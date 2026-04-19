@@ -1,0 +1,61 @@
+Good, I have a clear picture of the existing safety package and automation architecture. Now let me check the models to understand automation IDs and any existing patterns.
+
+Now I have a thorough understanding of the codebase patterns. Let me plan the implementation and get a rubber-duck critique before coding.
+
+Your revised split is the right direction: **cycle detection should be per-chain/context**, and **rapid-fire should be shared state**. The original global `executing` set would be wrong.
+
+Main issues IΓÇÖd fix:
+
+1. **Blocking: `[]int64` in context can race/corrupt under concurrent fan-out**
+   - If you store a slice in context and do `append(path, id)`, siblings can share the same backing array.
+   - That can corrupt paths or cause data races when one automation triggers multiple children concurrently.
+   - **Fix:** never append in place. Either:
+     - deep-copy on every write/read, or
+     - better: store an immutable linked node (`id + parent`) in context and materialize the full path only when needed.
+
+2. **Blocking: `RecordFire` is too weak for the requirement**
+   - Returning `RapidFireResult` means the caller decides whether to disable/notify, which makes it easy to forget and hard to do consistently.
+   - It also leaves ambiguity: does the 6th fire get blocked, or do you only notice after it already ran?
+   - **Fix:** expose a higher-level method like `CheckAndRecord(ctx, automationID)` or `BeforeExecute(...)` that:
+     - records the attempt,
+     - detects `>5 in 1m`,
+     - auto-disables,
+     - notifies,
+     - returns whether execution may proceed.
+
+3. **Blocking: duplicate disable/notify under concurrency**
+   - Two concurrent 6th/7th fires can both observe ΓÇ£exceededΓÇ¥ and both call `SetAutoDisabled` / notify.
+   - `SetAutoDisabled` in the repo is just an unconditional update, so it wonΓÇÖt naturally dedupe.
+   - **Fix:** make the disable path idempotent. E.g. conditional update (`WHERE auto_disabled=false`) and only notify when that update actually changed state.
+
+4. **Medium: cycle detection only works if chain-triggering is synchronous and reuses the same `ctx`**
+   - If any trigger path spawns a goroutine, queues work, or reconstructs a fresh context, your cycle detector becomes blind.
+   - **Fix:** put the cycle check in the single automation-dispatch entrypoint and require all nested automation execution to flow through it.
+
+5. **Medium: sentinel error alone is not enough**
+   - `ErrCycleDetected` doesnΓÇÖt carry the required `AΓåÆBΓåÆCΓåÆA` chain.
+   - **Fix:** use a typed error, e.g. `CycleError{Path []int64}`, and still support `errors.Is(err, ErrCycleDetected)`.
+
+6. **Medium: in-memory rapid-fire is per-process only**
+   - Fine if TeslaSync runs automations in one process.
+   - Wrong if multiple workers/pods can execute the same automation, since each instance gets its own counter.
+   - **Fix:** either document this as best-effort single-process safety, or move the counter to shared storage.
+
+Net: **the revised design is conceptually correct**, but I would tighten the API so callers canΓÇÖt bypass propagation or forget the auto-disable/notify side effects.Great critique. Key takeaways I'll adopt:
+1. **Immutable linked nodes** for context chain (no slice sharing)
+2. **Typed `CycleError`** with path, supporting `errors.Is`
+3. **Higher-level `CheckAndRecord`** that handles auto-disable/notify internally
+4. **`AutoDisabler` interface** to decouple from repo
+5. **Document single-process limitation**
+
+Let me implement.
+
+Now let me create the comprehensive test file:
+
+Now let me compile and run the tests:
+
+All 42 tests pass. Let me also verify the full project still builds:
+
+Clean build. Let me commit:
+
+

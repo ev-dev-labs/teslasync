@@ -22,6 +22,11 @@ import { cn } from '@/lib/cn'
 import { formatDateTime } from '@/lib/dateFormat'
 import { fmtNumber, fmtInt } from '@/lib/numberFormat'
 import SignalConfigModal from '@/components/ui/SignalConfigModal'
+import {
+  useFleetTelemetryErrorVINs, useFleetTelemetryErrors,
+  useRefreshFleetTelemetryErrorVINs, useRefreshFleetTelemetryErrors,
+  type FleetTelemetryErrorVIN, type FleetTelemetryError,
+} from '@/api/hooks/useTelemetry'
 
 /* ─── constants ───────────────────────────────────────────────────────── */
 
@@ -538,6 +543,89 @@ function PartnerRegistrationTool() {
   )
 }
 
+function PartnerPublicKeyTool() {
+  const { t } = useTranslation()
+  const [domain, setDomain] = useState('')
+
+  const mutation = useMutation({
+    mutationFn: () => apiFetch(`partner-public-key?domain=${encodeURIComponent(domain)}`),
+  })
+
+  const response = mutation.data ?? {}
+  const verification = (response.verification ?? {}) as Record<string, unknown>
+  const remoteFound = verification.remote_key_found === true
+  const matchesLocal = verification.matches_local === true
+  const localConfigured = verification.local_key_configured === true
+  const publicKey = ((response.response as Record<string, unknown>)?.public_key as string) ?? ''
+
+  return (
+    <ToolCard icon={Shield} color="cyan" title={t('devtools.partnerKey.title', 'Public Key Verification')} description={t('devtools.partnerKey.desc', 'Verify your registered public key with Tesla')}>
+      <div className="space-y-3">
+        <Input
+          label={t('Domain')}
+          placeholder="yourapp.example.com"
+          value={domain}
+          onChange={(e) => setDomain(e.target.value)}
+          icon={<Globe className="h-4 w-4" />}
+        />
+        <Button
+          variant="primary"
+          size="sm"
+          loading={mutation.isPending}
+          disabled={!domain.trim()}
+          onClick={() => mutation.mutate()}
+          icon={<Play className="h-3.5 w-3.5" />}
+        >
+          {t('devtools.partnerKey.verify', 'Verify')}
+        </Button>
+
+        {mutation.data && (
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              {remoteFound ? (
+                <Badge variant="success" size="sm" dot>{t('devtools.partnerKey.keyRegistered', 'Key Registered')}</Badge>
+              ) : (
+                <Badge variant="danger" size="sm" dot>{t('devtools.partnerKey.keyNotFound', 'Key Not Found')}</Badge>
+              )}
+              {remoteFound && localConfigured && (
+                matchesLocal ? (
+                  <Badge variant="success" size="sm" dot>{t('devtools.partnerKey.matchesLocal', 'Matches Local Key')}</Badge>
+                ) : (
+                  <Badge variant="warning" size="sm" dot>{t('devtools.partnerKey.mismatch', 'Does Not Match Local Key')}</Badge>
+                )
+              )}
+              {remoteFound && !localConfigured && (
+                <Badge variant="neutral" size="sm">{t('devtools.partnerKey.noLocal', 'No Local Key Configured')}</Badge>
+              )}
+            </div>
+
+            {publicKey && (
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-white/70">{t('devtools.partnerKey.pemLabel', 'Registered PEM')}</span>
+                <div className="rounded bg-black/30 p-3">
+                  <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-all text-xs text-white/80">
+                    {publicKey}
+                  </pre>
+                  <div className="mt-2 flex justify-end">
+                    <CopyButton text={publicKey} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <ResultPanel
+              title={t('devtools.partnerKey.rawResponse', 'Raw Response')}
+              data={response.error ? undefined : response}
+              error={typeof response.error === 'string' ? (response.error as string) : undefined}
+              idle={false}
+            />
+          </>
+        )}
+      </div>
+    </ToolCard>
+  )
+}
+
 function PublicKeySetupTool() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
@@ -938,11 +1026,164 @@ function VehicleDataTools() {
   )
 }
 
+/* ─── Fleet Telemetry Health Section ─────────────────────────────────── */
+
+function FleetTelemetryHealthSection() {
+  const { t } = useTranslation()
+  const [selectedVin, setSelectedVin] = useState('')
+
+  const { data: errorVINs, isLoading: vinsLoading } = useFleetTelemetryErrorVINs()
+  const { data: errors, isLoading: errorsLoading } = useFleetTelemetryErrors(selectedVin || undefined)
+  const refreshVINs = useRefreshFleetTelemetryErrorVINs()
+  const refreshErrors = useRefreshFleetTelemetryErrors()
+
+  const vinList = errorVINs ?? []
+  const errorList = errors ?? []
+
+  const isRecent = (dateStr: string | null) => {
+    if (!dateStr) return false
+    const diff = Date.now() - new Date(dateStr).getTime()
+    return diff < 24 * 60 * 60 * 1000
+  }
+
+  const vinColumns: Column<FleetTelemetryErrorVIN>[] = useMemo(() => [
+    {
+      key: 'vin',
+      header: t('devtools.health.vin', 'VIN'),
+      render: (r) => (
+        <button
+          className="text-xs font-mono text-neon-cyan hover:underline"
+          onClick={() => setSelectedVin(r.vin === selectedVin ? '' : r.vin)}
+        >
+          {r.vin}
+        </button>
+      ),
+    },
+    {
+      key: 'first_seen_at',
+      header: t('devtools.health.firstSeen', 'First Seen'),
+      render: (r) => <span className="text-xs text-white/60">{formatDateTime(r.first_seen_at)}</span>,
+    },
+    {
+      key: 'last_seen_at',
+      header: t('devtools.health.lastSeen', 'Last Seen'),
+      render: (r) => (
+        <span className={cn('text-xs', isRecent(r.last_seen_at) ? 'text-neon-red' : 'text-neon-amber')}>
+          {formatDateTime(r.last_seen_at)}
+        </span>
+      ),
+    },
+  ], [t, selectedVin])
+
+  const errorColumns: Column<FleetTelemetryError>[] = useMemo(() => [
+    {
+      key: 'vin',
+      header: t('devtools.health.vin', 'VIN'),
+      render: (r) => <span className="text-xs font-mono text-white/80">{r.vin}</span>,
+    },
+    {
+      key: 'error_code',
+      header: t('devtools.health.errorCode', 'Error Code'),
+      render: (r) => r.error_code ? <Badge variant="danger" size="sm">{r.error_code}</Badge> : <span className="text-xs text-white/40">—</span>,
+    },
+    {
+      key: 'error_message',
+      header: t('devtools.health.message', 'Message'),
+      render: (r) => <span className="text-xs text-white/70">{r.error_message ?? '—'}</span>,
+    },
+    {
+      key: 'reported_at',
+      header: t('devtools.health.reportedAt', 'Reported At'),
+      render: (r) => (
+        <span className={cn('text-xs', r.reported_at && isRecent(r.reported_at) ? 'text-neon-red' : 'text-white/60')}>
+          {r.reported_at ? formatDateTime(r.reported_at) : '—'}
+        </span>
+      ),
+    },
+  ], [t])
+
+  return (
+    <div className="space-y-4">
+      {/* Error VINs Summary */}
+      <ToolCard
+        icon={AlertTriangle}
+        color="red"
+        title={t('devtools.health.errorVinsTitle', 'Error VINs')}
+        description={t('devtools.health.errorVinsDesc', 'Vehicles with fleet telemetry configuration errors')}
+      >
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <Badge variant={vinList.length > 0 ? 'danger' : 'success'} size="sm">
+              {vinList.length} {t('devtools.health.affectedVehicles', 'affected')}
+            </Badge>
+            {selectedVin && (
+              <Badge variant="info" size="sm">
+                {t('devtools.health.filteredBy', 'Filtered')}: {selectedVin}
+                <button className="ml-1 text-white/60 hover:text-white" onClick={() => setSelectedVin('')}>×</button>
+              </Badge>
+            )}
+            <Button
+              variant="secondary"
+              size="sm"
+              loading={refreshVINs.isPending}
+              onClick={() => refreshVINs.mutate()}
+              icon={<RefreshCw className="h-3.5 w-3.5" />}
+            >
+              {t('devtools.health.refreshVins', 'Refresh from Tesla')}
+            </Button>
+          </div>
+          {vinsLoading ? (
+            <Skeleton className="h-24" />
+          ) : vinList.length > 0 ? (
+            <DataTable columns={vinColumns} data={vinList} keyExtractor={(r) => r.vin} compact />
+          ) : (
+            <p className="py-4 text-center text-sm text-white/40">
+              {t('devtools.health.noErrorVins', 'No vehicles with telemetry errors')}
+            </p>
+          )}
+        </div>
+      </ToolCard>
+
+      {/* Error Log Table */}
+      <ToolCard
+        icon={AlertCircle}
+        color="amber"
+        title={t('devtools.health.errorLogTitle', 'Error Log')}
+        description={t('devtools.health.errorLogDesc', 'Detailed fleet telemetry error history')}
+      >
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="secondary"
+              size="sm"
+              loading={refreshErrors.isPending}
+              onClick={() => refreshErrors.mutate()}
+              icon={<RefreshCw className="h-3.5 w-3.5" />}
+            >
+              {t('devtools.health.refreshErrors', 'Refresh from Tesla')}
+            </Button>
+          </div>
+          {errorsLoading ? (
+            <Skeleton className="h-40" />
+          ) : errorList.length > 0 ? (
+            <DataTable columns={errorColumns} data={errorList} keyExtractor={(r) => String(r.id)} compact pagination />
+          ) : (
+            <p className="py-4 text-center text-sm text-white/40">
+              {t('devtools.health.noErrors', 'No fleet telemetry errors recorded')}
+            </p>
+          )}
+        </div>
+      </ToolCard>
+    </div>
+  )
+}
+
 function FleetApiSection() {
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <FleetApiConfigTool />
       <PartnerRegistrationTool />
+      <PartnerPublicKeyTool />
       <PublicKeySetupTool />
       <VehicleKeyPairingTool />
       <FleetTelemetrySubscribeTool />
@@ -1988,6 +2229,14 @@ export default function DevToolsPage() {
             badge={<Badge variant="success" size="sm">{t('Tools')}</Badge>}
           >
             <FleetApiSection />
+          </Accordion>
+
+          <Accordion
+            title={t('devtools.health.sectionTitle', 'Fleet Telemetry Health')}
+            icon={<Radio className="h-5 w-5" />}
+            badge={<Badge variant="danger" size="sm">{t('devtools.health.badgeMonitor', 'Monitor')}</Badge>}
+          >
+            <FleetTelemetryHealthSection />
           </Accordion>
 
           <Accordion

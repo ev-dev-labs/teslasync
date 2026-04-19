@@ -23,7 +23,8 @@ type DBTX interface {
 
 // DB wraps a pgx connection pool and provides repository methods.
 type DB struct {
-	Pool *pgxpool.Pool
+	Pool         *pgxpool.Pool
+	WriteBreaker *DBCircuitBreaker
 }
 
 // New creates a new database connection pool from the given config, verifies
@@ -39,7 +40,17 @@ func New(ctx context.Context, cfg config.DatabaseConfig) (*DB, error) {
 	poolCfg.MinConns = int32(cfg.MinConns)
 	poolCfg.MaxConnLifetime = cfg.ConnMaxLifetime
 	poolCfg.MaxConnIdleTime = cfg.ConnMaxIdleTime
-	poolCfg.HealthCheckPeriod = 15 * time.Second
+	poolCfg.HealthCheckPeriod = cfg.HealthCheckPeriod
+
+	// Validate new connections by setting per-connection statement_timeout as safety net
+	stmtTimeout := cfg.StatementTimeout
+	poolCfg.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+		_, err := conn.Exec(ctx, fmt.Sprintf("SET statement_timeout = '%dms'", stmtTimeout))
+		if err != nil {
+			log.Warn().Err(err).Msg("failed to set statement_timeout on new connection")
+		}
+		return nil
+	}
 
 	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
 	if err != nil {
@@ -58,9 +69,16 @@ func New(ctx context.Context, cfg config.DatabaseConfig) (*DB, error) {
 	log.Info().
 		Str("host", cfg.Host).
 		Int("max_conns", cfg.MaxConns).
+		Int32("total_conns", stats.TotalConns()).
 		Int32("idle_conns", stats.IdleConns()).
+		Int("connect_timeout_s", cfg.ConnectTimeout).
+		Int("statement_timeout_ms", cfg.StatementTimeout).
+		Dur("health_check_period", cfg.HealthCheckPeriod).
 		Msg("database connected")
-	return &DB{Pool: pool}, nil
+	return &DB{
+		Pool:         pool,
+		WriteBreaker: NewDBCircuitBreaker("writes"),
+	}, nil
 }
 
 // Close shuts down the connection pool.
@@ -72,9 +90,10 @@ func (db *DB) Close() {
 
 // Migrate applies pending database migrations from the given path
 // (e.g. "file://migrations") using golang-migrate.
-func (db *DB) Migrate(migrationsPath string) error {
-	connStr := db.Pool.Config().ConnConfig.ConnString()
-	return runMigrations(connStr, migrationsPath)
+// Uses MigrationDSN() which excludes statement_timeout so pg_advisory_lock
+// can wait indefinitely without being killed.
+func (db *DB) Migrate(migrationsPath string, cfg config.DatabaseConfig) error {
+	return runMigrations(cfg.MigrationDSN(), migrationsPath)
 }
 
 // Health checks database connectivity with a 3-second deadline.
@@ -127,5 +146,20 @@ func (db *DB) Stats() map[string]interface{} {
 		"acquired_conns": s.AcquiredConns(),
 		"max_conns":      s.MaxConns(),
 		"constructing":   s.ConstructingConns(),
+	}
+}
+
+// PoolStats returns extended connection pool health information including
+// acquire counters useful for diagnosing connection exhaustion.
+func (db *DB) PoolStats() map[string]interface{} {
+	s := db.Pool.Stat()
+	return map[string]interface{}{
+		"total_conns":            s.TotalConns(),
+		"idle_conns":             s.IdleConns(),
+		"acquired_conns":         s.AcquiredConns(),
+		"constructing_conns":     s.ConstructingConns(),
+		"max_conns":              s.MaxConns(),
+		"empty_acquire_count":    s.EmptyAcquireCount(),
+		"canceled_acquire_count": s.CanceledAcquireCount(),
 	}
 }

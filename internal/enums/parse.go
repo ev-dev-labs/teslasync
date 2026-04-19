@@ -48,6 +48,23 @@ func ParseEnumBool(raw interface{}) bool {
 	return false
 }
 
+// ParseBuckleStatus converts Tesla's BuckleStatus enum to a boolean.
+// Tesla sends seatbelt signals as enum strings: "BuckleStatusLatched" (buckled)
+// or "BuckleStatusUnlatched" (unbuckled), but may also send raw booleans.
+func ParseBuckleStatus(raw interface{}) bool {
+	switch v := raw.(type) {
+	case bool:
+		return v
+	case string:
+		return v == "BuckleStatusLatched"
+	case float64:
+		return v != 0
+	case int:
+		return v != 0
+	}
+	return false
+}
+
 // ParseHvacPower returns true if HVAC is on or preconditioning.
 func ParseHvacPower(raw string) bool {
 	return strings.Contains(raw, "On") || strings.Contains(raw, "Precondition")
@@ -113,6 +130,78 @@ func ParseClimateKeeperMode(raw string) string {
 		return "On"
 	}
 	if g != "" {
+		return g
+	}
+	return raw
+}
+
+// ParseForwardCollisionWarning normalizes the FCW sensitivity enum.
+// Tesla sends: "ForwardCollisionSensitivityOff", "ForwardCollisionSensitivityLate",
+// "ForwardCollisionSensitivityAverage", "ForwardCollisionSensitivityEarly".
+func ParseForwardCollisionWarning(raw string) string {
+	g := strings.TrimPrefix(raw, PrefixForwardCollision)
+	switch g {
+	case "Off":
+		return "Off"
+	case "Late":
+		return "Late"
+	case "Average":
+		return "Average"
+	case "Early":
+		return "Early"
+	}
+	if g != "" && g != raw {
+		return g
+	}
+	return raw
+}
+
+// ParseLaneDepartureAvoidance normalizes the LDA mode enum.
+// Tesla sends: "LaneAssistLevelOff", "LaneAssistLevelWarning", "LaneAssistLevelAssist".
+func ParseLaneDepartureAvoidance(raw string) string {
+	g := strings.TrimPrefix(raw, PrefixLaneAssist)
+	switch g {
+	case "Off":
+		return "Off"
+	case "Warning":
+		return "Warning"
+	case "Assist":
+		return "Assist"
+	}
+	if g != "" && g != raw {
+		return g
+	}
+	return raw
+}
+
+// ParseSpeedLimitWarning normalizes the speed limit warning enum.
+// Tesla sends: "SpeedAssistLevelNone", "SpeedAssistLevelDisplay", "SpeedAssistLevelChime".
+func ParseSpeedLimitWarning(raw string) string {
+	g := strings.TrimPrefix(raw, PrefixSpeedAssist)
+	switch g {
+	case "None":
+		return "Off"
+	case "Display":
+		return "Display"
+	case "Chime":
+		return "Chime"
+	case "Off":
+		return "Off"
+	}
+	if g != "" && g != raw {
+		return g
+	}
+	return raw
+}
+
+// ParseCruiseFollowDistance normalizes the follow-distance enum.
+// Tesla sends: "FollowDistance1" through "FollowDistance7".
+func ParseCruiseFollowDistance(raw string) string {
+	g := strings.TrimPrefix(raw, PrefixFollowDistance)
+	if len(g) == 1 && g[0] >= '1' && g[0] <= '7' {
+		return g
+	}
+	if g != "" && g != raw {
 		return g
 	}
 	return raw

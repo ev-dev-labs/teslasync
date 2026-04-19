@@ -1,0 +1,65 @@
+Now I have enough context. Let me create a plan and implement the feature.
+
+Now I have a complete picture. Let me consult the rubber duck before implementing, then build all parts.
+
+A few real blind spots:
+
+- **Good call:** `000118` is the correct migration number. `000100` would not run on DBs already at `000117` (`migrations/000117_add_tesla_user_config.*`).
+
+- **Blocking ΓÇö your response shape breaks the ΓÇ£last syncedΓÇ¥ UX when Tesla returns no orders.**  
+  Current Tesla user config endpoints return `{ data, fetched_at }` and the Settings page uses that metadata (`internal/api/tesla_user_config_handler.go`, `web/src/api/hooks/useUser.ts`, `web/src/features/settings/pages/SettingsPage.tsx`).  
+  If `/orders` returns a bare array, then `[]` means you cannot tell **ΓÇ£never refreshedΓÇ¥** from **ΓÇ£refreshed successfully, no active ordersΓÇ¥**, and you canΓÇÖt show last sync time.  
+  **Fix:** return an envelope like `{ orders, fetched_at }`, or persist sync metadata separately.
+
+- **Blocking ΓÇö `delivery_date` as `time.Time` is likely to timezone-shift in the browser.**  
+  Tesla gives a date-only value (`"2026-05-01"`). If you store/serialize it as a timestamp, users west of UTC can see the previous day when the frontend formats it.  
+  **Fix:** expose `delivery_date` as a date-only string in the API/TS types, or use a custom date-only type instead of `time.Time` in the JSON contract.
+
+- **High ΓÇö donΓÇÖt forget refresh rate limiting.**  
+  Existing `/tesla/user/*/refresh` routes are explicitly rate-limited to 5/min in `internal/api/router.go`. Your plan says ΓÇ£add routesΓÇ¥ but not that safeguard.  
+  **Fix:** add the same `httprate.LimitByIP(5, 1*time.Minute)` wrapper on `/orders/refresh`.
+
+- **High ΓÇö donΓÇÖt leak `raw_json` to the frontend by accident.**  
+  If you return `[]*models.TeslaUserOrder` directly and the model has `json:"raw_json,omitempty"`, the browser gets the full raw Tesla payload whether you use it or not. ThatΓÇÖs extra payload and potentially extra sensitive fields.  
+  **Fix:** use a response DTO for the handler, or make `RawJSON` non-serialized.
+
+- **Moderate ΓÇö plan is missing tests for the risky parts.**  
+  The failure-prone areas are:
+  1. `ReplaceAll` with empty array vs non-empty array  
+  2. handler parsing of Tesla envelope / bad payloads  
+  3. Settings page rendering for **no orders yet** vs **refreshed, zero active orders**  
+  **Fix:** add repo + handler tests, plus at least one frontend test.
+
+- **Moderate ΓÇö decide what happens on Tesla disconnect/account switch.**  
+  `AuthHandler.Disconnect` clears tokens but not cached Tesla user data (`internal/api/auth_handler.go`). For orders, that means stale order info may remain visible after disconnect.  
+  **Fix:** explicitly choose whether disconnect should also clear `tesla_user_orders`.
+
+Overall: your **separate handler** decision and **SettingsPage placement** both look sound. The main thing IΓÇÖd change is the API shape: **make orders return sync metadata, not just an array**.Good feedback. Key adjustments: use migration 000118 (not 000100), return an envelope with `fetched_at` metadata, add rate limiting on refresh, hide `raw_json` from frontend. Let me implement now.
+
+Now I have full context. Let me implement all backend and frontend pieces in parallel.
+
+Now create the repository:
+
+Now create the handler:
+
+Now wire the routes in the router:
+
+Now add the frontend hook:
+
+Now add the "Active Orders" section to SettingsPage. Let me see more context around the Region section to insert after it:
+
+Good, I have all the info. Now let me add the Active Orders section to the SettingsPage, right after the Region section (before Fleet API Settings link):
+
+Now add the data query and mutation:
+
+Now add the Active Orders section between Region and Fleet API Settings link:
+
+Now I need to add the helper functions. Let me find where to put them ΓÇö before the component or at the end of the file:
+
+Now let's verify both Go and TypeScript compile:
+
+Both compile clean. Let me run the final verification checks:
+
+All pieces are in place. Let me now commit:
+
+

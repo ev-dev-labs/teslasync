@@ -98,7 +98,7 @@ func main() {
 	defer db.Close()
 	health.RecordSuccess("database")
 
-	if err := db.Migrate(cfg.Database.MigrationsPath); err != nil {
+	if err := db.Migrate(cfg.Database.MigrationsPath, cfg.Database); err != nil {
 		log.Fatal().Err(err).Msg("failed to run migrations")
 	}
 	log.Info().Msg("database migrations applied")
@@ -205,8 +205,11 @@ func main() {
 
 		// Initialize SignalStore with write-through Postgres flusher
 		liveStateRepo := database.NewLiveStateRepo(db)
-		signalStore = sigsvc.New(liveStateRepo, 0)
+		signalStore = sigsvc.New(liveStateRepo, 0, db.WriteBreaker)
 		telemetryHandler.SetSignalStore(signalStore)
+
+		// Start debounced flush loop (coalesces MQTT batches into 1 DB write/vehicle/sec)
+		go signalStore.FlushLoop(ctx)
 
 		// Load existing live state from DB (pod restart recovery)
 		if vehicles, err := database.NewVehicleRepo(db).GetAll(ctx); err == nil {
@@ -241,6 +244,7 @@ func main() {
 		if sessionTracker != nil {
 			sessionTracker.RecoverSessions(ctx)
 			sessionTracker.ValidateRecoveredSessions(ctx)
+			sessionTracker.StartBufferDrains(ctx)
 		}
 
 		// Populate alert prevSignals from SignalStore (pod restart resilience)
@@ -580,7 +584,9 @@ func main() {
 
 	// Phase 2: Flush SignalStore to Postgres (write-through belt-and-suspenders)
 	if signalStore != nil {
-		flushCtx, flushCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		// Wait for FlushLoop goroutine to exit before final flush
+		signalStore.WaitForFlushLoop()
+		flushCtx, flushCancel := context.WithTimeout(context.Background(), 30*time.Second)
 		signalStore.FlushAll(flushCtx)
 		flushCancel()
 	}
@@ -588,6 +594,12 @@ func main() {
 	// Phase 3: Shutdown telemetry handler goroutines
 	if telemetryHandler != nil {
 		telemetryHandler.Shutdown()
+		// Final drain of any buffered telemetry writes
+		if st := telemetryHandler.SessionTracker(); st != nil {
+			flushCtx, flushCancel := context.WithTimeout(context.Background(), 10*time.Second)
+			st.FlushBuffers(flushCtx)
+			flushCancel()
+		}
 	}
 
 	// Phase 4: Drain HTTP connections

@@ -7,6 +7,7 @@ import {
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/data-display/StatusBadge';
+import { FreshnessIndicator } from '@/components/data-display';
 import { RadialGauge } from '@/components/charts/RadialGauge';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
@@ -43,6 +44,7 @@ export function VehicleHero({
             {vehicle.display_name || vehicle.vin}
           </h2>
           <StatusBadge status={status} size="md" />
+          <FreshnessIndicator timestamp={vehicle.updated_at} />
         </div>
         <p className="text-sm text-[var(--text-muted)]">
           {vehicle.model} {vehicle.trim_badging} · <span className="font-mono">{vehicle.vin}</span>
@@ -121,7 +123,7 @@ export function VehicleHero({
               {buildStatCards(vehicle, state, firmwareVersion, {
                 convertDistance, convertSpeed, convertTemp,
                 distanceUnit, speedUnit, tempUnit,
-              }).map((item) => (
+              }, t).map((item) => (
                 <div
                   key={item.label}
                   className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]"
@@ -178,6 +180,7 @@ function buildStatCards(
   vehicle: Vehicle, s: VehicleState, firmware: string,
   u: { convertDistance: (v: number) => number; convertSpeed: (v: number) => number; convertTemp: (v: number) => number;
        distanceUnit: string; speedUnit: string; tempUnit: string },
+  t: (key: string, fallback: string) => string,
 ): StatItem[] {
   const isDriving = vehicle.state === 'driving' || s.speed > 0;
   const isCharging = s.is_charging;
@@ -208,8 +211,8 @@ function buildStatCards(
 
   // Always-visible cards
   cards.push(
-    { icon: s.is_locked ? Lock : Unlock, label: 'Status', value: s.is_locked ? 'Locked' : 'Unlocked', color: s.is_locked ? '#10b981' : '#f59e0b' },
-    { icon: Shield, label: 'Sentry', value: s.sentry_mode ? 'Active' : 'Off', color: s.sentry_mode ? '#ef4444' : '#374151' },
+    { icon: s.is_locked ? Lock : Unlock, label: t('common.status', 'Status'), value: s.is_locked ? t('common.locked', 'Locked') : t('common.unlocked', 'Unlocked'), color: s.is_locked ? '#10b981' : '#f59e0b' },
+    { icon: Shield, label: t('common.sentry', 'Sentry'), value: s.sentry_mode ? t('common.active', 'Active') : t('common.off', 'Off'), color: s.sentry_mode ? '#ef4444' : '#374151' },
     { icon: Gauge, label: 'Firmware', value: firmware, color: '#6366f1' },
     { icon: Zap, label: 'Power', value: `${fmtNumber(s.power)} kW`, color: s.power > 0 ? '#f59e0b' : s.power < 0 ? '#10b981' : '#374151' },
   );

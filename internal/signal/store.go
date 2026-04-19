@@ -9,11 +9,14 @@ package signal
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"github.com/sony/gobreaker"
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 )
 
@@ -25,12 +28,19 @@ type Value struct {
 
 // Store is a concurrent-safe, in-memory store of the latest signal values
 // per vehicle. Updated on every MQTT batch; never loses known values.
-// Write-through: every update is flushed to Postgres immediately.
+// Debounced write-through: updates mark vehicles dirty, a periodic FlushLoop
+// coalesces and flushes to Postgres (1s normal, 5s when circuit breaker open).
 type Store struct {
 	mu       sync.RWMutex
 	vehicles map[int64]map[string]*Value
 
-	flusher Flusher
+	flusher      Flusher
+	writeBreaker *database.DBCircuitBreaker
+
+	// Debounced flush: dirty vehicles are flushed on a timer, not per-batch.
+	dirtyMu sync.Mutex
+	dirty   map[int64]bool
+	flushWg sync.WaitGroup // tracks FlushLoop goroutine for shutdown coordination
 }
 
 // Flusher persists the in-memory state to a durable store (e.g. Postgres).
@@ -39,19 +49,23 @@ type Flusher interface {
 	LoadLiveState(ctx context.Context, vehicleID int64) (map[string]interface{}, error)
 }
 
-// New creates a new SignalStore with write-through persistence.
-// If flusher is nil, no DB persistence occurs.
-func New(flusher Flusher, flushInterval time.Duration) *Store {
+// New creates a new SignalStore with debounced write-through persistence.
+// If flusher is nil, no DB persistence occurs and FlushLoop is a no-op.
+// If writeBreaker is non-nil, flushes are guarded by the circuit breaker
+// and the flush interval adapts (1s normal → 5s when breaker is open).
+func New(flusher Flusher, flushInterval time.Duration, writeBreaker *database.DBCircuitBreaker) *Store {
 	return &Store{
-		vehicles: make(map[int64]map[string]*Value),
-		flusher:  flusher,
+		vehicles:     make(map[int64]map[string]*Value),
+		flusher:      flusher,
+		writeBreaker: writeBreaker,
+		dirty:        make(map[int64]bool),
 	}
 }
 
 // Update merges incoming signals into the vehicle's state. Only non-nil,
 // non-empty values are stored — existing values are never overwritten with nil.
 // This is called on every MQTT batch and must be as fast as possible.
-// Write-through: every batch is flushed to Postgres immediately for zero data loss.
+// Marks the vehicle dirty for the next FlushLoop tick (debounced write-through).
 func (s *Store) Update(vehicleID int64, signals map[string]interface{}) {
 	now := time.Now().UTC()
 
@@ -80,9 +94,9 @@ func (s *Store) Update(vehicleID int64, signals map[string]interface{}) {
 	// Update freshness metric
 	metrics.VehicleLastSeen.WithLabelValues(strconv.FormatInt(vehicleID, 10)).Set(0)
 
-	// Write-through: flush to Postgres on every batch (no timer).
-	// ~1 UPSERT per batch per vehicle — Postgres handles this trivially.
-	s.flushNow(vehicleID)
+	// Debounced write-through: mark dirty for next FlushLoop tick.
+	// Coalesces multiple MQTT batches into a single DB write per vehicle per tick.
+	s.markDirty(vehicleID)
 }
 
 // GetAll returns a snapshot of all latest signal values for a vehicle.
@@ -234,31 +248,110 @@ func (s *Store) Hydrate(vehicleID int64, signals map[string]interface{}) {
 	log.Debug().Int64("vehicle_id", vehicleID).Int("hydrated", added).Int("skipped", len(signals)-added).Msg("signal store: hydrated from signal_history")
 }
 
-// flushNow asynchronously flushes the vehicle's live state to Postgres.
-// Called on every batch for write-through persistence.
-func (s *Store) flushNow(vehicleID int64) {
+// markDirty flags a vehicle for flush on the next FlushLoop tick.
+// Lock-free fast path called from Update() on every MQTT batch.
+func (s *Store) markDirty(vehicleID int64) {
+	s.dirtyMu.Lock()
+	s.dirty[vehicleID] = true
+	s.dirtyMu.Unlock()
+}
+
+// FlushLoop runs a periodic flush of dirty vehicles to Postgres.
+// Normal interval is 1s; increases to 5s when the circuit breaker is open.
+// Must be started as a goroutine: go signalStore.FlushLoop(ctx)
+// Call WaitForFlushLoop() before FlushAll() during shutdown.
+func (s *Store) FlushLoop(ctx context.Context) {
 	if s.flusher == nil {
 		return
 	}
 
-	raw := s.GetRawMap(vehicleID)
-	if raw == nil {
+	s.flushWg.Add(1)
+	defer s.flushWg.Done()
+
+	const normalInterval = 1 * time.Second
+	const degradedInterval = 5 * time.Second
+
+	ticker := time.NewTicker(normalInterval)
+	defer ticker.Stop()
+	currentInterval := normalInterval
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			s.flushDirty(ctx)
+
+			// Adapt interval based on circuit breaker state
+			newInterval := normalInterval
+			if s.writeBreaker != nil && s.writeBreaker.State() != gobreaker.StateClosed {
+				newInterval = degradedInterval
+			}
+			if newInterval != currentInterval {
+				ticker.Reset(newInterval)
+				currentInterval = newInterval
+				log.Info().Dur("interval", newInterval).Msg("signal store: flush interval adjusted")
+			}
+		}
+	}
+}
+
+// WaitForFlushLoop blocks until FlushLoop exits. Call after cancelling the
+// context but before FlushAll() to prevent concurrent flush operations.
+func (s *Store) WaitForFlushLoop() {
+	s.flushWg.Wait()
+}
+
+// flushDirty flushes all dirty vehicles to Postgres and re-marks any that fail.
+func (s *Store) flushDirty(ctx context.Context) {
+	s.dirtyMu.Lock()
+	if len(s.dirty) == 0 {
+		s.dirtyMu.Unlock()
 		return
 	}
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				log.Error().Interface("panic", r).Int64("vehicle_id", vehicleID).Msg("signal store: panic in flush goroutine")
-			}
-		}()
+	ids := make([]int64, 0, len(s.dirty))
+	for id := range s.dirty {
+		ids = append(ids, id)
+	}
+	s.dirty = make(map[int64]bool, len(ids))
+	s.dirtyMu.Unlock()
+
+	for _, vid := range ids {
+		raw := s.GetRawMap(vid)
+		if raw == nil {
+			continue
+		}
+
 		flushStart := time.Now()
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := s.flusher.FlushLiveState(ctx, vehicleID, raw); err != nil {
-			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("signal store: flush to DB failed")
+		flushCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+
+		flushFn := func() error {
+			return database.RetryOnTransient(flushCtx, "live_state_flush", func(ctx context.Context) error {
+				return s.flusher.FlushLiveState(ctx, vid, raw)
+			})
+		}
+
+		var err error
+		if s.writeBreaker != nil {
+			err = s.writeBreaker.Execute(flushFn)
+		} else {
+			err = flushFn()
+		}
+		cancel()
+
+		if err != nil {
+			if errors.Is(err, gobreaker.ErrOpenState) {
+				log.Debug().Int64("vehicle_id", vid).Msg("signal store: circuit breaker open, re-marking dirty")
+			} else {
+				log.Warn().Err(err).Int64("vehicle_id", vid).Msg("signal store: flush failed, re-marking dirty")
+			}
+			// Re-mark for next cycle
+			s.dirtyMu.Lock()
+			s.dirty[vid] = true
+			s.dirtyMu.Unlock()
 		}
 		metrics.SignalFlushDuration.Observe(time.Since(flushStart).Seconds())
-	}()
+	}
 }
 
 // FlushAll synchronously flushes all vehicles' live state to Postgres.
@@ -273,8 +366,11 @@ func (s *Store) FlushAll(ctx context.Context) {
 		if raw == nil {
 			continue
 		}
-		if err := s.flusher.FlushLiveState(ctx, vid, raw); err != nil {
-			log.Warn().Err(err).Int64("vehicle_id", vid).Msg("signal store: shutdown flush failed")
+		err := database.RetryOnTransient(ctx, "shutdown_flush", func(ctx context.Context) error {
+			return s.flusher.FlushLiveState(ctx, vid, raw)
+		})
+		if err != nil {
+			log.Warn().Err(err).Int64("vehicle_id", vid).Msg("signal store: shutdown flush failed after retries")
 		}
 	}
 	log.Info().Int("vehicles", len(ids)).Msg("signal store: graceful shutdown flush complete")

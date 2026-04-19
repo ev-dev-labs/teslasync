@@ -1,0 +1,126 @@
+Now let me look at the cron test patterns and the models for Automation:
+
+Good ΓÇö no sunrise library exists yet. Let me also look at the Geofence model (for home location fallback) and how go.mod is structured:
+
+I now have a good understanding of the patterns. Let me plan the implementation and get a rubber-duck review before coding.
+
+Overall: the shape fits the existing trigger package well, but there are a few correctness gaps that will bite you.
+
+### 1. Blocking: ΓÇ£check todayΓÇÖs solar eventΓÇ¥ is not correct with offsets
+Your edge-case claim is wrong for cross-day offsets.
+
+Example: sunrise at 00:10, offset `-30` ΓçÆ fire time is **23:40 the previous day**.  
+If you only compute ΓÇ£todayΓÇÖs sunriseΓÇ¥ on each tick, you will never fire that automation on the previous day.
+
+**Fix:** compute candidate fire times for at least **yesterday/today/tomorrow** solar events, then choose the one that should fire relative to `now`.
+
+---
+
+### 2. Blocking: 60s polling + 60s window can double-fire
+With `now Γêê [fire_time, fire_time+60s)`, a trigger can fire twice if your ticker phase is unlucky.
+
+Example:
+- fire_time = `10:00:30`
+- ticks at `10:00:45` and `10:01:00`
+- both are inside the window
+
+So ΓÇ£already fired todayΓÇ¥ is too coarse; you need ΓÇ£already fired for this computed fire_timeΓÇ¥.
+
+**Fix:** dedupe by `(automationID, computedFireTime)` using:
+- persisted `LastTriggeredAt`, or
+- an in-memory `lastFired map[int64]time.Time` plus restart-safe handling.
+
+---
+
+### 3. Blocking: timezone semantics are underspecified
+`go-sunrise` returns UTC `time.Time`s. If you base ΓÇ£todayΓÇ¥, weekday filtering, or `CalculateNextFiring` on server-local time/UTC, west/east-of-UTC locations will be wrong around midnight.
+
+Also, `DaysOfWeek` should follow the **local day at the target coordinates**, not server time.
+
+**Fix:** add an explicit timezone strategy:
+- best: add `Timezone` to config, like cron does, or
+- derive timezone from coordinates before weekday/date logic.
+
+Then evaluate:
+- which solar date to calculate
+- `DaysOfWeek`
+- next firing
+all in that timezone.
+
+---
+
+### 4. Blocking: nil lat/lon fallback conflicts with global automations
+`models.Automation.VehicleID` is nullable. Your fallback `GetHomeLocation(vehicleID)` assumes a vehicle exists.
+
+So a global `sunrise_sunset` automation with nil lat/lon has no valid location source.
+
+**Fix:** validate one of these must be true:
+- explicit lat/lon provided, or
+- `automation.VehicleID != nil` and home location exists.
+
+Otherwise reject/auto-disable.
+
+---
+
+### 5. Non-blocking but important: ΓÇ£0,0 is invalidΓÇ¥ is not safe
+`0,0` is a real coordinate. Rare, but valid.
+
+**Fix:** validate coordinate ranges, not special-case `0,0`.
+
+---
+
+### 6. Non-blocking: handle polar day/night explicitly
+The library returns zero times when sun doesnΓÇÖt rise/set.
+
+**Fix:** treat zero sunrise/sunset as config/location/date non-fireable for that day, and test it.
+
+---
+
+### 7. Testability: `solarFunc` is good, but add a couple real-library contract tests
+Mocking `solarFunc` is the right unit-test seam.  
+But add a few integration-ish tests with the real library for:
+- known lat/lon/date
+- UTC behavior
+- no-sunrise/no-sunset case
+
+Otherwise you may unit-test your wrapper while still misusing the library.
+
+---
+
+## Direct answers
+
+### 1. Is 60s tick sound?
+**Only if** you add:
+- dedupe per computed fire time
+- catch-up logic for delayed ticks/restarts
+- correct timezone/day handling
+
+As currently described, **not sound enough**.
+
+### 2. Track ΓÇ£already fired todayΓÇ¥?
+**Yes, but not ΓÇ£todayΓÇ¥** ΓÇö track **already fired for this exact fire_time**.
+
+### 3. Inject `solarFunc`?
+**Yes.** Keep it for unit tests, and add a few real-library tests so you donΓÇÖt miss UTC/polar edge cases.
+
+If you want, I can turn this into a safer revised design before you implement it.Good critique ΓÇö several blocking issues to fix. Let me incorporate: multi-day candidate check, per-fire-time dedup, explicit timezone in config, proper validation, and polar edge cases.
+
+Now let me create the implementation:
+
+Now create the test file:
+
+Now let's build and run the tests:
+
+All 24 tests pass. Let me also run the remaining tests (isDayAllowed, inFireWindow, CalculateNextFiring, real library):
+
+All 39 tests pass (24 sunrise_sunset + 15 helper/contract). Let me also verify no existing tests broke:
+
+The failure is in `TestLiveScheduler_FiresWithinWindow` ΓÇö a pre-existing cron test, not related to my changes. Let me verify:
+
+Go's regexp doesn't support negative lookahead. Let me run specific test groups instead:
+
+All tests pass. The only failing test is `TestLiveScheduler_FiresWithinWindow` ΓÇö a pre-existing timing-sensitive cron test unrelated to my changes. Let me verify by checking git status:
+
+The `.github/prompts` and `internal/models/models.go` changes are pre-existing (not from my changes). My new files are untracked. Let me commit just my changes:
+
+

@@ -1,0 +1,579 @@
+I'll explore the TeslaSync automation subsystem by reading all the key files. Let me start with systematic searches and file reads.Now let me read the key files:Now let me check the models and router registration:Let me read the models directly:Now let me see the models and the router:Let me view more of the models and look closer at the router:
+
+Now let me find the router automations section:Now let me check how FSM transition logs work and look at the `automationHandler` constructor in router.go:Perfect! Now let me check a reference handler for patterns (notification or drive):
+
+Let me check the helpers for pagination:Perfect! Now let me create a comprehensive summary document:
+
+## **TeslaSync Automation Subsystem Architecture Report**
+
+---
+
+### **1. AUTOMATION HANDLER** 
+**File:** `D:\repos\teslasync\internal\api\automation_handler.go`
+
+#### **Handler Struct**
+```go
+type AutomationHandler struct {
+    repo *database.AutomationRepo
+}
+
+func NewAutomationHandler(db *database.DB) *AutomationHandler
+```
+
+#### **Response Wrapper**
+```go
+type automationResponse struct {
+    *models.Automation
+    NextFireTime *string              `json:"next_fire_time,omitempty"`
+    Conflicts    []condition.Conflict `json:"conflicts,omitempty"`
+}
+```
+
+#### **Existing Methods**
+- **List** (line 56): `func (h *AutomationHandler) List(w http.ResponseWriter, r *http.Request)`
+  - Query param: `?enabled=true` to filter
+  - Uses `h.repo.GetAll(r.Context(), enabledOnly)`
+  - No pagination support (returns all, hard-limited to 1000 in repo)
+
+- **Get** (line 78): `func (h *AutomationHandler) Get(w http.ResponseWriter, r *http.Request) int64`
+  - Fetches single automation by ID
+  - Uses `urlParamInt64(r, "id")` from chi router
+  - Returns 404 if not found
+
+- **Create** (line 124): Full validation, trigger config schema check, webhook token uniqueness
+- **Update** (line 212): Full-replacement PUT with same validations
+- **Delete** (line 307): Soft-deletes after verifying existence
+- **Toggle** (line 344): Enables/disables automation with auto-disabled state guard
+- **ReEnable** (line 393): Clears auto-disabled state and resets consecutive failures
+
+#### **Key Patterns**
+- Uses `writeJSON(w, status, data)` and `writeError(w, status, msg)` helpers
+- Conflict detection via `h.detectConflicts(r, a)` before returning response
+- HTTP rate limiting: `httprate.LimitByIP(20, 1*time.Minute)` on mutations
+
+---
+
+### **2. ROUTER REGISTRATION**
+**File:** `D:\repos\teslasync\internal\api\router.go` (lines 321-331)
+
+```go
+r.Route("/automations", func(r chi.Router) {
+    r.Get("/", automationHandler.List)
+    r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/", automationHandler.Create)
+    r.Route("/{id}", func(r chi.Router) {
+        r.Get("/", automationHandler.Get)
+        r.With(httprate.LimitByIP(20, 1*time.Minute)).Put("/", automationHandler.Update)
+        r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/", automationHandler.Delete)
+        r.With(httprate.LimitByIP(20, 1*time.Minute)).Patch("/toggle", automationHandler.Toggle)
+        r.With(httprate.LimitByIP(20, 1*time.Minute)).Patch("/re-enable", automationHandler.ReEnable)
+    })
+})
+```
+
+**Pattern:** Nested route groups with ID-based subrouter for detail operations
+
+---
+
+### **3. DATABASE MODELS**
+**File:** `D:\repos\teslasync\internal\models\models.go` (lines 1131-1185)
+
+#### **Automation Model** (lines 1131-1162)
+```go
+type Automation struct {
+    ID                  int64           `json:"id" db:"id"`
+    Name                string          `json:"name" db:"name"`
+    Description         string          `json:"description" db:"description"`
+    VehicleID           *int64          `json:"vehicle_id" db:"vehicle_id"`
+    Enabled             bool            `json:"enabled" db:"enabled"`
+    TriggerType         string          `json:"trigger_type" db:"trigger_type"`
+    TriggerConfig       json.RawMessage `json:"trigger_config" db:"trigger_config"`
+    Conditions          json.RawMessage `json:"conditions" db:"conditions"`
+    Actions             json.RawMessage `json:"actions" db:"actions"`
+    CooldownMinutes     int             `json:"cooldown_minutes" db:"cooldown_minutes"`
+    MaxExecutionsHour   int             `json:"max_executions_hour" db:"max_executions_hour"`
+    StopOnFailure       bool            `json:"stop_on_failure" db:"stop_on_failure"`
+    NotifyOnRun         bool            `json:"notify_on_run" db:"notify_on_run"`
+    NotifyOnFailure     bool            `json:"notify_on_failure" db:"notify_on_failure"`
+    SeasonalStart       *int            `json:"seasonal_start" db:"seasonal_start"`
+    SeasonalEnd         *int            `json:"seasonal_end" db:"seasonal_end"`
+    Priority            int             `json:"priority" db:"priority"`
+    LastTriggeredAt     *time.Time      `json:"last_triggered_at" db:"last_triggered_at"`
+    LastSuccessAt       *time.Time      `json:"last_success_at" db:"last_success_at"`
+    LastFailureAt       *time.Time      `json:"last_failure_at" db:"last_failure_at"`
+    ExecutionCount      int64           `json:"execution_count" db:"execution_count"`
+    FailureCount        int64           `json:"failure_count" db:"failure_count"`
+    ConsecutiveFailures int             `json:"consecutive_failures" db:"consecutive_failures"`
+    AutoDisabled        bool            `json:"auto_disabled" db:"auto_disabled"`
+    AutoDisabledReason  *string         `json:"auto_disabled_reason" db:"auto_disabled_reason"`
+    PresetID            *string         `json:"preset_id" db:"preset_id"`
+    Tags                []string        `json:"tags" db:"tags"`
+    CreatedAt           time.Time       `json:"created_at" db:"created_at"`
+    UpdatedAt           time.Time       `json:"updated_at" db:"updated_at"`
+}
+```
+
+#### **AutomationHistory Model** (lines 1164-1185)
+```go
+type AutomationHistory struct {
+    ID                 int64           `json:"id" db:"id"`
+    AutomationID       int64           `json:"automation_id" db:"automation_id"`
+    AutomationName     string          `json:"automation_name" db:"automation_name"`
+    VehicleID          *int64          `json:"vehicle_id" db:"vehicle_id"`
+    TriggeredAt        time.Time       `json:"triggered_at" db:"triggered_at"`
+    CompletedAt        *time.Time      `json:"completed_at" db:"completed_at"`
+    DurationMs         *int            `json:"duration_ms" db:"duration_ms"`
+    TriggerType        string          `json:"trigger_type" db:"trigger_type"`
+    TriggerSnapshot    json.RawMessage `json:"trigger_snapshot" db:"trigger_snapshot"`
+    ConditionsMet      bool            `json:"conditions_met" db:"conditions_met"`
+    ConditionsSnapshot json.RawMessage `json:"conditions_snapshot" db:"conditions_snapshot"`
+    ActionsExecuted    json.RawMessage `json:"actions_executed" db:"actions_executed"`
+    ActionsTotal       int             `json:"actions_total" db:"actions_total"`
+    ActionsSucceeded   int             `json:"actions_succeeded" db:"actions_succeeded"`
+    ActionsFailed      int             `json:"actions_failed" db:"actions_failed"`
+    Status             string          `json:"status" db:"status"` // running, success, partial, failed, skipped, cancelled
+    Error              *string         `json:"error" db:"error"`
+    FSMState           *string         `json:"fsm_state" db:"fsm_state"`
+    CreatedAt          time.Time       `json:"created_at" db:"created_at"`
+}
+```
+
+**AutomationVariable Model** (lines 1197-1200+)
+```go
+type AutomationVariable struct {
+    ID        int64     `json:"id" db:"id"`
+    Key       string    `json:"key" db:"key"`
+    Value     string    `json:"value" db:"value"`
+    VehicleID *int64    `json:"vehicle_id" db:"vehicle_id"`
+    UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+}
+```
+
+---
+
+### **4. DATABASE REPOSITORIES**
+
+#### **AutomationHistoryRepo**
+**File:** `D:\repos\teslasync\internal\database\automation_history_repo.go`
+
+```go
+type AutomationHistoryRepo struct {
+    db *DB
+}
+
+func NewAutomationHistoryRepo(db *DB) *AutomationHistoryRepo
+```
+
+**Key SQL Query Pattern:**
+```go
+const automationHistoryColumns = `id, automation_id, automation_name, vehicle_id,
+    triggered_at, completed_at, duration_ms,
+    trigger_type, trigger_snapshot,
+    conditions_met, conditions_snapshot,
+    actions_executed, actions_total, actions_succeeded, actions_failed,
+    status, error, fsm_state, created_at`
+```
+
+**Key Methods:**
+
+1. **Create** (line 41)
+   ```go
+   func (r *AutomationHistoryRepo) Create(ctx context.Context, h *models.AutomationHistory) error
+   ```
+   - Inserts new execution record
+   - Returns `RETURNING id, created_at`
+
+2. **Complete** (line 60)
+   ```go
+   func (r *AutomationHistoryRepo) Complete(ctx context.Context, id int64, status string, errMsg *string, durationMs int) error
+   ```
+   - Updates status, error, duration_ms, completed_at
+
+3. **GetByAutomation** (line 71) ΓÇö **WITH PAGINATION**
+   ```go
+   func (r *AutomationHistoryRepo) GetByAutomation(ctx context.Context, automationID int64, limit, offset int) ([]*models.AutomationHistory, error)
+   ```
+   - Default limit: 50, max: 100
+   - Default offset: 0
+   - Query: `SELECT ... FROM automation_history WHERE automation_id = $1 ORDER BY triggered_at DESC LIMIT $2 OFFSET $3`
+
+4. **CountSinceByAutomation** (line 106)
+   ```go
+   func (r *AutomationHistoryRepo) CountSinceByAutomation(ctx context.Context, automationID int64, since time.Time) (int, error)
+   ```
+   - Counts only budget-consuming statuses: 'running', 'success', 'partial', 'failed'
+
+5. **GetRecent** (line 120)
+   ```go
+   func (r *AutomationHistoryRepo) GetRecent(ctx context.Context, limit int) ([]*models.AutomationHistory, error)
+   ```
+   - Returns recent executions across all automations
+
+#### **AutomationRepo**
+**File:** `D:\repos\teslasync\internal\database\automation_repo.go`
+
+```go
+type AutomationRepo struct {
+    db *DB
+}
+
+func NewAutomationRepo(db *DB) *AutomationRepo
+```
+
+**SQL Columns:**
+```go
+const automationColumns = `id, name, description, vehicle_id, enabled,
+    trigger_type, trigger_config, conditions, actions,
+    cooldown_minutes, max_executions_hour, stop_on_failure, notify_on_run, notify_on_failure,
+    seasonal_start, seasonal_end, priority,
+    last_triggered_at, last_success_at, last_failure_at,
+    execution_count, failure_count, consecutive_failures,
+    auto_disabled, auto_disabled_reason, preset_id, tags,
+    created_at, updated_at`
+```
+
+**Key Methods:**
+- **GetByID** (line 65): Single automation by ID
+- **GetAll** (line 74): All automations, optional enabled filter, hard-limited to 1000
+- **GetByVehicle** (line 106): Automations for vehicle or global
+- **GetByTriggerType** (line 134): Filter by trigger type
+- **GetEnabledByVehicleAndTrigger** (line 164): Vehicle-specific + trigger filter
+- **GetByWebhookToken** (line 202): Query `trigger_config->>'webhook_token' = $1`
+- **IncrementExecution** (line 257): Updates counters after execution
+- **SetAutoDisabled** (line 281): Sets auto-disabled state with reason
+
+---
+
+### **5. DATABASE MIGRATION**
+**File:** `D:\repos\teslasync\migrations\000109_add_automations.up.sql`
+
+#### **automations table** (lines 2-44)
+```sql
+CREATE TABLE IF NOT EXISTS automations (
+    id                  BIGSERIAL PRIMARY KEY,
+    name                TEXT NOT NULL,
+    description         TEXT NOT NULL DEFAULT '',
+    vehicle_id          BIGINT REFERENCES vehicles(id) ON DELETE CASCADE,
+    enabled             BOOLEAN NOT NULL DEFAULT true,
+    trigger_type        TEXT NOT NULL,  -- cron, battery, vehicle_state, geofence, mqtt, webhook, sunrise_sunset, energy, calendar
+    trigger_config      JSONB NOT NULL DEFAULT '{}',
+    conditions          JSONB NOT NULL DEFAULT '[]',
+    actions             JSONB NOT NULL DEFAULT '[]',
+    cooldown_minutes    INTEGER NOT NULL DEFAULT 0,
+    max_executions_hour INTEGER NOT NULL DEFAULT 0,
+    stop_on_failure     BOOLEAN NOT NULL DEFAULT false,
+    notify_on_run       BOOLEAN NOT NULL DEFAULT false,
+    notify_on_failure   BOOLEAN NOT NULL DEFAULT true,
+    seasonal_start      INTEGER,  -- month 1-12
+    seasonal_end        INTEGER,
+    priority            INTEGER NOT NULL DEFAULT 50,
+    last_triggered_at   TIMESTAMPTZ,
+    last_success_at     TIMESTAMPTZ,
+    last_failure_at     TIMESTAMPTZ,
+    execution_count     BIGINT NOT NULL DEFAULT 0,
+    failure_count       BIGINT NOT NULL DEFAULT 0,
+    consecutive_failures INTEGER NOT NULL DEFAULT 0,
+    auto_disabled       BOOLEAN NOT NULL DEFAULT false,
+    auto_disabled_reason TEXT,
+    preset_id           TEXT,
+    tags                TEXT[] NOT NULL DEFAULT '{}',
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_automations_vehicle ON automations (vehicle_id);
+CREATE INDEX IF NOT EXISTS idx_automations_enabled ON automations (enabled) WHERE enabled = true;
+CREATE INDEX IF NOT EXISTS idx_automations_trigger ON automations (trigger_type);
+```
+
+#### **automation_history table** (lines 51-82)
+```sql
+CREATE TABLE IF NOT EXISTS automation_history (
+    id                  BIGSERIAL PRIMARY KEY,
+    automation_id       BIGINT NOT NULL REFERENCES automations(id) ON DELETE CASCADE,
+    automation_name     TEXT NOT NULL,
+    vehicle_id          BIGINT,
+    triggered_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    completed_at        TIMESTAMPTZ,
+    duration_ms         INTEGER,
+    trigger_type        TEXT NOT NULL,
+    trigger_snapshot    JSONB NOT NULL DEFAULT '{}',
+    conditions_met      BOOLEAN NOT NULL DEFAULT true,
+    conditions_snapshot JSONB NOT NULL DEFAULT '[]',
+    actions_executed    JSONB NOT NULL DEFAULT '[]',
+    actions_total       INTEGER NOT NULL DEFAULT 0,
+    actions_succeeded   INTEGER NOT NULL DEFAULT 0,
+    actions_failed      INTEGER NOT NULL DEFAULT 0,
+    status              TEXT NOT NULL DEFAULT 'running',
+    error               TEXT,
+    fsm_state           TEXT,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_automation_history_automation ON automation_history (automation_id, triggered_at DESC);
+CREATE INDEX IF NOT EXISTS idx_automation_history_status ON automation_history (status);I now have a full picture of the architecture. Let me get a design critique before implementing:
+CREATE INDEX IF NOT EXISTS idx_automation_history_time ON automation_history (triggered_at DESC);
+```
+
+**automation_variables table** (lines 89-95)
+```sql
+CREATE TABLE IF NOT EXISTS automation_variables (
+    id          BIGSERIAL PRIMARY KEY,
+    key         TEXT NOT NULL UNIQUE,
+    value       TEXT NOT NULL DEFAULT '',
+    vehicle_id  BIGINT,
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+---
+
+### **6. FSM HANDLER INTEGRATION**
+**File:** `D:\repos\teslasync\internal\api\fsm_handler.go`
+
+#### **FSMTransitionRepo Integration** (line 24)
+```go
+type FSMHandler struct {
+    mu        sync.Mutex
+    machines  map[int64]*fsm.VehicleFSM
+    drives    map[int64]*drive.SessionFSM
+    charges   map[int64]*charge.SessionFSM
+    stateRepo   *database.VehicleStateRepo
+    vehicleRepo *database.VehicleRepo
+    transRepo   *database.FSMTransitionRepo  // ΓåÉ FSM transition logs
+}
+```
+
+#### **FSM Transition Logging** (line 76)
+```go
+if err := a.transRepo.Insert(ctx, vehicleID, "vehicle", nil,
+    string(from), string(to), sctx.MatchedTrigger, sctx.MatchedGuard,
+    sctx.TransitionMode, snapshot, 0); err != nil {
+    log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("fsm: failed to log transition")
+}
+```
+
+**Snapshot includes:**
+- `Gear` (string)
+- `Speed` (float)
+- `IsGearCapable` (bool)
+- `IsCharging` (bool)
+
+**For execution history detail view:** Can include `fsm_state` and call `transRepo.GetByAutomationExecution(...)` for related FSM transitions
+
+---
+
+### **7. EXISTING HANDLER PATTERNS**
+
+#### **Pagination Pattern** (from helpers.go, lines 87-100)
+```go
+func pagination(r *http.Request) (limit, offset int) {
+    limit = 50                    // default
+    offset = 0                    // default
+    if v := r.URL.Query().Get("limit"); v != "" {
+        if l, err := strconv.Atoi(v); err == nil && l > 0 && l <= 1000 {
+            limit = l
+        }
+    }
+    if v := r.URL.Query().Get("offset"); v != "" {
+        if o, err := strconv.Atoi(v); err == nil && o >= 0 {
+            offset = o
+        }
+    }
+    return
+}
+```
+
+#### **URL Parameter Extraction** (helpers.go, line 104)
+```go
+func urlParamInt64(r *http.Request, key string) (int64, error) {
+    return strconv.ParseInt(chi.URLParam(r, key), 10, 64)
+}
+```
+
+#### **Response Writing** (helpers.go, lines 17-68)
+```go
+func writeJSON(w http.ResponseWriter, status int, data interface{}) {
+    w.Header().Set("Content-Type", "application/json; charset=utf-8")
+    w.WriteHeader(status)
+    if data != nil {
+        _ = json.NewEncoder(w).Encode(data)
+    }
+}
+
+func writeError(w http.ResponseWriter, status int, msg string) {
+    writeJSON(w, status, map[string]string{
+        "error": msg,
+        "code":  httpStatusCode(status),
+    })
+}
+```
+
+#### **Drive Handler List with Pagination** (drive_handler.go, lines 29-51)
+```go
+func (h *DriveHandler) ListByVehicle(w http.ResponseWriter, r *http.Request) {
+    vehicleID, _ := parseInt64(r.URL.Query().Get("vehicle_id"))
+    limit, offset := pagination(r)                           // ΓåÉ Gets pagination params
+    startTime, endTime := parseDateRange(r)                  // ΓåÉ Optional date filtering
+    drives, err := h.driveRepo.GetByVehicle(r.Context(), vehicleID, limit, offset, startTime, endTime)
+    if err != nil {
+        log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("failed to list drives")
+        writeError(w, http.StatusInternalServerError, "failed to list drives")
+        return
+    }
+    writeJSON(w, http.StatusOK, drives)
+}
+```
+
+#### **Detail View Pattern** (drive_handler.go, lines 95-100)
+```go
+type driveDetailResponse struct {
+    *models.Drive
+    Telemetry []*models.DriveTelemetryReading `json:"telemetry"`
+    Positions []*models.Position               `json:"positions"`
+}
+```
+
+---
+
+## **SUMMARY FOR EXECUTION HISTORY ENDPOINTS**
+
+### **Recommended Endpoints**
+```
+GET  /automations/{id}/executions           # List with pagination
+GET  /automations/{id}/executions/{historyID} # Detail with FSM logs
+```
+
+### **Key Implementation Points**
+
+1. **List Endpoint Parameters:**
+   - Use existing `pagination()` helper: `limit` (default 50, max 100), `offset` (default 0)
+   - Optional: `status`, `start_date`, `end_date` filters
+   - Call: `historyRepo.GetByAutomation(ctx, automationID, limit, offset)`
+
+2. **Detail Endpoint Response:**
+   - Embed `models.AutomationHistory` with computed fields
+   - Add nested `fsm_transitions` array from `transRepo`
+   - Show `trigger_snapshot`, `conditions_snapshot`, `actions_executed` as formatted JSON
+
+3. **Response Helpers:**
+   - Use `writeJSON(w, http.StatusOK, data)` for success
+   - Use `writeError(w, status, "message")` for errors
+   - Use `urlParamInt64(r, "id")` for path parameters
+
+4. **SQL Indices Already Present:**
+   - `idx_automation_history_automation` (automation_id, triggered_at DESC) ΓÇö optimized for detail listing
+   - `idx_automation_history_status` ΓÇö for status filtering
+   - `idx_automation_history_time` ΓÇö for recent queries
+
+5. **Route Registration Pattern:**
+   ```go
+   r.Route("/{id}/executions", func(r chi.Router) {
+       r.Get("/", automationHandler.ListExecutions)
+       r.Route("/{historyID}", func(r chi.Router) {
+           r.Get("/", automationHandler.GetExecution)
+       })
+   })
+   ```
+
+Overall shape is solid, but I see **2 blocking gaps** and a few important semantics to lock down.
+
+### Blocking issues
+
+1. **FSM detail correlation is too weak**
+   - **Issue:** `GetHistoryDetail` only has `vehicle_id` + time window, but `fsm_transition_repo.Query()` returns **all FSM transitions for that vehicle** in that window, optionally filtered by `fsm_type`/`instance_id` (`internal/database/fsm_transition_repo.go:49-123`).
+   - **Impact:** YouΓÇÖll likely return unrelated vehicle/drive/charge transitions, not ΓÇ£this automation executionΓÇÖs FSM transitionsΓÇ¥.
+   - **Fix:** Either:
+     - persist a correlation key on history rows and FSM transitions, or
+     - persist the relevant `fsm_type`/instance reference on the history row, or
+     - **do not ship `fsm_transitions` yet**; return empty until correlation is reliable.
+
+2. **Your summary stats wonΓÇÖt match filtered list results**
+   - **Issue:** `ListHistory` / `ListAutomationHistory` apply `status`/`since` filters, but your planned `GetStats(ctx, automationID)` does not.
+   - **Impact:** Response can say `total_executions=500` while page shows only filtered subset; `success_rate` / `avg_duration_ms` become misleading.
+   - **Fix:** Make stats accept the **same filters** as the list query, or explicitly return both `filtered_summary` and `overall_summary`.
+
+### Important semantics to define now
+
+3. **`success_rate` denominator is undefined**
+   - Statuses include `running`, `success`, `partial`, `failed`, `skipped`, `cancelled` (`migrations/000109_add_automations.up.sql:74-76`).
+   - `COUNT(*)` with `status='success'` is probably wrong.
+   - **Recommendation:** Exclude at least `running`; probably also exclude `skipped`. Decide whether `partial` counts as failure, success, or separate.
+
+4. **`since` should follow existing API convention**
+   - Existing helper parses **date-only** `YYYY-MM-DD` (`internal/api/helpers.go:108-121`).
+   - **Recommendation:** Accept both `YYYY-MM-DD` and RFC3339, normalize date-only to UTC midnight, and document `triggered_at >= since`.
+
+5. **Validate automation existence for `/automations/{id}/history`**
+   - **Recommendation:** Yes, validate and return **404**.
+   - Otherwise you conflate:
+     - nonexistent automation
+     - real automation with zero history
+
+### Direct answers to your numbered concerns
+
+1. **Route ordering:**  
+   Your proposed layout is safe. Static `/history` under `/automations` should not be captured as `{id}`. Defining it before `/{id}` is fine.
+
+2. **FSM upper bound / nil vehicle:**  
+   - If `completed_at == nil` **and status is running**, `time.Now().UTC()` is reasonable.
+   - If `vehicle_id == nil`, return `fsm_transitions: []`.
+   - Bigger issue: even with bounds, the transitions may be unrelated unless you add correlation.
+
+3. **Stats query:**  
+   Use **one aggregate SQL query** with `COUNT(*) FILTER (...)` / `AVG(...)`, not multiple scalar queries.
+
+4. **Since parsing:**  
+   DonΓÇÖt do RFC3339-only. Support date-only at minimum.
+
+5. **Existence check:**  
+   YesΓÇöreturn 404 for invalid automation ID.
+
+### One extra edge case
+
+- **Long-running executions + FSM detail pagination**
+  - `fsm_transition_repo.Query()` is paginated.
+  - If you include transitions in detail, cap them or paginate them; otherwise a running or long-lived execution can dump too much unrelated data.
+
+If you want, I can turn this into a ΓÇ£recommended API contractΓÇ¥ for the 3 endpoints.
+
+Good critique. Key takeaways I'm adopting:
+
+1. **FSM correlation is weak** ΓÇö I'll scope transitions using `vehicle_id` + time window + cap at 100, and document the limitation. This is the best we can do without a correlation key.
+2. **Stats must use same filters** ΓÇö I'll pass `status`/`since` into the stats query.
+3. **Success rate denominator** ΓÇö exclude `running` and `skipped`; count `partial` separately.
+4. **Since parsing** ΓÇö support both `YYYY-MM-DD` and RFC3339.
+5. **Validate automation exists** for `/{id}/history` ΓåÆ return 404.
+
+Let me implement.
+
+Now let me implement all three files. Starting with the repo layer:
+
+Now let me add the `strings` import needed for the `buildHistoryWhere` function (actually, looking at it, I only need `fmt` which is already imported). Let me verify the imports are correct:
+
+Good, all imports are present. Now let me update the handler. I need to add the `historyRepo` and `fsmTransRepo` fields and the three new handler methods:
+
+Now add the three history handler methods. I'll add them after the ReEnable method and before the Helpers section:
+
+Now I need to add the `time` import to the handler file:
+
+Now register the routes in router.go:
+
+Now let me build and verify:
+
+Build passes. Now let me run the tests:
+
+The `TestAllowedCommandsWhitelist` failure is pre-existing (command list count mismatch) and unrelated to my changes. Database tests pass. Let me verify:
+
+Good ΓÇö no automation-specific test failures (there are no tests matching "Automation"). Let me also run `go vet` to check for any issues:
+
+Clean. Now let me write tests for the new handler methods:
+
+Let me check the existing database test patterns:
+
+I see ΓÇö tests here are unit tests that don't require a database. Let me write a unit test for the `buildHistoryWhere` helper and for the `parseHistoryFilter` logic. Let me also check the `itoa` helper used in the FSM repo:
+
+Good, `itoa` exists in the same package. Now let me create the test file:
+
+All tests pass. Let me now commit the changes:
+
+

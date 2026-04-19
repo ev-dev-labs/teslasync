@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/sony/gobreaker"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
@@ -38,6 +39,18 @@ func ReadyHandler(db *database.DB, tc *tesla.Client) http.HandlerFunc {
 			checks["database"] = "unhealthy"
 		} else {
 			checks["database"] = "ok"
+		}
+
+		// Check write circuit breaker — if open, DB writes are failing
+		if db.WriteBreaker != nil {
+			state := db.WriteBreaker.State()
+			if state == gobreaker.StateOpen {
+				checks["database_writes"] = "unhealthy"
+			} else if state == gobreaker.StateHalfOpen {
+				checks["database_writes"] = "degraded"
+			} else {
+				checks["database_writes"] = "ok"
+			}
 		}
 
 		if tc.HasValidToken() {
@@ -178,8 +191,9 @@ func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Cli
 }
 
 // ExtendedHealthCheck returns a detailed health check with per-component latency,
-// pool stats, and system information.
-func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor) http.HandlerFunc {
+// pool stats, and system information. bufferStats is optional — if non-nil, it adds
+// telemetry write buffer statistics.
+func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor, bufferStats func() (int, int)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		results := make(map[string]interface{})
 
@@ -195,12 +209,27 @@ func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor) http
 		}
 
 		// DB pool stats
-		poolStats := db.Pool.Stat()
-		results["database_pool"] = map[string]interface{}{
-			"status":         "healthy",
-			"total_conns":    poolStats.TotalConns(),
-			"idle_conns":     poolStats.IdleConns(),
-			"acquired_conns": poolStats.AcquiredConns(),
+		poolStatsMap := db.PoolStats()
+		poolStatsMap["status"] = "healthy"
+		results["database_pool"] = poolStatsMap
+
+		// DB write circuit breaker
+		if db.WriteBreaker != nil {
+			counts := db.WriteBreaker.Counts()
+			cbState := db.WriteBreaker.State().String()
+			cbStatus := "healthy"
+			if cbState == "half-open" {
+				cbStatus = "degraded"
+			} else if cbState == "open" {
+				cbStatus = "unhealthy"
+			}
+			results["db_circuit_breaker"] = map[string]interface{}{
+				"status":               cbStatus,
+				"state":                cbState,
+				"consecutive_failures": counts.ConsecutiveFailures,
+				"total_failures":       counts.TotalFailures,
+				"total_successes":      counts.TotalSuccesses,
+			}
 		}
 
 		// Component statuses from health monitor — don't overwrite direct checks
@@ -211,6 +240,16 @@ func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor) http
 					"last_check":           comp.LastCheck,
 					"consecutive_failures": comp.ConsecFails,
 				}
+			}
+		}
+
+		// Telemetry write buffer stats
+		if bufferStats != nil {
+			driveBuf, chargeBuf := bufferStats()
+			results["telemetry_buffers"] = map[string]interface{}{
+				"status":          "healthy",
+				"drive_buffered":  driveBuf,
+				"charge_buffered": chargeBuf,
 			}
 		}
 
@@ -291,6 +330,7 @@ func MetricsCatalogHandler() http.HandlerFunc {
 		{Name: "teslasync_db_query_duration_seconds", Type: "histogram", Help: "Database query duration", Labels: []string{"operation", "table"}},
 		{Name: "teslasync_db_pool_connections", Type: "gauge", Help: "Database connection pool stats", Labels: []string{"state"}},
 		{Name: "teslasync_db_transactions_total", Type: "counter", Help: "Database transactions", Labels: []string{"result"}},
+		{Name: "teslasync_db_circuit_breaker_state", Type: "gauge", Help: "DB circuit breaker state: 0=closed, 1=half-open, 2=open", Labels: []string{"breaker"}},
 
 		// Alerts & Notifications
 		{Name: "teslasync_alerts_evaluated_total", Type: "counter", Help: "Total alert rule evaluations"},

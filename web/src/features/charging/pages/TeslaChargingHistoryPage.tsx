@@ -1,0 +1,334 @@
+import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  Zap, DollarSign, RefreshCw,
+  MapPin, Receipt, TrendingUp, Gauge, Download,
+} from 'lucide-react';
+import { PageContainer, Grid } from '@/components/layout';
+import { GlassPanel, Button, Select, DataTable, type Column } from '@/components/ui';
+import { StatCard } from '@/components/data-display';
+import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
+import {
+  ChartContainer, ChartTooltip, ChartGradient, chartGrid, axisTickSm,
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+} from '@/components/charts';
+import { EmptyState } from '@/components/feedback';
+import {
+  useTeslaChargingHistory,
+  useRefreshTeslaChargingHistory,
+  getTeslaChargingInvoiceURL,
+  type TeslaChargingHistoryEntry,
+} from '@/api/hooks/useCharging';
+import { useVehicles } from '@/api/hooks/useVehicles';
+import { usePageTitle } from '@/hooks/usePageTitle';
+import { formatDateTime } from '@/lib/dateFormat';
+import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { cn } from '@/lib/cn';
+
+/** Compute duration in minutes between two ISO timestamps */
+function durationMinutes(start: string, stop: string | null): number | null {
+  if (!stop) return null;
+  const ms = new Date(stop).getTime() - new Date(start).getTime();
+  return ms > 0 ? Math.round(ms / 60_000) : null;
+}
+
+/** Format duration in minutes to "Xh Ym" */
+function formatDurationMinutes(minutes: number | null): string {
+  if (minutes == null) return '—';
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
+/** Aggregate entries by month for the spending chart */
+function buildMonthlySpending(entries: TeslaChargingHistoryEntry[]): { month: string; total: number }[] {
+  const map = new Map<string, number>();
+  for (const e of entries) {
+    const d = new Date(e.charge_start_datetime);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    map.set(key, (map.get(key) ?? 0) + (e.total_due ?? 0));
+  }
+  return Array.from(map.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([month, total]) => ({ month, total }));
+}
+
+const gridCols = { default: 1, sm: 2, lg: 4 } as const;
+
+export default function TeslaChargingHistoryPage() {
+  const { t } = useTranslation();
+  usePageTitle(t('tesla_charging.title', 'Tesla Charging History'));
+
+  const { data: vehicles } = useVehicles();
+  const [selectedVin, setSelectedVin] = useState<string>('');
+  const { data: response, isLoading, error } = useTeslaChargingHistory(selectedVin || undefined);
+  const refreshMutation = useRefreshTeslaChargingHistory();
+
+  const entries = response?.entries ?? [];
+  const summary = response?.summary ?? { total_sessions: 0, total_kwh: null, total_spend: null, avg_cost_per_kwh: null };
+
+  const vehicleOptions = useMemo(() => {
+    const opts = [{ value: '', label: t('tesla_charging.allVehicles', 'All Vehicles') }];
+    for (const v of vehicles ?? []) {
+      opts.push({ value: v.vin, label: `${v.display_name} (${v.vin.slice(-6)})` });
+    }
+    return opts;
+  }, [vehicles, t]);
+
+  const monthlyData = useMemo(() => buildMonthlySpending(entries), [entries]);
+
+  const handleRefresh = () => {
+    refreshMutation.mutate(selectedVin ? { vin: selectedVin } : undefined);
+  };
+
+  const columns: Column<TeslaChargingHistoryEntry>[] = useMemo(() => [
+    {
+      key: 'date',
+      header: t('tesla_charging.col.date', 'Date'),
+      render: (row) => (
+        <span className="text-sm text-white/90">{formatDateTime(row.charge_start_datetime)}</span>
+      ),
+      sortable: true,
+    },
+    {
+      key: 'location',
+      header: t('tesla_charging.col.location', 'Location'),
+      render: (row) => (
+        <div className="flex items-center gap-1.5">
+          <MapPin className="h-3.5 w-3.5 text-white/40 shrink-0" />
+          <span className="text-sm text-white/80 truncate max-w-[200px]">
+            {row.site_location_name || '—'}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: 'duration',
+      header: t('tesla_charging.col.duration', 'Duration'),
+      render: (row) => (
+        <span className="text-sm text-white/80">
+          {formatDurationMinutes(durationMinutes(row.charge_start_datetime, row.charge_stop_datetime))}
+        </span>
+      ),
+    },
+    {
+      key: 'energy',
+      header: t('tesla_charging.col.energy', 'Energy (kWh)'),
+      render: (row) => (
+        <span className="text-sm font-medium text-cyan-400">
+          {row.usage_kwh != null ? fmtNumber(row.usage_kwh, 1) : '—'}
+        </span>
+      ),
+      sortable: true,
+    },
+    {
+      key: 'cost',
+      header: t('tesla_charging.col.cost', 'Cost'),
+      render: (row) => (
+        <span className="text-sm font-medium text-emerald-400">
+          {row.total_due != null
+            ? `${row.currency_code ?? '$'}${fmtNumber(row.total_due, 2)}`
+            : '—'}
+        </span>
+      ),
+      sortable: true,
+    },
+    {
+      key: 'rate',
+      header: t('tesla_charging.col.rate', 'Rate'),
+      render: (row) => (
+        <span className="text-sm text-white/70">
+          {row.rate_base != null
+            ? `${fmtNumber(row.rate_base, 3)}/${row.pricing_type ?? 'kWh'}`
+            : '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'invoice',
+      header: t('tesla_charging.col.invoice', 'Invoice'),
+      render: (row) => (
+        <span className="text-sm">
+          {row.has_invoice && row.invoice_content_id ? (
+            <a
+              href={getTeslaChargingInvoiceURL(row.invoice_content_id)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-cyan-400 hover:text-cyan-300 transition-colors"
+              title={t('tesla_charging.downloadInvoice', 'Download invoice')}
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span className="text-xs">{t('charging.invoice', 'Invoice')}</span>
+            </a>
+          ) : (
+            <span className="text-white/30">—</span>
+          )}
+        </span>
+      ),
+    },
+  ], [t]);
+
+  const [sortKey, setSortKey] = useState<string>('date');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+
+  const sortedEntries = useMemo(() => {
+    const sorted = [...entries];
+    sorted.sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case 'date':
+          cmp = a.charge_start_datetime.localeCompare(b.charge_start_datetime);
+          break;
+        case 'energy':
+          cmp = (a.usage_kwh ?? 0) - (b.usage_kwh ?? 0);
+          break;
+        case 'cost':
+          cmp = (a.total_due ?? 0) - (b.total_due ?? 0);
+          break;
+        default:
+          cmp = a.charge_start_datetime.localeCompare(b.charge_start_datetime);
+      }
+      return sortDir === 'desc' ? -cmp : cmp;
+    });
+    return sorted;
+  }, [entries, sortKey, sortDir]);
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortDir('desc');
+    }
+  };
+
+  return (
+    <PageContainer
+      title={t('tesla_charging.title', 'Tesla Charging History')}
+      subtitle={t('tesla_charging.subtitle', 'Supercharger & DC fast charging billing records from Tesla')}
+      loading={isLoading}
+      error={error as Error | null}
+    >
+      {/* Controls bar */}
+      <FadeIn>
+        <GlassPanel className="p-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <Select
+              options={vehicleOptions}
+              value={selectedVin}
+              onChange={(e) => setSelectedVin(e.target.value)}
+              className="w-56"
+            />
+            <Button
+              onClick={handleRefresh}
+              disabled={refreshMutation.isPending}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={cn('h-4 w-4', refreshMutation.isPending && 'animate-spin')} />
+              {refreshMutation.isPending
+                ? t('tesla_charging.refreshing', 'Syncing...')
+                : t('tesla_charging.refresh', 'Refresh from Tesla')}
+            </Button>
+            {response && entries.length > 0 && (
+              <span className="ml-auto text-xs text-white/40">
+                {t('tesla_charging.lastSync', 'Last synced')}: {formatDateTime(entries[0]?.fetched_at)}
+              </span>
+            )}
+          </div>
+        </GlassPanel>
+      </FadeIn>
+
+      {/* Summary stats */}
+      <FadeIn delay={0.05}>
+        <StaggerContainer>
+          <Grid cols={gridCols} gap={4}>
+            <StaggerItem>
+              <StatCard
+                label={t('tesla_charging.stats.sessions', 'Total Sessions')}
+                value={fmtInt(summary.total_sessions)}
+                icon={<Zap className="h-5 w-5 text-cyan-400" />}
+                loading={isLoading}
+              />
+            </StaggerItem>
+            <StaggerItem>
+              <StatCard
+                label={t('tesla_charging.stats.energy', 'Total Energy')}
+                value={summary.total_kwh != null ? fmtNumber(summary.total_kwh, 1) : '—'}
+                unit="kWh"
+                icon={<Gauge className="h-5 w-5 text-yellow-400" />}
+                loading={isLoading}
+              />
+            </StaggerItem>
+            <StaggerItem>
+              <StatCard
+                label={t('tesla_charging.stats.spend', 'Total Spend')}
+                value={summary.total_spend != null ? `$${fmtNumber(summary.total_spend, 2)}` : '—'}
+                icon={<DollarSign className="h-5 w-5 text-emerald-400" />}
+                loading={isLoading}
+              />
+            </StaggerItem>
+            <StaggerItem>
+              <StatCard
+                label={t('tesla_charging.stats.avgCost', 'Avg Cost/kWh')}
+                value={summary.avg_cost_per_kwh != null ? `$${fmtNumber(summary.avg_cost_per_kwh, 3)}` : '—'}
+                icon={<TrendingUp className="h-5 w-5 text-purple-400" />}
+                loading={isLoading}
+              />
+            </StaggerItem>
+          </Grid>
+        </StaggerContainer>
+      </FadeIn>
+
+      {/* Monthly spending chart */}
+      <FadeIn delay={0.1}>
+        <ChartContainer title={t('tesla_charging.monthlySpending', 'Monthly Spending')} height={280}>
+          {monthlyData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={monthlyData}>
+                <defs>
+                  <ChartGradient id="spendGrad" color="#22d3ee" opacity={0.6} />
+                </defs>
+                {chartGrid}
+                <XAxis dataKey="month" tick={axisTickSm} />
+                <YAxis tick={axisTickSm} tickFormatter={(v: number) => `$${v}`} />
+                <Tooltip content={<ChartTooltip />} />
+                <Bar dataKey="total" fill="url(#spendGrad)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyState
+              icon={<Receipt className="h-10 w-10" />}
+              message={t('tesla_charging.noChartData', 'No spending data yet. Click "Refresh from Tesla" to sync.')}
+            />
+          )}
+        </ChartContainer>
+      </FadeIn>
+
+      {/* Data table */}
+      <FadeIn delay={0.15}>
+        <GlassPanel className="p-4">
+          <h3 className="text-lg font-semibold text-white/90 mb-4">
+            {t('tesla_charging.sessions', 'Charging Sessions')}
+          </h3>
+          {entries.length > 0 ? (
+            <DataTable
+              columns={columns}
+              data={sortedEntries}
+              keyExtractor={(row) => row.session_id}
+              sortKey={sortKey}
+              sortDir={sortDir}
+              onSort={handleSort}
+              pagination={{ defaultPageSize: 25, pageSizeOptions: [25, 50, 100] }}
+            />
+          ) : (
+            <EmptyState
+              icon={<Zap className="h-10 w-10" />}
+              message={t('tesla_charging.noData', 'No Tesla charging history yet. Click "Refresh from Tesla" to import your Supercharger sessions.')}
+            />
+          )}
+        </GlassPanel>
+      </FadeIn>
+    </PageContainer>
+  );
+}

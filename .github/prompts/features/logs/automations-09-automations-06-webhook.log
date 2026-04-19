@@ -1,0 +1,29 @@
+Now let me look at the router, models, existing automation handler, and an existing trigger test for patterns:
+
+Let me check the models, find the mock engine, and look at the router for automation routes:
+
+Let me check the router and see if there's an existing automation handler:
+
+Now I have a thorough understanding of the codebase patterns. Let me implement the webhook trigger.
+
+Now add the `GetByWebhookToken` method to the automation repo:
+
+Now create the tests:
+
+Now let's build and run the tests:
+
+Build passes. Now run the webhook tests:
+
+Name collision with `strPtr` ΓÇö let me remove mine since it's already defined in another test file:
+
+All 18 tests pass. Let me also run the HMAC-specific tests and verify the full test suite still passes:
+
+Now run the full trigger test suite to verify no regressions:
+
+Let me see which test failed ΓÇö likely a cron test with a timeout:
+
+All non-cron tests pass. The failure is a pre-existing cron test timeout ΓÇö not related to my changes. Let me confirm:
+
+Pre-existing timeout issue in the cron suite ΓÇö not related to my changes. All webhook + trigger tests pass. Let me commit:
+
+

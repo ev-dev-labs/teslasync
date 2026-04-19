@@ -222,6 +222,12 @@ func WorkersHealthHandler() http.HandlerFunc {
 				envOrDefault("EXPORT_WORKER_HOST", "export-worker"),
 				envOrDefault("EXPORT_WORKER_PORT", "8082")),
 		},
+		{
+			"automation-worker",
+			fmt.Sprintf("http://%s:%s/healthz",
+				envOrDefault("AUTOMATION_WORKER_HOST", "automation-worker"),
+				envOrDefault("AUTOMATION_WORKER_PORT", "8083")),
+		},
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {

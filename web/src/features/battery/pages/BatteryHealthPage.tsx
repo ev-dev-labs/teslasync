@@ -528,6 +528,8 @@ export default function BatteryHealthPage() {
         <ChartContainer
           title={t('battery.chart.capacityTrend', 'Capacity Trend & Prediction')}
           subtitle={t('battery.chart.dashedProjected', 'Dashed = projected')}
+          exportable
+          exportFilename="capacity-trend"
         >
           {predictionChartData.length > 0 ? (
             <div className="h-48 sm:h-72">
@@ -560,7 +562,7 @@ export default function BatteryHealthPage() {
 
       {/* ── 6. Range Trend ───────────────────────────────────────── */}
       <FadeIn delay={0.25}>
-        <ChartContainer title={t('battery.chart.rangeTrend', 'Estimated Range Over Time')}>
+        <ChartContainer title={t('battery.chart.rangeTrend', 'Estimated Range Over Time')} exportable exportFilename="range-trend">
           {rangeTrend.length > 0 ? (
             <div className="h-44 sm:h-60">
               <ResponsiveContainer width="100%" height="100%">
@@ -715,7 +717,7 @@ export default function BatteryHealthPage() {
       {/* ── 9. AC/DC Energy Breakdown ────────────────────────────── */}
       <FadeIn delay={0.4}>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ChartContainer title={t('battery.chart.acdc', 'AC / DC Energy Breakdown')}>
+          <ChartContainer title={t('battery.chart.acdc', 'AC / DC Energy Breakdown')} exportable exportFilename="energy-breakdown">
             {energyBreakdown ? (
               <div className="h-52">
                 <ResponsiveContainer width="100%" height="100%">

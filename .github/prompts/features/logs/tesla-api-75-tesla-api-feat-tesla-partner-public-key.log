@@ -1,0 +1,73 @@
+Let me look at the frontend hook, the DevTools page, and the settings repo to understand the persistence pattern.
+
+Now let me understand the DevTools page structure ΓÇö specifically where the partner registration section is and how the `apiFetch` helper works.
+
+Let me find how the tools are arranged on the page and see the ToolCard/ResultPanel/CopyButton patterns.
+
+Now let me see the area where tools are rendered (around line 1102) and the ToolCard/ResultPanel definitions:
+
+Now I have all the context I need. Let me also check the `isJSON` helper function since it's used in the `RegisterPartner` handler:
+
+Good. Now let me send the plan to the rubber-duck agent for validation before implementing.
+
+Mostly solid. The main gaps I see:
+
+1. **It doesnΓÇÖt actually ΓÇ£verifyΓÇ¥ the key yet** ΓÇö **blocking**  
+   Your UI logic treats ΓÇ£Tesla returned a `public_key`ΓÇ¥ as success, but that only proves *some* key is registered for that domain. It does **not** prove it matches TeslaSyncΓÇÖs local key in `tesla_public_key`.  
+   **Fix:** read the local PEM from `tesla_public_key`, normalize/parse both PEMs, and return a comparison result like `matches_local`, `local_fingerprint`, `remote_fingerprint`.
+
+2. **Returning 502 on any error will hide useful upstream diagnostics** ΓÇö **blocking**  
+   `doRequestWithToken()` can return both a body and a real Tesla status for 401/404/429/etc. If you always convert that to 502, the dev tool becomes less useful. Existing dev-tools handlers generally pass through Tesla JSON when possible.  
+   **Fix:** forward TeslaΓÇÖs JSON body + upstream status when `isJSON(data)` is true; only synthesize a 502 wrapper for non-JSON/no-body cases.
+
+3. **DonΓÇÖt build `?domain=` via raw string interpolation** ΓÇö **non-blocking but real**  
+   In Go, use `url.Values`. In React, use `encodeURIComponent(domain)`.  
+   **Fix:** avoid `/...public_key?domain=${domain}` in both layers.
+
+4. **Skip persistence is the right call** ΓÇö **no issue**  
+   I agree with Option A. This endpoint is diagnostic; caching/persisting the remote key would add complexity without helping.
+
+5. **Inline `apiFetch()` in `DevToolsPage` is also the right call** ΓÇö **no issue**  
+   That matches the existing page pattern better than adding a hook to `useAdmin.ts`.
+
+6. **One missing piece: tests** ΓÇö **recommended**  
+   Add at least:
+   - client test: builds the correct encoded path for `domain`
+   - handler test: passes through upstream status/body
+   - handler test: `matches_local=true/false` behavior
+
+So: **route placement and no persistence look fine; the big correction is that the endpoint should compare remote vs local key, otherwise itΓÇÖs fetch-only, not verification.**Good feedback. Key adjustments: (1) compare remote vs local key for true verification, (2) forward Tesla's response/status properly, (3) URL-encode domain in both layers. Now implementing.
+
+Good, `net/url` is already imported. Now let me add the Tesla client method after `GetPartnerFleetTelemetryErrors`:
+
+Now add the handler. Let me check the end of the devtools_handler.go to find a good place for it, and look at how the handler reads from `tesla_public_key`:
+
+Now let me add the `PartnerPublicKey` handler right after `RegisterPartner` and before `FleetAPIInfo`. Let me find a good spot ΓÇö right after the `isJSON` function and before the Fleet Telemetry section would be clean, or right after `RegisterPartner`:
+
+I'll add the new handler right after `RegisterPartner` (after line 145) and before `FleetAPIInfo`:
+
+Now add the route in `router.go`:
+
+Let me verify the indentation is correct:
+
+Good. Now let me build the Go code to make sure it compiles:
+
+Go builds clean. Now let me add the frontend UI. Let me add the `PartnerPublicKeyTool` component to the DevTools page:
+
+I'll add the new component between `PartnerRegistrationTool` and `PublicKeySetupTool`:
+
+Now add it to the `FleetApiSection` grid:
+
+Now let me run TypeScript check:
+
+TypeScript compiles clean. Let me also verify the hook path (`/dev-tools/partner-public-key`) is correct by checking the `apiFetch` function prefixes the request client's `/api/v1`:
+
+The `apiFetch` prepends `/dev-tools/` and `request()` prepends `/api/v1`, so the full URL becomes `/api/v1/dev-tools/partner-public-key?domain=...` ΓÇö which matches the router at `/api/v1/dev-tools/partner-public-key`. 
+
+Now let me do a final verification ΓÇö rebuild Go and confirm the route shows up:
+
+Build succeeded. Let me verify the route with ripgrep:
+
+Everything checks out. Let me commit the changes:
+
+

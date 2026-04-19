@@ -8,11 +8,12 @@ interface StatCardProps {
   unit?: string;
   icon?: React.ReactNode;
   trend?: { direction: 'up' | 'down' | 'flat'; value: string; positive?: boolean };
+  sublabel?: string;
   loading?: boolean;
   className?: string;
 }
 
-export function StatCard({ label, value, unit, icon, trend, loading, className }: StatCardProps) {
+export function StatCard({ label, value, unit, icon, trend, sublabel, loading, className }: StatCardProps) {
   if (loading) {
     return (
       <Card className={className}>
@@ -39,6 +40,9 @@ export function StatCard({ label, value, unit, icon, trend, loading, className }
           <span>{trend.direction === 'up' ? '↑' : trend.direction === 'down' ? '↓' : '—'}</span>
           <span>{trend.value}</span>
         </div>
+      )}
+      {sublabel && (
+        <span className="text-xs text-gray-500 dark:text-gray-400">{sublabel}</span>
       )}
     </Card>
   );

@@ -1,0 +1,273 @@
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+
+	pahomqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+
+	"github.com/ev-dev-labs/teslasync/internal/automation"
+	"github.com/ev-dev-labs/teslasync/internal/automation/action"
+	"github.com/ev-dev-labs/teslasync/internal/automation/safety"
+	"github.com/ev-dev-labs/teslasync/internal/automation/trigger"
+	"github.com/ev-dev-labs/teslasync/internal/config"
+	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/resilience"
+	"github.com/ev-dev-labs/teslasync/internal/tesla"
+)
+
+var Version = "dev"
+
+func main() {
+	// Built-in healthcheck for distroless containers
+	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
+		port := healthPort()
+		resp, err := http.Get("http://localhost:" + port + "/healthz")
+		if err != nil || resp.StatusCode != 200 {
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to load config")
+	}
+	setupLogger(cfg.LogLevel)
+	log.Info().Str("version", Version).Msg("starting automation worker")
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// ── Database ───────────────────────────────────────────────────────
+	var db *database.DB
+	err = resilience.ConnectWithRetry(ctx, "database", 10, func(ctx context.Context) error {
+		var connErr error
+		db, connErr = database.New(ctx, cfg.Database)
+		return connErr
+	})
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to connect to database")
+	}
+	defer db.Close()
+	log.Info().Msg("database connected")
+
+	// ── MQTT (raw paho for trigger subscriptions) ──────────────────────
+	opts := pahomqtt.NewClientOptions().
+		AddBroker(cfg.MQTT.BrokerURL()).
+		SetClientID(cfg.MQTT.ClientID + "-automation-worker").
+		SetAutoReconnect(true).
+		SetCleanSession(true)
+
+	if cfg.MQTT.Username != "" {
+		opts.SetUsername(cfg.MQTT.Username)
+		opts.SetPassword(cfg.MQTT.Password)
+	}
+
+	mqttClient := pahomqtt.NewClient(opts)
+	token := mqttClient.Connect()
+	if !token.WaitTimeout(10e9) {
+		log.Fatal().Msg("MQTT connection timeout")
+	}
+	if token.Error() != nil {
+		log.Fatal().Err(token.Error()).Msg("MQTT connection failed")
+	}
+	defer mqttClient.Disconnect(1000)
+	log.Info().Msg("MQTT connected")
+
+	// ── Tesla Client ──────────────────────────────────────────────────
+	teslaClient := tesla.NewClient(cfg.Tesla)
+	log.Info().Msg("Tesla client initialised")
+
+	// ── Repositories ──────────────────────────────────────────────────
+	automationRepo := database.NewAutomationRepo(db)
+	historyRepo := database.NewAutomationHistoryRepo(db)
+	vehicleRepo := database.NewVehicleRepo(db)
+	commandLogRepo := database.NewCommandLogRepo(db)
+	settingsRepo := database.NewSettingsRepo(db)
+	notifRepo := database.NewNotificationRepo(db)
+	varRepo := database.NewAutomationVariableRepo(db)
+
+	// ── Action Chain Executor ─────────────────────────────────────────
+	chainExecutor := action.NewChainExecutor(vehicleRepo)
+
+	// Register action executors.
+	chainExecutor.Register("command", action.NewCommandExecutor(
+		vehicleRepo, commandLogRepo, settingsRepo, teslaClient,
+	))
+	chainExecutor.Register("notify", action.NewNotifyExecutor(notifRepo, vehicleRepo, nil))
+	chainExecutor.Register("set_variable", action.NewSetVariableExecutor(&variableRepoAdapter{repo: varRepo}))
+	chainExecutor.Register("wait", action.NewWaitExecutor())
+
+	// ── Safety Guards ─────────────────────────────────────────────────
+	rateLimiter := safety.NewRateLimiter(historyRepo)
+	loopDetector := safety.NewLoopDetector(
+		safety.WithDisabler(automationRepo),
+	)
+
+	// ── Engine ────────────────────────────────────────────────────────
+	engine := automation.NewEngine(
+		automationRepo, historyRepo, chainExecutor,
+		automation.WithRateLimiter(rateLimiter),
+		automation.WithLoopDetector(loopDetector),
+		automation.WithAuditor(automation.NewAuditor(nil)),
+	)
+
+	// ── Trigger Managers ──────────────────────────────────────────────
+	// Triggers reference engine for the AutomationEngine.Evaluate callback.
+	// Then we attach them back to the engine for lifecycle management.
+
+	cronTrig := trigger.NewCronTrigger(automationRepo, engine)
+	engine.SetCronTrigger(cronTrig)
+
+	mqttTrig := trigger.NewMQTTTrigger(automationRepo, engine, mqttClient)
+	engine.SetMQTTTrigger(mqttTrig)
+
+	sunTrig := trigger.NewSunriseSunsetTrigger(automationRepo, nil, engine)
+	engine.SetSunriseSunsetTrigger(sunTrig)
+
+	batteryTrig := trigger.NewBatteryTrigger(automationRepo, engine)
+	engine.SetBatteryTrigger(batteryTrig)
+
+	vehicleStateTrig := trigger.NewVehicleStateTrigger(automationRepo, engine)
+	engine.SetVehicleStateTrigger(vehicleStateTrig)
+
+	energyTrig := trigger.NewEnergyTrigger(automationRepo, engine)
+	engine.SetEnergyTrigger(energyTrig)
+
+	webhookTrig := trigger.NewWebhookTrigger(automationRepo, engine)
+	engine.SetWebhookTrigger(webhookTrig)
+
+	// ── Start Engine ──────────────────────────────────────────────────
+	if err := engine.Start(ctx); err != nil {
+		log.Error().Err(err).Msg("engine start had errors (non-fatal)")
+	}
+
+	// ── Subscribe to Reload Channel ───────────────────────────────────
+	reloadTopic := cfg.MQTT.Prefix + "/automations/reload"
+	reloadToken := mqttClient.Subscribe(reloadTopic, 1, func(_ pahomqtt.Client, msg pahomqtt.Message) {
+		log.Info().
+			Str("topic", msg.Topic()).
+			Str("payload", string(msg.Payload())).
+			Msg("received automation reload signal")
+		if err := engine.Reload(ctx); err != nil {
+			log.Error().Err(err).Msg("failed to reload engine after signal")
+		}
+	})
+	if !reloadToken.WaitTimeout(10e9) {
+		log.Error().Msg("MQTT subscribe timeout for reload channel")
+	} else if reloadToken.Error() != nil {
+		log.Error().Err(reloadToken.Error()).Msg("MQTT subscribe failed for reload channel")
+	} else {
+		log.Info().Str("topic", reloadTopic).Msg("subscribed to automation reload channel")
+	}
+
+	// ── Subscribe to Webhook Forwarding Channel ───────────────────────
+	webhookTopic := cfg.MQTT.Prefix + "/internal/automations/webhook"
+	webhookToken := mqttClient.Subscribe(webhookTopic, 1, func(_ pahomqtt.Client, msg pahomqtt.Message) {
+		var payload struct {
+			Token     string          `json:"token"`
+			Body      json.RawMessage `json:"body"`
+			Signature string          `json:"signature"`
+			RemoteIP  string          `json:"remote_ip"`
+		}
+		if err := json.Unmarshal(msg.Payload(), &payload); err != nil {
+			log.Error().Err(err).Msg("invalid webhook forwarding payload")
+			return
+		}
+		if err := webhookTrig.HandleWebhook(ctx, payload.Token, payload.Body, payload.Signature, payload.RemoteIP); err != nil {
+			log.Error().Err(err).Str("token_prefix", safePrefix(payload.Token)).Msg("webhook processing failed")
+		}
+	})
+	if !webhookToken.WaitTimeout(10e9) {
+		log.Error().Msg("MQTT subscribe timeout for webhook channel")
+	} else if webhookToken.Error() != nil {
+		log.Error().Err(webhookToken.Error()).Msg("MQTT subscribe failed for webhook channel")
+	} else {
+		log.Info().Str("topic", webhookTopic).Msg("subscribed to webhook forwarding channel")
+	}
+
+	log.Info().Msg("automation worker running")
+
+	// ── Health Endpoint ───────────────────────────────────────────────
+	port := healthPort()
+	healthMux := http.NewServeMux()
+	healthMux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		if err := db.Health(r.Context()); err != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			fmt.Fprintf(w, `{"status":"unhealthy","error":"%s"}`, err.Error())
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"status":"ok"}`)
+	})
+	go func() {
+		log.Info().Str("port", port).Msg("health endpoint listening")
+		if err := http.ListenAndServe(":"+port, healthMux); err != nil && err != http.ErrServerClosed {
+			log.Error().Err(err).Msg("health endpoint failed")
+		}
+	}()
+
+	// ── Graceful Shutdown ─────────────────────────────────────────────
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	sig := <-quit
+	log.Info().Str("signal", sig.String()).Msg("shutting down automation worker")
+	engine.Stop()
+	cancel()
+	log.Info().Msg("automation worker stopped")
+}
+
+func healthPort() string {
+	port := os.Getenv("HEALTH_PORT")
+	if port == "" {
+		port = "8083"
+	}
+	return port
+}
+
+func safePrefix(token string) string {
+	if len(token) <= 8 {
+		return token[:len(token)/2] + "***"
+	}
+	return token[:8] + "***"
+}
+
+// variableRepoAdapter wraps database.AutomationVariableRepo to satisfy action.VariableRepo.
+type variableRepoAdapter struct {
+	repo *database.AutomationVariableRepo
+}
+
+func (a *variableRepoAdapter) Get(ctx context.Context, key string) (*action.VariableEntry, error) {
+	v, err := a.repo.Get(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+	if v == nil {
+		return nil, nil
+	}
+	return &action.VariableEntry{Key: v.Key, Value: v.Value}, nil
+}
+
+func (a *variableRepoAdapter) Set(ctx context.Context, key, value string, vehicleID *int64) error {
+	return a.repo.Set(ctx, key, value, vehicleID)
+}
+
+func setupLogger(level string) {
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	lvl, err := zerolog.ParseLevel(level)
+	if err != nil {
+		lvl = zerolog.InfoLevel
+	}
+	zerolog.SetGlobalLevel(lvl)
+	if os.Getenv("TESLASYNC_DEV") == "true" {
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	}
+}

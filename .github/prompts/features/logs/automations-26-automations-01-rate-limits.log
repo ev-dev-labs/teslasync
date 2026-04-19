@@ -1,0 +1,101 @@
+Now I have a good understanding of the architecture. Let me plan and implement this.
+
+Good. Now I have a complete picture. Let me get rubber-duck feedback on my plan before implementing.
+
+Here are the issues IΓÇÖd push on before implementing this.
+
+### 1. **Blocking: `COUNT(*)` + ΓÇ£count all rowsΓÇ¥ is likely the wrong budget**
+`automation_history.status` includes `running`, `success`, `partial`, `failed`, `skipped`, `cancelled` (`migrations/000109_add_automations.up.sql:75`).
+
+If rate-limited/skipped attempts are also written to history, your proposed query will make rejected attempts consume budget too. Under a noisy trigger (MQTT/webhook), that can create a ratchet where the automation stays blocked as long as events keep arriving.
+
+**Fix:** define ΓÇ£executionΓÇ¥ precisely and count only rows that actually consumed capacity:
+- usually: `running`, `success`, `partial`, `failed`  
+- usually **exclude**: `skipped`
+
+So for your question #1: **do not count `skipped`** unless you intentionally want ΓÇ£trigger attempts per hourΓÇ¥, not ΓÇ£executions per hourΓÇ¥.
+
+---
+
+### 2. **Blocking: count-then-run is race-prone**
+Multiple triggers can call `engine.Evaluate()` concurrently (`battery.go`, `vehicle_state.go`, `mqtt.go`, `geofence.go`, `webhook.go`, etc.). A plain:
+
+1. `COUNT(*)`
+2. if under limit, run
+
+is not safe. Two requests can both see count=9 and both become the 10th+11th execution.
+
+**Fix:** make admission atomic:
+- lock per automation (`SELECT ... FOR UPDATE` on `automations`, or advisory lock), then count + create reservation/history row in one transaction; or
+- replace `CountSinceByAutomation` with something like `TryStartExecutionWithinRateLimit(...)`.
+
+This matters more than the package shape.
+
+---
+
+### 3. **Blocking: your ΓÇ£defaultsΓÇ¥ currently donΓÇÖt actually enforce safety**
+DB semantics today are `max_executions_hour INTEGER NOT NULL DEFAULT 0 -- 0 = unlimited` (`000109_add_automations.up.sql:20-21`).
+
+So a `DefaultLimit(triggerType)` helper alone does nothing unless you also define **where it is applied**:
+- on create only?
+- on read/evaluate when field is 0?
+- via migration backfill for existing rows?
+
+If you apply it at runtime when value is 0, then **0 no longer means unlimited**, which conflicts with the schema comment and your stated contract.
+
+Also, your defaults cover only 4 trigger types, but supported triggers include `cron`, `battery`, `vehicle_state`, `geofence`, `mqtt`, `webhook`, `sunrise_sunset`, `energy`, `calendar` (`000109_add_automations.up.sql:9-10`).
+
+**Fix:** pick one consistent model:
+- either **0 truly means unlimited**, and defaults are only UI/create-time defaults + migration backfill, or
+- change the schema/contract.
+
+---
+
+### 4. **Overall: the plan is close, but I see 4 real risks.
+
+1. **Blocking: count-then-run is race-prone**
+   - Multiple triggers can call `engine.Evaluate()` concurrently (`webhook`, `mqtt`, `geofence`, etc.), so two requests can both see `count < max` and both proceed. See direct trigger-to-engine calls in `internal/automation/trigger/webhook.go:57-146`, `mqtt.go:261-317`, `geofence.go:163-238`.
+   - **Impact:** you can still exceed the hourly cap under bursty traffic.
+   - **Fix:** enforce the limit atomically in the DB transaction that creates the history row, e.g. lock the automation row (`SELECT ... FOR UPDATE`) or use an advisory lock per automation ID, then count + insert.
+
+2. **Blocking: counting all history rows can create self-sustaining lockout**
+   - `automation_history.status` includes `running, success, partial, failed, skipped, cancelled` (`migrations/000109_add_automations.up.sql:75`).
+   - If rate-limited attempts are recorded as `skipped` and you count all rows, every blocked trigger extends the window and the automation may never recover while traffic continues.
+   - **Fix:** decide what consumes budget. Usually count only real executions (`success/partial/failed`, maybe `running`), not `skipped`. If you truly want to cap trigger firings, call that out explicitly because it behaves very differently.
+
+3. **Important: defaults are underspecified and may never apply**
+   - DB default is still `0 = unlimited` (`migrations/000109_add_automations.up.sql:20-22`), while your code defaults only cover 4 trigger types. But supported triggers include at least `cron, battery, vehicle_state, geofence, mqtt, webhook, sunrise_sunset, energy, calendar` (`migrations/...:9-10`, trigger files).
+   - **Impact:** existing and newly created automations may remain unlimited unless some other layer populates the field.
+   - **Fix:** decide one source of truth:
+     - backfill DB values in a migration, or
+     - set defaults on create/update, or
+     - remove `DefaultLimit()` and rely only on explicit config.
+     Hardcoded runtime defaults alone are easy to drift.
+
+4. **Important: denied-run persistence semantics are missing**
+   - Your plan doesnΓÇÖt say whether a rate-limit denial creates an `automation_history` row, what `status` it gets, or whether it affects `execution_count` / `last_triggered_at` (`internal/database/automation_repo.go:256-277`).
+   - **Impact:** hard to debug, and easy to corrupt analytics/counters.
+   - **Fix:** define this up front. IΓÇÖd recommend:
+     - create a history row for observability,
+     - mark it `status="skipped"` and `conditions_met=false`,
+     - do **not** increment `execution_count`,
+     - store a diagnostic snapshot similar to cooldown.
+
+Answers to your questions:
+- **Q1:** I would **not** count `skipped` by default. Count rows that actually consumed execution budget.
+- **Q2:** **Existing `AutomationHistoryRepo` is the right place.**
+
+Small but important follow-up:
+- Treat **negative** `max_executions_hour` as invalid config, not ΓÇ£unlimitedΓÇ¥. `<= 0 => unlimited` hides bad data.Good critique. Key adjustments I'm adopting:
+- Only count actual executions (not `skipped`/`cancelled`) to avoid self-sustaining lockout
+- Treat negative `max_executions_hour` as invalid, only 0 = unlimited
+- Add all 9 trigger type defaults
+- Document race condition as caller responsibility (consistent with `EvaluateCooldown` pattern)
+
+Now let me compile and run tests:
+
+All 15 tests pass. Let me also verify the existing automation tests still pass:
+
+Full project compiles clean. Let me commit:
+
+

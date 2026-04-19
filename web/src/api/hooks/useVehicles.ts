@@ -249,3 +249,133 @@ export async function fetchVehicleState(vehicleId: number): Promise<{ state?: Ve
   }
   return { state, live: res.live ?? false }
 }
+
+// ---------- Vehicle Info (mobile enabled, options, specs) ----------
+
+interface VehicleInfoEnvelope<T> {
+  data: T | null;
+  fetched_at: string | null;
+}
+
+interface MobileEnabledData {
+  enabled: boolean;
+}
+
+export function useVehicleMobileEnabled(vehicleId?: string) {
+  return useQuery({
+    queryKey: ['vehicle-mobile-enabled', vehicleId],
+    queryFn: () => request<VehicleInfoEnvelope<MobileEnabledData>>(`/vehicles/${vehicleId}/mobile-enabled`),
+    enabled: !!vehicleId,
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useRefreshVehicleMobileEnabled(vehicleId?: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => request<VehicleInfoEnvelope<MobileEnabledData>>(`/vehicles/${vehicleId}/mobile-enabled/refresh`, { method: 'POST' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vehicle-mobile-enabled', vehicleId] });
+    },
+  });
+}
+
+export function useVehicleOptions(vehicleId?: string) {
+  return useQuery({
+    queryKey: ['vehicle-options', vehicleId],
+    queryFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/options`),
+    enabled: !!vehicleId,
+    staleTime: Infinity,
+  });
+}
+
+export function useRefreshVehicleOptions(vehicleId?: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/options/refresh`, { method: 'POST' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vehicle-options', vehicleId] });
+    },
+  });
+}
+
+export function useVehicleSpecs(vehicleId?: string) {
+  return useQuery({
+    queryKey: ['vehicle-specs', vehicleId],
+    queryFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/specs`),
+    enabled: !!vehicleId,
+    staleTime: Infinity,
+  });
+}
+
+export function useRefreshVehicleSpecs(vehicleId?: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/specs/refresh`, { method: 'POST' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vehicle-specs', vehicleId] });
+    },
+  });
+}
+
+// ---------- Vehicle Subscriptions ----------
+
+export function useVehicleSubscriptions(vehicleId?: string) {
+  return useQuery({
+    queryKey: ['vehicle-subscriptions', vehicleId],
+    queryFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/subscriptions`),
+    enabled: !!vehicleId,
+    staleTime: 60 * 60_000, // 1 hour — rarely changes
+  });
+}
+
+export function useRefreshVehicleSubscriptions(vehicleId?: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/subscriptions/refresh`, { method: 'POST' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vehicle-subscriptions', vehicleId] });
+    },
+  });
+}
+
+// ---------- Vehicle Upgrades ----------
+
+export function useVehicleUpgrades(vehicleId?: string) {
+  return useQuery({
+    queryKey: ['vehicle-upgrades', vehicleId],
+    queryFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/upgrades`),
+    enabled: !!vehicleId,
+    staleTime: 60 * 60_000, // 1 hour — rarely changes
+  });
+}
+
+export function useRefreshVehicleUpgrades(vehicleId?: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/upgrades/refresh`, { method: 'POST' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vehicle-upgrades', vehicleId] });
+    },
+  });
+}
+
+// ---------- Warranty Details ----------
+
+export function useWarrantyDetails() {
+  return useQuery({
+    queryKey: ['warranty-details'],
+    queryFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>('/tesla/warranty'),
+    staleTime: 24 * 60 * 60_000, // 1 day
+  });
+}
+
+export function useRefreshWarrantyDetails() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>('/tesla/warranty/refresh', { method: 'POST' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['warranty-details'] });
+    },
+  });
+}

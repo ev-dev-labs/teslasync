@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
@@ -101,6 +102,8 @@ func normalizePath(path string) string {
 		return "/api/v1/geofences/:id"
 	case len(path) > 20 && path[:16] == "/api/v1/backup/":
 		return "/api/v1/backup/:sub"
+	case strings.HasPrefix(path, "/api/v1/automations/webhook/"):
+		return "/api/v1/automations/webhook/:token"
 	default:
 		return path
 	}

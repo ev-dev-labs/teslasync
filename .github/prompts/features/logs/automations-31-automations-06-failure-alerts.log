@@ -1,0 +1,103 @@
+Let me look at a few more things: the mock disabler, the action interface, and the AutomationHistory model.
+
+Now I have a good understanding of the architecture. Let me check the NotificationChannel model and review the trigger types.
+
+I now have a complete picture. Let me get the rubber-duck agent's feedback on my plan before implementing.
+
+Overall: **close, but I see 3 material issues**.
+
+### 1. Returning `nil` when all sends fail is misleading
+**Severity:** blocking
+
+`AutoDisableChecker.RecordOutcome` sets `NotificationSent=true` whenever `NotifyAutoDisabled` returns `nil` (`auto_disable.go:205-212`).  
+So if `FailureAlerter.NotifyAutoDisabled` logs per-channel failures but still returns `nil`, the system will record **ΓÇ£notification sentΓÇ¥ when nothing was delivered**.
+
+**Fix:**  
+Return an error when:
+- channel load fails
+- no enabled channels exist
+- **all** channel sends fail
+
+You can still keep **partial failure** best-effort:
+- at least 1 success ΓåÆ `nil`
+- 0 successes ΓåÆ error
+
+That gives the caller accurate semantics without making notification delivery block the main disable flow.
+
+---
+
+### 2. Putting `NotifyOnFailure` entirely on the caller is brittle
+**Severity:** blocking
+
+This is especially risky if `FailureAlerter` also implements `Notifier`.  
+`NotifyAutoDisabled(ctx, id, name, reason)` does **not** receive `NotifyOnFailure`, so once injected into `AutoDisableChecker`, itΓÇÖs easy to notify automations that opted out.
+
+**Fix:** choose one of these:
+- **Preferred:** keep `FailureAlerter` separate, and use a thin adapter for `Notifier` only where the caller has already checked policy.
+- Or make the higher-level orchestration pass the full `models.Automation` (or a small policy struct) before any alert is sent.
+
+I would **not** make the core alerter own policy, but I also wouldnΓÇÖt rely on every caller remembering the flag.
+
+---
+
+### 3. Relative `/automations/{id}/history` hint is weak
+**Severity:** non-blocking
+
+For Slack/Discord/email/webhook, a relative path is usually not clickable or useful. I donΓÇÖt see an obvious frontend base URL config to turn it into a real link.
+
+**Fix:** either:
+- inject a UI base URL and build a full URL, or
+- omit the link entirely for now
+
+---
+
+## Answers
+
+### 1. Should `FailureAlerter` implement `Notifier`?
+**My recommendation: no, not directly.**  
+Use a small adapter instead.
+
+Why:
+- `Notifier` is a **narrow auto-disable contract**
+- `FailureAlerter` is a **richer failure-alert contract**
+- combining them forces lossy event reconstruction and makes policy mistakes (`NotifyOnFailure`) easier
+
+---
+
+### 2. Is best-effort `nil` correct?
+**Not for total failure.**
+
+Recommended behavior:
+- **some channels succeed:** return `nil`, log failures
+- **all channels fail / no channels available:** return error
+
+That matches the callerΓÇÖs need to know whether anything was actually delivered.
+
+---
+
+### 3. New `FailureChannelRepo` or reuse `action.ChannelRepo`?
+**Reuse `action.ChannelRepo`** unless you plan to change the method set soon.
+
+ItΓÇÖs already the exact dependency you need.  
+If this pattern spreads, the better long-term move is extracting a shared notification-channel interface/type, not creating another duplicate one.
+
+---
+
+## Test gaps IΓÇÖd add
+- `all channels fail => error`
+- `no enabled channels => error`
+- `partial success => nil + logs`
+- `context canceled before / during dispatch => context error`
+- adapter test for `NotifyAutoDisabled` so `NotificationSent` semantics stay correctGood feedback. Key adjustments: (1) return error when ALL channels fail for accurate `NotificationSent`, (2) don't implement `Notifier` directly ΓÇö use adapter, (3) drop link hint, (4) reuse interface pattern. Let me implement.
+
+Now let me create the test file:
+
+Now let me run the tests:
+
+All 16 tests pass. Let me also verify the full safety package tests still pass:
+
+Let me also verify the broader build isn't broken:
+
+Clean build. Let me commit:
+
+

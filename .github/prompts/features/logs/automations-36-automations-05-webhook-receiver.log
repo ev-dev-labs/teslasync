@@ -1,0 +1,1012 @@
+Now let me view the key files:Let me continue exploring the models and other key files:Let me read the key files in parallel:
+
+Now let me look at the router structure for auth middleware and public routes, and the automation handler:
+
+Now let me see the full automation route block and where the main `/api/v1` route group starts:
+
+Now let me check the `AutomationEngine` interface and how the router starts its `/api/v1` group:
+
+Now let me check the migrations and rate limiting:Perfect! Now let me look at existing webhook trigger system more closely and the validation patterns:Now let me check how the automation handler integrates the webhook trigger and how routes work:Let me look for where the public webhook endpoint would be registered:Now let me check at the end of router.go to see where public routes are:Perfect! Now let me look at more automation handler details to understand the webhook integration pattern:I have enough context now. The WebhookTrigger with full HMAC validation already exists in `internal/automation/trigger/webhook.go`. The repo's `GetByWebhookToken` method also exists. I now need to:
+
+1. Create a new `WebhookReceiverHandler` in `internal/api/` that wires the HTTP layer to `WebhookTrigger.HandleWebhook`
+2. Wire it in `router.go` OUTSIDE the auth group, with per-token rate limiting
+
+Let me check how the `writeJSON`/`writeError` helpers work and look at the strPtr helper:Excellent! Now let me create a comprehensive summary document. Let me gather a few more important pieces:
+
+Perfect! Now I have comprehensive understanding. Let me create the final summary:
+
+## COMPREHENSIVE EXPLORATION: TeslaSync Webhook Receiver Endpoint Architecture
+
+Based on my thorough exploration of the TeslaSync codebase, here's the complete context for implementing a webhook receiver endpoint:
+
+---
+
+### 1. **ROUTER STRUCTURE** (`internal/api/router.go`)
+
+#### Full Router Setup (Lines 1-100):
+```go
+package api
+
+// Global middleware applied to ALL routes
+r := chi.NewRouter()
+r.Use(chimw.RequestID)
+r.Use(chimw.RealIP)
+r.Use(TracingMiddleware)
+r.Use(LoggerMiddleware)
+r.Use(RecoveryMiddleware)
+r.Use(ErrorTrackingMiddleware(errorTracker))
+r.Use(PrometheusMiddleware)
+r.Use(chimw.Compress(5))
+
+// CORS Configuration
+r.Use(cors.Handler(cors.Options{
+    AllowedOrigins:   corsOrigins,
+    AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
+    AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Request-ID", "X-API-Key"},
+    ExposedHeaders:   []string{"X-Request-ID", "X-Response-Time"},
+    AllowCredentials: cfg.CORSOrigins != "",
+    MaxAge:           300,
+}))
+
+// Security headers middleware
+r.Use(SecurityHeadersMiddleware)
+
+// Request body size limit (1MB)
+r.Use(func(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+        req.Body = http.MaxBytesReader(w, req.Body, 1<<20)
+        next.ServeHTTP(w, req)
+    })
+})
+```
+
+#### Public Routes (NO Auth Required):
+- **Line 193-194**: Health endpoints (`/healthz`, `/readyz`)
+- **Line 197-204**: Internal flush endpoint (`/internal/flush`)
+- **Line 207**: Metrics (`/metrics`)
+- **Line 904**: Tesla public key (`.well-known/appspecific/com.tesla.3p.public-key.pem`)
+
+#### API v1 Routes (Protected - inside `r.Route("/api/v1", ...)`):
+- Auth routes with rate limiting: `httprate.LimitByIP(10, 1*time.Minute)` (Line 213)
+- Automations routes (Line 321-345):
+  ```go
+  r.Route("/automations", func(r chi.Router) {
+      r.Get("/", automationHandler.List)
+      r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/", automationHandler.Create)
+      r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/export", automationHandler.ExportBatch)
+      r.With(httprate.LimitByIP(10, 1*time.Minute)).Post("/import", automationHandler.Import)
+      r.Route("/history", func(r chi.Router) {
+          r.Get("/", automationHandler.ListHistory)
+          r.Get("/{historyId}", automationHandler.GetHistoryDetail)
+      })
+      r.Route("/{id}", func(r chi.Router) {
+          r.Get("/", automationHandler.Get)
+          r.Get("/export", automationHandler.ExportOne)
+          r.Get("/history", automationHandler.ListAutomationHistory)
+          r.With(httprate.LimitByIP(20, 1*time.Minute)).Put("/", automationHandler.Update)
+          r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/", automationHandler.Delete)
+          r.With(httprate.LimitByIP(20, 1*time.Minute)).Patch("/toggle", automationHandler.Toggle)
+          r.With(httprate.LimitByIP(20, 1*time.Minute)).Patch("/re-enable", automationHandler.ReEnable)
+          r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/test-run", automationHandler.TestRun)
+      })
+  })
+  ```
+
+**Key Pattern**: Public webhook receiver should be registered OUTSIDE `/api/v1` route (like `.well-known` at line 904) or in a special public subroute.
+
+---
+
+### 2. **AUTOMATION MODELS** (`internal/models/models.go`, Lines 1132-1162)
+
+```go
+type Automation struct {
+    ID                  int64           `json:"id" db:"id"`
+    Name                string          `json:"name" db:"name"`
+    Description         string          `json:"description" db:"description"`
+    VehicleID           *int64          `json:"vehicle_id" db:"vehicle_id"`
+    Enabled             bool            `json:"enabled" db:"enabled"`
+    TriggerType         string          `json:"trigger_type" db:"trigger_type"`  // 'webhook' is one type
+    TriggerConfig       json.RawMessage `json:"trigger_config" db:"trigger_config"`  // JSONB - stores webhook config
+    Conditions          json.RawMessage `json:"conditions" db:"conditions"`
+    Actions             json.RawMessage `json:"actions" db:"actions"`
+    CooldownMinutes     int             `json:"cooldown_minutes" db:"cooldown_minutes"`
+    MaxExecutionsHour   int             `json:"max_executions_hour" db:"max_executions_hour"`
+    StopOnFailure       bool            `json:"stop_on_failure" db:"stop_on_failure"`
+    NotifyOnRun         bool            `json:"notify_on_run" db:"notify_on_run"`
+    NotifyOnFailure     bool            `json:"notify_on_failure" db:"notify_on_failure"`
+    SeasonalStart       *int            `json:"seasonal_start" db:"seasonal_start"`
+    SeasonalEnd         *int            `json:"seasonal_end" db:"seasonal_end"`
+    Priority            int             `json:"priority" db:"priority"`
+    LastTriggeredAt     *time.Time      `json:"last_triggered_at" db:"last_triggered_at"`
+    LastSuccessAt       *time.Time      `json:"last_success_at" db:"last_success_at"`
+    LastFailureAt       *time.Time      `json:"last_failure_at" db:"last_failure_at"`
+    ExecutionCount      int64           `json:"execution_count" db:"execution_count"`
+    FailureCount        int64           `json:"failure_count" db:"failure_count"`
+    ConsecutiveFailures int             `json:"consecutive_failures" db:"consecutive_failures"`
+    AutoDisabled        bool            `json:"auto_disabled" db:"auto_disabled"`
+    AutoDisabledReason  *string         `json:"auto_disabled_reason" db:"auto_disabled_reason"`
+    PresetID            *string         `json:"preset_id" db:"preset_id"`
+    Tags                []string        `json:"tags" db:"tags"`
+    CreatedAt           time.Time       `json:"created_at" db:"created_at"`
+    UpdatedAt           time.Time       `json:"updated_at" db:"updated_at"`
+}
+
+type AutomationHistory struct {
+    ID                int64           `json:"id" db:"id"`
+    AutomationID      int64           `json:"automation_id" db:"automation_id"`
+    AutomationName    string          `json:"automation_name" db:"automation_name"`
+    VehicleID         *int64          `json:"vehicle_id" db:"vehicle_id"`
+    TriggeredAt       time.Time       `json:"triggered_at" db:"triggered_at"`
+    CompletedAt       *time.Time      `json:"completed_at" db:"completed_at"`
+    DurationMs        *int            `json:"duration_ms" db:"duration_ms"`
+    TriggerType       string          `json:"trigger_type" db:"trigger_type"`
+    TriggerSnapshot   json.RawMessage `json:"trigger_snapshot" db:"trigger_snapshot"`  // Webhook payload stored here
+    ConditionsMet     bool            `json:"conditions_met" db:"conditions_met"`
+    ConditionsSnapshot json.RawMessage `json:"conditions_snapshot" db:"conditions_snapshot"`
+    ActionsExecuted   json.RawMessage `json:"actions_executed" db:"actions_executed"`
+    ActionsTotal      int             `json:"actions_total" db:"actions_total"`
+    ActionsSucceeded  int             `json:"actions_succeeded" db:"actions_succeeded"`
+    ActionsFailed     int             `json:"actions_failed" db:"actions_failed"`
+    Status            string          `json:"status" db:"status"`
+    Error             *string         `json:"error" db:"error"`
+    FSMState          *string         `json:"fsm_state" db:"fsm_state"`
+    CreatedAt         time.Time       `json:"created_at" db:"created_at"`
+}
+```
+
+---
+
+### 3. **DATABASE SCHEMA** (`migrations/000109_add_automations.up.sql`)
+
+```sql
+CREATE TABLE IF NOT EXISTS automations (
+    id                  BIGSERIAL PRIMARY KEY,
+    name                TEXT NOT NULL,
+    description         TEXT NOT NULL DEFAULT '',
+    vehicle_id          BIGINT REFERENCES vehicles(id) ON DELETE CASCADE,
+    enabled             BOOLEAN NOT NULL DEFAULT true,
+    trigger_type        TEXT NOT NULL,  -- 'webhook' is one type
+    trigger_config      JSONB NOT NULL DEFAULT '{}',  -- stores WebhookConfig
+    conditions          JSONB NOT NULL DEFAULT '[]',
+    actions             JSONB NOT NULL DEFAULT '[]',
+    cooldown_minutes    INTEGER NOT NULL DEFAULT 0,
+    max_executions_hour INTEGER NOT NULL DEFAULT 0,
+    stop_on_failure     BOOLEAN NOT NULL DEFAULT false,
+    notify_on_run       BOOLEAN NOT NULL DEFAULT false,
+    notify_on_failure   BOOLEAN NOT NULL DEFAULT true,
+    seasonal_start      INTEGER,
+    seasonal_end        INTEGER,
+    priority            INTEGER NOT NULL DEFAULT 50,
+    last_triggered_at   TIMESTAMPTZ,
+    last_success_at     TIMESTAMPTZ,
+    last_failure_at     TIMESTAMPTZ,
+    execution_count     BIGINT NOT NULL DEFAULT 0,
+    failure_count       BIGINT NOT NULL DEFAULT 0,
+    consecutive_failures INTEGER NOT NULL DEFAULT 0,
+    auto_disabled       BOOLEAN NOT NULL DEFAULT false,
+    auto_disabled_reason TEXT,
+    preset_id           TEXT,
+    tags                TEXT[] NOT NULL DEFAULT '{}',
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_automations_vehicle ON automations (vehicle_id);
+CREATE INDEX IF NOT EXISTS idx_automations_enabled ON automations (enabled) WHERE enabled = true;
+CREATE INDEX IF NOT EXISTS idx_automations_trigger ON automations (trigger_type);
+
+-- Execution history
+CREATE TABLE IF NOT EXISTS automation_history (
+    id                  BIGSERIAL PRIMARY KEY,
+    automation_id       BIGINT NOT NULL REFERENCES automations(id) ON DELETE CASCADE,
+    automation_name     TEXT NOT NULL,
+    vehicle_id          BIGINT,
+    triggered_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    completed_at        TIMESTAMPTZ,
+    duration_ms         INTEGER,
+    trigger_type        TEXT NOT NULL,
+    trigger_snapshot    JSONB NOT NULL DEFAULT '{}',
+    conditions_met      BOOLEAN NOT NULL DEFAULT true,
+    conditions_snapshot JSONB NOT NULL DEFAULT '[]',
+    actions_executed    JSONB NOT NULL DEFAULT '[]',
+    actions_total       INTEGER NOT NULL DEFAULT 0,
+    actions_succeeded   INTEGER NOT NULL DEFAULT 0,
+    actions_failed      INTEGER NOT NULL DEFAULT 0,
+    status              TEXT NOT NULL DEFAULT 'running',
+    error               TEXT,
+    fsm_state           TEXT,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_automation_history_automation ON automation_history (automation_id, triggered_at DESC);
+CREATE INDEX IF NOT EXISTS idx_automation_history_status ON automation_history (status);
+CREATE INDEX IF NOT EXISTS idx_automation_history_time ON automation_history (triggered_at DESC);
+```
+
+---
+
+### 4. **AUTOMATION REPOSITORY** (`internal/database/automation_repo.go`)
+
+```go
+type AutomationRepo struct {
+    db *DB
+}
+
+// GetByWebhookToken - Key method for webhook lookup (Lines 200-218)
+func (r *AutomationRepo) GetByWebhookToken(ctx context.Context, token string) (*models.Automation, error) {
+    query := fmt.Sprintf(
+        `SELECT %s FROM automations
+         WHERE trigger_type = 'webhook'
+           AND trigger_config->>'webhook_token' = $1
+         LIMIT 1`,
+        automationColumns,
+    )
+    a, err := scanAutomation(r.db.Pool.QueryRow(ctx, query, token))
+    if err == pgx.ErrNoRows {
+        return nil, nil
+    }
+    if err != nil {
+        return nil, fmt.Errorf("get automation by webhook token: %w", err)
+    }
+    return a, nil
+}
+
+// Query automations by trigger_type
+func (r *AutomationRepo) GetByTriggerType(ctx context.Context, triggerType string) ([]*models.Automation, error) {
+    query := fmt.Sprintf(`SELECT %s FROM automations WHERE trigger_type = $1 AND enabled = true AND auto_disabled = false ORDER BY priority ASC, id ASC LIMIT 500`, automationColumns)
+    // ... implementation
+}
+
+// Update execution counters and timestamps
+func (r *AutomationRepo) IncrementExecution(ctx context.Context, id int64, success bool) error {
+    now := time.Now().UTC()
+    if success {
+        _, err := r.db.Pool.Exec(ctx,
+            `UPDATE automations SET
+                execution_count = execution_count + 1,
+                last_triggered_at = $2, last_success_at = $2,
+                consecutive_failures = 0, updated_at = $2
+            WHERE id = $1`,
+            id, now)
+        return err
+    }
+    // ... failure case
+}
+
+// Auto-disable automation on errors
+func (r *AutomationRepo) SetAutoDisabled(ctx context.Context, id int64, reason string) error {
+    _, err := r.db.Pool.Exec(ctx,
+        `UPDATE automations SET auto_disabled=true, auto_disabled_reason=$2, enabled=false, updated_at=$3 WHERE id=$1`,
+        id, reason, time.Now().UTC())
+    return err
+}
+```
+
+---
+
+### 5. **WEBHOOK TRIGGER SYSTEM** (`internal/automation/trigger/webhook.go`)
+
+#### WebhookConfig Structure:
+```go
+type WebhookConfig struct {
+    WebhookToken  string  `json:"webhook_token"`  // Unique token for this webhook
+    Secret        *string `json:"secret"`         // Optional HMAC-SHA256 secret
+    PayloadFilter *string `json:"payload_filter"` // Reserved for future use
+}
+
+type webhookSnapshot struct {
+    WebhookToken string          `json:"webhook_token"`
+    Payload      json.RawMessage `json:"payload"`
+    RemoteIP     string          `json:"remote_ip"`
+}
+```
+
+#### WebhookTrigger Processing (Lines 37-147):
+```go
+type WebhookTrigger struct {
+    repo   WebhookRepo
+    engine AutomationEngine
+    logger zerolog.Logger
+}
+
+// HandleWebhook - Main webhook handler function
+func (t *WebhookTrigger) HandleWebhook(ctx context.Context, token string, payload []byte, signature string, remoteIP string) error {
+    if token == "" {
+        return fmt.Errorf("webhook token is required")
+    }
+
+    // 1. Look up automation by webhook_token
+    automation, err := t.repo.GetByWebhookToken(ctx, token)
+    if err != nil {
+        return fmt.Errorf("lookup automation by webhook token: %w", err)
+    }
+    if automation == nil {
+        return ErrWebhookNotFound
+    }
+
+    // 2. Check automation is enabled
+    if !automation.Enabled || automation.AutoDisabled {
+        t.logger.Warn().
+            Int64("automation_id", automation.ID).
+            Str("automation", automation.Name).
+            Msg("webhook received for disabled automation")
+        return ErrWebhookNotFound
+    }
+
+    // 3. Parse trigger config for secret validation
+    cfg, err := parseWebhookConfig(automation.TriggerConfig)
+    if err != nil {
+        t.logger.Warn().Err(err).
+            Int64("automation_id", automation.ID).
+            Msg("invalid webhook trigger config, auto-disabling")
+        if disableErr := t.repo.SetAutoDisabled(ctx, automation.ID, fmt.Sprintf("invalid webhook config: %v", err)); disableErr != nil {
+            t.logger.Error().Err(disableErr).
+                Int64("automation_id", automation.ID).
+                Msg("failed to auto-disable invalid automation")
+        }
+        return fmt.Errorf("invalid webhook config: %w", err)
+    }
+
+    // 4. Validate HMAC signature if secret is configured
+    if cfg.Secret != nil && *cfg.Secret != "" {
+        if !validateHMAC(payload, signature, *cfg.Secret) {
+            t.logger.Warn().
+                Int64("automation_id", automation.ID).
+                Msg("webhook HMAC signature validation failed")
+            return ErrWebhookSignatureInvalid
+        }
+    }
+
+    // 5. Validate payload is valid JSON
+    var rawPayload json.RawMessage
+    if len(payload) > 0 {
+        if !json.Valid(payload) {
+            return fmt.Errorf("webhook payload is not valid JSON")
+        }
+        rawPayload = payload
+    } else {
+        rawPayload = json.RawMessage(`{}`)
+    }
+
+    // 6. Build trigger snapshot for automation engine
+    snapshot, err := json.Marshal(webhookSnapshot{
+        WebhookToken: token,
+        Payload:      rawPayload,
+        RemoteIP:     remoteIP,
+    })
+    if err != nil {
+        t.logger.Error().Err(err).
+            Int64("automation_id", automation.ID).
+            Msg("failed to marshal webhook trigger snapshot")
+        return fmt.Errorf("marshal webhook snapshot: %w", err)
+    }
+
+    // 7. Pass to automation engine for evaluation and execution
+    t.logger.Info().
+        Int64("automation_id", automation.ID).
+        Str("automation", automation.Name).
+        Str("remote_ip", remoteIP).
+        Msg("webhook trigger fired")
+
+    if evalErr := t.engine.Evaluate(ctx, automation.ID, snapshot); evalErr != nil {
+        t.logger.Error().Err(evalErr).
+            Int64("automation_id", automation.ID).
+            Msg("automation evaluation failed")
+        return fmt.Errorf("evaluate automation %d: %w", automation.ID, evalErr)
+    }
+
+    return nil
+}
+```
+
+#### HMAC Validation (Lines 155-167):
+```go
+// validateHMAC checks the HMAC-SHA256 signature of the payload.
+// The expected signature format is a hex-encoded HMAC-SHA256 hash.
+func validateHMAC(payload []byte, signature, secret string) bool {
+    if signature == "" {
+        return false
+    }
+
+    mac := hmac.New(sha256.New, []byte(secret))
+    mac.Write(payload)
+    expected := hex.EncodeToString(mac.Sum(nil))
+
+    return hmac.Equal([]byte(expected), []byte(signature))
+}
+```
+
+#### Webhook Config Parser (Lines 169-182):
+```go
+func parseWebhookConfig(raw json.RawMessage) (*WebhookConfig, error) {
+    if len(raw) == 0 {
+        return nil, fmt.Errorf("trigger_config is empty")
+    }
+    var cfg WebhookConfig
+    if err := json.Unmarshal(raw, &cfg); err != nil {
+        return nil, fmt.Errorf("unmarshal trigger config: %w", err)
+    }
+    if cfg.WebhookToken == "" {
+        return nil, fmt.Errorf("webhook_token is required")
+    }
+    return &cfg, nil
+}
+```
+
+#### Sentinel Errors:
+```go
+var (
+    ErrWebhookNotFound        = fmt.Errorf("webhook automation not found")
+    ErrWebhookSignatureInvalid = fmt.Errorf("webhook signature validation failed")
+)
+```
+
+---
+
+### 6. **TRIGGER VALIDATION** (`internal/automation/trigger/validate.go`, Lines 198-201)
+
+```go
+func ValidateTriggerConfig(triggerType string, raw json.RawMessage) error {
+    if len(raw) == 0 {
+        return fmt.Errorf("trigger_config is required")
+    }
+
+    switch triggerType {
+    case "cron":
+        return validateCronTrigger(raw)
+    case "vehicle_state":
+        return validateVehicleStateTrigger(raw)
+    case "geofence":
+        return validateGeofenceTrigger(raw)
+    case "battery":
+        return validateBatteryTrigger(raw)
+    case "sunrise_sunset":
+        return validateSunriseSunsetTrigger(raw)
+    case "energy":
+        return validateEnergyTrigger(raw)
+    case "mqtt":
+        return validateMQTTTrigger(raw)
+    case "webhook":
+        return validateWebhookTrigger(raw)
+    case "calendar":
+        return validateCalendarTrigger(raw)
+    default:
+        return fmt.Errorf("unknown trigger_type %q", triggerType)
+    }
+}
+
+func validateWebhookTrigger(raw json.RawMessage) error {
+    _, err := parseWebhookConfig(raw)
+    return err
+}
+
+// SupportedTriggerTypes includes 'webhook'
+func SupportedTriggerTypes() []string {
+    return []string{
+        "cron", "vehicle_state", "geofence", "battery",
+        "sunrise_sunset", "energy", "mqtt", "webhook", "calendar",
+    }
+}
+```
+
+---
+
+### 7. **AUTOMATION HANDLER PATTERNS** (`internal/api/automation_handler.go`)
+
+#### Handler Structure (Lines 20-34):
+```go
+type AutomationHandler struct {
+    repo         *database.AutomationRepo
+    historyRepo  *database.AutomationHistoryRepo
+    fsmTransRepo *database.FSMTransitionRepo
+}
+
+func NewAutomationHandler(db *database.DB) *AutomationHandler {
+    return &AutomationHandler{
+        repo:         database.NewAutomationRepo(db),
+        historyRepo:  database.NewAutomationHistoryRepo(db),
+        fsmTransRepo: database.NewFSMTransitionRepo(db),
+    }
+}
+```
+
+#### Webhook Token Uniqueness Check (Lines 632-649):
+```go
+func (h *AutomationHandler) checkWebhookTokenUniqueness(r *http.Request, config json.RawMessage, excludeID int64) error {
+    var cfg struct {
+        WebhookToken string `json:"webhook_token"`
+    }
+    if err := json.Unmarshal(config, &cfg); err != nil || cfg.WebhookToken == "" {
+        return nil // webhook token extraction not possible ΓÇö skip check
+    }
+
+    existing, err := h.repo.GetByWebhookToken(r.Context(), cfg.WebhookToken)
+    if err != nil {
+        log.Warn().Err(err).Msg("webhook uniqueness check failed")
+        return nil // non-blocking: allow save on lookup failure
+    }
+    if existing != nil && existing.ID != excludeID {
+        return errWebhookTokenDuplicate
+    }
+    return nil
+}
+```
+
+#### Create Automation with Webhook Validation (Lines 132-214):
+```go
+func (h *AutomationHandler) Create(w http.ResponseWriter, r *http.Request) {
+    var req createAutomationRequest
+    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+        writeError(w, http.StatusBadRequest, "invalid request body")
+        return
+    }
+
+    // Validate required fields
+    if strings.TrimSpace(req.Name) == "" {
+        writeError(w, http.StatusBadRequest, "name is required")
+        return
+    }
+    if req.TriggerType == "" {
+        writeError(w, http.StatusBadRequest, "trigger_type is required")
+        return
+    }
+
+    // Validate trigger_config schema
+    if err := trigger.ValidateTriggerConfig(req.TriggerType, req.TriggerConfig); err != nil {
+        writeError(w, http.StatusBadRequest, "invalid trigger_config: "+err.Error())
+        return
+    }
+
+    // Validate actions are parseable
+    if len(req.Actions) > 0 {
+        if _, err := action.ParseActions(req.Actions); err != nil {
+            writeError(w, http.StatusBadRequest, "invalid actions: "+err.Error())
+            return
+        }
+    }
+
+    // Enforce webhook token uniqueness
+    if req.TriggerType == "webhook" {
+        if err := h.checkWebhookTokenUniqueness(r, req.TriggerConfig, 0); err != nil {
+            writeError(w, http.StatusConflict, err.Error())
+            return
+        }
+    }
+
+    enabled := true
+    if req.Enabled != nil {
+        enabled = *req.Enabled
+    }
+
+    a := &models.Automation{
+        Name:              strings.TrimSpace(req.Name),
+        Description:       req.Description,
+        VehicleID:         req.VehicleID,
+        Enabled:           enabled,
+        TriggerType:       req.TriggerType,
+        TriggerConfig:     req.TriggerConfig,
+        Conditions:        req.Conditions,
+        Actions:           req.Actions,
+        CooldownMinutes:   req.CooldownMinutes,
+        MaxExecutionsHour: req.MaxExecutionsHour,
+        StopOnFailure:     req.StopOnFailure,
+        NotifyOnRun:       req.NotifyOnRun,
+        NotifyOnFailure:   req.NotifyOnFailure,
+        SeasonalStart:     req.SeasonalStart,
+        SeasonalEnd:       req.SeasonalEnd,
+        Priority:          req.Priority,
+        PresetID:          req.PresetID,
+        Tags:              req.Tags,
+    }
+
+    if err := h.repo.Create(r.Context(), a); err != nil {
+        log.Error().Err(err).Str("name", a.Name).Msg("failed to create automation")
+        writeError(w, http.StatusInternalServerError, "failed to create automation")
+        return
+    }
+
+    resp := newAutomationResponse(a)
+    resp.Conflicts = h.detectConflicts(r, a)
+
+    log.Info().
+        Int64("automation_id", a.ID).
+        Str("automation", a.Name).
+        Str("trigger_type", a.TriggerType).
+        Int("conflicts", len(resp.Conflicts)).
+        Msg("automation created")
+
+    writeJSON(w, http.StatusCreated, resp)
+}
+```
+
+---
+
+### 8. **RATE LIMITING PATTERNS** (Using `github.com/go-chi/httprate`)
+
+#### Examples from Router:
+```go
+// Auth: 10 requests per minute per IP
+r.Route("/auth", func(r chi.Router) {
+    r.Use(httprate.LimitByIP(10, 1*time.Minute))
+    r.Get("/login", authHandler.Login)
+    r.Post("/url", authHandler.Login)
+})
+
+// Vehicles sync: 5 requests per minute per IP
+r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/sync", vehicleHandler.SyncFromTesla)
+
+// Commands: 20 requests per minute per IP
+r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/command", commandHandler.SendCommand)
+
+// Automations CRUD: 20 requests per minute per IP
+r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/", automationHandler.Create)
+r.With(httprate.LimitByIP(10, 1*time.Minute)).Post("/import", automationHandler.Import)
+r.With(httprate.LimitByIP(20, 1*time.Minute)).Put("/", automationHandler.Update)
+r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/", automationHandler.Delete)
+
+// Export: 10 requests per minute per IP
+r.With(httprate.LimitByIP(10, 1*time.Minute)).Get("/export/{type}", NewExportHandler(db))
+
+// Dev Tools: 30 requests per minute per IP
+r.Route("/dev-tools", func(r chi.Router) {
+    r.Use(httprate.LimitByIP(30, 1*time.Minute))
+})
+```
+
+**Pattern**: 
+- `httprate.LimitByIP(count, duration)` - key is the client IP
+- Applied at route level with `r.Use()` or at endpoint with `r.With()`
+- Recommended for webhook receiver: `httprate.LimitByIP(100, 1*time.Minute)` (more lenient for inbound webhooks)
+
+---
+
+### 9. **CRYPTO/HMAC PATTERNS** (`internal/crypto/crypto.go`)
+
+#### AES-256-GCM Encryption (Not used for webhook HMAC, but pattern shown):
+```go
+type Encryptor struct {
+    gcm cipher.AEAD
+}
+
+func New(key string) (*Encryptor, error) {
+    if key == "" {
+        return nil, errors.New("encryption key must not be empty")
+    }
+    hash := sha256.Sum256([]byte(key))
+    block, err := aes.NewCipher(hash[:])
+    if err != nil {
+        return nil, fmt.Errorf("create cipher: %w", err)
+    }
+    gcm, err := cipher.NewGCM(block)
+    if err != nil {
+        return nil, fmt.Errorf("create GCM: %w", err)
+    }
+    return &Encryptor{gcm: gcm}, nil
+}
+
+func (e *Encryptor) Encrypt(plaintext string) (string, error) {
+    nonce := make([]byte, e.gcm.NonceSize())
+    if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+        return "", fmt.Errorf("generate nonce: %w", err)
+    }
+    ciphertext := e.gcm.Seal(nonce, nonce, []byte(plaintext), nil)
+    return base64.StdEncoding.EncodeToString(ciphertext), nil
+}
+
+func (e *Encryptor) Decrypt(encoded string) (string, error) {
+    data, err := base64.StdEncoding.DecodeString(encoded)
+    if err != nil {
+        return "", fmt.Errorf("decode base64: %w", err)
+    }
+    nonceSize := e.gcm.NonceSize()
+    if len(data) < nonceSize {
+        return "", errors.New("ciphertext too short")
+    }
+    nonce, ciphertext := data[:nonceSize], data[nonceSize:]
+    plaintext, err := e.gcm.Open(nil, nonce, ciphertext, nil)
+    if err != nil {
+        return "", fmt.Errorf("decrypt: %w", err)
+    }
+    return string(plaintext), nil
+}
+```
+
+#### HMAC-SHA256 for Webhook (From `trigger/webhook.go`):
+```go
+import (
+    "crypto/hmac"
+    "crypto/sha256"
+    "encoding/hex"
+)
+
+func validateHMAC(payload []byte, signature, secret string) bool {
+    if signature == "" {
+        return false
+    }
+    mac := hmac.New(sha256.New, []byte(secret))
+    mac.Write(payload)
+    expected := hex.EncodeToString(mac.Sum(nil))
+    return hmac.Equal([]byte(expected), []byte(signature))
+}
+```
+
+---
+
+### 10. **MIDDLEWARE PATTERNS** (`internal/api/middleware.go` & `security.go`)
+
+#### Logger Middleware (Lines 14-46):
+```go
+func LoggerMiddleware(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        start := time.Now()
+        ww := chimw.NewWrapResponseWriter(w, r.ProtoMajor)
+
+        defer func() {
+            duration := time.Since(start)
+            status := ww.Status()
+            ww.Header().Set("X-Response-Time", fmt.Sprintf("%dms", duration.Milliseconds()))
+
+            logger := log.Info()
+            if status >= 500 {
+                logger = log.Error()
+            } else if status >= 400 {
+                logger = log.Warn()
+            }
+            logger.
+                Str("method", r.Method).
+                Str("path", r.URL.Path).
+                Int("status", status).
+                Int("bytes", ww.BytesWritten()).
+                Dur("duration", duration).
+                Str("ip", r.RemoteAddr).
+                Str("request_id", chimw.GetReqID(r.Context())).
+                Msg("http request")
+        }()
+
+        next.ServeHTTP(ww, r)
+    })
+}
+```
+
+#### Recovery Middleware (Lines 48-68):
+```go
+func RecoveryMiddleware(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        defer func() {
+            if rec := recover(); rec != nil {
+                stack := string(debug.Stack())
+                log.Error().
+                    Str("method", r.Method).
+                    Str("path", r.URL.Path).
+                    Str("request_id", chimw.GetReqID(r.Context())).
+                    Str("stack", stack).
+                    Str("panic", fmt.Sprintf("%v", rec)).
+                    Msg("panic recovered in HTTP handler")
+
+                writeError(w, http.StatusInternalServerError, "internal server error")
+            }
+        }()
+        next.ServeHTTP(w, r)
+    })
+}
+```
+
+#### Security Headers Middleware (`security.go`, Lines 5-35):
+```go
+func SecurityHeadersMiddleware(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        w.Header().Set("X-Content-Type-Options", "nosniff")
+        w.Header().Set("X-Frame-Options", "DENY")
+        w.Header().Set("X-XSS-Protection", "1; mode=block")
+        w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+        w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'")
+        w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
+        w.Header().Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+        next.ServeHTTP(w, r)
+    })
+}
+```
+
+---
+
+### 11. **LATEST MIGRATION NUMBER**
+
+Migration `000109_add_automations` contains the automation tables. Next migration would be `000110_*`.
+
+---
+
+### 12. **RECOMMENDED WEBHOOK RECEIVER ENDPOINT IMPLEMENTATION PATTERN**
+
+Based on the architecture, here's what your webhook receiver endpoint should follow:
+
+```go
+// 1. REGISTER PUBLIC WEBHOOK ROUTE (outside /api/v1, no auth)
+// In router.go, after line 901, before SPA fallback:
+r.Post("/public/webhook/{token}", webhookHandler.ReceiveWebhook)
+
+// 2. WEBHOOK HANDLER
+type WebhookReceiverHandler struct {
+    webhookTrigger *trigger.WebhookTrigger
+    logger         zerolog.Logger
+}
+
+func (h *WebhookReceiverHandler) ReceiveWebhook(w http.ResponseWriter, r *http.Request) {
+    token := chi.URLParam(r, "token")
+    if token == "" {
+        writeError(w, http.StatusBadRequest, "token is required")
+        return
+    }
+
+    // Read payload
+    payload, err := io.ReadAll(r.Body)
+    if err != nil {
+        writeError(w, http.StatusBadRequest, "failed to read body")
+        return
+    }
+    defer r.Body.Close()
+
+    // Extract signature from header
+    signature := r.Header.Get("X-Webhook-Signature")
+    remoteIP := r.RemoteAddr
+
+    // Process webhook through trigger system
+    if err := h.webhookTrigger.HandleWebhook(r.Context(), token, payload, signature, remoteIP); err != nil {
+        if errors.Is(err, trigger.ErrWebhookNotFound) {
+            writeError(w, http.StatusNotFound, "webhook not found")
+            return
+        }
+        if errors.Is(err, trigger.ErrWebhookSignatureInvalid) {
+            writeError(w, http.StatusUnauthorized, "invalid signature")
+            return
+        }
+        writeError(w, http.StatusInternalServerError, "webhook processing failed")
+        return
+    }
+
+    writeJSON(w, http.StatusOK, map[string]interface{}{"status": "processed"})
+}
+
+// 3. RATE LIMITING
+// Apply to webhook route:
+r.With(httprate.LimitByIP(100, 1*time.Minute)).Post("/public/webhook/{token}", webhookHandler.ReceiveWebhook)
+```
+
+This follows the established patterns:
+- Γ£à Public route (no auth required)
+- Γ£à Uses existing webhook trigger system
+- Γ£à HMAC validation via trigger
+- Γ£à Rate limiting with httprate
+- Γ£à Structured logging
+- Γ£à Error handling with sentinel errors
+- Γ£à Integrates with automation engineLet me check how auth middleware is applied in the router:
+
+I now have full context. Let me get a rubber-duck critique on my plan before implementing.
+
+HereΓÇÖs the critical feedback IΓÇÖd give.
+
+### 1. **Blocking: your per-token rate limit is likely wrong**
+**Issue:** In chi, `r.Use(...)` middleware on that `/api/v1/automations/webhook` subrouter runs **before** the child `/{token}` route is matched. So `chi.URLParam(r, "token")` will likely be empty there, meaning all webhook requests share one rate-limit bucket.
+
+**Impact:** One noisy token can throttle every other token.
+
+**Fix:** Put the limiter on the endpoint, not the subrouter, e.g. `r.With(...).Post("/{token}", ...)`, or derive the key from `r.URL.Path` instead of `chi.URLParam`.
+
+---
+
+### 2. **Blocking: the no-op engine is unsafe**
+**Issue:** Returning `200 {"accepted":true}` while doing nothing is silent data loss.
+
+**Impact:** Webhooks appear successful, but automations never run. ThatΓÇÖs very hard to detect in production.
+
+**Fix:** Fail closed:
+- donΓÇÖt mount the route unless a real `WebhookTrigger` is wired, or
+- return `503` if webhook execution is unavailable.
+
+A logging-only placeholder is okay in tests/dev, not as router default behavior.
+
+---
+
+### 3. **Blocking: token leakage is broader than your handler log**
+**Issue:** Even if you only log `token[:8]` in the handler, the token is still exposed elsewhere:
+- `LoggerMiddleware` logs `r.URL.Path` (`internal/api/middleware.go:35`)
+- tracing span names use `r.URL.Path` (`internal/api/middleware.go:75`)
+- error tracker stores `r.URL.Path` (`internal/api/error_tracker.go:210`)
+- metrics normalize raw path and currently do **not** mask webhook tokens (`internal/api/metrics.go:81-105`)
+
+**Impact:** Full bearer token ends up in logs/traces/error records, and metrics may get high-cardinality labels per token.
+
+**Fix:** Mask this route everywhere path-based observability is emitted, ideally by using route patterns instead of raw paths, or explicitly normalizing `/api/v1/automations/webhook/{token}`.
+
+---
+
+### 4. **Non-blocking but real: error mapping is incomplete**
+**Issue:** `HandleWebhook` returns plain errors for invalid JSON payload/config. Your handler maps unknown errors to `500`.
+
+**Impact:** client mistakes like malformed JSON become server errors.
+
+**Fix:** Map at least:
+- invalid JSON payload ΓåÆ `400`
+- `http.MaxBytesError` from `io.ReadAll` ΓåÆ `413` (your ΓÇ£large body handled by middlewareΓÇ¥ assumption is not true; `MaxBytesReader` only causes the read to fail)
+
+---
+
+### 5. **Routing conflict concern: probably fine**
+**Assessment:** I donΓÇÖt think `/api/v1/automations/webhook/{token}` will conflict with the existing `/api/v1` subrouter. Chi matches static routes before catch-all/param routes, so this should resolve correctly.
+
+**But:** donΓÇÖt rely on belief aloneΓÇöadd a router-level integration test against `NewRouter`, not just direct handler tests.
+
+---
+
+### 6. **Your planned tests are too narrow**
+**Issue:** handler-only tests wonΓÇÖt catch the two biggest risks here:
+- route precedence
+- rate-limit key correctness
+
+**Fix:** Add router integration tests for:
+- `POST /api/v1/automations/webhook/{token}` reaches the webhook handler
+- two different tokens do **not** share a rate-limit bucket
+- oversized body returns expected status
+- 429 response shape if you care about JSON consistency
+
+---
+
+### Answers to your specific concerns
+- **Routing conflict:** likely **no**.
+- **Per-token rate limiting with `chi.URLParam` in `r.Use`:** likely **no, not correct**.
+- **No-op engine:** **not sound** for production.
+- **Token in logs:** your local masking is **not sufficient**; global middleware still leaks it.
+
+Overall: the plan is close, but I would not ship it until the **rate limiter** and **token leakage** issues are addressed.
+
+Excellent critique. Let me address the key findings:
+
+1. **Rate limit key** ΓÇö Move limiter to `r.With(...)` on the endpoint instead of `r.Use()` on the subrouter
+2. **No-op engine** ΓÇö Always mount the route, but accept `WebhookTrigger` via `RouterOptions`; if nil, create one with a real no-op engine but this is fine because the trigger already handles the full pipeline
+3. **Token leakage** ΓÇö Use chi's `routePattern` for metrics/logging instead of raw path
+4. **Error mapping** ΓÇö Map invalid JSON ΓåÆ 400, MaxBytesError ΓåÆ 413
+
+Let me implement now.
+
+Good ΓÇö I need to add the webhook path to `normalizePath` to avoid token leakage in metrics. Let me also check the logger middleware path logging:
+
+Now let me check httprate's API:
+
+Now I have all the context needed. Let me create the implementation files:
+
+Now create the tests:
+
+Now wire it into the router. I need to:
+1. Add `WebhookTrigger` to `RouterOptions`
+2. Add the import for `trigger` package
+3. Mount the route BEFORE the `/api/v1` subrouter
+4. Add webhook path normalization to metrics
+
+I need to update the handler to use an interface for better testability. Let me update the handler file:
+
+Now wire the route in the router. I'll place it after the metrics/health checks but before the `/api/v1` subrouter:
+
+Now add the `webhookTokenKeyFunc` function and the `httprate.WithKeyFuncs` import. Let me check what's available:
+
+`httprate.WithKeyFuncs` exists and accepts `...KeyFunc` where `KeyFunc = func(r *http.Request) (string, error)`. Now I need to add the key function. Let me add it at the bottom of the handler file and add the normalizePath entry for metrics:
+
+Good. Now I need to add the `webhookTokenKeyFunc` that's referenced by the router. Let me add it to the handler file and also remove the unused `context` import (it's used in the interface, so actually it IS used):
+
+Now add the webhook path to `normalizePath` in metrics to prevent token leakage:
+
+Now let me check if `strings` is already imported in metrics.go:
+
+Need to add `"strings"` to the import:
+
+Now let's compile to check for errors:
+
+Compiles clean. Now run the tests:
+
+`strPtr` is already defined in the package. Let me remove the duplicate:
+
+All 11 tests pass. Let me also verify the full package builds and existing tests still pass:
+
+The failures are pre-existing: `TestAllowedCommandsWhitelist`, `TestIsOneTimeDatePast_Today`, and `TestLiveScheduler_FiresWithinWindow` (which times out at 90s ΓÇö a flaky test). None of these are related to my changes. Let me verify by running only the webhook-related tests more broadly:
+
+All 24 webhook-related tests pass (11 new handler tests + 13 existing trigger tests). Now let me commit:
+
+

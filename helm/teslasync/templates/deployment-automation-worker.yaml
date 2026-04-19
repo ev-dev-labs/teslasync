@@ -1,0 +1,73 @@
+{{- if .Values.automationWorker.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "teslasync.fullname" . }}-automation-worker
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: automation-worker
+spec:
+  replicas: {{ .Values.automationWorker.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "teslasync.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: automation-worker
+  template:
+    metadata:
+      labels:
+        {{- include "teslasync.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: automation-worker
+    spec:
+      {{- include "teslasync.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "teslasync.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+        - name: wait-for-db
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z {{ include "teslasync.postgresql.host" . }} {{ include "teslasync.postgresql.port" . }}; do echo "waiting for database..."; sleep 2; done']
+      containers:
+        - name: automation-worker
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: {{ include "teslasync.automationWorker.image" . | quote }}
+          imagePullPolicy: {{ .Values.automationWorker.image.pullPolicy }}
+          ports:
+            - name: health
+              containerPort: 8083
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          env:
+            - name: HEALTH_PORT
+              value: "8083"
+            - name: DATABASE_MAX_CONNS
+              value: {{ .Values.automationWorker.dbMaxConns | default 5 | quote }}
+            - name: DATABASE_MIN_CONNS
+              value: {{ .Values.automationWorker.dbMinConns | default 2 | quote }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "teslasync.fullname" . }}
+            - secretRef:
+                name: {{ include "teslasync.secretName" . }}
+          resources:
+            {{- toYaml .Values.automationWorker.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

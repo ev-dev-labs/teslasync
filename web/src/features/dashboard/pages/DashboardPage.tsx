@@ -17,6 +17,7 @@ import { StatusPill } from '@/components/ui/StatusPill';
 import { FadeIn } from '@/components/motion';
 import { AlertBanner, EmptyState } from '@/components/feedback';
 import { StatusBadge } from '@/components/data-display/StatusBadge';
+import { FreshnessIndicator } from '@/components/data-display';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { useSettings } from '@/hooks/useSettings';
 import { useRealtimeEvents } from '@/hooks/useRealtimeEvents';
@@ -334,7 +335,10 @@ function OtherVehiclesStrip({ vehicles, states, convertDistance, convertTemp, di
                 <div className="flex items-center gap-3 mb-3">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{v.display_name || v.vin}</p>
-                    <StatusBadge status={v.state} size="sm" />
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={v.state} size="sm" />
+                      <FreshnessIndicator timestamp={v.updated_at} size="sm" />
+                    </div>
                   </div>
                 </div>
                 {s ? (

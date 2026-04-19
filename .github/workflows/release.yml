@@ -20,6 +20,7 @@ env:
   WEB_IMAGE: ghcr.io/${{ github.repository }}-web
   NOTIFICATION_IMAGE: ghcr.io/${{ github.repository }}-notification-worker
   EXPORT_IMAGE: ghcr.io/${{ github.repository }}-export-worker
+  AUTOMATION_IMAGE: ghcr.io/${{ github.repository }}-automation-worker
 
 jobs:
   version-tag:
@@ -110,6 +111,10 @@ jobs:
               VERSION=${{ needs.version-tag.outputs.new_tag }}
           - image: export-worker
             file: Dockerfile.export-worker
+            build-args: |
+              VERSION=${{ needs.version-tag.outputs.new_tag }}
+          - image: automation-worker
+            file: Dockerfile.automation
             build-args: |
               VERSION=${{ needs.version-tag.outputs.new_tag }}
     steps:
@@ -226,6 +231,9 @@ jobs:
 
           # Export Worker
           docker pull ghcr.io/${{ github.repository }}-export-worker:${VERSION}
+
+          # Automation Worker
+          docker pull ghcr.io/${{ github.repository }}-automation-worker:${VERSION}
           \`\`\`
 
           ### ⎈ Helm Chart
@@ -258,6 +266,7 @@ jobs:
           | Web Image | \`ghcr.io/${{ github.repository }}-web:${VERSION}\` |
           | Notification Worker | \`ghcr.io/${{ github.repository }}-notification-worker:${VERSION}\` |
           | Export Worker | \`ghcr.io/${{ github.repository }}-export-worker:${VERSION}\` |
+          | Automation Worker | \`ghcr.io/${{ github.repository }}-automation-worker:${VERSION}\` |
           | Helm Chart | \`oci://ghcr.io/${{ github.repository_owner }}/charts/teslasync:${VERSION}\` |
           NOTES_EOF
 

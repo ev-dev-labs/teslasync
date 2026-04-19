@@ -28,6 +28,9 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/worker"
 
+	"github.com/ev-dev-labs/teslasync/internal/automation"
+	"github.com/ev-dev-labs/teslasync/internal/automation/action"
+
 	// New hexagonal architecture packages
 	pgadapter "github.com/ev-dev-labs/teslasync/internal/adapter/postgres"
 	"github.com/ev-dev-labs/teslasync/internal/app/chargingsvc"
@@ -45,6 +48,7 @@ type RouterOptions struct {
 	GasPriceWorker   *worker.GasPriceWorker  // If set, enables gas price management endpoints
 	PollEngine       *polling.PollEngine      // If set, enables polling engine dashboard endpoints
 	SignalStore      *signal.Store            // If set, enables /internal/flush endpoint
+	WebhookTrigger   WebhookProcessor         // If set, enables public webhook receiver endpoint
 }
 
 // NewRouter creates and configures the main HTTP router with all API routes,
@@ -173,6 +177,38 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	anomalyHandler := NewAnomalyHandler(db)
 	energyFlowHandler := NewEnergyFlowHandler(db)
 	weeklyDigestHandler := NewWeeklyDigestHandler(db)
+	teslaChargingHistoryHandler := NewTeslaChargingHistoryHandler(teslaClient, db)
+	teslaChargingSessionHandler := NewTeslaChargingSessionHandler(teslaClient, db)
+	teslaEnergyHistoryHandler := NewTeslaEnergyHistoryHandler(teslaClient, db)
+	teslaEnergyLiveStatusHandler := NewTeslaEnergyLiveStatusHandler(teslaClient, db)
+	energySiteHandler := NewEnergySiteHandler(teslaClient, db)
+	fleetTelemetryErrorHandler := NewFleetTelemetryErrorHandler(teslaClient, db)
+	teslaUserConfigHandler := NewTeslaUserConfigHandler(teslaClient, db)
+	teslaUserOrderHandler := NewTeslaUserOrderHandler(teslaClient, db)
+	teslaUserProfileHandler := NewTeslaUserProfileHandler(teslaClient, db)
+	vehicleAccessHandler := NewVehicleAccessHandler(teslaClient, db)
+	vehicleInfoHandler := NewVehicleInfoHandler(teslaClient, db)
+	// SSE event hub for automation real-time events
+	automationEventHub := NewEventHub()
+	automationPublisher := NewAutomationEventPublisher(automationEventHub)
+
+	// Wire MQTT publisher for automation config change notifications
+	var automationMQTTPublisher AutomationMQTTPublisher
+	if mqttClient != nil {
+		automationMQTTPublisher = &automationMQTTReloader{client: mqttClient}
+	}
+
+	automationHandler := NewAutomationHandler(db,
+		WithCommandExecutor(action.NewCommandExecutor(
+			database.NewVehicleRepo(db),
+			database.NewCommandLogRepo(db),
+			database.NewSettingsRepo(db),
+			teslaClient,
+		)),
+		WithAutomationEventPublisher(automationPublisher),
+		WithAutomationAuditor(automation.NewAuditor(NewDBAuditWriter(db))),
+		WithAutomationMQTTPublisher(automationMQTTPublisher),
+	)
 	telemetryHandler := opt.TelemetryHandler
 	if telemetryHandler == nil {
 		telemetryHandler = NewTelemetryHandler(db, mqttClient, eventHub, 5*time.Minute, geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
@@ -205,6 +241,18 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// Metrics
 	r.Handle("/metrics", MetricsHandler())
 
+	// Public: Automation webhook receiver (no auth — token IS the auth).
+	// Mounted before the /api/v1 subrouter so it is exempt from any
+	// ForwardAuth / auth middleware applied to the main API group.
+	if opt.WebhookTrigger != nil {
+		webhookReceiver := NewWebhookReceiverHandler(opt.WebhookTrigger)
+		r.With(
+			httprate.Limit(60, 1*time.Minute, httprate.WithKeyFuncs(
+				webhookTokenKeyFunc,
+			)),
+		).Post("/api/v1/automations/webhook/{token}", webhookReceiver.Receive)
+	}
+
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
 		// Auth (stricter rate limits to prevent brute force)
@@ -229,12 +277,41 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Get("/state", vehicleHandler.CurrentState)
 				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/wake", vehicleHandler.Wake)
 				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/command", commandHandler.SendCommand)
+				r.Get("/commands/latest", commandHandler.LatestCommands)
+				r.Get("/commands/history", commandHandler.CommandHistory)
 				r.Get("/energy", energyHandler.Stats)
 				r.Get("/energy/flow", energyFlowHandler.Get)
 				r.Get("/battery", batteryHandler.Report)
 				r.Get("/battery/cells", batteryCellsHandler.GetByVehicle)
 				r.Get("/battery/projected-range", rangeProjectionHandler.GetByVehicle)
 				r.Get("/weekly-digest", weeklyDigestHandler.Get)
+
+				// Vehicle access: drivers & share invitations
+				r.Route("/drivers", func(r chi.Router) {
+					r.Get("/", vehicleAccessHandler.ListDrivers)
+					r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/refresh", vehicleAccessHandler.RefreshDrivers)
+					r.With(httprate.LimitByIP(5, 1*time.Minute)).Delete("/", vehicleAccessHandler.RemoveDriver)
+				})
+				r.Route("/invitations", func(r chi.Router) {
+					r.Get("/", vehicleAccessHandler.ListInvitations)
+					r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/", vehicleAccessHandler.CreateInvitation)
+					r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/refresh", vehicleAccessHandler.RefreshInvitations)
+					r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/{invitationID}/revoke", vehicleAccessHandler.RevokeInvitation)
+				})
+
+				// Vehicle info: mobile access, options, specs
+				r.Get("/mobile-enabled", vehicleInfoHandler.MobileEnabled)
+				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/mobile-enabled/refresh", vehicleInfoHandler.RefreshMobileEnabled)
+				r.Get("/options", vehicleInfoHandler.VehicleOptions)
+				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/options/refresh", vehicleInfoHandler.RefreshVehicleOptions)
+				r.Get("/specs", vehicleInfoHandler.VehicleSpecs)
+				r.With(httprate.LimitByIP(2, 1*time.Minute)).Post("/specs/refresh", vehicleInfoHandler.RefreshVehicleSpecs)
+
+				// Vehicle lifecycle: subscriptions & upgrades
+				r.Get("/subscriptions", vehicleInfoHandler.SubscriptionEligibility)
+				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/subscriptions/refresh", vehicleInfoHandler.RefreshSubscriptionEligibility)
+				r.Get("/upgrades", vehicleInfoHandler.UpgradeEligibility)
+				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/upgrades/refresh", vehicleInfoHandler.RefreshUpgradeEligibility)
 			})
 		})
 
@@ -269,6 +346,70 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Get("/telemetry", chargingHandler.TelemetryReadings)
 			})
 		})
+
+		// Tesla Charging History (Supercharger/DC billing records)
+		r.Route("/tesla/charging", func(r chi.Router) {
+			r.Route("/history", func(r chi.Router) {
+				r.Get("/", teslaChargingHistoryHandler.List)
+				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/refresh", teslaChargingHistoryHandler.Refresh)
+			})
+			r.Get("/invoice/{contentID}", teslaChargingHistoryHandler.Invoice)
+			// Fleet charging sessions (business accounts only)
+			r.Route("/sessions", func(r chi.Router) {
+				r.Get("/", teslaChargingSessionHandler.List)
+				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/refresh", teslaChargingSessionHandler.Refresh)
+			})
+		})
+
+		// Tesla Energy Sites (product discovery)
+		r.Get("/tesla/energy-sites", energySiteHandler.List)
+		r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/tesla/energy-sites/refresh", energySiteHandler.Refresh)
+
+		// Tesla Energy Site History (calendar_history + telemetry_history)
+		r.Route("/tesla/energy-sites/{siteID}", func(r chi.Router) {
+			// Site info (configuration, components, firmware)
+			r.Get("/site-info", energySiteHandler.SiteInfo)
+			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/site-info/refresh", energySiteHandler.RefreshSiteInfo)
+
+			r.Get("/energy-history", teslaEnergyHistoryHandler.EnergyHistory)
+			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/energy-history/refresh", teslaEnergyHistoryHandler.RefreshEnergyHistory)
+			r.Get("/backup-history", teslaEnergyHistoryHandler.BackupHistory)
+			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/backup-history/refresh", teslaEnergyHistoryHandler.RefreshBackupHistory)
+			r.Get("/charging-history", teslaEnergyHistoryHandler.ChargingHistory)
+			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/charging-history/refresh", teslaEnergyHistoryHandler.RefreshChargingHistory)
+
+			// Live status (power flow snapshots)
+			r.Get("/live-status", teslaEnergyLiveStatusHandler.LiveStatus)
+			r.Get("/live-status/history", teslaEnergyLiveStatusHandler.LiveStatusHistory)
+			r.With(httprate.LimitByIP(10, 1*time.Minute)).Post("/live-status/refresh", teslaEnergyLiveStatusHandler.RefreshLiveStatus)
+
+			// Time-of-Use settings (rate plan / tariff)
+			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/tou-settings", energySiteHandler.UpdateTOUSettings)
+		})
+
+		// Tesla Fleet Telemetry Errors (partner-level — all vehicles)
+		r.Route("/tesla/fleet-telemetry", func(r chi.Router) {
+			r.Get("/error-vins", fleetTelemetryErrorHandler.ErrorVINs)
+			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/error-vins/refresh", fleetTelemetryErrorHandler.RefreshErrorVINs)
+			r.Get("/errors", fleetTelemetryErrorHandler.Errors)
+			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/errors/refresh", fleetTelemetryErrorHandler.RefreshErrors)
+		})
+
+		// Tesla User Config (feature flags, region) and Orders
+		r.Route("/tesla/user", func(r chi.Router) {
+			r.Get("/feature-config", teslaUserConfigHandler.FeatureConfig)
+			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/feature-config/refresh", teslaUserConfigHandler.RefreshFeatureConfig)
+			r.Get("/region", teslaUserConfigHandler.Region)
+			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/region/refresh", teslaUserConfigHandler.RefreshRegion)
+			r.Get("/orders", teslaUserOrderHandler.Orders)
+			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/orders/refresh", teslaUserOrderHandler.RefreshOrders)
+			r.Get("/profile", teslaUserProfileHandler.Profile)
+			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/profile/refresh", teslaUserProfileHandler.RefreshProfile)
+		})
+
+		// Tesla Warranty Details (account-level)
+		r.Get("/tesla/warranty", vehicleInfoHandler.WarrantyDetails)
+		r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/tesla/warranty/refresh", vehicleInfoHandler.RefreshWarrantyDetails)
 
 		// Geofences
 		r.Route("/geofences", func(r chi.Router) {
@@ -312,6 +453,47 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Put("/rules/{ruleID}", alertHandler.UpdateRule)
 			r.Delete("/rules/{ruleID}", alertHandler.DeleteRule)
 			r.Post("/test", alertHandler.TestRule)
+		})
+
+		// Automations
+		r.Route("/automations", func(r chi.Router) {
+			r.Get("/", automationHandler.List)
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/", automationHandler.Create)
+
+			// SSE stream for real-time automation events (static route before {id} param)
+			if cfg.Auth.AuthentikURL != "" || cfg.Auth.AuthentikHMACKey != "" {
+				r.With(AuthentikSSEAuth(cfg.Auth.AuthentikURL, cfg.Auth.AuthentikHMACKey)).Get("/events", SSEHandler(automationEventHub))
+			} else {
+				r.Get("/events", SSEHandler(automationEventHub))
+			}
+
+			// Import/Export (static routes before {id} param)
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/export", automationHandler.ExportBatch)
+			r.With(httprate.LimitByIP(10, 1*time.Minute)).Post("/import", automationHandler.Import)
+
+			// Execution history (static routes before {id} param)
+			r.Route("/history", func(r chi.Router) {
+				r.Get("/", automationHandler.ListHistory)
+				r.Get("/{historyId}", automationHandler.GetHistoryDetail)
+			})
+
+			// Presets (static routes before {id} param)
+			r.Route("/presets", func(r chi.Router) {
+				r.Get("/", automationHandler.ListPresets)
+				r.Get("/{presetId}", automationHandler.GetPreset)
+			})
+
+			r.Route("/{id}", func(r chi.Router) {
+				r.Get("/", automationHandler.Get)
+				r.Get("/export", automationHandler.ExportOne)
+				r.Get("/history", automationHandler.ListAutomationHistory)
+				r.With(httprate.LimitByIP(20, 1*time.Minute)).Put("/", automationHandler.Update)
+				r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/", automationHandler.Delete)
+				r.With(httprate.LimitByIP(20, 1*time.Minute)).Patch("/toggle", automationHandler.Toggle)
+				r.With(httprate.LimitByIP(20, 1*time.Minute)).Patch("/re-enable", automationHandler.ReEnable)
+				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/test-run", automationHandler.TestRun)
+				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/undo", automationHandler.UndoLast)
+			})
 		})
 
 		// Analytics
@@ -564,7 +746,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// System endpoints
 		r.Route("/system", func(r chi.Router) {
 			r.Get("/status", SystemStatusHandler(db, teslaClient, mqttClient, health, cfg))
-			r.Get("/health", ExtendedHealthCheck(db, health))
+			// Build telemetry buffer stats callback if telemetry is active
+			var bufferStats func() (int, int)
+			if telemetryHandler != nil {
+				if st := telemetryHandler.SessionTracker(); st != nil {
+					bufferStats = func() (int, int) {
+						return st.DriveBufferLen(), st.ChargeBufferLen()
+					}
+				}
+			}
+			r.Get("/health", ExtendedHealthCheck(db, health, bufferStats))
 			r.Get("/api-usage", APIUsageHandler(db))
 			r.Get("/compression-stats", CompressionStatsHandler(db))
 			r.Get("/backup", backupHandler.ExportData)
@@ -627,6 +818,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/fleet-api-info", devToolsHandler.FleetAPIInfo)
 			r.Get("/detect-region", devToolsHandler.DetectRegion)
 			r.Post("/register-partner", devToolsHandler.RegisterPartner)
+			r.Get("/partner-public-key", devToolsHandler.PartnerPublicKey)
 			r.Get("/test-api", devToolsHandler.TestAPIConnectivity)
 			r.Get("/token-info", devToolsHandler.TokenInfo)
 			r.Get("/db-stats", devToolsHandler.DatabaseStats)

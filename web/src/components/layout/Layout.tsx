@@ -29,6 +29,7 @@ import {
   Navigation,
   Activity,
   GitCompare,
+  ArrowLeftRight,
   Wallet,
   BedDouble,
   Shield,
@@ -49,12 +50,14 @@ import {
   DatabaseBackup,
   Recycle,
   Database,
+  History,
 } from 'lucide-react'
 import { useState, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import clsx from 'clsx'
+import { BottomTabBar, BOTTOM_TAB_PATHS } from './BottomTabBar'
 import { CommandPalette, CommandPaletteTrigger } from '../ui/CommandPalette'
 import { ServiceStatusBanner, SystemHealthDot } from '../data-display/ServiceStatus'
 import Logo from '../ui/Logo'
@@ -63,6 +66,7 @@ import { request } from '@/api/client'
 import { getVehicleState } from '@/api/vehicles'
 import type { Alert, Vehicle, VersionInfo, UpdateCheckResult, StaleSessionsResponse } from '@/api/types'
 import { useRealtimeEvents } from '../../hooks/useRealtimeEvents'
+import { useNotificationListener } from '../../hooks/useNotificationListener'
 import { useToast } from '../feedback/Toast'
 import { useSettings } from '../../hooks/useSettings'
 import { GlassPanel } from '../ui/GlassPanel'
@@ -76,6 +80,7 @@ const navI18nKeys: Record<string, string> = {
   'Energy': 'nav.energy',
   'Battery Health': 'nav.battery',
   'Analytics': 'nav.analytics',
+  'Vehicle Comparison': 'nav.vehicleComparison',
   'Efficiency': 'nav.efficiency',
   'Mileage': 'nav.mileage',
   'Timeline': 'nav.timeline',
@@ -88,6 +93,7 @@ const navI18nKeys: Record<string, string> = {
   'Statistics': 'nav.statistics',
   'Alerts': 'nav.alerts',
   'Commands': 'nav.commands',
+  'Command History': 'nav.commandHistory',
   'Geofences': 'nav.geofences',
   'Notifications': 'nav.notifications',
   'Settings': 'nav.settings',
@@ -96,6 +102,7 @@ const navI18nKeys: Record<string, string> = {
   'Security & Access': 'nav.securityAccess',
   'Temperature Impact': 'nav.temperatureImpact',
   'Route Efficiency': 'nav.routeEfficiency',
+  'Automations': 'nav.automations',
 }
 
 type SSEState = 'connected' | 'reconnecting' | 'unavailable'
@@ -180,6 +187,7 @@ export const navSections = [
     items: [
       { to: '/analytics', icon: BarChart3, label: 'Analytics', color: 'text-indigo-400' },
       { to: '/statistics', icon: BarChart3, label: 'Statistics', color: 'text-cyan-400' },
+      { to: '/vehicle-comparison', icon: ArrowLeftRight, label: 'Vehicle Comparison', color: 'text-orange-400', minVehicles: 2 },
       { to: '/timeline', icon: Clock, label: 'Timeline', color: 'text-sky-400' },
       { to: '/locations', icon: MapPin, label: 'Locations', color: 'text-emerald-400' },
     ],
@@ -188,6 +196,8 @@ export const navSections = [
     title: 'Control',
     items: [
       { to: '/commands', icon: Gamepad2, label: 'Commands', color: 'text-fuchsia-400' },
+      { to: '/command-history', icon: History, label: 'Command History', color: 'text-violet-400' },
+      { to: '/automations', icon: Zap, label: 'Automations', color: 'text-neon-cyan' },
       { to: '/alerts', icon: Bell, label: 'Alerts', color: 'text-red-400' },
       { to: '/alert-studio', icon: Zap, label: 'Alert Studio', color: 'text-neon-cyan' },
       { to: '/geofences', icon: MapPin, label: 'Geofences', color: 'text-lime-400' },
@@ -259,6 +269,7 @@ export default function Layout() {
       method(alert.title ?? 'Alert', alert.message ?? '')
     },
   })
+  useNotificationListener()
   const { convertDistance, distanceUnit } = useSettings()
 
   // Version info
@@ -368,10 +379,13 @@ export default function Layout() {
                 {section.title}
               </p>
               <div className="space-y-0.5">
-                {section.items.map(({ to, icon: Icon, label, color }) => {
+                {section.items
+                  .filter((item) => !('minVehicles' in item) || (vehicles?.length ?? 0) >= (item as { minVehicles?: number }).minVehicles!)
+                  .map(({ to, icon: Icon, label, color }) => {
                   const isActive = to === '/'
                     ? location.pathname === '/'
                     : location.pathname === to || location.pathname.startsWith(to + '/')
+                  const isInTabBar = BOTTOM_TAB_PATHS.has(to)
                   return (
                     <NavLink
                       key={to}
@@ -379,7 +393,10 @@ export default function Layout() {
                       onClick={() => setSidebarOpen(false)}
                       aria-label={label}
                       aria-current={isActive ? 'page' : undefined}
-                      className="group relative flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200"
+                      className={clsx(
+                        'group relative flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200',
+                        isInTabBar && 'opacity-50 lg:opacity-100'
+                      )}
                     >
                       {isActive && (
                         <motion.div
@@ -487,7 +504,7 @@ export default function Layout() {
         <div className="h-14 shrink-0 lg:hidden" />
 
         <ServiceStatusBanner />
-        <main id="main-content" ref={mainRef} role="main" tabIndex={-1} className="flex-1 overflow-y-auto outline-none">
+        <main id="main-content" ref={mainRef} role="main" tabIndex={-1} className="flex-1 overflow-y-auto outline-none pb-16 lg:pb-0">
           <div className="mx-auto max-w-[1600px] px-3 py-4 pb-safe sm:px-5 sm:py-5 lg:px-8 lg:py-8">
             <AnimatePresence mode="wait">
               <motion.div
@@ -503,6 +520,9 @@ export default function Layout() {
           </div>
         </main>
       </div>
+
+      {/* Mobile bottom tab bar */}
+      <BottomTabBar />
 
       {/* Command Palette */}
       <CommandPalette />

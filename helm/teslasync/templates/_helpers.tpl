@@ -131,6 +131,17 @@ imagePullSecrets:
 {{- end }}
 {{- end }}
 
+{{- define "teslasync.automationWorker.image" -}}
+{{- $registry := .Values.global.imageRegistry | default "" }}
+{{- $repo := .Values.automationWorker.image.repository }}
+{{- $tag := .Values.automationWorker.image.tag | default .Chart.AppVersion }}
+{{- if $registry }}
+{{- printf "%s/%s:%s" $registry $repo $tag }}
+{{- else }}
+{{- printf "%s:%s" $repo $tag }}
+{{- end }}
+{{- end }}
+
 {{/* ── PostgreSQL connection helpers ──────────────────────────────────── */}}
 
 {{- define "teslasync.postgresql.host" -}}
@@ -290,6 +301,24 @@ imagePullSecrets:
 {{- end }}
 
 {{/* ── Vehicle Command Proxy connection helpers ────────────────────────── */}}
+
+{{/* ── Automation Worker connection helpers ─────────────────────────────── */}}
+
+{{- define "teslasync.automationWorker.host" -}}
+{{- if .Values.automationWorker.enabled }}
+{{- printf "%s-automation-worker" (include "teslasync.fullname" .) }}
+{{- else }}
+{{- .Values.automationWorker.external.host }}
+{{- end }}
+{{- end }}
+
+{{- define "teslasync.automationWorker.port" -}}
+{{- if .Values.automationWorker.enabled }}
+{{- toString (.Values.automationWorker.service.port | default 8083) }}
+{{- else }}
+{{- toString (.Values.automationWorker.external.port | default 8083) }}
+{{- end }}
+{{- end }}
 
 {{- define "teslasync.commandProxy.url" -}}
 {{- if .Values.commandProxy.enabled }}

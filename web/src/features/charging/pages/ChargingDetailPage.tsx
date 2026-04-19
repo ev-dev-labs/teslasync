@@ -94,7 +94,10 @@ export default function ChargingDetailPage() {
   const { id } = useParams<{ id: string }>();
   const sessionId = Number(id);
 
-  const { convertDistance, convertTemp, distanceUnit, tempUnit } = useSettings();
+  const {
+    convertDistance, convertTemp, distanceUnit, tempUnit,
+    costPerKwh: settingsCostPerKwh, currencySymbol, formatEnergyCost,
+  } = useSettings();
 
   const { data: session, isLoading } = useChargingSessionDetail(sessionId || null);
   const { data: telemetry } = useChargeTelemetry(session?.id ?? null);
@@ -345,15 +348,27 @@ export default function ChargingDetailPage() {
           />
           <StatCard
             icon={<DollarSign className="h-4 w-4" />}
-            label={t('charging.detail.totalCost', 'Total Cost')}
-            value={session.cost != null ? fmtNumber(session.cost, 2) : '—'}
+            label={session.cost != null
+              ? t('charging.detail.totalCost', 'Total Cost')
+              : t('charging.detail.estCost', 'Est. Cost')}
+            value={session.cost != null
+              ? fmtNumber(session.cost, 2)
+              : session.charge_energy_added > 0
+                ? formatEnergyCost(session.charge_energy_added)
+                : '—'}
             unit={session.cost != null ? '$' : ''}
+            sublabel={session.cost == null && session.charge_energy_added > 0
+              ? t('charging.detail.atRate', `at ${currencySymbol}${settingsCostPerKwh}/kWh`)
+              : undefined}
           />
           <StatCard
             icon={<DollarSign className="h-4 w-4" />}
             label={t('charging.detail.perKwh', 'Per kWh')}
-            value={costPerKwh != null ? fmtNumber(costPerKwh, 2) : '—'}
-            unit={costPerKwh != null ? '$/kWh' : ''}
+            value={costPerKwh != null
+              ? fmtNumber(costPerKwh, 2)
+              : fmtNumber(settingsCostPerKwh, 2)}
+            unit="$/kWh"
+            sublabel={costPerKwh == null ? t('charging.detail.fromSettings', 'from settings') : undefined}
           />
           <StatCard
             icon={<MapPin className="h-4 w-4" />}

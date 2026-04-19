@@ -46,6 +46,14 @@ export default defineConfig({
             purpose: 'maskable',
           },
         ],
+        shortcuts: [
+          {
+            name: 'Quick Glance',
+            short_name: 'Glance',
+            url: '/glance',
+            icons: [{ src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
+          },
+        ],
       },
       workbox: {
         // Never precache API / SSE / WebSocket traffic

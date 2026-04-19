@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useState, useRef } from 'react'
 import { useRealtimeEvents } from './useRealtimeEvents'
-import { parseEnumBool } from '../lib/parseEnums'
+import { parseEnumBool, parseBuckleStatus } from '../lib/parseEnums'
 
 /**
  * Vehicle live state from the in-memory SignalStore via SSE.
@@ -317,8 +317,8 @@ function parseSignals(raw: Record<string, unknown>): Partial<VehicleLiveState> {
   // Vehicle State — Driver & Keys
   if (raw['DriverSeatOccupied'] != null) s.driverSeatOccupied = bool('DriverSeatOccupied')
   if (raw['PairedPhoneKeyAndKeyFobQty'] != null) s.pairedKeyCount = n('PairedPhoneKeyAndKeyFobQty')
-  if (raw['DriverSeatBelt'] != null) s.driverSeatBelt = bool('DriverSeatBelt')
-  if (raw['PassengerSeatBelt'] != null) s.passengerSeatBelt = bool('PassengerSeatBelt')
+  if (raw['DriverSeatBelt'] != null) s.driverSeatBelt = parseBuckleStatus(raw['DriverSeatBelt'])
+  if (raw['PassengerSeatBelt'] != null) s.passengerSeatBelt = parseBuckleStatus(raw['PassengerSeatBelt'])
 
   // Vehicle State — Homelink
   if (raw['HomelinkNearby'] != null) s.homelinkNearby = bool('HomelinkNearby')

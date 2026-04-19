@@ -17,6 +17,9 @@ services:
       - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-teslasync}
       - DATABASE_NAME=${POSTGRES_DB:-teslasync}
       - DATABASE_SSL_MODE=disable
+      - DATABASE_CONNECT_TIMEOUT=5
+      - DATABASE_STATEMENT_TIMEOUT=30000
+      - DATABASE_HEALTH_CHECK_PERIOD=5s
       - MQTT_HOST=mosquitto
       - MQTT_PORT=1883
       - REDIS_HOST=redis
@@ -280,6 +283,50 @@ services:
       resources:
         limits:
           memory: 512M
+        reservations:
+          memory: 64M
+
+  automation-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.automation
+      args:
+        VERSION: ${VERSION:-dev}
+    container_name: teslasync-automation-worker
+    restart: unless-stopped
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USER=${POSTGRES_USER:-teslasync}
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-teslasync}
+      - DATABASE_NAME=${POSTGRES_DB:-teslasync}
+      - DATABASE_SSL_MODE=disable
+      - MQTT_HOST=mosquitto
+      - MQTT_PORT=1883
+      - TESLA_CLIENT_ID=${TESLA_CLIENT_ID}
+      - TESLA_CLIENT_SECRET=${TESLA_CLIENT_SECRET}
+      - TESLA_API_BASE_URL=${TESLA_API_BASE_URL:-https://fleet-api.prd.na.vn.cloud.tesla.com}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - HEALTH_PORT=8083
+      - OTEL_ENABLED=${OTEL_ENABLED:-false}
+      - OTEL_ENDPOINT=${OTEL_ENDPOINT:-jaeger:4317}
+      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-teslasync-automation-worker}
+      - OTEL_INSECURE=${OTEL_INSECURE:-true}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/automation-worker", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
         reservations:
           memory: 64M
 

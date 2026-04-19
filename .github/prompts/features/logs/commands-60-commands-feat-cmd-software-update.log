@@ -1,0 +1,13 @@
+There's already a "Software" command group in the frontend. Let me see what's there now, along with the rest of the `allowedCommands` and `commands` maps to check if these entries already exist.
+
+All three pieces are already in place:
+
+1. **Backend `commands` map** (`client.go:720-722`): Γ£à Already has both `schedule_software_update` and `cancel_software_update`
+2. **Backend `allowedCommands`** (`command_handler.go:117-118`): Γ£à Already has both entries
+3. **Frontend "Software" group** (`CommandsPage.tsx:730-756`): Γ£à Already has both `CommandButton`s with correct icons, i18n, and logic
+
+This feature is already fully implemented. Let me verify the build compiles cleanly.
+
+Both Go and TypeScript compile cleanly.
+
+

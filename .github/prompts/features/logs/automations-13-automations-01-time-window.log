@@ -1,0 +1,56 @@
+Let me look at shared helpers, models, and a test file for patterns:
+
+Now let me understand how conditions fit into the automation engine:
+
+Let me check if there's an existing condition evaluation mechanism in the engine:
+
+This is the first condition implementation. Let me now plan and implement it. Let me also check the battery trigger test for its pattern:
+
+Overall: the overnight predicate is correct for a half-open window `[start, end)`.  
+For `22:00ΓÇô06:00`, `now >= start || now < end` is the right rule.
+
+What IΓÇÖd push back on:
+
+- **Blocking ΓÇö donΓÇÖt let `start_time == end_time` mean ΓÇ£alwaysΓÇ¥ implicitly.**  
+  With your current `start >= end` branch, equal times become always-true by accident. ThatΓÇÖs risky: a typo like `22:00` / `22:00` would silently enable a 24h window.  
+  **Fix:** handle equality explicitly in validation. Best option: reject it. If you truly need 24h windows later, add an explicit flag or separate condition type.
+
+- **Blocking ΓÇö decide where invalid config fails.**  
+  `EvaluateTimeWindow(...) Result` has no error return, so if callers bypass `ParseTimeWindowConfig`, bad timezone / malformed time can only become ΓÇ£Met=falseΓÇ¥, which hides config bugs instead of surfacing them.  
+  **Fix:** make `ParseTimeWindowConfig` the only place that validates and normalizes config, or make evaluate return an error too.
+
+- **Important ΓÇö validate `type` in the concrete parser if present.**  
+  If `ParseTimeWindowConfig` accepts `{type:"other_condition"}`, you can misroute bad config and still evaluate it.  
+  **Fix:** in `ParseTimeWindowConfig`, reject non-empty `type` values other than `"time_window"`. Allowing empty is okay only if you want backward/internal flexibility.
+
+- **Important ΓÇö be strict about `HH:MM`.**  
+  DonΓÇÖt assume generic parsing gives exactly the format you want.  
+  **Fix:** explicitly validate `00<=HH<=23`, `00<=MM<=59`, and whether zero-padding is required. Add tests for `24:00`, `12:60`, `9:00`, empty string, whitespace.
+
+- **Important ΓÇö test the end-boundary semantics explicitly.**  
+  Your plan mentions ΓÇ£exactly at endΓÇ¥, which is good; make sure you assert it is **not met** for both same-day and overnight windows. That boundary is easy to get wrong later.
+
+- **Non-blocking ΓÇö history/audit may need more than `Reason`.**  
+  `Result{Met, Reason}` is fine for flow control, but weak for `conditions_snapshot` diagnostics.  
+  **Fix:** consider a separate serializable snapshot payload with normalized start/end, timezone, evaluated local time, and maybe `window_kind` (`same_day` / `overnight`).
+
+- **Non-blocking ΓÇö document DST semantics.**  
+  Wall-clock evaluation is probably what you want, but DST days wonΓÇÖt represent a fixed duration.  
+  **Fix:** state clearly that this is a local-clock window, not ΓÇ£N hours from startΓÇ¥.
+
+Recommended extra tests:
+- `start == end` behavior
+- invalid timezone
+- invalid time formats/ranges
+- overnight exact end (`06:00` should be false)
+- DST transition dates in at least one timezone
+
+So: your core overnight logic is good, but I would **reject equal start/end**, **validate `type`**, and **ensure invalid config cannot quietly degrade into ΓÇ£condition not met.ΓÇ¥**Good feedback. I'll adopt the key findings: reject `start == end`, validate the `type` field, return an error from `Evaluate`, strict HH:MM validation, and include a richer snapshot. Let me implement:
+
+Now create the test file:
+
+Now let me run the tests:
+
+All 47 test cases pass. Let me verify the build compiles cleanly:
+
+

@@ -1,0 +1,657 @@
+I'll systematically investigate the automation system across all these areas. Let me start with parallel searches to locate the relevant files.Good! Now let me look at the models directory more broadly and check for automation-related model files:Now let me examine the key files to understand the automation system:Let me search for the Automation struct in models.go and view the router more specifically:Now let me get the exact line numbers and view those sections:Let me use a different approach to find the line numbers:Let me view the models.go file with a specific range search:Perfect! Now let me view those sections:Now let me examine the automation handler to see the existing handlers:Now let me view the Create handler to understand how it works:Now let me check the migration to understand the DB schema:Now let me check for export/import patterns in the codebase:Perfect! Let me examine the export and import handlers to see the patterns:Now let me look for how bulk operations are handled in the codebase and check for request/response types:Let me find the request struct definition:Perfect! Now let me check how other repositories implement bulk operations or listing:Perfect! Now let me check how List handler works and also look for helper functions:Excellent! Now let me look at the helpers file to see common patterns:Let me see the rest of the helpers file and URL parsing functions:Perfect! Now let me check the export models to understand the structure for import/export operations:Perfect! Now let me create a comprehensive summary. Let me also check if there are any other automated bulk operation patterns in the codebase:Let me check what's in the models for AutomationVariable and AutomationHistory since those are related structures:Perfect! Now I have enough information. Let me compile the comprehensive report:
+
+## Comprehensive Automation System Investigation Report
+
+### 1. **AUTOMATION MODEL** 
+**File:** `D:\repos\teslasync/internal/models/models.go` (Lines 1132-1162)
+
+```go
+type Automation struct {
+	ID                  int64           `json:"id" db:"id"`
+	Name                string          `json:"name" db:"name"`
+	Description         string          `json:"description" db:"description"`
+	VehicleID           *int64          `json:"vehicle_id" db:"vehicle_id"`
+	Enabled             bool            `json:"enabled" db:"enabled"`
+	TriggerType         string          `json:"trigger_type" db:"trigger_type"`
+	TriggerConfig       json.RawMessage `json:"trigger_config" db:"trigger_config"`
+	Conditions          json.RawMessage `json:"conditions" db:"conditions"`
+	Actions             json.RawMessage `json:"actions" db:"actions"`
+	CooldownMinutes     int             `json:"cooldown_minutes" db:"cooldown_minutes"`
+	MaxExecutionsHour   int             `json:"max_executions_hour" db:"max_executions_hour"`
+	StopOnFailure       bool            `json:"stop_on_failure" db:"stop_on_failure"`
+	NotifyOnRun         bool            `json:"notify_on_run" db:"notify_on_run"`
+	NotifyOnFailure     bool            `json:"notify_on_failure" db:"notify_on_failure"`
+	SeasonalStart       *int            `json:"seasonal_start" db:"seasonal_start"`
+	SeasonalEnd         *int            `json:"seasonal_end" db:"seasonal_end"`
+	Priority            int             `json:"priority" db:"priority"`
+	LastTriggeredAt     *time.Time      `json:"last_triggered_at" db:"last_triggered_at"`
+	LastSuccessAt       *time.Time      `json:"last_success_at" db:"last_success_at"`
+	LastFailureAt       *time.Time      `json:"last_failure_at" db:"last_failure_at"`
+	ExecutionCount      int64           `json:"execution_count" db:"execution_count"`
+	FailureCount        int64           `json:"failure_count" db:"failure_count"`
+	ConsecutiveFailures int             `json:"consecutive_failures" db:"consecutive_failures"`
+	AutoDisabled        bool            `json:"auto_disabled" db:"auto_disabled"`
+	AutoDisabledReason  *string         `json:"auto_disabled_reason" db:"auto_disabled_reason"`
+	PresetID            *string         `json:"preset_id" db:"preset_id"`
+	Tags                []string        `json:"tags" db:"tags"`
+	CreatedAt           time.Time       `json:"created_at" db:"created_at"`
+	UpdatedAt           time.Time       `json:"updated_at" db:"updated_at"`
+}
+```
+
+**Related Types:**
+- **AutomationHistory** (Lines 1165-1185): Records execution results with trigger snapshots, condition evaluations, and action results
+- **AutomationVariable** (Lines 1198-1204): Key-value store for cross-automation state management
+- **TriggerConfig** (json.RawMessage): Validated by `internal/automation/trigger` package
+- **Conditions** (json.RawMessage): Array of condition objects validated by `internal/automation/condition` package
+- **Actions** (json.RawMessage): Ordered array of action objects validated by `internal/automation/action` package
+
+---
+
+### 2. **AUTOMATION HANDLER**
+**File:** `D:\repos\teslasync/internal/api/automation_handler.go` (Lines 1-40)
+
+**Handler Structure:**
+```go
+type AutomationHandler struct {
+	repo         *database.AutomationRepo
+	historyRepo  *database.AutomationHistoryRepo
+	fsmTransRepo *database.FSMTransitionRepo
+}
+
+func NewAutomationHandler(db *database.DB) *AutomationHandler {
+	return &AutomationHandler{
+		repo:         database.NewAutomationRepo(db),
+		historyRepo:  database.NewAutomationHistoryRepo(db),
+		fsmTransRepo: database.NewFSMTransitionRepo(db),
+	}
+}
+```
+
+**Existing Handlers:**
+- `List(w http.ResponseWriter, r *http.Request)` - Line 61: Returns all automations with optional `?enabled=true` filter
+- `Get(w http.ResponseWriter, r *http.Request)` - Line 83: Returns single automation by ID with computed fields
+- `Create(w http.ResponseWriter, r *http.Request)` - Line 129: Creates automation with validation and conflict detection
+- `Update(w http.ResponseWriter, r *http.Request)` - Line 217: Full-replacement PUT with webhook token uniqueness check
+- `Delete(w http.ResponseWriter, r *http.Request)` - Line 312: Deletes automation by ID
+- `Toggle(w http.ResponseWriter, r *http.Request)` - Line 349: Toggles enabled state via PATCH
+- `ReEnable(w http.ResponseWriter, r *http.Request)` - Line 398: Clears auto-disabled state via PATCH
+- `ListHistory(w http.ResponseWriter, r *http.Request)` - Line 459: Lists execution history with filtering
+- `ListAutomationHistory(w http.ResponseWriter, r *http.Request)` - Line 491: Lists history for specific automation
+- `GetHistoryDetail(w http.ResponseWriter, r *http.Request)` - Line 543: Gets single history record details
+- `TestRun(w http.ResponseWriter, r *http.Request)` - Line 703: Tests automation conditions and simulates actions
+
+**Create Handler Logic (Lines 129-212):**
+```go
+func (h *AutomationHandler) Create(w http.ResponseWriter, r *http.Request) {
+	// 1. Parse request body into createAutomationRequest
+	// 2. Validate required fields (name, trigger_type)
+	// 3. Validate trigger_config schema via trigger.ValidateTriggerConfig()
+	// 4. Validate actions are parseable via action.ParseActions()
+	// 5. Check webhook token uniqueness (if trigger_type == "webhook")
+	// 6. Create Automation model from request
+	// 7. Insert via h.repo.Create()
+	// 8. Run conflict detection via h.detectConflicts()
+	// 9. Return automationResponse with computed next_fire_time and conflicts
+}
+```
+
+**Request Structure (Lines 107-126):**
+```go
+type createAutomationRequest struct {
+	Name              string          `json:"name"`
+	Description       string          `json:"description"`
+	VehicleID         *int64          `json:"vehicle_id"`
+	Enabled           *bool           `json:"enabled"`
+	TriggerType       string          `json:"trigger_type"`
+	TriggerConfig     json.RawMessage `json:"trigger_config"`
+	Conditions        json.RawMessage `json:"conditions"`
+	Actions           json.RawMessage `json:"actions"`
+	CooldownMinutes   int             `json:"cooldown_minutes"`
+	MaxExecutionsHour int             `json:"max_executions_hour"`
+	StopOnFailure     bool            `json:"stop_on_failure"`
+	NotifyOnRun       bool            `json:"notify_on_run"`
+	NotifyOnFailure   bool            `json:"notify_on_failure"`
+	SeasonalStart     *int            `json:"seasonal_start"`
+	SeasonalEnd       *int            `json:"seasonal_end"`
+	Priority          int             `json:"priority"`
+	PresetID          *string         `json:"preset_id"`
+	Tags              []string        `json:"tags"`
+}
+```
+
+**Response Structure (Lines 34-56):**
+```go
+type automationResponse struct {
+	*models.Automation
+	NextFireTime *string              `json:"next_fire_time,omitempty"`
+	Conflicts    []condition.Conflict `json:"conflicts,omitempty"`
+}
+```
+
+---
+
+### 3. **AUTOMATION ROUTES**
+**File:** `D:\repos\teslasync/internal/api/router.go` (Lines 321-340)
+
+```go
+r.Route("/automations", func(r chi.Router) {
+	r.Get("/", automationHandler.List)
+	r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/", automationHandler.Create)
+
+	// Execution history (static routes before {id} param)
+	r.Route("/history", func(r chi.Router) {
+		r.Get("/", automationHandler.ListHistory)
+		r.Get("/{historyId}", automationHandler.GetHistoryDetail)
+	})
+
+	r.Route("/{id}", func(r chi.Router) {
+		r.Get("/", automationHandler.Get)
+		r.Get("/history", automationHandler.ListAutomationHistory)
+		r.With(httprate.LimitByIP(20, 1*time.Minute)).Put("/", automationHandler.Update)
+		r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/", automationHandler.Delete)
+		r.With(httprate.LimitByIP(20, 1*time.Minute)).Patch("/toggle", automationHandler.Toggle)
+		r.With(httprate.LimitByIP(20, 1*time.Minute)).Patch("/re-enable", automationHandler.ReEnable)
+		r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/test-run", automationHandler.TestRun)
+	})
+})
+```
+
+**Current Routes:**
+- `GET /automations` - List all automations
+- `POST /automations` - Create new automation (rate limited: 20/min)
+- `GET /automations/history` - List all execution history
+- `GET /automations/history/{historyId}` - Get specific history record
+- `GET /automations/{id}` - Get automation by ID
+- `GET /automations/{id}/history` - Get automation's execution history
+- `PUT /automations/{id}` - Update automation (rate limited: 20/min)
+- `DELETE /automations/{id}` - Delete automation (rate limited: 20/min)
+- `PATCH /automations/{id}/toggle` - Toggle enabled state (rate limited: 20/min)
+- `PATCH /automations/{id}/re-enable` - Re-enable auto-disabled automation (rate limited: 20/min)
+- `POST /automations/{id}/test-run` - Test automation (rate limited: 20/min)
+
+---
+
+### 4. **AUTOMATION REPOSITORY**
+**File:** `D:\repos\teslasync/internal/database/automation_repo.go`
+
+**Repository Structure (Lines 13-19):**
+```go
+type AutomationRepo struct {
+	db *DB
+}
+
+func NewAutomationRepo(db *DB) *AutomationRepo {
+	return &AutomationRepo{db: db}
+}
+```
+
+**Repository Methods:**
+
+| Method | Signature | Line | Details |
+|--------|-----------|------|---------|
+| `Create` | `Create(ctx context.Context, a *models.Automation) error` | 46 | Inserts automation, returns generated ID and timestamps |
+| `GetByID` | `GetByID(ctx context.Context, id int64) (*models.Automation, error)` | 65 | Returns nil if not found (not error) |
+| `GetAll` | `GetAll(ctx context.Context, enabledOnly bool) ([]*models.Automation, error)` | 74 | Returns up to 1000 automations, ordered by priority |
+| `GetByVehicle` | `GetByVehicle(ctx context.Context, vehicleID int64) ([]*models.Automation, error)` | 106 | Returns automations for vehicle OR global (vehicle_id IS NULL) |
+| `GetByTriggerType` | `GetByTriggerType(ctx context.Context, triggerType string) ([]*models.Automation, error)` | 134 | Returns enabled automations for specific trigger type |
+| `GetEnabledByVehicleAndTrigger` | `GetEnabledByVehicleAndTrigger(ctx context.Context, vehicleID int64, triggerType string) ([]*models.Automation, error)` | 164 | Returns enabled automations matching vehicle and trigger |
+| `GetByWebhookToken` | `GetByWebhookToken(ctx context.Context, token string) (*models.Automation, error)` | 202 | Looks up by webhook_token in trigger_config JSONB |
+| `Update` | `Update(ctx context.Context, a *models.Automation) error` | 220 | Updates all fields except state tracking fields |
+| `SetEnabled` | `SetEnabled(ctx context.Context, id int64, enabled bool) error` | 244 | Updates enabled field and updated_at |
+| `Delete` | `Delete(ctx context.Context, id int64) error` | 251 | Deletes automation by ID |
+| `IncrementExecution` | `IncrementExecution(ctx context.Context, id int64, success bool) error` | 257 | Updates execution counters, failure tracking, and timestamps |
+| `SetAutoDisabled` | `SetAutoDisabled(ctx context.Context, id int64, reason string) error` | 281 | Marks automation as auto-disabled with reason |
+| `ReEnable` | `ReEnable(ctx context.Context, id int64) error` | 290 | Clears auto-disabled state, resets consecutive failures |
+
+**Create Method Logic (Lines 46-63):**
+```go
+func (r *AutomationRepo) Create(ctx context.Context, a *models.Automation) error {
+	now := time.Now().UTC()
+	query := `INSERT INTO automations (
+		name, description, vehicle_id, enabled,
+		trigger_type, trigger_config, conditions, actions,
+		cooldown_minutes, max_executions_hour, stop_on_failure, notify_on_run, notify_on_failure,
+		seasonal_start, seasonal_end, priority,
+		preset_id, tags, created_at, updated_at
+	) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$19)
+	RETURNING id, created_at, updated_at`
+	return r.db.Pool.QueryRow(ctx, query,
+		a.Name, a.Description, a.VehicleID, a.Enabled,
+		a.TriggerType, a.TriggerConfig, a.Conditions, a.Actions,
+		a.CooldownMinutes, a.MaxExecutionsHour, a.StopOnFailure, a.NotifyOnRun, a.NotifyOnFailure,
+		a.SeasonalStart, a.SeasonalEnd, a.Priority,
+		a.PresetID, a.Tags, now,
+	).Scan(&a.ID, &a.CreatedAt, &a.UpdatedAt)
+	// Does NOT set execution/failure counters (left at defaults)
+	// Does NOT set timestamps for triggered/success/failure (left as NULL)
+}
+```
+
+**DB Columns Queried (Line 22-29):**
+```
+id, name, description, vehicle_id, enabled,
+trigger_type, trigger_config, conditions, actions,
+cooldown_minutes, max_executions_hour, stop_on_failure, notify_on_run, notify_on_failure,
+seasonal_start, seasonal_end, priority,
+last_triggered_at, last_success_at, last_failure_at,
+execution_count, failure_count, consecutive_failures,
+auto_disabled, auto_disabled_reason, preset_id, tags,
+created_at, updated_at
+```
+
+---
+
+### 5. **MIGRATION SCHEMA**
+**File:** `D:\repos\teslasync/migrations/000109_add_automations.up.sql`
+
+**Automations Table (Lines 2-44):**
+```sql
+CREATE TABLE IF NOT EXISTS automations (
+    id                  BIGSERIAL PRIMARY KEY,
+    name                TEXT NOT NULL,
+    description         TEXT NOT NULL DEFAULT '',
+    vehicle_id          BIGINT REFERENCES vehicles(id) ON DELETE CASCADE,  -- NULL = all vehicles
+    enabled             BOOLEAN NOT NULL DEFAULT true,
+
+    -- Trigger
+    trigger_type        TEXT NOT NULL,  -- 'cron', 'battery', 'vehicle_state', 'geofence', 'mqtt', 'webhook', 'sunrise_sunset', 'energy', 'calendar'
+    trigger_config      JSONB NOT NULL DEFAULT '{}',
+
+    -- Conditions (optional guards)
+    conditions          JSONB NOT NULL DEFAULT '[]',  -- array of condition objects
+
+    -- Actions
+    actions             JSONB NOT NULL DEFAULT '[]',  -- ordered array of action objects
+
+    -- Options
+    cooldown_minutes    INTEGER NOT NULL DEFAULT 0,
+    max_executions_hour INTEGER NOT NULL DEFAULT 0,   -- 0 = unlimited
+    stop_on_failure     BOOLEAN NOT NULL DEFAULT false,
+    notify_on_run       BOOLEAN NOT NULL DEFAULT false,
+    notify_on_failure   BOOLEAN NOT NULL DEFAULT true,
+    seasonal_start      INTEGER,  -- month 1-12, NULL = no seasonal restriction
+    seasonal_end        INTEGER,  -- month 1-12
+    priority            INTEGER NOT NULL DEFAULT 50,  -- 1=highest, 100=lowest
+
+    -- State
+    last_triggered_at   TIMESTAMPTZ,
+    last_success_at     TIMESTAMPTZ,
+    last_failure_at     TIMESTAMPTZ,
+    execution_count     BIGINT NOT NULL DEFAULT 0,
+    failure_count       BIGINT NOT NULL DEFAULT 0,
+    consecutive_failures INTEGER NOT NULL DEFAULT 0,
+    auto_disabled       BOOLEAN NOT NULL DEFAULT false,
+    auto_disabled_reason TEXT,
+
+    -- Metadata
+    preset_id           TEXT,  -- if created from a preset template
+    tags                TEXT[] NOT NULL DEFAULT '{}',
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_automations_vehicle ON automations (vehicle_id);
+CREATE INDEX IF NOT EXISTS idx_automations_enabled ON automations (enabled) WHERE enabled = true;
+CREATE INDEX IF NOT EXISTS idx_automations_trigger ON automations (trigger_type);
+```
+
+**Automation History Table (Lines 50-87):**
+```sql
+CREATE TABLE IF NOT EXISTS automation_history (
+    id                  BIGSERIAL PRIMARY KEY,
+    automation_id       BIGINT NOT NULL REFERENCES automations(id) ON DELETE CASCADE,
+    automation_name     TEXT NOT NULL,
+    vehicle_id          BIGINT,
+    triggered_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    completed_at        TIMESTAMPTZ,
+    duration_ms         INTEGER,
+
+    -- Trigger info
+    trigger_type        TEXT NOT NULL,
+    trigger_snapshot    JSONB NOT NULL DEFAULT '{}',  -- what triggered it (e.g., battery_level=19)
+
+    -- Condition evaluation
+    conditions_met      BOOLEAN NOT NULL DEFAULT true,
+    conditions_snapshot JSONB NOT NULL DEFAULT '[]',  -- each condition's evaluation result
+
+    -- Action results
+    actions_executed    JSONB NOT NULL DEFAULT '[]',  -- [{action, status, error, duration_ms}]
+    actions_total       INTEGER NOT NULL DEFAULT 0,
+    actions_succeeded   INTEGER NOT NULL DEFAULT 0,
+    actions_failed      INTEGER NOT NULL DEFAULT 0,
+
+    -- Overall status
+    status              TEXT NOT NULL DEFAULT 'running',  -- running, success, partial, failed, skipped, cancelled
+    error               TEXT,
+
+    -- FSM tracking
+    fsm_state           TEXT,
+
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_automation_history_automation ON automation_history (automation_id, triggered_at DESC);
+CREATE INDEX IF NOT EXISTS idx_automation_history_status ON automation_history (status);
+CREATE INDEX IF NOT EXISTS idx_automation_history_time ON automation_history (triggered_at DESC);
+```
+
+**Automation Variables Table (Lines 88-95):**
+```sql
+CREATE TABLE IF NOT EXISTS automation_variables (
+    id          BIGSERIAL PRIMARY KEY,
+    key         TEXT NOT NULL UNIQUE,
+    value       TEXT NOT NULL DEFAULT '',
+    vehicle_id  BIGINT,
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+---
+
+### 6. **EXISTING EXPORT/IMPORT PATTERNS**
+
+#### **Export Handler Pattern**
+**File:** `D:\repos\teslasync/internal/api/export_handler.go`
+
+**Handler Structure (Lines 22-36):**
+```go
+type ExportHandler struct {
+	db         *database.DB
+	mqttClient pahomqtt.Client
+	jobRepo    *database.ExportJobRepo
+}
+
+func NewExportJobHandler(db *database.DB, mqttClient pahomqtt.Client) *ExportHandler {
+	return &ExportHandler{
+		db:         db,
+		mqttClient: mqttClient,
+		jobRepo:    database.NewExportJobRepo(db),
+	}
+}
+```
+
+**Key Methods:**
+- `SubmitJob(w http.ResponseWriter, r *http.Request)` - Line 39: Async export job submission via MQTT
+- `ListJobs(w http.ResponseWriter, r *http.Request)` - Line 145: List recent export jobs with pagination
+- `GetJob(w http.ResponseWriter, r *http.Request)` - Line 157: Get job status by ID
+- `DownloadJob(w http.ResponseWriter, r *http.Request)` - Line 179: Download completed export file
+- `SubmitImportJob(w http.ResponseWriter, r *http.Request)` - Line 206: Async import job submission
+- `NewExportHandler(db *database.DB)` - Line 275: Legacy synchronous export handler
+
+**Export Job Models (internal/models/models.go, Lines 753-794):**
+```go
+type ExportJob struct {
+	ID           string     `json:"id"`
+	Type         string     `json:"type"`
+	Format       string     `json:"format"`
+	Status       string     `json:"status"`
+	VehicleID    *int64     `json:"vehicle_id,omitempty"`
+	StartDate    *time.Time `json:"start_date,omitempty"`
+	EndDate      *time.Time `json:"end_date,omitempty"`
+	FileName     *string    `json:"file_name,omitempty"`
+	FileSize     int64      `json:"file_size"`
+	RecordCount  int        `json:"record_count"`
+	ErrorMessage *string    `json:"error_message,omitempty"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
+	CompletedAt  *time.Time `json:"completed_at,omitempty"`
+}
+
+type ExportJobRequest struct {
+	JobID     string     `json:"job_id"`
+	Type      string     `json:"type"`
+	Format    string     `json:"format"`
+	VehicleID *int64     `json:"vehicle_id,omitempty"`
+	StartDate *time.Time `json:"start_date,omitempty"`
+	EndDate   *time.Time `json:"end_date,omitempty"`
+}
+```
+
+#### **Import Handler Pattern**
+**File:** `D:\repos\teslasync/internal/api/import_handler.go`
+
+**Handler Structure (Lines 15-27):**
+```go
+type ImportHandler struct {
+	driveRepo    *database.DriveRepo
+	chargingRepo *database.ChargingRepo
+}
+
+func NewImportHandler(db *database.DB) *ImportHandler {
+	return &ImportHandler{
+		driveRepo:    database.NewDriveRepo(db),
+		chargingRepo: database.NewChargingRepo(db),
+	}
+}
+```
+
+**Key Methods:**
+- `ImportDrives(w http.ResponseWriter, r *http.Request)` - Line 31: Imports drive records from CSV
+- `ImportCharging(w http.ResponseWriter, r *http.Request)` - Line 117: Imports charging sessions from CSV
+- `ExportNotificationLogs(db *database.DB)` - Line 207: Exports notification logs as CSV/JSON
+
+**Bulk Operation Pattern:**
+- Parse multipart form with file (10 MB limit)
+- Read CSV and skip header row
+- Loop through records, parse fields, validate, create models
+- Insert via repo.Create() in loop
+- Track imported count and error count
+- Return summary JSON: `{"imported": int, "errors": int}`
+
+---
+
+### 7. **HELPER FUNCTIONS & PATTERNS**
+**File:** `D:\repos\teslasync/internal/api/helpers.go`
+
+**Common Response Writers:**
+```go
+// JSON response helper
+func writeJSON(w http.ResponseWriter, status int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(status)
+	if data != nil {
+		_ = json.NewEncoder(w).Encode(data)
+	}
+}
+
+// Error response helper
+func writeError(w http.ResponseWriter, status int, msg string) {
+	writeJSON(w, status, map[string]string{
+		"error": msg,
+		"code":  httpStatusCode(status),
+	})
+}
+```
+
+**URL Parameter Parsing (Lines 103-106):**
+```go
+func urlParamInt64(r *http.Request, key string) (int64, error) {
+	return strconv.ParseInt(chi.URLParam(r, key), 10, 64)
+}
+```
+
+**Pagination Helper (Lines 87-101):**
+```go
+func pagination(r *http.Request) (limit, offset int) {
+	limit = 50
+	offset = 0
+	if v := r.URL.Query().Get("limit"); v != "" {
+		if l, err := strconv.Atoi(v); err == nil && l > 0 && l <= 1000 {
+			limit = l
+		}
+	}
+	if v := r.URL.Query().Get("offset"); v != "" {
+		if o, err := strconv.Atoi(v); err == nil && o >= 0 {
+			offset = o
+		}
+	}
+	return
+}
+```
+
+**Date Parsing Helper (Lines 108-122):**
+```go
+func parseDateRange(r *http.Request) (startTime, endTime time.Time) {
+	if s := r.URL.Query().Get("start"); s != "" {
+		if t, err := time.Parse("2006-01-02", s); err == nil {
+			startTime = t
+		}
+	}
+	if s := r.URL.Query().Get("end"); s != "" {
+		if t, err := time.Parse("2006-01-02", s); err == nil {
+			endTime = t.Add(24*time.Hour - time.Second) // end of day
+		}
+	}
+	return
+}
+```
+
+---
+
+### 8. **ROUTE REGISTRATION PATTERN**
+**File:** `D:\repos\teslasync/internal/api/router.go`
+
+The export/import routes are registered at:
+```go
+exportJobHandler := NewExportJobHandler(db, pahoClient)
+r.Route("/export/jobs", func(r chi.Router) {
+	r.Post("/", exportJobHandler.SubmitJob)
+	r.Post("/import", exportJobHandler.SubmitImportJob)
+	r.Get("/", exportJobHandler.ListJobs)
+	r.Get("/{jobID}", exportJobHandler.GetJob)
+	r.Get("/{jobID}/download", exportJobHandler.DownloadJob)
+})
+```
+
+---
+
+### **KEY INSIGHTS FOR IMPLEMENTATION**
+
+1. **JSON Marshaling**: Trigger/Conditions/Actions use `json.RawMessage` to preserve exact JSON structure and defer parsing to specialized packages
+2. **Validation**: Always validate trigger_config via `trigger.ValidateTriggerConfig()` and actions via `action.ParseActions()`
+3. **Rate Limiting**: POST/PUT/DELETE operations use `httprate.LimitByIP(20, 1*time.Minute)`
+4. **Async Pattern**: Export/Import uses async job system with MQTT for background processing
+5. **Webhook Uniqueness**: Must check webhook token uniqueness before creating/updating webhook-type automations
+6. **Response Types**: All list endpoints return wrapped response types (e.g., `automationResponse`) with computed fields
+7. **Pagination**: Use standard `limit` and `offset` query params with defaults (limit=50, max=1000)
+8. **Error Handling**: Use `writeError()` for consistent error responses with HTTP status codes
+9. **State Management**: Automation state is tracked via separate fields (execution_count, failure_count, last_triggered_at, etc.)
+10. **CSV Export Format**: Column order matters; follow header+data format used in existing handlersGood, I have a thorough understanding of the system. Let me now look at the key files I'll be modifying and the validation functions.
+
+Now let me also check the end of the handler file and the `checkWebhookTokenUniqueness` function:
+
+Now I have a full picture. Let me get the rubber-duck agent to review my plan before implementing.
+
+Overall: the plan is close, but I see **3 material risks**.
+
+### Blocking / high-impact issues
+
+1. **Do not skip webhook-token validation on import**
+   - In current code, `AutomationRepo.GetByWebhookToken()` looks up by token **without filtering enabled**, and `WebhookTrigger.HandleWebhook()` resolves by token **before** checking `Enabled`.
+   - Impact: importing a disabled webhook automation with a duplicate token can still shadow/conflict with an existing one.
+   - Fix: on import, either:
+     - **reject duplicate webhook tokens**, or
+     - **strip/regenerate `webhook_token` (and probably `secret`)** for imported webhook automations.
+
+2. **Stripping only top-level `vehicle_id` is not enough for ΓÇ£portable/communityΓÇ¥ exports**
+   - `trigger_config` can contain instance-local IDs/secrets:
+     - `geofence_id`
+     - `energy_site_id`
+     - `webhook_token` / `secret`
+   - Impact: imported automations may validate syntactically but be unusable or unsafe on another instance.
+   - Fix: choose one of these explicitly:
+     - **Backup/restore semantics**: keep local IDs/secrets, document ΓÇ£same-instance onlyΓÇ¥.
+     - **Shareable template semantics**: scrub/remap local references inside `trigger_config` too.
+
+3. **Silent partial batch export is risky**
+   - If the user asks for `[1,2,3]` and only gets `[1,3]`, they may think the export is complete.
+   - Impact: incomplete backup/share artifact.
+   - Fix: default to **fail if any requested ID is missing**, or require an explicit `allow_partial=true`.
+
+### Non-blocking but important
+
+4. **Import validation should not fork from Create logic**
+   - Your plan says ΓÇ£same as CreateΓÇ¥, but if you duplicate that logic in Import, it will drift.
+   - Fix: extract shared normalize/validate/build logic used by **Create, Update, Import**.
+
+5. **Your 1MB import cap may already exist**
+   - Router middleware already wraps request bodies with `http.MaxBytesReader(..., 1<<20)`.
+   - Fix: donΓÇÖt add duplicate endpoint-specific limit unless you want a **different** cap.
+
+6. **Versioning approach is good**
+   - `version` is enough for now.
+   - Fix: make import behavior explicit:
+     - reject `version > current`
+     - optionally support migrators for older versions later.
+
+---
+
+## Direct answers
+
+1. **Strip `vehicle_id`?**  
+   **Yes.** For shareable imports, definitely strip it. But also address nested local references in `trigger_config`.
+
+2. **Include `preset_id`?**  
+   **No.** Stripping it is the right call.
+
+3. **Is `version` good?**  
+   **Yes.** Keep it simple with `version: 1`.
+
+4. **Validate webhook tokens on import?**  
+   **Yes ΓÇö or regenerate/blank them.** Skipping validation is unsafe in this codebase.
+
+5. **Missing edge cases?**  
+   - nested local IDs/secrets in `trigger_config`
+   - duplicate webhook tokens
+   - silent partial batch export
+   - validation drift between Create and Import
+   - optionally: reject unknown JSON fields so bad imports donΓÇÖt get silently accepted
+
+If you want, I can turn this into a tighter recommended API contract for the 3 endpoints.Good critique. Let me check a few things to address the feedback before implementing.
+
+Good ΓÇö `google/uuid` is already available. Now let me create a plan and implement.
+
+Now let me check if there are existing tests for the automation handler:
+
+Good. Now I have a complete understanding. Let me implement the handlers. I'll add them to the end of the automation_handler.go file.
+
+Now let me implement the import/export handlers:
+
+Now append the export/import code at the end of the file:
+
+Now add the routes to router.go:
+
+Now let me verify the Go code compiles:
+
+Clean build. Now let me add comprehensive tests:
+
+Good, the existing test file exists. Now let me add tests for the import/export functionality:
+
+Now I need to add the `newTestRecorder` import. Let me check what imports the test file needs:
+
+I need to add `net/http/httptest` for the recorder test. Let me also check if `newTestRecorder` is used elsewhere or if I should use `httptest.NewRecorder` directly:
+
+Now update the `newTestRecorder` reference to use `httptest.NewRecorder`:
+
+Now build and run the tests:
+
+`intPtr` is already declared elsewhere in the package. Let me fix the redeclaration:
+
+Only `intPtr` conflicts. Let me remove the duplicate and check if `int64Ptr` exists elsewhere too:
+
+`intPtr` is already in the package (non-test file), so it's available. `int64Ptr` is only in the test. Let me remove `intPtr` from the test file:
+
+All 14 tests pass. Now let me also run the full existing test suite to make sure I haven't broken anything:
+
+The one failing test (`TestAllowedCommandsWhitelist`) is pre-existing and unrelated to my changes ΓÇö it's about the allowed commands count. Let me verify it fails without my changes too:
+
+Confirmed ΓÇö `TestAllowedCommandsWhitelist` fails with 91 vs 43 entries on the base branch too. This is pre-existing and unrelated to my changes.
+
+Now let me do a final build verification and commit:
+
+Full build passes. Let me also run `go vet` to catch any issues:
+
+Clean. Now let me commit:
+
+

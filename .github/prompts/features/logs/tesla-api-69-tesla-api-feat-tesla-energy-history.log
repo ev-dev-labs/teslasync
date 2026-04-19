@@ -1,0 +1,85 @@
+Let me explore more of the router, existing Tesla handlers, models, and the frontend energy pages.
+
+Good, I now have a solid understanding of the codebase patterns. Let me check the end of the router and the rest of the models, then look at the frontend energy types.
+
+Now I have a thorough understanding of the codebase patterns. Let me create a plan and get rubber-duck review before implementing.
+
+A few real blind spots stand out:
+
+1. **Blocking ΓÇö backup history probably canΓÇÖt be ΓÇ£simple insertΓÇ¥**
+   - Your refresh endpoint will re-fetch overlapping ranges, so plain inserts will duplicate rows.
+   - Worse: TeslaΓÇÖs **backup history also uses `calendar_history` with a `period` param** (same family as energy history). Your backup table currently has no `period`, so `day` vs `month` data can get mixed together.
+   - **Fix:** add a `period` column to backup history and make it idempotent with a unique key + upsert (at minimum `(energy_site_id, period, timestamp)`).
+
+2. **Blocking ΓÇö timezone is a data-integrity risk**
+   - You plan to accept `timeZone` as an input, but your unique key for energy history is only `(site_id, period, timestamp)`.
+   - If the same site is refreshed with different time zones, bucket boundaries can shift and youΓÇÖll overwrite/mix semantically different aggregates.
+   - **Fix:** either always use the siteΓÇÖs canonical timezone from Tesla site info, or persist timezone as part of the stored key/schema and validate it strictly.
+
+3. **Blocking ΓÇö ΓÇ£generic JSON parsingΓÇ¥ is too risky here**
+   - Raw JSON storage is good, but these endpoints still need reliable extraction of timestamps/energy fields for charts and DB writes.
+   - If you guess the envelope/field names wrong, youΓÇÖll silently ingest empty/incorrect data.
+   - **Fix:** define minimal response structs from Tesla docs/sample payloads first, then store `raw_json` alongside parsed fields. Add table-driven parsing tests for each endpoint.
+
+4. **High ΓÇö WC charging also needs an idempotent natural key**
+   - If you use insert-only for wall connector telemetry/history, refreshing the same range duplicates records.
+   - **Fix:** add a unique key and upsert. Likely candidate: `(energy_site_id, din, timestamp)`; if Tesla can emit records without `din`, decide a fallback before implementing.
+
+5. **High ΓÇö unit handling is underspecified**
+   - Tesla docs for these endpoints use **watt-hours**, but the rest of the app often talks in kWh.
+   - Names like `solar_energy` / `consumer_energy` are ambiguous and invite 1000x chart/reporting bugs.
+   - **Fix:** either store raw Wh with explicit names (`solar_energy_wh`) or normalize to kWh consistently at ingest/read time.
+
+6. **High ΓÇö GET endpoints need bounds/defaults**
+   - `GetByRange` with optional `since/until` can become an unbounded table scan/huge payload over time.
+   - **Fix:** require a bounded range or apply sane defaults + max window/limit.
+
+7. **Medium ΓÇö validate `period`, but in both read and refresh paths**
+   - Yes, validate it in the handler.
+   - **Fix:** whitelist `day|week|month|year` and reject anything else before DB/Tesla calls. Keep one shared validator.
+
+8. **Medium ΓÇö naming will be confusing with existing charging history**
+   - The repo already has `tesla_charging_history` for vehicle/Supercharger billing history.
+   - `tesla_energy_charging_history` is technically fine, but easy to confuse operationally with the existing table and `/tesla/charging/history` route.
+   - **Fix:** prefer explicit WC naming end-to-end, e.g. `tesla_energy_wc_charging_history` and `/wc-charging-history`.
+
+### Your specific questions
+- **000112:** Yes, based on current top-level migrations ending at `000111`, thatΓÇÖs the right next number.
+- **Backup insert vs upsert:** **Upsert**.
+- **Generic parsing:** okay only for `raw_json`, **not** for the fields you depend on.
+- **Validate `period`:** **Yes**.
+- **Table name:** prefer the more explicit **`tesla_energy_wc_charging_history`** to avoid confusion.
+
+If you want, I can turn this into a tighter ΓÇ£recommended schema + handler contractΓÇ¥ checklist before you implement.Good critique. I'll adopt the key findings: (1) add `period` to backup table + upsert, (2) suffix Wh on energy field names, (3) use unique keys + upserts for all three tables, (4) validate `period` param, (5) add sensible date range defaults, (6) use `tesla_energy_wc_charging` naming. I'll skip the timezone-as-key concern ΓÇö I'll always use the site's timezone from the request, which is the standard pattern for these Tesla APIs.
+
+Now let me implement everything.
+
+Now let me add the models, Tesla client methods, and repos.
+
+Now add the Tesla client methods:
+
+Now create the database repository file:
+
+Now create the HTTP handler:
+
+Now wire the routes in the router. Let me find the right place to insert:
+
+Now add the handler instantiation in the router. Let me find where the other handlers are created:
+
+Now let's build the Go backend to verify:
+
+Go backend compiles cleanly. Now let's add the frontend types and hooks.
+
+Now add the hooks:
+
+Now add the hook functions at the bottom:
+
+Now let's check TypeScript compilation:
+
+TypeScript compiles clean. Now let me run the verification checks specified in the issue:
+
+All verification checks pass. Let me commit:
+
+There are extra untracked files from other work. Let me be selective about what I commit:
+
+

@@ -10,3 +10,4 @@ export { MetricBar } from './MetricBar';
 export { TimelineItem } from './TimelineItem';
 export { FSMBadge } from './FSMBadge';
 export { TransitionArrow } from './TransitionArrow';
+export { FreshnessIndicator, useIsStale } from './FreshnessIndicator';

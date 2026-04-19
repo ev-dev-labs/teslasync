@@ -12,6 +12,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
+	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
@@ -32,6 +33,10 @@ type TelemetrySessionTracker struct {
 	eventBus          *events.Bus
 	geocoder          geocoding.Geocoder
 	signalStore       *signal.Store
+
+	// Write buffers for DB outage resilience
+	driveTelBuffer  *database.WriteBuffer[*models.DriveTelemetryReading]
+	chargeTelBuffer *database.WriteBuffer[*models.ChargeTelemetryReading]
 
 	mu            sync.Mutex
 	activeDrives  map[int64]*streamingDrive  // vehicleID → active drive
@@ -142,7 +147,7 @@ type streamingCharge struct {
 
 // NewTelemetrySessionTracker creates a session tracker with comprehensive data tracking.
 func NewTelemetrySessionTracker(db *database.DB, eventBus *events.Bus, geocoder geocoding.Geocoder, store *signal.Store) *TelemetrySessionTracker {
-	return &TelemetrySessionTracker{
+	t := &TelemetrySessionTracker{
 		db:            db,
 		driveRepo:     database.NewDriveRepo(db),
 		chargeRepo:    database.NewChargingRepo(db),
@@ -158,6 +163,46 @@ func NewTelemetrySessionTracker(db *database.DB, eventBus *events.Bus, geocoder 
 		activeDrives:  make(map[int64]*streamingDrive),
 		activeCharges: make(map[int64]*streamingCharge),
 	}
+	t.driveTelBuffer = database.NewWriteBuffer("drive_telemetry", 10000,
+		func(ctx context.Context, r *models.DriveTelemetryReading) error {
+			return t.driveTelRepo.Insert(ctx, r)
+		},
+	)
+	t.chargeTelBuffer = database.NewWriteBuffer("charge_telemetry", 10000,
+		func(ctx context.Context, r *models.ChargeTelemetryReading) error {
+			return t.chargeTelRepo.Insert(ctx, r)
+		},
+	)
+	return t
+}
+
+// StartBufferDrains starts background goroutines that periodically retry
+// buffered telemetry writes. Call after initialization, before processing signals.
+func (t *TelemetrySessionTracker) StartBufferDrains(ctx context.Context) {
+	go t.driveTelBuffer.DrainLoop(ctx, 5*time.Second)
+	go t.chargeTelBuffer.DrainLoop(ctx, 5*time.Second)
+	log.Info().Msg("telemetry write buffers started (drain every 5s)")
+}
+
+// FlushBuffers synchronously drains any remaining buffered telemetry writes.
+// Call during shutdown to avoid losing data.
+func (t *TelemetrySessionTracker) FlushBuffers(ctx context.Context) {
+	t.driveTelBuffer.Flush(ctx)
+	t.chargeTelBuffer.Flush(ctx)
+	metrics.TelemetryBufferSize.WithLabelValues("drive").Set(float64(t.driveTelBuffer.Len()))
+	metrics.TelemetryBufferSize.WithLabelValues("charge").Set(float64(t.chargeTelBuffer.Len()))
+	log.Info().Int("drive_remaining", t.driveTelBuffer.Len()).Int("charge_remaining", t.chargeTelBuffer.Len()).
+		Msg("telemetry write buffers flushed")
+}
+
+// DriveBufferLen returns the number of buffered drive telemetry readings.
+func (t *TelemetrySessionTracker) DriveBufferLen() int {
+	return t.driveTelBuffer.Len()
+}
+
+// ChargeBufferLen returns the number of buffered charge telemetry readings.
+func (t *TelemetrySessionTracker) ChargeBufferLen() int {
+	return t.chargeTelBuffer.Len()
 }
 
 // telemetryWriteInterval controls how often drive/charge telemetry readings are
@@ -947,7 +992,10 @@ func (t *TelemetrySessionTracker) recordDriveTelemetry(ctx context.Context, driv
 	}
 
 	if err := t.driveTelRepo.Insert(ctx, reading); err != nil {
-		log.Error().Err(err).Int64("drive_id", drive.DriveID).Msg("telemetry: failed to insert drive telemetry reading")
+		log.Warn().Err(err).Int64("drive_id", drive.DriveID).Int("buffered", t.driveTelBuffer.Len()).
+			Msg("telemetry: drive insert failed, buffering for retry")
+		t.driveTelBuffer.Enqueue(reading)
+		metrics.TelemetryBufferSize.WithLabelValues("drive").Set(float64(t.driveTelBuffer.Len()))
 	}
 }
 
@@ -1523,7 +1571,10 @@ func (t *TelemetrySessionTracker) recordChargeTelemetry(ctx context.Context, cha
 	if v, ok := signalFloat(signals, "ChargeRateMilePerHour", "ChargeRateMph"); ok { reading.ChargeRate = floatPtr(v) }
 
 	if err := t.chargeTelRepo.Insert(ctx, reading); err != nil {
-		log.Error().Err(err).Int64("session_id", charge.SessionID).Msg("telemetry: failed to insert charge telemetry reading")
+		log.Warn().Err(err).Int64("session_id", charge.SessionID).Int("buffered", t.chargeTelBuffer.Len()).
+			Msg("telemetry: charge insert failed, buffering for retry")
+		t.chargeTelBuffer.Enqueue(reading)
+		metrics.TelemetryBufferSize.WithLabelValues("charge").Set(float64(t.chargeTelBuffer.Len()))
 	}
 }
 

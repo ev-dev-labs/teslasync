@@ -144,6 +144,77 @@ func (h *DevToolsHandler) RegisterPartner(w http.ResponseWriter, r *http.Request
 	}
 }
 
+// PartnerPublicKey fetches the registered public key for a domain from Tesla
+// and compares it against the locally stored key in tesla_public_key.
+func (h *DevToolsHandler) PartnerPublicKey(w http.ResponseWriter, r *http.Request) {
+	domain := strings.TrimSpace(r.URL.Query().Get("domain"))
+	if domain == "" {
+		writeError(w, http.StatusBadRequest, "domain query parameter is required")
+		return
+	}
+
+	data, status, err := h.teslaClient.GetPartnerPublicKey(r.Context(), domain)
+	if err != nil {
+		log.Warn().Err(err).Int("status", status).Str("domain", domain).Msg("partner public key fetch failed")
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if data != nil && isJSON(data) {
+		// Try to compare with the locally stored public key
+		var envelope struct {
+			Response struct {
+				PublicKey string `json:"public_key"`
+			} `json:"response"`
+		}
+		matchResult := map[string]interface{}{}
+		if json.Unmarshal(data, &envelope) == nil && envelope.Response.PublicKey != "" {
+			matchResult["remote_key_found"] = true
+			if h.db != nil {
+				var localPEM string
+				localErr := h.db.Pool.QueryRow(r.Context(),
+					`SELECT public_key_pem FROM tesla_public_key WHERE id = 1`,
+				).Scan(&localPEM)
+				if localErr == nil && localPEM != "" {
+					remotePEM := strings.TrimSpace(envelope.Response.PublicKey)
+					localPEM = strings.TrimSpace(localPEM)
+					matchResult["matches_local"] = remotePEM == localPEM
+					matchResult["local_key_configured"] = true
+				} else {
+					matchResult["matches_local"] = false
+					matchResult["local_key_configured"] = false
+				}
+			}
+		} else {
+			matchResult["remote_key_found"] = false
+		}
+
+		// Merge comparison into the Tesla response
+		var raw map[string]interface{}
+		if json.Unmarshal(data, &raw) == nil {
+			raw["verification"] = matchResult
+			w.WriteHeader(status)
+			json.NewEncoder(w).Encode(raw)
+		} else {
+			w.WriteHeader(status)
+			w.Write(data)
+		}
+	} else {
+		errMsg := "Failed to fetch partner public key from Tesla"
+		details := "Tesla returned a non-JSON response"
+		if err != nil {
+			details = err.Error()
+		}
+		if status == 0 {
+			status = http.StatusBadGateway
+		}
+		writeJSON(w, status, map[string]interface{}{
+			"error":       errMsg,
+			"details":     details,
+			"status_code": status,
+		})
+	}
+}
+
 // FleetAPIInfo returns current Fleet API configuration details.
 func (h *DevToolsHandler) FleetAPIInfo(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]interface{}{

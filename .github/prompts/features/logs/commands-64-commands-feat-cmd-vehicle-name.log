@@ -1,0 +1,9 @@
+All three parts of this feature are already implemented:
+
+1. **Backend `commands` map** ΓÇö `internal/tesla/client.go:725`: `"set_vehicle_name": {endpoint: "set_vehicle_name"}`
+2. **Backend `allowedCommands`** ΓÇö `internal/api/command_handler.go:125`: `"set_vehicle_name": true`
+3. **Frontend "Rename" button** ΓÇö `CommandsPage.tsx:758-773`: Vehicle group with `Pencil` icon, `window.prompt`, and `set_vehicle_name` command
+
+Let me run the verification commands to confirm everything compiles cleanly.
+
+

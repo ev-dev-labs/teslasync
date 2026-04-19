@@ -16,6 +16,11 @@ data:
         root /usr/share/nginx/html;
         index index.html;
 
+        # Kubernetes DNS resolver — re-resolves every 10s instead of once at startup.
+        # This prevents Nginx from crashing if the API service isn't registered yet.
+        resolver kube-dns.kube-system.svc.cluster.local valid=10s ipv6=off;
+        resolver_timeout 5s;
+
         # Inject API base URL into frontend at runtime.
         # This MUST be empty or a public URL reachable by the browser.
         # The internal K8s address is only used by Nginx's proxy_pass.
@@ -30,7 +35,8 @@ data:
         }
 
         location /api/ {
-            proxy_pass {{ $apiBackend }};
+            set $backend "{{ $apiBackend }}";
+            proxy_pass $backend;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -41,21 +47,25 @@ data:
         }
 
         location /healthz {
-            proxy_pass {{ $apiBackend }};
+            set $backend "{{ $apiBackend }}";
+            proxy_pass $backend;
         }
 
         location /readyz {
-            proxy_pass {{ $apiBackend }};
+            set $backend "{{ $apiBackend }}";
+            proxy_pass $backend;
         }
 
         location /.well-known/ {
-            proxy_pass {{ $apiBackend }};
+            set $backend "{{ $apiBackend }}";
+            proxy_pass $backend;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
         }
 
         location /metrics {
-            proxy_pass {{ $apiBackend }};
+            set $backend "{{ $apiBackend }}";
+            proxy_pass $backend;
         }
 
         # Service worker must never be cached — browser needs to detect updates

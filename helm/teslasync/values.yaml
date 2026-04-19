@@ -150,6 +150,12 @@ notificationWorker:
   enabled: true
   replicaCount: 1
 
+  # -- Database connection pool size for this worker. Workers need far fewer
+  # connections than the API server. Keeps total connection budget low to avoid
+  # exhausting Postgres max_connections during startup.
+  dbMaxConns: 5
+  dbMinConns: 2
+
   image:
     repository: ghcr.io/ev-dev-labs/teslasync-notification-worker
     pullPolicy: IfNotPresent
@@ -182,6 +188,10 @@ exportWorker:
   enabled: true
   replicaCount: 1
 
+  # -- Database connection pool size for this worker.
+  dbMaxConns: 5
+  dbMinConns: 2
+
   image:
     repository: ghcr.io/ev-dev-labs/teslasync-export-worker
     pullPolicy: IfNotPresent
@@ -203,6 +213,44 @@ exportWorker:
   external:
     host: ""
     port: 8082
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Automation Worker
+#
+# Runs the automation engine: cron/mqtt/geofence/battery/energy/calendar/
+# sunrise triggers, condition evaluation, and action execution.
+# Subscribes to teslasync/automations/reload for config change notifications.
+# Single-replica recommended — in-memory trigger state is not shared across pods.
+# ─────────────────────────────────────────────────────────────────────────────
+automationWorker:
+  enabled: true
+  replicaCount: 1
+
+  # -- Database connection pool size for this worker.
+  dbMaxConns: 5
+  dbMinConns: 2
+
+  image:
+    repository: ghcr.io/ev-dev-labs/teslasync-automation-worker
+    pullPolicy: IfNotPresent
+    tag: ""
+
+  service:
+    type: ClusterIP
+    port: 8083
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 64Mi
+
+  # -- External automation worker — used when automationWorker.enabled is false.
+  external:
+    host: ""
+    port: 8083
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Vehicle Command Proxy
@@ -565,6 +613,13 @@ postgresql:
   # -- Connection pool tuning
   maxConns: 25
   minConns: 5
+
+  # -- DSN connection timeout in seconds (prevents hanging on network issues)
+  connectTimeout: 5
+  # -- Per-statement timeout in milliseconds (kills long-running queries)
+  statementTimeout: 30000
+  # -- Pool health check interval (detects stale connections)
+  healthCheckPeriod: "5s"
 
   image: postgres:17-alpine
 

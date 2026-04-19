@@ -4,6 +4,10 @@ import type { User } from '@/types/user';
 
 export const userKeys = {
   me: ['users', 'me'] as const,
+  teslaFeatureConfig: ['tesla-feature-config'] as const,
+  teslaRegion: ['tesla-user-region'] as const,
+  teslaOrders: ['tesla-user-orders'] as const,
+  teslaProfile: ['tesla-user-profile'] as const,
 };
 
 export function useCurrentUser() {
@@ -21,5 +25,125 @@ export function useUpdateUser() {
     onSuccess: (data) => {
       queryClient.setQueryData(userKeys.me, data);
     },
+  });
+}
+
+// ─── Tesla Feature Config ────────────────────────────────────────────────────
+
+interface TeslaConfigEnvelope<T = Record<string, unknown>> {
+  data: T;
+  fetched_at: string | null;
+}
+
+export function useTeslaFeatureConfig() {
+  return useQuery({
+    queryKey: userKeys.teslaFeatureConfig,
+    queryFn: () => request<TeslaConfigEnvelope>('/tesla/user/feature-config'),
+    staleTime: 10 * 60_000,
+  });
+}
+
+export function useRefreshTeslaFeatureConfig() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      request<TeslaConfigEnvelope>('/tesla/user/feature-config/refresh', { method: 'POST' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: userKeys.teslaFeatureConfig }),
+  });
+}
+
+// ─── Tesla Region ────────────────────────────────────────────────────────────
+
+interface TeslaRegionData {
+  region: string;
+  fleet_api_base_url: string;
+}
+
+export function useTeslaUserRegion() {
+  return useQuery({
+    queryKey: userKeys.teslaRegion,
+    queryFn: () => request<TeslaConfigEnvelope<TeslaRegionData>>('/tesla/user/region'),
+    staleTime: Infinity,
+  });
+}
+
+export function useRefreshTeslaRegion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      request<TeslaConfigEnvelope<TeslaRegionData>>('/tesla/user/region/refresh', { method: 'POST' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: userKeys.teslaRegion }),
+  });
+}
+
+// ─── Tesla User Orders ───────────────────────────────────────────────────────
+
+export interface TeslaOrder {
+  id: number;
+  order_id: string;
+  model: string;
+  status: string;
+  delivery_date: string | null;
+  vin: string | null;
+  referral_code?: string | null;
+  is_upgradable: boolean;
+  fetched_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface TeslaOrdersEnvelope {
+  orders: TeslaOrder[];
+  fetched_at: string | null;
+}
+
+export function useTeslaUserOrders() {
+  return useQuery({
+    queryKey: userKeys.teslaOrders,
+    queryFn: () => request<TeslaOrdersEnvelope>('/tesla/user/orders'),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useRefreshTeslaOrders() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      request<TeslaOrdersEnvelope>('/tesla/user/orders/refresh', { method: 'POST' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: userKeys.teslaOrders }),
+  });
+}
+
+// ─── Tesla User Profile ──────────────────────────────────────────────────────
+
+export interface TeslaUserProfile {
+  id: number;
+  email: string;
+  full_name: string;
+  profile_image_url: string | null;
+  fetched_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface TeslaProfileEnvelope {
+  profile: TeslaUserProfile | null;
+  fetched_at: string | null;
+}
+
+export function useTeslaUserProfile() {
+  return useQuery({
+    queryKey: userKeys.teslaProfile,
+    queryFn: () => request<TeslaProfileEnvelope>('/tesla/user/profile'),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useRefreshTeslaProfile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      request<TeslaProfileEnvelope>('/tesla/user/profile/refresh', { method: 'POST' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: userKeys.teslaProfile }),
   });
 }

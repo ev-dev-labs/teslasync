@@ -1,0 +1,658 @@
+I'll explore the TeslaSync automation system by finding and examining these components systematically.Let me check the directory structure first:Now let me search for the specific files:Let me check the subdirectories:Great! Now let me read the key files:Now let me check the migrations and automation models:Now let me see the full handler, the tesla command map, and the models:
+
+Now let me read the automation handler and router:Now let me see the rest of the handler (TestRun, helpers, etc.) and the full command map:
+
+Let me also see the full `commands` map beginning and understand the action parsing:Now let me check the automation action files and Tesla client:
+
+Let me see the `action.ParseActions` and the `ActionConfig` struct:
+
+Let me find the SendCommand function:Let me search for SendCommand in the types or elsewhere:Now let me find the commands map:Now let me check the command action file:Perfect! Now let me check the models for AutomationHistory:Perfect! Now let me get a summary of the router registration one more time with complete context:Excellent! Now I have all the information. Let me create a comprehensive summary:
+
+## TeslaSync Automation System Exploration - Complete Report
+
+---
+
+### 1. **AUTOMATION HANDLER** (`internal/api/automation_handler.go`)
+
+**Struct Definition & Constructor:**
+```go
+type AutomationHandler struct {
+	repo         *database.AutomationRepo
+	historyRepo  *database.AutomationHistoryRepo
+	fsmTransRepo *database.FSMTransitionRepo
+}
+
+func NewAutomationHandler(db *database.DB) *AutomationHandler {
+	return &AutomationHandler{
+		repo:         database.NewAutomationRepo(db),
+		historyRepo:  database.NewAutomationHistoryRepo(db),
+		fsmTransRepo: database.NewFSMTransitionRepo(db),
+	}
+}
+```
+
+**Handler Methods:**
+- `List(w, r)` - Returns all automations, supports `?enabled=true` filter
+- `Get(w, r)` - Returns single automation by ID with computed fields
+- `Create(w, r)` - Creates new automation with trigger validation and conflict detection
+- `Update(w, r)` - Full-replacement PUT of automation configuration
+- `Delete(w, r)` - Removes automation by ID
+- `Toggle(w, r)` - Enables/disables automation (rejects auto-disabled unless re-enabled)
+- `ReEnable(w, r)` - Clears auto-disabled state and resets failure counter
+- `ListHistory(w, r)` - Returns recent execution history across all automations
+- `ListAutomationHistory(w, r)` - Returns execution history for single automation
+- `GetHistoryDetail(w, r)` - Returns single execution record with FSM transitions
+
+---
+
+### 2. **AUTOMATION HISTORY TABLE SCHEMA** (`migrations/000109_add_automations.up.sql`)
+
+```sql
+CREATE TABLE IF NOT EXISTS automation_history (
+    id                  BIGSERIAL PRIMARY KEY,
+    automation_id       BIGINT NOT NULL REFERENCES automations(id) ON DELETE CASCADE,
+    automation_name     TEXT NOT NULL,
+    vehicle_id          BIGINT,
+    triggered_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    completed_at        TIMESTAMPTZ,
+    duration_ms         INTEGER,
+
+    -- Trigger info
+    trigger_type        TEXT NOT NULL,
+    trigger_snapshot    JSONB NOT NULL DEFAULT '{}',  -- what triggered it (e.g., battery_level=19)
+
+    -- Condition evaluation
+    conditions_met      BOOLEAN NOT NULL DEFAULT true,
+    conditions_snapshot JSONB NOT NULL DEFAULT '[]',  -- each condition's evaluation result
+
+    -- Action results
+    actions_executed    JSONB NOT NULL DEFAULT '[]',  -- [{action, status, error, duration_ms}]
+    actions_total       INTEGER NOT NULL DEFAULT 0,
+    actions_succeeded   INTEGER NOT NULL DEFAULT 0,
+    actions_failed      INTEGER NOT NULL DEFAULT 0,
+
+    -- Overall status
+    status              TEXT NOT NULL DEFAULT 'running',  -- running, success, partial, failed, skipped, cancelled
+    error               TEXT,
+
+    -- FSM tracking
+    fsm_state           TEXT,
+
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_automation_history_automation ON automation_history (automation_id, triggered_at DESC);
+CREATE INDEX IF NOT EXISTS idx_automation_history_status ON automation_history (status);
+CREATE INDEX IF NOT EXISTS idx_automation_history_time ON automation_history (triggered_at DESC);
+```
+
+**Also includes `automations` table:**
+```sql
+CREATE TABLE IF NOT EXISTS automations (
+    id                  BIGSERIAL PRIMARY KEY,
+    name                TEXT NOT NULL,
+    description         TEXT NOT NULL DEFAULT '',
+    vehicle_id          BIGINT REFERENCES vehicles(id) ON DELETE CASCADE,  -- NULL = all vehicles
+    enabled             BOOLEAN NOT NULL DEFAULT true,
+    trigger_type        TEXT NOT NULL,  -- 'cron', 'battery', 'vehicle_state', 'geofence', 'mqtt', 'webhook', 'sunrise_sunset', 'energy', 'calendar'
+    trigger_config      JSONB NOT NULL DEFAULT '{}',
+    conditions          JSONB NOT NULL DEFAULT '[]',
+    actions             JSONB NOT NULL DEFAULT '[]',
+    cooldown_minutes    INTEGER NOT NULL DEFAULT 0,
+    max_executions_hour INTEGER NOT NULL DEFAULT 0,
+    stop_on_failure     BOOLEAN NOT NULL DEFAULT false,
+    notify_on_run       BOOLEAN NOT NULL DEFAULT false,
+    notify_on_failure   BOOLEAN NOT NULL DEFAULT true,
+    seasonal_start      INTEGER,  -- month 1-12
+    seasonal_end        INTEGER,
+    priority            INTEGER NOT NULL DEFAULT 50,
+    last_triggered_at   TIMESTAMPTZ,
+    last_success_at     TIMESTAMPTZ,
+    last_failure_at     TIMESTAMPTZ,
+    execution_count     BIGINT NOT NULL DEFAULT 0,
+    failure_count       BIGINT NOT NULL DEFAULT 0,
+    consecutive_failures INTEGER NOT NULL DEFAULT 0,
+    auto_disabled       BOOLEAN NOT NULL DEFAULT false,
+    auto_disabled_reason TEXT,
+    preset_id           TEXT,
+    tags                TEXT[] NOT NULL DEFAULT '{}',
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+---
+
+### 3. **AUTOMATION MODELS** (`internal/models/models.go`, lines 1132-1205)
+
+```go
+type Automation struct {
+	ID                  int64           `json:"id" db:"id"`
+	Name                string          `json:"name" db:"name"`
+	Description         string          `json:"description" db:"description"`
+	VehicleID           *int64          `json:"vehicle_id" db:"vehicle_id"`
+	Enabled             bool            `json:"enabled" db:"enabled"`
+	TriggerType         string          `json:"trigger_type" db:"trigger_type"`
+	TriggerConfig       json.RawMessage `json:"trigger_config" db:"trigger_config"`
+	Conditions          json.RawMessage `json:"conditions" db:"conditions"`
+	Actions             json.RawMessage `json:"actions" db:"actions"`
+	CooldownMinutes     int             `json:"cooldown_minutes" db:"cooldown_minutes"`
+	MaxExecutionsHour   int             `json:"max_executions_hour" db:"max_executions_hour"`
+	StopOnFailure       bool            `json:"stop_on_failure" db:"stop_on_failure"`
+	NotifyOnRun         bool            `json:"notify_on_run" db:"notify_on_run"`
+	NotifyOnFailure     bool            `json:"notify_on_failure" db:"notify_on_failure"`
+	SeasonalStart       *int            `json:"seasonal_start" db:"seasonal_start"`
+	SeasonalEnd         *int            `json:"seasonal_end" db:"seasonal_end"`
+	Priority            int             `json:"priority" db:"priority"`
+	LastTriggeredAt     *time.Time      `json:"last_triggered_at" db:"last_triggered_at"`
+	LastSuccessAt       *time.Time      `json:"last_success_at" db:"last_success_at"`
+	LastFailureAt       *time.Time      `json:"last_failure_at" db:"last_failure_at"`
+	ExecutionCount      int64           `json:"execution_count" db:"execution_count"`
+	FailureCount        int64           `json:"failure_count" db:"failure_count"`
+	ConsecutiveFailures int             `json:"consecutive_failures" db:"consecutive_failures"`
+	AutoDisabled        bool            `json:"auto_disabled" db:"auto_disabled"`
+	AutoDisabledReason  *string         `json:"auto_disabled_reason" db:"auto_disabled_reason"`
+	PresetID            *string         `json:"preset_id" db:"preset_id"`
+	Tags                []string        `json:"tags" db:"tags"`
+	CreatedAt           time.Time       `json:"created_at" db:"created_at"`
+	UpdatedAt           time.Time       `json:"updated_at" db:"updated_at"`
+}
+
+// AutomationHistory records the result of a single automation execution.
+type AutomationHistory struct {
+	ID                int64           `json:"id" db:"id"`
+	AutomationID      int64           `json:"automation_id" db:"automation_id"`
+	AutomationName    string          `json:"automation_name" db:"automation_name"`
+	VehicleID         *int64          `json:"vehicle_id" db:"vehicle_id"`
+	TriggeredAt       time.Time       `json:"triggered_at" db:"triggered_at"`
+	CompletedAt       *time.Time      `json:"completed_at" db:"completed_at"`
+	DurationMs        *int            `json:"duration_ms" db:"duration_ms"`
+	TriggerType       string          `json:"trigger_type" db:"trigger_type"`
+	TriggerSnapshot   json.RawMessage `json:"trigger_snapshot" db:"trigger_snapshot"`
+	ConditionsMet     bool            `json:"conditions_met" db:"conditions_met"`
+	ConditionsSnapshot json.RawMessage `json:"conditions_snapshot" db:"conditions_snapshot"`
+	ActionsExecuted   json.RawMessage `json:"actions_executed" db:"actions_executed"`
+	ActionsTotal      int             `json:"actions_total" db:"actions_total"`
+	ActionsSucceeded  int             `json:"actions_succeeded" db:"actions_succeeded"`
+	ActionsFailed     int             `json:"actions_failed" db:"actions_failed"`
+	Status            string          `json:"status" db:"status"`
+	Error             *string         `json:"error" db:"error"`
+	FSMState          *string         `json:"fsm_state" db:"fsm_state"`
+	CreatedAt         time.Time       `json:"created_at" db:"created_at"`
+}
+```
+
+---
+
+### 4. **TESLA COMMAND EXECUTION** (`internal/tesla/client.go`)
+
+**Command Map** (lines 593-726):
+```go
+type commandDef struct {
+	endpoint string                 // Tesla API endpoint name
+	params   map[string]interface{} // default params
+	noProxy  bool                   // true = send directly to Fleet API
+}
+
+var commands = map[string]commandDef{
+	// Wake ΓÇö does NOT require signing, goes direct to Fleet API
+	"wake":    {endpoint: "wake_up", noProxy: true},
+	"wake_up": {endpoint: "wake_up", noProxy: true},
+
+	// Security & Access
+	"lock": {endpoint: "door_lock"},
+	"unlock": {endpoint: "door_unlock"},
+	"set_sentry_mode": {endpoint: "set_sentry_mode", params: map[string]interface{}{"on": true}},
+	"sentry_on": {endpoint: "set_sentry_mode", params: map[string]interface{}{"on": true}},
+	"sentry_off": {endpoint: "set_sentry_mode", params: map[string]interface{}{"on": false}},
+	// ... and 90+ more commands including:
+	// - Climate: "climate_on", "climate_off", "set_temps", "seat_heater", etc.
+	// - Charging: "charge_start", "charge_stop", "set_charge_limit", etc.
+	// - Doors/Trunk: "frunk", "trunk_open", etc.
+	// - Media: "media_toggle_playback", "media_next_track", etc.
+	// - Navigation, Software Updates, etc.
+}
+```
+
+**SendCommand Function** (lines 735-777):
+```go
+// SendCommand sends a named command to a vehicle via the Fleet API or the
+// Vehicle Command Proxy (if configured). Commands that require signing are
+// routed through the proxy; wake_up goes directly to Fleet API.
+func (c *Client) SendCommand(ctx context.Context, vin string, command string, params map[string]interface{}) error {
+	def, ok := commands[command]
+	if !ok {
+		return fmt.Errorf("unknown command: %s", command)
+	}
+
+	// Merge default params with user-provided params
+	merged := make(map[string]interface{})
+	for k, v := range def.params {
+		merged[k] = v
+	}
+	for k, v := range params {
+		merged[k] = v
+	}
+
+	var bodyReader io.Reader
+	if len(merged) > 0 {
+		bodyBytes, err := json.Marshal(merged)
+		if err != nil {
+			return fmt.Errorf("marshal params: %w", err)
+		}
+		bodyReader = bytes.NewReader(bodyBytes)
+	}
+
+	path := fmt.Sprintf("/api/1/vehicles/%s/command/%s", vin, def.endpoint)
+
+	// Route through Vehicle Command Proxy for signed commands
+	if !def.noProxy && c.commandProxyURL != "" {
+		return c.doProxyRequest(ctx, path, bodyReader)
+	}
+
+	_, status, err := c.doRequest(ctx, http.MethodPost, path, bodyReader)
+	if err != nil {
+		return err
+	}
+	if status != http.StatusOK {
+		return fmt.Errorf("command %s: status %d", command, status)
+	}
+	return nil
+}
+```
+
+**Related Helper** (lines 728-733):
+```go
+// IsKnownCommand reports whether the given name is a supported Tesla command.
+// Used by the automation action executor for parse-time validation.
+func IsKnownCommand(name string) bool {
+	_, ok := commands[name]
+	return ok
+}
+```
+
+---
+
+### 5. **ROUTER REGISTRATION** (`internal/api/router.go`, lines 177 & 333-358)
+
+**Automation Handler Instantiation** (line 177):
+```go
+automationHandler := NewAutomationHandler(db)
+```
+
+**Route Group Registration** (lines 333-358):
+```go
+// Automations
+r.Route("/automations", func(r chi.Router) {
+	r.Get("/", automationHandler.List)
+	r.With(httprate.LimitByIP(20, 1*time.MinuteI now have a thorough understanding of the codebase. Let me plan and validate my approach.)).Post("/", automationHandler.Create)
+
+	// Import/Export (static routes before {id} param)
+	r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/export", automationHandler.ExportBatch)
+	r.With(httprate.LimitByIP(10, 1*time.Minute)).Post("/import", automationHandler.Import)
+
+	// Execution history (static routes before {id} param)
+	r.Route("/history", func(r chi.Router) {
+		r.Get("/", automationHandler.ListHistory)
+		r.Get("/{historyId}", automationHandler.GetHistoryDetail)
+	})
+
+	r.Route("/{id}", func(r chi.Router) {
+		r.Get("/", automationHandler.Get)
+		r.Get("/export", automationHandler.ExportOne)
+		r.Get("/history", automationHandler.ListAutomationHistory)
+		r.With(httprate.LimitByIP(20, 1*time.Minute)).Put("/", automationHandler.Update)
+		r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/", automationHandler.Delete)
+		r.With(httprate.LimitByIP(20, 1*time.Minute)).Patch("/toggle", automationHandler.Toggle)
+		r.With(httprate.LimitByIP(20, 1*time.Minute)).Patch("/re-enable", automationHandler.ReEnable)
+		r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/test-run", automationHandler.TestRun)
+	})
+})
+```
+
+**Public Webhook Receiver** (lines 210-219):
+```go
+// Public: Automation webhook receiver (no auth ΓÇö token IS the auth).
+if opt.WebhookTrigger != nil {
+	webhookReceiver := NewWebhookReceiverHandler(opt.WebhookTrigger)
+	r.With(
+		httprate.Limit(60, 1*time.Minute, httprate.WithKeyFuncs(
+			webhookTokenKeyFunc,
+		)),
+	).Post("/api/v1/automations/webhook/{token}", webhookReceiver.Receive)
+}
+```
+
+---
+
+### 6. **COMMAND ACTION EXECUTOR** (`internal/automation/action/command.go`)
+
+**Struct & Constructor** (lines 69-106):
+```go
+type CommandExecutor struct {
+	vehicleRepo  VehicleRepo
+	commandRepo  CommandLogRepo
+	settingsRepo SettingsChecker
+	teslaClient  TeslaCommander
+	logger       zerolog.Logger
+	wakeTimeout      time.Duration
+	wakePollInterval time.Duration
+}
+
+const (
+	defaultWakeTimeout      = 30 * time.Second
+	defaultWakePollInterval = 5 * time.Second
+)
+
+func NewCommandExecutor(
+	vehicleRepo VehicleRepo,
+	commandRepo CommandLogRepo,
+	settingsRepo SettingsChecker,
+	teslaClient TeslaCommander,
+) *CommandExecutor {
+	return &CommandExecutor{
+		vehicleRepo:      vehicleRepo,
+		commandRepo:      commandRepo,
+		settingsRepo:     settingsRepo,
+		teslaClient:      teslaClient,
+		wakeTimeout:      defaultWakeTimeout,
+		wakePollInterval: defaultWakePollInterval,
+		logger: log.With().
+			Str("component", "command_action").
+			Logger(),
+	}
+}
+```
+
+**Config & Result Types** (lines 42-67):
+```go
+type CommandConfig struct {
+	Type    string                 `json:"type"`    // "command" or empty
+	Command string                 `json:"command"` // e.g. "climate_on", "lock"
+	Params  map[string]interface{} `json:"params"`  // optional command parameters
+}
+
+type WakeResult struct {
+	Attempted  bool   `json:"attempted"`
+	Success    bool   `json:"success"`
+	Error      string `json:"error,omitempty"`
+	DurationMs int64  `json:"duration_ms"`
+	PollCount  int    `json:"poll_count"`
+}
+
+type CommandResult struct {
+	VehicleID   int64       `json:"vehicle_id"`
+	VehicleName string      `json:"vehicle_name"`
+	Command     string      `json:"command"`
+	Success     bool        `json:"success"`
+	Error       string      `json:"error,omitempty"`
+	DurationMs  int64       `json:"duration_ms"`
+	WakeResult  *WakeResult `json:"wake_result,omitempty"`
+}
+```
+
+**Execute Method** (lines 139-207):
+```go
+// Execute runs the command action for the given automation context.
+// If vehicleID is non-nil, the command targets that single vehicle.
+// If vehicleID is nil (fleet-wide automation), the command is sent to all vehicles.
+// Returns a JSON array of CommandResult and a summary error (nil if all succeeded).
+func (e *CommandExecutor) Execute(ctx context.Context, vehicleID *int64, raw json.RawMessage) (json.RawMessage, error) {
+	cfg, err := ParseCommandConfig(raw)
+	if err != nil {
+		return nil, fmt.Errorf("invalid command action config: %w", err)
+	}
+
+	// Safety gate: respect global API suspension.
+	if suspended, err := e.settingsRepo.IsAPISuspended(ctx); err != nil {
+		return nil, fmt.Errorf("check API suspension: %w", err)
+	} else if suspended {
+		return nil, fmt.Errorf("Tesla API calls are suspended")
+	}
+
+	// Safety gate: respect commands polling toggle.
+	if pc, err := e.settingsRepo.GetPollingConfig(ctx); err == nil && !pc.Commands {
+		return nil, fmt.Errorf("vehicle commands endpoint is disabled in polling config")
+	}
+
+	if !e.teslaClient.HasValidToken() {
+		return nil, fmt.Errorf("not authenticated with Tesla")
+	}
+
+	var vehicles []*models.Vehicle
+	if vehicleID != nil {
+		v, err := e.vehicleRepo.GetByID(ctx, *vehicleID)
+		if err != nil {
+			return nil, fmt.Errorf("look up vehicle %d: %w", *vehicleID, err)
+		}
+		if v == nil {
+			return nil, fmt.Errorf("vehicle %d not found", *vehicleID)
+		}
+		vehicles = []*models.Vehicle{v}
+	} else {
+		all, err := e.vehicleRepo.GetAll(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("list vehicles for fleet-wide command: %w", err)
+		}
+		if len(all) == 0 {
+			return nil, fmt.Errorf("no vehicles found for fleet-wide command")
+		}
+		vehicles = all
+	}
+
+	results := make([]CommandResult, 0, len(vehicles))
+	var failures int
+
+	for _, v := range vehicles {
+		if ctx.Err() != nil {
+			return nil, fmt.Errorf("context cancelled during fleet command execution: %w", ctx.Err())
+		}
+
+		result := e.sendToVehicle(ctx, v, cfg)
+		results = append(results, result)
+		if !result.Success {
+			failures++
+		}
+	}
+
+	resultJSON, err := json.Marshal(results)
+	if err != nil {
+		return nil, fmt.Errorf("marshal command results: %w", err)
+	}
+
+	if failures > 0 {
+		return resultJSON, fmt.Errorf("%d of %d vehicle commands failed", failures, len(vehicles))
+	}
+
+	return resultJSON, nil
+}
+```
+
+**Key Features:**
+- Auto-wake vehicles if needed (lines 260-328: `wakeIfNeeded` method)
+- Validates command against known commands at parse time
+- Respects safety gates: API suspension, polling config
+- Sends command to single vehicle or fleet-wide (all vehicles)
+- Auto-wake with polling (up to 30s timeout, 5s poll interval)
+- Logs each command execution to `command_logs` table
+- Returns structured results with wake details
+
+---
+
+### 7. **DATABASE REPOSITORY** (`internal/database/automation_history_repo.go`)
+
+**AutomationHistoryRepo Methods:**
+```go
+type AutomationHistoryRepo struct {
+	db *DB
+}
+
+func NewAutomationHistoryRepo(db *DB) *AutomationHistoryRepo
+
+// History-related methods:
+func (r *AutomationHistoryRepo) Create(ctx context.Context, h *models.AutomationHistory) error
+func (r *AutomationHistoryRepo) Complete(ctx context.Context, id int64, status string, errMsg *string, durationMs int) error
+func (r *AutomationHistoryRepo) GetByAutomation(ctx context.Context, automationID int64, limit, offset int) ([]*models.AutomationHistory, error)
+func (r *AutomationHistoryRepo) CountSinceByAutomation(ctx context.Context, automationID int64, since time.Time) (int, error)
+func (r *AutomationHistoryRepo) GetRecent(ctx context.Context, limit int) ([]*models.AutomationHistory, error)
+func (r *AutomationHistoryRepo) GetByID(ctx context.Context, id int64) (*models.AutomationHistory, error)
+func (r *AutomationHistoryRepo) ListAll(ctx context.Context, f HistoryFilter, limit, offset int) ([]*models.AutomationHistory, int, error)
+func (r *AutomationHistoryRepo) GetStats(ctx context.Context, f HistoryFilter) (*HistoryStats, error)
+
+// HistoryStats aggregates execution statistics:
+type HistoryStats struct {
+	TotalExecutions int     `json:"total_executions"`
+	Succeeded       int     `json:"succeeded"`
+	Failed          int     `json:"failed"`
+	Partial         int     `json:"partial"`
+	SuccessRate     float64 `json:"success_rate"` // percentage, excludes running/skipped/cancelled
+	AvgDurationMs   float64 `json:"avg_duration_ms"`
+}
+
+// HistoryFilter supports filtering executions:
+type HistoryFilter struct {
+	AutomationID int64     // 0 = all automations
+	Status       string    // empty = no status filter
+	Since        time.Time // zero = no lower bound
+}
+```
+
+---
+
+## Summary
+
+The TeslaSync automation system is a comprehensive, well-structured framework for:
+1. **Triggering automations** via cron, battery level, vehicle state, geofence, MQTT, webhooks, sunrise/sunset, energy, or calendar events
+2. **Evaluating conditions** before executing actions
+3. **Executing Tesla commands** with auto-wake capability and safety gates (API suspension, polling config)
+4. **Recording execution history** with detailed metadata (trigger info, condition evaluation, action results, FSM state)
+5. **Managing automation lifecycle** (create, update, delete, enable/disable, re-enable)
+6. **Monitoring performance** with statistics and execution tracking
+
+Commands are validated at parse time against a comprehensive map of 100+ supported Tesla Fleet API endpoints, and command execution includes automatic vehicle wake-up with configurable polling.
+
+Main issues IΓÇÖd push back on:
+
+1. **Blocking ΓÇö ΓÇ£latest successfulΓÇ¥ is not deterministic enough**
+   - You already expose history resources (`/automations/history/{historyId}`), but this plan undoes ΓÇ£whatever is latestΓÇ¥ at request time, which is race-prone and easy to double-apply. Two concurrent POSTs could both undo the same run.
+   - It also **skips partial runs**, even though partial executions can still have successful command side effects worth reversing.
+   - **Fix:** prefer undoing a **specific history row** (or accept `history_id` in body), and guard with a per-history/per-automation lock. If you keep ΓÇ£latestΓÇ¥, include `status IN ('success','partial')` and mark original runs as already undone.
+   - Refs: `internal/api/router.go:342-356`, `internal/database/automation_history_repo.go:103-117`
+
+2. **Blocking ΓÇö target vehicle selection is wrong**
+   - Using the **current automationΓÇÖs** `vehicle_id` can undo the wrong target if the automation was edited after the original run.
+   - For fleet-wide runs, `CommandExecutor.Execute(nil, ...)` targets **all current vehicles**, not the set that actually received the original command.
+   - **Fix:** derive targets from the **history row/output**, not from current automation state. For command actions, use stored command output (`CommandResult.VehicleID`) when available.
+   - Refs: `internal/automation/action/command.go:135-180`, `migrations/000109_add_automations.up.sql:51-82`
+
+3. **Blocking ΓÇö undo order must be reversed**
+   - The original chain executes in order; compensation should run in **reverse action order**. Otherwise dependent state changes can end wrong.
+   - **Fix:** collect reversible successful command actions, then execute them in descending `index`.
+   - Refs: `internal/automation/action/chain.go:132-237`
+
+4. **Blocking ΓÇö `status = "undo"` will skew history/stats**
+   - `automation_history` status logic elsewhere assumes execution statuses like `success/partial/failed/...`; `GetStats` excludes `test` but not `undo`, so undo rows will affect totals oddly.
+   - **Fix:** either:
+     - keep status as `success/partial/failed` and mark undo in `trigger_snapshot` / a new field, or
+     - add first-class undo support everywhere status is interpreted.
+   - Refs: `migrations/000109_add_automations.up.sql:75`, `internal/database/automation_history_repo.go:228-251`
+
+5. **High ΓÇö several ΓÇ£reverseΓÇ¥ mappings are not true inverses**
+   - Some are only best-effort compensations, not real undo: e.g. `vent_windows -> close_windows`, `climate_off -> climate_on`, `charge_stop -> charge_start`.
+   - You also drop original params, which can matter for some commands.
+   - **Fix:** limit undo to commands with safe, well-defined compensation; mark others `irreversible`. Consider naming this ΓÇ£reverse last reversible commandsΓÇ¥ rather than ΓÇ£undoΓÇ¥.
+   - Refs: `internal/tesla/client.go:598-688`
+
+6. **High ΓÇö sync HTTP may be too slow**
+   - Each command can wake vehicles for up to 30s, and undo may run multiple commands across multiple vehicles sequentially.
+   - **Fix:** strongly consider async job semantics (`202 Accepted` + history/job id) or a hard cap on undo scope.
+   - Refs: `internal/automation/action/command.go:82-86`, `internal/automation/action/command.go:185-206`
+
+7. **Medium ΓÇö optional `cmdExecutor` is risky**
+   - Making it optional means the route can exist while dependency wiring is missing, leading to nil-path behavior at runtime.
+   - **Fix:** make undo dependency required for this handler, or fail fast with a clear `501/500` at startup if undo is enabled without executor.
+
+One smaller positive note: parsing `action_config` is fine, but donΓÇÖt hand-roll itΓÇöreuse `action.ParseCommandConfig(...)` so you inherit existing validation and backward-compat behavior.
+- Ref: `internal/automation/action/command.go:108-132`
+
+If you address only three things, IΓÇÖd do: **specific-history targeting, reverse-order execution, and history/vehicle targeting based on the original run rather than current automation state.**
+
+Excellent critique. Let me adopt the key findings and refine my plan before implementing.
+
+**Key changes based on feedback:**
+1. **Reverse execution order** ΓÇö undo commands in descending index order
+2. **Include `partial` status** ΓÇö not just `success` runs are undoable
+3. **Derive vehicle targets from history output** ΓÇö not from current automation state
+4. **Add `undo` to `GetStats` exclusion** ΓÇö so undo rows don't skew statistics
+5. **Fail fast if cmdExecutor is nil** ΓÇö return 501 instead of silent nil path
+6. **Reuse `action.ParseCommandConfig`** ΓÇö don't hand-roll parsing
+
+I'll keep the "latest successful/partial" approach (simpler API, sufficient for MVP) but will address the stats skew issue.
+
+Let me now check remaining details and implement:
+
+Now let me check that `SettingsRepo` implements `action.SettingsChecker` and verify types:
+
+Good ΓÇö `teslaClient` is available in the router scope. Now let me check the end of the handler file and verify tests:
+
+Now I have full understanding. Let me implement all the changes:
+
+Now I have everything I need. Let me implement all the changes in parallel:
+
+Now add the undo endpoint code at the end of the file (before the Export section). Let me find the right insertion point:
+
+I'll insert the undo section between the `errWebhookTokenDuplicate` block and the Import/Export section:
+
+Now add `GetLatestSuccessful` to the history repo and fix `GetStats` to exclude `undo`:
+
+Now fix `GetStats` to exclude `undo` status (alongside `running`, `skipped`, `cancelled`, `test`):
+
+Now wire up the route and dependencies in router.go:
+
+Now add the route. Let me add the `action` import and the route:
+
+Need to add the `action` import to router.go:
+
+Now add the undo route. Let me see the current route block:
+
+Now let me verify the build compiles. First, check if the `action` import is already used in the handler (it should be since we reference `action.CommandExecutor`, `action.ParseCommandConfig`, etc.):
+
+Good ΓÇö the `action` package is already imported. Now let's verify `CommandConfig` is exported from the action package so we can use it in our JSON marshal:
+
+Good. Now let's build:
+
+Clean build. Now let's run the existing automation handler tests to make sure I haven't broken anything:
+
+All existing tests pass. Let me also run the history repo tests:
+
+All tests pass. Now let's also do a full build to make sure everything links properly:
+
+Clean full build. Now let me write a unit test for the `UndoLast` handler:
+
+Now let me add unit tests for the `UndoLast` handler and the reverse command map. The tests should be pure unit tests that don't need a DB ΓÇö I'll test the reverse command map and the handler's behavior when `cmdExecutor` is nil:
+
+Now let me add the undo tests at the end of the test file:
+
+Wait, I need to check if `action.IsKnownCommand` is importable from the test. It's a function in `internal/tesla` package, re-exported... let me check:
+
+`IsKnownCommand` is in the `tesla` package, not `action`. Let me fix the test to use `tesla.IsKnownCommand`:
+
+Now check if `action` is still used in tests (to avoid unused import):
+
+Good, `action` is still used. Now run the tests:
+
+All 3 new tests pass. Let me also run the full test suite to make sure nothing is broken:
+
+There's a failure. Let me see which test failed:
+
+There's a pre-existing test failure in `TestAllowedCommandsWhitelist`. Let me check if this is pre-existing:
+
+This is a pre-existing test failure unrelated to my changes (it checks a hardcoded count of 43 against an `allowedCommands` map that has 91 entries). Let me verify by checking git status to confirm my changes didn't touch this file:
+
+My changes are only in the 4 expected files. The `TestAllowedCommandsWhitelist` is in `handlers_test.go` ΓÇö a pre-existing failure. Let me verify it failed before my changes too:
+
+Confirmed ΓÇö `TestAllowedCommandsWhitelist` fails identically before my changes. It's a pre-existing issue.
+
+Now let me commit the changes:
+
+

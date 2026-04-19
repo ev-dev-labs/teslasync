@@ -1,0 +1,102 @@
+Let me understand the automation engine execution flow and find the frontend automations page.
+
+Now I have a thorough understanding of the codebase. Let me get a rubber-duck critique of my plan before implementing.
+
+The overall shape is good: **separate endpoint + publisher abstraction + FSM decoupling** is a reasonable design.
+
+The main things I think youΓÇÖre missing:
+
+- **Blocking: your new frontend hook will likely fail in prod unless it handles SSE auth exactly like the existing manager.**  
+  Current `sseManager` fetches `/api/v1/sse-token` and appends `?token=...`, because `EventSource` canΓÇÖt set headers and `AuthentikSSEAuth` checks the query token. A plain `new EventSource('/api/v1/automations/events')` will 401 under auth.  
+  **Fix:** either extend the manager to support multiple endpoints, or duplicate token-fetch + reconnect/backoff behavior intentionally.
+
+- **Blocking: wiring the publisher into `AutomationHandler` is the wrong ownership boundary for live runs.**  
+  `AutomationHandler` currently only owns CRUD/test-run HTTP paths. Your real automation executions likely happen outside the handler, and the automation FSM does not appear wired into non-test runtime code yet.  
+  **Fix:** inject the publisher into the actual automation execution/orchestration layer, and let the handler use it only for test-run if you really want test events.
+
+- **Blocking: `OnTransition func(from, to State, trigger string)` is too weak.**  
+  Your publisher methods need more than state names: at minimum timestamp, automation/run identity, maybe vehicle ID, retry count, and ideally a stable execution/history ID. Otherwise the caller has to reconstruct state from mutable data.  
+  **Fix:** pass a transition snapshot struct, not 3 scalars.
+
+- **Blocking: ΓÇ£currently-firing automation IDsΓÇ¥ will be fragile with SSE drops/reconnects.**  
+  `EventHub.Broadcast` already drops events when client buffers are full. Also SSE reconnects can miss terminal events, and your FSM is in-memory only. That means the UI can get stuck showing an automation as active forever.  
+  **Fix:** bootstrap/reconcile from a backend source of truth on mount/reconnect (recent history or active-run state), or support replay via run/history IDs.
+
+- **Blocking/semantic: mixing `TestRun` into the same feed can mislead users.**  
+  A dry-run event and a real automation execution are not the same thing operationally.  
+  **Fix:** either exclude test-runs from this stream or include `mode: "test" | "live"` and keep them visually separate.
+
+- **Important: your 4 event types donΓÇÖt match the actual FSM.**  
+  The FSM also has `partial`, `retrying`, `gave_up`, `disabled`, `cooldown`. If you only emit triggered/succeeded/failed/skipped, retries and auto-disable behavior become invisible or misleading.  
+  **Fix:** either emit a generic `automation_state_changed` event with `state`, or cover the missing terminal/intermediate states explicitly.
+
+- **Concurrency: donΓÇÖt call the callback under the FSM lock, but also donΓÇÖt ΓÇ£just goroutine itΓÇ¥.**  
+  Calling under lock risks deadlock/re-entrancy. Spawning a goroutine per transition risks out-of-order delivery.  
+  **Fix:** capture an immutable snapshot while locked, unlock, then enqueue to a buffered publisher/worker that preserves order.
+
+- **Route detail:** register `/automations/events` before `/{id}` routes.  
+  Otherwise `"events"` can get treated as the `{id}` path.
+
+On your main question: **separate EventHub/endpoint is fine** if automation activity is an optional domain stream. If most pages already use `/events`, though, a second `EventSource` means duplicated auth/reconnect logic and another long-lived connection, so the simplicity win may be smaller than it looks.
+
+If you want, I can turn this into a ΓÇ£recommended revised planΓÇ¥ next.Good critique. Key takeaways I'm adopting:
+1. Auth middleware on new endpoint (same pattern as `/events`)
+2. Rich `TransitionEvent` struct instead of bare scalars
+3. Register `/events` before `/{id}` routes
+4. Include `mode: "test"|"live"` in events
+5. Snapshot-then-callback for thread safety
+6. Frontend needs token fetch + reconnect (mirror sseManager pattern)
+
+Let me write the plan and implement.
+
+Let me start with the backend implementation. First, I'll add the `TransitionEvent` and observer callback to the FSM, then create the publisher, then wire everything together.
+
+Now I'll implement all the backend changes. Let me add the `TransitionEvent` struct and observer to the FSM:
+
+Now add the observer field to the struct and constructor:
+
+Now add the `SetObserver` method and update the `transition` method to capture snapshot under lock, call observer after unlock:
+
+Now update the `transition` method to capture snapshot and call observer outside lock. But wait ΓÇö the `transition` method is called while the caller already holds the lock (all the public methods lock, then call `transition`). So I need a different approach: capture the event in `transition`, and have the calling methods fire the observer after unlocking.
+
+Actually, the simpler approach: since `transition` is always called with the lock held by the caller, I'll have `transition` return the event, and have each caller fire the observer after releasing the lock.
+
+But that would be very invasive ΓÇö every public method would need to change. Let me use a cleaner pattern: accumulate pending events, and fire them on unlock. Or simpler: since the observer is documented as "MUST NOT block", we can call it under the lock safely. The SSE publisher just does a non-blocking channel send.
+
+Actually the cleanest approach is to call the observer inside transition() under the lock. The observer is documented as non-blocking, and the EventHub.Broadcast uses a non-blocking channel send (select with default). This is safe.
+
+Now create the `AutomationEventPublisher`:
+
+Now update the `AutomationHandler` to accept the publisher:
+
+Now add event publishing to the TestRun method. Let me look at the relevant section:
+
+Now I'll add SSE event publishing after the test-run completion log:
+
+Now wire the automation EventHub and SSE endpoint in the router. Let me look at the exact area where the automations route group is defined and where I need to add the events endpoint:
+
+Now add the SSE endpoint in the automations route group. I need to register `/events` BEFORE `/{id}` to avoid it being captured as a parameter:
+
+Now let me create the frontend files. First, the automation SSE client:
+
+No existing automation types. Let me check the end of the types file to append:
+
+Now create the automation SSE client:
+
+Now create the React hook:
+
+Now let me verify everything builds. Let me run the Go build and TypeScript check:
+
+Both Go and TypeScript compile clean. Now let me run the existing tests:
+
+All FSM tests pass. Let me also run the automation handler tests:
+
+Let me also run the SSE handler tests:
+
+All existing tests pass. Now let me commit:
+
+There are many unrelated files staged. Let me reset and only stage my changes:
+
+The FSM file is new (not yet committed to the branch). My changes are part of it. Let me commit:
+
+

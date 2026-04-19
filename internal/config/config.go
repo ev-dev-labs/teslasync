@@ -73,23 +73,38 @@ type FleetTelemetryConfig struct {
 }
 
 type DatabaseConfig struct {
-	Host           string
-	Port           int
-	User           string
-	Password       string
-	Name           string
-	SSLMode        string
-	MaxConns       int
-	MinConns       int
-	ConnMaxLifetime time.Duration
-	ConnMaxIdleTime time.Duration
-	MigrationsPath string
+	Host              string
+	Port              int
+	User              string
+	Password          string
+	Name              string
+	SSLMode           string
+	MaxConns          int
+	MinConns          int
+	ConnMaxLifetime   time.Duration
+	ConnMaxIdleTime   time.Duration
+	MigrationsPath    string
+	ConnectTimeout    int           // seconds, appended to DSN as connect_timeout
+	StatementTimeout  int           // milliseconds, appended to DSN as statement_timeout
+	HealthCheckPeriod time.Duration // pool health check interval
 }
 
 func (d DatabaseConfig) DSN() string {
 	return fmt.Sprintf(
-		"postgres://%s:%s@%s:%d/%s?sslmode=%s",
+		"postgres://%s:%s@%s:%d/%s?sslmode=%s&connect_timeout=%d&statement_timeout=%d",
 		d.User, d.Password, d.Host, d.Port, d.Name, d.SSLMode,
+		d.ConnectTimeout, d.StatementTimeout,
+	)
+}
+
+// MigrationDSN returns a DSN without statement_timeout. Migrations use
+// pg_advisory_lock which must wait indefinitely for the lock — a statement
+// timeout would kill the lock acquisition and crash the pod.
+func (d DatabaseConfig) MigrationDSN() string {
+	return fmt.Sprintf(
+		"postgres://%s:%s@%s:%d/%s?sslmode=%s&connect_timeout=%d",
+		d.User, d.Password, d.Host, d.Port, d.Name, d.SSLMode,
+		d.ConnectTimeout,
 	)
 }
 
@@ -161,17 +176,20 @@ func Load() (*Config, error) {
 		CORSOrigins: envStr("CORS_ORIGINS", ""),
 
 		Database: DatabaseConfig{
-			Host:            envStr("DATABASE_HOST", "localhost"),
-			Port:            envInt("DATABASE_PORT", 5432),
-			User:            envStr("DATABASE_USER", "teslasync"),
-			Password:        envStr("DATABASE_PASS", "teslasync"),
-			Name:            envStr("DATABASE_NAME", "teslasync"),
-			SSLMode:         envStr("DATABASE_SSLMODE", "disable"),
-			MaxConns:        envInt("DATABASE_MAX_CONNS", 25),
-			MinConns:        envInt("DATABASE_MIN_CONNS", 5),
-			ConnMaxLifetime: envDuration("DATABASE_CONN_MAX_LIFETIME", 5*time.Minute),
-			ConnMaxIdleTime: envDuration("DATABASE_CONN_MAX_IDLE_TIME", 1*time.Minute),
-			MigrationsPath:  envStr("DATABASE_MIGRATIONS", "file:///migrations"),
+			Host:              envStr("DATABASE_HOST", "localhost"),
+			Port:              envInt("DATABASE_PORT", 5432),
+			User:              envStr("DATABASE_USER", "teslasync"),
+			Password:          envStr("DATABASE_PASS", "teslasync"),
+			Name:              envStr("DATABASE_NAME", "teslasync"),
+			SSLMode:           envStr("DATABASE_SSLMODE", "disable"),
+			MaxConns:          envInt("DATABASE_MAX_CONNS", 25),
+			MinConns:          envInt("DATABASE_MIN_CONNS", 5),
+			ConnMaxLifetime:   envDuration("DATABASE_CONN_MAX_LIFETIME", 5*time.Minute),
+			ConnMaxIdleTime:   envDuration("DATABASE_CONN_MAX_IDLE_TIME", 1*time.Minute),
+			MigrationsPath:    envStr("DATABASE_MIGRATIONS", "file:///migrations"),
+			ConnectTimeout:    envInt("DATABASE_CONNECT_TIMEOUT", 5),
+			StatementTimeout:  envInt("DATABASE_STATEMENT_TIMEOUT", 30000),
+			HealthCheckPeriod: envDuration("DATABASE_HEALTH_CHECK_PERIOD", 5*time.Second),
 		},
 
 		Tesla: TeslaConfig{

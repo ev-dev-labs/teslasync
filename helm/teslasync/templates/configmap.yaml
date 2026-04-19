@@ -12,6 +12,9 @@ data:
   DATABASE_SSLMODE: {{ include "teslasync.postgresql.sslMode" . | quote }}
   DATABASE_MAX_CONNS: {{ .Values.postgresql.maxConns | default 25 | quote }}
   DATABASE_MIN_CONNS: {{ .Values.postgresql.minConns | default 5 | quote }}
+  DATABASE_CONNECT_TIMEOUT: {{ .Values.postgresql.connectTimeout | default 5 | quote }}
+  DATABASE_STATEMENT_TIMEOUT: {{ .Values.postgresql.statementTimeout | default 30000 | quote }}
+  DATABASE_HEALTH_CHECK_PERIOD: {{ .Values.postgresql.healthCheckPeriod | default "5s" | quote }}
   MQTT_HOST: {{ include "teslasync.mqtt.host" . | quote }}
   MQTT_PORT: {{ include "teslasync.mqtt.port" . | quote }}
   MQTT_CLIENT_ID: {{ .Values.mqtt.clientId | default "teslasync" | quote }}
@@ -80,6 +83,8 @@ data:
   NOTIFICATION_WORKER_PORT: {{ include "teslasync.notificationWorker.port" . | quote }}
   EXPORT_WORKER_HOST: {{ include "teslasync.exportWorker.host" . | quote }}
   EXPORT_WORKER_PORT: {{ include "teslasync.exportWorker.port" . | quote }}
+  AUTOMATION_WORKER_HOST: {{ include "teslasync.automationWorker.host" . | quote }}
+  AUTOMATION_WORKER_PORT: {{ include "teslasync.automationWorker.port" . | quote }}
   {{- $proxyURL := include "teslasync.commandProxy.url" . }}
   {{- if $proxyURL }}
   TESLA_COMMAND_PROXY_URL: {{ $proxyURL | quote }}

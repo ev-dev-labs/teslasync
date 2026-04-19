@@ -5,6 +5,7 @@ import {
   ArrowLeft, Route, Clock, Gauge, Battery, Zap, TrendingUp,
   MapPin, Navigation, Flag, Thermometer, BatteryCharging,
   Activity, ArrowUpRight, ArrowDownRight, Share2, Play,
+  DollarSign, TrendingDown,
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
@@ -88,6 +89,8 @@ export default function DriveDetailPage() {
   const {
     convertDistance, convertSpeed, convertTemp, convertEfficiency, convertPressure,
     distanceUnit, speedUnit, tempUnit, efficiencyUnit, pressureUnit, isMiles,
+    costPerKwh, currencySymbol, formatEnergyCost, formatCurrency, costPerDistanceUnit, estimateGasCost,
+    settings,
   } = useSettings();
 
   /* ---- Route data ---- */
@@ -415,6 +418,12 @@ export default function DriveDetailPage() {
             <StaggerItem><IconStatCard icon={Zap} color="#f59e0b" value={fmtWithUnit(stats.powerMax, 'kW')} label={t('driveDetail.maxPower', 'Max Power')} /></StaggerItem>
             <StaggerItem><IconStatCard icon={Navigation} color="#10b981" value={<AnimatedNumber value={Math.round(stats.elevGain)} suffix=" m ↑" />} label={t('driveDetail.elevGain', 'Elev. Gain')} /></StaggerItem>
             <StaggerItem><IconStatCard icon={Navigation} color="#ef4444" value={<AnimatedNumber value={Math.round(stats.elevLoss)} suffix=" m ↓" />} label={t('driveDetail.elevLoss', 'Elev. Loss')} /></StaggerItem>
+            {stats.energyWh > 0 && (
+              <StaggerItem><IconStatCard icon={DollarSign} color="#10b981" value={formatEnergyCost(stats.energyWh / 1000)} label={t('driveDetail.tripCost', 'Trip Cost')} /></StaggerItem>
+            )}
+            {stats.energyWh > 0 && drive.distance > 0 && (
+              <StaggerItem><IconStatCard icon={TrendingDown} color="#06b6d4" value={`${currencySymbol}${(costPerDistanceUnit(stats.energyWh / 1000, drive.distance) ?? 0).toFixed(3)}`} label={t('driveDetail.costPerUnit', `Cost / ${distanceUnit}`)} /></StaggerItem>
+            )}
           </StaggerContainer>
 
           {/* Battery Heater Status */}
@@ -573,6 +582,56 @@ export default function DriveDetailPage() {
               </div>
             </GlassPanel>
           </FadeIn>
+
+          {/* Cost & Savings */}
+          {stats.energyWh > 0 && (
+            <FadeIn>
+              <GlassPanel className="p-5">
+                <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
+                  <DollarSign className="h-4 w-4 text-green-400" /> {t('driveDetail.costSavings', 'Cost & Savings')}
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 text-center">
+                  <div>
+                    <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.tripCost', 'Trip Cost')}</p>
+                    <p className="text-lg font-bold text-green-400">{formatEnergyCost(stats.energyWh / 1000)}</p>
+                    <p className="text-[9px] text-[var(--text-muted)]">{t('driveDetail.atRate', `at ${currencySymbol}${costPerKwh}/kWh`)}</p>
+                  </div>
+                  {drive.distance > 0 && (
+                    <div>
+                      <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.costPerUnit', `Cost / ${distanceUnit}`)}</p>
+                      <p className="text-lg font-bold text-cyan-400">
+                        {formatCurrency(costPerDistanceUnit(stats.energyWh / 1000, drive.distance) ?? 0, 3)}
+                      </p>
+                    </div>
+                  )}
+                  {(() => {
+                    const gasCost = estimateGasCost(drive.distance);
+                    const evCost = (stats.energyWh / 1000) * costPerKwh;
+                    const savings = gasCost != null ? gasCost - evCost : null;
+                    return savings != null && savings > 0 ? (
+                      <>
+                        <div>
+                          <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.gasCostEquiv', 'Gas Cost (equiv)')}</p>
+                          <p className="text-lg font-bold text-red-400">{formatCurrency(gasCost!)}</p>
+                          <p className="text-[9px] text-[var(--text-muted)]">{t('driveDetail.atMpg', `at ${settings.gas_efficiency_mpg} MPG`)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.gasSavings', 'vs Gas Savings')}</p>
+                          <p className="text-lg font-bold text-emerald-400">{formatCurrency(savings)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.savingsPct', 'Savings %')}</p>
+                          <p className="text-lg font-bold text-emerald-400">
+                            {fmtNumber((savings / gasCost!) * 100, 0)}%
+                          </p>
+                        </div>
+                      </>
+                    ) : null;
+                  })()}
+                </div>
+              </GlassPanel>
+            </FadeIn>
+          )}
 
           {/* Route Map */}
           <FadeIn>

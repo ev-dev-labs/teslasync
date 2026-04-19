@@ -81,6 +81,33 @@ function dedup<T>(key: string, fn: () => Promise<T>): Promise<T> {
   return p
 }
 
+// --- Auth Middleware Session Expiry Detection ---
+
+let _authExpiredHandled = false
+
+function handleAuthExpired(): void {
+  if (_authExpiredHandled) return
+  _authExpiredHandled = true
+
+  // Store the current URL so we can return after re-authentication
+  sessionStorage.setItem('teslasync-return-url', window.location.href)
+
+  // In PWA standalone mode, we can't rely on a page reload triggering
+  // the ForwardAuth redirect — show a UI overlay instead
+  const isPWA = window.matchMedia('(display-mode: standalone)').matches
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    || (window.navigator as any).standalone === true
+
+  if (isPWA) {
+    document.dispatchEvent(new CustomEvent('teslasync:auth-expired', {
+      detail: { returnUrl: window.location.href, isPWA },
+    }))
+  } else {
+    // Regular browser — reload triggers the ForwardAuth redirect to login
+    window.location.reload()
+  }
+}
+
 // --- Token Refresh on 401 ---
 
 let _refreshing: Promise<void> | null = null
@@ -171,6 +198,24 @@ async function _doFetch<T>(
       // Any server response (even errors) means we're online
       setStatus('online')
 
+      // ── Auth middleware session expiry detection ──
+      // When a ForwardAuth proxy (Authentik, Authelia, etc.) intercepts the
+      // request after session expiry, the response is either a redirect
+      // followed to an HTML login page, or a non-JSON 401.
+      const contentType = res.headers.get('content-type') ?? ''
+
+      if (res.ok && contentType.includes('text/html')) {
+        // We asked for JSON from /api/v1 but got HTML — login page redirect
+        handleAuthExpired()
+        throw new ApiError('Authentication session expired', 401)
+      }
+
+      if (res.status === 401 && !contentType.includes('application/json')) {
+        // 401 from auth middleware (our API always returns JSON on 401)
+        handleAuthExpired()
+        throw new ApiError('Authentication session expired', 401)
+      }
+
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: res.statusText }))
         const apiErr = new ApiError(err.error || `HTTP ${res.status}`, res.status)
@@ -198,6 +243,22 @@ async function _doFetch<T>(
       return parsed as T
     } catch (err) {
       if (err instanceof ApiError) throw err
+
+      // Network error might be a CORS-blocked auth redirect
+      // (ForwardAuth redirected to external auth domain, browser blocked it)
+      if (err instanceof TypeError) {
+        try {
+          const probe = await fetch(`${getApiBase()}/api/v1/system/version`, { method: 'HEAD' })
+          if (!probe.ok || (probe.headers.get('content-type') ?? '').includes('text/html')) {
+            handleAuthExpired()
+            throw new ApiError('Authentication session expired', 401)
+          }
+        } catch (probeErr) {
+          if (probeErr instanceof ApiError) throw probeErr
+          handleAuthExpired()
+          throw new ApiError('Authentication session expired', 401)
+        }
+      }
 
       lastError = err instanceof Error ? err : new Error(String(err))
 

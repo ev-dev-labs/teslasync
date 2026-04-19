@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState, useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AppSettings } from '@/api/types'
 import {
@@ -7,13 +7,20 @@ import {
   useCarPreferences, useGasPriceStatus, usePollGasPrice,
   useToggleGasPrice, useUpdateGasPriceConfig,
 } from '@/api/hooks/useSettings'
+import {
+  useTeslaFeatureConfig, useRefreshTeslaFeatureConfig,
+  useTeslaUserRegion, useRefreshTeslaRegion,
+  useTeslaUserOrders, useRefreshTeslaOrders,
+} from '@/api/hooks/useUser'
 import { PageContainer } from '@/components/layout'
-import { GlassPanel, Button, Input, Select, IconBox } from '@/components/ui'
-import { Skeleton } from '@/components/feedback'
+import { GlassPanel, Button, Input, Select, IconBox, Badge, Toggle } from '@/components/ui'
+import { Skeleton, EmptyState } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { useTheme, type ThemeId, type ModeId } from '@/components/ui/ThemeProvider'
 import { useToast } from '@/components/feedback/Toast'
 import { usePageTitle } from '@/hooks/usePageTitle'
+import { useWebPush } from '@/hooks/useWebPush'
+import { useNotificationListener, type WebPushPreferences } from '@/hooks/useNotificationListener'
 import { cn } from '@/lib/cn'
 import { fmtNumber } from '@/lib/numberFormat'
 import { formatDateTime } from '@/lib/dateFormat'
@@ -21,7 +28,8 @@ import { parseSettingEnum, isSettingMiles, isSettingFahrenheit, isSettingPSI, is
 import {
   Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield,
   CheckCircle, XCircle, Palette, Download, Sun, Moon, Monitor, Sparkles,
-  Pause, Play, Fuel, Zap,
+  Pause, Play, Fuel, Zap, Flag, Globe, Info, ShoppingCart, Package, Calendar,
+  Bell,
 } from 'lucide-react'
 
 const modeIcons: Record<string, ReactNode> = {
@@ -43,6 +51,27 @@ function SettingField({ label, children }: { label: string; children: ReactNode 
   )
 }
 
+function orderStatusVariant(status: string): 'info' | 'success' | 'warning' | 'danger' | 'neutral' {
+  const s = status.toUpperCase()
+  if (s.includes('DELIVER')) return 'success'
+  if (s.includes('READY') || s.includes('TRANSPORT')) return 'info'
+  if (s.includes('CANCEL') || s.includes('REJECT')) return 'danger'
+  if (s.includes('PENDING') || s.includes('ORDER')) return 'warning'
+  return 'neutral'
+}
+
+function formatOrderStatus(status: string): string {
+  return status
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+function formatDeliveryDate(dateStr: string): string {
+  const d = new Date(dateStr)
+  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' })
+}
+
 export default function SettingsPage() {
   const { t } = useTranslation('settings')
   usePageTitle(t('title', 'Settings'))
@@ -51,7 +80,14 @@ export default function SettingsPage() {
   // ── Data queries ──
   const { data: settings, isLoading } = useSettings()
   const { data: auth } = useAuthStatus()
+
+  // ── Browser notifications ──
+  const { permission, requestPermission, isSupported: notificationsSupported } = useWebPush()
+  const { prefs: pushPrefs, setPrefs: setPushPrefs } = useNotificationListener()
   const { data: gasPriceStatus } = useGasPriceStatus()
+  const { data: featureConfig } = useTeslaFeatureConfig()
+  const { data: regionConfig } = useTeslaUserRegion()
+  const { data: ordersData } = useTeslaUserOrders()
   const { themeId, modeId, setTheme, setMode, setCustomColors, themes: allThemes, modes: allModes } = useTheme()
 
   // ── Form state ──
@@ -95,6 +131,26 @@ export default function SettingsPage() {
   const gasPollMut = usePollGasPrice()
   const gasToggleMut = useToggleGasPrice()
   const gasConfigMut = useUpdateGasPriceConfig()
+  const featureConfigRefresh = useRefreshTeslaFeatureConfig()
+  const regionRefresh = useRefreshTeslaRegion()
+  const ordersRefresh = useRefreshTeslaOrders()
+
+  // ── Derived feature flag entries ──
+  const featureEntries = useMemo(() => {
+    const data = featureConfig?.data
+    if (!data || typeof data !== 'object') return []
+    return Object.entries(data).map(([key, value]) => {
+      const isObj = typeof value === 'object' && value !== null
+      const enabled = isObj ? (value as Record<string, unknown>).enabled : value
+      const details = isObj
+        ? Object.entries(value as Record<string, unknown>)
+            .filter(([k]) => k !== 'enabled')
+            .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)
+            .join(', ')
+        : null
+      return { key, enabled: Boolean(enabled), details }
+    })
+  }, [featureConfig?.data])
 
   // ── Vehicle user preferences for "Sync from Car" feature ──
   const { data: vehicles } = useVehicles()
@@ -214,6 +270,208 @@ export default function SettingsPage() {
             <p className="text-sm text-neon-green animate-in fade-in">
               {t('tesla.synced', 'Synced {{count}} vehicle(s).', { count: syncMut.data.synced })}
             </p>
+          )}
+        </GlassPanel>
+      </FadeIn>
+
+      {/* ── Feature Flags ── */}
+      <FadeIn delay={0.03}>
+        <GlassPanel className="p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <IconBox color="purple">
+                <Flag className="h-5 w-5" />
+              </IconBox>
+              <div>
+                <h2 className="text-base font-semibold text-[var(--text-primary)]">{t('featureConfig.title', 'Feature Flags')}</h2>
+                <p className="text-xs text-[var(--text-muted)]">{t('featureConfig.subtitle', 'Tesla account feature configuration')}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {featureConfig?.fetched_at && (
+                <span className="text-[11px] text-[var(--text-muted)]">
+                  {t('featureConfig.lastSynced', 'Synced')} {formatDateTime(featureConfig.fetched_at)}
+                </span>
+              )}
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<RefreshCw className={cn('h-3.5 w-3.5', featureConfigRefresh.isPending && 'animate-spin')} />}
+                onClick={() => featureConfigRefresh.mutate(undefined, {
+                  onSuccess: () => toast.success(t('toast.featureConfigRefreshed', 'Feature config refreshed')),
+                  onError: (err: Error) => toast.error(t('toast.featureConfigFailed', 'Failed to refresh feature config'), err.message),
+                })}
+                disabled={featureConfigRefresh.isPending}
+              >
+                {t('featureConfig.refresh', 'Refresh')}
+              </Button>
+            </div>
+          </div>
+
+          {featureEntries.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/5 text-left">
+                    <th className="pb-2 pr-4 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">{t('featureConfig.feature', 'Feature')}</th>
+                    <th className="pb-2 pr-4 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">{t('featureConfig.status', 'Status')}</th>
+                    <th className="pb-2 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">{t('featureConfig.details', 'Details')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {featureEntries.map((entry) => (
+                    <tr key={entry.key} className="border-b border-white/[0.03]">
+                      <td className="py-2.5 pr-4 font-medium text-[var(--text-primary)]">{entry.key}</td>
+                      <td className="py-2.5 pr-4">
+                        <Badge variant={entry.enabled ? 'success' : 'neutral'}>
+                          {entry.enabled ? t('featureConfig.enabled', 'Enabled') : t('featureConfig.disabled', 'Disabled')}
+                        </Badge>
+                      </td>
+                      <td className="py-2.5 text-xs text-[var(--text-muted)] max-w-xs truncate">{entry.details ?? '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <EmptyState icon={<Info className="h-10 w-10" />} message={t('featureConfig.noData', 'No feature config data yet. Click Refresh to fetch from Tesla.')} />
+          )}
+        </GlassPanel>
+      </FadeIn>
+
+      {/* ── Region & API ── */}
+      <FadeIn delay={0.04}>
+        <GlassPanel className="p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <IconBox color="green">
+                <Globe className="h-5 w-5" />
+              </IconBox>
+              <div>
+                <h2 className="text-base font-semibold text-[var(--text-primary)]">{t('region.title', 'Region & API')}</h2>
+                <p className="text-xs text-[var(--text-muted)]">{t('region.subtitle', 'Tesla account region and Fleet API endpoint')}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {regionConfig?.fetched_at && (
+                <span className="text-[11px] text-[var(--text-muted)]">
+                  {t('region.lastSynced', 'Synced')} {formatDateTime(regionConfig.fetched_at)}
+                </span>
+              )}
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<RefreshCw className={cn('h-3.5 w-3.5', regionRefresh.isPending && 'animate-spin')} />}
+                onClick={() => regionRefresh.mutate(undefined, {
+                  onSuccess: () => toast.success(t('toast.regionRefreshed', 'Region info refreshed')),
+                  onError: (err: Error) => toast.error(t('toast.regionFailed', 'Failed to refresh region'), err.message),
+                })}
+                disabled={regionRefresh.isPending}
+              >
+                {t('region.refresh', 'Refresh')}
+              </Button>
+            </div>
+          </div>
+
+          {regionConfig?.data?.region ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="rounded-lg bg-white/[0.02] border border-white/5 p-4">
+                <p className="text-xs text-[var(--text-muted)] mb-1 uppercase tracking-wider">{t('region.regionCode', 'Region')}</p>
+                <p className="text-lg font-semibold text-[var(--text-primary)]">{regionConfig.data.region}</p>
+              </div>
+              <div className="rounded-lg bg-white/[0.02] border border-white/5 p-4">
+                <p className="text-xs text-[var(--text-muted)] mb-1 uppercase tracking-wider">{t('region.fleetApiUrl', 'Fleet API Base URL')}</p>
+                <p className="text-sm font-mono text-[var(--text-primary)] break-all">{regionConfig.data.fleet_api_base_url ?? '—'}</p>
+              </div>
+            </div>
+          ) : (
+            <EmptyState icon={<Info className="h-10 w-10" />} message={t('region.noData', 'No region data yet. Click Refresh to fetch from Tesla.')} />
+          )}
+        </GlassPanel>
+      </FadeIn>
+
+      {/* ── Active Orders ── */}
+      <FadeIn delay={0.045}>
+        <GlassPanel className="p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <IconBox color="cyan">
+                <ShoppingCart className="h-5 w-5" />
+              </IconBox>
+              <div>
+                <h2 className="text-base font-semibold text-[var(--text-primary)]">{t('orders.title', 'Active Orders')}</h2>
+                <p className="text-xs text-[var(--text-muted)]">{t('orders.subtitle', 'Vehicle orders and delivery tracking from Tesla')}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {ordersData?.fetched_at && (
+                <span className="text-[11px] text-[var(--text-muted)]">
+                  {t('orders.lastSynced', 'Synced')} {formatDateTime(ordersData.fetched_at)}
+                </span>
+              )}
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<RefreshCw className={cn('h-3.5 w-3.5', ordersRefresh.isPending && 'animate-spin')} />}
+                onClick={() => ordersRefresh.mutate(undefined, {
+                  onSuccess: () => toast.success(t('toast.ordersRefreshed', 'Orders refreshed')),
+                  onError: (err: Error) => toast.error(t('toast.ordersFailed', 'Failed to refresh orders'), err.message),
+                })}
+                disabled={ordersRefresh.isPending}
+              >
+                {t('orders.refresh', 'Refresh')}
+              </Button>
+            </div>
+          </div>
+
+          {(ordersData?.orders ?? []).length > 0 ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {(ordersData?.orders ?? []).map((order) => (
+                <div key={order.order_id} className="rounded-lg bg-white/[0.02] border border-white/5 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Package className="h-4 w-4 text-[var(--text-muted)]" />
+                      <span className="text-sm font-semibold text-[var(--text-primary)]">{order.model || '—'}</span>
+                    </div>
+                    <Badge variant={orderStatusVariant(order.status)}>
+                      {formatOrderStatus(order.status)}
+                    </Badge>
+                  </div>
+                  <div className="space-y-1.5 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-[var(--text-muted)]">{t('orders.orderId', 'Order ID')}</span>
+                      <span className="font-mono text-[var(--text-primary)]">{order.order_id}</span>
+                    </div>
+                    {order.vin && (
+                      <div className="flex justify-between">
+                        <span className="text-[var(--text-muted)]">{t('orders.vin', 'VIN')}</span>
+                        <span className="font-mono text-[var(--text-primary)]">{order.vin}</span>
+                      </div>
+                    )}
+                    {order.delivery_date && (
+                      <div className="flex justify-between">
+                        <span className="text-[var(--text-muted)]">{t('orders.deliveryDate', 'Delivery Date')}</span>
+                        <span className="flex items-center gap-1 text-[var(--text-primary)]">
+                          <Calendar className="h-3 w-3" />
+                          {formatDeliveryDate(order.delivery_date)}
+                        </span>
+                      </div>
+                    )}
+                    {order.is_upgradable && (
+                      <div className="flex justify-end">
+                        <Badge variant="info" size="sm">{t('orders.upgradable', 'Upgradable')}</Badge>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState icon={<Info className="h-10 w-10" />} message={
+              ordersData?.fetched_at
+                ? t('orders.noOrders', 'No active orders found.')
+                : t('orders.noData', 'No order data yet. Click Refresh to fetch from Tesla.')
+            } />
           )}
         </GlassPanel>
       </FadeIn>
@@ -487,6 +745,76 @@ export default function SettingsPage() {
               {t('gas.source', 'Source: U.S. Energy Information Administration')}
             </p>
           </div>
+        </GlassPanel>
+      </FadeIn>
+
+      {/* ── Browser Notifications ── */}
+      <FadeIn delay={0.13}>
+        <GlassPanel className="p-6 space-y-5">
+          <div className="flex items-center gap-3">
+            <IconBox color="cyan">
+              <Bell className="h-5 w-5" />
+            </IconBox>
+            <div>
+              <h2 className="text-base font-semibold text-[var(--text-primary)]">{t('browserNotifications.title', 'Browser Notifications')}</h2>
+              <p className="text-xs text-[var(--text-muted)]">{t('browserNotifications.subtitle', 'Get notified when the app tab is in the background')}</p>
+            </div>
+          </div>
+
+          {!notificationsSupported ? (
+            <p className="text-xs text-white/40">
+              {t('browserNotifications.unsupported', 'Browser notifications are not supported in this browser.')}
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {/* Permission state */}
+              <div className="flex items-center gap-3">
+                {permission === 'default' && (
+                  <Button
+                    variant="primary"
+                    icon={<Bell className="h-4 w-4" />}
+                    onClick={requestPermission}
+                  >
+                    {t('browserNotifications.enable', 'Enable Browser Notifications')}
+                  </Button>
+                )}
+                {permission === 'granted' && (
+                  <Badge variant="success">
+                    {t('browserNotifications.enabled', 'Enabled')}
+                  </Badge>
+                )}
+                {permission === 'denied' && (
+                  <span className="text-xs text-white/40">
+                    {t('browserNotifications.blocked', 'Notifications are blocked. Enable in your browser settings.')}
+                  </span>
+                )}
+              </div>
+
+              {/* Per-event toggles — only show when permission is granted */}
+              {permission === 'granted' && (
+                <div className="space-y-3 pt-2 border-t border-white/[0.06]">
+                  <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                    {t('browserNotifications.events', 'Notify me about')}
+                  </p>
+                  <Toggle
+                    label={t('browserNotifications.alerts', 'Alerts')}
+                    checked={pushPrefs.alerts}
+                    onChange={(checked) => setPushPrefs((prev: WebPushPreferences) => ({ ...prev, alerts: checked }))}
+                    size="sm"
+                  />
+                  <Toggle
+                    label={t('browserNotifications.exportStatus', 'Export completions')}
+                    checked={pushPrefs.exportStatus}
+                    onChange={(checked) => setPushPrefs((prev: WebPushPreferences) => ({ ...prev, exportStatus: checked }))}
+                    size="sm"
+                  />
+                  <p className="text-[10px] text-[var(--text-muted)]">
+                    {t('browserNotifications.hint', 'Notifications only fire when the app tab is in the background.')}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </GlassPanel>
       </FadeIn>
 

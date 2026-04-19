@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -166,6 +167,21 @@ func (c *Client) GetUserRegion(ctx context.Context) ([]byte, int, error) {
 	return c.doRequest(ctx, http.MethodGet, "/api/1/users/region", nil)
 }
 
+// GetUserFeatureConfig calls GET /api/1/users/feature_config to fetch account feature flags.
+func (c *Client) GetUserFeatureConfig(ctx context.Context) ([]byte, int, error) {
+	return c.doRequest(ctx, http.MethodGet, "/api/1/users/feature_config", nil)
+}
+
+// GetUserOrders calls GET /api/1/users/orders to fetch active Tesla orders.
+func (c *Client) GetUserOrders(ctx context.Context) ([]byte, int, error) {
+	return c.doRequest(ctx, http.MethodGet, "/api/1/users/orders", nil)
+}
+
+// GetUserProfile calls GET /api/1/users/me to fetch the Tesla account owner's profile.
+func (c *Client) GetUserProfile(ctx context.Context) ([]byte, int, error) {
+	return c.doRequest(ctx, http.MethodGet, "/api/1/users/me", nil)
+}
+
 // RegisterPartner calls POST /api/1/partner_accounts to register this app in the current region.
 // It requires the partner token (client_credentials), not the user's OAuth token.
 func (c *Client) RegisterPartner(ctx context.Context, partnerToken, domain string) ([]byte, int, error) {
@@ -209,6 +225,37 @@ func (c *Client) GetFleetTelemetryErrors(ctx context.Context, vin string) ([]byt
 	return c.doRequest(ctx, http.MethodGet, path, nil)
 }
 
+// GetFleetTelemetryErrorVINs calls GET /api/1/partner_accounts/fleet_telemetry_error_vins
+// using a partner token. Returns VINs with telemetry errors across the entire fleet.
+func (c *Client) GetFleetTelemetryErrorVINs(ctx context.Context) ([]byte, int, error) {
+	partnerToken, err := c.GetPartnerToken(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("get partner token: %w", err)
+	}
+	return c.doRequestWithToken(ctx, http.MethodGet, "/api/1/partner_accounts/fleet_telemetry_error_vins", nil, partnerToken)
+}
+
+// GetPartnerFleetTelemetryErrors calls GET /api/1/partner_accounts/fleet_telemetry_errors
+// using a partner token. Returns detailed error logs across the entire fleet.
+func (c *Client) GetPartnerFleetTelemetryErrors(ctx context.Context) ([]byte, int, error) {
+	partnerToken, err := c.GetPartnerToken(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("get partner token: %w", err)
+	}
+	return c.doRequestWithToken(ctx, http.MethodGet, "/api/1/partner_accounts/fleet_telemetry_errors", nil, partnerToken)
+}
+
+// GetPartnerPublicKey calls GET /api/1/partner_accounts/public_key?domain={domain}
+// using a partner token to verify the registered public key for the given domain.
+func (c *Client) GetPartnerPublicKey(ctx context.Context, domain string) ([]byte, int, error) {
+	partnerToken, err := c.GetPartnerToken(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("get partner token: %w", err)
+	}
+	path := "/api/1/partner_accounts/public_key?domain=" + url.QueryEscape(domain)
+	return c.doRequestWithToken(ctx, http.MethodGet, path, nil, partnerToken)
+}
+
 // GetNearbyChargingSites returns charging sites near the vehicle's current location.
 // GET /api/1/vehicles/{vin}/nearby_charging_sites
 func (c *Client) GetNearbyChargingSites(ctx context.Context, vin string) ([]byte, int, error) {
@@ -242,6 +289,77 @@ func (c *Client) GetServiceData(ctx context.Context, vin string) ([]byte, int, e
 func (c *Client) GetFleetStatus(ctx context.Context, vins []string) ([]byte, int, error) {
 	body, _ := json.Marshal(map[string]interface{}{"vins": vins})
 	return c.doRequest(ctx, http.MethodPost, "/api/1/vehicles/fleet_status", bytes.NewReader(body))
+}
+
+// GetMobileEnabled calls GET /api/1/vehicles/{vin}/mobile_enabled.
+func (c *Client) GetMobileEnabled(ctx context.Context, vin string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/vehicles/%s/mobile_enabled", vin)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// GetVehicleOptions calls GET /api/1/dx/vehicles/options?vin={vin}.
+func (c *Client) GetVehicleOptions(ctx context.Context, vin string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/dx/vehicles/options?vin=%s", vin)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// GetVehicleSpecs calls GET /api/1/vehicles/{vin}/specs using a partner token.
+// NOTE: This endpoint costs $0.10 per successful call — cache aggressively.
+func (c *Client) GetVehicleSpecs(ctx context.Context, vin string) ([]byte, int, error) {
+	partnerToken, err := c.GetPartnerToken(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("get partner token: %w", err)
+	}
+	path := fmt.Sprintf("/api/1/vehicles/%s/specs", vin)
+	return c.doRequestWithToken(ctx, http.MethodGet, path, nil, partnerToken)
+}
+
+// GetSubscriptionEligibility calls GET /api/1/dx/vehicles/subscriptions/eligibility?vin={vin}.
+func (c *Client) GetSubscriptionEligibility(ctx context.Context, vin string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/dx/vehicles/subscriptions/eligibility?vin=%s", vin)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// GetUpgradeEligibility calls GET /api/1/dx/vehicles/upgrades/eligibility?vin={vin}.
+func (c *Client) GetUpgradeEligibility(ctx context.Context, vin string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/dx/vehicles/upgrades/eligibility?vin=%s", vin)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// GetWarrantyDetails calls GET /api/1/dx/warranty/details.
+func (c *Client) GetWarrantyDetails(ctx context.Context) ([]byte, int, error) {
+	return c.doRequest(ctx, http.MethodGet, "/api/1/dx/warranty/details", nil)
+}
+
+// GetVehicleDrivers calls GET /api/1/vehicles/{vin}/drivers to list allowed drivers.
+func (c *Client) GetVehicleDrivers(ctx context.Context, vin string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/vehicles/%s/drivers", vin)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// RemoveVehicleDriver calls DELETE /api/1/vehicles/{vin}/drivers to revoke a driver's access.
+func (c *Client) RemoveVehicleDriver(ctx context.Context, vin string, shareUserID int64) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/vehicles/%s/drivers", vin)
+	body := fmt.Sprintf(`{"share_user_id":%d}`, shareUserID)
+	return c.doRequest(ctx, http.MethodDelete, path, bytes.NewReader([]byte(body)))
+}
+
+// GetVehicleInvitations calls GET /api/1/vehicles/{vin}/invitations to list share invites.
+func (c *Client) GetVehicleInvitations(ctx context.Context, vin string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/vehicles/%s/invitations", vin)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// CreateVehicleInvitation calls POST /api/1/vehicles/{vin}/invitations to create a share invite.
+func (c *Client) CreateVehicleInvitation(ctx context.Context, vin string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/vehicles/%s/invitations", vin)
+	return c.doRequest(ctx, http.MethodPost, path, nil)
+}
+
+// RevokeVehicleInvitation calls POST /api/1/vehicles/{vin}/invitations/{id}/revoke.
+func (c *Client) RevokeVehicleInvitation(ctx context.Context, vin, invitationID string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/vehicles/%s/invitations/%s/revoke", vin, invitationID)
+	return c.doRequest(ctx, http.MethodPost, path, nil)
 }
 
 // FleetTelemetrySubscription is the configuration payload for fleet telemetry.
@@ -601,13 +719,52 @@ var commands = map[string]commandDef{
 	"set_sentry_mode":  {endpoint: "set_sentry_mode", params: map[string]interface{}{"on": true}},
 	"sentry_on":        {endpoint: "set_sentry_mode", params: map[string]interface{}{"on": true}},
 	"sentry_off":       {endpoint: "set_sentry_mode", params: map[string]interface{}{"on": false}},
-	"speed_limit_on":   {endpoint: "speed_limit_activate"},
-	"speed_limit_off":  {endpoint: "speed_limit_deactivate"},
+	"speed_limit_on":              {endpoint: "speed_limit_activate"},
+	"speed_limit_off":             {endpoint: "speed_limit_deactivate"},
+	"speed_limit_set_limit":       {endpoint: "speed_limit_set_limit"},
+	"speed_limit_clear_pin":       {endpoint: "speed_limit_clear_pin"},
+	"speed_limit_clear_pin_admin": {endpoint: "speed_limit_clear_pin_admin"},
+	"guest_mode_on":    {endpoint: "guest_mode", params: map[string]interface{}{"enable": true}},
+	"guest_mode_off":   {endpoint: "guest_mode", params: map[string]interface{}{"enable": false}},
+	"erase_user_data":  {endpoint: "erase_user_data"},
+
+	// Valet Mode
+	"valet_on":        {endpoint: "set_valet_mode", params: map[string]interface{}{"on": true}},
+	"valet_off":       {endpoint: "set_valet_mode", params: map[string]interface{}{"on": false}},
+	"set_valet_mode":  {endpoint: "set_valet_mode"},
+	"reset_valet_pin": {endpoint: "reset_valet_pin"},
+
+	// PIN to Drive
+	"set_pin_to_drive":         {endpoint: "set_pin_to_drive"},
+	"reset_pin_to_drive_pin":   {endpoint: "reset_pin_to_drive_pin"},
+	"clear_pin_to_drive_admin": {endpoint: "clear_pin_to_drive_admin"},
 
 	// Climate
 	"climate_on":  {endpoint: "auto_conditioning_start"},
 	"climate_off": {endpoint: "auto_conditioning_stop"},
 	"set_temps":   {endpoint: "set_temps"},
+
+	// Seat & Steering Wheel Climate
+	"seat_heater":          {endpoint: "remote_seat_heater_request"},
+	"seat_cooler":          {endpoint: "remote_seat_cooler_request"},
+	"auto_seat_climate":    {endpoint: "remote_auto_seat_climate_request"},
+	"steering_wheel_heat":  {endpoint: "remote_steering_wheel_heater_request"},
+	"steering_wheel_level": {endpoint: "remote_steering_wheel_heat_level_request"},
+	"auto_steering_heat":   {endpoint: "remote_auto_steering_wheel_heat_climate_request"},
+
+	// Climate Protection
+	"bioweapon_on":          {endpoint: "set_bioweapon_mode", params: map[string]interface{}{"on": true, "manual_override": true}},
+	"bioweapon_off":         {endpoint: "set_bioweapon_mode", params: map[string]interface{}{"on": false, "manual_override": false}},
+	"cop_on":                {endpoint: "set_cabin_overheat_protection", params: map[string]interface{}{"on": true, "fan_only": false}},
+	"cop_fan_only":          {endpoint: "set_cabin_overheat_protection", params: map[string]interface{}{"on": true, "fan_only": true}},
+	"cop_off":               {endpoint: "set_cabin_overheat_protection", params: map[string]interface{}{"on": false, "fan_only": false}},
+	"set_cop_temp":          {endpoint: "set_cop_temp"},
+	"climate_keeper_off":    {endpoint: "set_climate_keeper_mode", params: map[string]interface{}{"climate_keeper_mode": 0}},
+	"climate_keeper_on":     {endpoint: "set_climate_keeper_mode", params: map[string]interface{}{"climate_keeper_mode": 1}},
+	"dog_mode":              {endpoint: "set_climate_keeper_mode", params: map[string]interface{}{"climate_keeper_mode": 2}},
+	"camp_mode":             {endpoint: "set_climate_keeper_mode", params: map[string]interface{}{"climate_keeper_mode": 3}},
+	"preconditioning_max":   {endpoint: "set_preconditioning_max", params: map[string]interface{}{"on": true}},
+	"preconditioning_reset": {endpoint: "set_preconditioning_max", params: map[string]interface{}{"on": false}},
 
 	// Charging
 	"open_charge_port":  {endpoint: "charge_port_door_open"},
@@ -618,6 +775,8 @@ var commands = map[string]commandDef{
 	"charge_stop":       {endpoint: "charge_stop"},
 	"set_charge_limit":  {endpoint: "set_charge_limit"},
 	"set_charging_amps": {endpoint: "set_charging_amps"},
+	"charge_max_range":  {endpoint: "charge_max_range"},
+	"charge_standard":   {endpoint: "charge_standard"},
 
 	// Doors & Trunk
 	"actuate_frunk": {endpoint: "actuate_trunk", params: map[string]interface{}{"which_trunk": "front"}},
@@ -632,22 +791,69 @@ var commands = map[string]commandDef{
 	"flash_lights": {endpoint: "flash_lights"},
 	"flash":        {endpoint: "flash_lights"},
 
+	// Boombox
+	"boombox_fart":   {endpoint: "remote_boombox", params: map[string]interface{}{"sound": 0}},
+	"boombox_ping":   {endpoint: "remote_boombox", params: map[string]interface{}{"sound": 2000}},
+	"remote_boombox": {endpoint: "remote_boombox"},
+
 	// Windows
 	"vent_windows":  {endpoint: "window_control", params: map[string]interface{}{"command": "vent"}},
 	"close_windows": {endpoint: "window_control", params: map[string]interface{}{"command": "close"}},
 
+	// Sunroof
+	"sunroof_vent":  {endpoint: "sun_roof_control", params: map[string]interface{}{"state": "vent"}},
+	"sunroof_close": {endpoint: "sun_roof_control", params: map[string]interface{}{"state": "close"}},
+	"sunroof_stop":  {endpoint: "sun_roof_control", params: map[string]interface{}{"state": "stop"}},
+
+	// HomeLink
+	"trigger_homelink": {endpoint: "trigger_homelink"},
+
 	// Drive
 	"remote_start_drive": {endpoint: "remote_start_drive"},
 
-	// Scheduling
+	// Media
+	"media_toggle_playback": {endpoint: "media_toggle_playback"},
+	"media_next_track":      {endpoint: "media_next_track"},
+	"media_prev_track":      {endpoint: "media_prev_track"},
+	"media_next_fav":        {endpoint: "media_next_fav"},
+	"media_prev_fav":        {endpoint: "media_prev_fav"},
+	"media_volume_down":     {endpoint: "media_volume_down"},
+	"adjust_volume":         {endpoint: "adjust_volume"},
+
+	// Scheduling (legacy)
 	"set_scheduled_departure": {endpoint: "set_scheduled_departure"},
 	"set_scheduled_charging":  {endpoint: "set_scheduled_charging"},
+
+	// Schedules (firmware 2024.26+)
+	"add_charge_schedule":          {endpoint: "add_charge_schedule"},
+	"remove_charge_schedule":       {endpoint: "remove_charge_schedule"},
+	"add_precondition_schedule":    {endpoint: "add_precondition_schedule"},
+	"remove_precondition_schedule": {endpoint: "remove_precondition_schedule"},
+
+	// Navigation
+	"navigation_request":     {endpoint: "navigation_request"},
+	"navigation_gps_request": {endpoint: "navigation_gps_request"},
+	"navigation_sc_request":  {endpoint: "navigation_sc_request"},
+
+	// Software Updates
+	"schedule_software_update": {endpoint: "schedule_software_update"},
+	"cancel_software_update":   {endpoint: "cancel_software_update"},
+
+	// Vehicle
+	"set_vehicle_name": {endpoint: "set_vehicle_name"},
+}
+
+// IsKnownCommand reports whether the given name is a supported Tesla command.
+// Used by the automation action executor for parse-time validation.
+func IsKnownCommand(name string) bool {
+	_, ok := commands[name]
+	return ok
 }
 
 // SendCommand sends a named command to a vehicle via the Fleet API or the
 // Vehicle Command Proxy (if configured). Commands that require signing are
 // routed through the proxy; wake_up goes directly to Fleet API.
-func (c *Client) SendCommand(ctx context.Context, vin string, command string, params map[string]string) error {
+func (c *Client) SendCommand(ctx context.Context, vin string, command string, params map[string]interface{}) error {
 	def, ok := commands[command]
 	if !ok {
 		return fmt.Errorf("unknown command: %s", command)
@@ -804,4 +1010,107 @@ func (c *Client) doProxyRequestWithResponse(ctx context.Context, method, path st
 	}
 
 	return respBody, resp.StatusCode, nil
+}
+
+// GetChargingHistory calls GET /api/1/dx/charging/history with pagination.
+// Returns raw response bytes, HTTP status code, and error.
+func (c *Client) GetChargingHistory(ctx context.Context, vin string, startTime, endTime string, pageNo, pageSize int) ([]byte, int, error) {
+	params := url.Values{}
+	if vin != "" {
+		params.Set("vin", vin)
+	}
+	if startTime != "" {
+		params.Set("startTime", startTime)
+	}
+	if endTime != "" {
+		params.Set("endTime", endTime)
+	}
+	params.Set("pageNo", strconv.Itoa(pageNo))
+	params.Set("pageSize", strconv.Itoa(pageSize))
+	params.Set("sortBy", "chargeStartDateTime")
+	params.Set("sortOrder", "DESC")
+
+	path := "/api/1/dx/charging/history?" + params.Encode()
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// GetChargingInvoice calls GET /api/1/dx/charging/invoice/{contentID} and returns the PDF bytes.
+func (c *Client) GetChargingInvoice(ctx context.Context, contentID string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/dx/charging/invoice/%s", contentID)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// GetChargingSessions calls GET /api/1/dx/charging/sessions (business accounts only).
+// Returns raw response bytes, HTTP status code, and error.
+func (c *Client) GetChargingSessions(ctx context.Context, vin, dateFrom, dateTo string, limit, offset int) ([]byte, int, error) {
+	params := url.Values{}
+	if vin != "" {
+		params.Set("vin", vin)
+	}
+	if dateFrom != "" {
+		params.Set("date_from", dateFrom)
+	}
+	if dateTo != "" {
+		params.Set("date_to", dateTo)
+	}
+	params.Set("limit", strconv.Itoa(limit))
+	params.Set("offset", strconv.Itoa(offset))
+
+	path := "/api/1/dx/charging/sessions?" + params.Encode()
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// GetProducts calls GET /api/1/products to fetch the user's vehicles and energy products.
+func (c *Client) GetProducts(ctx context.Context) ([]byte, int, error) {
+	return c.doRequest(ctx, http.MethodGet, "/api/1/products", nil)
+}
+
+// GetEnergySiteCalendarHistory calls GET /api/1/energy_sites/{id}/calendar_history.
+// kind: "backup" or "energy". period: "day", "week", "month", "year".
+// Dates are ISO 8601 (YYYY-MM-DD). timeZone is IANA (e.g. "America/Los_Angeles").
+func (c *Client) GetEnergySiteCalendarHistory(ctx context.Context, energySiteID int64, kind, startDate, endDate, period, timeZone string) ([]byte, int, error) {
+	params := url.Values{}
+	params.Set("kind", kind)
+	params.Set("start_date", startDate)
+	params.Set("end_date", endDate)
+	params.Set("period", period)
+	params.Set("time_zone", timeZone)
+
+	path := fmt.Sprintf("/api/1/energy_sites/%d/calendar_history?%s", energySiteID, params.Encode())
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// GetEnergySiteTelemetryHistory calls GET /api/1/energy_sites/{id}/telemetry_history.
+// kind: "charge" for wall connector history. Dates are ISO 8601 (YYYY-MM-DD).
+func (c *Client) GetEnergySiteTelemetryHistory(ctx context.Context, energySiteID int64, kind, startDate, endDate, timeZone string) ([]byte, int, error) {
+	params := url.Values{}
+	params.Set("kind", kind)
+	params.Set("start_date", startDate)
+	params.Set("end_date", endDate)
+	params.Set("time_zone", timeZone)
+
+	path := fmt.Sprintf("/api/1/energy_sites/%d/telemetry_history?%s", energySiteID, params.Encode())
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// GetEnergySiteLiveStatus calls GET /api/1/energy_sites/{id}/live_status.
+// Returns real-time power flow data for a Powerwall/Solar site.
+func (c *Client) GetEnergySiteLiveStatus(ctx context.Context, energySiteID int64) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/energy_sites/%d/live_status", energySiteID)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// GetEnergySiteInfo calls GET /api/1/energy_sites/{id}/site_info.
+// Returns detailed site configuration: components, backup reserve, operation mode, firmware version.
+func (c *Client) GetEnergySiteInfo(ctx context.Context, energySiteID int64) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/energy_sites/%d/site_info", energySiteID)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// SetEnergySiteTOUSettings calls POST /api/1/energy_sites/{id}/time_of_use_settings.
+// Updates the utility rate plan / tariff for a Powerwall site's time-of-use schedule.
+// The body should contain the full tou_settings JSON envelope as expected by the Tesla API.
+func (c *Client) SetEnergySiteTOUSettings(ctx context.Context, energySiteID int64, body io.Reader) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/energy_sites/%d/time_of_use_settings", energySiteID)
+	return c.doRequest(ctx, http.MethodPost, path, body)
 }

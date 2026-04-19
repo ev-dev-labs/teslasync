@@ -1,0 +1,19 @@
+{{- if .Values.automationWorker.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "teslasync.fullname" . }}-automation-worker
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: automation-worker
+spec:
+  type: {{ .Values.automationWorker.service.type }}
+  ports:
+    - port: {{ .Values.automationWorker.service.port }}
+      targetPort: health
+      protocol: TCP
+      name: health
+  selector:
+    {{- include "teslasync.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: automation-worker
+{{- end }}
