@@ -310,3 +310,33 @@ export interface TeslaEnergyLiveStatus {
   timestamp: string;
   fetched_at: string;
 }
+
+// Time-of-Use settings payload sent to Tesla API
+
+/** Wraps the full tou_settings object expected by POST /time_of_use_settings. */
+export interface TOUSettingsPayload {
+  tou_settings: {
+    optimization_strategy?: string;
+    tariff_content_v2?: TariffContentV2;
+    [key: string]: unknown;
+  };
+}
+
+/** Rate plan / tariff structure inside tou_settings. */
+export interface TariffContentV2 {
+  name?: string;
+  utility?: string;
+  daily_charges?: Array<{ amount: number; name?: string }>;
+  demand_charges?: Record<string, Record<string, number>>;
+  energy_charges?: Record<string, Record<string, Array<{ rate: number; start: number; end: number }>>>;
+  seasons?: Record<string, { fromMonth: number; fromDay: number; toMonth: number; toDay: number }>;
+  [key: string]: unknown;
+}
+
+/** Preset tariff for the TOU settings UI. */
+export interface TOUPreset {
+  id: string;
+  name: string;
+  utility: string;
+  settings: TOUSettingsPayload;
+}

@@ -342,6 +342,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/live-status", teslaEnergyLiveStatusHandler.LiveStatus)
 			r.Get("/live-status/history", teslaEnergyLiveStatusHandler.LiveStatusHistory)
 			r.With(httprate.LimitByIP(10, 1*time.Minute)).Post("/live-status/refresh", teslaEnergyLiveStatusHandler.RefreshLiveStatus)
+
+			// Time-of-Use settings (rate plan / tariff)
+			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/tou-settings", energySiteHandler.UpdateTOUSettings)
 		})
 
 		// Geofences

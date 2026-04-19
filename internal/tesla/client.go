@@ -989,3 +989,11 @@ func (c *Client) GetEnergySiteInfo(ctx context.Context, energySiteID int64) ([]b
 	path := fmt.Sprintf("/api/1/energy_sites/%d/site_info", energySiteID)
 	return c.doRequest(ctx, http.MethodGet, path, nil)
 }
+
+// SetEnergySiteTOUSettings calls POST /api/1/energy_sites/{id}/time_of_use_settings.
+// Updates the utility rate plan / tariff for a Powerwall site's time-of-use schedule.
+// The body should contain the full tou_settings JSON envelope as expected by the Tesla API.
+func (c *Client) SetEnergySiteTOUSettings(ctx context.Context, energySiteID int64, body io.Reader) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/energy_sites/%d/time_of_use_settings", energySiteID)
+	return c.doRequest(ctx, http.MethodPost, path, body)
+}

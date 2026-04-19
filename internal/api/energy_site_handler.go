@@ -179,6 +179,49 @@ func (h *EnergySiteHandler) RefreshSiteInfo(w http.ResponseWriter, r *http.Reque
 	fmt.Fprintf(w, `{"data":%s,"fetched_at":"%s"}`, *siteInfoJSON, fetchedAt.Format("2006-01-02T15:04:05Z"))
 }
 
+// UpdateTOUSettings proxies a time-of-use rate plan update to the Tesla API.
+func (h *EnergySiteHandler) UpdateTOUSettings(w http.ResponseWriter, r *http.Request) {
+	siteID, err := parseSiteID(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid site ID")
+		return
+	}
+
+	if !h.teslaClient.HasValidToken() {
+		writeError(w, http.StatusUnauthorized, "not authenticated with Tesla")
+		return
+	}
+
+	log.Info().Int64("site_id", siteID).Msg("updating TOU settings via Tesla API")
+
+	body, status, err := h.teslaClient.SetEnergySiteTOUSettings(r.Context(), siteID, r.Body)
+	if err != nil {
+		log.Error().Err(err).Int64("site_id", siteID).Msg("failed to update TOU settings")
+		writeError(w, http.StatusBadGateway, "failed to update TOU settings")
+		return
+	}
+
+	// Preserve Tesla's response status for client errors (4xx) so the frontend
+	// can distinguish validation failures from server outages.
+	if status >= 400 && status < 500 {
+		log.Warn().Int("status", status).Int64("site_id", siteID).Msg("tesla rejected TOU settings")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(status)
+		w.Write(body)
+		return
+	}
+	if status < 200 || status >= 300 {
+		log.Error().Int("status", status).Str("body", truncateBody(body)).Msg("tesla TOU settings non-2xx")
+		writeError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
+		return
+	}
+
+	log.Info().Int64("site_id", siteID).Msg("TOU settings updated successfully")
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(body)
+}
+
 // parseProductsResponse parses the Tesla /products response, filtering to energy products only.
 func parseProductsResponse(body []byte) ([]*models.TeslaEnergySite, error) {
 	var envelope struct {

@@ -18,6 +18,7 @@ import type {
   TeslaEnergyLiveStatus,
   TeslaEnergySite,
   TeslaEnergySiteInfoResponse,
+  TOUSettingsPayload,
 } from '@/types/energy';
 
 export function useEnergyStats(vehicleId: string | null, days = 30) {
@@ -151,6 +152,21 @@ export function useRefreshTeslaEnergySiteInfo() {
         { method: 'POST' },
       ),
     onSuccess: (_data, siteId) => {
+      queryClient.invalidateQueries({ queryKey: ['tesla-site-info', siteId] });
+    },
+  });
+}
+
+export function useUpdateTOUSettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ siteId, settings }: { siteId: number; settings: TOUSettingsPayload }) =>
+      request(`/tesla/energy-sites/${siteId}/tou-settings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings),
+      }),
+    onSuccess: (_data, { siteId }) => {
       queryClient.invalidateQueries({ queryKey: ['tesla-site-info', siteId] });
     },
   });

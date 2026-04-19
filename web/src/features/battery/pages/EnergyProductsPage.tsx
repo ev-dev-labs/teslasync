@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
+import { useState } from 'react';
 import {
   Sun, Battery, Zap, Grid3x3, RefreshCw, Shield,
-  CloudLightning, Gauge, Activity, Settings, Cpu, Info,
+  CloudLightning, Gauge, Activity, Settings, Cpu, Info, Clock,
 } from 'lucide-react';
 
 import { PageContainer, Grid } from '@/components/layout';
@@ -23,6 +24,7 @@ import {
 } from '@/api/hooks/useEnergy';
 
 import type { TeslaEnergySite, TeslaEnergySiteInfo } from '@/types/energy';
+import { TOUSettingsModal } from '../components/TOUSettingsModal';
 
 /* ───────── Helpers ───────── */
 
@@ -76,12 +78,20 @@ function CapBadge({ active, label, icon: Icon }: CapBadgeProps) {
 
 /* ───────── Site Info Section ───────── */
 
-function SiteInfoSection({ siteId }: { siteId: number }) {
+function SiteInfoSection({ siteId, touCapable }: { siteId: number; touCapable: boolean }) {
   const { t } = useTranslation();
   const { data: response, isLoading } = useTeslaEnergySiteInfo(siteId);
   const refreshMutation = useRefreshTeslaEnergySiteInfo();
+  const [touModalOpen, setTouModalOpen] = useState(false);
 
   const info: TeslaEnergySiteInfo | null = response?.data ?? null;
+
+  // Extract current tariff name from site_info if available
+  const tariffName =
+    (info?.tariff_content_v2 as Record<string, unknown> | undefined)?.name as string | undefined ??
+    (info?.tou_settings as Record<string, unknown> | undefined)?.tariff_content_v2 != null
+      ? ((info?.tou_settings as Record<string, unknown>)?.tariff_content_v2 as Record<string, unknown>)?.name as string | undefined
+      : undefined;
 
   if (isLoading) {
     return <Skeleton className="h-32 mt-4" />;
@@ -190,6 +200,31 @@ function SiteInfoSection({ siteId }: { siteId: number }) {
             </div>
           )}
 
+          {/* Time-of-Use Rate Plan */}
+          {(touCapable || info.components?.tou_capable) && (
+            <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-white/50 mb-0.5 flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {t('energy.tou.sectionTitle', 'Rate Plan')}
+                  </p>
+                  <p className="text-sm font-medium text-white/90">
+                    {tariffName ?? t('energy.tou.noPlan', 'No rate plan configured')}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setTouModalOpen(true)}
+                  aria-label={t('energy.tou.editPlan', 'Update rate plan')}
+                >
+                  {t('energy.tou.updateButton', 'Update')}
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Fetched timestamp */}
           {response?.fetched_at && (
             <p className="text-xs text-white/30">
@@ -208,6 +243,12 @@ function SiteInfoSection({ siteId }: { siteId: number }) {
           />
         </div>
       )}
+
+      <TOUSettingsModal
+        open={touModalOpen}
+        onClose={() => setTouModalOpen(false)}
+        siteId={siteId}
+      />
     </div>
   );
 }
@@ -275,7 +316,7 @@ function EnergySiteCard({ site }: { site: TeslaEnergySite }) {
       </div>
 
       {/* Site Info section */}
-      <SiteInfoSection siteId={site.energy_site_id} />
+      <SiteInfoSection siteId={site.energy_site_id} touCapable={site.tou_capable} />
 
       {/* Footer */}
       <p className="text-xs text-white/30">
