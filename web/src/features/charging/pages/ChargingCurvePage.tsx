@@ -612,6 +612,8 @@ export default function ChargingCurvePage() {
                     'Charging power curve for selected session',
                   )}
                   height={320}
+                  exportable
+                  exportFilename="power-vs-soc"
                 >
                   <ResponsiveContainer width="100%" height={320}>
                     <AreaChart data={curveData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
@@ -747,6 +749,8 @@ export default function ChargingCurvePage() {
               'Power curves overlaid from last 10 sessions',
             )}
             height={300}
+            exportable
+            exportFilename="session-comparison"
           >
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={comparisonData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
@@ -812,6 +816,8 @@ export default function ChargingCurvePage() {
                 'Average kW and kWh per charger category',
               )}
               height={280}
+              exportable
+              exportFilename="charge-rate-by-type"
             >
               <ResponsiveContainer width="100%" height={280}>
                 <ComposedChart
@@ -885,6 +891,8 @@ export default function ChargingCurvePage() {
                 'Monthly average DC vs AC charge rate',
               )}
               height={280}
+              exportable
+              exportFilename="charging-speed-trend"
             >
               <ResponsiveContainer width="100%" height={280}>
                 <LineChart
@@ -1010,6 +1018,8 @@ export default function ChargingCurvePage() {
                 'Average time-to-charge and session count by year',
               )}
               height={280}
+              exportable
+              exportFilename="yearly-charging-trend"
             >
               {timeToCharge.yearlyTrend.length > 0 ? (
                 <>

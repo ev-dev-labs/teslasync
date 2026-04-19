@@ -115,7 +115,7 @@ export default function TrueCostPage() {
 
           {/* Cumulative savings chart */}
           <FadeIn>
-            <ChartContainer title={t('tco.cumulativeSavings', 'Cumulative Savings Over Time')} >
+            <ChartContainer title={t('tco.cumulativeSavings', 'Cumulative Savings Over Time')} exportable exportFilename="cumulative-savings">
               {monthlyBreakdown.length > 0 ? (
                 <div className="h-64 sm:h-80">
                   <ResponsiveContainer width="100%" height="100%">
@@ -148,7 +148,7 @@ export default function TrueCostPage() {
           {/* Cost per km comparison + Monthly EV vs Gas */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <FadeIn delay={0.1}>
-              <ChartContainer title={t('tco.costPerKm', 'Cost per Kilometer')} >
+              <ChartContainer title={t('tco.costPerKm', 'Cost per Kilometer')} exportable exportFilename="cost-per-km">
                 <div className="h-56">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={[
@@ -177,7 +177,7 @@ export default function TrueCostPage() {
             </FadeIn>
 
             <FadeIn delay={0.2}>
-              <ChartContainer title={t('tco.monthlyEvVsGas', 'Monthly EV vs Gas Cost')} >
+              <ChartContainer title={t('tco.monthlyEvVsGas', 'Monthly EV vs Gas Cost')} exportable exportFilename="monthly-ev-vs-gas">
                 {monthlyBreakdown.length > 0 ? (
                   <div className="h-56">
                     <ResponsiveContainer width="100%" height="100%">

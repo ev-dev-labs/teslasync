@@ -346,7 +346,7 @@ export default function EnergyPage() {
           {/* ── Charts Row 1: Energy & Cost Daily + Efficiency ──── */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <FadeIn delay={0.1}>
-              <ChartContainer title={t('energy.chart.energyCostDaily', 'Energy & Cost Daily')}>
+              <ChartContainer title={t('energy.chart.energyCostDaily', 'Energy & Cost Daily')} exportable exportFilename="energy-cost-daily">
                 <div className="h-48 sm:h-64">
                   {dailyEnergy.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
@@ -401,7 +401,7 @@ export default function EnergyPage() {
             </FadeIn>
 
             <FadeIn delay={0.15}>
-              <ChartContainer title={t('energy.chart.efficiencyTrend', 'Efficiency Trend')}>
+              <ChartContainer title={t('energy.chart.efficiencyTrend', 'Efficiency Trend')} exportable exportFilename="efficiency-trend">
                 <div className="h-48 sm:h-64">
                   {dailyEnergy.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
@@ -450,7 +450,7 @@ export default function EnergyPage() {
           {/* ── Charts Row 2: Time of Day + Charger Breakdown ──── */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <FadeIn delay={0.2}>
-              <ChartContainer title={t('energy.chart.chargingByTime', 'Charging by Time of Day')}>
+              <ChartContainer title={t('energy.chart.chargingByTime', 'Charging by Time of Day')} exportable exportFilename="charging-by-time">
                 {timeOfDayData.length > 0 ? (
                   <>
                     <div className="h-44 sm:h-60">
@@ -499,7 +499,7 @@ export default function EnergyPage() {
             </FadeIn>
 
             <FadeIn delay={0.25}>
-              <ChartContainer title={t('energy.chart.chargerBreakdown', 'Charger Type Breakdown')}>
+              <ChartContainer title={t('energy.chart.chargerBreakdown', 'Charger Type Breakdown')} exportable exportFilename="charger-breakdown">
                 {chargerBreakdown.length > 0 ? (
                   <div className="flex items-center gap-6">
                     <div className="h-48 w-48">

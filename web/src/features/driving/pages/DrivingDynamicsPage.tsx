@@ -612,6 +612,8 @@ export default function DrivingDynamicsPage() {
             title={t('dynamics.speedOverTime', 'Speed Over Time')}
             subtitle={t('dynamics.speedOverTimeDesc', 'Vehicle speed from motor telemetry')}
             height={280}
+            exportable
+            exportFilename="speed-over-time"
           >
             {speedChartData.length > 0 ? (
               <ResponsiveContainer width="100%" height={280}>
@@ -638,6 +640,8 @@ export default function DrivingDynamicsPage() {
             title={t('dynamics.torqueHistory', 'Motor Torque History')}
             subtitle={t('dynamics.torqueHistoryDesc', 'Drive inverter torque over time')}
             height={280}
+            exportable
+            exportFilename="torque-history"
           >
             {torqueChartData.length > 0 ? (
               <ResponsiveContainer width="100%" height={280}>
@@ -664,6 +668,8 @@ export default function DrivingDynamicsPage() {
             title={t('dynamics.gForceHistory', 'G-Force History')}
             subtitle={t('dynamics.gForceHistoryDesc', 'Lateral & longitudinal acceleration over time')}
             height={280}
+            exportable
+            exportFilename="g-force-history"
           >
             {gForceChartData.length > 0 ? (
               <ResponsiveContainer width="100%" height={280}>
@@ -1061,6 +1067,8 @@ export default function DrivingDynamicsPage() {
               title={t('dynamics.speedDistribution', 'Speed Distribution')}
               subtitle={t('dynamics.speedDistDesc', 'Drives grouped by average speed')}
               height={300}
+              exportable
+              exportFilename="speed-distribution"
             >
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={speedDistribution}>
@@ -1080,6 +1088,8 @@ export default function DrivingDynamicsPage() {
               title={t('dynamics.accelPatterns', 'Acceleration Patterns')}
               subtitle={t('dynamics.accelPatternsDesc', 'Peak power vs trip distance')}
               height={300}
+              exportable
+              exportFilename="acceleration-patterns"
             >
               <ResponsiveContainer width="100%" height={300}>
                 <ScatterChart>
@@ -1108,6 +1118,8 @@ export default function DrivingDynamicsPage() {
             title={t('dynamics.powerProfile', 'Power Profile')}
             subtitle={t('dynamics.powerProfileDesc', 'Peak & regen power for recent drives')}
             height={320}
+            exportable
+            exportFilename="power-profile"
           >
             <ResponsiveContainer width="100%" height={320}>
               <AreaChart data={powerProfile}>

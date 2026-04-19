@@ -179,7 +179,7 @@ export default function StatisticsPage() {
           <FadeIn delay={0.15}>
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               {/* State Distribution PieChart */}
-              <ChartContainer title={t('statistics.stateDistribution', 'State Distribution')}>
+              <ChartContainer title={t('statistics.stateDistribution', 'State Distribution')} exportable exportFilename="state-distribution">
                 {stateData.length > 0 ? (
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
@@ -218,7 +218,7 @@ export default function StatisticsPage() {
 
           {/* ── Vehicle Comparison ────────────────────────────── */}
           <FadeIn delay={0.2}>
-            <ChartContainer title={t('statistics.vehicleComparison', 'Vehicle Comparison')}>
+            <ChartContainer title={t('statistics.vehicleComparison', 'Vehicle Comparison')} exportable exportFilename="vehicle-comparison">
               {compData.length > 1 ? (
                 <div className="h-72">
                   <ResponsiveContainer width="100%" height="100%">
