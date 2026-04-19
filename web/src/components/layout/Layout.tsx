@@ -56,6 +56,7 @@ import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import clsx from 'clsx'
+import { BottomTabBar, BOTTOM_TAB_PATHS } from './BottomTabBar'
 import { CommandPalette, CommandPaletteTrigger } from '../ui/CommandPalette'
 import { ServiceStatusBanner, SystemHealthDot } from '../data-display/ServiceStatus'
 import Logo from '../ui/Logo'
@@ -377,6 +378,7 @@ export default function Layout() {
                   const isActive = to === '/'
                     ? location.pathname === '/'
                     : location.pathname === to || location.pathname.startsWith(to + '/')
+                  const isInTabBar = BOTTOM_TAB_PATHS.has(to)
                   return (
                     <NavLink
                       key={to}
@@ -384,7 +386,10 @@ export default function Layout() {
                       onClick={() => setSidebarOpen(false)}
                       aria-label={label}
                       aria-current={isActive ? 'page' : undefined}
-                      className="group relative flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200"
+                      className={clsx(
+                        'group relative flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200',
+                        isInTabBar && 'opacity-50 lg:opacity-100'
+                      )}
                     >
                       {isActive && (
                         <motion.div
@@ -492,7 +497,7 @@ export default function Layout() {
         <div className="h-14 shrink-0 lg:hidden" />
 
         <ServiceStatusBanner />
-        <main id="main-content" ref={mainRef} role="main" tabIndex={-1} className="flex-1 overflow-y-auto outline-none">
+        <main id="main-content" ref={mainRef} role="main" tabIndex={-1} className="flex-1 overflow-y-auto outline-none pb-16 lg:pb-0">
           <div className="mx-auto max-w-[1600px] px-3 py-4 pb-safe sm:px-5 sm:py-5 lg:px-8 lg:py-8">
             <AnimatePresence mode="wait">
               <motion.div
@@ -508,6 +513,9 @@ export default function Layout() {
           </div>
         </main>
       </div>
+
+      {/* Mobile bottom tab bar */}
+      <BottomTabBar />
 
       {/* Command Palette */}
       <CommandPalette />
