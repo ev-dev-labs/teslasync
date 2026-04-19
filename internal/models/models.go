@@ -1202,3 +1202,37 @@ type AutomationVariable struct {
 	VehicleID *int64    `json:"vehicle_id" db:"vehicle_id"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
+
+// TeslaChargingHistoryEntry represents a Supercharger/DC charging session from Tesla billing.
+type TeslaChargingHistoryEntry struct {
+	ID                  int64      `json:"id" db:"id"`
+	SessionID           int64      `json:"session_id" db:"session_id"`
+	VIN                 string     `json:"vin" db:"vin"`
+	SiteLocationName    string     `json:"site_location_name" db:"site_location_name"`
+	ChargeStartDatetime time.Time  `json:"charge_start_datetime" db:"charge_start_datetime"`
+	ChargeStopDatetime  *time.Time `json:"charge_stop_datetime" db:"charge_stop_datetime"`
+	Country             *string    `json:"country" db:"country"`
+	State               *string    `json:"state" db:"state"`
+	County              *string    `json:"county" db:"county"`
+	PostalCode          *string    `json:"postal_code" db:"postal_code"`
+	BillingType         *string    `json:"billing_type" db:"billing_type"`
+	FeeType             *string    `json:"fee_type" db:"fee_type"`
+	CurrencyCode        *string    `json:"currency_code" db:"currency_code"`
+	PricingType         *string    `json:"pricing_type" db:"pricing_type"`
+	RateBase            *float64   `json:"rate_base" db:"rate_base"`
+	UsageKWh            *float64   `json:"usage_kwh" db:"usage_kwh"`
+	TotalDue            *float64   `json:"total_due" db:"total_due"`
+	HasInvoice          bool       `json:"has_invoice" db:"has_invoice"`
+	InvoiceContentID    *string    `json:"invoice_content_id" db:"invoice_content_id"`
+	RawJSON             string     `json:"raw_json,omitempty" db:"raw_json"`
+	FetchedAt           time.Time  `json:"fetched_at" db:"fetched_at"`
+	CreatedAt           time.Time  `json:"created_at" db:"created_at"`
+}
+
+// TeslaChargingHistorySummary holds aggregated stats for Tesla charging history.
+type TeslaChargingHistorySummary struct {
+	TotalSessions int      `json:"total_sessions"`
+	TotalKWh      *float64 `json:"total_kwh"`
+	TotalSpend    *float64 `json:"total_spend"`
+	AvgCostPerKWh *float64 `json:"avg_cost_per_kwh"`
+}

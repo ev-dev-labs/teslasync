@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -892,4 +893,26 @@ func (c *Client) doProxyRequestWithResponse(ctx context.Context, method, path st
 	}
 
 	return respBody, resp.StatusCode, nil
+}
+
+// GetChargingHistory calls GET /api/1/dx/charging/history with pagination.
+// Returns raw response bytes, HTTP status code, and error.
+func (c *Client) GetChargingHistory(ctx context.Context, vin string, startTime, endTime string, pageNo, pageSize int) ([]byte, int, error) {
+	params := url.Values{}
+	if vin != "" {
+		params.Set("vin", vin)
+	}
+	if startTime != "" {
+		params.Set("startTime", startTime)
+	}
+	if endTime != "" {
+		params.Set("endTime", endTime)
+	}
+	params.Set("pageNo", strconv.Itoa(pageNo))
+	params.Set("pageSize", strconv.Itoa(pageSize))
+	params.Set("sortBy", "chargeStartDateTime")
+	params.Set("sortOrder", "DESC")
+
+	path := "/api/1/dx/charging/history?" + params.Encode()
+	return c.doRequest(ctx, http.MethodGet, path, nil)
 }
