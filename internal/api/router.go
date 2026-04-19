@@ -28,6 +28,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/worker"
 
+	"github.com/ev-dev-labs/teslasync/internal/automation"
 	"github.com/ev-dev-labs/teslasync/internal/automation/action"
 
 	// New hexagonal architecture packages
@@ -188,6 +189,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			teslaClient,
 		)),
 		WithAutomationEventPublisher(automationPublisher),
+		WithAutomationAuditor(automation.NewAuditor(NewDBAuditWriter(db))),
 	)
 	telemetryHandler := opt.TelemetryHandler
 	if telemetryHandler == nil {

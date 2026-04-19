@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/automation"
 	"github.com/ev-dev-labs/teslasync/internal/automation/action"
 	"github.com/ev-dev-labs/teslasync/internal/automation/condition"
 	"github.com/ev-dev-labs/teslasync/internal/automation/trigger"
@@ -24,6 +25,7 @@ type AutomationHandler struct {
 	fsmTransRepo   *database.FSMTransitionRepo
 	cmdExecutor    *action.CommandExecutor // optional, enables undo
 	eventPublisher *AutomationEventPublisher // optional, enables SSE events
+	auditor        *automation.Auditor       // optional, enables audit trail
 }
 
 // AutomationHandlerOption configures optional AutomationHandler dependencies.
@@ -37,6 +39,11 @@ func WithCommandExecutor(e *action.CommandExecutor) AutomationHandlerOption {
 // WithAutomationEventPublisher provides an event publisher for SSE automation events.
 func WithAutomationEventPublisher(p *AutomationEventPublisher) AutomationHandlerOption {
 	return func(h *AutomationHandler) { h.eventPublisher = p }
+}
+
+// WithAutomationAuditor provides an auditor for recording automation lifecycle events.
+func WithAutomationAuditor(a *automation.Auditor) AutomationHandlerOption {
+	return func(h *AutomationHandler) { h.auditor = a }
 }
 
 // NewAutomationHandler creates an AutomationHandler backed by the given database.
@@ -230,6 +237,10 @@ func (h *AutomationHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Int("conflicts", len(resp.Conflicts)).
 		Msg("automation created")
 
+	if h.auditor != nil {
+		h.auditor.LogCreated(r.Context(), a.ID, a.Name, a.TriggerType, a.Enabled, r.RemoteAddr)
+	}
+
 	writeJSON(w, http.StatusCreated, resp)
 }
 
@@ -325,6 +336,10 @@ func (h *AutomationHandler) Update(w http.ResponseWriter, r *http.Request) {
 		Int("conflicts", len(resp.Conflicts)).
 		Msg("automation updated")
 
+	if h.auditor != nil {
+		h.auditor.LogUpdated(r.Context(), existing.ID, existing.Name, existing.TriggerType, r.RemoteAddr)
+	}
+
 	writeJSON(w, http.StatusOK, resp)
 }
 
@@ -360,6 +375,10 @@ func (h *AutomationHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		Int64("automation_id", id).
 		Str("automation", existing.Name).
 		Msg("automation deleted")
+
+	if h.auditor != nil {
+		h.auditor.LogDeleted(r.Context(), id, existing.Name, r.RemoteAddr)
+	}
 
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -407,6 +426,14 @@ func (h *AutomationHandler) Toggle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if h.auditor != nil {
+		if req.Enabled {
+			h.auditor.LogEnabled(r.Context(), id, existing.Name, r.RemoteAddr)
+		} else {
+			h.auditor.LogDisabled(r.Context(), id, existing.Name, r.RemoteAddr)
+		}
+	}
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"id":      id,
 		"enabled": req.Enabled,
@@ -449,6 +476,10 @@ func (h *AutomationHandler) ReEnable(w http.ResponseWriter, r *http.Request) {
 		Int64("automation_id", id).
 		Str("automation", existing.Name).
 		Msg("automation re-enabled")
+
+	if h.auditor != nil {
+		h.auditor.LogReEnabled(r.Context(), id, existing.Name, r.RemoteAddr)
+	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"id":            id,
@@ -811,6 +842,10 @@ func (h *AutomationHandler) TestRun(w http.ResponseWriter, r *http.Request) {
 		} else {
 			h.eventPublisher.PublishFailed(a.ID, a.Name, "some actions invalid (test-run)", -1, "test")
 		}
+	}
+
+	if h.auditor != nil {
+		h.auditor.LogTestRun(r.Context(), a.ID, a.Name, allMet, len(actionResults), r.RemoteAddr)
 	}
 
 	writeJSON(w, http.StatusOK, testRunResponse{
@@ -1291,6 +1326,10 @@ func (h *AutomationHandler) UndoLast(w http.ResponseWriter, r *http.Request) {
 		Str("status", overallStatus).
 		Msg("automation undo completed")
 
+	if h.auditor != nil {
+		h.auditor.LogUndo(r.Context(), a.ID, a.Name, lastExec.ID, reversed, overallStatus, r.RemoteAddr)
+	}
+
 	writeJSON(w, http.StatusOK, undoResponse{
 		AutomationID:      a.ID,
 		AutomationName:    a.Name,
@@ -1426,6 +1465,10 @@ func (h *AutomationHandler) ExportOne(w http.ResponseWriter, r *http.Request) {
 
 	envelope := buildExportEnvelope([]automationPortable{automationToPortable(a)})
 
+	if h.auditor != nil {
+		h.auditor.LogExported(r.Context(), 1, []string{a.Name}, r.RemoteAddr)
+	}
+
 	w.Header().Set("Content-Disposition",
 		fmt.Sprintf(`attachment; filename="automation-%d.json"`, a.ID))
 
@@ -1469,6 +1512,14 @@ func (h *AutomationHandler) ExportBatch(w http.ResponseWriter, r *http.Request) 
 	}
 
 	envelope := buildExportEnvelope(portables)
+
+	if h.auditor != nil {
+		names := make([]string, len(portables))
+		for i, p := range portables {
+			names[i] = p.Name
+		}
+		h.auditor.LogExported(r.Context(), len(portables), names, r.RemoteAddr)
+	}
 
 	w.Header().Set("Content-Disposition", `attachment; filename="automations.json"`)
 
@@ -1543,6 +1594,14 @@ func (h *AutomationHandler) Import(w http.ResponseWriter, r *http.Request) {
 		Int("imported", len(result.Imported)).
 		Int("errors", len(result.Errors)).
 		Msg("automations imported")
+
+	if h.auditor != nil && len(result.Imported) > 0 {
+		names := make([]string, len(result.Imported))
+		for i, imp := range result.Imported {
+			names[i] = imp.Name
+		}
+		h.auditor.LogImported(r.Context(), len(result.Imported), names, r.RemoteAddr)
+	}
 
 	writeJSON(w, status, result)
 }

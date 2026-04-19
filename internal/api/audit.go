@@ -19,6 +19,22 @@ func logAudit(db *database.DB, ctx context.Context, action, resource, details, i
 	}
 }
 
+// DBAuditWriter implements automation.AuditWriter by writing to the
+// audit_logs table. It satisfies the interface used by the Auditor.
+type DBAuditWriter struct {
+	db *database.DB
+}
+
+// NewDBAuditWriter creates a writer backed by the given database.
+func NewDBAuditWriter(db *database.DB) *DBAuditWriter {
+	return &DBAuditWriter{db: db}
+}
+
+// WriteAudit inserts an audit log entry. Errors are logged but not returned.
+func (w *DBAuditWriter) WriteAudit(ctx context.Context, action, resource, details, ip string) {
+	logAudit(w.db, ctx, action, resource, details, ip)
+}
+
 // AuditHandler handles audit log endpoints.
 type AuditHandler struct {
 	db *database.DB
