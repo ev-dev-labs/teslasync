@@ -59,6 +59,8 @@ func NewRegistry() *Registry {
 	r.presets = append(r.presets, drivingPresets...)
 	r.registerCategory(comfortCategory)
 	r.presets = append(r.presets, comfortPresets...)
+	r.registerCategory(maintenanceCategory)
+	r.presets = append(r.presets, maintenancePresets...)
 	return r
 }
 

@@ -9,12 +9,12 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/automation/trigger"
 )
 
-func TestChargingPresetsValid(t *testing.T) {
+func TestMaintenancePresetsValid(t *testing.T) {
 	registry := presets.NewRegistry()
-	all := registry.Presets("charging")
+	all := registry.Presets("maintenance")
 
-	if len(all) != 8 {
-		t.Fatalf("expected 8 charging presets, got %d", len(all))
+	if len(all) != 4 {
+		t.Fatalf("expected 4 maintenance presets, got %d", len(all))
 	}
 
 	for _, p := range all {
@@ -25,8 +25,8 @@ func TestChargingPresetsValid(t *testing.T) {
 			if p.Name == "" {
 				t.Error("preset Name is empty")
 			}
-			if p.Category != "charging" {
-				t.Errorf("expected category 'charging', got %q", p.Category)
+			if p.Category != "maintenance" {
+				t.Errorf("expected category 'maintenance', got %q", p.Category)
 			}
 			if p.TriggerType == "" {
 				t.Error("preset TriggerType is empty")
@@ -78,26 +78,26 @@ func TestChargingPresetsValid(t *testing.T) {
 				t.Error("preset has no tags")
 			}
 
-			// Every charging preset must be tagged "charging".
-			hasChargingTag := false
+			// Every maintenance preset must be tagged "maintenance".
+			hasMaintenanceTag := false
 			for _, tag := range p.Tags {
-				if tag == "charging" {
-					hasChargingTag = true
+				if tag == "maintenance" {
+					hasMaintenanceTag = true
 					break
 				}
 			}
-			if !hasChargingTag {
-				t.Error("preset missing 'charging' tag")
+			if !hasMaintenanceTag {
+				t.Error("preset missing 'maintenance' tag")
 			}
 		})
 	}
 }
 
-func TestChargingPresetIDsUnique(t *testing.T) {
+func TestMaintenancePresetIDsUnique(t *testing.T) {
 	registry := presets.NewRegistry()
 	seen := make(map[string]bool)
 
-	for _, p := range registry.Presets("charging") {
+	for _, p := range registry.Presets("maintenance") {
 		if seen[p.ID] {
 			t.Errorf("duplicate preset ID: %s", p.ID)
 		}
@@ -105,52 +105,48 @@ func TestChargingPresetIDsUnique(t *testing.T) {
 	}
 }
 
-func TestChargingPresetIDPrefix(t *testing.T) {
+func TestMaintenancePresetIDPrefix(t *testing.T) {
 	registry := presets.NewRegistry()
 
-	for _, p := range registry.Presets("charging") {
-		if len(p.ID) < 9 || p.ID[:9] != "charging-" {
-			t.Errorf("charging preset ID %q should start with 'charging-'", p.ID)
+	for _, p := range registry.Presets("maintenance") {
+		if len(p.ID) < 12 || p.ID[:12] != "maintenance-" {
+			t.Errorf("maintenance preset ID %q should start with 'maintenance-'", p.ID)
 		}
 	}
 }
 
-func TestChargingCategory(t *testing.T) {
+func TestMaintenanceCategory(t *testing.T) {
 	registry := presets.NewRegistry()
 
 	cats := registry.Categories()
 	found := false
 	for _, c := range cats {
-		if c.ID == "charging" {
+		if c.ID == "maintenance" {
 			found = true
-			if c.Name != "Charging" {
-				t.Errorf("expected category name 'Charging', got %q", c.Name)
+			if c.Name != "Maintenance" {
+				t.Errorf("expected category name 'Maintenance', got %q", c.Name)
 			}
-			if c.Icon != "BatteryCharging" {
-				t.Errorf("expected category icon 'BatteryCharging', got %q", c.Icon)
+			if c.Icon != "Wrench" {
+				t.Errorf("expected category icon 'Wrench', got %q", c.Icon)
 			}
 		}
 	}
 	if !found {
-		t.Error("charging category not found")
+		t.Error("maintenance category not found")
 	}
 }
 
-func TestChargingPresetGetByID(t *testing.T) {
+func TestMaintenancePresetGetByID(t *testing.T) {
 	registry := presets.NewRegistry()
 
 	tests := []struct {
 		id   string
 		name string
 	}{
-		{"charging-smart-stop", "Smart Charge Stop"},
-		{"charging-off-peak", "Off-Peak Charging"},
-		{"charging-trip-prep", "Trip Prep"},
-		{"charging-daily-reset", "Daily Limit Reset"},
-		{"charging-low-alert", "Low Battery Alert"},
-		{"charging-complete-notify", "Charge Complete Notify"},
-		{"charging-amperage-saver", "Amperage Saver"},
-		{"charging-solar", "Solar Charging"},
+		{"maintenance-software-update", "Software Update Night"},
+		{"maintenance-tire-pressure", "Tire Pressure Check"},
+		{"maintenance-range-degradation", "Range Degradation Alert"},
+		{"maintenance-service-reminder", "Service Reminder"},
 	}
 
 	for _, tt := range tests {
@@ -166,7 +162,7 @@ func TestChargingPresetGetByID(t *testing.T) {
 	}
 }
 
-func TestRegistryTotalPresetsIncludesCharging(t *testing.T) {
+func TestRegistryTotalPresetsIncludesMaintenance(t *testing.T) {
 	registry := presets.NewRegistry()
 
 	all := registry.Presets("")
