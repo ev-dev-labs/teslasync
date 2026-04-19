@@ -441,6 +441,22 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 		}
 	}
 
+	// Handle DriverSeatBelt (enum → boolean: "BuckleStatusLatched" → true)
+	if raw, ok := signals["DriverSeatBelt"]; ok {
+		if v, use := normalizeSignalValue(raw); use {
+			cols = append(cols, "driver_seat_belt")
+			vals = append(vals, enums.ParseBuckleStatus(v))
+		}
+	}
+
+	// Handle PassengerSeatBelt (enum → boolean: "BuckleStatusLatched" → true)
+	if raw, ok := signals["PassengerSeatBelt"]; ok {
+		if v, use := normalizeSignalValue(raw); use {
+			cols = append(cols, "passenger_seat_belt")
+			vals = append(vals, enums.ParseBuckleStatus(v))
+		}
+	}
+
 	// Boolean columns that come as enum strings from Fleet Telemetry.
 	// These need conversion: any non-Off/empty/false string ╬ô├Ñ├å true.
 	enumBoolSignals := map[string]string{
@@ -470,7 +486,7 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 		"DefrostForPreconditioning":           "defrost_for_preconditioning",
 		"DefrostMode":                         "defrost_mode",
 		"DriveRail":                           "drive_rail",
-		"DriverSeatBelt":                      "driver_seat_belt",
+
 		"EmergencyLaneDepartureAvoidance":     "emergency_lane_departure_avoidance",
 		"FastChargerPresent":                  "fast_charger_present",
 		"HvacACEnabled":                       "hvac_ac_enabled",
@@ -479,7 +495,7 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 		"LocatedAtHome":                       "located_at_home",
 		"LocatedAtWork":                       "located_at_work",
 		"NotEnoughPowerToHeat":                "not_enough_power_to_heat",
-		"PassengerSeatBelt":                   "passenger_seat_belt",
+
 		"PinToDriveEnabled":                   "pin_to_drive_enabled",
 		"PreconditioningEnabled":              "preconditioning_enabled",
 		"RearDefrostEnabled":                  "rear_defrost_enabled",
@@ -629,6 +645,7 @@ func (r *LiveStateRepo) LoadLiveState(ctx context.Context, vehicleID int64) (map
 		       driver_seat_occupied, speed_limit_mode, valet_mode_enabled, service_mode,
 		       current_limit_mph, paired_phone_key_count,
 		       lights_hazards_active, lights_high_beams, lights_turn_signal,
+		       driver_seat_belt, passenger_seat_belt,
 		       sw_update_version, sw_update_download_pct, sw_update_install_pct,
 		       sw_update_expected_duration, sw_update_scheduled_start,
 		       trim, roof_color, efficiency_package, rear_seat_heaters, sunroof_installed,
@@ -654,6 +671,7 @@ func (r *LiveStateRepo) LoadLiveState(ctx context.Context, vehicleID int64) (map
 	var guestMode, homelinkNearby, driverSeatOccupied *bool
 	var speedLimitMode, valetMode, serviceMode *bool
 	var lightsHazards, lightsHighBeams *bool
+	var driverSeatBelt, passengerSeatBelt *bool
 	var europeVehicle, rightHandDrive, remoteStartEnabled, offroadLightbar *bool
 	var lastGearDB *string
 	var lastSpeedTimeDB *time.Time
@@ -672,6 +690,7 @@ func (r *LiveStateRepo) LoadLiveState(ctx context.Context, vehicleID int64) (map
 		&driverSeatOccupied, &speedLimitMode, &valetMode, &serviceMode,
 		&currentLimitMph, &pairedKeyCount,
 		&lightsHazards, &lightsHighBeams, &lightsTurnSignal,
+		&driverSeatBelt, &passengerSeatBelt,
 		&swUpdateVersion, &swDownloadPct, &swInstallPct,
 		&swExpectedDur, &swScheduledStart,
 		&trimVal, &roofColor, &efficiencyPkg, &rearSeatHeaters, &sunroofInstalled,
@@ -737,6 +756,8 @@ func (r *LiveStateRepo) LoadLiveState(ctx context.Context, vehicleID int64) (map
 	if lightsHazards != nil { result["LightsHazardsActive"] = *lightsHazards }
 	if lightsHighBeams != nil { result["LightsHighBeams"] = *lightsHighBeams }
 	if lightsTurnSignal != nil { result["LightsTurnSignal"] = *lightsTurnSignal }
+	if driverSeatBelt != nil { result["DriverSeatBelt"] = *driverSeatBelt }
+	if passengerSeatBelt != nil { result["PassengerSeatBelt"] = *passengerSeatBelt }
 	if swUpdateVersion != nil { result["SoftwareUpdateVersion"] = *swUpdateVersion }
 	if swDownloadPct != nil { result["SoftwareUpdateDownloadPercentComplete"] = *swDownloadPct }
 	if swInstallPct != nil { result["SoftwareUpdateInstallationPercentComplete"] = *swInstallPct }

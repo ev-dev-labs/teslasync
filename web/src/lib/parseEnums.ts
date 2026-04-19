@@ -12,6 +12,15 @@ export function parseEnumBool(raw: unknown): boolean {
   return false
 }
 
+/** Convert Tesla BuckleStatus enum to boolean.
+ * "BuckleStatusLatched" → true (buckled), anything else → false. */
+export function parseBuckleStatus(raw: unknown): boolean {
+  if (typeof raw === 'boolean') return raw
+  if (typeof raw === 'string') return raw === 'BuckleStatusLatched'
+  if (typeof raw === 'number') return raw !== 0
+  return false
+}
+
 /** Check if DetailedChargeState indicates active charging. */
 export function isCharging(raw: string): boolean {
   return raw.includes('Charging') || raw.includes('Starting') || raw === 'Enable'

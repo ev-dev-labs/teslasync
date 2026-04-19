@@ -48,6 +48,23 @@ func ParseEnumBool(raw interface{}) bool {
 	return false
 }
 
+// ParseBuckleStatus converts Tesla's BuckleStatus enum to a boolean.
+// Tesla sends seatbelt signals as enum strings: "BuckleStatusLatched" (buckled)
+// or "BuckleStatusUnlatched" (unbuckled), but may also send raw booleans.
+func ParseBuckleStatus(raw interface{}) bool {
+	switch v := raw.(type) {
+	case bool:
+		return v
+	case string:
+		return v == "BuckleStatusLatched"
+	case float64:
+		return v != 0
+	case int:
+		return v != 0
+	}
+	return false
+}
+
 // ParseHvacPower returns true if HVAC is on or preconditioning.
 func ParseHvacPower(raw string) bool {
 	return strings.Contains(raw, "On") || strings.Contains(raw, "Precondition")
