@@ -97,6 +97,7 @@ export interface Vehicle {
   state: string;
   battery_level: number;
   battery_range: number;
+  updated_at: string;
 }
 
 export interface VehicleState {

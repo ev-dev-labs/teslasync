@@ -4,7 +4,7 @@ import { Activity, Pause, Play, Trash2, ArrowDown, ArrowDownUp } from 'lucide-re
 
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel, Badge, Button, Input, DataTable, type Column } from '@/components/ui';
-import { StatCard } from '@/components/data-display';
+import { StatCard, FreshnessIndicator } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { useRealtimeEvents } from '@/hooks/useRealtimeEvents';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -67,6 +67,13 @@ function buildSignalColumns(t: (k: string, d: string) => string): Column<SignalE
         >
           {entry.type}
         </Badge>
+      ),
+    },
+    {
+      key: 'freshness',
+      header: t('liveMonitor.freshness', 'Freshness'),
+      render: (entry) => (
+        <FreshnessIndicator timestamp={entry.timestamp} size="sm" />
       ),
     },
   ];

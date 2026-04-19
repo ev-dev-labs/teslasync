@@ -7,6 +7,7 @@ import {
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/data-display/StatusBadge';
+import { FreshnessIndicator } from '@/components/data-display';
 import { RadialGauge } from '@/components/charts/RadialGauge';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
@@ -43,6 +44,7 @@ export function VehicleHero({
             {vehicle.display_name || vehicle.vin}
           </h2>
           <StatusBadge status={status} size="md" />
+          <FreshnessIndicator timestamp={vehicle.updated_at} />
         </div>
         <p className="text-sm text-[var(--text-muted)]">
           {vehicle.model} {vehicle.trim_badging} · <span className="font-mono">{vehicle.vin}</span>

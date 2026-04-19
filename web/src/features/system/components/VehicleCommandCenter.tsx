@@ -9,7 +9,7 @@ import { useToast } from '@/components/feedback/Toast';
 import { useSettings } from '@/hooks/useSettings';
 import { request } from '@/api/client';
 import {
-  Battery, Wifi, Thermometer, Power, CheckCircle, AlertTriangle,
+  Battery, Wifi, Thermometer, Power, CheckCircle, AlertTriangle, Clock,
 } from 'lucide-react';
 import {
   COMMANDS, CATEGORY_ORDER, type CommandDef, type CommandLogEntry,
@@ -21,6 +21,8 @@ import { InputCommandTile } from './InputCommandTile';
 import { CollapsibleCommandGroup } from './CollapsibleCommandGroup';
 import { CommandSearch } from './CommandSearch';
 import { FavoritesBar } from './FavoritesBar';
+import { FreshnessIndicator, useIsStale } from '@/components/data-display';
+import { AlertBanner } from '@/components/feedback';
 import { CommandInputDialog } from './CommandInputDialog';
 import { CommandConfirmDialog } from './CommandConfirmDialog';
 import { CommandSelectDialog } from './CommandSelectDialog';
@@ -53,6 +55,7 @@ export function VehicleCommandCenter({ vehicle, state }: VehicleCommandCenterPro
 
   const name = vehicle.display_name || vehicle.vin;
   const isAsleep = vehicle.state === 'asleep' || vehicle.state === 'offline';
+  const { isStale, ageLabel } = useIsStale(vehicle.updated_at);
 
   // ─── Command state ──────────────────────────────────────────────────────
 
@@ -251,6 +254,7 @@ export function VehicleCommandCenter({ vehicle, state }: VehicleCommandCenterPro
           <div className="flex items-center gap-3 mb-1">
             <span className="text-lg font-semibold text-white/90">{name}</span>
             <Badge variant={isAsleep ? 'neutral' : 'success'} size="sm">{vehicle.state}</Badge>
+            <FreshnessIndicator timestamp={vehicle.updated_at} />
           </div>
           <span className="text-xs text-white/40">{vehicle.model} · {vehicle.vin}</span>
         </div>
@@ -298,6 +302,12 @@ export function VehicleCommandCenter({ vehicle, state }: VehicleCommandCenterPro
             {t('Vehicle is')} {vehicle.state}. {t('Wake it up first to send commands.')}
           </span>
         </GlassPanel>
+      )}
+
+      {isStale && !isAsleep && (
+        <AlertBanner variant="warning" icon={<Clock className="h-4 w-4" />}>
+          {t('commands.staleData', 'Vehicle data is {{age}} old. The vehicle may be asleep or offline.', { age: ageLabel })}
+        </AlertBanner>
       )}
 
       {/* Search */}
