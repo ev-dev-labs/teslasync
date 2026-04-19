@@ -9,12 +9,12 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/automation/trigger"
 )
 
-func TestHomePresetsValid(t *testing.T) {
+func TestComfortPresetsValid(t *testing.T) {
 	registry := presets.NewRegistry()
-	all := registry.Presets("home")
+	all := registry.Presets("comfort")
 
-	if len(all) != 5 {
-		t.Fatalf("expected 5 home presets, got %d", len(all))
+	if len(all) != 4 {
+		t.Fatalf("expected 4 comfort presets, got %d", len(all))
 	}
 
 	for _, p := range all {
@@ -25,8 +25,8 @@ func TestHomePresetsValid(t *testing.T) {
 			if p.Name == "" {
 				t.Error("preset Name is empty")
 			}
-			if p.Category != "home" {
-				t.Errorf("expected category 'home', got %q", p.Category)
+			if p.Category != "comfort" {
+				t.Errorf("expected category 'comfort', got %q", p.Category)
 			}
 			if p.TriggerType == "" {
 				t.Error("preset TriggerType is empty")
@@ -78,26 +78,26 @@ func TestHomePresetsValid(t *testing.T) {
 				t.Error("preset has no tags")
 			}
 
-			// Every home preset must be tagged "home".
-			hasHomeTag := false
+			// Every comfort preset must be tagged "comfort".
+			hasComfortTag := false
 			for _, tag := range p.Tags {
-				if tag == "home" {
-					hasHomeTag = true
+				if tag == "comfort" {
+					hasComfortTag = true
 					break
 				}
 			}
-			if !hasHomeTag {
-				t.Error("preset missing 'home' tag")
+			if !hasComfortTag {
+				t.Error("preset missing 'comfort' tag")
 			}
 		})
 	}
 }
 
-func TestHomePresetIDsUnique(t *testing.T) {
+func TestComfortPresetIDsUnique(t *testing.T) {
 	registry := presets.NewRegistry()
 	seen := make(map[string]bool)
 
-	for _, p := range registry.Presets("home") {
+	for _, p := range registry.Presets("comfort") {
 		if seen[p.ID] {
 			t.Errorf("duplicate preset ID: %s", p.ID)
 		}
@@ -105,65 +105,38 @@ func TestHomePresetIDsUnique(t *testing.T) {
 	}
 }
 
-func TestHomePresetIDPrefix(t *testing.T) {
+func TestComfortPresetIDPrefix(t *testing.T) {
 	registry := presets.NewRegistry()
 
-	for _, p := range registry.Presets("home") {
-		if len(p.ID) < 5 || p.ID[:5] != "home-" {
-			t.Errorf("home preset ID %q should start with 'home-'", p.ID)
+	for _, p := range registry.Presets("comfort") {
+		if len(p.ID) < 9 || p.ID[:8] != "comfort-" {
+			t.Errorf("comfort preset ID %q should start with 'comfort-'", p.ID)
 		}
 	}
 }
 
-func TestHomeCategory(t *testing.T) {
+func TestComfortCategory(t *testing.T) {
 	registry := presets.NewRegistry()
 
 	cats := registry.Categories()
 	found := false
 	for _, c := range cats {
-		if c.ID == "home" {
+		if c.ID == "comfort" {
 			found = true
-			if c.Name != "Home & Garage" {
-				t.Errorf("expected category name 'Home & Garage', got %q", c.Name)
+			if c.Name != "Comfort" {
+				t.Errorf("expected category name 'Comfort', got %q", c.Name)
 			}
-			if c.Icon != "Home" {
-				t.Errorf("expected category icon 'Home', got %q", c.Icon)
+			if c.Icon != "Music" {
+				t.Errorf("expected category icon 'Music', got %q", c.Icon)
 			}
 		}
 	}
 	if !found {
-		t.Error("home category not found")
+		t.Error("comfort category not found")
 	}
 }
 
-func TestHomePresetGetByID(t *testing.T) {
-	registry := presets.NewRegistry()
-
-	tests := []struct {
-		id   string
-		name string
-	}{
-		{"home-arrive", "Arrive Home"},
-		{"home-leave", "Leave Home"},
-		{"home-garage-auto-close", "Garage Auto-Close"},
-		{"home-porch-light", "Porch Light"},
-		{"home-departure-routine", "Departure Routine"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.id, func(t *testing.T) {
-			p := registry.Get(tt.id)
-			if p == nil {
-				t.Fatalf("preset %q not found", tt.id)
-			}
-			if p.Name != tt.name {
-				t.Errorf("expected name %q, got %q", tt.name, p.Name)
-			}
-		})
-	}
-}
-
-func TestRegistryTotalPresetsIncludesHome(t *testing.T) {
+func TestRegistryTotalPresetsIncludesComfort(t *testing.T) {
 	registry := presets.NewRegistry()
 
 	all := registry.Presets("")
@@ -178,5 +151,31 @@ func TestRegistryTotalPresetsIncludesHome(t *testing.T) {
 	if len(all) != total {
 		t.Errorf("total presets (%d) != security (%d) + climate (%d) + charging (%d) + home (%d) + driving (%d) + comfort (%d)",
 			len(all), len(security), len(climate), len(charging), len(home), len(driving), len(comfort))
+	}
+}
+
+func TestComfortPresetGetByID(t *testing.T) {
+	registry := presets.NewRegistry()
+
+	tests := []struct {
+		id   string
+		name string
+	}{
+		{"comfort-morning-playlist", "Morning Playlist"},
+		{"comfort-volume-normalize", "Volume Normalize"},
+		{"comfort-kids-mode", "Kids Mode"},
+		{"comfort-quiet-hours", "Quiet Hours"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.id, func(t *testing.T) {
+			p := registry.Get(tt.id)
+			if p == nil {
+				t.Fatalf("preset %q not found", tt.id)
+			}
+			if p.Name != tt.name {
+				t.Errorf("expected name %q, got %q", tt.name, p.Name)
+			}
+		})
 	}
 }
