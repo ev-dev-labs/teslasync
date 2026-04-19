@@ -99,8 +99,10 @@ data:
   OTEL_SERVICE_NAME: {{ .Values.config.openTelemetry.serviceName | quote }}
   OTEL_INSECURE: {{ .Values.config.openTelemetry.insecure | quote }}
   {{- end }}
+  {{- if not .Values.secrets.existingSecret }}
   {{- if .Values.config.googleMaps.apiKey }}
   GOOGLE_MAPS_API_KEY: {{ .Values.config.googleMaps.apiKey | quote }}
+  {{- end }}
   {{- end }}
   {{- if not .Values.secrets.existingSecret }}
   {{- if .Values.config.azureMaps.apiKey }}
