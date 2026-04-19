@@ -42,7 +42,8 @@ export type FSMType =
   | 'command'
   | 'notification'
   | 'alert_cooldown'
-  | 'automation';
+  | 'automation'
+  | 'telemetry_connection';
 
 export const FSM_TYPE_OPTIONS: { value: FSMType; label: string }[] = [
   { value: 'all', label: 'All FSMs' },
@@ -52,6 +53,7 @@ export const FSM_TYPE_OPTIONS: { value: FSMType; label: string }[] = [
   { value: 'command', label: 'Commands' },
   { value: 'notification', label: 'Notifications' },
   { value: 'automation', label: 'Automations' },
+  { value: 'telemetry_connection', label: 'Telemetry Connection' },
 ];
 
 export const HOURS_OPTIONS = [
@@ -76,6 +78,7 @@ export const FSM_STATES: Record<string, string[]> = {
     'idle', 'evaluating', 'executing', 'succeeded', 'partial',
     'failed', 'retrying', 'gave_up', 'skipped', 'cooldown', 'disabled',
   ],
+  telemetry_connection: ['unknown', 'connecting', 'streaming', 'stale', 'disconnected', 'polling_only'],
 };
 
 /** Typical transition edges per FSM type: [from, to][] */
@@ -124,6 +127,14 @@ export const FSM_EDGES: Record<string, [string, string][]> = {
     ['skipped', 'idle'],
     ['cooldown', 'idle'],
     ['disabled', 'idle'],
+  ],
+  telemetry_connection: [
+    ['unknown', 'connecting'], ['unknown', 'polling_only'],
+    ['connecting', 'streaming'], ['connecting', 'stale'], ['connecting', 'disconnected'],
+    ['streaming', 'stale'], ['streaming', 'disconnected'],
+    ['stale', 'streaming'], ['stale', 'disconnected'],
+    ['disconnected', 'streaming'],
+    ['polling_only', 'streaming'],
   ],
 };
 
@@ -189,6 +200,14 @@ export const STATE_COLORS: Record<string, Record<string, { bg: string; text: str
     skipped:    { bg: 'bg-gray-600/10', text: 'text-white/30', dot: 'bg-gray-500' },
     cooldown:   { bg: 'bg-purple-500/10', text: 'text-purple-400', dot: 'bg-purple-400' },
     disabled:   { bg: 'bg-red-500/5', text: 'text-red-400/50', dot: 'bg-red-400/50' },
+  },
+  telemetry_connection: {
+    unknown:      { bg: 'bg-gray-500/10',  text: 'text-gray-400',  dot: 'bg-gray-400' },
+    connecting:   { bg: 'bg-amber-500/10', text: 'text-amber-400', dot: 'bg-amber-400' },
+    streaming:    { bg: 'bg-green-500/10', text: 'text-green-400', dot: 'bg-green-400' },
+    stale:        { bg: 'bg-amber-500/10', text: 'text-amber-400', dot: 'bg-amber-400' },
+    disconnected: { bg: 'bg-red-500/10',   text: 'text-red-400',   dot: 'bg-red-400' },
+    polling_only: { bg: 'bg-blue-500/10',  text: 'text-blue-400',  dot: 'bg-blue-400' },
   },
 };
 

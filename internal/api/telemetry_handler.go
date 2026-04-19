@@ -15,6 +15,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
+	telemetryfsm "github.com/ev-dev-labs/teslasync/internal/fsm/telemetry"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/models"
@@ -86,6 +87,13 @@ type TelemetryHandler struct {
 	// Per-vehicle state machine — debounced vehicle state detection
 	vehicleStateMu sync.Mutex
 	vehicleStates  map[int64]*vehicleStateMachine // keyed by vehicleID
+
+	// Per-vehicle Fleet Telemetry connection FSM
+	connFSMMu sync.Mutex
+	connFSMs  map[int64]*telemetryfsm.ConnectionFSM // keyed by vehicleID
+
+	// Domain event bus for publishing state change events
+	eventBus *events.Bus
 }
 
 // vehicleStateMachine tracks vehicle state transitions.
@@ -271,6 +279,34 @@ func (h *TelemetryHandler) StartCleanup(ctx context.Context) {
 			}
 		}
 	})
+
+	// Periodic connection FSM timeout checker (every 10s)
+	safeGo("conn-fsm-timeout-checker", func() {
+		ticker := time.NewTicker(10 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				h.checkConnFSMTimeouts()
+			}
+		}
+	})
+}
+
+// checkConnFSMTimeouts copies FSM pointers under lock, then checks timeouts unlocked.
+func (h *TelemetryHandler) checkConnFSMTimeouts() {
+	h.connFSMMu.Lock()
+	fsms := make([]*telemetryfsm.ConnectionFSM, 0, len(h.connFSMs))
+	for _, cfsm := range h.connFSMs {
+		fsms = append(fsms, cfsm)
+	}
+	h.connFSMMu.Unlock()
+
+	for _, cfsm := range fsms {
+		cfsm.CheckTimeouts()
+	}
 }
 
 func (h *TelemetryHandler) cleanupStaleEntries() {
@@ -321,6 +357,20 @@ func (h *TelemetryHandler) cleanupStaleEntries() {
 		}
 	}
 	h.accumulatedSignalsMu.Unlock()
+
+	// Evict connection FSMs for vehicles that have been cleaned up
+	h.connFSMMu.Lock()
+	for vid, cfsm := range h.connFSMs {
+		if cfsm.IsStale() {
+			h.mu.RLock()
+			_, stillTracked := h.streamingState[cfsm.VIN()]
+			h.mu.RUnlock()
+			if !stillTracked {
+				delete(h.connFSMs, vid)
+			}
+		}
+	}
+	h.connFSMMu.Unlock()
 }
 
 // Shutdown cancels all background goroutines spawned by the handler.
@@ -520,6 +570,22 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 	}
 	state.LastSignals = last
 	h.mu.Unlock()
+
+	// Update Fleet Telemetry connection FSM
+	if vehicleID > 0 {
+		h.connFSMMu.Lock()
+		cfsm, ok := h.connFSMs[vehicleID]
+		if !ok {
+			cfsm = telemetryfsm.New(vehicleID, vin,
+				telemetryfsm.WithTransitionRepo(database.NewFSMTransitionRepo(h.db)),
+				telemetryfsm.WithMQTTClient(h.mqttClient),
+				telemetryfsm.WithEventBus(h.eventBus),
+			)
+			h.connFSMs[vehicleID] = cfsm
+		}
+		h.connFSMMu.Unlock()
+		cfsm.RecordBatch(len(signals), "fleet_telemetry")
+	}
 
 	// Drive/charge session detection from streaming signals.
 	// Pass the handler's accumulated signals so the session tracker can use
@@ -1300,8 +1366,33 @@ func (h *TelemetryHandler) TelemetryStatus(w http.ResponseWriter, r *http.Reques
 	var totalBatches int64
 	var avgRate float64
 	var streamingCount int
+
+	// Index connection FSMs by VIN for enriching the status response
+	h.connFSMMu.Lock()
+	connFSMByVIN := make(map[string]*telemetryfsm.ConnectionFSM, len(h.connFSMs))
+	for _, cfsm := range h.connFSMs {
+		connFSMByVIN[cfsm.VIN()] = cfsm
+	}
+	h.connFSMMu.Unlock()
 	for vin, v := range streamingVehicles {
-		vehicleMap[vin] = v
+		entry := map[string]interface{}{
+			"vin":                v.VIN,
+			"last_received":     v.LastReceived,
+			"first_received":    v.FirstReceived,
+			"signal_count":      v.SignalCount,
+			"batch_count":       v.BatchCount,
+			"is_streaming":      v.IsStreaming,
+			"data_source":       v.DataSource,
+			"signals_per_second": v.SignalsPerSecond,
+			"latency_ms":        v.LatencyMs,
+			"uptime_seconds":    v.UptimeSeconds,
+		}
+		if cfsm, ok := connFSMByVIN[vin]; ok {
+			entry["connection_fsm_state"] = string(cfsm.State())
+			entry["state_since"] = cfsm.StateEnteredAt()
+			entry["state_duration"] = time.Since(cfsm.StateEnteredAt()).String()
+		}
+		vehicleMap[vin] = entry
 		totalSignals += v.SignalCount
 		totalBatches += v.BatchCount
 		avgRate += v.SignalsPerSecond
