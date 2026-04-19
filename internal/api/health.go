@@ -191,8 +191,9 @@ func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Cli
 }
 
 // ExtendedHealthCheck returns a detailed health check with per-component latency,
-// pool stats, and system information.
-func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor) http.HandlerFunc {
+// pool stats, and system information. bufferStats is optional — if non-nil, it adds
+// telemetry write buffer statistics.
+func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor, bufferStats func() (int, int)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		results := make(map[string]interface{})
 
@@ -231,6 +232,15 @@ func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor) http
 					"last_check":           comp.LastCheck,
 					"consecutive_failures": comp.ConsecFails,
 				}
+			}
+		}
+
+		// Telemetry write buffer stats
+		if bufferStats != nil {
+			driveBuf, chargeBuf := bufferStats()
+			results["telemetry_buffers"] = map[string]interface{}{
+				"drive_buffered":  driveBuf,
+				"charge_buffered": chargeBuf,
 			}
 		}
 

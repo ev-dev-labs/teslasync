@@ -244,6 +244,7 @@ func main() {
 		if sessionTracker != nil {
 			sessionTracker.RecoverSessions(ctx)
 			sessionTracker.ValidateRecoveredSessions(ctx)
+			sessionTracker.StartBufferDrains(ctx)
 		}
 
 		// Populate alert prevSignals from SignalStore (pod restart resilience)
@@ -593,6 +594,12 @@ func main() {
 	// Phase 3: Shutdown telemetry handler goroutines
 	if telemetryHandler != nil {
 		telemetryHandler.Shutdown()
+		// Final drain of any buffered telemetry writes
+		if st := telemetryHandler.SessionTracker(); st != nil {
+			flushCtx, flushCancel := context.WithTimeout(context.Background(), 10*time.Second)
+			st.FlushBuffers(flushCtx)
+			flushCancel()
+		}
 	}
 
 	// Phase 4: Drain HTTP connections

@@ -746,7 +746,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// System endpoints
 		r.Route("/system", func(r chi.Router) {
 			r.Get("/status", SystemStatusHandler(db, teslaClient, mqttClient, health, cfg))
-			r.Get("/health", ExtendedHealthCheck(db, health))
+			// Build telemetry buffer stats callback if telemetry is active
+			var bufferStats func() (int, int)
+			if telemetryHandler != nil {
+				if st := telemetryHandler.SessionTracker(); st != nil {
+					bufferStats = func() (int, int) {
+						return st.DriveBufferLen(), st.ChargeBufferLen()
+					}
+				}
+			}
+			r.Get("/health", ExtendedHealthCheck(db, health, bufferStats))
 			r.Get("/api-usage", APIUsageHandler(db))
 			r.Get("/compression-stats", CompressionStatsHandler(db))
 			r.Get("/backup", backupHandler.ExportData)

@@ -115,6 +115,18 @@ var (
 		Name:      "charge_sessions_completed_total",
 		Help:      "Total charge sessions completed",
 	})
+
+	TelemetryBufferSize = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "teslasync",
+		Name:      "telemetry_buffer_size",
+		Help:      "Number of telemetry readings buffered for retry during DB outages",
+	}, []string{"type"})
+
+	TelemetryBufferDropped = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "telemetry_buffer_dropped_total",
+		Help:      "Total telemetry readings dropped due to buffer overflow",
+	}, []string{"type"})
 )
 
 // ── Database ───────────────────────────────────────────────
