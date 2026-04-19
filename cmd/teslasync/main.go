@@ -208,6 +208,9 @@ func main() {
 		signalStore = sigsvc.New(liveStateRepo, 0, db.WriteBreaker)
 		telemetryHandler.SetSignalStore(signalStore)
 
+		// Start debounced flush loop (coalesces MQTT batches into 1 DB write/vehicle/sec)
+		go signalStore.FlushLoop(ctx)
+
 		// Load existing live state from DB (pod restart recovery)
 		if vehicles, err := database.NewVehicleRepo(db).GetAll(ctx); err == nil {
 			for _, v := range vehicles {
@@ -580,6 +583,8 @@ func main() {
 
 	// Phase 2: Flush SignalStore to Postgres (write-through belt-and-suspenders)
 	if signalStore != nil {
+		// Wait for FlushLoop goroutine to exit before final flush
+		signalStore.WaitForFlushLoop()
 		flushCtx, flushCancel := context.WithTimeout(context.Background(), 30*time.Second)
 		signalStore.FlushAll(flushCtx)
 		flushCancel()
