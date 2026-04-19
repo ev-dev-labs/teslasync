@@ -595,8 +595,8 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
         <CommandGroup title="Schedules" t={t}>
           <CommandButton
             icon={<CalendarPlus className="h-5 w-5" />}
-            label={t('Add Charge Schedule')}
-            sublabel={t('Midnight daily')}
+            label={t('commands.schedules.addCharge', 'Add Charge Schedule')}
+            sublabel={t('commands.schedules.midnight', 'Midnight daily')}
             onClick={() => cmd.mutate({
               command: 'add_charge_schedule',
               params: {
@@ -615,10 +615,10 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
           />
           <CommandButton
             icon={<CalendarMinus className="h-5 w-5" />}
-            label={t('Remove Charge Schedule')}
-            sublabel={t('By ID')}
+            label={t('commands.schedules.removeCharge', 'Remove Schedule')}
+            sublabel={t('commands.schedules.byId', 'By ID')}
             onClick={() => {
-              const id = window.prompt(t('Enter schedule ID to remove:'));
+              const id = window.prompt(t('commands.schedules.enterScheduleId', 'Enter schedule ID to remove:'));
               if (id) cmd.mutate({ command: 'remove_charge_schedule', params: { id } });
             }}
             loading={cmd.isPending}
@@ -626,8 +626,8 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
           />
           <CommandButton
             icon={<CalendarPlus className="h-5 w-5" />}
-            label={t('Add Precondition')}
-            sublabel={t('7 AM daily')}
+            label={t('commands.schedules.addPrecondition', 'Add Precondition')}
+            sublabel={t('commands.schedules.morning', '7 AM daily')}
             onClick={() => cmd.mutate({
               command: 'add_precondition_schedule',
               params: {
@@ -643,10 +643,10 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
           />
           <CommandButton
             icon={<CalendarMinus className="h-5 w-5" />}
-            label={t('Remove Precondition')}
-            sublabel={t('By ID')}
+            label={t('commands.schedules.removePrecondition', 'Remove Precondition')}
+            sublabel={t('commands.schedules.byId', 'By ID')}
             onClick={() => {
-              const id = window.prompt(t('Enter schedule ID to remove:'));
+              const id = window.prompt(t('commands.schedules.enterScheduleId', 'Enter schedule ID to remove:'));
               if (id) cmd.mutate({ command: 'remove_precondition_schedule', params: { id } });
             }}
             loading={cmd.isPending}
