@@ -291,6 +291,29 @@ func (c *Client) GetFleetStatus(ctx context.Context, vins []string) ([]byte, int
 	return c.doRequest(ctx, http.MethodPost, "/api/1/vehicles/fleet_status", bytes.NewReader(body))
 }
 
+// GetMobileEnabled calls GET /api/1/vehicles/{vin}/mobile_enabled.
+func (c *Client) GetMobileEnabled(ctx context.Context, vin string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/vehicles/%s/mobile_enabled", vin)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// GetVehicleOptions calls GET /api/1/dx/vehicles/options?vin={vin}.
+func (c *Client) GetVehicleOptions(ctx context.Context, vin string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/dx/vehicles/options?vin=%s", vin)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// GetVehicleSpecs calls GET /api/1/vehicles/{vin}/specs using a partner token.
+// NOTE: This endpoint costs $0.10 per successful call — cache aggressively.
+func (c *Client) GetVehicleSpecs(ctx context.Context, vin string) ([]byte, int, error) {
+	partnerToken, err := c.GetPartnerToken(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("get partner token: %w", err)
+	}
+	path := fmt.Sprintf("/api/1/vehicles/%s/specs", vin)
+	return c.doRequestWithToken(ctx, http.MethodGet, path, nil, partnerToken)
+}
+
 // GetVehicleDrivers calls GET /api/1/vehicles/{vin}/drivers to list allowed drivers.
 func (c *Client) GetVehicleDrivers(ctx context.Context, vin string) ([]byte, int, error) {
 	path := fmt.Sprintf("/api/1/vehicles/%s/drivers", vin)

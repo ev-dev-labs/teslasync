@@ -187,6 +187,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	teslaUserOrderHandler := NewTeslaUserOrderHandler(teslaClient, db)
 	teslaUserProfileHandler := NewTeslaUserProfileHandler(teslaClient, db)
 	vehicleAccessHandler := NewVehicleAccessHandler(teslaClient, db)
+	vehicleInfoHandler := NewVehicleInfoHandler(teslaClient, db)
 	// SSE event hub for automation real-time events
 	automationEventHub := NewEventHub()
 	automationPublisher := NewAutomationEventPublisher(automationEventHub)
@@ -290,6 +291,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 					r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/refresh", vehicleAccessHandler.RefreshInvitations)
 					r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/{invitationID}/revoke", vehicleAccessHandler.RevokeInvitation)
 				})
+
+				// Vehicle info: mobile access, options, specs
+				r.Get("/mobile-enabled", vehicleInfoHandler.MobileEnabled)
+				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/mobile-enabled/refresh", vehicleInfoHandler.RefreshMobileEnabled)
+				r.Get("/options", vehicleInfoHandler.VehicleOptions)
+				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/options/refresh", vehicleInfoHandler.RefreshVehicleOptions)
+				r.Get("/specs", vehicleInfoHandler.VehicleSpecs)
+				r.With(httprate.LimitByIP(2, 1*time.Minute)).Post("/specs/refresh", vehicleInfoHandler.RefreshVehicleSpecs)
 			})
 		})
 
