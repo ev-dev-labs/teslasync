@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
-import type { SignalHistoryResponse, SignalStats, TelemetryStatus } from '@/types/telemetry';
+import type { SignalHistoryResponse, SignalStats, TelemetryStatus, VehicleTelemetry } from '@/types/telemetry';
 
 export const telemetryKeys = {
   signals: (vehicleId: number) => ['signals', vehicleId] as const,
@@ -80,7 +80,30 @@ export function useSignalGaps(vehicleId: number) {
 export function useMQTTStatus() {
   return useQuery({
     queryKey: telemetryKeys.mqttStatus,
-    queryFn: () => request<TelemetryStatus>('/telemetry'),
+    queryFn: async () => {
+      const raw = await request<TelemetryStatus>('/telemetry');
+      // Backend returns vehicles as Record<vin, VehicleStreamState>.
+      // Normalize to array for the page.
+      const vehiclesRaw = raw.vehicles ?? raw.streaming_vehicles;
+      let vehiclesArr: VehicleTelemetry[] = [];
+      if (Array.isArray(vehiclesRaw)) {
+        vehiclesArr = vehiclesRaw;
+      } else if (vehiclesRaw && typeof vehiclesRaw === 'object') {
+        vehiclesArr = Object.entries(vehiclesRaw).map(([vin, v]) => ({
+          ...v,
+          vin,
+          signalCount: v.signalCount ?? v.signal_count ?? 0,
+          batchCount: v.batchCount ?? v.batch_count ?? 0,
+          signalsPerSecond: v.signalsPerSecond ?? v.signals_per_second,
+          lastReceived: v.lastReceived ?? v.last_received,
+        }));
+      }
+      return {
+        ...raw,
+        uptimeSeconds: raw.uptimeSeconds ?? raw.uptime_seconds,
+        vehicles: vehiclesArr,
+      } as TelemetryStatus & { vehicles: VehicleTelemetry[] };
+    },
     refetchInterval: 5_000,
   });
 }

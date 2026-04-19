@@ -101,9 +101,9 @@ export default function MQTTInspectorPage() {
   const [throughputHistory, setThroughputHistory] = useState<ThroughputPoint[]>([]);
   const prevTotalRef = useRef<number | null>(null);
 
-  const vehicles = status?.vehicles ?? [];
-  const totalSignals = vehicles.reduce((sum, v) => sum + v.signalCount, 0);
-  const totalBatches = vehicles.reduce((sum, v) => sum + v.batchCount, 0);
+  const vehicles: VehicleTelemetry[] = Array.isArray(status?.vehicles) ? status.vehicles : [];
+  const totalSignals = vehicles.reduce((sum, v) => sum + (v.signalCount ?? 0), 0);
+  const totalBatches = vehicles.reduce((sum, v) => sum + (v.batchCount ?? 0), 0);
   const totalRate = vehicles.reduce((sum, v) => sum + (v.signalsPerSecond ?? 0), 0);
 
   useEffect(() => {
