@@ -9,12 +9,12 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/automation/trigger"
 )
 
-func TestHomePresetsValid(t *testing.T) {
+func TestEnergyPresetsValid(t *testing.T) {
 	registry := presets.NewRegistry()
-	all := registry.Presets("home")
+	all := registry.Presets("energy")
 
-	if len(all) != 5 {
-		t.Fatalf("expected 5 home presets, got %d", len(all))
+	if len(all) != 4 {
+		t.Fatalf("expected 4 energy presets, got %d", len(all))
 	}
 
 	for _, p := range all {
@@ -25,8 +25,8 @@ func TestHomePresetsValid(t *testing.T) {
 			if p.Name == "" {
 				t.Error("preset Name is empty")
 			}
-			if p.Category != "home" {
-				t.Errorf("expected category 'home', got %q", p.Category)
+			if p.Category != "energy" {
+				t.Errorf("expected category 'energy', got %q", p.Category)
 			}
 			if p.TriggerType == "" {
 				t.Error("preset TriggerType is empty")
@@ -78,26 +78,38 @@ func TestHomePresetsValid(t *testing.T) {
 				t.Error("preset has no tags")
 			}
 
-			// Every home preset must be tagged "home".
-			hasHomeTag := false
+			// Every energy preset must be tagged "energy".
+			hasEnergyTag := false
 			for _, tag := range p.Tags {
-				if tag == "home" {
-					hasHomeTag = true
+				if tag == "energy" {
+					hasEnergyTag = true
 					break
 				}
 			}
-			if !hasHomeTag {
-				t.Error("preset missing 'home' tag")
+			if !hasEnergyTag {
+				t.Error("preset missing 'energy' tag")
+			}
+
+			// Every energy preset must be tagged "requires-powerwall".
+			hasPowerwallTag := false
+			for _, tag := range p.Tags {
+				if tag == "requires-powerwall" {
+					hasPowerwallTag = true
+					break
+				}
+			}
+			if !hasPowerwallTag {
+				t.Error("preset missing 'requires-powerwall' tag")
 			}
 		})
 	}
 }
 
-func TestHomePresetIDsUnique(t *testing.T) {
+func TestEnergyPresetIDsUnique(t *testing.T) {
 	registry := presets.NewRegistry()
 	seen := make(map[string]bool)
 
-	for _, p := range registry.Presets("home") {
+	for _, p := range registry.Presets("energy") {
 		if seen[p.ID] {
 			t.Errorf("duplicate preset ID: %s", p.ID)
 		}
@@ -105,49 +117,48 @@ func TestHomePresetIDsUnique(t *testing.T) {
 	}
 }
 
-func TestHomePresetIDPrefix(t *testing.T) {
+func TestEnergyPresetIDPrefix(t *testing.T) {
 	registry := presets.NewRegistry()
 
-	for _, p := range registry.Presets("home") {
-		if len(p.ID) < 5 || p.ID[:5] != "home-" {
-			t.Errorf("home preset ID %q should start with 'home-'", p.ID)
+	for _, p := range registry.Presets("energy") {
+		if len(p.ID) < 7 || p.ID[:7] != "energy-" {
+			t.Errorf("energy preset ID %q should start with 'energy-'", p.ID)
 		}
 	}
 }
 
-func TestHomeCategory(t *testing.T) {
+func TestEnergyCategory(t *testing.T) {
 	registry := presets.NewRegistry()
 
 	cats := registry.Categories()
 	found := false
 	for _, c := range cats {
-		if c.ID == "home" {
+		if c.ID == "energy" {
 			found = true
-			if c.Name != "Home & Garage" {
-				t.Errorf("expected category name 'Home & Garage', got %q", c.Name)
+			if c.Name != "Energy & Powerwall" {
+				t.Errorf("expected category name 'Energy & Powerwall', got %q", c.Name)
 			}
-			if c.Icon != "Home" {
-				t.Errorf("expected category icon 'Home', got %q", c.Icon)
+			if c.Icon != "Zap" {
+				t.Errorf("expected category icon 'Zap', got %q", c.Icon)
 			}
 		}
 	}
 	if !found {
-		t.Error("home category not found")
+		t.Error("energy category not found")
 	}
 }
 
-func TestHomePresetGetByID(t *testing.T) {
+func TestEnergyPresetGetByID(t *testing.T) {
 	registry := presets.NewRegistry()
 
 	tests := []struct {
 		id   string
 		name string
 	}{
-		{"home-arrive", "Arrive Home"},
-		{"home-leave", "Leave Home"},
-		{"home-garage-auto-close", "Garage Auto-Close"},
-		{"home-porch-light", "Porch Light"},
-		{"home-departure-routine", "Departure Routine"},
+		{"energy-storm-prep", "Storm Prep"},
+		{"energy-grid-outage-alert", "Grid Outage Alert"},
+		{"energy-solar-export", "Solar Export"},
+		{"energy-peak-shaving", "Peak Shaving"},
 	}
 
 	for _, tt := range tests {
@@ -163,7 +174,7 @@ func TestHomePresetGetByID(t *testing.T) {
 	}
 }
 
-func TestRegistryTotalPresetsIncludesHome(t *testing.T) {
+func TestRegistryTotalPresetsIncludesEnergy(t *testing.T) {
 	registry := presets.NewRegistry()
 
 	all := registry.Presets("")
