@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"testing"
+	"time"
 )
 
 func TestLoad_Defaults(t *testing.T) {
@@ -65,16 +66,51 @@ func TestLoad_EnvOverride(t *testing.T) {
 
 func TestDatabaseConfig_DSN(t *testing.T) {
 	d := DatabaseConfig{
-		Host:     "localhost",
-		Port:     5432,
-		User:     "testuser",
-		Password: "testpass",
-		Name:     "testdb",
-		SSLMode:  "disable",
+		Host:             "localhost",
+		Port:             5432,
+		User:             "testuser",
+		Password:         "testpass",
+		Name:             "testdb",
+		SSLMode:          "disable",
+		ConnectTimeout:   5,
+		StatementTimeout: 30000,
 	}
-	expected := "postgres://testuser:testpass@localhost:5432/testdb?sslmode=disable"
+	expected := "postgres://testuser:testpass@localhost:5432/testdb?sslmode=disable&connect_timeout=5&statement_timeout=30000"
 	if got := d.DSN(); got != expected {
 		t.Errorf("expected DSN %q, got %q", expected, got)
+	}
+}
+
+func TestDatabaseConfig_DSN_CustomTimeouts(t *testing.T) {
+	d := DatabaseConfig{
+		Host:             "db.prod",
+		Port:             5432,
+		User:             "app",
+		Password:         "secret",
+		Name:             "mydb",
+		SSLMode:          "require",
+		ConnectTimeout:   10,
+		StatementTimeout: 60000,
+	}
+	expected := "postgres://app:secret@db.prod:5432/mydb?sslmode=require&connect_timeout=10&statement_timeout=60000"
+	if got := d.DSN(); got != expected {
+		t.Errorf("expected DSN %q, got %q", expected, got)
+	}
+}
+
+func TestLoad_DatabaseResilienceDefaults(t *testing.T) {
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error from Load(): %v", err)
+	}
+	if cfg.Database.ConnectTimeout != 5 {
+		t.Errorf("expected default ConnectTimeout 5, got %d", cfg.Database.ConnectTimeout)
+	}
+	if cfg.Database.StatementTimeout != 30000 {
+		t.Errorf("expected default StatementTimeout 30000, got %d", cfg.Database.StatementTimeout)
+	}
+	if cfg.Database.HealthCheckPeriod != 5*time.Second {
+		t.Errorf("expected default HealthCheckPeriod 5s, got %v", cfg.Database.HealthCheckPeriod)
 	}
 }
 

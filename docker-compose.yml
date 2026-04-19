@@ -17,6 +17,9 @@ services:
       - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-teslasync}
       - DATABASE_NAME=${POSTGRES_DB:-teslasync}
       - DATABASE_SSL_MODE=disable
+      - DATABASE_CONNECT_TIMEOUT=5
+      - DATABASE_STATEMENT_TIMEOUT=30000
+      - DATABASE_HEALTH_CHECK_PERIOD=5s
       - MQTT_HOST=mosquitto
       - MQTT_PORT=1883
       - REDIS_HOST=redis

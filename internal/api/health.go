@@ -195,13 +195,9 @@ func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor) http
 		}
 
 		// DB pool stats
-		poolStats := db.Pool.Stat()
-		results["database_pool"] = map[string]interface{}{
-			"status":         "healthy",
-			"total_conns":    poolStats.TotalConns(),
-			"idle_conns":     poolStats.IdleConns(),
-			"acquired_conns": poolStats.AcquiredConns(),
-		}
+		poolStatsMap := db.PoolStats()
+		poolStatsMap["status"] = "healthy"
+		results["database_pool"] = poolStatsMap
 
 		// Component statuses from health monitor — don't overwrite direct checks
 		for name, comp := range health.GetStatus() {

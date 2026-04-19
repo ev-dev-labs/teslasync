@@ -39,7 +39,17 @@ func New(ctx context.Context, cfg config.DatabaseConfig) (*DB, error) {
 	poolCfg.MinConns = int32(cfg.MinConns)
 	poolCfg.MaxConnLifetime = cfg.ConnMaxLifetime
 	poolCfg.MaxConnIdleTime = cfg.ConnMaxIdleTime
-	poolCfg.HealthCheckPeriod = 15 * time.Second
+	poolCfg.HealthCheckPeriod = cfg.HealthCheckPeriod
+
+	// Validate new connections by setting per-connection statement_timeout as safety net
+	stmtTimeout := cfg.StatementTimeout
+	poolCfg.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+		_, err := conn.Exec(ctx, fmt.Sprintf("SET statement_timeout = '%dms'", stmtTimeout))
+		if err != nil {
+			log.Warn().Err(err).Msg("failed to set statement_timeout on new connection")
+		}
+		return nil
+	}
 
 	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
 	if err != nil {
@@ -58,7 +68,11 @@ func New(ctx context.Context, cfg config.DatabaseConfig) (*DB, error) {
 	log.Info().
 		Str("host", cfg.Host).
 		Int("max_conns", cfg.MaxConns).
+		Int32("total_conns", stats.TotalConns()).
 		Int32("idle_conns", stats.IdleConns()).
+		Int("connect_timeout_s", cfg.ConnectTimeout).
+		Int("statement_timeout_ms", cfg.StatementTimeout).
+		Dur("health_check_period", cfg.HealthCheckPeriod).
 		Msg("database connected")
 	return &DB{Pool: pool}, nil
 }
@@ -127,5 +141,20 @@ func (db *DB) Stats() map[string]interface{} {
 		"acquired_conns": s.AcquiredConns(),
 		"max_conns":      s.MaxConns(),
 		"constructing":   s.ConstructingConns(),
+	}
+}
+
+// PoolStats returns extended connection pool health information including
+// acquire counters useful for diagnosing connection exhaustion.
+func (db *DB) PoolStats() map[string]interface{} {
+	s := db.Pool.Stat()
+	return map[string]interface{}{
+		"total_conns":            s.TotalConns(),
+		"idle_conns":             s.IdleConns(),
+		"acquired_conns":         s.AcquiredConns(),
+		"constructing_conns":     s.ConstructingConns(),
+		"max_conns":              s.MaxConns(),
+		"empty_acquire_count":    s.EmptyAcquireCount(),
+		"canceled_acquire_count": s.CanceledAcquireCount(),
 	}
 }

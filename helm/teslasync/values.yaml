@@ -600,6 +600,13 @@ postgresql:
   maxConns: 25
   minConns: 5
 
+  # -- DSN connection timeout in seconds (prevents hanging on network issues)
+  connectTimeout: 5
+  # -- Per-statement timeout in milliseconds (kills long-running queries)
+  statementTimeout: 30000
+  # -- Pool health check interval (detects stale connections)
+  healthCheckPeriod: "5s"
+
   image: postgres:17-alpine
 
   auth:
