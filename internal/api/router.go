@@ -368,6 +368,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Get("/{historyId}", automationHandler.GetHistoryDetail)
 			})
 
+			// Presets (static routes before {id} param)
+			r.Route("/presets", func(r chi.Router) {
+				r.Get("/", automationHandler.ListPresets)
+				r.Get("/{presetId}", automationHandler.GetPreset)
+			})
+
 			r.Route("/{id}", func(r chi.Router) {
 				r.Get("/", automationHandler.Get)
 				r.Get("/export", automationHandler.ExportOne)

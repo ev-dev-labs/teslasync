@@ -1518,6 +1518,39 @@ export interface Automation {
   conflicts?: AutomationConflict[]
 }
 
+// === Automation Preset Types ===
+
+export interface AutomationPresetCategory {
+  id: string
+  name: string
+  description: string
+  icon: string
+}
+
+export interface AutomationPreset {
+  id: string
+  name: string
+  description: string
+  category: string
+  icon: string
+  trigger_type: string
+  trigger_config: Record<string, unknown>
+  conditions?: Record<string, unknown>[] | null
+  actions: Record<string, unknown>[]
+  cooldown_minutes: number
+  max_executions_hour: number
+  stop_on_failure: boolean
+  notify_on_run: boolean
+  notify_on_failure: boolean
+  priority: number
+  tags: string[]
+}
+
+export interface AutomationPresetsResponse {
+  categories: AutomationPresetCategory[]
+  presets: AutomationPreset[]
+}
+
 export type AutomationHistoryStatus = 'running' | 'success' | 'partial' | 'failed' | 'skipped' | 'cancelled' | 'test' | 'undo'
 
 export interface AutomationHistory {

@@ -4,6 +4,8 @@ import { safeArray } from '@/lib/safeArray';
 import type {
   Automation,
   AutomationHistoryListResponse,
+  AutomationPresetsResponse,
+  AutomationPreset,
 } from '@/api/types';
 
 /** Shape of the request body for creating/updating an automation. */
@@ -23,6 +25,7 @@ export interface AutomationFormData {
   notify_on_failure: boolean;
   priority: number;
   tags: string[];
+  preset_id?: string | null;
 }
 
 export const automationKeys = {
@@ -137,5 +140,32 @@ export function useUpdateAutomation() {
       qc.invalidateQueries({ queryKey: automationKeys.all });
       qc.invalidateQueries({ queryKey: automationKeys.detail(id) });
     },
+  });
+}
+
+// ── Preset hooks ──────────────────────────────────────────────────────────────
+
+export const presetKeys = {
+  all: ['automation-presets'] as const,
+  category: (cat: string) => ['automation-presets', cat] as const,
+  detail: (id: string) => ['automation-preset', id] as const,
+};
+
+export function useAutomationPresets(category?: string) {
+  const queryParam = category ? `?category=${category}` : '';
+  return useQuery({
+    queryKey: category ? presetKeys.category(category) : presetKeys.all,
+    queryFn: () =>
+      request<AutomationPresetsResponse>(`/automations/presets${queryParam}`),
+    staleTime: Infinity,
+  });
+}
+
+export function useAutomationPreset(id: string | undefined) {
+  return useQuery({
+    queryKey: presetKeys.detail(id!),
+    queryFn: () => request<AutomationPreset>(`/automations/presets/${id}`),
+    enabled: !!id,
+    staleTime: Infinity,
   });
 }

@@ -8,7 +8,7 @@
  * Sections: Name/Vehicle → Trigger → Conditions → Actions → Options → Conflicts → Save
  */
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
@@ -28,6 +28,7 @@ import {
   useCreateAutomation,
   useUpdateAutomation,
   useTestRunAutomation,
+  useAutomationPreset,
   type AutomationFormData,
 } from '@/api/hooks/useAutomations';
 import { TriggerConfigurator, TRIGGER_TYPES } from './TriggerConfigurator';
@@ -56,6 +57,7 @@ interface FormState {
   notify_on_failure: boolean;
   priority: number;
   tags: string[];
+  preset_id: string | null;
 }
 
 function getInitialForm(): FormState {
@@ -74,6 +76,7 @@ function getInitialForm(): FormState {
     notify_on_failure: true,
     priority: 50,
     tags: [],
+    preset_id: null,
   };
 }
 
@@ -93,6 +96,7 @@ function automationToForm(a: Automation): FormState {
     notify_on_failure: a.notify_on_failure ?? true,
     priority: a.priority ?? 50,
     tags: a.tags ?? [],
+    preset_id: a.preset_id ?? null,
   };
 }
 
@@ -112,6 +116,7 @@ function formToPayload(form: FormState): AutomationFormData {
     notify_on_failure: form.notify_on_failure,
     priority: form.priority,
     tags: form.tags,
+    preset_id: form.preset_id,
   };
 }
 
@@ -125,19 +130,24 @@ export default function AutomationBuilderPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const presetId = searchParams.get('preset') ?? undefined;
   const isEdit = id != null;
   const automationId = id ? parseInt(id, 10) : undefined;
 
   usePageTitle(
     isEdit
       ? t('automations.builder.editTitle', 'Edit Automation')
-      : t('automations.builder.createTitle', 'Create Automation'),
+      : presetId
+        ? t('automations.builder.presetTitle', 'Install Preset')
+        : t('automations.builder.createTitle', 'Create Automation'),
   );
 
   // ── Data queries ────────────────────────────────────────────────────
   const { data: existingAutomation, isLoading: isLoadingAutomation, error: loadError } =
     useAutomation(automationId);
   const { data: vehicles } = useVehicles();
+  const { data: preset } = useAutomationPreset(presetId);
 
   // ── Mutations ───────────────────────────────────────────────────────
   const createMutation = useCreateAutomation();
@@ -160,6 +170,30 @@ export default function AutomationBuilderPage() {
       setHydrated(true);
     }
   }, [isEdit, existingAutomation, hydrated]);
+
+  // Hydrate form from preset in create mode
+  useEffect(() => {
+    if (!isEdit && preset && !hydrated) {
+      setForm({
+        name: preset.name,
+        description: preset.description,
+        vehicle_id: null,
+        trigger_type: preset.trigger_type,
+        trigger_config: preset.trigger_config ?? {},
+        conditions: (preset.conditions as Record<string, unknown>[]) ?? [],
+        actions: preset.actions ?? [],
+        cooldown_minutes: preset.cooldown_minutes ?? 0,
+        max_executions_hour: preset.max_executions_hour ?? 0,
+        stop_on_failure: preset.stop_on_failure ?? false,
+        notify_on_run: preset.notify_on_run ?? true,
+        notify_on_failure: preset.notify_on_failure ?? true,
+        priority: preset.priority ?? 50,
+        tags: preset.tags ?? [],
+        preset_id: preset.id,
+      });
+      setHydrated(true);
+    }
+  }, [isEdit, preset, hydrated]);
 
   // Reset hydration when switching automations
   useEffect(() => {

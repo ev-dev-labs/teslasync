@@ -7,12 +7,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/automation"
 	"github.com/ev-dev-labs/teslasync/internal/automation/action"
 	"github.com/ev-dev-labs/teslasync/internal/automation/condition"
+	"github.com/ev-dev-labs/teslasync/internal/automation/presets"
 	"github.com/ev-dev-labs/teslasync/internal/automation/trigger"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
@@ -26,6 +28,7 @@ type AutomationHandler struct {
 	cmdExecutor    *action.CommandExecutor // optional, enables undo
 	eventPublisher *AutomationEventPublisher // optional, enables SSE events
 	auditor        *automation.Auditor       // optional, enables audit trail
+	presetRegistry *presets.Registry         // built-in preset templates
 }
 
 // AutomationHandlerOption configures optional AutomationHandler dependencies.
@@ -49,9 +52,10 @@ func WithAutomationAuditor(a *automation.Auditor) AutomationHandlerOption {
 // NewAutomationHandler creates an AutomationHandler backed by the given database.
 func NewAutomationHandler(db *database.DB, opts ...AutomationHandlerOption) *AutomationHandler {
 	h := &AutomationHandler{
-		repo:         database.NewAutomationRepo(db),
-		historyRepo:  database.NewAutomationHistoryRepo(db),
-		fsmTransRepo: database.NewFSMTransitionRepo(db),
+		repo:           database.NewAutomationRepo(db),
+		historyRepo:    database.NewAutomationHistoryRepo(db),
+		fsmTransRepo:   database.NewFSMTransitionRepo(db),
+		presetRegistry: presets.NewRegistry(),
 	}
 	for _, opt := range opts {
 		opt(h)
@@ -104,6 +108,50 @@ func (h *AutomationHandler) List(w http.ResponseWriter, r *http.Request) {
 		results[i] = newAutomationResponse(a)
 	}
 	writeJSON(w, http.StatusOK, results)
+}
+
+// ── Presets ─────────────────────────────────────────────────────────────
+
+// presetsResponse is the envelope for the presets API.
+type presetsResponse struct {
+	Categories []presets.Category `json:"categories"`
+	Presets    []presets.Preset   `json:"presets"`
+}
+
+// ListPresets returns built-in automation preset templates.
+// Supports ?category=security to filter by category.
+func (h *AutomationHandler) ListPresets(w http.ResponseWriter, r *http.Request) {
+	category := r.URL.Query().Get("category")
+
+	resp := presetsResponse{
+		Categories: h.presetRegistry.Categories(),
+		Presets:    h.presetRegistry.Presets(category),
+	}
+	if resp.Presets == nil {
+		resp.Presets = []presets.Preset{}
+	}
+	if resp.Categories == nil {
+		resp.Categories = []presets.Category{}
+	}
+
+	writeJSON(w, http.StatusOK, resp)
+}
+
+// GetPreset returns a single preset by ID.
+func (h *AutomationHandler) GetPreset(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "presetId")
+	if id == "" {
+		writeError(w, http.StatusBadRequest, "preset ID is required")
+		return
+	}
+
+	p := h.presetRegistry.Get(id)
+	if p == nil {
+		writeError(w, http.StatusNotFound, "preset not found")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, p)
 }
 
 // ── Get ─────────────────────────────────────────────────────────────────

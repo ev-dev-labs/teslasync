@@ -32,9 +32,10 @@ import { AutomationCard } from './AutomationCard';
 import { AutomationActivityFeed } from './AutomationActivityFeed';
 import {
   Zap, Plus, Upload, ListFilter, AlertTriangle,
-  Pause, Power, ShieldOff,
+  Pause, Power, ShieldOff, Sparkles,
 } from 'lucide-react';
 import type { Automation } from '@/api/types';
+import { PresetGallery } from './PresetGallery';
 
 // ─── Filter types ─────────────────────────────────────────────────────────────
 
@@ -282,6 +283,24 @@ export default function AutomationsListPage() {
           </div>
         </FadeIn>
       )}
+
+      {/* Preset gallery (collapsible) */}
+      <FadeIn delay={0.045}>
+        <GlassPanel className="p-5">
+          <details className="group">
+            <summary className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-white/90 select-none">
+              <Sparkles className="h-4 w-4 text-cyan-400" />
+              {t('automations.presets.title', 'Quick Start Templates')}
+              <span className="text-xs font-normal text-white/40 ml-1">
+                {t('automations.presets.hint', 'One-click install')}
+              </span>
+            </summary>
+            <div className="mt-4">
+              <PresetGallery />
+            </div>
+          </details>
+        </GlassPanel>
+      </FadeIn>
 
       {/* Automation cards */}
       <FadeIn delay={0.05}>
