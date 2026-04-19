@@ -34,6 +34,7 @@ const BatteryCells = lazy(() => import('./features/battery/pages/BatteryCellsPag
 const BatteryDegradation = lazy(() => import('./features/battery/pages/BatteryDegradationPage'))
 const EnergyFlow = lazy(() => import('./features/battery/pages/EnergyFlowPage'))
 const PowerFlowDashboard = lazy(() => import('./features/battery/pages/PowerFlowDashboardPage'))
+const EnergyProducts = lazy(() => import('./features/battery/pages/EnergyProductsPage'))
 const VampireDrain = lazy(() => import('./features/battery/pages/VampireDrainPage'))
 const ProjectedRange = lazy(() => import('./features/battery/pages/ProjectedRangePage'))
 const SleepEfficiency = lazy(() => import('./features/battery/pages/SleepEfficiencyPage'))
@@ -196,6 +197,7 @@ export default function App() {
         <Route path="data-export" element={<SafeRoute name="DataExport"><DataExport /></SafeRoute>} />
         <Route path="energy-flow" element={<SafeRoute name="EnergyFlow"><EnergyFlow /></SafeRoute>} />
         <Route path="power-flow" element={<SafeRoute name="PowerFlowDashboard"><PowerFlowDashboard /></SafeRoute>} />
+        <Route path="energy-products" element={<SafeRoute name="EnergyProducts"><EnergyProducts /></SafeRoute>} />
         <Route path="drivetrain-health" element={<SafeRoute name="DrivetrainHealth"><DrivetrainHealth /></SafeRoute>} />
         <Route path="media-player" element={<SafeRoute name="MediaPlayer"><MediaPlayer /></SafeRoute>} />
         <Route path="safety-settings" element={<SafeRoute name="SafetySettings"><SafetySettings /></SafeRoute>} />

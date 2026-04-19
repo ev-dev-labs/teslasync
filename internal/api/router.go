@@ -181,6 +181,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	teslaChargingSessionHandler := NewTeslaChargingSessionHandler(teslaClient, db)
 	teslaEnergyHistoryHandler := NewTeslaEnergyHistoryHandler(teslaClient, db)
 	teslaEnergyLiveStatusHandler := NewTeslaEnergyLiveStatusHandler(teslaClient, db)
+	energySiteHandler := NewEnergySiteHandler(teslaClient, db)
 	// SSE event hub for automation real-time events
 	automationEventHub := NewEventHub()
 	automationPublisher := NewAutomationEventPublisher(automationEventHub)
@@ -319,6 +320,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/refresh", teslaChargingSessionHandler.Refresh)
 			})
 		})
+
+		// Tesla Energy Sites (product discovery)
+		r.Get("/tesla/energy-sites", energySiteHandler.List)
+		r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/tesla/energy-sites/refresh", energySiteHandler.Refresh)
 
 		// Tesla Energy Site History (calendar_history + telemetry_history)
 		r.Route("/tesla/energy-sites/{siteID}", func(r chi.Router) {

@@ -943,6 +943,11 @@ func (c *Client) GetChargingSessions(ctx context.Context, vin, dateFrom, dateTo 
 	return c.doRequest(ctx, http.MethodGet, path, nil)
 }
 
+// GetProducts calls GET /api/1/products to fetch the user's vehicles and energy products.
+func (c *Client) GetProducts(ctx context.Context) ([]byte, int, error) {
+	return c.doRequest(ctx, http.MethodGet, "/api/1/products", nil)
+}
+
 // GetEnergySiteCalendarHistory calls GET /api/1/energy_sites/{id}/calendar_history.
 // kind: "backup" or "energy". period: "day", "week", "month", "year".
 // Dates are ISO 8601 (YYYY-MM-DD). timeZone is IANA (e.g. "America/Los_Angeles").

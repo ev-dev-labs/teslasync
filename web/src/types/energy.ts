@@ -236,6 +236,30 @@ export interface TeslaWCChargingEntry {
   fetched_at: string;
 }
 
+// Tesla Energy Site (product from /products endpoint)
+
+export interface TeslaEnergySite {
+  id: number;
+  energy_site_id: number;
+  resource_type: string;
+  site_name: string;
+  gateway_id: string | null;
+  total_pack_energy: number | null;
+  percentage_charged: number | null;
+  battery_type: string | null;
+  backup_capable: boolean;
+  storm_mode_enabled: boolean;
+  has_solar: boolean;
+  has_battery: boolean;
+  has_grid: boolean;
+  has_load_meter: boolean;
+  tou_capable: boolean;
+  storm_mode_capable: boolean;
+  fetched_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // Tesla Energy Live Status (power flow snapshot)
 
 export interface TeslaEnergyLiveStatus {

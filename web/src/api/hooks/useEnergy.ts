@@ -16,6 +16,7 @@ import type {
   TeslaBackupEvent,
   TeslaWCChargingEntry,
   TeslaEnergyLiveStatus,
+  TeslaEnergySite,
 } from '@/types/energy';
 
 export function useEnergyStats(vehicleId: string | null, days = 30) {
@@ -103,6 +104,30 @@ export function useSleepEfficiency(vehicleId: string | null, days = 30) {
     queryKey: ['sleep-efficiency', vehicleId, days],
     queryFn: () => request<SleepEfficiencyData>(`/analytics/sleep?vehicle_id=${vehicleId}&days=${days}`),
     enabled: vehicleId !== null,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Tesla Energy Sites (product discovery from /products)
+// ---------------------------------------------------------------------------
+
+export function useTeslaEnergySites() {
+  return useQuery({
+    queryKey: ['tesla-energy-sites'],
+    queryFn: () => request<TeslaEnergySite[]>('/tesla/energy-sites'),
+    staleTime: 60_000,
+    select: safeArray,
+  });
+}
+
+export function useRefreshTeslaEnergySites() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      request<TeslaEnergySite[]>('/tesla/energy-sites/refresh', { method: 'POST' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tesla-energy-sites'] });
+    },
   });
 }
 
