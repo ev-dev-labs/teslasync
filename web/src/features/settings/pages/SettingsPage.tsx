@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState, useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AppSettings } from '@/api/types'
 import {
@@ -7,9 +7,13 @@ import {
   useCarPreferences, useGasPriceStatus, usePollGasPrice,
   useToggleGasPrice, useUpdateGasPriceConfig,
 } from '@/api/hooks/useSettings'
+import {
+  useTeslaFeatureConfig, useRefreshTeslaFeatureConfig,
+  useTeslaUserRegion, useRefreshTeslaRegion,
+} from '@/api/hooks/useUser'
 import { PageContainer } from '@/components/layout'
-import { GlassPanel, Button, Input, Select, IconBox } from '@/components/ui'
-import { Skeleton } from '@/components/feedback'
+import { GlassPanel, Button, Input, Select, IconBox, Badge } from '@/components/ui'
+import { Skeleton, EmptyState } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { useTheme, type ThemeId, type ModeId } from '@/components/ui/ThemeProvider'
 import { useToast } from '@/components/feedback/Toast'
@@ -21,7 +25,7 @@ import { parseSettingEnum, isSettingMiles, isSettingFahrenheit, isSettingPSI, is
 import {
   Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield,
   CheckCircle, XCircle, Palette, Download, Sun, Moon, Monitor, Sparkles,
-  Pause, Play, Fuel, Zap,
+  Pause, Play, Fuel, Zap, Flag, Globe, Info,
 } from 'lucide-react'
 
 const modeIcons: Record<string, ReactNode> = {
@@ -52,6 +56,8 @@ export default function SettingsPage() {
   const { data: settings, isLoading } = useSettings()
   const { data: auth } = useAuthStatus()
   const { data: gasPriceStatus } = useGasPriceStatus()
+  const { data: featureConfig } = useTeslaFeatureConfig()
+  const { data: regionConfig } = useTeslaUserRegion()
   const { themeId, modeId, setTheme, setMode, setCustomColors, themes: allThemes, modes: allModes } = useTheme()
 
   // ── Form state ──
@@ -95,6 +101,25 @@ export default function SettingsPage() {
   const gasPollMut = usePollGasPrice()
   const gasToggleMut = useToggleGasPrice()
   const gasConfigMut = useUpdateGasPriceConfig()
+  const featureConfigRefresh = useRefreshTeslaFeatureConfig()
+  const regionRefresh = useRefreshTeslaRegion()
+
+  // ── Derived feature flag entries ──
+  const featureEntries = useMemo(() => {
+    const data = featureConfig?.data
+    if (!data || typeof data !== 'object') return []
+    return Object.entries(data).map(([key, value]) => {
+      const isObj = typeof value === 'object' && value !== null
+      const enabled = isObj ? (value as Record<string, unknown>).enabled : value
+      const details = isObj
+        ? Object.entries(value as Record<string, unknown>)
+            .filter(([k]) => k !== 'enabled')
+            .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)
+            .join(', ')
+        : null
+      return { key, enabled: Boolean(enabled), details }
+    })
+  }, [featureConfig?.data])
 
   // ── Vehicle user preferences for "Sync from Car" feature ──
   const { data: vehicles } = useVehicles()
@@ -214,6 +239,122 @@ export default function SettingsPage() {
             <p className="text-sm text-neon-green animate-in fade-in">
               {t('tesla.synced', 'Synced {{count}} vehicle(s).', { count: syncMut.data.synced })}
             </p>
+          )}
+        </GlassPanel>
+      </FadeIn>
+
+      {/* ── Feature Flags ── */}
+      <FadeIn delay={0.03}>
+        <GlassPanel className="p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <IconBox color="purple">
+                <Flag className="h-5 w-5" />
+              </IconBox>
+              <div>
+                <h2 className="text-base font-semibold text-[var(--text-primary)]">{t('featureConfig.title', 'Feature Flags')}</h2>
+                <p className="text-xs text-[var(--text-muted)]">{t('featureConfig.subtitle', 'Tesla account feature configuration')}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {featureConfig?.fetched_at && (
+                <span className="text-[11px] text-[var(--text-muted)]">
+                  {t('featureConfig.lastSynced', 'Synced')} {formatDateTime(featureConfig.fetched_at)}
+                </span>
+              )}
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<RefreshCw className={cn('h-3.5 w-3.5', featureConfigRefresh.isPending && 'animate-spin')} />}
+                onClick={() => featureConfigRefresh.mutate(undefined, {
+                  onSuccess: () => toast.success(t('toast.featureConfigRefreshed', 'Feature config refreshed')),
+                  onError: (err: Error) => toast.error(t('toast.featureConfigFailed', 'Failed to refresh feature config'), err.message),
+                })}
+                disabled={featureConfigRefresh.isPending}
+              >
+                {t('featureConfig.refresh', 'Refresh')}
+              </Button>
+            </div>
+          </div>
+
+          {featureEntries.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/5 text-left">
+                    <th className="pb-2 pr-4 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">{t('featureConfig.feature', 'Feature')}</th>
+                    <th className="pb-2 pr-4 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">{t('featureConfig.status', 'Status')}</th>
+                    <th className="pb-2 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">{t('featureConfig.details', 'Details')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {featureEntries.map((entry) => (
+                    <tr key={entry.key} className="border-b border-white/[0.03]">
+                      <td className="py-2.5 pr-4 font-medium text-[var(--text-primary)]">{entry.key}</td>
+                      <td className="py-2.5 pr-4">
+                        <Badge variant={entry.enabled ? 'success' : 'neutral'}>
+                          {entry.enabled ? t('featureConfig.enabled', 'Enabled') : t('featureConfig.disabled', 'Disabled')}
+                        </Badge>
+                      </td>
+                      <td className="py-2.5 text-xs text-[var(--text-muted)] max-w-xs truncate">{entry.details ?? '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <EmptyState icon={<Info className="h-10 w-10" />} message={t('featureConfig.noData', 'No feature config data yet. Click Refresh to fetch from Tesla.')} />
+          )}
+        </GlassPanel>
+      </FadeIn>
+
+      {/* ── Region & API ── */}
+      <FadeIn delay={0.04}>
+        <GlassPanel className="p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <IconBox color="green">
+                <Globe className="h-5 w-5" />
+              </IconBox>
+              <div>
+                <h2 className="text-base font-semibold text-[var(--text-primary)]">{t('region.title', 'Region & API')}</h2>
+                <p className="text-xs text-[var(--text-muted)]">{t('region.subtitle', 'Tesla account region and Fleet API endpoint')}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {regionConfig?.fetched_at && (
+                <span className="text-[11px] text-[var(--text-muted)]">
+                  {t('region.lastSynced', 'Synced')} {formatDateTime(regionConfig.fetched_at)}
+                </span>
+              )}
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<RefreshCw className={cn('h-3.5 w-3.5', regionRefresh.isPending && 'animate-spin')} />}
+                onClick={() => regionRefresh.mutate(undefined, {
+                  onSuccess: () => toast.success(t('toast.regionRefreshed', 'Region info refreshed')),
+                  onError: (err: Error) => toast.error(t('toast.regionFailed', 'Failed to refresh region'), err.message),
+                })}
+                disabled={regionRefresh.isPending}
+              >
+                {t('region.refresh', 'Refresh')}
+              </Button>
+            </div>
+          </div>
+
+          {regionConfig?.data?.region ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="rounded-lg bg-white/[0.02] border border-white/5 p-4">
+                <p className="text-xs text-[var(--text-muted)] mb-1 uppercase tracking-wider">{t('region.regionCode', 'Region')}</p>
+                <p className="text-lg font-semibold text-[var(--text-primary)]">{regionConfig.data.region}</p>
+              </div>
+              <div className="rounded-lg bg-white/[0.02] border border-white/5 p-4">
+                <p className="text-xs text-[var(--text-muted)] mb-1 uppercase tracking-wider">{t('region.fleetApiUrl', 'Fleet API Base URL')}</p>
+                <p className="text-sm font-mono text-[var(--text-primary)] break-all">{regionConfig.data.fleet_api_base_url ?? '—'}</p>
+              </div>
+            </div>
+          ) : (
+            <EmptyState icon={<Info className="h-10 w-10" />} message={t('region.noData', 'No region data yet. Click Refresh to fetch from Tesla.')} />
           )}
         </GlassPanel>
       </FadeIn>

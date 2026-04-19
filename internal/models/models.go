@@ -1396,3 +1396,13 @@ type TeslaFleetTelemetryErrorVIN struct {
 	LastSeenAt  time.Time  `json:"last_seen_at" db:"last_seen_at"`
 	ResolvedAt  *time.Time `json:"resolved_at" db:"resolved_at"`
 }
+
+// TeslaUserConfig stores a Tesla user configuration blob (feature_config, region, etc.)
+type TeslaUserConfig struct {
+	ID         int64     `json:"id" db:"id"`
+	ConfigType string    `json:"config_type" db:"config_type"`
+	Data       string    `json:"data" db:"data"`
+	FetchedAt  time.Time `json:"fetched_at" db:"fetched_at"`
+	CreatedAt  time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at" db:"updated_at"`
+}

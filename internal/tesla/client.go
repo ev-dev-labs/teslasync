@@ -167,6 +167,11 @@ func (c *Client) GetUserRegion(ctx context.Context) ([]byte, int, error) {
 	return c.doRequest(ctx, http.MethodGet, "/api/1/users/region", nil)
 }
 
+// GetUserFeatureConfig calls GET /api/1/users/feature_config to fetch account feature flags.
+func (c *Client) GetUserFeatureConfig(ctx context.Context) ([]byte, int, error) {
+	return c.doRequest(ctx, http.MethodGet, "/api/1/users/feature_config", nil)
+}
+
 // RegisterPartner calls POST /api/1/partner_accounts to register this app in the current region.
 // It requires the partner token (client_credentials), not the user's OAuth token.
 func (c *Client) RegisterPartner(ctx context.Context, partnerToken, domain string) ([]byte, int, error) {

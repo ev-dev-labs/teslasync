@@ -183,6 +183,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	teslaEnergyLiveStatusHandler := NewTeslaEnergyLiveStatusHandler(teslaClient, db)
 	energySiteHandler := NewEnergySiteHandler(teslaClient, db)
 	fleetTelemetryErrorHandler := NewFleetTelemetryErrorHandler(teslaClient, db)
+	teslaUserConfigHandler := NewTeslaUserConfigHandler(teslaClient, db)
 	// SSE event hub for automation real-time events
 	automationEventHub := NewEventHub()
 	automationPublisher := NewAutomationEventPublisher(automationEventHub)
@@ -354,6 +355,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/error-vins/refresh", fleetTelemetryErrorHandler.RefreshErrorVINs)
 			r.Get("/errors", fleetTelemetryErrorHandler.Errors)
 			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/errors/refresh", fleetTelemetryErrorHandler.RefreshErrors)
+		})
+
+		// Tesla User Config (feature flags, region)
+		r.Route("/tesla/user", func(r chi.Router) {
+			r.Get("/feature-config", teslaUserConfigHandler.FeatureConfig)
+			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/feature-config/refresh", teslaUserConfigHandler.RefreshFeatureConfig)
+			r.Get("/region", teslaUserConfigHandler.Region)
+			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/region/refresh", teslaUserConfigHandler.RefreshRegion)
 		})
 
 		// Geofences
