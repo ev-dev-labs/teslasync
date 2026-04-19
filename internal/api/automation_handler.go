@@ -19,10 +19,11 @@ import (
 
 // AutomationHandler handles automation CRUD HTTP requests.
 type AutomationHandler struct {
-	repo         *database.AutomationRepo
-	historyRepo  *database.AutomationHistoryRepo
-	fsmTransRepo *database.FSMTransitionRepo
-	cmdExecutor  *action.CommandExecutor // optional, enables undo
+	repo           *database.AutomationRepo
+	historyRepo    *database.AutomationHistoryRepo
+	fsmTransRepo   *database.FSMTransitionRepo
+	cmdExecutor    *action.CommandExecutor // optional, enables undo
+	eventPublisher *AutomationEventPublisher // optional, enables SSE events
 }
 
 // AutomationHandlerOption configures optional AutomationHandler dependencies.
@@ -31,6 +32,11 @@ type AutomationHandlerOption func(*AutomationHandler)
 // WithCommandExecutor provides a CommandExecutor for undo support.
 func WithCommandExecutor(e *action.CommandExecutor) AutomationHandlerOption {
 	return func(h *AutomationHandler) { h.cmdExecutor = e }
+}
+
+// WithAutomationEventPublisher provides an event publisher for SSE automation events.
+func WithAutomationEventPublisher(p *AutomationEventPublisher) AutomationHandlerOption {
+	return func(h *AutomationHandler) { h.eventPublisher = p }
 }
 
 // NewAutomationHandler creates an AutomationHandler backed by the given database.
@@ -793,6 +799,19 @@ func (h *AutomationHandler) TestRun(w http.ResponseWriter, r *http.Request) {
 		Bool("conditions_met", allMet).
 		Int("actions", len(actionResults)).
 		Msg("automation test-run completed")
+
+	// Publish SSE events for the test-run
+	if h.eventPublisher != nil {
+		h.eventPublisher.PublishTriggered(a.ID, a.Name, "", a.TriggerType, "test")
+		if !allMet {
+			h.eventPublisher.PublishSkipped(a.ID, a.Name, "conditions not met (test-run)", "test")
+		} else if validCount == len(actionResults) {
+			durationMs := time.Since(now).Milliseconds()
+			h.eventPublisher.PublishSucceeded(a.ID, a.Name, durationMs, validCount, "test")
+		} else {
+			h.eventPublisher.PublishFailed(a.ID, a.Name, "some actions invalid (test-run)", -1, "test")
+		}
+	}
 
 	writeJSON(w, http.StatusOK, testRunResponse{
 		AutomationID:   a.ID,

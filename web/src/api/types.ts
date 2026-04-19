@@ -1474,3 +1474,63 @@ export interface BatteryDegradationData {
   stress_level: string
   fast_charge_ratio: number
 }
+
+// === Automation SSE Events ===
+
+export type AutomationSSEEventType =
+  | 'automation.triggered'
+  | 'automation.succeeded'
+  | 'automation.failed'
+  | 'automation.skipped'
+  | 'automation.state_changed'
+
+export interface AutomationTriggeredEvent {
+  automation_id: number
+  name: string
+  vehicle: string
+  trigger: string
+  at: string
+  mode: 'live' | 'test'
+}
+
+export interface AutomationSucceededEvent {
+  automation_id: number
+  name: string
+  duration_ms: number
+  actions: number
+  mode: 'live' | 'test'
+}
+
+export interface AutomationFailedEvent {
+  automation_id: number
+  name: string
+  error: string
+  action_index: number
+  mode: 'live' | 'test'
+}
+
+export interface AutomationSkippedEvent {
+  automation_id: number
+  name: string
+  reason: string
+  mode: 'live' | 'test'
+}
+
+export interface AutomationStateChangedEvent {
+  automation_id: number
+  name: string
+  from: string
+  to: string
+  trigger: string
+  at: string
+  retry_count: number
+  consecutive_failures: number
+  mode: 'live' | 'test'
+}
+
+export type AutomationSSEEvent =
+  | { type: 'automation.triggered'; data: AutomationTriggeredEvent }
+  | { type: 'automation.succeeded'; data: AutomationSucceededEvent }
+  | { type: 'automation.failed'; data: AutomationFailedEvent }
+  | { type: 'automation.skipped'; data: AutomationSkippedEvent }
+  | { type: 'automation.state_changed'; data: AutomationStateChangedEvent }

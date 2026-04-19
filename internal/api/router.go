@@ -176,6 +176,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	anomalyHandler := NewAnomalyHandler(db)
 	energyFlowHandler := NewEnergyFlowHandler(db)
 	weeklyDigestHandler := NewWeeklyDigestHandler(db)
+	// SSE event hub for automation real-time events
+	automationEventHub := NewEventHub()
+	automationPublisher := NewAutomationEventPublisher(automationEventHub)
+
 	automationHandler := NewAutomationHandler(db,
 		WithCommandExecutor(action.NewCommandExecutor(
 			database.NewVehicleRepo(db),
@@ -183,6 +187,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			database.NewSettingsRepo(db),
 			teslaClient,
 		)),
+		WithAutomationEventPublisher(automationPublisher),
 	)
 	telemetryHandler := opt.TelemetryHandler
 	if telemetryHandler == nil {
@@ -343,6 +348,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/automations", func(r chi.Router) {
 			r.Get("/", automationHandler.List)
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/", automationHandler.Create)
+
+			// SSE stream for real-time automation events (static route before {id} param)
+			if cfg.Auth.AuthentikURL != "" || cfg.Auth.AuthentikHMACKey != "" {
+				r.With(AuthentikSSEAuth(cfg.Auth.AuthentikURL, cfg.Auth.AuthentikHMACKey)).Get("/events", SSEHandler(automationEventHub))
+			} else {
+				r.Get("/events", SSEHandler(automationEventHub))
+			}
 
 			// Import/Export (static routes before {id} param)
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/export", automationHandler.ExportBatch)
