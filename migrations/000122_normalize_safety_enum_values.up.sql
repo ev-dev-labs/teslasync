@@ -4,6 +4,9 @@
 -- (e.g., "ForwardCollisionSensitivityEarly" instead of "Early").
 -- This migration strips those prefixes for consistency with the new parse logic.
 
+-- Disable statement_timeout: bulk UPDATEs on large tables can exceed the default 30s.
+SET statement_timeout = 0;
+
 UPDATE safety_snapshots SET forward_collision_warning = CASE
     WHEN forward_collision_warning LIKE 'ForwardCollisionSensitivity%'
     THEN REPLACE(forward_collision_warning, 'ForwardCollisionSensitivity', '')
