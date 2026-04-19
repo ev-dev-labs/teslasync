@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
   Route, Clock, Gauge, Battery, ChevronRight, TrendingUp,
-  Zap, ArrowUpDown, MapPin, Download, Activity,
+  Zap, ArrowUpDown, MapPin, Download, Activity, DollarSign,
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
@@ -72,11 +72,12 @@ interface DriveCardProps {
   distanceUnit: string;
   speedUnit: string;
   efficiencyUnit: string;
+  formatEnergyCost?: (kwh: number) => string;
 }
 
 function DriveCard({
   drive, convertDistance, convertSpeed, convertEfficiency,
-  distanceUnit, speedUnit, efficiencyUnit,
+  distanceUnit, speedUnit, efficiencyUnit, formatEnergyCost,
 }: DriveCardProps) {
   const { t } = useTranslation();
   const actualDistance =
@@ -152,6 +153,12 @@ function DriveCard({
                   <Zap className="h-3 w-3" /> {fmtInt(effConverted)} {efficiencyUnit}
                 </span>
               )}
+              {formatEnergyCost && hasBattery && drive.startBatteryLevel != null && drive.endBatteryLevel != null && drive.startBatteryLevel > drive.endBatteryLevel && (
+                <span className="flex items-center gap-1 text-emerald-400/70">
+                  <DollarSign className="h-3 w-3" />
+                  ~{formatEnergyCost((drive.startBatteryLevel - drive.endBatteryLevel) * 0.75)}
+                </span>
+              )}
             </div>
 
             {(drive.startAddress || drive.endAddress) && (
@@ -189,6 +196,7 @@ export default function DrivesListPage() {
   const {
     convertDistance, convertSpeed, convertEfficiency,
     distanceUnit, speedUnit, efficiencyUnit,
+    formatEnergyCost,
   } = useSettings();
 
   /* Local UI state */
@@ -554,6 +562,7 @@ export default function DrivesListPage() {
                   distanceUnit={distanceUnit}
                   speedUnit={speedUnit}
                   efficiencyUnit={efficiencyUnit}
+                  formatEnergyCost={formatEnergyCost}
                 />
               </StaggerItem>
             ))}

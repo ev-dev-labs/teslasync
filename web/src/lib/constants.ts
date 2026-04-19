@@ -37,4 +37,5 @@ export const FUEL = {
   KG_CO2_PER_TREE_YEAR: 22,
   DEFAULT_GAS_PRICE_USD: 3.5,
   DEFAULT_MPG: 30,
+  GALLONS_TO_LITERS: 3.78541,
 } as const

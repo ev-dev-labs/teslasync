@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getSettings } from '@/api/settings'
 import type { AppSettings } from '@/api/types'
 import { setGlobalPrecision, fmtNumber } from '../lib/numberFormat'
-import { UNITS } from '../lib/constants'
+import { UNITS, FUEL } from '../lib/constants'
 
 const defaults: AppSettings = {
   unit_of_length: 'km',
@@ -97,6 +97,40 @@ export function useSettings() {
   const fmtPressure = (bar: number, d?: number): string =>
     `${fmtNumber(convertPressure(bar), d)} ${pressureUnit}`
 
+  // ---- Cost helpers ----
+  const costPerKwh = s.base_cost_per_kwh ?? 0.12
+  const currencySymbol = '$'
+
+  /** Format energy consumption (kWh) as a currency string */
+  const formatEnergyCost = (kwh: number): string => {
+    const cost = kwh * costPerKwh
+    return `${currencySymbol}${cost.toFixed(2)}`
+  }
+
+  /** Format a raw currency amount */
+  const formatCurrency = (amount: number, d = 2): string =>
+    `${currencySymbol}${amount.toFixed(d)}`
+
+  /** Calculate cost per user-preferred distance unit (input: kWh and miles from DB) */
+  const costPerDistanceUnit = (kwh: number, distanceMi: number): number | null => {
+    if (distanceMi <= 0) return null
+    const cost = kwh * costPerKwh
+    const dist = convertDistance(distanceMi)
+    return cost / dist
+  }
+
+  /** Estimate gas cost for same distance (input: miles from DB). Normalizes gas_unit (gallon/liter). */
+  const estimateGasCost = (distanceMi: number): number | null => {
+    const mpg = s.gas_efficiency_mpg ?? 0
+    const gasPrice = s.gas_price_per_unit ?? 0
+    if (mpg <= 0 || gasPrice <= 0 || distanceMi <= 0) return null
+    const gallonsUsed = distanceMi / mpg
+    if ((s.gas_unit ?? 'gallon') === 'liter') {
+      return gallonsUsed * FUEL.GALLONS_TO_LITERS * gasPrice
+    }
+    return gallonsUsed * gasPrice
+  }
+
   return {
     settings: s,
     isMiles,
@@ -118,5 +152,11 @@ export function useSettings() {
     fmtSpeed,
     fmtTemp,
     fmtPressure,
+    costPerKwh,
+    currencySymbol,
+    formatEnergyCost,
+    formatCurrency,
+    costPerDistanceUnit,
+    estimateGasCost,
   }
 }
