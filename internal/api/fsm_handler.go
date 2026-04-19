@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -10,18 +11,22 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/fsm"
 	"github.com/ev-dev-labs/teslasync/internal/fsm/charge"
 	"github.com/ev-dev-labs/teslasync/internal/fsm/drive"
+	"github.com/ev-dev-labs/teslasync/internal/fsm/update"
+	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 )
 
 // FSMHandler owns the new FSM-based vehicle state management.
-// Manages vehicle FSM + drive/charge sub-FSMs.
+// Manages vehicle FSM + drive/charge/software-update sub-FSMs.
 type FSMHandler struct {
 	mu        sync.Mutex
 	machines  map[int64]*fsm.VehicleFSM
-	drives    map[int64]*drive.SessionFSM  // active drive sub-FSMs per vehicle
-	charges   map[int64]*charge.SessionFSM // active charge sub-FSMs per vehicle
+	drives    map[int64]*drive.SessionFSM    // active drive sub-FSMs per vehicle
+	charges   map[int64]*charge.SessionFSM   // active charge sub-FSMs per vehicle
+	updates   map[int64]*update.UpdateFSM    // software update sub-FSMs per vehicle
 	stateRepo   *database.VehicleStateRepo
 	vehicleRepo *database.VehicleRepo
 	transRepo   *database.FSMTransitionRepo
+	mqttClient  *mqtt.Client // optional, for publishing update state to MQTT
 }
 
 // NewFSMHandler creates an authoritative FSM handler.
@@ -30,10 +35,16 @@ func NewFSMHandler(stateRepo *database.VehicleStateRepo, vehicleRepo *database.V
 		machines:    make(map[int64]*fsm.VehicleFSM),
 		drives:      make(map[int64]*drive.SessionFSM),
 		charges:     make(map[int64]*charge.SessionFSM),
+		updates:     make(map[int64]*update.UpdateFSM),
 		stateRepo:   stateRepo,
 		vehicleRepo: vehicleRepo,
 		transRepo:   transRepo,
 	}
+}
+
+// SetMQTTClient sets the optional MQTT client for publishing update state.
+func (h *FSMHandler) SetMQTTClient(mc *mqtt.Client) {
+	h.mqttClient = mc
 }
 
 // fsmAction handles all side effects of a vehicle state transition:
@@ -309,5 +320,60 @@ func (h *FSMHandler) Stats() map[string]int {
 		"vehicles": len(h.machines),
 		"drives":   len(h.drives),
 		"charges":  len(h.charges),
+		"updates":  len(h.updates),
+	}
+}
+
+// ProcessUpdateSignals processes software update signals through the update FSM.
+// Creates an UpdateFSM per vehicle on first call, logs transitions to fsm_transitions,
+// and optionally publishes state changes to MQTT.
+func (h *FSMHandler) ProcessUpdateSignals(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
+	h.mu.Lock()
+	ufsm, exists := h.updates[vehicleID]
+	if !exists {
+		// Seed current firmware version from the Version signal if available
+		currentVersion := ""
+		if v, ok := signals["Version"]; ok {
+			if s, ok := v.(string); ok {
+				currentVersion = s
+			}
+		}
+		ufsm = update.NewUpdateFSM(vehicleID, currentVersion)
+		h.updates[vehicleID] = ufsm
+	}
+	h.mu.Unlock()
+
+	events := ufsm.ProcessSignals(signals)
+
+	// Log transitions and publish MQTT
+	for _, ev := range events {
+		durationMs := ev.Duration.Milliseconds()
+
+		if h.transRepo != nil {
+			if err := h.transRepo.Insert(ctx, vehicleID, "software_update", nil,
+				string(ev.From), string(ev.To), string(ev.Trigger), "",
+				"immediate", ev.Snapshot, durationMs); err != nil {
+				log.Warn().Err(err).Int64("vehicle_id", vehicleID).
+					Str("from", string(ev.From)).Str("to", string(ev.To)).
+					Msg("fsm: failed to log software update transition")
+			}
+		}
+
+		// Publish to MQTT for Home Assistant integration
+		if h.mqttClient != nil {
+			vehicle, err := h.vehicleRepo.GetByID(ctx, vehicleID)
+			if err == nil && vehicle != nil && vehicle.VIN != "" {
+				h.mqttClient.Publish(vehicle.VIN+"/software_update/state", string(ev.To))
+				if tv, ok := ev.Snapshot["target_version"]; ok {
+					h.mqttClient.Publish(vehicle.VIN+"/software_update/version", fmt.Sprintf("%v", tv))
+				}
+				if dp, ok := ev.Snapshot["download_pct"]; ok {
+					h.mqttClient.Publish(vehicle.VIN+"/software_update/download_pct", fmt.Sprintf("%v", dp))
+				}
+				if ip, ok := ev.Snapshot["install_pct"]; ok {
+					h.mqttClient.Publish(vehicle.VIN+"/software_update/install_pct", fmt.Sprintf("%v", ip))
+				}
+			}
+		}
 	}
 }

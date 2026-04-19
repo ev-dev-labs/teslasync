@@ -138,6 +138,8 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 		staleTimeout = 5 * time.Minute
 	}
 	bgCtx, bgCancel := context.WithCancel(context.Background())
+	fsmh := NewFSMHandler(database.NewVehicleStateRepo(db), database.NewVehicleRepo(db), database.NewFSMTransitionRepo(db))
+	fsmh.SetMQTTClient(mc)
 	return &TelemetryHandler{
 		db:             db,
 		posRepo:        database.NewPositionRepo(db),
@@ -171,7 +173,7 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 		lastWriteAt:        make(map[string]time.Time),
 		accumulatedSignals: make(map[string]map[string]interface{}),
 		vehicleStates:      make(map[int64]*vehicleStateMachine),
-		fsmHandler:         NewFSMHandler(database.NewVehicleStateRepo(db), database.NewVehicleRepo(db), database.NewFSMTransitionRepo(db)),
+		fsmHandler:         fsmh,
 	}
 }
 
@@ -2482,6 +2484,11 @@ func (h *TelemetryHandler) trackVehicleConfig(ctx context.Context, vehicleID int
 	}
 	if err := h.vehicleConfigRepo.Insert(ctx, snap); err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store vehicle config snapshot")
+	}
+
+	// Process software update signals through the Update FSM
+	if h.fsmHandler != nil {
+		h.fsmHandler.ProcessUpdateSignals(ctx, vehicleID, signals)
 	}
 }
 

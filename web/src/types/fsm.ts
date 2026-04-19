@@ -42,7 +42,8 @@ export type FSMType =
   | 'command'
   | 'notification'
   | 'alert_cooldown'
-  | 'automation';
+  | 'automation'
+  | 'software_update';
 
 export const FSM_TYPE_OPTIONS: { value: FSMType; label: string }[] = [
   { value: 'all', label: 'All FSMs' },
@@ -52,6 +53,7 @@ export const FSM_TYPE_OPTIONS: { value: FSMType; label: string }[] = [
   { value: 'command', label: 'Commands' },
   { value: 'notification', label: 'Notifications' },
   { value: 'automation', label: 'Automations' },
+  { value: 'software_update', label: 'Software Updates' },
 ];
 
 export const HOURS_OPTIONS = [
@@ -76,6 +78,7 @@ export const FSM_STATES: Record<string, string[]> = {
     'idle', 'evaluating', 'executing', 'succeeded', 'partial',
     'failed', 'retrying', 'gave_up', 'skipped', 'cooldown', 'disabled',
   ],
+  software_update: ['no_update', 'available', 'scheduled', 'downloading', 'downloaded', 'installing', 'installed', 'failed'],
 };
 
 /** Typical transition edges per FSM type: [from, to][] */
@@ -124,6 +127,19 @@ export const FSM_EDGES: Record<string, [string, string][]> = {
     ['skipped', 'idle'],
     ['cooldown', 'idle'],
     ['disabled', 'idle'],
+  ],
+  software_update: [
+    ['no_update', 'available'],
+    ['available', 'scheduled'], ['available', 'downloading'], ['available', 'no_update'],
+    ['scheduled', 'downloading'], ['scheduled', 'no_update'],
+    ['downloading', 'downloaded'], ['downloading', 'failed'],
+    ['downloaded', 'installing'],
+    ['installing', 'installed'], ['installing', 'failed'],
+    ['installed', 'no_update'],
+    ['failed', 'available'], ['failed', 'no_update'],
+    ['available', 'installed'], ['scheduled', 'installed'],
+    ['downloading', 'installed'], ['downloaded', 'installed'],
+    ['installing', 'installed'], ['failed', 'installed'],
   ],
 };
 
@@ -189,6 +205,16 @@ export const STATE_COLORS: Record<string, Record<string, { bg: string; text: str
     skipped:    { bg: 'bg-gray-600/10', text: 'text-white/30', dot: 'bg-gray-500' },
     cooldown:   { bg: 'bg-purple-500/10', text: 'text-purple-400', dot: 'bg-purple-400' },
     disabled:   { bg: 'bg-red-500/5', text: 'text-red-400/50', dot: 'bg-red-400/50' },
+  },
+  software_update: {
+    no_update:    { bg: 'bg-gray-500/10',   text: 'text-gray-400',   dot: 'bg-gray-400' },
+    available:    { bg: 'bg-blue-500/10',   text: 'text-blue-400',   dot: 'bg-blue-400' },
+    scheduled:    { bg: 'bg-purple-500/10', text: 'text-purple-400', dot: 'bg-purple-400' },
+    downloading:  { bg: 'bg-cyan-500/10',   text: 'text-cyan-400',   dot: 'bg-cyan-400' },
+    downloaded:   { bg: 'bg-teal-500/10',   text: 'text-teal-400',   dot: 'bg-teal-400' },
+    installing:   { bg: 'bg-amber-500/10',  text: 'text-amber-400',  dot: 'bg-amber-400' },
+    installed:    { bg: 'bg-green-500/10',  text: 'text-green-400',  dot: 'bg-green-400' },
+    failed:       { bg: 'bg-red-500/10',    text: 'text-red-400',    dot: 'bg-red-400' },
   },
 };
 
