@@ -62,6 +62,7 @@ const Mileage = lazy(() => import('./features/analytics/pages/MileagePage'))
 const TrueCostOwnership = lazy(() => import('./features/analytics/pages/TrueCostPage'))
 const WeeklyDigest = lazy(() => import('./features/analytics/pages/WeeklyDigestPage'))
 const Timeline = lazy(() => import('./features/analytics/pages/TimelinePage'))
+const VehicleComparison = lazy(() => import('./features/analytics/pages/ComparisonPage'))
 
 // Maps & Location
 const LiveMap = lazy(() => import('./features/maps/pages/MapOverviewPage'))
@@ -238,6 +239,7 @@ export default function App() {
         <Route path="regen-efficiency" element={<SafeRoute name="RegenEfficiency"><RegenEfficiency /></SafeRoute>} />
         <Route path="battery-degradation" element={<SafeRoute name="BatteryDegradation"><BatteryDegradation /></SafeRoute>} />
         <Route path="tco" element={<SafeRoute name="TrueCostOwnership"><TrueCostOwnership /></SafeRoute>} />
+        <Route path="vehicle-comparison" element={<SafeRoute name="VehicleComparison"><VehicleComparison /></SafeRoute>} />
         <Route path="sleep-efficiency" element={<SafeRoute name="SleepEfficiency"><SleepEfficiency /></SafeRoute>} />
         <Route path="charging-heatmap" element={<SafeRoute name="ChargingHeatmap"><ChargingHeatmap /></SafeRoute>} />
         <Route path="speed-profile" element={<SafeRoute name="SpeedProfile"><SpeedProfile /></SafeRoute>} />

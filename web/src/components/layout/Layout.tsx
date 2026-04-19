@@ -29,6 +29,7 @@ import {
   Navigation,
   Activity,
   GitCompare,
+  ArrowLeftRight,
   Wallet,
   BedDouble,
   Shield,
@@ -79,6 +80,7 @@ const navI18nKeys: Record<string, string> = {
   'Energy': 'nav.energy',
   'Battery Health': 'nav.battery',
   'Analytics': 'nav.analytics',
+  'Vehicle Comparison': 'nav.vehicleComparison',
   'Efficiency': 'nav.efficiency',
   'Mileage': 'nav.mileage',
   'Timeline': 'nav.timeline',
@@ -185,6 +187,7 @@ export const navSections = [
     items: [
       { to: '/analytics', icon: BarChart3, label: 'Analytics', color: 'text-indigo-400' },
       { to: '/statistics', icon: BarChart3, label: 'Statistics', color: 'text-cyan-400' },
+      { to: '/vehicle-comparison', icon: ArrowLeftRight, label: 'Vehicle Comparison', color: 'text-orange-400', minVehicles: 2 },
       { to: '/timeline', icon: Clock, label: 'Timeline', color: 'text-sky-400' },
       { to: '/locations', icon: MapPin, label: 'Locations', color: 'text-emerald-400' },
     ],
@@ -376,7 +379,9 @@ export default function Layout() {
                 {section.title}
               </p>
               <div className="space-y-0.5">
-                {section.items.map(({ to, icon: Icon, label, color }) => {
+                {section.items
+                  .filter((item) => !('minVehicles' in item) || (vehicles?.length ?? 0) >= (item as { minVehicles?: number }).minVehicles!)
+                  .map(({ to, icon: Icon, label, color }) => {
                   const isActive = to === '/'
                     ? location.pathname === '/'
                     : location.pathname === to || location.pathname.startsWith(to + '/')
