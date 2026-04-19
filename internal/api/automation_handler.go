@@ -645,6 +645,386 @@ func (h *AutomationHandler) checkWebhookTokenUniqueness(r *http.Request, config 
 	return nil
 }
 
+// ── Test Run ────────────────────────────────────────────────────────────
+
+// testRunResponse is the top-level response for a dry-run test.
+type testRunResponse struct {
+	AutomationID   int64                `json:"automation_id"`
+	AutomationName string               `json:"automation_name"`
+	VehicleID      *int64               `json:"vehicle_id"`
+	TriggerType    string               `json:"trigger_type"`
+	Status         string               `json:"status"` // always "test"
+	ConditionsMet  bool                 `json:"conditions_met"`
+	Conditions     []testConditionResult `json:"conditions"`
+	Actions        []testActionResult   `json:"actions"`
+	ExecutionPlan  testExecutionPlan    `json:"execution_plan"`
+	HistoryID      int64                `json:"history_id"`
+	Timestamp      time.Time            `json:"timestamp"`
+}
+
+// testConditionResult captures the evaluation of a single condition during dry-run.
+type testConditionResult struct {
+	Index    int             `json:"index"`
+	Type     string          `json:"type"`
+	Result   string          `json:"result"` // "met", "not_met", "unknown"
+	Reason   string          `json:"reason"`
+	Snapshot json.RawMessage `json:"snapshot,omitempty"`
+}
+
+// testActionResult captures the simulated outcome of a single action.
+type testActionResult struct {
+	Index      int             `json:"index"`
+	ActionType string          `json:"action_type"`
+	Config     json.RawMessage `json:"action_config"`
+	Valid      bool            `json:"valid"`
+	Error      string          `json:"error,omitempty"`
+	Simulated  bool            `json:"simulated"`
+	WouldSkip  bool            `json:"would_skip,omitempty"`
+	SkipReason string          `json:"skip_reason,omitempty"`
+	Output     json.RawMessage `json:"output,omitempty"`
+}
+
+// testExecutionPlan summarises what the automation would do.
+type testExecutionPlan struct {
+	TotalActions         int  `json:"total_actions"`
+	ValidActions         int  `json:"valid_actions"`
+	StopOnFailure        bool `json:"stop_on_failure"`
+	ConditionsCount      int  `json:"conditions_count"`
+	AllConditionsMet     bool `json:"all_conditions_met"`
+	HasUnknownConditions bool `json:"has_unknown_conditions"`
+}
+
+// TestRun performs a dry-run of an automation: evaluates the trigger snapshot,
+// checks conditions, and resolves the action chain using a mock executor.
+// The test run is logged in history with status "test". No real commands
+// are sent and no execution counters are updated.
+//
+//	POST /automations/{id}/test-run
+func (h *AutomationHandler) TestRun(w http.ResponseWriter, r *http.Request) {
+	id, err := urlParamInt64(r, "id")
+	if err != nil || id <= 0 {
+		writeError(w, http.StatusBadRequest, "invalid automation ID")
+		return
+	}
+
+	a, err := h.repo.GetByID(r.Context(), id)
+	if err != nil {
+		log.Error().Err(err).Int64("id", id).Msg("test-run: failed to get automation")
+		writeError(w, http.StatusInternalServerError, "failed to get automation")
+		return
+	}
+	if a == nil {
+		writeError(w, http.StatusNotFound, "automation not found")
+		return
+	}
+
+	now := time.Now().UTC()
+
+	// ── Evaluate conditions ───────────────────────────────────────────
+	condResults := h.evaluateTestConditions(a, now)
+
+	allMet := true
+	hasUnknown := false
+	for _, cr := range condResults {
+		switch cr.Result {
+		case "not_met":
+			allMet = false
+		case "unknown":
+			hasUnknown = true
+		}
+	}
+
+	// ── Validate & simulate actions ───────────────────────────────────
+	actionResults, validCount := h.simulateActions(a, allMet)
+
+	// ── Persist history record with status "test" ─────────────────────
+	conditionsJSON, _ := json.Marshal(condResults)
+	actionsJSON, _ := json.Marshal(actionResults)
+	triggerSnapshot, _ := json.Marshal(map[string]interface{}{
+		"type":      "test_run",
+		"simulated": true,
+	})
+
+	durationMs := int(time.Since(now).Milliseconds())
+	completedAt := time.Now().UTC()
+	hist := &models.AutomationHistory{
+		AutomationID:       a.ID,
+		AutomationName:     a.Name,
+		VehicleID:          a.VehicleID,
+		TriggeredAt:        now,
+		CompletedAt:        &completedAt,
+		DurationMs:         &durationMs,
+		TriggerType:        a.TriggerType,
+		TriggerSnapshot:    triggerSnapshot,
+		ConditionsMet:      allMet,
+		ConditionsSnapshot: conditionsJSON,
+		ActionsExecuted:    actionsJSON,
+		ActionsTotal:       len(actionResults),
+		ActionsSucceeded:   validCount,
+		ActionsFailed:      0,
+		Status:             "test",
+	}
+
+	if err := h.historyRepo.Create(r.Context(), hist); err != nil {
+		log.Error().Err(err).Int64("automation_id", a.ID).Msg("test-run: failed to log history")
+		writeError(w, http.StatusInternalServerError, "failed to log test run")
+		return
+	}
+
+	log.Info().
+		Int64("automation_id", a.ID).
+		Str("automation", a.Name).
+		Bool("conditions_met", allMet).
+		Int("actions", len(actionResults)).
+		Msg("automation test-run completed")
+
+	writeJSON(w, http.StatusOK, testRunResponse{
+		AutomationID:   a.ID,
+		AutomationName: a.Name,
+		VehicleID:      a.VehicleID,
+		TriggerType:    a.TriggerType,
+		Status:         "test",
+		ConditionsMet:  allMet,
+		Conditions:     condResults,
+		Actions:        actionResults,
+		ExecutionPlan: testExecutionPlan{
+			TotalActions:         len(actionResults),
+			ValidActions:         validCount,
+			StopOnFailure:        a.StopOnFailure,
+			ConditionsCount:      len(condResults),
+			AllConditionsMet:     allMet,
+			HasUnknownConditions: hasUnknown,
+		},
+		HistoryID: hist.ID,
+		Timestamp: now,
+	})
+}
+
+// evaluateTestConditions parses and evaluates each condition in the
+// automation. Time-based conditions use real time; state-dependent
+// conditions that require unavailable context are reported as "unknown".
+func (h *AutomationHandler) evaluateTestConditions(a *models.Automation, now time.Time) []testConditionResult {
+	if len(a.Conditions) == 0 || string(a.Conditions) == "[]" || string(a.Conditions) == "null" {
+		return []testConditionResult{}
+	}
+
+	var rawConditions []json.RawMessage
+	if err := json.Unmarshal(a.Conditions, &rawConditions); err != nil {
+		return []testConditionResult{{
+			Index:  0,
+			Type:   "parse_error",
+			Result: "unknown",
+			Reason: "failed to parse conditions array: " + err.Error(),
+		}}
+	}
+
+	results := make([]testConditionResult, 0, len(rawConditions))
+
+	for i, raw := range rawConditions {
+		var peek struct {
+			Type string `json:"type"`
+		}
+		if err := json.Unmarshal(raw, &peek); err != nil {
+			results = append(results, testConditionResult{
+				Index:  i,
+				Type:   "unknown",
+				Result: "unknown",
+				Reason: "failed to parse condition: " + err.Error(),
+			})
+			continue
+		}
+
+		cr := h.evaluateSingleCondition(i, peek.Type, raw, a, now)
+		results = append(results, cr)
+	}
+
+	return results
+}
+
+// evaluateSingleCondition evaluates one condition, dispatching to the
+// appropriate typed evaluator.
+func (h *AutomationHandler) evaluateSingleCondition(
+	index int, condType string, raw json.RawMessage,
+	a *models.Automation, now time.Time,
+) testConditionResult {
+	base := testConditionResult{Index: index, Type: condType}
+
+	switch condType {
+	case "time_window":
+		cfg, err := condition.ParseTimeWindowConfig(raw)
+		if err != nil {
+			return withUnknown(base, "invalid config: "+err.Error())
+		}
+		res, snapshot, err := condition.EvaluateTimeWindow(cfg, now)
+		if err != nil {
+			return withUnknown(base, "evaluation error: "+err.Error())
+		}
+		return withResult(base, res, snapshot)
+
+	case "day_filter":
+		cfg, err := condition.ParseDayFilterConfig(raw)
+		if err != nil {
+			return withUnknown(base, "invalid config: "+err.Error())
+		}
+		res, snapshot, err := condition.EvaluateDayFilter(cfg, now)
+		if err != nil {
+			return withUnknown(base, "evaluation error: "+err.Error())
+		}
+		return withResult(base, res, snapshot)
+
+	case "seasonal":
+		cfg, err := condition.ParseSeasonalConfig(raw)
+		if err != nil {
+			return withUnknown(base, "invalid config: "+err.Error())
+		}
+		res, snapshot, err := condition.EvaluateSeasonal(cfg, now)
+		if err != nil {
+			return withUnknown(base, "evaluation error: "+err.Error())
+		}
+		return withResult(base, res, snapshot)
+
+	case "cooldown":
+		cfg, err := condition.ParseCooldownConfig(raw)
+		if err != nil {
+			return withUnknown(base, "invalid config: "+err.Error())
+		}
+		res, snapshot, err := condition.EvaluateCooldown(cfg, a.LastTriggeredAt, now)
+		if err != nil {
+			return withUnknown(base, "evaluation error: "+err.Error())
+		}
+		return withResult(base, res, snapshot)
+
+	case "state_check":
+		if _, err := condition.ParseStateCheckConfig(raw); err != nil {
+			return withUnknown(base, "invalid config: "+err.Error())
+		}
+		return withUnknown(base, "requires live vehicle state (not available in test-run)")
+
+	case "location":
+		if _, err := condition.ParseLocationConfig(raw); err != nil {
+			return withUnknown(base, "invalid config: "+err.Error())
+		}
+		return withUnknown(base, "requires live vehicle position and geofence data (not available in test-run)")
+
+	case "variable_check":
+		if _, err := condition.ParseVariableCheckConfig(raw); err != nil {
+			return withUnknown(base, "invalid config: "+err.Error())
+		}
+		return withUnknown(base, "requires automation variable store (not available in test-run)")
+
+	default:
+		return withUnknown(base, "unknown condition type: "+condType)
+	}
+}
+
+// withResult builds a testConditionResult from a condition.Result.
+func withResult(base testConditionResult, res condition.Result, snapshot json.RawMessage) testConditionResult {
+	base.Snapshot = snapshot
+	base.Reason = res.Reason
+	if res.Met {
+		base.Result = "met"
+	} else {
+		base.Result = "not_met"
+	}
+	return base
+}
+
+// withUnknown builds a testConditionResult that could not be evaluated.
+func withUnknown(base testConditionResult, reason string) testConditionResult {
+	base.Result = "unknown"
+	base.Reason = reason
+	return base
+}
+
+// simulateActions parses the automation's action chain, validates each
+// action config, and returns simulated results. Returns the results and
+// the count of valid actions.
+func (h *AutomationHandler) simulateActions(a *models.Automation, conditionsMet bool) ([]testActionResult, int) {
+	if len(a.Actions) == 0 || string(a.Actions) == "[]" || string(a.Actions) == "null" {
+		return []testActionResult{}, 0
+	}
+
+	configs, err := action.ParseActions(a.Actions)
+	if err != nil {
+		return []testActionResult{{
+			Index:      0,
+			ActionType: "parse_error",
+			Simulated:  true,
+			Error:      "failed to parse actions: " + err.Error(),
+		}}, 0
+	}
+
+	simulatedOutput, _ := json.Marshal(map[string]interface{}{
+		"success":   true,
+		"simulated": true,
+	})
+
+	results := make([]testActionResult, 0, len(configs))
+	validCount := 0
+	stopped := false
+
+	for i, cfg := range configs {
+		result := testActionResult{
+			Index:      i,
+			ActionType: cfg.Type,
+			Config:     cfg.Raw,
+			Simulated:  true,
+		}
+
+		// If conditions not met, all actions would be skipped.
+		if !conditionsMet {
+			result.WouldSkip = true
+			result.SkipReason = "conditions not met"
+			results = append(results, result)
+			continue
+		}
+
+		// If a previous action was invalid and stop_on_failure is set.
+		if stopped {
+			result.WouldSkip = true
+			result.SkipReason = "previous action invalid (stop_on_failure)"
+			results = append(results, result)
+			continue
+		}
+
+		// Validate per-type config.
+		if parseErr := validateActionConfig(cfg); parseErr != nil {
+			result.Error = parseErr.Error()
+			if a.StopOnFailure {
+				stopped = true
+			}
+		} else {
+			result.Valid = true
+			result.Output = simulatedOutput
+			validCount++
+		}
+
+		results = append(results, result)
+	}
+
+	return results, validCount
+}
+
+// validateActionConfig runs the per-type parser for deeper config validation.
+func validateActionConfig(cfg action.ActionConfig) error {
+	switch cfg.Type {
+	case "command":
+		_, err := action.ParseCommandConfig(cfg.Raw)
+		return err
+	case "notify":
+		_, err := action.ParseNotifyConfig(cfg.Raw)
+		return err
+	case "wait":
+		_, err := action.ParseWaitConfig(cfg.Raw)
+		return err
+	case "set_variable":
+		_, err := action.ParseSetVariableConfig(cfg.Raw)
+		return err
+	default:
+		return nil
+	}
+}
+
 var errWebhookTokenDuplicate = &duplicateTokenError{}
 
 type duplicateTokenError struct{}

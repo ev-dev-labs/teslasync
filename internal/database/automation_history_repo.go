@@ -230,11 +230,11 @@ func (r *AutomationHistoryRepo) GetStats(ctx context.Context, f HistoryFilter) (
 	where, args := buildHistoryWhere(f)
 
 	query := `SELECT
-		COUNT(*) FILTER (WHERE status NOT IN ('running','skipped','cancelled')),
+		COUNT(*) FILTER (WHERE status NOT IN ('running','skipped','cancelled','test')),
 		COUNT(*) FILTER (WHERE status = 'success'),
 		COUNT(*) FILTER (WHERE status = 'failed'),
 		COUNT(*) FILTER (WHERE status = 'partial'),
-		COALESCE(AVG(duration_ms) FILTER (WHERE duration_ms IS NOT NULL), 0)
+		COALESCE(AVG(duration_ms) FILTER (WHERE duration_ms IS NOT NULL AND status != 'test'), 0)
 	FROM automation_history` + where
 
 	s := &HistoryStats{}
