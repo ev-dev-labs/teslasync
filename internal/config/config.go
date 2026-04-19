@@ -97,6 +97,17 @@ func (d DatabaseConfig) DSN() string {
 	)
 }
 
+// MigrationDSN returns a DSN without statement_timeout. Migrations use
+// pg_advisory_lock which must wait indefinitely for the lock — a statement
+// timeout would kill the lock acquisition and crash the pod.
+func (d DatabaseConfig) MigrationDSN() string {
+	return fmt.Sprintf(
+		"postgres://%s:%s@%s:%d/%s?sslmode=%s&connect_timeout=%d",
+		d.User, d.Password, d.Host, d.Port, d.Name, d.SSLMode,
+		d.ConnectTimeout,
+	)
+}
+
 type TeslaConfig struct {
 	ClientID        string
 	ClientSecret    string

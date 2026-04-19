@@ -51,6 +51,10 @@ spec:
           env:
             - name: HEALTH_PORT
               value: "8082"
+            - name: DATABASE_MAX_CONNS
+              value: {{ .Values.exportWorker.dbMaxConns | default 5 | quote }}
+            - name: DATABASE_MIN_CONNS
+              value: {{ .Values.exportWorker.dbMinConns | default 2 | quote }}
           envFrom:
             - configMapRef:
                 name: {{ include "teslasync.fullname" . }}

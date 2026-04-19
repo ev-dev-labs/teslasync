@@ -32,6 +32,10 @@ spec:
           env:
             - name: MIGRATE_ONLY
               value: "true"
+            - name: DATABASE_MAX_CONNS
+              value: "2"
+            - name: DATABASE_MIN_CONNS
+              value: "1"
           envFrom:
             - configMapRef:
                 name: {{ include "teslasync.fullname" . }}

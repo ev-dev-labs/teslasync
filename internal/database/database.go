@@ -90,9 +90,10 @@ func (db *DB) Close() {
 
 // Migrate applies pending database migrations from the given path
 // (e.g. "file://migrations") using golang-migrate.
-func (db *DB) Migrate(migrationsPath string) error {
-	connStr := db.Pool.Config().ConnConfig.ConnString()
-	return runMigrations(connStr, migrationsPath)
+// Uses MigrationDSN() which excludes statement_timeout so pg_advisory_lock
+// can wait indefinitely without being killed.
+func (db *DB) Migrate(migrationsPath string, cfg config.DatabaseConfig) error {
+	return runMigrations(cfg.MigrationDSN(), migrationsPath)
 }
 
 // Health checks database connectivity with a 3-second deadline.

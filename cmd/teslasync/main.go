@@ -98,7 +98,7 @@ func main() {
 	defer db.Close()
 	health.RecordSuccess("database")
 
-	if err := db.Migrate(cfg.Database.MigrationsPath); err != nil {
+	if err := db.Migrate(cfg.Database.MigrationsPath, cfg.Database); err != nil {
 		log.Fatal().Err(err).Msg("failed to run migrations")
 	}
 	log.Info().Msg("database migrations applied")
