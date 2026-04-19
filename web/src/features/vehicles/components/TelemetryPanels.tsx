@@ -515,9 +515,9 @@ export function LiveTelemetryPanels({
                         securityData.locked ? 'text-green-400' : 'text-amber-400',
                       )}
                     >
-                      {securityData.locked ? 'Locked' : 'Unlocked'}
+                      {securityData.locked ? t('common.locked', 'Locked') : t('common.unlocked', 'Unlocked')}
                     </p>
-                    <p className="text-[10px] text-[var(--text-muted)]">Vehicle lock status</p>
+                    <p className="text-[10px] text-white/40">{t('telemetry.lockStatus', 'Vehicle lock status')}</p>
                   </div>
                 </div>
 
