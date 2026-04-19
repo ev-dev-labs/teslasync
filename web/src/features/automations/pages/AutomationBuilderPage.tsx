@@ -23,6 +23,7 @@ import { FadeIn } from '@/components/motion/FadeIn';
 import { FormSection } from '@/components/forms/FormSection';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useVehicles } from '@/api/hooks/useVehicles';
+import { useNotificationChannels } from '@/api/hooks/useNotifications';
 import {
   useAutomation,
   useCreateAutomation,
@@ -36,7 +37,7 @@ import { ConditionBuilder } from './ConditionBuilder';
 import { ActionBuilder } from './ActionBuilder';
 import { ConflictWarnings } from './ConflictWarnings';
 import {
-  Save, PlayCircle, X, Zap, ArrowLeft, AlertTriangle,
+  Save, PlayCircle, X, Zap, ArrowLeft, AlertTriangle, Bell,
 } from 'lucide-react';
 import type { Automation, AutomationConflict } from '@/api/types';
 
@@ -55,6 +56,7 @@ interface FormState {
   stop_on_failure: boolean;
   notify_on_run: boolean;
   notify_on_failure: boolean;
+  notify_channels: number[];
   priority: number;
   tags: string[];
   preset_id: string | null;
@@ -74,6 +76,7 @@ function getInitialForm(): FormState {
     stop_on_failure: false,
     notify_on_run: true,
     notify_on_failure: true,
+    notify_channels: [],
     priority: 50,
     tags: [],
     preset_id: null,
@@ -94,6 +97,7 @@ function automationToForm(a: Automation): FormState {
     stop_on_failure: a.stop_on_failure ?? false,
     notify_on_run: a.notify_on_run ?? true,
     notify_on_failure: a.notify_on_failure ?? true,
+    notify_channels: a.notify_channels ?? [],
     priority: a.priority ?? 50,
     tags: a.tags ?? [],
     preset_id: a.preset_id ?? null,
@@ -114,6 +118,7 @@ function formToPayload(form: FormState): AutomationFormData {
     stop_on_failure: form.stop_on_failure,
     notify_on_run: form.notify_on_run,
     notify_on_failure: form.notify_on_failure,
+    notify_channels: form.notify_channels.length > 0 ? form.notify_channels : undefined,
     priority: form.priority,
     tags: form.tags,
     preset_id: form.preset_id,
@@ -147,6 +152,7 @@ export default function AutomationBuilderPage() {
   const { data: existingAutomation, isLoading: isLoadingAutomation, error: loadError } =
     useAutomation(automationId);
   const { data: vehicles } = useVehicles();
+  const { data: channels } = useNotificationChannels();
   const { data: preset } = useAutomationPreset(presetId);
 
   // ── Mutations ───────────────────────────────────────────────────────
@@ -187,6 +193,7 @@ export default function AutomationBuilderPage() {
         stop_on_failure: preset.stop_on_failure ?? false,
         notify_on_run: preset.notify_on_run ?? true,
         notify_on_failure: preset.notify_on_failure ?? true,
+        notify_channels: [],
         priority: preset.priority ?? 50,
         tags: preset.tags ?? [],
         preset_id: preset.id,
@@ -199,6 +206,16 @@ export default function AutomationBuilderPage() {
   useEffect(() => {
     setHydrated(false);
   }, [automationId]);
+
+  // Auto-select all enabled channels when channels load (only for new automations)
+  useEffect(() => {
+    if (!isEdit && channels && channels.length > 0 && form.notify_channels.length === 0 && !dirty) {
+      const enabledIds = channels.filter(c => c.enabled).map(c => c.id);
+      if (enabledIds.length > 0) {
+        setForm(prev => ({ ...prev, notify_channels: enabledIds }));
+      }
+    }
+  }, [channels, isEdit, form.notify_channels.length, dirty]);
 
   // Dirty-state guard
   useEffect(() => {
@@ -471,6 +488,72 @@ export default function AutomationBuilderPage() {
                 onChange={(v) => update('stop_on_failure', v)}
               />
             </div>
+
+            {/* Notification channels selector */}
+            {(form.notify_on_run || form.notify_on_failure) && (
+              <div className="mt-4 rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Bell className="h-4 w-4 text-cyan-400" />
+                    <span className="text-sm font-medium text-white/80">
+                      {t('automations.builder.notifyChannels', 'Notification Channels')}
+                    </span>
+                  </div>
+                  {(channels ?? []).length > 0 && (
+                    <button
+                      type="button"
+                      className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
+                      onClick={() => {
+                        const allIds = (channels ?? []).filter(c => c.enabled).map(c => c.id);
+                        const allSelected = allIds.every(id => form.notify_channels.includes(id));
+                        update('notify_channels', allSelected ? [] : allIds);
+                      }}
+                    >
+                      {(channels ?? []).filter(c => c.enabled).every(c => form.notify_channels.includes(c.id))
+                        ? t('automations.builder.deselectAll', 'Deselect all')
+                        : t('automations.builder.selectAll', 'Select all')}
+                    </button>
+                  )}
+                </div>
+                {(channels ?? []).length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {(channels ?? []).map((ch) => {
+                      const selected = form.notify_channels.includes(ch.id);
+                      return (
+                        <button
+                          key={ch.id}
+                          type="button"
+                          disabled={!ch.enabled}
+                          onClick={() => {
+                            const next = selected
+                              ? form.notify_channels.filter(id => id !== ch.id)
+                              : [...form.notify_channels, ch.id];
+                            update('notify_channels', next);
+                          }}
+                          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
+                            !ch.enabled
+                              ? 'border-white/[0.04] bg-white/[0.02] text-white/30 cursor-not-allowed'
+                              : selected
+                                ? 'border-cyan-500/40 bg-cyan-500/10 text-cyan-300 shadow-[0_0_8px_rgba(0,200,255,0.1)]'
+                                : 'border-white/[0.08] bg-white/[0.03] text-white/50 hover:border-white/[0.15] hover:text-white/70'
+                          }`}
+                        >
+                          <span className={`h-1.5 w-1.5 rounded-full ${
+                            !ch.enabled ? 'bg-white/20' : selected ? 'bg-cyan-400' : 'bg-white/30'
+                          }`} />
+                          {ch.name ?? ch.type}
+                          <span className="text-[10px] text-white/30 ml-0.5">({ch.type})</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-white/40">
+                    {t('automations.builder.noChannels', 'No notification channels configured. Go to Notifications to set up channels.')}
+                  </p>
+                )}
+              </div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
               <Input
                 label={t('automations.builder.cooldown', 'Cooldown (minutes)')}

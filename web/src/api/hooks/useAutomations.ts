@@ -23,6 +23,7 @@ export interface AutomationFormData {
   stop_on_failure: boolean;
   notify_on_run: boolean;
   notify_on_failure: boolean;
+  notify_channels?: number[];
   priority: number;
   tags: string[];
   preset_id?: string | null;

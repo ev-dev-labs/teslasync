@@ -1499,6 +1499,7 @@ export interface Automation {
   stop_on_failure: boolean
   notify_on_run: boolean
   notify_on_failure: boolean
+  notify_channels?: number[] | null
   seasonal_start: number | null
   seasonal_end: number | null
   priority: number

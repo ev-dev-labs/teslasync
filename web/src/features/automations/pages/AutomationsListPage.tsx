@@ -4,7 +4,8 @@
  * Displays automation cards with toggles, a stats bar, filters,
  * and a live activity feed powered by SSE.
  */
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
@@ -101,6 +102,7 @@ function buildVehicleLookup(vehicles: { id: number; display_name: string }[]): M
 
 export default function AutomationsListPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   usePageTitle(t('automations.title', 'Automations'));
 
   // Data hooks
@@ -114,6 +116,25 @@ export default function AutomationsListPage() {
   const deleteMutation = useDeleteAutomation();
   const testRunMutation = useTestRunAutomation();
   const reEnableMutation = useReEnableAutomation();
+
+  // Import file ref
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const handleImportFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const body = Array.isArray(data) ? data : [data];
+      const { request } = await import('@/api/client');
+      await request('/automations/import', { method: 'POST', body: JSON.stringify(body) });
+      window.location.reload();
+    } catch (err) {
+      console.error('Import failed:', err);
+    } finally {
+      if (importInputRef.current) importInputRef.current.value = '';
+    }
+  }, []);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -198,11 +219,18 @@ export default function AutomationsListPage() {
       loading={isLoading}
       actions={
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm">
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".json"
+            className="hidden"
+            onChange={handleImportFile}
+          />
+          <Button variant="ghost" size="sm" onClick={() => importInputRef.current?.click()}>
             <Upload className="mr-1.5 h-4 w-4" />
             {t('automations.import', 'Import')}
           </Button>
-          <Button variant="primary" size="sm">
+          <Button variant="primary" size="sm" onClick={() => navigate('/automations/new')}>
             <Plus className="mr-1.5 h-4 w-4" />
             {t('automations.create', 'Create')}
           </Button>
