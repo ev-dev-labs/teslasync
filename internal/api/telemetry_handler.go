@@ -1354,6 +1354,20 @@ func normalizeFleetUnits(signals map[string]interface{}) {
 			signals["Gear"] = parsed
 		}
 	}
+
+	// Safety enums: strip Tesla prefixes (e.g., "ForwardCollisionSensitivityEarly" → "Early")
+	if v, ok := signals["ForwardCollisionWarning"]; ok {
+		signals["ForwardCollisionWarning"] = enums.ParseForwardCollisionWarning(toString(v))
+	}
+	if v, ok := signals["LaneDepartureAvoidance"]; ok {
+		signals["LaneDepartureAvoidance"] = enums.ParseLaneDepartureAvoidance(toString(v))
+	}
+	if v, ok := signals["SpeedLimitWarning"]; ok {
+		signals["SpeedLimitWarning"] = enums.ParseSpeedLimitWarning(toString(v))
+	}
+	if v, ok := signals["CruiseFollowDistance"]; ok {
+		signals["CruiseFollowDistance"] = enums.ParseCruiseFollowDistance(toString(v))
+	}
 }
 
 func toFloat(v interface{}) float64 {
@@ -2631,7 +2645,7 @@ func (h *TelemetryHandler) trackSafety(ctx context.Context, vehicleID int64, sig
 		snap.BlindSpotCollisionWarning = &b
 	}
 	if v, ok := signals["CruiseFollowDistance"]; ok {
-		s := toString(v)
+		s := enums.ParseCruiseFollowDistance(toString(v))
 		snap.CruiseFollowDistance = &s
 	}
 	if v, ok := signals["EmergencyLaneDepartureAvoidance"]; ok {
@@ -2639,15 +2653,15 @@ func (h *TelemetryHandler) trackSafety(ctx context.Context, vehicleID int64, sig
 		snap.EmergencyLaneDepartureAvoidance = &b
 	}
 	if v, ok := signals["ForwardCollisionWarning"]; ok {
-		s := toString(v)
+		s := enums.ParseForwardCollisionWarning(toString(v))
 		snap.ForwardCollisionWarning = &s
 	}
 	if v, ok := signals["LaneDepartureAvoidance"]; ok {
-		s := toString(v)
+		s := enums.ParseLaneDepartureAvoidance(toString(v))
 		snap.LaneDepartureAvoidance = &s
 	}
 	if v, ok := signals["SpeedLimitWarning"]; ok {
-		s := toString(v)
+		s := enums.ParseSpeedLimitWarning(toString(v))
 		snap.SpeedLimitWarning = &s
 	}
 	if v, ok := signals["PinToDriveEnabled"]; ok {

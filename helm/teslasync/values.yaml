@@ -150,6 +150,12 @@ notificationWorker:
   enabled: true
   replicaCount: 1
 
+  # -- Database connection pool size for this worker. Workers need far fewer
+  # connections than the API server. Keeps total connection budget low to avoid
+  # exhausting Postgres max_connections during startup.
+  dbMaxConns: 5
+  dbMinConns: 2
+
   image:
     repository: ghcr.io/ev-dev-labs/teslasync-notification-worker
     pullPolicy: IfNotPresent
@@ -181,6 +187,10 @@ notificationWorker:
 exportWorker:
   enabled: true
   replicaCount: 1
+
+  # -- Database connection pool size for this worker.
+  dbMaxConns: 5
+  dbMinConns: 2
 
   image:
     repository: ghcr.io/ev-dev-labs/teslasync-export-worker
@@ -215,6 +225,10 @@ exportWorker:
 automationWorker:
   enabled: true
   replicaCount: 1
+
+  # -- Database connection pool size for this worker.
+  dbMaxConns: 5
+  dbMinConns: 2
 
   image:
     repository: ghcr.io/ev-dev-labs/teslasync-automation-worker

@@ -127,6 +127,95 @@ func TestParseHvacPower(t *testing.T) {
 	}
 }
 
+func TestParseForwardCollisionWarning(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"ForwardCollisionSensitivityOff", "Off"},
+		{"ForwardCollisionSensitivityLate", "Late"},
+		{"ForwardCollisionSensitivityAverage", "Average"},
+		{"ForwardCollisionSensitivityEarly", "Early"},
+		{"Off", "Off"},
+		{"Early", "Early"},
+		{"SomeUnknown", "SomeUnknown"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := ParseForwardCollisionWarning(tt.input)
+			if got != tt.expected {
+				t.Errorf("ParseForwardCollisionWarning(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseLaneDepartureAvoidance(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"LaneAssistLevelOff", "Off"},
+		{"LaneAssistLevelWarning", "Warning"},
+		{"LaneAssistLevelAssist", "Assist"},
+		{"Off", "Off"},
+		{"Warning", "Warning"},
+		{"SomeUnknown", "SomeUnknown"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := ParseLaneDepartureAvoidance(tt.input)
+			if got != tt.expected {
+				t.Errorf("ParseLaneDepartureAvoidance(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseSpeedLimitWarning(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"SpeedAssistLevelNone", "Off"},
+		{"SpeedAssistLevelDisplay", "Display"},
+		{"SpeedAssistLevelChime", "Chime"},
+		{"Off", "Off"},
+		{"Display", "Display"},
+		{"SomeUnknown", "SomeUnknown"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := ParseSpeedLimitWarning(tt.input)
+			if got != tt.expected {
+				t.Errorf("ParseSpeedLimitWarning(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseCruiseFollowDistance(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"FollowDistance1", "1"},
+		{"FollowDistance7", "7"},
+		{"FollowDistance3", "3"},
+		{"1", "1"},
+		{"7", "7"},
+		{"SomeUnknown", "SomeUnknown"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := ParseCruiseFollowDistance(tt.input)
+			if got != tt.expected {
+				t.Errorf("ParseCruiseFollowDistance(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
 func TestParseWindowState(t *testing.T) {
 	tests := []struct {
 		input    string

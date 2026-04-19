@@ -79,6 +79,26 @@ function isAebEnabled(off: boolean): boolean {
   return !off;
 }
 
+/** Known enum prefixes from raw Tesla telemetry. Old rows may still have these. */
+const ENUM_PREFIXES: Record<string, string> = {
+  forward_collision_warning: 'ForwardCollisionSensitivity',
+  lane_departure_avoidance: 'LaneAssistLevel',
+  speed_limit_warning: 'SpeedAssistLevel',
+  cruise_follow_distance: 'FollowDistance',
+};
+
+/** Strip Tesla enum prefix from a raw value, handling both old (raw) and new (clean) data. */
+function cleanEnum(value: string, field: keyof typeof ENUM_PREFIXES): string {
+  const prefix = ENUM_PREFIXES[field];
+  if (prefix && value.startsWith(prefix)) {
+    const stripped = value.slice(prefix.length);
+    // SpeedAssistLevelNone → "Off" (special case)
+    if (field === 'speed_limit_warning' && stripped === 'None') return 'Off';
+    return stripped || value;
+  }
+  return value;
+}
+
 function boolFeatures(snap: SafetySnapshot): boolean[] {
   return [
     isAebEnabled(snap.automatic_emergency_braking_off ?? false),
@@ -86,9 +106,9 @@ function boolFeatures(snap: SafetySnapshot): boolean[] {
     snap.blind_spot_collision_warning ?? false,
     snap.emergency_lane_departure_avoidance ?? false,
     snap.pin_to_drive_enabled ?? false,
-    (snap.forward_collision_warning ?? 'Off') !== 'Off',
-    (snap.lane_departure_avoidance ?? 'Off') !== 'Off',
-    (snap.speed_limit_warning ?? 'Off') !== 'Off',
+    cleanEnum(snap.forward_collision_warning ?? 'Off', 'forward_collision_warning') !== 'Off',
+    cleanEnum(snap.lane_departure_avoidance ?? 'Off', 'lane_departure_avoidance') !== 'Off',
+    cleanEnum(snap.speed_limit_warning ?? 'Off', 'speed_limit_warning') !== 'Off',
   ];
 }
 
@@ -225,9 +245,10 @@ function buildFeatureCards(
   t: (key: string) => string,
 ): FeatureCardDef[] {
   const aebOn = isAebEnabled(snap.automatic_emergency_braking_off ?? false);
-  const fcwVal = snap.forward_collision_warning ?? 'Off';
-  const ldaVal = snap.lane_departure_avoidance ?? 'Off';
-  const slwVal = snap.speed_limit_warning ?? 'Off';
+  const fcwVal = cleanEnum(snap.forward_collision_warning ?? 'Off', 'forward_collision_warning');
+  const ldaVal = cleanEnum(snap.lane_departure_avoidance ?? 'Off', 'lane_departure_avoidance');
+  const slwVal = cleanEnum(snap.speed_limit_warning ?? 'Off', 'speed_limit_warning');
+  const cfdVal = cleanEnum(snap.cruise_follow_distance ?? '0', 'cruise_follow_distance');
   const fcwOn = fcwVal !== 'Off';
   const ldaOn = ldaVal !== 'Off';
   const slwOn = slwVal !== 'Off';
@@ -265,8 +286,8 @@ function buildFeatureCards(
       key: 'cfd',
       label: t('Cruise Follow Distance'),
       description: t('Adaptive cruise headway setting'),
-      enabled: Number(snap.cruise_follow_distance) > 0,
-      valueText: snap.cruise_follow_distance ?? '—',
+      enabled: Number(cfdVal) > 0,
+      valueText: cfdVal || '—',
     },
     {
       key: 'slw',
@@ -341,7 +362,7 @@ function buildHistoryColumns(t: (k: string) => string): Column<SafetySnapshot>[]
       header: t('FCW'),
       render: (row) => (
         <span className="text-xs text-[var(--text-secondary)]">
-          {row.forward_collision_warning}
+          {cleanEnum(row.forward_collision_warning ?? '—', 'forward_collision_warning')}
         </span>
       ),
     },
@@ -350,7 +371,7 @@ function buildHistoryColumns(t: (k: string) => string): Column<SafetySnapshot>[]
       header: t('LDA'),
       render: (row) => (
         <span className="text-xs text-[var(--text-secondary)]">
-          {row.lane_departure_avoidance}
+          {cleanEnum(row.lane_departure_avoidance ?? '—', 'lane_departure_avoidance')}
         </span>
       ),
     },
@@ -364,7 +385,7 @@ function buildHistoryColumns(t: (k: string) => string): Column<SafetySnapshot>[]
       header: t('SLW'),
       render: (row) => (
         <span className="text-xs text-[var(--text-secondary)]">
-          {row.speed_limit_warning}
+          {cleanEnum(row.speed_limit_warning ?? '—', 'speed_limit_warning')}
         </span>
       ),
     },
