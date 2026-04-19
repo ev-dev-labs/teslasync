@@ -65,6 +65,7 @@ import { request } from '@/api/client'
 import { getVehicleState } from '@/api/vehicles'
 import type { Alert, Vehicle, VersionInfo, UpdateCheckResult, StaleSessionsResponse } from '@/api/types'
 import { useRealtimeEvents } from '../../hooks/useRealtimeEvents'
+import { useNotificationListener } from '../../hooks/useNotificationListener'
 import { useToast } from '../feedback/Toast'
 import { useSettings } from '../../hooks/useSettings'
 import { GlassPanel } from '../ui/GlassPanel'
@@ -265,6 +266,7 @@ export default function Layout() {
       method(alert.title ?? 'Alert', alert.message ?? '')
     },
   })
+  useNotificationListener()
   const { convertDistance, distanceUnit } = useSettings()
 
   // Version info
