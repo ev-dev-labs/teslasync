@@ -178,6 +178,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	energyFlowHandler := NewEnergyFlowHandler(db)
 	weeklyDigestHandler := NewWeeklyDigestHandler(db)
 	teslaChargingHistoryHandler := NewTeslaChargingHistoryHandler(teslaClient, db)
+	teslaChargingSessionHandler := NewTeslaChargingSessionHandler(teslaClient, db)
 	// SSE event hub for automation real-time events
 	automationEventHub := NewEventHub()
 	automationPublisher := NewAutomationEventPublisher(automationEventHub)
@@ -310,6 +311,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/refresh", teslaChargingHistoryHandler.Refresh)
 			})
 			r.Get("/invoice/{contentID}", teslaChargingHistoryHandler.Invoice)
+			// Fleet charging sessions (business accounts only)
+			r.Route("/sessions", func(r chi.Router) {
+				r.Get("/", teslaChargingSessionHandler.List)
+				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/refresh", teslaChargingSessionHandler.Refresh)
+			})
 		})
 
 		// Geofences

@@ -922,3 +922,23 @@ func (c *Client) GetChargingInvoice(ctx context.Context, contentID string) ([]by
 	path := fmt.Sprintf("/api/1/dx/charging/invoice/%s", contentID)
 	return c.doRequest(ctx, http.MethodGet, path, nil)
 }
+
+// GetChargingSessions calls GET /api/1/dx/charging/sessions (business accounts only).
+// Returns raw response bytes, HTTP status code, and error.
+func (c *Client) GetChargingSessions(ctx context.Context, vin, dateFrom, dateTo string, limit, offset int) ([]byte, int, error) {
+	params := url.Values{}
+	if vin != "" {
+		params.Set("vin", vin)
+	}
+	if dateFrom != "" {
+		params.Set("date_from", dateFrom)
+	}
+	if dateTo != "" {
+		params.Set("date_to", dateTo)
+	}
+	params.Set("limit", strconv.Itoa(limit))
+	params.Set("offset", strconv.Itoa(offset))
+
+	path := "/api/1/dx/charging/sessions?" + params.Encode()
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}

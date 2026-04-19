@@ -171,3 +171,78 @@ export function useRefreshTeslaChargingHistory() {
 export function getTeslaChargingInvoiceURL(contentId: string): string {
   return `/api/v1/tesla/charging/invoice/${contentId}`;
 }
+
+// --- Tesla Fleet Charging Sessions (business accounts only) ---
+
+export interface TeslaChargingSession {
+  id: number;
+  session_id: number;
+  vin: string;
+  charger_id: string | null;
+  site_location_name: string;
+  charge_start_datetime: string;
+  charge_stop_datetime: string | null;
+  energy_added_kwh: number | null;
+  peak_power_kw: number | null;
+  max_charge_rate_kw: number | null;
+  charge_duration_s: number | null;
+  charger_type: string | null;
+  currency_code: string | null;
+  total_cost: number | null;
+  per_kwh_rate: number | null;
+  idle_fee: number | null;
+  congestion_fee: number | null;
+  latitude: number | null;
+  longitude: number | null;
+  fetched_at: string;
+  created_at: string;
+}
+
+export interface TeslaChargingSessionSummary {
+  total_sessions: number;
+  total_kwh: number | null;
+  total_cost: number | null;
+  avg_cost_per_kwh: number | null;
+  peak_power_kw: number | null;
+}
+
+export interface TeslaChargingSessionResponse {
+  sessions: TeslaChargingSession[];
+  summary: TeslaChargingSessionSummary;
+  upserted?: number;
+}
+
+export const teslaChargingSessionKeys = {
+  all: ['tesla-charging-sessions'] as const,
+  byVin: (vin: string) => ['tesla-charging-sessions', vin] as const,
+};
+
+/** Fetches Tesla fleet charging sessions from the local DB (business accounts only). */
+export function useTeslaChargingSessions(vin?: string) {
+  return useQuery({
+    queryKey: vin ? teslaChargingSessionKeys.byVin(vin) : teslaChargingSessionKeys.all,
+    queryFn: () => request<TeslaChargingSessionResponse>(
+      `/tesla/charging/sessions${vin ? `?vin=${vin}` : ''}`
+    ),
+    staleTime: 5 * 60_000,
+  });
+}
+
+/** Mutation to refresh Tesla fleet charging sessions from the Tesla API. */
+export function useRefreshTeslaChargingSessions() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (params?: { vin?: string; date_from?: string; date_to?: string }) => {
+      const searchParams = new URLSearchParams();
+      if (params?.vin) searchParams.set('vin', params.vin);
+      if (params?.date_from) searchParams.set('date_from', params.date_from);
+      if (params?.date_to) searchParams.set('date_to', params.date_to);
+      const qs = searchParams.toString();
+      return request<TeslaChargingSessionResponse>(
+        `/tesla/charging/sessions/refresh${qs ? `?${qs}` : ''}`,
+        { method: 'POST' }
+      );
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: teslaChargingSessionKeys.all }),
+  });
+}

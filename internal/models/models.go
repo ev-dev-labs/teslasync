@@ -1236,3 +1236,38 @@ type TeslaChargingHistorySummary struct {
 	TotalSpend    *float64 `json:"total_spend"`
 	AvgCostPerKWh *float64 `json:"avg_cost_per_kwh"`
 }
+
+// TeslaChargingSession represents a fleet charging session from Tesla billing (business accounts).
+type TeslaChargingSession struct {
+	ID                  int64      `json:"id" db:"id"`
+	SessionID           int64      `json:"session_id" db:"session_id"`
+	VIN                 string     `json:"vin" db:"vin"`
+	ChargerID           *string    `json:"charger_id" db:"charger_id"`
+	SiteLocationName    string     `json:"site_location_name" db:"site_location_name"`
+	ChargeStartDatetime time.Time  `json:"charge_start_datetime" db:"charge_start_datetime"`
+	ChargeStopDatetime  *time.Time `json:"charge_stop_datetime" db:"charge_stop_datetime"`
+	EnergyAddedKWh      *float64   `json:"energy_added_kwh" db:"energy_added_kwh"`
+	PeakPowerKW         *float64   `json:"peak_power_kw" db:"peak_power_kw"`
+	MaxChargeRateKW     *float64   `json:"max_charge_rate_kw" db:"max_charge_rate_kw"`
+	ChargeDurationS     *int       `json:"charge_duration_s" db:"charge_duration_s"`
+	ChargerType         *string    `json:"charger_type" db:"charger_type"`
+	CurrencyCode        *string    `json:"currency_code" db:"currency_code"`
+	TotalCost           *float64   `json:"total_cost" db:"total_cost"`
+	PerKWhRate          *float64   `json:"per_kwh_rate" db:"per_kwh_rate"`
+	IdleFee             *float64   `json:"idle_fee" db:"idle_fee"`
+	CongestionFee       *float64   `json:"congestion_fee" db:"congestion_fee"`
+	Latitude            *float64   `json:"latitude" db:"latitude"`
+	Longitude           *float64   `json:"longitude" db:"longitude"`
+	RawJSON             string     `json:"raw_json,omitempty" db:"raw_json"`
+	FetchedAt           time.Time  `json:"fetched_at" db:"fetched_at"`
+	CreatedAt           time.Time  `json:"created_at" db:"created_at"`
+}
+
+// TeslaChargingSessionSummary holds aggregated stats for Tesla fleet charging sessions.
+type TeslaChargingSessionSummary struct {
+	TotalSessions int      `json:"total_sessions"`
+	TotalKWh      *float64 `json:"total_kwh"`
+	TotalCost     *float64 `json:"total_cost"`
+	AvgCostPerKWh *float64 `json:"avg_cost_per_kwh"`
+	PeakPowerKW   *float64 `json:"peak_power_kw"`
+}
