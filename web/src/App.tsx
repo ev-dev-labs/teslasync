@@ -3,7 +3,7 @@ import { Routes, Route, useNavigate } from 'react-router-dom'
 import Layout from './components/layout/Layout'
 import { PageLoader } from './components/feedback/PageLoader'
 import { ErrorBoundary } from './components/feedback/ErrorBoundary'
-import { AuthExpiredOverlay } from './components/feedback/AuthExpiredOverlay'
+import { AuthExpiredOverlay } from '@/components/feedback'
 
 // ── ALL pages live in features/ — zero imports from pages/ ──────────────
 
