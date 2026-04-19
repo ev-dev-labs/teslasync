@@ -9,12 +9,12 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/automation/trigger"
 )
 
-func TestHomePresetsValid(t *testing.T) {
+func TestDrivingPresetsValid(t *testing.T) {
 	registry := presets.NewRegistry()
-	all := registry.Presets("home")
+	all := registry.Presets("driving")
 
-	if len(all) != 5 {
-		t.Fatalf("expected 5 home presets, got %d", len(all))
+	if len(all) != 6 {
+		t.Fatalf("expected 6 driving presets, got %d", len(all))
 	}
 
 	for _, p := range all {
@@ -25,8 +25,8 @@ func TestHomePresetsValid(t *testing.T) {
 			if p.Name == "" {
 				t.Error("preset Name is empty")
 			}
-			if p.Category != "home" {
-				t.Errorf("expected category 'home', got %q", p.Category)
+			if p.Category != "driving" {
+				t.Errorf("expected category 'driving', got %q", p.Category)
 			}
 			if p.TriggerType == "" {
 				t.Error("preset TriggerType is empty")
@@ -78,26 +78,26 @@ func TestHomePresetsValid(t *testing.T) {
 				t.Error("preset has no tags")
 			}
 
-			// Every home preset must be tagged "home".
-			hasHomeTag := false
+			// Every driving preset must be tagged "driving".
+			hasDrivingTag := false
 			for _, tag := range p.Tags {
-				if tag == "home" {
-					hasHomeTag = true
+				if tag == "driving" {
+					hasDrivingTag = true
 					break
 				}
 			}
-			if !hasHomeTag {
-				t.Error("preset missing 'home' tag")
+			if !hasDrivingTag {
+				t.Error("preset missing 'driving' tag")
 			}
 		})
 	}
 }
 
-func TestHomePresetIDsUnique(t *testing.T) {
+func TestDrivingPresetIDsUnique(t *testing.T) {
 	registry := presets.NewRegistry()
 	seen := make(map[string]bool)
 
-	for _, p := range registry.Presets("home") {
+	for _, p := range registry.Presets("driving") {
 		if seen[p.ID] {
 			t.Errorf("duplicate preset ID: %s", p.ID)
 		}
@@ -105,49 +105,50 @@ func TestHomePresetIDsUnique(t *testing.T) {
 	}
 }
 
-func TestHomePresetIDPrefix(t *testing.T) {
+func TestDrivingPresetIDPrefix(t *testing.T) {
 	registry := presets.NewRegistry()
 
-	for _, p := range registry.Presets("home") {
-		if len(p.ID) < 5 || p.ID[:5] != "home-" {
-			t.Errorf("home preset ID %q should start with 'home-'", p.ID)
+	for _, p := range registry.Presets("driving") {
+		if len(p.ID) < 8 || p.ID[:8] != "driving-" {
+			t.Errorf("driving preset ID %q should start with 'driving-'", p.ID)
 		}
 	}
 }
 
-func TestHomeCategory(t *testing.T) {
+func TestDrivingCategory(t *testing.T) {
 	registry := presets.NewRegistry()
 
 	cats := registry.Categories()
 	found := false
 	for _, c := range cats {
-		if c.ID == "home" {
+		if c.ID == "driving" {
 			found = true
-			if c.Name != "Home & Garage" {
-				t.Errorf("expected category name 'Home & Garage', got %q", c.Name)
+			if c.Name != "Driving" {
+				t.Errorf("expected category name 'Driving', got %q", c.Name)
 			}
-			if c.Icon != "Home" {
-				t.Errorf("expected category icon 'Home', got %q", c.Icon)
+			if c.Icon != "Car" {
+				t.Errorf("expected category icon 'Car', got %q", c.Icon)
 			}
 		}
 	}
 	if !found {
-		t.Error("home category not found")
+		t.Error("driving category not found")
 	}
 }
 
-func TestHomePresetGetByID(t *testing.T) {
+func TestDrivingPresetGetByID(t *testing.T) {
 	registry := presets.NewRegistry()
 
 	tests := []struct {
 		id   string
 		name string
 	}{
-		{"home-arrive", "Arrive Home"},
-		{"home-leave", "Leave Home"},
-		{"home-garage-auto-close", "Garage Auto-Close"},
-		{"home-porch-light", "Porch Light"},
-		{"home-departure-routine", "Departure Routine"},
+		{"driving-start-log", "Drive Start Log"},
+		{"driving-speed-alert", "Speed Alert"},
+		{"driving-break-reminder", "Long Drive Break Reminder"},
+		{"driving-efficiency-coach", "Efficiency Coach"},
+		{"driving-remote-start-timer", "Remote Start Timer"},
+		{"driving-navigate-to-work", "Navigate to Work"},
 	}
 
 	for _, tt := range tests {
@@ -163,7 +164,7 @@ func TestHomePresetGetByID(t *testing.T) {
 	}
 }
 
-func TestRegistryTotalPresetsIncludesHome(t *testing.T) {
+func TestRegistryTotalPresetsIncludesDriving(t *testing.T) {
 	registry := presets.NewRegistry()
 
 	all := registry.Presets("")
@@ -173,7 +174,8 @@ func TestRegistryTotalPresetsIncludesHome(t *testing.T) {
 	home := registry.Presets("home")
 	driving := registry.Presets("driving")
 
-	if len(all) != len(security)+len(climate)+len(charging)+len(home)+len(driving) {
+	expected := len(security) + len(climate) + len(charging) + len(home) + len(driving)
+	if len(all) != expected {
 		t.Errorf("total presets (%d) != security (%d) + climate (%d) + charging (%d) + home (%d) + driving (%d)",
 			len(all), len(security), len(climate), len(charging), len(home), len(driving))
 	}
