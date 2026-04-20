@@ -166,7 +166,7 @@ export default function DashboardPage() {
 
   /* ——— Header actions ——— */
   const headerActions = (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 flex-wrap">
       {editMode ? (
         <>
           <div className="flex items-center gap-1 mr-1">
@@ -197,18 +197,18 @@ export default function DashboardPage() {
             )}
           </div>
           <Button variant="ghost" size="sm" onClick={() => setShowPicker(true)}>
-            <Plus className="h-3.5 w-3.5 mr-1" />
-            {t('dashboard.addWidget', 'Add Widget')}
+            <Plus className="h-3.5 w-3.5 sm:mr-1" />
+            <span className="hidden sm:inline">{t('dashboard.addWidget', 'Add Widget')}</span>
           </Button>
           <Button variant="ghost" size="sm" onClick={autoArrange}>
-            <LayoutGrid className="h-3.5 w-3.5 mr-1" />
-            {t('dashboard.autoArrange', 'Auto Arrange')}
+            <LayoutGrid className="h-3.5 w-3.5 sm:mr-1" />
+            <span className="hidden sm:inline">{t('dashboard.autoArrange', 'Auto Arrange')}</span>
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setShowTemplates(true)}>
+          <Button variant="ghost" size="sm" onClick={() => setShowTemplates(true)} className="hidden sm:flex">
             <LayoutTemplate className="h-3.5 w-3.5 mr-1" />
             {t('dashboard.templates', 'Templates')}
           </Button>
-          <Button variant="ghost" size="sm" onClick={resetToDefault}>
+          <Button variant="ghost" size="sm" onClick={resetToDefault} className="hidden sm:flex">
             <RotateCcw className="h-3.5 w-3.5 mr-1" />
             {t('dashboard.reset', 'Reset')}
           </Button>
@@ -221,19 +221,19 @@ export default function DashboardPage() {
           <Button variant="ghost" size="sm" onClick={handleRefresh} loading={isRefreshing}>
             <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setShowExportModal(true)}>
+          <Button variant="ghost" size="sm" onClick={() => setShowExportModal(true)} className="hidden sm:flex">
             <Download className="h-3.5 w-3.5" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => { setImportJson(null); setShowImportModal(true); }}>
+          <Button variant="ghost" size="sm" onClick={() => { setImportJson(null); setShowImportModal(true); }} className="hidden sm:flex">
             <Upload className="h-3.5 w-3.5" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setShowKioskSettings(true)}>
+          <Button variant="ghost" size="sm" onClick={() => setShowKioskSettings(true)} className="hidden sm:flex">
             <Tv className="h-3.5 w-3.5 mr-1" />
             {t('dashboard.kiosk', 'Kiosk')}
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setEditMode(true)} data-tour="edit-mode-btn">
-            <Settings className="h-3.5 w-3.5 mr-1" />
-            {t('dashboard.customize', 'Customize')}
+            <Settings className="h-3.5 w-3.5 sm:mr-1" />
+            <span className="hidden sm:inline">{t('dashboard.customize', 'Customize')}</span>
           </Button>
         </>
       )}
