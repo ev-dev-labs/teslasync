@@ -1,0 +1,194 @@
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  Thermometer, Fan, Armchair, CircleDot, Snowflake, Zap, Power,
+} from 'lucide-react';
+import { Badge } from '@/components/ui';
+import { EmptyState } from '@/components/feedback';
+import { useVehicles, useClimateLatest } from '@/api/hooks/useVehicles';
+import { useSettings } from '@/hooks/useSettings';
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+import { WidgetShell } from './WidgetShell';
+import type { WidgetProps } from './types';
+
+export default function ClimateControlPanelWidget({ vehicleId, size }: WidgetProps) {
+  const { t } = useTranslation('dashboard');
+  const { data: vehicles } = useVehicles();
+  const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
+  const { data: climateData, isLoading } = useClimateLatest(id, 5_000);
+  const { convertTemp, tempUnit } = useSettings();
+
+  const isCompact = size.cols <= 1 && size.rows <= 1;
+
+  const temps = useMemo(() => {
+    if (!climateData) return null;
+    return {
+      inside: climateData.inside_temp != null ? fmtInt(convertTemp(climateData.inside_temp)) : null,
+      outside: climateData.outside_temp != null ? fmtInt(convertTemp(climateData.outside_temp)) : null,
+    };
+  }, [climateData, convertTemp]);
+
+  const seatHeaters = useMemo(() => {
+    if (!climateData) return [];
+    const seats: { label: string; level: number }[] = [];
+    if (climateData.seat_heater_left != null && climateData.seat_heater_left > 0)
+      seats.push({ label: t('widget.climatePanel.seatFL', 'FL'), level: climateData.seat_heater_left });
+    if (climateData.seat_heater_right != null && climateData.seat_heater_right > 0)
+      seats.push({ label: t('widget.climatePanel.seatFR', 'FR'), level: climateData.seat_heater_right });
+    if (climateData.seat_heater_rear_left != null && climateData.seat_heater_rear_left > 0)
+      seats.push({ label: t('widget.climatePanel.seatRL', 'RL'), level: climateData.seat_heater_rear_left });
+    if (climateData.seat_heater_rear_center != null && climateData.seat_heater_rear_center > 0)
+      seats.push({ label: t('widget.climatePanel.seatRC', 'RC'), level: climateData.seat_heater_rear_center });
+    if (climateData.seat_heater_rear_right != null && climateData.seat_heater_rear_right > 0)
+      seats.push({ label: t('widget.climatePanel.seatRR', 'RR'), level: climateData.seat_heater_rear_right });
+    return seats;
+  }, [climateData, t]);
+
+  const steeringHeat = climateData?.hvac_steering_wheel_heat_level ?? 0;
+
+  return (
+    <WidgetShell
+      title={isCompact ? undefined : t('widget.climatePanel.title', 'Climate Control')}
+      icon={isCompact ? undefined : <Thermometer className="h-3.5 w-3.5 text-neon-cyan" />}
+      loading={isLoading}
+    >
+      {climateData ? (
+        isCompact ? (
+          <CompactView inside={temps?.inside ?? null} tempUnit={tempUnit} />
+        ) : (
+          <FullView
+            climateData={climateData}
+            temps={temps}
+            tempUnit={tempUnit}
+            seatHeaters={seatHeaters}
+            steeringHeat={steeringHeat}
+            t={t}
+          />
+        )
+      ) : (
+        <EmptyState
+          icon={<Thermometer className="h-5 w-5" />}
+          message={t('widget.climatePanel.noData', 'No climate data')}
+          className="py-4"
+        />
+      )}
+    </WidgetShell>
+  );
+}
+
+/* ── Compact: single temperature display ── */
+function CompactView({ inside, tempUnit }: { inside: string | null; tempUnit: string }) {
+  return (
+    <div className="h-full flex flex-col items-center justify-center gap-1">
+      <Thermometer className="h-5 w-5 text-neon-cyan" />
+      <span className="text-lg font-bold text-white/90">
+        {inside != null ? `${inside}${tempUnit}` : '—'}
+      </span>
+    </div>
+  );
+}
+
+/* ── Full 2x2 view ── */
+interface FullViewProps {
+  climateData: NonNullable<ReturnType<typeof useClimateLatest>['data']>;
+  temps: { inside: string | null; outside: string | null } | null;
+  tempUnit: string;
+  seatHeaters: { label: string; level: number }[];
+  steeringHeat: number;
+  t: (k: string, f: string) => string;
+}
+
+function FullView({ climateData, temps, tempUnit, seatHeaters, steeringHeat, t }: FullViewProps) {
+  const hvacOn = (climateData.hvac_power != null && climateData.hvac_power > 0) ||
+    climateData.hvac_ac_enabled === true;
+
+  return (
+    <div className="h-full flex flex-col justify-between gap-2.5">
+      {/* HVAC status badge */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <Power className="h-3.5 w-3.5 text-white/40" />
+          <Badge variant={hvacOn ? 'success' : 'neutral'} size="sm">
+            {hvacOn
+              ? t('widget.climatePanel.hvacOn', 'HVAC On')
+              : t('widget.climatePanel.hvacOff', 'HVAC Off')}
+          </Badge>
+        </div>
+        {climateData.hvac_power != null && climateData.hvac_power > 0 && (
+          <span className="text-xs text-white/50">
+            {fmtNumber(climateData.hvac_power, 1)} kW
+          </span>
+        )}
+      </div>
+
+      {/* Temperature row */}
+      <div className="grid grid-cols-2 gap-2">
+        <MetricCell
+          icon={<Thermometer className="h-3 w-3 text-neon-cyan" />}
+          label={t('widget.climatePanel.cabin', 'Cabin')}
+          value={temps?.inside != null ? `${temps.inside}${tempUnit}` : '—'}
+        />
+        <MetricCell
+          icon={<Thermometer className="h-3 w-3 text-blue-400" />}
+          label={t('widget.climatePanel.outside', 'Outside')}
+          value={temps?.outside != null ? `${temps.outside}${tempUnit}` : '—'}
+        />
+      </div>
+
+      {/* Fan speed */}
+      <div className="grid grid-cols-2 gap-2">
+        <MetricCell
+          icon={<Fan className="h-3 w-3 text-white/40" />}
+          label={t('widget.climatePanel.fanSpeed', 'Fan Speed')}
+          value={climateData.hvac_fan_speed != null ? `${climateData.hvac_fan_speed}` : '—'}
+        />
+        <MetricCell
+          icon={<CircleDot className="h-3 w-3 text-white/40" />}
+          label={t('widget.climatePanel.steeringHeat', 'Wheel Heat')}
+          value={steeringHeat > 0 ? `${steeringHeat}/3` : t('widget.climatePanel.off', 'Off')}
+        />
+      </div>
+
+      {/* Seat heaters + status badges */}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {seatHeaters.length > 0 ? (
+          seatHeaters.map((s) => (
+            <span
+              key={s.label}
+              className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-400"
+            >
+              <Armchair className="h-2.5 w-2.5" /> {s.label} {s.level}/3
+            </span>
+          ))
+        ) : (
+          <span className="text-[10px] text-white/30">
+            {t('widget.climatePanel.noSeatHeat', 'No seat heaters active')}
+          </span>
+        )}
+        {climateData.defrost_mode && (
+          <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400">
+            <Snowflake className="h-2.5 w-2.5" /> {t('widget.climatePanel.defrost', 'Defrost')}
+          </span>
+        )}
+        {climateData.battery_heater_on && (
+          <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-400">
+            <Zap className="h-2.5 w-2.5" /> {t('widget.climatePanel.batHeater', 'Bat Heater')}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Tiny metric cell (reused pattern) ── */
+function MetricCell({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="flex items-start gap-1.5 min-w-0">
+      <span className="mt-0.5 shrink-0">{icon}</span>
+      <div className="min-w-0">
+        <p className="text-[10px] text-white/40 truncate">{label}</p>
+        <p className="text-sm font-semibold text-white/90 truncate">{value}</p>
+      </div>
+    </div>
+  );
+}

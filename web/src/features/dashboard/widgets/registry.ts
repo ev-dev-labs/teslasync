@@ -203,6 +203,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     maxSize: { cols: 2, rows: 1 },
     component: lazy(() => import('./ClimateStatusWidget')),
   },
+  {
+    id: 'climate-control-panel',
+    name: 'Climate Control Panel',
+    description: 'Inside/outside temp, HVAC on/off, fan speed, seat heaters, steering heat',
+    icon: Thermometer,
+    category: 'climate',
+    defaultSize: { cols: 2, rows: 2 },
+    minSize: { cols: 1, rows: 1 },
+    maxSize: { cols: 4, rows: 3 },
+    component: lazy(() => import('./ClimateControlPanelWidget')),
+  },
 
   // ── Security ──
   {
