@@ -46,6 +46,7 @@ import {
 } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSettings } from '@/hooks/useSettings';
 import { formatDateTime, formatTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { CHART_COLORS } from '@/lib/colors';
@@ -92,7 +93,6 @@ const SEATS: SeatDef[] = [
   { key: 'seatHeaterRearRight', label: 'Rear Right', row: 'rear' },
 ];
 
-const TEMP_GAUGE_MAX = 55;
 
 /* ─── Helpers ─── */
 
@@ -194,6 +194,9 @@ function climateAccessor(row: ClimateState, key: string): number | string {
 export default function ClimateControlPage() {
   const { t } = useTranslation();
   usePageTitle(t('Climate Control'));
+  const { convertTemp, tempUnit } = useSettings();
+  const isFahrenheit = tempUnit === '°F';
+  const tempGaugeMax = isFahrenheit ? 131 : 55;
 
   /* ─── Vehicle selector ─── */
   const { data: vehicles } = useVehicles();
@@ -242,21 +245,21 @@ export default function ClimateControlPage() {
       },
       {
         key: 'insideTemp',
-        header: t('Inside °C'),
+        header: `${t('Inside')} ${tempUnit}`,
         sortable: true,
-        render: (row) => fmtNumber(row.insideTemp, 1),
+        render: (row) => fmtNumber(convertTemp(row.insideTemp), 1),
       },
       {
         key: 'outsideTemp',
-        header: t('Outside °C'),
+        header: `${t('Outside')} ${tempUnit}`,
         sortable: true,
-        render: (row) => fmtNumber(row.outsideTemp, 1),
+        render: (row) => fmtNumber(convertTemp(row.outsideTemp), 1),
       },
       {
         key: 'driverTempSetting',
-        header: t('Set Temp °C'),
+        header: `${t('Set Temp')} ${tempUnit}`,
         sortable: true,
-        render: (row) => fmtNumber(row.driverTempSetting, 1),
+        render: (row) => fmtNumber(convertTemp(row.driverTempSetting), 1),
       },
       {
         key: 'fanSpeed',
@@ -297,6 +300,16 @@ export default function ClimateControlPage() {
       (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
     );
   }, [history]);
+
+  const convertedChartData = useMemo(() =>
+    chronoHistory.map(h => ({
+      ...h,
+      insideTemp: h.insideTemp != null ? convertTemp(h.insideTemp) : null,
+      outsideTemp: h.outsideTemp != null ? convertTemp(h.outsideTemp) : null,
+      driverTempSetting: h.driverTempSetting != null ? convertTemp(h.driverTempSetting) : null,
+    })),
+    [chronoHistory, convertTemp],
+  );
 
   /* ─── Comfort score & temp delta ─── */
   const comfortScore = useMemo(() => {
@@ -412,40 +425,40 @@ export default function ClimateControlPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <GlassPanel className="flex flex-col items-center gap-2 p-6">
             <RadialGauge
-              value={latest?.insideTemp ?? 0}
-              max={TEMP_GAUGE_MAX}
+              value={convertTemp(latest?.insideTemp ?? 0)}
+              max={tempGaugeMax}
               label={t('Inside Temp')}
-              unit="°C"
+              unit={tempUnit}
               color={CHART_COLORS[0]}
             />
             <span className="text-lg font-bold text-[var(--text-primary)]">
-              {fmtNumber(latest?.insideTemp ?? 0, 1)}°C
+              {fmtNumber(convertTemp(latest?.insideTemp ?? 0), 1)}{tempUnit}
             </span>
           </GlassPanel>
 
           <GlassPanel className="flex flex-col items-center gap-2 p-6">
             <RadialGauge
-              value={latest?.outsideTemp ?? 0}
-              max={TEMP_GAUGE_MAX}
+              value={convertTemp(latest?.outsideTemp ?? 0)}
+              max={tempGaugeMax}
               label={t('Outside Temp')}
-              unit="°C"
+              unit={tempUnit}
               color={CHART_COLORS[1]}
             />
             <span className="text-lg font-bold text-[var(--text-primary)]">
-              {fmtNumber(latest?.outsideTemp ?? 0, 1)}°C
+              {fmtNumber(convertTemp(latest?.outsideTemp ?? 0), 1)}{tempUnit}
             </span>
           </GlassPanel>
 
           <GlassPanel className="flex flex-col items-center gap-2 p-6">
             <RadialGauge
-              value={latest?.driverTempSetting ?? 0}
-              max={TEMP_GAUGE_MAX}
+              value={convertTemp(latest?.driverTempSetting ?? 0)}
+              max={tempGaugeMax}
               label={t('Driver Set Temp')}
-              unit="°C"
+              unit={tempUnit}
               color={CHART_COLORS[2]}
             />
             <span className="text-lg font-bold text-[var(--text-primary)]">
-              {fmtNumber(latest?.driverTempSetting ?? 0, 1)}°C
+              {fmtNumber(convertTemp(latest?.driverTempSetting ?? 0), 1)}{tempUnit}
             </span>
           </GlassPanel>
         </div>
@@ -799,7 +812,7 @@ export default function ClimateControlPage() {
             />
           ) : (
             <ResponsiveContainer width="100%" height={320}>
-              <LineChart data={chronoHistory} margin={chartMarginLabeled}>
+              <LineChart data={convertedChartData} margin={chartMarginLabeled}>
                 <CartesianGrid
                   strokeDasharray="3 3"
                   stroke="var(--glass-border)"
@@ -866,7 +879,7 @@ export default function ClimateControlPage() {
             />
           ) : (
             <ResponsiveContainer width="100%" height={320}>
-              <AreaChart data={chronoHistory} margin={chartMarginLabeled}>
+              <AreaChart data={convertedChartData} margin={chartMarginLabeled}>
                 <CartesianGrid
                   strokeDasharray="3 3"
                   stroke="var(--glass-border)"
