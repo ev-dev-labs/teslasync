@@ -216,7 +216,7 @@ const catalog: SignalMeta[] = [
   { name: 'TpmsSoftWarnings', category: 'Tire Pressure', type: 'boolean', description: 'TPMS soft warnings present' },
 
   // ── Vehicle State ─────────────────────────────────────────────────────
-  { name: 'CenterDisplay', category: 'Vehicle Config', type: 'string', description: 'Center display state', enumValues: ['Off', 'On', 'Dim'] },
+  { name: 'CenterDisplay', category: 'Vehicle Config', type: 'string', description: 'Center display state', enumValues: ['Off', 'Dim', 'Accessory', 'On', 'Driving', 'Charging', 'Lock', 'Sentry', 'Dog', 'Entertainment'] },
   { name: 'CurrentLimitMph', category: 'Driving', type: 'number', unit: 'mph', description: 'Current speed limit' },
   { name: 'DoorState', category: 'Security', type: 'string', description: 'Door open/closed states' },
   { name: 'DriverSeatOccupied', category: 'Safety', type: 'boolean', description: 'Driver seat occupied' },

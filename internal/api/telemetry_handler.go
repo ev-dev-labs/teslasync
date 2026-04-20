@@ -1460,6 +1460,11 @@ func normalizeFleetUnits(signals map[string]interface{}) {
 		signals["CruiseFollowDistance"] = enums.ParseCruiseFollowDistance(toString(v))
 	}
 
+	// CenterDisplay: strip "DisplayState" prefix (e.g., "DisplayStateOff" → "Off")
+	if v, ok := signals["CenterDisplay"]; ok {
+		signals["CenterDisplay"] = enums.ParseCenterDisplay(toString(v))
+	}
+
 	// BMSState: strip "BMSState" prefix (e.g., "BMSStateStandby" → "Standby")
 	if v, ok := signals["BMSState"]; ok {
 		signals["BMSState"] = enums.ParseBMSState(toString(v))

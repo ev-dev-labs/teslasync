@@ -315,6 +315,40 @@ func ParseScheduledChargingMode(raw string) string {
 	return raw
 }
 
+// ParseCenterDisplay normalizes the center display state enum.
+// Tesla sends: "DisplayStateOff", "DisplayStateDim", "DisplayStateAccessory",
+// "DisplayStateOn", "DisplayStateDriving", "DisplayStateCharging",
+// "DisplayStateLock", "DisplayStateSentry", "DisplayStateDog", "DisplayStateEntertainment".
+func ParseCenterDisplay(raw string) string {
+	g := strings.TrimPrefix(raw, PrefixDisplayState)
+	switch g {
+	case "Off":
+		return DisplayOff
+	case "Dim":
+		return DisplayDim
+	case "Accessory":
+		return DisplayAccessory
+	case "On":
+		return DisplayOn
+	case "Driving":
+		return DisplayDriving
+	case "Charging":
+		return DisplayCharging
+	case "Lock":
+		return DisplayLock
+	case "Sentry":
+		return DisplaySentry
+	case "Dog":
+		return DisplayDog
+	case "Entertainment":
+		return DisplayEntertainment
+	}
+	if g != "" && g != raw {
+		return g
+	}
+	return raw
+}
+
 // ParseCruiseFollowDistance normalizes the follow-distance enum.
 // Tesla sends: "FollowDistance1" through "FollowDistance7".
 func ParseCruiseFollowDistance(raw string) string {
