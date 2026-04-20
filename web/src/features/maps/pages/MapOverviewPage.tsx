@@ -14,6 +14,7 @@ import { FadeIn } from '@/components/motion';
 import {
   MapContainer, Marker, Popup, Polyline,
   MapTileLayer, MapInvalidator, MapLayerSwitcher,
+  vehicleIcon,
   type MapStyle,
 } from '@/components/maps';
 
@@ -248,7 +249,7 @@ export default function MapOverviewPage() {
               >
                 <MapTileLayer style={mapStyle} />
                 <MapInvalidator />
-                <Marker position={[latest!.latitude, latest!.longitude]}>
+                <Marker position={[latest!.latitude, latest!.longitude]} icon={vehicleIcon()}>
                   <Popup>{vehicle?.display_name ?? t('mapOverview.vehicle', 'Vehicle')}</Popup>
                 </Marker>
                 {trailPositions.length > 1 && (

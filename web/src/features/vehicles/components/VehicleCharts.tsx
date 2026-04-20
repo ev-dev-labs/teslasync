@@ -4,7 +4,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ChartTooltip,
 } from '@/components/charts'
 import { Navigation, Activity, Car, Settings } from 'lucide-react'
-import { MapContainer, Polyline, Marker } from '@/components/maps'
+import { MapContainer, Polyline, Marker, vehicleIcon } from '@/components/maps'
 import { GlassPanel } from '@/components/ui/GlassPanel'
 import { FadeIn } from '@/components/motion/FadeIn'
 import { MetricCard } from '@/components/data-display/MetricCard'
@@ -72,7 +72,7 @@ export function VehicleCharts({
               >
                 <MapTileLayer style={mapStyle} />
                 <MapInvalidator />
-                <Marker position={[state.latitude, state.longitude]} />
+                <Marker position={[state.latitude, state.longitude]} icon={vehicleIcon()} />
                 {trail.length > 1 && (
                   <Polyline
                     positions={trail}

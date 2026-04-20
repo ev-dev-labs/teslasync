@@ -844,7 +844,7 @@ export function LiveTelemetryPanels({
                       'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold border',
                       chargingTelemetry.bms_state === 'Standby'
                         ? 'border-green-500/30 bg-green-500/10 text-green-400'
-                        : chargingTelemetry.bms_state === 'Charging'
+                        : chargingTelemetry.bms_state === 'Charge'
                           ? 'border-cyan-500/30 bg-cyan-500/10 text-cyan-400'
                           : chargingTelemetry.bms_state === 'Fault'
                             ? 'border-red-500/30 bg-red-500/10 text-red-400'

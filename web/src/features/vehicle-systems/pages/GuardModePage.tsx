@@ -26,7 +26,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { AlertBanner } from '@/components/feedback/AlertBanner';
 import { FadeIn } from '@/components/motion/FadeIn';
-import { MapContainer, Marker, Circle, Popup, Polyline } from '@/components/maps';
+import { MapContainer, Marker, Circle, Popup, Polyline, vehicleIcon } from '@/components/maps';
 import { MapTileLayer, MapInvalidator } from '@/components/maps';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
@@ -462,7 +462,7 @@ function LiveMap({
       <MapInvalidator />
 
       {/* Vehicle marker */}
-      <Marker position={[vehicleLat, vehicleLng]}>
+      <Marker position={[vehicleLat, vehicleLng]} icon={vehicleIcon()}>
         <MapPopup vehicleName={vehicleName} lat={vehicleLat} lng={vehicleLng} />
       </Marker>
 

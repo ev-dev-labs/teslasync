@@ -19,7 +19,7 @@ const catalog: SignalMeta[] = [
   { name: 'ACChargingEnergyIn', category: 'Charging', type: 'number', unit: 'kWh', description: 'AC energy delivered to the battery' },
   { name: 'ACChargingPower', category: 'Charging', type: 'number', unit: 'kW', description: 'Current AC charging power' },
   { name: 'BatteryLevel', category: 'Battery', type: 'number', unit: '%', description: 'State of charge percentage' },
-  { name: 'BMSState', category: 'Battery', type: 'string', description: 'Battery Management System state', enumValues: ['Standby', 'Drive', 'Charge', 'FaultEvent'] },
+  { name: 'BMSState', category: 'Battery', type: 'string', description: 'Battery Management System state', enumValues: ['Standby', 'Drive', 'Support', 'Charge', 'Fault'] },
   { name: 'BatteryHeaterOn', category: 'Battery', type: 'boolean', description: 'Battery heater active' },
   { name: 'BmsFullchargecomplete', category: 'Charging', type: 'boolean', description: 'BMS reports full charge complete' },
   { name: 'BrickVoltageMax', category: 'Battery', type: 'number', unit: 'V', description: 'Maximum brick voltage' },
