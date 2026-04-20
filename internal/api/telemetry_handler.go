@@ -1495,6 +1495,13 @@ func normalizeFleetUnits(signals map[string]interface{}) {
 		signals["ScheduledChargingMode"] = enums.ParseScheduledChargingMode(toString(v))
 	}
 
+	// Window states: strip "WindowState" prefix (e.g., "WindowStateClosed" → "Closed")
+	for _, wn := range []string{"FdWindow", "FpWindow", "RdWindow", "RpWindow"} {
+		if v, ok := signals[wn]; ok {
+			signals[wn] = enums.ParseWindowState(toString(v))
+		}
+	}
+
 	// TypeDoors compounds: flatten {DriverFront, PassengerFront, ...} maps → JSON strings.
 	// Tesla sends these as nested JSON objects; downstream consumers (signal_history,
 	// vehicle_live_state, security_events) expect scalar string values.
