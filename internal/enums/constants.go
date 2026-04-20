@@ -126,4 +126,5 @@ const (
 	PrefixPowershareType          = "PowershareType"
 	PrefixTurnSignal              = "TurnSignalState"
 	PrefixScheduledChargingMode   = "ScheduledChargingMode"
+	PrefixHvacAutoMode            = "HvacAutoModeState"
 )

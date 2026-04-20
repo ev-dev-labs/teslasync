@@ -70,6 +70,16 @@ func ParseHvacPower(raw string) bool {
 	return strings.Contains(raw, "On") || strings.Contains(raw, "Precondition")
 }
 
+// ParseHvacAutoMode strips the "HvacAutoModeState" prefix.
+// Tesla sends: "HvacAutoModeStateOn" → "On", "HvacAutoModeStateOff" → "Off".
+func ParseHvacAutoMode(raw string) string {
+	g := strings.TrimPrefix(raw, PrefixHvacAutoMode)
+	if g == "" || g == raw {
+		return raw
+	}
+	return g
+}
+
 // ParseWindowState normalizes window state for display.
 func ParseWindowState(raw string) string {
 	g := strings.TrimPrefix(raw, "WindowState")

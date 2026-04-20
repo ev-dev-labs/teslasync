@@ -130,6 +130,29 @@ func TestParseHvacPower(t *testing.T) {
 	}
 }
 
+func TestParseHvacAutoMode(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"HvacAutoModeStateOn", "On"},
+		{"HvacAutoModeStateOff", "Off"},
+		{"On", "On"},
+		{"Off", "Off"},
+		{"", ""},
+		{"HvacAutoModeState", "HvacAutoModeState"},
+		{"UnknownValue", "UnknownValue"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := ParseHvacAutoMode(tt.input)
+			if got != tt.expected {
+				t.Errorf("ParseHvacAutoMode(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
 func TestParseForwardCollisionWarning(t *testing.T) {
 	tests := []struct {
 		input    string

@@ -18,7 +18,7 @@ const LEGACY_KEY = 'teslasync-dashboard-layout';
 /* ─── Breakpoint constants ─── */
 export const GRID_BREAKPOINTS = { lg: 1200, md: 996, sm: 768, xs: 480 } as const;
 export const GRID_COLS = { lg: 4, md: 3, sm: 2, xs: 1 } as const;
-export const ROW_HEIGHT = 180;
+export const ROW_HEIGHT = 80;
 export const GRID_MARGIN: [number, number] = [16, 16];
 
 /* ─── Undo/Redo snapshot ─── */
@@ -285,17 +285,47 @@ function migrateLegacy(legacy: LegacyDashboardLayout): SavedDashboard {
   };
 }
 
+/* ─── Row height migration ─── */
+const ROW_HEIGHT_VERSION_KEY = 'teslasync-row-height-version';
+const CURRENT_ROW_VERSION = 2; // v1=180px, v2=80px
+
+function migrateRowHeight(dashboards: SavedDashboard[]): SavedDashboard[] {
+  const savedVersion = parseInt(localStorage.getItem(ROW_HEIGHT_VERSION_KEY) ?? '1', 10);
+  if (savedVersion >= CURRENT_ROW_VERSION) return dashboards;
+
+  // Scale factor: old ROW_HEIGHT / new ROW_HEIGHT = 180/80 = 2.25
+  const scale = 2.25;
+  const migrated = dashboards.map((d) => ({
+    ...d,
+    layouts: Object.fromEntries(
+      Object.entries(d.layouts).map(([bp, items]) => [
+        bp,
+        (items as RGLLayout[]).map((item) => ({
+          ...item,
+          h: Math.max(Math.round(item.h * scale), 2),
+          y: Math.round(item.y * scale),
+          minH: item.minH ? Math.max(Math.round(item.minH * scale), 2) : undefined,
+          maxH: item.maxH ? Math.round(item.maxH * scale) : undefined,
+        })),
+      ]),
+    ) as RGLLayouts,
+  }));
+
+  localStorage.setItem(ROW_HEIGHT_VERSION_KEY, String(CURRENT_ROW_VERSION));
+  localStorage.setItem(DASHBOARDS_KEY, JSON.stringify(migrated));
+  return migrated;
+}
+
 /* ─── Load from storage with migration ─── */
 function loadDashboards(): SavedDashboard[] {
   try {
     const stored = localStorage.getItem(DASHBOARDS_KEY);
     if (stored) {
-      const parsed = JSON.parse(stored) as SavedDashboard[];
-      // DEBUG: log raw saved layout heights
-      console.log('[LAYOUT DEBUG] Raw localStorage lg layouts:',
-        parsed[0]?.layouts?.lg?.map((i: RGLLayout) => `${i.i}:${i.w}x${i.h}`) ?? 'none');
+      let parsed = JSON.parse(stored) as SavedDashboard[];
+      // Migrate row heights from old ROW_HEIGHT=180 to new ROW_HEIGHT=80
+      parsed = migrateRowHeight(parsed);
       // Reconcile widgets against current registry
-      const result = parsed.map((d) => ({
+      return parsed.map((d) => ({
         ...d,
         widgets: d.widgets.filter((w) =>
           WIDGET_REGISTRY.some((def) => def.id === w.widgetId),
@@ -309,10 +339,6 @@ function loadDashboards(): SavedDashboard[] {
           ),
         ),
       }));
-      // DEBUG: log after reconcile
-      console.log('[LAYOUT DEBUG] After reconcile lg layouts:',
-        result[0]?.layouts?.lg?.map((i: RGLLayout) => `${i.i}:${i.w}x${i.h}`) ?? 'none');
-      return result;
     }
     // Try legacy migration
     const legacy = localStorage.getItem(LEGACY_KEY);
@@ -391,9 +417,6 @@ export function useDashboardLayout() {
   /* ─── Layout actions ─── */
   const updateLayouts = useCallback(
     (layouts: RGLLayouts) => {
-      // DEBUG: log what's being persisted
-      console.log('[LAYOUT DEBUG] Persisting lg layouts:',
-        layouts.lg?.map((i: RGLLayout) => `${i.i}:${i.w}x${i.h}`) ?? 'none');
       pushSnapshot({ widgets: activeDashRef.current.widgets, layouts });
       updateActive((d) => ({ ...d, layouts }));
     },

@@ -205,3 +205,11 @@ signal-audit/04-climate/005-climate-keeper-mode.prompt.md
 signal-audit/04-climate/006-climate-seat-cooling-front-left.prompt.md
 signal-audit/04-climate/007-climate-seat-cooling-front-right.prompt.md
 signal-audit/04-climate/008-defrost-for-preconditioning.prompt.md
+signal-audit/04-climate/009-defrost-mode.prompt.md
+signal-audit/04-climate/010-hvac-a-c-enabled.prompt.md
+signal-audit/04-climate/011-hvac-auto-mode.prompt.md
+signal-audit/04-climate/012-hvac-fan-speed.prompt.md
+signal-audit/04-climate/013-hvac-fan-status.prompt.md
+signal-audit/04-climate/014-hvac-left-temperature-request.prompt.md
+signal-audit/04-climate/015-hvac-power.prompt.md
+signal-audit/04-climate/016-hvac-right-temperature-request.prompt.md

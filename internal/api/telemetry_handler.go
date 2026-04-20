@@ -1530,6 +1530,11 @@ func normalizeFleetUnits(signals map[string]interface{}) {
 		signals["DefrostMode"] = enums.ParseDefrostMode(toString(v))
 	}
 
+	// HvacAutoMode: strip "HvacAutoModeState" prefix (e.g., "HvacAutoModeStateOn" → "On")
+	if v, ok := signals["HvacAutoMode"]; ok {
+		signals["HvacAutoMode"] = enums.ParseHvacAutoMode(toString(v))
+	}
+
 	// Window states: strip "WindowState" prefix (e.g., "WindowStateClosed" → "Closed")
 	for _, wn := range []string{"FdWindow", "FpWindow", "RdWindow", "RpWindow"} {
 		if v, ok := signals[wn]; ok {

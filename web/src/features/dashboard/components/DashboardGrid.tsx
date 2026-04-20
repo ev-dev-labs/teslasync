@@ -208,9 +208,6 @@ export function DashboardGrid({
   // and only update liveLayouts when the user is actively interacting.
   const handleLayoutChange = useCallback((_layout: RGLLayoutArray, allLayouts: ResponsiveLayouts) => {
     const typed = allLayouts as RGLLayouts;
-    // DEBUG: log what RGL reports
-    console.log('[LAYOUT DEBUG] RGL onLayoutChange, interacting:', interactingRef.current,
-      'lg:', typed.lg?.map(i => `${i.i}:${i.w}x${i.h}`)?.slice(0, 3));
     layoutRef.current = typed;
     if (interactingRef.current) {
       setLiveLayouts(typed);

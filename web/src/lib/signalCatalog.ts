@@ -87,7 +87,7 @@ const catalog: SignalMeta[] = [
   { name: 'DefrostForPreconditioning', category: 'Climate', type: 'boolean', description: 'Defrost for preconditioning active' },
   { name: 'DefrostMode', category: 'Climate', type: 'string', description: 'Defrost mode state', enumValues: ['Off', 'Normal', 'Max', 'AutoDefog'] },
   { name: 'HvacACEnabled', category: 'Climate', type: 'boolean', description: 'HVAC AC compressor enabled' },
-  { name: 'HvacAutoMode', category: 'Climate', type: 'boolean', description: 'HVAC auto mode enabled' },
+  { name: 'HvacAutoMode', category: 'Climate', type: 'string', description: 'HVAC auto mode enabled', enumValues: ['On', 'Off'] },
   { name: 'HvacFanSpeed', category: 'Climate', type: 'number', description: 'HVAC fan speed setting (0-10)' },
   { name: 'HvacFanStatus', category: 'Climate', type: 'number', description: 'HVAC fan status' },
   { name: 'HvacLeftTemperatureRequest', category: 'Climate', type: 'number', unit: '°C', description: 'Left side temperature request' },
