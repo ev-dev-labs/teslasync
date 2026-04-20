@@ -197,6 +197,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	tripPlannerHandler := NewTripPlannerHandler(db, opt.CacheStore)
 	geocodeHandler := NewGeocodeHandler(geocoding.NewSearcher("TeslaSync/1.0"))
 	shareHandler := NewShareHandler(db)
+	watchHandler := NewWatchHandler(db, teslaClient)
 	// SSE event hub for automation real-time events
 	automationEventHub := NewEventHub()
 	automationPublisher := NewAutomationEventPublisher(automationEventHub)
@@ -1110,6 +1111,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Suppress unused warnings
 		_ = vehicleSvc
 		_ = v1VehicleHandler
+
+		// Watch endpoints — lightweight API key auth for wearable devices
+		r.Route("/watch", func(r chi.Router) {
+			r.Use(APIKeyAuthRequired(db))
+			r.Get("/summary", watchHandler.Summary)
+			r.Get("/complication", watchHandler.Complication)
+			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/command", watchHandler.Command)
+		})
 	})
 
 	// Tesla public key (.well-known path required by Tesla Fleet API)

@@ -42,6 +42,43 @@ func APIKeyAuth(db *database.DB) func(next http.Handler) http.Handler {
 	}
 }
 
+// APIKeyAuthRequired is middleware that requires a valid X-API-Key header.
+// Unlike APIKeyAuth (which passes through when no key is provided), this
+// middleware rejects requests without a valid API key. Used for watch
+// endpoints where OAuth is not available.
+func APIKeyAuthRequired(db *database.DB) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			key := r.Header.Get("X-API-Key")
+			if key == "" {
+				// Also check query param (for PWA/bookmark URLs)
+				key = r.URL.Query().Get("key")
+			}
+			if key == "" {
+				writeError(w, http.StatusUnauthorized, "API key required")
+				return
+			}
+
+			hash := sha256Hex(key)
+			apiKey, err := findAPIKeyByHash(db, r.Context(), hash)
+			if err != nil || apiKey == nil {
+				writeError(w, http.StatusUnauthorized, "invalid API key")
+				return
+			}
+
+			if apiKey.ExpiresAt != nil && time.Now().After(*apiKey.ExpiresAt) {
+				writeError(w, http.StatusUnauthorized, "API key expired")
+				return
+			}
+
+			_ = updateAPIKeyLastUsed(db, r.Context(), apiKey.ID)
+
+			ctx := context.WithValue(r.Context(), apiKeyPermCtxKey{}, apiKey.Permissions)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
 func findAPIKeyByHash(db *database.DB, ctx context.Context, hash string) (*models.APIKey, error) {
 	var k models.APIKey
 	err := db.Pool.QueryRow(ctx,

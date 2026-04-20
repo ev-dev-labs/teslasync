@@ -134,6 +134,9 @@ const Settings = lazy(() => import('./features/settings/pages/SettingsPage'))
 // Sharing (public)
 const SharedDrive = lazy(() => import('./features/sharing/pages/SharedDrivePage'))
 
+// Watch (standalone — no Layout, API key auth)
+const WatchFace = lazy(() => import('./features/watch/pages/WatchFacePage'))
+
 /** Route wrapper: Suspense for lazy loading + ErrorBoundary for crash isolation */
 function SafeRoute({ children, name }: { children: React.ReactNode; name: string }) {
   return (
@@ -171,6 +174,7 @@ export default function App() {
       <Route path="glance" element={<SafeRoute name="Glance"><GlancePage /></SafeRoute>} />
       <Route path="year-review/:year" element={<SafeRoute name="YearReview"><YearReview /></SafeRoute>} />
       <Route path="s/:token" element={<SafeRoute name="SharedDrive"><SharedDrive /></SafeRoute>} />
+      <Route path="watch" element={<SafeRoute name="WatchFace"><WatchFace /></SafeRoute>} />
       <Route path="/" element={<Layout />}>
         <Route index element={<SafeRoute name="Dashboard"><Dashboard /></SafeRoute>} />
         <Route path="live" element={<SafeRoute name="LiveMap"><LiveMap /></SafeRoute>} />
