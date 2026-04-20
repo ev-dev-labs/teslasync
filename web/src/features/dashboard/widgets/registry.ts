@@ -65,6 +65,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     component: lazy(() => import('./RangeEstimateWidget')),
   },
   {
+    id: 'range-bar',
+    name: 'Range Bar',
+    description: 'Horizontal bar showing rated, ideal, and estimated range with EPA comparison',
+    icon: Gauge,
+    category: 'battery',
+    defaultSize: { cols: 2, rows: 1 },
+    minSize: { cols: 1, rows: 1 },
+    maxSize: { cols: 4, rows: 2 },
+    component: lazy(() => import('./RangeBarWidget')),
+  },
+  {
     id: 'energy-flow',
     name: 'Energy Flow',
     description: 'Live power flow diagram',
