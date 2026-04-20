@@ -10,6 +10,7 @@ import {
   Zap,
   Menu,
   X,
+  User,
   Radar,
   Bolt,
   HeartPulse,
@@ -260,6 +261,7 @@ export const navSections = [
   {
     title: 'System',
     items: [
+      { to: '/tesla-account', icon: User, label: 'Tesla Account', color: 'text-blue-400' },
       { to: '/system-status', icon: Activity, label: 'Status', color: 'text-emerald-400' },
       { to: '/api-logs', icon: FileText, label: 'API Logs', color: 'text-amber-400' },
       { to: '/fleet-api', icon: Cloud, label: 'Fleet API', color: 'text-sky-400' },
