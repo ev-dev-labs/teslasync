@@ -192,7 +192,7 @@ export default function MapOverviewPage() {
         header: t('mapOverview.colHeading', 'Heading'),
         render: (r) => (
           <span className="text-xs">
-            {r.elevation != null ? `${fmtNumber(r.elevation, 0)} m` : '—'}
+            {r.heading != null ? `${fmtNumber(r.heading, 0)}°` : '—'}
           </span>
         ),
       },
@@ -287,7 +287,7 @@ export default function MapOverviewPage() {
             />
             <MetricCard
               label={t('mapOverview.heading', 'Heading')}
-              value={latest.elevation != null ? `${fmtNumber(latest.elevation, 0)} m` : '—'}
+              value={latest.heading != null ? `${fmtNumber(latest.heading, 0)}°` : '—'}
               icon={<Compass className="h-4 w-4" />}
               color="purple"
             />
