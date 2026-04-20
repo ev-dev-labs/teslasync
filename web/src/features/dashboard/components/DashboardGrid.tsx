@@ -6,8 +6,9 @@ import {
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import {
-  GripVertical, X, Settings, Maximize2, Minimize2,
+  GripHorizontal, X, Settings, Maximize2, Minimize2,
 } from 'lucide-react';
+import { cn } from '@/lib/cn';
 import { GlassPanel, Button } from '@/components/ui';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { getWidgetDef } from '../widgets/registry';
@@ -67,16 +68,17 @@ function WidgetChrome({
       <div
         className="widget-drag-handle absolute top-0 left-0 right-0 h-8
           bg-gradient-to-b from-black/60 to-transparent
-          flex items-center justify-between px-3 cursor-grab
+          flex items-center justify-between px-3 cursor-grab active:cursor-grabbing
           opacity-0 group-hover:opacity-100 transition-opacity rounded-t-xl"
       >
         <div className="flex items-center gap-2">
-          <GripVertical className="h-3.5 w-3.5 text-white/40" />
+          <GripHorizontal className="h-3.5 w-3.5 text-white/40" />
           <span className="text-[11px] text-white/50 font-medium">{def.name}</span>
         </div>
         <div className="flex items-center gap-1">
           <button
             onClick={(e) => { e.stopPropagation(); onSettings(); }}
+            onMouseDown={(e) => e.stopPropagation()}
             className="p-1 rounded hover:bg-white/10 text-white/40 hover:text-white/70 transition-colors"
             aria-label={`Settings for ${def.name}`}
           >
@@ -84,6 +86,7 @@ function WidgetChrome({
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onRemove(); }}
+            onMouseDown={(e) => e.stopPropagation()}
             className="p-1 rounded hover:bg-red-500/20 text-white/40 hover:text-red-400 transition-colors"
             aria-label={`Remove ${def.name}`}
           >
@@ -147,6 +150,7 @@ export function DashboardGrid({
   getWidgetSize,
 }: DashboardGridProps) {
   const [fullscreenWidget, setFullscreenWidget] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const layoutRef = useRef<RGLLayouts>(dashboard.layouts);
 
   // react-grid-layout v2: hook provides containerRef + measured width
@@ -164,7 +168,12 @@ export function DashboardGrid({
   }), [editMode]);
 
   // Persist only on drag/resize stop (v2 EventCallback signature)
+  const handleDragStart = useCallback(() => {
+    setIsDragging(true);
+  }, []);
+
   const handleDragStop = useCallback(() => {
+    setIsDragging(false);
     onLayoutChange(layoutRef.current);
   }, [onLayoutChange]);
 
@@ -186,7 +195,20 @@ export function DashboardGrid({
 
   return (
     <>
-      <div ref={containerRef as React.RefObject<HTMLDivElement>}>
+      <div
+        ref={containerRef as React.RefObject<HTMLDivElement>}
+        className={cn('relative', editMode && 'edit-mode', isDragging && 'dragging-active')}
+      >
+      {/* Edit mode grid dot pattern */}
+      {editMode && (
+        <div
+          className="absolute inset-0 pointer-events-none z-0 rounded-xl"
+          style={{
+            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px)',
+            backgroundSize: '40px 40px',
+          }}
+        />
+      )}
       <ResponsiveGridLayout
         width={width}
         layouts={dashboard.layouts}
@@ -197,6 +219,7 @@ export function DashboardGrid({
         resizeConfig={resizeConfig}
         compactor={verticalCompactor}
         onLayoutChange={handleLayoutChange}
+        onDragStart={handleDragStart}
         onDragStop={handleDragStop}
         onResizeStop={handleResizeStop}
         margin={GRID_MARGIN}

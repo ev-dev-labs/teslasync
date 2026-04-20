@@ -561,6 +561,37 @@ select option:checked {
   border-radius: 0.75rem;
 }
 
+/* Smooth transitions for widgets settling after drag/resize */
+.react-grid-item:not(.react-draggable-dragging):not(.resizing) {
+  transition: transform 200ms ease, width 200ms ease, height 200ms ease;
+}
+
+/* Kill transitions on ALL siblings during active drag for snappy rearrangement */
+.dragging-active .react-grid-item {
+  transition: none !important;
+}
+
+/* Dragged widget lifts off the grid with shadow + scale */
+.react-grid-item.react-draggable-dragging {
+  z-index: 100 !important;
+  opacity: 0.92;
+  border: 1px solid rgba(var(--theme-primary-rgb), 0.3);
+  border-radius: 0.75rem;
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.4),
+    0 0 30px rgba(var(--theme-primary-rgb), 0.15);
+  transition: box-shadow 150ms ease, opacity 150ms ease !important;
+}
+
+/* Resizing widget gets subtle visual feedback */
+.react-grid-item.resizing {
+  z-index: 100 !important;
+  opacity: 0.95;
+  box-shadow:
+    0 10px 25px rgba(0, 0, 0, 0.3),
+    0 0 20px rgba(var(--theme-primary-rgb), 0.1);
+}
+
 /* Resize handles — must be above widget chrome (z-10) and GlassPanel */
 .react-grid-item > .react-resizable-handle {
   z-index: 30 !important;
@@ -641,23 +672,41 @@ select option:checked {
   border: none !important;
 }
 
+/* Drop zone placeholder — clearly visible themed dashed outline */
 .react-grid-item.react-grid-placeholder {
-  background: var(--theme-primary) !important;
-  opacity: 0.08 !important;
+  background: rgba(var(--theme-primary-rgb), 0.08) !important;
+  border: 2px dashed rgba(var(--theme-primary-rgb), 0.4) !important;
   border-radius: 0.75rem !important;
-  border: 2px dashed var(--theme-primary) !important;
+  opacity: 1 !important;
+  transition: all 150ms ease !important;
 }
 
-.react-grid-item.cssTransforms {
-  transition-property: transform;
-  transition-duration: 200ms;
+/* ─── Edit mode visual cues ─── */
+@keyframes widget-wobble {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-0.3deg); }
+  75% { transform: rotate(0.3deg); }
 }
-.react-grid-item.react-draggable-dragging {
-  transition: none !important;
-  z-index: 40;
-  opacity: 0.85;
+
+.edit-mode .react-grid-item > .widget-container {
+  animation: widget-wobble 2s ease-in-out infinite;
 }
-.react-grid-item.resizing {
-  opacity: 0.8;
-  z-index: 40;
+.edit-mode .react-grid-item:nth-child(odd) > .widget-container {
+  animation-delay: 0.5s;
+}
+.edit-mode .react-grid-item:nth-child(3n) > .widget-container {
+  animation-delay: 1s;
+}
+
+/* Stop wobble on actively dragged/resized widgets */
+.edit-mode .react-grid-item.react-draggable-dragging > .widget-container,
+.edit-mode .react-grid-item.resizing > .widget-container {
+  animation: none;
+}
+
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .edit-mode .react-grid-item > .widget-container {
+    animation: none !important;
+  }
 }
