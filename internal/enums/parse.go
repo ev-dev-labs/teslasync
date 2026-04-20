@@ -87,6 +87,63 @@ func ParseWindowState(raw string) string {
 	return raw
 }
 
+// ParseChargeState normalizes ChargeState enum.
+// Tesla sends: "ChargeStateCharging", "ChargeStateComplete", etc.
+// Also normalizes the special "Enable" value to "Charging".
+func ParseChargeState(raw string) string {
+	g := strings.TrimPrefix(raw, "ChargeState")
+	switch g {
+	case "Charging":
+		return ChargeStateCharging
+	case "Complete":
+		return ChargeStateComplete
+	case "Disconnected":
+		return ChargeStateDisconnected
+	case "NoPower":
+		return ChargeStateNoPower
+	case "Starting":
+		return ChargeStateStarting
+	case "Stopped":
+		return ChargeStateStopped
+	case "Enable":
+		return ChargeStateCharging
+	}
+	// "Enable" without prefix
+	if raw == "Enable" {
+		return ChargeStateCharging
+	}
+	if g != "" && g != raw {
+		return g
+	}
+	return raw
+}
+
+// ParseDetailedChargeState normalizes DetailedChargeState enum.
+// Tesla sends: "DetailedChargeStateCharging", "DetailedChargeStateComplete", etc.
+func ParseDetailedChargeState(raw string) string {
+	g := strings.TrimPrefix(raw, PrefixDetailedCharge)
+	switch g {
+	case "Charging":
+		return ChargeStateCharging
+	case "Complete":
+		return ChargeStateComplete
+	case "Disconnected":
+		return ChargeStateDisconnected
+	case "NoPower":
+		return ChargeStateNoPower
+	case "Starting":
+		return ChargeStateStarting
+	case "Stopped":
+		return ChargeStateStopped
+	case "Error":
+		return "Error"
+	}
+	if g != "" && g != raw {
+		return g
+	}
+	return raw
+}
+
 // ParseChargePort normalizes charge port state.
 // Tesla sends: "ChargePortOpen", "ChargePortClosed".
 func ParseChargePort(raw string) string {

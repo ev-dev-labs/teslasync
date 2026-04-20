@@ -1474,6 +1474,16 @@ func normalizeFleetUnits(signals map[string]interface{}) {
 	if v, ok := signals["ChargePortLatch"]; ok {
 		signals["ChargePortLatch"] = enums.ParseChargePortLatch(toString(v))
 	}
+
+	// ChargeState: strip "ChargeState" prefix (e.g., "ChargeStateCharging" → "Charging")
+	if v, ok := signals["ChargeState"]; ok {
+		signals["ChargeState"] = enums.ParseChargeState(toString(v))
+	}
+
+	// DetailedChargeState: strip "DetailedChargeState" prefix (e.g., "DetailedChargeStateCharging" → "Charging")
+	if v, ok := signals["DetailedChargeState"]; ok {
+		signals["DetailedChargeState"] = enums.ParseDetailedChargeState(toString(v))
+	}
 }
 
 func toFloat(v interface{}) float64 {

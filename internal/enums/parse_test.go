@@ -307,3 +307,64 @@ func TestParseChargePortLatch(t *testing.T) {
 		})
 	}
 }
+
+func TestParseChargeState(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"ChargeStateCharging", "Charging"},
+		{"ChargeStateComplete", "Complete"},
+		{"ChargeStateDisconnected", "Disconnected"},
+		{"ChargeStateNoPower", "NoPower"},
+		{"ChargeStateStarting", "Starting"},
+		{"ChargeStateStopped", "Stopped"},
+		{"ChargeStateEnable", "Charging"},
+		{"Charging", "Charging"},
+		{"Complete", "Complete"},
+		{"Disconnected", "Disconnected"},
+		{"NoPower", "NoPower"},
+		{"Starting", "Starting"},
+		{"Stopped", "Stopped"},
+		{"Enable", "Charging"},
+		{"ChargeStateNewValue", "NewValue"},
+		{"SomeUnknown", "SomeUnknown"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := ParseChargeState(tt.input)
+			if got != tt.expected {
+				t.Errorf("ParseChargeState(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseDetailedChargeState(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"DetailedChargeStateCharging", "Charging"},
+		{"DetailedChargeStateComplete", "Complete"},
+		{"DetailedChargeStateDisconnected", "Disconnected"},
+		{"DetailedChargeStateNoPower", "NoPower"},
+		{"DetailedChargeStateStarting", "Starting"},
+		{"DetailedChargeStateStopped", "Stopped"},
+		{"DetailedChargeStateError", "Error"},
+		{"Charging", "Charging"},
+		{"Complete", "Complete"},
+		{"Disconnected", "Disconnected"},
+		{"Error", "Error"},
+		{"DetailedChargeStateNewValue", "NewValue"},
+		{"SomeUnknown", "SomeUnknown"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := ParseDetailedChargeState(tt.input)
+			if got != tt.expected {
+				t.Errorf("ParseDetailedChargeState(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
