@@ -411,7 +411,12 @@ export default function DashboardPage() {
 
       {/* Kiosk Mode — portaled to document.body to escape all app chrome */}
       {isKiosk && createPortal(
-        <div className="kiosk-root fixed inset-0 z-[9990] bg-[var(--bg-primary)]">
+        <div
+          className="kiosk-root fixed inset-0 z-[9990]"
+          style={{
+            backgroundColor: `rgba(10, 10, 20, ${kioskConfig.backgroundOpacity ?? 1})`,
+          }}
+        >
           <DashboardGrid
             dashboard={activeDashboard}
             editMode={false}
@@ -422,6 +427,7 @@ export default function DashboardPage() {
             dashboardVehicleId={activeDashboard.settings?.vehicleId}
             compactMode={activeDashboard.settings?.compactMode}
             showWidgetBorders={activeDashboard.settings?.showWidgetBorders}
+            kioskWidgetOpacity={kioskConfig.widgetOpacity ?? 1}
           />
           <KioskOverlay
             config={kioskConfig}

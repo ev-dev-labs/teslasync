@@ -92,6 +92,21 @@ function buildDefaultLayouts(widgets: WidgetInstance[]): RGLLayouts {
   return layouts;
 }
 
+/** Guard against corrupt layout data (NaN, 0, undefined) from localStorage */
+function sanitizeLayouts(layouts: RGLLayouts): RGLLayouts {
+  const result: RGLLayouts = {};
+  for (const [bp, items] of Object.entries(layouts)) {
+    result[bp] = (items as RGLLayout[]).map((item) => ({
+      ...item,
+      w: Math.max(Number.isFinite(item.w) ? item.w : 1, 1),
+      h: Math.max(Number.isFinite(item.h) ? item.h : 1, 1),
+      x: Math.max(Number.isFinite(item.x) ? item.x : 0, 0),
+      y: Math.max(Number.isFinite(item.y) ? item.y : 0, 0),
+    }));
+  }
+  return result;
+}
+
 /** Ensure layout has valid items for all widgets and respects current constraints */
 export function reconcileLayouts(
   layouts: RGLLayouts,
@@ -281,10 +296,12 @@ function loadDashboards(): SavedDashboard[] {
         widgets: d.widgets.filter((w) =>
           WIDGET_REGISTRY.some((def) => def.id === w.widgetId),
         ),
-        layouts: reconcileLayouts(
-          d.layouts ?? {},
-          d.widgets.filter((w) =>
-            WIDGET_REGISTRY.some((def) => def.id === w.widgetId),
+        layouts: sanitizeLayouts(
+          reconcileLayouts(
+            d.layouts ?? {},
+            d.widgets.filter((w) =>
+              WIDGET_REGISTRY.some((def) => def.id === w.widgetId),
+            ),
           ),
         ),
       }));

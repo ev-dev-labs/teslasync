@@ -1,4 +1,4 @@
-import { Suspense, useState, useCallback, useMemo, useRef, Component as ReactComponent, type ErrorInfo, type ReactNode } from 'react';
+import { Suspense, useState, useCallback, useMemo, useRef, useEffect, Component as ReactComponent, type ErrorInfo, type ReactNode } from 'react';
 import {
   ResponsiveGridLayout, useContainerWidth, verticalCompactor,
   type Layout as RGLLayoutArray, type ResponsiveLayouts,
@@ -15,7 +15,7 @@ import { getWidgetDef } from '../widgets/registry';
 import {
   GRID_BREAKPOINTS, GRID_COLS, ROW_HEIGHT, GRID_MARGIN,
 } from '../hooks/useDashboardLayout';
-import type { SavedDashboard, WidgetDef, WidgetInstance, RGLLayouts } from '../widgets/types';
+import type { SavedDashboard, WidgetDef, WidgetInstance, RGLLayout, RGLLayouts } from '../widgets/types';
 
 /* ─── Types ─── */
 interface DashboardGridProps {
@@ -31,6 +31,8 @@ interface DashboardGridProps {
   compactMode?: boolean;
   /** Show a subtle border on each widget */
   showWidgetBorders?: boolean;
+  /** Kiosk mode widget opacity boost (0.3–1.0). Increases GlassPanel background. */
+  kioskWidgetOpacity?: number;
 }
 
 /* ─── Error Boundary ─── */
@@ -153,14 +155,29 @@ export function DashboardGrid({
   onLayoutChange,
   onRemoveWidget,
   onOpenSettings,
-  getWidgetSize,
   dashboardVehicleId,
   compactMode,
   showWidgetBorders,
+  kioskWidgetOpacity,
 }: DashboardGridProps) {
   const [fullscreenWidget, setFullscreenWidget] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+
+  // Local layout state breaks the controlled-component feedback loop:
+  // RGL renders from liveLayouts (always up-to-date), while dashboard.layouts
+  // is only read when syncing from external changes.
+  const [liveLayouts, setLiveLayouts] = useState<RGLLayouts>(dashboard.layouts);
   const layoutRef = useRef<RGLLayouts>(dashboard.layouts);
+  const interactingRef = useRef(false);
+
+  // Sync from parent state when not actively dragging/resizing.
+  // Covers: undo/redo, auto-arrange, add/remove widget, reset, import, dashboard switch.
+  useEffect(() => {
+    if (!interactingRef.current) {
+      setLiveLayouts(dashboard.layouts);
+      layoutRef.current = dashboard.layouts;
+    }
+  }, [dashboard.layouts]);
 
   // react-grid-layout v2: hook provides containerRef + measured width
   const { containerRef, width } = useContainerWidth({ initialWidth: 1200 });
@@ -176,24 +193,54 @@ export function DashboardGrid({
     handles: ['se', 'e', 's'] as const,
   }), [editMode]);
 
-  // Persist only on drag/resize stop (v2 EventCallback signature)
+  // Track layout changes in both ref (for sync reads) and state (for rendering)
+  const handleLayoutChange = useCallback((_layout: RGLLayoutArray, allLayouts: ResponsiveLayouts) => {
+    const typed = allLayouts as RGLLayouts;
+    layoutRef.current = typed;
+    setLiveLayouts(typed);
+  }, []);
+
   const handleDragStart = useCallback(() => {
+    interactingRef.current = true;
     setIsDragging(true);
   }, []);
 
   const handleDragStop = useCallback(() => {
     setIsDragging(false);
+    interactingRef.current = false;
     onLayoutChange(layoutRef.current);
   }, [onLayoutChange]);
+
+  const handleResizeStart = useCallback(() => {
+    interactingRef.current = true;
+  }, []);
 
   const handleResizeStop = useCallback(() => {
+    interactingRef.current = false;
     onLayoutChange(layoutRef.current);
   }, [onLayoutChange]);
 
-  // Track layout changes in ref (v2: layout is LayoutItem[], layouts is ResponsiveLayouts)
-  const handleLayoutChange = useCallback((_layout: RGLLayoutArray, allLayouts: ResponsiveLayouts) => {
-    layoutRef.current = allLayouts as RGLLayouts;
-  }, []);
+  // Compute widget size from live layouts so widgets adapt during resize
+  const getWidgetSizeLive = useCallback((instanceId: string): { cols: number; rows: number } => {
+    const lgLayout = (liveLayouts.lg ?? []) as RGLLayout[];
+    const item = lgLayout.find((l) => l.i === instanceId);
+    if (item) return { cols: item.w, rows: item.h };
+    const widget = dashboard.widgets.find((w) => w.id === instanceId);
+    const def = widget ? getWidgetDef(widget.widgetId) : undefined;
+    return def?.defaultSize ?? { cols: 1, rows: 1 };
+  }, [liveLayouts, dashboard.widgets]);
+
+  // Kiosk panel background boost: increases GlassPanel bg from default 5% white
+  const kioskPanelStyle = useMemo(() => {
+    if (kioskWidgetOpacity == null) return undefined;
+    // Scale from bg-white/8 at 0.3 to bg-white/20 at 1.0 for readability
+    const alpha = 0.03 + kioskWidgetOpacity * 0.17;
+    const blur = 4 + kioskWidgetOpacity * 12;
+    return {
+      backgroundColor: `rgba(255, 255, 255, ${alpha.toFixed(3)})`,
+      backdropFilter: `blur(${blur.toFixed(1)}px)`,
+    };
+  }, [kioskWidgetOpacity]);
 
   const fullscreenInstance = fullscreenWidget
     ? dashboard.widgets.find((w) => w.id === fullscreenWidget)
@@ -220,7 +267,7 @@ export function DashboardGrid({
       )}
       <ResponsiveGridLayout
         width={width}
-        layouts={dashboard.layouts}
+        layouts={liveLayouts}
         breakpoints={GRID_BREAKPOINTS}
         cols={GRID_COLS}
         rowHeight={ROW_HEIGHT}
@@ -230,6 +277,7 @@ export function DashboardGrid({
         onLayoutChange={handleLayoutChange}
         onDragStart={handleDragStart}
         onDragStop={handleDragStop}
+        onResizeStart={handleResizeStart}
         onResizeStop={handleResizeStop}
         margin={compactMode ? [8, 8] as [number, number] : GRID_MARGIN}
         containerPadding={[0, 0]}
@@ -238,7 +286,7 @@ export function DashboardGrid({
           const def = getWidgetDef(widget.widgetId);
           if (!def) return null;
           const Component = def.component;
-          const size = getWidgetSize(widget.id);
+          const size = getWidgetSizeLive(widget.id);
 
           return (
             <div key={widget.id} className="widget-container relative group">
@@ -272,10 +320,13 @@ export function DashboardGrid({
                   opacity-0 group-hover:opacity-100 transition-opacity rounded-b-xl pointer-events-none" />
               )}
 
-              <GlassPanel className={cn(
-                'h-full w-full overflow-hidden rounded-xl',
-                showWidgetBorders && 'border border-white/10',
-              )}>
+              <GlassPanel
+                className={cn(
+                  'h-full w-full overflow-hidden rounded-xl',
+                  showWidgetBorders && 'border border-white/10',
+                )}
+                style={kioskPanelStyle}
+              >
                 <WidgetErrorBoundary name={def.name}>
                   <Suspense
                     fallback={
@@ -304,7 +355,7 @@ export function DashboardGrid({
           widget={fullscreenInstance}
           def={fullscreenDef}
           onClose={() => setFullscreenWidget(null)}
-          getWidgetSize={getWidgetSize}
+          getWidgetSize={getWidgetSizeLive}
         />
       )}
     </>

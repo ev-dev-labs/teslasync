@@ -10,6 +10,10 @@ export interface KioskConfig {
   dimLevel: number;
   showClock: boolean;
   clockPosition: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+  /** Widget panel opacity: 0.3 (transparent) to 1.0 (solid/readable) */
+  widgetOpacity: number;
+  /** Page background opacity: 0.0 (transparent) to 1.0 (solid) */
+  backgroundOpacity: number;
 }
 
 export const DEFAULT_KIOSK_CONFIG: KioskConfig = {
@@ -21,6 +25,8 @@ export const DEFAULT_KIOSK_CONFIG: KioskConfig = {
   dimLevel: 0.5,
   showClock: true,
   clockPosition: 'bottom-right',
+  widgetOpacity: 1.0,
+  backgroundOpacity: 1.0,
 };
 
 const KIOSK_CONFIG_KEY = 'teslasync-kiosk-config';
