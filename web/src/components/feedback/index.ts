@@ -10,3 +10,4 @@ export { AlertBanner } from './AlertBanner';
 export { AuthExpiredOverlay } from './AuthExpiredOverlay';
 export { GotoIndicator } from './GotoIndicator';
 export { KeyboardCheatSheet } from './KeyboardCheatSheet';
+export { TourOverlay } from './TourOverlay';

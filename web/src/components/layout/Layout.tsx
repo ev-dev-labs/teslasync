@@ -54,10 +54,12 @@ import {
   Monitor,
   Terminal,
 } from 'lucide-react'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
+import { useTour, isTourCompleted } from '@/hooks/useTour'
 import { GotoIndicator } from '../feedback/GotoIndicator'
 import { KeyboardCheatSheet } from '../feedback/KeyboardCheatSheet'
+import { TourOverlay } from '../feedback/TourOverlay'
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
@@ -67,6 +69,7 @@ import { CommandPalette, CommandPaletteTrigger } from '../ui/CommandPalette'
 import { ServiceStatusBanner, SystemHealthDot } from '../data-display/ServiceStatus'
 import Logo from '../ui/Logo'
 import OnboardingWizard from '../feedback/OnboardingWizard'
+import { MAIN_TOUR_STEPS } from '@/features/onboarding/tourSteps'
 import { request } from '@/api/client'
 import { getVehicleState } from '@/api/vehicles'
 import type { Alert, Vehicle, VersionInfo, UpdateCheckResult, StaleSessionsResponse } from '@/api/types'
@@ -134,7 +137,7 @@ export const navSections = [
     items: [
       { to: '/', icon: LayoutDashboard, label: 'Dashboard', color: 'text-blue-400' },
       { to: '/live', icon: Radar, label: 'Live Map', color: 'text-emerald-400' },
-      { to: '/vehicles', icon: Car, label: 'Fleet', color: 'text-sky-400' },
+      { to: '/vehicles', icon: Car, label: 'Fleet', color: 'text-sky-400', dataTour: 'vehicle-section' },
       { to: '/compare', icon: GitCompare, label: 'Compare', color: 'text-orange-400' },
       { to: '/weekly-digest', icon: CalendarCheck, label: 'Weekly Digest', color: 'text-purple-400' },
       { to: '/navigation', icon: Navigation, label: 'Navigation', color: 'text-teal-400' },
@@ -202,7 +205,7 @@ export const navSections = [
   {
     title: 'Control',
     items: [
-      { to: '/commands', icon: Gamepad2, label: 'Commands', color: 'text-fuchsia-400' },
+      { to: '/commands', icon: Gamepad2, label: 'Commands', color: 'text-fuchsia-400', dataTour: 'commands-section' },
       { to: '/command-history', icon: History, label: 'Command History', color: 'text-violet-400' },
       { to: '/automations', icon: Zap, label: 'Automations', color: 'text-neon-cyan' },
       { to: '/alerts', icon: Bell, label: 'Alerts', color: 'text-red-400' },
@@ -249,7 +252,7 @@ export const navSections = [
   {
     title: 'Diagnostics',
     items: [
-      { to: '/live-monitor', icon: Activity, label: 'Live Monitor', color: 'text-neon-green' },
+      { to: '/live-monitor', icon: Activity, label: 'Live Monitor', color: 'text-neon-green', dataTour: 'live-signals-section' },
       { to: '/signal-log', icon: Database, label: 'Signal Log', color: 'text-cyan-400' },
       { to: '/signal-explorer', icon: Activity, label: 'Signal Explorer', color: 'text-neon-cyan' },
       { to: '/signal-diff', icon: GitCompare, label: 'Signal Diff', color: 'text-violet-400' },
@@ -280,6 +283,15 @@ export default function Layout() {
   useNotificationListener()
   const { convertDistance, distanceUnit } = useSettings()
   const { mode: shortcutMode, showCheatSheet, toggleCheatSheet } = useKeyboardShortcuts()
+
+  // Onboarding tour
+  const tour = useTour(MAIN_TOUR_STEPS)
+  useEffect(() => {
+    if (!isTourCompleted()) {
+      const timer = setTimeout(() => tour.start(), 1500)
+      return () => clearTimeout(timer)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Version info
   const { data: versionInfo } = useQuery({ queryKey: ['version-info'], queryFn: () => request<VersionInfo>('/system/version'), staleTime: 60_000, refetchInterval: 60_000 })
@@ -352,6 +364,7 @@ export default function Layout() {
       <aside
         role="navigation"
         aria-label="Main navigation"
+        data-tour="sidebar"
         data-sidebar-open={sidebarOpen}
         className={clsx(
           'fixed left-0 bottom-0 top-14 z-[56] w-[clamp(240px,70vw,256px)] transform transition-transform duration-300 ease-out lg:top-0 lg:static lg:z-auto lg:w-64 lg:translate-x-0',
@@ -390,7 +403,8 @@ export default function Layout() {
               <div className="space-y-0.5">
                 {section.items
                   .filter((item) => !('minVehicles' in item) || (vehicles?.length ?? 0) >= (item as { minVehicles?: number }).minVehicles!)
-                  .map(({ to, icon: Icon, label, color }) => {
+                  .map(({ to, icon: Icon, label, color, ...rest }) => {
+                  const dataTour = 'dataTour' in rest ? (rest as { dataTour?: string }).dataTour : undefined;
                   const isActive = to === '/'
                     ? location.pathname === '/'
                     : location.pathname === to || location.pathname.startsWith(to + '/')
@@ -402,6 +416,7 @@ export default function Layout() {
                       onClick={() => setSidebarOpen(false)}
                       aria-label={label}
                       aria-current={isActive ? 'page' : undefined}
+                      data-tour={dataTour}
                       className={clsx(
                         'group relative flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200',
                         isInTabBar && 'opacity-50 lg:opacity-100'
@@ -487,7 +502,7 @@ export default function Layout() {
             <SystemHealthDot />
             <SSEStatusDot state={sseState} />
           </GlassPanel>
-          <p className="text-center text-[10px] text-white/20 mt-1">
+          <p data-tour="keyboard-hint" className="text-center text-[10px] text-white/20 mt-1">
             {t('shortcuts.hint', 'Press')} <kbd className="px-1 rounded bg-white/5 text-white/30">?</kbd> {t('shortcuts.hintSuffix', 'for shortcuts')}
           </p>
         </div>
@@ -548,6 +563,19 @@ export default function Layout() {
       {/* Keyboard shortcut overlays */}
       <GotoIndicator visible={shortcutMode === 'goto'} />
       <KeyboardCheatSheet open={showCheatSheet} onClose={toggleCheatSheet} />
+
+      {/* Onboarding tour */}
+      {tour.isActive && tour.step && (
+        <TourOverlay
+          step={tour.step}
+          targetRect={tour.targetRect}
+          currentStep={tour.currentStep}
+          totalSteps={tour.totalSteps}
+          onNext={tour.next}
+          onPrev={tour.prev}
+          onSkip={tour.skip}
+        />
+      )}
     </div>
   )
 }

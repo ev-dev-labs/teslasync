@@ -1,0 +1,159 @@
+import { useTranslation } from 'react-i18next';
+import { cn } from '@/lib/cn';
+import { Button } from '@/components/ui';
+import { X, ArrowLeft, ArrowRight } from 'lucide-react';
+import type { TourStep } from '@/hooks/useTour';
+
+interface TourOverlayProps {
+  step: TourStep;
+  targetRect: DOMRect | null;
+  currentStep: number;
+  totalSteps: number;
+  onNext: () => void;
+  onPrev: () => void;
+  onSkip: () => void;
+}
+
+export function TourOverlay({
+  step, targetRect, currentStep, totalSteps,
+  onNext, onPrev, onSkip,
+}: TourOverlayProps) {
+  const { t } = useTranslation();
+
+  if (!targetRect) return null;
+
+  const spotlightPadding = 6;
+
+  const spotlight = {
+    top: targetRect.top - spotlightPadding,
+    left: targetRect.left - spotlightPadding,
+    width: targetRect.width + spotlightPadding * 2,
+    height: targetRect.height + spotlightPadding * 2,
+  };
+
+  const tooltipStyle = getTooltipPosition(step.placement, targetRect);
+
+  return (
+    <div className="fixed inset-0 z-[10000]">
+      {/* Dark overlay with spotlight cutout */}
+      <div
+        className="absolute inset-0 bg-black/60 transition-all duration-300"
+        style={{
+          clipPath: `polygon(
+            0% 0%, 0% 100%,
+            ${spotlight.left}px 100%,
+            ${spotlight.left}px ${spotlight.top}px,
+            ${spotlight.left + spotlight.width}px ${spotlight.top}px,
+            ${spotlight.left + spotlight.width}px ${spotlight.top + spotlight.height}px,
+            ${spotlight.left}px ${spotlight.top + spotlight.height}px,
+            ${spotlight.left}px 100%,
+            100% 100%, 100% 0%
+          )`,
+        }}
+        onClick={onSkip}
+      />
+
+      {/* Spotlight border glow */}
+      <div
+        className="absolute rounded-lg border-2 border-[var(--theme-primary)]/40
+          shadow-[0_0_20px_rgba(var(--theme-primary-rgb),0.2)] pointer-events-none
+          transition-all duration-300"
+        style={{
+          top: spotlight.top,
+          left: spotlight.left,
+          width: spotlight.width,
+          height: spotlight.height,
+        }}
+      />
+
+      {/* Tooltip */}
+      <div
+        className="absolute max-w-sm p-4 rounded-xl bg-[var(--bg-secondary)]
+          border border-white/10 shadow-2xl backdrop-blur-xl
+          animate-in fade-in slide-in-from-bottom-2 duration-200"
+        style={tooltipStyle}
+      >
+        {/* Close button */}
+        <button
+          onClick={onSkip}
+          className="absolute top-2 right-2 p-1 rounded-md text-white/30
+            hover:text-white/60 hover:bg-white/5 transition-colors"
+          aria-label={t('tour.close', 'Close tour')}
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+
+        {/* Step counter */}
+        <div className="text-[10px] text-white/30 mb-1">
+          {currentStep + 1} / {totalSteps}
+        </div>
+
+        {/* Content */}
+        <h4 className="text-sm font-semibold text-white/90 mb-1">{step.title}</h4>
+        <p className="text-xs text-white/50 leading-relaxed mb-4">{step.description}</p>
+
+        {/* Navigation */}
+        <div className="flex items-center justify-between">
+          <button
+            onClick={onSkip}
+            className="text-xs text-white/30 hover:text-white/50 transition-colors"
+          >
+            {t('tour.skip', 'Skip tour')}
+          </button>
+          <div className="flex items-center gap-2">
+            {currentStep > 0 && (
+              <Button variant="ghost" size="sm" onClick={onPrev}>
+                <ArrowLeft className="h-3.5 w-3.5 mr-1" />
+                {t('tour.prev', 'Back')}
+              </Button>
+            )}
+            <Button size="sm" onClick={onNext}>
+              {currentStep === totalSteps - 1
+                ? t('tour.finish', 'Get Started!')
+                : t('tour.next', 'Next')}
+              {currentStep < totalSteps - 1 && (
+                <ArrowRight className="h-3.5 w-3.5 ml-1" />
+              )}
+            </Button>
+          </div>
+        </div>
+
+        {/* Progress dots */}
+        <div className="flex justify-center gap-1 mt-3">
+          {Array.from({ length: totalSteps }).map((_, i) => (
+            <div
+              key={i}
+              className={cn(
+                'h-1 rounded-full transition-all',
+                i === currentStep
+                  ? 'w-4 bg-[var(--theme-primary)]'
+                  : i < currentStep
+                    ? 'w-1.5 bg-white/20'
+                    : 'w-1.5 bg-white/10',
+              )}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function getTooltipPosition(
+  placement: string,
+  rect: DOMRect,
+): React.CSSProperties {
+  const gap = 20;
+  switch (placement) {
+    case 'bottom':
+      return { top: rect.bottom + gap, left: rect.left, maxWidth: 360 };
+    case 'top':
+      return { bottom: window.innerHeight - rect.top + gap, left: rect.left, maxWidth: 360 };
+    case 'right':
+      return { top: rect.top, left: rect.right + gap, maxWidth: 360 };
+    case 'left':
+      return { top: rect.top, right: window.innerWidth - rect.left + gap, maxWidth: 360 };
+    default:
+      return { top: rect.bottom + gap, left: rect.left, maxWidth: 360 };
+  }
+}

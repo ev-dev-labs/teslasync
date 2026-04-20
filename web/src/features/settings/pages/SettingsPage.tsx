@@ -22,6 +22,7 @@ import { usePageTitle } from '@/hooks/usePageTitle'
 import { useWebPush } from '@/hooks/useWebPush'
 import { useNotificationListener, type WebPushPreferences } from '@/hooks/useNotificationListener'
 import { cn } from '@/lib/cn'
+import { resetTour } from '@/hooks/useTour'
 import { fmtNumber } from '@/lib/numberFormat'
 import { formatDateTime } from '@/lib/dateFormat'
 import { parseSettingEnum, isSettingMiles, isSettingFahrenheit, isSettingPSI, isSettingBar } from '@/lib/parseSettingEnum'
@@ -29,7 +30,7 @@ import {
   Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield,
   CheckCircle, XCircle, Palette, Download, Sun, Moon, Monitor, Sparkles,
   Pause, Play, Fuel, Zap, Flag, Globe, Info, ShoppingCart, Package, Calendar,
-  Bell,
+  Bell, PlayCircle,
 } from 'lucide-react'
 
 const modeIcons: Record<string, ReactNode> = {
@@ -977,6 +978,28 @@ export default function SettingsPage() {
             <ExternalLink className="h-4 w-4 text-[var(--text-muted)] group-hover:text-neon-cyan transition-colors shrink-0" />
           </GlassPanel>
         </a>
+      </FadeIn>
+      {/* ── Onboarding Tour ── */}
+      <FadeIn delay={0.2}>
+        <GlassPanel className="p-5 flex items-center gap-4">
+          <IconBox color="cyan">
+            <PlayCircle className="h-5 w-5" />
+          </IconBox>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-base font-semibold text-[var(--text-primary)]">{t('tour.title', 'Onboarding Tour')}</h2>
+            <p className="text-xs text-[var(--text-muted)]">{t('tour.description', 'Re-run the guided walkthrough of TeslaSync features')}</p>
+          </div>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              resetTour()
+              window.location.href = '/'
+            }}
+          >
+            <PlayCircle className="h-4 w-4 mr-2" />
+            {t('tour.restart', 'Restart Tour')}
+          </Button>
+        </GlassPanel>
       </FadeIn>
     </PageContainer>
   )

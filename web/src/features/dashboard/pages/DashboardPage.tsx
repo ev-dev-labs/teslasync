@@ -225,7 +225,7 @@ export default function DashboardPage() {
             <Tv className="h-3.5 w-3.5 mr-1" />
             {t('dashboard.kiosk', 'Kiosk')}
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setEditMode(true)}>
+          <Button variant="ghost" size="sm" onClick={() => setEditMode(true)} data-tour="edit-mode-btn">
             <Settings className="h-3.5 w-3.5 mr-1" />
             {t('dashboard.customize', 'Customize')}
           </Button>
@@ -308,14 +308,16 @@ export default function DashboardPage() {
 
             {/* Widget Grid */}
             <FadeIn>
-              <DashboardGrid
-                dashboard={activeDashboard}
-                editMode={editMode}
-                onLayoutChange={updateLayouts}
-                onRemoveWidget={removeWidget}
-                onOpenSettings={setSettingsWidgetId}
-                getWidgetSize={getWidgetSize}
-              />
+              <div data-tour="dashboard-grid">
+                <DashboardGrid
+                  dashboard={activeDashboard}
+                  editMode={editMode}
+                  onLayoutChange={updateLayouts}
+                  onRemoveWidget={removeWidget}
+                  onOpenSettings={setSettingsWidgetId}
+                  getWidgetSize={getWidgetSize}
+                />
+              </div>
             </FadeIn>
           </>
         ) : (
