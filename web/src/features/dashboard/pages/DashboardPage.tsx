@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   RefreshCw, Bell, Radio, ArrowUpRight, Activity,
   Route, BatteryCharging, Shield, AlertCircle, Settings, Plus, RotateCcw,
-  LayoutGrid, Download, Upload, Undo2, Redo2, LayoutTemplate,
+  LayoutGrid, Download, Upload, Undo2, Redo2, LayoutTemplate, Tv,
 } from 'lucide-react';
 import { request } from '@/api/client';
 import { useAuthStatus } from '@/api/hooks/useSettings';
@@ -26,8 +27,11 @@ import { LayoutManager } from '../components/LayoutManager';
 import { TemplateGallery } from '../components/TemplateGallery';
 import { ExportModal } from '../components/ExportModal';
 import { ImportPreviewModal } from '../components/ImportPreviewModal';
+import { KioskOverlay } from '../components/KioskOverlay';
+import { KioskSettingsModal } from '../components/KioskSettingsModal';
 import { useDashboardLayout } from '../hooks/useDashboardLayout';
 import { useLayoutKeyboard } from '../hooks/useLayoutKeyboard';
+import { useKioskMode } from '../hooks/useKioskMode';
 import { fromUrlSafeBase64 } from '../hooks/validateImport';
 import { getWidgetDef } from '../widgets/registry';
 import type { Vehicle, Alert } from '../types';
@@ -53,8 +57,16 @@ export default function DashboardPage() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importJson, setImportJson] = useState<string | null>(null);
+  const [showKioskSettings, setShowKioskSettings] = useState(false);
   useLayoutKeyboard({ editMode, canUndo, canRedo, onUndo: undo, onRedo: redo });
   const [settingsWidgetId, setSettingsWidgetId] = useState<string | null>(null);
+
+  /* ——— Kiosk mode ——— */
+  const {
+    config: kioskConfig, updateConfig: updateKioskConfig,
+    isKiosk, enterKiosk, exitKiosk,
+    isDimmed, isCursorHidden, rotateIndex, validIds,
+  } = useKioskMode(dashboards, activeId, switchDashboard);
 
   /* ——— Auth status ——— */
   const { data: auth } = useAuthStatus();
@@ -209,6 +221,10 @@ export default function DashboardPage() {
           <Button variant="ghost" size="sm" onClick={() => { setImportJson(null); setShowImportModal(true); }}>
             <Upload className="h-3.5 w-3.5" />
           </Button>
+          <Button variant="ghost" size="sm" onClick={() => setShowKioskSettings(true)}>
+            <Tv className="h-3.5 w-3.5 mr-1" />
+            {t('dashboard.kiosk', 'Kiosk')}
+          </Button>
           <Button variant="ghost" size="sm" onClick={() => setEditMode(true)}>
             <Settings className="h-3.5 w-3.5 mr-1" />
             {t('dashboard.customize', 'Customize')}
@@ -355,6 +371,39 @@ export default function DashboardPage() {
         onConfirm={handleImportConfirm}
         initialJson={importJson}
       />
+
+      {/* Kiosk Settings Modal */}
+      <KioskSettingsModal
+        open={showKioskSettings}
+        onClose={() => setShowKioskSettings(false)}
+        config={kioskConfig}
+        onUpdateConfig={updateKioskConfig}
+        onEnterKiosk={enterKiosk}
+        dashboards={dashboards}
+      />
+
+      {/* Kiosk Mode — portaled to document.body to escape all app chrome */}
+      {isKiosk && createPortal(
+        <div className="kiosk-root fixed inset-0 z-[9990] bg-[var(--bg-primary)]">
+          <DashboardGrid
+            dashboard={activeDashboard}
+            editMode={false}
+            onLayoutChange={() => {}}
+            onRemoveWidget={() => {}}
+            onOpenSettings={() => {}}
+            getWidgetSize={getWidgetSize}
+          />
+          <KioskOverlay
+            config={kioskConfig}
+            isDimmed={isDimmed}
+            isCursorHidden={isCursorHidden}
+            dashboardCount={validIds.length}
+            currentIndex={rotateIndex}
+            onExit={exitKiosk}
+          />
+        </div>,
+        document.body,
+      )}
     </PageContainer>
   );
 }
