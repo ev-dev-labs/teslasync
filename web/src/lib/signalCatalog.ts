@@ -228,7 +228,7 @@ const catalog: SignalMeta[] = [
   { name: 'HomelinkNearby', category: 'Location', type: 'boolean', description: 'Near a HomeLink location' },
   { name: 'LightsHazardsActive', category: 'Driving', type: 'boolean', description: 'Hazard lights active' },
   { name: 'LightsHighBeams', category: 'Driving', type: 'boolean', description: 'High beams active' },
-  { name: 'LightsTurnSignal', category: 'Driving', type: 'string', description: 'Turn signal state', enumValues: ['Off', 'Left', 'Right'] },
+  { name: 'LightsTurnSignal', category: 'Driving', type: 'string', description: 'Turn signal state', enumValues: ['Off', 'Left', 'Right', 'Both'] },
   { name: 'Odometer', category: 'Driving', type: 'number', unit: 'mi', description: 'Vehicle odometer reading' },
   { name: 'PairedPhoneKeyAndKeyFobQty', category: 'Security', type: 'number', description: 'Number of paired phone keys and key fobs' },
   { name: 'RdWindow', category: 'Security', type: 'string', description: 'Rear driver window state', enumValues: ['Closed', 'Open', 'Partial'] },
