@@ -2,6 +2,7 @@ import { lazy } from 'react';
 import {
   Battery, Zap, Car, MapPin, Shield, Thermometer,
   Activity, BarChart3, Gauge, Wifi, TrendingUp, Monitor,
+  DollarSign,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -166,6 +167,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 1 },
     maxSize: { cols: 4, rows: 2 },
     component: lazy(() => import('./ChargeSessionChartWidget')),
+  },
+  {
+    id: 'charge-cost-tracker',
+    name: 'Charge Cost Tracker',
+    description: 'Monthly charging cost breakdown: total kWh, total cost, cost per mile, vs gas savings',
+    icon: DollarSign,
+    category: 'charging',
+    defaultSize: { cols: 2, rows: 1 },
+    minSize: { cols: 1, rows: 1 },
+    maxSize: { cols: 4, rows: 2 },
+    component: lazy(() => import('./ChargeCostTrackerWidget')),
   },
 
   // ── Climate ──
