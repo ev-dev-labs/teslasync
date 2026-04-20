@@ -92,7 +92,7 @@ function buildDefaultLayouts(widgets: WidgetInstance[]): RGLLayouts {
 }
 
 /** Ensure layout has valid items for all widgets and respects current constraints */
-function reconcileLayouts(
+export function reconcileLayouts(
   layouts: RGLLayouts,
   widgets: WidgetInstance[],
 ): RGLLayouts {
@@ -530,6 +530,20 @@ export function useDashboardLayout() {
     [dashboards, persist, resetSnapshot],
   );
 
+  /** Import a pre-validated SavedDashboard directly (used by ImportPreviewModal) */
+  const importDashboardFromData = useCallback(
+    (dashboard: SavedDashboard) => {
+      const finalDash: SavedDashboard = {
+        ...dashboard,
+        layouts: reconcileLayouts(dashboard.layouts, dashboard.widgets),
+        isDefault: false,
+      };
+      persist([...dashboardsRef.current, finalDash], finalDash.id);
+      resetSnapshot({ widgets: finalDash.widgets, layouts: finalDash.layouts });
+    },
+    [persist, resetSnapshot],
+  );
+
   /* ─── Auto arrange ─── */
   const autoArrange = useCallback(() => {
     const current = activeDashRef.current;
@@ -591,6 +605,7 @@ export function useDashboardLayout() {
     // Import / Export
     exportDashboard,
     importDashboard,
+    importDashboardFromData,
     // Undo / Redo
     canUndo,
     canRedo,

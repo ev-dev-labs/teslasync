@@ -4,8 +4,9 @@ import { LayoutGrid, ArrowLeft, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Modal, Button, Badge } from '@/components/ui';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
-import { DASHBOARD_PRESETS, GRID_COLS } from '../hooks/useDashboardLayout';
+import { DASHBOARD_PRESETS } from '../hooks/useDashboardLayout';
 import { getWidgetDef } from '../widgets/registry';
+import { MiniGridPreview } from './MiniGridPreview';
 import type { SavedDashboard } from '../widgets/types';
 
 /* ─── Template descriptions keyed by preset ID ─── */
@@ -21,55 +22,6 @@ const TEMPLATE_DESCRIPTIONS: Record<string, { key: string; fallback: string }> =
   kiosk_wall: { key: 'templates.kioskWall.desc', fallback: 'Clean layout designed for always-on screens and kiosk mode' },
   minimal: { key: 'templates.minimal.desc', fallback: 'Just the essentials — battery, charging, climate, and navigation' },
 };
-
-/* ─── Mini Grid Preview ─── */
-function MiniGridPreview({
-  dashboard,
-  className,
-}: {
-  dashboard: SavedDashboard;
-  className?: string;
-}) {
-  const lgLayout = dashboard.layouts.lg ?? [];
-  const cols = GRID_COLS.lg; // 4
-
-  // Compute vertical extent from layout items
-  const maxY = lgLayout.length > 0
-    ? Math.max(...lgLayout.map((l) => l.y + l.h))
-    : 2;
-
-  return (
-    <div
-      className={cn(
-        'relative w-full bg-white/[0.02] rounded-lg border border-white/[0.06] overflow-hidden',
-        className,
-      )}
-      style={{ aspectRatio: `${cols} / ${maxY}` }}
-    >
-      {lgLayout.map((item) => {
-        const widget = dashboard.widgets.find((w) => w.id === item.i);
-        const def = widget ? getWidgetDef(widget.widgetId) : null;
-        const Icon = def?.icon;
-        return (
-          <div
-            key={item.i}
-            className="absolute rounded-sm bg-white/[0.06] border border-white/[0.08]
-              flex items-center justify-center transition-colors"
-            style={{
-              left: `${(item.x / cols) * 100}%`,
-              top: `${(item.y / maxY) * 100}%`,
-              width: `${(item.w / cols) * 100}%`,
-              height: `${(item.h / maxY) * 100}%`,
-              padding: '2px',
-            }}
-          >
-            {Icon && <Icon className="h-3 w-3 text-white/20" />}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 /* ─── Template Detail View ─── */
 function TemplateDetail({

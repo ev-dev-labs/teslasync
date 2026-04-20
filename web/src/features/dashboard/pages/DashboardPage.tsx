@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -24,17 +24,19 @@ import { WidgetPicker } from '../components/WidgetPicker';
 import { WidgetSettingsModal } from '../components/WidgetSettingsModal';
 import { LayoutManager } from '../components/LayoutManager';
 import { TemplateGallery } from '../components/TemplateGallery';
+import { ExportModal } from '../components/ExportModal';
+import { ImportPreviewModal } from '../components/ImportPreviewModal';
 import { useDashboardLayout } from '../hooks/useDashboardLayout';
 import { useLayoutKeyboard } from '../hooks/useLayoutKeyboard';
+import { fromUrlSafeBase64 } from '../hooks/validateImport';
 import { getWidgetDef } from '../widgets/registry';
 import type { Vehicle, Alert } from '../types';
-import type { WidgetConfig } from '../widgets/types';
+import type { WidgetConfig, SavedDashboard } from '../widgets/types';
 
 export default function DashboardPage() {
   usePageTitle('Dashboard');
   const { t } = useTranslation('dashboard');
   const queryClient = useQueryClient();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   /* ——— Dashboard layout state ——— */
   const {
@@ -43,11 +45,14 @@ export default function DashboardPage() {
     addWidget, removeWidget, updateWidgetConfig,
     updateLayouts, autoArrange, getWidgetSize,
     switchDashboard, createDashboard, renameDashboard, deleteDashboard,
-    applyPreset, resetToDefault, exportDashboard, importDashboard,
+    applyPreset, resetToDefault, exportDashboard, importDashboardFromData,
     canUndo, canRedo, undoCount, undo, redo,
   } = useDashboardLayout();
   const [showPicker, setShowPicker] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importJson, setImportJson] = useState<string | null>(null);
   useLayoutKeyboard({ editMode, canUndo, canRedo, onUndo: undo, onRedo: redo });
   const [settingsWidgetId, setSettingsWidgetId] = useState<string | null>(null);
 
@@ -98,16 +103,26 @@ export default function DashboardPage() {
   };
 
   /* ——— Import handler ——— */
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      await importDashboard(file);
-    } catch {
-      // TODO: show error toast
-    }
-    e.target.value = '';
+  const handleImportConfirm = (dashboard: SavedDashboard) => {
+    importDashboardFromData(dashboard);
   };
+
+  /* ——— URL import detection ——— */
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.startsWith('#import=')) {
+      try {
+        const encoded = hash.slice('#import='.length);
+        const json = fromUrlSafeBase64(encoded);
+        setImportJson(json);
+        setShowImportModal(true);
+        // Clean up URL
+        window.history.replaceState({}, '', window.location.pathname);
+      } catch {
+        // Invalid base64 — ignore
+      }
+    }
+  }, []);
 
   /* ——— Template gallery handler ——— */
   const handleApplyTemplate = (presetId: string) => {
@@ -188,10 +203,10 @@ export default function DashboardPage() {
           <Button variant="ghost" size="sm" onClick={handleRefresh} loading={isRefreshing}>
             <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => exportDashboard()}>
+          <Button variant="ghost" size="sm" onClick={() => setShowExportModal(true)}>
             <Download className="h-3.5 w-3.5" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => fileInputRef.current?.click()}>
+          <Button variant="ghost" size="sm" onClick={() => { setImportJson(null); setShowImportModal(true); }}>
             <Upload className="h-3.5 w-3.5" />
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setEditMode(true)}>
@@ -223,15 +238,6 @@ export default function DashboardPage() {
       actions={headerActions}
     >
       <div className="space-y-4">
-        {/* Hidden file input for import */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".json"
-          onChange={handleImport}
-          className="hidden"
-        />
-
         {/* Error banner */}
         {anyError && (
           <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
@@ -333,6 +339,22 @@ export default function DashboardPage() {
           onSave={handleSaveWidgetConfig}
         />
       )}
+
+      {/* Export Modal */}
+      <ExportModal
+        open={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        dashboard={activeDashboard}
+        onDownload={() => exportDashboard()}
+      />
+
+      {/* Import Preview Modal */}
+      <ImportPreviewModal
+        open={showImportModal}
+        onClose={() => { setShowImportModal(false); setImportJson(null); }}
+        onConfirm={handleImportConfirm}
+        initialJson={importJson}
+      />
     </PageContainer>
   );
 }
