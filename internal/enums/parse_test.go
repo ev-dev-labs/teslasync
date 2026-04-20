@@ -422,3 +422,26 @@ func TestParseTonneauPosition(t *testing.T) {
 		})
 	}
 }
+
+func TestParseTonneauTentMode(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"TonneauTentModeActive", "Active"},
+		{"TonneauTentModeOff", "Off"},
+		{"TonneauTentModeUnknown", "Unknown"},
+		{"Active", "Active"},
+		{"Off", "Off"},
+		{"TonneauTentModeNewValue", "NewValue"},
+		{"SomeUnknown", "SomeUnknown"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := ParseTonneauTentMode(tt.input)
+			if got != tt.expected {
+				t.Errorf("ParseTonneauTentMode(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}

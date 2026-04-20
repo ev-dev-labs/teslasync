@@ -245,7 +245,7 @@ const catalog: SignalMeta[] = [
   { name: 'SoftwareUpdateVersion', category: 'Software', type: 'string', description: 'Pending software update version' },
   { name: 'TonneauOpenPercent', category: 'Vehicle Config', type: 'number', unit: '%', description: 'Tonneau cover open percentage' },
   { name: 'TonneauPosition', category: 'Vehicle Config', type: 'string', description: 'Tonneau cover position' },
-  { name: 'TonneauTentMode', category: 'Vehicle Config', type: 'boolean', description: 'Tonneau tent mode active' },
+  { name: 'TonneauTentMode', category: 'Vehicle Config', type: 'string', description: 'Tonneau tent mode state' },
   { name: 'ValetModeEnabled', category: 'Security', type: 'boolean', description: 'Valet mode enabled' },
 
   // ── Vehicle Configuration ─────────────────────────────────────────────
