@@ -122,4 +122,5 @@ const (
 	PrefixTonneauPosition         = "TonneauPositionState"
 	PrefixPowershareState         = "PowershareState"
 	PrefixTurnSignal              = "TurnSignalState"
+	PrefixScheduledChargingMode   = "ScheduledChargingMode"
 )

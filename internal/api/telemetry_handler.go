@@ -1484,6 +1484,11 @@ func normalizeFleetUnits(signals map[string]interface{}) {
 	if v, ok := signals["DetailedChargeState"]; ok {
 		signals["DetailedChargeState"] = enums.ParseDetailedChargeState(toString(v))
 	}
+
+	// ScheduledChargingMode: strip "ScheduledChargingMode" prefix (e.g., "ScheduledChargingModeOff" → "Off")
+	if v, ok := signals["ScheduledChargingMode"]; ok {
+		signals["ScheduledChargingMode"] = enums.ParseScheduledChargingMode(toString(v))
+	}
 }
 
 func toFloat(v interface{}) float64 {

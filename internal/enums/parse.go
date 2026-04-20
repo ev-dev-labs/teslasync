@@ -294,6 +294,27 @@ func ParseBMSState(raw string) string {
 	return raw
 }
 
+// ParseScheduledChargingMode normalizes the scheduled charging mode enum.
+// Tesla sends: "ScheduledChargingModeOff", "ScheduledChargingModeStartAt",
+// "ScheduledChargingModeDepartBy", "ScheduledChargingModeUnknown".
+func ParseScheduledChargingMode(raw string) string {
+	g := strings.TrimPrefix(raw, PrefixScheduledChargingMode)
+	switch g {
+	case "Off":
+		return "Off"
+	case "StartAt":
+		return "StartAt"
+	case "DepartBy":
+		return "DepartBy"
+	case "Unknown":
+		return "Unknown"
+	}
+	if g != "" && g != raw {
+		return g
+	}
+	return raw
+}
+
 // ParseCruiseFollowDistance normalizes the follow-distance enum.
 // Tesla sends: "FollowDistance1" through "FollowDistance7".
 func ParseCruiseFollowDistance(raw string) string {

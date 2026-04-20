@@ -1,0 +1,3 @@
+-- Down migration: no-op. The original prefixed values are not recoverable
+-- since we cannot distinguish which rows had prefixed vs clean values.
+-- This is a data normalization migration — rollback is not meaningful.
