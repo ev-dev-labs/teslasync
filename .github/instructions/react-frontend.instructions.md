@@ -480,3 +480,64 @@ types/driving.ts                  # camelCase for type files
 features/driving/pages/           # kebab-case for feature directories
   DrivingListPage.tsx             # PascalCase + "Page" suffix for pages
 ```
+
+## Component & Page Size Limits
+
+**CRITICAL: No monolith files.** Every page and component must follow these limits:
+
+```
+❌ NEVER create a page file over 300 lines
+❌ NEVER create a component file over 200 lines
+❌ NEVER put multiple visual sections in one file
+✅ DO decompose pages into sub-components from the start
+✅ DO create a components/ subdirectory next to the page
+✅ DO keep the main page file as a thin orchestrator (150-200 lines max)
+```
+
+### Page Decomposition Pattern
+
+When creating a new page with multiple sections (stats + charts + tables + filters):
+
+```
+features/{domain}/
+  pages/
+    MyNewPage.tsx              # Thin shell: ~150-200 lines (layout + imports only)
+  components/{page-name}/
+    SummaryStats.tsx           # One section per file
+    TrendChart.tsx             # One chart per file
+    DataTable.tsx              # One table per file
+    FilterBar.tsx              # Controls/filters
+    helpers.ts                 # Page-specific helpers
+    constants.ts               # Page-specific constants
+    index.ts                   # Barrel export
+```
+
+### Main Page Template (thin orchestrator)
+
+```tsx
+export default function MyNewPage() {
+  const { t } = useTranslation();
+  usePageTitle(t('page.title'));
+  const { data, isLoading } = useSomeHook();
+
+  return (
+    <PageContainer title={t('page.title')} loading={isLoading}>
+      <Grid cols={{ default: 1, md: 2 }} gap={4}>
+        <SummaryStats data={data} />
+        <FilterBar onFilter={setFilter} />
+      </Grid>
+      <TrendChart data={data?.trends ?? []} />
+      <DataTable items={data?.items ?? []} />
+    </PageContainer>
+  );
+}
+```
+
+### When to Extract
+
+- **2+ chart sections** → each chart in its own file
+- **Stat card group** (3+ cards) → own file
+- **Table with custom columns** → own file
+- **Filter/controls bar** → own file
+- **Any helper function > 20 lines** → `helpers.ts`
+- **Constants/config arrays** → `constants.ts`
