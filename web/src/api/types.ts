@@ -608,7 +608,7 @@ export interface SecurityEvent {
   guest_mode_mobile_access_state?: string
   driver_seat_occupied?: boolean
   center_display?: string
-  speed_limit_mode?: boolean
+  speed_limit_mode?: string
   valet_mode_enabled?: boolean
   service_mode?: boolean
   current_limit_mph?: number
