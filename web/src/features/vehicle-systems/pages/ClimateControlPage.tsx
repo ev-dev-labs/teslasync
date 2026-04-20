@@ -391,10 +391,10 @@ export default function ClimateControlPage() {
                   {t(keeperLabel(latest.climateKeeperMode))}
                 </Badge>
               )}
-            {latest?.defrostMode && (
+            {latest?.defrostMode && latest.defrostMode !== 'Off' && (
               <Badge variant="info" dot>
                 <Snowflake className="mr-1 inline h-3 w-3" />
-                {t('Defrost')}
+                {t('Defrost')}{latest.defrostMode !== 'Normal' ? ` (${latest.defrostMode})` : ''}
               </Badge>
             )}
             {latest?.batteryHeater && (
@@ -514,12 +514,12 @@ export default function ClimateControlPage() {
 
           <MetricCard
             label={t('Defrost Mode')}
-            value={latest?.defrostMode ? t('Active') : t('Inactive')}
+            value={latest?.defrostMode && latest.defrostMode !== 'Off' ? latest.defrostMode : t('Off')}
             icon={
               <Snowflake
                 className={cn(
                   'h-5 w-5',
-                  latest?.defrostMode ? 'text-blue-400' : 'text-gray-500',
+                  latest?.defrostMode && latest.defrostMode !== 'Off' ? 'text-blue-400' : 'text-gray-500',
                 )}
               />
             }

@@ -38,7 +38,7 @@ export interface VehicleLiveState {
   climateKeeperMode: string
   cabinOverheatMode: string
   cabinOverheatTempLimit: string
-  defrostMode: boolean
+  defrostMode: string
   defrostPreconditioning: boolean
   rearDefrost: boolean
   rearDisplayHvac: boolean
@@ -169,7 +169,7 @@ const EMPTY_STATE: VehicleLiveState = {
   insideTemp: 0, outsideTemp: 0, hvacPower: false, fanSpeed: 0,
   hvacACEnabled: false, hvacAutoMode: '', hvacFanStatus: 0,
   climateKeeperMode: '', cabinOverheatMode: '', cabinOverheatTempLimit: '',
-  defrostMode: false, defrostPreconditioning: false, rearDefrost: false,
+  defrostMode: '', defrostPreconditioning: false, rearDefrost: false,
   rearDisplayHvac: false, wiperHeat: false,
   steeringWheelHeatAuto: false, steeringWheelHeatLevel: 0,
   seatHeaterLeft: 0, seatHeaterRight: 0, seatHeaterRearLeft: 0,
@@ -257,7 +257,7 @@ function parseSignals(raw: Record<string, unknown>): Partial<VehicleLiveState> {
   if (raw['ClimateKeeperMode'] != null) s.climateKeeperMode = str('ClimateKeeperMode')
   if (raw['CabinOverheatProtectionMode'] != null) s.cabinOverheatMode = str('CabinOverheatProtectionMode')
   if (raw['CabinOverheatProtectionTemperatureLimit'] != null) s.cabinOverheatTempLimit = str('CabinOverheatProtectionTemperatureLimit')
-  if (raw['DefrostMode'] != null) s.defrostMode = bool('DefrostMode')
+  if (raw['DefrostMode'] != null) s.defrostMode = str('DefrostMode')
   if (raw['DefrostForPreconditioning'] != null) s.defrostPreconditioning = bool('DefrostForPreconditioning')
   if (raw['RearDefrostEnabled'] != null) s.rearDefrost = bool('RearDefrostEnabled')
   if (raw['RearDisplayHvacEnabled'] != null) s.rearDisplayHvac = bool('RearDisplayHvacEnabled')

@@ -10,7 +10,7 @@ export interface ClimateState {
   isAcOn: boolean;
   isAutoClimate: boolean;
   climateKeeperMode: string;
-  defrostMode: boolean;
+  defrostMode: string;
   batteryHeater: boolean;
   steeringWheelHeat: boolean;
   seatHeaterLeft: number;

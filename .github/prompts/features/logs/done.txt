@@ -204,3 +204,4 @@ signal-audit/04-climate/004-cabin-overheat-protection-temperature-limit.prompt.m
 signal-audit/04-climate/005-climate-keeper-mode.prompt.md
 signal-audit/04-climate/006-climate-seat-cooling-front-left.prompt.md
 signal-audit/04-climate/007-climate-seat-cooling-front-right.prompt.md
+signal-audit/04-climate/008-defrost-for-preconditioning.prompt.md

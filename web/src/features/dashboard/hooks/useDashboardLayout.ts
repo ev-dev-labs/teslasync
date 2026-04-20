@@ -291,8 +291,11 @@ function loadDashboards(): SavedDashboard[] {
     const stored = localStorage.getItem(DASHBOARDS_KEY);
     if (stored) {
       const parsed = JSON.parse(stored) as SavedDashboard[];
+      // DEBUG: log raw saved layout heights
+      console.log('[LAYOUT DEBUG] Raw localStorage lg layouts:',
+        parsed[0]?.layouts?.lg?.map((i: RGLLayout) => `${i.i}:${i.w}x${i.h}`) ?? 'none');
       // Reconcile widgets against current registry
-      return parsed.map((d) => ({
+      const result = parsed.map((d) => ({
         ...d,
         widgets: d.widgets.filter((w) =>
           WIDGET_REGISTRY.some((def) => def.id === w.widgetId),
@@ -306,6 +309,10 @@ function loadDashboards(): SavedDashboard[] {
           ),
         ),
       }));
+      // DEBUG: log after reconcile
+      console.log('[LAYOUT DEBUG] After reconcile lg layouts:',
+        result[0]?.layouts?.lg?.map((i: RGLLayout) => `${i.i}:${i.w}x${i.h}`) ?? 'none');
+      return result;
     }
     // Try legacy migration
     const legacy = localStorage.getItem(LEGACY_KEY);
@@ -384,6 +391,9 @@ export function useDashboardLayout() {
   /* ─── Layout actions ─── */
   const updateLayouts = useCallback(
     (layouts: RGLLayouts) => {
+      // DEBUG: log what's being persisted
+      console.log('[LAYOUT DEBUG] Persisting lg layouts:',
+        layouts.lg?.map((i: RGLLayout) => `${i.i}:${i.w}x${i.h}`) ?? 'none');
       pushSnapshot({ widgets: activeDashRef.current.widgets, layouts });
       updateActive((d) => ({ ...d, layouts }));
     },

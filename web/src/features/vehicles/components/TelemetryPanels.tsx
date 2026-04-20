@@ -443,13 +443,13 @@ export function LiveTelemetryPanels({
                   <span
                     className={cn(
                       'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium border',
-                      climateData.defrost_mode
+                      climateData.defrost_mode && climateData.defrost_mode !== 'Off'
                         ? 'border-blue-400/30 bg-blue-400/10 text-blue-400'
                         : 'border-white/[0.06] bg-white/[0.02] text-[var(--text-muted)]',
                     )}
                   >
                     <Snowflake className="h-3 w-3" /> Defrost{' '}
-                    {climateData.defrost_mode ? 'ON' : 'OFF'}
+                    {climateData.defrost_mode && climateData.defrost_mode !== 'Off' ? climateData.defrost_mode : 'OFF'}
                   </span>
                   <span
                     className={cn(

@@ -101,7 +101,7 @@ export interface ClimateData {
   outside_temp: number | null;
   hvac_power: number | null;
   hvac_fan_speed: number | null;
-  defrost_mode: boolean;
+  defrost_mode: string | null;
   battery_heater_on: boolean;
 }
 

@@ -130,7 +130,7 @@ function ClimatePanel({ data, convertTemp, tempUnit }: {
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            {data.defrost_mode && (
+            {data.defrost_mode && data.defrost_mode !== 'Off' && (
               <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400">
                 <Snowflake className="h-2.5 w-2.5" /> {t('telemetry.defrost', 'Defrost')}
               </span>
@@ -140,7 +140,7 @@ function ClimatePanel({ data, convertTemp, tempUnit }: {
                 <Zap className="h-2.5 w-2.5" /> {t('telemetry.batHeater', 'Bat Heater')}
               </span>
             )}
-            {!data.defrost_mode && !data.battery_heater_on && (
+            {(!data.defrost_mode || data.defrost_mode === 'Off') && !data.battery_heater_on && (
               <span className="text-[10px] text-[var(--text-muted)]">{t('telemetry.noModes', 'No active modes')}</span>
             )}
           </div>

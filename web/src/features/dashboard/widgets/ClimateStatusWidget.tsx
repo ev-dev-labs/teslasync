@@ -59,7 +59,7 @@ export default function ClimateStatusWidget({ vehicleId }: WidgetProps) {
             }
           />
           <div className="flex items-center gap-2 flex-wrap">
-            {climateData.defrost_mode && (
+            {climateData.defrost_mode && climateData.defrost_mode !== 'Off' && (
               <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400">
                 <Snowflake className="h-2.5 w-2.5" /> {t('widget.defrost', 'Defrost')}
               </span>

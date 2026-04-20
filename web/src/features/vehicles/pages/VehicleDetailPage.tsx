@@ -624,9 +624,9 @@ export default function VehicleDetailPage() {
                   />
                   <MetricCard
                     label={t('vehicles.detail.defrost', 'Defrost')}
-                    value={climateData.defrost_mode ? t('common.on', 'On') : t('common.off', 'Off')}
+                    value={climateData.defrost_mode && climateData.defrost_mode !== 'Off' ? climateData.defrost_mode : t('common.off', 'Off')}
                     icon={<Snowflake className="h-4 w-4" />}
-                    color={climateData.defrost_mode ? 'green' : 'cyan'}
+                    color={climateData.defrost_mode && climateData.defrost_mode !== 'Off' ? 'green' : 'cyan'}
                   />
                   <MetricCard
                     label={t('vehicles.detail.acEnabled', 'A/C Enabled')}

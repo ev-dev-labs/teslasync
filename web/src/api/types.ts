@@ -566,7 +566,7 @@ export interface ClimateSnapshot {
   hvac_left_temp_request?: number
   hvac_right_temp_request?: number
   cabin_overheat_mode?: string
-  defrost_mode?: boolean
+  defrost_mode?: string
   battery_heater_on?: boolean
   hvac_ac_enabled?: boolean
   hvac_auto_mode?: string

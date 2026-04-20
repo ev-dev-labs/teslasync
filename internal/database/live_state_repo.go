@@ -484,7 +484,6 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 		"ChargePortDoorOpen":                  "charge_port_door_open",
 		"DCDCEnable":                          "dcdc_enable",
 		"DefrostForPreconditioning":           "defrost_for_preconditioning",
-		"DefrostMode":                         "defrost_mode",
 		"DriveRail":                           "drive_rail",
 
 		"EmergencyLaneDepartureAvoidance":     "emergency_lane_departure_avoidance",

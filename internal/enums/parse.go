@@ -475,3 +475,24 @@ func ParsePowershareType(raw string) string {
 	}
 	return raw
 }
+
+// ParseDefrostMode normalizes the DefrostMode enum.
+// Tesla sends: "DefrostModeStateOff", "DefrostModeStateNormal",
+// "DefrostModeStateMax", "DefrostModeStateAutoDefog".
+func ParseDefrostMode(raw string) string {
+	g := strings.TrimPrefix(raw, PrefixDefrostMode)
+	switch g {
+	case DefrostOff:
+		return DefrostOff
+	case DefrostNormal:
+		return DefrostNormal
+	case DefrostMax:
+		return DefrostMax
+	case DefrostAutoDefog:
+		return DefrostAutoDefog
+	}
+	if g != "" && g != raw {
+		return g
+	}
+	return raw
+}
