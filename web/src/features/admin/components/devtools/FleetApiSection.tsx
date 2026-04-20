@@ -1,0 +1,813 @@
+import { useState, useMemo, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  Globe, Shield, Key, Car, Radio, Settings, Satellite, Zap,
+  AlertTriangle, Fingerprint, Link, Network, Server,
+  Play, Upload, Trash2, Eye, Download, ChevronRight,
+  CheckCircle, ArrowRight, ArrowLeft, MapPin, FileText, Wrench, AlertCircle,
+} from 'lucide-react'
+import { GlassPanel, Badge, Button, Input, Select, DataTable, Textarea, type Column } from '@/components/ui'
+import { Skeleton, AlertBanner } from '@/components/feedback'
+import { cn } from '@/lib/cn'
+import { formatDateTime } from '@/lib/dateFormat'
+import { fmtInt } from '@/lib/numberFormat'
+import { getErrorMessage } from '@/lib/errorMessage'
+import SignalConfigModal from '@/components/ui/SignalConfigModal'
+
+import { ToolCard } from './ToolCard'
+import { CopyButton } from './CopyButton'
+import { ResultPanel } from './ResultPanel'
+import { apiFetch, useVehicleOptions } from './helpers'
+import { ICON_COLOR_MAP, ONBOARDING_STEPS, TELEMETRY_FIELDS } from './constants'
+
+/* ─── Fleet API Config Tool ───────────────────────────────────────────── */
+
+function FleetApiConfigTool() {
+  const { t } = useTranslation()
+  const { data, isLoading, error: configError } = useQuery({
+    queryKey: ['devtools', 'fleet-api-info'],
+    queryFn: () => apiFetch('fleet-api-info'),
+  })
+
+  if (isLoading) return <GlassPanel className="p-5"><Skeleton lines={4} /></GlassPanel>
+  if (configError) return <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>{t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(configError)}</AlertBanner>
+
+  const info = data ?? {}
+  const baseUrl = (info.baseUrl as string) ?? ''
+  const clientId = (info.clientId as string) ?? ''
+  const authStatus = info.authenticated === true
+  const regions = (info.regions as string[]) ?? []
+
+  return (
+    <ToolCard icon={Settings} color="cyan" title={t('Config')} description={t('Config Desc')}>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <GlassPanel className="p-3">
+          <span className="text-xs text-white/50">{t('Base Url')}</span>
+          <div className="mt-1 flex items-center gap-2">
+            <span className="truncate text-sm font-mono text-white">{baseUrl || '—'}</span>
+            {baseUrl && <CopyButton text={baseUrl} />}
+          </div>
+        </GlassPanel>
+        <GlassPanel className="p-3">
+          <span className="text-xs text-white/50">{t('Client Id')}</span>
+          <div className="mt-1 flex items-center gap-2">
+            <span className="truncate text-sm font-mono text-white">{clientId || '—'}</span>
+            {clientId && <CopyButton text={clientId} />}
+          </div>
+        </GlassPanel>
+        <GlassPanel className="p-3">
+          <span className="text-xs text-white/50">{t('Auth Status')}</span>
+          <div className="mt-1 flex items-center gap-2">
+            {authStatus ? (
+              <Badge variant="success" size="sm" dot>{t('Authenticated')}</Badge>
+            ) : (
+              <Badge variant="danger" size="sm" dot>{t('Not Authenticated')}</Badge>
+            )}
+          </div>
+        </GlassPanel>
+        <GlassPanel className="p-3">
+          <span className="text-xs text-white/50">{t('Regions')}</span>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {regions.length > 0
+              ? regions.map((r) => <Badge key={r} variant="info" size="sm">{r}</Badge>)
+              : <span className="text-sm text-white/40">—</span>}
+          </div>
+        </GlassPanel>
+      </div>
+    </ToolCard>
+  )
+}
+
+/* ─── Partner Registration Tool ───────────────────────────────────────── */
+
+function PartnerRegistrationTool() {
+  const { t } = useTranslation()
+  const [domain, setDomain] = useState('')
+  const mutation = useMutation({
+    mutationFn: () => apiFetch('register-partner', 'POST', { domain }),
+  })
+
+  const opensslGen = 'openssl ecparam -name prime256v1 -genkey -noout -out private.pem'
+  const opensslPub = 'openssl ec -in private.pem -pubout -out public.pem'
+
+  return (
+    <ToolCard icon={Globe} color="green" title={t('Partner Reg')} description={t('Partner Reg Desc')}>
+      <div className="space-y-3">
+        <GlassPanel className="border-neon-amber/20 bg-neon-amber/5 p-3">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-neon-amber" />
+            <div className="text-xs text-neon-amber/80">
+              <p className="font-semibold">{t('Prerequisites')}</p>
+              <p className="mt-1">{t('Prerequisites Desc')}</p>
+            </div>
+          </div>
+        </GlassPanel>
+
+        <div className="space-y-2">
+          <span className="text-xs font-medium text-white/70">{t('Openssl Commands')}</span>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 rounded bg-black/30 px-3 py-1.5">
+              <code className="flex-1 text-xs text-neon-cyan">{opensslGen}</code>
+              <CopyButton text={opensslGen} />
+            </div>
+            <div className="flex items-center gap-2 rounded bg-black/30 px-3 py-1.5">
+              <code className="flex-1 text-xs text-neon-cyan">{opensslPub}</code>
+              <CopyButton text={opensslPub} />
+            </div>
+          </div>
+        </div>
+
+        <Input
+          label={t('Domain')}
+          placeholder="yourapp.example.com"
+          value={domain}
+          onChange={(e) => setDomain(e.target.value)}
+          icon={<Globe className="h-4 w-4" />}
+        />
+        <Button
+          variant="primary"
+          size="sm"
+          loading={mutation.isPending}
+          onClick={() => mutation.mutate()}
+          icon={<Play className="h-3.5 w-3.5" />}
+        >
+          {t('Register')}
+        </Button>
+        {mutation.data && (
+          <ResultPanel
+            title={t('Partner Reg')}
+            data={mutation.data.error ? undefined : mutation.data}
+            error={typeof mutation.data.error === 'string' ? mutation.data.error : undefined}
+          />
+        )}
+      </div>
+    </ToolCard>
+  )
+}
+
+/* ─── Partner Public Key Tool ─────────────────────────────────────────── */
+
+function PartnerPublicKeyTool() {
+  const { t } = useTranslation()
+  const [domain, setDomain] = useState('')
+
+  const mutation = useMutation({
+    mutationFn: () => apiFetch(`partner-public-key?domain=${encodeURIComponent(domain)}`),
+  })
+
+  const response = mutation.data ?? {}
+  const verification = (response.verification ?? {}) as Record<string, unknown>
+  const remoteFound = verification.remote_key_found === true
+  const matchesLocal = verification.matches_local === true
+  const localConfigured = verification.local_key_configured === true
+  const publicKey = ((response.response as Record<string, unknown>)?.public_key as string) ?? ''
+
+  return (
+    <ToolCard icon={Shield} color="cyan" title={t('devtools.partnerKey.title', 'Public Key Verification')} description={t('devtools.partnerKey.desc', 'Verify your registered public key with Tesla')}>
+      <div className="space-y-3">
+        <Input
+          label={t('Domain')}
+          placeholder="yourapp.example.com"
+          value={domain}
+          onChange={(e) => setDomain(e.target.value)}
+          icon={<Globe className="h-4 w-4" />}
+        />
+        <Button
+          variant="primary"
+          size="sm"
+          loading={mutation.isPending}
+          disabled={!domain.trim()}
+          onClick={() => mutation.mutate()}
+          icon={<Play className="h-3.5 w-3.5" />}
+        >
+          {t('devtools.partnerKey.verify', 'Verify')}
+        </Button>
+
+        {mutation.data && (
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              {remoteFound ? (
+                <Badge variant="success" size="sm" dot>{t('devtools.partnerKey.keyRegistered', 'Key Registered')}</Badge>
+              ) : (
+                <Badge variant="danger" size="sm" dot>{t('devtools.partnerKey.keyNotFound', 'Key Not Found')}</Badge>
+              )}
+              {remoteFound && localConfigured && (
+                matchesLocal ? (
+                  <Badge variant="success" size="sm" dot>{t('devtools.partnerKey.matchesLocal', 'Matches Local Key')}</Badge>
+                ) : (
+                  <Badge variant="warning" size="sm" dot>{t('devtools.partnerKey.mismatch', 'Does Not Match Local Key')}</Badge>
+                )
+              )}
+              {remoteFound && !localConfigured && (
+                <Badge variant="neutral" size="sm">{t('devtools.partnerKey.noLocal', 'No Local Key Configured')}</Badge>
+              )}
+            </div>
+
+            {publicKey && (
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-white/70">{t('devtools.partnerKey.pemLabel', 'Registered PEM')}</span>
+                <div className="rounded bg-black/30 p-3">
+                  <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-all text-xs text-white/80">
+                    {publicKey}
+                  </pre>
+                  <div className="mt-2 flex justify-end">
+                    <CopyButton text={publicKey} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <ResultPanel
+              title={t('devtools.partnerKey.rawResponse', 'Raw Response')}
+              data={response.error ? undefined : response}
+              error={typeof response.error === 'string' ? (response.error as string) : undefined}
+              idle={false}
+            />
+          </>
+        )}
+      </div>
+    </ToolCard>
+  )
+}
+
+/* ─── Public Key Setup Tool ───────────────────────────────────────────── */
+
+function PublicKeySetupTool() {
+  const { t } = useTranslation()
+  const queryClient = useQueryClient()
+  const [pemInput, setPemInput] = useState('')
+
+  const { data: status, isLoading, error: keyError } = useQuery({
+    queryKey: ['devtools', 'public-key-status'],
+    queryFn: () => apiFetch('public-key-status'),
+  })
+
+  const generateMut = useMutation({
+    mutationFn: () => apiFetch('generate-keypair', 'POST'),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['devtools', 'public-key-status'] }) },
+  })
+
+  const uploadMut = useMutation({
+    mutationFn: () => apiFetch('upload-public-key', 'POST', { pem: pemInput }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['devtools', 'public-key-status'] }); setPemInput('') },
+  })
+
+  const deleteMut = useMutation({
+    mutationFn: () => apiFetch('public-key', 'DELETE'),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['devtools', 'public-key-status'] }) },
+  })
+
+  if (isLoading) return <GlassPanel className="p-5"><Skeleton lines={3} /></GlassPanel>
+  if (keyError) return <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>{t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(keyError)}</AlertBanner>
+
+  const configured = status?.configured === true
+  const fingerprint = (status?.fingerprint as string) ?? ''
+  const wellKnownUrl = (status?.wellKnownUrl as string) ?? ''
+
+  return (
+    <ToolCard icon={Key} color="purple" title={t('Public Key')} description={t('Public Key Desc')}>
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-white/50">{t('Status')}:</span>
+          {configured ? (
+            <Badge variant="success" size="sm" dot>{t('Configured')}</Badge>
+          ) : (
+            <Badge variant="warning" size="sm" dot>{t('Not Configured')}</Badge>
+          )}
+        </div>
+
+        {fingerprint && (
+          <div className="flex items-center gap-2 rounded bg-black/30 px-3 py-1.5">
+            <Fingerprint className="h-4 w-4 text-neon-purple" />
+            <code className="text-xs text-white/80">{fingerprint}</code>
+            <CopyButton text={fingerprint} />
+          </div>
+        )}
+
+        {wellKnownUrl && (
+          <div className="flex items-center gap-2 rounded bg-black/30 px-3 py-1.5">
+            <Link className="h-4 w-4 text-neon-cyan" />
+            <code className="flex-1 truncate text-xs text-white/80">{wellKnownUrl}</code>
+            <CopyButton text={wellKnownUrl} />
+          </div>
+        )}
+
+        <GlassPanel className="border-neon-amber/20 bg-neon-amber/5 p-3">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-neon-amber" />
+            <span className="text-xs text-neon-amber/80">{t('Private Key Warning')}</span>
+          </div>
+        </GlassPanel>
+
+        <div className="flex flex-wrap gap-2">
+          <Button variant="primary" size="sm" loading={generateMut.isPending} onClick={() => generateMut.mutate()} icon={<Key className="h-3.5 w-3.5" />}>
+            {t('Generate Keypair')}
+          </Button>
+          <Button variant="danger" size="sm" loading={deleteMut.isPending} onClick={() => deleteMut.mutate()} icon={<Trash2 className="h-3.5 w-3.5" />}>
+            {t('Delete Keypair')}
+          </Button>
+        </div>
+
+        <ResultPanel title={t('Generate Keypair')} data={generateMut.data?.error ? undefined : generateMut.data} error={typeof generateMut.data?.error === 'string' ? generateMut.data.error : undefined} idle={!generateMut.data} idleMessage={t('devtools.keypairIdle', 'Generate or delete a keypair to see results')} />
+        <ResultPanel title={t('Delete Keypair')} data={deleteMut.data?.error ? undefined : deleteMut.data} error={typeof deleteMut.data?.error === 'string' ? deleteMut.data.error : undefined} idle={!deleteMut.data} />
+
+        <div className="space-y-2">
+          <span className="text-xs font-medium text-white/70">{t('Upload Pem')}</span>
+          <Textarea
+            rows={4}
+            placeholder={t('Pem Placeholder')}
+            value={pemInput}
+            onChange={(e) => setPemInput(e.target.value)}
+          />
+          <Button variant="secondary" size="sm" loading={uploadMut.isPending} onClick={() => uploadMut.mutate()} icon={<Upload className="h-3.5 w-3.5" />}>
+            {t('Upload Key')}
+          </Button>
+          <ResultPanel title={t('Upload Key')} data={uploadMut.data?.error ? undefined : uploadMut.data} error={typeof uploadMut.data?.error === 'string' ? uploadMut.data.error : undefined} idle={!uploadMut.data} idleMessage={t('devtools.uploadIdle', 'Upload a public key to see results')} />
+        </div>
+      </div>
+    </ToolCard>
+  )
+}
+
+/* ─── Vehicle Key Pairing Tool ────────────────────────────────────────── */
+
+function VehicleKeyPairingTool() {
+  const { t } = useTranslation()
+  const { data } = useQuery({
+    queryKey: ['devtools', 'fleet-api-info'],
+    queryFn: () => apiFetch('fleet-api-info'),
+  })
+  const hostname = (data?.hostname as string) ?? 'yourapp.example.com'
+  const pairingUrl = `https://tesla.com/_ak/${hostname}`
+
+  return (
+    <ToolCard icon={Car} color="green" title={t('Key Pairing')} description={t('Key Pairing Desc')}>
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 rounded bg-black/30 px-3 py-2">
+          <Link className="h-4 w-4 text-neon-green" />
+          <code className="flex-1 truncate text-sm text-neon-green">{pairingUrl}</code>
+          <CopyButton text={pairingUrl} />
+        </div>
+        <div className="rounded-lg bg-neon-cyan/5 p-3">
+          <p className="text-xs text-white/60">{t('Pairing Instructions')}</p>
+          <ul className="mt-2 space-y-1 text-xs text-white/50">
+            <li className="flex items-start gap-2">
+              <ChevronRight className="mt-0.5 h-3 w-3 shrink-0 text-neon-cyan" />
+              <span>{t('devtools.fleet.pairingStep1', 'Pairing Step1')}</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <ChevronRight className="mt-0.5 h-3 w-3 shrink-0 text-neon-cyan" />
+              <span>{t('devtools.fleet.pairingStep2', 'Pairing Step2')}</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <ChevronRight className="mt-0.5 h-3 w-3 shrink-0 text-neon-cyan" />
+              <span>{t('devtools.fleet.pairingStep3', 'Pairing Step3')}</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </ToolCard>
+  )
+}
+
+/* ─── Fleet Telemetry Subscribe Tool ──────────────────────────────────── */
+
+function FleetTelemetrySubscribeTool() {
+  const { t } = useTranslation()
+  const queryClient = useQueryClient()
+  const [vin, setVin] = useState('')
+  const [hostname, setHostname] = useState('')
+  const [port, setPort] = useState('443')
+  const [interval, setInterval_] = useState(30)
+  const [caCert, setCaCert] = useState('')
+  const [signalModalOpen, setSignalModalOpen] = useState(false)
+  const [selectedSignals, setSelectedSignals] = useState<{ name: string; interval: number }[]>([])
+
+  const { options: vehicleOptions } = useVehicleOptions()
+
+  const subscribeMut = useMutation({
+    mutationFn: () =>
+      apiFetch('fleet-telemetry-subscribe', 'POST', {
+        vins: [vin],
+        hostname,
+        port: parseInt(port, 10),
+        ca: caCert || undefined,
+        fields: selectedSignals.length > 0 ? selectedSignals.map((s) => s.name) : undefined,
+        interval_seconds: interval,
+        field_intervals: selectedSignals.length > 0
+          ? Object.fromEntries(selectedSignals.filter((s) => s.interval !== interval).map((s) => [s.name, s.interval]))
+          : undefined,
+      }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['devtools'] }) },
+  })
+
+  return (
+    <ToolCard icon={Radio} color="cyan" title={t('Telemetry Sub')} description={t('Telemetry Sub Desc')}>
+      <div className="space-y-3">
+        <Select
+          label={t('Vehicle')}
+          placeholder={t('Select Vehicle')}
+          options={vehicleOptions}
+          value={vin}
+          onChange={(e) => setVin(e.target.value)}
+        />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Input
+            label={t('Hostname')}
+            placeholder="telemetry.example.com"
+            value={hostname}
+            onChange={(e) => setHostname(e.target.value)}
+            icon={<Server className="h-4 w-4" />}
+          />
+          <Input
+            label={t('Port')}
+            placeholder="443"
+            value={port}
+            onChange={(e) => setPort(e.target.value)}
+            icon={<Network className="h-4 w-4" />}
+          />
+        </div>
+        <div>
+          <span className="mb-1 block text-xs font-medium text-white/70">{t('Ca Cert')}</span>
+          <Textarea
+            rows={3}
+            placeholder={t('Ca Cert Placeholder')}
+            value={caCert}
+            onChange={(e) => setCaCert(e.target.value)}
+          />
+        </div>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setSignalModalOpen(true)}
+            icon={<Settings className="h-3.5 w-3.5" />}
+          >
+            {t('Configure Signals')} ({selectedSignals.length})
+          </Button>
+          <span className="text-xs text-white/40">
+            {t('Interval Label')}: {interval}s
+          </span>
+        </div>
+        <Button
+          variant="primary"
+          size="sm"
+          loading={subscribeMut.isPending}
+          onClick={() => subscribeMut.mutate()}
+          icon={<Play className="h-3.5 w-3.5" />}
+        >
+          {t('Subscribe')}
+        </Button>
+        {subscribeMut.data && (
+          <ResultPanel
+            title={t('Telemetry Sub')}
+            data={subscribeMut.data.error ? undefined : subscribeMut.data}
+            error={typeof subscribeMut.data.error === 'string' ? subscribeMut.data.error : undefined}
+          />
+        )}
+      </div>
+      <SignalConfigModal
+        open={signalModalOpen}
+        onClose={() => setSignalModalOpen(false)}
+        categories={TELEMETRY_FIELDS}
+        initialSelected={selectedSignals.map((s) => s.name)}
+        initialInterval={interval}
+        onSubmit={(signals) => {
+          setSelectedSignals(signals)
+          if (signals.length > 0) setInterval_(signals[0]?.interval ?? 30)
+          setSignalModalOpen(false)
+        }}
+      />
+    </ToolCard>
+  )
+}
+
+/* ─── Fleet Telemetry Config Tool ─────────────────────────────────────── */
+
+interface TelemetryError {
+  id: string
+  timestamp: string
+  code: string
+  message: string
+}
+
+function FleetTelemetryConfigTool() {
+  const { t } = useTranslation()
+  const [vin, setVin] = useState('')
+
+  const { options: vehicleOptions } = useVehicleOptions()
+
+  const configQuery = useMutation({ mutationFn: () => apiFetch(`fleet-telemetry-config?vin=${vin}`) })
+  const errorsQuery = useMutation({ mutationFn: () => apiFetch(`fleet-telemetry-errors?vin=${vin}`) })
+  const deleteMut = useMutation({ mutationFn: () => apiFetch(`fleet-telemetry-config?vin=${vin}`, 'DELETE') })
+
+  const errorData = Array.isArray(errorsQuery.data?.errors) ? (errorsQuery.data.errors as TelemetryError[]) : []
+
+  const errorColumns: Column<TelemetryError>[] = useMemo(() => [
+    { key: 'timestamp', header: t('Timestamp'), render: (r) => <span className="text-xs">{formatDateTime(r.timestamp)}</span> },
+    { key: 'code', header: t('Code'), render: (r) => <Badge variant="danger" size="sm">{r.code}</Badge> },
+    { key: 'message', header: t('Message'), render: (r) => <span className="text-xs text-white/70">{r.message}</span> },
+  ], [t])
+
+  return (
+    <ToolCard icon={Satellite} color="purple" title={t('Telemetry Config')} description={t('Telemetry Config Desc')}>
+      <div className="space-y-3">
+        <Select
+          label={t('Vehicle')}
+          placeholder={t('Select Vehicle')}
+          options={vehicleOptions}
+          value={vin}
+          onChange={(e) => setVin(e.target.value)}
+        />
+        <div className="flex flex-wrap gap-2">
+          <Button variant="primary" size="sm" loading={configQuery.isPending} onClick={() => configQuery.mutate()} icon={<Eye className="h-3.5 w-3.5" />}>
+            {t('Get Config')}
+          </Button>
+          <Button variant="secondary" size="sm" loading={errorsQuery.isPending} onClick={() => errorsQuery.mutate()} icon={<AlertTriangle className="h-3.5 w-3.5" />}>
+            {t('View Errors')}
+          </Button>
+          <Button variant="danger" size="sm" loading={deleteMut.isPending} onClick={() => deleteMut.mutate()} icon={<Trash2 className="h-3.5 w-3.5" />}>
+            {t('Delete Config')}
+          </Button>
+        </div>
+        <ResultPanel title={t('Telemetry Config')} data={configQuery.data?.error ? undefined : configQuery.data} error={typeof configQuery.data?.error === 'string' ? configQuery.data.error : undefined} idle={!configQuery.data} idleMessage={t('devtools.configIdle', 'Fetch config to see results')} />
+        <ResultPanel title={t('Delete Config')} data={deleteMut.data?.error ? undefined : deleteMut.data} error={typeof deleteMut.data?.error === 'string' ? deleteMut.data.error : undefined} idle={!deleteMut.data} />
+        {errorData.length > 0 && (
+          <div className="space-y-2">
+            <DataTable columns={errorColumns} data={errorData} keyExtractor={(r) => r.id} compact pagination={{ defaultPageSize: 50 }} />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                const blob = new Blob([JSON.stringify(errorData, null, 2)], { type: 'application/json' })
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = `telemetry-errors-${vin}.json`
+                a.click()
+                URL.revokeObjectURL(url)
+              }}
+              icon={<Download className="h-3.5 w-3.5" />}
+            >
+              {t('Download Errors')}
+            </Button>
+          </div>
+        )}
+      </div>
+    </ToolCard>
+  )
+}
+
+/* ─── Fleet Status Tool ───────────────────────────────────────────────── */
+
+function FleetStatusTool() {
+  const { t } = useTranslation()
+  const { vehicles } = useVehicleOptions()
+  const fleetStatusMut = useMutation({
+    mutationFn: () => apiFetch('fleet-status', 'POST', { vins: vehicles.map((v) => v.vin) }),
+  })
+
+  return (
+    <ToolCard icon={Zap} color="green" title={t('Fleet Status')} description={t('Check fleet status for all vehicles')}>
+      <div className="mt-3 flex items-center gap-2">
+        <Button
+          variant="primary"
+          size="sm"
+          loading={fleetStatusMut.isPending}
+          onClick={() => fleetStatusMut.mutate()}
+          disabled={vehicles.length === 0}
+          icon={<Play className="h-3.5 w-3.5" />}
+        >
+          {t('Check Fleet Status')}
+        </Button>
+      </div>
+      {fleetStatusMut.data && (
+        <ResultPanel
+          title={t('Fleet Status')}
+          data={fleetStatusMut.data.error ? undefined : fleetStatusMut.data}
+          error={typeof fleetStatusMut.data.error === 'string' ? fleetStatusMut.data.error : undefined}
+        />
+      )}
+    </ToolCard>
+  )
+}
+
+/* ─── Vehicle Data Tools ──────────────────────────────────────────────── */
+
+function VehicleDataTools() {
+  const { t } = useTranslation()
+  const [vin, setVin] = useState('')
+  const { options: vehicleOptions } = useVehicleOptions()
+
+  const chargingMut = useMutation({ mutationFn: () => apiFetch(`nearby-charging?vin=${vin}`) })
+  const releaseNotesMut = useMutation({ mutationFn: () => apiFetch(`release-notes?vin=${vin}`) })
+  const alertsMut = useMutation({ mutationFn: () => apiFetch(`recent-alerts?vin=${vin}`) })
+  const serviceMut = useMutation({ mutationFn: () => apiFetch(`service-data?vin=${vin}`) })
+
+  const lastResult = chargingMut.data ?? releaseNotesMut.data ?? alertsMut.data ?? serviceMut.data
+
+  return (
+    <ToolCard icon={Car} color="cyan" title={t('Vehicle Data')} description={t('Vehicle Data Desc')}>
+      <div className="space-y-3">
+        <Select
+          label={t('Vehicle')}
+          placeholder={t('Select Vehicle')}
+          options={vehicleOptions}
+          value={vin}
+          onChange={(e) => setVin(e.target.value)}
+        />
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" size="sm" loading={chargingMut.isPending} onClick={() => chargingMut.mutate()} icon={<MapPin className="h-3.5 w-3.5" />}>
+            {t('Nearby Charging')}
+          </Button>
+          <Button variant="secondary" size="sm" loading={releaseNotesMut.isPending} onClick={() => releaseNotesMut.mutate()} icon={<FileText className="h-3.5 w-3.5" />}>
+            {t('Release Notes')}
+          </Button>
+          <Button variant="secondary" size="sm" loading={alertsMut.isPending} onClick={() => alertsMut.mutate()} icon={<AlertTriangle className="h-3.5 w-3.5" />}>
+            {t('Recent Alerts')}
+          </Button>
+          <Button variant="secondary" size="sm" loading={serviceMut.isPending} onClick={() => serviceMut.mutate()} icon={<Wrench className="h-3.5 w-3.5" />}>
+            {t('Service Data')}
+          </Button>
+        </div>
+        {lastResult && (
+          <ResultPanel
+            title={t('Vehicle Data')}
+            data={lastResult.error ? undefined : lastResult}
+            error={typeof lastResult.error === 'string' ? lastResult.error : undefined}
+          />
+        )}
+      </div>
+    </ToolCard>
+  )
+}
+
+/* ─── Onboarding Workflow ─────────────────────────────────────────────── */
+
+function OnboardingWorkflow() {
+  const { t } = useTranslation()
+  const [currentStep, setCurrentStep] = useState(0)
+  const [completed, setCompleted] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem('devtools-onboarding')
+      return saved ? (JSON.parse(saved) as Record<string, boolean>) : {}
+    } catch {
+      return {}
+    }
+  })
+
+  useEffect(() => {
+    localStorage.setItem('devtools-onboarding', JSON.stringify(completed))
+  }, [completed])
+
+  const { data: keyStatus, error: keyStatusError } = useQuery({
+    queryKey: ['devtools', 'public-key-status'],
+    queryFn: () => apiFetch('public-key-status'),
+    refetchInterval: 30000,
+  })
+
+  const { data: fleetInfo, error: fleetInfoError } = useQuery({
+    queryKey: ['devtools', 'fleet-api-info'],
+    queryFn: () => apiFetch('fleet-api-info'),
+    refetchInterval: 30000,
+  })
+
+  useEffect(() => {
+    const autoDetected: Record<string, boolean> = { ...completed }
+    if (keyStatus?.configured === true) autoDetected.keypair = true
+    if (fleetInfo?.authenticated === true) autoDetected.auth = true
+    const changed = Object.keys(autoDetected).some((k) => autoDetected[k] !== completed[k])
+    if (changed) setCompleted(autoDetected)
+  }, [keyStatus, fleetInfo, completed])
+
+  const completedCount = ONBOARDING_STEPS.filter((s) => completed[s.id]).length
+  const progressPct = (completedCount / ONBOARDING_STEPS.length) * 100
+  const step = ONBOARDING_STEPS[currentStep]
+  if (!step) return null
+  const StepIcon = step.icon
+
+  const markComplete = () => {
+    setCompleted((prev) => ({ ...prev, [step.id]: true }))
+    if (currentStep < ONBOARDING_STEPS.length - 1) setCurrentStep(currentStep + 1)
+  }
+
+  const onboardingError = [keyStatusError, fleetInfoError].find(Boolean)
+
+  return (
+    <div className="space-y-4">
+      {onboardingError && (
+        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
+          {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(onboardingError)}
+        </AlertBanner>
+      )}
+
+      {/* Progress bar */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-xs text-white/60">
+          <span>{t('Progress')}</span>
+          <span>{completedCount} / {ONBOARDING_STEPS.length} ({fmtInt(progressPct)}%)</span>
+        </div>
+        <div className="h-2 overflow-hidden rounded-full bg-glass-border">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-neon-cyan to-neon-green transition-all duration-500"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Step indicators */}
+      <div className="flex flex-wrap gap-2">
+        {ONBOARDING_STEPS.map((s, i) => (
+          <Badge
+            key={s.id}
+            variant={completed[s.id] ? 'success' : i === currentStep ? 'info' : 'neutral'}
+            size="sm"
+            dot={i === currentStep}
+            onClick={() => setCurrentStep(i)}
+            className="cursor-pointer"
+          >
+            {s.label}
+          </Badge>
+        ))}
+      </div>
+
+      {/* Step content */}
+      <GlassPanel className="p-5">
+        <div className="mb-4 flex items-start gap-3">
+          <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg', completed[step.id] ? ICON_COLOR_MAP.green : ICON_COLOR_MAP.cyan)}>
+            {completed[step.id] ? <CheckCircle className="h-5 w-5" /> : <StepIcon className="h-5 w-5" />}
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-white">
+              {t('devtools.onboarding.stepLabel', `Step ${currentStep + 1}`)}: {step.label}
+            </h3>
+            <p className="text-xs text-white/50">{step.desc}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={currentStep === 0}
+            onClick={() => setCurrentStep(currentStep - 1)}
+            icon={<ArrowLeft className="h-3.5 w-3.5" />}
+          >
+            {t('Previous')}
+          </Button>
+          <Button
+            variant={completed[step.id] ? 'secondary' : 'primary'}
+            size="sm"
+            onClick={markComplete}
+            icon={<CheckCircle className="h-3.5 w-3.5" />}
+          >
+            {completed[step.id] ? t('Completed') : t('Mark Complete')}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={currentStep === ONBOARDING_STEPS.length - 1}
+            onClick={() => setCurrentStep(currentStep + 1)}
+            icon={<ArrowRight className="h-3.5 w-3.5" />}
+          >
+            {t('Next')}
+          </Button>
+        </div>
+      </GlassPanel>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Fleet API Section — composed layout
+   ═══════════════════════════════════════════════════════════════════════ */
+
+export function FleetApiSection() {
+  const { t } = useTranslation()
+  return (
+    <div className="space-y-6">
+      {/* Onboarding wizard */}
+      <div className="space-y-2">
+        <h2 className="text-sm font-semibold text-white/80">{t('devtools.fleet.setupWizard', 'Setup Wizard')}</h2>
+        <OnboardingWorkflow />
+      </div>
+
+      {/* Fleet API tool grid */}
+      <div className="space-y-2">
+        <h2 className="text-sm font-semibold text-white/80">{t('devtools.fleet.toolsTitle', 'Fleet API Tools')}</h2>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <FleetApiConfigTool />
+          <PartnerRegistrationTool />
+          <PartnerPublicKeyTool />
+          <PublicKeySetupTool />
+          <VehicleKeyPairingTool />
+          <FleetTelemetrySubscribeTool />
+          <FleetTelemetryConfigTool />
+          <FleetStatusTool />
+          <VehicleDataTools />
+        </div>
+      </div>
+    </div>
+  )
+}
