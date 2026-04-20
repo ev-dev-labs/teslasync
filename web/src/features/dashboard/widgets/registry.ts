@@ -3,7 +3,7 @@ import {
   Battery, Zap, Car, MapPin, Shield, Thermometer,
   Activity, BarChart3, Gauge, Wifi, TrendingUp, Monitor,
   DollarSign, Calendar, CloudSun, CircleDot, CreditCard, Hash,
-  MonitorSmartphone, List, Grid3X3, Workflow,
+  MonitorSmartphone, List, Grid3X3, Workflow, DoorOpen,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -340,6 +340,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 1 },
     maxSize: { cols: 2, rows: 2 },
     component: lazy(() => import('./SecurityStatusWidget')),
+  },
+  {
+    id: 'door-window-status',
+    name: 'Door & Window Status',
+    description: 'Grid showing 4 doors + 4 windows with open/closed/partial badges',
+    icon: DoorOpen,
+    category: 'security',
+    defaultSize: { cols: 2, rows: 1 },
+    minSize: { cols: 1, rows: 1 },
+    maxSize: { cols: 4, rows: 2 },
+    component: lazy(() => import('./DoorWindowStatusWidget')),
   },
 
   // ── Tires ──
