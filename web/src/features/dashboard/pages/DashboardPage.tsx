@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import {
   RefreshCw, Bell, Radio, ArrowUpRight, Activity,
   Route, BatteryCharging, Shield, AlertCircle, Settings, Plus, RotateCcw,
-  LayoutGrid, Download, Upload,
+  LayoutGrid, Download, Upload, Undo2, Redo2,
 } from 'lucide-react';
 import { request } from '@/api/client';
 import { useAuthStatus } from '@/api/hooks/useSettings';
@@ -24,6 +24,7 @@ import { WidgetPicker } from '../components/WidgetPicker';
 import { WidgetSettingsModal } from '../components/WidgetSettingsModal';
 import { LayoutManager } from '../components/LayoutManager';
 import { useDashboardLayout } from '../hooks/useDashboardLayout';
+import { useLayoutKeyboard } from '../hooks/useLayoutKeyboard';
 import { getWidgetDef } from '../widgets/registry';
 import type { Vehicle, Alert } from '../types';
 import type { WidgetConfig } from '../widgets/types';
@@ -42,8 +43,10 @@ export default function DashboardPage() {
     updateLayouts, autoArrange, getWidgetSize,
     switchDashboard, createDashboard, renameDashboard, deleteDashboard,
     applyPreset, resetToDefault, exportDashboard, importDashboard,
+    canUndo, canRedo, undoCount, undo, redo,
   } = useDashboardLayout();
   const [showPicker, setShowPicker] = useState(false);
+  useLayoutKeyboard({ editMode, canUndo, canRedo, onUndo: undo, onRedo: redo });
   const [settingsWidgetId, setSettingsWidgetId] = useState<string | null>(null);
 
   /* ——— Auth status ——— */
@@ -121,6 +124,33 @@ export default function DashboardPage() {
     <div className="flex items-center gap-2">
       {editMode ? (
         <>
+          <div className="flex items-center gap-1 mr-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={undo}
+              disabled={!canUndo}
+              aria-label={t('dashboard.undo', 'Undo')}
+              className="text-white/60 hover:text-white disabled:opacity-30"
+            >
+              <Undo2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={redo}
+              disabled={!canRedo}
+              aria-label={t('dashboard.redo', 'Redo')}
+              className="text-white/60 hover:text-white disabled:opacity-30"
+            >
+              <Redo2 className="h-4 w-4" />
+            </Button>
+            {canUndo && (
+              <span className="text-[10px] text-white/30 tabular-nums">
+                {undoCount}
+              </span>
+            )}
+          </div>
           <Button variant="ghost" size="sm" onClick={() => setShowPicker(true)}>
             <Plus className="h-3.5 w-3.5 mr-1" />
             {t('dashboard.addWidget', 'Add Widget')}

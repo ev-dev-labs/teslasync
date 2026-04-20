@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import type {
   WidgetInstance,
   WidgetConfig,
@@ -8,6 +8,7 @@ import type {
   RGLLayouts,
 } from '../widgets/types';
 import { WIDGET_REGISTRY, getWidgetDef } from '../widgets/registry';
+import { useUndoRedo } from './useUndoRedo';
 
 const DASHBOARDS_KEY = 'teslasync-dashboards';
 const ACTIVE_KEY = 'teslasync-active-dashboard';
@@ -18,6 +19,12 @@ export const GRID_BREAKPOINTS = { lg: 1200, md: 996, sm: 768, xs: 480 } as const
 export const GRID_COLS = { lg: 4, md: 3, sm: 2, xs: 1 } as const;
 export const ROW_HEIGHT = 180;
 export const GRID_MARGIN: [number, number] = [16, 16];
+
+/* ─── Undo/Redo snapshot ─── */
+interface DashboardSnapshot {
+  widgets: WidgetInstance[];
+  layouts: RGLLayouts;
+}
 
 /* ─── Helpers ─── */
 let nextId = Date.now();
@@ -266,6 +273,23 @@ export function useDashboardLayout() {
     return dashboards.find((d) => d.id === activeId) ?? dashboards[0] ?? DEFAULT_DASHBOARD;
   }, [dashboards, activeId]);
 
+  const activeDashRef = useRef(activeDashboard);
+  activeDashRef.current = activeDashboard;
+  const dashboardsRef = useRef(dashboards);
+  dashboardsRef.current = dashboards;
+
+  /* ─── Undo/Redo history ─── */
+  const {
+    canUndo, canRedo, undoCount,
+    set: pushSnapshot,
+    undo: undoSnapshot,
+    redo: redoSnapshot,
+    reset: resetSnapshot,
+  } = useUndoRedo<DashboardSnapshot>({
+    widgets: activeDashboard.widgets,
+    layouts: activeDashboard.layouts,
+  });
+
   /* ─── Persistence ─── */
   const persist = useCallback((dbs: SavedDashboard[], active?: string) => {
     setDashboards(dbs);
@@ -292,9 +316,10 @@ export function useDashboardLayout() {
   /* ─── Layout actions ─── */
   const updateLayouts = useCallback(
     (layouts: RGLLayouts) => {
+      pushSnapshot({ widgets: activeDashRef.current.widgets, layouts });
       updateActive((d) => ({ ...d, layouts }));
     },
-    [updateActive],
+    [updateActive, pushSnapshot],
   );
 
   const addWidget = useCallback(
@@ -305,24 +330,24 @@ export function useDashboardLayout() {
         id: generateId(),
         widgetId,
       };
-      updateActive((d) => {
-        const widgets = [...d.widgets, newWidget];
-        const layouts = reconcileLayouts(d.layouts, widgets);
-        return { ...d, widgets, layouts };
-      });
+      const current = activeDashRef.current;
+      const widgets = [...current.widgets, newWidget];
+      const layouts = reconcileLayouts(current.layouts, widgets);
+      pushSnapshot({ widgets, layouts });
+      updateActive((d) => ({ ...d, widgets, layouts }));
     },
-    [updateActive],
+    [updateActive, pushSnapshot],
   );
 
   const removeWidget = useCallback(
     (instanceId: string) => {
-      updateActive((d) => {
-        const widgets = d.widgets.filter((w) => w.id !== instanceId);
-        const layouts = reconcileLayouts(d.layouts, widgets);
-        return { ...d, widgets, layouts };
-      });
+      const current = activeDashRef.current;
+      const widgets = current.widgets.filter((w) => w.id !== instanceId);
+      const layouts = reconcileLayouts(current.layouts, widgets);
+      pushSnapshot({ widgets, layouts });
+      updateActive((d) => ({ ...d, widgets, layouts }));
     },
-    [updateActive],
+    [updateActive, pushSnapshot],
   );
 
   const updateWidgetConfig = useCallback(
@@ -342,8 +367,10 @@ export function useDashboardLayout() {
     (id: string) => {
       setActiveId(id);
       localStorage.setItem(ACTIVE_KEY, id);
+      const dash = dashboardsRef.current.find((d) => d.id === id);
+      if (dash) resetSnapshot({ widgets: dash.widgets, layouts: dash.layouts });
     },
-    [],
+    [resetSnapshot],
   );
 
   const createDashboard = useCallback(
@@ -359,9 +386,10 @@ export function useDashboardLayout() {
         updatedAt: new Date().toISOString(),
       };
       persist([...dashboards, newDash], id);
+      resetSnapshot({ widgets: newDash.widgets, layouts: newDash.layouts });
       return id;
     },
-    [dashboards, persist],
+    [dashboards, persist, resetSnapshot],
   );
 
   const renameDashboard = useCallback(
@@ -378,15 +406,19 @@ export function useDashboardLayout() {
   const deleteDashboard = useCallback(
     (id: string) => {
       const target = dashboards.find((d) => d.id === id);
-      if (!target || target.isDefault) return; // Can't delete default
+      if (!target || target.isDefault) return;
       const remaining = dashboards.filter((d) => d.id !== id);
-      if (remaining.length === 0) return; // Always keep at least one
+      if (remaining.length === 0) return;
       const nextActive = id === activeId
         ? (remaining.find((d) => d.isDefault)?.id ?? remaining[0].id)
         : activeId;
       persist(remaining, nextActive);
+      if (id === activeId) {
+        const nextDash = remaining.find((d) => d.id === nextActive);
+        if (nextDash) resetSnapshot({ widgets: nextDash.widgets, layouts: nextDash.layouts });
+      }
     },
-    [dashboards, activeId, persist],
+    [dashboards, activeId, persist, resetSnapshot],
   );
 
   const applyPreset = useCallback(
@@ -401,7 +433,8 @@ export function useDashboardLayout() {
 
   const resetToDefault = useCallback(() => {
     persist([{ ...DEFAULT_DASHBOARD }], 'default');
-  }, [persist]);
+    resetSnapshot({ widgets: DEFAULT_DASHBOARD.widgets, layouts: DEFAULT_DASHBOARD.layouts });
+  }, [persist, resetSnapshot]);
 
   /* ─── Import / Export ─── */
   const exportDashboard = useCallback(
@@ -443,17 +476,18 @@ export function useDashboardLayout() {
         updatedAt: new Date().toISOString(),
       };
       persist([...dashboards, newDash], id);
+      resetSnapshot({ widgets: newDash.widgets, layouts: newDash.layouts });
     },
-    [dashboards, persist],
+    [dashboards, persist, resetSnapshot],
   );
 
   /* ─── Auto arrange ─── */
   const autoArrange = useCallback(() => {
-    updateActive((d) => ({
-      ...d,
-      layouts: buildDefaultLayouts(d.widgets),
-    }));
-  }, [updateActive]);
+    const current = activeDashRef.current;
+    const layouts = buildDefaultLayouts(current.widgets);
+    pushSnapshot({ widgets: current.widgets, layouts });
+    updateActive((d) => ({ ...d, layouts }));
+  }, [updateActive, pushSnapshot]);
 
   /** Get the current widget size from the lg layout (for passing to widgets) */
   const getWidgetSize = useCallback(
@@ -467,6 +501,21 @@ export function useDashboardLayout() {
     },
     [activeDashboard],
   );
+
+  /* ─── Undo / Redo ─── */
+  const undo = useCallback(() => {
+    const prev = undoSnapshot();
+    if (prev) {
+      updateActive((d) => ({ ...d, widgets: prev.widgets, layouts: prev.layouts }));
+    }
+  }, [updateActive, undoSnapshot]);
+
+  const redo = useCallback(() => {
+    const next = redoSnapshot();
+    if (next) {
+      updateActive((d) => ({ ...d, widgets: next.widgets, layouts: next.layouts }));
+    }
+  }, [updateActive, redoSnapshot]);
 
   return {
     // Multi-dashboard
@@ -493,5 +542,11 @@ export function useDashboardLayout() {
     // Import / Export
     exportDashboard,
     importDashboard,
+    // Undo / Redo
+    canUndo,
+    canRedo,
+    undoCount,
+    undo,
+    redo,
   };
 }
