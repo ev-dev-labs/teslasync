@@ -397,3 +397,28 @@ func TestParseDetailedChargeState(t *testing.T) {
 		})
 	}
 }
+
+func TestParseTonneauPosition(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"TonneauPositionStateClosed", "Closed"},
+		{"TonneauPositionStateOpen", "Open"},
+		{"TonneauPositionStatePartiallyOpen", "PartiallyOpen"},
+		{"TonneauPositionStateMoving", "Moving"},
+		{"TonneauPositionStateUnknown", "Unknown"},
+		{"Closed", "Closed"},
+		{"Open", "Open"},
+		{"TonneauPositionStateNewValue", "NewValue"},
+		{"SomeUnknown", "SomeUnknown"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := ParseTonneauPosition(tt.input)
+			if got != tt.expected {
+				t.Errorf("ParseTonneauPosition(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}

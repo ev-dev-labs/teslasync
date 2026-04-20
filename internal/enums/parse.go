@@ -405,3 +405,17 @@ func ParseTurnSignal(raw string) string {
 	}
 	return raw
 }
+
+// ParseTonneauPosition normalizes the tonneau cover position enum.
+// Tesla sends: "TonneauPositionStateClosed", "TonneauPositionStateOpen", etc.
+func ParseTonneauPosition(raw string) string {
+	g := strings.TrimPrefix(raw, PrefixTonneauPosition)
+	switch g {
+	case "Closed", "Open", "PartiallyOpen", "Moving", "Unknown":
+		return g
+	}
+	if g != "" && g != raw {
+		return g
+	}
+	return raw
+}

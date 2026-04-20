@@ -1505,6 +1505,11 @@ func normalizeFleetUnits(signals map[string]interface{}) {
 		signals["LightsTurnSignal"] = enums.ParseTurnSignal(toString(v))
 	}
 
+	// TonneauPosition: strip "TonneauPositionState" prefix (e.g., "TonneauPositionStateClosed" → "Closed")
+	if v, ok := signals["TonneauPosition"]; ok {
+		signals["TonneauPosition"] = enums.ParseTonneauPosition(toString(v))
+	}
+
 	// Window states: strip "WindowState" prefix (e.g., "WindowStateClosed" → "Closed")
 	for _, wn := range []string{"FdWindow", "FpWindow", "RdWindow", "RpWindow"} {
 		if v, ok := signals[wn]; ok {
