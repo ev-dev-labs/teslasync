@@ -148,13 +148,13 @@ const TELEMETRY_FIELDS = [
 ]
 
 const ONBOARDING_STEPS = [
-  { id: 'account', label: 'devtools.onboarding.account', icon: KeyRound, desc: 'devtools.onboarding.accountDesc' },
-  { id: 'application', label: 'devtools.onboarding.application', icon: FileCode, desc: 'devtools.onboarding.applicationDesc' },
-  { id: 'keypair', label: 'devtools.onboarding.keypair', icon: Key, desc: 'devtools.onboarding.keypairDesc' },
-  { id: 'register', label: 'devtools.onboarding.register', icon: Globe, desc: 'devtools.onboarding.registerDesc' },
-  { id: 'auth', label: 'devtools.onboarding.auth', icon: Shield, desc: 'devtools.onboarding.authDesc' },
-  { id: 'pair', label: 'devtools.onboarding.pair', icon: Link, desc: 'devtools.onboarding.pairDesc' },
-  { id: 'telemetry', label: 'devtools.onboarding.telemetry', icon: Radio, desc: 'devtools.onboarding.telemetryDesc' },
+  { id: 'account', label: 'Tesla Developer Account', icon: KeyRound, desc: 'Create a Tesla Developer account at developer.tesla.com' },
+  { id: 'application', label: 'Create Application', icon: FileCode, desc: 'Register a new application in the Tesla Developer Portal' },
+  { id: 'keypair', label: 'Generate Key Pair', icon: Key, desc: 'Generate an EC private/public key pair for Fleet API authentication' },
+  { id: 'register', label: 'Register Partner', icon: Globe, desc: 'Register as a Fleet API partner with your public key' },
+  { id: 'auth', label: 'Authorize Account', icon: Shield, desc: 'Complete OAuth2 authorization to get API access tokens' },
+  { id: 'pair', label: 'Pair Vehicle Key', icon: Link, desc: 'Pair your public key with each vehicle for command access' },
+  { id: 'telemetry', label: 'Fleet Telemetry', icon: Radio, desc: 'Configure Fleet Telemetry streaming for real-time data' },
 ] as const
 
 /* ─── API helper ──────────────────────────────────────────────────────── */
@@ -1280,7 +1280,7 @@ function OnboardingWorkflow() {
             onClick={() => setCurrentStep(i)}
             className="cursor-pointer"
           >
-            {t(s.label)}
+            {s.label}
           </Badge>
         ))}
       </div>
@@ -1293,9 +1293,9 @@ function OnboardingWorkflow() {
           </div>
           <div>
             <h3 className="text-sm font-semibold text-white">
-              {t('devtools.onboarding.stepLabel', { num: currentStep + 1 })}: {t(step.label)}
+              {t('devtools.onboarding.stepLabel', `Step ${currentStep + 1}`)}: {step.label}
             </h3>
-            <p className="text-xs text-white/50">{t(step.desc)}</p>
+            <p className="text-xs text-white/50">{step.desc}</p>
           </div>
         </div>
 
