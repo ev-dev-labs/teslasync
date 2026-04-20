@@ -130,6 +130,16 @@ function CellHeatmap({
 
   return (
     <GlassPanel className="p-4">
+      <style>{`
+        @keyframes cell-fade-in {
+          from { opacity: 0; transform: scale(0.8); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes cell-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 transparent; }
+          50% { box-shadow: 0 0 8px currentColor; }
+        }
+      `}</style>
       <span className="mb-3 block text-sm font-medium text-[var(--text-secondary)]">
         {label}
       </span>
@@ -137,20 +147,30 @@ function CellHeatmap({
         className="grid gap-1"
         style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
       >
-        {cells.map((cell) => (
-          <div
-            key={cell.cell_id}
-            className={cn(
-              'flex flex-col items-center justify-center rounded-md p-1 text-[9px] font-mono',
-              'transition-transform hover:scale-110',
-            )}
-            style={{ backgroundColor: `${cellColor(cell.voltage, avg)}20`, color: cellColor(cell.voltage, avg) }}
-            title={`${t('Cell')} ${cell.cell_id}: ${fmtNumber(cell.voltage ?? 0, 3)} V (${(cell.delta_from_avg ?? 0) >= 0 ? '+' : ''}${fmtNumber((cell.delta_from_avg ?? 0) * 1000, 1)} mV)`}
-          >
-            <span className="font-semibold">{cell.cell_id}</span>
-            <span>{fmtNumber(cell.voltage ?? 0, 3)}</span>
-          </div>
-        ))}
+        {cells.map((cell, i) => {
+          const deviation = Math.abs(cell.delta_from_avg ?? 0);
+          const isDeviation = deviation > 0.005; // > 5mV
+          return (
+            <div
+              key={cell.cell_id}
+              className={cn(
+                'flex flex-col items-center justify-center rounded-md p-1 text-[9px] font-mono',
+                'transition-all hover:scale-110 hover:z-10 hover:shadow-lg',
+                'animate-[cell-fade-in_0.4s_ease-out_both]',
+                isDeviation && 'animate-[cell-fade-in_0.4s_ease-out_both,cell-pulse_3s_ease-in-out_infinite_0.5s]',
+              )}
+              style={{
+                backgroundColor: `${cellColor(cell.voltage, avg)}20`,
+                color: cellColor(cell.voltage, avg),
+                animationDelay: `${i * 15}ms`,
+              }}
+              title={`${t('Cell')} ${cell.cell_id}: ${fmtNumber(cell.voltage ?? 0, 3)} V (${(cell.delta_from_avg ?? 0) >= 0 ? '+' : ''}${fmtNumber((cell.delta_from_avg ?? 0) * 1000, 1)} mV)`}
+            >
+              <span className="font-semibold">{cell.cell_id}</span>
+              <span>{fmtNumber(cell.voltage ?? 0, 3)}</span>
+            </div>
+          );
+        })}
       </div>
       <div className="mt-3 flex items-center justify-center gap-4 text-[10px] text-[var(--text-muted)]">
         <span className="flex items-center gap-1">
