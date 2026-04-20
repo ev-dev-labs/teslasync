@@ -44,6 +44,7 @@ import {
   Battery,
   Trophy,
   CalendarCheck,
+  CalendarClock,
   Wrench as WrenchIcon,
   HardDriveDownload,
   Headphones,
@@ -112,6 +113,7 @@ const navI18nKeys: Record<string, string> = {
   'Route Efficiency': 'nav.routeEfficiency',
   'Automations': 'nav.automations',
   'Digital Twin': 'nav.digitalTwin',
+  'Smart Charge': 'nav.smartCharge',
 }
 
 type SSEState = 'connected' | 'reconnecting' | 'unavailable'
@@ -163,6 +165,7 @@ export const navSections = [
       { to: '/charging', icon: BatteryCharging, label: 'Charging', color: 'text-green-400' },
       { to: '/charging-heatmap', icon: BarChart3, label: 'Charging Patterns', color: 'text-cyan-400' },
       { to: '/charging-curve', icon: TrendingUp, label: 'Charging Curve', color: 'text-lime-400' },
+      { to: '/smart-charge', icon: CalendarClock, label: 'Smart Charge', color: 'text-cyan-400' },
     ],
   },
   {

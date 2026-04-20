@@ -1,7 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
-import type { ChargingSession, CostForecastData, ChargingOptimizerData } from '@/types/charging';
+import type {
+  ChargingSession,
+  CostForecastData,
+  ChargingOptimizerData,
+  OptimizeChargeRequest,
+  OptimizeChargeResponse,
+  ApplyScheduleRequest,
+  ApplyScheduleResponse,
+  ChargePlan,
+  RatePlanInfo,
+} from '@/types/charging';
 import type { ChargingSession as ApiChargingSession, ChargeTelemetryReading } from '../types';
 
 /** Fetches paginated charging sessions for a vehicle, optionally filtered by date range. */
@@ -244,5 +254,57 @@ export function useRefreshTeslaChargingSessions() {
       );
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: teslaChargingSessionKeys.all }),
+  });
+}
+
+// --- Smart Charge Planner ---
+
+export const chargePlannerKeys = {
+  all: ['charge-plans'] as const,
+  byVehicle: (vehicleId: number) => ['charge-plans', vehicleId] as const,
+  ratePlans: ['charge-planner-rate-plans'] as const,
+};
+
+/** Mutation to optimize a charge schedule using TOU rates. */
+export function useOptimizeCharge() {
+  return useMutation({
+    mutationFn: (params: OptimizeChargeRequest) =>
+      request<OptimizeChargeResponse>('/charge-planner/optimize', {
+        method: 'POST',
+        body: JSON.stringify(params),
+      }),
+  });
+}
+
+/** Mutation to apply an optimized charge plan to the vehicle. */
+export function useApplySchedule() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (params: ApplyScheduleRequest) =>
+      request<ApplyScheduleResponse>('/charge-planner/apply', {
+        method: 'POST',
+        body: JSON.stringify(params),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: chargePlannerKeys.all }),
+  });
+}
+
+/** Fetches charge plan history for a vehicle. */
+export function useChargePlans(vehicleId?: number) {
+  return useQuery({
+    queryKey: chargePlannerKeys.byVehicle(vehicleId!),
+    queryFn: () => request<ChargePlan[]>(`/charge-planner/history?vehicle_id=${vehicleId}`),
+    enabled: !!vehicleId,
+    select: safeArray,
+  });
+}
+
+/** Fetches available TOU rate plans from the backend. */
+export function useRatePlans() {
+  return useQuery({
+    queryKey: chargePlannerKeys.ratePlans,
+    queryFn: () => request<RatePlanInfo[]>('/charge-planner/rate-plans'),
+    staleTime: Infinity,
+    select: safeArray,
   });
 }
