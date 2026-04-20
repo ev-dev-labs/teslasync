@@ -2,7 +2,7 @@ import { lazy } from 'react';
 import {
   Battery, Zap, Car, MapPin, Shield, Thermometer,
   Activity, BarChart3, Gauge, Wifi, TrendingUp, Monitor,
-  DollarSign, Calendar, CloudSun,
+  DollarSign, Calendar, CloudSun, CircleDot,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -237,6 +237,19 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 1 },
     maxSize: { cols: 2, rows: 2 },
     component: lazy(() => import('./SecurityStatusWidget')),
+  },
+
+  // ── Tires ──
+  {
+    id: 'tire-pressure-visual',
+    name: 'Tire Pressure Visual',
+    description: 'Four-tire diagram with pressure per tire, color-coded (green/amber/red)',
+    icon: CircleDot,
+    category: 'tires',
+    defaultSize: { cols: 2, rows: 2 },
+    minSize: { cols: 2, rows: 2 },
+    maxSize: { cols: 4, rows: 3 },
+    component: lazy(() => import('./TirePressureVisualWidget')),
   },
 
   // ── Telemetry ──

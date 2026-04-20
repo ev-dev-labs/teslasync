@@ -27,6 +27,7 @@ export type WidgetCategory =
   | 'driving'
   | 'charging'
   | 'climate'
+  | 'tires'
   | 'security'
   | 'telemetry'
   | 'analytics'
