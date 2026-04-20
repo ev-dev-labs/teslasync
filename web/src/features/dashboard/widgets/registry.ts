@@ -3,6 +3,7 @@ import {
   Battery, Zap, Car, MapPin, Shield, Thermometer,
   Activity, BarChart3, Gauge, Wifi, TrendingUp, Monitor,
   DollarSign, Calendar, CloudSun, CircleDot, CreditCard, Hash,
+  MonitorSmartphone,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -53,6 +54,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     component: lazy(() => import('./DigitalTwinMiniWidget')),
   },
 
+  {
+    id: 'software-update-status',
+    name: 'Software Update',
+    description: 'Current firmware version, update availability, download/install progress bar',
+    icon: MonitorSmartphone,
+    category: 'vehicle',
+    defaultSize: { cols: 2, rows: 1 },
+    minSize: { cols: 1, rows: 1 },
+    maxSize: { cols: 4, rows: 2 },
+    component: lazy(() => import('./SoftwareUpdateStatusWidget')),
+  },
   {
     id: 'odometer-counter',
     name: 'Odometer Counter',
