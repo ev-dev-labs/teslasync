@@ -33,6 +33,7 @@ export type WidgetCategory =
   | 'commands'
   | 'telemetry'
   | 'analytics'
+  | 'alerts'
   | 'automations'
   | 'system';
 

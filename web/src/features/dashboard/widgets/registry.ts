@@ -4,7 +4,7 @@ import {
   Activity, BarChart3, Gauge, Wifi, TrendingUp, Monitor,
   DollarSign, Calendar, CloudSun, CircleDot, CreditCard, Hash,
   MonitorSmartphone, List, Grid3X3, Workflow, DoorOpen, Eye,
-  Command, CalendarRange,
+  Command, CalendarRange, Bell,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -448,6 +448,19 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 1 },
     maxSize: { cols: 4, rows: 2 },
     component: lazy(() => import('./WeeklySummaryCardWidget')),
+  },
+
+  // ── Alerts ──
+  {
+    id: 'alert-feed',
+    name: 'Alert Feed',
+    description: 'Recent alerts reverse-chronological with severity badges',
+    icon: Bell,
+    category: 'alerts',
+    defaultSize: { cols: 2, rows: 2 },
+    minSize: { cols: 2, rows: 2 },
+    maxSize: { cols: 4, rows: 2 },
+    component: lazy(() => import('./AlertFeedWidget')),
   },
 
   // ── Automations ──
