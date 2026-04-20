@@ -3,7 +3,7 @@ import {
   Battery, Zap, Car, MapPin, Shield, Thermometer,
   Activity, BarChart3, Gauge, Wifi, TrendingUp, Monitor,
   DollarSign, Calendar, CloudSun, CircleDot, CreditCard, Hash,
-  MonitorSmartphone, List,
+  MonitorSmartphone, List, Grid3X3,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -200,6 +200,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 1 },
     maxSize: { cols: 4, rows: 3 },
     component: lazy(() => import('./DriveEfficiencyChartWidget')),
+  },
+  {
+    id: 'speed-heatmap',
+    name: 'Speed Heatmap',
+    description: 'Heatmap: time-of-day vs day-of-week speed distribution',
+    icon: Grid3X3,
+    category: 'driving',
+    defaultSize: { cols: 2, rows: 2 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 3 },
+    component: lazy(() => import('./SpeedHeatmapWidget')),
   },
 
   // ── Charging ──
