@@ -493,3 +493,29 @@ func TestParseClimateKeeperMode(t *testing.T) {
 		})
 	}
 }
+
+func TestParseDefrostMode(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"DefrostModeStateOff", "Off"},
+		{"DefrostModeStateNormal", "Normal"},
+		{"DefrostModeStateMax", "Max"},
+		{"DefrostModeStateAutoDefog", "AutoDefog"},
+		{"Off", "Off"},
+		{"Normal", "Normal"},
+		{"Max", "Max"},
+		{"AutoDefog", "AutoDefog"},
+		{"DefrostModeStateUnknown", "Unknown"},
+		{"", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := ParseDefrostMode(tt.input)
+			if got != tt.expected {
+				t.Errorf("ParseDefrostMode(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
