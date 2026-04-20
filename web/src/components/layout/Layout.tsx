@@ -554,9 +554,11 @@ export default function Layout() {
         >
           {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
-        <div className="flex-1 flex justify-center -ml-10">
-          <Logo size={26} showWordmark />
-        </div>
+        {!sidebarOpen && (
+          <div className="flex-1 flex justify-center -ml-10">
+            <Logo size={26} showWordmark />
+          </div>
+        )}
       </header>
 
       {/* Main content */}
