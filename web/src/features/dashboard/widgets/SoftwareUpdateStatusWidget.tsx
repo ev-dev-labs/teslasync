@@ -24,6 +24,7 @@ export default function SoftwareUpdateStatusWidget({ vehicleId, size }: WidgetPr
   const downloadPct = configData?.software_update_download_pct ?? null;
   const installPct = configData?.software_update_install_pct ?? null;
   const expectedDuration = configData?.software_update_expected_duration ?? null;
+  const scheduledStart = configData?.software_update_scheduled_start ?? null;
 
   const updateStatus = useMemo(() => {
     if (!updateVersion) return 'up-to-date';
@@ -62,6 +63,7 @@ export default function SoftwareUpdateStatusWidget({ vehicleId, size }: WidgetPr
               downloadPct={downloadPct}
               installPct={installPct}
               expectedDuration={expectedDuration}
+              scheduledStart={scheduledStart}
               updateStatus={updateStatus}
               isTall={size.rows >= 2}
               t={t}
@@ -107,6 +109,7 @@ function FullView({
   downloadPct,
   installPct,
   expectedDuration,
+  scheduledStart,
   updateStatus,
   isTall,
   t,
@@ -116,6 +119,7 @@ function FullView({
   downloadPct: number | null;
   installPct: number | null;
   expectedDuration: number | null;
+  scheduledStart: string | null;
   updateStatus: string;
   isTall: boolean;
   t: (k: string, f: string) => string;
@@ -180,6 +184,16 @@ function FullView({
               <span>
                 {t('widget.estimatedTime', 'Est. time')}: ~{expectedDuration}{' '}
                 {t('widget.minutes', 'min')}
+              </span>
+            </div>
+          )}
+
+          {/* Scheduled start — shown when available */}
+          {isTall && scheduledStart && (
+            <div className="flex items-center gap-1.5 text-xs text-white/40 pt-0.5 border-t border-white/[0.06]">
+              <Clock className="h-3 w-3 shrink-0" />
+              <span>
+                {t('widget.scheduledStart', 'Scheduled')}: {scheduledStart}
               </span>
             </div>
           )}

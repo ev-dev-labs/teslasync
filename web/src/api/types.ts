@@ -1229,6 +1229,7 @@ export interface VehicleConfigSnapshot {
   software_update_download_pct?: number
   software_update_install_pct?: number
   software_update_expected_duration?: number
+  software_update_scheduled_start?: string
   created_at: string
 }
 
