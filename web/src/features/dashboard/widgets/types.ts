@@ -31,6 +31,7 @@ export type WidgetCategory =
   | 'tires'
   | 'security'
   | 'commands'
+  | 'media'
   | 'telemetry'
   | 'analytics'
   | 'alerts'

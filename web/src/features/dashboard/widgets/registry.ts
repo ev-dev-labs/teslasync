@@ -4,7 +4,7 @@ import {
   Activity, BarChart3, Gauge, Wifi, TrendingUp, Monitor,
   DollarSign, Calendar, CloudSun, CircleDot, CreditCard, Hash,
   MonitorSmartphone, List, Grid3X3, Workflow, DoorOpen, Eye,
-  Command, CalendarRange, Bell,
+  Command, CalendarRange, Bell, Music,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -376,6 +376,19 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 1 },
     maxSize: { cols: 4, rows: 1 },
     component: lazy(() => import('./CommandQuickActionsWidget')),
+  },
+
+  // ── Media ──
+  {
+    id: 'media-now-playing',
+    name: 'Now Playing',
+    description: 'Current media: song title, artist, source',
+    icon: Music,
+    category: 'media',
+    defaultSize: { cols: 2, rows: 1 },
+    minSize: { cols: 1, rows: 1 },
+    maxSize: { cols: 4, rows: 2 },
+    component: lazy(() => import('./MediaNowPlayingWidget')),
   },
 
   // ── Tires ──

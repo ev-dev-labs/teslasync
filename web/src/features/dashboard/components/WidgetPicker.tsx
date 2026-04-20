@@ -15,6 +15,7 @@ const CATEGORY_LABELS: Record<WidgetCategory, string> = {
   tires: 'Tires',
   security: 'Security',
   commands: 'Commands',
+  media: 'Media',
   telemetry: 'Telemetry',
   analytics: 'Analytics',
   alerts: 'Alerts',
