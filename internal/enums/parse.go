@@ -419,3 +419,55 @@ func ParseTonneauPosition(raw string) string {
 	}
 	return raw
 }
+
+// ParseTonneauTentMode normalizes the tonneau tent mode enum.
+// Tesla sends: "TonneauTentModeActive", "TonneauTentModeOff", etc.
+func ParseTonneauTentMode(raw string) string {
+	g := strings.TrimPrefix(raw, PrefixTonneauTentMode)
+	if g != "" && g != raw {
+		return g
+	}
+	return raw
+}
+
+// ParsePowershareStatus normalizes the Powershare status enum.
+// Tesla sends: "PowershareStateActive", "PowershareStateInactive", "PowershareStateUnknown".
+func ParsePowershareStatus(raw string) string {
+	g := strings.TrimPrefix(raw, PrefixPowershareState)
+	switch g {
+	case "Active", "Inactive", "Unknown":
+		return g
+	}
+	if g != "" && g != raw {
+		return g
+	}
+	return raw
+}
+
+// ParsePowershareStopReason normalizes the Powershare stop reason enum.
+// Tesla sends: "PowershareStopReasonUserRequest", "PowershareStopReasonLowBattery", etc.
+func ParsePowershareStopReason(raw string) string {
+	g := strings.TrimPrefix(raw, PrefixPowershareStopReason)
+	switch g {
+	case "UserRequest", "LowBattery", "Error", "None":
+		return g
+	}
+	if g != "" && g != raw {
+		return g
+	}
+	return raw
+}
+
+// ParsePowershareType normalizes the Powershare type enum.
+// Tesla sends: "PowershareTypeHome", "PowershareTypeVehicle", "PowershareTypeNone".
+func ParsePowershareType(raw string) string {
+	g := strings.TrimPrefix(raw, PrefixPowershareType)
+	switch g {
+	case "Home", "Vehicle", "None":
+		return g
+	}
+	if g != "" && g != raw {
+		return g
+	}
+	return raw
+}

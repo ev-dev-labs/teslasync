@@ -1522,6 +1522,17 @@ func normalizeFleetUnits(signals map[string]interface{}) {
 		}
 	}
 
+	// Powershare enums: strip Tesla prefixes
+	if v, ok := signals["PowershareStatus"]; ok {
+		signals["PowershareStatus"] = enums.ParsePowershareStatus(toString(v))
+	}
+	if v, ok := signals["PowershareStopReason"]; ok {
+		signals["PowershareStopReason"] = enums.ParsePowershareStopReason(toString(v))
+	}
+	if v, ok := signals["PowershareType"]; ok {
+		signals["PowershareType"] = enums.ParsePowershareType(toString(v))
+	}
+
 	// TypeDoors compounds: flatten {DriverFront, PassengerFront, ...} maps → JSON strings.
 	// Tesla sends these as nested JSON objects; downstream consumers (signal_history,
 	// vehicle_live_state, security_events) expect scalar string values.
