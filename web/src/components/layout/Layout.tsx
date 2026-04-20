@@ -9,7 +9,6 @@ import {
   Settings,
   Zap,
   Menu,
-  X,
   Radar,
   Bolt,
   HeartPulse,
@@ -542,24 +541,23 @@ export default function Layout() {
         </div>
       </aside>
 
-      {/* Mobile top bar — outside main content div so it's above the sidebar stacking context */}
-      <header className="fixed top-0 left-0 right-0 z-[60] flex items-center border-b backdrop-blur-xl px-4 py-3 lg:hidden" style={{ borderColor: 'var(--glass-border)', background: 'var(--surface-1)', touchAction: 'manipulation' }}>
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          type="button"
-          aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
-          aria-expanded={sidebarOpen}
-          style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
-          className="relative z-10 rounded-xl p-2.5 -ml-1 text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)] transition-colors active:scale-95"
-        >
-          {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
-        {!sidebarOpen && (
+      {/* Mobile top bar — hidden when sidebar is open (sidebar has its own close button) */}
+      {!sidebarOpen && (
+        <header className="fixed top-0 left-0 right-0 z-[60] flex items-center border-b backdrop-blur-xl px-4 py-3 lg:hidden" style={{ borderColor: 'var(--glass-border)', background: 'var(--surface-1)', touchAction: 'manipulation' }}>
+          <button
+            onClick={() => setSidebarOpen(true)}
+            type="button"
+            aria-label="Open sidebar"
+            style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+            className="relative z-10 rounded-xl p-2.5 -ml-1 text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)] transition-colors active:scale-95"
+          >
+            <Menu className="h-6 w-6" />
+          </button>
           <div className="flex-1 flex justify-center -ml-10">
             <Logo size={26} showWordmark />
           </div>
-        )}
-      </header>
+        </header>
+      )}
 
       {/* Main content */}
       <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
