@@ -403,6 +403,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     maxSize: { cols: 4, rows: 3 },
     component: lazy(() => import('./LiveSignalsWidget')),
   },
+  {
+    id: 'live-signal-sparklines',
+    name: 'Live Signal Sparklines',
+    description: 'Configurable list of 4-6 signals with mini sparkline charts (last 5 min)',
+    icon: Activity,
+    category: 'telemetry',
+    defaultSize: { cols: 2, rows: 2 },
+    minSize: { cols: 2, rows: 2 },
+    maxSize: { cols: 4, rows: 3 },
+    component: lazy(() => import('./LiveSignalSparklinesWidget')),
+  },
 
   // ── Analytics ──
   {
