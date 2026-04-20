@@ -2,7 +2,7 @@ import { lazy } from 'react';
 import {
   Battery, Zap, Car, MapPin, Shield, Thermometer,
   Activity, BarChart3, Gauge, Wifi, TrendingUp, Monitor,
-  DollarSign, Calendar,
+  DollarSign, Calendar, CloudSun,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -213,6 +213,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 1 },
     maxSize: { cols: 4, rows: 3 },
     component: lazy(() => import('./ClimateControlPanelWidget')),
+  },
+  {
+    id: 'weather-at-car',
+    name: 'Weather at Car',
+    description: 'Current weather at vehicle location: temp, conditions icon',
+    icon: CloudSun,
+    category: 'climate',
+    defaultSize: { cols: 1, rows: 1 },
+    minSize: { cols: 1, rows: 1 },
+    maxSize: { cols: 3, rows: 2 },
+    component: lazy(() => import('./WeatherAtCarWidget')),
   },
 
   // ── Security ──
