@@ -196,6 +196,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	vehicleInfoHandler := NewVehicleInfoHandler(teslaClient, db)
 	tripPlannerHandler := NewTripPlannerHandler(db, opt.CacheStore)
 	geocodeHandler := NewGeocodeHandler(geocoding.NewSearcher("TeslaSync/1.0"))
+	shareHandler := NewShareHandler(db)
 	// SSE event hub for automation real-time events
 	automationEventHub := NewEventHub()
 	automationPublisher := NewAutomationEventPublisher(automationEventHub)
@@ -260,6 +261,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			)),
 		).Post("/api/v1/automations/webhook/{token}", webhookReceiver.Receive)
 	}
+
+	// Public: Shareable drive reports (no auth — token IS the auth).
+	// Rate limited to prevent abuse of public endpoints.
+	// NOTE: If using ForwardAuth (Authentik/Authelia), exempt /api/v1/share/ from auth.
+	r.With(
+		httprate.LimitByIP(60, 1*time.Minute),
+	).Get("/api/v1/share/{token}", shareHandler.GetPublicShare)
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
@@ -343,8 +351,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Get("/", driveHandler.Get)
 				r.Get("/positions", driveHandler.Positions)
 				r.Get("/telemetry", driveHandler.TelemetryReadings)
+				// Share link management
+				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/share", shareHandler.Create)
+				r.Get("/shares", shareHandler.List)
 			})
 		})
+
+		// Share link revocation (by token, not by drive)
+		r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/shares/{token}", shareHandler.Revoke)
 
 		// Drivetrain Health
 		r.Get("/drivetrain/health", drivetrainHealthHandler.Get)

@@ -131,6 +131,9 @@ const TeslaAccount = lazy(() => import('./features/system/pages/TeslaAccountPage
 // Settings
 const Settings = lazy(() => import('./features/settings/pages/SettingsPage'))
 
+// Sharing (public)
+const SharedDrive = lazy(() => import('./features/sharing/pages/SharedDrivePage'))
+
 /** Route wrapper: Suspense for lazy loading + ErrorBoundary for crash isolation */
 function SafeRoute({ children, name }: { children: React.ReactNode; name: string }) {
   return (
@@ -167,6 +170,7 @@ export default function App() {
       <Route path="quick-stats" element={<SafeRoute name="QuickStats"><QuickStats /></SafeRoute>} />
       <Route path="glance" element={<SafeRoute name="Glance"><GlancePage /></SafeRoute>} />
       <Route path="year-review/:year" element={<SafeRoute name="YearReview"><YearReview /></SafeRoute>} />
+      <Route path="s/:token" element={<SafeRoute name="SharedDrive"><SharedDrive /></SafeRoute>} />
       <Route path="/" element={<Layout />}>
         <Route index element={<SafeRoute name="Dashboard"><Dashboard /></SafeRoute>} />
         <Route path="live" element={<SafeRoute name="LiveMap"><LiveMap /></SafeRoute>} />

@@ -10,6 +10,7 @@ import {
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Button } from '@/components/ui/Button';
+import { ShareDriveDialog } from '../components/ShareDriveDialog';
 import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 import {
   ChartContainer, ChartTooltip, ChartGradient,
@@ -283,12 +284,8 @@ export default function DriveDetailPage() {
       .map((b) => ({ range: b.range, pct: chartData.length > 0 ? Math.round((b.count / chartData.length) * 100) : 0 }));
   }, [chartData, convertSpeed]);
 
-  /* ---- Share handler ---- */
-  const handleShare = () => {
-    if (!drive || !stats) return;
-    const text = `🚙 ${t('driveDetail.sharePrefix', 'Drove')} ${fmtNumber(convertDistance(drive.distance))} ${distanceUnit} ${t('driveDetail.shareIn', 'in')} ${formatDuration(drive.durationMin)}. ${t('driveDetail.shareBattery', 'Battery')}: ${drive.startBatteryLevel ?? '?'}% → ${drive.endBatteryLevel ?? '?'}%. ${t('driveDetail.shareMaxSpeed', 'Max speed')}: ${fmtInt(stats.maxSpd)} ${speedUnit}`;
-    navigator.clipboard.writeText(text);
-  };
+  /* ---- Share dialog state ---- */
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   /* ---- Loading skeleton ---- */
   if (isLoading) {
@@ -341,7 +338,7 @@ export default function DriveDetailPage() {
                   {t('driveDetail.replay', 'Replay')}
                 </Button>
               </Link>
-              <Button variant="ghost" size="sm" onClick={handleShare} icon={<Share2 className="h-4 w-4" />}>
+              <Button variant="ghost" size="sm" onClick={() => setShareDialogOpen(true)} icon={<Share2 className="h-4 w-4" />}>
                 {t('driveDetail.share', 'Share')}
               </Button>
             </div>
@@ -1075,6 +1072,13 @@ export default function DriveDetailPage() {
                 );
               })()}
         </>
+      )}
+      {id && (
+        <ShareDriveDialog
+          driveId={id}
+          open={shareDialogOpen}
+          onClose={() => setShareDialogOpen(false)}
+        />
       )}
     </PageContainer>
   );
