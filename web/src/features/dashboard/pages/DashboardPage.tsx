@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   RefreshCw, Bell, Radio, ArrowUpRight, Activity,
   Route, BatteryCharging, Shield, AlertCircle, Settings, Plus, RotateCcw,
+  LayoutGrid, Download, Upload,
 } from 'lucide-react';
 import { request } from '@/api/client';
 import { useAuthStatus } from '@/api/hooks/useSettings';
@@ -20,21 +21,30 @@ import { useRealtimeEvents } from '@/hooks/useRealtimeEvents';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { DashboardGrid } from '../components/DashboardGrid';
 import { WidgetPicker } from '../components/WidgetPicker';
+import { WidgetSettingsModal } from '../components/WidgetSettingsModal';
+import { LayoutManager } from '../components/LayoutManager';
 import { useDashboardLayout } from '../hooks/useDashboardLayout';
+import { getWidgetDef } from '../widgets/registry';
 import type { Vehicle, Alert } from '../types';
+import type { WidgetConfig } from '../widgets/types';
 
 export default function DashboardPage() {
   usePageTitle('Dashboard');
   const { t } = useTranslation('dashboard');
   const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   /* ——— Dashboard layout state ——— */
   const {
-    layout, editMode, setEditMode,
-    addWidget, removeWidget, reorderWidgets,
-    resetLayout, applyPreset,
+    dashboards, activeDashboard, activeId,
+    editMode, setEditMode,
+    addWidget, removeWidget, updateWidgetConfig,
+    updateLayouts, autoArrange, getWidgetSize,
+    switchDashboard, createDashboard, renameDashboard, deleteDashboard,
+    applyPreset, resetToDefault, exportDashboard, importDashboard,
   } = useDashboardLayout();
   const [showPicker, setShowPicker] = useState(false);
+  const [settingsWidgetId, setSettingsWidgetId] = useState<string | null>(null);
 
   /* ——— Auth status ——— */
   const { data: auth } = useAuthStatus();
@@ -82,6 +92,30 @@ export default function DashboardPage() {
     setIsRefreshing(false);
   };
 
+  /* ——— Import handler ——— */
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      await importDashboard(file);
+    } catch {
+      // TODO: show error toast
+    }
+    e.target.value = '';
+  };
+
+  /* ——— Widget settings ——— */
+  const settingsWidget = settingsWidgetId
+    ? activeDashboard.widgets.find((w) => w.id === settingsWidgetId)
+    : null;
+  const settingsDef = settingsWidget ? getWidgetDef(settingsWidget.widgetId) : null;
+
+  const handleSaveWidgetConfig = (config: WidgetConfig) => {
+    if (settingsWidgetId) {
+      updateWidgetConfig(settingsWidgetId, config);
+    }
+  };
+
   /* ——— Header actions ——— */
   const headerActions = (
     <div className="flex items-center gap-2">
@@ -91,7 +125,11 @@ export default function DashboardPage() {
             <Plus className="h-3.5 w-3.5 mr-1" />
             {t('dashboard.addWidget', 'Add Widget')}
           </Button>
-          <Button variant="ghost" size="sm" onClick={resetLayout}>
+          <Button variant="ghost" size="sm" onClick={autoArrange}>
+            <LayoutGrid className="h-3.5 w-3.5 mr-1" />
+            {t('dashboard.autoArrange', 'Auto Arrange')}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={resetToDefault}>
             <RotateCcw className="h-3.5 w-3.5 mr-1" />
             {t('dashboard.reset', 'Reset')}
           </Button>
@@ -103,6 +141,12 @@ export default function DashboardPage() {
         <>
           <Button variant="ghost" size="sm" onClick={handleRefresh} loading={isRefreshing}>
             <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => exportDashboard()}>
+            <Download className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => fileInputRef.current?.click()}>
+            <Upload className="h-3.5 w-3.5" />
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setEditMode(true)}>
             <Settings className="h-3.5 w-3.5 mr-1" />
@@ -132,7 +176,16 @@ export default function DashboardPage() {
       loading={vehiclesLoading}
       actions={headerActions}
     >
-      <div className="space-y-6">
+      <div className="space-y-4">
+        {/* Hidden file input for import */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          onChange={handleImport}
+          className="hidden"
+        />
+
         {/* Error banner */}
         {anyError && (
           <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
@@ -157,6 +210,18 @@ export default function DashboardPage() {
           </FadeIn>
         )}
 
+        {/* Layout Manager — always show when there are dashboards */}
+        {dashboards.length > 0 && (
+          <LayoutManager
+            dashboards={dashboards}
+            activeId={activeId}
+            onSwitch={switchDashboard}
+            onCreate={createDashboard}
+            onRename={renameDashboard}
+            onDelete={deleteDashboard}
+          />
+        )}
+
         {vehiclesLoading ? (
           <LoadingSkeleton />
         ) : vehicles && vehicles.length > 0 ? (
@@ -166,7 +231,7 @@ export default function DashboardPage() {
               <FadeIn>
                 <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-3 text-center">
                   <p className="text-sm text-[var(--text-secondary)]">
-                    {t('dashboard.editHint', 'Drag widgets to reorder. Click "Add Widget" to add new ones.')}
+                    {t('dashboard.editHint', 'Drag widgets to reorder, resize from edges. Click the gear icon for widget settings.')}
                   </p>
                 </div>
               </FadeIn>
@@ -175,10 +240,12 @@ export default function DashboardPage() {
             {/* Widget Grid */}
             <FadeIn>
               <DashboardGrid
-                widgets={layout.widgets}
+                dashboard={activeDashboard}
                 editMode={editMode}
-                onReorder={reorderWidgets}
-                onRemove={removeWidget}
+                onLayoutChange={updateLayouts}
+                onRemoveWidget={removeWidget}
+                onOpenSettings={setSettingsWidgetId}
+                getWidgetSize={getWidgetSize}
               />
             </FadeIn>
           </>
@@ -199,8 +266,19 @@ export default function DashboardPage() {
         onClose={() => setShowPicker(false)}
         onAddWidget={addWidget}
         onApplyPreset={applyPreset}
-        activeWidgetIds={layout.widgets.map((w) => w.widgetId)}
+        activeWidgetIds={activeDashboard.widgets.map((w) => w.widgetId)}
       />
+
+      {/* Widget Settings Modal */}
+      {settingsWidget && settingsDef && (
+        <WidgetSettingsModal
+          widget={settingsWidget}
+          def={settingsDef}
+          open={!!settingsWidgetId}
+          onClose={() => setSettingsWidgetId(null)}
+          onSave={handleSaveWidgetConfig}
+        />
+      )}
     </PageContainer>
   );
 }

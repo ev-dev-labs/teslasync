@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { Drawer, Badge } from '@/components/ui';
 import { WIDGET_REGISTRY } from '../widgets/registry';
-import { LAYOUT_PRESETS } from '../hooks/useDashboardLayout';
+import { DASHBOARD_PRESETS } from '../hooks/useDashboardLayout';
 import type { WidgetCategory } from '../widgets/types';
 
 const CATEGORY_LABELS: Record<WidgetCategory, string> = {
@@ -52,11 +52,11 @@ export function WidgetPicker({
             {t('dashboard.presets', 'Layout Presets')}
           </h3>
           <div className="grid grid-cols-1 gap-2">
-            {Object.entries(LAYOUT_PRESETS).map(([key, preset]) => (
+            {DASHBOARD_PRESETS.map((preset) => (
               <button
-                key={key}
+                key={preset.id}
                 onClick={() => {
-                  onApplyPreset(key);
+                  onApplyPreset(preset.id);
                   onClose();
                 }}
                 className={cn(

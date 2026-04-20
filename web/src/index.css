@@ -550,3 +550,36 @@ select option:checked {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* ─── react-grid-layout overrides ─── */
+.react-grid-item > .react-resizable-handle {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.react-grid-item:hover > .react-resizable-handle {
+  opacity: 0.4;
+}
+.react-resizable-handle::after {
+  border-color: var(--theme-primary) !important;
+}
+
+.react-grid-item.react-grid-placeholder {
+  background: var(--theme-primary) !important;
+  opacity: 0.08 !important;
+  border-radius: 0.75rem;
+  border: 2px dashed var(--theme-primary);
+}
+
+.react-grid-item.cssTransforms {
+  transition-property: transform;
+  transition-duration: 200ms;
+}
+.react-grid-item.react-draggable-dragging {
+  transition: none !important;
+  z-index: 40;
+  opacity: 0.85;
+}
+.react-grid-item.resizing {
+  opacity: 0.8;
+  z-index: 40;
+}
