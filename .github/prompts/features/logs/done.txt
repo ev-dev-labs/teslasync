@@ -111,3 +111,5 @@ dashboard-widgets/25-fleet-stats-bar.prompt.md
 dashboard-widgets/26-automation-status.prompt.md
 dashboard-widgets/27-alert-feed.prompt.md
 dashboard-widgets/28-media-now-playing.prompt.md
+ux-improvements/16-onboarding-tour.prompt.md
+ux-improvements/17-data-annotations.prompt.md

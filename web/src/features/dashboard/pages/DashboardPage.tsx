@@ -27,6 +27,7 @@ import { LayoutManager } from '../components/LayoutManager';
 import { TemplateGallery } from '../components/TemplateGallery';
 import { ExportModal } from '../components/ExportModal';
 import { ImportPreviewModal } from '../components/ImportPreviewModal';
+import { DashboardSettingsModal } from '../components/DashboardSettingsModal';
 import { KioskOverlay } from '../components/KioskOverlay';
 import { KioskSettingsModal } from '../components/KioskSettingsModal';
 import { useDashboardLayout } from '../hooks/useDashboardLayout';
@@ -49,6 +50,7 @@ export default function DashboardPage() {
     addWidget, removeWidget, updateWidgetConfig,
     updateLayouts, autoArrange, getWidgetSize,
     switchDashboard, createDashboard, renameDashboard, deleteDashboard,
+    reorderDashboards, duplicateDashboard, updateDashboardSettings, updateDashboardIcon,
     applyPreset, resetToDefault, exportDashboard, importDashboardFromData,
     canUndo, canRedo, undoCount, undo, redo,
   } = useDashboardLayout();
@@ -58,7 +60,11 @@ export default function DashboardPage() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [importJson, setImportJson] = useState<string | null>(null);
   const [showKioskSettings, setShowKioskSettings] = useState(false);
-  useLayoutKeyboard({ editMode, canUndo, canRedo, onUndo: undo, onRedo: redo });
+  const [showDashSettings, setShowDashSettings] = useState<string | null>(null);
+  useLayoutKeyboard({
+    editMode, canUndo, canRedo, onUndo: undo, onRedo: redo,
+    dashboards, switchDashboard,
+  });
   const [settingsWidgetId, setSettingsWidgetId] = useState<string | null>(null);
 
   /* ——— Kiosk mode ——— */
@@ -287,6 +293,9 @@ export default function DashboardPage() {
             onCreate={createDashboard}
             onRename={renameDashboard}
             onDelete={deleteDashboard}
+            onReorder={reorderDashboards}
+            onDuplicate={duplicateDashboard}
+            onOpenSettings={(id) => setShowDashSettings(id)}
             onOpenTemplates={() => setShowTemplates(true)}
           />
         )}
@@ -316,6 +325,9 @@ export default function DashboardPage() {
                   onRemoveWidget={removeWidget}
                   onOpenSettings={setSettingsWidgetId}
                   getWidgetSize={getWidgetSize}
+                  dashboardVehicleId={activeDashboard.settings?.vehicleId}
+                  compactMode={activeDashboard.settings?.compactMode}
+                  showWidgetBorders={activeDashboard.settings?.showWidgetBorders}
                 />
               </div>
             </FadeIn>
@@ -384,6 +396,19 @@ export default function DashboardPage() {
         dashboards={dashboards}
       />
 
+      {/* Dashboard Settings Modal */}
+      {showDashSettings && (
+        <DashboardSettingsModal
+          open={!!showDashSettings}
+          onClose={() => setShowDashSettings(null)}
+          dashboard={dashboards.find((d) => d.id === showDashSettings) ?? activeDashboard}
+          vehicles={(vehicles ?? []).map((v) => ({ id: v.id, display_name: v.display_name }))}
+          onUpdate={(settings) => updateDashboardSettings(showDashSettings, settings)}
+          onRename={(name) => renameDashboard(showDashSettings, name)}
+          onChangeIcon={(icon) => updateDashboardIcon(showDashSettings, icon)}
+        />
+      )}
+
       {/* Kiosk Mode — portaled to document.body to escape all app chrome */}
       {isKiosk && createPortal(
         <div className="kiosk-root fixed inset-0 z-[9990] bg-[var(--bg-primary)]">
@@ -394,6 +419,9 @@ export default function DashboardPage() {
             onRemoveWidget={() => {}}
             onOpenSettings={() => {}}
             getWidgetSize={getWidgetSize}
+            dashboardVehicleId={activeDashboard.settings?.vehicleId}
+            compactMode={activeDashboard.settings?.compactMode}
+            showWidgetBorders={activeDashboard.settings?.showWidgetBorders}
           />
           <KioskOverlay
             config={kioskConfig}

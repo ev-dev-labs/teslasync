@@ -79,6 +79,23 @@ export interface RGLLayouts {
   [breakpoint: string]: RGLLayout[];
 }
 
+export interface DashboardSettings {
+  /** Auto-refresh interval in seconds (0 = use per-widget default) */
+  refreshInterval: number;
+  /** Filter widgets to show only this vehicle (undefined = all vehicles) */
+  vehicleId?: number;
+  /** Show widget borders in view mode */
+  showWidgetBorders: boolean;
+  /** Compact mode — reduces grid gaps */
+  compactMode: boolean;
+}
+
+export const DEFAULT_DASHBOARD_SETTINGS: DashboardSettings = {
+  refreshInterval: 0,
+  showWidgetBorders: false,
+  compactMode: false,
+};
+
 export interface SavedDashboard {
   id: string;
   name: string;
@@ -88,6 +105,7 @@ export interface SavedDashboard {
   createdAt: string;
   updatedAt: string;
   isDefault?: boolean;
+  settings?: DashboardSettings;
 }
 
 /** @deprecated Use SavedDashboard instead. Kept for migration. */

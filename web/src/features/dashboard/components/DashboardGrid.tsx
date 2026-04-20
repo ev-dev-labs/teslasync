@@ -25,6 +25,12 @@ interface DashboardGridProps {
   onRemoveWidget: (instanceId: string) => void;
   onOpenSettings: (instanceId: string) => void;
   getWidgetSize: (instanceId: string) => { cols: number; rows: number };
+  /** Dashboard-level vehicle filter (widgets inherit unless they have their own) */
+  dashboardVehicleId?: number;
+  /** Reduce grid gaps when compact mode is on */
+  compactMode?: boolean;
+  /** Show a subtle border on each widget */
+  showWidgetBorders?: boolean;
 }
 
 /* ─── Error Boundary ─── */
@@ -148,6 +154,9 @@ export function DashboardGrid({
   onRemoveWidget,
   onOpenSettings,
   getWidgetSize,
+  dashboardVehicleId,
+  compactMode,
+  showWidgetBorders,
 }: DashboardGridProps) {
   const [fullscreenWidget, setFullscreenWidget] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -222,7 +231,7 @@ export function DashboardGrid({
         onDragStart={handleDragStart}
         onDragStop={handleDragStop}
         onResizeStop={handleResizeStop}
-        margin={GRID_MARGIN}
+        margin={compactMode ? [8, 8] as [number, number] : GRID_MARGIN}
         containerPadding={[0, 0]}
       >
         {dashboard.widgets.map((widget) => {
@@ -263,7 +272,10 @@ export function DashboardGrid({
                   opacity-0 group-hover:opacity-100 transition-opacity rounded-b-xl pointer-events-none" />
               )}
 
-              <GlassPanel className="h-full w-full overflow-hidden rounded-xl">
+              <GlassPanel className={cn(
+                'h-full w-full overflow-hidden rounded-xl',
+                showWidgetBorders && 'border border-white/10',
+              )}>
                 <WidgetErrorBoundary name={def.name}>
                   <Suspense
                     fallback={
@@ -273,7 +285,7 @@ export function DashboardGrid({
                     }
                   >
                     <Component
-                      vehicleId={widget.config?.vehicleId}
+                      vehicleId={widget.config?.vehicleId ?? dashboardVehicleId}
                       config={widget.config}
                       size={size}
                     />

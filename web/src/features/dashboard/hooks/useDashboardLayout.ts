@@ -3,6 +3,7 @@ import type {
   WidgetInstance,
   WidgetConfig,
   SavedDashboard,
+  DashboardSettings,
   LegacyDashboardLayout,
   RGLLayout,
   RGLLayouts,
@@ -470,6 +471,83 @@ export function useDashboardLayout() {
     [dashboards, activeId, persist, resetSnapshot],
   );
 
+  const reorderDashboards = useCallback(
+    (fromIndex: number, toIndex: number) => {
+      setDashboards((prev) => {
+        const result = [...prev];
+        const [moved] = result.splice(fromIndex, 1);
+        result.splice(toIndex, 0, moved);
+        localStorage.setItem(DASHBOARDS_KEY, JSON.stringify(result));
+        return result;
+      });
+    },
+    [],
+  );
+
+  const duplicateDashboard = useCallback(
+    (id: string) => {
+      const source = dashboards.find((d) => d.id === id);
+      if (!source) return;
+
+      const newId = `dup-${Date.now()}`;
+      // Build a mapping from old widget IDs to new ones
+      const idMap = new Map<string, string>();
+      const widgets = source.widgets.map((w) => {
+        const newWidgetId = generateId();
+        idMap.set(w.id, newWidgetId);
+        return { ...w, id: newWidgetId };
+      });
+
+      // Remap layout item `i` values to match new widget IDs
+      const layouts: RGLLayouts = {};
+      for (const [bp, items] of Object.entries(source.layouts)) {
+        layouts[bp] = (items as RGLLayout[]).map((item) => ({
+          ...item,
+          i: idMap.get(item.i) ?? item.i,
+        }));
+      }
+
+      const duplicate: SavedDashboard = {
+        ...source,
+        id: newId,
+        name: `${source.name} (Copy)`,
+        icon: source.icon,
+        isDefault: false,
+        widgets,
+        layouts,
+        settings: source.settings ? { ...source.settings } : undefined,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      persist([...dashboards, duplicate], newId);
+      resetSnapshot({ widgets: duplicate.widgets, layouts: duplicate.layouts });
+    },
+    [dashboards, persist, resetSnapshot],
+  );
+
+  const updateDashboardSettings = useCallback(
+    (id: string, settings: DashboardSettings) => {
+      persist(
+        dashboards.map((d) =>
+          d.id === id ? { ...d, settings, updatedAt: new Date().toISOString() } : d,
+        ),
+      );
+    },
+    [dashboards, persist],
+  );
+
+  const updateDashboardIcon = useCallback(
+    (id: string, icon: string) => {
+      persist(
+        dashboards.map((d) =>
+          d.id === id ? { ...d, icon, updatedAt: new Date().toISOString() } : d,
+        ),
+      );
+    },
+    [dashboards, persist],
+  );
+
   const applyPreset = useCallback(
     (presetId: string) => {
       const preset = DASHBOARD_PRESETS.find((p) => p.id === presetId);
@@ -589,6 +667,10 @@ export function useDashboardLayout() {
     createDashboard,
     renameDashboard,
     deleteDashboard,
+    reorderDashboards,
+    duplicateDashboard,
+    updateDashboardSettings,
+    updateDashboardIcon,
     applyPreset,
     resetToDefault,
     // Edit mode
