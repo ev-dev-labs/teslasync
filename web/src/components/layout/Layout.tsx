@@ -152,6 +152,7 @@ export const navSections = [
     items: [
       { to: '/drives', icon: Route, label: 'Drives', color: 'text-violet-400' },
       { to: '/trips', icon: Navigation, label: 'Trips', color: 'text-teal-400' },
+      { to: '/trip-planner', icon: MapPin, label: 'Trip Planner', color: 'text-emerald-400' },
       { to: '/drive-score', icon: Trophy, label: 'Drive Score', color: 'text-yellow-400' },
       { to: '/speed-profile', icon: Gauge, label: 'Speed Profile', color: 'text-rose-400' },
       { to: '/driving-dynamics', icon: Cog, label: 'Driving Dynamics', color: 'text-red-400' },

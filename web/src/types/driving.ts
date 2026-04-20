@@ -214,3 +214,88 @@ export interface CoachDriveScore {
   efficiency: number;
   distance: number;
 }
+
+/* ── Trip Planner ─────────────────────────────────────────── */
+
+export interface TripLocation {
+  lat: number;
+  lng: number;
+  name: string;
+}
+
+export interface TripPlanPreferences {
+  max_charge_stops?: number;
+  speed_factor?: number;
+  include_weather?: boolean;
+  prefer_superchargers?: boolean;
+}
+
+export interface TripPlanRequest {
+  vehicle_id: number;
+  origin: TripLocation;
+  destination: TripLocation;
+  waypoints?: TripLocation[];
+  current_soc: number;
+  charge_limit_soc: number;
+  min_arrival_soc: number;
+  departure_time?: string;
+  preferences?: TripPlanPreferences;
+}
+
+export interface TripPlanRoute {
+  total_distance_km: number;
+  total_duration_min: number;
+  driving_duration_min: number;
+  charging_duration_min: number;
+  total_energy_kwh: number;
+  estimated_cost: number;
+  arrival_soc: number;
+  feasible: boolean;
+  is_estimate: boolean;
+}
+
+export interface TripLeg {
+  from: TripLocation;
+  to: TripLocation;
+  distance_km: number;
+  duration_min: number;
+  energy_kwh: number;
+  start_soc: number;
+  arrival_soc: number;
+}
+
+export interface TripChargeStop {
+  name: string;
+  location: TripLocation;
+  charge_from_soc: number;
+  charge_to_soc: number;
+  charge_duration_min: number;
+  energy_kwh: number;
+  cost: number;
+  is_recommended: boolean;
+}
+
+export interface TripWeatherImpact {
+  avg_temp_c: number | null;
+  efficiency_factor: number;
+  note: string;
+}
+
+export interface TripSOCPoint {
+  distance_km: number;
+  soc: number;
+}
+
+export interface TripPlan {
+  route: TripPlanRoute;
+  legs: TripLeg[];
+  charge_stops: TripChargeStop[];
+  weather_impact: TripWeatherImpact;
+  soc_curve: TripSOCPoint[];
+}
+
+export interface GeocodeResult {
+  display_name: string;
+  lat: number;
+  lng: number;
+}

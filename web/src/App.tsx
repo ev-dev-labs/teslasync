@@ -55,6 +55,7 @@ const Efficiency = lazy(() => import('./features/driving/pages/EfficiencyPage'))
 const SpeedProfile = lazy(() => import('./features/driving/pages/SpeedProfilePage'))
 const RegenEfficiency = lazy(() => import('./features/driving/pages/RegenEfficiencyPage'))
 const RouteEfficiency = lazy(() => import('./features/driving/pages/RouteEfficiencyPage'))
+const TripPlanner = lazy(() => import('./features/driving/pages/TripPlannerPage'))
 
 // Analytics & Statistics
 const Analytics = lazy(() => import('./features/analytics/pages/AnalyticsPage'))
@@ -202,6 +203,7 @@ export default function App() {
         <Route path="efficiency" element={<SafeRoute name="Efficiency"><Efficiency /></SafeRoute>} />
         <Route path="trips" element={<SafeRoute name="Trips"><Trips /></SafeRoute>} />
         <Route path="trips/:id" element={<SafeRoute name="TripDetail"><TripDetail /></SafeRoute>} />
+        <Route path="trip-planner" element={<SafeRoute name="TripPlanner"><TripPlanner /></SafeRoute>} />
         <Route path="statistics" element={<SafeRoute name="Statistics"><Statistics /></SafeRoute>} />
         <Route path="lifetime-stats" element={<SafeRoute name="LifetimeStats"><LifetimeStats /></SafeRoute>} />
         <Route path="system-status" element={<SafeRoute name="SystemStatus"><SystemStatus /></SafeRoute>} />

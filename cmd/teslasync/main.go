@@ -546,6 +546,7 @@ func main() {
 		GasPriceWorker:   gasPriceWorker,
 		PollEngine:       pollEngine,
 		SignalStore:      signalStore,
+		CacheStore:       cacheStore,
 	})
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Port),

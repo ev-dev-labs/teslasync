@@ -113,3 +113,6 @@ dashboard-widgets/27-alert-feed.prompt.md
 dashboard-widgets/28-media-now-playing.prompt.md
 ux-improvements/16-onboarding-tour.prompt.md
 ux-improvements/17-data-annotations.prompt.md
+competitive-edge/02-theft-alert.prompt.md
+competitive-edge/03-lifetime-stats.prompt.md
+competitive-edge/05-year-in-review.prompt.md

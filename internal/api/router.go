@@ -16,6 +16,7 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/go-chi/httprate"
 	"github.com/rs/zerolog/log"
+	"github.com/ev-dev-labs/teslasync/internal/cache"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -49,6 +50,7 @@ type RouterOptions struct {
 	PollEngine       *polling.PollEngine      // If set, enables polling engine dashboard endpoints
 	SignalStore      *signal.Store            // If set, enables /internal/flush endpoint
 	WebhookTrigger   WebhookProcessor         // If set, enables public webhook receiver endpoint
+	CacheStore       *cache.Store             // If set, enables cached endpoints (trip planner, etc.)
 }
 
 // NewRouter creates and configures the main HTTP router with all API routes,
@@ -192,6 +194,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	teslaUserProfileHandler := NewTeslaUserProfileHandler(teslaClient, db)
 	vehicleAccessHandler := NewVehicleAccessHandler(teslaClient, db)
 	vehicleInfoHandler := NewVehicleInfoHandler(teslaClient, db)
+	tripPlannerHandler := NewTripPlannerHandler(db, opt.CacheStore)
+	geocodeHandler := NewGeocodeHandler(geocoding.NewSearcher("TeslaSync/1.0"))
 	// SSE event hub for automation real-time events
 	automationEventHub := NewEventHub()
 	automationPublisher := NewAutomationEventPublisher(automationEventHub)
@@ -539,6 +543,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/history", chargePlannerHandler.ListPlans)
 			r.Get("/rate-plans", chargePlannerHandler.ListRatePlans)
 		})
+
+		// Trip Planner (route planning with charging stop estimation)
+		r.Route("/trip-planner", func(r chi.Router) {
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/plan", tripPlannerHandler.Plan)
+		})
+
+		// Geocoding (forward address search)
+		r.With(httprate.LimitByIP(30, 1*time.Minute)).Get("/geocode/search", geocodeHandler.Search)
 
 		// Notifications
 		r.Route("/notifications", func(r chi.Router) {

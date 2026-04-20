@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import type { Drive as ApiDrive } from '../types';
@@ -16,6 +16,9 @@ import type {
   RegenEfficiencyData,
   RouteEfficiencyData,
   DrivingCoachData,
+  TripPlan,
+  TripPlanRequest,
+  GeocodeResult,
 } from '@/types/driving';
 
 /** Fetches paginated driving sessions for a vehicle, optionally filtered by date range. */
@@ -181,5 +184,27 @@ export function useDrivingCoach(vehicleId?: string, days = 30) {
     queryFn: () => request<DrivingCoachData>(`/analytics/driving-coach?vehicle_id=${vehicleId}&days=${days}`),
     enabled: !!vehicleId,
     staleTime: 5 * 60_000,
+  });
+}
+
+/* ── Trip Planner hooks ─────────────────────────────────── */
+
+export function usePlanTrip() {
+  return useMutation({
+    mutationFn: (params: TripPlanRequest) =>
+      request<TripPlan>('/trip-planner/plan', {
+        method: 'POST',
+        body: JSON.stringify(params),
+      }),
+  });
+}
+
+export function useGeocodeSearch(query: string, enabled = true) {
+  return useQuery({
+    queryKey: ['geocode-search', query],
+    queryFn: () => request<GeocodeResult[]>(`/geocode/search?q=${encodeURIComponent(query)}&limit=5`),
+    enabled: enabled && query.length >= 3,
+    staleTime: 5 * 60_000,
+    select: safeArray,
   });
 }
