@@ -135,6 +135,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     component: lazy(() => import('./ChargeStatusWidget')),
   },
   {
+    id: 'charge-status-live',
+    name: 'Charge Status Live',
+    description: 'Live charging: current amps/volts/power, time remaining, energy added',
+    icon: Zap,
+    category: 'charging',
+    defaultSize: { cols: 2, rows: 1 },
+    minSize: { cols: 1, rows: 1 },
+    maxSize: { cols: 3, rows: 2 },
+    component: lazy(() => import('./ChargeStatusLiveWidget')),
+  },
+  {
     id: 'charge-history',
     name: 'Charge History',
     description: 'Recent charging sessions chart',
