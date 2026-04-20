@@ -338,7 +338,7 @@ function NavigationPanel({ data, convertDistance, distanceUnit }: {
           <TelemetryRow
             label={t('telemetry.distance', 'Distance')}
             value={data.miles_to_arrival != null
-              ? `${fmtNumber(convertDistance(data.miles_to_arrival * 1.60934), 1)} ${distanceUnit}`
+              ? `${fmtNumber(convertDistance(data.miles_to_arrival), 1)} ${distanceUnit}`
               : '—'}
           />
           <TelemetryRow

@@ -49,6 +49,7 @@ import {
   chartMargin,
 } from '@/components/charts';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSettings } from '@/hooks/useSettings';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { CHART_COLORS } from '@/lib/colors';
@@ -201,6 +202,7 @@ function buildWaypoints(latest: LocationSnapshot): Waypoint[] {
 export default function NavigationRoutePage() {
   const { t } = useTranslation();
   usePageTitle(t('nav.pageTitle', 'Navigation & Route'));
+  const { convertDistance, distanceUnit } = useSettings();
 
   /* ---- vehicle selector state ---- */
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
@@ -333,10 +335,10 @@ export default function NavigationRoutePage() {
     () => [
       { key: 'time', header: t('nav.col.time', 'Time'), render: (row) => <span className="text-xs text-gray-400 whitespace-nowrap">{row.time}</span> },
       { key: 'destination', header: t('nav.col.destination', 'Destination'), render: (row) => <span className="text-sm text-white/80">{row.destination}</span> },
-      { key: 'distance', header: t('nav.col.distance', 'Distance'), render: (row) => <span className="text-xs text-gray-400">{fmtNumber(row.distance, 1)} mi</span> },
+      { key: 'distance', header: t('nav.col.distance', 'Distance'), render: (row) => <span className="text-xs text-gray-400">{fmtNumber(convertDistance(row.distance), 1)} {distanceUnit}</span> },
       { key: 'eta', header: t('nav.col.eta', 'ETA'), render: (row) => <span className="text-xs text-gray-400">{fmtNumber(row.eta, 0)} min</span> },
     ],
-    [t],
+    [t, convertDistance, distanceUnit],
   );
 
   /* ---- table columns ---- */
@@ -460,12 +462,12 @@ export default function NavigationRoutePage() {
         header: t('nav.wp.distance', 'Distance'),
         render: (row: Waypoint) => (
           <span className="font-mono text-[var(--text-muted)]">
-            {fmtNumber(row.distance, 1)} mi
+            {fmtNumber(convertDistance(row.distance), 1)} {distanceUnit}
           </span>
         ),
       },
     ],
-    [t],
+    [t, convertDistance, distanceUnit],
   );
 
   /* ---- sort state ---- */
@@ -602,8 +604,8 @@ export default function NavigationRoutePage() {
                     {t('nav.distanceRemaining', 'Distance Remaining')}
                   </span>
                   <span className="block text-sm font-medium text-[var(--text-primary)]">
-                    {fmtNumber(latest.miles_to_arrival ?? latest.milesToArrival ?? 0, 1)}{' '}
-                    {t('nav.mi', 'mi')}
+                    {fmtNumber(convertDistance(latest.miles_to_arrival ?? latest.milesToArrival ?? 0), 1)}{' '}
+                    {distanceUnit}
                   </span>
                 </span>
 
@@ -684,7 +686,7 @@ export default function NavigationRoutePage() {
                 label={t('nav.metric.distance', 'Distance')}
                 value={
                   hasActiveRoute
-                    ? `${fmtNumber(latest?.miles_to_arrival ?? latest?.milesToArrival ?? 0, 1)} mi`
+                    ? `${fmtNumber(convertDistance(latest?.miles_to_arrival ?? latest?.milesToArrival ?? 0), 1)} ${distanceUnit}`
                     : '—'
                 }
                 icon={<Route className="h-5 w-5" />}
