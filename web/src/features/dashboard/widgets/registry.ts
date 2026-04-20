@@ -43,6 +43,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     component: lazy(() => import('./BatteryGaugeWidget')),
   },
   {
+    id: 'battery-radial-gauge',
+    name: 'Battery Radial Gauge',
+    description: 'Large radial gauge showing battery percentage with color gradient (green>amber>red)',
+    icon: Battery,
+    category: 'battery',
+    defaultSize: { cols: 1, rows: 1 },
+    minSize: { cols: 1, rows: 1 },
+    maxSize: { cols: 3, rows: 2 },
+    component: lazy(() => import('./BatteryRadialGaugeWidget')),
+  },
+  {
     id: 'range-estimate',
     name: 'Range Estimate',
     description: 'Rated, ideal, and estimated range',
