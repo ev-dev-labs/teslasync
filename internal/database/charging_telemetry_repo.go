@@ -39,7 +39,7 @@ func (r *ChargingTelemetryRepo) Insert(ctx context.Context, snap *models.Chargin
 }
 
 func (r *ChargingTelemetryRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit int) ([]*models.ChargingTelemetry, error) {
-	query := `SELECT id, vehicle_id, battery_level, soc, charge_state, detailed_charge_state, charge_limit_soc, charge_amps, charge_current_request, charge_current_request_max, charge_enable_request, charger_voltage, charger_phases, charge_rate_mph, dc_charging_power, dc_charging_energy_in, ac_charging_power, ac_charging_energy_in, energy_remaining, est_battery_range, ideal_battery_range, rated_range, pack_voltage, pack_current, charge_port_door_open, charge_port_latch, charge_port_cold_weather_mode, charging_cable_type, fast_charger_present, fast_charger_type, time_to_full_charge, estimated_hours_to_charge, scheduled_charging_mode, scheduled_charging_pending, preconditioning_enabled, brick_voltage_max, brick_voltage_min, num_brick_voltage_max, num_brick_voltage_min, module_temp_max, module_temp_min, num_module_temp_max, num_module_temp_min, battery_heater_on, not_enough_power_to_heat, bms_state, bms_fullcharge_complete, dcdc_enable, isolation_resistance, lifetime_energy_used, supercharger_session_trip_planner, powershare_status, powershare_type, powershare_stop_reason, powershare_hours_left, powershare_power_kw, created_at
+	query := `SELECT id, vehicle_id, battery_level, soc, charge_state, detailed_charge_state, charge_limit_soc, charge_amps, charge_current_request, charge_current_request_max, charge_enable_request, charger_voltage, charger_phases, charge_rate_mph, dc_charging_power, dc_charging_energy_in, ac_charging_power, ac_charging_energy_in, energy_remaining, est_battery_range, ideal_battery_range, rated_range, pack_voltage, pack_current, charge_port_door_open, charge_port_latch, charge_port_cold_weather_mode, charging_cable_type, fast_charger_present, fast_charger_type, time_to_full_charge, estimated_hours_to_charge, scheduled_charging_mode, scheduled_charging_pending, preconditioning_enabled, brick_voltage_max, brick_voltage_min, num_brick_voltage_max, num_brick_voltage_min, module_temp_max, module_temp_min, num_module_temp_max, num_module_temp_min, battery_heater_on, not_enough_power_to_heat, bms_state, bms_fullcharge_complete, dcdc_enable, isolation_resistance, lifetime_energy_used, supercharger_session_trip_planner, powershare_status, powershare_type, powershare_stop_reason, powershare_hours_left, powershare_power_kw, scheduled_charging_start_time, scheduled_departure_time, expected_energy_pct_at_arrival, created_at
 		FROM charging_telemetry WHERE vehicle_id=$1 ORDER BY created_at DESC LIMIT $2`
 	rows, err := r.db.Pool.Query(ctx, query, vehicleID, limit)
 	if err != nil {
@@ -66,6 +66,7 @@ func (r *ChargingTelemetryRepo) GetByVehicle(ctx context.Context, vehicleID int6
 			&s.SuperchargerSessionTripPlanner,
 			&s.PowershareStatus, &s.PowershareType, &s.PowershareStopReason,
 			&s.PowershareHoursLeft, &s.PowersharePowerKw,
+			&s.ScheduledChargingStartTime, &s.ScheduledDepartureTime, &s.ExpectedEnergyPctAtArrival,
 			&s.CreatedAt); err != nil {
 			return nil, err
 		}

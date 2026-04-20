@@ -1489,6 +1489,67 @@ func normalizeFleetUnits(signals map[string]interface{}) {
 	if v, ok := signals["ScheduledChargingMode"]; ok {
 		signals["ScheduledChargingMode"] = enums.ParseScheduledChargingMode(toString(v))
 	}
+
+	// TypeTime compounds: flatten {hour, minute, second} maps → "HH:MM:SS" strings.
+	// Tesla sends these as nested JSON objects; downstream consumers (signal_history,
+	// vehicle_live_state, charging_telemetry) expect scalar values.
+	for name, info := range enums.SignalRegistry {
+		if info.Type != enums.TypeTime {
+			continue
+		}
+		raw, ok := signals[name]
+		if !ok || raw == nil {
+			continue
+		}
+		// Already a string — leave unchanged
+		if _, isStr := raw.(string); isStr {
+			continue
+		}
+		m, isMap := raw.(map[string]interface{})
+		if !isMap {
+			continue
+		}
+		// Unwrap {"value": {...}} envelopes first
+		if inner, has := m["value"]; has {
+			if innerMap, ok := inner.(map[string]interface{}); ok {
+				m = innerMap
+			} else if s, ok := inner.(string); ok {
+				signals[name] = s
+				continue
+			}
+		}
+		// Extract hour/minute/second with validation
+		hour, hOk := extractTimeField(m, "hour")
+		minute, mOk := extractTimeField(m, "minute")
+		if !hOk || !mOk {
+			continue // malformed — leave unchanged rather than corrupt to 00:00:00
+		}
+		second, _ := extractTimeField(m, "second") // optional, defaults to 0
+		if hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59 {
+			continue // out of range — skip
+		}
+		signals[name] = fmt.Sprintf("%02d:%02d:%02d", hour, minute, second)
+	}
+}
+
+// extractTimeField extracts an integer time component from a compound time map.
+func extractTimeField(m map[string]interface{}, key string) (int, bool) {
+	v, ok := m[key]
+	if !ok {
+		return 0, false
+	}
+	switch val := v.(type) {
+	case float64:
+		return int(val), true
+	case int:
+		return val, true
+	case int64:
+		return int(val), true
+	case json.Number:
+		f, err := val.Float64()
+		return int(f), err == nil
+	}
+	return 0, false
 }
 
 func toFloat(v interface{}) float64 {
