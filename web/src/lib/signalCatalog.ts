@@ -80,7 +80,7 @@ const catalog: SignalMeta[] = [
   { name: 'AutoSeatClimateLeft', category: 'Climate', type: 'boolean', description: 'Auto seat climate left enabled' },
   { name: 'AutoSeatClimateRight', category: 'Climate', type: 'boolean', description: 'Auto seat climate right enabled' },
   { name: 'CabinOverheatProtectionMode', category: 'Climate', type: 'string', description: 'Cabin overheat protection mode', enumValues: ['Off', 'On', 'Fan Only', 'No Cooling'] },
-  { name: 'CabinOverheatProtectionTemperatureLimit', category: 'Climate', type: 'number', unit: '°C', description: 'Cabin overheat protection temperature limit' },
+  { name: 'CabinOverheatProtectionTemperatureLimit', category: 'Climate', type: 'string', description: 'Cabin overheat protection temperature limit', enumValues: ['Low', 'Medium', 'High'] },
   { name: 'ClimateKeeperMode', category: 'Climate', type: 'string', description: 'Climate keeper mode', enumValues: ['Off', 'On', 'Dog Mode', 'Camp Mode'] },
   { name: 'ClimateSeatCoolingFrontLeft', category: 'Climate', type: 'number', description: 'Front left seat cooling level (0-3)' },
   { name: 'ClimateSeatCoolingFrontRight', category: 'Climate', type: 'number', description: 'Front right seat cooling level (0-3)' },
