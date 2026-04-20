@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { Battery } from 'lucide-react';
-import { GlassPanel } from '@/components/ui';
 import { RadialGauge } from '@/components/charts';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { EmptyState } from '@/components/feedback';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
+import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
 export default function BatteryGaugeWidget({ vehicleId }: WidgetProps) {
@@ -21,32 +21,32 @@ export default function BatteryGaugeWidget({ vehicleId }: WidgetProps) {
   };
 
   return (
-    <GlassPanel className="h-full flex flex-col items-center justify-center p-4">
-      {isLoading ? (
-        <Skeleton className="h-20 w-20 rounded-full" />
-      ) : state ? (
-        <>
-          <RadialGauge
-            value={state.battery_level}
-            max={100}
-            label={t('widget.battery', 'Battery')}
-            unit="%"
-            color={batteryColor()}
-            size={80}
+    <WidgetShell loading={isLoading}>
+      <div className="h-full flex flex-col items-center justify-center">
+        {state ? (
+          <>
+            <RadialGauge
+              value={state.battery_level}
+              max={100}
+              label={t('widget.battery', 'Battery')}
+              unit="%"
+              color={batteryColor()}
+              size={80}
+            />
+            {state.is_charging && (
+              <p className="text-[10px] text-neon-green mt-2 animate-pulse">
+                ⚡ {t('widget.charging', 'Charging')}
+              </p>
+            )}
+          </>
+        ) : (
+          <EmptyState
+            icon={<Battery className="h-6 w-6" />}
+            message={t('widget.noBattery', 'No battery data')}
+            className="py-4"
           />
-          {state.is_charging && (
-            <p className="text-[10px] text-neon-green mt-2 animate-pulse">
-              ⚡ {t('widget.charging', 'Charging')}
-            </p>
-          )}
-        </>
-      ) : (
-        <EmptyState
-          icon={<Battery className="h-6 w-6" />}
-          message={t('widget.noBattery', 'No battery data')}
-          className="py-4"
-        />
-      )}
-    </GlassPanel>
+        )}
+      </div>
+    </WidgetShell>
   );
 }

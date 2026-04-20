@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Monitor, Lock, Unlock, ArrowUpRight } from 'lucide-react';
-import { GlassPanel, Badge, Button } from '@/components/ui';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { Badge } from '@/components/ui';
+import { EmptyState } from '@/components/feedback';
 import { useVehicles, useVehicleState, useSecurityLatest } from '@/api/hooks/useVehicles';
+import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
 export default function DigitalTwinWidget({ vehicleId }: WidgetProps) {
@@ -31,26 +32,21 @@ export default function DigitalTwinWidget({ vehicleId }: WidgetProps) {
   const openWindows = windows.filter((w) => w && w.toLowerCase() !== 'closed');
 
   return (
-    <GlassPanel className="h-full flex flex-col p-4">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
-          <Monitor className="h-3.5 w-3.5 text-neon-purple" />
-          {t('widget.digitalTwin', 'Digital Twin')}
-        </h3>
+    <WidgetShell
+      title={t('widget.digitalTwin', 'Digital Twin')}
+      icon={<Monitor className="h-3.5 w-3.5 text-neon-purple" />}
+      loading={isLoading}
+      actions={
         <Link
           to="/digital-twin"
-          className="text-[10px] text-[var(--text-muted)] hover:text-neon-cyan transition-colors flex items-center gap-0.5"
+          className="text-[10px] text-white/30 hover:text-neon-cyan transition-colors flex items-center gap-0.5"
         >
           {t('widget.open', 'Open')} <ArrowUpRight className="h-3 w-3" />
         </Link>
-      </div>
-
-      {isLoading ? (
-        <div className="flex-1 flex items-center justify-center">
-          <Skeleton className="h-32 w-32 rounded-xl" />
-        </div>
-      ) : vehicle ? (
-        <div className="flex-1 flex flex-col items-center justify-center gap-3">
+      }
+    >
+      {vehicle ? (
+        <div className="h-full flex flex-col items-center justify-center gap-3">
           {/* Simplified car visualization */}
           <div className="relative w-28 h-20 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center">
             <Monitor className="h-10 w-10 text-neon-purple/60" />
@@ -90,15 +86,9 @@ export default function DigitalTwinWidget({ vehicleId }: WidgetProps) {
             </Badge>
           </div>
 
-          <p className="text-xs text-[var(--text-muted)]">
+          <p className="text-xs text-white/40">
             {vehicle.display_name || vehicle.vin}
           </p>
-
-          <Link to="/digital-twin">
-            <Button variant="secondary" size="sm" icon={<Monitor className="h-3 w-3" />}>
-              {t('widget.fullView', 'Full View')}
-            </Button>
-          </Link>
         </div>
       ) : (
         <EmptyState
@@ -107,6 +97,6 @@ export default function DigitalTwinWidget({ vehicleId }: WidgetProps) {
           className="py-4"
         />
       )}
-    </GlassPanel>
+    </WidgetShell>
   );
 }

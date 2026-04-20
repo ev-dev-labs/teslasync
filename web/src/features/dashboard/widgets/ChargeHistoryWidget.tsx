@@ -1,11 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart3 } from 'lucide-react';
-import { GlassPanel } from '@/components/ui';
 import { AreaChartWrapper } from '@/components/charts';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { EmptyState } from '@/components/feedback';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { request } from '@/api/client';
+import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import type { ChargingSession } from '../types';
 
@@ -28,15 +28,13 @@ export default function ChargeHistoryWidget({ vehicleId }: WidgetProps) {
     .reverse();
 
   return (
-    <GlassPanel className="h-full flex flex-col p-4">
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
-        <BarChart3 className="h-3.5 w-3.5 text-neon-green" />
-        {t('widget.chargeHistory', 'Charge History')}
-      </h3>
-      <div className="flex-1 min-h-0">
-        {isLoading ? (
-          <Skeleton className="h-full w-full" />
-        ) : chartData.length > 1 ? (
+    <WidgetShell
+      title={t('widget.chargeHistory', 'Charge History')}
+      icon={<BarChart3 className="h-3.5 w-3.5 text-neon-green" />}
+      loading={isLoading}
+    >
+      <div className="h-full min-h-0">
+        {chartData.length > 1 ? (
           <AreaChartWrapper
             data={chartData}
             xKey="i"
@@ -52,6 +50,6 @@ export default function ChargeHistoryWidget({ vehicleId }: WidgetProps) {
           />
         )}
       </div>
-    </GlassPanel>
+    </WidgetShell>
   );
 }

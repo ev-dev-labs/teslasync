@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Wifi, Cog, Thermometer, CircleDot } from 'lucide-react';
-import { GlassPanel, Badge } from '@/components/ui';
+import { Badge } from '@/components/ui';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import {
   useVehicles,
@@ -12,13 +12,14 @@ import {
 import { useSettings } from '@/hooks/useSettings';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cleanNil } from '@/lib/cleanNil';
+import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-[10px] text-[var(--text-secondary)]">{label}</span>
-      <span className="text-xs font-bold text-[var(--text-primary)] truncate max-w-[100px]">
+      <span className="text-[10px] text-white/50">{label}</span>
+      <span className="text-xs font-bold text-white/90 truncate max-w-[100px]">
         {value}
       </span>
     </div>
@@ -40,11 +41,10 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
   const hasData = motor || climate || security || tires;
 
   return (
-    <GlassPanel className="h-full flex flex-col p-4 overflow-y-auto">
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
-        <Wifi className="h-3.5 w-3.5 text-neon-cyan" />
-        {t('widget.liveSignals', 'Live Signals')}
-      </h3>
+    <WidgetShell
+      title={t('widget.liveSignals', 'Live Signals')}
+      icon={<Wifi className="h-3.5 w-3.5 text-neon-cyan" />}
+    >
       {!hasData ? (
         <EmptyState
           icon={<Wifi className="h-5 w-5" />}
@@ -52,10 +52,10 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
           className="py-4"
         />
       ) : (
-        <div className="grid grid-cols-2 gap-4 flex-1">
+        <div className="grid grid-cols-2 gap-4 h-full overflow-y-auto">
           {/* Drivetrain */}
           <div className="space-y-1.5">
-            <h4 className="text-[10px] font-semibold uppercase text-[var(--text-muted)] flex items-center gap-1">
+            <h4 className="text-[10px] font-semibold uppercase text-white/40 flex items-center gap-1">
               <Cog className="h-3 w-3 text-neon-purple" /> {t('widget.motor', 'Motor')}
             </h4>
             {motor ? (
@@ -81,7 +81,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
 
           {/* Climate */}
           <div className="space-y-1.5">
-            <h4 className="text-[10px] font-semibold uppercase text-[var(--text-muted)] flex items-center gap-1">
+            <h4 className="text-[10px] font-semibold uppercase text-white/40 flex items-center gap-1">
               <Thermometer className="h-3 w-3 text-neon-cyan" /> {t('widget.climate', 'Climate')}
             </h4>
             {climate ? (
@@ -114,7 +114,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
 
           {/* Tires */}
           <div className="space-y-1.5">
-            <h4 className="text-[10px] font-semibold uppercase text-[var(--text-muted)] flex items-center gap-1">
+            <h4 className="text-[10px] font-semibold uppercase text-white/40 flex items-center gap-1">
               <CircleDot className="h-3 w-3 text-neon-cyan" /> {t('widget.tires', 'Tires')}
             </h4>
             {tires ? (
@@ -159,13 +159,13 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
 
           {/* Security summary */}
           <div className="space-y-1.5">
-            <h4 className="text-[10px] font-semibold uppercase text-[var(--text-muted)] flex items-center gap-1">
+            <h4 className="text-[10px] font-semibold uppercase text-white/40 flex items-center gap-1">
               🛡️ {t('widget.security', 'Security')}
             </h4>
             {security ? (
               <>
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-[var(--text-secondary)]">
+                  <span className="text-[10px] text-white/50">
                     {t('widget.lock', 'Lock')}
                   </span>
                   <Badge variant={security.locked ? 'success' : 'danger'}>
@@ -173,7 +173,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-[var(--text-secondary)]">
+                  <span className="text-[10px] text-white/50">
                     {t('widget.sentry', 'Sentry')}
                   </span>
                   <Badge variant={security.sentry_mode ? 'success' : 'neutral'}>
@@ -187,6 +187,6 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
           </div>
         </div>
       )}
-    </GlassPanel>
+    </WidgetShell>
   );
 }

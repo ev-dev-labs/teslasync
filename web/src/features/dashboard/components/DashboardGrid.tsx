@@ -1,6 +1,8 @@
-import { Suspense, useState, useCallback, useRef, Component as ReactComponent, type ErrorInfo, type ReactNode, type ComponentType, type ComponentClass } from 'react';
-// react-grid-layout uses CJS export= pattern; access named exports via the default import
-import RGL from 'react-grid-layout';
+import { Suspense, useState, useCallback, useMemo, useRef, Component as ReactComponent, type ErrorInfo, type ReactNode } from 'react';
+import {
+  ResponsiveGridLayout, useContainerWidth, verticalCompactor,
+  type Layout as RGLLayoutArray, type ResponsiveLayouts,
+} from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import {
@@ -12,13 +14,7 @@ import { getWidgetDef } from '../widgets/registry';
 import {
   GRID_BREAKPOINTS, GRID_COLS, ROW_HEIGHT, GRID_MARGIN,
 } from '../hooks/useDashboardLayout';
-import type { SavedDashboard, WidgetDef, WidgetInstance, RGLLayout, RGLLayouts } from '../widgets/types';
-
-// Runtime module exports Responsive and WidthProvider as properties on the default export
-const rgl = RGL as unknown as Record<string, unknown>;
-const Responsive = (rgl.Responsive ?? RGL) as ComponentType<Record<string, unknown>>;
-const WidthProvider = rgl.WidthProvider as (<P extends object>(c: ComponentType<P>) => ComponentClass<P>);
-const ResponsiveGrid = WidthProvider(Responsive);
+import type { SavedDashboard, WidgetDef, WidgetInstance, RGLLayouts } from '../widgets/types';
 
 /* ─── Types ─── */
 interface DashboardGridProps {
@@ -153,7 +149,21 @@ export function DashboardGrid({
   const [fullscreenWidget, setFullscreenWidget] = useState<string | null>(null);
   const layoutRef = useRef<RGLLayouts>(dashboard.layouts);
 
-  // Persist only on drag/resize stop
+  // react-grid-layout v2: hook provides containerRef + measured width
+  const { containerRef, width } = useContainerWidth({ initialWidth: 1200 });
+
+  // v2 drag/resize config objects (stable references via useMemo)
+  const dragConfig = useMemo(() => ({
+    enabled: editMode,
+    handle: '.widget-drag-handle',
+  }), [editMode]);
+
+  const resizeConfig = useMemo(() => ({
+    enabled: editMode,
+    handles: ['se', 'e', 's'] as const,
+  }), [editMode]);
+
+  // Persist only on drag/resize stop (v2 EventCallback signature)
   const handleDragStop = useCallback(() => {
     onLayoutChange(layoutRef.current);
   }, [onLayoutChange]);
@@ -162,9 +172,9 @@ export function DashboardGrid({
     onLayoutChange(layoutRef.current);
   }, [onLayoutChange]);
 
-  // Track layout changes in ref (no persistence on every change)
-  const handleLayoutChange = useCallback((_layout: RGLLayout[], allLayouts: RGLLayouts) => {
-    layoutRef.current = allLayouts;
+  // Track layout changes in ref (v2: layout is LayoutItem[], layouts is ResponsiveLayouts)
+  const handleLayoutChange = useCallback((_layout: RGLLayoutArray, allLayouts: ResponsiveLayouts) => {
+    layoutRef.current = allLayouts as RGLLayouts;
   }, []);
 
   const fullscreenInstance = fullscreenWidget
@@ -176,21 +186,21 @@ export function DashboardGrid({
 
   return (
     <>
-      <ResponsiveGrid
+      <div ref={containerRef as React.RefObject<HTMLDivElement>}>
+      <ResponsiveGridLayout
+        width={width}
         layouts={dashboard.layouts}
         breakpoints={GRID_BREAKPOINTS}
         cols={GRID_COLS}
         rowHeight={ROW_HEIGHT}
-        isDraggable={editMode}
-        isResizable={editMode}
+        dragConfig={dragConfig}
+        resizeConfig={resizeConfig}
+        compactor={verticalCompactor}
         onLayoutChange={handleLayoutChange}
         onDragStop={handleDragStop}
         onResizeStop={handleResizeStop}
-        compactType="vertical"
         margin={GRID_MARGIN}
         containerPadding={[0, 0]}
-        draggableHandle=".widget-drag-handle"
-        resizeHandles={['se', 'e', 's']}
       >
         {dashboard.widgets.map((widget) => {
           const def = getWidgetDef(widget.widgetId);
@@ -199,7 +209,7 @@ export function DashboardGrid({
           const size = getWidgetSize(widget.id);
 
           return (
-            <div key={widget.id} className="relative group">
+            <div key={widget.id} className="widget-container relative group">
               {/* Edit mode chrome */}
               {editMode && (
                 <WidgetChrome
@@ -223,7 +233,7 @@ export function DashboardGrid({
                 </button>
               )}
 
-              <GlassPanel className="h-full overflow-hidden rounded-xl">
+              <GlassPanel className="h-full w-full overflow-hidden rounded-xl">
                 <WidgetErrorBoundary name={def.name}>
                   <Suspense
                     fallback={
@@ -243,7 +253,8 @@ export function DashboardGrid({
             </div>
           );
         })}
-      </ResponsiveGrid>
+      </ResponsiveGridLayout>
+      </div>
 
       {/* Fullscreen overlay */}
       {fullscreenInstance && fullscreenDef && (

@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { Activity, BatteryCharging, Zap, ArrowDown, ArrowUp } from 'lucide-react';
-import { GlassPanel } from '@/components/ui';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { EmptyState } from '@/components/feedback';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { fmtNumber } from '@/lib/numberFormat';
+import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
 export default function EnergyFlowWidget({ vehicleId }: WidgetProps) {
@@ -19,24 +19,20 @@ export default function EnergyFlowWidget({ vehicleId }: WidgetProps) {
   const absPower = Math.abs(power);
 
   return (
-    <GlassPanel className="h-full flex flex-col p-4">
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
-        <Activity className="h-3.5 w-3.5 text-neon-cyan" />
-        {t('widget.energyFlow', 'Energy Flow')}
-      </h3>
-      {isLoading ? (
-        <div className="flex-1 flex items-center justify-center">
-          <Skeleton className="h-32 w-32 rounded-full" />
-        </div>
-      ) : state ? (
-        <div className="flex-1 flex flex-col items-center justify-center gap-4">
+    <WidgetShell
+      title={t('widget.energyFlow', 'Energy Flow')}
+      icon={<Activity className="h-3.5 w-3.5 text-neon-cyan" />}
+      loading={isLoading}
+    >
+      {state ? (
+        <div className="h-full flex flex-col items-center justify-center gap-4">
           {/* Battery block */}
           <div className="flex flex-col items-center">
             <BatteryCharging className="h-8 w-8 text-neon-green mb-1" />
-            <span className="text-2xl font-bold text-[var(--text-primary)]">
+            <span className="text-2xl font-bold text-white/90">
               {state.battery_level}%
             </span>
-            <span className="text-[10px] text-[var(--text-muted)]">
+            <span className="text-[10px] text-white/40">
               {t('widget.battery', 'Battery')}
             </span>
           </div>
@@ -58,7 +54,7 @@ export default function EnergyFlowWidget({ vehicleId }: WidgetProps) {
                 </span>
               </>
             ) : (
-              <span className="text-sm text-[var(--text-muted)]">
+              <span className="text-sm text-white/40">
                 {t('widget.idle', 'Idle')}
               </span>
             )}
@@ -67,7 +63,7 @@ export default function EnergyFlowWidget({ vehicleId }: WidgetProps) {
           {/* Motor block */}
           <div className="flex flex-col items-center">
             <Zap className="h-6 w-6 text-neon-purple mb-1" />
-            <span className="text-xs text-[var(--text-muted)]">
+            <span className="text-xs text-white/40">
               {isConsuming
                 ? t('widget.consuming', 'Consuming')
                 : isRegen
@@ -95,6 +91,6 @@ export default function EnergyFlowWidget({ vehicleId }: WidgetProps) {
           className="py-4"
         />
       )}
-    </GlassPanel>
+    </WidgetShell>
   );
 }

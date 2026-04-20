@@ -1,17 +1,17 @@
 import { useTranslation } from 'react-i18next';
 import { Thermometer, Snowflake, Zap } from 'lucide-react';
-import { GlassPanel } from '@/components/ui';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { EmptyState } from '@/components/feedback';
 import { useVehicles, useClimateLatest } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-xs text-[var(--text-secondary)]">{label}</span>
-      <span className="text-sm font-bold text-[var(--text-primary)]">{value}</span>
+      <span className="text-xs text-white/50">{label}</span>
+      <span className="text-sm font-bold text-white/90">{value}</span>
     </div>
   );
 }
@@ -24,18 +24,12 @@ export default function ClimateStatusWidget({ vehicleId }: WidgetProps) {
   const { convertTemp, tempUnit } = useSettings();
 
   return (
-    <GlassPanel className="h-full flex flex-col justify-center p-4">
-      <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
-        <Thermometer className="h-3.5 w-3.5 text-neon-cyan" />
-        {t('widget.climate', 'Climate')}
-      </h4>
-      {isLoading ? (
-        <div className="space-y-2">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-5" />
-          ))}
-        </div>
-      ) : climateData ? (
+    <WidgetShell
+      title={t('widget.climate', 'Climate')}
+      icon={<Thermometer className="h-3.5 w-3.5 text-neon-cyan" />}
+      loading={isLoading}
+    >
+      {climateData ? (
         <div className="space-y-2.5">
           <Row
             label={t('widget.cabin', 'Cabin')}
@@ -79,6 +73,6 @@ export default function ClimateStatusWidget({ vehicleId }: WidgetProps) {
           className="py-4"
         />
       )}
-    </GlassPanel>
+    </WidgetShell>
   );
 }

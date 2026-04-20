@@ -35,7 +35,7 @@ export function VehicleHero({
   const status = vehicle.state as 'online' | 'offline' | 'asleep' | 'driving' | 'charging';
 
   return (
-    <GlassPanel className="relative overflow-hidden">
+    <div className="relative h-full overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-neon-cyan/[0.02] via-transparent to-neon-purple/[0.02]" />
       <div className="relative p-4 sm:p-6 lg:p-8">
         {/* Vehicle name + status */}
@@ -173,7 +173,7 @@ export function VehicleHero({
           </GlassPanel>
         )}
       </div>
-    </GlassPanel>
+    </div>
   );
 }
 

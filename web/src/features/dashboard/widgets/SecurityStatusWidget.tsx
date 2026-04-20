@@ -1,14 +1,15 @@
 import { useTranslation } from 'react-i18next';
 import { Shield } from 'lucide-react';
-import { GlassPanel, Badge } from '@/components/ui';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { Badge } from '@/components/ui';
+import { EmptyState } from '@/components/feedback';
 import { useVehicles, useSecurityLatest } from '@/api/hooks/useVehicles';
+import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-xs text-[var(--text-secondary)]">{label}</span>
+      <span className="text-xs text-white/50">{label}</span>
       {children}
     </div>
   );
@@ -34,18 +35,12 @@ export default function SecurityStatusWidget({ vehicleId }: WidgetProps) {
   const openWindows = windows.filter((w) => w.val && w.val.toLowerCase() !== 'closed');
 
   return (
-    <GlassPanel className="h-full flex flex-col justify-center p-4">
-      <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
-        <Shield className="h-3.5 w-3.5 text-neon-green" />
-        {t('widget.security', 'Security')}
-      </h4>
-      {isLoading ? (
-        <div className="space-y-2">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-5" />
-          ))}
-        </div>
-      ) : securityData ? (
+    <WidgetShell
+      title={t('widget.security', 'Security')}
+      icon={<Shield className="h-3.5 w-3.5 text-neon-green" />}
+      loading={isLoading}
+    >
+      {securityData ? (
         <div className="space-y-2.5">
           <Row label={t('widget.lock', 'Lock')}>
             <span
@@ -59,7 +54,7 @@ export default function SecurityStatusWidget({ vehicleId }: WidgetProps) {
           </Row>
           <Row label={t('widget.sentry', 'Sentry')}>
             <span
-              className={`text-sm font-bold ${securityData.sentry_mode ? 'text-neon-cyan' : 'text-[var(--text-muted)]'}`}
+              className={`text-sm font-bold ${securityData.sentry_mode ? 'text-neon-cyan' : 'text-white/30'}`}
             >
               🛡️{' '}
               {securityData.sentry_mode ? t('widget.active', 'Active') : t('widget.off', 'Off')}
@@ -87,6 +82,6 @@ export default function SecurityStatusWidget({ vehicleId }: WidgetProps) {
           className="py-4"
         />
       )}
-    </GlassPanel>
+    </WidgetShell>
   );
 }

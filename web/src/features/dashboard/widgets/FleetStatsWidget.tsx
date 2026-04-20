@@ -4,6 +4,7 @@ import { useFleetAnalytics } from '@/api/hooks/useAnalytics';
 import { useSettings } from '@/hooks/useSettings';
 import { request } from '@/api/client';
 import { FleetStatsBar } from '../components/FleetStatsBar';
+import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import type { Drive, ChargingSession } from '../types';
 
@@ -30,17 +31,19 @@ export default function FleetStatsWidget(_props: WidgetProps) {
   const onlineCount = vehicles?.filter((v) => v.state === 'online').length ?? 0;
 
   return (
-    <FleetStatsBar
-      analytics={analytics as Parameters<typeof FleetStatsBar>[0]['analytics']}
-      vehicleCount={vehicleCount}
-      onlineCount={onlineCount}
-      unreadAlerts={0}
-      recentDrives={recentDrives as Parameters<typeof FleetStatsBar>[0]['recentDrives']}
-      recentCharges={recentCharges as Parameters<typeof FleetStatsBar>[0]['recentCharges']}
-      convertDistance={convertDistance}
-      convertEfficiency={convertEfficiency}
-      distanceUnit={distanceUnit}
-      efficiencyUnit={efficiencyUnit}
-    />
+    <WidgetShell noPadding>
+      <FleetStatsBar
+        analytics={analytics as Parameters<typeof FleetStatsBar>[0]['analytics']}
+        vehicleCount={vehicleCount}
+        onlineCount={onlineCount}
+        unreadAlerts={0}
+        recentDrives={recentDrives as Parameters<typeof FleetStatsBar>[0]['recentDrives']}
+        recentCharges={recentCharges as Parameters<typeof FleetStatsBar>[0]['recentCharges']}
+        convertDistance={convertDistance}
+        convertEfficiency={convertEfficiency}
+        distanceUnit={distanceUnit}
+        efficiencyUnit={efficiencyUnit}
+      />
+    </WidgetShell>
   );
 }

@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { Gauge } from 'lucide-react';
-import { GlassPanel } from '@/components/ui';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { EmptyState } from '@/components/feedback';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { fmtNumber } from '@/lib/numberFormat';
+import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
 export default function RangeEstimateWidget({ vehicleId }: WidgetProps) {
@@ -16,38 +16,35 @@ export default function RangeEstimateWidget({ vehicleId }: WidgetProps) {
   const state = stateData?.state;
 
   return (
-    <GlassPanel className="h-full flex flex-col justify-center p-4">
-      {isLoading ? (
-        <div className="space-y-2">
-          <Skeleton className="h-5" />
-          <Skeleton className="h-5" />
-        </div>
-      ) : state ? (
-        <div className="space-y-3">
-          <div>
-            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
-              {t('widget.ratedRange', 'Rated Range')}
-            </p>
-            <p className="text-xl font-bold text-neon-cyan">
-              {fmtNumber(convertDistance(state.rated_range), 0)} {distanceUnit}
-            </p>
+    <WidgetShell loading={isLoading}>
+      <div className="h-full flex flex-col justify-center">
+        {state ? (
+          <div className="space-y-3">
+            <div>
+              <p className="text-[10px] text-white/40 uppercase tracking-wider">
+                {t('widget.ratedRange', 'Rated Range')}
+              </p>
+              <p className="text-xl font-bold text-neon-cyan">
+                {fmtNumber(convertDistance(state.rated_range), 0)} {distanceUnit}
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] text-white/40 uppercase tracking-wider">
+                {t('widget.idealRange', 'Ideal Range')}
+              </p>
+              <p className="text-lg font-semibold text-white/90">
+                {fmtNumber(convertDistance(state.ideal_range), 0)} {distanceUnit}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
-              {t('widget.idealRange', 'Ideal Range')}
-            </p>
-            <p className="text-lg font-semibold text-[var(--text-primary)]">
-              {fmtNumber(convertDistance(state.ideal_range), 0)} {distanceUnit}
-            </p>
-          </div>
-        </div>
-      ) : (
-        <EmptyState
-          icon={<Gauge className="h-6 w-6" />}
-          message={t('widget.noRange', 'No range data')}
-          className="py-4"
-        />
-      )}
-    </GlassPanel>
+        ) : (
+          <EmptyState
+            icon={<Gauge className="h-6 w-6" />}
+            message={t('widget.noRange', 'No range data')}
+            className="py-4"
+          />
+        )}
+      </div>
+    </WidgetShell>
   );
 }

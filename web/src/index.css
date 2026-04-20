@@ -552,7 +552,17 @@ select option:checked {
 }
 
 /* ─── react-grid-layout overrides ─── */
+.react-grid-item {
+  overflow: visible !important;
+}
+.react-grid-item > .widget-container {
+  overflow: hidden;
+  height: 100%;
+  border-radius: 0.75rem;
+}
+
 .react-grid-item > .react-resizable-handle {
+  z-index: 10;
   opacity: 0;
   transition: opacity 0.2s ease;
 }
@@ -566,8 +576,8 @@ select option:checked {
 .react-grid-item.react-grid-placeholder {
   background: var(--theme-primary) !important;
   opacity: 0.08 !important;
-  border-radius: 0.75rem;
-  border: 2px dashed var(--theme-primary);
+  border-radius: 0.75rem !important;
+  border: 2px dashed var(--theme-primary) !important;
 }
 
 .react-grid-item.cssTransforms {
