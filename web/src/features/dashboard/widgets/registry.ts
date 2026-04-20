@@ -156,6 +156,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     maxSize: { cols: 4, rows: 3 },
     component: lazy(() => import('./ChargeHistoryWidget')),
   },
+  {
+    id: 'charge-session-chart',
+    name: 'Charge Session Chart',
+    description: 'Bar chart of recent charge sessions: energy per session, color-coded by charger type (home/SC/destination)',
+    icon: Zap,
+    category: 'charging',
+    defaultSize: { cols: 2, rows: 2 },
+    minSize: { cols: 1, rows: 1 },
+    maxSize: { cols: 4, rows: 2 },
+    component: lazy(() => import('./ChargeSessionChartWidget')),
+  },
 
   // ── Climate ──
   {
