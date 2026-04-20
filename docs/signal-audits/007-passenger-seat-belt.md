@@ -18,7 +18,7 @@ Tesla sends `PassengerSeatBelt` as an enum string with two known values:
 - `"BuckleStatusLatched"` — buckled (true)
 - `"BuckleStatusUnlatched"` — unbuckled (false)
 
-### 1a. Security events path (line 2020–2023)
+### 1a. Security events path (line 2111–2114)
 
 ```go
 if v, ok := signals["PassengerSeatBelt"]; ok {
@@ -27,7 +27,7 @@ if v, ok := signals["PassengerSeatBelt"]; ok {
 }
 ```
 
-**Coercion function:** `parseBuckleStatus()` (line 1511–1530)
+**Coercion function:** `parseBuckleStatus()` (line 1602–1621)
 
 Correctly handles:
 - Envelope unwrap: `{"value": X}` → `X`
@@ -59,7 +59,7 @@ The `SafetySnapshot` model has no `PassengerSeatBelt` field.
 
 ### 2a. `security_events` (historical snapshots)
 
-**File:** `internal/database/security_repo.go:18,30`
+**File:** `internal/database/security_repo.go:17,30`
 
 Column: `passenger_seat_belt` (BOOLEAN, nullable).
 Added in migration `000017_comprehensive_telemetry.up.sql:89`.
@@ -91,10 +91,10 @@ Uses `enums.ParseBuckleStatus()` which correctly converts
 
 ### 2c. `vehicle_live_state` recovery (`LoadLiveState`)
 
-**File:** `internal/database/live_state_repo.go:648,760`
+**File:** `internal/database/live_state_repo.go:649,761`
 
-`passenger_seat_belt` is included in the `LoadLiveState()` SELECT at line 648 and
-mapped back to `result["PassengerSeatBelt"]` at line 760. ✅
+`passenger_seat_belt` is included in the `LoadLiveState()` SELECT at line 649 and
+mapped back to `result["PassengerSeatBelt"]` at line 761. ✅
 
 ### 2d. `signal_history` (time-series)
 
@@ -131,10 +131,10 @@ vehicle state signal, not a safety "setting."
 | `/api/v1/security/latest?vehicle_id=X` | GET | Latest security event |
 | `/api/v1/security?vehicle_id=X&limit=N` | GET | Paginated security history |
 
-**Router:** `internal/api/router.go:570–573`
-**Handler:** `internal/api/security_handler.go:39–56` (`SecurityHandler.Latest`)
+**Router:** `internal/api/router.go:620–622`
+**Handler:** `internal/api/security_handler.go:39` (`SecurityHandler.Latest`)
 
-**Go struct JSON tag:** `json:"passenger_seat_belt,omitempty"` (`models.SecurityEvent`, models.go:915)
+**Go struct JSON tag:** `json:"passenger_seat_belt,omitempty"` (`models.SecurityEvent`, models.go:916)
 
 **Go type:** `*bool` — serialized as `true`/`false` or omitted if nil.
 
@@ -157,7 +157,7 @@ The in-memory SignalStore broadcasts raw signal values via SSE. After pod restar
 
 ### 4a. `useSecurityLatest` (SafetySettingsPage — ACTIVE)
 
-**File:** `web/src/api/hooks/useVehicles.ts:155–161`
+**File:** `web/src/api/hooks/useVehicles.ts:155–162`
 
 ```ts
 request<SecurityEvent | null>(`/security/latest?vehicle_id=${vehicleId}`)
@@ -204,7 +204,7 @@ Correctly maps `"BuckleStatusLatched"` → `true`, all else → `false`. ✅
 
 ### 5a. SafetySettingsPage
 
-**File:** `web/src/features/vehicle-systems/pages/SafetySettingsPage.tsx:606–617`
+**File:** `web/src/features/vehicle-systems/pages/SafetySettingsPage.tsx:616–627`
 
 Reads from `useSecurityLatest` (security_events table):
 
