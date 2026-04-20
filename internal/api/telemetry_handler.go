@@ -1459,6 +1459,21 @@ func normalizeFleetUnits(signals map[string]interface{}) {
 	if v, ok := signals["CruiseFollowDistance"]; ok {
 		signals["CruiseFollowDistance"] = enums.ParseCruiseFollowDistance(toString(v))
 	}
+
+	// BMSState: strip "BMSState" prefix (e.g., "BMSStateStandby" → "Standby")
+	if v, ok := signals["BMSState"]; ok {
+		signals["BMSState"] = enums.ParseBMSState(toString(v))
+	}
+
+	// ChargePort: strip "ChargePort" prefix (e.g., "ChargePortOpen" → "Open")
+	if v, ok := signals["ChargePort"]; ok {
+		signals["ChargePort"] = enums.ParseChargePort(toString(v))
+	}
+
+	// ChargePortLatch: strip "ChargePortLatch" prefix (e.g., "ChargePortLatchEngaged" → "Engaged")
+	if v, ok := signals["ChargePortLatch"]; ok {
+		signals["ChargePortLatch"] = enums.ParseChargePortLatch(toString(v))
+	}
 }
 
 func toFloat(v interface{}) float64 {

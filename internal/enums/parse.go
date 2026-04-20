@@ -87,14 +87,34 @@ func ParseWindowState(raw string) string {
 	return raw
 }
 
+// ParseChargePort normalizes charge port state.
+// Tesla sends: "ChargePortOpen", "ChargePortClosed".
+func ParseChargePort(raw string) string {
+	g := strings.TrimPrefix(raw, PrefixChargePort)
+	switch {
+	case strings.Contains(g, "Open"):
+		return "Open"
+	case strings.Contains(g, "Closed"):
+		return "Closed"
+	}
+	if g != "" && g != raw {
+		return g
+	}
+	return raw
+}
+
 // ParseChargePortLatch normalizes charge port latch state.
+// Tesla sends: "ChargePortLatchEngaged", "ChargePortLatchDisengaged".
 func ParseChargePortLatch(raw string) string {
-	g := strings.TrimPrefix(raw, "ChargePortLatch")
+	g := strings.TrimPrefix(raw, PrefixChargePortLatch)
 	switch {
 	case strings.Contains(g, "Engaged"):
 		return "Engaged"
 	case strings.Contains(g, "Disengaged"):
 		return "Disengaged"
+	}
+	if g != "" && g != raw {
+		return g
 	}
 	return raw
 }
@@ -187,6 +207,29 @@ func ParseSpeedLimitWarning(raw string) string {
 		return "Chime"
 	case "Off":
 		return "Off"
+	}
+	if g != "" && g != raw {
+		return g
+	}
+	return raw
+}
+
+// ParseBMSState normalizes the BMS state enum.
+// Tesla sends: "BMSStateStandby", "BMSStateDrive", "BMSStateSupport",
+// "BMSStateCharge", "BMSStateFault".
+func ParseBMSState(raw string) string {
+	g := strings.TrimPrefix(raw, PrefixBMSState)
+	switch g {
+	case "Standby":
+		return BMSStandby
+	case "Drive":
+		return BMSDrive
+	case "Support":
+		return BMSSupport
+	case "Charge":
+		return BMSCharge
+	case "Fault":
+		return BMSFault
 	}
 	if g != "" && g != raw {
 		return g

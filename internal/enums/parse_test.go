@@ -194,6 +194,33 @@ func TestParseSpeedLimitWarning(t *testing.T) {
 	}
 }
 
+func TestParseBMSState(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"BMSStateStandby", "Standby"},
+		{"BMSStateDrive", "Drive"},
+		{"BMSStateSupport", "Support"},
+		{"BMSStateCharge", "Charge"},
+		{"BMSStateFault", "Fault"},
+		{"Standby", "Standby"},
+		{"Drive", "Drive"},
+		{"Charge", "Charge"},
+		{"Fault", "Fault"},
+		{"BMSStateNewValue", "NewValue"},
+		{"SomeUnknown", "SomeUnknown"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := ParseBMSState(tt.input)
+			if got != tt.expected {
+				t.Errorf("ParseBMSState(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
 func TestParseCruiseFollowDistance(t *testing.T) {
 	tests := []struct {
 		input    string
@@ -232,6 +259,50 @@ func TestParseWindowState(t *testing.T) {
 			got := ParseWindowState(tt.input)
 			if got != tt.expected {
 				t.Errorf("ParseWindowState(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseChargePort(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"ChargePortOpen", "Open"},
+		{"ChargePortClosed", "Closed"},
+		{"Open", "Open"},
+		{"Closed", "Closed"},
+		{"ChargePortNewValue", "NewValue"},
+		{"SomeUnknown", "SomeUnknown"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := ParseChargePort(tt.input)
+			if got != tt.expected {
+				t.Errorf("ParseChargePort(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseChargePortLatch(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"ChargePortLatchEngaged", "Engaged"},
+		{"ChargePortLatchDisengaged", "Disengaged"},
+		{"Engaged", "Engaged"},
+		{"Disengaged", "Disengaged"},
+		{"ChargePortLatchNewValue", "NewValue"},
+		{"SomeUnknown", "SomeUnknown"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := ParseChargePortLatch(tt.input)
+			if got != tt.expected {
+				t.Errorf("ParseChargePortLatch(%q) = %q, want %q", tt.input, got, tt.expected)
 			}
 		})
 	}

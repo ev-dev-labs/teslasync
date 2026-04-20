@@ -64,9 +64,17 @@ export function parseClimateKeeperMode(raw: string): string {
   return g || raw
 }
 
+/** Parse charge port state. */
+export function parseChargePort(raw: string): string {
+  const g = raw.replace(/^ChargePort/i, '')
+  if (g.includes('Open')) return 'Open'
+  if (g.includes('Closed')) return 'Closed'
+  return g || raw
+}
+
 /** Parse charge port latch state. */
 export function parseChargePortLatch(raw: string): string {
-  const g = raw.replace(/ChargePortLatch/i, '')
+  const g = raw.replace(/^ChargePortLatch/i, '')
   if (g.includes('Engaged')) return 'Engaged'
   if (g.includes('Disengaged')) return 'Disengaged'
   return g || raw
