@@ -82,6 +82,9 @@ import {
   Radio,
   Signpost,
   Hammer,
+  Receipt,
+  Key,
+  Home,
 } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
@@ -193,6 +196,7 @@ export const navSections = [
       { to: '/battery-cells', icon: Battery, label: 'Battery Cells', color: 'text-purple-400' },
       { to: '/battery-degradation', icon: TrendingDown, label: 'Degradation', color: 'text-orange-400' },
       { to: '/charging', icon: BatteryCharging, label: 'Charging', color: 'text-green-400' },
+      { to: '/tesla-charging-history', icon: Receipt, label: 'Tesla Charge History', color: 'text-emerald-400' },
       { to: '/charging-heatmap', icon: Grid3X3, label: 'Charging Patterns', color: 'text-cyan-400' },
       { to: '/charging-curve', icon: TrendingUp, label: 'Charging Curve', color: 'text-lime-400' },
       { to: '/smart-charge', icon: CalendarClock, label: 'Smart Charge', color: 'text-cyan-400' },
@@ -203,6 +207,8 @@ export const navSections = [
     items: [
       { to: '/energy', icon: Bolt, label: 'Energy', color: 'text-yellow-400' },
       { to: '/energy-flow', icon: ArrowRightLeft, label: 'Energy Flow', color: 'text-yellow-400' },
+      { to: '/power-flow', icon: Zap, label: 'Power Flow', color: 'text-orange-400' },
+      { to: '/energy-products', icon: Home, label: 'Energy Products', color: 'text-lime-400' },
       { to: '/efficiency', icon: Leaf, label: 'Efficiency', color: 'text-amber-400' },
       { to: '/route-efficiency', icon: Navigation2, label: 'Route Efficiency', color: 'text-emerald-400' },
       { to: '/projected-range', icon: Target, label: 'Projected Range', color: 'text-pink-400' },
@@ -266,6 +272,7 @@ export const navSections = [
       { to: '/api-logs', icon: FileText, label: 'API Logs', color: 'text-amber-400' },
       { to: '/fleet-api', icon: Cloud, label: 'Fleet API', color: 'text-sky-400' },
       { to: '/settings', icon: Settings, label: 'Settings', color: 'text-[var(--text-muted)]' },
+      { to: '/api-keys', icon: Key, label: 'API Keys', color: 'text-amber-400' },
       { to: '/admin', icon: KeyRound, label: 'Admin', color: 'text-red-400' },
     ],
   },
@@ -283,6 +290,7 @@ export const navSections = [
       { to: '/dev-tools', icon: Hammer, label: 'Dev Tools', color: 'text-cyan-400' },
       { to: '/api-playground', icon: Terminal, label: 'API Playground', color: 'text-emerald-400' },
       { to: '/roadmap', icon: Signpost, label: 'Roadmap', color: 'text-violet-400' },
+      { to: '/changelog', icon: FileText, label: 'Changelog', color: 'text-white/50' },
     ],
   },
   {
