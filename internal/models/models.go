@@ -1463,3 +1463,29 @@ type TeslaVehicleInvitation struct {
 	FetchedAt    time.Time  `json:"fetched_at" db:"fetched_at"`
 	CreatedAt    time.Time  `json:"created_at" db:"created_at"`
 }
+
+// GuardConfig holds per-vehicle anti-theft guard mode configuration.
+type GuardConfig struct {
+	VehicleID      int64     `json:"vehicle_id" db:"vehicle_id"`
+	Enabled        bool      `json:"enabled" db:"enabled"`
+	HomeGeofenceID *int64    `json:"home_geofence_id" db:"home_geofence_id"`
+	Sensitivity    string    `json:"sensitivity" db:"sensitivity"`
+	AutoPanic      bool      `json:"auto_panic" db:"auto_panic"`
+	CreatedAt      time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at" db:"updated_at"`
+}
+
+// GuardEvent records a guard mode alert (movement, unlock, panic, etc.).
+type GuardEvent struct {
+	ID               int64                  `json:"id" db:"id"`
+	VehicleID        int64                  `json:"vehicle_id" db:"vehicle_id"`
+	EventType        string                 `json:"event_type" db:"event_type"`
+	Latitude         *float64               `json:"latitude" db:"latitude"`
+	Longitude        *float64               `json:"longitude" db:"longitude"`
+	Speed            *float64               `json:"speed" db:"speed"`
+	Details          map[string]interface{} `json:"details" db:"details"`
+	NotifiedChannels []string               `json:"notified_channels" db:"notified_channels"`
+	Acknowledged     bool                   `json:"acknowledged" db:"acknowledged"`
+	AcknowledgedAt   *time.Time             `json:"acknowledged_at" db:"acknowledged_at"`
+	CreatedAt        time.Time              `json:"created_at" db:"created_at"`
+}

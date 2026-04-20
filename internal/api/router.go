@@ -129,6 +129,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	}
 	alertHandler := NewAlertHandler(db, eventHub, pahoForAlerts, alertSignalStore)
 	commandHandler := NewCommandHandler(db, teslaClient)
+	guardHandler := NewGuardHandler(db, teslaClient)
 	energyHandler := NewEnergyHandler(energySvc)
 	batteryHandler := NewBatteryHandler(db)
 	analyticsHandler := NewAnalyticsHandler(db)
@@ -313,6 +314,15 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/subscriptions/refresh", vehicleInfoHandler.RefreshSubscriptionEligibility)
 				r.Get("/upgrades", vehicleInfoHandler.UpgradeEligibility)
 				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/upgrades/refresh", vehicleInfoHandler.RefreshUpgradeEligibility)
+
+				// Guard Mode (anti-theft)
+				r.Route("/guard", func(r chi.Router) {
+					r.Get("/", guardHandler.GetConfig)
+					r.Post("/", guardHandler.SetConfig)
+					r.Get("/events", guardHandler.ListEvents)
+					r.Post("/events/{eventID}/acknowledge", guardHandler.AcknowledgeEvent)
+					r.With(httprate.LimitByIP(3, 1*time.Minute)).Post("/panic", guardHandler.Panic)
+				})
 			})
 		})
 

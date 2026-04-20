@@ -79,6 +79,7 @@ const TirePressure = lazy(() => import('./features/vehicle-systems/pages/TirePre
 const Maintenance = lazy(() => import('./features/vehicle-systems/pages/MaintenancePage'))
 const SoftwareUpdates = lazy(() => import('./features/vehicle-systems/pages/SoftwareUpdatesPage'))
 const SafetySettings = lazy(() => import('./features/vehicle-systems/pages/SafetySettingsPage'))
+const GuardMode = lazy(() => import('./features/vehicle-systems/pages/GuardModePage'))
 const MediaPlayer = lazy(() => import('./features/vehicle-systems/pages/MediaPlayerPage'))
 
 // Automations
@@ -237,6 +238,7 @@ export default function App() {
         <Route path="drivetrain-health" element={<SafeRoute name="DrivetrainHealth"><DrivetrainHealth /></SafeRoute>} />
         <Route path="media-player" element={<SafeRoute name="MediaPlayer"><MediaPlayer /></SafeRoute>} />
         <Route path="safety-settings" element={<SafeRoute name="SafetySettings"><SafetySettings /></SafeRoute>} />
+        <Route path="guard-mode" element={<SafeRoute name="GuardMode"><GuardMode /></SafeRoute>} />
         <Route path="navigation" element={<SafeRoute name="NavigationRoute"><NavigationRoute /></SafeRoute>} />
         <Route path="data-repair" element={<SafeRoute name="DataRepair"><DataRepair /></SafeRoute>} />
         <Route path="backup" element={<SafeRoute name="BackupRestore"><BackupRestore /></SafeRoute>} />

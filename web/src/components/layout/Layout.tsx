@@ -33,6 +33,7 @@ import {
   Wallet,
   BedDouble,
   Shield,
+  ShieldAlert,
   FileText,
   Wrench,
   Thermometer,
@@ -114,6 +115,7 @@ const navI18nKeys: Record<string, string> = {
   'Automations': 'nav.automations',
   'Digital Twin': 'nav.digitalTwin',
   'Smart Charge': 'nav.smartCharge',
+  'Guard Mode': 'nav.guardMode',
 }
 
 type SSEState = 'connected' | 'reconnecting' | 'unavailable'
@@ -217,6 +219,7 @@ export const navSections = [
       { to: '/notifications', icon: BellRing, label: 'Notifications', color: 'text-purple-400' },
       { to: '/security-access', icon: Lock, label: 'Security & Access', color: 'text-emerald-400' },
       { to: '/safety-settings', icon: Shield, label: 'Safety Settings', color: 'text-amber-400' },
+      { to: '/guard-mode', icon: ShieldAlert, label: 'Guard Mode', color: 'text-red-400' },
     ],
   },
   {
