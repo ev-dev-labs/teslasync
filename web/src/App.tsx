@@ -65,6 +65,7 @@ const TrueCostOwnership = lazy(() => import('./features/analytics/pages/TrueCost
 const WeeklyDigest = lazy(() => import('./features/analytics/pages/WeeklyDigestPage'))
 const Timeline = lazy(() => import('./features/analytics/pages/TimelinePage'))
 const VehicleComparison = lazy(() => import('./features/analytics/pages/ComparisonPage'))
+const LifetimeStats = lazy(() => import('./features/analytics/pages/LifetimeStatsPage'))
 
 // Maps & Location
 const LiveMap = lazy(() => import('./features/maps/pages/MapOverviewPage'))
@@ -200,6 +201,7 @@ export default function App() {
         <Route path="trips" element={<SafeRoute name="Trips"><Trips /></SafeRoute>} />
         <Route path="trips/:id" element={<SafeRoute name="TripDetail"><TripDetail /></SafeRoute>} />
         <Route path="statistics" element={<SafeRoute name="Statistics"><Statistics /></SafeRoute>} />
+        <Route path="lifetime-stats" element={<SafeRoute name="LifetimeStats"><LifetimeStats /></SafeRoute>} />
         <Route path="system-status" element={<SafeRoute name="SystemStatus"><SystemStatus /></SafeRoute>} />
         <Route path="roadmap" element={<SafeRoute name="Roadmap"><Roadmap /></SafeRoute>} />
         <Route path="api-keys" element={<SafeRoute name="APIKeys"><APIKeysPage /></SafeRoute>} />

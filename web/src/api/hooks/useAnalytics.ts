@@ -13,6 +13,7 @@ export const analyticsKeys = {
   timeline: (vehicleId: string) => ['analytics', 'timeline', vehicleId] as const,
   stateSummary: (vehicleId: string) => ['analytics', 'state-summary', vehicleId] as const,
   weeklyDigest: (vehicleId: string) => ['analytics', 'weekly-digest', vehicleId] as const,
+  lifetime: (vehicleId?: string) => ['analytics', 'lifetime', vehicleId] as const,
 };
 
 export function useAnalyticsSummary(days = 30) {
@@ -81,5 +82,77 @@ export function useWeeklyDigest(vehicleId: string) {
     enabled: !!vehicleId,
     retry: false,
     staleTime: Infinity,
+  });
+}
+
+/* ── Lifetime Stats ─────────────────────────────────────────────── */
+
+export interface LifetimeAchievement {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  unlocked: boolean;
+  unlocked_at: string | null;
+  progress: number;
+  target: number;
+  current: number;
+}
+
+export interface PersonalRecord {
+  value: number;
+  date: string | null;
+}
+
+export interface LifetimeStats {
+  // Driving
+  total_drives: number;
+  total_distance_km: number;
+  total_driving_hours: number;
+  longest_drive_km: number;
+  highest_speed_kmh: number;
+  avg_efficiency_wh_km: number;
+
+  // Charging
+  total_charge_sessions: number;
+  total_energy_kwh: number;
+  total_charging_hours: number;
+  total_charging_cost: number;
+
+  // Savings
+  gas_equivalent_cost: number;
+  total_savings: number;
+  co2_offset_kg: number;
+  trees_equivalent: number;
+
+  // Fun facts
+  earth_circumferences: number;
+  moon_trips: number;
+  days_on_road: number;
+  homes_equivalent_days: number;
+
+  // Timeline
+  first_drive_date: string | null;
+  ownership_days: number;
+  most_active_day_of_week: string;
+  most_active_hour: number;
+
+  // Personal records
+  longest_drive_record: PersonalRecord;
+  highest_speed_record: PersonalRecord;
+  max_charge_record: PersonalRecord;
+
+  // Achievements
+  achievements: LifetimeAchievement[];
+}
+
+export function useLifetimeStats(vehicleId?: string) {
+  return useQuery({
+    queryKey: analyticsKeys.lifetime(vehicleId),
+    queryFn: () =>
+      request<LifetimeStats>(
+        `/analytics/lifetime${vehicleId ? `?vehicle_id=${vehicleId}` : ''}`,
+      ),
+    staleTime: 5 * 60_000,
   });
 }
