@@ -1460,6 +1460,11 @@ func normalizeFleetUnits(signals map[string]interface{}) {
 		signals["CruiseFollowDistance"] = enums.ParseCruiseFollowDistance(toString(v))
 	}
 
+	// SentryMode: strip "SentryModeState" prefix (e.g., "SentryModeStateArmed" → "Armed")
+	if v, ok := signals["SentryMode"]; ok {
+		signals["SentryMode"] = enums.ParseSentryMode(toString(v))
+	}
+
 	// CenterDisplay: strip "DisplayState" prefix (e.g., "DisplayStateOff" → "Off")
 	if v, ok := signals["CenterDisplay"]; ok {
 		signals["CenterDisplay"] = enums.ParseCenterDisplay(toString(v))
@@ -1493,6 +1498,11 @@ func normalizeFleetUnits(signals map[string]interface{}) {
 	// ScheduledChargingMode: strip "ScheduledChargingMode" prefix (e.g., "ScheduledChargingModeOff" → "Off")
 	if v, ok := signals["ScheduledChargingMode"]; ok {
 		signals["ScheduledChargingMode"] = enums.ParseScheduledChargingMode(toString(v))
+	}
+
+	// LightsTurnSignal: strip "TurnSignalState"/"TurnSignal" prefix (e.g., "TurnSignalStateOff" → "Off")
+	if v, ok := signals["LightsTurnSignal"]; ok {
+		signals["LightsTurnSignal"] = enums.ParseTurnSignal(toString(v))
 	}
 
 	// Window states: strip "WindowState" prefix (e.g., "WindowStateClosed" → "Closed")

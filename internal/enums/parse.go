@@ -212,6 +212,30 @@ func ParseClimateKeeperMode(raw string) string {
 	return raw
 }
 
+// ParseSentryMode normalizes the SentryMode enum.
+// Tesla sends: "SentryModeStateArmed", "SentryModeStateOff", "SentryModeStateIdle", etc.
+func ParseSentryMode(raw string) string {
+	g := strings.TrimPrefix(raw, PrefixSentryMode)
+	switch g {
+	case "Off":
+		return SentryOff
+	case "Idle":
+		return SentryIdle
+	case "Armed":
+		return SentryArmed
+	case "Aware":
+		return SentryAware
+	case "Panic":
+		return SentryPanic
+	case "Quiet":
+		return SentryQuiet
+	}
+	if g != "" && g != raw {
+		return g
+	}
+	return raw
+}
+
 // ParseForwardCollisionWarning normalizes the FCW sensitivity enum.
 // Tesla sends: "ForwardCollisionSensitivityOff", "ForwardCollisionSensitivityLate",
 // "ForwardCollisionSensitivityAverage", "ForwardCollisionSensitivityEarly".
@@ -354,6 +378,26 @@ func ParseCenterDisplay(raw string) string {
 func ParseCruiseFollowDistance(raw string) string {
 	g := strings.TrimPrefix(raw, PrefixFollowDistance)
 	if len(g) == 1 && g[0] >= '1' && g[0] <= '7' {
+		return g
+	}
+	if g != "" && g != raw {
+		return g
+	}
+	return raw
+}
+
+// ParseTurnSignal normalizes the turn-signal enum.
+// Tesla sends: "TurnSignalStateOff", "TurnSignalStateLeft", "TurnSignalStateRight",
+// or the shorter "TurnSignalOff", "TurnSignalLeft", "TurnSignalRight".
+func ParseTurnSignal(raw string) string {
+	// Try longer prefix first: "TurnSignalState"
+	g := strings.TrimPrefix(raw, PrefixTurnSignal)
+	if g == raw {
+		// Try shorter prefix: "TurnSignal"
+		g = strings.TrimPrefix(raw, "TurnSignal")
+	}
+	switch g {
+	case "Off", "Left", "Right", "Both":
 		return g
 	}
 	if g != "" && g != raw {

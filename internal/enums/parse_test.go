@@ -88,6 +88,9 @@ func TestParseEnumBool(t *testing.T) {
 		{"bool false", false, false},
 		{"string On", "SentryModeStateArmed", true},
 		{"string Off", "HvacPowerStateOff", false},
+		{"normalized Armed", "Armed", true},
+		{"normalized Off", "Off", false},
+		{"normalized Idle", "Idle", true},
 		{"string false", "false", false},
 		{"string empty", "", false},
 		{"string 0", "0", false},
@@ -335,6 +338,32 @@ func TestParseChargeState(t *testing.T) {
 			got := ParseChargeState(tt.input)
 			if got != tt.expected {
 				t.Errorf("ParseChargeState(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseSentryMode(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"SentryModeStateOff", "Off"},
+		{"SentryModeStateIdle", "Idle"},
+		{"SentryModeStateArmed", "Armed"},
+		{"SentryModeStateAware", "Aware"},
+		{"SentryModeStatePanic", "Panic"},
+		{"SentryModeStateQuiet", "Quiet"},
+		{"Off", "Off"},
+		{"Armed", "Armed"},
+		{"SentryModeStateNewValue", "NewValue"},
+		{"SomeUnknown", "SomeUnknown"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := ParseSentryMode(tt.input)
+			if got != tt.expected {
+				t.Errorf("ParseSentryMode(%q) = %q, want %q", tt.input, got, tt.expected)
 			}
 		})
 	}
