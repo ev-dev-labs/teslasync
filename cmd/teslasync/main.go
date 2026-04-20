@@ -534,8 +534,13 @@ func main() {
 	})
 
 	// Provide OpenAPI spec to API layer (best-effort; non-fatal if missing)
-	if specBytes, err := os.ReadFile("docs/public/openapi.yaml"); err == nil {
-		api.SetOpenAPISpec(specBytes)
+	// Try absolute path first (Docker), then relative (local dev)
+	specPaths := []string{"/docs/public/openapi.yaml", "docs/public/openapi.yaml"}
+	for _, p := range specPaths {
+		if specBytes, err := os.ReadFile(p); err == nil {
+			api.SetOpenAPISpec(specBytes)
+			break
+		}
 	}
 
 	// HTTP API

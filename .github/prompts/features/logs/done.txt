@@ -136,3 +136,4 @@ signal-audit/09-safety/013-self-driving-miles-since-reset.prompt.md
 signal-audit/09-safety/014-speed-limit-warning.prompt.md
 signal-audit/02-charging-enums/001-b-m-s-state.prompt.md
 signal-audit/02-charging-enums/002-charge-port.prompt.md
+signal-audit/02-charging-enums/003-charge-port-latch.prompt.md
