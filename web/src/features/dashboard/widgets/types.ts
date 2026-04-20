@@ -30,6 +30,7 @@ export type WidgetCategory =
   | 'climate'
   | 'tires'
   | 'security'
+  | 'commands'
   | 'telemetry'
   | 'analytics'
   | 'system';

@@ -99,3 +99,8 @@ dashboard-widgets/13-odometer-counter.prompt.md
 dashboard-widgets/14-software-update-status.prompt.md
 dashboard-widgets/15-recent-drives-list.prompt.md
 dashboard-widgets/16-drive-efficiency-chart.prompt.md
+dashboard-widgets/17-drive-score-gauge.prompt.md
+dashboard-widgets/18-speed-heatmap.prompt.md
+dashboard-widgets/19-energy-flow-animated.prompt.md
+dashboard-widgets/20-door-window-status.prompt.md
+dashboard-widgets/21-sentry-event-log.prompt.md
