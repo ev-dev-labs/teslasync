@@ -428,6 +428,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     component: lazy(() => import('./FleetStatsWidget')),
   },
   {
+    id: 'fleet-stats-bar',
+    name: 'Fleet Stats Bar',
+    description: 'Fleet-wide: total vehicles, online count, total miles today, total energy',
+    icon: BarChart3,
+    category: 'analytics',
+    defaultSize: { cols: 4, rows: 1 },
+    minSize: { cols: 3, rows: 1 },
+    maxSize: { cols: 4, rows: 2 },
+    component: lazy(() => import('./FleetStatsBarWidget')),
+  },
+  {
     id: 'weekly-summary-card',
     name: 'Weekly Summary',
     description: 'This week vs last week: total miles, kWh, cost, efficiency',
