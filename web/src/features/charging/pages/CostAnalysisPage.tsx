@@ -1,4 +1,4 @@
-import { useState, useMemo, type ReactNode } from 'react';
+import { useState, useMemo, type ReactNode, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   DollarSign, Zap, TrendingDown, TrendingUp,
@@ -13,6 +13,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, LineChart, Line, BarChart, Bar,
   PieChart, Pie, Cell, CHART_COLORS, ComposedChart, Legend,
+  renderAnnotationLines, AddAnnotationPopover, AnnotationList,
 } from '@/components/charts';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { AnimatedNumber } from '@/components/data-display';
@@ -21,6 +22,7 @@ import { useChargingSessionsPaginated, useCostForecast } from '@/api/hooks/useCh
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useAnnotations } from '@/hooks/useAnnotations';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt, fmtWithUnit } from '@/lib/numberFormat';
 import { CHARGER_COLORS } from '@/lib/colors';
@@ -149,6 +151,31 @@ export default function CostAnalysisPage() {
   });
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : null;
   const { data: forecastData } = useCostForecast(vehicleIdStr);
+
+  // ── Annotations ──────────────────────────────────────────────────────
+  const { annotations, addAnnotation, removeAnnotation } = useAnnotations('charging-cost', vehicleId);
+  const [isAnnotating, setIsAnnotating] = useState(false);
+  const [pendingTimestamp, setPendingTimestamp] = useState<string | null>(null);
+
+  const handleChartClick = useCallback(
+    (state: { activeLabel?: string }) => {
+      if (isAnnotating && state?.activeLabel) {
+        setPendingTimestamp(String(state.activeLabel));
+      }
+    },
+    [isAnnotating],
+  );
+
+  const handleAddAnnotation = useCallback(
+    (label: string, category: Parameters<typeof addAnnotation>[2], description?: string) => {
+      if (pendingTimestamp) {
+        addAnnotation(pendingTimestamp, label, category, description);
+        setPendingTimestamp(null);
+        setIsAnnotating(false);
+      }
+    },
+    [pendingTimestamp, addAnnotation],
+  );
 
   // ── Core aggregated stats ────────────────────────────────────────────
   const coreStats = useMemo(() => {
@@ -617,49 +644,70 @@ export default function CostAnalysisPage() {
         {/* ── Section 3 & 4: Monthly cost trend + Cost per kWh trend ─── */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {/* Monthly cost trend — AreaChart */}
-          <GlassPanel className="p-4">
-            <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
-              <TrendingUp className="h-4 w-4 text-cyan-400" />
-              {t('costAnalysis.charts.monthlyCost', 'Monthly Cost Trend')}
-            </h3>
+          <GlassPanel className={cn('p-4', isAnnotating && 'ring-1 ring-blue-400/30')}>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
+                <TrendingUp className="h-4 w-4 text-cyan-400" />
+                {t('costAnalysis.charts.monthlyCost', 'Monthly Cost Trend')}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsAnnotating((v) => !v)}
+                className={cn(
+                  'rounded p-1 text-xs transition-colors',
+                  isAnnotating ? 'text-blue-400' : 'text-white/30 hover:text-white/50',
+                )}
+                aria-label={t('annotation.toggle', 'Toggle annotations')}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/></svg>
+              </button>
+            </div>
             {monthlyData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={260}>
-                <AreaChart data={monthlyData}>
-                  <defs>
-                    <ChartGradient id="costGrad" color={CHART_COLORS[0]} />
-                  </defs>
-                  <CartesianGridComponent />
-                  <XAxis
-                    dataKey="month"
-                    {...axisTickSm}
-                    tickFormatter={(v: string) => {
-                      const parts = v.split('-');
-                      return parts.length === 2 ? `${parts[1]}/${parts[0].slice(2)}` : v;
-                    }}
-                  />
-                  <YAxis
-                    {...axisTickSm}
-                    tickFormatter={(v: number) => `$${v}`}
-                  />
-                  <Tooltip content={<ChartTooltip />} />
-                  <Area
-                    type="monotone"
-                    dataKey="cost"
-                    name={t('costAnalysis.charts.cost', 'Cost ($)')}
-                    stroke={CHART_COLORS[0]}
-                    fill="url(#costGrad)"
-                    strokeWidth={2}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              <div className={isAnnotating ? 'cursor-crosshair' : undefined}>
+                <ResponsiveContainer width="100%" height={260}>
+                  <AreaChart data={monthlyData} onClick={handleChartClick}>
+                    <defs>
+                      <ChartGradient id="costGrad" color={CHART_COLORS[0]} />
+                    </defs>
+                    <CartesianGridComponent />
+                    <XAxis
+                      dataKey="month"
+                      {...axisTickSm}
+                      tickFormatter={(v: string) => {
+                        const parts = v.split('-');
+                        return parts.length === 2 ? `${parts[1]}/${parts[0].slice(2)}` : v;
+                      }}
+                    />
+                    <YAxis
+                      {...axisTickSm}
+                      tickFormatter={(v: number) => `$${v}`}
+                    />
+                    <Tooltip content={<ChartTooltip />} />
+                    {renderAnnotationLines(annotations, (ts) => ts)}
+                    <Area
+                      type="monotone"
+                      dataKey="cost"
+                      name={t('costAnalysis.charts.cost', 'Cost ($)')}
+                      stroke={CHART_COLORS[0]}
+                      fill="url(#costGrad)"
+                      strokeWidth={2}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
             ) : (
               <div className="flex h-[260px] items-center justify-center text-sm text-gray-500">
                 {t('costAnalysis.charts.noData', 'Not enough data')}
               </div>
             )}
+            <AnnotationList annotations={annotations} onRemove={removeAnnotation} />
           </GlassPanel>
-
-          {/* Cost per kWh trend — LineChart */}
+          <AddAnnotationPopover
+            open={pendingTimestamp != null}
+            timestamp={pendingTimestamp ?? ''}
+            onAdd={handleAddAnnotation}
+            onCancel={() => setPendingTimestamp(null)}
+          />
           <GlassPanel className="p-4">
             <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
               <BarChart3 className="h-4 w-4 text-purple-400" />

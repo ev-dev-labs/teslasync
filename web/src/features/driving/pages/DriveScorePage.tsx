@@ -39,6 +39,8 @@ import {
   Cell,
   ReferenceLine,
   Legend,
+  renderAnnotationLines,
+  AddAnnotationPopover,
 } from '@/components/charts';
 import { AnimatedNumber, StatCard, MetricBar, InlineMetric, KVList } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
@@ -49,6 +51,7 @@ import { useDriveScore, useDrives } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useAnnotations } from '@/hooks/useAnnotations';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt, fmtWithUnit } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -441,6 +444,31 @@ export default function DriveScorePage() {
     speedUnit,
     efficiencyUnit,
   } = useSettings();
+
+  /* ---- annotations ---- */
+  const { annotations, addAnnotation, removeAnnotation } = useAnnotations('drive-score', vehicleId);
+  const [isAnnotating, setIsAnnotating] = useState(false);
+  const [pendingTimestamp, setPendingTimestamp] = useState<string | null>(null);
+
+  const handleAnnotateChartClick = useCallback(
+    (state: { activeLabel?: string }) => {
+      if (isAnnotating && state?.activeLabel) {
+        setPendingTimestamp(String(state.activeLabel));
+      }
+    },
+    [isAnnotating],
+  );
+
+  const handleAddAnnotation = useCallback(
+    (label: string, category: Parameters<typeof addAnnotation>[2], description?: string) => {
+      if (pendingTimestamp) {
+        addAnnotation(pendingTimestamp, label, category, description);
+        setPendingTimestamp(null);
+        setIsAnnotating(false);
+      }
+    },
+    [pendingTimestamp, addAnnotation],
+  );
 
   /* ---- date filter ---- */
   const [startDate, setStartDate] = useState<string>(getDefaultStartDate);
@@ -1018,9 +1046,16 @@ export default function DriveScorePage() {
           {/* -------- Section 4: Score trend chart -------- */}
           <StaggerItem>
             <GlassPanel>
-              <ChartContainer title={t('driveScore.scoreTrend', 'Score Trend')} height={300}>
+              <ChartContainer
+                title={t('driveScore.scoreTrend', 'Score Trend')}
+                height={300}
+                annotations={annotations}
+                isAnnotating={isAnnotating}
+                onAnnotateToggle={() => setIsAnnotating((v) => !v)}
+                onRemoveAnnotation={removeAnnotation}
+              >
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={trendChartData}>
+                  <LineChart data={trendChartData} onClick={handleAnnotateChartClick}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                     <XAxis dataKey="date" stroke="#94a3b8" fontSize={12} />
                     <YAxis domain={[0, 100]} stroke="#94a3b8" fontSize={12} />
@@ -1036,6 +1071,7 @@ export default function DriveScorePage() {
                         fontSize: 11,
                       }}
                     />
+                    {renderAnnotationLines(annotations, (ts) => ts)}
                     <Line
                       type="monotone"
                       dataKey="score"
@@ -1075,6 +1111,12 @@ export default function DriveScorePage() {
                   </LineChart>
                 </ResponsiveContainer>
               </ChartContainer>
+              <AddAnnotationPopover
+                open={pendingTimestamp != null}
+                timestamp={pendingTimestamp ?? ''}
+                onAdd={handleAddAnnotation}
+                onCancel={() => setPendingTimestamp(null)}
+              />
             </GlassPanel>
           </StaggerItem>
 

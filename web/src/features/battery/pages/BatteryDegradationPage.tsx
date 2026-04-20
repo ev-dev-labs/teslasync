@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Battery, TrendingDown, Zap, Thermometer,
@@ -9,7 +9,7 @@ import { PageContainer, Grid } from '@/components/layout';
 import { GlassPanel, Badge, Select, DataTable, type Column } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import {
-  RadialGauge, ChartTooltip,
+  RadialGauge, ChartTooltip, renderAnnotationLines, AddAnnotationPopover, AnnotationList,
   chartGrid, axisTickSm, CHART_COLORS,
   AreaChart, Area, ComposedChart, Line,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, ReferenceLine,
@@ -20,6 +20,7 @@ import { FadeIn } from '@/components/motion';
 import { useBatteryHealthAnalytics, useBatteryDegradation } from '@/api/hooks/useEnergy';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useAnnotations } from '@/hooks/useAnnotations';
 import { formatDate } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -107,6 +108,34 @@ export default function BatteryDegradationPage() {
 
   /* Degradation data (for prediction, risk factors, trend) */
   const { data: degradation } = useBatteryDegradation(activeIdStr);
+
+  /* Annotations */
+  const { annotations, addAnnotation, removeAnnotation } = useAnnotations(
+    'battery-degradation',
+    activeId,
+  );
+  const [isAnnotating, setIsAnnotating] = useState(false);
+  const [pendingTimestamp, setPendingTimestamp] = useState<string | null>(null);
+
+  const handleChartClick = useCallback(
+    (state: { activeLabel?: string }) => {
+      if (isAnnotating && state?.activeLabel) {
+        setPendingTimestamp(String(state.activeLabel));
+      }
+    },
+    [isAnnotating],
+  );
+
+  const handleAddAnnotation = useCallback(
+    (label: string, category: Parameters<typeof addAnnotation>[2], description?: string) => {
+      if (pendingTimestamp) {
+        addAnnotation(pendingTimestamp, label, category, description);
+        setPendingTimestamp(null);
+        setIsAnnotating(false);
+      }
+    },
+    [pendingTimestamp, addAnnotation],
+  );
 
   /* Chart data */
   const rangeData = useMemo(() => {
@@ -349,72 +378,98 @@ export default function BatteryDegradationPage() {
       {/* ── Health Trend & Projection ─────────────────── */}
       {projectionChartData.length > 0 ? (
         <FadeIn delay={0.15}>
-          <GlassPanel className="p-6">
-            <div className="mb-4 text-sm font-semibold">
-              {t('battery.degradation.trendTitle', 'Health Trend & Projection')}
+          <GlassPanel className={cn('p-6', isAnnotating && 'ring-1 ring-blue-400/30')}>
+            <div className="mb-4 flex items-center justify-between">
+              <span className="text-sm font-semibold">
+                {t('battery.degradation.trendTitle', 'Health Trend & Projection')}
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsAnnotating((v) => !v)}
+                className={cn(
+                  'rounded p-1 text-xs transition-colors',
+                  isAnnotating
+                    ? 'text-blue-400'
+                    : 'text-white/30 hover:text-white/50',
+                )}
+                aria-label={t('annotation.toggle', 'Toggle annotations')}
+                title={isAnnotating ? t('annotation.clickChart', 'Click on chart to annotate') : t('annotation.enable', 'Enable annotations')}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/></svg>
+              </button>
             </div>
-            <ResponsiveContainer width="100%" height={300}>
-              <ComposedChart data={projectionChartData}>
-                {chartGrid}
-                <defs>
-                  <linearGradient id="ciBand" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#a855f7" stopOpacity={0.18} />
-                    <stop offset="100%" stopColor="#a855f7" stopOpacity={0.04} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="label" tick={axisTickSm} tickLine={false} axisLine={false} />
-                <YAxis domain={[60, 100]} tick={axisTickSm} tickLine={false} axisLine={false} unit="%" />
-                <Tooltip content={<ChartTooltip />} />
-                <Legend />
-                <ReferenceLine
-                  y={80}
-                  stroke="#f59e0b"
-                  strokeDasharray="6 4"
-                  label={{ value: t('battery.degradation.warranty', '80% Warranty'), fill: '#f59e0b', fontSize: 11, position: 'insideTopRight' }}
-                />
-                <ReferenceLine y={70} stroke="#ef4444" strokeDasharray="6 4" />
-                {/* Confidence band (stacked areas: transparent base + visible band) */}
-                <Area
-                  type="monotone"
-                  dataKey="confidence_low"
-                  stackId="ci"
-                  stroke="none"
-                  fill="transparent"
-                  fillOpacity={0}
-                  legendType="none"
-                  connectNulls={false}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="confidence_band"
-                  stackId="ci"
-                  stroke="none"
-                  fill="url(#ciBand)"
-                  name={t('battery.degradation.confidence', '95% Confidence')}
-                  connectNulls={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="health"
-                  name={t('battery.degradation.actualHealth', 'Actual Health %')}
-                  stroke="#10b981"
-                  strokeWidth={2.5}
-                  dot={{ fill: '#10b981', r: 3 }}
-                  connectNulls={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="projected"
-                  name={t('battery.degradation.projected', 'Projected %')}
-                  stroke="#a855f7"
-                  strokeWidth={2}
-                  strokeDasharray="8 4"
-                  dot={false}
-                  connectNulls={false}
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
+            <div className={isAnnotating ? 'cursor-crosshair' : undefined}>
+              <ResponsiveContainer width="100%" height={300}>
+                <ComposedChart data={projectionChartData} onClick={handleChartClick}>
+                  {chartGrid}
+                  <defs>
+                    <linearGradient id="ciBand" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#a855f7" stopOpacity={0.18} />
+                      <stop offset="100%" stopColor="#a855f7" stopOpacity={0.04} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="label" tick={axisTickSm} tickLine={false} axisLine={false} />
+                  <YAxis domain={[60, 100]} tick={axisTickSm} tickLine={false} axisLine={false} unit="%" />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Legend />
+                  <ReferenceLine
+                    y={80}
+                    stroke="#f59e0b"
+                    strokeDasharray="6 4"
+                    label={{ value: t('battery.degradation.warranty', '80% Warranty'), fill: '#f59e0b', fontSize: 11, position: 'insideTopRight' }}
+                  />
+                  <ReferenceLine y={70} stroke="#ef4444" strokeDasharray="6 4" />
+                  {renderAnnotationLines(annotations, (ts) => ts)}
+                  {/* Confidence band (stacked areas: transparent base + visible band) */}
+                  <Area
+                    type="monotone"
+                    dataKey="confidence_low"
+                    stackId="ci"
+                    stroke="none"
+                    fill="transparent"
+                    fillOpacity={0}
+                    legendType="none"
+                    connectNulls={false}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="confidence_band"
+                    stackId="ci"
+                    stroke="none"
+                    fill="url(#ciBand)"
+                    name={t('battery.degradation.confidence', '95% Confidence')}
+                    connectNulls={false}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="health"
+                    name={t('battery.degradation.actualHealth', 'Actual Health %')}
+                    stroke="#10b981"
+                    strokeWidth={2.5}
+                    dot={{ fill: '#10b981', r: 3 }}
+                    connectNulls={false}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="projected"
+                    name={t('battery.degradation.projected', 'Projected %')}
+                    stroke="#a855f7"
+                    strokeWidth={2}
+                    strokeDasharray="8 4"
+                    dot={false}
+                    connectNulls={false}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+            <AnnotationList annotations={annotations} onRemove={removeAnnotation} />
           </GlassPanel>
+          <AddAnnotationPopover
+            open={pendingTimestamp != null}
+            timestamp={pendingTimestamp ?? ''}
+            onAdd={handleAddAnnotation}
+            onCancel={() => setPendingTimestamp(null)}
+          />
         </FadeIn>
       ) : (
         <Skeleton height={280} />
