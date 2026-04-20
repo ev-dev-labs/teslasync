@@ -44,7 +44,7 @@ function ServiceRow({ label, status }: { label: string; status: ServiceStatus })
 
 export default function UptimeMonitorWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { data, isLoading, error } = useSystemHealth();
+  const { data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useSystemHealth();
 
   const isCompact = size.cols === 1 && size.rows === 1;
   const isTall = size.rows >= 2;
@@ -71,6 +71,11 @@ export default function UptimeMonitorWidget({ size }: WidgetProps) {
       icon={<Activity className="h-3.5 w-3.5 text-neon-green" />}
       loading={isLoading}
       error={error ? String(error) : null}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
     >
       {data ? (
         <div className="flex flex-col gap-2 h-full">

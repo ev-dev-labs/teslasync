@@ -89,7 +89,7 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { convertSpeed, speedUnit } = useSettings();
 
-  const { data: drives, isLoading, error } = useQuery({
+  const { data: drives, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useQuery({
     queryKey: ['drives', id, 'speed-heatmap'],
     queryFn: () => request<Drive[]>(`/drives?vehicle_id=${id}&limit=200`),
     enabled: id > 0,
@@ -124,7 +124,7 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
   // Compact: show peak speed metric
   if (isCompact) {
     return (
-      <WidgetShell loading={isLoading} error={error ? String(error) : null}>
+      <WidgetShell loading={isLoading} error={error ? String(error) : null} updatedAt={dataUpdatedAt} isFetching={isFetching} isStale={isStale} isError={isError} onRefresh={() => refetch()}>
         <div className="h-full flex flex-col items-center justify-center gap-0.5">
           <span className="text-2xl font-bold text-white/90">
             {maxSpeed > 0 ? fmtNumber(maxSpeed, 0) : '—'}
@@ -146,6 +146,11 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
       loading={isLoading}
       error={error ? String(error) : null}
       noPadding
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
     >
       {totalDrives > 0 ? (
         <div className="h-full w-full flex flex-col min-h-0 px-3 pb-2">

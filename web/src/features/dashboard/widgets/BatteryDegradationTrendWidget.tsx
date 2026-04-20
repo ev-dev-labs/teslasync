@@ -20,7 +20,7 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
   const id = vehicleId ?? vehicles?.[0]?.id ?? null;
   const idStr = id != null ? String(id) : null;
 
-  const { data, isLoading } = useBatteryDegradation(idStr);
+  const { data, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useBatteryDegradation(idStr);
 
   const chartData = useMemo(() => {
     const trend = data?.monthly_trend ?? [];
@@ -47,6 +47,11 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
       title={isCompact ? undefined : t('widget.batteryDegradation', 'Battery Degradation')}
       icon={isCompact ? undefined : <TrendingDown className="h-3.5 w-3.5 text-neon-amber" />}
       loading={isLoading}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
     >
       {currentHealth != null || chartData.length > 0 ? (
         isCompact ? (

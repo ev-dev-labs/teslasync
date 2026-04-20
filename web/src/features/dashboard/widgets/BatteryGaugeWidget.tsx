@@ -10,7 +10,7 @@ export default function BatteryGaugeWidget({ vehicleId }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { data: stateData, isLoading } = useVehicleState(id);
+  const { data: stateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id);
   const state = stateData?.state;
 
   const batteryColor = () => {
@@ -21,7 +21,14 @@ export default function BatteryGaugeWidget({ vehicleId }: WidgetProps) {
   };
 
   return (
-    <WidgetShell loading={isLoading}>
+    <WidgetShell
+      loading={isLoading}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
+    >
       <div className="h-full flex flex-col items-center justify-center">
         {state ? (
           <>

@@ -16,7 +16,7 @@ export default function OdometerCounterWidget({ vehicleId, size }: WidgetProps) 
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const idStr = id > 0 ? String(id) : undefined;
 
-  const { data: stateData, isLoading: stateLoading } = useVehicleState(id);
+  const { data: stateData, isLoading: stateLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id);
   const { data: stats, isLoading: statsLoading } = useDrivingStats(idStr);
   const { convertDistance, distanceUnit } = useSettings();
 
@@ -42,6 +42,11 @@ export default function OdometerCounterWidget({ vehicleId, size }: WidgetProps) 
       title={isCompact ? undefined : t('widget.odometer.title', 'Odometer')}
       icon={isCompact ? undefined : <Gauge className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
     >
       {convertedOdometer != null ? (
         isCompact ? (

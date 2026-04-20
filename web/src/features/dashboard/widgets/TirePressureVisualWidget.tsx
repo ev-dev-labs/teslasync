@@ -96,7 +96,7 @@ export default function TirePressureVisualWidget({ vehicleId, size }: WidgetProp
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { data: tireData, isLoading, error } = useLatestTirePressure(id, 10_000);
+  const { data: tireData, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useLatestTirePressure(id, 10_000);
   const { convertPressure, pressureUnit } = useSettings();
 
   const isCompact = size.cols <= 1;
@@ -128,6 +128,11 @@ export default function TirePressureVisualWidget({ vehicleId, size }: WidgetProp
       icon={<CircleDot className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
       error={error ? String(error) : null}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
     >
       {tireData ? (
         <div className="h-full flex flex-col gap-2">

@@ -13,7 +13,7 @@ export default function SoftwareUpdateStatusWidget({ vehicleId, size }: WidgetPr
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { data: stateData, isLoading: stateLoading } = useVehicleState(id);
+  const { data: stateData, isLoading: stateLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id);
   const { data: configData, isLoading: configLoading } = useVehicleConfigLatest(id, 60_000);
 
   const isLoading = stateLoading || configLoading;
@@ -41,6 +41,11 @@ export default function SoftwareUpdateStatusWidget({ vehicleId, size }: WidgetPr
       title={isCompact ? undefined : t('widget.softwareUpdate', 'Software Update')}
       icon={isCompact ? undefined : <MonitorSmartphone className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
     >
       {state ? (
         <FadeIn>

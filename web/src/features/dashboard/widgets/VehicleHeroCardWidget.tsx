@@ -19,7 +19,7 @@ export default function VehicleHeroCardWidget({ vehicleId, size }: WidgetProps) 
     : vehicles?.[0];
 
   const id = vehicle?.id ?? 0;
-  const { data: stateData, isLoading } = useVehicleState(id);
+  const { data: stateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id);
   const state = stateData?.state;
   const { convertDistance, convertTemp, distanceUnit, tempUnit } = useSettings();
 
@@ -54,6 +54,11 @@ export default function VehicleHeroCardWidget({ vehicleId, size }: WidgetProps) 
       title={isCompact ? undefined : t('widget.vehicleHeroCard', 'Vehicle')}
       icon={isCompact ? undefined : <Car className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
     >
       {vehicle ? (
         <FadeIn>

@@ -122,7 +122,7 @@ export default function LiveSignalSparklinesWidget({ vehicleId, config, size }: 
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
 
   const { data: availableSignals, isLoading: signalsLoading } = useSignals(id);
-  const { data: liveData, isLoading: liveLoading } = useSignalGaps(id);
+  const { data: liveData, isLoading: liveLoading, isFetching: liveFetching, isStale: liveStale, isError: liveError, dataUpdatedAt: liveUpdatedAt, refetch: refetchLive } = useSignalGaps(id);
 
   const isLoading = signalsLoading || liveLoading;
 
@@ -151,6 +151,11 @@ export default function LiveSignalSparklinesWidget({ vehicleId, config, size }: 
       title={t('widget.liveSparklines', 'Live Signal Sparklines')}
       icon={<Activity className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
+      updatedAt={liveUpdatedAt}
+      isFetching={liveFetching}
+      isStale={liveStale}
+      isError={liveError}
+      onRefresh={() => refetchLive()}
     >
       {configuredSignals.length === 0 ? (
         <EmptyState

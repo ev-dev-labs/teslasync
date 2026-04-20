@@ -20,7 +20,7 @@ export default function ClimateStatusWidget({ vehicleId }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { data: climateData, isLoading } = useClimateLatest(id, 5_000);
+  const { data: climateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useClimateLatest(id, 5_000);
   const { convertTemp, tempUnit } = useSettings();
 
   return (
@@ -28,6 +28,11 @@ export default function ClimateStatusWidget({ vehicleId }: WidgetProps) {
       title={t('widget.climate', 'Climate')}
       icon={<Thermometer className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
     >
       {climateData ? (
         <div className="space-y-2.5">

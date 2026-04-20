@@ -35,7 +35,7 @@ export default function DriveScoreGaugeWidget({ vehicleId, size }: WidgetProps) 
   const vid = vehicleId ?? vehicles?.[0]?.id;
   const vehicleIdStr = vid != null ? String(vid) : undefined;
 
-  const { data: score, isLoading, error } = useDriveScore(vehicleIdStr);
+  const { data: score, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useDriveScore(vehicleIdStr);
 
   const overall = score?.overall ?? 0;
   const color = useMemo(() => scoreColor(overall), [overall]);
@@ -55,7 +55,15 @@ export default function DriveScoreGaugeWidget({ vehicleId, size }: WidgetProps) 
   // Compact: radial gauge only
   if (isCompact) {
     return (
-      <WidgetShell loading={isLoading} error={error ? String(error) : null}>
+      <WidgetShell
+        loading={isLoading}
+        error={error ? String(error) : null}
+        updatedAt={dataUpdatedAt}
+        isFetching={isFetching}
+        isStale={isStale}
+        isError={isError}
+        onRefresh={() => refetch()}
+      >
         <div className="h-full flex flex-col items-center justify-center">
           {score ? (
             <RadialGauge
@@ -84,6 +92,11 @@ export default function DriveScoreGaugeWidget({ vehicleId, size }: WidgetProps) 
       icon={<Gauge className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
       error={error ? String(error) : null}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
     >
       {score ? (
         <div className="h-full flex flex-col gap-3">

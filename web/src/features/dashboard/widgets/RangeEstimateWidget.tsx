@@ -11,12 +11,12 @@ export default function RangeEstimateWidget({ vehicleId }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { data: stateData, isLoading } = useVehicleState(id);
+  const { data: stateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id);
   const { convertDistance, distanceUnit } = useSettings();
   const state = stateData?.state;
 
   return (
-    <WidgetShell loading={isLoading}>
+    <WidgetShell loading={isLoading} updatedAt={dataUpdatedAt} isFetching={isFetching} isStale={isStale} isError={isError} onRefresh={() => refetch()}>
       <div className="h-full flex flex-col justify-center">
         {state ? (
           <div className="space-y-3">

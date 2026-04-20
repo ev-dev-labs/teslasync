@@ -10,7 +10,7 @@ export default function EnergyFlowWidget({ vehicleId }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { data: stateData, isLoading } = useVehicleState(id, { refetchInterval: 5_000 });
+  const { data: stateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id, { refetchInterval: 5_000 });
   const state = stateData?.state;
 
   const power = state?.power ?? 0;
@@ -23,6 +23,11 @@ export default function EnergyFlowWidget({ vehicleId }: WidgetProps) {
       title={t('widget.energyFlow', 'Energy Flow')}
       icon={<Activity className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
     >
       {state ? (
         <div className="h-full flex flex-col items-center justify-center gap-4">

@@ -21,7 +21,7 @@ export default function DigitalTwinMiniWidget({ vehicleId, size }: WidgetProps) 
   const id = vehicle?.id ?? 0;
 
   const { data: securityData, isLoading: secLoading } = useSecurityLatest(id, REFRESH_INTERVAL);
-  const { data: vehicleStateData, isLoading: stateLoading } = useVehicleState(id, { refetchInterval: REFRESH_INTERVAL });
+  const { data: vehicleStateData, isLoading: stateLoading, isFetching: stateFetching, isStale: stateStale, isError: stateError, dataUpdatedAt: stateUpdatedAt, refetch: refetchState } = useVehicleState(id, { refetchInterval: REFRESH_INTERVAL });
   const { data: chargingData } = useChargingTelemetryLatest(id, REFRESH_INTERVAL);
 
   const isLoading = secLoading || stateLoading;
@@ -39,6 +39,11 @@ export default function DigitalTwinMiniWidget({ vehicleId, size }: WidgetProps) 
       title={t('widget.digitalTwinMini', 'Digital Twin')}
       icon={<Monitor className="h-3.5 w-3.5 text-neon-purple" />}
       loading={isLoading}
+      updatedAt={stateUpdatedAt}
+      isFetching={stateFetching}
+      isStale={stateStale}
+      isError={stateError}
+      onRefresh={() => refetchState()}
       noPadding
       actions={
         <Link

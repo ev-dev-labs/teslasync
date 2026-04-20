@@ -10,7 +10,7 @@ import type { WidgetProps } from './types';
 
 export default function DriveScoreWidget(_props: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { data: analytics, isLoading } = useFleetAnalytics(7);
+  const { data: analytics, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useFleetAnalytics(7);
   const { convertEfficiency, efficiencyUnit } = useSettings();
 
   // Derive a score from efficiency (lower Wh/mi = better score)
@@ -18,7 +18,14 @@ export default function DriveScoreWidget(_props: WidgetProps) {
   const score = efficiency > 0 ? Math.min(100, Math.round((250 / efficiency) * 100)) : 0;
 
   return (
-    <WidgetShell loading={isLoading}>
+    <WidgetShell
+      loading={isLoading}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
+    >
       <div className="h-full flex flex-col items-center justify-center">
         {analytics ? (
           <>

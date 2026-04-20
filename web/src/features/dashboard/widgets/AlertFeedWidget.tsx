@@ -35,7 +35,7 @@ function buildSubtitle(alert: Alert, isWide: boolean): string {
 
 export default function AlertFeedWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { data: alerts, isLoading, error } = useAlerts();
+  const { data: alerts, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useAlerts();
 
   const isWide = size.cols >= 3;
   const isTall = size.rows >= 2;
@@ -54,6 +54,11 @@ export default function AlertFeedWidget({ size }: WidgetProps) {
       icon={<Bell className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
       error={error ? String(error) : null}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
     >
       <div className="space-y-0 overflow-y-auto h-full">
         {items.length > 0 ? (

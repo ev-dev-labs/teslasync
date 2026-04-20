@@ -19,7 +19,7 @@ export default function SecurityStatusWidget({ vehicleId }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { data: securityData, isLoading } = useSecurityLatest(id, 5_000);
+  const { data: securityData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useSecurityLatest(id, 5_000);
 
   const doorStates = (securityData?.door_state ?? '')
     .split(',')
@@ -39,6 +39,11 @@ export default function SecurityStatusWidget({ vehicleId }: WidgetProps) {
       title={t('widget.security', 'Security')}
       icon={<Shield className="h-3.5 w-3.5 text-neon-green" />}
       loading={isLoading}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
     >
       {securityData ? (
         <div className="space-y-2.5">

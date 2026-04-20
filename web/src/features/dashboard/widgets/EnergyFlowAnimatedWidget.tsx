@@ -124,7 +124,7 @@ export default function EnergyFlowAnimatedWidget({ vehicleId, size }: WidgetProp
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { data: stateData, isLoading } = useVehicleState(id, { refetchInterval: 5_000 });
+  const { data: stateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id, { refetchInterval: 5_000 });
   const state = stateData?.state;
 
   const power = state?.power ?? 0;
@@ -147,6 +147,11 @@ export default function EnergyFlowAnimatedWidget({ vehicleId, size }: WidgetProp
       title={t('widget.energyFlowAnimated.title', 'Energy Flow')}
       icon={<Zap className="h-3.5 w-3.5 text-cyan-400" />}
       loading={isLoading}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
       noPadding
     >
       {state ? (

@@ -87,7 +87,7 @@ export default function SentryEventLogWidget({ vehicleId, size }: WidgetProps) {
   const isTall = size.rows >= 2;
   const eventLimit = isWide ? 10 : isTall ? 7 : 4;
 
-  const { data: events, isLoading } = useQuery({
+  const { data: events, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useQuery({
     queryKey: ['security-events', id, `sentry-log-${eventLimit}`],
     queryFn: () => request<SecurityEvent[]>(`/security?vehicle_id=${id}&limit=${eventLimit}`),
     enabled: id > 0,
@@ -101,6 +101,11 @@ export default function SentryEventLogWidget({ vehicleId, size }: WidgetProps) {
       title={t('widget.sentryEventLog', 'Sentry Event Log')}
       icon={<Shield className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
     >
       <div className="space-y-0 overflow-y-auto h-full">
         {items.length > 0 ? (

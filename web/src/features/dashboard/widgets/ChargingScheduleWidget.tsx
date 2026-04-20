@@ -80,7 +80,7 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
 
   const { data: stateData, isLoading: stateLoading } = useVehicleState(id);
 
-  const { data: liveSignals, isLoading: signalsLoading } = useQuery({
+  const { data: liveSignals, isLoading: signalsLoading, isFetching: signalsFetching, isStale: signalsStale, isError: signalsError, dataUpdatedAt: signalsUpdatedAt, refetch: refetchSignals } = useQuery({
     queryKey: ['signals', id, 'live-schedule'],
     queryFn: async () => {
       const res = await request<{
@@ -109,7 +109,14 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
 
   if (isCompact) {
     return (
-      <WidgetShell loading={isLoading}>
+      <WidgetShell
+        loading={isLoading}
+        updatedAt={signalsUpdatedAt}
+        isFetching={signalsFetching}
+        isStale={signalsStale}
+        isError={signalsError}
+        onRefresh={() => refetchSignals()}
+      >
         {hasScheduleData ? (
           <div className="h-full flex flex-col items-center justify-center gap-1">
             <span className="text-2xl font-bold text-white/90">
@@ -171,6 +178,11 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
       title={t('widget.chargingSchedule.title', 'Charging Schedule')}
       icon={<Calendar className="h-3.5 w-3.5 text-cyan-400" />}
       loading={isLoading}
+      updatedAt={signalsUpdatedAt}
+      isFetching={signalsFetching}
+      isStale={signalsStale}
+      isError={signalsError}
+      onRefresh={() => refetchSignals()}
     >
       {hasScheduleData ? (
         <div className="h-full flex flex-col gap-3">

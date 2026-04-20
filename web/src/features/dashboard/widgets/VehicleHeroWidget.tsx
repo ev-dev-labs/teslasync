@@ -13,7 +13,7 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
     : vehicles?.[0];
 
   const id = vehicle?.id ?? 0;
-  const { data: stateData } = useVehicleState(id);
+  const { data: stateData, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id);
   const { state: live } = useVehicleLive(vehicle?.id);
   const {
     convertDistance, convertSpeed, convertTemp,
@@ -24,7 +24,7 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
     live.version || live.swUpdateVersion || stateData?.state?.software_version || '—';
 
   return (
-    <WidgetShell loading={!vehicle} noPadding>
+    <WidgetShell loading={!vehicle} noPadding updatedAt={dataUpdatedAt} isFetching={isFetching} isStale={isStale} isError={isError} onRefresh={() => refetch()}>
       {vehicle && (
         <VehicleHero
           vehicle={vehicle as unknown as Vehicle}

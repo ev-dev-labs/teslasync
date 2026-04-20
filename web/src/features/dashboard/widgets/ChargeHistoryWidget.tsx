@@ -14,7 +14,7 @@ export default function ChargeHistoryWidget({ vehicleId }: WidgetProps) {
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
 
-  const { data: charges, isLoading } = useQuery({
+  const { data: charges, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useQuery({
     queryKey: ['charging', id, 'recent-10'],
     queryFn: () => request<ChargingSession[]>(`/charging?vehicle_id=${id}&limit=10`),
     enabled: id > 0,
@@ -32,6 +32,11 @@ export default function ChargeHistoryWidget({ vehicleId }: WidgetProps) {
       title={t('widget.chargeHistory', 'Charge History')}
       icon={<BarChart3 className="h-3.5 w-3.5 text-neon-green" />}
       loading={isLoading}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
     >
       <div className="h-full min-h-0">
         {chartData.length > 1 ? (

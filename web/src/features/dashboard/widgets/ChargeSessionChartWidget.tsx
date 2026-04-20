@@ -42,7 +42,7 @@ export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProp
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
 
-  const { data: sessions, isLoading, error } = useQuery({
+  const { data: sessions, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useQuery({
     queryKey: ['charging', id, 'session-chart-10'],
     queryFn: () => request<ChargingSession[]>(`/charging?vehicle_id=${id}&limit=10`),
     enabled: id > 0,
@@ -71,7 +71,15 @@ export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProp
   if (isCompact) {
     const totalEnergy = chartData.reduce((sum, d) => sum + d.energy, 0);
     return (
-      <WidgetShell loading={isLoading} error={error ? String(error) : null}>
+      <WidgetShell
+        loading={isLoading}
+        error={error ? String(error) : null}
+        updatedAt={dataUpdatedAt}
+        isFetching={isFetching}
+        isStale={isStale}
+        isError={isError}
+        onRefresh={() => refetch()}
+      >
         <div className="h-full flex flex-col items-center justify-center gap-0.5">
           <span className="text-2xl font-bold text-white/90">{fmt(totalEnergy, 1)}</span>
           <span className="text-[10px] text-white/40 uppercase tracking-wider">
@@ -88,6 +96,11 @@ export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProp
       icon={<Zap className="h-3.5 w-3.5 text-emerald-400" />}
       loading={isLoading}
       error={error ? String(error) : null}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
       noPadding
     >
       {chartData.length > 0 ? (

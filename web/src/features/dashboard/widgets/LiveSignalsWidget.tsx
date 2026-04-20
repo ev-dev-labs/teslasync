@@ -32,7 +32,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const opts = { enabled: id > 0, refetchInterval: 5_000 } as const;
 
-  const { data: motor } = useMotorLatest(id, opts.refetchInterval);
+  const { data: motor, isFetching: motorFetching, isStale: motorStale, isError: motorError, dataUpdatedAt: motorUpdatedAt, refetch: refetchMotor } = useMotorLatest(id, opts.refetchInterval);
   const { data: climate } = useClimateLatest(id, opts.refetchInterval);
   const { data: security } = useSecurityLatest(id, opts.refetchInterval);
   const { data: tires } = useLatestTirePressure(id, opts.refetchInterval);
@@ -44,6 +44,11 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
     <WidgetShell
       title={t('widget.liveSignals', 'Live Signals')}
       icon={<Wifi className="h-3.5 w-3.5 text-neon-cyan" />}
+      updatedAt={motorUpdatedAt}
+      isFetching={motorFetching}
+      isStale={motorStale}
+      isError={motorError}
+      onRefresh={() => refetchMotor()}
     >
       {!hasData ? (
         <EmptyState

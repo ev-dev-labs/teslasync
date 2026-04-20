@@ -27,7 +27,7 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { data: media, isLoading } = useMediaLatest(id, 5_000);
+  const { data: media, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useMediaLatest(id, 5_000);
 
   const isCompact = size.cols === 1 && size.rows === 1;
   const isTall = size.rows >= 2;
@@ -49,6 +49,11 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
       title={isCompact ? undefined : t('widget.nowPlaying', 'Now Playing')}
       icon={<Music className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
     >
       {media ? (
         isCompact ? (

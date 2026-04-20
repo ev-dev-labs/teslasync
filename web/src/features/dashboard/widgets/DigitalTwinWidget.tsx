@@ -14,7 +14,7 @@ export default function DigitalTwinWidget({ vehicleId }: WidgetProps) {
     ? vehicles?.find((v) => v.id === vehicleId) ?? vehicles?.[0]
     : vehicles?.[0];
   const id = vehicle?.id ?? 0;
-  const { data: stateData, isLoading } = useVehicleState(id);
+  const { data: stateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id);
   const { data: security } = useSecurityLatest(id, 5_000);
   const state = stateData?.state;
 
@@ -36,6 +36,11 @@ export default function DigitalTwinWidget({ vehicleId }: WidgetProps) {
       title={t('widget.digitalTwin', 'Digital Twin')}
       icon={<Monitor className="h-3.5 w-3.5 text-neon-purple" />}
       loading={isLoading}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
       actions={
         <Link
           to="/digital-twin"

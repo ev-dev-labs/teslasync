@@ -101,7 +101,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { convertEfficiency, efficiencyUnit } = useSettings();
 
-  const { data: drives, isLoading, error } = useQuery({
+  const { data: drives, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useQuery({
     queryKey: ['drives', id, 'efficiency-chart-60'],
     queryFn: () => request<Drive[]>(`/drives?vehicle_id=${id}&limit=60`),
     enabled: id > 0,
@@ -146,7 +146,15 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
   // Compact: show single efficiency metric
   if (isCompact) {
     return (
-      <WidgetShell loading={isLoading} error={error ? String(error) : null}>
+      <WidgetShell
+        loading={isLoading}
+        error={error ? String(error) : null}
+        updatedAt={dataUpdatedAt}
+        isFetching={isFetching}
+        isStale={isStale}
+        isError={isError}
+        onRefresh={() => refetch()}
+      >
         <div className="h-full flex flex-col items-center justify-center gap-0.5">
           <span className="text-2xl font-bold text-white/90">
             {overallAvg != null ? fmt(overallAvg, 0) : '—'}
@@ -165,6 +173,11 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
       icon={<TrendingUp className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
       error={error ? String(error) : null}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
       noPadding
     >
       {displayData.length > 0 ? (

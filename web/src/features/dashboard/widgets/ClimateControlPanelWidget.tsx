@@ -15,7 +15,7 @@ export default function ClimateControlPanelWidget({ vehicleId, size }: WidgetPro
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { data: climateData, isLoading } = useClimateLatest(id, 5_000);
+  const { data: climateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useClimateLatest(id, 5_000);
   const { convertTemp, tempUnit } = useSettings();
 
   const isCompact = size.cols <= 1 && size.rows <= 1;
@@ -51,6 +51,11 @@ export default function ClimateControlPanelWidget({ vehicleId, size }: WidgetPro
       title={isCompact ? undefined : t('widget.climatePanel.title', 'Climate Control')}
       icon={isCompact ? undefined : <Thermometer className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
     >
       {climateData ? (
         isCompact ? (

@@ -168,7 +168,7 @@ function FullView({
 
 export default function AutomationStatusWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { data: automations, isLoading, error } = useAutomations();
+  const { data: automations, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useAutomations();
 
   const items = automations ?? [];
   const isCompact = size.cols <= 1 || size.rows <= 1;
@@ -184,6 +184,11 @@ export default function AutomationStatusWidget({ size }: WidgetProps) {
       }
       loading={isLoading}
       error={error ? String(error) : null}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
     >
       {items.length > 0 ? (
         <FadeIn>

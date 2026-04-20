@@ -77,7 +77,7 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
     return d.toISOString();
   }, []);
 
-  const { data: sessions, isLoading, error } = useQuery({
+  const { data: sessions, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useQuery({
     queryKey: ['charging', id, 'cost-tracker-30d', thirtyDaysAgo],
     queryFn: () =>
       request<ChargingSession[]>(
@@ -105,7 +105,15 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
   // Compact: single big metric (total cost)
   if (isCompact) {
     return (
-      <WidgetShell loading={isLoading} error={error ? String(error) : null}>
+      <WidgetShell
+        loading={isLoading}
+        error={error ? String(error) : null}
+        updatedAt={dataUpdatedAt}
+        isFetching={isFetching}
+        isStale={isStale}
+        isError={isError}
+        onRefresh={() => refetch()}
+      >
         {hasData ? (
           <div className="h-full flex flex-col items-center justify-center gap-0.5">
             <span className="text-2xl font-bold text-white/90">
@@ -132,6 +140,11 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
       icon={<DollarSign className="h-3.5 w-3.5 text-emerald-400" />}
       loading={isLoading}
       error={error ? String(error) : null}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
     >
       {hasData ? (
         <div className="space-y-2">

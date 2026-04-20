@@ -98,7 +98,7 @@ export default function DoorWindowStatusWidget({ vehicleId, size }: WidgetProps)
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { data: securityData, isLoading, error } = useSecurityLatest(id, 5_000);
+  const { data: securityData, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useSecurityLatest(id, 5_000);
 
   const isCompact = size.cols === 1 && size.rows === 1;
   const isTall = size.rows >= 2;
@@ -121,6 +121,11 @@ export default function DoorWindowStatusWidget({ vehicleId, size }: WidgetProps)
       icon={<DoorOpen className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
       error={error ? String(error) : null}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
     >
       {securityData ? (
         isCompact ? (

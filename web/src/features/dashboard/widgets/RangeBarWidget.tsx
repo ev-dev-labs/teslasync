@@ -12,7 +12,7 @@ export default function RangeBarWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { data: stateData, isLoading } = useVehicleState(id);
+  const { data: stateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id);
   const { convertDistance, distanceUnit } = useSettings();
   const state = stateData?.state;
 
@@ -32,6 +32,11 @@ export default function RangeBarWidget({ vehicleId, size }: WidgetProps) {
       title={isCompact ? undefined : t('widget.rangeBar', 'Range')}
       icon={isCompact ? undefined : <Gauge className="h-3 w-3 text-white/40" />}
       loading={isLoading}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
     >
       {hasData ? (
         isCompact ? (

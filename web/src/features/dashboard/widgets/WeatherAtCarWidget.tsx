@@ -18,7 +18,7 @@ export default function WeatherAtCarWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { data: stateData, isLoading } = useVehicleState(id, { refetchInterval: 30_000 });
+  const { data: stateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id, { refetchInterval: 30_000 });
   const { convertTemp, tempUnit } = useSettings();
 
   const state = stateData?.state;
@@ -31,6 +31,11 @@ export default function WeatherAtCarWidget({ vehicleId, size }: WidgetProps) {
       title={isCompact ? undefined : t('widget.weatherAtCar', 'Weather at Car')}
       icon={!isCompact ? <CloudSun className="h-3.5 w-3.5 text-neon-cyan" /> : undefined}
       loading={isLoading}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
     >
       {hasData ? (
         isCompact ? (

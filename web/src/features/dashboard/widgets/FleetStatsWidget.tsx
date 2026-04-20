@@ -10,7 +10,7 @@ import type { Drive, ChargingSession } from '../types';
 
 export default function FleetStatsWidget(_props: WidgetProps) {
   const { data: vehicles } = useVehicles();
-  const { data: analytics } = useFleetAnalytics(30);
+  const { data: analytics, isFetching: analyticsFetching, isStale: analyticsStale, isError: analyticsError, dataUpdatedAt: analyticsUpdatedAt, refetch: refetchAnalytics } = useFleetAnalytics(30);
   const {
     convertDistance, convertEfficiency, distanceUnit, efficiencyUnit,
   } = useSettings();
@@ -31,7 +31,7 @@ export default function FleetStatsWidget(_props: WidgetProps) {
   const onlineCount = vehicles?.filter((v) => v.state === 'online').length ?? 0;
 
   return (
-    <WidgetShell noPadding>
+    <WidgetShell noPadding updatedAt={analyticsUpdatedAt} isFetching={analyticsFetching} isStale={analyticsStale} isError={analyticsError} onRefresh={() => refetchAnalytics()}>
       <FleetStatsBar
         analytics={analytics as Parameters<typeof FleetStatsBar>[0]['analytics']}
         vehicleCount={vehicleCount}

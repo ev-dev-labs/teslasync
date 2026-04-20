@@ -16,7 +16,7 @@ export default function ChargeStatusLiveWidget({ vehicleId, size }: WidgetProps)
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
 
-  const { data: stateData, isLoading: stateLoading } = useVehicleState(id, {
+  const { data: stateData, isLoading: stateLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id, {
     refetchInterval: 5_000,
   });
   const { data: sessions, isLoading: sessionsLoading } = useChargingSessionsPaginated(
@@ -64,6 +64,11 @@ export default function ChargeStatusLiveWidget({ vehicleId, size }: WidgetProps)
         )
       }
       loading={isLoading}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
     >
       {state ? (
         state.is_charging ? (

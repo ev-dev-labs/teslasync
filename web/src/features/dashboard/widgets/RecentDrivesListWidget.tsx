@@ -34,7 +34,7 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
   const isTall = size.rows >= 2;
   const driveLimit = isWide ? 10 : isTall ? 7 : 5;
 
-  const { data: drives, isLoading } = useQuery({
+  const { data: drives, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useQuery({
     queryKey: ['drives', id, `recent-list-${driveLimit}`],
     queryFn: () => request<Drive[]>(`/drives?vehicle_id=${id}&limit=${driveLimit}`),
     enabled: id > 0,
@@ -47,6 +47,11 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
       title={t('widget.recentDrivesList', 'Recent Drives')}
       icon={<Route className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
       actions={
         <Link
           to="/drives"

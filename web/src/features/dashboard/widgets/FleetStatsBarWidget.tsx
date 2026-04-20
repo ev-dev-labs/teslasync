@@ -13,7 +13,7 @@ import type { WidgetProps } from './types';
 export default function FleetStatsBarWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
-  const { data: analytics, isLoading: analyticsLoading, error } = useFleetAnalytics(30);
+  const { data: analytics, isLoading: analyticsLoading, error, isFetching: analyticsFetching, isStale: analyticsStale, isError: analyticsIsError, dataUpdatedAt: analyticsUpdatedAt, refetch: refetchAnalytics } = useFleetAnalytics(30);
   const { convertDistance, distanceUnit } = useSettings();
 
   const isLoading = vehiclesLoading || analyticsLoading;
@@ -36,6 +36,11 @@ export default function FleetStatsBarWidget({ size }: WidgetProps) {
       icon={<Car className="h-3.5 w-3.5 text-cyan-400" />}
       loading={isLoading}
       error={error ? String(error) : null}
+      updatedAt={analyticsUpdatedAt}
+      isFetching={analyticsFetching}
+      isStale={analyticsStale}
+      isError={analyticsIsError}
+      onRefresh={() => refetchAnalytics()}
     >
       {hasData ? (
         <div className={isTall ? 'space-y-2' : undefined}>

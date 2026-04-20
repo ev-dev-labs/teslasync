@@ -10,7 +10,7 @@ export default function LocationMapWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { data: stateData, isLoading } = useVehicleState(id);
+  const { data: stateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id);
   const state = stateData?.state;
   const isLive = stateData?.live ?? false;
 
@@ -25,6 +25,11 @@ export default function LocationMapWidget({ vehicleId, size }: WidgetProps) {
       icon={isCompact ? undefined : <MapPin className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
       noPadding
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
     >
       {hasCoords ? (
         <div className="h-full relative">

@@ -17,7 +17,7 @@ export default function RecentDrivesWidget({ vehicleId }: WidgetProps) {
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { convertDistance, distanceUnit } = useSettings();
 
-  const { data: drives, isLoading } = useQuery({
+  const { data: drives, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useQuery({
     queryKey: ['drives', id, 'recent-5'],
     queryFn: () => request<Drive[]>(`/drives?vehicle_id=${id}&limit=5`),
     enabled: id > 0,
@@ -30,6 +30,11 @@ export default function RecentDrivesWidget({ vehicleId }: WidgetProps) {
       title={t('widget.recentDrives', 'Recent Drives')}
       icon={<Route className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
       actions={
         <Link
           to="/drives"

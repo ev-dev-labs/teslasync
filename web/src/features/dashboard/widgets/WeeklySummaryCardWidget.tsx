@@ -30,7 +30,7 @@ export default function WeeklySummaryCardWidget({ vehicleId, size }: WidgetProps
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
 
-  const { data, isLoading, error } = useWeeklyDigest(String(id));
+  const { data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useWeeklyDigest(String(id));
   const {
     convertDistance, convertEfficiency,
     distanceUnit, efficiencyUnit, formatCurrency,
@@ -67,7 +67,7 @@ export default function WeeklySummaryCardWidget({ vehicleId, size }: WidgetProps
 
   if (isCompact) {
     return (
-      <WidgetShell loading={isLoading} error={error ? String(error) : null}>
+      <WidgetShell loading={isLoading} error={error ? String(error) : null} updatedAt={dataUpdatedAt} isFetching={isFetching} isStale={isStale} isError={isError} onRefresh={() => refetch()}>
         {metrics ? (
           <div className="h-full flex flex-col items-center justify-center gap-0.5">
             <span className="text-2xl font-bold text-white/90">
@@ -94,6 +94,11 @@ export default function WeeklySummaryCardWidget({ vehicleId, size }: WidgetProps
       icon={<TrendingUp className="h-3.5 w-3.5 text-cyan-400" />}
       loading={isLoading}
       error={error ? String(error) : null}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
     >
       {metrics ? (
         <div className="space-y-2">

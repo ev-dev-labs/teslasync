@@ -49,7 +49,7 @@ export default function BatteryRadialGaugeWidget({ vehicleId, size }: WidgetProp
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { data: stateData, isLoading } = useVehicleState(id);
+  const { data: stateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id);
   const state = stateData?.state;
 
   const isCompact = size.cols === 1 && size.rows === 1;
@@ -68,6 +68,11 @@ export default function BatteryRadialGaugeWidget({ vehicleId, size }: WidgetProp
       title={isCompact ? undefined : t('widget.batteryRadial', 'Battery')}
       icon={isCompact ? undefined : <Battery className="h-3.5 w-3.5 text-white/40" />}
       loading={isLoading}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
     >
       <div className="h-full flex flex-col items-center justify-center gap-1">
         {state ? (
