@@ -109,11 +109,11 @@ function heatBadgeVariant(level: number): 'neutral' | 'info' | 'warning' | 'dang
 
 function keeperVariant(mode: string): 'neutral' | 'info' | 'warning' | 'danger' {
   switch (mode) {
-    case 'keep':
+    case 'On':
       return 'info';
-    case 'dog':
+    case 'Dog Mode':
       return 'warning';
-    case 'camp':
+    case 'Camp Mode':
       return 'info';
     default:
       return 'neutral';
@@ -122,11 +122,11 @@ function keeperVariant(mode: string): 'neutral' | 'info' | 'warning' | 'danger' 
 
 function keeperLabel(mode: string): string {
   switch (mode) {
-    case 'keep':
-      return 'Keep';
-    case 'dog':
+    case 'On':
+      return 'On';
+    case 'Dog Mode':
       return 'Dog Mode';
-    case 'camp':
+    case 'Camp Mode':
       return 'Camp Mode';
     default:
       return 'Off';
@@ -386,7 +386,7 @@ export default function ClimateControlPage() {
           </div>
           <div className="flex items-center gap-2">
             {latest?.climateKeeperMode &&
-              latest.climateKeeperMode !== 'off' && (
+              latest.climateKeeperMode !== 'Off' && (
                 <Badge variant={keeperVariant(latest.climateKeeperMode)} dot>
                   {t(keeperLabel(latest.climateKeeperMode))}
                 </Badge>
@@ -484,7 +484,7 @@ export default function ClimateControlPage() {
             icon={<ThermometerSun className="h-5 w-5 text-amber-400" />}
             subtitle={
               latest?.climateKeeperMode &&
-              latest.climateKeeperMode !== 'off'
+              latest.climateKeeperMode !== 'Off'
                 ? t('Active')
                 : undefined
             }
