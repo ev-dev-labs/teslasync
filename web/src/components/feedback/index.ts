@@ -8,3 +8,5 @@ export { PageLoader } from './PageLoader';
 export { QueryError } from './QueryError';
 export { AlertBanner } from './AlertBanner';
 export { AuthExpiredOverlay } from './AuthExpiredOverlay';
+export { GotoIndicator } from './GotoIndicator';
+export { KeyboardCheatSheet } from './KeyboardCheatSheet';

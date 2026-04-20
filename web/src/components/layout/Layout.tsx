@@ -55,6 +55,9 @@ import {
   Terminal,
 } from 'lucide-react'
 import { useState, useRef } from 'react'
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
+import { GotoIndicator } from '../feedback/GotoIndicator'
+import { KeyboardCheatSheet } from '../feedback/KeyboardCheatSheet'
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
@@ -276,6 +279,7 @@ export default function Layout() {
   })
   useNotificationListener()
   const { convertDistance, distanceUnit } = useSettings()
+  const { mode: shortcutMode, showCheatSheet, toggleCheatSheet } = useKeyboardShortcuts()
 
   // Version info
   const { data: versionInfo } = useQuery({ queryKey: ['version-info'], queryFn: () => request<VersionInfo>('/system/version'), staleTime: 60_000, refetchInterval: 60_000 })
@@ -483,6 +487,9 @@ export default function Layout() {
             <SystemHealthDot />
             <SSEStatusDot state={sseState} />
           </GlassPanel>
+          <p className="text-center text-[10px] text-white/20 mt-1">
+            {t('shortcuts.hint', 'Press')} <kbd className="px-1 rounded bg-white/5 text-white/30">?</kbd> {t('shortcuts.hintSuffix', 'for shortcuts')}
+          </p>
         </div>
       </aside>
 
@@ -537,6 +544,10 @@ export default function Layout() {
 
       {/* PWA Install Prompt */}
       <InstallPrompt />
+
+      {/* Keyboard shortcut overlays */}
+      <GotoIndicator visible={shortcutMode === 'goto'} />
+      <KeyboardCheatSheet open={showCheatSheet} onClose={toggleCheatSheet} />
     </div>
   )
 }
