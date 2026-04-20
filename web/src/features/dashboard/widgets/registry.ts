@@ -76,6 +76,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     component: lazy(() => import('./RangeBarWidget')),
   },
   {
+    id: 'battery-degradation-trend',
+    name: 'Battery Degradation Trend',
+    description: 'Line chart showing max range capacity over months',
+    icon: TrendingUp,
+    category: 'battery',
+    defaultSize: { cols: 2, rows: 2 },
+    minSize: { cols: 1, rows: 1 },
+    maxSize: { cols: 4, rows: 2 },
+    component: lazy(() => import('./BatteryDegradationTrendWidget')),
+  },
+  {
     id: 'energy-flow',
     name: 'Energy Flow',
     description: 'Live power flow diagram',
