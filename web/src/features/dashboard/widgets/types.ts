@@ -3,7 +3,7 @@ import type { LazyExoticComponent, ComponentType } from 'react';
 
 export interface WidgetSize {
   cols: number; // 1-4
-  rows: number; // 1-3
+  rows: number; // 1-8
 }
 
 export interface WidgetConfig {

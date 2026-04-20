@@ -233,6 +233,13 @@ export function DashboardGrid({
                 </button>
               )}
 
+              {/* Visual resize affordance bar at bottom edge in edit mode */}
+              {editMode && (
+                <div className="absolute bottom-0 left-0 right-0 h-1.5 z-20
+                  bg-gradient-to-r from-transparent via-[var(--theme-primary)]/20 to-transparent
+                  opacity-0 group-hover:opacity-100 transition-opacity rounded-b-xl pointer-events-none" />
+              )}
+
               <GlassPanel className="h-full w-full overflow-hidden rounded-xl">
                 <WidgetErrorBoundary name={def.name}>
                   <Suspense
