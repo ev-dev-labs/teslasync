@@ -85,3 +85,4 @@ ENGINEERING_GUIDELINES.md
 !.github/prompts/features/**/*
 .github/issues/
 scripts/check-loc.js
+/.github/prompts

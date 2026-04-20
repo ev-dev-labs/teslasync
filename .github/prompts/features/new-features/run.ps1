@@ -23,7 +23,7 @@ param(
     [switch]$DryRun        = $false,
     [int]$StartFrom        = 1,
     [int]$DelaySeconds     = 10,
-    [int]$TimeoutMinutes   = 45
+    [int]$TimeoutMinutes   = 60
 )
 
 $ErrorActionPreference = "Stop"

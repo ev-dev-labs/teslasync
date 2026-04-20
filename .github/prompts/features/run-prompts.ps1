@@ -108,6 +108,25 @@ function Log([string]$msg) {
     Add-Content -Path $runLog -Value $entry
 }
 
+# Discord webhook notification (optional — set TESLASYNC_DISCORD_WEBHOOK env var)
+$discordWebhook = $env:TESLASYNC_DISCORD_WEBHOOK
+function Discord([string]$msg, [string]$color = "3447003") {
+    if (-not $discordWebhook) { return }
+    try {
+        $body = @{
+            embeds = @(@{
+                description = $msg
+                color = [int]$color
+                timestamp = (Get-Date).ToUniversalTime().ToString("o")
+                footer = @{ text = "TeslaSync Prompt Runner" }
+            })
+        } | ConvertTo-Json -Depth 5
+        Invoke-RestMethod -Uri $discordWebhook -Method Post -ContentType "application/json" -Body $body -ErrorAction SilentlyContinue | Out-Null
+    } catch {
+        # Silently ignore webhook failures — don't break the runner
+    }
+}
+
 # ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
@@ -213,6 +232,7 @@ foreach ($p in $prompts) {
     # Run copilot as a background job with timeout
     $startTime = Get-Date
     Log "$tag START  $($p.Label)"
+    Discord "▶️ **Starting** ``$($p.Label)`` [$($p.Index)/$total]" "3447003"
 
     $tempArgsFile = Join-Path $env:TEMP "teslasync-feat-$($p.Index).json"
     $copilotArgs | ConvertTo-Json | Set-Content -Path $tempArgsFile -Encoding UTF8
@@ -291,6 +311,7 @@ foreach ($p in $prompts) {
     if ($exitCode -ne 0) {
         $failCount++
         Log "$tag FAILED (exit $exitCode) after $mins min"
+        Discord "❌ **Failed** ``$($p.Label)`` after ${mins}m (exit $exitCode)" "15158332"
         Write-Host ""
         Write-Host "  FAILED after $mins min (exit code $exitCode)" -ForegroundColor Red
         Write-Host "  Log: $logFile" -ForegroundColor Red
@@ -305,6 +326,7 @@ foreach ($p in $prompts) {
     else {
         $successCount++
         Log "$tag DONE in $mins min"
+        Discord "✅ **Completed** ``$($p.Label)`` in ${mins}m [$successCount done]" "3066993"
         Write-Host "  ✓ Completed in $mins min" -ForegroundColor Green
 
         # Mark as done
@@ -334,3 +356,6 @@ Write-Host "  Failed    : $failCount" -ForegroundColor $(if ($failCount -gt 0) {
 Write-Host "  Skipped   : $skipCount" -ForegroundColor DarkGray
 Write-Host "  Run log   : $runLog"
 Write-Host "============================================" -ForegroundColor Cyan
+
+$summaryColor = if ($failCount -eq 0) { "3066993" } else { "15158332" }
+Discord "🏁 **Run Complete** — ✅ $successCount succeeded, ❌ $failCount failed, ⏭️ $skipCount skipped" $summaryColor

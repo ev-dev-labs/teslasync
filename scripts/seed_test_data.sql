@@ -104,7 +104,7 @@ SELECT
 FROM (
   SELECT
     '2024-04-01'::timestamptz + (n * 2.8 || ' hours')::interval
-      + (random() * 60 || ' minutes')::interval AS ts,
+      + (floor(random() * 60)::int || ' minutes')::interval AS ts,
     2 + random() * 45 AS dist,
     5 + random() * 55 AS dur,
     40 + random() * 90 AS speed_max,
@@ -153,7 +153,7 @@ SELECT
 FROM (
   SELECT
     '2024-04-01'::timestamptz + (n * 14.6 || ' hours')::interval
-      + (random() * 120 || ' minutes')::interval AS ts,
+      + (floor(random() * 120)::int || ' minutes')::interval AS ts,
     20 + random() * 200 AS dur,
     5 + random() * 55 AS energy,
     15 + floor(random() * 45)::int AS start_bat,
@@ -202,7 +202,7 @@ SELECT
   1 + floor(random() * 4)::int,
   random() < 0.1,
   'standby',
-  '2024-04-01'::timestamptz + (n * 3.5 || ' hours')::interval + (random() * 60 || ' minutes')::interval
+  '2024-04-01'::timestamptz + (n * 3.5 || ' hours')::interval + (floor(random() * 60)::int || ' minutes')::interval
 FROM (
   SELECT n, 20 + floor(random() * 75)::int AS bat_level
   FROM generate_series(0, 4999) AS n
@@ -253,7 +253,7 @@ SELECT
   30 + random() * 50,
   35 + random() * 60,
   35 + random() * 60,
-  '2024-04-01'::timestamptz + (n * 1.75 || ' hours')::interval + (random() * 30 || ' minutes')::interval
+  '2024-04-01'::timestamptz + (n * 1.75 || ' hours')::interval + (floor(random() * 30)::int || ' minutes')::interval
 FROM generate_series(0, 9999) AS n;
 
 -- ============================================================
@@ -277,7 +277,7 @@ SELECT
   random() < 0.1,
   ts
 FROM (
-  SELECT '2024-04-01'::timestamptz + (n * 3.5 || ' hours')::interval + (random() * 30 || ' minutes')::interval AS ts
+  SELECT '2024-04-01'::timestamptz + (n * 3.5 || ' hours')::interval + (floor(random() * 30)::int || ' minutes')::interval AS ts
   FROM generate_series(0, 4999) AS n
 ) sub;
 
@@ -318,7 +318,7 @@ SELECT
   random() < 0.3
 FROM (
   SELECT
-    '2024-04-01'::timestamptz + (n * 35 || ' hours')::interval + (random() * 120 || ' minutes')::interval AS ts,
+    '2024-04-01'::timestamptz + (n * 35 || ' hours')::interval + (floor(random() * 120)::int || ' minutes')::interval AS ts,
     4 + random() * 20 AS dur,
     60 + floor(random() * 35)::int AS start_bat,
     1 + floor(random() * 5)::int AS drain_amt
@@ -365,10 +365,10 @@ SELECT
   1,
   random() > 0.5,
   random() < 0.05,
-  CASE WHEN random() < 0.8 THEN 'On' ELSE 'Off' END,
+  random() < 0.8,
   CASE floor(random()*3)::int WHEN 0 THEN '1' WHEN 1 THEN '3' ELSE '7' END,
   random() > 0.1,
-  CASE WHEN random() < 0.8 THEN 'On' ELSE 'Off' END,
+  CASE WHEN random() < 0.8 THEN 'Medium' ELSE 'Late' END,
   CASE WHEN random() < 0.8 THEN 'On' ELSE 'Off' END,
   CASE WHEN random() < 0.6 THEN 'Display' ELSE 'Off' END,
   '2024-04-01'::timestamptz + (n * 22 || ' hours')::interval

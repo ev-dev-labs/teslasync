@@ -3,7 +3,7 @@ import {
   Battery, Zap, Car, MapPin, Shield, Thermometer,
   Activity, BarChart3, Gauge, Wifi, TrendingUp, Monitor,
   DollarSign, Calendar, CloudSun, CircleDot, CreditCard, Hash,
-  MonitorSmartphone,
+  MonitorSmartphone, List,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -167,6 +167,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 1 },
     maxSize: { cols: 2, rows: 2 },
     component: lazy(() => import('./DriveScoreWidget')),
+  },
+  {
+    id: 'recent-drives-list',
+    name: 'Recent Drives List',
+    description: 'Last 5-10 drives: distance, duration, efficiency, start/end locations',
+    icon: List,
+    category: 'driving',
+    defaultSize: { cols: 2, rows: 2 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 3 },
+    component: lazy(() => import('./RecentDrivesListWidget')),
   },
 
   // ── Charging ──
