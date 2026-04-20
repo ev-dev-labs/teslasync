@@ -68,20 +68,20 @@ export interface SoftwareUpdate {
 }
 
 export interface SafetySnapshot {
-  id: string;
-  vehicleId: string;
-  automaticEmergencyBraking: boolean;
-  blindSpotCamera: boolean;
-  blindSpotWarning: boolean;
-  forwardCollisionWarning: string;
-  laneDepartureAvoidance: string;
-  emergencyLaneDeparture: boolean;
-  cruiseFollowDistance: number;
-  speedLimitWarning: string;
-  pinToDriveEnabled: boolean;
-  milesSinceReset: number;
-  selfDrivingMilesSinceReset: number;
-  timestamp: string;
+  id: number;
+  vehicle_id: number;
+  automatic_blind_spot_camera?: boolean | null;
+  automatic_emergency_braking_off?: boolean | null;
+  blind_spot_collision_warning?: boolean | null;
+  cruise_follow_distance?: string | null;
+  emergency_lane_departure_avoidance?: boolean | null;
+  forward_collision_warning?: string | null;
+  lane_departure_avoidance?: string | null;
+  speed_limit_warning?: string | null;
+  pin_to_drive_enabled?: boolean | null;
+  miles_since_reset?: number | null;
+  self_driving_miles_since_reset?: number | null;
+  created_at: string;
 }
 
 export interface MediaSnapshot {

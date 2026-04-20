@@ -109,6 +109,7 @@ function boolFeatures(snap: SafetySnapshot): boolean[] {
     cleanEnum(snap.forward_collision_warning ?? 'Off', 'forward_collision_warning') !== 'Off',
     cleanEnum(snap.lane_departure_avoidance ?? 'Off', 'lane_departure_avoidance') !== 'Off',
     cleanEnum(snap.speed_limit_warning ?? 'Off', 'speed_limit_warning') !== 'Off',
+    Number(cleanEnum(snap.cruise_follow_distance ?? '0', 'cruise_follow_distance')) > 0,
   ];
 }
 
@@ -379,6 +380,15 @@ function buildHistoryColumns(t: (k: string) => string): Column<SafetySnapshot>[]
       key: 'elda',
       header: t('ELDA'),
       render: (row) => boolCell(row.emergency_lane_departure_avoidance ?? false),
+    },
+    {
+      key: 'cfd',
+      header: t('CFD'),
+      render: (row) => (
+        <span className="text-xs text-[var(--text-secondary)]">
+          {cleanEnum(row.cruise_follow_distance ?? '—', 'cruise_follow_distance')}
+        </span>
+      ),
     },
     {
       key: 'slw',
