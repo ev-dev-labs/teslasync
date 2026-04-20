@@ -108,3 +108,6 @@ dashboard-widgets/22-command-quick-actions.prompt.md
 dashboard-widgets/23-live-signal-sparklines.prompt.md
 dashboard-widgets/24-weekly-summary-card.prompt.md
 dashboard-widgets/25-fleet-stats-bar.prompt.md
+dashboard-widgets/26-automation-status.prompt.md
+dashboard-widgets/27-alert-feed.prompt.md
+dashboard-widgets/28-media-now-playing.prompt.md

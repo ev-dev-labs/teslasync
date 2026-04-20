@@ -4,7 +4,7 @@ import {
   Activity, BarChart3, Gauge, Wifi, TrendingUp, Monitor,
   DollarSign, Calendar, CloudSun, CircleDot, CreditCard, Hash,
   MonitorSmartphone, List, Grid3X3, Workflow, DoorOpen, Eye,
-  Command, CalendarRange, Bell, Music,
+  Command, CalendarRange, Bell, Music, HeartPulse,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -490,6 +490,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
   },
 
   // ── System ──
+  {
+    id: 'uptime-monitor',
+    name: 'Uptime Monitor',
+    description: 'System health: DB, MQTT, Tesla API, Fleet Telemetry status',
+    icon: HeartPulse,
+    category: 'system',
+    defaultSize: { cols: 2, rows: 1 },
+    minSize: { cols: 1, rows: 1 },
+    maxSize: { cols: 4, rows: 2 },
+    component: lazy(() => import('./UptimeMonitorWidget')),
+  },
   {
     id: 'quick-nav',
     name: 'Quick Navigation',
