@@ -1510,6 +1510,11 @@ func normalizeFleetUnits(signals map[string]interface{}) {
 		signals["TonneauPosition"] = enums.ParseTonneauPosition(toString(v))
 	}
 
+	// TonneauTentMode: strip "TonneauTentMode" prefix (e.g., "TonneauTentModeActive" → "Active")
+	if v, ok := signals["TonneauTentMode"]; ok {
+		signals["TonneauTentMode"] = enums.ParseTonneauTentMode(toString(v))
+	}
+
 	// Window states: strip "WindowState" prefix (e.g., "WindowStateClosed" → "Closed")
 	for _, wn := range []string{"FdWindow", "FpWindow", "RdWindow", "RpWindow"} {
 		if v, ok := signals[wn]; ok {
@@ -2512,8 +2517,8 @@ func (h *TelemetryHandler) trackCharging(ctx context.Context, vehicleID int64, s
 		snap.PowershareStopReason = &s
 	}
 	if v, ok := signals["PowershareHoursLeft"]; ok {
-		i := int(toFloat(v))
-		snap.PowershareHoursLeft = &i
+		f := toFloat(v)
+		snap.PowershareHoursLeft = &f
 	}
 	if v, ok := signals["PowershareInstantaneousPowerKW"]; ok {
 		f := toFloat(v)

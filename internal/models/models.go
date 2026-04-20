@@ -973,7 +973,7 @@ type ChargingTelemetry struct {
 	PowershareStatus           *string   `json:"powershare_status,omitempty" db:"powershare_status"`
 	PowershareType             *string   `json:"powershare_type,omitempty" db:"powershare_type"`
 	PowershareStopReason       *string   `json:"powershare_stop_reason,omitempty" db:"powershare_stop_reason"`
-	PowershareHoursLeft        *int      `json:"powershare_hours_left,omitempty" db:"powershare_hours_left"`
+	PowershareHoursLeft        *float64  `json:"powershare_hours_left,omitempty" db:"powershare_hours_left"`
 	PowersharePowerKw          *float64  `json:"powershare_power_kw,omitempty" db:"powershare_power_kw"`
 	ScheduledChargingStartTime *string  `json:"scheduled_charging_start_time,omitempty" db:"scheduled_charging_start_time"`
 	ScheduledDepartureTime     *string  `json:"scheduled_departure_time,omitempty" db:"scheduled_departure_time"`
