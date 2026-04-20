@@ -18,7 +18,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'vehicle',
     defaultSize: { cols: 2, rows: 2 },
     minSize: { cols: 2, rows: 1 },
-    maxSize: { cols: 4, rows: 4 },
+    maxSize: { cols: 4, rows: 8 },
     component: lazy(() => import('./VehicleHeroWidget')),
   },
   {
@@ -29,7 +29,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'vehicle',
     defaultSize: { cols: 2, rows: 1 },
     minSize: { cols: 1, rows: 1 },
-    maxSize: { cols: 4, rows: 4 },
+    maxSize: { cols: 4, rows: 8 },
     component: lazy(() => import('./VehicleHeroCardWidget')),
   },
   {
@@ -40,7 +40,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'vehicle',
     defaultSize: { cols: 2, rows: 2 },
     minSize: { cols: 2, rows: 2 },
-    maxSize: { cols: 3, rows: 6 },
+    maxSize: { cols: 3, rows: 8 },
     component: lazy(() => import('./DigitalTwinWidget')),
   },
   {
@@ -51,7 +51,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'vehicle',
     defaultSize: { cols: 2, rows: 2 },
     minSize: { cols: 1, rows: 2 },
-    maxSize: { cols: 4, rows: 6 },
+    maxSize: { cols: 4, rows: 8 },
     component: lazy(() => import('./DigitalTwinMiniWidget')),
   },
 
@@ -63,7 +63,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'vehicle',
     defaultSize: { cols: 2, rows: 1 },
     minSize: { cols: 1, rows: 1 },
-    maxSize: { cols: 4, rows: 3 },
+    maxSize: { cols: 4, rows: 8 },
     component: lazy(() => import('./SoftwareUpdateStatusWidget')),
   },
   {
@@ -74,7 +74,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'vehicle',
     defaultSize: { cols: 1, rows: 1 },
     minSize: { cols: 1, rows: 1 },
-    maxSize: { cols: 2, rows: 3 },
+    maxSize: { cols: 2, rows: 8 },
     component: lazy(() => import('./OdometerCounterWidget')),
   },
 
@@ -87,7 +87,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'battery',
     defaultSize: { cols: 1, rows: 1 },
     minSize: { cols: 1, rows: 1 },
-    maxSize: { cols: 2, rows: 4 },
+    maxSize: { cols: 2, rows: 8 },
     component: lazy(() => import('./BatteryGaugeWidget')),
   },
   {
@@ -98,7 +98,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'battery',
     defaultSize: { cols: 1, rows: 1 },
     minSize: { cols: 1, rows: 1 },
-    maxSize: { cols: 3, rows: 4 },
+    maxSize: { cols: 3, rows: 8 },
     component: lazy(() => import('./BatteryRadialGaugeWidget')),
   },
   {
@@ -109,7 +109,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'battery',
     defaultSize: { cols: 1, rows: 1 },
     minSize: { cols: 1, rows: 1 },
-    maxSize: { cols: 2, rows: 3 },
+    maxSize: { cols: 2, rows: 8 },
     component: lazy(() => import('./RangeEstimateWidget')),
   },
   {
@@ -120,7 +120,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'battery',
     defaultSize: { cols: 2, rows: 1 },
     minSize: { cols: 1, rows: 1 },
-    maxSize: { cols: 4, rows: 4 },
+    maxSize: { cols: 4, rows: 8 },
     component: lazy(() => import('./RangeBarWidget')),
   },
   {
@@ -131,7 +131,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'battery',
     defaultSize: { cols: 2, rows: 2 },
     minSize: { cols: 1, rows: 1 },
-    maxSize: { cols: 4, rows: 6 },
+    maxSize: { cols: 4, rows: 8 },
     component: lazy(() => import('./BatteryDegradationTrendWidget')),
   },
   {
@@ -142,7 +142,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'battery',
     defaultSize: { cols: 2, rows: 2 },
     minSize: { cols: 2, rows: 2 },
-    maxSize: { cols: 4, rows: 6 },
+    maxSize: { cols: 4, rows: 8 },
     component: lazy(() => import('./EnergyFlowWidget')),
   },
 
@@ -155,7 +155,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'energy',
     defaultSize: { cols: 2, rows: 2 },
     minSize: { cols: 2, rows: 2 },
-    maxSize: { cols: 3, rows: 4 },
+    maxSize: { cols: 3, rows: 8 },
     component: lazy(() => import('./EnergyFlowAnimatedWidget')),
   },
 
@@ -168,7 +168,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'driving',
     defaultSize: { cols: 2, rows: 2 },
     minSize: { cols: 2, rows: 1 },
-    maxSize: { cols: 4, rows: 6 },
+    maxSize: { cols: 4, rows: 8 },
     component: lazy(() => import('./RecentDrivesWidget')),
   },
   {
@@ -179,7 +179,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'driving',
     defaultSize: { cols: 1, rows: 1 },
     minSize: { cols: 1, rows: 1 },
-    maxSize: { cols: 2, rows: 4 },
+    maxSize: { cols: 2, rows: 8 },
     component: lazy(() => import('./DriveScoreWidget')),
   },
   {
@@ -190,7 +190,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'driving',
     defaultSize: { cols: 2, rows: 2 },
     minSize: { cols: 1, rows: 2 },
-    maxSize: { cols: 4, rows: 6 },
+    maxSize: { cols: 4, rows: 8 },
     component: lazy(() => import('./RecentDrivesListWidget')),
   },
   {
@@ -201,7 +201,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'driving',
     defaultSize: { cols: 1, rows: 1 },
     minSize: { cols: 1, rows: 1 },
-    maxSize: { cols: 2, rows: 4 },
+    maxSize: { cols: 2, rows: 8 },
     component: lazy(() => import('./DriveScoreGaugeWidget')),
   },
   {
@@ -212,7 +212,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'driving',
     defaultSize: { cols: 2, rows: 2 },
     minSize: { cols: 1, rows: 1 },
-    maxSize: { cols: 4, rows: 6 },
+    maxSize: { cols: 4, rows: 8 },
     component: lazy(() => import('./DriveEfficiencyChartWidget')),
   },
   {
@@ -223,7 +223,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'driving',
     defaultSize: { cols: 2, rows: 2 },
     minSize: { cols: 1, rows: 2 },
-    maxSize: { cols: 4, rows: 6 },
+    maxSize: { cols: 4, rows: 8 },
     component: lazy(() => import('./SpeedHeatmapWidget')),
   },
 
@@ -236,7 +236,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'charging',
     defaultSize: { cols: 2, rows: 1 },
     minSize: { cols: 1, rows: 1 },
-    maxSize: { cols: 3, rows: 4 },
+    maxSize: { cols: 3, rows: 8 },
     component: lazy(() => import('./ChargeStatusWidget')),
   },
   {
@@ -247,7 +247,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'charging',
     defaultSize: { cols: 2, rows: 1 },
     minSize: { cols: 1, rows: 1 },
-    maxSize: { cols: 3, rows: 4 },
+    maxSize: { cols: 3, rows: 8 },
     component: lazy(() => import('./ChargeStatusLiveWidget')),
   },
   {
@@ -258,7 +258,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'charging',
     defaultSize: { cols: 2, rows: 2 },
     minSize: { cols: 2, rows: 1 },
-    maxSize: { cols: 4, rows: 6 },
+    maxSize: { cols: 4, rows: 8 },
     component: lazy(() => import('./ChargeHistoryWidget')),
   },
   {
@@ -269,7 +269,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'charging',
     defaultSize: { cols: 2, rows: 2 },
     minSize: { cols: 1, rows: 1 },
-    maxSize: { cols: 4, rows: 6 },
+    maxSize: { cols: 4, rows: 8 },
     component: lazy(() => import('./ChargeSessionChartWidget')),
   },
   {
@@ -280,7 +280,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'charging',
     defaultSize: { cols: 2, rows: 1 },
     minSize: { cols: 1, rows: 1 },
-    maxSize: { cols: 4, rows: 3 },
+    maxSize: { cols: 4, rows: 8 },
     component: lazy(() => import('./ChargeCostTrackerWidget')),
   },
   {
@@ -291,7 +291,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'charging',
     defaultSize: { cols: 2, rows: 1 },
     minSize: { cols: 1, rows: 1 },
-    maxSize: { cols: 4, rows: 3 },
+    maxSize: { cols: 4, rows: 8 },
     component: lazy(() => import('./ChargingScheduleWidget')),
   },
 
@@ -304,7 +304,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'climate',
     defaultSize: { cols: 1, rows: 1 },
     minSize: { cols: 1, rows: 1 },
-    maxSize: { cols: 2, rows: 3 },
+    maxSize: { cols: 2, rows: 8 },
     component: lazy(() => import('./ClimateStatusWidget')),
   },
   {
@@ -315,7 +315,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'climate',
     defaultSize: { cols: 2, rows: 2 },
     minSize: { cols: 1, rows: 1 },
-    maxSize: { cols: 4, rows: 6 },
+    maxSize: { cols: 4, rows: 8 },
     component: lazy(() => import('./ClimateControlPanelWidget')),
   },
   {
@@ -326,7 +326,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'climate',
     defaultSize: { cols: 1, rows: 1 },
     minSize: { cols: 1, rows: 1 },
-    maxSize: { cols: 3, rows: 3 },
+    maxSize: { cols: 3, rows: 8 },
     component: lazy(() => import('./WeatherAtCarWidget')),
   },
 
@@ -339,7 +339,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'security',
     defaultSize: { cols: 1, rows: 1 },
     minSize: { cols: 1, rows: 1 },
-    maxSize: { cols: 2, rows: 4 },
+    maxSize: { cols: 2, rows: 8 },
     component: lazy(() => import('./SecurityStatusWidget')),
   },
   {
@@ -350,7 +350,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'security',
     defaultSize: { cols: 2, rows: 1 },
     minSize: { cols: 1, rows: 1 },
-    maxSize: { cols: 4, rows: 4 },
+    maxSize: { cols: 4, rows: 8 },
     component: lazy(() => import('./DoorWindowStatusWidget')),
   },
   {
@@ -361,7 +361,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'security',
     defaultSize: { cols: 2, rows: 2 },
     minSize: { cols: 2, rows: 2 },
-    maxSize: { cols: 4, rows: 6 },
+    maxSize: { cols: 4, rows: 8 },
     component: lazy(() => import('./SentryEventLogWidget')),
   },
 
@@ -374,7 +374,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'commands',
     defaultSize: { cols: 2, rows: 1 },
     minSize: { cols: 1, rows: 1 },
-    maxSize: { cols: 4, rows: 2 },
+    maxSize: { cols: 4, rows: 8 },
     component: lazy(() => import('./CommandQuickActionsWidget')),
   },
 
@@ -387,7 +387,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'media',
     defaultSize: { cols: 2, rows: 1 },
     minSize: { cols: 1, rows: 1 },
-    maxSize: { cols: 4, rows: 3 },
+    maxSize: { cols: 4, rows: 8 },
     component: lazy(() => import('./MediaNowPlayingWidget')),
   },
 
@@ -400,7 +400,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'tires',
     defaultSize: { cols: 2, rows: 2 },
     minSize: { cols: 2, rows: 2 },
-    maxSize: { cols: 4, rows: 6 },
+    maxSize: { cols: 4, rows: 8 },
     component: lazy(() => import('./TirePressureVisualWidget')),
   },
 
@@ -413,7 +413,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'telemetry',
     defaultSize: { cols: 2, rows: 2 },
     minSize: { cols: 2, rows: 1 },
-    maxSize: { cols: 4, rows: 6 },
+    maxSize: { cols: 4, rows: 8 },
     component: lazy(() => import('./LiveSignalsWidget')),
   },
   {
@@ -424,7 +424,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'telemetry',
     defaultSize: { cols: 2, rows: 2 },
     minSize: { cols: 2, rows: 2 },
-    maxSize: { cols: 4, rows: 6 },
+    maxSize: { cols: 4, rows: 8 },
     component: lazy(() => import('./LiveSignalSparklinesWidget')),
   },
 
@@ -437,7 +437,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'analytics',
     defaultSize: { cols: 4, rows: 1 },
     minSize: { cols: 2, rows: 1 },
-    maxSize: { cols: 4, rows: 2 },
+    maxSize: { cols: 4, rows: 8 },
     component: lazy(() => import('./FleetStatsWidget')),
   },
   {
@@ -448,7 +448,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'analytics',
     defaultSize: { cols: 4, rows: 1 },
     minSize: { cols: 3, rows: 1 },
-    maxSize: { cols: 4, rows: 2 },
+    maxSize: { cols: 4, rows: 8 },
     component: lazy(() => import('./FleetStatsBarWidget')),
   },
   {
@@ -459,7 +459,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'analytics',
     defaultSize: { cols: 2, rows: 1 },
     minSize: { cols: 1, rows: 1 },
-    maxSize: { cols: 4, rows: 3 },
+    maxSize: { cols: 4, rows: 8 },
     component: lazy(() => import('./WeeklySummaryCardWidget')),
   },
 
@@ -472,7 +472,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'alerts',
     defaultSize: { cols: 2, rows: 2 },
     minSize: { cols: 2, rows: 2 },
-    maxSize: { cols: 4, rows: 6 },
+    maxSize: { cols: 4, rows: 8 },
     component: lazy(() => import('./AlertFeedWidget')),
   },
 
@@ -485,7 +485,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'automations',
     defaultSize: { cols: 2, rows: 2 },
     minSize: { cols: 1, rows: 1 },
-    maxSize: { cols: 4, rows: 6 },
+    maxSize: { cols: 4, rows: 8 },
     component: lazy(() => import('./AutomationStatusWidget')),
   },
 
@@ -498,7 +498,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'system',
     defaultSize: { cols: 2, rows: 1 },
     minSize: { cols: 1, rows: 1 },
-    maxSize: { cols: 4, rows: 4 },
+    maxSize: { cols: 4, rows: 8 },
     component: lazy(() => import('./UptimeMonitorWidget')),
   },
   {
@@ -509,7 +509,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: 'system',
     defaultSize: { cols: 4, rows: 1 },
     minSize: { cols: 2, rows: 1 },
-    maxSize: { cols: 4, rows: 2 },
+    maxSize: { cols: 4, rows: 8 },
     component: lazy(() => import('./QuickNavWidget')),
   },
   {

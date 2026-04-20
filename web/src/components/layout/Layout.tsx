@@ -60,7 +60,7 @@ import {
   BellPlus,
   Cloud,
   Grid3X3,
-  BarChart4,
+  PieChart,
   ShieldCheck,
   CircleDot,
   Fence,
@@ -228,7 +228,7 @@ export const navSections = [
     title: 'Analytics',
     items: [
       { to: '/analytics', icon: BarChart3, label: 'Analytics', color: 'text-indigo-400' },
-      { to: '/statistics', icon: BarChart4, label: 'Statistics', color: 'text-cyan-400' },
+      { to: '/statistics', icon: PieChart, label: 'Statistics', color: 'text-cyan-400' },
       { to: '/lifetime-stats', icon: Award, label: 'Lifetime Stats', color: 'text-yellow-400' },
       { to: '/vehicle-comparison', icon: ArrowLeftRight, label: 'Vehicle Comparison', color: 'text-orange-400', minVehicles: 2 },
       { to: '/timeline', icon: Clock, label: 'Timeline', color: 'text-sky-400' },
