@@ -162,7 +162,7 @@ export function LiveTelemetryPanels({
   sseConnected,
 }: LiveTelemetryProps) {
   const { t } = useTranslation()
-  const { convertTemp, convertPressure, convertDistance, tempUnit, pressureUnit, distanceUnit } =
+  const { convertTemp, convertPressure, convertDistance, convertSpeed, tempUnit, pressureUnit, distanceUnit, speedUnit } =
     useSettings()
 
   return (
@@ -757,8 +757,8 @@ export function LiveTelemetryPanels({
                   )}
                 >
                   {(live as Record<string, unknown>).speedLimitMode
-                    ? `${fmtNumber((live as Record<string, unknown>).currentSpeedLimit as number)} mph`
-                    : 'Off'}
+                    ? `${fmtNumber(convertSpeed((live as Record<string, unknown>).currentSpeedLimit as number))} ${speedUnit}`
+                    : t('common.off', 'Off')}
                 </span>
               </div>
               <div className="flex items-center justify-between">

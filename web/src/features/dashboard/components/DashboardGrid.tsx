@@ -333,7 +333,7 @@ export function DashboardGrid({
 
               <GlassPanel
                 className={cn(
-                  'h-full w-full overflow-hidden rounded-xl',
+                  'h-full w-full overflow-y-auto rounded-xl',
                   showWidgetBorders && 'border border-white/10',
                 )}
                 style={kioskPanelStyle}

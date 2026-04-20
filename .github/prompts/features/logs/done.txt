@@ -138,3 +138,12 @@ signal-audit/02-charging-enums/001-b-m-s-state.prompt.md
 signal-audit/02-charging-enums/002-charge-port.prompt.md
 signal-audit/02-charging-enums/003-charge-port-latch.prompt.md
 signal-audit/02-charging-enums/004-charge-state.prompt.md
+signal-audit/02-charging-enums/005-charging-cable-type.prompt.md
+signal-audit/02-charging-enums/006-detailed-charge-state.prompt.md
+signal-audit/02-charging-enums/007-fast-charger-type.prompt.md
+signal-audit/02-charging-enums/008-scheduled-charging-mode.prompt.md
+signal-audit/02-charging-enums/009-scheduled-charging-pending.prompt.md
+signal-audit/02-charging-enums/010-scheduled-charging-start-time.prompt.md
+signal-audit/02-charging-enums/011-scheduled-departure-time.prompt.md
+signal-audit/11-vehicle-state/001-center-display.prompt.md
+signal-audit/11-vehicle-state/002-current-limit-mph.prompt.md
