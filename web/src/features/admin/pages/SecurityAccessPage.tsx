@@ -120,8 +120,16 @@ function windowTextClass(state: WindowState): string {
 
 function doorClosed(state: string | null | undefined): boolean {
   if (!state) return true;
-  const lower = state.toLowerCase();
-  return lower === 'closed' || lower === '0' || lower === 'false';
+  const lower = state.trim().toLowerCase();
+  if (lower === 'closed' || lower === 'closedall' || lower === '0' || lower === 'false') return true;
+  // JSON compound: check if all door fields are false/absent
+  if (lower.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(state) as Record<string, unknown>;
+      return Object.values(parsed).every((v) => v === false || v == null);
+    } catch { /* fall through */ }
+  }
+  return false;
 }
 
 function timeSince(iso: string | null | undefined): string {

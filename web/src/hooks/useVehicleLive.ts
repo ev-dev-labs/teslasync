@@ -294,7 +294,10 @@ function parseSignals(raw: Record<string, unknown>): Partial<VehicleLiveState> {
   // Security
   if (raw['Locked'] != null) s.locked = bool('Locked')
   if (raw['SentryMode'] != null) s.sentryMode = bool('SentryMode')
-  if (raw['DoorState'] != null) s.doorState = str('DoorState')
+  if (raw['DoorState'] != null) {
+    const dv = raw['DoorState']
+    s.doorState = typeof dv === 'string' ? dv : typeof dv === 'object' ? JSON.stringify(dv) : ''
+  }
   if (raw['CenterDisplay'] != null) s.centerDisplay = str('CenterDisplay')
   if (raw['FdWindow'] != null) s.fdWindow = str('FdWindow')
   if (raw['FpWindow'] != null) s.fpWindow = str('FpWindow')

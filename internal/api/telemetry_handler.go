@@ -1495,6 +1495,38 @@ func normalizeFleetUnits(signals map[string]interface{}) {
 		signals["ScheduledChargingMode"] = enums.ParseScheduledChargingMode(toString(v))
 	}
 
+	// TypeDoors compounds: flatten {DriverFront, PassengerFront, ...} maps → JSON strings.
+	// Tesla sends these as nested JSON objects; downstream consumers (signal_history,
+	// vehicle_live_state, security_events) expect scalar string values.
+	for name, info := range enums.SignalRegistry {
+		if info.Type != enums.TypeDoors {
+			continue
+		}
+		raw, ok := signals[name]
+		if !ok || raw == nil {
+			continue
+		}
+		if _, isStr := raw.(string); isStr {
+			continue // already a string — leave unchanged
+		}
+		m, isMap := raw.(map[string]interface{})
+		if !isMap {
+			continue
+		}
+		// Unwrap {"value": {...}} envelopes first
+		if inner, has := m["value"]; has {
+			if innerMap, ok := inner.(map[string]interface{}); ok {
+				m = innerMap
+			} else if s, ok := inner.(string); ok {
+				signals[name] = s
+				continue
+			}
+		}
+		if jsonBytes, err := json.Marshal(m); err == nil {
+			signals[name] = string(jsonBytes)
+		}
+	}
+
 	// TypeTime compounds: flatten {hour, minute, second} maps → "HH:MM:SS" strings.
 	// Tesla sends these as nested JSON objects; downstream consumers (signal_history,
 	// vehicle_live_state, charging_telemetry) expect scalar values.

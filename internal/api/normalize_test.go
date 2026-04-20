@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"testing"
 )
 
@@ -99,6 +100,67 @@ func TestNormalizeFleetUnits_TypeTime(t *testing.T) {
 				// Just verify the value wasn't changed to a string
 				if _, isStr := got.(string); isStr {
 					t.Errorf("expected unchanged map, got string %q", got)
+				}
+			}
+		})
+	}
+}
+
+func TestNormalizeFleetUnits_TypeDoors(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   interface{}
+		wantStr bool // true if result should be a JSON string
+	}{
+		{
+			name:    "compound map → JSON string",
+			input:   map[string]interface{}{"DriverFront": true, "PassengerFront": false, "DriverRear": false, "PassengerRear": false},
+			wantStr: true,
+		},
+		{
+			name:    "wrapped in value envelope → JSON string",
+			input:   map[string]interface{}{"value": map[string]interface{}{"DriverFront": true, "PassengerRear": true}},
+			wantStr: true,
+		},
+		{
+			name:    "wrapped value is string → passthrough",
+			input:   map[string]interface{}{"value": "ClosedAll"},
+			wantStr: true,
+		},
+		{
+			name:    "already a string → unchanged",
+			input:   "ClosedAll",
+			wantStr: true,
+		},
+		{
+			name:    "string 0 → unchanged",
+			input:   "0",
+			wantStr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			signals := map[string]interface{}{"DoorState": tt.input}
+			normalizeFleetUnits(signals)
+
+			got := signals["DoorState"]
+			gotStr, isStr := got.(string)
+			if !isStr && tt.wantStr {
+				t.Fatalf("expected string result, got %T: %v", got, got)
+			}
+			if !isStr {
+				return
+			}
+
+			// If the original was a compound map, verify the result is valid JSON
+			if _, wasMap := tt.input.(map[string]interface{}); wasMap {
+				var parsed map[string]interface{}
+				if err := json.Unmarshal([]byte(gotStr), &parsed); err != nil {
+					// It could be a passthrough string like "ClosedAll"
+					if gotStr != "ClosedAll" {
+						t.Errorf("result is not valid JSON: %q, err: %v", gotStr, err)
+					}
 				}
 			}
 		})
