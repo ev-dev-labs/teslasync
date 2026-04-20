@@ -170,13 +170,22 @@ export function DashboardGrid({
   const layoutRef = useRef<RGLLayouts>(dashboard.layouts);
   const interactingRef = useRef(false);
 
-  // Sync from parent state when not actively dragging/resizing.
+  // Track persist cycles to avoid syncing our own changes back
+  const persistCountRef = useRef(0);
+  const syncedCountRef = useRef(0);
+
+  // Sync from parent state when not actively dragging/resizing
+  // and when the change didn't originate from our own persist.
   // Covers: undo/redo, auto-arrange, add/remove widget, reset, import, dashboard switch.
   useEffect(() => {
-    if (!interactingRef.current) {
-      setLiveLayouts(dashboard.layouts);
-      layoutRef.current = dashboard.layouts;
+    if (interactingRef.current) return;
+    // Skip if this is our own persist echoing back
+    if (syncedCountRef.current < persistCountRef.current) {
+      syncedCountRef.current = persistCountRef.current;
+      return;
     }
+    setLiveLayouts(dashboard.layouts);
+    layoutRef.current = dashboard.layouts;
   }, [dashboard.layouts]);
 
   // react-grid-layout v2: hook provides containerRef + measured width
@@ -207,8 +216,9 @@ export function DashboardGrid({
 
   const handleDragStop = useCallback(() => {
     setIsDragging(false);
-    interactingRef.current = false;
+    persistCountRef.current++;
     onLayoutChange(layoutRef.current);
+    requestAnimationFrame(() => { interactingRef.current = false; });
   }, [onLayoutChange]);
 
   const handleResizeStart = useCallback(() => {
@@ -216,8 +226,9 @@ export function DashboardGrid({
   }, []);
 
   const handleResizeStop = useCallback(() => {
-    interactingRef.current = false;
+    persistCountRef.current++;
     onLayoutChange(layoutRef.current);
+    requestAnimationFrame(() => { interactingRef.current = false; });
   }, [onLayoutChange]);
 
   // Compute widget size from live layouts so widgets adapt during resize
