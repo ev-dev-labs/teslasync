@@ -11,6 +11,7 @@ import {
 import { PageContainer } from '@/components/layout'
 import { GlassPanel, Badge, Button, DataTable, type Column } from '@/components/ui'
 import { MetricCard, AnimatedNumber, KVList } from '@/components/data-display'
+import { useBreadcrumbs } from '@/hooks/useBreadcrumbs'
 import {
   RadialGauge, ChartTooltip, CHART_COLORS,
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -195,6 +196,10 @@ export default function VehicleDetailPage() {
     enabled: vehicleId > 0,
   })
 
+  const breadcrumbs = useBreadcrumbs({
+    '/vehicles/:id': vehicle?.display_name ?? `Vehicle #${id}`,
+  })
+
   const { data: stateData, refetch: refetchState } = useQuery({
     queryKey: ['vehicle-state', vehicleId],
     queryFn: () => request<StateResponse>(`/vehicles/${vehicleId}/state`),
@@ -333,6 +338,7 @@ export default function VehicleDetailPage() {
       title={vehicle?.display_name ?? t('vehicles.detail.title', 'Vehicle Detail')}
       loading={vehicleLoading}
       error={vehicleError as Error | null}
+      breadcrumbs={breadcrumbs}
     >
       {/* ── 1. Vehicle Header ── */}
       <FadeIn>

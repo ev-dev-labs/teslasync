@@ -14,6 +14,7 @@ import { MetricBar, InlineMetric, AnimatedNumber, StatCard, KVList } from '@/com
 import { RadialGauge } from '@/components/charts';
 import { Skeleton } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
+import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
   ComposedChart, Line, ChartTooltip, ChartGradient,
@@ -109,6 +110,12 @@ export default function ChargingDetailPage() {
       : t('charging.detail.title', 'Charge Session'),
   );
 
+  const breadcrumbs = useBreadcrumbs({
+    '/charging/:id': session
+      ? `${formatDate(session.start_date)} — ${fmtNumber(session.charge_energy_added)} kWh`
+      : `Session #${id}`,
+  });
+
   const [mapStyle, setMapStyle] = useState<MapStyle>('dark');
   const hasTelemetry = !!telemetry && telemetry.length > 0;
   const hasLocation = !!(session?.latitude && session?.longitude);
@@ -168,7 +175,7 @@ export default function ChargingDetailPage() {
 
   if (isLoading || !session) {
     return (
-      <PageContainer title={t('charging.detail.title', 'Charge Session')}>
+      <PageContainer title={t('charging.detail.title', 'Charge Session')} breadcrumbs={breadcrumbs}>
         <LoadingSkeleton />
       </PageContainer>
     );
@@ -186,7 +193,7 @@ export default function ChargingDetailPage() {
       : null;
 
   return (
-    <PageContainer title={t('charging.detail.title', 'Charge Session')} className="space-y-8">
+    <PageContainer title={t('charging.detail.title', 'Charge Session')} className="space-y-8" breadcrumbs={breadcrumbs}>
       <FadeIn>
         {/* ── 1. Header ──────────────────────────────────────── */}
         <div className="flex flex-wrap items-center gap-3 mb-6">

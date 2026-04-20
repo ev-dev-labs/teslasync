@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/Button';
 import { Toggle } from '@/components/ui/Toggle';
 import { Textarea } from '@/components/ui/Textarea';
 import { AlertBanner } from '@/components/feedback/AlertBanner';
+import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { FormSection } from '@/components/forms/FormSection';
@@ -154,6 +155,12 @@ export default function AutomationBuilderPage() {
   const { data: vehicles } = useVehicles();
   const { data: channels } = useNotificationChannels();
   const { data: preset } = useAutomationPreset(presetId);
+
+  const breadcrumbs = useBreadcrumbs({
+    '/automations/:id/edit': existingAutomation?.name
+      ? `Edit: ${existingAutomation.name}`
+      : undefined,
+  });
 
   // ── Mutations ───────────────────────────────────────────────────────
   const createMutation = useCreateAutomation();
@@ -318,6 +325,7 @@ export default function AutomationBuilderPage() {
       <PageContainer
         title={t('automations.builder.editTitle', 'Edit Automation')}
         loading
+        breadcrumbs={breadcrumbs}
       >
         <div />
       </PageContainer>
@@ -329,6 +337,7 @@ export default function AutomationBuilderPage() {
       <PageContainer
         title={t('automations.builder.editTitle', 'Edit Automation')}
         error={loadError instanceof Error ? loadError : new Error(String(loadError))}
+        breadcrumbs={breadcrumbs}
       >
         <div />
       </PageContainer>
@@ -337,7 +346,7 @@ export default function AutomationBuilderPage() {
 
   if (isEdit && !existingAutomation && !isLoadingAutomation) {
     return (
-      <PageContainer title={t('automations.builder.editTitle', 'Edit Automation')}>
+      <PageContainer title={t('automations.builder.editTitle', 'Edit Automation')} breadcrumbs={breadcrumbs}>
         <EmptyState
           icon={<AlertTriangle className="h-8 w-8" />}
           message={t('automations.builder.notFound', 'Automation not found')}
@@ -357,6 +366,7 @@ export default function AutomationBuilderPage() {
         'automations.builder.subtitle',
         'Configure trigger, conditions, and actions for your automation.',
       )}
+      breadcrumbs={breadcrumbs}
     >
       <form
         onSubmit={(e) => {

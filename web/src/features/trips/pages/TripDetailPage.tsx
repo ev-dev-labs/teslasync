@@ -7,6 +7,7 @@ import { StatCard, KVList } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useTrip } from '@/api/hooks/useTrips';
 import { useSettings } from '@/hooks/useSettings';
+import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 import { formatDate } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 
@@ -15,6 +16,10 @@ export default function TripDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: trip, isLoading, error } = useTrip(id!);
   const { convertDistance, convertEfficiency, distanceUnit, efficiencyUnit } = useSettings();
+
+  const breadcrumbs = useBreadcrumbs({
+    '/trips/:id': trip ? (trip.name ?? `Trip #${trip.id}`) : `Trip #${id}`,
+  });
 
   const whPerKm = trip && trip.total_distance_km > 0
     ? (trip.total_energy_kwh / trip.total_distance_km) * 1000
@@ -26,6 +31,7 @@ export default function TripDetailPage() {
       subtitle={trip ? (trip.name ?? `Trip #${trip.id}`) : undefined}
       loading={isLoading}
       error={error instanceof Error ? error : null}
+      breadcrumbs={breadcrumbs}
     >
       {trip ? (
         <>

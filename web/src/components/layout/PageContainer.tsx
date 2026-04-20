@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
+import { Breadcrumbs, type BreadcrumbItem } from './Breadcrumbs';
 
 interface PageContainerProps {
   title: string;
@@ -9,15 +10,19 @@ interface PageContainerProps {
   error?: Error | null;
   empty?: boolean;
   emptyMessage?: string;
+  breadcrumbs?: BreadcrumbItem[];
   children: ReactNode;
   className?: string;
 }
 
 export function PageContainer({
-  title, subtitle, actions, loading, error, empty, emptyMessage, children, className,
+  title, subtitle, actions, loading, error, empty, emptyMessage, breadcrumbs, children, className,
 }: PageContainerProps) {
   return (
     <div className={cn('space-y-6', className)}>
+      {breadcrumbs && breadcrumbs.length > 1 && (
+        <Breadcrumbs items={breadcrumbs} className="mb-2" />
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{title}</h1>

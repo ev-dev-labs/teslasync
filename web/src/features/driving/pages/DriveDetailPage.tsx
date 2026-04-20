@@ -10,6 +10,7 @@ import {
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Button } from '@/components/ui/Button';
+import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 import {
   ChartContainer, ChartTooltip, ChartGradient,
   AreaChart, Area, LineChart, Line, BarChart, Bar,
@@ -85,6 +86,12 @@ export default function DriveDetailPage() {
   const { data: drive, isLoading, error } = useDrive(id ?? '');
   const [mapStyle, setMapStyle] = useState<MapStyle>('dark');
   const { data: vehicle } = useVehicle(String(drive?.vehicleId ?? ''));
+
+  const breadcrumbs = useBreadcrumbs({
+    '/drives/:id': drive
+      ? `${drive.startAddress ?? t('driveDetail.title', 'Drive')} → ${drive.endAddress ?? ''}`
+      : `Drive #${id}`,
+  });
 
   const {
     convertDistance, convertSpeed, convertTemp, convertEfficiency, convertPressure,
@@ -307,6 +314,7 @@ export default function DriveDetailPage() {
     <PageContainer
       title={t('driveDetail.title', 'Drive Detail')}
       error={error as Error | null}
+      breadcrumbs={breadcrumbs}
     >
       {drive && stats && (
         <>
