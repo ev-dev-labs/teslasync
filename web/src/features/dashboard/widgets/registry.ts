@@ -2,7 +2,7 @@ import { lazy } from 'react';
 import {
   Battery, Zap, Car, MapPin, Shield, Thermometer,
   Activity, BarChart3, Gauge, Wifi, TrendingUp, Monitor,
-  DollarSign,
+  DollarSign, Calendar,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -178,6 +178,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 1 },
     maxSize: { cols: 4, rows: 2 },
     component: lazy(() => import('./ChargeCostTrackerWidget')),
+  },
+  {
+    id: 'charging-schedule',
+    name: 'Charging Schedule',
+    description: 'Shows scheduled charge time, departure time, charge limit',
+    icon: Calendar,
+    category: 'charging',
+    defaultSize: { cols: 2, rows: 1 },
+    minSize: { cols: 1, rows: 1 },
+    maxSize: { cols: 4, rows: 2 },
+    component: lazy(() => import('./ChargingScheduleWidget')),
   },
 
   // ── Climate ──
