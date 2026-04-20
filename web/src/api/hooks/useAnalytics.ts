@@ -156,3 +156,17 @@ export function useLifetimeStats(vehicleId?: string) {
     staleTime: 5 * 60_000,
   });
 }
+
+/* ── Year in Review ──────────────────────────────────────────────── */
+
+export function useYearReview(year: number, vehicleId?: string) {
+  return useQuery({
+    queryKey: ['year-review', year, vehicleId] as const,
+    queryFn: () =>
+      request<import('@/api/types').YearReview>(
+        `/analytics/year-review?year=${year}${vehicleId ? `&vehicle_id=${vehicleId}` : ''}`,
+      ),
+    enabled: !!vehicleId,
+    staleTime: Infinity,
+  });
+}

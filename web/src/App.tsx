@@ -66,6 +66,7 @@ const WeeklyDigest = lazy(() => import('./features/analytics/pages/WeeklyDigestP
 const Timeline = lazy(() => import('./features/analytics/pages/TimelinePage'))
 const VehicleComparison = lazy(() => import('./features/analytics/pages/ComparisonPage'))
 const LifetimeStats = lazy(() => import('./features/analytics/pages/LifetimeStatsPage'))
+const YearReview = lazy(() => import('./features/analytics/pages/YearReviewPage'))
 
 // Maps & Location
 const LiveMap = lazy(() => import('./features/maps/pages/MapOverviewPage'))
@@ -164,6 +165,7 @@ export default function App() {
       <Routes>
       <Route path="quick-stats" element={<SafeRoute name="QuickStats"><QuickStats /></SafeRoute>} />
       <Route path="glance" element={<SafeRoute name="Glance"><GlancePage /></SafeRoute>} />
+      <Route path="year-review/:year" element={<SafeRoute name="YearReview"><YearReview /></SafeRoute>} />
       <Route path="/" element={<Layout />}>
         <Route index element={<SafeRoute name="Dashboard"><Dashboard /></SafeRoute>} />
         <Route path="live" element={<SafeRoute name="LiveMap"><LiveMap /></SafeRoute>} />

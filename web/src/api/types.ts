@@ -1677,3 +1677,76 @@ export interface VehicleInvitation {
   fetched_at: string
   created_at: string
 }
+
+// === Year in Review Types ===
+
+export interface YearReviewDriveHighlight {
+  drive_id: number
+  date: string
+  distance_km: number
+  duration_min: number
+  start_address: string
+  end_address: string
+  efficiency_wh_km: number
+}
+
+export interface YearReviewMonthStat {
+  month: number
+  drives: number
+  distance_km: number
+  energy_kwh: number
+  cost: number
+}
+
+export interface YearReviewComparison {
+  label: string
+  value: string
+  emoji: string
+}
+
+export interface YearReview {
+  year: number
+  vehicle: {
+    id: number
+    display_name: string
+    model: string
+  }
+
+  // Headline stats
+  total_drives: number
+  total_distance_km: number
+  total_energy_kwh: number
+  total_charge_sessions: number
+  total_driving_minutes: number
+  total_charging_cost: number
+  gas_savings: number
+  co2_offset_kg: number
+
+  // Extremes
+  longest_drive: YearReviewDriveHighlight | null
+  shortest_drive: YearReviewDriveHighlight | null
+  most_efficient_drive: YearReviewDriveHighlight | null
+  least_efficient_drive: YearReviewDriveHighlight | null
+  fastest_speed_kmh: number
+  coldest_drive_temp_c: number
+  hottest_drive_temp_c: number
+
+  // Monthly breakdown
+  monthly_stats: YearReviewMonthStat[]
+
+  // Patterns
+  most_active_day_of_week: string
+  most_active_hour: number
+  avg_drives_per_week: number
+  avg_distance_per_drive_km: number
+  avg_efficiency_wh_km: number
+
+  // Charging habits
+  supercharger_pct: number
+  dc_fast_pct: number
+  ac_other_pct: number
+  avg_charge_start_soc: number
+
+  // Fun comparisons
+  comparisons: YearReviewComparison[]
+}

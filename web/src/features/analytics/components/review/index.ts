@@ -1,0 +1,12 @@
+export { SlideRenderer } from './SlideRenderer';
+export { SLIDE_DEFS, buildSlides, type SlideDefinition } from './slides';
+export { TitleSlide } from './TitleSlide';
+export { StatHeroSlide } from './StatHeroSlide';
+export { StatChartSlide } from './StatChartSlide';
+export { DriveHighlightSlide } from './DriveHighlightSlide';
+export { ChargingBreakdownSlide } from './ChargingBreakdownSlide';
+export { SavingsSlide } from './SavingsSlide';
+export { EnvironmentSlide } from './EnvironmentSlide';
+export { PatternsSlide } from './PatternsSlide';
+export { ComparisonsSlide } from './ComparisonsSlide';
+export { SummarySlide } from './SummarySlide';

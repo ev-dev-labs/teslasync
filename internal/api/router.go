@@ -177,6 +177,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	chargingOptimizerHandler := NewChargingOptimizerHandler(db)
 	anomalyHandler := NewAnomalyHandler(db)
 	lifetimeHandler := NewLifetimeHandler(db)
+	yearReviewHandler := NewYearReviewHandler(db)
 	chargePlannerHandler := NewChargePlannerHandler(db, teslaClient, cfg)
 	energyFlowHandler := NewEnergyFlowHandler(db)
 	weeklyDigestHandler := NewWeeklyDigestHandler(db)
@@ -529,6 +530,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Get("/analytics/charging-optimizer", chargingOptimizerHandler.GetOptimization)
 		r.Get("/analytics/anomalies", anomalyHandler.GetAnomalies)
 		r.Get("/analytics/lifetime", lifetimeHandler.GetLifetimeStats)
+		r.Get("/analytics/year-review", yearReviewHandler.GetYearReview)
 
 		// Charge Planner (smart scheduling)
 		r.Route("/charge-planner", func(r chi.Router) {
