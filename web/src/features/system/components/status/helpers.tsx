@@ -1,0 +1,74 @@
+import { CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
+import { fmtNumber } from '@/lib/numberFormat';
+
+export function getStatusColor(status: string): string {
+  switch ((status ?? '').toLowerCase()) {
+    case 'healthy': case 'ok': case 'online': case 'connected': case 'ready': case 'sent': case 'completed':
+      return '#22c55e';
+    case 'degraded': case 'warning': case 'pending': case 'queued': case 'processing':
+      return '#f59e0b';
+    case 'unhealthy': case 'offline': case 'error': case 'down': case 'failed':
+      return '#ef4444';
+    default:
+      return '#6b7280';
+  }
+}
+
+export function statusTextClass(status: string): string {
+  switch ((status ?? '').toLowerCase()) {
+    case 'healthy': case 'ok': case 'online': case 'connected': case 'ready': case 'sent': case 'completed':
+      return 'text-green-400';
+    case 'degraded': case 'warning': case 'pending': case 'queued': case 'processing':
+      return 'text-amber-400';
+    case 'unhealthy': case 'offline': case 'error': case 'down': case 'failed':
+      return 'text-red-400';
+    default:
+      return 'text-gray-400';
+  }
+}
+
+export function getStatusIcon(status: string): JSX.Element {
+  const cls = statusTextClass(status);
+  switch ((status ?? '').toLowerCase()) {
+    case 'healthy': case 'ok': case 'online': case 'connected': case 'ready': case 'sent': case 'completed':
+      return <CheckCircle className={`h-4 w-4 ${cls}`} />;
+    case 'degraded': case 'warning': case 'pending': case 'queued': case 'processing':
+      return <AlertTriangle className={`h-4 w-4 ${cls}`} />;
+    case 'unhealthy': case 'offline': case 'error': case 'down': case 'failed':
+      return <XCircle className={`h-4 w-4 ${cls}`} />;
+    default:
+      return <AlertTriangle className={`h-4 w-4 ${cls}`} />;
+  }
+}
+
+export function formatUptime(seconds: number): string {
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  if (days > 0) return `${days}d ${hours}h ${mins}m`;
+  if (hours > 0) return `${hours}h ${mins}m`;
+  return `${mins}m`;
+}
+
+export function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${fmtNumber(bytes / Math.pow(k, i), 1)} ${sizes[i]}`;
+}
+
+export function statusToBadgeVariant(
+  status: string,
+): 'success' | 'warning' | 'danger' | 'neutral' {
+  switch ((status ?? '').toLowerCase()) {
+    case 'healthy': case 'ok': case 'online': case 'ready': case 'sent': case 'completed':
+      return 'success';
+    case 'degraded': case 'warning': case 'pending': case 'queued': case 'processing':
+      return 'warning';
+    case 'unhealthy': case 'offline': case 'error': case 'down': case 'failed':
+      return 'danger';
+    default:
+      return 'neutral';
+  }
+}
