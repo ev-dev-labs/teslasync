@@ -97,3 +97,5 @@ dashboard-widgets/11-vehicle-hero-card.prompt.md
 dashboard-widgets/12-digital-twin-mini.prompt.md
 dashboard-widgets/13-odometer-counter.prompt.md
 dashboard-widgets/14-software-update-status.prompt.md
+dashboard-widgets/15-recent-drives-list.prompt.md
+dashboard-widgets/16-drive-efficiency-chart.prompt.md

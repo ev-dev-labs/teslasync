@@ -180,6 +180,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     component: lazy(() => import('./RecentDrivesListWidget')),
   },
   {
+    id: 'drive-score-gauge',
+    name: 'Drive Score Gauge',
+    description: 'Radial gauge showing weekly score (0-100) with efficiency, smoothness, and speed breakdown',
+    icon: Gauge,
+    category: 'driving',
+    defaultSize: { cols: 1, rows: 1 },
+    minSize: { cols: 1, rows: 1 },
+    maxSize: { cols: 2, rows: 2 },
+    component: lazy(() => import('./DriveScoreGaugeWidget')),
+  },
+  {
     id: 'drive-efficiency-chart',
     name: 'Drive Efficiency Chart',
     description: 'Area chart of Wh/mi over last 30 days with rolling average overlay',
