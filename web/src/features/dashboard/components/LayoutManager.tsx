@@ -11,6 +11,7 @@ interface LayoutManagerProps {
   onCreate: (name: string) => void;
   onRename: (id: string, name: string) => void;
   onDelete: (id: string) => void;
+  onOpenTemplates?: () => void;
 }
 
 export function LayoutManager({
@@ -20,6 +21,7 @@ export function LayoutManager({
   onCreate,
   onRename,
   onDelete,
+  onOpenTemplates,
 }: LayoutManagerProps) {
   const { t } = useTranslation('dashboard');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -42,6 +44,10 @@ export function LayoutManager({
   };
 
   const startCreate = () => {
+    if (onOpenTemplates) {
+      onOpenTemplates();
+      return;
+    }
     setIsCreating(true);
     setNewName('');
     setTimeout(() => inputRef.current?.focus(), 50);

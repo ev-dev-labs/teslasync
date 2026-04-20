@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import {
   RefreshCw, Bell, Radio, ArrowUpRight, Activity,
   Route, BatteryCharging, Shield, AlertCircle, Settings, Plus, RotateCcw,
-  LayoutGrid, Download, Upload, Undo2, Redo2,
+  LayoutGrid, Download, Upload, Undo2, Redo2, LayoutTemplate,
 } from 'lucide-react';
 import { request } from '@/api/client';
 import { useAuthStatus } from '@/api/hooks/useSettings';
@@ -23,6 +23,7 @@ import { DashboardGrid } from '../components/DashboardGrid';
 import { WidgetPicker } from '../components/WidgetPicker';
 import { WidgetSettingsModal } from '../components/WidgetSettingsModal';
 import { LayoutManager } from '../components/LayoutManager';
+import { TemplateGallery } from '../components/TemplateGallery';
 import { useDashboardLayout } from '../hooks/useDashboardLayout';
 import { useLayoutKeyboard } from '../hooks/useLayoutKeyboard';
 import { getWidgetDef } from '../widgets/registry';
@@ -46,6 +47,7 @@ export default function DashboardPage() {
     canUndo, canRedo, undoCount, undo, redo,
   } = useDashboardLayout();
   const [showPicker, setShowPicker] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
   useLayoutKeyboard({ editMode, canUndo, canRedo, onUndo: undo, onRedo: redo });
   const [settingsWidgetId, setSettingsWidgetId] = useState<string | null>(null);
 
@@ -107,6 +109,16 @@ export default function DashboardPage() {
     e.target.value = '';
   };
 
+  /* ——— Template gallery handler ——— */
+  const handleApplyTemplate = (presetId: string) => {
+    if (presetId === '__blank__') {
+      createDashboard(t('dashboard.newDashboard', 'New Dashboard'));
+    } else {
+      applyPreset(presetId);
+    }
+    setShowTemplates(false);
+  };
+
   /* ——— Widget settings ——— */
   const settingsWidget = settingsWidgetId
     ? activeDashboard.widgets.find((w) => w.id === settingsWidgetId)
@@ -158,6 +170,10 @@ export default function DashboardPage() {
           <Button variant="ghost" size="sm" onClick={autoArrange}>
             <LayoutGrid className="h-3.5 w-3.5 mr-1" />
             {t('dashboard.autoArrange', 'Auto Arrange')}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setShowTemplates(true)}>
+            <LayoutTemplate className="h-3.5 w-3.5 mr-1" />
+            {t('dashboard.templates', 'Templates')}
           </Button>
           <Button variant="ghost" size="sm" onClick={resetToDefault}>
             <RotateCcw className="h-3.5 w-3.5 mr-1" />
@@ -249,6 +265,7 @@ export default function DashboardPage() {
             onCreate={createDashboard}
             onRename={renameDashboard}
             onDelete={deleteDashboard}
+            onOpenTemplates={() => setShowTemplates(true)}
           />
         )}
 
@@ -297,6 +314,13 @@ export default function DashboardPage() {
         onAddWidget={addWidget}
         onApplyPreset={applyPreset}
         activeWidgetIds={activeDashboard.widgets.map((w) => w.widgetId)}
+      />
+
+      {/* Template Gallery Modal */}
+      <TemplateGallery
+        open={showTemplates}
+        onClose={() => setShowTemplates(false)}
+        onApply={handleApplyTemplate}
       />
 
       {/* Widget Settings Modal */}
