@@ -14,7 +14,7 @@
 
 ## 1. Ingestion Layer
 
-**File:** `internal/api/telemetry_handler.go` (lines 1362–1363, 2659–2661)
+**File:** `internal/api/telemetry_handler.go` (lines 1453–1454, 2750–2752)
 
 The signal is received as a raw Tesla enum string in the `normalizeFleetUnits()` function:
 
@@ -97,7 +97,7 @@ Two endpoints serve this data:
 | `GET /api/v1/safety?vehicle_id={id}` | `List` | Returns `[]*SafetySnapshot` (history) |
 | `GET /api/v1/safety/latest?vehicle_id={id}` | `Latest` | Returns latest `*SafetySnapshot` |
 
-**Go struct** (`internal/models/models.go:1061`):
+**Go struct** (`internal/models/models.go:1062`):
 ```go
 LaneDepartureAvoidance *string `json:"lane_departure_avoidance,omitempty" db:"lane_departure_avoidance"`
 ```
@@ -166,7 +166,7 @@ lane_departure_avoidance: string;   // in SafetySettingsPage local interface
 
 ### Display locations:
 
-1. **Feature Card** (lines 278–284):
+1. **Feature Card** (lines 280–284):
    - Label: `"Lane Departure Avoidance"`
    - Value shown: `ldaVal` = `cleanEnum(snap.lane_departure_avoidance ?? 'Off', 'lane_departure_avoidance')`
    - Enabled status: `ldaOn = ldaVal !== 'Off'`
