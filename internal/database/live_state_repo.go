@@ -38,7 +38,7 @@ var isVarcharCol = map[string]bool{
 	"setting_temperature_unit": true, "setting_tire_pressure_unit": true,
 	"speed_limit_warning": true, "supercharger_session_trip_planner": true,
 	"tonneau_position": true, "tonneau_tent_mode": true, "tpms_hard_warnings": true, "tpms_soft_warnings": true,
-	"speed_limit_mode": true, "emergency_lane_departure_avoidance": true, "defrost_mode": true,
+	"speed_limit_mode": true, "defrost_mode": true,
 }
 
 // timestamptz columns in vehicle_live_state
