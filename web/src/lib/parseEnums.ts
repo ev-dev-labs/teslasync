@@ -45,12 +45,15 @@ export function parseWindowState(raw: string): string {
   return g || raw
 }
 
-/** Parse cabin overheat protection mode. */
+/** Parse cabin overheat protection mode.
+ *  Check multi-word variants (FanOnly, NoCooling) before single-word (On)
+ *  because "FanOnly" contains the substring "On". */
 export function parseCabinOverheatMode(raw: string): string {
   const g = raw.replace(/CabinOverheatProtectionModeState/i, '')
+  if (g.includes('FanOnly')) return 'Fan Only'
+  if (g.includes('NoCooling')) return 'No Cooling'
   if (g.includes('On')) return 'On'
   if (g.includes('Off')) return 'Off'
-  if (g.includes('FanOnly')) return 'Fan Only'
   return g || raw
 }
 

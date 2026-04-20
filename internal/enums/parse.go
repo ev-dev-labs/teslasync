@@ -177,15 +177,19 @@ func ParseChargePortLatch(raw string) string {
 }
 
 // ParseCabinOverheatMode normalizes cabin overheat protection mode.
+// Check multi-word variants (FanOnly, NoCooling) before single-word (On)
+// because "FanOnly" contains the substring "On".
 func ParseCabinOverheatMode(raw string) string {
 	g := strings.TrimPrefix(raw, "CabinOverheatProtectionModeState")
 	switch {
+	case strings.Contains(g, "FanOnly"):
+		return "Fan Only"
+	case strings.Contains(g, "NoCooling"):
+		return "No Cooling"
 	case strings.Contains(g, "On"):
 		return "On"
 	case strings.Contains(g, "Off"):
 		return "Off"
-	case strings.Contains(g, "FanOnly"):
-		return "Fan Only"
 	}
 	if g != "" {
 		return g

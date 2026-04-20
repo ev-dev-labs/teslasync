@@ -43,6 +43,10 @@ describe('parseWindowState', () => {
 describe('parseCabinOverheatMode', () => {
   it('"CabinOverheatProtectionModeStateOn" → "On"', () => expect(parseCabinOverheatMode('CabinOverheatProtectionModeStateOn')).toBe('On'))
   it('"CabinOverheatProtectionModeStateOff" → "Off"', () => expect(parseCabinOverheatMode('CabinOverheatProtectionModeStateOff')).toBe('Off'))
+  it('"CabinOverheatProtectionModeStateFanOnly" → "Fan Only"', () => expect(parseCabinOverheatMode('CabinOverheatProtectionModeStateFanOnly')).toBe('Fan Only'))
+  it('"CabinOverheatProtectionModeStateNoCooling" → "No Cooling"', () => expect(parseCabinOverheatMode('CabinOverheatProtectionModeStateNoCooling')).toBe('No Cooling'))
+  it('"FanOnly" → "Fan Only"', () => expect(parseCabinOverheatMode('FanOnly')).toBe('Fan Only'))
+  it('"On" → "On"', () => expect(parseCabinOverheatMode('On')).toBe('On'))
 })
 
 describe('parseClimateKeeperMode', () => {

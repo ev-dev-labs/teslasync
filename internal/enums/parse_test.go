@@ -445,3 +445,51 @@ func TestParseTonneauTentMode(t *testing.T) {
 		})
 	}
 }
+
+func TestParseCabinOverheatMode(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"CabinOverheatProtectionModeStateOn", "On"},
+		{"CabinOverheatProtectionModeStateOff", "Off"},
+		{"CabinOverheatProtectionModeStateFanOnly", "Fan Only"},
+		{"CabinOverheatProtectionModeStateNoCooling", "No Cooling"},
+		{"On", "On"},
+		{"Off", "Off"},
+		{"FanOnly", "Fan Only"},
+		{"NoCooling", "No Cooling"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := ParseCabinOverheatMode(tt.input)
+			if got != tt.expected {
+				t.Errorf("ParseCabinOverheatMode(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseClimateKeeperMode(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"ClimateKeeperModeStateOff", "Off"},
+		{"ClimateKeeperModeStateOn", "On"},
+		{"ClimateKeeperModeStateDog", "Dog Mode"},
+		{"ClimateKeeperModeStateCamp", "Camp Mode"},
+		{"Off", "Off"},
+		{"On", "On"},
+		{"Dog", "Dog Mode"},
+		{"Camp", "Camp Mode"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := ParseClimateKeeperMode(tt.input)
+			if got != tt.expected {
+				t.Errorf("ParseClimateKeeperMode(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}

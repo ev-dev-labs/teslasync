@@ -1500,6 +1500,16 @@ func normalizeFleetUnits(signals map[string]interface{}) {
 		signals["ScheduledChargingMode"] = enums.ParseScheduledChargingMode(toString(v))
 	}
 
+	// CabinOverheatProtectionMode: strip prefix (e.g., "CabinOverheatProtectionModeStateOn" → "On")
+	if v, ok := signals["CabinOverheatProtectionMode"]; ok {
+		signals["CabinOverheatProtectionMode"] = enums.ParseCabinOverheatMode(toString(v))
+	}
+
+	// ClimateKeeperMode: strip prefix (e.g., "ClimateKeeperModeStateDog" → "Dog Mode")
+	if v, ok := signals["ClimateKeeperMode"]; ok {
+		signals["ClimateKeeperMode"] = enums.ParseClimateKeeperMode(toString(v))
+	}
+
 	// LightsTurnSignal: strip "TurnSignalState"/"TurnSignal" prefix (e.g., "TurnSignalStateOff" → "Off")
 	if v, ok := signals["LightsTurnSignal"]; ok {
 		signals["LightsTurnSignal"] = enums.ParseTurnSignal(toString(v))
