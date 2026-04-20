@@ -2,7 +2,7 @@ import { lazy } from 'react';
 import {
   Battery, Zap, Car, MapPin, Shield, Thermometer,
   Activity, BarChart3, Gauge, Wifi, TrendingUp, Monitor,
-  DollarSign, Calendar, CloudSun, CircleDot,
+  DollarSign, Calendar, CloudSun, CircleDot, CreditCard,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -18,6 +18,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 2, rows: 1 },
     maxSize: { cols: 4, rows: 2 },
     component: lazy(() => import('./VehicleHeroWidget')),
+  },
+  {
+    id: 'vehicle-hero-card',
+    name: 'Vehicle Hero Card',
+    description: 'Vehicle name, model, state badge (online/asleep/driving/charging), battery, range, temp',
+    icon: CreditCard,
+    category: 'vehicle',
+    defaultSize: { cols: 2, rows: 1 },
+    minSize: { cols: 1, rows: 1 },
+    maxSize: { cols: 4, rows: 2 },
+    component: lazy(() => import('./VehicleHeroCardWidget')),
   },
   {
     id: 'vehicle-twin',
