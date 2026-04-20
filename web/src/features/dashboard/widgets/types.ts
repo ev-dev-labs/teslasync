@@ -33,6 +33,7 @@ export type WidgetCategory =
   | 'commands'
   | 'telemetry'
   | 'analytics'
+  | 'automations'
   | 'system';
 
 export interface WidgetDef {

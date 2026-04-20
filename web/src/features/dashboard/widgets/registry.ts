@@ -450,6 +450,19 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     component: lazy(() => import('./WeeklySummaryCardWidget')),
   },
 
+  // ── Automations ──
+  {
+    id: 'automation-status',
+    name: 'Automation Status',
+    description: 'Active automations: last run, success/fail badge, next scheduled',
+    icon: Workflow,
+    category: 'automations',
+    defaultSize: { cols: 2, rows: 2 },
+    minSize: { cols: 1, rows: 1 },
+    maxSize: { cols: 4, rows: 3 },
+    component: lazy(() => import('./AutomationStatusWidget')),
+  },
+
   // ── System ──
   {
     id: 'quick-nav',

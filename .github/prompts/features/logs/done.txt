@@ -104,3 +104,7 @@ dashboard-widgets/18-speed-heatmap.prompt.md
 dashboard-widgets/19-energy-flow-animated.prompt.md
 dashboard-widgets/20-door-window-status.prompt.md
 dashboard-widgets/21-sentry-event-log.prompt.md
+dashboard-widgets/22-command-quick-actions.prompt.md
+dashboard-widgets/23-live-signal-sparklines.prompt.md
+dashboard-widgets/24-weekly-summary-card.prompt.md
+dashboard-widgets/25-fleet-stats-bar.prompt.md
