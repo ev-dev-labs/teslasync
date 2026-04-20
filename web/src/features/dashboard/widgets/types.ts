@@ -36,7 +36,8 @@ export type WidgetCategory =
   | 'analytics'
   | 'alerts'
   | 'automations'
-  | 'system';
+  | 'system'
+  | 'maps';
 
 export interface WidgetDef {
   id: string;

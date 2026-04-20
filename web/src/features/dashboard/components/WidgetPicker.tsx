@@ -21,6 +21,7 @@ const CATEGORY_LABELS: Record<WidgetCategory, string> = {
   alerts: 'Alerts',
   automations: 'Automations',
   system: 'System',
+  maps: 'Maps',
 };
 
 interface WidgetPickerProps {

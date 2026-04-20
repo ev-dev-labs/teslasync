@@ -275,6 +275,7 @@ export interface VehicleState {
   state: string
   latitude: number
   longitude: number
+  heading?: number | null
   speed: number
   power: number
   battery_level: number

@@ -130,6 +130,12 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 	if v := all["Longitude"]; v != nil {
 		if f, ok := v.Raw.(float64); ok { state.Longitude = f }
 	}
+	if v := all["GpsHeading"]; v != nil {
+		switch hv := v.Raw.(type) {
+		case float64: state.Heading = &hv
+		case int: f := float64(hv); state.Heading = &f
+		}
+	}
 
 	// Power (computed or direct)
 	if v := all["Power"]; v != nil {
@@ -242,6 +248,12 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 			}
 			if v := all["Longitude"]; v != nil {
 				if f, ok := v.Raw.(float64); ok { state.Longitude = f }
+			}
+			if v := all["GpsHeading"]; v != nil {
+				switch hv := v.Raw.(type) {
+				case float64: state.Heading = &hv
+				case int: f := float64(hv); state.Heading = &f
+				}
 			}
 			if v := all["Power"]; v != nil {
 				if f, ok := v.Raw.(float64); ok { state.Power = f }
