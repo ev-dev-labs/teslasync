@@ -179,6 +179,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     maxSize: { cols: 4, rows: 3 },
     component: lazy(() => import('./RecentDrivesListWidget')),
   },
+  {
+    id: 'drive-efficiency-chart',
+    name: 'Drive Efficiency Chart',
+    description: 'Area chart of Wh/mi over last 30 days with rolling average overlay',
+    icon: TrendingUp,
+    category: 'driving',
+    defaultSize: { cols: 2, rows: 2 },
+    minSize: { cols: 1, rows: 1 },
+    maxSize: { cols: 4, rows: 3 },
+    component: lazy(() => import('./DriveEfficiencyChartWidget')),
+  },
 
   // ── Charging ──
   {
