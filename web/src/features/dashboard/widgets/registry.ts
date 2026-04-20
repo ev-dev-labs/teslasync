@@ -4,7 +4,7 @@ import {
   Activity, BarChart3, Gauge, Wifi, TrendingUp, Monitor,
   DollarSign, Calendar, CloudSun, CircleDot, CreditCard, Hash,
   MonitorSmartphone, List, Grid3X3, Workflow, DoorOpen, Eye,
-  Command,
+  Command, CalendarRange,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -426,6 +426,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 2, rows: 1 },
     maxSize: { cols: 4, rows: 1 },
     component: lazy(() => import('./FleetStatsWidget')),
+  },
+  {
+    id: 'weekly-summary-card',
+    name: 'Weekly Summary',
+    description: 'This week vs last week: total miles, kWh, cost, efficiency',
+    icon: CalendarRange,
+    category: 'analytics',
+    defaultSize: { cols: 2, rows: 1 },
+    minSize: { cols: 1, rows: 1 },
+    maxSize: { cols: 4, rows: 2 },
+    component: lazy(() => import('./WeeklySummaryCardWidget')),
   },
 
   // ── System ──
