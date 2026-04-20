@@ -52,6 +52,7 @@ import {
   Database,
   History,
   Monitor,
+  Terminal,
 } from 'lucide-react'
 import { useState, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -238,6 +239,7 @@ export const navSections = [
     title: 'Developer',
     items: [
       { to: '/dev-tools', icon: Wrench, label: 'Dev Tools', color: 'text-cyan-400' },
+      { to: '/api-playground', icon: Terminal, label: 'API Playground', color: 'text-emerald-400' },
       { to: '/roadmap', icon: Target, label: 'Roadmap', color: 'text-violet-400' },
     ],
   },

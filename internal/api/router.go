@@ -775,6 +775,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/update-check", UpdateCheckHandler())
 			r.Get("/workers", WorkersHealthHandler())
 			r.Get("/metrics-catalog", MetricsCatalogHandler())
+			r.Get("/openapi", OpenAPIHandler())
 		})
 
 		// API Call Logs

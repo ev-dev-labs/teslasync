@@ -1,0 +1,197 @@
+import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ChevronDown, Search } from 'lucide-react';
+import { cn } from '@/lib/cn';
+import { Input } from '@/components/ui';
+
+/* ─── types ───────────────────────────────────────────────────────────── */
+
+export interface ParsedParam {
+  name: string;
+  in: 'path' | 'query';
+  required: boolean;
+  type: string;
+  description: string;
+  default?: string;
+}
+
+export interface ParsedBody {
+  contentType: string;
+  example?: unknown;
+  schema?: Record<string, unknown>;
+}
+
+export interface ParsedEndpoint {
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  path: string;
+  tag: string;
+  summary: string;
+  description: string;
+  operationId: string;
+  parameters: ParsedParam[];
+  requestBody?: ParsedBody;
+  responses: Record<string, { description: string }>;
+}
+
+interface EndpointSidebarProps {
+  endpoints: ParsedEndpoint[];
+  selected: ParsedEndpoint | null;
+  onSelect: (ep: ParsedEndpoint) => void;
+}
+
+/* ─── method badge ────────────────────────────────────────────────────── */
+
+const METHOD_COLORS: Record<string, string> = {
+  GET: 'bg-green-500/20 text-green-400',
+  POST: 'bg-blue-500/20 text-blue-400',
+  PUT: 'bg-amber-500/20 text-amber-400',
+  DELETE: 'bg-red-500/20 text-red-400',
+  PATCH: 'bg-purple-500/20 text-purple-400',
+};
+
+export function MethodBadge({ method, className }: { method: string; className?: string }) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[9px] font-mono font-bold w-12 text-center shrink-0',
+        METHOD_COLORS[method] ?? 'bg-gray-500/20 text-gray-400',
+        className,
+      )}
+    >
+      {method}
+    </span>
+  );
+}
+
+/* ─── collapsible tag group ──────────────────────────────────────────── */
+
+function TagGroup({
+  tag,
+  endpoints,
+  selected,
+  onSelect,
+  defaultOpen,
+}: {
+  tag: string;
+  endpoints: ParsedEndpoint[];
+  selected: ParsedEndpoint | null;
+  onSelect: (ep: ParsedEndpoint) => void;
+  defaultOpen: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-white/[0.03] transition-colors"
+      >
+        <ChevronDown
+          className={cn(
+            'h-3 w-3 text-white/40 transition-transform duration-200',
+            open && 'rotate-180',
+          )}
+        />
+        <span className="flex-1 text-xs font-semibold text-white/60 uppercase tracking-wider">
+          {tag}
+        </span>
+        <span className="text-[10px] text-white/30 font-mono">{endpoints.length}</span>
+      </button>
+      {open && (
+        <div>
+          {endpoints.map(ep => {
+              const isSelected =
+                selected?.path === ep.path && selected?.method === ep.method;
+              return (
+                <button
+                  key={`${ep.method}-${ep.path}`}
+                  onClick={() => onSelect(ep)}
+                  className={cn(
+                    'w-full text-left px-3 py-1.5 text-xs flex items-center gap-2',
+                    'hover:bg-white/[0.05] transition-colors',
+                    isSelected && 'bg-white/[0.07] border-l-2 border-cyan-400',
+                  )}
+                  title={ep.summary}
+                >
+                  <MethodBadge method={ep.method} />
+                  <span className="truncate text-white/70 font-mono text-[11px]">
+                    {ep.path}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+    </div>
+  );
+}
+
+/* ─── sidebar ─────────────────────────────────────────────────────────── */
+
+export default function EndpointSidebar({ endpoints, selected, onSelect }: EndpointSidebarProps) {
+  const { t } = useTranslation();
+  const [search, setSearch] = useState('');
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return endpoints;
+    const q = search.toLowerCase();
+    return endpoints.filter(
+      e =>
+        e.path.toLowerCase().includes(q) ||
+        e.summary.toLowerCase().includes(q) ||
+        e.operationId.toLowerCase().includes(q),
+    );
+  }, [endpoints, search]);
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, ParsedEndpoint[]>();
+    for (const ep of filtered) {
+      const tag = ep.tag || 'Other';
+      const list = map.get(tag) ?? [];
+      list.push(ep);
+      map.set(tag, list);
+    }
+    return map;
+  }, [filtered]);
+
+  return (
+    <div className="flex flex-col h-full border-r border-white/[0.06]">
+      {/* Search */}
+      <div className="p-2 border-b border-white/[0.06]">
+        <Input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder={t('playground.search', 'Search endpoints...')}
+          icon={<Search className="h-3.5 w-3.5" />}
+          className="!text-xs !py-1.5 !bg-white/[0.03]"
+        />
+      </div>
+
+      {/* Endpoint count */}
+      <div className="px-3 py-1.5 text-[10px] text-white/30 border-b border-white/[0.04]">
+        {filtered.length} {t('playground.endpoints', 'endpoints')}
+      </div>
+
+      {/* Tag groups */}
+      <div className="flex-1 overflow-y-auto">
+        {Array.from(grouped.entries()).map(([tag, eps]) => (
+          <TagGroup
+            key={tag}
+            tag={tag}
+            endpoints={eps}
+            selected={selected}
+            onSelect={onSelect}
+            defaultOpen={selected?.tag === tag || grouped.size <= 5}
+          />
+        ))}
+
+        {filtered.length === 0 && (
+          <div className="px-3 py-6 text-center text-xs text-white/30">
+            {t('playground.noResults', 'No matching endpoints')}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

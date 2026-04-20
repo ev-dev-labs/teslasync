@@ -533,6 +533,11 @@ func main() {
 		}
 	})
 
+	// Provide OpenAPI spec to API layer (best-effort; non-fatal if missing)
+	if specBytes, err := os.ReadFile("docs/public/openapi.yaml"); err == nil {
+		api.SetOpenAPISpec(specBytes)
+	}
+
 	// HTTP API
 	router := api.NewRouter(db, teslaClient, mqttClient, cfg, health, api.RouterOptions{
 		AppVersion:       Version,
