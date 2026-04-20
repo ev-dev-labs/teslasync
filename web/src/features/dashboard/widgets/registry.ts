@@ -41,6 +41,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     maxSize: { cols: 3, rows: 3 },
     component: lazy(() => import('./DigitalTwinWidget')),
   },
+  {
+    id: 'digital-twin-mini',
+    name: 'Digital Twin Mini',
+    description: 'Small version of vehicle digital twin SVG: doors, windows, lock, charge port',
+    icon: Monitor,
+    category: 'vehicle',
+    defaultSize: { cols: 2, rows: 2 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 3 },
+    component: lazy(() => import('./DigitalTwinMiniWidget')),
+  },
 
   // ── Battery ──
   {
