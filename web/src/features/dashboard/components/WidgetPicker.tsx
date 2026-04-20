@@ -8,6 +8,7 @@ import type { WidgetCategory } from '../widgets/types';
 const CATEGORY_LABELS: Record<WidgetCategory, string> = {
   vehicle: 'Vehicle',
   battery: 'Battery & Range',
+  energy: 'Energy',
   driving: 'Driving',
   charging: 'Charging',
   climate: 'Climate',

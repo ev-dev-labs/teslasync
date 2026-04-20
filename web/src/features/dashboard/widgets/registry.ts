@@ -3,7 +3,7 @@ import {
   Battery, Zap, Car, MapPin, Shield, Thermometer,
   Activity, BarChart3, Gauge, Wifi, TrendingUp, Monitor,
   DollarSign, Calendar, CloudSun, CircleDot, CreditCard, Hash,
-  MonitorSmartphone, List, Grid3X3,
+  MonitorSmartphone, List, Grid3X3, Workflow,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -143,6 +143,19 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 2, rows: 2 },
     maxSize: { cols: 4, rows: 3 },
     component: lazy(() => import('./EnergyFlowWidget')),
+  },
+
+  // ── Energy ──
+  {
+    id: 'energy-flow-animated',
+    name: 'Energy Flow Animated',
+    description: 'Animated energy flow diagram: battery→drive, regen→battery, charger→battery',
+    icon: Workflow,
+    category: 'energy',
+    defaultSize: { cols: 2, rows: 2 },
+    minSize: { cols: 2, rows: 2 },
+    maxSize: { cols: 3, rows: 2 },
+    component: lazy(() => import('./EnergyFlowAnimatedWidget')),
   },
 
   // ── Driving ──

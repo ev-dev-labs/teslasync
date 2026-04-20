@@ -24,6 +24,7 @@ export interface WidgetProps {
 export type WidgetCategory =
   | 'vehicle'
   | 'battery'
+  | 'energy'
   | 'driving'
   | 'charging'
   | 'climate'
