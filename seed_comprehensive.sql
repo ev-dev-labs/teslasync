@@ -726,7 +726,7 @@ SELECT 1,
   CASE WHEN EXTRACT(HOUR FROM ts) IN (8,17) THEN random() * 5 ELSE 0 END,
   EXTRACT(HOUR FROM ts) NOT BETWEEN 8 AND 17,
   EXTRACT(HOUR FROM ts) BETWEEN 9 AND 17,
-  false, 'Valid', ts
+  false, 'Fix3D', ts
 FROM generate_series(NOW() - INTERVAL '90 days', NOW(), '1 hour') ts;
 
 -- ============================================================

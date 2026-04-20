@@ -139,7 +139,7 @@ export interface VehicleLiveState {
   locatedAtHome: boolean
   locatedAtWork: boolean
   locatedAtFavorite: boolean
-  gpsState: boolean
+  gpsState: string
   originLatitude: number
   originLongitude: number
 
@@ -196,7 +196,7 @@ const EMPTY_STATE: VehicleLiveState = {
   destinationName: '', destinationLatitude: 0, destinationLongitude: 0,
   distanceToArrival: 0, minutesToArrival: 0, routeLine: '',
   locatedAtHome: false, locatedAtWork: false, locatedAtFavorite: false,
-  gpsState: false, originLatitude: 0, originLongitude: 0,
+  gpsState: '', originLatitude: 0, originLongitude: 0,
   swUpdateVersion: '', swUpdateDownloadPct: 0, swUpdateInstallPct: 0,
   swUpdateExpectedMin: 0, swUpdateScheduledStart: '',
   setting24HourTime: false, settingChargeUnit: '', settingDistanceUnit: '',
@@ -369,7 +369,7 @@ function parseSignals(raw: Record<string, unknown>): Partial<VehicleLiveState> {
   if (raw['LocatedAtHome'] != null) s.locatedAtHome = bool('LocatedAtHome')
   if (raw['LocatedAtWork'] != null) s.locatedAtWork = bool('LocatedAtWork')
   if (raw['LocatedAtFavorite'] != null) s.locatedAtFavorite = bool('LocatedAtFavorite')
-  if (raw['GpsState'] != null) s.gpsState = bool('GpsState')
+  if (raw['GpsState'] != null) s.gpsState = str('GpsState')
   if (raw['OriginLocation'] != null && typeof raw['OriginLocation'] === 'object') {
     const orig = raw['OriginLocation'] as Record<string, unknown>
     if (orig['latitude'] != null) s.originLatitude = orig['latitude'] as number

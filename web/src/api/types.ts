@@ -1250,7 +1250,7 @@ export interface LocationSnapshot {
   located_at_home?: boolean
   located_at_work?: boolean
   located_at_favorite?: boolean
-  gps_state?: boolean
+  gps_state?: string
   created_at: string
 }
 

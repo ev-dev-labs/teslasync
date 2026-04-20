@@ -633,7 +633,7 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 // Used to recover in-memory state after a pod restart.
 func (r *LiveStateRepo) LoadLiveState(ctx context.Context, vehicleID int64) (map[string]interface{}, error) {
 	row := r.db.Pool.QueryRow(ctx, `
-		SELECT latitude, longitude, heading, speed, power, odometer, gear,
+		SELECT latitude, longitude, heading, gps_state, speed, power, odometer, gear,
 		       battery_level, soc, ideal_range, rated_range, est_range, energy_remaining,
 		       inside_temp, outside_temp, hvac_power, fan_speed,
 		       charge_state, detailed_charge_state, charger_voltage, charge_amps,
@@ -658,6 +658,7 @@ func (r *LiveStateRepo) LoadLiveState(ctx context.Context, vehicleID int64) (map
 	var insideT, outsideT, chargerV, chargeAmps, chargeRate, chargerPower, ttfc *float64
 	var tpFL, tpFR, tpRL, tpRR *float64
 	var currentLimitMph *float64
+	var gpsState *string
 	var heading, battLvl, fanSpeed, chargeLimitSoc *int
 	var homelinkDevCount, pairedKeyCount *int
 	var swDownloadPct, swInstallPct, swExpectedDur *int
@@ -678,7 +679,7 @@ func (r *LiveStateRepo) LoadLiveState(ctx context.Context, vehicleID int64) (map
 	var lastSpeedTimeDB *time.Time
 
 	err := row.Scan(
-		&lat, &lon, &heading, &speed, &power, &odo, &gear,
+		&lat, &lon, &heading, &gpsState, &speed, &power, &odo, &gear,
 		&battLvl, &soc, &idealR, &ratedR, &estR, &energyRem,
 		&insideT, &outsideT, &hvacPower, &fanSpeed,
 		&chargeState, &detailedCS, &chargerV, &chargeAmps,
@@ -706,6 +707,7 @@ func (r *LiveStateRepo) LoadLiveState(ctx context.Context, vehicleID int64) (map
 	if lat != nil { result["Latitude"] = *lat }
 	if lon != nil { result["Longitude"] = *lon }
 	if heading != nil { result["GpsHeading"] = *heading }
+	if gpsState != nil { result["GpsState"] = *gpsState }
 	if speed != nil { result["VehicleSpeed"] = *speed }
 	if power != nil { result["Power"] = *power }
 	if odo != nil { result["Odometer"] = *odo }
