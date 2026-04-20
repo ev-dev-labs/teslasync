@@ -50,7 +50,7 @@ function buildLayoutItem(
   const minW = Math.min(def?.minSize.cols ?? 1, cols);
   const minH = def?.minSize.rows ?? 1;
   const maxW = Math.min(def?.maxSize.cols ?? cols, cols);
-  const maxH = def?.maxSize.rows ?? 4;
+  const maxH = def?.maxSize.rows ?? 20;
 
   return {
     i: widget.id,
@@ -125,10 +125,11 @@ export function reconcileLayouts(
       const minW = Math.min(def?.minSize.cols ?? 1, cols);
       const minH = def?.minSize.rows ?? 1;
       const maxW = Math.min(def?.maxSize.cols ?? cols, cols);
-      const maxH = def?.maxSize.rows ?? 4;
+      const maxH = def?.maxSize.rows ?? 20;
 
       const prev = existingMap.get(widget.id);
       if (prev) {
+        // Preserve user-saved sizes — only enforce min/max from registry
         items.push({
           ...prev,
           w: clampMinMax(prev.w, minW, maxW),
