@@ -140,10 +140,12 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	var totalRegenKWh, totalDriveKWh float64
 	err = h.db.Pool.QueryRow(ctx, `
 		SELECT
-			COALESCE(MAX(lifetime_energy_gained_regen) - MIN(lifetime_energy_gained_regen), 0),
-			COALESCE(MAX(lifetime_energy_used_drive) - MIN(lifetime_energy_used_drive), 0)
+			COALESCE(MAX((signals->>'lifetime_energy_gained_regen')::double precision)
+			       - MIN((signals->>'lifetime_energy_gained_regen')::double precision), 0),
+			COALESCE(MAX((signals->>'lifetime_energy_used_drive')::double precision)
+			       - MIN((signals->>'lifetime_energy_used_drive')::double precision), 0)
 		FROM motor_snapshots
-		WHERE vehicle_id = $1 AND lifetime_energy_gained_regen IS NOT NULL`, vehicleID).Scan(&totalRegenKWh, &totalDriveKWh)
+		WHERE vehicle_id = $1 AND signals ? 'lifetime_energy_gained_regen'`, vehicleID).Scan(&totalRegenKWh, &totalDriveKWh)
 	if err != nil {
 		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get lifetime energy stats")
 		// Non-fatal; continue with zeros

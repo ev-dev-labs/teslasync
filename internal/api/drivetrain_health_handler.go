@@ -34,9 +34,10 @@ func (h *DrivetrainHealthHandler) Get(w http.ResponseWriter, r *http.Request) {
 	// Get latest battery module temps from charging_telemetry
 	var moduleTempMax, moduleTempMin *float64
 	err = h.db.Pool.QueryRow(ctx, `
-		SELECT module_temp_max, module_temp_min
+		SELECT (signals->>'module_temp_max')::double precision,
+		       (signals->>'module_temp_min')::double precision
 		FROM charging_telemetry
-		WHERE vehicle_id = $1 AND (module_temp_max IS NOT NULL OR module_temp_min IS NOT NULL)
+		WHERE vehicle_id = $1 AND (signals ? 'module_temp_max' OR signals ? 'module_temp_min')
 		ORDER BY created_at DESC LIMIT 1`, vehicleID,
 	).Scan(&moduleTempMax, &moduleTempMin)
 	if err != nil {

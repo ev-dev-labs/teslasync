@@ -311,8 +311,10 @@ func generateBatterySnapshots(ctx context.Context, db *database.DB) int {
 		// Derive capacity from latest energy_remaining in charging_telemetry
 		var latestEnergy, latestRange *float64
 		_ = db.Pool.QueryRow(ctx,
-			`SELECT energy_remaining, est_battery_range FROM charging_telemetry
-			 WHERE vehicle_id = $1 AND energy_remaining IS NOT NULL
+			`SELECT (signals->>'energy_remaining')::double precision,
+			        (signals->>'est_battery_range')::double precision
+			 FROM charging_telemetry
+			 WHERE vehicle_id = $1 AND signals ? 'energy_remaining'
 			 ORDER BY created_at DESC LIMIT 1`, vid).Scan(&latestEnergy, &latestRange)
 
 		if latestEnergy != nil && *latestEnergy > 0 {
@@ -340,9 +342,10 @@ func generateBatterySnapshots(ctx context.Context, db *database.DB) int {
 		// Get average module temp from latest charging telemetry
 		var modTemp *float64
 		_ = db.Pool.QueryRow(ctx,
-			`SELECT (module_temp_max + module_temp_min) / 2.0
+			`SELECT ((signals->>'module_temp_max')::double precision
+			       + (signals->>'module_temp_min')::double precision) / 2.0
 			 FROM charging_telemetry WHERE vehicle_id = $1
-			 AND module_temp_max IS NOT NULL AND module_temp_min IS NOT NULL
+			 AND signals ? 'module_temp_max' AND signals ? 'module_temp_min'
 			 ORDER BY created_at DESC LIMIT 1`, vid).Scan(&modTemp)
 		if modTemp != nil {
 			avgTemp = *modTemp

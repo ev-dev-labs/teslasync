@@ -34,10 +34,10 @@ func (h *EnergyFlowHandler) Get(w http.ResponseWriter, r *http.Request) {
 	_ = h.db.Pool.QueryRow(ctx, `
 		SELECT
 			dc_charging_power,
-			ac_charging_power,
-			energy_remaining,
-			pack_voltage,
-			pack_current,
+			(signals->>'ac_charging_power')::double precision,
+			(signals->>'energy_remaining')::double precision,
+			(signals->>'pack_voltage')::double precision,
+			(signals->>'pack_current')::double precision,
 			battery_level,
 			charge_state
 		FROM charging_telemetry

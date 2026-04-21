@@ -61,8 +61,10 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 		// Get latest energy_remaining and rated_range from charging_telemetry
 		var latestEnergy, latestRange *float64
 		_ = h.batteryRepo.DB().Pool.QueryRow(r.Context(),
-			`SELECT energy_remaining, est_battery_range FROM charging_telemetry 
-			 WHERE vehicle_id = $1 AND energy_remaining IS NOT NULL 
+			`SELECT (signals->>'energy_remaining')::double precision,
+			        (signals->>'est_battery_range')::double precision
+			 FROM charging_telemetry 
+			 WHERE vehicle_id = $1 AND signals ? 'energy_remaining' 
 			 ORDER BY created_at DESC LIMIT 1`, vehicleID).Scan(&latestEnergy, &latestRange)
 
 		// Model Y Long Range nominal capacity ~75 kWh, nominal range ~330 mi (531 km)

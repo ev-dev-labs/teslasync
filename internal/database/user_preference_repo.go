@@ -6,6 +6,14 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
+// userPreferenceCoreCols are the user-preference fields kept as dedicated SQL
+// columns. Secondary unit preferences live in the signals JSONB column.
+// See migrations 000142-000144.
+var userPreferenceCoreCols = []string{
+	"setting_distance_unit",
+	"setting_temperature_unit",
+}
+
 type UserPreferenceRepo struct {
 	db *DB
 }
@@ -15,16 +23,21 @@ func NewUserPreferenceRepo(db *DB) *UserPreferenceRepo {
 }
 
 func (r *UserPreferenceRepo) Insert(ctx context.Context, snap *models.UserPreferenceSnapshot) error {
-	query := `INSERT INTO user_preference_snapshots (vehicle_id, setting_24hr_time, setting_charge_unit, setting_distance_unit, setting_temperature_unit, setting_tire_pressure_unit)
-		VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
+	signalsJSON, err := marshalSignals(snap, userPreferenceCoreCols...)
+	if err != nil {
+		return err
+	}
+	query := `INSERT INTO user_preference_snapshots
+		(vehicle_id, setting_distance_unit, setting_temperature_unit, signals)
+		VALUES ($1, $2, $3, $4) RETURNING id`
 	return r.db.Pool.QueryRow(ctx, query,
-		snap.VehicleID, snap.Setting24hrTime, snap.SettingChargeUnit,
-		snap.SettingDistanceUnit, snap.SettingTemperatureUnit, snap.SettingTirePressureUnit,
+		snap.VehicleID, snap.SettingDistanceUnit, snap.SettingTemperatureUnit, signalsJSON,
 	).Scan(&snap.ID)
 }
 
 func (r *UserPreferenceRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit int) ([]*models.UserPreferenceSnapshot, error) {
-	query := `SELECT id, vehicle_id, setting_24hr_time, setting_charge_unit, setting_distance_unit, setting_temperature_unit, setting_tire_pressure_unit, created_at
+	query := `SELECT id, vehicle_id, setting_distance_unit, setting_temperature_unit,
+			signals, created_at
 		FROM user_preference_snapshots WHERE vehicle_id=$1 ORDER BY created_at DESC LIMIT $2`
 	rows, err := r.db.Pool.Query(ctx, query, vehicleID, limit)
 	if err != nil {
@@ -35,9 +48,12 @@ func (r *UserPreferenceRepo) GetByVehicle(ctx context.Context, vehicleID int64, 
 	var snaps []*models.UserPreferenceSnapshot
 	for rows.Next() {
 		s := &models.UserPreferenceSnapshot{}
-		if err := rows.Scan(&s.ID, &s.VehicleID, &s.Setting24hrTime, &s.SettingChargeUnit,
-			&s.SettingDistanceUnit, &s.SettingTemperatureUnit, &s.SettingTirePressureUnit,
-			&s.CreatedAt); err != nil {
+		var signalsRaw []byte
+		if err := rows.Scan(&s.ID, &s.VehicleID, &s.SettingDistanceUnit,
+			&s.SettingTemperatureUnit, &signalsRaw, &s.CreatedAt); err != nil {
+			return nil, err
+		}
+		if err := hydrateFromSignals(signalsRaw, s); err != nil {
 			return nil, err
 		}
 		snaps = append(snaps, s)

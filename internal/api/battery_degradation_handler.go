@@ -174,8 +174,10 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 		const nominalCapacity = 75.0
 		var energy, rng *float64
 		_ = h.db.Pool.QueryRow(ctx,
-			`SELECT energy_remaining, est_battery_range FROM charging_telemetry 
-			 WHERE vehicle_id = $1 AND energy_remaining IS NOT NULL 
+			`SELECT (signals->>'energy_remaining')::double precision,
+			        (signals->>'est_battery_range')::double precision
+			 FROM charging_telemetry 
+			 WHERE vehicle_id = $1 AND signals ? 'energy_remaining' 
 			 ORDER BY created_at DESC LIMIT 1`, vehicleID).Scan(&energy, &rng)
 		if energy != nil && *energy > 0 {
 			currentCapacity = *energy
@@ -609,8 +611,10 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 	if latestSOH == 0 {
 		var energy, rng *float64
 		_ = h.db.Pool.QueryRow(ctx,
-			`SELECT energy_remaining, est_battery_range FROM charging_telemetry
-			 WHERE vehicle_id = $1 AND energy_remaining IS NOT NULL
+			`SELECT (signals->>'energy_remaining')::double precision,
+			        (signals->>'est_battery_range')::double precision
+			 FROM charging_telemetry
+			 WHERE vehicle_id = $1 AND signals ? 'energy_remaining'
 			 ORDER BY created_at DESC LIMIT 1`, vehicleID).Scan(&energy, &rng)
 		if energy != nil && *energy > 0 {
 			latestCapacity = *energy

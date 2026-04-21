@@ -72,10 +72,13 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	// Current battery state
 	var batteryLevel, estRange, ratedRange, idealRange *float64
 	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT battery_level, est_battery_range, rated_range, ideal_battery_range
+		SELECT battery_level,
+		       (signals->>'est_battery_range')::double precision,
+		       (signals->>'rated_range')::double precision,
+		       (signals->>'ideal_battery_range')::double precision
 		FROM charging_telemetry
 		WHERE vehicle_id = $1
-			AND (battery_level IS NOT NULL OR est_battery_range IS NOT NULL)
+			AND (battery_level IS NOT NULL OR signals ? 'est_battery_range')
 		ORDER BY created_at DESC LIMIT 1`, vehicleID).Scan(&batteryLevel, &estRange, &ratedRange, &idealRange)
 
 	// Current outside temp from vehicle_live_state
@@ -508,7 +511,9 @@ func (h *RangeProjectionHandler) GetByVehicle(w http.ResponseWriter, r *http.Req
 
 	var batteryLevel, ratedRange, idealRange *float64
 	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT battery_level, rated_range, ideal_battery_range
+		SELECT battery_level,
+		       (signals->>'rated_range')::double precision,
+		       (signals->>'ideal_battery_range')::double precision
 		FROM charging_telemetry
 		WHERE vehicle_id = $1 AND battery_level IS NOT NULL
 		ORDER BY created_at DESC LIMIT 1`, vehicleID).Scan(&batteryLevel, &ratedRange, &idealRange)

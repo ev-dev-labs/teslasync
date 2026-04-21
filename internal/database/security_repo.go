@@ -6,6 +6,15 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
+// securityCoreCols are the access/security fields kept as dedicated SQL columns.
+// Everything else lives in the signals JSONB column. See migrations 000142-000144.
+var securityCoreCols = []string{
+	"locked",
+	"sentry_mode",
+	"door_state",
+	"driver_seat_occupied",
+}
+
 type SecurityRepo struct {
 	db *DB
 }
@@ -15,24 +24,22 @@ func NewSecurityRepo(db *DB) *SecurityRepo {
 }
 
 func (r *SecurityRepo) Insert(ctx context.Context, ev *models.SecurityEvent) error {
-	query := `INSERT INTO security_events (vehicle_id, locked, sentry_mode, door_state, fd_window, fp_window, rd_window, rp_window, homelink_nearby, guest_mode, homelink_device_count, guest_mode_mobile_access_state, driver_seat_occupied, center_display, speed_limit_mode, valet_mode_enabled, service_mode, current_limit_mph, paired_phone_key_count, lights_hazards_active, lights_high_beams, lights_turn_signal, tonneau_position, tonneau_open_percent, tonneau_tent_mode, driver_seat_belt, passenger_seat_belt)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27) RETURNING id`
+	signalsJSON, err := marshalSignals(ev, securityCoreCols...)
+	if err != nil {
+		return err
+	}
+	query := `INSERT INTO security_events
+		(vehicle_id, locked, sentry_mode, door_state, driver_seat_occupied, signals)
+		VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
 	return r.db.Pool.QueryRow(ctx, query,
-		ev.VehicleID, ev.Locked, ev.SentryMode, ev.DoorState,
-		ev.FdWindow, ev.FpWindow, ev.RdWindow, ev.RpWindow,
-		ev.HomelinkNearby, ev.GuestMode,
-		ev.HomelinkDeviceCount, ev.GuestModeMobileAccessState,
-		ev.DriverSeatOccupied, ev.CenterDisplay,
-		ev.SpeedLimitMode, ev.ValetModeEnabled, ev.ServiceMode,
-		ev.CurrentLimitMph, ev.PairedPhoneKeyCount,
-		ev.LightsHazardsActive, ev.LightsHighBeams, ev.LightsTurnSignal,
-		ev.TonneauPosition, ev.TonneauOpenPercent, ev.TonneauTentMode,
-		ev.DriverSeatBelt, ev.PassengerSeatBelt,
+		ev.VehicleID, ev.Locked, ev.SentryMode, ev.DoorState, ev.DriverSeatOccupied,
+		signalsJSON,
 	).Scan(&ev.ID)
 }
 
 func (r *SecurityRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit int) ([]*models.SecurityEvent, error) {
-	query := `SELECT id, vehicle_id, locked, sentry_mode, door_state, fd_window, fp_window, rd_window, rp_window, homelink_nearby, guest_mode, homelink_device_count, guest_mode_mobile_access_state, driver_seat_occupied, center_display, speed_limit_mode, valet_mode_enabled, service_mode, current_limit_mph, paired_phone_key_count, lights_hazards_active, lights_high_beams, lights_turn_signal, tonneau_position, tonneau_open_percent, tonneau_tent_mode, driver_seat_belt, passenger_seat_belt, created_at
+	query := `SELECT id, vehicle_id, locked, sentry_mode, door_state, driver_seat_occupied,
+			signals, created_at
 		FROM security_events WHERE vehicle_id=$1 ORDER BY created_at DESC LIMIT $2`
 	rows, err := r.db.Pool.Query(ctx, query, vehicleID, limit)
 	if err != nil {
@@ -43,17 +50,12 @@ func (r *SecurityRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit 
 	var evts []*models.SecurityEvent
 	for rows.Next() {
 		e := &models.SecurityEvent{}
+		var signalsRaw []byte
 		if err := rows.Scan(&e.ID, &e.VehicleID, &e.Locked, &e.SentryMode, &e.DoorState,
-			&e.FdWindow, &e.FpWindow, &e.RdWindow, &e.RpWindow,
-			&e.HomelinkNearby, &e.GuestMode,
-			&e.HomelinkDeviceCount, &e.GuestModeMobileAccessState,
-			&e.DriverSeatOccupied, &e.CenterDisplay,
-			&e.SpeedLimitMode, &e.ValetModeEnabled, &e.ServiceMode,
-			&e.CurrentLimitMph, &e.PairedPhoneKeyCount,
-			&e.LightsHazardsActive, &e.LightsHighBeams, &e.LightsTurnSignal,
-			&e.TonneauPosition, &e.TonneauOpenPercent, &e.TonneauTentMode,
-			&e.DriverSeatBelt, &e.PassengerSeatBelt,
-			&e.CreatedAt); err != nil {
+			&e.DriverSeatOccupied, &signalsRaw, &e.CreatedAt); err != nil {
+			return nil, err
+		}
+		if err := hydrateFromSignals(signalsRaw, e); err != nil {
 			return nil, err
 		}
 		evts = append(evts, e)
