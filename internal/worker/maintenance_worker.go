@@ -84,7 +84,7 @@ func runMaintenance(ctx context.Context, db *database.DB, cfg *config.Config) {
 //
 // NOTE: cagg_position_hourly / cagg_charging_hourly / cagg_climate_hourly /
 // cagg_position_daily are TimescaleDB continuous aggregates and are refreshed
-// automatically by policies attached in migration 000147 — do not add them
+// automatically by policies attached in migration 000148 — do not add them
 // here.
 func refreshMaterializedViews(ctx context.Context, db *database.DB) {
 	views := []string{

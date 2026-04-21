@@ -3,8 +3,8 @@
 -- if_not_exists => true makes this safe to re-run.
 -- chunk_time_interval defaults to 7 days (good for our write rate).
 --
--- Prerequisite: prompt 07-timescale-preflight must have fixed primary keys
--- so that `created_at` is part of every telemetry table's PK.
+-- Prerequisite: migration 000145_hypertable_preflight_fixes must have run
+-- first so that `created_at` is part of every telemetry table's PK.
 
 SET statement_timeout = 0;  -- migration may take a few minutes on large tables
 
