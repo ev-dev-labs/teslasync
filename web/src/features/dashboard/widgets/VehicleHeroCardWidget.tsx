@@ -35,7 +35,7 @@ export default function VehicleHeroCardWidget({ vehicleId, size }: WidgetProps) 
   }, [state]);
 
   const range = useMemo(
-    () => (state ? Math.round(convertDistance(state.rated_range)) : null),
+    () => (state ? Math.round(convertDistance(state.ideal_range)) : null),
     [state, convertDistance],
   );
 
