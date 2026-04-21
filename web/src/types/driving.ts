@@ -151,7 +151,7 @@ export interface SpeedBucket {
 export interface RegenEfficiencyData {
   totalRegenKwh: number;
   regenRatio: number;
-  monthlyAvgKw: number;
+  monthlyAvgRegen: number;
   freeCharges: number;
 }
 

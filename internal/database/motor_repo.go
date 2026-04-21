@@ -35,7 +35,7 @@ func (r *MotorRepo) Insert(ctx context.Context, snap *models.MotorSnapshot) erro
 }
 
 func (r *MotorRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit int) ([]*models.MotorSnapshot, error) {
-	query := `SELECT id, vehicle_id, di_state, di_torque, di_axle_speed, di_stator_temp, pedal_position, brake_pedal, lateral_accel, longitudinal_accel, vehicle_speed, gear, di_torque_actual_f, di_torque_actual_r, di_torque_actual_rel, di_torque_actual_rer, di_axle_speed_f, di_axle_speed_rel, di_axle_speed_rer, di_state_f, di_state_rel, di_state_rer, di_stator_temp_f, di_stator_temp_rel, di_stator_temp_rer, di_heatsink_t_f, di_heatsink_t_r, di_heatsink_t_rel, di_heatsink_t_rer, di_inverter_t_f, di_inverter_t_r, di_inverter_t_rel, di_inverter_t_rer, di_motor_current_f, di_motor_current_r, di_motor_current_rel, di_motor_current_rer, di_v_bat_f, di_v_bat_r, di_v_bat_rel, di_v_bat_rer, di_slave_torque_cmd, hvil, brake_pedal_pos, cruise_set_speed, drive_rail, created_at
+	query := `SELECT id, vehicle_id, di_state, di_torque, di_axle_speed, di_stator_temp, pedal_position, brake_pedal, lateral_accel, longitudinal_accel, vehicle_speed, gear, di_torque_actual_f, di_torque_actual_r, di_torque_actual_rel, di_torque_actual_rer, di_axle_speed_f, di_axle_speed_rel, di_axle_speed_rer, di_state_f, di_state_rel, di_state_rer, di_stator_temp_f, di_stator_temp_rel, di_stator_temp_rer, di_heatsink_t_f, di_heatsink_t_r, di_heatsink_t_rel, di_heatsink_t_rer, di_inverter_t_f, di_inverter_t_r, di_inverter_t_rel, di_inverter_t_rer, di_motor_current_f, di_motor_current_r, di_motor_current_rel, di_motor_current_rer, di_v_bat_f, di_v_bat_r, di_v_bat_rel, di_v_bat_rer, di_slave_torque_cmd, hvil, brake_pedal_pos, cruise_set_speed, drive_rail, lifetime_energy_gained_regen, lifetime_energy_used_drive, created_at
 		FROM motor_snapshots WHERE vehicle_id=$1 ORDER BY created_at DESC LIMIT $2`
 	rows, err := r.db.Pool.Query(ctx, query, vehicleID, limit)
 	if err != nil {
@@ -58,6 +58,7 @@ func (r *MotorRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit int
 			&s.DiMotorCurrentF, &s.DiMotorCurrentR, &s.DiMotorCurrentREL, &s.DiMotorCurrentRER,
 			&s.DiVBatF, &s.DiVBatR, &s.DiVBatREL, &s.DiVBatRER,
 			&s.DiSlaveTorqueCmd, &s.Hvil, &s.BrakePedalPos, &s.CruiseSetSpeed, &s.DriveRail,
+			&s.LifetimeEnergyGainedRegen, &s.LifetimeEnergyUsedDrive,
 			&s.CreatedAt); err != nil {
 			return nil, err
 		}

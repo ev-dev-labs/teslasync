@@ -155,7 +155,7 @@ export default function RegenEfficiencyPage() {
             <StaggerItem>
               <GlassPanel className="p-4 text-center">
                 <Calendar className="h-4 w-4 mx-auto mb-1 text-amber-400" />
-                <p className="text-lg font-bold text-[var(--text-primary)]"><AnimatedNumber value={data.monthlyAvgKw ?? 0} decimals={1} /></p>
+                <p className="text-lg font-bold text-[var(--text-primary)]"><AnimatedNumber value={data.monthlyAvgRegen ?? 0} decimals={1} /></p>
                 <p className="text-[10px] text-[var(--text-muted)]">{t('regen.monthlyAvg', 'Monthly Avg kW')}</p>
               </GlassPanel>
             </StaggerItem>
@@ -203,8 +203,8 @@ export default function RegenEfficiencyPage() {
                   <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtPercent(data.regenRatio ?? 0)}</p>
                 </div>
                 <div>
-                  <MetricBar label={t('regen.monthlyAvgBar', 'Monthly Avg')} value={data.monthlyAvgKw ?? 0} max={Math.max(data.monthlyAvgKw ?? 0, 50)} color="#a855f7" />
-                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtNumber(data.monthlyAvgKw ?? 0)} kW</p>
+                  <MetricBar label={t('regen.monthlyAvgBar', 'Monthly Avg')} value={data.monthlyAvgRegen ?? 0} max={Math.max(data.monthlyAvgRegen ?? 0, 50)} color="#a855f7" />
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtNumber(data.monthlyAvgRegen ?? 0)} kW</p>
                 </div>
                 <div>
                   <MetricBar label={t('regen.freeChargesBar', 'Free Charges')} value={data.freeCharges ?? 0} max={Math.max(data.freeCharges ?? 0, 10)} color="#f59e0b" />
