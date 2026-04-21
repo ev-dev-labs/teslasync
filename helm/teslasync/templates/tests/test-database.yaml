@@ -13,6 +13,8 @@ spec:
   restartPolicy: Never
   containers:
     - name: test-postgres
+      # psql client comes from the TimescaleDB HA image; any Postgres-compatible
+      # client image works since this pod only runs psql against the service.
       image: postgres:17-alpine
       env:
         - name: PGPASSWORD

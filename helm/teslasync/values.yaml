@@ -579,9 +579,9 @@ gasPrice:
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Embedding / semantic search (pgvector-backed AI chatbot retrieval)
-# Requires Postgres 15+ with the pgvector extension available. The default
-# Helm chart's Postgres dependency does NOT include pgvector — use an
-# external Postgres or swap the image to `pgvector/pgvector:pg17`.
+# The default Helm chart Postgres image is `timescale/timescaledb-ha:pg17`
+# which already bundles pgvector. If you use an external Postgres, ensure
+# it has the `vector` extension available (Postgres 15+).
 # ─────────────────────────────────────────────────────────────────────────────
 embedding:
   # -- Enable semantic search over drives, charges, alerts, and summaries.
@@ -631,10 +631,13 @@ tesla:
   timeout: "30s"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PostgreSQL
+# PostgreSQL (TimescaleDB HA)
 #
-# Set enabled: true  → an embedded PostgreSQL 17 pod is deployed.
+# Set enabled: true  → an embedded TimescaleDB HA pod is deployed.
 # Set enabled: false → supply connection details via postgresql.external.
+#
+# The image ships TimescaleDB + pgvector, both required by the baseline
+# migration (000000) which enables `timescaledb` and `vector` extensions.
 # ─────────────────────────────────────────────────────────────────────────────
 postgresql:
   enabled: true
@@ -650,7 +653,8 @@ postgresql:
   # -- Pool health check interval (detects stale connections)
   healthCheckPeriod: "5s"
 
-  image: postgres:17-alpine
+  # TimescaleDB HA bundles TimescaleDB, pgvector, PostGIS, and toolkit.
+  image: timescale/timescaledb-ha:pg17
 
   auth:
     username: teslasync

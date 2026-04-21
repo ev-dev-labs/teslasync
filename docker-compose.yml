@@ -11,7 +11,7 @@ services:
       - "${TESLASYNC_PORT:-8080}:8080"
     environment:
       - TESLASYNC_PORT=8080
-      - DATABASE_HOST=postgres
+      - DATABASE_HOST=timescaledb
       - DATABASE_PORT=5432
       - DATABASE_USER=${POSTGRES_USER:-teslasync}
       - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-teslasync}
@@ -55,7 +55,7 @@ services:
       - EMBEDDING_REFRESH_INTERVAL=${EMBEDDING_REFRESH_INTERVAL:-5m}
       - EMBEDDING_REQUEST_TIMEOUT=${EMBEDDING_REQUEST_TIMEOUT:-30s}
     depends_on:
-      postgres:
+      timescaledb:
         condition: service_healthy
       mosquitto:
         condition: service_started
@@ -101,7 +101,7 @@ services:
     container_name: teslasync-notification-worker
     restart: unless-stopped
     environment:
-      - DATABASE_HOST=postgres
+      - DATABASE_HOST=timescaledb
       - DATABASE_PORT=5432
       - DATABASE_USER=${POSTGRES_USER:-teslasync}
       - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-teslasync}
@@ -116,7 +116,7 @@ services:
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-teslasync-notification-worker}
       - OTEL_INSECURE=${OTEL_INSECURE:-true}
     depends_on:
-      postgres:
+      timescaledb:
         condition: service_healthy
       mosquitto:
         condition: service_started
@@ -133,11 +133,13 @@ services:
         reservations:
           memory: 32M
 
-  postgres:
-    # pgvector/pgvector bundles the pgvector extension on top of the
-    # official Postgres image; required for semantic search (migration 148).
-    image: pgvector/pgvector:pg17
-    container_name: teslasync-postgres
+  timescaledb:
+    # TimescaleDB HA bundles TimescaleDB + pgvector + PostGIS + toolkit.
+    # Required by migrations 000000_baseline (timescaledb, vector extensions),
+    # 000146_create_hypertables, 000147_enable_compression, 000149_add_pgvector.
+    # Mirrors the production database (helm/teslasync uses the same image).
+    image: timescale/timescaledb-ha:pg17
+    container_name: teslasync-timescaledb
     restart: unless-stopped
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
@@ -145,8 +147,10 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-teslasync}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-teslasync}
       - POSTGRES_DB=${POSTGRES_DB:-teslasync}
+      # The HA image stores data under /home/postgres/pgdata/data by default.
+      - PGDATA=/home/postgres/pgdata/data
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - timescaledb_data:/home/postgres/pgdata
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-teslasync}"]
       interval: 10s
@@ -169,7 +173,7 @@ services:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-teslasync}
       - GF_INSTALL_PLUGINS=grafana-clock-panel
-      - POSTGRES_HOST=postgres
+      - POSTGRES_HOST=timescaledb
       - POSTGRES_PORT=5432
       - POSTGRES_USER=${POSTGRES_USER:-teslasync}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-teslasync}
@@ -180,7 +184,7 @@ services:
       - ./grafana/provisioning:/etc/grafana/provisioning
       - ./grafana/dashboards:/var/lib/grafana/dashboards
     depends_on:
-      postgres:
+      timescaledb:
         condition: service_healthy
       prometheus:
         condition: service_started
@@ -266,7 +270,7 @@ services:
     container_name: teslasync-export-worker
     restart: unless-stopped
     environment:
-      - DATABASE_HOST=postgres
+      - DATABASE_HOST=timescaledb
       - DATABASE_PORT=5432
       - DATABASE_USER=${POSTGRES_USER:-teslasync}
       - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-teslasync}
@@ -281,7 +285,7 @@ services:
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-teslasync-export-worker}
       - OTEL_INSECURE=${OTEL_INSECURE:-true}
     depends_on:
-      postgres:
+      timescaledb:
         condition: service_healthy
       mosquitto:
         condition: service_started
@@ -307,7 +311,7 @@ services:
     container_name: teslasync-automation-worker
     restart: unless-stopped
     environment:
-      - DATABASE_HOST=postgres
+      - DATABASE_HOST=timescaledb
       - DATABASE_PORT=5432
       - DATABASE_USER=${POSTGRES_USER:-teslasync}
       - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-teslasync}
@@ -325,7 +329,7 @@ services:
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-teslasync-automation-worker}
       - OTEL_INSECURE=${OTEL_INSECURE:-true}
     depends_on:
-      postgres:
+      timescaledb:
         condition: service_healthy
       mosquitto:
         condition: service_started
@@ -424,7 +428,7 @@ services:
           memory: 32M
 
 volumes:
-  postgres_data:
+  timescaledb_data:
   grafana_data:
   mosquitto_data:
   redis_data:

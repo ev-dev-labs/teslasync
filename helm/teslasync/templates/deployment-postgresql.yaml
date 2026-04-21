@@ -39,6 +39,10 @@ spec:
                 secretKeyRef:
                   name: {{ include "teslasync.fullname" . }}
                   key: DATABASE_PASS
+            # TimescaleDB HA default PGDATA; keep explicit so the volume layout
+            # stays stable if the base image ever changes defaults.
+            - name: PGDATA
+              value: /home/postgres/pgdata/data
           livenessProbe:
             exec:
               command:
@@ -68,8 +72,7 @@ spec:
           {{- if .Values.postgresql.persistence.enabled }}
           volumeMounts:
             - name: postgresql-data
-              mountPath: /var/lib/postgresql/data
-              subPath: pgdata
+              mountPath: /home/postgres/pgdata
           {{- end }}
       {{- if .Values.postgresql.persistence.enabled }}
       volumes:

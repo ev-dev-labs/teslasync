@@ -1,6 +1,6 @@
 apiVersion: v2
 name: teslasync
-description: A Helm chart for deploying TeslaSync — a self-hosted Tesla vehicle data logger with a Go backend, Nginx frontend, PostgreSQL, Redis, MQTT, and Grafana.
+description: A Helm chart for deploying TeslaSync — a self-hosted Tesla vehicle data logger with a Go backend, Nginx frontend, TimescaleDB (Postgres + TimescaleDB + pgvector), Redis, MQTT, and Grafana.
 type: application
 version: 0.5.0
 appVersion: "1.0.0"
