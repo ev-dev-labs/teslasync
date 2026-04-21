@@ -269,3 +269,4 @@ refactor-monoliths/04-driving-dynamics.prompt.md
 refactor-monoliths/05-analytics.prompt.md
 refactor-monoliths/06-charging-curve.prompt.md
 refactor-monoliths/07-charging-list.prompt.md
+refactor-monoliths/09-drive-detail.prompt.md
