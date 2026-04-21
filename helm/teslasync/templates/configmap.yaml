@@ -93,6 +93,18 @@ data:
   GAS_PRICE_ENABLED: {{ .Values.gasPrice.enabled | default false | quote }}
   GAS_PRICE_POLL_INTERVAL: {{ .Values.gasPrice.pollInterval | default "7d" | quote }}
   {{- end }}
+  {{- if .Values.embedding }}
+  EMBEDDING_ENABLED: {{ .Values.embedding.enabled | default false | quote }}
+  {{- if .Values.embedding.enabled }}
+  EMBEDDING_PROVIDER: {{ .Values.embedding.provider | default "openai" | quote }}
+  EMBEDDING_MODEL: {{ .Values.embedding.model | default "text-embedding-3-small" | quote }}
+  EMBEDDING_DIMENSIONS: {{ .Values.embedding.dimensions | default 1536 | quote }}
+  EMBEDDING_BASE_URL: {{ .Values.embedding.baseUrl | default "https://api.openai.com/v1" | quote }}
+  EMBEDDING_BATCH_SIZE: {{ .Values.embedding.batchSize | default 50 | quote }}
+  EMBEDDING_REFRESH_INTERVAL: {{ .Values.embedding.refreshInterval | default "5m" | quote }}
+  EMBEDDING_REQUEST_TIMEOUT: {{ .Values.embedding.requestTimeout | default "30s" | quote }}
+  {{- end }}
+  {{- end }}
   {{- if .Values.config.openTelemetry.enabled }}
   OTEL_ENABLED: "true"
   OTEL_ENDPOINT: {{ .Values.config.openTelemetry.endpoint | quote }}

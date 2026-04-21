@@ -44,6 +44,16 @@ services:
       - OTEL_INSECURE=${OTEL_INSECURE:-true}
       - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY:-}
       - AZURE_MAPS_API_KEY=${AZURE_MAPS_API_KEY:-}
+      # Semantic search / AI chatbot embeddings (pgvector)
+      - EMBEDDING_ENABLED=${EMBEDDING_ENABLED:-false}
+      - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-openai}
+      - EMBEDDING_API_KEY=${EMBEDDING_API_KEY:-}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-small}
+      - EMBEDDING_DIMENSIONS=${EMBEDDING_DIMENSIONS:-1536}
+      - EMBEDDING_BASE_URL=${EMBEDDING_BASE_URL:-https://api.openai.com/v1}
+      - EMBEDDING_BATCH_SIZE=${EMBEDDING_BATCH_SIZE:-50}
+      - EMBEDDING_REFRESH_INTERVAL=${EMBEDDING_REFRESH_INTERVAL:-5m}
+      - EMBEDDING_REQUEST_TIMEOUT=${EMBEDDING_REQUEST_TIMEOUT:-30s}
     depends_on:
       postgres:
         condition: service_healthy
@@ -124,7 +134,9 @@ services:
           memory: 32M
 
   postgres:
-    image: postgres:17-alpine
+    # pgvector/pgvector bundles the pgvector extension on top of the
+    # official Postgres image; required for semantic search (migration 148).
+    image: pgvector/pgvector:pg17
     container_name: teslasync-postgres
     restart: unless-stopped
     ports:

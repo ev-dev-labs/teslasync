@@ -13,14 +13,16 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/embedding"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // ChatbotHandler handles AI chatbot queries against fleet data.
 type ChatbotHandler struct {
-	chat *database.ChatRepo
-	db   *database.DB
+	chat      *database.ChatRepo
+	db        *database.DB
+	embedding *embedding.Service // optional; nil disables semantic search
 }
 
 func NewChatbotHandler(db *database.DB) *ChatbotHandler {
@@ -28,6 +30,11 @@ func NewChatbotHandler(db *database.DB) *ChatbotHandler {
 		chat: database.NewChatRepo(db),
 		db:   db,
 	}
+}
+
+// SetEmbeddingService wires a semantic search provider. Safe to call with nil.
+func (h *ChatbotHandler) SetEmbeddingService(s *embedding.Service) {
+	h.embedding = s
 }
 
 // Chat processes a user message and returns an AI-generated response.
@@ -155,8 +162,80 @@ func (h *ChatbotHandler) processQuery(ctx context.Context, msg string) string {
 		return h.helpMessage()
 
 	default:
+		// Fall back to semantic search over embeddings when available —
+		// this lets us answer open-ended questions like "which drive was
+		// the most efficient?" without needing a hand-written pattern.
+		if h.embedding != nil {
+			if resp := h.semanticAnswer(ctx, msg); resp != "" {
+				return resp
+			}
+		}
 		return h.helpMessage()
 	}
+}
+
+// semanticAnswer uses pgvector similarity to find relevant entries for
+// the user's natural-language question and formats them into a concise
+// markdown reply. Returns "" to signal the caller to fall back to the
+// help message (e.g. no results, or search failed).
+func (h *ChatbotHandler) semanticAnswer(ctx context.Context, query string) string {
+	results, err := h.embedding.Search(ctx, query, embedding.SearchOptions{Limit: 5})
+	if err != nil {
+		log.Warn().Err(err).Msg("chatbot: semantic search failed")
+		return ""
+	}
+	if len(results) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString("Here's what I found in your vehicle data:\n")
+	for _, r := range results {
+		fmt.Fprintf(&b, "\n- *(%s, match %.0f%%)* %s", r.EntityType, r.Similarity*100, r.Content)
+	}
+	return b.String()
+}
+
+// Search exposes the semantic search index directly. Useful for UI
+// components that want to render vehicle-data results for a query
+// without going through the conversational layer.
+func (h *ChatbotHandler) Search(w http.ResponseWriter, r *http.Request) {
+	if h.embedding == nil {
+		writeError(w, http.StatusServiceUnavailable, "semantic search is not enabled")
+		return
+	}
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	if query == "" {
+		writeError(w, http.StatusBadRequest, "q (query) is required")
+		return
+	}
+	opts := embedding.SearchOptions{Limit: 10}
+	if v := r.URL.Query().Get("vehicle_id"); v != "" {
+		if id, err := strconv.ParseInt(v, 10, 64); err == nil {
+			opts.VehicleID = id
+		}
+	}
+	if v := r.URL.Query().Get("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 50 {
+			opts.Limit = n
+		}
+	}
+	if v := r.URL.Query().Get("entity_type"); v != "" {
+		opts.EntityTypes = strings.Split(v, ",")
+	}
+
+	results, err := h.embedding.Search(r.Context(), query, opts)
+	if err != nil {
+		log.Error().Err(err).Msg("chatbot: search failed")
+		writeError(w, http.StatusInternalServerError, "search failed")
+		return
+	}
+	if results == nil {
+		results = []embedding.SearchResult{}
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"query":   query,
+		"results": results,
+	})
 }
 
 func (h *ChatbotHandler) queryVehicleCount(ctx context.Context) string {

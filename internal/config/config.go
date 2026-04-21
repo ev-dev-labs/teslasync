@@ -25,6 +25,22 @@ type Config struct {
 	OpenTelemetry  OpenTelemetryConfig
 	GoogleMaps     GoogleMapsConfig
 	AzureMaps      AzureMapsConfig
+	Embedding      EmbeddingConfig
+}
+
+// EmbeddingConfig controls the pgvector-backed semantic search and
+// embedding generation used by the AI chatbot. When Enabled=false no
+// provider is constructed and no background worker runs.
+type EmbeddingConfig struct {
+	Enabled         bool          `json:"enabled"`
+	Provider        string        `json:"provider"`         // "openai" | "stub" (stub used in tests / air-gapped demos)
+	APIKey          string        `json:"-"`                // never log
+	Model           string        `json:"model"`            // default: "text-embedding-3-small"
+	Dimensions      int           `json:"dimensions"`       // default: 1536 (must match `vector(N)` column)
+	BaseURL         string        `json:"base_url"`         // default: OpenAI; override for self-hosted proxies
+	BatchSize       int           `json:"batch_size"`       // default: 50
+	RefreshInterval time.Duration `json:"refresh_interval"` // default: 5m
+	RequestTimeout  time.Duration `json:"request_timeout"`  // default: 30s
 }
 
 // GoogleMapsConfig holds settings for the Google Maps geocoding API.
@@ -276,6 +292,17 @@ func Load() (*Config, error) {
 			APIKey: envStr("GOOGLE_MAPS_API_KEY", ""),
 		},
 
+		Embedding: EmbeddingConfig{
+			Enabled:         envBool("EMBEDDING_ENABLED", false),
+			Provider:        envStr("EMBEDDING_PROVIDER", "openai"),
+			APIKey:          envStr("EMBEDDING_API_KEY", ""),
+			Model:           envStr("EMBEDDING_MODEL", "text-embedding-3-small"),
+			Dimensions:      envInt("EMBEDDING_DIMENSIONS", 1536),
+			BaseURL:         envStr("EMBEDDING_BASE_URL", "https://api.openai.com/v1"),
+			BatchSize:       envInt("EMBEDDING_BATCH_SIZE", 50),
+			RefreshInterval: envDuration("EMBEDDING_REFRESH_INTERVAL", 5*time.Minute),
+			RequestTimeout:  envDuration("EMBEDDING_REQUEST_TIMEOUT", 30*time.Second),
+		},
 		AzureMaps: AzureMapsConfig{
 			APIKey: envStr("AZURE_MAPS_API_KEY", ""),
 		},

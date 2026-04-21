@@ -578,6 +578,35 @@ gasPrice:
   apiKey: ""
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Embedding / semantic search (pgvector-backed AI chatbot retrieval)
+# Requires Postgres 15+ with the pgvector extension available. The default
+# Helm chart's Postgres dependency does NOT include pgvector — use an
+# external Postgres or swap the image to `pgvector/pgvector:pg17`.
+# ─────────────────────────────────────────────────────────────────────────────
+embedding:
+  # -- Enable semantic search over drives, charges, alerts, and summaries.
+  enabled: false
+  # -- Provider: "openai" (calls the OpenAI embeddings API) or "stub"
+  # (deterministic offline hash — only useful for tests/demos).
+  provider: "openai"
+  # -- OpenAI API key. Stored in the generated Secret (if secrets.existingSecret
+  # is not set) so it is mounted as EMBEDDING_API_KEY at runtime.
+  apiKey: ""
+  # -- Embedding model (must match the dimensionality of the `embeddings.embedding` column).
+  model: "text-embedding-3-small"
+  # -- Embedding dimensions (1536 for text-embedding-3-small; 3072 for text-embedding-3-large).
+  dimensions: 1536
+  # -- Base URL for the embeddings API. Override for self-hosted proxies or Azure OpenAI.
+  baseUrl: "https://api.openai.com/v1"
+  # -- How many rows of each entity type the background worker embeds per sweep.
+  batchSize: 50
+  # -- How often the background worker sweeps for un-embedded rows.
+  refreshInterval: "5m"
+  # -- HTTP timeout for a single embeddings API call.
+  requestTimeout: "30s"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Authentication (optional — leave jwtSecret empty to disable)
 # ─────────────────────────────────────────────────────────────────────────────
 auth:

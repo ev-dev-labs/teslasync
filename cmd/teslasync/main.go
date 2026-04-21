@@ -17,6 +17,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/embedding"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
@@ -543,6 +544,68 @@ func main() {
 		}
 	}
 
+	// Embedding service (pgvector semantic search for AI chatbot).
+	// When disabled the service is nil and all consumers fall back to
+	// their existing behaviour.
+	var embeddingService *embedding.Service
+	if cfg.Embedding.Enabled {
+		var provider embedding.Provider
+		switch cfg.Embedding.Provider {
+		case "stub":
+			provider = embedding.NewStubProvider(cfg.Embedding.Dimensions)
+			log.Warn().Msg("embedding service using STUB provider — vectors are not semantically meaningful")
+		case "openai", "":
+			p, err := embedding.NewOpenAIProvider(embedding.OpenAIConfig{
+				APIKey:     cfg.Embedding.APIKey,
+				Model:      cfg.Embedding.Model,
+				Dimensions: cfg.Embedding.Dimensions,
+				BaseURL:    cfg.Embedding.BaseURL,
+				Timeout:    cfg.Embedding.RequestTimeout,
+			})
+			if err != nil {
+				log.Warn().Err(err).Msg("embedding disabled: failed to build OpenAI provider")
+			} else {
+				provider = p
+			}
+		default:
+			log.Warn().Str("provider", cfg.Embedding.Provider).Msg("unknown embedding provider; disabling semantic search")
+		}
+		if provider != nil {
+			embeddingService = embedding.NewService(db, provider)
+			log.Info().
+				Str("provider", cfg.Embedding.Provider).
+				Str("model", provider.Model()).
+				Int("dimensions", provider.Dimensions()).
+				Dur("refresh_interval", cfg.Embedding.RefreshInterval).
+				Msg("embedding service initialized (pgvector semantic search)")
+
+			refresh := cfg.Embedding.RefreshInterval
+			if refresh <= 0 {
+				refresh = 5 * time.Minute
+			}
+			batchSize := cfg.Embedding.BatchSize
+			resilience.SafeGoLoop(ctx, "embedding-worker", func(loopCtx context.Context) {
+				ticker := time.NewTicker(refresh)
+				defer ticker.Stop()
+				for {
+					// Run once immediately, then on each tick.
+					n, err := embeddingService.BackfillOnce(loopCtx, batchSize)
+					if err != nil {
+						log.Warn().Err(err).Msg("embedding worker: backfill sweep failed")
+					} else if n > 0 {
+						log.Info().Int("embedded", n).Msg("embedding worker: backfilled rows")
+					}
+					select {
+					case <-loopCtx.Done():
+						return
+					case <-ticker.C:
+					}
+				}
+			})
+			log.Info().Msg("embedding worker started")
+		}
+	}
+
 	// HTTP API
 	router := api.NewRouter(db, teslaClient, mqttClient, cfg, health, api.RouterOptions{
 		AppVersion:       Version,
@@ -552,6 +615,7 @@ func main() {
 		PollEngine:       pollEngine,
 		SignalStore:      signalStore,
 		CacheStore:       cacheStore,
+		EmbeddingService: embeddingService,
 	})
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Port),
