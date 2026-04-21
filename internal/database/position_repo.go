@@ -7,6 +7,21 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
+// positionCoreCols are the fields stored as dedicated SQL columns on the
+// positions table. Every other telemetry signal lives in the `signals` JSONB
+// column. See migrations/000153 for Phase 1 of the positions JSONB
+// consolidation; the 9 legacy typed columns (odometer, power, ideal_range,
+// rated_range, battery_level, inside_temp, outside_temp, fan_status,
+// is_climate_on) are kept populated during this transition so external
+// consumers (Grafana, BI) keep working unchanged.
+var positionCoreCols = []string{
+	"latitude",
+	"longitude",
+	"speed",
+	"heading",
+	"elevation",
+}
+
 // PositionRepo provides position data access.
 type PositionRepo struct {
 	db *DB
@@ -21,24 +36,30 @@ func (r *PositionRepo) Insert(ctx context.Context, p *models.Position) error {
 	if p.Latitude == 0 && p.Longitude == 0 {
 		return nil
 	}
+	signalsJSON, err := marshalSignals(p, positionCoreCols...)
+	if err != nil {
+		return err
+	}
+	// Write both typed columns and signals during Phase 1. Native columns
+	// keep legacy Grafana dashboards working; signals is the forward path.
 	query := `
 		INSERT INTO positions (vehicle_id, latitude, longitude, speed, power, heading, elevation,
 			odometer, ideal_range, rated_range, battery_level, inside_temp, outside_temp,
-			fan_status, is_climate_on, created_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+			fan_status, is_climate_on, signals, created_at)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
 		RETURNING id`
 	now := time.Now().UTC()
 	return r.db.Pool.QueryRow(ctx, query,
 		p.VehicleID, p.Latitude, p.Longitude, p.Speed, p.Power, p.Heading, p.Elevation,
 		p.Odometer, p.IdealRange, p.RatedRange, p.BatteryLvl, p.InsideTemp, p.OutsideTemp,
-		p.FanStatus, p.IsClimate, now,
+		p.FanStatus, p.IsClimate, signalsJSON, now,
 	).Scan(&p.ID)
 }
 
 func (r *PositionRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int) ([]*models.Position, error) {
 	query := `SELECT id, vehicle_id, latitude, longitude, speed, power, heading, elevation,
 		odometer, ideal_range, rated_range, battery_level, inside_temp, outside_temp,
-		fan_status, is_climate_on, created_at
+		fan_status, is_climate_on, signals, created_at
 		FROM positions WHERE vehicle_id = $1
 		AND NOT (latitude = 0 AND longitude = 0)
 		ORDER BY created_at DESC LIMIT $2 OFFSET $3`
@@ -51,11 +72,15 @@ func (r *PositionRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit,
 	var positions []*models.Position
 	for rows.Next() {
 		p := &models.Position{}
+		var signalsRaw []byte
 		if err := rows.Scan(
 			&p.ID, &p.VehicleID, &p.Latitude, &p.Longitude, &p.Speed, &p.Power, &p.Heading,
 			&p.Elevation, &p.Odometer, &p.IdealRange, &p.RatedRange, &p.BatteryLvl,
-			&p.InsideTemp, &p.OutsideTemp, &p.FanStatus, &p.IsClimate, &p.CreatedAt,
+			&p.InsideTemp, &p.OutsideTemp, &p.FanStatus, &p.IsClimate, &signalsRaw, &p.CreatedAt,
 		); err != nil {
+			return nil, err
+		}
+		if err := hydrateFromSignals(signalsRaw, p); err != nil {
 			return nil, err
 		}
 		positions = append(positions, p)
@@ -72,7 +97,7 @@ func (r *PositionRepo) GetByTimeRange(ctx context.Context, vehicleID int64, star
 	}
 	query := `SELECT id, vehicle_id, latitude, longitude, speed, power, heading, elevation,
 		odometer, ideal_range, rated_range, battery_level, inside_temp, outside_temp,
-		fan_status, is_climate_on, created_at
+		fan_status, is_climate_on, signals, created_at
 		FROM positions WHERE vehicle_id = $1 AND created_at >= $2 AND created_at <= $3
 		AND NOT (latitude = 0 AND longitude = 0)
 		ORDER BY created_at ASC LIMIT 10000`
@@ -85,11 +110,15 @@ func (r *PositionRepo) GetByTimeRange(ctx context.Context, vehicleID int64, star
 	var positions []*models.Position
 	for rows.Next() {
 		p := &models.Position{}
+		var signalsRaw []byte
 		if err := rows.Scan(
 			&p.ID, &p.VehicleID, &p.Latitude, &p.Longitude, &p.Speed, &p.Power, &p.Heading,
 			&p.Elevation, &p.Odometer, &p.IdealRange, &p.RatedRange, &p.BatteryLvl,
-			&p.InsideTemp, &p.OutsideTemp, &p.FanStatus, &p.IsClimate, &p.CreatedAt,
+			&p.InsideTemp, &p.OutsideTemp, &p.FanStatus, &p.IsClimate, &signalsRaw, &p.CreatedAt,
 		); err != nil {
+			return nil, err
+		}
+		if err := hydrateFromSignals(signalsRaw, p); err != nil {
 			return nil, err
 		}
 		positions = append(positions, p)
@@ -100,17 +129,21 @@ func (r *PositionRepo) GetByTimeRange(ctx context.Context, vehicleID int64, star
 func (r *PositionRepo) GetLatest(ctx context.Context, vehicleID int64) (*models.Position, error) {
 	query := `SELECT id, vehicle_id, latitude, longitude, speed, power, heading, elevation,
 		odometer, ideal_range, rated_range, battery_level, inside_temp, outside_temp,
-		fan_status, is_climate_on, created_at
+		fan_status, is_climate_on, signals, created_at
 		FROM positions WHERE vehicle_id = $1
 		AND NOT (latitude = 0 AND longitude = 0)
 		ORDER BY created_at DESC LIMIT 1`
 	p := &models.Position{}
+	var signalsRaw []byte
 	err := r.db.Pool.QueryRow(ctx, query, vehicleID).Scan(
 		&p.ID, &p.VehicleID, &p.Latitude, &p.Longitude, &p.Speed, &p.Power, &p.Heading,
 		&p.Elevation, &p.Odometer, &p.IdealRange, &p.RatedRange, &p.BatteryLvl,
-		&p.InsideTemp, &p.OutsideTemp, &p.FanStatus, &p.IsClimate, &p.CreatedAt,
+		&p.InsideTemp, &p.OutsideTemp, &p.FanStatus, &p.IsClimate, &signalsRaw, &p.CreatedAt,
 	)
 	if err != nil {
+		return nil, err
+	}
+	if err := hydrateFromSignals(signalsRaw, p); err != nil {
 		return nil, err
 	}
 	return p, nil
@@ -143,16 +176,20 @@ func (r *PositionRepo) FindNearestPosition(ctx context.Context, vehicleID int64,
 		)
 		SELECT id, vehicle_id, latitude, longitude, speed, power, heading, elevation,
 			odometer, ideal_range, rated_range, battery_level, inside_temp, outside_temp,
-			fan_status, is_climate_on, created_at
+			fan_status, is_climate_on, signals, created_at
 		FROM candidates ORDER BY dist LIMIT 1`
 
 	p := &models.Position{}
+	var signalsRaw []byte
 	err := r.db.Pool.QueryRow(ctx, query, vehicleID, target, windowStart, windowEnd).Scan(
 		&p.ID, &p.VehicleID, &p.Latitude, &p.Longitude, &p.Speed, &p.Power, &p.Heading,
 		&p.Elevation, &p.Odometer, &p.IdealRange, &p.RatedRange, &p.BatteryLvl,
-		&p.InsideTemp, &p.OutsideTemp, &p.FanStatus, &p.IsClimate, &p.CreatedAt,
+		&p.InsideTemp, &p.OutsideTemp, &p.FanStatus, &p.IsClimate, &signalsRaw, &p.CreatedAt,
 	)
 	if err != nil {
+		return nil, err
+	}
+	if err := hydrateFromSignals(signalsRaw, p); err != nil {
 		return nil, err
 	}
 	return p, nil
