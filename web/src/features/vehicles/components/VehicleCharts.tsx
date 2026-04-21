@@ -130,12 +130,12 @@ export function VehicleCharts({
                       : '—',
                 },
                 {
-                  label: 'Right-Hand Drive',
+                  label: t('vehicles.detail.rhd', 'Right-Hand Drive'),
                   value:
                     vehicleConfigData.right_hand_drive != null
                       ? vehicleConfigData.right_hand_drive
-                        ? 'Yes'
-                        : 'No'
+                        ? t('common.yes', 'Yes')
+                        : t('common.no', 'No')
                       : '—',
                 },
                 {

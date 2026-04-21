@@ -313,7 +313,7 @@ export default function VehicleDetailPage() {
         { label: t('vehicles.detail.wheels', 'Wheels'), value: vehicleConfig.wheel_type ?? '—' },
         { label: t('vehicles.detail.roofColor', 'Roof Color'), value: vehicleConfig.roof_color ?? '—' },
         { label: t('vehicles.detail.chargePort', 'Charge Port'), value: vehicleConfig.charge_port ?? '—' },
-        { label: t('vehicles.detail.rhd', 'Right-Hand Drive'), value: vehicleConfig.right_hand_drive ? t('common.yes', 'Yes') : t('common.no', 'No') },
+        { label: t('vehicles.detail.rhd', 'Right-Hand Drive'), value: vehicleConfig.right_hand_drive != null ? (vehicleConfig.right_hand_drive ? t('common.yes', 'Yes') : t('common.no', 'No')) : '—' },
         { label: t('vehicles.detail.softwareVersion', 'Software'), value: vehicleConfig.software_update_version ?? state?.software_version ?? '—' },
       ]
     : []
