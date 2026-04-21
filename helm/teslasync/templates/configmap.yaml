@@ -5,11 +5,16 @@ metadata:
   labels:
     {{- include "teslasync.labels" . | nindent 4 }}
 data:
-  DATABASE_HOST: {{ include "teslasync.postgresql.host" . | quote }}
-  DATABASE_PORT: {{ include "teslasync.postgresql.port" . | quote }}
+  DATABASE_HOST: {{ include "teslasync.postgresql.poolHost" . | quote }}
+  DATABASE_PORT: {{ include "teslasync.postgresql.poolPort" . | quote }}
   DATABASE_USER: {{ include "teslasync.postgresql.username" . | quote }}
   DATABASE_NAME: {{ include "teslasync.postgresql.database" . | quote }}
   DATABASE_SSLMODE: {{ include "teslasync.postgresql.sslMode" . | quote }}
+  # Direct PostgreSQL endpoint (bypasses PgBouncer) — used for migrations
+  # and LISTEN/NOTIFY which require session-level features that transaction
+  # pooling breaks (SET, advisory locks, prepared statements).
+  DATABASE_DIRECT_HOST: {{ include "teslasync.postgresql.host" . | quote }}
+  DATABASE_DIRECT_PORT: {{ include "teslasync.postgresql.port" . | quote }}
   DATABASE_MAX_CONNS: {{ .Values.postgresql.maxConns | default 25 | quote }}
   DATABASE_MIN_CONNS: {{ .Values.postgresql.minConns | default 5 | quote }}
   DATABASE_CONNECT_TIMEOUT: {{ .Values.postgresql.connectTimeout | default 5 | quote }}

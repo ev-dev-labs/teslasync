@@ -685,6 +685,17 @@ postgresql:
     database: ""
     sslMode: "disable"
 
+  # PgBouncer sidecar/pool settings. When enabled, DATABASE_HOST/DATABASE_PORT
+  # route app queries through the pooler (transaction mode). Migrations and
+  # LISTEN/NOTIFY always use the direct PostgreSQL endpoint above.
+  # Requires pgx pool configured with QueryExecModeSimpleProtocol (already
+  # the default in internal/database.New).
+  pgbouncer:
+    enabled: false
+    # host defaults to the in-chart PostgreSQL service (sidecar scenario).
+    host: ""
+    port: 6432
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Redis
 #

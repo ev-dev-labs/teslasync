@@ -42,6 +42,17 @@ func New(ctx context.Context, cfg config.DatabaseConfig) (*DB, error) {
 	poolCfg.MaxConnIdleTime = cfg.ConnMaxIdleTime
 	poolCfg.HealthCheckPeriod = cfg.HealthCheckPeriod
 
+	// PgBouncer (transaction mode) compatibility: disable pgx's implicit
+	// prepared statements and statement/description caches. In transaction
+	// pooling a PREPARE lives on a specific backend but the next Execute
+	// may land on a different backend, producing
+	// "prepared statement does not exist" errors. Simple protocol sends
+	// each query as text with inline parameters — safe for pooled and
+	// direct connections alike.
+	poolCfg.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+	poolCfg.ConnConfig.StatementCacheCapacity = 0
+	poolCfg.ConnConfig.DescriptionCacheCapacity = 0
+
 	// Validate new connections by setting per-connection statement_timeout as safety net
 	stmtTimeout := cfg.StatementTimeout
 	poolCfg.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
@@ -74,7 +85,8 @@ func New(ctx context.Context, cfg config.DatabaseConfig) (*DB, error) {
 		Int("connect_timeout_s", cfg.ConnectTimeout).
 		Int("statement_timeout_ms", cfg.StatementTimeout).
 		Dur("health_check_period", cfg.HealthCheckPeriod).
-		Msg("database connected")
+		Str("query_mode", "simple_protocol").
+		Msg("database connected (PgBouncer-compatible)")
 	return &DB{
 		Pool:         pool,
 		WriteBreaker: NewDBCircuitBreaker("writes"),

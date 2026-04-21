@@ -103,6 +103,14 @@ type DatabaseConfig struct {
 	ConnectTimeout    int           // seconds, appended to DSN as connect_timeout
 	StatementTimeout  int           // milliseconds, appended to DSN as statement_timeout
 	HealthCheckPeriod time.Duration // pool health check interval
+
+	// DirectHost/DirectPort point directly at PostgreSQL, bypassing any
+	// connection pooler (PgBouncer). Used for migrations (SET, advisory
+	// locks, DDL) and LISTEN/NOTIFY which require session-level features
+	// that transaction-mode poolers break. If unset, falls back to
+	// Host/Port.
+	DirectHost string
+	DirectPort int
 }
 
 func (d DatabaseConfig) DSN() string {
@@ -113,14 +121,43 @@ func (d DatabaseConfig) DSN() string {
 	)
 }
 
-// MigrationDSN returns a DSN without statement_timeout. Migrations use
+// directHost returns the PostgreSQL direct host, falling back to Host.
+func (d DatabaseConfig) directHost() string {
+	if d.DirectHost != "" {
+		return d.DirectHost
+	}
+	return d.Host
+}
+
+// directPort returns the PostgreSQL direct port, falling back to Port.
+func (d DatabaseConfig) directPort() int {
+	if d.DirectPort != 0 {
+		return d.DirectPort
+	}
+	return d.Port
+}
+
+// MigrationDSN returns a DSN without statement_timeout, targeting the direct
+// PostgreSQL endpoint (bypassing any pooler). Migrations use
 // pg_advisory_lock which must wait indefinitely for the lock — a statement
-// timeout would kill the lock acquisition and crash the pod.
+// timeout would kill the lock acquisition and crash the pod. In addition,
+// transaction-mode poolers break SET, advisory locks, and DDL, so migrations
+// must always go direct.
 func (d DatabaseConfig) MigrationDSN() string {
 	return fmt.Sprintf(
 		"postgres://%s:%s@%s:%d/%s?sslmode=%s&connect_timeout=%d",
-		d.User, d.Password, d.Host, d.Port, d.Name, d.SSLMode,
+		d.User, d.Password, d.directHost(), d.directPort(), d.Name, d.SSLMode,
 		d.ConnectTimeout,
+	)
+}
+
+// DirectDSN returns a DSN targeting PostgreSQL directly (bypassing any
+// pooler), used for LISTEN/NOTIFY and other session-level features.
+func (d DatabaseConfig) DirectDSN() string {
+	return fmt.Sprintf(
+		"postgres://%s:%s@%s:%d/%s?sslmode=%s&connect_timeout=%d&statement_timeout=%d",
+		d.User, d.Password, d.directHost(), d.directPort(), d.Name, d.SSLMode,
+		d.ConnectTimeout, d.StatementTimeout,
 	)
 }
 
@@ -215,6 +252,8 @@ func Load() (*Config, error) {
 			ConnectTimeout:    envInt("DATABASE_CONNECT_TIMEOUT", 5),
 			StatementTimeout:  envInt("DATABASE_STATEMENT_TIMEOUT", 30000),
 			HealthCheckPeriod: envDuration("DATABASE_HEALTH_CHECK_PERIOD", 5*time.Second),
+			DirectHost:        envStr("DATABASE_DIRECT_HOST", ""),
+			DirectPort:        envInt("DATABASE_DIRECT_PORT", 0),
 		},
 
 		Tesla: TeslaConfig{

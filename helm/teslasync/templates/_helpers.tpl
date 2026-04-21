@@ -192,6 +192,28 @@ imagePullSecrets:
 {{- end }}
 {{- end }}
 
+{{/*
+PgBouncer-aware pool endpoint. When postgresql.pgbouncer.enabled is true,
+DATABASE_HOST/DATABASE_PORT point at the pooler (transaction mode); otherwise
+they resolve directly to PostgreSQL. The direct endpoint below is always
+PostgreSQL itself and is used for migrations and LISTEN/NOTIFY.
+*/}}
+{{- define "teslasync.postgresql.poolHost" -}}
+{{- if and .Values.postgresql.pgbouncer .Values.postgresql.pgbouncer.enabled }}
+{{- .Values.postgresql.pgbouncer.host | default (include "teslasync.postgresql.host" .) }}
+{{- else }}
+{{- include "teslasync.postgresql.host" . }}
+{{- end }}
+{{- end }}
+
+{{- define "teslasync.postgresql.poolPort" -}}
+{{- if and .Values.postgresql.pgbouncer .Values.postgresql.pgbouncer.enabled }}
+{{- toString (.Values.postgresql.pgbouncer.port | default 6432) }}
+{{- else }}
+{{- include "teslasync.postgresql.port" . }}
+{{- end }}
+{{- end }}
+
 {{/* ── Redis connection helpers ────────────────────────────────────────── */}}
 
 {{- define "teslasync.redis.host" -}}
