@@ -104,6 +104,11 @@ func main() {
 	}
 	log.Info().Msg("database migrations applied")
 
+	// Apply configurable retention policies (default: forever).
+	if err := db.ApplyRetentionPolicies(ctx, cfg.Retention); err != nil {
+		log.Warn().Err(err).Msg("failed to apply retention policies (non-fatal)")
+	}
+
 	// Record current migration version metric
 	var migVer int
 	if err := db.Pool.QueryRow(ctx, "SELECT version FROM schema_migrations LIMIT 1").Scan(&migVer); err == nil {
@@ -238,7 +243,7 @@ func main() {
 		log.Info().Msg("signal store hydrated from signal_history")
 
 		go signalHistoryWriter.FlushLoop(ctx)
-		log.Info().Int("retention_days", cfg.Retention.SignalHistoryRetentionDays).Msg("Postgres signal_history writer started")
+		log.Info().Msg("Postgres signal_history writer started")
 
 		// Recover active drive/charge sessions from Postgres (pod restart resilience)
 		sessionTracker := telemetryHandler.SessionTracker()
@@ -372,27 +377,6 @@ func main() {
 		worker.StartMaintenanceWorker(loopCtx, db, cfg)
 	})
 	log.Info().Msg("maintenance worker started")
-
-	// Signal history TTL cleanup — daily purge of old rows (only if retention configured)
-	if signalHistoryWriter != nil && cfg.Retention.SignalHistoryRetentionDays > 0 {
-		go func() {
-			signalHistoryWriter.Cleanup(ctx, cfg.Retention.SignalHistoryRetentionDays)
-
-			ticker := time.NewTicker(24 * time.Hour)
-			defer ticker.Stop()
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case <-ticker.C:
-					signalHistoryWriter.Cleanup(ctx, cfg.Retention.SignalHistoryRetentionDays)
-				}
-			}
-		}()
-		log.Info().Int("retention_days", cfg.Retention.SignalHistoryRetentionDays).Msg("signal_history TTL cleanup scheduled")
-	} else if signalHistoryWriter != nil {
-		log.Info().Msg("signal_history TTL cleanup DISABLED (SIGNAL_HISTORY_RETENTION_DAYS not set)")
-	}
 
 	// Trip generator — backfill monthly summaries on startup, then daily
 	tripRepo := database.NewTripRepo(db)
