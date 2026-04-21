@@ -1,0 +1,13 @@
+-- Revert hypertables back to regular tables.
+-- This preserves all data but removes chunking.
+--
+-- NOTE: TimescaleDB doesn't have a built-in "undo hypertable" command.
+-- To fully revert, you would need to:
+--   1. CREATE TABLE new_table (LIKE old_table INCLUDING ALL)
+--   2. INSERT INTO new_table SELECT * FROM old_table
+--   3. DROP TABLE old_table
+--   4. ALTER TABLE new_table RENAME TO old_table
+-- This is complex, expensive, and rarely needed — documented rather than automated.
+--
+-- If you need to revert, switch back to PG17 via Helm DSN change.
+SELECT 1;  -- no-op placeholder
