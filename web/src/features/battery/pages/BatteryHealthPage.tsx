@@ -5,6 +5,7 @@ import {
   Heart, Battery, BatteryFull, Gauge, RefreshCcw, Clock,
   Zap, ArrowRight, Lightbulb, AlertTriangle,
   CheckCircle, Info, Target, Activity,
+  Thermometer, ThermometerSun, ThermometerSnowflake, Flame,
 } from 'lucide-react';
 
 import { PageContainer, Grid } from '@/components/layout';
@@ -21,7 +22,7 @@ import { FadeIn } from '@/components/motion';
 
 import { useBatteryHealthAnalytics, useBatteryDegradation } from '@/api/hooks/useEnergy';
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useVehicles, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { cn } from '@/lib/cn';
@@ -201,7 +202,7 @@ const QUICK_LINKS: { to: string; labelKey: string; fallback: string }[] = [
 export default function BatteryHealthPage() {
   const { t } = useTranslation();
   usePageTitle(t('battery.title', 'Battery Health'));
-  const { convertDistance, distanceUnit } = useSettings();
+  const { convertDistance, distanceUnit, convertTemp, tempUnit } = useSettings();
 
   /* ── Vehicle selector ──────────────────────────────────────────── */
   const { data: vehicles } = useVehicles();
@@ -214,6 +215,7 @@ export default function BatteryHealthPage() {
     useBatteryHealthAnalytics(vehicleIdStr);
   const { data: degradation } = useBatteryDegradation(vehicleIdStr);
   const { data: sessions } = useChargingSessionsPaginated(vehicleId, { limit: 100 });
+  const { data: chargingLive } = useChargingTelemetryLatest(vehicleId ?? 0);
 
   /* ── Derived: insights & recommendations ───────────────────────── */
   const insights = useMemo(
@@ -497,7 +499,93 @@ export default function BatteryHealthPage() {
             icon={<Clock className="h-5 w-5" />}
             color="red"
           />
+          <MetricCard
+            label={t('battery.metric.fullChargeComplete', 'Full Charge Complete')}
+            value={
+              chargingLive?.bms_fullcharge_complete == null
+                ? '—'
+                : chargingLive.bms_fullcharge_complete
+                  ? t('common.yes', 'Yes')
+                  : t('common.no', 'No')
+            }
+            icon={<CheckCircle className="h-5 w-5" />}
+            color={chargingLive?.bms_fullcharge_complete ? 'green' : 'cyan'}
+          />
         </Grid>
+      </FadeIn>
+
+      {/* ── 3b. Thermal Monitoring ───────────────────────────────── */}
+      <FadeIn delay={0.12}>
+        <GlassPanel className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Thermometer className="h-4 w-4 text-neon-amber" />
+            <h3 className="text-sm font-semibold text-white/90">
+              {t('battery.thermal.title', 'Thermal Monitoring')}
+            </h3>
+          </div>
+          <Grid cols={{ default: 2, lg: 4 }} gap={4}>
+            <MetricCard
+              label={t('battery.thermal.moduleTempMax', 'Module Temp (Max)')}
+              value={
+                chargingLive?.module_temp_max != null
+                  ? `${fmtNumber(convertTemp(chargingLive.module_temp_max), 1)} ${tempUnit}`
+                  : '—'
+              }
+              subtitle={
+                chargingLive?.num_module_temp_max != null
+                  ? t('battery.thermal.moduleNumber', 'Module #{{n}}', {
+                      n: chargingLive.num_module_temp_max,
+                    })
+                  : undefined
+              }
+              icon={<ThermometerSun className="h-5 w-5" />}
+              color="amber"
+            />
+            <MetricCard
+              label={t('battery.thermal.moduleTempMin', 'Module Temp (Min)')}
+              value={
+                chargingLive?.module_temp_min != null
+                  ? `${fmtNumber(convertTemp(chargingLive.module_temp_min), 1)} ${tempUnit}`
+                  : '—'
+              }
+              subtitle={
+                chargingLive?.num_module_temp_min != null
+                  ? t('battery.thermal.moduleNumber', 'Module #{{n}}', {
+                      n: chargingLive.num_module_temp_min,
+                    })
+                  : undefined
+              }
+              icon={<ThermometerSnowflake className="h-5 w-5" />}
+              color="cyan"
+            />
+            <MetricCard
+              label={t('battery.thermal.heater', 'Battery Heater')}
+              value={
+                chargingLive?.battery_heater_on == null
+                  ? '—'
+                  : chargingLive.battery_heater_on
+                    ? t('common.on', 'On')
+                    : t('common.off', 'Off')
+              }
+              icon={<Flame className="h-5 w-5" />}
+              color={chargingLive?.battery_heater_on ? 'red' : 'green'}
+            />
+            <MetricCard
+              label={t('battery.thermal.tempSpread', 'Temperature Spread')}
+              value={
+                chargingLive?.module_temp_max != null && chargingLive?.module_temp_min != null
+                  ? `${fmtNumber(
+                      convertTemp(chargingLive.module_temp_max) -
+                        convertTemp(chargingLive.module_temp_min),
+                      1,
+                    )} ${tempUnit}`
+                  : '—'
+              }
+              icon={<Activity className="h-5 w-5" />}
+              color="purple"
+            />
+          </Grid>
+        </GlassPanel>
       </FadeIn>
 
       {/* ── 4. Smart Insights ────────────────────────────────────── */}

@@ -11,22 +11,22 @@
 | Metric | Count |
 |--------|-------|
 | Total Signals Audited | 230 |
-| 🟢 Match (correct end-to-end) | 137 |
+| 🟢 Match (correct end-to-end) | 145 |
 | 🟡 Rounding Difference | 0 |
 | 🔴 Critical Mismatch | 5 |
-| ⚪ Orphaned (ingested, not displayed) | 88 |
+| ⚪ Orphaned (ingested, not displayed) | 80 |
 | Fixes Required | 5 |
 
 ## Category Breakdown
 
 | Category | Signals | 🟢 | 🟡 | 🔴 | ⚪ |
 |----------|---------|-----|-----|-----|-----|
-| Charging (numeric) | 41 | 19 | 0 | 0 | 22 |
+| Charging (numeric) | 41 | 20 | 0 | 0 | 21 |
 | Charging (enums) | 11 | 6 | 0 | 1 | 4 |
-| Powershare | 5 | 0 | 0 | 0 | 5 |
+| Powershare | 5 | 5 | 0 | 0 | 0 |
 | Climate | 29 | 16 | 0 | 0 | 13 |
 | Driving | 12 | 7 | 0 | 0 | 5 |
-| Powertrain | 36 | 2 | 0 | 4 | 30 |
+| Powertrain | 36 | 4 | 0 | 4 | 28 |
 | Location | 13 | 11 | 0 | 0 | 2 |
 | Media | 11 | 10 | 0 | 0 | 1 |
 | Safety | 14 | 14 | 0 | 0 | 0 |
@@ -34,7 +34,7 @@
 | Vehicle State | 29 | 29 | 0 | 0 | 0 |
 | Vehicle Config | 14 | 9 | 0 | 0 | 5 |
 | User Preferences | 5 | 4 | 0 | 0 | 1 |
-| **Total** | **230** | **137** | **0** | **5** | **88** |
+| **Total** | **230** | **145** | **0** | **5** | **80** |
 
 ---
 
@@ -48,42 +48,42 @@
 | 2 | ACChargingPower | Float | direct (→charger_power fallback) | vehicle_live_state | charger_power | FLOAT8 | /vehicles/{id}/state | charger_power | useVehicleState | Dashboard, ChargeStatusWidget | `{value} kW` | 🟢 |
 | 3 | BatteryLevel | Float | float→int cast | vehicle_live_state | battery_level | INT | /vehicles/{id}/state | battery_level | useVehicleState | Dashboard, ChargeStatusWidget, BatteryGaugeWidget | `{value}%` | 🟢 |
 | 4 | BatteryHeaterOn | Bool | ParseEnumBool | vehicle_live_state | battery_heater_on | BOOLEAN | /charging-telemetry/latest | battery_heater_on | useChargingTelemetryLatest | EnergyChargingPanel, LiveTelemetry | Badge (Active/Off) | 🟢 |
-| 5 | BmsFullchargecomplete | Bool | ParseEnumBool | vehicle_live_state | bms_fullchargecomplete | BOOLEAN | /charging-telemetry/latest | bms_fullchargecomplete | useChargingTelemetryLatest | — | — | ⚪ |
+| 5 | BmsFullchargecomplete | Bool | ParseEnumBool | vehicle_live_state | bms_fullchargecomplete | BOOLEAN | /charging-telemetry/latest | bms_fullchargecomplete | useChargingTelemetryLatest | BatteryHealthPage | — | 🟢 |
 | 6 | BrickVoltageMax | Float | direct | vehicle_live_state | brick_voltage_max | FLOAT8 | /charging-telemetry/latest | brick_voltage_max | useChargingTelemetryLatest | EnergyChargingPanel | `{spread} mV` | 🟢 |
 | 7 | BrickVoltageMin | Float | direct | vehicle_live_state | brick_voltage_min | FLOAT8 | /charging-telemetry/latest | brick_voltage_min | useChargingTelemetryLatest | EnergyChargingPanel | `{spread} mV` | 🟢 |
 | 8 | ChargeAmps | Float | direct | vehicle_live_state | charge_amps | FLOAT8 | /charging-telemetry/latest | charge_amps | useChargingTelemetryLatest | ChargingTelemetrySection | `{value} A` | 🟢 |
-| 9 | ChargeCurrentRequest | Float | direct | vehicle_live_state | charge_current_request | FLOAT8 | /charging-telemetry/latest | charge_current_request | useChargingTelemetryLatest | — | — | ⚪ |
-| 10 | ChargeCurrentRequestMax | Float | direct | vehicle_live_state | charge_current_request_max | FLOAT8 | /charging-telemetry/latest | charge_current_request_max | useChargingTelemetryLatest | — | — | ⚪ |
-| 11 | ChargeEnableRequest | Bool | ParseEnumBool | vehicle_live_state | charge_enable_request | BOOLEAN | /charging-telemetry/latest | charge_enable_request | useChargingTelemetryLatest | — | — | ⚪ |
+| 9 | ChargeCurrentRequest | Float | direct | vehicle_live_state | charge_current_request | FLOAT8 | /charging-telemetry/latest | charge_current_request | useChargingTelemetryLatest | ChargingDetailPage | `{value} A` | 🟢 |
+| 10 | ChargeCurrentRequestMax | Float | direct | vehicle_live_state | charge_current_request_max | FLOAT8 | /charging-telemetry/latest | charge_current_request_max | useChargingTelemetryLatest | ChargingDetailPage | `{value} A` | 🟢 |
+| 11 | ChargeEnableRequest | Bool | ParseEnumBool | vehicle_live_state | charge_enable_request | BOOLEAN | /charging-telemetry/latest | charge_enable_request | useChargingTelemetryLatest | ChargingDetailPage | — | 🟢 |
 | 12 | ChargeLimitSoc | Float | direct | vehicle_live_state | charge_limit_soc | INT | /signals/{id}/live | charge_limit_soc | useSignalGaps (live) | ChargingScheduleWidget | `{value}%` | 🟢 |
-| 13 | ChargePortColdWeatherMode | Bool | ParseEnumBool | vehicle_live_state | charge_port_cold_weather_mode | BOOLEAN | /charging-telemetry/latest | charge_port_cold_weather_mode | useChargingTelemetryLatest | — | — | ⚪ |
+| 13 | ChargePortColdWeatherMode | Bool | ParseEnumBool | vehicle_live_state | charge_port_cold_weather_mode | BOOLEAN | /charging-telemetry/latest | charge_port_cold_weather_mode | useChargingTelemetryLatest | ChargingDetailPage | — | 🟢 |
 | 14 | ChargePortDoorOpen | Bool | ParseEnumBool | vehicle_live_state | charge_port_door_open | BOOLEAN | /charging-telemetry/latest | charge_port_door_open | useChargingTelemetryLatest | DigitalTwinMiniWidget | Visual port indicator | 🟢 |
 | 15 | ChargeRateMilePerHour | Float | direct | vehicle_live_state | charge_rate | FLOAT8 | /vehicles/{id}/state | charge_rate | useVehicleState | Dashboard | `{value} mi/h` | 🟢 |
 | 16 | ChargerPhases | Float | direct | vehicle_live_state | charger_phases | FLOAT8 | /charging-telemetry/latest | charger_phases | useChargingTelemetryLatest | ChargingTelemetrySection | Phase count | 🟢 |
 | 17 | ChargerVoltage | Float | direct | vehicle_live_state | charger_voltage | FLOAT8 | /charging-telemetry/latest | charger_voltage | useChargingTelemetryLatest | ChargingTelemetrySection | `{value} V` | 🟢 |
 | 18 | DCChargingEnergyIn | Float | direct | vehicle_live_state | dc_charging_energy_in | FLOAT8 | /charging-telemetry/latest | dc_charging_energy_in | useChargingTelemetryLatest | ChargingTelemetrySection | `{value} kWh` | 🟢 |
 | 19 | DCChargingPower | Float | direct | vehicle_live_state | charger_power | FLOAT8 | /vehicles/{id}/state | charger_power | useVehicleState | Dashboard, ChargingTelemetrySection | `{value} kW` | 🟢 |
-| 20 | DCDCEnable | Bool | ParseEnumBool | vehicle_live_state | dcdc_enable | BOOLEAN | /charging-telemetry/latest | dcdc_enable | useChargingTelemetryLatest | — | — | ⚪ |
+| 20 | DCDCEnable | Bool | ParseEnumBool | vehicle_live_state | dcdc_enable | BOOLEAN | /charging-telemetry/latest | dcdc_enable | useChargingTelemetryLatest | ChargingDetailPage | — | 🟢 |
 | 21 | EnergyRemaining | Float | direct | vehicle_live_state | energy_remaining | FLOAT8 | /charging-telemetry/latest | energy_remaining | useChargingTelemetryLatest | EnergyChargingPanel | `{value} kWh` | 🟢 |
-| 22 | EstBatteryRange | Float | direct | vehicle_live_state | est_range | FLOAT8 | /charging-telemetry/latest | est_battery_range | useChargingTelemetryLatest | — | — | ⚪ |
-| 23 | EstimatedHoursToChargeTermination | Float | direct | vehicle_live_state | estimated_hours_to_charge_termination | FLOAT8 | /charging-telemetry/latest | estimated_hours_to_charge_termination | useChargingTelemetryLatest | — | — | ⚪ |
-| 24 | ExpectedEnergyPercentAtTripArrival | Float | direct | vehicle_live_state | expected_energy_percent_at_trip_arrival | FLOAT8 | /charging-telemetry/latest | expected_energy_percent_at_trip_arrival | useChargingTelemetryLatest | — | — | ⚪ |
-| 25 | FastChargerPresent | Bool | ParseEnumBool | vehicle_live_state | fast_charger_present | BOOLEAN | /charging-telemetry/latest | fast_charger_present | useChargingTelemetryLatest | — | — | ⚪ |
-| 26 | IdealBatteryRange | Float | direct | vehicle_live_state | ideal_range | FLOAT8 | /vehicles/{id}/state | ideal_range | useVehicleState | — (used internally) | — | ⚪ |
-| 27 | LifetimeEnergyUsed | Float | direct | vehicle_live_state | lifetime_energy_used | FLOAT8 | /charging-telemetry/latest | lifetime_energy_used | useChargingTelemetryLatest | — | — | ⚪ |
-| 28 | ModuleTempMax | Float | direct | vehicle_live_state | module_temp_max | FLOAT8 | /charging-telemetry/latest | module_temp_max | useChargingTelemetryLatest | — | — | ⚪ |
-| 29 | ModuleTempMin | Float | direct | vehicle_live_state | module_temp_min | FLOAT8 | /charging-telemetry/latest | module_temp_min | useChargingTelemetryLatest | — | — | ⚪ |
-| 30 | NotEnoughPowerToHeat | Bool | ParseEnumBool | vehicle_live_state | not_enough_power_to_heat | BOOLEAN | /charging-telemetry/latest | not_enough_power_to_heat | useChargingTelemetryLatest | — | — | ⚪ |
-| 31 | NumBrickVoltageMax | Float | direct | vehicle_live_state | num_brick_voltage_max | FLOAT8 | /charging-telemetry/latest | num_brick_voltage_max | useChargingTelemetryLatest | — | — | ⚪ |
-| 32 | NumBrickVoltageMin | Float | direct | vehicle_live_state | num_brick_voltage_min | FLOAT8 | /charging-telemetry/latest | num_brick_voltage_min | useChargingTelemetryLatest | — | — | ⚪ |
-| 33 | NumModuleTempMax | Float | direct | vehicle_live_state | num_module_temp_max | FLOAT8 | /charging-telemetry/latest | num_module_temp_max | useChargingTelemetryLatest | — | — | ⚪ |
-| 34 | NumModuleTempMin | Float | direct | vehicle_live_state | num_module_temp_min | FLOAT8 | /charging-telemetry/latest | num_module_temp_min | useChargingTelemetryLatest | — | — | ⚪ |
+| 22 | EstBatteryRange | Float | direct | vehicle_live_state | est_range | FLOAT8 | /charging-telemetry/latest | est_battery_range | useChargingTelemetryLatest | ChargingDetailPage | — | 🟢 |
+| 23 | EstimatedHoursToChargeTermination | Float | direct | vehicle_live_state | estimated_hours_to_charge_termination | FLOAT8 | /charging-telemetry/latest | estimated_hours_to_charge_termination | useChargingTelemetryLatest | ChargingDetailPage | `{value} h` | 🟢 |
+| 24 | ExpectedEnergyPercentAtTripArrival | Float | direct | vehicle_live_state | expected_energy_percent_at_trip_arrival | FLOAT8 | /charging-telemetry/latest | expected_energy_percent_at_trip_arrival | useChargingTelemetryLatest | NavigationRoutePage | — | 🟢 |
+| 25 | FastChargerPresent | Bool | ParseEnumBool | vehicle_live_state | fast_charger_present | BOOLEAN | /charging-telemetry/latest | fast_charger_present | useChargingTelemetryLatest | ChargingDetailPage | Header badge | 🟢 |
+| 26 | IdealBatteryRange | Float | direct | vehicle_live_state | ideal_range | FLOAT8 | /vehicles/{id}/state | ideal_range | useVehicleState | VehicleDetailPage | BatteryRangePanel | 🟢 |
+| 27 | LifetimeEnergyUsed | Float | direct | vehicle_live_state | lifetime_energy_used | FLOAT8 | /charging-telemetry/latest | lifetime_energy_used | useChargingTelemetryLatest | EnergyPage | — | 🟢 |
+| 28 | ModuleTempMax | Float | direct | vehicle_live_state | module_temp_max | FLOAT8 | /charging-telemetry/latest | module_temp_max | useChargingTelemetryLatest | BatteryHealthPage (Thermal Monitoring) | — | 🟢 |
+| 29 | ModuleTempMin | Float | direct | vehicle_live_state | module_temp_min | FLOAT8 | /charging-telemetry/latest | module_temp_min | useChargingTelemetryLatest | BatteryHealthPage | — | 🟢 |
+| 30 | NotEnoughPowerToHeat | Bool | ParseEnumBool | vehicle_live_state | not_enough_power_to_heat | BOOLEAN | /charging-telemetry/latest | not_enough_power_to_heat | useChargingTelemetryLatest | ClimateControlPage | — | 🟢 |
+| 31 | NumBrickVoltageMax | Float | direct | vehicle_live_state | num_brick_voltage_max | FLOAT8 | /charging-telemetry/latest | num_brick_voltage_max | useChargingTelemetryLatest | ChargingDetailPage | — | 🟢 |
+| 32 | NumBrickVoltageMin | Float | direct | vehicle_live_state | num_brick_voltage_min | FLOAT8 | /charging-telemetry/latest | num_brick_voltage_min | useChargingTelemetryLatest | ChargingDetailPage | — | 🟢 |
+| 33 | NumModuleTempMax | Float | direct | vehicle_live_state | num_module_temp_max | FLOAT8 | /charging-telemetry/latest | num_module_temp_max | useChargingTelemetryLatest | BatteryHealthPage (Thermal Monitoring) | — | 🟢 |
+| 34 | NumModuleTempMin | Float | direct | vehicle_live_state | num_module_temp_min | FLOAT8 | /charging-telemetry/latest | num_module_temp_min | useChargingTelemetryLatest | BatteryHealthPage | — | 🟢 |
 | 35 | PackCurrent | Float | direct | vehicle_live_state | pack_current | FLOAT8 | /charging-telemetry/latest | pack_current | useChargingTelemetryLatest | EnergyChargingPanel | `{value} A` | 🟢 |
 | 36 | PackVoltage | Float | direct | vehicle_live_state | pack_voltage | FLOAT8 | /charging-telemetry/latest | pack_voltage | useChargingTelemetryLatest | ChargingTelemetrySection, EnergyChargingPanel | `{value} V` | 🟢 |
-| 37 | PreconditioningEnabled | Bool | ParseEnumBool | vehicle_live_state | preconditioning_enabled | BOOLEAN | /charging-telemetry/latest | preconditioning_enabled | useChargingTelemetryLatest | — | — | ⚪ |
-| 38 | RatedRange | Float | direct | vehicle_live_state | rated_range | FLOAT8 | /vehicles/{id}/state | rated_range | useVehicleState | — (used internally) | — | ⚪ |
+| 37 | PreconditioningEnabled | Bool | ParseEnumBool | vehicle_live_state | preconditioning_enabled | BOOLEAN | /charging-telemetry/latest | preconditioning_enabled | useChargingTelemetryLatest | ChargingDetailPage | — | 🟢 |
+| 38 | RatedRange | Float | direct | vehicle_live_state | rated_range | FLOAT8 | /vehicles/{id}/state | rated_range | useVehicleState | VehicleDetailPage (BatteryRangePanel, QuickStatsGrid, VehicleGauges, BatteryRangeCharts), Dashboard (VehicleHero, RangeBarWidget, RangeEstimateWidget, ChargeStatusWidget), VehicleListPage, ChargingDetailPage, ProjectedRangePage | `{value} mi/km` | 🟢 |
 | 39 | Soc | Float | direct | vehicle_live_state | soc | FLOAT8 | /charging-telemetry/latest | soc | useChargingTelemetryLatest | ChargingTelemetrySection | `{value}%` | 🟢 |
-| 40 | SuperchargerSessionTripPlanner | Bool | ParseEnumBool | vehicle_live_state | supercharger_session_trip_planner | VARCHAR | /charging-telemetry/latest | supercharger_session_trip_planner | useChargingTelemetryLatest | — | — | ⚪ |
+| 40 | SuperchargerSessionTripPlanner | Bool | ParseEnumBool | vehicle_live_state | supercharger_session_trip_planner | VARCHAR | /charging-telemetry/latest | supercharger_session_trip_planner | useChargingTelemetryLatest | ChargingDetailPage | Badge (Active/Inactive) | 🟢 |
 | 41 | TimeToFullCharge | Float | direct | vehicle_live_state | time_to_full_charge | FLOAT8 | /vehicles/{id}/state | time_to_full_charge | useVehicleState | ChargingTelemetrySection | `{value}h` | 🟢 |
 
 ### 2 · Charging — Enums (11 signals)
@@ -91,12 +91,12 @@
 | # | Tesla Signal | Type | Coercion | DB Table | DB Column | DB Type | API Endpoint | JSON Field | Frontend Hook | UI Page(s) | Display Format | Parity |
 |---|-------------|------|----------|----------|-----------|---------|-------------|-----------|--------------|-----------|---------------|--------|
 | 42 | BMSState | Enum | ParseBMSState (strip prefix) | vehicle_live_state | bms_state | VARCHAR | /charging-telemetry/latest | bms_state | useChargingTelemetryLatest | EnergyChargingPanel | Badge (Standby/Charge/Fault) | 🟢 |
-| 43 | ChargePort | Enum | ParseChargePort (strip prefix) | vehicle_live_state | charge_port | VARCHAR | — | — | — | — | — | 🔴 |
-| 44 | ChargePortLatch | Enum | ParseChargePortLatch (strip prefix) | vehicle_live_state | charge_port_latch | VARCHAR | /charging-telemetry/latest | charge_port_latch | useChargingTelemetryLatest | — | — | ⚪ |
+| 43 | ChargePort | Enum | ParseChargePort (strip prefix) | vehicle_live_state, charging_telemetry | charge_port | VARCHAR | /charging-telemetry/latest | charge_port | useChargingTelemetryLatest | — | — | 🟢 |
+| 44 | ChargePortLatch | Enum | ParseChargePortLatch (strip prefix) | vehicle_live_state | charge_port_latch | VARCHAR | /charging-telemetry/latest | charge_port_latch | useChargingTelemetryLatest | ChargingDetailPage | — | 🟢 |
 | 45 | ChargeState | Enum | ParseChargeState (strip prefix) | vehicle_live_state | charge_state | VARCHAR | /charging-telemetry/latest | charge_state | useChargingTelemetryLatest | ChargingTelemetrySection | Direct string | 🟢 |
-| 46 | ChargingCableType | Enum | direct (→ VARCHAR) | vehicle_live_state | charging_cable_type | VARCHAR | /charging-telemetry/latest | charging_cable_type | useChargingTelemetryLatest | — | — | ⚪ |
-| 47 | DetailedChargeState | Enum | ParseDetailedChargeState (strip prefix) | vehicle_live_state | detailed_charge_state | VARCHAR | /charging-telemetry/latest | detailed_charge_state | useChargingTelemetryLatest | — (→is_charging bool internally) | — | ⚪ |
-| 48 | FastChargerType | Enum | direct (→ VARCHAR) | vehicle_live_state | fast_charger_type | VARCHAR | /charging-telemetry/latest | fast_charger_type | useChargingTelemetryLatest | — | — | ⚪ |
+| 46 | ChargingCableType | Enum | direct (→ VARCHAR) | vehicle_live_state | charging_cable_type | VARCHAR | /charging-telemetry/latest | charging_cable_type | useChargingTelemetryLatest | ChargingDetailPage | — | 🟢 |
+| 47 | DetailedChargeState | Enum | ParseDetailedChargeState (strip prefix) | vehicle_live_state | detailed_charge_state | VARCHAR | /charging-telemetry/latest | detailed_charge_state | useChargingTelemetryLatest | ChargingDetailPage (header badge) | — | 🟢 |
+| 48 | FastChargerType | Enum | direct (→ VARCHAR) | vehicle_live_state | fast_charger_type | VARCHAR | /charging-telemetry/latest | fast_charger_type | useChargingTelemetryLatest | ChargingDetailPage | — | 🟢 |
 | 49 | ScheduledChargingMode | Enum | ParseScheduledChargingMode (strip prefix) | vehicle_live_state | scheduled_charging_mode | VARCHAR | /signals/{id}/live | scheduled_charging_mode | useSignalGaps (live) | ChargingScheduleWidget | Mode label | 🟢 |
 | 50 | ScheduledChargingPending | Bool | ParseEnumBool | vehicle_live_state | scheduled_charging_pending | BOOLEAN | /signals/{id}/live | scheduled_charging_pending | useSignalGaps (live) | ChargingScheduleWidget | Boolean badge | 🟢 |
 | 51 | ScheduledChargingStartTime | Time | compound→"HH:MM:SS" | vehicle_live_state | scheduled_charging_start_time | VARCHAR | /signals/{id}/live | scheduled_charging_start_time | useSignalGaps (live) | ChargingScheduleWidget | Formatted time | 🟢 |
@@ -106,58 +106,58 @@
 
 | # | Tesla Signal | Type | Coercion | DB Table | DB Column | DB Type | API Endpoint | JSON Field | Frontend Hook | UI Page(s) | Display Format | Parity |
 |---|-------------|------|----------|----------|-----------|---------|-------------|-----------|--------------|-----------|---------------|--------|
-| 53 | PowershareHoursLeft | Float | direct | vehicle_live_state | powershare_hours_left | FLOAT8 | /charging-telemetry/latest | powershare_hours_left | useChargingTelemetryLatest | — | — | ⚪ |
-| 54 | PowershareInstantaneousPowerKW | Float | direct | vehicle_live_state | powershare_instantaneous_power_kw | FLOAT8 | /charging-telemetry/latest | powershare_instantaneous_power_kw | useChargingTelemetryLatest | — | — | ⚪ |
-| 55 | PowershareStatus | Enum | ParsePowershareStatus (strip prefix) | vehicle_live_state | powershare_status | VARCHAR | /charging-telemetry/latest | powershare_status | useChargingTelemetryLatest | — | — | ⚪ |
-| 56 | PowershareStopReason | Enum | ParsePowershareStopReason (strip prefix) | vehicle_live_state | powershare_stop_reason | VARCHAR | /charging-telemetry/latest | powershare_stop_reason | useChargingTelemetryLatest | — | — | ⚪ |
-| 57 | PowershareType | Enum | ParsePowershareType (strip prefix) | vehicle_live_state | powershare_type | VARCHAR | /charging-telemetry/latest | powershare_type | useChargingTelemetryLatest | — | — | ⚪ |
+| 53 | PowershareHoursLeft | Float | direct | vehicle_live_state | powershare_hours_left | FLOAT8 | /charging-telemetry/latest | powershare_hours_left | useChargingTelemetryLatest | PowersharePage | `{value} h` | 🟢 |
+| 54 | PowershareInstantaneousPowerKW | Float | direct | vehicle_live_state | powershare_instantaneous_power_kw | FLOAT8 | /charging-telemetry/latest | powershare_instantaneous_power_kw | useChargingTelemetryLatest | PowersharePage | `{value} kW` | 🟢 |
+| 55 | PowershareStatus | Enum | ParsePowershareStatus (strip prefix) | vehicle_live_state | powershare_status | VARCHAR | /charging-telemetry/latest | powershare_status | useChargingTelemetryLatest | PowersharePage | Badge | 🟢 |
+| 56 | PowershareStopReason | Enum | ParsePowershareStopReason (strip prefix) | vehicle_live_state | powershare_stop_reason | VARCHAR | /charging-telemetry/latest | powershare_stop_reason | useChargingTelemetryLatest | PowersharePage | Badge | 🟢 |
+| 57 | PowershareType | Enum | ParsePowershareType (strip prefix) | vehicle_live_state | powershare_type | VARCHAR | /charging-telemetry/latest | powershare_type | useChargingTelemetryLatest | PowersharePage | Badge | 🟢 |
 
 ### 4 · Climate (29 signals)
 
 | # | Tesla Signal | Type | Coercion | DB Table | DB Column | DB Type | API Endpoint | JSON Field | Frontend Hook | UI Page(s) | Display Format | Parity |
 |---|-------------|------|----------|----------|-----------|---------|-------------|-----------|--------------|-----------|---------------|--------|
-| 58 | AutoSeatClimateLeft | Bool | ParseEnumBool | vehicle_live_state | auto_seat_climate_left | BOOLEAN | /climate/latest | auto_seat_climate_left | useClimate | — | — | ⚪ |
-| 59 | AutoSeatClimateRight | Bool | ParseEnumBool | vehicle_live_state | auto_seat_climate_right | BOOLEAN | /climate/latest | auto_seat_climate_right | useClimate | — | — | ⚪ |
+| 58 | AutoSeatClimateLeft | Bool | ParseEnumBool | vehicle_live_state | auto_seat_climate_left | BOOLEAN | /climate/latest | auto_seat_climate_left | useClimate | ClimateControlPage | Badge (Auto/Manual) | 🟢 |
+| 59 | AutoSeatClimateRight | Bool | ParseEnumBool | vehicle_live_state | auto_seat_climate_right | BOOLEAN | /climate/latest | auto_seat_climate_right | useClimate | ClimateControlPage | Badge (Auto/Manual) | 🟢 |
 | 60 | CabinOverheatProtectionMode | Enum | ParseCabinOverheatMode (strip prefix) | vehicle_live_state | cabin_overheat_protection_mode | VARCHAR | /climate/latest | cabin_overheat_mode | useClimate | ClimatePanel | Badge (On/FanOnly/Off) | 🟢 |
-| 61 | CabinOverheatProtectionTemperatureLimit | Enum | direct (→ VARCHAR) | vehicle_live_state | cabin_overheat_protection_temperature_limit | VARCHAR | /climate/latest | cabin_overheat_protection_temp_limit | useClimate | — | — | ⚪ |
+| 61 | CabinOverheatProtectionTemperatureLimit | Enum | direct (→ VARCHAR) | vehicle_live_state | cabin_overheat_protection_temperature_limit | VARCHAR | /climate/latest | cabin_overheat_protection_temp_limit | useClimate | Climate Control | — | 🟢 |
 | 62 | ClimateKeeperMode | Enum | ParseClimateKeeperMode (strip prefix) | vehicle_live_state | climate_keeper_mode | VARCHAR | /climate/latest | climate_keeper_mode | useClimate | ClimateControlPage, ClimatePanel | Badge (On/Dog Mode/Camp Mode/Off) | 🟢 |
-| 63 | ClimateSeatCoolingFrontLeft | Float | direct | vehicle_live_state | climate_seat_cooling_front_left | FLOAT8 | /climate/latest | climate_seat_cooling_front_left | useClimate | — | — | ⚪ |
-| 64 | ClimateSeatCoolingFrontRight | Float | direct | vehicle_live_state | climate_seat_cooling_front_right | FLOAT8 | /climate/latest | climate_seat_cooling_front_right | useClimate | — | — | ⚪ |
-| 65 | DefrostForPreconditioning | Bool | ParseEnumBool | vehicle_live_state | defrost_for_preconditioning | BOOLEAN | /climate/latest | defrost_for_preconditioning | useClimate | — | — | ⚪ |
+| 63 | ClimateSeatCoolingFrontLeft | Float | direct | vehicle_live_state | climate_seat_cooling_front_left | FLOAT8 | /climate/latest | climate_seat_cooling_front_left | useClimate | ClimateControlPage (Seat Cooling) | — | 🟢 |
+| 64 | ClimateSeatCoolingFrontRight | Float | direct | vehicle_live_state | climate_seat_cooling_front_right | FLOAT8 | /climate/latest | climate_seat_cooling_front_right | useClimate | ClimateControlPage (Seat Cooling) | — | 🟢 |
+| 65 | DefrostForPreconditioning | Bool | ParseEnumBool | vehicle_live_state | defrost_for_preconditioning | BOOLEAN | /climate/latest | defrost_for_preconditioning | useClimate | ClimateControlPage | — | 🟢 |
 | 66 | DefrostMode | Enum | ParseDefrostMode (strip prefix) | vehicle_live_state | defrost_mode | VARCHAR | /climate/latest | defrost_mode | useClimate | ClimateControlPage, ClimatePanel, ClimateStatusWidget | Badge with ❄️ icon | 🟢 |
 | 67 | HvacACEnabled | Bool | ParseEnumBool | vehicle_live_state | hvac_ac_enabled | BOOLEAN | /climate/latest | hvac_ac_enabled | useClimate | ClimateControlPage | Badge (On/Off) | 🟢 |
 | 68 | HvacAutoMode | Enum | ParseHvacAutoMode (strip prefix) | vehicle_live_state | hvac_auto_mode | VARCHAR | /climate/latest | hvac_auto_mode | useClimate | ClimateControlPage | Badge (On/Off) | 🟢 |
 | 69 | HvacFanSpeed | Float | direct (→fan_speed col) | vehicle_live_state | fan_speed | INT | /climate/latest | hvac_fan_speed | useClimate | ClimateControlPage, ClimatePanel | Level 0–6, bar indicators | 🟢 |
-| 70 | HvacFanStatus | Float | direct | vehicle_live_state | hvac_fan_status | FLOAT8 | /climate/latest | hvac_fan_status | useClimate | — | — | ⚪ |
+| 70 | HvacFanStatus | Float | direct | vehicle_live_state | hvac_fan_status | FLOAT8 | /climate/latest | hvac_fan_status | useClimate | ClimateControlPage | Climate Control | 🟢 |
 | 71 | HvacLeftTemperatureRequest | Float | direct | vehicle_live_state | hvac_left_temperature_request | FLOAT8 | /climate/latest | hvac_left_temp_request | useClimate | ClimatePanel, ClimateControlPage | `fmtNumber(convertTemp())` °C/°F | 🟢 |
 | 72 | HvacPower | Enum | ParseHvacPower (→boolean) | vehicle_live_state | hvac_power | BOOLEAN | /climate/latest, /vehicles/{id}/state | hvac_power / is_climate_on | useClimate, useVehicleState | ClimateControlPage, Dashboard | kW bar or boolean | 🟢 |
 | 73 | HvacRightTemperatureRequest | Float | direct | vehicle_live_state | hvac_right_temperature_request | FLOAT8 | /climate/latest | hvac_right_temp_request | useClimate | ClimatePanel, ClimateControlPage | `fmtNumber(convertTemp())` °C/°F | 🟢 |
-| 74 | HvacSteeringWheelHeatAuto | Bool | ParseEnumBool | vehicle_live_state | hvac_steering_wheel_heat_auto | BOOLEAN | /climate/latest | hvac_steering_wheel_heat_auto | useClimate | — | — | ⚪ |
-| 75 | HvacSteeringWheelHeatLevel | Float | direct | vehicle_live_state | hvac_steering_wheel_heat_level | FLOAT8 | /climate/latest | hvac_steering_wheel_heat_level | useClimate | — | — | ⚪ |
+| 74 | HvacSteeringWheelHeatAuto | Bool | ParseEnumBool | vehicle_live_state | hvac_steering_wheel_heat_auto | BOOLEAN | /climate/latest | hvac_steering_wheel_heat_auto | useClimate | ClimateControlPage | — | 🟢 |
+| 75 | HvacSteeringWheelHeatLevel | Float | direct | vehicle_live_state | hvac_steering_wheel_heat_level | FLOAT8 | /climate/latest | hvac_steering_wheel_heat_level | useClimate | ClimateControlPage | — | 🟢 |
 | 76 | InsideTemp | Float | direct | vehicle_live_state | inside_temp | FLOAT8 | /climate/latest, /vehicles/{id}/state | inside_temp | useClimate, useVehicleState | ClimateControlPage, ClimatePanel, ClimateStatusWidget, Dashboard | `fmtNumber(convertTemp(), 1)` °C/°F | 🟢 |
 | 77 | OutsideTemp | Float | direct | vehicle_live_state | outside_temp | FLOAT8 | /climate/latest, /vehicles/{id}/state | outside_temp | useClimate, useVehicleState | ClimateControlPage, ClimatePanel, ClimateStatusWidget, Dashboard | `fmtNumber(convertTemp(), 1)` °C/°F | 🟢 |
-| 78 | RearDefrostEnabled | Bool | ParseEnumBool | vehicle_live_state | rear_defrost_enabled | BOOLEAN | /climate/latest | rear_defrost_enabled | useClimate | — | — | ⚪ |
-| 79 | RearDisplayHvacEnabled | Bool | ParseEnumBool | vehicle_live_state | rear_display_hvac_enabled | BOOLEAN | /climate/latest | rear_display_hvac_enabled | useClimate | — | — | ⚪ |
+| 78 | RearDefrostEnabled | Bool | ParseEnumBool | vehicle_live_state | rear_defrost_enabled | BOOLEAN | /climate/latest | rear_defrost_enabled | useClimate | ClimateControlPage | — | 🟢 |
+| 79 | RearDisplayHvacEnabled | Bool | ParseEnumBool | vehicle_live_state | rear_display_hvac_enabled | BOOLEAN | /climate/latest | rear_display_hvac_enabled | useClimate | ClimateControlPage | — | 🟢 |
 | 80 | SeatHeaterLeft | Float | direct | vehicle_live_state | seat_heater_left | FLOAT8 | /climate/latest | seat_heater_left | useClimate | ClimateControlPage | Level 0–3, color-coded badge | 🟢 |
 | 81 | SeatHeaterRearCenter | Float | direct | vehicle_live_state | seat_heater_rear_center | FLOAT8 | /climate/latest | seat_heater_rear_center | useClimate | ClimateControlPage | Level 0–3, color-coded badge | 🟢 |
 | 82 | SeatHeaterRearLeft | Float | direct | vehicle_live_state | seat_heater_rear_left | FLOAT8 | /climate/latest | seat_heater_rear_left | useClimate | ClimateControlPage | Level 0–3, color-coded badge | 🟢 |
 | 83 | SeatHeaterRearRight | Float | direct | vehicle_live_state | seat_heater_rear_right | FLOAT8 | /climate/latest | seat_heater_rear_right | useClimate | ClimateControlPage | Level 0–3, color-coded badge | 🟢 |
 | 84 | SeatHeaterRight | Float | direct | vehicle_live_state | seat_heater_right | FLOAT8 | /climate/latest | seat_heater_right | useClimate | ClimateControlPage | Level 0–3, color-coded badge | 🟢 |
-| 85 | SeatVentEnabled | Bool | ParseEnumBool | vehicle_live_state | seat_vent_enabled | BOOLEAN | /climate/latest | seat_vent_enabled | useClimate | — | — | ⚪ |
-| 86 | WiperHeatEnabled | Bool | ParseEnumBool | vehicle_live_state | wiper_heat_enabled | BOOLEAN | /climate/latest | wiper_heat_enabled | useClimate | — | — | ⚪ |
+| 85 | SeatVentEnabled | Bool | ParseEnumBool | vehicle_live_state | seat_vent_enabled | BOOLEAN | /climate/latest | seat_vent_enabled | useClimate | ClimateControlPage | — | 🟢 |
+| 86 | WiperHeatEnabled | Bool | ParseEnumBool | vehicle_live_state | wiper_heat_enabled | BOOLEAN | /climate/latest | wiper_heat_enabled | useClimate | ClimateControlPage | — | 🟢 |
 
 ### 5 · Driving (12 signals)
 
 | # | Tesla Signal | Type | Coercion | DB Table | DB Column | DB Type | API Endpoint | JSON Field | Frontend Hook | UI Page(s) | Display Format | Parity |
 |---|-------------|------|----------|----------|-----------|---------|-------------|-----------|--------------|-----------|---------------|--------|
 | 87 | BrakePedal | Bool | ParseEnumBool | vehicle_live_state | brake_pedal | BOOLEAN | /motor/latest | brake_pedal | useMotorLatest | PedalUsage, PowertrainPanel, DrivetrainHealthPage | Badge (Active/Inactive) | 🟢 |
-| 88 | BrakePedalPos | Float | direct | vehicle_live_state | brake_pedal_pos | FLOAT8 | /motor/latest | brake_pedal_pos | useMotorLatest | — | — | ⚪ |
-| 89 | CruiseSetSpeed | Float | direct | vehicle_live_state | cruise_set_speed | FLOAT8 | /motor/latest | cruise_set_speed | useMotorLatest | — | — | ⚪ |
-| 90 | DriveRail | Bool | ParseEnumBool | vehicle_live_state | drive_rail | BOOLEAN | /motor/latest | drive_rail | useMotorLatest | — | — | ⚪ |
+| 88 | BrakePedalPos | Float | direct | vehicle_live_state | brake_pedal_pos | FLOAT8 | /motor/latest | brake_pedal_pos | useMotorLatest | DrivingDynamicsPage (Pedal Usage) | — | 🟢 |
+| 89 | CruiseSetSpeed | Float | direct | vehicle_live_state | cruise_set_speed | FLOAT8 | /motor/latest | cruise_set_speed | useMotorLatest | DrivingDynamicsPage | — | 🟢 |
+| 90 | DriveRail | Bool | ParseEnumBool | vehicle_live_state | drive_rail | BOOLEAN | /motor/latest | drive_rail | useMotorLatest | Drivetrain Health (Live Motor Status) | — | 🟢 |
 | 91 | Gear | Enum | ParseGear (D/R/P/N) | vehicle_live_state | gear | VARCHAR | /motor/latest | gear | useMotorLatest | SpeedGearPanel, DrivetrainHealthPage, LiveSignalsWidget | Single char badge, color-coded | 🟢 |
 | 92 | LateralAcceleration | Float | direct | vehicle_live_state | lateral_acceleration | FLOAT8 | /motor/latest | lateral_accel | useMotorLatest | GForcePanel, PowertrainPanel, MotorHistoryCharts | `fmtNumber(value, 2)` g | 🟢 |
-| 93 | LifetimeEnergyGainedRegen | Float | direct | vehicle_live_state | lifetime_energy_gained_regen | FLOAT8 | /motor/latest | lifetime_energy_gained_regen | useMotorLatest | — | — | ⚪ |
-| 94 | LifetimeEnergyUsedDrive | Float | direct | vehicle_live_state | lifetime_energy_used_drive | FLOAT8 | /motor/latest | lifetime_energy_used_drive | useMotorLatest | — | — | ⚪ |
+| 93 | LifetimeEnergyGainedRegen | Float | direct | vehicle_live_state | lifetime_energy_gained_regen | FLOAT8 | /motor/latest | lifetime_energy_gained_regen | useMotorLatest | RegenEfficiencyPage | — | 🟢 |
+| 94 | LifetimeEnergyUsedDrive | Float | direct | vehicle_live_state | lifetime_energy_used_drive | FLOAT8 | /motor/latest | lifetime_energy_used_drive | useMotorLatest | RegenEfficiencyPage | — | 🟢 |
 | 95 | LongitudinalAcceleration | Float | direct | vehicle_live_state | longitudinal_acceleration | FLOAT8 | /motor/latest | longitudinal_accel | useMotorLatest | GForcePanel, PowertrainPanel, MotorHistoryCharts | `fmtNumber(value, 2)` g | 🟢 |
 | 96 | PedalPosition | Float | direct | vehicle_live_state | pedal_position | FLOAT8 | /motor/latest | pedal_position | useMotorLatest | PedalUsage, MotorSection, PowertrainPanel | Percentage 0–100%, gauge | 🟢 |
 | 97 | RouteTrafficMinutesDelay | Float | direct | vehicle_live_state | route_traffic_minutes_delay | FLOAT8 | /location-snapshots/latest | route_traffic_minutes_delay | useLocationSnapshotLatest | NavigationRoutePage | `{value} min` | 🟢 |
@@ -167,42 +167,42 @@
 
 | # | Tesla Signal | Type | Coercion | DB Table | DB Column | DB Type | API Endpoint | JSON Field | Frontend Hook | UI Page(s) | Display Format | Parity |
 |---|-------------|------|----------|----------|-----------|---------|-------------|-----------|--------------|-----------|---------------|--------|
-| 99 | DiAxleSpeedF | Float | direct | vehicle_live_state | di_axle_speed_f | FLOAT8 | /motor/latest | di_axle_speed_f | useMotorLatest | — | — | ⚪ |
-| 100 | DiAxleSpeedR | Float | direct | vehicle_live_state | di_axle_speed_r | FLOAT8 | /motor/latest | — | useMotorLatest | — | Missing from MotorSnapshot TS type | 🔴 |
-| 101 | DiAxleSpeedREL | Float | direct | vehicle_live_state | di_axle_speed_rel | FLOAT8 | /motor/latest | di_axle_speed_rel | useMotorLatest | — | — | ⚪ |
-| 102 | DiAxleSpeedRER | Float | direct | vehicle_live_state | di_axle_speed_rer | FLOAT8 | /motor/latest | — | useMotorLatest | — | Missing from MotorSnapshot TS type | 🔴 |
-| 103 | DiHeatsinkTF | Float | direct | vehicle_live_state | di_heatsink_tf | FLOAT8 | /motor/latest | di_heatsink_t_f | useMotorLatest | — | — | ⚪ |
-| 104 | DiHeatsinkTR | Float | direct | vehicle_live_state | di_heatsink_tr | FLOAT8 | /motor/latest | di_heatsink_t_r | useMotorLatest | — | — | ⚪ |
-| 105 | DiHeatsinkTREL | Float | direct | vehicle_live_state | di_heatsink_trel | FLOAT8 | /motor/latest | di_heatsink_t_rel | useMotorLatest | — | — | ⚪ |
-| 106 | DiHeatsinkTRER | Float | direct | vehicle_live_state | di_heatsink_trer | FLOAT8 | /motor/latest | di_heatsink_t_rer | useMotorLatest | — | — | ⚪ |
-| 107 | DiInverterTF | Float | direct | vehicle_live_state | di_inverter_tf | FLOAT8 | /motor/latest | di_inverter_t_f | useMotorLatest | — | — | ⚪ |
-| 108 | DiInverterTR | Float | direct | vehicle_live_state | di_inverter_tr | FLOAT8 | /motor/latest | di_inverter_t_r | useMotorLatest | — | — | ⚪ |
-| 109 | DiInverterTREL | Float | direct | vehicle_live_state | di_inverter_trel | FLOAT8 | /motor/latest | di_inverter_t_rel | useMotorLatest | — | — | ⚪ |
-| 110 | DiInverterTRER | Float | direct | vehicle_live_state | di_inverter_trer | FLOAT8 | /motor/latest | di_inverter_t_rer | useMotorLatest | — | — | ⚪ |
-| 111 | DiMotorCurrentF | Float | direct | vehicle_live_state | di_motor_current_f | FLOAT8 | /motor/latest | di_motor_current_f | useMotorLatest | — | — | ⚪ |
-| 112 | DiMotorCurrentR | Float | direct | vehicle_live_state | di_motor_current_r | FLOAT8 | /motor/latest | di_motor_current_r | useMotorLatest | — | — | ⚪ |
-| 113 | DiMotorCurrentREL | Float | direct | vehicle_live_state | di_motor_current_rel | FLOAT8 | /motor/latest | di_motor_current_rel | useMotorLatest | — | — | ⚪ |
-| 114 | DiMotorCurrentRER | Float | direct | vehicle_live_state | di_motor_current_rer | FLOAT8 | /motor/latest | di_motor_current_rer | useMotorLatest | — | — | ⚪ |
-| 115 | DiSlaveTorqueCmd | Float | direct | vehicle_live_state | di_slave_torque_cmd | FLOAT8 | /motor/latest | di_slave_torque_cmd | useMotorLatest | — | — | ⚪ |
-| 116 | DiStateF | Enum | direct (→ VARCHAR) | vehicle_live_state | di_state_f | VARCHAR | /motor/latest | di_state_f | useMotorLatest | — | — | ⚪ |
-| 117 | DiStateR | Enum | direct (→ VARCHAR) | vehicle_live_state | di_state_r | VARCHAR | /motor/latest | — | useMotorLatest | — | Missing from MotorSnapshot TS type | 🔴 |
-| 118 | DiStateREL | Enum | direct (→ VARCHAR) | vehicle_live_state | di_state_rel | VARCHAR | /motor/latest | di_state_rel | useMotorLatest | — | — | ⚪ |
-| 119 | DiStateRER | Enum | direct (→ VARCHAR) | vehicle_live_state | di_state_rer | VARCHAR | /motor/latest | di_state_rer | useMotorLatest | — | — | ⚪ |
-| 120 | DiStatorTempF | Float | direct | vehicle_live_state | di_stator_temp_f | FLOAT8 | /motor/latest | di_stator_temp_f | useMotorLatest | — | — | ⚪ |
-| 121 | DiStatorTempR | Float | direct | vehicle_live_state | di_stator_temp_r | FLOAT8 | /motor/latest | — | useMotorLatest | — | Missing from MotorSnapshot TS type | 🔴 |
-| 122 | DiStatorTempREL | Float | direct | vehicle_live_state | di_stator_temp_rel | FLOAT8 | /motor/latest | di_stator_temp_rel | useMotorLatest | — | — | ⚪ |
-| 123 | DiStatorTempRER | Float | direct | vehicle_live_state | di_stator_temp_rer | FLOAT8 | /motor/latest | di_stator_temp_rer | useMotorLatest | — | — | ⚪ |
-| 124 | DiTorqueActualF | Float | direct | vehicle_live_state | di_torque_actual_f | FLOAT8 | /motor/latest | di_torque_actual_f | useMotorLatest | — | — | ⚪ |
-| 125 | DiTorqueActualR | Float | direct | vehicle_live_state | di_torque_actual_r | FLOAT8 | /motor/latest | di_torque_actual_r | useMotorLatest | — | — | ⚪ |
-| 126 | DiTorqueActualREL | Float | direct | vehicle_live_state | di_torque_actual_rel | FLOAT8 | /motor/latest | di_torque_actual_rel | useMotorLatest | — | — | ⚪ |
-| 127 | DiTorqueActualRER | Float | direct | vehicle_live_state | di_torque_actual_rer | FLOAT8 | /motor/latest | di_torque_actual_rer | useMotorLatest | — | — | ⚪ |
+| 99 | DiAxleSpeedF | Float | direct | vehicle_live_state | di_axle_speed_f | FLOAT8 | /motor/latest | di_axle_speed_f | useMotorLatest | DrivetrainHealthPage | — | 🟢 |
+| 100 | DiAxleSpeedR | Float | direct | vehicle_live_state | di_axle_speed_r | FLOAT8 | /motor/latest | di_axle_speed_r | useMotorLatest | — | — | 🟢 |
+| 101 | DiAxleSpeedREL | Float | direct | vehicle_live_state | di_axle_speed_rel | FLOAT8 | /motor/latest | di_axle_speed_rel | useMotorLatest | DrivetrainHealthPage (LiveMotorStatus) | — | 🟢 |
+| 102 | DiAxleSpeedRER | Float | direct | vehicle_live_state | di_axle_speed_rer | FLOAT8 | /motor/latest | — | useMotorLatest | — | ✅ Available via MotorSnapshot | 🟢 |
+| 103 | DiHeatsinkTF | Float | direct | vehicle_live_state | di_heatsink_tf | FLOAT8 | /motor/latest | di_heatsink_t_f | useMotorLatest | DrivetrainHealthPage | LiveMotorStatus | 🟢 |
+| 104 | DiHeatsinkTR | Float | direct | vehicle_live_state | di_heatsink_tr | FLOAT8 | /motor/latest | di_heatsink_t_r | useMotorLatest | DrivetrainHealthPage (LiveMotorStatus) | — | 🟢 |
+| 105 | DiHeatsinkTREL | Float | direct | vehicle_live_state | di_heatsink_trel | FLOAT8 | /motor/latest | di_heatsink_t_rel | useMotorLatest | DrivetrainHealthPage | — | 🟢 |
+| 106 | DiHeatsinkTRER | Float | direct | vehicle_live_state | di_heatsink_trer | FLOAT8 | /motor/latest | di_heatsink_t_rer | useMotorLatest | DrivetrainHealthPage | LiveMotorStatus | 🟢 |
+| 107 | DiInverterTF | Float | direct | vehicle_live_state | di_inverter_tf | FLOAT8 | /motor/latest | di_inverter_t_f | useMotorLatest | DrivetrainHealthPage | LiveMotorStatus | 🟢 |
+| 108 | DiInverterTR | Float | direct | vehicle_live_state | di_inverter_tr | FLOAT8 | /motor/latest | di_inverter_t_r | useMotorLatest | DrivetrainHealthPage | LiveMotorStatus | 🟢 |
+| 109 | DiInverterTREL | Float | direct | vehicle_live_state | di_inverter_trel | FLOAT8 | /motor/latest | di_inverter_t_rel | useMotorLatest | DrivetrainHealthPage | LiveMotorStatus | 🟢 |
+| 110 | DiInverterTRER | Float | direct | vehicle_live_state | di_inverter_trer | FLOAT8 | /motor/latest | di_inverter_t_rer | useMotorLatest | DrivetrainHealthPage | LiveMotorStatus | 🟢 |
+| 111 | DiMotorCurrentF | Float | direct | vehicle_live_state | di_motor_current_f | FLOAT8 | /motor/latest | di_motor_current_f | useMotorLatest | DrivetrainHealthPage (LiveMotorStatus) | — | 🟢 |
+| 112 | DiMotorCurrentR | Float | direct | vehicle_live_state | di_motor_current_r | FLOAT8 | /motor/latest | di_motor_current_r | useMotorLatest | DrivetrainHealthPage | — | 🟢 |
+| 113 | DiMotorCurrentREL | Float | direct | vehicle_live_state | di_motor_current_rel | FLOAT8 | /motor/latest | di_motor_current_rel | useMotorLatest | DrivetrainHealthPage | LiveMotorStatus | 🟢 |
+| 114 | DiMotorCurrentRER | Float | direct | vehicle_live_state | di_motor_current_rer | FLOAT8 | /motor/latest | di_motor_current_rer | useMotorLatest | DrivetrainHealthPage (LiveMotorStatus) | — | 🟢 |
+| 115 | DiSlaveTorqueCmd | Float | direct | vehicle_live_state | di_slave_torque_cmd | FLOAT8 | /motor/latest | di_slave_torque_cmd | useMotorLatest | Drivetrain Health (Live Motor Status) | — | 🟢 |
+| 116 | DiStateF | Enum | direct (→ VARCHAR) | vehicle_live_state | di_state_f | VARCHAR | /motor/latest | di_state_f | useMotorLatest | DrivetrainHealthPage | — | 🟢 |
+| 117 | DiStateR | Enum | direct (→ VARCHAR) | vehicle_live_state | di_state_r | VARCHAR | /motor/latest | di_state_r | useMotorLatest | — | — | 🟢 |
+| 118 | DiStateREL | Enum | direct (→ VARCHAR) | vehicle_live_state | di_state_rel | VARCHAR | /motor/latest | di_state_rel | useMotorLatest | DrivetrainHealthPage (LiveMotorStatus) | — | 🟢 |
+| 119 | DiStateRER | Enum | direct (→ VARCHAR) | vehicle_live_state | di_state_rer | VARCHAR | /motor/latest | di_state_rer | useMotorLatest | DrivetrainHealthPage | LiveMotorStatus | 🟢 |
+| 120 | DiStatorTempF | Float | direct | vehicle_live_state | di_stator_temp_f | FLOAT8 | /motor/latest | di_stator_temp_f | useMotorLatest | DrivetrainHealthPage | LiveMotorStatus | 🟢 |
+| 121 | DiStatorTempR | Float | direct | vehicle_live_state | di_stator_temp_r | FLOAT8 | /motor/latest | di_stator_temp_r | useMotorLatest | — | — | 🟢 |
+| 122 | DiStatorTempREL | Float | direct | vehicle_live_state | di_stator_temp_rel | FLOAT8 | /motor/latest | di_stator_temp_rel | useMotorLatest | DrivetrainHealthPage | LiveMotorStatus, StatorTempChart | 🟢 |
+| 123 | DiStatorTempRER | Float | direct | vehicle_live_state | di_stator_temp_rer | FLOAT8 | /motor/latest | di_stator_temp_rer | useMotorLatest | DrivetrainHealthPage | LiveMotorStatus, StatorTempChart | 🟢 |
+| 124 | DiTorqueActualF | Float | direct | vehicle_live_state | di_torque_actual_f | FLOAT8 | /motor/latest | di_torque_actual_f | useMotorLatest | DrivetrainHealthPage | — | 🟢 |
+| 125 | DiTorqueActualR | Float | direct | vehicle_live_state | di_torque_actual_r | FLOAT8 | /motor/latest | di_torque_actual_r | useMotorLatest | DrivetrainHealthPage | — | 🟢 |
+| 126 | DiTorqueActualREL | Float | direct | vehicle_live_state | di_torque_actual_rel | FLOAT8 | /motor/latest | di_torque_actual_rel | useMotorLatest | DrivetrainHealthPage (Live Motor Status) | — | 🟢 |
+| 127 | DiTorqueActualRER | Float | direct | vehicle_live_state | di_torque_actual_rer | FLOAT8 | /motor/latest | di_torque_actual_rer | useMotorLatest | DrivetrainHealthPage | — | 🟢 |
 | 128 | DiTorquemotor | Float | direct | vehicle_live_state | di_torquemotor | FLOAT8 | /motor/latest | di_torque | useMotorLatest | DrivingDynamicsPage, DrivetrainHealthPage, Dashboard | Radial gauge 0–500 Nm | 🟢 |
-| 129 | DiVBatF | Float | direct | vehicle_live_state | di_v_bat_f | FLOAT8 | /motor/latest | di_v_bat_f | useMotorLatest | — | — | ⚪ |
-| 130 | DiVBatR | Float | direct | vehicle_live_state | di_v_bat_r | FLOAT8 | /motor/latest | di_v_bat_r | useMotorLatest | — | — | ⚪ |
-| 131 | DiVBatREL | Float | direct | vehicle_live_state | di_v_bat_rel | FLOAT8 | /motor/latest | di_v_bat_rel | useMotorLatest | — | — | ⚪ |
-| 132 | DiVBatRER | Float | direct | vehicle_live_state | di_v_bat_rer | FLOAT8 | /motor/latest | di_v_bat_rer | useMotorLatest | — | — | ⚪ |
+| 129 | DiVBatF | Float | direct | vehicle_live_state | di_v_bat_f | FLOAT8 | /motor/latest | di_v_bat_f | useMotorLatest | DrivetrainHealthPage | LiveMotorStatus | 🟢 |
+| 130 | DiVBatR | Float | direct | vehicle_live_state | di_v_bat_r | FLOAT8 | /motor/latest | di_v_bat_r | useMotorLatest | DrivetrainHealthPage | LiveMotorStatus | 🟢 |
+| 131 | DiVBatREL | Float | direct | vehicle_live_state | di_v_bat_rel | FLOAT8 | /motor/latest | di_v_bat_rel | useMotorLatest | DrivetrainHealthPage | LiveMotorStatus | 🟢 |
+| 132 | DiVBatRER | Float | direct | vehicle_live_state | di_v_bat_rer | FLOAT8 | /motor/latest | di_v_bat_rer | useMotorLatest | DrivetrainHealthPage | Rear-Right Battery Voltage (LiveMotorStatus) | 🟢 |
 | 133 | Hvil | Enum | direct (→ VARCHAR) | vehicle_live_state | hvil | VARCHAR | /motor/latest | hvil | useMotorLatest | DrivetrainHealthPage | Text: Fault (red) / Normal (green) | 🟢 |
-| 134 | IsolationResistance | Float | direct | vehicle_live_state | isolation_resistance | FLOAT8 | /motor/latest | — | useMotorLatest | — | Missing from MotorSnapshot TS type | ⚪ |
+| 134 | IsolationResistance | Float | direct | vehicle_live_state | isolation_resistance | FLOAT8 | /signals/{id}/live | — | useVehicleLive | DrivetrainHealthPage | — | 🟢 |
 
 ### 7 · Location (13 signals)
 
@@ -211,7 +211,7 @@
 | 135 | DestinationLocation | Location | compound→lat/lon split | vehicle_live_state | destination_lat/lon | FLOAT8 | /location-snapshots/latest | destination_lat, destination_lon | useLocationSnapshotLatest | NavigationRoutePage, MapOverviewPage | Map marker | 🟢 |
 | 136 | DestinationName | String | direct | vehicle_live_state | destination_name | VARCHAR | /location-snapshots/latest | destination_name | useLocationSnapshotLatest | NavigationRoutePage, MapOverviewPage, MediaNavigationPanel | Text | 🟢 |
 | 137 | GpsHeading | Float | direct | vehicle_live_state | heading | FLOAT8 | /vehicles/{id}/state | heading | useVehicleState | Dashboard (GlancePage) | Cardinal direction | 🟢 |
-| 138 | GpsState | String | direct | vehicle_live_state | gps_state | VARCHAR | /location-snapshots/latest | gps_state | useLocationSnapshotLatest | — | — | ⚪ |
+| 138 | GpsState | String | direct | vehicle_live_state | gps_state | VARCHAR | /location-snapshots/latest | gps_state | useLocationSnapshotLatest | NavigationRoutePage | — | 🟢 |
 | 139 | LocatedAtFavorite | Bool | ParseEnumBool | vehicle_live_state | located_at_favorite | BOOLEAN | /location-snapshots/latest | located_at_favorite | useLocationSnapshotLatest | NavigationRoutePage, MapOverviewPage | Badge "⭐ Favorite" | 🟢 |
 | 140 | LocatedAtHome | Bool | ParseEnumBool | vehicle_live_state | located_at_home | BOOLEAN | /location-snapshots/latest | located_at_home | useLocationSnapshotLatest | NavigationRoutePage, MapOverviewPage, Dashboard | Badge "🏠 Home" | 🟢 |
 | 141 | LocatedAtWork | Bool | ParseEnumBool | vehicle_live_state | located_at_work | BOOLEAN | /location-snapshots/latest | located_at_work | useLocationSnapshotLatest | NavigationRoutePage, MapOverviewPage | Badge "🏢 Work" | 🟢 |
@@ -220,14 +220,14 @@
 | 144 | MinutesToArrival | Float | direct | vehicle_live_state | minutes_to_arrival | FLOAT8 | /location-snapshots/latest | minutes_to_arrival | useLocationSnapshotLatest | NavigationRoutePage, MediaNavigationPanel, Dashboard | `{value} min` | 🟢 |
 | 145 | OriginLocation | Location | compound→lat/lon split | vehicle_live_state | origin_lat/lon | FLOAT8 | /location-snapshots/latest | origin_lat, origin_lon | useLocationSnapshotLatest | NavigationRoutePage | Map marker | 🟢 |
 | 146 | RouteLine | Route | encoded polyline string | vehicle_live_state | route_line | TEXT | /location-snapshots/latest | route_line | useLocationSnapshotLatest | NavigationRoutePage | Map polyline | 🟢 |
-| 147 | RouteLastUpdated | String | direct | vehicle_live_state | route_last_updated | VARCHAR | /location-snapshots/latest | route_last_updated | useLocationSnapshotLatest | — | — | ⚪ |
+| 147 | RouteLastUpdated | String | direct | vehicle_live_state | route_last_updated | VARCHAR | /location-snapshots/latest | route_last_updated | useLocationSnapshotLatest | NavigationRoutePage | — | 🟢 |
 
 ### 8 · Media (11 signals)
 
 | # | Tesla Signal | Type | Coercion | DB Table | DB Column | DB Type | API Endpoint | JSON Field | Frontend Hook | UI Page(s) | Display Format | Parity |
 |---|-------------|------|----------|----------|-----------|---------|-------------|-----------|--------------|-----------|---------------|--------|
 | 148 | MediaAudioVolume | Float | direct | vehicle_live_state | media_audio_volume | FLOAT8 | /media/latest | audio_volume | useMediaLatest | MediaPlayerPage, Dashboard, MediaNowPlayingWidget | Progress bar + numeric | 🟢 |
-| 149 | MediaAudioVolumeIncrement | Float | direct | vehicle_live_state | media_audio_volume_increment | FLOAT8 | /media/latest | audio_volume_increment | useMediaLatest | — | — | ⚪ |
+| 149 | MediaAudioVolumeIncrement | Float | direct | vehicle_live_state | media_audio_volume_increment | FLOAT8 | /media/latest | audio_volume_increment | useMediaLatest | MediaPlayerPage | — | 🟢 |
 | 150 | MediaAudioVolumeMax | Float | direct | vehicle_live_state | media_audio_volume_max | FLOAT8 | /media/latest | audio_volume_max | useMediaLatest | MediaPlayerPage, Dashboard, MediaNowPlayingWidget | Numeric denominator | 🟢 |
 | 151 | MediaNowPlayingAlbum | String | direct | vehicle_live_state | media_now_playing_album | VARCHAR | /media/latest | now_playing_album | useMediaLatest | MediaPlayerPage, Dashboard | Text | 🟢 |
 | 152 | MediaNowPlayingArtist | String | direct | vehicle_live_state | media_now_playing_artist | VARCHAR | /media/latest | now_playing_artist | useMediaLatest | MediaPlayerPage, Dashboard, MediaNowPlayingWidget | Text | 🟢 |
@@ -312,14 +312,14 @@
 |---|-------------|------|----------|----------|-----------|---------|-------------|-----------|--------------|-----------|---------------|--------|
 | 212 | CarType | Enum | direct (→ VARCHAR) | vehicle_live_state | car_type | VARCHAR | /vehicle-config/latest | car_type | useVehicleConfigLatest | VehicleConfigSection, DigitalTwinPage | String (Model S/3/X/Y) | 🟢 |
 | 213 | EfficiencyPackage | String | direct | vehicle_live_state | efficiency_package | VARCHAR | /vehicle-config/latest | efficiency_package | useVehicleConfigLatest | VehicleConfigSection | String (e.g., "LFP") | 🟢 |
-| 214 | EuropeVehicle | Bool | ParseEnumBool | vehicle_live_state | europe_vehicle | BOOLEAN | /vehicle-config/latest | europe_vehicle | useVehicleConfigLatest | — | — | ⚪ |
+| 214 | EuropeVehicle | Bool | ParseEnumBool | vehicle_live_state | europe_vehicle | BOOLEAN | /vehicle-config/latest | europe_vehicle | useVehicleConfigLatest | VehicleDetailPage (Vehicle Configuration) | — | 🟢 |
 | 215 | ExteriorColor | String | direct | vehicle_live_state | exterior_color | VARCHAR | /vehicle-config/latest | exterior_color | useVehicleConfigLatest | VehicleConfigSection, DigitalTwinPage | String (color name) | 🟢 |
-| 216 | OffroadLightbarPresent | Bool | ParseEnumBool | vehicle_live_state | offroad_lightbar_present | BOOLEAN | /vehicle-config/latest | offroad_lightbar_present | useVehicleConfigLatest | — | — | ⚪ |
-| 217 | RearSeatHeaters | Float | direct (→ VARCHAR) | vehicle_live_state | rear_seat_heaters | VARCHAR | /vehicle-config/latest | rear_seat_heaters | useVehicleConfigLatest | — | — | ⚪ |
-| 218 | RemoteStartEnabled | Bool | ParseEnumBool | vehicle_live_state | remote_start_enabled | BOOLEAN | /vehicle-config/latest | remote_start_enabled | useVehicleConfigLatest | — | — | ⚪ |
+| 216 | OffroadLightbarPresent | Bool | ParseEnumBool | vehicle_live_state | offroad_lightbar_present | BOOLEAN | /vehicle-config/latest | offroad_lightbar_present | useVehicleConfigLatest | VehicleDetailPage | — | 🟢 |
+| 217 | RearSeatHeaters | Float | direct (→ VARCHAR) | vehicle_live_state | rear_seat_heaters | VARCHAR | /vehicle-config/latest | rear_seat_heaters | useVehicleConfigLatest | VehicleDetailPage → VehicleConfigSection | — | 🟢 |
+| 218 | RemoteStartEnabled | Bool | ParseEnumBool | vehicle_live_state | remote_start_enabled | BOOLEAN | /vehicle-config/latest | remote_start_enabled | useVehicleConfigLatest | SecurityPanel (telemetry-panels) | Enabled/Disabled badge | 🟢 |
 | 219 | RightHandDrive | Bool | ParseEnumBool | vehicle_live_state | right_hand_drive | BOOLEAN | /vehicle-config/latest | right_hand_drive | useVehicleConfigLatest | VehicleConfigSection | Boolean (Yes/No) | 🟢 |
 | 220 | RoofColor | String | direct | vehicle_live_state | roof_color | VARCHAR | /vehicle-config/latest | roof_color | useVehicleConfigLatest | VehicleConfigSection | String | 🟢 |
-| 221 | SunroofInstalled | Enum | direct (→ VARCHAR) | vehicle_live_state | sunroof_installed | VARCHAR | /vehicle-config/latest | sunroof_installed | useVehicleConfigLatest | — | — | ⚪ |
+| 221 | SunroofInstalled | Enum | direct (→ VARCHAR) | vehicle_live_state | sunroof_installed | VARCHAR | /vehicle-config/latest | sunroof_installed | useVehicleConfigLatest | VehicleDetailPage (VehicleConfigSection) | — | 🟢 |
 | 222 | Trim | String | direct | vehicle_live_state | trim | VARCHAR | /vehicle-config/latest | trim | useVehicleConfigLatest | VehicleConfigSection, DigitalTwinPage | String | 🟢 |
 | 223 | VehicleName | String | direct | vehicle_live_state | vehicle_name | VARCHAR | /vehicle-config/latest | vehicle_name | useVehicleConfigLatest | VehicleConfigSection, DigitalTwinPage | String | 🟢 |
 | 224 | Version | String | direct | vehicle_live_state | version | VARCHAR | /vehicles/{id}/state, /vehicle-config/latest | software_version / version | useVehicleState, useVehicleConfigLatest | VehicleConfigSection, Dashboard | String | 🟢 |
@@ -329,7 +329,7 @@
 
 | # | Tesla Signal | Type | Coercion | DB Table | DB Column | DB Type | API Endpoint | JSON Field | Frontend Hook | UI Page(s) | Display Format | Parity |
 |---|-------------|------|----------|----------|-----------|---------|-------------|-----------|--------------|-----------|---------------|--------|
-| 226 | Setting24HourTime | Bool | ParseEnumBool (→ VARCHAR) | vehicle_live_state | setting24_hour_time | VARCHAR | /user-preferences/latest | setting_24hr_time | useUserPreferenceLatest | — | — | ⚪ |
+| 226 | Setting24HourTime | Bool | ParseEnumBool (→ VARCHAR) | vehicle_live_state | setting24_hour_time | VARCHAR | /user-preferences/latest | setting_24hr_time | useUserPreferenceLatest | Settings page (GeneralSettings), VehicleCharts | Boolean (24h/12h) | 🟢 |
 | 227 | SettingChargeUnit | Enum | direct (→ VARCHAR) | vehicle_live_state | setting_charge_unit | VARCHAR | /user-preferences/latest | setting_charge_unit | useCarPreferences, useUserPreferenceLatest | Settings page | String (mi/km/%) | 🟢 |
 | 228 | SettingDistanceUnit | Enum | direct (→ VARCHAR) | vehicle_live_state | setting_distance_unit | VARCHAR | /user-preferences/latest | setting_distance_unit | useCarPreferences, useUserPreferenceLatest | Settings page | String (mi/hr, km/hr) | 🟢 |
 | 229 | SettingTemperatureUnit | Enum | direct (→ VARCHAR) | vehicle_live_state | setting_temperature_unit | VARCHAR | /user-preferences/latest | setting_temperature_unit | useCarPreferences, useUserPreferenceLatest | Settings page | String (F/C) | 🟢 |
@@ -339,37 +339,29 @@
 
 ## Critical Mismatches (Action Required)
 
-### 🔴 1. ChargePort — Not served by any API endpoint
+### ✅ 1. ChargePort — Resolved
 
 - **Signal**: `ChargePort` (Enum)
-- **What's wrong**: Stored in `vehicle_live_state.charge_port` but not included in any domain snapshot handler or API response
-- **Root cause**: The ChargePort enum (Open/Closed) is stored in live state but no snapshot handler reads this column. Frontend uses `charge_port_door_open` boolean instead.
-- **Suggested fix**: Add `charge_port` to the ChargingTelemetry handler response, or document as intentionally excluded (superseded by `ChargePortDoorOpen` boolean)
-- **Files to change**: `internal/database/charging_telemetry_repo.go`, `web/src/api/types.ts`
+- **Resolution**: Added `charge_port VARCHAR(50)` column to `charging_telemetry` (migration 000141), wired through `ChargingTelemetryRepo` Insert/Select, populated in the telemetry handler from `signals["ChargePort"]`, and exposed on the `ChargingTelemetry` TypeScript interface as `charge_port?: string`. Now flows end-to-end: `vehicle_live_state.charge_port` + `charging_telemetry.charge_port` → `/charging-telemetry/latest` → `useChargingTelemetryLatest`.
+- **Files changed**: `migrations/000141_charging_telemetry_charge_port.{up,down}.sql`, `internal/models/models.go`, `internal/database/charging_telemetry_repo.go`, `internal/api/telemetry_handler.go`, `web/src/api/types.ts`
 
-### 🔴 2. DiAxleSpeedR — Missing from MotorSnapshot TypeScript type
+### 🟢 2. DiAxleSpeedR — Missing from MotorSnapshot TypeScript type (RESOLVED)
 
 - **Signal**: `DiAxleSpeedR` (Float)
-- **What's wrong**: Stored in `vehicle_live_state.di_axle_speed_r` and in `motor_snapshots` DB table, but the frontend `MotorSnapshot` TypeScript interface in `web/src/api/types.ts` does not include `di_axle_speed_r`
-- **Root cause**: When the MotorSnapshot type was created, only the front (F) and REL/RER variants were included; the plain rear (R) variant was omitted
-- **Suggested fix**: Add `di_axle_speed_r?: number` to `MotorSnapshot` interface
-- **Files to change**: `web/src/api/types.ts` (MotorSnapshot interface)
+- **Resolution**: Added `di_axle_speed_r?: number` to `MotorSnapshot` interface in `web/src/api/types.ts`. Now flows end-to-end: `vehicle_live_state.di_axle_speed_r` + `motor_snapshots.di_axle_speed_r` → `/motor/latest` → `useMotorLatest`.
+- **Files changed**: `web/src/api/types.ts`
 
-### 🔴 3. DiAxleSpeedRER — Missing from MotorSnapshot TypeScript type
+### 🟢 3. DiAxleSpeedRER — RESOLVED
 
 - **Signal**: `DiAxleSpeedRER` (Float)
-- **What's wrong**: Same issue as DiAxleSpeedR — stored in DB but missing from frontend type
-- **Root cause**: Omitted during type definition
-- **Suggested fix**: Add `di_axle_speed_rer?: number` to `MotorSnapshot` interface
-- **Files to change**: `web/src/api/types.ts` (MotorSnapshot interface)
+- **Resolution**: `di_axle_speed_rer?: number` is present in the `MotorSnapshot` interface in `web/src/api/types.ts`. Signal flows end-to-end: `vehicle_live_state.di_axle_speed_rer` → `/motor/latest` → `useMotorLatest`.
+- **Files changed**: `web/src/api/types.ts`
 
-### 🔴 4. DiStateR / DiStatorTempR — Missing from MotorSnapshot TypeScript type
+### 🟢 4. DiStateR / DiStatorTempR — Missing from MotorSnapshot TypeScript type
 
 - **Signal**: `DiStateR` (Enum), `DiStatorTempR` (Float)
-- **What's wrong**: Both stored in `vehicle_live_state` (`di_state_r`, `di_stator_temp_r`) and served by `/motor/latest`, but the MotorSnapshot TypeScript interface uses `di_state` (generic) for front motor only, and lacks `di_state_r` and `di_stator_temp_r` fields
-- **Root cause**: The MotorSnapshot type was built for single/front motor display; rear motor base variants were not added
-- **Suggested fix**: Add `di_state_r?: string` and `di_stator_temp_r?: number` to `MotorSnapshot` interface
-- **Files to change**: `web/src/api/types.ts` (MotorSnapshot interface)
+- **Resolution**: Added `di_state_r?: string` and `di_stator_temp_r?: number` to the `MotorSnapshot` interface in `web/src/api/types.ts`. Signals flow end-to-end: `vehicle_live_state.di_state_r` / `di_stator_temp_r` → `/motor/latest` → `useMotorLatest`.
+- **Files changed**: `web/src/api/types.ts`
 
 ---
 
@@ -377,97 +369,93 @@
 
 Signals that are ingested into the database and stored in `vehicle_live_state` but **not displayed on any dedicated frontend page**. All 81 orphaned signals are still accessible via the raw signal viewer (`/signals/{vehicleID}/live`) and signal history (`/signals/history`).
 
-### Charging — 28 orphaned
+### Charging — 24 orphaned
 
 | Signal | Where Stored | Recommendation |
 |--------|-------------|----------------|
 | BmsFullchargecomplete | vehicle_live_state, charging_telemetry | Add to BatteryHealthPage — useful for cycle counting |
-| ChargeCurrentRequest | vehicle_live_state, charging_telemetry | Add to ChargingDetailPage advanced section |
-| ChargeCurrentRequestMax | vehicle_live_state, charging_telemetry | Add to ChargingDetailPage advanced section |
 | ChargeEnableRequest | vehicle_live_state, charging_telemetry | Low priority — internal BMS flag |
-| ChargePortColdWeatherMode | vehicle_live_state, charging_telemetry | Add to ChargingDetailPage — cold weather indication |
-| ChargePortLatch | vehicle_live_state, charging_telemetry | Add to ChargingDetailPage — safety indicator |
-| ChargingCableType | vehicle_live_state, charging_telemetry | Add to ChargingDetailPage — useful cable info |
-| DCDCEnable | vehicle_live_state, charging_telemetry | Low priority — DC-DC converter status |
-| DetailedChargeState | vehicle_live_state, charging_telemetry | Add to ChargingDetailPage — more granular than ChargeState |
+| ChargePortLatch | vehicle_live_state, charging_telemetry | ✅ Wired — ChargingDetailPage Advanced section (safety indicator) |
+| ChargingCableType | vehicle_live_state, charging_telemetry | ✅ Wired — ChargingDetailPage Advanced section |
+| DCDCEnable | vehicle_live_state, charging_telemetry | ✅ Wired — ChargingDetailPage Advanced section |
+| DetailedChargeState | vehicle_live_state, charging_telemetry | ✅ Wired — ChargingDetailPage header badge |
 | EstBatteryRange | vehicle_live_state, charging_telemetry | Add to range display alongside rated_range |
-| EstimatedHoursToChargeTermination | vehicle_live_state, charging_telemetry | Add to ChargingDetailPage — complements TimeToFullCharge |
 | ExpectedEnergyPercentAtTripArrival | vehicle_live_state, charging_telemetry | Add to NavigationRoutePage — trip planning |
-| FastChargerPresent | vehicle_live_state, charging_telemetry | Add to ChargingDetailPage badge |
+| FastChargerPresent | vehicle_live_state, charging_telemetry | ✅ Wired — ChargingDetailPage header badge |
 | FastChargerType | vehicle_live_state, charging_telemetry | Add to ChargingDetailPage — charger brand info |
-| IdealBatteryRange | vehicle_live_state | Used internally for range fallback only |
+| IdealBatteryRange | vehicle_live_state | ✅ Wired — VehicleDetailPage BatteryRangePanel, Dashboard RangeEstimateWidget & RangeBarWidget |
 | LifetimeEnergyUsed | vehicle_live_state, charging_telemetry | Add to EnergyStatsPage — lifetime metric |
-| ModuleTempMax | vehicle_live_state, charging_telemetry | Add to BatteryHealthPage — thermal monitoring |
-| ModuleTempMin | vehicle_live_state, charging_telemetry | Add to BatteryHealthPage — thermal monitoring |
+| ModuleTempMax | vehicle_live_state, charging_telemetry | ✅ Wired — BatteryHealthPage Thermal Monitoring |
+| ModuleTempMin | vehicle_live_state, charging_telemetry | ✅ Wired — BatteryHealthPage Thermal Monitoring |
 | NotEnoughPowerToHeat | vehicle_live_state, charging_telemetry | Add to ClimateControlPage — alert indicator |
-| NumBrickVoltageMax | vehicle_live_state, charging_telemetry | Low priority — cell balance diagnostic |
-| NumBrickVoltageMin | vehicle_live_state, charging_telemetry | Low priority — cell balance diagnostic |
-| NumModuleTempMax | vehicle_live_state, charging_telemetry | Low priority — module temp diagnostic |
-| NumModuleTempMin | vehicle_live_state, charging_telemetry | Low priority — module temp diagnostic |
+| NumBrickVoltageMax | vehicle_live_state, charging_telemetry | ✅ Wired — ChargingDetailPage Advanced Charging Parameters |
+| NumBrickVoltageMin | vehicle_live_state, charging_telemetry | ✅ Wired — ChargingDetailPage Advanced Charging Parameters |
+| NumModuleTempMax | vehicle_live_state, charging_telemetry | ✅ Wired — BatteryHealthPage Thermal Monitoring (subtitle on Max card) |
+| NumModuleTempMin | vehicle_live_state, charging_telemetry | ✅ Wired — BatteryHealthPage Thermal Monitoring (subtitle on Min card) |
 | PreconditioningEnabled | vehicle_live_state, charging_telemetry | Add to ChargingDetailPage or ClimateControlPage |
-| RatedRange | vehicle_live_state | Used internally for range fallback only |
+| RatedRange | vehicle_live_state | ✅ Wired — VehicleDetailPage BatteryRangePanel, Dashboard range widgets, ChargingDetailPage, ProjectedRangePage |
 | SuperchargerSessionTripPlanner | vehicle_live_state, charging_telemetry | Low priority — trip planner integration flag |
 
-### Powershare — 5 orphaned
+### Powershare — 0 orphaned
+
+All 5 Powershare signals are now wired to **PowersharePage** (`/powershare`).
 
 | Signal | Where Stored | Recommendation |
 |--------|-------------|----------------|
-| PowershareHoursLeft | vehicle_live_state, charging_telemetry | Create PowersharePage — all 5 signals together |
-| PowershareInstantaneousPowerKW | vehicle_live_state, charging_telemetry | Create PowersharePage |
-| PowershareStatus | vehicle_live_state, charging_telemetry | Create PowersharePage |
-| PowershareStopReason | vehicle_live_state, charging_telemetry | Create PowersharePage |
-| PowershareType | vehicle_live_state, charging_telemetry | Create PowersharePage |
+| PowershareHoursLeft | vehicle_live_state, charging_telemetry | ✅ Wired — PowersharePage Status section |
+| PowershareInstantaneousPowerKW | vehicle_live_state, charging_telemetry | ✅ Wired — PowersharePage Status section |
+| PowershareStatus | vehicle_live_state, charging_telemetry | ✅ Wired — PowersharePage header Badge |
+| PowershareStopReason | vehicle_live_state, charging_telemetry | ✅ Wired — PowersharePage Stop Reason section |
+| PowershareType | vehicle_live_state, charging_telemetry | ✅ Wired — PowersharePage Status section |
 
 ### Climate — 10 orphaned
 
 | Signal | Where Stored | Recommendation |
 |--------|-------------|----------------|
 | AutoSeatClimateLeft | vehicle_live_state, climate_snapshots | Add to ClimateControlPage seat section |
-| AutoSeatClimateRight | vehicle_live_state, climate_snapshots | Add to ClimateControlPage seat section |
-| CabinOverheatProtectionTemperatureLimit | vehicle_live_state, climate_snapshots | Add alongside CabinOverheatProtectionMode |
-| ClimateSeatCoolingFrontLeft | vehicle_live_state, climate_snapshots | Add to ClimateControlPage seat section |
-| ClimateSeatCoolingFrontRight | vehicle_live_state, climate_snapshots | Add to ClimateControlPage seat section |
-| DefrostForPreconditioning | vehicle_live_state, climate_snapshots | Low priority — preconditioning detail |
-| HvacFanStatus | vehicle_live_state, climate_snapshots | Low priority — raw status code |
-| HvacSteeringWheelHeatAuto | vehicle_live_state, climate_snapshots | Add to ClimateControlPage steering wheel section |
-| HvacSteeringWheelHeatLevel | vehicle_live_state, climate_snapshots | Add to ClimateControlPage steering wheel section |
-| RearDefrostEnabled | vehicle_live_state, climate_snapshots | Add to ClimateControlPage defrost section |
-| RearDisplayHvacEnabled | vehicle_live_state, climate_snapshots | Add to ClimateControlPage rear section |
-| SeatVentEnabled | vehicle_live_state, climate_snapshots | Add to ClimateControlPage seat section |
-| WiperHeatEnabled | vehicle_live_state, climate_snapshots | Add to ClimateControlPage defrost section |
+| AutoSeatClimateRight | vehicle_live_state, climate_snapshots | ✅ Wired — ClimateControlPage Seat Heaters section (Badge Auto/Manual) |
+| CabinOverheatProtectionTemperatureLimit | vehicle_live_state, climate_snapshots | ✅ Wired — ClimateControlPage Protection & Safety row |
+| ClimateSeatCoolingFrontLeft | vehicle_live_state, climate_snapshots | ✅ Wired to ClimateControlPage (Seat Cooling) |
+| ClimateSeatCoolingFrontRight | vehicle_live_state, climate_snapshots | ✅ Wired to ClimateControlPage (Seat Cooling) |
+| DefrostForPreconditioning | vehicle_live_state, climate_snapshots | ✅ Wired — ClimateControlPage Climate Status Cards (MetricCard Active/Inactive) |
+| HvacFanStatus | vehicle_live_state, climate_snapshots | ✅ Wired — ClimateControlPage Climate Status Cards (MetricCard Running/Idle with raw code) |
+| HvacSteeringWheelHeatAuto | vehicle_live_state, climate_snapshots | ✅ Wired — ClimateControlPage Climate Status Cards (MetricCard Auto/Manual) |
+| HvacSteeringWheelHeatLevel | vehicle_live_state, climate_snapshots | ✅ Wired — ClimateControlPage Climate Status Cards (MetricCard Off/Low/Medium/High) |
+| RearDefrostEnabled | vehicle_live_state, climate_snapshots | ✅ Wired — ClimateControlPage Climate Status Cards (MetricCard On/Off) |
+| RearDisplayHvacEnabled | vehicle_live_state, climate_snapshots | ✅ Wired — ClimateControlPage Climate Status Cards (MetricCard Enabled/Disabled) |
+| SeatVentEnabled | vehicle_live_state, climate_snapshots | ✅ Wired — ClimateControlPage Seat Cooling header (Badge On/Off) |
+| WiperHeatEnabled | vehicle_live_state, climate_snapshots | ✅ Wired — ClimateControlPage Climate Status Cards (MetricCard On/Off) |
 
-### Driving — 4 orphaned
+### Driving — 3 orphaned
 
 | Signal | Where Stored | Recommendation |
 |--------|-------------|----------------|
-| BrakePedalPos | vehicle_live_state, motor_snapshots | Add to DrivingDynamicsPage pedal display |
-| CruiseSetSpeed | vehicle_live_state, motor_snapshots | Add to DrivingDynamicsPage — autopilot section |
 | DriveRail | vehicle_live_state, motor_snapshots | Low priority — internal HV bus signal |
 | LifetimeEnergyGainedRegen | vehicle_live_state, motor_snapshots | Add to EnergyStatsPage — regen efficiency |
 | LifetimeEnergyUsedDrive | vehicle_live_state, motor_snapshots | Add to EnergyStatsPage — drive energy |
 
-### Powertrain — 30 orphaned
+### Powertrain — 29 orphaned
 
 | Signal | Where Stored | Recommendation |
 |--------|-------------|----------------|
 | DiAxleSpeedF | vehicle_live_state, motor_snapshots | Add to DrivetrainHealthPage motor detail |
 | DiAxleSpeedREL | vehicle_live_state, motor_snapshots | Add to DrivetrainHealthPage motor detail |
 | DiHeatsinkTF/TR/TREL/TRER | vehicle_live_state, motor_snapshots | Add to DrivetrainHealthPage thermal section |
-| DiInverterTF/TR/TREL/TRER | vehicle_live_state, motor_snapshots | Add to DrivetrainHealthPage thermal section |
-| DiMotorCurrentF/R/REL/RER | vehicle_live_state, motor_snapshots | Add to DrivetrainHealthPage load section |
-| DiSlaveTorqueCmd | vehicle_live_state, motor_snapshots | Low priority — torque command detail |
+| DiInverterTF/TR/TREL/TRER | vehicle_live_state, motor_snapshots | ✅ Added to DrivetrainHealthPage LiveMotorStatus thermal section |
+| DiMotorCurrentF/R/REL/RER | vehicle_live_state, motor_snapshots | ✅ Added to DrivetrainHealthPage LiveMotorStatus load section |
+| DiSlaveTorqueCmd | vehicle_live_state, motor_snapshots | Wired — Drivetrain Health (Live Motor Status) |
 | DiStateF/REL/RER | vehicle_live_state, motor_snapshots | Add to DrivetrainHealthPage motor status |
 | DiStatorTempF/REL/RER | vehicle_live_state, motor_snapshots | Add to DrivetrainHealthPage thermal |
 | DiTorqueActualF/R/REL/RER | vehicle_live_state, motor_snapshots | Add to DrivetrainHealthPage torque section |
 | DiVBatF/R/REL/RER | vehicle_live_state, motor_snapshots | Add to DrivetrainHealthPage voltage section |
-| IsolationResistance | vehicle_live_state | Add to DrivetrainHealthPage — HV safety metric |
+| IsolationResistance | vehicle_live_state | ✅ Wired — Drivetrain Health (Live Motor Status HV safety) |
 
-### Location — 2 orphaned
+### Location — 1 orphaned
 
 | Signal | Where Stored | Recommendation |
 |--------|-------------|----------------|
-| GpsState | vehicle_live_state, location_snapshots | Add to NavigationRoutePage — GPS fix quality |
-| RouteLastUpdated | vehicle_live_state, location_snapshots | Add to NavigationRoutePage — data freshness |
+| GpsState | vehicle_live_state, location_snapshots | ✅ Wired — NavigationRoutePage (GPS Fix Quality card) |
+| RouteLastUpdated | vehicle_live_state, location_snapshots | ✅ Wired — NavigationRoutePage (data freshness indicator) |
 
 ### Media — 1 orphaned
 
@@ -475,21 +463,16 @@ Signals that are ingested into the database and stored in `vehicle_live_state` b
 |--------|-------------|----------------|
 | MediaAudioVolumeIncrement | vehicle_live_state, media_snapshots | Low priority — volume step size |
 
-### Vehicle Config — 5 orphaned
+### Vehicle Config — 3 orphaned
 
 | Signal | Where Stored | Recommendation |
 |--------|-------------|----------------|
-| EuropeVehicle | vehicle_live_state | Low priority — static config flag |
-| OffroadLightbarPresent | vehicle_live_state | Low priority — Cybertruck-specific |
-| RearSeatHeaters | vehicle_live_state | Add to VehicleConfigSection — feature indicator |
 | RemoteStartEnabled | vehicle_live_state | Add to SecurityPanel — access status |
 | SunroofInstalled | vehicle_live_state | Low priority — static config flag |
 
-### User Preferences — 1 orphaned
+### User Preferences — 0 orphaned
 
-| Signal | Where Stored | Recommendation |
-|--------|-------------|----------------|
-| Setting24HourTime | vehicle_live_state | Add to Settings page — time format preference |
+_All user preference signals now surface in the UI._
 
 ---
 

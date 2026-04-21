@@ -27,6 +27,7 @@ const CostAnalysis = lazy(() => import('./features/charging/pages/CostAnalysisPa
 const TeslaChargingHistory = lazy(() => import('./features/charging/pages/TeslaChargingHistoryPage'))
 const TeslaChargingSessions = lazy(() => import('./features/charging/pages/TeslaChargingSessionsPage'))
 const SmartCharge = lazy(() => import('./features/charging/pages/SmartChargePage'))
+const Powershare = lazy(() => import('./features/charging/pages/PowersharePage'))
 
 // Trips
 const Trips = lazy(() => import('./features/trips/pages/TripListPage'))
@@ -241,6 +242,7 @@ export default function App() {
         <Route path="tesla-charging-history" element={<SafeRoute name="TeslaChargingHistory"><TeslaChargingHistory /></SafeRoute>} />
         <Route path="tesla-charging-sessions" element={<SafeRoute name="TeslaChargingSessions"><TeslaChargingSessions /></SafeRoute>} />
         <Route path="smart-charge" element={<SafeRoute name="SmartCharge"><SmartCharge /></SafeRoute>} />
+        <Route path="powershare" element={<SafeRoute name="Powershare"><Powershare /></SafeRoute>} />
         <Route path="battery-cells" element={<SafeRoute name="BatteryCells"><BatteryCells /></SafeRoute>} />
         <Route path="drive-score" element={<SafeRoute name="DriveScore"><DriveScore /></SafeRoute>} />
         <Route path="weekly-digest" element={<SafeRoute name="WeeklyDigest"><WeeklyDigest /></SafeRoute>} />

@@ -16,6 +16,8 @@ import {
   BatteryCharging,
   Zap,
   Activity,
+  AlertTriangle,
+  Monitor,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -51,7 +53,7 @@ import { formatDateTime, formatTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { CHART_COLORS } from '@/lib/colors';
 
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useVehicles, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { useClimate, useClimateHistory } from '@/api/hooks/useVehicleSystems';
 import type { ClimateState } from '@/types/vehicle-systems';
 
@@ -168,6 +170,54 @@ function SeatHeaterCard({
   );
 }
 
+/* ─── Seat Cooling Card ─── */
+
+const COOL_LEVELS: HeatLevelStyle[] = [
+  { color: 'text-gray-500', bg: 'bg-gray-500/10', label: 'Off' },
+  { color: 'text-sky-400', bg: 'bg-sky-400/10', label: 'Low' },
+  { color: 'text-cyan-300', bg: 'bg-cyan-300/10', label: 'Medium' },
+  { color: 'text-blue-400', bg: 'bg-blue-400/10', label: 'High' },
+];
+
+function coolStyle(level: number): HeatLevelStyle {
+  return COOL_LEVELS[Math.min(Math.max(Math.round(level), 0), 3)];
+}
+
+function coolBadgeVariant(level: number): 'neutral' | 'info' | 'warning' | 'danger' {
+  if (level <= 0) return 'neutral';
+  if (level === 1) return 'info';
+  if (level === 2) return 'info';
+  return 'info';
+}
+
+function SeatCoolingCard({
+  label,
+  level,
+  t,
+}: {
+  label: string;
+  level: number | null | undefined;
+  t: (s: string) => string;
+}) {
+  const lvl = level ?? 0;
+  const style = coolStyle(lvl);
+  return (
+    <GlassPanel className={cn('flex flex-col items-center gap-2 p-4', style.bg)}>
+      <Snowflake className={cn('h-6 w-6', style.color)} />
+      <span className="text-xs font-medium text-[var(--text-secondary)]">
+        {t(label)}
+      </span>
+      {level != null ? (
+        <Badge variant={coolBadgeVariant(lvl)} size="sm">
+          {t(style.label)} ({Math.round(lvl)}/3)
+        </Badge>
+      ) : (
+        <span className="text-xs text-[var(--text-muted)]">—</span>
+      )}
+    </GlassPanel>
+  );
+}
+
 /* ─── Column accessor for sort ─── */
 
 function climateAccessor(row: ClimateState, key: string): number | string {
@@ -213,6 +263,10 @@ export default function ClimateControlPage() {
   } = useClimate(activeId);
 
   const { data: history, isLoading: historyLoading } = useClimateHistory(activeId);
+
+  /* ─── Charging telemetry (for NotEnoughPowerToHeat alert) ─── */
+  const activeIdNum = Number(activeId) || 0;
+  const { data: chargingLatest } = useChargingTelemetryLatest(activeIdNum);
 
   /* ─── Comfort indicator ─── */
   const comfort = useMemo(
@@ -416,6 +470,12 @@ export default function ClimateControlPage() {
                 {t('Battery Heater')}
               </Badge>
             )}
+            {chargingLatest?.not_enough_power_to_heat && (
+              <Badge variant="danger" dot>
+                <AlertTriangle className="mr-1 inline h-3 w-3" />
+                {t('Insufficient Power to Heat')}
+              </Badge>
+            )}
           </div>
         </GlassPanel>
       </FadeIn>
@@ -511,6 +571,32 @@ export default function ClimateControlPage() {
           />
 
           <MetricCard
+            label={t('Fan Status')}
+            value={
+              latest?.hvacFanStatus != null
+                ? latest.hvacFanStatus > 0
+                  ? t('Running')
+                  : t('Idle')
+                : '—'
+            }
+            icon={
+              <Wind
+                className={cn(
+                  'h-5 w-5',
+                  latest?.hvacFanStatus != null && latest.hvacFanStatus > 0
+                    ? 'text-teal-400'
+                    : 'text-gray-500',
+                )}
+              />
+            }
+            subtitle={
+              latest?.hvacFanStatus != null
+                ? `${t('Code')} ${latest.hvacFanStatus}`
+                : undefined
+            }
+          />
+
+          <MetricCard
             label={t('Steering Wheel Heater')}
             value={latest?.steeringWheelHeat ? t('On') : t('Off')}
             icon={
@@ -518,6 +604,51 @@ export default function ClimateControlPage() {
                 className={cn(
                   'h-5 w-5',
                   latest?.steeringWheelHeat
+                    ? 'text-amber-400'
+                    : 'text-gray-500',
+                )}
+              />
+            }
+          />
+
+          <MetricCard
+            label={t('Steering Wheel Heat Level')}
+            value={
+              latest?.hvacSteeringWheelHeatLevel == null
+                ? '—'
+                : t(heatStyle(latest.hvacSteeringWheelHeatLevel).label)
+            }
+            icon={
+              <Flame
+                className={cn(
+                  'h-5 w-5',
+                  latest?.hvacSteeringWheelHeatLevel != null
+                    ? heatStyle(latest.hvacSteeringWheelHeatLevel).color
+                    : 'text-gray-500',
+                )}
+              />
+            }
+            subtitle={
+              latest?.hvacSteeringWheelHeatLevel != null
+                ? `${t('Level')} ${fmtInt(latest.hvacSteeringWheelHeatLevel)}`
+                : undefined
+            }
+          />
+
+          <MetricCard
+            label={t('Steering Wheel Heat Auto')}
+            value={
+              latest?.hvacSteeringWheelHeatAuto == null
+                ? '—'
+                : latest.hvacSteeringWheelHeatAuto
+                  ? t('Auto')
+                  : t('Manual')
+            }
+            icon={
+              <Activity
+                className={cn(
+                  'h-5 w-5',
+                  latest?.hvacSteeringWheelHeatAuto
                     ? 'text-amber-400'
                     : 'text-gray-500',
                 )}
@@ -537,16 +668,117 @@ export default function ClimateControlPage() {
               />
             }
           />
+
+          <MetricCard
+            label={t('Defrost for Preconditioning')}
+            value={
+              latest?.defrostForPreconditioning == null
+                ? '—'
+                : latest.defrostForPreconditioning
+                  ? t('Active')
+                  : t('Inactive')
+            }
+            icon={
+              <Snowflake
+                className={cn(
+                  'h-5 w-5',
+                  latest?.defrostForPreconditioning ? 'text-cyan-400' : 'text-gray-500',
+                )}
+              />
+            }
+            subtitle={
+              latest?.defrostForPreconditioning
+                ? t('Clearing windshield before drive')
+                : undefined
+            }
+          />
+
+          <MetricCard
+            label={t('Rear Defrost')}
+            value={
+              latest?.rearDefrostEnabled == null
+                ? '—'
+                : latest.rearDefrostEnabled
+                  ? t('On')
+                  : t('Off')
+            }
+            icon={
+              <Snowflake
+                className={cn(
+                  'h-5 w-5',
+                  latest?.rearDefrostEnabled ? 'text-blue-400' : 'text-gray-500',
+                )}
+              />
+            }
+            subtitle={
+              latest?.rearDefrostEnabled
+                ? t('Clearing rear window')
+                : undefined
+            }
+          />
+
+          <MetricCard
+            label={t('Wiper Heater', 'Wiper Heater')}
+            value={
+              latest?.wiperHeatEnabled == null
+                ? '—'
+                : latest.wiperHeatEnabled
+                  ? t('On')
+                  : t('Off')
+            }
+            icon={
+              <Flame
+                className={cn(
+                  'h-5 w-5',
+                  latest?.wiperHeatEnabled ? 'text-orange-400' : 'text-gray-500',
+                )}
+              />
+            }
+            subtitle={
+              latest?.wiperHeatEnabled
+                ? t('Heating windshield wipers', 'Heating windshield wipers')
+                : undefined
+            }
+          />
+
+          <MetricCard
+            label={t('Rear Display HVAC', 'Rear Display HVAC')}
+            value={
+              latest?.rearDisplayHvacEnabled == null
+                ? '—'
+                : latest.rearDisplayHvacEnabled
+                  ? t('Enabled')
+                  : t('Disabled')
+            }
+            icon={
+              <Monitor
+                className={cn(
+                  'h-5 w-5',
+                  latest?.rearDisplayHvacEnabled ? 'text-cyan-400' : 'text-gray-500',
+                )}
+              />
+            }
+            subtitle={
+              latest?.rearDisplayHvacEnabled
+                ? t('Rear passengers can control HVAC', 'Rear passengers can control HVAC')
+                : undefined
+            }
+          />
         </div>
       </FadeIn>
 
       {/* ─── Protection & Safety Row ─── */}
       <FadeIn delay={0.25}>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <MetricCard
             label={t('Overheat Protection')}
             value={latest?.overheatProtection ?? t('Unknown')}
             icon={<ShieldCheck className="h-5 w-5 text-green-400" />}
+          />
+          <MetricCard
+            label={t('Overheat Temp Limit', 'Overheat Temp Limit')}
+            value={latest?.cabinOverheatProtectionTempLimit ?? '—'}
+            icon={<ThermometerSun className="h-5 w-5 text-orange-400" />}
           />
           <MetricCard
             label={t('Battery Heater')}
@@ -767,6 +999,40 @@ export default function ClimateControlPage() {
             ))}
           </div>
 
+          {/* Auto Seat Climate (front row) */}
+          <div className="mx-auto mb-3 grid max-w-xs grid-cols-2 gap-3">
+            <div className="flex items-center justify-between rounded-md border border-white/[0.06] bg-white/[0.03] px-3 py-2">
+              <span className="text-xs text-[var(--text-secondary)]">
+                {t('Auto Climate (Left)')}
+              </span>
+              {latest?.autoSeatClimateLeft != null ? (
+                <Badge
+                  variant={latest.autoSeatClimateLeft ? 'success' : 'neutral'}
+                  size="sm"
+                >
+                  {latest.autoSeatClimateLeft ? t('Auto') : t('Manual')}
+                </Badge>
+              ) : (
+                <span className="text-xs text-[var(--text-muted)]">—</span>
+              )}
+            </div>
+            <div className="flex items-center justify-between rounded-md border border-white/[0.06] bg-white/[0.03] px-3 py-2">
+              <span className="text-xs text-[var(--text-secondary)]">
+                {t('Auto Climate (Right)')}
+              </span>
+              {latest?.autoSeatClimateRight != null ? (
+                <Badge
+                  variant={latest.autoSeatClimateRight ? 'success' : 'neutral'}
+                  size="sm"
+                >
+                  {latest.autoSeatClimateRight ? t('Auto') : t('Manual')}
+                </Badge>
+              ) : (
+                <span className="text-xs text-[var(--text-muted)]">—</span>
+              )}
+            </div>
+          </div>
+
           {/* Rear row — 3 seats */}
           <div className="mx-auto grid max-w-md grid-cols-3 gap-3">
             {rearSeats.map((seat) => (
@@ -777,6 +1043,40 @@ export default function ClimateControlPage() {
                 t={t}
               />
             ))}
+          </div>
+
+          {/* Front row — seat cooling */}
+          <div className="mt-4 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Snowflake className="h-4 w-4 text-sky-400" />
+              <span className="text-sm font-semibold text-[var(--text-primary)]">
+                {t('Seat Cooling')}
+              </span>
+            </div>
+            {latest?.seatVentEnabled != null ? (
+              <Badge
+                variant={latest.seatVentEnabled ? 'success' : 'neutral'}
+                size="sm"
+              >
+                {t('Ventilation')}: {latest.seatVentEnabled ? t('On') : t('Off')}
+              </Badge>
+            ) : (
+              <Badge variant="neutral" size="sm">
+                {t('Ventilation')}: —
+              </Badge>
+            )}
+          </div>
+          <div className="mx-auto mt-3 grid max-w-xs grid-cols-2 gap-3">
+            <SeatCoolingCard
+              label="Front Left"
+              level={latest?.climateSeatCoolingFrontLeft}
+              t={t}
+            />
+            <SeatCoolingCard
+              label="Front Right"
+              level={latest?.climateSeatCoolingFrontRight}
+              t={t}
+            />
           </div>
 
           {/* Legend */}

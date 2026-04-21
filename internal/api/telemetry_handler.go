@@ -2474,6 +2474,10 @@ func (h *TelemetryHandler) trackCharging(ctx context.Context, vehicleID int64, s
 		f := toFloat(v)
 		snap.PackCurrent = &f
 	}
+	if v, ok := signals["ChargePort"]; ok {
+		s := toString(v)
+		snap.ChargePort = &s
+	}
 	if v, ok := signals["ChargePortDoorOpen"]; ok {
 		b := toBool(v)
 		snap.ChargePortDoorOpen = &b

@@ -20,7 +20,7 @@ export default function PedalUsage({ motorLatest }: PedalUsageProps) {
         <h2 className="mb-4 text-lg font-semibold text-white/90">
           {t('dynamics.pedalUsage', 'Pedal Usage')}
         </h2>
-        <Grid cols={{ default: 2 }} gap={6}>
+        <Grid cols={{ default: 1, sm: 3 }} gap={6}>
           <div className="flex flex-col items-center gap-2">
             <RadialGauge
               value={motorLatest?.pedal_position ?? 0}
@@ -32,6 +32,19 @@ export default function PedalUsage({ motorLatest }: PedalUsageProps) {
             />
             <span className="text-xs text-white/50">
               {t('dynamics.throttlePosition', 'Throttle Position')}
+            </span>
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            <RadialGauge
+              value={motorLatest?.brake_pedal_pos ?? 0}
+              max={100}
+              label={t('dynamics.brake', 'Brake')}
+              unit={motorLatest?.brake_pedal_pos != null ? '%' : '—'}
+              color="#ef4444"
+              size={140}
+            />
+            <span className="text-xs text-white/50">
+              {t('dynamics.brakePedalPosition', 'Brake Pedal Position')}
             </span>
           </div>
           <div className="flex flex-col items-center justify-center gap-3">

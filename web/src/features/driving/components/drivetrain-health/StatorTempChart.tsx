@@ -51,6 +51,24 @@ export function StatorTempChart({ data }: StatorTempChartProps) {
               dot={false}
               connectNulls
             />
+            <Line
+              type="monotone"
+              dataKey="statorRel"
+              name={`${t('drivetrain.statorTempRearLeft', 'Rear-Left Stator Temp')} (${tempUnit})`}
+              stroke="#a855f7"
+              strokeWidth={2}
+              dot={false}
+              connectNulls
+            />
+            <Line
+              type="monotone"
+              dataKey="statorRer"
+              name={`${t('drivetrain.statorTempRearRight', 'Rear-Right Stator Temp')} (${tempUnit})`}
+              stroke="#06b6d4"
+              strokeWidth={2}
+              dot={false}
+              connectNulls
+            />
             <ReferenceLine
               y={convertTemp(60)}
               stroke="#4ade80"

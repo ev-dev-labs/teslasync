@@ -41,6 +41,8 @@ export interface ChartDataPoint {
 export interface MotorChartDataPoint {
   time: string;
   stator: number | null;
+  statorRel: number | null;
+  statorRer: number | null;
   torque: number | null;
   speed: number | null;
   axle: number | null;

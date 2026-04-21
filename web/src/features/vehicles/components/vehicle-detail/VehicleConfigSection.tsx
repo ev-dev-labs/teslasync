@@ -23,6 +23,10 @@ export function VehicleConfigSection({ vehicleConfig, softwareVersion }: Vehicle
         { label: t('vehicles.detail.roofColor', 'Roof Color'), value: vehicleConfig.roof_color ?? '—' },
         { label: t('vehicles.detail.chargePort', 'Charge Port'), value: vehicleConfig.charge_port ?? '—' },
         { label: t('vehicles.detail.rhd', 'Right-Hand Drive'), value: vehicleConfig.right_hand_drive != null ? (vehicleConfig.right_hand_drive ? t('common.yes', 'Yes') : t('common.no', 'No')) : '—' },
+        { label: t('vehicles.detail.europeVehicle', 'Europe Vehicle'), value: vehicleConfig.europe_vehicle != null ? (vehicleConfig.europe_vehicle ? t('common.yes', 'Yes') : t('common.no', 'No')) : '—' },
+        { label: t('vehicles.detail.offroadLightbar', 'Offroad Lightbar'), value: vehicleConfig.offroad_lightbar_present != null ? (vehicleConfig.offroad_lightbar_present ? t('common.yes', 'Yes') : t('common.no', 'No')) : '—' },
+        { label: t('vehicles.detail.rearSeatHeaters', 'Rear Seat Heaters'), value: vehicleConfig.rear_seat_heaters ?? '—' },
+        { label: t('vehicles.detail.sunroofInstalled', 'Sunroof'), value: vehicleConfig.sunroof_installed ?? '—' },
         { label: t('vehicles.detail.softwareVersion', 'Software'), value: vehicleConfig.software_update_version ?? softwareVersion ?? '—' },
       ]
     : []

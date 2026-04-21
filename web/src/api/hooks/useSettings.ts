@@ -96,6 +96,7 @@ interface UserPreferenceLatest {
   setting_distance_unit?: string;
   setting_temperature_unit?: string;
   setting_tire_pressure_unit?: string;
+  setting_24hr_time?: boolean;
 }
 
 export function useCarPreferences(vehicleId: number | null) {

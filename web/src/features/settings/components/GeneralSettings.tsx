@@ -11,7 +11,7 @@ import { useToast } from '@/components/feedback/Toast'
 import { parseSettingEnum, isSettingMiles, isSettingFahrenheit, isSettingPSI, isSettingBar } from '@/lib/parseSettingEnum'
 import { SettingField } from './SettingField'
 import {
-  Settings as SettingsIcon, Save, Download, Car, CheckCircle,
+  Settings as SettingsIcon, Save, Download, Car, CheckCircle, Clock,
 } from 'lucide-react'
 
 export function GeneralSettings() {
@@ -115,6 +115,25 @@ export function GeneralSettings() {
                 <Button variant="primary" size="sm" icon={<Download className="h-3.5 w-3.5" />} onClick={syncUnitsFromCar} className="shrink-0">
                   {t('app.syncFromCar', 'Sync from Car')}
                 </Button>
+              </div>
+            )}
+
+            {carPrefs && carPrefs.setting_24hr_time != null && (
+              <div className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 mb-5">
+                <Clock className="h-4 w-4 text-neon-amber shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-[var(--text-primary)]">
+                    {t('app.carClockFormat', 'Car clock format')}:{' '}
+                    <span className="font-medium">
+                      {carPrefs.setting_24hr_time
+                        ? t('app.clock24h', '24-hour')
+                        : t('app.clock12h', '12-hour')}
+                    </span>
+                  </p>
+                  <p className="text-[11px] text-[var(--text-muted)]">
+                    {t('app.clockFormatHint', "Your vehicle's time display preference (read-only)")}
+                  </p>
+                </div>
               </div>
             )}
 

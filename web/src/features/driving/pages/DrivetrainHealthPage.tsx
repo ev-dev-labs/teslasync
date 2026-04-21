@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/feedback';
 
 import { useDrivetrainHealth, useDrives, useDrivingStats } from '@/api/hooks/useDriving';
 import { useVehicles, useMotorLatest, useMotorHistory } from '@/api/hooks/useVehicles';
+import { useVehicleLive } from '@/hooks/useVehicleLive';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateShort } from '@/lib/dateFormat';
@@ -48,6 +49,7 @@ export default function DrivetrainHealthPage() {
   const { data: stats } = useDrivingStats(vehicleIdStr);
   const { data: motorLatest } = useMotorLatest(vehicleId ?? 0, 5_000);
   const { data: motorHistory } = useMotorHistory(vehicleId ?? 0, 200);
+  const { state: liveState } = useVehicleLive(vehicleId ?? undefined);
 
   const { convertTemp, convertSpeed } = useSettings();
 
@@ -107,6 +109,8 @@ export default function DrivetrainHealthPage() {
     return history.map((s) => ({
       time: s.created_at ? new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
       stator: s.di_stator_temp != null ? convertTemp(s.di_stator_temp) : null,
+      statorRel: s.di_stator_temp_rel != null ? convertTemp(s.di_stator_temp_rel) : null,
+      statorRer: s.di_stator_temp_rer != null ? convertTemp(s.di_stator_temp_rer) : null,
       torque: s.di_torque ?? null,
       speed: s.vehicle_speed != null ? convertSpeed(s.vehicle_speed) : null,
       axle: s.di_axle_speed ?? null,
@@ -139,7 +143,7 @@ export default function DrivetrainHealthPage() {
           <TemperatureGauges sensors={sensors} />
           <TemperatureMetricCards sensors={sensors} overallHealth={overallHealth} healthScore={healthScore} peakPower={peakPower} />
           <ThermalLoadPanel sensors={sensors} peakPower={peakPower} avgPowerMax={avgPowerMax} stats={stats} />
-          {motorLatest && <LiveMotorStatus motorLatest={motorLatest} />}
+          {motorLatest && <LiveMotorStatus motorLatest={motorLatest} isolationResistance={liveState.isolationResistance} />}
           <StatorTempChart data={motorChartData} />
           <TorqueHistoryChart data={motorChartData} />
           <TemperatureTrendChart data={tempTrendData} />

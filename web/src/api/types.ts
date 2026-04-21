@@ -524,12 +524,15 @@ export interface MotorSnapshot {
   di_torque_actual_rel?: number
   di_torque_actual_rer?: number
   di_axle_speed_f?: number
+  di_axle_speed_r?: number
   di_axle_speed_rel?: number
   di_axle_speed_rer?: number
   di_state_f?: string
+  di_state_r?: string
   di_state_rel?: string
   di_state_rer?: string
   di_stator_temp_f?: number
+  di_stator_temp_r?: number
   di_stator_temp_rel?: number
   di_stator_temp_rer?: number
   di_heatsink_t_f?: number
@@ -1154,6 +1157,7 @@ export interface ChargingTelemetry {
   rated_range?: number
   pack_voltage?: number
   pack_current?: number
+  charge_port?: string
   charge_port_door_open?: boolean
   charge_port_latch?: string
   charge_port_cold_weather_mode?: boolean

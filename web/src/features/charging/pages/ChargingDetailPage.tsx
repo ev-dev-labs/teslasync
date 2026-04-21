@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { ChargingSession, ChargeTelemetryReading } from '@/api/types';
 import { useChargingSessionDetail, useChargeTelemetry } from '@/api/hooks/useCharging';
-import { useVehicle } from '@/api/hooks/useVehicles';
+import { useVehicle, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime, formatDate, formatTime } from '@/lib/dateFormat';
@@ -103,6 +103,7 @@ export default function ChargingDetailPage() {
   const { data: session, isLoading } = useChargingSessionDetail(sessionId || null);
   const { data: telemetry } = useChargeTelemetry(session?.id ?? null);
   const { data: vehicle } = useVehicle(String(session?.vehicle_id ?? ''));
+  const { data: liveCharging } = useChargingTelemetryLatest(session?.vehicle_id ?? 0);
 
   usePageTitle(
     session
@@ -120,6 +121,24 @@ export default function ChargingDetailPage() {
   const hasTelemetry = !!telemetry && telemetry.length > 0;
   const hasLocation = !!(session?.latitude && session?.longitude);
   const dc = session ? isDC(session) : false;
+
+  const detailedChargeState = liveCharging?.detailed_charge_state;
+  const detailedChargeStateVariant: 'success' | 'warning' | 'danger' | 'info' | 'neutral' = (() => {
+    switch (detailedChargeState) {
+      case 'Charging':
+      case 'Starting':
+        return 'success';
+      case 'Complete':
+        return 'info';
+      case 'Stopped':
+      case 'NoPower':
+        return 'warning';
+      case 'Error':
+        return 'danger';
+      default:
+        return 'neutral';
+    }
+  })();
 
   /* derived chart data */
   const chargeCurve = useMemo(() => {
@@ -209,6 +228,25 @@ export default function ChargingDetailPage() {
           <Badge variant={dc ? 'warning' : 'info'} dot>
             {dc ? 'DC' : 'AC'}
           </Badge>
+          {detailedChargeState && (
+            <Badge variant={detailedChargeStateVariant} size="sm" dot>
+              {t(
+                `charging.detail.detailedState.${detailedChargeState}`,
+                detailedChargeState,
+              )}
+            </Badge>
+          )}
+          {liveCharging?.fast_charger_present != null && (
+            <Badge
+              variant={liveCharging.fast_charger_present ? 'success' : 'neutral'}
+              size="sm"
+              dot
+            >
+              {liveCharging.fast_charger_present
+                ? t('charging.detail.fastChargerConnected', 'Fast Charger Connected')
+                : t('charging.detail.fastChargerDisconnected', 'No Fast Charger')}
+            </Badge>
+          )}
           {session.fast_charger_brand && (
             <Badge variant="neutral" size="sm">{session.fast_charger_brand}</Badge>
           )}
@@ -773,6 +811,223 @@ export default function ChargingDetailPage() {
             </GlassPanel>
           )}
 
+        {/* ── 11b. Advanced charging parameters (live state) ─── */}
+        <GlassPanel className="p-6 mb-8">
+          <h2 className="text-lg font-semibold mb-1">
+            {t('charging.detail.advanced', 'Advanced Charging Parameters')}
+          </h2>
+          <p className="text-xs text-muted mb-4">
+            {t('charging.detail.advancedHint', 'Latest reported values from the vehicle.')}
+          </p>
+          {liveCharging ? (
+            <KVList
+              columns={2}
+              items={[
+                {
+                  label: t('charging.detail.chargeCurrentRequest', 'Requested Current'),
+                  value:
+                    liveCharging.charge_current_request != null
+                      ? fmtWithUnit(liveCharging.charge_current_request, 'A', 1)
+                      : '—',
+                },
+                {
+                  label: t('charging.detail.chargeCurrentRequestMax', 'Max Requested Current'),
+                  value:
+                    liveCharging.charge_current_request_max != null
+                      ? fmtWithUnit(liveCharging.charge_current_request_max, 'A', 1)
+                      : '—',
+                },
+                {
+                  label: t('charging.detail.chargeAmps', 'Active Charge Amps'),
+                  value:
+                    liveCharging.charge_amps != null
+                      ? fmtWithUnit(liveCharging.charge_amps, 'A', 1)
+                      : '—',
+                },
+                {
+                  label: t('charging.detail.chargerVoltage', 'Charger Voltage'),
+                  value:
+                    liveCharging.charger_voltage != null
+                      ? fmtWithUnit(liveCharging.charger_voltage, 'V', 0)
+                      : '—',
+                },
+                {
+                  label: t('charging.detail.ratedRange', 'Rated Range'),
+                  value:
+                    liveCharging.rated_range != null
+                      ? fmtWithUnit(convertDistance(liveCharging.rated_range), distanceUnit, 0)
+                      : '—',
+                },
+                {
+                  label: t('charging.detail.estBatteryRange', 'Estimated Range'),
+                  value:
+                    liveCharging.est_battery_range != null
+                      ? fmtWithUnit(convertDistance(liveCharging.est_battery_range), distanceUnit, 0)
+                      : '—',
+                },
+                {
+                  label: t(
+                    'charging.detail.estHoursToTermination',
+                    'Est. Hours to Charge Termination',
+                  ),
+                  value:
+                    liveCharging.estimated_hours_to_charge != null
+                      ? fmtWithUnit(liveCharging.estimated_hours_to_charge, 'h', 2)
+                      : '—',
+                },
+                {
+                  label: t('charging.detail.chargeEnableRequest', 'Charge Enable Request'),
+                  value:
+                    liveCharging.charge_enable_request != null
+                      ? liveCharging.charge_enable_request
+                        ? t('common.enabled', 'Enabled')
+                        : t('common.disabled', 'Disabled')
+                      : '—',
+                },
+                {
+                  label: t('charging.detail.coldWeatherMode', 'Cold Weather Mode'),
+                  value:
+                    liveCharging.charge_port_cold_weather_mode != null ? (
+                      <Badge
+                        variant={liveCharging.charge_port_cold_weather_mode ? 'warning' : 'neutral'}
+                        size="sm"
+                      >
+                        {liveCharging.charge_port_cold_weather_mode
+                          ? t('common.active', 'Active')
+                          : t('common.inactive', 'Inactive')}
+                      </Badge>
+                    ) : (
+                      '—'
+                    ),
+                },
+                {
+                  label: t('charging.detail.cableType', 'Cable Type'),
+                  value:
+                    liveCharging.charging_cable_type != null &&
+                    liveCharging.charging_cable_type !== '' ? (
+                      <Badge variant="info" size="sm">
+                        {liveCharging.charging_cable_type}
+                      </Badge>
+                    ) : (
+                      '—'
+                    ),
+                },
+                {
+                  label: t('charging.detail.fastChargerType', 'Fast Charger Type'),
+                  value:
+                    liveCharging.fast_charger_type != null &&
+                    liveCharging.fast_charger_type !== '' &&
+                    liveCharging.fast_charger_type !== '<invalid>' ? (
+                      <Badge
+                        variant={
+                          liveCharging.fast_charger_type.toLowerCase().includes('tesla')
+                            ? 'success'
+                            : 'info'
+                        }
+                        size="sm"
+                      >
+                        {liveCharging.fast_charger_type}
+                      </Badge>
+                    ) : (
+                      '—'
+                    ),
+                },
+                {
+                  label: t('charging.detail.chargePortLatch', 'Charge Port Latch'),
+                  value:
+                    liveCharging.charge_port_latch != null && liveCharging.charge_port_latch !== '' ? (
+                      <Badge
+                        variant={
+                          liveCharging.charge_port_latch === 'Engaged' ? 'success' : 'warning'
+                        }
+                        size="sm"
+                        dot
+                      >
+                        {liveCharging.charge_port_latch === 'Engaged'
+                          ? t('charging.detail.chargePortLatchEngaged', 'Engaged')
+                          : liveCharging.charge_port_latch === 'Disengaged'
+                            ? t('charging.detail.chargePortLatchDisengaged', 'Disengaged')
+                            : liveCharging.charge_port_latch}
+                      </Badge>
+                    ) : (
+                      '—'
+                    ),
+                },
+                {
+                  label: t('charging.detail.dcdcConverter', 'DC-DC Converter'),
+                  value:
+                    liveCharging.dcdc_enable != null ? (
+                      <Badge
+                        variant={liveCharging.dcdc_enable ? 'success' : 'neutral'}
+                        size="sm"
+                      >
+                        {liveCharging.dcdc_enable
+                          ? t('common.enabled', 'Enabled')
+                          : t('common.disabled', 'Disabled')}
+                      </Badge>
+                    ) : (
+                      '—'
+                    ),
+                },
+                {
+                  label: t('charging.detail.preconditioningEnabled', 'Preconditioning'),
+                  value:
+                    liveCharging.preconditioning_enabled != null ? (
+                      <Badge
+                        variant={liveCharging.preconditioning_enabled ? 'success' : 'neutral'}
+                        size="sm"
+                      >
+                        {liveCharging.preconditioning_enabled
+                          ? t('common.enabled', 'Enabled')
+                          : t('common.disabled', 'Disabled')}
+                      </Badge>
+                    ) : (
+                      '—'
+                    ),
+                },
+                {
+                  label: t(
+                    'charging.detail.superchargerSessionTripPlanner',
+                    'Supercharger Trip Planner'
+                  ),
+                  value:
+                    liveCharging.supercharger_session_trip_planner != null ? (
+                      <Badge
+                        variant={
+                          liveCharging.supercharger_session_trip_planner ? 'success' : 'neutral'
+                        }
+                        size="sm"
+                      >
+                        {liveCharging.supercharger_session_trip_planner
+                          ? t('common.active', 'Active')
+                          : t('common.inactive', 'Inactive')}
+                      </Badge>
+                    ) : (
+                      '—'
+                    ),
+                },
+                {
+                  label: t('charging.detail.numBrickVoltageMax', 'Brick Count at Max Voltage'),
+                  value:
+                    liveCharging.num_brick_voltage_max != null
+                      ? fmtWithUnit(liveCharging.num_brick_voltage_max, '', 0)
+                      : '—',
+                },
+                {
+                  label: t('charging.detail.numBrickVoltageMin', 'Brick Count at Min Voltage'),
+                  value:
+                    liveCharging.num_brick_voltage_min != null
+                      ? fmtWithUnit(liveCharging.num_brick_voltage_min, '', 0)
+                      : '—',
+                },
+              ]}
+            />
+          ) : (
+            <p className="text-sm text-muted">
+              {t('charging.detail.noLiveData', 'No live charging telemetry available.')}
+            </p>
+          )}
+        </GlassPanel>
         {/* ── 12. Timestamps footer ──────────────────────────── */}
         <GlassPanel className="p-6">
           <div className="grid grid-cols-2 gap-6 text-sm">

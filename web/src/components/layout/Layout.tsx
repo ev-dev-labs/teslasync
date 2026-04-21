@@ -200,6 +200,7 @@ export const navSections = [
       { to: '/charging-heatmap', icon: Grid3X3, label: 'Charging Patterns', color: 'text-cyan-400' },
       { to: '/charging-curve', icon: TrendingUp, label: 'Charging Curve', color: 'text-lime-400' },
       { to: '/smart-charge', icon: CalendarClock, label: 'Smart Charge', color: 'text-cyan-400' },
+      { to: '/powershare', icon: Zap, label: 'Powershare', color: 'text-amber-400' },
     ],
   },
   {

@@ -14,6 +14,7 @@ import {
   GForcePanel,
   PedalUsage,
   SpeedGearPanel,
+  AutopilotSection,
   MotorHistoryCharts,
   MotorEfficiencyInsights,
   SummaryStats,
@@ -109,6 +110,11 @@ export default function DrivingDynamicsPage() {
         <SpeedGearPanel
           motorLatest={motorLatest}
           filteredDrives={filteredDrives}
+          convertSpeed={convertSpeed}
+          speedUnit={speedUnit}
+        />
+        <AutopilotSection
+          motorLatest={motorLatest}
           convertSpeed={convertSpeed}
           speedUnit={speedUnit}
         />

@@ -27,6 +27,7 @@ interface LiveTelemetryProps {
   locationData: LocationSnapshot | null | undefined
   live: Record<string, unknown>
   sseConnected: boolean
+  remoteStartEnabled?: boolean | null
 }
 
 export function LiveTelemetryPanels({
@@ -39,6 +40,7 @@ export function LiveTelemetryPanels({
   locationData,
   live,
   sseConnected,
+  remoteStartEnabled,
 }: LiveTelemetryProps) {
   const { t } = useTranslation()
 
@@ -67,7 +69,7 @@ export function LiveTelemetryPanels({
         </FadeIn>
 
         <FadeIn delay={0.18}>
-          <SecurityPanel securityData={securityData} />
+          <SecurityPanel securityData={securityData} remoteStartEnabled={remoteStartEnabled} />
         </FadeIn>
 
         <FadeIn delay={0.19}>

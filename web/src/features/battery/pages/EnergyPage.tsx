@@ -17,7 +17,7 @@ import { DateRangeFilter } from '@/components/forms';
 
 import { useEnergyStats } from '@/api/hooks/useEnergy';
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useVehicles, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateShort } from '@/lib/dateFormat';
@@ -100,6 +100,8 @@ export default function EnergyPage() {
   const { data: sessions } = useChargingSessionsPaginated(vehicleId, {
     limit: 100, start: startDate, end: endDate,
   });
+
+  const { data: liveCharging } = useChargingTelemetryLatest(vehicleId ?? 0);
 
   /* ── Derived metrics ──────────────────────────────────────────── */
   const totalEnergy = sessions?.reduce((s, c) => s + c.charge_energy_added, 0) ?? 0;
@@ -315,6 +317,48 @@ export default function EnergyPage() {
           </StaggerItem>
         ))}
       </StaggerContainer>
+
+      {/* ── Lifetime Metrics ─────────────────────────────────────── */}
+      <FadeIn delay={0.05}>
+        <GlassPanel className="p-4 sm:p-6">
+          <h3 className="section-title mb-3 flex items-center gap-2">
+            <Zap className="h-4 w-4 text-neon-cyan" />
+            {t('energy.lifetime.title', 'Lifetime Metrics')}
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="rounded-lg bg-white/[0.03] ring-1 ring-white/[0.06] p-4">
+              <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
+                {t('energy.lifetime.energyUsed', 'Lifetime Energy Used')}
+              </p>
+              {liveCharging?.lifetime_energy_used != null ? (
+                <>
+                  <p className="text-2xl font-bold text-neon-cyan">
+                    {fmtNumber(liveCharging.lifetime_energy_used)}
+                    <span className="text-sm font-normal text-[var(--text-muted)] ml-1">kWh</span>
+                  </p>
+                  <p className="text-[11px] text-[var(--text-muted)] mt-1">
+                    {t('energy.lifetime.energyUsedDesc', 'Total energy consumed since vehicle delivery')}
+                  </p>
+                </>
+              ) : (
+                <p className="text-lg font-semibold text-[var(--text-muted)]">—</p>
+              )}
+            </div>
+            <div className="rounded-lg bg-white/[0.03] ring-1 ring-white/[0.06] p-4">
+              <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
+                {t('energy.lifetime.periodEnergy', { days: periodDays, defaultValue: `Last ${periodDays} Days` })}
+              </p>
+              <p className="text-2xl font-bold text-neon-green">
+                {fmtNumber(totalEnergy)}
+                <span className="text-sm font-normal text-[var(--text-muted)] ml-1">kWh</span>
+              </p>
+              <p className="text-[11px] text-[var(--text-muted)] mt-1">
+                {t('energy.lifetime.periodEnergyDesc', 'Energy added during selected date range')}
+              </p>
+            </div>
+          </div>
+        </GlassPanel>
+      </FadeIn>
 
       {isLoading ? (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

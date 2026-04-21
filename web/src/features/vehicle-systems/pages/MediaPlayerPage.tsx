@@ -45,6 +45,7 @@ interface MediaSnapshot {
   now_playing_duration: number;
   audio_volume: number;
   audio_volume_max: number;
+  audio_volume_increment?: number;
   created_at: string;
 }
 
@@ -429,7 +430,7 @@ export default function MediaPlayerPage() {
 
       {/* ── Volume + Stats row ───────────────────────────────── */}
       <FadeIn delay={0.05}>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <GlassPanel className="flex items-center justify-center p-4">
             <RadialGauge
               value={latest?.audio_volume ?? 0}
@@ -460,6 +461,17 @@ export default function MediaPlayerPage() {
             value={fmtInt(stats.avgVolume)}
             icon={<Volume2 className="h-5 w-5" />}
             color="cyan"
+          />
+
+          <MetricCard
+            label={t('Volume Step', 'Volume Step')}
+            value={
+              latest?.audio_volume_increment != null
+                ? latest.audio_volume_increment.toFixed(2)
+                : '—'
+            }
+            icon={<Volume2 className="h-5 w-5" />}
+            color="purple"
           />
         </div>
       </FadeIn>

@@ -7,6 +7,7 @@ import {
   MapPin,
   Home,
   Briefcase,
+  Satellite,
   Compass,
   Gauge,
   Clock,
@@ -55,6 +56,7 @@ import { fmtNumber } from '@/lib/numberFormat';
 import { CHART_COLORS } from '@/lib/colors';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { request } from '@/api/client';
+import { useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -264,6 +266,12 @@ export default function NavigationRoutePage() {
       ),
     enabled: vehicleId !== null,
   });
+
+  /* ---- charging telemetry (for expected energy at arrival) ---- */
+  const { data: chargingTelemetry } = useChargingTelemetryLatest(
+    vehicleId ?? 0,
+    15_000,
+  );
 
   /* ---- derived ---- */
   const anyError = [vehiclesError, latestError, historyError].find(Boolean);
@@ -576,6 +584,16 @@ export default function NavigationRoutePage() {
               </Badge>
             </span>
 
+            <span className="mb-3 flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+              <RefreshCw className="h-3 w-3" />
+              {t('nav.routeLastUpdated', 'Route last updated')}:{' '}
+              <span className="font-medium text-[var(--text-secondary)]">
+                {latest?.route_last_updated
+                  ? formatDateTime(latest.route_last_updated)
+                  : '—'}
+              </span>
+            </span>
+
             {latestLoading ? (
               <Skeleton lines={4} />
             ) : latest && hasActiveRoute ? (
@@ -639,7 +657,7 @@ export default function NavigationRoutePage() {
 
           {/* ─────── Location Status Cards ─────── */}
           <FadeIn delay={0.1}>
-            <span className="mb-6 grid gap-4 sm:grid-cols-3">
+            <span className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <LocationStatusCard
                 icon={<MapPin className="h-5 w-5" />}
                 label={t('nav.currentLocation', 'Current Location')}
@@ -649,6 +667,19 @@ export default function NavigationRoutePage() {
                     : t('nav.locationUnavailable', 'Location unavailable')
                 }
                 active={hasValidLocation}
+              />
+              <LocationStatusCard
+                icon={<Satellite className="h-5 w-5" />}
+                label={t('nav.gpsFixQuality', 'GPS Fix Quality')}
+                value={
+                  latest?.gps_state
+                    ? t(`nav.gpsState.${latest.gps_state}`, latest.gps_state)
+                    : t('nav.unknown', 'Unknown')
+                }
+                active={
+                  !!latest?.gps_state &&
+                  /^(normal|good|strong|ok|valid)$/i.test(latest.gps_state)
+                }
               />
               <LocationStatusCard
                 icon={<Home className="h-5 w-5" />}
@@ -681,7 +712,7 @@ export default function NavigationRoutePage() {
 
           {/* ─────── Route Metrics ─────── */}
           <FadeIn delay={0.15}>
-            <span className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <span className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
               <MetricCard
                 label={t('nav.metric.distance', 'Distance')}
                 value={
@@ -717,6 +748,19 @@ export default function NavigationRoutePage() {
                 value={`${fmtNumber(avgSpeed, 1)} mph`}
                 icon={<Gauge className="h-5 w-5" />}
                 color="amber"
+              />
+              <MetricCard
+                label={t(
+                  'nav.metric.energyAtArrival',
+                  'Energy at Arrival',
+                )}
+                value={
+                  chargingTelemetry?.expected_energy_pct_at_arrival != null
+                    ? `${fmtNumber(chargingTelemetry.expected_energy_pct_at_arrival, 0)}%`
+                    : '—'
+                }
+                icon={<BatteryCharging className="h-5 w-5" />}
+                color="green"
               />
             </span>
           </FadeIn>

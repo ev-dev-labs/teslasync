@@ -17,7 +17,7 @@ import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { useRegenEfficiency, useDrives } from '@/api/hooks/useDriving';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useVehicles, useMotorLatest } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateShort } from '@/lib/dateFormat';
@@ -56,6 +56,9 @@ export default function RegenEfficiencyPage() {
 
   const { data, isLoading, error } = useRegenEfficiency(vehicleIdStr);
   const { data: drives } = useDrives(vehicleIdStr);
+  const { data: motorLatest } = useMotorLatest(vehicleId ?? 0, 30_000);
+  const lifetimeRegenKwh = motorLatest?.lifetime_energy_gained_regen;
+  const lifetimeDriveKwh = motorLatest?.lifetime_energy_used_drive;
 
   const { convertDistance, distanceUnit } = useSettings();
 
@@ -137,7 +140,7 @@ export default function RegenEfficiencyPage() {
           </FadeIn>
 
           {/* Stat cards */}
-          <StaggerContainer className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <StaggerContainer className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <StaggerItem>
               <GlassPanel className="p-4 text-center">
                 <Zap className="h-4 w-4 mx-auto mb-1 text-green-400" />
@@ -164,6 +167,36 @@ export default function RegenEfficiencyPage() {
                 <Zap className="h-4 w-4 mx-auto mb-1 text-purple-400" />
                 <p className="text-lg font-bold text-[var(--text-primary)]"><AnimatedNumber value={data.freeCharges ?? 0} decimals={1} /></p>
                 <p className="text-[10px] text-[var(--text-muted)]">{t('regen.freeCharges', 'Free Charges')}</p>
+              </GlassPanel>
+            </StaggerItem>
+            <StaggerItem>
+              <GlassPanel className="p-4 text-center">
+                <Zap className="h-4 w-4 mx-auto mb-1 text-emerald-400" />
+                <p className="text-lg font-bold text-[var(--text-primary)]">
+                  {lifetimeRegenKwh != null ? (
+                    <AnimatedNumber value={lifetimeRegenKwh} decimals={1} />
+                  ) : (
+                    '—'
+                  )}
+                </p>
+                <p className="text-[10px] text-[var(--text-muted)]">
+                  {t('regen.lifetimeRegen', 'Lifetime Regen kWh')}
+                </p>
+              </GlassPanel>
+            </StaggerItem>
+            <StaggerItem>
+              <GlassPanel className="p-4 text-center">
+                <Activity className="h-4 w-4 mx-auto mb-1 text-orange-400" />
+                <p className="text-lg font-bold text-[var(--text-primary)]">
+                  {lifetimeDriveKwh != null ? (
+                    <AnimatedNumber value={lifetimeDriveKwh} decimals={1} />
+                  ) : (
+                    '—'
+                  )}
+                </p>
+                <p className="text-[10px] text-[var(--text-muted)]">
+                  {t('regen.lifetimeDrive', 'Lifetime Drive kWh')}
+                </p>
               </GlassPanel>
             </StaggerItem>
           </StaggerContainer>

@@ -943,6 +943,7 @@ type ChargingTelemetry struct {
 	RatedRange                 *float64  `json:"rated_range,omitempty" db:"rated_range"`
 	PackVoltage                *float64  `json:"pack_voltage,omitempty" db:"pack_voltage"`
 	PackCurrent                *float64  `json:"pack_current,omitempty" db:"pack_current"`
+	ChargePort                 *string   `json:"charge_port,omitempty" db:"charge_port"`
 	ChargePortDoorOpen         *bool     `json:"charge_port_door_open,omitempty" db:"charge_port_door_open"`
 	ChargePortLatch            *string   `json:"charge_port_latch,omitempty" db:"charge_port_latch"`
 	ChargePortColdWeatherMode  *bool     `json:"charge_port_cold_weather_mode,omitempty" db:"charge_port_cold_weather_mode"`

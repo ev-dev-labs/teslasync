@@ -5,20 +5,33 @@ export interface ClimateState {
   outsideTemp: number;
   hvacPower: number;
   fanSpeed: number;
+  hvacFanStatus?: number;
   driverTempSetting: number;
   passengerTempSetting: number;
   isAcOn: boolean;
   isAutoClimate: boolean;
   climateKeeperMode: string;
   defrostMode: string;
+  defrostForPreconditioning?: boolean;
+  rearDefrostEnabled?: boolean;
+  wiperHeatEnabled?: boolean;
+  rearDisplayHvacEnabled?: boolean;
   batteryHeater: boolean;
   steeringWheelHeat: boolean;
+  hvacSteeringWheelHeatAuto?: boolean;
+  hvacSteeringWheelHeatLevel?: number;
   seatHeaterLeft: number;
   seatHeaterRight: number;
   seatHeaterRearLeft: number;
   seatHeaterRearRight: number;
   seatHeaterRearCenter: number;
+  autoSeatClimateLeft?: boolean;
+  autoSeatClimateRight?: boolean;
+  climateSeatCoolingFrontLeft?: number;
+  climateSeatCoolingFrontRight?: number;
+  seatVentEnabled?: boolean;
   overheatProtection: string;
+  cabinOverheatProtectionTempLimit?: string;
   timestamp: string;
 }
 

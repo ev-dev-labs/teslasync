@@ -121,12 +121,12 @@ export function VehicleCharts({
                   value: cleanNil(vehicleConfigData.sunroof_installed) || 'Not Installed',
                 },
                 {
-                  label: 'Europe Vehicle',
+                  label: t('vehicles.detail.europeVehicle', 'Europe Vehicle'),
                   value:
                     vehicleConfigData.europe_vehicle != null
                       ? vehicleConfigData.europe_vehicle
-                        ? 'Yes'
-                        : 'No'
+                        ? t('common.yes', 'Yes')
+                        : t('common.no', 'No')
                       : '—',
                 },
                 {

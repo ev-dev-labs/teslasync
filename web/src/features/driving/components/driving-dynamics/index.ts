@@ -2,6 +2,7 @@ export { default as LiveMotorStatus } from './LiveMotorStatus';
 export { default as GForcePanel } from './GForcePanel';
 export { default as PedalUsage } from './PedalUsage';
 export { default as SpeedGearPanel } from './SpeedGearPanel';
+export { default as AutopilotSection } from './AutopilotSection';
 export { default as MotorHistoryCharts } from './MotorHistoryCharts';
 export { default as MotorEfficiencyInsights } from './MotorEfficiencyInsights';
 export { default as SummaryStats } from './SummaryStats';
