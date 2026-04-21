@@ -1,0 +1,254 @@
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import type { AppSettings } from '@/api/types'
+import {
+  useSettings, useSaveSettings, useVehicles, useCarPreferences,
+} from '@/api/hooks/useSettings'
+import { GlassPanel, Button, IconBox, Input, Select } from '@/components/ui'
+import { Skeleton } from '@/components/feedback'
+import { FadeIn } from '@/components/motion'
+import { useToast } from '@/components/feedback/Toast'
+import { parseSettingEnum, isSettingMiles, isSettingFahrenheit, isSettingPSI, isSettingBar } from '@/lib/parseSettingEnum'
+import { SettingField } from './SettingField'
+import {
+  Settings as SettingsIcon, Save, Download, Car, CheckCircle,
+} from 'lucide-react'
+
+export function GeneralSettings() {
+  const { t } = useTranslation('settings')
+  const toast = useToast()
+  const { data: settings, isLoading } = useSettings()
+  const settingsMut = useSaveSettings()
+
+  const [form, setForm] = useState<AppSettings>({
+    unit_of_length: 'km',
+    unit_of_temp: 'C',
+    unit_of_pressure: 'bar',
+    preferred_range: 'rated',
+    language: 'en',
+    base_cost_per_kwh: 0.12,
+    api_suspended: false,
+    theme: 'neon-cyan',
+    mode: 'dark',
+    custom_primary: '#00b4d8',
+    custom_accent: '#e63946',
+    gas_price_per_unit: 3.50,
+    gas_unit: 'gallon',
+    gas_efficiency_mpg: 25,
+    decimal_precision: 2,
+    quiet_hours_enabled: false,
+    quiet_hours_start: '22:00',
+    quiet_hours_end: '07:00',
+    alert_digest_mode: 'instant',
+  })
+  const [saved, setSaved] = useState(false)
+
+  const [formInited, setFormInited] = useState(false)
+  if (settings && !formInited) {
+    setForm(settings)
+    setFormInited(true)
+  }
+
+  // Sync from Car
+  const { data: vehicles } = useVehicles()
+  const firstVehicleId = vehicles?.[0]?.id ?? null
+  const { data: carPrefs } = useCarPreferences(firstVehicleId)
+
+  function syncUnitsFromCar() {
+    if (!carPrefs) return
+    const updates: Partial<AppSettings> = {}
+
+    if (isSettingMiles(carPrefs.setting_distance_unit)) updates.unit_of_length = 'mi'
+    else if (carPrefs.setting_distance_unit) updates.unit_of_length = 'km'
+
+    if (isSettingFahrenheit(carPrefs.setting_temperature_unit)) updates.unit_of_temp = 'F'
+    else if (carPrefs.setting_temperature_unit) updates.unit_of_temp = 'C'
+
+    if (isSettingPSI(carPrefs.setting_tire_pressure_unit)) updates.unit_of_pressure = 'psi'
+    else if (isSettingBar(carPrefs.setting_tire_pressure_unit)) updates.unit_of_pressure = 'bar'
+
+    if (Object.keys(updates).length > 0) {
+      const newForm = { ...form, ...updates }
+      setForm(newForm)
+      settingsMut.mutate(newForm)
+      toast.success(
+        t('toast.unitsSynced', 'Units synced from car'),
+        `${t('distance', 'Distance')}: ${updates.unit_of_length === 'mi' ? t('miles', 'Miles') : t('kilometers', 'Kilometers')}, ${t('temperature', 'Temperature')}: ${updates.unit_of_temp === 'F' ? t('fahrenheit', 'Fahrenheit') : t('celsius', 'Celsius')}, ${t('pressure', 'Pressure')}: ${updates.unit_of_pressure === 'psi' ? 'PSI' : 'Bar'}`,
+      )
+    } else {
+      toast.info(t('toast.noChanges', 'No changes'), t('toast.noChangesDesc', 'Could not detect car unit preferences'))
+    }
+  }
+
+  return (
+    <FadeIn delay={0.1}>
+      <GlassPanel className="p-6 space-y-6">
+        <div className="flex items-center gap-3">
+          <IconBox color="cyan">
+            <SettingsIcon className="h-5 w-5" />
+          </IconBox>
+          <div>
+            <h2 className="text-base font-semibold text-[var(--text-primary)]">{t('app.title', 'Application')}</h2>
+            <p className="text-xs text-[var(--text-muted)]">{t('app.subtitle', 'Units, language, and cost preferences')}</p>
+          </div>
+        </div>
+
+        {isLoading ? (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-16" />)}
+          </div>
+        ) : (
+          <>
+            {carPrefs && (carPrefs.setting_distance_unit || carPrefs.setting_temperature_unit) && (
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-neon-cyan/20 bg-neon-cyan/5 p-4 mb-5">
+                <div className="flex items-center gap-3">
+                  <Car className="h-5 w-5 text-neon-cyan shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-[var(--text-primary)]">
+                      {t('app.carUses', 'Car uses')} {parseSettingEnum(carPrefs.setting_distance_unit, 'distance')} / {parseSettingEnum(carPrefs.setting_temperature_unit, 'temperature')} / {parseSettingEnum(carPrefs.setting_tire_pressure_unit, 'pressure')}
+                    </p>
+                    <p className="text-[11px] text-[var(--text-muted)]">
+                      {t('app.syncHint', "Sync your app's units to match your vehicle's display settings")}
+                    </p>
+                  </div>
+                </div>
+                <Button variant="primary" size="sm" icon={<Download className="h-3.5 w-3.5" />} onClick={syncUnitsFromCar} className="shrink-0">
+                  {t('app.syncFromCar', 'Sync from Car')}
+                </Button>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <Select
+                label={t('app.distanceUnit', 'Distance Unit')}
+                value={form.unit_of_length}
+                onChange={e => setForm({ ...form, unit_of_length: e.target.value })}
+                options={[{ value: 'km', label: t('app.kilometers', 'Kilometers') }, { value: 'mi', label: t('app.miles', 'Miles') }]}
+              />
+              <Select
+                label={t('app.temperatureUnit', 'Temperature Unit')}
+                value={form.unit_of_temp}
+                onChange={e => setForm({ ...form, unit_of_temp: e.target.value })}
+                options={[{ value: 'C', label: t('app.celsius', 'Celsius') }, { value: 'F', label: t('app.fahrenheit', 'Fahrenheit') }]}
+              />
+              <Select
+                label={t('app.pressureUnit', 'Pressure Unit')}
+                value={form.unit_of_pressure ?? 'bar'}
+                onChange={e => setForm({ ...form, unit_of_pressure: e.target.value })}
+                options={[{ value: 'bar', label: t('app.bar', 'Bar') }, { value: 'psi', label: t('app.psi', 'PSI') }]}
+              />
+              <Select
+                label={t('app.preferredRange', 'Preferred Range')}
+                value={form.preferred_range}
+                onChange={e => setForm({ ...form, preferred_range: e.target.value })}
+                options={[{ value: 'rated', label: t('app.rated', 'Rated') }, { value: 'ideal', label: t('app.ideal', 'Ideal') }]}
+              />
+
+              <div>
+                <Input
+                  label={t('app.decimalPrecision', 'Decimal Precision')}
+                  type="number"
+                  min={0}
+                  max={20}
+                  value={String(form.decimal_precision)}
+                  onChange={e => setForm({ ...form, decimal_precision: Math.max(0, Math.min(20, Number(e.target.value) || 0)) })}
+                  placeholder="e.g. 2"
+                />
+                <p className="mt-1 text-[10px] text-[var(--text-muted)]">
+                  {t('app.preview', 'Preview')}: {(14.248539).toFixed(form.decimal_precision)}
+                </p>
+              </div>
+
+              <Select
+                label={t('app.language', 'Language')}
+                value={form.language}
+                onChange={e => setForm({ ...form, language: e.target.value })}
+                options={[
+                  { value: 'en', label: 'English' },
+                  { value: 'de', label: 'Deutsch' },
+                  { value: 'fr', label: 'Français' },
+                  { value: 'es', label: 'Español' },
+                  { value: 'zh', label: '中文' },
+                ]}
+              />
+
+              <SettingField label={t('app.electricityCost', 'Electricity Cost (per kWh)')}>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-sm">$</span>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={form.base_cost_per_kwh}
+                    onChange={e => setForm({ ...form, base_cost_per_kwh: parseFloat(e.target.value) || 0 })}
+                    className="w-full pl-7 pr-3 py-2.5 text-sm"
+                  />
+                </div>
+              </SettingField>
+
+              <SettingField label={t('app.gasPrice', 'Gas Price (for EV vs ICE comparison)')}>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-sm">$</span>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={form.gas_price_per_unit}
+                      onChange={e => setForm({ ...form, gas_price_per_unit: parseFloat(e.target.value) || 0 })}
+                      className="w-full pl-7 pr-3 py-2.5 text-sm"
+                    />
+                  </div>
+                  <Select
+                    value={form.gas_unit}
+                    onChange={e => setForm({ ...form, gas_unit: e.target.value })}
+                    options={[{ value: 'gallon', label: t('app.perGallon', '/ gallon') }, { value: 'liter', label: t('app.perLiter', '/ liter') }]}
+                    className="w-28"
+                  />
+                </div>
+              </SettingField>
+
+              <SettingField label={t('app.comparisonMPG', 'Comparison Vehicle MPG')}>
+                <Input
+                  type="number"
+                  step="0.5"
+                  value={form.gas_efficiency_mpg}
+                  onChange={e => setForm({ ...form, gas_efficiency_mpg: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-3 py-2.5 text-sm"
+                  placeholder={t('app.mpgPlaceholder', 'Average MPG of equivalent gas car')}
+                />
+              </SettingField>
+
+              <SettingField label={t('app.googleMapsApiKey', 'Google Maps API Key')}>
+                <Input
+                  type="password"
+                  value={form.google_maps_api_key || ''}
+                  onChange={e => setForm({ ...form, google_maps_api_key: e.target.value })}
+                  className="w-full px-3 py-2.5 text-sm"
+                  placeholder={t('app.googleMapsPlaceholder', 'Enter your Google Maps API key')}
+                />
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">
+                  {t('app.googleMapsHint', 'Optional — enables satellite views, Places autocomplete, and enhanced geocoding.')}{' '}
+                  {t('app.getKeyAt', 'Get a key at')}{' '}
+                  <a href="https://console.cloud.google.com" target="_blank" rel="noreferrer" className="text-neon-cyan hover:underline">console.cloud.google.com</a>
+                </p>
+              </SettingField>
+            </div>
+          </>
+        )}
+
+        <div className="flex items-center gap-4">
+          <Button variant="primary" icon={<Save className="h-4 w-4" />} onClick={() => settingsMut.mutate(form, {
+            onSuccess: () => { toast.success(t('toast.saved', 'Settings saved'), t('toast.savedDesc', 'Your preferences have been updated')); setSaved(true); setTimeout(() => setSaved(false), 3000) },
+            onError: () => toast.error(t('toast.saveFailed', 'Failed to save'), t('toast.saveFailedDesc', 'Could not update settings')),
+          })} loading={settingsMut.isPending}>
+            {t('app.save', 'Save Settings')}
+          </Button>
+          {saved && (
+            <span className="text-sm text-neon-green flex items-center gap-1 animate-in fade-in">
+              <CheckCircle className="h-4 w-4" /> {t('app.settingsSaved', 'Settings saved')}
+            </span>
+          )}
+        </div>
+      </GlassPanel>
+    </FadeIn>
+  )
+}
