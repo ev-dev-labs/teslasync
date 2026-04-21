@@ -72,9 +72,10 @@ const TIME_RANGES = [
 
 /* ── Helpers ───────────────────────────────────────────────────── */
 
-function fmtPlayTime(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
+function fmtPlayTime(ms: number): string {
+  const totalSec = Math.floor(ms / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
