@@ -9,12 +9,12 @@ import { Badge, DataTable, type Column } from '@/components/ui';
 import { MetricCard, StatCard } from '@/components/data-display';
 import { RadialGauge } from '@/components/charts';
 import { Skeleton, EmptyState } from '@/components/feedback';
-import { fmtNumber, fmtInt, fmtPercent } from '@/lib/numberFormat';
+import { fmtInt, fmtPercent } from '@/lib/numberFormat';
 import { formatDateTime } from '@/lib/dateFormat';
 import { getCompressionStats, getExportJobs as getDevtoolsExportJobs } from '@/api/devtools';
 import type { ExportJobSummary } from '@/api/types';
 import { AccordionSection } from './AccordionSection';
-import { getStatusIcon, statusTextClass } from './helpers';
+import { getStatusIcon, statusTextClass, formatBytes } from './helpers';
 
 export function DataPipelineSection() {
   const { t } = useTranslation();
@@ -116,12 +116,4 @@ export function DataPipelineSection() {
       )}
     </AccordionSection>
   );
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${fmtNumber(bytes / Math.pow(k, i), 1)} ${sizes[i]}`;
 }
