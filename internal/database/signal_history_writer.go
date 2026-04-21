@@ -3,7 +3,6 @@ package database
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 
@@ -156,16 +155,13 @@ func (w *SignalHistoryWriter) flush(ctx context.Context) {
 	}
 }
 
-// Cleanup deletes rows older than the retention period.
+// Cleanup is retained as a no-op shim for backwards compatibility. Retention
+// is now handled by TimescaleDB retention policies (see
+// internal/database/retention.go). Kept as a method so existing callers (if
+// any) don't break; new code should rely on the startup policy application.
 func (w *SignalHistoryWriter) Cleanup(ctx context.Context, retentionDays int) {
-	result, err := w.db.Pool.Exec(ctx,
-		"DELETE FROM signal_history WHERE created_at < NOW() - $1::interval",
-		fmt.Sprintf("%d days", retentionDays))
-	if err != nil {
-		log.Warn().Err(err).Msg("signal_history: TTL cleanup failed")
-		return
-	}
-	log.Info().Int64("deleted", result.RowsAffected()).Int("retention_days", retentionDays).Msg("signal_history: TTL cleanup")
+	_ = ctx
+	_ = retentionDays
 }
 
 // GetHistory returns time-series data for a single signal within a date range.
