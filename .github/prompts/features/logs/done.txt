@@ -264,3 +264,5 @@ signal-audit/12-vehicle-config/012-vehicle-name.prompt.md
 signal-audit/12-vehicle-config/013-version.prompt.md
 signal-audit/12-vehicle-config/014-wheel-type.prompt.md
 refactor-monoliths/02-cost-analysis.prompt.md
+refactor-monoliths/03-drivetrain-health.prompt.md
+refactor-monoliths/04-driving-dynamics.prompt.md
