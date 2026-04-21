@@ -23,12 +23,16 @@ func (r *TirePressureRepo) Insert(ctx context.Context, snap *models.TirePressure
 		(snap.RearRight == nil || *snap.RearRight == 0) {
 		return nil // skip all-zero readings
 	}
-	query := `INSERT INTO tire_pressure_snapshots (vehicle_id, front_left, front_right, rear_left, rear_right, tpms_hard_warnings, tpms_soft_warnings, last_seen_time_fl, last_seen_time_fr, last_seen_time_rl, last_seen_time_rr)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`
+	if snap.Signals == nil {
+		snap.Signals = models.SignalsMap{}
+	}
+	query := `INSERT INTO tire_pressure_snapshots (vehicle_id, front_left, front_right, rear_left, rear_right, tpms_hard_warnings, tpms_soft_warnings, last_seen_time_fl, last_seen_time_fr, last_seen_time_rl, last_seen_time_rr, signals)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`
 	return r.db.Pool.QueryRow(ctx, query,
 		snap.VehicleID, snap.FrontLeft, snap.FrontRight, snap.RearLeft, snap.RearRight,
 		snap.TpmsHardWarn, snap.TpmsSoftWarn,
 		snap.LastSeenTimeFl, snap.LastSeenTimeFr, snap.LastSeenTimeRl, snap.LastSeenTimeRr,
+		snap.Signals,
 	).Scan(&snap.ID)
 }
 
@@ -36,7 +40,7 @@ func (r *TirePressureRepo) GetByVehicle(ctx context.Context, vehicleID int64, li
 	query := `SELECT id, vehicle_id, front_left, front_right, rear_left, rear_right,
 		tpms_hard_warnings, tpms_soft_warnings,
 		last_seen_time_fl, last_seen_time_fr, last_seen_time_rl, last_seen_time_rr,
-		created_at
+		signals, created_at
 		FROM tire_pressure_snapshots
 		WHERE vehicle_id=$1
 		  AND NOT (front_left = 0 AND front_right = 0 AND rear_left = 0 AND rear_right = 0)
@@ -53,7 +57,7 @@ func (r *TirePressureRepo) GetByVehicle(ctx context.Context, vehicleID int64, li
 		if err := rows.Scan(&s.ID, &s.VehicleID, &s.FrontLeft, &s.FrontRight, &s.RearLeft, &s.RearRight,
 			&s.TpmsHardWarn, &s.TpmsSoftWarn,
 			&s.LastSeenTimeFl, &s.LastSeenTimeFr, &s.LastSeenTimeRl, &s.LastSeenTimeRr,
-			&s.CreatedAt); err != nil {
+			&s.Signals, &s.CreatedAt); err != nil {
 			return nil, err
 		}
 		snaps = append(snaps, s)

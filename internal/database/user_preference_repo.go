@@ -15,16 +15,20 @@ func NewUserPreferenceRepo(db *DB) *UserPreferenceRepo {
 }
 
 func (r *UserPreferenceRepo) Insert(ctx context.Context, snap *models.UserPreferenceSnapshot) error {
-	query := `INSERT INTO user_preference_snapshots (vehicle_id, setting_24hr_time, setting_charge_unit, setting_distance_unit, setting_temperature_unit, setting_tire_pressure_unit)
-		VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
+	if snap.Signals == nil {
+		snap.Signals = models.SignalsMap{}
+	}
+	query := `INSERT INTO user_preference_snapshots (vehicle_id, setting_24hr_time, setting_charge_unit, setting_distance_unit, setting_temperature_unit, setting_tire_pressure_unit, signals)
+		VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
 	return r.db.Pool.QueryRow(ctx, query,
 		snap.VehicleID, snap.Setting24hrTime, snap.SettingChargeUnit,
 		snap.SettingDistanceUnit, snap.SettingTemperatureUnit, snap.SettingTirePressureUnit,
+		snap.Signals,
 	).Scan(&snap.ID)
 }
 
 func (r *UserPreferenceRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit int) ([]*models.UserPreferenceSnapshot, error) {
-	query := `SELECT id, vehicle_id, setting_24hr_time, setting_charge_unit, setting_distance_unit, setting_temperature_unit, setting_tire_pressure_unit, created_at
+	query := `SELECT id, vehicle_id, setting_24hr_time, setting_charge_unit, setting_distance_unit, setting_temperature_unit, setting_tire_pressure_unit, signals, created_at
 		FROM user_preference_snapshots WHERE vehicle_id=$1 ORDER BY created_at DESC LIMIT $2`
 	rows, err := r.db.Pool.Query(ctx, query, vehicleID, limit)
 	if err != nil {
@@ -37,6 +41,7 @@ func (r *UserPreferenceRepo) GetByVehicle(ctx context.Context, vehicleID int64, 
 		s := &models.UserPreferenceSnapshot{}
 		if err := rows.Scan(&s.ID, &s.VehicleID, &s.Setting24hrTime, &s.SettingChargeUnit,
 			&s.SettingDistanceUnit, &s.SettingTemperatureUnit, &s.SettingTirePressureUnit,
+			&s.Signals,
 			&s.CreatedAt); err != nil {
 			return nil, err
 		}

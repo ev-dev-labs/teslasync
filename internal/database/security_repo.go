@@ -15,8 +15,11 @@ func NewSecurityRepo(db *DB) *SecurityRepo {
 }
 
 func (r *SecurityRepo) Insert(ctx context.Context, ev *models.SecurityEvent) error {
-	query := `INSERT INTO security_events (vehicle_id, locked, sentry_mode, door_state, fd_window, fp_window, rd_window, rp_window, homelink_nearby, guest_mode, homelink_device_count, guest_mode_mobile_access_state, driver_seat_occupied, center_display, speed_limit_mode, valet_mode_enabled, service_mode, current_limit_mph, paired_phone_key_count, lights_hazards_active, lights_high_beams, lights_turn_signal, tonneau_position, tonneau_open_percent, tonneau_tent_mode, driver_seat_belt, passenger_seat_belt)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27) RETURNING id`
+	if ev.Signals == nil {
+		ev.Signals = models.SignalsMap{}
+	}
+	query := `INSERT INTO security_events (vehicle_id, locked, sentry_mode, door_state, fd_window, fp_window, rd_window, rp_window, homelink_nearby, guest_mode, homelink_device_count, guest_mode_mobile_access_state, driver_seat_occupied, center_display, speed_limit_mode, valet_mode_enabled, service_mode, current_limit_mph, paired_phone_key_count, lights_hazards_active, lights_high_beams, lights_turn_signal, tonneau_position, tonneau_open_percent, tonneau_tent_mode, driver_seat_belt, passenger_seat_belt, signals)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28) RETURNING id`
 	return r.db.Pool.QueryRow(ctx, query,
 		ev.VehicleID, ev.Locked, ev.SentryMode, ev.DoorState,
 		ev.FdWindow, ev.FpWindow, ev.RdWindow, ev.RpWindow,
@@ -28,11 +31,12 @@ func (r *SecurityRepo) Insert(ctx context.Context, ev *models.SecurityEvent) err
 		ev.LightsHazardsActive, ev.LightsHighBeams, ev.LightsTurnSignal,
 		ev.TonneauPosition, ev.TonneauOpenPercent, ev.TonneauTentMode,
 		ev.DriverSeatBelt, ev.PassengerSeatBelt,
+		ev.Signals,
 	).Scan(&ev.ID)
 }
 
 func (r *SecurityRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit int) ([]*models.SecurityEvent, error) {
-	query := `SELECT id, vehicle_id, locked, sentry_mode, door_state, fd_window, fp_window, rd_window, rp_window, homelink_nearby, guest_mode, homelink_device_count, guest_mode_mobile_access_state, driver_seat_occupied, center_display, speed_limit_mode, valet_mode_enabled, service_mode, current_limit_mph, paired_phone_key_count, lights_hazards_active, lights_high_beams, lights_turn_signal, tonneau_position, tonneau_open_percent, tonneau_tent_mode, driver_seat_belt, passenger_seat_belt, created_at
+	query := `SELECT id, vehicle_id, locked, sentry_mode, door_state, fd_window, fp_window, rd_window, rp_window, homelink_nearby, guest_mode, homelink_device_count, guest_mode_mobile_access_state, driver_seat_occupied, center_display, speed_limit_mode, valet_mode_enabled, service_mode, current_limit_mph, paired_phone_key_count, lights_hazards_active, lights_high_beams, lights_turn_signal, tonneau_position, tonneau_open_percent, tonneau_tent_mode, driver_seat_belt, passenger_seat_belt, signals, created_at
 		FROM security_events WHERE vehicle_id=$1 ORDER BY created_at DESC LIMIT $2`
 	rows, err := r.db.Pool.Query(ctx, query, vehicleID, limit)
 	if err != nil {
@@ -53,6 +57,7 @@ func (r *SecurityRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit 
 			&e.LightsHazardsActive, &e.LightsHighBeams, &e.LightsTurnSignal,
 			&e.TonneauPosition, &e.TonneauOpenPercent, &e.TonneauTentMode,
 			&e.DriverSeatBelt, &e.PassengerSeatBelt,
+			&e.Signals,
 			&e.CreatedAt); err != nil {
 			return nil, err
 		}

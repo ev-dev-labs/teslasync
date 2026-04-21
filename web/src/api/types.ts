@@ -503,6 +503,7 @@ export interface TirePressureSnapshot {
   last_seen_time_fr?: string
   last_seen_time_rl?: string
   last_seen_time_rr?: string
+  signals?: Record<string, unknown>
   created_at: string
 }
 
@@ -558,6 +559,7 @@ export interface MotorSnapshot {
   drive_rail?: boolean
   lifetime_energy_gained_regen?: number
   lifetime_energy_used_drive?: number
+  signals?: Record<string, unknown>
   created_at: string
 }
 
@@ -594,6 +596,7 @@ export interface ClimateSnapshot {
   rear_defrost_enabled?: boolean
   rear_display_hvac_enabled?: boolean
   wiper_heat_enabled?: boolean
+  signals?: Record<string, unknown>
   created_at: string
 }
 
@@ -626,6 +629,7 @@ export interface SecurityEvent {
   tonneau_tent_mode?: string
   driver_seat_belt?: boolean
   passenger_seat_belt?: boolean
+  signals?: Record<string, unknown>
   created_at: string
 }
 
@@ -1193,6 +1197,7 @@ export interface ChargingTelemetry {
   scheduled_charging_start_time?: string
   scheduled_departure_time?: string
   expected_energy_pct_at_arrival?: number
+  signals?: Record<string, unknown>
   created_at: string
 }
 
@@ -1212,6 +1217,7 @@ export interface MediaSnapshot {
   audio_volume?: number
   audio_volume_max?: number
   audio_volume_increment?: number
+  signals?: Record<string, unknown>
   created_at: string
 }
 
@@ -1240,6 +1246,7 @@ export interface VehicleConfigSnapshot {
   software_update_install_pct?: number
   software_update_expected_duration?: number
   software_update_scheduled_start?: string
+  signals?: Record<string, unknown>
   created_at: string
 }
 
@@ -1280,6 +1287,7 @@ export interface SafetySnapshot {
   pin_to_drive_enabled?: boolean
   miles_since_reset?: number
   self_driving_miles_since_reset?: number
+  signals?: Record<string, unknown>
   created_at: string
 }
 
@@ -1293,6 +1301,7 @@ export interface UserPreferenceSnapshot {
   setting_distance_unit?: string
   setting_temperature_unit?: string
   setting_tire_pressure_unit?: string
+  signals?: Record<string, unknown>
   created_at: string
 }
 

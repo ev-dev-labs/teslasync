@@ -666,6 +666,7 @@ type TirePressureSnapshot struct {
 	LastSeenTimeFr *time.Time `json:"last_seen_time_fr,omitempty" db:"last_seen_time_fr"`
 	LastSeenTimeRl *time.Time `json:"last_seen_time_rl,omitempty" db:"last_seen_time_rl"`
 	LastSeenTimeRr *time.Time `json:"last_seen_time_rr,omitempty" db:"last_seen_time_rr"`
+	Signals        SignalsMap `json:"signals,omitempty" db:"signals"`
 	CreatedAt      time.Time  `json:"created_at" db:"created_at"`
 }
 
@@ -844,6 +845,7 @@ type MotorSnapshot struct {
 	DriveRail          *bool      `json:"drive_rail,omitempty" db:"drive_rail"`
 	LifetimeEnergyGainedRegen *float64 `json:"lifetime_energy_gained_regen,omitempty" db:"lifetime_energy_gained_regen"`
 	LifetimeEnergyUsedDrive   *float64 `json:"lifetime_energy_used_drive,omitempty" db:"lifetime_energy_used_drive"`
+	Signals            SignalsMap `json:"signals,omitempty" db:"signals"`
 	CreatedAt          time.Time  `json:"created_at" db:"created_at"`
 }
 
@@ -881,6 +883,7 @@ type ClimateSnapshot struct {
 	RearDefrostEnabled   *bool     `json:"rear_defrost_enabled,omitempty" db:"rear_defrost_enabled"`
 	RearDisplayHvacEnabled *bool   `json:"rear_display_hvac_enabled,omitempty" db:"rear_display_hvac_enabled"`
 	WiperHeatEnabled     *bool     `json:"wiper_heat_enabled,omitempty" db:"wiper_heat_enabled"`
+	Signals              SignalsMap `json:"signals,omitempty" db:"signals"`
 	CreatedAt            time.Time `json:"created_at" db:"created_at"`
 }
 
@@ -914,6 +917,7 @@ type SecurityEvent struct {
 	TonneauTentMode     *string  `json:"tonneau_tent_mode,omitempty" db:"tonneau_tent_mode"`
 	DriverSeatBelt      *bool    `json:"driver_seat_belt,omitempty" db:"driver_seat_belt"`
 	PassengerSeatBelt   *bool    `json:"passenger_seat_belt,omitempty" db:"passenger_seat_belt"`
+	Signals        SignalsMap `json:"signals,omitempty" db:"signals"`
 	CreatedAt      time.Time `json:"created_at" db:"created_at"`
 }
 
@@ -979,6 +983,7 @@ type ChargingTelemetry struct {
 	ScheduledChargingStartTime *string  `json:"scheduled_charging_start_time,omitempty" db:"scheduled_charging_start_time"`
 	ScheduledDepartureTime     *string  `json:"scheduled_departure_time,omitempty" db:"scheduled_departure_time"`
 	ExpectedEnergyPctAtArrival *float64 `json:"expected_energy_pct_at_arrival,omitempty" db:"expected_energy_pct_at_arrival"`
+	Signals                    SignalsMap `json:"signals,omitempty" db:"signals"`
 	CreatedAt                  time.Time `json:"created_at" db:"created_at"`
 }
 
@@ -997,6 +1002,7 @@ type MediaSnapshot struct {
 	AudioVolume         *float64  `json:"audio_volume,omitempty" db:"audio_volume"`
 	AudioVolumeMax      *float64  `json:"audio_volume_max,omitempty" db:"audio_volume_max"`
 	AudioVolumeIncrement *float64 `json:"audio_volume_increment,omitempty" db:"audio_volume_increment"`
+	Signals             SignalsMap `json:"signals,omitempty" db:"signals"`
 	CreatedAt           time.Time `json:"created_at" db:"created_at"`
 }
 
@@ -1024,10 +1030,11 @@ type VehicleConfigSnapshot struct {
 	SoftwareUpdateInstallPct    *int      `json:"software_update_install_pct,omitempty" db:"software_update_install_pct"`
 	SoftwareUpdateExpectedDuration *int   `json:"software_update_expected_duration,omitempty" db:"software_update_expected_duration"`
 	SoftwareUpdateScheduledStart  *string `json:"software_update_scheduled_start,omitempty" db:"software_update_scheduled_start"`
+	Signals                     SignalsMap `json:"signals,omitempty" db:"signals"`
 	CreatedAt                   time.Time `json:"created_at" db:"created_at"`
 }
 
-// LocationSnapshot represents a point-in-time navigation/location telemetry reading.
+// LocationSnapshotrepresents a point-in-time navigation/location telemetry reading.
 type LocationSnapshot struct {
 	ID                     int64     `json:"id" db:"id"`
 	VehicleID              int64     `json:"vehicle_id" db:"vehicle_id"`
@@ -1065,10 +1072,11 @@ type SafetySnapshot struct {
 	PinToDriveEnabled               *bool     `json:"pin_to_drive_enabled,omitempty" db:"pin_to_drive_enabled"`
 	MilesSinceReset                 *float64  `json:"miles_since_reset,omitempty" db:"miles_since_reset"`
 	SelfDrivingMilesSinceReset      *float64  `json:"self_driving_miles_since_reset,omitempty" db:"self_driving_miles_since_reset"`
+	Signals                         SignalsMap `json:"signals,omitempty" db:"signals"`
 	CreatedAt                       time.Time `json:"created_at" db:"created_at"`
 }
 
-// UserPreferenceSnapshot represents a point-in-time user preference telemetry reading.
+// UserPreferenceSnapshotrepresents a point-in-time user preference telemetry reading.
 type UserPreferenceSnapshot struct {
 	ID                      int64     `json:"id" db:"id"`
 	VehicleID               int64     `json:"vehicle_id" db:"vehicle_id"`
@@ -1077,6 +1085,7 @@ type UserPreferenceSnapshot struct {
 	SettingDistanceUnit     *string   `json:"setting_distance_unit,omitempty" db:"setting_distance_unit"`
 	SettingTemperatureUnit  *string   `json:"setting_temperature_unit,omitempty" db:"setting_temperature_unit"`
 	SettingTirePressureUnit *string   `json:"setting_tire_pressure_unit,omitempty" db:"setting_tire_pressure_unit"`
+	Signals                 SignalsMap `json:"signals,omitempty" db:"signals"`
 	CreatedAt               time.Time `json:"created_at" db:"created_at"`
 }
 
