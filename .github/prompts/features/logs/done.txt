@@ -271,3 +271,5 @@ refactor-monoliths/06-charging-curve.prompt.md
 refactor-monoliths/07-charging-list.prompt.md
 refactor-monoliths/09-drive-detail.prompt.md
 refactor-monoliths/10-security-access.prompt.md
+refactor-monoliths/11-vehicle-detail.prompt.md
+refactor-monoliths/12-settings.prompt.md
