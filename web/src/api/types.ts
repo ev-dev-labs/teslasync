@@ -1186,6 +1186,9 @@ export interface ChargingTelemetry {
   powershare_stop_reason?: string
   powershare_hours_left?: number
   powershare_power_kw?: number
+  scheduled_charging_start_time?: string
+  scheduled_departure_time?: string
+  expected_energy_pct_at_arrival?: number
   created_at: string
 }
 
