@@ -202,14 +202,14 @@ export function DashboardGrid({
     handles: ['se', 'e', 's'] as const,
   }), [editMode]);
 
-  // Track layout changes — only update visual state during active drag/resize.
-  // On initial render, RGL fires onLayoutChange with re-computed (possibly compacted)
-  // layouts that can shrink saved widget heights. We trust saved layouts from props
-  // and only update liveLayouts when the user is actively interacting.
+  // Track layout changes — only update during active drag/resize.
+  // CRITICAL: layoutRef must also only update during interaction, otherwise
+  // RGL's initial mount compaction overwrites saved heights in the ref,
+  // and the next handleResizeStop persists the wrong values.
   const handleLayoutChange = useCallback((_layout: RGLLayoutArray, allLayouts: ResponsiveLayouts) => {
     const typed = allLayouts as RGLLayouts;
-    layoutRef.current = typed;
     if (interactingRef.current) {
+      layoutRef.current = typed;
       setLiveLayouts(typed);
     }
   }, []);
