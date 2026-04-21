@@ -10,21 +10,18 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
-// StartMaintenanceWorker runs periodic database maintenance on a 24-hour schedule.
-//
-// Raw-data retention is handled by TimescaleDB retention policies configured at
-// startup (see database.ApplyRetentionPolicies) — this worker no longer deletes
-// rows by date. It now only performs tasks that TimescaleDB does not handle:
-//   - Ensuring monthly partitions exist on the native-partitioned positions table
-//   - Compressing old per-second positions into hourly summaries
-//   - Trimming operational log tables (api_call_logs, notification_logs)
-//   - Generating daily battery health snapshots
-//   - Running VACUUM ANALYZE after compression
+// StartMaintenanceWorker runs periodic database cleanup on a 24-hour schedule.
+// It deletes old positions and vehicle states based on configured retention
+// periods, ensures partitions exist for the current and next month, then
+// runs VACUUM ANALYZE to reclaim space.
 func StartMaintenanceWorker(ctx context.Context, db *database.DB, cfg *config.Config) {
 	ticker := time.NewTicker(24 * time.Hour)
 	defer ticker.Stop()
 
-	log.Info().Msg("maintenance worker started")
+	log.Info().
+		Int("data_retention_days", cfg.Retention.DataRetentionDays).
+		Int("position_retention_days", cfg.Retention.PositionRetentionDays).
+		Msg("maintenance worker started")
 
 	// Run initial cleanup shortly after startup (5 minute delay to let the system settle)
 	select {
@@ -56,24 +53,41 @@ func runMaintenance(ctx context.Context, db *database.DB, cfg *config.Config) {
 	// Refresh materialized views before any data deletion so views reflect latest data
 	refreshMaterializedViews(maintCtx, db)
 
-	// Ensure partitions exist for current and next month (positions is native-partitioned)
+	// Ensure partitions exist for current and next month
 	if err := ensurePartitions(maintCtx, db); err != nil {
 		log.Error().Err(err).Msg("partition creation failed")
 	}
 
-	// Positions is PostgreSQL-native range-partitioned (not a TimescaleDB
-	// hypertable), so TimescaleDB retention policies do not apply to it.
-	// When the user configures positions retention we drop partitions whose
-	// time range falls entirely before the cutoff.
-	if cfg.Retention.PositionsDays > 0 {
-		if err := cleanOldPartitions(maintCtx, db, "positions", cfg.Retention.PositionsDays); err != nil {
+	// Clean up old partitions beyond retention period
+	if cfg.Retention.PositionRetentionDays > 0 {
+		if err := cleanOldPartitions(maintCtx, db, "positions", cfg.Retention.PositionRetentionDays); err != nil {
 			log.Error().Err(err).Msg("partition cleanup failed")
 		}
 	}
 
-	// Compress old per-second positions into hourly summaries
+	// Compress old positions into hourly summaries before deletion
 	if err := compressOldPositions(maintCtx, db); err != nil {
 		log.Error().Err(err).Msg("position compression failed")
+	}
+
+	// Clean up old positions that may remain in the default partition
+	var posDeleted int64
+	if cfg.Retention.PositionRetentionDays > 0 {
+		var err error
+		posDeleted, err = db.CleanupOldPositions(maintCtx, cfg.Retention.PositionRetentionDays)
+		if err != nil {
+			log.Error().Err(err).Msg("position cleanup failed")
+		}
+	}
+
+	// Clean up old vehicle states
+	var statesDeleted int64
+	if cfg.Retention.DataRetentionDays > 0 {
+		var err error
+		statesDeleted, err = db.CleanupOldStates(maintCtx, cfg.Retention.DataRetentionDays)
+		if err != nil {
+			log.Error().Err(err).Msg("vehicle state cleanup failed")
+		}
 	}
 
 	// Clean up old API call logs (keep 30 days)
@@ -89,14 +103,18 @@ func runMaintenance(ctx context.Context, db *database.DB, cfg *config.Config) {
 	}
 
 	// Run VACUUM ANALYZE to reclaim space and update statistics
-	if err := db.VacuumAnalyze(maintCtx); err != nil {
-		log.Error().Err(err).Msg("VACUUM ANALYZE failed")
+	if posDeleted > 0 || statesDeleted > 0 {
+		if err := db.VacuumAnalyze(maintCtx); err != nil {
+			log.Error().Err(err).Msg("VACUUM ANALYZE failed")
+		}
 	}
 
 	// Generate daily battery health snapshots from charging telemetry
 	batSnaps := generateBatterySnapshots(maintCtx, db)
 
 	log.Info().
+		Int64("positions_deleted", posDeleted).
+		Int64("states_deleted", statesDeleted).
 		Int64("api_logs_deleted", apiLogsDeleted).
 		Int64("notif_logs_deleted", notifLogsDeleted).
 		Int("battery_snapshots_created", batSnaps).

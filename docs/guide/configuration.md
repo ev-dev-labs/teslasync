@@ -128,26 +128,13 @@ Redis is deployed automatically with the Helm chart and enabled by default. When
 
 ### Data Retention
 
-Configurable per-table TimescaleDB retention policies. Days to retain raw data
-before old chunks are dropped. **`0` or unset = retain forever (default).**
-Continuous aggregates are never affected, so long-term trend dashboards keep
-working even after raw data is dropped.
-
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `RETENTION_POSITIONS_DAYS` | int | `0` | Days to keep GPS position history |
-| `RETENTION_CHARGING_TELEMETRY_DAYS` | int | `0` | Days to keep charging telemetry samples |
-| `RETENTION_CLIMATE_SNAPSHOTS_DAYS` | int | `0` | Days to keep climate snapshots |
-| `RETENTION_SECURITY_EVENTS_DAYS` | int | `0` | Days to keep security events |
-| `RETENTION_MOTOR_SNAPSHOTS_DAYS` | int | `0` | Days to keep motor snapshots |
-| `RETENTION_TIRE_PRESSURE_DAYS` | int | `0` | Days to keep tire-pressure snapshots |
-| `RETENTION_MEDIA_SNAPSHOTS_DAYS` | int | `0` | Days to keep media snapshots |
-| `RETENTION_SAFETY_SNAPSHOTS_DAYS` | int | `0` | Days to keep safety snapshots |
+| `DATA_RETENTION_DAYS` | int | `365` | Number of days to keep general data (drives, charging, etc.) |
+| `POSITION_RETENTION_DAYS` | int | `90` | Number of days to keep GPS position history |
 
 ::: warning Data Retention
-Setting a value > 0 installs a TimescaleDB retention policy that drops old
-chunks automatically. Setting it back to `0` removes the policy but does **not**
-delete existing data. Export data before enabling aggressive retention.
+The maintenance worker runs periodically to delete records older than the configured retention period. Lowering these values will permanently delete historical data. Make sure to export data before changing retention settings.
 :::
 
 ### Alert & CEP Settings

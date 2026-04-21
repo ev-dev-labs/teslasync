@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -153,6 +154,18 @@ func (w *SignalHistoryWriter) flush(ctx context.Context) {
 		}
 		w.mu.Unlock()
 	}
+}
+
+// Cleanup deletes rows older than the retention period.
+func (w *SignalHistoryWriter) Cleanup(ctx context.Context, retentionDays int) {
+	result, err := w.db.Pool.Exec(ctx,
+		"DELETE FROM signal_history WHERE created_at < NOW() - $1::interval",
+		fmt.Sprintf("%d days", retentionDays))
+	if err != nil {
+		log.Warn().Err(err).Msg("signal_history: TTL cleanup failed")
+		return
+	}
+	log.Info().Int64("deleted", result.RowsAffected()).Int("retention_days", retentionDays).Msg("signal_history: TTL cleanup")
 }
 
 // GetHistory returns time-series data for a single signal within a date range.
