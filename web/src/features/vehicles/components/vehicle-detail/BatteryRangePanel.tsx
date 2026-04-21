@@ -45,7 +45,7 @@ export function BatteryRangePanel({ state }: BatteryRangePanelProps) {
           />
           <MetricCard
             label={t('common.charging', 'Charging')}
-            value={state.is_charging ? `${fmtNumber(state.charge_rate)} kW` : t('common.notCharging', 'Not Charging')}
+            value={state.is_charging ? `${fmtNumber(convertDistance(state.charge_rate))} ${distanceUnit}/h` : t('common.notCharging', 'Not Charging')}
             icon={<BatteryCharging className="h-4 w-4" />}
             color={state.is_charging ? 'green' : 'cyan'}
             subtitle={
