@@ -1204,6 +1204,7 @@ export interface MediaSnapshot {
   playback_source?: string
   audio_volume?: number
   audio_volume_max?: number
+  audio_volume_increment?: number
   created_at: string
 }
 
