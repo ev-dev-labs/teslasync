@@ -16,7 +16,11 @@ datasources:
       maxIdleConns: 5
       connMaxLifetime: 14400
       postgresVersion: 1700
-      timescaledb: false
+      # Enable TimescaleDB-aware query editor: $__timeGroup translates to
+      # time_bucket() (chunk-aware, CAGG-compatible), query inspector surfaces
+      # hypertable chunk metadata, and continuous-aggregate-backed panels get
+      # automatic time-bucket alignment.
+      timescaledb: true
     isDefault: true
     editable: true
 

@@ -109,7 +109,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT seat_heater_left AS \"Left\", seat_heater_right AS \"Right\", seat_heater_rear_left AS \"Rear Left\", seat_heater_rear_center AS \"Rear Center\", seat_heater_rear_right AS \"Rear Right\" FROM climate_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT seat_heater_left AS \"Left\", seat_heater_right AS \"Right\", seat_heater_rear_left AS \"Rear Left\", seat_heater_rear_center AS \"Rear Center\", seat_heater_rear_right AS \"Rear Right\" FROM v_climate_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -168,7 +168,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(hvac_auto_mode, 'Off') AS \"HVAC Mode\", CASE WHEN COALESCE(hvac_steering_wheel_heat_level, 0) > 0 THEN 'On' ELSE 'Off' END AS \"Steering Wheel Heat\", CASE WHEN COALESCE(hvac_ac_enabled, false) THEN 'On' ELSE 'Off' END AS \"Auto Climate\" FROM climate_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT COALESCE(hvac_auto_mode, 'Off') AS \"HVAC Mode\", CASE WHEN COALESCE(hvac_steering_wheel_heat_level, 0) > 0 THEN 'On' ELSE 'Off' END AS \"Steering Wheel Heat\", CASE WHEN COALESCE(hvac_ac_enabled, false) THEN 'On' ELSE 'Off' END AS \"Auto Climate\" FROM v_climate_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -248,7 +248,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, seat_heater_left AS \"Left\", seat_heater_right AS \"Right\", seat_heater_rear_left AS \"Rear Left\", seat_heater_rear_center AS \"Rear Center\", seat_heater_rear_right AS \"Rear Right\" FROM climate_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "rawSql": "SELECT created_at AS time, seat_heater_left AS \"Left\", seat_heater_right AS \"Right\", seat_heater_rear_left AS \"Rear Left\", seat_heater_rear_center AS \"Rear Center\", seat_heater_rear_right AS \"Rear Right\" FROM v_climate_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -328,7 +328,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, CASE WHEN hvac_ac_enabled THEN 1 ELSE 0 END AS \"AC Enabled\", CASE WHEN defrost_mode IS NOT NULL AND defrost_mode != '' THEN 1 ELSE 0 END AS \"Defrost\", CASE WHEN rear_defrost_enabled THEN 1 ELSE 0 END AS \"Rear Defrost\", CASE WHEN wiper_heat_enabled THEN 1 ELSE 0 END AS \"Wiper Heat\" FROM climate_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "rawSql": "SELECT created_at AS time, CASE WHEN hvac_ac_enabled THEN 1 ELSE 0 END AS \"AC Enabled\", CASE WHEN defrost_mode IS NOT NULL AND defrost_mode != '' THEN 1 ELSE 0 END AS \"Defrost\", CASE WHEN rear_defrost_enabled THEN 1 ELSE 0 END AS \"Rear Defrost\", CASE WHEN wiper_heat_enabled THEN 1 ELSE 0 END AS \"Wiper Heat\" FROM v_climate_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -408,7 +408,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, hvac_fan_speed AS \"Fan Speed\", hvac_fan_status AS \"Fan Status\" FROM climate_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "rawSql": "SELECT created_at AS time, hvac_fan_speed AS \"Fan Speed\", hvac_fan_status AS \"Fan Status\" FROM v_climate_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -467,7 +467,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT now_playing_title AS \"Title\", now_playing_artist AS \"Artist\", now_playing_album AS \"Album\", playback_status AS \"Status\", playback_source AS \"Source\", audio_volume AS \"Volume\", created_at AS \"Time\" FROM media_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at DESC",
+          "rawSql": "SELECT now_playing_title AS \"Title\", now_playing_artist AS \"Artist\", now_playing_album AS \"Album\", playback_status AS \"Status\", playback_source AS \"Source\", audio_volume AS \"Volume\", created_at AS \"Time\" FROM v_media_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at DESC",
           "refId": "A"
         }
       ],
@@ -547,7 +547,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, audio_volume AS \"Volume\" FROM media_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "rawSql": "SELECT created_at AS time, audio_volume AS \"Volume\" FROM v_media_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -616,7 +616,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT playback_source AS \"Source\", COUNT(*) AS \"Count\" FROM media_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) AND playback_source IS NOT NULL GROUP BY playback_source ORDER BY COUNT(*) DESC",
+          "rawSql": "SELECT playback_source AS \"Source\", COUNT(*) AS \"Count\" FROM v_media_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) AND playback_source IS NOT NULL GROUP BY playback_source ORDER BY COUNT(*) DESC",
           "refId": "A"
         }
       ],

@@ -227,7 +227,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT forward_collision_warning AS \"FCW\", automatic_emergency_braking_off AS \"AEB\", blind_spot_collision_warning AS \"BSW\", lane_departure_avoidance AS \"LDA\", speed_limit_warning AS \"Speed Limit Warn\", created_at AS \"Snapshot Time\" FROM safety_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT forward_collision_warning AS \"FCW\", automatic_emergency_braking_off AS \"AEB\", blind_spot_collision_warning AS \"BSW\", lane_departure_avoidance AS \"LDA\", speed_limit_warning AS \"Speed Limit Warn\", created_at AS \"Snapshot Time\" FROM v_safety_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -505,7 +505,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, CASE WHEN lights_hazards_active THEN 1 ELSE 0 END AS \"Hazards Active\", CASE WHEN lights_high_beams THEN 1 ELSE 0 END AS \"High Beams\" FROM security_events WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "rawSql": "SELECT created_at AS time, CASE WHEN lights_hazards_active THEN 1 ELSE 0 END AS \"Hazards Active\", CASE WHEN lights_high_beams THEN 1 ELSE 0 END AS \"High Beams\" FROM v_security_events WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -585,7 +585,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, tonneau_open_percent AS \"Tonneau Open %\" FROM security_events WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) AND tonneau_open_percent IS NOT NULL ORDER BY created_at",
+          "rawSql": "SELECT created_at AS time, tonneau_open_percent AS \"Tonneau Open %\" FROM v_security_events WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) AND tonneau_open_percent IS NOT NULL ORDER BY created_at",
           "refId": "A"
         }
       ],

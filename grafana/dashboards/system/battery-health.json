@@ -751,7 +751,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT created_at AS time,\n  brick_voltage_max AS \"Max Cell (V)\",\n  brick_voltage_min AS \"Min Cell (V)\",\n  (brick_voltage_max - brick_voltage_min) AS \"Delta (V)\"\nFROM charging_telemetry\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\n  AND brick_voltage_max IS NOT NULL\nORDER BY created_at",
+          "rawSql": "SELECT created_at AS time,\n  brick_voltage_max AS \"Max Cell (V)\",\n  brick_voltage_min AS \"Min Cell (V)\",\n  (brick_voltage_max - brick_voltage_min) AS \"Delta (V)\"\nFROM v_charging_telemetry\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\n  AND brick_voltage_max IS NOT NULL\nORDER BY created_at",
           "format": "time_series",
           "refId": "A",
           "datasource": {
@@ -790,7 +790,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT created_at AS time,\n  module_temp_max AS \"Max Module Temp\",\n  module_temp_min AS \"Min Module Temp\",\n  (module_temp_max - module_temp_min) AS \"Temp Delta\"\nFROM charging_telemetry\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\n  AND module_temp_max IS NOT NULL\nORDER BY created_at",
+          "rawSql": "SELECT created_at AS time,\n  module_temp_max AS \"Max Module Temp\",\n  module_temp_min AS \"Min Module Temp\",\n  (module_temp_max - module_temp_min) AS \"Temp Delta\"\nFROM v_charging_telemetry\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\n  AND module_temp_max IS NOT NULL\nORDER BY created_at",
           "format": "time_series",
           "refId": "A",
           "datasource": {
@@ -829,7 +829,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT created_at AS time,\n  pack_voltage AS \"Pack Voltage (V)\",\n  pack_current AS \"Pack Current (A)\"\nFROM charging_telemetry\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\n  AND pack_voltage IS NOT NULL\nORDER BY created_at",
+          "rawSql": "SELECT created_at AS time,\n  pack_voltage AS \"Pack Voltage (V)\",\n  pack_current AS \"Pack Current (A)\"\nFROM v_charging_telemetry\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\n  AND pack_voltage IS NOT NULL\nORDER BY created_at",
           "format": "time_series",
           "refId": "A",
           "datasource": {
@@ -868,7 +868,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT created_at AS \"Time\",\n  COALESCE(bms_state, '—') AS \"BMS State\",\n  CASE WHEN bms_fullcharge_complete THEN 'Yes' ELSE 'No' END AS \"Full Charge\",\n  isolation_resistance AS \"Isolation (Ω)\",\n  lifetime_energy_used AS \"Lifetime Energy (kWh)\",\n  CASE WHEN battery_heater_on THEN 'ON' ELSE 'Off' END AS \"Battery Heater\"\nFROM charging_telemetry\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\nORDER BY created_at DESC LIMIT 20",
+          "rawSql": "SELECT created_at AS \"Time\",\n  COALESCE(bms_state, '—') AS \"BMS State\",\n  CASE WHEN bms_fullcharge_complete THEN 'Yes' ELSE 'No' END AS \"Full Charge\",\n  isolation_resistance AS \"Isolation (Ω)\",\n  lifetime_energy_used AS \"Lifetime Energy (kWh)\",\n  CASE WHEN battery_heater_on THEN 'ON' ELSE 'Off' END AS \"Battery Heater\"\nFROM v_charging_telemetry\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\nORDER BY created_at DESC LIMIT 20",
           "format": "table",
           "refId": "A",
           "datasource": {
@@ -899,7 +899,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT created_at AS \"Time\",\n  COALESCE(powershare_status, '—') AS \"Status\",\n  COALESCE(powershare_type, '—') AS \"Type\",\n  powershare_power_kw AS \"Power (kW)\",\n  powershare_hours_left AS \"Hours Left\"\nFROM charging_telemetry\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\n  AND powershare_status IS NOT NULL AND powershare_status != ''\nORDER BY created_at DESC LIMIT 20",
+          "rawSql": "SELECT created_at AS \"Time\",\n  COALESCE(powershare_status, '—') AS \"Status\",\n  COALESCE(powershare_type, '—') AS \"Type\",\n  powershare_power_kw AS \"Power (kW)\",\n  powershare_hours_left AS \"Hours Left\"\nFROM v_charging_telemetry\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\n  AND powershare_status IS NOT NULL AND powershare_status != ''\nORDER BY created_at DESC LIMIT 20",
           "format": "table",
           "refId": "A",
           "datasource": {

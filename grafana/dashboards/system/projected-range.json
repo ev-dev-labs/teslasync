@@ -131,7 +131,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  created_at AS time,\n  ROUND(convert_distance(rated_range)::numeric, 1) AS \"Rated Range\"\nFROM positions\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\n  AND rated_range IS NOT NULL\n  AND battery_level >= 95\nORDER BY created_at",
+          "rawSql": "SELECT\n  created_at AS time,\n  ROUND(convert_distance(rated_range)::numeric, 1) AS \"Rated Range\"\nFROM v_positions\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\n  AND rated_range IS NOT NULL\n  AND battery_level >= 95\nORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -211,7 +211,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  created_at AS time,\n  battery_level AS \"🔋 Battery %\",\n  convert_distance(rated_range) AS \"Rated Range\"\nFROM positions\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\n  AND rated_range IS NOT NULL\nORDER BY created_at",
+          "rawSql": "SELECT\n  created_at AS time,\n  battery_level AS \"🔋 Battery %\",\n  convert_distance(rated_range) AS \"Rated Range\"\nFROM v_positions\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\n  AND rated_range IS NOT NULL\nORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -292,7 +292,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(created_at, '1d') AS time,\n  ROUND(convert_distance(AVG(rated_range / NULLIF(battery_level, 0) * 100))::numeric, 1) AS \"Projected Range\"\nFROM positions\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\n  AND rated_range IS NOT NULL\n  AND battery_level > 10\nGROUP BY time\nORDER BY time",
+          "rawSql": "SELECT\n  $__timeGroup(created_at, '1d') AS time,\n  ROUND(convert_distance(AVG(rated_range / NULLIF(battery_level, 0) * 100))::numeric, 1) AS \"Projected Range\"\nFROM v_positions\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\n  AND rated_range IS NOT NULL\n  AND battery_level > 10\nGROUP BY time\nORDER BY time",
           "refId": "A"
         }
       ],

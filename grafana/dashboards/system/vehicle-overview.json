@@ -119,7 +119,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT battery_level AS \"Battery\" FROM positions WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT battery_level AS \"Battery\" FROM v_positions WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -179,7 +179,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(convert_distance(rated_range)::numeric, 1) AS \"Range\" FROM positions WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT ROUND(convert_distance(rated_range)::numeric, 1) AS \"Range\" FROM v_positions WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -239,7 +239,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(convert_distance(odometer)::numeric, 1) AS \"📏 Odometer\" FROM positions WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT ROUND(convert_distance(odometer)::numeric, 1) AS \"📏 Odometer\" FROM v_positions WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -358,7 +358,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(convert_temp(outside_temp)::numeric, 1) AS \"Temp\" FROM positions WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT ROUND(convert_temp(outside_temp)::numeric, 1) AS \"Temp\" FROM v_positions WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -984,7 +984,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT di_torque AS \"Torque (Nm)\", convert_temp(di_stator_temp) AS \"Stator Temp\", convert_speed(vehicle_speed) AS \"Speed\", gear AS \"Gear\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT di_torque AS \"Torque (Nm)\", convert_temp(di_stator_temp) AS \"Stator Temp\", convert_speed(vehicle_speed) AS \"Speed\", gear AS \"Gear\" FROM v_motor_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -1043,7 +1043,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT convert_temp(inside_temp) AS \"Cabin\", convert_temp(outside_temp) AS \"Outside\", hvac_power AS \"HVAC (kW)\", hvac_fan_speed AS \"Fan Speed\" FROM climate_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT convert_temp(inside_temp) AS \"Cabin\", convert_temp(outside_temp) AS \"Outside\", hvac_power AS \"HVAC (kW)\", hvac_fan_speed AS \"Fan Speed\" FROM v_climate_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -1102,7 +1102,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT CASE WHEN locked THEN 'Locked' ELSE 'Unlocked' END AS \"🔒 Lock\", CASE WHEN sentry_mode THEN 'Active' ELSE 'Off' END AS \"🛡️ Sentry\", COALESCE(door_state, 'Unknown') AS \"🚪 Doors\", COALESCE(fd_window, '-') AS \"FD Window\", COALESCE(fp_window, '-') AS \"FP Window\" FROM security_events WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT CASE WHEN locked THEN 'Locked' ELSE 'Unlocked' END AS \"🔒 Lock\", CASE WHEN sentry_mode THEN 'Active' ELSE 'Off' END AS \"🛡️ Sentry\", COALESCE(door_state, 'Unknown') AS \"🚪 Doors\", COALESCE(fd_window, '-') AS \"FD Window\", COALESCE(fp_window, '-') AS \"FP Window\" FROM v_security_events WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],

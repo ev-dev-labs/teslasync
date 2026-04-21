@@ -109,7 +109,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT AVG(battery_level) AS \"🔋 Avg SOC\", AVG(pack_voltage) AS \"⚡ Avg Pack V\", AVG(pack_current) AS \"🔌 Avg Pack A\", AVG(energy_remaining) AS \"🔋 Energy kWh\", MAX(dc_charging_power) AS \"⚡ Peak DC kW\", MAX(ac_charging_power) AS \"🔌 Peak AC kW\" FROM charging_telemetry WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)",
+          "rawSql": "SELECT AVG(battery_level) AS \"🔋 Avg SOC\", AVG(pack_voltage) AS \"⚡ Avg Pack V\", AVG(pack_current) AS \"🔌 Avg Pack A\", AVG(energy_remaining) AS \"🔋 Energy kWh\", MAX(dc_charging_power) AS \"⚡ Peak DC kW\", MAX(ac_charging_power) AS \"🔌 Peak AC kW\" FROM v_charging_telemetry WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)",
           "refId": "A"
         }
       ],
@@ -189,7 +189,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, pack_voltage AS \"Pack Voltage (V)\", pack_current AS \"Pack Current (A)\" FROM charging_telemetry WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "rawSql": "SELECT created_at AS time, pack_voltage AS \"Pack Voltage (V)\", pack_current AS \"Pack Current (A)\" FROM v_charging_telemetry WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -269,7 +269,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, dc_charging_power AS \"DC Power (kW)\", ac_charging_power AS \"AC Power (kW)\" FROM charging_telemetry WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "rawSql": "SELECT created_at AS time, dc_charging_power AS \"DC Power (kW)\", ac_charging_power AS \"AC Power (kW)\" FROM v_charging_telemetry WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -349,7 +349,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, battery_level AS \"SOC %\", convert_distance(est_battery_range) AS \"Est Range\", convert_distance(rated_range) AS \"Rated Range\" FROM charging_telemetry WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "rawSql": "SELECT created_at AS time, battery_level AS \"SOC %\", convert_distance(est_battery_range) AS \"Est Range\", convert_distance(rated_range) AS \"Rated Range\" FROM v_charging_telemetry WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -429,7 +429,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, brick_voltage_max AS \"Max Cell V\", brick_voltage_min AS \"Min Cell V\", (brick_voltage_max - brick_voltage_min) AS \"Spread\" FROM charging_telemetry WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) AND brick_voltage_max IS NOT NULL ORDER BY created_at",
+          "rawSql": "SELECT created_at AS time, brick_voltage_max AS \"Max Cell V\", brick_voltage_min AS \"Min Cell V\", (brick_voltage_max - brick_voltage_min) AS \"Spread\" FROM v_charging_telemetry WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) AND brick_voltage_max IS NOT NULL ORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -509,7 +509,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, convert_temp(module_temp_max) AS \"Max Module Temp\", convert_temp(module_temp_min) AS \"Min Module Temp\" FROM charging_telemetry WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) AND module_temp_max IS NOT NULL ORDER BY created_at",
+          "rawSql": "SELECT created_at AS time, convert_temp(module_temp_max) AS \"Max Module Temp\", convert_temp(module_temp_min) AS \"Min Module Temp\" FROM v_charging_telemetry WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) AND module_temp_max IS NOT NULL ORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -568,7 +568,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(bms_state, 'N/A') AS \"BMS State\", CASE WHEN bms_fullcharge_complete THEN 'Yes' ELSE 'No' END AS \"Full Charge\", CASE WHEN battery_heater_on THEN 'On' ELSE 'Off' END AS \"Battery Heater\", ROUND(isolation_resistance::numeric) AS \"Isolation Ω\" FROM charging_telemetry WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT COALESCE(bms_state, 'N/A') AS \"BMS State\", CASE WHEN bms_fullcharge_complete THEN 'Yes' ELSE 'No' END AS \"Full Charge\", CASE WHEN battery_heater_on THEN 'On' ELSE 'Off' END AS \"Battery Heater\", ROUND(isolation_resistance::numeric) AS \"Isolation Ω\" FROM v_charging_telemetry WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -627,7 +627,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(powershare_status, 'N/A') AS \"Status\", COALESCE(powershare_type, 'N/A') AS \"Type\", powershare_hours_left AS \"Hours Left\", ROUND(powershare_power_kw::numeric, 1) AS \"Power kW\" FROM charging_telemetry WHERE vehicle_id = ${vehicle_id} AND powershare_status IS NOT NULL ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT COALESCE(powershare_status, 'N/A') AS \"Status\", COALESCE(powershare_type, 'N/A') AS \"Type\", powershare_hours_left AS \"Hours Left\", ROUND(powershare_power_kw::numeric, 1) AS \"Power kW\" FROM v_charging_telemetry WHERE vehicle_id = ${vehicle_id} AND powershare_status IS NOT NULL ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],

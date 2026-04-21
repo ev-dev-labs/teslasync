@@ -151,7 +151,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT p.latitude, p.longitude, convert_speed(p.speed) AS speed, p.battery_level, p.created_at AS time FROM positions p JOIN v_drives d ON p.vehicle_id = d.vehicle_id AND p.created_at >= d.start_date AND p.created_at <= COALESCE(d.end_date, NOW()) WHERE d.id = ${drive_id} ORDER BY p.created_at",
+          "rawSql": "SELECT p.latitude, p.longitude, convert_speed(p.speed) AS speed, p.battery_level, p.created_at AS time FROM v_positions p JOIN v_drives d ON p.vehicle_id = d.vehicle_id AND p.created_at >= d.start_date AND p.created_at <= COALESCE(d.end_date, NOW()) WHERE d.id = ${drive_id} ORDER BY p.created_at",
           "refId": "A"
         }
       ],
@@ -257,7 +257,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT p.created_at AS time, convert_speed(p.speed) AS \"Speed\"\nFROM positions p\nJOIN v_drives d ON p.vehicle_id = d.vehicle_id AND p.created_at >= d.start_date AND p.created_at <= COALESCE(d.end_date, NOW())\nWHERE d.id = ${drive_id}\nORDER BY p.created_at",
+          "rawSql": "SELECT p.created_at AS time, convert_speed(p.speed) AS \"Speed\"\nFROM v_positions p\nJOIN v_drives d ON p.vehicle_id = d.vehicle_id AND p.created_at >= d.start_date AND p.created_at <= COALESCE(d.end_date, NOW())\nWHERE d.id = ${drive_id}\nORDER BY p.created_at",
           "refId": "A"
         }
       ],
@@ -306,7 +306,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT p.created_at AS time, p.battery_level AS \"🔋 Battery %\"\nFROM positions p\nJOIN v_drives d ON p.vehicle_id = d.vehicle_id AND p.created_at >= d.start_date AND p.created_at <= COALESCE(d.end_date, NOW())\nWHERE d.id = ${drive_id}\nORDER BY p.created_at",
+          "rawSql": "SELECT p.created_at AS time, p.battery_level AS \"🔋 Battery %\"\nFROM v_positions p\nJOIN v_drives d ON p.vehicle_id = d.vehicle_id AND p.created_at >= d.start_date AND p.created_at <= COALESCE(d.end_date, NOW())\nWHERE d.id = ${drive_id}\nORDER BY p.created_at",
           "refId": "A"
         }
       ],
@@ -355,7 +355,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT p.created_at AS time, convert_temp(p.inside_temp) AS \"Cabin\", convert_temp(p.outside_temp) AS \"Outside\"\nFROM positions p\nJOIN v_drives d ON p.vehicle_id = d.vehicle_id AND p.created_at >= d.start_date AND p.created_at <= COALESCE(d.end_date, NOW())\nWHERE d.id = ${drive_id}\nORDER BY p.created_at",
+          "rawSql": "SELECT p.created_at AS time, convert_temp(p.inside_temp) AS \"Cabin\", convert_temp(p.outside_temp) AS \"Outside\"\nFROM v_positions p\nJOIN v_drives d ON p.vehicle_id = d.vehicle_id AND p.created_at >= d.start_date AND p.created_at <= COALESCE(d.end_date, NOW())\nWHERE d.id = ${drive_id}\nORDER BY p.created_at",
           "refId": "A"
         }
       ],
@@ -404,7 +404,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT p.created_at AS time, p.power AS \"Power (kW)\"\nFROM positions p\nJOIN v_drives d ON p.vehicle_id = d.vehicle_id AND p.created_at >= d.start_date AND p.created_at <= COALESCE(d.end_date, NOW())\nWHERE d.id = ${drive_id}\nORDER BY p.created_at",
+          "rawSql": "SELECT p.created_at AS time, p.power AS \"Power (kW)\"\nFROM v_positions p\nJOIN v_drives d ON p.vehicle_id = d.vehicle_id AND p.created_at >= d.start_date AND p.created_at <= COALESCE(d.end_date, NOW())\nWHERE d.id = ${drive_id}\nORDER BY p.created_at",
           "refId": "A"
         }
       ],
@@ -452,7 +452,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT m.created_at AS time, m.di_torque AS \"Torque (Nm)\", convert_speed(m.vehicle_speed) AS \"Speed\"\nFROM motor_snapshots m\nJOIN v_drives d ON m.vehicle_id = d.vehicle_id AND m.created_at >= d.start_date AND m.created_at <= COALESCE(d.end_date, NOW())\nWHERE d.id = ${drive_id}\nORDER BY m.created_at",
+          "rawSql": "SELECT m.created_at AS time, m.di_torque AS \"Torque (Nm)\", convert_speed(m.vehicle_speed) AS \"Speed\"\nFROM v_motor_snapshots m\nJOIN v_drives d ON m.vehicle_id = d.vehicle_id AND m.created_at >= d.start_date AND m.created_at <= COALESCE(d.end_date, NOW())\nWHERE d.id = ${drive_id}\nORDER BY m.created_at",
           "refId": "A"
         }
       ],
@@ -500,7 +500,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT p.created_at AS time, p.elevation AS \"Elevation (m)\"\nFROM positions p\nJOIN v_drives d ON p.vehicle_id = d.vehicle_id AND p.created_at >= d.start_date AND p.created_at <= COALESCE(d.end_date, NOW())\nWHERE d.id = ${drive_id} AND p.elevation IS NOT NULL\nORDER BY p.created_at",
+          "rawSql": "SELECT p.created_at AS time, p.elevation AS \"Elevation (m)\"\nFROM v_positions p\nJOIN v_drives d ON p.vehicle_id = d.vehicle_id AND p.created_at >= d.start_date AND p.created_at <= COALESCE(d.end_date, NOW())\nWHERE d.id = ${drive_id} AND p.elevation IS NOT NULL\nORDER BY p.created_at",
           "refId": "A"
         }
       ],
