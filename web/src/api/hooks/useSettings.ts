@@ -49,7 +49,7 @@ export function useAuthStatus() {
 
 export function useAuthURL() {
   return useMutation({
-    mutationFn: () => request<{ auth_url: string }>('/auth/url'),
+    mutationFn: () => request<{ auth_url: string }>('/auth/url', { method: 'POST' }),
   });
 }
 
