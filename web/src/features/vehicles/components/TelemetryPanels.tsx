@@ -275,14 +275,14 @@ export function LiveTelemetryPanels({
                     <span className="text-[var(--text-muted)]">Throttle Position</span>
                     <span className="text-[var(--text-primary)] font-mono">
                       {motorData.pedal_position != null
-                        ? `${fmtPercent(motorData.pedal_position * 100)}`
+                        ? `${fmtPercent(motorData.pedal_position)}`
                         : '—'}
                     </span>
                   </div>
                   <div className="h-2 rounded-full bg-white/[0.04] overflow-hidden">
                     <div
                       className="h-full rounded-full bg-neon-cyan/60 transition-all duration-300"
-                      style={{ width: `${(motorData.pedal_position ?? 0) * 100}%` }}
+                      style={{ width: `${motorData.pedal_position ?? 0}%` }}
                     />
                   </div>
                 </div>

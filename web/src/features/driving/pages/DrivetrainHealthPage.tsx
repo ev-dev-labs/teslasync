@@ -817,7 +817,7 @@ export default function DrivetrainHealthPage() {
                 </Grid>
                 <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <InlineMetric icon={<Activity className="h-4 w-4 text-yellow-400" />} label={t('drivetrain.axleSpeed', 'Axle Speed')} value={motorLatest.di_axle_speed != null ? `${fmtInt(motorLatest.di_axle_speed)} RPM` : '—'} />
-                  <InlineMetric icon={<Gauge className="h-4 w-4 text-green-400" />} label={t('drivetrain.pedalPos', 'Pedal Position')} value={motorLatest.pedal_position != null ? `${fmtNumber(motorLatest.pedal_position * 100, 0)}%` : '—'} />
+                  <InlineMetric icon={<Gauge className="h-4 w-4 text-green-400" />} label={t('drivetrain.pedalPos', 'Pedal Position')} value={motorLatest.pedal_position != null ? `${fmtNumber(motorLatest.pedal_position, 0)}%` : '—'} />
                   <InlineMetric icon={<Thermometer className="h-4 w-4 text-red-400" />} label={t('drivetrain.statorTemp', 'Stator Temp')} value={motorLatest.di_stator_temp != null ? `${fmtNumber(convertTemp(motorLatest.di_stator_temp))} ${tempUnit}` : '—'} />
                   <InlineMetric
                     icon={<Shield className={cn('h-4 w-4', motorLatest.hvil === 'Fault' ? 'text-red-400' : 'text-green-400')} />}
