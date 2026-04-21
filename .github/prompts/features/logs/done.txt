@@ -267,3 +267,4 @@ refactor-monoliths/02-cost-analysis.prompt.md
 refactor-monoliths/03-drivetrain-health.prompt.md
 refactor-monoliths/04-driving-dynamics.prompt.md
 refactor-monoliths/05-analytics.prompt.md
+refactor-monoliths/06-charging-curve.prompt.md
