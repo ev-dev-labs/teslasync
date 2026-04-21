@@ -1,0 +1,15 @@
+-- Revert hypertables back to regular tables.
+--
+-- TimescaleDB does not provide a built-in "undo hypertable" command. A true
+-- revert would need to:
+--   1. CREATE TABLE new_table (LIKE old_table INCLUDING ALL)
+--   2. INSERT INTO new_table SELECT * FROM old_table
+--   3. DROP TABLE old_table
+--   4. ALTER TABLE new_table RENAME TO old_table
+-- This is destructive, slow on large tables, and rarely needed. If you must
+-- revert, switch back to plain PostgreSQL via the Helm/Compose DSN change;
+-- hypertable rows remain readable as normal tables when the extension is absent
+-- only if you fully drop and rebuild the tables.
+--
+-- Intentional no-op so `migrate down` succeeds.
+SELECT 1;
