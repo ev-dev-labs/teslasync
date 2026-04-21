@@ -111,7 +111,7 @@ const catalog: SignalMeta[] = [
   { name: 'BrakePedal', category: 'Driving', type: 'boolean', description: 'Brake pedal pressed' },
   { name: 'BrakePedalPos', category: 'Driving', type: 'number', unit: '%', description: 'Brake pedal position' },
   { name: 'CruiseSetSpeed', category: 'Driving', type: 'number', unit: 'km/h', description: 'Cruise control set speed' },
-  { name: 'DriveRail', category: 'Driving', type: 'number', unit: 'V', description: 'Drive rail voltage' },
+  { name: 'DriveRail', category: 'Driving', type: 'boolean', description: 'Drive rail active' },
   { name: 'Gear', category: 'Driving', type: 'string', description: 'Current gear', enumValues: ['P', 'R', 'N', 'D', 'Invalid'] },
   { name: 'LateralAcceleration', category: 'Driving', type: 'number', unit: 'm/s²', description: 'Lateral acceleration' },
   { name: 'LifetimeEnergyGainedRegen', category: 'Driving', type: 'number', unit: 'kWh', description: 'Lifetime energy gained via regen' },

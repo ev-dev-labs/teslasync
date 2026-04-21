@@ -137,10 +137,10 @@ var SignalRegistry = map[string]SignalInfo{
 	"WiperHeatEnabled":                {TypeBool, ftproto.Field_WiperHeatEnabled},
 
 	// ── Driving ─────────────────────────────────────────────────────
-	"BrakePedal":                      {TypeFloat, ftproto.Field_BrakePedal},
+	"BrakePedal":                      {TypeBool, ftproto.Field_BrakePedal},
 	"BrakePedalPos":                   {TypeFloat, ftproto.Field_BrakePedalPos},
 	"CruiseSetSpeed":                  {TypeFloat, ftproto.Field_CruiseSetSpeed},
-	"DriveRail":                       {TypeFloat, ftproto.Field_DriveRail},
+	"DriveRail":                       {TypeBool, ftproto.Field_DriveRail},
 	"Gear":                            {TypeEnum, ftproto.Field_Gear},
 	"LateralAcceleration":             {TypeFloat, ftproto.Field_LateralAcceleration},
 	"LifetimeEnergyGainedRegen":       {TypeFloat, ftproto.Field_LifetimeEnergyGainedRegen},
