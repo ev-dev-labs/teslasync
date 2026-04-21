@@ -1,0 +1,4523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tesla Signal Traceability Matrix</title>
+<style>
+:root {
+  --bg: #0f172a; --surface: #1e293b; --border: #334155;
+  --text: #e2e8f0; --text-dim: #94a3b8; --accent: #38bdf8;
+  --green: #22c55e; --yellow: #eab308; --red: #ef4444; --gray: #64748b;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.6; padding: 2rem;
+  max-width: 1600px; margin: 0 auto;
+}
+h1 { color: var(--accent); font-size: 2rem; margin-bottom: 0.5rem; border-bottom: 2px solid var(--accent); padding-bottom: 0.5rem; }
+h2 { color: var(--accent); font-size: 1.5rem; margin-top: 2rem; margin-bottom: 0.75rem; }
+h3 { color: #7dd3fc; font-size: 1.2rem; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+h4 { color: #bae6fd; margin-top: 1rem; margin-bottom: 0.5rem; }
+p { margin-bottom: 0.75rem; color: var(--text-dim); }
+blockquote {
+  border-left: 4px solid var(--accent); padding: 0.75rem 1rem;
+  background: rgba(56,189,248,0.05); border-radius: 0 8px 8px 0;
+  margin-bottom: 1rem;
+}
+blockquote p { color: var(--text); margin: 0; }
+strong { color: var(--text); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+ul, ol { margin-left: 1.5rem; margin-bottom: 1rem; color: var(--text-dim); }
+li { margin-bottom: 0.25rem; }
+code {
+  background: rgba(56,189,248,0.1); color: var(--accent);
+  padding: 0.15em 0.4em; border-radius: 4px; font-size: 0.9em;
+  font-family: "Fira Code", "Cascadia Code", "JetBrains Mono", monospace;
+}
+pre {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 1rem; overflow-x: auto; margin-bottom: 1rem;
+}
+pre code { background: none; padding: 0; color: var(--text-dim); }
+table {
+  width: 100%; border-collapse: collapse; margin-bottom: 1.5rem;
+  font-size: 0.85rem; background: var(--surface); border-radius: 8px;
+  overflow: hidden;
+}
+thead { background: rgba(56,189,248,0.1); }
+th {
+  text-align: left; padding: 0.6rem 0.75rem; color: var(--accent);
+  font-weight: 600; border-bottom: 2px solid var(--border);
+  white-space: nowrap; position: sticky; top: 0; z-index: 1;
+  background: rgba(30,41,59,0.95);
+}
+td {
+  padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border);
+  color: var(--text-dim); vertical-align: top;
+}
+tr:hover td { background: rgba(56,189,248,0.03); }
+tr:last-child td { border-bottom: none; }
+.table-wrapper {
+  overflow-x: auto; border-radius: 8px;
+  border: 1px solid var(--border); margin-bottom: 1.5rem;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<h1 id="tesla-signal-traceability-matrix">Tesla Signal Traceability Matrix</h1>
+<blockquote>
+<p><strong>Single source of truth</strong> for Tesla Fleet Telemetry signal mapping integrity in TeslaSync.</p>
+<p>Generated: 2026-04-21 | Audited: 230 signals across 13 categories</p>
+</blockquote>
+<hr />
+<h2 id="summary-statistics">Summary Statistics</h2>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Count</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Total Signals Audited</td>
+<td>230</td>
+</tr>
+<tr>
+<td>🟢 Match (correct end-to-end)</td>
+<td>137</td>
+</tr>
+<tr>
+<td>🟡 Rounding Difference</td>
+<td>0</td>
+</tr>
+<tr>
+<td>🔴 Critical Mismatch</td>
+<td>5</td>
+</tr>
+<tr>
+<td>⚪ Orphaned (ingested, not displayed)</td>
+<td>88</td>
+</tr>
+<tr>
+<td>Fixes Required</td>
+<td>5</td>
+</tr>
+</tbody>
+</table>
+<h2 id="category-breakdown">Category Breakdown</h2>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Signals</th>
+<th>🟢</th>
+<th>🟡</th>
+<th>🔴</th>
+<th>⚪</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Charging (numeric)</td>
+<td>41</td>
+<td>19</td>
+<td>0</td>
+<td>0</td>
+<td>22</td>
+</tr>
+<tr>
+<td>Charging (enums)</td>
+<td>11</td>
+<td>6</td>
+<td>0</td>
+<td>1</td>
+<td>4</td>
+</tr>
+<tr>
+<td>Powershare</td>
+<td>5</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>5</td>
+</tr>
+<tr>
+<td>Climate</td>
+<td>29</td>
+<td>16</td>
+<td>0</td>
+<td>0</td>
+<td>13</td>
+</tr>
+<tr>
+<td>Driving</td>
+<td>12</td>
+<td>7</td>
+<td>0</td>
+<td>0</td>
+<td>5</td>
+</tr>
+<tr>
+<td>Powertrain</td>
+<td>36</td>
+<td>2</td>
+<td>0</td>
+<td>4</td>
+<td>30</td>
+</tr>
+<tr>
+<td>Location</td>
+<td>13</td>
+<td>11</td>
+<td>0</td>
+<td>0</td>
+<td>2</td>
+</tr>
+<tr>
+<td>Media</td>
+<td>11</td>
+<td>10</td>
+<td>0</td>
+<td>0</td>
+<td>1</td>
+</tr>
+<tr>
+<td>Safety</td>
+<td>14</td>
+<td>14</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>TPMS</td>
+<td>10</td>
+<td>10</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>Vehicle State</td>
+<td>29</td>
+<td>29</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>Vehicle Config</td>
+<td>14</td>
+<td>9</td>
+<td>0</td>
+<td>0</td>
+<td>5</td>
+</tr>
+<tr>
+<td>User Preferences</td>
+<td>5</td>
+<td>4</td>
+<td>0</td>
+<td>0</td>
+<td>1</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td><strong>230</strong></td>
+<td><strong>137</strong></td>
+<td><strong>0</strong></td>
+<td><strong>5</strong></td>
+<td><strong>88</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="master-traceability-matrix">Master Traceability Matrix</h2>
+<h3 id="1-charging-numeric-41-signals">1 · Charging — Numeric (41 signals)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Tesla Signal</th>
+<th>Type</th>
+<th>Coercion</th>
+<th>DB Table</th>
+<th>DB Column</th>
+<th>DB Type</th>
+<th>API Endpoint</th>
+<th>JSON Field</th>
+<th>Frontend Hook</th>
+<th>UI Page(s)</th>
+<th>Display Format</th>
+<th>Parity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>ACChargingEnergyIn</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>ac_charging_energy_in</td>
+<td>FLOAT8</td>
+<td>/charging-telemetry/latest</td>
+<td>ac_charging_energy_in</td>
+<td>useChargingTelemetryLatest</td>
+<td>ChargingTelemetrySection, EnergyChargingPanel</td>
+<td><code>{value} kWh</code></td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>2</td>
+<td>ACChargingPower</td>
+<td>Float</td>
+<td>direct (→charger_power fallback)</td>
+<td>vehicle_live_state</td>
+<td>charger_power</td>
+<td>FLOAT8</td>
+<td>/vehicles/{id}/state</td>
+<td>charger_power</td>
+<td>useVehicleState</td>
+<td>Dashboard, ChargeStatusWidget</td>
+<td><code>{value} kW</code></td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>3</td>
+<td>BatteryLevel</td>
+<td>Float</td>
+<td>float→int cast</td>
+<td>vehicle_live_state</td>
+<td>battery_level</td>
+<td>INT</td>
+<td>/vehicles/{id}/state</td>
+<td>battery_level</td>
+<td>useVehicleState</td>
+<td>Dashboard, ChargeStatusWidget, BatteryGaugeWidget</td>
+<td><code>{value}%</code></td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>4</td>
+<td>BatteryHeaterOn</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>battery_heater_on</td>
+<td>BOOLEAN</td>
+<td>/charging-telemetry/latest</td>
+<td>battery_heater_on</td>
+<td>useChargingTelemetryLatest</td>
+<td>EnergyChargingPanel, LiveTelemetry</td>
+<td>Badge (Active/Off)</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>5</td>
+<td>BmsFullchargecomplete</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>bms_fullchargecomplete</td>
+<td>BOOLEAN</td>
+<td>/charging-telemetry/latest</td>
+<td>bms_fullchargecomplete</td>
+<td>useChargingTelemetryLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>6</td>
+<td>BrickVoltageMax</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>brick_voltage_max</td>
+<td>FLOAT8</td>
+<td>/charging-telemetry/latest</td>
+<td>brick_voltage_max</td>
+<td>useChargingTelemetryLatest</td>
+<td>EnergyChargingPanel</td>
+<td><code>{spread} mV</code></td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>7</td>
+<td>BrickVoltageMin</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>brick_voltage_min</td>
+<td>FLOAT8</td>
+<td>/charging-telemetry/latest</td>
+<td>brick_voltage_min</td>
+<td>useChargingTelemetryLatest</td>
+<td>EnergyChargingPanel</td>
+<td><code>{spread} mV</code></td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>8</td>
+<td>ChargeAmps</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>charge_amps</td>
+<td>FLOAT8</td>
+<td>/charging-telemetry/latest</td>
+<td>charge_amps</td>
+<td>useChargingTelemetryLatest</td>
+<td>ChargingTelemetrySection</td>
+<td><code>{value} A</code></td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>9</td>
+<td>ChargeCurrentRequest</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>charge_current_request</td>
+<td>FLOAT8</td>
+<td>/charging-telemetry/latest</td>
+<td>charge_current_request</td>
+<td>useChargingTelemetryLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>10</td>
+<td>ChargeCurrentRequestMax</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>charge_current_request_max</td>
+<td>FLOAT8</td>
+<td>/charging-telemetry/latest</td>
+<td>charge_current_request_max</td>
+<td>useChargingTelemetryLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>11</td>
+<td>ChargeEnableRequest</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>charge_enable_request</td>
+<td>BOOLEAN</td>
+<td>/charging-telemetry/latest</td>
+<td>charge_enable_request</td>
+<td>useChargingTelemetryLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>12</td>
+<td>ChargeLimitSoc</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>charge_limit_soc</td>
+<td>INT</td>
+<td>/signals/{id}/live</td>
+<td>charge_limit_soc</td>
+<td>useSignalGaps (live)</td>
+<td>ChargingScheduleWidget</td>
+<td><code>{value}%</code></td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>13</td>
+<td>ChargePortColdWeatherMode</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>charge_port_cold_weather_mode</td>
+<td>BOOLEAN</td>
+<td>/charging-telemetry/latest</td>
+<td>charge_port_cold_weather_mode</td>
+<td>useChargingTelemetryLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>14</td>
+<td>ChargePortDoorOpen</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>charge_port_door_open</td>
+<td>BOOLEAN</td>
+<td>/charging-telemetry/latest</td>
+<td>charge_port_door_open</td>
+<td>useChargingTelemetryLatest</td>
+<td>DigitalTwinMiniWidget</td>
+<td>Visual port indicator</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>15</td>
+<td>ChargeRateMilePerHour</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>charge_rate</td>
+<td>FLOAT8</td>
+<td>/vehicles/{id}/state</td>
+<td>charge_rate</td>
+<td>useVehicleState</td>
+<td>Dashboard</td>
+<td><code>{value} mi/h</code></td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>16</td>
+<td>ChargerPhases</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>charger_phases</td>
+<td>FLOAT8</td>
+<td>/charging-telemetry/latest</td>
+<td>charger_phases</td>
+<td>useChargingTelemetryLatest</td>
+<td>ChargingTelemetrySection</td>
+<td>Phase count</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>17</td>
+<td>ChargerVoltage</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>charger_voltage</td>
+<td>FLOAT8</td>
+<td>/charging-telemetry/latest</td>
+<td>charger_voltage</td>
+<td>useChargingTelemetryLatest</td>
+<td>ChargingTelemetrySection</td>
+<td><code>{value} V</code></td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>18</td>
+<td>DCChargingEnergyIn</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>dc_charging_energy_in</td>
+<td>FLOAT8</td>
+<td>/charging-telemetry/latest</td>
+<td>dc_charging_energy_in</td>
+<td>useChargingTelemetryLatest</td>
+<td>ChargingTelemetrySection</td>
+<td><code>{value} kWh</code></td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>19</td>
+<td>DCChargingPower</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>charger_power</td>
+<td>FLOAT8</td>
+<td>/vehicles/{id}/state</td>
+<td>charger_power</td>
+<td>useVehicleState</td>
+<td>Dashboard, ChargingTelemetrySection</td>
+<td><code>{value} kW</code></td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>20</td>
+<td>DCDCEnable</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>dcdc_enable</td>
+<td>BOOLEAN</td>
+<td>/charging-telemetry/latest</td>
+<td>dcdc_enable</td>
+<td>useChargingTelemetryLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>21</td>
+<td>EnergyRemaining</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>energy_remaining</td>
+<td>FLOAT8</td>
+<td>/charging-telemetry/latest</td>
+<td>energy_remaining</td>
+<td>useChargingTelemetryLatest</td>
+<td>EnergyChargingPanel</td>
+<td><code>{value} kWh</code></td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>22</td>
+<td>EstBatteryRange</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>est_range</td>
+<td>FLOAT8</td>
+<td>/charging-telemetry/latest</td>
+<td>est_battery_range</td>
+<td>useChargingTelemetryLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>23</td>
+<td>EstimatedHoursToChargeTermination</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>estimated_hours_to_charge_termination</td>
+<td>FLOAT8</td>
+<td>/charging-telemetry/latest</td>
+<td>estimated_hours_to_charge_termination</td>
+<td>useChargingTelemetryLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>24</td>
+<td>ExpectedEnergyPercentAtTripArrival</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>expected_energy_percent_at_trip_arrival</td>
+<td>FLOAT8</td>
+<td>/charging-telemetry/latest</td>
+<td>expected_energy_percent_at_trip_arrival</td>
+<td>useChargingTelemetryLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>25</td>
+<td>FastChargerPresent</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>fast_charger_present</td>
+<td>BOOLEAN</td>
+<td>/charging-telemetry/latest</td>
+<td>fast_charger_present</td>
+<td>useChargingTelemetryLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>26</td>
+<td>IdealBatteryRange</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>ideal_range</td>
+<td>FLOAT8</td>
+<td>/vehicles/{id}/state</td>
+<td>ideal_range</td>
+<td>useVehicleState</td>
+<td>— (used internally)</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>27</td>
+<td>LifetimeEnergyUsed</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>lifetime_energy_used</td>
+<td>FLOAT8</td>
+<td>/charging-telemetry/latest</td>
+<td>lifetime_energy_used</td>
+<td>useChargingTelemetryLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>28</td>
+<td>ModuleTempMax</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>module_temp_max</td>
+<td>FLOAT8</td>
+<td>/charging-telemetry/latest</td>
+<td>module_temp_max</td>
+<td>useChargingTelemetryLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>29</td>
+<td>ModuleTempMin</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>module_temp_min</td>
+<td>FLOAT8</td>
+<td>/charging-telemetry/latest</td>
+<td>module_temp_min</td>
+<td>useChargingTelemetryLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>30</td>
+<td>NotEnoughPowerToHeat</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>not_enough_power_to_heat</td>
+<td>BOOLEAN</td>
+<td>/charging-telemetry/latest</td>
+<td>not_enough_power_to_heat</td>
+<td>useChargingTelemetryLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>31</td>
+<td>NumBrickVoltageMax</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>num_brick_voltage_max</td>
+<td>FLOAT8</td>
+<td>/charging-telemetry/latest</td>
+<td>num_brick_voltage_max</td>
+<td>useChargingTelemetryLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>32</td>
+<td>NumBrickVoltageMin</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>num_brick_voltage_min</td>
+<td>FLOAT8</td>
+<td>/charging-telemetry/latest</td>
+<td>num_brick_voltage_min</td>
+<td>useChargingTelemetryLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>33</td>
+<td>NumModuleTempMax</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>num_module_temp_max</td>
+<td>FLOAT8</td>
+<td>/charging-telemetry/latest</td>
+<td>num_module_temp_max</td>
+<td>useChargingTelemetryLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>34</td>
+<td>NumModuleTempMin</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>num_module_temp_min</td>
+<td>FLOAT8</td>
+<td>/charging-telemetry/latest</td>
+<td>num_module_temp_min</td>
+<td>useChargingTelemetryLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>35</td>
+<td>PackCurrent</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>pack_current</td>
+<td>FLOAT8</td>
+<td>/charging-telemetry/latest</td>
+<td>pack_current</td>
+<td>useChargingTelemetryLatest</td>
+<td>EnergyChargingPanel</td>
+<td><code>{value} A</code></td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>36</td>
+<td>PackVoltage</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>pack_voltage</td>
+<td>FLOAT8</td>
+<td>/charging-telemetry/latest</td>
+<td>pack_voltage</td>
+<td>useChargingTelemetryLatest</td>
+<td>ChargingTelemetrySection, EnergyChargingPanel</td>
+<td><code>{value} V</code></td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>37</td>
+<td>PreconditioningEnabled</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>preconditioning_enabled</td>
+<td>BOOLEAN</td>
+<td>/charging-telemetry/latest</td>
+<td>preconditioning_enabled</td>
+<td>useChargingTelemetryLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>38</td>
+<td>RatedRange</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>rated_range</td>
+<td>FLOAT8</td>
+<td>/vehicles/{id}/state</td>
+<td>rated_range</td>
+<td>useVehicleState</td>
+<td>— (used internally)</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>39</td>
+<td>Soc</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>soc</td>
+<td>FLOAT8</td>
+<td>/charging-telemetry/latest</td>
+<td>soc</td>
+<td>useChargingTelemetryLatest</td>
+<td>ChargingTelemetrySection</td>
+<td><code>{value}%</code></td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>40</td>
+<td>SuperchargerSessionTripPlanner</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>supercharger_session_trip_planner</td>
+<td>VARCHAR</td>
+<td>/charging-telemetry/latest</td>
+<td>supercharger_session_trip_planner</td>
+<td>useChargingTelemetryLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>41</td>
+<td>TimeToFullCharge</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>time_to_full_charge</td>
+<td>FLOAT8</td>
+<td>/vehicles/{id}/state</td>
+<td>time_to_full_charge</td>
+<td>useVehicleState</td>
+<td>ChargingTelemetrySection</td>
+<td><code>{value}h</code></td>
+<td>🟢</td>
+</tr>
+</tbody>
+</table>
+<h3 id="2-charging-enums-11-signals">2 · Charging — Enums (11 signals)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Tesla Signal</th>
+<th>Type</th>
+<th>Coercion</th>
+<th>DB Table</th>
+<th>DB Column</th>
+<th>DB Type</th>
+<th>API Endpoint</th>
+<th>JSON Field</th>
+<th>Frontend Hook</th>
+<th>UI Page(s)</th>
+<th>Display Format</th>
+<th>Parity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>42</td>
+<td>BMSState</td>
+<td>Enum</td>
+<td>ParseBMSState (strip prefix)</td>
+<td>vehicle_live_state</td>
+<td>bms_state</td>
+<td>VARCHAR</td>
+<td>/charging-telemetry/latest</td>
+<td>bms_state</td>
+<td>useChargingTelemetryLatest</td>
+<td>EnergyChargingPanel</td>
+<td>Badge (Standby/Charge/Fault)</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>43</td>
+<td>ChargePort</td>
+<td>Enum</td>
+<td>ParseChargePort (strip prefix)</td>
+<td>vehicle_live_state</td>
+<td>charge_port</td>
+<td>VARCHAR</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>🔴</td>
+</tr>
+<tr>
+<td>44</td>
+<td>ChargePortLatch</td>
+<td>Enum</td>
+<td>ParseChargePortLatch (strip prefix)</td>
+<td>vehicle_live_state</td>
+<td>charge_port_latch</td>
+<td>VARCHAR</td>
+<td>/charging-telemetry/latest</td>
+<td>charge_port_latch</td>
+<td>useChargingTelemetryLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>45</td>
+<td>ChargeState</td>
+<td>Enum</td>
+<td>ParseChargeState (strip prefix)</td>
+<td>vehicle_live_state</td>
+<td>charge_state</td>
+<td>VARCHAR</td>
+<td>/charging-telemetry/latest</td>
+<td>charge_state</td>
+<td>useChargingTelemetryLatest</td>
+<td>ChargingTelemetrySection</td>
+<td>Direct string</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>46</td>
+<td>ChargingCableType</td>
+<td>Enum</td>
+<td>direct (→ VARCHAR)</td>
+<td>vehicle_live_state</td>
+<td>charging_cable_type</td>
+<td>VARCHAR</td>
+<td>/charging-telemetry/latest</td>
+<td>charging_cable_type</td>
+<td>useChargingTelemetryLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>47</td>
+<td>DetailedChargeState</td>
+<td>Enum</td>
+<td>ParseDetailedChargeState (strip prefix)</td>
+<td>vehicle_live_state</td>
+<td>detailed_charge_state</td>
+<td>VARCHAR</td>
+<td>/charging-telemetry/latest</td>
+<td>detailed_charge_state</td>
+<td>useChargingTelemetryLatest</td>
+<td>— (→is_charging bool internally)</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>48</td>
+<td>FastChargerType</td>
+<td>Enum</td>
+<td>direct (→ VARCHAR)</td>
+<td>vehicle_live_state</td>
+<td>fast_charger_type</td>
+<td>VARCHAR</td>
+<td>/charging-telemetry/latest</td>
+<td>fast_charger_type</td>
+<td>useChargingTelemetryLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>49</td>
+<td>ScheduledChargingMode</td>
+<td>Enum</td>
+<td>ParseScheduledChargingMode (strip prefix)</td>
+<td>vehicle_live_state</td>
+<td>scheduled_charging_mode</td>
+<td>VARCHAR</td>
+<td>/signals/{id}/live</td>
+<td>scheduled_charging_mode</td>
+<td>useSignalGaps (live)</td>
+<td>ChargingScheduleWidget</td>
+<td>Mode label</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>50</td>
+<td>ScheduledChargingPending</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>scheduled_charging_pending</td>
+<td>BOOLEAN</td>
+<td>/signals/{id}/live</td>
+<td>scheduled_charging_pending</td>
+<td>useSignalGaps (live)</td>
+<td>ChargingScheduleWidget</td>
+<td>Boolean badge</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>51</td>
+<td>ScheduledChargingStartTime</td>
+<td>Time</td>
+<td>compound→"HH:MM:SS"</td>
+<td>vehicle_live_state</td>
+<td>scheduled_charging_start_time</td>
+<td>VARCHAR</td>
+<td>/signals/{id}/live</td>
+<td>scheduled_charging_start_time</td>
+<td>useSignalGaps (live)</td>
+<td>ChargingScheduleWidget</td>
+<td>Formatted time</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>52</td>
+<td>ScheduledDepartureTime</td>
+<td>Time</td>
+<td>compound→"HH:MM:SS"</td>
+<td>vehicle_live_state</td>
+<td>scheduled_departure_time</td>
+<td>VARCHAR</td>
+<td>/signals/{id}/live</td>
+<td>scheduled_departure_time</td>
+<td>useSignalGaps (live)</td>
+<td>ChargingScheduleWidget</td>
+<td>Formatted time</td>
+<td>🟢</td>
+</tr>
+</tbody>
+</table>
+<h3 id="3-powershare-5-signals">3 · Powershare (5 signals)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Tesla Signal</th>
+<th>Type</th>
+<th>Coercion</th>
+<th>DB Table</th>
+<th>DB Column</th>
+<th>DB Type</th>
+<th>API Endpoint</th>
+<th>JSON Field</th>
+<th>Frontend Hook</th>
+<th>UI Page(s)</th>
+<th>Display Format</th>
+<th>Parity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>53</td>
+<td>PowershareHoursLeft</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>powershare_hours_left</td>
+<td>FLOAT8</td>
+<td>/charging-telemetry/latest</td>
+<td>powershare_hours_left</td>
+<td>useChargingTelemetryLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>54</td>
+<td>PowershareInstantaneousPowerKW</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>powershare_instantaneous_power_kw</td>
+<td>FLOAT8</td>
+<td>/charging-telemetry/latest</td>
+<td>powershare_instantaneous_power_kw</td>
+<td>useChargingTelemetryLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>55</td>
+<td>PowershareStatus</td>
+<td>Enum</td>
+<td>ParsePowershareStatus (strip prefix)</td>
+<td>vehicle_live_state</td>
+<td>powershare_status</td>
+<td>VARCHAR</td>
+<td>/charging-telemetry/latest</td>
+<td>powershare_status</td>
+<td>useChargingTelemetryLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>56</td>
+<td>PowershareStopReason</td>
+<td>Enum</td>
+<td>ParsePowershareStopReason (strip prefix)</td>
+<td>vehicle_live_state</td>
+<td>powershare_stop_reason</td>
+<td>VARCHAR</td>
+<td>/charging-telemetry/latest</td>
+<td>powershare_stop_reason</td>
+<td>useChargingTelemetryLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>57</td>
+<td>PowershareType</td>
+<td>Enum</td>
+<td>ParsePowershareType (strip prefix)</td>
+<td>vehicle_live_state</td>
+<td>powershare_type</td>
+<td>VARCHAR</td>
+<td>/charging-telemetry/latest</td>
+<td>powershare_type</td>
+<td>useChargingTelemetryLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+</tbody>
+</table>
+<h3 id="4-climate-29-signals">4 · Climate (29 signals)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Tesla Signal</th>
+<th>Type</th>
+<th>Coercion</th>
+<th>DB Table</th>
+<th>DB Column</th>
+<th>DB Type</th>
+<th>API Endpoint</th>
+<th>JSON Field</th>
+<th>Frontend Hook</th>
+<th>UI Page(s)</th>
+<th>Display Format</th>
+<th>Parity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>58</td>
+<td>AutoSeatClimateLeft</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>auto_seat_climate_left</td>
+<td>BOOLEAN</td>
+<td>/climate/latest</td>
+<td>auto_seat_climate_left</td>
+<td>useClimate</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>59</td>
+<td>AutoSeatClimateRight</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>auto_seat_climate_right</td>
+<td>BOOLEAN</td>
+<td>/climate/latest</td>
+<td>auto_seat_climate_right</td>
+<td>useClimate</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>60</td>
+<td>CabinOverheatProtectionMode</td>
+<td>Enum</td>
+<td>ParseCabinOverheatMode (strip prefix)</td>
+<td>vehicle_live_state</td>
+<td>cabin_overheat_protection_mode</td>
+<td>VARCHAR</td>
+<td>/climate/latest</td>
+<td>cabin_overheat_mode</td>
+<td>useClimate</td>
+<td>ClimatePanel</td>
+<td>Badge (On/FanOnly/Off)</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>61</td>
+<td>CabinOverheatProtectionTemperatureLimit</td>
+<td>Enum</td>
+<td>direct (→ VARCHAR)</td>
+<td>vehicle_live_state</td>
+<td>cabin_overheat_protection_temperature_limit</td>
+<td>VARCHAR</td>
+<td>/climate/latest</td>
+<td>cabin_overheat_protection_temp_limit</td>
+<td>useClimate</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>62</td>
+<td>ClimateKeeperMode</td>
+<td>Enum</td>
+<td>ParseClimateKeeperMode (strip prefix)</td>
+<td>vehicle_live_state</td>
+<td>climate_keeper_mode</td>
+<td>VARCHAR</td>
+<td>/climate/latest</td>
+<td>climate_keeper_mode</td>
+<td>useClimate</td>
+<td>ClimateControlPage, ClimatePanel</td>
+<td>Badge (On/Dog Mode/Camp Mode/Off)</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>63</td>
+<td>ClimateSeatCoolingFrontLeft</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>climate_seat_cooling_front_left</td>
+<td>FLOAT8</td>
+<td>/climate/latest</td>
+<td>climate_seat_cooling_front_left</td>
+<td>useClimate</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>64</td>
+<td>ClimateSeatCoolingFrontRight</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>climate_seat_cooling_front_right</td>
+<td>FLOAT8</td>
+<td>/climate/latest</td>
+<td>climate_seat_cooling_front_right</td>
+<td>useClimate</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>65</td>
+<td>DefrostForPreconditioning</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>defrost_for_preconditioning</td>
+<td>BOOLEAN</td>
+<td>/climate/latest</td>
+<td>defrost_for_preconditioning</td>
+<td>useClimate</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>66</td>
+<td>DefrostMode</td>
+<td>Enum</td>
+<td>ParseDefrostMode (strip prefix)</td>
+<td>vehicle_live_state</td>
+<td>defrost_mode</td>
+<td>VARCHAR</td>
+<td>/climate/latest</td>
+<td>defrost_mode</td>
+<td>useClimate</td>
+<td>ClimateControlPage, ClimatePanel, ClimateStatusWidget</td>
+<td>Badge with ❄️ icon</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>67</td>
+<td>HvacACEnabled</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>hvac_ac_enabled</td>
+<td>BOOLEAN</td>
+<td>/climate/latest</td>
+<td>hvac_ac_enabled</td>
+<td>useClimate</td>
+<td>ClimateControlPage</td>
+<td>Badge (On/Off)</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>68</td>
+<td>HvacAutoMode</td>
+<td>Enum</td>
+<td>ParseHvacAutoMode (strip prefix)</td>
+<td>vehicle_live_state</td>
+<td>hvac_auto_mode</td>
+<td>VARCHAR</td>
+<td>/climate/latest</td>
+<td>hvac_auto_mode</td>
+<td>useClimate</td>
+<td>ClimateControlPage</td>
+<td>Badge (On/Off)</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>69</td>
+<td>HvacFanSpeed</td>
+<td>Float</td>
+<td>direct (→fan_speed col)</td>
+<td>vehicle_live_state</td>
+<td>fan_speed</td>
+<td>INT</td>
+<td>/climate/latest</td>
+<td>hvac_fan_speed</td>
+<td>useClimate</td>
+<td>ClimateControlPage, ClimatePanel</td>
+<td>Level 0–6, bar indicators</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>70</td>
+<td>HvacFanStatus</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>hvac_fan_status</td>
+<td>FLOAT8</td>
+<td>/climate/latest</td>
+<td>hvac_fan_status</td>
+<td>useClimate</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>71</td>
+<td>HvacLeftTemperatureRequest</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>hvac_left_temperature_request</td>
+<td>FLOAT8</td>
+<td>/climate/latest</td>
+<td>hvac_left_temp_request</td>
+<td>useClimate</td>
+<td>ClimatePanel, ClimateControlPage</td>
+<td><code>fmtNumber(convertTemp())</code> °C/°F</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>72</td>
+<td>HvacPower</td>
+<td>Enum</td>
+<td>ParseHvacPower (→boolean)</td>
+<td>vehicle_live_state</td>
+<td>hvac_power</td>
+<td>BOOLEAN</td>
+<td>/climate/latest, /vehicles/{id}/state</td>
+<td>hvac_power / is_climate_on</td>
+<td>useClimate, useVehicleState</td>
+<td>ClimateControlPage, Dashboard</td>
+<td>kW bar or boolean</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>73</td>
+<td>HvacRightTemperatureRequest</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>hvac_right_temperature_request</td>
+<td>FLOAT8</td>
+<td>/climate/latest</td>
+<td>hvac_right_temp_request</td>
+<td>useClimate</td>
+<td>ClimatePanel, ClimateControlPage</td>
+<td><code>fmtNumber(convertTemp())</code> °C/°F</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>74</td>
+<td>HvacSteeringWheelHeatAuto</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>hvac_steering_wheel_heat_auto</td>
+<td>BOOLEAN</td>
+<td>/climate/latest</td>
+<td>hvac_steering_wheel_heat_auto</td>
+<td>useClimate</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>75</td>
+<td>HvacSteeringWheelHeatLevel</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>hvac_steering_wheel_heat_level</td>
+<td>FLOAT8</td>
+<td>/climate/latest</td>
+<td>hvac_steering_wheel_heat_level</td>
+<td>useClimate</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>76</td>
+<td>InsideTemp</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>inside_temp</td>
+<td>FLOAT8</td>
+<td>/climate/latest, /vehicles/{id}/state</td>
+<td>inside_temp</td>
+<td>useClimate, useVehicleState</td>
+<td>ClimateControlPage, ClimatePanel, ClimateStatusWidget, Dashboard</td>
+<td><code>fmtNumber(convertTemp(), 1)</code> °C/°F</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>77</td>
+<td>OutsideTemp</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>outside_temp</td>
+<td>FLOAT8</td>
+<td>/climate/latest, /vehicles/{id}/state</td>
+<td>outside_temp</td>
+<td>useClimate, useVehicleState</td>
+<td>ClimateControlPage, ClimatePanel, ClimateStatusWidget, Dashboard</td>
+<td><code>fmtNumber(convertTemp(), 1)</code> °C/°F</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>78</td>
+<td>RearDefrostEnabled</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>rear_defrost_enabled</td>
+<td>BOOLEAN</td>
+<td>/climate/latest</td>
+<td>rear_defrost_enabled</td>
+<td>useClimate</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>79</td>
+<td>RearDisplayHvacEnabled</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>rear_display_hvac_enabled</td>
+<td>BOOLEAN</td>
+<td>/climate/latest</td>
+<td>rear_display_hvac_enabled</td>
+<td>useClimate</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>80</td>
+<td>SeatHeaterLeft</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>seat_heater_left</td>
+<td>FLOAT8</td>
+<td>/climate/latest</td>
+<td>seat_heater_left</td>
+<td>useClimate</td>
+<td>ClimateControlPage</td>
+<td>Level 0–3, color-coded badge</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>81</td>
+<td>SeatHeaterRearCenter</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>seat_heater_rear_center</td>
+<td>FLOAT8</td>
+<td>/climate/latest</td>
+<td>seat_heater_rear_center</td>
+<td>useClimate</td>
+<td>ClimateControlPage</td>
+<td>Level 0–3, color-coded badge</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>82</td>
+<td>SeatHeaterRearLeft</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>seat_heater_rear_left</td>
+<td>FLOAT8</td>
+<td>/climate/latest</td>
+<td>seat_heater_rear_left</td>
+<td>useClimate</td>
+<td>ClimateControlPage</td>
+<td>Level 0–3, color-coded badge</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>83</td>
+<td>SeatHeaterRearRight</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>seat_heater_rear_right</td>
+<td>FLOAT8</td>
+<td>/climate/latest</td>
+<td>seat_heater_rear_right</td>
+<td>useClimate</td>
+<td>ClimateControlPage</td>
+<td>Level 0–3, color-coded badge</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>84</td>
+<td>SeatHeaterRight</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>seat_heater_right</td>
+<td>FLOAT8</td>
+<td>/climate/latest</td>
+<td>seat_heater_right</td>
+<td>useClimate</td>
+<td>ClimateControlPage</td>
+<td>Level 0–3, color-coded badge</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>85</td>
+<td>SeatVentEnabled</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>seat_vent_enabled</td>
+<td>BOOLEAN</td>
+<td>/climate/latest</td>
+<td>seat_vent_enabled</td>
+<td>useClimate</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>86</td>
+<td>WiperHeatEnabled</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>wiper_heat_enabled</td>
+<td>BOOLEAN</td>
+<td>/climate/latest</td>
+<td>wiper_heat_enabled</td>
+<td>useClimate</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+</tbody>
+</table>
+<h3 id="5-driving-12-signals">5 · Driving (12 signals)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Tesla Signal</th>
+<th>Type</th>
+<th>Coercion</th>
+<th>DB Table</th>
+<th>DB Column</th>
+<th>DB Type</th>
+<th>API Endpoint</th>
+<th>JSON Field</th>
+<th>Frontend Hook</th>
+<th>UI Page(s)</th>
+<th>Display Format</th>
+<th>Parity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>87</td>
+<td>BrakePedal</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>brake_pedal</td>
+<td>BOOLEAN</td>
+<td>/motor/latest</td>
+<td>brake_pedal</td>
+<td>useMotorLatest</td>
+<td>PedalUsage, PowertrainPanel, DrivetrainHealthPage</td>
+<td>Badge (Active/Inactive)</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>88</td>
+<td>BrakePedalPos</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>brake_pedal_pos</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>brake_pedal_pos</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>89</td>
+<td>CruiseSetSpeed</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>cruise_set_speed</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>cruise_set_speed</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>90</td>
+<td>DriveRail</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>drive_rail</td>
+<td>BOOLEAN</td>
+<td>/motor/latest</td>
+<td>drive_rail</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>91</td>
+<td>Gear</td>
+<td>Enum</td>
+<td>ParseGear (D/R/P/N)</td>
+<td>vehicle_live_state</td>
+<td>gear</td>
+<td>VARCHAR</td>
+<td>/motor/latest</td>
+<td>gear</td>
+<td>useMotorLatest</td>
+<td>SpeedGearPanel, DrivetrainHealthPage, LiveSignalsWidget</td>
+<td>Single char badge, color-coded</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>92</td>
+<td>LateralAcceleration</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>lateral_acceleration</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>lateral_accel</td>
+<td>useMotorLatest</td>
+<td>GForcePanel, PowertrainPanel, MotorHistoryCharts</td>
+<td><code>fmtNumber(value, 2)</code> g</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>93</td>
+<td>LifetimeEnergyGainedRegen</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>lifetime_energy_gained_regen</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>lifetime_energy_gained_regen</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>94</td>
+<td>LifetimeEnergyUsedDrive</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>lifetime_energy_used_drive</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>lifetime_energy_used_drive</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>95</td>
+<td>LongitudinalAcceleration</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>longitudinal_acceleration</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>longitudinal_accel</td>
+<td>useMotorLatest</td>
+<td>GForcePanel, PowertrainPanel, MotorHistoryCharts</td>
+<td><code>fmtNumber(value, 2)</code> g</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>96</td>
+<td>PedalPosition</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>pedal_position</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>pedal_position</td>
+<td>useMotorLatest</td>
+<td>PedalUsage, MotorSection, PowertrainPanel</td>
+<td>Percentage 0–100%, gauge</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>97</td>
+<td>RouteTrafficMinutesDelay</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>route_traffic_minutes_delay</td>
+<td>FLOAT8</td>
+<td>/location-snapshots/latest</td>
+<td>route_traffic_minutes_delay</td>
+<td>useLocationSnapshotLatest</td>
+<td>NavigationRoutePage</td>
+<td><code>{value} min</code></td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>98</td>
+<td>VehicleSpeed</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>speed</td>
+<td>FLOAT8</td>
+<td>/vehicles/{id}/state, /motor/latest</td>
+<td>speed / vehicle_speed</td>
+<td>useVehicleState, useMotorLatest</td>
+<td>SpeedGearPanel, Dashboard, DrivetrainHealthPage</td>
+<td><code>convertSpeed()</code> with unit</td>
+<td>🟢</td>
+</tr>
+</tbody>
+</table>
+<h3 id="6-powertrain-36-signals">6 · Powertrain (36 signals)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Tesla Signal</th>
+<th>Type</th>
+<th>Coercion</th>
+<th>DB Table</th>
+<th>DB Column</th>
+<th>DB Type</th>
+<th>API Endpoint</th>
+<th>JSON Field</th>
+<th>Frontend Hook</th>
+<th>UI Page(s)</th>
+<th>Display Format</th>
+<th>Parity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>99</td>
+<td>DiAxleSpeedF</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>di_axle_speed_f</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>di_axle_speed_f</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>100</td>
+<td>DiAxleSpeedR</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>di_axle_speed_r</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>—</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>Missing from MotorSnapshot TS type</td>
+<td>🔴</td>
+</tr>
+<tr>
+<td>101</td>
+<td>DiAxleSpeedREL</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>di_axle_speed_rel</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>di_axle_speed_rel</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>102</td>
+<td>DiAxleSpeedRER</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>di_axle_speed_rer</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>—</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>Missing from MotorSnapshot TS type</td>
+<td>🔴</td>
+</tr>
+<tr>
+<td>103</td>
+<td>DiHeatsinkTF</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>di_heatsink_tf</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>di_heatsink_t_f</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>104</td>
+<td>DiHeatsinkTR</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>di_heatsink_tr</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>di_heatsink_t_r</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>105</td>
+<td>DiHeatsinkTREL</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>di_heatsink_trel</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>di_heatsink_t_rel</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>106</td>
+<td>DiHeatsinkTRER</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>di_heatsink_trer</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>di_heatsink_t_rer</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>107</td>
+<td>DiInverterTF</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>di_inverter_tf</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>di_inverter_t_f</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>108</td>
+<td>DiInverterTR</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>di_inverter_tr</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>di_inverter_t_r</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>109</td>
+<td>DiInverterTREL</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>di_inverter_trel</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>di_inverter_t_rel</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>110</td>
+<td>DiInverterTRER</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>di_inverter_trer</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>di_inverter_t_rer</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>111</td>
+<td>DiMotorCurrentF</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>di_motor_current_f</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>di_motor_current_f</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>112</td>
+<td>DiMotorCurrentR</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>di_motor_current_r</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>di_motor_current_r</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>113</td>
+<td>DiMotorCurrentREL</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>di_motor_current_rel</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>di_motor_current_rel</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>114</td>
+<td>DiMotorCurrentRER</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>di_motor_current_rer</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>di_motor_current_rer</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>115</td>
+<td>DiSlaveTorqueCmd</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>di_slave_torque_cmd</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>di_slave_torque_cmd</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>116</td>
+<td>DiStateF</td>
+<td>Enum</td>
+<td>direct (→ VARCHAR)</td>
+<td>vehicle_live_state</td>
+<td>di_state_f</td>
+<td>VARCHAR</td>
+<td>/motor/latest</td>
+<td>di_state_f</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>117</td>
+<td>DiStateR</td>
+<td>Enum</td>
+<td>direct (→ VARCHAR)</td>
+<td>vehicle_live_state</td>
+<td>di_state_r</td>
+<td>VARCHAR</td>
+<td>/motor/latest</td>
+<td>—</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>Missing from MotorSnapshot TS type</td>
+<td>🔴</td>
+</tr>
+<tr>
+<td>118</td>
+<td>DiStateREL</td>
+<td>Enum</td>
+<td>direct (→ VARCHAR)</td>
+<td>vehicle_live_state</td>
+<td>di_state_rel</td>
+<td>VARCHAR</td>
+<td>/motor/latest</td>
+<td>di_state_rel</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>119</td>
+<td>DiStateRER</td>
+<td>Enum</td>
+<td>direct (→ VARCHAR)</td>
+<td>vehicle_live_state</td>
+<td>di_state_rer</td>
+<td>VARCHAR</td>
+<td>/motor/latest</td>
+<td>di_state_rer</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>120</td>
+<td>DiStatorTempF</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>di_stator_temp_f</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>di_stator_temp_f</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>121</td>
+<td>DiStatorTempR</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>di_stator_temp_r</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>—</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>Missing from MotorSnapshot TS type</td>
+<td>🔴</td>
+</tr>
+<tr>
+<td>122</td>
+<td>DiStatorTempREL</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>di_stator_temp_rel</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>di_stator_temp_rel</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>123</td>
+<td>DiStatorTempRER</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>di_stator_temp_rer</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>di_stator_temp_rer</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>124</td>
+<td>DiTorqueActualF</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>di_torque_actual_f</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>di_torque_actual_f</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>125</td>
+<td>DiTorqueActualR</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>di_torque_actual_r</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>di_torque_actual_r</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>126</td>
+<td>DiTorqueActualREL</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>di_torque_actual_rel</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>di_torque_actual_rel</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>127</td>
+<td>DiTorqueActualRER</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>di_torque_actual_rer</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>di_torque_actual_rer</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>128</td>
+<td>DiTorquemotor</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>di_torquemotor</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>di_torque</td>
+<td>useMotorLatest</td>
+<td>DrivingDynamicsPage, DrivetrainHealthPage, Dashboard</td>
+<td>Radial gauge 0–500 Nm</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>129</td>
+<td>DiVBatF</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>di_v_bat_f</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>di_v_bat_f</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>130</td>
+<td>DiVBatR</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>di_v_bat_r</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>di_v_bat_r</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>131</td>
+<td>DiVBatREL</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>di_v_bat_rel</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>di_v_bat_rel</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>132</td>
+<td>DiVBatRER</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>di_v_bat_rer</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>di_v_bat_rer</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>133</td>
+<td>Hvil</td>
+<td>Enum</td>
+<td>direct (→ VARCHAR)</td>
+<td>vehicle_live_state</td>
+<td>hvil</td>
+<td>VARCHAR</td>
+<td>/motor/latest</td>
+<td>hvil</td>
+<td>useMotorLatest</td>
+<td>DrivetrainHealthPage</td>
+<td>Text: Fault (red) / Normal (green)</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>134</td>
+<td>IsolationResistance</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>isolation_resistance</td>
+<td>FLOAT8</td>
+<td>/motor/latest</td>
+<td>—</td>
+<td>useMotorLatest</td>
+<td>—</td>
+<td>Missing from MotorSnapshot TS type</td>
+<td>⚪</td>
+</tr>
+</tbody>
+</table>
+<h3 id="7-location-13-signals">7 · Location (13 signals)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Tesla Signal</th>
+<th>Type</th>
+<th>Coercion</th>
+<th>DB Table</th>
+<th>DB Column</th>
+<th>DB Type</th>
+<th>API Endpoint</th>
+<th>JSON Field</th>
+<th>Frontend Hook</th>
+<th>UI Page(s)</th>
+<th>Display Format</th>
+<th>Parity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>135</td>
+<td>DestinationLocation</td>
+<td>Location</td>
+<td>compound→lat/lon split</td>
+<td>vehicle_live_state</td>
+<td>destination_lat/lon</td>
+<td>FLOAT8</td>
+<td>/location-snapshots/latest</td>
+<td>destination_lat, destination_lon</td>
+<td>useLocationSnapshotLatest</td>
+<td>NavigationRoutePage, MapOverviewPage</td>
+<td>Map marker</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>136</td>
+<td>DestinationName</td>
+<td>String</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>destination_name</td>
+<td>VARCHAR</td>
+<td>/location-snapshots/latest</td>
+<td>destination_name</td>
+<td>useLocationSnapshotLatest</td>
+<td>NavigationRoutePage, MapOverviewPage, MediaNavigationPanel</td>
+<td>Text</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>137</td>
+<td>GpsHeading</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>heading</td>
+<td>FLOAT8</td>
+<td>/vehicles/{id}/state</td>
+<td>heading</td>
+<td>useVehicleState</td>
+<td>Dashboard (GlancePage)</td>
+<td>Cardinal direction</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>138</td>
+<td>GpsState</td>
+<td>String</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>gps_state</td>
+<td>VARCHAR</td>
+<td>/location-snapshots/latest</td>
+<td>gps_state</td>
+<td>useLocationSnapshotLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>139</td>
+<td>LocatedAtFavorite</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>located_at_favorite</td>
+<td>BOOLEAN</td>
+<td>/location-snapshots/latest</td>
+<td>located_at_favorite</td>
+<td>useLocationSnapshotLatest</td>
+<td>NavigationRoutePage, MapOverviewPage</td>
+<td>Badge "⭐ Favorite"</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>140</td>
+<td>LocatedAtHome</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>located_at_home</td>
+<td>BOOLEAN</td>
+<td>/location-snapshots/latest</td>
+<td>located_at_home</td>
+<td>useLocationSnapshotLatest</td>
+<td>NavigationRoutePage, MapOverviewPage, Dashboard</td>
+<td>Badge "🏠 Home"</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>141</td>
+<td>LocatedAtWork</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>located_at_work</td>
+<td>BOOLEAN</td>
+<td>/location-snapshots/latest</td>
+<td>located_at_work</td>
+<td>useLocationSnapshotLatest</td>
+<td>NavigationRoutePage, MapOverviewPage</td>
+<td>Badge "🏢 Work"</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>142</td>
+<td>Location</td>
+<td>Location</td>
+<td>compound→lat/lon split</td>
+<td>vehicle_live_state</td>
+<td>latitude, longitude</td>
+<td>FLOAT8</td>
+<td>/vehicles/{id}/state</td>
+<td>latitude, longitude</td>
+<td>useVehicleState</td>
+<td>Dashboard, MapOverviewPage</td>
+<td>Map coordinates</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>143</td>
+<td>MilesToArrival</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>miles_to_arrival</td>
+<td>FLOAT8</td>
+<td>/location-snapshots/latest</td>
+<td>miles_to_arrival</td>
+<td>useLocationSnapshotLatest</td>
+<td>NavigationRoutePage, MediaNavigationPanel, Dashboard</td>
+<td>Numeric + unit conversion</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>144</td>
+<td>MinutesToArrival</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>minutes_to_arrival</td>
+<td>FLOAT8</td>
+<td>/location-snapshots/latest</td>
+<td>minutes_to_arrival</td>
+<td>useLocationSnapshotLatest</td>
+<td>NavigationRoutePage, MediaNavigationPanel, Dashboard</td>
+<td><code>{value} min</code></td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>145</td>
+<td>OriginLocation</td>
+<td>Location</td>
+<td>compound→lat/lon split</td>
+<td>vehicle_live_state</td>
+<td>origin_lat/lon</td>
+<td>FLOAT8</td>
+<td>/location-snapshots/latest</td>
+<td>origin_lat, origin_lon</td>
+<td>useLocationSnapshotLatest</td>
+<td>NavigationRoutePage</td>
+<td>Map marker</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>146</td>
+<td>RouteLine</td>
+<td>Route</td>
+<td>encoded polyline string</td>
+<td>vehicle_live_state</td>
+<td>route_line</td>
+<td>TEXT</td>
+<td>/location-snapshots/latest</td>
+<td>route_line</td>
+<td>useLocationSnapshotLatest</td>
+<td>NavigationRoutePage</td>
+<td>Map polyline</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>147</td>
+<td>RouteLastUpdated</td>
+<td>String</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>route_last_updated</td>
+<td>VARCHAR</td>
+<td>/location-snapshots/latest</td>
+<td>route_last_updated</td>
+<td>useLocationSnapshotLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+</tbody>
+</table>
+<h3 id="8-media-11-signals">8 · Media (11 signals)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Tesla Signal</th>
+<th>Type</th>
+<th>Coercion</th>
+<th>DB Table</th>
+<th>DB Column</th>
+<th>DB Type</th>
+<th>API Endpoint</th>
+<th>JSON Field</th>
+<th>Frontend Hook</th>
+<th>UI Page(s)</th>
+<th>Display Format</th>
+<th>Parity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>148</td>
+<td>MediaAudioVolume</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>media_audio_volume</td>
+<td>FLOAT8</td>
+<td>/media/latest</td>
+<td>audio_volume</td>
+<td>useMediaLatest</td>
+<td>MediaPlayerPage, Dashboard, MediaNowPlayingWidget</td>
+<td>Progress bar + numeric</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>149</td>
+<td>MediaAudioVolumeIncrement</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>media_audio_volume_increment</td>
+<td>FLOAT8</td>
+<td>/media/latest</td>
+<td>audio_volume_increment</td>
+<td>useMediaLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>150</td>
+<td>MediaAudioVolumeMax</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>media_audio_volume_max</td>
+<td>FLOAT8</td>
+<td>/media/latest</td>
+<td>audio_volume_max</td>
+<td>useMediaLatest</td>
+<td>MediaPlayerPage, Dashboard, MediaNowPlayingWidget</td>
+<td>Numeric denominator</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>151</td>
+<td>MediaNowPlayingAlbum</td>
+<td>String</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>media_now_playing_album</td>
+<td>VARCHAR</td>
+<td>/media/latest</td>
+<td>now_playing_album</td>
+<td>useMediaLatest</td>
+<td>MediaPlayerPage, Dashboard</td>
+<td>Text</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>152</td>
+<td>MediaNowPlayingArtist</td>
+<td>String</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>media_now_playing_artist</td>
+<td>VARCHAR</td>
+<td>/media/latest</td>
+<td>now_playing_artist</td>
+<td>useMediaLatest</td>
+<td>MediaPlayerPage, Dashboard, MediaNowPlayingWidget</td>
+<td>Text</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>153</td>
+<td>MediaNowPlayingDuration</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>media_now_playing_duration</td>
+<td>FLOAT8</td>
+<td>/media/latest</td>
+<td>now_playing_duration</td>
+<td>useMediaLatest</td>
+<td>MediaPlayerPage</td>
+<td>MM:SS (fmtPlayTime)</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>154</td>
+<td>MediaNowPlayingElapsed</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>media_now_playing_elapsed</td>
+<td>FLOAT8</td>
+<td>/media/latest</td>
+<td>now_playing_elapsed</td>
+<td>useMediaLatest</td>
+<td>MediaPlayerPage</td>
+<td>MM:SS (fmtPlayTime)</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>155</td>
+<td>MediaNowPlayingStation</td>
+<td>String</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>media_now_playing_station</td>
+<td>VARCHAR</td>
+<td>/media/latest</td>
+<td>now_playing_station</td>
+<td>useMediaLatest</td>
+<td>MediaPlayerPage, Dashboard</td>
+<td>Text</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>156</td>
+<td>MediaNowPlayingTitle</td>
+<td>String</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>media_now_playing_title</td>
+<td>VARCHAR</td>
+<td>/media/latest</td>
+<td>now_playing_title</td>
+<td>useMediaLatest</td>
+<td>MediaPlayerPage, Dashboard, MediaNowPlayingWidget</td>
+<td>Text</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>157</td>
+<td>MediaPlaybackSource</td>
+<td>String</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>media_playback_source</td>
+<td>VARCHAR</td>
+<td>/media/latest</td>
+<td>playback_source</td>
+<td>useMediaLatest</td>
+<td>MediaPlayerPage, Dashboard, MediaNowPlayingWidget</td>
+<td>Icon + text (Spotify/BT/Radio)</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>158</td>
+<td>MediaPlaybackStatus</td>
+<td>Enum</td>
+<td>direct (→ VARCHAR)</td>
+<td>vehicle_live_state</td>
+<td>media_playback_status</td>
+<td>VARCHAR</td>
+<td>/media/latest</td>
+<td>playback_status</td>
+<td>useMediaLatest</td>
+<td>MediaPlayerPage, Dashboard, MediaNowPlayingWidget</td>
+<td>Badge (Playing/Paused/Stopped)</td>
+<td>🟢</td>
+</tr>
+</tbody>
+</table>
+<h3 id="9-safety-14-signals">9 · Safety (14 signals)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Tesla Signal</th>
+<th>Type</th>
+<th>Coercion</th>
+<th>DB Table</th>
+<th>DB Column</th>
+<th>DB Type</th>
+<th>API Endpoint</th>
+<th>JSON Field</th>
+<th>Frontend Hook</th>
+<th>UI Page(s)</th>
+<th>Display Format</th>
+<th>Parity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>159</td>
+<td>AutomaticBlindSpotCamera</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>automatic_blind_spot_camera</td>
+<td>BOOLEAN</td>
+<td>/safety/latest</td>
+<td>automatic_blind_spot_camera</td>
+<td>useSafety</td>
+<td>SafetySettingsPage</td>
+<td>Boolean (Enabled/Disabled)</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>160</td>
+<td>AutomaticEmergencyBrakingOff</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>automatic_emergency_braking_off</td>
+<td>BOOLEAN</td>
+<td>/safety/latest</td>
+<td>automatic_emergency_braking_off</td>
+<td>useSafety</td>
+<td>SafetySettingsPage</td>
+<td>Boolean inverted (AEB status)</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>161</td>
+<td>BlindSpotCollisionWarningChime</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>blind_spot_collision_warning_chime</td>
+<td>BOOLEAN</td>
+<td>/safety/latest</td>
+<td>blind_spot_collision_warning_chime</td>
+<td>useSafety</td>
+<td>SafetySettingsPage</td>
+<td>Boolean (Warning/No Warning)</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>162</td>
+<td>CruiseFollowDistance</td>
+<td>Enum</td>
+<td>ParseCruiseFollowDistance (strip prefix)</td>
+<td>vehicle_live_state</td>
+<td>cruise_follow_distance</td>
+<td>VARCHAR</td>
+<td>/safety/latest</td>
+<td>cruise_follow_distance</td>
+<td>useSafety</td>
+<td>SafetySettingsPage</td>
+<td>String (1–7)</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>163</td>
+<td>DriverSeatBelt</td>
+<td>Enum</td>
+<td>ParseBuckleStatus (→boolean)</td>
+<td>vehicle_live_state</td>
+<td>driver_seat_belt</td>
+<td>BOOLEAN</td>
+<td>/safety/latest</td>
+<td>driver_seat_belt</td>
+<td>useSafety</td>
+<td>SafetySettingsPage</td>
+<td>Boolean</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>164</td>
+<td>EmergencyLaneDepartureAvoidance</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>emergency_lane_departure_avoidance</td>
+<td>BOOLEAN</td>
+<td>/safety/latest</td>
+<td>emergency_lane_departure_avoidance</td>
+<td>useSafety</td>
+<td>SafetySettingsPage</td>
+<td>Boolean</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>165</td>
+<td>ForwardCollisionWarning</td>
+<td>Enum</td>
+<td>ParseForwardCollisionWarning (strip prefix)</td>
+<td>vehicle_live_state</td>
+<td>forward_collision_warning</td>
+<td>VARCHAR</td>
+<td>/safety/latest</td>
+<td>forward_collision_warning</td>
+<td>useSafety</td>
+<td>SafetySettingsPage</td>
+<td>String (Off/Late/Average/Early)</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>166</td>
+<td>LaneDepartureAvoidance</td>
+<td>Enum</td>
+<td>ParseLaneDepartureAvoidance (strip prefix)</td>
+<td>vehicle_live_state</td>
+<td>lane_departure_avoidance</td>
+<td>VARCHAR</td>
+<td>/safety/latest</td>
+<td>lane_departure_avoidance</td>
+<td>useSafety</td>
+<td>SafetySettingsPage</td>
+<td>String (Off/Warning/Assist)</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>167</td>
+<td>Locked</td>
+<td>Bool</td>
+<td>bool/string→bool</td>
+<td>vehicle_live_state</td>
+<td>locked</td>
+<td>BOOLEAN</td>
+<td>/vehicles/{id}/state, /security/latest</td>
+<td>is_locked / locked</td>
+<td>useVehicleState, useSecurityLatest</td>
+<td>SecuritySection, SecurityStatusWidget, GuardModePage</td>
+<td>🔒/🔓 icon</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>168</td>
+<td>MilesSinceReset</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>miles_since_reset</td>
+<td>FLOAT8</td>
+<td>/safety/latest</td>
+<td>miles_since_reset</td>
+<td>useSafety</td>
+<td>SafetySettingsPage</td>
+<td>Number formatted</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>169</td>
+<td>PassengerSeatBelt</td>
+<td>Enum</td>
+<td>ParseBuckleStatus (→boolean)</td>
+<td>vehicle_live_state</td>
+<td>passenger_seat_belt</td>
+<td>BOOLEAN</td>
+<td>/safety/latest</td>
+<td>passenger_seat_belt</td>
+<td>useSafety</td>
+<td>SafetySettingsPage</td>
+<td>Boolean</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>170</td>
+<td>PinToDriveEnabled</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>pin_to_drive_enabled</td>
+<td>BOOLEAN</td>
+<td>/safety/latest</td>
+<td>pin_to_drive_enabled</td>
+<td>useSafety</td>
+<td>SafetySettingsPage</td>
+<td>Boolean</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>171</td>
+<td>SelfDrivingMilesSinceReset</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>self_driving_miles_since_reset</td>
+<td>FLOAT8</td>
+<td>/safety/latest</td>
+<td>self_driving_miles_since_reset</td>
+<td>useSafety</td>
+<td>SafetySettingsPage</td>
+<td>Number formatted</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>172</td>
+<td>SpeedLimitWarning</td>
+<td>Enum</td>
+<td>ParseSpeedLimitWarning (strip prefix)</td>
+<td>vehicle_live_state</td>
+<td>speed_limit_warning</td>
+<td>VARCHAR</td>
+<td>/safety/latest</td>
+<td>speed_limit_warning</td>
+<td>useSafety</td>
+<td>SafetySettingsPage</td>
+<td>String (Off/Display/Chime)</td>
+<td>🟢</td>
+</tr>
+</tbody>
+</table>
+<h3 id="10-tpms-10-signals">10 · TPMS (10 signals)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Tesla Signal</th>
+<th>Type</th>
+<th>Coercion</th>
+<th>DB Table</th>
+<th>DB Column</th>
+<th>DB Type</th>
+<th>API Endpoint</th>
+<th>JSON Field</th>
+<th>Frontend Hook</th>
+<th>UI Page(s)</th>
+<th>Display Format</th>
+<th>Parity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>173</td>
+<td>TpmsHardWarnings</td>
+<td>TireLocation</td>
+<td>compound→JSON string</td>
+<td>vehicle_live_state</td>
+<td>tpms_hard_warnings</td>
+<td>VARCHAR</td>
+<td>/tire-pressure/latest</td>
+<td>tpms_hard_warnings</td>
+<td>useLatestTirePressure</td>
+<td>TirePressurePage, TirePressureVisualWidget</td>
+<td>Per-tire JSON parsed</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>174</td>
+<td>TpmsLastSeenPressureTimeFl</td>
+<td>Float</td>
+<td>float→timestamptz</td>
+<td>vehicle_live_state</td>
+<td>tpms_last_seen_pressure_time_fl</td>
+<td>TIMESTAMPTZ</td>
+<td>/tire-pressure/latest</td>
+<td>last_seen_time_fl</td>
+<td>useLatestTirePressure</td>
+<td>TirePressurePage</td>
+<td>ISO timestamp formatted</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>175</td>
+<td>TpmsLastSeenPressureTimeFr</td>
+<td>Float</td>
+<td>float→timestamptz</td>
+<td>vehicle_live_state</td>
+<td>tpms_last_seen_pressure_time_fr</td>
+<td>TIMESTAMPTZ</td>
+<td>/tire-pressure/latest</td>
+<td>last_seen_time_fr</td>
+<td>useLatestTirePressure</td>
+<td>TirePressurePage</td>
+<td>ISO timestamp formatted</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>176</td>
+<td>TpmsLastSeenPressureTimeRl</td>
+<td>Float</td>
+<td>float→timestamptz</td>
+<td>vehicle_live_state</td>
+<td>tpms_last_seen_pressure_time_rl</td>
+<td>TIMESTAMPTZ</td>
+<td>/tire-pressure/latest</td>
+<td>last_seen_time_rl</td>
+<td>useLatestTirePressure</td>
+<td>TirePressurePage</td>
+<td>ISO timestamp formatted</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>177</td>
+<td>TpmsLastSeenPressureTimeRr</td>
+<td>Float</td>
+<td>float→timestamptz</td>
+<td>vehicle_live_state</td>
+<td>tpms_last_seen_pressure_time_rr</td>
+<td>TIMESTAMPTZ</td>
+<td>/tire-pressure/latest</td>
+<td>last_seen_time_rr</td>
+<td>useLatestTirePressure</td>
+<td>TirePressurePage</td>
+<td>ISO timestamp formatted</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>178</td>
+<td>TpmsPressureFl</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>tire_pressure_fl</td>
+<td>FLOAT8</td>
+<td>/tire-pressure/latest</td>
+<td>front_left</td>
+<td>useLatestTirePressure</td>
+<td>TirePressurePage, TirePressureVisualWidget</td>
+<td>Number (Bar) + gauge</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>179</td>
+<td>TpmsPressureFr</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>tire_pressure_fr</td>
+<td>FLOAT8</td>
+<td>/tire-pressure/latest</td>
+<td>front_right</td>
+<td>useLatestTirePressure</td>
+<td>TirePressurePage, TirePressureVisualWidget</td>
+<td>Number (Bar) + gauge</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>180</td>
+<td>TpmsPressureRl</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>tire_pressure_rl</td>
+<td>FLOAT8</td>
+<td>/tire-pressure/latest</td>
+<td>rear_left</td>
+<td>useLatestTirePressure</td>
+<td>TirePressurePage, TirePressureVisualWidget</td>
+<td>Number (Bar) + gauge</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>181</td>
+<td>TpmsPressureRr</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>tire_pressure_rr</td>
+<td>FLOAT8</td>
+<td>/tire-pressure/latest</td>
+<td>rear_right</td>
+<td>useLatestTirePressure</td>
+<td>TirePressurePage, TirePressureVisualWidget</td>
+<td>Number (Bar) + gauge</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>182</td>
+<td>TpmsSoftWarnings</td>
+<td>TireLocation</td>
+<td>compound→JSON string</td>
+<td>vehicle_live_state</td>
+<td>tpms_soft_warnings</td>
+<td>VARCHAR</td>
+<td>/tire-pressure/latest</td>
+<td>tpms_soft_warnings</td>
+<td>useLatestTirePressure</td>
+<td>TirePressurePage, TirePressureVisualWidget</td>
+<td>Per-tire JSON parsed</td>
+<td>🟢</td>
+</tr>
+</tbody>
+</table>
+<h3 id="11-vehicle-state-29-signals">11 · Vehicle State (29 signals)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Tesla Signal</th>
+<th>Type</th>
+<th>Coercion</th>
+<th>DB Table</th>
+<th>DB Column</th>
+<th>DB Type</th>
+<th>API Endpoint</th>
+<th>JSON Field</th>
+<th>Frontend Hook</th>
+<th>UI Page(s)</th>
+<th>Display Format</th>
+<th>Parity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>183</td>
+<td>CenterDisplay</td>
+<td>Enum</td>
+<td>ParseCenterDisplay (strip prefix)</td>
+<td>vehicle_live_state</td>
+<td>center_display</td>
+<td>VARCHAR</td>
+<td>/security/latest</td>
+<td>center_display</td>
+<td>useSecurityLatest</td>
+<td>SecurityPanel</td>
+<td>String (Off/Dim/On/Driving)</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>184</td>
+<td>CurrentLimitMph</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>current_limit_mph</td>
+<td>FLOAT8</td>
+<td>/security/latest</td>
+<td>current_limit_mph</td>
+<td>useSecurityLatest</td>
+<td>SecurityPanel</td>
+<td><code>{value} mph</code></td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>185</td>
+<td>DoorState</td>
+<td>Doors</td>
+<td>compound→JSON string</td>
+<td>vehicle_live_state</td>
+<td>door_state</td>
+<td>VARCHAR</td>
+<td>/security/latest</td>
+<td>door_state</td>
+<td>useSecurityLatest</td>
+<td>SecuritySection, DoorWindowStatusWidget, SecurityPanel</td>
+<td>Parsed JSON per-door</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>186</td>
+<td>DriverSeatOccupied</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>driver_seat_occupied</td>
+<td>BOOLEAN</td>
+<td>/security/latest</td>
+<td>driver_seat_occupied</td>
+<td>useSecurityLatest</td>
+<td>SecurityPanel</td>
+<td>Boolean</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>187</td>
+<td>FdWindow</td>
+<td>Enum</td>
+<td>ParseWindowState (strip prefix)</td>
+<td>vehicle_live_state</td>
+<td>fd_window</td>
+<td>VARCHAR</td>
+<td>/security/latest</td>
+<td>fd_window</td>
+<td>useSecurityLatest</td>
+<td>SecuritySection, DoorWindowStatusWidget, SecurityPanel</td>
+<td>String (Closed/Open/Partial)</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>188</td>
+<td>FpWindow</td>
+<td>Enum</td>
+<td>ParseWindowState (strip prefix)</td>
+<td>vehicle_live_state</td>
+<td>fp_window</td>
+<td>VARCHAR</td>
+<td>/security/latest</td>
+<td>fp_window</td>
+<td>useSecurityLatest</td>
+<td>SecuritySection, DoorWindowStatusWidget, SecurityPanel</td>
+<td>String (Closed/Open/Partial)</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>189</td>
+<td>GuestModeEnabled</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>guest_mode</td>
+<td>BOOLEAN</td>
+<td>/security/latest</td>
+<td>guest_mode</td>
+<td>useSecurityLatest</td>
+<td>SecurityPanel</td>
+<td>Boolean</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>190</td>
+<td>GuestModeMobileAccessState</td>
+<td>Enum</td>
+<td>direct (→ VARCHAR)</td>
+<td>vehicle_live_state</td>
+<td>guest_mode_mobile_access</td>
+<td>VARCHAR</td>
+<td>/security/latest</td>
+<td>guest_mode_mobile_access_state</td>
+<td>useSecurityLatest</td>
+<td>SecurityPanel</td>
+<td>String</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>191</td>
+<td>HomelinkDeviceCount</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>homelink_device_count</td>
+<td>INT</td>
+<td>/security/latest</td>
+<td>homelink_device_count</td>
+<td>useSecurityLatest</td>
+<td>SecurityPanel</td>
+<td>Number</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>192</td>
+<td>HomelinkNearby</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>homelink_nearby</td>
+<td>BOOLEAN</td>
+<td>/security/latest</td>
+<td>homelink_nearby</td>
+<td>useSecurityLatest</td>
+<td>SecurityPanel</td>
+<td>Boolean</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>193</td>
+<td>LightsHazardsActive</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>lights_hazards_active</td>
+<td>BOOLEAN</td>
+<td>/security/latest</td>
+<td>lights_hazards_active</td>
+<td>useSecurityLatest</td>
+<td>SecurityPanel</td>
+<td>Boolean</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>194</td>
+<td>LightsHighBeams</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>lights_high_beams</td>
+<td>BOOLEAN</td>
+<td>/security/latest</td>
+<td>lights_high_beams</td>
+<td>useSecurityLatest</td>
+<td>SecurityPanel</td>
+<td>Boolean</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>195</td>
+<td>LightsTurnSignal</td>
+<td>Enum</td>
+<td>ParseTurnSignal (strip prefix)</td>
+<td>vehicle_live_state</td>
+<td>lights_turn_signal</td>
+<td>VARCHAR</td>
+<td>/security/latest</td>
+<td>lights_turn_signal</td>
+<td>useSecurityLatest</td>
+<td>SecurityPanel</td>
+<td>String (Off/Left/Right/Both)</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>196</td>
+<td>Odometer</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>odometer</td>
+<td>FLOAT8</td>
+<td>/vehicles/{id}/state, /security/latest</td>
+<td>odometer</td>
+<td>useVehicleState, useSecurityLatest</td>
+<td>OdometerCounterWidget, QuickStatsGrid, LiveStateIndicators</td>
+<td><code>fmtNumber(convertDistance())</code> km/mi</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>197</td>
+<td>PairedPhoneKeyAndKeyFobQty</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>paired_phone_key_count</td>
+<td>INT</td>
+<td>/security/latest</td>
+<td>paired_phone_key_count</td>
+<td>useSecurityLatest</td>
+<td>SecurityPanel</td>
+<td>Number</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>198</td>
+<td>RdWindow</td>
+<td>Enum</td>
+<td>ParseWindowState (strip prefix)</td>
+<td>vehicle_live_state</td>
+<td>rd_window</td>
+<td>VARCHAR</td>
+<td>/security/latest</td>
+<td>rd_window</td>
+<td>useSecurityLatest</td>
+<td>SecuritySection, DoorWindowStatusWidget, SecurityPanel</td>
+<td>String (Closed/Open/Partial)</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>199</td>
+<td>RpWindow</td>
+<td>Enum</td>
+<td>ParseWindowState (strip prefix)</td>
+<td>vehicle_live_state</td>
+<td>rp_window</td>
+<td>VARCHAR</td>
+<td>/security/latest</td>
+<td>rp_window</td>
+<td>useSecurityLatest</td>
+<td>SecuritySection, DoorWindowStatusWidget, SecurityPanel</td>
+<td>String (Closed/Open/Partial)</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>200</td>
+<td>SentryMode</td>
+<td>Enum</td>
+<td>ParseEnumBool (→boolean)</td>
+<td>vehicle_live_state</td>
+<td>sentry_mode</td>
+<td>BOOLEAN</td>
+<td>/vehicles/{id}/state, /security/latest</td>
+<td>sentry_mode</td>
+<td>useVehicleState, useSecurityLatest</td>
+<td>SecuritySection, SecurityStatusWidget, SentryEventLogWidget</td>
+<td>🛡️ icon + badge</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>201</td>
+<td>ServiceMode</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>service_mode</td>
+<td>BOOLEAN</td>
+<td>/security/latest</td>
+<td>service_mode</td>
+<td>useSecurityLatest</td>
+<td>SecurityPanel</td>
+<td>Boolean</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>202</td>
+<td>SpeedLimitMode</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>speed_limit_mode</td>
+<td>BOOLEAN</td>
+<td>/security/latest</td>
+<td>speed_limit_mode</td>
+<td>useSecurityLatest</td>
+<td>SecurityPanel</td>
+<td>Boolean</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>203</td>
+<td>SoftwareUpdateDownloadPercentComplete</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>sw_update_download_pct</td>
+<td>INT</td>
+<td>/vehicle-config/latest</td>
+<td>software_update_download_pct</td>
+<td>useVehicleConfigLatest</td>
+<td>SoftwareUpdateStatusWidget</td>
+<td><code>{value}%</code></td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>204</td>
+<td>SoftwareUpdateExpectedDurationMinutes</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>sw_update_expected_duration</td>
+<td>INT</td>
+<td>/vehicle-config/latest</td>
+<td>software_update_expected_duration</td>
+<td>useVehicleConfigLatest</td>
+<td>SoftwareUpdateStatusWidget</td>
+<td><code>{value} minutes</code></td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>205</td>
+<td>SoftwareUpdateInstallationPercentComplete</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>sw_update_install_pct</td>
+<td>INT</td>
+<td>/vehicle-config/latest</td>
+<td>software_update_install_pct</td>
+<td>useVehicleConfigLatest</td>
+<td>SoftwareUpdateStatusWidget</td>
+<td><code>{value}%</code></td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>206</td>
+<td>SoftwareUpdateScheduledStartTime</td>
+<td>String</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>sw_update_scheduled_start</td>
+<td>VARCHAR</td>
+<td>/vehicle-config/latest</td>
+<td>software_update_scheduled_start</td>
+<td>useVehicleConfigLatest</td>
+<td>SoftwareUpdateStatusWidget</td>
+<td>ISO timestamp</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>207</td>
+<td>SoftwareUpdateVersion</td>
+<td>String</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>sw_update_version</td>
+<td>VARCHAR</td>
+<td>/vehicle-config/latest</td>
+<td>software_update_version</td>
+<td>useVehicleConfigLatest</td>
+<td>SoftwareUpdateStatusWidget</td>
+<td>String</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>208</td>
+<td>TonneauOpenPercent</td>
+<td>Float</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>tonneau_open_percent</td>
+<td>FLOAT8</td>
+<td>/security/latest</td>
+<td>tonneau_open_percent</td>
+<td>useSecurityLatest</td>
+<td>SecurityPanel</td>
+<td><code>{value}%</code></td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>209</td>
+<td>TonneauPosition</td>
+<td>Enum</td>
+<td>ParseTonneauPosition (strip prefix)</td>
+<td>vehicle_live_state</td>
+<td>tonneau_position</td>
+<td>VARCHAR</td>
+<td>/security/latest</td>
+<td>tonneau_position</td>
+<td>useSecurityLatest</td>
+<td>SecurityPanel</td>
+<td>String</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>210</td>
+<td>TonneauTentMode</td>
+<td>Enum</td>
+<td>ParseTonneauTentMode (strip prefix)</td>
+<td>vehicle_live_state</td>
+<td>tonneau_tent_mode</td>
+<td>VARCHAR</td>
+<td>/security/latest</td>
+<td>tonneau_tent_mode</td>
+<td>useSecurityLatest</td>
+<td>SecurityPanel</td>
+<td>String</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>211</td>
+<td>ValetModeEnabled</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>valet_mode_enabled</td>
+<td>BOOLEAN</td>
+<td>/security/latest</td>
+<td>valet_mode_enabled</td>
+<td>useSecurityLatest</td>
+<td>SecurityPanel, GuardModePage</td>
+<td>Boolean</td>
+<td>🟢</td>
+</tr>
+</tbody>
+</table>
+<h3 id="12-vehicle-config-14-signals">12 · Vehicle Config (14 signals)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Tesla Signal</th>
+<th>Type</th>
+<th>Coercion</th>
+<th>DB Table</th>
+<th>DB Column</th>
+<th>DB Type</th>
+<th>API Endpoint</th>
+<th>JSON Field</th>
+<th>Frontend Hook</th>
+<th>UI Page(s)</th>
+<th>Display Format</th>
+<th>Parity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>212</td>
+<td>CarType</td>
+<td>Enum</td>
+<td>direct (→ VARCHAR)</td>
+<td>vehicle_live_state</td>
+<td>car_type</td>
+<td>VARCHAR</td>
+<td>/vehicle-config/latest</td>
+<td>car_type</td>
+<td>useVehicleConfigLatest</td>
+<td>VehicleConfigSection, DigitalTwinPage</td>
+<td>String (Model S/3/X/Y)</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>213</td>
+<td>EfficiencyPackage</td>
+<td>String</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>efficiency_package</td>
+<td>VARCHAR</td>
+<td>/vehicle-config/latest</td>
+<td>efficiency_package</td>
+<td>useVehicleConfigLatest</td>
+<td>VehicleConfigSection</td>
+<td>String (e.g., "LFP")</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>214</td>
+<td>EuropeVehicle</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>europe_vehicle</td>
+<td>BOOLEAN</td>
+<td>/vehicle-config/latest</td>
+<td>europe_vehicle</td>
+<td>useVehicleConfigLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>215</td>
+<td>ExteriorColor</td>
+<td>String</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>exterior_color</td>
+<td>VARCHAR</td>
+<td>/vehicle-config/latest</td>
+<td>exterior_color</td>
+<td>useVehicleConfigLatest</td>
+<td>VehicleConfigSection, DigitalTwinPage</td>
+<td>String (color name)</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>216</td>
+<td>OffroadLightbarPresent</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>offroad_lightbar_present</td>
+<td>BOOLEAN</td>
+<td>/vehicle-config/latest</td>
+<td>offroad_lightbar_present</td>
+<td>useVehicleConfigLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>217</td>
+<td>RearSeatHeaters</td>
+<td>Float</td>
+<td>direct (→ VARCHAR)</td>
+<td>vehicle_live_state</td>
+<td>rear_seat_heaters</td>
+<td>VARCHAR</td>
+<td>/vehicle-config/latest</td>
+<td>rear_seat_heaters</td>
+<td>useVehicleConfigLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>218</td>
+<td>RemoteStartEnabled</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>remote_start_enabled</td>
+<td>BOOLEAN</td>
+<td>/vehicle-config/latest</td>
+<td>remote_start_enabled</td>
+<td>useVehicleConfigLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>219</td>
+<td>RightHandDrive</td>
+<td>Bool</td>
+<td>ParseEnumBool</td>
+<td>vehicle_live_state</td>
+<td>right_hand_drive</td>
+<td>BOOLEAN</td>
+<td>/vehicle-config/latest</td>
+<td>right_hand_drive</td>
+<td>useVehicleConfigLatest</td>
+<td>VehicleConfigSection</td>
+<td>Boolean (Yes/No)</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>220</td>
+<td>RoofColor</td>
+<td>String</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>roof_color</td>
+<td>VARCHAR</td>
+<td>/vehicle-config/latest</td>
+<td>roof_color</td>
+<td>useVehicleConfigLatest</td>
+<td>VehicleConfigSection</td>
+<td>String</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>221</td>
+<td>SunroofInstalled</td>
+<td>Enum</td>
+<td>direct (→ VARCHAR)</td>
+<td>vehicle_live_state</td>
+<td>sunroof_installed</td>
+<td>VARCHAR</td>
+<td>/vehicle-config/latest</td>
+<td>sunroof_installed</td>
+<td>useVehicleConfigLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>222</td>
+<td>Trim</td>
+<td>String</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>trim</td>
+<td>VARCHAR</td>
+<td>/vehicle-config/latest</td>
+<td>trim</td>
+<td>useVehicleConfigLatest</td>
+<td>VehicleConfigSection, DigitalTwinPage</td>
+<td>String</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>223</td>
+<td>VehicleName</td>
+<td>String</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>vehicle_name</td>
+<td>VARCHAR</td>
+<td>/vehicle-config/latest</td>
+<td>vehicle_name</td>
+<td>useVehicleConfigLatest</td>
+<td>VehicleConfigSection, DigitalTwinPage</td>
+<td>String</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>224</td>
+<td>Version</td>
+<td>String</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>version</td>
+<td>VARCHAR</td>
+<td>/vehicles/{id}/state, /vehicle-config/latest</td>
+<td>software_version / version</td>
+<td>useVehicleState, useVehicleConfigLatest</td>
+<td>VehicleConfigSection, Dashboard</td>
+<td>String</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>225</td>
+<td>WheelType</td>
+<td>String</td>
+<td>direct</td>
+<td>vehicle_live_state</td>
+<td>wheel_type</td>
+<td>VARCHAR</td>
+<td>/vehicle-config/latest</td>
+<td>wheel_type</td>
+<td>useVehicleConfigLatest</td>
+<td>VehicleConfigSection, DigitalTwinPage</td>
+<td>String</td>
+<td>🟢</td>
+</tr>
+</tbody>
+</table>
+<h3 id="13-user-preferences-5-signals">13 · User Preferences (5 signals)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Tesla Signal</th>
+<th>Type</th>
+<th>Coercion</th>
+<th>DB Table</th>
+<th>DB Column</th>
+<th>DB Type</th>
+<th>API Endpoint</th>
+<th>JSON Field</th>
+<th>Frontend Hook</th>
+<th>UI Page(s)</th>
+<th>Display Format</th>
+<th>Parity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>226</td>
+<td>Setting24HourTime</td>
+<td>Bool</td>
+<td>ParseEnumBool (→ VARCHAR)</td>
+<td>vehicle_live_state</td>
+<td>setting24_hour_time</td>
+<td>VARCHAR</td>
+<td>/user-preferences/latest</td>
+<td>setting_24hr_time</td>
+<td>useUserPreferenceLatest</td>
+<td>—</td>
+<td>—</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>227</td>
+<td>SettingChargeUnit</td>
+<td>Enum</td>
+<td>direct (→ VARCHAR)</td>
+<td>vehicle_live_state</td>
+<td>setting_charge_unit</td>
+<td>VARCHAR</td>
+<td>/user-preferences/latest</td>
+<td>setting_charge_unit</td>
+<td>useCarPreferences, useUserPreferenceLatest</td>
+<td>Settings page</td>
+<td>String (mi/km/%)</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>228</td>
+<td>SettingDistanceUnit</td>
+<td>Enum</td>
+<td>direct (→ VARCHAR)</td>
+<td>vehicle_live_state</td>
+<td>setting_distance_unit</td>
+<td>VARCHAR</td>
+<td>/user-preferences/latest</td>
+<td>setting_distance_unit</td>
+<td>useCarPreferences, useUserPreferenceLatest</td>
+<td>Settings page</td>
+<td>String (mi/hr, km/hr)</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>229</td>
+<td>SettingTemperatureUnit</td>
+<td>Enum</td>
+<td>direct (→ VARCHAR)</td>
+<td>vehicle_live_state</td>
+<td>setting_temperature_unit</td>
+<td>VARCHAR</td>
+<td>/user-preferences/latest</td>
+<td>setting_temperature_unit</td>
+<td>useCarPreferences, useUserPreferenceLatest</td>
+<td>Settings page</td>
+<td>String (F/C)</td>
+<td>🟢</td>
+</tr>
+<tr>
+<td>230</td>
+<td>SettingTirePressureUnit</td>
+<td>Enum</td>
+<td>direct (→ VARCHAR)</td>
+<td>vehicle_live_state</td>
+<td>setting_tire_pressure_unit</td>
+<td>VARCHAR</td>
+<td>/user-preferences/latest</td>
+<td>setting_tire_pressure_unit</td>
+<td>useCarPreferences, useUserPreferenceLatest</td>
+<td>Settings page, TirePressurePage</td>
+<td>String (Bar/Psi)</td>
+<td>🟢</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="critical-mismatches-action-required">Critical Mismatches (Action Required)</h2>
+<h3 id="1-chargeport-not-served-by-any-api-endpoint">🔴 1. ChargePort — Not served by any API endpoint</h3>
+<ul>
+<li><strong>Signal</strong>: <code>ChargePort</code> (Enum)</li>
+<li><strong>What's wrong</strong>: Stored in <code>vehicle_live_state.charge_port</code> but not included in any domain snapshot handler or API response</li>
+<li><strong>Root cause</strong>: The ChargePort enum (Open/Closed) is stored in live state but no snapshot handler reads this column. Frontend uses <code>charge_port_door_open</code> boolean instead.</li>
+<li><strong>Suggested fix</strong>: Add <code>charge_port</code> to the ChargingTelemetry handler response, or document as intentionally excluded (superseded by <code>ChargePortDoorOpen</code> boolean)</li>
+<li><strong>Files to change</strong>: <code>internal/database/charging_telemetry_repo.go</code>, <code>web/src/api/types.ts</code></li>
+</ul>
+<h3 id="2-diaxlespeedr-missing-from-motorsnapshot-typescript-type">🔴 2. DiAxleSpeedR — Missing from MotorSnapshot TypeScript type</h3>
+<ul>
+<li><strong>Signal</strong>: <code>DiAxleSpeedR</code> (Float)</li>
+<li><strong>What's wrong</strong>: Stored in <code>vehicle_live_state.di_axle_speed_r</code> and in <code>motor_snapshots</code> DB table, but the frontend <code>MotorSnapshot</code> TypeScript interface in <code>web/src/api/types.ts</code> does not include <code>di_axle_speed_r</code></li>
+<li><strong>Root cause</strong>: When the MotorSnapshot type was created, only the front (F) and REL/RER variants were included; the plain rear (R) variant was omitted</li>
+<li><strong>Suggested fix</strong>: Add <code>di_axle_speed_r?: number</code> to <code>MotorSnapshot</code> interface</li>
+<li><strong>Files to change</strong>: <code>web/src/api/types.ts</code> (MotorSnapshot interface)</li>
+</ul>
+<h3 id="3-diaxlespeedrer-missing-from-motorsnapshot-typescript-type">🔴 3. DiAxleSpeedRER — Missing from MotorSnapshot TypeScript type</h3>
+<ul>
+<li><strong>Signal</strong>: <code>DiAxleSpeedRER</code> (Float)</li>
+<li><strong>What's wrong</strong>: Same issue as DiAxleSpeedR — stored in DB but missing from frontend type</li>
+<li><strong>Root cause</strong>: Omitted during type definition</li>
+<li><strong>Suggested fix</strong>: Add <code>di_axle_speed_rer?: number</code> to <code>MotorSnapshot</code> interface</li>
+<li><strong>Files to change</strong>: <code>web/src/api/types.ts</code> (MotorSnapshot interface)</li>
+</ul>
+<h3 id="4-distater-distatortempr-missing-from-motorsnapshot-typescript-type">🔴 4. DiStateR / DiStatorTempR — Missing from MotorSnapshot TypeScript type</h3>
+<ul>
+<li><strong>Signal</strong>: <code>DiStateR</code> (Enum), <code>DiStatorTempR</code> (Float)</li>
+<li><strong>What's wrong</strong>: Both stored in <code>vehicle_live_state</code> (<code>di_state_r</code>, <code>di_stator_temp_r</code>) and served by <code>/motor/latest</code>, but the MotorSnapshot TypeScript interface uses <code>di_state</code> (generic) for front motor only, and lacks <code>di_state_r</code> and <code>di_stator_temp_r</code> fields</li>
+<li><strong>Root cause</strong>: The MotorSnapshot type was built for single/front motor display; rear motor base variants were not added</li>
+<li><strong>Suggested fix</strong>: Add <code>di_state_r?: string</code> and <code>di_stator_temp_r?: number</code> to <code>MotorSnapshot</code> interface</li>
+<li><strong>Files to change</strong>: <code>web/src/api/types.ts</code> (MotorSnapshot interface)</li>
+</ul>
+<hr />
+<h2 id="orphaned-signals">Orphaned Signals</h2>
+<p>Signals that are ingested into the database and stored in <code>vehicle_live_state</code> but <strong>not displayed on any dedicated frontend page</strong>. All 81 orphaned signals are still accessible via the raw signal viewer (<code>/signals/{vehicleID}/live</code>) and signal history (<code>/signals/history</code>).</p>
+<h3 id="charging-28-orphaned">Charging — 28 orphaned</h3>
+<table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Where Stored</th>
+<th>Recommendation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BmsFullchargecomplete</td>
+<td>vehicle_live_state, charging_telemetry</td>
+<td>Add to BatteryHealthPage — useful for cycle counting</td>
+</tr>
+<tr>
+<td>ChargeCurrentRequest</td>
+<td>vehicle_live_state, charging_telemetry</td>
+<td>Add to ChargingDetailPage advanced section</td>
+</tr>
+<tr>
+<td>ChargeCurrentRequestMax</td>
+<td>vehicle_live_state, charging_telemetry</td>
+<td>Add to ChargingDetailPage advanced section</td>
+</tr>
+<tr>
+<td>ChargeEnableRequest</td>
+<td>vehicle_live_state, charging_telemetry</td>
+<td>Low priority — internal BMS flag</td>
+</tr>
+<tr>
+<td>ChargePortColdWeatherMode</td>
+<td>vehicle_live_state, charging_telemetry</td>
+<td>Add to ChargingDetailPage — cold weather indication</td>
+</tr>
+<tr>
+<td>ChargePortLatch</td>
+<td>vehicle_live_state, charging_telemetry</td>
+<td>Add to ChargingDetailPage — safety indicator</td>
+</tr>
+<tr>
+<td>ChargingCableType</td>
+<td>vehicle_live_state, charging_telemetry</td>
+<td>Add to ChargingDetailPage — useful cable info</td>
+</tr>
+<tr>
+<td>DCDCEnable</td>
+<td>vehicle_live_state, charging_telemetry</td>
+<td>Low priority — DC-DC converter status</td>
+</tr>
+<tr>
+<td>DetailedChargeState</td>
+<td>vehicle_live_state, charging_telemetry</td>
+<td>Add to ChargingDetailPage — more granular than ChargeState</td>
+</tr>
+<tr>
+<td>EstBatteryRange</td>
+<td>vehicle_live_state, charging_telemetry</td>
+<td>Add to range display alongside rated_range</td>
+</tr>
+<tr>
+<td>EstimatedHoursToChargeTermination</td>
+<td>vehicle_live_state, charging_telemetry</td>
+<td>Add to ChargingDetailPage — complements TimeToFullCharge</td>
+</tr>
+<tr>
+<td>ExpectedEnergyPercentAtTripArrival</td>
+<td>vehicle_live_state, charging_telemetry</td>
+<td>Add to NavigationRoutePage — trip planning</td>
+</tr>
+<tr>
+<td>FastChargerPresent</td>
+<td>vehicle_live_state, charging_telemetry</td>
+<td>Add to ChargingDetailPage badge</td>
+</tr>
+<tr>
+<td>FastChargerType</td>
+<td>vehicle_live_state, charging_telemetry</td>
+<td>Add to ChargingDetailPage — charger brand info</td>
+</tr>
+<tr>
+<td>IdealBatteryRange</td>
+<td>vehicle_live_state</td>
+<td>Used internally for range fallback only</td>
+</tr>
+<tr>
+<td>LifetimeEnergyUsed</td>
+<td>vehicle_live_state, charging_telemetry</td>
+<td>Add to EnergyStatsPage — lifetime metric</td>
+</tr>
+<tr>
+<td>ModuleTempMax</td>
+<td>vehicle_live_state, charging_telemetry</td>
+<td>Add to BatteryHealthPage — thermal monitoring</td>
+</tr>
+<tr>
+<td>ModuleTempMin</td>
+<td>vehicle_live_state, charging_telemetry</td>
+<td>Add to BatteryHealthPage — thermal monitoring</td>
+</tr>
+<tr>
+<td>NotEnoughPowerToHeat</td>
+<td>vehicle_live_state, charging_telemetry</td>
+<td>Add to ClimateControlPage — alert indicator</td>
+</tr>
+<tr>
+<td>NumBrickVoltageMax</td>
+<td>vehicle_live_state, charging_telemetry</td>
+<td>Low priority — cell balance diagnostic</td>
+</tr>
+<tr>
+<td>NumBrickVoltageMin</td>
+<td>vehicle_live_state, charging_telemetry</td>
+<td>Low priority — cell balance diagnostic</td>
+</tr>
+<tr>
+<td>NumModuleTempMax</td>
+<td>vehicle_live_state, charging_telemetry</td>
+<td>Low priority — module temp diagnostic</td>
+</tr>
+<tr>
+<td>NumModuleTempMin</td>
+<td>vehicle_live_state, charging_telemetry</td>
+<td>Low priority — module temp diagnostic</td>
+</tr>
+<tr>
+<td>PreconditioningEnabled</td>
+<td>vehicle_live_state, charging_telemetry</td>
+<td>Add to ChargingDetailPage or ClimateControlPage</td>
+</tr>
+<tr>
+<td>RatedRange</td>
+<td>vehicle_live_state</td>
+<td>Used internally for range fallback only</td>
+</tr>
+<tr>
+<td>SuperchargerSessionTripPlanner</td>
+<td>vehicle_live_state, charging_telemetry</td>
+<td>Low priority — trip planner integration flag</td>
+</tr>
+</tbody>
+</table>
+<h3 id="powershare-5-orphaned">Powershare — 5 orphaned</h3>
+<table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Where Stored</th>
+<th>Recommendation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PowershareHoursLeft</td>
+<td>vehicle_live_state, charging_telemetry</td>
+<td>Create PowersharePage — all 5 signals together</td>
+</tr>
+<tr>
+<td>PowershareInstantaneousPowerKW</td>
+<td>vehicle_live_state, charging_telemetry</td>
+<td>Create PowersharePage</td>
+</tr>
+<tr>
+<td>PowershareStatus</td>
+<td>vehicle_live_state, charging_telemetry</td>
+<td>Create PowersharePage</td>
+</tr>
+<tr>
+<td>PowershareStopReason</td>
+<td>vehicle_live_state, charging_telemetry</td>
+<td>Create PowersharePage</td>
+</tr>
+<tr>
+<td>PowershareType</td>
+<td>vehicle_live_state, charging_telemetry</td>
+<td>Create PowersharePage</td>
+</tr>
+</tbody>
+</table>
+<h3 id="climate-10-orphaned">Climate — 10 orphaned</h3>
+<table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Where Stored</th>
+<th>Recommendation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AutoSeatClimateLeft</td>
+<td>vehicle_live_state, climate_snapshots</td>
+<td>Add to ClimateControlPage seat section</td>
+</tr>
+<tr>
+<td>AutoSeatClimateRight</td>
+<td>vehicle_live_state, climate_snapshots</td>
+<td>Add to ClimateControlPage seat section</td>
+</tr>
+<tr>
+<td>CabinOverheatProtectionTemperatureLimit</td>
+<td>vehicle_live_state, climate_snapshots</td>
+<td>Add alongside CabinOverheatProtectionMode</td>
+</tr>
+<tr>
+<td>ClimateSeatCoolingFrontLeft</td>
+<td>vehicle_live_state, climate_snapshots</td>
+<td>Add to ClimateControlPage seat section</td>
+</tr>
+<tr>
+<td>ClimateSeatCoolingFrontRight</td>
+<td>vehicle_live_state, climate_snapshots</td>
+<td>Add to ClimateControlPage seat section</td>
+</tr>
+<tr>
+<td>DefrostForPreconditioning</td>
+<td>vehicle_live_state, climate_snapshots</td>
+<td>Low priority — preconditioning detail</td>
+</tr>
+<tr>
+<td>HvacFanStatus</td>
+<td>vehicle_live_state, climate_snapshots</td>
+<td>Low priority — raw status code</td>
+</tr>
+<tr>
+<td>HvacSteeringWheelHeatAuto</td>
+<td>vehicle_live_state, climate_snapshots</td>
+<td>Add to ClimateControlPage steering wheel section</td>
+</tr>
+<tr>
+<td>HvacSteeringWheelHeatLevel</td>
+<td>vehicle_live_state, climate_snapshots</td>
+<td>Add to ClimateControlPage steering wheel section</td>
+</tr>
+<tr>
+<td>RearDefrostEnabled</td>
+<td>vehicle_live_state, climate_snapshots</td>
+<td>Add to ClimateControlPage defrost section</td>
+</tr>
+<tr>
+<td>RearDisplayHvacEnabled</td>
+<td>vehicle_live_state, climate_snapshots</td>
+<td>Add to ClimateControlPage rear section</td>
+</tr>
+<tr>
+<td>SeatVentEnabled</td>
+<td>vehicle_live_state, climate_snapshots</td>
+<td>Add to ClimateControlPage seat section</td>
+</tr>
+<tr>
+<td>WiperHeatEnabled</td>
+<td>vehicle_live_state, climate_snapshots</td>
+<td>Add to ClimateControlPage defrost section</td>
+</tr>
+</tbody>
+</table>
+<h3 id="driving-4-orphaned">Driving — 4 orphaned</h3>
+<table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Where Stored</th>
+<th>Recommendation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BrakePedalPos</td>
+<td>vehicle_live_state, motor_snapshots</td>
+<td>Add to DrivingDynamicsPage pedal display</td>
+</tr>
+<tr>
+<td>CruiseSetSpeed</td>
+<td>vehicle_live_state, motor_snapshots</td>
+<td>Add to DrivingDynamicsPage — autopilot section</td>
+</tr>
+<tr>
+<td>DriveRail</td>
+<td>vehicle_live_state, motor_snapshots</td>
+<td>Low priority — internal HV bus signal</td>
+</tr>
+<tr>
+<td>LifetimeEnergyGainedRegen</td>
+<td>vehicle_live_state, motor_snapshots</td>
+<td>Add to EnergyStatsPage — regen efficiency</td>
+</tr>
+<tr>
+<td>LifetimeEnergyUsedDrive</td>
+<td>vehicle_live_state, motor_snapshots</td>
+<td>Add to EnergyStatsPage — drive energy</td>
+</tr>
+</tbody>
+</table>
+<h3 id="powertrain-30-orphaned">Powertrain — 30 orphaned</h3>
+<table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Where Stored</th>
+<th>Recommendation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DiAxleSpeedF</td>
+<td>vehicle_live_state, motor_snapshots</td>
+<td>Add to DrivetrainHealthPage motor detail</td>
+</tr>
+<tr>
+<td>DiAxleSpeedREL</td>
+<td>vehicle_live_state, motor_snapshots</td>
+<td>Add to DrivetrainHealthPage motor detail</td>
+</tr>
+<tr>
+<td>DiHeatsinkTF/TR/TREL/TRER</td>
+<td>vehicle_live_state, motor_snapshots</td>
+<td>Add to DrivetrainHealthPage thermal section</td>
+</tr>
+<tr>
+<td>DiInverterTF/TR/TREL/TRER</td>
+<td>vehicle_live_state, motor_snapshots</td>
+<td>Add to DrivetrainHealthPage thermal section</td>
+</tr>
+<tr>
+<td>DiMotorCurrentF/R/REL/RER</td>
+<td>vehicle_live_state, motor_snapshots</td>
+<td>Add to DrivetrainHealthPage load section</td>
+</tr>
+<tr>
+<td>DiSlaveTorqueCmd</td>
+<td>vehicle_live_state, motor_snapshots</td>
+<td>Low priority — torque command detail</td>
+</tr>
+<tr>
+<td>DiStateF/REL/RER</td>
+<td>vehicle_live_state, motor_snapshots</td>
+<td>Add to DrivetrainHealthPage motor status</td>
+</tr>
+<tr>
+<td>DiStatorTempF/REL/RER</td>
+<td>vehicle_live_state, motor_snapshots</td>
+<td>Add to DrivetrainHealthPage thermal</td>
+</tr>
+<tr>
+<td>DiTorqueActualF/R/REL/RER</td>
+<td>vehicle_live_state, motor_snapshots</td>
+<td>Add to DrivetrainHealthPage torque section</td>
+</tr>
+<tr>
+<td>DiVBatF/R/REL/RER</td>
+<td>vehicle_live_state, motor_snapshots</td>
+<td>Add to DrivetrainHealthPage voltage section</td>
+</tr>
+<tr>
+<td>IsolationResistance</td>
+<td>vehicle_live_state</td>
+<td>Add to DrivetrainHealthPage — HV safety metric</td>
+</tr>
+</tbody>
+</table>
+<h3 id="location-2-orphaned">Location — 2 orphaned</h3>
+<table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Where Stored</th>
+<th>Recommendation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GpsState</td>
+<td>vehicle_live_state, location_snapshots</td>
+<td>Add to NavigationRoutePage — GPS fix quality</td>
+</tr>
+<tr>
+<td>RouteLastUpdated</td>
+<td>vehicle_live_state, location_snapshots</td>
+<td>Add to NavigationRoutePage — data freshness</td>
+</tr>
+</tbody>
+</table>
+<h3 id="media-1-orphaned">Media — 1 orphaned</h3>
+<table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Where Stored</th>
+<th>Recommendation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MediaAudioVolumeIncrement</td>
+<td>vehicle_live_state, media_snapshots</td>
+<td>Low priority — volume step size</td>
+</tr>
+</tbody>
+</table>
+<h3 id="vehicle-config-5-orphaned">Vehicle Config — 5 orphaned</h3>
+<table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Where Stored</th>
+<th>Recommendation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EuropeVehicle</td>
+<td>vehicle_live_state</td>
+<td>Low priority — static config flag</td>
+</tr>
+<tr>
+<td>OffroadLightbarPresent</td>
+<td>vehicle_live_state</td>
+<td>Low priority — Cybertruck-specific</td>
+</tr>
+<tr>
+<td>RearSeatHeaters</td>
+<td>vehicle_live_state</td>
+<td>Add to VehicleConfigSection — feature indicator</td>
+</tr>
+<tr>
+<td>RemoteStartEnabled</td>
+<td>vehicle_live_state</td>
+<td>Add to SecurityPanel — access status</td>
+</tr>
+<tr>
+<td>SunroofInstalled</td>
+<td>vehicle_live_state</td>
+<td>Low priority — static config flag</td>
+</tr>
+</tbody>
+</table>
+<h3 id="user-preferences-1-orphaned">User Preferences — 1 orphaned</h3>
+<table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Where Stored</th>
+<th>Recommendation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Setting24HourTime</td>
+<td>vehicle_live_state</td>
+<td>Add to Settings page — time format preference</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="data-flow-architecture">Data Flow Architecture</h2>
+<div class="codehilite"><pre><span></span><code><span class="n">Tesla</span><span class="w"> </span><span class="n">Vehicle</span><span class="w"> </span><span class="err">──▶</span><span class="w"> </span><span class="n">Fleet</span><span class="w"> </span><span class="n">Telemetry</span><span class="w"> </span><span class="n">Server</span><span class="w"> </span><span class="err">──▶</span><span class="w"> </span><span class="n">TeslaSync</span><span class="w"> </span><span class="n">Telemetry</span><span class="w"> </span><span class="n">Handler</span>
+<span class="w">                                                      </span><span class="err">│</span>
+<span class="w">                                            </span><span class="err">┌─────────┤─────────────┐</span>
+<span class="w">                                            </span><span class="err">▼</span><span class="w">         </span><span class="err">▼</span><span class="w">             </span><span class="err">▼</span>
+<span class="w">                                      </span><span class="n">SignalStore</span><span class="w">   </span><span class="n">normalizeFleetUnits</span><span class="w">   </span><span class="n">signal_history</span>
+<span class="w">                                      </span><span class="p">(</span><span class="ow">in</span><span class="o">-</span><span class="n">memory</span><span class="p">)</span><span class="w">    </span><span class="p">(</span><span class="n">coercion</span><span class="p">)</span><span class="w">          </span><span class="p">(</span><span class="n">Postgres</span><span class="p">)</span>
+<span class="w">                                            </span><span class="err">│</span><span class="w">         </span><span class="err">│</span>
+<span class="w">                                            </span><span class="err">▼</span><span class="w">         </span><span class="err">▼</span>
+<span class="w">                                      </span><span class="n">FlushLiveState</span><span class="w"> </span><span class="err">──▶</span><span class="w"> </span><span class="n">vehicle_live_state</span><span class="w"> </span><span class="p">(</span><span class="n">Postgres</span><span class="p">)</span>
+<span class="w">                                            </span><span class="err">│</span>
+<span class="w">                                </span><span class="err">┌───────────┼───────────────────────────┐</span>
+<span class="w">                                </span><span class="err">▼</span><span class="w">           </span><span class="err">▼</span><span class="w">           </span><span class="err">▼</span><span class="w">               </span><span class="err">▼</span>
+<span class="w">                         </span><span class="n">Domain</span><span class="w"> </span><span class="n">Snapshot</span><span class="w">  </span><span class="n">Domain</span><span class="w"> </span><span class="n">Snapshot</span><span class="w">  </span><span class="o">...</span><span class="w">    </span><span class="n">BuildStateFromSignalStore</span>
+<span class="w">                         </span><span class="n">Writers</span><span class="w">          </span><span class="n">Repos</span><span class="w">                   </span><span class="p">(</span><span class="mi">20</span><span class="w"> </span><span class="n">core</span><span class="w"> </span><span class="n">signals</span><span class="p">)</span>
+<span class="w">                                </span><span class="err">▼</span><span class="w">           </span><span class="err">▼</span><span class="w">                          </span><span class="err">▼</span>
+<span class="w">                         </span><span class="n">climate_snapshots</span><span class="w">  </span><span class="n">motor_snapshots</span><span class="w">     </span><span class="n">VehicleState</span><span class="w"> </span><span class="n">JSON</span>
+<span class="w">                         </span><span class="n">security_events</span><span class="w">    </span><span class="n">charging_telemetry</span><span class="w">        </span><span class="err">│</span>
+<span class="w">                         </span><span class="n">tire_pressure_</span><span class="o">*</span><span class="w">    </span><span class="n">media_snapshots</span><span class="w">           </span><span class="err">▼</span>
+<span class="w">                         </span><span class="n">safety_snapshots</span><span class="w">   </span><span class="n">location_snapshots</span><span class="w">   </span><span class="o">/</span><span class="n">vehicles</span><span class="o">/</span><span class="p">{</span><span class="n">id</span><span class="p">}</span><span class="o">/</span><span class="n">state</span>
+<span class="w">                         </span><span class="n">vehicle_config_</span><span class="o">*</span><span class="w">   </span><span class="n">user_preference_</span><span class="o">*</span><span class="w">         </span><span class="err">│</span>
+<span class="w">                                </span><span class="err">▼</span><span class="w">                                     </span><span class="err">▼</span>
+<span class="w">                         </span><span class="o">/</span><span class="n">climate</span><span class="o">/</span><span class="n">latest</span><span class="w">    </span><span class="o">/</span><span class="n">motor</span><span class="o">/</span><span class="n">latest</span><span class="w">       </span><span class="n">React</span><span class="w"> </span><span class="n">Frontend</span>
+<span class="w">                         </span><span class="o">/</span><span class="n">security</span><span class="o">/</span><span class="n">latest</span><span class="w">   </span><span class="o">/</span><span class="n">charging</span><span class="o">-</span><span class="n">telemetry</span><span class="o">/</span><span class="n">latest</span>
+<span class="w">                         </span><span class="o">/</span><span class="n">tire</span><span class="o">-</span><span class="n">pressure</span><span class="o">/</span><span class="n">latest</span><span class="w">  </span><span class="o">/</span><span class="n">media</span><span class="o">/</span><span class="n">latest</span>
+<span class="w">                         </span><span class="o">/</span><span class="n">safety</span><span class="o">/</span><span class="n">latest</span><span class="w">     </span><span class="o">/</span><span class="n">vehicle</span><span class="o">-</span><span class="n">config</span><span class="o">/</span><span class="n">latest</span>
+<span class="w">                         </span><span class="o">/</span><span class="n">location</span><span class="o">-</span><span class="n">snapshots</span><span class="o">/</span><span class="n">latest</span>
+<span class="w">                         </span><span class="o">/</span><span class="n">user</span><span class="o">-</span><span class="n">preferences</span><span class="o">/</span><span class="n">latest</span>
+<span class="w">                                </span><span class="err">▼</span>
+<span class="w">                         </span><span class="n">React</span><span class="w"> </span><span class="n">Frontend</span><span class="w"> </span><span class="p">(</span><span class="n">TanStack</span><span class="w"> </span><span class="n">Query</span><span class="w"> </span><span class="n">hooks</span><span class="p">)</span>
+<span class="w">                                </span><span class="err">▼</span>
+<span class="w">                         </span><span class="n">UI</span><span class="w"> </span><span class="n">Pages</span><span class="w"> </span><span class="p">(</span><span class="n">shared</span><span class="w"> </span><span class="n">components</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="notes">Notes</h2>
+<ol>
+<li><strong>All 230 signals</strong> are stored in <code>vehicle_live_state</code> via <code>signalToColumn</code> mapping — this is the single source of truth for current vehicle state</li>
+<li><strong>Domain snapshot tables</strong> (climate_snapshots, motor_snapshots, etc.) duplicate data for historical querying — the <code>*_snapshots</code> tables are populated by periodic snapshot writers</li>
+<li><strong>Signal History</strong> (<code>signal_history</code> table) stores every signal value change with timestamp — accessible via <code>/signals/history</code> endpoint</li>
+<li><strong>Raw Signal Viewer</strong> (<code>/signals/{vehicleID}/live</code>) provides real-time access to all signals from the in-memory SignalStore</li>
+<li><strong>Orphaned signals</strong> are "orphaned" only from dedicated UI pages — they remain accessible via raw signal viewer and signal history</li>
+<li><strong>ACChargingPower</strong> and <strong>DCChargingPower</strong> both map to <code>charger_power</code> column; DC takes priority when both present</li>
+<li><strong>ScheduledChargingPending</strong> is classified as Bool in SignalRegistry despite being in the "Charging (enums)" audit category</li>
+<li><strong>Compound types</strong> (Location, DoorState, TpmsWarnings, ScheduledChargingStartTime) undergo structural transformation before storage</li>
+</ol>
+<script>
+document.querySelectorAll('table').forEach(function(t) {
+  var w = document.createElement('div');
+  w.className = 'table-wrapper';
+  t.parentNode.insertBefore(w, t);
+  w.appendChild(t);
+});
+</script>
+</body>
+</html>
