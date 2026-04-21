@@ -36,14 +36,26 @@ interface TirePressureReading {
   front_right: number;
   rear_left: number;
   rear_right: number;
-  tpms_hard_warnings: boolean;
-  tpms_soft_warnings: boolean;
+  tpms_hard_warnings?: string | null;
+  tpms_soft_warnings?: string | null;
   created_at: string;
 }
 
 /* ------------------------------------------------------------------ */
 /*  Constants & helpers                                                */
 /* ------------------------------------------------------------------ */
+
+/** Check if a TPMS warning JSON string contains any true value. */
+function hasTpmsWarning(val: string | null | undefined): boolean {
+  if (!val) return false;
+  try {
+    const parsed = JSON.parse(val) as Record<string, boolean>;
+    return Object.values(parsed).some(Boolean);
+  } catch {
+    // Fallback: treat non-empty non-JSON strings as truthy
+    return val !== 'false' && val !== '';
+  }
+}
 
 // Thresholds in Bar (internal unit — DB stores Bar)
 const NORMAL_MIN_BAR = 2.5;
@@ -181,7 +193,7 @@ export default function TirePressurePage() {
 
   /* ---- Derived data ---- */
 
-  const hasWarning = latest?.tpms_hard_warnings || latest?.tpms_soft_warnings;
+  const hasWarning = hasTpmsWarning(latest?.tpms_hard_warnings) || hasTpmsWarning(latest?.tpms_soft_warnings);
 
   const summaryStats = useMemo(() => {
     if (!latest) return null;
@@ -235,14 +247,14 @@ export default function TirePressurePage() {
         key: 'warnings',
         header: t('Warnings'),
         render: (row: TirePressureReading) => {
-          if (row.tpms_hard_warnings) {
+          if (hasTpmsWarning(row.tpms_hard_warnings)) {
             return (
               <Badge variant="danger" size="sm" dot>
                 {t('Hard Warning')}
               </Badge>
             );
           }
-          if (row.tpms_soft_warnings) {
+          if (hasTpmsWarning(row.tpms_soft_warnings)) {
             return (
               <Badge variant="warning" size="sm" dot>
                 {t('Soft Warning')}
@@ -295,7 +307,7 @@ export default function TirePressurePage() {
           <GlassPanel
             className={cn(
               'mb-6 flex items-center gap-3 px-4 py-3',
-              latest?.tpms_hard_warnings
+              hasTpmsWarning(latest?.tpms_hard_warnings)
                 ? 'border-red-500/40'
                 : 'border-amber-500/40',
             )}
@@ -303,11 +315,11 @@ export default function TirePressurePage() {
             <AlertTriangle
               className={cn(
                 'h-5 w-5 shrink-0',
-                latest?.tpms_hard_warnings ? 'text-red-400' : 'text-amber-400',
+                hasTpmsWarning(latest?.tpms_hard_warnings) ? 'text-red-400' : 'text-amber-400',
               )}
             />
-            <Badge variant={latest?.tpms_hard_warnings ? 'danger' : 'warning'}>
-              {latest?.tpms_hard_warnings
+            <Badge variant={hasTpmsWarning(latest?.tpms_hard_warnings) ? 'danger' : 'warning'}>
+              {hasTpmsWarning(latest?.tpms_hard_warnings)
                 ? t('Hard Warning Active')
                 : t('Soft Warning Active')}
             </Badge>

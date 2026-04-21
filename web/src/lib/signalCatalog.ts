@@ -204,7 +204,7 @@ const catalog: SignalMeta[] = [
 
   // ── Service / Tire Pressure ───────────────────────────────────────────
   { name: 'IsolationResistance', category: 'Service', type: 'number', unit: 'kΩ', description: 'HV isolation resistance' },
-  { name: 'TpmsHardWarnings', category: 'Tire Pressure', type: 'boolean', description: 'TPMS hard warnings present' },
+  { name: 'TpmsHardWarnings', category: 'Tire Pressure', type: 'string', description: 'TPMS hard warnings (per-tire JSON)' },
   { name: 'TpmsLastSeenPressureTimeFl', category: 'Tire Pressure', type: 'string', description: 'Last TPMS reading time — front left' },
   { name: 'TpmsLastSeenPressureTimeFr', category: 'Tire Pressure', type: 'string', description: 'Last TPMS reading time — front right' },
   { name: 'TpmsLastSeenPressureTimeRl', category: 'Tire Pressure', type: 'string', description: 'Last TPMS reading time — rear left' },
@@ -213,7 +213,7 @@ const catalog: SignalMeta[] = [
   { name: 'TpmsPressureFr', category: 'Tire Pressure', type: 'number', unit: 'bar', description: 'Front-right tire pressure' },
   { name: 'TpmsPressureRl', category: 'Tire Pressure', type: 'number', unit: 'bar', description: 'Rear-left tire pressure' },
   { name: 'TpmsPressureRr', category: 'Tire Pressure', type: 'number', unit: 'bar', description: 'Rear-right tire pressure' },
-  { name: 'TpmsSoftWarnings', category: 'Tire Pressure', type: 'boolean', description: 'TPMS soft warnings present' },
+  { name: 'TpmsSoftWarnings', category: 'Tire Pressure', type: 'string', description: 'TPMS soft warnings (per-tire JSON)' },
 
   // ── Vehicle State ─────────────────────────────────────────────────────
   { name: 'CenterDisplay', category: 'Vehicle Config', type: 'string', description: 'Center display state', enumValues: ['Off', 'Dim', 'Accessory', 'On', 'Driving', 'Charging', 'Lock', 'Sentry', 'Dog', 'Entertainment'] },

@@ -1625,6 +1625,38 @@ func normalizeFleetUnits(signals map[string]interface{}) {
 		}
 		signals[name] = fmt.Sprintf("%02d:%02d:%02d", hour, minute, second)
 	}
+
+	// TypeTireLocation compounds: flatten {FrontLeft, FrontRight, RearLeft, RearRight} maps → JSON strings.
+	// Tesla sends these as nested JSON objects; downstream consumers (signal_history,
+	// vehicle_live_state, tire_pressure_snapshots) expect scalar string values.
+	for name, info := range enums.SignalRegistry {
+		if info.Type != enums.TypeTireLocation {
+			continue
+		}
+		raw, ok := signals[name]
+		if !ok || raw == nil {
+			continue
+		}
+		if _, isStr := raw.(string); isStr {
+			continue // already a string — leave unchanged
+		}
+		m, isMap := raw.(map[string]interface{})
+		if !isMap {
+			continue
+		}
+		// Unwrap {"value": {...}} envelopes first
+		if inner, has := m["value"]; has {
+			if innerMap, ok := inner.(map[string]interface{}); ok {
+				m = innerMap
+			} else if s, ok := inner.(string); ok {
+				signals[name] = s
+				continue
+			}
+		}
+		if jsonBytes, err := json.Marshal(m); err == nil {
+			signals[name] = string(jsonBytes)
+		}
+	}
 }
 
 // extractTimeField extracts an integer time component from a compound time map.
@@ -1767,6 +1799,12 @@ func toBool(v interface{}) bool {
 		if inner, has := m["value"]; has {
 			v = inner
 		} else {
+			// Check if this is a tire-location compound map: any true value → true
+			for _, val := range m {
+				if b, ok := val.(bool); ok && b {
+					return true
+				}
+			}
 			return false
 		}
 	}
@@ -1776,7 +1814,22 @@ func toBool(v interface{}) bool {
 	case float64:
 		return val != 0
 	case string:
-		return val == "true" || val == "1"
+		if val == "true" || val == "1" {
+			return true
+		}
+		// Handle tire-location JSON strings: {"FrontLeft":true,...} → true if any value is true
+		if len(val) > 2 && val[0] == '{' {
+			var m map[string]interface{}
+			if json.Unmarshal([]byte(val), &m) == nil {
+				for _, v := range m {
+					if b, ok := v.(bool); ok && b {
+						return true
+					}
+				}
+			}
+			return false
+		}
+		return false
 	default:
 		return false
 	}
