@@ -553,6 +553,8 @@ export interface MotorSnapshot {
   brake_pedal_pos?: number
   cruise_set_speed?: number
   drive_rail?: boolean
+  lifetime_energy_gained_regen?: number
+  lifetime_energy_used_drive?: number
   created_at: string
 }
 
