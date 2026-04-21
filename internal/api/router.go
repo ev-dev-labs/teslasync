@@ -20,6 +20,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/embedding"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/polling"
@@ -51,6 +52,7 @@ type RouterOptions struct {
 	SignalStore      *signal.Store            // If set, enables /internal/flush endpoint
 	WebhookTrigger   WebhookProcessor         // If set, enables public webhook receiver endpoint
 	CacheStore       *cache.Store             // If set, enables cached endpoints (trip planner, etc.)
+	EmbeddingService *embedding.Service       // If set, enables semantic search + embedding endpoints
 }
 
 // NewRouter creates and configures the main HTTP router with all API routes,
@@ -138,6 +140,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	notificationHandler := NewNotificationHandler(db)
 	notifScheduleHandler := NewNotificationScheduleHandler(db)
 	chatbotHandler := NewChatbotHandler(db)
+	chatbotHandler.SetEmbeddingService(opt.EmbeddingService)
+	embeddingHandler := NewEmbeddingHandler(opt.EmbeddingService)
 	tirePressureHandler := NewTirePressureHandler(db)
 	motorHandler := NewMotorHandler(db)
 	climateHandler := NewClimateHandler(db)
@@ -596,6 +600,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Post("/", chatbotHandler.Chat)
 			r.Get("/history", chatbotHandler.History)
 			r.Get("/sessions", chatbotHandler.Sessions)
+		})
+
+		// Semantic search (pgvector). Returns 503 when embeddings are disabled.
+		r.Get("/search", embeddingHandler.Search)
+		r.Route("/embeddings", func(r chi.Router) {
+			r.Post("/generate", embeddingHandler.Generate)
 		})
 
 		// Tire Pressure

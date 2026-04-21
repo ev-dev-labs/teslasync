@@ -578,6 +578,29 @@ gasPrice:
   apiKey: ""
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Embeddings / pgvector semantic search (optional)
+# When enabled a background worker generates vector embeddings for drives,
+# charging sessions and alerts so the chatbot can perform semantic search
+# ("/api/v1/search"). Requires an OpenAI API key and pgvector to be installed
+# in Postgres (the bundled postgres image ships it).
+# ─────────────────────────────────────────────────────────────────────────────
+embedding:
+  # -- Enable the embedding service and background worker.
+  enabled: false
+  # -- Provider (currently only "openai").
+  provider: "openai"
+  # -- OpenAI API key. Stored in the Helm-managed Secret.
+  apiKey: ""
+  # -- OpenAI embedding model. 1536 dims = text-embedding-3-small default.
+  model: "text-embedding-3-small"
+  # -- Vector dimensions. Must match the embeddings table (migration 000146).
+  dimensions: 1536
+  # -- Max rows per entity type fetched per worker tick.
+  batchSize: 50
+  # -- Interval between background worker runs (Go duration string).
+  refreshInterval: "5m"
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Authentication (optional — leave jwtSecret empty to disable)
 # ─────────────────────────────────────────────────────────────────────────────
 auth:
@@ -621,7 +644,7 @@ postgresql:
   # -- Pool health check interval (detects stale connections)
   healthCheckPeriod: "5s"
 
-  image: postgres:17-alpine
+  image: pgvector/pgvector:pg17
 
   auth:
     username: teslasync

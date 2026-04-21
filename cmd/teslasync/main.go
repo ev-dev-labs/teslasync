@@ -17,6 +17,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/embedding"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
@@ -543,6 +544,57 @@ func main() {
 		}
 	}
 
+	// Embedding / semantic-search service — optional. When enabled, a background
+	// worker keeps the pgvector `embeddings` table populated and /api/v1/search
+	// + the chatbot fallback use it for nearest-neighbor retrieval.
+	var embeddingService *embedding.Service
+	if cfg.Embedding.Enabled {
+		if cfg.Embedding.APIKey == "" {
+			log.Warn().Msg("embeddings enabled but EMBEDDING_API_KEY is empty — feature disabled")
+		} else {
+			provider := embedding.NewOpenAIProvider(cfg.Embedding.APIKey, cfg.Embedding.Model, cfg.Embedding.Dimensions)
+			embeddingService = embedding.NewService(db, provider)
+			log.Info().
+				Str("model", provider.Model()).
+				Int("dimensions", provider.Dimensions()).
+				Int("batch_size", cfg.Embedding.BatchSize).
+				Dur("refresh_interval", cfg.Embedding.RefreshInterval).
+				Msg("embeddings service initialised")
+
+			refresh := cfg.Embedding.RefreshInterval
+			if refresh <= 0 {
+				refresh = 5 * time.Minute
+			}
+			batchSize := cfg.Embedding.BatchSize
+			if batchSize <= 0 {
+				batchSize = 50
+			}
+			resilience.SafeGoLoop(ctx, "embedding-worker", func(loopCtx context.Context) {
+				ticker := time.NewTicker(refresh)
+				defer ticker.Stop()
+				// Run once immediately so startup does not wait for the first tick.
+				if n, err := embeddingService.RunBatch(loopCtx, batchSize); err != nil {
+					log.Warn().Err(err).Msg("embedding worker: initial batch failed")
+				} else if n > 0 {
+					log.Info().Int("embedded", n).Msg("embedding worker: initial batch complete")
+				}
+				for {
+					select {
+					case <-loopCtx.Done():
+						return
+					case <-ticker.C:
+						n, err := embeddingService.RunBatch(loopCtx, batchSize)
+						if err != nil {
+							log.Warn().Err(err).Msg("embedding worker: batch failed")
+						} else if n > 0 {
+							log.Info().Int("embedded", n).Msg("embedding worker: batch complete")
+						}
+					}
+				}
+			})
+		}
+	}
+
 	// HTTP API
 	router := api.NewRouter(db, teslaClient, mqttClient, cfg, health, api.RouterOptions{
 		AppVersion:       Version,
@@ -552,6 +604,7 @@ func main() {
 		PollEngine:       pollEngine,
 		SignalStore:      signalStore,
 		CacheStore:       cacheStore,
+		EmbeddingService: embeddingService,
 	})
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Port),

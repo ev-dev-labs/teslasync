@@ -13,14 +13,16 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/embedding"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // ChatbotHandler handles AI chatbot queries against fleet data.
 type ChatbotHandler struct {
-	chat *database.ChatRepo
-	db   *database.DB
+	chat      *database.ChatRepo
+	db        *database.DB
+	embedding *embedding.Service
 }
 
 func NewChatbotHandler(db *database.DB) *ChatbotHandler {
@@ -28,6 +30,14 @@ func NewChatbotHandler(db *database.DB) *ChatbotHandler {
 		chat: database.NewChatRepo(db),
 		db:   db,
 	}
+}
+
+// SetEmbeddingService attaches a pgvector-backed search service. When present
+// and enabled, the chatbot falls back to semantic search for queries that do
+// not match any of the built-in patterns, returning the most relevant drive /
+// charge / alert summaries.
+func (h *ChatbotHandler) SetEmbeddingService(svc *embedding.Service) {
+	h.embedding = svc
 }
 
 // Chat processes a user message and returns an AI-generated response.
@@ -155,8 +165,38 @@ func (h *ChatbotHandler) processQuery(ctx context.Context, msg string) string {
 		return h.helpMessage()
 
 	default:
+		// When no pattern matches, fall back to semantic search against
+		// embeddings if the feature is enabled. This lets users ask open-ended
+		// questions like "drives where battery dropped fast" or "slowest charge".
+		if resp := h.semanticFallback(ctx, msg); resp != "" {
+			return resp
+		}
 		return h.helpMessage()
 	}
+}
+
+// semanticFallback performs a pgvector nearest-neighbor search over drives,
+// charges and alerts and renders the top matches as a Markdown snippet.
+// Returns "" when embeddings are disabled or no matches are found.
+func (h *ChatbotHandler) semanticFallback(ctx context.Context, query string) string {
+	if h.embedding == nil || !h.embedding.Enabled() {
+		return ""
+	}
+	results, err := h.embedding.Search(ctx, query, 0, 5)
+	if err != nil {
+		log.Warn().Err(err).Str("query", query).Msg("chatbot semantic search failed")
+		return ""
+	}
+	if len(results) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString("Here are the most relevant entries I found:\n\n")
+	for _, r := range results {
+		fmt.Fprintf(&b, "- *(%s #%d, similarity %.2f)* %s\n",
+			r.EntityType, r.EntityID, r.Similarity, r.Content)
+	}
+	return b.String()
 }
 
 func (h *ChatbotHandler) queryVehicleCount(ctx context.Context) string {
