@@ -68,6 +68,14 @@ func (m *VehicleFSM) SetGearCapable(v bool) {
 	m.isGearCapable = v
 }
 
+// LastTransitionAt returns when the FSM last committed a transition (thread-safe).
+// Used by health endpoints to detect FSMs that are stale despite live signals.
+func (m *VehicleFSM) LastTransitionAt() time.Time {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.lastTransitionAt
+}
+
 // ProcessSignals is the single entry point for telemetry signal batches.
 // It detects triggers, evaluates the transition table, and commits valid transitions.
 func (m *VehicleFSM) ProcessSignals(ctx context.Context, vehicleID int64, signals map[string]interface{}) error {
@@ -196,14 +204,27 @@ func (m *VehicleFSM) commit(ctx context.Context, vehicleID int64, tr Transition,
 	from := m.current
 	duration := time.Since(m.lastTransitionAt)
 
-	m.current = tr.To
-	m.pending = nil
-	m.lastTransitionAt = time.Now()
-
 	// Populate metadata for logging
 	sctx.MatchedTrigger = tr.Trigger.String()
 	sctx.MatchedGuard = tr.GuardNameStr()
 	sctx.TransitionMode = tr.Mode.String()
+
+	// Persist FIRST. If the action layer fails, leave in-memory state untouched
+	// so the next signal batch retries the transition. Without this, a transient
+	// DB error would leave us claiming we're in `tr.To` while the DB still says `from`.
+	if err := m.actions.Execute(ctx, vehicleID, from, tr.To, sctx); err != nil {
+		m.logger.Error().
+			Err(err).
+			Int64("vehicle_id", vehicleID).
+			Str("from", string(from)).
+			Str("to", string(tr.To)).
+			Msg("vehicle state transition aborted: action failed")
+		return err
+	}
+
+	m.current = tr.To
+	m.pending = nil
+	m.lastTransitionAt = time.Now()
 
 	m.logger.Info().
 		Int64("vehicle_id", vehicleID).
@@ -214,7 +235,7 @@ func (m *VehicleFSM) commit(ctx context.Context, vehicleID int64, tr Transition,
 		Dur("duration_in_state", duration).
 		Msg("vehicle state transition")
 
-	return m.actions.Execute(ctx, vehicleID, from, tr.To, sctx)
+	return nil
 }
 
 func (m *VehicleFSM) buildSignalContext(signals map[string]interface{}) *SignalContext {

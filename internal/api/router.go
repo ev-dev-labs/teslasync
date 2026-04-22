@@ -707,8 +707,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				}
 				stats := fh.Stats()
 				result := map[string]interface{}{
-					"enabled": true,
-					"stats":   stats,
+					"enabled":  true,
+					"stats":    stats,
+					"vehicles": fh.VehicleSnapshots(),
 				}
 				// If vehicle_id provided, include active sub-FSM state
 				if vidStr := req.URL.Query().Get("vehicle_id"); vidStr != "" {
