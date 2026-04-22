@@ -63,7 +63,10 @@ $phaseDirs = if ($Phase) {
     }
     @(Get-Item $candidate)
 } else {
-    Get-ChildItem -Path $promptsRoot -Directory -Filter "phase-*" | Sort-Object Name
+    Get-ChildItem -Path $promptsRoot -Directory -Filter "phase-*" |
+        Sort-Object @{ Expression = {
+            if ($_.Name -match '^phase-(\d+)') { [int]$Matches[1] } else { 9999 }
+        }}, Name
 }
 
 if ($phaseDirs.Count -eq 0) {
