@@ -47,22 +47,44 @@ type fsmAction struct {
 }
 
 func (a *fsmAction) Execute(ctx context.Context, vehicleID int64, from, to fsm.State, sctx *fsm.SignalContext) error {
+	// Best-effort writes; collect the first error so the FSM can decide whether to
+	// roll back its in-memory transition. We continue past failures so that, e.g.,
+	// a vehicle_states write failure doesn't block the vehicles.state update that
+	// the UI relies on.
+	var firstErr error
+	keep := func(err error) {
+		if err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+
 	// 1. End current state record
 	if err := a.stateRepo.EndCurrent(ctx, vehicleID); err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("fsm: failed to end current state")
+		keep(err)
 	}
 
 	// 2. Insert new state record
 	if _, err := a.stateRepo.Insert(ctx, vehicleID, string(to)); err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Str("state", string(to)).Msg("fsm: failed to insert state")
+		keep(err)
 	}
 
-	// 3. Update vehicles table
+	// 3. Update vehicles table — most important: this is what the UI / state queries read.
 	if err := a.vehicleRepo.UpdateState(ctx, vehicleID, string(to), true); err != nil {
-		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("fsm: failed to update vehicle state")
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("fsm: failed to update vehicle state")
+		keep(err)
 	}
 
-	// 4. Log transition to fsm_transitions
+	// 4. Persist gear capability the first time we observe a Gear signal. This used to
+	// live in the legacy state-machine code; the FSM is now the single writer.
+	if sctx.IsGearCapable {
+		if err := a.vehicleRepo.SetGearCapable(ctx, vehicleID, true); err != nil {
+			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("fsm: failed to persist gear capability")
+		}
+	}
+
+	// 5. Log transition to fsm_transitions
 	if a.transRepo != nil {
 		snapshot := map[string]interface{}{}
 		if sctx.Gear != "" {
@@ -80,10 +102,10 @@ func (a *fsmAction) Execute(ctx context.Context, vehicleID int64, from, to fsm.S
 		}
 	}
 
-	// 5. Manage sub-FSM lifecycle based on state transitions
+	// 6. Manage sub-FSM lifecycle based on state transitions
 	a.handler.manageSubFSMs(ctx, vehicleID, from, to, sctx)
 
-	return nil
+	return firstErr
 }
 
 // manageSubFSMs creates/finalizes drive and charge sub-FSMs on state transitions.
@@ -186,6 +208,13 @@ func (h *FSMHandler) getOrCreate(ctx context.Context, vehicleID int64) *fsm.Vehi
 		transRepo:   h.transRepo,
 	}
 	m = fsm.NewVehicleFSM(initial, action)
+
+	// Rehydrate persisted gear-capability so the FSM doesn't re-trigger the
+	// false→true persistence path on every restart.
+	if vehicle, err := h.vehicleRepo.GetByID(ctx, vehicleID); err == nil && vehicle != nil && vehicle.IsGearCapable {
+		m.SetGearCapable(true)
+	}
+
 	h.machines[vehicleID] = m
 
 	log.Info().Int64("vehicle_id", vehicleID).Str("state", currentDB).Msg("fsm: initialized vehicle FSM from DB")
@@ -310,4 +339,39 @@ func (h *FSMHandler) Stats() map[string]int {
 		"drives":   len(h.drives),
 		"charges":  len(h.charges),
 	}
+}
+
+// VehicleFSMSnapshot is a point-in-time view of one vehicle's FSM state.
+// Exposed via /fsm/stats so the frontend can flag FSMs that are stale despite
+// the vehicle actively streaming telemetry.
+type VehicleFSMSnapshot struct {
+	VehicleID            int64     `json:"vehicle_id"`
+	State                string    `json:"state"`
+	LastTransitionAt     time.Time `json:"last_transition_at"`
+	SecondsSinceLastTransition float64 `json:"seconds_since_last_transition"`
+	IsGearCapable        bool      `json:"is_gear_capable"`
+}
+
+// VehicleSnapshots returns one snapshot per known vehicle FSM.
+func (h *FSMHandler) VehicleSnapshots() []VehicleFSMSnapshot {
+	h.mu.Lock()
+	machines := make(map[int64]*fsm.VehicleFSM, len(h.machines))
+	for id, m := range h.machines {
+		machines[id] = m
+	}
+	h.mu.Unlock()
+
+	now := time.Now()
+	out := make([]VehicleFSMSnapshot, 0, len(machines))
+	for id, m := range machines {
+		last := m.LastTransitionAt()
+		out = append(out, VehicleFSMSnapshot{
+			VehicleID:                  id,
+			State:                      string(m.Current()),
+			LastTransitionAt:           last,
+			SecondsSinceLastTransition: now.Sub(last).Seconds(),
+			IsGearCapable:              m.IsGearCapable(),
+		})
+	}
+	return out
 }

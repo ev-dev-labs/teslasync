@@ -4,12 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/rs/zerolog/log"
+
+	"github.com/ev-dev-labs/teslasync/internal/metrics"
 )
 
 // SignalBatch contains batched signals for a single VIN.
@@ -158,7 +161,12 @@ func (s *Subscriber) addSignal(vin, fieldName string, value interface{}) {
 		batch.timer = time.AfterFunc(time.Duration(s.batchMs)*time.Millisecond, func() {
 			defer func() {
 				if r := recover(); r != nil {
-					log.Error().Interface("panic", r).Str("vin", vin).Msg("mqtt: panic in batch flush")
+					metrics.PanicsRecovered.WithLabelValues("mqtt-batch-flush").Inc()
+					log.Error().
+						Interface("panic", r).
+						Str("vin", vin).
+						Bytes("stack", debug.Stack()).
+						Msg("mqtt: panic in batch flush")
 				}
 			}()
 			s.flushBatch(vin)

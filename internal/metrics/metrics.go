@@ -477,3 +477,15 @@ var (
 		Help:      "Total geofence events by type",
 	}, []string{"type"}) // enter, exit
 )
+
+// ── Reliability ────────────────────────────────────────────
+
+var (
+	// PanicsRecovered counts panics caught by recovery wrappers (safeGo,
+	// MQTT batch flush timer, etc.). Any non-zero rate indicates a bug.
+	PanicsRecovered = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "panics_recovered_total",
+		Help:      "Total panics caught by recovery wrappers, labeled by location",
+	}, []string{"location"})
+)
