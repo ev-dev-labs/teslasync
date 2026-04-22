@@ -771,16 +771,20 @@ mqtt:
 # ─────────────────────────────────────────────────────────────────────────────
 # Data Retention
 #
-# Controls how long historical data is kept before automatic cleanup.
+# Controls how long raw telemetry hypertables are retained before TimescaleDB
+# automatically drops old chunks. 0 or omitted = retain forever (default).
+# Continuous aggregates are never affected by these settings.
 # ─────────────────────────────────────────────────────────────────────────────
 retention:
-  # Days to keep general data (drives, charges, positions, etc.)
-  # Uncomment to enable automatic cleanup:
-  # dataDays: 365
-  # Days to keep high-frequency position data
-  # positionDays: 90
-  # Days to keep per-signal telemetry history (Postgres signal_history table)
-  # signalHistoryDays: 7
+  # Days to retain raw data per hypertable. 0 = forever (default).
+  # positions: 365
+  # chargingTelemetry: 365
+  # climateSnapshots: 90
+  # securityEvents: 90
+  # motorSnapshots: 90
+  # tirePressure: 30
+  # mediaSnapshots: 30
+  # safetySnapshots: 30
 
 # ─────────────────────────────────────────────────────────────────────────────
 # MongoDB (raw telemetry signal capture)

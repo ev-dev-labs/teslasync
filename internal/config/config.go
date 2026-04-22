@@ -171,10 +171,19 @@ type AuthConfig struct {
 	AuthentikHMACKey string // Authentik client secret for HS256 token validation
 }
 
+// RetentionConfig controls TimescaleDB retention policies for raw telemetry
+// hypertables. Each value is a number of days; 0 (the default) means
+// "retain forever" — no policy is created and any existing policy is removed.
+// Continuous aggregates are never affected by these settings.
 type RetentionConfig struct {
-	DataRetentionDays        int
-	PositionRetentionDays    int
-	SignalHistoryRetentionDays int
+	PositionsDays         int
+	ChargingTelemetryDays int
+	ClimateSnapshotsDays  int
+	SecurityEventsDays    int
+	MotorSnapshotsDays    int
+	TirePressureDays      int
+	MediaSnapshotsDays    int
+	SafetySnapshotsDays   int
 }
 
 // Load reads configuration from environment variables with sensible defaults.
@@ -248,9 +257,14 @@ func Load() (*Config, error) {
 		},
 
 		Retention: RetentionConfig{
-			DataRetentionDays:          envInt("DATA_RETENTION_DAYS", 0),
-			PositionRetentionDays:      envInt("POSITION_RETENTION_DAYS", 0),
-			SignalHistoryRetentionDays: envInt("SIGNAL_HISTORY_RETENTION_DAYS", 0),
+			PositionsDays:         envInt("RETENTION_POSITIONS_DAYS", 0),
+			ChargingTelemetryDays: envInt("RETENTION_CHARGING_TELEMETRY_DAYS", 0),
+			ClimateSnapshotsDays:  envInt("RETENTION_CLIMATE_SNAPSHOTS_DAYS", 0),
+			SecurityEventsDays:    envInt("RETENTION_SECURITY_EVENTS_DAYS", 0),
+			MotorSnapshotsDays:    envInt("RETENTION_MOTOR_SNAPSHOTS_DAYS", 0),
+			TirePressureDays:      envInt("RETENTION_TIRE_PRESSURE_DAYS", 0),
+			MediaSnapshotsDays:    envInt("RETENTION_MEDIA_SNAPSHOTS_DAYS", 0),
+			SafetySnapshotsDays:   envInt("RETENTION_SAFETY_SNAPSHOTS_DAYS", 0),
 		},
 
 		FleetTelemetry: FleetTelemetryConfig{

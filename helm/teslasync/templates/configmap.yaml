@@ -67,16 +67,32 @@ data:
   MONGODB_DATABASE: {{ .Values.mongodb.database | default "teslasync" | quote }}
   MONGODB_TTL_DAYS: {{ .Values.mongodb.ttlDays | default 7 | quote }}
   {{- end }}
-  # Data retention (0 or unset = no automatic cleanup)
+  # Data retention (0 or unset = no automatic cleanup, retain forever)
+  # TimescaleDB drop_chunks policies — applied at startup, removable by setting to 0.
   {{- if .Values.retention }}
-  {{- if .Values.retention.dataDays }}
-  DATA_RETENTION_DAYS: {{ .Values.retention.dataDays | quote }}
+  {{- if .Values.retention.positions }}
+  RETENTION_POSITIONS_DAYS: {{ .Values.retention.positions | quote }}
   {{- end }}
-  {{- if .Values.retention.positionDays }}
-  POSITION_RETENTION_DAYS: {{ .Values.retention.positionDays | quote }}
+  {{- if .Values.retention.chargingTelemetry }}
+  RETENTION_CHARGING_TELEMETRY_DAYS: {{ .Values.retention.chargingTelemetry | quote }}
   {{- end }}
-  {{- if .Values.retention.signalHistoryDays }}
-  SIGNAL_HISTORY_RETENTION_DAYS: {{ .Values.retention.signalHistoryDays | quote }}
+  {{- if .Values.retention.climateSnapshots }}
+  RETENTION_CLIMATE_SNAPSHOTS_DAYS: {{ .Values.retention.climateSnapshots | quote }}
+  {{- end }}
+  {{- if .Values.retention.securityEvents }}
+  RETENTION_SECURITY_EVENTS_DAYS: {{ .Values.retention.securityEvents | quote }}
+  {{- end }}
+  {{- if .Values.retention.motorSnapshots }}
+  RETENTION_MOTOR_SNAPSHOTS_DAYS: {{ .Values.retention.motorSnapshots | quote }}
+  {{- end }}
+  {{- if .Values.retention.tirePressure }}
+  RETENTION_TIRE_PRESSURE_DAYS: {{ .Values.retention.tirePressure | quote }}
+  {{- end }}
+  {{- if .Values.retention.mediaSnapshots }}
+  RETENTION_MEDIA_SNAPSHOTS_DAYS: {{ .Values.retention.mediaSnapshots | quote }}
+  {{- end }}
+  {{- if .Values.retention.safetySnapshots }}
+  RETENTION_SAFETY_SNAPSHOTS_DAYS: {{ .Values.retention.safetySnapshots | quote }}
   {{- end }}
   {{- end }}
   NOTIFICATION_WORKER_HOST: {{ include "teslasync.notificationWorker.host" . | quote }}

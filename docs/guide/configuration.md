@@ -128,13 +128,28 @@ Redis is deployed automatically with the Helm chart and enabled by default. When
 
 ### Data Retention
 
+Raw telemetry hypertables are managed by TimescaleDB `drop_chunks` policies that
+TeslaSync configures at startup. The default for every variable is `0`, meaning
+**retain forever** — no policy is created and any pre-existing policy is removed.
+Setting a value to `0` or removing the variable on a future restart will disable
+the policy non-destructively (existing data is not deleted). Continuous aggregates
+are never affected.
+
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `DATA_RETENTION_DAYS` | int | `365` | Number of days to keep general data (drives, charging, etc.) |
-| `POSITION_RETENTION_DAYS` | int | `90` | Number of days to keep GPS position history |
+| `RETENTION_POSITIONS_DAYS` | int | `0` | Days of GPS position history to keep |
+| `RETENTION_CHARGING_TELEMETRY_DAYS` | int | `0` | Days of charging telemetry to keep |
+| `RETENTION_CLIMATE_SNAPSHOTS_DAYS` | int | `0` | Days of climate snapshots to keep |
+| `RETENTION_SECURITY_EVENTS_DAYS` | int | `0` | Days of security events to keep |
+| `RETENTION_MOTOR_SNAPSHOTS_DAYS` | int | `0` | Days of motor/drivetrain snapshots to keep |
+| `RETENTION_TIRE_PRESSURE_DAYS` | int | `0` | Days of tire pressure snapshots to keep |
+| `RETENTION_MEDIA_SNAPSHOTS_DAYS` | int | `0` | Days of media snapshots to keep |
+| `RETENTION_SAFETY_SNAPSHOTS_DAYS` | int | `0` | Days of ADAS/safety snapshots to keep |
 
 ::: warning Data Retention
-The maintenance worker runs periodically to delete records older than the configured retention period. Lowering these values will permanently delete historical data. Make sure to export data before changing retention settings.
+Enabling a retention policy causes TimescaleDB to drop chunks older than the
+configured interval on its background schedule. This is irreversible — export
+any data you wish to keep before lowering a retention value.
 :::
 
 ### Alert & CEP Settings
@@ -205,9 +220,9 @@ MQTT_PORT=1883
 # Redis
 REDIS_PORT=6379
 
-# Data Retention
-DATA_RETENTION_DAYS=365
-POSITION_RETENTION_DAYS=90
+# Data Retention (default: forever; uncomment to enable)
+# RETENTION_POSITIONS_DAYS=365
+# RETENTION_CHARGING_TELEMETRY_DAYS=365
 ```
 
 ## Configuration Best Practices
