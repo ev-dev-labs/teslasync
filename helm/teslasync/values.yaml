@@ -640,7 +640,7 @@ tesla:
 # migration (000000) which enables `timescaledb` and `vector` extensions.
 # ─────────────────────────────────────────────────────────────────────────────
 postgresql:
-  enabled: true
+  enabled: false
 
   # -- Connection pool tuning
   maxConns: 25
