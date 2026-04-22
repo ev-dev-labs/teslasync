@@ -436,7 +436,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT date_trunc('hour', created_at) AS time, COUNT(*) AS \"API Calls\" FROM api_call_logs WHERE $__timeFilter(created_at) GROUP BY date_trunc('hour', created_at) ORDER BY time",
+          "rawSql": "SELECT time_bucket('1 hour', created_at) AS time, COUNT(*) AS \"API Calls\" FROM api_call_logs WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY time",
           "refId": "A"
         }
       ],

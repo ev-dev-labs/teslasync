@@ -16,7 +16,11 @@ datasources:
       maxIdleConns: 5
       connMaxLifetime: 14400
       postgresVersion: 1700
-      timescaledb: false
+      # timescaledb: true enables Grafana to translate $__timeGroup() into
+      # time_bucket(), which is chunk-aware on hypertables and produces better
+      # query plans than date_trunc(). Continuous aggregate queries (cagg_*)
+      # also benefit from this for cleaner editor UX.
+      timescaledb: true
     isDefault: true
     editable: true
 
