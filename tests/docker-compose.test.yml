@@ -2,11 +2,21 @@ version: "3.8"
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: timescale/timescaledb-ha:pg17
+    shm_size: 1g
     environment:
       POSTGRES_USER: teslasync
       POSTGRES_PASSWORD: teslasync
       POSTGRES_DB: teslasync
+      PGDATA: /home/postgres/pgdata/data
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=timescaledb,pg_stat_statements
+      - -c
+      - timescaledb.max_background_workers=8
+    volumes:
+      - ../scripts/postgres-init:/docker-entrypoint-initdb.d:ro
     ports:
       - "5432:5432"
     healthcheck:
@@ -14,6 +24,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+      start_period: 60s
 
   backend:
     build:
