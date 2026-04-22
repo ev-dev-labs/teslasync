@@ -101,6 +101,37 @@ type DatabaseConfig struct {
 	ConnectTimeout    int           // seconds, appended to DSN as connect_timeout
 	StatementTimeout  int           // milliseconds, appended to DSN as statement_timeout
 	HealthCheckPeriod time.Duration // pool health check interval
+
+	// PgBouncerEnabled signals that Host/Port point to PgBouncer running in
+	// transaction pooling mode. When true, the pgx pool is configured to use
+	// the simple query protocol and disables prepared-statement / description
+	// caches — both are incompatible with transaction pooling because backend
+	// connections are multiplexed across clients.
+	PgBouncerEnabled bool
+
+	// DirectHost / DirectPort point at PostgreSQL directly (bypassing
+	// PgBouncer). They are used by code paths that require session-level
+	// features: migrations (SET, advisory locks, CREATE EXTENSION) and
+	// LISTEN/NOTIFY. When empty / zero they fall back to Host / Port so
+	// deployments without PgBouncer keep working unchanged.
+	DirectHost string
+	DirectPort int
+}
+
+// directHost returns the host to use for direct (non-pooled) connections.
+func (d DatabaseConfig) directHost() string {
+	if d.DirectHost != "" {
+		return d.DirectHost
+	}
+	return d.Host
+}
+
+// directPort returns the port to use for direct (non-pooled) connections.
+func (d DatabaseConfig) directPort() int {
+	if d.DirectPort != 0 {
+		return d.DirectPort
+	}
+	return d.Port
 }
 
 func (d DatabaseConfig) DSN() string {
@@ -111,13 +142,26 @@ func (d DatabaseConfig) DSN() string {
 	)
 }
 
-// MigrationDSN returns a DSN without statement_timeout. Migrations use
-// pg_advisory_lock which must wait indefinitely for the lock — a statement
-// timeout would kill the lock acquisition and crash the pod.
+// MigrationDSN returns a DSN without statement_timeout, pointing at the
+// direct PostgreSQL endpoint (bypassing PgBouncer when configured).
+// Migrations use pg_advisory_lock which must wait indefinitely for the lock —
+// a statement timeout would kill the lock acquisition and crash the pod, and
+// PgBouncer transaction pooling would break the session-level lock entirely.
 func (d DatabaseConfig) MigrationDSN() string {
 	return fmt.Sprintf(
 		"postgres://%s:%s@%s:%d/%s?sslmode=%s&connect_timeout=%d",
-		d.User, d.Password, d.Host, d.Port, d.Name, d.SSLMode,
+		d.User, d.Password, d.directHost(), d.directPort(), d.Name, d.SSLMode,
+		d.ConnectTimeout,
+	)
+}
+
+// DirectDSN returns a DSN pointing at PostgreSQL directly (bypassing
+// PgBouncer). Use this for any code that requires a persistent session:
+// LISTEN/NOTIFY, advisory locks held across queries, temporary tables, etc.
+func (d DatabaseConfig) DirectDSN() string {
+	return fmt.Sprintf(
+		"postgres://%s:%s@%s:%d/%s?sslmode=%s&connect_timeout=%d",
+		d.User, d.Password, d.directHost(), d.directPort(), d.Name, d.SSLMode,
 		d.ConnectTimeout,
 	)
 }
@@ -213,6 +257,9 @@ func Load() (*Config, error) {
 			ConnectTimeout:    envInt("DATABASE_CONNECT_TIMEOUT", 5),
 			StatementTimeout:  envInt("DATABASE_STATEMENT_TIMEOUT", 30000),
 			HealthCheckPeriod: envDuration("DATABASE_HEALTH_CHECK_PERIOD", 5*time.Second),
+			PgBouncerEnabled:  envBool("DATABASE_PGBOUNCER", false),
+			DirectHost:        envStr("DATABASE_DIRECT_HOST", ""),
+			DirectPort:        envInt("DATABASE_DIRECT_PORT", 0),
 		},
 
 		Tesla: TeslaConfig{

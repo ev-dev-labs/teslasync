@@ -145,7 +145,9 @@ imagePullSecrets:
 {{/* ── PostgreSQL connection helpers ──────────────────────────────────── */}}
 
 {{- define "teslasync.postgresql.host" -}}
-{{- if .Values.postgresql.enabled }}
+{{- if .Values.postgresql.pgbouncer.enabled }}
+{{- .Values.postgresql.pgbouncer.host | default (printf "%s-pgbouncer" (include "teslasync.fullname" .)) }}
+{{- else if .Values.postgresql.enabled }}
 {{- printf "%s-postgresql" (include "teslasync.fullname" .) }}
 {{- else }}
 {{- .Values.postgresql.external.host }}
@@ -153,6 +155,26 @@ imagePullSecrets:
 {{- end }}
 
 {{- define "teslasync.postgresql.port" -}}
+{{- if .Values.postgresql.pgbouncer.enabled }}
+{{- toString (.Values.postgresql.pgbouncer.port | default 6432) }}
+{{- else if .Values.postgresql.enabled }}
+{{- toString .Values.postgresql.service.port }}
+{{- else }}
+{{- toString .Values.postgresql.external.port }}
+{{- end }}
+{{- end }}
+
+{{/* Direct PostgreSQL host/port (always bypasses PgBouncer). Used for
+     migrations and LISTEN/NOTIFY. */}}
+{{- define "teslasync.postgresql.directHost" -}}
+{{- if .Values.postgresql.enabled }}
+{{- printf "%s-postgresql" (include "teslasync.fullname" .) }}
+{{- else }}
+{{- .Values.postgresql.external.host }}
+{{- end }}
+{{- end }}
+
+{{- define "teslasync.postgresql.directPort" -}}
 {{- if .Values.postgresql.enabled }}
 {{- toString .Values.postgresql.service.port }}
 {{- else }}

@@ -42,6 +42,24 @@ func New(ctx context.Context, cfg config.DatabaseConfig) (*DB, error) {
 	poolCfg.MaxConnIdleTime = cfg.ConnMaxIdleTime
 	poolCfg.HealthCheckPeriod = cfg.HealthCheckPeriod
 
+	// PgBouncer transaction-pool compatibility.
+	//
+	// In transaction mode PgBouncer multiplexes many client connections over a
+	// smaller number of backend PostgreSQL connections, releasing each backend
+	// at COMMIT/ROLLBACK. Anything that lives at the session level breaks:
+	//   - prepared statements (pgx auto-prepares unique queries by default)
+	//   - the pgx description cache (server-side OID lookups bound to a backend)
+	//   - SET / advisory locks / LISTEN — bypass via DirectDSN() instead
+	//
+	// Switching the default exec mode to SimpleProtocol sends queries as plain
+	// text with parameters interpolated client-side, which routes through
+	// PgBouncer cleanly. Both caches are zeroed for defence in depth.
+	if cfg.PgBouncerEnabled {
+		poolCfg.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+		poolCfg.ConnConfig.StatementCacheCapacity = 0
+		poolCfg.ConnConfig.DescriptionCacheCapacity = 0
+	}
+
 	// Validate new connections by setting per-connection statement_timeout as safety net
 	stmtTimeout := cfg.StatementTimeout
 	poolCfg.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
@@ -66,8 +84,15 @@ func New(ctx context.Context, cfg config.DatabaseConfig) (*DB, error) {
 	}
 
 	stats := pool.Stat()
+	queryMode := "extended"
+	if cfg.PgBouncerEnabled {
+		queryMode = "simple_protocol"
+	}
 	log.Info().
 		Str("host", cfg.Host).
+		Int("port", cfg.Port).
+		Bool("pgbouncer", cfg.PgBouncerEnabled).
+		Str("query_mode", queryMode).
 		Int("max_conns", cfg.MaxConns).
 		Int32("total_conns", stats.TotalConns()).
 		Int32("idle_conns", stats.IdleConns()).

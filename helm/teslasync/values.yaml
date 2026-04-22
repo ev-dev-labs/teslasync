@@ -650,6 +650,28 @@ postgresql:
   # -- Pool health check interval (detects stale connections)
   healthCheckPeriod: "5s"
 
+  # ───────────────────────────────────────────────────────────────────────────
+  # PgBouncer transaction pooling
+  #
+  # Enable when a PgBouncer sidecar (or external service) fronts PostgreSQL in
+  # transaction-pool mode — typical on resource-constrained k3s clusters where
+  # many app + worker pods share a smaller pool of backend connections.
+  #
+  # When enabled:
+  #   - DATABASE_HOST/PORT route to PgBouncer (default port 6432)
+  #   - DATABASE_PGBOUNCER=true → pgx switches to simple query protocol and
+  #     disables the prepared-statement / description caches
+  #   - DATABASE_DIRECT_HOST/PORT route to PostgreSQL directly, used by
+  #     migrations (advisory locks, DDL, CREATE EXTENSION) and LISTEN/NOTIFY
+  # ───────────────────────────────────────────────────────────────────────────
+  pgbouncer:
+    enabled: false
+    # -- Override PgBouncer service host. Defaults to <release>-pgbouncer
+    #    (assumes a sidecar/Service exposing port 6432).
+    host: ""
+    # -- PgBouncer listen port
+    port: 6432
+
   image: pgvector/pgvector:pg17
 
   auth:
