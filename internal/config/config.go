@@ -25,6 +25,20 @@ type Config struct {
 	OpenTelemetry  OpenTelemetryConfig
 	GoogleMaps     GoogleMapsConfig
 	AzureMaps      AzureMapsConfig
+	Embedding      EmbeddingConfig
+}
+
+// EmbeddingConfig controls the pgvector-backed semantic search subsystem
+// (see internal/embedding). When Enabled is false the service short-circuits
+// and the chatbot falls back to its pattern-matching path.
+type EmbeddingConfig struct {
+	Enabled         bool          `json:"enabled"`
+	Provider        string        `json:"provider"`         // "openai" or "local"
+	APIKey          string        `json:"api_key"`          // OpenAI API key (when provider == "openai")
+	Model           string        `json:"model"`            // default: "text-embedding-3-small"
+	Dimensions      int           `json:"dimensions"`       // default: 1536 (must match the `vector(N)` column)
+	BatchSize       int           `json:"batch_size"`       // default: 50
+	RefreshInterval time.Duration `json:"refresh_interval"` // default: 5m
 }
 
 // GoogleMapsConfig holds settings for the Google Maps geocoding API.
@@ -278,6 +292,16 @@ func Load() (*Config, error) {
 
 		AzureMaps: AzureMapsConfig{
 			APIKey: envStr("AZURE_MAPS_API_KEY", ""),
+		},
+
+		Embedding: EmbeddingConfig{
+			Enabled:         envBool("EMBEDDING_ENABLED", false),
+			Provider:        envStr("EMBEDDING_PROVIDER", "local"),
+			APIKey:          envStr("EMBEDDING_API_KEY", ""),
+			Model:           envStr("EMBEDDING_MODEL", "text-embedding-3-small"),
+			Dimensions:      envInt("EMBEDDING_DIMENSIONS", 1536),
+			BatchSize:       envInt("EMBEDDING_BATCH_SIZE", 50),
+			RefreshInterval: envDuration("EMBEDDING_REFRESH_INTERVAL", 5*time.Minute),
 		},
 	}
 

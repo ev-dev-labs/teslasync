@@ -13,7 +13,7 @@ spec:
   restartPolicy: Never
   containers:
     - name: test-postgres
-      image: postgres:17-alpine
+      image: pgvector/pgvector:pg17
       env:
         - name: PGPASSWORD
           value: {{ include "teslasync.postgresql.password" . | quote }}

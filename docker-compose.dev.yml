@@ -149,7 +149,7 @@ services:
   # ── Infrastructure ────────────────────────────────────────
 
   postgres:
-    image: postgres:17-alpine
+    image: pgvector/pgvector:pg17
     container_name: teslasync-postgres-dev
     restart: unless-stopped
     ports:

@@ -17,6 +17,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/embedding"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
@@ -436,6 +437,36 @@ func main() {
 			Msg("gas price worker started")
 	}
 
+	// Embedding service — pgvector-backed semantic search for the chatbot.
+	// Selects a provider based on EMBEDDING_PROVIDER. The "local" provider
+	// is deterministic and offline (safe default for self-hosters without
+	// an OpenAI key); "openai" uses the configured EMBEDDING_API_KEY.
+	var embeddingSvc *embedding.Service
+	if cfg.Embedding.Enabled {
+		var provider embedding.EmbeddingProvider
+		switch cfg.Embedding.Provider {
+		case "openai":
+			if cfg.Embedding.APIKey == "" {
+				log.Warn().Msg("embedding: provider=openai but EMBEDDING_API_KEY is empty; falling back to local")
+				provider = embedding.NewLocalProvider(cfg.Embedding.Dimensions)
+			} else {
+				provider = embedding.NewOpenAIProvider(cfg.Embedding.APIKey, cfg.Embedding.Model, cfg.Embedding.Dimensions)
+			}
+		default:
+			provider = embedding.NewLocalProvider(cfg.Embedding.Dimensions)
+		}
+		embeddingSvc = embedding.NewService(db, provider, cfg.Embedding)
+		embeddingWorker := embedding.NewWorker(embeddingSvc, db, cfg.Embedding.RefreshInterval, cfg.Embedding.BatchSize)
+		resilience.SafeGoLoop(ctx, "embedding-worker", func(loopCtx context.Context) {
+			embeddingWorker.Run(loopCtx)
+		})
+		log.Info().
+			Str("provider", cfg.Embedding.Provider).
+			Int("dimensions", cfg.Embedding.Dimensions).
+			Dur("refresh", cfg.Embedding.RefreshInterval).
+			Msg("embedding service started")
+	}
+
 	// Periodic component health checker — creates system alerts on state changes
 	alertRepo := database.NewAlertRepo(db)
 	notifRepo := database.NewNotificationRepo(db)
@@ -552,6 +583,7 @@ func main() {
 		PollEngine:       pollEngine,
 		SignalStore:      signalStore,
 		CacheStore:       cacheStore,
+		EmbeddingService: embeddingSvc,
 	})
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Port),

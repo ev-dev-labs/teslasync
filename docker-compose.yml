@@ -124,7 +124,7 @@ services:
           memory: 32M
 
   postgres:
-    image: postgres:17-alpine
+    image: pgvector/pgvector:pg17
     container_name: teslasync-postgres
     restart: unless-stopped
     ports:

@@ -578,6 +578,35 @@ gasPrice:
   apiKey: ""
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Embeddings — pgvector-backed semantic search for the AI chatbot
+#
+# When enabled, drives, charging sessions, and alerts are summarized into
+# text and embedded into 1536-dim vectors stored in the `embeddings` table.
+# The chatbot uses cosine similarity to find relevant context for queries
+# like "show me drives where battery dropped fast".
+#
+# Provider "openai" requires apiKey and calls https://api.openai.com.
+# Provider "local" is deterministic and offline (good for air-gapped or
+# self-hosted installs without an OpenAI account); it is NOT semantically
+# meaningful but exercises all storage/search code paths.
+# ─────────────────────────────────────────────────────────────────────────────
+embedding:
+  # -- Enable the embedding subsystem and start the background backfill worker.
+  enabled: false
+  # -- Embedding provider: "openai" or "local".
+  provider: "local"
+  # -- OpenAI API key (only used when provider == "openai").
+  apiKey: ""
+  # -- Model name. Must match the dimensions of the `vector(N)` column (1536).
+  model: "text-embedding-3-small"
+  # -- Vector dimension (must match migration 000004's vector(N)).
+  dimensions: 1536
+  # -- Backfill batch size per worker tick.
+  batchSize: 50
+  # -- How often the worker scans for un-embedded entities.
+  refreshInterval: "5m"
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Authentication (optional — leave jwtSecret empty to disable)
 # ─────────────────────────────────────────────────────────────────────────────
 auth:
@@ -621,7 +650,7 @@ postgresql:
   # -- Pool health check interval (detects stale connections)
   healthCheckPeriod: "5s"
 
-  image: postgres:17-alpine
+  image: pgvector/pgvector:pg17
 
   auth:
     username: teslasync
