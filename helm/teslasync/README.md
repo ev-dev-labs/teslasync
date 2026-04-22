@@ -158,6 +158,12 @@ You can disable bundled services and point TeslaSync at your own infrastructure.
 
 ### External PostgreSQL
 
+The chart supports external **TimescaleDB + PgBouncer** topologies — common when the
+database is operated in a separate namespace or by a managed service (Timescale Cloud,
+Aiven, RDS).
+
+**External direct PostgreSQL (no pooler):**
+
 ```yaml
 postgresql:
   enabled: false
@@ -167,7 +173,40 @@ postgresql:
     username: teslasync
     password: secretpassword
     database: teslasync
+    sslMode: require
 ```
+
+**External PgBouncer + direct PostgreSQL endpoint** (mirrors the in-cluster
+`timescaledb`/`pgbouncer` two-container pod topology):
+
+```yaml
+postgresql:
+  enabled: false
+  external:
+    host: timescaledb.timescaledb.svc.cluster.local   # PgBouncer (pooled)
+    port: 6432
+    directHost: timescaledb.timescaledb.svc.cluster.local  # bypass pooler
+    directPort: 5432                                  # used by migrations
+    pgbouncer: true                                   # → DATABASE_PGBOUNCER=true
+    username: teslasync
+    database: teslasync
+    passwordSecret:
+      name: teslasync-db    # SOPS / Sealed-Secrets / External-Secrets
+      key: password
+```
+
+When `external.pgbouncer: true`, `external.directHost` is **required**: migrations
+take advisory locks and run DDL / `CREATE EXTENSION`, none of which work through a
+transaction-mode pooler. Helm rendering fails fast if you forget it.
+
+### Bundled TimescaleDB + PgBouncer
+
+The default (`postgresql.enabled: true`) deploys a single Pod with two containers
+(`postgresql` running `timescale/timescaledb-ha:pg17` + `pgbouncer` sidecar) and one
+Service exposing both port `5432` (direct) and `6432` (pooled). Disable the sidecar
+with `postgresql.pgbouncer.enabled: false` for dev environments. Backups
+(`postgresql.backup.enabled`, default on) run nightly via a CronJob using `pg_dump
+-Fc` against the direct endpoint, optionally pushing to S3-compatible storage.
 
 ### External Redis
 

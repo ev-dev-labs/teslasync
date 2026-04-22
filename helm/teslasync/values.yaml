@@ -639,7 +639,11 @@ tesla:
 postgresql:
   enabled: true
 
-  # -- Connection pool tuning
+  # -- TimescaleDB-HA image bundles pg17 + timescaledb + pgvector + toolkit.
+  #    Tag pinned for reproducibility; bump deliberately during upgrades.
+  image: timescale/timescaledb-ha:pg17
+
+  # -- Connection pool tuning (app side, not PostgreSQL max_connections)
   maxConns: 25
   minConns: 5
 
@@ -651,28 +655,28 @@ postgresql:
   healthCheckPeriod: "5s"
 
   # ───────────────────────────────────────────────────────────────────────────
-  # PgBouncer transaction pooling
-  #
-  # Enable when a PgBouncer sidecar (or external service) fronts PostgreSQL in
-  # transaction-pool mode — typical on resource-constrained k3s clusters where
-  # many app + worker pods share a smaller pool of backend connections.
-  #
-  # When enabled:
-  #   - DATABASE_HOST/PORT route to PgBouncer (default port 6432)
-  #   - DATABASE_PGBOUNCER=true → pgx switches to simple query protocol and
-  #     disables the prepared-statement / description caches
-  #   - DATABASE_DIRECT_HOST/PORT route to PostgreSQL directly, used by
-  #     migrations (advisory locks, DDL, CREATE EXTENSION) and LISTEN/NOTIFY
+  # PostgreSQL tuning — rendered into postgresql.conf via the init configmap.
+  # TimescaleDB REQUIRES timescaledb in shared_preload_libraries.
   # ───────────────────────────────────────────────────────────────────────────
-  pgbouncer:
-    enabled: false
-    # -- Override PgBouncer service host. Defaults to <release>-pgbouncer
-    #    (assumes a sidecar/Service exposing port 6432).
-    host: ""
-    # -- PgBouncer listen port
-    port: 6432
+  config:
+    sharedPreloadLibraries: "timescaledb,pg_stat_statements"
+    maxConnections: 200            # PgBouncer fronts this; backend conns kept low
+    sharedBuffers: "1GB"           # ~25% of memory limit
+    workMem: "32MB"
+    maintenanceWorkMem: "256MB"
+    effectiveCacheSize: "3GB"      # ~75% of memory limit
+    walLevel: "replica"
+    maxWalSize: "2GB"
+    timescaledb:
+      maxBackgroundWorkers: 8      # Required for compression + CAGG refresh
 
-  image: pgvector/pgvector:pg17
+  # -- Init scripts run once on a fresh data volume.
+  #    Mounted at /docker-entrypoint-initdb.d in the timescaledb container.
+  initScripts:
+    enabled: true
+    extensions:
+      - timescaledb
+      - vector
 
   auth:
     username: teslasync
@@ -685,27 +689,123 @@ postgresql:
 
   persistence:
     enabled: true
-    size: 10Gi
-    storageClass: ""
+    size: 100Gi                    # Hypertables grow fast — size for chunks + WAL
+    storageClass: ""               # Set "longhorn" or your CSI class
     accessModes:
       - ReadWriteOnce
 
   resources:
-    limits:
-      cpu: 1000m
-      memory: 1Gi
     requests:
-      cpu: 250m
-      memory: 256Mi
+      cpu: 500m
+      memory: 2Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi                  # Fits compression workers + CAGG refresh
 
-  # External PostgreSQL — used when postgresql.enabled is false.
+  # -- TimescaleDB startup is slower than vanilla PG due to extension load.
+  startupProbe:
+    enabled: true
+    failureThreshold: 30
+    periodSeconds: 10              # Allow up to 5 min for first start
+  readinessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # PgBouncer — runs as a SIDECAR in the same pod as TimescaleDB, mirroring
+  # the production topology (one pod, two containers: timescaledb + pgbouncer).
+  # The pod's Service exposes both port 5432 (direct) and 6432 (pooled).
+  # When this is enabled, NO separate pgbouncer Deployment/Service is rendered.
+  #
+  # When enabled:
+  #   - DATABASE_HOST/PORT route to PgBouncer (default port 6432)
+  #   - DATABASE_PGBOUNCER=true → pgx switches to simple query protocol and
+  #     disables the prepared-statement / description caches
+  #   - DATABASE_DIRECT_HOST/PORT route to PostgreSQL directly, used by
+  #     migrations (advisory locks, DDL, CREATE EXTENSION) and LISTEN/NOTIFY
+  # ───────────────────────────────────────────────────────────────────────────
+  pgbouncer:
+    enabled: true                  # Default ON in production; off in dev compose
+    image: pgbouncer/pgbouncer:1.23.1
+    port: 6432
+    poolMode: transaction
+    maxClientConn: 500             # Total app connections accepted
+    defaultPoolSize: 25            # Backend conns per (user,db) pair
+    minPoolSize: 5
+    reservePoolSize: 5
+    serverIdleTimeout: 600
+    serverLifetime: 3600
+    resources:
+      requests: { cpu: 50m,  memory: 64Mi }
+      limits:   { cpu: 500m, memory: 256Mi }
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Backups — TimescaleDB is now the source of truth, so backups are required.
+  # CronJob runs pg_dump -Fc against the direct PG endpoint into a PVC.
+  # Optionally pushes to S3-compatible storage if backup.s3.enabled.
+  # ───────────────────────────────────────────────────────────────────────────
+  backup:
+    enabled: true
+    schedule: "0 3 * * *"          # 03:00 UTC daily
+    retentionDays: 14
+    image: postgres:17-alpine      # pg_dump client only — no server runs
+    storage:
+      size: 50Gi
+      storageClass: ""
+    s3:
+      enabled: false
+      bucket: ""
+      endpoint: ""                 # e.g. https://s3.amazonaws.com or MinIO
+      region: ""
+      # Secret must contain AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY keys
+      credentialsSecret: ""
+    resources:
+      requests: { cpu: 100m, memory: 128Mi }
+      limits:   { cpu: 500m, memory: 512Mi }
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Prometheus exporter sidecar (postgres_exporter) — scrapes pg_stat_*
+  # ───────────────────────────────────────────────────────────────────────────
+  metrics:
+    enabled: false
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
+    port: 9187
+    serviceMonitor:
+      enabled: false
+      interval: "30s"
+    resources:
+      requests: { cpu: 25m,  memory: 32Mi }
+      limits:   { cpu: 200m, memory: 128Mi }
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # External database — used when postgresql.enabled is false.
+  # Supports any PostgreSQL-compatible target: managed Timescale Cloud,
+  # self-managed TimescaleDB StatefulSet, AWS RDS, Aiven, etc.
+  # When .enabled=false, the chart deploys NO database/pgbouncer/backup/PVC.
+  # ───────────────────────────────────────────────────────────────────────────
   external:
-    host: ""
-    port: 5432
+    # -- Pooled endpoint — what the application talks to for normal queries.
+    #    Point at PgBouncer if available, otherwise PostgreSQL directly.
+    host: ""                       # e.g. timescaledb.timescaledb.svc.cluster.local
+    port: 6432                     # 6432 if pooled, 5432 if direct
     username: ""
+    # -- passwordSecret takes precedence over plaintext password.
     password: ""
+    passwordSecret:
+      name: ""                     # e.g. teslasync-db (SOPS-encrypted)
+      key: "password"
     database: ""
     sslMode: "disable"
+
+    # -- Direct endpoint — REQUIRED when external.pgbouncer=true.
+    #    Used for migrations (advisory locks), LISTEN/NOTIFY, CREATE EXTENSION.
+    #    If empty AND pgbouncer=false, falls back to host/port.
+    directHost: ""                 # e.g. timescaledb.timescaledb.svc.cluster.local
+    directPort: 5432
+
+    # -- Set true when external.host points at a PgBouncer in transaction mode.
+    #    Forces pgx to disable prepared statements via DATABASE_PGBOUNCER=true.
+    pgbouncer: false
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Redis

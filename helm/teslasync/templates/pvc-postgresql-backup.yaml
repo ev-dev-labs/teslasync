@@ -1,0 +1,20 @@
+{{- if and .Values.postgresql.enabled .Values.postgresql.backup.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "teslasync.fullname" . }}-postgresql-backup
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgresql-backup
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.postgresql.backup.storage.size | default "50Gi" }}
+  {{- if .Values.postgresql.backup.storage.storageClass }}
+  storageClassName: {{ .Values.postgresql.backup.storage.storageClass | quote }}
+  {{- end }}
+{{- end }}

@@ -1,0 +1,103 @@
+{{- if and .Values.postgresql.enabled .Values.postgresql.backup.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "teslasync.fullname" . }}-postgresql-backup
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgresql-backup
+spec:
+  schedule: {{ .Values.postgresql.backup.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      ttlSecondsAfterFinished: 86400
+      template:
+        metadata:
+          labels:
+            {{- include "teslasync.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: postgresql-backup
+        spec:
+          {{- include "teslasync.imagePullSecrets" . | nindent 10 }}
+          serviceAccountName: {{ include "teslasync.serviceAccountName" . }}
+          restartPolicy: OnFailure
+          containers:
+            - name: backup
+              image: {{ .Values.postgresql.backup.image | default "postgres:17-alpine" | quote }}
+              imagePullPolicy: IfNotPresent
+              env:
+                - name: PGHOST
+                  value: {{ include "teslasync.postgresql.directHost" . | quote }}
+                - name: PGPORT
+                  value: {{ include "teslasync.postgresql.directPort" . | quote }}
+                - name: PGUSER
+                  value: {{ include "teslasync.postgresql.username" . | quote }}
+                - name: PGDATABASE
+                  value: {{ include "teslasync.postgresql.database" . | quote }}
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "teslasync.postgresql.passwordSecretName" . }}
+                      key:  {{ include "teslasync.postgresql.passwordSecretKey" . }}
+                - name: RETENTION_DAYS
+                  value: {{ .Values.postgresql.backup.retentionDays | default 14 | quote }}
+                {{- if .Values.postgresql.backup.s3.enabled }}
+                - name: S3_BUCKET
+                  value: {{ .Values.postgresql.backup.s3.bucket | quote }}
+                - name: S3_ENDPOINT
+                  value: {{ .Values.postgresql.backup.s3.endpoint | quote }}
+                - name: S3_REGION
+                  value: {{ .Values.postgresql.backup.s3.region | quote }}
+                {{- if .Values.postgresql.backup.s3.credentialsSecret }}
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.postgresql.backup.s3.credentialsSecret | quote }}
+                      key: AWS_ACCESS_KEY_ID
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.postgresql.backup.s3.credentialsSecret | quote }}
+                      key: AWS_SECRET_ACCESS_KEY
+                {{- end }}
+                {{- end }}
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -euo pipefail
+                  TS="$(date -u +%Y%m%d-%H%M%S)"
+                  OUT="/backup/${PGDATABASE}-${TS}.dump"
+                  echo "[$(date -u)] starting pg_dump → ${OUT}"
+                  pg_dump -Fc --verbose --no-owner --no-privileges \
+                    --file="${OUT}" "${PGDATABASE}"
+                  echo "[$(date -u)] dump complete: $(du -h "${OUT}" | cut -f1)"
+                  {{- if .Values.postgresql.backup.s3.enabled }}
+                  if command -v aws >/dev/null 2>&1; then
+                    echo "[$(date -u)] uploading to s3://${S3_BUCKET}/"
+                    AWS_EC2_METADATA_DISABLED=true aws \
+                      {{- if .Values.postgresql.backup.s3.endpoint }} --endpoint-url "${S3_ENDPOINT}"{{- end }} \
+                      {{- if .Values.postgresql.backup.s3.region }} --region "${S3_REGION}"{{- end }} \
+                      s3 cp "${OUT}" "s3://${S3_BUCKET}/$(basename "${OUT}")"
+                  else
+                    echo "[$(date -u)] WARN: aws cli not present; skipping S3 upload"
+                  fi
+                  {{- end }}
+                  echo "[$(date -u)] pruning backups older than ${RETENTION_DAYS} days"
+                  find /backup -maxdepth 1 -type f -name '*.dump' -mtime +"${RETENTION_DAYS}" -print -delete
+                  echo "[$(date -u)] backup job complete"
+              volumeMounts:
+                - name: backup
+                  mountPath: /backup
+              {{- with .Values.postgresql.backup.resources }}
+              resources:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+          volumes:
+            - name: backup
+              persistentVolumeClaim:
+                claimName: {{ include "teslasync.fullname" . }}-postgresql-backup
+{{- end }}

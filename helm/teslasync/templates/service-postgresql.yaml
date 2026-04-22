@@ -16,4 +16,16 @@ spec:
       port: {{ .Values.postgresql.service.port }}
       targetPort: postgres
       protocol: TCP
+    {{- if .Values.postgresql.pgbouncer.enabled }}
+    - name: pgbouncer
+      port: {{ .Values.postgresql.pgbouncer.port | default 6432 }}
+      targetPort: pgbouncer
+      protocol: TCP
+    {{- end }}
+    {{- if .Values.postgresql.metrics.enabled }}
+    - name: metrics
+      port: {{ .Values.postgresql.metrics.port | default 9187 }}
+      targetPort: metrics
+      protocol: TCP
+    {{- end }}
 {{- end }}

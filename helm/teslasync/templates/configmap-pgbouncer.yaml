@@ -1,0 +1,36 @@
+{{- if and .Values.postgresql.enabled .Values.postgresql.pgbouncer.enabled }}
+{{- $pgb := .Values.postgresql.pgbouncer }}
+{{- $auth := .Values.postgresql.auth }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "teslasync.fullname" . }}-pgbouncer
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pgbouncer
+data:
+  # PgBouncer config rendered from values. The sidecar reaches PostgreSQL via
+  # 127.0.0.1:5432 because both containers share the pod network namespace.
+  pgbouncer.ini: |
+    [databases]
+    {{ $auth.database }} = host=127.0.0.1 port=5432 dbname={{ $auth.database }}
+    * = host=127.0.0.1 port=5432
+
+    [pgbouncer]
+    listen_addr = 0.0.0.0
+    listen_port = {{ $pgb.port | default 6432 }}
+    auth_type = md5
+    auth_file = /etc/pgbouncer/userlist.txt
+    pool_mode = {{ $pgb.poolMode | default "transaction" }}
+    max_client_conn = {{ $pgb.maxClientConn | default 500 }}
+    default_pool_size = {{ $pgb.defaultPoolSize | default 25 }}
+    min_pool_size = {{ $pgb.minPoolSize | default 5 }}
+    reserve_pool_size = {{ $pgb.reservePoolSize | default 5 }}
+    server_idle_timeout = {{ $pgb.serverIdleTimeout | default 600 }}
+    server_lifetime = {{ $pgb.serverLifetime | default 3600 }}
+    ignore_startup_parameters = extra_float_digits,search_path
+    admin_users = {{ $auth.username }}
+    stats_users = {{ $auth.username }}
+    log_connections = 0
+    log_disconnections = 0
+{{- end }}

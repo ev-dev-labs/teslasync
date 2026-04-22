@@ -124,28 +124,53 @@ services:
           memory: 32M
 
   postgres:
-    image: pgvector/pgvector:pg17
+    image: timescale/timescaledb-ha:pg17
     container_name: teslasync-postgres
     restart: unless-stopped
+    shm_size: 1g
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-teslasync}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-teslasync}
       - POSTGRES_DB=${POSTGRES_DB:-teslasync}
+      # timescaledb-ha image stores PGDATA under /home/postgres/pgdata/data
+      - PGDATA=/home/postgres/pgdata/data
+    # TimescaleDB requires shared_preload_libraries; keep tuning aligned with
+    # helm/teslasync/values.yaml postgresql.config.* for parity.
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=timescaledb,pg_stat_statements
+      - -c
+      - max_connections=200
+      - -c
+      - shared_buffers=512MB
+      - -c
+      - work_mem=16MB
+      - -c
+      - maintenance_work_mem=128MB
+      - -c
+      - effective_cache_size=1536MB
+      - -c
+      - timescaledb.max_background_workers=8
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/home/postgres/pgdata
+      # Mirror helm chart's configmap-postgresql-init.yaml — runs ONCE on
+      # a fresh volume to install timescaledb + vector + pg_stat_statements.
+      - ./scripts/postgres-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-teslasync}"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 60s
     deploy:
       resources:
         limits:
-          memory: 1G
+          memory: 2G
         reservations:
-          memory: 256M
+          memory: 512M
 
   grafana:
     image: grafana/grafana:10.4.0

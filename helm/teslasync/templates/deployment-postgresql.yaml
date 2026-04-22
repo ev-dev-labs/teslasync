@@ -1,4 +1,6 @@
 {{- if .Values.postgresql.enabled }}
+{{- $pgb := .Values.postgresql.pgbouncer }}
+{{- $met := .Values.postgresql.metrics }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -19,12 +21,72 @@ spec:
       labels:
         {{- include "teslasync.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: postgresql
+      annotations:
+        # Roll the pod when postgresql.conf or init scripts change so the new
+        # configuration takes effect on the next start.
+        checksum/init: {{ include (print $.Template.BasePath "/configmap-postgresql-init.yaml") . | sha256sum }}
+        {{- if $pgb.enabled }}
+        checksum/pgbouncer: {{ include (print $.Template.BasePath "/configmap-pgbouncer.yaml") . | sha256sum }}
+        {{- end }}
     spec:
       {{- include "teslasync.imagePullSecrets" . | nindent 6 }}
       serviceAccountName: {{ include "teslasync.serviceAccountName" . }}
+      {{- if $pgb.enabled }}
+      initContainers:
+        # Render userlist.txt with md5 hash. PgBouncer's md5 format is
+        # `md5` + md5(password + username) — must be computed at runtime
+        # because the password lives in a Secret (or an external secret).
+        - name: pgbouncer-userlist-init
+          image: alpine:3.19
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              HASH="md5$(printf '%s%s' "$POSTGRES_PASSWORD" "$POSTGRES_USER" | md5sum | awk '{print $1}')"
+              printf '"%s" "%s"\n' "$POSTGRES_USER" "$HASH" > /pgb-runtime/userlist.txt
+              chmod 0600 /pgb-runtime/userlist.txt
+          env:
+            - name: POSTGRES_USER
+              value: {{ .Values.postgresql.auth.username | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "teslasync.fullname" . }}
+                  key: DATABASE_PASS
+          volumeMounts:
+            - name: pgbouncer-runtime
+              mountPath: /pgb-runtime
+      {{- end }}
       containers:
         - name: postgresql
           image: {{ .Values.postgresql.image | quote }}
+          imagePullPolicy: IfNotPresent
+          # Custom command — pass shared_preload_libraries via -c so the
+          # TimescaleDB extension is loaded on first start (required for
+          # CREATE EXTENSION timescaledb to succeed in the init script).
+          # The base image's entrypoint still handles initdb + initdb.d scripts.
+          command:
+            - docker-entrypoint.sh
+            - postgres
+            - -c
+            - shared_preload_libraries={{ .Values.postgresql.config.sharedPreloadLibraries | default "timescaledb,pg_stat_statements" }}
+            - -c
+            - max_connections={{ .Values.postgresql.config.maxConnections | default 200 }}
+            - -c
+            - shared_buffers={{ .Values.postgresql.config.sharedBuffers | default "1GB" }}
+            - -c
+            - work_mem={{ .Values.postgresql.config.workMem | default "32MB" }}
+            - -c
+            - maintenance_work_mem={{ .Values.postgresql.config.maintenanceWorkMem | default "256MB" }}
+            - -c
+            - effective_cache_size={{ .Values.postgresql.config.effectiveCacheSize | default "3GB" }}
+            - -c
+            - wal_level={{ .Values.postgresql.config.walLevel | default "replica" }}
+            - -c
+            - max_wal_size={{ .Values.postgresql.config.maxWalSize | default "2GB" }}
+            - -c
+            - timescaledb.max_background_workers={{ (.Values.postgresql.config.timescaledb | default dict).maxBackgroundWorkers | default 8 }}
           ports:
             - name: postgres
               containerPort: 5432
@@ -39,42 +101,130 @@ spec:
                 secretKeyRef:
                   name: {{ include "teslasync.fullname" . }}
                   key: DATABASE_PASS
+            # timescaledb-ha image stores PGDATA under /home/postgres/pgdata/data
+            - name: PGDATA
+              value: /home/postgres/pgdata/data
+          {{- if .Values.postgresql.startupProbe.enabled }}
+          startupProbe:
+            exec:
+              command: [pg_isready, -U, {{ .Values.postgresql.auth.username | quote }}, -d, {{ .Values.postgresql.auth.database | quote }}]
+            failureThreshold: {{ .Values.postgresql.startupProbe.failureThreshold | default 30 }}
+            periodSeconds: {{ .Values.postgresql.startupProbe.periodSeconds | default 10 }}
+          {{- end }}
           livenessProbe:
             exec:
-              command:
-                - pg_isready
-                - -U
-                - {{ .Values.postgresql.auth.username | quote }}
-                - -d
-                - {{ .Values.postgresql.auth.database | quote }}
+              command: [pg_isready, -U, {{ .Values.postgresql.auth.username | quote }}, -d, {{ .Values.postgresql.auth.database | quote }}]
             initialDelaySeconds: 30
             periodSeconds: 10
             failureThreshold: 5
           readinessProbe:
             exec:
-              command:
-                - pg_isready
-                - -U
-                - {{ .Values.postgresql.auth.username | quote }}
-                - -d
-                - {{ .Values.postgresql.auth.database | quote }}
-            initialDelaySeconds: 5
-            periodSeconds: 5
+              command: [pg_isready, -U, {{ .Values.postgresql.auth.username | quote }}, -d, {{ .Values.postgresql.auth.database | quote }}]
+            initialDelaySeconds: {{ .Values.postgresql.readinessProbe.initialDelaySeconds | default 30 }}
+            periodSeconds: {{ .Values.postgresql.readinessProbe.periodSeconds | default 10 }}
             failureThreshold: 5
           {{- with .Values.postgresql.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- if .Values.postgresql.persistence.enabled }}
           volumeMounts:
+            {{- if .Values.postgresql.persistence.enabled }}
             - name: postgresql-data
-              mountPath: /var/lib/postgresql/data
-              subPath: pgdata
+              mountPath: /home/postgres/pgdata
+            {{- end }}
+            {{- if .Values.postgresql.initScripts.enabled }}
+            - name: init-scripts
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
+            {{- end }}
+            # /dev/shm — TimescaleDB parallel workers need shared memory
+            # well above the kubernetes default 64Mi or you'll see "could not
+            # resize shared memory segment" under load.
+            - name: dshm
+              mountPath: /dev/shm
+        {{- if $met.enabled }}
+        - name: postgres-exporter
+          image: {{ $met.image | quote }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: metrics
+              containerPort: {{ $met.port | default 9187 }}
+              protocol: TCP
+          env:
+            - name: DATA_SOURCE_URI
+              value: "127.0.0.1:5432/{{ .Values.postgresql.auth.database }}?sslmode=disable"
+            - name: DATA_SOURCE_USER
+              value: {{ .Values.postgresql.auth.username | quote }}
+            - name: DATA_SOURCE_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "teslasync.fullname" . }}
+                  key: DATABASE_PASS
+          {{- with $met.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
           {{- end }}
-      {{- if .Values.postgresql.persistence.enabled }}
+        {{- end }}
+        {{- if $pgb.enabled }}
+        - name: pgbouncer
+          image: {{ $pgb.image | quote }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: pgbouncer
+              containerPort: {{ $pgb.port | default 6432 }}
+              protocol: TCP
+          # PgBouncer talks to PostgreSQL via the loopback interface — both
+          # containers share the pod network namespace.
+          volumeMounts:
+            - name: pgbouncer-config
+              mountPath: /etc/pgbouncer/pgbouncer.ini
+              subPath: pgbouncer.ini
+              readOnly: true
+            - name: pgbouncer-runtime
+              mountPath: /etc/pgbouncer/userlist.txt
+              subPath: userlist.txt
+              readOnly: true
+          readinessProbe:
+            tcpSocket:
+              port: pgbouncer
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: pgbouncer
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          {{- with $pgb.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+        {{- end }}
       volumes:
+        {{- if .Values.postgresql.persistence.enabled }}
         - name: postgresql-data
           persistentVolumeClaim:
             claimName: {{ include "teslasync.fullname" . }}-postgresql-data
-      {{- end }}
+        {{- end }}
+        {{- if .Values.postgresql.initScripts.enabled }}
+        - name: init-scripts
+          configMap:
+            name: {{ include "teslasync.fullname" . }}-postgresql-init
+            items:
+              - key: 00-extensions.sql
+                path: 00-extensions.sql
+        {{- end }}
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Gi
+        {{- if $pgb.enabled }}
+        - name: pgbouncer-config
+          configMap:
+            name: {{ include "teslasync.fullname" . }}-pgbouncer
+            items:
+              - key: pgbouncer.ini
+                path: pgbouncer.ini
+        - name: pgbouncer-runtime
+          emptyDir: {}
+        {{- end }}
 {{- end }}

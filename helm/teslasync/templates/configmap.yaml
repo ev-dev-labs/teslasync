@@ -15,7 +15,7 @@ data:
   DATABASE_CONNECT_TIMEOUT: {{ .Values.postgresql.connectTimeout | default 5 | quote }}
   DATABASE_STATEMENT_TIMEOUT: {{ .Values.postgresql.statementTimeout | default 30000 | quote }}
   DATABASE_HEALTH_CHECK_PERIOD: {{ .Values.postgresql.healthCheckPeriod | default "5s" | quote }}
-  {{- if .Values.postgresql.pgbouncer.enabled }}
+  {{- if include "teslasync.postgresql.usingPooler" . }}
   # PgBouncer transaction pooling: app queries route through PgBouncer; pgx
   # falls back to the simple query protocol so no prepared statements / OID
   # description lookups leak across multiplexed backend connections.

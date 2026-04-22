@@ -143,76 +143,139 @@ imagePullSecrets:
 {{- end }}
 
 {{/* ── PostgreSQL connection helpers ──────────────────────────────────── */}}
+{{/*
+Topology truth table (see prompt 12):
+
+  | enabled | pgbouncer (.pgbouncer.enabled OR .external.pgbouncer) | host:port (pooled)            | directHost:directPort         |
+  |---------|-------------------------------------------------------|-------------------------------|-------------------------------|
+  | true    | true   | <release>-postgresql:6432 (sidecar)   | <release>-postgresql:5432     |
+  | true    | false  | <release>-postgresql:5432             | <release>-postgresql:5432     |
+  | false   | true   | external.host:port (the pooler)       | external.directHost:directPort (REQUIRED) |
+  | false   | false  | external.host:port                    | external.directHost:directPort if set, else external.host:port |
+
+Bundled mode always returns the same Service name; only the port differs.
+*/}}
+
+{{/*
+Returns true when EITHER the embedded sidecar PgBouncer is enabled OR the
+external endpoint is itself a PgBouncer. Single source of truth used by
+configmap.yaml to set DATABASE_PGBOUNCER and by helpers below to switch ports.
+*/}}
+{{- define "teslasync.postgresql.usingPooler" -}}
+{{- if .Values.postgresql.enabled -}}
+{{- ternary "true" "" .Values.postgresql.pgbouncer.enabled -}}
+{{- else -}}
+{{- ternary "true" "" .Values.postgresql.external.pgbouncer -}}
+{{- end -}}
+{{- end -}}
 
 {{- define "teslasync.postgresql.host" -}}
-{{- if .Values.postgresql.pgbouncer.enabled }}
-{{- .Values.postgresql.pgbouncer.host | default (printf "%s-pgbouncer" (include "teslasync.fullname" .)) }}
-{{- else if .Values.postgresql.enabled }}
-{{- printf "%s-postgresql" (include "teslasync.fullname" .) }}
-{{- else }}
-{{- .Values.postgresql.external.host }}
-{{- end }}
-{{- end }}
+{{- if .Values.postgresql.enabled -}}
+{{- printf "%s-postgresql" (include "teslasync.fullname" .) -}}
+{{- else -}}
+{{- required "postgresql.external.host is required when postgresql.enabled=false" .Values.postgresql.external.host -}}
+{{- end -}}
+{{- end -}}
 
 {{- define "teslasync.postgresql.port" -}}
-{{- if .Values.postgresql.pgbouncer.enabled }}
-{{- toString (.Values.postgresql.pgbouncer.port | default 6432) }}
-{{- else if .Values.postgresql.enabled }}
-{{- toString .Values.postgresql.service.port }}
-{{- else }}
-{{- toString .Values.postgresql.external.port }}
-{{- end }}
-{{- end }}
+{{- if .Values.postgresql.enabled -}}
+  {{- if .Values.postgresql.pgbouncer.enabled -}}
+{{- toString (.Values.postgresql.pgbouncer.port | default 6432) -}}
+  {{- else -}}
+{{- toString .Values.postgresql.service.port -}}
+  {{- end -}}
+{{- else -}}
+{{- toString .Values.postgresql.external.port -}}
+{{- end -}}
+{{- end -}}
 
-{{/* Direct PostgreSQL host/port (always bypasses PgBouncer). Used for
-     migrations and LISTEN/NOTIFY. */}}
+{{/*
+Direct PostgreSQL host/port (always bypasses PgBouncer). Used for migrations
+(advisory locks need session mode), LISTEN/NOTIFY, and CREATE EXTENSION.
+
+In bundled mode, returns the same Service as host but port 5432.
+In external mode with pgbouncer=true, REQUIRES external.directHost or fails.
+*/}}
 {{- define "teslasync.postgresql.directHost" -}}
-{{- if .Values.postgresql.enabled }}
-{{- printf "%s-postgresql" (include "teslasync.fullname" .) }}
-{{- else }}
-{{- .Values.postgresql.external.host }}
-{{- end }}
-{{- end }}
+{{- if .Values.postgresql.enabled -}}
+{{- printf "%s-postgresql" (include "teslasync.fullname" .) -}}
+{{- else if .Values.postgresql.external.directHost -}}
+{{- .Values.postgresql.external.directHost -}}
+{{- else if .Values.postgresql.external.pgbouncer -}}
+{{- fail "postgresql.external.directHost is required when postgresql.external.pgbouncer=true (migrations cannot run through a transaction-mode pooler)" -}}
+{{- else -}}
+{{- .Values.postgresql.external.host -}}
+{{- end -}}
+{{- end -}}
 
 {{- define "teslasync.postgresql.directPort" -}}
-{{- if .Values.postgresql.enabled }}
-{{- toString .Values.postgresql.service.port }}
-{{- else }}
-{{- toString .Values.postgresql.external.port }}
-{{- end }}
-{{- end }}
+{{- if .Values.postgresql.enabled -}}
+{{- toString .Values.postgresql.service.port -}}
+{{- else if .Values.postgresql.external.directPort -}}
+{{- toString .Values.postgresql.external.directPort -}}
+{{- else -}}
+{{- toString .Values.postgresql.external.port -}}
+{{- end -}}
+{{- end -}}
 
 {{- define "teslasync.postgresql.database" -}}
-{{- if .Values.postgresql.enabled }}
-{{- .Values.postgresql.auth.database }}
-{{- else }}
-{{- .Values.postgresql.external.database }}
-{{- end }}
-{{- end }}
+{{- if .Values.postgresql.enabled -}}
+{{- .Values.postgresql.auth.database -}}
+{{- else -}}
+{{- .Values.postgresql.external.database -}}
+{{- end -}}
+{{- end -}}
 
 {{- define "teslasync.postgresql.username" -}}
-{{- if .Values.postgresql.enabled }}
-{{- .Values.postgresql.auth.username }}
-{{- else }}
-{{- .Values.postgresql.external.username }}
-{{- end }}
-{{- end }}
+{{- if .Values.postgresql.enabled -}}
+{{- .Values.postgresql.auth.username -}}
+{{- else -}}
+{{- .Values.postgresql.external.username -}}
+{{- end -}}
+{{- end -}}
 
 {{- define "teslasync.postgresql.password" -}}
-{{- if .Values.postgresql.enabled }}
-{{- .Values.postgresql.auth.password | default "" }}
-{{- else }}
-{{- .Values.postgresql.external.password | default "" }}
-{{- end }}
-{{- end }}
+{{- if .Values.postgresql.enabled -}}
+{{- .Values.postgresql.auth.password | default "" -}}
+{{- else -}}
+{{- .Values.postgresql.external.password | default "" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Returns true when the external password should be sourced from a user-managed
+Secret (e.g. SOPS / Sealed-Secrets / External-Secrets) instead of the chart's
+own secret.yaml. Used by configmap consumers and deployments via valueFrom.
+*/}}
+{{- define "teslasync.postgresql.useExternalPasswordSecret" -}}
+{{- if and (not .Values.postgresql.enabled) .Values.postgresql.external.passwordSecret.name -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{- define "teslasync.postgresql.passwordSecretName" -}}
+{{- if include "teslasync.postgresql.useExternalPasswordSecret" . -}}
+{{- .Values.postgresql.external.passwordSecret.name -}}
+{{- else -}}
+{{- include "teslasync.secretName" . -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "teslasync.postgresql.passwordSecretKey" -}}
+{{- if include "teslasync.postgresql.useExternalPasswordSecret" . -}}
+{{- .Values.postgresql.external.passwordSecret.key | default "password" -}}
+{{- else -}}
+DATABASE_PASS
+{{- end -}}
+{{- end -}}
 
 {{- define "teslasync.postgresql.sslMode" -}}
-{{- if .Values.postgresql.enabled }}
-{{- "disable" }}
-{{- else }}
-{{- .Values.postgresql.external.sslMode | default "disable" }}
-{{- end }}
-{{- end }}
+{{- if .Values.postgresql.enabled -}}
+{{- "disable" -}}
+{{- else -}}
+{{- .Values.postgresql.external.sslMode | default "disable" -}}
+{{- end -}}
+{{- end -}}
 
 {{/* ── Redis connection helpers ────────────────────────────────────────── */}}
 

@@ -1,0 +1,33 @@
+{{- if and .Values.postgresql.enabled .Values.postgresql.initScripts.enabled }}
+{{- $cfg := .Values.postgresql.config | default dict }}
+{{- $ts  := $cfg.timescaledb | default dict }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "teslasync.fullname" . }}-postgresql-init
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgresql
+data:
+  # Custom postgresql.conf appended at startup via -c overrides on the command
+  # line (see deployment-postgresql.yaml). Kept here for visibility/operability.
+  postgresql.conf: |
+    shared_preload_libraries = '{{ $cfg.sharedPreloadLibraries | default "timescaledb,pg_stat_statements" }}'
+    max_connections = {{ $cfg.maxConnections | default 200 }}
+    shared_buffers = '{{ $cfg.sharedBuffers | default "1GB" }}'
+    work_mem = '{{ $cfg.workMem | default "32MB" }}'
+    maintenance_work_mem = '{{ $cfg.maintenanceWorkMem | default "256MB" }}'
+    effective_cache_size = '{{ $cfg.effectiveCacheSize | default "3GB" }}'
+    wal_level = '{{ $cfg.walLevel | default "replica" }}'
+    max_wal_size = '{{ $cfg.maxWalSize | default "2GB" }}'
+    timescaledb.max_background_workers = {{ $ts.maxBackgroundWorkers | default 8 }}
+
+  # Init script — runs ONCE on a fresh data volume (docker-entrypoint-initdb.d).
+  # Idempotent: IF NOT EXISTS guards make it safe to re-mount on rebuilds where
+  # the volume happens to be retained.
+  00-extensions.sql: |
+    {{- range .Values.postgresql.initScripts.extensions }}
+    CREATE EXTENSION IF NOT EXISTS {{ . }} CASCADE;
+    {{- end }}
+    CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+{{- end }}
