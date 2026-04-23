@@ -342,47 +342,9 @@ type VehicleState struct {
 	SoftwareVersion string     `json:"software_version"`
 }
 
-// Alert represents a system or vehicle alert/notification.
-type Alert struct {
-	ID        int64     `json:"id" db:"id"`
-	VehicleID *int64    `json:"vehicle_id,omitempty" db:"vehicle_id"`
-	Type      string    `json:"type" db:"type"`           // geofence, battery_low, battery_full, sentry, speed, maintenance, software, custom
-	Severity  string    `json:"severity" db:"severity"`   // info, warning, critical
-	Title     string    `json:"title" db:"title"`
-	Message   string    `json:"message" db:"message"`
-	IsRead    bool      `json:"is_read" db:"is_read"`
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
-}
-
-// AlertRule defines when an alert should be triggered.
-// Supports both legacy simple rules (Type + Threshold) and CEP rules (Conditions JSONB).
-type AlertRule struct {
-	ID         int64   `json:"id" db:"id"`
-	Name       string  `json:"name" db:"name"`
-	Type       string  `json:"type" db:"type"`
-	Enabled    bool    `json:"enabled" db:"enabled"`
-	Threshold  float64 `json:"threshold" db:"threshold"`
-	VehicleID  *int64  `json:"vehicle_id,omitempty" db:"vehicle_id"`
-	CreatedAt  time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at" db:"updated_at"`
-
-	// CEP rule engine fields
-	Conditions     json.RawMessage `json:"conditions,omitempty" db:"conditions"`
-	Expression     string          `json:"expression,omitempty" db:"expression"`
-	CooldownMin    int             `json:"cooldown_min" db:"cooldown_min"`
-	ForDurationS   *int            `json:"for_duration_s,omitempty" db:"for_duration_s"`
-	Severity       string          `json:"severity" db:"severity"`
-	MsgTemplate    string          `json:"msg_template,omitempty" db:"msg_template"`
-	NotifyChannels []int64         `json:"notify_channels,omitempty" db:"notify_channels"`
-	LastFiredAt    *time.Time      `json:"last_fired_at,omitempty" db:"last_fired_at"`
-	FireCount      int             `json:"fire_count" db:"fire_count"`
-	Tags           []string        `json:"tags,omitempty" db:"tags"`
-}
-
-// IsCEPRule returns true if this rule uses the CEP condition engine (vs legacy type+threshold).
-func (r *AlertRule) IsCEPRule() bool {
-	return len(r.Conditions) > 0 && string(r.Conditions) != "null"
-}
+// Alert and AlertRule have moved to alert.go. The legacy `alerts` table is
+// dropped by the Phase 4 baseline migration; only `alert_rules` remains and is
+// modeled by AlertRule in alert.go.
 
 // RuleCondition represents a node in the condition tree.
 // Can be a leaf (signal comparison) or a branch (AND/OR/NOT combinator).
