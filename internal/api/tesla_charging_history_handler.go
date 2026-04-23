@@ -289,11 +289,6 @@ func parseTeslaChargingEntries(items []teslaChargingHistoryItem, rawPage []byte)
 			e.InvoiceContentID = &item.Invoices[0].ContentID
 		}
 
-		// Store raw item JSON
-		if itemJSON, err := json.Marshal(item); err == nil {
-			e.RawJSON = string(itemJSON)
-		}
-
 		results = append(results, e)
 	}
 
