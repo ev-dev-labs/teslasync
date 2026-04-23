@@ -38,6 +38,13 @@ export interface NotificationChannelSlack extends NotificationChannelBase {
   username: string | null;
 }
 
+export interface NotificationChannelTelegram extends NotificationChannelBase {
+  kind: 'telegram';
+  bot_token: string;
+  chat_id: string;
+}
+
 export type NotificationChannel =
   | (NotificationChannelDiscord & { kind: 'discord' })
-  | (NotificationChannelSlack & { kind: 'slack' });
+  | (NotificationChannelSlack & { kind: 'slack' })
+  | (NotificationChannelTelegram & { kind: 'telegram' });
