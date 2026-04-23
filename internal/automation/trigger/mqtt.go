@@ -18,7 +18,7 @@ import (
 
 // MQTTRepo is the subset of database.AutomationRepo needed by MQTTTrigger.
 type MQTTRepo interface {
-	GetByTriggerType(ctx context.Context, triggerType string) ([]*models.Automation, error)
+	GetByTriggerType(ctx context.Context, triggerType string) ([]*models.AutomationFull, error)
 	SetAutoDisabled(ctx context.Context, id int64, reason string) error
 }
 
@@ -49,7 +49,7 @@ type mqttSnapshot struct {
 // compiledMQTTAutomation pairs an automation with its pre-parsed config
 // to avoid re-parsing on every incoming message.
 type compiledMQTTAutomation struct {
-	automation *models.Automation
+	automation *models.AutomationFull
 	config     *MQTTConfig
 }
 
@@ -200,12 +200,12 @@ func (t *MQTTTrigger) AutomationCount() int {
 
 // compileAutomations parses and validates automations, auto-disabling invalid ones.
 // Returns the valid compiled list and a slice of invalid automation IDs.
-func (t *MQTTTrigger) compileAutomations(ctx context.Context, automations []*models.Automation) ([]compiledMQTTAutomation, []int64) {
+func (t *MQTTTrigger) compileAutomations(ctx context.Context, automations []*models.AutomationFull) ([]compiledMQTTAutomation, []int64) {
 	var compiled []compiledMQTTAutomation
 	var invalidIDs []int64
 
 	for _, a := range automations {
-		cfg, err := parseMQTTConfig(a.TriggerConfig)
+		cfg, err := parseMQTTConfig(a.TriggerConfig())
 		if err != nil {
 			t.logger.Warn().Err(err).
 				Int64("automation_id", a.ID).

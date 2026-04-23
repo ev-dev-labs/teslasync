@@ -1,0 +1,75 @@
+=== PREFLIGHT ===
+Checking AutomationFull accessors from Prompt 01...
+FOUND: func (af *AutomationFull) TriggerType() string {
+FOUND: func (af *AutomationFull) TriggerConfig() json.RawMessage {
+FOUND: func (af *AutomationFull) AutoDisabled() bool { return false }
+PREFLIGHT: PASS — all 3 AutomationFull accessors found
+
+=== SURVEY ===
+File: internal/automation/trigger/mqtt.go
+FOUND: Line 21 — MQTTRepo.GetByTriggerType returns []*models.Automation (needs AutomationFull)
+FOUND: Line 52 — compiledMQTTAutomation.automation is *models.Automation (needs AutomationFull)
+FOUND: Line 203 — compileAutomations param is []*models.Automation (needs AutomationFull)
+FOUND: Line 208 — a.TriggerConfig is field access (needs method call a.TriggerConfig())
+FOUND: calendar.go:21 already uses []*models.AutomationFull — confirms pattern
+
+=== REASONING ===
+APPROACH: Change types from *models.Automation to *models.AutomationFull in 4 locations:
+  1. MQTTRepo interface return type
+  2. compiledMQTTAutomation.automation field
+  3. compileAutomations parameter type
+  4. a.TriggerConfig → a.TriggerConfig() method call
+REJECTED: Type assertion approach — no interface boundary here, direct type change is cleaner
+REJECTED: Keeping *Automation and adding a manual TriggerConfig field — field was deleted per ADR-001
+NOTE: mqtt_test.go has mockMQTTRepo returning []*models.Automation — NOT in scope per prompt
+NOTE: go build ./... does not compile _test.go files, so test mock mismatch won't block gate
+
+=== CHANGES ===
+Change 1: MQTTRepo interface
+BEFORE: GetByTriggerType(ctx context.Context, triggerType string) ([]*models.Automation, error)
+AFTER:  GetByTriggerType(ctx context.Context, triggerType string) ([]*models.AutomationFull, error)
+
+Change 2: compiledMQTTAutomation struct field
+BEFORE: automation *models.Automation
+AFTER:  automation *models.AutomationFull
+
+Change 3: compileAutomations parameter
+BEFORE: func (t *MQTTTrigger) compileAutomations(ctx context.Context, automations []*models.Automation) ...
+AFTER:  func (t *MQTTTrigger) compileAutomations(ctx context.Context, automations []*models.AutomationFull) ...
+
+Change 4: TriggerConfig field → method call
+BEFORE: cfg, err := parseMQTTConfig(a.TriggerConfig)
+AFTER:  cfg, err := parseMQTTConfig(a.TriggerConfig())
+
+=== GATE ===
+# github.com/ev-dev-labs/teslasync/internal/automation/condition
+internal\automation\condition\location.go:84:26: geofence.Radius undefined (type *models.Geofence has no field or method Radius)
+internal\automation\condition\location.go:86:25: geofence.Radius undefined (type *models.Geofence has no field or method Radius)
+internal\automation\condition\location.go:97:42: geofence.Radius undefined (type *models.Geofence has no field or method Radius)
+internal\automation\condition\location.go:101:22: geofence.Radius undefined (type *models.Geofence has no field or method Radius)
+internal\automation\condition\location.go:105:47: geofence.Radius undefined (type *models.Geofence has no field or method Radius)
+internal\automation\condition\location.go:115:26: geofence.Radius undefined (type *models.Geofence has no field or method Radius)
+# github.com/ev-dev-labs/teslasync/internal/automation/trigger
+internal\automation\trigger\sunrise_sunset.go:148:41: a.TriggerConfig undefined (type *models.Automation has no field or method TriggerConfig)
+internal\automation\trigger\vehicle_state.go:94:41: a.TriggerConfig undefined (type *models.Automation has no field or method TriggerConfig)
+internal\automation\trigger\webhook.go:72:39: automation.AutoDisabled undefined (type *models.Automation has no field or method AutoDisabled)
+internal\automation\trigger\webhook.go:77:37: automation.AutoDisabled undefined (type *models.Automation has no field or method AutoDisabled)
+internal\automation\trigger\webhook.go:83:44: automation.TriggerConfig undefined (type *models.Automation has no field or method TriggerConfig)
+# github.com/ev-dev-labs/teslasync/internal/database
+internal\database\alert_repo.go:21:59: undefined: models.Alert
+internal\database\alert_repo.go:28:79: undefined: models.Alert
+internal\database\alert_repo.go:37:23: undefined: models.Alert
+internal\database\alert_repo.go:39:16: undefined: models.Alert
+internal\database\alert_repo.go:75:45: ar.Type undefined (type *models.AlertRule has no field or method Type)
+internal\database\alert_repo.go:75:68: ar.Threshold undefined (type *models.AlertRule has no field or method Threshold)
+internal\database\alert_repo.go:76:8: ar.Conditions undefined (type *models.AlertRule has no field or method Conditions)
+internal\database\alert_repo.go:76:41: ar.ForDurationS undefined (type *models.AlertRule has no field or method ForDurationS)
+internal\database\alert_repo.go:76:73: ar.MsgTemplate undefined (type *models.AlertRule has no field or method MsgTemplate)
+internal\database\alert_repo.go:76:90: ar.NotifyChannels undefined (type *models.AlertRule has no field or method NotifyChannels)
+internal\database\alert_repo.go:76:90: too many errors
+BUILD_EXIT=1
+MQTT_ERROR_COUNT=0
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
