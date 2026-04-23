@@ -8,7 +8,7 @@ import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useSignalObservations } from '@/api/hooks/useTelemetry';
 
-import { latestNumeric, latestBool } from './signalHelpers';
+import { latestNumeric, latestBool } from '@/lib/signalObservation';
 
 interface PedalUsageProps {
   vehicleId: number | null | undefined;

@@ -13,3 +13,10 @@ export function latestBool(
 ): boolean | null {
   return data?.[0]?.value_bool ?? null;
 }
+
+/** Extract the latest text value from a signal-observations query result. */
+export function latestText(
+  data: SignalObservation[] | undefined,
+): string | null {
+  return data?.[0]?.value_text ?? null;
+}

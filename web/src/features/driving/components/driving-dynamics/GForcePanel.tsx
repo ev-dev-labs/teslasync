@@ -9,7 +9,7 @@ import { FadeIn } from '@/components/motion';
 import { useSignalObservations } from '@/api/hooks/useTelemetry';
 import { fmtNumber } from '@/lib/numberFormat';
 
-import { latestNumeric } from './signalHelpers';
+import { latestNumeric } from '@/lib/signalObservation';
 
 interface GForcePanelProps {
   vehicleId: number | null | undefined;

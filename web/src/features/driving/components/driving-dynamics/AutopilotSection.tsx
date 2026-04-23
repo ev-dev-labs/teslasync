@@ -11,7 +11,7 @@ import { useSignalObservations } from '@/api/hooks/useTelemetry';
 import { useSettings } from '@/hooks/useSettings';
 import { fmtNumber } from '@/lib/numberFormat';
 
-import { latestNumeric } from './signalHelpers';
+import { latestNumeric } from '@/lib/signalObservation';
 
 interface AutopilotSectionProps {
   vehicleId: number | null | undefined;
