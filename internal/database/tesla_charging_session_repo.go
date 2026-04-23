@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -122,8 +121,8 @@ func (r *TeslaChargingSessionRepo) UpsertBatch(ctx context.Context, sessions []*
 		charge_start_datetime, charge_stop_datetime,
 		energy_added_kwh, peak_power_kw, max_charge_rate_kw, charge_duration_s,
 		charger_type, currency_code, total_cost, per_kwh_rate, idle_fee, congestion_fee,
-		latitude, longitude, raw_json, fetched_at
-	) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+		latitude, longitude, fetched_at
+	) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
 	ON CONFLICT (session_id) DO UPDATE SET
 		vin = EXCLUDED.vin,
 		charger_id = EXCLUDED.charger_id,
@@ -142,27 +141,18 @@ func (r *TeslaChargingSessionRepo) UpsertBatch(ctx context.Context, sessions []*
 		congestion_fee = EXCLUDED.congestion_fee,
 		latitude = EXCLUDED.latitude,
 		longitude = EXCLUDED.longitude,
-		raw_json = EXCLUDED.raw_json,
 		fetched_at = EXCLUDED.fetched_at`
 
 	now := time.Now().UTC()
 	upserted := 0
 	for _, s := range sessions {
-		rawJSON := s.RawJSON
-		if rawJSON == "" {
-			rawJSON = "{}"
-		}
-		if !json.Valid([]byte(rawJSON)) {
-			rawJSON = "{}"
-		}
-
 		_, err := r.db.Pool.Exec(ctx, query,
 			s.SessionID, s.VIN, s.ChargerID, s.SiteLocationName,
 			s.ChargeStartDatetime, s.ChargeStopDatetime,
 			s.EnergyAddedKWh, s.PeakPowerKW, s.MaxChargeRateKW, s.ChargeDurationS,
 			s.ChargerType, s.CurrencyCode, s.TotalCost, s.PerKWhRate, s.IdleFee, s.CongestionFee,
 			s.Latitude, s.Longitude,
-			rawJSON, now,
+			now,
 		)
 		if err != nil {
 			return upserted, fmt.Errorf("upsert tesla charging session %d: %w", s.SessionID, err)
