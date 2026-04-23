@@ -59,6 +59,35 @@ func (r *SignalObservationRepo) BulkInsert(ctx context.Context, obs []models.Sig
 	return nil
 }
 
+// GetLatest returns the most recent observation for a (vehicle, signal_name)
+// pair. Returns (nil, nil) when no observation exists.
+func (r *SignalObservationRepo) GetLatest(ctx context.Context, vehicleID int64, signalName string) (*models.SignalObservation, error) {
+	const query = `
+		SELECT vehicle_id, ts, signal_name, value_numeric, value_text, value_bool, source
+		FROM signal_observations
+		WHERE vehicle_id = $1 AND signal_name = $2
+		ORDER BY ts DESC
+		LIMIT 1`
+
+	var o models.SignalObservation
+	err := r.db.Pool.QueryRow(ctx, query, vehicleID, signalName).Scan(
+		&o.VehicleID,
+		&o.Ts,
+		&o.SignalName,
+		&o.ValueNumeric,
+		&o.ValueText,
+		&o.ValueBool,
+		&o.Source,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("signal-observations-repo-get-latest: %w", err)
+	}
+	return &o, nil
+}
+
 // ListByVehicle returns signal observations for a vehicle within the inclusive
 // time window [from, to], ordered by ts ASC and capped by limit.
 func (r *SignalObservationRepo) ListByVehicle(ctx context.Context, vehicleID int64, from, to time.Time, limit int) ([]models.SignalObservation, error) {
