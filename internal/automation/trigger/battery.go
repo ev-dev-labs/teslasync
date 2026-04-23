@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math"
 	"sync"
 
 	"github.com/rs/zerolog"
@@ -13,21 +12,29 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
-// BatteryRepo is the subset of database.AutomationRepo needed by BatteryTrigger.
+// BatteryAutomation is the hydrated view BatteryTrigger consumes: an enabled
+// automation paired with the typed signal-trigger CTI row that drives it.
+//
+// Per ADR-012 (Option A), consumers receive Go-typed CTI children rather than
+// reading JSONB blobs from the parent row; per ADR-004 the legacy "battery"
+// trigger kind is expressed as a signal trigger on the `battery_level` signal,
+// so the relevant CTI table is `automation_step_trigger_signal`.
+type BatteryAutomation struct {
+	Automation models.Automation
+	Trigger    models.AutomationStepTriggerSignal
+}
+
+// BatteryRepo is the narrow port BatteryTrigger needs from the persistence
+// layer. The implementation is expected to load enabled automations whose
+// (single) trigger step is a signal trigger on `battery_level`, returning
+// each parent paired with its typed CTI row in one batched query (ADR-012
+// Option A; ADR-005 N+1 prevention).
 type BatteryRepo interface {
-	GetEnabledByVehicleAndTrigger(ctx context.Context, vehicleID int64, triggerType string) ([]*models.Automation, error)
-	SetAutoDisabled(ctx context.Context, id int64, reason string) error
+	LoadEnabledBatterySignalTriggers(ctx context.Context, vehicleID int64) ([]BatteryAutomation, error)
 }
 
-// BatteryConfig represents the parsed trigger_config for battery automations.
-type BatteryConfig struct {
-	Operator  string   `json:"operator"`  // "above", "below", "reaches", "changes_by"
-	Threshold float64  `json:"threshold"` // percentage 0-100
-	Delta     *float64 `json:"delta"`     // for "changes_by": fire when level changes by N%
-	Direction string   `json:"direction"` // for "changes_by": "up", "down", "any"
-}
-
-// batterySnapshot is the JSON payload passed to engine.Evaluate when a battery trigger fires.
+// batterySnapshot is the JSON payload passed to engine.Evaluate when a battery
+// trigger fires.
 type batterySnapshot struct {
 	VehicleID     int64   `json:"vehicle_id"`
 	BatteryLevel  float64 `json:"battery_level"`
@@ -89,7 +96,7 @@ func (t *BatteryTrigger) Evaluate(ctx context.Context, vehicleID int64, currentL
 		return nil
 	}
 
-	automations, err := t.repo.GetEnabledByVehicleAndTrigger(ctx, vehicleID, "battery")
+	automations, err := t.repo.LoadEnabledBatterySignalTriggers(ctx, vehicleID)
 	if err != nil {
 		return fmt.Errorf("load battery automations for vehicle %d: %w", vehicleID, err)
 	}
@@ -99,31 +106,34 @@ func (t *BatteryTrigger) Evaluate(ctx context.Context, vehicleID int64, currentL
 	}
 
 	var firstErr error
-	for _, a := range automations {
-		cfg, err := parseBatteryConfig(a.TriggerConfig)
-		if err != nil {
-			t.logger.Warn().Err(err).
+	for _, ba := range automations {
+		a := ba.Automation
+		trig := ba.Trigger
+
+		if trig.Signal != "battery_level" {
+			t.logger.Warn().
 				Int64("automation_id", a.ID).
 				Str("automation", a.Name).
-				Msg("invalid battery trigger config, auto-disabling")
-			if disableErr := t.repo.SetAutoDisabled(ctx, a.ID, fmt.Sprintf("invalid battery config: %v", err)); disableErr != nil {
-				t.logger.Error().Err(disableErr).
-					Int64("automation_id", a.ID).
-					Msg("failed to auto-disable invalid automation")
-			}
+				Str("signal", trig.Signal).
+				Msg("battery trigger loader returned non-battery_level signal; skipping")
 			continue
 		}
 
-		if !shouldFire(previousLevel, currentLevel, cfg) {
+		if !shouldFire(previousLevel, currentLevel, &trig) {
 			continue
+		}
+
+		var threshold float64
+		if trig.ValueNum != nil {
+			threshold = *trig.ValueNum
 		}
 
 		snapshot, err := json.Marshal(batterySnapshot{
 			VehicleID:     vehicleID,
 			BatteryLevel:  currentLevel,
 			PreviousLevel: previousLevel,
-			Threshold:     cfg.Threshold,
-			Operator:      cfg.Operator,
+			Threshold:     threshold,
+			Operator:      trig.Op,
 		})
 		if err != nil {
 			t.logger.Error().Err(err).
@@ -138,8 +148,8 @@ func (t *BatteryTrigger) Evaluate(ctx context.Context, vehicleID int64, currentL
 			Int64("vehicle_id", vehicleID).
 			Float64("previous_level", previousLevel).
 			Float64("current_level", currentLevel).
-			Str("operator", cfg.Operator).
-			Float64("threshold", cfg.Threshold).
+			Str("operator", trig.Op).
+			Float64("threshold", threshold).
 			Msg("battery trigger fired")
 
 		if evalErr := t.engine.Evaluate(ctx, a.ID, snapshot); evalErr != nil {
@@ -156,68 +166,44 @@ func (t *BatteryTrigger) Evaluate(ctx context.Context, vehicleID int64, currentL
 	return firstErr
 }
 
-// shouldFire determines whether a battery level change should fire for the given config.
+// shouldFire determines whether a battery level change should fire for the
+// given typed signal-trigger row. The CTI op vocabulary is enforced by a
+// CHECK constraint on automation_step_trigger_signal (see migration
+// 000142_baseline_typed):
+//
+//	'='  '!='  '<'  '<='  '>'  '>='  'changed'  'crossed_above'  'crossed_below'
+//
+// Threshold-bearing ops use ValueNum; 'changed' fires on any level transition.
 // Exported for unit testing of pure logic without mocks.
-func shouldFire(previousLevel, currentLevel float64, cfg *BatteryConfig) bool {
-	switch cfg.Operator {
-	case "below":
-		// Fire when crossing downward through threshold.
-		return previousLevel >= cfg.Threshold && currentLevel < cfg.Threshold
-	case "above":
-		// Fire when crossing upward through threshold.
-		return previousLevel <= cfg.Threshold && currentLevel > cfg.Threshold
-	case "reaches":
-		// Fire when crossing or touching the threshold from either direction.
-		return currentLevel == cfg.Threshold && previousLevel != cfg.Threshold
-	case "changes_by":
-		if cfg.Delta == nil || *cfg.Delta <= 0 {
-			return false
-		}
-		delta := currentLevel - previousLevel
-		switch cfg.Direction {
-		case "up":
-			return delta >= *cfg.Delta
-		case "down":
-			return -delta >= *cfg.Delta
-		default: // "any" or empty
-			return math.Abs(delta) >= *cfg.Delta
-		}
+func shouldFire(previousLevel, currentLevel float64, t *models.AutomationStepTriggerSignal) bool {
+	if t == nil {
+		return false
+	}
+
+	switch t.Op {
+	case "changed":
+		return previousLevel != currentLevel
+	}
+
+	if t.ValueNum == nil {
+		return false
+	}
+	threshold := *t.ValueNum
+
+	switch t.Op {
+	case ">", ">=", "crossed_above":
+		// Fire when crossing upward through the threshold.
+		return previousLevel <= threshold && currentLevel > threshold
+	case "<", "<=", "crossed_below":
+		// Fire when crossing downward through the threshold.
+		return previousLevel >= threshold && currentLevel < threshold
+	case "=":
+		// Fire when the level reaches the exact threshold from elsewhere.
+		return currentLevel == threshold && previousLevel != threshold
+	case "!=":
+		// Fire when the level moves off an exact threshold.
+		return previousLevel == threshold && currentLevel != threshold
 	default:
 		return false
 	}
-}
-
-// parseBatteryConfig unmarshals and validates the trigger_config JSON.
-func parseBatteryConfig(raw json.RawMessage) (*BatteryConfig, error) {
-	if len(raw) == 0 {
-		return nil, fmt.Errorf("trigger_config is empty")
-	}
-	var cfg BatteryConfig
-	if err := json.Unmarshal(raw, &cfg); err != nil {
-		return nil, fmt.Errorf("unmarshal trigger config: %w", err)
-	}
-
-	switch cfg.Operator {
-	case "above", "below", "reaches":
-		if cfg.Threshold < 0 || cfg.Threshold > 100 {
-			return nil, fmt.Errorf("threshold must be 0-100, got %v", cfg.Threshold)
-		}
-	case "changes_by":
-		if cfg.Delta == nil || *cfg.Delta <= 0 {
-			return nil, fmt.Errorf("delta must be positive for changes_by operator")
-		}
-		if cfg.Direction == "" {
-			cfg.Direction = "any"
-		}
-		switch cfg.Direction {
-		case "up", "down", "any":
-			// valid
-		default:
-			return nil, fmt.Errorf("invalid direction %q, must be up/down/any", cfg.Direction)
-		}
-	default:
-		return nil, fmt.Errorf("unknown operator %q", cfg.Operator)
-	}
-
-	return &cfg, nil
 }
