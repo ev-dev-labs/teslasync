@@ -1,0 +1,49 @@
+=== SURVEY ===
+File: internal/api/fleet_telemetry_error_handler.go
+Error: line 200 references m.RawJSON which no longer exists in TeslaFleetTelemetryError model
+=== REASONING ===
+Removed m.RawJSON assignment (field deleted from model). Changed loop var i to _ since no longer used.
+=== CHANGES ===
+diff --git a/internal/api/fleet_telemetry_error_handler.go b/internal/api/fleet_telemetry_error_handler.go
+index 356595ac..2980bfaa 100644
+--- a/internal/api/fleet_telemetry_error_handler.go
++++ b/internal/api/fleet_telemetry_error_handler.go
+@@ -176,7 +176,7 @@ func (h *FleetTelemetryErrorHandler) RefreshErrors(w http.ResponseWriter, r *htt
+ 
+ 	// Convert parsed errors to model structs
+ 	var modelErrors []*models.TeslaFleetTelemetryError
+-	for i, e := range envelope.Response.Errors {
++	for _, e := range envelope.Response.Errors {
+ 		m := &models.TeslaFleetTelemetryError{
+ 			VIN:            e.VIN,
+ 			TeslaUpdatedAt: teslaUpdatedAt,
+@@ -195,11 +195,6 @@ func (h *FleetTelemetryErrorHandler) RefreshErrors(w http.ResponseWriter, r *htt
+ 			}
+ 		}
+ 
+-		// Store raw JSON for each error entry
+-		if rawBytes, err := json.Marshal(envelope.Response.Errors[i]); err == nil {
+-			m.RawJSON = string(rawBytes)
+-		}
+-
+ 		modelErrors = append(modelErrors, m)
+ 	}
+ 
+=== GATE ===
+# github.com/ev-dev-labs/teslasync/internal/automation
+internal\automation\engine.go:252:21: a.AutoDisabled undefined (type *models.Automation has no field or method AutoDisabled)
+internal\automation\engine.go:256:28: a.AutoDisabled undefined (type *models.Automation has no field or method AutoDisabled)
+internal\automation\engine.go:262:31: a.MaxExecutionsHour undefined (type *models.Automation has no field or method MaxExecutionsHour)
+internal\automation\engine.go:263:59: a.MaxExecutionsHour undefined (type *models.Automation has no field or method MaxExecutionsHour)
+internal\automation\engine.go:310:25: a.TriggerType undefined (type *models.Automation has no field or method TriggerType)
+internal\automation\engine.go:324:40: a.Actions undefined (type *models.Automation has no field or method Actions)
+internal\automation\engine.go:335:62: a.StopOnFailure undefined (type *models.Automation has no field or method StopOnFailure)
+internal\automation\engine.go:373:46: a.TriggerType undefined (type *models.Automation has no field or method TriggerType)
+internal\automation\engine.go:394:11: a.Conditions undefined (type *models.Automation has no field or method Conditions)
+internal\automation\engine.go:399:29: a.Conditions undefined (type *models.Automation has no field or method Conditions)
+internal\automation\engine.go:480:52: a.LastTriggeredAt undefined (type *models.Automation has no field or method LastTriggeredAt)
+internal\automation\engine.go:521:22: a.TriggerType undefined (type *models.Automation has no field or method TriggerType)
+FILE_ERROR_COUNT=0
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
