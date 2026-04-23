@@ -1,0 +1,4 @@
+=== PREFLIGHT ===
+STATUS=BLOCKED
+REASON=Prompt 24 not DONE (phase-5b-24-test.log shows STATUS=BLOCKED cascading from prompts 21/22/23)
+EXIT=2
