@@ -1139,7 +1139,44 @@ func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded
 		Int("flatten_errors", flattenErrs).
 		Msg("flatten step complete")
 
-	_ = atomics
+	buckets := bucketAtomics(atomics)
+	log.Debug().
+		Int("hot_tables", len(buckets.HotByTable)).
+		Int("cold_atomics", len(buckets.Cold)).
+		Msg("bucket step complete")
+
+	_ = buckets
+}
+
+// bucketResult partitions a flattened atomic stream into per-hot-table queues
+// and a cold residue (atomics with no HotCatalog mapping). AllNames preserves
+// every atomic name in arrival order for the catalog upsert step.
+type bucketResult struct {
+	HotByTable map[string][]telemetry.Atomic
+	Cold       []telemetry.Atomic
+	AllNames   []string
+}
+
+// bucketAtomics walks atomics and routes each one via telemetry.LookupHot.
+// Compound parents (HotRoute with empty Column) should never reach here —
+// Flatten expands them into atomics first. If one slips through, treat it as
+// unmapped and route to cold so we don't lose the data.
+func bucketAtomics(atomics []telemetry.Atomic) bucketResult {
+	res := bucketResult{
+		HotByTable: map[string][]telemetry.Atomic{},
+		Cold:       make([]telemetry.Atomic, 0),
+		AllNames:   make([]string, 0, len(atomics)),
+	}
+	for _, a := range atomics {
+		res.AllNames = append(res.AllNames, a.Name)
+		hot := telemetry.LookupHot(a.Name)
+		if hot == nil || hot.Column == "" {
+			res.Cold = append(res.Cold, a)
+			continue
+		}
+		res.HotByTable[hot.Table] = append(res.HotByTable[hot.Table], a)
+	}
+	return res
 }
 
 // normalizeFleetSignals adapts the slice-based telemetry.NormalizeFleetUnits
