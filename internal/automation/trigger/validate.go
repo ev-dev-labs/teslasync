@@ -72,6 +72,82 @@ func ComputeNextCronFireTime(cronExpr, timezone string) *time.Time {
 	return &next
 }
 
+// CronConfig represents the parsed trigger_config for cron automations.
+// Moved here from cron.go after Phase 5b rewire — validate.go is the only caller.
+type CronConfig struct {
+	CronExpr    string `json:"cron_expr"`
+	Timezone    string `json:"timezone"`
+	OneTime     bool   `json:"one_time"`
+	OneTimeDate string `json:"one_time_date"`
+}
+
+func parseCronConfig(raw json.RawMessage) (*CronConfig, error) {
+	if len(raw) == 0 {
+		return nil, fmt.Errorf("trigger_config is empty")
+	}
+	var cfg CronConfig
+	if err := json.Unmarshal(raw, &cfg); err != nil {
+		return nil, fmt.Errorf("unmarshal trigger config: %w", err)
+	}
+	return &cfg, nil
+}
+
+// GeofenceConfig represents the parsed trigger_config for geofence automations.
+type GeofenceConfig struct {
+	GeofenceID   int64  `json:"geofence_id"`
+	Event        string `json:"event"`
+	DwellMinutes int    `json:"dwell_minutes"`
+}
+
+func parseGeofenceConfig(raw json.RawMessage) (*GeofenceConfig, error) {
+	if len(raw) == 0 {
+		return nil, fmt.Errorf("trigger_config is empty")
+	}
+	var cfg GeofenceConfig
+	if err := json.Unmarshal(raw, &cfg); err != nil {
+		return nil, fmt.Errorf("unmarshal trigger config: %w", err)
+	}
+	return &cfg, nil
+}
+
+// BatteryConfig represents the parsed trigger_config for battery automations.
+type BatteryConfig struct {
+	Operator  string   `json:"operator"`
+	Threshold float64  `json:"threshold"`
+	Delta     *float64 `json:"delta"`
+	Direction string   `json:"direction"`
+}
+
+func parseBatteryConfig(raw json.RawMessage) (*BatteryConfig, error) {
+	if len(raw) == 0 {
+		return nil, fmt.Errorf("trigger_config is empty")
+	}
+	var cfg BatteryConfig
+	if err := json.Unmarshal(raw, &cfg); err != nil {
+		return nil, fmt.Errorf("unmarshal trigger config: %w", err)
+	}
+	return &cfg, nil
+}
+
+// EnergyConfig represents the parsed trigger_config for energy automations.
+type EnergyConfig struct {
+	EnergySiteID int64   `json:"energy_site_id"`
+	Event        string  `json:"event"`
+	Threshold    float64 `json:"threshold"`
+	Operator     string  `json:"operator"`
+}
+
+func parseEnergyConfig(raw json.RawMessage) (*EnergyConfig, error) {
+	if len(raw) == 0 {
+		return nil, fmt.Errorf("trigger_config is empty")
+	}
+	var cfg EnergyConfig
+	if err := json.Unmarshal(raw, &cfg); err != nil {
+		return nil, fmt.Errorf("unmarshal trigger config: %w", err)
+	}
+	return &cfg, nil
+}
+
 func validateCronTrigger(raw json.RawMessage) error {
 	cfg, err := parseCronConfig(raw)
 	if err != nil {
