@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/jackc/pgx/v5"
@@ -56,4 +57,43 @@ func (r *PositionRepo) BulkInsert(ctx context.Context, ps []models.Position) err
 		return fmt.Errorf("positions-repo-bulk-insert: %w", err)
 	}
 	return nil
+}
+
+// ListByVehicle returns positions for a vehicle within the inclusive
+// time window [from, to], ordered chronologically. Uses the typed
+// columns from ADR-001; no JSONB hydration required.
+func (r *PositionRepo) ListByVehicle(ctx context.Context, vehicleID int64, from, to time.Time) ([]models.Position, error) {
+	rows, err := r.db.Pool.Query(ctx, `
+		SELECT vehicle_id, ts, latitude, longitude, heading, speed_mph, elevation_m, gps_state, source
+		FROM positions
+		WHERE vehicle_id = $1 AND ts BETWEEN $2 AND $3
+		ORDER BY ts
+	`, vehicleID, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("positions-repo-list-by-vehicle: %w", err)
+	}
+	defer rows.Close()
+
+	var out []models.Position
+	for rows.Next() {
+		var p models.Position
+		if err := rows.Scan(
+			&p.VehicleID,
+			&p.Ts,
+			&p.Latitude,
+			&p.Longitude,
+			&p.Heading,
+			&p.SpeedMph,
+			&p.ElevationM,
+			&p.GpsState,
+			&p.Source,
+		); err != nil {
+			return nil, fmt.Errorf("positions-repo-list-by-vehicle: %w", err)
+		}
+		out = append(out, p)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("positions-repo-list-by-vehicle: %w", err)
+	}
+	return out, nil
 }
