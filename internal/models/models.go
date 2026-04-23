@@ -637,70 +637,8 @@ type ExportJobRequest struct {
 
 // SecurityEvent moved to security.go (regenerated for post-migration schema).
 
-// ChargingTelemetry represents a point-in-time charging telemetry reading.
-type ChargingTelemetry struct {
-	ID                         int64     `json:"id" db:"id"`
-	VehicleID                  int64     `json:"vehicle_id" db:"vehicle_id"`
-	BatteryLevel               *float64  `json:"battery_level,omitempty" db:"battery_level"`
-	Soc                        *float64  `json:"soc,omitempty" db:"soc"`
-	ChargeState                *string   `json:"charge_state,omitempty" db:"charge_state"`
-	DetailedChargeState        *string   `json:"detailed_charge_state,omitempty" db:"detailed_charge_state"`
-	ChargeLimitSoc             *int      `json:"charge_limit_soc,omitempty" db:"charge_limit_soc"`
-	ChargeAmps                 *float64  `json:"charge_amps,omitempty" db:"charge_amps"`
-	ChargeCurrentRequest       *float64  `json:"charge_current_request,omitempty" db:"charge_current_request"`
-	ChargeCurrentRequestMax    *float64  `json:"charge_current_request_max,omitempty" db:"charge_current_request_max"`
-	ChargeEnableRequest        *bool     `json:"charge_enable_request,omitempty" db:"charge_enable_request"`
-	ChargerVoltage             *float64  `json:"charger_voltage,omitempty" db:"charger_voltage"`
-	ChargerPhases              *int      `json:"charger_phases,omitempty" db:"charger_phases"`
-	ChargeRateMph              *float64  `json:"charge_rate_mph,omitempty" db:"charge_rate_mph"`
-	DCChargingPower            *float64  `json:"dc_charging_power,omitempty" db:"dc_charging_power"`
-	DCChargingEnergyIn         *float64  `json:"dc_charging_energy_in,omitempty" db:"dc_charging_energy_in"`
-	ACChargingPower            *float64  `json:"ac_charging_power,omitempty" db:"ac_charging_power"`
-	ACChargingEnergyIn         *float64  `json:"ac_charging_energy_in,omitempty" db:"ac_charging_energy_in"`
-	EnergyRemaining            *float64  `json:"energy_remaining,omitempty" db:"energy_remaining"`
-	EstBatteryRange            *float64  `json:"est_battery_range,omitempty" db:"est_battery_range"`
-	IdealBatteryRange          *float64  `json:"ideal_battery_range,omitempty" db:"ideal_battery_range"`
-	RatedRange                 *float64  `json:"rated_range,omitempty" db:"rated_range"`
-	PackVoltage                *float64  `json:"pack_voltage,omitempty" db:"pack_voltage"`
-	PackCurrent                *float64  `json:"pack_current,omitempty" db:"pack_current"`
-	ChargePort                 *string   `json:"charge_port,omitempty" db:"charge_port"`
-	ChargePortDoorOpen         *bool     `json:"charge_port_door_open,omitempty" db:"charge_port_door_open"`
-	ChargePortLatch            *string   `json:"charge_port_latch,omitempty" db:"charge_port_latch"`
-	ChargePortColdWeatherMode  *bool     `json:"charge_port_cold_weather_mode,omitempty" db:"charge_port_cold_weather_mode"`
-	ChargingCableType          *string   `json:"charging_cable_type,omitempty" db:"charging_cable_type"`
-	FastChargerPresent         *bool     `json:"fast_charger_present,omitempty" db:"fast_charger_present"`
-	FastChargerType            *string   `json:"fast_charger_type,omitempty" db:"fast_charger_type"`
-	TimeToFullCharge           *float64  `json:"time_to_full_charge,omitempty" db:"time_to_full_charge"`
-	EstimatedHoursToCharge     *float64  `json:"estimated_hours_to_charge,omitempty" db:"estimated_hours_to_charge"`
-	ScheduledChargingMode      *string   `json:"scheduled_charging_mode,omitempty" db:"scheduled_charging_mode"`
-	ScheduledChargingPending   *bool     `json:"scheduled_charging_pending,omitempty" db:"scheduled_charging_pending"`
-	PreconditioningEnabled     *bool     `json:"preconditioning_enabled,omitempty" db:"preconditioning_enabled"`
-	BrickVoltageMax            *float64  `json:"brick_voltage_max,omitempty" db:"brick_voltage_max"`
-	BrickVoltageMin            *float64  `json:"brick_voltage_min,omitempty" db:"brick_voltage_min"`
-	NumBrickVoltageMax         *int      `json:"num_brick_voltage_max,omitempty" db:"num_brick_voltage_max"`
-	NumBrickVoltageMin         *int      `json:"num_brick_voltage_min,omitempty" db:"num_brick_voltage_min"`
-	ModuleTempMax              *float64  `json:"module_temp_max,omitempty" db:"module_temp_max"`
-	ModuleTempMin              *float64  `json:"module_temp_min,omitempty" db:"module_temp_min"`
-	NumModuleTempMax           *int      `json:"num_module_temp_max,omitempty" db:"num_module_temp_max"`
-	NumModuleTempMin           *int      `json:"num_module_temp_min,omitempty" db:"num_module_temp_min"`
-	BatteryHeaterOn            *bool     `json:"battery_heater_on,omitempty" db:"battery_heater_on"`
-	NotEnoughPowerToHeat       *bool     `json:"not_enough_power_to_heat,omitempty" db:"not_enough_power_to_heat"`
-	BmsState                   *string   `json:"bms_state,omitempty" db:"bms_state"`
-	BmsFullchargeComplete      *bool     `json:"bms_fullcharge_complete,omitempty" db:"bms_fullcharge_complete"`
-	DcdcEnable                 *bool     `json:"dcdc_enable,omitempty" db:"dcdc_enable"`
-	IsolationResistance        *float64  `json:"isolation_resistance,omitempty" db:"isolation_resistance"`
-	LifetimeEnergyUsed         *float64  `json:"lifetime_energy_used,omitempty" db:"lifetime_energy_used"`
-	SuperchargerSessionTripPlanner *bool  `json:"supercharger_session_trip_planner,omitempty" db:"supercharger_session_trip_planner"`
-	PowershareStatus           *string   `json:"powershare_status,omitempty" db:"powershare_status"`
-	PowershareType             *string   `json:"powershare_type,omitempty" db:"powershare_type"`
-	PowershareStopReason       *string   `json:"powershare_stop_reason,omitempty" db:"powershare_stop_reason"`
-	PowershareHoursLeft        *float64  `json:"powershare_hours_left,omitempty" db:"powershare_hours_left"`
-	PowersharePowerKw          *float64  `json:"powershare_power_kw,omitempty" db:"powershare_power_kw"`
-	ScheduledChargingStartTime *string  `json:"scheduled_charging_start_time,omitempty" db:"scheduled_charging_start_time"`
-	ScheduledDepartureTime     *string  `json:"scheduled_departure_time,omitempty" db:"scheduled_departure_time"`
-	ExpectedEnergyPctAtArrival *float64 `json:"expected_energy_pct_at_arrival,omitempty" db:"expected_energy_pct_at_arrival"`
-	CreatedAt                  time.Time `json:"created_at" db:"created_at"`
-}
+// ChargingTelemetry moved to charging_telemetry.go (regenerated for post-migration schema).
+
 
 // MediaSnapshot represents a point-in-time media playback telemetry reading.
 type MediaSnapshot struct {
