@@ -65,7 +65,7 @@ type Worker struct {
 	fallbackPollInterval time.Duration // overrides cfg.PollInterval when fleet telemetry is primary
 
 	// Cached polling config — refreshed each poll cycle from the database.
-	pollingConfig *models.PollingConfig
+	pollingConfig *models.LegacyPollingConfig
 
 	// Adaptive polling engine — evaluates API responses to determine optimal
 	// poll intervals. When set, replaces the fixed-interval backoff logic.
@@ -222,13 +222,11 @@ func (w *Worker) pollAllVehicles(ctx context.Context) {
 		return
 	}
 
-	// Load polling config for this cycle
-	pc, err := w.settingsRepo.GetPollingConfig(ctx)
-	if err != nil {
-		log.Warn().Err(err).Msg("failed to load polling config, using defaults")
-		defaultPC := models.DefaultPollingConfig()
-		pc = &defaultPC
-	}
+	// Load polling config for this cycle (per-vehicle configs are in the
+	// polling_config table; the worker still uses the legacy feature-flag
+	// struct for endpoint selection until the full migration is complete).
+	defaultPC := models.DefaultPollingConfig()
+	pc := &defaultPC
 	w.pollingConfig = pc
 
 	// When fleet telemetry is primary, periodically discover new vehicles
@@ -335,11 +333,9 @@ func (w *Worker) discoverVehicles(ctx context.Context) {
 
 		// New vehicle discovered — create it
 		v := &models.Vehicle{
-			VehicleID:   tv.VehicleID,
+			TeslaID:     tv.VehicleID,
 			VIN:         tv.VIN,
 			DisplayName: tv.DisplayName,
-			State:       tv.State,
-			Healthy:     true,
 		}
 		if err := w.vehicleRepo.Create(ctx, v); err != nil {
 			log.Error().Err(err).Str("vin", tv.VIN).Msg("fleet telemetry: failed to create discovered vehicle")
@@ -437,9 +433,6 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *models.Vehicle) {
 
 	data, err := w.teslaClient.GetVehicleData(pollCtx, vehicle.VIN, endpoints...)
 	if errors.Is(err, tesla.ErrVehicleAsleep) {
-		if err := w.vehicleRepo.UpdateState(ctx, vehicle.ID, "asleep", true); err != nil {
-			logger.Error().Err(err).Msg("failed to update vehicle state")
-		}
 		w.publishMQTT(vehicle, "state", "asleep")
 		w.recordVehicleAsleep(vehicle.ID)
 		if w.PollEngine != nil {
@@ -476,9 +469,6 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *models.Vehicle) {
 	} else if err != nil {
 		logger.Warn().Err(err).Msg("failed to get vehicle data")
 		metrics.PollsTotal.WithLabelValues("error").Inc()
-		if err := w.vehicleRepo.UpdateState(ctx, vehicle.ID, vehicle.State, false); err != nil {
-			logger.Error().Err(err).Msg("failed to mark vehicle unhealthy")
-		}
 		w.recordVehicleFailure(vehicle.ID)
 		return
 	}
@@ -488,14 +478,9 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *models.Vehicle) {
 	metrics.PollsTotal.WithLabelValues("success").Inc()
 	metrics.PollCycleDuration.Observe(time.Since(pollStart).Seconds())
 
-	// Update vehicle state
-	if err := w.vehicleRepo.UpdateState(ctx, vehicle.ID, data.State, true); err != nil {
-		logger.Error().Err(err).Msg("failed to update vehicle state")
-	}
-
 	// Store position
 	pos := w.buildPosition(vehicle.ID, data)
-	if err := w.posRepo.Insert(ctx, pos); err != nil {
+	if err := w.posRepo.BulkInsert(ctx, []models.Position{*pos}); err != nil {
 		logger.Error().Err(err).Msg("failed to insert position")
 	}
 
@@ -528,34 +513,19 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *models.Vehicle) {
 
 func (w *Worker) buildPosition(vehicleID int64, data *tesla.VehicleDataResponse) *models.Position {
 	p := &models.Position{
-		VehicleID:  vehicleID,
-		Latitude:   data.DriveState.Latitude,
-		Longitude:  data.DriveState.Longitude,
-		Odometer:   data.VehicleState.Odometer,
-		BatteryLvl: data.ChargeState.BatteryLevel,
+		VehicleID: vehicleID,
+		Ts:        time.Now(),
+		Latitude:  data.DriveState.Latitude,
+		Longitude: data.DriveState.Longitude,
+		Source:    "polling",
 	}
 
 	if data.DriveState.Speed != nil {
 		s := float64(*data.DriveState.Speed)
-		p.Speed = &s
+		p.SpeedMph = &s
 	}
-	power := float64(data.DriveState.Power)
-	p.Power = &power
-	heading := data.DriveState.Heading
+	heading := int16(data.DriveState.Heading)
 	p.Heading = &heading
-
-	idealRange := data.ChargeState.IdealBatteryRange
-	p.IdealRange = &idealRange
-	ratedRange := data.ChargeState.BatteryRange
-	p.RatedRange = &ratedRange
-	insideTemp := data.ClimateState.InsideTemp
-	p.InsideTemp = &insideTemp
-	outsideTemp := data.ClimateState.OutsideTemp
-	p.OutsideTemp = &outsideTemp
-	fanStatus := data.ClimateState.FanStatus
-	p.FanStatus = &fanStatus
-	isClimate := data.ClimateState.IsClimateOn
-	p.IsClimate = &isClimate
 
 	return p
 }
