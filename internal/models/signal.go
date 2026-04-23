@@ -27,10 +27,10 @@ type SignalCatalog struct {
 	FirstSeenAt      time.Time `db:"first_seen_at"     json:"first_seen_at"`
 	LastSeenAt       time.Time `db:"last_seen_at"      json:"last_seen_at"`
 	ObservationCount int64     `db:"observation_count" json:"observation_count"`
-	StorageTier      string    `db:"storage_tier"      json:"storage_tier"`
-	TypedTable       *string   `db:"typed_table"       json:"typed_table"`
-	TypedColumn      *string   `db:"typed_column"      json:"typed_column"`
-	DataKind         *string   `db:"data_kind"         json:"data_kind"`
+	StorageTier      SignalStorageTier `db:"storage_tier"      json:"storage_tier"`
+	TypedTable       *string           `db:"typed_table"       json:"typed_table"`
+	TypedColumn      *string           `db:"typed_column"      json:"typed_column"`
+	DataKind         *SignalDataKind   `db:"data_kind"         json:"data_kind"`
 	Unit             *string   `db:"unit"              json:"unit"`
 	Notes            *string   `db:"notes"             json:"notes"`
 	CreatedAt        time.Time `db:"created_at"        json:"created_at"`
@@ -41,10 +41,10 @@ type SignalCatalog struct {
 // column on a hot-path table. When true, TypedTable and TypedColumn are
 // expected to be non-nil.
 func (c SignalCatalog) IsHot() bool {
-	return c.StorageTier == "hot"
+	return c.StorageTier == SignalStorageTierHot
 }
 
 // IsDropped reports whether ingestion silently skips this signal.
 func (c SignalCatalog) IsDropped() bool {
-	return c.StorageTier == "dropped"
+	return c.StorageTier == SignalStorageTierDropped
 }
