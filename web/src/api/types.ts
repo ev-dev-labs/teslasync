@@ -1308,8 +1308,7 @@ export interface BackupRun {
   checksum: string | null
   duration_ms: number
   error_message: string | null
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  metadata: Record<string, any>
+  metadata: Record<string, unknown>
   started_at: string | null
   completed_at: string | null
   created_at: string
