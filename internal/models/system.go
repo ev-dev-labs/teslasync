@@ -1,6 +1,7 @@
 package models
 
 import (
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -141,6 +142,57 @@ func (g *Geofence) Latitude() float64 {
 func (g *Geofence) Longitude() float64 {
 	_, lon := g.Centroid()
 	return lon
+}
+
+// Radius returns the approximate radius (in meters) of this geofence's polygon,
+// computed as the max Haversine distance from the centroid to any polygon vertex.
+// Returns 0 if the polygon is empty or unparseable.
+func (g *Geofence) Radius() float64 {
+	cLat, cLon := g.Centroid()
+	if cLat == 0 && cLon == 0 {
+		return 0
+	}
+
+	start := strings.Index(g.PolygonWKT, "((")
+	end := strings.Index(g.PolygonWKT, "))")
+	if start < 0 || end < 0 || end <= start+2 {
+		return 0
+	}
+	coords := g.PolygonWKT[start+2 : end]
+	pairs := strings.Split(coords, ",")
+
+	var maxDist float64
+	for _, pair := range pairs {
+		p := strings.TrimSpace(pair)
+		parts := strings.Fields(p)
+		if len(parts) != 2 {
+			continue
+		}
+		lonVal, err1 := strconv.ParseFloat(parts[0], 64)
+		latVal, err2 := strconv.ParseFloat(parts[1], 64)
+		if err1 != nil || err2 != nil {
+			continue
+		}
+		d := geofenceHaversineM(cLat, cLon, latVal, lonVal)
+		if d > maxDist {
+			maxDist = d
+		}
+	}
+	return maxDist
+}
+
+// geofenceHaversineM returns the great-circle distance between two points in meters.
+func geofenceHaversineM(lat1, lon1, lat2, lon2 float64) float64 {
+	const R = 6_371_000.0 // Earth radius in meters
+	dLat := (lat2 - lat1) * math.Pi / 180.0
+	dLon := (lon2 - lon1) * math.Pi / 180.0
+	lat1r := lat1 * math.Pi / 180.0
+	lat2r := lat2 * math.Pi / 180.0
+
+	a := math.Sin(dLat/2)*math.Sin(dLat/2) +
+		math.Cos(lat1r)*math.Cos(lat2r)*math.Sin(dLon/2)*math.Sin(dLon/2)
+	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
+	return R * c
 }
 
 // ElectricityCost mirrors the post-migration `electricity_cost` schema

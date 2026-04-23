@@ -1,0 +1,20 @@
+=== SURVEY ===
+Geofence struct in internal/models/system.go has PolygonWKT, Centroid(), Latitude(), Longitude().
+No Radius field or method exists. location.go references geofence.Radius 6 times.
+
+=== REASONING ===
+Add Radius() method that computes max Haversine distance from centroid to any polygon vertex.
+Reuses same WKT parsing pattern as Centroid(). Helper function geofenceHaversineM avoids naming
+conflicts with haversineKm in other packages. Returns meters to match location.go usage.
+
+=== CHANGES ===
+1. Added 'math' to imports in internal/models/system.go
+2. Added Radius() method on *Geofence — max haversine distance from centroid to vertices
+3. Added geofenceHaversineM() helper — great-circle distance in meters
+
+=== GATE ===
+MODEL_BUILD_EXIT=0
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
