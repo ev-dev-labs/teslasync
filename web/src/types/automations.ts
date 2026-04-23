@@ -59,11 +59,19 @@ export interface AutomationStepTriggerTime extends AutomationStepBase {
   timezone: string;
 }
 
+export interface AutomationStepTriggerWebhook extends AutomationStepBase {
+  kind: 'trigger_webhook';
+  lane: 'trigger';
+  webhook_token: string;
+  require_signature: boolean;
+}
+
 // Discriminated union — children added by prompts 13-23
 export type AutomationStep =
   | AutomationStepTriggerSignal
   | AutomationStepTriggerGeofence
   | AutomationStepTriggerTime
+  | AutomationStepTriggerWebhook
   | AutomationStepBase;
 
 export interface AutomationFull extends Automation {
