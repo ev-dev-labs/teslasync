@@ -48,6 +48,15 @@ jobs:
           DATABASE_NAME: teslasync_test
         run: go test -race -coverprofile=coverage.out ./...
 
+      - name: Integration test (telemetry replay)
+        env:
+          DATABASE_HOST: localhost
+          DATABASE_PORT: 5432
+          DATABASE_USER: test
+          DATABASE_PASS: test
+          DATABASE_NAME: teslasync_test
+        run: go test -tags integration -race -count=1 ./internal/api/... -run TestTelemetryReplay -v
+
       - name: Migration rollback test
         env:
           DATABASE_URL: postgres://test:test@localhost:5432/teslasync_test?sslmode=disable

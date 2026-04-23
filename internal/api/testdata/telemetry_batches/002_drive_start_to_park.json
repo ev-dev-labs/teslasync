@@ -1,0 +1,18 @@
+{
+  "_doc": "Drive in progress -> ends in PARK. Hot routes: positions (lat/lon/speed/heading/altitude), motor_snapshots (rpm/torque/temps), vehicle_live_state (gear, odometer). Some cold flags too. Expected final FSM: PARKED.",
+  "vin": "5YJ3E1EA1NF000002",
+  "signals": [
+    {"name": "Gear",                  "value": "D"},
+    {"name": "VehicleSpeed",          "value": 42.5},
+    {"name": "Heading",               "value": 184.2},
+    {"name": "Latitude",              "value": 37.7749},
+    {"name": "Longitude",             "value": -122.4194},
+    {"name": "Elevation",             "value": 25.0},
+    {"name": "Odometer",              "value": 12345.7},
+    {"name": "ModuleTempMin",         "value": 28.1},
+    {"name": "ModuleTempMax",         "value": 31.4},
+    {"name": "DriveRailVoltage",      "value": 396.0},
+    {"name": "BrakePedal",            "value": false},
+    {"name": "Gear",                  "value": "P"}
+  ]
+}

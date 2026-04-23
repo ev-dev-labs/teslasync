@@ -1,0 +1,7 @@
+{
+  "_doc": "Single-signal partial payload. Exercises the path where a tiny batch arrives without enough hot signals to populate a row — must still register in catalog and produce one cold observation.",
+  "vin": "5YJ3E1EA1NF000007",
+  "signals": [
+    {"name": "ExperimentalSolo", "value": 0.42}
+  ]
+}

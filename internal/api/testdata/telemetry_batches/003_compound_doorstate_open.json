@@ -1,0 +1,17 @@
+{
+  "_doc": "Compound TypeDoors signal expanded by Flatten() into per-door booleans. All routed to vehicle_live_state.doors_*. Cold residue: zero.",
+  "vin": "5YJ3E1EA1NF000003",
+  "signals": [
+    {
+      "name": "DoorState",
+      "value": {
+        "DriverFront":   true,
+        "DriverRear":    false,
+        "PassengerFront":false,
+        "PassengerRear": false,
+        "TrunkFront":    false,
+        "TrunkRear":     true
+      }
+    }
+  ]
+}
