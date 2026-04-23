@@ -96,3 +96,43 @@ func (r *SignalObservationRepo) ListByVehicle(ctx context.Context, vehicleID int
 	}
 	return out, nil
 }
+
+// ListByName returns signal observations for a vehicle filtered by signal
+// name within the inclusive time window [from, to], ordered by ts ASC and
+// capped by limit. signal_name is the FK into signal_catalog.name (ADR-009),
+// so an explicit join is unnecessary for filtering.
+func (r *SignalObservationRepo) ListByName(ctx context.Context, vehicleID int64, name string, from, to time.Time, limit int) ([]models.SignalObservation, error) {
+	const query = `
+		SELECT vehicle_id, ts, signal_name, value_numeric, value_text, value_bool, source
+		FROM signal_observations
+		WHERE vehicle_id = $1 AND signal_name = $2 AND ts BETWEEN $3 AND $4
+		ORDER BY ts ASC
+		LIMIT $5`
+
+	rows, err := r.db.Pool.Query(ctx, query, vehicleID, name, from, to, limit)
+	if err != nil {
+		return nil, fmt.Errorf("signal-observations-repo-list-by-name: %w", err)
+	}
+	defer rows.Close()
+
+	out := make([]models.SignalObservation, 0)
+	for rows.Next() {
+		var o models.SignalObservation
+		if err := rows.Scan(
+			&o.VehicleID,
+			&o.Ts,
+			&o.SignalName,
+			&o.ValueNumeric,
+			&o.ValueText,
+			&o.ValueBool,
+			&o.Source,
+		); err != nil {
+			return nil, fmt.Errorf("signal-observations-repo-list-by-name-scan: %w", err)
+		}
+		out = append(out, o)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("signal-observations-repo-list-by-name-rows: %w", err)
+	}
+	return out, nil
+}
