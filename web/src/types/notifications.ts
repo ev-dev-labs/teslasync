@@ -72,10 +72,19 @@ export interface NotificationChannelNtfy extends NotificationChannelBase {
   password: string | null;
 }
 
+export interface NotificationChannelPushover extends NotificationChannelBase {
+  kind: 'pushover';
+  user_key: string;
+  app_token: string;
+  device: string | null;
+  priority: -2 | -1 | 0 | 1 | 2;
+}
+
 export type NotificationChannel =
   | (NotificationChannelDiscord & { kind: 'discord' })
   | (NotificationChannelSlack & { kind: 'slack' })
   | (NotificationChannelTelegram & { kind: 'telegram' })
   | (NotificationChannelEmail & { kind: 'email' })
   | (NotificationChannelWebhook & { kind: 'webhook' })
-  | (NotificationChannelNtfy & { kind: 'ntfy' });
+  | (NotificationChannelNtfy & { kind: 'ntfy' })
+  | (NotificationChannelPushover & { kind: 'pushover' });
