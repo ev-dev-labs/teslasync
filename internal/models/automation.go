@@ -28,3 +28,11 @@ func (a *Automation) IsActive() bool { return a.Enabled }
 // AppliesToAllVehicles reports whether this automation has no vehicle scope
 // and therefore applies to every vehicle the owner has enrolled.
 func (a *Automation) AppliesToAllVehicles() bool { return a.VehicleID == nil }
+
+// AutomationSummary is a lightweight projection of `automations` used by list
+// endpoints that do not need to load steps, triggers, or scope. See ADR-004.
+type AutomationSummary struct {
+	ID      int64  `db:"id"      json:"id"`
+	Name    string `db:"name"    json:"name"`
+	Enabled bool   `db:"enabled" json:"enabled"`
+}
