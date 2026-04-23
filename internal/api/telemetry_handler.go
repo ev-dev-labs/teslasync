@@ -521,22 +521,35 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 		}
 	}
 
-	// Broadcast to SSE clients for real-time frontend updates.
-	// Send the complete SignalStore state (not just the partial batch) so the
-	// frontend always has a full picture without polling.
-	if h.eventHub != nil {
-		sseData := map[string]interface{}{
-			"vin":        vin,
-			"vehicle_id": vehicleID,
-			"source":     "fleet_telemetry",
-			"signals":    signals,
-			"timestamp":  time.Now().UTC(),
+	// Broadcast to SSE clients for real-time frontend updates using the typed
+	// per-table wire format. We re-run the legacy map batch through the same
+	// flatten/bucket/hot-row pipeline ProcessBatch uses, so both write-paths
+	// publish an identical shape: {vehicle_id, ts, tables:{<table>:{<col>:<val>}},
+	// cold:[{name,value}]}. No raw map / legacy jsonb fields are emitted.
+	if h.eventHub != nil && vehicleID > 0 {
+		named := make([]telemetry.NamedValue, 0, len(signals))
+		for k, v := range signals {
+			named = append(named, telemetry.NamedValue{Name: k, Value: v})
 		}
-		// Include complete state from SignalStore if available
-		if vehicleID > 0 && h.signalStore != nil {
-			sseData["state"] = h.signalStore.GetRawMap(vehicleID)
+		atomics := make([]telemetry.Atomic, 0, len(named)*2)
+		for _, nv := range named {
+			flat, ferr := telemetry.Flatten(nv.Name, nv.Value)
+			if ferr != nil {
+				continue
+			}
+			atomics = append(atomics, flat...)
 		}
-		h.eventHub.Broadcast("vehicle_update", sseData)
+		bk := bucketAtomics(atomics)
+		ts := time.Now().UTC()
+		hotRows := map[string]map[string]any{}
+		for table, items := range bk.HotByTable {
+			row := h.buildHotRow(table, items, &bk.Cold)
+			if len(row) > 0 {
+				hotRows[table] = row
+			}
+		}
+		coldObs := h.buildColdObservations(vehicleID, ts, bk.Cold)
+		h.eventHub.Broadcast("vehicle_update", buildSSEPayload(vehicleID, ts, hotRows, coldObs))
 	}
 
 	// Update streaming health state
@@ -1293,6 +1306,12 @@ func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded
 		})
 	}
 
+	// Typed-tables SSE broadcast (Phase 6 wire format). Frontend SSE consumer
+	// rewrite to read `tables.<name>.<column>` is Phase 7's responsibility.
+	if h.eventHub != nil {
+		h.eventHub.Broadcast("vehicle_update", buildSSEPayload(vehicleID, ts, hotRows, coldObs))
+	}
+
 	total := len(hotRows) + boolToInt(len(coldObs) > 0)
 	failed := len(writeErrs)
 
@@ -1328,6 +1347,55 @@ func boolToInt(b bool) int {
 		return 1
 	}
 	return 0
+}
+
+// pickValue returns the populated value_* field of a SignalObservation, or nil.
+// Cold observations have exactly one of ValueNumeric/ValueText/ValueBool set.
+func pickValue(o models.SignalObservation) any {
+	switch {
+	case o.ValueNumeric != nil:
+		return *o.ValueNumeric
+	case o.ValueText != nil:
+		return *o.ValueText
+	case o.ValueBool != nil:
+		return *o.ValueBool
+	default:
+		return nil
+	}
+}
+
+// buildSSEPayload assembles the Phase-6 typed-tables SSE payload from the
+// already-built hot rows and cold observations. Wire shape:
+//
+//	{ vehicle_id, ts, tables: {<table>: {<col>: <val>}}, cold: [{name, value}] }
+//
+// Empty hot rows are skipped; cold is omitted entirely when there are no
+// observations. The frontend (Phase 7) reads tables.<name>.<column> instead of
+// the legacy raw_state/signals jsonb shape.
+func buildSSEPayload(vehicleID int64, ts time.Time, hotRows map[string]map[string]any, coldObs []models.SignalObservation) map[string]any {
+	tables := map[string]map[string]any{}
+	for table, row := range hotRows {
+		if len(row) == 0 {
+			continue
+		}
+		tables[table] = row
+	}
+	payload := map[string]any{
+		"vehicle_id": vehicleID,
+		"ts":         ts,
+		"tables":     tables,
+	}
+	if len(coldObs) > 0 {
+		cold := make([]map[string]any, 0, len(coldObs))
+		for _, o := range coldObs {
+			cold = append(cold, map[string]any{
+				"name":  o.SignalName,
+				"value": pickValue(o),
+			})
+		}
+		payload["cold"] = cold
+	}
+	return payload
 }
 
 // buildColdObservations converts cold atomics (originally cold + transform-demoted)
