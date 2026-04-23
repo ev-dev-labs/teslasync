@@ -45,6 +45,9 @@ type TelemetryHandler struct {
 	userPrefRepo          *database.UserPreferenceRepo
 	swUpdateRepo          *database.SoftwareUpdateRepo
 	signalCatalogRepo     *database.SignalCatalogRepo
+	liveStateRepo         *database.VehicleLiveStateRepo
+	vehMetaRepo           *database.VehicleMetaRepo
+	signalObsRepo         *database.SignalObservationRepo
 	mqttClient            *mqtt.Client
 	logRepo               *database.APICallLogRepo
 	eventHub              *EventHub
@@ -139,6 +142,9 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 		userPrefRepo:          database.NewUserPreferenceRepo(db),
 		swUpdateRepo:          database.NewSoftwareUpdateRepo(db),
 		signalCatalogRepo:     database.NewSignalCatalogRepo(db),
+		liveStateRepo:         database.NewVehicleLiveStateRepo(db),
+		vehMetaRepo:           database.NewVehicleMetaRepo(db),
+		signalObsRepo:         database.NewSignalObservationRepo(db),
 		mqttClient:            mc,
 		logRepo:               database.NewAPICallLogRepo(db),
 		eventHub:              hub,
@@ -1183,8 +1189,75 @@ func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded
 		Int("cold_observations", len(coldObs)).
 		Msg("cold observation build step complete")
 
-	_ = hotRows
-	_ = coldObs
+	// Fan-out: dispatch each populated hot row to its per-table repo, then the
+	// cold residue to signal_observations. Errors are aggregated (not returned)
+	// so a slow/failing table does not lose writes destined for sibling tables;
+	// terminal handling of writeErrs is layered in the next prompt (28).
+	//
+	// vehicleID/ts identity columns are placeholders here (mirrors the cold
+	// build call above) — wired to the resolved vehicle and batch timestamp by
+	// prompt 27 (FSM hooks).
+	var vehicleID int64
+	var ts time.Time
+	type writeErr struct {
+		table string
+		err   error
+	}
+	var writeErrs []writeErr
+	dispatch := func(table string, fn func() error) {
+		if err := fn(); err != nil {
+			writeErrs = append(writeErrs, writeErr{table, err})
+		}
+	}
+	for table, row := range hotRows {
+		if len(row) == 0 {
+			continue
+		}
+		switch table {
+		case "vehicle_live_state":
+			dispatch(table, func() error {
+				return h.liveStateRepo.UpsertFromMap(ctx, vehicleID, ts, row)
+			})
+		case "positions":
+			dispatch(table, func() error {
+				return h.posRepo.InsertFromMap(ctx, vehicleID, ts, row)
+			})
+		case "charging_telemetry":
+			dispatch(table, func() error {
+				return h.chargingTelemetryRepo.InsertFromMap(ctx, vehicleID, ts, row)
+			})
+		case "climate_snapshots":
+			dispatch(table, func() error {
+				return h.climateRepo.InsertFromMap(ctx, vehicleID, ts, row)
+			})
+		case "motor_snapshots":
+			dispatch(table, func() error {
+				return h.motorRepo.InsertFromMap(ctx, vehicleID, ts, row)
+			})
+		case "security_events":
+			dispatch(table, func() error {
+				return h.securityRepo.InsertFromMap(ctx, vehicleID, ts, row)
+			})
+		case "vehicle_meta_snapshots":
+			dispatch(table, func() error {
+				return h.vehMetaRepo.InsertFromMap(ctx, vehicleID, ts, row)
+			})
+		default:
+			writeErrs = append(writeErrs, writeErr{table, fmt.Errorf("unknown hot table")})
+		}
+	}
+	if len(coldObs) > 0 {
+		dispatch("signal_observations", func() error {
+			return h.signalObsRepo.BulkInsert(ctx, coldObs)
+		})
+	}
+	if len(writeErrs) > 0 {
+		log.Warn().
+			Int("count", len(writeErrs)).
+			Str("first_table", writeErrs[0].table).
+			Err(writeErrs[0].err).
+			Msg("fan-out write errors (aggregation/terminal handling in prompt 28)")
+	}
 }
 
 // buildColdObservations converts cold atomics (originally cold + transform-demoted)
