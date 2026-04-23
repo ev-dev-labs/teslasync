@@ -3,31 +3,26 @@ import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import type {
   Automation,
+  AutomationFull,
+  AutomationStep,
   AutomationHistoryListResponse,
   AutomationPresetsResponse,
   AutomationPreset,
 } from '@/api/types';
 
-/** Shape of the request body for creating/updating an automation. */
-export interface AutomationFormData {
-  name: string;
-  description: string;
-  vehicle_id: number | null;
-  enabled?: boolean;
-  trigger_type: string;
-  trigger_config: Record<string, unknown>;
-  conditions: Record<string, unknown>[];
-  actions: Record<string, unknown>[];
-  cooldown_minutes: number;
-  max_executions_hour: number;
-  stop_on_failure: boolean;
-  notify_on_run: boolean;
-  notify_on_failure: boolean;
-  notify_channels?: number[];
-  priority: number;
-  tags: string[];
-  preset_id?: string | null;
-}
+export type AutomationStepInput = Omit<
+  AutomationStep,
+  'id' | 'automation_id' | 'created_at'
+>;
+
+export type AutomationFullInput = Omit<
+  AutomationFull,
+  'id' | 'created_at' | 'updated_at' | 'triggers' | 'conditions' | 'actions'
+> & {
+  triggers: AutomationStepInput[];
+  conditions: AutomationStepInput[];
+  actions: AutomationStepInput[];
+};
 
 export const automationKeys = {
   all: ['automations'] as const,
@@ -105,22 +100,23 @@ export function useTestRunAutomation() {
   });
 }
 
-export function useAutomation(id: number | undefined) {
+export function useAutomation(id: number | string | undefined) {
+  const numericId = typeof id === 'string' ? Number(id) : id;
   return useQuery({
-    queryKey: automationKeys.detail(id!),
-    queryFn: () => request<Automation>(`/automations/${id}`),
-    enabled: id != null && id > 0,
+    queryKey: automationKeys.detail(numericId!),
+    queryFn: () => request<AutomationFull>(`/automations/${id}`),
+    enabled: numericId != null && !Number.isNaN(numericId) && numericId > 0,
   });
 }
 
-export function useCreateAutomation() {
+export function useCreateAutomationFull() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: AutomationFormData) =>
-      request<Automation>(`/automations`, {
+    mutationFn: (input: AutomationFullInput) =>
+      request<AutomationFull>('/automations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(input),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: automationKeys.all });
@@ -128,18 +124,18 @@ export function useCreateAutomation() {
   });
 }
 
-export function useUpdateAutomation() {
+export function useUpdateAutomationFull() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: AutomationFormData }) =>
-      request<Automation>(`/automations/${id}`, {
+    mutationFn: ({ id, input }: { id: number; input: AutomationFullInput }) =>
+      request<AutomationFull>(`/automations/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(input),
       }),
-    onSuccess: (_, { id }) => {
+    onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: automationKeys.all });
-      qc.invalidateQueries({ queryKey: automationKeys.detail(id) });
+      qc.invalidateQueries({ queryKey: automationKeys.detail(vars.id) });
     },
   });
 }
