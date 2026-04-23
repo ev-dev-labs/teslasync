@@ -14,6 +14,8 @@ var (
 	NormalizeHvacState     Transformer = passthrough
 	NormalizeShiftState    Transformer = passthrough
 	NormalizeDriveState    Transformer = passthrough
+	NormalizeDefrostMode   Transformer = passthrough
+	NormalizeSeatHeater    Transformer = passthrough
 )
 
 // Compound flatteners
