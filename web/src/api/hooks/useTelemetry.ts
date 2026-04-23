@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import type { SignalHistoryResponse, SignalStats, TelemetryStatus, VehicleTelemetry } from '@/types/telemetry';
+import type { SignalCatalogEntry, SignalObservation } from '@/types/signals';
 
 export const telemetryKeys = {
   signals: (vehicleId: number) => ['signals', vehicleId] as const,
@@ -105,6 +106,35 @@ export function useMQTTStatus() {
       } as TelemetryStatus & { vehicles: VehicleTelemetry[] };
     },
     refetchInterval: 5_000,
+  });
+}
+
+// ─── Typed Signal Hooks (Phase 6 endpoints) ──────────────────────────────────
+
+export function useSignalCatalog() {
+  return useQuery({
+    queryKey: ['signal-catalog'],
+    queryFn: () => request<SignalCatalogEntry[]>('/signals/catalog'),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useSignalObservations(
+  vehicleId: number | string | undefined,
+  opts?: { signal_name?: string; since?: string; until?: string; limit?: number },
+) {
+  const params = new URLSearchParams();
+  if (vehicleId != null) params.set('vehicle_id', String(vehicleId));
+  if (opts?.signal_name) params.set('signal_name', opts.signal_name);
+  if (opts?.since) params.set('since', opts.since);
+  if (opts?.until) params.set('until', opts.until);
+  if (opts?.limit) params.set('limit', String(opts.limit));
+
+  return useQuery({
+    queryKey: ['signal-observations', vehicleId, opts],
+    queryFn: () => request<SignalObservation[]>(`/signals/observations?${params}`),
+    enabled: !!vehicleId,
+    staleTime: 5_000,
   });
 }
 
