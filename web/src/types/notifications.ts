@@ -44,7 +44,19 @@ export interface NotificationChannelTelegram extends NotificationChannelBase {
   chat_id: string;
 }
 
+export interface NotificationChannelEmail extends NotificationChannelBase {
+  kind: 'email';
+  smtp_host: string;
+  smtp_port: number;
+  smtp_username: string;
+  smtp_password: string;
+  from_address: string;
+  to_addresses: string[];
+  use_tls: boolean;
+}
+
 export type NotificationChannel =
   | (NotificationChannelDiscord & { kind: 'discord' })
   | (NotificationChannelSlack & { kind: 'slack' })
-  | (NotificationChannelTelegram & { kind: 'telegram' });
+  | (NotificationChannelTelegram & { kind: 'telegram' })
+  | (NotificationChannelEmail & { kind: 'email' });
