@@ -1,0 +1,30 @@
+package models
+
+import "time"
+
+// Automation mirrors the post-migration `automations` table (see migration
+// 000142_baseline_typed and .github/prompts/db-refactor/phase-3-schema/_baseline_source/14-automations.sql).
+//
+// ADR-001: typed-by-default — no raw_json, no JSONB carve-outs. Trigger,
+// conditions, and actions are modeled via the CTI child tables rooted at
+// automation_steps; nothing on this row is JSONB.
+//
+// ADR-004: class-table-inheritance root. A NULL VehicleID means the rule
+// applies to every vehicle owned by the user.
+type Automation struct {
+	ID          int64     `db:"id"          json:"id"`
+	Name        string    `db:"name"        json:"name"`
+	Description *string   `db:"description" json:"description,omitempty"`
+	Enabled     bool      `db:"enabled"     json:"enabled"`
+	VehicleID   *int64    `db:"vehicle_id"  json:"vehicle_id,omitempty"`
+	CreatedAt   time.Time `db:"created_at"  json:"created_at"`
+	UpdatedAt   time.Time `db:"updated_at"  json:"updated_at"`
+}
+
+// IsActive reports whether the automation is currently eligible to run.
+// A rule must be both explicitly enabled by the user (Enabled=true).
+func (a *Automation) IsActive() bool { return a.Enabled }
+
+// AppliesToAllVehicles reports whether this automation has no vehicle scope
+// and therefore applies to every vehicle the owner has enrolled.
+func (a *Automation) AppliesToAllVehicles() bool { return a.VehicleID == nil }

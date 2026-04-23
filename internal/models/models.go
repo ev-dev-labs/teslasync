@@ -788,38 +788,9 @@ type RawTelemetrySignal struct {
 	CreatedAt   time.Time              `json:"created_at" bson:"created_at"`
 }
 
-// Automation represents a user-defined automation rule with trigger, conditions, and actions.
-type Automation struct {
-	ID                  int64           `json:"id" db:"id"`
-	Name                string          `json:"name" db:"name"`
-	Description         string          `json:"description" db:"description"`
-	VehicleID           *int64          `json:"vehicle_id" db:"vehicle_id"`
-	Enabled             bool            `json:"enabled" db:"enabled"`
-	TriggerType         string          `json:"trigger_type" db:"trigger_type"`
-	TriggerConfig       json.RawMessage `json:"trigger_config" db:"trigger_config"`
-	Conditions          json.RawMessage `json:"conditions" db:"conditions"`
-	Actions             json.RawMessage `json:"actions" db:"actions"`
-	CooldownMinutes     int             `json:"cooldown_minutes" db:"cooldown_minutes"`
-	MaxExecutionsHour   int             `json:"max_executions_hour" db:"max_executions_hour"`
-	StopOnFailure       bool            `json:"stop_on_failure" db:"stop_on_failure"`
-	NotifyOnRun         bool            `json:"notify_on_run" db:"notify_on_run"`
-	NotifyOnFailure     bool            `json:"notify_on_failure" db:"notify_on_failure"`
-	SeasonalStart       *int            `json:"seasonal_start" db:"seasonal_start"`
-	SeasonalEnd         *int            `json:"seasonal_end" db:"seasonal_end"`
-	Priority            int             `json:"priority" db:"priority"`
-	LastTriggeredAt     *time.Time      `json:"last_triggered_at" db:"last_triggered_at"`
-	LastSuccessAt       *time.Time      `json:"last_success_at" db:"last_success_at"`
-	LastFailureAt       *time.Time      `json:"last_failure_at" db:"last_failure_at"`
-	ExecutionCount      int64           `json:"execution_count" db:"execution_count"`
-	FailureCount        int64           `json:"failure_count" db:"failure_count"`
-	ConsecutiveFailures int             `json:"consecutive_failures" db:"consecutive_failures"`
-	AutoDisabled        bool            `json:"auto_disabled" db:"auto_disabled"`
-	AutoDisabledReason  *string         `json:"auto_disabled_reason" db:"auto_disabled_reason"`
-	PresetID            *string         `json:"preset_id" db:"preset_id"`
-	Tags                []string        `json:"tags" db:"tags"`
-	CreatedAt           time.Time       `json:"created_at" db:"created_at"`
-	UpdatedAt           time.Time       `json:"updated_at" db:"updated_at"`
-}
+// Automation has been moved to automation.go to match the post-migration
+// schema (ADR-001 typed-by-default, ADR-004 class-table-inheritance root).
+// Trigger, conditions, and actions now live in the automation_steps CTI tree.
 
 // AutomationHistory records the result of a single automation execution.
 type AutomationHistory struct {
