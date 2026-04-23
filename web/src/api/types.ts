@@ -21,6 +21,24 @@ export interface Vehicle {
   updated_at: string
 }
 
+export interface VehicleLiveState {
+  vehicle_id: number
+  updated_at: string
+  battery_level: number | null
+  usable_battery_level: number | null
+  charge_state: string | null
+  shift_state: string | null
+  speed_kph: number | null
+  odometer_km: number | null
+  inside_temp_c: number | null
+  outside_temp_c: number | null
+  latitude: number | null
+  longitude: number | null
+  heading: number | null
+  is_locked: boolean | null
+  is_user_present: boolean | null
+}
+
 export interface Position {
   id: number
   vehicle_id: number
