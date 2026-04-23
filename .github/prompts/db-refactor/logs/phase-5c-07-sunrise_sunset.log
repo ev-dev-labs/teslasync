@@ -1,0 +1,70 @@
+=== PREFLIGHT ===
+Checking Prompt 01 (AutomationFull accessors)...
+func (af *AutomationFull) TriggerType() string {
+func (af *AutomationFull) TriggerConfig() json.RawMessage {
+func (af *AutomationFull) AutoDisabled() bool { return false }
+PROMPT_01_STATUS=DONE (TriggerType, TriggerConfig, AutoDisabled methods exist)
+
+=== SURVEY ===
+FOUND: sunrise_sunset.go:148 accesses a.TriggerConfig (direct field) on *models.Automation
+FOUND: No .AutoDisabled or .TriggerType accesses in this file
+FOUND: SunriseSunsetRepo interface (line 20-23) defined in this file returns []*models.Automation
+FOUND: evaluateAutomation (line 147), resolveLocation (line 278), fire (line 299) all take *models.Automation
+FOUND: resolveLocation/fire only use promoted fields (ID, Name, VehicleID) but receive *models.Automation
+
+=== REASONING ===
+APPROACH: Change parameter types from *models.Automation to *models.AutomationFull for evaluateAutomation, resolveLocation, fire
+APPROACH: Change SunriseSunsetRepo.GetByTriggerType return type to []*models.AutomationFull
+APPROACH: Replace a.TriggerConfig (field) with a.TriggerConfig() (method call) at line 148
+REJECTED: Type assertion approach — parameter types are explicit *models.Automation, not interface{}
+REJECTED: Keeping resolveLocation/fire as *models.Automation — they are called from evaluateAutomation with the same 'a', so types must match
+
+=== CHANGES ===
+BEFORE: GetByTriggerType(ctx context.Context, triggerType string) ([]*models.Automation, error)
+AFTER:  GetByTriggerType(ctx context.Context, triggerType string) ([]*models.AutomationFull, error)
+
+BEFORE: func (t *SunriseSunsetTrigger) evaluateAutomation(ctx context.Context, a *models.Automation, now time.Time)
+AFTER:  func (t *SunriseSunsetTrigger) evaluateAutomation(ctx context.Context, a *models.AutomationFull, now time.Time)
+
+BEFORE: cfg, err := parseSunriseSunsetConfig(a.TriggerConfig)
+AFTER:  cfg, err := parseSunriseSunsetConfig(a.TriggerConfig())
+
+BEFORE: func (t *SunriseSunsetTrigger) resolveLocation(ctx context.Context, a *models.Automation, ...)
+AFTER:  func (t *SunriseSunsetTrigger) resolveLocation(ctx context.Context, a *models.AutomationFull, ...)
+
+BEFORE: func (t *SunriseSunsetTrigger) fire(ctx context.Context, a *models.Automation, ...)
+AFTER:  func (t *SunriseSunsetTrigger) fire(ctx context.Context, a *models.AutomationFull, ...)
+
+=== GATE ===
+# github.com/ev-dev-labs/teslasync/internal/automation/condition
+internal\automation\condition\location.go:84:26: geofence.Radius undefined (type *models.Geofence has no field or method Radius)
+internal\automation\condition\location.go:86:25: geofence.Radius undefined (type *models.Geofence has no field or method Radius)
+internal\automation\condition\location.go:97:42: geofence.Radius undefined (type *models.Geofence has no field or method Radius)
+internal\automation\condition\location.go:101:22: geofence.Radius undefined (type *models.Geofence has no field or method Radius)
+internal\automation\condition\location.go:105:47: geofence.Radius undefined (type *models.Geofence has no field or method Radius)
+internal\automation\condition\location.go:115:26: geofence.Radius undefined (type *models.Geofence has no field or method Radius)
+# github.com/ev-dev-labs/teslasync/internal/automation/trigger
+internal\automation\trigger\vehicle_state.go:94:41: a.TriggerConfig undefined (type *models.Automation has no field or method TriggerConfig)
+internal\automation\trigger\webhook.go:72:39: automation.AutoDisabled undefined (type *models.Automation has no field or method AutoDisabled)
+internal\automation\trigger\webhook.go:77:37: automation.AutoDisabled undefined (type *models.Automation has no field or method AutoDisabled)
+internal\automation\trigger\webhook.go:83:44: automation.TriggerConfig undefined (type *models.Automation has no field or method TriggerConfig)
+# github.com/ev-dev-labs/teslasync/internal/database
+internal\database\alert_repo.go:21:59: undefined: models.Alert
+internal\database\alert_repo.go:28:79: undefined: models.Alert
+internal\database\alert_repo.go:37:23: undefined: models.Alert
+internal\database\alert_repo.go:39:16: undefined: models.Alert
+internal\database\alert_repo.go:75:45: ar.Type undefined (type *models.AlertRule has no field or method Type)
+internal\database\alert_repo.go:75:68: ar.Threshold undefined (type *models.AlertRule has no field or method Threshold)
+internal\database\alert_repo.go:76:8: ar.Conditions undefined (type *models.AlertRule has no field or method Conditions)
+internal\database\alert_repo.go:76:41: ar.ForDurationS undefined (type *models.AlertRule has no field or method ForDurationS)
+internal\database\alert_repo.go:76:73: ar.MsgTemplate undefined (type *models.AlertRule has no field or method MsgTemplate)
+internal\database\alert_repo.go:76:90: ar.NotifyChannels undefined (type *models.AlertRule has no field or method NotifyChannels)
+internal\database\alert_repo.go:76:90: too many errors
+BUILD_EXIT=1
+SUNRISESUNSET_ERROR_COUNT=0
+
+NOTE: Build has errors in other files (location.go, vehicle_state.go, webhook.go, alert_repo.go) but ZERO errors in sunrise_sunset.go
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===

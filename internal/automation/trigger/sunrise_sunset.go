@@ -18,7 +18,7 @@ import (
 
 // SunriseSunsetRepo is the subset of database.AutomationRepo needed by SunriseSunsetTrigger.
 type SunriseSunsetRepo interface {
-	GetByTriggerType(ctx context.Context, triggerType string) ([]*models.Automation, error)
+	GetByTriggerType(ctx context.Context, triggerType string) ([]*models.AutomationFull, error)
 	SetAutoDisabled(ctx context.Context, id int64, reason string) error
 }
 
@@ -144,8 +144,8 @@ func (t *SunriseSunsetTrigger) tick(ctx context.Context) {
 }
 
 // evaluateAutomation checks one automation against the current time.
-func (t *SunriseSunsetTrigger) evaluateAutomation(ctx context.Context, a *models.Automation, now time.Time) {
-	cfg, err := parseSunriseSunsetConfig(a.TriggerConfig)
+func (t *SunriseSunsetTrigger) evaluateAutomation(ctx context.Context, a *models.AutomationFull, now time.Time) {
+	cfg, err := parseSunriseSunsetConfig(a.TriggerConfig())
 	if err != nil {
 		t.logger.Warn().Err(err).
 			Int64("automation_id", a.ID).
@@ -275,7 +275,7 @@ func isDayAllowed(localFireTime time.Time, daysOfWeek []int) bool {
 
 // resolveLocation returns the latitude and longitude for the automation.
 // Explicit config values take priority; falls back to the vehicle's home location.
-func (t *SunriseSunsetTrigger) resolveLocation(ctx context.Context, a *models.Automation, cfg *SunriseSunsetConfig) (float64, float64, error) {
+func (t *SunriseSunsetTrigger) resolveLocation(ctx context.Context, a *models.AutomationFull, cfg *SunriseSunsetConfig) (float64, float64, error) {
 	if cfg.Latitude != nil && cfg.Longitude != nil {
 		return *cfg.Latitude, *cfg.Longitude, nil
 	}
@@ -296,7 +296,7 @@ func (t *SunriseSunsetTrigger) resolveLocation(ctx context.Context, a *models.Au
 }
 
 // fire marshals the snapshot and calls engine.Evaluate.
-func (t *SunriseSunsetTrigger) fire(ctx context.Context, a *models.Automation, cfg *SunriseSunsetConfig, lat, lon float64, solarTime, fireTime time.Time) {
+func (t *SunriseSunsetTrigger) fire(ctx context.Context, a *models.AutomationFull, cfg *SunriseSunsetConfig, lat, lon float64, solarTime, fireTime time.Time) {
 	snapshot, err := json.Marshal(sunriseSunsetSnapshot{
 		Event:         cfg.Event,
 		OffsetMinutes: cfg.OffsetMinutes,
