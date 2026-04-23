@@ -97,6 +97,22 @@ ORDER BY name`
 	return out, nil
 }
 
+// GetIDByName returns the surrogate id for the given canonical signal
+// name, or 0 if no such row exists. ADR-009 ingest hot path uses this to
+// translate a name to its stable id once and cache the result, avoiding
+// per-observation text comparisons in tight inner loops.
+func (r *SignalCatalogRepo) GetIDByName(ctx context.Context, name string) (int64, error) {
+	var id int64
+	err := r.db.Pool.QueryRow(ctx, `SELECT id FROM signal_catalog WHERE name = $1`, name).Scan(&id)
+	if err == pgx.ErrNoRows {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, fmt.Errorf("signal-catalog-repo-get-id-by-name %s: %w", name, err)
+	}
+	return id, nil
+}
+
 // GetByName returns the signal_catalog row for the given canonical name,
 // or (nil, nil) if no such row exists. ADR-009: signal names are the
 // stable identity for both ingestion and downstream typed promotion.
