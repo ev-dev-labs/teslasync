@@ -631,58 +631,7 @@ type ExportJobRequest struct {
 	EndDate   *time.Time `json:"end_date,omitempty"`
 }
 
-// MotorSnapshot represents a point-in-time motor/powertrain telemetry reading.
-type MotorSnapshot struct {
-	ID                 int64      `json:"id" db:"id"`
-	VehicleID          int64      `json:"vehicle_id" db:"vehicle_id"`
-	DiState            *string    `json:"di_state,omitempty" db:"di_state"`
-	DiTorque           *float64   `json:"di_torque,omitempty" db:"di_torque"`
-	DiAxleSpeed        *float64   `json:"di_axle_speed,omitempty" db:"di_axle_speed"`
-	DiStatorTemp       *float64   `json:"di_stator_temp,omitempty" db:"di_stator_temp"`
-	PedalPosition      *float64   `json:"pedal_position,omitempty" db:"pedal_position"`
-	BrakePedal         *bool      `json:"brake_pedal,omitempty" db:"brake_pedal"`
-	LateralAccel       *float64   `json:"lateral_accel,omitempty" db:"lateral_accel"`
-	LongitudinalAccel  *float64   `json:"longitudinal_accel,omitempty" db:"longitudinal_accel"`
-	VehicleSpeed       *float64   `json:"vehicle_speed,omitempty" db:"vehicle_speed"`
-	Gear               *string    `json:"gear,omitempty" db:"gear"`
-	DiTorqueActualF    *float64   `json:"di_torque_actual_f,omitempty" db:"di_torque_actual_f"`
-	DiTorqueActualR    *float64   `json:"di_torque_actual_r,omitempty" db:"di_torque_actual_r"`
-	DiTorqueActualREL  *float64   `json:"di_torque_actual_rel,omitempty" db:"di_torque_actual_rel"`
-	DiTorqueActualRER  *float64   `json:"di_torque_actual_rer,omitempty" db:"di_torque_actual_rer"`
-	DiAxleSpeedF       *float64   `json:"di_axle_speed_f,omitempty" db:"di_axle_speed_f"`
-	DiAxleSpeedREL     *float64   `json:"di_axle_speed_rel,omitempty" db:"di_axle_speed_rel"`
-	DiAxleSpeedRER     *float64   `json:"di_axle_speed_rer,omitempty" db:"di_axle_speed_rer"`
-	DiStateF           *string    `json:"di_state_f,omitempty" db:"di_state_f"`
-	DiStateREL         *string    `json:"di_state_rel,omitempty" db:"di_state_rel"`
-	DiStateRER         *string    `json:"di_state_rer,omitempty" db:"di_state_rer"`
-	DiStatorTempF      *float64   `json:"di_stator_temp_f,omitempty" db:"di_stator_temp_f"`
-	DiStatorTempREL    *float64   `json:"di_stator_temp_rel,omitempty" db:"di_stator_temp_rel"`
-	DiStatorTempRER    *float64   `json:"di_stator_temp_rer,omitempty" db:"di_stator_temp_rer"`
-	DiHeatsinkTF       *float64   `json:"di_heatsink_t_f,omitempty" db:"di_heatsink_t_f"`
-	DiHeatsinkTR       *float64   `json:"di_heatsink_t_r,omitempty" db:"di_heatsink_t_r"`
-	DiHeatsinkTREL     *float64   `json:"di_heatsink_t_rel,omitempty" db:"di_heatsink_t_rel"`
-	DiHeatsinkTRER     *float64   `json:"di_heatsink_t_rer,omitempty" db:"di_heatsink_t_rer"`
-	DiInverterTF       *float64   `json:"di_inverter_t_f,omitempty" db:"di_inverter_t_f"`
-	DiInverterTR       *float64   `json:"di_inverter_t_r,omitempty" db:"di_inverter_t_r"`
-	DiInverterTREL     *float64   `json:"di_inverter_t_rel,omitempty" db:"di_inverter_t_rel"`
-	DiInverterTRER     *float64   `json:"di_inverter_t_rer,omitempty" db:"di_inverter_t_rer"`
-	DiMotorCurrentF    *float64   `json:"di_motor_current_f,omitempty" db:"di_motor_current_f"`
-	DiMotorCurrentR    *float64   `json:"di_motor_current_r,omitempty" db:"di_motor_current_r"`
-	DiMotorCurrentREL  *float64   `json:"di_motor_current_rel,omitempty" db:"di_motor_current_rel"`
-	DiMotorCurrentRER  *float64   `json:"di_motor_current_rer,omitempty" db:"di_motor_current_rer"`
-	DiVBatF            *float64   `json:"di_v_bat_f,omitempty" db:"di_v_bat_f"`
-	DiVBatR            *float64   `json:"di_v_bat_r,omitempty" db:"di_v_bat_r"`
-	DiVBatREL          *float64   `json:"di_v_bat_rel,omitempty" db:"di_v_bat_rel"`
-	DiVBatRER          *float64   `json:"di_v_bat_rer,omitempty" db:"di_v_bat_rer"`
-	DiSlaveTorqueCmd   *float64   `json:"di_slave_torque_cmd,omitempty" db:"di_slave_torque_cmd"`
-	Hvil               *string    `json:"hvil,omitempty" db:"hvil"`
-	BrakePedalPos      *float64   `json:"brake_pedal_pos,omitempty" db:"brake_pedal_pos"`
-	CruiseSetSpeed     *float64   `json:"cruise_set_speed,omitempty" db:"cruise_set_speed"`
-	DriveRail          *bool      `json:"drive_rail,omitempty" db:"drive_rail"`
-	LifetimeEnergyGainedRegen *float64 `json:"lifetime_energy_gained_regen,omitempty" db:"lifetime_energy_gained_regen"`
-	LifetimeEnergyUsedDrive   *float64 `json:"lifetime_energy_used_drive,omitempty" db:"lifetime_energy_used_drive"`
-	CreatedAt          time.Time  `json:"created_at" db:"created_at"`
-}
+// MotorSnapshot moved to motor.go (regenerated for post-migration schema).
 
 // ClimateSnapshot moved to climate.go (regenerated for post-migration schema).
 
