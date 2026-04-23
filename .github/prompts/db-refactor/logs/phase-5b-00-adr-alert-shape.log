@@ -1,0 +1,41 @@
+=== PREFLIGHT ===
+HEAD=34cad40cad97bfffb76a2e3d71c74c95aad6260d
+BRANCH=db-refactor/timescaledb-migration-mo-jsonb-at-all
+CLEAN
+=== SCHEMA SURVEY ===
+
+migrations\000142_baseline_typed.up.sql:1107:CREATE TABLE alert_rules (
+
+alerts table in 142: NONE (only alert_rules at line 1107)
+=== CONSUMER SITES ===
+
+internal\database\alert_repo.go:21:func (r *AlertRepo) Create(ctx context.Context, a *models.Alert) error {
+internal\database\alert_repo.go:28:func (r *AlertRepo) GetAll(ctx context.Context, limit, offset int) ([]*models.Alert, error) {
+internal\database\alert_repo.go:37:	var alerts []*models.Alert
+internal\database\alert_repo.go:39:		a := &models.Alert{}
+internal\database\alert_repo.go:62:func (r *AlertRuleRepo) GetAll(ctx context.Context) ([]*models.AlertRule, error) {
+internal\database\alert_repo.go:72:	var rules []*models.AlertRule
+internal\database\alert_repo.go:74:		ar := &models.AlertRule{}
+internal\database\alert_repo.go:91:func (r *AlertRuleRepo) Update(ctx context.Context, id int64, rule *models.AlertRule) error {
+internal\database\alert_repo.go:101:func (r *AlertRuleRepo) GetByID(ctx context.Context, id int64) (*models.AlertRule, error) {
+internal\database\alert_repo.go:105:	ar := &models.AlertRule{}
+internal\database\alert_repo.go:114:func (r *AlertRuleRepo) Create(ctx context.Context, rule *models.AlertRule) error {
+internal\api\alert_handler.go:45:		alerts = []*models.Alert{}
+internal\api\alert_handler.go:72:		rules = []*models.AlertRule{}
+internal\api\alert_handler.go:191:	rule := &models.AlertRule{
+internal\api\alert_handler.go:267:	alert := &models.Alert{
+internal\api\telemetry_alerts.go:147:func (e *TelemetryAlertEvaluator) evaluateLegacy(rule *models.AlertRule, signals map[string]interface{}) (bool, string) {
+internal\api\telemetry_alerts.go:184:func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.AlertRule, vehicleID int64, vin, message string) {
+internal\api\telemetry_alerts.go:207:	alert := &models.Alert{
+internal\api\telemetry_alerts.go:295:func (e *TelemetryAlertEvaluator) dispatchNotifications(rule *models.AlertRule, title, message string) {
+internal\api\telemetry_alerts.go:147:func (e *TelemetryAlertEvaluator) evaluateLegacy(rule *models.AlertRule, signals map[string]interface{}) (bool, string) {
+internal\api\telemetry_alerts.go:184:func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.AlertRule, vehicleID int64, vin, message string) {
+internal\api\telemetry_alerts.go:207:	alert := &models.Alert{
+internal\api\telemetry_alerts.go:295:func (e *TelemetryAlertEvaluator) dispatchNotifications(rule *models.AlertRule, title, message string) {
+
+=== GATE ===
+all sections present, APPROVED-B detected
+=== DRIFT CHECK ===
+no internal/ drift
+EXIT=0
+STATUS=DONE
