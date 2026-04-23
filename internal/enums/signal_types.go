@@ -299,6 +299,16 @@ var SignalRegistry = map[string]SignalInfo{
 	"SettingTirePressureUnit":         {TypeEnum, ftproto.Field_SettingTirePressureUnit},
 }
 
+// AllSignalNames returns every signal name declared in SignalRegistry.
+// Order is not guaranteed; callers that need stability should sort.
+func AllSignalNames() []string {
+	names := make([]string, 0, len(SignalRegistry))
+	for name := range SignalRegistry {
+		names = append(names, name)
+	}
+	return names
+}
+
 // IsCompoundSignal returns true if the signal is a compound type (Location, Doors, etc.)
 // that arrives as a nested JSON object rather than a flat value.
 func IsCompoundSignal(name string) bool {
