@@ -229,15 +229,12 @@ func (t *TelemetrySessionTracker) RecoverSessions(ctx context.Context) {
 		sd := &streamingDrive{
 			DriveID:            d.ID,
 			VehicleID:          d.VehicleID,
-			StartTime:          d.StartDate,
+			StartTime:          d.StartTs,
 			LastSeen:           time.Now().UTC(),
 			accumulatedSignals: make(map[string]interface{}),
 			lastTelemetryWrite: time.Now().UTC(),
 		}
-		if d.StartOdometer != nil {
-			sd.StartOdometer = d.StartOdometer
-			sd.LastOdometer = d.StartOdometer
-		}
+		
 		t.activeDrives[d.VehicleID] = sd
 		log.Info().Int64("drive_id", d.ID).Int64("vehicle_id", d.VehicleID).Msg("session recovery: restored open drive")
 	}
@@ -494,6 +491,7 @@ func signalStr(signals map[string]interface{}, keys ...string) (string, bool) {
 
 func floatPtr(v float64) *float64 { return &v }
 func intPtr(v int) *int           { return &v }
+func int16Ptr(v int) *int16       { i := int16(v); return &i }
 func boolPtr(v bool) *bool        { return &v }
 func strPtr(v string) *string     { return &v }
 func derefInt16AsInt(p *int16) int {
@@ -625,25 +623,14 @@ func (t *TelemetrySessionTracker) startDriveLocked(ctx context.Context, vehicleI
 
 	drive := &models.Drive{
 		VehicleID: vehicleID,
-		StartDate: time.Now().UTC(),
+		StartTs: time.Now().UTC(),
 	}
 	if hasBat {
-		drive.StartBatteryLvl = &batteryLevel
-	}
-	if hasOdo {
-		drive.StartOdometer = floatPtr(odometer)
+		drive.StartBatteryPct = int16Ptr(batteryLevel)
 	}
 	if hasLoc {
-		drive.StartLatitude = floatPtr(lat)
-		drive.StartLongitude = floatPtr(lon)
-	}
-	// Populate start_range_km from best available range signal
-	if ratedRange > 0 {
-		drive.StartRangeKm = floatPtr(ratedRange)
-	} else if idealRange > 0 {
-		drive.StartRangeKm = floatPtr(idealRange)
-	} else if estRange > 0 {
-		drive.StartRangeKm = floatPtr(estRange)
+		drive.StartLat = floatPtr(lat)
+		drive.StartLon = floatPtr(lon)
 	}
 
 	if err := t.driveRepo.Create(ctx, drive); err != nil {
@@ -1378,11 +1365,11 @@ func (t *TelemetrySessionTracker) BackfillAddresses(ctx context.Context) {
 			break
 		}
 
-		needStart := (d.StartAddress == nil || *d.StartAddress == "") && d.StartLatitude != nil && d.StartLongitude != nil
-		needEnd := (d.EndAddress == nil || *d.EndAddress == "") && d.EndLatitude != nil && d.EndLongitude != nil
+		needStart := (d.StartAddress == nil || *d.StartAddress == "") && d.StartLat != nil && d.StartLon != nil
+		needEnd := (d.EndAddress == nil || *d.EndAddress == "") && d.EndLat != nil && d.EndLon != nil
 
 		if needStart {
-			t.resolveAndUpdateAddress(d.ID, *d.StartLatitude, *d.StartLongitude, true)
+			t.resolveAndUpdateAddress(d.ID, *d.StartLat, *d.StartLon, true)
 			filled++
 			AddressBackfillCompleted.Inc()
 			AddressBackfillRemaining.Dec()
@@ -1393,7 +1380,7 @@ func (t *TelemetrySessionTracker) BackfillAddresses(ctx context.Context) {
 			if ctx.Err() != nil {
 				break
 			}
-			t.resolveAndUpdateAddress(d.ID, *d.EndLatitude, *d.EndLongitude, false)
+			t.resolveAndUpdateAddress(d.ID, *d.EndLat, *d.EndLon, false)
 			filled++
 			AddressBackfillCompleted.Inc()
 			AddressBackfillRemaining.Dec()
@@ -1442,15 +1429,8 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 
 		session := &models.ChargingSession{
 			VehicleID:         vehicleID,
-			StartDate:         time.Now().UTC(),
-			StartBatteryLevel: batteryLevel,
-		}
-		if startRange > 0 {
-			session.StartRangeKm = floatPtr(startRange)
-		}
-		if hasLoc {
-			session.Latitude = floatPtr(lat)
-			session.Longitude = floatPtr(lon)
+			StartTs:           time.Now().UTC(),
+			StartBatteryPct:   int16Ptr(batteryLevel),
 		}
 
 		if err := t.chargeRepo.Create(ctx, session); err != nil {

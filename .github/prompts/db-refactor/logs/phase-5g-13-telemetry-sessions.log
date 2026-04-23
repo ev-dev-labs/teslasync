@@ -1,0 +1,77 @@
+=== SURVEY ===
+File: internal/api/telemetry_sessions.go
+Errors found (model field renames):
+
+models.Drive:
+  L232:  d.StartDate -> d.StartTs
+  L237-239: d.StartOdometer -> DELETE (field removed)
+  L628:  StartDate: -> StartTs:
+  L631:  drive.StartBatteryLvl = &batteryLevel -> StartBatteryPct (*int16)
+  L634:  drive.StartOdometer -> DELETE
+  L637:  drive.StartLatitude -> drive.StartLat
+  L638:  drive.StartLongitude -> drive.StartLon
+  L640-647: drive.StartRangeKm -> DELETE (entire block)
+  L1381: d.StartLatitude/d.StartLongitude -> d.StartLat/d.StartLon
+  L1382: d.EndLatitude/d.EndLongitude -> d.EndLat/d.EndLon
+  L1385: *d.StartLatitude, *d.StartLongitude -> *d.StartLat, *d.StartLon
+  L1396: *d.EndLatitude, *d.EndLongitude -> *d.EndLat, *d.EndLon
+
+models.ChargingSession:
+  L1445: StartDate: -> StartTs:
+  L1446: StartBatteryLevel: batteryLevel -> StartBatteryPct (*int16)
+  L1448-1449: session.StartRangeKm -> DELETE
+  L1451-1454: session.Latitude/session.Longitude -> DELETE (fields removed from model)
+
+=== REASONING ===
+The prompt describes 2 ChargingSession errors but there are also many Drive field renames.
+All references to old model fields must be updated:
+- StartDate -> StartTs
+- StartBatteryLvl/StartBatteryLevel -> StartBatteryPct (*int16, need int16Ptr helper)
+- StartOdometer -> DELETE (no equivalent)
+- StartLatitude/EndLatitude -> StartLat/EndLat
+- StartLongitude/EndLongitude -> StartLon/EndLon
+- StartRangeKm -> DELETE
+- Latitude/Longitude on ChargingSession -> DELETE (field removed)
+
+Type change: int -> *int16 requires an int16Ptr helper function.
+
+=== CHANGES ===
+=== GATE ===
+# github.com/ev-dev-labs/teslasync/internal/automation
+internal\automation\engine.go:252:21: a.AutoDisabled undefined (type *models.Automation has no field or method AutoDisabled)
+internal\automation\engine.go:256:28: a.AutoDisabled undefined (type *models.Automation has no field or method AutoDisabled)
+internal\automation\engine.go:262:31: a.MaxExecutionsHour undefined (type *models.Automation has no field or method MaxExecutionsHour)
+internal\automation\engine.go:263:59: a.MaxExecutionsHour undefined (type *models.Automation has no field or method MaxExecutionsHour)
+internal\automation\engine.go:310:25: a.TriggerType undefined (type *models.Automation has no field or method TriggerType)
+internal\automation\engine.go:324:40: a.Actions undefined (type *models.Automation has no field or method Actions)
+internal\automation\engine.go:335:62: a.StopOnFailure undefined (type *models.Automation has no field or method StopOnFailure)
+internal\automation\engine.go:373:46: a.TriggerType undefined (type *models.Automation has no field or method TriggerType)
+internal\automation\engine.go:394:11: a.Conditions undefined (type *models.Automation has no field or method Conditions)
+internal\automation\engine.go:399:29: a.Conditions undefined (type *models.Automation has no field or method Conditions)
+internal\automation\engine.go:480:52: a.LastTriggeredAt undefined (type *models.Automation has no field or method LastTriggeredAt)
+internal\automation\engine.go:521:22: a.TriggerType undefined (type *models.Automation has no field or method TriggerType)
+# github.com/ev-dev-labs/teslasync/internal/worker
+internal\worker\worker.go:226:28: w.settingsRepo.GetPollingConfig undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".SettingsRepo has no field or method GetPollingConfig)
+internal\worker\worker.go:338:4: unknown field VehicleID in struct literal of type models.Vehicle
+internal\worker\worker.go:341:4: unknown field State in struct literal of type models.Vehicle
+internal\worker\worker.go:342:4: unknown field Healthy in struct literal of type models.Vehicle
+internal\worker\worker.go:435:31: w.pollingConfig.EnabledVehicleDataEndpoints undefined (type *models.PollingConfig has no field or method EnabledVehicleDataEndpoints)
+internal\worker\worker.go:440:27: w.vehicleRepo.UpdateState undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".VehicleRepo has no field or method UpdateState)
+internal\worker\worker.go:479:27: w.vehicleRepo.UpdateState undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".VehicleRepo has no field or method UpdateState)
+internal\worker\worker.go:479:64: vehicle.State undefined (type *models.Vehicle has no field or method State)
+internal\worker\worker.go:492:26: w.vehicleRepo.UpdateState undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".VehicleRepo has no field or method UpdateState)
+internal\worker\worker.go:498:22: w.posRepo.Insert undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".PositionRepo has no field or method Insert)
+internal\worker\worker.go:534:3: unknown field Odometer in struct literal of type models.Position
+internal\worker\worker.go:535:3: unknown field BatteryLvl in struct literal of type models.Position
+internal\worker\worker.go:540:5: p.Speed undefined (type *models.Position has no field or method Speed)
+internal\worker\worker.go:543:4: p.Power undefined (type *models.Position has no field or method Power)
+internal\worker\worker.go:545:14: cannot use &heading (value of type *int) as *int16 value in assignment
+internal\worker\worker.go:548:4: p.IdealRange undefined (type *models.Position has no field or method IdealRange)
+internal\worker\worker.go:550:4: p.RatedRange undefined (type *models.Position has no field or method RatedRange)
+internal\worker\worker.go:552:4: p.InsideTemp undefined (type *models.Position has no field or method InsideTemp)
+internal\worker\worker.go:554:4: p.OutsideTemp undefined (type *models.Position has no field or method OutsideTemp)
+internal\worker\worker.go:556:4: p.FanStatus undefined (type *models.Position has no field or method FanStatus)
+internal\worker\worker.go:558:4: p.IsClimate undefined (type *models.Position has no field or method IsClimate)
+FILE_ERROR_COUNT=0
+EXIT=0
+STATUS=DONE
