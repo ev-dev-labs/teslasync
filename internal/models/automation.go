@@ -48,6 +48,13 @@ type AutomationStep struct {
 	Kind         string `db:"kind"          json:"kind"`
 }
 
+// StepOrdering is a (stepID, step_order) tuple used to reorder steps within a
+// single automation in one transactional batch (see AutomationStepRepo.UpdateOrder).
+type StepOrdering struct {
+	ID        int64 `json:"id"`
+	StepOrder int   `json:"step_order"`
+}
+
 // AutomationFull is the fully-hydrated aggregate used by list/detail endpoints
 // that need the parent row together with its ordered steps. CTI children are
 // attached separately by the step-children loader (ADR-004).

@@ -33,3 +33,27 @@ func (r *AutomationStepRepo) Insert(ctx context.Context, s *models.AutomationSte
 	}
 	return nil
 }
+
+// UpdateOrder reorders steps within a single automation in one transaction.
+// Each entry in `ordering` is a (stepID, step_order) tuple; the automationID
+// scope guard prevents callers from accidentally renumbering steps that belong
+// to a different automation.
+func (r *AutomationStepRepo) UpdateOrder(ctx context.Context, automationID int64, ordering []models.StepOrdering) error {
+	tx, err := r.db.Pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("automation-steps-repo-update-order: begin: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	const query = `UPDATE automation_steps SET step_order=$1 WHERE id=$2 AND automation_id=$3`
+	for _, o := range ordering {
+		if _, err := tx.Exec(ctx, query, o.StepOrder, o.ID, automationID); err != nil {
+			return fmt.Errorf("automation-steps-repo-update-order: step %d: %w", o.ID, err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("automation-steps-repo-update-order: commit: %w", err)
+	}
+	return nil
+}
