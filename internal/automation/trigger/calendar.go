@@ -18,7 +18,7 @@ import (
 
 // CalendarRepo is the subset of database.AutomationRepo needed by CalendarTrigger.
 type CalendarRepo interface {
-	GetByTriggerType(ctx context.Context, triggerType string) ([]*models.Automation, error)
+	GetByTriggerType(ctx context.Context, triggerType string) ([]*models.AutomationFull, error)
 	SetAutoDisabled(ctx context.Context, id int64, reason string) error
 }
 
@@ -166,8 +166,8 @@ func (t *CalendarTrigger) tick(ctx context.Context) {
 	}
 
 	// Group automations by vehicleID to fetch entries once per vehicle.
-	byVehicle := make(map[int64][]*models.Automation)
-	var noVehicle []*models.Automation
+	byVehicle := make(map[int64][]*models.AutomationFull)
+	var noVehicle []*models.AutomationFull
 	for _, a := range automations {
 		if a.VehicleID == nil {
 			noVehicle = append(noVehicle, a)
@@ -210,8 +210,8 @@ func (t *CalendarTrigger) tick(ctx context.Context) {
 }
 
 // evaluateAutomation checks one automation against its vehicle's calendar entries.
-func (t *CalendarTrigger) evaluateAutomation(ctx context.Context, a *models.Automation, entries []CalendarEntry, lastTick, now time.Time) {
-	cfg, err := parseCalendarConfig(a.TriggerConfig)
+func (t *CalendarTrigger) evaluateAutomation(ctx context.Context, a *models.AutomationFull, entries []CalendarEntry, lastTick, now time.Time) {
+	cfg, err := parseCalendarConfig(a.TriggerConfig())
 	if err != nil {
 		t.logger.Warn().Err(err).
 			Int64("automation_id", a.ID).
@@ -282,7 +282,7 @@ func calendarDedupKey(automationID int64, fireTime time.Time) string {
 }
 
 // fire marshals the snapshot and calls engine.Evaluate.
-func (t *CalendarTrigger) fire(ctx context.Context, a *models.Automation, cfg *CalendarConfig, entry CalendarEntry, fireTime time.Time) {
+func (t *CalendarTrigger) fire(ctx context.Context, a *models.AutomationFull, cfg *CalendarConfig, entry CalendarEntry, fireTime time.Time) {
 	snapshot, err := json.Marshal(calendarSnapshot{
 		EventTitle:        entry.Title,
 		EventStart:        entry.StartTime.Format(time.RFC3339),
