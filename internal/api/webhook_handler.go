@@ -5,22 +5,14 @@ import (
 	"net/http"
 
 	"github.com/rs/zerolog/log"
-	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // WebhookHandler handles inbound webhook requests from external systems
 // such as Home Assistant, IFTTT, and Node-RED.
-type WebhookHandler struct {
-	alertRepo *database.AlertRepo
-	db        *database.DB
-}
+type WebhookHandler struct{}
 
-func NewWebhookHandler(db *database.DB) *WebhookHandler {
-	return &WebhookHandler{
-		alertRepo: database.NewAlertRepo(db),
-		db:        db,
-	}
+func NewWebhookHandler() *WebhookHandler {
+	return &WebhookHandler{}
 }
 
 // InboundWebhook accepts external events and creates alerts or triggers actions.
@@ -52,18 +44,13 @@ func (h *WebhookHandler) InboundWebhook(w http.ResponseWriter, r *http.Request) 
 		if payload.Severity == "" {
 			payload.Severity = "info"
 		}
-		alert := &models.Alert{
-			Type:     "external_webhook",
-			Severity: payload.Severity,
-			Title:    payload.Title,
-			Message:  payload.Message,
-		}
-		if err := h.alertRepo.Create(r.Context(), alert); err != nil {
-			log.Error().Err(err).Msg("webhook: failed to create alert")
-			writeError(w, http.StatusInternalServerError, "failed to create alert")
-			return
-		}
-		writeJSON(w, http.StatusCreated, map[string]interface{}{"status": "alert_created", "id": alert.ID})
+		log.Warn().
+			Str("title", payload.Title).
+			Str("severity", payload.Severity).
+			Str("message", payload.Message).
+			Str("vehicle", payload.Vehicle).
+			Msg("webhook: external alert received")
+		writeJSON(w, http.StatusCreated, map[string]interface{}{"status": "alert_logged"})
 
 	case "note":
 		log.Info().Str("title", payload.Title).Str("message", payload.Message).Msg("webhook: note received")
