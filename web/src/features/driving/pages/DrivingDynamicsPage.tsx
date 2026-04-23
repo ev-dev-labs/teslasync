@@ -105,15 +105,15 @@ export default function DrivingDynamicsPage() {
     >
       <div className="space-y-6">
         <LiveMotorStatus motorLatest={motorLatest} convertTemp={convertTemp} tempUnit={tempUnit} />
-        <GForcePanel />
-        <PedalUsage />
+        <GForcePanel vehicleId={vehicleId} />
+        <PedalUsage vehicleId={vehicleId} />
         <SpeedGearPanel
           motorLatest={motorLatest}
           filteredDrives={filteredDrives}
           convertSpeed={convertSpeed}
           speedUnit={speedUnit}
         />
-        <AutopilotSection />
+        <AutopilotSection vehicleId={vehicleId} />
         <MotorHistoryCharts motorHistory={motorHistory} convertSpeed={convertSpeed} speedUnit={speedUnit} />
         <MotorEfficiencyInsights
           motorStats={motorStats}
