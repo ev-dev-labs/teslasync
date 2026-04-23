@@ -6,15 +6,16 @@ import (
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/rs/zerolog/log"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
-// AlertHandler handles alert and alert rule HTTP requests.
+// AlertHandler handles alert rule CRUD and test-notification HTTP requests.
+// Alert firing/listing moved to the notifications subsystem (ADR-010).
 type AlertHandler struct {
-	alertRepo     *database.AlertRepo
 	alertRuleRepo *database.AlertRuleRepo
 	notifRepo     *database.NotificationRepo
 	eventHub      *EventHub
@@ -24,7 +25,6 @@ type AlertHandler struct {
 
 func NewAlertHandler(db *database.DB, hub *EventHub, mc pahomqtt.Client, store *signal.Store) *AlertHandler {
 	return &AlertHandler{
-		alertRepo:     database.NewAlertRepo(db),
 		alertRuleRepo: database.NewAlertRuleRepo(db),
 		notifRepo:     database.NewNotificationRepo(db),
 		eventHub:      hub,
@@ -33,29 +33,28 @@ func NewAlertHandler(db *database.DB, hub *EventHub, mc pahomqtt.Client, store *
 	}
 }
 
+// List returns recent notification logs. Alert rows migrated to
+// notifications (ADR-010 Option B); this endpoint is kept for backward
+// compatibility with the frontend /alerts route.
 func (h *AlertHandler) List(w http.ResponseWriter, r *http.Request) {
 	limit, offset := pagination(r)
-	alerts, err := h.alertRepo.GetAll(r.Context(), limit, offset)
+	logs, err := h.notifRepo.GetLogs(r.Context(), limit, offset)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to list alerts")
+		log.Error().Err(err).Msg("failed to list notification logs")
 		writeError(w, http.StatusInternalServerError, "failed to list alerts")
 		return
 	}
-	if alerts == nil {
-		alerts = []*models.Alert{}
+	if logs == nil {
+		logs = []*models.NotificationLog{}
 	}
-	writeJSON(w, http.StatusOK, alerts)
+	writeJSON(w, http.StatusOK, logs)
 }
 
+// MarkRead is a no-op kept for backward compatibility. The notifications
+// table is append-only (ADR-010); "read" status is tracked client-side.
 func (h *AlertHandler) MarkRead(w http.ResponseWriter, r *http.Request) {
-	id, err := urlParamInt64(r, "alertID")
-	if err != nil {
+	if _, err := urlParamInt64(r, "alertID"); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid alert ID")
-		return
-	}
-	if err := h.alertRepo.MarkRead(r.Context(), id); err != nil {
-		log.Error().Err(err).Int64("id", id).Msg("failed to mark alert read")
-		writeError(w, http.StatusInternalServerError, "failed to mark alert read")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
@@ -89,16 +88,19 @@ func (h *AlertHandler) UpdateRule(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var body struct {
-		Name           *string          `json:"name"`
-		Type           *string          `json:"type"`
-		Enabled        *bool            `json:"enabled"`
-		Threshold      *float64         `json:"threshold"`
-		Severity       *string          `json:"severity"`
-		Conditions     *json.RawMessage `json:"conditions"`
-		CooldownMin    *int             `json:"cooldown_min"`
-		MsgTemplate    *string          `json:"msg_template"`
-		NotifyChannels *[]int64         `json:"notify_channels"`
-		Tags           *[]string        `json:"tags"`
+		Name        *string  `json:"name"`
+		Description *string  `json:"description"`
+		Enabled     *bool    `json:"enabled"`
+		VehicleID   *int64   `json:"vehicle_id"`
+		SignalName  *string  `json:"signal_name"`
+		Op          *string  `json:"op"`
+		ValueNum    *float64 `json:"value_num"`
+		ValueText   *string  `json:"value_text"`
+		ValueBool   *bool    `json:"value_bool"`
+		ValueMin    *float64 `json:"value_min"`
+		ValueMax    *float64 `json:"value_max"`
+		Severity    *string  `json:"severity"`
+		CooldownMin *int     `json:"cooldown_min"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -109,32 +111,41 @@ func (h *AlertHandler) UpdateRule(w http.ResponseWriter, r *http.Request) {
 	if body.Name != nil {
 		existing.Name = *body.Name
 	}
-	if body.Type != nil {
-		existing.Type = *body.Type
+	if body.Description != nil {
+		existing.Description = body.Description
 	}
 	if body.Enabled != nil {
 		existing.Enabled = *body.Enabled
 	}
-	if body.Threshold != nil {
-		existing.Threshold = *body.Threshold
+	if body.VehicleID != nil {
+		existing.VehicleID = body.VehicleID
+	}
+	if body.SignalName != nil {
+		existing.SignalName = *body.SignalName
+	}
+	if body.Op != nil {
+		existing.Op = *body.Op
+	}
+	if body.ValueNum != nil {
+		existing.ValueNum = body.ValueNum
+	}
+	if body.ValueText != nil {
+		existing.ValueText = body.ValueText
+	}
+	if body.ValueBool != nil {
+		existing.ValueBool = body.ValueBool
+	}
+	if body.ValueMin != nil {
+		existing.ValueMin = body.ValueMin
+	}
+	if body.ValueMax != nil {
+		existing.ValueMax = body.ValueMax
 	}
 	if body.Severity != nil {
 		existing.Severity = *body.Severity
 	}
-	if body.Conditions != nil {
-		existing.Conditions = *body.Conditions
-	}
 	if body.CooldownMin != nil {
 		existing.CooldownMin = *body.CooldownMin
-	}
-	if body.MsgTemplate != nil {
-		existing.MsgTemplate = *body.MsgTemplate
-	}
-	if body.NotifyChannels != nil {
-		existing.NotifyChannels = *body.NotifyChannels
-	}
-	if body.Tags != nil {
-		existing.Tags = *body.Tags
 	}
 
 	if err := h.alertRuleRepo.Update(r.Context(), id, existing); err != nil {
@@ -154,17 +165,19 @@ func (h *AlertHandler) UpdateRule(w http.ResponseWriter, r *http.Request) {
 
 func (h *AlertHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Name           string          `json:"name"`
-		Type           string          `json:"type"`
-		Enabled        bool            `json:"enabled"`
-		Threshold      float64         `json:"threshold"`
-		Severity       string          `json:"severity"`
-		VehicleID      *int64          `json:"vehicle_id"`
-		Conditions     json.RawMessage `json:"conditions"`
-		CooldownMin    int             `json:"cooldown_min"`
-		MsgTemplate    string          `json:"msg_template"`
-		NotifyChannels []int64         `json:"notify_channels"`
-		Tags           []string        `json:"tags"`
+		Name        string   `json:"name"`
+		Description *string  `json:"description"`
+		Enabled     bool     `json:"enabled"`
+		VehicleID   *int64   `json:"vehicle_id"`
+		SignalName  string   `json:"signal_name"`
+		Op          string   `json:"op"`
+		ValueNum    *float64 `json:"value_num"`
+		ValueText   *string  `json:"value_text"`
+		ValueBool   *bool    `json:"value_bool"`
+		ValueMin    *float64 `json:"value_min"`
+		ValueMax    *float64 `json:"value_max"`
+		Severity    string   `json:"severity"`
+		CooldownMin int      `json:"cooldown_min"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -174,8 +187,13 @@ func (h *AlertHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "name is required")
 		return
 	}
-	if body.Type == "" {
-		body.Type = "custom"
+	if body.SignalName == "" {
+		writeError(w, http.StatusBadRequest, "signal_name is required")
+		return
+	}
+	if body.Op == "" {
+		writeError(w, http.StatusBadRequest, "op is required")
+		return
 	}
 	if body.Severity == "" {
 		body.Severity = "warning"
@@ -189,19 +207,19 @@ func (h *AlertHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rule := &models.AlertRule{
-		Name:           body.Name,
-		Type:           body.Type,
-		Enabled:        body.Enabled,
-		Threshold:      body.Threshold,
-		Conditions:     body.Conditions,
-		CooldownMin:    body.CooldownMin,
-		Severity:       body.Severity,
-		MsgTemplate:    body.MsgTemplate,
-		NotifyChannels: body.NotifyChannels,
-		Tags:           body.Tags,
-	}
-	if body.VehicleID != nil {
-		rule.VehicleID = body.VehicleID
+		Name:        body.Name,
+		Description: body.Description,
+		Enabled:     body.Enabled,
+		VehicleID:   body.VehicleID,
+		SignalName:  body.SignalName,
+		Op:          body.Op,
+		ValueNum:    body.ValueNum,
+		ValueText:   body.ValueText,
+		ValueBool:   body.ValueBool,
+		ValueMin:    body.ValueMin,
+		ValueMax:    body.ValueMax,
+		Severity:    body.Severity,
+		CooldownMin: body.CooldownMin,
 	}
 
 	if err := h.alertRuleRepo.Create(r.Context(), rule); err != nil {
@@ -229,12 +247,13 @@ func (h *AlertHandler) DeleteRule(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
 
-// TestRule fires a test alert for a rule — creates a test alert in DB and broadcasts via SSE.
+// TestRule fires a test notification for a rule — creates a notification log
+// entry and broadcasts via SSE.
 func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Name           string  `json:"name"`
 		Severity       string  `json:"severity"`
-		MsgTemplate    string  `json:"msg_template"`
+		Message        string  `json:"message"`
 		NotifyChannels []int64 `json:"notify_channels"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -247,7 +266,7 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 	if body.Severity == "" {
 		body.Severity = "info"
 	}
-	message := body.MsgTemplate
+	message := body.Message
 	if message == "" {
 		message = "This is a test notification from Alert Studio"
 	}
@@ -263,28 +282,29 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Create test alert in DB
-	alert := &models.Alert{
-		Type:     "test",
-		Severity: body.Severity,
-		Title:    "[TEST] " + body.Name,
-		Message:  message,
+	title := "[TEST] " + body.Name
+
+	// Create a notification log entry
+	nlog := &models.NotificationLog{
+		Title:   title,
+		Message: message,
+		Status:  "sent",
 	}
-	if err := h.alertRepo.Create(r.Context(), alert); err != nil {
-		log.Error().Err(err).Msg("failed to create test alert")
-		writeError(w, http.StatusInternalServerError, "failed to create test alert")
+	if err := h.notifRepo.CreateLog(r.Context(), nlog); err != nil {
+		log.Error().Err(err).Msg("failed to create test notification log")
+		writeError(w, http.StatusInternalServerError, "failed to create test notification")
 		return
 	}
 
 	// Broadcast via SSE
 	if h.eventHub != nil {
 		h.eventHub.Broadcast("alert", map[string]interface{}{
-			"id":        alert.ID,
+			"id":        nlog.ID,
 			"type":      "test",
 			"severity":  body.Severity,
-			"title":     "[TEST] " + body.Name,
+			"title":     title,
 			"message":   message,
-			"timestamp": alert.CreatedAt,
+			"timestamp": nlog.CreatedAt,
 			"is_test":   true,
 		})
 	}
@@ -300,7 +320,7 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 			req := &notification.Request{
 				ChannelType: ch.Type,
 				Config:      ch.Config,
-				Title:       "[TEST] " + body.Name,
+				Title:       title,
 				Message:     message,
 				ChannelID:   ch.ID,
 			}
@@ -313,11 +333,13 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 		channels, err := h.notifRepo.GetAllChannels(r.Context())
 		if err == nil {
 			for _, ch := range channels {
-				if !ch.Enabled { continue }
+				if !ch.Enabled {
+					continue
+				}
 				req := &notification.Request{
 					ChannelType: ch.Type,
 					Config:      ch.Config,
-					Title:       "[TEST] " + body.Name,
+					Title:       title,
 					Message:     message,
 					ChannelID:   ch.ID,
 				}
@@ -330,7 +352,6 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"status":     "sent",
-		"alert":      alert,
 		"dispatched": dispatched,
 		"message":    "Test notification sent — check your browser toast and notification channels",
 	})
