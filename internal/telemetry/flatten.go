@@ -153,7 +153,31 @@ func toInt(v any) (int, error) {
 		return 0, fmt.Errorf("unexpected type %T", v)
 	}
 }
-func flattenShiftState(raw any) ([]Atomic, error)        { return nil, nil }
+func flattenShiftState(raw any) ([]Atomic, error) {
+	if raw == nil {
+		return nil, nil
+	}
+	s, ok := raw.(string)
+	if !ok {
+		return nil, fmt.Errorf("ShiftState: expected string, got %T", raw)
+	}
+	var gear string
+	switch s {
+	case "P", "p", "Park", "park":
+		gear = "park"
+	case "R", "r", "Reverse", "reverse":
+		gear = "reverse"
+	case "N", "n", "Neutral", "neutral":
+		gear = "neutral"
+	case "D", "d", "Drive", "drive":
+		gear = "drive"
+	case "":
+		return nil, nil
+	default:
+		return nil, fmt.Errorf("ShiftState: unknown value %q", s)
+	}
+	return []Atomic{{Name: "Gear", Value: gear}}, nil
+}
 func flattenPassthrough(name string, raw any) ([]Atomic, error) {
 	return []Atomic{{Name: name, Value: raw}}, nil
 }
