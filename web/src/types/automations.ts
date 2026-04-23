@@ -113,6 +113,13 @@ export interface AutomationStepActionVehicleCommand extends AutomationStepBase {
   command_params: Record<string, unknown>;
 }
 
+export interface AutomationStepActionSetState extends AutomationStepBase {
+  kind: 'action_set_state';
+  lane: 'action';
+  state_key: string;
+  state_value: string;
+}
+
 // Discriminated union — children added by prompts 13-23
 export type AutomationStep =
   | AutomationStepTriggerSignal
@@ -125,6 +132,7 @@ export type AutomationStep =
   | AutomationStepConditionDayOfWeek
   | AutomationStepActionNotification
   | AutomationStepActionVehicleCommand
+  | AutomationStepActionSetState
   | AutomationStepBase;
 
 export interface AutomationFull extends Automation {
