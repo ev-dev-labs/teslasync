@@ -18,25 +18,25 @@ func NewAPICallLogRepo(db *DB) *APICallLogRepo {
 }
 
 func (r *APICallLogRepo) Create(ctx context.Context, l *models.APICallLog) error {
-	if l.Source == "" {
-		l.Source = "tesla_api"
+	if l.Service == "" {
+		l.Service = "tesla-fleet"
 	}
-	query := `INSERT INTO api_call_logs (method, url, status_code, request_body, response_body, duration_ms, error, source, created_at)
+	query := `INSERT INTO api_call_logs (ts, vehicle_id, service, http_method, endpoint, status_code, duration_ms, error_message, rate_limited)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`
 	now := time.Now().UTC()
-	return r.db.Pool.QueryRow(ctx, query, l.Method, l.URL, l.StatusCode, l.RequestBody, l.ResponseBody, l.DurationMs, l.Error, l.Source, now).Scan(&l.ID)
+	return r.db.Pool.QueryRow(ctx, query, now, l.VehicleID, l.Service, l.HTTPMethod, l.Endpoint, l.StatusCode, l.DurationMs, l.ErrorMessage, l.RateLimited).Scan(&l.ID)
 }
 
 func (r *APICallLogRepo) GetAll(ctx context.Context, limit, offset int, method, statusFilter, endpoint, startDate, endDate string) ([]*models.APICallLog, int, error) {
 	// Build dynamic query with filters
-	query := `SELECT id, method, url, status_code, request_body, response_body, duration_ms, error, source, created_at FROM api_call_logs WHERE 1=1`
+	query := `SELECT id, ts, vehicle_id, service, http_method, endpoint, status_code, duration_ms, error_message, rate_limited FROM api_call_logs WHERE 1=1`
 	countQuery := `SELECT COUNT(*) FROM api_call_logs WHERE 1=1`
 	args := []interface{}{}
 	argIdx := 1
 
 	if method != "" {
-		query += ` AND method = $` + itoa(argIdx)
-		countQuery += ` AND method = $` + itoa(argIdx)
+		query += ` AND http_method = $` + itoa(argIdx)
+		countQuery += ` AND http_method = $` + itoa(argIdx)
 		args = append(args, method)
 		argIdx++
 	}
@@ -57,20 +57,20 @@ func (r *APICallLogRepo) GetAll(ctx context.Context, limit, offset int, method, 
 		}
 	}
 	if endpoint != "" {
-		query += ` AND url ILIKE $` + itoa(argIdx)
-		countQuery += ` AND url ILIKE $` + itoa(argIdx)
+		query += ` AND endpoint ILIKE $` + itoa(argIdx)
+		countQuery += ` AND endpoint ILIKE $` + itoa(argIdx)
 		args = append(args, "%"+endpoint+"%")
 		argIdx++
 	}
 	if startDate != "" {
-		query += ` AND created_at >= $` + itoa(argIdx)
-		countQuery += ` AND created_at >= $` + itoa(argIdx)
+		query += ` AND ts >= $` + itoa(argIdx)
+		countQuery += ` AND ts >= $` + itoa(argIdx)
 		args = append(args, startDate)
 		argIdx++
 	}
 	if endDate != "" {
-		query += ` AND created_at <= $` + itoa(argIdx)
-		countQuery += ` AND created_at <= $` + itoa(argIdx)
+		query += ` AND ts <= $` + itoa(argIdx)
+		countQuery += ` AND ts <= $` + itoa(argIdx)
 		args = append(args, endDate)
 		argIdx++
 	}
@@ -83,7 +83,7 @@ func (r *APICallLogRepo) GetAll(ctx context.Context, limit, offset int, method, 
 	}
 
 	// Add ordering and pagination
-	query += ` ORDER BY created_at DESC LIMIT $` + itoa(argIdx) + ` OFFSET $` + itoa(argIdx+1)
+	query += ` ORDER BY ts DESC LIMIT $` + itoa(argIdx) + ` OFFSET $` + itoa(argIdx+1)
 	args = append(args, limit, offset)
 
 	rows, err := r.db.Pool.Query(ctx, query, args...)
@@ -95,7 +95,7 @@ func (r *APICallLogRepo) GetAll(ctx context.Context, limit, offset int, method, 
 	var logs []*models.APICallLog
 	for rows.Next() {
 		l := &models.APICallLog{}
-		if err := rows.Scan(&l.ID, &l.Method, &l.URL, &l.StatusCode, &l.RequestBody, &l.ResponseBody, &l.DurationMs, &l.Error, &l.Source, &l.CreatedAt); err != nil {
+		if err := rows.Scan(&l.ID, &l.Ts, &l.VehicleID, &l.Service, &l.HTTPMethod, &l.Endpoint, &l.StatusCode, &l.DurationMs, &l.ErrorMessage, &l.RateLimited); err != nil {
 			return nil, 0, err
 		}
 		logs = append(logs, l)
@@ -112,9 +112,9 @@ func (r *APICallLogRepo) GetStats(ctx context.Context) (map[string]interface{}, 
 	err := r.db.Pool.QueryRow(ctx, `
 		SELECT
 			COUNT(*),
-			COUNT(*) FILTER (WHERE status_code >= 400 OR error IS NOT NULL),
+			COUNT(*) FILTER (WHERE status_code >= 400 OR error_message IS NOT NULL),
 			COALESCE(AVG(duration_ms), 0),
-			COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '24 hours')
+			COUNT(*) FILTER (WHERE ts >= NOW() - INTERVAL '24 hours')
 		FROM api_call_logs
 	`).Scan(&total, &errorCount, &avgDuration, &last24h)
 	if err != nil {
@@ -131,7 +131,7 @@ func (r *APICallLogRepo) GetStats(ctx context.Context) (map[string]interface{}, 
 	stats["last_24h"] = last24h
 
 	// Calls by method (still needs its own query for the grouped result)
-	rows, err := r.db.Pool.Query(ctx, `SELECT method, COUNT(*) as count FROM api_call_logs GROUP BY method ORDER BY count DESC`)
+	rows, err := r.db.Pool.Query(ctx, `SELECT http_method, COUNT(*) as count FROM api_call_logs GROUP BY http_method ORDER BY count DESC`)
 	if err != nil {
 		return nil, err
 	}
