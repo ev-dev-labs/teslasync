@@ -98,6 +98,13 @@ export interface AutomationStepConditionDayOfWeek extends AutomationStepBase {
   timezone: string;
 }
 
+export interface AutomationStepActionNotification extends AutomationStepBase {
+  kind: 'action_notification';
+  lane: 'action';
+  channel_id: number;
+  template: string;
+}
+
 // Discriminated union — children added by prompts 13-23
 export type AutomationStep =
   | AutomationStepTriggerSignal
@@ -108,6 +115,7 @@ export type AutomationStep =
   | AutomationStepConditionTimeWindow
   | AutomationStepConditionGeofence
   | AutomationStepConditionDayOfWeek
+  | AutomationStepActionNotification
   | AutomationStepBase;
 
 export interface AutomationFull extends Automation {
