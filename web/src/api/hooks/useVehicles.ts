@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import type { Vehicle } from '@/types/vehicle';
-import type { VehicleState, VehicleStatus } from '../types';
+import type { VehicleState, VehicleStatus, VehicleLiveState } from '../types';
 
 export const vehicleKeys = {
   all: ['vehicles'] as const,
@@ -26,6 +26,16 @@ export function useVehicles() {
     queryFn: () => request<Vehicle[]>('/vehicles'),
     staleTime: 30_000,
     select: safeArray,
+  });
+}
+
+export function useVehicleLiveState(vehicleId: number | string | undefined) {
+  return useQuery({
+    queryKey: ['vehicle-live-state', vehicleId],
+    queryFn: () => request<VehicleLiveState>(`/vehicles/${vehicleId}/live-state`),
+    enabled: vehicleId !== undefined && vehicleId !== null && vehicleId !== '',
+    staleTime: 5_000,
+    refetchInterval: 10_000,
   });
 }
 
