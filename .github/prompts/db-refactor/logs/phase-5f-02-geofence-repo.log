@@ -1,0 +1,76 @@
+=== SURVEY ===
+File: internal/database/geofence_repo.go
+BEFORE errors (Category 1 - CostPerKwh): lines 24,29,32,48,59,76,79,84,116 (9 refs)
+BEFORE errors (Category 2 - address-of methods): lines 48,59,116 (3 lines x3 fields = 9 refs)
+Total: 18 compile errors
+
+Current geofences table columns (000142_baseline_typed):
+  id, name, polygon_wkt, category, created_at, updated_at
+  NO latitude, longitude, radius, cost_per_kwh columns
+
+Current models.Geofence fields:
+  ID, Name, PolygonWKT, Category, CreatedAt, UpdatedAt
+  Methods: Latitude(), Longitude(), Radius(), Centroid()
+
+geofence_electricity_rates table: NOT in baseline (removed)
+
+=== REASONING ===
+1. Create: Replace lat/lon/radius/cost_per_kwh with polygon_wkt/category. Remove electricity_rates INSERT.
+2. GetAll: Replace SELECT columns and Scan targets.
+3. GetByID: Replace SELECT columns and Scan targets.
+4. Update: Replace SET columns. Remove electricity_rates transaction logic (table gone).
+5. FindByCoordinates: Move Haversine from SQL to Go (columns gone). Add haversine helper.
+6. Add "math" import for haversine.
+
+=== CHANGES ===
+Removed cost_per_kwh from all SQL + Scan + args (9 refs)
+Removed latitude/longitude/radius from all SQL + Scan + args (9 refs)
+Replaced with polygon_wkt + category columns matching current schema
+Moved FindByCoordinates Haversine from SQL to Go (columns removed from table)
+Removed geofence_electricity_rates references (table removed from baseline)
+Simplified Update to single statement (no transaction needed without rates)
+
+=== GATE ===
+# github.com/ev-dev-labs/teslasync/internal/database
+internal\database\tesla_charging_history_repo.go:145:16: e.RawJSON undefined (type *models.TeslaChargingHistoryEntry has no field or method RawJSON)
+internal\database\tesla_charging_session_repo.go:151:16: s.RawJSON undefined (type *models.TeslaChargingSession has no field or method RawJSON)
+internal\database\tesla_energy_history_repo.go:52:7: e.RawJSON undefined (type *models.TeslaEnergyHistory has no field or method RawJSON)
+internal\database\tesla_energy_history_repo.go:86:26: e.RawJSON undefined (type *models.TeslaEnergyHistory has no field or method RawJSON)
+internal\database\tesla_energy_history_repo.go:136:27: e.RawJSON undefined (type *models.TeslaEnergyBackupEvent has no field or method RawJSON)
+internal\database\tesla_energy_history_repo.go:162:26: e.RawJSON undefined (type *models.TeslaEnergyBackupEvent has no field or method RawJSON)
+internal\database\tesla_energy_history_repo.go:210:20: e.RawJSON undefined (type *models.TeslaEnergyWCCharging has no field or method RawJSON)
+internal\database\tesla_energy_history_repo.go:236:26: e.RawJSON undefined (type *models.TeslaEnergyWCCharging has no field or method RawJSON)
+internal\database\tesla_energy_live_status_repo.go:35:25: s.RawJSON undefined (type *models.TeslaEnergyLiveStatus has no field or method RawJSON)
+internal\database\tesla_energy_live_status_repo.go:61:6: s.RawJSON undefined (type *models.TeslaEnergyLiveStatus has no field or method RawJSON)
+internal\database\tesla_energy_live_status_repo.go:99:7: s.RawJSON undefined (type *models.TeslaEnergyLiveStatus has no field or method RawJSON)
+internal\database\tesla_energy_site_repo.go:49:7: s.RawJSON undefined (type *models.TeslaEnergySite has no field or method RawJSON)
+internal\database\tesla_energy_site_repo.go:74:16: s.RawJSON undefined (type *models.TeslaEnergySite has no field or method RawJSON)
+internal\database\tesla_fleet_telemetry_error_repo.go:129:87: e.RawJSON undefined (type *models.TeslaFleetTelemetryError has no field or method RawJSON)
+internal\database\tesla_fleet_telemetry_error_repo.go:151:16: e.RawJSON undefined (type *models.TeslaFleetTelemetryError has no field or method RawJSON)
+internal\database\tesla_user_order_repo.go:36:49: o.RawJSON undefined (type *models.TeslaUserOrder has no field or method RawJSON)
+internal\database\tesla_user_order_repo.go:59:16: o.RawJSON undefined (type *models.TeslaUserOrder has no field or method RawJSON)
+internal\database\tesla_user_profile_repo.go:29:56: p.RawJSON undefined (type *models.TeslaUserProfile has no field or method RawJSON)
+internal\database\tesla_user_profile_repo.go:58:45: p.RawJSON undefined (type *models.TeslaUserProfile has no field or method RawJSON)
+internal\database\tesla_vehicle_driver_repo.go:37:47: d.RawJSON undefined (type *models.TeslaVehicleDriver has no field or method RawJSON)
+internal\database\tesla_vehicle_driver_repo.go:61:16: d.RawJSON undefined (type *models.TeslaVehicleDriver has no field or method RawJSON)
+internal\database\tesla_vehicle_driver_repo.go:95:9: inv.RawJSON undefined (type *models.TeslaVehicleInvitation has no field or method RawJSON)
+internal\database\tesla_vehicle_driver_repo.go:119:18: inv.RawJSON undefined (type *models.TeslaVehicleInvitation has no field or method RawJSON)
+internal\database\tesla_vehicle_driver_repo.go:140:17: inv.RawJSON undefined (type *models.TeslaVehicleInvitation has no field or method RawJSON)
+internal\database\trip_repo.go:46:56: t.StartDate undefined (type *models.Trip has no field or method StartDate)
+internal\database\trip_repo.go:46:70: t.EndDate undefined (type *models.Trip has no field or method EndDate)
+internal\database\trip_repo.go:47:7: t.TotalDistanceKm undefined (type *models.Trip has no field or method TotalDistanceKm)
+internal\database\trip_repo.go:47:46: t.TotalCost undefined (type *models.Trip has no field or method TotalCost)
+internal\database\trip_repo.go:47:60: t.DriveCount undefined (type *models.Trip has no field or method DriveCount)
+internal\database\trip_repo.go:47:75: t.ChargeCount undefined (type *models.Trip has no field or method ChargeCount)
+internal\database\trip_repo.go:82:56: t.StartDate undefined (type *models.Trip has no field or method StartDate)
+internal\database\trip_repo.go:82:70: t.EndDate undefined (type *models.Trip has no field or method EndDate)
+internal\database\trip_repo.go:83:7: t.TotalDistanceKm undefined (type *models.Trip has no field or method TotalDistanceKm)
+internal\database\trip_repo.go:83:46: t.TotalCost undefined (type *models.Trip has no field or method TotalCost)
+internal\database\trip_repo.go:83:60: t.DriveCount undefined (type *models.Trip has no field or method DriveCount)
+internal\database\trip_repo.go:83:75: t.ChargeCount undefined (type *models.Trip has no field or method ChargeCount)
+
+GEOFENCE_REPO_ERROR_COUNT=0
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
