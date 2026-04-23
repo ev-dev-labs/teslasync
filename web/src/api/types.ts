@@ -436,15 +436,18 @@ export interface CommandResult {
 
 // === Notification Types ===
 
-export interface NotificationChannel {
-  id: number
-  name: string
-  type: 'discord' | 'email' | 'slack' | 'telegram' | 'webhook' | 'ntfy' | 'pushover'
-  config: Record<string, string>
-  enabled: boolean
-  created_at: string
-  updated_at: string
-}
+export type {
+  NotificationChannel,
+  NotificationChannelKind,
+  NotificationChannelBase,
+  NotificationChannelDiscord,
+  NotificationChannelSlack,
+  NotificationChannelTelegram,
+  NotificationChannelEmail,
+  NotificationChannelWebhook,
+  NotificationChannelNtfy,
+  NotificationChannelPushover,
+} from '@/types/notifications'
 
 export interface NotificationLog {
   id: number

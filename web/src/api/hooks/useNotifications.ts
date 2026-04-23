@@ -5,6 +5,24 @@ import type { Alert, AlertRule, NotificationChannel, NotificationLog, Notificati
 
 export type { Alert, AlertRule, NotificationChannel, RuleConditionTree, NotificationLog, NotificationStats };
 
+/**
+ * Payload for creating a notification channel: omits server-managed fields.
+ * Remains a discriminated union so each `kind` requires its own config shape.
+ */
+export type NotificationChannelCreate = {
+  [K in NotificationChannel['kind']]: Omit<
+    Extract<NotificationChannel, { kind: K }>,
+    'id' | 'created_at' | 'updated_at'
+  >;
+}[NotificationChannel['kind']];
+
+/** Payload for updating an existing channel (includes id). */
+export type NotificationChannelUpdate = NotificationChannelCreate & { id: number };
+
+export type NotificationChannelInput =
+  | NotificationChannelCreate
+  | NotificationChannelUpdate;
+
 export const notificationKeys = {
   alerts: ['alerts'] as const,
   alertRules: ['alert-rules'] as const,
@@ -112,15 +130,17 @@ export function useNotificationStats() {
 export function useSaveChannel() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<NotificationChannel>) =>
-      request<NotificationChannel>(
-        data.id ? `/notifications/${data.id}` : '/notifications',
+    mutationFn: (data: NotificationChannelInput) => {
+      const hasId = 'id' in data && typeof data.id === 'number';
+      return request<NotificationChannel>(
+        hasId ? `/notifications/${(data as NotificationChannelUpdate).id}` : '/notifications',
         {
-          method: data.id ? 'PUT' : 'POST',
+          method: hasId ? 'PUT' : 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data),
         }
-      ),
+      );
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: notificationKeys.channels }),
   });
 }
