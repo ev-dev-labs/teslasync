@@ -63,17 +63,17 @@ func (h *RouteEfficiencyHandler) List(w http.ResponseWriter, r *http.Request) {
 		  start_address as start_location,
 		  end_address as end_location,
 		  COUNT(*) as trip_count,
-		  AVG(distance) as avg_distance_km,
+		  AVG(distance_mi) as avg_distance_km,
 		  AVG(duration_min) as avg_duration_min,
-		  AVG(CASE WHEN distance > 0 THEN (start_battery_level - end_battery_level)::float / distance * 100 ELSE 0 END) as avg_efficiency,
-		  MIN(CASE WHEN distance > 0 THEN (start_battery_level - end_battery_level)::float / distance * 100 ELSE 0 END) as best_efficiency,
-		  MAX(CASE WHEN distance > 0 THEN (start_battery_level - end_battery_level)::float / distance * 100 ELSE 0 END) as worst_efficiency,
-		  AVG(speed_avg) as avg_speed,
-		  AVG(outside_temp_avg) as avg_temp
+		  AVG(CASE WHEN distance_mi > 0 THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 ELSE 0 END) as avg_efficiency,
+		  MIN(CASE WHEN distance_mi > 0 THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 ELSE 0 END) as best_efficiency,
+		  MAX(CASE WHEN distance_mi > 0 THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 ELSE 0 END) as worst_efficiency,
+		  AVG(avg_speed_mph) as avg_speed,
+		  AVG(outside_temp_avg_c) as avg_temp
 		FROM drives
 		WHERE vehicle_id = $1
 		  AND start_address IS NOT NULL AND end_address IS NOT NULL
-		  AND distance > 1
+		  AND distance_mi > 1
 		GROUP BY start_address, end_address
 		HAVING COUNT(*) >= 1
 		ORDER BY COUNT(*) DESC
@@ -156,14 +156,14 @@ func (h *RouteEfficiencyHandler) Detail(w http.ResponseWriter, r *http.Request) 
 	ctx := r.Context()
 
 	rows, err := h.db.Pool.Query(ctx, `
-		SELECT id, start_date, distance, duration_min, speed_avg,
-		  start_battery_level, end_battery_level, outside_temp_avg,
-		  CASE WHEN distance > 0 THEN (start_battery_level - end_battery_level)::float / distance * 100 ELSE 0 END as efficiency
+		SELECT id, start_ts, distance_mi, duration_min, avg_speed_mph,
+		  start_battery_pct, end_battery_pct, outside_temp_avg_c,
+		  CASE WHEN distance_mi > 0 THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 ELSE 0 END as efficiency
 		FROM drives
 		WHERE vehicle_id = $1
 		  AND start_address = $2 AND end_address = $3
-		  AND distance > 1
-		ORDER BY start_date DESC
+		  AND distance_mi > 1
+		ORDER BY start_ts DESC
 		LIMIT 20`, vehicleID, startAddr, endAddr)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).
