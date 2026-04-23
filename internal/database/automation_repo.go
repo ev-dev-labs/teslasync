@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/jackc/pgx/v5"
 )
 
 // AutomationRepo provides automation data access operations.
@@ -68,7 +68,10 @@ func (r *AutomationRepo) GetByID(ctx context.Context, id int64) (*models.Automat
 	if err == pgx.ErrNoRows {
 		return nil, nil
 	}
-	return a, err
+	if err != nil {
+		return nil, fmt.Errorf("automations-repo-get-by-id: %w", err)
+	}
+	return a, nil
 }
 
 func (r *AutomationRepo) GetAll(ctx context.Context, enabledOnly bool) ([]*models.Automation, error) {
