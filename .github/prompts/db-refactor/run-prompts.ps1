@@ -133,6 +133,22 @@ function Log([string]$msg) {
 }
 
 # ---------------------------------------------------------------------------
+# Log-gate: detect red markers in child logs even when CLI exits 0
+# ---------------------------------------------------------------------------
+function Test-LogSaysRed {
+    param([string]$LogPath)
+    if (-not (Test-Path $LogPath)) { return @($true, 'log file missing') }
+    $content = Get-Content $LogPath -Raw
+    $reasons = @()
+    if ($content -match '(?m)^EXIT=(?!0\s*$)\d+')             { $reasons += 'EXIT non-zero' }
+    if ($content -match '(?m)^STATUS=BLOCKED')                 { $reasons += 'STATUS=BLOCKED' }
+    if ($content -match '\[FAIL\]')                            { $reasons += '[FAIL] marker' }
+    if ($content -match '(?m)^UNEXPECTED_COUNT=(?!0\s*$)\d+')  { $reasons += 'UNEXPECTED_COUNT' }
+    if ($reasons.Count -gt 0) { return @($true, ($reasons -join ', ')) }
+    return @($false, '')
+}
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 $doneCount    = ($prompts | Where-Object { $doneSet.Contains($_.RelPath) }).Count
@@ -152,6 +168,7 @@ Write-Host "  Single        : $(if ($Single) { $Single } else { '(all)' })"
 Write-Host "  Model         : $(if ($Model) { $Model } else { '(default)' })"
 Write-Host "  Timeout       : $TimeoutMinutes min per prompt"
 Write-Host "  Dry run       : $DryRun"
+Write-Host "  Log-gate      : EXIT!=0 / STATUS=BLOCKED / [FAIL] / UNEXPECTED_COUNT → RED" -ForegroundColor Yellow
 Write-Host "  Run log       : $runLog"
 Write-Host "================================================================" -ForegroundColor Cyan
 Write-Host ""
@@ -325,18 +342,32 @@ foreach ($p in $prompts) {
         }
     }
     else {
-        # Verify the prompt actually committed something (every db-refactor prompt
-        # ends with a git commit). If HEAD didn't advance, warn but don't block.
-        Push-Location $RepoRoot
-        $headBefore = $null  # we don't snapshot per-prompt; rely on commit log inspection externally
-        Pop-Location
+        # Log-gate: even if CLI exited 0, check the child log for red markers
+        $logGate = Test-LogSaysRed $logFile
+        if ($logGate[0]) {
+            $failCount++
+            Log "$tag LOG-GATE FAILED ($($logGate[1])) after $mins min"
+            Write-Host ""
+            Write-Host "  LOG-GATE FAILED after $mins min" -ForegroundColor Red
+            Write-Host "  Reason: $($logGate[1])" -ForegroundColor Red
+            Write-Host "  CLI exited 0 but child log contains red markers." -ForegroundColor Red
+            Write-Host "  Log: $logFile" -ForegroundColor Red
+            Write-Host ""
+            $answer = Read-Host "  Continue to next prompt? (y/n/q)"
+            if ($answer -eq 'q' -or $answer -eq 'n') {
+                Log "ABORTED by user at prompt $($p.Index) (log-gate)"
+                Write-Host "Aborted. Resume later with: -StartFrom $($p.Index)" -ForegroundColor Yellow
+                exit 1
+            }
+        }
+        else {
+            $successCount++
+            Log "$tag DONE in $mins min"
+            Write-Host "  ✓ Completed in $mins min" -ForegroundColor Green
 
-        $successCount++
-        Log "$tag DONE in $mins min"
-        Write-Host "  ✓ Completed in $mins min" -ForegroundColor Green
-
-        Add-Content -Path $doneFile -Value $p.RelPath
-        $doneSet.Add($p.RelPath) | Out-Null
+            Add-Content -Path $doneFile -Value $p.RelPath
+            $doneSet.Add($p.RelPath) | Out-Null
+        }
     }
 
     if ($DelaySeconds -gt 0) {
