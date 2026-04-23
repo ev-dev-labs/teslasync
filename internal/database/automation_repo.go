@@ -19,6 +19,21 @@ func NewAutomationRepo(db *DB) *AutomationRepo {
 	return &AutomationRepo{db: db}
 }
 
+// Create inserts a new automation parent row and populates the assigned ID
+// and timestamps on the supplied model. Per ADR-004, child rows (steps,
+// triggers, scope) are persisted by their own repos in separate calls.
+func (r *AutomationRepo) Create(ctx context.Context, a *models.Automation) error {
+	const query = `
+		INSERT INTO automations (name, description, enabled, vehicle_id)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id, created_at, updated_at`
+	if err := r.db.Pool.QueryRow(ctx, query, a.Name, a.Description, a.Enabled, a.VehicleID).
+		Scan(&a.ID, &a.CreatedAt, &a.UpdatedAt); err != nil {
+		return fmt.Errorf("automations-repo-create: %w", err)
+	}
+	return nil
+}
+
 // ListSummaries returns lightweight automation summaries (id, name, enabled)
 // suitable for list views. Steps, triggers, and scope are intentionally not
 // loaded; callers needing the full aggregate should use GetByID.
