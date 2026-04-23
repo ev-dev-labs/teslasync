@@ -21,17 +21,17 @@ export default function DrivingTips({ motorStats, throttleStyle }: DrivingTipsPr
       list.push(t('dynamics.tipNoData', 'Drive your vehicle to start collecting dynamics data.'));
       return list;
     }
-    if (motorStats.avgPedalPosition > 55) {
+    if (motorStats.avgPower > 80) {
       list.push(t('dynamics.tipEaseAccel', 'Ease into the accelerator — gradual inputs save energy and tire wear.'));
       list.push(t('dynamics.tipBrakeEarly', 'Brake earlier and lighter to improve regen capture.'));
-    } else if (motorStats.avgPedalPosition > 25) {
+    } else if (motorStats.avgPower > 20) {
       list.push(t('dynamics.tipSmoothThrottle', 'Smooth throttle transitions can improve efficiency by 10–15%.'));
       list.push(t('dynamics.tipCoast', 'Lift off the pedal earlier to let regen do the work.'));
     } else {
       list.push(t('dynamics.tipGreat', 'Excellent driving style! Maintaining this maximizes range and comfort.'));
       list.push(t('dynamics.tipKeep', 'Keep monitoring your scores — consistency is key.'));
     }
-    if (motorStats.maxStatorTemp > 120) {
+    if (motorStats.maxMotorTemp > 120) {
       list.push(t('dynamics.tipThermal', 'Motor temps are running high — consider easing off sustained high power.'));
     }
     return list;

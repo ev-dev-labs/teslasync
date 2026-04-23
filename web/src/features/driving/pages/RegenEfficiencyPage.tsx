@@ -17,7 +17,7 @@ import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { useRegenEfficiency, useDrives } from '@/api/hooks/useDriving';
-import { useVehicles, useMotorLatest } from '@/api/hooks/useVehicles';
+import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateShort } from '@/lib/dateFormat';
@@ -56,9 +56,8 @@ export default function RegenEfficiencyPage() {
 
   const { data, isLoading, error } = useRegenEfficiency(vehicleIdStr);
   const { data: drives } = useDrives(vehicleIdStr);
-  const { data: motorLatest } = useMotorLatest(vehicleId ?? 0, 30_000);
-  const lifetimeRegenKwh = motorLatest?.lifetime_energy_gained_regen;
-  const lifetimeDriveKwh = motorLatest?.lifetime_energy_used_drive;
+  const lifetimeRegenKwh: number | null = null;
+  const lifetimeDriveKwh: number | null = null;
 
   const { convertDistance, distanceUnit } = useSettings();
 

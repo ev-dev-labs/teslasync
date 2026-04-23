@@ -59,8 +59,8 @@ export default function MotorEfficiencyInsights({
           {motorStats ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm text-white/70">
-                <span>{t('dynamics.avgPedalPos', 'Avg Pedal Position')}</span>
-                <span className="font-mono">{fmtNumber(motorStats.avgPedalPosition, 1)}%</span>
+                <span>{t('dynamics.avgPower', 'Avg Power')}</span>
+                <span className="font-mono">{fmtNumber(motorStats.avgPower, 1)} kW</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-white/70">{t('dynamics.drivingStyle', 'Style')}</span>
@@ -76,8 +76,8 @@ export default function MotorEfficiencyInsights({
                 </Badge>
               </div>
               <MetricBar
-                value={motorStats.avgPedalPosition}
-                max={100}
+                value={motorStats.avgPower}
+                max={200}
                 color={throttleStyle === 'conservative' ? '#22c55e' : throttleStyle === 'moderate' ? '#eab308' : '#ef4444'}
                 label=""
                 sublabel=""
@@ -97,20 +97,20 @@ export default function MotorEfficiencyInsights({
           {motorStats ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm text-white/70">
-                <span>{t('dynamics.avgStatorTemp', 'Avg Stator Temp')}</span>
-                <span className="font-mono">{fmtNumber(convertTemp(motorStats.avgStatorTemp), 1)}°{tempUnit}</span>
+                <span>{t('dynamics.avgMotorTemp', 'Avg Motor Temp')}</span>
+                <span className="font-mono">{fmtNumber(convertTemp(motorStats.avgMotorTemp), 1)}°{tempUnit}</span>
               </div>
               <div className="flex items-center justify-between text-sm text-white/70">
-                <span>{t('dynamics.maxStatorTemp', 'Max Stator Temp')}</span>
-                <span className="font-mono">{fmtNumber(convertTemp(motorStats.maxStatorTemp), 1)}°{tempUnit}</span>
+                <span>{t('dynamics.maxMotorTemp', 'Max Motor Temp')}</span>
+                <span className="font-mono">{fmtNumber(convertTemp(motorStats.maxMotorTemp), 1)}°{tempUnit}</span>
               </div>
               <Badge
-                variant={motorStats.maxStatorTemp < 100 ? 'success' : motorStats.maxStatorTemp < 140 ? 'warning' : 'danger'}
+                variant={motorStats.maxMotorTemp < 100 ? 'success' : motorStats.maxMotorTemp < 140 ? 'warning' : 'danger'}
                 size="sm"
               >
-                {motorStats.maxStatorTemp < 100
+                {motorStats.maxMotorTemp < 100
                   ? t('dynamics.thermalGood', 'Thermal: Good')
-                  : motorStats.maxStatorTemp < 140
+                  : motorStats.maxMotorTemp < 140
                     ? t('dynamics.thermalWarm', 'Thermal: Warm')
                     : t('dynamics.thermalHot', 'Thermal: Hot')}
               </Badge>

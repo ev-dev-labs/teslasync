@@ -27,60 +27,76 @@ interface MotorHistoryChartsProps {
   speedUnit: string;
 }
 
-export default function MotorHistoryCharts({ motorHistory, convertSpeed, speedUnit }: MotorHistoryChartsProps) {
+export default function MotorHistoryCharts({ motorHistory }: MotorHistoryChartsProps) {
   const { t } = useTranslation();
 
-  const speedChartData = useMemo(() =>
-    (motorHistory ?? []).map((s) => ({
-      time: new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      speed: s.vehicle_speed != null ? convertSpeed(s.vehicle_speed) : null,
-    })), [motorHistory, convertSpeed],
+  const powerChartData = useMemo(
+    () =>
+      (motorHistory ?? []).map((s) => ({
+        time: new Date(s.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        power: s.power_kw ?? null,
+        regen: s.regen_kw ?? null,
+      })),
+    [motorHistory],
   );
 
-  const torqueChartData = useMemo(() =>
-    (motorHistory ?? []).map((s) => ({
-      time: new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      torque: s.di_torque ?? null,
-    })), [motorHistory],
+  const torqueChartData = useMemo(
+    () =>
+      (motorHistory ?? []).map((s) => ({
+        time: new Date(s.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        front: s.torque_nm_front ?? null,
+        rear: s.torque_nm_rear ?? null,
+      })),
+    [motorHistory],
   );
 
-  const gForceChartData = useMemo(() =>
-    (motorHistory ?? []).map((s) => ({
-      time: new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      lateral: s.lateral_accel ?? null,
-      longitudinal: s.longitudinal_accel ?? null,
-    })), [motorHistory],
+  const rpmChartData = useMemo(
+    () =>
+      (motorHistory ?? []).map((s) => ({
+        time: new Date(s.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        front: s.motor_rpm_front ?? null,
+        rear: s.motor_rpm_rear ?? null,
+      })),
+    [motorHistory],
   );
 
   const noData = (
-    <EmptyState icon={<Activity className="h-5 w-5" />} message={t('dynamics.awaitingData', 'Awaiting motor telemetry data...')} />
+    <EmptyState
+      icon={<Activity className="h-5 w-5" />}
+      message={t('dynamics.awaitingData', 'Awaiting motor telemetry data...')}
+    />
   );
 
   return (
     <>
-      {/* Speed Over Time */}
+      {/* Motor Power Over Time */}
       <FadeIn delay={0.2}>
         <ChartContainer
-          title={t('dynamics.speedOverTime', 'Speed Over Time')}
-          subtitle={t('dynamics.speedOverTimeDesc', 'Vehicle speed from motor telemetry')}
+          title={t('dynamics.powerOverTime', 'Motor Power Over Time')}
+          subtitle={t('dynamics.powerOverTimeDesc', 'Drive and regen power from motor telemetry')}
           height={280}
           exportable
-          exportFilename="speed-over-time"
+          exportFilename="motor-power"
         >
-          {speedChartData.length > 0 ? (
+          {powerChartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>
-              <AreaChart data={speedChartData}>
+              <AreaChart data={powerChartData}>
                 <defs>
-                  <ChartGradient id="speedAreaGrad" color="#06b6d4" />
+                  <ChartGradient id="powerAreaGrad" color="#06b6d4" />
+                  <ChartGradient id="regenAreaGrad" color="#22c55e" />
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                 <XAxis dataKey="time" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} />
-                <YAxis tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} unit={` ${speedUnit}`} />
+                <YAxis tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} unit=" kW" />
                 <Tooltip content={<ChartTooltip />} />
-                <Area type="monotone" dataKey="speed" stroke="#06b6d4" fill="url(#speedAreaGrad)" name={t('dynamics.speed', 'Speed')} />
+                <Legend wrapperStyle={{ color: 'rgba(255,255,255,0.6)' }} />
+                <Area type="monotone" dataKey="power" stroke="#06b6d4" fill="url(#powerAreaGrad)" name={t('dynamics.power', 'Power')} />
+                <Area type="monotone" dataKey="regen" stroke="#22c55e" fill="url(#regenAreaGrad)" name={t('dynamics.regen', 'Regen')} />
               </AreaChart>
             </ResponsiveContainer>
-          ) : noData}
+          ) : (
+            noData
+          )}
         </ChartContainer>
       </FadeIn>
 
@@ -88,50 +104,53 @@ export default function MotorHistoryCharts({ motorHistory, convertSpeed, speedUn
       <FadeIn delay={0.25}>
         <ChartContainer
           title={t('dynamics.torqueHistory', 'Motor Torque History')}
-          subtitle={t('dynamics.torqueHistoryDesc', 'Drive inverter torque over time')}
+          subtitle={t('dynamics.torqueHistoryDesc', 'Front and rear motor torque over time')}
           height={280}
           exportable
           exportFilename="torque-history"
         >
           {torqueChartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>
-              <AreaChart data={torqueChartData}>
-                <defs>
-                  <ChartGradient id="torqueGrad" color="#3b82f6" />
-                </defs>
+              <LineChart data={torqueChartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                 <XAxis dataKey="time" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} />
                 <YAxis tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} unit=" Nm" />
                 <Tooltip content={<ChartTooltip />} />
-                <Area type="monotone" dataKey="torque" stroke="#3b82f6" fill="url(#torqueGrad)" name={t('dynamics.torqueNm', 'Torque (Nm)')} />
-              </AreaChart>
+                <Legend wrapperStyle={{ color: 'rgba(255,255,255,0.6)' }} />
+                <Line type="monotone" dataKey="front" stroke="#3b82f6" strokeWidth={2} dot={false} name={t('dynamics.torqueFront', 'Front Torque')} />
+                <Line type="monotone" dataKey="rear" stroke="#a855f7" strokeWidth={2} dot={false} name={t('dynamics.torqueRear', 'Rear Torque')} />
+              </LineChart>
             </ResponsiveContainer>
-          ) : noData}
+          ) : (
+            noData
+          )}
         </ChartContainer>
       </FadeIn>
 
-      {/* G-Force History */}
+      {/* Motor RPM History */}
       <FadeIn delay={0.3}>
         <ChartContainer
-          title={t('dynamics.gForceHistory', 'G-Force History')}
-          subtitle={t('dynamics.gForceHistoryDesc', 'Lateral & longitudinal acceleration over time')}
+          title={t('dynamics.rpmHistory', 'Motor RPM History')}
+          subtitle={t('dynamics.rpmHistoryDesc', 'Front and rear motor RPM over time')}
           height={280}
           exportable
-          exportFilename="g-force-history"
+          exportFilename="motor-rpm"
         >
-          {gForceChartData.length > 0 ? (
+          {rpmChartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>
-              <LineChart data={gForceChartData}>
+              <LineChart data={rpmChartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                 <XAxis dataKey="time" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} />
-                <YAxis tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} unit=" g" />
+                <YAxis tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} unit=" RPM" />
                 <Tooltip content={<ChartTooltip />} />
                 <Legend wrapperStyle={{ color: 'rgba(255,255,255,0.6)' }} />
-                <Line type="monotone" dataKey="lateral" stroke="#a855f7" strokeWidth={2} dot={false} name={t('dynamics.lateralGLine', 'Lateral G')} />
-                <Line type="monotone" dataKey="longitudinal" stroke="#22c55e" strokeWidth={2} dot={false} name={t('dynamics.longGLine', 'Longitudinal G')} />
+                <Line type="monotone" dataKey="front" stroke="#06b6d4" strokeWidth={2} dot={false} name={t('dynamics.rpmFront', 'Front RPM')} />
+                <Line type="monotone" dataKey="rear" stroke="#a855f7" strokeWidth={2} dot={false} name={t('dynamics.rpmRear', 'Rear RPM')} />
               </LineChart>
             </ResponsiveContainer>
-          ) : noData}
+          ) : (
+            noData
+          )}
         </ChartContainer>
       </FadeIn>
     </>

@@ -1,10 +1,11 @@
 import { useTranslation } from 'react-i18next'
-import { Thermometer, Fan, Snowflake, Zap, ShieldAlert } from 'lucide-react'
+import { Thermometer, Fan, Snowflake, Zap } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { GlassPanel } from '@/components/ui'
 import { MetricCard } from '@/components/data-display'
+import { EmptyState } from '@/components/feedback'
 import { useSettings } from '@/hooks/useSettings'
-import { fmtNumber, fmtWithUnit } from '@/lib/numberFormat'
+import { fmtNumber } from '@/lib/numberFormat'
 import type { ClimateSnapshot } from '@/api/types'
 
 interface ClimatePanelProps {
@@ -25,19 +26,19 @@ export function ClimatePanel({ climateData }: ClimatePanelProps) {
           {/* Cabin + Outside temps */}
           <div className="grid grid-cols-2 gap-3">
             <MetricCard
-              label="Cabin"
+              label={t('common.insideTemp', 'Cabin')}
               value={
-                climateData.inside_temp != null
-                  ? fmtNumber(convertTemp(climateData.inside_temp))
+                climateData.inside_temp_c != null
+                  ? fmtNumber(convertTemp(climateData.inside_temp_c))
                   : '—'
               }
               subtitle={tempUnit}
             />
             <MetricCard
-              label="Outside"
+              label={t('common.outsideTemp', 'Outside')}
               value={
-                climateData.outside_temp != null
-                  ? fmtNumber(convertTemp(climateData.outside_temp))
+                climateData.outside_temp_c != null
+                  ? fmtNumber(convertTemp(climateData.outside_temp_c))
                   : '—'
               }
               subtitle={tempUnit}
@@ -47,47 +48,41 @@ export function ClimatePanel({ climateData }: ClimatePanelProps) {
           {/* Target temps */}
           <div className="grid grid-cols-2 gap-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-[var(--text-muted)]">Left Zone</span>
+              <span className="text-xs text-[var(--text-muted)]">
+                {t('telemetry.driverSetpoint', 'Driver Setpoint')}
+              </span>
               <span className="text-sm font-mono text-[var(--text-primary)]">
-                {climateData.hvac_left_temp_request != null
-                  ? `${fmtNumber(convertTemp(climateData.hvac_left_temp_request))} ${tempUnit}`
+                {climateData.driver_setpoint_c != null
+                  ? `${fmtNumber(convertTemp(climateData.driver_setpoint_c))} ${tempUnit}`
                   : '—'}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-xs text-[var(--text-muted)]">Right Zone</span>
+              <span className="text-xs text-[var(--text-muted)]">
+                {t('telemetry.passengerSetpoint', 'Passenger Setpoint')}
+              </span>
               <span className="text-sm font-mono text-[var(--text-primary)]">
-                {climateData.hvac_right_temp_request != null
-                  ? `${fmtNumber(convertTemp(climateData.hvac_right_temp_request))} ${tempUnit}`
+                {climateData.passenger_setpoint_c != null
+                  ? `${fmtNumber(convertTemp(climateData.passenger_setpoint_c))} ${tempUnit}`
                   : '—'}
               </span>
             </div>
           </div>
 
-          {/* HVAC Power bar */}
-          <div>
-            <div className="flex items-center justify-between text-xs mb-1">
-              <span className="text-[var(--text-muted)]">HVAC Power</span>
-              <span className="text-[var(--text-primary)] font-mono">
-                {climateData.hvac_power != null
-                  ? `${fmtWithUnit(climateData.hvac_power, 'kW')}`
-                  : '—'}
-              </span>
-            </div>
-            <div className="h-2 rounded-full bg-white/[0.04] overflow-hidden">
-              <div
-                className="h-full rounded-full bg-neon-cyan/60 transition-all duration-300"
-                style={{
-                  width: `${Math.min(((climateData.hvac_power ?? 0) / 8) * 100, 100)}%`,
-                }}
-              />
-            </div>
+          {/* HVAC State */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-[var(--text-muted)]">
+              {t('telemetry.hvacState', 'HVAC State')}
+            </span>
+            <span className="text-sm font-mono text-[var(--text-primary)]">
+              {climateData.hvac_state ?? '—'}
+            </span>
           </div>
 
           {/* Fan Speed */}
           <div className="flex items-center justify-between">
             <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
-              <Fan className="h-3 w-3" /> Fan Speed
+              <Fan className="h-3 w-3" /> {t('telemetry.fanSpeed', 'Fan Speed')}
             </span>
             <div className="flex items-center gap-1">
               {[1, 2, 3, 4, 5, 6].map((level) => (
@@ -106,14 +101,14 @@ export function ClimatePanel({ climateData }: ClimatePanelProps) {
                             : level === 5
                               ? 'w-3.5'
                               : 'w-4',
-                    (climateData.hvac_fan_speed ?? 0) >= level
+                    (climateData.fan_status ?? 0) >= level
                       ? 'bg-neon-cyan/70'
                       : 'bg-white/[0.06]',
                   )}
                 />
               ))}
               <span className="text-xs font-mono text-[var(--text-primary)] ml-1.5">
-                {climateData.hvac_fan_speed ?? 0}
+                {climateData.fan_status ?? 0}
               </span>
             </div>
           </div>
@@ -128,38 +123,37 @@ export function ClimatePanel({ climateData }: ClimatePanelProps) {
                   : 'border-white/[0.06] bg-white/[0.02] text-[var(--text-muted)]',
               )}
             >
-              <Snowflake className="h-3 w-3" /> Defrost{' '}
-              {climateData.defrost_mode && climateData.defrost_mode !== 'Off' ? climateData.defrost_mode : 'OFF'}
+              <Snowflake className="h-3 w-3" /> {t('telemetry.defrost', 'Defrost')}{' '}
+              {climateData.defrost_mode && climateData.defrost_mode !== 'Off'
+                ? climateData.defrost_mode
+                : t('common.off', 'Off')}
             </span>
             <span
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium border',
-                climateData.battery_heater_on
+                climateData.is_climate_on
+                  ? 'border-green-400/30 bg-green-400/10 text-green-400'
+                  : 'border-white/[0.06] bg-white/[0.02] text-[var(--text-muted)]',
+              )}
+            >
+              <Zap className="h-3 w-3" /> {t('telemetry.climate', 'Climate')}{' '}
+              {climateData.is_climate_on ? t('common.on', 'On') : t('common.off', 'Off')}
+            </span>
+            <span
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium border',
+                climateData.is_preconditioning
                   ? 'border-amber-400/30 bg-amber-400/10 text-amber-400'
                   : 'border-white/[0.06] bg-white/[0.02] text-[var(--text-muted)]',
               )}
             >
-              <Zap className="h-3 w-3" /> Battery Heater{' '}
-              {climateData.battery_heater_on ? 'ON' : 'OFF'}
-            </span>
-            <span
-              className={cn(
-                'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium border',
-                climateData.cabin_overheat_mode &&
-                  climateData.cabin_overheat_mode !== 'Off'
-                  ? 'border-red-400/30 bg-red-400/10 text-red-400'
-                  : 'border-white/[0.06] bg-white/[0.02] text-[var(--text-muted)]',
-              )}
-            >
-              <ShieldAlert className="h-3 w-3" /> Overheat Protection{' '}
-              {climateData.cabin_overheat_mode ?? 'Off'}
+              {t('telemetry.precondition', 'Precondition')}{' '}
+              {climateData.is_preconditioning ? t('common.on', 'On') : t('common.off', 'Off')}
             </span>
           </div>
         </div>
       ) : (
-        <p className="text-xs text-[var(--text-muted)] text-center py-6">
-          No climate data available
-        </p>
+        <EmptyState message={t('telemetry.noClimateData', 'No climate data available')} />
       )}
     </GlassPanel>
   )

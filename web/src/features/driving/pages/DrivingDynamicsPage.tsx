@@ -80,7 +80,7 @@ export default function DrivingDynamicsPage() {
 
   /* ---- motor stats (cross-section) ---- */
   const motorStats = useMemo(() => computeMotorStats(motorHistory), [motorHistory]);
-  const throttleStyle = motorStats ? getThrottleStyle(motorStats.avgPedalPosition) : null;
+  const throttleStyle = motorStats ? getThrottleStyle(motorStats.avgPower) : null;
 
   /* ================================================================ */
   /*  RENDER                                                           */
@@ -105,19 +105,15 @@ export default function DrivingDynamicsPage() {
     >
       <div className="space-y-6">
         <LiveMotorStatus motorLatest={motorLatest} convertTemp={convertTemp} tempUnit={tempUnit} />
-        <GForcePanel motorLatest={motorLatest} motorStats={motorStats} />
-        <PedalUsage motorLatest={motorLatest} />
+        <GForcePanel />
+        <PedalUsage />
         <SpeedGearPanel
           motorLatest={motorLatest}
           filteredDrives={filteredDrives}
           convertSpeed={convertSpeed}
           speedUnit={speedUnit}
         />
-        <AutopilotSection
-          motorLatest={motorLatest}
-          convertSpeed={convertSpeed}
-          speedUnit={speedUnit}
-        />
+        <AutopilotSection />
         <MotorHistoryCharts motorHistory={motorHistory} convertSpeed={convertSpeed} speedUnit={speedUnit} />
         <MotorEfficiencyInsights
           motorStats={motorStats}

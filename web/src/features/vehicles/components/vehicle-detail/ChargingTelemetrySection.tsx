@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Zap, Activity, BatteryCharging, Battery, Clock } from 'lucide-react'
+import { Zap, Activity, BatteryCharging, Battery } from 'lucide-react'
 
 import { GlassPanel } from '@/components/ui'
 import { MetricCard } from '@/components/data-display'
@@ -25,50 +25,78 @@ export function ChargingTelemetrySection({ chargingTelemetry }: ChargingTelemetr
       {chargingTelemetry ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           <MetricCard
-            label={t('vehicles.detail.dcPower', 'DC Power')}
-            value={chargingTelemetry.dc_charging_power != null ? `${fmtNumber(chargingTelemetry.dc_charging_power)} kW` : '—'}
+            label={t('vehicles.detail.chargerPower', 'Charger Power')}
+            value={
+              chargingTelemetry.charger_power_kw != null
+                ? `${fmtNumber(chargingTelemetry.charger_power_kw)} kW`
+                : '—'
+            }
             icon={<Zap className="h-4 w-4" />}
             color="green"
           />
           <MetricCard
             label={t('vehicles.detail.voltage', 'Voltage')}
-            value={chargingTelemetry.charger_voltage != null ? `${fmtNumber(chargingTelemetry.charger_voltage)} V` : '—'}
+            value={
+              chargingTelemetry.charger_voltage != null
+                ? `${fmtNumber(chargingTelemetry.charger_voltage)} V`
+                : '—'
+            }
             icon={<Activity className="h-4 w-4" />}
             color="cyan"
           />
           <MetricCard
             label={t('vehicles.detail.current', 'Current')}
-            value={chargingTelemetry.charge_amps != null ? `${fmtNumber(chargingTelemetry.charge_amps)} A` : '—'}
+            value={
+              chargingTelemetry.charger_actual_current != null
+                ? `${fmtNumber(chargingTelemetry.charger_actual_current)} A`
+                : '—'
+            }
             icon={<Activity className="h-4 w-4" />}
             color="purple"
           />
           <MetricCard
             label={t('vehicles.detail.energyAdded', 'Energy Added')}
-            value={chargingTelemetry.dc_charging_energy_in != null ? `${fmtNumber(chargingTelemetry.dc_charging_energy_in)} kWh` : '—'}
+            value={
+              chargingTelemetry.charge_energy_added_kwh != null
+                ? `${fmtNumber(chargingTelemetry.charge_energy_added_kwh)} kWh`
+                : '—'
+            }
             icon={<BatteryCharging className="h-4 w-4" />}
             color="green"
           />
           <MetricCard
-            label={t('vehicles.detail.chargeState', 'Charge State')}
-            value={chargingTelemetry.charge_state ?? '—'}
+            label={t('vehicles.detail.chargingState', 'Charging State')}
+            value={chargingTelemetry.charging_state ?? '—'}
             icon={<Battery className="h-4 w-4" />}
             color="cyan"
           />
           <MetricCard
-            label={t('vehicles.detail.soc', 'SOC')}
-            value={chargingTelemetry.soc != null ? `${fmtNumber(chargingTelemetry.soc)}%` : '—'}
+            label={t('vehicles.detail.batteryLevel', 'Battery Level')}
+            value={
+              chargingTelemetry.battery_level != null
+                ? `${fmtNumber(chargingTelemetry.battery_level)}%`
+                : '—'
+            }
             icon={<Battery className="h-4 w-4" />}
             color="green"
           />
           <MetricCard
-            label={t('vehicles.detail.timeToFull', 'Time to Full')}
-            value={chargingTelemetry.time_to_full_charge != null ? `${fmtNumber(chargingTelemetry.time_to_full_charge, 1)}h` : '—'}
-            icon={<Clock className="h-4 w-4" />}
+            label={t('vehicles.detail.chargeRate', 'Charge Rate')}
+            value={
+              chargingTelemetry.charge_rate_mph != null
+                ? `${fmtNumber(chargingTelemetry.charge_rate_mph)} mph`
+                : '—'
+            }
+            icon={<Activity className="h-4 w-4" />}
             color="cyan"
           />
           <MetricCard
-            label={t('vehicles.detail.packVoltage', 'Pack Voltage')}
-            value={chargingTelemetry.pack_voltage != null ? `${fmtNumber(chargingTelemetry.pack_voltage)} V` : '—'}
+            label={t('vehicles.detail.milesAdded', 'Miles Added')}
+            value={
+              chargingTelemetry.charge_miles_added != null
+                ? `${fmtNumber(chargingTelemetry.charge_miles_added)} mi`
+                : '—'
+            }
             icon={<Zap className="h-4 w-4" />}
             color="purple"
           />

@@ -8,21 +8,20 @@ export interface MotorStats {
   totalReadings: number;
   avgTorque: number;
   maxTorque: number;
-  maxLateralG: number;
-  maxLongitudinalG: number;
-  avgPedalPosition: number;
-  avgStatorTemp: number;
-  maxStatorTemp: number;
-  peakLateralG: number;
-  peakLongitudinalG: number;
+  avgMotorTemp: number;
+  maxMotorTemp: number;
+  avgPower: number;
+  peakPower: number;
+  minPower: number;
+  peakRegen: number;
   highTorquePct: number;
 }
 
 /* ---- Helper functions ---- */
 
-export function getThrottleStyle(avgPedal: number): ThrottleStyle {
-  if (avgPedal < 25) return 'conservative';
-  if (avgPedal < 55) return 'moderate';
+export function getThrottleStyle(avgPower: number): ThrottleStyle {
+  if (avgPower < 20) return 'conservative';
+  if (avgPower < 80) return 'moderate';
   return 'aggressive';
 }
 
@@ -52,28 +51,38 @@ export function computeMotorStats(motorHistory: MotorSnapshot[] | undefined): Mo
   const vals = (fn: (s: MotorSnapshot) => number | undefined | null) =>
     h.map(fn).filter((v): v is number => v != null);
 
-  const avg = (arr: number[]) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
-  const max = (arr: number[]) => arr.length > 0 ? Math.max(...arr) : 0;
+  const avg = (arr: number[]) => (arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
+  const max = (arr: number[]) => (arr.length > 0 ? Math.max(...arr) : 0);
+  const min = (arr: number[]) => (arr.length > 0 ? Math.min(...arr) : 0);
 
-  const torques = vals((s) => s.di_torque);
-  const laterals = vals((s) => s.lateral_accel);
-  const longitudinals = vals((s) => s.longitudinal_accel);
-  const pedals = vals((s) => s.pedal_position);
-  const statorTemps = vals((s) => s.di_stator_temp);
+  const torques = vals((s) => {
+    const f = s.torque_nm_front ?? 0;
+    const r = s.torque_nm_rear ?? 0;
+    if (s.torque_nm_front == null && s.torque_nm_rear == null) return null;
+    return f + r;
+  });
+  const motorTemps = vals((s) => {
+    const f = s.motor_temp_c_front;
+    const r = s.motor_temp_c_rear;
+    if (f == null && r == null) return null;
+    return Math.max(f ?? -Infinity, r ?? -Infinity);
+  });
+  const powers = vals((s) => s.power_kw);
+  const regens = vals((s) => s.regen_kw);
 
   return {
     totalReadings: h.length,
     avgTorque: avg(torques),
     maxTorque: max(torques),
-    maxLateralG: max(laterals.map(Math.abs)),
-    maxLongitudinalG: max(longitudinals.map(Math.abs)),
-    avgPedalPosition: avg(pedals),
-    avgStatorTemp: avg(statorTemps),
-    maxStatorTemp: max(statorTemps),
-    peakLateralG: max(laterals.map(Math.abs)),
-    peakLongitudinalG: max(longitudinals.map(Math.abs)),
-    highTorquePct: torques.length > 0
-      ? (torques.filter((t) => t > 200).length / torques.length) * 100
-      : 0,
+    avgMotorTemp: avg(motorTemps),
+    maxMotorTemp: max(motorTemps),
+    avgPower: avg(powers),
+    peakPower: max(powers),
+    minPower: min(powers),
+    peakRegen: max(regens),
+    highTorquePct:
+      torques.length > 0
+        ? (torques.filter((t) => t > 200).length / torques.length) * 100
+        : 0,
   };
 }

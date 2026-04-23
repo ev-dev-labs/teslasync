@@ -41,30 +41,30 @@ export default function SummaryStats({ motorStats, convertTemp, tempUnit }: Summ
         </StaggerItem>
         <StaggerItem>
           <StatCard
-            label={t('dynamics.maxLatG', 'Max Lat G')}
-            value={`${fmtNumber(motorStats?.maxLateralG ?? 0, 3)} g`}
+            label={t('dynamics.peakPower', 'Peak Power')}
+            value={`${fmtNumber(motorStats?.peakPower ?? 0, 1)} kW`}
             icon={<CornerDownRight className="h-4 w-4" />}
           />
         </StaggerItem>
         <StaggerItem>
           <StatCard
-            label={t('dynamics.maxLonG', 'Max Lon G')}
-            value={`${fmtNumber(motorStats?.maxLongitudinalG ?? 0, 3)} g`}
+            label={t('dynamics.peakRegen', 'Peak Regen')}
+            value={`${fmtNumber(motorStats?.peakRegen ?? 0, 1)} kW`}
             icon={<TrendingDown className="h-4 w-4" />}
           />
         </StaggerItem>
         <StaggerItem>
           <StatCard
-            label={t('dynamics.avgPedal', 'Avg Pedal')}
-            value={`${fmtNumber(motorStats?.avgPedalPosition ?? 0, 1)}%`}
+            label={t('dynamics.avgPower', 'Avg Power')}
+            value={`${fmtNumber(motorStats?.avgPower ?? 0, 1)} kW`}
             icon={<Gauge className="h-4 w-4" />}
           />
         </StaggerItem>
         <StaggerItem>
           <StatCard
-            label={t('dynamics.avgStator', 'Avg Stator')}
+            label={t('dynamics.avgMotorTemp', 'Avg Motor Temp')}
             value={motorStats
-              ? `${fmtNumber(convertTemp(motorStats.avgStatorTemp), 1)}°${tempUnit}`
+              ? `${fmtNumber(convertTemp(motorStats.avgMotorTemp), 1)}°${tempUnit}`
               : '—'}
             icon={<Thermometer className="h-4 w-4" />}
           />

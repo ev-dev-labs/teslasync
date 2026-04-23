@@ -1,17 +1,16 @@
 import { useTranslation } from 'react-i18next';
-import { Footprints } from 'lucide-react';
 
-import { Grid } from '@/components/layout';
-import { GlassPanel, Badge } from '@/components/ui';
-import { RadialGauge } from '@/components/charts';
+import { GlassPanel } from '@/components/ui';
+import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import type { MotorSnapshot } from '@/api/types';
 
-interface PedalUsageProps {
-  motorLatest: MotorSnapshot | null | undefined;
-}
-
-export default function PedalUsage({ motorLatest }: PedalUsageProps) {
+/**
+ * Pedal position and brake-pedal telemetry are not persisted in the typed
+ * MotorSnapshot model after the JSONB-telemetry refactor (ADR-001,
+ * migration 000144). The panel shell remains so page layout is unchanged but
+ * always renders an EmptyState per the section-rendering rule.
+ */
+export default function PedalUsage() {
   const { t } = useTranslation();
 
   return (
@@ -20,48 +19,12 @@ export default function PedalUsage({ motorLatest }: PedalUsageProps) {
         <h2 className="mb-4 text-lg font-semibold text-white/90">
           {t('dynamics.pedalUsage', 'Pedal Usage')}
         </h2>
-        <Grid cols={{ default: 1, sm: 3 }} gap={6}>
-          <div className="flex flex-col items-center gap-2">
-            <RadialGauge
-              value={motorLatest?.pedal_position ?? 0}
-              max={100}
-              label={t('dynamics.throttle', 'Throttle')}
-              unit="%"
-              color="#06b6d4"
-              size={140}
-            />
-            <span className="text-xs text-white/50">
-              {t('dynamics.throttlePosition', 'Throttle Position')}
-            </span>
-          </div>
-          <div className="flex flex-col items-center gap-2">
-            <RadialGauge
-              value={motorLatest?.brake_pedal_pos ?? 0}
-              max={100}
-              label={t('dynamics.brake', 'Brake')}
-              unit={motorLatest?.brake_pedal_pos != null ? '%' : '—'}
-              color="#ef4444"
-              size={140}
-            />
-            <span className="text-xs text-white/50">
-              {t('dynamics.brakePedalPosition', 'Brake Pedal Position')}
-            </span>
-          </div>
-          <div className="flex flex-col items-center justify-center gap-3">
-            <Footprints className="h-8 w-8 text-white/20" />
-            <Badge
-              variant={motorLatest?.brake_pedal ? 'danger' : 'success'}
-              size="lg"
-            >
-              {motorLatest?.brake_pedal
-                ? t('dynamics.brakeActive', 'Brake Active')
-                : t('dynamics.brakeInactive', 'Brake Inactive')}
-            </Badge>
-            <span className="text-xs text-white/50">
-              {t('dynamics.brakePedal', 'Brake Pedal Status')}
-            </span>
-          </div>
-        </Grid>
+        <EmptyState
+          message={t(
+            'dynamics.pedalUnavailable',
+            'Pedal telemetry is not available in the current data model',
+          )}
+        />
       </GlassPanel>
     </FadeIn>
   );

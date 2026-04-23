@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next'
-import { Cog, Activity, Thermometer, Gauge, Settings } from 'lucide-react'
+import { Cog, Activity, Thermometer, Gauge, Settings, Zap } from 'lucide-react'
 
 import { GlassPanel } from '@/components/ui'
 import { MetricCard } from '@/components/data-display'
-import { Skeleton } from '@/components/feedback'
+import { EmptyState } from '@/components/feedback'
 import { useSettings } from '@/hooks/useSettings'
 import { fmtNumber, fmtInt } from '@/lib/numberFormat'
 import type { MotorSnapshot } from '@/api/types'
@@ -16,6 +16,11 @@ export function MotorSection({ motorData }: MotorSectionProps) {
   const { t } = useTranslation()
   const { convertTemp, tempUnit } = useSettings()
 
+  const maxMotorTemp =
+    motorData
+      ? Math.max(motorData.motor_temp_c_front ?? -Infinity, motorData.motor_temp_c_rear ?? -Infinity)
+      : null
+
   return (
     <GlassPanel className="p-6">
       <div className="flex items-center gap-2 mb-4">
@@ -27,44 +32,64 @@ export function MotorSection({ motorData }: MotorSectionProps) {
       {motorData ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           <MetricCard
-            label={t('vehicles.detail.motorState', 'Motor State')}
-            value={motorData.di_state ?? '—'}
-            icon={<Cog className="h-4 w-4" />}
+            label={t('vehicles.detail.shiftState', 'Shift State')}
+            value={motorData.shift_state ?? '—'}
+            icon={<Settings className="h-4 w-4" />}
             color="cyan"
           />
           <MetricCard
-            label={t('vehicles.detail.torque', 'Torque')}
-            value={motorData.di_torque != null ? `${fmtNumber(motorData.di_torque)} Nm` : '—'}
+            label={t('vehicles.detail.power', 'Power')}
+            value={motorData.power_kw != null ? `${fmtNumber(motorData.power_kw)} kW` : '—'}
+            icon={<Zap className="h-4 w-4" />}
+            color="purple"
+          />
+          <MetricCard
+            label={t('vehicles.detail.regen', 'Regen')}
+            value={motorData.regen_kw != null ? `${fmtNumber(motorData.regen_kw)} kW` : '—'}
+            icon={<Zap className="h-4 w-4" />}
+            color="green"
+          />
+          <MetricCard
+            label={t('vehicles.detail.torqueFront', 'Front Torque')}
+            value={
+              motorData.torque_nm_front != null ? `${fmtNumber(motorData.torque_nm_front)} Nm` : '—'
+            }
+            icon={<Activity className="h-4 w-4" />}
+            color="cyan"
+          />
+          <MetricCard
+            label={t('vehicles.detail.torqueRear', 'Rear Torque')}
+            value={
+              motorData.torque_nm_rear != null ? `${fmtNumber(motorData.torque_nm_rear)} Nm` : '—'
+            }
             icon={<Activity className="h-4 w-4" />}
             color="purple"
           />
           <MetricCard
-            label={t('vehicles.detail.statorTemp', 'Stator Temp')}
-            value={motorData.di_stator_temp != null ? `${fmtNumber(convertTemp(motorData.di_stator_temp))}${tempUnit}` : '—'}
-            icon={<Thermometer className="h-4 w-4" />}
-            color="green"
-          />
-          <MetricCard
-            label={t('vehicles.detail.axleSpeed', 'Axle Speed')}
-            value={motorData.di_axle_speed != null ? `${fmtInt(motorData.di_axle_speed)} RPM` : '—'}
+            label={t('vehicles.detail.rpmFront', 'Front RPM')}
+            value={motorData.motor_rpm_front != null ? `${fmtInt(motorData.motor_rpm_front)}` : '—'}
             icon={<Gauge className="h-4 w-4" />}
             color="cyan"
           />
           <MetricCard
-            label={t('vehicles.detail.pedalPos', 'Pedal Position')}
-            value={motorData.pedal_position != null ? `${fmtNumber(motorData.pedal_position)}%` : '—'}
-            icon={<Activity className="h-4 w-4" />}
-            color="cyan"
+            label={t('vehicles.detail.rpmRear', 'Rear RPM')}
+            value={motorData.motor_rpm_rear != null ? `${fmtInt(motorData.motor_rpm_rear)}` : '—'}
+            icon={<Gauge className="h-4 w-4" />}
+            color="purple"
           />
           <MetricCard
-            label={t('vehicles.detail.gear', 'Gear')}
-            value={motorData.gear ?? '—'}
-            icon={<Settings className="h-4 w-4" />}
-            color="purple"
+            label={t('vehicles.detail.motorTemp', 'Motor Temp (peak)')}
+            value={
+              maxMotorTemp != null && isFinite(maxMotorTemp)
+                ? `${fmtNumber(convertTemp(maxMotorTemp))}${tempUnit}`
+                : '—'
+            }
+            icon={<Thermometer className="h-4 w-4" />}
+            color="green"
           />
         </div>
       ) : (
-        <Skeleton lines={3} height={16} />
+        <EmptyState message={t('vehicles.detail.noMotorData', 'No motor data available')} />
       )}
     </GlassPanel>
   )

@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next'
-import { Shield, Lock, Unlock, Eye, Car } from 'lucide-react'
+import { Shield, Lock, Unlock, Eye, Car, DoorClosed } from 'lucide-react'
 
 import { GlassPanel } from '@/components/ui'
 import { MetricCard } from '@/components/data-display'
-import { Skeleton } from '@/components/feedback'
+import { EmptyState } from '@/components/feedback'
 import type { SecurityEvent, VehicleState } from '@/api/types'
 
 interface SecuritySectionProps {
@@ -38,29 +38,19 @@ export function SecuritySection({ securityData, state }: SecuritySectionProps) {
           />
           <MetricCard
             label={t('vehicles.detail.doors', 'Doors')}
-            value={securityData.door_state ?? '—'}
-            icon={<Car className="h-4 w-4" />}
-            color="cyan"
+            value={securityData.doors_open ?? t('common.closed', 'Closed')}
+            icon={<DoorClosed className="h-4 w-4" />}
+            color={securityData.doors_open ? 'cyan' : 'green'}
           />
           <MetricCard
             label={t('vehicles.detail.windows', 'Windows')}
-            value={
-              [securityData.fd_window, securityData.fp_window, securityData.rd_window, securityData.rp_window]
-                .every((w) => w === 'Closed')
-                ? t('common.allClosed', 'All Closed')
-                : t('common.someOpen', 'Some Open')
-            }
+            value={securityData.windows_open ?? t('common.closed', 'Closed')}
             icon={<Car className="h-4 w-4" />}
-            color={
-              [securityData.fd_window, securityData.fp_window, securityData.rd_window, securityData.rp_window]
-                .every((w) => w === 'Closed')
-                ? 'green'
-                : 'cyan'
-            }
+            color={securityData.windows_open ? 'cyan' : 'green'}
           />
         </div>
       ) : (
-        <Skeleton lines={2} height={16} />
+        <EmptyState message={t('vehicles.detail.noSecurityData', 'No security data available')} />
       )}
     </GlassPanel>
   )

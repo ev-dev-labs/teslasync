@@ -107,13 +107,13 @@ export default function DrivetrainHealthPage() {
     const history = motorHistory ?? [];
     if (history.length === 0) return [];
     return history.map((s) => ({
-      time: s.created_at ? new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
-      stator: s.di_stator_temp != null ? convertTemp(s.di_stator_temp) : null,
-      statorRel: s.di_stator_temp_rel != null ? convertTemp(s.di_stator_temp_rel) : null,
-      statorRer: s.di_stator_temp_rer != null ? convertTemp(s.di_stator_temp_rer) : null,
-      torque: s.di_torque ?? null,
-      speed: s.vehicle_speed != null ? convertSpeed(s.vehicle_speed) : null,
-      axle: s.di_axle_speed ?? null,
+      time: s.ts ? new Date(s.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+      stator: s.motor_temp_c_front != null ? convertTemp(s.motor_temp_c_front) : null,
+      statorRel: s.motor_temp_c_rear != null ? convertTemp(s.motor_temp_c_rear) : null,
+      statorRer: s.inverter_temp_c != null ? convertTemp(s.inverter_temp_c) : null,
+      torque: s.torque_nm_front ?? s.torque_nm_rear ?? null,
+      speed: s.power_kw != null ? convertSpeed(s.power_kw) : null,
+      axle: s.motor_rpm_front ?? s.motor_rpm_rear ?? null,
     }));
   }, [motorHistory, convertTemp, convertSpeed]);
 

@@ -44,9 +44,8 @@ export function VehicleCharts({
   const batteryData =
     positions
       ?.map((p) => ({
-        time: formatTime(p.created_at),
-        battery: p.battery_level,
-        speed: convertSpeed(p.speed ?? 0),
+        time: formatTime(p.ts),
+        speed: p.speed_mph != null ? convertSpeed(p.speed_mph) : null,
       }))
       .reverse() ?? []
 
@@ -240,7 +239,7 @@ export function VehicleCharts({
         <GlassPanel className="p-6 h-full">
           <h3 className="section-title mb-4 flex items-center gap-2">
             <Activity className="h-4 w-4 text-neon-cyan" />
-            {t('common.batterySpeedHistory', 'Battery & Speed History')}
+            {t('common.speedHistory', 'Speed History')}
           </h3>
           {batteryData.length > 0 ? (
             <div className="h-64">
@@ -255,28 +254,9 @@ export function VehicleCharts({
                     dataKey="time"
                     tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
                   />
-                  <YAxis
-                    yAxisId="left"
-                    domain={[0, 100]}
-                    tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
-                  />
-                  <YAxis
-                    yAxisId="right"
-                    orientation="right"
-                    tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
-                  />
+                  <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
                   <Tooltip content={<ChartTooltip />} />
                   <Area
-                    yAxisId="left"
-                    type="monotone"
-                    dataKey="battery"
-                    stroke="#10b981"
-                    fill="#10b981"
-                    fillOpacity={0.1}
-                    name="Battery %"
-                  />
-                  <Area
-                    yAxisId="right"
                     type="monotone"
                     dataKey="speed"
                     stroke="#00f0ff"
@@ -290,7 +270,7 @@ export function VehicleCharts({
           ) : (
             <div className="h-64 flex items-center justify-center">
               <p className="text-xs text-[var(--text-muted)]">
-                Position data will appear here
+                {t('common.positionDataWillAppear', 'Position data will appear here')}
               </p>
             </div>
           )}
