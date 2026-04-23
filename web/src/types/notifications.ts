@@ -63,9 +63,19 @@ export interface NotificationChannelWebhook extends NotificationChannelBase {
   body_template: string;
 }
 
+export interface NotificationChannelNtfy extends NotificationChannelBase {
+  kind: 'ntfy';
+  server_url: string;
+  topic: string;
+  priority: 1 | 2 | 3 | 4 | 5;
+  username: string | null;
+  password: string | null;
+}
+
 export type NotificationChannel =
   | (NotificationChannelDiscord & { kind: 'discord' })
   | (NotificationChannelSlack & { kind: 'slack' })
   | (NotificationChannelTelegram & { kind: 'telegram' })
   | (NotificationChannelEmail & { kind: 'email' })
-  | (NotificationChannelWebhook & { kind: 'webhook' });
+  | (NotificationChannelWebhook & { kind: 'webhook' })
+  | (NotificationChannelNtfy & { kind: 'ntfy' });
