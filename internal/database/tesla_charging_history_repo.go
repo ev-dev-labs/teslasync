@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -117,8 +116,8 @@ func (r *TeslaChargingHistoryRepo) UpsertBatch(ctx context.Context, entries []*m
 	query := `INSERT INTO tesla_charging_history (
 		session_id, vin, site_location_name, charge_start_datetime, charge_stop_datetime,
 		country, state, county, postal_code, billing_type, fee_type, currency_code, pricing_type,
-		rate_base, usage_kwh, total_due, has_invoice, invoice_content_id, raw_json, fetched_at
-	) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+		rate_base, usage_kwh, total_due, has_invoice, invoice_content_id, fetched_at
+	) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
 	ON CONFLICT (session_id) DO UPDATE SET
 		site_location_name = EXCLUDED.site_location_name,
 		charge_start_datetime = EXCLUDED.charge_start_datetime,
@@ -136,21 +135,11 @@ func (r *TeslaChargingHistoryRepo) UpsertBatch(ctx context.Context, entries []*m
 		total_due = EXCLUDED.total_due,
 		has_invoice = EXCLUDED.has_invoice,
 		invoice_content_id = EXCLUDED.invoice_content_id,
-		raw_json = EXCLUDED.raw_json,
 		fetched_at = EXCLUDED.fetched_at`
 
 	now := time.Now().UTC()
 	upserted := 0
 	for _, e := range entries {
-		rawJSON := e.RawJSON
-		if rawJSON == "" {
-			rawJSON = "{}"
-		}
-		// Validate raw_json is valid JSON
-		if !json.Valid([]byte(rawJSON)) {
-			rawJSON = "{}"
-		}
-
 		_, err := r.db.Pool.Exec(ctx, query,
 			e.SessionID, e.VIN, e.SiteLocationName,
 			e.ChargeStartDatetime, e.ChargeStopDatetime,
@@ -158,7 +147,7 @@ func (r *TeslaChargingHistoryRepo) UpsertBatch(ctx context.Context, entries []*m
 			e.BillingType, e.FeeType, e.CurrencyCode, e.PricingType,
 			e.RateBase, e.UsageKWh, e.TotalDue,
 			e.HasInvoice, e.InvoiceContentID,
-			rawJSON, now,
+			now,
 		)
 		if err != nil {
 			return upserted, fmt.Errorf("upsert tesla charging history session %d: %w", e.SessionID, err)
