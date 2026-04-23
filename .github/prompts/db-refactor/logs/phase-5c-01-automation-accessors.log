@@ -1,0 +1,97 @@
+=== PREFLIGHT ===
+Phase 5c.01 — Add AutomationFull accessor methods
+Timestamp: 2026-04-23 11:52:42
+Depends on: none (independent)
+No predecessor checks required.
+
+=== SURVEY ===
+Inspecting AutomationFull and CTI child types...
+
+FOUND: AutomationFull struct at internal/models/automation.go:61-64
+FOUND: Current shape:
+  type AutomationFull struct {
+      Automation
+      Steps []AutomationStep `json:steps`
+  }
+
+FOUND: CTI trigger children:
+  - AutomationStepTriggerSignal   (step_trigger.go:20)
+  - AutomationStepTriggerGeofence (step_trigger.go:33)
+  - AutomationStepTriggerSchedule (step_trigger.go:43)
+  - AutomationStepTriggerEvent    (step_trigger.go:54)
+
+FOUND: CTI condition children:
+  - AutomationStepConditionSignal           (step_condition.go:23)
+  - AutomationStepConditionTimeWindow       (step_condition.go:40)
+  - AutomationStepConditionGeofence         (step_condition.go:52)
+  - AutomationStepConditionOtherAutomation  (step_condition.go:64)
+
+FOUND: CTI action children:
+  - AutomationAction                     (step_action.go:32)
+  - AutomationStepActionNotify           (step_action.go:47)
+  - AutomationStepActionSetSetting       (step_action.go:58)
+  - AutomationStepActionCallAutomation   (step_action.go:71)
+
+FOUND: No common interface across trigger/condition/action children => []any
+FOUND: AutomationTriggerKind enum uses 'trigger_' prefix (enum_automation_triggers.go)
+FOUND: Consumer usages of deleted fields:
+  - .Actions       => conflict.go, engine.go (json.RawMessage of action array)
+  - .TriggerType   => conflict.go, engine.go (string)
+  - .TriggerConfig => conflict.go, calendar.go, mqtt.go, sunrise_sunset.go,
+                      vehicle_state.go, webhook.go (json.RawMessage)
+  - .AutoDisabled  => conflict.go, engine.go, webhook.go (bool)
+  - .Conditions    => conflict.go, engine.go (json.RawMessage)
+
+=== REASONING ===
+APPROACH: Per ADR-012 Option A, add typed child slices ([]any) to AutomationFull
+  for Triggers/Conditions/Actions, plus derived accessor methods for
+  TriggerType()/TriggerConfig()/AutoDisabled().
+
+APPROACH: TriggerType() scans Steps for first 'trigger_*' kind using strings.HasPrefix.
+APPROACH: TriggerConfig() marshals first element of Triggers to json.RawMessage.
+APPROACH: AutoDisabled() returns false (stub until run-history table).
+
+REJECTED: Specific typed slices (e.g. []AutomationStepTriggerSignal) — CTI children
+  have 4 different types per category with no shared interface; []any is correct.
+REJECTED: Adding TriggerType/TriggerConfig/AutoDisabled as struct fields — violates
+  Phase 5's deletion of those fields. Must use methods per prompt instructions.
+
+=== CHANGES ===
+File: internal/models/automation.go
+
+BEFORE (imports):
+  import "time"
+
+AFTER (imports):
+  import (
+    "encoding/json"
+    "strings"
+    "time"
+  )
+
+BEFORE (AutomationFull):
+  type AutomationFull struct {
+      Automation
+      Steps []AutomationStep `json:"steps"`
+  }
+
+AFTER (AutomationFull + accessors):
+  type AutomationFull struct {
+      Automation
+      Steps      []AutomationStep `json:"steps"`
+      Triggers   []any            `json:"triggers,omitempty"`
+      Conditions []any            `json:"conditions,omitempty"`
+      Actions    []any            `json:"actions,omitempty"`
+  }
+
+  func (af *AutomationFull) TriggerType() string { /* scans Steps for trigger_* */ }
+  func (af *AutomationFull) TriggerConfig() json.RawMessage { /* marshals first Trigger */ }
+  func (af *AutomationFull) AutoDisabled() bool { return false /* stub */ }
+
+=== GATE ===
+go build ./internal/models/... => exit 0
+MODEL_BUILD_EXIT=0
+go vet ./internal/models/... => exit 0
+MODEL_VET_EXIT=0
+
+=== COMMIT ===

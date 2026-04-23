@@ -1,6 +1,10 @@
 package models
 
-import "time"
+import (
+	"encoding/json"
+	"strings"
+	"time"
+)
 
 // Automation mirrors the post-migration `automations` table (see migration
 // 000142_baseline_typed and .github/prompts/db-refactor/phase-3-schema/_baseline_source/14-automations.sql).
@@ -58,7 +62,47 @@ type StepOrdering struct {
 // AutomationFull is the fully-hydrated aggregate used by list/detail endpoints
 // that need the parent row together with its ordered steps. CTI children are
 // attached separately by the step-children loader (ADR-004).
+//
+// Triggers, Conditions, and Actions hold the CTI child rows loaded by the
+// step-children loader (Phase 5 prompts 49-51). Each slice element is one of
+// the typed child structs (e.g. AutomationStepTriggerSignal); []any is used
+// because the four trigger / four condition / four action child types share no
+// common interface.
 type AutomationFull struct {
 	Automation
-	Steps []AutomationStep `json:"steps"`
+	Steps      []AutomationStep `json:"steps"`
+	Triggers   []any            `json:"triggers,omitempty"`
+	Conditions []any            `json:"conditions,omitempty"`
+	Actions    []any            `json:"actions,omitempty"`
 }
+
+// TriggerType returns the kind discriminator of the first trigger step,
+// or "" if no trigger steps exist. Used by conflict detection and
+// trigger evaluation consumers.
+func (af *AutomationFull) TriggerType() string {
+	for _, s := range af.Steps {
+		if strings.HasPrefix(s.Kind, "trigger_") {
+			return s.Kind
+		}
+	}
+	return ""
+}
+
+// TriggerConfig returns the raw JSON config of the first trigger.
+// Returns nil if no triggers. Used by trigger/*.go evaluation consumers.
+func (af *AutomationFull) TriggerConfig() json.RawMessage {
+	if len(af.Triggers) == 0 {
+		return nil
+	}
+	b, err := json.Marshal(af.Triggers[0])
+	if err != nil {
+		return nil
+	}
+	return b
+}
+
+// AutoDisabled derives whether this automation has been auto-disabled
+// (e.g. via repeated failures). Per ADR-012 sub-decision (ii), this
+// is derived from run history, not a stored field.
+// For now, returns false until the run-history table is implemented.
+func (af *AutomationFull) AutoDisabled() bool { return false }
