@@ -76,6 +76,14 @@ export interface AutomationStepConditionSignal extends AutomationStepBase {
   compare_bool: boolean | null;
 }
 
+export interface AutomationStepConditionTimeWindow extends AutomationStepBase {
+  kind: 'condition_time_window';
+  lane: 'condition';
+  start_time: string;
+  end_time: string;
+  timezone: string;
+}
+
 // Discriminated union — children added by prompts 13-23
 export type AutomationStep =
   | AutomationStepTriggerSignal
@@ -83,6 +91,7 @@ export type AutomationStep =
   | AutomationStepTriggerTime
   | AutomationStepTriggerWebhook
   | AutomationStepConditionSignal
+  | AutomationStepConditionTimeWindow
   | AutomationStepBase;
 
 export interface AutomationFull extends Automation {
