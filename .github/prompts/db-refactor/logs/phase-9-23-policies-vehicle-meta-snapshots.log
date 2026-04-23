@@ -1,0 +1,28 @@
+    hypertable_name     | num_dimensions | compression_enabled 
+------------------------+----------------+---------------------
+ vehicle_meta_snapshots |              1 | t
+(1 row)
+
+ dimension_number | column_name | time_interval 
+------------------+-------------+---------------
+                1 | ts          | 7 days
+(1 row)
+
+     proc_name      | schedule_interval |                       config                       
+--------------------+-------------------+----------------------------------------------------
+ policy_compression | 12:00:00          | {"hypertable_id": 13, "compress_after": "30 days"}
+ policy_retention   | 1 day             | {"drop_after": "730 days", "hypertable_id": 13}
+(2 rows)
+
+           indexname           |                                                        indexdef                                                         
+-------------------------------+-------------------------------------------------------------------------------------------------------------------------
+ idx_vmeta_vehicle_cat_ts      | CREATE INDEX idx_vmeta_vehicle_cat_ts ON public.vehicle_meta_snapshots USING btree (vehicle_id, category, ts DESC)
+ vehicle_meta_snapshots_pkey   | CREATE UNIQUE INDEX vehicle_meta_snapshots_pkey ON public.vehicle_meta_snapshots USING btree (vehicle_id, ts, category)
+ vehicle_meta_snapshots_ts_idx | CREATE INDEX vehicle_meta_snapshots_ts_idx ON public.vehicle_meta_snapshots USING btree (ts DESC)
+(3 rows)
+
+    hypertable_name     | total_size | total_bytes 
+------------------------+------------+-------------
+ vehicle_meta_snapshots | 32 kB      |       32768
+(1 row)
+
