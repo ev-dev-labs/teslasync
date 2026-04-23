@@ -88,16 +88,16 @@ func (h *ImportHandler) ImportDrives(w http.ResponseWriter, r *http.Request) {
 
 		d := &models.Drive{
 			VehicleID:   vehicleID,
-			StartDate:   startDate,
-			Distance:    distance,
+			StartTs:     startDate,
+			DistanceMi:  distance,
 			DurationMin: duration,
 		}
 		if speedMax > 0 {
-			d.SpeedMax = &speedMax
+			d.MaxSpeedMph = &speedMax
 		}
 		if record[2] != "" {
 			if endDate, err := time.Parse("2006-01-02T15:04:05Z", record[2]); err == nil {
-				d.EndDate = &endDate
+				d.EndTs = endDate
 			}
 		}
 
@@ -171,26 +171,28 @@ func (h *ImportHandler) ImportCharging(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
+		startBattPct := int16(startBattery)
 		c := &models.ChargingSession{
-			VehicleID:         vehicleID,
-			StartDate:         startDate,
-			ChargeEnergyAdded: energyAdded,
-			StartBatteryLevel: startBattery,
+			VehicleID:       vehicleID,
+			StartTs:         startDate,
+			EnergyAddedKwh:  &energyAdded,
+			StartBatteryPct: &startBattPct,
 		}
 
 		if record[2] != "" {
 			if endDate, err := time.Parse("2006-01-02T15:04:05Z", record[2]); err == nil {
-				c.EndDate = &endDate
+				c.EndTs = &endDate
 			}
 		}
 		if endBatt, err := strconv.Atoi(record[5]); err == nil {
-			c.EndBatteryLevel = &endBatt
+			endBattPct := int16(endBatt)
+			c.EndBatteryPct = &endBattPct
 		}
 		if power, err := strconv.ParseFloat(record[6], 64); err == nil {
-			c.ChargerPower = &power
+			c.ChargerPowerKwMax = &power
 		}
 		durationMin, _ := strconv.ParseFloat(record[7], 64)
-		c.DurationMin = durationMin
+		c.DurationMin = &durationMin
 
 		if err := h.chargingRepo.Create(r.Context(), c); err != nil {
 			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to import charging session")
