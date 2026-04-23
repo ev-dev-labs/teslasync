@@ -1121,14 +1121,15 @@ func (h *TelemetryHandler) TelemetryStatus(w http.ResponseWriter, r *http.Reques
 // This method is being assembled incrementally across the db-refactor
 // prompts. Today it covers stages 1-2 (normalize + flatten); subsequent
 // prompts add hot-route bucketing and per-table writers.
-func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded []telemetry.NamedValue) {
+func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded []telemetry.NamedValue) error {
+	startedAt := time.Now()
 	// Resolve vehicle by VIN up-front so downstream stages (FSM hooks, hot/cold
 	// writers) all share the same identity columns. A missing vehicle is fatal
 	// for this batch — without an FK we cannot persist anything.
 	veh, err := h.vehicleRepo.GetByVIN(ctx, vin)
 	if err != nil || veh == nil {
 		log.Warn().Err(err).Str("vin", vin).Msg("ProcessBatch: vehicle not found; dropping batch")
-		return
+		return nil
 	}
 	vehicleID := veh.ID
 	ts := time.Now().UTC()
@@ -1179,7 +1180,7 @@ func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded
 			Str("vin", vin).
 			Int("unique_names", len(unique)).
 			Msg("catalog upsert failed; aborting batch")
-		return
+		return fmt.Errorf("catalog upsert: %w", err)
 	}
 	log.Debug().
 		Int("unique_names", len(unique)).
@@ -1291,13 +1292,42 @@ func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded
 			return h.signalObsRepo.BulkInsert(ctx, coldObs)
 		})
 	}
-	if len(writeErrs) > 0 {
-		log.Warn().
-			Int("count", len(writeErrs)).
-			Str("first_table", writeErrs[0].table).
-			Err(writeErrs[0].err).
-			Msg("fan-out write errors (aggregation/terminal handling in prompt 28)")
+
+	total := len(hotRows) + boolToInt(len(coldObs) > 0)
+	failed := len(writeErrs)
+
+	for _, we := range writeErrs {
+		log.Error().
+			Err(we.err).
+			Str("table", we.table).
+			Msg("telemetry write failed")
 	}
+
+	log.Info().
+		Str("vin", vin).
+		Int64("vehicle_id", vehicleID).
+		Int("normalized", len(normalized)).
+		Int("atomics", len(atomics)).
+		Int("hot_writes", len(hotRows)).
+		Int("cold_writes", len(coldObs)).
+		Int("write_failures", failed).
+		Dur("duration", time.Since(startedAt)).
+		Msg("telemetry batch processed")
+
+	if total > 0 && failed == total {
+		return fmt.Errorf("all %d write targets failed (systemic)", total)
+	}
+	return nil
+}
+
+// boolToInt returns 1 when b is true, else 0. Used to count the cold-write
+// target as one of the batch's total write targets without inflating the hot
+// row count.
+func boolToInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
 }
 
 // buildColdObservations converts cold atomics (originally cold + transform-demoted)
