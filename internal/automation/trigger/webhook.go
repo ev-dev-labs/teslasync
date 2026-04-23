@@ -16,7 +16,7 @@ import (
 
 // WebhookRepo is the subset of database.AutomationRepo needed by WebhookTrigger.
 type WebhookRepo interface {
-	GetByWebhookToken(ctx context.Context, token string) (*models.Automation, error)
+	GetByWebhookToken(ctx context.Context, token string) (*models.AutomationFull, error)
 	SetAutoDisabled(ctx context.Context, id int64, reason string) error
 }
 
@@ -69,18 +69,18 @@ func (t *WebhookTrigger) HandleWebhook(ctx context.Context, token string, payloa
 	}
 
 	// Check automation is enabled.
-	if !automation.Enabled || automation.AutoDisabled {
+	if !automation.Enabled || automation.AutoDisabled() {
 		t.logger.Warn().
 			Int64("automation_id", automation.ID).
 			Str("automation", automation.Name).
 			Bool("enabled", automation.Enabled).
-			Bool("auto_disabled", automation.AutoDisabled).
+			Bool("auto_disabled", automation.AutoDisabled()).
 			Msg("webhook received for disabled automation")
 		return ErrWebhookNotFound
 	}
 
 	// Parse trigger config for secret validation.
-	cfg, err := parseWebhookConfig(automation.TriggerConfig)
+	cfg, err := parseWebhookConfig(automation.TriggerConfig())
 	if err != nil {
 		t.logger.Warn().Err(err).
 			Int64("automation_id", automation.ID).
