@@ -103,14 +103,14 @@ func (r *TeslaFleetTelemetryErrorRepo) GetErrors(ctx context.Context, vin string
 	var args []interface{}
 
 	if vin != "" {
-		query = `SELECT id, vin, error_code, error_message, reported_at, raw_json, tesla_updated_at, fetched_at
+		query = `SELECT id, vin, error_code, error_message, reported_at, tesla_updated_at, fetched_at
 			FROM tesla_fleet_telemetry_errors
 			WHERE vin = $1
 			ORDER BY fetched_at DESC
 			LIMIT $2 OFFSET $3`
 		args = []interface{}{vin, limit, offset}
 	} else {
-		query = `SELECT id, vin, error_code, error_message, reported_at, raw_json, tesla_updated_at, fetched_at
+		query = `SELECT id, vin, error_code, error_message, reported_at, tesla_updated_at, fetched_at
 			FROM tesla_fleet_telemetry_errors
 			ORDER BY fetched_at DESC
 			LIMIT $1 OFFSET $2`
@@ -126,7 +126,7 @@ func (r *TeslaFleetTelemetryErrorRepo) GetErrors(ctx context.Context, vin string
 	var results []*models.TeslaFleetTelemetryError
 	for rows.Next() {
 		e := &models.TeslaFleetTelemetryError{}
-		if err := rows.Scan(&e.ID, &e.VIN, &e.ErrorCode, &e.ErrorMessage, &e.ReportedAt, &e.RawJSON, &e.TeslaUpdatedAt, &e.FetchedAt); err != nil {
+		if err := rows.Scan(&e.ID, &e.VIN, &e.ErrorCode, &e.ErrorMessage, &e.ReportedAt, &e.TeslaUpdatedAt, &e.FetchedAt); err != nil {
 			return nil, fmt.Errorf("scan fleet telemetry error: %w", err)
 		}
 		results = append(results, e)
@@ -148,19 +148,14 @@ func (r *TeslaFleetTelemetryErrorRepo) UpsertErrors(ctx context.Context, errors 
 
 	inserted := 0
 	for _, e := range errors {
-		rawJSON := e.RawJSON
-		if rawJSON == "" {
-			rawJSON = "{}"
-		}
 		tag, err := tx.Exec(ctx,
-			`INSERT INTO tesla_fleet_telemetry_errors (vin, error_code, error_message, reported_at, raw_json, tesla_updated_at, fetched_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			`INSERT INTO tesla_fleet_telemetry_errors (vin, error_code, error_message, reported_at, tesla_updated_at, fetched_at)
+			VALUES ($1, $2, $3, $4, $5, $6)
 			ON CONFLICT (vin, error_code, reported_at) DO UPDATE SET
 				error_message = EXCLUDED.error_message,
-				raw_json = EXCLUDED.raw_json,
 				tesla_updated_at = EXCLUDED.tesla_updated_at,
 				fetched_at = EXCLUDED.fetched_at`,
-			e.VIN, e.ErrorCode, e.ErrorMessage, e.ReportedAt, rawJSON, e.TeslaUpdatedAt, e.FetchedAt,
+			e.VIN, e.ErrorCode, e.ErrorMessage, e.ReportedAt, e.TeslaUpdatedAt, e.FetchedAt,
 		)
 		if err != nil {
 			return 0, fmt.Errorf("upsert fleet telemetry error: %w", err)
