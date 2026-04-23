@@ -168,7 +168,10 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 	for k, v := range signals {
 		mergedSignals[k] = v
 	}
-	message := renderTemplate(rule.MsgTemplate, mergedSignals)
+	// MsgTemplate was removed from AlertRule; derive a default template
+	// that includes the rule name and the triggering signal value.
+	defaultTmpl := rule.Name + ": {{" + rule.SignalName + "}}"
+	message := renderTemplate(defaultTmpl, mergedSignals)
 	if message == "" {
 		message = rule.Name
 	}
