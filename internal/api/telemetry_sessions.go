@@ -255,14 +255,14 @@ func (t *TelemetrySessionTracker) RecoverSessions(ctx context.Context) {
 		sc := &streamingCharge{
 			SessionID:          c.ID,
 			VehicleID:          c.VehicleID,
-			StartTime:          c.StartDate,
-			StartBatteryLevel:  c.StartBatteryLevel,
+			StartTime:          c.StartTs,
+			StartBatteryLevel:  derefInt16AsInt(c.StartBatteryPct),
 			LastSeen:           time.Now().UTC(),
 			accumulatedSignals: make(map[string]interface{}),
 			lastTelemetryWrite: time.Now().UTC(),
 		}
-		if c.ChargerPower != nil {
-			sc.Power = c.ChargerPower
+		if c.ChargerPowerKwMax != nil {
+			sc.Power = c.ChargerPowerKwMax
 		}
 		t.activeCharges[c.VehicleID] = sc
 		log.Info().Int64("session_id", c.ID).Int64("vehicle_id", c.VehicleID).Msg("session recovery: restored open charge")
@@ -496,6 +496,12 @@ func floatPtr(v float64) *float64 { return &v }
 func intPtr(v int) *int           { return &v }
 func boolPtr(v bool) *bool        { return &v }
 func strPtr(v string) *string     { return &v }
+func derefInt16AsInt(p *int16) int {
+	if p == nil {
+		return 0
+	}
+	return int(*p)
+}
 
 func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}) {
 	speed, hasSpeed := signalFloat(signals, "VehicleSpeed")
