@@ -28,22 +28,7 @@ type AuditLog struct {
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }
 
-// Vehicle represents a tracked Tesla vehicle.
-type Vehicle struct {
-	ID            int64     `json:"id" db:"id"`
-	VehicleID     int64     `json:"vehicle_id" db:"vehicle_id"`
-	VIN           string    `json:"vin" db:"vin"`
-	DisplayName   string    `json:"display_name" db:"display_name"`
-	Model         string    `json:"model" db:"model"`
-	TrimBadging   string    `json:"trim_badging" db:"trim_badging"`
-	ExteriorColor string    `json:"exterior_color" db:"exterior_color"`
-	WheelType     string    `json:"wheel_type" db:"wheel_type"`
-	State         string    `json:"state" db:"state"`   // online, asleep, offline
-	Healthy       bool      `json:"healthy" db:"healthy"`
-	IsGearCapable bool      `json:"is_gear_capable" db:"is_gear_capable"`
-	CreatedAt     time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at" db:"updated_at"`
-}
+// Vehicle has moved to vehicle.go (regenerated for post-migration schema).
 
 // Position represents a GPS position record with telemetry.
 type Position struct {
