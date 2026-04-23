@@ -91,6 +91,13 @@ export interface AutomationStepConditionGeofence extends AutomationStepBase {
   must_be_inside: boolean;
 }
 
+export interface AutomationStepConditionDayOfWeek extends AutomationStepBase {
+  kind: 'condition_day_of_week';
+  lane: 'condition';
+  days_of_week: number[];
+  timezone: string;
+}
+
 // Discriminated union — children added by prompts 13-23
 export type AutomationStep =
   | AutomationStepTriggerSignal
@@ -100,6 +107,7 @@ export type AutomationStep =
   | AutomationStepConditionSignal
   | AutomationStepConditionTimeWindow
   | AutomationStepConditionGeofence
+  | AutomationStepConditionDayOfWeek
   | AutomationStepBase;
 
 export interface AutomationFull extends Automation {
