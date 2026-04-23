@@ -45,6 +45,16 @@ func (r *AutomationRepo) Update(ctx context.Context, a *models.Automation) error
 	return nil
 }
 
+// Delete removes an automation by ID. Child rows (steps, triggers, scope)
+// are removed automatically via FK ON DELETE CASCADE per ADR-004.
+func (r *AutomationRepo) Delete(ctx context.Context, id int64) error {
+	const query = `DELETE FROM automations WHERE id = $1`
+	if _, err := r.db.Pool.Exec(ctx, query, id); err != nil {
+		return fmt.Errorf("automations-repo-delete: %w", err)
+	}
+	return nil
+}
+
 // ListSummaries returns lightweight automation summaries (id, name, enabled)
 // suitable for list views. Steps, triggers, and scope are intentionally not
 // loaded; callers needing the full aggregate should use GetByID.
