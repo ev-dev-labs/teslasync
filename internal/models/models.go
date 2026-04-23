@@ -30,26 +30,7 @@ type AuditLog struct {
 
 // Vehicle has moved to vehicle.go (regenerated for post-migration schema).
 
-// Position represents a GPS position record with telemetry.
-type Position struct {
-	ID          int64     `json:"id" db:"id"`
-	VehicleID   int64     `json:"vehicle_id" db:"vehicle_id"`
-	Latitude    float64   `json:"latitude" db:"latitude"`
-	Longitude   float64   `json:"longitude" db:"longitude"`
-	Speed       *float64  `json:"speed,omitempty" db:"speed"`
-	Power       *float64  `json:"power,omitempty" db:"power"`
-	Heading     *int      `json:"heading,omitempty" db:"heading"`
-	Elevation   *float64  `json:"elevation,omitempty" db:"elevation"`
-	Odometer    float64   `json:"odometer" db:"odometer"`
-	IdealRange  *float64  `json:"ideal_range,omitempty" db:"ideal_range"`
-	RatedRange  *float64  `json:"rated_range,omitempty" db:"rated_range"`
-	BatteryLvl  int       `json:"battery_level" db:"battery_level"`
-	InsideTemp  *float64  `json:"inside_temp,omitempty" db:"inside_temp"`
-	OutsideTemp *float64  `json:"outside_temp,omitempty" db:"outside_temp"`
-	FanStatus   *int      `json:"fan_status,omitempty" db:"fan_status"`
-	IsClimate   *bool     `json:"is_climate_on,omitempty" db:"is_climate_on"`
-	CreatedAt   time.Time `json:"created_at" db:"created_at"`
-}
+// Position has moved to position.go (regenerated for post-migration schema).
 
 // Drive has moved to drive.go (regenerated for post-migration schema).
 
