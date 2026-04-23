@@ -684,42 +684,7 @@ type MotorSnapshot struct {
 	CreatedAt          time.Time  `json:"created_at" db:"created_at"`
 }
 
-// ClimateSnapshot represents a point-in-time climate/HVAC telemetry reading.
-type ClimateSnapshot struct {
-	ID                   int64     `json:"id" db:"id"`
-	VehicleID            int64     `json:"vehicle_id" db:"vehicle_id"`
-	InsideTemp           *float64  `json:"inside_temp,omitempty" db:"inside_temp"`
-	OutsideTemp          *float64  `json:"outside_temp,omitempty" db:"outside_temp"`
-	HvacPower            *float64  `json:"hvac_power,omitempty" db:"hvac_power"`
-	HvacFanSpeed         *int      `json:"hvac_fan_speed,omitempty" db:"hvac_fan_speed"`
-	HvacLeftTempRequest  *float64  `json:"hvac_left_temp_request,omitempty" db:"hvac_left_temp_request"`
-	HvacRightTempRequest *float64  `json:"hvac_right_temp_request,omitempty" db:"hvac_right_temp_request"`
-	CabinOverheatMode    *string   `json:"cabin_overheat_mode,omitempty" db:"cabin_overheat_mode"`
-	DefrostMode          *string   `json:"defrost_mode,omitempty" db:"defrost_mode"`
-	BatteryHeaterOn      *bool     `json:"battery_heater_on,omitempty" db:"battery_heater_on"`
-	HvacACEnabled        *bool     `json:"hvac_ac_enabled,omitempty" db:"hvac_ac_enabled"`
-	HvacAutoMode         *string   `json:"hvac_auto_mode,omitempty" db:"hvac_auto_mode"`
-	HvacFanStatus        *int      `json:"hvac_fan_status,omitempty" db:"hvac_fan_status"`
-	HvacSteeringWheelHeatAuto *bool `json:"hvac_steering_wheel_heat_auto,omitempty" db:"hvac_steering_wheel_heat_auto"`
-	HvacSteeringWheelHeatLevel *int `json:"hvac_steering_wheel_heat_level,omitempty" db:"hvac_steering_wheel_heat_level"`
-	ClimateKeeperMode    *string   `json:"climate_keeper_mode,omitempty" db:"climate_keeper_mode"`
-	CabinOverheatProtectionTempLimit *string `json:"cabin_overheat_protection_temp_limit,omitempty" db:"cabin_overheat_protection_temp_limit"`
-	DefrostForPreconditioning *bool `json:"defrost_for_preconditioning,omitempty" db:"defrost_for_preconditioning"`
-	SeatHeaterLeft       *int      `json:"seat_heater_left,omitempty" db:"seat_heater_left"`
-	SeatHeaterRight      *int      `json:"seat_heater_right,omitempty" db:"seat_heater_right"`
-	SeatHeaterRearLeft   *int      `json:"seat_heater_rear_left,omitempty" db:"seat_heater_rear_left"`
-	SeatHeaterRearCenter *int      `json:"seat_heater_rear_center,omitempty" db:"seat_heater_rear_center"`
-	SeatHeaterRearRight  *int      `json:"seat_heater_rear_right,omitempty" db:"seat_heater_rear_right"`
-	SeatVentEnabled      *bool     `json:"seat_vent_enabled,omitempty" db:"seat_vent_enabled"`
-	ClimateSeatCoolingFrontLeft *int `json:"climate_seat_cooling_front_left,omitempty" db:"climate_seat_cooling_front_left"`
-	ClimateSeatCoolingFrontRight *int `json:"climate_seat_cooling_front_right,omitempty" db:"climate_seat_cooling_front_right"`
-	AutoSeatClimateLeft  *bool     `json:"auto_seat_climate_left,omitempty" db:"auto_seat_climate_left"`
-	AutoSeatClimateRight *bool     `json:"auto_seat_climate_right,omitempty" db:"auto_seat_climate_right"`
-	RearDefrostEnabled   *bool     `json:"rear_defrost_enabled,omitempty" db:"rear_defrost_enabled"`
-	RearDisplayHvacEnabled *bool   `json:"rear_display_hvac_enabled,omitempty" db:"rear_display_hvac_enabled"`
-	WiperHeatEnabled     *bool     `json:"wiper_heat_enabled,omitempty" db:"wiper_heat_enabled"`
-	CreatedAt            time.Time `json:"created_at" db:"created_at"`
-}
+// ClimateSnapshot moved to climate.go (regenerated for post-migration schema).
 
 // SecurityEvent represents a point-in-time security/access telemetry reading.
 type SecurityEvent struct {
