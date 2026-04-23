@@ -9,3 +9,15 @@ export interface SignalObservation {
   value_bool: boolean | null;
   source: SignalSource;
 }
+
+export type SignalValueType = 'numeric' | 'text' | 'bool';
+
+export interface SignalCatalogEntry {
+  name: string;
+  value_type: SignalValueType;
+  source_module: string;
+  unit: string | null;
+  description: string | null;
+  first_seen_at: string;
+  last_seen_at: string;
+}
