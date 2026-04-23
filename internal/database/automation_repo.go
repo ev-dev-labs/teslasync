@@ -34,6 +34,17 @@ func (r *AutomationRepo) Create(ctx context.Context, a *models.Automation) error
 	return nil
 }
 
+// Update modifies the mutable parent fields (name, enabled) on an existing
+// automation row. Per ADR-004, child rows (steps, triggers, scope) are managed
+// by their own repos; this method touches only the automations table.
+func (r *AutomationRepo) Update(ctx context.Context, a *models.Automation) error {
+	const query = `UPDATE automations SET name = $1, enabled = $2 WHERE id = $3`
+	if _, err := r.db.Pool.Exec(ctx, query, a.Name, a.Enabled, a.ID); err != nil {
+		return fmt.Errorf("automations-repo-update: %w", err)
+	}
+	return nil
+}
+
 // ListSummaries returns lightweight automation summaries (id, name, enabled)
 // suitable for list views. Steps, triggers, and scope are intentionally not
 // loaded; callers needing the full aggregate should use GetByID.
