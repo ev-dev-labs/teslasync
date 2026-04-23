@@ -1154,7 +1154,63 @@ func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded
 		Int("cold_atomics_after_transform", len(buckets.Cold)).
 		Msg("hot row build step complete")
 
+	coldObs := h.buildColdObservations(0, time.Time{}, buckets.Cold)
+	log.Debug().
+		Int("cold_observations", len(coldObs)).
+		Msg("cold observation build step complete")
+
 	_ = hotRows
+	_ = coldObs
+}
+
+// buildColdObservations converts cold atomics (originally cold + transform-demoted)
+// into SignalObservation rows ready for signalObsRepo.BulkInsert. Each atomic's
+// Go type selects the correct value_* column; nulls are skipped. Unknown types
+// are stringified defensively into value_text with a warn log so no data is lost.
+func (h *TelemetryHandler) buildColdObservations(vehicleID int64, ts time.Time, cold []telemetry.Atomic) []models.SignalObservation {
+	out := make([]models.SignalObservation, 0, len(cold))
+	for _, a := range cold {
+		obs := models.SignalObservation{
+			VehicleID:  vehicleID,
+			Ts:         ts,
+			SignalName: a.Name,
+			Source:     "fleet_telemetry",
+		}
+		switch v := a.Value.(type) {
+		case nil:
+			continue
+		case bool:
+			b := v
+			obs.ValueBool = &b
+		case float64:
+			f := v
+			obs.ValueNumeric = &f
+		case float32:
+			f := float64(v)
+			obs.ValueNumeric = &f
+		case int:
+			f := float64(v)
+			obs.ValueNumeric = &f
+		case int32:
+			f := float64(v)
+			obs.ValueNumeric = &f
+		case int64:
+			f := float64(v)
+			obs.ValueNumeric = &f
+		case string:
+			s := v
+			obs.ValueText = &s
+		default:
+			s := fmt.Sprintf("%v", v)
+			obs.ValueText = &s
+			log.Warn().
+				Str("signal", a.Name).
+				Str("type", fmt.Sprintf("%T", v)).
+				Msg("cold signal had unexpected type; stringified")
+		}
+		out = append(out, obs)
+	}
+	return out
 }
 
 // buildHotRow folds a slice of atomics that all target the same table into one
