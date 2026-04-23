@@ -122,9 +122,9 @@ export default function ChargingDetailPage() {
   const hasLocation = !!(session?.latitude && session?.longitude);
   const dc = session ? isDC(session) : false;
 
-  const detailedChargeState = liveCharging?.detailed_charge_state;
-  const detailedChargeStateVariant: 'success' | 'warning' | 'danger' | 'info' | 'neutral' = (() => {
-    switch (detailedChargeState) {
+  const chargingState = liveCharging?.charging_state;
+  const chargingStateVariant: 'success' | 'warning' | 'danger' | 'info' | 'neutral' = (() => {
+    switch (chargingState) {
       case 'Charging':
       case 'Starting':
         return 'success';
@@ -228,23 +228,12 @@ export default function ChargingDetailPage() {
           <Badge variant={dc ? 'warning' : 'info'} dot>
             {dc ? 'DC' : 'AC'}
           </Badge>
-          {detailedChargeState && (
-            <Badge variant={detailedChargeStateVariant} size="sm" dot>
+          {chargingState && (
+            <Badge variant={chargingStateVariant} size="sm" dot>
               {t(
-                `charging.detail.detailedState.${detailedChargeState}`,
-                detailedChargeState,
+                `charging.detail.chargingState.${chargingState}`,
+                chargingState,
               )}
-            </Badge>
-          )}
-          {liveCharging?.fast_charger_present != null && (
-            <Badge
-              variant={liveCharging.fast_charger_present ? 'success' : 'neutral'}
-              size="sm"
-              dot
-            >
-              {liveCharging.fast_charger_present
-                ? t('charging.detail.fastChargerConnected', 'Fast Charger Connected')
-                : t('charging.detail.fastChargerDisconnected', 'No Fast Charger')}
             </Badge>
           )}
           {session.fast_charger_brand && (
@@ -824,24 +813,10 @@ export default function ChargingDetailPage() {
               columns={2}
               items={[
                 {
-                  label: t('charging.detail.chargeCurrentRequest', 'Requested Current'),
+                  label: t('charging.detail.chargingState', 'Charging State'),
                   value:
-                    liveCharging.charge_current_request != null
-                      ? fmtWithUnit(liveCharging.charge_current_request, 'A', 1)
-                      : '—',
-                },
-                {
-                  label: t('charging.detail.chargeCurrentRequestMax', 'Max Requested Current'),
-                  value:
-                    liveCharging.charge_current_request_max != null
-                      ? fmtWithUnit(liveCharging.charge_current_request_max, 'A', 1)
-                      : '—',
-                },
-                {
-                  label: t('charging.detail.chargeAmps', 'Active Charge Amps'),
-                  value:
-                    liveCharging.charge_amps != null
-                      ? fmtWithUnit(liveCharging.charge_amps, 'A', 1)
+                    liveCharging.charging_state != null && liveCharging.charging_state !== ''
+                      ? liveCharging.charging_state
                       : '—',
                 },
                 {
@@ -852,172 +827,59 @@ export default function ChargingDetailPage() {
                       : '—',
                 },
                 {
-                  label: t('charging.detail.ratedRange', 'Rated Range'),
+                  label: t('charging.detail.chargerActualCurrent', 'Active Charge Current'),
                   value:
-                    liveCharging.rated_range != null
-                      ? fmtWithUnit(convertDistance(liveCharging.rated_range), distanceUnit, 0)
+                    liveCharging.charger_actual_current != null
+                      ? fmtWithUnit(liveCharging.charger_actual_current, 'A', 1)
                       : '—',
                 },
                 {
-                  label: t('charging.detail.estBatteryRange', 'Estimated Range'),
+                  label: t('charging.detail.chargerPilotCurrent', 'Pilot Current'),
                   value:
-                    liveCharging.est_battery_range != null
-                      ? fmtWithUnit(convertDistance(liveCharging.est_battery_range), distanceUnit, 0)
+                    liveCharging.charger_pilot_current != null
+                      ? fmtWithUnit(liveCharging.charger_pilot_current, 'A', 1)
                       : '—',
                 },
                 {
-                  label: t(
-                    'charging.detail.estHoursToTermination',
-                    'Est. Hours to Charge Termination',
-                  ),
+                  label: t('charging.detail.chargerPowerKw', 'Charger Power'),
                   value:
-                    liveCharging.estimated_hours_to_charge != null
-                      ? fmtWithUnit(liveCharging.estimated_hours_to_charge, 'h', 2)
+                    liveCharging.charger_power_kw != null
+                      ? fmtWithUnit(liveCharging.charger_power_kw, 'kW', 1)
                       : '—',
                 },
                 {
-                  label: t('charging.detail.chargeEnableRequest', 'Charge Enable Request'),
+                  label: t('charging.detail.chargerPhases', 'Phases'),
                   value:
-                    liveCharging.charge_enable_request != null
-                      ? liveCharging.charge_enable_request
-                        ? t('common.enabled', 'Enabled')
-                        : t('common.disabled', 'Disabled')
+                    liveCharging.charger_phases != null
+                      ? String(liveCharging.charger_phases)
                       : '—',
                 },
                 {
-                  label: t('charging.detail.coldWeatherMode', 'Cold Weather Mode'),
+                  label: t('charging.detail.batteryRange', 'Battery Range'),
                   value:
-                    liveCharging.charge_port_cold_weather_mode != null ? (
-                      <Badge
-                        variant={liveCharging.charge_port_cold_weather_mode ? 'warning' : 'neutral'}
-                        size="sm"
-                      >
-                        {liveCharging.charge_port_cold_weather_mode
-                          ? t('common.active', 'Active')
-                          : t('common.inactive', 'Inactive')}
-                      </Badge>
-                    ) : (
-                      '—'
-                    ),
-                },
-                {
-                  label: t('charging.detail.cableType', 'Cable Type'),
-                  value:
-                    liveCharging.charging_cable_type != null &&
-                    liveCharging.charging_cable_type !== '' ? (
-                      <Badge variant="info" size="sm">
-                        {liveCharging.charging_cable_type}
-                      </Badge>
-                    ) : (
-                      '—'
-                    ),
-                },
-                {
-                  label: t('charging.detail.fastChargerType', 'Fast Charger Type'),
-                  value:
-                    liveCharging.fast_charger_type != null &&
-                    liveCharging.fast_charger_type !== '' &&
-                    liveCharging.fast_charger_type !== '<invalid>' ? (
-                      <Badge
-                        variant={
-                          liveCharging.fast_charger_type.toLowerCase().includes('tesla')
-                            ? 'success'
-                            : 'info'
-                        }
-                        size="sm"
-                      >
-                        {liveCharging.fast_charger_type}
-                      </Badge>
-                    ) : (
-                      '—'
-                    ),
-                },
-                {
-                  label: t('charging.detail.chargePortLatch', 'Charge Port Latch'),
-                  value:
-                    liveCharging.charge_port_latch != null && liveCharging.charge_port_latch !== '' ? (
-                      <Badge
-                        variant={
-                          liveCharging.charge_port_latch === 'Engaged' ? 'success' : 'warning'
-                        }
-                        size="sm"
-                        dot
-                      >
-                        {liveCharging.charge_port_latch === 'Engaged'
-                          ? t('charging.detail.chargePortLatchEngaged', 'Engaged')
-                          : liveCharging.charge_port_latch === 'Disengaged'
-                            ? t('charging.detail.chargePortLatchDisengaged', 'Disengaged')
-                            : liveCharging.charge_port_latch}
-                      </Badge>
-                    ) : (
-                      '—'
-                    ),
-                },
-                {
-                  label: t('charging.detail.dcdcConverter', 'DC-DC Converter'),
-                  value:
-                    liveCharging.dcdc_enable != null ? (
-                      <Badge
-                        variant={liveCharging.dcdc_enable ? 'success' : 'neutral'}
-                        size="sm"
-                      >
-                        {liveCharging.dcdc_enable
-                          ? t('common.enabled', 'Enabled')
-                          : t('common.disabled', 'Disabled')}
-                      </Badge>
-                    ) : (
-                      '—'
-                    ),
-                },
-                {
-                  label: t('charging.detail.preconditioningEnabled', 'Preconditioning'),
-                  value:
-                    liveCharging.preconditioning_enabled != null ? (
-                      <Badge
-                        variant={liveCharging.preconditioning_enabled ? 'success' : 'neutral'}
-                        size="sm"
-                      >
-                        {liveCharging.preconditioning_enabled
-                          ? t('common.enabled', 'Enabled')
-                          : t('common.disabled', 'Disabled')}
-                      </Badge>
-                    ) : (
-                      '—'
-                    ),
-                },
-                {
-                  label: t(
-                    'charging.detail.superchargerSessionTripPlanner',
-                    'Supercharger Trip Planner'
-                  ),
-                  value:
-                    liveCharging.supercharger_session_trip_planner != null ? (
-                      <Badge
-                        variant={
-                          liveCharging.supercharger_session_trip_planner ? 'success' : 'neutral'
-                        }
-                        size="sm"
-                      >
-                        {liveCharging.supercharger_session_trip_planner
-                          ? t('common.active', 'Active')
-                          : t('common.inactive', 'Inactive')}
-                      </Badge>
-                    ) : (
-                      '—'
-                    ),
-                },
-                {
-                  label: t('charging.detail.numBrickVoltageMax', 'Brick Count at Max Voltage'),
-                  value:
-                    liveCharging.num_brick_voltage_max != null
-                      ? fmtWithUnit(liveCharging.num_brick_voltage_max, '', 0)
+                    liveCharging.battery_range_mi != null
+                      ? fmtWithUnit(convertDistance(liveCharging.battery_range_mi), distanceUnit, 0)
                       : '—',
                 },
                 {
-                  label: t('charging.detail.numBrickVoltageMin', 'Brick Count at Min Voltage'),
+                  label: t('charging.detail.chargeRate', 'Charge Rate'),
                   value:
-                    liveCharging.num_brick_voltage_min != null
-                      ? fmtWithUnit(liveCharging.num_brick_voltage_min, '', 0)
+                    liveCharging.charge_rate_mph != null
+                      ? fmtWithUnit(convertDistance(liveCharging.charge_rate_mph), `${distanceUnit}/h`, 1)
+                      : '—',
+                },
+                {
+                  label: t('charging.detail.chargeEnergyAdded', 'Energy Added'),
+                  value:
+                    liveCharging.charge_energy_added_kwh != null
+                      ? fmtWithUnit(liveCharging.charge_energy_added_kwh, 'kWh', 2)
+                      : '—',
+                },
+                {
+                  label: t('charging.detail.chargeMilesAdded', 'Range Added'),
+                  value:
+                    liveCharging.charge_miles_added != null
+                      ? fmtWithUnit(convertDistance(liveCharging.charge_miles_added), distanceUnit, 1)
                       : '—',
                 },
               ]}
