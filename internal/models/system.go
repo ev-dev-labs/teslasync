@@ -189,6 +189,39 @@ type FSMTransition struct {
 	Trigger   *string   `db:"trigger" json:"trigger,omitempty"`
 }
 
+// Settings is the typed-struct facade over the key/value `settings` table
+// (ADR-011 Option A). Each field corresponds to one row in `settings`,
+// keyed by the JSON tag. Repositories aggregate N rows into this struct on
+// Get and decompose it into N upserts on Upsert. The JSON wire shape is
+// preserved verbatim from the pre-refactor wide-row form so the frontend
+// `useSettings` hook and Settings pages render unchanged.
+//
+// `polling_config` is intentionally NOT a field here — per-vehicle polling
+// tuning lives in the sibling `polling_config` table (see PollingConfig
+// above) and is accessed via its own repo methods. This eliminates the
+// pre-refactor JSONB carve-out (ADR-001, ADR-005).
+type Settings struct {
+	UnitOfLength      string  `json:"unit_of_length"`
+	UnitOfTemp        string  `json:"unit_of_temp"`
+	UnitOfPressure    string  `json:"unit_of_pressure"`
+	PreferredRange    string  `json:"preferred_range"`
+	Language          string  `json:"language"`
+	BaseCostPerKWh    float64 `json:"base_cost_per_kwh"`
+	APISuspended      bool    `json:"api_suspended"`
+	Theme             string  `json:"theme"`
+	Mode              string  `json:"mode"`
+	CustomPrimary     string  `json:"custom_primary"`
+	CustomAccent      string  `json:"custom_accent"`
+	GasPricePerUnit   float64 `json:"gas_price_per_unit"`
+	GasUnit           string  `json:"gas_unit"`
+	GasEfficiencyMPG  float64 `json:"gas_efficiency_mpg"`
+	DecimalPrecision  int     `json:"decimal_precision"`
+	QuietHoursEnabled bool    `json:"quiet_hours_enabled"`
+	QuietHoursStart   string  `json:"quiet_hours_start"`
+	QuietHoursEnd     string  `json:"quiet_hours_end"`
+	AlertDigestMode   string  `json:"alert_digest_mode"`
+}
+
 // Embedding mirrors the post-migration `embeddings` schema (pgvector-backed).
 //
 // ADR-005 carve-out: Embedding is the only field permitted to use a non-scalar
