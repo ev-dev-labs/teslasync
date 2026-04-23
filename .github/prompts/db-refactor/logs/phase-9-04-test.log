@@ -1,0 +1,112 @@
+# github.com/ev-dev-labs/teslasync/internal/automation/condition
+internal\automation\condition\conflict.go:71:45: candidate.Actions undefined (type *models.Automation has no field or method Actions)
+internal\automation\condition\conflict.go:81:52: candidate.TriggerType undefined (type *models.Automation has no field or method TriggerType)
+internal\automation\condition\conflict.go:81:75: candidate.TriggerConfig undefined (type *models.Automation has no field or method TriggerConfig)
+internal\automation\condition\conflict.go:88:30: other.AutoDisabled undefined (type *models.Automation has no field or method AutoDisabled)
+internal\automation\condition\conflict.go:95:38: other.Actions undefined (type *models.Automation has no field or method Actions)
+internal\automation\condition\conflict.go:106:45: other.TriggerType undefined (type *models.Automation has no field or method TriggerType)
+internal\automation\condition\conflict.go:106:64: other.TriggerConfig undefined (type *models.Automation has no field or method TriggerConfig)
+internal\automation\condition\conflict.go:394:15: a.Conditions undefined (type *models.Automation has no field or method Conditions)
+internal\automation\condition\location.go:79:70: geofence.Latitude undefined (type *models.Geofence has no field or method Latitude)
+internal\automation\condition\location.go:79:89: geofence.Longitude undefined (type *models.Geofence has no field or method Longitude)
+internal\automation\condition\location.go:79:89: too many errors
+# github.com/ev-dev-labs/teslasync/internal/automation/trigger
+internal\automation\trigger\battery.go:103:36: a.TriggerConfig undefined (type *models.Automation has no field or method TriggerConfig)
+internal\automation\trigger\calendar.go:214:36: a.TriggerConfig undefined (type *models.Automation has no field or method TriggerConfig)
+internal\automation\trigger\cron.go:122:41: automation.TriggerConfig undefined (type *models.Automation has no field or method TriggerConfig)
+internal\automation\trigger\energy.go:126:35: a.TriggerConfig undefined (type *models.Automation has no field or method TriggerConfig)
+internal\automation\trigger\geofence.go:174:37: a.TriggerConfig undefined (type *models.Automation has no field or method TriggerConfig)
+internal\automation\trigger\mqtt.go:208:33: a.TriggerConfig undefined (type *models.Automation has no field or method TriggerConfig)
+internal\automation\trigger\sunrise_sunset.go:148:41: a.TriggerConfig undefined (type *models.Automation has no field or method TriggerConfig)
+internal\automation\trigger\vehicle_state.go:94:41: a.TriggerConfig undefined (type *models.Automation has no field or method TriggerConfig)
+internal\automation\trigger\webhook.go:72:39: automation.AutoDisabled undefined (type *models.Automation has no field or method AutoDisabled)
+internal\automation\trigger\webhook.go:77:37: automation.AutoDisabled undefined (type *models.Automation has no field or method AutoDisabled)
+internal\automation\trigger\webhook.go:77:37: too many errors
+# github.com/ev-dev-labs/teslasync/internal/database
+internal\database\alert_repo.go:21:59: undefined: models.Alert
+internal\database\alert_repo.go:28:79: undefined: models.Alert
+internal\database\alert_repo.go:37:23: undefined: models.Alert
+internal\database\alert_repo.go:39:16: undefined: models.Alert
+internal\database\alert_repo.go:75:45: ar.Type undefined (type *models.AlertRule has no field or method Type)
+internal\database\alert_repo.go:75:68: ar.Threshold undefined (type *models.AlertRule has no field or method Threshold)
+internal\database\alert_repo.go:76:8: ar.Conditions undefined (type *models.AlertRule has no field or method Conditions)
+internal\database\settings_repo.go:20:58: undefined: models.Settings
+internal\database\settings_repo.go:44:62: undefined: models.Settings
+internal\database\settings_repo.go:119:43: undefined: models.Settings
+internal\database\alert_repo.go:76:8: too many errors
+FAIL	github.com/ev-dev-labs/teslasync/cmd/automation-worker [build failed]
+FAIL	github.com/ev-dev-labs/teslasync/cmd/export-worker [build failed]
+FAIL	github.com/ev-dev-labs/teslasync/cmd/notification-worker [build failed]
+FAIL	github.com/ev-dev-labs/teslasync/cmd/teslasync [build failed]
+ok  	github.com/ev-dev-labs/teslasync/internal/adapter/gasprices	4.335s
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/geocoding	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/mqtt	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/postgres	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/postgres/queries	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/redis	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/storage	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/tesla	[no test files]
+FAIL	github.com/ev-dev-labs/teslasync/internal/api [build failed]
+ok  	github.com/ev-dev-labs/teslasync/internal/app/chargingsvc	1.595s
+ok  	github.com/ev-dev-labs/teslasync/internal/app/dashboardsvc	1.587s
+ok  	github.com/ev-dev-labs/teslasync/internal/app/exportsvc	1.581s
+ok  	github.com/ev-dev-labs/teslasync/internal/app/notificationsvc	1.581s
+ok  	github.com/ev-dev-labs/teslasync/internal/app/tripsvc	1.597s
+ok  	github.com/ev-dev-labs/teslasync/internal/app/vehiclesvc	1.586s
+FAIL	github.com/ev-dev-labs/teslasync/internal/automation [build failed]
+FAIL	github.com/ev-dev-labs/teslasync/internal/automation/action [build failed]
+FAIL	github.com/ev-dev-labs/teslasync/internal/automation/condition [build failed]
+FAIL	github.com/ev-dev-labs/teslasync/internal/automation/presets [build failed]
+FAIL	github.com/ev-dev-labs/teslasync/internal/automation/safety [build failed]
+FAIL	github.com/ev-dev-labs/teslasync/internal/automation/trigger [build failed]
+FAIL	github.com/ev-dev-labs/teslasync/internal/backup [build failed]
+ok  	github.com/ev-dev-labs/teslasync/internal/cache	3.109s
+ok  	github.com/ev-dev-labs/teslasync/internal/config	1.739s
+ok  	github.com/ev-dev-labs/teslasync/internal/crypto	1.733s
+FAIL	github.com/ev-dev-labs/teslasync/internal/database [build failed]
+ok  	github.com/ev-dev-labs/teslasync/internal/domain	1.718s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/charging	1.716s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/export	1.748s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/fsm	1.748s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/notification	1.739s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/trip	1.716s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/user	1.734s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/vehicle	1.733s
+ok  	github.com/ev-dev-labs/teslasync/internal/enums	2.220s
+ok  	github.com/ev-dev-labs/teslasync/internal/events	2.051s
+FAIL	github.com/ev-dev-labs/teslasync/internal/export [build failed]
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm	2.246s
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/automation	1.479s
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/charge	1.545s
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/command	1.550s
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/drive	1.541s
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/notification	1.542s
+FAIL	github.com/ev-dev-labs/teslasync/internal/fsm/telemetry [build failed]
+ok  	github.com/ev-dev-labs/teslasync/internal/geocoding	1.667s
+?   	github.com/ev-dev-labs/teslasync/internal/handler/dto	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/handler/middleware	4.263s
+?   	github.com/ev-dev-labs/teslasync/internal/handler/v1	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/metrics	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/models	1.553s
+ok  	github.com/ev-dev-labs/teslasync/internal/mqtt	2.403s
+FAIL	github.com/ev-dev-labs/teslasync/internal/notification [build failed]
+ok  	github.com/ev-dev-labs/teslasync/internal/platform/buildinfo	1.786s
+?   	github.com/ev-dev-labs/teslasync/internal/platform/cache	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/platform/config	1.583s
+?   	github.com/ev-dev-labs/teslasync/internal/platform/database	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/platform/httputil	2.411s
+?   	github.com/ev-dev-labs/teslasync/internal/platform/telemetry	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/polling	2.469s
+?   	github.com/ev-dev-labs/teslasync/internal/port/external	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/port/messaging	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/port/repository	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/resilience	5.879s
+FAIL	github.com/ev-dev-labs/teslasync/internal/service [build failed]
+FAIL	github.com/ev-dev-labs/teslasync/internal/signal [build failed]
+ok  	github.com/ev-dev-labs/teslasync/internal/telemetry	2.073s
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla	2.231s
+?   	github.com/ev-dev-labs/teslasync/internal/tracing	[no test files]
+FAIL	github.com/ev-dev-labs/teslasync/internal/worker [build failed]
+?   	github.com/ev-dev-labs/teslasync/web/node_modules/flatted/golang/pkg/flatted	[no test files]
+FAIL
+EXIT=1
