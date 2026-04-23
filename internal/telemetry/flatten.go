@@ -1,6 +1,9 @@
 package telemetry
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 // Atomic is one (name, value) pair after compound expansion.The handler
 // re-routes each Atomic through LookupHot.
@@ -59,7 +62,50 @@ func flattenDoors(raw any) ([]Atomic, error) {
 }
 func flattenWindows(raw any) ([]Atomic, error)           { return nil, nil }
 func flattenLocation(raw any) ([]Atomic, error)          { return nil, nil }
-func flattenTime(name string, raw any) ([]Atomic, error) { return nil, nil }
+func flattenTime(name string, raw any) ([]Atomic, error) {
+	m, ok := raw.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("%s: expected map[string]any, got %T", name, raw)
+	}
+	h, err := toInt(m["Hour"])
+	if err != nil {
+		return nil, fmt.Errorf("%s.Hour: %w", name, err)
+	}
+	mn, err := toInt(m["Minute"])
+	if err != nil {
+		return nil, fmt.Errorf("%s.Minute: %w", name, err)
+	}
+	s, err := toInt(m["Second"])
+	if err != nil {
+		return nil, fmt.Errorf("%s.Second: %w", name, err)
+	}
+	if h < 0 || h > 23 || mn < 0 || mn > 59 || s < 0 || s > 59 {
+		return nil, fmt.Errorf("%s: out-of-range %02d:%02d:%02d", name, h, mn, s)
+	}
+	return []Atomic{{Name: name, Value: fmt.Sprintf("%02d:%02d:%02d", h, mn, s)}}, nil
+}
+
+// toInt accepts float64 (default JSON number type), int, int64, or numeric string.
+func toInt(v any) (int, error) {
+	switch x := v.(type) {
+	case nil:
+		return 0, fmt.Errorf("nil")
+	case int:
+		return x, nil
+	case int64:
+		return int(x), nil
+	case float64:
+		return int(x), nil
+	case string:
+		n, err := strconv.Atoi(x)
+		if err != nil {
+			return 0, fmt.Errorf("parse int %q: %w", x, err)
+		}
+		return n, nil
+	default:
+		return 0, fmt.Errorf("unexpected type %T", v)
+	}
+}
 func flattenShiftState(raw any) ([]Atomic, error)        { return nil, nil }
 func flattenPassthrough(name string, raw any) ([]Atomic, error) {
 	return []Atomic{{Name: name, Value: raw}}, nil
