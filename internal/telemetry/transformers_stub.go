@@ -27,3 +27,8 @@ var (
 var (
 	NormalizeTimestamp Transformer = passthrough
 )
+
+// Unit conversions
+var (
+	ConvertMphToMps Transformer = passthrough
+)
