@@ -1,0 +1,63 @@
+=== SURVEY ===
+File: internal/service/vehicle_service.go
+9 errors found:
+  L75:  vehicle.State undefined (Vehicle no longer has State field)
+  L304: positionRepo.GetLatest undefined (method removed from PositionRepo)
+  L312: chargingTelRepo.GetLatest undefined (method removed from ChargingTelemetryRepo)
+  L358: climateRepo.GetLatest undefined (method removed from ClimateRepo)
+  L369: securityRepo.GetLatest undefined (method removed from SecurityRepo)
+  L380: chargingTelRepo.GetLatestMerged undefined (method removed from ChargingTelemetryRepo)
+  L478: unknown field VehicleID in Vehicle struct literal (renamed to TeslaID)
+  L481: unknown field State in Vehicle struct literal (deleted)
+  L482: unknown field Healthy in Vehicle struct literal (deleted)
+
+=== REASONING ===
+1. L75 (vehicle.State): Remove assignment. State is populated later by stateRepo.GetCurrentState fallback (L288-295).
+2. L304-459 (BuildStateFromDB): This entire method is dead code — grep confirms zero callers.
+   It calls 5 non-existent repo methods (GetLatest on position/climate/security/chargingTel repos,
+   GetLatestMerged on chargingTel repo). All were snapshot-table methods removed during the DB refactor.
+   BuildStateFromSignalStore + live_state fallback is the correct replacement per architecture.
+   Remove the entire method.
+3. L478: VehicleID → TeslaID (tesla.VehicleData.VehicleID maps to models.Vehicle.TeslaID).
+4. L481: State → DELETE (models.Vehicle no longer has State).
+5. L482: Healthy → DELETE (models.Vehicle no longer has Healthy).
+=== CHANGES ===
+1. L75: Removed vehicle.State assignment (field deleted from Vehicle model)
+2. L300-459: Removed dead BuildStateFromDB method (calls 5 non-existent repo methods, zero callers)
+3. L478: VehicleID -> TeslaID in Vehicle struct literal
+4. L481: Removed State from Vehicle struct literal (field deleted)
+5. L482: Removed Healthy from Vehicle struct literal (field deleted)
+
+=== GATE ===
+# github.com/ev-dev-labs/teslasync/internal/automation/action
+internal\automation\action\command.go:153:72: pc.Commands undefined (type *models.PollingConfig has no field or method Commands)
+internal\automation\action\command.go:263:7: v.State undefined (type *models.Vehicle has no field or method State)
+internal\automation\action\command.go:268:72: pc.WakeUp undefined (type *models.PollingConfig has no field or method WakeUp)
+internal\automation\action\command.go:281:18: v.State undefined (type *models.Vehicle has no field or method State)
+internal\automation\action\command.go:316:29: fresh.State undefined (type *models.Vehicle has no field or method State)
+# github.com/ev-dev-labs/teslasync/internal/worker
+internal\worker\worker.go:226:28: w.settingsRepo.GetPollingConfig undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".SettingsRepo has no field or method GetPollingConfig)
+internal\worker\worker.go:338:4: unknown field VehicleID in struct literal of type models.Vehicle
+internal\worker\worker.go:341:4: unknown field State in struct literal of type models.Vehicle
+internal\worker\worker.go:342:4: unknown field Healthy in struct literal of type models.Vehicle
+internal\worker\worker.go:435:31: w.pollingConfig.EnabledVehicleDataEndpoints undefined (type *models.PollingConfig has no field or method EnabledVehicleDataEndpoints)
+internal\worker\worker.go:440:27: w.vehicleRepo.UpdateState undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".VehicleRepo has no field or method UpdateState)
+internal\worker\worker.go:479:27: w.vehicleRepo.UpdateState undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".VehicleRepo has no field or method UpdateState)
+internal\worker\worker.go:479:64: vehicle.State undefined (type *models.Vehicle has no field or method State)
+internal\worker\worker.go:492:26: w.vehicleRepo.UpdateState undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".VehicleRepo has no field or method UpdateState)
+internal\worker\worker.go:498:22: w.posRepo.Insert undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".PositionRepo has no field or method Insert)
+internal\worker\worker.go:534:3: unknown field Odometer in struct literal of type models.Position
+internal\worker\worker.go:535:3: unknown field BatteryLvl in struct literal of type models.Position
+internal\worker\worker.go:540:5: p.Speed undefined (type *models.Position has no field or method Speed)
+internal\worker\worker.go:543:4: p.Power undefined (type *models.Position has no field or method Power)
+internal\worker\worker.go:545:14: cannot use &heading (value of type *int) as *int16 value in assignment
+internal\worker\worker.go:548:4: p.IdealRange undefined (type *models.Position has no field or method IdealRange)
+internal\worker\worker.go:550:4: p.RatedRange undefined (type *models.Position has no field or method RatedRange)
+internal\worker\worker.go:552:4: p.InsideTemp undefined (type *models.Position has no field or method InsideTemp)
+internal\worker\worker.go:554:4: p.OutsideTemp undefined (type *models.Position has no field or method OutsideTemp)
+internal\worker\worker.go:556:4: p.FanStatus undefined (type *models.Position has no field or method FanStatus)
+internal\worker\worker.go:558:4: p.IsClimate undefined (type *models.Position has no field or method IsClimate)
+FILE_ERROR_COUNT=0
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
