@@ -1,0 +1,25 @@
+=== SURVEY ===
+Removed raw_json from SELECT, INSERT, Scan, and args in all 3 repos (TeslaEnergyHistory, TeslaEnergyBackupEvent, TeslaEnergyWCCharging)
+=== REASONING ===
+RawJSON field deleted from models; removed raw_json column, placeholders, scan targets, rawJSON local vars. Kept validJSON helper (still used by tesla_energy_live_status_repo.go).
+=== CHANGES ===
+File: internal/database/tesla_energy_history_repo.go — 6 RawJSON references removed across GetByRange/UpsertBatch for all 3 entity types
+=== GATE ===
+# github.com/ev-dev-labs/teslasync/internal/database
+internal\database\tesla_charging_history_repo.go:145:16: e.RawJSON undefined (type *models.TeslaChargingHistoryEntry has no field or method RawJSON)
+internal\database\tesla_charging_session_repo.go:151:16: s.RawJSON undefined (type *models.TeslaChargingSession has no field or method RawJSON)
+internal\database\tesla_energy_live_status_repo.go:35:25: s.RawJSON undefined (type *models.TeslaEnergyLiveStatus has no field or method RawJSON)
+internal\database\tesla_energy_live_status_repo.go:61:6: s.RawJSON undefined (type *models.TeslaEnergyLiveStatus has no field or method RawJSON)
+internal\database\tesla_energy_live_status_repo.go:99:7: s.RawJSON undefined (type *models.TeslaEnergyLiveStatus has no field or method RawJSON)
+internal\database\tesla_energy_site_repo.go:49:7: s.RawJSON undefined (type *models.TeslaEnergySite has no field or method RawJSON)
+internal\database\tesla_energy_site_repo.go:74:16: s.RawJSON undefined (type *models.TeslaEnergySite has no field or method RawJSON)
+internal\database\tesla_fleet_telemetry_error_repo.go:129:87: e.RawJSON undefined (type *models.TeslaFleetTelemetryError has no field or method RawJSON)
+internal\database\tesla_fleet_telemetry_error_repo.go:151:16: e.RawJSON undefined (type *models.TeslaFleetTelemetryError has no field or method RawJSON)
+internal\database\tesla_user_order_repo.go:36:49: o.RawJSON undefined (type *models.TeslaUserOrder has no field or method RawJSON)
+internal\database\tesla_user_order_repo.go:59:16: o.RawJSON undefined (type *models.TeslaUserOrder has no field or method RawJSON)
+internal\database\tesla_user_profile_repo.go:29:56: p.RawJSON undefined (type *models.TeslaUserProfile has no field or method RawJSON)
+internal\database\tesla_user_profile_repo.go:58:45: p.RawJSON undefined (type *models.TeslaUserProfile has no field or method RawJSON)
+ERROR_COUNT=0
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
