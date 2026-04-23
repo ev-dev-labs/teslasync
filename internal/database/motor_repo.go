@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/ev-dev-labs/teslasync/internal/models"
@@ -70,4 +71,42 @@ func (r *MotorRepo) BulkInsert(ctx context.Context, ms []models.MotorSnapshot) e
 		return fmt.Errorf("motor-repo-bulk-insert: %w", err)
 	}
 	return nil
+}
+
+// GetLatest returns the most recent motor snapshot for the given vehicle, or
+// nil if no rows exist. All columns of the post-refactor motor_snapshots
+// schema are selected.
+func (r *MotorRepo) GetLatest(ctx context.Context, vehicleID int64) (*models.MotorSnapshot, error) {
+	var m models.MotorSnapshot
+	err := r.db.Pool.QueryRow(ctx, `
+		SELECT vehicle_id, ts, power_kw, motor_rpm_front, motor_rpm_rear,
+		       torque_nm_front, torque_nm_rear, motor_temp_c_front, motor_temp_c_rear,
+		       inverter_temp_c, battery_temp_c, regen_kw, shift_state, source
+		FROM motor_snapshots
+		WHERE vehicle_id = $1
+		ORDER BY ts DESC
+		LIMIT 1
+	`, vehicleID).Scan(
+		&m.VehicleID,
+		&m.Ts,
+		&m.PowerKw,
+		&m.MotorRpmFront,
+		&m.MotorRpmRear,
+		&m.TorqueNmFront,
+		&m.TorqueNmRear,
+		&m.MotorTempCFront,
+		&m.MotorTempCRear,
+		&m.InverterTempC,
+		&m.BatteryTempC,
+		&m.RegenKw,
+		&m.ShiftState,
+		&m.Source,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("motor-repo-get-latest: %w", err)
+	}
+	return &m, nil
 }
