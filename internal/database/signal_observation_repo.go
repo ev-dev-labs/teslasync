@@ -165,3 +165,14 @@ func (r *SignalObservationRepo) ListByName(ctx context.Context, vehicleID int64,
 	}
 	return out, nil
 }
+
+// DeleteOlderThan removes observations strictly older than cutoff and
+// returns the number of rows deleted. Used by the cold-storage retention
+// worker (ADR-001).
+func (r *SignalObservationRepo) DeleteOlderThan(ctx context.Context, cutoff time.Time) (int64, error) {
+	tag, err := r.db.Pool.Exec(ctx, `DELETE FROM signal_observations WHERE ts < $1`, cutoff)
+	if err != nil {
+		return 0, fmt.Errorf("signal-observations-repo-delete-older-than: %w", err)
+	}
+	return tag.RowsAffected(), nil
+}
