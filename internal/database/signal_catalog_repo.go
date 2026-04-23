@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/jackc/pgx/v5"
@@ -55,6 +56,51 @@ ON CONFLICT (name) DO UPDATE SET
 		}
 	}
 	return nil
+}
+
+// BulkUpsertObserved registers a batch of newly-observed signal names in
+// signal_catalog with a single round-trip, leaving classification fields
+// (storage_tier, typed_table, ...) at their schema defaults. Names that
+// already exist are left untouched. Returns the number of newly-inserted
+// rows.
+//
+// This is the ADR-009 hot-path onboarding ritual called once per ingest
+// batch, before signal_observations rows are inserted, so the FK from
+// signal_observations.signal_name -> signal_catalog.name resolves.
+func (r *SignalCatalogRepo) BulkUpsertObserved(ctx context.Context, names []string) (int, error) {
+	if len(names) == 0 {
+		return 0, nil
+	}
+	var b strings.Builder
+	b.Grow(64 + len(names)*8)
+	b.WriteString("INSERT INTO signal_catalog (name) VALUES ")
+	args := make([]any, len(names))
+	for i, n := range names {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		fmt.Fprintf(&b, "($%d)", i+1)
+		args[i] = n
+	}
+	b.WriteString(" ON CONFLICT (name) DO NOTHING RETURNING name")
+
+	rows, err := r.db.Pool.Query(ctx, b.String(), args...)
+	if err != nil {
+		return 0, fmt.Errorf("signal-catalog-repo-bulk-upsert-observed: %w", err)
+	}
+	defer rows.Close()
+	newCount := 0
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return newCount, fmt.Errorf("signal-catalog-repo-bulk-upsert-observed-scan: %w", err)
+		}
+		newCount++
+	}
+	if err := rows.Err(); err != nil {
+		return newCount, fmt.Errorf("signal-catalog-repo-bulk-upsert-observed-rows: %w", err)
+	}
+	return newCount, nil
 }
 
 // List returns the full signal_catalog ordered by name.

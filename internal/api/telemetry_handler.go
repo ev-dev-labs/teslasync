@@ -44,6 +44,7 @@ type TelemetryHandler struct {
 	safetyRepo            *database.SafetyRepo
 	userPrefRepo          *database.UserPreferenceRepo
 	swUpdateRepo          *database.SoftwareUpdateRepo
+	signalCatalogRepo     *database.SignalCatalogRepo
 	mqttClient            *mqtt.Client
 	logRepo               *database.APICallLogRepo
 	eventHub              *EventHub
@@ -137,6 +138,7 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 		safetyRepo:            database.NewSafetyRepo(db),
 		userPrefRepo:          database.NewUserPreferenceRepo(db),
 		swUpdateRepo:          database.NewSoftwareUpdateRepo(db),
+		signalCatalogRepo:     database.NewSignalCatalogRepo(db),
 		mqttClient:            mc,
 		logRepo:               database.NewAPICallLogRepo(db),
 		eventHub:              hub,
@@ -1114,9 +1116,6 @@ func (h *TelemetryHandler) TelemetryStatus(w http.ResponseWriter, r *http.Reques
 // prompts. Today it covers stages 1-2 (normalize + flatten); subsequent
 // prompts add hot-route bucketing and per-table writers.
 func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded []telemetry.NamedValue) {
-	_ = ctx
-	_ = vin
-
 	normalized := telemetry.NormalizeFleetUnits(decoded)
 
 	atomics := make([]telemetry.Atomic, 0, len(normalized)*2)
@@ -1144,6 +1143,31 @@ func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded
 		Int("hot_tables", len(buckets.HotByTable)).
 		Int("cold_atomics", len(buckets.Cold)).
 		Msg("bucket step complete")
+
+	// Catalog upsert: dedupe AllNames in-place (stable order) and register
+	// every observed signal name in signal_catalog before any cold inserts
+	// so the signal_observations FK resolves. Single round-trip per batch.
+	seen := make(map[string]struct{}, len(buckets.AllNames))
+	unique := buckets.AllNames[:0]
+	for _, n := range buckets.AllNames {
+		if _, ok := seen[n]; ok {
+			continue
+		}
+		seen[n] = struct{}{}
+		unique = append(unique, n)
+	}
+	newCount, err := h.signalCatalogRepo.BulkUpsertObserved(ctx, unique)
+	if err != nil {
+		log.Error().Err(fmt.Errorf("catalog upsert: %w", err)).
+			Str("vin", vin).
+			Int("unique_names", len(unique)).
+			Msg("catalog upsert failed; aborting batch")
+		return
+	}
+	log.Debug().
+		Int("unique_names", len(unique)).
+		Int("new_names", newCount).
+		Msg("catalog upsert complete")
 
 	hotRows := map[string]map[string]any{}
 	for table, items := range buckets.HotByTable {
