@@ -52,10 +52,18 @@ export interface AutomationStepTriggerGeofence extends AutomationStepBase {
   direction: 'enter' | 'exit' | 'either';
 }
 
+export interface AutomationStepTriggerTime extends AutomationStepBase {
+  kind: 'trigger_time';
+  lane: 'trigger';
+  cron_expr: string;
+  timezone: string;
+}
+
 // Discriminated union — children added by prompts 13-23
 export type AutomationStep =
   | AutomationStepTriggerSignal
   | AutomationStepTriggerGeofence
+  | AutomationStepTriggerTime
   | AutomationStepBase;
 
 export interface AutomationFull extends Automation {
