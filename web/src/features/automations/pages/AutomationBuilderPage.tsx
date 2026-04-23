@@ -27,11 +27,12 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useNotificationChannels } from '@/api/hooks/useNotifications';
 import {
   useAutomation,
-  useCreateAutomation,
-  useUpdateAutomation,
+  useCreateAutomationFull,
+  useUpdateAutomationFull,
   useTestRunAutomation,
   useAutomationPreset,
-  type AutomationFormData,
+  type AutomationFullInput,
+  type AutomationStepInput,
 } from '@/api/hooks/useAutomations';
 import { TriggerConfigurator, TRIGGER_TYPES } from './TriggerConfigurator';
 import { ConditionBuilder } from './ConditionBuilder';
@@ -40,7 +41,8 @@ import { ConflictWarnings } from './ConflictWarnings';
 import {
   Save, PlayCircle, X, Zap, ArrowLeft, AlertTriangle, Bell,
 } from 'lucide-react';
-import type { Automation, AutomationConflict } from '@/api/types';
+import type { AutomationFull, AutomationConflict } from '@/api/types';
+import type { AutomationStep } from '@/types/automations';
 
 // ─── Initial form state ───────────────────────────────────────────────────────
 
@@ -84,45 +86,319 @@ function getInitialForm(): FormState {
   };
 }
 
-function automationToForm(a: Automation): FormState {
+function automationToForm(a: AutomationFull): FormState {
+  // AutomationFull is the new CTI-backed shape: it carries `triggers`, `conditions`,
+  // and `actions` as typed `AutomationStep[]` discriminated unions (no more jsonb
+  // blobs). Legacy fields (trigger_type/trigger_config, cooldown, priority, etc.)
+  // no longer travel with the entity, so we reconstruct the builder's internal
+  // Record-shaped view from the typed steps and seed omitted scalars with defaults.
+  const trigger = a.triggers[0];
+  const { triggerType, triggerConfig } = triggerStepToLegacy(trigger);
   return {
     name: a.name,
     description: a.description ?? '',
     vehicle_id: a.vehicle_id,
-    trigger_type: a.trigger_type,
-    trigger_config: (a.trigger_config as Record<string, unknown>) ?? {},
-    conditions: (a.conditions as Record<string, unknown>[]) ?? [],
-    actions: (a.actions as Record<string, unknown>[]) ?? [],
-    cooldown_minutes: a.cooldown_minutes ?? 0,
-    max_executions_hour: a.max_executions_hour ?? 0,
-    stop_on_failure: a.stop_on_failure ?? false,
-    notify_on_run: a.notify_on_run ?? true,
-    notify_on_failure: a.notify_on_failure ?? true,
-    notify_channels: a.notify_channels ?? [],
-    priority: a.priority ?? 50,
-    tags: a.tags ?? [],
-    preset_id: a.preset_id ?? null,
+    trigger_type: triggerType,
+    trigger_config: triggerConfig,
+    conditions: a.conditions.map(conditionStepToRecord),
+    actions: a.actions.map(actionStepToRecord),
+    cooldown_minutes: 0,
+    max_executions_hour: 0,
+    stop_on_failure: false,
+    notify_on_run: true,
+    notify_on_failure: true,
+    notify_channels: [],
+    priority: 50,
+    tags: [],
+    preset_id: null,
   };
 }
 
-function formToPayload(form: FormState): AutomationFormData {
+// ─── Step ↔ Record mappers ────────────────────────────────────────────────────
+// The sub-components (TriggerConfigurator, ConditionBuilder, ActionBuilder)
+// still operate on loose Record<string, unknown> entries. These helpers bridge
+// those Records to the backend's typed AutomationStep discriminated union.
+
+function str(v: unknown, fallback = ''): string {
+  return typeof v === 'string' ? v : fallback;
+}
+
+function num(v: unknown, fallback = 0): number {
+  return typeof v === 'number' && Number.isFinite(v) ? v : fallback;
+}
+
+function bool(v: unknown, fallback = false): boolean {
+  return typeof v === 'boolean' ? v : fallback;
+}
+
+function triggerStepToLegacy(step: AutomationStep | undefined): {
+  triggerType: string;
+  triggerConfig: Record<string, unknown>;
+} {
+  if (!step) return { triggerType: '', triggerConfig: {} };
+  switch (step.kind) {
+    case 'trigger_time':
+      return {
+        triggerType: 'cron',
+        triggerConfig: { cron_expression: step.cron_expr, timezone: step.timezone },
+      };
+    case 'trigger_geofence':
+      return {
+        triggerType: 'geofence',
+        triggerConfig: { geofence_id: step.geofence_id, event: step.direction },
+      };
+    case 'trigger_webhook':
+      return {
+        triggerType: 'webhook',
+        triggerConfig: {
+          webhook_token: step.webhook_token,
+          require_signature: step.require_signature,
+        },
+      };
+    case 'trigger_signal':
+      return {
+        triggerType: 'vehicle_state',
+        triggerConfig: {
+          signal_name: step.signal_name,
+          operator: step.operator,
+          threshold_numeric: step.threshold_numeric,
+          threshold_text: step.threshold_text,
+          threshold_bool: step.threshold_bool,
+        },
+      };
+    default:
+      return { triggerType: '', triggerConfig: {} };
+  }
+}
+
+function conditionStepToRecord(step: AutomationStep): Record<string, unknown> {
+  switch (step.kind) {
+    case 'condition_signal':
+      return {
+        type: 'state_check',
+        signal: step.signal_name,
+        operator: step.operator,
+        value:
+          step.compare_numeric ?? step.compare_text ?? step.compare_bool ?? null,
+      };
+    case 'condition_time_window':
+      return {
+        type: 'time_window',
+        start_time: step.start_time,
+        end_time: step.end_time,
+        timezone: step.timezone,
+      };
+    case 'condition_day_of_week':
+      return {
+        type: 'day_filter',
+        days_of_week: step.days_of_week,
+        timezone: step.timezone,
+      };
+    case 'condition_geofence':
+      return {
+        type: 'location',
+        geofence_id: step.geofence_id,
+        must_be_inside: step.must_be_inside,
+      };
+    default:
+      return { type: step.kind };
+  }
+}
+
+function actionStepToRecord(step: AutomationStep): Record<string, unknown> {
+  switch (step.kind) {
+    case 'action_vehicle_command':
+      return {
+        type: 'command',
+        command: step.command,
+        params: step.command_params,
+      };
+    case 'action_notification':
+      return {
+        type: 'notify',
+        channel_id: step.channel_id,
+        template: step.template,
+      };
+    case 'action_set_state':
+      return {
+        type: 'set_variable',
+        state_key: step.state_key,
+        state_value: step.state_value,
+      };
+    default:
+      return { type: step.kind };
+  }
+}
+
+function recordToTriggerStep(
+  triggerType: string,
+  config: Record<string, unknown>,
+  position: number,
+): AutomationStepInput | null {
+  switch (triggerType) {
+    case 'cron':
+      return {
+        kind: 'trigger_time',
+        lane: 'trigger',
+        position,
+        cron_expr: str(config.cron_expression),
+        timezone: str(config.timezone),
+      };
+    case 'geofence':
+      return {
+        kind: 'trigger_geofence',
+        lane: 'trigger',
+        position,
+        geofence_id: num(config.geofence_id),
+        direction: (str(config.event, 'either') as 'enter' | 'exit' | 'either'),
+      };
+    case 'webhook':
+      return {
+        kind: 'trigger_webhook',
+        lane: 'trigger',
+        position,
+        webhook_token: str(config.webhook_token),
+        require_signature: bool(config.require_signature),
+      };
+    case 'vehicle_state':
+    case 'battery':
+    case 'mqtt':
+    case 'sunrise_sunset':
+    case 'energy':
+    case 'calendar':
+      return {
+        kind: 'trigger_signal',
+        lane: 'trigger',
+        position,
+        signal_name: str(config.signal_name, triggerType),
+        operator: '==',
+        threshold_numeric:
+          typeof config.threshold_numeric === 'number'
+            ? config.threshold_numeric
+            : null,
+        threshold_text:
+          typeof config.threshold_text === 'string' ? config.threshold_text : null,
+        threshold_bool:
+          typeof config.threshold_bool === 'boolean'
+            ? config.threshold_bool
+            : null,
+      };
+    default:
+      return null;
+  }
+}
+
+function recordToConditionStep(
+  cond: Record<string, unknown>,
+  position: number,
+): AutomationStepInput | null {
+  const condType = str(cond.type);
+  switch (condType) {
+    case 'state_check': {
+      const raw = cond.value;
+      return {
+        kind: 'condition_signal',
+        lane: 'condition',
+        position,
+        signal_name: str(cond.signal),
+        operator: (str(cond.operator, '==') as '>' | '<' | '>=' | '<=' | '==' | '!='),
+        compare_numeric: typeof raw === 'number' ? raw : null,
+        compare_text: typeof raw === 'string' ? raw : null,
+        compare_bool: typeof raw === 'boolean' ? raw : null,
+      };
+    }
+    case 'time_window':
+      return {
+        kind: 'condition_time_window',
+        lane: 'condition',
+        position,
+        start_time: str(cond.start_time),
+        end_time: str(cond.end_time),
+        timezone: str(cond.timezone),
+      };
+    case 'day_filter':
+      return {
+        kind: 'condition_day_of_week',
+        lane: 'condition',
+        position,
+        days_of_week: Array.isArray(cond.days_of_week)
+          ? (cond.days_of_week as unknown[]).filter(
+              (d): d is number => typeof d === 'number',
+            )
+          : [],
+        timezone: str(cond.timezone),
+      };
+    case 'location':
+      return {
+        kind: 'condition_geofence',
+        lane: 'condition',
+        position,
+        geofence_id: num(cond.geofence_id),
+        must_be_inside: bool(cond.must_be_inside, true),
+      };
+    default:
+      return null;
+  }
+}
+
+function recordToActionStep(
+  action: Record<string, unknown>,
+  position: number,
+): AutomationStepInput | null {
+  const actionType = str(action.type);
+  switch (actionType) {
+    case 'command':
+      return {
+        kind: 'action_vehicle_command',
+        lane: 'action',
+        position,
+        command: str(action.command),
+        command_params:
+          action.params && typeof action.params === 'object'
+            ? (action.params as Record<string, unknown>)
+            : {},
+      };
+    case 'notify':
+      return {
+        kind: 'action_notification',
+        lane: 'action',
+        position,
+        channel_id: num(action.channel_id),
+        template: str(action.template),
+      };
+    case 'set_variable':
+      return {
+        kind: 'action_set_state',
+        lane: 'action',
+        position,
+        state_key: str(action.state_key ?? action.variable),
+        state_value: str(action.state_value ?? action.value),
+      };
+    default:
+      return null;
+  }
+}
+
+function formToPayload(form: FormState): AutomationFullInput {
+  const triggerStep = form.trigger_type
+    ? recordToTriggerStep(form.trigger_type, form.trigger_config, 0)
+    : null;
+  const triggers: AutomationStepInput[] = triggerStep ? [triggerStep] : [];
+  const conditions: AutomationStepInput[] = form.conditions
+    .map((c, i) => recordToConditionStep(c, i))
+    .filter((s): s is AutomationStepInput => s !== null);
+  const actions: AutomationStepInput[] = form.actions
+    .map((a, i) => recordToActionStep(a, i))
+    .filter((s): s is AutomationStepInput => s !== null);
+
   return {
     name: form.name.trim(),
     description: form.description.trim(),
     vehicle_id: form.vehicle_id,
-    trigger_type: form.trigger_type,
-    trigger_config: form.trigger_config,
-    conditions: form.conditions,
-    actions: form.actions,
-    cooldown_minutes: form.cooldown_minutes,
-    max_executions_hour: form.max_executions_hour,
-    stop_on_failure: form.stop_on_failure,
-    notify_on_run: form.notify_on_run,
-    notify_on_failure: form.notify_on_failure,
-    notify_channels: form.notify_channels.length > 0 ? form.notify_channels : undefined,
-    priority: form.priority,
-    tags: form.tags,
-    preset_id: form.preset_id,
+    enabled: true,
+    triggers,
+    conditions,
+    actions,
   };
 }
 
@@ -163,8 +439,8 @@ export default function AutomationBuilderPage() {
   });
 
   // ── Mutations ───────────────────────────────────────────────────────
-  const createMutation = useCreateAutomation();
-  const updateMutation = useUpdateAutomation();
+  const createMutation = useCreateAutomationFull();
+  const updateMutation = useUpdateAutomationFull();
   const testRunMutation = useTestRunAutomation();
 
   // ── Form state ──────────────────────────────────────────────────────
@@ -179,7 +455,9 @@ export default function AutomationBuilderPage() {
   useEffect(() => {
     if (isEdit && existingAutomation && !hydrated) {
       setForm(automationToForm(existingAutomation));
-      setConflicts(existingAutomation.conflicts ?? []);
+      // AutomationFull no longer carries conflicts; conflict warnings now arrive
+      // via a separate endpoint (outside scope of this prompt).
+      setConflicts([]);
       setHydrated(true);
     }
   }, [isEdit, existingAutomation, hydrated]);
@@ -292,20 +570,17 @@ export default function AutomationBuilderPage() {
     const payload = formToPayload(form);
 
     try {
-      let result: Automation;
+      let result: AutomationFull;
       if (isEdit && automationId) {
-        result = await updateMutation.mutateAsync({ id: automationId, data: payload });
+        result = await updateMutation.mutateAsync({ id: automationId, input: payload });
       } else {
         result = await createMutation.mutateAsync(payload);
       }
       setDirty(false);
       setSavedId(result.id);
-      setConflicts(result.conflicts ?? []);
-
-      // Navigate away only if no conflicts
-      if (!result.conflicts?.length) {
-        navigate('/automations');
-      }
+      // Conflict detection has moved out of the create/update response shape.
+      setConflicts([]);
+      navigate('/automations');
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setSaveError(msg);
@@ -551,8 +826,8 @@ export default function AutomationBuilderPage() {
                           <span className={`h-1.5 w-1.5 rounded-full ${
                             !ch.enabled ? 'bg-white/20' : selected ? 'bg-cyan-400' : 'bg-white/30'
                           }`} />
-                          {ch.name ?? ch.type}
-                          <span className="text-[10px] text-white/30 ml-0.5">({ch.type})</span>
+                          {ch.name ?? ch.kind}
+                          <span className="text-[10px] text-white/30 ml-0.5">({ch.kind})</span>
                         </button>
                       );
                     })}

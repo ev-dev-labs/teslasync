@@ -10,10 +10,14 @@ import type {
   AutomationPreset,
 } from '@/api/types';
 
-export type AutomationStepInput = Omit<
-  AutomationStep,
-  'id' | 'automation_id' | 'created_at'
->;
+// Distributes over the AutomationStep discriminated union so variant-specific
+// fields (e.g. cron_expr on trigger_time) survive the Omit. Without this
+// conditional, TS would collapse to the intersection of common keys only.
+export type AutomationStepInput = AutomationStep extends infer T
+  ? T extends AutomationStep
+    ? Omit<T, 'id' | 'automation_id' | 'created_at'>
+    : never
+  : never;
 
 export type AutomationFullInput = Omit<
   AutomationFull,

@@ -132,8 +132,7 @@ export type AutomationStep =
   | AutomationStepConditionDayOfWeek
   | AutomationStepActionNotification
   | AutomationStepActionVehicleCommand
-  | AutomationStepActionSetState
-  | AutomationStepBase;
+  | AutomationStepActionSetState;
 
 export interface AutomationFull extends Automation {
   triggers: AutomationStep[];
