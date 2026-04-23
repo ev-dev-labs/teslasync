@@ -16,6 +16,11 @@ var (
 	NormalizeDriveState    Transformer = passthrough
 	NormalizeDefrostMode   Transformer = passthrough
 	NormalizeSeatHeater    Transformer = passthrough
+	NormalizeWindowState     Transformer = passthrough
+	NormalizeSentryMode      Transformer = passthrough
+	NormalizeTonneauPosition Transformer = passthrough
+	NormalizeTonneauTentMode Transformer = passthrough
+	NormalizeTurnSignal      Transformer = passthrough
 )
 
 // Compound flatteners
