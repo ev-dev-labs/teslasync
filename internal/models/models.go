@@ -722,13 +722,16 @@ type BackupRun struct {
 	CreatedAt     time.Time       `json:"created_at" db:"created_at"`
 }
 
-// RawTelemetrySignal stores a raw signal batch from Tesla fleet telemetry for debugging.
+// RawTelemetrySignal previously stored a raw signal batch from Tesla fleet
+// telemetry for debugging. ADR-001/ADR-005 eliminated the `signals` JSONB
+// blob — typed columns now hold each signal. This struct is retained for
+// metadata-only use (vin/source/count/timestamp) until the raw_telemetry repo
+// is removed in its own prompt.
 type RawTelemetrySignal struct {
-	VIN         string                 `json:"vin" bson:"vin"`
-	Source      string                 `json:"source" bson:"source"`
-	Signals     map[string]interface{} `json:"signals" bson:"signals"`
-	SignalCount int                    `json:"signal_count" bson:"signal_count"`
-	CreatedAt   time.Time              `json:"created_at" bson:"created_at"`
+	VIN         string    `json:"vin" bson:"vin"`
+	Source      string    `json:"source" bson:"source"`
+	SignalCount int       `json:"signal_count" bson:"signal_count"`
+	CreatedAt   time.Time `json:"created_at" bson:"created_at"`
 }
 
 // Automation has been moved to automation.go to match the post-migration
@@ -777,7 +780,6 @@ type TeslaEnergySite struct {
 	HasLoadMeter      bool       `json:"has_load_meter" db:"has_load_meter"`
 	TOUCapable        bool       `json:"tou_capable" db:"tou_capable"`
 	StormModeCapable  bool       `json:"storm_mode_capable" db:"storm_mode_capable"`
-	RawJSON           string     `json:"raw_json,omitempty" db:"raw_json"`
 	SiteInfoJSON      *string    `json:"site_info_json,omitempty" db:"site_info_json"`
 	SiteInfoFetchedAt *time.Time `json:"site_info_fetched_at,omitempty" db:"site_info_fetched_at"`
 	FetchedAt         time.Time  `json:"fetched_at" db:"fetched_at"`
@@ -801,7 +803,6 @@ type TeslaEnergyLiveStatus struct {
 	GridStatus        *string   `json:"grid_status" db:"grid_status"`
 	BackupCapable     *bool     `json:"backup_capable" db:"backup_capable"`
 	StormModeActive   *bool     `json:"storm_mode_active" db:"storm_mode_active"`
-	RawJSON           string    `json:"raw_json,omitempty" db:"raw_json"`
 	Timestamp         time.Time `json:"timestamp" db:"timestamp"`
 	FetchedAt         time.Time `json:"fetched_at" db:"fetched_at"`
 }
@@ -860,7 +861,6 @@ type TeslaChargingHistoryEntry struct {
 	TotalDue            *float64   `json:"total_due" db:"total_due"`
 	HasInvoice          bool       `json:"has_invoice" db:"has_invoice"`
 	InvoiceContentID    *string    `json:"invoice_content_id" db:"invoice_content_id"`
-	RawJSON             string     `json:"raw_json,omitempty" db:"raw_json"`
 	FetchedAt           time.Time  `json:"fetched_at" db:"fetched_at"`
 	CreatedAt           time.Time  `json:"created_at" db:"created_at"`
 }
@@ -894,7 +894,6 @@ type TeslaChargingSession struct {
 	CongestionFee       *float64   `json:"congestion_fee" db:"congestion_fee"`
 	Latitude            *float64   `json:"latitude" db:"latitude"`
 	Longitude           *float64   `json:"longitude" db:"longitude"`
-	RawJSON             string     `json:"raw_json,omitempty" db:"raw_json"`
 	FetchedAt           time.Time  `json:"fetched_at" db:"fetched_at"`
 	CreatedAt           time.Time  `json:"created_at" db:"created_at"`
 }
@@ -921,7 +920,6 @@ type TeslaEnergyHistory struct {
 	GridEnergyInWh     *float64   `json:"grid_energy_in_wh" db:"grid_energy_in_wh"`
 	GridEnergyOutWh    *float64   `json:"grid_energy_out_wh" db:"grid_energy_out_wh"`
 	ConsumerEnergyWh   *float64   `json:"consumer_energy_wh" db:"consumer_energy_wh"`
-	RawJSON            string     `json:"raw_json,omitempty" db:"raw_json"`
 	FetchedAt          time.Time  `json:"fetched_at" db:"fetched_at"`
 }
 
@@ -932,7 +930,6 @@ type TeslaEnergyBackupEvent struct {
 	Period          string    `json:"period" db:"period"`
 	Timestamp       time.Time `json:"timestamp" db:"timestamp"`
 	DurationSeconds int       `json:"duration_seconds" db:"duration_seconds"`
-	RawJSON         string    `json:"raw_json,omitempty" db:"raw_json"`
 	FetchedAt       time.Time `json:"fetched_at" db:"fetched_at"`
 }
 
@@ -944,7 +941,6 @@ type TeslaEnergyWCCharging struct {
 	DIN            *string   `json:"din" db:"din"`
 	Timestamp      time.Time `json:"timestamp" db:"timestamp"`
 	EnergyWh       *float64  `json:"energy_wh" db:"energy_wh"`
-	RawJSON        string    `json:"raw_json,omitempty" db:"raw_json"`
 	FetchedAt      time.Time `json:"fetched_at" db:"fetched_at"`
 }
 
@@ -956,7 +952,6 @@ type TeslaFleetTelemetryError struct {
 	ErrorCode      *string    `json:"error_code" db:"error_code"`
 	ErrorMessage   *string    `json:"error_message" db:"error_message"`
 	ReportedAt     *time.Time `json:"reported_at" db:"reported_at"`
-	RawJSON        string     `json:"raw_json,omitempty" db:"raw_json"`
 	TeslaUpdatedAt *time.Time `json:"tesla_updated_at" db:"tesla_updated_at"`
 	FetchedAt      time.Time  `json:"fetched_at" db:"fetched_at"`
 }
@@ -991,7 +986,6 @@ type TeslaUserOrder struct {
 	VIN          *string    `json:"vin" db:"vin"`
 	ReferralCode *string    `json:"referral_code,omitempty" db:"referral_code"`
 	IsUpgradable bool       `json:"is_upgradable" db:"is_upgradable"`
-	RawJSON      string     `json:"-" db:"raw_json"`
 	FetchedAt    time.Time  `json:"fetched_at" db:"fetched_at"`
 	CreatedAt    time.Time  `json:"created_at" db:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at" db:"updated_at"`
@@ -1003,7 +997,6 @@ type TeslaUserProfile struct {
 	Email           string    `json:"email" db:"email"`
 	FullName        string    `json:"full_name" db:"full_name"`
 	ProfileImageURL *string   `json:"profile_image_url" db:"profile_image_url"`
-	RawJSON         string    `json:"-" db:"raw_json"`
 	FetchedAt       time.Time `json:"fetched_at" db:"fetched_at"`
 	CreatedAt       time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at" db:"updated_at"`
@@ -1018,7 +1011,6 @@ type TeslaVehicleDriver struct {
 	DriverEmail *string   `json:"driver_email" db:"driver_email"`
 	DriverName  *string   `json:"driver_name" db:"driver_name"`
 	Role        *string   `json:"role" db:"role"`
-	RawJSON     string    `json:"-" db:"raw_json"`
 	FetchedAt   time.Time `json:"fetched_at" db:"fetched_at"`
 }
 
@@ -1032,7 +1024,6 @@ type TeslaVehicleInvitation struct {
 	Status       string     `json:"status" db:"status"`
 	ExpiresAt    *time.Time `json:"expires_at" db:"expires_at"`
 	CreatedBy    *string    `json:"created_by" db:"created_by"`
-	RawJSON      string     `json:"-" db:"raw_json"`
 	FetchedAt    time.Time  `json:"fetched_at" db:"fetched_at"`
 	CreatedAt    time.Time  `json:"created_at" db:"created_at"`
 }
