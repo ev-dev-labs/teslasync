@@ -186,3 +186,86 @@ func (r *AutomationStepChildRepo) loadConditions(ctx context.Context, stepIDs []
 	}
 	return out, nil
 }
+
+// loadActions fetches the action CTI child row for each step ID in the
+// batch using a single UNION ALL query across the four action tables
+// (command, notify, set_setting, call_automation). The heterogeneous
+// per-table columns are projected as a JSONB payload that is decoded into
+// the matching typed model based on the discriminator `kind`. The returned
+// map is keyed by step_id; entries are one of:
+//
+//   - *models.AutomationAction                     (kind=command — sole ADR-005 jsonb carve-out via CommandParams)
+//   - *models.AutomationStepActionNotify
+//   - *models.AutomationStepActionSetSetting
+//   - *models.AutomationStepActionCallAutomation
+//
+// Steps without an action child row are simply absent from the map.
+func (r *AutomationStepChildRepo) loadActions(ctx context.Context, stepIDs []int64) (map[int64]any, error) {
+	if len(stepIDs) == 0 {
+		return nil, nil
+	}
+
+	const q = `
+		SELECT step_id, 'command'          AS kind, to_jsonb(a.*) AS payload
+		  FROM automation_actions                     a WHERE step_id = ANY($1)
+		UNION ALL
+		SELECT step_id, 'notify'           AS kind, to_jsonb(a.*) AS payload
+		  FROM automation_step_action_notify          a WHERE step_id = ANY($1)
+		UNION ALL
+		SELECT step_id, 'set_setting'      AS kind, to_jsonb(a.*) AS payload
+		  FROM automation_step_action_set_setting     a WHERE step_id = ANY($1)
+		UNION ALL
+		SELECT step_id, 'call_automation'  AS kind, to_jsonb(a.*) AS payload
+		  FROM automation_step_action_call_automation a WHERE step_id = ANY($1)`
+
+	rows, err := r.db.Pool.Query(ctx, q, stepIDs)
+	if err != nil {
+		return nil, fmt.Errorf("automation-step-children-loader-action: query: %w", err)
+	}
+	defer rows.Close()
+
+	out := make(map[int64]any, len(stepIDs))
+	for rows.Next() {
+		var (
+			stepID  int64
+			kind    string
+			payload []byte
+		)
+		if err := rows.Scan(&stepID, &kind, &payload); err != nil {
+			return nil, fmt.Errorf("automation-step-children-loader-action: scan: %w", err)
+		}
+
+		switch kind {
+		case "command":
+			a := &models.AutomationAction{}
+			if err := json.Unmarshal(payload, a); err != nil {
+				return nil, fmt.Errorf("automation-step-children-loader-action: decode command step %d: %w", stepID, err)
+			}
+			out[stepID] = a
+		case "notify":
+			a := &models.AutomationStepActionNotify{}
+			if err := json.Unmarshal(payload, a); err != nil {
+				return nil, fmt.Errorf("automation-step-children-loader-action: decode notify step %d: %w", stepID, err)
+			}
+			out[stepID] = a
+		case "set_setting":
+			a := &models.AutomationStepActionSetSetting{}
+			if err := json.Unmarshal(payload, a); err != nil {
+				return nil, fmt.Errorf("automation-step-children-loader-action: decode set_setting step %d: %w", stepID, err)
+			}
+			out[stepID] = a
+		case "call_automation":
+			a := &models.AutomationStepActionCallAutomation{}
+			if err := json.Unmarshal(payload, a); err != nil {
+				return nil, fmt.Errorf("automation-step-children-loader-action: decode call_automation step %d: %w", stepID, err)
+			}
+			out[stepID] = a
+		default:
+			return nil, fmt.Errorf("automation-step-children-loader-action: unknown kind %q for step %d", kind, stepID)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("automation-step-children-loader-action: rows: %w", err)
+	}
+	return out, nil
+}
