@@ -66,12 +66,23 @@ export interface AutomationStepTriggerWebhook extends AutomationStepBase {
   require_signature: boolean;
 }
 
+export interface AutomationStepConditionSignal extends AutomationStepBase {
+  kind: 'condition_signal';
+  lane: 'condition';
+  signal_name: string;
+  operator: '>' | '<' | '>=' | '<=' | '==' | '!=';
+  compare_numeric: number | null;
+  compare_text: string | null;
+  compare_bool: boolean | null;
+}
+
 // Discriminated union — children added by prompts 13-23
 export type AutomationStep =
   | AutomationStepTriggerSignal
   | AutomationStepTriggerGeofence
   | AutomationStepTriggerTime
   | AutomationStepTriggerWebhook
+  | AutomationStepConditionSignal
   | AutomationStepBase;
 
 export interface AutomationFull extends Automation {
