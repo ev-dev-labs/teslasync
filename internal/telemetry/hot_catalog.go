@@ -30,3 +30,17 @@ type HotRoute struct {
 	Kind        SignalKind
 	Transformer Transformer
 }
+
+// HotCatalog is the static routing table. Keys are Tesla signal names exactly
+// as Fleet Telemetry emits them. Populated by per-table init blocks in
+// hot_catalog_*.go files (prompts 03-08).
+var HotCatalog = map[string]HotRoute{}
+
+// LookupHot returns the routing entry, or nil if the signal is cold
+// (i.e., should land in signal_observations).
+func LookupHot(name string) *HotRoute {
+	if h, ok := HotCatalog[name]; ok {
+		return &h
+	}
+	return nil
+}
