@@ -58,6 +58,36 @@ func (r *AutomationStepRepo) UpdateOrder(ctx context.Context, automationID int64
 	return nil
 }
 
+// ListByAutomation returns all steps for the given automation in step_order
+// ascending. Per ADR-004 the CTI child rows (condition, action, delay) are
+// loaded by a separate UNION hydrator wired in by the orchestrating service;
+// this method returns the discriminator rows only.
+func (r *AutomationStepRepo) ListByAutomation(ctx context.Context, automationID int64) ([]models.AutomationStep, error) {
+	const query = `
+		SELECT id, automation_id, kind, step_order
+		FROM automation_steps
+		WHERE automation_id = $1
+		ORDER BY step_order`
+	rows, err := r.db.Pool.Query(ctx, query, automationID)
+	if err != nil {
+		return nil, fmt.Errorf("automation-steps-repo-list-by-automation: %w", err)
+	}
+	defer rows.Close()
+
+	var out []models.AutomationStep
+	for rows.Next() {
+		var s models.AutomationStep
+		if err := rows.Scan(&s.ID, &s.AutomationID, &s.Kind, &s.StepOrder); err != nil {
+			return nil, fmt.Errorf("automation-steps-repo-list-by-automation: scan: %w", err)
+		}
+		out = append(out, s)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("automation-steps-repo-list-by-automation: rows: %w", err)
+	}
+	return out, nil
+}
+
 // Delete removes a single step row. The matching CTI child row (condition,
 // action, or delay) is removed automatically by the FK ON DELETE CASCADE
 // declared in the phase-3 schema (ADR-004).
