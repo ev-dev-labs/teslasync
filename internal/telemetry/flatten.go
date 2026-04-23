@@ -3,6 +3,7 @@ package telemetry
 import (
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 // Atomic is one (name, value) pair after compound expansion.The handler
@@ -60,7 +61,29 @@ func flattenDoors(raw any) ([]Atomic, error) {
 	}
 	return out, nil
 }
-func flattenWindows(raw any) ([]Atomic, error)           { return nil, nil }
+func flattenWindows(raw any) ([]Atomic, error) {
+	m, ok := raw.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("WindowState: expected map[string]any, got %T", raw)
+	}
+	parts := []string{"DriverFront", "PassengerFront", "DriverRear", "PassengerRear"}
+	out := make([]Atomic, 0, len(parts))
+	for _, p := range parts {
+		v, present := m[p]
+		if !present {
+			continue
+		}
+		s, ok := v.(string)
+		if !ok {
+			return nil, fmt.Errorf("WindowState.%s: expected string, got %T", p, v)
+		}
+		out = append(out, Atomic{
+			Name:  "WindowState_" + p,
+			Value: strings.ToLower(strings.TrimSpace(s)),
+		})
+	}
+	return out, nil
+}
 func flattenLocation(raw any) ([]Atomic, error) {
 	m, ok := raw.(map[string]any)
 	if !ok {
