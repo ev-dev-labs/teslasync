@@ -130,39 +130,8 @@ type FleetTelemetrySubscription struct {
 	CreatedAt       time.Time      `json:"created_at" db:"created_at"`
 }
 
-// ChargingSession represents a charging event.
-type ChargingSession struct {
-	ID                    int64      `json:"id" db:"id"`
-	VehicleID             int64      `json:"vehicle_id" db:"vehicle_id"`
-	StartDate             time.Time  `json:"start_date" db:"start_date"`
-	EndDate               *time.Time `json:"end_date,omitempty" db:"end_date"`
-	AddressID             *int64     `json:"address_id,omitempty" db:"address_id"`
-	ChargeEnergyAdded     float64    `json:"charge_energy_added" db:"charge_energy_added"`
-	ChargeEnergyUsed      *float64   `json:"charge_energy_used,omitempty" db:"charge_energy_used"`
-	StartBatteryLevel     int        `json:"start_battery_level" db:"start_battery_level"`
-	EndBatteryLevel       *int       `json:"end_battery_level,omitempty" db:"end_battery_level"`
-	StartRangeKm          *float64   `json:"start_range_km,omitempty" db:"start_range_km"`
-	EndRangeKm            *float64   `json:"end_range_km,omitempty" db:"end_range_km"`
-	ChargerPhases         *int       `json:"charger_phases,omitempty" db:"charger_phases"`
-	ChargerVoltage        *int       `json:"charger_voltage,omitempty" db:"charger_voltage"`
-	ChargerActualCurrent  *int       `json:"charger_actual_current,omitempty" db:"charger_actual_current"`
-	ChargerPower          *float64   `json:"charger_power,omitempty" db:"charger_power"`
-	FastChargerType       *string    `json:"fast_charger_type,omitempty" db:"fast_charger_type"`
-	FastChargerBrand      *string    `json:"fast_charger_brand,omitempty" db:"fast_charger_brand"`
-	ConnChargeCable       *string    `json:"conn_charge_cable,omitempty" db:"conn_charge_cable"`
-	Cost                  *float64   `json:"cost,omitempty" db:"cost"`
-	DurationMin           float64    `json:"duration_min" db:"duration_min"`
-
-	// Enhanced tracking fields (migration 21)
-	Latitude       *float64 `json:"latitude,omitempty" db:"latitude"`
-	Longitude      *float64 `json:"longitude,omitempty" db:"longitude"`
-	LocationName   *string  `json:"location_name,omitempty" db:"location_name"`
-	InsideTempAvg  *float64 `json:"inside_temp_avg,omitempty" db:"inside_temp_avg"`
-	OutsideTempAvg *float64 `json:"outside_temp_avg,omitempty" db:"outside_temp_avg"`
-
-	// Joined address details (populated on detail view)
-	Address *Address `json:"address,omitempty" db:"-"`
-}
+// ChargingSession is defined in charging.go to mirror the post-migration
+// `charging_sessions` schema (migrations/000142_baseline_typed.up.sql).
 
 // Address represents a reverse-geocoded location.
 type Address struct {
