@@ -1,0 +1,52 @@
+=== SURVEY ===
+BEFORE state of doc.go:
+// Package database provides the data access layer for TeslaSync.
+//
+// It wraps pgx/v5 connection pooling (pgxpool) with configurable pool
+// sizes and health checks, and runs schema migrations automatically via
+// golang-migrate. Twenty-two repository types (e.g. VehicleRepo,
+// DriveRepo, ChargingRepo, AlertRepo, MileageRepo, TripRepo) implement
+// CRUD and domain-specific queries for all TeslaSync models. Native
+// PostgreSQL partitioning is used for high-volume time-series data such
+// as positions, with monthly partitions managed by the maintenance worker.
+package database
+
+=== REASONING ===
+Line 6 references 'AlertRepo' but the actual type is 'AlertRuleRepo'.
+Per the prompt, remove AlertRepo from the example list.
+Replace with AlertRuleRepo to match the actual type name.
+
+=== CHANGES ===
+Replaced 'AlertRepo' with 'AlertRuleRepo' on line 6 to match actual type name.
+
+AFTER state of doc.go:
+// Package database provides the data access layer for TeslaSync.
+//
+// It wraps pgx/v5 connection pooling (pgxpool) with configurable pool
+// sizes and health checks, and runs schema migrations automatically via
+// golang-migrate. Twenty-two repository types (e.g. VehicleRepo,
+// DriveRepo, ChargingRepo, AlertRuleRepo, MileageRepo, TripRepo) implement
+// CRUD and domain-specific queries for all TeslaSync models. Native
+// PostgreSQL partitioning is used for high-volume time-series data such
+// as positions, with monthly partitions managed by the maintenance worker.
+package database
+
+=== GATE ===
+# github.com/ev-dev-labs/teslasync/internal/database
+internal\database\drive_repo.go:38:27: d.StartDate undefined (type *models.Drive has no field or method StartDate)
+internal\database\drive_repo.go:38:41: d.EndDate undefined (type *models.Drive has no field or method EndDate)
+internal\database\drive_repo.go:38:53: d.StartPositionID undefined (type *models.Drive has no field or method StartPositionID)
+internal\database\drive_repo.go:38:73: d.EndPositionID undefined (type *models.Drive has no field or method EndPositionID)
+internal\database\drive_repo.go:39:6: d.StartAddressID undefined (type *models.Drive has no field or method StartAddressID)
+internal\database\drive_repo.go:39:25: d.EndAddressID undefined (type *models.Drive has no field or method EndAddressID)
+internal\database\drive_repo.go:39:42: d.Distance undefined (type *models.Drive has no field or method Distance)
+internal\database\drive_repo.go:39:71: d.StartRangeKm undefined (type *models.Drive has no field or method StartRangeKm)
+internal\database\drive_repo.go:40:6: d.EndRangeKm undefined (type *models.Drive has no field or method EndRangeKm)
+internal\database\drive_repo.go:40:21: d.SpeedMax undefined (type *models.Drive has no field or method SpeedMax)
+internal\database\drive_repo.go:40:21: too many errors
+BUILD_EXIT=1
+DOC_ERROR_COUNT=0
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
