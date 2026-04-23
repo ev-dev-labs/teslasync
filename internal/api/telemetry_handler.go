@@ -11,7 +11,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
@@ -22,33 +21,34 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/telemetry"
+	"github.com/rs/zerolog/log"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 // TelemetryHandler receives and processes Tesla Fleet Telemetry data.
 type TelemetryHandler struct {
-	db             *database.DB
-	posRepo        *database.PositionRepo
-	vehicleRepo    *database.VehicleRepo
-	stateRepo      *database.VehicleStateRepo
-	mileageRepo    *database.MileageRepo
-	tireRepo       *database.TirePressureRepo
-	motorRepo      *database.MotorRepo
-	climateRepo    *database.ClimateRepo
-	securityRepo   *database.SecurityRepo
+	db                    *database.DB
+	posRepo               *database.PositionRepo
+	vehicleRepo           *database.VehicleRepo
+	stateRepo             *database.VehicleStateRepo
+	mileageRepo           *database.MileageRepo
+	tireRepo              *database.TirePressureRepo
+	motorRepo             *database.MotorRepo
+	climateRepo           *database.ClimateRepo
+	securityRepo          *database.SecurityRepo
 	chargingTelemetryRepo *database.ChargingTelemetryRepo
-	mediaRepo      *database.MediaRepo
-	vehicleConfigRepo *database.VehicleConfigRepo
-	locationRepo   *database.LocationSnapshotRepo
-	safetyRepo     *database.SafetyRepo
-	userPrefRepo   *database.UserPreferenceRepo
-	swUpdateRepo   *database.SoftwareUpdateRepo
-	mqttClient     *mqtt.Client
-	logRepo        *database.APICallLogRepo
-	eventHub       *EventHub
-	sessionTracker *TelemetrySessionTracker
-	alertEvaluator *TelemetryAlertEvaluator
+	mediaRepo             *database.MediaRepo
+	vehicleConfigRepo     *database.VehicleConfigRepo
+	locationRepo          *database.LocationSnapshotRepo
+	safetyRepo            *database.SafetyRepo
+	userPrefRepo          *database.UserPreferenceRepo
+	swUpdateRepo          *database.SoftwareUpdateRepo
+	mqttClient            *mqtt.Client
+	logRepo               *database.APICallLogRepo
+	eventHub              *EventHub
+	sessionTracker        *TelemetrySessionTracker
+	alertEvaluator        *TelemetryAlertEvaluator
 	staleTimeout          time.Duration
 	snapshotWriteInterval time.Duration
 	cleanupInterval       time.Duration
@@ -103,8 +103,8 @@ type VehicleStreamState struct {
 	IsStreaming      bool                   `json:"is_streaming"`
 	DataSource       string                 `json:"data_source"`        // "fleet_telemetry" or "fleet_api"
 	SignalsPerSecond float64                `json:"signals_per_second"` // rolling throughput
-	LatencyMs        int64                  `json:"latency_ms"`        // age of data in milliseconds
-	UptimeSeconds    float64                `json:"uptime_seconds"`    // how long vehicle has been streaming
+	LatencyMs        int64                  `json:"latency_ms"`         // age of data in milliseconds
+	UptimeSeconds    float64                `json:"uptime_seconds"`     // how long vehicle has been streaming
 	LastSignals      map[string]interface{} `json:"last_signals,omitempty"`
 }
 
@@ -121,39 +121,44 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 	}
 	bgCtx, bgCancel := context.WithCancel(context.Background())
 	return &TelemetryHandler{
-		db:             db,
-		posRepo:        database.NewPositionRepo(db),
-		vehicleRepo:    database.NewVehicleRepo(db),
-		stateRepo:      database.NewVehicleStateRepo(db),
-		mileageRepo:    database.NewMileageRepo(db),
-		tireRepo:       database.NewTirePressureRepo(db),
-		motorRepo:      database.NewMotorRepo(db),
-		climateRepo:    database.NewClimateRepo(db),
-		securityRepo:   database.NewSecurityRepo(db),
+		db:                    db,
+		posRepo:               database.NewPositionRepo(db),
+		vehicleRepo:           database.NewVehicleRepo(db),
+		stateRepo:             database.NewVehicleStateRepo(db),
+		mileageRepo:           database.NewMileageRepo(db),
+		tireRepo:              database.NewTirePressureRepo(db),
+		motorRepo:             database.NewMotorRepo(db),
+		climateRepo:           database.NewClimateRepo(db),
+		securityRepo:          database.NewSecurityRepo(db),
 		chargingTelemetryRepo: database.NewChargingTelemetryRepo(db),
-		mediaRepo:      database.NewMediaRepo(db),
-		vehicleConfigRepo: database.NewVehicleConfigRepo(db),
-		locationRepo:   database.NewLocationSnapshotRepo(db),
-		safetyRepo:     database.NewSafetyRepo(db),
-		userPrefRepo:   database.NewUserPreferenceRepo(db),
-		swUpdateRepo:   database.NewSoftwareUpdateRepo(db),
-		mqttClient:     mc,
-		logRepo:        database.NewAPICallLogRepo(db),
-		eventHub:       hub,
-		sessionTracker: NewTelemetrySessionTracker(db, eventBus, geocoder, nil),
-		alertEvaluator: NewTelemetryAlertEvaluator(db, eventBus, hub, func() pahomqtt.Client { if mc != nil { return mc.Underlying() }; return nil }()),
+		mediaRepo:             database.NewMediaRepo(db),
+		vehicleConfigRepo:     database.NewVehicleConfigRepo(db),
+		locationRepo:          database.NewLocationSnapshotRepo(db),
+		safetyRepo:            database.NewSafetyRepo(db),
+		userPrefRepo:          database.NewUserPreferenceRepo(db),
+		swUpdateRepo:          database.NewSoftwareUpdateRepo(db),
+		mqttClient:            mc,
+		logRepo:               database.NewAPICallLogRepo(db),
+		eventHub:              hub,
+		sessionTracker:        NewTelemetrySessionTracker(db, eventBus, geocoder, nil),
+		alertEvaluator: NewTelemetryAlertEvaluator(db, eventBus, hub, func() pahomqtt.Client {
+			if mc != nil {
+				return mc.Underlying()
+			}
+			return nil
+		}()),
 		staleTimeout:          staleTimeout,
 		snapshotWriteInterval: 10 * time.Second,
 		cleanupInterval:       2 * time.Minute,
 		staleSessionTimeout:   5 * time.Minute,
 		startTime:             time.Now().UTC(),
-		bgCtx:          bgCtx,
-		bgCancel:       bgCancel,
-		streamingState:     make(map[string]*VehicleStreamState),
-		lastWriteAt:        make(map[string]time.Time),
-		accumulatedSignals: make(map[string]map[string]interface{}),
-		connFSMs:           make(map[int64]*telemetryfsm.ConnectionFSM),
-		fsmHandler:         NewFSMHandler(database.NewVehicleStateRepo(db), database.NewVehicleRepo(db), database.NewFSMTransitionRepo(db)),
+		bgCtx:                 bgCtx,
+		bgCancel:              bgCancel,
+		streamingState:        make(map[string]*VehicleStreamState),
+		lastWriteAt:           make(map[string]time.Time),
+		accumulatedSignals:    make(map[string]map[string]interface{}),
+		connFSMs:              make(map[int64]*telemetryfsm.ConnectionFSM),
+		fsmHandler:            NewFSMHandler(database.NewVehicleStateRepo(db), database.NewVehicleRepo(db), database.NewFSMTransitionRepo(db)),
 	}
 }
 
@@ -1042,15 +1047,15 @@ func (h *TelemetryHandler) TelemetryStatus(w http.ResponseWriter, r *http.Reques
 	for vin, v := range streamingVehicles {
 		entry := map[string]interface{}{
 			"vin":                v.VIN,
-			"last_received":     v.LastReceived,
-			"first_received":    v.FirstReceived,
-			"signal_count":      v.SignalCount,
-			"batch_count":       v.BatchCount,
-			"is_streaming":      v.IsStreaming,
-			"data_source":       v.DataSource,
+			"last_received":      v.LastReceived,
+			"first_received":     v.FirstReceived,
+			"signal_count":       v.SignalCount,
+			"batch_count":        v.BatchCount,
+			"is_streaming":       v.IsStreaming,
+			"data_source":        v.DataSource,
 			"signals_per_second": v.SignalsPerSecond,
-			"latency_ms":        v.LatencyMs,
-			"uptime_seconds":    v.UptimeSeconds,
+			"latency_ms":         v.LatencyMs,
+			"uptime_seconds":     v.UptimeSeconds,
 		}
 		if cfsm, ok := connFSMByVIN[vin]; ok {
 			entry["connection_fsm_state"] = string(cfsm.State())
@@ -1078,17 +1083,17 @@ func (h *TelemetryHandler) TelemetryStatus(w http.ResponseWriter, r *http.Reques
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"enabled":              true,
-		"connected":            connected,
-		"broker":               broker,
-		"uptime_seconds":       time.Since(h.startTime).Seconds(),
-		"topics":               topics,
-		"mode":                 "fleet_telemetry",
-		"endpoint":             "/api/v1/telemetry",
-		"protocol":             "MQTT + HTTP",
-		"mqtt_publishing":      connected,
-		"vehicles":             vehicleMap,
-		"streaming_vehicles":   vehicleMap,
+		"enabled":            true,
+		"connected":          connected,
+		"broker":             broker,
+		"uptime_seconds":     time.Since(h.startTime).Seconds(),
+		"topics":             topics,
+		"mode":               "fleet_telemetry",
+		"endpoint":           "/api/v1/telemetry",
+		"protocol":           "MQTT + HTTP",
+		"mqtt_publishing":    connected,
+		"vehicles":           vehicleMap,
+		"streaming_vehicles": vehicleMap,
 		"aggregate_stats": map[string]interface{}{
 			"streaming_vehicles":      streamingCount,
 			"total_vehicles_seen":     len(streamingVehicles),
@@ -1098,6 +1103,43 @@ func (h *TelemetryHandler) TelemetryStatus(w http.ResponseWriter, r *http.Reques
 			"stale_timeout":           h.staleTimeout.String(),
 		},
 	})
+}
+
+// ProcessBatch is the new slice-oriented write-path entrypoint that will
+// eventually replace the map-based ProcessSignals pipeline. It accepts an
+// ordered batch of telemetry.NamedValue (decoded in Tesla emission order)
+// and walks it through normalize -> flatten -> bucket -> persist stages.
+//
+// This method is being assembled incrementally across the db-refactor
+// prompts. Today it covers stages 1-2 (normalize + flatten); subsequent
+// prompts add hot-route bucketing and per-table writers.
+func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded []telemetry.NamedValue) {
+	_ = ctx
+	_ = vin
+
+	normalized := telemetry.NormalizeFleetUnits(decoded)
+
+	atomics := make([]telemetry.Atomic, 0, len(normalized)*2)
+	var flattenErrs int
+	for _, nv := range normalized {
+		flat, err := telemetry.Flatten(nv.Name, nv.Value)
+		if err != nil {
+			flattenErrs++
+			log.Warn().
+				Err(err).
+				Str("signal", nv.Name).
+				Msg("flatten failed; skipping signal")
+			continue
+		}
+		atomics = append(atomics, flat...)
+	}
+	log.Debug().
+		Int("normalized", len(normalized)).
+		Int("atomics", len(atomics)).
+		Int("flatten_errors", flattenErrs).
+		Msg("flatten step complete")
+
+	_ = atomics
 }
 
 // normalizeFleetSignals adapts the slice-based telemetry.NormalizeFleetUnits
