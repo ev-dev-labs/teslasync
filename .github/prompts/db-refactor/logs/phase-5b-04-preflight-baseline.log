@@ -1,0 +1,71 @@
+=== PREFLIGHT ===
+HEAD=aa8c9e05906c470cfa924e47784a747c12d85b92
+BRANCH=db-refactor/timescaledb-migration-mo-jsonb-at-all
+=== BUILD OUTPUT ===
+# github.com/ev-dev-labs/teslasync/internal/automation/condition
+internal\automation\condition\conflict.go:71:45: candidate.Actions undefined (type *models.Automation has no field or method Actions)
+internal\automation\condition\conflict.go:81:52: candidate.TriggerType undefined (type *models.Automation has no field or method TriggerType)
+internal\automation\condition\conflict.go:81:75: candidate.TriggerConfig undefined (type *models.Automation has no field or method TriggerConfig)
+internal\automation\condition\conflict.go:88:30: other.AutoDisabled undefined (type *models.Automation has no field or method AutoDisabled)
+internal\automation\condition\conflict.go:95:38: other.Actions undefined (type *models.Automation has no field or method Actions)
+internal\automation\condition\conflict.go:106:45: other.TriggerType undefined (type *models.Automation has no field or method TriggerType)
+internal\automation\condition\conflict.go:106:64: other.TriggerConfig undefined (type *models.Automation has no field or method TriggerConfig)
+internal\automation\condition\conflict.go:394:15: a.Conditions undefined (type *models.Automation has no field or method Conditions)
+internal\automation\condition\location.go:79:70: geofence.Latitude undefined (type *models.Geofence has no field or method Latitude)
+internal\automation\condition\location.go:79:89: geofence.Longitude undefined (type *models.Geofence has no field or method Longitude)
+internal\automation\condition\location.go:79:89: too many errors
+# github.com/ev-dev-labs/teslasync/internal/automation/trigger
+internal\automation\trigger\battery.go:103:36: a.TriggerConfig undefined (type *models.Automation has no field or method TriggerConfig)
+internal\automation\trigger\calendar.go:214:36: a.TriggerConfig undefined (type *models.Automation has no field or method TriggerConfig)
+internal\automation\trigger\cron.go:122:41: automation.TriggerConfig undefined (type *models.Automation has no field or method TriggerConfig)
+internal\automation\trigger\energy.go:126:35: a.TriggerConfig undefined (type *models.Automation has no field or method TriggerConfig)
+internal\automation\trigger\geofence.go:174:37: a.TriggerConfig undefined (type *models.Automation has no field or method TriggerConfig)
+internal\automation\trigger\mqtt.go:208:33: a.TriggerConfig undefined (type *models.Automation has no field or method TriggerConfig)
+internal\automation\trigger\sunrise_sunset.go:148:41: a.TriggerConfig undefined (type *models.Automation has no field or method TriggerConfig)
+internal\automation\trigger\vehicle_state.go:94:41: a.TriggerConfig undefined (type *models.Automation has no field or method TriggerConfig)
+internal\automation\trigger\webhook.go:72:39: automation.AutoDisabled undefined (type *models.Automation has no field or method AutoDisabled)
+internal\automation\trigger\webhook.go:77:37: automation.AutoDisabled undefined (type *models.Automation has no field or method AutoDisabled)
+internal\automation\trigger\webhook.go:77:37: too many errors
+# github.com/ev-dev-labs/teslasync/internal/database
+internal\database\alert_repo.go:21:59: undefined: models.Alert
+internal\database\alert_repo.go:28:79: undefined: models.Alert
+internal\database\alert_repo.go:37:23: undefined: models.Alert
+internal\database\alert_repo.go:39:16: undefined: models.Alert
+internal\database\alert_repo.go:75:45: ar.Type undefined (type *models.AlertRule has no field or method Type)
+internal\database\alert_repo.go:75:68: ar.Threshold undefined (type *models.AlertRule has no field or method Threshold)
+internal\database\alert_repo.go:76:8: ar.Conditions undefined (type *models.AlertRule has no field or method Conditions)
+internal\database\settings_repo.go:20:58: undefined: models.Settings
+internal\database\settings_repo.go:44:62: undefined: models.Settings
+internal\database\settings_repo.go:119:43: undefined: models.Settings
+internal\database\alert_repo.go:76:8: too many errors
+BUILD_EXIT=1
+=== OBSERVED BROKEN FILES ===
+internal\automation\condition\conflict.go
+internal\automation\condition\location.go
+internal\automation\trigger\battery.go
+internal\automation\trigger\calendar.go
+internal\automation\trigger\cron.go
+internal\automation\trigger\energy.go
+internal\automation\trigger\geofence.go
+internal\automation\trigger\mqtt.go
+internal\automation\trigger\sunrise_sunset.go
+internal\automation\trigger\vehicle_state.go
+internal\automation\trigger\webhook.go
+internal\database\alert_repo.go
+internal\database\settings_repo.go
+=== OBSERVED MISSING SYMBOLS ===
+models.Alert
+models.AlertRule.Conditions
+models.AlertRule.Threshold
+models.AlertRule.Type
+models.Automation.Actions
+models.Automation.AutoDisabled
+models.Automation.Conditions
+models.Automation.TriggerConfig
+models.Automation.TriggerType
+models.Geofence.Latitude
+models.Geofence.Longitude
+models.Settings
+BASELINE_HEAD=aa8c9e05906c470cfa924e47784a747c12d85b92
+EXIT=0
+STATUS=DONE
