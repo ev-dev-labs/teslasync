@@ -31,5 +31,13 @@ export interface NotificationChannelDiscord extends NotificationChannelBase {
   avatar_url: string | null;
 }
 
+export interface NotificationChannelSlack extends NotificationChannelBase {
+  kind: 'slack';
+  webhook_url: string;
+  channel: string | null;
+  username: string | null;
+}
+
 export type NotificationChannel =
-  | (NotificationChannelDiscord & { kind: 'discord' });
+  | (NotificationChannelDiscord & { kind: 'discord' })
+  | (NotificationChannelSlack & { kind: 'slack' });
