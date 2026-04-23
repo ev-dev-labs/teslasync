@@ -1,0 +1,604 @@
+=== SURVEY ===
+Timestamp: 2026-04-23T15:53:38.5731519-07:00
+File: internal/export/analytics.go
+Line count: 372
+
+package export
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"math"
+	"sort"
+	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/models"
+)
+
+// processAnalytics generates a fleet analytics report as JSON.
+// This mirrors the computation from analytics_handler.Fleet() but runs
+// asynchronously in the export worker, avoiding HTTP timeouts for large fleets.
+func (p *Processor) processAnalytics(ctx context.Context, req *models.ExportJobRequest) (*ProcessResult, error) {
+	vehicles, err := p.vehicleRepo.GetAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse cutoff from request dates
+	cutoff := time.Now().UTC().AddDate(0, 0, -30) // default 30 days
+	if req.StartDate != nil {
+		cutoff = *req.StartDate
+	}
+
+	batRepo := database.NewBatterySnapshotRepo(p.db)
+
+	type vehicleStats struct {
+		ID         int64   `json:"id"`
+		Name       string  `json:"name"`
+		Drives     int     `json:"drives"`
+		Distance   float64 `json:"distance"`
+		Energy     float64 `json:"energy"`
+		Efficiency float64 `json:"efficiency"`
+	}
+
+	var comparisons []vehicleStats
+	var fleetDist, fleetEnergy, fleetCost float64
+	var fleetDrives, fleetSessions int
+
+	hourCounts := make([]int, 24)
+	hourDistance := make([]float64, 24)
+	dowCounts := make([]int, 7)
+	dowDistance := make([]float64, 7)
+	var allSpeedMax, allDriveDurations, allDriveDistances, allDriveEfficiencies []float64
+	var insideTemps, outsideTemps []float64
+	var tempVsEfficiency []map[string]interface{}
+	dailyDriveAgg := make(map[string]map[string]interface{})
+	var totalRangeUsed float64
+
+	chargerTypeMap := make(map[string]int)
+	var chargePowers, chargeDurations, chargeEnergies, chargeCosts, chargeEfficiencies []float64
+	hourChargeCounts := make([]int, 24)
+	hourChargeEnergy := make([]float64, 24)
+	monthlyChargeAgg := make(map[string]map[string]interface{})
+
+	type batteryPoint struct {
+		Date        string  `json:"date"`
+		HealthScore float64 `json:"health_score"`
+		CapacityKWh float64 `json:"capacity_kwh"`
+		Degradation float64 `json:"degradation_pct"`
+		RangeKm     float64 `json:"range_km"`
+		CycleCount  int     `json:"cycle_count"`
+	}
+	var batteryTrend []batteryPoint
+
+	for _, v := range vehicles {
+		if req.VehicleID != nil && v.ID != *req.VehicleID {
+			continue
+		}
+
+		// Fetch all data for this vehicle (paginated)
+		var allDrives []*models.Drive
+		offset := 0
+		for {
+			drives, _ := p.driveRepo.GetByVehicle(ctx, v.ID, 500, offset, time.Time{}, time.Time{})
+			if len(drives) == 0 {
+				break
+			}
+			allDrives = append(allDrives, drives...)
+			offset += len(drives)
+			if len(drives) < 500 {
+				break
+			}
+		}
+
+		var allSessions []*models.ChargingSession
+		offset = 0
+		for {
+			sessions, _ := p.chargingRepo.GetByVehicle(ctx, v.ID, 500, offset, time.Time{}, time.Time{})
+			if len(sessions) == 0 {
+				break
+			}
+			allSessions = append(allSessions, sessions...)
+			offset += len(sessions)
+			if len(sessions) < 500 {
+				break
+			}
+		}
+
+		batSnaps, _ := batRepo.GetByVehicle(ctx, v.ID, 365)
+
+		var dist float64
+		var driveCount int
+		for _, d := range allDrives {
+			if d.StartDate.Before(cutoff) {
+				continue
+			}
+			dist += d.Distance
+			driveCount++
+
+			hour := d.StartDate.Hour()
+			hourCounts[hour]++
+			hourDistance[hour] += d.Distance
+			dow := int(d.StartDate.Weekday())
+			dowCounts[dow]++
+			dowDistance[dow] += d.Distance
+
+			if d.SpeedMax != nil {
+				allSpeedMax = append(allSpeedMax, *d.SpeedMax)
+			}
+			allDriveDurations = append(allDriveDurations, d.DurationMin)
+			allDriveDistances = append(allDriveDistances, d.Distance)
+
+			if d.StartBatteryLvl != nil && d.EndBatteryLvl != nil && d.Distance > 0 {
+				totalRangeUsed += float64(*d.StartBatteryLvl - *d.EndBatteryLvl)
+			}
+			if d.Distance > 0 && d.StartRangeKm != nil && d.EndRangeKm != nil {
+				eff := ((*d.StartRangeKm - *d.EndRangeKm) / d.Distance) * 100
+				if eff > 0 && eff < 500 {
+					allDriveEfficiencies = append(allDriveEfficiencies, eff)
+				}
+			}
+			if d.OutsideTempAvg != nil {
+				outsideTemps = append(outsideTemps, *d.OutsideTempAvg)
+			}
+			if d.InsideTempAvg != nil {
+				insideTemps = append(insideTemps, *d.InsideTempAvg)
+			}
+			if d.OutsideTempAvg != nil && d.Distance > 1 && d.StartRangeKm != nil && d.EndRangeKm != nil {
+				eff := ((*d.StartRangeKm - *d.EndRangeKm) / d.Distance) * 100
+				if eff > 0 && eff < 500 {
+					tempVsEfficiency = append(tempVsEfficiency, map[string]interface{}{
+						"temp":       math.Round(*d.OutsideTempAvg*10) / 10,
+						"efficiency": math.Round(eff*10) / 10,
+						"distance":   math.Round(d.Distance*10) / 10,
+					})
+				}
+			}
+
+			dateKey := d.StartDate.Format("2006-01-02")
+			if dailyDriveAgg[dateKey] == nil {
+				dailyDriveAgg[dateKey] = map[string]interface{}{"drives": 0, "distance": 0.0}
+			}
+			dailyDriveAgg[dateKey]["drives"] = dailyDriveAgg[dateKey]["drives"].(int) + 1
+			dailyDriveAgg[dateKey]["distance"] = dailyDriveAgg[dateKey]["distance"].(float64) + d.Distance
+		}
+
+		var energy, cost float64
+		for _, s := range allSessions {
+			if s.StartDate.Before(cutoff) {
+				continue
+			}
+			energy += s.ChargeEnergyAdded
+			if s.Cost != nil {
+				cost += *s.Cost
+			}
+
+			ct := "Home/AC"
+			if s.FastChargerType != nil && *s.FastChargerType != "" {
+				ct = *s.FastChargerType
+			}
+			chargerTypeMap[ct]++
+
+			if s.ChargerPower != nil {
+				chargePowers = append(chargePowers, *s.ChargerPower)
+			}
+			chargeDurations = append(chargeDurations, s.DurationMin)
+			chargeEnergies = append(chargeEnergies, s.ChargeEnergyAdded)
+			if s.Cost != nil {
+				chargeCosts = append(chargeCosts, *s.Cost)
+			}
+
+			if s.ChargeEnergyUsed != nil && *s.ChargeEnergyUsed > 0 {
+				chargeEfficiencies = append(chargeEfficiencies, (s.ChargeEnergyAdded / *s.ChargeEnergyUsed) * 100)
+			}
+
+			chHour := s.StartDate.Hour()
+			hourChargeCounts[chHour]++
+			hourChargeEnergy[chHour] += s.ChargeEnergyAdded
+
+			monthKey := s.StartDate.Format("2006-01")
+			if monthlyChargeAgg[monthKey] == nil {
+				monthlyChargeAgg[monthKey] = map[string]interface{}{
+					"energy": 0.0, "cost": 0.0, "sessions": 0, "power_sum": 0.0,
+				}
+			}
+			monthlyChargeAgg[monthKey]["energy"] = monthlyChargeAgg[monthKey]["energy"].(float64) + s.ChargeEnergyAdded
+			if s.Cost != nil {
+				monthlyChargeAgg[monthKey]["cost"] = monthlyChargeAgg[monthKey]["cost"].(float64) + *s.Cost
+			}
+			monthlyChargeAgg[monthKey]["sessions"] = monthlyChargeAgg[monthKey]["sessions"].(int) + 1
+			if s.ChargerPower != nil {
+				monthlyChargeAgg[monthKey]["power_sum"] = monthlyChargeAgg[monthKey]["power_sum"].(float64) + *s.ChargerPower
+			}
+		}
+
+		effic := 0.0
+		if dist > 0 && energy > 0 {
+			effic = (energy * 1000) / dist
+		}
+
+		comparisons = append(comparisons, vehicleStats{
+			ID: v.ID, Name: v.DisplayName, Drives: driveCount,
+			Distance: dist, Energy: energy, Efficiency: effic,
+		})
+
+		fleetDist += dist
+		fleetEnergy += energy
+		fleetCost += cost
+		fleetDrives += driveCount
+		fleetSessions += len(allSessions)
+
+		for _, bs := range batSnaps {
+			batteryTrend = append(batteryTrend, batteryPoint{
+				Date: bs.CreatedAt.Format("2006-01-02"), HealthScore: bs.HealthScore,
+				CapacityKWh: bs.CapacityKWh, Degradation: bs.DegradationPct,
+				RangeKm: bs.EstRangeKm, CycleCount: bs.CycleCount,
+			})
+		}
+	}
+
+	fleetEffic := 0.0
+	if fleetDist > 0 && fleetEnergy > 0 {
+		fleetEffic = (fleetEnergy * 1000) / fleetDist
+	}
+
+	if comparisons == nil {
+		comparisons = []vehicleStats{}
+	}
+
+	// Build hourly patterns
+	hourlyDriving := make([]map[string]interface{}, 24)
+	hourlyCharging := make([]map[string]interface{}, 24)
+	for i := 0; i < 24; i++ {
+		hourlyDriving[i] = map[string]interface{}{"hour": i, "drives": hourCounts[i], "distance": math.Round(hourDistance[i]*10) / 10}
+		hourlyCharging[i] = map[string]interface{}{"hour": i, "charges": hourChargeCounts[i], "energy": math.Round(hourChargeEnergy[i]*10) / 10}
+	}
+
+	dayNames := []string{"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"}
+	dowData := make([]map[string]interface{}, 7)
+	for i := 0; i < 7; i++ {
+		avgDist := 0.0
+		if dowCounts[i] > 0 {
+			avgDist = dowDistance[i] / float64(dowCounts[i])
+		}
+		dowData[i] = map[string]interface{}{"day": dayNames[i], "drives": dowCounts[i], "distance": math.Round(dowDistance[i]*10) / 10, "avg_distance": math.Round(avgDist*10) / 10}
+	}
+
+	// Monthly charging trends
+	monthlyCharge := make([]map[string]interface{}, 0, len(monthlyChargeAgg))
+	for m, data := range monthlyChargeAgg {
+		sessions := data["sessions"].(int)
+		avgPower := 0.0
+		if sessions > 0 {
+			avgPower = data["power_sum"].(float64) / float64(sessions)
+		}
+		gasCost := data["energy"].(float64) * 0.14 * 8.5
+		monthlyCharge = append(monthlyCharge, map[string]interface{}{
+			"month": m, "energy": math.Round(data["energy"].(float64)*100) / 100,
+			"cost": math.Round(data["cost"].(float64)*100) / 100, "sessions": sessions,
+			"avg_power": math.Round(avgPower*10) / 10, "gas_cost": math.Round(gasCost*100) / 100,
+			"savings": math.Round((gasCost-data["cost"].(float64))*100) / 100,
+		})
+	}
+	sort.Slice(monthlyCharge, func(i, j int) bool { return monthlyCharge[i]["month"].(string) < monthlyCharge[j]["month"].(string) })
+
+	dailyTrend := make([]map[string]interface{}, 0, len(dailyDriveAgg))
+	for d, data := range dailyDriveAgg {
+		dailyTrend = append(dailyTrend, map[string]interface{}{"date": d, "drives": data["drives"], "distance": math.Round(data["distance"].(float64)*10) / 10})
+	}
+	sort.Slice(dailyTrend, func(i, j int) bool { return dailyTrend[i]["date"].(string) < dailyTrend[j]["date"].(string) })
+
+	if len(tempVsEfficiency) > 200 {
+		tempVsEfficiency = tempVsEfficiency[:200]
+	}
+	sort.Slice(batteryTrend, func(i, j int) bool { return batteryTrend[i].Date < batteryTrend[j].Date })
+
+	result := map[string]interface{}{
+		"period_days":             int(time.Since(cutoff).Hours()/24) + 1,
+		"total_vehicles":          len(vehicles),
+		"total_distance_km":       math.Round(fleetDist*10) / 10,
+		"total_drives":            fleetDrives,
+		"total_charging_sessions": fleetSessions,
+		"total_energy_kwh":        math.Round(fleetEnergy*100) / 100,
+		"total_cost":              math.Round(fleetCost*100) / 100,
+		"avg_efficiency_wh_km":    math.Round(fleetEffic*10) / 10,
+		"vehicle_comparison":      comparisons,
+		"drive_analytics": map[string]interface{}{
+			"hourly_pattern":      hourlyDriving,
+			"day_of_week":         dowData,
+			"speed_stats":         computeStats(allSpeedMax),
+			"duration_stats":      computeStats(allDriveDurations),
+			"distance_stats":      computeStats(allDriveDistances),
+			"efficiency_stats":    computeStats(allDriveEfficiencies),
+			"daily_trend":         dailyTrend,
+			"temp_vs_efficiency":  tempVsEfficiency,
+			"temperature":         map[string]interface{}{"inside": computeStats(insideTemps), "outside": computeStats(outsideTemps)},
+		},
+		"charging_analytics": map[string]interface{}{
+			"hourly_pattern":  hourlyCharging,
+			"charger_types":   mapToSlice(chargerTypeMap, "type", "count"),
+			"monthly_trend":   monthlyCharge,
+			"power_stats":     computeStats(chargePowers),
+			"duration_stats":  computeStats(chargeDurations),
+			"energy_stats":    computeStats(chargeEnergies),
+			"cost_stats":      computeStats(chargeCosts),
+			"efficiency_stats": computeStats(chargeEfficiencies),
+		},
+		"battery_trend": batteryTrend,
+	}
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(result); err != nil {
+		return nil, err
+	}
+
+	return &ProcessResult{
+		FileName:    "teslasync-analytics-report.json",
+		Data:        buf.Bytes(),
+		RecordCount: fleetDrives + fleetSessions,
+	}, nil
+}
+
+func computeStats(vals []float64) map[string]interface{} {
+	if len(vals) == 0 {
+		return map[string]interface{}{"min": 0, "max": 0, "avg": 0, "median": 0, "p95": 0, "count": 0}
+	}
+	sorted := make([]float64, len(vals))
+	copy(sorted, vals)
+	sort.Float64s(sorted)
+	sum := 0.0
+	for _, v := range sorted {
+		sum += v
+	}
+	p95Idx := int(float64(len(sorted)) * 0.95)
+	if p95Idx >= len(sorted) {
+		p95Idx = len(sorted) - 1
+	}
+	medIdx := len(sorted) / 2
+	return map[string]interface{}{
+		"min":    math.Round(sorted[0]*10) / 10,
+		"max":    math.Round(sorted[len(sorted)-1]*10) / 10,
+		"avg":    math.Round((sum/float64(len(sorted)))*10) / 10,
+		"median": math.Round(sorted[medIdx]*10) / 10,
+		"p95":    math.Round(sorted[p95Idx]*10) / 10,
+		"count":  len(sorted),
+	}
+}
+
+func mapToSlice(m map[string]int, keyName, valName string) []map[string]interface{} {
+	result := make([]map[string]interface{}, 0, len(m))
+	for k, v := range m {
+		result = append(result, map[string]interface{}{keyName: k, valName: v})
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i][valName].(int) > result[j][valName].(int) })
+	return result
+}
+
+=== REASONING ===
+Drive fields renamed: StartDate->StartTs, Distance->DistanceMi, SpeedMax->MaxSpeedMph, StartBatteryLvl->StartBatteryPct, EndBatteryLvl->EndBatteryPct, OutsideTempAvg->OutsideTempAvgC, InsideTempAvg->InsideTempAvgC
+Drive fields deleted: StartRangeKm, EndRangeKm (removed efficiency calc and tempVsEfficiency blocks)
+Charging fields renamed: StartDate->StartTs, ChargeEnergyAdded->EnergyAddedKwh(*float64), FastChargerType->ChargerType, ChargerPower->ChargerPowerKwMax, DurationMin now *float64
+Charging fields deleted: ChargeEnergyUsed (removed chargeEfficiencies block)
+All pointer fields properly nil-checked before dereference
+
+=== CHANGES ===
+diff --git a/internal/export/analytics.go b/internal/export/analytics.go
+index e7149928..b4287f10 100644
+--- a/internal/export/analytics.go
++++ b/internal/export/analytics.go
+@@ -107,105 +107,95 @@ func (p *Processor) processAnalytics(ctx context.Context, req *models.ExportJobR
+ 		var dist float64
+ 		var driveCount int
+ 		for _, d := range allDrives {
+-			if d.StartDate.Before(cutoff) {
++			if d.StartTs.Before(cutoff) {
+ 				continue
+ 			}
+-			dist += d.Distance
++			dist += d.DistanceMi
+ 			driveCount++
+ 
+-			hour := d.StartDate.Hour()
++			hour := d.StartTs.Hour()
+ 			hourCounts[hour]++
+-			hourDistance[hour] += d.Distance
+-			dow := int(d.StartDate.Weekday())
++			hourDistance[hour] += d.DistanceMi
++			dow := int(d.StartTs.Weekday())
+ 			dowCounts[dow]++
+-			dowDistance[dow] += d.Distance
++			dowDistance[dow] += d.DistanceMi
+ 
+-			if d.SpeedMax != nil {
+-				allSpeedMax = append(allSpeedMax, *d.SpeedMax)
++			if d.MaxSpeedMph != nil {
++				allSpeedMax = append(allSpeedMax, *d.MaxSpeedMph)
+ 			}
+ 			allDriveDurations = append(allDriveDurations, d.DurationMin)
+-			allDriveDistances = append(allDriveDistances, d.Distance)
++			allDriveDistances = append(allDriveDistances, d.DistanceMi)
+ 
+-			if d.StartBatteryLvl != nil && d.EndBatteryLvl != nil && d.Distance > 0 {
+-				totalRangeUsed += float64(*d.StartBatteryLvl - *d.EndBatteryLvl)
++			if d.StartBatteryPct != nil && d.EndBatteryPct != nil && d.DistanceMi > 0 {
++				totalRangeUsed += float64(*d.StartBatteryPct - *d.EndBatteryPct)
+ 			}
+-			if d.Distance > 0 && d.StartRangeKm != nil && d.EndRangeKm != nil {
+-				eff := ((*d.StartRangeKm - *d.EndRangeKm) / d.Distance) * 100
+-				if eff > 0 && eff < 500 {
+-					allDriveEfficiencies = append(allDriveEfficiencies, eff)
+-				}
+-			}
+-			if d.OutsideTempAvg != nil {
+-				outsideTemps = append(outsideTemps, *d.OutsideTempAvg)
+-			}
+-			if d.InsideTempAvg != nil {
+-				insideTemps = append(insideTemps, *d.InsideTempAvg)
++			if d.OutsideTempAvgC != nil {
++				outsideTemps = append(outsideTemps, *d.OutsideTempAvgC)
+ 			}
+-			if d.OutsideTempAvg != nil && d.Distance > 1 && d.StartRangeKm != nil && d.EndRangeKm != nil {
+-				eff := ((*d.StartRangeKm - *d.EndRangeKm) / d.Distance) * 100
+-				if eff > 0 && eff < 500 {
+-					tempVsEfficiency = append(tempVsEfficiency, map[string]interface{}{
+-						"temp":       math.Round(*d.OutsideTempAvg*10) / 10,
+-						"efficiency": math.Round(eff*10) / 10,
+-						"distance":   math.Round(d.Distance*10) / 10,
+-					})
+-				}
++			if d.InsideTempAvgC != nil {
++				insideTemps = append(insideTemps, *d.InsideTempAvgC)
+ 			}
+ 
+-			dateKey := d.StartDate.Format("2006-01-02")
++			dateKey := d.StartTs.Format("2006-01-02")
+ 			if dailyDriveAgg[dateKey] == nil {
+ 				dailyDriveAgg[dateKey] = map[string]interface{}{"drives": 0, "distance": 0.0}
+ 			}
+ 			dailyDriveAgg[dateKey]["drives"] = dailyDriveAgg[dateKey]["drives"].(int) + 1
+-			dailyDriveAgg[dateKey]["distance"] = dailyDriveAgg[dateKey]["distance"].(float64) + d.Distance
++			dailyDriveAgg[dateKey]["distance"] = dailyDriveAgg[dateKey]["distance"].(float64) + d.DistanceMi
+ 		}
+ 
+ 		var energy, cost float64
+ 		for _, s := range allSessions {
+-			if s.StartDate.Before(cutoff) {
++			if s.StartTs.Before(cutoff) {
+ 				continue
+ 			}
+-			energy += s.ChargeEnergyAdded
++			if s.EnergyAddedKwh != nil {
++				energy += *s.EnergyAddedKwh
++			}
+ 			if s.Cost != nil {
+ 				cost += *s.Cost
+ 			}
+ 
+ 			ct := "Home/AC"
+-			if s.FastChargerType != nil && *s.FastChargerType != "" {
+-				ct = *s.FastChargerType
++			if s.ChargerType != nil && *s.ChargerType != "" {
++				ct = *s.ChargerType
+ 			}
+ 			chargerTypeMap[ct]++
+ 
+-			if s.ChargerPower != nil {
+-				chargePowers = append(chargePowers, *s.ChargerPower)
++			if s.ChargerPowerKwMax != nil {
++				chargePowers = append(chargePowers, *s.ChargerPowerKwMax)
++			}
++			if s.DurationMin != nil {
++				chargeDurations = append(chargeDurations, *s.DurationMin)
++			}
++			if s.EnergyAddedKwh != nil {
++				chargeEnergies = append(chargeEnergies, *s.EnergyAddedKwh)
+ 			}
+-			chargeDurations = append(chargeDurations, s.DurationMin)
+-			chargeEnergies = append(chargeEnergies, s.ChargeEnergyAdded)
+ 			if s.Cost != nil {
+ 				chargeCosts = append(chargeCosts, *s.Cost)
+ 			}
+ 
+-			if s.ChargeEnergyUsed != nil && *s.ChargeEnergyUsed > 0 {
+-				chargeEfficiencies = append(chargeEfficiencies, (s.ChargeEnergyAdded / *s.ChargeEnergyUsed) * 100)
+-			}
+-
+-			chHour := s.StartDate.Hour()
++			chHour := s.StartTs.Hour()
+ 			hourChargeCounts[chHour]++
+-			hourChargeEnergy[chHour] += s.ChargeEnergyAdded
++			if s.EnergyAddedKwh != nil {
++				hourChargeEnergy[chHour] += *s.EnergyAddedKwh
++			}
+ 
+-			monthKey := s.StartDate.Format("2006-01")
++			monthKey := s.StartTs.Format("2006-01")
+ 			if monthlyChargeAgg[monthKey] == nil {
+ 				monthlyChargeAgg[monthKey] = map[string]interface{}{
+ 					"energy": 0.0, "cost": 0.0, "sessions": 0, "power_sum": 0.0,
+ 				}
+ 			}
+-			monthlyChargeAgg[monthKey]["energy"] = monthlyChargeAgg[monthKey]["energy"].(float64) + s.ChargeEnergyAdded
++			if s.EnergyAddedKwh != nil {
++				monthlyChargeAgg[monthKey]["energy"] = monthlyChargeAgg[monthKey]["energy"].(float64) + *s.EnergyAddedKwh
++			}
+ 			if s.Cost != nil {
+ 				monthlyChargeAgg[monthKey]["cost"] = monthlyChargeAgg[monthKey]["cost"].(float64) + *s.Cost
+ 			}
+ 			monthlyChargeAgg[monthKey]["sessions"] = monthlyChargeAgg[monthKey]["sessions"].(int) + 1
+-			if s.ChargerPower != nil {
+-				monthlyChargeAgg[monthKey]["power_sum"] = monthlyChargeAgg[monthKey]["power_sum"].(float64) + *s.ChargerPower
++			if s.ChargerPowerKwMax != nil {
++				monthlyChargeAgg[monthKey]["power_sum"] = monthlyChargeAgg[monthKey]["power_sum"].(float64) + *s.ChargerPowerKwMax
+ 			}
+ 		}
+ 
+
+=== GATE ===
+# github.com/ev-dev-labs/teslasync/internal/automation/action
+internal\automation\action\command.go:153:72: pc.Commands undefined (type *models.PollingConfig has no field or method Commands)
+internal\automation\action\command.go:263:7: v.State undefined (type *models.Vehicle has no field or method State)
+internal\automation\action\command.go:268:72: pc.WakeUp undefined (type *models.PollingConfig has no field or method WakeUp)
+internal\automation\action\command.go:281:18: v.State undefined (type *models.Vehicle has no field or method State)
+internal\automation\action\command.go:316:29: fresh.State undefined (type *models.Vehicle has no field or method State)
+# github.com/ev-dev-labs/teslasync/internal/export
+internal\export\import.go:75:4: unknown field StartDate in struct literal of type models.Drive
+internal\export\import.go:76:4: unknown field Distance in struct literal of type models.Drive
+internal\export\import.go:80:6: d.SpeedMax undefined (type *models.Drive has no field or method SpeedMax)
+internal\export\import.go:84:7: d.EndDate undefined (type *models.Drive has no field or method EndDate)
+internal\export\import.go:158:4: unknown field StartDate in struct literal of type models.ChargingSession
+internal\export\import.go:159:4: unknown field ChargeEnergyAdded in struct literal of type models.ChargingSession
+internal\export\import.go:160:4: unknown field StartBatteryLevel in struct literal of type models.ChargingSession
+internal\export\import.go:165:7: c.EndDate undefined (type *models.ChargingSession has no field or method EndDate)
+internal\export\import.go:169:6: c.EndBatteryLevel undefined (type *models.ChargingSession has no field or method EndBatteryLevel)
+internal\export\import.go:172:6: c.ChargerPower undefined (type *models.ChargingSession has no field or method ChargerPower)
+internal\export\import.go:175:19: cannot use durationMin (variable of type float64) as *float64 value in assignment
+internal\export\processor.go:106:19: d.StartDate undefined (type *models.Drive has no field or method StartDate)
+internal\export\processor.go:107:19: d.Distance undefined (type *models.Drive has no field or method Distance)
+internal\export\processor.go:109:28: d.SpeedMax undefined (type *models.Drive has no field or method SpeedMax)
+internal\export\processor.go:111:10: d.EndDate undefined (type *models.Drive has no field or method EndDate)
+internal\export\processor.go:112:21: d.EndDate undefined (type *models.Drive has no field or method EndDate)
+internal\export\processor.go:199:22: s.StartDate undefined (type *models.ChargingSession has no field or method StartDate)
+internal\export\processor.go:200:22: s.ChargeEnergyAdded undefined (type *models.ChargingSession has no field or method ChargeEnergyAdded)
+internal\export\processor.go:201:22: s.StartBatteryLevel undefined (type *models.ChargingSession has no field or method StartBatteryLevel)
+internal\export\processor.go:202:29: s.EndBatteryLevel undefined (type *models.ChargingSession has no field or method EndBatteryLevel)
+internal\export\processor.go:203:31: s.ChargerPower undefined (type *models.ChargingSession has no field or method ChargerPower)
+internal\export\processor.go:204:20: cannot use s.DurationMin (variable of type *float64) as float64 value in struct literal
+internal\export\processor.go:206:10: s.EndDate undefined (type *models.ChargingSession has no field or method EndDate)
+internal\export\processor.go:207:21: s.EndDate undefined (type *models.ChargingSession has no field or method EndDate)
+# github.com/ev-dev-labs/teslasync/internal/service
+internal\service\session_service.go:128:3: unknown field StartDate in struct literal of type models.Drive
+internal\service\session_service.go:129:3: unknown field StartBatteryLvl in struct literal of type models.Drive
+internal\service\session_service.go:130:3: unknown field StartRangeKm in struct literal of type models.Drive
+internal\service\session_service.go:131:3: unknown field StartOdometer in struct literal of type models.Drive
+internal\service\session_service.go:132:3: unknown field StartLatitude in struct literal of type models.Drive
+internal\service\session_service.go:133:3: unknown field StartLongitude in struct literal of type models.Drive
+internal\service\session_service.go:301:49: too many arguments in call to s.driveRepo.Complete
+	have (context.Context, int64, "time".Time, nil, nil, number, number, *float64, *int, nil, nil, nil, nil, nil)
+	want (context.Context, int64, "time".Time, float64, float64, *int16, *float64, *float64, *float64, *float64)
+internal\service\session_service.go:352:14: too many arguments in call to s.driveRepo.Complete
+	have (context.Context, int64, "time".Time, nil, nil, float64, float64, *float64, *int, *float64, *float64, *float64, *float64, *float64)
+	want (context.Context, int64, "time".Time, float64, float64, *int16, *float64, *float64, *float64, *float64)
+internal\service\session_service.go:477:4: unknown field StartDate in struct literal of type models.ChargingSession
+internal\service\session_service.go:478:4: unknown field StartBatteryLevel in struct literal of type models.ChargingSession
+internal\service\session_service.go:481:11: session.StartRangeKm undefined (type *models.ChargingSession has no field or method StartRangeKm)
+internal\service\session_service.go:504:9: too many arguments in call to s.chargeRepo.Complete
+	have (context.Context, int64, "time".Time, float64, nil, *int, *float64, *int, *int, *int, *float64, nil, nil, nil, nil, number)
+	want (context.Context, int64, "time".Time, *float64, *int16, *float64, *float64, *float64, *float64, *string, *float64, *string)
+internal\service\vehicle_service.go:75:22: vehicle.State undefined (type *models.Vehicle has no field or method State)
+internal\service\vehicle_service.go:304:29: s.positionRepo.GetLatest undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".PositionRepo has no field or method GetLatest)
+internal\service\vehicle_service.go:312:34: s.chargingTelRepo.GetLatest undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".ChargingTelemetryRepo has no field or method GetLatest)
+internal\service\vehicle_service.go:358:35: s.climateRepo.GetLatest undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".ClimateRepo has no field or method GetLatest)
+internal\service\vehicle_service.go:369:32: s.securityRepo.GetLatest undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".SecurityRepo has no field or method GetLatest)
+internal\service\vehicle_service.go:380:34: s.chargingTelRepo.GetLatestMerged undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".ChargingTelemetryRepo has no field or method GetLatestMerged)
+internal\service\vehicle_service.go:478:4: unknown field VehicleID in struct literal of type models.Vehicle
+internal\service\vehicle_service.go:481:4: unknown field State in struct literal of type models.Vehicle
+internal\service\vehicle_service.go:482:4: unknown field Healthy in struct literal of type models.Vehicle
+FILE_ERROR_COUNT=0
+FILE_ERROR_COUNT=0
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===

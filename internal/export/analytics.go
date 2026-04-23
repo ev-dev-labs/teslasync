@@ -107,105 +107,95 @@ func (p *Processor) processAnalytics(ctx context.Context, req *models.ExportJobR
 		var dist float64
 		var driveCount int
 		for _, d := range allDrives {
-			if d.StartDate.Before(cutoff) {
+			if d.StartTs.Before(cutoff) {
 				continue
 			}
-			dist += d.Distance
+			dist += d.DistanceMi
 			driveCount++
 
-			hour := d.StartDate.Hour()
+			hour := d.StartTs.Hour()
 			hourCounts[hour]++
-			hourDistance[hour] += d.Distance
-			dow := int(d.StartDate.Weekday())
+			hourDistance[hour] += d.DistanceMi
+			dow := int(d.StartTs.Weekday())
 			dowCounts[dow]++
-			dowDistance[dow] += d.Distance
+			dowDistance[dow] += d.DistanceMi
 
-			if d.SpeedMax != nil {
-				allSpeedMax = append(allSpeedMax, *d.SpeedMax)
+			if d.MaxSpeedMph != nil {
+				allSpeedMax = append(allSpeedMax, *d.MaxSpeedMph)
 			}
 			allDriveDurations = append(allDriveDurations, d.DurationMin)
-			allDriveDistances = append(allDriveDistances, d.Distance)
+			allDriveDistances = append(allDriveDistances, d.DistanceMi)
 
-			if d.StartBatteryLvl != nil && d.EndBatteryLvl != nil && d.Distance > 0 {
-				totalRangeUsed += float64(*d.StartBatteryLvl - *d.EndBatteryLvl)
+			if d.StartBatteryPct != nil && d.EndBatteryPct != nil && d.DistanceMi > 0 {
+				totalRangeUsed += float64(*d.StartBatteryPct - *d.EndBatteryPct)
 			}
-			if d.Distance > 0 && d.StartRangeKm != nil && d.EndRangeKm != nil {
-				eff := ((*d.StartRangeKm - *d.EndRangeKm) / d.Distance) * 100
-				if eff > 0 && eff < 500 {
-					allDriveEfficiencies = append(allDriveEfficiencies, eff)
-				}
+			if d.OutsideTempAvgC != nil {
+				outsideTemps = append(outsideTemps, *d.OutsideTempAvgC)
 			}
-			if d.OutsideTempAvg != nil {
-				outsideTemps = append(outsideTemps, *d.OutsideTempAvg)
-			}
-			if d.InsideTempAvg != nil {
-				insideTemps = append(insideTemps, *d.InsideTempAvg)
-			}
-			if d.OutsideTempAvg != nil && d.Distance > 1 && d.StartRangeKm != nil && d.EndRangeKm != nil {
-				eff := ((*d.StartRangeKm - *d.EndRangeKm) / d.Distance) * 100
-				if eff > 0 && eff < 500 {
-					tempVsEfficiency = append(tempVsEfficiency, map[string]interface{}{
-						"temp":       math.Round(*d.OutsideTempAvg*10) / 10,
-						"efficiency": math.Round(eff*10) / 10,
-						"distance":   math.Round(d.Distance*10) / 10,
-					})
-				}
+			if d.InsideTempAvgC != nil {
+				insideTemps = append(insideTemps, *d.InsideTempAvgC)
 			}
 
-			dateKey := d.StartDate.Format("2006-01-02")
+			dateKey := d.StartTs.Format("2006-01-02")
 			if dailyDriveAgg[dateKey] == nil {
 				dailyDriveAgg[dateKey] = map[string]interface{}{"drives": 0, "distance": 0.0}
 			}
 			dailyDriveAgg[dateKey]["drives"] = dailyDriveAgg[dateKey]["drives"].(int) + 1
-			dailyDriveAgg[dateKey]["distance"] = dailyDriveAgg[dateKey]["distance"].(float64) + d.Distance
+			dailyDriveAgg[dateKey]["distance"] = dailyDriveAgg[dateKey]["distance"].(float64) + d.DistanceMi
 		}
 
 		var energy, cost float64
 		for _, s := range allSessions {
-			if s.StartDate.Before(cutoff) {
+			if s.StartTs.Before(cutoff) {
 				continue
 			}
-			energy += s.ChargeEnergyAdded
+			if s.EnergyAddedKwh != nil {
+				energy += *s.EnergyAddedKwh
+			}
 			if s.Cost != nil {
 				cost += *s.Cost
 			}
 
 			ct := "Home/AC"
-			if s.FastChargerType != nil && *s.FastChargerType != "" {
-				ct = *s.FastChargerType
+			if s.ChargerType != nil && *s.ChargerType != "" {
+				ct = *s.ChargerType
 			}
 			chargerTypeMap[ct]++
 
-			if s.ChargerPower != nil {
-				chargePowers = append(chargePowers, *s.ChargerPower)
+			if s.ChargerPowerKwMax != nil {
+				chargePowers = append(chargePowers, *s.ChargerPowerKwMax)
 			}
-			chargeDurations = append(chargeDurations, s.DurationMin)
-			chargeEnergies = append(chargeEnergies, s.ChargeEnergyAdded)
+			if s.DurationMin != nil {
+				chargeDurations = append(chargeDurations, *s.DurationMin)
+			}
+			if s.EnergyAddedKwh != nil {
+				chargeEnergies = append(chargeEnergies, *s.EnergyAddedKwh)
+			}
 			if s.Cost != nil {
 				chargeCosts = append(chargeCosts, *s.Cost)
 			}
 
-			if s.ChargeEnergyUsed != nil && *s.ChargeEnergyUsed > 0 {
-				chargeEfficiencies = append(chargeEfficiencies, (s.ChargeEnergyAdded / *s.ChargeEnergyUsed) * 100)
+			chHour := s.StartTs.Hour()
+			hourChargeCounts[chHour]++
+			if s.EnergyAddedKwh != nil {
+				hourChargeEnergy[chHour] += *s.EnergyAddedKwh
 			}
 
-			chHour := s.StartDate.Hour()
-			hourChargeCounts[chHour]++
-			hourChargeEnergy[chHour] += s.ChargeEnergyAdded
-
-			monthKey := s.StartDate.Format("2006-01")
+			monthKey := s.StartTs.Format("2006-01")
 			if monthlyChargeAgg[monthKey] == nil {
 				monthlyChargeAgg[monthKey] = map[string]interface{}{
 					"energy": 0.0, "cost": 0.0, "sessions": 0, "power_sum": 0.0,
 				}
 			}
-			monthlyChargeAgg[monthKey]["energy"] = monthlyChargeAgg[monthKey]["energy"].(float64) + s.ChargeEnergyAdded
+			if s.EnergyAddedKwh != nil {
+				monthlyChargeAgg[monthKey]["energy"] = monthlyChargeAgg[monthKey]["energy"].(float64) + *s.EnergyAddedKwh
+			}
 			if s.Cost != nil {
 				monthlyChargeAgg[monthKey]["cost"] = monthlyChargeAgg[monthKey]["cost"].(float64) + *s.Cost
 			}
 			monthlyChargeAgg[monthKey]["sessions"] = monthlyChargeAgg[monthKey]["sessions"].(int) + 1
-			if s.ChargerPower != nil {
-				monthlyChargeAgg[monthKey]["power_sum"] = monthlyChargeAgg[monthKey]["power_sum"].(float64) + *s.ChargerPower
+			if s.ChargerPowerKwMax != nil {
+				monthlyChargeAgg[monthKey]["power_sum"] = monthlyChargeAgg[monthKey]["power_sum"].(float64) + *s.ChargerPowerKwMax
 			}
 		}
 
