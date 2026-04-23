@@ -39,24 +39,20 @@ export interface VehicleLiveState {
   is_user_present: boolean | null
 }
 
+// Position mirrors the post-migration `positions` hypertable (Phase 3,
+// migration 000142_baseline_typed). High-frequency GPS + motion sample.
+// Typed-only — no raw_json / JSONB carve-outs (ADR-001, ADR-005).
+// Matches Go model in internal/models/position.go.
 export interface Position {
-  id: number
   vehicle_id: number
+  ts: string
   latitude: number
   longitude: number
-  speed: number | null
-  power: number | null
   heading: number | null
-  elevation: number | null
-  odometer: number
-  ideal_range: number | null
-  rated_range: number | null
-  battery_level: number
-  inside_temp: number | null
-  outside_temp: number | null
-  is_climate_on: boolean | null
-  created_at: string
-  fan_status?: number
+  speed_mph: number | null
+  elevation_m: number | null
+  gps_state: string | null
+  source: string
 }
 
 export interface Drive {
@@ -524,127 +520,131 @@ export interface TirePressureSnapshot {
   created_at: string
 }
 
+// MotorSnapshot mirrors the post-migration `motor_snapshots` hypertable
+// (Phase 3, migration 000142_baseline_typed). Typed-only — no raw_json /
+// JSONB carve-outs (ADR-001, ADR-005). Matches Go model in
+// internal/models/motor.go.
 export interface MotorSnapshot {
-  id: number
   vehicle_id: number
-  di_state?: string
-  di_torque?: number
-  di_axle_speed?: number
-  di_stator_temp?: number
-  pedal_position?: number
-  brake_pedal?: boolean
-  lateral_accel?: number
-  longitudinal_accel?: number
-  vehicle_speed?: number
-  gear?: string
-  di_torque_actual_f?: number
-  di_torque_actual_r?: number
-  di_torque_actual_rel?: number
-  di_torque_actual_rer?: number
-  di_axle_speed_f?: number
-  di_axle_speed_r?: number
-  di_axle_speed_rel?: number
-  di_axle_speed_rer?: number
-  di_state_f?: string
-  di_state_r?: string
-  di_state_rel?: string
-  di_state_rer?: string
-  di_stator_temp_f?: number
-  di_stator_temp_r?: number
-  di_stator_temp_rel?: number
-  di_stator_temp_rer?: number
-  di_heatsink_t_f?: number
-  di_heatsink_t_r?: number
-  di_heatsink_t_rel?: number
-  di_heatsink_t_rer?: number
-  di_inverter_t_f?: number
-  di_inverter_t_r?: number
-  di_inverter_t_rel?: number
-  di_inverter_t_rer?: number
-  di_motor_current_f?: number
-  di_motor_current_r?: number
-  di_motor_current_rel?: number
-  di_motor_current_rer?: number
-  di_v_bat_f?: number
-  di_v_bat_r?: number
-  di_v_bat_rel?: number
-  di_v_bat_rer?: number
-  di_slave_torque_cmd?: number
-  hvil?: string
-  brake_pedal_pos?: number
-  cruise_set_speed?: number
-  drive_rail?: boolean
-  lifetime_energy_gained_regen?: number
-  lifetime_energy_used_drive?: number
-  created_at: string
+  ts: string
+  power_kw: number | null
+  motor_rpm_front: number | null
+  motor_rpm_rear: number | null
+  torque_nm_front: number | null
+  torque_nm_rear: number | null
+  motor_temp_c_front: number | null
+  motor_temp_c_rear: number | null
+  inverter_temp_c: number | null
+  battery_temp_c: number | null
+  regen_kw: number | null
+  shift_state: string | null
+  source: string
 }
 
+// ClimateSnapshot mirrors the post-migration `climate_snapshots` hypertable
+// (Phase 3, migration 000142_baseline_typed). Typed-only — no raw_json /
+// JSONB carve-outs (ADR-001, ADR-005). Matches Go model in
+// internal/models/climate.go.
 export interface ClimateSnapshot {
-  id: number
   vehicle_id: number
-  inside_temp?: number
-  outside_temp?: number
-  hvac_power?: number
-  hvac_fan_speed?: number
-  hvac_left_temp_request?: number
-  hvac_right_temp_request?: number
-  cabin_overheat_mode?: string
-  defrost_mode?: string
-  battery_heater_on?: boolean
-  hvac_ac_enabled?: boolean
-  hvac_auto_mode?: string
-  hvac_fan_status?: number
-  hvac_steering_wheel_heat_auto?: boolean
-  hvac_steering_wheel_heat_level?: number
-  climate_keeper_mode?: string
-  cabin_overheat_protection_temp_limit?: string
-  defrost_for_preconditioning?: boolean
-  seat_heater_left?: number
-  seat_heater_right?: number
-  seat_heater_rear_left?: number
-  seat_heater_rear_center?: number
-  seat_heater_rear_right?: number
-  seat_vent_enabled?: boolean
-  climate_seat_cooling_front_left?: number
-  climate_seat_cooling_front_right?: number
-  auto_seat_climate_left?: boolean
-  auto_seat_climate_right?: boolean
-  rear_defrost_enabled?: boolean
-  rear_display_hvac_enabled?: boolean
-  wiper_heat_enabled?: boolean
-  created_at: string
+  ts: string
+  inside_temp_c: number | null
+  outside_temp_c: number | null
+  driver_setpoint_c: number | null
+  passenger_setpoint_c: number | null
+  hvac_state: string | null
+  defrost_mode: string | null
+  is_climate_on: boolean | null
+  is_preconditioning: boolean | null
+  fan_status: number | null
+  seat_heater_left: number | null
+  seat_heater_right: number | null
+  seat_heater_rear_left: number | null
+  seat_heater_rear_right: number | null
+  steering_wheel_heater: boolean | null
+  cabin_overheat_protection: boolean | null
+  source: string
 }
 
+// SecurityEvent mirrors the post-migration `security_events` hypertable
+// (Phase 3, migration 000142_baseline_typed). Event-driven door/lock/sentry
+// history with 5-year audit retention. Typed-only — no raw_json / JSONB
+// carve-outs (ADR-001, ADR-005). Matches Go model in
+// internal/models/security.go. PK: (vehicle_id, ts, event_type).
 export interface SecurityEvent {
-  id: number
   vehicle_id: number
-  locked?: boolean
-  sentry_mode?: boolean
-  door_state?: string
-  fd_window?: string
-  fp_window?: string
-  rd_window?: string
-  rp_window?: string
-  homelink_nearby?: boolean
-  guest_mode?: boolean
-  homelink_device_count?: number
-  guest_mode_mobile_access_state?: string
-  driver_seat_occupied?: boolean
-  center_display?: string
-  speed_limit_mode?: string
-  valet_mode_enabled?: boolean
-  service_mode?: boolean
-  current_limit_mph?: number
-  paired_phone_key_count?: number
-  lights_hazards_active?: boolean
-  lights_high_beams?: boolean
-  lights_turn_signal?: string
-  tonneau_position?: string
-  tonneau_open_percent?: number
-  tonneau_tent_mode?: string
-  driver_seat_belt?: boolean
-  passenger_seat_belt?: boolean
-  created_at: string
+  ts: string
+  event_type: string
+  doors_open: string | null
+  windows_open: string | null
+  locked: boolean | null
+  sentry_mode: boolean | null
+  user_present: boolean | null
+  detail: string | null
+  source: string
+}
+
+// VehicleMetaSnapshot mirrors the post-migration `vehicle_meta_snapshots`
+// consolidated hypertable (Phase 3, migration 000142_baseline_typed). The
+// `category` discriminator selects which column group is populated; unused
+// groups remain null. Typed-only — no raw_json / JSONB carve-outs
+// (ADR-001, ADR-005). Matches Go model in internal/models/vehicle_meta.go.
+export type VehicleMetaCategory =
+  | 'tire'
+  | 'media'
+  | 'safety'
+  | 'config'
+  | 'preference'
+
+export interface VehicleMetaSnapshot {
+  vehicle_id: number
+  ts: string
+  category: VehicleMetaCategory
+
+  // Tire (category='tire')
+  tire_pressure_fl_psi?: number | null
+  tire_pressure_fr_psi?: number | null
+  tire_pressure_rl_psi?: number | null
+  tire_pressure_rr_psi?: number | null
+  tire_temp_fl_c?: number | null
+  tire_temp_fr_c?: number | null
+  tire_temp_rl_c?: number | null
+  tire_temp_rr_c?: number | null
+
+  // Media (category='media')
+  media_source?: string | null
+  media_track_title?: string | null
+  media_track_artist?: string | null
+  media_track_album?: string | null
+  media_volume?: number | null
+  media_is_playing?: boolean | null
+  media_track_duration_sec?: number | null
+
+  // Safety (category='safety')
+  autopilot_state?: string | null
+  fcw_active?: boolean | null
+  blind_spot_active?: boolean | null
+  emergency_lane_assist?: boolean | null
+  abs_active?: boolean | null
+  speed_limit_mode?: string | null
+
+  // Config (category='config')
+  software_version?: string | null
+  car_type?: string | null
+  exterior_color?: string | null
+  wheel_type?: string | null
+  spoiler_type?: string | null
+  has_ludicrous_mode?: boolean | null
+
+  // Preference (category='preference')
+  drive_mode?: string | null
+  regen_level?: string | null
+  steering_mode?: string | null
+  acceleration_mode?: string | null
+  climate_keeper_mode?: string | null
+  pet_mode?: boolean | null
+
+  source: string
 }
 
 export interface SoftwareUpdate {
