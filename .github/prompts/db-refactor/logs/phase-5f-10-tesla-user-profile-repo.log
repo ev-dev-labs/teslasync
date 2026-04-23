@@ -1,0 +1,42 @@
+=== SURVEY ===
+Removed raw_json from SELECT (Get) and INSERT (Upsert), removed &p.RawJSON from Scan and args, renumbered placeholders.
+=== REASONING ===
+TeslaUserProfile model no longer has RawJSON field. Columns/placeholders/scan/args counts verified manually.
+=== CHANGES ===
+diff --git a/internal/database/tesla_user_profile_repo.go b/internal/database/tesla_user_profile_repo.go
+index d3df45be..b903b958 100644
+--- a/internal/database/tesla_user_profile_repo.go
++++ b/internal/database/tesla_user_profile_repo.go
+@@ -23,10 +23,10 @@ func NewTeslaUserProfileRepo(db *DB) *TeslaUserProfileRepo {
+ // Get returns the stored Tesla user profile (single-row table).
+ func (r *TeslaUserProfileRepo) Get(ctx context.Context) (*models.TeslaUserProfile, error) {
+ 	p := &models.TeslaUserProfile{}
+-	query := `SELECT id, email, full_name, profile_image_url, raw_json, fetched_at, created_at, updated_at
++	query := `SELECT id, email, full_name, profile_image_url, fetched_at, created_at, updated_at
+ 		FROM tesla_user_profiles ORDER BY updated_at DESC LIMIT 1`
+ 	err := r.db.Pool.QueryRow(ctx, query).Scan(
+-		&p.ID, &p.Email, &p.FullName, &p.ProfileImageURL, &p.RawJSON,
++		&p.ID, &p.Email, &p.FullName, &p.ProfileImageURL,
+ 		&p.FetchedAt, &p.CreatedAt, &p.UpdatedAt,
+ 	)
+ 	if err == pgx.ErrNoRows {
+@@ -53,9 +53,9 @@ func (r *TeslaUserProfileRepo) Upsert(ctx context.Context, p *models.TeslaUserPr
+ 	}
+ 
+ 	err = tx.QueryRow(ctx, `INSERT INTO tesla_user_profiles
+-		(email, full_name, profile_image_url, raw_json, fetched_at, created_at, updated_at)
+-		VALUES ($1, $2, $3, $4, $5, $6, $6) RETURNING id`,
+-		p.Email, p.FullName, p.ProfileImageURL, p.RawJSON, now, now,
++		(email, full_name, profile_image_url, fetched_at, created_at, updated_at)
++		VALUES ($1, $2, $3, $4, $5, $5) RETURNING id`,
++		p.Email, p.FullName, p.ProfileImageURL, now, now,
+ 	).Scan(&p.ID)
+ 	if err != nil {
+ 		return fmt.Errorf("insert profile: %w", err)
+=== GATE ===
+# github.com/ev-dev-labs/teslasync/internal/database
+internal\database\tesla_charging_history_repo.go:145:16: e.RawJSON undefined (type *models.TeslaChargingHistoryEntry has no field or method RawJSON)
+internal\database\tesla_charging_session_repo.go:151:16: s.RawJSON undefined (type *models.TeslaChargingSession has no field or method RawJSON)
+ERROR_COUNT=0
+EXIT=0
+STATUS=DONE
