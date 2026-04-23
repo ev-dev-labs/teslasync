@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"math"
 	"sync"
 	"time"
 
@@ -122,15 +121,14 @@ func (s *SessionService) startDrive(ctx context.Context, vehicle *models.Vehicle
 	idealRange := data.ChargeState.IdealBatteryRange
 	estRange := data.ChargeState.EstBatteryRange
 	soc := float64(batteryLevel)
+	bl := int16(batteryLevel)
 
 	drive := &models.Drive{
 		VehicleID:       vehicle.ID,
-		StartDate:       now,
-		StartBatteryLvl: &batteryLevel,
-		StartRangeKm:    &ratedRange,
-		StartOdometer:   &odometer,
-		StartLatitude:   &lat,
-		StartLongitude:  &lon,
+		StartTs:         now,
+		StartBatteryPct: &bl,
+		StartLat:        &lat,
+		StartLon:        &lon,
 	}
 
 	if err := s.driveRepo.Create(ctx, drive); err != nil {
@@ -140,13 +138,8 @@ func (s *SessionService) startDrive(ctx context.Context, vehicle *models.Vehicle
 
 	// Write additional start fields via PartialUpdate
 	startFields := map[string]interface{}{
-		"start_odometer":        odometer,
-		"start_rated_range_km":  ratedRange,
-		"start_ideal_range_km":  idealRange,
-		"start_est_range_km":    estRange,
-		"soc_start":             soc,
-		"start_latitude":        lat,
-		"start_longitude":       lon,
+		"start_lat": lat,
+		"start_lon": lon,
 	}
 	if err := s.driveRepo.PartialUpdate(ctx, drive.ID, startFields); err != nil {
 		log.Warn().Err(err).Int64("driveID", drive.ID).Msg("failed to write drive start enhanced fields")
@@ -297,8 +290,9 @@ func (s *SessionService) completeDrive(ctx context.Context, vehicle *models.Vehi
 	// If state is nil (shouldn't happen, but safety), fall back to old behavior
 	if state == nil {
 		log.Warn().Int64("driveID", driveID).Msg("completing drive without accumulator state — data will be incomplete")
+		eb := int16(endBattery)
 		if err := s.driveRepo.Complete(ctx, driveID, now,
-			nil, nil, 0, 0, &endRange, &endBattery, nil, nil, nil, nil, nil); err != nil {
+			0, 0, &eb, nil, nil, nil, nil); err != nil {
 			log.Error().Err(err).Int64("driveID", driveID).Msg("failed to complete drive")
 		}
 		s.mu.Lock()
@@ -330,14 +324,6 @@ func (s *SessionService) completeDrive(ctx context.Context, vehicle *models.Vehi
 		speedMin = &min
 	}
 
-	var powerMax, powerMin *float64
-	if state.SpeedCount > 0 {
-		powerMax = &state.PowerMax
-		if state.PowerMin < math.MaxFloat64 {
-			powerMin = &state.PowerMin
-		}
-	}
-
 	var insideAvg, outsideAvg *float64
 	if state.TempCount > 0 {
 		ia := state.InsideTempSum / float64(state.TempCount)
@@ -347,9 +333,9 @@ func (s *SessionService) completeDrive(ctx context.Context, vehicle *models.Vehi
 	}
 
 	// Complete with core fields
+	endBatteryPct := int16(endBattery)
 	if err := s.driveRepo.Complete(ctx, driveID, now,
-		nil, nil, distance, duration, &endRange, &endBattery,
-		&maxSpeed, powerMax, powerMin, insideAvg, outsideAvg); err != nil {
+		distance, duration, &endBatteryPct, &maxSpeed, nil, insideAvg, outsideAvg); err != nil {
 		log.Error().Err(err).Int64("driveID", driveID).Msg("failed to complete drive")
 	}
 
@@ -472,13 +458,12 @@ func (s *SessionService) TrackChargeFromAPI(ctx context.Context, vehicle *models
 	s.mu.Unlock()
 
 	if isCharging && !hasActiveCharge {
+		cbl := int16(data.ChargeState.BatteryLevel)
 		session := &models.ChargingSession{
-			VehicleID:         vehicle.ID,
-			StartDate:         time.Now().UTC(),
-			StartBatteryLevel: data.ChargeState.BatteryLevel,
+			VehicleID:       vehicle.ID,
+			StartTs:         time.Now().UTC(),
+			StartBatteryPct: &cbl,
 		}
-		range_ := data.ChargeState.BatteryRange
-		session.StartRangeKm = &range_
 
 		if err := s.chargeRepo.Create(ctx, session); err != nil {
 			log.Error().Err(err).Int64("vehicleID", vehicle.ID).Msg("failed to create charging session")
@@ -493,15 +478,14 @@ func (s *SessionService) TrackChargeFromAPI(ctx context.Context, vehicle *models
 		}
 	} else if !isCharging && hasActiveCharge {
 		endBattery := data.ChargeState.BatteryLevel
-		endRange := data.ChargeState.BatteryRange
 		power := data.ChargeState.ChargerPower
-		voltage := data.ChargeState.ChargerVoltage
-		current := data.ChargeState.ChargerActualCurrent
+		energyAdded := data.ChargeState.ChargeEnergyAdded
+		ceb := int16(endBattery)
 
 		if err := s.chargeRepo.Complete(ctx, activeChargeID, time.Now().UTC(),
-			data.ChargeState.ChargeEnergyAdded, nil, &endBattery, &endRange,
-			data.ChargeState.ChargerPhases, &voltage, &current, &power,
-			nil, nil, nil, nil, 0); err != nil {
+			&energyAdded, &ceb, nil,
+			&power, nil,
+			nil, nil, nil, nil); err != nil {
 			log.Error().Err(err).Int64("sessionID", activeChargeID).Msg("failed to complete charging session")
 		}
 		s.mu.Lock()
