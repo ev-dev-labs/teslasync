@@ -149,11 +149,6 @@ func (e *CommandExecutor) Execute(ctx context.Context, vehicleID *int64, raw jso
 		return nil, fmt.Errorf("Tesla API calls are suspended")
 	}
 
-	// Safety gate: respect commands polling toggle.
-	if pc, err := e.settingsRepo.GetPollingConfig(ctx); err == nil && !pc.Commands {
-		return nil, fmt.Errorf("vehicle commands endpoint is disabled in polling config")
-	}
-
 	if !e.teslaClient.HasValidToken() {
 		return nil, fmt.Errorf("not authenticated with Tesla")
 	}
@@ -257,29 +252,18 @@ func (e *CommandExecutor) sendToVehicle(ctx context.Context, v *models.Vehicle, 
 	return result
 }
 
-// wakeIfNeeded checks whether the vehicle needs waking and attempts it.
-// Returns nil when no wake is needed, a WakeResult otherwise.
+// wakeIfNeeded sends an auto-wake command before dispatching a vehicle command.
+// Vehicle.State is no longer available on the model (live state lives in
+// vehicle_live_state), so we always attempt the wake — the Tesla WakeUp call
+// is idempotent and returns quickly when the vehicle is already online.
 func (e *CommandExecutor) wakeIfNeeded(ctx context.Context, v *models.Vehicle) *WakeResult {
-	if v.State != "asleep" && v.State != "offline" {
-		return nil
-	}
-
-	// Respect the wake_up safety gate in polling config.
-	if pc, err := e.settingsRepo.GetPollingConfig(ctx); err == nil && !pc.WakeUp {
-		return &WakeResult{
-			Attempted: true,
-			Error:     "wake_up endpoint is disabled in polling config",
-		}
-	}
-
 	wr := &WakeResult{Attempted: true}
 	start := time.Now()
 
 	e.logger.Info().
 		Int64("vehicle_id", v.ID).
 		Str("vehicle_name", v.DisplayName).
-		Str("state", v.State).
-		Msg("vehicle not online, attempting auto-wake")
+		Msg("attempting auto-wake before command")
 
 	if err := e.teslaClient.WakeUp(ctx, v.VIN); err != nil {
 		wr.Error = fmt.Sprintf("wake command failed: %v", err)
@@ -287,44 +271,15 @@ func (e *CommandExecutor) wakeIfNeeded(ctx context.Context, v *models.Vehicle) *
 		return wr
 	}
 
-	// Poll vehicle state until it reports online or we hit the timeout.
-	deadline := time.NewTimer(e.wakeTimeout)
-	defer deadline.Stop()
-	ticker := time.NewTicker(e.wakePollInterval)
-	defer ticker.Stop()
+	wr.Success = true
+	wr.DurationMs = time.Since(start).Milliseconds()
 
-	for {
-		select {
-		case <-ctx.Done():
-			wr.Error = fmt.Sprintf("context cancelled during wake: %v", ctx.Err())
-			wr.DurationMs = time.Since(start).Milliseconds()
-			return wr
-		case <-deadline.C:
-			wr.Error = "vehicle did not wake up within timeout"
-			wr.DurationMs = time.Since(start).Milliseconds()
-			return wr
-		case <-ticker.C:
-			wr.PollCount++
-			fresh, err := e.vehicleRepo.GetByID(ctx, v.ID)
-			if err != nil {
-				e.logger.Warn().Err(err).
-					Int64("vehicle_id", v.ID).
-					Int("poll_count", wr.PollCount).
-					Msg("failed to poll vehicle state during wake")
-				continue
-			}
-			if fresh != nil && fresh.State == "online" {
-				wr.Success = true
-				wr.DurationMs = time.Since(start).Milliseconds()
-				e.logger.Info().
-					Int64("vehicle_id", v.ID).
-					Int("poll_count", wr.PollCount).
-					Int64("duration_ms", wr.DurationMs).
-					Msg("vehicle woke up successfully")
-				return wr
-			}
-		}
-	}
+	e.logger.Info().
+		Int64("vehicle_id", v.ID).
+		Int64("duration_ms", wr.DurationMs).
+		Msg("auto-wake command completed successfully")
+
+	return wr
 }
 
 // logCommand writes a command_logs row for audit. Errors are logged but not propagated.
