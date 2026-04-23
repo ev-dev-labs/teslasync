@@ -108,7 +108,7 @@ interface Vehicle {
 /*  Helper: heading label                                              */
 /* ------------------------------------------------------------------ */
 
-// @ts-ignore -- kept for future use when GPS data is available
+// @ts-expect-error -- kept for future use when GPS data is available
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function headingToCardinal(deg: number): string {
   const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];

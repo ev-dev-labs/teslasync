@@ -336,7 +336,7 @@ export default function Layout() {
       const timer = setTimeout(() => tour.start(), 1500)
       return () => clearTimeout(timer)
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
   // Version info
   const { data: versionInfo } = useQuery({ queryKey: ['version-info'], queryFn: () => request<VersionInfo>('/system/version'), staleTime: 60_000, refetchInterval: 60_000 })
@@ -555,7 +555,7 @@ export default function Layout() {
 
       {/* Mobile top bar — hidden when sidebar is open (sidebar has its own close button) */}
       {/* Mobile top bar */}
-      <header className="fixed top-0 left-0 right-0 z-[60] flex items-center border-b backdrop-blur-xl px-4 py-3 lg:hidden" style={{ borderColor: 'var(--glass-border)', background: 'var(--surface-1)', touchAction: 'manipulation' }}>
+      <header className="fixed top-0 left-0 right-0 z-[60] flex items-center border-b border-[var(--glass-border)] bg-[var(--surface-1)] backdrop-blur-xl px-4 py-3 lg:hidden [touch-action:manipulation]">
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
           type="button"

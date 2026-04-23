@@ -135,9 +135,8 @@ function SignalPicker({ value, onChange }: { value: string; onChange: (v: string
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute z-50 mt-1 w-96 max-h-96 overflow-auto rounded-xl shadow-2xl border border-neon-cyan/20"
-               style={{ background: 'var(--bg, #0a0e1a)' }}>
-            <div className="sticky top-0 p-2.5 border-b border-white/10" style={{ background: 'var(--bg, #0a0e1a)' }}>
+          <div className="absolute z-50 mt-1 w-96 max-h-96 overflow-auto rounded-xl shadow-2xl border border-neon-cyan/20 bg-[var(--bg,#0a0e1a)]">
+            <div className="sticky top-0 p-2.5 border-b border-white/10 bg-[var(--bg,#0a0e1a)]">
               <Input
                   autoFocus
                   icon={<Search className="h-3.5 w-3.5" />}
@@ -149,8 +148,7 @@ function SignalPicker({ value, onChange }: { value: string; onChange: (v: string
             </div>
             {grouped.map(([cat, items]) => (
               <div key={cat}>
-                <div className="px-3 py-2 text-[10px] uppercase tracking-widest font-bold text-neon-cyan/70 border-b border-white/5"
-                     style={{ background: 'var(--surface-2, #111827)' }}>
+                <div className="px-3 py-2 text-[10px] uppercase tracking-widest font-bold text-neon-cyan/70 border-b border-white/5 bg-[var(--surface-2,#111827)]">
                   {cat}
                 </div>
                 {items.map(s => (

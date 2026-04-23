@@ -9,12 +9,11 @@ export type { Alert, AlertRule, NotificationChannel, RuleConditionTree, Notifica
  * Payload for creating a notification channel: omits server-managed fields.
  * Remains a discriminated union so each `kind` requires its own config shape.
  */
-export type NotificationChannelCreate = {
-  [K in NotificationChannel['kind']]: Omit<
-    Extract<NotificationChannel, { kind: K }>,
-    'id' | 'created_at' | 'updated_at'
-  >;
-}[NotificationChannel['kind']];
+export type NotificationChannelCreate = NotificationChannel extends infer C
+  ? C extends NotificationChannel
+    ? Omit<C, 'id' | 'created_at' | 'updated_at'>
+    : never
+  : never;
 
 /** Payload for updating an existing channel (includes id). */
 export type NotificationChannelUpdate = NotificationChannelCreate & { id: number };

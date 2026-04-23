@@ -365,45 +365,41 @@ export default function SmartChargePage() {
 
           {historyItems.length > 0 ? (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-white/50 border-b border-white/10">
-                    <th className="text-left py-2 pr-4">{t('chargePlanner.date', 'Date')}</th>
-                    <th className="text-left py-2 pr-4">{t('chargePlanner.window', 'Window')}</th>
-                    <th className="text-left py-2 pr-4">{t('chargePlanner.plan', 'Plan')}</th>
-                    <th className="text-right py-2 pr-4">{t('chargePlanner.cost', 'Cost')}</th>
-                    <th className="text-right py-2 pr-4">{t('chargePlanner.savedAmount', 'Saved')}</th>
-                    <th className="text-left py-2">{t('chargePlanner.status', 'Status')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {historyItems.map(p => (
-                    <tr key={p.id} className="border-b border-white/5 text-white/70">
-                      <td className="py-2 pr-4">{formatDate(p.created_at)}</td>
-                      <td className="py-2 pr-4">
-                        {formatTime(p.scheduled_start)} — {formatTime(p.scheduled_end)}
-                      </td>
-                      <td className="py-2 pr-4">{p.rate_plan}</td>
-                      <td className="py-2 pr-4 text-right">
-                        {p.estimated_cost != null ? `$${p.estimated_cost.toFixed(2)}` : '—'}
-                      </td>
-                      <td className="py-2 pr-4 text-right text-emerald-400">
-                        {p.savings != null && p.savings > 0 ? `$${p.savings.toFixed(2)}` : '—'}
-                      </td>
-                      <td className="py-2">
-                        <span className={
-                          p.status === 'scheduled' ? 'text-cyan-400' :
-                          p.status === 'completed' ? 'text-emerald-400' :
-                          p.status === 'cancelled' ? 'text-red-400' :
-                          'text-white/50'
-                        }>
-                          {p.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="grid grid-cols-[1fr_1fr_1fr_auto_auto_auto] gap-x-4 text-sm">
+                <div className="contents text-white/50 border-b border-white/10">
+                  <div className="py-2">{t('chargePlanner.date', 'Date')}</div>
+                  <div className="py-2">{t('chargePlanner.window', 'Window')}</div>
+                  <div className="py-2">{t('chargePlanner.plan', 'Plan')}</div>
+                  <div className="py-2 text-right">{t('chargePlanner.cost', 'Cost')}</div>
+                  <div className="py-2 text-right">{t('chargePlanner.savedAmount', 'Saved')}</div>
+                  <div className="py-2">{t('chargePlanner.status', 'Status')}</div>
+                </div>
+                {historyItems.map(p => (
+                  <div key={p.id} className="contents text-white/70">
+                    <div className="py-2 border-b border-white/5">{formatDate(p.created_at)}</div>
+                    <div className="py-2 border-b border-white/5">
+                      {formatTime(p.scheduled_start)} — {formatTime(p.scheduled_end)}
+                    </div>
+                    <div className="py-2 border-b border-white/5">{p.rate_plan}</div>
+                    <div className="py-2 border-b border-white/5 text-right">
+                      {p.estimated_cost != null ? `$${p.estimated_cost.toFixed(2)}` : '—'}
+                    </div>
+                    <div className="py-2 border-b border-white/5 text-right text-emerald-400">
+                      {p.savings != null && p.savings > 0 ? `$${p.savings.toFixed(2)}` : '—'}
+                    </div>
+                    <div className="py-2 border-b border-white/5">
+                      <span className={
+                        p.status === 'scheduled' ? 'text-cyan-400' :
+                        p.status === 'completed' ? 'text-emerald-400' :
+                        p.status === 'cancelled' ? 'text-red-400' :
+                        'text-white/50'
+                      }>
+                        {p.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : (
             <EmptyState

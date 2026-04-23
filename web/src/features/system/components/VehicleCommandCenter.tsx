@@ -141,7 +141,6 @@ export function VehicleCommandCenter({ vehicle, state }: VehicleCommandCenterPro
     } else {
       cmd.mutate({ command, params });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ─── Centralized dialog state ──────────────────────────────────────────

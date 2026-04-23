@@ -107,36 +107,6 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
 
   const chargeLimit = schedule.chargeLimit ?? (state?.battery_level != null ? undefined : null);
 
-  if (isCompact) {
-    return (
-      <WidgetShell
-        loading={isLoading}
-        updatedAt={signalsUpdatedAt}
-        isFetching={signalsFetching}
-        isStale={signalsStale}
-        isError={signalsError}
-        onRefresh={() => refetchSignals()}
-      >
-        {hasScheduleData ? (
-          <div className="h-full flex flex-col items-center justify-center gap-1">
-            <span className="text-2xl font-bold text-white/90">
-              {schedule.chargeLimit != null ? `${schedule.chargeLimit}%` : '—'}
-            </span>
-            <span className="text-[10px] text-white/40 uppercase tracking-wider">
-              {t('widget.chargingSchedule.limit', 'Charge Limit')}
-            </span>
-          </div>
-        ) : (
-          <EmptyState
-            icon={<Calendar className="h-5 w-5" />}
-            message={t('widget.chargingSchedule.noData', 'No schedule data')}
-            className="py-4"
-          />
-        )}
-      </WidgetShell>
-    );
-  }
-
   const timelineItems = useMemo(() => {
     const items: { icon?: React.ReactNode; title: string; subtitle?: string; time: string; color?: string }[] = [];
 
@@ -172,6 +142,36 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
 
     return items;
   }, [schedule, chargeLimit, t]);
+
+  if (isCompact) {
+    return (
+      <WidgetShell
+        loading={isLoading}
+        updatedAt={signalsUpdatedAt}
+        isFetching={signalsFetching}
+        isStale={signalsStale}
+        isError={signalsError}
+        onRefresh={() => refetchSignals()}
+      >
+        {hasScheduleData ? (
+          <div className="h-full flex flex-col items-center justify-center gap-1">
+            <span className="text-2xl font-bold text-white/90">
+              {schedule.chargeLimit != null ? `${schedule.chargeLimit}%` : '—'}
+            </span>
+            <span className="text-[10px] text-white/40 uppercase tracking-wider">
+              {t('widget.chargingSchedule.limit', 'Charge Limit')}
+            </span>
+          </div>
+        ) : (
+          <EmptyState
+            icon={<Calendar className="h-5 w-5" />}
+            message={t('widget.chargingSchedule.noData', 'No schedule data')}
+            className="py-4"
+          />
+        )}
+      </WidgetShell>
+    );
+  }
 
   return (
     <WidgetShell

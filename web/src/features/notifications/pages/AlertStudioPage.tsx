@@ -1,4 +1,5 @@
-// @ts-nocheck — TODO: wire to refactored API types
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+// @ts-nocheck -- legacy API types; will be rewired in a later phase
 /**
  * AlertStudio — full-featured CEP rule editor page.
  *

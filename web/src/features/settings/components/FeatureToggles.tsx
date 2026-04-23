@@ -67,28 +67,24 @@ export function FeatureToggles() {
 
         {featureEntries.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-white/5 text-left">
-                  <th className="pb-2 pr-4 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">{t('featureConfig.feature', 'Feature')}</th>
-                  <th className="pb-2 pr-4 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">{t('featureConfig.status', 'Status')}</th>
-                  <th className="pb-2 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">{t('featureConfig.details', 'Details')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {featureEntries.map((entry) => (
-                  <tr key={entry.key} className="border-b border-white/[0.03]">
-                    <td className="py-2.5 pr-4 font-medium text-[var(--text-primary)]">{entry.key}</td>
-                    <td className="py-2.5 pr-4">
-                      <Badge variant={entry.enabled ? 'success' : 'neutral'}>
-                        {entry.enabled ? t('featureConfig.enabled', 'Enabled') : t('featureConfig.disabled', 'Disabled')}
-                      </Badge>
-                    </td>
-                    <td className="py-2.5 text-xs text-[var(--text-muted)] max-w-xs truncate">{entry.details ?? '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="grid grid-cols-[1fr_auto_2fr] gap-x-4 text-sm">
+              <div className="contents border-b border-white/5 text-left">
+                <div className="pb-2 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">{t('featureConfig.feature', 'Feature')}</div>
+                <div className="pb-2 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">{t('featureConfig.status', 'Status')}</div>
+                <div className="pb-2 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">{t('featureConfig.details', 'Details')}</div>
+              </div>
+              {featureEntries.map((entry) => (
+                <div key={entry.key} className="contents">
+                  <div className="py-2.5 border-b border-white/[0.03] font-medium text-[var(--text-primary)]">{entry.key}</div>
+                  <div className="py-2.5 border-b border-white/[0.03]">
+                    <Badge variant={entry.enabled ? 'success' : 'neutral'}>
+                      {entry.enabled ? t('featureConfig.enabled', 'Enabled') : t('featureConfig.disabled', 'Disabled')}
+                    </Badge>
+                  </div>
+                  <div className="py-2.5 border-b border-white/[0.03] text-xs text-[var(--text-muted)] max-w-xs truncate">{entry.details ?? '—'}</div>
+                </div>
+              ))}
+            </div>
           </div>
         ) : (
           <EmptyState icon={<Info className="h-10 w-10" />} message={t('featureConfig.noData', 'No feature config data yet. Click Refresh to fetch from Tesla.')} />

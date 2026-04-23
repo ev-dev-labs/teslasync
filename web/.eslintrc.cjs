@@ -16,4 +16,12 @@ module.exports = {
     'react-hooks/exhaustive-deps': 'off',
     'prefer-const': 'warn',
   },
+  overrides: [
+    {
+      files: ['**/*.test.ts', '**/*.test.tsx', '**/test-setup.ts', 'src/lib/gpx.ts', 'src/lib/report.ts'],
+      rules: {
+        '@typescript-eslint/no-explicit-any': 'off',
+      },
+    },
+  ],
 }

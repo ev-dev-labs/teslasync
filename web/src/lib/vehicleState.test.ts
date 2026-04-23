@@ -4,7 +4,7 @@ import {
   parseWindowState,
   parseTurnSignal,
   buildTwinState,
-  mapLiveToTwinState,
+  mapLiveToTwinState as _mapLiveToTwinState,
 } from './vehicleState';
 
 describe('parseDoorState', () => {

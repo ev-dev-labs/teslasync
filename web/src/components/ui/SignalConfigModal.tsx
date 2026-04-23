@@ -247,7 +247,11 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
                 <div className="flex items-center gap-2 px-3 py-2 bg-white/[0.02] cursor-pointer" onClick={() => {
                   setExpandedCats(prev => {
                     const next = new Set(prev)
-                    next.has(category) ? next.delete(category) : next.add(category)
+                    if (next.has(category)) {
+                      next.delete(category)
+                    } else {
+                      next.add(category)
+                    }
                     return next
                   })
                 }}>

@@ -117,7 +117,7 @@ export default function SentryEventLogWidget({ vehicleId, size }: WidgetProps) {
                 icon={derived.icon}
                 title={derived.title}
                 subtitle={isWide ? buildSubtitle(ev) : undefined}
-                time={formatEventTime(ev.created_at)}
+                time={formatEventTime(ev.created_at ?? ev.ts)}
                 color={derived.color}
                 isLast={i === items.length - 1}
               />

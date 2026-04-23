@@ -7,7 +7,16 @@ function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v))
 }
 
-export function computeDriveScore(drive: any): { total: number; efficiency: number; speed: number; range: number; trip: number } {
+type DriveLike = {
+  distance?: number | null
+  duration_min?: number | null
+  speed_max?: number | null
+  start_battery_level?: number | null
+  end_battery_level?: number | null
+  [key: string]: unknown
+}
+
+export function computeDriveScore(drive: DriveLike): { total: number; efficiency: number; speed: number; range: number; trip: number } {
   const distance = drive.distance ?? 0
   const durationMin = drive.duration_min ?? 0
   const avgSpeed = durationMin > 0 ? (distance / (durationMin / 60)) : 0
@@ -46,7 +55,7 @@ export function getScoreColor(score: number): string {
   return COLOR.GOOD
 }
 
-export function DriveScore({ drive }: { drive: any }) {
+export function DriveScore({ drive }: { drive: DriveLike }) {
   const score = useMemo(() => computeDriveScore(drive), [drive])
   const color = getScoreColor(score.total)
 

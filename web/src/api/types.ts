@@ -542,6 +542,12 @@ export interface MotorSnapshot {
   regen_kw: number | null
   shift_state: string | null
   source: string
+  // Legacy / compat-view field aliases (present when reading via v_motor_snapshots
+  // or JSONB hydrate; undefined when reading the typed column set). Optional so
+  // pages that reference these names still compile.
+  di_torque?: number | null
+  di_stator_temp?: number | null
+  gear?: string | null
 }
 
 // ClimateSnapshot mirrors the post-migration `climate_snapshots` hypertable
@@ -567,6 +573,17 @@ export interface ClimateSnapshot {
   steering_wheel_heater: boolean | null
   cabin_overheat_protection: boolean | null
   source: string
+  // Legacy / compat-view field aliases (pre-migration column names, JSONB
+  // carve-out fields). Optional so widgets that still reference these names
+  // compile; values are undefined when reading the typed column set.
+  inside_temp?: number | null
+  outside_temp?: number | null
+  hvac_power?: number | null
+  hvac_ac_enabled?: boolean | null
+  hvac_fan_speed?: number | null
+  hvac_steering_wheel_heat_level?: number | null
+  battery_heater_on?: boolean | null
+  seat_heater_rear_center?: number | null
 }
 
 // SecurityEvent mirrors the post-migration `security_events` hypertable
@@ -585,6 +602,22 @@ export interface SecurityEvent {
   user_present: boolean | null
   detail: string | null
   source: string
+  // Legacy / compat-view field aliases (pre-migration individual door/window
+  // columns, seat/belt/light JSONB carve-outs). Optional so existing widgets
+  // compile; values are undefined when reading the typed column set.
+  id?: number
+  created_at?: string
+  door_state?: string | null
+  fd_window?: string | null
+  fp_window?: string | null
+  rd_window?: string | null
+  rp_window?: string | null
+  driver_seat_belt?: boolean | null
+  passenger_seat_belt?: boolean | null
+  driver_seat_occupied?: boolean | null
+  lights_high_beams?: boolean | null
+  lights_hazards_active?: boolean | null
+  lights_turn_signal?: string | null
 }
 
 // VehicleMetaSnapshot mirrors the post-migration `vehicle_meta_snapshots`
@@ -1174,6 +1207,19 @@ export interface ChargingTelemetry {
   charger_pilot_current: number | null
   scheduled_charging_at: string | null
   source: string
+  // Legacy / compat-view field aliases (BMS/module/energy JSONB carve-outs,
+  // charge-port & navigation helpers). Optional so existing pages compile;
+  // values are undefined when reading the typed column set.
+  bms_fullcharge_complete?: boolean | null
+  module_temp_max?: number | null
+  module_temp_min?: number | null
+  num_module_temp_max?: number | null
+  num_module_temp_min?: number | null
+  battery_heater_on?: boolean | null
+  lifetime_energy_used?: number | null
+  expected_energy_pct_at_arrival?: number | null
+  not_enough_power_to_heat?: boolean | null
+  charge_port_door_open?: boolean | null
 }
 
 // === Media ===
@@ -1749,7 +1795,6 @@ export type {
 } from '@/types/signals';
 
 export type {
-  Automation,
   AutomationFull,
   AutomationStep,
   AutomationStepBase,

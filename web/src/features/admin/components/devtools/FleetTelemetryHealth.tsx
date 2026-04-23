@@ -103,7 +103,7 @@ export function FleetTelemetryHealth() {
             {selectedVin && (
               <Badge variant="info" size="sm">
                 {t('devtools.health.filteredBy', 'Filtered')}: {selectedVin}
-                <button className="ml-1 text-white/60 hover:text-white" onClick={() => setSelectedVin('')}>×</button>
+                <Button variant="ghost" size="sm" className="ml-1 text-white/60 hover:text-white !px-1 !py-0 min-h-0" onClick={() => setSelectedVin('')}>×</Button>
               </Badge>
             )}
             <Button

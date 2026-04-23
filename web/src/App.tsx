@@ -164,7 +164,6 @@ export default function App() {
         // Invalid URL stored — ignore
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (

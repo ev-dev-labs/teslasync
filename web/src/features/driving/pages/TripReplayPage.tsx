@@ -92,7 +92,6 @@ function FitBounds({ trail }: { trail: LatLngExpression[] }) {
     } else if (trail.length === 1) {
       map.setView(trail[0] as [number, number], 15);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trail.length]);
   return null;
 }
@@ -125,22 +124,25 @@ export default function TripReplayPage() {
     if (!drive) return [];
     const pos = drive.positions ?? [];
     return pos
-      .map((p: any) => ({
-        latitude: p.latitude ?? 0,
-        longitude: p.longitude ?? 0,
-        speed: p.speed ?? null,
-        power: p.power ?? null,
-        batteryLevel: p.batteryLevel ?? p.battery_level ?? 0,
-        timestamp: p.timestamp ?? p.created_at ?? p.createdAt ?? '',
-        elevation: p.elevation ?? null,
-        insideTemp: p.insideTemp ?? p.inside_temp ?? null,
-        outsideTemp: p.outsideTemp ?? p.outside_temp ?? null,
-        idealRange: p.idealRange ?? p.ideal_range ?? null,
-        ratedRange: p.ratedRange ?? p.rated_range ?? null,
-        odometer: p.odometer ?? null,
-        fanStatus: p.fanStatus ?? p.fan_status ?? null,
+      .map((raw: unknown) => {
+        const p = raw as Record<string, unknown>;
+        return {
+        latitude: (p.latitude as number) ?? 0,
+        longitude: (p.longitude as number) ?? 0,
+        speed: (p.speed as number | null) ?? null,
+        power: (p.power as number | null) ?? null,
+        batteryLevel: (p.batteryLevel as number) ?? (p.battery_level as number) ?? 0,
+        timestamp: (p.timestamp as string) ?? (p.created_at as string) ?? (p.createdAt as string) ?? '',
+        elevation: (p.elevation as number | null) ?? null,
+        insideTemp: (p.insideTemp as number | null) ?? (p.inside_temp as number | null) ?? null,
+        outsideTemp: (p.outsideTemp as number | null) ?? (p.outside_temp as number | null) ?? null,
+        idealRange: (p.idealRange as number | null) ?? (p.ideal_range as number | null) ?? null,
+        ratedRange: (p.ratedRange as number | null) ?? (p.rated_range as number | null) ?? null,
+        odometer: (p.odometer as number | null) ?? null,
+        fanStatus: (p.fanStatus as number | null) ?? (p.fan_status as number | null) ?? null,
         isClimateOn: p.isClimateOn ?? p.is_climate_on ?? null,
-      } as DrivePosition))
+      } as DrivePosition;
+      })
       .filter((p) => p.latitude !== 0 || p.longitude !== 0);
   }, [drive]);
 
