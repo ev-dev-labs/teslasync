@@ -1,6 +1,10 @@
 package models
 
-import "time"
+import (
+	"strconv"
+	"strings"
+	"time"
+)
 
 // =============================================================================
 // system.go — Go models for the system / admin / runtime tables defined in
@@ -87,6 +91,56 @@ type Geofence struct {
 	Category   *GeofenceCategory `db:"category" json:"category,omitempty"`
 	CreatedAt  time.Time         `db:"created_at" json:"created_at"`
 	UpdatedAt  time.Time         `db:"updated_at" json:"updated_at"`
+}
+
+// Centroid computes the arithmetic mean of the polygon vertices.
+// Returns (0, 0) if PolygonWKT is empty or unparseable.
+// WKT convention: coordinates are (longitude latitude).
+func (g *Geofence) Centroid() (lat, lon float64) {
+	if g.PolygonWKT == "" {
+		return 0, 0
+	}
+	start := strings.Index(g.PolygonWKT, "((")
+	end := strings.Index(g.PolygonWKT, "))")
+	if start < 0 || end < 0 || end <= start+2 {
+		return 0, 0
+	}
+	coords := g.PolygonWKT[start+2 : end]
+	pairs := strings.Split(coords, ",")
+
+	var sumLat, sumLon float64
+	var count int
+	for _, pair := range pairs {
+		p := strings.TrimSpace(pair)
+		parts := strings.Fields(p)
+		if len(parts) != 2 {
+			continue
+		}
+		lonVal, err1 := strconv.ParseFloat(parts[0], 64)
+		latVal, err2 := strconv.ParseFloat(parts[1], 64)
+		if err1 != nil || err2 != nil {
+			continue
+		}
+		sumLon += lonVal
+		sumLat += latVal
+		count++
+	}
+	if count == 0 {
+		return 0, 0
+	}
+	return sumLat / float64(count), sumLon / float64(count)
+}
+
+// Latitude returns the centroid latitude of this geofence's polygon.
+func (g *Geofence) Latitude() float64 {
+	lat, _ := g.Centroid()
+	return lat
+}
+
+// Longitude returns the centroid longitude of this geofence's polygon.
+func (g *Geofence) Longitude() float64 {
+	_, lon := g.Centroid()
+	return lon
 }
 
 // ElectricityCost mirrors the post-migration `electricity_cost` schema

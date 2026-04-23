@@ -1,0 +1,100 @@
+=== PREFLIGHT ===
+No predecessor dependencies for this prompt.
+
+=== SURVEY ===
+FOUND: Geofence struct at internal/models/system.go:83 has PolygonWKT but no Latitude/Longitude fields.
+FOUND: location.go:79 calls geofence.Latitude and geofence.Longitude (currently non-existent).
+FOUND: location.go:84 also references geofence.Radius (out of scope for this prompt).
+FOUND: system.go imports only 'time' — need to add 'strconv' and 'strings'.
+
+=== REASONING ===
+APPROACH: Add Centroid(), Latitude(), Longitude() methods on *Geofence.
+  - Centroid() parses WKT POLYGON((lon lat, ...)) format, averages all vertices.
+  - Latitude()/Longitude() delegate to Centroid() for single-value access.
+  - Returns (0,0) for empty/malformed WKT (safe zero-value fallback).
+  - WKT stores coordinates as (longitude latitude) per OGC spec.
+REJECTED: Adding Latitude/Longitude as struct fields — ADR-013 chose typed point methods.
+REJECTED: Using a geometry library — simple centroid doesn't need external deps.
+
+=== CHANGES ===
+BEFORE: import 	ime only; no methods on Geofence struct.
+AFTER: import (strconv, strings, time); added Centroid(), Latitude(), Longitude() methods.
+diff --git a/internal/models/system.go b/internal/models/system.go
+index 2926074..1e6e385 100644
+--- a/internal/models/system.go
++++ b/internal/models/system.go
+@@ -1,6 +1,10 @@
+ package models
+ 
+-import "time"
++import (
++	"strconv"
++	"strings"
++	"time"
++)
+ 
+ // =============================================================================
+ // system.go ΓÇö Go models for the system / admin / runtime tables defined in
+@@ -89,6 +93,56 @@ type Geofence struct {
+ 	UpdatedAt  time.Time         `db:"updated_at" json:"updated_at"`
+ }
+ 
++// Centroid computes the arithmetic mean of the polygon vertices.
++// Returns (0, 0) if PolygonWKT is empty or unparseable.
++// WKT convention: coordinates are (longitude latitude).
++func (g *Geofence) Centroid() (lat, lon float64) {
++	if g.PolygonWKT == "" {
++		return 0, 0
++	}
++	start := strings.Index(g.PolygonWKT, "((")
++	end := strings.Index(g.PolygonWKT, "))")
++	if start < 0 || end < 0 || end <= start+2 {
++		return 0, 0
++	}
++	coords := g.PolygonWKT[start+2 : end]
++	pairs := strings.Split(coords, ",")
++
++	var sumLat, sumLon float64
++	var count int
++	for _, pair := range pairs {
++		p := strings.TrimSpace(pair)
++		parts := strings.Fields(p)
++		if len(parts) != 2 {
++			continue
++		}
++		lonVal, err1 := strconv.ParseFloat(parts[0], 64)
++		latVal, err2 := strconv.ParseFloat(parts[1], 64)
++		if err1 != nil || err2 != nil {
++			continue
++		}
++		sumLon += lonVal
++		sumLat += latVal
++		count++
++	}
++	if count == 0 {
++		return 0, 0
++	}
++	return sumLat / float64(count), sumLon / float64(count)
++}
++
++// Latitude returns the centroid latitude of this geofence's polygon.
++func (g *Geofence) Latitude() float64 {
++	lat, _ := g.Centroid()
++	return lat
++}
++
++// Longitude returns the centroid longitude of this geofence's polygon.
++func (g *Geofence) Longitude() float64 {
++	_, lon := g.Centroid()
++	return lon
++}
++
+ // ElectricityCost mirrors the post-migration `electricity_cost` schema
+ // (time-of-use rate schedule). RatePerKwh is numeric(10,6); represented as
+ // float64 since the rate has a fixed magnitude well within float64 precision.
+
+=== GATE ===
+MODEL_BUILD_EXIT=0
+MODEL_VET_EXIT=0
+
+=== COMMIT ===
