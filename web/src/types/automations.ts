@@ -105,6 +105,14 @@ export interface AutomationStepActionNotification extends AutomationStepBase {
   template: string;
 }
 
+export interface AutomationStepActionVehicleCommand extends AutomationStepBase {
+  kind: 'action_vehicle_command';
+  lane: 'action';
+  command: string;
+  /** Sole jsonb carve-out (ADR-001). Tesla command params are inherently dynamic. */
+  command_params: Record<string, unknown>;
+}
+
 // Discriminated union — children added by prompts 13-23
 export type AutomationStep =
   | AutomationStepTriggerSignal
@@ -116,6 +124,7 @@ export type AutomationStep =
   | AutomationStepConditionGeofence
   | AutomationStepConditionDayOfWeek
   | AutomationStepActionNotification
+  | AutomationStepActionVehicleCommand
   | AutomationStepBase;
 
 export interface AutomationFull extends Automation {
