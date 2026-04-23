@@ -57,6 +57,46 @@ ON CONFLICT (name) DO UPDATE SET
 	return nil
 }
 
+// List returns the full signal_catalog ordered by name.
+func (r *SignalCatalogRepo) List(ctx context.Context) ([]models.SignalCatalog, error) {
+	const q = `
+SELECT name, first_seen_at, last_seen_at, observation_count,
+       storage_tier, typed_table, typed_column, data_kind, unit, notes,
+       created_at, updated_at
+FROM signal_catalog
+ORDER BY name`
+	rows, err := r.db.Pool.Query(ctx, q)
+	if err != nil {
+		return nil, fmt.Errorf("signal-catalog-repo-list: %w", err)
+	}
+	defer rows.Close()
+	var out []models.SignalCatalog
+	for rows.Next() {
+		var c models.SignalCatalog
+		if err := rows.Scan(
+			&c.Name,
+			&c.FirstSeenAt,
+			&c.LastSeenAt,
+			&c.ObservationCount,
+			&c.StorageTier,
+			&c.TypedTable,
+			&c.TypedColumn,
+			&c.DataKind,
+			&c.Unit,
+			&c.Notes,
+			&c.CreatedAt,
+			&c.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("signal-catalog-repo-list-scan: %w", err)
+		}
+		out = append(out, c)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("signal-catalog-repo-list-rows: %w", err)
+	}
+	return out, nil
+}
+
 // GetByName returns the signal_catalog row for the given canonical name,
 // or (nil, nil) if no such row exists. ADR-009: signal names are the
 // stable identity for both ingestion and downstream typed promotion.
