@@ -63,12 +63,12 @@ type triggerSummary struct {
 // DetectConflicts scans other automations for potential conflicts with the candidate.
 // Returns a list of advisory Conflict warnings. The context parameter is reserved
 // for future use (e.g., condition-aware analysis that may need data lookups).
-func DetectConflicts(_ context.Context, candidate *models.Automation, others []*models.Automation) []Conflict {
+func DetectConflicts(_ context.Context, candidate *models.AutomationFull, others []*models.AutomationFull) []Conflict {
 	if candidate == nil || len(others) == 0 {
 		return nil
 	}
 
-	candidateActions := parseActions(candidate.Actions)
+	candidateActions := parseActions(marshalSlice(candidate.Actions))
 	if len(candidateActions) == 0 {
 		return nil
 	}
@@ -78,21 +78,21 @@ func DetectConflicts(_ context.Context, candidate *models.Automation, others []*
 		return nil
 	}
 
-	candidateTrigger := parseTriggerSummary(candidate.TriggerType, candidate.TriggerConfig)
+	candidateTrigger := parseTriggerSummary(candidate.TriggerType(), candidate.TriggerConfig())
 
 	var conflicts []Conflict
 	for _, other := range others {
 		if other.ID == candidate.ID {
 			continue
 		}
-		if !other.Enabled || other.AutoDisabled {
+		if !other.Enabled || other.AutoDisabled() {
 			continue
 		}
 		if !vehicleScopeOverlaps(candidate.VehicleID, other.VehicleID) {
 			continue
 		}
 
-		otherActions := parseActions(other.Actions)
+		otherActions := parseActions(marshalSlice(other.Actions))
 		otherCommands := extractCommands(otherActions)
 		if len(otherCommands) == 0 {
 			continue
@@ -103,7 +103,7 @@ func DetectConflicts(_ context.Context, candidate *models.Automation, others []*
 			continue
 		}
 
-		otherTrigger := parseTriggerSummary(other.TriggerType, other.TriggerConfig)
+		otherTrigger := parseTriggerSummary(other.TriggerType(), other.TriggerConfig())
 
 		if reason := checkTriggerOverlap(candidateTrigger, otherTrigger, opposites); reason != "" {
 			severity := "warning"
@@ -390,8 +390,21 @@ func vehicleScopeOverlaps(a, b *int64) bool {
 	return *a == *b
 }
 
-func hasConditions(a *models.Automation) bool {
-	return len(a.Conditions) > 2 // "[]" is 2 bytes
+func hasConditions(a *models.AutomationFull) bool {
+	return len(a.Conditions) > 0
+}
+
+// marshalSlice converts a []any (typed CTI children) back to JSON so the
+// legacy parseActions helper can extract command strings.
+func marshalSlice(v []any) json.RawMessage {
+	if len(v) == 0 {
+		return nil
+	}
+	b, err := json.Marshal(v)
+	if err != nil {
+		return nil
+	}
+	return b
 }
 
 func normalizeTimezone(tz string) string {
