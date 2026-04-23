@@ -61,7 +61,54 @@ func flattenDoors(raw any) ([]Atomic, error) {
 	return out, nil
 }
 func flattenWindows(raw any) ([]Atomic, error)           { return nil, nil }
-func flattenLocation(raw any) ([]Atomic, error)          { return nil, nil }
+func flattenLocation(raw any) ([]Atomic, error) {
+	m, ok := raw.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("Location: expected map[string]any, got %T", raw)
+	}
+	lat, err := toFloat64(m["Latitude"])
+	if err != nil {
+		return nil, fmt.Errorf("Location.Latitude: %w", err)
+	}
+	lng, err := toFloat64(m["Longitude"])
+	if err != nil {
+		return nil, fmt.Errorf("Location.Longitude: %w", err)
+	}
+	if lat < -90 || lat > 90 {
+		return nil, fmt.Errorf("Location.Latitude out of range: %v", lat)
+	}
+	if lng < -180 || lng > 180 {
+		return nil, fmt.Errorf("Location.Longitude out of range: %v", lng)
+	}
+	return []Atomic{
+		{Name: "Latitude", Value: lat},
+		{Name: "Longitude", Value: lng},
+	}, nil
+}
+
+// toFloat64 accepts float64/float32/int/int64 or numeric string.
+func toFloat64(v any) (float64, error) {
+	switch x := v.(type) {
+	case nil:
+		return 0, fmt.Errorf("nil")
+	case float64:
+		return x, nil
+	case float32:
+		return float64(x), nil
+	case int:
+		return float64(x), nil
+	case int64:
+		return float64(x), nil
+	case string:
+		f, err := strconv.ParseFloat(x, 64)
+		if err != nil {
+			return 0, fmt.Errorf("parse float %q: %w", x, err)
+		}
+		return f, nil
+	default:
+		return 0, fmt.Errorf("unexpected type %T", v)
+	}
+}
 func flattenTime(name string, raw any) ([]Atomic, error) {
 	m, ok := raw.(map[string]any)
 	if !ok {
