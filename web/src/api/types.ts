@@ -1737,3 +1737,5 @@ export interface YearReview {
   // Fun comparisons
   comparisons: YearReviewComparison[]
 }
+
+export type { SignalObservation, SignalSource } from '@/types/signals';
