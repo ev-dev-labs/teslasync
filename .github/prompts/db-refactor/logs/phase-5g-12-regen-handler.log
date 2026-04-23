@@ -1,0 +1,236 @@
+=== SURVEY ===
+package api
+
+import (
+	"math"
+	"net/http"
+	"strconv"
+	"time"
+
+	"github.com/rs/zerolog/log"
+	"github.com/ev-dev-labs/teslasync/internal/database"
+)
+
+// RegenHandler handles regenerative braking analytics HTTP requests.
+type RegenHandler struct {
+	db *database.DB
+}
+
+func NewRegenHandler(db *database.DB) *RegenHandler {
+	return &RegenHandler{db: db}
+}
+
+func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
+	vehicleIDStr := r.URL.Query().Get("vehicle_id")
+	if vehicleIDStr == "" {
+		writeError(w, http.StatusBadRequest, "vehicle_id is required")
+		return
+	}
+	vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
+		return
+	}
+
+	ctx := r.Context()
+
+	// Per-drive regen stats (last 90 days)
+	type driveRegen struct {
+		ID               int64      `json:"id"`
+		StartDate        time.Time  `json:"start_date"`
+		Distance         float64    `json:"distance"`
+		DurationMin      float64    `json:"duration_min"`
+		SpeedAvg         *float64   `json:"speed_avg"`
+		PowerMax         *float64   `json:"power_max"`
+		PowerMin         *float64   `json:"power_min"`
+		StartBatteryLvl  *int       `json:"start_battery_level"`
+		EndBatteryLvl    *int       `json:"end_battery_level"`
+		Efficiency       float64    `json:"efficiency"`
+		RegenScore       float64    `json:"regen_score"`
+	}
+
+	driveRows, err := h.db.Pool.Query(ctx, `
+		SELECT id, start_date, distance, duration_min, speed_avg,
+			power_max, power_min,
+			start_battery_level, end_battery_level,
+			CASE WHEN distance > 0 THEN (start_battery_level - end_battery_level)::float / distance * 100 ELSE 0 END as efficiency
+		FROM drives
+		WHERE vehicle_id = $1 AND distance > 2 AND power_min IS NOT NULL
+			AND start_date > NOW() - interval '90 days'
+		ORDER BY start_date DESC`, vehicleID)
+	if err != nil {
+		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get regen drive data")
+		writeError(w, http.StatusInternalServerError, "failed to get regen data")
+		return
+	}
+	defer driveRows.Close()
+
+	var drives []driveRegen
+	for driveRows.Next() {
+		var d driveRegen
+		if err := driveRows.Scan(&d.ID, &d.StartDate, &d.Distance, &d.DurationMin, &d.SpeedAvg,
+			&d.PowerMax, &d.PowerMin, &d.StartBatteryLvl, &d.EndBatteryLvl, &d.Efficiency); err != nil {
+			log.Error().Err(err).Msg("failed to scan regen drive row")
+			continue
+		}
+		// Regen score: magnitude of power_min relative to speed (higher regen at lower speed = better)
+		if d.PowerMin != nil {
+			regenKW := math.Abs(*d.PowerMin)
+			speedFactor := 1.0
+			if d.SpeedAvg != nil && *d.SpeedAvg > 0 {
+				speedFactor = regenKW / *d.SpeedAvg * 10
+			}
+			d.RegenScore = math.Min(math.Round(speedFactor*10)/10, 100)
+		}
+		drives = append(drives, d)
+	}
+	if drives == nil {
+		drives = []driveRegen{}
+	}
+
+	// Monthly regen summary (last 12 months)
+	type monthlySummary struct {
+		Month         string  `json:"month"`
+		DriveCount    int     `json:"drive_count"`
+		AvgRegenPower float64 `json:"avg_regen_power_kw"`
+		AvgSpeed      float64 `json:"avg_speed"`
+		AvgEfficiency float64 `json:"avg_efficiency"`
+	}
+
+	monthRows, err := h.db.Pool.Query(ctx, `
+		SELECT DATE_TRUNC('month', start_date) as month,
+			COUNT(*) as drive_count,
+			AVG(ABS(COALESCE(power_min, 0))) as avg_regen_power_kw,
+			AVG(speed_avg) as avg_speed,
+			AVG(CASE WHEN distance > 0 THEN (start_battery_level - end_battery_level)::float / distance * 100 ELSE 0 END) as avg_efficiency
+		FROM drives
+		WHERE vehicle_id = $1 AND distance > 2
+			AND start_date > NOW() - interval '12 months'
+		GROUP BY month ORDER BY month`, vehicleID)
+	if err != nil {
+		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get monthly regen data")
+		writeError(w, http.StatusInternalServerError, "failed to get regen data")
+		return
+	}
+	defer monthRows.Close()
+
+	var monthly []monthlySummary
+	for monthRows.Next() {
+		var m monthlySummary
+		var monthTime time.Time
+		var avgSpeed, avgEff *float64
+		if err := monthRows.Scan(&monthTime, &m.DriveCount, &m.AvgRegenPower, &avgSpeed, &avgEff); err != nil {
+			log.Error().Err(err).Msg("failed to scan monthly regen row")
+			continue
+		}
+		m.Month = monthTime.Format("2006-01")
+		if avgSpeed != nil {
+			m.AvgSpeed = math.Round(*avgSpeed*10) / 10
+		}
+		if avgEff != nil {
+			m.AvgEfficiency = math.Round(*avgEff*10) / 10
+		}
+		m.AvgRegenPower = math.Round(m.AvgRegenPower*10) / 10
+		monthly = append(monthly, m)
+	}
+	if monthly == nil {
+		monthly = []monthlySummary{}
+	}
+
+	// Lifetime energy stats from motor snapshots
+	var totalRegenKWh, totalDriveKWh float64
+	err = h.db.Pool.QueryRow(ctx, `
+		SELECT
+			COALESCE(MAX(lifetime_energy_gained_regen) - MIN(lifetime_energy_gained_regen), 0),
+			COALESCE(MAX(lifetime_energy_used_drive) - MIN(lifetime_energy_used_drive), 0)
+		FROM motor_snapshots
+		WHERE vehicle_id = $1 AND lifetime_energy_gained_regen IS NOT NULL`, vehicleID).Scan(&totalRegenKWh, &totalDriveKWh)
+	if err != nil {
+		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get lifetime energy stats")
+		// Non-fatal; continue with zeros
+	}
+
+	regenRatio := 0.0
+	if totalDriveKWh > 0 {
+		regenRatio = totalRegenKWh / totalDriveKWh * 100
+	}
+
+	// Monthly average regen power
+	var monthlyAvgRegen float64
+	if len(monthly) > 0 {
+		sum := 0.0
+		for _, m := range monthly {
+			sum += m.AvgRegenPower
+		}
+		monthlyAvgRegen = math.Round(sum/float64(len(monthly))*10) / 10
+	}
+
+	// Free charges equivalent (assuming ~60 kWh per full charge)
+	freeCharges := 0.0
+	if totalRegenKWh > 0 {
+		freeCharges = math.Round(totalRegenKWh/60*10) / 10
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"vehicle_id":          vehicleID,
+		"total_regen_kwh":     math.Round(totalRegenKWh*100) / 100,
+		"total_drive_kwh":     math.Round(totalDriveKWh*100) / 100,
+		"regen_ratio":         math.Round(regenRatio*10) / 10,
+		"monthly_avg_regen":   monthlyAvgRegen,
+		"free_charges":        freeCharges,
+		"monthly_summary":     monthly,
+		"drives":              drives,
+	})
+}
+
+=== REASONING ===
+regen_handler.go has 0 compile errors.
+The file does NOT import or reference models.Drive — it uses raw SQL queries
+against the drives and motor_snapshots tables with local struct types
+(driveRegen, monthlySummary). No Go struct field renames apply.
+No changes needed to pass the compilation gate.
+
+=== CHANGES ===
+No code changes required — file already compiles cleanly.
+
+=== GATE ===
+# github.com/ev-dev-labs/teslasync/internal/automation
+internal\automation\engine.go:252:21: a.AutoDisabled undefined (type *models.Automation has no field or method AutoDisabled)
+internal\automation\engine.go:256:28: a.AutoDisabled undefined (type *models.Automation has no field or method AutoDisabled)
+internal\automation\engine.go:262:31: a.MaxExecutionsHour undefined (type *models.Automation has no field or method MaxExecutionsHour)
+internal\automation\engine.go:263:59: a.MaxExecutionsHour undefined (type *models.Automation has no field or method MaxExecutionsHour)
+internal\automation\engine.go:310:25: a.TriggerType undefined (type *models.Automation has no field or method TriggerType)
+internal\automation\engine.go:324:40: a.Actions undefined (type *models.Automation has no field or method Actions)
+internal\automation\engine.go:335:62: a.StopOnFailure undefined (type *models.Automation has no field or method StopOnFailure)
+internal\automation\engine.go:373:46: a.TriggerType undefined (type *models.Automation has no field or method TriggerType)
+internal\automation\engine.go:394:11: a.Conditions undefined (type *models.Automation has no field or method Conditions)
+internal\automation\engine.go:399:29: a.Conditions undefined (type *models.Automation has no field or method Conditions)
+internal\automation\engine.go:480:52: a.LastTriggeredAt undefined (type *models.Automation has no field or method LastTriggeredAt)
+internal\automation\engine.go:521:22: a.TriggerType undefined (type *models.Automation has no field or method TriggerType)
+# github.com/ev-dev-labs/teslasync/internal/worker
+internal\worker\worker.go:226:28: w.settingsRepo.GetPollingConfig undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".SettingsRepo has no field or method GetPollingConfig)
+internal\worker\worker.go:338:4: unknown field VehicleID in struct literal of type models.Vehicle
+internal\worker\worker.go:341:4: unknown field State in struct literal of type models.Vehicle
+internal\worker\worker.go:342:4: unknown field Healthy in struct literal of type models.Vehicle
+internal\worker\worker.go:435:31: w.pollingConfig.EnabledVehicleDataEndpoints undefined (type *models.PollingConfig has no field or method EnabledVehicleDataEndpoints)
+internal\worker\worker.go:440:27: w.vehicleRepo.UpdateState undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".VehicleRepo has no field or method UpdateState)
+internal\worker\worker.go:479:27: w.vehicleRepo.UpdateState undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".VehicleRepo has no field or method UpdateState)
+internal\worker\worker.go:479:64: vehicle.State undefined (type *models.Vehicle has no field or method State)
+internal\worker\worker.go:492:26: w.vehicleRepo.UpdateState undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".VehicleRepo has no field or method UpdateState)
+internal\worker\worker.go:498:22: w.posRepo.Insert undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".PositionRepo has no field or method Insert)
+internal\worker\worker.go:534:3: unknown field Odometer in struct literal of type models.Position
+internal\worker\worker.go:535:3: unknown field BatteryLvl in struct literal of type models.Position
+internal\worker\worker.go:540:5: p.Speed undefined (type *models.Position has no field or method Speed)
+internal\worker\worker.go:543:4: p.Power undefined (type *models.Position has no field or method Power)
+internal\worker\worker.go:545:14: cannot use &heading (value of type *int) as *int16 value in assignment
+internal\worker\worker.go:548:4: p.IdealRange undefined (type *models.Position has no field or method IdealRange)
+internal\worker\worker.go:550:4: p.RatedRange undefined (type *models.Position has no field or method RatedRange)
+internal\worker\worker.go:552:4: p.InsideTemp undefined (type *models.Position has no field or method InsideTemp)
+internal\worker\worker.go:554:4: p.OutsideTemp undefined (type *models.Position has no field or method OutsideTemp)
+internal\worker\worker.go:556:4: p.FanStatus undefined (type *models.Position has no field or method FanStatus)
+internal\worker\worker.go:558:4: p.IsClimate undefined (type *models.Position has no field or method IsClimate)
+
+FILE_ERROR_COUNT=0
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
