@@ -1,0 +1,30 @@
+=== SURVEY ===
+File: internal/api/tesla_charging_session_handler.go
+Error: s.RawJSON field no longer exists in models.TeslaChargingSession
+Line 248-249: json.Marshal + RawJSON assignment must be removed
+
+=== REASONING ===
+The TeslaChargingSession model no longer has a RawJSON field.
+Remove the block that marshals the item to JSON and assigns it to s.RawJSON (lines 248-250).
+
+=== CHANGES ===
+Removed RawJSON block (lines 248-250 old) — json.Marshal + s.RawJSON assignment deleted.
+
+=== GATE ===
+# github.com/ev-dev-labs/teslasync/internal/automation
+internal\automation\engine.go:252:21: a.AutoDisabled undefined (type *models.Automation has no field or method AutoDisabled)
+internal\automation\engine.go:256:28: a.AutoDisabled undefined (type *models.Automation has no field or method AutoDisabled)
+internal\automation\engine.go:262:31: a.MaxExecutionsHour undefined (type *models.Automation has no field or method MaxExecutionsHour)
+internal\automation\engine.go:263:59: a.MaxExecutionsHour undefined (type *models.Automation has no field or method MaxExecutionsHour)
+internal\automation\engine.go:310:25: a.TriggerType undefined (type *models.Automation has no field or method TriggerType)
+internal\automation\engine.go:324:40: a.Actions undefined (type *models.Automation has no field or method Actions)
+internal\automation\engine.go:335:62: a.StopOnFailure undefined (type *models.Automation has no field or method StopOnFailure)
+internal\automation\engine.go:373:46: a.TriggerType undefined (type *models.Automation has no field or method TriggerType)
+internal\automation\engine.go:394:11: a.Conditions undefined (type *models.Automation has no field or method Conditions)
+internal\automation\engine.go:399:29: a.Conditions undefined (type *models.Automation has no field or method Conditions)
+internal\automation\engine.go:480:52: a.LastTriggeredAt undefined (type *models.Automation has no field or method LastTriggeredAt)
+internal\automation\engine.go:521:22: a.TriggerType undefined (type *models.Automation has no field or method TriggerType)
+
+FILE_ERROR_COUNT=0
+EXIT=0
+STATUS=DONE

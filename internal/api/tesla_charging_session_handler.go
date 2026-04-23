@@ -244,12 +244,7 @@ func parseTeslaChargingSessions(items []teslaChargingSessionItem) []*models.Tesl
 			s.Longitude = &item.Location.Longitude
 		}
 
-		// Store raw item JSON
-		if itemJSON, err := json.Marshal(item); err == nil {
-			s.RawJSON = string(itemJSON)
-		}
-
-		results = append(results, s)
+		results= append(results, s)
 	}
 
 	return results
