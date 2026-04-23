@@ -12,18 +12,38 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
-// EnergyRepo is the subset of database.AutomationRepo needed by EnergyTrigger.
-type EnergyRepo interface {
-	GetByTriggerType(ctx context.Context, triggerType string) ([]*models.Automation, error)
-	SetAutoDisabled(ctx context.Context, id int64, reason string) error
+// EnergyAutomation is the hydrated view EnergyTrigger consumes: an enabled
+// automation paired with the typed signal-trigger CTI row that drives it,
+// plus the energy site the automation targets.
+//
+// Per ADR-012 (Option A), consumers receive Go-typed CTI children rather
+// than reading JSONB blobs from the parent row; per ADR-004 the legacy
+// "energy" trigger kind is expressed as a signal trigger on one of the
+// energy-site signals ('solar_power', 'battery_level', 'grid_power',
+// 'grid_status', 'storm_mode_active'), so the relevant CTI table is
+// `automation_step_trigger_signal`.
+//
+// `EnergySiteID` is supplied separately because the post-142 baseline
+// scopes automations by `vehicle_id`, not by site; resolving site-targeting
+// is the persistence layer's responsibility (e.g. via a side mapping table
+// owned by the energy subsystem) and is presented here as a typed field.
+type EnergyAutomation struct {
+	Automation   models.Automation
+	Trigger      models.AutomationStepTriggerSignal
+	EnergySiteID int64
 }
 
-// EnergyConfig represents the parsed trigger_config for energy automations.
-type EnergyConfig struct {
-	EnergySiteID int64   `json:"energy_site_id"`
-	Event        string  `json:"event"`     // "solar_above", "solar_below", "battery_above", etc.
-	Threshold    float64 `json:"threshold"` // watts (power events) or percent (battery events)
-	Operator     string  `json:"operator"`  // informational; event is authoritative for logic
+// EnergyRepo is the narrow port EnergyTrigger needs from the persistence
+// layer. The implementation is expected to load enabled automations whose
+// (single) trigger step is a signal trigger on an energy-site signal,
+// scoped to the given site, returning each parent paired with its typed
+// CTI row in one batched query (ADR-012 Option A; ADR-005 N+1 prevention).
+//
+// Per ADR-012 sub-decision (ii), `auto_disabled` is retired: invalid
+// signal/op combinations are simply skipped at evaluation time; no
+// database write is performed against the parent automation.
+type EnergyRepo interface {
+	LoadEnabledEnergySignalTriggers(ctx context.Context, energySiteID int64) ([]EnergyAutomation, error)
 }
 
 // energyState tracks the last known energy site status for crossing detection.
@@ -37,19 +57,20 @@ type energyState struct {
 
 // energySnapshot is the JSON payload passed to engine.Evaluate when an energy trigger fires.
 type energySnapshot struct {
-	EnergySiteID        int64   `json:"energy_site_id"`
-	Event               string  `json:"event"`
-	SolarPower          float64 `json:"solar_power"`
-	BatteryLevel        float64 `json:"battery_level"`
-	GridPower           float64 `json:"grid_power"`
-	GridStatus          string  `json:"grid_status"`
-	StormModeActive     bool    `json:"storm_mode_active"`
-	Threshold           float64 `json:"threshold"`
-	PreviousSolarPower  float64 `json:"previous_solar_power"`
+	EnergySiteID         int64   `json:"energy_site_id"`
+	Signal               string  `json:"signal"`
+	Operator             string  `json:"operator"`
+	SolarPower           float64 `json:"solar_power"`
+	BatteryLevel         float64 `json:"battery_level"`
+	GridPower            float64 `json:"grid_power"`
+	GridStatus           string  `json:"grid_status"`
+	StormModeActive      bool    `json:"storm_mode_active"`
+	Threshold            float64 `json:"threshold"`
+	PreviousSolarPower   float64 `json:"previous_solar_power"`
 	PreviousBatteryLevel float64 `json:"previous_battery_level"`
-	PreviousGridPower   float64 `json:"previous_grid_power"`
-	PreviousGridStatus  string  `json:"previous_grid_status"`
-	PreviousStormMode   bool    `json:"previous_storm_mode"`
+	PreviousGridPower    float64 `json:"previous_grid_power"`
+	PreviousGridStatus   string  `json:"previous_grid_status"`
+	PreviousStormMode    bool    `json:"previous_storm_mode"`
 }
 
 // EnergyTrigger evaluates energy/Powerwall-based automations when energy site status updates.
@@ -112,9 +133,9 @@ func (t *EnergyTrigger) OnEnergyUpdate(ctx context.Context, siteID int64, status
 		return nil
 	}
 
-	automations, err := t.repo.GetByTriggerType(ctx, "energy")
+	automations, err := t.repo.LoadEnabledEnergySignalTriggers(ctx, siteID)
 	if err != nil {
-		return fmt.Errorf("load energy automations: %w", err)
+		return fmt.Errorf("load energy automations for site %d: %w", siteID, err)
 	}
 
 	if len(automations) == 0 {
@@ -122,39 +143,35 @@ func (t *EnergyTrigger) OnEnergyUpdate(ctx context.Context, siteID int64, status
 	}
 
 	var firstErr error
-	for _, a := range automations {
-		cfg, err := parseEnergyConfig(a.TriggerConfig)
-		if err != nil {
-			t.logger.Warn().Err(err).
-				Int64("automation_id", a.ID).
-				Str("automation", a.Name).
-				Msg("invalid energy trigger config, auto-disabling")
-			if disableErr := t.repo.SetAutoDisabled(ctx, a.ID, fmt.Sprintf("invalid energy config: %v", err)); disableErr != nil {
-				t.logger.Error().Err(disableErr).
-					Int64("automation_id", a.ID).
-					Msg("failed to auto-disable invalid automation")
-			}
+	for _, ea := range automations {
+		a := ea.Automation
+		trig := ea.Trigger
+
+		// Defensive: the repo filter is authoritative, but skip rows that
+		// somehow target a different site.
+		if ea.EnergySiteID != siteID {
 			continue
 		}
 
-		// Skip automations that target a different site.
-		if cfg.EnergySiteID != siteID {
+		if !shouldFireEnergy(previous, current, &trig) {
 			continue
 		}
 
-		if !shouldFireEnergy(previous, current, cfg) {
-			continue
+		var threshold float64
+		if trig.ValueNum != nil {
+			threshold = *trig.ValueNum
 		}
 
 		snapshot, err := json.Marshal(energySnapshot{
 			EnergySiteID:         siteID,
-			Event:                cfg.Event,
+			Signal:               trig.Signal,
+			Operator:             trig.Op,
 			SolarPower:           current.SolarPower,
 			BatteryLevel:         current.BatteryLevel,
 			GridPower:            current.GridPower,
 			GridStatus:           current.GridStatus,
 			StormModeActive:      current.StormModeActive,
-			Threshold:            cfg.Threshold,
+			Threshold:            threshold,
 			PreviousSolarPower:   previous.SolarPower,
 			PreviousBatteryLevel: previous.BatteryLevel,
 			PreviousGridPower:    previous.GridPower,
@@ -172,7 +189,8 @@ func (t *EnergyTrigger) OnEnergyUpdate(ctx context.Context, siteID int64, status
 			Int64("automation_id", a.ID).
 			Str("automation", a.Name).
 			Int64("energy_site_id", siteID).
-			Str("event", cfg.Event).
+			Str("signal", trig.Signal).
+			Str("operator", trig.Op).
 			Msg("energy trigger fired")
 
 		if evalErr := t.engine.Evaluate(ctx, a.ID, snapshot); evalErr != nil {
@@ -189,62 +207,88 @@ func (t *EnergyTrigger) OnEnergyUpdate(ctx context.Context, siteID int64, status
 	return firstErr
 }
 
-// shouldFireEnergy determines whether an energy state change should fire for the given config.
-func shouldFireEnergy(prev, curr energyState, cfg *EnergyConfig) bool {
-	switch cfg.Event {
-	case "solar_above":
-		return prev.SolarPower <= cfg.Threshold && curr.SolarPower > cfg.Threshold
-	case "solar_below":
-		return prev.SolarPower >= cfg.Threshold && curr.SolarPower < cfg.Threshold
-	case "battery_above":
-		return prev.BatteryLevel <= cfg.Threshold && curr.BatteryLevel > cfg.Threshold
-	case "battery_below":
-		return prev.BatteryLevel >= cfg.Threshold && curr.BatteryLevel < cfg.Threshold
-	case "grid_outage":
-		return prev.GridStatus == "Active" && curr.GridStatus == "Islanded"
-	case "grid_restored":
-		return prev.GridStatus == "Islanded" && curr.GridStatus == "Active"
-	case "storm_mode_activated":
-		return !prev.StormModeActive && curr.StormModeActive
-	case "storm_mode_deactivated":
-		return prev.StormModeActive && !curr.StormModeActive
-	case "exporting_to_grid":
-		return prev.GridPower >= 0 && curr.GridPower < 0
+// shouldFireEnergy determines whether an energy state change should fire for
+// the given typed signal-trigger row. The CTI op vocabulary is enforced by a
+// CHECK constraint on automation_step_trigger_signal (see migration
+// 000142_baseline_typed):
+//
+//	'='  '!='  '<'  '<='  '>'  '>='  'changed'  'crossed_above'  'crossed_below'
+//
+// Threshold-bearing numeric ops use ValueNum; equality ops on the textual
+// 'grid_status' signal use ValueText; equality ops on the boolean
+// 'storm_mode_active' signal use ValueBool. Unknown signals are ignored so
+// that a misconfigured row cannot fire arbitrary numeric crossings.
+func shouldFireEnergy(prev, curr energyState, t *models.AutomationStepTriggerSignal) bool {
+	if t == nil {
+		return false
+	}
+
+	switch t.Signal {
+	case "grid_status":
+		if t.Op == "changed" {
+			return prev.GridStatus != curr.GridStatus
+		}
+		if t.ValueText == nil {
+			return false
+		}
+		v := *t.ValueText
+		switch t.Op {
+		case "=":
+			return prev.GridStatus != v && curr.GridStatus == v
+		case "!=":
+			return prev.GridStatus == v && curr.GridStatus != v
+		default:
+			return false
+		}
+
+	case "storm_mode_active":
+		if t.Op == "changed" {
+			return prev.StormModeActive != curr.StormModeActive
+		}
+		if t.ValueBool == nil {
+			return false
+		}
+		v := *t.ValueBool
+		switch t.Op {
+		case "=":
+			return prev.StormModeActive != v && curr.StormModeActive == v
+		case "!=":
+			return prev.StormModeActive == v && curr.StormModeActive != v
+		default:
+			return false
+		}
+	}
+
+	// Numeric signals: solar_power, battery_level, grid_power.
+	var prevVal, currVal float64
+	switch t.Signal {
+	case "solar_power":
+		prevVal, currVal = prev.SolarPower, curr.SolarPower
+	case "battery_level":
+		prevVal, currVal = prev.BatteryLevel, curr.BatteryLevel
+	case "grid_power":
+		prevVal, currVal = prev.GridPower, curr.GridPower
 	default:
 		return false
 	}
-}
 
-// parseEnergyConfig unmarshals and validates the trigger_config JSON.
-func parseEnergyConfig(raw json.RawMessage) (*EnergyConfig, error) {
-	if len(raw) == 0 {
-		return nil, fmt.Errorf("trigger_config is empty")
+	if t.Op == "changed" {
+		return prevVal != currVal
 	}
-	var cfg EnergyConfig
-	if err := json.Unmarshal(raw, &cfg); err != nil {
-		return nil, fmt.Errorf("unmarshal trigger config: %w", err)
+	if t.ValueNum == nil {
+		return false
 	}
-
-	if cfg.EnergySiteID <= 0 {
-		return nil, fmt.Errorf("energy_site_id must be positive, got %d", cfg.EnergySiteID)
-	}
-
-	switch cfg.Event {
-	case "solar_above", "solar_below":
-		if cfg.Threshold < 0 {
-			return nil, fmt.Errorf("threshold must be non-negative for solar events, got %v", cfg.Threshold)
-		}
-	case "battery_above", "battery_below":
-		if cfg.Threshold < 0 || cfg.Threshold > 100 {
-			return nil, fmt.Errorf("threshold must be 0-100 for battery events, got %v", cfg.Threshold)
-		}
-	case "grid_outage", "grid_restored",
-		"storm_mode_activated", "storm_mode_deactivated",
-		"exporting_to_grid":
-		// No threshold required for state transition events.
+	threshold := *t.ValueNum
+	switch t.Op {
+	case ">", ">=", "crossed_above":
+		return prevVal <= threshold && currVal > threshold
+	case "<", "<=", "crossed_below":
+		return prevVal >= threshold && currVal < threshold
+	case "=":
+		return currVal == threshold && prevVal != threshold
+	case "!=":
+		return prevVal == threshold && currVal != threshold
 	default:
-		return nil, fmt.Errorf("unknown energy event %q", cfg.Event)
+		return false
 	}
-
-	return &cfg, nil
 }
