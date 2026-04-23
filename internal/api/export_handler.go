@@ -323,13 +323,13 @@ func exportDrives(w http.ResponseWriter, r *http.Request, vehicleRepo *database.
 			ed := exportDrive{
 				ID:        d.ID,
 				VehicleID: d.VehicleID,
-				StartDate: d.StartDate.Format("2006-01-02T15:04:05Z"),
-				Distance:  d.Distance,
+				StartDate: d.StartTs.Format("2006-01-02T15:04:05Z"),
+				Distance:  d.DistanceMi,
 				Duration:  d.DurationMin,
-				SpeedMax:  ptrFloat(d.SpeedMax),
+				SpeedMax:  ptrFloat(d.MaxSpeedMph),
 			}
-			if d.EndDate != nil {
-				ed.EndDate = d.EndDate.Format("2006-01-02T15:04:05Z")
+			if !d.EndTs.IsZero() {
+				ed.EndDate = d.EndTs.Format("2006-01-02T15:04:05Z")
 			}
 			allDrives = append(allDrives, ed)
 		}
@@ -390,15 +390,15 @@ func exportCharging(w http.ResponseWriter, r *http.Request, vehicleRepo *databas
 			es := exportSession{
 				ID:           s.ID,
 				VehicleID:    s.VehicleID,
-				StartDate:    s.StartDate.Format("2006-01-02T15:04:05Z"),
-				EnergyAdded:  s.ChargeEnergyAdded,
-				StartBattery: s.StartBatteryLevel,
-				EndBattery:   ptrInt(s.EndBatteryLevel),
-				ChargerPower: ptrFloat(s.ChargerPower),
-				Duration:     s.DurationMin,
+				StartDate:    s.StartTs.Format("2006-01-02T15:04:05Z"),
+				EnergyAdded:  ptrFloat(s.EnergyAddedKwh),
+				StartBattery: ptrInt16(s.StartBatteryPct),
+				EndBattery:   ptrInt16(s.EndBatteryPct),
+				ChargerPower: ptrFloat(s.ChargerPowerKwMax),
+				Duration:     ptrFloat(s.DurationMin),
 			}
-			if s.EndDate != nil {
-				es.EndDate = s.EndDate.Format("2006-01-02T15:04:05Z")
+			if s.EndTs != nil {
+				es.EndDate = s.EndTs.Format("2006-01-02T15:04:05Z")
 			}
 			allSessions = append(allSessions, es)
 		}
@@ -438,9 +438,9 @@ func ptrFloat(p *float64) float64 {
 	return 0
 }
 
-func ptrInt(p *int) int {
+func ptrInt16(p *int16) int {
 	if p != nil {
-		return *p
+		return int(*p)
 	}
 	return 0
 }
