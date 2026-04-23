@@ -57,3 +57,14 @@ func (r *AutomationStepRepo) UpdateOrder(ctx context.Context, automationID int64
 	}
 	return nil
 }
+
+// Delete removes a single step row. The matching CTI child row (condition,
+// action, or delay) is removed automatically by the FK ON DELETE CASCADE
+// declared in the phase-3 schema (ADR-004).
+func (r *AutomationStepRepo) Delete(ctx context.Context, stepID int64) error {
+	const query = `DELETE FROM automation_steps WHERE id=$1`
+	if _, err := r.db.Pool.Exec(ctx, query, stepID); err != nil {
+		return fmt.Errorf("automation-steps-repo-delete: %w", err)
+	}
+	return nil
+}
