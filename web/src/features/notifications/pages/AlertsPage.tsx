@@ -170,7 +170,7 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
 
   const channelMap = useMemo(() => {
     const m: Record<number, string> = {};
-    channels?.forEach(c => { m[c.id] = `${c.name} (${c.type})`; });
+    channels?.forEach(c => { m[c.id] = `${c.name} (${c.kind})`; });
     return m;
   }, [channels]);
 
