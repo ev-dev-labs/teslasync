@@ -55,8 +55,17 @@ export interface NotificationChannelEmail extends NotificationChannelBase {
   use_tls: boolean;
 }
 
+export interface NotificationChannelWebhook extends NotificationChannelBase {
+  kind: 'webhook';
+  url: string;
+  method: 'GET' | 'POST' | 'PUT';
+  headers: Record<string, string>;
+  body_template: string;
+}
+
 export type NotificationChannel =
   | (NotificationChannelDiscord & { kind: 'discord' })
   | (NotificationChannelSlack & { kind: 'slack' })
   | (NotificationChannelTelegram & { kind: 'telegram' })
-  | (NotificationChannelEmail & { kind: 'email' });
+  | (NotificationChannelEmail & { kind: 'email' })
+  | (NotificationChannelWebhook & { kind: 'webhook' });
