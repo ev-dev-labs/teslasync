@@ -24,7 +24,8 @@ spec:
       serviceAccountName: {{ include "teslasync.serviceAccountName" . }}
       containers:
         - name: postgresql
-          image: {{ .Values.postgresql.image | quote }}
+          image: "{{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag }}"
+          imagePullPolicy: {{ .Values.postgresql.image.pullPolicy | default "IfNotPresent" }}
           ports:
             - name: postgres
               containerPort: 5432
@@ -39,6 +40,8 @@ spec:
                 secretKeyRef:
                   name: {{ include "teslasync.fullname" . }}
                   key: DATABASE_PASS
+            - name: PGDATA
+              value: {{ .Values.postgresql.persistence.pgdataPath | quote }}
           livenessProbe:
             exec:
               command:
@@ -65,16 +68,25 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- if .Values.postgresql.persistence.enabled }}
           volumeMounts:
+            {{- if .Values.postgresql.persistence.enabled }}
             - name: postgresql-data
-              mountPath: /var/lib/postgresql/data
-              subPath: pgdata
-          {{- end }}
-      {{- if .Values.postgresql.persistence.enabled }}
+              mountPath: {{ .Values.postgresql.persistence.mountPath | quote }}
+            {{- end }}
+            {{- if .Values.postgresql.initScripts.enabled }}
+            - name: init-scripts
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
+            {{- end }}
       volumes:
+        {{- if .Values.postgresql.persistence.enabled }}
         - name: postgresql-data
           persistentVolumeClaim:
             claimName: {{ include "teslasync.fullname" . }}-postgresql-data
-      {{- end }}
+        {{- end }}
+        {{- if .Values.postgresql.initScripts.enabled }}
+        - name: init-scripts
+          configMap:
+            name: {{ include "teslasync.fullname" . }}-postgres-init
+        {{- end }}
 {{- end }}

@@ -1,0 +1,19 @@
+{{- if and .Values.postgresql.enabled .Values.postgresql.initScripts.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "teslasync.fullname" . }}-postgres-init
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgresql
+data:
+  00-init-timescaledb.sql: |
+    -- Runs once on fresh PGDATA via /docker-entrypoint-initdb.d/
+    -- Idempotent — IF NOT EXISTS guards everything.
+    {{- range .Values.postgresql.initScripts.extensions }}
+    CREATE EXTENSION IF NOT EXISTS {{ . }};
+    {{- end }}
+
+    -- Disable TimescaleDB telemetry (ADR-007)
+    ALTER DATABASE {{ .Values.postgresql.auth.database }} SET timescaledb.telemetry_level = 'off';
+{{- end }}

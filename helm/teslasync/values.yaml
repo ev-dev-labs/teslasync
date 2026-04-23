@@ -621,7 +621,16 @@ postgresql:
   # -- Pool health check interval (detects stale connections)
   healthCheckPeriod: "5s"
 
-  image: postgres:17-alpine
+  # ⚠️  TimescaleDB-HA migration (ADR-007):
+  #   The embedded Postgres image is timescale/timescaledb-ha:pg17, which
+  #   bundles TimescaleDB + pgvector + pg_stat_statements. PGDATA is mounted
+  #   at /home/postgres/pgdata/data (the image default for the HA variant).
+  #   Upgrading from postgres:17-alpine requires deleting the PVC — existing
+  #   data will not be preserved (staging losses accepted per ADR-009).
+  image:
+    repository: timescale/timescaledb-ha
+    tag: pg17
+    pullPolicy: IfNotPresent
 
   auth:
     username: teslasync
@@ -634,18 +643,30 @@ postgresql:
 
   persistence:
     enabled: true
-    size: 10Gi
+    size: 50Gi
     storageClass: ""
     accessModes:
       - ReadWriteOnce
+    # -- PGDATA path inside the container (timescaledb-ha default)
+    pgdataPath: /home/postgres/pgdata/data
+    # -- Mount path for the PGDATA volume (parent of pgdataPath)
+    mountPath: /home/postgres/pgdata
+
+  # Init scripts mounted at /docker-entrypoint-initdb.d/ — run once on empty PGDATA.
+  initScripts:
+    enabled: true
+    extensions:
+      - timescaledb
+      - vector
+      - pg_stat_statements
 
   resources:
     limits:
-      cpu: 1000m
-      memory: 1Gi
+      cpu: 2000m
+      memory: 4Gi
     requests:
-      cpu: 250m
-      memory: 256Mi
+      cpu: 500m
+      memory: 1Gi
 
   # External PostgreSQL — used when postgresql.enabled is false.
   external:
