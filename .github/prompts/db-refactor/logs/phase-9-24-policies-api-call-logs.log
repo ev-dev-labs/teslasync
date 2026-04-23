@@ -1,0 +1,30 @@
+ hypertable_name | num_dimensions | compression_enabled 
+-----------------+----------------+---------------------
+ api_call_logs   |              1 | t
+(1 row)
+
+ dimension_number | column_name | time_interval 
+------------------+-------------+---------------
+                1 | ts          | 7 days
+(1 row)
+
+     proc_name      | schedule_interval |                       config                       
+--------------------+-------------------+----------------------------------------------------
+ policy_compression | 12:00:00          | {"hypertable_id": 15, "compress_after": "30 days"}
+ policy_retention   | 1 day             | {"drop_after": "365 days", "hypertable_id": 15}
+(2 rows)
+
+         indexname         |                                                     indexdef                                                     
+---------------------------+------------------------------------------------------------------------------------------------------------------
+ api_call_logs_pkey        | CREATE UNIQUE INDEX api_call_logs_pkey ON public.api_call_logs USING btree (ts, id)
+ api_call_logs_ts_idx      | CREATE INDEX api_call_logs_ts_idx ON public.api_call_logs USING btree (ts DESC)
+ idx_api_logs_failures     | CREATE INDEX idx_api_logs_failures ON public.api_call_logs USING btree (ts DESC) WHERE (status_code >= 400)
+ idx_api_logs_rate_limited | CREATE INDEX idx_api_logs_rate_limited ON public.api_call_logs USING btree (ts DESC) WHERE (rate_limited = true)
+ idx_api_logs_service_ts   | CREATE INDEX idx_api_logs_service_ts ON public.api_call_logs USING btree (service, ts DESC)
+(5 rows)
+
+ hypertable_name | total_size | total_bytes 
+-----------------+------------+-------------
+ api_call_logs   | 48 kB      |       49152
+(1 row)
+
