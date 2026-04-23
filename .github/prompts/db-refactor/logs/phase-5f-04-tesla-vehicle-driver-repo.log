@@ -1,0 +1,36 @@
+=== SURVEY ===
+Model TeslaVehicleDriver: no RawJSON field
+Model TeslaVehicleInvitation: no RawJSON field
+=== REASONING ===
+Remove raw_json from SELECT, INSERT, Scan, ON CONFLICT across 5 functions
+Renumber placeholders after removal
+=== CHANGES ===
+GetDriversByVehicleID: removed raw_json from SELECT + Scan (8->7 cols)
+ReplaceDriversForVehicle: removed rawJSON var, raw_json col, placeholder, arg (8->7 cols)
+GetInvitationsByVehicleID: removed raw_json from SELECT + Scan (11->10 cols)
+ReplaceInvitationsForVehicle: removed rawJSON var, raw_json col, placeholder, arg (10->9 cols)
+InsertInvitation: removed rawJSON var, raw_json col, placeholder, arg, ON CONFLICT (10->9 cols)
+=== GATE ===
+# github.com/ev-dev-labs/teslasync/internal/database
+internal\database\tesla_charging_history_repo.go:145:16: e.RawJSON undefined (type *models.TeslaChargingHistoryEntry has no field or method RawJSON)
+internal\database\tesla_charging_session_repo.go:151:16: s.RawJSON undefined (type *models.TeslaChargingSession has no field or method RawJSON)
+internal\database\tesla_energy_history_repo.go:52:7: e.RawJSON undefined (type *models.TeslaEnergyHistory has no field or method RawJSON)
+internal\database\tesla_energy_history_repo.go:86:26: e.RawJSON undefined (type *models.TeslaEnergyHistory has no field or method RawJSON)
+internal\database\tesla_energy_history_repo.go:136:27: e.RawJSON undefined (type *models.TeslaEnergyBackupEvent has no field or method RawJSON)
+internal\database\tesla_energy_history_repo.go:162:26: e.RawJSON undefined (type *models.TeslaEnergyBackupEvent has no field or method RawJSON)
+internal\database\tesla_energy_history_repo.go:210:20: e.RawJSON undefined (type *models.TeslaEnergyWCCharging has no field or method RawJSON)
+internal\database\tesla_energy_history_repo.go:236:26: e.RawJSON undefined (type *models.TeslaEnergyWCCharging has no field or method RawJSON)
+internal\database\tesla_energy_live_status_repo.go:35:25: s.RawJSON undefined (type *models.TeslaEnergyLiveStatus has no field or method RawJSON)
+internal\database\tesla_energy_live_status_repo.go:61:6: s.RawJSON undefined (type *models.TeslaEnergyLiveStatus has no field or method RawJSON)
+internal\database\tesla_energy_live_status_repo.go:99:7: s.RawJSON undefined (type *models.TeslaEnergyLiveStatus has no field or method RawJSON)
+internal\database\tesla_energy_site_repo.go:49:7: s.RawJSON undefined (type *models.TeslaEnergySite has no field or method RawJSON)
+internal\database\tesla_energy_site_repo.go:74:16: s.RawJSON undefined (type *models.TeslaEnergySite has no field or method RawJSON)
+internal\database\tesla_fleet_telemetry_error_repo.go:129:87: e.RawJSON undefined (type *models.TeslaFleetTelemetryError has no field or method RawJSON)
+internal\database\tesla_fleet_telemetry_error_repo.go:151:16: e.RawJSON undefined (type *models.TeslaFleetTelemetryError has no field or method RawJSON)
+internal\database\tesla_user_order_repo.go:36:49: o.RawJSON undefined (type *models.TeslaUserOrder has no field or method RawJSON)
+internal\database\tesla_user_order_repo.go:59:16: o.RawJSON undefined (type *models.TeslaUserOrder has no field or method RawJSON)
+internal\database\tesla_user_profile_repo.go:29:56: p.RawJSON undefined (type *models.TeslaUserProfile has no field or method RawJSON)
+internal\database\tesla_user_profile_repo.go:58:45: p.RawJSON undefined (type *models.TeslaUserProfile has no field or method RawJSON)
+ERROR_COUNT=0
+EXIT=0
+STATUS=DONE
