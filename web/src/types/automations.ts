@@ -84,6 +84,13 @@ export interface AutomationStepConditionTimeWindow extends AutomationStepBase {
   timezone: string;
 }
 
+export interface AutomationStepConditionGeofence extends AutomationStepBase {
+  kind: 'condition_geofence';
+  lane: 'condition';
+  geofence_id: number;
+  must_be_inside: boolean;
+}
+
 // Discriminated union — children added by prompts 13-23
 export type AutomationStep =
   | AutomationStepTriggerSignal
@@ -92,6 +99,7 @@ export type AutomationStep =
   | AutomationStepTriggerWebhook
   | AutomationStepConditionSignal
   | AutomationStepConditionTimeWindow
+  | AutomationStepConditionGeofence
   | AutomationStepBase;
 
 export interface AutomationFull extends Automation {
