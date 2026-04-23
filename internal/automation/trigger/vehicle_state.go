@@ -13,7 +13,7 @@ import (
 
 // VehicleStateRepo is the subset of database.AutomationRepo needed by VehicleStateTrigger.
 type VehicleStateRepo interface {
-	GetEnabledByVehicleAndTrigger(ctx context.Context, vehicleID int64, triggerType string) ([]*models.Automation, error)
+	GetEnabledByVehicleAndTrigger(ctx context.Context, vehicleID int64, triggerType string) ([]*models.AutomationFull, error)
 	SetAutoDisabled(ctx context.Context, id int64, reason string) error
 }
 
@@ -91,7 +91,7 @@ func (t *VehicleStateTrigger) OnFSMTransition(ctx context.Context, vehicleID int
 
 	var firstErr error
 	for _, a := range automations {
-		cfg, err := parseVehicleStateConfig(a.TriggerConfig)
+		cfg, err := parseVehicleStateConfig(a.TriggerConfig())
 		if err != nil {
 			t.logger.Warn().Err(err).
 				Int64("automation_id", a.ID).
