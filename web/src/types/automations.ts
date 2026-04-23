@@ -37,3 +37,9 @@ export interface AutomationStepBase {
 
 // Discriminated union — children added by prompts 13-23
 export type AutomationStep = AutomationStepBase;
+
+export interface AutomationFull extends Automation {
+  triggers: AutomationStep[];
+  conditions: AutomationStep[];
+  actions: AutomationStep[];
+}

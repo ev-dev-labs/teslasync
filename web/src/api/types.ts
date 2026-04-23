@@ -1744,3 +1744,12 @@ export type {
   SignalCatalogEntry,
   SignalValueType,
 } from '@/types/signals';
+
+export type {
+  Automation,
+  AutomationFull,
+  AutomationStep,
+  AutomationStepBase,
+  AutomationStepKind,
+  AutomationStepLane,
+} from '@/types/automations';
