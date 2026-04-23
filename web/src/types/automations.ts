@@ -45,8 +45,18 @@ export interface AutomationStepTriggerSignal extends AutomationStepBase {
   threshold_bool: boolean | null;
 }
 
+export interface AutomationStepTriggerGeofence extends AutomationStepBase {
+  kind: 'trigger_geofence';
+  lane: 'trigger';
+  geofence_id: number;
+  direction: 'enter' | 'exit' | 'either';
+}
+
 // Discriminated union — children added by prompts 13-23
-export type AutomationStep = AutomationStepTriggerSignal | AutomationStepBase;
+export type AutomationStep =
+  | AutomationStepTriggerSignal
+  | AutomationStepTriggerGeofence
+  | AutomationStepBase;
 
 export interface AutomationFull extends Automation {
   triggers: AutomationStep[];
