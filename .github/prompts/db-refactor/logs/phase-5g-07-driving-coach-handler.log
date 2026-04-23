@@ -1,0 +1,38 @@
+=== SURVEY ===
+File: internal/api/driving_coach_handler.go
+This file uses raw SQL + local driveAnalysis struct, NOT models.Drive fields.
+No models.Drive field references (StartDate, Distance, SpeedMax, InsideTempAvg, OutsideTempAvg) found.
+
+=== REASONING ===
+The 7 errors mentioned in the prompt description do not manifest in compilation.
+The handler queries the drives table directly via h.db.Pool.Query and scans into
+a local driveAnalysis struct — it never references models.Drive.
+No changes are needed.
+
+=== CHANGES ===
+No changes required — file has zero compile errors.
+
+=== GATE ===
+# github.com/ev-dev-labs/teslasync/internal/automation/action
+internal\automation\action\command.go:153:72: pc.Commands undefined (type *models.PollingConfig has no field or method Commands)
+internal\automation\action\command.go:263:7: v.State undefined (type *models.Vehicle has no field or method State)
+internal\automation\action\command.go:268:72: pc.WakeUp undefined (type *models.PollingConfig has no field or method WakeUp)
+internal\automation\action\command.go:281:18: v.State undefined (type *models.Vehicle has no field or method State)
+internal\automation\action\command.go:316:29: fresh.State undefined (type *models.Vehicle has no field or method State)
+# github.com/ev-dev-labs/teslasync/internal/worker
+internal\worker\worker.go:226:28: w.settingsRepo.GetPollingConfig undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".SettingsRepo has no field or method GetPollingConfig)
+internal\worker\worker.go:338:4: unknown field VehicleID in struct literal of type models.Vehicle
+internal\worker\worker.go:341:4: unknown field State in struct literal of type models.Vehicle
+internal\worker\worker.go:342:4: unknown field Healthy in struct literal of type models.Vehicle
+internal\worker\worker.go:435:31: w.pollingConfig.EnabledVehicleDataEndpoints undefined (type *models.PollingConfig has no field or method EnabledVehicleDataEndpoints)
+internal\worker\worker.go:440:27: w.vehicleRepo.UpdateState undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".VehicleRepo has no field or method UpdateState)
+internal\worker\worker.go:479:27: w.vehicleRepo.UpdateState undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".VehicleRepo has no field or method UpdateState)
+internal\worker\worker.go:479:64: vehicle.State undefined (type *models.Vehicle has no field or method State)
+internal\worker\worker.go:492:26: w.vehicleRepo.UpdateState undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".VehicleRepo has no field or method UpdateState)
+internal\worker\worker.go:498:22: w.posRepo.Insert undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".PositionRepo has no field or method Insert)
+internal\worker\worker.go:498:22: too many errors
+
+FILE_ERROR_COUNT=0
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
