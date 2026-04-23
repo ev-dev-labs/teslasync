@@ -1,3 +1,11 @@
+# ⚠️  TimescaleDB-HA migration (ADR-007):
+#   This compose file was migrated to timescale/timescaledb-ha:pg17.
+#   If upgrading from a postgres:17-alpine deployment, you MUST wipe the volume:
+#       docker compose down
+#       docker volume rm teslasync_postgres_data
+#       docker compose up -d
+#   Existing data is replaced; staging losses accepted per ADR-009.
+
 services:
   teslasync-api:
     build:
@@ -124,7 +132,14 @@ services:
           memory: 32M
 
   postgres:
-    image: postgres:17-alpine
+    # ⚠️  TimescaleDB-HA migration (ADR-007):
+    #   Migrated from postgres:17-alpine to timescale/timescaledb-ha:pg17.
+    #   If upgrading an existing deployment, you MUST wipe the volume:
+    #       docker compose down
+    #       docker volume rm teslasync_postgres_data
+    #       docker compose up -d
+    #   Existing data is replaced; staging losses accepted per ADR-009.
+    image: timescale/timescaledb-ha:pg17
     container_name: teslasync-postgres
     restart: unless-stopped
     ports:
@@ -133,8 +148,10 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-teslasync}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-teslasync}
       - POSTGRES_DB=${POSTGRES_DB:-teslasync}
+      - PGDATA=/home/postgres/pgdata/data
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/home/postgres/pgdata
+      - ./scripts/init-timescaledb.sql:/docker-entrypoint-initdb.d/00-init-timescaledb.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-teslasync}"]
       interval: 10s
