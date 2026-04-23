@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -56,4 +57,42 @@ func (r *SignalObservationRepo) BulkInsert(ctx context.Context, obs []models.Sig
 		return fmt.Errorf("signal-observations-repo-bulk-insert: %w", err)
 	}
 	return nil
+}
+
+// ListByVehicle returns signal observations for a vehicle within the inclusive
+// time window [from, to], ordered by ts ASC and capped by limit.
+func (r *SignalObservationRepo) ListByVehicle(ctx context.Context, vehicleID int64, from, to time.Time, limit int) ([]models.SignalObservation, error) {
+	const query = `
+		SELECT vehicle_id, ts, signal_name, value_numeric, value_text, value_bool, source
+		FROM signal_observations
+		WHERE vehicle_id = $1 AND ts BETWEEN $2 AND $3
+		ORDER BY ts ASC
+		LIMIT $4`
+
+	rows, err := r.db.Pool.Query(ctx, query, vehicleID, from, to, limit)
+	if err != nil {
+		return nil, fmt.Errorf("signal-observations-repo-list-by-vehicle: %w", err)
+	}
+	defer rows.Close()
+
+	out := make([]models.SignalObservation, 0)
+	for rows.Next() {
+		var o models.SignalObservation
+		if err := rows.Scan(
+			&o.VehicleID,
+			&o.Ts,
+			&o.SignalName,
+			&o.ValueNumeric,
+			&o.ValueText,
+			&o.ValueBool,
+			&o.Source,
+		); err != nil {
+			return nil, fmt.Errorf("signal-observations-repo-list-by-vehicle-scan: %w", err)
+		}
+		out = append(out, o)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("signal-observations-repo-list-by-vehicle-rows: %w", err)
+	}
+	return out, nil
 }
