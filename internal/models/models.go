@@ -579,20 +579,7 @@ type VisitedLocation struct {
 	CreatedAt        time.Time  `json:"created_at" db:"created_at"`
 }
 
-// Trip represents a multi-drive journey.
-type Trip struct {
-	ID              int64      `json:"id" db:"id"`
-	VehicleID       int64      `json:"vehicle_id" db:"vehicle_id"`
-	Name            *string    `json:"name,omitempty" db:"name"`
-	StartDate       time.Time  `json:"start_date" db:"start_date"`
-	EndDate         *time.Time `json:"end_date,omitempty" db:"end_date"`
-	TotalDistanceKm float64    `json:"total_distance_km" db:"total_distance_km"`
-	TotalEnergyKWh  float64    `json:"total_energy_kwh" db:"total_energy_kwh"`
-	TotalCost       float64    `json:"total_cost" db:"total_cost"`
-	DriveCount      int        `json:"drive_count" db:"drive_count"`
-	ChargeCount     int        `json:"charge_count" db:"charge_count"`
-	CreatedAt       time.Time  `json:"created_at" db:"created_at"`
-}
+// Trip is defined in trip.go (regenerated to match post-migration schema).
 
 // VehicleStateRecord represents a vehicle state change record from the DB.
 type VehicleStateRecord struct {
