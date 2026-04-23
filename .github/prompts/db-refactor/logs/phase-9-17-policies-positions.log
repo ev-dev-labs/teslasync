@@ -1,0 +1,28 @@
+ hypertable_name | num_dimensions | compression_enabled 
+-----------------+----------------+---------------------
+ positions       |              1 | t
+(1 row)
+
+ dimension_number | column_name | time_interval 
+------------------+-------------+---------------
+                1 | ts          | 1 day
+(1 row)
+
+     proc_name      | schedule_interval |                      config                      
+--------------------+-------------------+--------------------------------------------------
+ policy_compression | 12:00:00          | {"hypertable_id": 1, "compress_after": "7 days"}
+ policy_retention   | 1 day             | {"drop_after": "365 days", "hypertable_id": 1}
+(2 rows)
+
+        indexname         |                                          indexdef                                           
+--------------------------+---------------------------------------------------------------------------------------------
+ idx_positions_vehicle_ts | CREATE INDEX idx_positions_vehicle_ts ON public.positions USING btree (vehicle_id, ts DESC)
+ positions_pkey           | CREATE UNIQUE INDEX positions_pkey ON public.positions USING btree (vehicle_id, ts)
+ positions_ts_idx         | CREATE INDEX positions_ts_idx ON public.positions USING btree (ts DESC)
+(3 rows)
+
+ hypertable_name | total_size | total_bytes 
+-----------------+------------+-------------
+ positions       | 32 kB      |       32768
+(1 row)
+
