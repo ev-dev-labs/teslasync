@@ -1145,7 +1145,47 @@ func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded
 		Int("cold_atomics", len(buckets.Cold)).
 		Msg("bucket step complete")
 
-	_ = buckets
+	hotRows := map[string]map[string]any{}
+	for table, items := range buckets.HotByTable {
+		hotRows[table] = h.buildHotRow(table, items, &buckets.Cold)
+	}
+	log.Debug().
+		Int("hot_rows", len(hotRows)).
+		Int("cold_atomics_after_transform", len(buckets.Cold)).
+		Msg("hot row build step complete")
+
+	_ = hotRows
+}
+
+// buildHotRow folds a slice of atomics that all target the same table into one
+// column->value map, applying each route's Transformer where present. A
+// transform error does NOT abort the row — the offending atomic is appended to
+// demoteCold so the data still lands losslessly in signal_observations.
+func (h *TelemetryHandler) buildHotRow(table string, atomics []telemetry.Atomic, demoteCold *[]telemetry.Atomic) map[string]any {
+	row := map[string]any{}
+	for _, a := range atomics {
+		hot := telemetry.LookupHot(a.Name)
+		if hot == nil || hot.Column == "" {
+			*demoteCold = append(*demoteCold, a)
+			continue
+		}
+		v := a.Value
+		if hot.Transformer != nil {
+			tv, err := hot.Transformer(v)
+			if err != nil {
+				log.Warn().
+					Err(err).
+					Str("signal", a.Name).
+					Str("table", table).
+					Msg("transform failed; demoting to cold")
+				*demoteCold = append(*demoteCold, a)
+				continue
+			}
+			v = tv
+		}
+		row[hot.Column] = v
+	}
+	return row
 }
 
 // bucketResult partitions a flattened atomic stream into per-hot-table queues
