@@ -635,38 +635,7 @@ type ExportJobRequest struct {
 
 // ClimateSnapshot moved to climate.go (regenerated for post-migration schema).
 
-// SecurityEvent represents a point-in-time security/access telemetry reading.
-type SecurityEvent struct {
-	ID             int64     `json:"id" db:"id"`
-	VehicleID      int64     `json:"vehicle_id" db:"vehicle_id"`
-	Locked         *bool     `json:"locked,omitempty" db:"locked"`
-	SentryMode     *bool     `json:"sentry_mode,omitempty" db:"sentry_mode"`
-	DoorState      *string   `json:"door_state,omitempty" db:"door_state"`
-	FdWindow       *string   `json:"fd_window,omitempty" db:"fd_window"`
-	FpWindow       *string   `json:"fp_window,omitempty" db:"fp_window"`
-	RdWindow       *string   `json:"rd_window,omitempty" db:"rd_window"`
-	RpWindow       *string   `json:"rp_window,omitempty" db:"rp_window"`
-	HomelinkNearby *bool     `json:"homelink_nearby,omitempty" db:"homelink_nearby"`
-	GuestMode      *bool     `json:"guest_mode,omitempty" db:"guest_mode"`
-	HomelinkDeviceCount *int `json:"homelink_device_count,omitempty" db:"homelink_device_count"`
-	GuestModeMobileAccessState *string `json:"guest_mode_mobile_access_state,omitempty" db:"guest_mode_mobile_access_state"`
-	DriverSeatOccupied  *bool    `json:"driver_seat_occupied,omitempty" db:"driver_seat_occupied"`
-	CenterDisplay       *string  `json:"center_display,omitempty" db:"center_display"`
-	SpeedLimitMode      *string  `json:"speed_limit_mode,omitempty" db:"speed_limit_mode"`
-	ValetModeEnabled    *bool    `json:"valet_mode_enabled,omitempty" db:"valet_mode_enabled"`
-	ServiceMode         *bool    `json:"service_mode,omitempty" db:"service_mode"`
-	CurrentLimitMph     *float64 `json:"current_limit_mph,omitempty" db:"current_limit_mph"`
-	PairedPhoneKeyCount *int     `json:"paired_phone_key_count,omitempty" db:"paired_phone_key_count"`
-	LightsHazardsActive *bool    `json:"lights_hazards_active,omitempty" db:"lights_hazards_active"`
-	LightsHighBeams     *bool    `json:"lights_high_beams,omitempty" db:"lights_high_beams"`
-	LightsTurnSignal    *string  `json:"lights_turn_signal,omitempty" db:"lights_turn_signal"`
-	TonneauPosition     *string  `json:"tonneau_position,omitempty" db:"tonneau_position"`
-	TonneauOpenPercent  *float64 `json:"tonneau_open_percent,omitempty" db:"tonneau_open_percent"`
-	TonneauTentMode     *string  `json:"tonneau_tent_mode,omitempty" db:"tonneau_tent_mode"`
-	DriverSeatBelt      *bool    `json:"driver_seat_belt,omitempty" db:"driver_seat_belt"`
-	PassengerSeatBelt   *bool    `json:"passenger_seat_belt,omitempty" db:"passenger_seat_belt"`
-	CreatedAt      time.Time `json:"created_at" db:"created_at"`
-}
+// SecurityEvent moved to security.go (regenerated for post-migration schema).
 
 // ChargingTelemetry represents a point-in-time charging telemetry reading.
 type ChargingTelemetry struct {
