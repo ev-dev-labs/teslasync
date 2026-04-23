@@ -1,0 +1,28 @@
+ hypertable_name | num_dimensions | compression_enabled 
+-----------------+----------------+---------------------
+ motor_snapshots |              1 | t
+(1 row)
+
+ dimension_number | column_name | time_interval 
+------------------+-------------+---------------
+                1 | ts          | 1 day
+(1 row)
+
+     proc_name      | schedule_interval |                      config                      
+--------------------+-------------------+--------------------------------------------------
+ policy_compression | 12:00:00          | {"hypertable_id": 7, "compress_after": "7 days"}
+ policy_retention   | 1 day             | {"drop_after": "90 days", "hypertable_id": 7}
+(2 rows)
+
+       indexname        |                                            indexdef                                             
+------------------------+-------------------------------------------------------------------------------------------------
+ idx_motor_vehicle_ts   | CREATE INDEX idx_motor_vehicle_ts ON public.motor_snapshots USING btree (vehicle_id, ts DESC)
+ motor_snapshots_pkey   | CREATE UNIQUE INDEX motor_snapshots_pkey ON public.motor_snapshots USING btree (vehicle_id, ts)
+ motor_snapshots_ts_idx | CREATE INDEX motor_snapshots_ts_idx ON public.motor_snapshots USING btree (ts DESC)
+(3 rows)
+
+ hypertable_name | total_size | total_bytes 
+-----------------+------------+-------------
+ motor_snapshots | 32 kB      |       32768
+(1 row)
+
