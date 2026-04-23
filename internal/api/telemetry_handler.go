@@ -21,6 +21,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
+	"github.com/ev-dev-labs/teslasync/internal/telemetry"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 )
@@ -854,10 +855,21 @@ func (h *TelemetryHandler) TelemetryIngest(w http.ResponseWriter, r *http.Reques
 		Int("signals", len(payload.Signals)).
 		Msg("telemetry data received via HTTP")
 
-	// Build a signal map for easy lookup
-	signals := make(map[string]interface{}, len(payload.Signals))
+	// Build the signal map for downstream consumers. We first walk
+	// payload.Signals in Tesla emission order, normalize that ordered
+	// batch via telemetry.NormalizeFleetUnits, then merge into a map
+	// for the legacy map-based ProcessSignals pipeline. ProcessSignals
+	// will run normalization again as a safety net for the MQTT path,
+	// which is idempotent for these per-signal transforms.
+	ordered := make([]telemetry.NamedValue, 0, len(payload.Signals))
 	for _, sig := range payload.Signals {
-		signals[sig.Name] = sig.Value
+		ordered = append(ordered, telemetry.NamedValue{Name: sig.Name, Value: sig.Value})
+	}
+	ordered = telemetry.NormalizeFleetUnits(ordered)
+
+	signals := make(map[string]interface{}, len(ordered)+len(payload.Data))
+	for _, nv := range ordered {
+		signals[nv.Name] = nv.Value
 	}
 
 	// Also merge payload.Data (Fleet Telemetry server may use either format)
@@ -1088,248 +1100,18 @@ func (h *TelemetryHandler) TelemetryStatus(w http.ResponseWriter, r *http.Reques
 	})
 }
 
-// normalizeFleetSignals normalizes Tesla Fleet Telemetry signal formats.
-// Raw values are stored AS-IS (no unit conversion) ╬ô├ç├╢ conversion happens at display time.
-// Only format normalization is done here (e.g., Gear enum ╬ô├Ñ├å single letter).
+// normalizeFleetSignals adapts the slice-based telemetry.NormalizeFleetUnits
+// helper to the legacy map-based ProcessSignals path.
+//
+// ProcessSignals (and the FSM/SignalStore consumers downstream) still use
+// map[string]interface{}, so we round-trip through the ordered slice API
+// for the duration of the normalization step. New code paths should call
+// telemetry.NormalizeFleetUnits directly with an ordered batch decoded
+// from Tesla emission order.
 func normalizeFleetUnits(signals map[string]interface{}) {
-	// Gear: normalize Tesla enum to single-letter D/R/P/N
-	if g, ok := signals["Gear"]; ok {
-		if parsed := enums.ParseGear(toString(g)); parsed != "" {
-			signals["Gear"] = parsed
-		}
-	}
-
-	// Safety enums: strip Tesla prefixes (e.g., "ForwardCollisionSensitivityEarly" → "Early")
-	if v, ok := signals["ForwardCollisionWarning"]; ok {
-		signals["ForwardCollisionWarning"] = enums.ParseForwardCollisionWarning(toString(v))
-	}
-	if v, ok := signals["LaneDepartureAvoidance"]; ok {
-		signals["LaneDepartureAvoidance"] = enums.ParseLaneDepartureAvoidance(toString(v))
-	}
-	if v, ok := signals["SpeedLimitWarning"]; ok {
-		signals["SpeedLimitWarning"] = enums.ParseSpeedLimitWarning(toString(v))
-	}
-	if v, ok := signals["CruiseFollowDistance"]; ok {
-		signals["CruiseFollowDistance"] = enums.ParseCruiseFollowDistance(toString(v))
-	}
-
-	// SentryMode: strip "SentryModeState" prefix (e.g., "SentryModeStateArmed" → "Armed")
-	if v, ok := signals["SentryMode"]; ok {
-		signals["SentryMode"] = enums.ParseSentryMode(toString(v))
-	}
-
-	// CenterDisplay: strip "DisplayState" prefix (e.g., "DisplayStateOff" → "Off")
-	if v, ok := signals["CenterDisplay"]; ok {
-		signals["CenterDisplay"] = enums.ParseCenterDisplay(toString(v))
-	}
-
-	// BMSState: strip "BMSState" prefix (e.g., "BMSStateStandby" → "Standby")
-	if v, ok := signals["BMSState"]; ok {
-		signals["BMSState"] = enums.ParseBMSState(toString(v))
-	}
-
-	// ChargePort: strip "ChargePort" prefix (e.g., "ChargePortOpen" → "Open")
-	if v, ok := signals["ChargePort"]; ok {
-		signals["ChargePort"] = enums.ParseChargePort(toString(v))
-	}
-
-	// ChargePortLatch: strip "ChargePortLatch" prefix (e.g., "ChargePortLatchEngaged" → "Engaged")
-	if v, ok := signals["ChargePortLatch"]; ok {
-		signals["ChargePortLatch"] = enums.ParseChargePortLatch(toString(v))
-	}
-
-	// ChargeState: strip "ChargeState" prefix (e.g., "ChargeStateCharging" → "Charging")
-	if v, ok := signals["ChargeState"]; ok {
-		signals["ChargeState"] = enums.ParseChargeState(toString(v))
-	}
-
-	// DetailedChargeState: strip "DetailedChargeState" prefix (e.g., "DetailedChargeStateCharging" → "Charging")
-	if v, ok := signals["DetailedChargeState"]; ok {
-		signals["DetailedChargeState"] = enums.ParseDetailedChargeState(toString(v))
-	}
-
-	// ScheduledChargingMode: strip "ScheduledChargingMode" prefix (e.g., "ScheduledChargingModeOff" → "Off")
-	if v, ok := signals["ScheduledChargingMode"]; ok {
-		signals["ScheduledChargingMode"] = enums.ParseScheduledChargingMode(toString(v))
-	}
-
-	// CabinOverheatProtectionMode: strip prefix (e.g., "CabinOverheatProtectionModeStateOn" → "On")
-	if v, ok := signals["CabinOverheatProtectionMode"]; ok {
-		signals["CabinOverheatProtectionMode"] = enums.ParseCabinOverheatMode(toString(v))
-	}
-
-	// ClimateKeeperMode: strip prefix (e.g., "ClimateKeeperModeStateDog" → "Dog Mode")
-	if v, ok := signals["ClimateKeeperMode"]; ok {
-		signals["ClimateKeeperMode"] = enums.ParseClimateKeeperMode(toString(v))
-	}
-
-	// LightsTurnSignal: strip "TurnSignalState"/"TurnSignal" prefix (e.g., "TurnSignalStateOff" → "Off")
-	if v, ok := signals["LightsTurnSignal"]; ok {
-		signals["LightsTurnSignal"] = enums.ParseTurnSignal(toString(v))
-	}
-
-	// TonneauPosition: strip "TonneauPositionState" prefix (e.g., "TonneauPositionStateClosed" → "Closed")
-	if v, ok := signals["TonneauPosition"]; ok {
-		signals["TonneauPosition"] = enums.ParseTonneauPosition(toString(v))
-	}
-
-	// TonneauTentMode: strip "TonneauTentMode" prefix (e.g., "TonneauTentModeActive" → "Active")
-	if v, ok := signals["TonneauTentMode"]; ok {
-		signals["TonneauTentMode"] = enums.ParseTonneauTentMode(toString(v))
-	}
-
-	// DefrostMode: strip "DefrostModeState" prefix (e.g., "DefrostModeStateNormal" → "Normal")
-	if v, ok := signals["DefrostMode"]; ok {
-		signals["DefrostMode"] = enums.ParseDefrostMode(toString(v))
-	}
-
-	// HvacAutoMode: strip "HvacAutoModeState" prefix (e.g., "HvacAutoModeStateOn" → "On")
-	if v, ok := signals["HvacAutoMode"]; ok {
-		signals["HvacAutoMode"] = enums.ParseHvacAutoMode(toString(v))
-	}
-
-	// Window states: strip "WindowState" prefix (e.g., "WindowStateClosed" → "Closed")
-	for _, wn := range []string{"FdWindow", "FpWindow", "RdWindow", "RpWindow"} {
-		if v, ok := signals[wn]; ok {
-			signals[wn] = enums.ParseWindowState(toString(v))
-		}
-	}
-
-	// Powershare enums: strip Tesla prefixes
-	if v, ok := signals["PowershareStatus"]; ok {
-		signals["PowershareStatus"] = enums.ParsePowershareStatus(toString(v))
-	}
-	if v, ok := signals["PowershareStopReason"]; ok {
-		signals["PowershareStopReason"] = enums.ParsePowershareStopReason(toString(v))
-	}
-	if v, ok := signals["PowershareType"]; ok {
-		signals["PowershareType"] = enums.ParsePowershareType(toString(v))
-	}
-
-	// TypeDoors compounds: flatten {DriverFront, PassengerFront, ...} maps → JSON strings.
-	// Tesla sends these as nested JSON objects; downstream consumers (signal_history,
-	// vehicle_live_state, security_events) expect scalar string values.
-	for name, info := range enums.SignalRegistry {
-		if info.Type != enums.TypeDoors {
-			continue
-		}
-		raw, ok := signals[name]
-		if !ok || raw == nil {
-			continue
-		}
-		if _, isStr := raw.(string); isStr {
-			continue // already a string — leave unchanged
-		}
-		m, isMap := raw.(map[string]interface{})
-		if !isMap {
-			continue
-		}
-		// Unwrap {"value": {...}} envelopes first
-		if inner, has := m["value"]; has {
-			if innerMap, ok := inner.(map[string]interface{}); ok {
-				m = innerMap
-			} else if s, ok := inner.(string); ok {
-				signals[name] = s
-				continue
-			}
-		}
-		if jsonBytes, err := json.Marshal(m); err == nil {
-			signals[name] = string(jsonBytes)
-		}
-	}
-
-	// TypeTime compounds: flatten {hour, minute, second} maps → "HH:MM:SS" strings.
-	// Tesla sends these as nested JSON objects; downstream consumers (signal_history,
-	// vehicle_live_state, charging_telemetry) expect scalar values.
-	for name, info := range enums.SignalRegistry {
-		if info.Type != enums.TypeTime {
-			continue
-		}
-		raw, ok := signals[name]
-		if !ok || raw == nil {
-			continue
-		}
-		// Already a string — leave unchanged
-		if _, isStr := raw.(string); isStr {
-			continue
-		}
-		m, isMap := raw.(map[string]interface{})
-		if !isMap {
-			continue
-		}
-		// Unwrap {"value": {...}} envelopes first
-		if inner, has := m["value"]; has {
-			if innerMap, ok := inner.(map[string]interface{}); ok {
-				m = innerMap
-			} else if s, ok := inner.(string); ok {
-				signals[name] = s
-				continue
-			}
-		}
-		// Extract hour/minute/second with validation
-		hour, hOk := extractTimeField(m, "hour")
-		minute, mOk := extractTimeField(m, "minute")
-		if !hOk || !mOk {
-			continue // malformed — leave unchanged rather than corrupt to 00:00:00
-		}
-		second, _ := extractTimeField(m, "second") // optional, defaults to 0
-		if hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59 {
-			continue // out of range — skip
-		}
-		signals[name] = fmt.Sprintf("%02d:%02d:%02d", hour, minute, second)
-	}
-
-	// TypeTireLocation compounds: flatten {FrontLeft, FrontRight, RearLeft, RearRight} maps → JSON strings.
-	// Tesla sends these as nested JSON objects; downstream consumers (signal_history,
-	// vehicle_live_state, tire_pressure_snapshots) expect scalar string values.
-	for name, info := range enums.SignalRegistry {
-		if info.Type != enums.TypeTireLocation {
-			continue
-		}
-		raw, ok := signals[name]
-		if !ok || raw == nil {
-			continue
-		}
-		if _, isStr := raw.(string); isStr {
-			continue // already a string — leave unchanged
-		}
-		m, isMap := raw.(map[string]interface{})
-		if !isMap {
-			continue
-		}
-		// Unwrap {"value": {...}} envelopes first
-		if inner, has := m["value"]; has {
-			if innerMap, ok := inner.(map[string]interface{}); ok {
-				m = innerMap
-			} else if s, ok := inner.(string); ok {
-				signals[name] = s
-				continue
-			}
-		}
-		if jsonBytes, err := json.Marshal(m); err == nil {
-			signals[name] = string(jsonBytes)
-		}
-	}
-}
-
-// extractTimeField extracts an integer time component from a compound time map.
-func extractTimeField(m map[string]interface{}, key string) (int, bool) {
-	v, ok := m[key]
-	if !ok {
-		return 0, false
-	}
-	switch val := v.(type) {
-	case float64:
-		return int(val), true
-	case int:
-		return val, true
-	case int64:
-		return int(val), true
-	case json.Number:
-		f, err := val.Float64()
-		return int(f), err == nil
-	}
-	return 0, false
+	nvs := telemetry.FromMap(signals)
+	nvs = telemetry.NormalizeFleetUnits(nvs)
+	telemetry.WriteIntoMap(nvs, signals)
 }
 
 func toFloat(v interface{}) float64 {

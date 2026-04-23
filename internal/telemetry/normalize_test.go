@@ -1,4 +1,4 @@
-package api
+package telemetry
 
 import (
 	"encoding/json"
@@ -80,13 +80,10 @@ func TestNormalizeFleetUnits_TypeTime(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			signals := map[string]interface{}{
-				tt.signal: tt.input,
-			}
-			normalizeFleetUnits(signals)
+			nvs := []NamedValue{{Name: tt.signal, Value: tt.input}}
+			out := NormalizeFleetUnits(nvs)
 
-			got := signals[tt.signal]
-			// Compare string results
+			got := out[0].Value
 			if gotStr, ok := got.(string); ok {
 				if expStr, ok := tt.expected.(string); ok {
 					if gotStr != expStr {
@@ -95,9 +92,7 @@ func TestNormalizeFleetUnits_TypeTime(t *testing.T) {
 					return
 				}
 			}
-			// If not changed, the value should be the same type as input
 			if !tt.changed {
-				// Just verify the value wasn't changed to a string
 				if _, isStr := got.(string); isStr {
 					t.Errorf("expected unchanged map, got string %q", got)
 				}
@@ -110,7 +105,7 @@ func TestNormalizeFleetUnits_TypeDoors(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   interface{}
-		wantStr bool // true if result should be a JSON string
+		wantStr bool
 	}{
 		{
 			name:    "compound map → JSON string",
@@ -141,10 +136,10 @@ func TestNormalizeFleetUnits_TypeDoors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			signals := map[string]interface{}{"DoorState": tt.input}
-			normalizeFleetUnits(signals)
+			nvs := []NamedValue{{Name: "DoorState", Value: tt.input}}
+			out := NormalizeFleetUnits(nvs)
 
-			got := signals["DoorState"]
+			got := out[0].Value
 			gotStr, isStr := got.(string)
 			if !isStr && tt.wantStr {
 				t.Fatalf("expected string result, got %T: %v", got, got)
@@ -153,11 +148,9 @@ func TestNormalizeFleetUnits_TypeDoors(t *testing.T) {
 				return
 			}
 
-			// If the original was a compound map, verify the result is valid JSON
 			if _, wasMap := tt.input.(map[string]interface{}); wasMap {
 				var parsed map[string]interface{}
 				if err := json.Unmarshal([]byte(gotStr), &parsed); err != nil {
-					// It could be a passthrough string like "ClosedAll"
 					if gotStr != "ClosedAll" {
 						t.Errorf("result is not valid JSON: %q, err: %v", gotStr, err)
 					}
@@ -193,5 +186,27 @@ func TestExtractTimeField(t *testing.T) {
 				t.Errorf("extractTimeField = %d, want %d", got, tt.want)
 			}
 		})
+	}
+}
+
+// TestNormalizeFleetUnits_PreservesOrder confirms that NormalizeFleetUnits
+// returns values in the order they were emitted, which the FSM relies on
+// to compute deterministic prior→new state diffs within a single batch.
+func TestNormalizeFleetUnits_PreservesOrder(t *testing.T) {
+	in := []NamedValue{
+		{Name: "Gear", Value: "ShiftStateD"},
+		{Name: "VehicleSpeed", Value: 35.0},
+		{Name: "ChargeState", Value: "ChargeStateCharging"},
+		{Name: "Odometer", Value: 12345.6},
+	}
+	out := NormalizeFleetUnits(in)
+	if len(out) != len(in) {
+		t.Fatalf("length changed: got %d want %d", len(out), len(in))
+	}
+	wantNames := []string{"Gear", "VehicleSpeed", "ChargeState", "Odometer"}
+	for i, want := range wantNames {
+		if out[i].Name != want {
+			t.Errorf("position %d: got name %q want %q", i, out[i].Name, want)
+		}
 	}
 }
