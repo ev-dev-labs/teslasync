@@ -35,8 +35,18 @@ export interface AutomationStepBase {
   created_at: string;
 }
 
+export interface AutomationStepTriggerSignal extends AutomationStepBase {
+  kind: 'trigger_signal';
+  lane: 'trigger';
+  signal_name: string;
+  operator: '>' | '<' | '>=' | '<=' | '==' | '!=' | 'changed';
+  threshold_numeric: number | null;
+  threshold_text: string | null;
+  threshold_bool: boolean | null;
+}
+
 // Discriminated union — children added by prompts 13-23
-export type AutomationStep = AutomationStepBase;
+export type AutomationStep = AutomationStepTriggerSignal | AutomationStepBase;
 
 export interface AutomationFull extends Automation {
   triggers: AutomationStep[];
