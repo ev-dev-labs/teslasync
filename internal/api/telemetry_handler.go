@@ -1122,6 +1122,17 @@ func (h *TelemetryHandler) TelemetryStatus(w http.ResponseWriter, r *http.Reques
 // prompts. Today it covers stages 1-2 (normalize + flatten); subsequent
 // prompts add hot-route bucketing and per-table writers.
 func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded []telemetry.NamedValue) {
+	// Resolve vehicle by VIN up-front so downstream stages (FSM hooks, hot/cold
+	// writers) all share the same identity columns. A missing vehicle is fatal
+	// for this batch — without an FK we cannot persist anything.
+	veh, err := h.vehicleRepo.GetByVIN(ctx, vin)
+	if err != nil || veh == nil {
+		log.Warn().Err(err).Str("vin", vin).Msg("ProcessBatch: vehicle not found; dropping batch")
+		return
+	}
+	vehicleID := veh.ID
+	ts := time.Now().UTC()
+
 	normalized := telemetry.NormalizeFleetUnits(decoded)
 
 	atomics := make([]telemetry.Atomic, 0, len(normalized)*2)
@@ -1184,21 +1195,50 @@ func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded
 		Int("cold_atomics_after_transform", len(buckets.Cold)).
 		Msg("hot row build step complete")
 
-	coldObs := h.buildColdObservations(0, time.Time{}, buckets.Cold)
+	coldObs := h.buildColdObservations(vehicleID, ts, buckets.Cold)
 	log.Debug().
 		Int("cold_observations", len(coldObs)).
 		Msg("cold observation build step complete")
+
+	// FSM hooks — fire AFTER the bucket/transform step but BEFORE write fan-out
+	// so connection-state, drive, charge, and automation rule FSMs see every
+	// batch in arrival order. Order with writes matters (prompt 27): if writes
+	// were to fail, the FSM has already observed the transition and follow-up
+	// batches will keep its state coherent.
+	//
+	// 1. Connection FSM: per-vehicle health/staleness tracker. Lookup is guarded
+	//    by connFSMMu; the map is initialized in NewTelemetryHandler (e516fef
+	//    nil-map regression guard).
+	if vehicleID > 0 {
+		h.connFSMMu.Lock()
+		cfsm, ok := h.connFSMs[vehicleID]
+		if !ok {
+			cfsm = telemetryfsm.New(vehicleID, vin,
+				telemetryfsm.WithTransitionRepo(database.NewFSMTransitionRepo(h.db)),
+				telemetryfsm.WithMQTTClient(h.mqttClient),
+				telemetryfsm.WithEventBus(h.eventBus),
+			)
+			h.connFSMs[vehicleID] = cfsm
+		}
+		h.connFSMMu.Unlock()
+		cfsm.RecordBatch(len(atomics), "fleet_telemetry")
+	}
+
+	// 2. Vehicle/drive/charge FSM: feed it the same atomic stream the buckets
+	//    were built from, adapted to the legacy map shape its trackStateTransition
+	//    / commitStateTransition logic still expects. FSM internals are unchanged.
+	if vehicleID > 0 && h.fsmHandler != nil {
+		fsmSignals := make(map[string]interface{}, len(atomics))
+		for _, a := range atomics {
+			fsmSignals[a.Name] = a.Value
+		}
+		h.fsmHandler.ProcessSignals(ctx, vehicleID, fsmSignals)
+	}
 
 	// Fan-out: dispatch each populated hot row to its per-table repo, then the
 	// cold residue to signal_observations. Errors are aggregated (not returned)
 	// so a slow/failing table does not lose writes destined for sibling tables;
 	// terminal handling of writeErrs is layered in the next prompt (28).
-	//
-	// vehicleID/ts identity columns are placeholders here (mirrors the cold
-	// build call above) — wired to the resolved vehicle and batch timestamp by
-	// prompt 27 (FSM hooks).
-	var vehicleID int64
-	var ts time.Time
 	type writeErr struct {
 		table string
 		err   error
