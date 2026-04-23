@@ -18,15 +18,7 @@ type APIKey struct {
 	ExpiresAt   *time.Time `json:"expires_at" db:"expires_at"`
 }
 
-// AuditLog represents a record of a mutation action for auditing.
-type AuditLog struct {
-	ID        int64     `json:"id" db:"id"`
-	Action    string    `json:"action" db:"action"`
-	Resource  string    `json:"resource" db:"resource"`
-	Details   string    `json:"details" db:"details"`
-	IP        string    `json:"ip" db:"ip"`
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
-}
+// AuditLog has moved to system.go (regenerated for post-migration schema).
 
 // Vehicle has moved to vehicle.go (regenerated for post-migration schema).
 
@@ -131,17 +123,7 @@ type Address struct {
 	CreatedAt   time.Time `json:"created_at" db:"created_at"`
 }
 
-// Geofence represents a user-defined geofenced area.
-type Geofence struct {
-	ID          int64      `json:"id" db:"id"`
-	Name        string     `json:"name" db:"name"`
-	Latitude    float64    `json:"latitude" db:"latitude"`
-	Longitude   float64    `json:"longitude" db:"longitude"`
-	Radius      float64    `json:"radius" db:"radius"` // meters
-	CostPerKwh  *float64   `json:"cost_per_kwh" db:"cost_per_kwh"`
-	CreatedAt   time.Time  `json:"created_at" db:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at" db:"updated_at"`
-}
+// Geofence has moved to system.go (regenerated for post-migration schema).
 
 // SoftwareUpdate represents a vehicle software update.
 type SoftwareUpdate struct {
@@ -164,8 +146,13 @@ type Token struct {
 	UpdatedAt    time.Time `json:"updated_at" db:"updated_at"`
 }
 
-// Settings stores application-level user settings.
-type Settings struct {
+// LegacySettings stores application-level user settings.
+//
+// Deprecated: superseded by the typed key-value `Setting` struct in system.go,
+// which mirrors the post-migration `settings` table. Retained temporarily so
+// that internal/database/settings_repo.go and internal/api/settings_handler.go
+// continue to build; these will be rewritten in phase-5 prompts 30-66.
+type LegacySettings struct {
 	ID              int64   `json:"id" db:"id"`
 	UnitOfLength    string  `json:"unit_of_length" db:"unit_of_length"`       // km, mi
 	UnitOfTemp      string  `json:"unit_of_temp" db:"unit_of_temp"`           // C, F
@@ -186,15 +173,17 @@ type Settings struct {
 	QuietHoursStart   string `json:"quiet_hours_start" db:"quiet_hours_start"`   // HH:MM (24h)
 	QuietHoursEnd     string `json:"quiet_hours_end" db:"quiet_hours_end"`       // HH:MM (24h)
 	AlertDigestMode   string `json:"alert_digest_mode" db:"alert_digest_mode"`   // instant, hourly, daily
-	PollingConfig   PollingConfig `json:"polling_config" db:"polling_config"`
+	PollingConfig   LegacyPollingConfig `json:"polling_config" db:"polling_config"`
 }
 
-// PollingConfig controls which Tesla Fleet API endpoints are enabled.
-// All fields default to true (enabled) to preserve existing behavior.
-// Endpoints that appear in both Polling and On-Demand have separate toggles
-// (e.g., VehicleDiscovery controls auto-polling, OnDemandVehicleDiscovery
-// controls manual sync).
-type PollingConfig struct {
+// LegacyPollingConfig controls which Tesla Fleet API endpoints are enabled.
+//
+// Deprecated: superseded by the typed `PollingConfig` struct in system.go,
+// which mirrors the post-migration `polling_config` table (per-vehicle polling
+// intervals). Retained temporarily so that internal/worker/, internal/database/
+// settings_repo.go, and internal/api/settings_handler.go continue to build;
+// these will be rewritten in phase-5 prompts 30-66.
+type LegacyPollingConfig struct {
 	// Polling endpoints (automatic, worker-driven)
 	VehicleDiscovery bool `json:"vehicle_discovery"` // GET /api/1/vehicles (auto-discovery)
 	ChargeState      bool `json:"charge_state"`      // vehicle_data sub-endpoint
@@ -228,9 +217,12 @@ type PollingConfig struct {
 	TelemetryCaptureRetentionDays int  `json:"telemetry_capture_retention_days"` // TTL in days (default: 7)
 }
 
-// DefaultPollingConfig returns a PollingConfig with all endpoints enabled.
-func DefaultPollingConfig() PollingConfig {
-	return PollingConfig{
+// DefaultPollingConfig returns a LegacyPollingConfig with all endpoints enabled.
+//
+// Deprecated: returns the legacy feature-flag struct, not the per-vehicle
+// `PollingConfig` from system.go. Will be removed in phase-5 prompts 30-66.
+func DefaultPollingConfig() LegacyPollingConfig {
+	return LegacyPollingConfig{
 		VehicleDiscovery:         true,
 		ChargeState:              true,
 		ClimateState:             true,
@@ -258,7 +250,7 @@ func DefaultPollingConfig() PollingConfig {
 
 // EnabledVehicleDataEndpoints returns the list of enabled vehicle_data sub-endpoints
 // for use in the Tesla API query string (e.g., "charge_state;drive_state").
-func (pc *PollingConfig) EnabledVehicleDataEndpoints() []string {
+func (pc *LegacyPollingConfig) EnabledVehicleDataEndpoints() []string {
 	var endpoints []string
 	if pc.ChargeState {
 		endpoints = append(endpoints, "charge_state")
@@ -282,18 +274,18 @@ func (pc *PollingConfig) EnabledVehicleDataEndpoints() []string {
 }
 
 // VehicleDataEndpointsString returns enabled sub-endpoints as a semicolon-separated string.
-func (pc *PollingConfig) VehicleDataEndpointsString() string {
+func (pc *LegacyPollingConfig) VehicleDataEndpointsString() string {
 	return strings.Join(pc.EnabledVehicleDataEndpoints(), ";")
 }
 
 // HasAnyVehicleDataEndpoint returns true if at least one vehicle_data sub-endpoint is enabled.
-func (pc *PollingConfig) HasAnyVehicleDataEndpoint() bool {
+func (pc *LegacyPollingConfig) HasAnyVehicleDataEndpoint() bool {
 	return pc.ChargeState || pc.ClimateState || pc.DriveState ||
 		pc.LocationData || pc.VehicleState || pc.VehicleConfig
 }
 
 // EnabledOnDemandVehicleDataEndpoints returns the list of enabled on-demand vehicle_data sub-endpoints.
-func (pc *PollingConfig) EnabledOnDemandVehicleDataEndpoints() []string {
+func (pc *LegacyPollingConfig) EnabledOnDemandVehicleDataEndpoints() []string {
 	var endpoints []string
 	if pc.OnDemandChargeState {
 		endpoints = append(endpoints, "charge_state")
