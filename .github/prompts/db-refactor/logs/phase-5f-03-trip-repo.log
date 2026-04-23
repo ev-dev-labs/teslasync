@@ -1,0 +1,73 @@
+=== SURVEY ===
+File: internal/database/trip_repo.go
+
+BEFORE state — compile errors from struct field references:
+  Line 46: t.StartDate, t.EndDate (→ StartTs, EndTs)
+  Line 47: t.TotalDistanceKm, t.TotalCost, t.DriveCount, t.ChargeCount (→ TotalDistanceMi, remove 3)
+  Line 82: t.StartDate, t.EndDate (→ StartTs, EndTs)
+  Line 83: t.TotalDistanceKm, t.TotalCost, t.DriveCount, t.ChargeCount (→ TotalDistanceMi, remove 3)
+  = 12 total compile errors across 2 call sites
+
+SQL column renames needed throughout (trips table):
+  start_date → start_ts
+  end_date → end_ts
+  total_distance_km → total_distance_mi
+  total_cost, drive_count, charge_count → DELETE
+
+Functions affected:
+  1. GetByVehicle  — SELECT, WHERE, ORDER BY, Scan
+  2. GetAll        — SELECT, WHERE, ORDER BY, Scan
+  3. GenerateMonthlyTrips — existing_trips CTE references trips.start_date
+  4. UpsertMonthTrip — INSERT, UPDATE, ON CONFLICT all reference old columns
+     Also: local vars totalCost/driveCount/chargeCount become unused after column removal
+
+New columns to add to SELECT/Scan: description, total_duration_min, updated_at
+
+=== REASONING ===
+1. GetByVehicle & GetAll: Rename SQL columns and Go field refs to match models.Trip:
+   - SELECT: swap start_date/end_date/total_distance_km → start_ts/end_ts/total_distance_mi
+   - SELECT: remove total_cost, drive_count, charge_count
+   - SELECT: add description, total_duration_min, updated_at
+   - WHERE/ORDER BY: start_date → start_ts
+   - Scan: rename 3 fields, remove 3 fields, add 3 fields (description, total_duration_min, updated_at)
+   Note: SELECT column count stays at 11 (was 11, now 11). Scan args also 11.
+
+2. GenerateMonthlyTrips: Fix existing_trips CTE to use start_ts (trips table column).
+   Leave drive_months CTE alone — it queries drives table which still uses start_date.
+
+3. UpsertMonthTrip:
+   - Remove driveCount/chargeCount/totalCost local vars and their SQL aggregation
+   - Rename SQL columns in INSERT, ON CONFLICT, UPDATE, fallback paths
+   - Adjust  placeholders to match reduced arg count (9→6 for INSERT, 8→5 for UPDATE)
+
+=== CHANGES ===
+=== GATE ===
+# github.com/ev-dev-labs/teslasync/internal/database
+internal\database\tesla_charging_history_repo.go:145:16: e.RawJSON undefined (type *models.TeslaChargingHistoryEntry has no field or method RawJSON)
+internal\database\tesla_charging_session_repo.go:151:16: s.RawJSON undefined (type *models.TeslaChargingSession has no field or method RawJSON)
+internal\database\tesla_energy_history_repo.go:52:7: e.RawJSON undefined (type *models.TeslaEnergyHistory has no field or method RawJSON)
+internal\database\tesla_energy_history_repo.go:86:26: e.RawJSON undefined (type *models.TeslaEnergyHistory has no field or method RawJSON)
+internal\database\tesla_energy_history_repo.go:136:27: e.RawJSON undefined (type *models.TeslaEnergyBackupEvent has no field or method RawJSON)
+internal\database\tesla_energy_history_repo.go:162:26: e.RawJSON undefined (type *models.TeslaEnergyBackupEvent has no field or method RawJSON)
+internal\database\tesla_energy_history_repo.go:210:20: e.RawJSON undefined (type *models.TeslaEnergyWCCharging has no field or method RawJSON)
+internal\database\tesla_energy_history_repo.go:236:26: e.RawJSON undefined (type *models.TeslaEnergyWCCharging has no field or method RawJSON)
+internal\database\tesla_energy_live_status_repo.go:35:25: s.RawJSON undefined (type *models.TeslaEnergyLiveStatus has no field or method RawJSON)
+internal\database\tesla_energy_live_status_repo.go:61:6: s.RawJSON undefined (type *models.TeslaEnergyLiveStatus has no field or method RawJSON)
+internal\database\tesla_energy_live_status_repo.go:99:7: s.RawJSON undefined (type *models.TeslaEnergyLiveStatus has no field or method RawJSON)
+internal\database\tesla_energy_site_repo.go:49:7: s.RawJSON undefined (type *models.TeslaEnergySite has no field or method RawJSON)
+internal\database\tesla_energy_site_repo.go:74:16: s.RawJSON undefined (type *models.TeslaEnergySite has no field or method RawJSON)
+internal\database\tesla_fleet_telemetry_error_repo.go:129:87: e.RawJSON undefined (type *models.TeslaFleetTelemetryError has no field or method RawJSON)
+internal\database\tesla_fleet_telemetry_error_repo.go:151:16: e.RawJSON undefined (type *models.TeslaFleetTelemetryError has no field or method RawJSON)
+internal\database\tesla_user_order_repo.go:36:49: o.RawJSON undefined (type *models.TeslaUserOrder has no field or method RawJSON)
+internal\database\tesla_user_order_repo.go:59:16: o.RawJSON undefined (type *models.TeslaUserOrder has no field or method RawJSON)
+internal\database\tesla_user_profile_repo.go:29:56: p.RawJSON undefined (type *models.TeslaUserProfile has no field or method RawJSON)
+internal\database\tesla_user_profile_repo.go:58:45: p.RawJSON undefined (type *models.TeslaUserProfile has no field or method RawJSON)
+internal\database\tesla_vehicle_driver_repo.go:37:47: d.RawJSON undefined (type *models.TeslaVehicleDriver has no field or method RawJSON)
+internal\database\tesla_vehicle_driver_repo.go:61:16: d.RawJSON undefined (type *models.TeslaVehicleDriver has no field or method RawJSON)
+internal\database\tesla_vehicle_driver_repo.go:95:9: inv.RawJSON undefined (type *models.TeslaVehicleInvitation has no field or method RawJSON)
+internal\database\tesla_vehicle_driver_repo.go:119:18: inv.RawJSON undefined (type *models.TeslaVehicleInvitation has no field or method RawJSON)
+internal\database\tesla_vehicle_driver_repo.go:140:17: inv.RawJSON undefined (type *models.TeslaVehicleInvitation has no field or method RawJSON)
+TRIP_REPO_ERROR_COUNT=0
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
