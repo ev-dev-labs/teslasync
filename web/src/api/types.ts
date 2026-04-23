@@ -1150,68 +1150,27 @@ export interface RouteDetailData {
 
 // === Charging Telemetry ===
 
+// ChargingTelemetry mirrors `charging_telemetry` hypertable (Phase 3, migration
+// 000142_baseline_typed). One row per 1 Hz sample while charging. Typed-only —
+// no raw_json / JSONB carve-outs (ADR-001, ADR-005). Matches Go model in
+// internal/models/charging_telemetry.go.
 export interface ChargingTelemetry {
-  id: number
   vehicle_id: number
-  battery_level?: number
-  soc?: number
-  charge_state?: string
-  detailed_charge_state?: string
-  charge_limit_soc?: number
-  charge_amps?: number
-  charge_current_request?: number
-  charge_current_request_max?: number
-  charge_enable_request?: boolean
-  charger_voltage?: number
-  charger_phases?: number
-  charge_rate_mph?: number
-  dc_charging_power?: number
-  dc_charging_energy_in?: number
-  ac_charging_power?: number
-  ac_charging_energy_in?: number
-  energy_remaining?: number
-  est_battery_range?: number
-  ideal_battery_range?: number
-  rated_range?: number
-  pack_voltage?: number
-  pack_current?: number
-  charge_port?: string
-  charge_port_door_open?: boolean
-  charge_port_latch?: string
-  charge_port_cold_weather_mode?: boolean
-  charging_cable_type?: string
-  fast_charger_present?: boolean
-  fast_charger_type?: string
-  time_to_full_charge?: number
-  estimated_hours_to_charge?: number
-  scheduled_charging_mode?: string
-  scheduled_charging_pending?: boolean
-  preconditioning_enabled?: boolean
-  brick_voltage_max?: number
-  brick_voltage_min?: number
-  num_brick_voltage_max?: number
-  num_brick_voltage_min?: number
-  module_temp_max?: number
-  module_temp_min?: number
-  num_module_temp_max?: number
-  num_module_temp_min?: number
-  battery_heater_on?: boolean
-  not_enough_power_to_heat?: boolean
-  bms_state?: string
-  bms_fullcharge_complete?: boolean
-  dcdc_enable?: boolean
-  isolation_resistance?: number
-  lifetime_energy_used?: number
-  supercharger_session_trip_planner?: boolean
-  powershare_status?: string
-  powershare_type?: string
-  powershare_stop_reason?: string
-  powershare_hours_left?: number
-  powershare_power_kw?: number
-  scheduled_charging_start_time?: string
-  scheduled_departure_time?: string
-  expected_energy_pct_at_arrival?: number
-  created_at: string
+  ts: string
+  session_id: number | null
+  battery_level: number | null
+  battery_range_mi: number | null
+  charging_state: string | null
+  charger_voltage: number | null
+  charger_actual_current: number | null
+  charger_power_kw: number | null
+  charger_phases: number | null
+  charge_energy_added_kwh: number | null
+  charge_miles_added: number | null
+  charge_rate_mph: number | null
+  charger_pilot_current: number | null
+  scheduled_charging_at: string | null
+  source: string
 }
 
 // === Media ===
