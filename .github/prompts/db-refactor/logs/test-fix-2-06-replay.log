@@ -1,0 +1,506 @@
+=== REBUILD ===
+ Container teslasync-grafana Stopping 
+ Container teslasync-notification-worker Stopping 
+ Container teslasync-web Stopping 
+ Container teslasync-automation-worker Stopping 
+ Container teslasync-export-worker Stopping 
+ Container teslasync-notification-worker Stopped 
+ Container teslasync-notification-worker Removing 
+ Container teslasync-notification-worker Removed 
+ Container teslasync-automation-worker Stopped 
+ Container teslasync-automation-worker Removing 
+ Container teslasync-automation-worker Removed 
+ Container teslasync-export-worker Stopped 
+ Container teslasync-export-worker Removing 
+ Container teslasync-export-worker Removed 
+ Container teslasync-grafana Stopped 
+ Container teslasync-grafana Removing 
+ Container teslasync-grafana Removed 
+ Container teslasync-prometheus Stopping 
+ Container teslasync-prometheus Stopped 
+ Container teslasync-prometheus Removing 
+ Container teslasync-prometheus Removed 
+ Container teslasync-web Stopped 
+ Container teslasync-web Removing 
+ Container teslasync-web Removed 
+ Container teslasync-api Stopping 
+ Container teslasync-api Stopped 
+ Container teslasync-api Removing 
+ Container teslasync-api Removed 
+ Container teslasync-postgres Stopping 
+ Container teslasync-redis Stopping 
+ Container teslasync-mosquitto Stopping 
+ Container teslasync-mosquitto Stopped 
+ Container teslasync-mosquitto Removing 
+ Container teslasync-mosquitto Removed 
+ Container teslasync-redis Stopped 
+ Container teslasync-redis Removing 
+ Container teslasync-redis Removed 
+ Container teslasync-postgres Stopped 
+ Container teslasync-postgres Removing 
+ Container teslasync-postgres Removed 
+ Network teslasync_default Removing 
+ Network teslasync_default Resource is still in use 
+ Image teslasync-web Building 
+ Image teslasync-automation-worker Building 
+ Image teslasync-notification-worker Building 
+ Image teslasync-teslasync-api Building 
+ Image teslasync-export-worker Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 2.52kB done
+#1 DONE 0.0s
+
+#2 [export-worker internal] load build definition from Dockerfile.export-worker
+#2 transferring dockerfile: 786B 0.0s done
+#2 DONE 1.8s
+
+#3 [web internal] load build definition from Dockerfile.web
+#3 transferring dockerfile: 555B 1.7s done
+#3 DONE 1.8s
+
+#4 [notification-worker internal] load build definition from Dockerfile.notification
+#4 transferring dockerfile: 815B 1.7s done
+#4 DONE 1.8s
+
+#5 [teslasync-api internal] load build definition from Dockerfile
+#5 transferring dockerfile: 1.34kB 0.0s done
+#5 DONE 0.2s
+
+#6 [automation-worker internal] load build definition from Dockerfile.automation
+#6 transferring dockerfile: 803B 0.0s done
+#6 DONE 1.9s
+
+#7 [teslasync-api internal] load metadata for docker.io/library/golang:1.25-alpine
+#7 ...
+
+#8 [teslasync-api internal] load metadata for gcr.io/distroless/static:nonroot
+#8 DONE 1.0s
+
+#9 [teslasync-api internal] load metadata for docker.io/library/node:20-alpine
+#9 DONE 2.5s
+
+#10 [web internal] load metadata for docker.io/library/nginx:1.25-alpine
+#10 DONE 1.3s
+
+#11 [web internal] load .dockerignore
+#11 transferring context: 127B 0.0s done
+#11 DONE 0.1s
+
+#12 [web internal] load build context
+#12 transferring context: 51.89kB 0.0s done
+#12 DONE 0.1s
+
+#11 [notification-worker internal] load .dockerignore
+#11 transferring context: 127B 0.0s done
+#11 DONE 0.1s
+
+#13 [web stage-1 1/3] FROM docker.io/library/nginx:1.25-alpine@sha256:516475cc129da42866742567714ddc681e5eed7b9ee0b9e9c015e464b4221a00
+#13 resolve docker.io/library/nginx:1.25-alpine@sha256:516475cc129da42866742567714ddc681e5eed7b9ee0b9e9c015e464b4221a00 0.1s done
+#13 DONE 0.1s
+
+#14 [teslasync-api builder 1/6] FROM docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
+#14 resolve docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 0.1s done
+#14 DONE 0.3s
+
+#15 [web builder 4/6] RUN if [ -f package-lock.json ]; then npm ci --legacy-peer-deps; else npm install --legacy-peer-deps; fi
+#15 CACHED
+
+#16 [web stage-1 2/3] COPY --from=builder /app/dist /usr/share/nginx/html
+#16 CACHED
+
+#17 [web builder 3/6] COPY web/package.json web/package-lock.json* ./
+#17 CACHED
+
+#18 [web builder 5/6] COPY web/ .
+#18 CACHED
+
+#19 [web builder 6/6] RUN npm run build
+#19 CACHED
+
+#20 [web builder 2/6] WORKDIR /app
+#20 CACHED
+
+#21 [web stage-1 3/3] COPY web/nginx.conf /etc/nginx/conf.d/default.conf
+#21 CACHED
+
+#7 [export-worker internal] load metadata for docker.io/library/golang:1.25-alpine
+#7 DONE 3.0s
+
+#22 [automation-worker internal] load build context
+#22 ...
+
+#23 [notification-worker stage-1 1/4] FROM gcr.io/distroless/static:nonroot@sha256:e3f945647ffb95b5839c07038d64f9811adf17308b9121d8a2b87b6a22a80a39
+#23 resolve gcr.io/distroless/static:nonroot@sha256:e3f945647ffb95b5839c07038d64f9811adf17308b9121d8a2b87b6a22a80a39 0.1s done
+#23 DONE 0.3s
+
+#24 [teslasync-api builder 1/9] FROM docker.io/library/golang:1.25-alpine@sha256:5caaf1cca9dc351e13deafbc3879fd4754801acba8653fa9540cea125d01a71f
+#24 resolve docker.io/library/golang:1.25-alpine@sha256:5caaf1cca9dc351e13deafbc3879fd4754801acba8653fa9540cea125d01a71f 0.1s done
+#24 DONE 0.3s
+
+#22 [automation-worker internal] load build context
+#22 ...
+
+#25 [web] exporting to image
+#25 exporting layers done
+#25 exporting manifest sha256:df8961f9060d9836fa9384a144bf8eccd7eaa454a9204e1ffbd6c6062cbaa22f done
+#25 exporting config sha256:401c9c401853a0d46a64d770db3f8c36d05cc252c1c721906f17071ff9857dc3 0.0s done
+#25 exporting attestation manifest sha256:19edf0e9c0fb507c169e6819c817f3f9d699c518ef1c4fd3271967cc9a4414ed 0.1s done
+#25 exporting manifest list sha256:5e33e463ceaa6fb1ac0fae3dae51cb612c24fdcc44667297d6b3c0b4197fc367 0.0s done
+#25 naming to docker.io/library/teslasync-web:latest done
+#25 unpacking to docker.io/library/teslasync-web:latest 0.0s done
+#25 DONE 0.3s
+
+#22 [automation-worker internal] load build context
+#22 ...
+
+#26 [web] resolving provenance for metadata file
+#26 DONE 0.0s
+
+#22 [automation-worker internal] load build context
+#22 transferring context: 1.14MB 0.8s done
+#22 DONE 1.7s
+
+#27 [teslasync-api builder 2/9] RUN apk add --no-cache git ca-certificates tzdata
+#27 CACHED
+
+#28 [teslasync-api builder 3/9] WORKDIR /src
+#28 CACHED
+
+#29 [teslasync-api builder 4/9] COPY go.mod ./
+#29 CACHED
+
+#30 [teslasync-api builder 5/9] COPY go.sum* ./
+#30 CACHED
+
+#31 [teslasync-api builder 6/9] RUN go mod download 2>/dev/null || true
+#31 CACHED
+
+#32 [automation-worker builder 7/9] COPY . .
+#32 DONE 7.0s
+
+#33 [notification-worker builder 8/9] RUN go mod tidy
+#33 1.120 go: downloading github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.13.1
+#33 1.120 go: downloading github.com/stretchr/testify v1.11.1
+#33 1.241 go: downloading github.com/google/go-cmp v0.7.0
+#33 1.335 go: downloading go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.40.0
+#33 1.337 go: downloading github.com/bsm/ginkgo/v2 v2.12.0
+#33 1.339 go: downloading github.com/bsm/gomega v1.27.10
+#33 1.380 go: downloading github.com/dhui/dktest v0.4.6
+#33 1.566 go: downloading go.uber.org/goleak v1.3.0
+#33 1.603 go: downloading github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage v1.8.1
+#33 1.676 go: downloading github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/cloudmock v0.55.0
+#33 1.681 go: downloading cloud.google.com/go/longrunning v0.8.0
+#33 1.704 go: downloading github.com/zeebo/xxh3 v1.0.2
+#33 1.706 go: downloading github.com/docker/docker v28.3.3+incompatible
+#33 1.732 go: downloading github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
+#33 1.878 go: downloading github.com/docker/go-connections v0.5.0
+#33 2.027 go: downloading github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2
+#33 2.089 go: downloading github.com/AzureAD/microsoft-authentication-library-for-go v1.6.0
+#33 2.352 go: downloading github.com/envoyproxy/go-control-plane v0.14.0
+#33 2.352 go: downloading github.com/golang/protobuf v1.5.4
+#33 2.352 go: downloading github.com/google/martian/v3 v3.3.3
+#33 2.482 go: downloading cloud.google.com/go/trace v1.11.7
+#33 2.482 go: downloading cloud.google.com/go/logging v1.13.1
+#33 2.485 go: downloading github.com/klauspost/cpuid/v2 v2.0.9
+#33 2.485 go: downloading gopkg.in/yaml.v3 v3.0.1
+#33 2.486 go: downloading gonum.org/v1/gonum v0.16.0
+#33 2.487 go: downloading github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
+#33 2.490 go: downloading github.com/kylelemons/godebug v1.1.0
+#33 2.532 go: downloading github.com/envoyproxy/go-control-plane/ratelimit v0.1.0
+#33 2.541 go: downloading github.com/golang-jwt/jwt/v5 v5.3.0
+#33 3.146 go: downloading github.com/opencontainers/image-spec v1.1.0
+#33 3.146 go: downloading github.com/opencontainers/go-digest v1.0.0
+#33 3.147 go: downloading github.com/docker/go-units v0.5.0
+#33 3.147 go: downloading github.com/pkg/errors v0.9.1
+#33 3.147 go: downloading github.com/morikuni/aec v1.0.0
+#33 3.147 go: downloading github.com/moby/docker-image-spec v1.3.1
+#33 3.147 go: downloading github.com/Microsoft/go-winio v0.6.2
+#33 3.147 go: downloading github.com/moby/term v0.5.0
+#33 3.147 go: downloading github.com/gogo/protobuf v1.3.2
+#33 3.150 go: downloading github.com/containerd/errdefs v1.0.0
+#33 3.150 go: downloading github.com/containerd/errdefs/pkg v0.3.0
+#33 3.150 go: downloading github.com/distribution/reference v0.6.0
+#33 3.365 go: downloading github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161
+#33 DONE 5.7s
+
+#34 [export-worker builder 9/9] RUN CGO_ENABLED=0 GOOS=linux go build     -ldflags="-s -w -X main.Version=dev"     -o /bin/export-worker ./cmd/export-worker
+#34 ...
+
+#35 [teslasync-api go-builder 9/9] RUN CGO_ENABLED=0 GOOS=linux go build     -ldflags="-s -w -X main.Version=dev -X main.Commit=unknown -X main.buildTime=unknown"     -o /bin/teslasync ./cmd/teslasync
+#35 ...
+
+#36 [automation-worker builder 9/9] RUN CGO_ENABLED=0 GOOS=linux go build     -ldflags="-s -w -X main.Version=dev"     -o /bin/automation-worker ./cmd/automation-worker
+#36 ...
+
+#37 [notification-worker builder 9/9] RUN CGO_ENABLED=0 GOOS=linux go build     -ldflags="-s -w -X main.Version=dev"     -o /bin/notification-worker ./cmd/notification-worker
+#37 DONE 57.8s
+
+#34 [export-worker builder 9/9] RUN CGO_ENABLED=0 GOOS=linux go build     -ldflags="-s -w -X main.Version=dev"     -o /bin/export-worker ./cmd/export-worker
+#34 ...
+
+#38 [notification-worker stage-1 2/4] COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
+#38 CACHED
+
+#39 [notification-worker stage-1 3/4] COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+#39 CACHED
+
+#40 [notification-worker stage-1 4/4] COPY --from=builder /bin/notification-worker /usr/local/bin/notification-worker
+#40 DONE 0.3s
+
+#35 [teslasync-api go-builder 9/9] RUN CGO_ENABLED=0 GOOS=linux go build     -ldflags="-s -w -X main.Version=dev -X main.Commit=unknown -X main.buildTime=unknown"     -o /bin/teslasync ./cmd/teslasync
+#35 ...
+
+#41 [notification-worker] exporting to image
+#41 exporting layers
+#41 ...
+
+#36 [automation-worker builder 9/9] RUN CGO_ENABLED=0 GOOS=linux go build     -ldflags="-s -w -X main.Version=dev"     -o /bin/automation-worker ./cmd/automation-worker
+#36 DONE 59.6s
+
+#39 [automation-worker stage-1 3/4] COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+#39 CACHED
+
+#41 [notification-worker] exporting to image
+#41 ...
+
+#42 [automation-worker stage-1 2/4] COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
+#42 CACHED
+
+#43 [automation-worker stage-1 3/4] COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+#43 CACHED
+
+#44 [automation-worker stage-1 4/4] COPY --from=builder /bin/automation-worker /usr/local/bin/automation-worker
+#44 DONE 0.3s
+
+#41 [notification-worker] exporting to image
+#41 exporting layers 2.4s done
+#41 exporting manifest sha256:b4653eb79c08abe7732772c4897f6603bed219979f1de8fd279b4d474ffabbd7
+#41 exporting manifest sha256:b4653eb79c08abe7732772c4897f6603bed219979f1de8fd279b4d474ffabbd7 0.1s done
+#41 exporting config sha256:59f9d0b904e2e7215eec48c4c63b481c739e62611a7032aa64584b55017188ce 0.1s done
+#41 exporting attestation manifest sha256:6c97a642381645b6546ee5ece9e33aacd6a3c2c897f6107901402ae1581671fe
+#41 exporting attestation manifest sha256:6c97a642381645b6546ee5ece9e33aacd6a3c2c897f6107901402ae1581671fe 0.2s done
+#41 exporting manifest list sha256:6c08fc47d632253a2c8dde9eba61920a620db394e2637d20eeb03b52b74d6819
+#41 exporting manifest list sha256:6c08fc47d632253a2c8dde9eba61920a620db394e2637d20eeb03b52b74d6819 0.1s done
+#41 naming to docker.io/library/teslasync-notification-worker:latest
+#41 naming to docker.io/library/teslasync-notification-worker:latest 0.0s done
+#41 unpacking to docker.io/library/teslasync-notification-worker:latest
+#41 unpacking to docker.io/library/teslasync-notification-worker:latest 0.9s done
+#41 DONE 3.8s
+
+#45 [automation-worker] exporting to image
+#45 exporting layers 2.6s done
+#45 exporting manifest sha256:d289c88c661e72d7bf3db12574b094ca994be41be243a832712d4f3e104d360d 0.1s done
+#45 exporting config sha256:8ccb23b4c15cb46fbc5d17bfbf57b8126510562adfcbfc7c907079dd58806f71 0.1s done
+#45 exporting attestation manifest sha256:c4e0be9d5529d88e44b80ae1789b8ddfc43f62e1fd8fbf8673a38199e1bd41f3
+#45 ...
+
+#46 [notification-worker] resolving provenance for metadata file
+#46 DONE 0.0s
+
+#45 [automation-worker] exporting to image
+#45 exporting attestation manifest sha256:c4e0be9d5529d88e44b80ae1789b8ddfc43f62e1fd8fbf8673a38199e1bd41f3 0.1s done
+#45 exporting manifest list sha256:cb6a941718c5f06c757a4f921b45dc19c3f0fd37a73729aea642a3eab596e3f0
+#45 exporting manifest list sha256:cb6a941718c5f06c757a4f921b45dc19c3f0fd37a73729aea642a3eab596e3f0 0.0s done
+#45 naming to docker.io/library/teslasync-automation-worker:latest done
+#45 unpacking to docker.io/library/teslasync-automation-worker:latest
+#45 unpacking to docker.io/library/teslasync-automation-worker:latest 0.4s done
+#45 DONE 3.6s
+
+#34 [export-worker builder 9/9] RUN CGO_ENABLED=0 GOOS=linux go build     -ldflags="-s -w -X main.Version=dev"     -o /bin/export-worker ./cmd/export-worker
+#34 ...
+
+#47 [automation-worker] resolving provenance for metadata file
+#47 DONE 0.1s
+
+#34 [export-worker builder 9/9] RUN CGO_ENABLED=0 GOOS=linux go build     -ldflags="-s -w -X main.Version=dev"     -o /bin/export-worker ./cmd/export-worker
+#34 DONE 74.9s
+
+#35 [teslasync-api go-builder 9/9] RUN CGO_ENABLED=0 GOOS=linux go build     -ldflags="-s -w -X main.Version=dev -X main.Commit=unknown -X main.buildTime=unknown"     -o /bin/teslasync ./cmd/teslasync
+#35 ...
+
+#48 [export-worker stage-1 2/4] COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
+#48 CACHED
+
+#49 [export-worker stage-1 3/4] COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+#49 CACHED
+
+#50 [export-worker stage-1 4/4] COPY --from=builder /bin/export-worker /usr/local/bin/export-worker
+#50 DONE 0.1s
+
+#35 [teslasync-api go-builder 9/9] RUN CGO_ENABLED=0 GOOS=linux go build     -ldflags="-s -w -X main.Version=dev -X main.Commit=unknown -X main.buildTime=unknown"     -o /bin/teslasync ./cmd/teslasync
+#35 ...
+
+#51 [export-worker] exporting to image
+#51 exporting layers
+#51 exporting layers 1.8s done
+#51 exporting manifest sha256:e12344260d3a5143350be963b4b399e410334194c63e80c180bfdaa047435fdd 0.0s done
+#51 exporting config sha256:bd9666c6a7ed79c86bf5b9d2b7972b4915ef0db3c0171da185d8198ffbcd90ce 0.0s done
+#51 exporting attestation manifest sha256:d98337a45d8e73df72b1d05a4b69ee638af5a6a6cadcab13a963c0e56fa7da09
+#51 exporting attestation manifest sha256:d98337a45d8e73df72b1d05a4b69ee638af5a6a6cadcab13a963c0e56fa7da09 0.1s done
+#51 exporting manifest list sha256:0f5313ca02f421c2709d2cfe1afc46e60dd5d0330397f2cbec6114bd7996cb1f 0.0s done
+#51 naming to docker.io/library/teslasync-export-worker:latest done
+#51 unpacking to docker.io/library/teslasync-export-worker:latest
+#51 unpacking to docker.io/library/teslasync-export-worker:latest 0.3s done
+#51 DONE 2.4s
+
+#35 [teslasync-api go-builder 9/9] RUN CGO_ENABLED=0 GOOS=linux go build     -ldflags="-s -w -X main.Version=dev -X main.Commit=unknown -X main.buildTime=unknown"     -o /bin/teslasync ./cmd/teslasync
+#35 ...
+
+#52 [export-worker] resolving provenance for metadata file
+#52 DONE 0.0s
+
+#35 [teslasync-api go-builder 9/9] RUN CGO_ENABLED=0 GOOS=linux go build     -ldflags="-s -w -X main.Version=dev -X main.Commit=unknown -X main.buildTime=unknown"     -o /bin/teslasync ./cmd/teslasync
+#35 DONE 78.1s
+
+#53 [teslasync-api stage-2 2/7] COPY --from=go-builder /usr/share/zoneinfo /usr/share/zoneinfo
+#53 CACHED
+
+#20 [teslasync-api builder 2/6] WORKDIR /app
+#20 CACHED
+
+#54 [teslasync-api web-builder 3/6] COPY web/package.json web/package-lock.json* ./
+#54 CACHED
+
+#55 [teslasync-api web-builder 4/6] RUN if [ -f package-lock.json ]; then npm ci --legacy-peer-deps; else npm install --legacy-peer-deps; fi
+#55 CACHED
+
+#56 [teslasync-api web-builder 5/6] COPY web/ .
+#56 CACHED
+
+#57 [teslasync-api stage-2 3/7] COPY --from=go-builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+#57 CACHED
+
+#58 [teslasync-api web-builder 6/6] RUN npm run build
+#58 CACHED
+
+#59 [teslasync-api stage-2 4/7] COPY --from=go-builder /bin/teslasync /usr/local/bin/teslasync
+#59 DONE 0.1s
+
+#60 [teslasync-api stage-2 5/7] COPY migrations /migrations
+#60 DONE 0.1s
+
+#61 [teslasync-api stage-2 6/7] COPY docs/public/openapi.yaml /docs/public/openapi.yaml
+#61 DONE 0.1s
+
+#62 [teslasync-api stage-2 7/7] COPY --from=web-builder /app/dist /web/dist
+#62 DONE 0.2s
+
+#63 [teslasync-api] exporting to image
+#63 exporting layers 2.1s done
+#63 exporting manifest sha256:ff8ca931093f129abcc3a35f2971564dc24345faa0d128aa483807e4b9f26c6d 0.0s done
+#63 exporting config sha256:5a385c80dddc436bc690f957dcfcb54481914bfbad188deda1ff174dd028f97e 0.0s done
+#63 exporting attestation manifest sha256:46beace36687079c8d57196b609b290659c32f435d0c09e0fe4804a9eb863bf8 0.1s done
+#63 exporting manifest list sha256:bfacc86a4d39401b6f76cae66963be6db2ab389699d7c5e0290f686af302e1f3
+#63 exporting manifest list sha256:bfacc86a4d39401b6f76cae66963be6db2ab389699d7c5e0290f686af302e1f3 0.0s done
+#63 naming to docker.io/library/teslasync-teslasync-api:latest done
+#63 unpacking to docker.io/library/teslasync-teslasync-api:latest
+#63 unpacking to docker.io/library/teslasync-teslasync-api:latest 0.8s done
+#63 DONE 3.2s
+
+#64 [teslasync-api] resolving provenance for metadata file
+#64 DONE 0.0s
+ Image teslasync-web Built 
+ Image teslasync-automation-worker Built 
+ Image teslasync-export-worker Built 
+ Image teslasync-teslasync-api Built 
+ Image teslasync-notification-worker Built 
+ Container teslasync-redis Creating 
+ Container teslasync-mosquitto Creating 
+ Container teslasync-postgres Creating 
+ Container teslasync-postgres Created 
+ Container teslasync-mosquitto Created 
+ Container teslasync-notification-worker Creating 
+ Container teslasync-export-worker Creating 
+ Container teslasync-automation-worker Creating 
+ Container teslasync-redis Created 
+ Container teslasync-api Creating 
+ Container teslasync-notification-worker Created 
+ Container teslasync-export-worker Created 
+ Container teslasync-automation-worker Created 
+ Container teslasync-api Created 
+ Container teslasync-prometheus Creating 
+ Container teslasync-web Creating 
+ Container teslasync-web Created 
+ Container teslasync-prometheus Created 
+ Container teslasync-grafana Creating 
+ Container teslasync-grafana Created 
+ Container teslasync-mosquitto Starting 
+ Container teslasync-postgres Starting 
+ Container teslasync-redis Starting 
+ Container teslasync-mosquitto Started 
+ Container teslasync-redis Started 
+ Container teslasync-postgres Started 
+ Container teslasync-redis Waiting 
+ Container teslasync-postgres Waiting 
+ Container teslasync-postgres Waiting 
+ Container teslasync-postgres Waiting 
+ Container teslasync-postgres Waiting 
+ Container teslasync-redis Healthy 
+ Container teslasync-postgres Healthy 
+ Container teslasync-postgres Healthy 
+ Container teslasync-api Starting 
+ Container teslasync-export-worker Starting 
+ Container teslasync-postgres Healthy 
+ Container teslasync-notification-worker Starting 
+ Container teslasync-postgres Healthy 
+ Container teslasync-automation-worker Starting 
+ Container teslasync-automation-worker Started 
+ Container teslasync-export-worker Started 
+ Container teslasync-notification-worker Started 
+ Container teslasync-api Started 
+ Container teslasync-api Waiting 
+ Container teslasync-api Waiting 
+ Container teslasync-api Healthy 
+ Container teslasync-api Healthy 
+ Container teslasync-prometheus Starting 
+ Container teslasync-web Starting 
+ Container teslasync-web Started 
+ Container teslasync-prometheus Started 
+ Container teslasync-postgres Waiting 
+ Container teslasync-postgres Healthy 
+ Container teslasync-grafana Starting 
+ Container teslasync-grafana Started 
+NAME                            IMAGE                           COMMAND                  SERVICE               CREATED          STATUS                    PORTS
+teslasync-api                   teslasync-teslasync-api         "teslasync"              teslasync-api         58 seconds ago   Up 43 seconds (healthy)   0.0.0.0:8080->8080/tcp, [::]:8080->8080/tcp
+teslasync-automation-worker     teslasync-automation-worker     "automation-worker"      automation-worker     58 seconds ago   Up 43 seconds (healthy)   8083/tcp
+teslasync-export-worker         teslasync-export-worker         "export-worker"          export-worker         58 seconds ago   Up 43 seconds (healthy)   8082/tcp
+teslasync-grafana               grafana/grafana:10.4.0          "/run.sh"                grafana               57 seconds ago   Up 36 seconds             0.0.0.0:3001->3000/tcp, [::]:3001->3000/tcp
+teslasync-jaeger                jaegertracing/all-in-one:1.57   "/go/bin/all-in-one-ΓÇª"   jaeger                13 hours ago     Up 13 hours               0.0.0.0:4317->4317/tcp, [::]:4317->4317/tcp, 0.0.0.0:16686->16686/tcp, [::]:16686->16686/tcp
+teslasync-mosquitto             eclipse-mosquitto:2             "/docker-entrypoint.ΓÇª"   mosquitto             58 seconds ago   Up 55 seconds (healthy)   0.0.0.0:1883->1883/tcp, [::]:1883->1883/tcp, 0.0.0.0:9001->9001/tcp, [::]:9001->9001/tcp
+teslasync-notification-worker   teslasync-notification-worker   "notification-worker"    notification-worker   58 seconds ago   Up 43 seconds (healthy)   8081/tcp
+teslasync-postgres              timescale/timescaledb-ha:pg17   "/docker-entrypoint.ΓÇª"   postgres              58 seconds ago   Up 55 seconds (healthy)   0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp
+teslasync-prometheus            prom/prometheus:v2.51.0         "/bin/prometheus --cΓÇª"   prometheus            58 seconds ago   Up 37 seconds             0.0.0.0:9099->9090/tcp, [::]:9099->9090/tcp
+teslasync-redis                 redis:7-alpine                  "docker-entrypoint.sΓÇª"   redis                 58 seconds ago   Up 55 seconds (healthy)   0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp
+teslasync-web                   teslasync-web                   "/docker-entrypoint.ΓÇª"   web                   58 seconds ago   Up 37 seconds (healthy)   0.0.0.0:3000->80/tcp, [::]:3000->80/tcp
+BEGIN
+INSERT 0 0
+INSERT 0 0
+INSERT 0 0
+INSERT 0 0
+DO
+COMMIT
+       entity       | count 
+--------------------+-------
+ vehicles           |     1
+ vehicle_units      |     1
+ vehicle_live_state |     1
+ settings           |     7
+(4 rows)
+
+=== REPLAY ===
+=== WARNINGS ===
+WARN_COUNT=8
+ERROR_COUNT=0
+
+{"level":"warn","time":1777005598,"message":"no TESLA_COMMAND_PROXY_URL set ΓÇö vehicle commands will be sent unsigned (may fail on 2021+ vehicles)"}
+{"level":"warn","error":"no tokens stored","time":1777005598,"message":"no stored tokens, waiting for authentication"}
+{"level":"warn","error":"upsert current month: aggregate charges: ERROR: column \"charge_energy_added\" does not exist (SQLSTATE 42703)","time":1777005598,"message":"trip generator: backfill failed"}
+{"level":"warn","method":"HEAD","path":"/api/v1/system/version","status":405,"bytes":0,"duration":0.1287,"ip":"172.18.0.1","request_id":"7b31f154437e/f0Es0OV8D1-000002","time":1777005603,"message":"http request"}
+{"level":"warn","method":"HEAD","path":"/api/v1/system/version","status":405,"bytes":0,"duration":0.08595,"ip":"172.18.0.1","request_id":"7b31f154437e/f0Es0OV8D1-000003","time":1777005603,"message":"http request"}
+{"level":"warn","method":"HEAD","path":"/api/v1/system/version","status":405,"bytes":0,"duration":0.05769,"ip":"172.18.0.1","request_id":"7b31f154437e/f0Es0OV8D1-000004","time":1777005603,"message":"http request"}
+{"level":"warn","error":"aggregate charges: ERROR: column \"charge_energy_added\" does not exist (SQLSTATE 42703)","vehicle_id":1,"time":1777005680,"message":"telemetry: failed to update monthly trip"}
+{"level":"warn","vehicle_id":1,"issues":["distance <= 0","duration < 30s ΓÇö micro-drive"],"time":1777005680,"message":"fsm: drive validation warnings"}
+
+STATUS=BLOCKED
+REASON=8 warnings, 0 errors
+EXIT=1
