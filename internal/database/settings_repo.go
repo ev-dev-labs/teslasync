@@ -293,3 +293,26 @@ func (r *SettingsRepo) IsAPISuspended(ctx context.Context) (bool, error) {
 	}
 	return *suspended, nil
 }
+
+// GetPollingConfig returns the first polling configuration row, or nil if
+// the polling_config table is empty. The action.SettingsChecker interface
+// uses this to retrieve timing parameters for command wake-up sequences.
+func (r *SettingsRepo) GetPollingConfig(ctx context.Context) (*models.PollingConfig, error) {
+	const query = `
+		SELECT vehicle_id, awake_interval_sec, asleep_interval_sec,
+		       driving_interval_sec, enabled, created_at, updated_at
+		FROM polling_config
+		LIMIT 1`
+	pc := &models.PollingConfig{}
+	err := r.db.Pool.QueryRow(ctx, query).Scan(
+		&pc.VehicleID, &pc.AwakeIntervalSec, &pc.AsleepIntervalSec,
+		&pc.DrivingIntervalSec, &pc.Enabled, &pc.CreatedAt, &pc.UpdatedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("settings get_polling_config: %w", err)
+	}
+	return pc, nil
+}
