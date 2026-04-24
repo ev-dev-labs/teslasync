@@ -101,10 +101,7 @@ func (h *ChargingOptimizerHandler) GetOptimization(w http.ResponseWriter, r *htt
 		       COALESCE(energy_added_kwh, 0),
 		       COALESCE(charger_power_kw_max, 0),
 		       COALESCE(end_battery_pct, 0),
-		       COALESCE(start_battery_pct, 0),
-		       COALESCE(latitude, 0),
-		       COALESCE(longitude, 0),
-		       COALESCE(outside_temp_avg_c, 20)
+		       COALESCE(start_battery_pct, 0)
 		FROM charging_sessions
 		WHERE vehicle_id = $1
 		ORDER BY start_ts DESC`, vehicleID)
@@ -119,9 +116,12 @@ func (h *ChargingOptimizerHandler) GetOptimization(w http.ResponseWriter, r *htt
 	for rows.Next() {
 		var s sessionRow
 		if err := rows.Scan(&s.startDate, &s.cost, &s.kwh, &s.power,
-			&s.endBattery, &s.startBattery, &s.lat, &s.lon, &s.outsideTemp); err != nil {
+			&s.endBattery, &s.startBattery); err != nil {
 			continue
 		}
+		// lat, lon, outsideTemp not available in charging_sessions — use defaults
+		// detectHome() skips (0,0) entries; outsideTemp=20 is neutral for health scoring
+		s.outsideTemp = 20
 		sessions = append(sessions, s)
 	}
 
