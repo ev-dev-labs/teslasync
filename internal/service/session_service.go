@@ -284,7 +284,6 @@ func (s *SessionService) updateActiveDrive(vehicle *models.Vehicle, data *tesla.
 
 func (s *SessionService) completeDrive(ctx context.Context, vehicle *models.Vehicle, driveID int64, state *apiDriveState, data *tesla.VehicleDataResponse) {
 	now := time.Now().UTC()
-	endRange := data.ChargeState.BatteryRange
 	endBattery := data.ChargeState.BatteryLevel
 
 	// If state is nil (shouldn't happen, but safety), fall back to old behavior
@@ -316,12 +315,15 @@ func (s *SessionService) completeDrive(ctx context.Context, vehicle *models.Vehi
 	duration := now.Sub(state.StartTime).Minutes()
 	maxSpeed := state.MaxSpeed
 
-	var speedAvg, speedMin *float64
+	var speedAvg *float64
 	if state.SpeedCount > 0 {
 		avg := state.SpeedSum / float64(state.SpeedCount)
 		speedAvg = &avg
-		min := state.MinSpeed
-		speedMin = &min
+	}
+
+	// Fallback: estimate distance from avg speed when odometer delta is zero
+	if distance == 0 && speedAvg != nil && duration > 0 {
+		distance = (*speedAvg) * (duration / 60.0) // mph × hours = miles
 	}
 
 	var insideAvg, outsideAvg *float64
@@ -342,77 +344,23 @@ func (s *SessionService) completeDrive(ctx context.Context, vehicle *models.Vehi
 	// Build enhanced fields map (same as telemetry path)
 	enhanced := map[string]interface{}{}
 
-	// Odometer
-	if state.StartOdometer != nil {
-		enhanced["start_odometer"] = *state.StartOdometer
-	}
-	if state.LastOdometer != nil {
-		enhanced["end_odometer"] = *state.LastOdometer
-	}
-
 	// Speed
 	if speedAvg != nil {
-		enhanced["speed_avg"] = *speedAvg
-	}
-	if speedMin != nil {
-		enhanced["speed_min"] = *speedMin
-	}
-
-	// Range stats
-	if state.StartRatedRange != nil {
-		enhanced["start_rated_range_km"] = *state.StartRatedRange
-	}
-	enhanced["end_rated_range_km"] = endRange
-	if state.RangeCount > 0 {
-		enhanced["rated_range_avg"] = state.RatedRangeSum / float64(state.RangeCount)
-		enhanced["rated_range_max"] = state.RatedRangeMax
-		enhanced["rated_range_min"] = state.RatedRangeMin
-		enhanced["ideal_range_avg"] = state.IdealRangeSum / float64(state.RangeCount)
-		enhanced["ideal_range_max"] = state.IdealRangeMax
-		enhanced["ideal_range_min"] = state.IdealRangeMin
-		enhanced["est_range_avg"] = state.EstRangeSum / float64(state.RangeCount)
-		enhanced["est_range_max"] = state.EstRangeMax
-		enhanced["est_range_min"] = state.EstRangeMin
-	}
-	if state.StartIdealRange != nil {
-		enhanced["start_ideal_range_km"] = *state.StartIdealRange
-	}
-	enhanced["end_ideal_range_km"] = data.ChargeState.IdealBatteryRange
-	if state.StartEstRange != nil {
-		enhanced["start_est_range_km"] = *state.StartEstRange
-	}
-	enhanced["end_est_range_km"] = data.ChargeState.EstBatteryRange
-
-	// SOC
-	if state.StartSoc != nil {
-		enhanced["soc_start"] = *state.StartSoc
-	}
-	endSoc := float64(endBattery)
-	enhanced["soc_end"] = endSoc
-	if state.SocCount > 0 {
-		enhanced["soc_avg"] = state.SocSum / float64(state.SocCount)
-		enhanced["soc_max"] = state.SocMax
-		enhanced["soc_min"] = state.SocMin
-	}
-
-	// Temperature
-	if state.TempCount > 0 {
-		enhanced["driver_temp_avg"] = state.DriverTempSum / float64(state.TempCount)
-		enhanced["passenger_temp_avg"] = state.PassengerTempSum / float64(state.TempCount)
+		enhanced["avg_speed_mph"] = *speedAvg
 	}
 
 	// Coordinates
 	if state.StartLatitude != nil {
-		enhanced["start_latitude"] = *state.StartLatitude
+		enhanced["start_lat"] = *state.StartLatitude
 	}
 	if state.StartLongitude != nil {
-		enhanced["start_longitude"] = *state.StartLongitude
+		enhanced["start_lon"] = *state.StartLongitude
 	}
 	if state.LastLatitude != nil {
-		enhanced["end_latitude"] = *state.LastLatitude
+		enhanced["end_lat"] = *state.LastLatitude
 	}
 	if state.LastLongitude != nil {
-		enhanced["end_longitude"] = *state.LastLongitude
+		enhanced["end_lon"] = *state.LastLongitude
 	}
 
 	if len(enhanced) > 0 {

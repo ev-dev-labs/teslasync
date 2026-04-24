@@ -1,0 +1,33 @@
+=== SURVEY ===
+
+internal\service\session_service.go:347:		enhanced["start_odometer"] = *state.StartOdometer
+internal\service\session_service.go:350:		enhanced["end_odometer"] = *state.LastOdometer
+internal\service\session_service.go:355:		enhanced["speed_avg"] = *speedAvg
+internal\service\session_service.go:358:		enhanced["speed_min"] = *speedMin
+internal\service\session_service.go:363:		enhanced["start_rated_range_km"] = *state.StartRatedRange
+internal\service\session_service.go:365:	enhanced["end_rated_range_km"] = endRange
+internal\service\session_service.go:378:		enhanced["start_ideal_range_km"] = *state.StartIdealRange
+internal\service\session_service.go:380:	enhanced["end_ideal_range_km"] = data.ChargeState.IdealBatteryRange
+internal\service\session_service.go:382:		enhanced["start_est_range_km"] = *state.StartEstRange
+internal\service\session_service.go:384:	enhanced["end_est_range_km"] = data.ChargeState.EstBatteryRange
+internal\service\session_service.go:388:		enhanced["soc_start"] = *state.StartSoc
+internal\service\session_service.go:391:	enhanced["soc_end"] = endSoc
+internal\service\session_service.go:400:		enhanced["driver_temp_avg"] = state.DriverTempSum / float64(state.TempCount)
+internal\service\session_service.go:401:		enhanced["passenger_temp_avg"] = state.PassengerTempSum / float64(state.TempCount)
+internal\service\session_service.go:406:		enhanced["start_latitude"] = *state.StartLatitude
+internal\service\session_service.go:409:		enhanced["start_longitude"] = *state.StartLongitude
+internal\service\session_service.go:412:		enhanced["end_latitude"] = *state.LastLatitude
+internal\service\session_service.go:415:		enhanced["end_longitude"] = *state.LastLongitude
+
+Ref count: 18
+=== REASONING ===
+Rename map applied: speed_avg→avg_speed_mph, start_latitude→start_lat, start_longitude→start_lon, end_latitude→end_lat, end_longitude→end_lon. Removed: start_odometer, end_odometer, speed_min, all range stats, all SOC fields, driver_temp_avg, passenger_temp_avg. Added distance fallback from speed.
+=== CHANGES ===
+ internal/service/session_service.go | 74 ++++++-------------------------------
+ 1 file changed, 11 insertions(+), 63 deletions(-)
+=== GATE ===
+Build: OK
+Remaining: 0
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
