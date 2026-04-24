@@ -109,7 +109,6 @@ func (h *TeslaUserOrderHandler) RefreshOrders(w http.ResponseWriter, r *http.Req
 			VIN:          o.VIN,
 			ReferralCode: o.ReferralCode,
 			IsUpgradable: o.IsUpgradable,
-			RawJSON:      string(raw),
 		}
 		if o.DeliveryDate != nil && *o.DeliveryDate != "" {
 			if t, err := time.Parse("2006-01-02", *o.DeliveryDate); err == nil {

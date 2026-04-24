@@ -435,7 +435,6 @@ func parseEnergyHistoryResponse(body []byte, siteID int64, period string) ([]*mo
 			GridEnergyInWh:     point.GridEnergyIn,
 			GridEnergyOutWh:    point.GridEnergyOut,
 			ConsumerEnergyWh:   point.ConsumerEnergy,
-			RawJSON:            string(raw),
 		})
 	}
 	return entries, nil
@@ -466,7 +465,6 @@ func parseBackupHistoryResponse(body []byte, siteID int64, period string) ([]*mo
 			Period:          period,
 			Timestamp:       ts,
 			DurationSeconds: point.Duration,
-			RawJSON:         string(raw),
 		})
 	}
 	return entries, nil
@@ -505,7 +503,6 @@ func parseWCChargingResponse(body []byte, siteID int64) ([]*models.TeslaEnergyWC
 			DIN:          point.DIN,
 			Timestamp:    ts,
 			EnergyWh:     point.EnergyWh,
-			RawJSON:      string(raw),
 		})
 	}
 	return entries, nil

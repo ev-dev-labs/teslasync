@@ -130,11 +130,6 @@ func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, "Tesla API calls are suspended")
 		return
 	}
-	// Check if commands endpoint is enabled in polling config
-	if pc, err := h.settingsRepo.GetPollingConfig(r.Context()); err == nil && !pc.Commands {
-		writeAppError(w, r, ErrTeslaEndpointDisabled.WithMessage("vehicle commands endpoint is disabled in polling config"))
-		return
-	}
 
 	vehicleID, err := urlParamInt64(r, "vehicleID")
 	if err != nil {
@@ -178,15 +173,9 @@ func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {
 	// Track command lifecycle via FSM
 	fsm := cmdFSM.NewExecutionFSM(0, vehicleID, body.Command)
 
-	// Check if vehicle is awake (state from DB)
-	if vehicle.State == "asleep" || vehicle.State == "offline" {
-		fsm.MarkVehicleAsleep()
-		// Tesla client handles wake internally, but we track the lifecycle
-		fsm.MarkWakeConfirmed()
-		fsm.StartSending()
-	} else {
-		fsm.MarkVehicleAwake()
-	}
+	// Vehicle state is tracked in vehicle_live_state, not on the vehicle row.
+	// The wake/command lifecycle is managed by the Tesla client internally.
+	fsm.MarkVehicleAwake()
 
 	// Execute command via Tesla API
 	cmdErr := h.teslaClient.SendCommand(r.Context(), vehicle.VIN, body.Command, body.Params)

@@ -89,7 +89,6 @@ func (h *TeslaUserProfileHandler) RefreshProfile(w http.ResponseWriter, r *http.
 		Email:           envelope.Response.Email,
 		FullName:        envelope.Response.FullName,
 		ProfileImageURL: envelope.Response.ProfileImageURL,
-		RawJSON:         string(body),
 	}
 	if err := h.profileRepo.Upsert(r.Context(), profile); err != nil {
 		log.Error().Err(err).Msg("failed to save tesla user profile")

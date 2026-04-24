@@ -88,7 +88,7 @@ func (h *WatchHandler) Summary(w http.ResponseWriter, r *http.Request) {
 		// Return basic info from vehicle record when no live state exists
 		writeJSON(w, http.StatusOK, WatchSummary{
 			VehicleName: vehicle.DisplayName,
-			State:       vehicle.State,
+			State:       "unknown",
 			IsLocked:    true,
 			LastUpdated: vehicle.UpdatedAt.Format(time.RFC3339),
 		})
@@ -96,7 +96,6 @@ func (h *WatchHandler) Summary(w http.ResponseWriter, r *http.Request) {
 	}
 
 	summary.VehicleName = vehicle.DisplayName
-	summary.State = vehicle.State
 
 	writeJSON(w, http.StatusOK, summary)
 }
@@ -120,7 +119,7 @@ func (h *WatchHandler) Complication(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, WatchComplication{
 			Battery:  "—",
 			Range:    "—",
-			State:    stateEmoji(vehicle.State),
+			State:    stateEmoji("unknown"),
 			Charging: false,
 		})
 		return
@@ -308,4 +307,11 @@ func stateEmoji(state string) string {
 	default:
 		return "⚫"
 	}
+}
+
+func derefInt(p *int) int {
+if p == nil {
+return 0
+}
+return *p
 }

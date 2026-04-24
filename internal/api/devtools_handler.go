@@ -1040,12 +1040,6 @@ func (h *DevToolsHandler) FleetStatus(w http.ResponseWriter, r *http.Request) {
 
 // NearbyChargingSites returns charging sites near the vehicle.
 func (h *DevToolsHandler) NearbyChargingSites(w http.ResponseWriter, r *http.Request) {
-	if h.settingsRepo != nil {
-		if pc, err := h.settingsRepo.GetPollingConfig(r.Context()); err == nil && !pc.NearbyChargingSites {
-			writeAppError(w, r, ErrTeslaEndpointDisabled.WithMessage("nearby_charging_sites endpoint is disabled in polling config"))
-			return
-		}
-	}
 	vin := r.URL.Query().Get("vin")
 	if vin == "" {
 		writeError(w, http.StatusBadRequest, "vin is required")
@@ -1064,12 +1058,6 @@ func (h *DevToolsHandler) NearbyChargingSites(w http.ResponseWriter, r *http.Req
 
 // ReleaseNotes returns firmware release notes.
 func (h *DevToolsHandler) ReleaseNotes(w http.ResponseWriter, r *http.Request) {
-	if h.settingsRepo != nil {
-		if pc, err := h.settingsRepo.GetPollingConfig(r.Context()); err == nil && !pc.ReleaseNotes {
-			writeAppError(w, r, ErrTeslaEndpointDisabled.WithMessage("release_notes endpoint is disabled in polling config"))
-			return
-		}
-	}
 	vin := r.URL.Query().Get("vin")
 	if vin == "" {
 		writeError(w, http.StatusBadRequest, "vin is required")
@@ -1088,12 +1076,6 @@ func (h *DevToolsHandler) ReleaseNotes(w http.ResponseWriter, r *http.Request) {
 
 // RecentAlerts returns recent vehicle alerts from Tesla.
 func (h *DevToolsHandler) RecentAlerts(w http.ResponseWriter, r *http.Request) {
-	if h.settingsRepo != nil {
-		if pc, err := h.settingsRepo.GetPollingConfig(r.Context()); err == nil && !pc.RecentAlerts {
-			writeAppError(w, r, ErrTeslaEndpointDisabled.WithMessage("recent_alerts endpoint is disabled in polling config"))
-			return
-		}
-	}
 	vin := r.URL.Query().Get("vin")
 	if vin == "" {
 		writeError(w, http.StatusBadRequest, "vin is required")
@@ -1112,12 +1094,6 @@ func (h *DevToolsHandler) RecentAlerts(w http.ResponseWriter, r *http.Request) {
 
 // ServiceData returns vehicle service history and status.
 func (h *DevToolsHandler) ServiceData(w http.ResponseWriter, r *http.Request) {
-	if h.settingsRepo != nil {
-		if pc, err := h.settingsRepo.GetPollingConfig(r.Context()); err == nil && !pc.ServiceData {
-			writeAppError(w, r, ErrTeslaEndpointDisabled.WithMessage("service_data endpoint is disabled in polling config"))
-			return
-		}
-	}
 	vin := r.URL.Query().Get("vin")
 	if vin == "" {
 		writeError(w, http.StatusBadRequest, "vin is required")

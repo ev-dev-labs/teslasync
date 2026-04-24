@@ -165,10 +165,10 @@ func (h *DataRepairHandler) CloseCharging(w http.ResponseWriter, r *http.Request
 	}
 
 	now := time.Now().UTC()
-	duration := math.Round(now.Sub(session.StartDate).Minutes()*100) / 100
+	duration := math.Round(now.Sub(session.StartTs).Minutes()*100) / 100
 
 	patch := map[string]interface{}{
-		"end_date":     now.Format(time.RFC3339),
+		"end_ts":       now.Format(time.RFC3339),
 		"duration_min": duration,
 	}
 	if err := h.chargingRepo.PartialUpdate(ctx, id, patch); err != nil {
@@ -200,10 +200,10 @@ func (h *DataRepairHandler) CloseDrive(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := time.Now().UTC()
-	duration := math.Round(now.Sub(drive.StartDate).Minutes()*100) / 100
+	duration := math.Round(now.Sub(drive.StartTs).Minutes()*100) / 100
 
 	patch := map[string]interface{}{
-		"end_date":     now.Format(time.RFC3339),
+		"end_ts":       now.Format(time.RFC3339),
 		"duration_min": duration,
 	}
 	if err := h.driveRepo.PartialUpdate(ctx, id, patch); err != nil {

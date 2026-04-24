@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/service"
@@ -84,11 +85,6 @@ func (h *VehicleHandler) SyncFromTesla(w http.ResponseWriter, r *http.Request) {
 		writeAppError(w, r, ErrTeslaAPISuspended)
 		return
 	}
-	// Check if vehicle_discovery endpoint is enabled in polling config (on-demand)
-	if pc, err := h.vehicleSvc.SettingsRepo().GetPollingConfig(ctx); err == nil && !pc.OnDemandVehicleDiscovery {
-		writeAppError(w, r, ErrTeslaEndpointDisabled.WithMessage("vehicle discovery endpoint is disabled in polling config"))
-		return
-	}
 	if !h.teslaClient.HasValidToken() {
 		writeAppError(w, r, ErrTeslaNotConnected)
 		return
@@ -116,12 +112,18 @@ func (h *VehicleHandler) Positions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	limit, offset := pagination(r)
-	positions, err := h.vehicleSvc.PositionRepo().GetByVehicle(r.Context(), id, limit, offset)
+	limit, _ := pagination(r)
+	from := time.Now().AddDate(0, 0, -7) // default to last 7 days
+	to := time.Now()
+	positions, err := h.vehicleSvc.PositionRepo().ListByVehicle(r.Context(), id, from, to)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", id).Msg("failed to get positions")
 		writeAppError(w, r, ErrDBQuery.WithMessage("failed to get positions"))
 		return
+	}
+	// Apply limit
+	if limit > 0 && len(positions) > limit {
+		positions = positions[:limit]
 	}
 	writeJSON(w, http.StatusOK, positions)
 }
@@ -182,11 +184,6 @@ func (h *VehicleHandler) CurrentState(w http.ResponseWriter, r *http.Request) {
 func (h *VehicleHandler) Wake(w http.ResponseWriter, r *http.Request) {
 	if suspended, _ := h.vehicleSvc.SettingsRepo().IsAPISuspended(r.Context()); suspended {
 		writeAppError(w, r, ErrTeslaAPISuspended)
-		return
-	}
-	// Check if wake_up endpoint is enabled in polling config
-	if pc, err := h.vehicleSvc.SettingsRepo().GetPollingConfig(r.Context()); err == nil && !pc.WakeUp {
-		writeAppError(w, r, ErrTeslaEndpointDisabled.WithMessage("wake_up endpoint is disabled in polling config"))
 		return
 	}
 

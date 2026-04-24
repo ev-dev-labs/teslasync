@@ -18,35 +18,25 @@ func NewChargingTelemetryHandler(db *database.DB) *ChargingTelemetryHandler {
 }
 
 func (h *ChargingTelemetryHandler) List(w http.ResponseWriter, r *http.Request) {
-	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
-	if err != nil || vehicleID == 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id required")
+	sessionID, err := strconv.ParseInt(r.URL.Query().Get("session_id"), 10, 64)
+	if err != nil || sessionID == 0 {
+		writeJSON(w, http.StatusOK, []models.ChargingTelemetry{})
 		return
 	}
-	limit, _ := pagination(r)
-	data, err := h.repo.GetByVehicle(r.Context(), vehicleID, limit)
+	data, err := h.repo.ListBySession(r.Context(), sessionID)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get charging telemetry")
 		writeError(w, http.StatusInternalServerError, "failed to get charging telemetry")
 		return
 	}
 	if data == nil {
-		data = make([]*models.ChargingTelemetry, 0)
+		data = make([]models.ChargingTelemetry, 0)
 	}
 	writeJSON(w, http.StatusOK, data)
 }
 
 func (h *ChargingTelemetryHandler) Latest(w http.ResponseWriter, r *http.Request) {
-	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
-	if err != nil || vehicleID == 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id required")
-		return
-	}
-	data, err := h.repo.GetLatest(r.Context(), vehicleID)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to get latest charging telemetry")
-		writeError(w, http.StatusInternalServerError, "failed to get charging telemetry")
-		return
-	}
-	writeJSON(w, http.StatusOK, data)
+	// ChargingTelemetry is now retrieved by session, not by vehicle.
+	// Return null when no session is specified.
+	writeJSON(w, http.StatusOK, nil)
 }

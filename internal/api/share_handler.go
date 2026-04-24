@@ -39,10 +39,8 @@ type publicDriveInfo struct {
 	DurationMin    float64  `json:"duration_min"`
 	StartAddress   string   `json:"start_address"`
 	EndAddress     string   `json:"end_address"`
-	StartBattery   *int     `json:"start_battery"`
-	EndBattery     *int     `json:"end_battery"`
-	ElevationGain  *float64 `json:"elevation_gain"`
-	ElevationLoss  *float64 `json:"elevation_loss"`
+	StartBattery   *int16   `json:"start_battery"`
+	EndBattery     *int16   `json:"end_battery"`
 	MaxSpeedKmh    *float64 `json:"max_speed_kmh,omitempty"`
 	AvgSpeedKmh    *float64 `json:"avg_speed_kmh,omitempty"`
 	EfficiencyWhKm *float64 `json:"efficiency_wh_km,omitempty"`
@@ -250,27 +248,25 @@ func (h *ShareHandler) GetPublicShare(w http.ResponseWriter, r *http.Request) {
 
 	// Build public drive info (no PII)
 	info := publicDriveInfo{
-		Date:          drive.StartDate.Format("2006-01-02"),
-		DistanceKm:    drive.Distance,
+		Date:          drive.StartTs.Format("2006-01-02"),
+		DistanceKm:    drive.DistanceMi,
 		DurationMin:   drive.DurationMin,
 		StartAddress:  safeDeref(drive.StartAddress, ""),
 		EndAddress:    safeDeref(drive.EndAddress, ""),
-		StartBattery:  drive.StartBatteryLvl,
-		EndBattery:    drive.EndBatteryLvl,
-		ElevationGain: drive.ElevationGain,
-		ElevationLoss: drive.ElevationLoss,
+		StartBattery:  drive.StartBatteryPct,
+		EndBattery:    drive.EndBatteryPct,
 	}
 
 	if share.IncludeSpeed {
-		info.MaxSpeedKmh = drive.SpeedMax
-		info.AvgSpeedKmh = drive.SpeedAvg
+		info.MaxSpeedKmh = drive.MaxSpeedMph
+		info.AvgSpeedKmh = drive.AvgSpeedMph
 	}
 
 	// Approximate efficiency: battery % delta per km → Wh/km
-	if drive.StartBatteryLvl != nil && drive.EndBatteryLvl != nil && drive.Distance > 2 {
-		battUsed := float64(*drive.StartBatteryLvl - *drive.EndBatteryLvl)
+	if drive.StartBatteryPct != nil && drive.EndBatteryPct != nil && drive.DistanceMi > 2 {
+		battUsed := float64(*drive.StartBatteryPct - *drive.EndBatteryPct)
 		if battUsed > 0 {
-			eff := battUsed / drive.Distance * 100 * 0.75
+			eff := battUsed / drive.DistanceMi * 100 * 0.75
 			info.EfficiencyWhKm = &eff
 		}
 	}
@@ -285,8 +281,8 @@ func (h *ShareHandler) GetPublicShare(w http.ResponseWriter, r *http.Request) {
 	vehicle, err := h.vehicleRepo.GetByID(ctx, drive.VehicleID)
 	if err == nil && vehicle != nil {
 		resp.Vehicle = &publicVehicle{
-			Model: vehicle.Model,
-			Color: vehicle.ExteriorColor,
+			Model: safeDeref(vehicle.Model, ""),
+			Color: safeDeref(vehicle.Color, ""),
 		}
 	}
 
@@ -313,8 +309,8 @@ func (h *ShareHandler) buildPublicProfiles(ctx context.Context, resp *publicShar
 	}
 
 	// Fall back to positions
-	if drive.EndDate != nil {
-		positions, _ := h.posRepo.GetByTimeRange(ctx, drive.VehicleID, drive.StartDate, drive.EndDate)
+	if !drive.EndTs.IsZero() {
+		positions, _ := h.posRepo.ListByVehicle(ctx, drive.VehicleID, drive.StartTs, drive.EndTs)
 		if len(positions) > 0 {
 			h.buildFromPositions(resp, positions, share)
 		}
@@ -378,7 +374,7 @@ func (h *ShareHandler) buildFromTelemetry(resp *publicShareResponse, readings []
 	}
 }
 
-func (h *ShareHandler) buildFromPositions(resp *publicShareResponse, positions []*models.Position, share *models.ShareToken) {
+func (h *ShareHandler) buildFromPositions(resp *publicShareResponse, positions []models.Position, share *models.ShareToken) {
 	n := len(positions)
 	if n <= clipPoints*2 {
 		return
@@ -406,17 +402,17 @@ func (h *ShareHandler) buildFromPositions(resp *publicShareResponse, positions [
 			})
 		}
 
-		if p.Elevation != nil {
+		if p.ElevationM != nil {
 			resp.ElevationProfile = append(resp.ElevationProfile, publicElevationPoint{
 				DistanceKm: cumulativeDist,
-				ElevationM: *p.Elevation,
+				ElevationM: *p.ElevationM,
 			})
 		}
 
-		if share.IncludeSpeed && p.Speed != nil {
+		if share.IncludeSpeed && p.SpeedMph != nil {
 			resp.SpeedProfile = append(resp.SpeedProfile, publicSpeedPoint{
 				DistanceKm: cumulativeDist,
-				SpeedKmh:   *p.Speed,
+				SpeedKmh:   *p.SpeedMph,
 			})
 		}
 	}

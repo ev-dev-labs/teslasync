@@ -21,6 +21,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
+	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/polling"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
@@ -51,6 +52,22 @@ type RouterOptions struct {
 	SignalStore      *signal.Store            // If set, enables /internal/flush endpoint
 	WebhookTrigger   WebhookProcessor         // If set, enables public webhook receiver endpoint
 	CacheStore       *cache.Store             // If set, enables cached endpoints (trip planner, etc.)
+}
+
+// settingsCheckerAdapter wraps *database.SettingsRepo to satisfy action.SettingsChecker.
+// GetPollingConfig returns a default PollingConfig since per-vehicle polling tuning
+// now lives in the `polling_config` table (ADR-011), not on the global settings repo.
+type settingsCheckerAdapter struct {
+	*database.SettingsRepo
+}
+
+func (a *settingsCheckerAdapter) GetPollingConfig(_ context.Context) (*models.PollingConfig, error) {
+	return &models.PollingConfig{
+		AwakeIntervalSec:   60,
+		AsleepIntervalSec:  600,
+		DrivingIntervalSec: 10,
+		Enabled:            true,
+	}, nil
 }
 
 // NewRouter creates and configures the main HTTP router with all API routes,
@@ -212,7 +229,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		WithCommandExecutor(action.NewCommandExecutor(
 			database.NewVehicleRepo(db),
 			database.NewCommandLogRepo(db),
-			database.NewSettingsRepo(db),
+			&settingsCheckerAdapter{database.NewSettingsRepo(db)},
 			teslaClient,
 		)),
 		WithAutomationEventPublisher(automationPublisher),

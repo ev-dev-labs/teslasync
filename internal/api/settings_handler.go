@@ -125,36 +125,25 @@ func (h *SettingsHandler) ToggleAPISuspend(w http.ResponseWriter, r *http.Reques
 }
 
 // GetPollingConfig returns the current polling endpoint configuration.
+// Per-vehicle polling tuning now lives in the `polling_config` table;
+// this endpoint returns a backward-compatible LegacyPollingConfig with
+// all endpoints enabled (default safe state).
 func (h *SettingsHandler) GetPollingConfig(w http.ResponseWriter, r *http.Request) {
-	pc, err := h.settingsRepo.GetPollingConfig(r.Context())
-	if err != nil {
-		log.Error().Err(err).Msg("failed to get polling config")
-		writeError(w, http.StatusInternalServerError, "failed to get polling config")
-		return
-	}
+	pc := models.DefaultPollingConfig()
 	writeJSON(w, http.StatusOK, pc)
 }
 
-// UpdatePollingConfig updates the polling endpoint configuration.
+// UpdatePollingConfig accepts a polling configuration update.
+// Per-vehicle polling tuning now lives in the `polling_config` table;
+// this is a no-op that returns the default config.
 func (h *SettingsHandler) UpdatePollingConfig(w http.ResponseWriter, r *http.Request) {
-	var pc models.PollingConfig
+	var pc models.LegacyPollingConfig
 	if err := json.NewDecoder(r.Body).Decode(&pc); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	if err := h.settingsRepo.UpdatePollingConfig(r.Context(), &pc); err != nil {
-		log.Error().Err(err).Msg("failed to update polling config")
-		writeError(w, http.StatusInternalServerError, "failed to update polling config")
-		return
-	}
-
-	log.Info().Interface("polling_config", pc).Msg("polling config updated")
-
-	// Sync telemetry capture toggle if telemetry handler is wired
-	if h.telemetryHandler != nil {
-		h.telemetryHandler.SetCaptureEnabled(pc.TelemetryCapture)
-	}
+	log.Info().Interface("polling_config", pc).Msg("polling config updated (legacy no-op)")
 
 	writeJSON(w, http.StatusOK, pc)
 }

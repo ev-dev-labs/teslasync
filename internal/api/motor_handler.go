@@ -23,17 +23,19 @@ func (h *MotorHandler) List(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "vehicle_id required")
 		return
 	}
-	limit, _ := pagination(r)
-	snaps, err := h.repo.GetByVehicle(r.Context(), vehicleID, limit)
+	// Motor snapshots are retrieved via GetLatest; for the list view
+	// we return the latest snapshot if available.
+	snap, err := h.repo.GetLatest(r.Context(), vehicleID)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get motor data")
 		writeError(w, http.StatusInternalServerError, "failed to get motor data")
 		return
 	}
-	if snaps == nil {
-		snaps = make([]*models.MotorSnapshot, 0)
+	if snap == nil {
+		writeJSON(w, http.StatusOK, []models.MotorSnapshot{})
+		return
 	}
-	writeJSON(w, http.StatusOK, snaps)
+	writeJSON(w, http.StatusOK, []*models.MotorSnapshot{snap})
 }
 
 func (h *MotorHandler) Latest(w http.ResponseWriter, r *http.Request) {

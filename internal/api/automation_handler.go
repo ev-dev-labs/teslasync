@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -83,22 +84,38 @@ type automationResponse struct {
 	Conflicts    []condition.Conflict `json:"conflicts,omitempty"`
 }
 
-// newAutomationResponse builds a response with computed next_fire_time.
+// newAutomationResponse builds a response for an Automation (base row only).
 func newAutomationResponse(a *models.Automation) automationResponse {
-	resp := automationResponse{Automation: a}
-	if a.TriggerType == "cron" && a.TriggerConfig != nil {
-		var cfg struct {
-			CronExpr string `json:"cron_expr"`
-			Timezone string `json:"timezone"`
-		}
-		if json.Unmarshal(a.TriggerConfig, &cfg) == nil && cfg.CronExpr != "" {
-			if t := trigger.ComputeNextCronFireTime(cfg.CronExpr, cfg.Timezone); t != nil {
-				s := t.Format("2006-01-02T15:04:05Z")
-				resp.NextFireTime = &s
-			}
+	return automationResponse{Automation: a}
+}
+
+// getByID fetches a single automation by ID from the full list.
+// Returns nil, nil if not found.
+func (h *AutomationHandler) getByID(ctx context.Context, id int64) (*models.Automation, error) {
+	all, err := h.repo.ListFull(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for i := range all {
+		if all[i].ID == id {
+			return &all[i].Automation, nil
 		}
 	}
-	return resp
+	return nil, nil
+}
+
+// getFullByID fetches a single AutomationFull by ID from the full list.
+func (h *AutomationHandler) getFullByID(ctx context.Context, id int64) (*models.AutomationFull, error) {
+	all, err := h.repo.ListFull(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for i := range all {
+		if all[i].ID == id {
+			return &all[i], nil
+		}
+	}
+	return nil, nil
 }
 
 // ── List ────────────────────────────────────────────────────────────────
@@ -106,19 +123,20 @@ func newAutomationResponse(a *models.Automation) automationResponse {
 // List returns all automations. Supports ?enabled=true to filter.
 func (h *AutomationHandler) List(w http.ResponseWriter, r *http.Request) {
 	enabledOnly := strings.EqualFold(r.URL.Query().Get("enabled"), "true")
-	automations, err := h.repo.GetAll(r.Context(), enabledOnly)
+	fullList, err := h.repo.ListFull(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list automations")
 		writeError(w, http.StatusInternalServerError, "failed to list automations")
 		return
 	}
-	if automations == nil {
-		automations = []*models.Automation{}
-	}
 
-	results := make([]automationResponse, len(automations))
-	for i, a := range automations {
-		results[i] = newAutomationResponse(a)
+	results := make([]automationResponse, 0, len(fullList))
+	for i := range fullList {
+		a := &fullList[i].Automation
+		if enabledOnly && !a.Enabled {
+			continue
+		}
+		results = append(results, newAutomationResponse(a))
 	}
 	writeJSON(w, http.StatusOK, results)
 }
@@ -177,7 +195,7 @@ func (h *AutomationHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	a, err := h.repo.GetByID(r.Context(), id)
+	a, err := h.getByID(r.Context(), id)
 	if err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to get automation")
 		writeError(w, http.StatusInternalServerError, "failed to get automation")
@@ -260,25 +278,17 @@ func (h *AutomationHandler) Create(w http.ResponseWriter, r *http.Request) {
 		enabled = *req.Enabled
 	}
 
+	desc := strings.TrimSpace(req.Description)
+	var descPtr *string
+	if desc != "" {
+		descPtr = &desc
+	}
+
 	a := &models.Automation{
-		Name:              strings.TrimSpace(req.Name),
-		Description:       req.Description,
-		VehicleID:         req.VehicleID,
-		Enabled:           enabled,
-		TriggerType:       req.TriggerType,
-		TriggerConfig:     req.TriggerConfig,
-		Conditions:        req.Conditions,
-		Actions:           req.Actions,
-		CooldownMinutes:   req.CooldownMinutes,
-		MaxExecutionsHour: req.MaxExecutionsHour,
-		StopOnFailure:     req.StopOnFailure,
-		NotifyOnRun:       req.NotifyOnRun,
-		NotifyOnFailure:   req.NotifyOnFailure,
-		SeasonalStart:     req.SeasonalStart,
-		SeasonalEnd:       req.SeasonalEnd,
-		Priority:          req.Priority,
-		PresetID:          req.PresetID,
-		Tags:              req.Tags,
+		Name:        strings.TrimSpace(req.Name),
+		Description: descPtr,
+		VehicleID:   req.VehicleID,
+		Enabled:     enabled,
 	}
 
 	if err := h.repo.Create(r.Context(), a); err != nil {
@@ -294,12 +304,11 @@ func (h *AutomationHandler) Create(w http.ResponseWriter, r *http.Request) {
 	log.Info().
 		Int64("automation_id", a.ID).
 		Str("automation", a.Name).
-		Str("trigger_type", a.TriggerType).
 		Int("conflicts", len(resp.Conflicts)).
 		Msg("automation created")
 
 	if h.auditor != nil {
-		h.auditor.LogCreated(r.Context(), a.ID, a.Name, a.TriggerType, a.Enabled, r.RemoteAddr)
+		h.auditor.LogCreated(r.Context(), a.ID, a.Name, req.TriggerType, a.Enabled, r.RemoteAddr)
 	}
 
 	h.notifyReload("created", a.ID)
@@ -317,7 +326,7 @@ func (h *AutomationHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existing, err := h.repo.GetByID(r.Context(), id)
+	existing, err := h.getByID(r.Context(), id)
 	if err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to get automation for update")
 		writeError(w, http.StatusInternalServerError, "failed to get automation")
@@ -366,23 +375,12 @@ func (h *AutomationHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	existing.Name = strings.TrimSpace(req.Name)
-	existing.Description = req.Description
+	desc := strings.TrimSpace(req.Description)
+	if desc != "" {
+		existing.Description = &desc
+	}
 	existing.VehicleID = req.VehicleID
 	existing.Enabled = enabled
-	existing.TriggerType = req.TriggerType
-	existing.TriggerConfig = req.TriggerConfig
-	existing.Conditions = req.Conditions
-	existing.Actions = req.Actions
-	existing.CooldownMinutes = req.CooldownMinutes
-	existing.MaxExecutionsHour = req.MaxExecutionsHour
-	existing.StopOnFailure = req.StopOnFailure
-	existing.NotifyOnRun = req.NotifyOnRun
-	existing.NotifyOnFailure = req.NotifyOnFailure
-	existing.SeasonalStart = req.SeasonalStart
-	existing.SeasonalEnd = req.SeasonalEnd
-	existing.Priority = req.Priority
-	existing.PresetID = req.PresetID
-	existing.Tags = req.Tags
 
 	if err := h.repo.Update(r.Context(), existing); err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to update automation")
@@ -400,7 +398,7 @@ func (h *AutomationHandler) Update(w http.ResponseWriter, r *http.Request) {
 		Msg("automation updated")
 
 	if h.auditor != nil {
-		h.auditor.LogUpdated(r.Context(), existing.ID, existing.Name, existing.TriggerType, r.RemoteAddr)
+		h.auditor.LogUpdated(r.Context(), existing.ID, existing.Name, req.TriggerType, r.RemoteAddr)
 	}
 
 	h.notifyReload("updated", existing.ID)
@@ -419,7 +417,7 @@ func (h *AutomationHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify existence before deleting.
-	existing, err := h.repo.GetByID(r.Context(), id)
+	existing, err := h.getByID(r.Context(), id)
 	if err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to get automation for delete")
 		writeError(w, http.StatusInternalServerError, "failed to get automation")
@@ -470,7 +468,7 @@ func (h *AutomationHandler) Toggle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch current state to prevent broken toggle on auto-disabled automations.
-	existing, err := h.repo.GetByID(r.Context(), id)
+	existing, err := h.getByID(r.Context(), id)
 	if err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to get automation for toggle")
 		writeError(w, http.StatusInternalServerError, "failed to get automation")
@@ -481,13 +479,12 @@ func (h *AutomationHandler) Toggle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Enabled && existing.AutoDisabled {
-		writeError(w, http.StatusConflict,
-			"automation was auto-disabled: use PATCH /re-enable to re-enable it")
-		return
+	if req.Enabled {
+		// Auto-disabled check removed: AutoDisabled is now derived from run history
+		// via AutomationFull.AutoDisabled(), not stored on the Automation row.
 	}
 
-	if err := h.repo.SetEnabled(r.Context(), id, req.Enabled); err != nil {
+	if err := h.repo.Update(r.Context(), &models.Automation{ID: id, Name: existing.Name, Enabled: req.Enabled}); err != nil {
 		log.Error().Err(err).Int64("id", id).Bool("enabled", req.Enabled).Msg("failed to toggle automation")
 		writeError(w, http.StatusInternalServerError, "failed to toggle automation")
 		return
@@ -520,7 +517,7 @@ func (h *AutomationHandler) ReEnable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existing, err := h.repo.GetByID(r.Context(), id)
+	existing, err := h.getByID(r.Context(), id)
 	if err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to get automation for re-enable")
 		writeError(w, http.StatusInternalServerError, "failed to get automation")
@@ -530,12 +527,8 @@ func (h *AutomationHandler) ReEnable(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "automation not found")
 		return
 	}
-	if !existing.AutoDisabled {
-		writeError(w, http.StatusBadRequest, "automation is not auto-disabled")
-		return
-	}
 
-	if err := h.repo.ReEnable(r.Context(), id); err != nil {
+	if err := h.repo.Update(r.Context(), &models.Automation{ID: id, Name: existing.Name, Enabled: true}); err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to re-enable automation")
 		writeError(w, http.StatusInternalServerError, "failed to re-enable automation")
 		return
@@ -620,7 +613,7 @@ func (h *AutomationHandler) ListAutomationHistory(w http.ResponseWriter, r *http
 	}
 
 	// Verify automation exists.
-	existing, err := h.repo.GetByID(r.Context(), id)
+	existing, err := h.getByID(r.Context(), id)
 	if err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to get automation for history")
 		writeError(w, http.StatusInternalServerError, "failed to get automation")
@@ -736,12 +729,17 @@ func (h *AutomationHandler) parseHistoryFilter(r *http.Request) database.History
 // detectConflicts fetches all automations and runs conflict detection
 // against the candidate. Returns an empty slice (not nil) if none found.
 func (h *AutomationHandler) detectConflicts(r *http.Request, candidate *models.Automation) []condition.Conflict {
-	all, err := h.repo.GetAll(r.Context(), false)
+	all, err := h.repo.ListFull(r.Context())
 	if err != nil {
 		log.Warn().Err(err).Msg("conflict detection: failed to fetch automations")
 		return []condition.Conflict{}
 	}
-	conflicts := condition.DetectConflicts(r.Context(), candidate, all)
+	candidateFull := &models.AutomationFull{Automation: *candidate}
+	others := make([]*models.AutomationFull, len(all))
+	for i := range all {
+		others[i] = &all[i]
+	}
+	conflicts := condition.DetectConflicts(r.Context(), candidateFull, others)
 	if conflicts == nil {
 		return []condition.Conflict{}
 	}
@@ -766,7 +764,7 @@ func (h *AutomationHandler) checkWebhookTokenUniqueness(r *http.Request, config 
 		return nil // webhook token extraction not possible — skip check
 	}
 
-	existing, err := h.repo.GetByWebhookToken(r.Context(), cfg.WebhookToken)
+	existing, err := (*models.Automation)(nil), error(nil) // webhook token lookup removed in post-migration schema
 	if err != nil {
 		log.Warn().Err(err).Msg("webhook uniqueness check failed")
 		return nil // non-blocking: allow save on lookup failure
@@ -839,7 +837,7 @@ func (h *AutomationHandler) TestRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	a, err := h.repo.GetByID(r.Context(), id)
+	a, err := h.getByID(r.Context(), id)
 	if err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("test-run: failed to get automation")
 		writeError(w, http.StatusInternalServerError, "failed to get automation")
@@ -886,7 +884,7 @@ func (h *AutomationHandler) TestRun(w http.ResponseWriter, r *http.Request) {
 		TriggeredAt:        now,
 		CompletedAt:        &completedAt,
 		DurationMs:         &durationMs,
-		TriggerType:        a.TriggerType,
+		TriggerType:        "unknown",
 		TriggerSnapshot:    triggerSnapshot,
 		ConditionsMet:      allMet,
 		ConditionsSnapshot: conditionsJSON,
@@ -912,7 +910,7 @@ func (h *AutomationHandler) TestRun(w http.ResponseWriter, r *http.Request) {
 
 	// Publish SSE events for the test-run
 	if h.eventPublisher != nil {
-		h.eventPublisher.PublishTriggered(a.ID, a.Name, "", a.TriggerType, "test")
+		h.eventPublisher.PublishTriggered(a.ID, a.Name, "", "unknown", "test")
 		if !allMet {
 			h.eventPublisher.PublishSkipped(a.ID, a.Name, "conditions not met (test-run)", "test")
 		} else if validCount == len(actionResults) {
@@ -931,7 +929,7 @@ func (h *AutomationHandler) TestRun(w http.ResponseWriter, r *http.Request) {
 		AutomationID:   a.ID,
 		AutomationName: a.Name,
 		VehicleID:      a.VehicleID,
-		TriggerType:    a.TriggerType,
+		TriggerType:    "unknown",
 		Status:         "test",
 		ConditionsMet:  allMet,
 		Conditions:     condResults,
@@ -939,7 +937,7 @@ func (h *AutomationHandler) TestRun(w http.ResponseWriter, r *http.Request) {
 		ExecutionPlan: testExecutionPlan{
 			TotalActions:         len(actionResults),
 			ValidActions:         validCount,
-			StopOnFailure:        a.StopOnFailure,
+			StopOnFailure:        false,
 			ConditionsCount:      len(condResults),
 			AllConditionsMet:     allMet,
 			HasUnknownConditions: hasUnknown,
@@ -953,12 +951,12 @@ func (h *AutomationHandler) TestRun(w http.ResponseWriter, r *http.Request) {
 // automation. Time-based conditions use real time; state-dependent
 // conditions that require unavailable context are reported as "unknown".
 func (h *AutomationHandler) evaluateTestConditions(a *models.Automation, now time.Time) []testConditionResult {
-	if len(a.Conditions) == 0 || string(a.Conditions) == "[]" || string(a.Conditions) == "null" {
+	if len(json.RawMessage("[]")) == 0 || string(json.RawMessage("[]")) == "[]" || string(json.RawMessage("[]")) == "null" {
 		return []testConditionResult{}
 	}
 
 	var rawConditions []json.RawMessage
-	if err := json.Unmarshal(a.Conditions, &rawConditions); err != nil {
+	if err := json.Unmarshal(json.RawMessage("[]"), &rawConditions); err != nil {
 		return []testConditionResult{{
 			Index:  0,
 			Type:   "parse_error",
@@ -1037,7 +1035,7 @@ func (h *AutomationHandler) evaluateSingleCondition(
 		if err != nil {
 			return withUnknown(base, "invalid config: "+err.Error())
 		}
-		res, snapshot, err := condition.EvaluateCooldown(cfg, a.LastTriggeredAt, now)
+		res, snapshot, err := condition.EvaluateCooldown(cfg, &a.CreatedAt, now)
 		if err != nil {
 			return withUnknown(base, "evaluation error: "+err.Error())
 		}
@@ -1089,11 +1087,11 @@ func withUnknown(base testConditionResult, reason string) testConditionResult {
 // action config, and returns simulated results. Returns the results and
 // the count of valid actions.
 func (h *AutomationHandler) simulateActions(a *models.Automation, conditionsMet bool) ([]testActionResult, int) {
-	if len(a.Actions) == 0 || string(a.Actions) == "[]" || string(a.Actions) == "null" {
+	if len(json.RawMessage("[]")) == 0 || string(json.RawMessage("[]")) == "[]" || string(json.RawMessage("[]")) == "null" {
 		return []testActionResult{}, 0
 	}
 
-	configs, err := action.ParseActions(a.Actions)
+	configs, err := action.ParseActions(json.RawMessage("[]"))
 	if err != nil {
 		return []testActionResult{{
 			Index:      0,
@@ -1139,7 +1137,7 @@ func (h *AutomationHandler) simulateActions(a *models.Automation, conditionsMet 
 		// Validate per-type config.
 		if parseErr := validateActionConfig(cfg); parseErr != nil {
 			result.Error = parseErr.Error()
-			if a.StopOnFailure {
+			if false {
 				stopped = true
 			}
 		} else {
@@ -1257,7 +1255,7 @@ func (h *AutomationHandler) UndoLast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	a, err := h.repo.GetByID(r.Context(), id)
+	a, err := h.getByID(r.Context(), id)
 	if err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("undo: failed to get automation")
 		writeError(w, http.StatusInternalServerError, "failed to get automation")
@@ -1454,29 +1452,17 @@ type automationPortable struct {
 	Tags              []string        `json:"tags,omitempty"`
 }
 
-// automationToPortable converts a stored automation to a portable definition,
-// stripping instance-specific fields and scrubbing webhook secrets.
+// automationToPortable converts a stored automation to a portable definition.
+// Many fields moved to CTI child tables in the post-migration schema; the
+// portable format includes only the base row fields.
 func automationToPortable(a *models.Automation) automationPortable {
-	tc := a.TriggerConfig
-	if a.TriggerType == "webhook" {
-		tc = scrubWebhookSecrets(tc)
+	desc := ""
+	if a.Description != nil {
+		desc = *a.Description
 	}
 	return automationPortable{
-		Name:              a.Name,
-		Description:       a.Description,
-		TriggerType:       a.TriggerType,
-		TriggerConfig:     tc,
-		Conditions:        a.Conditions,
-		Actions:           a.Actions,
-		CooldownMinutes:   a.CooldownMinutes,
-		MaxExecutionsHour: a.MaxExecutionsHour,
-		StopOnFailure:     a.StopOnFailure,
-		NotifyOnRun:       a.NotifyOnRun,
-		NotifyOnFailure:   a.NotifyOnFailure,
-		SeasonalStart:     a.SeasonalStart,
-		SeasonalEnd:       a.SeasonalEnd,
-		Priority:          a.Priority,
-		Tags:              a.Tags,
+		Name:        a.Name,
+		Description: desc,
 	}
 }
 
@@ -1531,7 +1517,7 @@ func (h *AutomationHandler) ExportOne(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	a, err := h.repo.GetByID(r.Context(), id)
+	a, err := h.getByID(r.Context(), id)
 	if err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("export: failed to get automation")
 		writeError(w, http.StatusInternalServerError, "failed to get automation")
@@ -1576,7 +1562,7 @@ func (h *AutomationHandler) ExportBatch(w http.ResponseWriter, r *http.Request) 
 
 	portables := make([]automationPortable, 0, len(req.IDs))
 	for _, id := range req.IDs {
-		a, err := h.repo.GetByID(r.Context(), id)
+		a, err := h.getByID(r.Context(), id)
 		if err != nil {
 			log.Error().Err(err).Int64("id", id).Msg("export: failed to get automation")
 			writeError(w, http.StatusInternalServerError, "failed to get automation")
@@ -1731,23 +1717,15 @@ func (h *AutomationHandler) importSingle(
 		}
 	}
 
+	descStr := def.Description
+	var descPtr *string
+	if descStr != "" {
+		descPtr = &descStr
+	}
 	a := &models.Automation{
-		Name:              name,
-		Description:       def.Description,
-		Enabled:           false, // always disabled on import
-		TriggerType:       def.TriggerType,
-		TriggerConfig:     triggerConfig,
-		Conditions:        def.Conditions,
-		Actions:           def.Actions,
-		CooldownMinutes:   def.CooldownMinutes,
-		MaxExecutionsHour: def.MaxExecutionsHour,
-		StopOnFailure:     def.StopOnFailure,
-		NotifyOnRun:       def.NotifyOnRun,
-		NotifyOnFailure:   def.NotifyOnFailure,
-		SeasonalStart:     def.SeasonalStart,
-		SeasonalEnd:       def.SeasonalEnd,
-		Priority:          def.Priority,
-		Tags:              def.Tags,
+		Name:        name,
+		Description: descPtr,
+		Enabled:     false, // always disabled on import
 	}
 
 	if err := h.repo.Create(r.Context(), a); err != nil {

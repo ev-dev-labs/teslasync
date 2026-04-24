@@ -12,7 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
@@ -86,11 +85,17 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 		}
 	}
 
-	// Parse conditions
-	var cond models.RuleCondition
-	if err := json.Unmarshal(rule.Conditions, &cond); err != nil {
-		log.Warn().Err(err).Int64("rule_id", rule.ID).Msg("cep: failed to parse rule conditions")
-		return EvalResult{}
+	// Build condition from typed AlertRule fields (no JSONB conditions blob)
+	cond := models.RuleCondition{
+		Signal:  rule.SignalName,
+		Compare: rule.Op,
+	}
+	if rule.ValueNum != nil {
+		cond.Value = *rule.ValueNum
+	} else if rule.ValueText != nil {
+		cond.Value = *rule.ValueText
+	} else if rule.ValueBool != nil {
+		cond.Value = *rule.ValueBool
 	}
 
 	// === EVALUATE CONDITION TREE ===
@@ -216,23 +221,19 @@ func (e *RuleEngine) SetLastFired(ruleID, vehicleID int64, t time.Time) {
 }
 
 // LoadCooldownFromDB restores cooldown state from the database (pod restart recovery).
+// LastFiredAt is now tracked in-memory only; this method initializes state entries
+// for rules scoped to specific vehicles so cooldown tracking begins immediately.
 func (e *RuleEngine) LoadCooldownFromDB(ctx context.Context, rules []*models.AlertRule) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	for _, rule := range rules {
-		if rule.LastFiredAt != nil {
-			// Apply to all vehicles (vehicleID 0 = wildcard)
-			vid := int64(0)
-			if rule.VehicleID != nil {
-				vid = *rule.VehicleID
-			}
-			key := ruleKey{RuleID: rule.ID, VehicleID: vid}
-			st, ok := e.state[key]
-			if !ok {
-				st = &ruleState{}
-				e.state[key] = st
-			}
-			st.LastFiredAt = rule.LastFiredAt
+		vid := int64(0)
+		if rule.VehicleID != nil {
+			vid = *rule.VehicleID
+		}
+		key := ruleKey{RuleID: rule.ID, VehicleID: vid}
+		if _, ok := e.state[key]; !ok {
+			e.state[key] = &ruleState{}
 		}
 	}
 }
@@ -417,11 +418,7 @@ func compareNum(a, b interface{}) int {
 // changed_from operator. Cooldown reset only applies to transition rules — threshold
 // rules should NOT reset on brief bounces to avoid notification storms.
 func isTransitionRule(rule *models.AlertRule) bool {
-	if rule.Conditions == nil {
-		return false
-	}
-	raw := string(rule.Conditions)
-	return strings.Contains(raw, `"changed_to"`) || strings.Contains(raw, `"changed_from"`)
+	return rule.Op == "changed_to" || rule.Op == "changed_from"
 }
 
 var templateRe = regexp.MustCompile(`\{\{(\w+)\}\}`)

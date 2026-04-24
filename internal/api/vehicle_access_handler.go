@@ -360,7 +360,6 @@ func parseDriversResponse(body []byte, vehicleID int64, vin string) ([]*models.T
 			DriverEmail: d.Email,
 			DriverName:  d.Name,
 			Role:        d.Role,
-			RawJSON:     string(raw),
 		})
 	}
 
@@ -396,7 +395,6 @@ func parseInvitationsResponse(body []byte, vehicleID int64, vin string) ([]*mode
 			InviteURL:    inv.InviteURL,
 			Status:       inv.Status,
 			CreatedBy:    inv.CreatedBy,
-			RawJSON:      string(raw),
 		}
 		if inv.ExpiresAt != nil {
 			if t, err := time.Parse(time.RFC3339, *inv.ExpiresAt); err == nil {
@@ -438,7 +436,6 @@ func parseCreateInvitationResponse(body []byte, vehicleID int64, vin string) (*m
 		InviteURL:    inv.InviteURL,
 		Status:       inv.Status,
 		CreatedBy:    inv.CreatedBy,
-		RawJSON:      string(envelope.Response),
 	}
 	if inv.ExpiresAt != nil {
 		if t, err := time.Parse(time.RFC3339, *inv.ExpiresAt); err == nil {

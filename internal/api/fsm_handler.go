@@ -70,19 +70,10 @@ func (a *fsmAction) Execute(ctx context.Context, vehicleID int64, from, to fsm.S
 		keep(err)
 	}
 
-	// 3. Update vehicles table — most important: this is what the UI / state queries read.
-	if err := a.vehicleRepo.UpdateState(ctx, vehicleID, string(to), true); err != nil {
-		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("fsm: failed to update vehicle state")
-		keep(err)
-	}
+	// 3. State is now tracked in vehicle_live_state, not on the vehicles table.
+	// The live-state repo is the single source of truth for current vehicle state.
 
-	// 4. Persist gear capability the first time we observe a Gear signal. This used to
-	// live in the legacy state-machine code; the FSM is now the single writer.
-	if sctx.IsGearCapable {
-		if err := a.vehicleRepo.SetGearCapable(ctx, vehicleID, true); err != nil {
-			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("fsm: failed to persist gear capability")
-		}
-	}
+	// 4. Gear capability is now derived from vehicle_live_state, not stored on the vehicle row.
 
 	// 5. Log transition to fsm_transitions
 	if a.transRepo != nil {
@@ -209,11 +200,8 @@ func (h *FSMHandler) getOrCreate(ctx context.Context, vehicleID int64) *fsm.Vehi
 	}
 	m = fsm.NewVehicleFSM(initial, action)
 
-	// Rehydrate persisted gear-capability so the FSM doesn't re-trigger the
-	// false→true persistence path on every restart.
-	if vehicle, err := h.vehicleRepo.GetByID(ctx, vehicleID); err == nil && vehicle != nil && vehicle.IsGearCapable {
-		m.SetGearCapable(true)
-	}
+	// Gear capability is now derived from vehicle_live_state signals.
+	// No need to rehydrate from the vehicle row.
 
 	h.machines[vehicleID] = m
 

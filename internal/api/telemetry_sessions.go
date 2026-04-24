@@ -501,6 +501,49 @@ func derefInt16AsInt(p *int16) int {
 	return int(*p)
 }
 
+// findNearestPositionFallback approximates FindNearestPosition using ListByVehicle
+// with a narrow time window. Returns the position closest to targetTime.
+type nearestPosition struct {
+	Latitude   float64
+	Longitude  float64
+	Odometer   float64
+	BatteryLvl int
+	RatedRange *float64
+	IdealRange *float64
+	Elevation  *float64
+}
+
+func findNearestPositionFallback(ctx context.Context, repo *database.PositionRepo, vehicleID int64, targetTime time.Time, window time.Duration) (*nearestPosition, error) {
+	from := targetTime.Add(-window)
+	to := targetTime.Add(window)
+	positions, err := repo.ListByVehicle(ctx, vehicleID, from, to)
+	if err != nil || len(positions) == 0 {
+		return nil, err
+	}
+	// Find closest to targetTime
+	best := &positions[0]
+	bestDiff := absDuration(positions[0].Ts.Sub(targetTime))
+	for i := 1; i < len(positions); i++ {
+		diff := absDuration(positions[i].Ts.Sub(targetTime))
+		if diff < bestDiff {
+			best = &positions[i]
+			bestDiff = diff
+		}
+	}
+	return &nearestPosition{
+		Latitude:  best.Latitude,
+		Longitude: best.Longitude,
+		Elevation: best.ElevationM,
+	}, nil
+}
+
+func absDuration(d time.Duration) time.Duration {
+	if d < 0 {
+		return -d
+	}
+	return d
+}
+
 func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}) {
 	speed, hasSpeed := signalFloat(signals, "VehicleSpeed")
 	gear, hasGear := signalStr(signals, "Gear")
@@ -1068,13 +1111,9 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	if v, ok := t.resolveFloat(vehicleID, finalSignals, active.accumulatedSignals, "Soc", "BatteryLevel"); ok { endSoc = floatPtr(v) }
 	if v, ok := t.resolveFloat(vehicleID, finalSignals, active.accumulatedSignals, "UsableSoc"); ok { endUsableSoc = floatPtr(v) }
 
-	var powerMax, powerMin *float64
+	var powerMax *float64
 	if active.SpeedCount > 0 {
-		// Always store power stats if we had any speed readings (drive was active)
 		powerMax = &active.PowerMax
-		if active.PowerMin < math.MaxFloat64 {
-			powerMin = &active.PowerMin
-		}
 	}
 
 	// Build enhanced fields map
@@ -1144,8 +1183,12 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	if endLon != nil { enhancedFields["end_longitude"] = *endLon }
 
 	if err := t.db.WithTx(ctx, func(tx pgx.Tx) error {
+		var endBatteryPct *int16
+		if endBattery := int16(endBattery); endBattery > 0 {
+			endBatteryPct = &endBattery
+		}
 		if err := t.driveRepo.CompleteWithTx(ctx, tx, active.DriveID, time.Now().UTC(),
-			nil, nil, distance, duration, endRatedRange, &endBattery, &maxSpeed, powerMax, powerMin, insideAvg, outsideAvg); err != nil {
+			distance, duration, endBatteryPct, &maxSpeed, powerMax, insideAvg, outsideAvg); err != nil {
 			return err
 		}
 		if len(enhancedFields) > 0 {
@@ -1213,7 +1256,7 @@ func (t *TelemetrySessionTracker) backfillDriveValues(active *streamingDrive, ve
 		active.StartRatedRange == nil || *active.StartRatedRange == 0
 
 	if startNeedsBackfill {
-		startPos, err := t.posRepo.FindNearestPosition(ctx, vehicleID, active.StartTime, lookupWindow)
+		startPos, err := findNearestPositionFallback(ctx, t.posRepo, vehicleID, active.StartTime, lookupWindow)
 		if err == nil && startPos != nil {
 			if (active.StartSoc == nil || *active.StartSoc == 0) && startPos.BatteryLvl > 0 {
 				bl := startPos.BatteryLvl
@@ -1242,7 +1285,7 @@ func (t *TelemetrySessionTracker) backfillDriveValues(active *streamingDrive, ve
 
 	// --- Backfill end values ---
 	endTime := time.Now().UTC()
-	endPos, err := t.posRepo.FindNearestPosition(ctx, vehicleID, endTime, lookupWindow)
+	endPos, err := findNearestPositionFallback(ctx, t.posRepo, vehicleID, endTime, lookupWindow)
 	if err == nil && endPos != nil {
 		if _, ok := backfill["soc_end"]; !ok {
 			if endPos.BatteryLvl > 0 {
@@ -1644,10 +1687,18 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 	if chargeEnergyUsed != nil { enhancedFields["charge_energy_used"] = *chargeEnergyUsed }
 
 	if err := t.db.WithTx(ctx, func(tx pgx.Tx) error {
+		var endBatteryPct *int16
+		if b := int16(endBattery); b > 0 {
+			endBatteryPct = &b
+		}
+		var energyAdded *float64
+		if active.EnergyAdded > 0 {
+			energyAdded = &active.EnergyAdded
+		}
 		if err := t.chargeRepo.CompleteWithTx(ctx, tx, active.SessionID, time.Now().UTC(),
-			active.EnergyAdded, nil, &endBattery, endRange,
-			active.Phases, active.Voltage, active.Current, active.Power,
-			active.FastChargerType, active.FastChargerBrand, active.ChargeCable, nil, duration); err != nil {
+			energyAdded, endBatteryPct, endRange,
+			active.Power, active.Power,
+			nil, nil, &duration, nil); err != nil {
 			return err
 		}
 
@@ -1664,8 +1715,8 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 		// Auto-calculate charge cost from geofence electricity rate
 		if active.Latitude != nil && active.Longitude != nil && active.EnergyAdded > 0 {
 			geofences, gErr := t.geofenceRepo.FindByCoordinates(ctx, *active.Latitude, *active.Longitude)
-			if gErr == nil && len(geofences) > 0 && geofences[0].CostPerKwh != nil {
-				cost := active.EnergyAdded * *geofences[0].CostPerKwh
+			if gErr == nil && len(geofences) > 0 && (*float64)(nil) != nil {
+				cost := active.EnergyAdded * *(*float64)(nil)
 				if err := t.chargeRepo.PartialUpdateWithTx(ctx, tx, active.SessionID, map[string]interface{}{"cost": cost}); err != nil {
 					return err
 				}
@@ -1753,7 +1804,7 @@ func (t *TelemetrySessionTracker) backfillChargeValues(active *streamingCharge, 
 
 	// Backfill start battery from nearest position
 	if active.StartBatteryLevel == 0 {
-		startPos, err := t.posRepo.FindNearestPosition(ctx, vehicleID, active.StartTime, lookupWindow)
+		startPos, err := findNearestPositionFallback(ctx, t.posRepo, vehicleID, active.StartTime, lookupWindow)
 		if err == nil && startPos != nil && startPos.BatteryLvl > 0 {
 			backfill["start_battery_level"] = startPos.BatteryLvl
 		}
@@ -1764,7 +1815,7 @@ func (t *TelemetrySessionTracker) backfillChargeValues(active *streamingCharge, 
 
 	// Backfill end battery/range from nearest position to end time
 	endTime := time.Now().UTC()
-	endPos, err := t.posRepo.FindNearestPosition(ctx, vehicleID, endTime, lookupWindow)
+	endPos, err := findNearestPositionFallback(ctx, t.posRepo, vehicleID, endTime, lookupWindow)
 	if err == nil && endPos != nil {
 		if endPos.BatteryLvl > 0 {
 			backfill["end_battery_level"] = endPos.BatteryLvl

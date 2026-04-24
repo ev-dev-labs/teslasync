@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -23,15 +24,16 @@ func (h *SecurityHandler) List(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "vehicle_id required")
 		return
 	}
-	limit, _ := pagination(r)
-	evts, err := h.repo.GetByVehicle(r.Context(), vehicleID, limit)
+	from := time.Now().AddDate(0, 0, -7)
+	to := time.Now()
+	evts, err := h.repo.ListByVehicle(r.Context(), vehicleID, from, to)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get security events")
 		writeError(w, http.StatusInternalServerError, "failed to get security events")
 		return
 	}
 	if evts == nil {
-		evts = make([]*models.SecurityEvent, 0)
+		evts = make([]models.SecurityEvent, 0)
 	}
 	writeJSON(w, http.StatusOK, evts)
 }
@@ -42,15 +44,17 @@ func (h *SecurityHandler) Latest(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "vehicle_id required")
 		return
 	}
-	evt, err := h.repo.GetLatest(r.Context(), vehicleID)
+	from := time.Now().Add(-1 * time.Hour)
+	to := time.Now()
+	evts, err := h.repo.ListByVehicle(r.Context(), vehicleID, from, to)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get latest security event")
 		writeError(w, http.StatusInternalServerError, "failed to get security data")
 		return
 	}
-	if evt == nil {
+	if len(evts) == 0 {
 		writeJSON(w, http.StatusOK, nil)
 		return
 	}
-	writeJSON(w, http.StatusOK, evt)
+	writeJSON(w, http.StatusOK, evts[len(evts)-1])
 }
