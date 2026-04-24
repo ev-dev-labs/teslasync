@@ -16,10 +16,10 @@ func NewFSMTransitionRepo(db *DB) *FSMTransitionRepo {
 }
 
 // FSMTransitionRecord represents a single FSM transition log entry.
-// Matches fsm_transitions table: id, ts, vehicle_id, from_state, to_state, trigger.
 type FSMTransitionRecord struct {
 	ID        int64     `json:"id"`
 	VehicleID int64     `json:"vehicle_id"`
+	FSMType   string    `json:"fsm_type"`
 	FromState string    `json:"from_state"`
 	ToState   string    `json:"to_state"`
 	Trigger   string    `json:"trigger"`
@@ -30,10 +30,13 @@ type FSMTransitionRecord struct {
 func (r *FSMTransitionRepo) Insert(ctx context.Context, vehicleID int64, fsmType string, instanceID *int64,
 	fromState, toState, trigger, guard, mode string, snapshot map[string]interface{}, durationMs int64) error {
 
+	if fsmType == "" {
+		fsmType = "vehicle"
+	}
 	_, err := r.db.Pool.Exec(ctx,
-		`INSERT INTO fsm_transitions (vehicle_id, from_state, to_state, trigger)
-		 VALUES ($1, $2, $3, $4)`,
-		vehicleID, fromState, toState, trigger)
+		`INSERT INTO fsm_transitions (vehicle_id, fsm_type, from_state, to_state, trigger)
+		 VALUES ($1, $2, $3, $4, $5)`,
+		vehicleID, fsmType, fromState, toState, trigger)
 	return err
 }
 
@@ -48,20 +51,30 @@ func (r *FSMTransitionRepo) Query(ctx context.Context, vehicleID int64, fsmType 
 		limit = 100
 	}
 
+	// Build WHERE clause with optional fsm_type filter
+	whereType := ""
+	args := []interface{}{vehicleID, from, to}
+	if fsmType != "" && fsmType != "all" {
+		whereType = " AND fsm_type = $4"
+		args = append(args, fsmType)
+	}
+
 	// Count
 	var total int64
-	if err := r.db.Pool.QueryRow(ctx,
-		`SELECT COUNT(*) FROM fsm_transitions WHERE vehicle_id = $1 AND ts BETWEEN $2 AND $3`,
-		vehicleID, from, to).Scan(&total); err != nil {
+	countSQL := `SELECT COUNT(*) FROM fsm_transitions WHERE vehicle_id = $1 AND ts BETWEEN $2 AND $3` + whereType
+	if err := r.db.Pool.QueryRow(ctx, countSQL, args...).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 
 	// Fetch
-	rows, err := r.db.Pool.Query(ctx,
-		`SELECT id, vehicle_id, from_state, to_state, COALESCE(trigger, ''), ts
-		 FROM fsm_transitions WHERE vehicle_id = $1 AND ts BETWEEN $2 AND $3
-		 ORDER BY ts DESC LIMIT $4 OFFSET $5`,
-		vehicleID, from, to, limit, offset)
+	limitIdx := len(args) + 1
+	offsetIdx := len(args) + 2
+	fetchSQL := `SELECT id, vehicle_id, COALESCE(fsm_type, 'vehicle'), from_state, to_state, COALESCE(trigger, ''), ts
+		 FROM fsm_transitions WHERE vehicle_id = $1 AND ts BETWEEN $2 AND $3` + whereType +
+		` ORDER BY ts DESC LIMIT $` + itoa(limitIdx) + ` OFFSET $` + itoa(offsetIdx)
+	fetchArgs := append(args, limit, offset)
+
+	rows, err := r.db.Pool.Query(ctx, fetchSQL, fetchArgs...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -70,7 +83,7 @@ func (r *FSMTransitionRepo) Query(ctx context.Context, vehicleID int64, fsmType 
 	records := make([]FSMTransitionRecord, 0)
 	for rows.Next() {
 		var rec FSMTransitionRecord
-		if err := rows.Scan(&rec.ID, &rec.VehicleID, &rec.FromState, &rec.ToState,
+		if err := rows.Scan(&rec.ID, &rec.VehicleID, &rec.FSMType, &rec.FromState, &rec.ToState,
 			&rec.Trigger, &rec.CreatedAt); err != nil {
 			return nil, 0, err
 		}

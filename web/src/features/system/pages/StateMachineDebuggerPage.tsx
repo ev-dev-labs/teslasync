@@ -207,17 +207,24 @@ export default function StateMachineDebuggerPage() {
         ),
       },
       {
+        key: 'fsm_type',
+        header: t('fsm.type', 'FSM Type'),
+        render: (row: FSMTransition) => (
+          <span className="text-white/60 text-xs font-mono capitalize">{row.fsm_type?.replace('_', ' ') ?? 'vehicle'}</span>
+        ),
+      },
+      {
         key: 'from_state',
         header: t('fsm.from', 'From'),
         render: (row: FSMTransition) => (
-          <StateBadge state={row.from_state} fsmType="vehicle" />
+          <StateBadge state={row.from_state} fsmType={row.fsm_type || 'vehicle'} />
         ),
       },
       {
         key: 'to_state',
         header: t('fsm.to', 'To'),
         render: (row: FSMTransition) => (
-          <StateBadge state={row.to_state} fsmType="vehicle" />
+          <StateBadge state={row.to_state} fsmType={row.fsm_type || 'vehicle'} />
         ),
       },
       {
