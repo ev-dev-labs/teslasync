@@ -1,0 +1,23 @@
+=== SURVEY ===
+Timestamp: 2026-04-23T23:27:03.1232830-07:00
+Files: drive_handler.go, year_review_handler.go, lifetime_handler.go
+
+Grep results for old column names in drives table queries:
+  drive_handler.go: distance(10), speed_max(7), end_date(9), start_date(0), speed_avg(0)
+  year_review_handler.go: distance(18), speed_max(1), end_date(8), start_date(16), speed_avg(0)
+  lifetime_handler.go: distance(10), speed_max(4), end_date(7), start_date(5), speed_avg(0)
+  NOTE: charging_sessions queries use same column names but are NOT renamed (different table)
+
+=== REASONING ===
+Rename ONLY in SQL targeting drives table: distance->distance_mi, start_date->start_ts, end_date->end_ts, speed_max->max_speed_mph
+speed_avg not found in any file. charging_sessions queries left unchanged.
+
+=== CHANGES ===
+
+=== GATE ===
+
+BUILD OK
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===

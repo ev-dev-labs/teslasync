@@ -179,12 +179,12 @@ func (h *DriveHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	var totalDistKm, totalDurMin, avgSpeedKmh, topSpeedKmh *float64
 	err = h.db.Pool.QueryRow(ctx, `
 		SELECT COUNT(*),
-		       SUM(distance),
+		       SUM(distance_mi),
 		       SUM(duration_min),
-		       AVG(CASE WHEN duration_min > 0 THEN distance / (duration_min / 60) ELSE NULL END),
-		       MAX(speed_max)
+		       AVG(CASE WHEN duration_min > 0 THEN distance_mi / (duration_min / 60) ELSE NULL END),
+		       MAX(max_speed_mph)
 		FROM drives
-		WHERE vehicle_id = $1 AND end_date IS NOT NULL`, vehicleID,
+		WHERE vehicle_id = $1 AND end_ts IS NOT NULL`, vehicleID,
 	).Scan(&totalDrives, &totalDistKm, &totalDurMin, &avgSpeedKmh, &topSpeedKmh)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("drive stats: failed to query")
@@ -196,12 +196,12 @@ func (h *DriveHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	var avgEfficiency *float64
 	err = h.db.Pool.QueryRow(ctx, `
 		SELECT AVG(
-			CASE WHEN distance > 2 AND start_battery_level IS NOT NULL AND end_battery_level IS NOT NULL
-			THEN (start_battery_level - end_battery_level)::float / distance * 100 * 0.75
+			CASE WHEN distance_mi > 2 AND start_battery_level IS NOT NULL AND end_battery_level IS NOT NULL
+			THEN (start_battery_level - end_battery_level)::float / distance_mi * 100 * 0.75
 			ELSE NULL END
 		)
 		FROM drives
-		WHERE vehicle_id = $1 AND end_date IS NOT NULL`, vehicleID,
+		WHERE vehicle_id = $1 AND end_ts IS NOT NULL`, vehicleID,
 	).Scan(&avgEfficiency)
 	if err != nil {
 		log.Debug().Err(err).Msg("drive stats: efficiency query")
@@ -213,7 +213,7 @@ func (h *DriveHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		SELECT SUM(CASE WHEN power_min IS NOT NULL AND power_min < 0
 		           THEN ABS(power_min) * duration_min / 60 ELSE 0 END)
 		FROM drives
-		WHERE vehicle_id = $1 AND end_date IS NOT NULL`, vehicleID,
+		WHERE vehicle_id = $1 AND end_ts IS NOT NULL`, vehicleID,
 	).Scan(&totalRegenKwh)
 	if err != nil {
 		log.Debug().Err(err).Msg("drive stats: regen query")
@@ -281,13 +281,13 @@ func (h *DriveHandler) Score(w http.ResponseWriter, r *http.Request) {
 	var avgWhKm, avgPowerMax, avgPowerMin *float64
 	err = h.db.Pool.QueryRow(ctx, `
 		SELECT COUNT(*),
-		       AVG(CASE WHEN distance > 2 AND start_battery_level IS NOT NULL AND end_battery_level IS NOT NULL
-		            THEN (start_battery_level - end_battery_level)::float / distance * 100 * 0.75
+		       AVG(CASE WHEN distance_mi > 2 AND start_battery_level IS NOT NULL AND end_battery_level IS NOT NULL
+		            THEN (start_battery_level - end_battery_level)::float / distance_mi * 100 * 0.75
 		            ELSE NULL END),
 		       AVG(power_max),
 		       AVG(power_min)
 		FROM drives
-		WHERE vehicle_id = $1 AND end_date IS NOT NULL`, vehicleID,
+		WHERE vehicle_id = $1 AND end_ts IS NOT NULL`, vehicleID,
 	).Scan(&totalDrives, &avgWhKm, &avgPowerMax, &avgPowerMin)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("score: failed to query aggregates")
@@ -313,8 +313,8 @@ func (h *DriveHandler) Score(w http.ResponseWriter, r *http.Request) {
 	err = h.db.Pool.QueryRow(ctx, `
 		SELECT COUNT(*)
 		FROM drives
-		WHERE vehicle_id = $1 AND end_date IS NOT NULL
-		  AND (speed_max IS NULL OR speed_max < 130)`, vehicleID,
+		WHERE vehicle_id = $1 AND end_ts IS NOT NULL
+		  AND (max_speed_mph IS NULL OR max_speed_mph < 130)`, vehicleID,
 	).Scan(&disciplinedCount)
 	if err != nil {
 		log.Error().Err(err).Msg("score: speed discipline query")
@@ -393,19 +393,19 @@ func (h *DriveHandler) Score(w http.ResponseWriter, r *http.Request) {
 			var batchTotal, batchDisciplined int
 			_ = h.db.Pool.QueryRow(ctx, `
 				SELECT COUNT(*),
-				       AVG(CASE WHEN distance > 2 AND start_battery_level IS NOT NULL AND end_battery_level IS NOT NULL
-				            THEN (start_battery_level - end_battery_level)::float / distance * 100 * 0.75
+				       AVG(CASE WHEN distance_mi > 2 AND start_battery_level IS NOT NULL AND end_battery_level IS NOT NULL
+				            THEN (start_battery_level - end_battery_level)::float / distance_mi * 100 * 0.75
 				            ELSE NULL END),
 				       AVG(power_max),
 				       AVG(power_min)
-				FROM (SELECT * FROM drives WHERE vehicle_id = $1 AND end_date IS NOT NULL
-				      ORDER BY end_date DESC LIMIT 10 OFFSET $2) sub`, vehicleID, offset,
+				FROM (SELECT * FROM drives WHERE vehicle_id = $1 AND end_ts IS NOT NULL
+				      ORDER BY end_ts DESC LIMIT 10 OFFSET $2) sub`, vehicleID, offset,
 			).Scan(&batchTotal, &batchWhKm, &batchPMax, &batchPMin)
 			_ = h.db.Pool.QueryRow(ctx, `
 				SELECT COUNT(*)
-				FROM (SELECT * FROM drives WHERE vehicle_id = $1 AND end_date IS NOT NULL
-				      ORDER BY end_date DESC LIMIT 10 OFFSET $2) sub
-				WHERE speed_max IS NULL OR speed_max < 130`, vehicleID, offset,
+				FROM (SELECT * FROM drives WHERE vehicle_id = $1 AND end_ts IS NOT NULL
+				      ORDER BY end_ts DESC LIMIT 10 OFFSET $2) sub
+				WHERE max_speed_mph IS NULL OR max_speed_mph < 130`, vehicleID, offset,
 			).Scan(&batchDisciplined)
 
 			eff := 50.0
@@ -478,13 +478,13 @@ func (h *DriveHandler) Dynamics(w http.ResponseWriter, r *http.Request) {
 	var maxSpeedMax, avgSpeed, maxPowerMax, avgPowerMax, avgPowerMin *float64
 	err = h.db.Pool.QueryRow(ctx, `
 		SELECT COUNT(*),
-		       MAX(speed_max),
-		       AVG(CASE WHEN duration_min > 0 THEN distance / (duration_min / 60) ELSE NULL END),
+		       MAX(max_speed_mph),
+		       AVG(CASE WHEN duration_min > 0 THEN distance_mi / (duration_min / 60) ELSE NULL END),
 		       MAX(power_max),
 		       AVG(power_max),
 		       AVG(power_min)
 		FROM drives
-		WHERE vehicle_id = $1 AND end_date IS NOT NULL`, vehicleID,
+		WHERE vehicle_id = $1 AND end_ts IS NOT NULL`, vehicleID,
 	).Scan(&totalDrives, &maxSpeedMax, &avgSpeed, &maxPowerMax, &avgPowerMax, &avgPowerMin)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("dynamics: failed to query")

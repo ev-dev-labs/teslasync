@@ -91,13 +91,13 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 	// ── Driving aggregates ──
 	driveQuery := `
 		SELECT COUNT(*),
-		       COALESCE(SUM(distance), 0),
+		       COALESCE(SUM(distance_mi), 0),
 		       COALESCE(SUM(duration_min), 0),
-		       COALESCE(MAX(distance), 0),
-		       COALESCE(MAX(speed_max), 0),
-		       MIN(start_date)
+		       COALESCE(MAX(distance_mi), 0),
+		       COALESCE(MAX(max_speed_mph), 0),
+		       MIN(start_ts)
 		FROM drives
-		WHERE end_date IS NOT NULL AND distance > 0`
+		WHERE end_ts IS NOT NULL AND distance_mi > 0`
 	driveArgs := []interface{}{}
 	if vehicleID > 0 {
 		driveQuery += " AND vehicle_id = $1"
@@ -120,13 +120,13 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 	// Average efficiency (Wh/km) — from drives with valid range data
 	effQuery := `
 		SELECT COALESCE(AVG(
-			CASE WHEN distance > 1 AND start_range_km IS NOT NULL AND end_range_km IS NOT NULL
+			CASE WHEN distance_mi > 1 AND start_range_km IS NOT NULL AND end_range_km IS NOT NULL
 			     AND (start_range_km - end_range_km) > 0
-			THEN ((start_range_km - end_range_km) / distance) * 1000
+			THEN ((start_range_km - end_range_km) / distance_mi) * 1000
 			ELSE NULL END
 		), 0)
 		FROM drives
-		WHERE end_date IS NOT NULL AND distance > 0`
+		WHERE end_ts IS NOT NULL AND distance_mi > 0`
 	effArgs := []interface{}{}
 	if vehicleID > 0 {
 		effQuery += " AND vehicle_id = $1"
@@ -214,8 +214,8 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 	mostActiveHour := 0
 
 	dowQuery := `
-		SELECT EXTRACT(DOW FROM start_date)::int as dow, COUNT(*) as cnt
-		FROM drives WHERE end_date IS NOT NULL AND distance > 0`
+		SELECT EXTRACT(DOW FROM start_ts)::int as dow, COUNT(*) as cnt
+		FROM drives WHERE end_ts IS NOT NULL AND distance_mi > 0`
 	dowArgs := []interface{}{}
 	if vehicleID > 0 {
 		dowQuery += " AND vehicle_id = $1"
@@ -233,8 +233,8 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 	}
 
 	hourQuery := `
-		SELECT EXTRACT(HOUR FROM start_date)::int as hr, COUNT(*) as cnt
-		FROM drives WHERE end_date IS NOT NULL AND distance > 0`
+		SELECT EXTRACT(HOUR FROM start_ts)::int as hr, COUNT(*) as cnt
+		FROM drives WHERE end_ts IS NOT NULL AND distance_mi > 0`
 	hourArgs := []interface{}{}
 	if vehicleID > 0 {
 		hourQuery += " AND vehicle_id = $1"
@@ -257,14 +257,14 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 	// Longest drive
 	longestRec := personalRecord{Value: longestDriveKm}
 	longestRecQuery := `
-		SELECT start_date FROM drives
-		WHERE end_date IS NOT NULL AND distance > 0`
+		SELECT start_ts FROM drives
+		WHERE end_ts IS NOT NULL AND distance_mi > 0`
 	longestRecArgs := []interface{}{}
 	if vehicleID > 0 {
 		longestRecQuery += " AND vehicle_id = $1"
 		longestRecArgs = append(longestRecArgs, vehicleID)
 	}
-	longestRecQuery += " ORDER BY distance DESC LIMIT 1"
+	longestRecQuery += " ORDER BY distance_mi DESC LIMIT 1"
 	var longestDate time.Time
 	if err := h.db.Pool.QueryRow(ctx, longestRecQuery, longestRecArgs...).Scan(&longestDate); err == nil {
 		s := longestDate.Format("2006-01-02")
@@ -274,14 +274,14 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 	// Highest speed
 	speedRec := personalRecord{Value: highestSpeedKmh}
 	speedRecQuery := `
-		SELECT start_date FROM drives
-		WHERE end_date IS NOT NULL AND distance > 0 AND speed_max IS NOT NULL`
+		SELECT start_ts FROM drives
+		WHERE end_ts IS NOT NULL AND distance_mi > 0 AND max_speed_mph IS NOT NULL`
 	speedRecArgs := []interface{}{}
 	if vehicleID > 0 {
 		speedRecQuery += " AND vehicle_id = $1"
 		speedRecArgs = append(speedRecArgs, vehicleID)
 	}
-	speedRecQuery += " ORDER BY speed_max DESC LIMIT 1"
+	speedRecQuery += " ORDER BY max_speed_mph DESC LIMIT 1"
 	var speedDate time.Time
 	if err := h.db.Pool.QueryRow(ctx, speedRecQuery, speedRecArgs...).Scan(&speedDate); err == nil {
 		s := speedDate.Format("2006-01-02")

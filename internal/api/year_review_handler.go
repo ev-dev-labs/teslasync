@@ -112,17 +112,17 @@ func (h *YearReviewHandler) GetYearReview(w http.ResponseWriter, r *http.Request
 	var fastestSpeed, coldestTemp, hottestTemp *float64
 	err = h.db.Pool.QueryRow(ctx, `
 		SELECT COUNT(*),
-		       COALESCE(SUM(distance), 0),
+		       COALESCE(SUM(distance_mi), 0),
 		       COALESCE(SUM(duration_min), 0),
-		       MAX(speed_max),
+		       MAX(max_speed_mph),
 		       MIN(outside_temp_avg),
 		       MAX(outside_temp_avg)
 		FROM drives
 		WHERE vehicle_id = $1
-		  AND end_date IS NOT NULL
-		  AND distance > 0
-		  AND start_date >= $2
-		  AND start_date < $3`,
+		  AND end_ts IS NOT NULL
+		  AND distance_mi > 0
+		  AND start_ts >= $2
+		  AND start_ts < $3`,
 		vehicleID, yearStart, yearEnd,
 	).Scan(&totalDrives, &totalDistKm, &totalDrivingMin, &fastestSpeed, &coldestTemp, &hottestTemp)
 	if err != nil {
@@ -131,21 +131,21 @@ func (h *YearReviewHandler) GetYearReview(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Weighted average efficiency: SUM(range_consumed) / SUM(distance) * 1000
+	// Weighted average efficiency: SUM(range_consumed) / SUM(distance_mi) * 1000
 	var avgEffWhKm float64
 	var sumRangeConsumed, sumEffDist float64
 	err = h.db.Pool.QueryRow(ctx, `
 		SELECT COALESCE(SUM(start_range_km - end_range_km), 0),
-		       COALESCE(SUM(distance), 0)
+		       COALESCE(SUM(distance_mi), 0)
 		FROM drives
 		WHERE vehicle_id = $1
-		  AND end_date IS NOT NULL
-		  AND distance > 1
+		  AND end_ts IS NOT NULL
+		  AND distance_mi > 1
 		  AND start_range_km IS NOT NULL
 		  AND end_range_km IS NOT NULL
 		  AND (start_range_km - end_range_km) > 0
-		  AND start_date >= $2
-		  AND start_date < $3`,
+		  AND start_ts >= $2
+		  AND start_ts < $3`,
 		vehicleID, yearStart, yearEnd,
 	).Scan(&sumRangeConsumed, &sumEffDist)
 	if err == nil && sumEffDist > 0 {
@@ -230,36 +230,36 @@ func (h *YearReviewHandler) GetYearReview(w http.ResponseWriter, r *http.Request
 	}
 
 	highlightBase := `
-		SELECT id, start_date, distance, duration_min,
+		SELECT id, start_ts, distance_mi, duration_min,
 		       start_address, end_address, start_range_km, end_range_km
 		FROM drives
-		WHERE vehicle_id = $1 AND end_date IS NOT NULL AND distance > 0
-		  AND start_date >= $2 AND start_date < $3`
+		WHERE vehicle_id = $1 AND end_ts IS NOT NULL AND distance_mi > 0
+		  AND start_ts >= $2 AND start_ts < $3`
 
-	longestDrive := scanHighlight(highlightBase+" ORDER BY distance DESC LIMIT 1", vehicleID, yearStart, yearEnd)
-	shortestDrive := scanHighlight(highlightBase+" AND distance >= 1 ORDER BY distance ASC LIMIT 1", vehicleID, yearStart, yearEnd)
+	longestDrive := scanHighlight(highlightBase+" ORDER BY distance_mi DESC LIMIT 1", vehicleID, yearStart, yearEnd)
+	shortestDrive := scanHighlight(highlightBase+" AND distance_mi >= 1 ORDER BY distance_mi ASC LIMIT 1", vehicleID, yearStart, yearEnd)
 
 	// Most efficient: lowest Wh/km (lowest range consumption per km)
 	mostEfficient := scanHighlight(`
-		SELECT id, start_date, distance, duration_min,
+		SELECT id, start_ts, distance_mi, duration_min,
 		       start_address, end_address, start_range_km, end_range_km
 		FROM drives
-		WHERE vehicle_id = $1 AND end_date IS NOT NULL AND distance > 1
+		WHERE vehicle_id = $1 AND end_ts IS NOT NULL AND distance_mi > 1
 		  AND start_range_km IS NOT NULL AND end_range_km IS NOT NULL
 		  AND (start_range_km - end_range_km) > 0
-		  AND start_date >= $2 AND start_date < $3
-		ORDER BY ((start_range_km - end_range_km) / distance) ASC LIMIT 1`,
+		  AND start_ts >= $2 AND start_ts < $3
+		ORDER BY ((start_range_km - end_range_km) / distance_mi) ASC LIMIT 1`,
 		vehicleID, yearStart, yearEnd)
 
 	leastEfficient := scanHighlight(`
-		SELECT id, start_date, distance, duration_min,
+		SELECT id, start_ts, distance_mi, duration_min,
 		       start_address, end_address, start_range_km, end_range_km
 		FROM drives
-		WHERE vehicle_id = $1 AND end_date IS NOT NULL AND distance > 1
+		WHERE vehicle_id = $1 AND end_ts IS NOT NULL AND distance_mi > 1
 		  AND start_range_km IS NOT NULL AND end_range_km IS NOT NULL
 		  AND (start_range_km - end_range_km) > 0
-		  AND start_date >= $2 AND start_date < $3
-		ORDER BY ((start_range_km - end_range_km) / distance) DESC LIMIT 1`,
+		  AND start_ts >= $2 AND start_ts < $3
+		ORDER BY ((start_range_km - end_range_km) / distance_mi) DESC LIMIT 1`,
 		vehicleID, yearStart, yearEnd)
 
 	// ── Monthly breakdown (always 12 entries) ──
@@ -270,10 +270,10 @@ func (h *YearReviewHandler) GetYearReview(w http.ResponseWriter, r *http.Request
 
 	// Drives per month
 	driveMonthRows, err := h.db.Pool.Query(ctx, `
-		SELECT EXTRACT(MONTH FROM start_date)::int AS m, COUNT(*), COALESCE(SUM(distance), 0)
+		SELECT EXTRACT(MONTH FROM start_ts)::int AS m, COUNT(*), COALESCE(SUM(distance_mi), 0)
 		FROM drives
-		WHERE vehicle_id = $1 AND end_date IS NOT NULL AND distance > 0
-		  AND start_date >= $2 AND start_date < $3
+		WHERE vehicle_id = $1 AND end_ts IS NOT NULL AND distance_mi > 0
+		  AND start_ts >= $2 AND start_ts < $3
 		GROUP BY m`,
 		vehicleID, yearStart, yearEnd)
 	if err == nil {
@@ -325,10 +325,10 @@ func (h *YearReviewHandler) GetYearReview(w http.ResponseWriter, r *http.Request
 	mostActiveDOW := ""
 	var dowIdx, dowCnt int
 	if err := h.db.Pool.QueryRow(ctx, `
-		SELECT EXTRACT(DOW FROM start_date)::int AS dow, COUNT(*) AS cnt
+		SELECT EXTRACT(DOW FROM start_ts)::int AS dow, COUNT(*) AS cnt
 		FROM drives
-		WHERE vehicle_id = $1 AND end_date IS NOT NULL AND distance > 0
-		  AND start_date >= $2 AND start_date < $3
+		WHERE vehicle_id = $1 AND end_ts IS NOT NULL AND distance_mi > 0
+		  AND start_ts >= $2 AND start_ts < $3
 		GROUP BY dow ORDER BY cnt DESC LIMIT 1`,
 		vehicleID, yearStart, yearEnd,
 	).Scan(&dowIdx, &dowCnt); err == nil {
@@ -341,10 +341,10 @@ func (h *YearReviewHandler) GetYearReview(w http.ResponseWriter, r *http.Request
 	mostActiveHour := 0
 	var hrIdx, hrCnt int
 	if err := h.db.Pool.QueryRow(ctx, `
-		SELECT EXTRACT(HOUR FROM start_date)::int AS hr, COUNT(*) AS cnt
+		SELECT EXTRACT(HOUR FROM start_ts)::int AS hr, COUNT(*) AS cnt
 		FROM drives
-		WHERE vehicle_id = $1 AND end_date IS NOT NULL AND distance > 0
-		  AND start_date >= $2 AND start_date < $3
+		WHERE vehicle_id = $1 AND end_ts IS NOT NULL AND distance_mi > 0
+		  AND start_ts >= $2 AND start_ts < $3
 		GROUP BY hr ORDER BY cnt DESC LIMIT 1`,
 		vehicleID, yearStart, yearEnd,
 	).Scan(&hrIdx, &hrCnt); err == nil {
