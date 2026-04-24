@@ -56,6 +56,38 @@ export const VEHICLE_STATE_LABELS: Record<VehicleState, string> = {
   offline:  'Offline',
 }
 
+/** Vehicle triggers — mirrors Go iota. Reference: §2.3 */
+export const VEHICLE_TRIGGERS = [
+  'gear_driving', 'gear_parked', 'gear_neutral',
+  'speed_detected', 'speed_zero',
+  'charge_started', 'charge_ended', 'charge_interrupted',
+  'signal_received', 'activity_detected',
+  'sleep_timeout', 'heartbeat_lost', 'timeout',
+] as const
+export type VehicleTrigger = (typeof VEHICLE_TRIGGERS)[number]
+
+/** Vehicle guards — logic in Go, labels for frontend. Reference: §2.4 */
+export const VEHICLE_GUARDS = [
+  'no_charge', 'is_charging', 'still_plugged_in', 'speed_zero',
+  'no_gear', 'gear_parked_seen', 'no_activity',
+  'unexpected_loss', 'expected_loss',
+] as const
+export type VehicleGuard = (typeof VEHICLE_GUARDS)[number]
+
+/** Signal context — mirrors Go SignalContext (§2.4) */
+export interface VehicleSignalContext {
+  currentState: VehicleState
+  isCharging: boolean
+  isPluggedIn: boolean
+  isGearCapable: boolean
+  hasSeenGearP: boolean
+  speed: number
+  hvacOn: boolean
+  preconditionOn: boolean
+  sentryOn: boolean
+  wasActive: boolean
+}
+
 /**
  * Derive vehicle status from live state data.
  * Priority: charging > driving > API state string > offline fallback.
