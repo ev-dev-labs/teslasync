@@ -1,0 +1,28 @@
+=== SURVEY ===
+grep charge_energy_added internal/**/*.go
+
+Found in internal/database/trip_repo.go:242:
+  SELECT COALESCE(SUM(charge_energy_added), 0) FROM charging_sessions
+
+Note: prompt listed allowed files as internal/api/trip_generator.go (does not exist)
+and internal/api/telemetry_sessions.go (has no charge_energy_added reference).
+Actual occurrence is in internal/database/trip_repo.go.
+
+=== REASONING ===
+charging_sessions table was migrated in 000142_baseline_typed.up.sql.
+Old column: charge_energy_added (from 000001_initial.up.sql)
+New column: energy_added_kwh (from 000142_baseline_typed.up.sql:707)
+The trip_repo.go GenerateMonthlyTrips aggregation query references the old column name.
+This causes: "aggregate charges: ERROR: column "charge_energy_added" does not exist"
+and propagates to "find missing months" context when the backfill calls generateMonthTrip.
+
+=== CHANGES ===
+internal/database/trip_repo.go:242
+  - SELECT COALESCE(SUM(charge_energy_added), 0)
+  + SELECT COALESCE(SUM(energy_added_kwh), 0)
+
+=== GATE ===
+CGO_ENABLED=0 go build ./... → exit 0
+
+EXIT=0
+STATUS=DONE

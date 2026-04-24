@@ -239,7 +239,7 @@ func (r *TripRepo) UpsertMonthTrip(ctx context.Context, vehicleID int64, monthSt
 	// Aggregate charging for this month
 	var totalEnergy float64
 	err = r.db.Pool.QueryRow(ctx, `
-		SELECT COALESCE(SUM(charge_energy_added), 0)
+		SELECT COALESCE(SUM(energy_added_kwh), 0)
 		FROM charging_sessions
 		WHERE vehicle_id = $1
 		  AND start_ts >= $2 AND start_ts < $3
