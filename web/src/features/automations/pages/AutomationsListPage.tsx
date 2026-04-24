@@ -174,8 +174,8 @@ export default function AutomationsListPage() {
       const q = search.toLowerCase();
       result = result.filter(
         (a) =>
-          a.name.toLowerCase().includes(q) ||
-          a.description.toLowerCase().includes(q) ||
+          (a.name ?? '').toLowerCase().includes(q) ||
+          (a.description ?? '').toLowerCase().includes(q) ||
           (a.tags ?? []).some((tag) => tag.toLowerCase().includes(q)),
       );
     }

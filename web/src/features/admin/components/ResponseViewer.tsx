@@ -286,7 +286,7 @@ export default function ResponseViewer({ response, loading, history, onReplay }:
 
             {/* Body */}
             <pre className="text-xs font-mono text-white/70 overflow-auto max-h-[500px] bg-black/30 rounded-lg p-3 border border-white/[0.04]">
-              {response.contentType.includes('json') && typeof response.body !== 'string'
+              {(response.contentType ?? '').includes('json') && typeof response.body !== 'string'
                 ? JSON.stringify(response.body, null, 2)
                 : response.bodyText}
             </pre>

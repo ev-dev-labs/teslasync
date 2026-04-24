@@ -536,9 +536,9 @@ function EventRow({
           <CheckCircle2 className="h-5 w-5 text-white/30" />
         ) : event.event_type === 'manual_panic' ? (
           <Siren className="h-5 w-5 text-red-400" />
-        ) : event.event_type.includes('unlock') ? (
+        ) : (event.event_type ?? '').includes('unlock') ? (
           <Unlock className="h-5 w-5 text-amber-400" />
-        ) : event.event_type.includes('drive') ? (
+        ) : (event.event_type ?? '').includes('drive') ? (
           <Car className="h-5 w-5 text-red-400" />
         ) : (
           <AlertTriangle className="h-5 w-5 text-amber-400" />

@@ -30,11 +30,13 @@ export type DetailedChargeState =
   | 'Charging' | 'Complete' | 'Disconnected' | 'NoPower'
   | 'Starting' | 'Stopped' | 'Error'
 
-export function isChargingState(state: string): boolean {
+export function isChargingState(state: string | undefined | null): boolean {
+  if (!state) return false
   return state.includes('Charging') || state.includes('Starting') || state === 'Enable'
 }
 
-export function isChargeCompleteState(state: string): boolean {
+export function isChargeCompleteState(state: string | undefined | null): boolean {
+  if (!state) return false
   return state.includes('Complete')
 }
 

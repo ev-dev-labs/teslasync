@@ -22,22 +22,26 @@ export function parseBuckleStatus(raw: unknown): boolean {
 }
 
 /** Check if DetailedChargeState indicates active charging. */
-export function isCharging(raw: string): boolean {
+export function isCharging(raw: string | undefined | null): boolean {
+  if (!raw) return false
   return raw.includes('Charging') || raw.includes('Starting') || raw === 'Enable'
 }
 
 /** Check if DetailedChargeState indicates charge complete. */
-export function isChargeComplete(raw: string): boolean {
+export function isChargeComplete(raw: string | undefined | null): boolean {
+  if (!raw) return false
   return raw.includes('Complete')
 }
 
 /** Parse HVAC power state to boolean. */
-export function parseHvacPower(raw: string): boolean {
+export function parseHvacPower(raw: string | undefined | null): boolean {
+  if (!raw) return false
   return raw.includes('On') || raw.includes('Precondition')
 }
 
 /** Parse window state to clean display value. */
-export function parseWindowState(raw: string): string {
+export function parseWindowState(raw: string | undefined | null): string {
+  if (!raw) return ''
   const g = raw.replace(/WindowState/i, '')
   if (g.includes('Closed')) return 'Closed'
   if (g.includes('Partial')) return 'Partial'
@@ -48,7 +52,8 @@ export function parseWindowState(raw: string): string {
 /** Parse cabin overheat protection mode.
  *  Check multi-word variants (FanOnly, NoCooling) before single-word (On)
  *  because "FanOnly" contains the substring "On". */
-export function parseCabinOverheatMode(raw: string): string {
+export function parseCabinOverheatMode(raw: string | undefined | null): string {
+  if (!raw) return ''
   const g = raw.replace(/CabinOverheatProtectionModeState/i, '')
   if (g.includes('FanOnly')) return 'Fan Only'
   if (g.includes('NoCooling')) return 'No Cooling'
@@ -58,7 +63,8 @@ export function parseCabinOverheatMode(raw: string): string {
 }
 
 /** Parse climate keeper mode. */
-export function parseClimateKeeperMode(raw: string): string {
+export function parseClimateKeeperMode(raw: string | undefined | null): string {
+  if (!raw) return ''
   const g = raw.replace(/ClimateKeeperModeState/i, '')
   if (g.includes('Off')) return 'Off'
   if (g.includes('On')) return 'On'
@@ -68,7 +74,8 @@ export function parseClimateKeeperMode(raw: string): string {
 }
 
 /** Parse charge port state. */
-export function parseChargePort(raw: string): string {
+export function parseChargePort(raw: string | undefined | null): string {
+  if (!raw) return ''
   const g = raw.replace(/^ChargePort/i, '')
   if (g.includes('Open')) return 'Open'
   if (g.includes('Closed')) return 'Closed'
@@ -76,7 +83,8 @@ export function parseChargePort(raw: string): string {
 }
 
 /** Parse charge port latch state. */
-export function parseChargePortLatch(raw: string): string {
+export function parseChargePortLatch(raw: string | undefined | null): string {
+  if (!raw) return ''
   const g = raw.replace(/^ChargePortLatch/i, '')
   if (g.includes('Engaged')) return 'Engaged'
   if (g.includes('Disengaged')) return 'Disengaged'

@@ -8,7 +8,8 @@ import { cn } from '@/lib/cn'
 import { formatDateTime } from '@/lib/dateFormat'
 import { ShoppingCart, RefreshCw, Info, Package, Calendar } from 'lucide-react'
 
-function orderStatusVariant(status: string): 'info' | 'success' | 'warning' | 'danger' | 'neutral' {
+function orderStatusVariant(status: string | undefined | null): 'info' | 'success' | 'warning' | 'danger' | 'neutral' {
+  if (!status) return 'neutral'
   const s = status.toUpperCase()
   if (s.includes('DELIVER')) return 'success'
   if (s.includes('READY') || s.includes('TRANSPORT')) return 'info'
@@ -17,7 +18,8 @@ function orderStatusVariant(status: string): 'info' | 'success' | 'warning' | 'd
   return 'neutral'
 }
 
-function formatOrderStatus(status: string): string {
+function formatOrderStatus(status: string | undefined | null): string {
+  if (!status) return '—'
   return status
     .replace(/_/g, ' ')
     .toLowerCase()

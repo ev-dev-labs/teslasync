@@ -138,9 +138,9 @@ export default function EndpointSidebar({ endpoints, selected, onSelect }: Endpo
     const q = search.toLowerCase();
     return endpoints.filter(
       e =>
-        e.path.toLowerCase().includes(q) ||
-        e.summary.toLowerCase().includes(q) ||
-        e.operationId.toLowerCase().includes(q),
+        (e.path ?? '').toLowerCase().includes(q) ||
+        (e.summary ?? '').toLowerCase().includes(q) ||
+        (e.operationId ?? '').toLowerCase().includes(q),
     );
   }, [endpoints, search]);
 

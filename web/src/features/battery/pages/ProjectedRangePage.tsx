@@ -76,7 +76,7 @@ function effColor(whKm: number): string {
 }
 
 function scenarioIcon(scenario: RangeScenario) {
-  if (scenario.extras.includes('sentry')) return <Shield className="h-4 w-4" />;
+  if ((scenario.extras ?? []).includes('sentry')) return <Shield className="h-4 w-4" />;
   if (scenario.temp_c < 0) return <Snowflake className="h-4 w-4" />;
   if (scenario.speed_kmh > 90) return <Car className="h-4 w-4" />;
   return <Zap className="h-4 w-4" />;
