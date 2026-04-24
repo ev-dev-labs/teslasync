@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -117,6 +118,9 @@ func runMaintenance(ctx context.Context, db *database.DB, cfg *config.Config) {
 func refreshFleetStats(ctx context.Context, db *database.DB) error {
 	log.Info().Msg("refreshing cagg_fleet_stats materialized view")
 	_, err := db.Pool.Exec(ctx, "REFRESH MATERIALIZED VIEW CONCURRENTLY cagg_fleet_stats")
+	if err != nil && strings.Contains(err.Error(), "not populated") {
+		_, err = db.Pool.Exec(ctx, "REFRESH MATERIALIZED VIEW cagg_fleet_stats")
+	}
 	if err != nil {
 		return fmt.Errorf("refresh cagg_fleet_stats: %w", err)
 	}
@@ -125,7 +129,7 @@ func refreshFleetStats(ctx context.Context, db *database.DB) error {
 }
 
 // compressOldPositions aggregates positions older than 30 days into hourly
-// summaries (avg speed, battery, coordinates, temps) and removes the
+// summaries (avg speed, coordinates, heading, elevation) and removes the
 // redundant individual rows. This dramatically reduces storage for historical
 // data while preserving meaningful trends.
 func compressOldPositions(ctx context.Context, db *database.DB) error {
@@ -138,11 +142,10 @@ func compressOldPositions(ctx context.Context, db *database.DB) error {
 			vehicle_id,
 			date_trunc('hour', ts) as hour,
 			AVG(speed_mph) as avg_speed,
-			AVG(battery_level) as avg_battery,
 			AVG(latitude) as avg_lat,
 			AVG(longitude) as avg_lng,
-			AVG(inside_temp) as avg_inside_temp,
-			AVG(outside_temp) as avg_outside_temp,
+			AVG(heading) as avg_heading,
+			AVG(elevation_m) as avg_elevation,
 			COUNT(*) as sample_count,
 			MIN(ts) as first_at
 		FROM positions
@@ -150,10 +153,8 @@ func compressOldPositions(ctx context.Context, db *database.DB) error {
 		GROUP BY vehicle_id, date_trunc('hour', ts)
 		HAVING COUNT(*) > 1
 	)
-	INSERT INTO positions (vehicle_id, speed_mph, battery_level, latitude, longitude,
-		inside_temp, outside_temp, ts)
-	SELECT vehicle_id, avg_speed, avg_battery::int, avg_lat, avg_lng,
-		avg_inside_temp, avg_outside_temp, first_at
+	INSERT INTO positions (vehicle_id, speed_mph, latitude, longitude, heading, elevation_m, ts)
+	SELECT vehicle_id, avg_speed, avg_lat, avg_lng, avg_heading, avg_elevation, first_at
 	FROM hourly
 	ON CONFLICT DO NOTHING;
 	`
@@ -163,12 +164,12 @@ func compressOldPositions(ctx context.Context, db *database.DB) error {
 	}
 
 	// Delete the now-compressed individual records, keeping the single
-	// representative row (MIN(id)) for each (vehicle, hour) bucket.
+	// representative row (MIN(ts)) for each (vehicle, hour) bucket.
 	res, err := db.Pool.Exec(ctx, `
 		DELETE FROM positions
 		WHERE ts < NOW() - INTERVAL '30 days'
-		AND id NOT IN (
-			SELECT MIN(id) FROM positions
+		AND (vehicle_id, ts) NOT IN (
+			SELECT vehicle_id, MIN(ts) FROM positions
 			WHERE ts < NOW() - INTERVAL '30 days'
 			GROUP BY vehicle_id, date_trunc('hour', ts)
 		)
@@ -254,8 +255,8 @@ func generateBatterySnapshots(ctx context.Context, db *database.DB) int {
 		// Count charge cycles from charging sessions (sum of SOC deltas / 100)
 		var totalSOCDelta *float64
 		_ = db.Pool.QueryRow(ctx,
-			`SELECT SUM(GREATEST(end_battery_level - start_battery_level, 0))
-			 FROM charging_sessions WHERE vehicle_id = $1 AND end_battery_level > start_battery_level`,
+			`SELECT SUM(GREATEST(end_battery_pct - start_battery_pct, 0))
+			 FROM charging_sessions WHERE vehicle_id = $1 AND end_battery_pct > start_battery_pct`,
 			vid).Scan(&totalSOCDelta)
 		if totalSOCDelta != nil {
 			cycleCount = int(*totalSOCDelta / 100)

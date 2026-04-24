@@ -1,0 +1,22 @@
+=== SURVEY ===
+Issues: 1) positions compression uses removed columns (battery_level, inside_temp, outside_temp, id)
+         2) charging_sessions query uses old column names (end_battery_level/start_battery_level)
+         3) REFRESH MATERIALIZED VIEW CONCURRENTLY fails on unpopulated view
+
+=== REASONING ===
+Fix 1: Rewrite compression CTE — removed battery_level, inside_temp, outside_temp; added heading, elevation_m; changed delete key from id to (vehicle_id, ts)
+Fix 2: Rename end_battery_level→end_battery_pct, start_battery_level→start_battery_pct
+Fix 3: Try CONCURRENTLY first, fallback to non-concurrent if 'not populated' error; added strings import
+
+=== CHANGES ===
+File: internal/worker/maintenance_worker.go
+  - Added 'strings' import
+  - refreshFleetStats: CONCURRENTLY fallback
+  - compressOldPositions: rewrote CTE, INSERT, DELETE
+  - generateBatterySnapshots: end_battery_level→end_battery_pct, start_battery_level→start_battery_pct
+
+=== GATE ===
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
