@@ -11,8 +11,6 @@ import { Grid } from '@/components/layout/Grid';
 import { FSM_REGISTRY } from '@/types/fsm';
 import type { VehicleStatus } from '@/api/types';
 
-const _vehicleStates = FSM_REGISTRY.vehicle.states;
-
 export interface VehicleHeroCardProps extends HTMLAttributes<HTMLDivElement> {
   vehicle: {
     id: number;
@@ -38,7 +36,7 @@ export interface VehicleHeroCardProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 function toStatus(state: string): VehicleStatus {
-  return state in _vehicleStates ? (state as VehicleStatus) : 'offline';
+  return state in FSM_REGISTRY.vehicle.states ? (state as VehicleStatus) : 'offline';
 }
 
 export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(

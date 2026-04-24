@@ -5,18 +5,18 @@ describe('getStateBadgeColor', () => {
   it('driving → green', () => expect(getStateBadgeColor('driving')).toBe('green'))
   it('charging → amber', () => expect(getStateBadgeColor('charging')).toBe('amber'))
   it('parked → cyan', () => expect(getStateBadgeColor('parked')).toBe('cyan'))
-  it('asleep → purple', () => expect(getStateBadgeColor('asleep')).toBe('purple'))
-  it('online → cyan', () => expect(getStateBadgeColor('online')).toBe('cyan'))
-  it('offline → neutral', () => expect(getStateBadgeColor('offline')).toBe('neutral'))
+  it('asleep → neutral', () => expect(getStateBadgeColor('asleep')).toBe('neutral'))
+  it('online → green', () => expect(getStateBadgeColor('online')).toBe('green'))
+  it('offline → red', () => expect(getStateBadgeColor('offline')).toBe('red'))
   it('unknown → neutral', () => expect(getStateBadgeColor('unknown')).toBe('neutral'))
   it('null → neutral', () => expect(getStateBadgeColor(null)).toBe('neutral'))
   it('undefined → neutral', () => expect(getStateBadgeColor(undefined)).toBe('neutral'))
 })
 
 describe('getStateColor', () => {
-  it('driving → text-neon-green', () => expect(getStateColor('driving')).toBe('text-neon-green'))
-  it('charging → text-neon-amber', () => expect(getStateColor('charging')).toBe('text-neon-amber'))
-  it('null → muted', () => expect(getStateColor(null)).toBe('text-[var(--text-muted)]'))
+  it('driving → text-green-400', () => expect(getStateColor('driving')).toBe('text-green-400'))
+  it('charging → text-cyan-400', () => expect(getStateColor('charging')).toBe('text-cyan-400'))
+  it('null → text-gray-400', () => expect(getStateColor(null)).toBe('text-gray-400'))
 })
 
 describe('getStateLabel', () => {

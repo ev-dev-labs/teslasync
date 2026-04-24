@@ -444,33 +444,36 @@ export interface ChatResponse {
   session_id: string
 }
 
-import { FSM_REGISTRY, type BadgeVariant } from '@/types/fsm'
+import { resolveStyle, VEHICLE_STATE_ENTRIES, VEHICLE_STATES } from '@/types/fsm'
+import type { BadgeVariant, VehicleState as _VehicleState } from '@/types/fsm'
 export type { BadgeVariant } from '@/types/fsm'
 
-/* ── Vehicle status — derived from FSM_REGISTRY.vehicle ── */
+/* ── Vehicle status — single source from @/types/fsm ── */
 
-const _vehicleDef = FSM_REGISTRY.vehicle
-export type VehicleStatus = keyof typeof _vehicleDef.states
-export const VEHICLE_STATUSES = Object.keys(_vehicleDef.states) as VehicleStatus[]
+export type VehicleStatus = _VehicleState
+export const VEHICLE_STATUSES = VEHICLE_STATES as unknown as VehicleStatus[]
 
 /** Derives a display-friendly status from live vehicle state. */
 export function deriveVehicleStatus(state?: VehicleState | null): VehicleStatus {
   if (!state) return 'offline'
   if (state.is_charging) return 'charging'
   if (state.speed && state.speed > 0) return 'driving'
-  const s = state.state as string
-  if (s in _vehicleDef.states) return s as VehicleStatus
+  const s = (state.state ?? '').toLowerCase()
+  if ((VEHICLE_STATES as readonly string[]).includes(s)) return s as VehicleStatus
   return 'online'
 }
 
 /** Maps VehicleStatus → badge variant. */
-export function statusVariant(status: VehicleStatus): BadgeVariant {
-  return _vehicleDef.states[status]?.variant ?? 'danger'
+export function statusVariant(status: VehicleStatus | string): BadgeVariant {
+  const entry = VEHICLE_STATE_ENTRIES[status as _VehicleState]
+  return entry?.variant ?? 'danger'
 }
 
 /** Maps VehicleStatus → Tailwind badge dot color class. */
-export function statusDotColor(status: VehicleStatus): string {
-  return _vehicleDef.states[status]?.badgeDot ?? 'bg-gray-400'
+export function statusDotColor(status: VehicleStatus | string): string {
+  const entry = VEHICLE_STATE_ENTRIES[status as _VehicleState]
+  if (!entry) return 'bg-gray-400'
+  return resolveStyle(entry).badgeDot
 }
 
 // === New Data Types ===

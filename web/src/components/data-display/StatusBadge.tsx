@@ -1,8 +1,6 @@
 import { cn } from '@/lib/cn';
-import { FSM_REGISTRY } from '@/types/fsm';
+import { getStateDefinition } from '@/types/fsm';
 import type { VehicleStatus } from '@/api/types';
-
-const _vehicleStates = FSM_REGISTRY.vehicle.states;
 
 interface StatusBadgeProps {
   status: VehicleStatus | (string & {});
@@ -17,7 +15,7 @@ const sizes = {
 
 export function StatusBadge({ status, size = 'md', className }: StatusBadgeProps) {
   const s = sizes[size];
-  const dotColor = _vehicleStates[status as VehicleStatus]?.badgeDot ?? 'bg-gray-400';
+  const dotColor = getStateDefinition('vehicle', status).badgeDot;
 
   return (
     <span
