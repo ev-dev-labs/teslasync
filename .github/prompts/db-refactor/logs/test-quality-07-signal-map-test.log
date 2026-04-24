@@ -1,0 +1,9 @@
+=== GATE ===
+=== RUN   TestSignalColumnMapMatchesSchema
+    live_state_repo_test.go:103: validated 13 signalΓåÆcolumn mappings + 3 special handler columns against 36 DB columns
+--- PASS: TestSignalColumnMapMatchesSchema (0.07s)
+PASS
+ok  	github.com/ev-dev-labs/teslasync/internal/database	0.286s
+TEST_EXIT=0
+EXIT=0
+STATUS=DONE
