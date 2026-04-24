@@ -1,0 +1,30 @@
+=== SURVEY ===
+File: internal/signal/store_test.go
+Line 219: var flushCount atomic.Int64
+Line 242: _ = flushCount // suppress unused warning
+
+The variable flushCount (atomic.Int64) is declared but never meaningfully used.
+The blank assignment _ = flushCount copies the atomic value, which contains sync/atomic.noCopy.
+This triggers: "assignment copies lock value to _: sync/atomic.Int64 contains sync/atomic.noCopy"
+
+=== REASONING ===
+flushCount is never incremented, read, or referenced except in the suppression line.
+It was likely leftover from an earlier iteration of this test.
+Fix: Remove both line 219 (declaration) and line 242 (blank assignment).
+No other code references flushCount in this function.
+The tomic import may become unused — check after removal.
+
+=== CHANGES ===
+1. Removed "sync/atomic" import (line 7) — no longer needed
+2. Removed ar flushCount atomic.Int64 declaration (line 218-219) — unused variable
+3. Removed _ = flushCount blank assignment (line 242) — caused vet error (copies lock)
+4. Removed comment "Use an atomic counter to detect if flushes happen synchronously" — stale
+
+=== GATE ===
+
+FILE_ERROR_COUNT=0
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
+Full go vet ./... shows 0 errors in store_test.go (3 pre-existing errors in other files, out of scope).

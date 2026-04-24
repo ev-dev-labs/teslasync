@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -215,8 +214,6 @@ func TestFlushAllDoesNotUseDirtyMap(t *testing.T) {
 }
 
 func TestUpdateDoesNotSpawnGoroutines(t *testing.T) {
-	// Use an atomic counter to detect if flushes happen synchronously
-	var flushCount atomic.Int64
 	f := &mockFlusher{}
 	s := New(f, 0, nil)
 
@@ -239,7 +236,6 @@ func TestUpdateDoesNotSpawnGoroutines(t *testing.T) {
 		t.Errorf("expected 5 dirty vehicles, got %d", dirtyCount)
 	}
 
-	_ = flushCount // suppress unused warning
 }
 
 func TestConcurrentUpdateAndFlush(t *testing.T) {
