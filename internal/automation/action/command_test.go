@@ -114,17 +114,21 @@ func (m *mockTeslaCommander) SendCommand(_ context.Context, vin string, command 
 // --- Helpers ---
 
 func defaultPollingConfig() *models.PollingConfig {
-	pc := models.DefaultPollingConfig()
-	pc.Commands = true
-	return &pc
+	return &models.PollingConfig{
+		AwakeIntervalSec:   30,
+		AsleepIntervalSec:  300,
+		DrivingIntervalSec: 15,
+		Enabled:            true,
+	}
 }
 
 func testVehicle(id int64, vin, name string) *models.Vehicle {
-	return &models.Vehicle{ID: id, VIN: vin, DisplayName: name, State: "online"}
+	return &models.Vehicle{ID: id, VIN: vin, DisplayName: name}
 }
 
-func testVehicleWithState(id int64, vin, name, state string) *models.Vehicle {
-	return &models.Vehicle{ID: id, VIN: vin, DisplayName: name, State: state}
+func testVehicleWithState(id int64, vin, name, _ string) *models.Vehicle {
+	// Vehicle no longer carries State; kept for caller compatibility.
+	return &models.Vehicle{ID: id, VIN: vin, DisplayName: name}
 }
 
 func makeConfig(t *testing.T, typ, command string, params map[string]interface{}) json.RawMessage {
@@ -393,7 +397,7 @@ func TestExecute_APISuspended(t *testing.T) {
 
 func TestExecute_CommandsDisabled(t *testing.T) {
 	pc := defaultPollingConfig()
-	pc.Commands = false
+	pc.Enabled = false
 	settings := &mockSettingsChecker{pollingCfg: pc}
 	exec := NewCommandExecutor(&mockVehicleRepo{}, &mockCommandLogRepo{}, settings, &mockTeslaCommander{hasToken: true})
 
@@ -846,7 +850,7 @@ func TestAutoWake_WakeDisabledInPollingConfig(t *testing.T) {
 	commandRepo := &mockCommandLogRepo{}
 
 	pc := defaultPollingConfig()
-	pc.WakeUp = false
+	pc.Enabled = false
 	settings := &mockSettingsChecker{pollingCfg: pc}
 	teslaCmd := &mockTeslaCommander{hasToken: true}
 
