@@ -24,7 +24,7 @@ import (
 
 // AutomationStore provides automation data access needed by the Engine.
 type AutomationStore interface {
-	GetByID(ctx context.Context, id int64) (*models.Automation, error)
+	GetByID(ctx context.Context, id int64) (*models.AutomationFull, error)
 	IncrementExecution(ctx context.Context, id int64, success bool) error
 }
 
@@ -249,32 +249,19 @@ func (e *Engine) Evaluate(ctx context.Context, automationID int64, triggerSnapsh
 	if a == nil {
 		return fmt.Errorf("automation %d not found", automationID)
 	}
-	if !a.Enabled || a.AutoDisabled {
+	if !a.Enabled || a.AutoDisabled() {
 		e.logger.Debug().
 			Int64("automation_id", automationID).
 			Bool("enabled", a.Enabled).
-			Bool("auto_disabled", a.AutoDisabled).
+			Bool("auto_disabled", a.AutoDisabled()).
 			Msg("skipping disabled automation")
 		return nil
 	}
 
-	// Rate limit check.
-	if e.rateLimiter != nil && a.MaxExecutionsHour > 0 {
-		result, err := e.rateLimiter.Check(ctx, automationID, a.MaxExecutionsHour)
-		if err != nil {
-			e.logger.Warn().Err(err).
-				Int64("automation_id", automationID).
-				Msg("rate limit check failed, proceeding")
-		} else if !result.Allowed {
-			e.logger.Info().
-				Int64("automation_id", automationID).
-				Str("automation", a.Name).
-				Str("reason", result.Reason).
-				Msg("automation rate limited")
-			e.recordSkipped(ctx, a, triggerSnapshot, start, "rate_limited: "+result.Reason)
-			return nil
-		}
-	}
+	// Rate limit check — MaxExecutionsHour removed in typed migration (000142).
+	// Per-automation rate-limiting will be re-derived from step-level config
+	// once the CTI children are fully wired. Global rate limiter still guards
+	// against runaway loops via the LoopDetector below.
 
 	// Loop detection — check context chain and rapid-fire guard.
 	if e.loopDetector != nil {
@@ -307,7 +294,7 @@ func (e *Engine) Evaluate(ctx context.Context, automationID int64, triggerSnapsh
 		AutomationName:     a.Name,
 		VehicleID:          a.VehicleID,
 		TriggeredAt:        start,
-		TriggerType:        a.TriggerType,
+		TriggerType:        a.TriggerType(),
 		TriggerSnapshot:    triggerSnapshot,
 		ConditionsMet:      true,
 		ConditionsSnapshot: conditionsSnapshot,
@@ -320,8 +307,15 @@ func (e *Engine) Evaluate(ctx context.Context, automationID int64, triggerSnapsh
 		return fmt.Errorf("create history: %w", err)
 	}
 
-	// Parse actions.
-	actions, err := action.ParseActions(a.Actions)
+	// Parse actions — marshal []any to JSON for action.ParseActions.
+	actionsJSON, err := json.Marshal(a.Actions)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to marshal actions: %v", err)
+		e.completeHistory(ctx, hist.ID, "failed", &errMsg, start)
+		_ = e.automationRepo.IncrementExecution(ctx, automationID, false)
+		return fmt.Errorf("marshal actions for automation %d: %w", automationID, err)
+	}
+	actions, err := action.ParseActions(actionsJSON)
 	if err != nil {
 		errMsg := fmt.Sprintf("invalid actions: %v", err)
 		e.completeHistory(ctx, hist.ID, "failed", &errMsg, start)
@@ -332,7 +326,8 @@ func (e *Engine) Evaluate(ctx context.Context, automationID int64, triggerSnapsh
 	// Execute the action chain.
 	var vehicle *models.Vehicle
 	// vehicle lookup deferred to ChainExecutor.Execute which handles nil vehicle
-	results := e.chainExecutor.Execute(ctx, actions, vehicle, a.StopOnFailure)
+	// StopOnFailure removed in typed migration (000142); default true (safe).
+	results := e.chainExecutor.Execute(ctx, actions, vehicle, true)
 
 	// Summarise results.
 	succeeded := action.Succeeded(results)
@@ -340,7 +335,7 @@ func (e *Engine) Evaluate(ctx context.Context, automationID int64, triggerSnapsh
 	skipped := action.SkippedCount(results)
 	total := len(results)
 
-	actionsJSON, _ := json.Marshal(results)
+	actionsJSON, _ = json.Marshal(results)
 
 	status := "success"
 	var errStr *string
@@ -370,7 +365,7 @@ func (e *Engine) Evaluate(ctx context.Context, automationID int64, triggerSnapsh
 
 	// Audit trail.
 	if e.auditor != nil {
-		e.auditor.LogExecuted(ctx, a.ID, a.Name, a.TriggerType, status != "failed", time.Since(start).Milliseconds())
+		e.auditor.LogExecuted(ctx, a.ID, a.Name, a.TriggerType(), status != "failed", time.Since(start).Milliseconds())
 	}
 
 	_ = actionsJSON // used in history update; kept for future SSE publishing
@@ -390,13 +385,21 @@ type conditionResult struct {
 
 // evaluateConditions parses and evaluates all conditions on the automation.
 // Returns whether all conditions are met and a JSON snapshot of results.
-func (e *Engine) evaluateConditions(a *models.Automation, now time.Time) (bool, json.RawMessage) {
-	if len(a.Conditions) == 0 || string(a.Conditions) == "[]" || string(a.Conditions) == "null" {
+func (e *Engine) evaluateConditions(a *models.AutomationFull, now time.Time) (bool, json.RawMessage) {
+	if len(a.Conditions) == 0 {
+		return true, nil
+	}
+
+	condJSON, err := json.Marshal(a.Conditions)
+	if err != nil {
+		e.logger.Warn().Err(err).
+			Int64("automation_id", a.ID).
+			Msg("failed to marshal conditions")
 		return true, nil
 	}
 
 	var rawConditions []json.RawMessage
-	if err := json.Unmarshal(a.Conditions, &rawConditions); err != nil {
+	if err := json.Unmarshal(condJSON, &rawConditions); err != nil {
 		e.logger.Warn().Err(err).
 			Int64("automation_id", a.ID).
 			Msg("failed to parse conditions array")
@@ -434,7 +437,7 @@ func (e *Engine) evaluateConditions(a *models.Automation, now time.Time) (bool, 
 // evaluateSingleCondition dispatches to the appropriate condition evaluator.
 func (e *Engine) evaluateSingleCondition(
 	index int, condType string, raw json.RawMessage,
-	a *models.Automation, now time.Time,
+	a *models.AutomationFull, now time.Time,
 ) conditionResult {
 	base := conditionResult{Index: index, Type: condType}
 
@@ -477,7 +480,9 @@ func (e *Engine) evaluateSingleCondition(
 		if err != nil {
 			return conditionResult{Index: index, Type: condType, Result: "unknown", Reason: "invalid config: " + err.Error()}
 		}
-		res, _, err := condition.EvaluateCooldown(cfg, a.LastTriggeredAt, now)
+		// LastTriggeredAt removed in typed migration (000142); pass nil (never triggered).
+		// TODO: derive from automation_history once wired.
+		res, _, err := condition.EvaluateCooldown(cfg, nil, now)
 		if err != nil {
 			return conditionResult{Index: index, Type: condType, Result: "unknown", Reason: "evaluation error: " + err.Error()}
 		}
@@ -508,7 +513,7 @@ func withEvalResult(base conditionResult, met bool) conditionResult {
 // ── History Helpers ────────────────────────────────────────────────────
 
 // recordSkipped writes a history record for a skipped execution.
-func (e *Engine) recordSkipped(ctx context.Context, a *models.Automation, triggerSnapshot json.RawMessage, start time.Time, reason string) {
+func (e *Engine) recordSkipped(ctx context.Context, a *models.AutomationFull, triggerSnapshot json.RawMessage, start time.Time, reason string) {
 	durationMs := int(time.Since(start).Milliseconds())
 	completedAt := time.Now().UTC()
 	hist := &models.AutomationHistory{
@@ -518,7 +523,7 @@ func (e *Engine) recordSkipped(ctx context.Context, a *models.Automation, trigge
 		TriggeredAt:     start,
 		CompletedAt:     &completedAt,
 		DurationMs:      &durationMs,
-		TriggerType:     a.TriggerType,
+		TriggerType:     a.TriggerType(),
 		TriggerSnapshot: triggerSnapshot,
 		Status:          "skipped",
 		Error:           &reason,
