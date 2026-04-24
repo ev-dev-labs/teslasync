@@ -1,0 +1,10 @@
+=== SURVEY ===
+Renamed d.end_date -> d.end_ts and d.start_date -> d.start_ts in visited_location_repo.go lines 94-97
+=== REASONING ===
+drives table renamed end_date to end_ts and start_date to start_ts; 3 occurrences fixed (2 in SELECT, 1 in WHERE)
+=== CHANGES ===
+internal/database/visited_location_repo.go: end_date->end_ts (x2), start_date->start_ts (x1)
+=== GATE ===
+EXIT=0
+STATUS=DONE
+=== COMMIT ===

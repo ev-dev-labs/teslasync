@@ -91,10 +91,10 @@ func (r *VisitedLocationRepo) deriveFromDrives(ctx context.Context, vehicleID *i
 	query := `SELECT d.vehicle_id, d.end_address,
 			COUNT(*) AS visit_count,
 			COALESCE(SUM(d.duration_min), 0) AS total_duration_min,
-			MAX(d.end_date) AS last_visited,
-			MIN(d.start_date) AS first_visited
+			MAX(d.end_ts) AS last_visited,
+			MIN(d.start_ts) AS first_visited
 		FROM drives d
-		WHERE d.end_date IS NOT NULL
+		WHERE d.end_ts IS NOT NULL
 		  AND d.end_address IS NOT NULL
 		  AND d.end_address != ''`
 
