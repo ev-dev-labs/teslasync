@@ -117,12 +117,12 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Average efficiency (Wh/km) — from drives with valid range data
+	// Average efficiency (Wh/km) — from drives with energy consumed data
 	effQuery := `
 		SELECT COALESCE(AVG(
-			CASE WHEN distance_mi > 1 AND start_range_km IS NOT NULL AND end_range_km IS NOT NULL
-			     AND (start_range_km - end_range_km) > 0
-			THEN ((start_range_km - end_range_km) / distance_mi) * 1000
+			CASE WHEN distance_mi > 1 AND energy_consumed_kwh IS NOT NULL
+			     AND energy_consumed_kwh > 0
+			THEN (energy_consumed_kwh / (distance_mi * 1.60934)) * 1000
 			ELSE NULL END
 		), 0)
 		FROM drives
@@ -138,11 +138,11 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 	// ── Charging aggregates ──
 	chargeQuery := `
 		SELECT COUNT(*),
-		       COALESCE(SUM(charge_energy_added), 0),
+		       COALESCE(SUM(energy_added_kwh), 0),
 		       COALESCE(SUM(duration_min), 0),
 		       COALESCE(SUM(CASE WHEN cost > 0 THEN cost ELSE 0 END), 0)
 		FROM charging_sessions
-		WHERE end_date IS NOT NULL`
+		WHERE end_ts IS NOT NULL`
 	chargeArgs := []interface{}{}
 	if vehicleID > 0 {
 		chargeQuery += " AND vehicle_id = $1"
@@ -292,14 +292,14 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 	var maxChargeKwh float64
 	var maxChargeDate *string
 	maxChargeQuery := `
-		SELECT charge_energy_added, start_date FROM charging_sessions
-		WHERE end_date IS NOT NULL AND charge_energy_added > 0`
+		SELECT energy_added_kwh, start_ts FROM charging_sessions
+		WHERE end_ts IS NOT NULL AND energy_added_kwh > 0`
 	maxChargeArgs := []interface{}{}
 	if vehicleID > 0 {
 		maxChargeQuery += " AND vehicle_id = $1"
 		maxChargeArgs = append(maxChargeArgs, vehicleID)
 	}
-	maxChargeQuery += " ORDER BY charge_energy_added DESC LIMIT 1"
+	maxChargeQuery += " ORDER BY energy_added_kwh DESC LIMIT 1"
 	var mcDate time.Time
 	if err := h.db.Pool.QueryRow(ctx, maxChargeQuery, maxChargeArgs...).Scan(&maxChargeKwh, &mcDate); err == nil {
 		s := mcDate.Format("2006-01-02")

@@ -1,0 +1,36 @@
+=== SURVEY ===
+Matches for old column names in internal/api/lifetime_handler.go:
+  L123: start_range_km IS NOT NULL AND end_range_km IS NOT NULL (drives — removed columns)
+  L124: (start_range_km - end_range_km) > 0
+  L125: ((start_range_km - end_range_km) / distance_mi) * 1000
+  L141: SUM(charge_energy_added) → SUM(energy_added_kwh)
+  L145: end_date IS NOT NULL → end_ts IS NOT NULL
+  L295: charge_energy_added, start_date → energy_added_kwh, start_ts
+  L296: end_date IS NOT NULL AND charge_energy_added > 0 → end_ts IS NOT NULL AND energy_added_kwh > 0
+  L302: charge_energy_added DESC → energy_added_kwh DESC
+Total: 8 references to fix across 6 logical changes.
+
+=== REASONING ===
+1. Lines 121-129 (efficiency query): start_range_km / end_range_km removed from drives table.
+   Rewrote to use energy_consumed_kwh / (distance_mi * 1.60934) * 1000 for Wh/km.
+2. Line 141: charge_energy_added → energy_added_kwh (charging_sessions rename)
+3. Line 145: end_date → end_ts (charging_sessions rename)
+4. Lines 295-296: charge_energy_added → energy_added_kwh, start_date → start_ts, end_date → end_ts
+5. Line 302: charge_energy_added → energy_added_kwh in ORDER BY
+
+=== CHANGES ===
+Modified: internal/api/lifetime_handler.go
+  - Rewrote efficiency calc (L121-129): dropped start_range_km/end_range_km, use energy_consumed_kwh
+  - L141: SUM(charge_energy_added) → SUM(energy_added_kwh)
+  - L145: end_date IS NOT NULL → end_ts IS NOT NULL
+  - L295: charge_energy_added, start_date → energy_added_kwh, start_ts
+  - L296: end_date → end_ts, charge_energy_added → energy_added_kwh
+  - L302: ORDER BY charge_energy_added → energy_added_kwh
+
+=== GATE ===
+go build ./... — PASS (exit 0)
+Post-fix grep for old columns: 0 matches — clean.
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
