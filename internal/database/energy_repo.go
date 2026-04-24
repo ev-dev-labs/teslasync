@@ -131,17 +131,17 @@ func isNotPopulated(err error) bool {
 func (r *EnergyStatsRepo) GetDailyBreakdown(ctx context.Context, vehicleID int64, days int) ([]*models.EnergyStatsRow, error) {
 	query := `SELECT
 		TO_CHAR(day, 'YYYY-MM-DD') AS date,
-		total_energy_kwh AS energy_kwh,
-		total_distance_mi AS distance_mi,
-		CASE WHEN total_distance_mi > 0
-			THEN total_energy_kwh / total_distance_mi * 1000
+		COALESCE(total_energy_kwh, 0) AS energy_kwh,
+		COALESCE(total_distance_mi, 0) AS distance_mi,
+		CASE WHEN COALESCE(total_distance_mi, 0) > 0
+			THEN COALESCE(total_energy_kwh, 0) / total_distance_mi * 1000
 			ELSE 0
 		END AS efficiency_wh_per_mi,
 		0 AS cost
 	FROM cagg_fleet_stats
 	WHERE vehicle_id = $1
 	  AND day >= (NOW() - make_interval(days := $2))::date
-	  AND (total_energy_kwh > 0 OR total_distance_mi > 0)
+	  AND (COALESCE(total_energy_kwh, 0) > 0 OR COALESCE(total_distance_mi, 0) > 0)
 	ORDER BY day`
 	rows, err := r.db.Pool.Query(ctx, query, vehicleID, days)
 	if err != nil {

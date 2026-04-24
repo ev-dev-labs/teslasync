@@ -19,6 +19,7 @@ type LiveStateRepo struct {
 // varchar columns in vehicle_live_state — values must be written as strings
 var isVarcharCol = map[string]bool{
 	"defrost_mode": true,
+	"gps_state":    true,
 }
 
 // timestamptz columns in vehicle_live_state

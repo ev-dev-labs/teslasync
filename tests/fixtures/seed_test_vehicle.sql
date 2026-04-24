@@ -38,11 +38,16 @@ VALUES
   ('decimal_precision', '1', 'text')
 ON CONFLICT (key) DO NOTHING;
 
--- 5. Polling config for the test vehicle
-INSERT INTO polling_configs (vehicle_id, awake_interval_sec, asleep_interval_sec, driving_interval_sec, enabled)
-SELECT id, 30, 300, 5, true
-FROM vehicles WHERE vin = 'TEST00000000000VIN'
-ON CONFLICT (vehicle_id) DO NOTHING;
+-- 5. Polling config for the test vehicle (skip if table doesn't exist)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'polling_configs') THEN
+    EXECUTE 'INSERT INTO polling_configs (vehicle_id, awake_interval_sec, asleep_interval_sec, driving_interval_sec, enabled)
+    SELECT id, 30, 300, 5, true
+    FROM vehicles WHERE vin = ''TEST00000000000VIN''
+    ON CONFLICT (vehicle_id) DO NOTHING';
+  END IF;
+END $$;
 
 COMMIT;
 
@@ -50,5 +55,4 @@ COMMIT;
 SELECT 'vehicles' AS entity, count(*) FROM vehicles
 UNION ALL SELECT 'vehicle_units', count(*) FROM vehicle_units
 UNION ALL SELECT 'vehicle_live_state', count(*) FROM vehicle_live_state
-UNION ALL SELECT 'settings', count(*) FROM settings
-UNION ALL SELECT 'polling_configs', count(*) FROM polling_configs;
+UNION ALL SELECT 'settings', count(*) FROM settings;

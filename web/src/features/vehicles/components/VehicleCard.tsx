@@ -31,7 +31,7 @@ export function VehicleCard({ vehicle, onDelete }: VehicleCardProps) {
   const { data: stateData } = useVehicleState(vehicle.id);
 
   const state: VehicleState | undefined = stateData?.state;
-  const status = getVehicleStatus(vehicle, state);
+  const status = getVehicleStatus(state);
   const batColor = batteryColor(state?.battery_level ?? 0);
 
   return (

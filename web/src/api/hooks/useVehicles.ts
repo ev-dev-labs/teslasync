@@ -2,7 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import type { Vehicle } from '@/types/vehicle';
-import type { VehicleState, VehicleStatus, VehicleLiveState } from '../types';
+import type { VehicleState, VehicleLiveState } from '../types';
+export { deriveVehicleStatus as getVehicleStatus } from '../types';
 
 export const vehicleKeys = {
   all: ['vehicles'] as const,
@@ -10,17 +11,6 @@ export const vehicleKeys = {
   state: (id: number) => ['vehicle-state', id] as const,
   positions: (id: number) => ['vehicle-positions', id] as const,
 };
-
-/** Derives a display-friendly vehicle status from the vehicle record and optional live state. */
-export function getVehicleStatus(_v: Vehicle, state?: VehicleState | null): VehicleStatus {
-  if (state?.is_charging) return 'charging'
-  if (state?.speed && state.speed > 0) return 'driving'
-  if (state?.state === 'online') return 'online'
-  if (state?.state === 'asleep') return 'asleep'
-  if (state?.state === 'parked') return 'online'
-  if (state) return 'online'
-  return 'offline'
-}
 
 export function useVehicles() {
   return useQuery({

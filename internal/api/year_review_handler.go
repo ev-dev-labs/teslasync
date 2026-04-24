@@ -115,8 +115,8 @@ func (h *YearReviewHandler) GetYearReview(w http.ResponseWriter, r *http.Request
 		       COALESCE(SUM(distance_mi), 0),
 		       COALESCE(SUM(duration_min), 0),
 		       MAX(max_speed_mph),
-		       MIN(outside_temp_avg),
-		       MAX(outside_temp_avg)
+		       MIN(outside_temp_avg_c),
+		       MAX(outside_temp_avg_c)
 		FROM drives
 		WHERE vehicle_id = $1
 		  AND end_ts IS NOT NULL

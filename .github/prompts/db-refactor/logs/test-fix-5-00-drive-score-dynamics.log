@@ -26,3 +26,6 @@ EXIT=0
 STATUS=DONE
 
 === COMMIT ===
+[db-refactor/timescaledb-migration-mo-jsonb-at-all 2550ce5f] fix(db-refactor): drive_handler score+dynamics column renames
+ 2 files changed, 46 insertions(+), 18 deletions(-)
+ create mode 100644 .github/prompts/db-refactor/logs/test-fix-5-00-drive-score-dynamics.log

@@ -130,7 +130,7 @@ export default function VehicleDetailPage() {
   /* ─── Derived state ─── */
 
   const state = stateData?.state
-  const status: VehicleStatus = vehicle ? deriveStatus(vehicle, state) : 'offline'
+  const status: VehicleStatus = vehicle ? deriveStatus(state) : 'offline'
 
   /* ─── Render ─── */
 

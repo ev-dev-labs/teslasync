@@ -14,6 +14,7 @@ import {
 import { useVehicleStateMachine } from '@/api/hooks/useAdmin';
 import { useFSMStats, useFSMTransitions } from '@/api/hooks/useFSM';
 import { useVehicles } from '@/api/hooks/useVehicles';
+import type { VehicleState } from '@/api/types';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime, formatRelative } from '@/lib/dateFormat';
 import { fmtInt } from '@/lib/numberFormat';
@@ -50,8 +51,9 @@ function formatDuration(seconds: number): string {
 }
 
 interface StateResponse {
-  state?: { state?: string; since?: string };
+  state?: VehicleState;
   live?: boolean;
+  data_source?: string;
 }
 
 /* ─── Stat summary row for the distribution table ─── */
@@ -356,14 +358,24 @@ export default function StateMachineDebuggerPage() {
                 />
                 {currentState.state ?? '—'}
               </div>
-              <div className="text-sm text-white/70">
+              <div className="text-sm text-white/70 space-y-1">
                 <p>
-                  {t('fsm.since', 'Since')}:{' '}
+                  <span className="text-white/40">{t('fsm.type', 'FSM Type')}:</span>{' '}
+                  <span className="text-white/90 font-medium">Vehicle</span>
+                </p>
+                <p>
+                  <span className="text-white/40">{t('fsm.mode', 'Mode')}:</span>{' '}
+                  <span className="text-white/90 font-medium">
+                    {currentState.is_charging ? 'Charging' : currentState.speed && currentState.speed > 0 ? 'Drive' : currentState.state === 'asleep' ? 'Sleep' : 'Idle'}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-white/40">{t('fsm.since', 'Since')}:</span>{' '}
                   <span className="text-white/90 font-medium">
                     {formatDateTime(currentState.since)}
                   </span>
                 </p>
-                <p className="text-white/50 mt-1">{formatRelative(currentState.since)}</p>
+                <p className="text-white/50">{formatRelative(currentState.since)}</p>
               </div>
             </div>
           ) : (

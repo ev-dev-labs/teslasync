@@ -430,3 +430,6 @@ ALERT_HANDLER_ERROR_COUNT=0
 EXIT=0
 STATUS=DONE
 === COMMIT ===
+[db-refactor/timescaledb-migration-mo-jsonb-at-all 1d3c919] fix(db-refactor): Phase 5e.01 ΓÇö rewire alert_handler.go
+ 2 files changed, 540 insertions(+), 87 deletions(-)
+ create mode 100644 .github/prompts/db-refactor/logs/phase-5e-01-alert-handler.log

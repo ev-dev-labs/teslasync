@@ -32,7 +32,7 @@ export function VehicleHero({
   isFahrenheit, distanceUnit, speedUnit, tempUnit,
 }: VehicleHeroProps) {
   const { t } = useTranslation('dashboard');
-  const status = (state?.state ?? 'offline') as 'online' | 'offline' | 'asleep' | 'driving' | 'charging';
+  const status = (state?.state ?? 'offline') as string;
 
   return (
     <div className="relative h-full overflow-hidden">

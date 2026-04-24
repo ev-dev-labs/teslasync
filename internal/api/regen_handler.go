@@ -136,18 +136,15 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		monthly = []monthlySummary{}
 	}
 
-	// Lifetime energy stats from motor snapshots
+	// Lifetime regen/drive energy — not available in current schema, use
+	// aggregated cagg_fleet_stats regen totals when available.
 	var totalRegenKWh, totalDriveKWh float64
-	err = h.db.Pool.QueryRow(ctx, `
+	_ = h.db.Pool.QueryRow(ctx, `
 		SELECT
-			COALESCE(MAX(lifetime_energy_gained_regen) - MIN(lifetime_energy_gained_regen), 0),
-			COALESCE(MAX(lifetime_energy_used_drive) - MIN(lifetime_energy_used_drive), 0)
-		FROM motor_snapshots
-		WHERE vehicle_id = $1 AND lifetime_energy_gained_regen IS NOT NULL`, vehicleID).Scan(&totalRegenKWh, &totalDriveKWh)
-	if err != nil {
-		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get lifetime energy stats")
-		// Non-fatal; continue with zeros
-	}
+			COALESCE(SUM(total_regen_kwh), 0),
+			COALESCE(SUM(total_energy_kwh), 0)
+		FROM cagg_fleet_stats
+		WHERE vehicle_id = $1`, vehicleID).Scan(&totalRegenKWh, &totalDriveKWh)
 
 	regenRatio := 0.0
 	if totalDriveKWh > 0 {

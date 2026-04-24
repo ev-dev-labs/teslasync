@@ -17,7 +17,7 @@ export function VehicleHeader({ vehicle, state, onRefetchState }: VehicleHeaderP
   const { t } = useTranslation()
   const vehicleId = vehicle?.id ?? 0
 
-  const status: VehicleStatus = vehicle ? getVehicleStatus(vehicle, state) : 'offline'
+  const status: VehicleStatus = vehicle ? getVehicleStatus(state) : 'offline'
 
   const wakeMut = useWakeVehicle()
 
@@ -44,7 +44,7 @@ export function VehicleHeader({ vehicle, state, onRefetchState }: VehicleHeaderP
               {vehicle?.display_name || vehicle?.vin || t('common.vehicle', 'Vehicle')}
             </h1>
             <StatusBadge
-              status={status as 'online' | 'offline' | 'asleep' | 'driving' | 'charging' | 'updating'}
+              status={status}
               size="md"
             />
           </div>

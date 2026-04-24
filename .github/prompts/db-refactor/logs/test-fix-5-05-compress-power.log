@@ -72,3 +72,6 @@ EXIT=0
 STATUS=DONE
 
 === COMMIT ===
+[db-refactor/timescaledb-migration-mo-jsonb-at-all 1ea301bf] fix(db-refactor): remove positions.power from compression INSERT
+ 2 files changed, 78 insertions(+), 5 deletions(-)
+ create mode 100644 .github/prompts/db-refactor/logs/test-fix-5-05-compress-power.log

@@ -1,39 +1,16 @@
-import type { Vehicle, VehicleState, VehicleStatus } from '@/api/types'
+import type { VehicleState } from '@/api/types'
 import { fmtInt } from '@/lib/numberFormat'
+export { deriveVehicleStatus as deriveStatus, statusVariant } from '@/api/types'
 
 export interface StateResponse {
   state: VehicleState
   live: boolean
 }
 
-export function deriveStatus(_v: Vehicle, s?: VehicleState | null): VehicleStatus {
-  if (s?.is_charging) return 'charging'
-  if (s?.speed && s.speed > 0) return 'driving'
-  if (s?.state === 'online') return 'online'
-  if (s?.state === 'asleep') return 'asleep'
-  if (s?.state === 'parked') return 'online'
-  if (s) return 'online'
-  return 'offline'
-}
-
 export function batteryColor(level: number): string {
   if (level > 60) return '#10b981'
   if (level > 25) return '#f59e0b'
   return '#ef4444'
-}
-
-export function statusVariant(status: VehicleStatus): 'success' | 'warning' | 'danger' | 'info' | 'neutral' {
-  switch (status) {
-    case 'online':
-    case 'driving':
-      return 'success'
-    case 'charging':
-      return 'warning'
-    case 'asleep':
-      return 'info'
-    default:
-      return 'danger'
-  }
 }
 
 export function tirePressureVariant(psi: number | null): 'success' | 'warning' | 'danger' | 'neutral' {

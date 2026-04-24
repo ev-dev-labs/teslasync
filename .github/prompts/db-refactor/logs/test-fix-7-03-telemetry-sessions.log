@@ -96,3 +96,6 @@ Remaining: 0
 EXIT=0
 STATUS=DONE
 === COMMIT ===
+[db-refactor/timescaledb-migration-mo-jsonb-at-all bb535257] fix(db-refactor): telemetry_sessions.go enhancedFields + drive completion columns
+ 2 files changed, 124 insertions(+), 137 deletions(-)
+ create mode 100644 .github/prompts/db-refactor/logs/test-fix-7-03-telemetry-sessions.log

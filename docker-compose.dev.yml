@@ -41,7 +41,7 @@ services:
       - TESLA_REDIRECT_URI=http://localhost:8080/api/v1/auth/callback
       - TESLA_API_BASE_URL=${TESLA_API_BASE_URL:-https://fleet-api.prd.na.vn.cloud.tesla.com}
       - WORKER_POLL_INTERVAL=30s
-      - LOG_LEVEL=debug
+      - LOG_LEVEL=error
       - FLEET_TELEMETRY_ENABLED=${FLEET_TELEMETRY_ENABLED:-false}
       - FLEET_TELEMETRY_HOST=${FLEET_TELEMETRY_HOST:-}
       - FLEET_TELEMETRY_PORT=4443
@@ -101,7 +101,7 @@ services:
       - DATABASE_SSL_MODE=disable
       - MQTT_HOST=mosquitto
       - MQTT_PORT=1883
-      - LOG_LEVEL=debug
+      - LOG_LEVEL=error
       - HEALTH_PORT=8081
       - OTEL_ENABLED=true
       - OTEL_ENDPOINT=jaeger:4317
@@ -136,7 +136,7 @@ services:
       - DATABASE_SSL_MODE=disable
       - MQTT_HOST=mosquitto
       - MQTT_PORT=1883
-      - LOG_LEVEL=debug
+      - LOG_LEVEL=error
       - HEALTH_PORT=8082
       - OTEL_ENABLED=true
       - OTEL_ENDPOINT=jaeger:4317

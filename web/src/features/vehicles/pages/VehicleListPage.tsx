@@ -20,6 +20,7 @@ import { cn } from '@/lib/cn';
 import { fmtNumber } from '@/lib/numberFormat';
 import { request } from '@/api/client';
 import { fetchVehicleState } from '@/api/hooks/useVehicles';
+import { deriveVehicleStatus, statusVariant } from '@/api/types';
 import type { Vehicle } from '@/types/vehicle';
 import type { VehicleState } from '@/api/types';
 
@@ -30,34 +31,6 @@ function batteryColor(level: number): string {
   if (level > 30) return '#f59e0b';
   return '#ef4444';
 }
-
-type StatusKey = 'online' | 'asleep' | 'driving' | 'charging' | 'offline';
-
-function deriveStatus(_vehicle: Vehicle, state?: VehicleState | null): StatusKey {
-  if (state?.is_charging) return 'charging';
-  if (state?.speed && state.speed > 0) return 'driving';
-  if (state?.state === 'online') return 'online';
-  if (state?.state === 'asleep') return 'asleep';
-  if (state?.state === 'parked') return 'online';
-  if (state) return 'online';
-  return 'offline';
-}
-
-const STATUS_VARIANT: Record<StatusKey, 'success' | 'warning' | 'info' | 'danger' | 'neutral'> = {
-  online: 'success',
-  charging: 'warning',
-  driving: 'info',
-  asleep: 'neutral',
-  offline: 'danger',
-};
-
-const STATUS_LABEL: Record<StatusKey, string> = {
-  online: 'Online',
-  charging: 'Charging',
-  driving: 'Driving',
-  asleep: 'Asleep',
-  offline: 'Offline',
-};
 
 /* ── Page ────────────────────────────────────────────────── */
 
@@ -310,7 +283,7 @@ export default function VehicleListPage() {
             {vehicleList.map((vehicle) => {
               const entry = fleet.entries.find(e => e.vehicle.id === vehicle.id);
               const state = entry?.state ?? null;
-              const status = deriveStatus(vehicle, state);
+              const status = deriveVehicleStatus(state);
               const level = state?.battery_level ?? 0;
               const color = batteryColor(level);
 
@@ -330,8 +303,8 @@ export default function VehicleListPage() {
                             >
                               {vehicle.display_name || vehicle.vin}
                             </Link>
-                            <Badge variant={STATUS_VARIANT[status]} dot size="sm">
-                              {STATUS_LABEL[status]}
+                            <Badge variant={statusVariant(status)} dot size="sm">
+                              {status}
                             </Badge>
                           </div>
 

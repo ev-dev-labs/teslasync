@@ -31,3 +31,6 @@ EXIT=0
 STATUS=DONE
 
 === COMMIT ===
+[db-refactor/timescaledb-migration-mo-jsonb-at-all 39e10e0e] fix(db-refactor): skip native partition creation for hypertables
+ 2 files changed, 34 insertions(+), 72 deletions(-)
+ create mode 100644 .github/prompts/db-refactor/logs/test-fix-3-04-partition.log
