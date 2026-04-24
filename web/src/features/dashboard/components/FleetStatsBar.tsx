@@ -48,7 +48,7 @@ export function FleetStatsBar({
           <p className="text-xl sm:text-2xl font-bold text-neon-cyan">
             <AnimatedNumber value={convertDistance(totalDistance)} suffix={` ${distanceUnit}`} />
           </p>
-          <MiniChart data={recentDrives?.map((d) => d.distance).reverse() ?? [0]} color="#00f0ff" height={24} width={60} />
+          <MiniChart data={recentDrives?.map((d) => d.distance_mi).reverse() ?? [0]} color="#00f0ff" height={24} width={60} />
         </GlassPanel>
       </StaggerItem>
 

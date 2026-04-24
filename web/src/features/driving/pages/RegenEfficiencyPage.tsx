@@ -36,9 +36,9 @@ function regenColor(ratio: number): string {
 }
 
 function getRegenRatio(drive: Drive): number | null {
-  if (!drive.powerMin || drive.powerMin >= 0) return null;
-  if (!drive.powerMax || drive.powerMax <= 0) return null;
-  return Math.abs(drive.powerMin) / drive.powerMax * 100;
+  if (!drive.avgPowerKw || drive.avgPowerKw <= 0) return null;
+  if (!drive.regenKwh || !drive.energyUsedKwh || drive.energyUsedKwh <= 0) return null;
+  return (drive.regenKwh / drive.energyUsedKwh) * 100;
 }
 
 /* ------------------------------------------------------------------ */
@@ -66,13 +66,13 @@ export default function RegenEfficiencyPage() {
     if (!drives || drives.length === 0) return [];
     const byMonth = new Map<string, { totalRegen: number; count: number; totalDist: number }>();
     drives.forEach((d) => {
-      const month = d.startDate?.substring(0, 7);
+      const month = d.startTs?.substring(0, 7);
       if (!month) return;
-      const regen = d.powerMin && d.powerMin < 0 ? Math.abs(d.powerMin) * (d.durationMin / 60) : 0;
+      const regen = d.regenKwh ?? 0;
       const existing = byMonth.get(month) ?? { totalRegen: 0, count: 0, totalDist: 0 };
       existing.totalRegen += regen;
       existing.count++;
-      existing.totalDist += d.distance;
+      existing.totalDist += d.distanceMi;
       byMonth.set(month, existing);
     });
     return Array.from(byMonth.entries())
@@ -90,13 +90,13 @@ export default function RegenEfficiencyPage() {
   const regenDrives = useMemo(() => {
     if (!drives) return [];
     return drives
-      .filter((d) => d.powerMin && d.powerMin < 0)
+      .filter((d) => d.regenKwh && d.regenKwh > 0)
       .slice(0, 20)
       .map((d) => ({
         id: d.id,
-        date: d.startDate ? formatDateShort(d.startDate) : '—',
-        distance: fmtWithUnit(convertDistance(d.distance), distanceUnit),
-        maxRegen: d.powerMin ? fmtWithUnit(Math.abs(d.powerMin), 'kW') : '—',
+        date: d.startTs ? formatDateShort(d.startTs) : '—',
+        distance: fmtWithUnit(convertDistance(d.distanceMi), distanceUnit),
+        maxRegen: d.regenKwh ? fmtWithUnit(d.regenKwh, 'kWh') : '—',
         ratio: getRegenRatio(d),
       }));
   }, [drives, convertDistance, distanceUnit]);

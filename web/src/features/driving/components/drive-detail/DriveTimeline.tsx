@@ -18,11 +18,11 @@ export function DriveTimeline({ drive }: DriveTimelineProps) {
       <GlassPanel className="p-4">
         <div className="flex items-center justify-between text-xs text-[var(--text-secondary)] mb-2">
           <span className="flex items-center gap-1 text-green-400">
-            <Flag className="h-3 w-3" />{formatTime(drive.startDate)}
+            <Flag className="h-3 w-3" />{formatTime(drive.startTs)}
           </span>
           <span className="text-[var(--text-muted)]">{formatDuration(drive.durationMin)}</span>
           <span className="flex items-center gap-1 text-red-400">
-            <Flag className="h-3 w-3" />{drive.endDate ? formatTime(drive.endDate) : t('driveDetail.inProgress', 'In progress')}
+            <Flag className="h-3 w-3" />{drive.endTs ? formatTime(drive.endTs) : t('driveDetail.inProgress', 'In progress')}
           </span>
         </div>
         <div className="h-3 rounded-full overflow-hidden bg-[var(--surface-2)]">

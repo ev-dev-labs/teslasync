@@ -2,7 +2,6 @@ import { useTranslation } from 'react-i18next';
 import { Navigation, MapPin, Flag } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
-import { useSettings } from '@/hooks/useSettings';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import type { DriveDetail } from '@/types/driving';
@@ -13,7 +12,6 @@ interface JourneyDetailsPanelProps {
 
 export function JourneyDetailsPanel({ drive }: JourneyDetailsPanelProps) {
   const { t } = useTranslation();
-  const { convertDistance, distanceUnit } = useSettings();
 
   return (
     <FadeIn>
@@ -29,16 +27,13 @@ export function JourneyDetailsPanel({ drive }: JourneyDetailsPanelProps) {
             <p className="font-bold text-[var(--text-primary)] text-sm">
               {drive.startAddress
                 ? drive.startAddress
-                : drive.startLatitude && drive.startLongitude
-                  ? <span className="font-mono">{fmtNumber(drive.startLatitude)}°{drive.startLatitude >= 0 ? 'N' : 'S'}, {fmtNumber(Math.abs(drive.startLongitude))}°{drive.startLongitude >= 0 ? 'E' : 'W'}</span>
+                : drive.startLat && drive.startLon
+                  ? <span className="font-mono">{fmtNumber(drive.startLat)}°{drive.startLat >= 0 ? 'N' : 'S'}, {fmtNumber(Math.abs(drive.startLon))}°{drive.startLon >= 0 ? 'E' : 'W'}</span>
                   : t('driveDetail.noAddress', 'No address data')}
             </p>
-            <p className="text-xs text-[var(--text-muted)]">{formatDateTime(drive.startDate)}</p>
+            <p className="text-xs text-[var(--text-muted)]">{formatDateTime(drive.startTs)}</p>
             <p className="text-xs text-[var(--text-secondary)]">
-              {t('driveDetail.battery', 'Battery')}: {drive.startBatteryLevel ?? '?'}%
-              {drive.startRangeKm != null && (
-                <> · {t('driveDetail.range', 'Range')}: {fmtNumber(convertDistance(drive.startRangeKm))} {distanceUnit}</>
-              )}
+              {t('driveDetail.battery', 'Battery')}: {drive.startBatteryPct ?? '?'}%
             </p>
           </div>
           <div>
@@ -48,16 +43,13 @@ export function JourneyDetailsPanel({ drive }: JourneyDetailsPanelProps) {
             <p className="font-bold text-[var(--text-primary)] text-sm">
               {drive.endAddress
                 ? drive.endAddress
-                : drive.endLatitude && drive.endLongitude
-                  ? <span className="font-mono">{fmtNumber(drive.endLatitude)}°{drive.endLatitude >= 0 ? 'N' : 'S'}, {fmtNumber(Math.abs(drive.endLongitude))}°{drive.endLongitude >= 0 ? 'E' : 'W'}</span>
-                  : drive.endDate ? t('driveDetail.noAddress', 'No address data') : t('driveDetail.inProgress', 'In progress')}
+                : drive.endLat && drive.endLon
+                  ? <span className="font-mono">{fmtNumber(drive.endLat)}°{drive.endLat >= 0 ? 'N' : 'S'}, {fmtNumber(Math.abs(drive.endLon))}°{drive.endLon >= 0 ? 'E' : 'W'}</span>
+                  : drive.endTs ? t('driveDetail.noAddress', 'No address data') : t('driveDetail.inProgress', 'In progress')}
             </p>
-            <p className="text-xs text-[var(--text-muted)]">{drive.endDate ? formatDateTime(drive.endDate) : t('driveDetail.inProgress', 'In progress')}</p>
+            <p className="text-xs text-[var(--text-muted)]">{drive.endTs ? formatDateTime(drive.endTs) : t('driveDetail.inProgress', 'In progress')}</p>
             <p className="text-xs text-[var(--text-secondary)]">
-              {t('driveDetail.battery', 'Battery')}: {drive.endBatteryLevel ?? '?'}%
-              {drive.endRangeKm != null && (
-                <> · {t('driveDetail.range', 'Range')}: {fmtNumber(convertDistance(drive.endRangeKm))} {distanceUnit}</>
-              )}
+              {t('driveDetail.battery', 'Battery')}: {drive.endBatteryPct ?? '?'}%
             </p>
           </div>
         </div>

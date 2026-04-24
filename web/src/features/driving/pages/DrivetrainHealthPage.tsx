@@ -75,14 +75,14 @@ export default function DrivetrainHealthPage() {
     if (!drives?.length) return [];
     return drives
       .slice()
-      .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
+      .sort((a, b) => new Date(a.startTs).getTime() - new Date(b.startTs).getTime())
       .slice(-30)
       .map((d) => ({
-        date: formatDateShort(d.startDate),
-        powerMax: d.powerMax ?? 0,
-        powerMin: d.powerMin ?? 0,
-        outsideTemp: d.outsideTempAvg ?? null,
-        distance: d.distance,
+        date: formatDateShort(d.startTs),
+        powerMax: d.avgPowerKw ?? 0,
+        powerMin: 0,
+        outsideTemp: d.outsideTempAvgC ?? null,
+        distance: d.distanceMi,
       }));
   }, [drives]);
 

@@ -30,8 +30,8 @@ export function DriveDetailHeader({ drive, driveId, vehicleName, onShare }: Driv
               : t('driveDetail.title', 'Drive Details')}
           </h1>
           <p className="text-sm text-[var(--text-muted)] mt-0.5">
-            {vehicleName} · {formatDate(drive.startDate)} · {formatTime(drive.startDate)}
-            {drive.endDate && ` → ${formatTime(drive.endDate)}`}
+            {vehicleName} · {formatDate(drive.startTs)} · {formatTime(drive.startTs)}
+            {drive.endTs && ` → ${formatTime(drive.endTs)}`}
           </p>
         </div>
         <Link to={`/drives/${driveId}/replay`}>

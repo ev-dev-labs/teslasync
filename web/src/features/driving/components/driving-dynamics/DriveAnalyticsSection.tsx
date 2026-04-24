@@ -74,7 +74,7 @@ export default function DriveAnalyticsSection({
       count: 0,
     }));
     for (const d of filteredDrives) {
-      const spd = d.speedAvg != null ? convertSpeed(d.speedAvg) : null;
+      const spd = d.avgSpeedMph != null ? convertSpeed(d.avgSpeedMph) : null;
       if (spd == null) continue;
       for (let i = 0; i < SPEED_BUCKETS_RANGES.length; i++) {
         const r = SPEED_BUCKETS_RANGES[i];
@@ -91,10 +91,10 @@ export default function DriveAnalyticsSection({
 
   const accelPatterns = useMemo<AccelPoint[]>(() =>
     filteredDrives
-      .filter((d) => d.powerMax != null)
+      .filter((d) => d.avgPowerKw != null)
       .map((d) => ({
-        distance: Math.round(convertDistance(d.distance)),
-        powerMax: d.powerMax as number,
+        distance: Math.round(convertDistance(d.distanceMi)),
+        powerMax: d.avgPowerKw as number,
       })),
   [filteredDrives, convertDistance]);
 
@@ -102,9 +102,9 @@ export default function DriveAnalyticsSection({
     const recent = filteredDrives.slice(-20);
     return recent.map((d, i) => ({
       index: i + 1,
-      label: formatDateShort(d.startDate),
-      powerMax: d.powerMax ?? 0,
-      powerMin: d.powerMin ?? 0,
+      label: formatDateShort(d.startTs),
+      powerMax: d.avgPowerKw ?? 0,
+      powerMin: 0,
     }));
   }, [filteredDrives]);
 

@@ -160,8 +160,8 @@ export default function TripReplayPage() {
     ? (trail[trail.length - 1] as [number, number])
     : undefined;
   const centerPos: [number, number] = startPos
-    ?? (drive?.startLatitude && drive?.startLongitude
-      ? [drive.startLatitude, drive.startLongitude]
+    ?? (drive?.startLat && drive?.startLon
+      ? [drive.startLat, drive.startLon]
       : [47.6, -122.3]);
 
   /* ---- Speed-colored segments ---- */
@@ -235,17 +235,17 @@ export default function TripReplayPage() {
   const cp = replay.currentPosition;
 
   /* ---- Drive summary stats ---- */
-  const distanceKm = drive?.distance ?? 0;
+  const distanceMi = drive?.distanceMi ?? 0;
   const durationMin = drive?.durationMin ?? 0;
-  const efficiency = distanceKm > 0 && drive?.socStart != null && drive?.socEnd != null
-    ? ((drive.socStart - drive.socEnd) / convertDistance(distanceKm)) * 1000
+  const efficiency = distanceMi > 0 && drive?.startBatteryPct != null && drive?.endBatteryPct != null
+    ? ((drive.startBatteryPct - drive.endBatteryPct) / convertDistance(distanceMi)) * 1000
     : null;
 
   return (
     <PageContainer
       title={t('replay.title', 'Trip Replay')}
       subtitle={drive
-        ? `${t('replay.drive', 'Drive')} #${drive.id} — ${formatDate(drive.startDate)}${drive.startAddress && drive.endAddress ? ` · ${drive.startAddress} → ${drive.endAddress}` : ''}`
+        ? `${t('replay.drive', 'Drive')} #${drive.id} — ${formatDate(drive.startTs)}${drive.startAddress && drive.endAddress ? ` · ${drive.startAddress} → ${drive.endAddress}` : ''}`
         : undefined}
       loading={isLoading}
       error={error instanceof Error ? error : error ? new Error(String(error)) : null}
@@ -525,7 +525,7 @@ export default function TripReplayPage() {
             <StaggerItem>
               <StatCard
                 label={t('replay.summary.distance', 'Distance')}
-                value={fmtNumber(convertDistance(distanceKm))}
+                value={fmtNumber(convertDistance(distanceMi))}
                 unit={distanceUnit}
                 icon={<Route className="h-4 w-4" />}
               />
@@ -548,40 +548,38 @@ export default function TripReplayPage() {
             <StaggerItem>
               <StatCard
                 label={t('replay.summary.elevGain', 'Elevation Gain')}
-                value={drive?.elevationGain != null ? fmtInt(drive.elevationGain) : '—'}
-                unit={drive?.elevationGain != null ? 'm' : undefined}
+                value={'—'}
                 icon={<ArrowUpRight className="h-4 w-4" />}
               />
             </StaggerItem>
             <StaggerItem>
               <StatCard
                 label={t('replay.summary.elevLoss', 'Elevation Loss')}
-                value={drive?.elevationLoss != null ? fmtInt(drive.elevationLoss) : '—'}
-                unit={drive?.elevationLoss != null ? 'm' : undefined}
+                value={'—'}
                 icon={<ArrowDownRight className="h-4 w-4" />}
               />
             </StaggerItem>
             <StaggerItem>
               <StatCard
                 label={t('replay.summary.maxSpeed', 'Max Speed')}
-                value={drive?.speedMax != null ? fmtNumber(convertSpeed(drive.speedMax)) : '—'}
-                unit={drive?.speedMax != null ? speedUnit : undefined}
+                value={drive?.maxSpeedMph != null ? fmtNumber(convertSpeed(drive.maxSpeedMph)) : '—'}
+                unit={drive?.maxSpeedMph != null ? speedUnit : undefined}
                 icon={<Gauge className="h-4 w-4" />}
               />
             </StaggerItem>
             <StaggerItem>
               <StatCard
                 label={t('replay.summary.avgSpeed', 'Avg Speed')}
-                value={drive?.speedAvg != null ? fmtNumber(convertSpeed(drive.speedAvg)) : '—'}
-                unit={drive?.speedAvg != null ? speedUnit : undefined}
+                value={drive?.avgSpeedMph != null ? fmtNumber(convertSpeed(drive.avgSpeedMph)) : '—'}
+                unit={drive?.avgSpeedMph != null ? speedUnit : undefined}
                 icon={<Gauge className="h-4 w-4" />}
               />
             </StaggerItem>
             <StaggerItem>
               <StatCard
                 label={t('replay.summary.battery', 'Battery')}
-                value={drive?.socStart != null && drive?.socEnd != null
-                  ? `${fmtInt(drive.socStart)}% → ${fmtInt(drive.socEnd)}%`
+                value={drive?.startBatteryPct != null && drive?.endBatteryPct != null
+                  ? `${fmtInt(drive.startBatteryPct)}% → ${fmtInt(drive.endBatteryPct)}%`
                   : '—'}
                 icon={<Battery className="h-4 w-4" />}
               />

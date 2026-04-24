@@ -14,7 +14,7 @@ interface MoreDetailsPanelProps {
 
 export function MoreDetailsPanel({ drive, stats }: MoreDetailsPanelProps) {
   const { t } = useTranslation();
-  const { convertDistance, convertEfficiency, distanceUnit, speedUnit, tempUnit, efficiencyUnit } = useSettings();
+  const { convertEfficiency, distanceUnit, speedUnit, tempUnit, efficiencyUnit } = useSettings();
 
   return (
     <FadeIn>
@@ -26,8 +26,8 @@ export function MoreDetailsPanel({ drive, stats }: MoreDetailsPanelProps) {
           <div className="text-center">
             <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.odometer', 'Odometer (From → To)')}</p>
             <p className="text-lg font-bold text-cyan-400">
-              {drive.startOdometer && drive.endOdometer
-                ? `${fmtNumber(convertDistance(drive.startOdometer))} → ${fmtNumber(convertDistance(drive.endOdometer))}`
+              {stats.odometerStart && stats.odometerEnd
+                ? `${fmtNumber(stats.odometerStart)} → ${fmtNumber(stats.odometerEnd)}`
                 : '—'}{' '}
               <span className="text-xs text-[var(--text-muted)]">{distanceUnit}</span>
             </p>
@@ -98,8 +98,8 @@ export function MoreDetailsPanel({ drive, stats }: MoreDetailsPanelProps) {
           <div className="text-center">
             <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.batteryUsed', 'Battery Used')}</p>
             <p className="text-lg font-bold text-amber-400">
-              {drive.startBatteryLevel != null && drive.endBatteryLevel != null
-                ? `${drive.startBatteryLevel - drive.endBatteryLevel}%`
+              {drive.startBatteryPct != null && drive.endBatteryPct != null
+                ? `${drive.startBatteryPct - drive.endBatteryPct}%`
                 : '—'}
             </p>
           </div>

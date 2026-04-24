@@ -1,11 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import {
   Route, Clock, Gauge, TrendingUp, Battery, Zap,
-  Navigation, BatteryCharging, DollarSign, TrendingDown,
+  Navigation, DollarSign, TrendingDown,
 } from 'lucide-react';
-import { GlassPanel } from '@/components/ui';
 import { AnimatedNumber } from '@/components/data-display';
-import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
+import { StaggerContainer, StaggerItem } from '@/components/motion';
 import { useSettings } from '@/hooks/useSettings';
 import { fmtInt, fmtWithUnit } from '@/lib/numberFormat';
 import { IconStatCard } from './IconStatCard';
@@ -28,36 +27,23 @@ export function DriveStatCards({ drive, stats }: DriveStatCardsProps) {
   return (
     <>
       <StaggerContainer className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
-        <StaggerItem><IconStatCard icon={Route} color="#00f0ff" value={<AnimatedNumber value={convertDistance(drive.distance)} decimals={1} suffix={` ${distanceUnit}`} />} label={t('driveDetail.distance', 'Distance')} /></StaggerItem>
+        <StaggerItem><IconStatCard icon={Route} color="#00f0ff" value={<AnimatedNumber value={convertDistance(drive.distanceMi)} decimals={1} suffix={` ${distanceUnit}`} />} label={t('driveDetail.distance', 'Distance')} /></StaggerItem>
         <StaggerItem><IconStatCard icon={Clock} color="#f59e0b" value={formatDuration(drive.durationMin)} label={t('driveDetail.duration', 'Duration')} /></StaggerItem>
         <StaggerItem><IconStatCard icon={Gauge} color="#a855f7" value={<AnimatedNumber value={stats.maxSpd} suffix={` ${speedUnit}`} />} label={t('driveDetail.maxSpeed', 'Max Speed')} /></StaggerItem>
         <StaggerItem><IconStatCard icon={TrendingUp} color="#10b981" value={<AnimatedNumber value={stats.avgSpd} suffix={` ${speedUnit}`} />} label={t('driveDetail.avgSpeed', 'Avg Speed')} /></StaggerItem>
-        <StaggerItem><IconStatCard icon={Battery} color="#10b981" value={`${fmtInt(drive.socStart ?? drive.startBatteryLevel)}% → ${fmtInt(drive.socEnd ?? drive.endBatteryLevel)}%`} label={t('driveDetail.soc', 'SOC')} /></StaggerItem>
+        <StaggerItem><IconStatCard icon={Battery} color="#10b981" value={`${fmtInt(drive.startBatteryPct)}% → ${fmtInt(drive.endBatteryPct)}%`} label={t('driveDetail.soc', 'SOC')} /></StaggerItem>
         <StaggerItem><IconStatCard icon={Zap} color="#f59e0b" value={fmtWithUnit(stats.powerMax, 'kW')} label={t('driveDetail.maxPower', 'Max Power')} /></StaggerItem>
         <StaggerItem><IconStatCard icon={Navigation} color="#10b981" value={<AnimatedNumber value={Math.round(stats.elevGain)} suffix=" m ↑" />} label={t('driveDetail.elevGain', 'Elev. Gain')} /></StaggerItem>
         <StaggerItem><IconStatCard icon={Navigation} color="#ef4444" value={<AnimatedNumber value={Math.round(stats.elevLoss)} suffix=" m ↓" />} label={t('driveDetail.elevLoss', 'Elev. Loss')} /></StaggerItem>
         {stats.energyWh > 0 && (
           <StaggerItem><IconStatCard icon={DollarSign} color="#10b981" value={formatEnergyCost(stats.energyWh / 1000)} label={t('driveDetail.tripCost', 'Trip Cost')} /></StaggerItem>
         )}
-        {stats.energyWh > 0 && drive.distance > 0 && (
-          <StaggerItem><IconStatCard icon={TrendingDown} color="#06b6d4" value={`${currencySymbol}${(costPerDistanceUnit(stats.energyWh / 1000, drive.distance) ?? 0).toFixed(3)}`} label={t('driveDetail.costPerUnit', `Cost / ${distanceUnit}`)} /></StaggerItem>
+        {stats.energyWh > 0 && drive.distanceMi > 0 && (
+          <StaggerItem><IconStatCard icon={TrendingDown} color="#06b6d4" value={`${currencySymbol}${(costPerDistanceUnit(stats.energyWh / 1000, drive.distanceMi) ?? 0).toFixed(3)}`} label={t('driveDetail.costPerUnit', `Cost / ${distanceUnit}`)} /></StaggerItem>
         )}
       </StaggerContainer>
 
-      {/* Battery Heater Status */}
-      {drive.batteryHeaterOn != null && (
-        <FadeIn>
-          <GlassPanel className="p-3">
-            <div className="flex items-center justify-center gap-2 text-xs">
-              <BatteryCharging className="h-3.5 w-3.5 text-amber-400" />
-              <span className="text-[var(--text-secondary)]">{t('driveDetail.batteryHeater', 'Battery Heater')}:</span>
-              <span className={drive.batteryHeaterOn ? 'text-amber-400 font-medium' : 'text-[var(--text-muted)]'}>
-                {drive.batteryHeaterOn ? t('driveDetail.active', 'Active') : t('driveDetail.off', 'Off')}
-              </span>
-            </div>
-          </GlassPanel>
-        </FadeIn>
-      )}
+      {/* Battery Heater Status — field removed from new API */}
     </>
   );
 }

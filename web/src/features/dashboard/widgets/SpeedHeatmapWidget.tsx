@@ -30,11 +30,11 @@ function buildHeatmap(drives: Drive[], convertSpeed: (mph: number) => number): H
   );
 
   for (const d of drives) {
-    if (!d.start_date) continue;
-    const speed = d.speed_avg ?? d.speed_max;
+    if (!d.start_ts) continue;
+    const speed = d.avg_speed_mph ?? d.max_speed_mph;
     if (speed == null || speed <= 0) continue;
 
-    const dt = new Date(d.start_date);
+    const dt = new Date(d.start_ts);
     // JS getDay: 0=Sun … 6=Sat → remap to 0=Mon … 6=Sun
     const jsDay = dt.getDay();
     const day = jsDay === 0 ? 6 : jsDay - 1;

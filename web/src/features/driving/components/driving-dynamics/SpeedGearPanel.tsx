@@ -39,12 +39,12 @@ export default function SpeedGearPanel({ motorLatest, filteredDrives, convertSpe
 
   const avgDriveSpeed =
     filteredDrives.length > 0
-      ? filteredDrives.reduce((s, d) => s + (d.speedAvg ?? 0), 0) / filteredDrives.length
+      ? filteredDrives.reduce((s, d) => s + (d.avgSpeedMph ?? 0), 0) / filteredDrives.length
       : null;
 
   const topDriveSpeed =
     filteredDrives.length > 0
-      ? Math.max(...filteredDrives.map((d) => d.speedMax ?? 0))
+      ? Math.max(...filteredDrives.map((d) => d.maxSpeedMph ?? 0))
       : null;
 
   return (

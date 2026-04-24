@@ -17,11 +17,6 @@ import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import type { Drive } from '@/api/types';
 
-const KM_TO_MI = 0.621371;
-// Average Tesla EPA-rated consumption (~250 Wh/mi). Used to estimate actual
-// Wh/mi from the ratio of rated-range consumed vs distance driven.
-const EPA_WH_PER_MI = 250;
-
 interface DailyEfficiency {
   date: string;
   label: string;
@@ -29,23 +24,24 @@ interface DailyEfficiency {
   rollingAvg: number | null;
 }
 
-/** Estimate Wh/mi for a single drive from range + distance data. */
+/** Estimate Wh/mi for a single drive from energy + distance data. */
 function estimateEfficiency(d: Drive): number | null {
-  const distance = d.distance;
+  const distance = d.distance_mi;
   if (!distance || distance < 0.5) return null; // skip tiny drives
 
-  const startRange = d.start_range_km ?? d.start_rated_range_km;
-  const endRange = d.end_range_km ?? d.end_rated_range_km;
+  if (d.energy_used_kwh != null && d.energy_used_kwh > 0) {
+    const whPerMi = (d.energy_used_kwh * 1000) / distance;
+    if (whPerMi < 50 || whPerMi > 800) return null;
+    return whPerMi;
+  }
 
-  if (startRange == null || endRange == null) return null;
-
-  const rangeConsumedMi = (startRange - endRange) * KM_TO_MI;
-  if (rangeConsumedMi <= 0) return null; // regen-only or charging during drive
-
-  const factor = rangeConsumedMi / distance;
-  const whPerMi = factor * EPA_WH_PER_MI;
-
-  // Sanity bounds: 50–800 Wh/mi (filter outliers)
+  // Fallback: estimate from battery pct
+  const startBatt = d.start_battery_pct;
+  const endBatt = d.end_battery_pct;
+  if (startBatt == null || endBatt == null) return null;
+  const battUsed = startBatt - endBatt;
+  if (battUsed <= 0) return null;
+  const whPerMi = (battUsed * 0.75 * 1000) / distance;
   if (whPerMi < 50 || whPerMi > 800) return null;
   return whPerMi;
 }
@@ -55,10 +51,10 @@ function buildDailyEfficiency(drives: Drive[], windowSize: number): DailyEfficie
   const byDate = new Map<string, number[]>();
 
   for (const d of drives) {
-    if (!d.start_date) continue;
+    if (!d.start_ts) continue;
     const eff = estimateEfficiency(d);
     if (eff == null) continue;
-    const dateKey = d.start_date.slice(0, 10); // YYYY-MM-DD
+    const dateKey = d.start_ts.slice(0, 10); // YYYY-MM-DD
     const existing = byDate.get(dateKey);
     if (existing) {
       existing.push(eff);
@@ -114,7 +110,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 30);
     const recent = items.filter(
-      (d) => d.start_date && new Date(d.start_date) >= cutoff,
+      (d) => d.start_ts && new Date(d.start_ts) >= cutoff,
     );
     return buildDailyEfficiency(recent, 7);
   }, [drives]);

@@ -32,7 +32,7 @@ export function useDriveDetailData(id: string) {
   const startPos = trail[0] as [number, number] | undefined;
   const endPos = trail.length > 1 ? (trail[trail.length - 1] as [number, number]) : undefined;
   const centerPos: [number, number] = startPos
-    ?? (drive?.startLatitude && drive?.startLongitude ? [drive.startLatitude, drive.startLongitude] : [47.6, -122.3]);
+    ?? (drive?.startLat && drive?.startLon ? [drive.startLat, drive.startLon] : [47.6, -122.3]);
 
   /* Speed-colored segments */
   const speedSegments = useMemo<SpeedSegment[]>(() => {
@@ -107,26 +107,32 @@ export function useDriveDetailData(id: string) {
   /* ---- Computed stats ---- */
   const stats = useMemo<DriveStats | null>(() => {
     if (!drive) return null;
-    const maxSpd = drive.speedMax != null ? convertSpeed(drive.speedMax) : 0;
-    const avgSpd = drive.speedAvg != null ? convertSpeed(drive.speedAvg) : 0;
-    const minSpd = drive.speedMin != null ? convertSpeed(drive.speedMin) : 0;
-    const powerMax = drive.powerMax ?? 0;
-    const powerMin = drive.powerMin ?? 0;
-    const avgPower = chartData.length > 0
-      ? chartData.reduce((s, d) => s + d.power, 0) / chartData.length
-      : (powerMax + powerMin) / 2;
+    const maxSpd = drive.maxSpeedMph != null ? convertSpeed(drive.maxSpeedMph) : 0;
+    const avgSpd = drive.avgSpeedMph != null ? convertSpeed(drive.avgSpeedMph) : 0;
+    const minSpd = 0; // speedMin removed from API; compute from telemetry if available
+    const powerMax = drive.avgPowerKw ?? 0; // powerMax removed; use avgPowerKw as approx
+    const powerMin = 0; // powerMin removed from API
+    const avgPower = drive.avgPowerKw != null
+      ? drive.avgPowerKw
+      : (chartData.length > 0
+        ? chartData.reduce((s, d) => s + d.power, 0) / chartData.length
+        : 0);
     const durationH = (drive.durationMin ?? 0) / 60;
-    const energyWh = Math.abs(avgPower) * durationH * 1000;
-    const regenWh = chartData.length > 0
-      ? chartData.filter((d) => d.power < 0).reduce((s, d) => s + Math.abs(d.power), 0) * (durationH / chartData.length) * 1000
-      : 0;
-    const consumptionWhKm = drive.distance > 0 ? energyWh / drive.distance : 0;
-    const elevGain = drive.elevationGain ?? chartData.reduce((sum, d, i) => {
+    const energyWh = drive.energyUsedKwh != null
+      ? drive.energyUsedKwh * 1000
+      : Math.abs(avgPower) * durationH * 1000;
+    const regenWh = drive.regenKwh != null
+      ? drive.regenKwh * 1000
+      : (chartData.length > 0
+        ? chartData.filter((d) => d.power < 0).reduce((s, d) => s + Math.abs(d.power), 0) * (durationH / chartData.length) * 1000
+        : 0);
+    const consumptionWhKm = drive.distanceMi > 0 ? energyWh / drive.distanceMi : 0;
+    const elevGain = chartData.reduce((sum, d, i) => {
       if (i === 0) return 0;
       const diff = d.elevation - chartData[i - 1].elevation;
       return diff > 0 ? sum + diff : sum;
     }, 0);
-    const elevLoss = drive.elevationLoss ?? chartData.reduce((sum, d, i) => {
+    const elevLoss = chartData.reduce((sum, d, i) => {
       if (i === 0) return 0;
       const diff = d.elevation - chartData[i - 1].elevation;
       return diff < 0 ? sum + Math.abs(diff) : sum;
@@ -152,13 +158,13 @@ export function useDriveDetailData(id: string) {
     const startRange = firstWithRange ? (firstWithRange.idealRange ?? firstWithRange.ratedRange) : null;
     const endRange = lastWithRange ? (lastWithRange.idealRange ?? lastWithRange.ratedRange) : null;
 
-    const odometerStart = drive.startOdometer != null ? convertDistance(drive.startOdometer) : (chartData.length > 0 ? (chartData[0].odometer ?? 0) : 0);
-    const odometerEnd = drive.endOdometer != null ? convertDistance(drive.endOdometer) : (chartData.length > 0 ? (chartData[chartData.length - 1].odometer ?? 0) : 0);
+    const odometerStart = chartData.length > 0 ? (chartData[0].odometer ?? 0) : 0;
+    const odometerEnd = chartData.length > 0 ? (chartData[chartData.length - 1].odometer ?? 0) : 0;
 
     const hasTirePressure = chartData.some((d) => d.tireFl !== null || d.tireFr !== null || d.tireRl !== null || d.tireRr !== null);
 
-    const efficiencyPctPer100 = drive.distance > 0 && drive.startBatteryLevel != null && drive.endBatteryLevel != null
-      ? (drive.startBatteryLevel - drive.endBatteryLevel) / convertDistance(drive.distance) * 10
+    const efficiencyPctPer100 = drive.distanceMi > 0 && drive.startBatteryPct != null && drive.endBatteryPct != null
+      ? (drive.startBatteryPct - drive.endBatteryPct) / convertDistance(drive.distanceMi) * 10
       : null;
 
     return {

@@ -63,15 +63,17 @@ export interface Alert {
 export interface Drive {
   id: number;
   vehicle_id: number;
-  start_date: string;
-  end_date: string | null;
-  distance: number;
+  start_ts: string;
+  end_ts: string | null;
+  distance_mi: number;
   duration_min: number;
-  speed_max: number | null;
-  power_max: number | null;
-  power_min: number | null;
-  start_battery_level: number | null;
-  end_battery_level: number | null;
+  max_speed_mph: number | null;
+  avg_speed_mph: number | null;
+  avg_power_kw: number | null;
+  start_battery_pct: number | null;
+  end_battery_pct: number | null;
+  energy_used_kwh: number | null;
+  regen_kwh: number | null;
   start_address?: string;
   end_address?: string;
 }

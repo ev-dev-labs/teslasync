@@ -31,8 +31,8 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
 
   const driveChartData = useMemo(() =>
     (drives ?? []).map((d) => ({
-      date: formatDate(d.start_date),
-      distance: Math.round(convertDistance(d.distance)),
+      date: formatDate(d.start_ts),
+      distance: Math.round(convertDistance(d.distance_mi)),
       duration: Math.round(d.duration_min),
     })).reverse(),
   [drives, convertDistance])

@@ -19,7 +19,7 @@ export function CostSavingsPanel({ drive, stats }: CostSavingsPanelProps) {
     costPerDistanceUnit, estimateGasCost, distanceUnit, settings,
   } = useSettings();
 
-  const gasCost = estimateGasCost(drive.distance);
+  const gasCost = estimateGasCost(drive.distanceMi);
   const evCost = (stats.energyWh / 1000) * costPerKwh;
   const savings = gasCost != null ? gasCost - evCost : null;
 
@@ -35,11 +35,11 @@ export function CostSavingsPanel({ drive, stats }: CostSavingsPanelProps) {
             <p className="text-lg font-bold text-green-400">{formatEnergyCost(stats.energyWh / 1000)}</p>
             <p className="text-[9px] text-[var(--text-muted)]">{t('driveDetail.atRate', `at ${currencySymbol}${costPerKwh}/kWh`)}</p>
           </div>
-          {drive.distance > 0 && (
+          {drive.distanceMi > 0 && (
             <div>
               <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.costPerUnit', `Cost / ${distanceUnit}`)}</p>
               <p className="text-lg font-bold text-cyan-400">
-                {formatCurrency(costPerDistanceUnit(stats.energyWh / 1000, drive.distance) ?? 0, 3)}
+                {formatCurrency(costPerDistanceUnit(stats.energyWh / 1000, drive.distanceMi) ?? 0, 3)}
               </p>
             </div>
           )}

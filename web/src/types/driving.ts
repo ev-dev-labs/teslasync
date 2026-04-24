@@ -1,36 +1,29 @@
 export interface Drive {
   id: number;
   vehicleId: number;
-  startDate: string;
-  endDate: string | null;
-  distance: number;
+  startTs: string;
+  endTs: string | null;
   durationMin: number;
-  speedMax: number | null;
-  speedAvg: number | null;
-  speedMin: number | null;
-  startBatteryLevel: number | null;
-  endBatteryLevel: number | null;
+  distanceMi: number;
   startAddress: string | null;
   endAddress: string | null;
-  outsideTempAvg: number | null;
-  insideTempAvg: number | null;
-  driverTempAvg: number | null;
-  passengerTempAvg: number | null;
-  powerMax: number | null;
-  powerMin: number | null;
-  startOdometer: number | null;
-  endOdometer: number | null;
-  startRangeKm: number | null;
-  endRangeKm: number | null;
-  elevationGain: number | null;
-  elevationLoss: number | null;
-  socStart: number | null;
-  socEnd: number | null;
-  batteryHeaterOn: boolean | null;
-  startLatitude: number | null;
-  startLongitude: number | null;
-  endLatitude: number | null;
-  endLongitude: number | null;
+  startLat: number | null;
+  startLon: number | null;
+  endLat: number | null;
+  endLon: number | null;
+  startBatteryPct: number | null;
+  endBatteryPct: number | null;
+  energyUsedKwh: number | null;
+  regenKwh: number | null;
+  avgSpeedMph: number | null;
+  maxSpeedMph: number | null;
+  avgPowerKw: number | null;
+  outsideTempAvgC: number | null;
+  insideTempAvgC: number | null;
+  score: number | null;
+  endedStatus: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface DriveDetail extends Drive {

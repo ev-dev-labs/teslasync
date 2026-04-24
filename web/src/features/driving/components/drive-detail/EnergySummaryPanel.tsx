@@ -14,7 +14,7 @@ interface EnergySummaryPanelProps {
 
 export function EnergySummaryPanel({ drive, stats }: EnergySummaryPanelProps) {
   const { t } = useTranslation();
-  const { convertDistance, convertEfficiency, distanceUnit, efficiencyUnit } = useSettings();
+  const { convertEfficiency, efficiencyUnit } = useSettings();
 
   return (
     <FadeIn>
@@ -42,17 +42,13 @@ export function EnergySummaryPanel({ drive, stats }: EnergySummaryPanelProps) {
           <div>
             <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.batteryUsed', 'Battery Used')}</p>
             <p className="text-lg font-bold text-amber-400">
-              {drive.startBatteryLevel != null && drive.endBatteryLevel != null ? `${drive.startBatteryLevel - drive.endBatteryLevel}%` : '—'}
-              <span className="text-xs text-[var(--text-muted)] ml-1">{drive.startBatteryLevel ?? '?'}% → {drive.endBatteryLevel ?? '?'}%</span>
+              {drive.startBatteryPct != null && drive.endBatteryPct != null ? `${drive.startBatteryPct - drive.endBatteryPct}%` : '—'}
+              <span className="text-xs text-[var(--text-muted)] ml-1">{drive.startBatteryPct ?? '?'}% → {drive.endBatteryPct ?? '?'}%</span>
             </p>
           </div>
           <div>
             <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.rangeUsed', 'Range Used')}</p>
-            <p className="text-lg font-bold text-green-400">
-              {drive.startRangeKm != null && drive.endRangeKm != null
-                ? `${fmtNumber(convertDistance(drive.startRangeKm - drive.endRangeKm))} ${distanceUnit}`
-                : '—'}
-            </p>
+            <p className="text-lg font-bold text-green-400">—</p>
           </div>
         </div>
       </GlassPanel>

@@ -51,15 +51,15 @@ export default function RecentDrivesWidget({ vehicleId }: WidgetProps) {
               <div className="flex items-center justify-between p-2 rounded-lg bg-white/[0.02] hover:bg-white/[0.05] transition-colors">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-white/90 truncate">
-                    {fmtNumber(convertDistance(d.distance ?? 0), 1)} {distanceUnit}
+                    {fmtNumber(convertDistance(d.distance_mi ?? 0), 1)} {distanceUnit}
                   </p>
                   <p className="text-[10px] text-white/40">
-                    {fmtInt(d.duration_min ?? 0)} min · {d.start_battery_level ?? '?'}% →{' '}
-                    {d.end_battery_level ?? '?'}%
+                    {fmtInt(d.duration_min ?? 0)} min · {d.start_battery_pct ?? '?'}% →{' '}
+                    {d.end_battery_pct ?? '?'}%
                   </p>
                 </div>
                 <span className="text-[10px] text-white/40 shrink-0">
-                  {new Date(d.start_date).toLocaleDateString(undefined, {
+                  {new Date(d.start_ts).toLocaleDateString(undefined, {
                     month: 'short',
                     day: 'numeric',
                   })}

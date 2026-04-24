@@ -20,12 +20,12 @@ function useDriveColumns(convertDistance: (v: number) => number, distanceUnit: s
     {
       key: 'date',
       header: t('common.date', 'Date'),
-      render: (d) => formatDateTime(d.start_date),
+      render: (d) => formatDateTime(d.start_ts),
     },
     {
       key: 'distance',
       header: t('common.distance', 'Distance'),
-      render: (d) => `${fmtNumber(convertDistance(d.distance))} ${distanceUnit}`,
+      render: (d) => `${fmtNumber(convertDistance(d.distance_mi))} ${distanceUnit}`,
       sortable: true,
     },
     {
@@ -37,8 +37,8 @@ function useDriveColumns(convertDistance: (v: number) => number, distanceUnit: s
       key: 'battery',
       header: t('common.battery', 'Battery'),
       render: (d) =>
-        d.start_battery_level != null && d.end_battery_level != null
-          ? `${d.start_battery_level}% → ${d.end_battery_level}%`
+        d.start_battery_pct != null && d.end_battery_pct != null
+          ? `${d.start_battery_pct}% → ${d.end_battery_pct}%`
           : '—',
     },
   ]

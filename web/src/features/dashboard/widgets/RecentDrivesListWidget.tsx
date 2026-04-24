@@ -64,10 +64,10 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
       <div className="space-y-1.5 overflow-y-auto h-full">
         {items.length > 0 ? (
           items.map((d) => {
-            const dist = convertDistance(d.distance ?? 0);
+            const dist = convertDistance(d.distance_mi ?? 0);
             const batteryUsed =
-              d.start_battery_level != null && d.end_battery_level != null
-                ? d.start_battery_level - d.end_battery_level
+              d.start_battery_pct != null && d.end_battery_pct != null
+                ? d.start_battery_pct - d.end_battery_pct
                 : null;
 
             return (
@@ -109,7 +109,7 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
                     <div className="flex items-center justify-end gap-1">
                       <Battery className="h-2.5 w-2.5 text-white/30" />
                       <span className="text-[10px] text-white/50 tabular-nums">
-                        {d.start_battery_level ?? '?'}% → {d.end_battery_level ?? '?'}%
+                        {d.start_battery_pct ?? '?'}% → {d.end_battery_pct ?? '?'}%
                       </span>
                     </div>
                     <div className="flex items-center justify-end gap-1 mt-0.5">
@@ -119,7 +119,7 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
                         </span>
                       )}
                       <span className="text-[10px] text-white/30 tabular-nums">
-                        {new Date(d.start_date).toLocaleDateString(undefined, {
+                        {new Date(d.start_ts).toLocaleDateString(undefined, {
                           month: 'short',
                           day: 'numeric',
                         })}

@@ -58,66 +58,29 @@ export interface Position {
 export interface Drive {
   id: number
   vehicle_id: number
-  start_date: string
-  end_date: string | null
-  start_position_id: number | null
-  end_position_id: number | null
-  start_address_id: number | null
-  end_address_id: number | null
-  distance: number
+  start_ts: string
+  end_ts: string | null
   duration_min: number
-  start_range_km: number | null
-  end_range_km: number | null
-  speed_max: number | null
-  power_max: number | null
-  power_min: number | null
-  start_battery_level: number | null
-  end_battery_level: number | null
-  inside_temp_avg: number | null
-  outside_temp_avg: number | null
-  // Enhanced tracking (migration 21)
-  start_odometer: number | null
-  end_odometer: number | null
-  speed_avg: number | null
-  speed_min: number | null
-  start_rated_range_km: number | null
-  end_rated_range_km: number | null
-  rated_range_avg: number | null
-  rated_range_max: number | null
-  rated_range_min: number | null
-  start_ideal_range_km: number | null
-  end_ideal_range_km: number | null
-  ideal_range_avg: number | null
-  ideal_range_max: number | null
-  ideal_range_min: number | null
-  start_est_range_km: number | null
-  end_est_range_km: number | null
-  est_range_avg: number | null
-  est_range_max: number | null
-  est_range_min: number | null
-  soc_start: number | null
-  soc_end: number | null
-  soc_avg: number | null
-  soc_max: number | null
-  soc_min: number | null
-  usable_soc_start: number | null
-  usable_soc_end: number | null
-  usable_soc_avg: number | null
-  usable_soc_max: number | null
-  usable_soc_min: number | null
-  elevation_start: number | null
-  elevation_end: number | null
-  elevation_gain: number | null
-  elevation_loss: number | null
-  driver_temp_avg: number | null
-  passenger_temp_avg: number | null
-  battery_heater_on: boolean | null
+  distance_mi: number
   start_address: string | null
   end_address: string | null
-  start_latitude: number | null
-  start_longitude: number | null
-  end_latitude: number | null
-  end_longitude: number | null
+  start_lat: number | null
+  start_lon: number | null
+  end_lat: number | null
+  end_lon: number | null
+  start_battery_pct: number | null
+  end_battery_pct: number | null
+  energy_used_kwh: number | null
+  regen_kwh: number | null
+  avg_speed_mph: number | null
+  max_speed_mph: number | null
+  avg_power_kw: number | null
+  outside_temp_avg_c: number | null
+  inside_temp_avg_c: number | null
+  score: number | null
+  ended_status: string | null
+  created_at: string
+  updated_at: string
 }
 
 export interface ChargingSession {

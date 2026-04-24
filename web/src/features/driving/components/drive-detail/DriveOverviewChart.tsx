@@ -16,7 +16,7 @@ interface DriveOverviewChartProps {
   chartData: ChartDataPoint[];
 }
 
-export function DriveOverviewChart({ drive, chartData }: DriveOverviewChartProps) {
+export function DriveOverviewChart({ chartData }: DriveOverviewChartProps) {
   const { t } = useTranslation();
   const { speedUnit, distanceUnit } = useSettings();
 
@@ -54,12 +54,12 @@ export function DriveOverviewChart({ drive, chartData }: DriveOverviewChartProps
         )}
       </ChartContainer>
       {/* Rich legend with Mean/Max/Min stats */}
-      {chartData.length > 1 && <ChartLegend chartData={chartData} drive={drive} />}
+      {chartData.length > 1 && <ChartLegend chartData={chartData} />}
     </FadeIn>
   );
 }
 
-function ChartLegend({ chartData, drive }: { chartData: ChartDataPoint[]; drive: DriveDetail }) {
+function ChartLegend({ chartData }: { chartData: ChartDataPoint[] }) {
   const { t } = useTranslation();
   const { speedUnit, distanceUnit } = useSettings();
 
@@ -84,7 +84,6 @@ function ChartLegend({ chartData, drive }: { chartData: ChartDataPoint[]; drive:
   if (socS) items.push({ color: '#84cc16', label: t('driveDetail.soc', 'SOC'), mean: fmtPercent(socS.mean), max: fmtPercent(socS.max), min: fmtPercent(socS.min) });
   if (usableSocS) items.push({ color: '#22d3ee', label: t('driveDetail.usableSoc', 'Usable SOC'), mean: fmtPercent(usableSocS.mean), max: fmtPercent(usableSocS.max), min: fmtPercent(usableSocS.min) });
   if (powerS) items.push({ color: '#f59e0b', label: t('driveDetail.power', 'Power'), mean: fmtWithUnit(powerS.mean, 'kW'), max: fmtWithUnit(powerS.max, 'kW'), min: fmtWithUnit(powerS.min, 'kW') });
-  if (drive.batteryHeaterOn != null) items.push({ color: '#ef4444', dash: true, label: t('driveDetail.batteryHeater', 'Battery Heater'), mean: drive.batteryHeaterOn ? 'On' : 'Off', max: drive.batteryHeaterOn ? 'On' : 'Off', min: drive.batteryHeaterOn ? 'On' : 'Off' });
 
   if (items.length === 0) return null;
 

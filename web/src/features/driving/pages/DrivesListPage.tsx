@@ -46,8 +46,8 @@ function formatDuration(min: number): string {
 }
 
 function getEfficiency(drive: Drive): number | null {
-  const batteryUsed = (drive.startBatteryLevel ?? 0) - (drive.endBatteryLevel ?? 0);
-  if (drive.distance > 0 && batteryUsed > 0) return (batteryUsed * 0.75 * 1000) / drive.distance;
+  const batteryUsed = (drive.startBatteryPct ?? 0) - (drive.endBatteryPct ?? 0);
+  if (drive.distanceMi > 0 && batteryUsed > 0) return (batteryUsed * 0.75 * 1000) / drive.distanceMi;
   return null;
 }
 
@@ -80,15 +80,12 @@ function DriveCard({
   distanceUnit, speedUnit, efficiencyUnit, formatEnergyCost,
 }: DriveCardProps) {
   const { t } = useTranslation();
-  const actualDistance =
-    drive.startOdometer != null && drive.endOdometer != null && drive.endOdometer > drive.startOdometer
-      ? drive.endOdometer - drive.startOdometer
-      : drive.distance;
-  const isCompleted = drive.endDate != null;
+  const actualDistance = drive.distanceMi;
+  const isCompleted = drive.endTs != null;
   const hasData = actualDistance > 0 || drive.durationMin > 0;
   const avgSpeed =
-    drive.speedAvg != null
-      ? fmtInt(convertSpeed(drive.speedAvg))
+    drive.avgSpeedMph != null
+      ? fmtInt(convertSpeed(drive.avgSpeedMph))
       : drive.durationMin > 0 && actualDistance > 0
         ? fmtInt(convertSpeed(actualDistance / (drive.durationMin / 60)))
         : '—';
@@ -96,9 +93,9 @@ function DriveCard({
   const effConverted = eff ? convertEfficiency(eff) : null;
   const score = getEfficiencyScore(eff);
   const hasBattery =
-    drive.startBatteryLevel !== null &&
-    drive.endBatteryLevel !== null &&
-    !(drive.startBatteryLevel === 0 && drive.endBatteryLevel === 0 && isCompleted);
+    drive.startBatteryPct !== null &&
+    drive.endBatteryPct !== null &&
+    !(drive.startBatteryPct === 0 && drive.endBatteryPct === 0 && isCompleted);
 
   return (
     <Link to={`/drives/${drive.id}`}>
@@ -113,7 +110,7 @@ function DriveCard({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1">
               <p className="text-sm font-semibold text-[var(--text-primary)]">
-                {formatDateTime(drive.startDate)}
+                {formatDateTime(drive.startTs)}
               </p>
               {hasData ? (
                 <Badge variant="info" size="sm">
@@ -124,7 +121,7 @@ function DriveCard({
               ) : (
                 <Badge variant="success" size="sm">{t('drives.inProgress', 'In progress')}</Badge>
               )}
-              {drive.speedMax !== null && drive.speedMax > 130 && (
+              {drive.maxSpeedMph !== null && drive.maxSpeedMph > 130 && (
                 <Badge variant="danger" size="sm">{t('drives.highSpeed', 'High speed')}</Badge>
               )}
             </div>
@@ -132,19 +129,19 @@ function DriveCard({
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
               <InlineMetric icon={<Clock />} value={formatDuration(drive.durationMin)} />
               <InlineMetric icon={<Gauge />} value={`${t('drives.avg', 'Avg')} ${avgSpeed} ${speedUnit}`} />
-              {drive.speedMax !== null && (
+              {drive.maxSpeedMph !== null && (
                 <InlineMetric
                   icon={<TrendingUp />}
-                  value={`${t('drives.max', 'Max')} ${fmtInt(convertSpeed(drive.speedMax))} ${speedUnit}`}
+                  value={`${t('drives.max', 'Max')} ${fmtInt(convertSpeed(drive.maxSpeedMph))} ${speedUnit}`}
                 />
               )}
               {hasBattery && (
                 <span className="flex items-center gap-1">
                   <Battery className="h-3 w-3" />
-                  <span className="text-green-400">{drive.startBatteryLevel}%</span>
+                  <span className="text-green-400">{drive.startBatteryPct}%</span>
                   {' → '}
-                  <span className={cn(drive.endBatteryLevel! < 20 ? 'text-red-400' : 'text-amber-400')}>
-                    {drive.endBatteryLevel}%
+                  <span className={cn(drive.endBatteryPct! < 20 ? 'text-red-400' : 'text-amber-400')}>
+                    {drive.endBatteryPct}%
                   </span>
                 </span>
               )}
@@ -153,10 +150,10 @@ function DriveCard({
                   <Zap className="h-3 w-3" /> {fmtInt(effConverted)} {efficiencyUnit}
                 </span>
               )}
-              {formatEnergyCost && hasBattery && drive.startBatteryLevel != null && drive.endBatteryLevel != null && drive.startBatteryLevel > drive.endBatteryLevel && (
+              {formatEnergyCost && hasBattery && drive.startBatteryPct != null && drive.endBatteryPct != null && drive.startBatteryPct > drive.endBatteryPct && (
                 <span className="flex items-center gap-1 text-emerald-400/70">
                   <DollarSign className="h-3 w-3" />
-                  ~{formatEnergyCost((drive.startBatteryLevel - drive.endBatteryLevel) * 0.75)}
+                  ~{formatEnergyCost((drive.startBatteryPct - drive.endBatteryPct) * 0.75)}
                 </span>
               )}
             </div>
@@ -213,7 +210,7 @@ export default function DrivesListPage() {
   const filteredDrives = useMemo(() => {
     if (!drives) return [];
     return drives.filter((d) => {
-      const driveDate = d.startDate?.split('T')[0];
+      const driveDate = d.startTs?.split('T')[0];
       if (!driveDate) return true;
       if (startDate && driveDate < startDate) return false;
       if (endDate && driveDate > endDate) return false;
@@ -225,7 +222,7 @@ export default function DrivesListPage() {
   const sortedDrives = useMemo(() => {
     const sorted = [...filteredDrives];
     switch (sortBy) {
-      case 'distance': return sorted.sort((a, b) => b.distance - a.distance);
+      case 'distance': return sorted.sort((a, b) => b.distanceMi - a.distanceMi);
       case 'efficiency': return sorted.sort((a, b) => (getEfficiency(a) ?? 999) - (getEfficiency(b) ?? 999));
       default: return sorted;
     }
@@ -242,8 +239,8 @@ export default function DrivesListPage() {
     if (filteredDrives.length === 0) return null;
     const effs = filteredDrives.map((d) => getEfficiency(d)).filter((e): e is number => e !== null);
     const bestEff = effs.length > 0 ? Math.min(...effs) : 0;
-    const longest = filteredDrives.reduce((best, d) => (d.distance > best.distance ? d : best), filteredDrives[0]);
-    const totalDist = filteredDrives.reduce((s, d) => s + d.distance, 0);
+    const longest = filteredDrives.reduce((best, d) => (d.distanceMi > best.distanceMi ? d : best), filteredDrives[0]);
+    const totalDist = filteredDrives.reduce((s, d) => s + d.distanceMi, 0);
     const totalDur = filteredDrives.reduce((s, d) => s + d.durationMin, 0);
     return { bestEff, longest, totalDist, totalDur, count: filteredDrives.length };
   }, [filteredDrives]);
@@ -260,7 +257,7 @@ export default function DrivesListPage() {
       { range: '100+', min: 100, max: Infinity, count: 0 },
     ];
     filteredDrives.forEach((d) => {
-      const b = buckets.find((bk) => d.distance >= bk.min && d.distance < bk.max);
+      const b = buckets.find((bk) => d.distanceMi >= bk.min && d.distanceMi < bk.max);
       if (b) b.count++;
     });
     return buckets.map((b) => ({ range: `${b.range} ${distanceUnit}`, count: b.count }));
@@ -270,9 +267,9 @@ export default function DrivesListPage() {
   const scatterData = useMemo(() => {
     if (filteredDrives.length === 0) return [];
     return filteredDrives
-      .filter((d) => d.speedMax && d.durationMin > 0)
+      .filter((d) => d.maxSpeedMph && d.durationMin > 0)
       .map((d) => {
-        const avgSpd = d.durationMin > 0 ? d.distance / (d.durationMin / 60) : 0;
+        const avgSpd = d.durationMin > 0 ? d.distanceMi / (d.durationMin / 60) : 0;
         const eff = getEfficiency(d);
         return eff ? { speed: Math.round(avgSpd), efficiency: Math.round(eff) } : null;
       })
@@ -283,8 +280,8 @@ export default function DrivesListPage() {
   const distanceTrend = useMemo(() => {
     if (filteredDrives.length === 0) return [];
     return filteredDrives.slice(0, 20).reverse().map((d) => ({
-      date: formatDateShort(d.startDate),
-      distance: parseFloat(fmtNumber(d.distance ?? 0, 1)),
+      date: formatDateShort(d.startTs),
+      distance: parseFloat(fmtNumber(d.distanceMi ?? 0, 1)),
     }));
   }, [filteredDrives]);
 
@@ -394,12 +391,12 @@ export default function DrivesListPage() {
               <div>
                 <MetricBar
                   label={t('drives.longestDrive', 'Longest Drive')}
-                  value={computedStats.longest.distance}
-                  max={Math.max(computedStats.longest.distance, 200)}
+                  value={computedStats.longest.distanceMi}
+                  max={Math.max(computedStats.longest.distanceMi, 200)}
                   color="#a855f7"
                 />
                 <p className="text-[10px] text-[var(--text-muted)] mt-1">
-                  {fmtNumber(convertDistance(computedStats.longest.distance))} {distanceUnit}
+                  {fmtNumber(convertDistance(computedStats.longest.distanceMi))} {distanceUnit}
                 </p>
               </div>
               <div>

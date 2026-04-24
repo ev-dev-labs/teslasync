@@ -65,18 +65,18 @@ export function RouteMapSection({ drive, trail, startPos, endPos, centerPos, spe
                 ))}
                 {startPos && (
                   <CircleMarker center={startPos} radius={8} pathOptions={{ color: '#10b981', fillColor: '#10b981', fillOpacity: 1, weight: 2 }}>
-                    <Popup><span className="text-xs font-bold">{t('driveDetail.start', 'Start')}</span><br /><span className="text-xs">{formatDateTime(drive.startDate)}</span></Popup>
+                    <Popup><span className="text-xs font-bold">{t('driveDetail.start', 'Start')}</span><br /><span className="text-xs">{formatDateTime(drive.startTs)}</span></Popup>
                   </CircleMarker>
                 )}
                 {endPos && (
                   <CircleMarker center={endPos} radius={8} pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 1, weight: 2 }}>
-                    <Popup><span className="text-xs font-bold">{t('driveDetail.end', 'End')}</span><br /><span className="text-xs">{drive.endDate ? formatDateTime(drive.endDate) : t('driveDetail.inProgress', 'In progress')}</span></Popup>
+                    <Popup><span className="text-xs font-bold">{t('driveDetail.end', 'End')}</span><br /><span className="text-xs">{drive.endTs ? formatDateTime(drive.endTs) : t('driveDetail.inProgress', 'In progress')}</span></Popup>
                   </CircleMarker>
                 )}
               </MapContainer>
             </div>
             <div className="flex items-center justify-between px-4 py-3 text-xs">
-              <span className="flex items-center gap-1.5 text-green-400"><Flag className="h-3 w-3" /> {t('driveDetail.start', 'Start')}: {formatTime(drive.startDate)}</span>
+              <span className="flex items-center gap-1.5 text-green-400"><Flag className="h-3 w-3" /> {t('driveDetail.start', 'Start')}: {formatTime(drive.startTs)}</span>
               {trail.length > 1 && (
                 <div className="flex items-center gap-3 text-[var(--text-muted)]">
                   <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-emerald-500" /> &lt;{fmtNumber(convertSpeed(30))}</span>
@@ -86,8 +86,8 @@ export function RouteMapSection({ drive, trail, startPos, endPos, centerPos, spe
                   <span>{speedUnit}</span>
                 </div>
               )}
-              {drive.endDate && (
-                <span className="flex items-center gap-1.5 text-red-400"><Flag className="h-3 w-3" /> {t('driveDetail.end', 'End')}: {formatTime(drive.endDate)}</span>
+              {drive.endTs && (
+                <span className="flex items-center gap-1.5 text-red-400"><Flag className="h-3 w-3" /> {t('driveDetail.end', 'End')}: {formatTime(drive.endTs)}</span>
               )}
             </div>
           </>
