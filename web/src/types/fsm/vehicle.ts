@@ -1,4 +1,4 @@
-import type { StateEntry, Edge, FSMDefinition } from './types'
+import type { StateEntry, Edge, FSMDefinition, DisallowedTransition, CoverageMatrix } from './types'
 import { deriveEdges, type TransitionRow } from './types'
 
 /**
@@ -118,6 +118,27 @@ export const VEHICLE_TRANSITIONS: TransitionRow<VehicleState, VehicleTrigger>[] 
   { from: 'offline', to: 'asleep',   trigger: 'sleep_timeout',    guard: null,              timing: 'immediate' },
   { from: 'offline', to: 'asleep',   trigger: 'timeout',          guard: null,              timing: 'immediate' },
 ]
+
+export const VEHICLE_DISALLOWED: DisallowedTransition<VehicleState>[] = [
+  { from: 'driving', to: 'asleep', reason: 'Moving vehicle cannot sleep — must Park or go Offline first' },
+  { from: 'driving', to: 'updating', reason: 'Cannot start OTA while driving' },
+]
+
+export const VEHICLE_DISALLOWED_PATTERNS = [
+  'Online → Charging without TriggerChargeStarted — charging must be backed by a real charge signal',
+  'X → X self-loops — no-op, suppress at dispatcher to keep transition log clean',
+  'Driving → Online via SpeedZero on gear-capable vehicle — would mis-handle red lights (use GuardNoGear)',
+] as const
+
+export const VEHICLE_COVERAGE: CoverageMatrix<VehicleState> = {
+  online:   { online: 'self', driving: 'valid', charging: 'valid', parked: 'valid', updating: null,   asleep: 'valid', offline: 'valid' },
+  driving:  { online: 'valid', driving: 'self', charging: 'valid', parked: 'valid', updating: null,   asleep: 'disallowed', offline: 'valid' },
+  charging: { online: 'valid', driving: 'valid', charging: 'self', parked: 'valid', updating: null,   asleep: 'valid', offline: 'valid' },
+  parked:   { online: 'valid', driving: 'valid', charging: 'valid', parked: 'self', updating: null,   asleep: 'valid', offline: 'valid' },
+  updating: { online: null,    driving: null,    charging: null,    parked: null,    updating: 'self', asleep: null,    offline: null },
+  asleep:   { online: 'valid', driving: 'valid', charging: 'valid', parked: 'valid', updating: null,   asleep: 'self', offline: 'valid' },
+  offline:  { online: 'valid', driving: 'valid', charging: 'valid', parked: 'valid', updating: null,   asleep: 'valid', offline: 'self' },
+}
 
 /** Valid transitions for the vehicle FSM — derived from transition table */
 export const VEHICLE_EDGES: Edge<VehicleState>[] = deriveEdges(VEHICLE_TRANSITIONS)
