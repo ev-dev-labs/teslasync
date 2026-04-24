@@ -198,12 +198,19 @@ func (h *TelemetryHandler) SetSignalStore(store *signal.Store) {
 	if h.sessionTracker != nil {
 		h.sessionTracker.signalStore = store
 	}
+	if h.redisCache != nil {
+		store.SetRedisCache(h.redisCache)
+	}
 }
 
 // SetRedisCache sets the Redis write-through cache for signal values.
 // When set, signal updates are mirrored to Redis HSET in a fire-and-forget goroutine.
+// Also forwards the cache to the signal store for Redis-first startup recovery.
 func (h *TelemetryHandler) SetRedisCache(cache *signal.RedisSignalCache) {
 	h.redisCache = cache
+	if h.signalStore != nil {
+		h.signalStore.SetRedisCache(cache)
+	}
 }
 
 // SetEventHub sets the SSE event hub for real-time browser updates.

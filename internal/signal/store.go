@@ -35,6 +35,7 @@ type Store struct {
 	vehicles map[int64]map[string]*Value
 
 	flusher      Flusher
+	redisCache   *RedisSignalCache
 	writeBreaker *database.DBCircuitBreaker
 
 	// Debounced flush: dirty vehicles are flushed on a timer, not per-batch.
@@ -60,6 +61,13 @@ func New(flusher Flusher, flushInterval time.Duration, writeBreaker *database.DB
 		writeBreaker: writeBreaker,
 		dirty:        make(map[int64]bool),
 	}
+}
+
+// SetRedisCache sets the Redis signal cache for startup recovery.
+// When set, LoadFromDB tries Redis HSET first (all 230+ signals) before
+// falling back to the Postgres vehicle_live_state table (~30 columns).
+func (s *Store) SetRedisCache(cache *RedisSignalCache) {
+	s.redisCache = cache
 }
 
 // Update merges incoming signals into the vehicle's state. Only non-nil,
@@ -189,9 +197,24 @@ func (s *Store) GetRawMap(vehicleID int64) map[string]interface{} {
 	return result
 }
 
-// LoadFromDB loads the vehicle_live_state from the flusher (Postgres) into memory.
-// Called on startup to recover state after a pod restart.
+// LoadFromDB loads vehicle state into memory for pod restart recovery.
+// Tries Redis HSET first (has all 230+ signals), falls back to Postgres
+// vehicle_live_state (~30 columns) if Redis is unavailable or empty.
 func (s *Store) LoadFromDB(ctx context.Context, vehicleID int64) {
+	// 1. Try Redis HSET first (has all 230+ signals)
+	if s.redisCache != nil {
+		signals, err := s.redisCache.GetAll(ctx, vehicleID)
+		if err == nil && len(signals) > 0 {
+			s.Hydrate(vehicleID, signals)
+			log.Info().Int64("vehicle_id", vehicleID).Int("signals", len(signals)).Msg("signal store: loaded from Redis")
+			return
+		}
+		if err != nil {
+			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("signal store: Redis read failed, falling back to Postgres")
+		}
+	}
+
+	// 2. Fall back to Postgres vehicle_live_state (legacy, ~30 columns)
 	if s.flusher == nil {
 		return
 	}

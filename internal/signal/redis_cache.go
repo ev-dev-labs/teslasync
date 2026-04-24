@@ -71,6 +71,58 @@ log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("redis signal cache: EXPI
 return nil
 }
 
+// GetAll returns all signals for a vehicle from Redis HSET.
+// Returns map[string]interface{} matching the signal store format.
+// Values are decoded: numbers → float64, "true"/"false" → bool, otherwise string.
+func (c *RedisSignalCache) GetAll(ctx context.Context, vehicleID int64) (map[string]interface{}, error) {
+	key := fmt.Sprintf("vehicle:%d:signals", vehicleID)
+
+	vals, err := c.rdb.HGetAll(ctx, key).Result()
+	if err != nil {
+		return nil, fmt.Errorf("redis HGETALL %s: %w", key, err)
+	}
+	if len(vals) == 0 {
+		return nil, nil
+	}
+
+	result := make(map[string]interface{}, len(vals))
+	for field, raw := range vals {
+		result[field] = decodeSignalValue(raw)
+	}
+	return result, nil
+}
+
+// GetSignal returns a single signal value from Redis HSET.
+// Returns the decoded value or an error if Redis is unreachable.
+// Returns (nil, nil) if the signal does not exist.
+func (c *RedisSignalCache) GetSignal(ctx context.Context, vehicleID int64, signal string) (interface{}, error) {
+	key := fmt.Sprintf("vehicle:%d:signals", vehicleID)
+
+	raw, err := c.rdb.HGet(ctx, key, signal).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("redis HGET %s %s: %w", key, signal, err)
+	}
+	return decodeSignalValue(raw), nil
+}
+
+// decodeSignalValue reverses encodeSignalValue: tries float64 first, then
+// bool ("true"/"false"), then returns the raw string.
+func decodeSignalValue(s string) interface{} {
+	if f, err := strconv.ParseFloat(s, 64); err == nil {
+		return f
+	}
+	if s == "true" {
+		return true
+	}
+	if s == "false" {
+		return false
+	}
+	return s
+}
+
 // encodeSignalValue converts a signal value to its string representation.
 // Numbers -> decimal string, bools -> "true"/"false", strings -> as-is.
 func encodeSignalValue(v interface{}) string {
