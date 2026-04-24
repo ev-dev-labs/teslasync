@@ -1,0 +1,18 @@
+=== SURVEY ===
+File: web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx
+Problem: SSE payload nested (cold/tables) treated as flat -> [object Object]
+
+=== REASONING ===
+Flatten cold array [{name,value},...], tables {tbl:{col:val},...}, skip ts/vehicle_id.
+Keep fallback for flat payload (old format compatibility).
+
+=== CHANGES ===
+Replaced handleVehicleUpdate callback (lines 109-126) with 3-branch flattener:
+  1. cold array: iterate [{name,value},...] items
+  2. tables object: iterate {tableName: {col: val}} nested entries
+  3. fallback: flat signals with skip list (timestamp, vehicle_id, ts) + nested object guard
+
+=== GATE ===
+
+EXIT=0
+STATUS=DONE

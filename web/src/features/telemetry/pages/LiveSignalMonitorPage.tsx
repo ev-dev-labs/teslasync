@@ -109,16 +109,45 @@ export default function LiveSignalMonitorPage() {
   const handleVehicleUpdate = useCallback((data: unknown) => {
     if (pausedRef.current) return;
     const payload = data as Record<string, unknown>;
-    const signals = (payload?.signals ?? payload) as Record<string, unknown> | undefined;
-    if (!signals || typeof signals !== 'object') return;
-
     const now = new Date().toISOString();
     const newEntries: SignalEntry[] = [];
 
-    for (const [name, value] of Object.entries(signals)) {
-      if (name === 'timestamp' || name === 'vehicle_id') continue;
-      idRef.current += 1;
-      newEntries.push({ id: idRef.current, timestamp: now, name, value: String(value), type: detectType(value) });
+    // 1. Flatten "cold" array: [{name, value}, ...]
+    const cold = payload?.cold;
+    if (Array.isArray(cold)) {
+      for (const item of cold) {
+        if (item && typeof item === 'object' && 'name' in item && 'value' in item) {
+          const { name, value } = item as { name: string; value: unknown };
+          idRef.current += 1;
+          newEntries.push({ id: idRef.current, timestamp: now, name, value: String(value), type: detectType(value) });
+        }
+      }
+    }
+
+    // 2. Flatten "tables" object: {tableName: {column: value, ...}, ...}
+    const tables = payload?.tables;
+    if (tables && typeof tables === 'object') {
+      for (const [, columns] of Object.entries(tables as Record<string, unknown>)) {
+        if (columns && typeof columns === 'object') {
+          for (const [colName, colValue] of Object.entries(columns as Record<string, unknown>)) {
+            idRef.current += 1;
+            newEntries.push({ id: idRef.current, timestamp: now, name: colName, value: String(colValue), type: detectType(colValue) });
+          }
+        }
+      }
+    }
+
+    // 3. Fallback: flat signals (old format compatibility)
+    if (!cold && !tables) {
+      const signals = (payload?.signals ?? payload) as Record<string, unknown> | undefined;
+      if (signals && typeof signals === 'object') {
+        for (const [name, value] of Object.entries(signals)) {
+          if (name === 'timestamp' || name === 'vehicle_id' || name === 'ts') continue;
+          if (typeof value === 'object' && value !== null) continue;
+          idRef.current += 1;
+          newEntries.push({ id: idRef.current, timestamp: now, name, value: String(value), type: detectType(value) });
+        }
+      }
     }
 
     rateRef.current.push(newEntries.length);
