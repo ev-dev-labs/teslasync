@@ -1,4 +1,5 @@
 import type { StateEntry, Edge, FSMDefinition } from './types'
+import { deriveEdges, type TransitionRow } from './types'
 
 /**
  * Vehicle operational states — MUST match Go `internal/enums/constants.go`
@@ -24,22 +25,6 @@ export const VEHICLE_STATE_ENTRIES: Record<VehicleState, StateEntry> = {
   updating: { variant: 'info',    overrides: { badgeDot: 'bg-indigo-500', bg: 'bg-indigo-500/10', text: 'text-indigo-400', dot: 'bg-indigo-400' } },
   asleep:   { variant: 'neutral', overrides: { badgeDot: 'bg-purple-500' } },
   offline:  { variant: 'danger',  overrides: { bg: 'bg-gray-600/10', text: 'text-gray-500', dot: 'bg-gray-500' } },
-}
-
-/** Valid transitions for the vehicle FSM — compile-time checked */
-export const VEHICLE_EDGES: Edge<VehicleState>[] = [
-  ['online', 'driving'],  ['online', 'charging'],  ['online', 'parked'],
-  ['driving', 'parked'],  ['driving', 'charging'],  ['driving', 'online'],
-  ['charging', 'parked'], ['charging', 'online'],   ['charging', 'driving'],
-  ['parked', 'driving'],  ['parked', 'charging'],   ['parked', 'asleep'],  ['parked', 'online'],
-  ['asleep', 'online'],   ['asleep', 'offline'],
-  ['offline', 'online'],
-]
-
-/** Complete vehicle FSM definition */
-export const VEHICLE_FSM: FSMDefinition<VehicleState> = {
-  states: VEHICLE_STATE_ENTRIES,
-  edges: VEHICLE_EDGES,
 }
 
 /**
@@ -73,6 +58,75 @@ export const VEHICLE_GUARDS = [
   'unexpected_loss', 'expected_loss',
 ] as const
 export type VehicleGuard = (typeof VEHICLE_GUARDS)[number]
+
+/** 50-row vehicle transition table — single source of truth. Reference: §2.5 */
+export const VEHICLE_TRANSITIONS: TransitionRow<VehicleState, VehicleTrigger>[] = [
+  // ═══ ONLINE (9 rows) ═══
+  { from: 'online', to: 'driving',  trigger: 'gear_driving',      guard: null,              timing: 'immediate' },
+  { from: 'online', to: 'driving',  trigger: 'gear_neutral',      guard: null,              timing: 'immediate' },
+  { from: 'online', to: 'driving',  trigger: 'speed_detected',    guard: 'no_gear',         timing: 'immediate' },
+  { from: 'online', to: 'charging', trigger: 'charge_started',    guard: null,              timing: 'immediate' },
+  { from: 'online', to: 'parked',   trigger: 'gear_parked',       guard: 'no_charge',       timing: 'debounced' },
+  { from: 'online', to: 'asleep',   trigger: 'sleep_timeout',     guard: 'no_activity',     timing: 'immediate' },
+  { from: 'online', to: 'offline',  trigger: 'heartbeat_lost',    guard: null,              timing: 'immediate' },
+  { from: 'online', to: 'asleep',   trigger: 'timeout',           guard: 'expected_loss',   timing: 'immediate' },
+  { from: 'online', to: 'offline',  trigger: 'timeout',           guard: 'unexpected_loss', timing: 'immediate' },
+  // ═══ DRIVING (6 rows) ═══
+  { from: 'driving', to: 'parked',   trigger: 'gear_parked',      guard: 'no_charge',       timing: 'immediate' },
+  { from: 'driving', to: 'charging', trigger: 'charge_started',   guard: 'speed_zero',      timing: 'immediate' },
+  { from: 'driving', to: 'online',   trigger: 'speed_zero',       guard: 'no_gear',         timing: 'debounced' },
+  { from: 'driving', to: 'parked',   trigger: 'speed_zero',       guard: 'gear_parked_seen', timing: 'debounced' },
+  { from: 'driving', to: 'offline',  trigger: 'heartbeat_lost',   guard: null,              timing: 'immediate' },
+  { from: 'driving', to: 'offline',  trigger: 'timeout',          guard: null,              timing: 'immediate' },
+  // ═══ CHARGING (8 rows) ═══
+  { from: 'charging', to: 'driving', trigger: 'gear_driving',     guard: null,              timing: 'immediate' },
+  { from: 'charging', to: 'driving', trigger: 'gear_neutral',     guard: null,              timing: 'immediate' },
+  { from: 'charging', to: 'parked',  trigger: 'charge_ended',     guard: null,              timing: 'immediate' },
+  { from: 'charging', to: 'driving', trigger: 'speed_detected',   guard: 'no_gear',         timing: 'immediate' },
+  { from: 'charging', to: 'online',  trigger: 'charge_interrupted', guard: null,            timing: 'immediate' },
+  { from: 'charging', to: 'asleep',  trigger: 'sleep_timeout',    guard: 'still_plugged_in', timing: 'debounced' },
+  { from: 'charging', to: 'offline', trigger: 'heartbeat_lost',   guard: null,              timing: 'immediate' },
+  { from: 'charging', to: 'offline', trigger: 'timeout',          guard: null,              timing: 'immediate' },
+  // ═══ PARKED (9 rows) ═══
+  { from: 'parked', to: 'driving',  trigger: 'gear_driving',      guard: null,              timing: 'immediate' },
+  { from: 'parked', to: 'driving',  trigger: 'gear_neutral',      guard: null,              timing: 'immediate' },
+  { from: 'parked', to: 'driving',  trigger: 'speed_detected',    guard: 'no_gear',         timing: 'immediate' },
+  { from: 'parked', to: 'charging', trigger: 'charge_started',    guard: null,              timing: 'immediate' },
+  { from: 'parked', to: 'online',   trigger: 'activity_detected', guard: null,              timing: 'immediate' },
+  { from: 'parked', to: 'asleep',   trigger: 'sleep_timeout',     guard: 'no_activity',     timing: 'immediate' },
+  { from: 'parked', to: 'offline',  trigger: 'heartbeat_lost',    guard: null,              timing: 'immediate' },
+  { from: 'parked', to: 'asleep',   trigger: 'timeout',           guard: 'expected_loss',   timing: 'immediate' },
+  { from: 'parked', to: 'offline',  trigger: 'timeout',           guard: 'unexpected_loss', timing: 'immediate' },
+  // ═══ ASLEEP (9 rows) ═══
+  { from: 'asleep', to: 'online',   trigger: 'signal_received',   guard: null,              timing: 'immediate' },
+  { from: 'asleep', to: 'online',   trigger: 'activity_detected', guard: null,              timing: 'immediate' },
+  { from: 'asleep', to: 'charging', trigger: 'charge_started',    guard: null,              timing: 'immediate' },
+  { from: 'asleep', to: 'driving',  trigger: 'gear_driving',      guard: null,              timing: 'immediate' },
+  { from: 'asleep', to: 'driving',  trigger: 'gear_neutral',      guard: null,              timing: 'immediate' },
+  { from: 'asleep', to: 'driving',  trigger: 'speed_detected',    guard: 'no_gear',         timing: 'immediate' },
+  { from: 'asleep', to: 'parked',   trigger: 'gear_parked',       guard: null,              timing: 'immediate' },
+  { from: 'asleep', to: 'offline',  trigger: 'heartbeat_lost',    guard: null,              timing: 'immediate' },
+  { from: 'asleep', to: 'offline',  trigger: 'timeout',           guard: null,              timing: 'immediate' },
+  // ═══ OFFLINE (9 rows) ═══
+  { from: 'offline', to: 'online',   trigger: 'signal_received',  guard: null,              timing: 'immediate' },
+  { from: 'offline', to: 'online',   trigger: 'activity_detected', guard: null,             timing: 'immediate' },
+  { from: 'offline', to: 'charging', trigger: 'charge_started',   guard: null,              timing: 'immediate' },
+  { from: 'offline', to: 'driving',  trigger: 'gear_driving',     guard: null,              timing: 'immediate' },
+  { from: 'offline', to: 'driving',  trigger: 'gear_neutral',     guard: null,              timing: 'immediate' },
+  { from: 'offline', to: 'driving',  trigger: 'speed_detected',   guard: 'no_gear',         timing: 'immediate' },
+  { from: 'offline', to: 'parked',   trigger: 'gear_parked',      guard: null,              timing: 'immediate' },
+  { from: 'offline', to: 'asleep',   trigger: 'sleep_timeout',    guard: null,              timing: 'immediate' },
+  { from: 'offline', to: 'asleep',   trigger: 'timeout',          guard: null,              timing: 'immediate' },
+]
+
+/** Valid transitions for the vehicle FSM — derived from transition table */
+export const VEHICLE_EDGES: Edge<VehicleState>[] = deriveEdges(VEHICLE_TRANSITIONS)
+
+/** Complete vehicle FSM definition */
+export const VEHICLE_FSM: FSMDefinition<VehicleState> = {
+  states: VEHICLE_STATE_ENTRIES,
+  edges: VEHICLE_EDGES,
+}
 
 /** Signal context — mirrors Go SignalContext (§2.4) */
 export interface VehicleSignalContext {
