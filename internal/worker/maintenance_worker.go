@@ -124,8 +124,8 @@ func refreshFleetStats(ctx context.Context, db *database.DB) error {
 	return nil
 }
 
-// compressOldPositionsaggregates positions older than 30 days into hourly
-// summaries (avg speed, power, battery, coordinates, temps) and removes the
+// compressOldPositions aggregates positions older than 30 days into hourly
+// summaries (avg speed, battery, coordinates, temps) and removes the
 // redundant individual rows. This dramatically reduces storage for historical
 // data while preserving meaningful trends.
 func compressOldPositions(ctx context.Context, db *database.DB) error {
@@ -138,7 +138,6 @@ func compressOldPositions(ctx context.Context, db *database.DB) error {
 			vehicle_id,
 			date_trunc('hour', ts) as hour,
 			AVG(speed_mph) as avg_speed,
-			AVG(power) as avg_power,
 			AVG(battery_level) as avg_battery,
 			AVG(latitude) as avg_lat,
 			AVG(longitude) as avg_lng,
@@ -151,9 +150,9 @@ func compressOldPositions(ctx context.Context, db *database.DB) error {
 		GROUP BY vehicle_id, date_trunc('hour', ts)
 		HAVING COUNT(*) > 1
 	)
-	INSERT INTO positions (vehicle_id, speed_mph, power, battery_level, latitude, longitude,
+	INSERT INTO positions (vehicle_id, speed_mph, battery_level, latitude, longitude,
 		inside_temp, outside_temp, ts)
-	SELECT vehicle_id, avg_speed, avg_power, avg_battery::int, avg_lat, avg_lng,
+	SELECT vehicle_id, avg_speed, avg_battery::int, avg_lat, avg_lng,
 		avg_inside_temp, avg_outside_temp, first_at
 	FROM hourly
 	ON CONFLICT DO NOTHING;
