@@ -1,4 +1,4 @@
-import type { StateEntry, Edge, FSMDefinition } from './types'
+import { deriveEdges, type TransitionRow, type StateEntry, type Edge, type FSMDefinition } from './types'
 
 export const DRIVE_SESSION_STATES = [
   'pending', 'active', 'ending', 'completed', 'recovered',
@@ -36,10 +36,18 @@ export interface DriveSignalContext {
   endLongitude: number
 }
 
-export const DRIVE_SESSION_EDGES: Edge<DriveSessionState>[] = [
-  ['pending', 'active'],    ['active', 'ending'],     ['ending', 'completed'],
-  ['pending', 'recovered'], ['active', 'recovered'],  ['recovered', 'active'],
+export const DRIVE_SESSION_TRANSITIONS: TransitionRow<DriveSessionState, DriveSessionTrigger>[] = [
+  { from: 'pending',   to: 'active',    trigger: 'start_snapshot_ready',  guard: 'has_required_start_fields', timing: 'immediate' },
+  { from: 'pending',   to: 'recovered', trigger: 'pod_restart',           guard: null,                        timing: 'immediate' },
+  { from: 'active',    to: 'ending',    trigger: 'drive_ending',          guard: null,                        timing: 'immediate' },
+  { from: 'active',    to: 'recovered', trigger: 'pod_restart',           guard: null,                        timing: 'immediate' },
+  { from: 'ending',    to: 'completed', trigger: 'end_snapshot_ready',    guard: 'has_required_end_fields',   timing: 'immediate' },
+  { from: 'ending',    to: 'completed', trigger: 'end_snapshot_timeout',  guard: null,                        timing: 'immediate' },
+  { from: 'recovered', to: 'active',    trigger: 'signals_flowing',       guard: null,                        timing: 'immediate' },
+  { from: 'recovered', to: 'ending',    trigger: 'drive_ending',          guard: null,                        timing: 'immediate' },
 ]
+
+export const DRIVE_SESSION_EDGES: Edge<DriveSessionState>[] = deriveEdges(DRIVE_SESSION_TRANSITIONS)
 
 export const DRIVE_SESSION_FSM: FSMDefinition<DriveSessionState> = {
   states: DRIVE_SESSION_STATE_ENTRIES,
