@@ -1,0 +1,30 @@
+/** Semantic badge variants used across the entire app */
+export type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral'
+
+/** Visual style derived from a BadgeVariant — no per-state customization needed */
+export interface StateStyle {
+  badgeDot: string   // Tailwind class for the badge dot color
+  bg: string         // Tailwind class for background (panel/card tint)
+  text: string       // Tailwind class for text color
+  dot: string        // Tailwind class for status dot in diagrams
+}
+
+/** A single state in an FSM: just a variant. Theme resolves the rest. */
+export interface StateEntry {
+  variant: BadgeVariant
+  /** Optional override: only use when a state MUST differ from theme defaults.
+   *  Example: vehicle.driving is 'success' but uses blue tint, not green. */
+  overrides?: Partial<StateStyle>
+}
+
+/** Typed edge tuple — generic so each FSM constrains its own state names */
+export type Edge<S extends string> = [from: S, to: S]
+
+/** Full FSM definition — generic over its state union */
+export interface FSMDefinition<S extends string = string> {
+  states: Record<S, StateEntry>
+  edges: Edge<S>[]
+}
+
+/** Resolved state style = theme defaults merged with optional overrides */
+export type ResolvedStateStyle = StateStyle & { variant: BadgeVariant }
