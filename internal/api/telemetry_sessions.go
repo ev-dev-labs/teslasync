@@ -211,7 +211,7 @@ func (t *TelemetrySessionTracker) ChargeBufferLen() int {
 const telemetryWriteInterval = 5 * time.Second
 
 // RecoverSessions restores active drive/charge sessions from Postgres on pod restart.
-// Queries for sessions with no end_date and rebuilds the in-memory tracking state.
+// Queries for sessions with no end_ts and rebuilds the in-memory tracking state.
 func (t *TelemetrySessionTracker) RecoverSessions(ctx context.Context) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -406,18 +406,18 @@ func (t *TelemetrySessionTracker) CleanupStaleSessions(ctx context.Context, stal
 		}
 	}
 
-	// Close orphaned DB sessions — drives/charges with NULL end_date that started
+	// Close orphaned DB sessions — drives/charges with NULL end_ts that started
 	// more than staleTimeout ago and have no in-memory tracker (e.g. from pre-restart)
 	cutoff := now.Add(-staleTimeout)
 	_, err := t.db.Pool.Exec(ctx,
-		`UPDATE drives SET end_date = $1, duration_min = EXTRACT(EPOCH FROM ($1 - start_date))/60
-		 WHERE end_date IS NULL AND start_date < $2`, now, cutoff)
+		`UPDATE drives SET end_ts = $1, duration_min = EXTRACT(EPOCH FROM ($1 - start_ts))/60
+		 WHERE end_ts IS NULL AND start_ts < $2`, now, cutoff)
 	if err != nil {
 		log.Warn().Err(err).Msg("telemetry: failed to close orphaned drives")
 	}
 	_, err = t.db.Pool.Exec(ctx,
-		`UPDATE charging_sessions SET end_date = $1, duration_min = EXTRACT(EPOCH FROM ($1 - start_date))/60
-		 WHERE end_date IS NULL AND start_date < $2`, now, cutoff)
+		`UPDATE charging_sessions SET end_ts = $1, duration_min = EXTRACT(EPOCH FROM ($1 - start_ts))/60
+		 WHERE end_ts IS NULL AND start_ts < $2`, now, cutoff)
 	if err != nil {
 		log.Warn().Err(err).Msg("telemetry: failed to close orphaned charges")
 	}
