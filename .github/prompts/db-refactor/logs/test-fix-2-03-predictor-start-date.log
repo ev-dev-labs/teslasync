@@ -1,0 +1,29 @@
+=== SURVEY ===
+File: internal/polling/predictor.go (prompt says internal/api/predictor.go but actual location is polling/)
+Issues found:
+  Line 73: d.start_date → d.start_ts (drives table uses start_ts)
+  Line 74: d.start_date → d.start_ts
+  Line 78: d.start_date → d.start_ts
+  Line 79: d.start_date → d.start_ts
+  Line 116: cs.start_date → cs.start_ts (charging_sessions table uses start_ts)
+  Line 117: cs.start_date → cs.start_ts
+  Line 121: cs.start_date → cs.start_ts
+  Line 122: cs.start_date → cs.start_ts
+No occurrences of end_date or distance found in this file — no additional renames needed.
+Schema confirms: drives.start_ts, drives.end_ts, drives.distance_mi; charging_sessions.start_ts, charging_sessions.end_ts.
+
+=== REASONING ===
+Both SQL queries in predictor.go reference start_date which was renamed to start_ts in the typed baseline migration (000142).
+Fix: replace all d.start_date → d.start_ts and cs.start_date → cs.start_ts.
+No end_date or distance references exist in this file, so no additional renames.
+
+=== CHANGES ===
+internal/polling/predictor.go:
+  - Lines 73-79: d.start_date → d.start_ts (4 occurrences in departure query)
+  - Lines 116-122: cs.start_date → cs.start_ts (4 occurrences in charging query)
+Total: 8 column references fixed.
+=== GATE ===
+BUILD_EXIT=0
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
