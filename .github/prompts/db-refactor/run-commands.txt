@@ -1,0 +1,149 @@
+# TeslaSync db-refactor — Per-Phase Runner Commands
+# Run one phase at a time. Each command is independent and resumable
+# (skips prompts already in logs/done.txt).
+#
+# To run an entire phase end-to-end, copy a single line below and execute
+# it in PowerShell from the repo root (D:\repos\teslasync).
+
+# ── Phase 3 — Schema (28 prompts) ──
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase phase-3-schema
+
+# ── Phase 4 — Migration assembly (varies) ──
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase phase-4-migration
+
+# ── Phase 5 — Go models + repos (71 prompts) ──
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase phase-5-go-models
+
+# ── Phase 6 — Write path / telemetry handler (32 prompts) ──
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase phase-6-write-path
+
+# ── Phase 7 — Frontend types + hooks + pages (44 prompts) ──
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase phase-7-frontend ***
+
+# ── Phase 8 — Helm + docker-compose cutover (3 prompts) ──
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase phase-8-helm-docker
+
+# ── Phase 9 — Acceptance gates (25 prompts) ──
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase phase-9-acceptance ***
+
+# ── Phase 5b — Consumer rewire CORRECTIVE (26 prompts) ──
+# Addresses the falsely-green Phase 9 gates. Rewires 13 legacy consumers that
+# still reference deleted model fields (Alert, Settings, AlertRule.Type,
+# Automation.TriggerConfig/AutoDisabled, Geofence.Latitude/Longitude) and
+# hardens the runner to fail-closed on EXIT=/STATUS=BLOCKED/[FAIL] markers.
+# Prompts 00-03 are owner-approval ADRs — they emit STATUS=BLOCKED-PENDING-
+# OWNER-APPROVAL and stop. Approve each ADR in-file before continuing.
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase phase-5b-consumer-rewire
+
+# ── Phase 5c — Fixup (15 prompts) ──
+# Fixes the 9 files still broken after Phase 5b (12/26 prompts were BLOCKED).
+# Root causes: deleted parsers in validate.go, missing AutomationFull accessors,
+# missing Geofence centroid, dirty-tree blocks, uncommitted changes.
+# Also hardens the runner to stop marking BLOCKED prompts as DONE.
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase phase-5c-fixup
+
+# ── Phase 5d — Final fixup (6 prompts) ──
+# Fixes the last 2 broken files: location.go (Geofence.Radius) and
+# api_call_log_repo.go (field name mismatches). Then runs build/vet/test gates.
+# Runner now has fail-closed log-gate from Phase 5c.14.
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase phase-5d-final
+
+# ── Phase 5e — Full cascade fix (11 prompts) ──
+# Fixes charging_repo.go (Layer 1, blocks database pkg) then 7 cascade files
+# in api/worker (alert_handler, telemetry_alerts, webhook_handler, worker,
+# rule_engine, telemetry_sessions, doc.go). Then build/vet/test gates.
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase phase-5e-cascade
+
+# ── Phase 5f — Repository layer rewire (16 prompts) ──
+# Fixes 13 broken database repos (drive, vehicle, geofence, trip + 9 Tesla*
+# RawJSON removals) that were hidden behind Go's "too many errors" limit.
+# Each prompt has exact field mappings (old→new, or DELETE).
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase phase-5f-repos
+
+# ── Phase 5g — Consumer layer rewire (24 prompts) ──
+# Final pass: 20 consumer files (api handlers, export, service, automation,
+# worker) that reference old Drive/ChargingSession/Vehicle/PollingConfig fields.
+# Found via comprehensive grep, not limited by Go's "too many errors".
+# Each prompt has exact field mapping tables.
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase phase-5g-consumers
+
+# ── Phase 5h — Final build fix (4 prompts) ──
+# Last file: automation/engine.go (12 errors — Automation→AutomationFull).
+# Then build/vet/test gates. After this, go build ./... should be GREEN.
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase phase-5h-final
+
+# ── Phase 6 — Batch build fix (6 prompts) ──
+# Different approach: batch by package instead of one-file-at-a-time.
+# Prompt 00: telemetry_handler.go alone (187 errors).
+# Prompt 01: all 27 other api handlers (~177 errors).
+# Prompt 02: cmd/automation-worker/main.go (10 interface errors).
+# Then build/vet/test gates.
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase phase-6-batch-fix
+
+# ── Test-Fix Iteration 1 — Runtime errors from signal replay (8 prompts) ──
+# Fixes 9 runtime errors found by replaying 6,672 prod signals against local Docker.
+# Column renames (power→power_kw, end_date→end_ts), missing tables, CHECK constraint
+# violations, NULL constraint on in-progress drives, fsm_type removal.
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase test-fix-iteration-1
+
+# ── Test-Fix Iteration 2 — Remaining runtime errors (7 prompts) ──
+# Down from 3,429 → 153 errors after iteration 1. Fixes: live_state signal map
+# (hvac_power, driver_seat_belt, speed), fsm_instance_id, predictor/trip start_date/distance.
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase test-fix-iteration-2
+
+# ── Test Quality — Fix broken tests + schema validation (9 prompts) ──
+# Part A: Fix 5 broken _test.go files (vet errors on old model fields).
+# Part B: Add schema_test.go (verify SQL columns against DB schema).
+# Part C: Add signal→column map test (verify live_state_repo mappings).
+# Requires local Docker Postgres running (localhost:5432).
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase test-quality
+
+# ── Test-Fix Iteration 3 — Frontend crash + residual SQL + maintenance (7 prompts) ──
+# Frontend .includes() crash, trip charge_energy_added→energy_added_kwh,
+# created_at→ts in positions/api_call_logs, missing matviews, partition fix.
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase test-fix-iteration-3
+
+# ── Test-Fix Iteration 4 — Last 3 runtime errors (5 prompts) ──
+# distance→distance_mi in stats, vehicle_config_snapshots missing table,
+# speed→speed_mph in position compression. Targeting ZERO errors.
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase test-fix-iteration-4
+
+# -- Test Fix Iteration 5 (7 prompts) --
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase test-fix-iteration-5
+
+# -- Test Fix Iteration 6 (7 prompts) --
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase test-fix-iteration-6
+
+# -- Test Fix Iteration 7 (5 prompts) --
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase test-fix-iteration-7
+
+# ── Phase 12 — Signal Pipeline: Redis hot cache + signal_history hypertable (7 prompts) ──
+# PA-level architecture fix: solves Tesla delta-encoding missing context problem.
+# Converts signal_history to hypertable, adds Redis HSET cache, adds point-in-time
+# reconstruction for drive/charge completion. No new infrastructure needed.
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase phase-12-signal-pipeline
+
+
+# ── Future-1 — Unit normalization (19 prompts) ──
+# Stamps per-row unit columns (distance_unit, temp_unit, pressure_unit) on all
+# measurement tables so historical data is self-describing. Frontend converts
+# between car's GUI unit and user's TeslaSync display preference.
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase future-1-unit-normalization
+
+# ── Phase 10 — Staging soak (3 prompts) ──
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase phase-10-staging-soak
+
+# ── Phase 11 — Production cutover (1 prompt) ──
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase phase-11-prod-cutover
+
+# ── Rollback (use only on abort, not part of normal flow) ──
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Single "99-rollback.prompt.md"
+
+# ── Useful flags ──
+# Add  -DryRun                    to preview the order without executing
+# Add  -Reset                     to wipe logs/done.txt and re-run from prompt 01
+# Add  -Single "NN-name.prompt.md" to run one prompt only (searches all phases)
+# Add  -Model "claude-opus-4.7"   to override the default model
+
+
+
