@@ -1,0 +1,119 @@
+=== SURVEY ===
+Date: 2026-04-24T10:56:23.7870431-07:00
+File: web\src\features\system\pages\StateMachineDebuggerPage.tsx
+
+--- grep for fsm_type|fsmType|mode|Mode|FSM Type ---
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:21:import type { FSMTransition, FSMType } from '@/types/fsm';
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:22:import { FSM_TYPE_OPTIONS, HOURS_OPTIONS } from '@/types/fsm';
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:59:  fsm_type: string;
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:75:  const [fsmType, setFsmType] = useState<FSMType>('all');
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:98:  } = useFSMTransitions(activeId, fsmType, Number(hours), serverPage, perPage);
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:112:  /* ─── Pie chart data — dual mode ─── */
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:114:    if (fsmType === 'all') {
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:115:      // Show distribution by FSM type (deduplicated — skip camelCase duplicates)
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:118:        const fsmType = tr.fsm_type ?? 'unknown';
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:119:        byType.set(fsmType, (byType.get(fsmType) ?? 0) + 1);
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:142:  }, [transitions, fsmType]);
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:149:      const key = tr.fsm_type ?? 'unknown';
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:156:    // Also merge in stats endpoint data (for FSM types not in current transitions page)
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:182:        return { fsm_type: name, count, avg_interval_sec: avgInterval };
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:190:        key: 'fsm_type',
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:191:        header: t('fsm.type', 'FSM Type'),
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:192:        render: (row: StatSummaryRow) => <FSMBadge type={row.fsm_type} />,
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:239:        key: 'fsm_type',
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:240:        header: t('fsm.type', 'FSM Type'),
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:241:        render: (row: FSMTransition) => <FSMBadge type={row.fsm_type} />,
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:247:          <StateBadge state={row.from_state} fsmType={row.fsm_type} />
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:254:          <StateBadge state={row.to_state} fsmType={row.fsm_type} />
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:295:  const fsmTypeOptions = FSM_TYPE_OPTIONS.map((o) => ({
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:313:  const uniqueFsmTypes = new Set(transitions.map(tr => tr.fsm_type)).size;
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:342:                label={t('fsm.fsmType', 'FSM Type')}
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:343:                options={fsmTypeOptions}
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:344:                value={fsmType}
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:346:                  setFsmType(e.target.value as FSMType);
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:423:        <FSMSubFSMPanel activeSubs={statsData?.active_subs} fsmType={fsmType} />
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:429:          fsmType={fsmType === 'all' ? 'vehicle' : fsmType}
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:438:            title={fsmType === 'all'
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:439:              ? t('fsm.distributionByType', 'Distribution by FSM Type')
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:494:                keyExtractor={(row) => row.fsm_type}
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:512:            label={t('fsm.fsmTypes', 'FSM Types Seen')}
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:513:            value={fmtInt(uniqueFsmTypes)}
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:609:        <span className="text-white/40 block mb-1">{t('fsm.detail.fsmType', 'FSM Type')}</span>
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:610:        <FSMBadge type={transition.fsm_type} />
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:620:        <StateBadge state={transition.from_state} fsmType={transition.fsm_type} />
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:624:        <StateBadge state={transition.to_state} fsmType={transition.fsm_type} />
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:631:        <span className="text-white/40 block mb-1">{t('fsm.detail.mode', 'Mode')}</span>
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:632:        <Badge variant={transition.mode === 'immediate' ? 'info' : 'warning'}>
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:633:          {transition.mode}
+
+=== REASONING ===
+The API no longer returns fsm_type or mode fields on FSMTransition objects.
+The page has 40+ references to these fields across:
+  - fsmType state variable and FSM Type filter dropdown
+  - fsm_type column in transition log table
+  - FSM Type and Mode fields in transition detail panel
+  - Pie chart dual-mode (by type vs by state)
+  - Summary rows grouped by fsm_type
+  - FSM Types Seen stat card
+  - FSMBadge usage (shows fsm_type)
+  - StateBadge fsmType prop
+
+Plan (all within StateMachineDebuggerPage.tsx):
+1. Remove fsmType state, FSM_TYPE_OPTIONS import, FSMType type import
+2. Remove FSMBadge import, remove Layers icon import
+3. Hardcode 'all' in useFSMTransitions hook call
+4. Pie chart: always group by to_state (remove dual-mode)
+5. Summary rows: group by to_state instead of fsm_type
+6. Summary columns: show StateBadge instead of FSMBadge
+7. Timeline columns: remove fsm_type column, remove fsmType from StateBadge
+8. Remove FSM Type filter Select
+9. Replace FSM Types Seen stat card with Total Transitions
+10. Transition detail: remove FSM Type and Mode fields
+11. Pass transformed transitions to FSMTimelineChart (set fsm_type=to_state)
+12. Pass hardcoded values to child components (FSMSubFSMPanel, FSMStateDiagram)
+
+=== CHANGES ===
+File: web/src/features/system/pages/StateMachineDebuggerPage.tsx
+
+1. Removed imports: FSMBadge, Badge, Layers, FSMType, FSM_TYPE_OPTIONS
+2. Removed fsmType state variable (was useState<FSMType>('all'))
+3. Hardcoded 'all' in useFSMTransitions hook call
+4. Removed unused stats variable (statsData?.stats)
+5. Pie chart: removed dual-mode logic, always groups by to_state
+6. Summary rows: group by to_state instead of fsm_type
+7. Summary columns: show StateBadge(fsmType='vehicle') instead of FSMBadge
+8. StatSummaryRow interface: renamed fsm_type -> to_state
+9. Timeline columns: removed fsm_type column, StateBadge uses fsmType='vehicle'
+10. Removed fsmTypeOptions, uniqueFsmTypes computed values
+11. Added timelineTransitions useMemo (maps fsm_type=to_state for chart grouping)
+12. Filter section: removed FSM Type Select, grid cols 5->4
+13. FSMSubFSMPanel: hardcoded fsmType='all'
+14. FSMStateDiagram: hardcoded fsmType='vehicle'
+15. Pie chart title: always 'State Distribution'
+16. Summary table keyExtractor: row.to_state
+17. Stat card: replaced 'FSM Types Seen' with 'Total Transitions' (totalRows)
+18. FSMTimelineChart: receives timelineTransitions (groups by to_state via fsm_type shim)
+19. Detail panel: removed FSM Type field (FSMBadge), removed Mode field (Badge)
+20. Detail panel StateBadge: fsmType='vehicle' instead of transition.fsm_type
+
+=== GATE ===
+Running: npx tsc --noEmit
+
+TSC exit code: 0
+
+Post-fix grep for residual fsm_type|fsmType|FSMBadge|FSM Type:
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:160:        render: (row: StatSummaryRow) => <StateBadge state={row.to_state} fsmType="vehicle" />,
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:210:          <StateBadge state={row.from_state} fsmType="vehicle" />
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:217:          <StateBadge state={row.to_state} fsmType="vehicle" />
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:274:    transitions.map(tr => ({ ...tr, fsm_type: tr.to_state })),
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:377:        <FSMSubFSMPanel activeSubs={statsData?.active_subs} fsmType="all" />
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:383:          fsmType="vehicle"
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:568:        <StateBadge state={transition.from_state} fsmType="vehicle" />
+D:\repos\teslasync\web\src\features\system\pages\StateMachineDebuggerPage.tsx:572:        <StateBadge state={transition.to_state} fsmType="vehicle" />
+
+All residual fsmType references are hardcoded string literals for child component props.
+No dynamic references to removed API fields (fsm_type, mode) remain.
+TSC exit code: 0 (clean)
+
+EXIT=0
+STATUS=DONE
