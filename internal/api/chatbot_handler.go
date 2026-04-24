@@ -221,7 +221,7 @@ func (h *ChatbotHandler) queryBatteryStatus(ctx context.Context) string {
 		`SELECT v.display_name, p.battery_level, p.rated_range
 		 FROM vehicles v
 		 LEFT JOIN LATERAL (
-		   SELECT battery_level, rated_range FROM positions WHERE vehicle_id = v.id ORDER BY created_at DESC LIMIT 1
+		   SELECT battery_level, rated_range FROM positions WHERE vehicle_id = v.id ORDER BY ts DESC LIMIT 1
 		 ) p ON true
 		 ORDER BY v.display_name`)
 	if err != nil {

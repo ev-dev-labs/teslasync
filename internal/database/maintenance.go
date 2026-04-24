@@ -23,8 +23,8 @@ func (db *DB) CleanupOldPositions(ctx context.Context, days int) (int64, error) 
 
 	for {
 		res, err := db.Pool.Exec(ctx,
-			`DELETE FROM positions WHERE created_at < $1 AND ctid IN (
-				SELECT ctid FROM positions WHERE created_at < $1 LIMIT $2
+			`DELETE FROM positions WHERE ts < $1 AND ctid IN (
+				SELECT ctid FROM positions WHERE ts < $1 LIMIT $2
 			)`, cutoff, batchSize)
 		if err != nil {
 			return totalDeleted, fmt.Errorf("delete old positions: %w", err)

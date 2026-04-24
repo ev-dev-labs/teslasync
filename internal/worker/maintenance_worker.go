@@ -91,13 +91,13 @@ func runMaintenance(ctx context.Context, db *database.DB, cfg *config.Config) {
 	}
 
 	// Clean up old API call logs (keep 30 days)
-	apiLogsDeleted, err := cleanupOldLogs(maintCtx, db, "api_call_logs", 30)
+	apiLogsDeleted, err := cleanupOldLogs(maintCtx, db, "api_call_logs", "ts", 30)
 	if err != nil {
 		log.Error().Err(err).Msg("API call log cleanup failed")
 	}
 
 	// Clean up old notification logs (keep 90 days)
-	notifLogsDeleted, err := cleanupOldLogs(maintCtx, db, "notification_logs", 90)
+	notifLogsDeleted, err := cleanupOldLogs(maintCtx, db, "notification_logs", "created_at", 90)
 	if err != nil {
 		log.Error().Err(err).Msg("notification log cleanup failed")
 	}
@@ -153,7 +153,7 @@ func compressOldPositions(ctx context.Context, db *database.DB) error {
 	WITH hourly AS (
 		SELECT
 			vehicle_id,
-			date_trunc('hour', created_at) as hour,
+			date_trunc('hour', ts) as hour,
 			AVG(speed) as avg_speed,
 			AVG(power) as avg_power,
 			AVG(battery_level) as avg_battery,
@@ -162,14 +162,14 @@ func compressOldPositions(ctx context.Context, db *database.DB) error {
 			AVG(inside_temp) as avg_inside_temp,
 			AVG(outside_temp) as avg_outside_temp,
 			COUNT(*) as sample_count,
-			MIN(created_at) as first_at
+			MIN(ts) as first_at
 		FROM positions
-		WHERE created_at < NOW() - INTERVAL '30 days'
-		GROUP BY vehicle_id, date_trunc('hour', created_at)
+		WHERE ts < NOW() - INTERVAL '30 days'
+		GROUP BY vehicle_id, date_trunc('hour', ts)
 		HAVING COUNT(*) > 1
 	)
 	INSERT INTO positions (vehicle_id, speed, power, battery_level, latitude, longitude,
-		inside_temp, outside_temp, created_at)
+		inside_temp, outside_temp, ts)
 	SELECT vehicle_id, avg_speed, avg_power, avg_battery::int, avg_lat, avg_lng,
 		avg_inside_temp, avg_outside_temp, first_at
 	FROM hourly
@@ -184,11 +184,11 @@ func compressOldPositions(ctx context.Context, db *database.DB) error {
 	// representative row (MIN(id)) for each (vehicle, hour) bucket.
 	res, err := db.Pool.Exec(ctx, `
 		DELETE FROM positions
-		WHERE created_at < NOW() - INTERVAL '30 days'
+		WHERE ts < NOW() - INTERVAL '30 days'
 		AND id NOT IN (
 			SELECT MIN(id) FROM positions
-			WHERE created_at < NOW() - INTERVAL '30 days'
-			GROUP BY vehicle_id, date_trunc('hour', created_at)
+			WHERE ts < NOW() - INTERVAL '30 days'
+			GROUP BY vehicle_id, date_trunc('hour', ts)
 		)
 	`)
 	if err != nil {
@@ -257,8 +257,8 @@ func cleanOldPartitions(ctx context.Context, db *database.DB, table string, rete
 	return err
 }
 
-func cleanupOldLogs(ctx context.Context, db *database.DB, table string, retentionDays int) (int64, error) {
-	query := fmt.Sprintf("DELETE FROM %s WHERE created_at < NOW() - ($1 || ' days')::INTERVAL", table)
+func cleanupOldLogs(ctx context.Context, db *database.DB, table, tsCol string, retentionDays int) (int64, error) {
+	query := fmt.Sprintf("DELETE FROM %s WHERE %s < NOW() - ($1 || ' days')::INTERVAL", table, tsCol)
 	tag, err := db.Pool.Exec(ctx, query, fmt.Sprintf("%d", retentionDays))
 	if err != nil {
 		return 0, err

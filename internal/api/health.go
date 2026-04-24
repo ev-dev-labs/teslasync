@@ -414,7 +414,7 @@ func APIUsageHandler(db *database.DB) http.HandlerFunc {
 		// Total requests this month
 		var totalRequests int
 		err := db.Pool.QueryRow(ctx,
-			`SELECT COUNT(*) FROM api_call_logs WHERE created_at >= date_trunc('month', NOW())`).Scan(&totalRequests)
+			`SELECT COUNT(*) FROM api_call_logs WHERE ts >= date_trunc('month', NOW())`).Scan(&totalRequests)
 		if err != nil {
 			writeJSON(w, http.StatusOK, map[string]interface{}{
 				"total_requests":      0,
@@ -430,7 +430,7 @@ func APIUsageHandler(db *database.DB) http.HandlerFunc {
 		// Skipped polls (408/504 asleep responses don't count as useful polls)
 		var skippedPolls int
 		_ = db.Pool.QueryRow(ctx,
-			`SELECT COUNT(*) FROM api_call_logs WHERE created_at >= date_trunc('month', NOW()) AND (status_code = 408 OR status_code = 504)`).Scan(&skippedPolls)
+			`SELECT COUNT(*) FROM api_call_logs WHERE ts >= date_trunc('month', NOW()) AND (status_code = 408 OR status_code = 504)`).Scan(&skippedPolls)
 
 		estimatedCost := float64(totalRequests) * costPerRequest
 		remaining := monthlyCredit - estimatedCost
