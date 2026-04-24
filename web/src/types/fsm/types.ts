@@ -21,9 +21,16 @@ export interface StateEntry {
 export type Edge<S extends string> = [from: S, to: S]
 
 /** Full FSM definition — generic over its state union */
-export interface FSMDefinition<S extends string = string> {
+export interface FSMDefinition<S extends string = string, T extends string = string> {
   states: Record<S, StateEntry>
   edges: Edge<S>[]
+  transitions?: TransitionRow<S, T>[]
+  disallowed?: DisallowedTransition<S>[]
+  coverage?: CoverageMatrix<S>
+  scenarios?: Scenario<S>[]
+  toasts?: ToastMap<S>
+  truthTable?: TruthTable<S, T>
+  labels?: Record<S, string>
 }
 
 /** Resolved state style = theme defaults merged with optional overrides */
@@ -63,3 +70,26 @@ export type TruthTableCell<S extends string> =
   | { action: 'disallowed'; reason: string }
 
 export type TruthTable<S extends string, T extends string> = Record<S, Record<T, TruthTableCell<S>>>
+
+export function deriveEdges<S extends string, T extends string>(
+  transitions: TransitionRow<S, T>[],
+): Edge<S>[] {
+  const seen = new Set<string>()
+  const edges: Edge<S>[] = []
+  for (const { from, to } of transitions) {
+    const key = `${from}→${to}`
+    if (!seen.has(key)) {
+      seen.add(key)
+      edges.push([from, to])
+    }
+  }
+  return edges
+}
+
+export function isValidTransition<S extends string>(
+  coverage: CoverageMatrix<S>,
+  from: S,
+  to: S,
+): CoverageCell {
+  return coverage[from]?.[to] ?? null
+}
