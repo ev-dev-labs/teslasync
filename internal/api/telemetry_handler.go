@@ -95,6 +95,9 @@ type TelemetryHandler struct {
 
 	// Domain event bus for publishing state change events
 	eventBus *events.Bus
+
+	// Redis write-through cache for signal values (fire-and-forget)
+	redisCache *signal.RedisSignalCache
 }
 
 // VehicleStreamState tracks streaming health per vehicle.
@@ -195,6 +198,12 @@ func (h *TelemetryHandler) SetSignalStore(store *signal.Store) {
 	if h.sessionTracker != nil {
 		h.sessionTracker.signalStore = store
 	}
+}
+
+// SetRedisCache sets the Redis write-through cache for signal values.
+// When set, signal updates are mirrored to Redis HSET in a fire-and-forget goroutine.
+func (h *TelemetryHandler) SetRedisCache(cache *signal.RedisSignalCache) {
+	h.redisCache = cache
 }
 
 // SetEventHub sets the SSE event hub for real-time browser updates.
@@ -458,10 +467,23 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 		log.Warn().Err(err).Str("vin", vin).Msg("telemetry: vehicle not found or DB error")
 	}
 
-	// Update in-memory SignalStore ╬ô├ç├╢ always complete, never has null fields.
+	// Update in-memory SignalStore — always complete, never has null fields.
 	// This is the primary source of truth for dashboard, state machine, and sessions.
 	if vehicleID > 0 && h.signalStore != nil {
 		h.signalStore.Update(vehicleID, signals)
+	}
+
+	// Mirror to Redis HSET (fire-and-forget, non-blocking)
+	if vehicleID > 0 && h.redisCache != nil {
+		redisCopy := make(map[string]interface{}, len(signals))
+		for k, v := range signals {
+			redisCopy[k] = v
+		}
+		safeGo("redis-signal-cache", func() {
+			redisCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			h.redisCache.Update(redisCtx, vehicleID, redisCopy)
+		})
 	}
 
 	// Log every signal to MongoDB for full history (async, non-blocking)

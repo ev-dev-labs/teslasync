@@ -123,6 +123,13 @@
 # reconstruction for drive/charge completion. No new infrastructure needed.
 & "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase phase-12-signal-pipeline
 
+# ── Phase 13 — Anti-Pattern Cleanup: centralize constants, eliminate duplication (10 prompts) ──
+# Deep audit found 18+ anti-patterns: hardcoded domain constants in .tsx files,
+# duplicate helper functions, scattered signal→column mappings, magic timing numbers,
+# duplicate types/interfaces, and string enum literals. This phase centralizes
+# everything into single sources of truth.
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase phase-13-anti-pattern-cleanup
+
 
 # ── Future-1 — Unit normalization (19 prompts) ──
 # Stamps per-row unit columns (distance_unit, temp_unit, pressure_unit) on all
