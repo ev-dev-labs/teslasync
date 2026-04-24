@@ -19,8 +19,8 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime, formatRelative } from '@/lib/dateFormat';
 import { fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
-import type { FSMTransition } from '@/types/fsm';
-import { HOURS_OPTIONS } from '@/types/fsm';
+import type { FSMTransition, FSMType } from '@/types/fsm';
+import { HOURS_OPTIONS, FSM_TYPE_OPTIONS } from '@/types/fsm';
 import { StateBadge } from '../components/StateBadge';
 import { FSMStateDiagram } from '../components/FSMStateDiagram';
 import { FSMHealthPanel, computeFlapIds } from '../components/FSMHealthPanel';
@@ -74,7 +74,8 @@ export default function StateMachineDebuggerPage() {
   const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
 
   /* ─── FSM filters ─── */
-  const [hours, setHours] = useState('1');
+  const [fsmType, setFsmType] = useState<FSMType>('all');
+  const [hours, setHours] = useState('24');
   const [serverPage, setServerPage] = useState(1);
   const [perPage, setPerPage] = useState(50);
 
@@ -96,7 +97,7 @@ export default function StateMachineDebuggerPage() {
   const {
     data: transData,
     isLoading: transLoading,
-  } = useFSMTransitions(activeId, 'all', Number(hours), serverPage, perPage);
+  } = useFSMTransitions(activeId, fsmType, Number(hours), serverPage, perPage);
 
   /* ─── Derived data ─── */
   const stateResponse = stateData as unknown as StateResponse | undefined;
@@ -262,6 +263,11 @@ export default function StateMachineDebuggerPage() {
     label: o.label,
   }));
 
+  const fsmTypeOptions = FSM_TYPE_OPTIONS.map((o) => ({
+    value: o.value,
+    label: o.label,
+  }));
+
   const perPageOptions = [
     { value: '25', label: '25' },
     { value: '50', label: '50' },
@@ -309,6 +315,15 @@ export default function StateMachineDebuggerPage() {
                 value={hours}
                 onChange={(e) => {
                   setHours(e.target.value);
+                  setServerPage(1);
+                }}
+              />
+              <Select
+                label={t('fsm.fsmType', 'FSM Type')}
+                options={fsmTypeOptions}
+                value={fsmType}
+                onChange={(e) => {
+                  setFsmType(e.target.value as FSMType);
                   setServerPage(1);
                 }}
               />
