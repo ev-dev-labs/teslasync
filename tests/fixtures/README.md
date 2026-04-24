@@ -7,6 +7,8 @@ Test data fixtures for local development and integration testing.
 | File | Purpose | Usage |
 |---|---|---|
 | `seed_test_vehicle.sql` | Seeds a test vehicle + units + live state + settings | Run once after `docker compose up` |
+| `replay_signals.ps1` | Replays prod signal CSV against local MQTT | After seeding, with CSV from prod |
+| `EXPECTED_RESULTS.md` | Expected DB state after D→P replay test | Verification checklist |
 
 ## Quick Start
 
