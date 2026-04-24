@@ -39,10 +39,10 @@ func (r *FSMTransitionRepo) Insert(ctx context.Context, vehicleID int64, fsmType
 	snapshotJSON, _ := json.Marshal(snapshot)
 
 	_, err := r.db.Pool.Exec(ctx,
-		`INSERT INTO fsm_transitions (vehicle_id, fsm_type, fsm_instance_id, from_state, to_state,
+		`INSERT INTO fsm_transitions (vehicle_id, fsm_instance_id, from_state, to_state,
 		 trigger, guard, mode, context_snapshot, duration_in_state_ms)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-		vehicleID, fsmType, instanceID, fromState, toState, trigger, guard, mode, snapshotJSON, durationMs)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		vehicleID, instanceID, fromState, toState, trigger, guard, mode, snapshotJSON, durationMs)
 	return err
 }
 
@@ -62,11 +62,6 @@ func (r *FSMTransitionRepo) Query(ctx context.Context, vehicleID int64, fsmType 
 	args := []interface{}{vehicleID, from, to}
 	argIdx := 4
 
-	if fsmType != "" {
-		countQuery += ` AND fsm_type = $` + itoa(argIdx)
-		args = append(args, fsmType)
-		argIdx++
-	}
 	if instanceID != nil {
 		countQuery += ` AND fsm_instance_id = $` + itoa(argIdx)
 		args = append(args, *instanceID)
@@ -79,17 +74,12 @@ func (r *FSMTransitionRepo) Query(ctx context.Context, vehicleID int64, fsmType 
 	}
 
 	// Fetch
-	fetchQuery := `SELECT id, vehicle_id, fsm_type, fsm_instance_id, from_state, to_state,
+	fetchQuery := `SELECT id, vehicle_id, fsm_instance_id, from_state, to_state,
 		trigger, COALESCE(guard, ''), mode, context_snapshot, COALESCE(duration_in_state_ms, 0), created_at
 		FROM fsm_transitions WHERE vehicle_id = $1 AND created_at BETWEEN $2 AND $3`
 	fetchArgs := []interface{}{vehicleID, from, to}
 	fetchIdx := 4
 
-	if fsmType != "" {
-		fetchQuery += ` AND fsm_type = $` + itoa(fetchIdx)
-		fetchArgs = append(fetchArgs, fsmType)
-		fetchIdx++
-	}
 	if instanceID != nil {
 		fetchQuery += ` AND fsm_instance_id = $` + itoa(fetchIdx)
 		fetchArgs = append(fetchArgs, *instanceID)
@@ -109,7 +99,7 @@ func (r *FSMTransitionRepo) Query(ctx context.Context, vehicleID int64, fsmType 
 	for rows.Next() {
 		var rec FSMTransitionRecord
 		var snapshotBytes []byte
-		if err := rows.Scan(&rec.ID, &rec.VehicleID, &rec.FSMType, &rec.FSMInstanceID,
+		if err := rows.Scan(&rec.ID, &rec.VehicleID, &rec.FSMInstanceID,
 			&rec.FromState, &rec.ToState, &rec.Trigger, &rec.Guard, &rec.Mode,
 			&snapshotBytes, &rec.DurationInStateMs, &rec.CreatedAt); err != nil {
 			return nil, 0, err
