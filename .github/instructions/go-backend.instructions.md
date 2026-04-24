@@ -489,13 +489,163 @@ Located in `internal/tesla/client.go`:
 - API calls are logged via callback to `api_call_logs` table
 - Vehicle commands use `commandMap` for mapping friendly names to Tesla API endpoints
 
+## Model ↔ Repo ↔ Handler Alignment (CRITICAL)
+
+Every model struct, its repo SQL, and its handler must stay in sync. This is the
+#1 source of build breakage — a field rename in models that isn't propagated to
+repos and handlers causes cascading compile errors across 20+ files.
+
+### The Alignment Checklist
+
+When adding, renaming, or removing a field on ANY model struct:
+
+```
+❌ DO NOT rename a model field without grep-verifying ALL consumers
+✅ ALWAYS search across ALL layers before committing:
+   1. grep for the old field name in internal/database/*_repo.go
+   2. grep for the old field name in internal/api/*_handler.go
+   3. grep for the old field name in internal/service/*.go
+   4. grep for the old field name in internal/export/*.go
+   5. grep for the old field name in internal/worker/*.go
+   6. grep for the old field name in internal/automation/**/*.go
+   7. Update SQL column names in ALL repo queries (SELECT, INSERT, UPDATE, Scan)
+   8. Update $N placeholder numbering after column additions/removals
+   9. Verify: column count = $N count = Scan target count = Exec arg count
+```
+
+### SQL ↔ Scan ↔ Args Alignment
+
+The most common repo bug: column count doesn't match Scan targets or `$N` args.
+
+```go
+// ❌ BAD — 4 columns but 3 scan targets
+query := `SELECT id, name, distance_mi, start_ts FROM drives WHERE id = $1`
+rows.Scan(&d.ID, &d.Name, &d.DistanceMi) // missing &d.StartTs → runtime panic
+
+// ✅ GOOD — counts match exactly
+query := `SELECT id, name, distance_mi, start_ts FROM drives WHERE id = $1`
+rows.Scan(&d.ID, &d.Name, &d.DistanceMi, &d.StartTs) // 4 = 4
+```
+
+When editing repo SQL:
+1. Count columns in SELECT/INSERT
+2. Count `$N` placeholders in VALUES
+3. Count `&x.Field` targets in Scan()
+4. Count arguments in Exec/QueryRow call
+5. All four numbers MUST match
+
+### Naming Conventions (model → DB)
+
+Model fields use Go PascalCase. DB columns use snake_case. The `db:` tag is
+the source of truth for the column name.
+
+```go
+// ✅ Field name describes the unit in the name itself
+StartTs         time.Time  `db:"start_ts"`       // not StartDate
+DistanceMi      float64    `db:"distance_mi"`    // not Distance (ambiguous unit)
+MaxSpeedMph     *float64   `db:"max_speed_mph"`  // not SpeedMax
+StartBatteryPct *int16     `db:"start_battery_pct"` // not StartBatteryLvl
+EnergyAddedKwh  *float64   `db:"energy_added_kwh"`  // not ChargeEnergyAdded
+
+// ❌ Ambiguous field names (what unit? what does "level" mean?)
+Distance    float64  // miles? km? meters?
+SpeedMax    float64  // mph? km/h?
+TempAvg     float64  // celsius? fahrenheit?
+```
+
+**Rule:** Numeric measurement fields MUST include the unit suffix in both the Go
+field name AND the db tag: `_mi`, `_km`, `_mph`, `_kmh`, `_c`, `_f`, `_pct`,
+`_kwh`, `_kw`, `_m` (meters), `_psi`, `_bar`.
+
+## Unit-Aware Data Storage (ADR-020)
+
+Tesla Fleet Telemetry sends values in the car's GUI unit (miles/km, F/C, PSI/bar).
+The unit preference arrives as a separate signal (`SettingDistanceUnit`, etc.)
+and is cached in the `vehicle_units` table.
+
+### Per-Row Unit Tags
+
+Every table that stores unit-sensitive measurements has a `smallint` unit column
+matching the Tesla proto enum:
+
+```go
+// models/units.go — unit enums matching Tesla proto
+type DistanceUnit    int16  // 0=Unknown, 1=Miles, 2=Kilometers
+type TemperatureUnit int16  // 0=Unknown, 1=Fahrenheit, 2=Celsius
+type PressureUnit    int16  // 0=Unknown, 1=PSI, 2=Bar
+```
+
+```go
+// On the model struct:
+type Drive struct {
+    DistanceMi   float64      `db:"distance_mi"`
+    DistanceUnit DistanceUnit `db:"distance_unit"` // what unit distance_mi is actually in
+    // ...
+}
+```
+
+### Write Path — stamp unit at INSERT
+
+```go
+// In repo Create/Insert methods:
+// 1. Read cached car preference
+var distPref string
+_ = r.db.Pool.QueryRow(ctx,
+    `SELECT car_distance_pref FROM vehicle_units WHERE vehicle_id = $1`,
+    d.VehicleID).Scan(&distPref)
+d.DistanceUnit = models.ParseDistanceUnit(distPref)
+
+// 2. Include in INSERT
+query := `INSERT INTO drives (..., distance_unit) VALUES (..., $N)`
+```
+
+### Unknown (0) handling
+
+If `vehicle_units` has no row (first boot, no preference signal yet), default
+to `0` (Unknown). Consumers should interpret Unknown as the Tesla US default
+(Miles, Fahrenheit, PSI).
+
+## No JSONB for Typed Data (ADR-001)
+
+```
+❌ DO NOT store structured data as JSONB when the schema is known at design time
+❌ DO NOT add a `raw_json jsonb` column to "store the full API response"
+❌ DO NOT use `json.RawMessage` fields on models for typed data
+
+✅ DO define explicit typed columns for every field
+✅ DO use the Class-Table-Inheritance (CTI) pattern for polymorphic entities
+✅ DO keep JSONB only for truly dynamic/opaque payloads (user-provided webhook bodies)
+```
+
+### CTI Pattern (ADR-004)
+
+For polymorphic entities (automations with different trigger/condition/action types):
+
+```
+automations (parent)
+  └── automation_steps (discriminator: kind enum)
+        ├── automation_step_trigger_signal (child)
+        ├── automation_step_trigger_geofence (child)
+        ├── automation_step_condition_time_window (child)
+        └── automation_step_action_command (child)
+```
+
+- Parent table has common fields only
+- Discriminator row (automation_steps) has a `kind` enum column
+- Each kind has its own typed child table with kind-specific columns
+- Loaders join parent → discriminator → child to hydrate the full aggregate
+
 ## Migrations
 
 - Path: `migrations/000NNN_description.{up,down}.sql`
 - Runner: golang-migrate/migrate/v4 with PostgreSQL driver
 - Auto-applied on startup in `db.Migrate(cfg.Database.MigrationsPath)`
-- Current: 16 migrations (000001–000016)
 - Always provide both up and down migrations
+- **Naming:** Use descriptive snake_case: `000143_add_unit_columns`, not `000143_fix`
+- **Check latest:** `Get-ChildItem migrations -Filter "*.up.sql" | Sort-Object Name | Select-Object -Last 3`
+- **TimescaleDB:** Tables with time-series data use hypertables. Do NOT add foreign keys TO hypertables.
+- **Column additions:** Always `ADD COLUMN IF NOT EXISTS` with a `DEFAULT` for backcompat
+- **Column renames:** Prefer adding a new column + backfill + dropping old, over `ALTER COLUMN RENAME`
 
 ## MQTT Publishing
 

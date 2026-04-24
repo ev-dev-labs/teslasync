@@ -228,6 +228,52 @@ const { t } = useTranslation();
 - Use `Record<string, unknown>` for dynamic objects, never `any`
 - All pages must pass `npx tsc --noEmit`
 
+## Unit-Aware Display (CRITICAL — see unit-conversion.instructions.md)
+
+Every page displaying measurements (distance, speed, temperature, pressure)
+MUST convert between the car's source unit and the user's display preference.
+
+```typescript
+// ✅ CORRECT — convert + correct label
+import { toDisplayDistance, distanceLabel } from '@/lib/unitConversion';
+const userUnit = settings?.unit_of_length === 'km' ? 2 : 1;
+<StatCard value={toDisplayDistance(d.distance_mi ?? 0, d.distance_unit ?? 0, userUnit, 1)}
+          suffix={distanceLabel(userUnit)} />
+
+// ❌ WRONG — raw value with assumed unit
+<StatCard value={d.distance_mi} suffix="mi" />
+```
+
+See `unit-conversion.instructions.md` for the full pattern, all affected pages,
+and conversion factors.
+
+## API Response Type Alignment
+
+Frontend types MUST match Go JSON tags exactly. The `db:` tag and `json:` tag
+on Go structs use the same snake_case name.
+
+```typescript
+// ✅ GOOD — matches Go json tags exactly
+interface Drive {
+  id: number;
+  vehicle_id: number;
+  start_ts: string;           // not start_date
+  distance_mi: number;        // not distance (includes unit suffix)
+  max_speed_mph: number | null; // nullable → | null
+  distance_unit: number;      // unit enum (0=unknown, 1=mi, 2=km)
+  temp_unit: number;          // unit enum
+}
+
+// ❌ BAD — doesn't match Go tags
+interface Drive {
+  startDate: string;          // Go sends start_ts
+  distance: number;           // Go sends distance_mi
+  speedMax: number;           // Go sends max_speed_mph
+}
+```
+
+When Go model fields change, frontend types MUST be updated in the same PR.
+
 ## Design System
 
 - **Dark-first glassmorphism** — frosted glass panels with `backdrop-blur`
