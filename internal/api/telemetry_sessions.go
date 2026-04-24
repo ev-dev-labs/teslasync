@@ -795,15 +795,12 @@ func (t *TelemetrySessionTracker) updateActiveDriveLocked(ctx context.Context, a
 		if odo, ok := signalFloat(signals, "Odometer"); ok {
 			active.StartOdometer = floatPtr(odo)
 			active.LastOdometer = floatPtr(odo)
-			startBackfill["start_odometer"] = odo
 		}
 	}
 	if active.StartSoc == nil {
 		if soc, ok := signalFloat(signals, "Soc", "BatteryLevel"); ok {
 			active.StartSoc = floatPtr(soc)
-			bl := int(soc)
-			startBackfill["start_battery_level"] = bl
-			startBackfill["soc_start"] = soc
+			startBackfill["start_battery_pct"] = int16(soc)
 			active.SocMax = soc
 			active.SocMin = soc
 			active.SocSum = soc
@@ -814,27 +811,24 @@ func (t *TelemetrySessionTracker) updateActiveDriveLocked(ctx context.Context, a
 		if la, lo, ok := signalLatLon(signals); ok {
 			active.StartLatitude = floatPtr(la)
 			active.StartLongitude = floatPtr(lo)
-			startBackfill["start_latitude"] = la
-			startBackfill["start_longitude"] = lo
+			startBackfill["start_lat"] = la
+			startBackfill["start_lon"] = lo
 			go t.resolveAndUpdateAddress(active.DriveID, la, lo, true)
 		}
 	}
 	if active.StartRatedRange == nil {
 		if rr, ok := signalFloat(signals, "RatedRange"); ok {
 			active.StartRatedRange = floatPtr(rr)
-			startBackfill["start_rated_range_km"] = rr
 		}
 	}
 	if active.StartIdealRange == nil {
 		if ir, ok := signalFloat(signals, "IdealBatteryRange"); ok {
 			active.StartIdealRange = floatPtr(ir)
-			startBackfill["start_ideal_range_km"] = ir
 		}
 	}
 	if active.StartEstRange == nil {
 		if er, ok := signalFloat(signals, "EstBatteryRange"); ok {
 			active.StartEstRange = floatPtr(er)
-			startBackfill["start_est_range_km"] = er
 		}
 	}
 	if len(startBackfill) > 0 {
@@ -1076,13 +1070,15 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	}
 
 	// Compute averages
-	var speedAvg, speedMin *float64
+	var speedAvg *float64
 	if active.SpeedCount > 0 {
 		avg := active.SpeedSum / float64(active.SpeedCount)
 		speedAvg = &avg
-		if active.MinSpeed < math.MaxFloat64 {
-			speedMin = &active.MinSpeed
-		}
+	}
+
+	// Fallback: estimate distance from avg speed × duration when odometer unavailable
+	if distance == 0 && speedAvg != nil && duration > 0 {
+		distance = (*speedAvg) * (duration / 60.0) // mph × hours = miles
 	}
 
 	var insideAvg, outsideAvg *float64
@@ -1102,85 +1098,19 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 		endLon = active.LastLongitude
 	}
 
-	// Get end ranges/SOC — fall back to accumulated signals → SignalStore
-	var endRatedRange, endIdealRange, endEstRange *float64
-	var endSoc, endUsableSoc *float64
-	if v, ok := t.resolveFloat(vehicleID, finalSignals, active.accumulatedSignals, "RatedRange"); ok { endRatedRange = floatPtr(v) }
-	if v, ok := t.resolveFloat(vehicleID, finalSignals, active.accumulatedSignals, "IdealBatteryRange"); ok { endIdealRange = floatPtr(v) }
-	if v, ok := t.resolveFloat(vehicleID, finalSignals, active.accumulatedSignals, "EstBatteryRange"); ok { endEstRange = floatPtr(v) }
-	if v, ok := t.resolveFloat(vehicleID, finalSignals, active.accumulatedSignals, "Soc", "BatteryLevel"); ok { endSoc = floatPtr(v) }
-	if v, ok := t.resolveFloat(vehicleID, finalSignals, active.accumulatedSignals, "UsableSoc"); ok { endUsableSoc = floatPtr(v) }
 
 	var powerMax *float64
 	if active.SpeedCount > 0 {
 		powerMax = &active.PowerMax
 	}
 
-	// Build enhanced fields map
+	// Build enhanced fields map (only columns in drivePartialAllowed)
 	enhancedFields := map[string]interface{}{}
-	if active.StartOdometer != nil { enhancedFields["start_odometer"] = *active.StartOdometer }
-	if active.LastOdometer != nil { enhancedFields["end_odometer"] = *active.LastOdometer }
-	if speedAvg != nil { enhancedFields["speed_avg"] = *speedAvg }
-	if speedMin != nil { enhancedFields["speed_min"] = *speedMin }
-
-	// Range stats
-	if active.StartRatedRange != nil {
-		enhancedFields["start_rated_range_km"] = *active.StartRatedRange
-		enhancedFields["start_range_km"] = *active.StartRatedRange
-	}
-	if endRatedRange != nil { enhancedFields["end_rated_range_km"] = *endRatedRange }
-	if active.RangeCount > 0 {
-		enhancedFields["rated_range_avg"] = active.RatedRangeSum / float64(active.RangeCount)
-		if active.RatedRangeMax > 0 { enhancedFields["rated_range_max"] = active.RatedRangeMax }
-		if active.RatedRangeMin < math.MaxFloat64 { enhancedFields["rated_range_min"] = active.RatedRangeMin }
-		enhancedFields["ideal_range_avg"] = active.IdealRangeSum / float64(active.RangeCount)
-		if active.IdealRangeMax > 0 { enhancedFields["ideal_range_max"] = active.IdealRangeMax }
-		if active.IdealRangeMin < math.MaxFloat64 { enhancedFields["ideal_range_min"] = active.IdealRangeMin }
-		enhancedFields["est_range_avg"] = active.EstRangeSum / float64(active.RangeCount)
-		if active.EstRangeMax > 0 { enhancedFields["est_range_max"] = active.EstRangeMax }
-		if active.EstRangeMin < math.MaxFloat64 { enhancedFields["est_range_min"] = active.EstRangeMin }
-	}
-	if active.StartIdealRange != nil { enhancedFields["start_ideal_range_km"] = *active.StartIdealRange }
-	if endIdealRange != nil { enhancedFields["end_ideal_range_km"] = *endIdealRange }
-	if active.StartEstRange != nil { enhancedFields["start_est_range_km"] = *active.StartEstRange }
-	if endEstRange != nil { enhancedFields["end_est_range_km"] = *endEstRange }
-
-	// SOC stats
-	if active.StartSoc != nil { enhancedFields["soc_start"] = *active.StartSoc }
-	if endSoc != nil { enhancedFields["soc_end"] = *endSoc }
-	if active.SocCount > 0 {
-		enhancedFields["soc_avg"] = active.SocSum / float64(active.SocCount)
-		if active.SocMax > 0 { enhancedFields["soc_max"] = active.SocMax }
-		if active.SocMin < math.MaxFloat64 { enhancedFields["soc_min"] = active.SocMin }
-	}
-	if active.StartUsableSoc != nil { enhancedFields["usable_soc_start"] = *active.StartUsableSoc }
-	if endUsableSoc != nil { enhancedFields["usable_soc_end"] = *endUsableSoc }
-	if active.SocCount > 0 {
-		enhancedFields["usable_soc_avg"] = active.UsableSocSum / float64(active.SocCount)
-		if active.UsableSocMax > 0 { enhancedFields["usable_soc_max"] = active.UsableSocMax }
-		if active.UsableSocMin < math.MaxFloat64 { enhancedFields["usable_soc_min"] = active.UsableSocMin }
-	}
-
-	// Elevation
-	if active.StartElevation != nil { enhancedFields["elevation_start"] = *active.StartElevation }
-	if active.LastElevation != nil { enhancedFields["elevation_end"] = *active.LastElevation }
-	if active.ElevationGain > 0 { enhancedFields["elevation_gain"] = active.ElevationGain }
-	if active.ElevationLoss > 0 { enhancedFields["elevation_loss"] = active.ElevationLoss }
-
-	// Temperature
-	if active.TempCount > 0 {
-		enhancedFields["driver_temp_avg"] = active.DriverTempSum / float64(active.TempCount)
-		enhancedFields["passenger_temp_avg"] = active.PassengerTempSum / float64(active.TempCount)
-	}
-
-	// Battery heater
-	enhancedFields["battery_heater_on"] = active.BatteryHeaterSeen
-
-	// Coordinates
-	if active.StartLatitude != nil { enhancedFields["start_latitude"] = *active.StartLatitude }
-	if active.StartLongitude != nil { enhancedFields["start_longitude"] = *active.StartLongitude }
-	if endLat != nil { enhancedFields["end_latitude"] = *endLat }
-	if endLon != nil { enhancedFields["end_longitude"] = *endLon }
+	if speedAvg != nil { enhancedFields["avg_speed_mph"] = *speedAvg }
+	if active.StartLatitude != nil { enhancedFields["start_lat"] = *active.StartLatitude }
+	if active.StartLongitude != nil { enhancedFields["start_lon"] = *active.StartLongitude }
+	if endLat != nil { enhancedFields["end_lat"] = *endLat }
+	if endLon != nil { enhancedFields["end_lon"] = *endLon }
 
 	if err := t.db.WithTx(ctx, func(tx pgx.Tx) error {
 		var endBatteryPct *int16
@@ -1252,33 +1182,17 @@ func (t *TelemetrySessionTracker) backfillDriveValues(active *streamingDrive, ve
 
 	// --- Backfill start values ---
 	startNeedsBackfill := active.StartSoc == nil || *active.StartSoc == 0 ||
-		active.StartOdometer == nil || *active.StartOdometer == 0 ||
-		active.StartRatedRange == nil || *active.StartRatedRange == 0
+		active.StartLatitude == nil
 
 	if startNeedsBackfill {
 		startPos, err := findNearestPositionFallback(ctx, t.posRepo, vehicleID, active.StartTime, lookupWindow)
 		if err == nil && startPos != nil {
 			if (active.StartSoc == nil || *active.StartSoc == 0) && startPos.BatteryLvl > 0 {
-				bl := startPos.BatteryLvl
-				backfill["start_battery_level"] = bl
-				backfill["soc_start"] = float64(bl)
-			}
-			if (active.StartOdometer == nil || *active.StartOdometer == 0) && startPos.Odometer > 0 {
-				backfill["start_odometer"] = startPos.Odometer
-			}
-			if (active.StartRatedRange == nil || *active.StartRatedRange == 0) && startPos.RatedRange != nil && *startPos.RatedRange > 0 {
-				backfill["start_rated_range_km"] = *startPos.RatedRange
-				backfill["start_range_km"] = *startPos.RatedRange
-			}
-			if active.StartIdealRange == nil && startPos.IdealRange != nil && *startPos.IdealRange > 0 {
-				backfill["start_ideal_range_km"] = *startPos.IdealRange
-			}
-			if active.StartEstRange == nil && startPos.Elevation != nil {
-				backfill["elevation_start"] = *startPos.Elevation
+				backfill["start_battery_pct"] = int16(startPos.BatteryLvl)
 			}
 			if active.StartLatitude == nil && startPos.Latitude != 0 {
-				backfill["start_latitude"] = startPos.Latitude
-				backfill["start_longitude"] = startPos.Longitude
+				backfill["start_lat"] = startPos.Latitude
+				backfill["start_lon"] = startPos.Longitude
 			}
 		}
 	}
@@ -1287,20 +1201,14 @@ func (t *TelemetrySessionTracker) backfillDriveValues(active *streamingDrive, ve
 	endTime := time.Now().UTC()
 	endPos, err := findNearestPositionFallback(ctx, t.posRepo, vehicleID, endTime, lookupWindow)
 	if err == nil && endPos != nil {
-		if _, ok := backfill["soc_end"]; !ok {
-			if endPos.BatteryLvl > 0 {
-				backfill["end_battery_level"] = endPos.BatteryLvl
-				backfill["soc_end"] = float64(endPos.BatteryLvl)
-			}
+		if endPos.BatteryLvl > 0 {
+			backfill["end_battery_pct"] = int16(endPos.BatteryLvl)
 		}
 		if active.LastOdometer == nil && endPos.Odometer > 0 {
-			backfill["end_odometer"] = endPos.Odometer
 			// Recompute distance if we now have both start and end odometer
 			startOdo := 0.0
 			if active.StartOdometer != nil {
 				startOdo = *active.StartOdometer
-			} else if v, ok := backfill["start_odometer"]; ok {
-				startOdo = v.(float64)
 			}
 			if startOdo > 0 {
 				dist := endPos.Odometer - startOdo
@@ -1309,18 +1217,9 @@ func (t *TelemetrySessionTracker) backfillDriveValues(active *streamingDrive, ve
 				}
 			}
 		}
-		if endPos.RatedRange != nil && *endPos.RatedRange > 0 {
-			backfill["end_rated_range_km"] = *endPos.RatedRange
-		}
-		if endPos.IdealRange != nil && *endPos.IdealRange > 0 {
-			backfill["end_ideal_range_km"] = *endPos.IdealRange
-		}
-		if endPos.Elevation != nil {
-			backfill["elevation_end"] = *endPos.Elevation
-		}
 		if active.LastLatitude == nil && endPos.Latitude != 0 {
-			backfill["end_latitude"] = endPos.Latitude
-			backfill["end_longitude"] = endPos.Longitude
+			backfill["end_lat"] = endPos.Latitude
+			backfill["end_lon"] = endPos.Longitude
 		}
 	}
 
@@ -1806,26 +1705,16 @@ func (t *TelemetrySessionTracker) backfillChargeValues(active *streamingCharge, 
 	if active.StartBatteryLevel == 0 {
 		startPos, err := findNearestPositionFallback(ctx, t.posRepo, vehicleID, active.StartTime, lookupWindow)
 		if err == nil && startPos != nil && startPos.BatteryLvl > 0 {
-			backfill["start_battery_level"] = startPos.BatteryLvl
-		}
-		if err == nil && startPos != nil && startPos.RatedRange != nil && *startPos.RatedRange > 0 {
-			backfill["start_range_km"] = *startPos.RatedRange
+			backfill["start_battery_pct"] = int16(startPos.BatteryLvl)
 		}
 	}
 
-	// Backfill end battery/range from nearest position to end time
+	// Backfill end battery from nearest position to end time
 	endTime := time.Now().UTC()
 	endPos, err := findNearestPositionFallback(ctx, t.posRepo, vehicleID, endTime, lookupWindow)
 	if err == nil && endPos != nil {
 		if endPos.BatteryLvl > 0 {
-			backfill["end_battery_level"] = endPos.BatteryLvl
-		}
-		if endPos.RatedRange != nil && *endPos.RatedRange > 0 {
-			backfill["end_range_km"] = *endPos.RatedRange
-		}
-		if active.Latitude == nil && endPos.Latitude != 0 {
-			backfill["latitude"] = endPos.Latitude
-			backfill["longitude"] = endPos.Longitude
+			backfill["end_battery_pct"] = int16(endPos.BatteryLvl)
 		}
 	}
 
