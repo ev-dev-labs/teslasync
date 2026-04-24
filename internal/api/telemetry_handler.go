@@ -241,6 +241,9 @@ func (h *TelemetryHandler) SetSignalLogRepo(repo *database.SignalLogRepo) {
 // SetSignalHistoryWriter enables per-signal history logging to Postgres.
 func (h *TelemetryHandler) SetSignalHistoryWriter(w *database.SignalHistoryWriter) {
 	h.signalHistoryWriter = w
+	if h.sessionTracker != nil {
+		h.sessionTracker.signalHistoryWriter = w
+	}
 }
 
 // FSMHandler returns the FSM handler for status/stats queries.

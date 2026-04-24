@@ -32,7 +32,8 @@ type TelemetrySessionTracker struct {
 	tripRepo          *database.TripRepo
 	eventBus          *events.Bus
 	geocoder          geocoding.Geocoder
-	signalStore       *signal.Store
+	signalStore         *signal.Store
+	signalHistoryWriter *database.SignalHistoryWriter
 
 	// Write buffers for DB outage resilience
 	driveTelBuffer  *database.WriteBuffer[*models.DriveTelemetryReading]
@@ -1111,6 +1112,70 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	if active.StartLongitude != nil { enhancedFields["start_lon"] = *active.StartLongitude }
 	if endLat != nil { enhancedFields["end_lat"] = *endLat }
 	if endLon != nil { enhancedFields["end_lon"] = *endLon }
+
+	// Enrich with signal_history for any fields not captured during session.
+	// Signal_history reconstructs full signal state using last-known values,
+	// compensating for Tesla's delta encoding (signals not sent unless changed).
+	if t.signalHistoryWriter != nil {
+		startSnapshot, startErr := t.signalHistoryWriter.SnapshotAt(ctx, vehicleID, active.StartTime)
+		if startErr != nil {
+			log.Warn().Err(startErr).Int64("vehicle_id", vehicleID).
+				Msg("telemetry: signal_history start snapshot failed")
+		}
+		endSnapshot, endErr := t.signalHistoryWriter.SnapshotAt(ctx, vehicleID, time.Now().UTC())
+		if endErr != nil {
+			log.Warn().Err(endErr).Int64("vehicle_id", vehicleID).
+				Msg("telemetry: signal_history end snapshot failed")
+		}
+
+		// Fill missing start position
+		if _, exists := enhancedFields["start_lat"]; !exists {
+			if v, ok := startSnapshot["Latitude"]; ok {
+				if lat, fOk := v.(float64); fOk {
+					enhancedFields["start_lat"] = lat
+				}
+			}
+		}
+		if _, exists := enhancedFields["start_lon"]; !exists {
+			if v, ok := startSnapshot["Longitude"]; ok {
+				if lon, fOk := v.(float64); fOk {
+					enhancedFields["start_lon"] = lon
+				}
+			}
+		}
+
+		// Fill missing end position
+		if _, exists := enhancedFields["end_lat"]; !exists {
+			if v, ok := endSnapshot["Latitude"]; ok {
+				if lat, fOk := v.(float64); fOk {
+					enhancedFields["end_lat"] = lat
+				}
+			}
+		}
+		if _, exists := enhancedFields["end_lon"]; !exists {
+			if v, ok := endSnapshot["Longitude"]; ok {
+				if lon, fOk := v.(float64); fOk {
+					enhancedFields["end_lon"] = lon
+				}
+			}
+		}
+
+		// Fill missing temperature (single-point fallback when no temp signals during drive)
+		if insideAvg == nil {
+			if v, ok := startSnapshot["InsideTemp"]; ok {
+				if temp, fOk := v.(float64); fOk {
+					enhancedFields["inside_temp_avg_c"] = temp
+				}
+			}
+		}
+		if outsideAvg == nil {
+			if v, ok := startSnapshot["OutsideTemp"]; ok {
+				if temp, fOk := v.(float64); fOk {
+					enhancedFields["outside_temp_avg_c"] = temp
+				}
+			}
+		}
+	}
 
 	if err := t.db.WithTx(ctx, func(tx pgx.Tx) error {
 		var endBatteryPct *int16
