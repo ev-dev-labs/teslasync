@@ -1,35 +1,30 @@
 === SURVEY ===
 File: internal/automation/action/command_test.go
-Reported error: line 119 — cannot use &pc (*models.LegacyPollingConfig) as *models.PollingConfig
-
-Additional issues found upon survey:
-1. L116-120: defaultPollingConfig() calls models.DefaultPollingConfig() → LegacyPollingConfig, sets .Commands, returns as *PollingConfig — type mismatch
-2. L123: testVehicle() sets State: "online" — Vehicle struct no longer has State field
-3. L127: testVehicleWithState() sets State: state — same
-4. L396: pc.Commands = false — PollingConfig has no Commands field
-5. L849: pc.WakeUp = false — PollingConfig has no WakeUp field
-
-Current PollingConfig (system.go:44-52): VehicleID, AwakeIntervalSec, AsleepIntervalSec, DrivingIntervalSec, Enabled, CreatedAt, UpdatedAt
-Current Vehicle (vehicle.go:10-23): ID, TeslaID, VIN, DisplayName, Model, OptionCodes, Color, TrimLevel, EnrolledAt, ArchivedAt, CreatedAt, UpdatedAt — no State field.
-
-Production code (command.go): wakeIfNeeded() always attempts wake (no State check); Execute() never calls GetPollingConfig().
+Checked models.PollingConfig in internal/models/system.go (lines 44-52):
+  Fields: VehicleID(int64), AwakeIntervalSec(int32), AsleepIntervalSec(int32), DrivingIntervalSec(int32), Enabled(bool), CreatedAt, UpdatedAt
+Checked LegacyPollingConfig exists separately in internal/models/models.go (line 186)
+Test mock struct (line 56-61): already uses *models.PollingConfig
+Mock GetPollingConfig (line 67): already returns (*models.PollingConfig, error)
+defaultPollingConfig() (line 116): already returns *models.PollingConfig
+Interface SettingsChecker (command.go:30-32): expects (*models.PollingConfig, error)
 
 === REASONING ===
-Fix 1: defaultPollingConfig() — construct models.PollingConfig{Enabled: true, ...} directly, remove Commands field ref.
-Fix 2: testVehicle() — remove State: "online" from Vehicle literal.
-Fix 3: testVehicleWithState() — accept state param for caller compat but don't set it (Vehicle has no State).
-Fix 4: L396 pc.Commands = false — remove (field does not exist on PollingConfig).
-Fix 5: L849 pc.WakeUp = false — remove (field does not exist on PollingConfig).
+The code already uses models.PollingConfig (not LegacyPollingConfig) throughout command_test.go.
+All three places (mock struct field, mock method return, helper function) are consistent with the interface.
+go vet ./internal/automation/action/... exits 0 — no vet errors.
+No changes needed — the fix described in the prompt was already applied.
 
 === CHANGES ===
+No changes required — command_test.go already uses models.PollingConfig correctly.
+
 === GATE ===
-internal\signal\store_test.go:242:6: assignment copies lock value to _: sync/atomic.Int64 contains sync/atomic.noCopy
 # github.com/ev-dev-labs/teslasync/internal/automation/condition
 # [github.com/ev-dev-labs/teslasync/internal/automation/condition]
 vet.exe: internal\automation\condition\location_test.go:105:3: unknown field Latitude in struct literal of type models.Geofence
 # github.com/ev-dev-labs/teslasync/internal/automation/trigger
 # [github.com/ev-dev-labs/teslasync/internal/automation/trigger]
 vet.exe: internal\automation\trigger\battery_test.go:30:8: a.TriggerType undefined (type *models.Automation has no field or method TriggerType)
+internal\signal\store_test.go:242:6: assignment copies lock value to _: sync/atomic.Int64 contains sync/atomic.noCopy
 # github.com/ev-dev-labs/teslasync/internal/api
 # [github.com/ev-dev-labs/teslasync/internal/api]
 vet.exe: internal\api\automation_handler_test.go:16:26: unknown field Conditions in struct literal of type models.Automation
@@ -37,3 +32,5 @@ FILE_ERROR_COUNT=0
 EXIT=0
 STATUS=DONE
 === COMMIT ===
+No source changes needed — command_test.go already uses models.PollingConfig.
+Committing log file only.
