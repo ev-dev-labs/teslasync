@@ -160,7 +160,7 @@ export default function StateMachineDebuggerPage() {
       {
         key: 'to_state',
         header: t('fsm.state', 'State'),
-        render: (row: StatSummaryRow) => <StateBadge state={row.to_state} fsmType="vehicle" />,
+        render: (row: StatSummaryRow) => <StateBadge state={row.to_state} fsmType={fsmType === 'all' ? 'vehicle' : fsmType} />,
       },
       {
         key: 'count',
@@ -408,13 +408,13 @@ export default function StateMachineDebuggerPage() {
 
       {/* ──── Section 4: Sub-FSM Panel (active drive/charge context) ──── */}
       <FadeIn delay={0.15}>
-        <FSMSubFSMPanel activeSubs={statsData?.active_subs} fsmType="all" />
+        <FSMSubFSMPanel activeSubs={statsData?.active_subs} fsmType={fsmType === 'all' ? 'vehicle' : fsmType} />
       </FadeIn>
 
       {/* ──── Section 5: State Diagram ──── */}
       <FadeIn delay={0.2}>
         <FSMStateDiagram
-          fsmType="vehicle"
+          fsmType={fsmType === 'all' ? 'vehicle' : fsmType}
           transitions={transitions}
         />
       </FadeIn>
@@ -599,11 +599,11 @@ function TransitionDetail({ transition }: { transition: FSMTransition }) {
       )}
       <div>
         <span className="text-white/40 block mb-1">{t('fsm.detail.from', 'From State')}</span>
-        <StateBadge state={transition.from_state} fsmType="vehicle" />
+        <StateBadge state={transition.from_state} fsmType={transition.fsm_type || 'vehicle'} />
       </div>
       <div>
         <span className="text-white/40 block mb-1">{t('fsm.detail.to', 'To State')}</span>
-        <StateBadge state={transition.to_state} fsmType="vehicle" />
+        <StateBadge state={transition.to_state} fsmType={transition.fsm_type || 'vehicle'} />
       </div>
       <div>
         <span className="text-white/40 block mb-1">{t('fsm.detail.trigger', 'Trigger')}</span>
