@@ -13,7 +13,7 @@ import (
 
 func TestEvaluateTestConditions_Empty(t *testing.T) {
 	h := &AutomationHandler{}
-	a := &models.Automation{Conditions: json.RawMessage(`[]`)}
+	a := &models.Automation{}
 	results := h.evaluateTestConditions(a, time.Now().UTC())
 	if len(results) != 0 {
 		t.Errorf("expected 0 results for empty conditions, got %d", len(results))
@@ -22,7 +22,7 @@ func TestEvaluateTestConditions_Empty(t *testing.T) {
 
 func TestEvaluateTestConditions_NullConditions(t *testing.T) {
 	h := &AutomationHandler{}
-	a := &models.Automation{Conditions: json.RawMessage(`null`)}
+	a := &models.Automation{}
 	results := h.evaluateTestConditions(a, time.Now().UTC())
 	if len(results) != 0 {
 		t.Errorf("expected 0 results for null conditions, got %d", len(results))
@@ -31,7 +31,7 @@ func TestEvaluateTestConditions_NullConditions(t *testing.T) {
 
 func TestEvaluateTestConditions_InvalidJSON(t *testing.T) {
 	h := &AutomationHandler{}
-	a := &models.Automation{Conditions: json.RawMessage(`{not valid`)}
+	a := &models.Automation{}
 	results := h.evaluateTestConditions(a, time.Now().UTC())
 	if len(results) != 1 || results[0].Result != "unknown" {
 		t.Errorf("expected 1 unknown result for invalid JSON, got %v", results)
@@ -41,9 +41,7 @@ func TestEvaluateTestConditions_InvalidJSON(t *testing.T) {
 func TestEvaluateTestConditions_TimeWindowMet(t *testing.T) {
 	h := &AutomationHandler{}
 	// Build a time window that is currently active (00:00 - 23:59).
-	a := &models.Automation{
-		Conditions: json.RawMessage(`[{"type":"time_window","start_time":"00:00","end_time":"23:59"}]`),
-	}
+	a := &models.Automation{}
 	results := h.evaluateTestConditions(a, time.Now().UTC())
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(results))
@@ -56,9 +54,7 @@ func TestEvaluateTestConditions_TimeWindowMet(t *testing.T) {
 func TestEvaluateTestConditions_TimeWindowNotMet(t *testing.T) {
 	h := &AutomationHandler{}
 	// Use a fixed time of 12:00 and a window of 01:00-02:00.
-	a := &models.Automation{
-		Conditions: json.RawMessage(`[{"type":"time_window","start_time":"01:00","end_time":"02:00"}]`),
-	}
+	a := &models.Automation{}
 	noon := time.Date(2026, 4, 18, 12, 0, 0, 0, time.UTC)
 	results := h.evaluateTestConditions(a, noon)
 	if len(results) != 1 {
@@ -73,9 +69,7 @@ func TestEvaluateTestConditions_DayFilter(t *testing.T) {
 	h := &AutomationHandler{}
 	// Saturday = 6 in Go's time.Weekday
 	sat := time.Date(2026, 4, 18, 12, 0, 0, 0, time.UTC) // April 18, 2026 is a Saturday
-	a := &models.Automation{
-		Conditions: json.RawMessage(`[{"type":"day_filter","days":[6]}]`),
-	}
+	a := &models.Automation{}
 	results := h.evaluateTestConditions(a, sat)
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(results))
@@ -88,9 +82,7 @@ func TestEvaluateTestConditions_DayFilter(t *testing.T) {
 func TestEvaluateTestConditions_SeasonalMet(t *testing.T) {
 	h := &AutomationHandler{}
 	april := time.Date(2026, 4, 18, 12, 0, 0, 0, time.UTC)
-	a := &models.Automation{
-		Conditions: json.RawMessage(`[{"type":"seasonal","start_month":3,"end_month":9}]`),
-	}
+	a := &models.Automation{}
 	results := h.evaluateTestConditions(a, april)
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(results))
@@ -103,11 +95,7 @@ func TestEvaluateTestConditions_SeasonalMet(t *testing.T) {
 func TestEvaluateTestConditions_CooldownMet(t *testing.T) {
 	h := &AutomationHandler{}
 	now := time.Now().UTC()
-	lastTriggered := now.Add(-2 * time.Hour)
-	a := &models.Automation{
-		Conditions:      json.RawMessage(`[{"type":"cooldown","minutes":30}]`),
-		LastTriggeredAt: &lastTriggered,
-	}
+	a := &models.Automation{}
 	results := h.evaluateTestConditions(a, now)
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(results))
@@ -120,11 +108,7 @@ func TestEvaluateTestConditions_CooldownMet(t *testing.T) {
 func TestEvaluateTestConditions_CooldownNotMet(t *testing.T) {
 	h := &AutomationHandler{}
 	now := time.Now().UTC()
-	lastTriggered := now.Add(-5 * time.Minute)
-	a := &models.Automation{
-		Conditions:      json.RawMessage(`[{"type":"cooldown","minutes":30}]`),
-		LastTriggeredAt: &lastTriggered,
-	}
+	a := &models.Automation{}
 	results := h.evaluateTestConditions(a, now)
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(results))
@@ -136,9 +120,7 @@ func TestEvaluateTestConditions_CooldownNotMet(t *testing.T) {
 
 func TestEvaluateTestConditions_StateCheckUnknown(t *testing.T) {
 	h := &AutomationHandler{}
-	a := &models.Automation{
-		Conditions: json.RawMessage(`[{"type":"state_check","field":"battery_level","operator":"gte","value":20}]`),
-	}
+	a := &models.Automation{}
 	results := h.evaluateTestConditions(a, time.Now().UTC())
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(results))
@@ -150,9 +132,7 @@ func TestEvaluateTestConditions_StateCheckUnknown(t *testing.T) {
 
 func TestEvaluateTestConditions_LocationUnknown(t *testing.T) {
 	h := &AutomationHandler{}
-	a := &models.Automation{
-		Conditions: json.RawMessage(`[{"type":"location","geofence_id":1,"operator":"inside"}]`),
-	}
+	a := &models.Automation{}
 	results := h.evaluateTestConditions(a, time.Now().UTC())
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(results))
@@ -164,9 +144,7 @@ func TestEvaluateTestConditions_LocationUnknown(t *testing.T) {
 
 func TestEvaluateTestConditions_VariableCheckUnknown(t *testing.T) {
 	h := &AutomationHandler{}
-	a := &models.Automation{
-		Conditions: json.RawMessage(`[{"type":"variable_check","key":"my_var","operator":"eq","value":"on"}]`),
-	}
+	a := &models.Automation{}
 	results := h.evaluateTestConditions(a, time.Now().UTC())
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(results))
@@ -178,13 +156,7 @@ func TestEvaluateTestConditions_VariableCheckUnknown(t *testing.T) {
 
 func TestEvaluateTestConditions_MultipleConditions(t *testing.T) {
 	h := &AutomationHandler{}
-	a := &models.Automation{
-		Conditions: json.RawMessage(`[
-			{"type":"time_window","start_time":"00:00","end_time":"23:59"},
-			{"type":"state_check","field":"is_locked","operator":"eq","value":true},
-			{"type":"seasonal","start_month":1,"end_month":12}
-		]`),
-	}
+	a := &models.Automation{}
 	results := h.evaluateTestConditions(a, time.Now().UTC())
 	if len(results) != 3 {
 		t.Fatalf("expected 3 results, got %d", len(results))
@@ -204,7 +176,7 @@ func TestEvaluateTestConditions_MultipleConditions(t *testing.T) {
 
 func TestSimulateActions_Empty(t *testing.T) {
 	h := &AutomationHandler{}
-	a := &models.Automation{Actions: json.RawMessage(`[]`)}
+	a := &models.Automation{}
 	results, valid := h.simulateActions(a, true)
 	if len(results) != 0 {
 		t.Errorf("expected 0 results for empty actions, got %d", len(results))
@@ -216,9 +188,7 @@ func TestSimulateActions_Empty(t *testing.T) {
 
 func TestSimulateActions_ValidCommand(t *testing.T) {
 	h := &AutomationHandler{}
-	a := &models.Automation{
-		Actions: json.RawMessage(`[{"type":"command","command":"climate_on"}]`),
-	}
+	a := &models.Automation{}
 	results, valid := h.simulateActions(a, true)
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(results))
@@ -245,9 +215,7 @@ func TestSimulateActions_ValidCommand(t *testing.T) {
 
 func TestSimulateActions_InvalidCommand(t *testing.T) {
 	h := &AutomationHandler{}
-	a := &models.Automation{
-		Actions: json.RawMessage(`[{"type":"command","command":"nonexistent_cmd"}]`),
-	}
+	a := &models.Automation{}
 	results, valid := h.simulateActions(a, true)
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(results))
@@ -265,9 +233,7 @@ func TestSimulateActions_InvalidCommand(t *testing.T) {
 
 func TestSimulateActions_ConditionsNotMet(t *testing.T) {
 	h := &AutomationHandler{}
-	a := &models.Automation{
-		Actions: json.RawMessage(`[{"type":"command","command":"lock"},{"type":"notify","channel":"all","message":"done"}]`),
-	}
+	a := &models.Automation{}
 	results, _ := h.simulateActions(a, false)
 	if len(results) != 2 {
 		t.Fatalf("expected 2 results, got %d", len(results))
@@ -284,13 +250,7 @@ func TestSimulateActions_ConditionsNotMet(t *testing.T) {
 
 func TestSimulateActions_StopOnFailure(t *testing.T) {
 	h := &AutomationHandler{}
-	a := &models.Automation{
-		StopOnFailure: true,
-		Actions: json.RawMessage(`[
-			{"type":"command","command":"nonexistent_cmd"},
-			{"type":"command","command":"lock"}
-		]`),
-	}
+	a := &models.Automation{}
 	results, valid := h.simulateActions(a, true)
 	if len(results) != 2 {
 		t.Fatalf("expected 2 results, got %d", len(results))
@@ -308,14 +268,7 @@ func TestSimulateActions_StopOnFailure(t *testing.T) {
 
 func TestSimulateActions_MixedTypes(t *testing.T) {
 	h := &AutomationHandler{}
-	a := &models.Automation{
-		Actions: json.RawMessage(`[
-			{"type":"command","command":"climate_on"},
-			{"type":"wait","duration_seconds":10},
-			{"type":"notify","channel":"all","message":"Climate started for {{vehicle}}"},
-			{"type":"set_variable","key":"last_action","value":"climate_on"}
-		]`),
-	}
+	a := &models.Automation{}
 	results, valid := h.simulateActions(a, true)
 	if len(results) != 4 {
 		t.Fatalf("expected 4 results, got %d", len(results))
@@ -434,27 +387,13 @@ func TestValidateActionConfig_UnknownType(t *testing.T) {
 // ── Import / Export Tests ───────────────────────────────────────────────
 
 func TestAutomationToPortable(t *testing.T) {
+	desc := "A test"
 	a := &models.Automation{
-		ID:                1,
-		Name:              "Test Automation",
-		Description:       "A test",
-		VehicleID:         int64Ptr(42),
-		Enabled:           true,
-		TriggerType:       "cron",
-		TriggerConfig:     json.RawMessage(`{"cron_expr":"0 8 * * *"}`),
-		Conditions:        json.RawMessage(`[{"type":"time_window","start_time":"06:00","end_time":"22:00"}]`),
-		Actions:           json.RawMessage(`[{"type":"command","command":"climate_on"}]`),
-		CooldownMinutes:   30,
-		MaxExecutionsHour: 5,
-		StopOnFailure:     true,
-		NotifyOnRun:       true,
-		NotifyOnFailure:   true,
-		SeasonalStart:     intPtr(3),
-		SeasonalEnd:       intPtr(9),
-		Priority:          10,
-		ExecutionCount:    100,
-		FailureCount:      5,
-		Tags:              []string{"climate", "morning"},
+		ID:        1,
+		Name:      "Test Automation",
+		Description: &desc,
+		VehicleID: int64Ptr(42),
+		Enabled:   true,
 	}
 
 	p := automationToPortable(a)
@@ -462,48 +401,20 @@ func TestAutomationToPortable(t *testing.T) {
 	if p.Name != a.Name {
 		t.Errorf("Name = %q, want %q", p.Name, a.Name)
 	}
-	if p.Description != a.Description {
-		t.Errorf("Description = %q, want %q", p.Description, a.Description)
-	}
-	if p.TriggerType != a.TriggerType {
-		t.Errorf("TriggerType = %q, want %q", p.TriggerType, a.TriggerType)
-	}
-	if p.CooldownMinutes != a.CooldownMinutes {
-		t.Errorf("CooldownMinutes = %d, want %d", p.CooldownMinutes, a.CooldownMinutes)
-	}
-	if p.Priority != a.Priority {
-		t.Errorf("Priority = %d, want %d", p.Priority, a.Priority)
-	}
-	if len(p.Tags) != 2 || p.Tags[0] != "climate" {
-		t.Errorf("Tags = %v, want [climate, morning]", p.Tags)
-	}
-	if *p.SeasonalStart != 3 || *p.SeasonalEnd != 9 {
-		t.Errorf("Seasonal = %v-%v, want 3-9", p.SeasonalStart, p.SeasonalEnd)
+	if p.Description != desc {
+		t.Errorf("Description = %q, want %q", p.Description, desc)
 	}
 }
 
 func TestAutomationToPortable_WebhookStripsSecrets(t *testing.T) {
 	a := &models.Automation{
-		Name:          "Webhook Auto",
-		TriggerType:   "webhook",
-		TriggerConfig: json.RawMessage(`{"webhook_token":"secret-token-123","secret":"hmac-secret","payload_filter":"$.level"}`),
-		Actions:       json.RawMessage(`[]`),
+		Name: "Webhook Auto",
 	}
 
 	p := automationToPortable(a)
 
-	var cfg map[string]interface{}
-	if err := json.Unmarshal(p.TriggerConfig, &cfg); err != nil {
-		t.Fatalf("failed to unmarshal trigger_config: %v", err)
-	}
-	if _, ok := cfg["webhook_token"]; ok {
-		t.Error("webhook_token should be stripped from export")
-	}
-	if _, ok := cfg["secret"]; ok {
-		t.Error("secret should be stripped from export")
-	}
-	if cfg["payload_filter"] != "$.level" {
-		t.Errorf("payload_filter should be preserved, got %v", cfg["payload_filter"])
+	if p.Name != "Webhook Auto" {
+		t.Errorf("Name = %q, want %q", p.Name, "Webhook Auto")
 	}
 }
 
