@@ -163,7 +163,9 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 	// ── Savings computation (mirrors TCOHandler pattern) ──
 	var gasPrice, gasEfficiencyMPG float64
 	err = h.db.Pool.QueryRow(ctx,
-		`SELECT COALESCE(gas_price_per_unit, 3.50), COALESCE(gas_efficiency_mpg, 25) FROM settings LIMIT 1`,
+		`SELECT
+			COALESCE((SELECT value_num FROM settings WHERE key = 'gas_price_per_unit'), 3.50),
+			COALESCE((SELECT value_num FROM settings WHERE key = 'gas_efficiency_mpg'), 25)`,
 	).Scan(&gasPrice, &gasEfficiencyMPG)
 	if err != nil && err != pgx.ErrNoRows {
 		log.Error().Err(err).Msg("lifetime: failed to get settings")

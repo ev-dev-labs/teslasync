@@ -191,7 +191,7 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 	// Get settings for cost calculations
 	var baseCostPerKWh float64
 	err = h.db.Pool.QueryRow(ctx,
-		`SELECT COALESCE(base_cost_per_kwh, 0.12) FROM settings LIMIT 1`,
+		`SELECT COALESCE((SELECT value_num FROM settings WHERE key = 'base_cost_per_kwh'), 0.12)`,
 	).Scan(&baseCostPerKWh)
 	if err != nil && err != pgx.ErrNoRows {
 		baseCostPerKWh = 0.12
