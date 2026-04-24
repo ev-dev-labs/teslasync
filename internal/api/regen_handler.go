@@ -39,11 +39,11 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		StartDate        time.Time  `json:"start_date"`
 		Distance         float64    `json:"distance"`
 		DurationMin      float64    `json:"duration_min"`
-		SpeedAvg         *float64   `json:"speed_avg"`
-		PowerMax         *float64   `json:"power_max"`
-		PowerMin         *float64   `json:"power_min"`
-		StartBatteryLvl  *int       `json:"start_battery_level"`
-		EndBatteryLvl    *int       `json:"end_battery_level"`
+		SpeedAvg         *float64   `json:"avg_speed_mph"`
+		PowerMax         *float64   `json:"avg_power_kw"`
+		PowerMin         *float64   `json:"min_power_kw"`
+		StartBatteryLvl  *int       `json:"start_battery_pct"`
+		EndBatteryLvl    *int       `json:"end_battery_pct"`
 		Efficiency       float64    `json:"efficiency"`
 		RegenScore       float64    `json:"regen_score"`
 	}

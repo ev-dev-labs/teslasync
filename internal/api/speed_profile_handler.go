@@ -31,7 +31,7 @@ type efficiencyCategory struct {
 }
 
 type efficiencyPoint struct {
-	SpeedAvg   float64 `json:"speed_avg"`
+	SpeedAvg   float64 `json:"avg_speed_mph"`
 	Distance   float64 `json:"distance"`
 	Efficiency float64 `json:"efficiency"`
 }

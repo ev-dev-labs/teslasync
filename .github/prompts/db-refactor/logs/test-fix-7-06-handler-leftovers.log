@@ -1,0 +1,76 @@
+=== SURVEY ===
+=== internal\api\regen_handler.go ===
+D:\repos\teslasync\internal\api\regen_handler.go:42:		SpeedAvg         *float64   `json:"speed_avg"`
+D:\repos\teslasync\internal\api\regen_handler.go:43:		PowerMax         *float64   `json:"power_max"`
+D:\repos\teslasync\internal\api\regen_handler.go:44:		PowerMin         *float64   `json:"power_min"`
+D:\repos\teslasync\internal\api\regen_handler.go:45:		StartBatteryLvl  *int       `json:"start_battery_level"`
+D:\repos\teslasync\internal\api\regen_handler.go:46:		EndBatteryLvl    *int       `json:"end_battery_level"`
+=== internal\api\range_projection_handler.go ===
+D:\repos\teslasync\internal\api\range_projection_handler.go:92:				(COALESCE(start_rated_range_km, 0) - COALESCE(end_rated_range_km, 0))
+D:\repos\teslasync\internal\api\range_projection_handler.go:186:		SELECT COUNT(*) FROM drives WHERE vehicle_id = $1 AND distance_mi > 5 AND soc_start > soc_end`,
+D:\repos\teslasync\internal\api\range_projection_handler.go:240:			AVG((soc_start - soc_end) * $2 * 10 / NULLIF(distance_mi, 0)) AS wh_per_km,
+D:\repos\teslasync\internal\api\range_projection_handler.go:243:		WHERE vehicle_id = $1 AND distance_mi > 5 AND soc_start > soc_end
+=== internal\api\route_efficiency_handler.go ===
+D:\repos\teslasync\internal\api\route_efficiency_handler.go:39:	SpeedAvg        float64 `json:"speed_avg"`
+D:\repos\teslasync\internal\api\route_efficiency_handler.go:40:	StartBattery    int     `json:"start_battery_level"`
+D:\repos\teslasync\internal\api\route_efficiency_handler.go:41:	EndBattery      int     `json:"end_battery_level"`
+=== internal\api\driving_coach_handler.go ===
+D:\repos\teslasync\internal\api\driving_coach_handler.go:115:		       COALESCE(soc_start, 0), COALESCE(soc_end, 0),
+=== internal\api\weekly_digest_handler.go ===
+D:\repos\teslasync\internal\api\weekly_digest_handler.go:50:					(COALESCE(start_rated_range_km, 0) - COALESCE(end_rated_range_km, 0)) * 0.150
+D:\repos\teslasync\internal\api\weekly_digest_handler.go:53:					(COALESCE(start_rated_range_km, 0) - COALESCE(end_rated_range_km, 0)) * 0.150 * 0.14
+=== internal\api\speed_profile_handler.go ===
+D:\repos\teslasync\internal\api\speed_profile_handler.go:34:	SpeedAvg   float64 `json:"speed_avg"`
+=== internal\api\export_handler.go ===
+D:\repos\teslasync\internal\api\export_handler.go:378:		ChargerPower float64 `json:"charger_power"`
+D:\repos\teslasync\internal\api\export_handler.go:417:	_ = cw.Write([]string{"id", "vehicle_id", "start_date", "end_date", "energy_added_kwh", "start_battery", "end_battery", "charger_power", "duration_min"})
+=== internal\api\settings_handler.go ===
+D:\repos\teslasync\internal\api\settings_handler.go:68:		writeError(w, http.StatusBadRequest, "base_cost_per_kwh must be between 0 and 10")
+=== REASONING ===
+Analysis of each file:
+
+1. regen_handler.go (5 hits, lines 42-46):
+   JSON-only struct tags (no db:), API response names. Rename to match new schema.
+   - speed_avg -> avg_speed_mph
+   - power_max -> avg_power_kw (actually scans avg_power_kw from SQL)
+   - power_min -> min_power_kw (scans NULL::float8)
+   - start_battery_level -> start_battery_pct
+   - end_battery_level -> end_battery_pct
+
+2. range_projection_handler.go (5 hits):
+   - Line 92: SQL start_rated_range_km/end_rated_range_km in drives query. Columns REMOVED.
+     Replace with energy_used_kwh based calculation.
+   - Lines 186,240,243: SQL soc_start/soc_end -> start_battery_pct/end_battery_pct
+
+3. route_efficiency_handler.go (3 hits, lines 39-41):
+   JSON-only struct tags (no db:). Rename:
+   - speed_avg -> avg_speed_mph
+   - start_battery_level -> start_battery_pct
+   - end_battery_level -> end_battery_pct
+
+4. driving_coach_handler.go (1 hit, line 115):
+   SQL soc_start/soc_end -> start_battery_pct/end_battery_pct
+
+5. weekly_digest_handler.go (2 hits, lines 50,53):
+   SQL start_rated_range_km/end_rated_range_km in drives query. Columns REMOVED.
+   Replace with COALESCE(energy_used_kwh, 0) for energy, * 0.14 for cost.
+
+6. speed_profile_handler.go (1 hit, line 34):
+   JSON-only struct tag: speed_avg -> avg_speed_mph
+
+7. export_handler.go (2 hits, lines 378,417):
+   JSON tag and CSV header: charger_power -> charger_power_kw_max
+
+8. settings_handler.go (1 hit, line 68):
+   FALSE POSITIVE. base_cost_per_kwh is the legitimate field name in models.Settings.
+   No change needed.
+
+=== CHANGES ===
+
+settings_handler.go hit is FALSE POSITIVE: base_cost_per_kwh matches models.Settings.BaseCostPerKWh json tag.
+
+=== GATE ===
+go build ./... — PASSED (exit 0)
+Post-fix survey: 1 hit (false positive in settings_handler.go)
+EXIT=0
+STATUS=DONE

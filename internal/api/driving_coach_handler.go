@@ -112,7 +112,7 @@ func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request
 		SELECT id, start_ts, distance_mi,
 		       COALESCE(max_speed_mph, 0), COALESCE(avg_speed_mph, 0),
 		       COALESCE(avg_power_kw, 0), 0,
-		       COALESCE(soc_start, 0), COALESCE(soc_end, 0),
+		       COALESCE(start_battery_pct, 0), COALESCE(end_battery_pct, 0),
 		       COALESCE(outside_temp_avg_c, 20)
 		FROM drives
 		WHERE vehicle_id = $1

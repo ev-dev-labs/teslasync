@@ -36,9 +36,9 @@ type routeDriveDetail struct {
 	StartDate       string  `json:"start_date"`
 	Distance        float64 `json:"distance"`
 	DurationMin     float64 `json:"duration_min"`
-	SpeedAvg        float64 `json:"speed_avg"`
-	StartBattery    int     `json:"start_battery_level"`
-	EndBattery      int     `json:"end_battery_level"`
+	SpeedAvg        float64 `json:"avg_speed_mph"`
+	StartBattery    int     `json:"start_battery_pct"`
+	EndBattery      int     `json:"end_battery_pct"`
 	OutsideTempAvg  float64 `json:"outside_temp_avg"`
 	Efficiency      float64 `json:"efficiency"`
 }

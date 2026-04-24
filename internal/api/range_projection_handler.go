@@ -89,8 +89,8 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	_ = h.db.Pool.QueryRow(ctx, `
 		SELECT AVG(
 			CASE WHEN distance_mi > 0 THEN
-				(COALESCE(start_rated_range_km, 0) - COALESCE(end_rated_range_km, 0))
-				/ NULLIF(distance_mi, 0) * 1000
+				COALESCE(energy_used_kwh, 0) * 1000
+				/ NULLIF(distance_mi * 1.60934, 0)
 			END
 		)
 		FROM drives
@@ -183,7 +183,7 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	// Sample count
 	var totalDrives int
 	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT COUNT(*) FROM drives WHERE vehicle_id = $1 AND distance_mi > 5 AND soc_start > soc_end`,
+		SELECT COUNT(*) FROM drives WHERE vehicle_id = $1 AND distance_mi > 5 AND start_battery_pct > end_battery_pct`,
 		vehicleID).Scan(&totalDrives)
 
 	// First drive date for accuracy note
@@ -237,10 +237,10 @@ func (h *RangeProjectionHandler) buildEfficiencyMatrix(ctx context.Context, vehi
 				WHEN avg_speed_mph < 90 THEN 'suburban'
 				ELSE 'highway'
 			END AS speed_bucket,
-			AVG((soc_start - soc_end) * $2 * 10 / NULLIF(distance_mi, 0)) AS wh_per_km,
+			AVG((start_battery_pct - end_battery_pct) * $2 * 10 / NULLIF(distance_mi, 0)) AS wh_per_km,
 			COUNT(*) AS sample_count
 		FROM drives
-		WHERE vehicle_id = $1 AND distance_mi > 5 AND soc_start > soc_end
+		WHERE vehicle_id = $1 AND distance_mi > 5 AND start_battery_pct > end_battery_pct
 		  AND outside_temp_avg_c IS NOT NULL AND avg_speed_mph IS NOT NULL
 		GROUP BY temp_bucket, speed_bucket
 		HAVING COUNT(*) >= 3`,

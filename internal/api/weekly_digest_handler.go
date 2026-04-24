@@ -46,12 +46,8 @@ func (h *WeeklyDigestHandler) Get(w http.ResponseWriter, r *http.Request) {
 			SELECT
 				COUNT(*),
 				COALESCE(SUM(distance_mi), 0),
-				COALESCE(SUM(CASE WHEN distance_mi > 0 THEN
-					(COALESCE(start_rated_range_km, 0) - COALESCE(end_rated_range_km, 0)) * 0.150
-				ELSE 0 END), 0),
-				COALESCE(SUM(CASE WHEN distance_mi > 0 THEN
-					(COALESCE(start_rated_range_km, 0) - COALESCE(end_rated_range_km, 0)) * 0.150 * 0.14
-				ELSE 0 END), 0)
+				COALESCE(SUM(COALESCE(energy_used_kwh, 0)), 0),
+				COALESCE(SUM(COALESCE(energy_used_kwh, 0)) * 0.14, 0)
 			FROM drives
 			WHERE vehicle_id = $1 AND start_ts >= $2 AND start_ts < $3`,
 			vehicleID, start, end).Scan(&s.Drives, &s.DistanceKm, &s.EnergyKwh, &s.Cost)
