@@ -1305,7 +1305,7 @@ func (t *TelemetrySessionTracker) backfillDriveValues(active *streamingDrive, ve
 			if startOdo > 0 {
 				dist := endPos.Odometer - startOdo
 				if dist > 0 {
-					backfill["distance"] = dist
+					backfill["distance_mi"] = dist
 				}
 			}
 		}

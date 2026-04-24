@@ -117,10 +117,10 @@ func (r *TripRepo) GenerateMonthlyTrips(ctx context.Context) (int, error) {
 	query := `
 		WITH drive_months AS (
 			SELECT vehicle_id,
-			       date_trunc('month', start_date) AS month_start
+			       date_trunc('month', start_ts) AS month_start
 			FROM drives
-			WHERE start_date IS NOT NULL
-			GROUP BY vehicle_id, date_trunc('month', start_date)
+			WHERE start_ts IS NOT NULL
+			GROUP BY vehicle_id, date_trunc('month', start_ts)
 		),
 		existing_trips AS (
 			SELECT vehicle_id,
@@ -192,7 +192,7 @@ func (r *TripRepo) vehiclesWithDrivesInMonth(ctx context.Context, monthStart tim
 	monthEnd := monthStart.AddDate(0, 1, 0)
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT DISTINCT vehicle_id FROM drives
-		WHERE start_date >= $1 AND start_date < $2 AND start_date IS NOT NULL
+		WHERE start_ts >= $1 AND start_ts < $2 AND start_ts IS NOT NULL
 	`, monthStart, monthEnd)
 	if err != nil {
 		return nil, err
@@ -227,10 +227,10 @@ func (r *TripRepo) UpsertMonthTrip(ctx context.Context, vehicleID int64, monthSt
 	// Aggregate drives for this month
 	var totalDist float64
 	err := r.db.Pool.QueryRow(ctx, `
-		SELECT COALESCE(SUM(distance), 0)
+		SELECT COALESCE(SUM(distance_mi), 0)
 		FROM drives
 		WHERE vehicle_id = $1
-		  AND start_date >= $2 AND start_date < $3
+		  AND start_ts >= $2 AND start_ts < $3
 	`, vehicleID, monthStart, monthEnd).Scan(&totalDist)
 	if err != nil {
 		return 0, fmt.Errorf("aggregate drives: %w", err)
@@ -242,7 +242,7 @@ func (r *TripRepo) UpsertMonthTrip(ctx context.Context, vehicleID int64, monthSt
 		SELECT COALESCE(SUM(charge_energy_added), 0)
 		FROM charging_sessions
 		WHERE vehicle_id = $1
-		  AND start_date >= $2 AND start_date < $3
+		  AND start_ts >= $2 AND start_ts < $3
 	`, vehicleID, monthStart, monthEnd).Scan(&totalEnergy)
 	if err != nil {
 		return 0, fmt.Errorf("aggregate charges: %w", err)
@@ -299,7 +299,7 @@ func (r *TripRepo) UpsertMonthTrip(ctx context.Context, vehicleID int64, monthSt
 		INSERT INTO trip_drives (trip_id, drive_id)
 		SELECT $1, id FROM drives
 		WHERE vehicle_id = $2
-		  AND start_date >= $3 AND start_date < $4
+		  AND start_ts >= $3 AND start_ts < $4
 		ON CONFLICT DO NOTHING
 	`, tripID, vehicleID, monthStart, monthEnd)
 	if err != nil {

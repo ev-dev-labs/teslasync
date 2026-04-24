@@ -1,0 +1,24 @@
+=== SURVEY ===
+File: internal/database/trip_repo.go
+  - start_date -> start_ts (lines 120,122,123,195,233,245,302)
+  - distance -> distance_mi (line 230)
+File: internal/api/telemetry_sessions.go
+  - backfill[distance] -> backfill[distance_mi] (line 1308)
+
+=== REASONING ===
+Drives table columns renamed: start_date->start_ts, distance->distance_mi
+Charging_sessions table: start_date->start_ts
+trip_repo.go: All SQL queries against drives/charging_sessions used old names
+telemetry_sessions.go: backfill map key 'distance' not in drivePartialAllowed; must be 'distance_mi'
+Note: prompt listed internal/api/trip_generator.go but actual file is internal/database/trip_repo.go
+
+=== CHANGES ===
+internal/database/trip_repo.go: 8x start_date->start_ts, 1x distance->distance_mi
+internal/api/telemetry_sessions.go: 1x backfill[distance]->backfill[distance_mi]
+
+=== GATE ===
+BUILD_EXIT=0
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
