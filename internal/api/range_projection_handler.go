@@ -88,28 +88,28 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	var avgEffWhKm *float64
 	_ = h.db.Pool.QueryRow(ctx, `
 		SELECT AVG(
-			CASE WHEN distance > 0 THEN
+			CASE WHEN distance_mi > 0 THEN
 				(COALESCE(start_rated_range_km, 0) - COALESCE(end_rated_range_km, 0))
-				/ NULLIF(distance, 0) * 1000
+				/ NULLIF(distance_mi, 0) * 1000
 			END
 		)
 		FROM drives
-		WHERE vehicle_id = $1 AND distance > 1
-		ORDER BY start_date DESC LIMIT 30`, vehicleID).Scan(&avgEffWhKm)
+		WHERE vehicle_id = $1 AND distance_mi > 1
+		ORDER BY start_ts DESC LIMIT 30`, vehicleID).Scan(&avgEffWhKm)
 
 	var avgTempC *float64
 	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT AVG(outside_temp_avg)
+		SELECT AVG(outside_temp_avg_c)
 		FROM drives
-		WHERE vehicle_id = $1 AND outside_temp_avg IS NOT NULL
-		  AND start_date > NOW() - INTERVAL '30 days'`, vehicleID).Scan(&avgTempC)
+		WHERE vehicle_id = $1 AND outside_temp_avg_c IS NOT NULL
+		  AND start_ts > NOW() - INTERVAL '30 days'`, vehicleID).Scan(&avgTempC)
 
 	var avgSpeedKmh *float64
 	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT AVG(speed_avg)
+		SELECT AVG(avg_speed_mph)
 		FROM drives
-		WHERE vehicle_id = $1 AND speed_avg IS NOT NULL AND speed_avg > 0
-		  AND start_date > NOW() - INTERVAL '30 days'`, vehicleID).Scan(&avgSpeedKmh)
+		WHERE vehicle_id = $1 AND avg_speed_mph IS NOT NULL AND avg_speed_mph > 0
+		  AND start_ts > NOW() - INTERVAL '30 days'`, vehicleID).Scan(&avgSpeedKmh)
 
 	// ── Efficiency matrix ────────────────────────────────
 	matrix := h.buildEfficiencyMatrix(ctx, vehicleID)
@@ -183,13 +183,13 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	// Sample count
 	var totalDrives int
 	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT COUNT(*) FROM drives WHERE vehicle_id = $1 AND distance > 5 AND soc_start > soc_end`,
+		SELECT COUNT(*) FROM drives WHERE vehicle_id = $1 AND distance_mi > 5 AND soc_start > soc_end`,
 		vehicleID).Scan(&totalDrives)
 
 	// First drive date for accuracy note
 	var firstDrive *time.Time
 	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT MIN(start_date) FROM drives WHERE vehicle_id = $1 AND distance > 0`,
+		SELECT MIN(start_ts) FROM drives WHERE vehicle_id = $1 AND distance_mi > 0`,
 		vehicleID).Scan(&firstDrive)
 	monthsOfData := 0
 	if firstDrive != nil {
@@ -227,21 +227,21 @@ func (h *RangeProjectionHandler) buildEfficiencyMatrix(ctx context.Context, vehi
 	rows, err := h.db.Pool.Query(ctx, `
 		SELECT
 			CASE
-				WHEN outside_temp_avg < 0 THEN 'freezing'
-				WHEN outside_temp_avg < 10 THEN 'cold'
-				WHEN outside_temp_avg < 25 THEN 'mild'
+				WHEN outside_temp_avg_c < 0 THEN 'freezing'
+				WHEN outside_temp_avg_c < 10 THEN 'cold'
+				WHEN outside_temp_avg_c < 25 THEN 'mild'
 				ELSE 'hot'
 			END AS temp_bucket,
 			CASE
-				WHEN speed_avg < 50 THEN 'city'
-				WHEN speed_avg < 90 THEN 'suburban'
+				WHEN avg_speed_mph < 50 THEN 'city'
+				WHEN avg_speed_mph < 90 THEN 'suburban'
 				ELSE 'highway'
 			END AS speed_bucket,
-			AVG((soc_start - soc_end) * $2 * 10 / NULLIF(distance, 0)) AS wh_per_km,
+			AVG((soc_start - soc_end) * $2 * 10 / NULLIF(distance_mi, 0)) AS wh_per_km,
 			COUNT(*) AS sample_count
 		FROM drives
-		WHERE vehicle_id = $1 AND distance > 5 AND soc_start > soc_end
-		  AND outside_temp_avg IS NOT NULL AND speed_avg IS NOT NULL
+		WHERE vehicle_id = $1 AND distance_mi > 5 AND soc_start > soc_end
+		  AND outside_temp_avg_c IS NOT NULL AND avg_speed_mph IS NOT NULL
 		GROUP BY temp_bucket, speed_bucket
 		HAVING COUNT(*) >= 3`,
 		vehicleID, nominalCapacity)
@@ -553,9 +553,9 @@ func (h *RangeProjectionHandler) GetByVehicle(w http.ResponseWriter, r *http.Req
 	var avgDailyKm float64
 	_ = h.db.Pool.QueryRow(ctx, `
 		SELECT COALESCE(AVG(daily_km), 0) FROM (
-			SELECT DATE(start_date) AS d, SUM(distance) AS daily_km
-			FROM drives WHERE vehicle_id = $1 AND distance > 0
-			GROUP BY DATE(start_date)
+			SELECT DATE(start_ts) AS d, SUM(distance_mi) AS daily_km
+			FROM drives WHERE vehicle_id = $1 AND distance_mi > 0
+			GROUP BY DATE(start_ts)
 		) sub`, vehicleID).Scan(&avgDailyKm)
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{

@@ -56,10 +56,10 @@ func (h *ChargingHeatmapHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	// Heatmap data: hour of day × day of week
 	heatmapRows, err := h.db.Pool.Query(ctx, `
-		SELECT EXTRACT(DOW FROM start_date)::int  AS day_of_week,
-		       EXTRACT(HOUR FROM start_date)::int  AS hour_of_day,
+		SELECT EXTRACT(DOW FROM start_ts)::int  AS day_of_week,
+		       EXTRACT(HOUR FROM start_ts)::int  AS hour_of_day,
 		       COUNT(*)                             AS session_count,
-		       COALESCE(AVG(charge_energy_added),0) AS avg_energy,
+		       COALESCE(AVG(energy_added_kwh),0) AS avg_energy,
 		       COALESCE(AVG(cost),0)                AS avg_cost
 		FROM charging_sessions
 		WHERE vehicle_id = $1
@@ -94,9 +94,9 @@ func (h *ChargingHeatmapHandler) Get(w http.ResponseWriter, r *http.Request) {
 	locRows, err := h.db.Pool.Query(ctx, `
 		SELECT COALESCE(location_name, 'Unknown') AS location,
 		       COUNT(*)                            AS count,
-		       COALESCE(SUM(charge_energy_added),0) AS total_kwh,
+		       COALESCE(SUM(energy_added_kwh),0) AS total_kwh,
 		       COALESCE(SUM(cost),0)                AS total_cost,
-		       COALESCE(AVG(charger_power),0)       AS avg_power
+		       COALESCE(AVG(charger_power_kw_max),0)       AS avg_power
 		FROM charging_sessions
 		WHERE vehicle_id = $1
 		GROUP BY location_name
@@ -132,7 +132,7 @@ func (h *ChargingHeatmapHandler) Get(w http.ResponseWriter, r *http.Request) {
 	var summary chargingSummary
 	err = h.db.Pool.QueryRow(ctx, `
 		SELECT COUNT(*)                             AS total_sessions,
-		       COALESCE(SUM(charge_energy_added),0) AS total_kwh,
+		       COALESCE(SUM(energy_added_kwh),0) AS total_kwh,
 		       COALESCE(SUM(cost),0)                AS total_cost,
 		       COALESCE(AVG(duration_min),0)        AS avg_duration
 		FROM charging_sessions WHERE vehicle_id = $1`, vehicleID).

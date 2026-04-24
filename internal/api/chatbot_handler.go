@@ -176,7 +176,7 @@ func (h *ChatbotHandler) queryDriveCount(ctx context.Context, days int) string {
 	var totalDist float64
 	since := time.Now().AddDate(0, 0, -days)
 	err := h.db.Pool.QueryRow(ctx,
-		`SELECT COUNT(*), COALESCE(SUM(distance), 0) FROM drives WHERE start_date >= $1`, since,
+		`SELECT COUNT(*), COALESCE(SUM(distance_mi), 0) FROM drives WHERE start_ts >= $1`, since,
 	).Scan(&count, &totalDist)
 	if err != nil {
 		return "I couldn't retrieve drive data right now."
@@ -188,7 +188,7 @@ func (h *ChatbotHandler) queryDriveCount(ctx context.Context, days int) string {
 func (h *ChatbotHandler) queryTotalDistance(ctx context.Context, days int) string {
 	var dist float64
 	since := time.Now().AddDate(0, 0, -days)
-	if err := h.db.Pool.QueryRow(ctx, `SELECT COALESCE(SUM(distance), 0) FROM drives WHERE start_date >= $1`, since).Scan(&dist); err != nil {
+	if err := h.db.Pool.QueryRow(ctx, `SELECT COALESCE(SUM(distance_mi), 0) FROM drives WHERE start_ts >= $1`, since).Scan(&dist); err != nil {
 		return "I couldn't retrieve distance data right now."
 	}
 	return fmt.Sprintf("Total distance driven in the last **%d days**: **%.1f km** (%.1f miles).",
@@ -199,12 +199,12 @@ func (h *ChatbotHandler) queryEfficiency(ctx context.Context, days int) string {
 	var totalEnergy, totalDist float64
 	since := time.Now().AddDate(0, 0, -days)
 	if err := h.db.Pool.QueryRow(ctx,
-		`SELECT COALESCE(SUM(charge_energy_added), 0) FROM charging_sessions WHERE start_date >= $1`, since,
+		`SELECT COALESCE(SUM(energy_added_kwh), 0) FROM charging_sessions WHERE start_ts >= $1`, since,
 	).Scan(&totalEnergy); err != nil {
 		return "I couldn't retrieve efficiency data right now."
 	}
 	if err := h.db.Pool.QueryRow(ctx,
-		`SELECT COALESCE(SUM(distance), 0) FROM drives WHERE start_date >= $1`, since,
+		`SELECT COALESCE(SUM(distance_mi), 0) FROM drives WHERE start_ts >= $1`, since,
 	).Scan(&totalDist); err != nil {
 		return "I couldn't retrieve efficiency data right now."
 	}
@@ -261,7 +261,7 @@ func (h *ChatbotHandler) queryChargingSummary(ctx context.Context, days int) str
 	var energy float64
 	since := time.Now().AddDate(0, 0, -days)
 	if err := h.db.Pool.QueryRow(ctx,
-		`SELECT COUNT(*), COALESCE(SUM(charge_energy_added), 0) FROM charging_sessions WHERE start_date >= $1`, since,
+		`SELECT COUNT(*), COALESCE(SUM(energy_added_kwh), 0) FROM charging_sessions WHERE start_ts >= $1`, since,
 	).Scan(&count, &energy); err != nil {
 		return "I couldn't retrieve charging data right now."
 	}
@@ -273,7 +273,7 @@ func (h *ChatbotHandler) queryChargingCost(ctx context.Context, days int) string
 	var cost float64
 	since := time.Now().AddDate(0, 0, -days)
 	if err := h.db.Pool.QueryRow(ctx,
-		`SELECT COALESCE(SUM(cost), 0) FROM charging_sessions WHERE start_date >= $1`, since,
+		`SELECT COALESCE(SUM(cost), 0) FROM charging_sessions WHERE start_ts >= $1`, since,
 	).Scan(&cost); err != nil {
 		return "I couldn't retrieve charging cost data right now."
 	}
@@ -285,7 +285,7 @@ func (h *ChatbotHandler) queryLongestDrive(ctx context.Context) string {
 	var dur int
 	var startDate time.Time
 	err := h.db.Pool.QueryRow(ctx,
-		`SELECT distance, duration_min, start_date FROM drives ORDER BY distance DESC LIMIT 1`,
+		`SELECT distance_mi, duration_min, start_ts FROM drives ORDER BY distance_mi DESC LIMIT 1`,
 	).Scan(&dist, &dur, &startDate)
 	if err != nil {
 		return "No drives recorded yet."
@@ -298,7 +298,7 @@ func (h *ChatbotHandler) queryMaxSpeed(ctx context.Context) string {
 	var speed float64
 	var startDate time.Time
 	err := h.db.Pool.QueryRow(ctx,
-		`SELECT COALESCE(speed_max, 0), start_date FROM drives WHERE speed_max IS NOT NULL ORDER BY speed_max DESC LIMIT 1`,
+		`SELECT COALESCE(max_speed_mph, 0), start_ts FROM drives WHERE max_speed_mph IS NOT NULL ORDER BY max_speed_mph DESC LIMIT 1`,
 	).Scan(&speed, &startDate)
 	if err != nil {
 		return "No speed data recorded yet."
@@ -312,7 +312,7 @@ func (h *ChatbotHandler) queryLastDrive(ctx context.Context) string {
 	var dur int
 	var startDate time.Time
 	err := h.db.Pool.QueryRow(ctx,
-		`SELECT distance, duration_min, start_date FROM drives ORDER BY start_date DESC LIMIT 1`,
+		`SELECT distance_mi, duration_min, start_ts FROM drives ORDER BY start_ts DESC LIMIT 1`,
 	).Scan(&dist, &dur, &startDate)
 	if err != nil {
 		return "No drives recorded yet."
@@ -327,8 +327,8 @@ func (h *ChatbotHandler) queryLastCharge(ctx context.Context) string {
 	var startBat, endBat int
 	var startDate time.Time
 	err := h.db.Pool.QueryRow(ctx,
-		`SELECT charge_energy_added, start_battery_level, COALESCE(end_battery_level, start_battery_level),
-		        start_date FROM charging_sessions ORDER BY start_date DESC LIMIT 1`,
+		`SELECT energy_added_kwh, start_battery_pct, COALESCE(end_battery_pct, start_battery_pct),
+		        start_ts FROM charging_sessions ORDER BY start_ts DESC LIMIT 1`,
 	).Scan(&energy, &startBat, &endBat, &startDate)
 	if err != nil {
 		return "No charging sessions recorded yet."

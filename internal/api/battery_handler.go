@@ -82,8 +82,8 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 		// Count charge cycles from charging sessions (sum of SOC deltas / 100)
 		var totalSOCDelta *float64
 		_ = h.batteryRepo.DB().Pool.QueryRow(r.Context(),
-			`SELECT SUM(GREATEST(end_battery_level - start_battery_level, 0)) 
-			 FROM charging_sessions WHERE vehicle_id = $1 AND end_battery_level > start_battery_level`,
+			`SELECT SUM(GREATEST(end_battery_pct - start_battery_pct, 0)) 
+			 FROM charging_sessions WHERE vehicle_id = $1 AND end_battery_pct > start_battery_pct`,
 			vehicleID).Scan(&totalSOCDelta)
 		if totalSOCDelta != nil {
 			cycleCount = int(*totalSOCDelta / 100)

@@ -45,15 +45,15 @@ func (h *WeeklyDigestHandler) Get(w http.ResponseWriter, r *http.Request) {
 		_ = h.db.Pool.QueryRow(ctx, `
 			SELECT
 				COUNT(*),
-				COALESCE(SUM(distance), 0),
-				COALESCE(SUM(CASE WHEN distance > 0 THEN
+				COALESCE(SUM(distance_mi), 0),
+				COALESCE(SUM(CASE WHEN distance_mi > 0 THEN
 					(COALESCE(start_rated_range_km, 0) - COALESCE(end_rated_range_km, 0)) * 0.150
 				ELSE 0 END), 0),
-				COALESCE(SUM(CASE WHEN distance > 0 THEN
+				COALESCE(SUM(CASE WHEN distance_mi > 0 THEN
 					(COALESCE(start_rated_range_km, 0) - COALESCE(end_rated_range_km, 0)) * 0.150 * 0.14
 				ELSE 0 END), 0)
 			FROM drives
-			WHERE vehicle_id = $1 AND start_date >= $2 AND start_date < $3`,
+			WHERE vehicle_id = $1 AND start_ts >= $2 AND start_ts < $3`,
 			vehicleID, start, end).Scan(&s.Drives, &s.DistanceKm, &s.EnergyKwh, &s.Cost)
 
 		if s.DistanceKm > 0 {

@@ -109,16 +109,16 @@ func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request
 	since := time.Now().AddDate(0, 0, -days)
 
 	rows, err := h.db.Pool.Query(ctx, `
-		SELECT id, start_date, distance,
-		       COALESCE(speed_max, 0), COALESCE(speed_avg, 0),
-		       COALESCE(power_max, 0), COALESCE(power_min, 0),
+		SELECT id, start_ts, distance_mi,
+		       COALESCE(max_speed_mph, 0), COALESCE(avg_speed_mph, 0),
+		       COALESCE(avg_power_kw, 0), 0,
 		       COALESCE(soc_start, 0), COALESCE(soc_end, 0),
-		       COALESCE(outside_temp_avg, 20)
+		       COALESCE(outside_temp_avg_c, 20)
 		FROM drives
 		WHERE vehicle_id = $1
-		  AND start_date >= $2
-		  AND distance > 0.5
-		ORDER BY start_date DESC`, vehicleID, since)
+		  AND start_ts >= $2
+		  AND distance_mi > 0.5
+		ORDER BY start_ts DESC`, vehicleID, since)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("driving-coach: query failed")
 		writeError(w, http.StatusInternalServerError, "failed to get driving data")

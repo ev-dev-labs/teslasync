@@ -49,14 +49,14 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	driveRows, err := h.db.Pool.Query(ctx, `
-		SELECT id, start_date, distance, duration_min, speed_avg,
-			power_max, power_min,
-			start_battery_level, end_battery_level,
-			CASE WHEN distance > 0 THEN (start_battery_level - end_battery_level)::float / distance * 100 ELSE 0 END as efficiency
+		SELECT id, start_ts, distance_mi, duration_min, avg_speed_mph,
+			avg_power_kw, NULL::float8,
+			start_battery_pct, end_battery_pct,
+			CASE WHEN distance_mi > 0 THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 ELSE 0 END as efficiency
 		FROM drives
-		WHERE vehicle_id = $1 AND distance > 2 AND power_min IS NOT NULL
-			AND start_date > NOW() - interval '90 days'
-		ORDER BY start_date DESC`, vehicleID)
+		WHERE vehicle_id = $1 AND distance_mi > 2
+			AND start_ts > NOW() - interval '90 days'
+		ORDER BY start_ts DESC`, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get regen drive data")
 		writeError(w, http.StatusInternalServerError, "failed to get regen data")
@@ -72,7 +72,7 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 			log.Error().Err(err).Msg("failed to scan regen drive row")
 			continue
 		}
-		// Regen score: magnitude of power_min relative to speed (higher regen at lower speed = better)
+		// Regen score: based on avg_power_kw relative to speed
 		if d.PowerMin != nil {
 			regenKW := math.Abs(*d.PowerMin)
 			speedFactor := 1.0
@@ -97,14 +97,14 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	monthRows, err := h.db.Pool.Query(ctx, `
-		SELECT DATE_TRUNC('month', start_date) as month,
+		SELECT DATE_TRUNC('month', start_ts) as month,
 			COUNT(*) as drive_count,
-			AVG(ABS(COALESCE(power_min, 0))) as avg_regen_power_kw,
-			AVG(speed_avg) as avg_speed,
-			AVG(CASE WHEN distance > 0 THEN (start_battery_level - end_battery_level)::float / distance * 100 ELSE 0 END) as avg_efficiency
+			AVG(ABS(COALESCE(avg_power_kw, 0))) as avg_regen_power_kw,
+			AVG(avg_speed_mph) as avg_speed,
+			AVG(CASE WHEN distance_mi > 0 THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 ELSE 0 END) as avg_efficiency
 		FROM drives
-		WHERE vehicle_id = $1 AND distance > 2
-			AND start_date > NOW() - interval '12 months'
+		WHERE vehicle_id = $1 AND distance_mi > 2
+			AND start_ts > NOW() - interval '12 months'
 		GROUP BY month ORDER BY month`, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get monthly regen data")

@@ -137,12 +137,12 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 	var habits chargingHabits
 	err = h.db.Pool.QueryRow(ctx, `
 		SELECT
-			COUNT(*) FILTER (WHERE charger_power > 50),
-			COUNT(*) FILTER (WHERE charger_power <= 50 OR charger_power IS NULL),
-			COUNT(*) FILTER (WHERE start_battery_level < 10),
-			COUNT(*) FILTER (WHERE end_battery_level > 95),
-			COUNT(*) FILTER (WHERE end_battery_level > 90),
-			COALESCE(AVG(charge_energy_added), 0),
+			COUNT(*) FILTER (WHERE charger_power_kw_max > 50),
+			COUNT(*) FILTER (WHERE charger_power_kw_max <= 50 OR charger_power_kw_max IS NULL),
+			COUNT(*) FILTER (WHERE start_battery_pct < 10),
+			COUNT(*) FILTER (WHERE end_battery_pct > 95),
+			COUNT(*) FILTER (WHERE end_battery_pct > 90),
+			COALESCE(AVG(energy_added_kwh), 0),
 			COUNT(*)
 		FROM charging_sessions
 		WHERE vehicle_id = $1`, vehicleID).Scan(
@@ -187,8 +187,8 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 		// Cycle count from charge sessions
 		var delta *float64
 		_ = h.db.Pool.QueryRow(ctx,
-			`SELECT SUM(GREATEST(end_battery_level - start_battery_level, 0)) 
-			 FROM charging_sessions WHERE vehicle_id = $1 AND end_battery_level > start_battery_level`,
+			`SELECT SUM(GREATEST(end_battery_pct - start_battery_pct, 0)) 
+			 FROM charging_sessions WHERE vehicle_id = $1 AND end_battery_pct > start_battery_pct`,
 			vehicleID).Scan(&delta)
 		if delta != nil { currentCycles = int(*delta / 100) }
 
@@ -624,8 +624,8 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 		}
 		var delta *float64
 		_ = h.db.Pool.QueryRow(ctx,
-			`SELECT SUM(GREATEST(end_battery_level - start_battery_level, 0))
-			 FROM charging_sessions WHERE vehicle_id = $1 AND end_battery_level > start_battery_level`,
+			`SELECT SUM(GREATEST(end_battery_pct - start_battery_pct, 0))
+			 FROM charging_sessions WHERE vehicle_id = $1 AND end_battery_pct > start_battery_pct`,
 			vehicleID).Scan(&delta)
 		if delta != nil {
 			latestCycles = int(*delta / 100)
@@ -645,10 +645,10 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 	var fastCount, slowCount, deepDischarge, fullCharge int
 	_ = h.db.Pool.QueryRow(ctx, `
 		SELECT
-			COUNT(*) FILTER (WHERE charger_power > 50),
-			COUNT(*) FILTER (WHERE charger_power <= 50 OR charger_power IS NULL),
-			COUNT(*) FILTER (WHERE start_battery_level < 10),
-			COUNT(*) FILTER (WHERE end_battery_level > 95)
+			COUNT(*) FILTER (WHERE charger_power_kw_max > 50),
+			COUNT(*) FILTER (WHERE charger_power_kw_max <= 50 OR charger_power_kw_max IS NULL),
+			COUNT(*) FILTER (WHERE start_battery_pct < 10),
+			COUNT(*) FILTER (WHERE end_battery_pct > 95)
 		FROM charging_sessions
 		WHERE vehicle_id = $1`, vehicleID).Scan(&fastCount, &slowCount, &deepDischarge, &fullCharge)
 
@@ -696,8 +696,8 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 	// Avg depth of discharge
 	var avgDoD *float64
 	_ = h.db.Pool.QueryRow(ctx,
-		`SELECT AVG(GREATEST(start_battery_level - end_battery_level, 0))
-		 FROM drives WHERE vehicle_id = $1 AND start_battery_level > end_battery_level`,
+		`SELECT AVG(GREATEST(start_battery_pct - end_battery_pct, 0))
+		 FROM drives WHERE vehicle_id = $1 AND start_battery_pct > end_battery_pct`,
 		vehicleID).Scan(&avgDoD)
 	dod := 0.0
 	if avgDoD != nil {

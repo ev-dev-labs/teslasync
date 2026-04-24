@@ -56,14 +56,14 @@ func (h *DrivetrainHealthHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get peak motor power from recent drives as a proxy for motor health
-	var powerMax, powerMin *float64
+	var powerMax *float64
 	var recentDrives int
 	err = h.db.Pool.QueryRow(ctx, `
-		SELECT MAX(power_max), MIN(power_min), COUNT(*)
+		SELECT MAX(avg_power_kw), COUNT(*)
 		FROM drives
-		WHERE vehicle_id = $1 AND end_date IS NOT NULL
-		  AND start_date > NOW() - interval '30 days'`, vehicleID,
-	).Scan(&powerMax, &powerMin, &recentDrives)
+		WHERE vehicle_id = $1 AND end_ts IS NOT NULL
+		  AND start_ts > NOW() - interval '30 days'`, vehicleID,
+	).Scan(&powerMax, &recentDrives)
 	if err != nil {
 		log.Debug().Err(err).Int64("vehicleID", vehicleID).Msg("drivetrain: no drive power data")
 	}

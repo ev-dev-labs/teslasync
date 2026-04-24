@@ -433,19 +433,19 @@ func (h *TripPlannerHandler) vehicleEfficiency(ctx context.Context, vehicleID in
 	var eff *float64
 	_ = h.db.Pool.QueryRow(ctx, `
 		SELECT CASE
-			WHEN SUM(distance) > 0 THEN
+			WHEN SUM(distance_mi) > 0 THEN
 				SUM(
-					CASE WHEN distance > 1 AND soc_start > soc_end THEN
+					CASE WHEN distance_mi > 1 AND soc_start > soc_end THEN
 						(COALESCE(start_rated_range_km, 0) - COALESCE(end_rated_range_km, 0))
-						/ NULLIF(distance, 0) * 1000
-					ELSE 0 END * distance
+						/ NULLIF(distance_mi, 0) * 1000
+					ELSE 0 END * distance_mi
 				) / NULLIF(SUM(
-					CASE WHEN distance > 1 AND soc_start > soc_end THEN distance ELSE 0 END
+					CASE WHEN distance_mi > 1 AND soc_start > soc_end THEN distance_mi ELSE 0 END
 				), 0)
 			END
 		FROM drives
-		WHERE vehicle_id = $1 AND distance > 1
-		  AND start_date > NOW() - INTERVAL '90 days'`, vehicleID).Scan(&eff)
+		WHERE vehicle_id = $1 AND distance_mi > 1
+		  AND start_ts > NOW() - INTERVAL '90 days'`, vehicleID).Scan(&eff)
 
 	if eff != nil && *eff > 50 && *eff < 500 {
 		return *eff
@@ -484,9 +484,9 @@ func (h *TripPlannerHandler) batteryCapacity(ctx context.Context, vehicleID int6
 func (h *TripPlannerHandler) estimateWeatherImpact(ctx context.Context, vehicleID int64) tripWeatherImpact {
 	var avgTempC *float64
 	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT AVG(outside_temp_avg) FROM drives
-		WHERE vehicle_id = $1 AND outside_temp_avg IS NOT NULL
-		  AND start_date > NOW() - INTERVAL '7 days'`, vehicleID).Scan(&avgTempC)
+		SELECT AVG(outside_temp_avg_c) FROM drives
+		WHERE vehicle_id = $1 AND outside_temp_avg_c IS NOT NULL
+		  AND start_ts > NOW() - INTERVAL '7 days'`, vehicleID).Scan(&avgTempC)
 
 	if avgTempC == nil {
 		return tripWeatherImpact{

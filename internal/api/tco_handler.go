@@ -34,7 +34,7 @@ func (h *TCOHandler) GetTCO(w http.ResponseWriter, r *http.Request) {
 	var totalChargingCost, totalKWh float64
 	var totalSessions int
 	err = h.db.Pool.QueryRow(ctx,
-		`SELECT COALESCE(SUM(cost), 0), COALESCE(SUM(charge_energy_added), 0), COUNT(*)
+		`SELECT COALESCE(SUM(cost), 0), COALESCE(SUM(energy_added_kwh), 0), COUNT(*)
 		 FROM charging_sessions WHERE vehicle_id = $1 AND cost > 0`, vehicleID,
 	).Scan(&totalChargingCost, &totalKWh, &totalSessions)
 	if err != nil {
@@ -119,12 +119,12 @@ func (h *TCOHandler) GetTCO(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := h.db.Pool.Query(ctx,
-		`SELECT TO_CHAR(start_date, 'YYYY-MM') as month,
+		`SELECT TO_CHAR(start_ts, 'YYYY-MM') as month,
 		        COALESCE(SUM(cost), 0) as monthly_cost,
-		        COALESCE(SUM(charge_energy_added), 0) as monthly_kwh
+		        COALESCE(SUM(energy_added_kwh), 0) as monthly_kwh
 		 FROM charging_sessions
 		 WHERE vehicle_id = $1 AND cost > 0
-		 GROUP BY TO_CHAR(start_date, 'YYYY-MM')
+		 GROUP BY TO_CHAR(start_ts, 'YYYY-MM')
 		 ORDER BY month`, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Msg("tco: failed to get monthly breakdown")

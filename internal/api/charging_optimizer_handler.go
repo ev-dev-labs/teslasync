@@ -96,18 +96,18 @@ func (h *ChargingOptimizerHandler) GetOptimization(w http.ResponseWriter, r *htt
 	ctx := r.Context()
 
 	rows, err := h.db.Pool.Query(ctx, `
-		SELECT start_date,
+		SELECT start_ts,
 		       COALESCE(cost, 0),
-		       COALESCE(charge_energy_added, 0),
-		       COALESCE(charger_power, 0),
-		       COALESCE(end_battery_level, 0),
-		       COALESCE(start_battery_level, 0),
+		       COALESCE(energy_added_kwh, 0),
+		       COALESCE(charger_power_kw_max, 0),
+		       COALESCE(end_battery_pct, 0),
+		       COALESCE(start_battery_pct, 0),
 		       COALESCE(latitude, 0),
 		       COALESCE(longitude, 0),
-		       COALESCE(outside_temp_avg, 20)
+		       COALESCE(outside_temp_avg_c, 20)
 		FROM charging_sessions
 		WHERE vehicle_id = $1
-		ORDER BY start_date DESC`, vehicleID)
+		ORDER BY start_ts DESC`, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("charging-optimizer: query failed")
 		writeError(w, http.StatusInternalServerError, "failed to get charging data")

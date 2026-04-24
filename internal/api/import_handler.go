@@ -27,7 +27,7 @@ func NewImportHandler(db *database.DB) *ImportHandler {
 }
 
 // ImportDrives imports drive records from a CSV file upload.
-// Expected CSV columns: vehicle_id, start_date, end_date, distance, duration_min, speed_max
+// Expected CSV columns: vehicle_id, start_ts, end_ts, distance_mi, duration_min, max_speed_mph
 func (h *ImportHandler) ImportDrives(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid multipart form")
@@ -113,7 +113,7 @@ func (h *ImportHandler) ImportDrives(w http.ResponseWriter, r *http.Request) {
 }
 
 // ImportCharging imports charging session records from a CSV file upload.
-// Expected CSV columns: vehicle_id, start_date, end_date, energy_added_kwh, start_battery, end_battery, charger_power, duration_min
+// Expected CSV columns: vehicle_id, start_ts, end_ts, energy_added_kwh, start_battery, end_battery, charger_power_kw_max, duration_min
 func (h *ImportHandler) ImportCharging(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid multipart form")
