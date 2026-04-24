@@ -1,0 +1,63 @@
+=== SURVEY ===
+Timestamp: 2026-04-24T11:36:23.7427629-07:00
+
+=== internal\database\settings_repo.go ===
+D:\repos\teslasync\internal\database\settings_repo.go:121:	case "base_cost_per_kwh":
+D:\repos\teslasync\internal\database\settings_repo.go:145:	case "gas_price_per_unit":
+D:\repos\teslasync\internal\database\settings_repo.go:153:	case "gas_efficiency_mpg":
+D:\repos\teslasync\internal\database\settings_repo.go:247:		{"base_cost_per_kwh", s.BaseCostPerKWh},
+D:\repos\teslasync\internal\database\settings_repo.go:248:		{"gas_price_per_unit", s.GasPricePerUnit},
+D:\repos\teslasync\internal\database\settings_repo.go:249:		{"gas_efficiency_mpg", s.GasEfficiencyMPG},
+=== internal\export\processor.go ===
+D:\repos\teslasync\internal\export\processor.go:168:		ChargerPower float64 `json:"charger_power"`
+D:\repos\teslasync\internal\export\processor.go:227:		_ = cw.Write([]string{"id", "vehicle_id", "start_date", "end_date", "energy_added_kwh", "start_battery", "end_battery", "charger_power", "duration_min"})
+MISSING: internal\domain\vehicle\system.go
+MISSING: internal\tesla\mqtt.go
+MISSING: internal\api\hot_catalog_charging.go
+MISSING: internal\api\hot_catalog_vehicle_live_state.go
+MISSING: internal\domain\charging\mapper.go
+
+=== REASONING ===
+
+--- settings_repo.go (6 hits) ---
+Lines 121,145,153,247,248,249: "base_cost_per_kwh", "gas_price_per_unit", "gas_efficiency_mpg"
+These are key-value store KEY STRINGS stored in the settings table's 'key' column.
+The settings table schema (000142_baseline_typed.up.sql:1397) is:
+  CREATE TABLE settings (key text PRIMARY KEY, value_text text, value_num double precision, ...)
+These are NOT column references — they are data values. FALSE POSITIVES.
+
+--- export/processor.go (2 hits) ---
+Line 168: ChargerPower float64 json:"charger_power" — JSON-only export struct (no db: tag)
+Line 227: CSV header label "charger_power" — export output format, not a DB reference
+Per rules: "If it's a Go struct json: tag for API response (no db: tag) -> keep for API compat"
+The struct maps from s.ChargerPowerKwMax (correct model field). FALSE POSITIVES.
+
+--- domain/charging/types.go (0 regex hits) ---
+Survey regex did not match any patterns. Verified db: tags (max_power_kw, cost_cents,
+fsm_state, etc.) match SQL query ALIASES in internal/adapter/postgres/queries/charging.go,
+which bridge from actual table columns (charger_power_kw_max, cost, start_ts, etc.)
+to domain model names. This is intentional adapter pattern. NO CHANGES NEEDED.
+
+--- Missing files (5 of 8) ---
+internal/domain/vehicle/system.go    — DOES NOT EXIST (types.go, fsm.go exist)
+internal/tesla/mqtt.go               — DOES NOT EXIST
+internal/api/hot_catalog_charging.go  — DOES NOT EXIST
+internal/api/hot_catalog_vehicle_live_state.go — DOES NOT EXIST
+internal/domain/charging/mapper.go   — DOES NOT EXIST
+These files were listed as allowed but do not exist. No changes possible.
+
+--- Conclusion ---
+ALL survey hits are false positives (KV store keys, JSON export tags).
+Domain charging db: tags are valid (match SQL query aliases).
+No code changes required. Proceeding to gate.
+
+=== CHANGES ===
+No code changes made. All hits verified as false positives.
+
+
+=== GATE ===
+BUILD OK
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
