@@ -1,4 +1,4 @@
-import type { StateEntry, Edge, FSMDefinition, DisallowedTransition, CoverageMatrix, TruthTable } from './types'
+import type { StateEntry, Edge, FSMDefinition, DisallowedTransition, CoverageMatrix, TruthTable, Scenario } from './types'
 import { deriveEdges, type TransitionRow } from './types'
 
 /**
@@ -201,13 +201,57 @@ export const VEHICLE_TRUTH_TABLE: TruthTable<VehicleState, VehicleTrigger> = {
   },
 }
 
+export const VEHICLE_SCENARIOS: Scenario<VehicleState>[] = [
+  { id: 'V1',  description: 'Morning: asleep → unlock → drive',                     transitions: ['asleep', 'online', 'driving'] },
+  { id: 'V2',  description: 'Arrive at work, park',                                  transitions: ['driving', 'parked'] },
+  { id: 'V3',  description: 'Plug into workplace L2',                                transitions: ['parked', 'charging'] },
+  { id: 'V4',  description: 'Charge completes mid-day',                              transitions: ['charging', 'parked'] },
+  { id: 'V5',  description: 'Drive home',                                             transitions: ['parked', 'driving'] },
+  { id: 'V6',  description: 'Park, plug in, walk away',                              transitions: ['driving', 'parked', 'charging'] },
+  { id: 'V7',  description: 'Cell-balance dwell overnight',                          transitions: ['charging', 'asleep'] },
+  { id: 'V8',  description: 'Charge resumes from dwell',                             transitions: ['asleep', 'charging'] },
+  { id: 'V9',  description: 'Quiet park → graceful sleep',                           transitions: ['parked', 'asleep'] },
+  { id: 'V10', description: 'Drive into tunnel, signal lost',                        transitions: ['driving', 'offline'] },
+  { id: 'V11', description: 'Exit tunnel, still driving',                            transitions: ['offline', 'driving'] },
+  { id: 'V12', description: 'Underground garage blackout',                           transitions: ['parked', 'offline'] },
+  { id: 'V13', description: 'Garage opens, still parked',                            transitions: ['offline', 'parked'] },
+  { id: 'V14', description: 'DC charger network drop',                               transitions: ['charging', 'offline'] },
+  { id: 'V15', description: 'Reconnect mid-charge',                                  transitions: ['offline', 'charging'] },
+  { id: 'V16', description: 'Long offline → deep sleep',                             transitions: ['offline', 'asleep'] },
+  { id: 'V17', description: 'Brief signal blip',                                     transitions: ['online', 'offline', 'online'] },
+  { id: 'V18', description: 'Charge fault → awake',                                  transitions: ['charging', 'online'] },
+  { id: 'V19', description: 'Unplug and drive off',                                  transitions: ['charging', 'driving'] },
+  { id: 'V20', description: 'Supercharger pull-in still in D',                       transitions: ['driving', 'charging'] },
+  { id: 'V21', description: 'Scheduled charge starts at 11pm',                       transitions: ['asleep', 'charging'] },
+  { id: 'V23', description: 'Remote precondition while parked',                      transitions: ['parked', 'online'] },
+  { id: 'V25', description: 'Cabin overheat wakes asleep car',                       transitions: ['asleep', 'online'] },
+  { id: 'V26', description: 'Precondition ends → sleep',                             transitions: ['online', 'parked', 'asleep'] },
+  { id: 'V28', description: 'REST-poll speed > 1, no gear',                          transitions: ['online', 'driving'] },
+  { id: 'V29', description: 'Speed = 0, no gear → Online',                           transitions: ['driving', 'online'] },
+  { id: 'V30', description: 'Gear=P seen → future stops = Parked',                   transitions: ['driving', 'parked'] },
+  { id: 'V31', description: 'Cold-start: already charging',                          transitions: ['offline', 'charging'] },
+  { id: 'V32', description: 'Cold-start: mid-drive',                                 transitions: ['offline', 'driving'] },
+  { id: 'V33', description: 'Cold-start: parked + plugged + asleep',                 transitions: ['offline', 'asleep'] },
+  { id: 'V34', description: 'Driving → lost → home → parked',                        transitions: ['driving', 'offline', 'parked'] },
+  { id: 'V35', description: 'Sleep deepens past staleTimeout',                       transitions: ['asleep', 'offline'] },
+  { id: 'V36', description: 'Asleep car loaded onto flatbed',                        transitions: ['asleep', 'driving'] },
+  { id: 'V37', description: 'Offline car towed, signal returns',                     transitions: ['offline', 'driving'] },
+  { id: 'V38', description: 'REST-poll: unplugs and rolls away',                     transitions: ['charging', 'driving'] },
+]
+
 /** Valid transitions for the vehicle FSM — derived from transition table */
 export const VEHICLE_EDGES: Edge<VehicleState>[] = deriveEdges(VEHICLE_TRANSITIONS)
 
 /** Complete vehicle FSM definition */
-export const VEHICLE_FSM: FSMDefinition<VehicleState> = {
+export const VEHICLE_FSM: FSMDefinition<VehicleState, VehicleTrigger> = {
   states: VEHICLE_STATE_ENTRIES,
   edges: VEHICLE_EDGES,
+  transitions: VEHICLE_TRANSITIONS,
+  disallowed: VEHICLE_DISALLOWED,
+  coverage: VEHICLE_COVERAGE,
+  truthTable: VEHICLE_TRUTH_TABLE,
+  scenarios: VEHICLE_SCENARIOS,
+  labels: VEHICLE_STATE_LABELS,
 }
 
 /** Signal context — mirrors Go SignalContext (§2.4) */
