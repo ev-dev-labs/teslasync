@@ -20,6 +20,21 @@ export const COMMAND_STATE_ENTRIES: Record<CommandState, StateEntry> = {
   gave_up:        { variant: 'danger',  overrides: { badgeDot: 'bg-red-500', bg: 'bg-red-600/10', text: 'text-red-500', dot: 'bg-red-500' } },
 }
 
+export const COMMAND_TRIGGERS = [
+  'vehicle_awake', 'vehicle_asleep', 'duplicate_command',
+  'wake_response', 'timeout_30s', 'init_delay',
+  'command_ok', 'command_error', 'timeout_15s',
+  'retry_scheduled', 'backoff_expired',
+] as const
+export type CommandTrigger = (typeof COMMAND_TRIGGERS)[number]
+
+export const COMMAND_GUARDS = [
+  'retryable', 'non_retryable',
+  'wake_retries_left', 'wake_retries_exhausted',
+  'retries_left', 'retries_exhausted',
+] as const
+export type CommandGuard = (typeof COMMAND_GUARDS)[number]
+
 export const COMMAND_EDGES: Edge<CommandState>[] = [
   ['queued', 'waking'],           ['waking', 'wake_confirmed'],  ['waking', 'wake_timeout'],
   ['wake_confirmed', 'sending'],  ['wake_timeout', 'retrying'],
