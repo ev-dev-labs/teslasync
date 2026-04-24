@@ -2,8 +2,6 @@ package database
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/models"
@@ -21,26 +19,18 @@ func NewNotificationRepo(db *DB) *NotificationRepo {
 // --- Channels ---
 
 func (r *NotificationRepo) CreateChannel(ctx context.Context, ch *models.NotificationChannel) error {
-	cfgJSON, err := json.Marshal(ch.Config)
-	if err != nil {
-		return err
-	}
 	now := time.Now().UTC()
 	return r.db.Pool.QueryRow(ctx,
-		`INSERT INTO notification_channels (name, type, config, enabled, created_at, updated_at)
-		 VALUES ($1, $2, $3, $4, $5, $5) RETURNING id`,
-		ch.Name, ch.Type, cfgJSON, ch.Enabled, now,
+		`INSERT INTO notification_channels (name, kind, enabled, created_at, updated_at)
+		 VALUES ($1, $2, $3, $4, $4) RETURNING id`,
+		ch.Name, ch.Type, ch.Enabled, now,
 	).Scan(&ch.ID)
 }
 
 func (r *NotificationRepo) UpdateChannel(ctx context.Context, ch *models.NotificationChannel) error {
-	cfgJSON, err := json.Marshal(ch.Config)
-	if err != nil {
-		return err
-	}
-	_, err = r.db.Pool.Exec(ctx,
-		`UPDATE notification_channels SET name=$1, type=$2, config=$3, enabled=$4, updated_at=$5 WHERE id=$6`,
-		ch.Name, ch.Type, cfgJSON, ch.Enabled, time.Now().UTC(), ch.ID,
+	_, err := r.db.Pool.Exec(ctx,
+		`UPDATE notification_channels SET name=$1, kind=$2, enabled=$3, updated_at=$4 WHERE id=$5`,
+		ch.Name, ch.Type, ch.Enabled, time.Now().UTC(), ch.ID,
 	)
 	return err
 }
@@ -52,23 +42,19 @@ func (r *NotificationRepo) DeleteChannel(ctx context.Context, id int64) error {
 
 func (r *NotificationRepo) GetChannel(ctx context.Context, id int64) (*models.NotificationChannel, error) {
 	ch := &models.NotificationChannel{}
-	var cfgJSON []byte
 	err := r.db.Pool.QueryRow(ctx,
-		`SELECT id, name, type, config, enabled, created_at, updated_at FROM notification_channels WHERE id=$1`, id,
-	).Scan(&ch.ID, &ch.Name, &ch.Type, &cfgJSON, &ch.Enabled, &ch.CreatedAt, &ch.UpdatedAt)
+		`SELECT id, name, kind, enabled, created_at, updated_at FROM notification_channels WHERE id=$1`, id,
+	).Scan(&ch.ID, &ch.Name, &ch.Type, &ch.Enabled, &ch.CreatedAt, &ch.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
 	ch.Config = make(map[string]string)
-	if err := json.Unmarshal(cfgJSON, &ch.Config); err != nil {
-		return nil, fmt.Errorf("unmarshalling config: %w", err)
-	}
 	return ch, nil
 }
 
 func (r *NotificationRepo) GetAllChannels(ctx context.Context) ([]*models.NotificationChannel, error) {
 	rows, err := r.db.Pool.Query(ctx,
-		`SELECT id, name, type, config, enabled, created_at, updated_at FROM notification_channels ORDER BY created_at DESC LIMIT 1000`,
+		`SELECT id, name, kind, enabled, created_at, updated_at FROM notification_channels ORDER BY created_at DESC LIMIT 1000`,
 	)
 	if err != nil {
 		return nil, err
@@ -78,14 +64,10 @@ func (r *NotificationRepo) GetAllChannels(ctx context.Context) ([]*models.Notifi
 	var channels []*models.NotificationChannel
 	for rows.Next() {
 		ch := &models.NotificationChannel{}
-		var cfgJSON []byte
-		if err := rows.Scan(&ch.ID, &ch.Name, &ch.Type, &cfgJSON, &ch.Enabled, &ch.CreatedAt, &ch.UpdatedAt); err != nil {
+		if err := rows.Scan(&ch.ID, &ch.Name, &ch.Type, &ch.Enabled, &ch.CreatedAt, &ch.UpdatedAt); err != nil {
 			return nil, err
 		}
 		ch.Config = make(map[string]string)
-		if err := json.Unmarshal(cfgJSON, &ch.Config); err != nil {
-			return nil, fmt.Errorf("unmarshalling config: %w", err)
-		}
 		channels = append(channels, ch)
 	}
 	return channels, rows.Err()

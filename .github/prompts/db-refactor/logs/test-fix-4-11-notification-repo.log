@@ -1,0 +1,41 @@
+=== SURVEY ===
+DB columns for notification_channels: id, name, kind, enabled, created_at, updated_at
+No 'config' column — config lives in per-kind child tables (notification_channel_discord, etc.)
+No 'type' column — renamed to 'kind' in db-refactor migration.
+
+Code had:
+  - SQL references to column 'type' (should be 'kind')
+  - SQL references to column 'config' (does not exist — removed from schema)
+  - json.Marshal/Unmarshal of config JSONB (no longer needed)
+
+NotificationChannel model at internal/models/models.go:391
+  - Type field db tag was "type", needs "kind"
+  - Config field db tag was "config", needs "-" (not a DB column)
+
+ch.Type used in 50+ places across handlers/workers/automation — renaming Go field out of scope.
+
+=== REASONING ===
+Keep Go field name 'Type' (avoid cascading changes across dozens of files).
+Change only db tag: db:"type" → db:"kind".
+Mark Config: db:"-" since it's not a DB column.
+Fix 4 SQL queries in notification_repo.go: type→kind, remove config column.
+Remove json.Marshal/Unmarshal of cfgJSON (no config column to read/write).
+Remove unused imports (encoding/json, fmt).
+Initialize Config to empty map on reads so callers don't hit nil map.
+
+=== CHANGES ===
+1. internal/models/models.go:
+   - Type field: db:"type" → db:"kind"
+   - Config field: db:"config" → db:"-"
+
+2. internal/database/notification_repo.go:
+   - CreateChannel: removed config from INSERT, removed json.Marshal, reordered params
+   - UpdateChannel: removed config from UPDATE, removed json.Marshal, reordered params
+   - GetChannel: removed config from SELECT, removed cfgJSON scan/unmarshal
+   - GetAllChannels: removed config from SELECT, removed cfgJSON scan/unmarshal
+   - Removed unused imports: encoding/json, fmt
+
+=== GATE ===
+go build ./... — PASS (exit 0)
+EXIT=0
+STATUS=DONE

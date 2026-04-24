@@ -391,8 +391,8 @@ type BatterySnapshot struct {
 type NotificationChannel struct {
 	ID        int64             `json:"id" db:"id"`
 	Name      string            `json:"name" db:"name"`
-	Type      string            `json:"type" db:"type"` // discord, email, slack, telegram, webhook, ntfy, pushover
-	Config    map[string]string `json:"config" db:"config"`
+	Type      string            `json:"type" db:"kind"` // discord, email, slack, telegram, webhook, ntfy, pushover
+	Config    map[string]string `json:"config" db:"-"`  // populated from per-kind child tables, not a DB column
 	Enabled   bool              `json:"enabled" db:"enabled"`
 	CreatedAt time.Time         `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time         `json:"updated_at" db:"updated_at"`
