@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
@@ -59,17 +58,15 @@ func (h *TCOHandler) GetTCO(w http.ResponseWriter, r *http.Request) {
 	// Get gas price and efficiency from settings
 	var baseCostPerKWh, gasPrice, gasEfficiencyMPG float64
 	err = h.db.Pool.QueryRow(ctx,
-		`SELECT COALESCE(base_cost_per_kwh, 0.12), COALESCE(gas_price_per_unit, 3.50), COALESCE(gas_efficiency_mpg, 25) FROM settings LIMIT 1`,
+		`SELECT
+		   COALESCE((SELECT value_num FROM settings WHERE key = 'base_cost_per_kwh'), 0.12),
+		   COALESCE((SELECT value_num FROM settings WHERE key = 'gas_price_per_unit'), 3.50),
+		   COALESCE((SELECT value_num FROM settings WHERE key = 'gas_efficiency_mpg'), 25)`,
 	).Scan(&baseCostPerKWh, &gasPrice, &gasEfficiencyMPG)
-	if err != nil && err != pgx.ErrNoRows {
+	if err != nil {
 		log.Error().Err(err).Msg("tco: failed to get settings")
 		writeError(w, http.StatusInternalServerError, "failed to get TCO data")
 		return
-	}
-	if err == pgx.ErrNoRows {
-		baseCostPerKWh = 0.12
-		gasPrice = 3.50
-		gasEfficiencyMPG = 25
 	}
 	// Guard against zero/negative values that would cause division-by-zero (producing +Inf/NaN in JSON)
 	if gasEfficiencyMPG <= 0 {

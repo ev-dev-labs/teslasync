@@ -1,0 +1,27 @@
+=== SURVEY ===
+
+internal\api\tco_handler.go:46:	// Total distance and date range from daily_mileage
+internal\api\tco_handler.go:62:		`SELECT COALESCE(base_cost_per_kwh, 0.12), COALESCE(gas_price_per_unit, 3.50), COALESCE(gas_efficiency_mpg, 25) FROM settings LIMIT 1`,
+internal\api\tco_handler.go:217:		"gas_price":                    safeF(gasPrice),
+internal\api\tco_handler.go:218:		"gas_efficiency_mpg":           safeF(gasEfficiencyMPG),
+internal\api\tco_handler.go:219:		"base_cost_per_kwh":            safeF(baseCostPerKWh),
+
+
+=== REASONING ===
+Old settings query used flat columns (base_cost_per_kwh, gas_price_per_unit, gas_efficiency_mpg).
+New settings table is key-value: key TEXT PK, value_num FLOAT8, etc.
+Rewrote to 3 scalar subselects with COALESCE defaults. No more pgx.ErrNoRows branch needed.
+Removed unused pgx import.
+
+=== CHANGES ===
+File: internal/api/tco_handler.go
+- Lines 60-72: Replaced flat-column settings query with key-value subselect query
+- Removed pgx.ErrNoRows fallback (COALESCE handles missing keys)
+- Removed unused pgx/v5 import
+
+=== GATE ===
+go build ./... passed
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
