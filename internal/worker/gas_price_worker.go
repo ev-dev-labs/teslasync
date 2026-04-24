@@ -153,13 +153,14 @@ func (w *GasPriceWorker) recordPrice(ctx context.Context, price float64) error {
 		return fmt.Errorf("close period: %w", err)
 	}
 
-	// Get current efficiency from settings
-	var efficiencyMPG float64
+	// Get current efficiency from settings (key-value table)
 	var gasUnit string
+	var efficiencyMPG float64
 	err = tx.QueryRow(ctx,
-		`SELECT gas_unit, gas_efficiency_mpg FROM settings WHERE id = 1`).Scan(&gasUnit, &efficiencyMPG)
+		`SELECT
+			COALESCE((SELECT value_text FROM settings WHERE key = 'gas_unit'), 'gallon'),
+			COALESCE((SELECT value_num FROM settings WHERE key = 'gas_efficiency_mpg'), 25)`).Scan(&gasUnit, &efficiencyMPG)
 	if err != nil {
-		// Defaults if settings not found
 		gasUnit = "gallon"
 		efficiencyMPG = 25
 	}
@@ -174,10 +175,12 @@ func (w *GasPriceWorker) recordPrice(ctx context.Context, price float64) error {
 	return tx.Commit(ctx)
 }
 
-// updateSettingsPrice updates the gas_price_per_unit in the settings table.
+// updateSettingsPrice upserts the gas_price_per_unit in the key-value settings table.
 func (w *GasPriceWorker) updateSettingsPrice(ctx context.Context, price float64) error {
 	_, err := w.db.Pool.Exec(ctx,
-		`UPDATE settings SET gas_price_per_unit = $1 WHERE id = 1`, price)
+		`INSERT INTO settings (key, value_num, data_kind, created_at, updated_at)
+		VALUES ('gas_price_per_unit', $1, 'number', NOW(), NOW())
+		ON CONFLICT (key) DO UPDATE SET value_num = $1, updated_at = NOW()`, price)
 	return err
 }
 
