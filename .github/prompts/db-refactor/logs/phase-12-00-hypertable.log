@@ -1,0 +1,88 @@
+=== SURVEY ===
+Table: signal_history
+Source migration: migrations/000040_signal_history.up.sql
+Current schema:
+  id          BIGSERIAL PRIMARY KEY
+  vehicle_id  BIGINT NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE
+  signal      VARCHAR(100) NOT NULL
+  value_num   DOUBLE PRECISION
+  value_str   VARCHAR(500)
+  value_bool  BOOLEAN
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+Indexes:
+  idx_signal_history_vehicle_signal_time (vehicle_id, signal, created_at DESC)
+  idx_signal_history_created (created_at)
+Inbound FKs: none
+Go code usage (signal_history_writer.go):
+  - CopyFrom inserts: vehicle_id, signal, value_num, value_str, value_bool, created_at (no id)
+  - All queries SELECT same 6 columns (no id)
+  - Cleanup uses DELETE WHERE created_at < ... (user-configurable retention)
+  - id column is unreferenced in entire Go codebase
+Existing hypertable patterns in 000142_baseline_typed.up.sql:
+  - positions: PK (vehicle_id, ts), segmentby=vehicle_id
+  - signal_observations: PK (vehicle_id, ts, signal_name), segmentby=vehicle_id,signal_name
+  - All use chunk_time_interval 1 day, compression policy 7d
+Next migration number in internal/database/migrations/: 000042
+
+=== REASONING ===
+1. Drop id column — not used by any Go code, and hypertables require time column in PK.
+   Using DROP COLUMN (not DROP CONSTRAINT) so it works regardless of constraint name.
+2. Composite PK: (vehicle_id, created_at, signal) — matches signal_observations pattern
+   and ensures created_at is in the PK for hypertable partitioning.
+3. chunk_time_interval: 1 day — matches signal_observations and positions patterns.
+4. compress_segmentby: vehicle_id, signal — matches signal_observations pattern,
+   enables per-vehicle+signal decompression for time-range queries.
+5. compress_orderby: created_at DESC — standard for time-series.
+6. Compression policy: 1 hour (per prompt) — aggressive but appropriate since
+   signal_history is predominantly read via recent time-range queries.
+7. NO retention policy — existing manual TTL in signal_history_writer.go:162 handles
+   retention via user-configurable settings (retentionDays param).
+8. Existing indexes (vehicle_signal_time, created) are auto-migrated to chunk-local
+   indexes by create_hypertable(migrate_data => true).
+
+=== CHANGES ===
+Created: internal/database/migrations/000042_signal_history_hypertable.up.sql
+  - DROP COLUMN id (cascades PK constraint regardless of name)
+  - ADD PRIMARY KEY (vehicle_id, created_at, signal)
+  - create_hypertable('signal_history', 'created_at', migrate_data => true, chunk_time_interval => '1 day')
+  - ALTER TABLE SET (compress, segmentby='vehicle_id, signal', orderby='created_at DESC')
+  - add_compression_policy('signal_history', '1 hour')
+
+Created: internal/database/migrations/000042_signal_history_hypertable.down.sql
+  - remove_compression_policy
+  - decompress all chunks
+  - CREATE TABLE signal_history_plain (original schema with BIGSERIAL PK + FK)
+  - INSERT ... SELECT data from hypertable
+  - DROP hypertable, RENAME plain table
+  - Re-create indexes
+
+=== GATE ===
+Test 1 — UP migration (fresh):
+  Result: PASS
+  Output: create_hypertable returned (id,public,signal_history,t)
+  Compression policy active: compress_after=01:00:00
+
+Test 2 — Verify hypertable:
+  Query: SELECT hypertable_name FROM timescaledb_information.hypertables WHERE hypertable_name = 'signal_history';
+  Result: 1 row returned ✓
+
+Test 3 — Verify compression settings:
+  segmentby: vehicle_id (1), signal (2)
+  orderby: created_at DESC ✓
+
+Test 4 — Verify compression policy job:
+  config: {"hypertable_id": N, "compress_after": "01:00:00"} ✓
+
+Test 5 — DOWN migration:
+  Result: PASS
+  remove_compression_policy: true
+  Table restored as regular table with BIGSERIAL PK, FK, indexes ✓
+  Hypertable count after DOWN: 0 rows ✓
+
+Test 6 — Re-UP after DOWN (round-trip):
+  Result: PASS
+  Hypertable re-created, compression policy re-activated ✓
+
+=== COMMIT ===
+EXIT=0
+STATUS=DONE
