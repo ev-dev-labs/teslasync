@@ -1,0 +1,45 @@
+=== SURVEY ===
+Date: 2026-04-23T22:20:04.7783815-07:00
+
+Searching for mv_energy_daily, mv_position_hourly, mv_signal_stats in internal/
+
+
+Migration 000142 drops all three:
+  DROP MATERIALIZED VIEW IF EXISTS mv_position_hourly CASCADE;
+  DROP MATERIALIZED VIEW IF EXISTS mv_energy_daily    CASCADE;
+  DROP MATERIALIZED VIEW IF EXISTS mv_signal_stats    CASCADE;
+
+Replaced by TimescaleDB continuous aggregates (cagg_*) per ADR-006.
+Continuous aggregates refresh automatically via TimescaleDB policies.
+
+=== REASONING ===
+All 3 materialized views in refreshMaterializedViews() were dropped by migration
+000142_baseline_typed and replaced by TimescaleDB continuous aggregates (cagg_*).
+Caggs auto-refresh via TimescaleDB policies — no manual REFRESH needed.
+
+Decision: Option A — remove refreshMaterializedViews() entirely and its call site.
+The function becomes a no-op since the view list is now empty.
+
+Note: energy_repo.go and signal_history_writer.go also reference these views
+but are outside the allowed scope of this fix (maintenance_worker.go only).
+
+=== CHANGES ===
+File: internal/worker/maintenance_worker.go
+1. Remove call to refreshMaterializedViews() at line 54 (and comment at line 53)
+2. Remove the entire refreshMaterializedViews function (lines 125-142)
+
+D:\repos\teslasync\internal\database\energy_repo.go:131:	FROM mv_energy_daily mv
+D:\repos\teslasync\internal\database\energy_repo.go:158:	FROM mv_energy_daily
+D:\repos\teslasync\internal\database\signal_history_writer.go:321:// Stats returns aggregate stats per signal using the mv_signal_stats materialized view.
+D:\repos\teslasync\internal\database\signal_history_writer.go:326:		 FROM mv_signal_stats
+D:\repos\teslasync\internal\worker\maintenance_worker.go:129:		"mv_energy_daily",
+D:\repos\teslasync\internal\worker\maintenance_worker.go:130:		"mv_position_hourly",
+D:\repos\teslasync\internal\worker\maintenance_worker.go:131:		"mv_signal_stats",
+
+=== GATE ===
+
+go build exit code: 0
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
