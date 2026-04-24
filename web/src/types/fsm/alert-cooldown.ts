@@ -40,7 +40,7 @@ export const ALERT_COOLDOWN_DISALLOWED: DisallowedTransition<AlertCooldownState>
 export const ALERT_COOLDOWN_COVERAGE: CoverageMatrix<AlertCooldownState> = {
   armed:      { armed: 'self', fired: 'valid',      suppressed: 'disallowed' },
   fired:      { armed: 'valid', fired: 'self',      suppressed: 'valid' },
-  suppressed: { armed: 'valid', fired: 'disallowed', suppressed: 'valid' },
+  suppressed: { armed: 'valid', fired: 'disallowed', suppressed: 'self' },
 }
 
 export const ALERT_COOLDOWN_SCENARIOS: Scenario<AlertCooldownState>[] = [
