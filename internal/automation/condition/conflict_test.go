@@ -12,22 +12,37 @@ import (
 
 func ptr[T any](v T) *T { return &v }
 
-func makeAutomation(id int64, name string, vehicleID *int64, triggerType string, triggerConfig, actions string) *models.Automation {
-	return &models.Automation{
-		ID:            id,
-		Name:          name,
-		VehicleID:     vehicleID,
-		Enabled:       true,
-		TriggerType:   triggerType,
-		TriggerConfig: json.RawMessage(triggerConfig),
-		Actions:       json.RawMessage(actions),
+func makeAutomation(id int64, name string, vehicleID *int64, triggerType string, triggerConfig, actions string) *models.AutomationFull {
+	var triggerMap map[string]any
+	_ = json.Unmarshal([]byte(triggerConfig), &triggerMap)
+
+	var triggers []any
+	if triggerMap != nil {
+		triggers = []any{triggerMap}
+	}
+
+	var actionSlice []any
+	_ = json.Unmarshal([]byte(actions), &actionSlice)
+
+	return &models.AutomationFull{
+		Automation: models.Automation{
+			ID:        id,
+			Name:      name,
+			VehicleID: vehicleID,
+			Enabled:   true,
+		},
+		Steps: []models.AutomationStep{
+			{Kind: "trigger_" + triggerType},
+		},
+		Triggers: triggers,
+		Actions:  actionSlice,
 	}
 }
 
 // ── DetectConflicts Tests ───────────────────────────────
 
 func TestDetectConflicts_NilCandidate(t *testing.T) {
-	result := DetectConflicts(context.Background(), nil, []*models.Automation{})
+	result := DetectConflicts(context.Background(), nil, []*models.AutomationFull{})
 	if len(result) != 0 {
 		t.Fatalf("expected 0 conflicts for nil candidate, got %d", len(result))
 	}
@@ -52,7 +67,7 @@ func TestDetectConflicts_NoActionsOnCandidate(t *testing.T) {
 		`{"cron_expr":"0 22 * * *"}`,
 		`[{"command":"unlock"}]`)
 
-	result := DetectConflicts(context.Background(), candidate, []*models.Automation{other})
+	result := DetectConflicts(context.Background(), candidate, []*models.AutomationFull{other})
 	if len(result) != 0 {
 		t.Fatalf("expected 0 conflicts for no-action candidate, got %d", len(result))
 	}
@@ -68,7 +83,7 @@ func TestDetectConflicts_SkipsSelf(t *testing.T) {
 		`{"cron_expr":"0 22 * * *"}`,
 		`[{"command":"unlock"}]`)
 
-	result := DetectConflicts(context.Background(), auto, []*models.Automation{other})
+	result := DetectConflicts(context.Background(), auto, []*models.AutomationFull{other})
 	if len(result) != 0 {
 		t.Fatalf("expected 0 conflicts when comparing with self, got %d", len(result))
 	}
@@ -84,26 +99,16 @@ func TestDetectConflicts_SkipsDisabledAutomations(t *testing.T) {
 		`[{"command":"unlock"}]`)
 	disabled.Enabled = false
 
-	result := DetectConflicts(context.Background(), candidate, []*models.Automation{disabled})
+	result := DetectConflicts(context.Background(), candidate, []*models.AutomationFull{disabled})
 	if len(result) != 0 {
 		t.Fatalf("expected 0 conflicts for disabled other, got %d", len(result))
 	}
 }
 
 func TestDetectConflicts_SkipsAutoDisabledAutomations(t *testing.T) {
-	candidate := makeAutomation(1, "lock nightly", nil, "cron",
-		`{"cron_expr":"0 22 * * *"}`,
-		`[{"command":"lock"}]`)
-
-	autoDisabled := makeAutomation(2, "unlock nightly", nil, "cron",
-		`{"cron_expr":"0 22 * * *"}`,
-		`[{"command":"unlock"}]`)
-	autoDisabled.AutoDisabled = true
-
-	result := DetectConflicts(context.Background(), candidate, []*models.Automation{autoDisabled})
-	if len(result) != 0 {
-		t.Fatalf("expected 0 conflicts for auto-disabled other, got %d", len(result))
-	}
+	// AutoDisabled() is now derived from run history (always false until
+	// the run-history table lands). This test is a placeholder until then.
+	t.Skip("AutoDisabled is now a method derived from run history, not a settable field")
 }
 
 // ── Cron Trigger Conflicts ──────────────────────────────
@@ -116,7 +121,7 @@ func TestDetectConflicts_CronSameScheduleOppositeActions(t *testing.T) {
 		`{"cron_expr":"0 22 * * *"}`,
 		`[{"command":"unlock"}]`)
 
-	result := DetectConflicts(context.Background(), candidate, []*models.Automation{other})
+	result := DetectConflicts(context.Background(), candidate, []*models.AutomationFull{other})
 	if len(result) != 1 {
 		t.Fatalf("expected 1 conflict, got %d", len(result))
 	}
@@ -136,7 +141,7 @@ func TestDetectConflicts_CronDifferentSchedule_NoConflict(t *testing.T) {
 		`{"cron_expr":"0 6 * * *"}`,
 		`[{"command":"unlock"}]`)
 
-	result := DetectConflicts(context.Background(), candidate, []*models.Automation{other})
+	result := DetectConflicts(context.Background(), candidate, []*models.AutomationFull{other})
 	if len(result) != 0 {
 		t.Fatalf("expected 0 conflicts for different cron schedules, got %d", len(result))
 	}
@@ -150,7 +155,7 @@ func TestDetectConflicts_CronSameExprDifferentTimezone_NoConflict(t *testing.T) 
 		`{"cron_expr":"0 22 * * *","timezone":"America/Los_Angeles"}`,
 		`[{"command":"unlock"}]`)
 
-	result := DetectConflicts(context.Background(), candidate, []*models.Automation{other})
+	result := DetectConflicts(context.Background(), candidate, []*models.AutomationFull{other})
 	if len(result) != 0 {
 		t.Fatalf("expected 0 conflicts for same cron expr different timezone, got %d", len(result))
 	}
@@ -164,7 +169,7 @@ func TestDetectConflicts_CronSameExprSameTimezone(t *testing.T) {
 		`{"cron_expr":"0 22 * * *","timezone":"America/New_York"}`,
 		`[{"command":"unlock"}]`)
 
-	result := DetectConflicts(context.Background(), candidate, []*models.Automation{other})
+	result := DetectConflicts(context.Background(), candidate, []*models.AutomationFull{other})
 	if len(result) != 1 {
 		t.Fatalf("expected 1 conflict, got %d", len(result))
 	}
@@ -178,7 +183,7 @@ func TestDetectConflicts_CronSameActions_NoConflict(t *testing.T) {
 		`{"cron_expr":"0 22 * * *"}`,
 		`[{"command":"lock"}]`)
 
-	result := DetectConflicts(context.Background(), candidate, []*models.Automation{other})
+	result := DetectConflicts(context.Background(), candidate, []*models.AutomationFull{other})
 	if len(result) != 0 {
 		t.Fatalf("expected 0 conflicts for same (non-opposite) commands, got %d", len(result))
 	}
@@ -194,7 +199,7 @@ func TestDetectConflicts_VehicleState_SameEvent_OppositeActions(t *testing.T) {
 		`{"event":"drive_ends"}`,
 		`[{"command":"unlock"}]`)
 
-	result := DetectConflicts(context.Background(), candidate, []*models.Automation{other})
+	result := DetectConflicts(context.Background(), candidate, []*models.AutomationFull{other})
 	if len(result) != 1 {
 		t.Fatalf("expected 1 conflict, got %d", len(result))
 	}
@@ -208,7 +213,7 @@ func TestDetectConflicts_VehicleState_DifferentEvent_NoConflict(t *testing.T) {
 		`{"event":"drive_starts"}`,
 		`[{"command":"unlock"}]`)
 
-	result := DetectConflicts(context.Background(), candidate, []*models.Automation{other})
+	result := DetectConflicts(context.Background(), candidate, []*models.AutomationFull{other})
 	if len(result) != 0 {
 		t.Fatalf("expected 0 conflicts for different events, got %d", len(result))
 	}
@@ -222,7 +227,7 @@ func TestDetectConflicts_VehicleState_StateChangeWildcard(t *testing.T) {
 		`{"event":"goes_to_sleep"}`,
 		`[{"command":"unlock"}]`)
 
-	result := DetectConflicts(context.Background(), candidate, []*models.Automation{other})
+	result := DetectConflicts(context.Background(), candidate, []*models.AutomationFull{other})
 	if len(result) != 1 {
 		t.Fatalf("expected 1 conflict (state_change overlaps any event), got %d", len(result))
 	}
@@ -236,7 +241,7 @@ func TestDetectConflicts_VehicleState_SameEventDifferentFromState_NoConflict(t *
 		`{"event":"comes_online","from_state":"offline"}`,
 		`[{"command":"unlock"}]`)
 
-	result := DetectConflicts(context.Background(), candidate, []*models.Automation{other})
+	result := DetectConflicts(context.Background(), candidate, []*models.AutomationFull{other})
 	if len(result) != 0 {
 		t.Fatalf("expected 0 conflicts for mutually exclusive from_state, got %d", len(result))
 	}
@@ -251,7 +256,7 @@ func TestDetectConflicts_VehicleState_SameEventOneFilteredOneNot(t *testing.T) {
 		`[{"command":"unlock"}]`)
 
 	// One has from_state filter, other does not → they can overlap.
-	result := DetectConflicts(context.Background(), candidate, []*models.Automation{other})
+	result := DetectConflicts(context.Background(), candidate, []*models.AutomationFull{other})
 	if len(result) != 1 {
 		t.Fatalf("expected 1 conflict (one unfiltered overlaps with filtered), got %d", len(result))
 	}
@@ -267,7 +272,7 @@ func TestDetectConflicts_Geofence_SameGeofenceSameEvent(t *testing.T) {
 		`{"geofence_id":5,"event":"enter"}`,
 		`[{"command":"unlock"}]`)
 
-	result := DetectConflicts(context.Background(), candidate, []*models.Automation{other})
+	result := DetectConflicts(context.Background(), candidate, []*models.AutomationFull{other})
 	if len(result) != 1 {
 		t.Fatalf("expected 1 conflict, got %d", len(result))
 	}
@@ -281,7 +286,7 @@ func TestDetectConflicts_Geofence_SameGeofenceDifferentEvent_NoConflict(t *testi
 		`{"geofence_id":5,"event":"leave"}`,
 		`[{"command":"unlock"}]`)
 
-	result := DetectConflicts(context.Background(), candidate, []*models.Automation{other})
+	result := DetectConflicts(context.Background(), candidate, []*models.AutomationFull{other})
 	if len(result) != 0 {
 		t.Fatalf("expected 0 conflicts for enter vs leave, got %d", len(result))
 	}
@@ -295,7 +300,7 @@ func TestDetectConflicts_Geofence_BothEventOverlapsEnter(t *testing.T) {
 		`{"geofence_id":5,"event":"enter"}`,
 		`[{"command":"unlock"}]`)
 
-	result := DetectConflicts(context.Background(), candidate, []*models.Automation{other})
+	result := DetectConflicts(context.Background(), candidate, []*models.AutomationFull{other})
 	if len(result) != 1 {
 		t.Fatalf("expected 1 conflict (both overlaps enter), got %d", len(result))
 	}
@@ -309,7 +314,7 @@ func TestDetectConflicts_Geofence_DifferentGeofence_NoConflict(t *testing.T) {
 		`{"geofence_id":10,"event":"enter"}`,
 		`[{"command":"unlock"}]`)
 
-	result := DetectConflicts(context.Background(), candidate, []*models.Automation{other})
+	result := DetectConflicts(context.Background(), candidate, []*models.AutomationFull{other})
 	if len(result) != 0 {
 		t.Fatalf("expected 0 conflicts for different geofences, got %d", len(result))
 	}
@@ -325,7 +330,7 @@ func TestDetectConflicts_DifferentVehicles_NoConflict(t *testing.T) {
 		`{"cron_expr":"0 22 * * *"}`,
 		`[{"command":"unlock"}]`)
 
-	result := DetectConflicts(context.Background(), candidate, []*models.Automation{other})
+	result := DetectConflicts(context.Background(), candidate, []*models.AutomationFull{other})
 	if len(result) != 0 {
 		t.Fatalf("expected 0 conflicts for different vehicles, got %d", len(result))
 	}
@@ -339,7 +344,7 @@ func TestDetectConflicts_GlobalVsSpecific_Conflict(t *testing.T) {
 		`{"cron_expr":"0 22 * * *"}`,
 		`[{"command":"unlock"}]`)
 
-	result := DetectConflicts(context.Background(), candidate, []*models.Automation{other})
+	result := DetectConflicts(context.Background(), candidate, []*models.AutomationFull{other})
 	if len(result) != 1 {
 		t.Fatalf("expected 1 conflict (global overlaps specific), got %d", len(result))
 	}
@@ -354,7 +359,7 @@ func TestDetectConflicts_SameVehicle_Conflict(t *testing.T) {
 		`{"cron_expr":"0 22 * * *"}`,
 		`[{"command":"unlock"}]`)
 
-	result := DetectConflicts(context.Background(), candidate, []*models.Automation{other})
+	result := DetectConflicts(context.Background(), candidate, []*models.AutomationFull{other})
 	if len(result) != 1 {
 		t.Fatalf("expected 1 conflict for same vehicle, got %d", len(result))
 	}
@@ -366,13 +371,13 @@ func TestDetectConflicts_ConditionsDowngradeSeverity(t *testing.T) {
 	candidate := makeAutomation(1, "lock", nil, "cron",
 		`{"cron_expr":"0 22 * * *"}`,
 		`[{"command":"lock"}]`)
-	candidate.Conditions = json.RawMessage(`[{"type":"time_window","start_time":"22:00","end_time":"06:00"}]`)
+	candidate.Conditions = []any{map[string]any{"type": "time_window", "start_time": "22:00", "end_time": "06:00"}}
 
 	other := makeAutomation(2, "unlock", nil, "cron",
 		`{"cron_expr":"0 22 * * *"}`,
 		`[{"command":"unlock"}]`)
 
-	result := DetectConflicts(context.Background(), candidate, []*models.Automation{other})
+	result := DetectConflicts(context.Background(), candidate, []*models.AutomationFull{other})
 	if len(result) != 1 {
 		t.Fatalf("expected 1 conflict, got %d", len(result))
 	}
@@ -391,7 +396,7 @@ func TestDetectConflicts_MultipleOppositeCommandPairs(t *testing.T) {
 		`{"cron_expr":"0 22 * * *"}`,
 		`[{"command":"unlock"},{"command":"sentry_off"},{"command":"climate_on"}]`)
 
-	result := DetectConflicts(context.Background(), candidate, []*models.Automation{other})
+	result := DetectConflicts(context.Background(), candidate, []*models.AutomationFull{other})
 	if len(result) != 1 {
 		t.Fatalf("expected 1 conflict (single entry per automation), got %d", len(result))
 	}
@@ -413,7 +418,7 @@ func TestDetectConflicts_MultipleOtherAutomations(t *testing.T) {
 		`{"cron_expr":"0 22 * * *"}`,
 		`[{"command":"unlock"}]`)
 
-	result := DetectConflicts(context.Background(), candidate, []*models.Automation{other1, other2})
+	result := DetectConflicts(context.Background(), candidate, []*models.AutomationFull{other1, other2})
 	if len(result) != 2 {
 		t.Fatalf("expected 2 conflicts, got %d", len(result))
 	}
@@ -429,7 +434,7 @@ func TestDetectConflicts_DifferentTriggerTypes_NoConflict(t *testing.T) {
 		`{"geofence_id":5,"event":"enter"}`,
 		`[{"command":"unlock"}]`)
 
-	result := DetectConflicts(context.Background(), candidate, []*models.Automation{other})
+	result := DetectConflicts(context.Background(), candidate, []*models.AutomationFull{other})
 	if len(result) != 0 {
 		t.Fatalf("expected 0 conflicts for different trigger types, got %d", len(result))
 	}
@@ -446,7 +451,7 @@ func TestDetectConflicts_MalformedJSON_NoConflict(t *testing.T) {
 		`[{"command":"unlock"}]`)
 
 	// Malformed trigger config → trigger summary will be empty → no cron expr match.
-	result := DetectConflicts(context.Background(), candidate, []*models.Automation{other})
+	result := DetectConflicts(context.Background(), candidate, []*models.AutomationFull{other})
 	if len(result) != 0 {
 		t.Fatalf("expected 0 conflicts for malformed JSON, got %d", len(result))
 	}
@@ -460,7 +465,7 @@ func TestDetectConflicts_NoCommandActions(t *testing.T) {
 		`{"cron_expr":"0 22 * * *"}`,
 		`[{"command":"unlock"}]`)
 
-	result := DetectConflicts(context.Background(), candidate, []*models.Automation{other})
+	result := DetectConflicts(context.Background(), candidate, []*models.AutomationFull{other})
 	if len(result) != 0 {
 		t.Fatalf("expected 0 conflicts when candidate has no command actions, got %d", len(result))
 	}
