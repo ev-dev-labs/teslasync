@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/models"
@@ -121,6 +122,12 @@ func NewEnergyStatsRepo(db *DB) *EnergyStatsRepo {
 	return &EnergyStatsRepo{db: db}
 }
 
+// isNotPopulated detects the Postgres error raised when querying a
+// materialized view that was created WITH NO DATA and never refreshed.
+func isNotPopulated(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "has not been populated")
+}
+
 func (r *EnergyStatsRepo) GetDailyBreakdown(ctx context.Context, vehicleID int64, days int) ([]*models.EnergyStatsRow, error) {
 	query := `SELECT
 		TO_CHAR(day, 'YYYY-MM-DD') AS date,
@@ -138,6 +145,9 @@ func (r *EnergyStatsRepo) GetDailyBreakdown(ctx context.Context, vehicleID int64
 	ORDER BY day`
 	rows, err := r.db.Pool.Query(ctx, query, vehicleID, days)
 	if err != nil {
+		if isNotPopulated(err) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	defer rows.Close()
@@ -163,5 +173,10 @@ func (r *EnergyStatsRepo) GetTotalEnergy(ctx context.Context, vehicleID int64, d
 	  AND day >= (NOW() - make_interval(days := $2))::date`
 	var energy, cost, distance float64
 	err := r.db.Pool.QueryRow(ctx, query, vehicleID, days).Scan(&energy, &cost, &distance)
+	if err != nil {
+		if isNotPopulated(err) {
+			return 0, 0, 0, nil
+		}
+	}
 	return energy, cost, distance, err
 }

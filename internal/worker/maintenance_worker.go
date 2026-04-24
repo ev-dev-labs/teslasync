@@ -93,6 +93,11 @@ func runMaintenance(ctx context.Context, db *database.DB, cfg *config.Config) {
 		}
 	}
 
+	// Refresh cagg_fleet_stats materialized view (regular MV, not TimescaleDB CAGG)
+	if err := refreshFleetStats(maintCtx, db); err != nil {
+		log.Error().Err(err).Msg("cagg_fleet_stats refresh failed")
+	}
+
 	// Generate daily battery health snapshots from charging telemetry
 	batSnaps := generateBatterySnapshots(maintCtx, db)
 
@@ -104,6 +109,19 @@ func runMaintenance(ctx context.Context, db *database.DB, cfg *config.Config) {
 		Int("battery_snapshots_created", batSnaps).
 		Dur("duration", time.Since(start)).
 		Msg("scheduled maintenance complete")
+}
+
+// refreshFleetStats refreshes the cagg_fleet_stats materialized view.
+// This is a regular MV (not a TimescaleDB continuous aggregate) because the
+// source table `drives` is mutable and cannot be converted to a hypertable.
+func refreshFleetStats(ctx context.Context, db *database.DB) error {
+	log.Info().Msg("refreshing cagg_fleet_stats materialized view")
+	_, err := db.Pool.Exec(ctx, "REFRESH MATERIALIZED VIEW CONCURRENTLY cagg_fleet_stats")
+	if err != nil {
+		return fmt.Errorf("refresh cagg_fleet_stats: %w", err)
+	}
+	log.Info().Msg("cagg_fleet_stats refresh complete")
+	return nil
 }
 
 // compressOldPositionsaggregates positions older than 30 days into hourly
