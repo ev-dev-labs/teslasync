@@ -62,7 +62,7 @@ var signalToColumn = map[string]string{
 	"GpsState":  "gps_state",
 
 	// Driving
-	"VehicleSpeed":   "speed",
+	"VehicleSpeed":   "speed_mph",
 	"Odometer":       "odometer",
 	"Gear":           "gear",
 	"PedalPosition":  "pedal_position",
@@ -77,8 +77,8 @@ var signalToColumn = map[string]string{
 	"EnergyRemaining": "energy_remaining",
 
 	// Climate
-	"InsideTemp":  "inside_temp",
-	"OutsideTemp": "outside_temp",
+	"InsideTemp":  "inside_temp_c",
+	"OutsideTemp": "outside_temp_c",
 
 	// Charging
 	"ChargeState":         "charge_state",
@@ -86,7 +86,7 @@ var signalToColumn = map[string]string{
 	"ChargerVoltage":      "charger_voltage",
 	"ChargeAmps":          "charge_amps",
 	"ChargeRateMilePerHour": "charge_rate",
-	"DCChargingPower":     "charger_power",
+	"DCChargingPower":     "charger_power_kw",
 	// ACChargingPower also maps to charger_power but is handled in the skip/special logic
 	// to avoid duplicate column errors when both signals arrive in the same batch.
 	"ChargeLimitSoc":      "charge_limit_soc",
@@ -392,7 +392,7 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 			pc, pcOk := toFloat64(signals["PackCurrent"])
 			if pvOk && pcOk {
 				power := pv * pc / 1000.0
-				cols = append(cols, "power")
+				cols = append(cols, "power_kw")
 				vals = append(vals, power)
 			}
 		}
@@ -519,7 +519,7 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 	skipCols := map[string]bool{
 		"latitude": true, "longitude": true, "locked": true, "sentry_mode": true,
 		"hvac_power": true, "fan_speed": true, "hvac_fan_speed": true,
-		"power": true, "charger_power": true,
+		"power_kw": true, "charger_power_kw": true,
 		"driver_seat_belt": true, "passenger_seat_belt": true,
 	}
 	for _, col := range enumBoolSignals {
