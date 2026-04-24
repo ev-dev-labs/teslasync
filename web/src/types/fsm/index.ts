@@ -28,3 +28,11 @@ export { NOTIFICATION_STATES, NOTIFICATION_STATE_ENTRIES, NOTIFICATION_EDGES, NO
 // Alert Cooldown FSM
 export type { AlertCooldownState } from './alert-cooldown'
 export { ALERT_COOLDOWN_STATES, ALERT_COOLDOWN_STATE_ENTRIES, ALERT_COOLDOWN_EDGES, ALERT_COOLDOWN_FSM } from './alert-cooldown'
+
+// Automation FSM
+export type { AutomationState } from './automation'
+export { AUTOMATION_STATES, AUTOMATION_STATE_ENTRIES, AUTOMATION_EDGES, AUTOMATION_FSM } from './automation'
+
+// Telemetry Connection FSM
+export type { TelemetryConnectionState } from './telemetry-connection'
+export { TELEMETRY_CONNECTION_STATES, TELEMETRY_CONNECTION_STATE_ENTRIES, TELEMETRY_CONNECTION_EDGES, TELEMETRY_CONNECTION_FSM } from './telemetry-connection'
