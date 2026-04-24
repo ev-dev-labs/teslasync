@@ -1823,57 +1823,116 @@ func (h *TelemetryHandler) trackSecurity(ctx context.Context, vehicleID int64, s
 
 	log.Debug().Int64("vehicle_id", vehicleID).Bool("locked", hasLocked).Bool("sentry", hasSentry).Bool("door", hasDoor).Bool("window", hasWindow).Msg("telemetry: trackSecurity gate passed")
 
-	ev := &models.SecurityEvent{VehicleID: vehicleID, Ts: time.Now().UTC(), EventType: "state_change", Source: "fleet_telemetry"}
+	now := time.Now().UTC()
+
+	// Collect snapshot-level state from all signals in this batch.
+	var locked *bool
 	if v, ok := signals["Locked"]; ok {
 		b := toBool(v)
-		ev.Locked = &b
+		locked = &b
 	}
+	var sentryMode *bool
 	if v, ok := signals["SentryMode"]; ok {
 		b := enums.ParseEnumBool(toString(v))
-		ev.SentryMode = &b
+		sentryMode = &b
 	}
+	var doorsOpen *string
 	if v, ok := signals["DoorState"]; ok {
 		s := toString(v)
-		ev.DoorsOpen = &s
+		doorsOpen = &s
 	}
-	// Aggregate window states into a single WindowsOpen summary
+	// Aggregate window states into a single WindowsOpen summary.
 	var windowParts []string
-	if v, ok := signals["FdWindow"]; ok {
-		s := toString(v)
-		if s != "" && s != "Closed" {
-			windowParts = append(windowParts, "FD:"+s)
+	for _, wp := range []struct{ sig, label string }{
+		{"FdWindow", "FD"}, {"FpWindow", "FP"},
+		{"RdWindow", "RD"}, {"RpWindow", "RP"},
+	} {
+		if v, ok := signals[wp.sig]; ok {
+			s := toString(v)
+			if s != "" && s != "Closed" {
+				windowParts = append(windowParts, wp.label+":"+s)
+			}
 		}
 	}
-	if v, ok := signals["FpWindow"]; ok {
-		s := toString(v)
-		if s != "" && s != "Closed" {
-			windowParts = append(windowParts, "FP:"+s)
-		}
-	}
-	if v, ok := signals["RdWindow"]; ok {
-		s := toString(v)
-		if s != "" && s != "Closed" {
-			windowParts = append(windowParts, "RD:"+s)
-		}
-	}
-	if v, ok := signals["RpWindow"]; ok {
-		s := toString(v)
-		if s != "" && s != "Closed" {
-			windowParts = append(windowParts, "RP:"+s)
-		}
-	}
+	var windowsOpen *string
 	if len(windowParts) > 0 {
 		s := strings.Join(windowParts, ",")
-		ev.WindowsOpen = &s
+		windowsOpen = &s
 	}
+	var userPresent *bool
 	if v, ok := signals["DriverSeatOccupied"]; ok {
 		b := toBool(v)
-		ev.UserPresent = &b
+		userPresent = &b
 	}
-	if err := h.securityRepo.BulkInsert(ctx, []models.SecurityEvent{*ev}); err != nil {
-		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store security event")
+
+	// Base event carries the full snapshot state; each derived event
+	// gets a distinct event_type matching the DB CHECK constraint.
+	base := models.SecurityEvent{
+		VehicleID:   vehicleID,
+		Ts:          now,
+		Locked:      locked,
+		SentryMode:  sentryMode,
+		DoorsOpen:   doorsOpen,
+		WindowsOpen: windowsOpen,
+		UserPresent: userPresent,
+		Source:      "fleet_telemetry",
+	}
+
+	var events []models.SecurityEvent
+
+	if locked != nil {
+		ev := base
+		if *locked {
+			ev.EventType = "lock"
+		} else {
+			ev.EventType = "unlock"
+		}
+		events = append(events, ev)
+	}
+	if sentryMode != nil {
+		ev := base
+		if *sentryMode {
+			ev.EventType = "sentry_on"
+		} else {
+			ev.EventType = "sentry_off"
+		}
+		events = append(events, ev)
+	}
+	if doorsOpen != nil {
+		ev := base
+		if *doorsOpen != "" && *doorsOpen != "Closed" {
+			ev.EventType = "door_open"
+		} else {
+			ev.EventType = "door_closed"
+		}
+		events = append(events, ev)
+	}
+	if hasWindow {
+		ev := base
+		if len(windowParts) > 0 {
+			ev.EventType = "window_open"
+		} else {
+			ev.EventType = "window_closed"
+		}
+		events = append(events, ev)
+	}
+	if userPresent != nil {
+		ev := base
+		if *userPresent {
+			ev.EventType = "user_present"
+		} else {
+			ev.EventType = "user_absent"
+		}
+		events = append(events, ev)
+	}
+
+	if len(events) == 0 {
+		return
+	}
+	if err := h.securityRepo.BulkInsert(ctx, events); err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store security events")
 	} else {
-		log.Debug().Int64("vehicle_id", vehicleID).Msg("telemetry: security event stored")
+		log.Debug().Int64("vehicle_id", vehicleID).Int("count", len(events)).Msg("telemetry: security events stored")
 	}
 }
 
