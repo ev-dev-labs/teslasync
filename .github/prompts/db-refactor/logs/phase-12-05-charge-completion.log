@@ -1,0 +1,73 @@
+=== SURVEY ===
+Date: 2026-04-24T15:47-07:00
+Prompt: 05 — Charge Completion: Signal Context from signal_history
+Depends on: Prompt 03 (SnapshotAt helper)
+
+Files surveyed:
+- internal/api/telemetry_sessions.go (1790+ lines post-prompt-04)
+  - TelemetrySessionTracker struct: lines 23-45 — signalHistoryWriter field added by prompt 04
+  - streamingCharge struct: lines 115-145 — has Latitude, Longitude, TempCount, InsideTempSum, OutsideTempSum
+  - completeChargeLocked: line 1574 — charge completion function
+  - enhancedFields construction: lines 1646-1651 — builds map with latitude, longitude, inside_temp_avg, outside_temp_avg, charge_energy_used
+  - Transaction boundary: line 1653 — WithTx call
+  - Geocoding async block: line 1746 — checks active.Latitude != nil for geocoding
+- internal/api/telemetry_handler.go
+  - signalHistoryWriter forwarding to sessionTracker: already wired by prompt 04
+- internal/database/signal_history_writer.go
+  - SnapshotAt: returns map[string]interface{} with signal names as keys
+  - nil map on error is safe for reads (returns zero, false)
+
+Key observations:
+- Charge session location is fixed (car doesn't move while charging)
+- Only endSnapshot is needed for location/temp (charge position = current position)
+- startSnapshot fetched to validate signal_history availability but not used for field enrichment
+- active.Latitude/Longitude must be set (not just enhancedFields) for downstream geocoding
+- insideAvg/outsideAvg nil checks gate temp enrichment (existing fields use "inside_temp_avg")
+- Signal_history fallback uses "_c" suffix keys ("inside_temp_avg_c", "outside_temp_avg_c")
+  per pattern from prompt 04
+
+=== REASONING ===
+
+Problem: When a charge session ends, enhancedFields are built from accumulated session
+data (temp sums, location). If Tesla delta encoding means temp or location signals weren't
+sent during the charge (e.g., car was already parked and temps stable), those fields are nil.
+
+Solution: Use SnapshotAt() from signal_history as a fallback to reconstruct signal state
+at charge end time. Insert enrichment block between enhancedFields construction and the
+WithTx transaction boundary.
+
+Fields enriched:
+- latitude, longitude ← endSnapshot["Latitude"], endSnapshot["Longitude"]
+  Also sets active.Latitude/active.Longitude so downstream geocoding triggers
+- inside_temp_avg_c ← endSnapshot["InsideTemp"] (when insideAvg is nil)
+- outside_temp_avg_c ← endSnapshot["OutsideTemp"] (when outsideAvg is nil)
+
+Constraints satisfied:
+- Existing enhancedFields construction preserved (primary path)
+- signal_history is fallback only (_, ok check before each field)
+- SnapshotAt errors are non-fatal (log.Warn and continue)
+- signal_history reads happen BEFORE the transaction boundary
+- Uses signalHistoryWriter already wired by prompt 04
+- startSnapshot fetched but unused for field enrichment (charge is stationary)
+  — assigned to _ to avoid unused variable error
+
+=== CHANGES ===
+
+File: internal/api/telemetry_sessions.go
+1. Added signal_history enrichment block in completeChargeLocked after enhancedFields
+   construction (line ~1652) and before the WithTx transaction (line ~1703):
+   - Fetches startSnapshot at active.StartTime (unused, for future extensibility)
+   - Fetches endSnapshot at time.Now().UTC()
+   - Fills missing latitude/longitude from endSnapshot["Latitude"/"Longitude"]
+     Sets both active.Latitude/Longitude AND enhancedFields for geocoding
+   - Fills missing inside_temp_avg_c from endSnapshot["InsideTemp"]
+   - Fills missing outside_temp_avg_c from endSnapshot["OutsideTemp"]
+   - All with triple-guard: field-exists check, map-key check, type assertion
+
+=== GATE ===
+
+Command: cd D:\repos\teslasync && go build ./...
+Result: EXIT CODE 0 — clean build, no errors
+
+EXIT=0
+STATUS=DONE

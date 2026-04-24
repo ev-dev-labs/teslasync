@@ -1650,6 +1650,56 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 	if outsideAvg != nil { enhancedFields["outside_temp_avg"] = *outsideAvg }
 	if chargeEnergyUsed != nil { enhancedFields["charge_energy_used"] = *chargeEnergyUsed }
 
+	// Enrich with signal_history for any fields not captured during charge session.
+	// Signal_history reconstructs full signal state using last-known values,
+	// compensating for Tesla's delta encoding (signals not sent unless changed).
+	if t.signalHistoryWriter != nil {
+		_, startErr := t.signalHistoryWriter.SnapshotAt(ctx, vehicleID, active.StartTime)
+		if startErr != nil {
+			log.Warn().Err(startErr).Int64("vehicle_id", vehicleID).
+				Msg("telemetry: signal_history charge start snapshot failed")
+		}
+		endSnapshot, endErr := t.signalHistoryWriter.SnapshotAt(ctx, vehicleID, time.Now().UTC())
+		if endErr != nil {
+			log.Warn().Err(endErr).Int64("vehicle_id", vehicleID).
+				Msg("telemetry: signal_history charge end snapshot failed")
+		}
+
+		// Fill missing location (for geocoding)
+		if active.Latitude == nil {
+			if v, ok := endSnapshot["Latitude"]; ok {
+				if f, fOk := v.(float64); fOk {
+					active.Latitude = &f
+					enhancedFields["latitude"] = f
+				}
+			}
+		}
+		if active.Longitude == nil {
+			if v, ok := endSnapshot["Longitude"]; ok {
+				if f, fOk := v.(float64); fOk {
+					active.Longitude = &f
+					enhancedFields["longitude"] = f
+				}
+			}
+		}
+
+		// Fill missing temps
+		if _, ok := enhancedFields["inside_temp_avg"]; !ok {
+			if v, ok := endSnapshot["InsideTemp"]; ok {
+				if temp, fOk := v.(float64); fOk {
+					enhancedFields["inside_temp_avg_c"] = temp
+				}
+			}
+		}
+		if _, ok := enhancedFields["outside_temp_avg"]; !ok {
+			if v, ok := endSnapshot["OutsideTemp"]; ok {
+				if temp, fOk := v.(float64); fOk {
+					enhancedFields["outside_temp_avg_c"] = temp
+				}
+			}
+		}
+	}
+
 	if err := t.db.WithTx(ctx, func(tx pgx.Tx) error {
 		var endBatteryPct *int16
 		if b := int16(endBattery); b > 0 {
