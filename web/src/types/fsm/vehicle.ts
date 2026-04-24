@@ -1,4 +1,4 @@
-import type { StateEntry, Edge, FSMDefinition, DisallowedTransition, CoverageMatrix } from './types'
+import type { StateEntry, Edge, FSMDefinition, DisallowedTransition, CoverageMatrix, TruthTable } from './types'
 import { deriveEdges, type TransitionRow } from './types'
 
 /**
@@ -138,6 +138,67 @@ export const VEHICLE_COVERAGE: CoverageMatrix<VehicleState> = {
   updating: { online: null,    driving: null,    charging: null,    parked: null,    updating: 'self', asleep: null,    offline: null },
   asleep:   { online: 'valid', driving: 'valid', charging: 'valid', parked: 'valid', updating: null,   asleep: 'self', offline: 'valid' },
   offline:  { online: 'valid', driving: 'valid', charging: 'valid', parked: 'valid', updating: null,   asleep: 'valid', offline: 'self' },
+}
+
+const T = (to: VehicleState, guard?: string) => ({ action: 'transition' as const, to, guard })
+const NOOP = { action: 'no_op' as const }
+const NA = { action: 'not_applicable' as const }
+const DIS = (reason: string) => ({ action: 'disallowed' as const, reason })
+
+export const VEHICLE_TRUTH_TABLE: TruthTable<VehicleState, VehicleTrigger> = {
+  online: {
+    gear_driving: T('driving'), gear_parked: T('parked', 'no_charge'), gear_neutral: T('driving'),
+    speed_detected: T('driving', 'no_gear'), speed_zero: NOOP,
+    charge_started: T('charging'), charge_ended: NA, charge_interrupted: NA,
+    signal_received: NOOP, activity_detected: NOOP,
+    sleep_timeout: T('asleep', 'no_activity'), heartbeat_lost: T('offline'),
+    timeout: T('asleep', 'expected_loss'),
+  },
+  driving: {
+    gear_driving: NOOP, gear_parked: T('parked', 'no_charge'), gear_neutral: NOOP,
+    speed_detected: NOOP, speed_zero: T('online', 'no_gear'),
+    charge_started: T('charging', 'speed_zero'), charge_ended: NA, charge_interrupted: NA,
+    signal_received: NOOP, activity_detected: NOOP,
+    sleep_timeout: DIS('Moving vehicle cannot sleep'),
+    heartbeat_lost: T('offline'), timeout: T('offline'),
+  },
+  charging: {
+    gear_driving: T('driving'), gear_parked: NOOP, gear_neutral: T('driving'),
+    speed_detected: T('driving', 'no_gear'), speed_zero: NOOP,
+    charge_started: NOOP, charge_ended: T('parked'), charge_interrupted: T('online'),
+    signal_received: NOOP, activity_detected: NOOP,
+    sleep_timeout: T('asleep', 'still_plugged_in'),
+    heartbeat_lost: T('offline'), timeout: T('offline'),
+  },
+  parked: {
+    gear_driving: T('driving'), gear_parked: NOOP, gear_neutral: T('driving'),
+    speed_detected: T('driving', 'no_gear'), speed_zero: NOOP,
+    charge_started: T('charging'), charge_ended: NA, charge_interrupted: NA,
+    signal_received: NOOP, activity_detected: T('online'),
+    sleep_timeout: T('asleep', 'no_activity'),
+    heartbeat_lost: T('offline'), timeout: T('asleep', 'expected_loss'),
+  },
+  asleep: {
+    gear_driving: T('driving'), gear_parked: T('parked'), gear_neutral: T('driving'),
+    speed_detected: T('driving', 'no_gear'), speed_zero: NOOP,
+    charge_started: T('charging'), charge_ended: NA, charge_interrupted: NA,
+    signal_received: T('online'), activity_detected: T('online'),
+    sleep_timeout: NOOP, heartbeat_lost: T('offline'), timeout: T('offline'),
+  },
+  offline: {
+    gear_driving: T('driving'), gear_parked: T('parked'), gear_neutral: T('driving'),
+    speed_detected: T('driving', 'no_gear'), speed_zero: NOOP,
+    charge_started: T('charging'), charge_ended: NA, charge_interrupted: NA,
+    signal_received: T('online'), activity_detected: T('online'),
+    sleep_timeout: T('asleep'), heartbeat_lost: NOOP, timeout: T('asleep'),
+  },
+  updating: {
+    gear_driving: NA, gear_parked: NA, gear_neutral: NA,
+    speed_detected: NA, speed_zero: NA,
+    charge_started: NA, charge_ended: NA, charge_interrupted: NA,
+    signal_received: NA, activity_detected: NA,
+    sleep_timeout: NA, heartbeat_lost: NA, timeout: NA,
+  },
 }
 
 /** Valid transitions for the vehicle FSM — derived from transition table */
