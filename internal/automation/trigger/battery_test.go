@@ -12,43 +12,27 @@ import (
 // ─── Mock Battery Repo ──────────────────────────────────
 
 type mockBatteryRepo struct {
-	automations []*models.Automation
-	disabled    map[int64]string
+	automations []BatteryAutomation
 	returnErr   error
 }
 
 func newMockBatteryRepo() *mockBatteryRepo {
-	return &mockBatteryRepo{disabled: make(map[int64]string)}
+	return &mockBatteryRepo{}
 }
 
-func (r *mockBatteryRepo) GetEnabledByVehicleAndTrigger(_ context.Context, _ int64, triggerType string) ([]*models.Automation, error) {
+func (r *mockBatteryRepo) LoadEnabledBatterySignalTriggers(_ context.Context, _ int64) ([]BatteryAutomation, error) {
 	if r.returnErr != nil {
 		return nil, r.returnErr
 	}
-	var result []*models.Automation
-	for _, a := range r.automations {
-		if a.TriggerType == triggerType {
-			result = append(result, a)
-		}
-	}
-	return result, nil
-}
-
-func (r *mockBatteryRepo) SetAutoDisabled(_ context.Context, id int64, reason string) error {
-	r.disabled[id] = reason
-	return nil
+	return r.automations, nil
 }
 
 // ─── Helpers ────────────────────────────────────────────
 
-func makeBatteryAutomation(id int64, name string, cfg BatteryConfig) *models.Automation {
-	raw, _ := json.Marshal(cfg)
-	return &models.Automation{
-		ID:            id,
-		Name:          name,
-		Enabled:       true,
-		TriggerType:   "battery",
-		TriggerConfig: raw,
+func makeBatteryAutomation(id int64, name, op string, threshold *float64) BatteryAutomation {
+	return BatteryAutomation{
+		Automation: models.Automation{ID: id, Name: name, Enabled: true},
+		Trigger:    models.AutomationStepTriggerSignal{Signal: "battery_level", Op: op, ValueNum: threshold},
 	}
 }
 
@@ -56,143 +40,140 @@ func ptr(f float64) *float64 { return &f }
 
 // ─── shouldFire Pure Logic Tests ────────────────────────
 
-func TestShouldFire_Below_CrossingDown(t *testing.T) {
-	cfg := &BatteryConfig{Operator: "below", Threshold: 20}
-	if !shouldFire(21, 19, cfg) {
+func TestShouldFire_CrossedBelow_CrossingDown(t *testing.T) {
+	trig := &models.AutomationStepTriggerSignal{Op: "crossed_below", ValueNum: ptr(20), Signal: "battery_level"}
+	if !shouldFire(21, 19, trig) {
 		t.Fatal("expected fire: crossing 21→19 with threshold 20")
 	}
 }
 
-func TestShouldFire_Below_AlreadyBelow(t *testing.T) {
-	cfg := &BatteryConfig{Operator: "below", Threshold: 20}
-	if shouldFire(18, 17, cfg) {
+func TestShouldFire_CrossedBelow_AlreadyBelow(t *testing.T) {
+	trig := &models.AutomationStepTriggerSignal{Op: "crossed_below", ValueNum: ptr(20), Signal: "battery_level"}
+	if shouldFire(18, 17, trig) {
 		t.Fatal("should not fire: already below threshold (18→17)")
 	}
 }
 
-func TestShouldFire_Below_ExactThresholdToPrev(t *testing.T) {
-	cfg := &BatteryConfig{Operator: "below", Threshold: 20}
+func TestShouldFire_CrossedBelow_FromExactThreshold(t *testing.T) {
+	trig := &models.AutomationStepTriggerSignal{Op: "crossed_below", ValueNum: ptr(20), Signal: "battery_level"}
 	// previousLevel == threshold, crossing below
-	if !shouldFire(20, 19, cfg) {
+	if !shouldFire(20, 19, trig) {
 		t.Fatal("expected fire: crossing from exact threshold (20→19)")
 	}
 }
 
-func TestShouldFire_Below_RisingAbove(t *testing.T) {
-	cfg := &BatteryConfig{Operator: "below", Threshold: 20}
-	if shouldFire(19, 21, cfg) {
+func TestShouldFire_CrossedBelow_RisingAbove(t *testing.T) {
+	trig := &models.AutomationStepTriggerSignal{Op: "crossed_below", ValueNum: ptr(20), Signal: "battery_level"}
+	if shouldFire(19, 21, trig) {
 		t.Fatal("should not fire: rising above threshold (19→21)")
 	}
 }
 
-func TestShouldFire_Above_CrossingUp(t *testing.T) {
-	cfg := &BatteryConfig{Operator: "above", Threshold: 80}
-	if !shouldFire(79, 81, cfg) {
+func TestShouldFire_CrossedAbove_CrossingUp(t *testing.T) {
+	trig := &models.AutomationStepTriggerSignal{Op: "crossed_above", ValueNum: ptr(80), Signal: "battery_level"}
+	if !shouldFire(79, 81, trig) {
 		t.Fatal("expected fire: crossing 79→81 with threshold 80")
 	}
 }
 
-func TestShouldFire_Above_AlreadyAbove(t *testing.T) {
-	cfg := &BatteryConfig{Operator: "above", Threshold: 80}
-	if shouldFire(85, 90, cfg) {
+func TestShouldFire_CrossedAbove_AlreadyAbove(t *testing.T) {
+	trig := &models.AutomationStepTriggerSignal{Op: "crossed_above", ValueNum: ptr(80), Signal: "battery_level"}
+	if shouldFire(85, 90, trig) {
 		t.Fatal("should not fire: already above threshold (85→90)")
 	}
 }
 
-func TestShouldFire_Above_ExactThresholdToPrev(t *testing.T) {
-	cfg := &BatteryConfig{Operator: "above", Threshold: 80}
+func TestShouldFire_CrossedAbove_FromExactThreshold(t *testing.T) {
+	trig := &models.AutomationStepTriggerSignal{Op: "crossed_above", ValueNum: ptr(80), Signal: "battery_level"}
 	// previousLevel == threshold, crossing above
-	if !shouldFire(80, 81, cfg) {
+	if !shouldFire(80, 81, trig) {
 		t.Fatal("expected fire: crossing from exact threshold (80→81)")
 	}
 }
 
-func TestShouldFire_Above_DroppingBelow(t *testing.T) {
-	cfg := &BatteryConfig{Operator: "above", Threshold: 80}
-	if shouldFire(81, 79, cfg) {
+func TestShouldFire_CrossedAbove_DroppingBelow(t *testing.T) {
+	trig := &models.AutomationStepTriggerSignal{Op: "crossed_above", ValueNum: ptr(80), Signal: "battery_level"}
+	if shouldFire(81, 79, trig) {
 		t.Fatal("should not fire: dropping below threshold (81→79)")
 	}
 }
 
-func TestShouldFire_Reaches_FromBelow(t *testing.T) {
-	cfg := &BatteryConfig{Operator: "reaches", Threshold: 80}
-	if !shouldFire(79, 80, cfg) {
+func TestShouldFire_Equal_FromBelow(t *testing.T) {
+	trig := &models.AutomationStepTriggerSignal{Op: "=", ValueNum: ptr(80), Signal: "battery_level"}
+	if !shouldFire(79, 80, trig) {
 		t.Fatal("expected fire: reaching 80 from below (79→80)")
 	}
 }
 
-func TestShouldFire_Reaches_FromAbove(t *testing.T) {
-	cfg := &BatteryConfig{Operator: "reaches", Threshold: 80}
-	if !shouldFire(81, 80, cfg) {
+func TestShouldFire_Equal_FromAbove(t *testing.T) {
+	trig := &models.AutomationStepTriggerSignal{Op: "=", ValueNum: ptr(80), Signal: "battery_level"}
+	if !shouldFire(81, 80, trig) {
 		t.Fatal("expected fire: reaching 80 from above (81→80)")
 	}
 }
 
-func TestShouldFire_Reaches_AlreadyAtThreshold(t *testing.T) {
-	cfg := &BatteryConfig{Operator: "reaches", Threshold: 80}
-	if shouldFire(80, 80, cfg) {
+func TestShouldFire_Equal_AlreadyAtThreshold(t *testing.T) {
+	trig := &models.AutomationStepTriggerSignal{Op: "=", ValueNum: ptr(80), Signal: "battery_level"}
+	if shouldFire(80, 80, trig) {
 		t.Fatal("should not fire: already at threshold (80→80)")
 	}
 }
 
-func TestShouldFire_ChangesBy_AnyDirection(t *testing.T) {
-	cfg := &BatteryConfig{Operator: "changes_by", Delta: ptr(5), Direction: "any"}
-	if !shouldFire(50, 58, cfg) {
-		t.Fatal("expected fire: delta 8 >= 5 (50→58)")
-	}
-	if !shouldFire(50, 42, cfg) {
-		t.Fatal("expected fire: delta 8 >= 5 (50→42)")
-	}
-	if shouldFire(50, 52, cfg) {
-		t.Fatal("should not fire: delta 2 < 5 (50→52)")
+func TestShouldFire_NotEqual_FromThreshold(t *testing.T) {
+	trig := &models.AutomationStepTriggerSignal{Op: "!=", ValueNum: ptr(80), Signal: "battery_level"}
+	if !shouldFire(80, 79, trig) {
+		t.Fatal("expected fire: leaving threshold 80→79")
 	}
 }
 
-func TestShouldFire_ChangesBy_UpOnly(t *testing.T) {
-	cfg := &BatteryConfig{Operator: "changes_by", Delta: ptr(5), Direction: "up"}
-	if !shouldFire(50, 56, cfg) {
-		t.Fatal("expected fire: up delta 6 >= 5 (50→56)")
-	}
-	if shouldFire(50, 44, cfg) {
-		t.Fatal("should not fire: down delta with up-only direction")
+func TestShouldFire_NotEqual_AlreadyOff(t *testing.T) {
+	trig := &models.AutomationStepTriggerSignal{Op: "!=", ValueNum: ptr(80), Signal: "battery_level"}
+	if shouldFire(79, 81, trig) {
+		t.Fatal("should not fire: was not at threshold (79→81)")
 	}
 }
 
-func TestShouldFire_ChangesBy_DownOnly(t *testing.T) {
-	cfg := &BatteryConfig{Operator: "changes_by", Delta: ptr(5), Direction: "down"}
-	if !shouldFire(50, 44, cfg) {
-		t.Fatal("expected fire: down delta 6 >= 5 (50→44)")
+func TestShouldFire_Changed_AnyChange(t *testing.T) {
+	trig := &models.AutomationStepTriggerSignal{Op: "changed", Signal: "battery_level"}
+	if !shouldFire(50, 58, trig) {
+		t.Fatal("expected fire: level changed (50→58)")
 	}
-	if shouldFire(50, 56, cfg) {
-		t.Fatal("should not fire: up delta with down-only direction")
-	}
-}
-
-func TestShouldFire_ChangesBy_NilDelta(t *testing.T) {
-	cfg := &BatteryConfig{Operator: "changes_by", Delta: nil, Direction: "any"}
-	if shouldFire(50, 80, cfg) {
-		t.Fatal("should not fire: nil delta")
+	if !shouldFire(50, 42, trig) {
+		t.Fatal("expected fire: level changed (50→42)")
 	}
 }
 
-func TestShouldFire_ChangesBy_ExactDelta(t *testing.T) {
-	cfg := &BatteryConfig{Operator: "changes_by", Delta: ptr(5), Direction: "any"}
-	if !shouldFire(50, 55, cfg) {
-		t.Fatal("expected fire: exact delta 5 == 5 (50→55)")
+func TestShouldFire_Changed_NoChange(t *testing.T) {
+	trig := &models.AutomationStepTriggerSignal{Op: "changed", Signal: "battery_level"}
+	if shouldFire(50, 50, trig) {
+		t.Fatal("should not fire: no change (50→50)")
+	}
+}
+
+func TestShouldFire_NilValueNum(t *testing.T) {
+	trig := &models.AutomationStepTriggerSignal{Op: "crossed_below", ValueNum: nil, Signal: "battery_level"}
+	if shouldFire(50, 10, trig) {
+		t.Fatal("should not fire: nil ValueNum")
+	}
+}
+
+func TestShouldFire_NilTrigger(t *testing.T) {
+	if shouldFire(50, 80, nil) {
+		t.Fatal("should not fire: nil trigger")
 	}
 }
 
 func TestShouldFire_UnknownOperator(t *testing.T) {
-	cfg := &BatteryConfig{Operator: "invalid"}
-	if shouldFire(50, 80, cfg) {
+	trig := &models.AutomationStepTriggerSignal{Op: "invalid", Signal: "battery_level"}
+	if shouldFire(50, 80, trig) {
 		t.Fatal("should not fire: unknown operator")
 	}
 }
 
 func TestShouldFire_NoChange(t *testing.T) {
 	// This is checked before shouldFire in Evaluate, but test the pure function too.
-	cfg := &BatteryConfig{Operator: "below", Threshold: 20}
-	if shouldFire(50, 50, cfg) {
+	trig := &models.AutomationStepTriggerSignal{Op: "crossed_below", ValueNum: ptr(20), Signal: "battery_level"}
+	if shouldFire(50, 50, trig) {
 		t.Fatal("should not fire: no change (50→50)")
 	}
 }
@@ -293,8 +274,8 @@ func TestBatteryTrigger_FirstObservation_NoFire(t *testing.T) {
 	engine := &mockEngine{}
 	bt := NewBatteryTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
-		makeBatteryAutomation(1, "low-battery", BatteryConfig{Operator: "below", Threshold: 20}),
+	repo.automations = []BatteryAutomation{
+		makeBatteryAutomation(1, "low-battery", "crossed_below", ptr(20)),
 	}
 
 	// First observation: level=15, below threshold, but should NOT fire.
@@ -311,8 +292,8 @@ func TestBatteryTrigger_CrossingDown_Fires(t *testing.T) {
 	engine := &mockEngine{}
 	bt := NewBatteryTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
-		makeBatteryAutomation(1, "low-battery", BatteryConfig{Operator: "below", Threshold: 20}),
+	repo.automations = []BatteryAutomation{
+		makeBatteryAutomation(1, "low-battery", "crossed_below", ptr(20)),
 	}
 
 	bt.Seed(100, 21) // previous level = 21
@@ -339,8 +320,8 @@ func TestBatteryTrigger_CrossingDown_Fires(t *testing.T) {
 	if snap.PreviousLevel != 21 {
 		t.Fatalf("expected previous_level 21, got %v", snap.PreviousLevel)
 	}
-	if snap.Operator != "below" {
-		t.Fatalf("expected operator 'below', got %q", snap.Operator)
+	if snap.Operator != "crossed_below" {
+		t.Fatalf("expected operator 'crossed_below', got %q", snap.Operator)
 	}
 }
 
@@ -349,8 +330,8 @@ func TestBatteryTrigger_AlreadyBelow_NoFire(t *testing.T) {
 	engine := &mockEngine{}
 	bt := NewBatteryTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
-		makeBatteryAutomation(1, "low-battery", BatteryConfig{Operator: "below", Threshold: 20}),
+	repo.automations = []BatteryAutomation{
+		makeBatteryAutomation(1, "low-battery", "crossed_below", ptr(20)),
 	}
 
 	bt.Seed(100, 18) // already below 20
@@ -368,8 +349,8 @@ func TestBatteryTrigger_CrossingUp_Fires(t *testing.T) {
 	engine := &mockEngine{}
 	bt := NewBatteryTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
-		makeBatteryAutomation(1, "high-battery", BatteryConfig{Operator: "above", Threshold: 80}),
+	repo.automations = []BatteryAutomation{
+		makeBatteryAutomation(1, "high-battery", "crossed_above", ptr(80)),
 	}
 
 	bt.Seed(100, 79) // previous level = 79
@@ -387,8 +368,8 @@ func TestBatteryTrigger_ExactReach_Fires(t *testing.T) {
 	engine := &mockEngine{}
 	bt := NewBatteryTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
-		makeBatteryAutomation(1, "reach-80", BatteryConfig{Operator: "reaches", Threshold: 80}),
+	repo.automations = []BatteryAutomation{
+		makeBatteryAutomation(1, "reach-80", "=", ptr(80)),
 	}
 
 	bt.Seed(100, 79) // previous level = 79
@@ -401,18 +382,16 @@ func TestBatteryTrigger_ExactReach_Fires(t *testing.T) {
 	}
 }
 
-func TestBatteryTrigger_ChangesBy_Fires(t *testing.T) {
+func TestBatteryTrigger_Changed_Fires(t *testing.T) {
 	repo := newMockBatteryRepo()
 	engine := &mockEngine{}
 	bt := NewBatteryTrigger(repo, engine)
 
-	d := 5.0
-	repo.automations = []*models.Automation{
-		makeBatteryAutomation(1, "big-change", BatteryConfig{
-			Operator:  "changes_by",
-			Delta:     &d,
-			Direction: "any",
-		}),
+	repo.automations = []BatteryAutomation{
+		{
+			Automation: models.Automation{ID: 1, Name: "any-change", Enabled: true},
+			Trigger:    models.AutomationStepTriggerSignal{Signal: "battery_level", Op: "changed"},
+		},
 	}
 
 	bt.Seed(100, 50)
@@ -430,8 +409,8 @@ func TestBatteryTrigger_NoTriggerOnSameLevel(t *testing.T) {
 	engine := &mockEngine{}
 	bt := NewBatteryTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
-		makeBatteryAutomation(1, "low-battery", BatteryConfig{Operator: "below", Threshold: 20}),
+	repo.automations = []BatteryAutomation{
+		makeBatteryAutomation(1, "low-battery", "crossed_below", ptr(20)),
 	}
 
 	bt.Seed(100, 50)
@@ -449,9 +428,9 @@ func TestBatteryTrigger_MultipleAutomations(t *testing.T) {
 	engine := &mockEngine{}
 	bt := NewBatteryTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
-		makeBatteryAutomation(1, "low-battery", BatteryConfig{Operator: "below", Threshold: 20}),
-		makeBatteryAutomation(2, "critical-battery", BatteryConfig{Operator: "below", Threshold: 15}),
+	repo.automations = []BatteryAutomation{
+		makeBatteryAutomation(1, "low-battery", "crossed_below", ptr(20)),
+		makeBatteryAutomation(2, "critical-battery", "crossed_below", ptr(15)),
 	}
 
 	bt.Seed(100, 21)
@@ -465,21 +444,20 @@ func TestBatteryTrigger_MultipleAutomations(t *testing.T) {
 	}
 }
 
-func TestBatteryTrigger_InvalidConfig_AutoDisables(t *testing.T) {
+func TestBatteryTrigger_NonBatterySignal_Skipped(t *testing.T) {
 	repo := newMockBatteryRepo()
 	engine := &mockEngine{}
 	bt := NewBatteryTrigger(repo, engine)
 
-	// Automation with invalid config (bad JSON)
-	bad := &models.Automation{
-		ID:            99,
-		Name:          "broken",
-		Enabled:       true,
-		TriggerType:   "battery",
-		TriggerConfig: json.RawMessage(`{invalid`),
+	// One automation with wrong signal, one with correct signal.
+	threshold := 20.0
+	repo.automations = []BatteryAutomation{
+		{
+			Automation: models.Automation{ID: 99, Name: "wrong-signal", Enabled: true},
+			Trigger:    models.AutomationStepTriggerSignal{Signal: "tire_pressure", Op: "crossed_below", ValueNum: &threshold},
+		},
+		makeBatteryAutomation(1, "low-battery", "crossed_below", ptr(20)),
 	}
-	good := makeBatteryAutomation(1, "low-battery", BatteryConfig{Operator: "below", Threshold: 20})
-	repo.automations = []*models.Automation{bad, good}
 
 	bt.Seed(100, 21)
 
@@ -487,14 +465,9 @@ func TestBatteryTrigger_InvalidConfig_AutoDisables(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// Bad automation should be auto-disabled
-	if _, disabled := repo.disabled[99]; !disabled {
-		t.Fatal("expected automation 99 to be auto-disabled")
-	}
-
-	// Good automation should still fire
+	// Only the correct-signal automation should fire
 	if engine.callCount() != 1 {
-		t.Fatalf("expected 1 fire (good automation), got %d", engine.callCount())
+		t.Fatalf("expected 1 fire (correct signal only), got %d", engine.callCount())
 	}
 }
 
@@ -518,8 +491,8 @@ func TestBatteryTrigger_Seed_PreventsFirstObservationSkip(t *testing.T) {
 	engine := &mockEngine{}
 	bt := NewBatteryTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
-		makeBatteryAutomation(1, "low-battery", BatteryConfig{Operator: "below", Threshold: 20}),
+	repo.automations = []BatteryAutomation{
+		makeBatteryAutomation(1, "low-battery", "crossed_below", ptr(20)),
 	}
 
 	// Seed with level above threshold, then evaluate below — should fire.
@@ -538,8 +511,8 @@ func TestBatteryTrigger_DifferentVehicles_Independent(t *testing.T) {
 	engine := &mockEngine{}
 	bt := NewBatteryTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
-		makeBatteryAutomation(1, "low-battery", BatteryConfig{Operator: "below", Threshold: 20}),
+	repo.automations = []BatteryAutomation{
+		makeBatteryAutomation(1, "low-battery", "crossed_below", ptr(20)),
 	}
 
 	bt.Seed(1, 21)
@@ -564,8 +537,8 @@ func TestBatteryTrigger_EngineError_ReturnsFirstError(t *testing.T) {
 	engine := &mockEngine{returnErr: fmt.Errorf("action failed")}
 	bt := NewBatteryTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
-		makeBatteryAutomation(1, "low-battery", BatteryConfig{Operator: "below", Threshold: 20}),
+	repo.automations = []BatteryAutomation{
+		makeBatteryAutomation(1, "low-battery", "crossed_below", ptr(20)),
 	}
 
 	bt.Seed(100, 21)
