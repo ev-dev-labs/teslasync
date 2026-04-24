@@ -1,4 +1,4 @@
-import { deriveEdges, type TransitionRow, type StateEntry, type Edge, type FSMDefinition } from './types'
+import { deriveEdges, type TransitionRow, type StateEntry, type Edge, type FSMDefinition, type DisallowedTransition, type CoverageMatrix, type Scenario } from './types'
 
 export const CHARGE_SESSION_STATES = [
   'pending', 'active', 'completing', 'done', 'recovered',
@@ -54,7 +54,39 @@ export const CHARGE_SESSION_TRANSITIONS: TransitionRow<ChargeSessionState, Charg
 
 export const CHARGE_SESSION_EDGES: Edge<ChargeSessionState>[] = deriveEdges(CHARGE_SESSION_TRANSITIONS)
 
-export const CHARGE_SESSION_FSM: FSMDefinition<ChargeSessionState> = {
+export const CHARGE_SESSION_DISALLOWED: DisallowedTransition<ChargeSessionState>[] = [
+  { from: 'active', to: 'pending', reason: 'Snapshots only flow forward' },
+  { from: 'done',   to: 'pending', reason: 'Terminal' },
+  { from: 'done',   to: 'active',  reason: 'Terminal' },
+  { from: 'pending', to: 'done',   reason: 'Must accumulate via Active first' },
+]
+
+export const CHARGE_SESSION_COVERAGE: CoverageMatrix<ChargeSessionState> = {
+  pending:    { pending: 'self', active: 'valid',  completing: null,    done: null,    recovered: 'valid' },
+  active:     { pending: null,   active: 'self',   completing: 'valid', done: null,    recovered: 'valid' },
+  completing: { pending: null,   active: null,     completing: 'self',  done: 'valid', recovered: null },
+  done:       { pending: null,   active: null,     completing: null,    done: 'self',  recovered: null },
+  recovered:  { pending: null,   active: 'valid',  completing: 'valid', done: null,    recovered: 'self' },
+}
+
+export const CHARGE_SESSION_SCENARIOS: Scenario<ChargeSessionState>[] = [
+  { id: 'C1',  description: 'Normal AC home charge to 80%',                    transitions: ['pending', 'active', 'completing', 'done'] },
+  { id: 'C2',  description: 'DC Supercharger, ramp & taper',                   transitions: ['pending', 'active', 'completing', 'done'] },
+  { id: 'C3',  description: 'Pod restart mid-charge, still active',            transitions: ['active', 'recovered', 'active'] },
+  { id: 'C4',  description: 'Pod restart, charge already completed',           transitions: ['active', 'recovered', 'completing', 'done'] },
+  { id: 'C5',  description: 'Unplug & immediately drive off',                  transitions: ['active', 'completing', 'done'] },
+  { id: 'C6',  description: 'Charge interrupted by fault',                     transitions: ['active', 'completing', 'done'] },
+  { id: 'C7',  description: 'End battery never arrives within 30s',            transitions: ['completing', 'done'] },
+  { id: 'C8',  description: 'Cell-balance dwell (Vehicle Asleep)',             transitions: ['active'] },
+  { id: 'C9',  description: 'Plug-in but never starts (handshake fail)',       transitions: ['pending'] },
+  { id: 'C10', description: 'Two back-to-back plug-ins',                       transitions: ['pending', 'active', 'completing', 'done'] },
+]
+
+export const CHARGE_SESSION_FSM: FSMDefinition<ChargeSessionState, ChargeSessionTrigger> = {
   states: CHARGE_SESSION_STATE_ENTRIES,
   edges: CHARGE_SESSION_EDGES,
+  transitions: CHARGE_SESSION_TRANSITIONS,
+  disallowed: CHARGE_SESSION_DISALLOWED,
+  coverage: CHARGE_SESSION_COVERAGE,
+  scenarios: CHARGE_SESSION_SCENARIOS,
 }
