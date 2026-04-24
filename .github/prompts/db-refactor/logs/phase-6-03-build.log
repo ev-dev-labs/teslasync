@@ -1,0 +1,16 @@
+=== PREFLIGHT ===
+=== GATE ===
+# github.com/ev-dev-labs/teslasync/cmd/teslasync
+cmd\teslasync\main.go:163:4: unknown field Method in struct literal of type models.APICallLog
+cmd\teslasync\main.go:164:4: unknown field URL in struct literal of type models.APICallLog
+cmd\teslasync\main.go:165:16: cannot use durationMs (variable of type int) as int32 value in struct literal
+cmd\teslasync\main.go:166:4: unknown field Source in struct literal of type models.APICallLog
+cmd\teslasync\main.go:169:26: cannot use &statusCode (value of type *int) as int16 value in assignment
+cmd\teslasync\main.go:173:13: logEntry.RequestBody undefined (type *models.APICallLog has no field or method RequestBody)
+cmd\teslasync\main.go:181:13: logEntry.ResponseBody undefined (type *models.APICallLog has no field or method ResponseBody)
+cmd\teslasync\main.go:185:13: logEntry.Error undefined (type *models.APICallLog has no field or method Error)
+cmd\teslasync\main.go:283:44: pc.TelemetryCapture undefined (type *models.PollingConfig has no field or method TelemetryCapture)
+cmd\teslasync\main.go:284:12: pc.TelemetryCapture undefined (type *models.PollingConfig has no field or method TelemetryCapture)
+cmd\teslasync\main.go:284:12: too many errors
+EXIT=1
+REASON=Build RED
