@@ -434,17 +434,13 @@ func (h *TripPlannerHandler) vehicleEfficiency(ctx context.Context, vehicleID in
 	_ = h.db.Pool.QueryRow(ctx, `
 		SELECT CASE
 			WHEN SUM(distance_mi) > 0 THEN
-				SUM(
-					CASE WHEN distance_mi > 1 AND soc_start > soc_end THEN
-						(COALESCE(start_rated_range_km, 0) - COALESCE(end_rated_range_km, 0))
-						/ NULLIF(distance_mi, 0) * 1000
-					ELSE 0 END * distance_mi
-				) / NULLIF(SUM(
-					CASE WHEN distance_mi > 1 AND soc_start > soc_end THEN distance_mi ELSE 0 END
-				), 0)
+				SUM(COALESCE(energy_used_kwh, 0)) * 1000.0
+				/ (SUM(distance_mi) * 1.60934)
 			END
 		FROM drives
 		WHERE vehicle_id = $1 AND distance_mi > 1
+		  AND energy_used_kwh > 0
+		  AND start_battery_pct > end_battery_pct
 		  AND start_ts > NOW() - INTERVAL '90 days'`, vehicleID).Scan(&eff)
 
 	if eff != nil && *eff > 50 && *eff < 500 {
