@@ -32,7 +32,7 @@ export function VehicleHero({
   isFahrenheit, distanceUnit, speedUnit, tempUnit,
 }: VehicleHeroProps) {
   const { t } = useTranslation('dashboard');
-  const status = vehicle.state as 'online' | 'offline' | 'asleep' | 'driving' | 'charging';
+  const status = (state?.state ?? 'offline') as 'online' | 'offline' | 'asleep' | 'driving' | 'charging';
 
   return (
     <div className="relative h-full overflow-hidden">
@@ -62,7 +62,7 @@ export function VehicleHero({
                 value={Math.round(convertDistance(state.rated_range))} max={600}
                 label={t('hero.range', 'Range')} unit={distanceUnit} color="#00f0ff" size={70}
               />
-              {(vehicle.state === 'driving' || state.speed > 0) && (
+              {(status === 'driving' || state.speed > 0) && (
                 <RadialGauge
                   value={Math.round(convertSpeed(state.speed))} max={250}
                   label={t('hero.speed', 'Speed')} unit={speedUnit} color="#a855f7" size={70}
@@ -182,12 +182,12 @@ type LucideIcon = React.ComponentType<{ className?: string; style?: React.CSSPro
 interface StatItem { icon: LucideIcon; label: string; value: string; color: string }
 
 function buildStatCards(
-  vehicle: Vehicle, s: VehicleState, firmware: string,
+  _vehicle: Vehicle, s: VehicleState, firmware: string,
   u: { convertDistance: (v: number) => number; convertSpeed: (v: number) => number; convertTemp: (v: number) => number;
        distanceUnit: string; speedUnit: string; tempUnit: string },
   t: (key: string, fallback: string) => string,
 ): StatItem[] {
-  const isDriving = vehicle.state === 'driving' || s.speed > 0;
+  const isDriving = s.state === 'driving' || s.speed > 0;
   const isCharging = s.is_charging;
   const cards: StatItem[] = [];
 

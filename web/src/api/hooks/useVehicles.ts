@@ -12,11 +12,13 @@ export const vehicleKeys = {
 };
 
 /** Derives a display-friendly vehicle status from the vehicle record and optional live state. */
-export function getVehicleStatus(v: Vehicle, state?: VehicleState | null): VehicleStatus {
+export function getVehicleStatus(_v: Vehicle, state?: VehicleState | null): VehicleStatus {
   if (state?.is_charging) return 'charging'
   if (state?.speed && state.speed > 0) return 'driving'
-  if (v.state === 'online') return 'online'
-  if (v.state === 'asleep') return 'asleep'
+  if (state?.state === 'online') return 'online'
+  if (state?.state === 'asleep') return 'asleep'
+  if (state?.state === 'parked') return 'online'
+  if (state) return 'online'
   return 'offline'
 }
 

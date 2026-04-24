@@ -6,11 +6,13 @@ export interface StateResponse {
   live: boolean
 }
 
-export function deriveStatus(v: Vehicle, s?: VehicleState | null): VehicleStatus {
+export function deriveStatus(_v: Vehicle, s?: VehicleState | null): VehicleStatus {
   if (s?.is_charging) return 'charging'
   if (s?.speed && s.speed > 0) return 'driving'
-  if (v.state === 'online') return 'online'
-  if (v.state === 'asleep') return 'asleep'
+  if (s?.state === 'online') return 'online'
+  if (s?.state === 'asleep') return 'asleep'
+  if (s?.state === 'parked') return 'online'
+  if (s) return 'online'
   return 'offline'
 }
 

@@ -126,7 +126,7 @@ export default function GlancePage() {
   const { convertDistance, convertTemp, distanceUnit, tempUnit } = useSettings();
   const sendCommand = useVehicleCommand();
 
-  const isOnline = vehicle?.state === 'online';
+  const isOnline = state?.state === 'online' || state?.state === 'parked';
   const canSendCommands = isOnline && !sendCommand.isPending;
 
   const locationLabel = getLocationLabel(location, t);
@@ -169,7 +169,7 @@ export default function GlancePage() {
             variant={isOnline ? 'success' : 'neutral'}
             dot
           >
-            {vehicle.state ?? t('glance.unknown', 'Unknown')}
+            {state?.state ?? t('glance.unknown', 'Unknown')}
           </Badge>
         </div>
 

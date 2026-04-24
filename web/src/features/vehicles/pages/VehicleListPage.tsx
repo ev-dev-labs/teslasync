@@ -33,11 +33,13 @@ function batteryColor(level: number): string {
 
 type StatusKey = 'online' | 'asleep' | 'driving' | 'charging' | 'offline';
 
-function deriveStatus(vehicle: Vehicle, state?: VehicleState | null): StatusKey {
+function deriveStatus(_vehicle: Vehicle, state?: VehicleState | null): StatusKey {
   if (state?.is_charging) return 'charging';
   if (state?.speed && state.speed > 0) return 'driving';
-  if (vehicle.state === 'online') return 'online';
-  if (vehicle.state === 'asleep') return 'asleep';
+  if (state?.state === 'online') return 'online';
+  if (state?.state === 'asleep') return 'asleep';
+  if (state?.state === 'parked') return 'online';
+  if (state) return 'online';
   return 'offline';
 }
 

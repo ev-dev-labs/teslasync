@@ -6,7 +6,7 @@ import { GlassPanel } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { useAnalyticsSummary } from '@/api/hooks/useAnalytics';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -23,6 +23,7 @@ export default function QuickStatsPage() {
   const isLoading = vehiclesLoading || analyticsLoading;
   const error = vehiclesError || analyticsError;
   const vehicle = vehicles?.[0];
+  const { data: stateData } = useVehicleState(vehicle?.id ?? 0);
 
   return (
     <PageContainer
@@ -45,7 +46,7 @@ export default function QuickStatsPage() {
                     {vehicle.display_name || t('quickStats.defaultName', 'Tesla')}
                   </p>
                   <p className="text-xs text-white/40">
-                    {vehicle.model} · {vehicle.state}
+                    {vehicle.model} · {stateData?.state?.state ?? 'offline'}
                   </p>
                 </div>
               </div>

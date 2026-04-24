@@ -1,0 +1,49 @@
+=== SURVEY ===
+Date: 2026-04-24 11:02:33
+Task: Fix vehicle card not showing FSM state badge
+
+Files with vehicle.state references (from grep):
+- VehicleHeroCardWidget.tsx:70,77 — status={vehicle.state}
+- VehicleHero.tsx:35 — vehicle.state as cast; :65,:190 — vehicle.state === 'driving'
+- QuickStatsPage.tsx:48 — {vehicle.model} · {vehicle.state}
+- GlancePage.tsx:129 — vehicle?.state === 'online'; :172 — vehicle.state ?? ...
+- helpers.ts:12,13 — v.state === 'online'/'asleep'
+- useVehicles.ts:18,19 — v.state === 'online'/'asleep'
+- VehicleListPage.tsx:39,40 — vehicle.state === 'online'/'asleep'
+- FleetStatsBarWidget.tsx:23 — v.state === 'online'
+- FleetStatsWidget.tsx:31 — v.state === 'online'
+- VehicleCard.tsx — uses getVehicleStatus (fixed via useVehicles.ts fix)
+- VehicleHeader.tsx — uses getVehicleStatus (fixed via useVehicles.ts fix)
+- api/vehicles.ts:28,29 — v.state checks (old API file, same pattern)
+
+Root cause: vehicle.state on the Vehicle type exists in TypeScript interfaces but the
+/api/v1/vehicles list endpoint does NOT return a meaningful state field (it returns empty
+or stale data). The FSM state is only in VehicleState.state from /vehicles/{id}/state.
+
+
+=== REASONING ===
+The Vehicle type has a state field in the TypeScript interface, but the /vehicles list
+endpoint returns stale/empty state. The actual FSM state (parked, driving, charging, etc.)
+is only available from /vehicles/{id}/state which returns VehicleState with a state field.
+
+All deriveStatus/getVehicleStatus functions were reading v.state (Vehicle.state) which is
+undefined/stale, causing them to always fall through to 'offline'. They need to read from
+VehicleState.state instead (s?.state, state?.state).
+
+Pages that display vehicle.state directly (QuickStatsPage, GlancePage) needed to either
+fetch useVehicleState or use the already-fetched stateData.
+
+=== CHANGES ===
+1. useVehicles.ts: getVehicleStatus — read state?.state instead of v.state; added parked→online mapping
+2. helpers.ts: deriveStatus — same fix as above
+3. VehicleHeroCardWidget.tsx: lines 70,77 — status={state?.state ?? 'offline'} instead of vehicle.state
+4. VehicleHero.tsx: line 35 — status from state?.state; line 65 — status check; line 190 — s.state check
+5. VehicleHero.tsx: buildStatCards vehicle param → _vehicle (now unused)
+6. QuickStatsPage.tsx: added useVehicleState import + hook call; display stateData?.state?.state
+7. GlancePage.tsx: isOnline from state?.state; badge text from state?.state
+8. VehicleListPage.tsx: local deriveStatus — same fix pattern
+
+=== GATE ===
+TypeScript: PASS (exit 0)
+EXIT=0
+STATUS=DONE

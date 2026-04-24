@@ -67,14 +67,14 @@ export default function VehicleHeroCardWidget({ vehicleId, size }: WidgetProps) 
               name={vehicle.display_name || vehicle.vin}
               batteryLevel={state?.battery_level ?? null}
               batteryColor={batteryColor}
-              status={vehicle.state}
+              status={state?.state ?? 'offline'}
             />
           ) : (
             <FullView
               name={vehicle.display_name || vehicle.vin}
               model={vehicle.model}
               trimBadging={vehicle.trim_badging}
-              status={vehicle.state}
+              status={state?.state ?? 'offline'}
               batteryLevel={state?.battery_level ?? null}
               batteryColor={batteryColor}
               range={range}
