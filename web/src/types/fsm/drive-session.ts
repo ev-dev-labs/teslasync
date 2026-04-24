@@ -1,4 +1,4 @@
-import { deriveEdges, type TransitionRow, type StateEntry, type Edge, type FSMDefinition } from './types'
+import { deriveEdges, type TransitionRow, type StateEntry, type Edge, type FSMDefinition, type DisallowedTransition, type CoverageMatrix, type Scenario } from './types'
 
 export const DRIVE_SESSION_STATES = [
   'pending', 'active', 'ending', 'completed', 'recovered',
@@ -49,7 +49,47 @@ export const DRIVE_SESSION_TRANSITIONS: TransitionRow<DriveSessionState, DriveSe
 
 export const DRIVE_SESSION_EDGES: Edge<DriveSessionState>[] = deriveEdges(DRIVE_SESSION_TRANSITIONS)
 
-export const DRIVE_SESSION_FSM: FSMDefinition<DriveSessionState> = {
+export const DRIVE_SESSION_DISALLOWED: DisallowedTransition<DriveSessionState>[] = [
+  { from: 'active',    to: 'pending',   reason: 'Snapshots only flow forward' },
+  { from: 'completed', to: 'pending',   reason: 'Terminal — new drive starts fresh sub-FSM' },
+  { from: 'completed', to: 'active',    reason: 'Terminal' },
+  { from: 'completed', to: 'ending',    reason: 'Terminal' },
+  { from: 'completed', to: 'recovered', reason: 'Terminal' },
+  { from: 'pending',   to: 'completed', reason: 'Must accumulate via Active first' },
+]
+
+export const DRIVE_VALIDATION_RULES = {
+  distanceMin: 0, distanceMaxMi: 500, durationMinSec: 30,
+  netEnergyMin: 0, efficiencyRangeWhPerMi: [100, 600] as const,
+  endBatteryMaxDelta: 2,
+} as const
+
+export const DRIVE_SESSION_COVERAGE: CoverageMatrix<DriveSessionState> = {
+  pending:   { pending: 'self', active: 'valid',  ending: null,    completed: null,    recovered: 'valid' },
+  active:    { pending: null,   active: 'self',   ending: 'valid', completed: null,    recovered: 'valid' },
+  ending:    { pending: null,   active: null,     ending: 'self',  completed: 'valid', recovered: null },
+  completed: { pending: null,   active: null,     ending: null,    completed: 'self',  recovered: null },
+  recovered: { pending: null,   active: 'valid',  ending: 'valid', completed: null,    recovered: 'self' },
+}
+
+export const DRIVE_SESSION_SCENARIOS: Scenario<DriveSessionState>[] = [
+  { id: 'D1',  description: 'Normal drive with all signals',                     transitions: ['pending', 'active', 'ending', 'completed'] },
+  { id: 'D2',  description: 'Pod restart mid-drive, signals still flowing',       transitions: ['active', 'recovered', 'active'] },
+  { id: 'D3',  description: 'Pod restart while car already parked',              transitions: ['active', 'recovered', 'ending', 'completed'] },
+  { id: 'D4',  description: 'End odometer never arrives within 60s',              transitions: ['ending', 'completed'] },
+  { id: 'D5',  description: 'Signal lost before snapshot ready',                  transitions: ['pending', 'recovered'] },
+  { id: 'D6',  description: 'Charge starts mid-drive (Supercharger)',             transitions: ['active', 'ending', 'completed'] },
+  { id: 'D7',  description: 'Micro-drive (< 30s)',                                transitions: ['pending', 'active', 'ending', 'completed'] },
+  { id: 'D8',  description: 'End battery > start (heavy regen)',                  transitions: ['pending', 'active', 'ending', 'completed'] },
+  { id: 'D9',  description: 'Two back-to-back drives',                            transitions: ['pending', 'active', 'ending', 'completed'] },
+  { id: 'D10', description: 'No start GPS (parking garage)',                      transitions: ['pending'] },
+]
+
+export const DRIVE_SESSION_FSM: FSMDefinition<DriveSessionState, DriveSessionTrigger> = {
   states: DRIVE_SESSION_STATE_ENTRIES,
   edges: DRIVE_SESSION_EDGES,
+  transitions: DRIVE_SESSION_TRANSITIONS,
+  disallowed: DRIVE_SESSION_DISALLOWED,
+  coverage: DRIVE_SESSION_COVERAGE,
+  scenarios: DRIVE_SESSION_SCENARIOS,
 }
