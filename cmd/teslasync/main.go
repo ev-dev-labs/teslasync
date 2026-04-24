@@ -160,29 +160,18 @@ func main() {
 	apiLogRepo := database.NewAPICallLogRepo(db)
 	teslaClient.SetLogCallback(func(method, url string, statusCode int, reqBody, respBody []byte, durationMs int, callErr error) {
 		logEntry := &models.APICallLog{
-			Method:     method,
-			URL:        url,
-			DurationMs: durationMs,
-			Source:     "tesla_api",
+			HTTPMethod: method,
+			Endpoint:   url,
+			DurationMs: int32(durationMs),
+			Service:    "tesla_api",
 		}
 		if statusCode > 0 {
-			logEntry.StatusCode = &statusCode
-		}
-		if len(reqBody) > 0 {
-			s := string(reqBody)
-			logEntry.RequestBody = &s
-		}
-		// Truncate response body to prevent excessive storage
-		if len(respBody) > 0 {
-			s := string(respBody)
-			if len(s) > 10000 {
-				s = s[:10000] + "...(truncated)"
-			}
-			logEntry.ResponseBody = &s
+			sc := int16(statusCode)
+			logEntry.StatusCode = sc
 		}
 		if callErr != nil {
 			s := callErr.Error()
-			logEntry.Error = &s
+			logEntry.ErrorMessage = &s
 		}
 		logCtx, logCancel := context.WithTimeout(context.Background(), 5*time.Second)
 		if err := apiLogRepo.Create(logCtx, logEntry); err != nil {
@@ -279,11 +268,10 @@ func main() {
 
 				// Read initial capture toggle from settings
 				settingsRepo := database.NewSettingsRepo(db)
-				if pc, err := settingsRepo.GetPollingConfig(ctx); err == nil {
-					telemetryHandler.SetCaptureEnabled(pc.TelemetryCapture)
-					if pc.TelemetryCapture {
-						log.Info().Msg("raw telemetry capture is ENABLED (from settings)")
-					}
+				if _, err := settingsRepo.GetPollingConfig(ctx); err == nil {
+					// TelemetryCapture toggle was removed in the typed-schema migration.
+					// Raw capture is now controlled via MongoDB availability only.
+					log.Debug().Msg("polling config loaded (telemetry capture toggle removed)")
 				}
 			}
 		}
@@ -436,8 +424,7 @@ func main() {
 			Msg("gas price worker started")
 	}
 
-	// Periodic component health checker — creates system alerts on state changes
-	alertRepo := database.NewAlertRepo(db)
+	// Periodic component health checker — sends notifications on state changes
 	notifRepo := database.NewNotificationRepo(db)
 	prevHealthState := make(map[string]resilience.ComponentStatus)
 	resilience.SafeGo("health-watchdog", func() {
@@ -492,27 +479,15 @@ func main() {
 						}
 						title := fmt.Sprintf("%s is %s", componentDisplayName(name), comp.Status.String())
 						message := fmt.Sprintf("Component %s has %d consecutive failures. Last error: %s", name, comp.ConsecFails, comp.LastError)
-						_ = alertRepo.Create(ctx, &models.Alert{
-							Type:     "system_" + name,
-							Severity: severity,
-							Title:    title,
-							Message:  message,
-						})
-						// Send notifications to all enabled channels
+						_ = severity // logged below
 						sendSystemNotification(ctx, notifRepo, mqttClient, "⚠️ "+title, message)
-						log.Warn().Str("component", name).Str("status", comp.Status.String()).Msg("system alert: component degraded")
+						log.Warn().Str("component", name).Str("status", comp.Status.String()).Str("severity", severity).Msg("system alert: component degraded")
 					}
 
 					// Component recovered
 					if prev >= resilience.StatusDegraded && comp.Status == resilience.StatusHealthy {
 						title := fmt.Sprintf("%s recovered", componentDisplayName(name))
 						message := fmt.Sprintf("Component %s is healthy again", name)
-						_ = alertRepo.Create(ctx, &models.Alert{
-							Type:     "system_" + name,
-							Severity: "info",
-							Title:    title,
-							Message:  message,
-						})
 						sendSystemNotification(ctx, notifRepo, mqttClient, "✅ "+title, message)
 						log.Info().Str("component", name).Msg("system alert: component recovered")
 					}
