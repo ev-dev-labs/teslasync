@@ -1,4 +1,4 @@
-import type { StateEntry, Edge, FSMDefinition } from './types'
+import { deriveEdges, type TransitionRow, type StateEntry, type Edge, type FSMDefinition } from './types'
 
 export const COMMAND_STATES = [
   'queued', 'waking', 'wake_confirmed', 'wake_timeout',
@@ -35,15 +35,29 @@ export const COMMAND_GUARDS = [
 ] as const
 export type CommandGuard = (typeof COMMAND_GUARDS)[number]
 
-export const COMMAND_EDGES: Edge<CommandState>[] = [
-  ['queued', 'waking'],           ['waking', 'wake_confirmed'],  ['waking', 'wake_timeout'],
-  ['wake_confirmed', 'sending'],  ['wake_timeout', 'retrying'],
-  ['sending', 'succeeded'],       ['sending', 'failed'],         ['sending', 'timed_out'],
-  ['failed', 'retrying'],         ['timed_out', 'retrying'],
-  ['retrying', 'waking'],         ['retrying', 'gave_up'],
+export const COMMAND_TRANSITIONS: TransitionRow<CommandState, CommandTrigger>[] = [
+  { from: 'queued',          to: 'sending',        trigger: 'vehicle_awake',     guard: null,                    timing: 'immediate' },
+  { from: 'queued',          to: 'waking',          trigger: 'vehicle_asleep',    guard: null,                    timing: 'immediate' },
+  { from: 'queued',          to: 'gave_up',         trigger: 'duplicate_command', guard: null,                    timing: 'immediate' },
+  { from: 'waking',          to: 'wake_confirmed',  trigger: 'wake_response',     guard: null,                    timing: 'immediate' },
+  { from: 'waking',          to: 'wake_timeout',    trigger: 'timeout_30s',       guard: null,                    timing: 'immediate' },
+  { from: 'wake_confirmed',  to: 'sending',         trigger: 'init_delay',        guard: null,                    timing: 'immediate' },
+  { from: 'wake_timeout',    to: 'waking',           trigger: 'retry_scheduled',   guard: 'wake_retries_left',     timing: 'immediate' },
+  { from: 'wake_timeout',    to: 'gave_up',          trigger: 'retry_scheduled',   guard: 'wake_retries_exhausted', timing: 'immediate' },
+  { from: 'sending',         to: 'succeeded',        trigger: 'command_ok',        guard: null,                    timing: 'immediate' },
+  { from: 'sending',         to: 'failed',            trigger: 'command_error',     guard: null,                    timing: 'immediate' },
+  { from: 'sending',         to: 'timed_out',         trigger: 'timeout_15s',       guard: null,                    timing: 'immediate' },
+  { from: 'failed',          to: 'retrying',          trigger: 'retry_scheduled',   guard: 'retryable',             timing: 'immediate' },
+  { from: 'failed',          to: 'gave_up',           trigger: 'retry_scheduled',   guard: 'non_retryable',         timing: 'immediate' },
+  { from: 'timed_out',       to: 'retrying',          trigger: 'retry_scheduled',   guard: 'retries_left',          timing: 'immediate' },
+  { from: 'timed_out',       to: 'gave_up',           trigger: 'retry_scheduled',   guard: 'retries_exhausted',     timing: 'immediate' },
+  { from: 'retrying',        to: 'sending',           trigger: 'backoff_expired',   guard: null,                    timing: 'immediate' },
 ]
 
-export const COMMAND_FSM: FSMDefinition<CommandState> = {
+export const COMMAND_EDGES: Edge<CommandState>[] = deriveEdges(COMMAND_TRANSITIONS)
+
+export const COMMAND_FSM: FSMDefinition<CommandState, CommandTrigger> = {
   states: COMMAND_STATE_ENTRIES,
   edges: COMMAND_EDGES,
+  transitions: COMMAND_TRANSITIONS,
 }
