@@ -1,4 +1,4 @@
-import type { StateEntry, Edge, FSMDefinition } from './types'
+import { deriveEdges, type TransitionRow, type StateEntry, type Edge, type FSMDefinition } from './types'
 
 export const CHARGE_SESSION_STATES = [
   'pending', 'active', 'completing', 'done', 'recovered',
@@ -40,11 +40,19 @@ export interface ChargeSignalContext {
   maxPower: number
 }
 
-export const CHARGE_SESSION_EDGES: Edge<ChargeSessionState>[] = [
-  ['pending', 'active'],    ['active', 'completing'], ['completing', 'done'],
-  ['pending', 'recovered'], ['active', 'recovered'],  ['recovered', 'active'],
-  ['active', 'done'],
+export const CHARGE_SESSION_TRANSITIONS: TransitionRow<ChargeSessionState, ChargeSessionTrigger>[] = [
+  { from: 'pending',    to: 'active',     trigger: 'start_snapshot_ready', guard: 'has_charge_start_fields', timing: 'immediate' },
+  { from: 'pending',    to: 'recovered',  trigger: 'pod_restart',          guard: null,                      timing: 'immediate' },
+  { from: 'active',     to: 'completing', trigger: 'charge_ending',        guard: null,                      timing: 'immediate' },
+  { from: 'active',     to: 'completing', trigger: 'gear_driving',         guard: null,                      timing: 'immediate' },
+  { from: 'active',     to: 'recovered',  trigger: 'pod_restart',          guard: null,                      timing: 'immediate' },
+  { from: 'completing', to: 'done',       trigger: 'end_snapshot_ready',   guard: 'has_charge_end_fields',   timing: 'immediate' },
+  { from: 'completing', to: 'done',       trigger: 'end_snapshot_timeout', guard: null,                      timing: 'immediate' },
+  { from: 'recovered',  to: 'active',     trigger: 'charge_still_active',  guard: null,                      timing: 'immediate' },
+  { from: 'recovered',  to: 'completing', trigger: 'charge_ending',        guard: null,                      timing: 'immediate' },
 ]
+
+export const CHARGE_SESSION_EDGES: Edge<ChargeSessionState>[] = deriveEdges(CHARGE_SESSION_TRANSITIONS)
 
 export const CHARGE_SESSION_FSM: FSMDefinition<ChargeSessionState> = {
   states: CHARGE_SESSION_STATE_ENTRIES,
