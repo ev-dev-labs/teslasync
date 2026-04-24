@@ -98,17 +98,17 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 	catRows, err := h.db.Pool.Query(ctx, `
 		SELECT
 		  CASE
-		    WHEN speed_avg < 30 THEN 'City (<30)'
-		    WHEN speed_avg < 60 THEN 'Suburban (30-60)'
-		    WHEN speed_avg < 90 THEN 'Highway (60-90)'
+		    WHEN avg_speed_mph < 30 THEN 'City (<30)'
+		    WHEN avg_speed_mph < 60 THEN 'Suburban (30-60)'
+		    WHEN avg_speed_mph < 90 THEN 'Highway (60-90)'
 		    ELSE 'High Speed (90+)'
 		  END AS category,
 		  COUNT(*) AS drive_count,
-		  AVG(distance / NULLIF(duration_min,0) * 60) AS avg_speed,
-		  AVG(CASE WHEN distance > 0 THEN (start_battery_level - end_battery_level)::float / distance * 100 ELSE 0 END) AS battery_pct_per_100km
+		  AVG(distance_mi / NULLIF(duration_min,0) * 60) AS avg_speed,
+		  AVG(CASE WHEN distance_mi > 0 THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 ELSE 0 END) AS battery_pct_per_100km
 		FROM drives
-		WHERE vehicle_id = $1 AND distance > 1 AND duration_min > 1
-		  AND start_date > NOW() - interval '90 days'
+		WHERE vehicle_id = $1 AND distance_mi > 1 AND duration_min > 1
+		  AND start_ts > NOW() - interval '90 days'
 		GROUP BY category`, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("speed profile: failed to query efficiency categories")
@@ -142,12 +142,12 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	// Optimal speed data points
 	ptRows, err := h.db.Pool.Query(ctx, `
-		SELECT speed_avg, distance,
-		  CASE WHEN distance > 0 THEN (start_battery_level - end_battery_level)::float / distance * 100 ELSE 0 END AS efficiency
+		SELECT avg_speed_mph, distance_mi,
+		  CASE WHEN distance_mi > 0 THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 ELSE 0 END AS efficiency
 		FROM drives
-		WHERE vehicle_id = $1 AND distance > 5 AND duration_min > 5
-		  AND speed_avg IS NOT NULL
-		ORDER BY start_date DESC LIMIT 100`, vehicleID)
+		WHERE vehicle_id = $1 AND distance_mi > 5 AND duration_min > 5
+		  AND avg_speed_mph IS NOT NULL
+		ORDER BY start_ts DESC LIMIT 100`, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("speed profile: failed to query efficiency points")
 		writeError(w, http.StatusInternalServerError, "failed to query efficiency points")
