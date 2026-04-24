@@ -28,3 +28,38 @@ export interface FSMDefinition<S extends string = string> {
 
 /** Resolved state style = theme defaults merged with optional overrides */
 export type ResolvedStateStyle = StateStyle & { variant: BadgeVariant }
+
+export type TransitionTiming = 'immediate' | 'debounced'
+
+export interface TransitionRow<S extends string = string, T extends string = string> {
+  from: S
+  to: S
+  trigger: T
+  guard: string | null
+  timing: TransitionTiming
+}
+
+export type CoverageCell = 'valid' | 'disallowed' | 'self' | null
+export type CoverageMatrix<S extends string> = Record<S, Record<S, CoverageCell>>
+
+export interface DisallowedTransition<S extends string> {
+  from: S
+  to: S
+  reason: string
+}
+
+export interface Scenario<S extends string> {
+  id: string
+  description: string
+  transitions: S[]
+}
+
+export type ToastMap<S extends string> = Partial<Record<S, string | null>>
+
+export type TruthTableCell<S extends string> =
+  | { action: 'transition'; to: S; guard?: string }
+  | { action: 'no_op' }
+  | { action: 'not_applicable' }
+  | { action: 'disallowed'; reason: string }
+
+export type TruthTable<S extends string, T extends string> = Record<S, Record<T, TruthTableCell<S>>>
