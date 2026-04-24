@@ -1,0 +1,58 @@
+=== SURVEY ===
+
+internal\api\year_review_handler.go:138:		SELECT COALESCE(SUM(start_range_km - end_range_km), 0),
+internal\api\year_review_handler.go:144:		  AND start_range_km IS NOT NULL
+internal\api\year_review_handler.go:145:		  AND end_range_km IS NOT NULL
+internal\api\year_review_handler.go:146:		  AND (start_range_km - end_range_km) > 0
+internal\api\year_review_handler.go:160:		       COALESCE(SUM(charge_energy_added), 0),
+internal\api\year_review_handler.go:164:		  AND end_date IS NOT NULL
+internal\api\year_review_handler.go:165:		  AND start_date >= $2
+internal\api\year_review_handler.go:166:		  AND start_date < $3`,
+internal\api\year_review_handler.go:178:		`SELECT COALESCE(gas_price_per_unit, 3.50), COALESCE(gas_efficiency_mpg, 25) FROM settings LIMIT 1`,
+internal\api\year_review_handler.go:234:		       start_address, end_address, start_range_km, end_range_km
+internal\api\year_review_handler.go:245:		       start_address, end_address, start_range_km, end_range_km
+internal\api\year_review_handler.go:248:		  AND start_range_km IS NOT NULL AND end_range_km IS NOT NULL
+internal\api\year_review_handler.go:249:		  AND (start_range_km - end_range_km) > 0
+internal\api\year_review_handler.go:251:		ORDER BY ((start_range_km - end_range_km) / distance_mi) ASC LIMIT 1`,
+internal\api\year_review_handler.go:256:		       start_address, end_address, start_range_km, end_range_km
+internal\api\year_review_handler.go:259:		  AND start_range_km IS NOT NULL AND end_range_km IS NOT NULL
+internal\api\year_review_handler.go:260:		  AND (start_range_km - end_range_km) > 0
+internal\api\year_review_handler.go:262:		ORDER BY ((start_range_km - end_range_km) / distance_mi) DESC LIMIT 1`,
+internal\api\year_review_handler.go:296:		SELECT EXTRACT(MONTH FROM start_date)::int AS m,
+internal\api\year_review_handler.go:297:		       COALESCE(SUM(charge_energy_added), 0),
+internal\api\year_review_handler.go:300:		WHERE vehicle_id = $1 AND end_date IS NOT NULL
+internal\api\year_review_handler.go:301:		  AND start_date >= $2 AND start_date < $3
+internal\api\year_review_handler.go:388:		WHERE vehicle_id = $1 AND end_date IS NOT NULL
+internal\api\year_review_handler.go:389:		  AND start_date >= $2 AND start_date < $3
+internal\api\year_review_handler.go:424:		SELECT COALESCE(AVG(start_battery_level), 0)
+internal\api\year_review_handler.go:426:		WHERE vehicle_id = $1 AND end_date IS NOT NULL AND start_battery_level > 0
+internal\api\year_review_handler.go:427:		  AND start_date >= $2 AND start_date < $3`,
+
+
+=== REASONING ===
+charging_sessions: charge_energy_added->energy_added_kwh, start_date->start_ts, end_date->end_ts, start_battery_level->start_battery_pct
+drives: start_range_km/end_range_km removed -> efficiency queries removed, scanHighlight simplified
+settings: column-based SELECT rewritten to key-value subquery (value_num)
+
+=== CHANGES ===
+1. Lines 134-153: Removed efficiency query (start_range_km/end_range_km removed from drives)
+2. Lines 158-168: charge_energy_added->energy_added_kwh, start_date->start_ts, end_date->end_ts
+3. Line 178: Settings query rewritten to key-value subqueries
+4. Lines 204-230: scanHighlight: removed startRangeKm/endRangeKm vars and efficiency calc
+5. Lines 232-237: highlightBase: removed start_range_km, end_range_km from SELECT
+6. Lines 242-263: mostEfficient/leastEfficient set to nil (range columns unavailable)
+7. Lines 295-302: Charging per month: start_date->start_ts, end_date->end_ts, charge_energy_added->energy_added_kwh
+8. Lines 387-390: Charge types: end_date->end_ts, start_date->start_ts
+9. Lines 423-428: Avg charge SOC: start_battery_level->start_battery_pct, end_date->end_ts, start_date->start_ts
+
+=== GATE ===
+FAIL: Old column refs still present:
+
+internal\api\year_review_handler.go:161:		  COALESCE((SELECT value_num FROM settings WHERE key = 'gas_price_per_unit'), 3.50),
+internal\api\year_review_handler.go:162:		  COALESCE((SELECT value_num FROM settings WHERE key = 'gas_efficiency_mpg'), 25)`,
+
+OK: No start_date/end_date refs (none expected in this file)
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===

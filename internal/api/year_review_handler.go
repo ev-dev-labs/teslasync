@@ -131,39 +131,21 @@ func (h *YearReviewHandler) GetYearReview(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Weighted average efficiency: SUM(range_consumed) / SUM(distance_mi) * 1000
+	// Range-based efficiency unavailable (range columns removed from drives)
 	var avgEffWhKm float64
-	var sumRangeConsumed, sumEffDist float64
-	err = h.db.Pool.QueryRow(ctx, `
-		SELECT COALESCE(SUM(start_range_km - end_range_km), 0),
-		       COALESCE(SUM(distance_mi), 0)
-		FROM drives
-		WHERE vehicle_id = $1
-		  AND end_ts IS NOT NULL
-		  AND distance_mi > 1
-		  AND start_range_km IS NOT NULL
-		  AND end_range_km IS NOT NULL
-		  AND (start_range_km - end_range_km) > 0
-		  AND start_ts >= $2
-		  AND start_ts < $3`,
-		vehicleID, yearStart, yearEnd,
-	).Scan(&sumRangeConsumed, &sumEffDist)
-	if err == nil && sumEffDist > 0 {
-		avgEffWhKm = (sumRangeConsumed / sumEffDist) * 1000
-	}
 
 	// ── Charging aggregates ──
 	var totalChargeSessions int
 	var totalEnergyKwh, totalChargingCost float64
 	err = h.db.Pool.QueryRow(ctx, `
 		SELECT COUNT(*),
-		       COALESCE(SUM(charge_energy_added), 0),
+		       COALESCE(SUM(energy_added_kwh), 0),
 		       COALESCE(SUM(CASE WHEN cost > 0 THEN cost ELSE 0 END), 0)
 		FROM charging_sessions
 		WHERE vehicle_id = $1
-		  AND end_date IS NOT NULL
-		  AND start_date >= $2
-		  AND start_date < $3`,
+		  AND end_ts IS NOT NULL
+		  AND start_ts >= $2
+		  AND start_ts < $3`,
 		vehicleID, yearStart, yearEnd,
 	).Scan(&totalChargeSessions, &totalEnergyKwh, &totalChargingCost)
 	if err != nil {
@@ -175,7 +157,9 @@ func (h *YearReviewHandler) GetYearReview(w http.ResponseWriter, r *http.Request
 	// ── Gas savings ──
 	var gasPrice, gasEffMPG float64
 	err = h.db.Pool.QueryRow(ctx,
-		`SELECT COALESCE(gas_price_per_unit, 3.50), COALESCE(gas_efficiency_mpg, 25) FROM settings LIMIT 1`,
+		`SELECT
+		  COALESCE((SELECT value_num FROM settings WHERE key = 'gas_price_per_unit'), 3.50),
+		  COALESCE((SELECT value_num FROM settings WHERE key = 'gas_efficiency_mpg'), 25)`,
 	).Scan(&gasPrice, &gasEffMPG)
 	if err != nil && err != pgx.ErrNoRows {
 		log.Warn().Err(err).Msg("year-review: failed to get settings, using defaults")
@@ -206,10 +190,9 @@ func (h *YearReviewHandler) GetYearReview(w http.ResponseWriter, r *http.Request
 		var startDate time.Time
 		var durMin float64
 		var startAddr, endAddr *string
-		var startRangeKm, endRangeKm *float64
 		err := h.db.Pool.QueryRow(ctx, query, args...).Scan(
 			&dh.DriveID, &startDate, &dh.DistanceKm, &durMin,
-			&startAddr, &endAddr, &startRangeKm, &endRangeKm,
+			&startAddr, &endAddr,
 		)
 		if err != nil {
 			return nil
@@ -222,16 +205,13 @@ func (h *YearReviewHandler) GetYearReview(w http.ResponseWriter, r *http.Request
 		if endAddr != nil {
 			dh.EndAddress = *endAddr
 		}
-		if startRangeKm != nil && endRangeKm != nil && dh.DistanceKm > 0 {
-			dh.EfficiencyWhKm = roundYR(((*startRangeKm-*endRangeKm)/dh.DistanceKm)*1000, 1)
-		}
 		dh.DistanceKm = roundYR(dh.DistanceKm, 1)
 		return &dh
 	}
 
 	highlightBase := `
 		SELECT id, start_ts, distance_mi, duration_min,
-		       start_address, end_address, start_range_km, end_range_km
+		       start_address, end_address
 		FROM drives
 		WHERE vehicle_id = $1 AND end_ts IS NOT NULL AND distance_mi > 0
 		  AND start_ts >= $2 AND start_ts < $3`
@@ -239,28 +219,9 @@ func (h *YearReviewHandler) GetYearReview(w http.ResponseWriter, r *http.Request
 	longestDrive := scanHighlight(highlightBase+" ORDER BY distance_mi DESC LIMIT 1", vehicleID, yearStart, yearEnd)
 	shortestDrive := scanHighlight(highlightBase+" AND distance_mi >= 1 ORDER BY distance_mi ASC LIMIT 1", vehicleID, yearStart, yearEnd)
 
-	// Most efficient: lowest Wh/km (lowest range consumption per km)
-	mostEfficient := scanHighlight(`
-		SELECT id, start_ts, distance_mi, duration_min,
-		       start_address, end_address, start_range_km, end_range_km
-		FROM drives
-		WHERE vehicle_id = $1 AND end_ts IS NOT NULL AND distance_mi > 1
-		  AND start_range_km IS NOT NULL AND end_range_km IS NOT NULL
-		  AND (start_range_km - end_range_km) > 0
-		  AND start_ts >= $2 AND start_ts < $3
-		ORDER BY ((start_range_km - end_range_km) / distance_mi) ASC LIMIT 1`,
-		vehicleID, yearStart, yearEnd)
-
-	leastEfficient := scanHighlight(`
-		SELECT id, start_ts, distance_mi, duration_min,
-		       start_address, end_address, start_range_km, end_range_km
-		FROM drives
-		WHERE vehicle_id = $1 AND end_ts IS NOT NULL AND distance_mi > 1
-		  AND start_range_km IS NOT NULL AND end_range_km IS NOT NULL
-		  AND (start_range_km - end_range_km) > 0
-		  AND start_ts >= $2 AND start_ts < $3
-		ORDER BY ((start_range_km - end_range_km) / distance_mi) DESC LIMIT 1`,
-		vehicleID, yearStart, yearEnd)
+	// Efficiency extremes unavailable (range columns removed from drives)
+	var mostEfficient *driveHighlight
+	var leastEfficient *driveHighlight
 
 	// ── Monthly breakdown (always 12 entries) ──
 	monthlyMap := make(map[int]*monthStat)
@@ -293,12 +254,12 @@ func (h *YearReviewHandler) GetYearReview(w http.ResponseWriter, r *http.Request
 
 	// Charging per month
 	chargeMonthRows, err := h.db.Pool.Query(ctx, `
-		SELECT EXTRACT(MONTH FROM start_date)::int AS m,
-		       COALESCE(SUM(charge_energy_added), 0),
+		SELECT EXTRACT(MONTH FROM start_ts)::int AS m,
+		       COALESCE(SUM(energy_added_kwh), 0),
 		       COALESCE(SUM(CASE WHEN cost > 0 THEN cost ELSE 0 END), 0)
 		FROM charging_sessions
-		WHERE vehicle_id = $1 AND end_date IS NOT NULL
-		  AND start_date >= $2 AND start_date < $3
+		WHERE vehicle_id = $1 AND end_ts IS NOT NULL
+		  AND start_ts >= $2 AND start_ts < $3
 		GROUP BY m`,
 		vehicleID, yearStart, yearEnd)
 	if err == nil {
@@ -385,8 +346,8 @@ func (h *YearReviewHandler) GetYearReview(w http.ResponseWriter, r *http.Request
 			END AS ctype,
 			COUNT(*)
 		FROM charging_sessions
-		WHERE vehicle_id = $1 AND end_date IS NOT NULL
-		  AND start_date >= $2 AND start_date < $3
+		WHERE vehicle_id = $1 AND end_ts IS NOT NULL
+		  AND start_ts >= $2 AND start_ts < $3
 		GROUP BY ctype`,
 		vehicleID, yearStart, yearEnd)
 	if err == nil {
@@ -421,10 +382,10 @@ func (h *YearReviewHandler) GetYearReview(w http.ResponseWriter, r *http.Request
 	// Average charge start SOC
 	var avgChargeStartSOC float64
 	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT COALESCE(AVG(start_battery_level), 0)
+		SELECT COALESCE(AVG(start_battery_pct), 0)
 		FROM charging_sessions
-		WHERE vehicle_id = $1 AND end_date IS NOT NULL AND start_battery_level > 0
-		  AND start_date >= $2 AND start_date < $3`,
+		WHERE vehicle_id = $1 AND end_ts IS NOT NULL AND start_battery_pct > 0
+		  AND start_ts >= $2 AND start_ts < $3`,
 		vehicleID, yearStart, yearEnd,
 	).Scan(&avgChargeStartSOC)
 
