@@ -113,18 +113,18 @@ func (h *TempImpactHandler) Get(w http.ResponseWriter, r *http.Request) {
 	drainRows, err := h.db.Pool.Query(ctx, `
 		SELECT
 		  CASE
-		    WHEN outside_temp_avg_c < 0 THEN 'Below 0°C'
-		    WHEN outside_temp_avg_c < 10 THEN '0-10°C'
-		    WHEN outside_temp_avg_c < 20 THEN '10-20°C'
-		    WHEN outside_temp_avg_c < 30 THEN '20-30°C'
+		    WHEN outside_temp_avg < 0 THEN 'Below 0°C'
+		    WHEN outside_temp_avg < 10 THEN '0-10°C'
+		    WHEN outside_temp_avg < 20 THEN '10-20°C'
+		    WHEN outside_temp_avg < 30 THEN '20-30°C'
 		    ELSE 'Above 30°C'
 		  END as temp_bucket,
 		  AVG(drain_rate_pct_per_hour) as avg_drain_rate,
 		  COUNT(*) as event_count
 		FROM vampire_drain_events
-		WHERE vehicle_id = $1 AND outside_temp_avg_c IS NOT NULL
+		WHERE vehicle_id = $1 AND outside_temp_avg IS NOT NULL
 		GROUP BY temp_bucket
-		ORDER BY MIN(outside_temp_avg_c)`, vehicleID)
+		ORDER BY MIN(outside_temp_avg)`, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("temp impact: failed to query vampire drain")
 		writeError(w, http.StatusInternalServerError, "failed to query vampire drain by temperature")

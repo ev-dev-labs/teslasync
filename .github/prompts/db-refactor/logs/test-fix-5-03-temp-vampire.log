@@ -1,0 +1,39 @@
+=== SURVEY ===
+
+internal\api\temp_impact_handler.go:61:		    WHEN outside_temp_avg_c < 0 THEN 'Below 0°C'
+internal\api\temp_impact_handler.go:62:		    WHEN outside_temp_avg_c < 10 THEN '0-10°C'
+internal\api\temp_impact_handler.go:63:		    WHEN outside_temp_avg_c < 20 THEN '10-20°C'
+internal\api\temp_impact_handler.go:64:		    WHEN outside_temp_avg_c < 30 THEN '20-30°C'
+internal\api\temp_impact_handler.go:71:		  AVG(outside_temp_avg_c) as avg_temp
+internal\api\temp_impact_handler.go:73:		WHERE vehicle_id = $1 AND distance_mi > 2 AND outside_temp_avg_c IS NOT NULL
+internal\api\temp_impact_handler.go:75:		ORDER BY MIN(outside_temp_avg_c)`, vehicleID)
+internal\api\temp_impact_handler.go:116:		    WHEN outside_temp_avg < 0 THEN 'Below 0°C'
+internal\api\temp_impact_handler.go:117:		    WHEN outside_temp_avg < 10 THEN '0-10°C'
+internal\api\temp_impact_handler.go:118:		    WHEN outside_temp_avg < 20 THEN '10-20°C'
+internal\api\temp_impact_handler.go:119:		    WHEN outside_temp_avg < 30 THEN '20-30°C'
+internal\api\temp_impact_handler.go:124:		FROM vampire_drain_events
+internal\api\temp_impact_handler.go:125:		WHERE vehicle_id = $1 AND outside_temp_avg IS NOT NULL
+internal\api\temp_impact_handler.go:127:		ORDER BY MIN(outside_temp_avg)`, vehicleID)
+internal\api\temp_impact_handler.go:158:		       AVG(outside_temp_avg_c) as avg_temp,
+internal\api\temp_impact_handler.go:163:		WHERE vehicle_id = $1 AND distance_mi > 2 AND outside_temp_avg_c IS NOT NULL
+internal\api\temp_impact_handler.go:224:		SELECT outside_temp_avg_c,
+internal\api\temp_impact_handler.go:229:		WHERE vehicle_id = $1 AND distance_mi > 2 AND outside_temp_avg_c IS NOT NULL
+internal\api\temp_impact_handler.go:262:		"vampire_drain": vampireDrain,
+
+
+=== REASONING ===
+Lines 116-127 queried vampire_drain_events with outside_temp_avg_c (wrong).
+vampire_drain_events uses outside_temp_avg (no _c suffix).
+Changed 6 occurrences of outside_temp_avg_c -> outside_temp_avg in vampire drain query only.
+drives table queries remain unchanged (they correctly use outside_temp_avg_c).
+
+=== CHANGES ===
+File: internal/api/temp_impact_handler.go
+Lines 116-127: outside_temp_avg_c -> outside_temp_avg in vampire_drain_events query
+
+=== GATE ===
+Build succeeded
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
