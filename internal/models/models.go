@@ -365,13 +365,13 @@ type CommandLog struct {
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }
 
-// EnergyStatsRow represents a single day of energy data.
+// EnergyStatsRow represents a single day of energy data from cagg_fleet_stats.
 type EnergyStatsRow struct {
-	Date       string  `json:"date"`
-	EnergyKWh  float64 `json:"energy_kwh"`
-	DistanceKm float64 `json:"distance_km"`
-	Efficiency float64 `json:"efficiency"`
-	Cost       float64 `json:"cost"`
+	Date             string  `json:"date"`
+	EnergyKWh        float64 `json:"energy_kwh"`
+	DistanceMi       float64 `json:"distance_mi"`
+	EfficiencyWhPerMi float64 `json:"efficiency_wh_per_mi"`
+	Cost             float64 `json:"cost"`
 }
 
 // BatterySnapshot represents a point-in-time battery health reading.

@@ -318,14 +318,14 @@ type SignalStats struct {
 	Count  int64   `json:"count"`
 }
 
-// Stats returns aggregate stats per signal using the mv_signal_stats materialized view.
+// Stats returns aggregate stats per signal using the cagg_signal_hourly continuous aggregate.
 func (w *SignalHistoryWriter) Stats(ctx context.Context, vehicleID int64, signals []string, from, to time.Time) ([]SignalStats, error) {
 	rows, err := w.db.Pool.Query(ctx,
-		`SELECT signal, COALESCE(MIN(min_val), 0), COALESCE(MAX(max_val), 0),
-		        COALESCE(SUM(avg_val * cnt) / NULLIF(SUM(cnt), 0), 0), COALESCE(SUM(cnt), 0)
-		 FROM mv_signal_stats
-		 WHERE vehicle_id = $1 AND signal = ANY($2) AND hour >= $3 AND hour < $4
-		 GROUP BY signal ORDER BY signal`,
+		`SELECT signal_name, COALESCE(MIN(min_value), 0), COALESCE(MAX(max_value), 0),
+		        COALESCE(SUM(avg_value * sample_count) / NULLIF(SUM(sample_count), 0), 0), COALESCE(SUM(sample_count), 0)
+		 FROM cagg_signal_hourly
+		 WHERE vehicle_id = $1 AND signal_name = ANY($2) AND hour >= $3 AND hour < $4
+		 GROUP BY signal_name ORDER BY signal_name`,
 		vehicleID, signals, from, to)
 	if err != nil {
 		return nil, err

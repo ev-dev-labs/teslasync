@@ -53,8 +53,8 @@ func (h *EnergyHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		"total_energy_charged_kwh": stats.TotalEnergy,
 		"total_kwh":                stats.TotalEnergy,
 		"total_cost":               stats.TotalCost,
-		"total_distance_km":        stats.TotalDistance,
-		"avg_efficiency_wh_km":     stats.AvgEfficiency,
+		"total_distance_mi":        stats.TotalDistance,
+		"avg_efficiency_wh_per_mi": stats.AvgEfficiency,
 		"co2_saved_kg":             stats.CO2Saved,
 		"daily_breakdown":          stats.DailyBreakdown,
 	})
@@ -94,8 +94,8 @@ func (h *EnergyHandler) AnalyticsStats(w http.ResponseWriter, r *http.Request) {
 		"total_energy_charged_kwh": stats.TotalEnergy,
 		"total_kwh":                stats.TotalEnergy,
 		"total_cost":               stats.TotalCost,
-		"total_distance_km":        stats.TotalDistance,
-		"avg_efficiency_wh_km":     stats.AvgEfficiency,
+		"total_distance_mi":        stats.TotalDistance,
+		"avg_efficiency_wh_per_mi": stats.AvgEfficiency,
 		"co2_saved_kg":             stats.CO2Saved,
 		"daily_breakdown":          stats.DailyBreakdown,
 	})

@@ -123,16 +123,19 @@ func NewEnergyStatsRepo(db *DB) *EnergyStatsRepo {
 
 func (r *EnergyStatsRepo) GetDailyBreakdown(ctx context.Context, vehicleID int64, days int) ([]*models.EnergyStatsRow, error) {
 	query := `SELECT
-		TO_CHAR(mv.day, 'YYYY-MM-DD') AS date,
-		mv.energy_kwh,
-		mv.distance_km,
-		mv.efficiency,
-		mv.cost
-	FROM mv_energy_daily mv
-	WHERE mv.vehicle_id = $1
-	  AND mv.day >= (NOW() - make_interval(days := $2))::date
-	  AND (mv.energy_kwh > 0 OR mv.distance_km > 0)
-	ORDER BY mv.day`
+		TO_CHAR(day, 'YYYY-MM-DD') AS date,
+		total_energy_kwh AS energy_kwh,
+		total_distance_mi AS distance_mi,
+		CASE WHEN total_distance_mi > 0
+			THEN total_energy_kwh / total_distance_mi * 1000
+			ELSE 0
+		END AS efficiency_wh_per_mi,
+		0 AS cost
+	FROM cagg_fleet_stats
+	WHERE vehicle_id = $1
+	  AND day >= (NOW() - make_interval(days := $2))::date
+	  AND (total_energy_kwh > 0 OR total_distance_mi > 0)
+	ORDER BY day`
 	rows, err := r.db.Pool.Query(ctx, query, vehicleID, days)
 	if err != nil {
 		return nil, err
@@ -142,7 +145,7 @@ func (r *EnergyStatsRepo) GetDailyBreakdown(ctx context.Context, vehicleID int64
 	var stats []*models.EnergyStatsRow
 	for rows.Next() {
 		s := &models.EnergyStatsRow{}
-		if err := rows.Scan(&s.Date, &s.EnergyKWh, &s.DistanceKm, &s.Efficiency, &s.Cost); err != nil {
+		if err := rows.Scan(&s.Date, &s.EnergyKWh, &s.DistanceMi, &s.EfficiencyWhPerMi, &s.Cost); err != nil {
 			return nil, err
 		}
 		stats = append(stats, s)
@@ -152,10 +155,10 @@ func (r *EnergyStatsRepo) GetDailyBreakdown(ctx context.Context, vehicleID int64
 
 func (r *EnergyStatsRepo) GetTotalEnergy(ctx context.Context, vehicleID int64, days int) (float64, float64, float64, error) {
 	query := `SELECT
-		COALESCE(SUM(energy_kwh), 0),
-		COALESCE(SUM(cost), 0),
-		COALESCE(SUM(distance_km), 0)
-	FROM mv_energy_daily
+		COALESCE(SUM(total_energy_kwh), 0),
+		0,
+		COALESCE(SUM(total_distance_mi), 0)
+	FROM cagg_fleet_stats
 	WHERE vehicle_id = $1
 	  AND day >= (NOW() - make_interval(days := $2))::date`
 	var energy, cost, distance float64

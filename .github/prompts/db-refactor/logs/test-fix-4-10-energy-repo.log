@@ -1,0 +1,45 @@
+=== SURVEY ===
+- energy_repo.go: GetDailyBreakdown and GetTotalEnergy query mv_energy_daily (DROPPED)
+- models.go: EnergyStatsRow has DistanceKm (float64, json:distance_km) and Efficiency (float64, json:efficiency)
+- energy_service.go: EnergyStats has TotalDistance (json:total_distance_km) and AvgEfficiency (json:avg_efficiency_wh_km)
+- energy_handler.go: Two handlers return hardcoded JSON keys total_distance_km, avg_efficiency_wh_km
+- signal_history_writer.go: Stats() queries mv_signal_stats (DROPPED), replaced by cagg_signal_hourly
+- cagg_fleet_stats columns: vehicle_id, day, drive_count, total_distance_mi, total_energy_kwh, total_regen_kwh, total_duration_min, avg_speed_mph, max_speed_mph, avg_score
+- cagg_signal_hourly columns: vehicle_id, signal_name, hour, sample_count, avg_value, min_value, max_value
+
+=== REASONING ===
+1. mv_energy_daily was dropped by migration 000142, replaced by cagg_fleet_stats
+2. Unit changed: distance_km -> distance_mi (cagg_fleet_stats uses miles from drives table)
+3. Efficiency must be computed: total_energy_kwh / total_distance_mi * 1000 = Wh/mi
+4. Cost column not available in cagg_fleet_stats — return 0
+5. mv_signal_stats was dropped, replaced by cagg_signal_hourly (column renames: signal->signal_name, min_val->min_value, max_val->max_value, avg_val->avg_value, cnt->sample_count)
+6. energy_handler.go JSON keys updated to match new unit names
+
+=== CHANGES ===
+1. internal/database/energy_repo.go:
+   - GetDailyBreakdown: mv_energy_daily -> cagg_fleet_stats, compute efficiency_wh_per_mi
+   - GetTotalEnergy: mv_energy_daily -> cagg_fleet_stats, cost hardcoded to 0
+   - Scan fields: DistanceKm->DistanceMi, Efficiency->EfficiencyWhPerMi
+
+2. internal/models/models.go:
+   - EnergyStatsRow.DistanceKm -> DistanceMi (json:distance_mi)
+   - EnergyStatsRow.Efficiency -> EfficiencyWhPerMi (json:efficiency_wh_per_mi)
+
+3. internal/service/energy_service.go:
+   - EnergyStats.TotalDistance json tag: total_distance_km -> total_distance_mi
+   - EnergyStats.AvgEfficiency json tag: avg_efficiency_wh_km -> avg_efficiency_wh_per_mi
+   - Comment: Wh/km -> Wh/mi
+
+4. internal/api/energy_handler.go:
+   - Both handlers: total_distance_km -> total_distance_mi
+   - Both handlers: avg_efficiency_wh_km -> avg_efficiency_wh_per_mi
+
+5. internal/database/signal_history_writer.go:
+   - Stats(): mv_signal_stats -> cagg_signal_hourly
+   - Column renames: signal->signal_name, min_val->min_value, max_val->max_value, avg_val->avg_value, cnt->sample_count
+
+=== GATE ===
+go build ./... succeeded
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
