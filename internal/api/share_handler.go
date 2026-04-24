@@ -309,8 +309,8 @@ func (h *ShareHandler) buildPublicProfiles(ctx context.Context, resp *publicShar
 	}
 
 	// Fall back to positions
-	if !drive.EndTs.IsZero() {
-		positions, _ := h.posRepo.ListByVehicle(ctx, drive.VehicleID, drive.StartTs, drive.EndTs)
+	if drive.EndTs != nil {
+		positions, _ := h.posRepo.ListByVehicle(ctx, drive.VehicleID, drive.StartTs, *drive.EndTs)
 		if len(positions) > 0 {
 			h.buildFromPositions(resp, positions, share)
 		}

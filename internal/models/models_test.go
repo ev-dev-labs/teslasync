@@ -81,10 +81,11 @@ func TestChargingSession_Fields(t *testing.T) {
 
 func TestDrive_Fields(t *testing.T) {
 	start := time.Now()
+	endTs := start.Add(30 * time.Minute)
 	d := Drive{
 		VehicleID:   1,
 		StartTs:     start,
-		EndTs:       start.Add(30 * time.Minute),
+		EndTs:       &endTs,
 		DistanceMi:  25.5,
 		DurationMin: 30.0,
 	}

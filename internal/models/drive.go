@@ -2,7 +2,7 @@ package models
 
 import "time"
 
-// Drive represents a single completed driving session.
+// Drive represents a single driving session.
 //
 // Mirrors the post-migration `drives` table (see migration 000142_baseline_typed
 // and .github/prompts/db-refactor/phase-3-schema/_baseline_source/11-drives.sql).
@@ -11,13 +11,14 @@ import "time"
 // via useSettings.convertDistance.
 //
 // Mutability: rows are mutable because re-scoring updates the score column.
+// EndTs is NULL while a drive is in progress (same pattern as ChargingSession).
 type Drive struct {
-	ID          int64     `db:"id"           json:"id"`
-	VehicleID   int64     `db:"vehicle_id"   json:"vehicle_id"`
-	StartTs     time.Time `db:"start_ts"     json:"start_ts"`
-	EndTs       time.Time `db:"end_ts"       json:"end_ts"`
-	DurationMin float64   `db:"duration_min" json:"duration_min"`
-	DistanceMi  float64   `db:"distance_mi"  json:"distance_mi"`
+	ID          int64      `db:"id"           json:"id"`
+	VehicleID   int64      `db:"vehicle_id"   json:"vehicle_id"`
+	StartTs     time.Time  `db:"start_ts"     json:"start_ts"`
+	EndTs       *time.Time `db:"end_ts"       json:"end_ts"`
+	DurationMin float64    `db:"duration_min" json:"duration_min"`
+	DistanceMi  float64    `db:"distance_mi"  json:"distance_mi"`
 
 	StartAddress *string  `db:"start_address" json:"start_address,omitempty"`
 	EndAddress   *string  `db:"end_address"   json:"end_address,omitempty"`

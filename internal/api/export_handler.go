@@ -328,7 +328,7 @@ func exportDrives(w http.ResponseWriter, r *http.Request, vehicleRepo *database.
 				Duration:  d.DurationMin,
 				SpeedMax:  ptrFloat(d.MaxSpeedMph),
 			}
-			if !d.EndTs.IsZero() {
+			if d.EndTs != nil {
 				ed.EndDate = d.EndTs.Format("2006-01-02T15:04:05Z")
 			}
 			allDrives = append(allDrives, ed)

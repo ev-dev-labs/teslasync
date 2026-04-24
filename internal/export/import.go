@@ -81,7 +81,7 @@ func (p *Processor) processImportDrives(ctx context.Context, req *models.ExportJ
 		}
 		if record[2] != "" {
 			if endDate, err := time.Parse("2006-01-02T15:04:05Z", record[2]); err == nil {
-				d.EndTs = endDate
+				d.EndTs = &endDate
 			}
 		}
 
