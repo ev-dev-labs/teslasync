@@ -104,7 +104,7 @@ export default function EnergyPage() {
   const { data: liveCharging } = useChargingTelemetryLatest(vehicleId ?? 0);
 
   /* ── Derived metrics ──────────────────────────────────────────── */
-  const totalEnergy = sessions?.reduce((s, c) => s + c.charge_energy_added, 0) ?? 0;
+  const totalEnergy = sessions?.reduce((s, c) => s + c.energy_added_kwh, 0) ?? 0;
   const totalCost = sessions?.reduce((s, c) => s + (c.cost ?? 0), 0) ?? 0;
   const avgEfficiency = stats?.avg_efficiency_wh_km ?? 0;
   const totalDistance = stats?.total_distance_km ?? 0;
@@ -134,10 +134,10 @@ export default function EnergyPage() {
     const buckets: Record<string, { count: number; energy: number }> = {};
     labels.forEach((l) => { buckets[l] = { count: 0, energy: 0 }; });
     sessions.forEach((s) => {
-      const hour = new Date(s.start_date).getHours();
+      const hour = new Date(s.start_ts).getHours();
       const idx = hour < 6 ? 0 : hour < 12 ? 1 : hour < 18 ? 2 : 3;
       buckets[labels[idx]].count++;
-      buckets[labels[idx]].energy += s.charge_energy_added;
+      buckets[labels[idx]].energy += s.energy_added_kwh;
     });
     return labels.map((name) => ({ name, ...buckets[name] }));
   }, [sessions, t]);
@@ -147,12 +147,12 @@ export default function EnergyPage() {
     if (!sessions || sessions.length === 0) return [];
     const types: Record<string, { count: number; energy: number; cost: number }> = {};
     sessions.forEach((s) => {
-      const label = s.fast_charger_type?.toLowerCase().includes('tesla')
+      const label = s.charger_type?.toLowerCase().includes('tesla')
         ? 'Supercharger'
-        : s.fast_charger_type ? 'DC Fast' : 'Home/AC';
+        : s.charger_type ? 'DC Fast' : 'Home/AC';
       if (!types[label]) types[label] = { count: 0, energy: 0, cost: 0 };
       types[label].count++;
-      types[label].energy += s.charge_energy_added;
+      types[label].energy += s.energy_added_kwh;
       types[label].cost += s.cost ?? 0;
     });
     return Object.entries(types).map(([name, data]) => ({
@@ -169,7 +169,7 @@ export default function EnergyPage() {
       header: t('energy.table.date', 'Date'),
       render: (s) => (
         <Link to={`/charging/${s.id}`} className="hover:text-neon-cyan transition-colors">
-          {formatDateShort(s.start_date)}
+          {formatDateShort(s.start_ts)}
         </Link>
       ),
     },
@@ -178,7 +178,7 @@ export default function EnergyPage() {
       header: t('energy.table.energy', 'Energy'),
       render: (s) => (
         <span className="text-neon-cyan font-medium">
-          {fmtNumber(s.charge_energy_added ?? 0)} kWh
+          {fmtNumber(s.energy_added_kwh ?? 0)} kWh
         </span>
       ),
     },
@@ -187,29 +187,29 @@ export default function EnergyPage() {
       header: t('energy.table.battery', 'Battery'),
       render: (s) => (
         <>
-          <span className="text-[var(--text-muted)]">{s.start_battery_level}%</span>
+          <span className="text-[var(--text-muted)]">{s.start_battery_pct}%</span>
           <span className="text-gray-700 mx-1">→</span>
-          <span className="text-neon-green">{s.end_battery_level ?? '—'}%</span>
+          <span className="text-neon-green">{s.end_battery_pct ?? '—'}%</span>
         </>
       ),
     },
     {
       key: 'power',
       header: t('energy.table.power', 'Power'),
-      render: (s) => <>{s.charger_power != null ? `${fmtNumber(s.charger_power)} kW` : '—'}</>,
+      render: (s) => <>{s.charger_power_kw_max != null ? `${fmtNumber(s.charger_power_kw_max)} kW` : '—'}</>,
     },
     {
       key: 'type',
       header: t('energy.table.type', 'Type'),
       render: (s) => {
-        const isTesla = s.fast_charger_type?.toLowerCase().includes('tesla');
-        const isFast = !!s.fast_charger_type;
+        const isTesla = s.charger_type?.toLowerCase().includes('tesla');
+        const isFast = !!s.charger_type;
         const cls = isTesla
           ? 'bg-neon-red/10 text-neon-red ring-neon-red/20'
           : isFast
             ? 'bg-neon-amber/10 text-neon-amber ring-neon-amber/20'
             : 'bg-neon-green/10 text-neon-green ring-neon-green/20';
-        const label = isTesla ? 'Supercharger' : s.fast_charger_type || 'AC';
+        const label = isTesla ? 'Supercharger' : s.charger_type || 'AC';
         return (
           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ring-1 ${cls}`}>
             {label}
@@ -227,8 +227,8 @@ export default function EnergyPage() {
       header: t('energy.table.perKwh', '$/kWh'),
       render: (s) => (
         <span className="text-[var(--text-muted)]">
-          {typeof s.cost === 'number' && s.charge_energy_added > 0
-            ? `$${fmtNumber(s.cost / s.charge_energy_added)}`
+          {typeof s.cost === 'number' && s.energy_added_kwh > 0
+            ? `$${fmtNumber(s.cost / s.energy_added_kwh)}`
             : '—'}
         </span>
       ),

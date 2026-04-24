@@ -135,7 +135,7 @@ function buildInsights(
   }
 
   if (sessions) {
-    const deepDischarges = sessions.filter((s) => s.start_battery_level < 10).length;
+    const deepDischarges = sessions.filter((s) => s.start_battery_pct < 10).length;
     if (deepDischarges > 3) {
       items.push({
         icon: <AlertTriangle className="h-4 w-4" />,
@@ -146,7 +146,7 @@ function buildInsights(
     }
 
     const superchargerCount = sessions.filter((s) =>
-      s.fast_charger_type?.toLowerCase().includes('tesla'),
+      s.charger_type?.toLowerCase().includes('tesla'),
     ).length;
     if (superchargerCount > sessions.length * 0.6) {
       items.push({
@@ -266,10 +266,10 @@ export default function BatteryHealthPage() {
       endCount: 0,
     }));
     items.forEach((s) => {
-      const si = Math.min(Math.floor(s.start_battery_level / 10), 9);
+      const si = Math.min(Math.floor(s.start_battery_pct / 10), 9);
       buckets[si].startCount++;
-      if (s.end_battery_level != null) {
-        const ei = Math.min(Math.floor(s.end_battery_level / 10), 9);
+      if (s.end_battery_pct != null) {
+        const ei = Math.min(Math.floor(s.end_battery_pct / 10), 9);
         buckets[ei].endCount++;
       }
     });
@@ -280,12 +280,12 @@ export default function BatteryHealthPage() {
   const chargingHabits = useMemo(() => {
     const items = sessions ?? [];
     if (items.length === 0) return null;
-    const startLevels = items.map((s) => s.start_battery_level);
-    const endLevels = items.filter((s) => s.end_battery_level != null).map((s) => s.end_battery_level!);
+    const startLevels = items.map((s) => s.start_battery_pct);
+    const endLevels = items.filter((s) => s.end_battery_pct != null).map((s) => s.end_battery_pct!);
     const avgStart = startLevels.length > 0 ? startLevels.reduce((a, b) => a + b, 0) / startLevels.length : 0;
     const avgEnd = endLevels.length > 0 ? endLevels.reduce((a, b) => a + b, 0) / endLevels.length : 80;
-    const superchargerCount = items.filter((s) => s.fast_charger_type?.toLowerCase().includes('tesla')).length;
-    const dcFastCount = items.filter((s) => s.fast_charger_type && !s.fast_charger_type.toLowerCase().includes('tesla')).length;
+    const superchargerCount = items.filter((s) => s.charger_type?.toLowerCase().includes('tesla')).length;
+    const dcFastCount = items.filter((s) => s.charger_type && !s.charger_type.toLowerCase().includes('tesla')).length;
     return { avgStart, avgEnd, superchargerCount, dcFastCount, total: items.length };
   }, [sessions]);
 
@@ -296,9 +296,9 @@ export default function BatteryHealthPage() {
     let acEnergy = 0, dcEnergy = 0, acCount = 0, dcCount = 0;
     items.forEach((s) => {
       const isDC =
-        (s.fast_charger_type != null && s.fast_charger_type.length > 0) ||
-        (s.charger_power != null && s.charger_power > 20);
-      const energy = s.charge_energy_added ?? 0;
+        (s.charger_type != null && s.charger_type.length > 0) ||
+        (s.charger_power_kw_max != null && s.charger_power_kw_max > 20);
+      const energy = s.energy_added_kwh ?? 0;
       if (isDC) { dcEnergy += energy; dcCount++; }
       else { acEnergy += energy; acCount++; }
     });

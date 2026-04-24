@@ -40,8 +40,8 @@ export default function ChargerTypeChart({ sessions }: ChargerTypeChartProps) {
       ([label, items]): ChargerTypeStats => ({
         label,
         count: items.length,
-        avgKw: avg(items.map((s) => s.charger_power ?? 0)),
-        avgKwh: avg(items.map((s) => s.charge_energy_added ?? 0)),
+        avgKw: avg(items.map((s) => s.charger_power_kw_max ?? 0)),
+        avgKwh: avg(items.map((s) => s.energy_added_kwh ?? 0)),
         avgDuration: avg(items.map((s) => s.duration_min)),
       }),
     );

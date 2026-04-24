@@ -4,30 +4,30 @@ import { fmtNumber } from '@/lib/numberFormat';
 import type { CurvePoint } from './types';
 
 export function isDcSession(s: ChargingSession): boolean {
-  return !!(s.fast_charger_type || (s.charger_power && s.charger_power > 20));
+  return !!(s.charger_type || (s.charger_power_kw_max && s.charger_power_kw_max > 20));
 }
 
 export function getChargerLabel(s: ChargingSession): string {
-  if (s.fast_charger_type === 'Tesla' || s.fast_charger_brand === 'Tesla')
+  if (s.charger_type === 'Tesla' || (s.charger_type ?? '').toLowerCase().includes('tesla'))
     return 'Supercharger';
-  if (s.fast_charger_type) return 'DC Fast';
-  if (s.charger_power && s.charger_power > 20) return 'DC Fast';
+  if (s.charger_type) return 'DC Fast';
+  if (s.charger_power_kw_max && s.charger_power_kw_max > 20) return 'DC Fast';
   return 'Home / AC';
 }
 
 export function sessionLabel(s: ChargingSession): string {
-  const date = formatDateShort(s.start_date);
+  const date = formatDateShort(s.start_ts);
   const label = getChargerLabel(s);
-  const energy = s.charge_energy_added != null ? fmtNumber(s.charge_energy_added, 1) : '?';
+  const energy = s.energy_added_kwh != null ? fmtNumber(s.energy_added_kwh, 1) : '?';
   return `${date} — ${label} — ${energy} kWh`;
 }
 
 /** Simulate a power-vs-SOC curve based on session metadata. */
 export function generateChargingCurve(session: ChargingSession): CurvePoint[] {
   const points: CurvePoint[] = [];
-  const startSoc = session.start_battery_level;
-  const endSoc = session.end_battery_level ?? 100;
-  const peakPower = session.charger_power ?? 11;
+  const startSoc = session.start_battery_pct;
+  const endSoc = session.end_battery_pct ?? 100;
+  const peakPower = session.charger_power_kw_max ?? 11;
   const dc = isDcSession(session);
 
   for (let soc = startSoc; soc <= endSoc; soc += 1) {

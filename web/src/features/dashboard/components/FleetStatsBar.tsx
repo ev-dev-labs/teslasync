@@ -58,7 +58,7 @@ export function FleetStatsBar({
           <p className="text-xl sm:text-2xl font-bold text-neon-green">
             <AnimatedNumber value={totalEnergy} decimals={1} suffix=" kWh" />
           </p>
-          <MiniChart data={recentCharges?.map((s) => s.charge_energy_added).reverse() ?? [0]} color="#10b981" height={24} width={60} />
+          <MiniChart data={recentCharges?.map((s) => s.energy_added_kwh).reverse() ?? [0]} color="#10b981" height={24} width={60} />
         </GlassPanel>
       </StaggerItem>
 

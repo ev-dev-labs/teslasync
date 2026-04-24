@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { ChargingSession, ChargeTelemetryReading } from '@/api/types';
@@ -20,35 +20,29 @@ import {
   ComposedChart, Line, ChartTooltip, ChartGradient,
   chartGrid, axisTickSm, chartMargin,
 } from '@/components/charts';
-import { MapContainer, Popup, CircleMarker } from '@/components/maps';
-import { MapTileLayer, MapInvalidator, MapLayerSwitcher, type MapStyle } from '@/components/maps';
+
 import {
   ArrowLeft, Zap, Battery, Clock, Gauge, DollarSign,
-  Thermometer, MapPin, PlugZap, Activity,
+  MapPin, Activity,
 } from 'lucide-react';
 
 /* ─── helpers ──────────────────────────────────────────────────── */
 
 function isDC(session: ChargingSession): boolean {
-  const ft = session.fast_charger_type?.toLowerCase() ?? '';
+  const ft = session.charger_type?.toLowerCase() ?? '';
   return ft !== '' && ft !== '<invalid>' && ft !== 'unknown';
-}
-
-function efficiency(session: ChargingSession): number | null {
-  if (!session.charge_energy_used || !session.charge_energy_added) return null;
-  return (session.charge_energy_added / session.charge_energy_used) * 100;
 }
 
 function kwhPerHour(session: ChargingSession): number | null {
   if (!session.duration_min || session.duration_min <= 0) return null;
-  return (session.charge_energy_added / session.duration_min) * 60;
+  return (session.energy_added_kwh / session.duration_min) * 60;
 }
 
 /** Synthesize a plausible charge curve when telemetry is absent */
 function synthesizeCurve(session: ChargingSession): { soc: number; power: number }[] {
-  const startSoc = session.start_battery_level ?? 0;
-  const endSoc = session.end_battery_level ?? 100;
-  const peakPower = session.charger_power ?? 50;
+  const startSoc = session.start_battery_pct ?? 0;
+  const endSoc = session.end_battery_pct ?? 100;
+  const peakPower = session.charger_power_kw_max ?? 50;
   const points: { soc: number; power: number }[] = [];
   const steps = 20;
   for (let i = 0; i <= steps; i++) {
@@ -113,13 +107,11 @@ export default function ChargingDetailPage() {
 
   const breadcrumbs = useBreadcrumbs({
     '/charging/:id': session
-      ? `${formatDate(session.start_date)} — ${fmtNumber(session.charge_energy_added)} kWh`
+      ? `${formatDate(session.start_ts)} — ${fmtNumber(session.energy_added_kwh)} kWh`
       : `Session #${id}`,
   });
 
-  const [mapStyle, setMapStyle] = useState<MapStyle>('dark');
   const hasTelemetry = !!telemetry && telemetry.length > 0;
-  const hasLocation = !!(session?.latitude && session?.longitude);
   const dc = session ? isDC(session) : false;
 
   const chargingState = liveCharging?.charging_state;
@@ -200,15 +192,10 @@ export default function ChargingDetailPage() {
     );
   }
 
-  const eff = efficiency(session);
   const avgRate = kwhPerHour(session);
-  const rangeGained =
-    session.start_range_km != null && session.end_range_km != null
-      ? session.end_range_km - session.start_range_km
-      : null;
   const costPerKwh =
-    session.cost != null && session.charge_energy_added > 0
-      ? session.cost / session.charge_energy_added
+    session.cost != null && session.energy_added_kwh > 0
+      ? session.cost / session.energy_added_kwh
       : null;
 
   return (
@@ -220,7 +207,7 @@ export default function ChargingDetailPage() {
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <h1 className="text-2xl font-bold tracking-tight">
-            {formatDate(session.start_date)}
+            {formatDate(session.start_ts)}
           </h1>
           {vehicle && (
             <span className="text-muted text-sm">{vehicle.display_name}</span>
@@ -236,13 +223,13 @@ export default function ChargingDetailPage() {
               )}
             </Badge>
           )}
-          {session.fast_charger_brand && (
-            <Badge variant="neutral" size="sm">{session.fast_charger_brand}</Badge>
+          {session.charger_type && (
+            <Badge variant="neutral" size="sm">{session.charger_type}</Badge>
           )}
-          {session.location_name && (
+          {session.charger_location && (
             <Badge variant="neutral" size="sm">
               <MapPin className="h-3 w-3 mr-1 inline" />
-              {session.location_name}
+              {session.charger_location}
             </Badge>
           )}
         </div>
@@ -252,8 +239,8 @@ export default function ChargingDetailPage() {
           <StaggerItem>
             <GlassPanel className="flex flex-col items-center py-4" glow="cyan">
               <RadialGauge
-                value={session.charge_energy_added ?? 0}
-                max={Math.max(session.charge_energy_added ?? 1, 80)}
+                value={session.energy_added_kwh ?? 0}
+                max={Math.max(session.energy_added_kwh ?? 1, 80)}
                 label={t('charging.detail.energyAdded', 'Energy Added')}
                 unit="kWh"
                 color="#00f0ff"
@@ -263,7 +250,7 @@ export default function ChargingDetailPage() {
           <StaggerItem>
             <GlassPanel className="flex flex-col items-center py-4" glow="green">
               <RadialGauge
-                value={session.end_battery_level ?? 0}
+                value={session.end_battery_pct ?? 0}
                 max={100}
                 label={t('charging.detail.endSoc', 'End SoC')}
                 unit="%"
@@ -274,7 +261,7 @@ export default function ChargingDetailPage() {
           <StaggerItem>
             <GlassPanel className="flex flex-col items-center py-4" glow="purple">
               <RadialGauge
-                value={session.charger_power ?? 0}
+                value={session.charger_power_kw_max ?? 0}
                 max={dc ? 250 : 22}
                 label={t('charging.detail.peakPower', 'Peak Power')}
                 unit="kW"
@@ -296,10 +283,10 @@ export default function ChargingDetailPage() {
           <StaggerItem>
             <GlassPanel className="flex flex-col items-center py-4" glow="none">
               <RadialGauge
-                value={eff ?? 0}
-                max={100}
-                label={t('charging.detail.efficiency', 'Efficiency')}
-                unit="%"
+                value={session.charger_power_kw_avg ?? 0}
+                max={dc ? 250 : 22}
+                label={t('charging.detail.avgPower', 'Avg Power')}
+                unit="kW"
                 color="#06b6d4"
               />
             </GlassPanel>
@@ -313,18 +300,18 @@ export default function ChargingDetailPage() {
           </h2>
           <div className="space-y-4">
             <MetricBar
-              value={session.start_battery_level ?? 0}
+              value={session.start_battery_pct ?? 0}
               max={100}
               color="#f59e0b"
               label={t('charging.detail.startSoc', 'Start SoC')}
-              sublabel={fmtPercent(session.start_battery_level)}
+              sublabel={fmtPercent(session.start_battery_pct)}
             />
             <MetricBar
-              value={session.end_battery_level ?? 0}
+              value={session.end_battery_pct ?? 0}
               max={100}
               color="#10b981"
               label={t('charging.detail.endSoc', 'End SoC')}
-              sublabel={fmtPercent(session.end_battery_level)}
+              sublabel={fmtPercent(session.end_battery_pct)}
             />
           </div>
           <div className="grid grid-cols-3 gap-4 mt-4 text-center text-sm">
@@ -332,7 +319,7 @@ export default function ChargingDetailPage() {
               <p className="text-muted">{t('charging.detail.socGained', 'SoC Gained')}</p>
               <p className="text-lg font-bold">
                 <AnimatedNumber
-                  value={(session.end_battery_level ?? 0) - (session.start_battery_level ?? 0)}
+                  value={(session.end_battery_pct ?? 0) - (session.start_battery_pct ?? 0)}
                 />
                 %
               </p>
@@ -340,15 +327,15 @@ export default function ChargingDetailPage() {
             <div>
               <p className="text-muted">{t('charging.detail.rangeGained', 'Range Gained')}</p>
               <p className="text-lg font-bold">
-                {rangeGained != null
-                  ? fmtWithUnit(convertDistance(rangeGained), distanceUnit, 0)
+                {session.miles_added != null
+                  ? fmtWithUnit(convertDistance(session.miles_added), distanceUnit, 0)
                   : '—'}
               </p>
             </div>
             <div>
               <p className="text-muted">{t('charging.detail.energyAdded', 'Energy Added')}</p>
               <p className="text-lg font-bold">
-                {fmtWithUnit(session.charge_energy_added, 'kWh')}
+                {fmtWithUnit(session.energy_added_kwh, 'kWh')}
               </p>
             </div>
           </div>
@@ -359,7 +346,7 @@ export default function ChargingDetailPage() {
           <StatCard
             icon={<Zap className="h-4 w-4" />}
             label={t('charging.detail.energy', 'Energy')}
-            value={fmtNumber(session.charge_energy_added)}
+            value={fmtNumber(session.energy_added_kwh)}
             unit="kWh"
           />
           <StatCard
@@ -371,13 +358,13 @@ export default function ChargingDetailPage() {
           <StatCard
             icon={<Gauge className="h-4 w-4" />}
             label={t('charging.detail.peakPower', 'Peak Power')}
-            value={fmtNumber(session.charger_power)}
+            value={fmtNumber(session.charger_power_kw_max)}
             unit="kW"
           />
           <StatCard
             icon={<Battery className="h-4 w-4" />}
             label={t('charging.detail.socRange', 'SoC Range')}
-            value={`${session.start_battery_level ?? 0}–${session.end_battery_level ?? 0}`}
+            value={`${session.start_battery_pct ?? 0}–${session.end_battery_pct ?? 0}`}
             unit="%"
           />
           <StatCard
@@ -387,11 +374,11 @@ export default function ChargingDetailPage() {
               : t('charging.detail.estCost', 'Est. Cost')}
             value={session.cost != null
               ? fmtNumber(session.cost, 2)
-              : session.charge_energy_added > 0
-                ? formatEnergyCost(session.charge_energy_added)
+              : session.energy_added_kwh > 0
+                ? formatEnergyCost(session.energy_added_kwh)
                 : '—'}
             unit={session.cost != null ? '$' : ''}
-            sublabel={session.cost == null && session.charge_energy_added > 0
+            sublabel={session.cost == null && session.energy_added_kwh > 0
               ? t('charging.detail.atRate', `at ${currencySymbol}${settingsCostPerKwh}/kWh`)
               : undefined}
           />
@@ -406,13 +393,13 @@ export default function ChargingDetailPage() {
           />
           <StatCard
             icon={<MapPin className="h-4 w-4" />}
-            label={t('charging.detail.rangeGained', 'Range Gained')}
+            label={t('charging.detail.milesAdded', 'Miles Added')}
             value={
-              rangeGained != null
-                ? fmtNumber(convertDistance(rangeGained), 0)
+              session.miles_added != null
+                ? fmtNumber(convertDistance(session.miles_added), 0)
                 : '—'
             }
-            unit={rangeGained != null ? distanceUnit : ''}
+            unit={session.miles_added != null ? distanceUnit : ''}
           />
           <StatCard
             icon={<Zap className="h-4 w-4" />}
@@ -427,60 +414,42 @@ export default function ChargingDetailPage() {
           <h2 className="text-lg font-semibold mb-4">
             {t('charging.detail.moreDetails', 'More Details')}
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
             <InlineMetric
-              icon={<Zap className="h-4 w-4 text-yellow-400" />}
-              label={t('charging.detail.voltage', 'Voltage')}
-              value={session.charger_voltage != null ? fmtWithUnit(session.charger_voltage, 'V', 0) : '—'}
-            />
-            <InlineMetric
-              icon={<Zap className="h-4 w-4 text-cyan-400" />}
-              label={t('charging.detail.current', 'Current')}
-              value={session.charger_actual_current != null ? fmtWithUnit(session.charger_actual_current, 'A', 0) : '—'}
-            />
-            <InlineMetric
-              icon={<PlugZap className="h-4 w-4 text-purple-400" />}
-              label={t('charging.detail.phases', 'Phases')}
-              value={session.charger_phases != null ? String(session.charger_phases) : '—'}
+              icon={<Gauge className="h-4 w-4 text-purple-400" />}
+              label={t('charging.detail.avgPower', 'Avg Power')}
+              value={session.charger_power_kw_avg != null ? fmtWithUnit(session.charger_power_kw_avg, 'kW') : '—'}
             />
             <InlineMetric
               icon={<MapPin className="h-4 w-4 text-green-400" />}
-              label={t('charging.detail.rangeEnd', 'End Range')}
+              label={t('charging.detail.milesAdded', 'Miles Added')}
               value={
-                session.end_range_km != null
-                  ? fmtWithUnit(convertDistance(session.end_range_km), distanceUnit, 0)
+                session.miles_added != null
+                  ? fmtWithUnit(convertDistance(session.miles_added), distanceUnit, 0)
                   : '—'
               }
             />
             <InlineMetric
-              icon={<Gauge className="h-4 w-4 text-blue-400" />}
-              label={t('charging.detail.efficiency', 'Efficiency')}
-              value={eff != null ? fmtPercent(eff) : '—'}
+              icon={<Zap className="h-4 w-4 text-blue-400" />}
+              label={t('charging.detail.status', 'Status')}
+              value={session.ended_status ?? '—'}
             />
             <InlineMetric
-              icon={<Zap className="h-4 w-4 text-orange-400" />}
-              label={t('charging.detail.gridEnergy', 'Grid Energy')}
-              value={
-                session.charge_energy_used != null
-                  ? fmtWithUnit(session.charge_energy_used, 'kWh')
-                  : '—'
-              }
+              icon={<DollarSign className="h-4 w-4 text-orange-400" />}
+              label={t('charging.detail.currency', 'Currency')}
+              value={session.cost_currency ?? '—'}
             />
           </div>
           <KVList
             columns={2}
             items={[
               {
-                label: t('charging.detail.cable', 'Cable'),
-                value: session.conn_charge_cable ?? '—',
-              },
-              {
                 label: t('charging.detail.chargerType', 'Charger Type'),
-                value: session.fast_charger_type ?? (dc ? 'DC' : 'AC'),
+                value: session.charger_type ?? (dc ? 'DC' : 'AC'),
               },
               {
-                label: t('charging.detail.chargerBrand', 'Charger Brand'),
-                value: session.fast_charger_brand ?? '—',
+                label: t('charging.detail.location', 'Location'),
+                value: session.charger_location ?? '—',
               },
               {
                 label: t('charging.detail.vehicle', 'Vehicle'),
@@ -490,81 +459,13 @@ export default function ChargingDetailPage() {
           />
         </GlassPanel>
 
-        {/* ── 6. Location map ────────────────────────────────── */}
-        {hasLocation && (
+        {/* ── 6. Location info ────────────────────────────────── */}
+        {session.charger_location && (
           <GlassPanel className="p-6 mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">
-                {t('charging.detail.location', 'Location')}
-              </h2>
-              <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
-            </div>
-            <div className="h-64 rounded-lg overflow-hidden mb-4">
-              <MapContainer
-                center={[session.latitude!, session.longitude!]}
-                zoom={15}
-                className="h-full w-full"
-                scrollWheelZoom={false}
-              >
-                <MapTileLayer style={mapStyle} />
-                <MapInvalidator />
-                <CircleMarker
-                  center={[session.latitude!, session.longitude!]}
-                  radius={10}
-                  pathOptions={{ color: '#10b981', fillColor: '#10b981', fillOpacity: 0.6 }}
-                >
-                  <Popup>
-                    <span className="font-medium">
-                      {session.location_name ?? t('charging.detail.chargeLocation', 'Charge Location')}
-                    </span>
-                  </Popup>
-                </CircleMarker>
-              </MapContainer>
-            </div>
-            {session.address && (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-                {session.address.road && (
-                  <div>
-                    <p className="text-muted">{t('charging.detail.road', 'Road')}</p>
-                    <p className="font-medium">
-                      {session.address.house_number
-                        ? `${session.address.house_number} ${session.address.road}`
-                        : session.address.road}
-                    </p>
-                  </div>
-                )}
-                {session.address.city && (
-                  <div>
-                    <p className="text-muted">{t('charging.detail.city', 'City')}</p>
-                    <p className="font-medium">{session.address.city}</p>
-                  </div>
-                )}
-                {session.address.state && (
-                  <div>
-                    <p className="text-muted">{t('charging.detail.state', 'State')}</p>
-                    <p className="font-medium">{session.address.state}</p>
-                  </div>
-                )}
-                {session.address.country && (
-                  <div>
-                    <p className="text-muted">{t('charging.detail.country', 'Country')}</p>
-                    <p className="font-medium">{session.address.country}</p>
-                  </div>
-                )}
-                {session.address.postcode && (
-                  <div>
-                    <p className="text-muted">{t('charging.detail.postcode', 'Postcode')}</p>
-                    <p className="font-medium">{session.address.postcode}</p>
-                  </div>
-                )}
-                {session.address.display_name && (
-                  <div className="col-span-full">
-                    <p className="text-muted">{t('charging.detail.fullAddress', 'Full Address')}</p>
-                    <p className="font-medium text-xs">{session.address.display_name}</p>
-                  </div>
-                )}
-              </div>
-            )}
+            <h2 className="text-lg font-semibold mb-4">
+              {t('charging.detail.location', 'Location')}
+            </h2>
+            <p className="text-sm text-white/80">{session.charger_location}</p>
           </GlassPanel>
         )}
 
@@ -762,43 +663,7 @@ export default function ChargingDetailPage() {
           )}
         </GlassPanel>
 
-        {/* ── 11. Temperature summary fallback ───────────────── */}
-        {tempData.length === 0 &&
-          (session.inside_temp_avg != null || session.outside_temp_avg != null) && (
-            <GlassPanel className="p-6 mb-8">
-              <h2 className="text-lg font-semibold mb-4">
-                {t('charging.detail.temperature', 'Temperature')}
-              </h2>
-              <div className="grid grid-cols-2 gap-6">
-                {session.inside_temp_avg != null && (
-                  <div className="flex items-center gap-3">
-                    <Thermometer className="h-5 w-5 text-orange-400" />
-                    <div>
-                      <p className="text-muted text-sm">
-                        {t('charging.detail.insideAvg', 'Inside Avg')}
-                      </p>
-                      <p className="text-xl font-bold">
-                        {fmtWithUnit(convertTemp(session.inside_temp_avg), tempUnit, 1)}
-                      </p>
-                    </div>
-                  </div>
-                )}
-                {session.outside_temp_avg != null && (
-                  <div className="flex items-center gap-3">
-                    <Thermometer className="h-5 w-5 text-blue-400" />
-                    <div>
-                      <p className="text-muted text-sm">
-                        {t('charging.detail.outsideAvg', 'Outside Avg')}
-                      </p>
-                      <p className="text-xl font-bold">
-                        {fmtWithUnit(convertTemp(session.outside_temp_avg), tempUnit, 1)}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </GlassPanel>
-          )}
+        {/* ── 11. Temperature summary fallback — removed: inside_temp_avg/outside_temp_avg no longer in session */}
 
         {/* ── 11b. Advanced charging parameters (live state) ─── */}
         <GlassPanel className="p-6 mb-8">
@@ -895,12 +760,12 @@ export default function ChargingDetailPage() {
           <div className="grid grid-cols-2 gap-6 text-sm">
             <div>
               <p className="text-muted mb-1">{t('charging.detail.started', 'Started')}</p>
-              <p className="font-medium">{formatDateTime(session.start_date)}</p>
+              <p className="font-medium">{formatDateTime(session.start_ts)}</p>
             </div>
             <div>
               <p className="text-muted mb-1">{t('charging.detail.ended', 'Ended')}</p>
               <p className="font-medium">
-                {session.end_date ? formatDateTime(session.end_date) : '—'}
+                {session.end_ts ? formatDateTime(session.end_ts) : '—'}
               </p>
             </div>
           </div>

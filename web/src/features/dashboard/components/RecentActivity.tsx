@@ -50,9 +50,9 @@ export function RecentActivity({
   recentCharges?.forEach((s) =>
     activityItems.push({
       type: 'charge',
-      title: `${fmtNumber(s.charge_energy_added ?? 0, 1)} kWh ${t('activity.charged', 'charged')}`,
-      subtitle: `${s.start_battery_level ?? '?'}% → ${s.end_battery_level ?? '?'}%${typeof s.cost === 'number' ? ` · $${fmtNumber(s.cost, 2)}` : ''}`,
-      time: new Date(s.start_date),
+      title: `${fmtNumber(s.energy_added_kwh ?? 0, 1)} kWh ${t('activity.charged', 'charged')}`,
+      subtitle: `${s.start_battery_pct ?? '?'}% → ${s.end_battery_pct ?? '?'}%${typeof s.cost === 'number' ? ` · $${fmtNumber(s.cost, 2)}` : ''}`,
+      time: new Date(s.start_ts),
     }),
   );
   activityItems.sort((a, b) => b.time.getTime() - a.time.getTime());

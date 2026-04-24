@@ -86,45 +86,22 @@ export interface Drive {
 export interface ChargingSession {
   id: number
   vehicle_id: number
-  start_date: string
-  end_date: string | null
-  address_id: number | null
-  charge_energy_added: number
-  charge_energy_used: number | null
-  start_battery_level: number
-  end_battery_level: number | null
-  start_range_km: number | null
-  end_range_km: number | null
-  charger_phases: number | null
-  charger_voltage: number | null
-  charger_actual_current: number | null
-  charger_power: number | null
-  fast_charger_type: string | null
-  fast_charger_brand: string | null
-  conn_charge_cable: string | null
-  cost: number | null
+  start_ts: string
+  end_ts: string | null
   duration_min: number
-  // Enhanced tracking (migration 21)
-  latitude: number | null
-  longitude: number | null
-  location_name: string | null
-  inside_temp_avg: number | null
-  outside_temp_avg: number | null
-  // Joined address details (detail view only)
-  address?: {
-    id: number
-    display_name: string
-    latitude: number
-    longitude: number
-    name: string | null
-    house_number: string | null
-    road: string | null
-    city: string | null
-    county: string | null
-    state: string | null
-    country: string | null
-    postcode: string | null
-  }
+  start_battery_pct: number
+  end_battery_pct: number | null
+  energy_added_kwh: number
+  miles_added: number | null
+  charger_type: string | null
+  charger_location: string | null
+  charger_power_kw_max: number | null
+  charger_power_kw_avg: number | null
+  cost: number | null
+  cost_currency: string | null
+  ended_status: string | null
+  created_at: string
+  updated_at: string
 }
 
 export interface DriveTelemetryReading {

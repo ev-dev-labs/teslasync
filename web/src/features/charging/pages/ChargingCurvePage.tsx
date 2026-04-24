@@ -70,10 +70,10 @@ export default function ChargingCurvePage() {
 
   const stats = useMemo((): SummaryStats | null => {
     if (!sessions?.length) return null;
-    const totalEnergy = sessions.reduce((sum, s) => sum + (s.charge_energy_added ?? 0), 0);
+    const totalEnergy = sessions.reduce((sum, s) => sum + (s.energy_added_kwh ?? 0), 0);
     const totalCost = sessions.reduce((sum, s) => sum + (s.cost ?? 0), 0);
     const avgDuration = avg(sessions.map((s) => s.duration_min));
-    const powers = sessions.map((s) => s.charger_power ?? 0);
+    const powers = sessions.map((s) => s.charger_power_kw_max ?? 0);
     const avgRate = avg(powers);
     const peakRate = Math.max(...powers);
     return {
@@ -179,8 +179,8 @@ export default function ChargingCurvePage() {
           />
           {selectedSession && (
             <span className="text-xs text-white/50">
-              {formatDateTime(selectedSession.start_date)}
-              {selectedSession.location_name && ` · ${selectedSession.location_name}`}
+              {formatDateTime(selectedSession.start_ts)}
+              {selectedSession.charger_location && ` · ${selectedSession.charger_location}`}
             </span>
           )}
         </div>

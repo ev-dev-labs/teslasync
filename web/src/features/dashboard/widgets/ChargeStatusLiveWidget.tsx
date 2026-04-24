@@ -36,9 +36,9 @@ export default function ChargeStatusLiveWidget({ vehicleId, size }: WidgetProps)
   // Derive charging metrics from live state + latest session
   const metrics = useMemo(() => {
     const power = state?.charger_power ?? 0;
-    const voltage = latestSession?.charger_voltage ?? null;
-    const amps = latestSession?.charger_actual_current ?? null;
-    const energyAdded = latestSession?.charge_energy_added ?? 0;
+    const voltage = null;
+    const amps = null;
+    const energyAdded = latestSession?.energy_added_kwh ?? 0;
     const timeToFull = state?.time_to_full_charge ?? 0;
     const chargeRate = state?.charge_rate ?? 0;
     const batteryLevel = state?.battery_level ?? 0;
@@ -220,7 +220,7 @@ interface IdleViewProps {
     energyAdded: number;
     batteryLevel: number;
   };
-  latestSession: { charge_energy_added: number; charger_voltage: number | null; charger_actual_current: number | null } | undefined;
+  latestSession: { energy_added_kwh: number } | undefined;
   t: (k: string, f: string) => string;
 }
 
@@ -242,7 +242,7 @@ function IdleView({ metrics, latestSession, t }: IdleViewProps) {
             {t('widget.lastSession', 'Last Session')}
           </p>
           <p className="text-xs font-medium text-white/70">
-            +{fmtNumber(latestSession.charge_energy_added, 1)} kWh
+            +{fmtNumber(latestSession.energy_added_kwh, 1)} kWh
           </p>
         </div>
       )}

@@ -1,0 +1,83 @@
+=== SURVEY ===
+Timestamp: 2026-04-24T00:32:33.8574477-07:00
+Task: Fix frontend ChargingSession types to match new API response
+
+Old ChargingSession interface in web/src/api/types.ts (lines 86-128) had 25+ fields
+that no longer match the Go model JSON response.
+
+Files affected (25+ files across charging, battery, dashboard, vehicles, analytics domains):
+- 5 interface definitions updated
+- 20+ consumer files updated
+
+Field mapping applied:
+  start_date -> start_ts
+  end_date -> end_ts
+  charge_energy_added -> energy_added_kwh
+  charge_energy_used -> REMOVED
+  start_battery_level -> start_battery_pct
+  end_battery_level -> end_battery_pct
+  start_range_km -> REMOVED (use miles_added)
+  end_range_km -> REMOVED (use miles_added)
+  charger_phases -> REMOVED
+  charger_voltage -> REMOVED
+  charger_actual_current -> REMOVED
+  charger_power -> charger_power_kw_max
+  fast_charger_type -> charger_type
+  fast_charger_brand -> REMOVED
+  conn_charge_cable -> REMOVED
+  location_name -> charger_location
+  address_id -> REMOVED
+  latitude/longitude -> REMOVED
+  inside_temp_avg/outside_temp_avg -> REMOVED
+  address (nested) -> REMOVED
+  NEW: miles_added, charger_location, charger_power_kw_avg, cost_currency, ended_status
+
+=== REASONING ===
+All field renames follow the Go model JSON tags exactly.
+Removed fields were consolidated or dropped in the DB refactor.
+Consumer code adapted: efficiency calcs removed where charge_energy_used was needed,
+range calculations switched from start_range_km/end_range_km to miles_added,
+charger spec displays simplified since voltage/phases/current no longer in session model.
+
+=== CHANGES ===
+Interface updates:
+  web/src/api/types.ts - Main ChargingSession interface
+  web/src/types/charging.ts - types/charging ChargingSession
+  web/src/features/dashboard/types.ts - Dashboard ChargingSession
+  web/src/features/analytics/components/weekly-digest/types.ts - Weekly digest ChargingSession
+  web/src/features/system/pages/DataRepairPage.tsx - Local ChargingSession interface
+  web/src/features/charging/components/cost-analysis/types.ts - CoreStats totalDistanceKm -> totalDistanceMi
+
+Consumer updates (charging domain):
+  web/src/features/charging/components/charging-curve/helpers.ts
+  web/src/features/charging/components/ChargingSessionCard.tsx
+  web/src/features/charging/components/cost-analysis/helpers.ts
+  web/src/features/charging/components/cost-analysis/useCostAnalysisData.ts
+  web/src/features/charging/components/charging-curve/SessionDetailPanel.tsx
+  web/src/features/charging/components/charging-curve/ChargerTypeChart.tsx
+  web/src/features/charging/components/charging-curve/TimeToChargeSection.tsx
+  web/src/features/charging/components/charging-curve/SpeedTrendChart.tsx
+  web/src/features/charging/components/charging-curve/SessionComparisonChart.tsx
+  web/src/features/charging/pages/ChargingCurvePage.tsx
+  web/src/features/charging/pages/ChargingDetailPage.tsx
+  web/src/features/charging/pages/ChargingHeatmapPage.tsx
+  web/src/features/charging/components/charging-list/helpers.ts
+
+Consumer updates (other domains):
+  web/src/features/battery/pages/EnergyPage.tsx
+  web/src/features/battery/pages/BatteryHealthPage.tsx
+  web/src/features/dashboard/components/RecentActivity.tsx
+  web/src/features/dashboard/components/FleetStatsBar.tsx
+  web/src/features/dashboard/widgets/ChargeSessionChartWidget.tsx
+  web/src/features/dashboard/widgets/ChargeHistoryWidget.tsx
+  web/src/features/dashboard/widgets/ChargeCostTrackerWidget.tsx
+  web/src/features/dashboard/widgets/ChargeStatusLiveWidget.tsx
+  web/src/features/vehicles/components/RecentActivity.tsx
+  web/src/features/vehicles/components/vehicle-detail/RecentChargesSection.tsx
+  web/src/features/analytics/components/weekly-digest/useWeeklyDigest.ts
+
+=== GATE ===
+npx tsc --noEmit: PASS (exit code 0)
+
+EXIT=0
+STATUS=DONE

@@ -87,12 +87,12 @@ export function useWeeklyDigest() {
   );
 
   const weekCharging = useMemo(
-    () => (chargingSessions ?? []).filter((c) => isInRange(c.start_date, weekStart, weekEnd)),
+    () => (chargingSessions ?? []).filter((c) => isInRange(c.start_ts, weekStart, weekEnd)),
     [chargingSessions, weekStart, weekEnd],
   );
 
   const prevWeekCharging = useMemo(
-    () => (chargingSessions ?? []).filter((c) => isInRange(c.start_date, prevStart, prevEnd)),
+    () => (chargingSessions ?? []).filter((c) => isInRange(c.start_ts, prevStart, prevEnd)),
     [chargingSessions, prevStart, prevEnd],
   );
 
@@ -126,22 +126,22 @@ export function useWeeklyDigest() {
       weekDrives.length > 0
         ? weekDrives.reduce((best, d) => (d.distance > best.distance ? d : best))
         : undefined;
-    const chargeEnergyAdded = weekCharging.reduce((s, c) => s + c.charge_energy_added, 0);
-    const prevChargeEnergy = prevWeekCharging.reduce((s, c) => s + c.charge_energy_added, 0);
+    const chargeEnergyAdded = weekCharging.reduce((s, c) => s + c.energy_added_kwh, 0);
+    const prevChargeEnergy = prevWeekCharging.reduce((s, c) => s + c.energy_added_kwh, 0);
     const avgChargeRate =
       weekCharging.length > 0
         ? weekCharging.reduce(
-            (s, c) => s + (c.duration_min > 0 ? (c.charge_energy_added / c.duration_min) * 60 : 0),
+            (s, c) => s + (c.duration_min > 0 ? (c.energy_added_kwh / c.duration_min) * 60 : 0),
             0,
           ) / weekCharging.length
         : 0;
     const batteryStart =
       weekCharging.length > 0
-        ? weekCharging.reduce((s, c) => s + c.start_battery_level, 0) / weekCharging.length
+        ? weekCharging.reduce((s, c) => s + c.start_battery_pct, 0) / weekCharging.length
         : 0;
     const batteryEnd =
       weekCharging.length > 0
-        ? weekCharging.reduce((s, c) => s + c.end_battery_level, 0) / weekCharging.length
+        ? weekCharging.reduce((s, c) => s + c.end_battery_pct, 0) / weekCharging.length
         : 0;
 
     const alertsByType: Record<string, number> = {};
@@ -189,8 +189,8 @@ export function useWeeklyDigest() {
   const dailyEnergyData: DailyEnergyEntry[] = useMemo(() => {
     const bins = DAY_LABELS.map((label) => ({ day: label, energy: 0 }));
     for (const c of weekCharging) {
-      const idx = dayOfWeekIndex(c.start_date);
-      bins[idx].energy += c.charge_energy_added;
+      const idx = dayOfWeekIndex(c.start_ts);
+      bins[idx].energy += c.energy_added_kwh;
     }
     return bins;
   }, [weekCharging]);

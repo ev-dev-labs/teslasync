@@ -23,7 +23,7 @@ export default function ChargeHistoryWidget({ vehicleId }: WidgetProps) {
   const chartData = (charges ?? [])
     .map((s, i) => ({
       i: String(i),
-      energy: s.charge_energy_added ?? 0,
+      energy: s.energy_added_kwh ?? 0,
     }))
     .reverse();
 

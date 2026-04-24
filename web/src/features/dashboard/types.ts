@@ -81,11 +81,11 @@ export interface Drive {
 export interface ChargingSession {
   id: number;
   vehicle_id: number;
-  start_date: string;
-  end_date: string | null;
-  charge_energy_added: number;
-  start_battery_level: number;
-  end_battery_level: number | null;
+  start_ts: string;
+  end_ts: string | null;
+  energy_added_kwh: number;
+  start_battery_pct: number;
+  end_battery_pct: number | null;
   cost: number | null;
   duration_min: number;
 }

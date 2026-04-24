@@ -9,12 +9,12 @@ export interface Drive {
 
 export interface ChargingSession {
   id: number;
-  start_date: string;
-  charge_energy_added: number;
+  start_ts: string;
+  energy_added_kwh: number;
   cost: number;
   duration_min: number;
-  start_battery_level: number;
-  end_battery_level: number;
+  start_battery_pct: number;
+  end_battery_pct: number;
 }
 
 export interface Alert {

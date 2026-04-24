@@ -16,12 +16,10 @@ import type { ChargingSession } from '@/api/types';
 
 /** Classify a charging session into a charger-type bucket for color-coding. */
 function classifyChargerType(session: ChargingSession): string {
-  const ft = (session.fast_charger_type ?? '').toLowerCase();
-  const cable = (session.conn_charge_cable ?? '').toLowerCase();
+  const ft = (session.charger_type ?? '').toLowerCase();
 
   if (ft.includes('supercharger') || ft.includes('tesla')) return 'supercharger';
   if (ft && ft !== '<invalid>' && ft !== '') return 'dc';
-  if (cable.includes('sae') || cable.includes('ccs') || cable.includes('chademo')) return 'dc';
   return 'home';
 }
 
@@ -52,10 +50,10 @@ export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProp
   const chartData = useMemo<ChartDatum[]>(() =>
     (sessions ?? [])
       .map((s, i) => ({
-        label: s.start_date
-          ? new Date(s.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+        label: s.start_ts
+          ? new Date(s.start_ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
           : `#${i + 1}`,
-        energy: s.charge_energy_added ?? 0,
+        energy: s.energy_added_kwh ?? 0,
         type: classifyChargerType(s),
       }))
       .reverse(),

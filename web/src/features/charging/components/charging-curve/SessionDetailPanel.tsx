@@ -35,7 +35,7 @@ export default function SessionDetailPanel({ session, currencySymbol }: SessionD
       </h3>
       <SessionDetailRow
         label={t('charging.curve.date', 'Date')}
-        value={formatDateTime(session.start_date)}
+        value={formatDateTime(session.start_ts)}
       />
       <SessionDetailRow
         label={t('charging.curve.chargerType', 'Charger Type')}
@@ -43,60 +43,36 @@ export default function SessionDetailPanel({ session, currencySymbol }: SessionD
       />
       <SessionDetailRow
         label={t('charging.curve.socRange', 'SOC Range')}
-        value={`${session.start_battery_level}% → ${session.end_battery_level ?? '?'}%`}
+        value={`${session.start_battery_pct}% → ${session.end_battery_pct ?? '?'}%`}
       />
       <SessionDetailRow
         label={t('charging.curve.energyAdded', 'Energy Added')}
-        value={fmtWithUnit(session.charge_energy_added, 'kWh')}
+        value={fmtWithUnit(session.energy_added_kwh, 'kWh')}
       />
-      {session.charge_energy_used != null && (
-        <SessionDetailRow
-          label={t('charging.curve.energyUsed', 'Energy Used')}
-          value={fmtWithUnit(session.charge_energy_used, 'kWh')}
-        />
-      )}
       <SessionDetailRow
         label={t('charging.curve.peakPower', 'Peak Power')}
-        value={fmtWithUnit(session.charger_power ?? 0, 'kW')}
+        value={fmtWithUnit(session.charger_power_kw_max ?? 0, 'kW')}
       />
+      {session.charger_power_kw_avg != null && (
+        <SessionDetailRow
+          label={t('charging.curve.avgPower', 'Avg Power')}
+          value={fmtWithUnit(session.charger_power_kw_avg, 'kW')}
+        />
+      )}
       <SessionDetailRow
         label={t('charging.curve.duration', 'Duration')}
         value={fmtWithUnit(session.duration_min, 'min')}
       />
-      {session.charger_voltage != null && (
-        <SessionDetailRow
-          label={t('charging.curve.voltage', 'Voltage')}
-          value={fmtWithUnit(session.charger_voltage, 'V')}
-        />
-      )}
-      {session.charger_actual_current != null && (
-        <SessionDetailRow
-          label={t('charging.curve.current', 'Current')}
-          value={fmtWithUnit(session.charger_actual_current, 'A')}
-        />
-      )}
-      {session.charger_phases != null && (
-        <SessionDetailRow
-          label={t('charging.curve.phases', 'Phases')}
-          value={String(session.charger_phases)}
-        />
-      )}
       {session.cost != null && (
         <SessionDetailRow
           label={t('charging.curve.cost', 'Cost')}
           value={`${currencySymbol}${fmtNumber(session.cost)}`}
         />
       )}
-      {session.location_name && (
+      {session.charger_location && (
         <SessionDetailRow
           label={t('charging.curve.location', 'Location')}
-          value={session.location_name}
-        />
-      )}
-      {session.conn_charge_cable && (
-        <SessionDetailRow
-          label={t('charging.curve.cable', 'Cable')}
-          value={session.conn_charge_cable}
+          value={session.charger_location}
         />
       )}
     </GlassPanel>
