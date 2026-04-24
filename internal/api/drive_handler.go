@@ -196,8 +196,8 @@ func (h *DriveHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	var avgEfficiency *float64
 	err = h.db.Pool.QueryRow(ctx, `
 		SELECT AVG(
-			CASE WHEN distance_mi > 2 AND start_battery_level IS NOT NULL AND end_battery_level IS NOT NULL
-			THEN (start_battery_level - end_battery_level)::float / distance_mi * 100 * 0.75
+			CASE WHEN distance_mi > 2 AND start_battery_pct IS NOT NULL AND end_battery_pct IS NOT NULL
+			THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 * 0.75
 			ELSE NULL END
 		)
 		FROM drives
@@ -210,8 +210,8 @@ func (h *DriveHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	// Regen: estimate from negative power readings
 	var totalRegenKwh *float64
 	err = h.db.Pool.QueryRow(ctx, `
-		SELECT SUM(CASE WHEN power_min IS NOT NULL AND power_min < 0
-		           THEN ABS(power_min) * duration_min / 60 ELSE 0 END)
+		SELECT SUM(CASE WHEN avg_power_kw IS NOT NULL AND avg_power_kw < 0
+		           THEN ABS(avg_power_kw) * duration_min / 60 ELSE 0 END)
 		FROM drives
 		WHERE vehicle_id = $1 AND end_ts IS NOT NULL`, vehicleID,
 	).Scan(&totalRegenKwh)
@@ -281,11 +281,11 @@ func (h *DriveHandler) Score(w http.ResponseWriter, r *http.Request) {
 	var avgWhKm, avgPowerMax, avgPowerMin *float64
 	err = h.db.Pool.QueryRow(ctx, `
 		SELECT COUNT(*),
-		       AVG(CASE WHEN distance_mi > 2 AND start_battery_level IS NOT NULL AND end_battery_level IS NOT NULL
-		            THEN (start_battery_level - end_battery_level)::float / distance_mi * 100 * 0.75
+		       AVG(CASE WHEN distance_mi > 2 AND start_battery_pct IS NOT NULL AND end_battery_pct IS NOT NULL
+		            THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 * 0.75
 		            ELSE NULL END),
-		       AVG(power_max),
-		       AVG(power_min)
+		       AVG(avg_power_kw),
+		       AVG(avg_power_kw)
 		FROM drives
 		WHERE vehicle_id = $1 AND end_ts IS NOT NULL`, vehicleID,
 	).Scan(&totalDrives, &avgWhKm, &avgPowerMax, &avgPowerMin)
@@ -308,7 +308,7 @@ func (h *DriveHandler) Score(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Speed discipline: fraction of drives where speed_max < 130
+	// Speed discipline: fraction of drives where max_speed_mph < 130
 	var disciplinedCount int
 	err = h.db.Pool.QueryRow(ctx, `
 		SELECT COUNT(*)
@@ -335,7 +335,7 @@ func (h *DriveHandler) Score(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Smoothness: lower power_max/abs(power_min) ratio = smoother
+	// Smoothness: lower avg_power_kw ratio = smoother
 	smoothness := 70.0 // default
 	if avgPowerMax != nil && avgPowerMin != nil && *avgPowerMin != 0 {
 		ratio := math.Abs(*avgPowerMax / *avgPowerMin)
@@ -393,11 +393,11 @@ func (h *DriveHandler) Score(w http.ResponseWriter, r *http.Request) {
 			var batchTotal, batchDisciplined int
 			_ = h.db.Pool.QueryRow(ctx, `
 				SELECT COUNT(*),
-				       AVG(CASE WHEN distance_mi > 2 AND start_battery_level IS NOT NULL AND end_battery_level IS NOT NULL
-				            THEN (start_battery_level - end_battery_level)::float / distance_mi * 100 * 0.75
+				       AVG(CASE WHEN distance_mi > 2 AND start_battery_pct IS NOT NULL AND end_battery_pct IS NOT NULL
+				            THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 * 0.75
 				            ELSE NULL END),
-				       AVG(power_max),
-				       AVG(power_min)
+				       AVG(avg_power_kw),
+				       AVG(avg_power_kw)
 				FROM (SELECT * FROM drives WHERE vehicle_id = $1 AND end_ts IS NOT NULL
 				      ORDER BY end_ts DESC LIMIT 10 OFFSET $2) sub`, vehicleID, offset,
 			).Scan(&batchTotal, &batchWhKm, &batchPMax, &batchPMin)
@@ -480,9 +480,9 @@ func (h *DriveHandler) Dynamics(w http.ResponseWriter, r *http.Request) {
 		SELECT COUNT(*),
 		       MAX(max_speed_mph),
 		       AVG(CASE WHEN duration_min > 0 THEN distance_mi / (duration_min / 60) ELSE NULL END),
-		       MAX(power_max),
-		       AVG(power_max),
-		       AVG(power_min)
+		       MAX(avg_power_kw),
+		       AVG(avg_power_kw),
+		       AVG(avg_power_kw)
 		FROM drives
 		WHERE vehicle_id = $1 AND end_ts IS NOT NULL`, vehicleID,
 	).Scan(&totalDrives, &maxSpeedMax, &avgSpeed, &maxPowerMax, &avgPowerMax, &avgPowerMin)
@@ -528,7 +528,7 @@ func (h *DriveHandler) Dynamics(w http.ResponseWriter, r *http.Request) {
 		avgAccG = (pAvg / (vehicleMassKg * vAvgMs)) / gravity
 	}
 
-	// Braking G from regen power (negative power_min)
+	// Braking G from regen power (negative avg_power_kw)
 	maxBrakeG := 0.0
 	avgBrakeG := 0.0
 	if vAvgMs > 1 {
