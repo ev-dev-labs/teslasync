@@ -115,10 +115,11 @@ export default function StateMachineDebuggerPage() {
       // Show distribution by FSM type (deduplicated — skip camelCase duplicates)
       const byType = new Map<string, number>();
       for (const tr of transitions) {
-        byType.set(tr.fsm_type, (byType.get(tr.fsm_type) ?? 0) + 1);
+        const fsmType = tr.fsm_type ?? 'unknown';
+        byType.set(fsmType, (byType.get(fsmType) ?? 0) + 1);
       }
       return Array.from(byType.entries())
-        .filter(([key]) => key.includes('_') || key.length <= 10)
+        .filter(([key]) => key?.includes('_') || (key?.length ?? 0) <= 10)
         .sort((a, b) => b[1] - a[1])
         .map(([name, value], i) => ({
           name,
@@ -145,7 +146,7 @@ export default function StateMachineDebuggerPage() {
     const byType = new Map<string, number[]>();
     const counts = new Map<string, number>();
     for (const tr of transitions) {
-      const key = tr.fsm_type;
+      const key = tr.fsm_type ?? 'unknown';
       counts.set(key, (counts.get(key) ?? 0) + 1);
       const list = byType.get(key) ?? [];
       list.push(new Date(tr.created_at).getTime());
