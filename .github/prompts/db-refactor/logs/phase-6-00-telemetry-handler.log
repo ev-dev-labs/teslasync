@@ -1,0 +1,414 @@
+=== SURVEY ===
+187 errors in telemetry_handler.go across 8 sections
+
+=== REASONING ===
+Fixed 187 errors across 8 sections:
+1. RawTelemetrySignal: removed deleted Signals field (1 error)
+2. Position insert: Insert->BulkInsert + add Ts/Source (1 error)
+3. APICallLog: Method->HTTPMethod, URL->Endpoint, StatusCode int16, DurationMs int32, Source->Service (5 errors)
+4. extractPosition: Speed->SpeedMph, Heading int->int16, deleted BatteryLvl/IdealRange/RatedRange/InsideTemp/OutsideTemp/Power/Odometer (13 errors)
+5. trackMotor: Rewrote to lean MotorSnapshot (47 errors) - kept TorqueNm/MotorRpm/MotorTempC/InverterTempC/ShiftState, deleted 40+ old drivetrain fields
+6. trackClimate: Rewrote to lean ClimateSnapshot (32 errors) - kept InsideTempC/OutsideTempC/Setpoints/FanStatus/SeatHeaters/DefrostMode/IsClimateOn, deleted 20+ old fields
+7. trackSecurity: Rewrote to lean SecurityEvent (26 errors) - kept Locked/SentryMode/DoorsOpen/WindowsOpen/UserPresent, aggregated window states, deleted 20+ old fields
+8. trackCharging: Rewrote to lean ChargingTelemetry (62 errors) - kept BatteryLevel/ChargingState/ChargerVoltage/Current/Power/Phases/RateMph/EnergyAdded/RangeMi/PilotCurrent/ScheduledChargingAt, deleted 50+ old fields
+
+=== CHANGES ===
+Files modified: internal/api/telemetry_handler.go
+
+=== GATE ===
+# github.com/ev-dev-labs/teslasync/cmd/automation-worker
+cmd\automation-worker\main.go:103:32: cannot use settingsRepo (variable of type *"github.com/ev-dev-labs/teslasync/internal/database".SettingsRepo) as action.SettingsChecker value in argument to action.NewCommandExecutor: *"github.com/ev-dev-labs/teslasync/internal/database".SettingsRepo does not implement action.SettingsChecker (missing method GetPollingConfig)
+cmd\automation-worker\main.go:112:23: cannot use automationRepo (variable of type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo) as safety.AutoDisabler value in argument to safety.WithDisabler: *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo does not implement safety.AutoDisabler (missing method SetAutoDisabled)
+cmd\automation-worker\main.go:117:3: cannot use automationRepo (variable of type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo) as automation.AutomationStore value in argument to automation.NewEngine: *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo does not implement automation.AutomationStore (missing method GetByID)
+cmd\automation-worker\main.go:127:37: cannot use automationRepo (variable of type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo) as trigger.CronRepo value in argument to trigger.NewCronTrigger: *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo does not implement trigger.CronRepo (missing method LoadEnabledScheduleTriggers)
+cmd\automation-worker\main.go:130:37: cannot use automationRepo (variable of type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo) as trigger.MQTTRepo value in argument to trigger.NewMQTTTrigger: *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo does not implement trigger.MQTTRepo (missing method GetByTriggerType)
+cmd\automation-worker\main.go:133:45: cannot use automationRepo (variable of type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo) as trigger.SunriseSunsetRepo value in argument to trigger.NewSunriseSunsetTrigger: *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo does not implement trigger.SunriseSunsetRepo (missing method GetByTriggerType)
+cmd\automation-worker\main.go:136:43: cannot use automationRepo (variable of type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo) as trigger.BatteryRepo value in argument to trigger.NewBatteryTrigger: *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo does not implement trigger.BatteryRepo (missing method LoadEnabledBatterySignalTriggers)
+cmd\automation-worker\main.go:139:53: cannot use automationRepo (variable of type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo) as trigger.VehicleStateRepo value in argument to trigger.NewVehicleStateTrigger: *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo does not implement trigger.VehicleStateRepo (missing method GetEnabledByVehicleAndTrigger)
+cmd\automation-worker\main.go:142:41: cannot use automationRepo (variable of type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo) as trigger.EnergyRepo value in argument to trigger.NewEnergyTrigger: *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo does not implement trigger.EnergyRepo (missing method LoadEnabledEnergySignalTriggers)
+cmd\automation-worker\main.go:145:43: cannot use automationRepo (variable of type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo) as trigger.WebhookRepo value in argument to trigger.NewWebhookTrigger: *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo does not implement trigger.WebhookRepo (missing method GetByWebhookToken)
+# github.com/ev-dev-labs/teslasync/internal/api
+internal\api\audit.go:68:44: l.Resource undefined (type models.AuditLog has no field or method Resource)
+internal\api\audit.go:68:57: l.Details undefined (type models.AuditLog has no field or method Details)
+internal\api\audit.go:68:69: l.IP undefined (type models.AuditLog has no field or method IP)
+internal\api\audit.go:68:76: l.CreatedAt undefined (type models.AuditLog has no field or method CreatedAt)
+internal\api\automation_handler.go:89:7: a.TriggerType undefined (type *models.Automation has no field or method TriggerType)
+internal\api\automation_handler.go:89:34: a.TriggerConfig undefined (type *models.Automation has no field or method TriggerConfig)
+internal\api\automation_handler.go:94:23: a.TriggerConfig undefined (type *models.Automation has no field or method TriggerConfig)
+internal\api\automation_handler.go:109:29: h.repo.GetAll undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo has no field or method GetAll)
+internal\api\automation_handler.go:180:19: h.repo.GetByID undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo has no field or method GetByID)
+internal\api\automation_handler.go:265:22: cannot use req.Description (variable of type string) as *string value in struct literal
+internal\api\automation_handler.go:268:3: unknown field TriggerType in struct literal of type models.Automation
+internal\api\automation_handler.go:269:3: unknown field TriggerConfig in struct literal of type models.Automation
+internal\api\automation_handler.go:270:3: unknown field Conditions in struct literal of type models.Automation
+internal\api\automation_handler.go:271:3: unknown field Actions in struct literal of type models.Automation
+internal\api\automation_handler.go:272:3: unknown field CooldownMinutes in struct literal of type models.Automation
+internal\api\automation_handler.go:273:3: unknown field MaxExecutionsHour in struct literal of type models.Automation
+internal\api\automation_handler.go:274:3: unknown field StopOnFailure in struct literal of type models.Automation
+internal\api\automation_handler.go:275:3: unknown field NotifyOnRun in struct literal of type models.Automation
+internal\api\automation_handler.go:276:3: unknown field NotifyOnFailure in struct literal of type models.Automation
+internal\api\automation_handler.go:277:3: unknown field SeasonalStart in struct literal of type models.Automation
+internal\api\automation_handler.go:278:3: unknown field SeasonalEnd in struct literal of type models.Automation
+internal\api\automation_handler.go:279:3: unknown field Priority in struct literal of type models.Automation
+internal\api\automation_handler.go:280:3: unknown field PresetID in struct literal of type models.Automation
+internal\api\automation_handler.go:281:3: unknown field Tags in struct literal of type models.Automation
+internal\api\automation_handler.go:297:25: a.TriggerType undefined (type *models.Automation has no field or method TriggerType)
+internal\api\automation_handler.go:302:53: a.TriggerType undefined (type *models.Automation has no field or method TriggerType)
+internal\api\automation_handler.go:320:26: h.repo.GetByID undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo has no field or method GetByID)
+internal\api\automation_handler.go:422:26: h.repo.GetByID undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo has no field or method GetByID)
+internal\api\automation_handler.go:473:26: h.repo.GetByID undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo has no field or method GetByID)
+internal\api\automation_handler.go:490:19: h.repo.SetEnabled undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo has no field or method SetEnabled)
+internal\api\automation_handler.go:523:26: h.repo.GetByID undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo has no field or method GetByID)
+internal\api\automation_handler.go:538:19: h.repo.ReEnable undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo has no field or method ReEnable)
+internal\api\automation_handler.go:623:26: h.repo.GetByID undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo has no field or method GetByID)
+internal\api\automation_handler.go:739:21: h.repo.GetAll undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo has no field or method GetAll)
+internal\api\automation_handler.go:744:54: cannot use candidate (variable of type *models.Automation) as *models.AutomationFull value in argument to condition.DetectConflicts
+internal\api\automation_handler.go:769:26: h.repo.GetByWebhookToken undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo has no field or method GetByWebhookToken)
+internal\api\automation_handler.go:842:19: h.repo.GetByID undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo has no field or method GetByID)
+internal\api\automation_handler.go:956:11: a.Conditions undefined (type *models.Automation has no field or method Conditions)
+internal\api\automation_handler.go:961:29: a.Conditions undefined (type *models.Automation has no field or method Conditions)
+internal\api\automation_handler.go:1040:59: a.LastTriggeredAt undefined (type *models.Automation has no field or method LastTriggeredAt)
+internal\api\automation_handler.go:1092:11: a.Actions undefined (type *models.Automation has no field or method Actions)
+internal\api\automation_handler.go:1096:40: a.Actions undefined (type *models.Automation has no field or method Actions)
+internal\api\automation_handler.go:1142:9: a.StopOnFailure undefined (type *models.Automation has no field or method StopOnFailure)
+internal\api\automation_handler.go:1260:19: h.repo.GetByID undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo has no field or method GetByID)
+internal\api\automation_handler.go:1460:10: a.TriggerConfig undefined (type *models.Automation has no field or method TriggerConfig)
+internal\api\automation_handler.go:1461:7: a.TriggerType undefined (type *models.Automation has no field or method TriggerType)
+internal\api\automation_handler.go:1466:22: cannot use a.Description (variable of type *string) as string value in struct literal
+internal\api\automation_handler.go:1467:24: a.TriggerType undefined (type *models.Automation has no field or method TriggerType)
+internal\api\automation_handler.go:1469:24: a.Conditions undefined (type *models.Automation has no field or method Conditions)
+internal\api\automation_handler.go:1470:24: a.Actions undefined (type *models.Automation has no field or method Actions)
+internal\api\automation_handler.go:1471:24: a.CooldownMinutes undefined (type *models.Automation has no field or method CooldownMinutes)
+internal\api\automation_handler.go:1472:24: a.MaxExecutionsHour undefined (type *models.Automation has no field or method MaxExecutionsHour)
+internal\api\automation_handler.go:1473:24: a.StopOnFailure undefined (type *models.Automation has no field or method StopOnFailure)
+internal\api\automation_handler.go:1474:24: a.NotifyOnRun undefined (type *models.Automation has no field or method NotifyOnRun)
+internal\api\automation_handler.go:1475:24: a.NotifyOnFailure undefined (type *models.Automation has no field or method NotifyOnFailure)
+internal\api\automation_handler.go:1476:24: a.SeasonalStart undefined (type *models.Automation has no field or method SeasonalStart)
+internal\api\automation_handler.go:1477:24: a.SeasonalEnd undefined (type *models.Automation has no field or method SeasonalEnd)
+internal\api\automation_handler.go:1478:24: a.Priority undefined (type *models.Automation has no field or method Priority)
+internal\api\automation_handler.go:1479:24: a.Tags undefined (type *models.Automation has no field or method Tags)
+internal\api\automation_handler.go:1534:19: h.repo.GetByID undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo has no field or method GetByID)
+internal\api\automation_handler.go:1579:20: h.repo.GetByID undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo has no field or method GetByID)
+internal\api\automation_handler.go:1736:22: cannot use def.Description (variable of type string) as *string value in struct literal
+internal\api\automation_handler.go:1738:3: unknown field TriggerType in struct literal of type models.Automation
+internal\api\automation_handler.go:1739:3: unknown field TriggerConfig in struct literal of type models.Automation
+internal\api\automation_handler.go:1740:3: unknown field Conditions in struct literal of type models.Automation
+internal\api\automation_handler.go:1741:3: unknown field Actions in struct literal of type models.Automation
+internal\api\automation_handler.go:1742:3: unknown field CooldownMinutes in struct literal of type models.Automation
+internal\api\automation_handler.go:1743:3: unknown field MaxExecutionsHour in struct literal of type models.Automation
+internal\api\automation_handler.go:1744:3: unknown field StopOnFailure in struct literal of type models.Automation
+internal\api\automation_handler.go:1745:3: unknown field NotifyOnRun in struct literal of type models.Automation
+internal\api\automation_handler.go:1746:3: unknown field NotifyOnFailure in struct literal of type models.Automation
+internal\api\automation_handler.go:1747:3: unknown field SeasonalStart in struct literal of type models.Automation
+internal\api\automation_handler.go:1748:3: unknown field SeasonalEnd in struct literal of type models.Automation
+internal\api\automation_handler.go:1749:3: unknown field Priority in struct literal of type models.Automation
+internal\api\automation_handler.go:1750:3: unknown field Tags in struct literal of type models.Automation
+internal\api\battery_cells_handler.go:53:42: h.chargingTelemetryRepo.GetByVehicle undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".ChargingTelemetryRepo has no field or method GetByVehicle)
+internal\api\battery_cells_handler.go:121:8: r.BrickVoltageMax undefined (type *models.ChargingTelemetry has no field or method BrickVoltageMax)
+internal\api\battery_cells_handler.go:121:36: r.BrickVoltageMin undefined (type *models.ChargingTelemetry has no field or method BrickVoltageMin)
+internal\api\battery_cells_handler.go:140:26: latest.BrickVoltageMax undefined (type *models.ChargingTelemetry has no field or method BrickVoltageMax)
+internal\api\battery_cells_handler.go:141:26: latest.BrickVoltageMin undefined (type *models.ChargingTelemetry has no field or method BrickVoltageMin)
+internal\api\battery_cells_handler.go:142:27: latest.PackVoltage undefined (type *models.ChargingTelemetry has no field or method PackVoltage)
+internal\api\battery_cells_handler.go:163:30: latest.NumBrickVoltageMin undefined (type *models.ChargingTelemetry has no field or method NumBrickVoltageMin)
+internal\api\battery_cells_handler.go:164:30: latest.NumBrickVoltageMax undefined (type *models.ChargingTelemetry has no field or method NumBrickVoltageMax)
+internal\api\battery_cells_handler.go:217:8: r.BrickVoltageMax undefined (type *models.ChargingTelemetry has no field or method BrickVoltageMax)
+internal\api\battery_cells_handler.go:217:36: r.BrickVoltageMin undefined (type *models.ChargingTelemetry has no field or method BrickVoltageMin)
+internal\api\battery_cells_handler.go:220:14: r.BrickVoltageMax undefined (type *models.ChargingTelemetry has no field or method BrickVoltageMax)
+internal\api\battery_cells_handler.go:221:14: r.BrickVoltageMin undefined (type *models.ChargingTelemetry has no field or method BrickVoltageMin)
+internal\api\battery_cells_handler.go:224:19: r.CreatedAt undefined (type *models.ChargingTelemetry has no field or method CreatedAt)
+internal\api\battery_cells_handler.go:265:22: ct.ModuleTempMax undefined (type *models.ChargingTelemetry has no field or method ModuleTempMax)
+internal\api\battery_cells_handler.go:266:22: ct.ModuleTempMin undefined (type *models.ChargingTelemetry has no field or method ModuleTempMin)
+internal\api\charging_telemetry_handler.go:27:22: h.repo.GetByVehicle undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".ChargingTelemetryRepo has no field or method GetByVehicle)
+internal\api\charging_telemetry_handler.go:45:22: h.repo.GetLatest undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".ChargingTelemetryRepo has no field or method GetLatest)
+internal\api\climate_handler.go:27:23: h.repo.GetByVehicle undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".ClimateRepo has no field or method GetByVehicle)
+internal\api\climate_handler.go:45:22: h.repo.GetLatest undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".ClimateRepo has no field or method GetLatest)
+internal\api\command_handler.go:134:31: h.settingsRepo.GetPollingConfig undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".SettingsRepo has no field or method GetPollingConfig)
+internal\api\command_handler.go:182:13: vehicle.State undefined (type *models.Vehicle has no field or method State)
+internal\api\data_repair_handler.go:168:41: session.StartDate undefined (type *models.ChargingSession has no field or method StartDate)
+internal\api\data_repair_handler.go:203:39: drive.StartDate undefined (type *models.Drive has no field or method StartDate)
+internal\api\devtools_handler.go:1044:32: h.settingsRepo.GetPollingConfig undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".SettingsRepo has no field or method GetPollingConfig)
+internal\api\devtools_handler.go:1068:32: h.settingsRepo.GetPollingConfig undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".SettingsRepo has no field or method GetPollingConfig)
+internal\api\devtools_handler.go:1092:32: h.settingsRepo.GetPollingConfig undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".SettingsRepo has no field or method GetPollingConfig)
+internal\api\devtools_handler.go:1116:32: h.settingsRepo.GetPollingConfig undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".SettingsRepo has no field or method GetPollingConfig)
+internal\api\drive_handler.go:85:11: drive.EndDate undefined (type *models.Drive has no field or method EndDate)
+internal\api\drive_handler.go:86:30: h.posRepo.GetByTimeRange undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".PositionRepo has no field or method GetByTimeRange)
+internal\api\drive_handler.go:86:73: drive.StartDate undefined (type *models.Drive has no field or method StartDate)
+internal\api\drive_handler.go:86:90: drive.EndDate undefined (type *models.Drive has no field or method EndDate)
+internal\api\drive_handler.go:127:30: h.posRepo.GetByTimeRange undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".PositionRepo has no field or method GetByTimeRange)
+internal\api\drive_handler.go:127:81: drive.StartDate undefined (type *models.Drive has no field or method StartDate)
+internal\api\drive_handler.go:127:98: drive.EndDate undefined (type *models.Drive has no field or method EndDate)
+internal\api\energy_site_handler.go:294:4: unknown field RawJSON in struct literal of type models.TeslaEnergySite
+internal\api\fsm_handler.go:74:26: a.vehicleRepo.UpdateState undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".VehicleRepo has no field or method UpdateState)
+internal\api\fsm_handler.go:82:27: a.vehicleRepo.SetGearCapable undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".VehicleRepo has no field or method SetGearCapable)
+internal\api\fsm_handler.go:214:100: vehicle.IsGearCapable undefined (type *models.Vehicle has no field or method IsGearCapable)
+internal\api\geofence_handler.go:14:18: invalid operation: g.Latitude < -90 (mismatched types func() float64 and untyped int)
+internal\api\geofence_handler.go:14:38: invalid operation: g.Latitude > 90 (mismatched types func() float64 and untyped int)
+internal\api\geofence_handler.go:17:19: invalid operation: g.Longitude < -180 (mismatched types func() float64 and untyped int)
+internal\api\geofence_handler.go:17:41: invalid operation: g.Longitude > 180 (mismatched types func() float64 and untyped int)
+internal\api\geofence_handler.go:20:16: invalid operation: g.Radius > 100000 (mismatched types func() float64 and untyped int)
+internal\api\geofence_handler.go:54:33: invalid operation: g.Radius <= 0 (mismatched types func() float64 and untyped int)
+internal\api\geofence_handler.go:105:33: invalid operation: g.Radius <= 0 (mismatched types func() float64 and untyped int)
+internal\api\motor_handler.go:27:23: h.repo.GetByVehicle undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".MotorRepo has no field or method GetByVehicle)
+internal\api\router.go:215:4: cannot use database.NewSettingsRepo(db) (value of type *"github.com/ev-dev-labs/teslasync/internal/database".SettingsRepo) as action.SettingsChecker value in argument to action.NewCommandExecutor: *"github.com/ev-dev-labs/teslasync/internal/database".SettingsRepo does not implement action.SettingsChecker (missing method GetPollingConfig)
+internal\api\rule_engine.go:91:32: rule.Conditions undefined (type *models.AlertRule has no field or method Conditions)
+internal\api\rule_engine.go:223:11: rule.LastFiredAt undefined (type *models.AlertRule has no field or method LastFiredAt)
+internal\api\rule_engine.go:235:26: rule.LastFiredAt undefined (type *models.AlertRule has no field or method LastFiredAt)
+internal\api\rule_engine.go:420:10: rule.Conditions undefined (type *models.AlertRule has no field or method Conditions)
+internal\api\rule_engine.go:423:21: rule.Conditions undefined (type *models.AlertRule has no field or method Conditions)
+internal\api\security_handler.go:27:22: h.repo.GetByVehicle undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".SecurityRepo has no field or method GetByVehicle)
+internal\api\security_handler.go:45:21: h.repo.GetLatest undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".SecurityRepo has no field or method GetLatest)
+internal\api\settings_handler.go:129:28: h.settingsRepo.GetPollingConfig undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".SettingsRepo has no field or method GetPollingConfig)
+internal\api\settings_handler.go:146:27: h.settingsRepo.UpdatePollingConfig undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".SettingsRepo has no field or method UpdatePollingConfig)
+internal\api\settings_handler.go:156:43: pc.TelemetryCapture undefined (type models.PollingConfig has no field or method TelemetryCapture)
+internal\api\share_handler.go:253:24: drive.StartDate undefined (type *models.Drive has no field or method StartDate)
+internal\api\share_handler.go:254:24: drive.Distance undefined (type *models.Drive has no field or method Distance)
+internal\api\share_handler.go:258:24: drive.StartBatteryLvl undefined (type *models.Drive has no field or method StartBatteryLvl)
+internal\api\share_handler.go:259:24: drive.EndBatteryLvl undefined (type *models.Drive has no field or method EndBatteryLvl)
+internal\api\share_handler.go:260:24: drive.ElevationGain undefined (type *models.Drive has no field or method ElevationGain)
+internal\api\share_handler.go:261:24: drive.ElevationLoss undefined (type *models.Drive has no field or method ElevationLoss)
+internal\api\share_handler.go:265:28: drive.SpeedMax undefined (type *models.Drive has no field or method SpeedMax)
+internal\api\share_handler.go:266:28: drive.SpeedAvg undefined (type *models.Drive has no field or method SpeedAvg)
+internal\api\share_handler.go:270:11: drive.StartBatteryLvl undefined (type *models.Drive has no field or method StartBatteryLvl)
+internal\api\share_handler.go:270:43: drive.EndBatteryLvl undefined (type *models.Drive has no field or method EndBatteryLvl)
+internal\api\share_handler.go:270:73: drive.Distance undefined (type *models.Drive has no field or method Distance)
+internal\api\share_handler.go:271:30: drive.StartBatteryLvl undefined (type *models.Drive has no field or method StartBatteryLvl)
+internal\api\share_handler.go:271:55: drive.EndBatteryLvl undefined (type *models.Drive has no field or method EndBatteryLvl)
+internal\api\share_handler.go:273:28: drive.Distance undefined (type *models.Drive has no field or method Distance)
+internal\api\share_handler.go:288:11: cannot use vehicle.Model (variable of type *string) as string value in struct literal
+internal\api\share_handler.go:289:19: vehicle.ExteriorColor undefined (type *models.Vehicle has no field or method ExteriorColor)
+internal\api\share_handler.go:316:11: drive.EndDate undefined (type *models.Drive has no field or method EndDate)
+internal\api\share_handler.go:317:29: h.posRepo.GetByTimeRange undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".PositionRepo has no field or method GetByTimeRange)
+internal\api\share_handler.go:317:72: drive.StartDate undefined (type *models.Drive has no field or method StartDate)
+internal\api\share_handler.go:317:89: drive.EndDate undefined (type *models.Drive has no field or method EndDate)
+internal\api\share_handler.go:409:8: p.Elevation undefined (type *models.Position has no field or method Elevation)
+internal\api\share_handler.go:412:20: p.Elevation undefined (type *models.Position has no field or method Elevation)
+internal\api\share_handler.go:416:30: p.Speed undefined (type *models.Position has no field or method Speed)
+internal\api\share_handler.go:419:20: p.Speed undefined (type *models.Position has no field or method Speed)
+internal\api\telemetry_sessions.go:1148:73: too many arguments in call to t.driveRepo.CompleteWithTx
+	have ("context".Context, pgx.Tx, int64, "time".Time, nil, nil, float64, float64, *float64, *int, *float64, *float64, *float64, *float64, *float64)
+	want ("context".Context, "github.com/ev-dev-labs/teslasync/internal/database".DBTX, int64, "time".Time, float64, float64, *int16, *float64, *float64, *float64, *float64)
+internal\api\telemetry_sessions.go:1216:30: t.posRepo.FindNearestPosition undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".PositionRepo has no field or method FindNearestPosition)
+internal\api\telemetry_sessions.go:1245:27: t.posRepo.FindNearestPosition undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".PositionRepo has no field or method FindNearestPosition)
+internal\api\telemetry_sessions.go:1650:28: too many arguments in call to t.chargeRepo.CompleteWithTx
+	have ("context".Context, pgx.Tx, int64, "time".Time, float64, nil, *int, *float64, *int, *int, *int, *float64, *string, *string, *string, nil, float64)
+	want ("context".Context, "github.com/ev-dev-labs/teslasync/internal/database".DBTX, int64, "time".Time, *float64, *int16, *float64, *float64, *float64, *float64, *string, *float64, *string)
+internal\api\telemetry_sessions.go:1667:57: geofences[0].CostPerKwh undefined (type *models.Geofence has no field or method CostPerKwh)
+internal\api\telemetry_sessions.go:1668:48: geofences[0].CostPerKwh undefined (type *models.Geofence has no field or method CostPerKwh)
+internal\api\telemetry_sessions.go:1756:30: t.posRepo.FindNearestPosition undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".PositionRepo has no field or method FindNearestPosition)
+internal\api\telemetry_sessions.go:1767:27: t.posRepo.FindNearestPosition undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".PositionRepo has no field or method FindNearestPosition)
+internal\api\tesla_energy_history_handler.go:438:4: unknown field RawJSON in struct literal of type models.TeslaEnergyHistory
+internal\api\tesla_energy_history_handler.go:469:4: unknown field RawJSON in struct literal of type models.TeslaEnergyBackupEvent
+internal\api\tesla_energy_history_handler.go:508:4: unknown field RawJSON in struct literal of type models.TeslaEnergyWCCharging
+internal\api\tesla_energy_live_status_handler.go:168:3: unknown field RawJSON in struct literal of type models.TeslaEnergyLiveStatus
+internal\api\tesla_user_order_handler.go:112:4: unknown field RawJSON in struct literal of type models.TeslaUserOrder
+internal\api\tesla_user_profile_handler.go:92:3: unknown field RawJSON in struct literal of type models.TeslaUserProfile
+internal\api\vehicle_access_handler.go:363:4: unknown field RawJSON in struct literal of type models.TeslaVehicleDriver
+internal\api\vehicle_access_handler.go:399:4: unknown field RawJSON in struct literal of type models.TeslaVehicleInvitation
+internal\api\vehicle_access_handler.go:441:3: unknown field RawJSON in struct literal of type models.TeslaVehicleInvitation
+internal\api\vehicle_handler.go:88:44: h.vehicleSvc.SettingsRepo().GetPollingConfig undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".SettingsRepo has no field or method GetPollingConfig)
+internal\api\vehicle_handler.go:120:48: h.vehicleSvc.PositionRepo().GetByVehicle undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".PositionRepo has no field or method GetByVehicle)
+internal\api\vehicle_handler.go:188:44: h.vehicleSvc.SettingsRepo().GetPollingConfig undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".SettingsRepo has no field or method GetPollingConfig)
+internal\api\watch_handler.go:91:25: vehicle.State undefined (type *models.Vehicle has no field or method State)
+internal\api\watch_handler.go:99:26: vehicle.State undefined (type *models.Vehicle has no field or method State)
+internal\api\watch_handler.go:123:33: vehicle.State undefined (type *models.Vehicle has no field or method State)
+
+
+# github.com/ev-dev-labs/teslasync/cmd/automation-worker
+cmd\automation-worker\main.go:103:32: cannot use settingsRepo (variable of type *"github.com/ev-dev-labs/teslasync/internal/database".SettingsRepo) as action.SettingsChecker value in argument to action.NewCommandExecutor: *"github.com/ev-dev-labs/teslasync/internal/database".SettingsRepo does not implement action.SettingsChecker (missing method GetPollingConfig)
+cmd\automation-worker\main.go:112:23: cannot use automationRepo (variable of type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo) as safety.AutoDisabler value in argument to safety.WithDisabler: *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo does not implement safety.AutoDisabler (missing method SetAutoDisabled)
+cmd\automation-worker\main.go:117:3: cannot use automationRepo (variable of type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo) as automation.AutomationStore value in argument to automation.NewEngine: *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo does not implement automation.AutomationStore (missing method GetByID)
+cmd\automation-worker\main.go:127:37: cannot use automationRepo (variable of type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo) as trigger.CronRepo value in argument to trigger.NewCronTrigger: *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo does not implement trigger.CronRepo (missing method LoadEnabledScheduleTriggers)
+cmd\automation-worker\main.go:130:37: cannot use automationRepo (variable of type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo) as trigger.MQTTRepo value in argument to trigger.NewMQTTTrigger: *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo does not implement trigger.MQTTRepo (missing method GetByTriggerType)
+cmd\automation-worker\main.go:133:45: cannot use automationRepo (variable of type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo) as trigger.SunriseSunsetRepo value in argument to trigger.NewSunriseSunsetTrigger: *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo does not implement trigger.SunriseSunsetRepo (missing method GetByTriggerType)
+cmd\automation-worker\main.go:136:43: cannot use automationRepo (variable of type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo) as trigger.BatteryRepo value in argument to trigger.NewBatteryTrigger: *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo does not implement trigger.BatteryRepo (missing method LoadEnabledBatterySignalTriggers)
+cmd\automation-worker\main.go:139:53: cannot use automationRepo (variable of type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo) as trigger.VehicleStateRepo value in argument to trigger.NewVehicleStateTrigger: *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo does not implement trigger.VehicleStateRepo (missing method GetEnabledByVehicleAndTrigger)
+cmd\automation-worker\main.go:142:41: cannot use automationRepo (variable of type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo) as trigger.EnergyRepo value in argument to trigger.NewEnergyTrigger: *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo does not implement trigger.EnergyRepo (missing method LoadEnabledEnergySignalTriggers)
+cmd\automation-worker\main.go:145:43: cannot use automationRepo (variable of type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo) as trigger.WebhookRepo value in argument to trigger.NewWebhookTrigger: *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo does not implement trigger.WebhookRepo (missing method GetByWebhookToken)
+# github.com/ev-dev-labs/teslasync/internal/api
+internal\api\audit.go:68:44: l.Resource undefined (type models.AuditLog has no field or method Resource)
+internal\api\audit.go:68:57: l.Details undefined (type models.AuditLog has no field or method Details)
+internal\api\audit.go:68:69: l.IP undefined (type models.AuditLog has no field or method IP)
+internal\api\audit.go:68:76: l.CreatedAt undefined (type models.AuditLog has no field or method CreatedAt)
+internal\api\automation_handler.go:89:7: a.TriggerType undefined (type *models.Automation has no field or method TriggerType)
+internal\api\automation_handler.go:89:34: a.TriggerConfig undefined (type *models.Automation has no field or method TriggerConfig)
+internal\api\automation_handler.go:94:23: a.TriggerConfig undefined (type *models.Automation has no field or method TriggerConfig)
+internal\api\automation_handler.go:109:29: h.repo.GetAll undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo has no field or method GetAll)
+internal\api\automation_handler.go:180:19: h.repo.GetByID undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo has no field or method GetByID)
+internal\api\automation_handler.go:265:22: cannot use req.Description (variable of type string) as *string value in struct literal
+internal\api\automation_handler.go:268:3: unknown field TriggerType in struct literal of type models.Automation
+internal\api\automation_handler.go:269:3: unknown field TriggerConfig in struct literal of type models.Automation
+internal\api\automation_handler.go:270:3: unknown field Conditions in struct literal of type models.Automation
+internal\api\automation_handler.go:271:3: unknown field Actions in struct literal of type models.Automation
+internal\api\automation_handler.go:272:3: unknown field CooldownMinutes in struct literal of type models.Automation
+internal\api\automation_handler.go:273:3: unknown field MaxExecutionsHour in struct literal of type models.Automation
+internal\api\automation_handler.go:274:3: unknown field StopOnFailure in struct literal of type models.Automation
+internal\api\automation_handler.go:275:3: unknown field NotifyOnRun in struct literal of type models.Automation
+internal\api\automation_handler.go:276:3: unknown field NotifyOnFailure in struct literal of type models.Automation
+internal\api\automation_handler.go:277:3: unknown field SeasonalStart in struct literal of type models.Automation
+internal\api\automation_handler.go:278:3: unknown field SeasonalEnd in struct literal of type models.Automation
+internal\api\automation_handler.go:279:3: unknown field Priority in struct literal of type models.Automation
+internal\api\automation_handler.go:280:3: unknown field PresetID in struct literal of type models.Automation
+internal\api\automation_handler.go:281:3: unknown field Tags in struct literal of type models.Automation
+internal\api\automation_handler.go:297:25: a.TriggerType undefined (type *models.Automation has no field or method TriggerType)
+internal\api\automation_handler.go:302:53: a.TriggerType undefined (type *models.Automation has no field or method TriggerType)
+internal\api\automation_handler.go:320:26: h.repo.GetByID undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo has no field or method GetByID)
+internal\api\automation_handler.go:422:26: h.repo.GetByID undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo has no field or method GetByID)
+internal\api\automation_handler.go:473:26: h.repo.GetByID undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo has no field or method GetByID)
+internal\api\automation_handler.go:490:19: h.repo.SetEnabled undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo has no field or method SetEnabled)
+internal\api\automation_handler.go:523:26: h.repo.GetByID undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo has no field or method GetByID)
+internal\api\automation_handler.go:538:19: h.repo.ReEnable undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo has no field or method ReEnable)
+internal\api\automation_handler.go:623:26: h.repo.GetByID undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo has no field or method GetByID)
+internal\api\automation_handler.go:739:21: h.repo.GetAll undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo has no field or method GetAll)
+internal\api\automation_handler.go:744:54: cannot use candidate (variable of type *models.Automation) as *models.AutomationFull value in argument to condition.DetectConflicts
+internal\api\automation_handler.go:769:26: h.repo.GetByWebhookToken undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo has no field or method GetByWebhookToken)
+internal\api\automation_handler.go:842:19: h.repo.GetByID undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo has no field or method GetByID)
+internal\api\automation_handler.go:956:11: a.Conditions undefined (type *models.Automation has no field or method Conditions)
+internal\api\automation_handler.go:961:29: a.Conditions undefined (type *models.Automation has no field or method Conditions)
+internal\api\automation_handler.go:1040:59: a.LastTriggeredAt undefined (type *models.Automation has no field or method LastTriggeredAt)
+internal\api\automation_handler.go:1092:11: a.Actions undefined (type *models.Automation has no field or method Actions)
+internal\api\automation_handler.go:1096:40: a.Actions undefined (type *models.Automation has no field or method Actions)
+internal\api\automation_handler.go:1142:9: a.StopOnFailure undefined (type *models.Automation has no field or method StopOnFailure)
+internal\api\automation_handler.go:1260:19: h.repo.GetByID undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo has no field or method GetByID)
+internal\api\automation_handler.go:1460:10: a.TriggerConfig undefined (type *models.Automation has no field or method TriggerConfig)
+internal\api\automation_handler.go:1461:7: a.TriggerType undefined (type *models.Automation has no field or method TriggerType)
+internal\api\automation_handler.go:1466:22: cannot use a.Description (variable of type *string) as string value in struct literal
+internal\api\automation_handler.go:1467:24: a.TriggerType undefined (type *models.Automation has no field or method TriggerType)
+internal\api\automation_handler.go:1469:24: a.Conditions undefined (type *models.Automation has no field or method Conditions)
+internal\api\automation_handler.go:1470:24: a.Actions undefined (type *models.Automation has no field or method Actions)
+internal\api\automation_handler.go:1471:24: a.CooldownMinutes undefined (type *models.Automation has no field or method CooldownMinutes)
+internal\api\automation_handler.go:1472:24: a.MaxExecutionsHour undefined (type *models.Automation has no field or method MaxExecutionsHour)
+internal\api\automation_handler.go:1473:24: a.StopOnFailure undefined (type *models.Automation has no field or method StopOnFailure)
+internal\api\automation_handler.go:1474:24: a.NotifyOnRun undefined (type *models.Automation has no field or method NotifyOnRun)
+internal\api\automation_handler.go:1475:24: a.NotifyOnFailure undefined (type *models.Automation has no field or method NotifyOnFailure)
+internal\api\automation_handler.go:1476:24: a.SeasonalStart undefined (type *models.Automation has no field or method SeasonalStart)
+internal\api\automation_handler.go:1477:24: a.SeasonalEnd undefined (type *models.Automation has no field or method SeasonalEnd)
+internal\api\automation_handler.go:1478:24: a.Priority undefined (type *models.Automation has no field or method Priority)
+internal\api\automation_handler.go:1479:24: a.Tags undefined (type *models.Automation has no field or method Tags)
+internal\api\automation_handler.go:1534:19: h.repo.GetByID undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo has no field or method GetByID)
+internal\api\automation_handler.go:1579:20: h.repo.GetByID undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".AutomationRepo has no field or method GetByID)
+internal\api\automation_handler.go:1736:22: cannot use def.Description (variable of type string) as *string value in struct literal
+internal\api\automation_handler.go:1738:3: unknown field TriggerType in struct literal of type models.Automation
+internal\api\automation_handler.go:1739:3: unknown field TriggerConfig in struct literal of type models.Automation
+internal\api\automation_handler.go:1740:3: unknown field Conditions in struct literal of type models.Automation
+internal\api\automation_handler.go:1741:3: unknown field Actions in struct literal of type models.Automation
+internal\api\automation_handler.go:1742:3: unknown field CooldownMinutes in struct literal of type models.Automation
+internal\api\automation_handler.go:1743:3: unknown field MaxExecutionsHour in struct literal of type models.Automation
+internal\api\automation_handler.go:1744:3: unknown field StopOnFailure in struct literal of type models.Automation
+internal\api\automation_handler.go:1745:3: unknown field NotifyOnRun in struct literal of type models.Automation
+internal\api\automation_handler.go:1746:3: unknown field NotifyOnFailure in struct literal of type models.Automation
+internal\api\automation_handler.go:1747:3: unknown field SeasonalStart in struct literal of type models.Automation
+internal\api\automation_handler.go:1748:3: unknown field SeasonalEnd in struct literal of type models.Automation
+internal\api\automation_handler.go:1749:3: unknown field Priority in struct literal of type models.Automation
+internal\api\automation_handler.go:1750:3: unknown field Tags in struct literal of type models.Automation
+internal\api\battery_cells_handler.go:53:42: h.chargingTelemetryRepo.GetByVehicle undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".ChargingTelemetryRepo has no field or method GetByVehicle)
+internal\api\battery_cells_handler.go:121:8: r.BrickVoltageMax undefined (type *models.ChargingTelemetry has no field or method BrickVoltageMax)
+internal\api\battery_cells_handler.go:121:36: r.BrickVoltageMin undefined (type *models.ChargingTelemetry has no field or method BrickVoltageMin)
+internal\api\battery_cells_handler.go:140:26: latest.BrickVoltageMax undefined (type *models.ChargingTelemetry has no field or method BrickVoltageMax)
+internal\api\battery_cells_handler.go:141:26: latest.BrickVoltageMin undefined (type *models.ChargingTelemetry has no field or method BrickVoltageMin)
+internal\api\battery_cells_handler.go:142:27: latest.PackVoltage undefined (type *models.ChargingTelemetry has no field or method PackVoltage)
+internal\api\battery_cells_handler.go:163:30: latest.NumBrickVoltageMin undefined (type *models.ChargingTelemetry has no field or method NumBrickVoltageMin)
+internal\api\battery_cells_handler.go:164:30: latest.NumBrickVoltageMax undefined (type *models.ChargingTelemetry has no field or method NumBrickVoltageMax)
+internal\api\battery_cells_handler.go:217:8: r.BrickVoltageMax undefined (type *models.ChargingTelemetry has no field or method BrickVoltageMax)
+internal\api\battery_cells_handler.go:217:36: r.BrickVoltageMin undefined (type *models.ChargingTelemetry has no field or method BrickVoltageMin)
+internal\api\battery_cells_handler.go:220:14: r.BrickVoltageMax undefined (type *models.ChargingTelemetry has no field or method BrickVoltageMax)
+internal\api\battery_cells_handler.go:221:14: r.BrickVoltageMin undefined (type *models.ChargingTelemetry has no field or method BrickVoltageMin)
+internal\api\battery_cells_handler.go:224:19: r.CreatedAt undefined (type *models.ChargingTelemetry has no field or method CreatedAt)
+internal\api\battery_cells_handler.go:265:22: ct.ModuleTempMax undefined (type *models.ChargingTelemetry has no field or method ModuleTempMax)
+internal\api\battery_cells_handler.go:266:22: ct.ModuleTempMin undefined (type *models.ChargingTelemetry has no field or method ModuleTempMin)
+internal\api\charging_telemetry_handler.go:27:22: h.repo.GetByVehicle undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".ChargingTelemetryRepo has no field or method GetByVehicle)
+internal\api\charging_telemetry_handler.go:45:22: h.repo.GetLatest undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".ChargingTelemetryRepo has no field or method GetLatest)
+internal\api\climate_handler.go:27:23: h.repo.GetByVehicle undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".ClimateRepo has no field or method GetByVehicle)
+internal\api\climate_handler.go:45:22: h.repo.GetLatest undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".ClimateRepo has no field or method GetLatest)
+internal\api\command_handler.go:134:31: h.settingsRepo.GetPollingConfig undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".SettingsRepo has no field or method GetPollingConfig)
+internal\api\command_handler.go:182:13: vehicle.State undefined (type *models.Vehicle has no field or method State)
+internal\api\data_repair_handler.go:168:41: session.StartDate undefined (type *models.ChargingSession has no field or method StartDate)
+internal\api\data_repair_handler.go:203:39: drive.StartDate undefined (type *models.Drive has no field or method StartDate)
+internal\api\devtools_handler.go:1044:32: h.settingsRepo.GetPollingConfig undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".SettingsRepo has no field or method GetPollingConfig)
+internal\api\devtools_handler.go:1068:32: h.settingsRepo.GetPollingConfig undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".SettingsRepo has no field or method GetPollingConfig)
+internal\api\devtools_handler.go:1092:32: h.settingsRepo.GetPollingConfig undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".SettingsRepo has no field or method GetPollingConfig)
+internal\api\devtools_handler.go:1116:32: h.settingsRepo.GetPollingConfig undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".SettingsRepo has no field or method GetPollingConfig)
+internal\api\drive_handler.go:85:11: drive.EndDate undefined (type *models.Drive has no field or method EndDate)
+internal\api\drive_handler.go:86:30: h.posRepo.GetByTimeRange undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".PositionRepo has no field or method GetByTimeRange)
+internal\api\drive_handler.go:86:73: drive.StartDate undefined (type *models.Drive has no field or method StartDate)
+internal\api\drive_handler.go:86:90: drive.EndDate undefined (type *models.Drive has no field or method EndDate)
+internal\api\drive_handler.go:127:30: h.posRepo.GetByTimeRange undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".PositionRepo has no field or method GetByTimeRange)
+internal\api\drive_handler.go:127:81: drive.StartDate undefined (type *models.Drive has no field or method StartDate)
+internal\api\drive_handler.go:127:98: drive.EndDate undefined (type *models.Drive has no field or method EndDate)
+internal\api\energy_site_handler.go:294:4: unknown field RawJSON in struct literal of type models.TeslaEnergySite
+internal\api\fsm_handler.go:74:26: a.vehicleRepo.UpdateState undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".VehicleRepo has no field or method UpdateState)
+internal\api\fsm_handler.go:82:27: a.vehicleRepo.SetGearCapable undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".VehicleRepo has no field or method SetGearCapable)
+internal\api\fsm_handler.go:214:100: vehicle.IsGearCapable undefined (type *models.Vehicle has no field or method IsGearCapable)
+internal\api\geofence_handler.go:14:18: invalid operation: g.Latitude < -90 (mismatched types func() float64 and untyped int)
+internal\api\geofence_handler.go:14:38: invalid operation: g.Latitude > 90 (mismatched types func() float64 and untyped int)
+internal\api\geofence_handler.go:17:19: invalid operation: g.Longitude < -180 (mismatched types func() float64 and untyped int)
+internal\api\geofence_handler.go:17:41: invalid operation: g.Longitude > 180 (mismatched types func() float64 and untyped int)
+internal\api\geofence_handler.go:20:16: invalid operation: g.Radius > 100000 (mismatched types func() float64 and untyped int)
+internal\api\geofence_handler.go:54:33: invalid operation: g.Radius <= 0 (mismatched types func() float64 and untyped int)
+internal\api\geofence_handler.go:105:33: invalid operation: g.Radius <= 0 (mismatched types func() float64 and untyped int)
+internal\api\motor_handler.go:27:23: h.repo.GetByVehicle undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".MotorRepo has no field or method GetByVehicle)
+internal\api\router.go:215:4: cannot use database.NewSettingsRepo(db) (value of type *"github.com/ev-dev-labs/teslasync/internal/database".SettingsRepo) as action.SettingsChecker value in argument to action.NewCommandExecutor: *"github.com/ev-dev-labs/teslasync/internal/database".SettingsRepo does not implement action.SettingsChecker (missing method GetPollingConfig)
+internal\api\rule_engine.go:91:32: rule.Conditions undefined (type *models.AlertRule has no field or method Conditions)
+internal\api\rule_engine.go:223:11: rule.LastFiredAt undefined (type *models.AlertRule has no field or method LastFiredAt)
+internal\api\rule_engine.go:235:26: rule.LastFiredAt undefined (type *models.AlertRule has no field or method LastFiredAt)
+internal\api\rule_engine.go:420:10: rule.Conditions undefined (type *models.AlertRule has no field or method Conditions)
+internal\api\rule_engine.go:423:21: rule.Conditions undefined (type *models.AlertRule has no field or method Conditions)
+internal\api\security_handler.go:27:22: h.repo.GetByVehicle undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".SecurityRepo has no field or method GetByVehicle)
+internal\api\security_handler.go:45:21: h.repo.GetLatest undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".SecurityRepo has no field or method GetLatest)
+internal\api\settings_handler.go:129:28: h.settingsRepo.GetPollingConfig undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".SettingsRepo has no field or method GetPollingConfig)
+internal\api\settings_handler.go:146:27: h.settingsRepo.UpdatePollingConfig undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".SettingsRepo has no field or method UpdatePollingConfig)
+internal\api\settings_handler.go:156:43: pc.TelemetryCapture undefined (type models.PollingConfig has no field or method TelemetryCapture)
+internal\api\share_handler.go:253:24: drive.StartDate undefined (type *models.Drive has no field or method StartDate)
+internal\api\share_handler.go:254:24: drive.Distance undefined (type *models.Drive has no field or method Distance)
+internal\api\share_handler.go:258:24: drive.StartBatteryLvl undefined (type *models.Drive has no field or method StartBatteryLvl)
+internal\api\share_handler.go:259:24: drive.EndBatteryLvl undefined (type *models.Drive has no field or method EndBatteryLvl)
+internal\api\share_handler.go:260:24: drive.ElevationGain undefined (type *models.Drive has no field or method ElevationGain)
+internal\api\share_handler.go:261:24: drive.ElevationLoss undefined (type *models.Drive has no field or method ElevationLoss)
+internal\api\share_handler.go:265:28: drive.SpeedMax undefined (type *models.Drive has no field or method SpeedMax)
+internal\api\share_handler.go:266:28: drive.SpeedAvg undefined (type *models.Drive has no field or method SpeedAvg)
+internal\api\share_handler.go:270:11: drive.StartBatteryLvl undefined (type *models.Drive has no field or method StartBatteryLvl)
+internal\api\share_handler.go:270:43: drive.EndBatteryLvl undefined (type *models.Drive has no field or method EndBatteryLvl)
+internal\api\share_handler.go:270:73: drive.Distance undefined (type *models.Drive has no field or method Distance)
+internal\api\share_handler.go:271:30: drive.StartBatteryLvl undefined (type *models.Drive has no field or method StartBatteryLvl)
+internal\api\share_handler.go:271:55: drive.EndBatteryLvl undefined (type *models.Drive has no field or method EndBatteryLvl)
+internal\api\share_handler.go:273:28: drive.Distance undefined (type *models.Drive has no field or method Distance)
+internal\api\share_handler.go:288:11: cannot use vehicle.Model (variable of type *string) as string value in struct literal
+internal\api\share_handler.go:289:19: vehicle.ExteriorColor undefined (type *models.Vehicle has no field or method ExteriorColor)
+internal\api\share_handler.go:316:11: drive.EndDate undefined (type *models.Drive has no field or method EndDate)
+internal\api\share_handler.go:317:29: h.posRepo.GetByTimeRange undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".PositionRepo has no field or method GetByTimeRange)
+internal\api\share_handler.go:317:72: drive.StartDate undefined (type *models.Drive has no field or method StartDate)
+internal\api\share_handler.go:317:89: drive.EndDate undefined (type *models.Drive has no field or method EndDate)
+internal\api\share_handler.go:409:8: p.Elevation undefined (type *models.Position has no field or method Elevation)
+internal\api\share_handler.go:412:20: p.Elevation undefined (type *models.Position has no field or method Elevation)
+internal\api\share_handler.go:416:30: p.Speed undefined (type *models.Position has no field or method Speed)
+internal\api\share_handler.go:419:20: p.Speed undefined (type *models.Position has no field or method Speed)
+internal\api\telemetry_sessions.go:1148:73: too many arguments in call to t.driveRepo.CompleteWithTx
+	have ("context".Context, pgx.Tx, int64, "time".Time, nil, nil, float64, float64, *float64, *int, *float64, *float64, *float64, *float64, *float64)
+	want ("context".Context, "github.com/ev-dev-labs/teslasync/internal/database".DBTX, int64, "time".Time, float64, float64, *int16, *float64, *float64, *float64, *float64)
+internal\api\telemetry_sessions.go:1216:30: t.posRepo.FindNearestPosition undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".PositionRepo has no field or method FindNearestPosition)
+internal\api\telemetry_sessions.go:1245:27: t.posRepo.FindNearestPosition undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".PositionRepo has no field or method FindNearestPosition)
+internal\api\telemetry_sessions.go:1650:28: too many arguments in call to t.chargeRepo.CompleteWithTx
+	have ("context".Context, pgx.Tx, int64, "time".Time, float64, nil, *int, *float64, *int, *int, *int, *float64, *string, *string, *string, nil, float64)
+	want ("context".Context, "github.com/ev-dev-labs/teslasync/internal/database".DBTX, int64, "time".Time, *float64, *int16, *float64, *float64, *float64, *float64, *string, *float64, *string)
+internal\api\telemetry_sessions.go:1667:57: geofences[0].CostPerKwh undefined (type *models.Geofence has no field or method CostPerKwh)
+internal\api\telemetry_sessions.go:1668:48: geofences[0].CostPerKwh undefined (type *models.Geofence has no field or method CostPerKwh)
+internal\api\telemetry_sessions.go:1756:30: t.posRepo.FindNearestPosition undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".PositionRepo has no field or method FindNearestPosition)
+internal\api\telemetry_sessions.go:1767:27: t.posRepo.FindNearestPosition undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".PositionRepo has no field or method FindNearestPosition)
+internal\api\tesla_energy_history_handler.go:438:4: unknown field RawJSON in struct literal of type models.TeslaEnergyHistory
+internal\api\tesla_energy_history_handler.go:469:4: unknown field RawJSON in struct literal of type models.TeslaEnergyBackupEvent
+internal\api\tesla_energy_history_handler.go:508:4: unknown field RawJSON in struct literal of type models.TeslaEnergyWCCharging
+internal\api\tesla_energy_live_status_handler.go:168:3: unknown field RawJSON in struct literal of type models.TeslaEnergyLiveStatus
+internal\api\tesla_user_order_handler.go:112:4: unknown field RawJSON in struct literal of type models.TeslaUserOrder
+internal\api\tesla_user_profile_handler.go:92:3: unknown field RawJSON in struct literal of type models.TeslaUserProfile
+internal\api\vehicle_access_handler.go:363:4: unknown field RawJSON in struct literal of type models.TeslaVehicleDriver
+internal\api\vehicle_access_handler.go:399:4: unknown field RawJSON in struct literal of type models.TeslaVehicleInvitation
+internal\api\vehicle_access_handler.go:441:3: unknown field RawJSON in struct literal of type models.TeslaVehicleInvitation
+internal\api\vehicle_handler.go:88:44: h.vehicleSvc.SettingsRepo().GetPollingConfig undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".SettingsRepo has no field or method GetPollingConfig)
+internal\api\vehicle_handler.go:120:48: h.vehicleSvc.PositionRepo().GetByVehicle undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".PositionRepo has no field or method GetByVehicle)
+internal\api\vehicle_handler.go:188:44: h.vehicleSvc.SettingsRepo().GetPollingConfig undefined (type *"github.com/ev-dev-labs/teslasync/internal/database".SettingsRepo has no field or method GetPollingConfig)
+internal\api\watch_handler.go:91:25: vehicle.State undefined (type *models.Vehicle has no field or method State)
+internal\api\watch_handler.go:99:26: vehicle.State undefined (type *models.Vehicle has no field or method State)
+internal\api\watch_handler.go:123:33: vehicle.State undefined (type *models.Vehicle has no field or method State)
+
+TELEMETRY_HANDLER_ERROR_COUNT=0
+EXIT=0
+STATUS=DONE

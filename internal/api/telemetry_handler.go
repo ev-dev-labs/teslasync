@@ -432,14 +432,9 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 			source = "http_ingest"
 		}
 		// Copy the signals map to avoid concurrent read/write with normalizeFleetUnits
-		rawCopy := make(map[string]interface{}, len(signals))
-		for k, v := range signals {
-			rawCopy[k] = v
-		}
 		rec := &models.RawTelemetrySignal{
 			VIN:         vin,
 			Source:      source,
-			Signals:     rawCopy,
 			SignalCount: len(signals),
 		}
 		safeGo("raw-telemetry-insert", func() {
@@ -723,7 +718,9 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 			// MQTT batches within the 10s accumulation window.
 			if pos := h.extractPosition(writeSignals); pos != nil {
 				pos.VehicleID = vehicleID
-				if err := h.posRepo.Insert(bgCtx, pos); err != nil {
+				pos.Ts = time.Now().UTC()
+				pos.Source = "fleet_telemetry"
+				if err := h.posRepo.BulkInsert(bgCtx, []models.Position{*pos}); err != nil {
 					log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store accumulated position")
 				}
 			}
@@ -916,11 +913,11 @@ func (h *TelemetryHandler) TelemetryIngest(w http.ResponseWriter, r *http.Reques
 		durationMs := int(time.Since(start).Milliseconds())
 		statusCode := http.StatusOK
 		logEntry := &models.APICallLog{
-			Method:     "POST",
-			URL:        fmt.Sprintf("/api/v1/telemetry (VIN: %s)", payload.VIN),
-			StatusCode: &statusCode,
-			DurationMs: durationMs,
-			Source:     "fleet_telemetry",
+			HTTPMethod: "POST",
+			Endpoint:   fmt.Sprintf("/api/v1/telemetry (VIN: %s)", payload.VIN),
+			StatusCode: int16(statusCode),
+			DurationMs: int32(durationMs),
+			Service:    "fleet_telemetry",
 		}
 		_ = h.logRepo.Create(r.Context(), logEntry)
 	}
@@ -971,75 +968,25 @@ func (h *TelemetryHandler) extractPosition(signals map[string]interface{}) *mode
 	// Driving signals
 	if v, ok := signals["VehicleSpeed"]; ok {
 		if f, fok := toFloatOk(v); fok {
-			pos.Speed = &f
-		}
-	}
-	// Power ╬ô├ç├╢ Tesla Fleet Telemetry has no "PackPower" signal; compute from
-	// PackVoltage (V) Γö£├╣ PackCurrent (A) ╬ô├Ñ├å kW.  Fall back to PackPower for
-	// non-fleet-telemetry sources (e.g. REST API polling).
-	if v, ok := signals["PackPower"]; ok {
-		if f, fok := toFloatOk(v); fok {
-			pos.Power = &f
-		}
-	} else if voltage, vOk := toFloatOk(signals["PackVoltage"]); vOk {
-		if current, cOk := toFloatOk(signals["PackCurrent"]); cOk {
-			pwr := voltage * current / 1000.0 // kW
-			pos.Power = &pwr
+			pos.SpeedMph = &f
 		}
 	}
 	if v, ok := signals["GpsHeading"]; ok {
 		if f, fok := toFloatOk(v); fok {
-			i := int(f)
-			pos.Heading = &i
+			i16 := int16(f)
+			pos.Heading = &i16
 		}
 	} else if v, ok := signals["Heading"]; ok {
 		if f, fok := toFloatOk(v); fok {
-			i := int(f)
-			pos.Heading = &i
+			i16 := int16(f)
+			pos.Heading = &i16
 		}
 	}
 
-	// Battery & range ╬ô├ç├╢ use toFloatOk to distinguish 0% from missing signal
-	if v, ok := signals["BatteryLevel"]; ok {
+	// Elevation
+	if v, ok := signals["Elevation"]; ok {
 		if f, fok := toFloatOk(v); fok {
-			pos.BatteryLvl = int(f)
-		}
-	} else if v, ok := signals["Soc"]; ok {
-		if f, fok := toFloatOk(v); fok {
-			pos.BatteryLvl = int(f)
-		}
-	} else if v, ok := signals["StateOfCharge"]; ok {
-		if f, fok := toFloatOk(v); fok {
-			pos.BatteryLvl = int(f)
-		}
-	}
-	if v, ok := signals["IdealBatteryRange"]; ok {
-		if f, fok := toFloatOk(v); fok {
-			pos.IdealRange = &f
-		}
-	}
-	if v, ok := signals["EstBatteryRange"]; ok {
-		if f, fok := toFloatOk(v); fok {
-			pos.RatedRange = &f
-		}
-	}
-
-	// Climate
-	if v, ok := signals["InsideTemp"]; ok {
-		if f, fok := toFloatOk(v); fok {
-			pos.InsideTemp = &f
-		}
-	}
-	if v, ok := signals["OutsideTemp"]; ok {
-		if f, fok := toFloatOk(v); fok {
-			pos.OutsideTemp = &f
-		}
-	}
-
-	// Odometer ╬ô├ç├╢ use toFloatOk to avoid storing 0 for missing signal
-	if v, ok := signals["Odometer"]; ok {
-		if f, fok := toFloatOk(v); fok {
-			pos.Odometer = f
+			pos.ElevationM = &f
 		}
 	}
 
@@ -1735,201 +1682,53 @@ func toTimestamp(v interface{}) *time.Time {
 // trackMotor stores motor/powertrain snapshots when relevant signals arrive.
 func (h *TelemetryHandler) trackMotor(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
 	_, hasTorque := signals["DiTorquemotor"]
-	_, hasSpeed := signals["VehicleSpeed"]
-	_, hasPedal := signals["PedalPosition"]
-	_, hasAccel := signals["LateralAcceleration"]
+	_, hasTorqueF := signals["DiTorqueActualF"]
+	_, hasAxleF := signals["DiAxleSpeedF"]
+	_, hasAxleR := signals["DiAxleSpeedR"]
+	_, hasTemp := signals["DiStatorTempR"]
 	_, hasGear := signals["Gear"]
-	_, hasOdometer := signals["Odometer"]
-	if !hasTorque && !hasSpeed && !hasPedal && !hasAccel && !hasGear && !hasOdometer {
+	if !hasTorque && !hasTorqueF && !hasAxleF && !hasAxleR && !hasTemp && !hasGear {
 		return
 	}
 
-	snap := &models.MotorSnapshot{VehicleID: vehicleID}
-	if v, ok := signals["DiStateR"]; ok {
-		s := toString(v)
-		snap.DiState = &s
-	}
+	snap := &models.MotorSnapshot{VehicleID: vehicleID, Ts: time.Now().UTC(), Source: "fleet_telemetry"}
 	if v, ok := signals["DiTorquemotor"]; ok {
 		f := toFloat(v)
-		snap.DiTorque = &f
-	}
-	if v, ok := signals["DiAxleSpeedR"]; ok {
-		f := toFloat(v)
-		snap.DiAxleSpeed = &f
-	}
-	if v, ok := signals["DiStatorTempR"]; ok {
-		f := toFloat(v)
-		snap.DiStatorTemp = &f
-	}
-	if v, ok := signals["PedalPosition"]; ok {
-		f := toFloat(v)
-		snap.PedalPosition = &f
-	}
-	if v, ok := signals["BrakePedal"]; ok {
-		b := toBool(v)
-		snap.BrakePedal = &b
-	}
-	if v, ok := signals["LateralAcceleration"]; ok {
-		f := toFloat(v)
-		snap.LateralAccel = &f
-	}
-	if v, ok := signals["LongitudinalAcceleration"]; ok {
-		f := toFloat(v)
-		snap.LongitudinalAccel = &f
-	}
-	if v, ok := signals["VehicleSpeed"]; ok {
-		f := toFloat(v)
-		snap.VehicleSpeed = &f
-	}
-	if v, ok := signals["Gear"]; ok {
-		s := toString(v)
-		snap.Gear = &s
+		snap.TorqueNmRear = &f
 	}
 	if v, ok := signals["DiTorqueActualF"]; ok {
 		f := toFloat(v)
-		snap.DiTorqueActualF = &f
+		snap.TorqueNmFront = &f
 	}
 	if v, ok := signals["DiTorqueActualR"]; ok {
 		f := toFloat(v)
-		snap.DiTorqueActualR = &f
-	}
-	if v, ok := signals["DiTorqueActualREL"]; ok {
-		f := toFloat(v)
-		snap.DiTorqueActualREL = &f
-	}
-	if v, ok := signals["DiTorqueActualRER"]; ok {
-		f := toFloat(v)
-		snap.DiTorqueActualRER = &f
+		snap.TorqueNmRear = &f
 	}
 	if v, ok := signals["DiAxleSpeedF"]; ok {
-		f := toFloat(v)
-		snap.DiAxleSpeedF = &f
+		i := int32(toFloat(v))
+		snap.MotorRpmFront = &i
 	}
-	if v, ok := signals["DiAxleSpeedREL"]; ok {
-		f := toFloat(v)
-		snap.DiAxleSpeedREL = &f
-	}
-	if v, ok := signals["DiAxleSpeedRER"]; ok {
-		f := toFloat(v)
-		snap.DiAxleSpeedRER = &f
-	}
-	if v, ok := signals["DiStateF"]; ok {
-		s := toString(v)
-		snap.DiStateF = &s
-	}
-	if v, ok := signals["DiStateREL"]; ok {
-		s := toString(v)
-		snap.DiStateREL = &s
-	}
-	if v, ok := signals["DiStateRER"]; ok {
-		s := toString(v)
-		snap.DiStateRER = &s
+	if v, ok := signals["DiAxleSpeedR"]; ok {
+		i := int32(toFloat(v))
+		snap.MotorRpmRear = &i
 	}
 	if v, ok := signals["DiStatorTempF"]; ok {
 		f := toFloat(v)
-		snap.DiStatorTempF = &f
+		snap.MotorTempCFront = &f
 	}
-	if v, ok := signals["DiStatorTempREL"]; ok {
+	if v, ok := signals["DiStatorTempR"]; ok {
 		f := toFloat(v)
-		snap.DiStatorTempREL = &f
-	}
-	if v, ok := signals["DiStatorTempRER"]; ok {
-		f := toFloat(v)
-		snap.DiStatorTempRER = &f
-	}
-	if v, ok := signals["DiHeatsinkTF"]; ok {
-		f := toFloat(v)
-		snap.DiHeatsinkTF = &f
-	}
-	if v, ok := signals["DiHeatsinkTR"]; ok {
-		f := toFloat(v)
-		snap.DiHeatsinkTR = &f
-	}
-	if v, ok := signals["DiHeatsinkTREL"]; ok {
-		f := toFloat(v)
-		snap.DiHeatsinkTREL = &f
-	}
-	if v, ok := signals["DiHeatsinkTRER"]; ok {
-		f := toFloat(v)
-		snap.DiHeatsinkTRER = &f
+		snap.MotorTempCRear = &f
 	}
 	if v, ok := signals["DiInverterTF"]; ok {
 		f := toFloat(v)
-		snap.DiInverterTF = &f
+		snap.InverterTempC = &f
 	}
-	if v, ok := signals["DiInverterTR"]; ok {
-		f := toFloat(v)
-		snap.DiInverterTR = &f
-	}
-	if v, ok := signals["DiInverterTREL"]; ok {
-		f := toFloat(v)
-		snap.DiInverterTREL = &f
-	}
-	if v, ok := signals["DiInverterTRER"]; ok {
-		f := toFloat(v)
-		snap.DiInverterTRER = &f
-	}
-	if v, ok := signals["DiMotorCurrentF"]; ok {
-		f := toFloat(v)
-		snap.DiMotorCurrentF = &f
-	}
-	if v, ok := signals["DiMotorCurrentR"]; ok {
-		f := toFloat(v)
-		snap.DiMotorCurrentR = &f
-	}
-	if v, ok := signals["DiMotorCurrentREL"]; ok {
-		f := toFloat(v)
-		snap.DiMotorCurrentREL = &f
-	}
-	if v, ok := signals["DiMotorCurrentRER"]; ok {
-		f := toFloat(v)
-		snap.DiMotorCurrentRER = &f
-	}
-	if v, ok := signals["DiVBatF"]; ok {
-		f := toFloat(v)
-		snap.DiVBatF = &f
-	}
-	if v, ok := signals["DiVBatR"]; ok {
-		f := toFloat(v)
-		snap.DiVBatR = &f
-	}
-	if v, ok := signals["DiVBatREL"]; ok {
-		f := toFloat(v)
-		snap.DiVBatREL = &f
-	}
-	if v, ok := signals["DiVBatRER"]; ok {
-		f := toFloat(v)
-		snap.DiVBatRER = &f
-	}
-	if v, ok := signals["DiSlaveTorqueCmd"]; ok {
-		f := toFloat(v)
-		snap.DiSlaveTorqueCmd = &f
-	}
-	if v, ok := signals["Hvil"]; ok {
+	if v, ok := signals["Gear"]; ok {
 		s := toString(v)
-		snap.Hvil = &s
+		snap.ShiftState = &s
 	}
-	if v, ok := signals["BrakePedalPos"]; ok {
-		f := toFloat(v)
-		snap.BrakePedalPos = &f
-	}
-	if v, ok := signals["CruiseSetSpeed"]; ok {
-		f := toFloat(v)
-		snap.CruiseSetSpeed = &f
-	}
-	if v, ok := signals["DriveRail"]; ok {
-		b := toBool(v)
-		snap.DriveRail = &b
-	}
-	if v, ok := signals["LifetimeEnergyGainedRegen"]; ok {
-		f := toFloat(v)
-		snap.LifetimeEnergyGainedRegen = &f
-	}
-	if v, ok := signals["LifetimeEnergyUsedDrive"]; ok {
-		f := toFloat(v)
-		snap.LifetimeEnergyUsedDrive = &f
-	}
-	if err := h.motorRepo.Insert(ctx, snap); err != nil {
+	if err := h.motorRepo.BulkInsert(ctx, []models.MotorSnapshot{*snap}); err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store motor snapshot")
 	}
 }
@@ -1939,142 +1738,75 @@ func (h *TelemetryHandler) trackClimate(ctx context.Context, vehicleID int64, si
 	_, hasInside := signals["InsideTemp"]
 	_, hasOutside := signals["OutsideTemp"]
 	_, hasHvac := signals["HvacPower"]
-	_, hasFan := signals["HvacFanSpeed"]
+	_, hasFan := signals["HvacFanStatus"]
 	if !hasInside && !hasOutside && !hasHvac && !hasFan {
 		return
 	}
 
-	snap := &models.ClimateSnapshot{VehicleID: vehicleID}
+	snap := &models.ClimateSnapshot{VehicleID: vehicleID, Ts: time.Now().UTC(), Source: "fleet_telemetry"}
 	if v, ok := signals["InsideTemp"]; ok {
 		f := toFloat(v)
-		snap.InsideTemp = &f
+		snap.InsideTempC = &f
 	}
 	if v, ok := signals["OutsideTemp"]; ok {
 		f := toFloat(v)
-		snap.OutsideTemp = &f
+		snap.OutsideTempC = &f
 	}
 	if v, ok := signals["HvacPower"]; ok {
 		s := toString(v)
-		if enums.ParseHvacPower(s) {
-			one := 1.0
-			snap.HvacPower = &one
-		} else {
-			zero := 0.0
-			snap.HvacPower = &zero
-		}
-	}
-	if v, ok := signals["HvacFanSpeed"]; ok {
-		i := int(toFloat(v))
-		snap.HvacFanSpeed = &i
-	}
-	if v, ok := signals["HvacLeftTemperatureRequest"]; ok {
-		f := toFloat(v)
-		snap.HvacLeftTempRequest = &f
-	}
-	if v, ok := signals["HvacRightTemperatureRequest"]; ok {
-		f := toFloat(v)
-		snap.HvacRightTempRequest = &f
-	}
-	if v, ok := signals["CabinOverheatProtectionMode"]; ok {
-		s := toString(v)
-		snap.CabinOverheatMode = &s
+		b := enums.ParseHvacPower(s)
+		snap.IsClimateOn = &b
+		snap.HvacState = &s
 	}
 	if v, ok := signals["DefrostMode"]; ok {
 		s := toString(v)
 		snap.DefrostMode = &s
 	}
-	if v, ok := signals["BatteryHeaterOn"]; ok {
-		b := toBool(v)
-		snap.BatteryHeaterOn = &b
+	if v, ok := signals["HvacLeftTemperatureRequest"]; ok {
+		f := toFloat(v)
+		snap.DriverSetpointC = &f
 	}
-	if v, ok := signals["HvacACEnabled"]; ok {
-		b := toBool(v)
-		snap.HvacACEnabled = &b
-	}
-	if v, ok := signals["HvacAutoMode"]; ok {
-		s := toString(v)
-		snap.HvacAutoMode = &s
+	if v, ok := signals["HvacRightTemperatureRequest"]; ok {
+		f := toFloat(v)
+		snap.PassengerSetpointC = &f
 	}
 	if v, ok := signals["HvacFanStatus"]; ok {
-		i := int(toFloat(v))
-		snap.HvacFanStatus = &i
+		i16 := int16(toFloat(v))
+		snap.FanStatus = &i16
 	}
-	if v, ok := signals["HvacSteeringWheelHeatAuto"]; ok {
+	if v, ok := signals["CabinOverheatProtectionMode"]; ok {
+		s := toString(v)
+		b := s != "Off" && s != "off" && s != ""
+		snap.CabinOverheatProtection = &b
+	}
+	if v, ok := signals["PreconditioningEnabled"]; ok {
 		b := toBool(v)
-		snap.HvacSteeringWheelHeatAuto = &b
+		snap.IsPreconditioning = &b
 	}
 	if v, ok := signals["HvacSteeringWheelHeatLevel"]; ok {
-		i := int(toFloat(v))
-		snap.HvacSteeringWheelHeatLevel = &i
-	}
-	if v, ok := signals["ClimateKeeperMode"]; ok {
-		s := toString(v)
-		snap.ClimateKeeperMode = &s
-	}
-	if v, ok := signals["CabinOverheatProtectionTemperatureLimit"]; ok {
-		s := toString(v)
-		snap.CabinOverheatProtectionTempLimit = &s
-	} else if v, ok := signals["CabinOverheatProtectionTempLimit"]; ok {
-		s := toString(v)
-		snap.CabinOverheatProtectionTempLimit = &s
-	}
-	if v, ok := signals["DefrostForPreconditioning"]; ok {
+		b := int(toFloat(v)) > 0
+		snap.SteeringWheelHeater = &b
+	} else if v, ok := signals["HvacSteeringWheelHeatAuto"]; ok {
 		b := toBool(v)
-		snap.DefrostForPreconditioning = &b
+		snap.SteeringWheelHeater = &b
 	}
 	if v, ok := signals["SeatHeaterLeft"]; ok {
-		i := int(toFloat(v))
-		snap.SeatHeaterLeft = &i
+		i16 := int16(toFloat(v))
+		snap.SeatHeaterLeft = &i16
 	}
 	if v, ok := signals["SeatHeaterRight"]; ok {
-		i := int(toFloat(v))
-		snap.SeatHeaterRight = &i
+		i16 := int16(toFloat(v))
+		snap.SeatHeaterRight = &i16
 	}
 	if v, ok := signals["SeatHeaterRearLeft"]; ok {
-		i := int(toFloat(v))
-		snap.SeatHeaterRearLeft = &i
-	}
-	if v, ok := signals["SeatHeaterRearCenter"]; ok {
-		i := int(toFloat(v))
-		snap.SeatHeaterRearCenter = &i
+		i16 := int16(toFloat(v))
+		snap.SeatHeaterRearLeft = &i16
 	}
 	if v, ok := signals["SeatHeaterRearRight"]; ok {
-		i := int(toFloat(v))
-		snap.SeatHeaterRearRight = &i
+		i16 := int16(toFloat(v))
+		snap.SeatHeaterRearRight = &i16
 	}
-	if v, ok := signals["SeatVentEnabled"]; ok {
-		b := toBool(v)
-		snap.SeatVentEnabled = &b
-	}
-	if v, ok := signals["ClimateSeatCoolingFrontLeft"]; ok {
-		i := int(toFloat(v))
-		snap.ClimateSeatCoolingFrontLeft = &i
-	}
-	if v, ok := signals["ClimateSeatCoolingFrontRight"]; ok {
-		i := int(toFloat(v))
-		snap.ClimateSeatCoolingFrontRight = &i
-	}
-	if v, ok := signals["AutoSeatClimateLeft"]; ok {
-		b := toBool(v)
-		snap.AutoSeatClimateLeft = &b
-	}
-	if v, ok := signals["AutoSeatClimateRight"]; ok {
-		b := toBool(v)
-		snap.AutoSeatClimateRight = &b
-	}
-	if v, ok := signals["RearDefrostEnabled"]; ok {
-		b := toBool(v)
-		snap.RearDefrostEnabled = &b
-	}
-	if v, ok := signals["RearDisplayHvacEnabled"]; ok {
-		b := toBool(v)
-		snap.RearDisplayHvacEnabled = &b
-	}
-	if v, ok := signals["WiperHeatEnabled"]; ok {
-		b := toBool(v)
-		snap.WiperHeatEnabled = &b
-	}
-	if err := h.climateRepo.Insert(ctx, snap); err != nil {
+	if err := h.climateRepo.BulkInsert(ctx, []models.ClimateSnapshot{*snap}); err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store climate snapshot")
 	}
 }
@@ -2091,7 +1823,7 @@ func (h *TelemetryHandler) trackSecurity(ctx context.Context, vehicleID int64, s
 
 	log.Debug().Int64("vehicle_id", vehicleID).Bool("locked", hasLocked).Bool("sentry", hasSentry).Bool("door", hasDoor).Bool("window", hasWindow).Msg("telemetry: trackSecurity gate passed")
 
-	ev := &models.SecurityEvent{VehicleID: vehicleID}
+	ev := &models.SecurityEvent{VehicleID: vehicleID, Ts: time.Now().UTC(), EventType: "state_change", Source: "fleet_telemetry"}
 	if v, ok := signals["Locked"]; ok {
 		b := toBool(v)
 		ev.Locked = &b
@@ -2102,104 +1834,46 @@ func (h *TelemetryHandler) trackSecurity(ctx context.Context, vehicleID int64, s
 	}
 	if v, ok := signals["DoorState"]; ok {
 		s := toString(v)
-		ev.DoorState = &s
+		ev.DoorsOpen = &s
 	}
+	// Aggregate window states into a single WindowsOpen summary
+	var windowParts []string
 	if v, ok := signals["FdWindow"]; ok {
 		s := toString(v)
-		ev.FdWindow = &s
+		if s != "" && s != "Closed" {
+			windowParts = append(windowParts, "FD:"+s)
+		}
 	}
 	if v, ok := signals["FpWindow"]; ok {
 		s := toString(v)
-		ev.FpWindow = &s
+		if s != "" && s != "Closed" {
+			windowParts = append(windowParts, "FP:"+s)
+		}
 	}
 	if v, ok := signals["RdWindow"]; ok {
 		s := toString(v)
-		ev.RdWindow = &s
+		if s != "" && s != "Closed" {
+			windowParts = append(windowParts, "RD:"+s)
+		}
 	}
 	if v, ok := signals["RpWindow"]; ok {
 		s := toString(v)
-		ev.RpWindow = &s
+		if s != "" && s != "Closed" {
+			windowParts = append(windowParts, "RP:"+s)
+		}
 	}
-	if v, ok := signals["HomelinkNearby"]; ok {
-		b := toBool(v)
-		ev.HomelinkNearby = &b
-	}
-	if v, ok := signals["GuestModeEnabled"]; ok {
-		b := toBool(v)
-		ev.GuestMode = &b
-	}
-	if v, ok := signals["HomelinkDeviceCount"]; ok {
-		i := int(toFloat(v))
-		ev.HomelinkDeviceCount = &i
-	}
-	if v, ok := signals["GuestModeMobileAccessState"]; ok {
-		s := toString(v)
-		ev.GuestModeMobileAccessState = &s
+	if len(windowParts) > 0 {
+		s := strings.Join(windowParts, ",")
+		ev.WindowsOpen = &s
 	}
 	if v, ok := signals["DriverSeatOccupied"]; ok {
 		b := toBool(v)
-		ev.DriverSeatOccupied = &b
+		ev.UserPresent = &b
 	}
-	if v, ok := signals["CenterDisplay"]; ok {
-		s := toString(v)
-		ev.CenterDisplay = &s
-	}
-	if v, ok := signals["SpeedLimitMode"]; ok {
-		s := toString(v)
-		ev.SpeedLimitMode = &s
-	}
-	if v, ok := signals["ValetModeEnabled"]; ok {
-		b := toBool(v)
-		ev.ValetModeEnabled = &b
-	}
-	if v, ok := signals["ServiceMode"]; ok {
-		b := toBool(v)
-		ev.ServiceMode = &b
-	}
-	if v, ok := signals["CurrentLimitMph"]; ok {
-		f := toFloat(v)
-		ev.CurrentLimitMph = &f
-	}
-	if v, ok := signals["PairedPhoneKeyAndKeyFobQty"]; ok {
-		i := int(toFloat(v))
-		ev.PairedPhoneKeyCount = &i
-	}
-	if v, ok := signals["LightsHazardsActive"]; ok {
-		b := toBool(v)
-		ev.LightsHazardsActive = &b
-	}
-	if v, ok := signals["LightsHighBeams"]; ok {
-		b := toBool(v)
-		ev.LightsHighBeams = &b
-	}
-	if v, ok := signals["LightsTurnSignal"]; ok {
-		s := toString(v)
-		ev.LightsTurnSignal = &s
-	}
-	if v, ok := signals["TonneauPosition"]; ok {
-		s := toString(v)
-		ev.TonneauPosition = &s
-	}
-	if v, ok := signals["TonneauOpenPercent"]; ok {
-		f := toFloat(v)
-		ev.TonneauOpenPercent = &f
-	}
-	if v, ok := signals["TonneauTentMode"]; ok {
-		s := toString(v)
-		ev.TonneauTentMode = &s
-	}
-	if v, ok := signals["DriverSeatBelt"]; ok {
-		b := parseBuckleStatus(v)
-		ev.DriverSeatBelt = &b
-	}
-	if v, ok := signals["PassengerSeatBelt"]; ok {
-		b := parseBuckleStatus(v)
-		ev.PassengerSeatBelt = &b
-	}
-	if err := h.securityRepo.Insert(ctx, ev); err != nil {
+	if err := h.securityRepo.BulkInsert(ctx, []models.SecurityEvent{*ev}); err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store security event")
 	} else {
-		log.Debug().Int64("vehicle_id", vehicleID).Int64("id", ev.ID).Msg("telemetry: security event stored")
+		log.Debug().Int64("vehicle_id", vehicleID).Msg("telemetry: security event stored")
 	}
 }
 
@@ -2220,7 +1894,7 @@ func (h *TelemetryHandler) trackCharging(ctx context.Context, vehicleID int64, s
 	_, hasIdealRange := signals["IdealBatteryRange"]
 	_, hasEnergyRemaining := signals["EnergyRemaining"]
 	_, hasChargeLimitSoc := signals["ChargeLimitSoc"]
-	// Note: PackVoltage/PackCurrent excluded from gate ╬ô├ç├╢ they're always sent
+	// Note: PackVoltage/PackCurrent excluded from gate — they're always sent
 	// (even when not charging) and would create 35K+ mostly-empty rows.
 	// They're still stored in the row when other charging signals trigger it.
 	if !hasChargeState && !hasDetailedCharge && !hasDCPower && !hasACPower &&
@@ -2230,50 +1904,40 @@ func (h *TelemetryHandler) trackCharging(ctx context.Context, vehicleID int64, s
 		return
 	}
 
-	snap := &models.ChargingTelemetry{VehicleID: vehicleID}
+	snap := &models.ChargingTelemetry{VehicleID: vehicleID, Ts: time.Now().UTC(), Source: "fleet_telemetry"}
 	if v, ok := signals["BatteryLevel"]; ok {
 		f := toFloat(v)
-		snap.BatteryLevel = &f
+		i16 := int16(f)
+		snap.BatteryLevel = &i16
 	}
 	if v, ok := signals["Soc"]; ok {
-		f := toFloat(v)
-		snap.Soc = &f
+		if snap.BatteryLevel == nil {
+			f := toFloat(v)
+			i16 := int16(f)
+			snap.BatteryLevel = &i16
+		}
 	}
 	if v, ok := signals["ChargeState"]; ok {
 		s := toString(v)
-		snap.ChargeState = &s
+		snap.ChargingState = &s
 	}
 	if v, ok := signals["DetailedChargeState"]; ok {
-		s := toString(v)
-		snap.DetailedChargeState = &s
-	}
-	if v, ok := signals["ChargeLimitSoc"]; ok {
-		i := int(toFloat(v))
-		snap.ChargeLimitSoc = &i
-	}
-	if v, ok := signals["ChargeAmps"]; ok {
-		f := toFloat(v)
-		snap.ChargeAmps = &f
-	}
-	if v, ok := signals["ChargeCurrentRequest"]; ok {
-		f := toFloat(v)
-		snap.ChargeCurrentRequest = &f
-	}
-	if v, ok := signals["ChargeCurrentRequestMax"]; ok {
-		f := toFloat(v)
-		snap.ChargeCurrentRequestMax = &f
-	}
-	if v, ok := signals["ChargeEnableRequest"]; ok {
-		b := toBool(v)
-		snap.ChargeEnableRequest = &b
+		if snap.ChargingState == nil {
+			s := toString(v)
+			snap.ChargingState = &s
+		}
 	}
 	if v, ok := signals["ChargerVoltage"]; ok {
 		f := toFloat(v)
 		snap.ChargerVoltage = &f
 	}
+	if v, ok := signals["ChargeAmps"]; ok {
+		f := toFloat(v)
+		snap.ChargerActualCurrent = &f
+	}
 	if v, ok := signals["ChargerPhases"]; ok {
-		i := int(toFloat(v))
-		snap.ChargerPhases = &i
+		i16 := int16(toFloat(v))
+		snap.ChargerPhases = &i16
 	}
 	if v, ok := signals["ChargeRateMilePerHour"]; ok {
 		f := toFloat(v)
@@ -2281,198 +1945,35 @@ func (h *TelemetryHandler) trackCharging(ctx context.Context, vehicleID int64, s
 	}
 	if v, ok := signals["DCChargingPower"]; ok {
 		f := toFloat(v)
-		snap.DCChargingPower = &f
+		snap.ChargerPowerKw = &f
+	} else if v, ok := signals["ACChargingPower"]; ok {
+		f := toFloat(v)
+		snap.ChargerPowerKw = &f
 	}
 	if v, ok := signals["DCChargingEnergyIn"]; ok {
 		f := toFloat(v)
-		snap.DCChargingEnergyIn = &f
-	}
-	if v, ok := signals["ACChargingPower"]; ok {
+		snap.ChargeEnergyAddedKwh = &f
+	} else if v, ok := signals["ACChargingEnergyIn"]; ok {
 		f := toFloat(v)
-		snap.ACChargingPower = &f
-	}
-	if v, ok := signals["ACChargingEnergyIn"]; ok {
-		f := toFloat(v)
-		snap.ACChargingEnergyIn = &f
-	}
-	if v, ok := signals["EnergyRemaining"]; ok {
-		f := toFloat(v)
-		snap.EnergyRemaining = &f
+		snap.ChargeEnergyAddedKwh = &f
 	}
 	if v, ok := signals["EstBatteryRange"]; ok {
 		f := toFloat(v)
-		snap.EstBatteryRange = &f
-	}
-	if v, ok := signals["IdealBatteryRange"]; ok {
+		snap.BatteryRangeMi = &f
+	} else if v, ok := signals["IdealBatteryRange"]; ok {
 		f := toFloat(v)
-		snap.IdealBatteryRange = &f
+		snap.BatteryRangeMi = &f
 	}
-	if v, ok := signals["RatedRange"]; ok {
+	if v, ok := signals["ChargerPilotCurrent"]; ok {
 		f := toFloat(v)
-		snap.RatedRange = &f
-	}
-	if v, ok := signals["PackVoltage"]; ok {
-		f := toFloat(v)
-		snap.PackVoltage = &f
-	}
-	if v, ok := signals["PackCurrent"]; ok {
-		f := toFloat(v)
-		snap.PackCurrent = &f
-	}
-	if v, ok := signals["ChargePort"]; ok {
-		s := toString(v)
-		snap.ChargePort = &s
-	}
-	if v, ok := signals["ChargePortDoorOpen"]; ok {
-		b := toBool(v)
-		snap.ChargePortDoorOpen = &b
-	}
-	if v, ok := signals["ChargePortLatch"]; ok {
-		s := toString(v)
-		snap.ChargePortLatch = &s
-	}
-	if v, ok := signals["ChargePortColdWeatherMode"]; ok {
-		b := toBool(v)
-		snap.ChargePortColdWeatherMode = &b
-	}
-	if v, ok := signals["ChargingCableType"]; ok {
-		s := toString(v)
-		snap.ChargingCableType = &s
-	}
-	if v, ok := signals["FastChargerPresent"]; ok {
-		b := toBool(v)
-		snap.FastChargerPresent = &b
-	}
-	if v, ok := signals["FastChargerType"]; ok {
-		s := toString(v)
-		snap.FastChargerType = &s
-	}
-	if v, ok := signals["TimeToFullCharge"]; ok {
-		f := toFloat(v)
-		snap.TimeToFullCharge = &f
-	}
-	if v, ok := signals["EstimatedHoursToChargeTermination"]; ok {
-		f := toFloat(v)
-		snap.EstimatedHoursToCharge = &f
-	}
-	if v, ok := signals["ScheduledChargingMode"]; ok {
-		s := toString(v)
-		snap.ScheduledChargingMode = &s
-	}
-	if v, ok := signals["ScheduledChargingPending"]; ok {
-		b := toBool(v)
-		snap.ScheduledChargingPending = &b
-	}
-	if v, ok := signals["PreconditioningEnabled"]; ok {
-		b := toBool(v)
-		snap.PreconditioningEnabled = &b
-	}
-	if v, ok := signals["BrickVoltageMax"]; ok {
-		f := toFloat(v)
-		snap.BrickVoltageMax = &f
-	}
-	if v, ok := signals["BrickVoltageMin"]; ok {
-		f := toFloat(v)
-		snap.BrickVoltageMin = &f
-	}
-	if v, ok := signals["NumBrickVoltageMax"]; ok {
-		i := int(toFloat(v))
-		snap.NumBrickVoltageMax = &i
-	}
-	if v, ok := signals["NumBrickVoltageMin"]; ok {
-		i := int(toFloat(v))
-		snap.NumBrickVoltageMin = &i
-	}
-	if v, ok := signals["ModuleTempMax"]; ok {
-		f := toFloat(v)
-		snap.ModuleTempMax = &f
-	}
-	if v, ok := signals["ModuleTempMin"]; ok {
-		f := toFloat(v)
-		snap.ModuleTempMin = &f
-	}
-	if v, ok := signals["NumModuleTempMax"]; ok {
-		i := int(toFloat(v))
-		snap.NumModuleTempMax = &i
-	}
-	if v, ok := signals["NumModuleTempMin"]; ok {
-		i := int(toFloat(v))
-		snap.NumModuleTempMin = &i
-	}
-	if v, ok := signals["BatteryHeaterOn"]; ok {
-		b := toBool(v)
-		snap.BatteryHeaterOn = &b
-	}
-	if v, ok := signals["NotEnoughPowerToHeat"]; ok {
-		b := toBool(v)
-		snap.NotEnoughPowerToHeat = &b
-	}
-	if v, ok := signals["BMSState"]; ok {
-		s := toString(v)
-		snap.BmsState = &s
-	} else if v, ok := signals["BmsState"]; ok {
-		s := toString(v)
-		snap.BmsState = &s
-	}
-	if v, ok := signals["BmsFullchargecomplete"]; ok {
-		b := toBool(v)
-		snap.BmsFullchargeComplete = &b
-	}
-	if v, ok := signals["DCDCEnable"]; ok {
-		b := toBool(v)
-		snap.DcdcEnable = &b
-	} else if v, ok := signals["DcdcEnable"]; ok {
-		b := toBool(v)
-		snap.DcdcEnable = &b
-	}
-	if v, ok := signals["IsolationResistance"]; ok {
-		f := toFloat(v)
-		snap.IsolationResistance = &f
-	}
-	if v, ok := signals["LifetimeEnergyUsed"]; ok {
-		f := toFloat(v)
-		snap.LifetimeEnergyUsed = &f
-	}
-	if v, ok := signals["SuperchargerSessionTripPlanner"]; ok {
-		b := toBool(v)
-		snap.SuperchargerSessionTripPlanner = &b
-	}
-	if v, ok := signals["PowershareStatus"]; ok {
-		s := toString(v)
-		snap.PowershareStatus = &s
-	}
-	if v, ok := signals["PowershareType"]; ok {
-		s := toString(v)
-		snap.PowershareType = &s
-	}
-	if v, ok := signals["PowershareStopReason"]; ok {
-		s := toString(v)
-		snap.PowershareStopReason = &s
-	}
-	if v, ok := signals["PowershareHoursLeft"]; ok {
-		f := toFloat(v)
-		snap.PowershareHoursLeft = &f
-	}
-	if v, ok := signals["PowershareInstantaneousPowerKW"]; ok {
-		f := toFloat(v)
-		snap.PowersharePowerKw = &f
-	} else if v, ok := signals["PowersharePowerKw"]; ok {
-		f := toFloat(v)
-		snap.PowersharePowerKw = &f
+		snap.ChargerPilotCurrent = &f
 	}
 	if v, ok := signals["ScheduledChargingStartTime"]; ok {
-		s := toString(v)
-		snap.ScheduledChargingStartTime = &s
+		if t := toTimestamp(v); t != nil {
+			snap.ScheduledChargingAt = t
+		}
 	}
-	if v, ok := signals["ScheduledDepartureTime"]; ok {
-		s := toString(v)
-		snap.ScheduledDepartureTime = &s
-	}
-	if v, ok := signals["ExpectedEnergyPercentAtTripArrival"]; ok {
-		f := toFloat(v)
-		snap.ExpectedEnergyPctAtArrival = &f
-	}
-	if err := h.chargingTelemetryRepo.Insert(ctx, snap); err != nil {
+	if err := h.chargingTelemetryRepo.BulkInsert(ctx, []models.ChargingTelemetry{*snap}); err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store charging telemetry")
 	}
 }
