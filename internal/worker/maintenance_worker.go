@@ -12,8 +12,7 @@ import (
 
 // StartMaintenanceWorker runs periodic database cleanup on a 24-hour schedule.
 // It deletes old positions and vehicle states based on configured retention
-// periods, ensures partitions exist for the current and next month, then
-// runs VACUUM ANALYZE to reclaim space.
+// periods, then runs VACUUM ANALYZE to reclaim space.
 func StartMaintenanceWorker(ctx context.Context, db *database.DB, cfg *config.Config) {
 	ticker := time.NewTicker(24 * time.Hour)
 	defer ticker.Stop()
@@ -49,18 +48,6 @@ func runMaintenance(ctx context.Context, db *database.DB, cfg *config.Config) {
 	// Use a separate context with a generous timeout for maintenance operations
 	maintCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
 	defer cancel()
-
-	// Ensure partitions exist for current and next month
-	if err := ensurePartitions(maintCtx, db); err != nil {
-		log.Error().Err(err).Msg("partition creation failed")
-	}
-
-	// Clean up old partitions beyond retention period
-	if cfg.Retention.PositionRetentionDays > 0 {
-		if err := cleanOldPartitions(maintCtx, db, "positions", cfg.Retention.PositionRetentionDays); err != nil {
-			log.Error().Err(err).Msg("partition cleanup failed")
-		}
-	}
 
 	// Compress old positions into hourly summaries before deletion
 	if err := compressOldPositions(maintCtx, db); err != nil {
@@ -175,64 +162,6 @@ func compressOldPositions(ctx context.Context, db *database.DB) error {
 
 	log.Info().Int64("rows_removed", res.RowsAffected()).Msg("position compression complete")
 	return nil
-}
-
-// ensurePartitions creates monthly partitions for the current and next month.
-// Uses inline DDL to avoid dependency on a stored function that may not exist
-// in external PostgreSQL instances.
-func ensurePartitions(ctx context.Context, db *database.DB) error {
-	tables := []string{"positions"}
-	for _, t := range tables {
-		for _, monthOffset := range []int{0, 1} {
-			start := time.Now().AddDate(0, monthOffset, 0)
-			partStart := time.Date(start.Year(), start.Month(), 1, 0, 0, 0, 0, time.UTC)
-			partEnd := partStart.AddDate(0, 1, 0)
-			partName := fmt.Sprintf("%s_%s", t, partStart.Format("2006_01"))
-
-			query := fmt.Sprintf(`
-				DO $$
-				BEGIN
-					IF NOT EXISTS (
-						SELECT 1 FROM pg_tables WHERE tablename = '%s'
-					) THEN
-						EXECUTE format(
-							'CREATE TABLE IF NOT EXISTS %s PARTITION OF %s FOR VALUES FROM (%%L) TO (%%L)',
-							'%s'::timestamp, '%s'::timestamp
-						);
-					END IF;
-				END $$;
-			`, partName, partName, t, partStart.Format("2006-01-02"), partEnd.Format("2006-01-02"))
-
-			if _, err := db.Pool.Exec(ctx, query); err != nil {
-				log.Warn().Err(err).Str("table", t).Str("partition", partName).Msg("failed to create partition")
-				if monthOffset == 0 {
-					return fmt.Errorf("failed to create current month partition %s: %w", partName, err)
-				}
-			}
-		}
-	}
-	return nil
-}
-
-// cleanOldPartitions drops monthly partitions older than the retention period.
-func cleanOldPartitions(ctx context.Context, db *database.DB, table string, retentionDays int) error {
-	cutoff := time.Now().AddDate(0, 0, -retentionDays).Format("2006-01-02")
-	query := fmt.Sprintf(`
-		DO $$ 
-		DECLARE r RECORD;
-		BEGIN
-			FOR r IN SELECT tablename FROM pg_tables 
-			         WHERE tablename LIKE '%s_%%' 
-			         AND tablename != '%s_default'
-			         AND tablename < '%s_' || to_char(date '%s', 'YYYY_MM')
-			LOOP
-				EXECUTE 'DROP TABLE IF EXISTS ' || r.tablename;
-				RAISE NOTICE 'Dropped partition: %%', r.tablename;
-			END LOOP;
-		END $$;
-	`, table, table, table, cutoff)
-	_, err := db.Pool.Exec(ctx, query)
-	return err
 }
 
 func cleanupOldLogs(ctx context.Context, db *database.DB, table, tsCol string, retentionDays int) (int64, error) {
