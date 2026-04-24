@@ -2,10 +2,14 @@ package database
 
 import (
 	"context"
+	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
+// TirePressureRepo reads/writes tire pressure data via the consolidated
+// vehicle_meta_snapshots table (category='tire'). The old tire_pressure_snapshots
+// table was dropped in migration 000142_baseline_typed.
 type TirePressureRepo struct {
 	db *DB
 }
@@ -23,24 +27,29 @@ func (r *TirePressureRepo) Insert(ctx context.Context, snap *models.TirePressure
 		(snap.RearRight == nil || *snap.RearRight == 0) {
 		return nil // skip all-zero readings
 	}
-	query := `INSERT INTO tire_pressure_snapshots (vehicle_id, front_left, front_right, rear_left, rear_right, tpms_hard_warnings, tpms_soft_warnings, last_seen_time_fl, last_seen_time_fr, last_seen_time_rl, last_seen_time_rr)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`
-	return r.db.Pool.QueryRow(ctx, query,
-		snap.VehicleID, snap.FrontLeft, snap.FrontRight, snap.RearLeft, snap.RearRight,
-		snap.TpmsHardWarn, snap.TpmsSoftWarn,
-		snap.LastSeenTimeFl, snap.LastSeenTimeFr, snap.LastSeenTimeRl, snap.LastSeenTimeRr,
-	).Scan(&snap.ID)
+	query := `INSERT INTO vehicle_meta_snapshots
+		(vehicle_id, ts, category,
+		 tire_pressure_fl_psi, tire_pressure_fr_psi,
+		 tire_pressure_rl_psi, tire_pressure_rr_psi, source)
+		VALUES ($1, $2, 'tire', $3, $4, $5, $6, 'fleet_telemetry')
+		ON CONFLICT (vehicle_id, ts, category) DO NOTHING`
+	_, err := r.db.Pool.Exec(ctx, query,
+		snap.VehicleID, time.Now().UTC(),
+		snap.FrontLeft, snap.FrontRight, snap.RearLeft, snap.RearRight)
+	return err
 }
 
 func (r *TirePressureRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit int) ([]*models.TirePressureSnapshot, error) {
-	query := `SELECT id, vehicle_id, front_left, front_right, rear_left, rear_right,
-		tpms_hard_warnings, tpms_soft_warnings,
-		last_seen_time_fl, last_seen_time_fr, last_seen_time_rl, last_seen_time_rr,
-		created_at
-		FROM tire_pressure_snapshots
-		WHERE vehicle_id=$1
-		  AND NOT (front_left = 0 AND front_right = 0 AND rear_left = 0 AND rear_right = 0)
-		ORDER BY created_at DESC LIMIT $2`
+	query := `SELECT vehicle_id,
+		tire_pressure_fl_psi, tire_pressure_fr_psi,
+		tire_pressure_rl_psi, tire_pressure_rr_psi, ts
+		FROM vehicle_meta_snapshots
+		WHERE vehicle_id = $1 AND category = 'tire'
+		  AND NOT (COALESCE(tire_pressure_fl_psi, 0) = 0
+		       AND COALESCE(tire_pressure_fr_psi, 0) = 0
+		       AND COALESCE(tire_pressure_rl_psi, 0) = 0
+		       AND COALESCE(tire_pressure_rr_psi, 0) = 0)
+		ORDER BY ts DESC LIMIT $2`
 	rows, err := r.db.Pool.Query(ctx, query, vehicleID, limit)
 	if err != nil {
 		return nil, err
@@ -50,9 +59,8 @@ func (r *TirePressureRepo) GetByVehicle(ctx context.Context, vehicleID int64, li
 	var snaps []*models.TirePressureSnapshot
 	for rows.Next() {
 		s := &models.TirePressureSnapshot{}
-		if err := rows.Scan(&s.ID, &s.VehicleID, &s.FrontLeft, &s.FrontRight, &s.RearLeft, &s.RearRight,
-			&s.TpmsHardWarn, &s.TpmsSoftWarn,
-			&s.LastSeenTimeFl, &s.LastSeenTimeFr, &s.LastSeenTimeRl, &s.LastSeenTimeRr,
+		if err := rows.Scan(&s.VehicleID,
+			&s.FrontLeft, &s.FrontRight, &s.RearLeft, &s.RearRight,
 			&s.CreatedAt); err != nil {
 			return nil, err
 		}

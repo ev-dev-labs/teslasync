@@ -2,10 +2,14 @@ package database
 
 import (
 	"context"
+	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
+// SafetyRepo reads/writes safety settings data via the consolidated
+// vehicle_meta_snapshots table (category='safety'). The old safety_snapshots
+// table was dropped in migration 000142_baseline_typed.
 type SafetyRepo struct {
 	db *DB
 }
@@ -15,20 +19,43 @@ func NewSafetyRepo(db *DB) *SafetyRepo {
 }
 
 func (r *SafetyRepo) Insert(ctx context.Context, snap *models.SafetySnapshot) error {
-	query := `INSERT INTO safety_snapshots (vehicle_id, automatic_blind_spot_camera, automatic_emergency_braking_off, blind_spot_collision_warning, cruise_follow_distance, emergency_lane_departure_avoidance, forward_collision_warning, lane_departure_avoidance, speed_limit_warning, pin_to_drive_enabled, miles_since_reset, self_driving_miles_since_reset)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`
-	return r.db.Pool.QueryRow(ctx, query,
-		snap.VehicleID, snap.AutomaticBlindSpotCamera, snap.AutomaticEmergencyBrakingOff,
-		snap.BlindSpotCollisionWarning, snap.CruiseFollowDistance,
-		snap.EmergencyLaneDepartureAvoidance, snap.ForwardCollisionWarning,
-		snap.LaneDepartureAvoidance, snap.SpeedLimitWarning,
-		snap.PinToDriveEnabled, snap.MilesSinceReset, snap.SelfDrivingMilesSinceReset,
-	).Scan(&snap.ID)
+	// Map old model fields to new schema columns:
+	//   ForwardCollisionWarning (string) → fcw_active (bool)
+	//   BlindSpotCollisionWarning (bool) → blind_spot_active (bool)
+	//   EmergencyLaneDepartureAvoidance (bool) → emergency_lane_assist (bool)
+	//   SpeedLimitWarning (string) → speed_limit_mode (text)
+	var fcwActive *bool
+	if snap.ForwardCollisionWarning != nil {
+		b := *snap.ForwardCollisionWarning != "Off" && *snap.ForwardCollisionWarning != ""
+		fcwActive = &b
+	}
+
+	// Prefer BlindSpotCollisionWarning; fall back to AutomaticBlindSpotCamera
+	blindSpotActive := snap.BlindSpotCollisionWarning
+	if blindSpotActive == nil {
+		blindSpotActive = snap.AutomaticBlindSpotCamera
+	}
+
+	query := `INSERT INTO vehicle_meta_snapshots
+		(vehicle_id, ts, category,
+		 fcw_active, blind_spot_active, emergency_lane_assist,
+		 speed_limit_mode, source)
+		VALUES ($1, $2, 'safety', $3, $4, $5, $6, 'fleet_telemetry')
+		ON CONFLICT (vehicle_id, ts, category) DO NOTHING`
+	_, err := r.db.Pool.Exec(ctx, query,
+		snap.VehicleID, time.Now().UTC(),
+		fcwActive, blindSpotActive, snap.EmergencyLaneDepartureAvoidance,
+		snap.SpeedLimitWarning)
+	return err
 }
 
 func (r *SafetyRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit int) ([]*models.SafetySnapshot, error) {
-	query := `SELECT id, vehicle_id, automatic_blind_spot_camera, automatic_emergency_braking_off, blind_spot_collision_warning, cruise_follow_distance, emergency_lane_departure_avoidance, forward_collision_warning, lane_departure_avoidance, speed_limit_warning, pin_to_drive_enabled, miles_since_reset, self_driving_miles_since_reset, created_at
-		FROM safety_snapshots WHERE vehicle_id=$1 ORDER BY created_at DESC LIMIT $2`
+	query := `SELECT vehicle_id,
+		fcw_active, blind_spot_active, emergency_lane_assist,
+		speed_limit_mode, ts
+		FROM vehicle_meta_snapshots
+		WHERE vehicle_id = $1 AND category = 'safety'
+		ORDER BY ts DESC LIMIT $2`
 	rows, err := r.db.Pool.Query(ctx, query, vehicleID, limit)
 	if err != nil {
 		return nil, err
@@ -38,13 +65,21 @@ func (r *SafetyRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit in
 	var snaps []*models.SafetySnapshot
 	for rows.Next() {
 		s := &models.SafetySnapshot{}
-		if err := rows.Scan(&s.ID, &s.VehicleID, &s.AutomaticBlindSpotCamera, &s.AutomaticEmergencyBrakingOff,
-			&s.BlindSpotCollisionWarning, &s.CruiseFollowDistance,
-			&s.EmergencyLaneDepartureAvoidance, &s.ForwardCollisionWarning,
-			&s.LaneDepartureAvoidance, &s.SpeedLimitWarning,
-			&s.PinToDriveEnabled, &s.MilesSinceReset, &s.SelfDrivingMilesSinceReset,
-			&s.CreatedAt); err != nil {
+		var fcwActive *bool
+		if err := rows.Scan(&s.VehicleID,
+			&fcwActive, &s.BlindSpotCollisionWarning, &s.EmergencyLaneDepartureAvoidance,
+			&s.SpeedLimitWarning, &s.CreatedAt); err != nil {
 			return nil, err
+		}
+		// Map fcw_active (bool) back to ForwardCollisionWarning (string)
+		if fcwActive != nil {
+			if *fcwActive {
+				w := "Warning"
+				s.ForwardCollisionWarning = &w
+			} else {
+				w := "Off"
+				s.ForwardCollisionWarning = &w
+			}
 		}
 		snaps = append(snaps, s)
 	}
