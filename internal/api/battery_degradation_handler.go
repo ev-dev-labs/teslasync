@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 
@@ -13,11 +14,12 @@ import (
 
 // BatteryDegradationHandler handles battery degradation prediction HTTP requests.
 type BatteryDegradationHandler struct {
-	db *database.DB
+	db              *database.DB
+	signalLogReader *database.SignalLogReader
 }
 
-func NewBatteryDegradationHandler(db *database.DB) *BatteryDegradationHandler {
-	return &BatteryDegradationHandler{db: db}
+func NewBatteryDegradationHandler(db *database.DB, slr *database.SignalLogReader) *BatteryDegradationHandler {
+	return &BatteryDegradationHandler{db: db, signalLogReader: slr}
 }
 
 type batterySnapshotData struct {
@@ -45,83 +47,27 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 
 	ctx := r.Context()
 
-	// Battery health history
-	snapRows, err := h.db.Pool.Query(ctx, `
-		SELECT id, health_score, capacity_kwh, degradation_pct,
-			est_range_km, cycle_count, avg_cell_temp_c, created_at
-		FROM battery_snapshots
-		WHERE vehicle_id = $1
-		ORDER BY created_at`, vehicleID)
-	if err != nil {
-		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get battery snapshots")
-		writeError(w, http.StatusInternalServerError, "failed to get battery data")
-		return
-	}
-	defer snapRows.Close()
-
+	// Battery health history — reconstruct from signal_log
 	var snapshots []batterySnapshotData
-	for snapRows.Next() {
-		var s batterySnapshotData
-		if err := snapRows.Scan(&s.ID, &s.HealthScore, &s.CapacityKWh, &s.DegradationPct,
-			&s.EstRangeKm, &s.CycleCount, &s.AvgCellTempC, &s.CreatedAt); err != nil {
-			log.Error().Err(err).Msg("failed to scan battery snapshot row")
-			continue
+	if h.signalLogReader != nil {
+		// Query BatteryLevel + EnergyRemaining + EstBatteryRange over all time
+		from := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+		to := time.Now()
+		entries, err := h.signalLogReader.SignalTrace(ctx, vehicleID,
+			[]string{"BatteryLevel", "EnergyRemaining", "EstBatteryRange"}, from, to)
+		if err != nil {
+			log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get battery signal trace")
+			writeError(w, http.StatusInternalServerError, "failed to get battery data")
+			return
 		}
-		snapshots = append(snapshots, s)
+		snapshots = synthesizeBatterySnapshots(entries)
 	}
 	if snapshots == nil {
 		snapshots = []batterySnapshotData{}
 	}
 
-	// Monthly averages for trend
-	type monthlyTrend struct {
-		Month          string  `json:"month"`
-		AvgHealth      float64 `json:"avg_health"`
-		AvgCapacity    float64 `json:"avg_capacity"`
-		AvgDegradation float64 `json:"avg_degradation"`
-		AvgRange       float64 `json:"avg_range"`
-		MaxCycles      int     `json:"max_cycles"`
-		AvgCellTemp    float64 `json:"avg_cell_temp"`
-	}
-
-	monthRows, err := h.db.Pool.Query(ctx, `
-		SELECT DATE_TRUNC('month', created_at) as month,
-			AVG(health_score) as avg_health,
-			AVG(capacity_kwh) as avg_capacity,
-			AVG(degradation_pct) as avg_degradation,
-			AVG(est_range_km) as avg_range,
-			MAX(cycle_count) as max_cycles,
-			AVG(avg_cell_temp_c) as avg_cell_temp
-		FROM battery_snapshots
-		WHERE vehicle_id = $1
-		GROUP BY month ORDER BY month`, vehicleID)
-	if err != nil {
-		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get monthly battery trends")
-		writeError(w, http.StatusInternalServerError, "failed to get battery data")
-		return
-	}
-	defer monthRows.Close()
-
-	var monthlyData []monthlyTrend
-	for monthRows.Next() {
-		var m monthlyTrend
-		var monthTime time.Time
-		if err := monthRows.Scan(&monthTime, &m.AvgHealth, &m.AvgCapacity, &m.AvgDegradation,
-			&m.AvgRange, &m.MaxCycles, &m.AvgCellTemp); err != nil {
-			log.Error().Err(err).Msg("failed to scan monthly battery row")
-			continue
-		}
-		m.Month = monthTime.Format("2006-01")
-		m.AvgHealth = math.Round(m.AvgHealth*10) / 10
-		m.AvgCapacity = math.Round(m.AvgCapacity*10) / 10
-		m.AvgDegradation = math.Round(m.AvgDegradation*10) / 10
-		m.AvgRange = math.Round(m.AvgRange*10) / 10
-		m.AvgCellTemp = math.Round(m.AvgCellTemp*10) / 10
-		monthlyData = append(monthlyData, m)
-	}
-	if monthlyData == nil {
-		monthlyData = []monthlyTrend{}
-	}
+	// Monthly averages — aggregated from synthesized snapshots
+	monthlyData := aggregateMonthlyTrends(snapshots)
 
 	// Charging habits that affect battery
 	type chargingHabits struct {
@@ -556,20 +502,7 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 	ctx := r.Context()
 	const nominalCapacity = 75.0
 
-	// Battery snapshots for history
-	snapRows, err := h.db.Pool.Query(ctx, `
-		SELECT health_score, capacity_kwh, degradation_pct,
-			est_range_km, cycle_count, created_at
-		FROM battery_snapshots
-		WHERE vehicle_id = $1
-		ORDER BY created_at`, vehicleID)
-	if err != nil {
-		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("battery-health: failed to query snapshots")
-		writeError(w, http.StatusInternalServerError, "failed to get battery data")
-		return
-	}
-	defer snapRows.Close()
-
+	// Battery history — reconstruct from signal_log
 	type histEntry struct {
 		Date        string  `json:"date"`
 		Odometer    float64 `json:"odometer"`
@@ -583,26 +516,35 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 	var latestCycles int
 	var firstDate time.Time
 
-	for snapRows.Next() {
-		var healthScore, capacityKWh, degradationPct, rangeKm float64
-		var cycleCount int
-		var createdAt time.Time
-		if err := snapRows.Scan(&healthScore, &capacityKWh, &degradationPct, &rangeKm, &cycleCount, &createdAt); err != nil {
-			continue
+	if h.signalLogReader != nil {
+		from := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+		to := time.Now()
+		entries, traceErr := h.signalLogReader.SignalTrace(ctx, vehicleID,
+			[]string{"BatteryLevel", "EnergyRemaining", "EstBatteryRange"}, from, to)
+		if traceErr != nil {
+			log.Error().Err(traceErr).Int64("vehicleID", vehicleID).Msg("battery-health: failed to query signal_log")
+			writeError(w, http.StatusInternalServerError, "failed to get battery data")
+			return
 		}
-		if firstDate.IsZero() {
-			firstDate = createdAt
+		snaps := synthesizeBatterySnapshots(entries)
+		for _, s := range snaps {
+			if firstDate.IsZero() {
+				firstDate = s.CreatedAt
+			}
+			soh := s.HealthScore
+			cap := s.CapacityKWh
+			rng := s.EstRangeKm
+			history = append(history, histEntry{
+				Date:        s.CreatedAt.Format("2006-01-02"),
+				SohPct:      math.Round(soh*10) / 10,
+				CapacityKWh: math.Round(cap*10) / 10,
+				RangeKm:     math.Round(rng*10) / 10,
+			})
+			latestSOH = soh
+			latestCapacity = cap
+			latestRange = rng
+			latestCycles = s.CycleCount
 		}
-		history = append(history, histEntry{
-			Date:        createdAt.Format("2006-01-02"),
-			SohPct:      math.Round(healthScore*10) / 10,
-			CapacityKWh: math.Round(capacityKWh*10) / 10,
-			RangeKm:     math.Round(rangeKm*10) / 10,
-		})
-		latestSOH = healthScore
-		latestCapacity = capacityKWh
-		latestRange = rangeKm
-		latestCycles = cycleCount
 	}
 
 	// Fallback from charging_telemetry
@@ -722,4 +664,152 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 		"temp_exposure_score":    80, // placeholder until temp tracking is granular
 		"history":                history,
 	})
+}
+
+// synthesizeBatterySnapshots converts signal trace entries into the legacy
+// batterySnapshotData shape expected by the prediction and display code.
+// Entries are grouped by timestamp; each unique timestamp yields one snapshot.
+const defaultNominalCapacity = 75.0
+
+func synthesizeBatterySnapshots(entries []database.SignalTraceEntry) []batterySnapshotData {
+	if len(entries) == 0 {
+		return nil
+	}
+
+	// Group entries by timestamp (rounded to the nearest second)
+	type group struct {
+		ts              time.Time
+		batteryLevel    *float64
+		energyRemain    *float64
+		estBatteryRange *float64
+	}
+	groupMap := make(map[int64]*group) // unix seconds → group
+	var orderedKeys []int64
+
+	for _, e := range entries {
+		key := e.Timestamp.Unix()
+		g, ok := groupMap[key]
+		if !ok {
+			g = &group{ts: e.Timestamp}
+			groupMap[key] = g
+			orderedKeys = append(orderedKeys, key)
+		}
+		if e.ValueNum == nil {
+			continue
+		}
+		switch e.Signal {
+		case "BatteryLevel":
+			v := *e.ValueNum
+			g.batteryLevel = &v
+		case "EnergyRemaining":
+			v := *e.ValueNum
+			g.energyRemain = &v
+		case "EstBatteryRange":
+			v := *e.ValueNum
+			g.estBatteryRange = &v
+		}
+	}
+
+	sort.Slice(orderedKeys, func(i, j int) bool { return orderedKeys[i] < orderedKeys[j] })
+
+	var result []batterySnapshotData
+	var idCounter int64
+	for _, key := range orderedKeys {
+		g := groupMap[key]
+		idCounter++
+
+		// Derive health_score from EnergyRemaining / nominal
+		capacityKWh := defaultNominalCapacity
+		healthScore := 100.0
+		if g.energyRemain != nil && *g.energyRemain > 0 {
+			capacityKWh = *g.energyRemain
+			healthScore = (capacityKWh / defaultNominalCapacity) * 100
+			if healthScore > 100 {
+				healthScore = 100
+			}
+		}
+
+		estRangeKm := 0.0
+		if g.estBatteryRange != nil {
+			estRangeKm = *g.estBatteryRange
+		}
+
+		result = append(result, batterySnapshotData{
+			ID:             idCounter,
+			HealthScore:    healthScore,
+			CapacityKWh:    capacityKWh,
+			DegradationPct: 100 - healthScore,
+			EstRangeKm:     estRangeKm,
+			CreatedAt:      g.ts,
+		})
+	}
+	return result
+}
+
+// monthlyTrend holds monthly aggregation of battery health data.
+type monthlyTrend struct {
+	Month          string  `json:"month"`
+	AvgHealth      float64 `json:"avg_health"`
+	AvgCapacity    float64 `json:"avg_capacity"`
+	AvgDegradation float64 `json:"avg_degradation"`
+	AvgRange       float64 `json:"avg_range"`
+	MaxCycles      int     `json:"max_cycles"`
+	AvgCellTemp    float64 `json:"avg_cell_temp"`
+}
+
+// aggregateMonthlyTrends groups synthesized snapshots by month and computes averages.
+func aggregateMonthlyTrends(snapshots []batterySnapshotData) []monthlyTrend {
+	if len(snapshots) == 0 {
+		return []monthlyTrend{}
+	}
+
+	type monthAccum struct {
+		sumHealth      float64
+		sumCapacity    float64
+		sumDegradation float64
+		sumRange       float64
+		sumTemp        float64
+		maxCycles      int
+		count          int
+	}
+
+	months := make(map[string]*monthAccum)
+	var monthOrder []string
+
+	for _, s := range snapshots {
+		key := s.CreatedAt.Format("2006-01")
+		acc, ok := months[key]
+		if !ok {
+			acc = &monthAccum{}
+			months[key] = acc
+			monthOrder = append(monthOrder, key)
+		}
+		acc.sumHealth += s.HealthScore
+		acc.sumCapacity += s.CapacityKWh
+		acc.sumDegradation += s.DegradationPct
+		acc.sumRange += s.EstRangeKm
+		acc.sumTemp += s.AvgCellTempC
+		if s.CycleCount > acc.maxCycles {
+			acc.maxCycles = s.CycleCount
+		}
+		acc.count++
+	}
+
+	sort.Strings(monthOrder)
+
+	result := make([]monthlyTrend, 0, len(monthOrder))
+	for _, key := range monthOrder {
+		acc := months[key]
+		n := float64(acc.count)
+		result = append(result, monthlyTrend{
+			Month:          key,
+			AvgHealth:      math.Round(acc.sumHealth/n*10) / 10,
+			AvgCapacity:    math.Round(acc.sumCapacity/n*10) / 10,
+			AvgDegradation: math.Round(acc.sumDegradation/n*10) / 10,
+			AvgRange:       math.Round(acc.sumRange/n*10) / 10,
+			MaxCycles:      acc.maxCycles,
+			AvgCellTemp:    math.Round(acc.sumTemp/n*10) / 10,
+		})
+	}
+	return result
 }

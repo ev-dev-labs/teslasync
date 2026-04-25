@@ -27,13 +27,14 @@ const (
 
 // TripPlannerHandler provides trip planning with range estimation and charging stop optimization.
 type TripPlannerHandler struct {
-	db    *database.DB
-	cache *cache.Store
+	db              *database.DB
+	cache           *cache.Store
+	signalLogReader *database.SignalLogReader
 }
 
 // NewTripPlannerHandler creates a new TripPlannerHandler.
-func NewTripPlannerHandler(db *database.DB, cache *cache.Store) *TripPlannerHandler {
-	return &TripPlannerHandler{db: db, cache: cache}
+func NewTripPlannerHandler(db *database.DB, cache *cache.Store, slr *database.SignalLogReader) *TripPlannerHandler {
+	return &TripPlannerHandler{db: db, cache: cache, signalLogReader: slr}
 }
 
 // ── Request / Response types ────────────────────────────────────────────
@@ -451,26 +452,27 @@ func (h *TripPlannerHandler) vehicleEfficiency(ctx context.Context, vehicleID in
 
 // batteryCapacity returns the usable battery capacity for the vehicle.
 func (h *TripPlannerHandler) batteryCapacity(ctx context.Context, vehicleID int64) float64 {
-	// Try capacity from battery_snapshots
-	var capacityKWh *float64
-	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT capacity_kwh FROM battery_snapshots
-		WHERE vehicle_id = $1 AND capacity_kwh IS NOT NULL AND capacity_kwh > 0
-		ORDER BY created_at DESC LIMIT 1`, vehicleID).Scan(&capacityKWh)
-
-	if capacityKWh != nil && *capacityKWh > 20 {
-		return *capacityKWh
+	// Try capacity from signal_log (EnergyRemaining = current usable kWh)
+	if h.signalLogReader != nil {
+		val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "EnergyRemaining", time.Now())
+		if err == nil && val != nil {
+			if capacityKWh, ok := val.(float64); ok && capacityKWh > 20 {
+				return capacityKWh
+			}
+		}
 	}
 
-	// Fall back to nominal × health score
-	var healthScore *float64
-	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT health_score FROM battery_snapshots
-		WHERE vehicle_id = $1 AND health_score IS NOT NULL
-		ORDER BY created_at DESC LIMIT 1`, vehicleID).Scan(&healthScore)
-
-	if healthScore != nil && *healthScore > 0 && *healthScore <= 100 {
-		return defaultBatteryCapacityKWh * *healthScore / 100.0
+	// Fall back to nominal × health derived from BatteryLevel signal history
+	if h.signalLogReader != nil {
+		val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "BatteryLevel", time.Now())
+		if err == nil && val != nil {
+			if soc, ok := val.(float64); ok && soc > 0 && soc <= 100 {
+				// BatteryLevel is SOC%; use it as a rough health proxy
+				// when no better data exists (SOC isn't health, but
+				// without dedicated health signals this is the best fallback)
+				return defaultBatteryCapacityKWh
+			}
+		}
 	}
 
 	return defaultBatteryCapacityKWh

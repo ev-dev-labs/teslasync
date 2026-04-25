@@ -15,11 +15,12 @@ const nominalCapacity = 75.0
 
 // RangeProjectionHandler serves projected range analytics.
 type RangeProjectionHandler struct {
-	db *database.DB
+	db              *database.DB
+	signalLogReader *database.SignalLogReader
 }
 
-func NewRangeProjectionHandler(db *database.DB) *RangeProjectionHandler {
-	return &RangeProjectionHandler{db: db}
+func NewRangeProjectionHandler(db *database.DB, slr *database.SignalLogReader) *RangeProjectionHandler {
+	return &RangeProjectionHandler{db: db, signalLogReader: slr}
 }
 
 type rangeFactor struct {
@@ -116,10 +117,18 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	// ── Battery health / degradation adjustment ──────────
 	var healthScore *float64
-	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT health_score FROM battery_snapshots
-		WHERE vehicle_id = $1 AND health_score IS NOT NULL
-		ORDER BY created_at DESC LIMIT 1`, vehicleID).Scan(&healthScore)
+	if h.signalLogReader != nil {
+		val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "EnergyRemaining", time.Now())
+		if err == nil && val != nil {
+			if energy, ok := val.(float64); ok && energy > 0 {
+				hs := (energy / nominalCapacity) * 100
+				if hs > 100 {
+					hs = 100
+				}
+				healthScore = &hs
+			}
+		}
+	}
 
 	healthFactor := 1.0
 	if healthScore != nil && *healthScore > 0 && *healthScore < 100 {
@@ -528,12 +537,20 @@ func (h *RangeProjectionHandler) GetByVehicle(w http.ResponseWriter, r *http.Req
 		currentRange = rated
 	}
 
-	// Degradation estimate from battery snapshots
+	// Degradation estimate from signal_log
 	var healthPct *float64
-	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT battery_health_pct FROM battery_snapshots
-		WHERE vehicle_id = $1 AND battery_health_pct IS NOT NULL
-		ORDER BY created_at DESC LIMIT 1`, vehicleID).Scan(&healthPct)
+	if h.signalLogReader != nil {
+		val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "EnergyRemaining", time.Now())
+		if err == nil && val != nil {
+			if energy, ok := val.(float64); ok && energy > 0 {
+				hp := (energy / nominalCapacity) * 100
+				if hp > 100 {
+					hp = 100
+				}
+				healthPct = &hp
+			}
+		}
+	}
 
 	degradation := 0.0
 	healthScore := 100.0
