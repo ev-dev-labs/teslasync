@@ -8,6 +8,7 @@ import {
   RadialGauge, ChartTooltip, CHART_COLORS,
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend,
+  AREA_DEFAULTS, areaGradient,
 } from '@/components/charts'
 import { EmptyState } from '@/components/feedback'
 import { useSettings } from '@/hooks/useSettings'
@@ -97,26 +98,26 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={driveChartData}>
+                {areaGradient('driveTrendDistGrad', CHART_COLORS[0])}
+                {areaGradient('driveTrendDurGrad', CHART_COLORS[1])}
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                 <XAxis dataKey="date" stroke="rgba(255,255,255,0.4)" fontSize={11} />
                 <YAxis stroke="rgba(255,255,255,0.4)" fontSize={11} />
                 <Tooltip content={<ChartTooltip />} />
                 <Legend />
                 <Area
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="distance"
                   name={t('common.distance', 'Distance')}
                   stroke={CHART_COLORS[0]}
-                  fill={CHART_COLORS[0]}
-                  fillOpacity={0.15}
+                  fill="url(#driveTrendDistGrad)"
                 />
                 <Area
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="duration"
                   name={t('common.duration', 'Duration')}
                   stroke={CHART_COLORS[1]}
-                  fill={CHART_COLORS[1]}
-                  fillOpacity={0.1}
+                  fill="url(#driveTrendDurGrad)"
                 />
               </AreaChart>
             </ResponsiveContainer>

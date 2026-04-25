@@ -13,6 +13,7 @@ import {
   chartGrid, axisTickSm, CHART_COLORS,
   AreaChart, Area, ComposedChart, Line,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, ReferenceLine,
+  AREA_DEFAULTS, areaGradient,
 } from '@/components/charts';
 import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -422,7 +423,7 @@ export default function BatteryDegradationPage() {
                   {renderAnnotationLines(annotations, (ts) => ts)}
                   {/* Confidence band (stacked areas: transparent base + visible band) */}
                   <Area
-                    type="monotone"
+                    {...AREA_DEFAULTS}
                     dataKey="confidence_low"
                     stackId="ci"
                     stroke="none"
@@ -432,7 +433,7 @@ export default function BatteryDegradationPage() {
                     connectNulls={false}
                   />
                   <Area
-                    type="monotone"
+                    {...AREA_DEFAULTS}
                     dataKey="confidence_band"
                     stackId="ci"
                     stroke="none"
@@ -441,7 +442,7 @@ export default function BatteryDegradationPage() {
                     connectNulls={false}
                   />
                   <Line
-                    type="monotone"
+                    {...AREA_DEFAULTS}
                     dataKey="health"
                     name={t('battery.degradation.actualHealth', 'Actual Health %')}
                     stroke="#10b981"
@@ -450,13 +451,11 @@ export default function BatteryDegradationPage() {
                     connectNulls={false}
                   />
                   <Line
-                    type="monotone"
+                    {...AREA_DEFAULTS}
                     dataKey="projected"
                     name={t('battery.degradation.projected', 'Projected %')}
                     stroke="#a855f7"
-                    strokeWidth={2}
                     strokeDasharray="8 4"
-                    dot={false}
                     connectNulls={false}
                   />
                 </ComposedChart>
@@ -489,31 +488,21 @@ export default function BatteryDegradationPage() {
                 <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
                 <Tooltip content={<ChartTooltip />} />
                 <Legend />
-                <defs>
-                  <linearGradient id="origRange" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={CHART_COLORS[0]} stopOpacity={0.25} />
-                    <stop offset="100%" stopColor={CHART_COLORS[0]} stopOpacity={0.02} />
-                  </linearGradient>
-                  <linearGradient id="curRange" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={CHART_COLORS[2]} stopOpacity={0.3} />
-                    <stop offset="100%" stopColor={CHART_COLORS[2]} stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
+                {areaGradient('origRange', CHART_COLORS[0], 0.25)}
+                {areaGradient('curRange', CHART_COLORS[2])}
                 <Area
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="original"
                   name={t('Original Range')}
                   stroke={CHART_COLORS[0]}
                   fill="url(#origRange)"
-                  strokeWidth={2}
                 />
                 <Area
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="current"
                   name={t('Current Range')}
                   stroke={CHART_COLORS[2]}
                   fill="url(#curRange)"
-                  strokeWidth={2}
                 />
               </AreaChart>
             </ResponsiveContainer>

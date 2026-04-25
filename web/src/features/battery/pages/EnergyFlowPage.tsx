@@ -16,6 +16,7 @@ import {
   chartGrid, axisTick, chartMarginLabeled, chartAnimation, CHART_COLORS,
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
+  AREA_DEFAULTS,
 } from '@/components/charts';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -502,20 +503,18 @@ export default function EnergyFlowPage() {
                 <Tooltip content={<ChartTooltip />} />
                 <Legend />
                 <Area
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="consumption"
                   name={t('Consumption')}
                   stroke={CHART_COLORS[0]}
                   fill="url(#gradConsumption)"
-                  strokeWidth={2}
                 />
                 <Area
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="regen"
                   name={t('Regen')}
                   stroke={CHART_COLORS[1]}
                   fill="url(#gradRegen)"
-                  strokeWidth={2}
                 />
               </AreaChart>
             </ResponsiveContainer>

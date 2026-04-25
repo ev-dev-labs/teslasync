@@ -10,6 +10,7 @@ import {
   chartGrid, axisTickSm,
   AreaChart, Area, BarChart, Bar, ComposedChart, Line,
   PieChart, Pie, Cell, Brush, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  AREA_DEFAULTS,
 } from '@/components/charts';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { Skeleton, QueryError, EmptyState } from '@/components/feedback';
@@ -413,13 +414,11 @@ export default function EnergyPage() {
                           animationDuration={800}
                         />
                         <Line
+                          {...AREA_DEFAULTS}
                           yAxisId="right"
-                          type="monotone"
                           dataKey="efficiency_wh_km"
                           name={efficiencyUnit}
                           stroke="#10b981"
-                          strokeWidth={2}
-                          dot={false}
                           animationDuration={800}
                         />
                         {dailyEnergy.length > 14 && (
@@ -459,16 +458,15 @@ export default function EnergyPage() {
                         <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
                         <Tooltip content={<ChartTooltip />} />
                         <Area
-                          type="monotone"
+                          {...AREA_DEFAULTS}
                           dataKey="efficiency_wh_km"
                           name={efficiencyUnit}
                           stroke="#10b981"
                           fill="url(#effGrad)"
-                          strokeWidth={2}
                           animationDuration={800}
                         />
                         <Area
-                          type="monotone"
+                          {...AREA_DEFAULTS}
                           dataKey="distance_km"
                           name={t('energy.chart.distance', { unit: distanceUnit, defaultValue: `Distance (${distanceUnit})` })}
                           stroke="#00f0ff"

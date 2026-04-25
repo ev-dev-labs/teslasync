@@ -14,6 +14,7 @@ import {
   chartGrid, axisTick, axisTickSm, chartMargin, chartMarginLabeled, CHART_COLORS,
   BarChart, Bar, LineChart, Line, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine,
+  AREA_DEFAULTS,
 } from '@/components/charts';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -602,12 +603,10 @@ export default function BatteryCellsPage() {
                   />
                   <Legend />
                   <Line
-                    type="monotone"
+                    {...AREA_DEFAULTS}
                     dataKey="imbalance_mv"
                     name={t('Imbalance (mV)')}
                     stroke={CHART_COLORS[3]}
-                    strokeWidth={2}
-                    dot={false}
                     activeDot={{ r: 4 }}
                   />
                   <ReferenceLine
@@ -659,29 +658,23 @@ export default function BatteryCellsPage() {
                 />
                 <Legend />
                 <Line
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="min_voltage"
                   name={t('Min Voltage')}
                   stroke={CHART_COLORS[5]}
-                  strokeWidth={2}
-                  dot={false}
                   strokeDasharray="4 2"
                 />
                 <Line
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="avg_voltage"
                   name={t('Avg Voltage')}
                   stroke={CHART_COLORS[0]}
-                  strokeWidth={2}
-                  dot={false}
                 />
                 <Line
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="max_voltage"
                   name={t('Max Voltage')}
                   stroke={CHART_COLORS[1]}
-                  strokeWidth={2}
-                  dot={false}
                   strokeDasharray="4 2"
                 />
               </LineChart>
@@ -742,12 +735,11 @@ export default function BatteryCellsPage() {
                   <ReferenceLine y={5} stroke={CHART_COLORS[1]} strokeDasharray="4 4" />
                   <ReferenceLine y={15} stroke={CHART_COLORS[5]} strokeDasharray="4 4" />
                   <Area
-                    type="monotone"
+                    {...AREA_DEFAULTS}
                     dataKey="spreadRaw"
                     name={t('battery.cells.chart.voltageSpread', 'Voltage Spread (mV)')}
                     stroke="#a855f7"
                     fill="url(#spreadGrad)"
-                    strokeWidth={2}
                   />
                 </AreaChart>
               </ResponsiveContainer>

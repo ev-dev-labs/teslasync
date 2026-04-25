@@ -5,6 +5,7 @@ import {
   AreaChart, Area, XAxis, YAxis, ResponsiveContainer,
   Tooltip, CartesianGrid, ReferenceLine,
   chartGrid, axisTickSm, CHART_COLORS,
+  AREA_DEFAULTS, areaGradient,
 } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
@@ -92,12 +93,7 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
               <div className="flex-1 min-h-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
-                    <defs>
-                      <linearGradient id="degradation-grad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={CHART_COLORS[1]} stopOpacity={0.3} />
-                        <stop offset="100%" stopColor={CHART_COLORS[1]} stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
+                    {areaGradient('degradation-grad', CHART_COLORS[1])}
                     <CartesianGrid {...chartGrid} />
                     <XAxis dataKey="month" {...axisTickSm} />
                     <YAxis
@@ -108,12 +104,10 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
                     <Tooltip content={<ChartTooltip />} />
                     <ReferenceLine y={80} stroke="#ef4444" strokeDasharray="4 4" strokeOpacity={0.4} />
                     <Area
-                      type="monotone"
+                      {...AREA_DEFAULTS}
                       dataKey="health"
                       stroke={CHART_COLORS[1]}
                       fill="url(#degradation-grad)"
-                      strokeWidth={2}
-                      dot={false}
                       name={t('widget.healthPct', 'Health %')}
                     />
                   </AreaChart>

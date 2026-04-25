@@ -15,6 +15,7 @@ import {
   chartGrid, axisTickSm, CHART_COLORS,
   AreaChart, Area, BarChart, Bar, ComposedChart, Line, ReferenceLine,
   PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
+  AREA_DEFAULTS,
 } from '@/components/charts';
 import { MetricCard, MetricBar } from '@/components/data-display';
 import { Skeleton, EmptyState } from '@/components/feedback';
@@ -632,9 +633,9 @@ export default function BatteryHealthPage() {
                   <Tooltip content={<ChartTooltip />} />
                   <ReferenceLine y={70} stroke="#ef4444" strokeDasharray="8 4" />
                   <ReferenceLine y={80} stroke="#f59e0b" strokeDasharray="4 4" />
-                  <Area type="monotone" dataKey="actual" name={t('battery.chart.actual', 'Actual %')} stroke="transparent" fill="url(#healthGrad)" />
-                  <Line type="monotone" dataKey="actual" name={t('battery.chart.actual', 'Actual %')} stroke="#00f0ff" strokeWidth={2} dot={{ fill: '#00f0ff', r: 2 }} connectNulls={false} />
-                  <Line type="monotone" dataKey="predicted" name={t('battery.chart.predicted', 'Predicted %')} stroke="#00f0ff" strokeWidth={2} strokeDasharray="6 4" dot={false} opacity={0.5} />
+                  <Area {...AREA_DEFAULTS} dataKey="actual" name={t('battery.chart.actual', 'Actual %')} stroke="transparent" fill="url(#healthGrad)" />
+                  <Line {...AREA_DEFAULTS} dataKey="actual" name={t('battery.chart.actual', 'Actual %')} stroke="#00f0ff" dot={{ fill: '#00f0ff', r: 2 }} connectNulls={false} />
+                  <Line {...AREA_DEFAULTS} dataKey="predicted" name={t('battery.chart.predicted', 'Predicted %')} stroke="#00f0ff" strokeDasharray="6 4" opacity={0.5} />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
@@ -663,12 +664,11 @@ export default function BatteryHealthPage() {
                   <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
                   <Tooltip content={<ChartTooltip />} />
                   <Area
-                    type="monotone"
+                    {...AREA_DEFAULTS}
                     dataKey="range"
                     name={`${t('battery.chart.range', 'Range')} (${distanceUnit})`}
                     stroke="#10b981"
                     fill="url(#rangeGrad)"
-                    strokeWidth={2}
                   />
                 </AreaChart>
               </ResponsiveContainer>
