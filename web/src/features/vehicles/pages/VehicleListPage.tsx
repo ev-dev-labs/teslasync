@@ -18,19 +18,12 @@ import { useSettings } from '@/hooks/useSettings';
 import { useVehicleLive } from '@/hooks/useVehicleLive';
 import { cn } from '@/lib/cn';
 import { fmtNumber } from '@/lib/numberFormat';
+import { batteryColor } from '@/lib/colors';
 import { request } from '@/api/client';
 import { fetchVehicleState } from '@/api/hooks/useVehicles';
 import { deriveVehicleStatus, statusVariant } from '@/api/types';
 import type { Vehicle } from '@/types/vehicle';
 import type { VehicleState } from '@/api/types';
-
-/* ── Helpers ─────────────────────────────────────────────── */
-
-function batteryColor(level: number): string {
-  if (level > 60) return '#10b981';
-  if (level > 30) return '#f59e0b';
-  return '#ef4444';
-}
 
 /* ── Page ────────────────────────────────────────────────── */
 

@@ -9,15 +9,9 @@ import { TeslaCarViz, parseModelKey } from '@/components/data-display/TeslaCarVi
 import { useSettings } from '@/hooks/useSettings';
 import { useVehicleState, getVehicleStatus } from '@/api/hooks/useVehicles';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { batteryColor } from '@/lib/colors';
 import type { Vehicle } from '@/api/types';
 import type { VehicleState } from '@/api/types';
-
-/** Traffic-light color for battery percentage */
-function batteryColor(level: number): string {
-  if (level > 60) return '#10b981';
-  if (level > 25) return '#f59e0b';
-  return '#ef4444';
-}
 
 interface VehicleCardProps {
   vehicle: Vehicle;

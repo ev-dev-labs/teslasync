@@ -7,6 +7,7 @@ import { RadialGauge } from '@/components/charts/RadialGauge'
 import { MetricBar } from '@/components/data-display/MetricBar'
 import { useSettings } from '@/hooks/useSettings'
 import { fmtNumber } from '@/lib/numberFormat'
+import { batteryColor } from '@/lib/colors'
 import type { Vehicle, VehicleState } from '@/api/types'
 
 /** Color constants matching original production palette */
@@ -16,12 +17,6 @@ const COLOR = {
   DARK: '#374151',
   MUTED: '#6b7280',
   BAD: '#ef4444',
-}
-
-function batteryColor(level: number): string {
-  if (level > 60) return '#10b981'
-  if (level > 25) return '#f59e0b'
-  return '#ef4444'
 }
 
 function boolColor(flag: boolean): string {

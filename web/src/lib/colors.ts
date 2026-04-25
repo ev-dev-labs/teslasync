@@ -121,6 +121,18 @@ export function degradationColor(percent: number): string {
   return percent < 10 ? COLOR.GOOD : COLOR.WARN
 }
 
+/** Color for vehicle activity level (polling engine) */
+export function activityColor(activity: string): string {
+  switch (activity) {
+    case 'active': case 'critical': return COLOR.GOOD
+    case 'moderate': return '#3b82f6'
+    case 'low': return COLOR.WARN
+    case 'idle': return COLOR.MUTED
+    case 'sleeping': return '#4b5563'
+    default: return COLOR.MUTED
+  }
+}
+
 /** Color for system status string */
 export function statusHexColor(status: string): string {
   switch (status.toLowerCase()) {

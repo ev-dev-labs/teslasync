@@ -63,6 +63,12 @@ export function formatRelative(iso: string | Date | null | undefined): string {
   return formatDate(iso)
 }
 
+/** Local datetime string for `<input type="datetime-local">` value: "2026-04-04T14:30:00" */
+export function toLocalDatetimeStr(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+}
+
 /** Weekday + short date: "Fri, Apr 4" */
 export function formatDateWithDay(iso: string | Date | null | undefined): string {
   if (!iso) return '—'

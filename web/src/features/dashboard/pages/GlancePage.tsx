@@ -22,6 +22,7 @@ import { useVehicleCommand } from '@/api/hooks/useVehicleCommand';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { fmtNumber } from '@/lib/numberFormat';
+import { batteryColor, COLOR } from '@/lib/colors';
 
 /** Derive a user-friendly location label from the location snapshot */
 function getLocationLabel(
@@ -34,14 +35,6 @@ function getLocationLabel(
   if (location.located_at_favorite) return t('glance.location.favorite', 'Saved');
   if (location.destination_name) return location.destination_name;
   return '—';
-}
-
-/** Return a color for the battery gauge based on level */
-function batteryColor(level: number | null | undefined): string {
-  if (level == null) return '#6b7280';
-  if (level >= 50) return '#22c55e';
-  if (level >= 20) return '#f59e0b';
-  return '#ef4444';
 }
 
 // ── Local sub-components ─────────────────────────────────────────────
@@ -181,7 +174,7 @@ export default function GlancePage() {
             label={t('glance.battery', 'Battery')}
             unit="%"
             size={180}
-            color={batteryColor(state?.battery_level)}
+            color={state?.battery_level != null ? batteryColor(state.battery_level) : COLOR.MUTED}
           />
         </div>
 

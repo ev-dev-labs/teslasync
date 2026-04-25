@@ -23,8 +23,9 @@ import { FadeIn } from '@/components/motion/FadeIn';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSignals } from '@/api/hooks/useTelemetry';
 import { request } from '@/api/client';
-import { fmtNumber } from '@/lib/numberFormat';
 import { CHART_COLORS } from '@/lib/colors';
+import { toLocalDatetimeStr } from '@/lib/dateFormat';
+import { formatValue } from '@/components/SignalQueryControls';
 import { TIME_RANGE_PRESETS } from '@/lib/constants';
 import { Database, Search, Clock, Activity, Filter, AlertCircle } from 'lucide-react';
 
@@ -51,17 +52,6 @@ interface SignalHistoryResp {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function toLocalDatetime(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-function formatValue(row: SignalRow): string {
-  if (row.value_num !== null && row.value_num !== undefined) return fmtNumber(row.value_num, 4);
-  if (row.value_bool !== null && row.value_bool !== undefined) return String(row.value_bool);
-  return row.value_str ?? '';
-}
-
 function valueType(row: SignalRow): string {
   if (row.value_num !== null && row.value_num !== undefined) return 'number';
   if (row.value_bool !== null && row.value_bool !== undefined) return 'boolean';
@@ -85,8 +75,8 @@ export default function SignalLogViewerPage() {
   const [signalSearch, setSignalSearch] = useState('');
 
   // DateTime range
-  const [fromStr, setFromStr] = useState(() => toLocalDatetime(new Date(Date.now() - 3600_000)));
-  const [toStr, setToStr] = useState(() => toLocalDatetime(new Date()));
+  const [fromStr, setFromStr] = useState(() => toLocalDatetimeStr(new Date(Date.now() - 3600_000)));
+  const [toStr, setToStr] = useState(() => toLocalDatetimeStr(new Date()));
 
   // Pagination
   const [perPage, setPerPage] = useState(50);
@@ -97,8 +87,8 @@ export default function SignalLogViewerPage() {
 
   const applyPreset = useCallback((hours: number) => {
     const end = new Date();
-    setFromStr(toLocalDatetime(new Date(end.getTime() - hours * 3600_000)));
-    setToStr(toLocalDatetime(end));
+    setFromStr(toLocalDatetimeStr(new Date(end.getTime() - hours * 3600_000)));
+    setToStr(toLocalDatetimeStr(end));
   }, []);
 
   const canQuery = selectedSignals.length > 0 && fromStr && toStr;
