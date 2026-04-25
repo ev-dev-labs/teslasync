@@ -9,10 +9,22 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog/log"
 	"github.com/sony/gobreaker"
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
+)
+
+const (
+	// redisBacklogKey is the Redis list used as a secondary WAL for signal rows
+	// that couldn't be flushed to Postgres when the in-memory buffer overflows.
+	redisBacklogKey = "signal_log:backlog"
+	// redisBacklogTTL prevents unbounded accumulation — stale backlog expires.
+	redisBacklogTTL = 24 * time.Hour
+	// redisBacklogThreshold is the buffer size above which overflow rows are
+	// pushed to Redis on flush failure, providing crash-resilient persistence.
+	redisBacklogThreshold = 50_000
 )
 
 // SignalHistoryRow represents a single signal value at a point in time.
@@ -39,20 +51,25 @@ const (
 // SignalHistoryWriter buffers incoming signals and batch-inserts them into
 // the signal_log table every flushInterval. Uses pgx CopyFrom for
 // maximum insert performance.
+//
+// 3-tier resilience: memory buffer → Redis backlog → MQTT persistence.
 type SignalHistoryWriter struct {
 	db       *DB
+	redis    *redis.Client
 	mu       sync.Mutex
 	buffer   []SignalHistoryRow
 	interval time.Duration
 }
 
 // NewSignalHistoryWriter creates a writer with the given flush interval.
-func NewSignalHistoryWriter(db *DB, flushInterval time.Duration) *SignalHistoryWriter {
+// rdb may be nil — Redis backlog features become no-ops.
+func NewSignalHistoryWriter(db *DB, flushInterval time.Duration, rdb *redis.Client) *SignalHistoryWriter {
 	if flushInterval <= 0 {
 		flushInterval = config.SignalFlushInterval
 	}
 	return &SignalHistoryWriter{
 		db:       db,
+		redis:    rdb,
 		buffer:   make([]SignalHistoryRow, 0, 512),
 		interval: flushInterval,
 	}
@@ -120,6 +137,9 @@ func (w *SignalHistoryWriter) Append(vehicleID int64, signals map[string]interfa
 // FlushLoop runs the periodic batch insert. Call in a goroutine.
 // Stops when ctx is cancelled, performing a final drain before returning.
 func (w *SignalHistoryWriter) FlushLoop(ctx context.Context) {
+	// On startup, recover any rows that were pushed to Redis during a prior crash.
+	w.drainRedisBacklog(ctx)
+
 	ticker := time.NewTicker(w.interval)
 	defer ticker.Stop()
 	for {
@@ -166,6 +186,60 @@ func (w *SignalHistoryWriter) drainAll(ctx context.Context) {
 		}
 		w.flush(ctx)
 	}
+}
+
+// drainRedisBacklog recovers rows from the Redis backlog list that were
+// persisted during a previous crash/outage. Called once at startup.
+// If Redis is nil or unreachable this is a no-op.
+func (w *SignalHistoryWriter) drainRedisBacklog(ctx context.Context) {
+	if w.redis == nil {
+		return
+	}
+	count := 0
+	for {
+		data, err := w.redis.LPop(ctx, redisBacklogKey).Bytes()
+		if errors.Is(err, redis.Nil) {
+			break
+		}
+		if err != nil {
+			log.Warn().Err(err).Msg("signal_log: Redis backlog drain error")
+			break
+		}
+		var row SignalHistoryRow
+		if json.Unmarshal(data, &row) == nil {
+			w.mu.Lock()
+			w.buffer = append(w.buffer, row)
+			w.mu.Unlock()
+			count++
+		}
+	}
+	if count > 0 {
+		log.Info().Int("rows", count).Msg("signal_log: drained Redis backlog")
+	}
+}
+
+// pushToRedisBacklog persists overflow rows to a Redis list so they survive
+// an app crash. Only called when insertBatch fails AND the in-memory buffer
+// exceeds redisBacklogThreshold. Fails silently if Redis is nil or down.
+func (w *SignalHistoryWriter) pushToRedisBacklog(rows []SignalHistoryRow) {
+	if w.redis == nil {
+		return
+	}
+	pipe := w.redis.Pipeline()
+	for _, row := range rows {
+		data, err := json.Marshal(row)
+		if err != nil {
+			continue
+		}
+		pipe.RPush(context.Background(), redisBacklogKey, data)
+	}
+	pipe.Expire(context.Background(), redisBacklogKey, redisBacklogTTL)
+	if _, err := pipe.Exec(context.Background()); err != nil {
+		log.Warn().Err(err).Int("rows", len(rows)).
+			Msg("signal_log: failed to push overflow to Redis backlog")
+		return
+	}
+	log.Info().Int("rows", len(rows)).Msg("signal_log: pushed overflow to Redis backlog")
 }
 
 func (w *SignalHistoryWriter) flush(ctx context.Context) {
@@ -244,10 +318,21 @@ func (w *SignalHistoryWriter) flush(ctx context.Context) {
 		w.buffer = append(rows, w.buffer...)
 		if len(w.buffer) > maxBufferSize {
 			dropped := len(w.buffer) - maxBufferSize
+			overflow := make([]SignalHistoryRow, dropped)
+			copy(overflow, w.buffer[:dropped])
 			w.buffer = w.buffer[dropped:]
+
+			// Push overflow to Redis backlog before losing them
+			if len(w.buffer) >= redisBacklogThreshold {
+				w.mu.Unlock()
+				w.pushToRedisBacklog(overflow)
+			} else {
+				w.mu.Unlock()
+			}
 			log.Warn().Int("dropped", dropped).Msg("signal_log: dropping oldest rows (buffer limit)")
+		} else {
+			w.mu.Unlock()
 		}
-		w.mu.Unlock()
 	}
 }
 

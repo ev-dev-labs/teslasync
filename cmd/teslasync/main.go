@@ -215,7 +215,7 @@ func main() {
 		log.Info().Msg("signal store initialized")
 
 		// Postgres signal_history writer (always-on per-signal history)
-		signalHistoryWriter = database.NewSignalHistoryWriter(db, 2*time.Second)
+		signalHistoryWriter = database.NewSignalHistoryWriter(db, 2*time.Second, cacheStore.Underlying())
 		telemetryHandler.SetSignalHistoryWriter(signalHistoryWriter)
 
 		// Hydrate remaining signals from signal_history (covers all 230+ signals)
