@@ -33,20 +33,11 @@ type TelemetryHandler struct {
 	vehicleRepo           *database.VehicleRepo
 	stateRepo             *database.VehicleStateRepo
 	mileageRepo           *database.MileageRepo
-	tireRepo              *database.TirePressureRepo
-	motorRepo             *database.MotorRepo
-	climateRepo           *database.ClimateRepo
 	securityRepo          *database.SecurityRepo
-	chargingTelemetryRepo *database.ChargingTelemetryRepo
 	mediaRepo             *database.MediaRepo
 	vehicleConfigRepo     *database.VehicleConfigRepo
-	locationRepo          *database.LocationSnapshotRepo
-	safetyRepo            *database.SafetyRepo
-	userPrefRepo          *database.UserPreferenceRepo
 	swUpdateRepo          *database.SoftwareUpdateRepo
 	signalCatalogRepo     *database.SignalCatalogRepo
-	liveStateRepo         *database.VehicleLiveStateRepo
-	vehMetaRepo           *database.VehicleMetaRepo
 	signalObsRepo         *database.SignalObservationRepo
 	mqttClient            *mqtt.Client
 	logRepo               *database.APICallLogRepo
@@ -133,20 +124,11 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 		vehicleRepo:           database.NewVehicleRepo(db),
 		stateRepo:             database.NewVehicleStateRepo(db),
 		mileageRepo:           database.NewMileageRepo(db),
-		tireRepo:              database.NewTirePressureRepo(db),
-		motorRepo:             database.NewMotorRepo(db),
-		climateRepo:           database.NewClimateRepo(db),
 		securityRepo:          database.NewSecurityRepo(db),
-		chargingTelemetryRepo: database.NewChargingTelemetryRepo(db),
 		mediaRepo:             database.NewMediaRepo(db),
 		vehicleConfigRepo:     database.NewVehicleConfigRepo(db),
-		locationRepo:          database.NewLocationSnapshotRepo(db),
-		safetyRepo:            database.NewSafetyRepo(db),
-		userPrefRepo:          database.NewUserPreferenceRepo(db),
 		swUpdateRepo:          database.NewSoftwareUpdateRepo(db),
 		signalCatalogRepo:     database.NewSignalCatalogRepo(db),
-		liveStateRepo:         database.NewVehicleLiveStateRepo(db),
-		vehMetaRepo:           database.NewVehicleMetaRepo(db),
 		signalObsRepo:         database.NewSignalObservationRepo(db),
 		mqttClient:            mc,
 		logRepo:               database.NewAPICallLogRepo(db),
@@ -720,20 +702,8 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 			// Update daily mileage from odometer readings
 			h.trackMileage(bgCtx, vehicleID, writeSignals)
 
-			// Store tire pressure snapshots
-			h.trackTirePressure(bgCtx, vehicleID, writeSignals)
-
-			// Store motor/powertrain snapshots
-			h.trackMotor(bgCtx, vehicleID, writeSignals)
-
-			// Store climate/HVAC snapshots
-			h.trackClimate(bgCtx, vehicleID, writeSignals)
-
 			// Store security events
 			h.trackSecurity(bgCtx, vehicleID, writeSignals)
-
-			// Store charging telemetry
-			h.trackCharging(bgCtx, vehicleID, writeSignals)
 
 			// Store media snapshots
 			h.trackMedia(bgCtx, vehicleID, writeSignals)
@@ -741,13 +711,7 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 			// Store vehicle config snapshots
 			h.trackVehicleConfig(bgCtx, vehicleID, writeSignals)
 
-			// Store location/navigation snapshots
-			h.trackLocation(bgCtx, vehicleID, writeSignals)
-
-			// Store safety settings snapshots
-			h.trackSafety(bgCtx, vehicleID, writeSignals)
-
-			// Store user preference snapshots
+			// Update vehicle_units with car display preferences
 			h.trackUserPreferences(bgCtx, vehicleID, writeSignals)
 
 			// Store accumulated position ╬ô├ç├╢ uses merged signals so fields like
@@ -779,96 +743,6 @@ func (h *TelemetryHandler) trackMileage(ctx context.Context, vehicleID int64, si
 }
 
 // trackTirePressure stores tire pressure snapshots when TPMS signals arrive.
-func (h *TelemetryHandler) trackTirePressure(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
-	fl, flOk := signals["TirePressureFrontLeft"]
-	fr, frOk := signals["TirePressureFrontRight"]
-	rl, rlOk := signals["TirePressureRearLeft"]
-	rr, rrOk := signals["TirePressureRearRight"]
-
-	if !flOk && !frOk && !rlOk && !rrOk {
-		// Also try the alternate signal names from fleet telemetry
-		fl, flOk = signals["TPMS_FL"]
-		fr, frOk = signals["TPMS_FR"]
-		rl, rlOk = signals["TPMS_RL"]
-		rr, rrOk = signals["TPMS_RR"]
-	}
-
-	if !flOk && !frOk && !rlOk && !rrOk {
-		// Try TpmsPressure* naming used by fleet-telemetry proto
-		fl, flOk = signals["TpmsPressureFl"]
-		fr, frOk = signals["TpmsPressureFr"]
-		rl, rlOk = signals["TpmsPressureRl"]
-		rr, rrOk = signals["TpmsPressureRr"]
-	}
-
-	if !flOk && !frOk && !rlOk && !rrOk {
-		// Try short TpmsFl/Fr/Rl/Rr naming from Fleet Telemetry subscriptions
-		fl, flOk = signals["TpmsFl"]
-		fr, frOk = signals["TpmsFr"]
-		rl, rlOk = signals["TpmsRl"]
-		rr, rrOk = signals["TpmsRr"]
-	}
-
-	_, hasHardWarn := signals["TpmsHardWarnings"]
-	_, hasSoftWarn := signals["TpmsSoftWarnings"]
-	_, hasLastSeenFL := signals["TpmsLastSeenPressureTimeFl"]
-	if !flOk && !frOk && !rlOk && !rrOk && !hasHardWarn && !hasSoftWarn && !hasLastSeenFL {
-		return // no tire-pressure-related data in this batch
-	}
-
-	snap := &models.TirePressureSnapshot{VehicleID: vehicleID}
-	if flOk {
-		if v, ok := toFloatOk(fl); ok {
-			snap.FrontLeft = &v
-		}
-	}
-	if frOk {
-		if v, ok := toFloatOk(fr); ok {
-			snap.FrontRight = &v
-		}
-	}
-	if rlOk {
-		if v, ok := toFloatOk(rl); ok {
-			snap.RearLeft = &v
-		}
-	}
-	if rrOk {
-		if v, ok := toFloatOk(rr); ok {
-			snap.RearRight = &v
-		}
-	}
-	if v, ok := signals["TpmsHardWarnings"]; ok {
-		s := toString(v)
-		snap.TpmsHardWarn = &s
-	}
-	if v, ok := signals["TpmsSoftWarnings"]; ok {
-		s := toString(v)
-		snap.TpmsSoftWarn = &s
-	}
-	if v, ok := signals["TpmsLastSeenPressureTimeFl"]; ok {
-		if t := toTimestamp(v); t != nil {
-			snap.LastSeenTimeFl = t
-		}
-	}
-	if v, ok := signals["TpmsLastSeenPressureTimeFr"]; ok {
-		if t := toTimestamp(v); t != nil {
-			snap.LastSeenTimeFr = t
-		}
-	}
-	if v, ok := signals["TpmsLastSeenPressureTimeRl"]; ok {
-		if t := toTimestamp(v); t != nil {
-			snap.LastSeenTimeRl = t
-		}
-	}
-	if v, ok := signals["TpmsLastSeenPressureTimeRr"]; ok {
-		if t := toTimestamp(v); t != nil {
-			snap.LastSeenTimeRr = t
-		}
-	}
-	if err := h.tireRepo.Insert(ctx, snap); err != nil {
-		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store tire pressure")
-	}
-}
 
 // StreamingVINs returns the set of VINs currently receiving live telemetry data.
 func (h *TelemetryHandler) StreamingVINs() map[string]bool {
@@ -1252,36 +1126,18 @@ func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded
 			continue
 		}
 		switch table {
-		case "vehicle_live_state":
-			dispatch(table, func() error {
-				return h.liveStateRepo.UpsertFromMap(ctx, vehicleID, ts, row)
-			})
 		case "positions":
 			dispatch(table, func() error {
 				return h.posRepo.InsertFromMap(ctx, vehicleID, ts, row)
-			})
-		case "charging_telemetry":
-			dispatch(table, func() error {
-				return h.chargingTelemetryRepo.InsertFromMap(ctx, vehicleID, ts, row)
-			})
-		case "climate_snapshots":
-			dispatch(table, func() error {
-				return h.climateRepo.InsertFromMap(ctx, vehicleID, ts, row)
-			})
-		case "motor_snapshots":
-			dispatch(table, func() error {
-				return h.motorRepo.InsertFromMap(ctx, vehicleID, ts, row)
 			})
 		case "security_events":
 			dispatch(table, func() error {
 				return h.securityRepo.InsertFromMap(ctx, vehicleID, ts, row)
 			})
-		case "vehicle_meta_snapshots":
-			dispatch(table, func() error {
-				return h.vehMetaRepo.InsertFromMap(ctx, vehicleID, ts, row)
-			})
 		default:
-			writeErrs = append(writeErrs, writeErr{table, fmt.Errorf("unknown hot table")})
+			// Tables whose repos were removed (vehicle_live_state, charging_telemetry,
+			// climate_snapshots, motor_snapshots, vehicle_meta_snapshots) are silently
+			// skipped — their signals already land in signal_log via signalHistoryWriter.
 		}
 	}
 	if len(coldObs) > 0 {
@@ -1630,138 +1486,6 @@ func toTimestamp(v interface{}) *time.Time {
 	return nil
 }
 
-// trackMotor stores motor/powertrain snapshots when relevant signals arrive.
-func (h *TelemetryHandler) trackMotor(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
-	_, hasTorque := signals["DiTorquemotor"]
-	_, hasTorqueF := signals["DiTorqueActualF"]
-	_, hasAxleF := signals["DiAxleSpeedF"]
-	_, hasAxleR := signals["DiAxleSpeedR"]
-	_, hasTemp := signals["DiStatorTempR"]
-	_, hasGear := signals["Gear"]
-	if !hasTorque && !hasTorqueF && !hasAxleF && !hasAxleR && !hasTemp && !hasGear {
-		return
-	}
-
-	snap := &models.MotorSnapshot{VehicleID: vehicleID, Ts: time.Now().UTC(), Source: "fleet_telemetry"}
-	if v, ok := signals["DiTorquemotor"]; ok {
-		f := toFloat(v)
-		snap.TorqueNmRear = &f
-	}
-	if v, ok := signals["DiTorqueActualF"]; ok {
-		f := toFloat(v)
-		snap.TorqueNmFront = &f
-	}
-	if v, ok := signals["DiTorqueActualR"]; ok {
-		f := toFloat(v)
-		snap.TorqueNmRear = &f
-	}
-	if v, ok := signals["DiAxleSpeedF"]; ok {
-		i := int32(toFloat(v))
-		snap.MotorRpmFront = &i
-	}
-	if v, ok := signals["DiAxleSpeedR"]; ok {
-		i := int32(toFloat(v))
-		snap.MotorRpmRear = &i
-	}
-	if v, ok := signals["DiStatorTempF"]; ok {
-		f := toFloat(v)
-		snap.MotorTempCFront = &f
-	}
-	if v, ok := signals["DiStatorTempR"]; ok {
-		f := toFloat(v)
-		snap.MotorTempCRear = &f
-	}
-	if v, ok := signals["DiInverterTF"]; ok {
-		f := toFloat(v)
-		snap.InverterTempC = &f
-	}
-	if v, ok := signals["Gear"]; ok {
-		s := toString(v)
-		snap.ShiftState = &s
-	}
-	if err := h.motorRepo.BulkInsert(ctx, []models.MotorSnapshot{*snap}); err != nil {
-		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store motor snapshot")
-	}
-}
-
-// trackClimate stores climate/HVAC snapshots when relevant signals arrive.
-func (h *TelemetryHandler) trackClimate(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
-	_, hasInside := signals["InsideTemp"]
-	_, hasOutside := signals["OutsideTemp"]
-	_, hasHvac := signals["HvacPower"]
-	_, hasFan := signals["HvacFanStatus"]
-	if !hasInside && !hasOutside && !hasHvac && !hasFan {
-		return
-	}
-
-	snap := &models.ClimateSnapshot{VehicleID: vehicleID, Ts: time.Now().UTC(), Source: "fleet_telemetry"}
-	if v, ok := signals["InsideTemp"]; ok {
-		f := toFloat(v)
-		snap.InsideTempC = &f
-	}
-	if v, ok := signals["OutsideTemp"]; ok {
-		f := toFloat(v)
-		snap.OutsideTempC = &f
-	}
-	if v, ok := signals["HvacPower"]; ok {
-		s := toString(v)
-		b := enums.ParseHvacPower(s)
-		snap.IsClimateOn = &b
-		snap.HvacState = &s
-	}
-	if v, ok := signals["DefrostMode"]; ok {
-		s := toString(v)
-		snap.DefrostMode = &s
-	}
-	if v, ok := signals["HvacLeftTemperatureRequest"]; ok {
-		f := toFloat(v)
-		snap.DriverSetpointC = &f
-	}
-	if v, ok := signals["HvacRightTemperatureRequest"]; ok {
-		f := toFloat(v)
-		snap.PassengerSetpointC = &f
-	}
-	if v, ok := signals["HvacFanStatus"]; ok {
-		i16 := int16(toFloat(v))
-		snap.FanStatus = &i16
-	}
-	if v, ok := signals["CabinOverheatProtectionMode"]; ok {
-		s := toString(v)
-		b := s != "Off" && s != "off" && s != ""
-		snap.CabinOverheatProtection = &b
-	}
-	if v, ok := signals["PreconditioningEnabled"]; ok {
-		b := toBool(v)
-		snap.IsPreconditioning = &b
-	}
-	if v, ok := signals["HvacSteeringWheelHeatLevel"]; ok {
-		b := int(toFloat(v)) > 0
-		snap.SteeringWheelHeater = &b
-	} else if v, ok := signals["HvacSteeringWheelHeatAuto"]; ok {
-		b := toBool(v)
-		snap.SteeringWheelHeater = &b
-	}
-	if v, ok := signals["SeatHeaterLeft"]; ok {
-		i16 := int16(toFloat(v))
-		snap.SeatHeaterLeft = &i16
-	}
-	if v, ok := signals["SeatHeaterRight"]; ok {
-		i16 := int16(toFloat(v))
-		snap.SeatHeaterRight = &i16
-	}
-	if v, ok := signals["SeatHeaterRearLeft"]; ok {
-		i16 := int16(toFloat(v))
-		snap.SeatHeaterRearLeft = &i16
-	}
-	if v, ok := signals["SeatHeaterRearRight"]; ok {
-		i16 := int16(toFloat(v))
-		snap.SeatHeaterRearRight = &i16
-	}
-	if err := h.climateRepo.BulkInsert(ctx, []models.ClimateSnapshot{*snap}); err != nil {
-		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store climate snapshot")
-	}
-}
-
 // trackSecurity stores security/access events when relevant signals arrive.
 func (h *TelemetryHandler) trackSecurity(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
 	_, hasLocked := signals["Locked"]
@@ -1887,106 +1611,6 @@ func (h *TelemetryHandler) trackSecurity(ctx context.Context, vehicleID int64, s
 	}
 }
 
-// trackCharging stores charging telemetry when relevant signals arrive.
-// Gate: only writes when a charging-specific signal is present (not just
-// PackVoltage/PackCurrent which are always sent regardless of charge state).
-func (h *TelemetryHandler) trackCharging(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
-	_, hasChargeState := signals["ChargeState"]
-	_, hasDetailedCharge := signals["DetailedChargeState"]
-	_, hasDCPower := signals["DCChargingPower"]
-	_, hasACPower := signals["ACChargingPower"]
-	_, hasBatteryLevel := signals["BatteryLevel"]
-	_, hasSoc := signals["Soc"]
-	_, hasChargeRate := signals["ChargeRateMilePerHour"]
-	_, hasChargeAmps := signals["ChargeAmps"]
-	_, hasChargerVoltage := signals["ChargerVoltage"]
-	_, hasEstRange := signals["EstBatteryRange"]
-	_, hasIdealRange := signals["IdealBatteryRange"]
-	_, hasEnergyRemaining := signals["EnergyRemaining"]
-	_, hasChargeLimitSoc := signals["ChargeLimitSoc"]
-	// Note: PackVoltage/PackCurrent excluded from gate — they're always sent
-	// (even when not charging) and would create 35K+ mostly-empty rows.
-	// They're still stored in the row when other charging signals trigger it.
-	if !hasChargeState && !hasDetailedCharge && !hasDCPower && !hasACPower &&
-		!hasBatteryLevel && !hasSoc && !hasChargeRate && !hasChargeAmps &&
-		!hasChargerVoltage && !hasEstRange && !hasIdealRange && !hasEnergyRemaining &&
-		!hasChargeLimitSoc {
-		return
-	}
-
-	snap := &models.ChargingTelemetry{VehicleID: vehicleID, Ts: time.Now().UTC(), Source: "fleet_telemetry"}
-	if v, ok := signals["BatteryLevel"]; ok {
-		f := toFloat(v)
-		i16 := int16(f)
-		snap.BatteryLevel = &i16
-	}
-	if v, ok := signals["Soc"]; ok {
-		if snap.BatteryLevel == nil {
-			f := toFloat(v)
-			i16 := int16(f)
-			snap.BatteryLevel = &i16
-		}
-	}
-	if v, ok := signals["ChargeState"]; ok {
-		s := toString(v)
-		snap.ChargingState = &s
-	}
-	if v, ok := signals["DetailedChargeState"]; ok {
-		if snap.ChargingState == nil {
-			s := toString(v)
-			snap.ChargingState = &s
-		}
-	}
-	if v, ok := signals["ChargerVoltage"]; ok {
-		f := toFloat(v)
-		snap.ChargerVoltage = &f
-	}
-	if v, ok := signals["ChargeAmps"]; ok {
-		f := toFloat(v)
-		snap.ChargerActualCurrent = &f
-	}
-	if v, ok := signals["ChargerPhases"]; ok {
-		i16 := int16(toFloat(v))
-		snap.ChargerPhases = &i16
-	}
-	if v, ok := signals["ChargeRateMilePerHour"]; ok {
-		f := toFloat(v)
-		snap.ChargeRateMph = &f
-	}
-	if v, ok := signals["DCChargingPower"]; ok {
-		f := toFloat(v)
-		snap.ChargerPowerKw = &f
-	} else if v, ok := signals["ACChargingPower"]; ok {
-		f := toFloat(v)
-		snap.ChargerPowerKw = &f
-	}
-	if v, ok := signals["DCChargingEnergyIn"]; ok {
-		f := toFloat(v)
-		snap.ChargeEnergyAddedKwh = &f
-	} else if v, ok := signals["ACChargingEnergyIn"]; ok {
-		f := toFloat(v)
-		snap.ChargeEnergyAddedKwh = &f
-	}
-	if v, ok := signals["EstBatteryRange"]; ok {
-		f := toFloat(v)
-		snap.BatteryRangeMi = &f
-	} else if v, ok := signals["IdealBatteryRange"]; ok {
-		f := toFloat(v)
-		snap.BatteryRangeMi = &f
-	}
-	if v, ok := signals["ChargerPilotCurrent"]; ok {
-		f := toFloat(v)
-		snap.ChargerPilotCurrent = &f
-	}
-	if v, ok := signals["ScheduledChargingStartTime"]; ok {
-		if t := toTimestamp(v); t != nil {
-			snap.ScheduledChargingAt = t
-		}
-	}
-	if err := h.chargingTelemetryRepo.BulkInsert(ctx, []models.ChargingTelemetry{*snap}); err != nil {
-		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store charging telemetry")
-	}
-}
 
 // trackMedia stores media playback snapshots when relevant signals arrive.
 func (h *TelemetryHandler) trackMedia(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
@@ -2175,255 +1799,31 @@ func (h *TelemetryHandler) trackVehicleConfig(ctx context.Context, vehicleID int
 	}
 }
 
-// trackLocation stores navigation/location snapshots when relevant signals arrive.
-func (h *TelemetryHandler) trackLocation(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
-	_, hasDest := signals["DestinationName"]
-	_, hasMiles := signals["MilesToArrival"]
-	_, hasRoute := signals["RouteLine"]
-	_, hasLocation := signals["Location"]
-	_, hasRouteUpdated := signals["RouteLastUpdated"]
-	_, hasAtHome := signals["LocatedAtHome"]
-	_, hasAtWork := signals["LocatedAtWork"]
-	_, hasAtFav := signals["LocatedAtFavorite"]
-	_, hasGpsState := signals["GpsState"]
-	if !hasDest && !hasMiles && !hasRoute && !hasLocation && !hasRouteUpdated &&
-		!hasAtHome && !hasAtWork && !hasAtFav && !hasGpsState {
-		return
-	}
-
-	snap := &models.LocationSnapshot{VehicleID: vehicleID}
-	if v, ok := signals["DestinationName"]; ok {
-		s := toString(v)
-		snap.DestinationName = &s
-	}
-	if v, ok := signals["DestinationLocation"].(map[string]interface{}); ok {
-		if lat, ok2 := v["latitude"]; ok2 {
-			f := toFloat(lat)
-			snap.DestinationLat = &f
-		}
-		if lon, ok2 := v["longitude"]; ok2 {
-			f := toFloat(lon)
-			snap.DestinationLon = &f
-		}
-	}
-	if v, ok := signals["OriginLocation"].(map[string]interface{}); ok {
-		if lat, ok2 := v["latitude"]; ok2 {
-			f := toFloat(lat)
-			snap.OriginLat = &f
-		}
-		if lon, ok2 := v["longitude"]; ok2 {
-			f := toFloat(lon)
-			snap.OriginLon = &f
-		}
-	}
-	if v, ok := signals["MilesToArrival"]; ok {
-		f := toFloat(v)
-		snap.MilesToArrival = &f
-	}
-	if v, ok := signals["MinutesToArrival"]; ok {
-		f := toFloat(v)
-		snap.MinutesToArrival = &f
-	}
-	if v, ok := signals["RouteLine"]; ok {
-		s := toString(v)
-		snap.RouteLine = &s
-	}
-	if v, ok := signals["RouteTrafficMinutesDelay"]; ok {
-		f := toFloat(v)
-		snap.RouteTrafficDelayMin = &f
-	}
-	if v, ok := signals["LocatedAtHome"]; ok {
-		b := toBool(v)
-		snap.LocatedAtHome = &b
-	}
-	if v, ok := signals["LocatedAtWork"]; ok {
-		b := toBool(v)
-		snap.LocatedAtWork = &b
-	}
-	if v, ok := signals["LocatedAtFavorite"]; ok {
-		b := toBool(v)
-		snap.LocatedAtFavorite = &b
-	}
-	if v, ok := signals["GpsState"]; ok {
-		s := toString(v)
-		snap.GpsState = &s
-	}
-	if v, ok := signals["RouteLastUpdated"]; ok {
-		if t := toTimestamp(v); t != nil {
-			snap.RouteLastUpdated = t
-		}
-	}
-	if v, ok := signals["Location"]; ok {
-		if loc, ok2 := v.(map[string]interface{}); ok2 {
-			if lat, ok3 := loc["latitude"]; ok3 {
-				f := toFloat(lat)
-				snap.CurrentLat = &f
-			}
-			if lon, ok3 := loc["longitude"]; ok3 {
-				f := toFloat(lon)
-				snap.CurrentLon = &f
-			}
-		}
-	}
-	// Backfill current position from SignalStore if Location wasn't in this batch
-	if snap.CurrentLat == nil && h.signalStore != nil {
-		if locVal := h.signalStore.Get(vehicleID, "Location"); locVal != nil {
-			if loc, ok := locVal.Raw.(map[string]interface{}); ok {
-				if lat, ok2 := loc["latitude"]; ok2 {
-					f := toFloat(lat)
-					snap.CurrentLat = &f
-				}
-				if lon, ok2 := loc["longitude"]; ok2 {
-					f := toFloat(lon)
-					snap.CurrentLon = &f
-				}
-			}
-		}
-	}
-	// Carry forward contextual fields from signalStore if not in current batch.
-	// Tesla sends these only on change (e.g., arriving/leaving home), not with every location update.
-	if snap.LocatedAtHome == nil && h.signalStore != nil {
-		if v, ok := h.signalStore.GetBool(vehicleID, "LocatedAtHome"); ok {
-			snap.LocatedAtHome = &v
-		}
-	}
-	if snap.LocatedAtWork == nil && h.signalStore != nil {
-		if v, ok := h.signalStore.GetBool(vehicleID, "LocatedAtWork"); ok {
-			snap.LocatedAtWork = &v
-		}
-	}
-	if snap.LocatedAtFavorite == nil && h.signalStore != nil {
-		if v, ok := h.signalStore.GetBool(vehicleID, "LocatedAtFavorite"); ok {
-			snap.LocatedAtFavorite = &v
-		}
-	}
-	if snap.DestinationName == nil && h.signalStore != nil {
-		if v, ok := h.signalStore.GetString(vehicleID, "DestinationName"); ok && v != "" {
-			snap.DestinationName = &v
-		}
-	}
-	if snap.GpsState == nil && h.signalStore != nil {
-		if v, ok := h.signalStore.GetString(vehicleID, "GpsState"); ok && v != "" {
-			snap.GpsState = &v
-		}
-	}
-	if err := h.locationRepo.Insert(ctx, snap); err != nil {
-		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store location snapshot")
-	}
-}
-
-// trackSafety stores safety settings snapshots when relevant signals arrive.
-func (h *TelemetryHandler) trackSafety(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
-	_, hasBelt := signals["DriverSeatBelt"]
-	_, hasAEB := signals["AutomaticEmergencyBrakingOff"]
-	_, hasFCW := signals["ForwardCollisionWarning"]
-	if !hasBelt && !hasAEB && !hasFCW {
-		return
-	}
-
-	snap := &models.SafetySnapshot{VehicleID: vehicleID}
-	if v, ok := signals["AutomaticBlindSpotCamera"]; ok {
-		b := toBool(v)
-		snap.AutomaticBlindSpotCamera = &b
-	}
-	if v, ok := signals["AutomaticEmergencyBrakingOff"]; ok {
-		b := toBool(v)
-		snap.AutomaticEmergencyBrakingOff = &b
-	}
-	if v, ok := signals["BlindSpotCollisionWarningChime"]; ok {
-		b := toBool(v)
-		snap.BlindSpotCollisionWarning = &b
-	}
-	if v, ok := signals["CruiseFollowDistance"]; ok {
-		s := enums.ParseCruiseFollowDistance(toString(v))
-		snap.CruiseFollowDistance = &s
-	}
-	if v, ok := signals["EmergencyLaneDepartureAvoidance"]; ok {
-		b := toBool(v)
-		snap.EmergencyLaneDepartureAvoidance = &b
-	}
-	if v, ok := signals["ForwardCollisionWarning"]; ok {
-		s := enums.ParseForwardCollisionWarning(toString(v))
-		snap.ForwardCollisionWarning = &s
-	}
-	if v, ok := signals["LaneDepartureAvoidance"]; ok {
-		s := enums.ParseLaneDepartureAvoidance(toString(v))
-		snap.LaneDepartureAvoidance = &s
-	}
-	if v, ok := signals["SpeedLimitWarning"]; ok {
-		s := enums.ParseSpeedLimitWarning(toString(v))
-		snap.SpeedLimitWarning = &s
-	}
-	if v, ok := signals["PinToDriveEnabled"]; ok {
-		b := toBool(v)
-		snap.PinToDriveEnabled = &b
-	}
-	if v, ok := signals["MilesSinceReset"]; ok {
-		f := toFloat(v)
-		snap.MilesSinceReset = &f
-	}
-	if v, ok := signals["SelfDrivingMilesSinceReset"]; ok {
-		f := toFloat(v)
-		snap.SelfDrivingMilesSinceReset = &f
-	}
-	if err := h.safetyRepo.Insert(ctx, snap); err != nil {
-		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store safety snapshot")
-	}
-}
-
-// trackUserPreferences stores user preference snapshots when relevant signals arrive.
+// trackUserPreferences updates vehicle_units with car display preferences.
+// (Snapshot write to user_preference_snapshots removed — signals land in signal_log.)
 func (h *TelemetryHandler) trackUserPreferences(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
-	_, hasDist := signals["SettingDistanceUnit"]
-	_, hasTemp := signals["SettingTemperatureUnit"]
-	_, hasCharge := signals["SettingChargeUnit"]
-	_, hasPressure := signals["SettingTirePressureUnit"]
-	_, has24h := signals["Setting24HourTime"]
-	if !hasDist && !hasTemp && !hasCharge && !hasPressure && !has24h {
+	hasDist := signals["SettingDistanceUnit"] != nil
+	hasTemp := signals["SettingTemperatureUnit"] != nil
+	hasCharge := signals["SettingChargeUnit"] != nil
+	hasPressure := signals["SettingTirePressureUnit"] != nil
+	if !hasDist && !hasTemp && !hasPressure && !hasCharge {
 		return
 	}
 
-	snap := &models.UserPreferenceSnapshot{VehicleID: vehicleID}
-	if v, ok := signals["Setting24HourTime"]; ok {
-		b := toBool(v)
-		snap.Setting24hrTime = &b
-	}
-	if v, ok := signals["SettingChargeUnit"]; ok {
-		s := toString(v)
-		snap.SettingChargeUnit = &s
-	}
-	if v, ok := signals["SettingDistanceUnit"]; ok {
-		s := toString(v)
-		snap.SettingDistanceUnit = &s
-	}
-	if v, ok := signals["SettingTemperatureUnit"]; ok {
-		s := toString(v)
-		snap.SettingTemperatureUnit = &s
-	}
-	if v, ok := signals["SettingTirePressureUnit"]; ok {
-		s := toString(v)
-		snap.SettingTirePressureUnit = &s
-	}
-	if err := h.userPrefRepo.Insert(ctx, snap); err != nil {
-		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store user preference snapshot")
-	}
-
-	// Update vehicle_units with car display preferences
-	if hasDist || hasTemp || hasPressure || hasCharge {
-		distPref := toString(signals["SettingDistanceUnit"])
-		tempPref := toString(signals["SettingTemperatureUnit"])
-		pressurePref := toString(signals["SettingTirePressureUnit"])
-		chargePref := toString(signals["SettingChargeUnit"])
-		_, _ = h.db.Pool.Exec(ctx,
-			`INSERT INTO vehicle_units (vehicle_id, car_distance_pref, car_temp_pref, car_pressure_pref, car_charge_pref, updated_at)
-			 VALUES ($1, NULLIF($2,''), NULLIF($3,''), NULLIF($4,''), NULLIF($5,''), NOW())
-			 ON CONFLICT (vehicle_id) DO UPDATE SET
-			   car_distance_pref = COALESCE(NULLIF($2,''), vehicle_units.car_distance_pref),
-			   car_temp_pref = COALESCE(NULLIF($3,''), vehicle_units.car_temp_pref),
-			   car_pressure_pref = COALESCE(NULLIF($4,''), vehicle_units.car_pressure_pref),
-			   car_charge_pref = COALESCE(NULLIF($5,''), vehicle_units.car_charge_pref),
-			   updated_at = NOW()`,
-			vehicleID, distPref, tempPref, pressurePref, chargePref)
-	}
+	distPref := toString(signals["SettingDistanceUnit"])
+	tempPref := toString(signals["SettingTemperatureUnit"])
+	pressurePref := toString(signals["SettingTirePressureUnit"])
+	chargePref := toString(signals["SettingChargeUnit"])
+	_, _ = h.db.Pool.Exec(ctx,
+		`INSERT INTO vehicle_units (vehicle_id, car_distance_pref, car_temp_pref, car_pressure_pref, car_charge_pref, updated_at)
+		 VALUES ($1, NULLIF($2,''), NULLIF($3,''), NULLIF($4,''), NULLIF($5,''), NOW())
+		 ON CONFLICT (vehicle_id) DO UPDATE SET
+		   car_distance_pref = COALESCE(NULLIF($2,''), vehicle_units.car_distance_pref),
+		   car_temp_pref = COALESCE(NULLIF($3,''), vehicle_units.car_temp_pref),
+		   car_pressure_pref = COALESCE(NULLIF($4,''), vehicle_units.car_pressure_pref),
+		   car_charge_pref = COALESCE(NULLIF($5,''), vehicle_units.car_charge_pref),
+		   updated_at = NOW()`,
+		vehicleID, distPref, tempPref, pressurePref, chargePref)
 }
 
 // formatSignalName converts camelCase signal names to snake_case for MQTT topic consistency.

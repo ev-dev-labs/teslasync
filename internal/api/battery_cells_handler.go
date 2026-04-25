@@ -8,18 +8,13 @@ import (
 )
 
 // BatteryCellsHandler serves battery cell analytics derived from charging telemetry.
-// NOTE: The post-migration ChargingTelemetry model no longer carries brick voltage
-// signals (BrickVoltageMax/Min, PackVoltage, etc.). These were previously in
-// JSONB signals columns. Until a signal-based data source is wired, this handler
-// returns empty/default cell analytics.
+// Repo removed in phase-14/12 — returns defaults pending signal-based rewire.
 type BatteryCellsHandler struct {
-	chargingTelemetryRepo *database.ChargingTelemetryRepo
+	db *database.DB
 }
 
 func NewBatteryCellsHandler(db *database.DB) *BatteryCellsHandler {
-	return &BatteryCellsHandler{
-		chargingTelemetryRepo: database.NewChargingTelemetryRepo(db),
-	}
+	return &BatteryCellsHandler{db: db}
 }
 
 type cellReading struct {

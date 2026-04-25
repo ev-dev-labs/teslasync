@@ -17,7 +17,6 @@ type ShareHandler struct {
 	shareRepo    *database.ShareTokenRepo
 	driveRepo    *database.DriveRepo
 	posRepo      *database.PositionRepo
-	driveTelRepo *database.DriveTelemetryRepo
 	vehicleRepo  *database.VehicleRepo
 }
 
@@ -26,7 +25,6 @@ func NewShareHandler(db *database.DB) *ShareHandler {
 		shareRepo:    database.NewShareTokenRepo(db),
 		driveRepo:    database.NewDriveRepo(db),
 		posRepo:      database.NewPositionRepo(db),
-		driveTelRepo: database.NewDriveTelemetryRepo(db),
 		vehicleRepo:  database.NewVehicleRepo(db),
 	}
 }
@@ -300,15 +298,7 @@ func (h *ShareHandler) GetPublicShare(w http.ResponseWriter, r *http.Request) {
 // from drive positions/telemetry. It clips the first and last few points to
 // hide exact start/end locations.
 func (h *ShareHandler) buildPublicProfiles(ctx context.Context, resp *publicShareResponse, drive *models.Drive, share *models.ShareToken) {
-	// Try telemetry first (higher resolution), fall back to positions
-	telemetry, _ := h.driveTelRepo.GetByDriveID(ctx, share.DriveID)
-
-	if len(telemetry) > 0 {
-		h.buildFromTelemetry(resp, telemetry, share)
-		return
-	}
-
-	// Fall back to positions
+	// Drive telemetry repo removed — fall back to positions only.
 	if drive.EndTs != nil {
 		positions, _ := h.posRepo.ListByVehicle(ctx, drive.VehicleID, drive.StartTs, *drive.EndTs)
 		if len(positions) > 0 {

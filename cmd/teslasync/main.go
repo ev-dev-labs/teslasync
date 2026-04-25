@@ -192,9 +192,8 @@ func main() {
 			cfg.FleetTelemetry.StaleSessionTimeout,
 		)
 
-		// Initialize SignalStore with write-through Postgres flusher
-		liveStateRepo := database.NewLiveStateRepo(db)
-		signalStore = sigsvc.New(liveStateRepo, 0, db.WriteBreaker)
+		// Initialize SignalStore (in-memory; recovery via Redis → signal_log)
+		signalStore = sigsvc.New()
 		telemetryHandler.SetSignalStore(signalStore)
 
 		// Wire Redis signal cache (write-through HSET mirror, fire-and-forget)
@@ -203,10 +202,7 @@ func main() {
 			log.Info().Msg("redis signal cache enabled")
 		}
 
-		// Start debounced flush loop (coalesces MQTT batches into 1 DB write/vehicle/sec)
-		go signalStore.FlushLoop(ctx)
-
-		// Load existing live state from DB (pod restart recovery)
+		// Load existing state from Redis/signal_log (pod restart recovery)
 		if vehicles, err := database.NewVehicleRepo(db).GetAll(ctx); err == nil {
 			for _, v := range vehicles {
 				signalStore.LoadFromDB(ctx, v.ID)
@@ -577,14 +573,8 @@ func main() {
 	// Phase 1: Stop accepting new work
 	cancel()
 
-	// Phase 2: Flush SignalStore to Postgres (write-through belt-and-suspenders)
-	if signalStore != nil {
-		// Wait for FlushLoop goroutine to exit before final flush
-		signalStore.WaitForFlushLoop()
-		flushCtx, flushCancel := context.WithTimeout(context.Background(), 30*time.Second)
-		signalStore.FlushAll(flushCtx)
-		flushCancel()
-	}
+	// Phase 2: Signal store no longer has Postgres flush (uses Redis + signal_log)
+	// Nothing to flush here.
 
 	// Phase 3: Shutdown telemetry handler goroutines
 	if telemetryHandler != nil {

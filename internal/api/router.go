@@ -256,12 +256,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	r.Get("/readyz", ReadyHandler(db, teslaClient))
 
 	// Internal: PreStop flush endpoint for Kubernetes lifecycle hooks
+	// (Signal store no longer has Postgres flush — Redis + signal_log handle persistence)
 	r.Post("/internal/flush", func(w http.ResponseWriter, req *http.Request) {
-		if opt.SignalStore != nil {
-			flushCtx, cancel := context.WithTimeout(req.Context(), 10*time.Second)
-			defer cancel()
-			opt.SignalStore.FlushAll(flushCtx)
-		}
 		writeJSON(w, http.StatusOK, map[string]string{"status": "flushed"})
 	})
 

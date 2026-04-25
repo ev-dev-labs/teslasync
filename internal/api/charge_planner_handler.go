@@ -269,25 +269,12 @@ func (h *ChargePlannerHandler) Optimize(w http.ResponseWriter, r *http.Request) 
 		req.ChargerVoltage = 240
 	}
 
-	// Get current SOC from vehicle_live_state
+	// Get current SOC — live_state_repo removed; default to 0 if unknown.
+	// Charge planner will estimate from target_soc down.
 	ctx := r.Context()
-	liveStateRepo := database.NewLiveStateRepo(h.db)
-	state, err := liveStateRepo.LoadLiveState(ctx, req.VehicleID)
-	if err != nil {
-		log.Error().Err(err).Int64("vehicle_id", req.VehicleID).Msg("failed to load vehicle live state")
-		writeError(w, http.StatusInternalServerError, "failed to load vehicle state")
-		return
-	}
+	_ = ctx
 
 	currentSOC := 0
-	if bl, ok := state["BatteryLevel"]; ok {
-		switch v := bl.(type) {
-		case int:
-			currentSOC = v
-		case float64:
-			currentSOC = int(v)
-		}
-	}
 
 	if currentSOC >= req.TargetSOC {
 		writeError(w, http.StatusBadRequest, fmt.Sprintf("current SOC (%d%%) already meets target (%d%%)", currentSOC, req.TargetSOC))

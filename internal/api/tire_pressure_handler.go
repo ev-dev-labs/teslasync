@@ -2,55 +2,24 @@ package api
 
 import (
 	"net/http"
-	"strconv"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
+// TirePressureHandler serves tire pressure snapshot endpoints.
+// Repo removed in phase-14/12 — returns empty results pending rewire (prompt 14).
 type TirePressureHandler struct {
-	repo *database.TirePressureRepo
+	db *database.DB
 }
 
 func NewTirePressureHandler(db *database.DB) *TirePressureHandler {
-	return &TirePressureHandler{repo: database.NewTirePressureRepo(db)}
+	return &TirePressureHandler{db: db}
 }
 
 func (h *TirePressureHandler) List(w http.ResponseWriter, r *http.Request) {
-	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
-	if err != nil || vehicleID == 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id required")
-		return
-	}
-	limit, _ := pagination(r)
-	snaps, err := h.repo.GetByVehicle(r.Context(), vehicleID, limit)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to get tire pressure data")
-		writeError(w, http.StatusInternalServerError, "failed to get tire pressure data")
-		return
-	}
-	if snaps == nil {
-		snaps = make([]*models.TirePressureSnapshot, 0)
-	}
-	writeJSON(w, http.StatusOK, snaps)
+	writeJSON(w, http.StatusOK, []struct{}{})
 }
 
 func (h *TirePressureHandler) Latest(w http.ResponseWriter, r *http.Request) {
-	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
-	if err != nil || vehicleID == 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id required")
-		return
-	}
-	snap, err := h.repo.GetLatest(r.Context(), vehicleID)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to get latest tire pressure")
-		writeError(w, http.StatusInternalServerError, "failed to get tire pressure")
-		return
-	}
-	if snap == nil {
-		writeJSON(w, http.StatusOK, nil)
-		return
-	}
-	writeJSON(w, http.StatusOK, snap)
+	writeJSON(w, http.StatusOK, nil)
 }

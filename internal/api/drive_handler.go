@@ -15,7 +15,6 @@ type DriveHandler struct {
 	db           *database.DB
 	driveRepo    *database.DriveRepo
 	posRepo      *database.PositionRepo
-	driveTelRepo *database.DriveTelemetryRepo
 }
 
 func NewDriveHandler(db *database.DB) *DriveHandler {
@@ -23,7 +22,6 @@ func NewDriveHandler(db *database.DB) *DriveHandler {
 		db:           db,
 		driveRepo:    database.NewDriveRepo(db),
 		posRepo:      database.NewPositionRepo(db),
-		driveTelRepo: database.NewDriveTelemetryRepo(db),
 	}
 }
 
@@ -71,15 +69,8 @@ func (h *DriveHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fetch telemetry readings for this drive
-	telemetry, err := h.driveTelRepo.GetByDriveID(ctx, id)
-	if err != nil {
-		log.Warn().Err(err).Int64("driveID", id).Msg("failed to get drive telemetry")
-		telemetry = nil
-	}
-	if telemetry == nil {
-		telemetry = make([]*models.DriveTelemetryReading, 0)
-	}
+	// Drive telemetry repo removed — return empty telemetry pending rewire (prompt 14).
+	telemetry := make([]*models.DriveTelemetryReading, 0)
 
 	// Fetch positions for this drive's time range
 	var positions []models.Position
@@ -142,22 +133,8 @@ func (h *DriveHandler) Positions(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DriveHandler) TelemetryReadings(w http.ResponseWriter, r *http.Request) {
-	driveID, err := urlParamInt64(r, "driveID")
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid drive ID")
-		return
-	}
-
-	readings, err := h.driveTelRepo.GetByDriveID(r.Context(), driveID)
-	if err != nil {
-		log.Error().Err(err).Int64("id", driveID).Msg("failed to get drive telemetry")
-		writeError(w, http.StatusInternalServerError, "failed to get drive telemetry")
-		return
-	}
-	if readings == nil {
-		readings = make([]*models.DriveTelemetryReading, 0)
-	}
-	writeJSON(w, http.StatusOK, readings)
+	// Drive telemetry repo removed — return empty pending rewire (prompt 14).
+	writeJSON(w, http.StatusOK, []*models.DriveTelemetryReading{})
 }
 
 // Stats returns aggregate driving statistics for a vehicle.

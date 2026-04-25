@@ -2,51 +2,24 @@ package api
 
 import (
 	"net/http"
-	"strconv"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
+// SafetyHandler serves safety snapshot endpoints.
+// Repo removed in phase-14/12 — returns empty results pending rewire (prompt 14).
 type SafetyHandler struct {
-	repo *database.SafetyRepo
+	db *database.DB
 }
 
 func NewSafetyHandler(db *database.DB) *SafetyHandler {
-	return &SafetyHandler{repo: database.NewSafetyRepo(db)}
+	return &SafetyHandler{db: db}
 }
 
 func (h *SafetyHandler) List(w http.ResponseWriter, r *http.Request) {
-	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
-	if err != nil || vehicleID == 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id required")
-		return
-	}
-	limit, _ := pagination(r)
-	snaps, err := h.repo.GetByVehicle(r.Context(), vehicleID, limit)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to get safety data")
-		writeError(w, http.StatusInternalServerError, "failed to get safety data")
-		return
-	}
-	if snaps == nil {
-		snaps = make([]*models.SafetySnapshot, 0)
-	}
-	writeJSON(w, http.StatusOK, snaps)
+	writeJSON(w, http.StatusOK, []struct{}{})
 }
 
 func (h *SafetyHandler) Latest(w http.ResponseWriter, r *http.Request) {
-	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
-	if err != nil || vehicleID == 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id required")
-		return
-	}
-	snap, err := h.repo.GetLatest(r.Context(), vehicleID)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to get latest safety data")
-		writeError(w, http.StatusInternalServerError, "failed to get safety data")
-		return
-	}
-	writeJSON(w, http.StatusOK, snap)
+	writeJSON(w, http.StatusOK, nil)
 }

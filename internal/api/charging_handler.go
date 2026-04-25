@@ -11,13 +11,11 @@ import (
 // ChargingHandler handles charging session HTTP requests.
 type ChargingHandler struct {
 	chargingRepo *database.ChargingRepo
-	chargeTelRepo *database.ChargeTelemetryReadingRepo
 }
 
 func NewChargingHandler(db *database.DB) *ChargingHandler {
 	return &ChargingHandler{
 		chargingRepo:  database.NewChargingRepo(db),
-		chargeTelRepo: database.NewChargeTelemetryReadingRepo(db),
 	}
 }
 
@@ -66,22 +64,8 @@ func (h *ChargingHandler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ChargingHandler) TelemetryReadings(w http.ResponseWriter, r *http.Request) {
-	sessionID, err := urlParamInt64(r, "sessionID")
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid session ID")
-		return
-	}
-
-	readings, err := h.chargeTelRepo.GetBySessionID(r.Context(), sessionID)
-	if err != nil {
-		log.Error().Err(err).Int64("id", sessionID).Msg("failed to get charge telemetry")
-		writeError(w, http.StatusInternalServerError, "failed to get charge telemetry")
-		return
-	}
-	if readings == nil {
-		readings = make([]*models.ChargeTelemetryReading, 0)
-	}
-	writeJSON(w, http.StatusOK, readings)
+	// Charge telemetry repo removed — return empty pending rewire (prompt 14).
+	writeJSON(w, http.StatusOK, []*models.ChargeTelemetryReading{})
 }
 
 

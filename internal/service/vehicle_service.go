@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -19,13 +18,10 @@ type VehicleService struct {
 	db                *database.DB
 	vehicleRepo       *database.VehicleRepo
 	positionRepo      *database.PositionRepo
-	climateRepo       *database.ClimateRepo
 	securityRepo      *database.SecurityRepo
-	chargingTelRepo   *database.ChargingTelemetryRepo
 	stateRepo         *database.VehicleStateRepo
 	vehicleConfigRepo *database.VehicleConfigRepo
 	settingsRepo      *database.SettingsRepo
-	liveStateRepo     *database.LiveStateRepo
 }
 
 // NewVehicleService creates a VehicleService with all required repos.
@@ -34,13 +30,10 @@ func NewVehicleService(db *database.DB) *VehicleService {
 		db:                db,
 		vehicleRepo:       database.NewVehicleRepo(db),
 		positionRepo:      database.NewPositionRepo(db),
-		climateRepo:       database.NewClimateRepo(db),
 		securityRepo:      database.NewSecurityRepo(db),
-		chargingTelRepo:   database.NewChargingTelemetryRepo(db),
 		stateRepo:         database.NewVehicleStateRepo(db),
 		vehicleConfigRepo: database.NewVehicleConfigRepo(db),
 		settingsRepo:      database.NewSettingsRepo(db),
-		liveStateRepo:     database.NewLiveStateRepo(db),
 	}
 }
 
@@ -199,89 +192,10 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 		}
 	}
 
-	// --- Phase 2: If SignalStore was empty (e.g., pod restart), load from
-	// vehicle_live_state (single source of truth, always current) and re-run
-	// signal parsing. This replaces scattered fallback queries to individual
-	// snapshot tables (positions, climate_snapshots, security_events, etc.)
-	// that could return inconsistent data.
+	// --- Phase 2: If SignalStore was empty (e.g., pod restart), state will
+	// be populated on next telemetry batch via SignalStore.LoadFromDB which
+	// uses Redis → signal_log fallback chain.
 	ctx := context.Background()
-	if len(all) == 0 {
-		if liveSignals, err := s.liveStateRepo.LoadLiveState(ctx, vehicle.ID); err == nil && len(liveSignals) > 0 {
-			// Convert map[string]interface{} → map[string]*signal.Value
-			for k, v := range liveSignals {
-				all[k] = &signal.Value{Raw: v, Timestamp: time.Now()}
-			}
-			// Re-run Phase 1 with live_state data to populate all state fields
-			if v := all["VehicleSpeed"]; v != nil {
-				if f, ok := v.Raw.(float64); ok { state.Speed = f }
-			}
-			if v := all["Odometer"]; v != nil {
-				if f, ok := v.Raw.(float64); ok { state.Odometer = f }
-			}
-			if v := all["BatteryLevel"]; v != nil {
-				switch bv := v.Raw.(type) {
-				case float64: state.BatteryLevel = int(bv)
-				case int: state.BatteryLevel = bv
-				}
-			}
-			if v := all["Soc"]; v != nil && state.BatteryLevel == 0 {
-				if f, ok := v.Raw.(float64); ok { state.BatteryLevel = int(f) }
-			}
-			if v := all["IdealBatteryRange"]; v != nil {
-				if f, ok := v.Raw.(float64); ok { state.IdealRange = f }
-			}
-			if v := all["RatedRange"]; v != nil {
-				if f, ok := v.Raw.(float64); ok { state.RatedRange = f }
-			}
-			if v := all["EstBatteryRange"]; v != nil && state.RatedRange == 0 {
-				if f, ok := v.Raw.(float64); ok { state.RatedRange = f }
-			}
-			if v := all["InsideTemp"]; v != nil {
-				if f, ok := v.Raw.(float64); ok { state.InsideTemp = f }
-			}
-			if v := all["OutsideTemp"]; v != nil {
-				if f, ok := v.Raw.(float64); ok { state.OutsideTemp = f }
-			}
-			if v := all["Latitude"]; v != nil {
-				if f, ok := v.Raw.(float64); ok { state.Latitude = f }
-			}
-			if v := all["Longitude"]; v != nil {
-				if f, ok := v.Raw.(float64); ok { state.Longitude = f }
-			}
-			if v := all["GpsHeading"]; v != nil {
-				switch hv := v.Raw.(type) {
-				case float64: state.Heading = &hv
-				case int: f := float64(hv); state.Heading = &f
-				}
-			}
-			if v := all["Power"]; v != nil {
-				if f, ok := v.Raw.(float64); ok { state.Power = f }
-			}
-			if v := all["DetailedChargeState"]; v != nil {
-				if cs, ok := v.Raw.(string); ok { state.IsCharging = enums.IsCharging(cs) }
-			}
-			if v := all["Locked"]; v != nil {
-				switch lv := v.Raw.(type) {
-				case bool: state.IsLocked = lv
-				case string: state.IsLocked = lv == "true" || lv == "1"
-				}
-			}
-			if v := all["SentryMode"]; v != nil {
-				state.SentryMode = enums.ParseEnumBool(v.Raw)
-			}
-			if v := all["Version"]; v != nil {
-				if sv, ok := v.Raw.(string); ok && sv != "" { state.SoftwareVersion = sv }
-			}
-			if v := all["HvacPower"]; v != nil {
-				switch hv := v.Raw.(type) {
-				case bool: state.IsClimateOn = hv
-				case string: state.IsClimateOn = enums.ParseHvacPower(hv)
-				case float64: state.IsClimateOn = hv > 0
-				}
-			}
-			log.Debug().Int64("vehicleID", vehicle.ID).Int("signals", len(liveSignals)).Msg("state built from vehicle_live_state")
-		}
-	}
 
 	// Vehicle state: fallback from state history
 	if state.State == "" {
