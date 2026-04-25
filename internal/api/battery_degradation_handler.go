@@ -115,14 +115,23 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 		currentTemp = latest.AvgCellTempC
 	}
 
-	// Fallback: derive from charging_telemetry when no snapshots exist
+	// Fallback: derive from signal_log when no snapshots exist
 	if currentHealth == 0 {
 		const nominalCapacity = 75.0
 		var energy, rng *float64
-		_ = h.db.Pool.QueryRow(ctx,
-			`SELECT energy_remaining, est_battery_range FROM charging_telemetry 
-			 WHERE vehicle_id = $1 AND energy_remaining IS NOT NULL 
-			 ORDER BY created_at DESC LIMIT 1`, vehicleID).Scan(&energy, &rng)
+		if h.signalLogReader != nil {
+			now := time.Now()
+			if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "EnergyRemaining", now); err == nil && val != nil {
+				if v, ok := toFloatOk(val); ok && v > 0 {
+					energy = &v
+				}
+			}
+			if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "EstBatteryRange", now); err == nil && val != nil {
+				if v, ok := toFloatOk(val); ok && v > 0 {
+					rng = &v
+				}
+			}
+		}
 		if energy != nil && *energy > 0 {
 			currentCapacity = *energy
 			currentHealth = (currentCapacity / nominalCapacity) * 100
@@ -547,13 +556,22 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	// Fallback from charging_telemetry
+	// Fallback from signal_log
 	if latestSOH == 0 {
 		var energy, rng *float64
-		_ = h.db.Pool.QueryRow(ctx,
-			`SELECT energy_remaining, est_battery_range FROM charging_telemetry
-			 WHERE vehicle_id = $1 AND energy_remaining IS NOT NULL
-			 ORDER BY created_at DESC LIMIT 1`, vehicleID).Scan(&energy, &rng)
+		if h.signalLogReader != nil {
+			now := time.Now()
+			if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "EnergyRemaining", now); err == nil && val != nil {
+				if v, ok := toFloatOk(val); ok && v > 0 {
+					energy = &v
+				}
+			}
+			if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "EstBatteryRange", now); err == nil && val != nil {
+				if v, ok := toFloatOk(val); ok && v > 0 {
+					rng = &v
+				}
+			}
+		}
 		if energy != nil && *energy > 0 {
 			latestCapacity = *energy
 			latestSOH = (latestCapacity / nominalCapacity) * 100

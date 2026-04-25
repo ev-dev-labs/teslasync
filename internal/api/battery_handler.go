@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -11,11 +12,12 @@ import (
 
 // BatteryHandler handles battery health HTTP requests.
 type BatteryHandler struct {
-	batteryRepo *database.BatterySnapshotRepo
+	batteryRepo     *database.BatterySnapshotRepo
+	signalLogReader *database.SignalLogReader
 }
 
-func NewBatteryHandler(db *database.DB) *BatteryHandler {
-	return &BatteryHandler{batteryRepo: database.NewBatterySnapshotRepo(db)}
+func NewBatteryHandler(db *database.DB, slr *database.SignalLogReader) *BatteryHandler {
+	return &BatteryHandler{batteryRepo: database.NewBatterySnapshotRepo(db), signalLogReader: slr}
 }
 
 func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
@@ -56,27 +58,28 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 		avgTemp = latest.AvgCellTempC
 	}
 
-	// If no battery snapshots, derive basic health metrics from charging telemetry
+	// If no battery snapshots, derive basic health metrics from signal_log
 	if healthScore == 0 {
-		// Get latest energy_remaining and rated_range from charging_telemetry
-		var latestEnergy, latestRange *float64
-		_ = h.batteryRepo.DB().Pool.QueryRow(r.Context(),
-			`SELECT energy_remaining, est_battery_range FROM charging_telemetry 
-			 WHERE vehicle_id = $1 AND energy_remaining IS NOT NULL 
-			 ORDER BY created_at DESC LIMIT 1`, vehicleID).Scan(&latestEnergy, &latestRange)
-
-		// Model Y Long Range nominal capacity ~75 kWh, nominal range ~330 mi (531 km)
 		const nominalCapacity = 75.0
 		const nominalRangeKm = 531.0
 
-		if latestEnergy != nil && *latestEnergy > 0 {
-			capacityKWh = *latestEnergy
-			healthScore = (capacityKWh / nominalCapacity) * 100
-			if healthScore > 100 { healthScore = 100 }
-			degradation = 100 - healthScore
-		}
-		if latestRange != nil && *latestRange > 0 {
-			estRange = *latestRange
+		if h.signalLogReader != nil {
+			now := time.Now()
+			if val, err := h.signalLogReader.SignalAt(r.Context(), vehicleID, "EnergyRemaining", now); err == nil && val != nil {
+				if v, ok := toFloatOk(val); ok && v > 0 {
+					capacityKWh = v
+					healthScore = (capacityKWh / nominalCapacity) * 100
+					if healthScore > 100 {
+						healthScore = 100
+					}
+					degradation = 100 - healthScore
+				}
+			}
+			if val, err := h.signalLogReader.SignalAt(r.Context(), vehicleID, "EstBatteryRange", now); err == nil && val != nil {
+				if v, ok := toFloatOk(val); ok && v > 0 {
+					estRange = v
+				}
+			}
 		}
 
 		// Count charge cycles from charging sessions (sum of SOC deltas / 100)

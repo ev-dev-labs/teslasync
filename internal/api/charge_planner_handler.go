@@ -18,14 +18,15 @@ import (
 
 // ChargePlannerHandler provides smart charge scheduling optimization.
 type ChargePlannerHandler struct {
-	db          *database.DB
-	teslaClient *tesla.Client
-	cfg         *config.Config
+	db              *database.DB
+	teslaClient     *tesla.Client
+	cfg             *config.Config
+	signalLogReader *database.SignalLogReader
 }
 
 // NewChargePlannerHandler creates a new ChargePlannerHandler.
-func NewChargePlannerHandler(db *database.DB, teslaClient *tesla.Client, cfg *config.Config) *ChargePlannerHandler {
-	return &ChargePlannerHandler{db: db, teslaClient: teslaClient, cfg: cfg}
+func NewChargePlannerHandler(db *database.DB, teslaClient *tesla.Client, cfg *config.Config, slr *database.SignalLogReader) *ChargePlannerHandler {
+	return &ChargePlannerHandler{db: db, teslaClient: teslaClient, cfg: cfg, signalLogReader: slr}
 }
 
 // ── Request/Response types ───────────────────────────────────
@@ -269,12 +270,16 @@ func (h *ChargePlannerHandler) Optimize(w http.ResponseWriter, r *http.Request) 
 		req.ChargerVoltage = 240
 	}
 
-	// Get current SOC — live_state_repo removed; default to 0 if unknown.
-	// Charge planner will estimate from target_soc down.
+	// Get current SOC from signal_log
 	ctx := r.Context()
-	_ = ctx
-
 	currentSOC := 0
+	if h.signalLogReader != nil {
+		if val, err := h.signalLogReader.SignalAt(ctx, req.VehicleID, "BatteryLevel", time.Now()); err == nil && val != nil {
+			if v, ok := toFloatOk(val); ok && v > 0 {
+				currentSOC = int(v)
+			}
+		}
+	}
 
 	if currentSOC >= req.TargetSOC {
 		writeError(w, http.StatusBadRequest, fmt.Sprintf("current SOC (%d%%) already meets target (%d%%)", currentSOC, req.TargetSOC))

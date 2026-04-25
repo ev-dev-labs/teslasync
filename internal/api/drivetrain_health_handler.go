@@ -3,6 +3,7 @@ package api
 import (
 	"math"
 	"net/http"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -10,11 +11,12 @@ import (
 
 // DrivetrainHealthHandler serves drivetrain health analytics.
 type DrivetrainHealthHandler struct {
-	db *database.DB
+	db              *database.DB
+	signalLogReader *database.SignalLogReader
 }
 
-func NewDrivetrainHealthHandler(db *database.DB) *DrivetrainHealthHandler {
-	return &DrivetrainHealthHandler{db: db}
+func NewDrivetrainHealthHandler(db *database.DB, slr *database.SignalLogReader) *DrivetrainHealthHandler {
+	return &DrivetrainHealthHandler{db: db, signalLogReader: slr}
 }
 
 func (h *DrivetrainHealthHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -31,28 +33,34 @@ func (h *DrivetrainHealthHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// Get latest battery module temps from charging_telemetry
+	// Get latest battery module temps and battery temp from signal_log
 	var moduleTempMax, moduleTempMin *float64
-	err = h.db.Pool.QueryRow(ctx, `
-		SELECT module_temp_max, module_temp_min
-		FROM charging_telemetry
-		WHERE vehicle_id = $1 AND (module_temp_max IS NOT NULL OR module_temp_min IS NOT NULL)
-		ORDER BY created_at DESC LIMIT 1`, vehicleID,
-	).Scan(&moduleTempMax, &moduleTempMin)
-	if err != nil {
-		log.Debug().Err(err).Int64("vehicleID", vehicleID).Msg("drivetrain: no module temp data")
+	var batteryTemp *float64
+	if h.signalLogReader != nil {
+		now := time.Now()
+		if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "ModuleTempMax", now); err == nil && val != nil {
+			if v, ok := toFloatOk(val); ok {
+				moduleTempMax = &v
+			}
+		}
+		if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "ModuleTempMin", now); err == nil && val != nil {
+			if v, ok := toFloatOk(val); ok {
+				moduleTempMin = &v
+			}
+		}
+	}
+	if moduleTempMax == nil && moduleTempMin == nil {
+		log.Debug().Int64("vehicleID", vehicleID).Msg("drivetrain: no module temp data")
 	}
 
-	// Get latest battery temp from charge_telemetry (drive-time snapshots)
-	var batteryTemp *float64
-	err = h.db.Pool.QueryRow(ctx, `
-		SELECT battery_temp
-		FROM charge_telemetry
-		WHERE vehicle_id = $1 AND battery_temp IS NOT NULL
-		ORDER BY created_at DESC LIMIT 1`, vehicleID,
-	).Scan(&batteryTemp)
-	if err != nil {
-		log.Debug().Err(err).Int64("vehicleID", vehicleID).Msg("drivetrain: no battery temp data")
+	// Derive battery temp from module temps average
+	if moduleTempMax != nil && moduleTempMin != nil {
+		avg := (*moduleTempMax + *moduleTempMin) / 2
+		batteryTemp = &avg
+	} else if moduleTempMax != nil {
+		batteryTemp = moduleTempMax
+	} else if moduleTempMin != nil {
+		batteryTemp = moduleTempMin
 	}
 
 	// Get peak motor power from recent drives as a proxy for motor health

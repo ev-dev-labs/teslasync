@@ -70,14 +70,31 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
-	// Current battery state
+	// Current battery state from signal_log
 	var batteryLevel, estRange, ratedRange, idealRange *float64
-	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT battery_level, est_battery_range, rated_range, ideal_battery_range
-		FROM charging_telemetry
-		WHERE vehicle_id = $1
-			AND (battery_level IS NOT NULL OR est_battery_range IS NOT NULL)
-		ORDER BY created_at DESC LIMIT 1`, vehicleID).Scan(&batteryLevel, &estRange, &ratedRange, &idealRange)
+	if h.signalLogReader != nil {
+		now := time.Now()
+		if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "BatteryLevel", now); err == nil && val != nil {
+			if v, ok := toFloatOk(val); ok {
+				batteryLevel = &v
+			}
+		}
+		if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "EstBatteryRange", now); err == nil && val != nil {
+			if v, ok := toFloatOk(val); ok {
+				estRange = &v
+			}
+		}
+		if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "RatedRange", now); err == nil && val != nil {
+			if v, ok := toFloatOk(val); ok {
+				ratedRange = &v
+			}
+		}
+		if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "IdealBatteryRange", now); err == nil && val != nil {
+			if v, ok := toFloatOk(val); ok {
+				idealRange = &v
+			}
+		}
+	}
 
 	// Current outside temp from vehicle_live_state
 	var currentOutsideTemp *float64
@@ -516,11 +533,24 @@ func (h *RangeProjectionHandler) GetByVehicle(w http.ResponseWriter, r *http.Req
 	defer cancel()
 
 	var batteryLevel, ratedRange, idealRange *float64
-	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT battery_level, rated_range, ideal_battery_range
-		FROM charging_telemetry
-		WHERE vehicle_id = $1 AND battery_level IS NOT NULL
-		ORDER BY created_at DESC LIMIT 1`, vehicleID).Scan(&batteryLevel, &ratedRange, &idealRange)
+	if h.signalLogReader != nil {
+		now := time.Now()
+		if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "BatteryLevel", now); err == nil && val != nil {
+			if v, ok := toFloatOk(val); ok {
+				batteryLevel = &v
+			}
+		}
+		if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "RatedRange", now); err == nil && val != nil {
+			if v, ok := toFloatOk(val); ok {
+				ratedRange = &v
+			}
+		}
+		if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "IdealBatteryRange", now); err == nil && val != nil {
+			if v, ok := toFloatOk(val); ok {
+				idealRange = &v
+			}
+		}
+	}
 
 	bl := ptrF64(batteryLevel)
 	rated := ptrF64(ratedRange)
