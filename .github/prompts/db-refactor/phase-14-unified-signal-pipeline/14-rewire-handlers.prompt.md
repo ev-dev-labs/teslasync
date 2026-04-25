@@ -32,17 +32,19 @@ grep -rn "motor_snapshots\|climate_snapshots\|location_snapshots\|safety_snapsho
 ```
 
 Expected handlers to rewire (from earlier audit):
-- `battery_degradation_handler.go` — reads charging_telemetry
-- `battery_handler.go` — reads vehicle_live_state
-- `drivetrain_health_handler.go` — reads motor_snapshots
-- `energy_flow_handler.go` — reads vehicle_live_state
+- `battery_degradation_handler.go` — reads charging_telemetry, battery_snapshots (4 queries)
+- `battery_handler.go` — reads vehicle_live_state, charging_telemetry
+- `drivetrain_health_handler.go` — reads charging_telemetry, motor_snapshots
+- `energy_flow_handler.go` — reads charging_telemetry
 - `maintenance_handler.go` — reads vehicle_live_state
-- `range_projection_handler.go` — reads drive_telemetry_readings
+- `range_projection_handler.go` — reads drive_telemetry_readings, vehicle_live_state, battery_snapshots, charging_telemetry
 - `speed_profile_handler.go` — reads drive_telemetry_readings
 - `signal_handler.go` — reads vehicle_live_state
 - `watch_handler.go` — reads vehicle_live_state
 - `charge_planner_handler.go` — reads charging_telemetry
 - `command_handler.go` — reads vehicle_live_state
+- `trip_planner_handler.go` — reads battery_snapshots
+- `drive_handler.go` — `AccelerationDistribution` calls `fn_driving_acceleration_distribution` which reads `drive_telemetry_readings`. Rewrite to compute acceleration from consecutive VehicleSpeed signals in signal_log: `(speed_n - speed_n-1) / (ts_n - ts_n-1) / 9.81`. Drop the old Postgres function.
 
 ### 2. For each handler — choose the right replacement
 
