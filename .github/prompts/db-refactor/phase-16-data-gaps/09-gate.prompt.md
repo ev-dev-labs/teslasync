@@ -1,12 +1,12 @@
 ---
 description: "Phase-16 — Gate: build + verify battery data + zero TODOs"
 ---
-# Prompt 07 — Gate: Build + Verify Battery Data + Zero TODO Stubs
+# Prompt 09 — Gate: Build + Verify Battery Data + Zero TODO Stubs
 > **Severity:** Gate | **Atomic:** yes | **Delegation:** FORBIDDEN
 
 | Field | Value |
 |---|---|
-| Output log | `.github/prompts/db-refactor/logs/phase-16-07-gate.log` |
+| Output log | `.github/prompts/db-refactor/logs/phase-16-09-gate.log` |
 | Allowed files to change | NONE (read-only verification), the log file |
 
 ## Honesty Covenant
@@ -22,7 +22,7 @@ description: "Phase-16 — Gate: build + verify battery data + zero TODOs"
 
 ```powershell
 cd D:\repos\teslasync
-$log = ".github\prompts\db-refactor\logs\phase-16-07-gate.log"
+$log = ".github\prompts\db-refactor\logs\phase-16-09-gate.log"
 $env:CGO_ENABLED = "0"
 
 "=== GO BUILD ===" | Tee-Object -FilePath $log

@@ -55,5 +55,5 @@ instead of implementing the signal_log replacement. This phase fills those gaps.
 08g — Apply to remaining charts (15 files)
 
 ── Gate ──
-07 — Gate: build + vet + zero TODOs + zero dead dispatch + zero dot={true} + drive field check
+09 — Gate: build + vet + zero TODOs + zero dead dispatch + zero dot={true} + drive field check
 ```
