@@ -1593,6 +1593,18 @@ export interface AutomationHistoryStats {
   avg_duration_ms: number
 }
 
+/** Per-signal history response from /signals/{vehicleID}/{signalName}/history */
+export interface SignalHistoryResp {
+  signal: string
+  count: number
+  data: Array<{
+    created_at: string
+    value_num?: number | null
+    value_str?: string | null
+    value_bool?: boolean | null
+  }>
+}
+
 export interface AutomationHistoryListResponse {
   items: AutomationHistory[]
   total: number

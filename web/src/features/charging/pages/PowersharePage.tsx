@@ -13,8 +13,7 @@ import { latestNumeric, latestText } from '@/lib/signalObservation';
 
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSignalObservations } from '@/api/hooks/useTelemetry';
-
-type BadgeVariant = 'info' | 'success' | 'warning' | 'danger' | 'neutral';
+import type { BadgeVariant } from '@/types/fsm';
 
 /** Map status string → Badge variant. */
 function statusVariant(status: string | null): BadgeVariant {

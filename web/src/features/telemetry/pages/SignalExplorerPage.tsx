@@ -37,27 +37,10 @@ import { TIME_RANGE_PRESETS } from '@/lib/constants';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { Activity, BarChart3, Search, Clock, AlertCircle, Radio } from 'lucide-react';
+import type { SignalLogEntry } from '@/components/SignalQueryControls';
+import type { SignalHistoryResp } from '@/api/types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-
-interface SignalRow {
-  created_at: string;
-  signal: string;
-  value_num: number | null;
-  value_str: string | null;
-  value_bool: boolean | null;
-}
-
-interface SignalHistoryResp {
-  signal: string;
-  count: number;
-  data: Array<{
-    created_at: string;
-    value_num?: number | null;
-    value_str?: string | null;
-    value_bool?: boolean | null;
-  }>;
-}
 
 interface SignalStat {
   signal: string;
@@ -196,7 +179,7 @@ export default function SignalExplorerPage() {
   const toIso = toStr ? new Date(toStr).toISOString() : '';
 
   // ── Combined signal data query (parallel per-signal fetches) ──
-  const { data: allSignalRows, isLoading: dataLoading, error: dataError } = useQuery<SignalRow[]>({
+  const { data: allSignalRows, isLoading: dataLoading, error: dataError } = useQuery<SignalLogEntry[]>({
     queryKey: ['explorer-data', exploreKey],
     queryFn: async () => {
       const results = await Promise.all(
@@ -282,7 +265,7 @@ export default function SignalExplorerPage() {
   }, [availableSignals, signalSearch]);
 
   // Table columns
-  const tableColumns: Column<SignalRow>[] = useMemo(() => [
+  const tableColumns: Column<SignalLogEntry>[] = useMemo(() => [
     { key: 'time', header: t('Time'), render: (r) => <span className="whitespace-nowrap text-xs text-[var(--text-muted)]">{new Date(r.created_at).toLocaleString()}</span> },
     { key: 'signal', header: t('Signal'), render: (r) => <span className="font-mono text-xs text-neon-cyan">{r.signal}</span> },
     { key: 'value', header: t('Value'), render: (r) => <span className="font-mono text-xs text-[var(--text-primary)]">{r.value_num ?? r.value_str ?? String(r.value_bool ?? '')}</span> },

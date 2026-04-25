@@ -25,34 +25,14 @@ import { useSignals } from '@/api/hooks/useTelemetry';
 import { request } from '@/api/client';
 import { CHART_COLORS } from '@/lib/colors';
 import { toLocalDatetimeStr } from '@/lib/dateFormat';
-import { formatValue } from '@/components/SignalQueryControls';
+import { formatValue, type SignalLogEntry } from '@/components/SignalQueryControls';
+import type { SignalHistoryResp } from '@/api/types';
 import { TIME_RANGE_PRESETS } from '@/lib/constants';
 import { Database, Search, Clock, Activity, Filter, AlertCircle } from 'lucide-react';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-interface SignalRow {
-  created_at: string;
-  signal: string;
-  value_num: number | null;
-  value_str: string | null;
-  value_bool: boolean | null;
-}
-
-interface SignalHistoryResp {
-  signal: string;
-  count: number;
-  data: Array<{
-    created_at: string;
-    value_num?: number | null;
-    value_str?: string | null;
-    value_bool?: boolean | null;
-  }>;
-}
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function valueType(row: SignalRow): string {
+function valueType(row: SignalLogEntry): string {
   if (row.value_num !== null && row.value_num !== undefined) return 'number';
   if (row.value_bool !== null && row.value_bool !== undefined) return 'boolean';
   return 'string';
@@ -109,7 +89,7 @@ export default function SignalLogViewerPage() {
   const toIso = toStr ? new Date(toStr).toISOString() : '';
 
   // ── Data query (parallel per-signal fetches) ──
-  const { data: allRows, isLoading, isFetching, error: dataError } = useQuery<SignalRow[]>({
+  const { data: allRows, isLoading, isFetching, error: dataError } = useQuery<SignalLogEntry[]>({
     queryKey: ['signal-log', queryKey],
     queryFn: async () => {
       const results = await Promise.all(
@@ -150,7 +130,7 @@ export default function SignalLogViewerPage() {
   }, [availableSignals, signalSearch]);
 
   // Table columns
-  const logColumns: Column<SignalRow>[] = useMemo(() => [
+  const logColumns: Column<SignalLogEntry>[] = useMemo(() => [
     { key: 'row', header: '#', render: (r) => {
       const idx = rows.indexOf(r);
       return <span className="text-xs text-[var(--text-muted)] font-mono">{(page - 1) * perPage + idx + 1}</span>;
