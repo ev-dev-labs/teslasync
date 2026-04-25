@@ -236,9 +236,12 @@ func main() {
 
 		// Recover active drive/charge sessions from Postgres (pod restart resilience)
 		sessionTracker := telemetryHandler.SessionTracker()
+		signalLogReader := database.NewSignalLogReader(db)
 		if sessionTracker != nil {
+			sessionTracker.SetSignalLogReader(signalLogReader)
 			sessionTracker.RecoverSessions(ctx)
 			sessionTracker.ValidateRecoveredSessions(ctx)
+			sessionTracker.RecoverIncompleteSessions(ctx)
 			sessionTracker.StartBufferDrains(ctx)
 		}
 

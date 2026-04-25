@@ -1,0 +1,57 @@
+=== SURVEY ===
+Surveyed existing codebase:
+- internal/api/telemetry_sessions.go: TelemetrySessionTracker with RecoverSessions (restores
+  in-memory tracking state for recent open sessions) and ValidateRecoveredSessions (auto-closes
+  stale/completed sessions based on SignalStore state).
+- internal/database/signal_log_reader.go: SnapshotAt, SnapshotBetween, SignalTrace,
+  DriveAggregates, ChargeAggregates, RegenEnergy — no LatestTimestamp yet.
+- internal/database/drive_repo.go: GetStale(ctx, cutoff) returns drives WHERE end_ts IS NULL
+  AND start_ts < cutoff. CompleteWithTx, PartialUpdateWithTx for closing drives.
+- internal/database/charging_repo.go: GetStale(ctx, cutoff) returns charges WHERE end_ts IS NULL
+  AND start_ts < cutoff. CompleteWithTx, PartialUpdateWithTx for closing charges.
+- cmd/teslasync/main.go: Session recovery sequence at lines 237-243: RecoverSessions →
+  ValidateRecoveredSessions → StartBufferDrains. SignalLogReader not yet wired.
+- SetSignalLogReader exists on TelemetrySessionTracker but was never called from main.go.
+
+=== REASONING ===
+Design:
+1. LatestTimestamp on SignalLogReader: Simple MAX(created_at) query with timeout.
+2. RecoverIncompleteSessions on TelemetrySessionTracker:
+   - Requires signalLogReader (returns early if nil).
+   - Uses GetStale(ctx, now) to find ALL open drives/charges (start_ts < now covers everything).
+   - Skips sessions already tracked in activeDrives/activeCharges (handled by RecoverSessions).
+   - For each remaining open session: checks LatestTimestamp, skips if < 5 min stale.
+   - Stale sessions completed using SnapshotAt + DriveAggregates/ChargeAggregates.
+   - No signals at all → still completes with minimal data (best-effort, don't leave open forever).
+3. completeRecoveredDrive / completeRecoveredCharge: Simplified versions of completeDriveLocked /
+   completeChargeLocked that operate on DB models + signal_log snapshots (no in-memory streamingDrive).
+   Replicates the signal_log enrichment sections (unit-aware distance, battery, temperature,
+   energy, speed/power aggregates, regen). Sets ended_status="recovered".
+4. Wiring: main.go creates SignalLogReader, calls SetSignalLogReader, then RecoverIncompleteSessions
+   runs after RecoverSessions + ValidateRecoveredSessions but before StartBufferDrains.
+
+=== CHANGES ===
+Files changed:
+1. internal/database/signal_log_reader.go
+   - Added LatestTimestamp(ctx, vehicleID) (time.Time, error)
+   - Returns MAX(created_at) from signal_log for the vehicle
+   - Returns zero time when no signals exist
+
+2. internal/api/telemetry_sessions.go
+   - Added const staleSessionThreshold = 5 * time.Minute
+   - Added RecoverIncompleteSessions(ctx) method
+   - Added completeRecoveredDrive(ctx, drive, startSnap, endSnap, endTs) method
+   - Added completeRecoveredCharge(ctx, charge, startSnap, endSnap, endTs) method
+
+3. cmd/teslasync/main.go
+   - Created signalLogReader via database.NewSignalLogReader(db)
+   - Wired via sessionTracker.SetSignalLogReader(signalLogReader)
+   - Added sessionTracker.RecoverIncompleteSessions(ctx) call after ValidateRecoveredSessions
+
+=== GATE ===
+$ cd D:\repos\teslasync && go build ./...
+Exit code: 0 (clean build, no errors)
+
+=== COMMIT ===
+EXIT=0
+STATUS=DONE

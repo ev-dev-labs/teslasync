@@ -310,6 +310,25 @@ func (r *SignalLogReader) ChargeAggregates(ctx context.Context, vehicleID int64,
 	return maxPower, avgPower
 }
 
+// LatestTimestamp returns the most recent signal timestamp for a vehicle.
+// Returns (zero time, nil) if no signals exist for the vehicle.
+func (r *SignalLogReader) LatestTimestamp(ctx context.Context, vehicleID int64) (time.Time, error) {
+	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
+	defer cancel()
+
+	query := `SELECT MAX(created_at) FROM signal_log WHERE vehicle_id = $1`
+
+	var ts *time.Time
+	err := r.db.Pool.QueryRow(ctx, query, vehicleID).Scan(&ts)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("latest timestamp for vehicle %d: %w", vehicleID, err)
+	}
+	if ts == nil {
+		return time.Time{}, nil
+	}
+	return *ts, nil
+}
+
 // decodeValue applies the canonical priority for multi-typed signal values:
 //
 //	value_num (float64) → value_bool (bool) → value_jsonb (map) → value_str (string).
