@@ -154,6 +154,7 @@ func main() {
 	sig := <-quit
 	log.Info().Str("signal", sig.String()).Msg("shutting down notification worker")
 	cancel()
+	worker.Shutdown()
 	log.Info().Msg("notification worker stopped")
 }
 

@@ -174,6 +174,7 @@ func main() {
 	sig := <-quit
 	log.Info().Str("signal", sig.String()).Msg("shutting down export worker")
 	cancel()
+	worker.Shutdown()
 	log.Info().Msg("export worker stopped")
 }
 
