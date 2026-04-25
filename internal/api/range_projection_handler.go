@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
 const nominalCapacity = 75.0
@@ -17,10 +18,17 @@ const nominalCapacity = 75.0
 type RangeProjectionHandler struct {
 	db              *database.DB
 	signalLogReader *database.SignalLogReader
+	redisCache      *signal.RedisSignalCache
 }
 
 func NewRangeProjectionHandler(db *database.DB, slr *database.SignalLogReader) *RangeProjectionHandler {
 	return &RangeProjectionHandler{db: db, signalLogReader: slr}
+}
+
+// WithRedisCache sets the Redis signal cache for reading live vehicle state.
+func (h *RangeProjectionHandler) WithRedisCache(cache *signal.RedisSignalCache) *RangeProjectionHandler {
+	h.redisCache = cache
+	return h
 }
 
 type rangeFactor struct {
@@ -96,11 +104,15 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Current outside temp from vehicle_live_state
+	// Current outside temp from Redis signal cache
 	var currentOutsideTemp *float64
-	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT outside_temp FROM vehicle_live_state WHERE vehicle_id = $1`,
-		vehicleID).Scan(&currentOutsideTemp)
+	if h.redisCache != nil {
+		if val, err := h.redisCache.GetSignal(ctx, vehicleID, "OutsideTemp"); err == nil {
+			if f, ok := val.(float64); ok {
+				currentOutsideTemp = &f
+			}
+		}
+	}
 
 	// Recent driving efficiency
 	var avgEffWhKm *float64

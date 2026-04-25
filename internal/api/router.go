@@ -225,6 +225,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			watchHandler.WithRedisCache(redisSignalCache)
 			driveHandler.WithRedisCache(redisSignalCache)
 			chargingHandler.WithRedisCache(redisSignalCache)
+			rangeProjectionHandler.WithRedisCache(redisSignalCache)
 		}
 	}
 
