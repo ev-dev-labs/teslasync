@@ -187,7 +187,23 @@ func (p *Processor) RunBackup(ctx context.Context, cfg *models.BackupConfig, run
 	log.Info().Str("file", fileName).Int64("size", int64(len(finalData))).Int("records", totalRecords).Int64("duration_ms", duration).Msg("backup: completed")
 }
 
+// IsAllowedTable returns true if the table name is in the processor's backup table list.
+// Used to prevent SQL injection — table names in queries MUST pass this check.
+func IsAllowedTable(table string) bool {
+	for _, t := range backupTables {
+		if t == table {
+			return true
+		}
+	}
+	return false
+}
+
 func (p *Processor) exportTable(ctx context.Context, table string) (json.RawMessage, error) {
+	if !IsAllowedTable(table) {
+		log.Error().Str("table", table).Msg("backup: table not in allowlist, skipping")
+		return nil, fmt.Errorf("backup: table %q not in allowlist", table)
+	}
+	// table name is safe — validated against backupTables allowlist above
 	query := fmt.Sprintf(`SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) FROM "%s" t`, table)
 	var result json.RawMessage
 	err := p.pool.QueryRow(ctx, query).Scan(&result)
