@@ -15,23 +15,10 @@ import {
   MONTHS, DAYS, COMMON_TIMEZONES,
 } from '@/lib/constants';
 import { Plus, Trash2 } from 'lucide-react';
+import { SIGNAL_FIELD_OPTIONS, BOOL_FIELD_KEYS } from '@/lib/signals';
 
 // Re-export so existing consumers of CONDITION_TYPES from this file keep working
 export { CONDITION_TYPES } from '@/lib/constants';
-
-const STATE_CHECK_FIELDS = [
-  { value: 'battery_level', label: 'Battery Level' },
-  { value: 'inside_temp', label: 'Inside Temperature' },
-  { value: 'outside_temp', label: 'Outside Temperature' },
-  { value: 'speed', label: 'Speed' },
-  { value: 'is_locked', label: 'Is Locked' },
-  { value: 'is_charging', label: 'Is Charging' },
-  { value: 'is_climate_on', label: 'Climate On' },
-  { value: 'sentry_mode', label: 'Sentry Mode' },
-  { value: 'state', label: 'Vehicle State' },
-];
-
-const BOOL_FIELDS = new Set(['is_locked', 'is_charging', 'is_climate_on', 'sentry_mode']);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -158,18 +145,18 @@ function ConditionFields({ type, config, onChange, geofenceOptions }: ConditionF
   switch (type) {
     case 'state_check': {
       const field = str(config.field);
-      const isBool = BOOL_FIELDS.has(field);
+      const isBool = BOOL_FIELD_KEYS.has(field);
       const isString = field === 'state';
       const operators = isBool ? BOOL_OPERATORS : NUMERIC_OPERATORS;
 
       return (
         <div className="flex gap-3 items-end flex-wrap flex-1">
           <Select
-            options={STATE_CHECK_FIELDS}
+            options={SIGNAL_FIELD_OPTIONS}
             value={field}
             onChange={(e) => {
               const newField = e.target.value;
-              const newIsBool = BOOL_FIELDS.has(newField);
+              const newIsBool = BOOL_FIELD_KEYS.has(newField);
               onChange({
                 field: newField,
                 operator: newIsBool ? 'eq' : str(config.operator) || 'lt',

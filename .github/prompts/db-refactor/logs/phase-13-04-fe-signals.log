@@ -1,0 +1,30 @@
+=== SURVEY ===
+- ConditionBuilder.tsx (lines 22-34) hardcoded STATE_CHECK_FIELDS (9 entries) and BOOL_FIELDS (Set of 4 keys).
+- Both used in ConditionFields sub-component for state_check condition type.
+- No web/src/lib/signals.ts existed.
+
+=== REASONING ===
+- Created a centralized signal field catalog in web/src/lib/signals.ts with typed SignalField interface.
+- Exported SIGNAL_FIELD_OPTIONS (for <Select> dropdowns) and BOOL_FIELD_KEYS (Set for boolean checks).
+- Updated ConditionBuilder.tsx to import from @/lib/signals instead of hardcoding.
+
+=== CHANGES ===
+1. CREATED web/src/lib/signals.ts
+   - SignalFieldType union, SignalField interface
+   - SIGNAL_FIELDS array (9 entries with key, label, type, unit)
+   - NUMERIC_SIGNAL_FIELDS, BOOLEAN_SIGNAL_FIELDS derived arrays
+   - BOOL_FIELD_KEYS Set for boolean field checks
+   - SIGNAL_FIELD_OPTIONS for Select dropdowns
+2. EDITED web/src/features/automations/pages/ConditionBuilder.tsx
+   - Removed hardcoded STATE_CHECK_FIELDS (lines 22-32)
+   - Removed hardcoded BOOL_FIELDS Set (line 34)
+   - Added import { SIGNAL_FIELD_OPTIONS, BOOL_FIELD_KEYS } from '@/lib/signals'
+   - Replaced STATE_CHECK_FIELDS → SIGNAL_FIELD_OPTIONS
+   - Replaced BOOL_FIELDS.has() → BOOL_FIELD_KEYS.has()
+
+=== GATE ===
+- npx tsc --noEmit: PASS (exit code 0)
+- grep STATE_CHECK_FIELDS|BOOL_FIELDS in src/features/*.tsx: 0 matches ✓
+
+EXIT=0
+STATUS=DONE
