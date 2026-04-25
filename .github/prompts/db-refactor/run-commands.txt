@@ -138,6 +138,12 @@
 # DB outage resilience, and signal name change handling.
 & "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase phase-14-unified-signal-pipeline
 
+# ── Phase 15 — Phase 14 Fixup: remaining dropped-table refs (7 prompts) ──
+# Fixes 7 remaining refs to dropped tables that Phase 14 agent missed:
+# battery_snapshots in energy_repo/maintenance_worker/backup, vehicle_live_state
+# in range_projection_handler, fsm_type migration, stale test fields.
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase phase-15-phase14-fixup
+
 
 # ── Future-1 — Unit normalization (19 prompts) ──
 # Stamps per-row unit columns (distance_unit, temp_unit, pressure_unit) on all
