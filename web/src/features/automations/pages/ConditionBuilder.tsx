@@ -10,19 +10,14 @@ import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { useGeofences } from '@/api/hooks/useLocations';
+import {
+  CONDITION_TYPES, NUMERIC_OPERATORS, BOOL_OPERATORS,
+  MONTHS, DAYS, COMMON_TIMEZONES,
+} from '@/lib/constants';
 import { Plus, Trash2 } from 'lucide-react';
 
-// ─── Type registry ────────────────────────────────────────────────────────────
-
-export const CONDITION_TYPES = [
-  { value: 'state_check', label: 'State Check' },
-  { value: 'time_window', label: 'Time Window' },
-  { value: 'cooldown', label: 'Cooldown' },
-  { value: 'day_filter', label: 'Day Filter' },
-  { value: 'location', label: 'Location / Geofence' },
-  { value: 'seasonal', label: 'Seasonal' },
-  { value: 'variable_check', label: 'Variable Check' },
-] as const;
+// Re-export so existing consumers of CONDITION_TYPES from this file keep working
+export { CONDITION_TYPES } from '@/lib/constants';
 
 const STATE_CHECK_FIELDS = [
   { value: 'battery_level', label: 'Battery Level' },
@@ -34,49 +29,6 @@ const STATE_CHECK_FIELDS = [
   { value: 'is_climate_on', label: 'Climate On' },
   { value: 'sentry_mode', label: 'Sentry Mode' },
   { value: 'state', label: 'Vehicle State' },
-];
-
-const NUMERIC_OPERATORS = [
-  { value: 'eq', label: '=' },
-  { value: 'neq', label: '≠' },
-  { value: 'gt', label: '>' },
-  { value: 'lt', label: '<' },
-  { value: 'gte', label: '≥' },
-  { value: 'lte', label: '≤' },
-];
-
-const BOOL_OPERATORS = [
-  { value: 'eq', label: 'Is' },
-  { value: 'neq', label: 'Is Not' },
-];
-
-const MONTHS = [
-  { value: '1', label: 'January' },
-  { value: '2', label: 'February' },
-  { value: '3', label: 'March' },
-  { value: '4', label: 'April' },
-  { value: '5', label: 'May' },
-  { value: '6', label: 'June' },
-  { value: '7', label: 'July' },
-  { value: '8', label: 'August' },
-  { value: '9', label: 'September' },
-  { value: '10', label: 'October' },
-  { value: '11', label: 'November' },
-  { value: '12', label: 'December' },
-];
-
-const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-const COMMON_TIMEZONES = [
-  { value: '', label: 'UTC (Default)' },
-  { value: 'America/New_York', label: 'Eastern (US)' },
-  { value: 'America/Chicago', label: 'Central (US)' },
-  { value: 'America/Denver', label: 'Mountain (US)' },
-  { value: 'America/Los_Angeles', label: 'Pacific (US)' },
-  { value: 'Europe/London', label: 'London' },
-  { value: 'Europe/Berlin', label: 'Berlin' },
-  { value: 'Asia/Tokyo', label: 'Tokyo' },
-  { value: 'Australia/Sydney', label: 'Sydney' },
 ];
 
 const BOOL_FIELDS = new Set(['is_locked', 'is_charging', 'is_climate_on', 'sentry_mode']);
@@ -307,7 +259,7 @@ function ConditionFields({ type, config, onChange, geofenceOptions }: ConditionF
       return (
         <div className="flex gap-3 items-end flex-wrap flex-1">
           <div className="flex gap-1">
-            {DAY_LABELS.map((label, i) => {
+            {DAYS.map((label, i) => {
               const active = days.includes(i);
               return (
                 <button

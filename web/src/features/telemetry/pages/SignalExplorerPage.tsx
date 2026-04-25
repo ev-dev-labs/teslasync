@@ -32,6 +32,7 @@ import { useRealtimeEvents } from '@/hooks/useRealtimeEvents';
 import { useSignals } from '@/api/hooks/useTelemetry';
 import { request } from '@/api/client';
 import { CHART_COLORS } from '@/lib/colors';
+import { TIME_RANGE_PRESETS } from '@/lib/constants';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { Activity, BarChart3, Search, Clock, AlertCircle, Radio } from 'lucide-react';
@@ -71,14 +72,6 @@ function toLocalDatetime(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
-
-const PRESETS = [
-  { label: '1h', hours: 1 },
-  { label: '6h', hours: 6 },
-  { label: '24h', hours: 24 },
-  { label: '7d', hours: 168 },
-  { label: '30d', hours: 720 },
-];
 
 const LIVE_WINDOW_MS = 5 * 60 * 1000; // 5 minute rolling window
 const LIVE_THROTTLE_MS = 500;          // 2 Hz chart updates
@@ -368,7 +361,7 @@ export default function SignalExplorerPage() {
             <Clock className="inline h-3 w-3 mr-1" />{t('Time Range')}
           </span>
           <div className="flex flex-wrap gap-2 mb-2">
-            {PRESETS.map(p => (
+            {TIME_RANGE_PRESETS.map(p => (
               <Button key={p.label} size="sm" variant="ghost" onClick={() => applyPreset(p.hours)}>
                 {p.label}
               </Button>

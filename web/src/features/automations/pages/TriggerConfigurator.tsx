@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Toggle } from '@/components/ui/Toggle';
 import { useGeofences } from '@/api/hooks/useLocations';
+import { DAYS, COMMON_TIMEZONES } from '@/lib/constants';
 import {
   Clock, Zap, MapPin, Battery, Sunrise, Sun, Radio, Globe, Calendar,
   Copy,
@@ -54,22 +55,6 @@ const GEOFENCE_EVENTS = [
   { value: 'enter', label: 'Enter' },
   { value: 'leave', label: 'Leave' },
   { value: 'both', label: 'Enter or Leave' },
-];
-
-const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-const COMMON_TIMEZONES = [
-  { value: '', label: 'UTC (Default)' },
-  { value: 'America/New_York', label: 'Eastern (US)' },
-  { value: 'America/Chicago', label: 'Central (US)' },
-  { value: 'America/Denver', label: 'Mountain (US)' },
-  { value: 'America/Los_Angeles', label: 'Pacific (US)' },
-  { value: 'Europe/London', label: 'London (UK)' },
-  { value: 'Europe/Berlin', label: 'Berlin (EU)' },
-  { value: 'Europe/Paris', label: 'Paris (EU)' },
-  { value: 'Asia/Tokyo', label: 'Tokyo (JP)' },
-  { value: 'Asia/Shanghai', label: 'Shanghai (CN)' },
-  { value: 'Australia/Sydney', label: 'Sydney (AU)' },
 ];
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -165,7 +150,7 @@ export function TriggerConfigurator({ triggerType, config, onChange }: TriggerCo
                   {t('automations.builder.days', 'Days')}
                 </label>
                 <div className="flex gap-2 mt-1">
-                  {DAY_LABELS.map((label, i) => {
+                  {DAYS.map((label, i) => {
                     const active = selectedDays.length === 0 || selectedDays.includes(i);
                     return (
                       <button
@@ -179,7 +164,7 @@ export function TriggerConfigurator({ triggerType, config, onChange }: TriggerCo
                         onClick={() => {
                           let next: number[];
                           if (selectedDays.length === 0) {
-                            next = DAY_LABELS.map((_, idx) => idx).filter((idx) => idx !== i);
+                            next = DAYS.map((_, idx) => idx).filter((idx) => idx !== i);
                           } else if (selectedDays.includes(i)) {
                             next = selectedDays.filter((d) => d !== i);
                           } else {
@@ -354,7 +339,7 @@ export function TriggerConfigurator({ triggerType, config, onChange }: TriggerCo
               {t('automations.builder.days', 'Days')}
             </label>
             <div className="flex gap-2 mt-1">
-              {DAY_LABELS.map((label, i) => {
+              {DAYS.map((label, i) => {
                 const days = numArr(config.days_of_week);
                 const active = days.length === 0 || days.includes(i);
                 return (
@@ -369,7 +354,7 @@ export function TriggerConfigurator({ triggerType, config, onChange }: TriggerCo
                     onClick={() => {
                       let next: number[];
                       if (days.length === 0) {
-                        next = DAY_LABELS.map((_, idx) => idx).filter((idx) => idx !== i);
+                        next = DAYS.map((_, idx) => idx).filter((idx) => idx !== i);
                       } else if (days.includes(i)) {
                         next = days.filter((d) => d !== i);
                       } else {

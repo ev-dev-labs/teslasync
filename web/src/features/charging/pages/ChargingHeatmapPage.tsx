@@ -14,9 +14,8 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSettings } from '@/hooks/useSettings';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { DAYS } from '@/lib/constants';
 import type { ChargingSession } from '@/api/types';
-
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
 
 function heatColor(count: number, max: number): string {
   if (count === 0 || max === 0) return 'rgba(0, 240, 255, 0.04)';

@@ -25,6 +25,7 @@ import { useSignals } from '@/api/hooks/useTelemetry';
 import { request } from '@/api/client';
 import { fmtNumber } from '@/lib/numberFormat';
 import { CHART_COLORS } from '@/lib/colors';
+import { TIME_RANGE_PRESETS } from '@/lib/constants';
 import { Database, Search, Clock, Activity, Filter, AlertCircle } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -70,14 +71,6 @@ function valueType(row: SignalRow): string {
 const typeVariant: Record<string, 'info' | 'success' | 'warning'> = {
   number: 'info', string: 'success', boolean: 'warning',
 };
-
-const PRESETS = [
-  { label: '1h', hours: 1 },
-  { label: '6h', hours: 6 },
-  { label: '24h', hours: 24 },
-  { label: '7d', hours: 168 },
-  { label: '30d', hours: 720 },
-];
 
 // ─── Page component ──────────────────────────────────────────────────────────
 
@@ -247,7 +240,7 @@ export default function SignalLogViewerPage() {
             <Clock className="inline h-3 w-3 mr-1" />{t('Time Range')}
           </span>
           <div className="flex flex-wrap gap-2 mb-2">
-            {PRESETS.map(p => (
+            {TIME_RANGE_PRESETS.map(p => (
               <Button key={p.label} size="sm" variant="ghost" onClick={() => applyPreset(p.hours)}>
                 {p.label}
               </Button>

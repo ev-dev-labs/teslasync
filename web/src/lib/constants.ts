@@ -39,3 +39,81 @@ export const FUEL = {
   DEFAULT_MPG: 30,
   GALLONS_TO_LITERS: 3.78541,
 } as const
+
+/** Day-of-week labels (Sunday-first) */
+export const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const
+
+/** Calendar months for dropdowns */
+export const MONTHS: { value: string; label: string }[] = [
+  { value: '1', label: 'January' },
+  { value: '2', label: 'February' },
+  { value: '3', label: 'March' },
+  { value: '4', label: 'April' },
+  { value: '5', label: 'May' },
+  { value: '6', label: 'June' },
+  { value: '7', label: 'July' },
+  { value: '8', label: 'August' },
+  { value: '9', label: 'September' },
+  { value: '10', label: 'October' },
+  { value: '11', label: 'November' },
+  { value: '12', label: 'December' },
+]
+
+/** Common timezone options for selects */
+export const COMMON_TIMEZONES: { value: string; label: string }[] = [
+  { value: '', label: 'UTC (Default)' },
+  { value: 'America/New_York', label: 'Eastern (US)' },
+  { value: 'America/Chicago', label: 'Central (US)' },
+  { value: 'America/Denver', label: 'Mountain (US)' },
+  { value: 'America/Los_Angeles', label: 'Pacific (US)' },
+  { value: 'Europe/London', label: 'London (UK)' },
+  { value: 'Europe/Berlin', label: 'Berlin (EU)' },
+  { value: 'Europe/Paris', label: 'Paris (EU)' },
+  { value: 'Asia/Tokyo', label: 'Tokyo (JP)' },
+  { value: 'Asia/Shanghai', label: 'Shanghai (CN)' },
+  { value: 'Australia/Sydney', label: 'Sydney (AU)' },
+]
+
+/** Numeric comparison operators */
+export const NUMERIC_OPERATORS: { value: string; label: string }[] = [
+  { value: 'eq', label: '=' },
+  { value: 'neq', label: '≠' },
+  { value: 'gt', label: '>' },
+  { value: 'lt', label: '<' },
+  { value: 'gte', label: '≥' },
+  { value: 'lte', label: '≤' },
+]
+
+/** Boolean comparison operators */
+export const BOOL_OPERATORS: { value: string; label: string }[] = [
+  { value: 'eq', label: 'Is' },
+  { value: 'neq', label: 'Is Not' },
+]
+
+/** Time range presets for signal viewers */
+export const TIME_RANGE_PRESETS = [
+  { label: '1h', hours: 1 },
+  { label: '6h', hours: 6 },
+  { label: '24h', hours: 24 },
+  { label: '7d', hours: 168 },
+  { label: '30d', hours: 720 },
+] as const
+
+/** Days-back options for analytics filters */
+export const DAYS_OPTIONS: { value: string; label: string }[] = [
+  { value: '7', label: '7 days' },
+  { value: '30', label: '30 days' },
+  { value: '90', label: '90 days' },
+  { value: '180', label: '180 days' },
+]
+
+/** Automation condition type registry */
+export const CONDITION_TYPES: { value: string; label: string }[] = [
+  { value: 'state_check', label: 'State Check' },
+  { value: 'time_window', label: 'Time Window' },
+  { value: 'cooldown', label: 'Cooldown' },
+  { value: 'day_filter', label: 'Day Filter' },
+  { value: 'location', label: 'Location / Geofence' },
+  { value: 'seasonal', label: 'Seasonal' },
+  { value: 'variable_check', label: 'Variable Check' },
+]

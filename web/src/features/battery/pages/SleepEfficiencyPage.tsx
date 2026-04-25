@@ -18,6 +18,7 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSleepEfficiency } from '@/api/hooks/useEnergy';
 import { formatDateShort, formatTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { DAYS_OPTIONS } from '@/lib/constants';
 import type { SleepDrainEvent } from '@/types/energy';
 
 /* ── Constants ── */
@@ -30,13 +31,6 @@ const STATE_COLORS: Record<string, string> = {
   updating: '#ec4899',
   suspended: '#6366f1',
 };
-
-const DAYS_OPTIONS = [
-  { value: '7', label: '7 days' },
-  { value: '30', label: '30 days' },
-  { value: '90', label: '90 days' },
-  { value: '180', label: '180 days' },
-];
 
 /* ── Component ── */
 
