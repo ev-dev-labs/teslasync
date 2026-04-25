@@ -25,6 +25,7 @@ import {
   axisTick,
   chartMargin,
   CHART_COLORS,
+  AREA_DEFAULTS,
 } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -728,30 +729,27 @@ export default function SafetySettingsPage() {
                     <Tooltip content={<ChartTooltip />} />
                     <Legend />
                     <Line
+                      {...AREA_DEFAULTS}
                       type="stepAfter"
                       dataKey="aeb"
                       name={t('AEB')}
                       stroke={CHART_COLORS[0]}
-                      dot={false}
-                      strokeWidth={2}
                       isAnimationActive={false}
                     />
                     <Line
+                      {...AREA_DEFAULTS}
                       type="stepAfter"
                       dataKey="bscw"
                       name={t('BSCW')}
                       stroke={CHART_COLORS[1]}
-                      dot={false}
-                      strokeWidth={2}
                       isAnimationActive={false}
                     />
                     <Line
+                      {...AREA_DEFAULTS}
                       type="stepAfter"
                       dataKey="elda"
                       name={t('ELDA')}
                       stroke={CHART_COLORS[2]}
-                      dot={false}
-                      strokeWidth={2}
                       isAnimationActive={false}
                     />
                   </LineChart>

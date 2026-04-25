@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
   Legend,
   ReferenceLine,
+  AREA_DEFAULTS,
 } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
 import { useSettings } from '@/hooks/useSettings';
@@ -43,31 +44,22 @@ export function StatorTempChart({ data }: StatorTempChartProps) {
             <Tooltip content={<ChartTooltip />} />
             <Legend />
             <Line
-              type="monotone"
+              {...AREA_DEFAULTS}
               dataKey="stator"
               name={`${t('drivetrain.statorTemp', 'Stator Temp')} (${tempUnit})`}
               stroke="#ef4444"
-              strokeWidth={2}
-              dot={false}
-              connectNulls
             />
             <Line
-              type="monotone"
+              {...AREA_DEFAULTS}
               dataKey="statorRel"
               name={`${t('drivetrain.statorTempRearLeft', 'Rear-Left Stator Temp')} (${tempUnit})`}
               stroke="#a855f7"
-              strokeWidth={2}
-              dot={false}
-              connectNulls
             />
             <Line
-              type="monotone"
+              {...AREA_DEFAULTS}
               dataKey="statorRer"
               name={`${t('drivetrain.statorTempRearRight', 'Rear-Right Stator Temp')} (${tempUnit})`}
               stroke="#06b6d4"
-              strokeWidth={2}
-              dot={false}
-              connectNulls
             />
             <ReferenceLine
               y={convertTemp(60)}

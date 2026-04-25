@@ -13,6 +13,7 @@ import {
   ResponsiveContainer,
   Legend,
   ReferenceLine,
+  AREA_DEFAULTS,
 } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
 
@@ -45,12 +46,11 @@ export function TorqueHistoryChart({ data }: TorqueHistoryChartProps) {
             <Tooltip content={<ChartTooltip />} />
             <Legend />
             <Area
-              type="monotone"
+              {...AREA_DEFAULTS}
               dataKey="torque"
               name={`${t('drivetrain.torque', 'Torque')} (Nm)`}
               stroke="#00f0ff"
               fill="url(#dtTorqueGrad)"
-              strokeWidth={2}
             />
             <ReferenceLine y={0} stroke="#64748b" strokeDasharray="2 2" />
           </AreaChart>

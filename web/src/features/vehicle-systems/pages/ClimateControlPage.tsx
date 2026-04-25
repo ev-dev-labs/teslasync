@@ -45,6 +45,8 @@ import {
   chartMarginLabeled,
   axisTick,
   chartAnimation,
+  AREA_DEFAULTS,
+  areaGradient,
 } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -1127,30 +1129,24 @@ export default function ClimateControlPage() {
                 <Tooltip content={<ChartTooltip />} />
                 <Legend />
                 <Line
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="insideTemp"
                   name={t('Inside Temp')}
                   stroke={CHART_COLORS[0]}
-                  dot={false}
-                  strokeWidth={2}
                   {...chartAnimation}
                 />
                 <Line
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="outsideTemp"
                   name={t('Outside Temp')}
                   stroke={CHART_COLORS[1]}
-                  dot={false}
-                  strokeWidth={2}
                   {...chartAnimation}
                 />
                 <Line
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="driverTempSetting"
                   name={t('Driver Set Temp')}
                   stroke={CHART_COLORS[2]}
-                  dot={false}
-                  strokeWidth={2}
                   strokeDasharray="5 5"
                   {...chartAnimation}
                 />
@@ -1214,26 +1210,23 @@ export default function ClimateControlPage() {
                 />
                 <Tooltip content={<ChartTooltip />} />
                 <Legend />
+                {areaGradient('climateHvacGrad', CHART_COLORS[0])}
                 <Area
+                  {...AREA_DEFAULTS}
                   yAxisId="power"
-                  type="monotone"
                   dataKey="hvacPower"
                   name={t('HVAC Power (kW)')}
                   stroke={CHART_COLORS[0]}
-                  fill={CHART_COLORS[0]}
-                  fillOpacity={0.15}
-                  strokeWidth={2}
-                  dot={false}
+                  fill="url(#climateHvacGrad)"
                   {...chartAnimation}
                 />
                 <Line
+                  {...AREA_DEFAULTS}
                   yAxisId="fan"
                   type="stepAfter"
                   dataKey="fanSpeed"
                   name={t('Fan Speed')}
                   stroke={CHART_COLORS[3]}
-                  strokeWidth={2}
-                  dot={false}
                   {...chartAnimation}
                 />
               </AreaChart>

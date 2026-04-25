@@ -16,6 +16,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
+  AREA_DEFAULTS,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -90,8 +91,8 @@ export default function MotorHistoryCharts({ motorHistory }: MotorHistoryChartsP
                 <YAxis tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} unit=" kW" />
                 <Tooltip content={<ChartTooltip />} />
                 <Legend wrapperStyle={{ color: 'rgba(255,255,255,0.6)' }} />
-                <Area type="monotone" dataKey="power" stroke="#06b6d4" fill="url(#powerAreaGrad)" name={t('dynamics.power', 'Power')} />
-                <Area type="monotone" dataKey="regen" stroke="#22c55e" fill="url(#regenAreaGrad)" name={t('dynamics.regen', 'Regen')} />
+                <Area {...AREA_DEFAULTS} dataKey="power" stroke="#06b6d4" fill="url(#powerAreaGrad)" name={t('dynamics.power', 'Power')} />
+                <Area {...AREA_DEFAULTS} dataKey="regen" stroke="#22c55e" fill="url(#regenAreaGrad)" name={t('dynamics.regen', 'Regen')} />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
@@ -117,8 +118,8 @@ export default function MotorHistoryCharts({ motorHistory }: MotorHistoryChartsP
                 <YAxis tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} unit=" Nm" />
                 <Tooltip content={<ChartTooltip />} />
                 <Legend wrapperStyle={{ color: 'rgba(255,255,255,0.6)' }} />
-                <Line type="monotone" dataKey="front" stroke="#3b82f6" strokeWidth={2} dot={false} name={t('dynamics.torqueFront', 'Front Torque')} />
-                <Line type="monotone" dataKey="rear" stroke="#a855f7" strokeWidth={2} dot={false} name={t('dynamics.torqueRear', 'Rear Torque')} />
+                <Line {...AREA_DEFAULTS} dataKey="front" stroke="#3b82f6" name={t('dynamics.torqueFront', 'Front Torque')} />
+                <Line {...AREA_DEFAULTS} dataKey="rear" stroke="#a855f7" name={t('dynamics.torqueRear', 'Rear Torque')} />
               </LineChart>
             </ResponsiveContainer>
           ) : (
@@ -144,8 +145,8 @@ export default function MotorHistoryCharts({ motorHistory }: MotorHistoryChartsP
                 <YAxis tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} unit=" RPM" />
                 <Tooltip content={<ChartTooltip />} />
                 <Legend wrapperStyle={{ color: 'rgba(255,255,255,0.6)' }} />
-                <Line type="monotone" dataKey="front" stroke="#06b6d4" strokeWidth={2} dot={false} name={t('dynamics.rpmFront', 'Front RPM')} />
-                <Line type="monotone" dataKey="rear" stroke="#a855f7" strokeWidth={2} dot={false} name={t('dynamics.rpmRear', 'Rear RPM')} />
+                <Line {...AREA_DEFAULTS} dataKey="front" stroke="#06b6d4" name={t('dynamics.rpmFront', 'Front RPM')} />
+                <Line {...AREA_DEFAULTS} dataKey="rear" stroke="#a855f7" name={t('dynamics.rpmRear', 'Rear RPM')} />
               </LineChart>
             </ResponsiveContainer>
           ) : (

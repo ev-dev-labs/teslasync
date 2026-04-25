@@ -1,0 +1,43 @@
+=== SURVEY ===
+Files found at expected paths:
+  1. web/src/features/vehicle-systems/pages/TirePressurePage.tsx — 1 Line (mapped in loop)
+  2. web/src/features/driving/components/drive-detail/TirePressureSection.tsx — 4 Lines
+  3. web/src/features/vehicle-systems/pages/ClimateControlPage.tsx — 3 Lines + 1 Area + 1 Line (HVAC)
+  4. web/src/features/driving/components/driving-dynamics/MotorHistoryCharts.tsx — 2 Areas + 4 Lines
+  5. web/src/features/driving/components/drivetrain-health/StatorTempChart.tsx — 3 Lines
+  6. web/src/features/driving/components/drivetrain-health/TorqueHistoryChart.tsx — 1 Area
+  7. web/src/features/vehicle-systems/pages/SafetySettingsPage.tsx — 3 Lines (stepAfter)
+  8. web/src/features/battery/pages/VampireDrainPage.tsx — 1 Line
+
+chartDefaults.tsx exports:
+  AREA_DEFAULTS = { type: 'monotone', dot: false, connectNulls: true, strokeWidth: 2, animationDuration: 300 }
+  areaGradient(id, color, opacity=0.3) — returns <defs><linearGradient>
+
+=== REASONING ===
+For each Area/Line:
+  - Spread {...AREA_DEFAULTS} to supply type, dot, connectNulls, strokeWidth, animationDuration
+  - Remove redundant props now covered (type="monotone", dot={false}, strokeWidth={2}, connectNulls)
+  - Keep props that intentionally differ: type="stepAfter" (SafetySettings, ClimateHVAC fan line),
+    isAnimationActive={false} (SafetySettings), strokeDasharray (ClimateControl driver temp),
+    {...chartAnimation} overrides animationDuration with 800 (ClimateControl)
+  - For Area charts already using ChartGradient defs, keep those (MotorHistoryCharts, TorqueHistoryChart)
+  - For ClimateControlPage HVAC Area: replaced fill={color}+fillOpacity with areaGradient()
+  - No Bar/Pie/Gauge/RadialBar components touched
+
+=== CHANGES ===
+1. TirePressureSection.tsx: Added AREA_DEFAULTS import, spread on 4 Lines, removed redundant props
+2. TirePressurePage.tsx: Added AREA_DEFAULTS import, spread on mapped Line, removed redundant props
+3. ClimateControlPage.tsx: Added AREA_DEFAULTS+areaGradient imports, spread on 3 temp Lines + 1 HVAC Area + 1 HVAC fan Line, added areaGradient for HVAC power
+4. MotorHistoryCharts.tsx: Added AREA_DEFAULTS import, spread on 2 Areas + 4 Lines
+5. StatorTempChart.tsx: Added AREA_DEFAULTS import, spread on 3 Lines, removed redundant props
+6. TorqueHistoryChart.tsx: Added AREA_DEFAULTS import, spread on 1 Area, removed redundant props
+7. SafetySettingsPage.tsx: Added AREA_DEFAULTS import, spread on 3 Lines, kept type="stepAfter" + isAnimationActive={false} overrides
+8. VampireDrainPage.tsx: Added AREA_DEFAULTS import, spread on 1 Line, removed redundant props
+
+=== GATE ===
+npx tsc --noEmit: EXIT 0 (clean)
+dot={true} count: 0
+
+=== COMMIT ===
+EXIT=0
+STATUS=DONE

@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import {
-  ChartTooltip,
+  ChartTooltip, AREA_DEFAULTS,
   LineChart, Line, Legend,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
@@ -60,16 +60,16 @@ export function TirePressureSection({ chartData, stats }: TirePressureSectionPro
                   <Tooltip content={<ChartTooltip />} />
                   <Legend wrapperStyle={LEGEND_STYLE} />
                   {chartData.some((d) => d.tireFl !== null) && (
-                    <Line type="monotone" dataKey="tireFl" stroke="#3b82f6" strokeWidth={2} dot={false} name={`FL (${pressureUnit})`} connectNulls />
+                    <Line {...AREA_DEFAULTS} dataKey="tireFl" stroke="#3b82f6" name={`FL (${pressureUnit})`} />
                   )}
                   {chartData.some((d) => d.tireFr !== null) && (
-                    <Line type="monotone" dataKey="tireFr" stroke="#10b981" strokeWidth={2} dot={false} name={`FR (${pressureUnit})`} connectNulls />
+                    <Line {...AREA_DEFAULTS} dataKey="tireFr" stroke="#10b981" name={`FR (${pressureUnit})`} />
                   )}
                   {chartData.some((d) => d.tireRl !== null) && (
-                    <Line type="monotone" dataKey="tireRl" stroke="#f59e0b" strokeWidth={2} dot={false} name={`RL (${pressureUnit})`} connectNulls />
+                    <Line {...AREA_DEFAULTS} dataKey="tireRl" stroke="#f59e0b" name={`RL (${pressureUnit})`} />
                   )}
                   {chartData.some((d) => d.tireRr !== null) && (
-                    <Line type="monotone" dataKey="tireRr" stroke="#ef4444" strokeWidth={2} dot={false} name={`RR (${pressureUnit})`} connectNulls />
+                    <Line {...AREA_DEFAULTS} dataKey="tireRr" stroke="#ef4444" name={`RR (${pressureUnit})`} />
                   )}
                 </LineChart>
               </ResponsiveContainer>

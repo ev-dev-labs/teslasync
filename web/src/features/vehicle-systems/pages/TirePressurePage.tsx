@@ -9,7 +9,7 @@ import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Button, Select, DataTable, type Column } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import {
-  RadialGauge, ChartTooltip, CHART_COLORS,
+  RadialGauge, ChartTooltip, CHART_COLORS, AREA_DEFAULTS,
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend,
 } from '@/components/charts';
@@ -466,12 +466,10 @@ export default function TirePressurePage() {
                   {TIRE_POSITIONS.map((pos) => (
                     <Line
                       key={pos}
-                      type="monotone"
+                      {...AREA_DEFAULTS}
                       dataKey={pos}
                       name={TIRE_LABELS[pos]}
                       stroke={LINE_COLORS[pos]}
-                      strokeWidth={2}
-                      dot={false}
                     />
                   ))}
                 </LineChart>
