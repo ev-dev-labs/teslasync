@@ -64,7 +64,7 @@ Tesla Fleet API → MQTT Broker
 - **3-tier resilience** — memory buffer → Redis backup → MQTT persistence
 - **Continuous aggregates** replace snapshot table reads for dashboards
 
-## Prompt ordering (23 atomic prompts)
+## Prompt ordering (29 atomic prompts)
 
 ```
 ── Foundation ──
@@ -100,8 +100,15 @@ Tesla Fleet API → MQTT Broker
 20 — Export + Backup workers: rewire for signal_log
 21 — Frontend types: remove dropped table interfaces, update API types
 
+── Telemetry endpoints (pivot + rewire) ──
+23 — SignalTracePivot helper (vertical → horizontal chart data)
+24 — Drive telemetry + positions: rewire to signal_log via pivot
+25 — Charge telemetry: rewire to signal_log via pivot
+26 — Snapshot endpoints (tire/motor/climate/security/etc.): rewire to signal_log
+27 — Live active drive/charge: in-progress session detail in UI
+
 ── Gate ──
-22 — Gate: build + tsc + replay signals + verify sessions + verify no legacy refs
+28 — Gate: build + tsc + replay signals + verify sessions + verify no legacy refs
 ```
 
 ## Supersedes
