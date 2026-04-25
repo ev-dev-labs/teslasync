@@ -111,7 +111,25 @@ func (w *SignalHistoryWriter) Append(vehicleID int64, signals map[string]interfa
 				continue
 			}
 		case map[string]interface{}:
-			// Compound signal (DoorState, DetailedChargeState, etc.)
+			// Flatten Location-type compounds into separate Latitude/Longitude rows
+			if latName, lonName, isLoc := locationCompoundNames(name); isLoc {
+				if lat, latOk := v["latitude"].(float64); latOk {
+					latVal := lat
+					w.buffer = append(w.buffer, SignalHistoryRow{
+						VehicleID: vehicleID, Signal: latName,
+						ValueNum: &latVal, CreatedAt: now,
+					})
+				}
+				if lon, lonOk := v["longitude"].(float64); lonOk {
+					lonVal := lon
+					w.buffer = append(w.buffer, SignalHistoryRow{
+						VehicleID: vehicleID, Signal: lonName,
+						ValueNum: &lonVal, CreatedAt: now,
+					})
+				}
+				continue
+			}
+			// Other compound signals — JSON-marshal into value_jsonb
 			jsonBytes, err := json.Marshal(v)
 			if err == nil {
 				s := string(jsonBytes)
@@ -630,4 +648,19 @@ func (w *SignalHistoryWriter) Stats(ctx context.Context, vehicleID int64, signal
 		stats = append(stats, s)
 	}
 	return stats, rows.Err()
+}
+
+// locationCompoundNames maps Location compound signal names to their flattened
+// Latitude/Longitude signal names. Returns false for non-Location compounds.
+func locationCompoundNames(signal string) (latName, lonName string, isLocation bool) {
+	switch signal {
+	case "Location":
+		return "Latitude", "Longitude", true
+	case "OriginLocation":
+		return "OriginLatitude", "OriginLongitude", true
+	case "DestinationLocation":
+		return "DestinationLatitude", "DestinationLongitude", true
+	default:
+		return "", "", false
+	}
 }

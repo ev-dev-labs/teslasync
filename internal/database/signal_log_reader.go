@@ -69,7 +69,15 @@ func (r *SignalLogReader) SnapshotAt(ctx context.Context, vehicleID int64, at ti
 			result[signal] = val
 		}
 	}
-	return result, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Unpack historical Location compounds stored as value_jsonb.
+	// Newer flattened rows (Latitude/Longitude) take precedence.
+	unpackLocationCompounds(result)
+
+	return result, nil
 }
 
 // SignalAt returns a single signal's value at or before the given timestamp.
@@ -473,4 +481,34 @@ func decodeValue(vNum *float64, vStr *string, vBool *bool, vJsonb []byte) interf
 		return *vStr
 	}
 	return nil
+}
+
+// unpackLocationCompounds expands historical Location compound blobs (stored
+// as value_jsonb) into flat Latitude/Longitude keys. Only sets the flat key
+// if it doesn't already exist — newer flattened rows take precedence.
+func unpackLocationCompounds(result map[string]interface{}) {
+	for _, loc := range []struct{ compound, lat, lon string }{
+		{"Location", "Latitude", "Longitude"},
+		{"OriginLocation", "OriginLatitude", "OriginLongitude"},
+		{"DestinationLocation", "DestinationLatitude", "DestinationLongitude"},
+	} {
+		locRaw, ok := result[loc.compound]
+		if !ok {
+			continue
+		}
+		locMap, mapOk := locRaw.(map[string]interface{})
+		if !mapOk {
+			continue
+		}
+		if lat, latOk := locMap["latitude"]; latOk {
+			if _, exists := result[loc.lat]; !exists {
+				result[loc.lat] = lat
+			}
+		}
+		if lon, lonOk := locMap["longitude"]; lonOk {
+			if _, exists := result[loc.lon]; !exists {
+				result[loc.lon] = lon
+			}
+		}
+	}
 }
