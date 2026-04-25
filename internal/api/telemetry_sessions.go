@@ -778,7 +778,8 @@ func (t *TelemetrySessionTracker) CleanupStaleSessions(ctx context.Context, stal
 	// more than staleTimeout ago and have no in-memory tracker (e.g. from pre-restart)
 	cutoff := now.Add(-staleTimeout)
 	_, err := t.db.Pool.Exec(ctx,
-		`UPDATE drives SET end_ts = $1, duration_min = EXTRACT(EPOCH FROM ($1 - start_ts))/60
+		`UPDATE drives SET end_ts = $1, duration_min = EXTRACT(EPOCH FROM ($1 - start_ts))/60,
+		 ended_status = 'interrupted'
 		 WHERE end_ts IS NULL AND start_ts < $2`, now, cutoff)
 	if err != nil {
 		log.Warn().Err(err).Msg("telemetry: failed to close orphaned drives")
@@ -1658,6 +1659,41 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 			}
 		}
 	}
+
+	// Determine ended_status based on how the drive ended
+	switch {
+	case duration < 1.0 || distance < 0.1:
+		enhancedFields["ended_status"] = "aborted"
+	case signals != nil:
+		enhancedFields["ended_status"] = "completed"
+	default:
+		// signals == nil means stale-session cleanup closed the drive
+		enhancedFields["ended_status"] = "interrupted"
+	}
+
+	// Compute drive score (0–100) from available driving data
+	driveScore := 100.0
+	if maxSpeed > 85 {
+		driveScore -= 10
+	}
+	if regenKwh, ok := enhancedFields["regen_kwh"].(float64); ok && regenKwh > 0 {
+		if energyUsed, ok := enhancedFields["energy_used_kwh"].(float64); ok && energyUsed > 0 {
+			if regenKwh/energyUsed > 0.3 {
+				driveScore += 5 // good regen usage
+			}
+		}
+	}
+	// Penalize very high average speed (aggressive driving)
+	if speedAvg != nil && *speedAvg > 80 {
+		driveScore -= 5
+	}
+	if driveScore < 0 {
+		driveScore = 0
+	}
+	if driveScore > 100 {
+		driveScore = 100
+	}
+	enhancedFields["score"] = driveScore
 
 	if err := t.db.WithTx(ctx, func(tx pgx.Tx) error {
 		var endBatteryPct *int16
