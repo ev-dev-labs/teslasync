@@ -32,6 +32,7 @@ services:
       - MQTT_PORT=1883
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - REDIS_ENABLED=true
       - TESLA_CLIENT_ID=${TESLA_CLIENT_ID}
       - TESLA_CLIENT_SECRET=${TESLA_CLIENT_SECRET}
       - TESLA_REDIRECT_URI=${TESLA_REDIRECT_URI:-http://localhost:8080/api/v1/auth/callback}

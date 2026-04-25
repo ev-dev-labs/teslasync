@@ -197,6 +197,12 @@ func main() {
 		signalStore = sigsvc.New(liveStateRepo, 0, db.WriteBreaker)
 		telemetryHandler.SetSignalStore(signalStore)
 
+		// Wire Redis signal cache (write-through HSET mirror, fire-and-forget)
+		if rdb := cacheStore.Underlying(); rdb != nil {
+			telemetryHandler.SetRedisCache(sigsvc.NewRedisSignalCache(rdb))
+			log.Info().Msg("redis signal cache enabled")
+		}
+
 		// Start debounced flush loop (coalesces MQTT batches into 1 DB write/vehicle/sec)
 		go signalStore.FlushLoop(ctx)
 

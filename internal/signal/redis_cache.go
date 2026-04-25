@@ -1,13 +1,13 @@
 package signal
 
 import (
-"context"
-"fmt"
-"strconv"
-"time"
+	"context"
+	"fmt"
+	"strconv"
+	"time"
 
-"github.com/redis/go-redis/v9"
-"github.com/rs/zerolog/log"
+	"github.com/redis/go-redis/v9"
+	"github.com/rs/zerolog/log"
 )
 
 const signalKeyTTL = 7 * 24 * time.Hour // auto-expire stale vehicles after 7 days
@@ -16,12 +16,12 @@ const signalKeyTTL = 7 * 24 * time.Hour // auto-expire stale vehicles after 7 da
 // cache alongside the in-memory Store. Key: "vehicle:{vehicleID}:signals",
 // field: signal name, value: string-encoded typed value.
 type RedisSignalCache struct {
-rdb *redis.Client
+	rdb *redis.Client
 }
 
 // NewRedisSignalCache creates a RedisSignalCache backed by the given client.
 func NewRedisSignalCache(rdb *redis.Client) *RedisSignalCache {
-return &RedisSignalCache{rdb: rdb}
+	return &RedisSignalCache{rdb: rdb}
 }
 
 // Update writes all non-nil signals to the vehicle's HSET using a single
@@ -31,44 +31,44 @@ return &RedisSignalCache{rdb: rdb}
 // If Redis is unreachable, the error is logged as a warning and swallowed -
 // the in-memory store remains the primary source of truth.
 func (c *RedisSignalCache) Update(ctx context.Context, vehicleID int64, signals map[string]interface{}) error {
-if len(signals) == 0 {
-return nil
-}
+	if len(signals) == 0 {
+		return nil
+	}
 
-key := fmt.Sprintf("vehicle:%d:signals", vehicleID)
+	key := fmt.Sprintf("vehicle:%d:signals", vehicleID)
 
-// Build flat field-value pairs for variadic HSET.
-fields := make([]interface{}, 0, len(signals)*2)
-for name, val := range signals {
-if val == nil {
-continue
-}
-// Skip {invalid: true} markers from Tesla
-if im, isMap := val.(map[string]interface{}); isMap {
-if inv, has := im["invalid"]; has {
-if b, isBool := inv.(bool); isBool && b {
-continue
-}
-}
-}
-fields = append(fields, name, encodeSignalValue(val))
-}
+	// Build flat field-value pairs for variadic HSET.
+	fields := make([]interface{}, 0, len(signals)*2)
+	for name, val := range signals {
+		if val == nil {
+			continue
+		}
+		// Skip {invalid: true} markers from Tesla
+		if im, isMap := val.(map[string]interface{}); isMap {
+			if inv, has := im["invalid"]; has {
+				if b, isBool := inv.(bool); isBool && b {
+					continue
+				}
+			}
+		}
+		fields = append(fields, name, encodeSignalValue(val))
+	}
 
-if len(fields) == 0 {
-return nil
-}
+	if len(fields) == 0 {
+		return nil
+	}
 
-if err := c.rdb.HSet(ctx, key, fields...).Err(); err != nil {
-log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("redis signal cache: HSET failed")
-return err
-}
+	if err := c.rdb.HSet(ctx, key, fields...).Err(); err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("redis signal cache: HSET failed")
+		return err
+	}
 
-// Refresh TTL so actively-streaming vehicles never expire
-if err := c.rdb.Expire(ctx, key, signalKeyTTL).Err(); err != nil {
-log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("redis signal cache: EXPIRE failed")
-}
+	// Refresh TTL so actively-streaming vehicles never expire
+	if err := c.rdb.Expire(ctx, key, signalKeyTTL).Err(); err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("redis signal cache: EXPIRE failed")
+	}
 
-return nil
+	return nil
 }
 
 // GetAll returns all signals for a vehicle from Redis HSET.
@@ -126,27 +126,27 @@ func decodeSignalValue(s string) interface{} {
 // encodeSignalValue converts a signal value to its string representation.
 // Numbers -> decimal string, bools -> "true"/"false", strings -> as-is.
 func encodeSignalValue(v interface{}) string {
-switch val := v.(type) {
-case string:
-return val
-case bool:
-if val {
-return "true"
-}
-return "false"
-case float64:
-return strconv.FormatFloat(val, 'f', -1, 64)
-case float32:
-return strconv.FormatFloat(float64(val), 'f', -1, 32)
-case int:
-return strconv.Itoa(val)
-case int64:
-return strconv.FormatInt(val, 10)
-case int32:
-return strconv.FormatInt(int64(val), 10)
-case uint64:
-return strconv.FormatUint(val, 10)
-default:
-return fmt.Sprintf("%v", val)
-}
+	switch val := v.(type) {
+	case string:
+		return val
+	case bool:
+		if val {
+			return "true"
+		}
+		return "false"
+	case float64:
+		return strconv.FormatFloat(val, 'f', -1, 64)
+	case float32:
+		return strconv.FormatFloat(float64(val), 'f', -1, 32)
+	case int:
+		return strconv.Itoa(val)
+	case int64:
+		return strconv.FormatInt(val, 10)
+	case int32:
+		return strconv.FormatInt(int64(val), 10)
+	case uint64:
+		return strconv.FormatUint(val, 10)
+	default:
+		return fmt.Sprintf("%v", val)
+	}
 }
