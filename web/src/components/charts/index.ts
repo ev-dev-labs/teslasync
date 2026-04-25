@@ -10,6 +10,7 @@ export { ElevationProfile, type ElevationDataPoint } from './ElevationProfile';
 export { renderAnnotationLines } from './ChartAnnotationLayer';
 export { AddAnnotationPopover } from './AddAnnotationPopover';
 export { AnnotationList } from './AnnotationList';
+export { AREA_DEFAULTS, areaGradient } from './chartDefaults';
 
 // Re-export recharts through shared charts module
 export { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, Brush, ComposedChart, ScatterChart, Scatter, ReferenceLine, Legend, RadarChart, Radar, PolarGrid, PolarAngleAxis, ZAxis, Label } from 'recharts';
