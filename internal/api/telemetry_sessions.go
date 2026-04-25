@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"math"
+	"strings"
 	"sync"
 	"time"
 
@@ -785,7 +786,9 @@ func (t *TelemetrySessionTracker) CleanupStaleSessions(ctx context.Context, stal
 		log.Warn().Err(err).Msg("telemetry: failed to close orphaned drives")
 	}
 	_, err = t.db.Pool.Exec(ctx,
-		`UPDATE charging_sessions SET end_ts = $1, duration_min = EXTRACT(EPOCH FROM ($1 - start_ts))/60
+		`UPDATE charging_sessions SET end_ts = $1,
+		 duration_min = EXTRACT(EPOCH FROM ($1 - start_ts))/60,
+		 ended_status = 'interrupted'
 		 WHERE end_ts IS NULL AND start_ts < $2`, now, cutoff)
 	if err != nil {
 		log.Warn().Err(err).Msg("telemetry: failed to close orphaned charges")
@@ -2136,33 +2139,8 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 	var endRange *float64
 	if v, ok := t.resolveFloat(vehicleID, finalSignals, active.accumulatedSignals, "RatedRange"); ok { endRange = floatPtr(v) }
 
-	// Calculate charge_energy_used (grid energy = added / efficiency)
-	var chargeEnergyUsed *float64
-	if active.EnergyAdded > 0 {
-		efficiency := 0.90 // ~90% for L2
-		if active.FastChargerType != nil {
-			efficiency = 0.95 // ~95% for DC
-		}
-		used := active.EnergyAdded / efficiency
-		chargeEnergyUsed = &used
-	}
-
-	// Temperature averages
-	var insideAvg, outsideAvg *float64
-	if active.TempCount > 0 {
-		ia := active.InsideTempSum / float64(active.TempCount)
-		oa := active.OutsideTempSum / float64(active.TempCount)
-		insideAvg = &ia
-		outsideAvg = &oa
-	}
-
-	// Build enhanced fields
+	// Build enhanced fields (only columns that exist in charging_sessions)
 	enhancedFields := map[string]interface{}{}
-	if active.Latitude != nil { enhancedFields["latitude"] = *active.Latitude }
-	if active.Longitude != nil { enhancedFields["longitude"] = *active.Longitude }
-	if insideAvg != nil { enhancedFields["inside_temp_avg"] = *insideAvg }
-	if outsideAvg != nil { enhancedFields["outside_temp_avg"] = *outsideAvg }
-	if chargeEnergyUsed != nil { enhancedFields["charge_energy_used"] = *chargeEnergyUsed }
 
 	// Enrich with signal_log for fields not captured during charge session.
 	// SignalLogReader reconstructs full signal state using last-known values,
@@ -2186,7 +2164,6 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 		// Unit preferences at start and end (may differ if user changed mid-charge)
 		startDistUnit := units.GetUnitFromSnapshot(startSnap, "SettingDistanceUnit")
 		endDistUnit := units.GetUnitFromSnapshot(endSnap, "SettingDistanceUnit")
-		endTempUnit := units.GetUnitFromSnapshot(endSnap, "SettingTemperatureUnit")
 
 		// Battery level from snapshots
 		if bl, ok := snapFloat(startSnap, "BatteryLevel"); ok && bl > 0 {
@@ -2220,30 +2197,16 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 			}
 		}
 
-		// Location from snapshots (for geocoding)
+		// Location from snapshots (for geocoding — not written to DB)
 		if active.Latitude == nil {
 			if lat, ok := snapFloat(endSnap, "Latitude"); ok {
 				active.Latitude = floatPtr(lat)
-				enhancedFields["latitude"] = lat
 			}
 		}
 		if active.Longitude == nil {
 			if lon, ok := snapFloat(endSnap, "Longitude"); ok {
 				active.Longitude = floatPtr(lon)
-				enhancedFields["longitude"] = lon
 			}
-		}
-
-		// Temperature (unit-aware, normalized to °C)
-		if temp, ok := snapFloat(endSnap, "InsideTemp"); ok {
-			normalized := units.NormalizeTemp(temp, endTempUnit)
-			enhancedFields["inside_temp_avg_c"] = normalized
-			insideAvg = &normalized
-		}
-		if temp, ok := snapFloat(endSnap, "OutsideTemp"); ok {
-			normalized := units.NormalizeTemp(temp, endTempUnit)
-			enhancedFields["outside_temp_avg_c"] = normalized
-			outsideAvg = &normalized
 		}
 
 		// Charger type detection from snapshot
@@ -2272,12 +2235,11 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 				Msg("telemetry: signal_history charge end snapshot failed")
 		}
 
-		// Fill missing location (for geocoding)
+		// Fill missing location (for geocoding — not written to DB)
 		if active.Latitude == nil {
 			if v, ok := endSnapshot["Latitude"]; ok {
 				if f, fOk := v.(float64); fOk {
 					active.Latitude = &f
-					enhancedFields["latitude"] = f
 				}
 			}
 		}
@@ -2285,27 +2247,33 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 			if v, ok := endSnapshot["Longitude"]; ok {
 				if f, fOk := v.(float64); fOk {
 					active.Longitude = &f
-					enhancedFields["longitude"] = f
-				}
-			}
-		}
-
-		// Fill missing temps
-		if _, ok := enhancedFields["inside_temp_avg"]; !ok {
-			if v, ok := endSnapshot["InsideTemp"]; ok {
-				if temp, fOk := v.(float64); fOk {
-					enhancedFields["inside_temp_avg_c"] = temp
-				}
-			}
-		}
-		if _, ok := enhancedFields["outside_temp_avg"]; !ok {
-			if v, ok := endSnapshot["OutsideTemp"]; ok {
-				if temp, fOk := v.(float64); fOk {
-					enhancedFields["outside_temp_avg_c"] = temp
 				}
 			}
 		}
 	}
+
+	// Determine ended_status based on how the charge ended
+	switch {
+	case signals == nil:
+		enhancedFields["ended_status"] = "interrupted"
+	case endBattery >= 95:
+		enhancedFields["ended_status"] = "full"
+	default:
+		// Check DetailedChargeState for user-stop vs normal completion
+		if cs, ok := signalStr(signals, "DetailedChargeState", "ChargeState"); ok {
+			if strings.Contains(cs, enums.ChargeStateStopped) || strings.Contains(cs, enums.ChargeStateDisconnected) {
+				enhancedFields["ended_status"] = "user_stopped"
+			} else {
+				enhancedFields["ended_status"] = "completed"
+			}
+		} else {
+			enhancedFields["ended_status"] = "completed"
+		}
+	}
+
+	// Default cost_currency — will be overridden when geofence electricity pricing is implemented
+	// TODO: Set from geofence.ElectricityCurrency when Geofence model gains that field
+	enhancedFields["cost_currency"] = "USD"
 
 	if err := t.db.WithTx(ctx, func(tx pgx.Tx) error {
 		var endBatteryPct *int16
@@ -2333,16 +2301,9 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 			}
 		}
 
-		// Auto-calculate charge cost from geofence electricity rate
-		if active.Latitude != nil && active.Longitude != nil && active.EnergyAdded > 0 {
-			geofences, gErr := t.geofenceRepo.FindByCoordinates(ctx, *active.Latitude, *active.Longitude)
-			if gErr == nil && len(geofences) > 0 && (*float64)(nil) != nil {
-				cost := active.EnergyAdded * *(*float64)(nil)
-				if err := t.chargeRepo.PartialUpdateWithTx(ctx, tx, active.SessionID, map[string]interface{}{"cost": cost}); err != nil {
-					return err
-				}
-			}
-		}
+		// TODO: Auto-calculate charge cost from geofence electricity rate.
+		// Geofence model does not yet have ElectricityRate/ElectricityCurrency fields.
+		// When added, compute: cost = energyAdded * rate, cost_currency = geofence.ElectricityCurrency.
 
 		return nil
 	}); err != nil {
@@ -2361,7 +2322,7 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 
 			// 1. Check geofences first (user-defined name)
 			if geofences, err := t.geofenceRepo.FindByCoordinates(gctx, lat, lon); err == nil && len(geofences) > 0 {
-				fields["location_name"] = geofences[0].Name
+				fields["charger_location"] = geofences[0].Name
 				_ = t.chargeRepo.PartialUpdate(gctx, sessionID, fields)
 				return
 			}
@@ -2369,7 +2330,7 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 			// 2. Check places cache (previously resolved, within 50m)
 			if cached, err := t.placesCache.FindNearby(gctx, lat, lon, 50); err == nil && cached != nil {
 				_ = t.placesCache.IncrementHitCount(gctx, cached.ID)
-				fields["location_name"] = cached.DisplayName
+				fields["charger_location"] = cached.DisplayName
 				_ = t.chargeRepo.PartialUpdate(gctx, sessionID, fields)
 				return
 			}
@@ -2381,7 +2342,7 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 				return
 			}
 			name := result.ShortName()
-			fields["location_name"] = name
+			fields["charger_location"] = name
 			_ = t.chargeRepo.PartialUpdate(gctx, sessionID, fields)
 
 			// Save to cache
