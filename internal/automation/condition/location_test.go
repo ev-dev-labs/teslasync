@@ -2,6 +2,7 @@ package condition
 
 import (
 	"encoding/json"
+	"fmt"
 	"math"
 	"testing"
 
@@ -99,12 +100,20 @@ func TestSphericalDistance_Antipodal(t *testing.T) {
 // ─── Evaluate Tests ─────────────────────────────────────
 
 func makeGeofence(id int64, name string, lat, lon, radius float64) *models.Geofence {
+	// Build a simple square polygon around the center point
+	// Approximate: 0.001 degrees ≈ 111m at equator
+	delta := radius / 111000.0
+	wkt := fmt.Sprintf("POLYGON((%f %f,%f %f,%f %f,%f %f,%f %f))",
+		lon-delta, lat-delta,
+		lon+delta, lat-delta,
+		lon+delta, lat+delta,
+		lon-delta, lat+delta,
+		lon-delta, lat-delta,
+	)
 	return &models.Geofence{
-		ID:        id,
-		Name:      name,
-		Latitude:  lat,
-		Longitude: lon,
-		Radius:    radius,
+		ID:         id,
+		Name:       name,
+		PolygonWKT: wkt,
 	}
 }
 

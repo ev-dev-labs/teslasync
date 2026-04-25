@@ -15,12 +15,10 @@ func TestChangedTo_ResetsAfterConditionFalse(t *testing.T) {
 		ID:          1,
 		Name:        "Gear to Drive",
 		CooldownMin: 15,
-		Conditions: json.RawMessage(`{
-			"signal": "Gear",
-			"compare": "changed_to",
-			"value": "D"
-		}`),
-		MsgTemplate: "Gear changed to {{Gear}}",
+		SignalName:  "Gear",
+		Op:          "changed",
+		ValueText:   strPtr("D"),
+		Severity:    "info",
 	}
 
 	vehicleID := int64(100)

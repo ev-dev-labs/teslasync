@@ -29,14 +29,11 @@ func (m *mockCalendarProvider) GetUpcomingCalendarEntries(_ context.Context, veh
 // ─── Helpers ────────────────────────────────────────────
 
 func makeCalendarAutomation(id int64, name string, cfg CalendarConfig, vehicleID *int64) *models.Automation {
-	raw, _ := json.Marshal(cfg)
 	return &models.Automation{
-		ID:            id,
-		Name:          name,
-		Enabled:       true,
-		VehicleID:     vehicleID,
-		TriggerType:   "calendar",
-		TriggerConfig: raw,
+		ID:        id,
+		Name:      name,
+		Enabled:   true,
+		VehicleID: vehicleID,
 	}
 }
 

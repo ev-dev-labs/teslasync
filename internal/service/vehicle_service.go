@@ -15,25 +15,23 @@ import (
 // and Tesla API synchronisation. Handlers delegate here instead of
 // interacting with repositories directly for complex operations.
 type VehicleService struct {
-	db                *database.DB
-	vehicleRepo       *database.VehicleRepo
-	positionRepo      *database.PositionRepo
-	securityRepo      *database.SecurityRepo
-	stateRepo         *database.VehicleStateRepo
-	vehicleConfigRepo *database.VehicleConfigRepo
-	settingsRepo      *database.SettingsRepo
+	db           *database.DB
+	vehicleRepo  *database.VehicleRepo
+	positionRepo *database.PositionRepo
+	securityRepo *database.SecurityRepo
+	stateRepo    *database.VehicleStateRepo
+	settingsRepo *database.SettingsRepo
 }
 
 // NewVehicleService creates a VehicleService with all required repos.
 func NewVehicleService(db *database.DB) *VehicleService {
 	return &VehicleService{
-		db:                db,
-		vehicleRepo:       database.NewVehicleRepo(db),
-		positionRepo:      database.NewPositionRepo(db),
-		securityRepo:      database.NewSecurityRepo(db),
-		stateRepo:         database.NewVehicleStateRepo(db),
-		vehicleConfigRepo: database.NewVehicleConfigRepo(db),
-		settingsRepo:      database.NewSettingsRepo(db),
+		db:           db,
+		vehicleRepo:  database.NewVehicleRepo(db),
+		positionRepo: database.NewPositionRepo(db),
+		securityRepo: database.NewSecurityRepo(db),
+		stateRepo:    database.NewVehicleStateRepo(db),
+		settingsRepo: database.NewSettingsRepo(db),
 	}
 }
 

@@ -21,10 +21,8 @@ SELECT id, 'DistanceUnitMiles', 'TemperatureUnitFahrenheit', 'PressureUnitPsi', 
 FROM vehicles WHERE vin = 'TEST00000000000VIN'
 ON CONFLICT (vehicle_id) DO NOTHING;
 
--- 3. Vehicle live state (single-row current-state cache)
-INSERT INTO vehicle_live_state (vehicle_id)
-SELECT id FROM vehicles WHERE vin = 'TEST00000000000VIN'
-ON CONFLICT (vehicle_id) DO NOTHING;
+-- 3. Seed initial signal in Redis (done by app on first signal batch)
+--    vehicle_live_state was dropped in Phase 14 — no longer needed here
 
 -- 4. Default settings (app display preferences)
 INSERT INTO settings (key, value_text, data_kind)
@@ -54,5 +52,4 @@ COMMIT;
 -- Verify
 SELECT 'vehicles' AS entity, count(*) FROM vehicles
 UNION ALL SELECT 'vehicle_units', count(*) FROM vehicle_units
-UNION ALL SELECT 'vehicle_live_state', count(*) FROM vehicle_live_state
 UNION ALL SELECT 'settings', count(*) FROM settings;

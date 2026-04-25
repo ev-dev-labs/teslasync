@@ -34,8 +34,6 @@ type TelemetryHandler struct {
 	stateRepo             *database.VehicleStateRepo
 	mileageRepo           *database.MileageRepo
 	securityRepo          *database.SecurityRepo
-	mediaRepo             *database.MediaRepo
-	vehicleConfigRepo     *database.VehicleConfigRepo
 	swUpdateRepo          *database.SoftwareUpdateRepo
 	signalCatalogRepo     *database.SignalCatalogRepo
 	signalObsRepo         *database.SignalObservationRepo
@@ -125,8 +123,6 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 		stateRepo:             database.NewVehicleStateRepo(db),
 		mileageRepo:           database.NewMileageRepo(db),
 		securityRepo:          database.NewSecurityRepo(db),
-		mediaRepo:             database.NewMediaRepo(db),
-		vehicleConfigRepo:     database.NewVehicleConfigRepo(db),
 		swUpdateRepo:          database.NewSoftwareUpdateRepo(db),
 		signalCatalogRepo:     database.NewSignalCatalogRepo(db),
 		signalObsRepo:         database.NewSignalObservationRepo(db),
@@ -1713,9 +1709,7 @@ func (h *TelemetryHandler) trackMedia(ctx context.Context, vehicleID int64, sign
 		}
 	}
 
-	if err := h.mediaRepo.Insert(ctx, snap); err != nil {
-		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store media snapshot")
-	}
+	// Media snapshots now captured via signal_log — no dedicated table write needed
 }
 
 // trackVehicleConfig stores vehicle configuration snapshots when relevant signals arrive.
@@ -1828,9 +1822,7 @@ func (h *TelemetryHandler) trackVehicleConfig(ctx context.Context, vehicleID int
 		s := toString(v)
 		snap.SoftwareUpdateScheduledStart = &s
 	}
-	if err := h.vehicleConfigRepo.Insert(ctx, snap); err != nil {
-		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store vehicle config snapshot")
-	}
+	// Vehicle config snapshots now captured via signal_log — no dedicated table write needed
 }
 
 // trackUserPreferences updates vehicle_units with car display preferences.
