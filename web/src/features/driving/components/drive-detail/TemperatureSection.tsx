@@ -3,6 +3,7 @@ import { Thermometer, Activity } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import {
   ChartTooltip,
+  AREA_DEFAULTS,
   LineChart, Line, Legend,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
@@ -77,16 +78,16 @@ export function TemperatureSection({ chartData, stats }: TemperatureSectionProps
                 <Tooltip content={<ChartTooltip />} />
                 <Legend wrapperStyle={LEGEND_STYLE} />
                 {stats.outsideTemps.length > 0 && (
-                  <Line type="monotone" dataKey="outsideTemp" stroke="#3b82f6" strokeWidth={2} dot={false} name={`${t('driveDetail.outside', 'Outside')} ${tempUnit}`} connectNulls />
+                  <Line {...AREA_DEFAULTS} dataKey="outsideTemp" stroke="#3b82f6" name={`${t('driveDetail.outside', 'Outside')} ${tempUnit}`} />
                 )}
                 {stats.insideTemps.length > 0 && (
-                  <Line type="monotone" dataKey="insideTemp" stroke="#f97316" strokeWidth={2} dot={false} name={`${t('driveDetail.inside', 'Inside')} ${tempUnit}`} connectNulls />
+                  <Line {...AREA_DEFAULTS} dataKey="insideTemp" stroke="#f97316" name={`${t('driveDetail.inside', 'Inside')} ${tempUnit}`} />
                 )}
                 {stats.driverTemps.length > 0 && (
-                  <Line type="monotone" dataKey="driverTemp" stroke="#fb7185" strokeWidth={2} dot={false} name={`${t('driveDetail.driver', 'Driver')} ${tempUnit}`} connectNulls />
+                  <Line {...AREA_DEFAULTS} dataKey="driverTemp" stroke="#fb7185" name={`${t('driveDetail.driver', 'Driver')} ${tempUnit}`} />
                 )}
                 {stats.passengerTemps.length > 0 && (
-                  <Line type="monotone" dataKey="passengerTemp" stroke="#a855f7" strokeWidth={2} dot={false} name={`${t('driveDetail.passenger', 'Passenger')} ${tempUnit}`} connectNulls />
+                  <Line {...AREA_DEFAULTS} dataKey="passengerTemp" stroke="#a855f7" name={`${t('driveDetail.passenger', 'Passenger')} ${tempUnit}`} />
                 )}
               </LineChart>
             </ResponsiveContainer>

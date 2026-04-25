@@ -6,6 +6,8 @@ import {
   ChartContainer,
   ChartTooltip,
   ChartGradient,
+  AREA_DEFAULTS,
+  areaGradient,
   BarChart,
   Bar,
   ScatterChart,
@@ -189,18 +191,16 @@ export default function DriveAnalyticsSection({
         >
           <ResponsiveContainer width="100%" height={320}>
             <AreaChart data={powerProfile}>
-              <defs>
-                <ChartGradient id="powerMaxGrad" color="#3b82f6" />
-                <ChartGradient id="powerMinGrad" color="#ef4444" opacity={0.25} />
-              </defs>
+              {areaGradient('powerMaxGrad', '#3b82f6')}
+              {areaGradient('powerMinGrad', '#ef4444', 0.25)}
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
               <XAxis dataKey="label" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} />
               <YAxis tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} unit=" kW" />
               <Tooltip content={<ChartTooltip />} />
               <Legend wrapperStyle={{ color: 'rgba(255,255,255,0.6)' }} />
               <ReferenceLine y={0} stroke="rgba(255,255,255,0.2)" />
-              <Area type="monotone" dataKey="powerMax" stroke="#3b82f6" fill="url(#powerMaxGrad)" name={t('dynamics.maxPower', 'Max Power (kW)')} />
-              <Area type="monotone" dataKey="powerMin" stroke="#ef4444" fill="url(#powerMinGrad)" name={t('dynamics.regenPower', 'Regen Power (kW)')} />
+              <Area {...AREA_DEFAULTS} dataKey="powerMax" stroke="#3b82f6" fill="url(#powerMaxGrad)" name={t('dynamics.maxPower', 'Max Power (kW)')} />
+              <Area {...AREA_DEFAULTS} dataKey="powerMin" stroke="#ef4444" fill="url(#powerMinGrad)" name={t('dynamics.regenPower', 'Regen Power (kW)')} />
             </AreaChart>
           </ResponsiveContainer>
         </ChartContainer>

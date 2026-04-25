@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 import {
-  ChartContainer, ChartTooltip, ChartGradient,
+  ChartContainer, ChartTooltip,
+  AREA_DEFAULTS, areaGradient,
   AreaChart, Area, ReferenceLine,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
@@ -28,8 +29,8 @@ export function PowerProfileChart({ chartData, stats }: PowerProfileChartProps) 
               <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
               <Tooltip content={<ChartTooltip />} />
               <ReferenceLine y={0} stroke="rgba(255,255,255,0.15)" />
-              <defs><ChartGradient id="powerGrad" color="#f59e0b" /></defs>
-              <Area type="monotone" dataKey="power" stroke="#f59e0b" fill="url(#powerGrad)" strokeWidth={2} name={`${t('driveDetail.power', 'Power')} kW`} />
+              {areaGradient('powerGrad', '#f59e0b')}
+              <Area {...AREA_DEFAULTS} dataKey="power" stroke="#f59e0b" fill="url(#powerGrad)" name={`${t('driveDetail.power', 'Power')} kW`} />
             </AreaChart>
           </ResponsiveContainer>
         ) : (

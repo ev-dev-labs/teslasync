@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   ReferenceLine, ChartContainer, chartGrid, axisTick, fmt,
+  AREA_DEFAULTS, areaGradient,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { cn } from '@/lib/cn';
@@ -94,12 +95,7 @@ export function ElevationProfile({
           onClick={handleClick}
           className={cn(onClickIndex && 'cursor-pointer')}
         >
-          <defs>
-            <linearGradient id="elevGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
-              <stop offset="95%" stopColor="#10b981" stopOpacity={0.05} />
-            </linearGradient>
-          </defs>
+          {areaGradient('elevGrad', '#10b981', 0.4)}
           <CartesianGrid {...chartGrid} />
           <XAxis
             dataKey="distance"
@@ -118,12 +114,10 @@ export function ElevationProfile({
             formatter={(v: number) => [`${fmt(v, 0)} m`, t('replay.elevation.label', 'Elevation')]}
           />
           <Area
-            type="monotone"
+            {...AREA_DEFAULTS}
             dataKey="elevation"
             stroke="#10b981"
             fill="url(#elevGrad)"
-            strokeWidth={2}
-            dot={false}
             isAnimationActive={false}
           />
           {cursorDistance != null && (

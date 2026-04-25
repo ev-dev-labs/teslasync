@@ -4,6 +4,7 @@ import {
   ChartContainer,
   ChartTooltip,
   ChartGradient,
+  AREA_DEFAULTS,
   LineChart,
   Line,
   XAxis,
@@ -55,13 +56,11 @@ export function TemperatureTrendChart({ data }: TemperatureTrendChartProps) {
             <Tooltip content={<ChartTooltip />} />
             <Legend />
             <Line
-              type="monotone"
+              {...AREA_DEFAULTS}
               dataKey="outsideTemp"
               name={t('drivetrain.outsideTemp', 'Outside Temp')}
               stroke="#06b6d4"
-              strokeWidth={2}
               dot={{ r: 3, fill: '#06b6d4' }}
-              connectNulls
             />
             <ReferenceLine
               y={convertTemp(35)}

@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 import {
-  ChartContainer, ChartTooltip, ChartGradient,
+  ChartContainer, ChartTooltip,
+  AREA_DEFAULTS, areaGradient,
   AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
@@ -25,8 +26,8 @@ export function SocChart({ chartData }: SocChartProps) {
               <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} interval="preserveStartEnd" />
               <YAxis domain={[0, 100]} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
               <Tooltip content={<ChartTooltip />} />
-              <defs><ChartGradient id="socGrad" color="#10b981" /></defs>
-              <Area type="monotone" dataKey="battery" stroke="#10b981" fill="url(#socGrad)" strokeWidth={2} name={`${t('driveDetail.soc', 'SOC')} %`} />
+              {areaGradient('socGrad', '#10b981')}
+              <Area {...AREA_DEFAULTS} dataKey="battery" stroke="#10b981" fill="url(#socGrad)" name={`${t('driveDetail.soc', 'SOC')} %`} />
             </AreaChart>
           </ResponsiveContainer>
         ) : (

@@ -7,6 +7,7 @@ import {
   chartGrid,
   axisTickSm,
   CHART_COLORS,
+  AREA_DEFAULTS,
   LineChart,
   Line,
   XAxis,
@@ -74,20 +75,18 @@ export default function SpeedTrendChart({ sessions }: SpeedTrendChartProps) {
           />
           <Tooltip content={<ChartTooltip />} />
           <Line
-            type="monotone"
+            {...AREA_DEFAULTS}
             dataKey="dcAvgKw"
             name={t('charging.curve.dcAvg', 'DC Avg')}
             stroke={CHART_COLORS[0]}
-            strokeWidth={2}
             dot={{ r: 3, fill: CHART_COLORS[0] }}
             unit=" kW"
           />
           <Line
-            type="monotone"
+            {...AREA_DEFAULTS}
             dataKey="acAvgKw"
             name={t('charging.curve.acAvg', 'AC Avg')}
             stroke={CHART_COLORS[1]}
-            strokeWidth={2}
             dot={{ r: 3, fill: CHART_COLORS[1] }}
             unit=" kW"
           />
