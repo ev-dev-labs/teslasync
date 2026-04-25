@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/config"
 )
 
 // NominatimResult represents the JSON response from Nominatim reverse geocoding.
@@ -38,7 +40,7 @@ type Client struct {
 // NewClient creates a Nominatim client that respects the 1 req/sec rate limit.
 func NewClient(userAgent string) *Client {
 	return &Client{
-		httpClient: &http.Client{Timeout: 10 * time.Second},
+		httpClient: &http.Client{Timeout: config.HTTPClientTimeout},
 		userAgent:  userAgent,
 	}
 }

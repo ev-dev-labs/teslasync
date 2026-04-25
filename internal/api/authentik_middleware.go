@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+
+	"github.com/ev-dev-labs/teslasync/internal/config"
 )
 
 type authentikContextKey string
@@ -46,7 +48,7 @@ func newJWKSCache(jwksURL string) *jwksCache {
 	return &jwksCache{
 		keys:    make(map[string]*rsa.PublicKey),
 		jwksURL: jwksURL,
-		ttl:     5 * time.Minute,
+		ttl:     config.AuthCacheTTL,
 	}
 }
 
@@ -87,7 +89,7 @@ func (c *jwksCache) getKey(kid string) (*rsa.PublicKey, error) {
 }
 
 func (c *jwksCache) refresh() error {
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := &http.Client{Timeout: config.HTTPClientTimeout}
 	resp, err := client.Get(c.jwksURL)
 	if err != nil {
 		return err

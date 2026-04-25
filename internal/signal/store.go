@@ -16,6 +16,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/sony/gobreaker"
+	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 )
@@ -291,8 +292,8 @@ func (s *Store) FlushLoop(ctx context.Context) {
 	s.flushWg.Add(1)
 	defer s.flushWg.Done()
 
-	const normalInterval = 1 * time.Second
-	const degradedInterval = 5 * time.Second
+	const normalInterval = config.LiveStateFlushNormal
+	const degradedInterval = config.LiveStateFlushDegraded
 
 	ticker := time.NewTicker(normalInterval)
 	defer ticker.Stop()
@@ -346,7 +347,7 @@ func (s *Store) flushDirty(ctx context.Context) {
 		}
 
 		flushStart := time.Now()
-		flushCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		flushCtx, cancel := context.WithTimeout(ctx, config.SignalFlushTimeout)
 
 		flushFn := func() error {
 			return database.RetryOnTransient(flushCtx, "live_state_flush", func(ctx context.Context) error {

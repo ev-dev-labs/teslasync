@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"sync"
 	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/config"
 )
 
 // SearchResult represents a forward geocoding result.
@@ -40,7 +42,7 @@ type NominatimSearcher struct {
 // NewSearcher creates a Nominatim-based forward geocoding searcher.
 func NewSearcher(userAgent string) Searcher {
 	return &NominatimSearcher{
-		httpClient: &http.Client{Timeout: 10 * time.Second},
+		httpClient: &http.Client{Timeout: config.HTTPClientTimeout},
 		userAgent:  userAgent,
 	}
 }

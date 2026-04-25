@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/config"
 )
 
 // AzureClient implements Geocoder using Azure Maps Search API.
@@ -17,7 +18,7 @@ type AzureClient struct {
 func NewAzureClient(apiKey string) *AzureClient {
 	return &AzureClient{
 		apiKey: apiKey,
-		client: &http.Client{Timeout: 10 * time.Second},
+		client: &http.Client{Timeout: config.HTTPClientTimeout},
 	}
 }
 

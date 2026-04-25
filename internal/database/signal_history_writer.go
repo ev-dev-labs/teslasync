@@ -10,6 +10,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 	"github.com/sony/gobreaker"
+
+	"github.com/ev-dev-labs/teslasync/internal/config"
 )
 
 // SignalHistoryRow represents a single signal value at a point in time.
@@ -35,7 +37,7 @@ type SignalHistoryWriter struct {
 // NewSignalHistoryWriter creates a writer with the given flush interval.
 func NewSignalHistoryWriter(db *DB, flushInterval time.Duration) *SignalHistoryWriter {
 	if flushInterval <= 0 {
-		flushInterval = 2 * time.Second
+		flushInterval = config.SignalFlushInterval
 	}
 	return &SignalHistoryWriter{
 		db:       db,

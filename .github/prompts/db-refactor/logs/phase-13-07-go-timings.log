@@ -1,0 +1,98 @@
+=== SURVEY ===
+Searched internal/ for hardcoded `time.Second` and `time.Minute` literals (excluding _test.go and internal/config/).
+Found 245 non-test occurrences. Identified replacements matching the defined constants:
+
+HTTPClientTimeout (10 * time.Second) — 9 sites:
+  - internal/geocoding/search.go:43
+  - internal/geocoding/nominatim.go:41
+  - internal/geocoding/google.go:36
+  - internal/geocoding/azure.go:20
+  - internal/adapter/gasprices/eia.go:76
+  - internal/api/authentik_middleware.go:90
+  - internal/api/notification_handler.go:308
+  - internal/api/notification_handler.go:335
+  - internal/api/notification_handler.go:364
+
+AuthCacheTTL (5 * time.Minute) — 1 site:
+  - internal/api/authentik_middleware.go:49
+
+AuthRefreshInterval (30 * time.Minute) — 1 site:
+  - internal/worker/worker.go:131
+
+MQTTKeepAlive (30 * time.Second) — 1 site:
+  - internal/mqtt/mqtt.go:32
+
+MQTTReconnectMax (60 * time.Second) — 1 site:
+  - internal/mqtt/mqtt.go:31
+
+SignalFlushInterval (2 * time.Second) — 1 site:
+  - internal/database/signal_history_writer.go:38
+
+SignalFlushTimeout (10 * time.Second) — 1 site:
+  - internal/signal/store.go:349
+
+LiveStateFlushNormal (1 * time.Second) — 1 site:
+  - internal/signal/store.go:294
+
+LiveStateFlushDegraded (5 * time.Second) — 1 site:
+  - internal/signal/store.go:295
+
+MemCacheCleanup (60 * time.Second) — 1 site:
+  - internal/cache/mem.go:67
+
+CBFailureThreshold (5) — 1 site:
+  - internal/database/circuit_breaker.go:37
+
+NOT replaced (no value match or env-configurable):
+  - HTTPWriteTimeout (30s): main.go WriteTimeout is 0; platform/config has envDefault — skip
+  - CBResetTimeout (30s): DB breaker Timeout=15s, Tesla breaker Timeout=60s — no match
+  - Rate-limit 1*time.Minute in router.go: these are rate-limit windows, not timing constants
+  - system_handler.go 5s/3s HTTP clients: one-off, not HTTPClientTimeout (different values)
+  - worker.go various backoff/context timeouts: one-off values, not matching defined constants
+  - Various FSM/automation timeouts: domain-specific, not matching defined constants
+
+=== REASONING ===
+Created internal/config/timings.go with all 13 constants as specified in the task.
+Replaced 19 hardcoded values across 13 source files where both value AND semantic meaning matched.
+Skipped replacements where:
+  1. Values didn't match (e.g., CB Timeout is 15s or 60s, not 30s)
+  2. Values come from env vars (platform/config ServerConfig)
+  3. Values are one-off/domain-specific (FSM timeouts, backoff durations, rate limit windows)
+  4. Values are in test files
+Removed unused `time` import from google.go and azure.go (only used for the replaced literal).
+Added `config` import to all files that didn't already have it.
+
+=== CHANGES ===
+Created:
+  - internal/config/timings.go (13 constants)
+
+Modified (13 files):
+  - internal/geocoding/search.go — HTTPClientTimeout + added config import
+  - internal/geocoding/nominatim.go — HTTPClientTimeout + added config import
+  - internal/geocoding/google.go — HTTPClientTimeout + replaced time import with config
+  - internal/geocoding/azure.go — HTTPClientTimeout + replaced time import with config
+  - internal/adapter/gasprices/eia.go — HTTPClientTimeout + added config import
+  - internal/api/authentik_middleware.go — AuthCacheTTL + HTTPClientTimeout + added config import
+  - internal/api/notification_handler.go — 3× HTTPClientTimeout + added config import
+  - internal/cache/mem.go — MemCacheCleanup + added config import
+  - internal/signal/store.go — LiveStateFlushNormal + LiveStateFlushDegraded + SignalFlushTimeout + added config import
+  - internal/database/signal_history_writer.go — SignalFlushInterval + added config import
+  - internal/database/circuit_breaker.go — CBFailureThreshold + added config import
+  - internal/mqtt/mqtt.go — MQTTKeepAlive + MQTTReconnectMax (config import already present)
+  - internal/worker/worker.go — AuthRefreshInterval (config import already present)
+
+=== GATE ===
+$ go build ./...
+EXIT CODE: 0 (PASS)
+
+$ go vet ./...
+EXIT CODE: 1
+3 pre-existing errors (all in test files, unrelated to this change):
+  - internal/automation/condition/location_test.go:105 — unknown field Latitude
+  - internal/automation/trigger/calendar_test.go:38 — unknown field TriggerType
+  - internal/api/rule_engine_test.go:18 — unknown field Conditions
+Verified identical failures exist before this change (stash/unstash test).
+
+=== COMMIT ===
+EXIT=0
+STATUS=DONE

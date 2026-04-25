@@ -28,8 +28,8 @@ func NewClient(cfg config.MQTTConfig) (*Client, error) {
 		AddBroker(cfg.BrokerURL()).
 		SetClientID(clientID).
 		SetAutoReconnect(true).
-		SetMaxReconnectInterval(60 * time.Second).
-		SetKeepAlive(30 * time.Second).
+		SetMaxReconnectInterval(config.MQTTReconnectMax).
+		SetKeepAlive(config.MQTTKeepAlive).
 		SetCleanSession(true).
 		SetConnectionLostHandler(func(_ pahomqtt.Client, err error) {
 			log.Warn().Err(err).Msg("MQTT connection lost")

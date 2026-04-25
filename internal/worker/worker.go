@@ -128,7 +128,7 @@ func (w *Worker) Start(ctx context.Context) {
 	defer ticker.Stop()
 
 	// Token refresh ticker (every 30 minutes)
-	refreshTicker := time.NewTicker(30 * time.Minute)
+	refreshTicker := time.NewTicker(config.AuthRefreshInterval)
 	defer refreshTicker.Stop()
 
 	for {

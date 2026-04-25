@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
@@ -305,7 +306,7 @@ func sendWebhook(url, method, title, message string) error {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := (&http.Client{Timeout: 10 * time.Second}).Do(req)
+	resp, err := (&http.Client{Timeout: config.HTTPClientTimeout}).Do(req)
 	if err != nil {
 		return err
 	}
@@ -332,7 +333,7 @@ func sendNtfy(serverURL, topic, title, message string) error {
 	req.Header.Set("Title", title)
 	req.Header.Set("Priority", "default")
 	req.Header.Set("Tags", "electric_plug")
-	resp, err := (&http.Client{Timeout: 10 * time.Second}).Do(req)
+	resp, err := (&http.Client{Timeout: config.HTTPClientTimeout}).Do(req)
 	if err != nil {
 		return err
 	}
@@ -361,7 +362,7 @@ func postJSON(url string, payload interface{}) error {
 	if err != nil {
 		return err
 	}
-	resp, err := (&http.Client{Timeout: 10 * time.Second}).Post(url, "application/json", bytes.NewReader(body))
+	resp, err := (&http.Client{Timeout: config.HTTPClientTimeout}).Post(url, "application/json", bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
