@@ -199,10 +199,12 @@ func (s *Store) GetRawMap(vehicleID int64) map[string]interface{} {
 }
 
 // LoadFromDB loads vehicle state into memory for pod restart recovery.
-// Tries Redis HSET first (has all 230+ signals), falls back to Postgres
-// vehicle_live_state (~30 columns) if Redis is unavailable or empty.
+// Three-tier fallback chain:
+//   Tier 1: Redis HSET (has ALL 230+ signals, survives pod restart)
+//   Tier 2: signal_log (query latest value per signal — prompt 06)
+//   Tier 3: Legacy vehicle_live_state (~30 columns — removed in prompt 13)
 func (s *Store) LoadFromDB(ctx context.Context, vehicleID int64) {
-	// 1. Try Redis HSET first (has all 230+ signals)
+	// Tier 1: Redis HSET (has ALL 230+ signals, survives pod restart)
 	if s.redisCache != nil {
 		signals, err := s.redisCache.GetAll(ctx, vehicleID)
 		if err == nil && len(signals) > 0 {
@@ -211,11 +213,16 @@ func (s *Store) LoadFromDB(ctx context.Context, vehicleID int64) {
 			return
 		}
 		if err != nil {
-			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("signal store: Redis read failed, falling back to Postgres")
+			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("signal store: Redis read failed, falling back to DB")
 		}
 	}
 
-	// 2. Fall back to Postgres vehicle_live_state (legacy, ~30 columns)
+	// Tier 2: signal_log (query latest value per signal)
+	// SELECT DISTINCT ON (signal) signal, value_num, value_str, value_bool
+	// FROM signal_log WHERE vehicle_id = $1 ORDER BY signal, created_at DESC
+	// (implemented in prompt 06 — for now fall through to legacy)
+
+	// Tier 3: Legacy vehicle_live_state (will be removed in prompt 13)
 	if s.flusher == nil {
 		return
 	}

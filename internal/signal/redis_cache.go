@@ -2,6 +2,7 @@ package signal
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
@@ -109,7 +110,7 @@ func (c *RedisSignalCache) GetSignal(ctx context.Context, vehicleID int64, signa
 }
 
 // decodeSignalValue reverses encodeSignalValue: tries float64 first, then
-// bool ("true"/"false"), then returns the raw string.
+// bool ("true"/"false"), then JSON objects/arrays, then returns the raw string.
 func decodeSignalValue(s string) interface{} {
 	if f, err := strconv.ParseFloat(s, 64); err == nil {
 		return f
@@ -119,6 +120,13 @@ func decodeSignalValue(s string) interface{} {
 	}
 	if s == "false" {
 		return false
+	}
+	// JSON objects or arrays (e.g. Tesla composite signal values)
+	if len(s) > 0 && (s[0] == '{' || s[0] == '[') {
+		var parsed interface{}
+		if err := json.Unmarshal([]byte(s), &parsed); err == nil {
+			return parsed
+		}
 	}
 	return s
 }
