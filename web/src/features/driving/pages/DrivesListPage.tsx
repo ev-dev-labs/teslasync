@@ -12,9 +12,10 @@ import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { Pagination } from '@/components/ui/Pagination';
 import {
-  ChartContainer, ChartTooltip, ChartGradient,
+  ChartContainer, ChartTooltip,
   AreaChart, Area, BarChart, Bar, ScatterChart, Scatter,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  AREA_DEFAULTS, areaGradient,
 } from '@/components/charts';
 import { RadialGauge } from '@/components/charts/RadialGauge';
 import { AnimatedNumber } from '@/components/data-display/AnimatedNumber';
@@ -422,20 +423,17 @@ export default function DrivesListPage() {
             <ChartContainer title={t('drives.recentDrives', 'Recent Drives')} height={220}>
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={distanceTrend}>
-                  <defs>
-                    <ChartGradient id="drivesDistGrad" color="#00f0ff" />
-                  </defs>
+                  {areaGradient('drivesDistGrad', '#00f0ff')}
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                   <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} />
                   <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                   <Tooltip content={<ChartTooltip />} />
                   <Area
-                    type="monotone"
+                    {...AREA_DEFAULTS}
                     dataKey="distance"
                     name={`${t('drives.distance', 'Distance')} (${distanceUnit})`}
                     stroke="#00f0ff"
                     fill="url(#drivesDistGrad)"
-                    strokeWidth={2}
                   />
                 </AreaChart>
               </ResponsiveContainer>

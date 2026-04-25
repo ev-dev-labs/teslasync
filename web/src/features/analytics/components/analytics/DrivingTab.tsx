@@ -6,6 +6,7 @@ import {
   chartGrid, axisTick, axisTickSm, chartMarginLabeled, chartAnimation, safe, CHART_COLORS,
   BarChart, Bar, ComposedChart, Line, AreaChart, Area, ScatterChart, Scatter,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, ZAxis,
+  AREA_DEFAULTS,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -81,7 +82,7 @@ export function DrivingTab({ data }: { data: FleetAnalytics | undefined }) {
               <Tooltip content={<ChartTooltip />} />
               <Legend />
               <Bar yAxisId="left" dataKey="drives" name={t('analytics.driving.drives', 'Drives')} fill={CHART_COLORS[0]} radius={[3, 3, 0, 0]} />
-              <Line yAxisId="right" type="monotone" dataKey="distance" name={t('analytics.driving.distance', 'Distance')} stroke={CHART_COLORS[3]} strokeWidth={2} dot={false} />
+              <Line {...AREA_DEFAULTS} yAxisId="right" dataKey="distance" name={t('analytics.driving.distance', 'Distance')} stroke={CHART_COLORS[3]} />
             </ComposedChart>
           </ResponsiveContainer>
         ) : (
@@ -130,8 +131,8 @@ export function DrivingTab({ data }: { data: FleetAnalytics | undefined }) {
               <defs>
                 <ChartGradient id="dailyDistGrad" color={CHART_COLORS[0]} />
               </defs>
-              <Area yAxisId="left" type="monotone" dataKey="distance" name={distanceUnit} stroke={CHART_COLORS[0]} fill="url(#dailyDistGrad)" strokeWidth={2} />
-              <Line yAxisId="right" type="monotone" dataKey="drives" name={t('analytics.driving.drives', 'Drives')} stroke={CHART_COLORS[3]} strokeWidth={2} dot={false} />
+              <Area {...AREA_DEFAULTS} yAxisId="left" dataKey="distance" name={distanceUnit} stroke={CHART_COLORS[0]} fill="url(#dailyDistGrad)" />
+              <Line {...AREA_DEFAULTS} yAxisId="right" dataKey="drives" name={t('analytics.driving.drives', 'Drives')} stroke={CHART_COLORS[3]} />
             </ComposedChart>
           </ResponsiveContainer>
         ) : (
@@ -170,7 +171,7 @@ export function DrivingTab({ data }: { data: FleetAnalytics | undefined }) {
               <defs>
                 <ChartGradient id="effTrendGrad" color={CHART_COLORS[1]} />
               </defs>
-              <Area type="monotone" dataKey="efficiency" name={efficiencyUnit} stroke={CHART_COLORS[1]} fill="url(#effTrendGrad)" strokeWidth={2} />
+              <Area {...AREA_DEFAULTS} dataKey="efficiency" name={efficiencyUnit} stroke={CHART_COLORS[1]} fill="url(#effTrendGrad)" />
             </AreaChart>
           </ResponsiveContainer>
         ) : (

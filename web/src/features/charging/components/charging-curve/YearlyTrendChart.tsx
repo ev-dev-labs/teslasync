@@ -14,6 +14,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  AREA_DEFAULTS,
 } from '@/components/charts';
 
 interface YearlyTrendChartProps {
@@ -75,22 +76,20 @@ export default function YearlyTrendChart({ yearlyTrend }: YearlyTrendChartProps)
                 radius={[4, 4, 0, 0]}
               />
               <Line
+                {...AREA_DEFAULTS}
                 yAxisId="min"
-                type="monotone"
                 dataKey="avg10to80"
                 name={t('charging.curve.avg10to80Line', '10→80% avg')}
                 stroke={CHART_COLORS[0]}
-                strokeWidth={2}
                 dot={{ r: 4, fill: CHART_COLORS[0] }}
                 unit=" min"
               />
               <Line
+                {...AREA_DEFAULTS}
                 yAxisId="min"
-                type="monotone"
                 dataKey="avg20to80"
                 name={t('charging.curve.avg20to80Line', '20→80% avg')}
                 stroke={CHART_COLORS[2]}
-                strokeWidth={2}
                 dot={{ r: 4, fill: CHART_COLORS[2] }}
                 unit=" min"
               />

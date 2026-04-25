@@ -6,6 +6,7 @@ import {
   ChartTooltip, ChartGradient, chartGrid, axisTickSm,
   AreaChart, Area, XAxis, YAxis, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell,
+  AREA_DEFAULTS,
 } from '@/components/charts';
 import { fmtNumber, fmtWithUnit } from '@/lib/numberFormat';
 import type { EnergyTrendPoint, ChargerBreakdownEntry, CostByTypeEntry } from './helpers';
@@ -38,8 +39,8 @@ export function ChartsRow({ energyTrend, chargerBreakdown, costByType }: ChartsR
                 <XAxis dataKey="date" tick={axisTickSm} />
                 <YAxis tick={axisTickSm} />
                 <Tooltip content={<ChartTooltip />} />
-                <Area type="monotone" dataKey="energy" name="Energy (kWh)" stroke="#10b981" fill="url(#eGrad)" strokeWidth={2} />
-                <Area type="monotone" dataKey="cost" name="Cost ($)" stroke="#f59e0b" fill="transparent" strokeWidth={1.5} strokeDasharray="4 2" />
+                <Area {...AREA_DEFAULTS} dataKey="energy" name="Energy (kWh)" stroke="#10b981" fill="url(#eGrad)" />
+                <Area {...AREA_DEFAULTS} dataKey="cost" name="Cost ($)" stroke="#f59e0b" fill="transparent" strokeWidth={1.5} strokeDasharray="4 2" />
               </AreaChart>
             </ResponsiveContainer>
           </div>

@@ -13,6 +13,7 @@ import {
   ChartTooltip, CHART_COLORS,
   AreaChart, Area, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer,
+  AREA_DEFAULTS, areaGradient,
 } from '@/components/charts';
 
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -194,22 +195,16 @@ export default function MileagePage() {
           ) : (
             <ResponsiveContainer width="100%" height={280}>
               <AreaChart data={odometerData}>
-                <defs>
-                  <linearGradient id="odoGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={CHART_COLORS[2]} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={CHART_COLORS[2]} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
+                {areaGradient('odoGrad', CHART_COLORS[2])}
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" />
                 <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
                 <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
                 <Tooltip content={<ChartTooltip />} />
                 <Area
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="odometer"
                   stroke={CHART_COLORS[2]}
                   fill="url(#odoGrad)"
-                  strokeWidth={2}
                   name={`${t('Odometer')} (${distanceUnit})`}
                 />
               </AreaChart>

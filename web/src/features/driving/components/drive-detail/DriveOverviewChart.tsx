@@ -4,6 +4,7 @@ import {
   ChartContainer, ChartTooltip,
   ComposedChart, Area, Line, ReferenceLine,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  AREA_DEFAULTS, areaGradient,
 } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
 import { useSettings } from '@/hooks/useSettings';
@@ -31,19 +32,20 @@ export function DriveOverviewChart({ chartData }: DriveOverviewChartProps) {
               <YAxis yAxisId="power" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} unit=" kW" />
               <YAxis yAxisId="speed" hide />
               <Tooltip content={<ChartTooltip />} />
+              {areaGradient('driveOverviewSpeed', '#3b82f6', 0.08)}
               <ReferenceLine yAxisId="power" y={0} stroke="rgba(255,255,255,0.1)" />
-              <Area yAxisId="speed" type="monotone" dataKey="speed" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.08} strokeWidth={1.5} name={`${t('driveDetail.speed', 'Speed')} (${speedUnit})`} />
+              <Area {...AREA_DEFAULTS} yAxisId="speed" dataKey="speed" stroke="#3b82f6" fill="url(#driveOverviewSpeed)" strokeWidth={1.5} name={`${t('driveDetail.speed', 'Speed')} (${speedUnit})`} />
               {chartData.some((d) => d.idealRange !== null) && (
-                <Line yAxisId="speed" type="monotone" dataKey="idealRange" stroke="#c084fc" strokeWidth={1} dot={false} name={`${t('driveDetail.rangeIdeal', 'Range ideal')} (${distanceUnit})`} strokeDasharray="4 2" />
+                <Line {...AREA_DEFAULTS} yAxisId="speed" dataKey="idealRange" stroke="#c084fc" strokeWidth={1} name={`${t('driveDetail.rangeIdeal', 'Range ideal')} (${distanceUnit})`} strokeDasharray="4 2" />
               )}
               {chartData.some((d) => d.estRange !== null || d.ratedRange !== null) && (
-                <Line yAxisId="speed" type="monotone" dataKey={chartData.some((d) => d.estRange !== null) ? 'estRange' : 'ratedRange'} stroke="#a855f7" strokeWidth={1} dot={false} name={`${t('driveDetail.rangeEst', 'Range est.')} (${distanceUnit})`} strokeDasharray="4 2" />
+                <Line {...AREA_DEFAULTS} yAxisId="speed" dataKey={chartData.some((d) => d.estRange !== null) ? 'estRange' : 'ratedRange'} stroke="#a855f7" strokeWidth={1} name={`${t('driveDetail.rangeEst', 'Range est.')} (${distanceUnit})`} strokeDasharray="4 2" />
               )}
-              <Line yAxisId="speed" type="monotone" dataKey="battery" stroke="#84cc16" strokeWidth={1.5} dot={false} name={`${t('driveDetail.soc', 'SOC')} %`} />
+              <Line {...AREA_DEFAULTS} yAxisId="speed" dataKey="battery" stroke="#84cc16" strokeWidth={1.5} name={`${t('driveDetail.soc', 'SOC')} %`} />
               {chartData.some((d) => d.usableSoc !== null) && (
-                <Line yAxisId="speed" type="monotone" dataKey="usableSoc" stroke="#22d3ee" strokeWidth={1} dot={false} name={`${t('driveDetail.usableSoc', 'Usable SOC')} %`} />
+                <Line {...AREA_DEFAULTS} yAxisId="speed" dataKey="usableSoc" stroke="#22d3ee" strokeWidth={1} name={`${t('driveDetail.usableSoc', 'Usable SOC')} %`} />
               )}
-              <Line yAxisId="power" type="monotone" dataKey="power" stroke="#f59e0b" strokeWidth={2} dot={false} name={`${t('driveDetail.power', 'Power')} kW`} />
+              <Line {...AREA_DEFAULTS} yAxisId="power" dataKey="power" stroke="#f59e0b" name={`${t('driveDetail.power', 'Power')} kW`} />
             </ComposedChart>
           </ResponsiveContainer>
         ) : (

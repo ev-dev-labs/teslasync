@@ -48,6 +48,7 @@ import {
   chartGrid,
   axisTick,
   chartMargin,
+  AREA_DEFAULTS,
 } from '@/components/charts';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSettings } from '@/hooks/useSettings';
@@ -830,17 +831,16 @@ export default function NavigationRoutePage() {
                       wrapperStyle={{ fontSize: 11 }}
                     />
                     <Area
+                      {...AREA_DEFAULTS}
                       yAxisId="speed"
-                      type="monotone"
                       dataKey="speed"
                       stroke={CHART_COLORS[0]}
                       fill="url(#speedGrad)"
-                      strokeWidth={2}
                       name={t('nav.legendSpeed', 'Speed (mph)')}
                     />
                     <Area
+                      {...AREA_DEFAULTS}
                       yAxisId="odo"
-                      type="monotone"
                       dataKey="odometer"
                       stroke={CHART_COLORS[1]}
                       fill="url(#odoGrad)"
@@ -963,9 +963,9 @@ export default function NavigationRoutePage() {
                     />
                     <Tooltip content={<ChartTooltip />} />
                     <Legend />
-                    <Line type="stepAfter" dataKey="home" name={t('nav.atHome', 'At Home')} stroke={CHART_COLORS[1]} strokeWidth={2} dot={false} />
-                    <Line type="stepAfter" dataKey="work" name={t('nav.atWork', 'At Work')} stroke={CHART_COLORS[3]} strokeWidth={2} dot={false} />
-                    <Line type="stepAfter" dataKey="homelink" name={t('nav.homelinkNearby', 'HomeLink')} stroke={CHART_COLORS[4]} strokeWidth={2} dot={false} />
+                    <Line {...AREA_DEFAULTS} type="stepAfter" dataKey="home" name={t('nav.atHome', 'At Home')} stroke={CHART_COLORS[1]} />
+                    <Line {...AREA_DEFAULTS} type="stepAfter" dataKey="work" name={t('nav.atWork', 'At Work')} stroke={CHART_COLORS[3]} />
+                    <Line {...AREA_DEFAULTS} type="stepAfter" dataKey="homelink" name={t('nav.homelinkNearby', 'HomeLink')} stroke={CHART_COLORS[4]} />
                   </LineChart>
                 </ResponsiveContainer>
               )}

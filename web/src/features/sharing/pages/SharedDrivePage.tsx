@@ -12,6 +12,7 @@ import {
   ChartContainer, ChartGradient, chartGrid, axisTick,
   AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
+  AREA_DEFAULTS,
 } from '@/components/charts';
 import {
   MapContainer, Polyline, CircleMarker,
@@ -283,11 +284,10 @@ export default function SharedDrivePage() {
                     formatter={(v: number) => [`${Math.round(v)} m`, 'Elevation']}
                   />
                   <Area
-                    type="monotone"
+                    {...AREA_DEFAULTS}
                     dataKey="elevation"
                     stroke="var(--theme-primary)"
                     fill="url(#elevGrad)"
-                    strokeWidth={2}
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -314,11 +314,9 @@ export default function SharedDrivePage() {
                     formatter={(v: number) => [`${Math.round(v)} km/h`, 'Speed']}
                   />
                   <Line
-                    type="monotone"
+                    {...AREA_DEFAULTS}
                     dataKey="speed"
                     stroke="#00f0ff"
-                    strokeWidth={2}
-                    dot={false}
                   />
                 </LineChart>
               </ResponsiveContainer>

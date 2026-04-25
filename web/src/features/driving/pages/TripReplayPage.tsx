@@ -16,7 +16,7 @@ import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 import {
   ChartContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, ReferenceLine, chartGrid, axisTick, fmt,
-  CHART_COLORS,
+  CHART_COLORS, AREA_DEFAULTS, areaGradient,
 } from '@/components/charts';
 import { ElevationProfile, type ElevationDataPoint } from '@/components/charts';
 import {
@@ -438,16 +438,8 @@ export default function TripReplayPage() {
                   }
                 }}
               >
-                <defs>
-                  <linearGradient id="speedGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={CHART_COLORS[0]} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={CHART_COLORS[0]} stopOpacity={0.02} />
-                  </linearGradient>
-                  <linearGradient id="powerGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={CHART_COLORS[1]} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={CHART_COLORS[1]} stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
+                {areaGradient('speedGrad', CHART_COLORS[0])}
+                {areaGradient('powerGrad', CHART_COLORS[1])}
                 <CartesianGrid {...chartGrid} />
                 <XAxis
                   dataKey="time"
@@ -472,25 +464,21 @@ export default function TripReplayPage() {
                   labelFormatter={(v: number) => `${fmt(v, 1)} min`}
                 />
                 <Area
+                  {...AREA_DEFAULTS}
                   yAxisId="speed"
-                  type="monotone"
                   dataKey="speed"
                   name={t('replay.timeline.speed', 'Speed')}
                   stroke={CHART_COLORS[0]}
                   fill="url(#speedGrad)"
-                  strokeWidth={2}
-                  dot={false}
                   isAnimationActive={false}
                 />
                 <Area
+                  {...AREA_DEFAULTS}
                   yAxisId="power"
-                  type="monotone"
                   dataKey="power"
                   name={t('replay.timeline.power', 'Power')}
                   stroke={CHART_COLORS[1]}
                   fill="url(#powerGrad)"
-                  strokeWidth={2}
-                  dot={false}
                   isAnimationActive={false}
                 />
                 {cursorTime != null && (

@@ -11,6 +11,7 @@ import {
   Tooltip,
   chartGrid,
   axisTick,
+  AREA_DEFAULTS,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { useTranslation } from 'react-i18next';
@@ -86,11 +87,10 @@ export function SOCRouteChart({ socCurve, chargeStops, minArrivalSOC }: SOCRoute
             formatter={(v: number) => [`${v}%`, 'SOC']}
           />
           <Area
-            type="monotone"
+            {...AREA_DEFAULTS}
             dataKey="soc"
             stroke="#22c55e"
             fill="url(#socGradient)"
-            strokeWidth={2}
           />
           {/* Min arrival SOC reference line */}
           <ReferenceLine

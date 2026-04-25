@@ -7,6 +7,7 @@ import {
   chartGrid, axisTick, axisTickSm, chartMarginLabeled, chartAnimation, safe, CHART_COLORS,
   BarChart, Bar, ComposedChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
+  AREA_DEFAULTS,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -135,7 +136,7 @@ export function ChargingTab({ data }: { data: FleetAnalytics | undefined }) {
               <Tooltip content={<ChartTooltip />} />
               <Legend />
               <Bar yAxisId="left" dataKey="charges" name={t('analytics.charging.charges', 'Charges')} fill={CHART_COLORS[0]} radius={[3, 3, 0, 0]} />
-              <Line yAxisId="right" type="monotone" dataKey="energy" name={t('analytics.charging.energykWh', 'Energy (kWh)')} stroke={CHART_COLORS[3]} strokeWidth={2} dot={false} />
+              <Line {...AREA_DEFAULTS} yAxisId="right" dataKey="energy" name={t('analytics.charging.energykWh', 'Energy (kWh)')} stroke={CHART_COLORS[3]} />
             </ComposedChart>
           </ResponsiveContainer>
         ) : (

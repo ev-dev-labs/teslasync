@@ -6,6 +6,7 @@ import {
   AreaChart, Area, XAxis, YAxis, ResponsiveContainer,
   Tooltip, ReferenceLine,
   chartGrid, axisTick, axisTickSm, chartAnimation, fmt, CHART_COLORS,
+  AREA_DEFAULTS, areaGradient,
 } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
@@ -205,12 +206,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
                 margin={{ top: 4, right: 4, bottom: 0, left: -20 }}
                 {...chartAnimation}
               >
-                <defs>
-                  <linearGradient id="efficiency-grad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={CHART_COLORS[0]} stopOpacity={0.3} />
-                    <stop offset="100%" stopColor={CHART_COLORS[0]} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
+                {areaGradient('efficiency-grad', CHART_COLORS[0])}
                 {chartGrid}
                 <XAxis dataKey="label" tick={tick} tickLine={false} axisLine={false} />
                 <YAxis
@@ -231,23 +227,19 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
                   />
                 )}
                 <Area
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="efficiency"
                   stroke={CHART_COLORS[0]}
                   fill="url(#efficiency-grad)"
-                  strokeWidth={2}
-                  dot={false}
                   name={t('widget.driveEfficiencyChart.daily', 'Daily') + ` (${efficiencyUnit})`}
                 />
                 <Area
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="rollingAvg"
                   stroke="#f59e0b"
                   fill="none"
                   strokeWidth={1.5}
                   strokeDasharray="4 2"
-                  dot={false}
-                  connectNulls
                   name={t('widget.driveEfficiencyChart.rolling', '7-day avg') + ` (${efficiencyUnit})`}
                 />
               </AreaChart>

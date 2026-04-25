@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ChartTooltip,
+  AREA_DEFAULTS, areaGradient,
 } from '@/components/charts'
 import { Navigation, Activity, Car, Settings } from 'lucide-react'
 import { MapContainer, Polyline, Marker, vehicleIcon } from '@/components/maps'
@@ -245,6 +246,7 @@ export function VehicleCharts({
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={batteryData}>
+                  {areaGradient('vehicleSpeedGrad', '#00f0ff', 0.1)}
                   <CartesianGrid
                     strokeDasharray="3 3"
                     stroke="var(--glass-border)"
@@ -257,11 +259,10 @@ export function VehicleCharts({
                   <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
                   <Tooltip content={<ChartTooltip />} />
                   <Area
-                    type="monotone"
+                    {...AREA_DEFAULTS}
                     dataKey="speed"
                     stroke="#00f0ff"
-                    fill="#00f0ff"
-                    fillOpacity={0.1}
+                    fill="url(#vehicleSpeedGrad)"
                     name={`Speed ${speedUnit}`}
                   />
                 </AreaChart>

@@ -8,6 +8,7 @@ import {
   chartGrid, axisTick, axisTickSm, chartMarginLabeled, chartAnimation, safe, CHART_COLORS,
   BarChart, Bar, ComposedChart, Line,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
+  AREA_DEFAULTS,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -65,7 +66,7 @@ export function OverviewTab({ data }: { data: FleetAnalytics | undefined }) {
               <Tooltip content={<ChartTooltip />} />
               <Legend />
               <Bar yAxisId="left" dataKey="drives" name={t('analytics.overview.drives', 'Drives')} fill={CHART_COLORS[2]} radius={[3, 3, 0, 0]} />
-              <Line yAxisId="right" type="monotone" dataKey="avg_distance" name={t('analytics.overview.avgDist', 'Avg Distance')} stroke={CHART_COLORS[3]} strokeWidth={2} dot={false} />
+              <Line {...AREA_DEFAULTS} yAxisId="right" dataKey="avg_distance" name={t('analytics.overview.avgDist', 'Avg Distance')} stroke={CHART_COLORS[3]} />
             </ComposedChart>
           </ResponsiveContainer>
         ) : (
@@ -87,7 +88,7 @@ export function OverviewTab({ data }: { data: FleetAnalytics | undefined }) {
               <Legend />
               <Bar yAxisId="left" dataKey="cost" name={t('analytics.overview.electricCost', 'Electric Cost')} fill={CHART_COLORS[0]} radius={[3, 3, 0, 0]} />
               <Bar yAxisId="left" dataKey="gas_cost" name={t('analytics.overview.gasCost', 'Gas Cost')} fill={CHART_COLORS[5]} radius={[3, 3, 0, 0]} />
-              <Line yAxisId="right" type="monotone" dataKey="savings" name={t('analytics.overview.savings', 'Savings')} stroke={CHART_COLORS[1]} strokeWidth={2} dot={false} />
+              <Line {...AREA_DEFAULTS} yAxisId="right" dataKey="savings" name={t('analytics.overview.savings', 'Savings')} stroke={CHART_COLORS[1]} />
             </ComposedChart>
           </ResponsiveContainer>
         ) : (

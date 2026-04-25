@@ -13,6 +13,7 @@ import {
   chartGrid, axisTick, chartMarginLabeled, CHART_COLORS,
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
   LineChart, Line,
+  AREA_DEFAULTS,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
@@ -346,36 +347,32 @@ export default function PowerFlowDashboardPage() {
                 <Tooltip content={<ChartTooltip />} />
                 <Legend />
                 <Area
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="solar"
                   name={t('powerFlow.solar', 'Solar')}
                   stroke="#f59e0b"
                   fill="url(#gradSolar)"
-                  strokeWidth={2}
                 />
                 <Area
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="battery"
                   name={t('powerFlow.batteryLabel', 'Battery')}
                   stroke="#22c55e"
                   fill="url(#gradBattery)"
-                  strokeWidth={2}
                 />
                 <Area
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="grid"
                   name={t('powerFlow.grid', 'Grid')}
                   stroke="#a855f7"
                   fill="url(#gradGrid)"
-                  strokeWidth={2}
                 />
                 <Area
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="load"
                   name={t('powerFlow.home', 'Home')}
                   stroke="#3b82f6"
                   fill="url(#gradLoad)"
-                  strokeWidth={2}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -404,12 +401,10 @@ export default function PowerFlowDashboardPage() {
                 <YAxis domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} {...axisTick} />
                 <Tooltip content={<ChartTooltip />} />
                 <Line
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="soc"
                   name={t('powerFlow.stateOfCharge', 'State of Charge')}
                   stroke={CHART_COLORS[1]}
-                  strokeWidth={2}
-                  dot={false}
                 />
               </LineChart>
             </ResponsiveContainer>

@@ -14,6 +14,7 @@ import {
   chartMargin, axisTick, CHART_COLORS,
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend, ReferenceLine,
+  AREA_DEFAULTS, areaGradient,
 } from '@/components/charts';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
@@ -213,24 +214,16 @@ export default function ProjectedRangePage() {
             {data?.projection_curve && data.projection_curve.length > 0 ? (
               <ResponsiveContainer width="100%" height={260}>
                 <AreaChart data={data.projection_curve} margin={chartMargin}>
-                  <defs>
-                    <linearGradient id="ratedFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={CHART_COLORS[0]} stopOpacity={0.3} />
-                      <stop offset="95%" stopColor={CHART_COLORS[0]} stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="projectedFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={CHART_COLORS[1]} stopOpacity={0.3} />
-                      <stop offset="95%" stopColor={CHART_COLORS[1]} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
+                  {areaGradient('ratedFill', CHART_COLORS[0])}
+                  {areaGradient('projectedFill', CHART_COLORS[1])}
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" strokeOpacity={0.4} />
                   <XAxis dataKey="battery_pct" tick={axisTick} unit="%" />
                   <YAxis tick={axisTick} unit=" km" width={55} />
                   <Tooltip content={<ChartTooltip />} />
                   <Legend />
                   <ReferenceLine x={data.battery_level} stroke={CHART_COLORS[3]} strokeDasharray="4 4" label={t('range.current', 'Current')} />
-                  <Area type="monotone" dataKey="rated_range" name={t('range.rated', 'Rated Range')} stroke={CHART_COLORS[0]} fill="url(#ratedFill)" strokeWidth={2} />
-                  <Area type="monotone" dataKey="projected_range" name={t('range.projected', 'Projected Range')} stroke={CHART_COLORS[1]} fill="url(#projectedFill)" strokeWidth={2} />
+                  <Area {...AREA_DEFAULTS} dataKey="rated_range" name={t('range.rated', 'Rated Range')} stroke={CHART_COLORS[0]} fill="url(#ratedFill)" />
+                  <Area {...AREA_DEFAULTS} dataKey="projected_range" name={t('range.projected', 'Projected Range')} stroke={CHART_COLORS[1]} fill="url(#projectedFill)" />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (

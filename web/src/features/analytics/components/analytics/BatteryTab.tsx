@@ -7,6 +7,7 @@ import {
   chartGrid, axisTick, axisTickSm, chartMarginLabeled, chartAnimation, safe, CHART_COLORS,
   LineChart, Line, AreaChart, Area, ComposedChart,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
+  AREA_DEFAULTS,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -87,7 +88,7 @@ export function BatteryTab({ data }: { data: FleetAnalytics | undefined }) {
             <defs>
               <ChartGradient id="healthGrad" color={CHART_COLORS[1]} />
             </defs>
-            <Area type="monotone" dataKey="health_score" name={t('analytics.battery.health', 'Health %')} stroke={CHART_COLORS[1]} fill="url(#healthGrad)" strokeWidth={2} />
+            <Area {...AREA_DEFAULTS} dataKey="health_score" name={t('analytics.battery.health', 'Health %')} stroke={CHART_COLORS[1]} fill="url(#healthGrad)" />
           </AreaChart>
         </ResponsiveContainer>
       </GlassPanel>
@@ -102,7 +103,7 @@ export function BatteryTab({ data }: { data: FleetAnalytics | undefined }) {
               <XAxis dataKey="date" tick={axisTickSm} tickFormatter={(v: string) => v.slice(5)} />
               <YAxis tick={axisTick} />
               <Tooltip content={<ChartTooltip />} />
-              <Line type="monotone" dataKey="capacity_kwh" name={t('analytics.battery.capacitykWh', 'Capacity (kWh)')} stroke={CHART_COLORS[0]} strokeWidth={2} dot={false} />
+              <Line {...AREA_DEFAULTS} dataKey="capacity_kwh" name={t('analytics.battery.capacitykWh', 'Capacity (kWh)')} stroke={CHART_COLORS[0]} />
             </LineChart>
           </ResponsiveContainer>
         </GlassPanel>
@@ -120,7 +121,7 @@ export function BatteryTab({ data }: { data: FleetAnalytics | undefined }) {
               <XAxis dataKey="date" tick={axisTickSm} tickFormatter={(v: string) => v.slice(5)} />
               <YAxis tick={axisTick} />
               <Tooltip content={<ChartTooltip />} />
-              <Line type="monotone" dataKey="range" name={`${t('analytics.battery.range', 'Range')} (${distanceUnit})`} stroke={CHART_COLORS[2]} strokeWidth={2} dot={false} />
+              <Line {...AREA_DEFAULTS} dataKey="range" name={`${t('analytics.battery.range', 'Range')} (${distanceUnit})`} stroke={CHART_COLORS[2]} />
             </LineChart>
           </ResponsiveContainer>
         </GlassPanel>
@@ -140,8 +141,8 @@ export function BatteryTab({ data }: { data: FleetAnalytics | undefined }) {
             <defs>
               <ChartGradient id="degradGrad" color={CHART_COLORS[5]} />
             </defs>
-            <Area yAxisId="left" type="monotone" dataKey="degradation_pct" name={t('analytics.battery.degradPct', 'Degradation %')} stroke={CHART_COLORS[5]} fill="url(#degradGrad)" strokeWidth={2} />
-            <Line yAxisId="right" type="monotone" dataKey="cycle_count" name={t('analytics.battery.cycleCount', 'Cycle Count')} stroke={CHART_COLORS[4]} strokeWidth={2} dot={false} />
+            <Area {...AREA_DEFAULTS} yAxisId="left" dataKey="degradation_pct" name={t('analytics.battery.degradPct', 'Degradation %')} stroke={CHART_COLORS[5]} fill="url(#degradGrad)" />
+            <Line {...AREA_DEFAULTS} yAxisId="right" dataKey="cycle_count" name={t('analytics.battery.cycleCount', 'Cycle Count')} stroke={CHART_COLORS[4]} />
           </ComposedChart>
         </ResponsiveContainer>
       </GlassPanel>
