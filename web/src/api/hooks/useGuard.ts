@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
+import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 
 // ── Types ───────────────────────────────────────────────────────────────
 
@@ -52,8 +53,8 @@ export function useGuardConfig(vehicleId: number) {
     queryKey: guardKeys.config(vehicleId),
     queryFn: () => request<GuardConfig>(`/vehicles/${vehicleId}/guard`),
     enabled: vehicleId > 0,
-    staleTime: 5_000,
-    refetchInterval: 5_000,
+    staleTime: STALE_TIMES.REALTIME,
+    refetchInterval: INTERVALS.REALTIME,
   });
 }
 
@@ -62,7 +63,7 @@ export function useGuardEvents(vehicleId: number) {
     queryKey: guardKeys.events(vehicleId),
     queryFn: () => request<GuardEvent[]>(`/vehicles/${vehicleId}/guard/events`),
     enabled: vehicleId > 0,
-    staleTime: 10_000,
+    staleTime: STALE_TIMES.QUICK,
   });
 }
 

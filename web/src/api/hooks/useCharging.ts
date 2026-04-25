@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
+import { STALE_TIMES } from '@/lib/constants';
 import type {
   ChargingSession,
   CostForecastData,
@@ -90,7 +91,7 @@ export function useCostForecast(vehicleId: string | null, months = 6) {
     queryKey: ['cost-forecast', vehicleId, months],
     queryFn: () => request<CostForecastData>(`/analytics/cost-forecast?vehicle_id=${vehicleId}&months=${months}`),
     enabled: vehicleId !== null,
-    staleTime: 5 * 60_000,
+    staleTime: STALE_TIMES.SLOW,
   });
 }
 
@@ -99,11 +100,11 @@ export function useChargingOptimizer(vehicleId: string | null) {
     queryKey: ['charging-optimizer', vehicleId],
     queryFn: () => request<ChargingOptimizerData>(`/analytics/charging-optimizer?vehicle_id=${vehicleId}`),
     enabled: vehicleId !== null,
-    staleTime: 5 * 60_000,
+    staleTime: STALE_TIMES.SLOW,
   });
 }
 
-// --- Tesla Charging History (Supercharger/DC billing records) ---
+// --- Tesla Charging History(Supercharger/DC billing records) ---
 
 export interface TeslaChargingHistoryEntry {
   id: number;
@@ -154,11 +155,11 @@ export function useTeslaChargingHistory(vin?: string) {
     queryFn: () => request<TeslaChargingHistoryResponse>(
       `/tesla/charging/history${vin ? `?vin=${vin}` : ''}`
     ),
-    staleTime: 5 * 60_000,
+    staleTime: STALE_TIMES.SLOW,
   });
 }
 
-/** Mutation to refresh Tesla charging history from the Tesla API. */
+/** Mutation to refresh Tesla charging historyfrom the Tesla API. */
 export function useRefreshTeslaChargingHistory() {
   const qc = useQueryClient();
   return useMutation({
@@ -237,11 +238,11 @@ export function useTeslaChargingSessions(vin?: string) {
     queryFn: () => request<TeslaChargingSessionResponse>(
       `/tesla/charging/sessions${vin ? `?vin=${vin}` : ''}`
     ),
-    staleTime: 5 * 60_000,
+    staleTime: STALE_TIMES.SLOW,
   });
 }
 
-/** Mutation to refresh Tesla fleet charging sessions from the Tesla API. */
+/** Mutation to refresh Tesla fleet charging sessionsfrom the Tesla API. */
 export function useRefreshTeslaChargingSessions() {
   const qc = useQueryClient();
   return useMutation({
@@ -307,7 +308,7 @@ export function useRatePlans() {
   return useQuery({
     queryKey: chargePlannerKeys.ratePlans,
     queryFn: () => request<RatePlanInfo[]>('/charge-planner/rate-plans'),
-    staleTime: Infinity,
+    staleTime: STALE_TIMES.STATIC,
     select: safeArray,
   });
 }

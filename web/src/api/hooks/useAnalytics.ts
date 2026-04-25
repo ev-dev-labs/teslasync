@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
+import { STALE_TIMES } from '@/lib/constants';
 import type { AnalyticsSummary, MileageStats, CostBreakdown, TimelineEvent, StateSummary, WeeklyDigestData, MonthlyStat } from '@/types/analytics';
 import type { FleetAnalytics } from '@/api/types';
 
@@ -81,7 +82,7 @@ export function useWeeklyDigest(vehicleId: string) {
     queryFn: () => request<WeeklyDigestData>(`/vehicles/${vehicleId}/weekly-digest`),
     enabled: !!vehicleId,
     retry: false,
-    staleTime: Infinity,
+    staleTime: STALE_TIMES.STATIC,
   });
 }
 
@@ -153,11 +154,11 @@ export function useLifetimeStats(vehicleId?: string) {
       request<LifetimeStats>(
         `/analytics/lifetime${vehicleId ? `?vehicle_id=${vehicleId}` : ''}`,
       ),
-    staleTime: 5 * 60_000,
+    staleTime: STALE_TIMES.SLOW,
   });
 }
 
-/* ── Year in Review ──────────────────────────────────────────────── */
+/* ── Year in Review──────────────────────────────────────────────── */
 
 export function useYearReview(year: number, vehicleId?: string) {
   return useQuery({
@@ -167,6 +168,6 @@ export function useYearReview(year: number, vehicleId?: string) {
         `/analytics/year-review?year=${year}${vehicleId ? `&vehicle_id=${vehicleId}` : ''}`,
       ),
     enabled: !!vehicleId,
-    staleTime: Infinity,
+    staleTime: STALE_TIMES.STATIC,
   });
 }

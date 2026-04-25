@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
+import { INTERVALS } from '@/lib/constants';
 import type {
   APIKey, APICallLog, APICallLogStats, BackupConfig, BackupRun,
   SystemHealth, AuditLogEntry, SecurityEvent, DBStats, MigrationStatus,
@@ -73,7 +74,7 @@ export function useApiLogStats() {
   return useQuery({
     queryKey: adminKeys.apiLogStats,
     queryFn: () => request<APICallLogStats>('/api-logs/stats'),
-    refetchInterval: 30_000,
+    refetchInterval: INTERVALS.STANDARD,
   });
 }
 
@@ -89,7 +90,7 @@ export function useBackupRuns() {
   return useQuery({
     queryKey: adminKeys.backupRuns,
     queryFn: () => request<BackupRun[]>('/backup/runs'),
-    refetchInterval: 10_000,
+    refetchInterval: INTERVALS.FAST,
     select: safeArray,
   });
 }
@@ -98,7 +99,7 @@ export function useSystemHealth() {
   return useQuery({
     queryKey: adminKeys.systemHealth,
     queryFn: () => request<SystemHealth>('/system/health'),
-    refetchInterval: 30_000,
+    refetchInterval: INTERVALS.STANDARD,
   });
 }
 
@@ -123,7 +124,7 @@ export function useDBStats() {
   return useQuery({
     queryKey: adminKeys.dbStats,
     queryFn: () => request<DBStats>('/dev-tools/db-stats'),
-    refetchInterval: 30_000,
+    refetchInterval: INTERVALS.STANDARD,
   });
 }
 
@@ -131,7 +132,7 @@ export function useMigrations() {
   return useQuery({
     queryKey: adminKeys.migrations,
     queryFn: () => request<MigrationStatus>('/dev-tools/migration-status'),
-    refetchInterval: 60_000,
+    refetchInterval: INTERVALS.SLOW,
   });
 }
 
@@ -139,7 +140,7 @@ export function useConnectionPool() {
   return useQuery({
     queryKey: adminKeys.connectionPool,
     queryFn: () => request<ConnectionPool>('/dev-tools/runtime-info'),
-    refetchInterval: 30_000,
+    refetchInterval: INTERVALS.STANDARD,
   });
 }
 
@@ -169,7 +170,7 @@ export function useVehicleStateMachine(vehicleId: string) {
     queryKey: adminKeys.vehicleState(vehicleId),
     queryFn: () => request<VehicleState>(`/vehicles/${vehicleId}/state`),
     enabled: !!vehicleId,
-    refetchInterval: 3_000,
+    refetchInterval: INTERVALS.CRITICAL,
   });
 }
 
@@ -178,6 +179,6 @@ export function useStateTimeline(vehicleId: string, days = 7) {
     queryKey: [...adminKeys.stateTimeline(vehicleId), days],
     queryFn: () => request<{ transitions: StateTransition[] }>(`/vehicle-states/timeline?vehicle_id=${vehicleId}&days=${days}`),
     enabled: !!vehicleId,
-    refetchInterval: 10_000,
+    refetchInterval: INTERVALS.FAST,
   });
 }

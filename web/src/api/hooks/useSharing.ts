@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
+import { STALE_TIMES } from '@/lib/constants';
 import type {
   ShareToken,
   SharedDriveData,
@@ -59,6 +60,6 @@ export function useSharedDrive(token: string) {
     queryFn: () => request<SharedDriveData>(`/share/${token}`),
     enabled: !!token,
     retry: false,
-    staleTime: 5 * 60_000,
+    staleTime: STALE_TIMES.SLOW,
   });
 }

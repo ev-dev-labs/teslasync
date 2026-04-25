@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { getApiBase } from '@/lib/resilience';
+import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 
 // --- Watch-specific API client ---
 // Watch requests use API key auth (X-API-Key header) instead of
@@ -86,8 +87,8 @@ export function useWatchSummary(vehicleId?: number) {
   return useQuery({
     queryKey: watchKeys.summary(vehicleId),
     queryFn: () => watchRequest<WatchSummary>(`/watch/summary${params}`),
-    refetchInterval: 30_000,
-    staleTime: 15_000,
+    refetchInterval: INTERVALS.STANDARD,
+    staleTime: STALE_TIMES.MODERATE,
     retry: 2,
   });
 }
@@ -98,8 +99,8 @@ export function useWatchComplication(vehicleId?: number) {
   return useQuery({
     queryKey: watchKeys.complication(vehicleId),
     queryFn: () => watchRequest<WatchComplication>(`/watch/complication${params}`),
-    refetchInterval: 60_000,
-    staleTime: 30_000,
+    refetchInterval: INTERVALS.SLOW,
+    staleTime: STALE_TIMES.FAST,
   });
 }
 

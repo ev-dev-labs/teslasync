@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
+import { STALE_TIMES } from '@/lib/constants';
 import type { VehicleDriver, VehicleInvitation } from '../types';
 
 export const vehicleAccessKeys = {
@@ -15,7 +16,7 @@ export function useVehicleDrivers(vehicleId?: string) {
     queryKey: vehicleAccessKeys.drivers(vehicleId ?? ''),
     queryFn: () => request<VehicleDriver[]>(`/vehicles/${vehicleId}/drivers`),
     enabled: !!vehicleId,
-    staleTime: 60_000,
+    staleTime: STALE_TIMES.STANDARD,
     select: safeArray,
   });
 }
@@ -25,7 +26,7 @@ export function useVehicleInvitations(vehicleId?: string) {
     queryKey: vehicleAccessKeys.invitations(vehicleId ?? ''),
     queryFn: () => request<VehicleInvitation[]>(`/vehicles/${vehicleId}/invitations`),
     enabled: !!vehicleId,
-    staleTime: 60_000,
+    staleTime: STALE_TIMES.STANDARD,
     select: safeArray,
   });
 }

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
+import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import type {
   Automation,
   AutomationFull,
@@ -38,7 +39,7 @@ export function useAutomations() {
   return useQuery({
     queryKey: automationKeys.all,
     queryFn: () => request<Automation[]>('/automations'),
-    refetchInterval: 30_000,
+    refetchInterval: INTERVALS.STANDARD,
     select: safeArray,
   });
 }
@@ -48,7 +49,7 @@ export function useAutomationHistory(limit = 20) {
     queryKey: automationKeys.history(limit),
     queryFn: () =>
       request<AutomationHistoryListResponse>(`/automations/history?limit=${limit}`),
-    refetchInterval: 30_000,
+    refetchInterval: INTERVALS.STANDARD,
   });
 }
 
@@ -158,7 +159,7 @@ export function useAutomationPresets(category?: string) {
     queryKey: category ? presetKeys.category(category) : presetKeys.all,
     queryFn: () =>
       request<AutomationPresetsResponse>(`/automations/presets${queryParam}`),
-    staleTime: Infinity,
+    staleTime: STALE_TIMES.STATIC,
   });
 }
 
@@ -167,6 +168,6 @@ export function useAutomationPreset(id: string | undefined) {
     queryKey: presetKeys.detail(id!),
     queryFn: () => request<AutomationPreset>(`/automations/presets/${id}`),
     enabled: !!id,
-    staleTime: Infinity,
+    staleTime: STALE_TIMES.STATIC,
   });
 }

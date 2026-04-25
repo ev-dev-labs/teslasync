@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
+import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import type { SignalHistoryResponse, SignalStats, TelemetryStatus, VehicleTelemetry } from '@/types/telemetry';
 import type { SignalCatalogEntry, SignalObservation } from '@/types/signals';
 
@@ -24,7 +25,7 @@ export function useSignals(vehicleId: number) {
       return (resp as { signals?: string[] }).signals ?? [];
     },
     enabled: vehicleId > 0,
-    staleTime: 60_000,
+    staleTime: STALE_TIMES.STANDARD,
     select: safeArray,
   });
 }
@@ -42,7 +43,7 @@ export function useSignalHistory(vehicleId: number, signal: string, hours: numbe
     queryKey: telemetryKeys.signalHistory(vehicleId, signal, hours),
     queryFn: () => request<SignalHistoryResponse>(`/signals/${vehicleId}/${signal}/history?hours=${hours}`),
     enabled: vehicleId > 0 && !!signal,
-    refetchInterval: 30_000,
+    refetchInterval: INTERVALS.STANDARD,
   });
 }
 
@@ -74,7 +75,7 @@ export function useSignalGaps(vehicleId: number) {
       return res.signals ?? {};
     },
     enabled: vehicleId > 0,
-    refetchInterval: 5_000,
+    refetchInterval: INTERVALS.REALTIME,
   });
 }
 
@@ -105,7 +106,7 @@ export function useMQTTStatus() {
         vehicles: vehiclesArr,
       } as TelemetryStatus & { vehicles: VehicleTelemetry[] };
     },
-    refetchInterval: 5_000,
+    refetchInterval: INTERVALS.REALTIME,
   });
 }
 
@@ -115,7 +116,7 @@ export function useSignalCatalog() {
   return useQuery({
     queryKey: ['signal-catalog'],
     queryFn: () => request<SignalCatalogEntry[]>('/signals/catalog'),
-    staleTime: 5 * 60_000,
+    staleTime: STALE_TIMES.SLOW,
   });
 }
 
@@ -134,7 +135,7 @@ export function useSignalObservations(
     queryKey: ['signal-observations', vehicleId, opts],
     queryFn: () => request<SignalObservation[]>(`/signals/observations?${params}`),
     enabled: !!vehicleId,
-    staleTime: 5_000,
+    staleTime: STALE_TIMES.REALTIME,
   });
 }
 
@@ -165,7 +166,7 @@ export function useFleetTelemetryErrorVINs() {
   return useQuery({
     queryKey: ['fleet-telemetry-error-vins'],
     queryFn: () => request<FleetTelemetryErrorVIN[]>('/tesla/fleet-telemetry/error-vins'),
-    staleTime: 60_000,
+    staleTime: STALE_TIMES.STANDARD,
   });
 }
 
@@ -176,7 +177,7 @@ export function useFleetTelemetryErrors(vin?: string) {
       request<FleetTelemetryError[]>(
         `/tesla/fleet-telemetry/errors${vin ? `?vin=${vin}` : ''}`
       ),
-    staleTime: 60_000,
+    staleTime: STALE_TIMES.STANDARD,
   });
 }
 

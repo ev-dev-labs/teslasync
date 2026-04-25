@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { request } from '../client';
+import { STALE_TIMES } from '@/lib/constants';
 
 /* ── Types ────────────────────────────────────────────────── */
 
@@ -29,6 +30,6 @@ export function useAnomalies(vehicleId: string | null, days = 7) {
     queryKey: ['anomalies', vehicleId, days],
     queryFn: () => request<AnomalyData>(`/analytics/anomalies?vehicle_id=${vehicleId}&days=${days}`),
     enabled: vehicleId !== null,
-    staleTime: 5 * 60_000,
+    staleTime: STALE_TIMES.SLOW,
   });
 }

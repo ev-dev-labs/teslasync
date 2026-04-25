@@ -24,6 +24,52 @@ export const TIMEOUTS = {
   STALE_SIGNAL: 15 * 60 * 1000, // 15 minutes — signal is considered stale
 } as const
 
+/** Centralized refetch/polling intervals (milliseconds) */
+export const INTERVALS = {
+  /** 3s — critical system polling (admin metrics, vehicle state machine) */
+  CRITICAL: 3_000,
+  /** 5s — real-time data (SSE, live state, live signals) */
+  REALTIME: 5_000,
+  /** 10s — frequently changing data (vehicle state, positions) */
+  FAST: 10_000,
+  /** 30s — moderately changing data (drives list, charges) */
+  STANDARD: 30_000,
+  /** 60s — slow-changing data (settings, geofences) */
+  SLOW: 60_000,
+  /** 5 min — rarely changing data (analytics, statistics) */
+  ANALYTICS: 5 * 60_000,
+  /** 1 hour — near-static data (vehicle list, fleet overview) */
+  RARE: 60 * 60_000,
+  /** Never refetch automatically */
+  STATIC: Infinity,
+} as const
+
+/** Centralized staleTime values for TanStack Query (milliseconds) */
+export const STALE_TIMES = {
+  /** 5s — data considered stale almost immediately */
+  REALTIME: 5_000,
+  /** 10s — fast-changing command/guard data */
+  QUICK: 10_000,
+  /** 15s — watch/command staleness threshold */
+  MODERATE: 15_000,
+  /** 30s — frequently accessed data */
+  FAST: 30_000,
+  /** 60s — standard cache duration */
+  STANDARD: 60_000,
+  /** 5 min — infrequently changing data */
+  SLOW: 5 * 60_000,
+  /** 10 min — user profile/feature config data */
+  EXTENDED: 10 * 60_000,
+  /** 15 min — analytics and reports */
+  ANALYTICS: 15 * 60_000,
+  /** 1 hour — near-static data */
+  RARE: 60 * 60_000,
+  /** 24 hours — effectively permanent within a session */
+  DAILY: 24 * 60 * 60_000,
+  /** Never becomes stale */
+  STATIC: Infinity,
+} as const
+
 /** Pagination defaults */
 export const PAGINATION = {
   DEFAULT_LIMIT: 50,

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
+import { STALE_TIMES } from '@/lib/constants';
 import type { User } from '@/types/user';
 
 export const userKeys = {
@@ -39,7 +40,7 @@ export function useTeslaFeatureConfig() {
   return useQuery({
     queryKey: userKeys.teslaFeatureConfig,
     queryFn: () => request<TeslaConfigEnvelope>('/tesla/user/feature-config'),
-    staleTime: 10 * 60_000,
+    staleTime: STALE_TIMES.EXTENDED,
   });
 }
 
@@ -63,7 +64,7 @@ export function useTeslaUserRegion() {
   return useQuery({
     queryKey: userKeys.teslaRegion,
     queryFn: () => request<TeslaConfigEnvelope<TeslaRegionData>>('/tesla/user/region'),
-    staleTime: Infinity,
+    staleTime: STALE_TIMES.STATIC,
   });
 }
 
@@ -101,7 +102,7 @@ export function useTeslaUserOrders() {
   return useQuery({
     queryKey: userKeys.teslaOrders,
     queryFn: () => request<TeslaOrdersEnvelope>('/tesla/user/orders'),
-    staleTime: 5 * 60_000,
+    staleTime: STALE_TIMES.SLOW,
   });
 }
 
@@ -135,7 +136,7 @@ export function useTeslaUserProfile() {
   return useQuery({
     queryKey: userKeys.teslaProfile,
     queryFn: () => request<TeslaProfileEnvelope>('/tesla/user/profile'),
-    staleTime: 5 * 60_000,
+    staleTime: STALE_TIMES.SLOW,
   });
 }
 

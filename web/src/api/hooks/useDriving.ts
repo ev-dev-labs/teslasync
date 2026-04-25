@@ -1,6 +1,7 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
+import { STALE_TIMES } from '@/lib/constants';
 import type { Drive as ApiDrive } from '../types';
 import type {
   Drive,
@@ -183,11 +184,11 @@ export function useDrivingCoach(vehicleId?: string, days = 30) {
     queryKey: drivingKeys.coach(vehicleId, days),
     queryFn: () => request<DrivingCoachData>(`/analytics/driving-coach?vehicle_id=${vehicleId}&days=${days}`),
     enabled: !!vehicleId,
-    staleTime: 5 * 60_000,
+    staleTime: STALE_TIMES.SLOW,
   });
 }
 
-/* ── Trip Planner hooks ─────────────────────────────────── */
+/* ── Trip Planner hooks─────────────────────────────────── */
 
 export function usePlanTrip() {
   return useMutation({
@@ -204,7 +205,7 @@ export function useGeocodeSearch(query: string, enabled = true) {
     queryKey: ['geocode-search', query],
     queryFn: () => request<GeocodeResult[]>(`/geocode/search?q=${encodeURIComponent(query)}&limit=5`),
     enabled: enabled && query.length >= 3,
-    staleTime: 5 * 60_000,
+    staleTime: STALE_TIMES.SLOW,
     select: safeArray,
   });
 }

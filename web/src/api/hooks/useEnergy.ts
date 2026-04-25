@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
+import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import type {
   EnergyStats,
   BatteryHealth,
@@ -43,7 +44,7 @@ export function useBatteryCells(vehicleId: string | null) {
     queryFn: () => request<BatteryCellSummary>(`/vehicles/${vehicleId}/battery/cells`),
     enabled: vehicleId !== null,
     retry: false,
-    staleTime: Infinity,
+    staleTime: STALE_TIMES.STATIC,
   });
 }
 
@@ -68,9 +69,9 @@ export function useEnergyFlow(vehicleId: string | null) {
     queryKey: ['energy-flow', vehicleId],
     queryFn: () => request<EnergyFlowData>(`/vehicles/${vehicleId}/energy/flow`),
     enabled: vehicleId !== null,
-    refetchInterval: 5000,
+    refetchInterval: INTERVALS.REALTIME,
     retry: false,
-    staleTime: Infinity,
+    staleTime: STALE_TIMES.STATIC,
   });
 }
 
@@ -97,7 +98,7 @@ export function useProjectedRange(vehicleId: string | null) {
     queryFn: () => request<ProjectedRangeData>(`/vehicles/${vehicleId}/battery/projected-range`),
     enabled: vehicleId !== null,
     retry: false,
-    staleTime: Infinity,
+    staleTime: STALE_TIMES.STATIC,
   });
 }
 
@@ -117,7 +118,7 @@ export function useTeslaEnergySites() {
   return useQuery({
     queryKey: ['tesla-energy-sites'],
     queryFn: () => request<TeslaEnergySite[]>('/tesla/energy-sites'),
-    staleTime: 60_000,
+    staleTime: STALE_TIMES.STANDARD,
     select: safeArray,
   });
 }
@@ -139,7 +140,7 @@ export function useTeslaEnergySiteInfo(siteId?: number) {
     queryFn: () =>
       request<TeslaEnergySiteInfoResponse>(`/tesla/energy-sites/${siteId}/site-info`),
     enabled: !!siteId,
-    staleTime: 5 * 60_000,
+    staleTime: STALE_TIMES.SLOW,
   });
 }
 
@@ -193,7 +194,7 @@ export function useTeslaEnergyHistory(
         `/tesla/energy-sites/${siteId}/energy-history?${params.toString()}`,
       ),
     enabled: !!siteId,
-    staleTime: 5 * 60_000,
+    staleTime: STALE_TIMES.SLOW,
     select: safeArray,
   });
 }
@@ -214,7 +215,7 @@ export function useTeslaBackupHistory(
         `/tesla/energy-sites/${siteId}/backup-history?${params.toString()}`,
       ),
     enabled: !!siteId,
-    staleTime: 5 * 60_000,
+    staleTime: STALE_TIMES.SLOW,
     select: safeArray,
   });
 }
@@ -235,12 +236,12 @@ export function useTeslaWCChargingHistory(
         `/tesla/energy-sites/${siteId}/charging-history?${params.toString()}`,
       ),
     enabled: !!siteId,
-    staleTime: 5 * 60_000,
+    staleTime: STALE_TIMES.SLOW,
     select: safeArray,
   });
 }
 
-interface RefreshParams {
+interface RefreshParams{
   siteId: number;
   start_date?: string;
   end_date?: string;
@@ -315,7 +316,7 @@ export function useTeslaEnergyLiveStatus(siteId?: number) {
     queryFn: () =>
       request<TeslaEnergyLiveStatus>(`/tesla/energy-sites/${siteId}/live-status`),
     enabled: !!siteId,
-    refetchInterval: 30_000,
+    refetchInterval: INTERVALS.STANDARD,
   });
 }
 
@@ -337,7 +338,7 @@ export function useTeslaEnergyLiveStatusHistory(
         `/tesla/energy-sites/${siteId}/live-status/history?${params.toString()}`,
       ),
     enabled: !!siteId,
-    staleTime: 60_000,
+    staleTime: STALE_TIMES.STANDARD,
     select: safeArray,
   });
 }

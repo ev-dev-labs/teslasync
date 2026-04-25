@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
+import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import type { AppSettings, GasPriceStatus } from '@/api/types';
 
 export const settingsKeys = {
@@ -115,7 +116,7 @@ export function useGasPriceStatus(enabled = true) {
     queryFn: () => request<GasPriceStatus>('/gas-price/status'),
     enabled,
     retry: false,
-    refetchInterval: enabled ? 30_000 : false,
+    refetchInterval: enabled ? INTERVALS.STANDARD : false,
   });
 }
 
@@ -196,7 +197,7 @@ export function usePollingConfig() {
   return useQuery({
     queryKey: ['polling-config'] as const,
     queryFn: () => request<PollingConfig>('/settings/polling-config'),
-    staleTime: 5 * 60 * 1000,
+    staleTime: STALE_TIMES.SLOW,
   });
 }
 
@@ -226,7 +227,7 @@ export function useCaptureStats() {
   return useQuery({
     queryKey: ['capture-stats'] as const,
     queryFn: () => request<CaptureStats>('/dev-tools/telemetry-capture/stats'),
-    staleTime: 30_000,
+    staleTime: STALE_TIMES.FAST,
   });
 }
 
@@ -242,6 +243,6 @@ export function useVersionInfo() {
   return useQuery({
     queryKey: ['version'] as const,
     queryFn: () => request<VersionInfo>('/system/version'),
-    staleTime: 60_000,
+    staleTime: STALE_TIMES.STANDARD,
   });
 }

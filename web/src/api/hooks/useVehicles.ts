@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
+import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import type { Vehicle } from '@/types/vehicle';
 import type { VehicleState, VehicleLiveState } from '../types';
 export { deriveVehicleStatus as getVehicleStatus } from '../types';
@@ -16,7 +17,7 @@ export function useVehicles() {
   return useQuery({
     queryKey: vehicleKeys.all,
     queryFn: () => request<Vehicle[]>('/vehicles'),
-    staleTime: 30_000,
+    staleTime: STALE_TIMES.FAST,
     select: safeArray,
   });
 }
@@ -26,8 +27,8 @@ export function useVehicleLiveState(vehicleId: number | string | undefined) {
     queryKey: ['vehicle-live-state', vehicleId],
     queryFn: () => request<VehicleLiveState>(`/vehicles/${vehicleId}/live-state`),
     enabled: vehicleId !== undefined && vehicleId !== null && vehicleId !== '',
-    staleTime: 5_000,
-    refetchInterval: 10_000,
+    staleTime: STALE_TIMES.REALTIME,
+    refetchInterval: INTERVALS.FAST,
   });
 }
 
@@ -76,7 +77,7 @@ export function useVehicleState(vehicleId: number, options?: { refetchInterval?:
       return { state, live: res.live ?? false }
     },
     enabled: vehicleId > 0,
-    refetchInterval: options?.refetchInterval ?? 30_000,
+    refetchInterval: options?.refetchInterval ?? INTERVALS.STANDARD,
   });
 }
 
@@ -268,7 +269,7 @@ export function useVehicleMobileEnabled(vehicleId?: string) {
     queryKey: ['vehicle-mobile-enabled', vehicleId],
     queryFn: () => request<VehicleInfoEnvelope<MobileEnabledData>>(`/vehicles/${vehicleId}/mobile-enabled`),
     enabled: !!vehicleId,
-    staleTime: 5 * 60_000,
+    staleTime: STALE_TIMES.SLOW,
   });
 }
 
@@ -287,7 +288,7 @@ export function useVehicleOptions(vehicleId?: string) {
     queryKey: ['vehicle-options', vehicleId],
     queryFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/options`),
     enabled: !!vehicleId,
-    staleTime: Infinity,
+    staleTime: STALE_TIMES.STATIC,
   });
 }
 
@@ -306,7 +307,7 @@ export function useVehicleSpecs(vehicleId?: string) {
     queryKey: ['vehicle-specs', vehicleId],
     queryFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/specs`),
     enabled: !!vehicleId,
-    staleTime: Infinity,
+    staleTime: STALE_TIMES.STATIC,
   });
 }
 
@@ -327,7 +328,7 @@ export function useVehicleSubscriptions(vehicleId?: string) {
     queryKey: ['vehicle-subscriptions', vehicleId],
     queryFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/subscriptions`),
     enabled: !!vehicleId,
-    staleTime: 60 * 60_000, // 1 hour — rarely changes
+    staleTime: STALE_TIMES.RARE,
   });
 }
 
@@ -348,7 +349,7 @@ export function useVehicleUpgrades(vehicleId?: string) {
     queryKey: ['vehicle-upgrades', vehicleId],
     queryFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/upgrades`),
     enabled: !!vehicleId,
-    staleTime: 60 * 60_000, // 1 hour — rarely changes
+    staleTime: STALE_TIMES.RARE,
   });
 }
 
@@ -368,7 +369,7 @@ export function useWarrantyDetails() {
   return useQuery({
     queryKey: ['warranty-details'],
     queryFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>('/tesla/warranty'),
-    staleTime: 24 * 60 * 60_000, // 1 day
+    staleTime: STALE_TIMES.DAILY,
   });
 }
 
