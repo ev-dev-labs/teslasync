@@ -24,6 +24,7 @@ export interface Drive {
   endedStatus: string | null;
   createdAt: string;
   updatedAt: string;
+  live?: boolean;
 }
 
 export interface DriveDetail extends Drive {

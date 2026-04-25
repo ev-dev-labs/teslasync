@@ -88,6 +88,7 @@ export interface ChargingSession {
   ended_status: string | null
   created_at: string
   updated_at: string
+  live?: boolean
 }
 
 export interface DriveTelemetryReading {

@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
-import { STALE_TIMES } from '@/lib/constants';
+import { STALE_TIMES, INTERVALS } from '@/lib/constants';
 import type {
   ChargingSession,
   CostForecastData,
@@ -56,6 +56,10 @@ export function useChargingSessionDetail(id: number | null) {
     queryKey: chargingKeys.detailById(id!),
     queryFn: () => request<ApiChargingSession>(`/charging/${id}`),
     enabled: id != null,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      return data?.live === true ? INTERVALS.FAST : false;
+    },
   });
 }
 

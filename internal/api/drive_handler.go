@@ -1,12 +1,15 @@
 package api
 
 import (
+	"context"
 	"math"
 	"net/http"
 	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
 // DriveHandler handles drive-related HTTP requests.
@@ -15,6 +18,7 @@ type DriveHandler struct {
 	driveRepo       *database.DriveRepo
 	posRepo         *database.PositionRepo
 	signalLogReader *database.SignalLogReader
+	redisCache      *signal.RedisSignalCache
 }
 
 func NewDriveHandler(db *database.DB) *DriveHandler {
@@ -24,6 +28,12 @@ func NewDriveHandler(db *database.DB) *DriveHandler {
 		posRepo:         database.NewPositionRepo(db),
 		signalLogReader: database.NewSignalLogReader(db),
 	}
+}
+
+// WithRedisCache sets the Redis signal cache for computing live in-progress drive values.
+func (h *DriveHandler) WithRedisCache(cache *signal.RedisSignalCache) *DriveHandler {
+	h.redisCache = cache
+	return h
 }
 
 // Drive telemetry signal → JSON field mappings (field names match the old
@@ -97,9 +107,14 @@ func (h *DriveHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	endTs := time.Now()
+	live := false
+	endTs := time.Now().UTC()
 	if drive.EndTs != nil {
 		endTs = *drive.EndTs
+	} else {
+		// In-progress drive — compute live values from signal snapshots
+		live = true
+		h.enrichLiveDrive(ctx, drive, endTs)
 	}
 
 	// Telemetry from signal_log via pivot
@@ -150,9 +165,100 @@ func (h *DriveHandler) Get(w http.ResponseWriter, r *http.Request) {
 		"score":              drive.Score,
 		"ended_status":       drive.EndedStatus,
 		"created_at":         drive.CreatedAt,
+		"live":               live,
 		"telemetry":          telemetry,
 		"positions":          positions,
 	})
+}
+
+// enrichLiveDrive computes live values for an in-progress drive by reading
+// start-of-drive state from signal_log and current state from Redis (with
+// signal_log fallback). The drive struct is mutated in place.
+func (h *DriveHandler) enrichLiveDrive(ctx context.Context, drive *models.Drive, now time.Time) {
+	startSnap, err := h.signalLogReader.SnapshotAt(ctx, drive.VehicleID, drive.StartTs)
+	if err != nil {
+		log.Warn().Err(err).Int64("driveID", drive.ID).Msg("live drive: failed to get start snapshot")
+		startSnap = map[string]interface{}{}
+	}
+
+	currentSnap := h.currentSignals(ctx, drive.VehicleID)
+
+	// Duration — always computable from wall clock
+	durationMin := now.Sub(drive.StartTs).Minutes()
+	drive.DurationMin = safeFloat(durationMin)
+
+	// Distance from odometer delta
+	startOdo, startOdoOk := signalFloat(startSnap, "Odometer")
+	currentOdo, currentOdoOk := signalFloat(currentSnap, "Odometer")
+	if startOdoOk && currentOdoOk && currentOdo > startOdo {
+		drive.DistanceMi = safeFloat(currentOdo - startOdo)
+	}
+
+	// Battery levels
+	if startBat, ok := signalFloat(startSnap, "BatteryLevel"); ok {
+		v := int16(startBat)
+		drive.StartBatteryPct = &v
+	}
+	if currentBat, ok := signalFloat(currentSnap, "BatteryLevel"); ok {
+		v := int16(currentBat)
+		drive.EndBatteryPct = &v
+	}
+
+	// Average speed (distance / hours)
+	if drive.DistanceMi > 0 && durationMin > 0 {
+		avgSpeed := safeFloat(drive.DistanceMi / (durationMin / 60.0))
+		drive.AvgSpeedMph = &avgSpeed
+	}
+
+	// Current speed as max (best approximation during live drive)
+	if currentSpeed, ok := signalFloat(currentSnap, "VehicleSpeed"); ok {
+		if drive.MaxSpeedMph == nil || currentSpeed > *drive.MaxSpeedMph {
+			v := safeFloat(currentSpeed)
+			drive.MaxSpeedMph = &v
+		}
+	}
+
+	// Current position as end position
+	if lat, ok := signalFloat(currentSnap, "Latitude"); ok {
+		drive.EndLat = &lat
+	}
+	if lon, ok := signalFloat(currentSnap, "Longitude"); ok {
+		drive.EndLon = &lon
+	}
+
+	// Power
+	if voltage, vOk := signalFloat(currentSnap, "PackVoltage"); vOk {
+		if current, cOk := signalFloat(currentSnap, "PackCurrent"); cOk {
+			power := safeFloat(voltage * current / 1000.0)
+			drive.AvgPowerKw = &power
+		}
+	}
+
+	// Temps
+	if outside, ok := signalFloat(currentSnap, "OutsideTemp"); ok {
+		drive.OutsideTempAvgC = &outside
+	}
+	if inside, ok := signalFloat(currentSnap, "InsideTemp"); ok {
+		drive.InsideTempAvgC = &inside
+	}
+}
+
+// currentSignals returns the latest signal values for a vehicle, preferring
+// Redis (sub-ms) with signal_log SnapshotAt(now) as fallback.
+func (h *DriveHandler) currentSignals(ctx context.Context, vehicleID int64) map[string]interface{} {
+	if h.redisCache != nil {
+		snap, err := h.redisCache.GetAll(ctx, vehicleID)
+		if err == nil && snap != nil {
+			return snap
+		}
+		log.Debug().Err(err).Int64("vehicleID", vehicleID).Msg("live drive: Redis unavailable, falling back to signal_log")
+	}
+	snap, err := h.signalLogReader.SnapshotAt(ctx, vehicleID, time.Now().UTC())
+	if err != nil {
+		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("live drive: failed to get current snapshot from signal_log")
+		return map[string]interface{}{}
+	}
+	return snap
 }
 
 func (h *DriveHandler) Positions(w http.ResponseWriter, r *http.Request) {

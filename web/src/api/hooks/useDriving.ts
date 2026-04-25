@@ -1,7 +1,7 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
-import { STALE_TIMES } from '@/lib/constants';
+import { STALE_TIMES, INTERVALS } from '@/lib/constants';
 import type { Drive as ApiDrive } from '../types';
 import type {
   Drive,
@@ -59,6 +59,10 @@ export function useDrive(id: string) {
     queryKey: drivingKeys.drive(id),
     queryFn: () => request<DriveDetail>(`/drives/${id}`),
     enabled: !!id,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      return data?.live === true ? INTERVALS.FAST : false;
+    },
   });
 }
 

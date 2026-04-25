@@ -1,0 +1,82 @@
+=== SURVEY ===
+Surveyed existing code:
+- drive_handler.go: Get() returns drive + telemetry + positions inline as map.
+  Already uses time.Now() as endTs when drive.EndTs == nil for telemetry/position queries.
+  Does NOT compute live summary fields (distance, duration, battery, speed).
+- charging_handler.go: Get() returns *models.ChargingSession directly via writeJSON.
+  Does NOT compute live summary fields for in-progress sessions.
+- signal/redis_cache.go: RedisSignalCache with GetAll(vehicleID) returns all signals from Redis HSET.
+- database/signal_log_reader.go: SnapshotAt(vehicleID, at) returns latest signal values at a timestamp.
+- converters.go: toFloatOk(), signalFloat(), signalInt() — signal extraction helpers.
+- router.go: Already wires Redis cache to maintenance/command/watch handlers via WithRedisCache pattern.
+- Frontend: useDrive() / useChargingSessionDetail() have no refetchInterval for live sessions.
+  Types: Drive, DriveDetail, ChargingSession — no `live` field.
+
+=== REASONING ===
+1. DriveHandler.Get: When EndTs is nil (in-progress), compute live values from:
+   - SnapshotAt(drive.StartTs) for start-of-drive state
+   - Redis GetAll (sub-ms) for current state, with signal_log fallback
+   - Compute: duration (wall clock), distance (odometer delta), battery, speed, position, power, temp
+   - Add "live": true to response JSON
+
+2. ChargingHandler.Get: Same pattern:
+   - SnapshotAt(session.StartTs) for start battery/energy
+   - Redis/signal_log for current battery/energy
+   - Compute: duration, battery levels, energy added (ACChargingEnergyIn delta), power
+   - Wrap response in map to add "live" field
+
+3. Router: Wire RedisSignalCache to driveHandler and chargingHandler
+
+4. Frontend: Add `live?: boolean` to Drive and ChargingSession types.
+   Add refetchInterval callback to useDrive() and useChargingSessionDetail() —
+   auto-refetch at INTERVALS.FAST (10s) when live === true.
+
+5. Telemetry/positions for in-progress drives already work (Prompts 24) —
+   SignalTracePivotFlat uses time.Now() when end_ts is null.
+
+=== CHANGES ===
+Files modified:
+1. internal/api/drive_handler.go
+   - Added `redisCache *signal.RedisSignalCache` field
+   - Added `WithRedisCache` method
+   - Modified `Get()`: computes live values via enrichLiveDrive() when EndTs == nil
+   - Added `enrichLiveDrive()`: reads start snapshot + current signals, computes
+     duration, distance, battery, speed, position, power, temp
+   - Added `currentSignals()`: Redis-first with signal_log fallback
+   - Added `"live": true/false` to response JSON
+
+2. internal/api/charging_handler.go
+   - Added `redisCache *signal.RedisSignalCache` field
+   - Added `WithRedisCache` method
+   - Modified `Get()`: computes live values via enrichLiveCharge() when IsActive()
+   - Added `chargingSessionResponse()`: wraps session in map with `live` field
+   - Added `enrichLiveCharge()`: computes duration, battery, energy, power from snapshots
+   - Added `currentSignals()`: Redis-first with signal_log fallback
+
+3. internal/api/router.go
+   - Wired driveHandler.WithRedisCache(redisSignalCache) and
+     chargingHandler.WithRedisCache(redisSignalCache) in Redis wiring block
+
+4. web/src/types/driving.ts
+   - Added `live?: boolean` to Drive interface
+
+5. web/src/api/types.ts
+   - Added `live?: boolean` to ChargingSession interface
+
+6. web/src/api/hooks/useDriving.ts
+   - Added refetchInterval callback to useDrive(): auto-refetches at INTERVALS.FAST when live
+   - Imported INTERVALS from constants
+
+7. web/src/api/hooks/useCharging.ts
+   - Added refetchInterval callback to useChargingSessionDetail(): auto-refetches when live
+   - Imported INTERVALS from constants
+
+=== GATE ===
+$ go build ./...
+EXIT CODE: 0 (pass)
+
+$ cd web && npx tsc --noEmit
+EXIT CODE: 0 (pass)
+
+EXIT=0
+STATUS=DONE
