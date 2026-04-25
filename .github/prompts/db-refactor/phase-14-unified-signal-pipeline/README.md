@@ -64,7 +64,7 @@ Tesla Fleet API → MQTT Broker
 - **3-tier resilience** — memory buffer → Redis backup → MQTT persistence
 - **Continuous aggregates** replace snapshot table reads for dashboards
 
-## Prompt ordering (18 atomic prompts)
+## Prompt ordering (23 atomic prompts)
 
 ```
 ── Foundation ──
@@ -90,12 +90,18 @@ Tesla Fleet API → MQTT Broker
 13 — Drop snapshot tables + vehicle_live_state (migration to remove from schema)
 14 — Rewire API handlers (read from signal_log / Redis instead of snapshot tables)
 
-── Dashboard ──
+── Dashboard + real-time ──
 15 — Continuous aggregates (replace snapshot table reads for dashboards)
 16 — Frontend unit conversion (display in user's preferred units)
 
+── Cross-cutting (SSE, FSM, workers, frontend types) ──
+18 — SSE push path: Redis Pub/Sub replaces in-memory broadcast
+19 — FSM + Automation engine: read from Redis instead of vehicle_live_state
+20 — Export + Backup workers: rewire for signal_log
+21 — Frontend types: remove dropped table interfaces, update API types
+
 ── Gate ──
-17 — Gate: build + tsc + replay signals + verify sessions + verify no legacy refs
+22 — Gate: build + tsc + replay signals + verify sessions + verify no legacy refs
 ```
 
 ## Supersedes

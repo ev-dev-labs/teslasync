@@ -1,7 +1,7 @@
 ---
 description: "Phase-14 — Gate: full build + replay + verify sessions"
 ---
-# Prompt 17 — Gate: Build + TSC + Replay + Verify Everything
+# Prompt 22 — Gate: Build + TSC + Replay + Verify Everything
 > **Severity:** Gate | **Atomic:** yes | **Delegation:** FORBIDDEN
 
 | Field | Value |
@@ -16,13 +16,13 @@ description: "Phase-14 — Gate: full build + replay + verify sessions"
 ## Logging: === SURVEY ===, === REASONING ===, === CHANGES ===, === GATE ===, === COMMIT ===.
 ## CRITICAL: Do NOT launch agents. If stuck, STATUS=BLOCKED.
 
-## Depends on: ALL previous prompts (00–16)
+## Depends on: ALL previous prompts (00–21)
 
 ## Step 1 — Build gates
 
 ```powershell
 cd D:\repos\teslasync
-$log = ".github\prompts\db-refactor\logs\phase-14-17-gate.log"
+$log = ".github\prompts\db-refactor\logs\phase-14-22-gate.log"
 $env:CGO_ENABLED = "0"
 
 "=== GO BUILD ===" | Tee-Object -FilePath $log
