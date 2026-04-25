@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -16,16 +17,17 @@ import (
 
 // SignalHistoryRow represents a single signal value at a point in time.
 type SignalHistoryRow struct {
-	VehicleID int64
-	Signal    string
-	ValueNum  *float64
-	ValueStr  *string
-	ValueBool *bool
-	CreatedAt time.Time
+	VehicleID  int64
+	Signal     string
+	ValueNum   *float64
+	ValueStr   *string
+	ValueBool  *bool
+	ValueJsonb *string
+	CreatedAt  time.Time
 }
 
 // SignalHistoryWriter buffers incoming signals and batch-inserts them into
-// the signal_history table every flushInterval. Uses pgx CopyFrom for
+// the signal_log table every flushInterval. Uses pgx CopyFrom for
 // maximum insert performance.
 type SignalHistoryWriter struct {
 	db       *DB
@@ -82,7 +84,14 @@ func (w *SignalHistoryWriter) Append(vehicleID int64, signals map[string]interfa
 				continue
 			}
 		case map[string]interface{}:
-			continue // skip nested objects (Location, etc.)
+			// Compound signal (DoorState, DetailedChargeState, etc.)
+			jsonBytes, err := json.Marshal(v)
+			if err == nil {
+				s := string(jsonBytes)
+				row.ValueJsonb = &s
+			} else {
+				continue
+			}
 		default:
 			continue
 		}
@@ -119,13 +128,13 @@ func (w *SignalHistoryWriter) flush(ctx context.Context) {
 	w.mu.Unlock()
 
 	flushFn := func() error {
-		return RetryOnTransient(ctx, "signal_history_flush", func(ctx context.Context) error {
+		return RetryOnTransient(ctx, "signal_log_flush", func(ctx context.Context) error {
 			_, copyErr := w.db.Pool.CopyFrom(ctx,
-				pgx.Identifier{"signal_history"},
-				[]string{"vehicle_id", "signal", "value_num", "value_str", "value_bool", "created_at"},
+				pgx.Identifier{"signal_log"},
+				[]string{"vehicle_id", "signal", "value_num", "value_str", "value_bool", "value_jsonb", "created_at"},
 				pgx.CopyFromSlice(len(rows), func(i int) ([]interface{}, error) {
 					r := rows[i]
-					return []interface{}{r.VehicleID, r.Signal, r.ValueNum, r.ValueStr, r.ValueBool, r.CreatedAt}, nil
+					return []interface{}{r.VehicleID, r.Signal, r.ValueNum, r.ValueStr, r.ValueBool, r.ValueJsonb, r.CreatedAt}, nil
 				}),
 			)
 			return copyErr
@@ -141,9 +150,9 @@ func (w *SignalHistoryWriter) flush(ctx context.Context) {
 
 	if err != nil {
 		if errors.Is(err, gobreaker.ErrOpenState) {
-			log.Debug().Int("rows", len(rows)).Msg("signal_history: circuit breaker open, re-queuing")
+			log.Debug().Int("rows", len(rows)).Msg("signal_log: circuit breaker open, re-queuing")
 		} else {
-			log.Warn().Err(err).Int("rows", len(rows)).Msg("signal_history: batch insert failed after retries")
+			log.Warn().Err(err).Int("rows", len(rows)).Msg("signal_log: batch insert failed after retries")
 		}
 		// Re-queue failed rows for the next flush (bounded to prevent memory leak)
 		w.mu.Lock()
@@ -151,7 +160,7 @@ func (w *SignalHistoryWriter) flush(ctx context.Context) {
 		if len(rows) <= maxRequeue {
 			w.buffer = append(rows, w.buffer...)
 		} else {
-			log.Warn().Int("dropped", len(rows)-maxRequeue).Msg("signal_history: dropping oldest rows (requeue limit)")
+			log.Warn().Int("dropped", len(rows)-maxRequeue).Msg("signal_log: dropping oldest rows (requeue limit)")
 			w.buffer = append(rows[len(rows)-maxRequeue:], w.buffer...)
 		}
 		w.mu.Unlock()
@@ -161,13 +170,13 @@ func (w *SignalHistoryWriter) flush(ctx context.Context) {
 // Cleanup deletes rows older than the retention period.
 func (w *SignalHistoryWriter) Cleanup(ctx context.Context, retentionDays int) {
 	result, err := w.db.Pool.Exec(ctx,
-		"DELETE FROM signal_history WHERE created_at < NOW() - $1::interval",
+		"DELETE FROM signal_log WHERE created_at < NOW() - $1::interval",
 		fmt.Sprintf("%d days", retentionDays))
 	if err != nil {
-		log.Warn().Err(err).Msg("signal_history: TTL cleanup failed")
+		log.Warn().Err(err).Msg("signal_log: TTL cleanup failed")
 		return
 	}
-	log.Info().Int64("deleted", result.RowsAffected()).Int("retention_days", retentionDays).Msg("signal_history: TTL cleanup")
+	log.Info().Int64("deleted", result.RowsAffected()).Int("retention_days", retentionDays).Msg("signal_log: TTL cleanup")
 }
 
 // GetHistory returns time-series data for a single signal within a date range.
@@ -177,7 +186,7 @@ func (w *SignalHistoryWriter) GetHistory(ctx context.Context, vehicleID int64, s
 		limit = 1000
 	}
 	query := `SELECT vehicle_id, signal, value_num, value_str, value_bool, created_at
-	          FROM signal_history
+	          FROM signal_log
 	          WHERE vehicle_id = $1 AND signal = $2 AND created_at BETWEEN $3 AND $4
 	          ORDER BY created_at ASC
 	          LIMIT $5`
@@ -203,11 +212,11 @@ func (w *SignalHistoryWriter) GetGlobalStats(ctx context.Context, vehicleID int6
 	var oldest, newest *time.Time
 	err := w.db.Pool.QueryRow(ctx,
 		`SELECT COUNT(*), MIN(created_at), MAX(created_at)
-		 FROM signal_history WHERE vehicle_id = $1`, vehicleID).Scan(&count, &oldest, &newest)
+		 FROM signal_log WHERE vehicle_id = $1`, vehicleID).Scan(&count, &oldest, &newest)
 	return count, oldest, newest, err
 }
 
-// SignalHistoryEntry is a single row from signal_history for API responses.
+// SignalHistoryEntry is a single row from signal_log for API responses.
 type SignalHistoryEntry struct {
 	Signal    string   `json:"signal"`
 	ValueNum  *float64 `json:"value_num,omitempty"`
@@ -226,7 +235,7 @@ func (w *SignalHistoryWriter) Query(ctx context.Context, vehicleID int64, signal
 	// Count total
 	var total int64
 	err := w.db.Pool.QueryRow(ctx,
-		"SELECT COUNT(*) FROM signal_history WHERE vehicle_id = $1 AND signal = ANY($2) AND created_at BETWEEN $3 AND $4",
+		"SELECT COUNT(*) FROM signal_log WHERE vehicle_id = $1 AND signal = ANY($2) AND created_at BETWEEN $3 AND $4",
 		vehicleID, signals, from, to).Scan(&total)
 	if err != nil {
 		return nil, 0, err
@@ -235,7 +244,7 @@ func (w *SignalHistoryWriter) Query(ctx context.Context, vehicleID int64, signal
 	// Fetch page
 	rows, err := w.db.Pool.Query(ctx,
 		`SELECT signal, value_num, value_str, value_bool, created_at
-		 FROM signal_history
+		 FROM signal_log
 		 WHERE vehicle_id = $1 AND signal = ANY($2) AND created_at BETWEEN $3 AND $4
 		 ORDER BY created_at DESC LIMIT $5 OFFSET $6`,
 		vehicleID, signals, from, to, perPage, offset)
@@ -258,7 +267,7 @@ func (w *SignalHistoryWriter) Query(ctx context.Context, vehicleID int64, signal
 // AvailableSignals returns distinct signal names for a vehicle.
 func (w *SignalHistoryWriter) AvailableSignals(ctx context.Context, vehicleID int64) ([]string, error) {
 	rows, err := w.db.Pool.Query(ctx,
-		"SELECT DISTINCT signal FROM signal_history WHERE vehicle_id = $1 ORDER BY signal",
+		"SELECT DISTINCT signal FROM signal_log WHERE vehicle_id = $1 ORDER BY signal",
 		vehicleID)
 	if err != nil {
 		return nil, err
@@ -281,9 +290,9 @@ func (w *SignalHistoryWriter) AvailableSignals(ctx context.Context, vehicleID in
 // Uses DISTINCT ON for an efficient single-pass scan.
 func (w *SignalHistoryWriter) GetLatestPerSignal(ctx context.Context, vehicleID int64) (map[string]interface{}, error) {
 	query := `SELECT DISTINCT ON (signal) signal, value_num, value_str, value_bool
-	          FROM signal_history
+	          FROM signal_log
 	          WHERE vehicle_id = $1
-	          ORDER BY signal, created_at DESC, id DESC`
+	          ORDER BY signal, created_at DESC`
 	rows, err := w.db.Pool.Query(ctx, query, vehicleID)
 	if err != nil {
 		return nil, err
@@ -319,7 +328,7 @@ func (w *SignalHistoryWriter) SnapshotAt(ctx context.Context, vehicleID int64, a
 	defer cancel()
 
 	query := `SELECT DISTINCT ON (signal) signal, value_num, value_str, value_bool, created_at
-	          FROM signal_history
+	          FROM signal_log
 	          WHERE vehicle_id = $1 AND created_at <= $2
 	          ORDER BY signal, created_at DESC`
 	rows, err := w.db.Pool.Query(ctx, query, vehicleID, at)
@@ -357,7 +366,7 @@ func (w *SignalHistoryWriter) SignalAt(ctx context.Context, vehicleID int64, sig
 	defer cancel()
 
 	query := `SELECT value_num, value_str, value_bool
-	          FROM signal_history
+	          FROM signal_log
 	          WHERE vehicle_id = $1 AND signal = $2 AND created_at <= $3
 	          ORDER BY created_at DESC
 	          LIMIT 1`
@@ -389,7 +398,7 @@ func (w *SignalHistoryWriter) SnapshotBetween(ctx context.Context, vehicleID int
 	defer cancel()
 
 	query := `SELECT DISTINCT ON (signal) signal, value_num, value_str, value_bool, created_at
-	          FROM signal_history
+	          FROM signal_log
 	          WHERE vehicle_id = $1 AND created_at >= $2 AND created_at <= $3
 	          ORDER BY signal, created_at DESC`
 	rows, err := w.db.Pool.Query(ctx, query, vehicleID, from, to)
