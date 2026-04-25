@@ -84,10 +84,13 @@ func (p *Processor) RunBackup(ctx context.Context, cfg *models.BackupConfig, run
 	// Export data
 	data := make(map[string]json.RawMessage)
 	totalRecords := 0
+	totalTables := len(tables)
+	failedTables := 0
 	for _, table := range tables {
 		rows, err := p.exportTable(ctx, table)
 		if err != nil {
 			log.Warn().Err(err).Str("table", table).Msg("backup: skipping table")
+			failedTables++
 			continue
 		}
 		data[table] = rows
@@ -157,11 +160,22 @@ func (p *Processor) RunBackup(ctx context.Context, cfg *models.BackupConfig, run
 
 	duration := time.Since(start).Milliseconds()
 
-	// Mark completed
-	if err := p.runRepo.Complete(ctx, run.ID, fileName, filePath, int64(len(finalData)), totalRecords, len(tables), checksum, duration); err != nil {
+	// Determine final status based on table export results
+	var status string
+	switch {
+	case failedTables == 0:
+		status = "completed"
+	case failedTables == totalTables:
+		status = "failed"
+	default:
+		status = "partial"
+	}
+
+	// Mark completed with computed status
+	if err := p.runRepo.Complete(ctx, run.ID, status, fileName, filePath, int64(len(finalData)), totalRecords, len(tables), checksum, duration); err != nil {
 		log.Error().Err(err).Msg("backup: failed to mark completed")
 	}
-	backupRunsMetric.WithLabelValues("completed", cfg.Provider).Inc()
+	backupRunsMetric.WithLabelValues(status, cfg.Provider).Inc()
 	backupDurationMetric.Observe(float64(duration) / 1000.0)
 	backupSizeMetric.Observe(float64(len(finalData)))
 
@@ -184,7 +198,7 @@ func (p *Processor) RunBackup(ctx context.Context, cfg *models.BackupConfig, run
 		}
 	}
 
-	log.Info().Str("file", fileName).Int64("size", int64(len(finalData))).Int("records", totalRecords).Int64("duration_ms", duration).Msg("backup: completed")
+	log.Info().Str("file", fileName).Int64("size", int64(len(finalData))).Int("records", totalRecords).Int("total", totalTables).Int("failed", failedTables).Str("status", status).Int64("duration_ms", duration).Msg("backup run finished")
 }
 
 // IsAllowedTable returns true if the table name is in the processor's backup table list.
