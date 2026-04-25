@@ -149,6 +149,11 @@
 # Dead snapshot dispatch functions left as no-op comments. This phase fills the gaps.
 & "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase phase-16-data-gaps
 
+# ── Phase 17 — Security & Reliability Hardening (10 prompts) ──
+# SQL injection in backup, plaintext token fallback, incomplete backup status,
+# credential leaks in query strings, SSE reconnect death spiral, ungraceful shutdown,
+# silent write-buffer drops, competing config systems, critical-path test coverage.
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase phase-17-security-reliability
 
 # ── Future-1 — Unit normalization (19 prompts) ──
 # Stamps per-row unit columns (distance_unit, temp_unit, pressure_unit) on all
