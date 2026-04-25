@@ -16,7 +16,6 @@ type AnalyticsHandler struct {
 	vehicleRepo    *database.VehicleRepo
 	driveRepo      *database.DriveRepo
 	chargingRepo   *database.ChargingRepo
-	batteryRepo    *database.BatterySnapshotRepo
 	positionRepo   *database.PositionRepo
 }
 
@@ -25,7 +24,6 @@ func NewAnalyticsHandler(db *database.DB) *AnalyticsHandler {
 		vehicleRepo:  database.NewVehicleRepo(db),
 		driveRepo:    database.NewDriveRepo(db),
 		chargingRepo: database.NewChargingRepo(db),
-		batteryRepo:  database.NewBatterySnapshotRepo(db),
 		positionRepo: database.NewPositionRepo(db),
 	}
 }
@@ -122,11 +120,8 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 			log.Error().Err(err).Int64("vehicleID", v.ID).Msg("analytics: failed to get charging sessions")
 			sessions = nil
 		}
-		batSnaps, err := h.batteryRepo.GetByVehicle(r.Context(), v.ID, 365)
-		if err != nil {
-			log.Error().Err(err).Int64("vehicleID", v.ID).Msg("analytics: failed to get battery snapshots")
-			batSnaps = nil
-		}
+		// Battery health trend: derive from signal_log in future update
+		// TODO: implement via SignalLogReader.SignalTracePivot for BatteryLevel
 
 		var dist float64
 		var driveCount int
@@ -270,17 +265,8 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 		fleetDrives += driveCount
 		fleetSessions += len(sessions)
 
-		// Battery snapshots
-		for _, bs := range batSnaps {
-			batteryTrend = append(batteryTrend, batteryPoint{
-				Date:        bs.CreatedAt.Format("2006-01-02"),
-				HealthScore: bs.HealthScore,
-				CapacityKWh: bs.CapacityKWh,
-				Degradation: bs.DegradationPct,
-				RangeKm:     bs.EstRangeKm,
-				CycleCount:  bs.CycleCount,
-			})
-		}
+		// Battery trend — TODO: derive from signal_log
+		// for _, bs := range batSnaps { ... }
 	}
 
 	fleetEffic := 0.0

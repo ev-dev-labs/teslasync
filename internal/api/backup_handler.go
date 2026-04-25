@@ -26,7 +26,7 @@ var allowedBackupTables = map[string]bool{
 	"positions": true, "addresses": true, "geofences": true,
 	"alerts": true, "alert_rules": true, "settings": true,
 	"daily_mileage": true, "vehicle_states": true, "software_updates": true,
-	"tire_pressure_snapshots": true, "vampire_drain_events": true,
+	"signal_log": true, "vampire_drain_events": true,
 	"visited_locations": true, "trips": true,
 }
 

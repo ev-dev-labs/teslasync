@@ -8,7 +8,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -26,8 +25,6 @@ func (p *Processor) processAnalytics(ctx context.Context, req *models.ExportJobR
 	if req.StartDate != nil {
 		cutoff = *req.StartDate
 	}
-
-	batRepo := database.NewBatterySnapshotRepo(p.db)
 
 	type vehicleStats struct {
 		ID         int64   `json:"id"`
@@ -102,7 +99,9 @@ func (p *Processor) processAnalytics(ctx context.Context, req *models.ExportJobR
 			}
 		}
 
-		batSnaps, _ := batRepo.GetByVehicle(ctx, v.ID, 365)
+		// Battery health trend: derive from signal_log BatteryLevel over time.
+		// TODO: implement via SignalLogReader.SignalTracePivot for BatteryLevel, PackVoltage
+		// to compute health_score, capacity, degradation from historical data.
 
 		var dist float64
 		var driveCount int
@@ -215,13 +214,8 @@ func (p *Processor) processAnalytics(ctx context.Context, req *models.ExportJobR
 		fleetDrives += driveCount
 		fleetSessions += len(allSessions)
 
-		for _, bs := range batSnaps {
-			batteryTrend = append(batteryTrend, batteryPoint{
-				Date: bs.CreatedAt.Format("2006-01-02"), HealthScore: bs.HealthScore,
-				CapacityKWh: bs.CapacityKWh, Degradation: bs.DegradationPct,
-				RangeKm: bs.EstRangeKm, CycleCount: bs.CycleCount,
-			})
-		}
+		// Battery trend from signal_log — TODO: implement via SignalTracePivot
+		// for _, bs := range batSnaps { ... }
 	}
 
 	fleetEffic := 0.0

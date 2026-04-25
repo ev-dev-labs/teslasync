@@ -2,22 +2,19 @@ package api
 
 import (
 	"net/http"
-	"strconv"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // BatteryHandler handles battery health HTTP requests.
 type BatteryHandler struct {
-	batteryRepo     *database.BatterySnapshotRepo
+	db              *database.DB
 	signalLogReader *database.SignalLogReader
 }
 
 func NewBatteryHandler(db *database.DB, slr *database.SignalLogReader) *BatteryHandler {
-	return &BatteryHandler{batteryRepo: database.NewBatterySnapshotRepo(db), signalLogReader: slr}
+	return &BatteryHandler{db: db, signalLogReader: slr}
 }
 
 func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
@@ -27,39 +24,11 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	days := 3650
-	if d := r.URL.Query().Get("days"); d != "" {
-		if parsed, err := strconv.Atoi(d); err == nil && parsed > 0 && parsed <= 3650 {
-			days = parsed
-		}
-	}
-
-	snapshots, err := h.batteryRepo.GetByVehicle(r.Context(), vehicleID, days)
-	if err != nil {
-		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get battery snapshots")
-		writeError(w, http.StatusInternalServerError, "failed to get battery report")
-		return
-	}
-
-	if snapshots == nil {
-		snapshots = make([]*models.BatterySnapshot, 0)
-	}
-
-	// Build response with latest data
+	// Derive battery health from signal_log (no more battery_snapshots table)
 	var healthScore, capacityKWh, degradation, estRange, avgTemp float64
 	var cycleCount int
-	if len(snapshots) > 0 {
-		latest := snapshots[0]
-		healthScore = latest.HealthScore
-		capacityKWh = latest.CapacityKWh
-		degradation = latest.DegradationPct
-		estRange = latest.EstRangeKm
-		cycleCount = latest.CycleCount
-		avgTemp = latest.AvgCellTempC
-	}
 
-	// If no battery snapshots, derive basic health metrics from signal_log
-	if healthScore == 0 {
+	{
 		const nominalCapacity = 75.0
 		const nominalRangeKm = 531.0
 
@@ -84,7 +53,7 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 
 		// Count charge cycles from charging sessions (sum of SOC deltas / 100)
 		var totalSOCDelta *float64
-		_ = h.batteryRepo.DB().Pool.QueryRow(r.Context(),
+		_ = h.db.Pool.QueryRow(r.Context(),
 			`SELECT SUM(GREATEST(end_battery_pct - start_battery_pct, 0)) 
 			 FROM charging_sessions WHERE vehicle_id = $1 AND end_battery_pct > start_battery_pct`,
 			vehicleID).Scan(&totalSOCDelta)
@@ -103,16 +72,7 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 		EstRangeKm  float64 `json:"est_range_km"`
 	}
 	var trend []trendPoint
-	for _, s := range snapshots {
-		trend = append(trend, trendPoint{
-			Month:       s.CreatedAt.Format("2006-01"),
-			CapacityPct: s.HealthScore,
-			RangeKm:     s.EstRangeKm,
-			HealthScore: s.HealthScore,
-			CapacityKWh: s.CapacityKWh,
-			EstRangeKm:  s.EstRangeKm,
-		})
-	}
+	// TODO: derive monthly battery trend from signal_log BatteryLevel aggregates
 
 	// Model Y Long Range nominal range ~531 km (330 mi)
 	const nominalRangeKm = 531.0
