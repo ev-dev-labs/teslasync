@@ -11,6 +11,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
@@ -45,6 +46,7 @@ type WatchHandler struct {
 	vehicleRepo  *database.VehicleRepo
 	settingsRepo *database.SettingsRepo
 	teslaClient  *tesla.Client
+	redisCache   *signal.RedisSignalCache
 }
 
 // NewWatchHandler creates a new WatchHandler.
@@ -55,6 +57,12 @@ func NewWatchHandler(db *database.DB, tc *tesla.Client) *WatchHandler {
 		settingsRepo: database.NewSettingsRepo(db),
 		teslaClient:  tc,
 	}
+}
+
+// WithRedisCache sets the Redis signal cache for reading live vehicle state.
+func (h *WatchHandler) WithRedisCache(cache *signal.RedisSignalCache) *WatchHandler {
+	h.redisCache = cache
+	return h
 }
 
 // watchCommands is the limited set of commands available from a watch.
@@ -216,63 +224,88 @@ func (h *WatchHandler) Command(w http.ResponseWriter, r *http.Request) {
 }
 
 // queryWatchSummary reads only the fields needed for a watch display
-// from vehicle_live_state using a single efficient query.
+// from the Redis signal cache.
 func (h *WatchHandler) queryWatchSummary(ctx context.Context, vehicleID int64) (*WatchSummary, error) {
-	var batteryLevel *int
-	var ratedRange, insideTemp, outsideTemp *float64
-	var chargeRate, timeToFull *float64
-	var locked, sentryMode, hvacPower *bool
-	var chargeState *string
-	var updatedAt *time.Time
+	if h.redisCache == nil {
+		return nil, fmt.Errorf("redis signal cache not available")
+	}
 
-	err := h.db.Pool.QueryRow(ctx, `
-		SELECT battery_level, rated_range, inside_temp, outside_temp,
-		       charge_rate, time_to_full_charge, locked, sentry_mode,
-		       hvac_power, charge_state, updated_at
-		FROM vehicle_live_state
-		WHERE vehicle_id = $1`, vehicleID).Scan(
-		&batteryLevel, &ratedRange, &insideTemp, &outsideTemp,
-		&chargeRate, &timeToFull, &locked, &sentryMode,
-		&hvacPower, &chargeState, &updatedAt,
-	)
+	signals, err := h.redisCache.GetAll(ctx, vehicleID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read redis signals: %w", err)
+	}
+	if signals == nil {
+		return nil, fmt.Errorf("no signals for vehicle %d", vehicleID)
 	}
 
-	// Convert rated_range from miles to km (DB stores miles)
-	rangeKm := 0.0
-	if ratedRange != nil {
-		rangeKm = *ratedRange * 1.60934
+	batteryLevel, _ := signalInt(signals, "BatteryLevel")
+
+	// RatedRange from Fleet Telemetry is in miles — convert to km
+	ratedRange, _ := signalFloat(signals, "RatedRange")
+	rangeKm := ratedRange * 1.60934
+
+	insideTemp, _ := signalFloat(signals, "InsideTemp")
+	outsideTemp, _ := signalFloat(signals, "OutsideTemp")
+	chargeRate, _ := signalFloat(signals, "ChargeRateMilePerHour")
+
+	// TimeToFullCharge is in hours — convert to minutes
+	ttf, _ := signalFloat(signals, "TimeToFullCharge")
+	ttfMinutes := ttf * 60
+
+	// Locked: default to true (safe assumption) when unknown
+	locked := true
+	if v, ok := signals["Locked"]; ok && v != nil {
+		switch b := v.(type) {
+		case bool:
+			locked = b
+		case string:
+			locked = b == "true"
+		case float64:
+			locked = b > 0
+		}
 	}
 
-	isCharging := false
-	if chargeState != nil && (*chargeState == enums.ChargeStateCharging || *chargeState == "charging") {
-		isCharging = true
+	// SentryMode
+	sentryMode := false
+	if v, ok := signals["SentryMode"]; ok && v != nil {
+		switch b := v.(type) {
+		case bool:
+			sentryMode = b
+		case string:
+			sentryMode = b == "true" || b == "On"
+		case float64:
+			sentryMode = b > 0
+		}
 	}
 
-	lastUpdated := time.Now().UTC().Format(time.RFC3339)
-	if updatedAt != nil {
-		lastUpdated = updatedAt.Format(time.RFC3339)
+	// HvacPower is an enum ("On"/"Off") or bool
+	isClimateOn := false
+	if v, ok := signals["HvacPower"]; ok {
+		switch hv := v.(type) {
+		case bool:
+			isClimateOn = hv
+		case string:
+			isClimateOn = enums.ParseHvacPower(hv)
+		case float64:
+			isClimateOn = hv > 0
+		}
 	}
 
-	// Convert time_to_full from hours to minutes
-	ttfMinutes := 0.0
-	if timeToFull != nil {
-		ttfMinutes = *timeToFull * 60
-	}
+	chargeState, _ := signalStr(signals, "ChargeState")
+	isCharging := chargeState == enums.ChargeStateCharging || chargeState == "charging"
 
 	return &WatchSummary{
-		BatteryLevel: derefInt(batteryLevel),
+		BatteryLevel: batteryLevel,
 		RangeKm:      rangeKm,
 		IsCharging:   isCharging,
-		ChargeRate:   derefFloat(chargeRate),
+		ChargeRate:   chargeRate,
 		TimeToFull:   ttfMinutes,
-		IsLocked:     locked == nil || *locked, // default locked when unknown
-		SentryMode:   sentryMode != nil && *sentryMode,
-		InsideTemp:   derefFloat(insideTemp),
-		OutsideTemp:  derefFloat(outsideTemp),
-		IsClimateOn:  hvacPower != nil && *hvacPower,
-		LastUpdated:  lastUpdated,
+		IsLocked:     locked,
+		SentryMode:   sentryMode,
+		InsideTemp:   insideTemp,
+		OutsideTemp:  outsideTemp,
+		IsClimateOn:  isClimateOn,
+		LastUpdated:  time.Now().UTC().Format(time.RFC3339),
 	}, nil
 }
 

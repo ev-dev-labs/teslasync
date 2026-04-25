@@ -215,6 +215,17 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	geocodeHandler := NewGeocodeHandler(geocoding.NewSearcher("TeslaSync/1.0"))
 	shareHandler := NewShareHandler(db)
 	watchHandler := NewWatchHandler(db, teslaClient)
+
+	// Wire Redis signal cache to handlers that read live vehicle state
+	if opt.CacheStore != nil {
+		if rdb := opt.CacheStore.Underlying(); rdb != nil {
+			redisSignalCache := signal.NewRedisSignalCache(rdb)
+			maintenanceHandler.WithRedisCache(redisSignalCache)
+			commandHandler.WithRedisCache(redisSignalCache)
+			watchHandler.WithRedisCache(redisSignalCache)
+		}
+	}
+
 	// SSE event hub for automation real-time events
 	automationEventHub := NewEventHub()
 	automationPublisher := NewAutomationEventPublisher(automationEventHub)
@@ -1025,6 +1036,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				if telemetryHandler.signalHistoryWriter != nil {
 					signalHandler.WithSignalHistory(telemetryHandler.signalHistoryWriter)
 				}
+				if opt.CacheStore != nil {
+					if rdb := opt.CacheStore.Underlying(); rdb != nil {
+						signalHandler.WithRedisCache(signal.NewRedisSignalCache(rdb))
+					}
+				}
 				r.Get("/available", signalHandler.AvailableSignals)
 				r.Get("/stats", signalHandler.Stats)
 				r.Get("/{signalName}/history", signalHandler.History)
@@ -1033,6 +1049,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				signalHandler := NewSignalHandler(nil)
 				if db != nil {
 					signalHandler.WithDB(db)
+				}
+				if opt.CacheStore != nil {
+					if rdb := opt.CacheStore.Underlying(); rdb != nil {
+						signalHandler.WithRedisCache(signal.NewRedisSignalCache(rdb))
+					}
 				}
 				r.Get("/available", signalHandler.AvailableSignals)
 				r.Get("/stats", signalHandler.Stats)

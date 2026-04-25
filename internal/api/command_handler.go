@@ -9,6 +9,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	cmdFSM "github.com/ev-dev-labs/teslasync/internal/fsm/command"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
@@ -18,6 +19,7 @@ type CommandHandler struct {
 	commandRepo  *database.CommandLogRepo
 	settingsRepo *database.SettingsRepo
 	teslaClient  *tesla.Client
+	redisCache   *signal.RedisSignalCache
 }
 
 func NewCommandHandler(db *database.DB, tc *tesla.Client) *CommandHandler {
@@ -27,6 +29,12 @@ func NewCommandHandler(db *database.DB, tc *tesla.Client) *CommandHandler {
 		settingsRepo: database.NewSettingsRepo(db),
 		teslaClient:  tc,
 	}
+}
+
+// WithRedisCache sets the Redis signal cache for reading vehicle wake state.
+func (h *CommandHandler) WithRedisCache(cache *signal.RedisSignalCache) *CommandHandler {
+	h.redisCache = cache
+	return h
 }
 
 // allowedCommands is the whitelist of Tesla commands that can be sent via the API.
@@ -173,9 +181,15 @@ func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {
 	// Track command lifecycle via FSM
 	fsm := cmdFSM.NewExecutionFSM(0, vehicleID, body.Command)
 
-	// Vehicle state is tracked in vehicle_live_state, not on the vehicle row.
-	// The wake/command lifecycle is managed by the Tesla client internally.
-	fsm.MarkVehicleAwake()
+	// Check wake state from Redis signal cache
+	if h.redisCache != nil {
+		if shift, err := h.redisCache.GetSignal(r.Context(), vehicleID, "ShiftState"); err == nil && shift != nil {
+			fsm.MarkVehicleAwake()
+		}
+	} else {
+		// No Redis — assume awake; Tesla client handles wake internally
+		fsm.MarkVehicleAwake()
+	}
 
 	// Execute command via Tesla API
 	cmdErr := h.teslaClient.SendCommand(r.Context(), vehicle.VIN, body.Command, body.Params)
