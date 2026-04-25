@@ -12,7 +12,7 @@ import { StatCard } from '@/components/data-display';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
-  ChartContainer, ChartTooltip, CHART_COLORS,
+  ChartContainer, ChartTooltip, CHART_COLORS, AREA_DEFAULTS,
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend, BarChart, Bar,
   chartMarginLabeled, axisTick, chartAnimation,
@@ -542,21 +542,17 @@ export default function ComparisonPage() {
                 />
                 <Legend />
                 <Line
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="distA"
                   name={nameA}
                   stroke={CHART_COLORS[0]}
-                  strokeWidth={2}
-                  dot={false}
                   {...chartAnimation}
                 />
                 <Line
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="distB"
                   name={nameB}
                   stroke={CHART_COLORS[1]}
-                  strokeWidth={2}
-                  dot={false}
                   {...chartAnimation}
                 />
               </LineChart>

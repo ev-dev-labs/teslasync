@@ -12,7 +12,7 @@ import { AlertBanner } from '@/components/feedback';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { FadeIn } from '@/components/motion';
 import {
-  ChartTooltip, CHART_COLORS,
+  ChartTooltip, CHART_COLORS, AREA_DEFAULTS,
   ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, LineChart, Line, Legend, ReferenceLine,
 } from '@/components/charts';
@@ -356,11 +356,10 @@ export default function TemperatureImpactPage() {
                   <Tooltip content={<ChartTooltip />} />
                   <Legend />
                   <Line
-                    type="monotone"
+                    {...AREA_DEFAULTS}
                     dataKey="avg"
                     name={`${t('tempImpact.avgEff', 'Avg Efficiency')} (${effLabel})`}
                     stroke={CHART_COLORS[0]}
-                    strokeWidth={2}
                     dot={{ r: 5, fill: CHART_COLORS[0] }}
                     activeDot={{ r: 7 }}
                   />

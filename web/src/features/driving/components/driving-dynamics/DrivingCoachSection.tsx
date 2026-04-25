@@ -6,6 +6,7 @@ import { GlassPanel, Badge, DataTable, type Column } from '@/components/ui';
 import {
   ChartTooltip,
   RadialGauge,
+  AREA_DEFAULTS,
   LineChart,
   Line,
   XAxis,
@@ -174,7 +175,7 @@ export default function DrivingCoachSection({ coachData }: DrivingCoachSectionPr
                 <XAxis dataKey="week" tick={{ fontSize: 11, fill: 'rgba(255,255,255,0.5)' }} tickLine={false} axisLine={false} />
                 <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: 'rgba(255,255,255,0.5)' }} tickLine={false} axisLine={false} />
                 <Tooltip content={<ChartTooltip />} />
-                <Line type="monotone" dataKey="score" stroke="#22c55e" strokeWidth={2} dot={{ fill: '#22c55e', r: 3 }} name={t('Score')} />
+                <Line {...AREA_DEFAULTS} dataKey="score" stroke="#22c55e" dot={{ fill: '#22c55e', r: 3 }} name={t('Score')} />
               </LineChart>
             </ResponsiveContainer>
           ) : (

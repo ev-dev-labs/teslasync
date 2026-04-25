@@ -27,6 +27,7 @@ import {
   ChartContainer,
   ChartTooltip,
   RadialGauge,
+  AREA_DEFAULTS,
   LineChart,
   Line,
   BarChart,
@@ -1070,40 +1071,36 @@ export default function DriveScorePage() {
                     />
                     {renderAnnotationLines(annotations, (ts) => ts)}
                     <Line
-                      type="monotone"
+                      {...AREA_DEFAULTS}
                       dataKey="score"
                       name={t('driveScore.totalScore', 'Total Score')}
                       stroke={gradeColor(overallGrade)}
-                      strokeWidth={2}
                       dot={{ r: 3, fill: gradeColor(overallGrade) }}
                       activeDot={{ r: 5 }}
                     />
                     <Line
-                      type="monotone"
+                      {...AREA_DEFAULTS}
                       dataKey="efficiency"
                       name={t('driveScore.efficiency', 'Efficiency')}
                       stroke={CATEGORY_COLORS.efficiency}
                       strokeWidth={1}
                       strokeDasharray="4 2"
-                      dot={false}
                     />
                     <Line
-                      type="monotone"
+                      {...AREA_DEFAULTS}
                       dataKey="smoothness"
                       name={t('driveScore.smoothness', 'Smoothness')}
                       stroke={CATEGORY_COLORS.smoothness}
                       strokeWidth={1}
                       strokeDasharray="4 2"
-                      dot={false}
                     />
                     <Line
-                      type="monotone"
+                      {...AREA_DEFAULTS}
                       dataKey="speed"
                       name={t('driveScore.speedDiscipline', 'Speed Discipline')}
                       stroke={CATEGORY_COLORS.speed}
                       strokeWidth={1}
                       strokeDasharray="4 2"
-                      dot={false}
                     />
                   </LineChart>
                 </ResponsiveContainer>

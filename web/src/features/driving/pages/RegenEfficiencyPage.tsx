@@ -5,7 +5,7 @@ import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Select } from '@/components/ui/Select';
 import {
-  ChartContainer, ChartTooltip,
+  ChartContainer, ChartTooltip, AREA_DEFAULTS,
   ComposedChart, Line, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
@@ -212,7 +212,7 @@ export default function RegenEfficiencyPage() {
                     <YAxis yAxisId="drives" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                     <Tooltip content={<ChartTooltip />} />
                     <Bar yAxisId="drives" dataKey="drives" name={t('regen.drives', 'Drives')} fill="#a855f7" fillOpacity={0.4} radius={[4, 4, 0, 0]} />
-                    <Line yAxisId="kwh" type="monotone" dataKey="regenKwh" name={t('regen.regenKwh', 'Regen kWh')} stroke="#10b981" strokeWidth={2} dot={false} />
+                    <Line {...AREA_DEFAULTS} yAxisId="kwh" dataKey="regenKwh" name={t('regen.regenKwh', 'Regen kWh')} stroke="#10b981" />
                   </ComposedChart>
                 </ResponsiveContainer>
               </ChartContainer>

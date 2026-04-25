@@ -7,7 +7,8 @@ import { Select } from '@/components/ui/Select';
 import { DataTable } from '@/components/ui/DataTable';
 import { MetricBar } from '@/components/data-display/MetricBar';
 import {
-  ChartContainer, ChartTooltip, ChartGradient, renderAnnotationLines, AddAnnotationPopover,
+  ChartContainer, ChartTooltip, renderAnnotationLines, AddAnnotationPopover,
+  AREA_DEFAULTS, areaGradient,
   AreaChart, Area, BarChart, Bar, ScatterChart, Scatter,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from '@/components/charts';
@@ -335,13 +336,13 @@ export default function EfficiencyPage() {
             >
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={dailyTrend} onClick={handleChartClick}>
-                  <defs><ChartGradient id="effGrad" color="#00f0ff" /></defs>
+                  {areaGradient('effGrad', '#00f0ff')}
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                   <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} />
                   <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                   <Tooltip content={<ChartTooltip />} />
                   {renderAnnotationLines(annotations, (ts) => ts)}
-                  <Area type="monotone" dataKey="efficiency" stroke="#00f0ff" fill="url(#effGrad)" strokeWidth={2} name={efficiencyUnit} />
+                  <Area {...AREA_DEFAULTS} dataKey="efficiency" stroke="#00f0ff" fill="url(#effGrad)" name={efficiencyUnit} />
                 </AreaChart>
               </ResponsiveContainer>
             </ChartContainer>

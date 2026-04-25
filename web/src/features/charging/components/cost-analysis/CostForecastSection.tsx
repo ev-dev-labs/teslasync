@@ -4,7 +4,7 @@ import { GlassPanel } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { EmptyState } from '@/components/feedback';
 import {
-  ChartTooltip, chartGrid, axisTickSm,
+  ChartTooltip, chartGrid, axisTickSm, AREA_DEFAULTS, areaGradient,
   ComposedChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, LineChart, Line, Legend,
   CHART_COLORS,
@@ -49,24 +49,16 @@ export function CostForecastSection({ forecastData }: CostForecastSectionProps) 
                 ]}
               >
                 <CartesianGrid {...chartGrid} />
-                <defs>
-                  <linearGradient id="forecastBand" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#a855f7" stopOpacity={0.15} />
-                    <stop offset="100%" stopColor="#a855f7" stopOpacity={0.03} />
-                  </linearGradient>
-                  <linearGradient id="actualCostFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={CHART_COLORS[0]} stopOpacity={0.3} />
-                    <stop offset="100%" stopColor={CHART_COLORS[0]} stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
+                {areaGradient('forecastBand', '#a855f7', 0.15)}
+                {areaGradient('actualCostFill', CHART_COLORS[0], 0.3)}
                 <XAxis dataKey="month" tick={axisTickSm} tickLine={false} axisLine={false} />
                 <YAxis tick={axisTickSm} tickLine={false} axisLine={false} unit="$" />
                 <Tooltip content={<ChartTooltip />} />
                 <Legend />
-                <Area type="monotone" dataKey="ci_low" stackId="ci" stroke="none" fill="transparent" fillOpacity={0} legendType="none" />
-                <Area type="monotone" dataKey="ci_band" stackId="ci" stroke="none" fill="url(#forecastBand)" name={t('costAnalysis.forecast.confidence', '95% Confidence')} connectNulls={false} />
-                <Area type="monotone" dataKey="actual" stroke={CHART_COLORS[0]} fill="url(#actualCostFill)" strokeWidth={2} name={t('costAnalysis.forecast.actual', 'Actual Cost')} connectNulls={false} />
-                <Line type="monotone" dataKey="forecast" stroke="#a855f7" strokeWidth={2} strokeDasharray="8 4" dot={false} name={t('costAnalysis.forecast.projected', 'Projected Cost')} connectNulls={false} />
+                <Area {...AREA_DEFAULTS} dataKey="ci_low" stackId="ci" stroke="none" fill="transparent" fillOpacity={0} legendType="none" connectNulls={false} />
+                <Area {...AREA_DEFAULTS} dataKey="ci_band" stackId="ci" stroke="none" fill="url(#forecastBand)" name={t('costAnalysis.forecast.confidence', '95% Confidence')} connectNulls={false} />
+                <Area {...AREA_DEFAULTS} dataKey="actual" stroke={CHART_COLORS[0]} fill="url(#actualCostFill)" name={t('costAnalysis.forecast.actual', 'Actual Cost')} connectNulls={false} />
+                <Line {...AREA_DEFAULTS} dataKey="forecast" stroke="#a855f7" strokeDasharray="8 4" name={t('costAnalysis.forecast.projected', 'Projected Cost')} connectNulls={false} />
               </ComposedChart>
             </ResponsiveContainer>
           ) : (
@@ -90,7 +82,7 @@ export function CostForecastSection({ forecastData }: CostForecastSectionProps) 
                 <XAxis dataKey="month" tick={axisTickSm} tickLine={false} axisLine={false} />
                 <YAxis tick={axisTickSm} tickLine={false} axisLine={false} unit="$" />
                 <Tooltip content={<ChartTooltip />} />
-                <Line type="monotone" dataKey="cost_per_kwh" stroke="#06b6d4" strokeWidth={2} dot={{ fill: '#06b6d4', r: 3 }} name={t('costAnalysis.forecast.costPerKwh', '$/kWh')} />
+                <Line {...AREA_DEFAULTS} dataKey="cost_per_kwh" stroke="#06b6d4" dot={{ fill: '#06b6d4', r: 3 }} name={t('costAnalysis.forecast.costPerKwh', '$/kWh')} />
               </LineChart>
             </ResponsiveContainer>
           </GlassPanel>
