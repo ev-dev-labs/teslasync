@@ -1,0 +1,75 @@
+=== SURVEY ===
+Date: 2026-04-25T11:07:46-07:00
+Prompt: phase-17/08-test-coverage-critical
+
+Files surveyed:
+- internal/backup/processor.go: IsAllowedTable() exported at line 206, backupTables at line 24 (21 tables)
+- internal/signal/store.go: In-memory map store with Update/Get/GetAll/GetFloat/GetString/GetBool, uses metrics.VehicleLastSeen + metrics.SignalStoreEntries (promauto — no init needed)
+- internal/signal/store_test.go: DID NOT EXIST — must create
+- internal/database/write_buffer_test.go: EXISTS, already has TestWriteBuffer_Enqueue_DropsOldest (line 25) and TestWriteBuffer_DropsOldest_LargeBuffer (line 60) — drop behavior fully covered, no changes needed
+
+=== REASONING ===
+1. processor_test.go — Test IsAllowedTable() directly (pure function, no DB needed)
+   - Validate all 21 backupTables entries pass
+   - Reject SQL injection payloads, empty string, path traversal, case-sensitive mismatch
+   - Guard against empty allowlist regression
+
+2. store_test.go — Exercise in-memory Update/Get roundtrip
+   - Update with mixed types (float64, int, string, bool), verify typed accessors
+   - Confirm nil signals do not overwrite existing values
+   - Confirm {invalid: true} Tesla markers are skipped
+   - Confirm GetAll returns a snapshot (mutation-safe copy)
+   - Confirm unknown vehicle returns nil/zero for all accessors
+
+3. write_buffer_test.go — Already covers drop behavior. No changes.
+
+=== CHANGES ===
+Created: internal/backup/processor_test.go (3 tests)
+  - TestSmoke_IsAllowedTable_ValidTables: iterates backupTables, asserts all allowed
+  - TestSmoke_IsAllowedTable_RejectsInvalid: 7 bad inputs including SQL injection
+  - TestSmoke_IsAllowedTable_BackupTablesNotEmpty: guards against empty allowlist
+
+Created: internal/signal/store_test.go (5 tests)
+  - TestSmoke_Store_UpdateGet: roundtrip with 4 signal types + typed accessors
+  - TestSmoke_Store_NilIgnored: nil must not overwrite existing value
+  - TestSmoke_Store_InvalidMarkerSkipped: Tesla {invalid:true} markers rejected
+  - TestSmoke_Store_GetAll_Snapshot: returned map is a copy, not a reference
+  - TestSmoke_Store_UnknownVehicle: nil/zero for unknown vehicle ID
+
+No changes to: internal/database/write_buffer_test.go (already covers drops)
+
+=== GATE ===
+$ go build ./...
+EXIT CODE: 0
+
+$ go test ./internal/backup/ -v -count=1 -run TestSmoke
+=== RUN   TestSmoke_IsAllowedTable_ValidTables
+--- PASS: TestSmoke_IsAllowedTable_ValidTables (0.00s)
+=== RUN   TestSmoke_IsAllowedTable_RejectsInvalid
+--- PASS: TestSmoke_IsAllowedTable_RejectsInvalid (0.00s)
+=== RUN   TestSmoke_IsAllowedTable_BackupTablesNotEmpty
+--- PASS: TestSmoke_IsAllowedTable_BackupTablesNotEmpty (0.00s)
+PASS
+ok  github.com/ev-dev-labs/teslasync/internal/backup  0.141s
+
+$ go test ./internal/signal/ -v -count=1 -run TestSmoke
+=== RUN   TestSmoke_Store_UpdateGet
+--- PASS: TestSmoke_Store_UpdateGet (0.00s)
+=== RUN   TestSmoke_Store_NilIgnored
+--- PASS: TestSmoke_Store_NilIgnored (0.00s)
+=== RUN   TestSmoke_Store_InvalidMarkerSkipped
+--- PASS: TestSmoke_Store_InvalidMarkerSkipped (0.00s)
+=== RUN   TestSmoke_Store_GetAll_Snapshot
+--- PASS: TestSmoke_Store_GetAll_Snapshot (0.00s)
+=== RUN   TestSmoke_Store_UnknownVehicle
+--- PASS: TestSmoke_Store_UnknownVehicle (0.00s)
+PASS
+ok  github.com/ev-dev-labs/teslasync/internal/signal  0.766s
+
+All 8 smoke tests PASS. Build clean.
+
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
+phase-17/08-test-coverage-critical: add smoke tests for backup allowlist + signal store roundtrip
