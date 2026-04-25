@@ -20,6 +20,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
+
+	"github.com/rs/zerolog/log"
 )
 
 // Encryptor provides AES-256-GCM encryption and decryption.
@@ -49,10 +52,20 @@ func New(key string) (*Encryptor, error) {
 }
 
 // NewFromEnv creates an Encryptor using the ENCRYPTION_KEY environment variable.
-// Returns nil (no encryption) if the variable is not set.
+// Returns nil (no encryption) if the variable is not set in non-production environments.
+// In production (APP_ENV or GO_ENV set to "production" or "prod"), the process is
+// terminated to prevent accidental plaintext token storage.
 func NewFromEnv() *Encryptor {
 	key := os.Getenv("ENCRYPTION_KEY")
 	if key == "" {
+		env := strings.ToLower(os.Getenv("APP_ENV"))
+		if env == "" {
+			env = strings.ToLower(os.Getenv("GO_ENV"))
+		}
+		if env == "production" || env == "prod" {
+			log.Fatal().Msg("ENCRYPTION_KEY is required in production — refusing to start with plaintext token storage")
+		}
+		log.Warn().Msg("ENCRYPTION_KEY not set — tokens will be stored in PLAINTEXT. Set ENCRYPTION_KEY before deploying to production")
 		return nil
 	}
 	enc, err := New(key)
@@ -96,6 +109,8 @@ func (e *Encryptor) Decrypt(encoded string) (string, error) {
 
 // EncryptIfEnabled encrypts if an encryptor is provided, otherwise returns plaintext.
 func EncryptIfEnabled(enc *Encryptor, plaintext string) string {
+	// When enc is nil, returns plaintext. This is only safe in dev/test —
+	// production startup is blocked by NewFromEnv() when ENCRYPTION_KEY is missing.
 	if enc == nil {
 		return plaintext
 	}
