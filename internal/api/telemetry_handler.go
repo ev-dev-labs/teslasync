@@ -701,9 +701,6 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 			// Store security events
 			h.trackSecurity(bgCtx, vehicleID, writeSignals)
 
-			// Store media snapshots
-			h.trackMedia(bgCtx, vehicleID, writeSignals)
-
 			// Store vehicle config snapshots
 			h.trackVehicleConfig(bgCtx, vehicleID, writeSignals)
 
@@ -1642,187 +1639,26 @@ func (h *TelemetryHandler) trackSecurity(ctx context.Context, vehicleID int64, s
 }
 
 
-// trackMedia stores media playback snapshots when relevant signals arrive.
-func (h *TelemetryHandler) trackMedia(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
-	// Only create a snapshot when actual track data arrives (non-empty title or artist)
-	title := toString(signals["MediaNowPlayingTitle"])
-	artist := toString(signals["MediaNowPlayingArtist"])
-	if title == "" && artist == "" {
-		return
-	}
-
-	snap := &models.MediaSnapshot{VehicleID: vehicleID}
-	if v, ok := signals["MediaNowPlayingTitle"]; ok {
-		s := toString(v)
-		snap.NowPlayingTitle = &s
-	}
-	if v, ok := signals["MediaNowPlayingArtist"]; ok {
-		s := toString(v)
-		snap.NowPlayingArtist = &s
-	}
-	if v, ok := signals["MediaNowPlayingAlbum"]; ok {
-		s := toString(v)
-		snap.NowPlayingAlbum = &s
-	}
-	if v, ok := signals["MediaNowPlayingStation"]; ok {
-		s := toString(v)
-		snap.NowPlayingStation = &s
-	}
-	if v, ok := signals["MediaNowPlayingDuration"]; ok {
-		i := int(toFloat(v))
-		snap.NowPlayingDuration = &i
-	}
-	if v, ok := signals["MediaNowPlayingElapsed"]; ok {
-		i := int(toFloat(v))
-		snap.NowPlayingElapsed = &i
-	}
-	if v, ok := signals["MediaPlaybackStatus"]; ok {
-		s := toString(v)
-		snap.PlaybackStatus = &s
-	}
-	if v, ok := signals["MediaPlaybackSource"]; ok {
-		s := toString(v)
-		snap.PlaybackSource = &s
-	}
-	if v, ok := signals["MediaAudioVolume"]; ok {
-		f := toFloat(v)
-		snap.AudioVolume = &f
-	}
-	if v, ok := signals["MediaAudioVolumeMax"]; ok {
-		f := toFloat(v)
-		snap.AudioVolumeMax = &f
-	}
-	if v, ok := signals["MediaAudioVolumeIncrement"]; ok {
-		f := toFloat(v)
-		snap.AudioVolumeIncrement = &f
-	}
-
-	// Carry forward source/status from signalStore if not in current batch
-	if snap.PlaybackSource == nil && h.signalStore != nil {
-		if src, ok := h.signalStore.GetString(vehicleID, "MediaPlaybackSource"); ok && src != "" {
-			snap.PlaybackSource = &src
-		}
-	}
-	if snap.PlaybackStatus == nil && h.signalStore != nil {
-		if status, ok := h.signalStore.GetString(vehicleID, "MediaPlaybackStatus"); ok && status != "" {
-			snap.PlaybackStatus = &status
-		}
-	}
-
-	// Media snapshots now captured via signal_log — no dedicated table write needed
-}
-
-// trackVehicleConfig stores vehicle configuration snapshots when relevant signals arrive.
+// trackVehicleConfig tracks firmware version changes via swUpdateRepo.
 func (h *TelemetryHandler) trackVehicleConfig(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
-	_, hasVersion := signals["Version"]
-	_, hasName := signals["VehicleName"]
-	_, hasCarType := signals["CarType"]
-	_, hasSWVersion := signals["SoftwareUpdateVersion"]
-	_, hasSWDownload := signals["SoftwareUpdateDownloadPercentComplete"]
-	_, hasTrim := signals["Trim"]
-	_, hasWheel := signals["WheelType"]
-	_, hasColor := signals["ExteriorColor"]
-	_, hasChargePort := signals["ChargePort"]
-	if !hasVersion && !hasName && !hasCarType && !hasSWVersion && !hasSWDownload &&
-		!hasTrim && !hasWheel && !hasColor && !hasChargePort {
+	v, ok := signals["Version"]
+	if !ok {
 		return
 	}
-
-	snap := &models.VehicleConfigSnapshot{VehicleID: vehicleID}
-	if v, ok := signals["CarType"]; ok {
-		s := toString(v)
-		snap.CarType = &s
+	version := toString(v)
+	if version == "" {
+		return
 	}
-	if v, ok := signals["Trim"]; ok {
-		s := toString(v)
-		snap.Trim = &s
-	}
-	if v, ok := signals["ExteriorColor"]; ok {
-		s := toString(v)
-		snap.ExteriorColor = &s
-	}
-	if v, ok := signals["RoofColor"]; ok {
-		s := toString(v)
-		snap.RoofColor = &s
-	}
-	if v, ok := signals["WheelType"]; ok {
-		s := toString(v)
-		snap.WheelType = &s
-	}
-	if v, ok := signals["RearSeatHeaters"]; ok {
-		s := toString(v)
-		snap.RearSeatHeaters = &s
-	}
-	if v, ok := signals["SunroofInstalled"]; ok {
-		s := toString(v)
-		snap.SunroofInstalled = &s
-	}
-	if v, ok := signals["EfficiencyPackage"]; ok {
-		s := toString(v)
-		snap.EfficiencyPackage = &s
-	}
-	if v, ok := signals["EuropeVehicle"]; ok {
-		b := toBool(v)
-		snap.EuropeVehicle = &b
-	}
-	if v, ok := signals["RightHandDrive"]; ok {
-		b := toBool(v)
-		snap.RightHandDrive = &b
-	}
-	if v, ok := signals["RemoteStartEnabled"]; ok {
-		b := toBool(v)
-		snap.RemoteStartEnabled = &b
-	}
-	if v, ok := signals["ChargePort"]; ok {
-		s := toString(v)
-		snap.ChargePort = &s
-	}
-	if v, ok := signals["OffroadLightbarPresent"]; ok {
-		b := toBool(v)
-		snap.OffroadLightbarPresent = &b
-	}
-	if v, ok := signals["Version"]; ok {
-		s := toString(v)
-		snap.Version = &s
-		// Track firmware version changes ╬ô├ç├╢ only insert if different from latest
-		if s != "" {
-			go func(vid int64, ver string) {
-				fwCtx, cancel := context.WithTimeout(h.bgCtx, 5*time.Second)
-				defer cancel()
-				inserted, err := h.swUpdateRepo.InsertIfChanged(fwCtx, vid, ver, "installed")
-				if err != nil {
-					log.Warn().Err(err).Int64("vehicle_id", vid).Str("version", ver).Msg("telemetry: failed to track firmware version")
-				} else if inserted {
-					log.Info().Int64("vehicle_id", vid).Str("version", ver).Msg("telemetry: new firmware version detected")
-				}
-			}(vehicleID, s)
+	go func(vid int64, ver string) {
+		fwCtx, cancel := context.WithTimeout(h.bgCtx, 5*time.Second)
+		defer cancel()
+		inserted, err := h.swUpdateRepo.InsertIfChanged(fwCtx, vid, ver, "installed")
+		if err != nil {
+			log.Warn().Err(err).Int64("vehicle_id", vid).Str("version", ver).Msg("telemetry: failed to track firmware version")
+		} else if inserted {
+			log.Info().Int64("vehicle_id", vid).Str("version", ver).Msg("telemetry: new firmware version detected")
 		}
-	}
-	if v, ok := signals["VehicleName"]; ok {
-		s := toString(v)
-		snap.VehicleName = &s
-	}
-	if v, ok := signals["SoftwareUpdateVersion"]; ok {
-		s := toString(v)
-		snap.SoftwareUpdateVersion = &s
-	}
-	if v, ok := signals["SoftwareUpdateDownloadPercentComplete"]; ok {
-		i := int(toFloat(v))
-		snap.SoftwareUpdateDownloadPct = &i
-	}
-	if v, ok := signals["SoftwareUpdateInstallationPercentComplete"]; ok {
-		i := int(toFloat(v))
-		snap.SoftwareUpdateInstallPct = &i
-	}
-	if v, ok := signals["SoftwareUpdateExpectedDurationMinutes"]; ok {
-		i := int(toFloat(v))
-		snap.SoftwareUpdateExpectedDuration = &i
-	}
-	if v, ok := signals["SoftwareUpdateScheduledStartTime"]; ok {
-		s := toString(v)
-		snap.SoftwareUpdateScheduledStart = &s
-	}
-	// Vehicle config snapshots now captured via signal_log — no dedicated table write needed
+	}(vehicleID, version)
 }
 
 // trackUserPreferences updates vehicle_units with car display preferences.

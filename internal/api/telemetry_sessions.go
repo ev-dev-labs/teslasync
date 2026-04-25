@@ -12,7 +12,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
-	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/units"
@@ -34,10 +33,6 @@ type TelemetrySessionTracker struct {
 	signalStore         *signal.Store
 	signalHistoryWriter *database.SignalHistoryWriter
 	signalLogReader     *database.SignalLogReader
-
-	// Write buffers for DB outage resilience
-	driveTelBuffer  *database.WriteBuffer[*models.DriveTelemetryReading]
-	chargeTelBuffer *database.WriteBuffer[*models.ChargeTelemetryReading]
 
 	mu            sync.Mutex
 	activeDrives  map[int64]*streamingDrive  // vehicleID → active drive
@@ -162,48 +157,21 @@ func NewTelemetrySessionTracker(db *database.DB, eventBus *events.Bus, geocoder 
 		activeDrives:  make(map[int64]*streamingDrive),
 		activeCharges: make(map[int64]*streamingCharge),
 	}
-	// Telemetry repos removed — buffer callbacks are no-ops (data lands in signal_log).
-	t.driveTelBuffer = database.NewWriteBuffer("drive_telemetry", 10000,
-		func(ctx context.Context, r *models.DriveTelemetryReading) error {
-			return nil
-		},
-	)
-	t.chargeTelBuffer = database.NewWriteBuffer("charge_telemetry", 10000,
-		func(ctx context.Context, r *models.ChargeTelemetryReading) error {
-			return nil
-		},
-	)
 	return t
 }
 
-// StartBufferDrains starts background goroutines that periodically retry
-// buffered telemetry writes. Call after initialization, before processing signals.
-func (t *TelemetrySessionTracker) StartBufferDrains(ctx context.Context) {
-	go t.driveTelBuffer.DrainLoop(ctx, 5*time.Second)
-	go t.chargeTelBuffer.DrainLoop(ctx, 5*time.Second)
-	log.Info().Msg("telemetry write buffers started (drain every 5s)")
-}
+// StartBufferDrains is retained for caller compatibility (main.go). Telemetry
+// buffers were removed — drive/charge data now lands in signal_log.
+func (t *TelemetrySessionTracker) StartBufferDrains(ctx context.Context) {}
 
-// FlushBuffers synchronously drains any remaining buffered telemetry writes.
-// Call during shutdown to avoid losing data.
-func (t *TelemetrySessionTracker) FlushBuffers(ctx context.Context) {
-	t.driveTelBuffer.Flush(ctx)
-	t.chargeTelBuffer.Flush(ctx)
-	metrics.TelemetryBufferSize.WithLabelValues("drive").Set(float64(t.driveTelBuffer.Len()))
-	metrics.TelemetryBufferSize.WithLabelValues("charge").Set(float64(t.chargeTelBuffer.Len()))
-	log.Info().Int("drive_remaining", t.driveTelBuffer.Len()).Int("charge_remaining", t.chargeTelBuffer.Len()).
-		Msg("telemetry write buffers flushed")
-}
+// FlushBuffers is retained for caller compatibility (main.go).
+func (t *TelemetrySessionTracker) FlushBuffers(ctx context.Context) {}
 
-// DriveBufferLen returns the number of buffered drive telemetry readings.
-func (t *TelemetrySessionTracker) DriveBufferLen() int {
-	return t.driveTelBuffer.Len()
-}
+// DriveBufferLen is retained for caller compatibility (router.go).
+func (t *TelemetrySessionTracker) DriveBufferLen() int { return 0 }
 
-// ChargeBufferLen returns the number of buffered charge telemetry readings.
-func (t *TelemetrySessionTracker) ChargeBufferLen() int {
-	return t.chargeTelBuffer.Len()
-}
+// ChargeBufferLen is retained for caller compatibility (router.go).
+func (t *TelemetrySessionTracker) ChargeBufferLen() int { return 0 }
 
 // SetSignalLogReader enables signal_log-based drive/charge completion enrichment.
 func (t *TelemetrySessionTracker) SetSignalLogReader(r *database.SignalLogReader) {
@@ -1430,8 +1398,8 @@ func (t *TelemetrySessionTracker) recordDriveTelemetry(ctx context.Context, driv
 		if b, ok2 := v.(bool); ok2 { reading.BatteryHeaterOn = boolPtr(b) }
 	}
 
-	// Drive telemetry repo removed — buffer for potential future write path.
-	t.driveTelBuffer.Enqueue(reading)
+	// Drive telemetry data now lands in signal_log; reading built for session stats only.
+	_ = reading
 }
 
 func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehicleID int64, active *streamingDrive, signals map[string]interface{}) {
@@ -2077,8 +2045,8 @@ func (t *TelemetrySessionTracker) recordChargeTelemetry(ctx context.Context, cha
 	}
 	if v, ok := signalFloat(signals, "ChargeRateMilePerHour", "ChargeRateMph"); ok { reading.ChargeRate = floatPtr(v) }
 
-	// Charge telemetry repo removed — buffer for potential future write path.
-	t.chargeTelBuffer.Enqueue(reading)
+	// Charge telemetry data now lands in signal_log; reading built for session stats only.
+	_ = reading
 }
 
 func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehicleID int64, active *streamingCharge, signals map[string]interface{}) {
