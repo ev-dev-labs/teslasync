@@ -35,6 +35,13 @@ type HistoryStore interface {
 	CountSinceByAutomation(ctx context.Context, automationID int64, since time.Time) (int, error)
 }
 
+// StateProvider retrieves current vehicle state for condition evaluation.
+// Implementations may read from Redis signal cache, the in-memory signal
+// store, or any other real-time source.
+type StateProvider interface {
+	GetVehicleState(ctx context.Context, vehicleID int64) (*models.VehicleState, error)
+}
+
 // ── Engine ─────────────────────────────────────────────────────────────
 
 // Engine is the runtime core that processes automation triggers. It implements
@@ -55,6 +62,9 @@ type Engine struct {
 	// Safety guards
 	rateLimiter  *safety.RateLimiter
 	loopDetector *safety.LoopDetector
+
+	// State provider for condition evaluation (reads from Redis / signal store)
+	stateProvider StateProvider
 
 	// Trigger managers — started/stopped by lifecycle methods
 	cronTrigger         *trigger.CronTrigger
@@ -131,6 +141,12 @@ func WithLoopDetector(ld *safety.LoopDetector) EngineOption {
 // WithAuditor attaches the audit logger.
 func WithAuditor(a *Auditor) EngineOption {
 	return func(e *Engine) { e.auditor = a }
+}
+
+// WithStateProvider attaches a provider for real-time vehicle state lookups.
+// Used by state_check conditions to evaluate fields like battery_level, speed, etc.
+func WithStateProvider(sp StateProvider) EngineOption {
+	return func(e *Engine) { e.stateProvider = sp }
 }
 
 // NewEngine creates an automation Engine. The repos and chainExecutor are
@@ -488,10 +504,12 @@ func (e *Engine) evaluateSingleCondition(
 		}
 		return withEvalResult(base, res.Met)
 
-	case "state_check", "location", "variable_check":
-		// State-dependent conditions require live vehicle/variable data.
-		// Marked as met (default-allow) for the initial engine extraction.
-		// TODO: wire DB-backed state lookups for full condition evaluation.
+	case "state_check":
+		return e.evaluateStateCheck(index, condType, raw, a)
+
+	case "location", "variable_check":
+		// Location and variable conditions require additional data sources
+		// not yet wired. Default-allow until fully implemented.
 		return conditionResult{Index: index, Type: condType, Result: "met", Reason: "state-dependent condition (default-allow)"}
 
 	default:
@@ -508,6 +526,60 @@ func withEvalResult(base conditionResult, met bool) conditionResult {
 		base.Reason = "condition not satisfied"
 	}
 	return base
+}
+
+// evaluateStateCheck evaluates a state_check condition by reading the current
+// vehicle state from the StateProvider (Redis signal cache). If no provider
+// is configured or the automation has no vehicle scope, falls back to
+// default-allow to preserve backward compatibility.
+func (e *Engine) evaluateStateCheck(index int, condType string, raw json.RawMessage, a *models.AutomationFull) conditionResult {
+	base := conditionResult{Index: index, Type: condType}
+
+	if e.stateProvider == nil {
+		e.logger.Debug().
+			Int64("automation_id", a.ID).
+			Msg("state_check: no state provider configured, default-allow")
+		return conditionResult{Index: index, Type: condType, Result: "met", Reason: "no state provider (default-allow)"}
+	}
+
+	if a.VehicleID == nil {
+		e.logger.Debug().
+			Int64("automation_id", a.ID).
+			Msg("state_check: automation has no vehicle scope, default-allow")
+		return conditionResult{Index: index, Type: condType, Result: "met", Reason: "no vehicle scope (default-allow)"}
+	}
+
+	cfg, err := condition.ParseStateCheckConfig(raw)
+	if err != nil {
+		return conditionResult{Index: index, Type: condType, Result: "unknown", Reason: "invalid config: " + err.Error()}
+	}
+
+	ctx := context.Background()
+	state, err := e.stateProvider.GetVehicleState(ctx, *a.VehicleID)
+	if err != nil {
+		e.logger.Warn().Err(err).
+			Int64("automation_id", a.ID).
+			Int64("vehicle_id", *a.VehicleID).
+			Msg("state_check: failed to get vehicle state, default-allow")
+		return conditionResult{Index: index, Type: condType, Result: "met", Reason: "state lookup failed (default-allow)"}
+	}
+
+	if state == nil {
+		e.logger.Debug().
+			Int64("automation_id", a.ID).
+			Int64("vehicle_id", *a.VehicleID).
+			Msg("state_check: no state available, default-allow")
+		return conditionResult{Index: index, Type: condType, Result: "met", Reason: "no state data (default-allow)"}
+	}
+
+	res, _, err := condition.EvaluateStateCheck(cfg, state)
+	if err != nil {
+		return conditionResult{Index: index, Type: condType, Result: "unknown", Reason: "evaluation error: " + err.Error()}
+	}
+
+	result := withEvalResult(base, res.Met)
+	result.Reason = res.Reason
+	return result
 }
 
 // ── History Helpers ────────────────────────────────────────────────────

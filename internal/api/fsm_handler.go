@@ -71,10 +71,10 @@ func (a *fsmAction) Execute(ctx context.Context, vehicleID int64, from, to fsm.S
 		keep(err)
 	}
 
-	// 3. State is now tracked in vehicle_live_state, not on the vehicles table.
+	// 3. State is now tracked in the Redis signal cache and in-memory signal store.
 	// The live-state repo is the single source of truth for current vehicle state.
 
-	// 4. Gear capability is now derived from vehicle_live_state, not stored on the vehicle row.
+	// 4. Gear capability is now derived from the signal store, not stored on the vehicle row.
 
 	// 5. Log transition to fsm_transitions
 	if a.transRepo != nil {
@@ -201,7 +201,7 @@ func (h *FSMHandler) getOrCreate(ctx context.Context, vehicleID int64) *fsm.Vehi
 	}
 	m = fsm.NewVehicleFSM(initial, action)
 
-	// Gear capability is now derived from vehicle_live_state signals.
+	// Gear capability is now derived from the signal store.
 	// No need to rehydrate from the vehicle row.
 
 	h.machines[vehicleID] = m

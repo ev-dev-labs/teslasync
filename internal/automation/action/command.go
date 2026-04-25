@@ -253,8 +253,8 @@ func (e *CommandExecutor) sendToVehicle(ctx context.Context, v *models.Vehicle, 
 }
 
 // wakeIfNeeded sends an auto-wake command before dispatching a vehicle command.
-// Vehicle.State is no longer available on the model (live state lives in
-// vehicle_live_state), so we always attempt the wake — the Tesla WakeUp call
+// Vehicle.State is no longer available on the model (live state lives in the
+// Redis signal cache), so we always attempt the wake — the Tesla WakeUp call
 // is idempotent and returns quickly when the vehicle is already online.
 func (e *CommandExecutor) wakeIfNeeded(ctx context.Context, v *models.Vehicle) *WakeResult {
 	wr := &WakeResult{Attempted: true}
