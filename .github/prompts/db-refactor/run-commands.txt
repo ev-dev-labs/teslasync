@@ -130,6 +130,14 @@
 # everything into single sources of truth.
 & "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase phase-13-anti-pattern-cleanup
 
+# ── Phase 14 — Unified Signal Pipeline: PA architecture (18 prompts) ──
+# Replaces Phase 12 + absorbs Future-1 unit normalization (19 prompts).
+# Single signal_log hypertable + Redis HSET replaces 12 snapshot tables.
+# Clean break: drop legacy tables, no data migration, fresh start.
+# Fixes core missing context problem, unit normalization, session recovery,
+# DB outage resilience, and signal name change handling.
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase phase-14-unified-signal-pipeline
+
 
 # ── Future-1 — Unit normalization (19 prompts) ──
 # Stamps per-row unit columns (distance_unit, temp_unit, pressure_unit) on all
