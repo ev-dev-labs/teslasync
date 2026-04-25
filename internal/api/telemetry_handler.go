@@ -563,7 +563,7 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 			}
 		}
 		coldObs := h.buildColdObservations(vehicleID, ts, bk.Cold)
-		h.eventHub.Broadcast("vehicle_update", buildSSEPayload(vehicleID, ts, hotRows, coldObs))
+		h.broadcastSSE(buildSSEPayload(vehicleID, ts, hotRows, coldObs))
 	}
 
 	// Update streaming health state
@@ -1148,9 +1148,8 @@ func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded
 
 	// Typed-tables SSE broadcast (Phase 6 wire format). Frontend SSE consumer
 	// rewrite to read `tables.<name>.<column>` is Phase 7's responsibility.
-	if h.eventHub != nil {
-		h.eventHub.Broadcast("vehicle_update", buildSSEPayload(vehicleID, ts, hotRows, coldObs))
-	}
+	// Uses Redis Pub/Sub when available for multi-pod delivery.
+	h.broadcastSSE(buildSSEPayload(vehicleID, ts, hotRows, coldObs))
 
 	total := len(hotRows) + boolToInt(len(coldObs) > 0)
 	failed := len(writeErrs)
@@ -1236,6 +1235,41 @@ func buildSSEPayload(vehicleID int64, ts time.Time, hotRows map[string]map[strin
 		payload["cold"] = cold
 	}
 	return payload
+}
+
+// broadcastSSE sends a vehicle_update SSE event. When Redis Pub/Sub is
+// available the payload is published to the vehicle_signals channel so all
+// pods receive it (including this one, via SubscribeRedis). When Redis is
+// not configured, falls back to direct in-process broadcast (single-pod mode).
+func (h *TelemetryHandler) broadcastSSE(payload map[string]any) {
+	if h.eventHub == nil {
+		return
+	}
+
+	if h.redisCache != nil {
+		// Format the SSE wire message exactly as Broadcast would, then publish
+		// via Redis so every pod's SubscribeRedis goroutine forwards it.
+		jsonData, err := json.Marshal(payload)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to marshal SSE payload for Redis Pub/Sub")
+			// Fall through to local broadcast as safety net
+			h.eventHub.Broadcast("vehicle_update", payload)
+			return
+		}
+		msg := fmt.Appendf(nil, "event: vehicle_update\ndata: %s\n\n", jsonData)
+		safeGo("redis-pubsub-publish", func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+			if err := h.redisCache.PublishSignals(ctx, msg); err != nil {
+				log.Warn().Err(err).Msg("redis pub/sub publish failed, falling back to local broadcast")
+				h.eventHub.Broadcast("vehicle_update", payload)
+			}
+		})
+		return
+	}
+
+	// No Redis — single-pod fallback
+	h.eventHub.Broadcast("vehicle_update", payload)
 }
 
 // buildColdObservations converts cold atomics (originally cold + transform-demoted)

@@ -1,12 +1,14 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"sync"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/rs/zerolog/log"
 )
 
@@ -74,6 +76,40 @@ func (h *EventHub) ClientCount() int {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return len(h.clients)
+}
+
+// SubscribeRedis listens on the Redis Pub/Sub vehicle_signals channel and
+// forwards every message to all connected SSE clients. This enables multi-pod
+// deployments where MQTT telemetry arrives on one pod but SSE clients may be
+// on any pod. When ctx is cancelled the subscription is torn down.
+//
+// If redisCache is nil (Redis not configured) this is a no-op and single-pod
+// in-process broadcasting remains the only path.
+func (h *EventHub) SubscribeRedis(ctx context.Context, redisCache *signal.RedisSignalCache) {
+	if redisCache == nil {
+		return
+	}
+	ch := redisCache.SubscribeSignals(ctx)
+	go func() {
+		log.Info().Msg("SSE event hub: Redis Pub/Sub subscription started")
+		for payload := range ch {
+			// payload is pre-formatted SSE data: "event: vehicle_update\ndata: ...\n\n"
+			msg := []byte(payload)
+			h.mu.RLock()
+			for id, c := range h.clients {
+				select {
+				case c <- msg:
+					SSEEventsSent.WithLabelValues("vehicle_update").Inc()
+					SSEBytesSent.Add(float64(len(msg)))
+				default:
+					SSEEventsDropped.WithLabelValues("vehicle_update").Inc()
+					log.Warn().Str("client", id).Msg("SSE client buffer full (redis), dropping event")
+				}
+			}
+			h.mu.RUnlock()
+		}
+		log.Info().Msg("SSE event hub: Redis Pub/Sub subscription ended")
+	}()
 }
 
 // SSEHandler handles Server-Sent Events connections.

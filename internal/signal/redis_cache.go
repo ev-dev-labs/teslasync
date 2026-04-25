@@ -13,6 +13,10 @@ import (
 
 const signalKeyTTL = 7 * 24 * time.Hour // auto-expire stale vehicles after 7 days
 
+// vehicleSignalsChannel is the Redis Pub/Sub channel used to broadcast
+// signal updates across all pods so every SSE handler sees every update.
+const vehicleSignalsChannel = "vehicle_signals"
+
 // RedisSignalCache writes signal values to Redis HSET as a write-through
 // cache alongside the in-memory Store. Key: "vehicle:{vehicleID}:signals",
 // field: signal name, value: string-encoded typed value.
@@ -157,4 +161,40 @@ func encodeSignalValue(v interface{}) string {
 	default:
 		return fmt.Sprintf("%v", val)
 	}
+}
+
+// PublishSignals publishes a vehicle signal update to the Redis Pub/Sub
+// channel so all pods' SSE handlers receive the event. The payload is
+// pre-serialised JSON (from buildSSEPayload) to avoid double-marshalling.
+func (c *RedisSignalCache) PublishSignals(ctx context.Context, payload []byte) error {
+	return c.rdb.Publish(ctx, vehicleSignalsChannel, payload).Err()
+}
+
+// SubscribeSignals returns a Go channel that yields SSE payloads published
+// by any pod via PublishSignals. The subscription is cancelled when ctx is
+// done. The caller must drain the returned channel.
+func (c *RedisSignalCache) SubscribeSignals(ctx context.Context) <-chan string {
+	sub := c.rdb.Subscribe(ctx, vehicleSignalsChannel)
+	ch := sub.Channel()
+	out := make(chan string, 64)
+	go func() {
+		defer close(out)
+		defer func() {
+			if err := sub.Close(); err != nil {
+				log.Warn().Err(err).Msg("redis pub/sub: close error")
+			}
+		}()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case msg, ok := <-ch:
+				if !ok {
+					return
+				}
+				out <- msg.Payload
+			}
+		}
+	}()
+	return out
 }

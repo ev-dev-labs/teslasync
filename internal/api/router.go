@@ -227,6 +227,15 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		}
 	}
 
+	// Start Redis Pub/Sub subscription for cross-pod SSE delivery.
+	// When Redis is available, vehicle_update events published by any pod's
+	// telemetry handler are forwarded to this pod's SSE clients.
+	if opt.CacheStore != nil {
+		if rdb := opt.CacheStore.Underlying(); rdb != nil {
+			eventHub.SubscribeRedis(context.Background(), signal.NewRedisSignalCache(rdb))
+		}
+	}
+
 	// SSE event hub for automation real-time events
 	automationEventHub := NewEventHub()
 	automationPublisher := NewAutomationEventPublisher(automationEventHub)
