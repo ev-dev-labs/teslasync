@@ -233,12 +233,28 @@ func generateBatterySnapshots(ctx context.Context, db *database.DB) int {
 		var healthScore, capacityKWh, degradation, estRange, avgTemp float64
 		var cycleCount int
 
-		// Derive capacity from latest energy_remaining in charging_telemetry
+		// Derive capacity from latest EnergyRemaining / EstBatteryRange in signal_log
 		var latestEnergy, latestRange *float64
-		_ = db.Pool.QueryRow(ctx,
-			`SELECT energy_remaining, est_battery_range FROM charging_telemetry
-			 WHERE vehicle_id = $1 AND energy_remaining IS NOT NULL
-			 ORDER BY created_at DESC LIMIT 1`, vid).Scan(&latestEnergy, &latestRange)
+		sigRows, sigErr := db.Pool.Query(ctx,
+			`SELECT DISTINCT ON (signal) signal, value_num
+			 FROM signal_log
+			 WHERE vehicle_id = $1 AND signal IN ('EnergyRemaining', 'EstBatteryRange') AND value_num IS NOT NULL
+			 ORDER BY signal, created_at DESC`, vid)
+		if sigErr == nil {
+			for sigRows.Next() {
+				var sig string
+				var val *float64
+				if scanErr := sigRows.Scan(&sig, &val); scanErr == nil && val != nil {
+					switch sig {
+					case "EnergyRemaining":
+						latestEnergy = val
+					case "EstBatteryRange":
+						latestRange = val
+					}
+				}
+			}
+			sigRows.Close()
+		}
 
 		if latestEnergy != nil && *latestEnergy > 0 {
 			capacityKWh = *latestEnergy
@@ -262,15 +278,30 @@ func generateBatterySnapshots(ctx context.Context, db *database.DB) int {
 			cycleCount = int(*totalSOCDelta / 100)
 		}
 
-		// Get average module temp from latest charging telemetry
-		var modTemp *float64
-		_ = db.Pool.QueryRow(ctx,
-			`SELECT (module_temp_max + module_temp_min) / 2.0
-			 FROM charging_telemetry WHERE vehicle_id = $1
-			 AND module_temp_max IS NOT NULL AND module_temp_min IS NOT NULL
-			 ORDER BY created_at DESC LIMIT 1`, vid).Scan(&modTemp)
-		if modTemp != nil {
-			avgTemp = *modTemp
+		// Get average module temp from latest ModuleTempMax/ModuleTempMin in signal_log
+		var tempMax, tempMin *float64
+		tempRows, tempErr := db.Pool.Query(ctx,
+			`SELECT DISTINCT ON (signal) signal, value_num
+			 FROM signal_log
+			 WHERE vehicle_id = $1 AND signal IN ('ModuleTempMax', 'ModuleTempMin') AND value_num IS NOT NULL
+			 ORDER BY signal, created_at DESC`, vid)
+		if tempErr == nil {
+			for tempRows.Next() {
+				var sig string
+				var val *float64
+				if scanErr := tempRows.Scan(&sig, &val); scanErr == nil && val != nil {
+					switch sig {
+					case "ModuleTempMax":
+						tempMax = val
+					case "ModuleTempMin":
+						tempMin = val
+					}
+				}
+			}
+			tempRows.Close()
+		}
+		if tempMax != nil && tempMin != nil {
+			avgTemp = (*tempMax + *tempMin) / 2.0
 		}
 
 		// Only insert if we have meaningful data

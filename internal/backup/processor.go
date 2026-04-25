@@ -24,10 +24,9 @@ import (
 var backupTables = []string{
 	"vehicles", "drives", "charging_sessions", "positions", "addresses",
 	"geofences", "geofence_events", "alerts", "alert_rules", "settings",
-	"daily_mileage", "vehicle_states", "software_updates", "tire_pressure_snapshots",
+	"daily_mileage", "vehicle_states", "software_updates",
 	"vampire_drain_events", "visited_locations", "trips", "trip_drives",
-	"battery_snapshots", "motor_snapshots", "climate_snapshots", "media_snapshots",
-	"charging_telemetry", "notification_channels", "notification_logs",
+	"battery_snapshots", "signal_log", "notification_channels", "notification_logs",
 	"efficiency_factors", "api_keys",
 }
 
