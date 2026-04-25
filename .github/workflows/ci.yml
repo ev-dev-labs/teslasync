@@ -12,7 +12,7 @@ permissions:
 jobs:
   backend:
     name: Backend (lint + test + build)
-    runs-on: ubuntu-latest
+    runs-on: arc-runner
     services:
       postgres:
         image: postgres:17-alpine
@@ -81,7 +81,7 @@ jobs:
 
   frontend:
     name: Frontend (lint + test + build)
-    runs-on: ubuntu-latest
+    runs-on: arc-runner
     defaults:
       run:
         working-directory: web
@@ -104,7 +104,7 @@ jobs:
 
   docker:
     name: Docker · ${{ matrix.image }}
-    runs-on: ubuntu-latest
+    runs-on: arc-runner
     needs: [backend, frontend]
     strategy:
       fail-fast: false
