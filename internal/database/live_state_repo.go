@@ -16,48 +16,9 @@ type LiveStateRepo struct {
 	db *DB
 }
 
-// varchar columns in vehicle_live_state — values must be written as strings
-var isVarcharCol = map[string]bool{
-	"defrost_mode": true,
-	"gps_state":    true,
-}
-
-// timestamptz columns in vehicle_live_state
-var isTimestampCol = map[string]bool{}
-
 // NewLiveStateRepo creates a new LiveStateRepo.
 func NewLiveStateRepo(db *DB) *LiveStateRepo {
 	return &LiveStateRepo{db: db}
-}
-
-// signalToColumn maps Tesla signal names to vehicle_live_state column names.
-// Only columns that exist in the slimmed-down table are mapped here.
-// Signals not listed are stored in domain-specific JSONB tables instead.
-var signalToColumn = map[string]string{
-	// Location
-	"Latitude":   "latitude",
-	"Longitude":  "longitude",
-	"GpsHeading": "heading",
-	"GpsState":   "gps_state",
-
-	// Driving
-	"VehicleSpeed": "speed_mph",
-
-	// Battery
-	"BatteryLevel":   "battery_level",
-	"ChargeLimitSoc": "charge_limit_soc",
-
-	// Climate
-	"InsideTemp":  "inside_temp_c",
-	"OutsideTemp": "outside_temp_c",
-	"DefrostMode": "defrost_mode",
-
-	// Charging
-	"ChargerVoltage": "charger_voltage",
-
-	// Security (enum conversion handled in special handlers below)
-	"Locked":     "locked",
-	"SentryMode": "sentry_mode",
 }
 
 // normalizeSignalValue unwraps wrapped signal values and converts types.
@@ -162,7 +123,7 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 	}
 
 	// Map all simple signals
-	for signalName, colName := range signalToColumn {
+	for signalName, colName := range SignalToColumn {
 		if skipCols[colName] {
 			continue
 		}
@@ -178,7 +139,7 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 		}
 
 		// Convert TPMS timestamp floats to time.Time (Bug 3)
-		if isTimestampCol[colName] {
+		if IsTimestampCol[colName] {
 			switch tv := v.(type) {
 			case float64:
 				if tv > 1e9 {
@@ -214,9 +175,9 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 
 		// For varchar columns, ensure we write a string (not bool/float).
 		// pgx cannot encode bool→varchar or float→varchar directly.
-		if isVarcharCol[colName] {
+		if IsVarcharCol[colName] {
 			vals = append(vals, fmt.Sprintf("%v", v))
-		} else if isTimestampCol[colName] {
+		} else if IsTimestampCol[colName] {
 			// Already converted to time.Time above — just append
 			vals = append(vals, v)
 		} else {
