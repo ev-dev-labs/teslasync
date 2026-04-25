@@ -1,3 +1,7 @@
+// Deprecated: This package is superseded by internal/config.
+// New code should use internal/config exclusively.
+// This package will be removed in a future phase — do not add new fields here.
+// See: .github/prompts/db-refactor/phase-17-security-reliability/README.md
 package config
 
 import (
