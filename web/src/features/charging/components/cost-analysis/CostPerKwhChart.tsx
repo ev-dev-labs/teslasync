@@ -4,7 +4,7 @@ import { GlassPanel } from '@/components/ui';
 import {
   ChartTooltip, chartGrid, axisTickSm,
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, CHART_COLORS,
+  ResponsiveContainer, CHART_COLORS, AREA_DEFAULTS,
 } from '@/components/charts';
 import { fmtNumber } from '@/lib/numberFormat';
 
@@ -32,12 +32,10 @@ export function CostPerKwhChart({ data }: CostPerKwhChartProps) {
             />
             <Tooltip content={<ChartTooltip />} />
             <Line
-              type="monotone"
+              {...AREA_DEFAULTS}
               dataKey="costPerKwh"
               name={t('costAnalysis.charts.rateLabel', '$/kWh')}
               stroke={CHART_COLORS[2]}
-              strokeWidth={2}
-              dot={false}
               activeDot={{ r: 4, strokeWidth: 0 }}
             />
           </LineChart>

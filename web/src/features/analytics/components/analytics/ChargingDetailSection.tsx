@@ -4,10 +4,11 @@ import { DollarSign } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import {
-  ChartTooltip, ChartGradient,
+  ChartTooltip,
   chartGrid, axisTick, axisTickSm, chartMarginLabeled, chartAnimation, safe, CHART_COLORS,
   ComposedChart, Line, Area, Bar,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
+  AREA_DEFAULTS, areaGradient,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
@@ -71,11 +72,9 @@ export function ChargingDetailSection({ data }: { data: FleetAnalytics | undefin
               <YAxis yAxisId="right" orientation="right" tick={axisTick} />
               <Tooltip content={<ChartTooltip />} />
               <Legend />
-              <defs>
-                <ChartGradient id="monthlyEnergyGrad" color={CHART_COLORS[1]} />
-              </defs>
-              <Area yAxisId="left" type="monotone" dataKey="energy" name={t('analytics.charging.energykWh', 'Energy (kWh)')} stroke={CHART_COLORS[1]} fill="url(#monthlyEnergyGrad)" strokeWidth={2} />
-              <Line yAxisId="right" type="monotone" dataKey="avg_power" name={t('analytics.charging.avgPowerkW', 'Avg Power (kW)')} stroke={CHART_COLORS[3]} strokeWidth={2} dot={false} />
+              {areaGradient('monthlyEnergyGrad', CHART_COLORS[1])}
+              <Area {...AREA_DEFAULTS} yAxisId="left" dataKey="energy" name={t('analytics.charging.energykWh', 'Energy (kWh)')} stroke={CHART_COLORS[1]} fill="url(#monthlyEnergyGrad)" />
+              <Line {...AREA_DEFAULTS} yAxisId="right" dataKey="avg_power" name={t('analytics.charging.avgPowerkW', 'Avg Power (kW)')} stroke={CHART_COLORS[3]} />
               <Bar yAxisId="left" dataKey="sessions" name={t('analytics.charging.sessions', 'Sessions')} fill={CHART_COLORS[2]} radius={[3, 3, 0, 0]} opacity={0.6} />
             </ComposedChart>
           </ResponsiveContainer>

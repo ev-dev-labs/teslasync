@@ -2,7 +2,6 @@ import { useTranslation } from 'react-i18next';
 import {
   ChartContainer,
   ChartTooltip,
-  ChartGradient,
   chartGrid,
   axisTickSm,
   CHART_COLORS,
@@ -13,6 +12,8 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  AREA_DEFAULTS,
+  areaGradient,
 } from '@/components/charts';
 import type { CurvePoint } from './types';
 
@@ -36,9 +37,7 @@ export default function SessionCurveChart({ curveData }: SessionCurveChartProps)
     >
       <ResponsiveContainer width="100%" height={320}>
         <AreaChart data={curveData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-          <defs>
-            <ChartGradient id="curvePowerGrad" color={CHART_COLORS[0]} />
-          </defs>
+          {areaGradient('curvePowerGrad', CHART_COLORS[0])}
           <CartesianGrid {...chartGrid} />
           <XAxis
             dataKey="soc"
@@ -61,12 +60,11 @@ export default function SessionCurveChart({ curveData }: SessionCurveChartProps)
           />
           <Tooltip content={<ChartTooltip />} />
           <Area
-            type="monotone"
+            {...AREA_DEFAULTS}
             dataKey="power"
             name={t('charging.curve.power', 'Power')}
             stroke={CHART_COLORS[0]}
             fill="url(#curvePowerGrad)"
-            strokeWidth={2}
             unit=" kW"
           />
         </AreaChart>

@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import {
   ChartContainer,
   ChartTooltip,
-  ChartGradient,
   AreaChart,
   Area,
   XAxis,
@@ -13,6 +12,8 @@ import {
   ResponsiveContainer,
   Legend,
   ReferenceLine,
+  AREA_DEFAULTS,
+  areaGradient,
 } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
 
@@ -36,10 +37,8 @@ export function PowerOutputChart({ data }: PowerOutputChartProps) {
       >
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data}>
-            <defs>
-              <ChartGradient id="dtPwrMaxGrad" color="#8b5cf6" />
-              <ChartGradient id="dtPwrMinGrad" color="#ef4444" />
-            </defs>
+            {areaGradient('dtPwrMaxGrad', '#8b5cf6')}
+            {areaGradient('dtPwrMinGrad', '#ef4444')}
             <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
             <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
             <YAxis
@@ -54,20 +53,18 @@ export function PowerOutputChart({ data }: PowerOutputChartProps) {
             <Tooltip content={<ChartTooltip />} />
             <Legend />
             <Area
-              type="monotone"
+              {...AREA_DEFAULTS}
               dataKey="powerMax"
               name={t('drivetrain.powerMax', 'Peak Power (kW)')}
               stroke="#8b5cf6"
               fill="url(#dtPwrMaxGrad)"
-              strokeWidth={2}
             />
             <Area
-              type="monotone"
+              {...AREA_DEFAULTS}
               dataKey="powerMin"
               name={t('drivetrain.powerMin', 'Regen Power (kW)')}
               stroke="#ef4444"
               fill="url(#dtPwrMinGrad)"
-              strokeWidth={2}
             />
             <ReferenceLine y={0} stroke="#64748b" strokeDasharray="2 2" />
           </AreaChart>

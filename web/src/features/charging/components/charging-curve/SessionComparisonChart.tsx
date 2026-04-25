@@ -15,6 +15,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  AREA_DEFAULTS,
 } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
 import { generateChargingCurve, getChargerLabel } from './helpers';
@@ -86,14 +87,12 @@ export default function SessionComparisonChart({ sessions }: SessionComparisonCh
             {comparisonSessions.map((s, i) => (
               <Line
                 key={s.id}
-                type="monotone"
+                {...AREA_DEFAULTS}
                 dataKey={`s${i}`}
                 name={`${formatDateShort(s.start_ts)} (${getChargerLabel(s)})`}
                 stroke={CHART_COLORS[i % CHART_COLORS.length]}
                 strokeWidth={1.5}
-                dot={false}
                 unit=" kW"
-                connectNulls
               />
             ))}
           </LineChart>

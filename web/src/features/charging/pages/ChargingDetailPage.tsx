@@ -17,8 +17,9 @@ import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  ComposedChart, Line, ChartTooltip, ChartGradient,
+  ComposedChart, Line, ChartTooltip,
   chartGrid, axisTickSm, chartMargin,
+  AREA_DEFAULTS, areaGradient,
 } from '@/components/charts';
 
 import {
@@ -482,9 +483,7 @@ export default function ChargingDetailPage() {
           {chargeCurve.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>
               <AreaChart data={chargeCurve} margin={chartMargin}>
-                <defs>
-                  <ChartGradient id="powerGrad" color="#a855f7" />
-                </defs>
+                {areaGradient('powerGrad', '#a855f7')}
                 {chartGrid}
                 <XAxis
                   dataKey="soc"
@@ -497,11 +496,10 @@ export default function ChargingDetailPage() {
                 />
                 <Tooltip content={<ChartTooltip />} />
                 <Area
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="power"
                   stroke="#a855f7"
                   fill="url(#powerGrad)"
-                  strokeWidth={2}
                   name={t('charging.detail.power', 'Power')}
                   unit=" kW"
                 />
@@ -523,41 +521,34 @@ export default function ChargingDetailPage() {
           {timeSeriesData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <ComposedChart data={timeSeriesData} margin={chartMargin}>
-                <defs>
-                  <ChartGradient id="socGrad" color="#10b981" />
-                </defs>
+                {areaGradient('socGrad', '#10b981')}
                 {chartGrid}
                 <XAxis dataKey="time" tick={axisTickSm} />
                 <YAxis yAxisId="left" tick={axisTickSm} domain={[0, 100]} />
                 <YAxis yAxisId="right" orientation="right" tick={axisTickSm} />
                 <Tooltip content={<ChartTooltip />} />
                 <Area
+                  {...AREA_DEFAULTS}
                   yAxisId="left"
-                  type="monotone"
                   dataKey="soc"
                   stroke="#10b981"
                   fill="url(#socGrad)"
-                  strokeWidth={2}
                   name={t('charging.detail.soc', 'SoC')}
                   unit=" %"
                 />
                 <Line
+                  {...AREA_DEFAULTS}
                   yAxisId="right"
-                  type="monotone"
                   dataKey="energy"
                   stroke="#00f0ff"
-                  strokeWidth={2}
-                  dot={false}
                   name={t('charging.detail.energy', 'Energy')}
                   unit=" kWh"
                 />
                 <Line
+                  {...AREA_DEFAULTS}
                   yAxisId="right"
-                  type="monotone"
                   dataKey="range"
                   stroke="#f59e0b"
-                  strokeWidth={2}
-                  dot={false}
                   name={t('charging.detail.range', 'Range')}
                   unit={` ${distanceUnit}`}
                 />
@@ -584,29 +575,23 @@ export default function ChargingDetailPage() {
                 <YAxis tick={axisTickSm} unit={` ${tempUnit}`} />
                 <Tooltip content={<ChartTooltip />} />
                 <Line
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="battery"
                   stroke="#ef4444"
-                  strokeWidth={2}
-                  dot={false}
                   name={t('charging.detail.batteryTemp', 'Battery')}
                   unit={` ${tempUnit}`}
                 />
                 <Line
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="inside"
                   stroke="#f59e0b"
-                  strokeWidth={2}
-                  dot={false}
                   name={t('charging.detail.insideTemp', 'Inside')}
                   unit={` ${tempUnit}`}
                 />
                 <Line
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="outside"
                   stroke="#3b82f6"
-                  strokeWidth={2}
-                  dot={false}
                   name={t('charging.detail.outsideTemp', 'Outside')}
                   unit={` ${tempUnit}`}
                 />
@@ -634,22 +619,18 @@ export default function ChargingDetailPage() {
                 <YAxis yAxisId="a" orientation="right" tick={axisTickSm} unit=" A" />
                 <Tooltip content={<ChartTooltip />} />
                 <Line
+                  {...AREA_DEFAULTS}
                   yAxisId="v"
-                  type="monotone"
                   dataKey="voltage"
                   stroke="#f59e0b"
-                  strokeWidth={2}
-                  dot={false}
                   name={t('charging.detail.voltage', 'Voltage')}
                   unit=" V"
                 />
                 <Line
+                  {...AREA_DEFAULTS}
                   yAxisId="a"
-                  type="monotone"
                   dataKey="current"
                   stroke="#06b6d4"
-                  strokeWidth={2}
-                  dot={false}
                   name={t('charging.detail.current', 'Current')}
                   unit=" A"
                 />

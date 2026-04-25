@@ -3,11 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { TrendingUp } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import {
-  ChartTooltip, ChartGradient, chartGrid, axisTickSm,
+  ChartTooltip, chartGrid, axisTickSm,
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer,
   renderAnnotationLines, AddAnnotationPopover, AnnotationList,
-  CHART_COLORS,
+  CHART_COLORS, AREA_DEFAULTS, areaGradient,
 } from '@/components/charts';
 import { useAnnotations } from '@/hooks/useAnnotations';
 import { cn } from '@/lib/cn';
@@ -69,9 +69,7 @@ export function MonthlyCostChart({ data, vehicleId }: MonthlyCostChartProps) {
           <div className={isAnnotating ? 'cursor-crosshair' : undefined}>
             <ResponsiveContainer width="100%" height={260}>
               <AreaChart data={data} onClick={handleChartClick}>
-                <defs>
-                  <ChartGradient id="costGrad" color={CHART_COLORS[0]} />
-                </defs>
+                {areaGradient('costGrad', CHART_COLORS[0])}
                 <CartesianGrid {...chartGrid} />
                 <XAxis
                   dataKey="month"
@@ -88,12 +86,11 @@ export function MonthlyCostChart({ data, vehicleId }: MonthlyCostChartProps) {
                 <Tooltip content={<ChartTooltip />} />
                 {renderAnnotationLines(annotations, (ts) => ts)}
                 <Area
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="cost"
                   name={t('costAnalysis.charts.cost', 'Cost ($)')}
                   stroke={CHART_COLORS[0]}
                   fill="url(#costGrad)"
-                  strokeWidth={2}
                 />
               </AreaChart>
             </ResponsiveContainer>
