@@ -41,9 +41,9 @@ func TestWriteBuffer_Enqueue_DropsOldest(t *testing.T) {
 	}
 
 	// Verify oldest was dropped
-	_, dropped := buf.Stats()
-	if dropped != 1 {
-		t.Fatalf("dropped = %d, want 1", dropped)
+	stats := buf.Stats()
+	if stats.Dropped != 1 {
+		t.Fatalf("dropped = %d, want 1", stats.Dropped)
 	}
 
 	// Verify the buffer contains items 1-9 + 99 (item 0 was dropped)
@@ -72,9 +72,9 @@ func TestWriteBuffer_DropsOldest_LargeBuffer(t *testing.T) {
 		t.Fatalf("Len() = %d after overflow, want 91", got)
 	}
 
-	_, dropped := buf.Stats()
-	if dropped != 10 {
-		t.Fatalf("dropped = %d, want 10", dropped)
+	stats := buf.Stats()
+	if stats.Dropped != 10 {
+		t.Fatalf("dropped = %d, want 10", stats.Dropped)
 	}
 }
 

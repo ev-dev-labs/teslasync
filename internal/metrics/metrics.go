@@ -150,6 +150,12 @@ var (
 		Name:      "db_transactions_total",
 		Help:      "Total database transactions by result",
 	}, []string{"result"})
+
+	WriteBufferDroppedTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "signal_write_buffer_dropped_total",
+		Help:      "Total number of entries dropped from write buffer due to overflow",
+	}, []string{"buffer_name"})
 )
 
 // ── Alerts & Notifications ─────────────────────────────────

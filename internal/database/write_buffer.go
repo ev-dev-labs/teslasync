@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/rs/zerolog/log"
 )
 
@@ -48,6 +49,7 @@ func (b *WriteBuffer[T]) Enqueue(item T) {
 			dropCount = 1
 		}
 		b.totalDropped += int64(dropCount)
+		metrics.WriteBufferDroppedTotal.WithLabelValues(b.name).Add(float64(dropCount))
 		log.Warn().Str("buffer", b.name).Int("dropped", dropCount).Int64("total_dropped", b.totalDropped).
 			Msg("write buffer full, dropping oldest items")
 		b.items = b.items[dropCount:]
@@ -62,11 +64,24 @@ func (b *WriteBuffer[T]) Len() int {
 	return len(b.items)
 }
 
-// Stats returns the current buffer size and total dropped count.
-func (b *WriteBuffer[T]) Stats() (buffered int, dropped int64) {
+// BufferStats holds current write buffer pressure information.
+type BufferStats struct {
+	Name     string `json:"name"`
+	Size     int    `json:"size"`
+	Capacity int    `json:"capacity"`
+	Dropped  int64  `json:"total_dropped"`
+}
+
+// Stats returns current buffer pressure info.
+func (b *WriteBuffer[T]) Stats() BufferStats {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	return len(b.items), b.totalDropped
+	return BufferStats{
+		Name:     b.name,
+		Size:     len(b.items),
+		Capacity: b.maxSize,
+		Dropped:  b.totalDropped,
+	}
 }
 
 // DrainLoop periodically retries buffered items. Call in a goroutine.
@@ -148,6 +163,7 @@ func (b *WriteBuffer[T]) drain(ctx context.Context, timeout time.Duration) {
 				failed = nil
 			} else {
 				b.totalDropped += int64(excess)
+				metrics.WriteBufferDroppedTotal.WithLabelValues(b.name).Add(float64(excess))
 				failed = failed[excess:]
 			}
 		}
