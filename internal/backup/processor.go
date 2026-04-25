@@ -26,7 +26,7 @@ var backupTables = []string{
 	"geofences", "geofence_events", "alerts", "alert_rules", "settings",
 	"daily_mileage", "vehicle_states", "software_updates",
 	"vampire_drain_events", "visited_locations", "trips", "trip_drives",
-	"battery_snapshots", "signal_log", "notification_channels", "notification_logs",
+	"signal_log", "notification_channels", "notification_logs",
 	"efficiency_factors", "api_keys",
 }
 

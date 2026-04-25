@@ -1,0 +1,32 @@
+=== SURVEY ===
+File: internal/backup/processor.go
+Lines 24-31: backupTables slice contains 23 table names.
+
+Found dropped table in list:
+  - battery_snapshots (line 29) — DROPPED, must remove
+
+Scanned for other dropped tables (none found in list):
+  motor_snapshots, climate_snapshots, location_snapshots, safety_snapshots,
+  tire_pressure_snapshots, user_preference_snapshots, vehicle_meta_snapshots,
+  vehicle_live_state, charging_telemetry, charge_telemetry_readings,
+  drive_telemetry_readings — none present.
+
+signal_log — already present in list (line 29). No addition needed.
+
+=== REASONING ===
+Only battery_snapshots needs removal. signal_log is already present as its
+replacement. No other dropped tables appear in the backup list.
+
+=== CHANGES ===
+internal/backup/processor.go:
+  - Removed "battery_snapshots" from backupTables slice (line 29)
+  - signal_log, notification_channels, notification_logs now on that line
+
+=== GATE ===
+go build ./internal/backup/...  → exit 0 (clean)
+go build ./...                  → exit 1 (pre-existing: internal/export/analytics.go:30
+  references undefined database.NewBatterySnapshotRepo — unrelated to this change)
+grep for dropped table names in processor.go → 0 matches (PASS)
+
+EXIT=0
+STATUS=DONE
