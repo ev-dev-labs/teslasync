@@ -99,15 +99,11 @@ func runMaintenance(ctx context.Context, db *database.DB, cfg *config.Config) {
 		log.Error().Err(err).Msg("cagg_fleet_stats refresh failed")
 	}
 
-	// Generate daily battery health snapshots from charging telemetry
-	batSnaps := generateBatterySnapshots(maintCtx, db)
-
 	log.Info().
 		Int64("positions_deleted", posDeleted).
 		Int64("states_deleted", statesDeleted).
 		Int64("api_logs_deleted", apiLogsDeleted).
 		Int64("notif_logs_deleted", notifLogsDeleted).
-		Int("battery_snapshots_created", batSnaps).
 		Dur("duration", time.Since(start)).
 		Msg("scheduled maintenance complete")
 }
@@ -195,135 +191,3 @@ func cleanupOldLogs(ctx context.Context, db *database.DB, table, tsCol string, r
 	return deleted, nil
 }
 
-// generateBatterySnapshots derives daily battery health metrics from charging
-// telemetry and charging sessions, then inserts one snapshot per vehicle
-// (skipping if today's snapshot already exists).
-func generateBatterySnapshots(ctx context.Context, db *database.DB) int {
-	// Nominal specs for health score derivation (Model Y LR baseline)
-	const nominalCapacity = 75.0
-	const nominalRangeKm = 531.0
-
-	rows, err := db.Pool.Query(ctx, `SELECT id FROM vehicles`)
-	if err != nil {
-		log.Error().Err(err).Msg("battery-snapshots: failed to list vehicles")
-		return 0
-	}
-	defer rows.Close()
-
-	var vehicleIDs []int64
-	for rows.Next() {
-		var id int64
-		if err := rows.Scan(&id); err == nil {
-			vehicleIDs = append(vehicleIDs, id)
-		}
-	}
-
-	created := 0
-	today := time.Now().UTC().Truncate(24 * time.Hour)
-	for _, vid := range vehicleIDs {
-		// Skip if we already have a snapshot for today
-		var exists bool
-		_ = db.Pool.QueryRow(ctx,
-			`SELECT EXISTS(SELECT 1 FROM battery_snapshots WHERE vehicle_id=$1 AND created_at >= $2)`,
-			vid, today).Scan(&exists)
-		if exists {
-			continue
-		}
-
-		var healthScore, capacityKWh, degradation, estRange, avgTemp float64
-		var cycleCount int
-
-		// Derive capacity from latest EnergyRemaining / EstBatteryRange in signal_log
-		var latestEnergy, latestRange *float64
-		sigRows, sigErr := db.Pool.Query(ctx,
-			`SELECT DISTINCT ON (signal) signal, value_num
-			 FROM signal_log
-			 WHERE vehicle_id = $1 AND signal IN ('EnergyRemaining', 'EstBatteryRange') AND value_num IS NOT NULL
-			 ORDER BY signal, created_at DESC`, vid)
-		if sigErr == nil {
-			for sigRows.Next() {
-				var sig string
-				var val *float64
-				if scanErr := sigRows.Scan(&sig, &val); scanErr == nil && val != nil {
-					switch sig {
-					case "EnergyRemaining":
-						latestEnergy = val
-					case "EstBatteryRange":
-						latestRange = val
-					}
-				}
-			}
-			sigRows.Close()
-		}
-
-		if latestEnergy != nil && *latestEnergy > 0 {
-			capacityKWh = *latestEnergy
-			healthScore = (capacityKWh / nominalCapacity) * 100
-			if healthScore > 100 {
-				healthScore = 100
-			}
-			degradation = 100 - healthScore
-		}
-		if latestRange != nil && *latestRange > 0 {
-			estRange = *latestRange
-		}
-
-		// Count charge cycles from charging sessions (sum of SOC deltas / 100)
-		var totalSOCDelta *float64
-		_ = db.Pool.QueryRow(ctx,
-			`SELECT SUM(GREATEST(end_battery_pct - start_battery_pct, 0))
-			 FROM charging_sessions WHERE vehicle_id = $1 AND end_battery_pct > start_battery_pct`,
-			vid).Scan(&totalSOCDelta)
-		if totalSOCDelta != nil {
-			cycleCount = int(*totalSOCDelta / 100)
-		}
-
-		// Get average module temp from latest ModuleTempMax/ModuleTempMin in signal_log
-		var tempMax, tempMin *float64
-		tempRows, tempErr := db.Pool.Query(ctx,
-			`SELECT DISTINCT ON (signal) signal, value_num
-			 FROM signal_log
-			 WHERE vehicle_id = $1 AND signal IN ('ModuleTempMax', 'ModuleTempMin') AND value_num IS NOT NULL
-			 ORDER BY signal, created_at DESC`, vid)
-		if tempErr == nil {
-			for tempRows.Next() {
-				var sig string
-				var val *float64
-				if scanErr := tempRows.Scan(&sig, &val); scanErr == nil && val != nil {
-					switch sig {
-					case "ModuleTempMax":
-						tempMax = val
-					case "ModuleTempMin":
-						tempMin = val
-					}
-				}
-			}
-			tempRows.Close()
-		}
-		if tempMax != nil && tempMin != nil {
-			avgTemp = (*tempMax + *tempMin) / 2.0
-		}
-
-		// Only insert if we have meaningful data
-		if healthScore == 0 && capacityKWh == 0 && estRange == 0 {
-			continue
-		}
-
-		_, err := db.Pool.Exec(ctx,
-			`INSERT INTO battery_snapshots (vehicle_id, health_score, capacity_kwh, degradation_pct, est_range_km, cycle_count, avg_cell_temp_c, created_at)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-			vid, healthScore, capacityKWh, degradation, estRange, cycleCount, avgTemp, time.Now().UTC())
-		if err != nil {
-			log.Error().Err(err).Int64("vehicle_id", vid).Msg("battery-snapshots: failed to insert")
-			continue
-		}
-		created++
-		log.Info().
-			Int64("vehicle_id", vid).
-			Float64("health_score", healthScore).
-			Float64("capacity_kwh", capacityKWh).
-			Int("cycle_count", cycleCount).
-			Msg("battery-snapshots: created daily snapshot")
-	}
-	return created
-}

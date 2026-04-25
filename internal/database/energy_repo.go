@@ -73,46 +73,6 @@ func (r *CommandLogRepo) GetHistoryByVehicle(ctx context.Context, vehicleID int6
 	return results, rows.Err()
 }
 
-// BatterySnapshotRepo tracks battery health over time.
-type BatterySnapshotRepo struct {
-	db *DB
-}
-
-func NewBatterySnapshotRepo(db *DB) *BatterySnapshotRepo {
-	return &BatterySnapshotRepo{db: db}
-}
-
-func (r *BatterySnapshotRepo) DB() *DB {
-	return r.db
-}
-
-func (r *BatterySnapshotRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit int) ([]*models.BatterySnapshot, error) {
-	query := `SELECT id, vehicle_id, health_score, capacity_kwh, degradation_pct, est_range_km, cycle_count, avg_cell_temp_c, created_at
-		FROM battery_snapshots WHERE vehicle_id=$1 ORDER BY created_at DESC LIMIT $2`
-	rows, err := r.db.Pool.Query(ctx, query, vehicleID, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var snaps []*models.BatterySnapshot
-	for rows.Next() {
-		s := &models.BatterySnapshot{}
-		if err := rows.Scan(&s.ID, &s.VehicleID, &s.HealthScore, &s.CapacityKWh, &s.DegradationPct, &s.EstRangeKm, &s.CycleCount, &s.AvgCellTempC, &s.CreatedAt); err != nil {
-			return nil, err
-		}
-		snaps = append(snaps, s)
-	}
-	return snaps, rows.Err()
-}
-
-func (r *BatterySnapshotRepo) Create(ctx context.Context, s *models.BatterySnapshot) error {
-	query := `INSERT INTO battery_snapshots (vehicle_id, health_score, capacity_kwh, degradation_pct, est_range_km, cycle_count, avg_cell_temp_c, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`
-	now := time.Now().UTC()
-	return r.db.Pool.QueryRow(ctx, query, s.VehicleID, s.HealthScore, s.CapacityKWh, s.DegradationPct, s.EstRangeKm, s.CycleCount, s.AvgCellTempC, now).Scan(&s.ID)
-}
-
 // EnergyStatsRepo computes energy statistics from charging sessions.
 type EnergyStatsRepo struct {
 	db *DB
