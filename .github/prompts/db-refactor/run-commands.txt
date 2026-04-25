@@ -144,6 +144,11 @@
 # in range_projection_handler, fsm_type migration, stale test fields.
 & "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase phase-15-phase14-fixup
 
+# ── Phase 16 — Data Gaps: replace empty TODO stubs with real signal_log queries (4 prompts) ──
+# Battery health trend was replaced with empty arrays by Phase 14 agent.
+# Dead snapshot dispatch functions left as no-op comments. This phase fills the gaps.
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase phase-16-data-gaps
+
 
 # ── Future-1 — Unit normalization (19 prompts) ──
 # Stamps per-row unit columns (distance_unit, temp_unit, pressure_unit) on all
