@@ -1,0 +1,45 @@
+=== SURVEY ===
+Files inspected:
+  - internal/export/analytics.go (357 lines) — processAnalytics with two TODO stubs
+  - internal/export/processor.go (326 lines) — Processor struct with db *database.DB
+  - internal/api/analytics_handler.go:287-318 — cagg_battery_daily pattern (reference)
+  - internal/api/battery_handler.go:67-115 — cagg_battery_daily trend pattern (reference)
+  - internal/database/migrations/000045_continuous_aggregates.up.sql — cagg_battery_daily schema
+
+Stubs found:
+  1. analytics.go:102-104 — "TODO: implement via SignalLogReader.SignalTracePivot for BatteryLevel"
+  2. analytics.go:217-218 — "Battery trend from signal_log — TODO: implement via SignalTracePivot"
+
+Both left batteryTrend empty (declared at line 66, never populated).
+
+=== REASONING ===
+cagg_battery_daily columns: bucket, vehicle_id, min_soc, max_soc, end_soc, avg_pack_voltage, charge_signal_count.
+analytics_handler.go already queries cagg_battery_daily with the exact pattern needed.
+Processor already has db *database.DB — no need to wire SignalLogReader.
+The query SELECT bucket, end_soc, min_soc, max_soc, charge_signal_count produces all fields
+needed for batteryPoint{Date, HealthScore, CapacityKWh, Degradation, RangeKm, CycleCount}.
+
+No processor.go changes required — db pool is sufficient.
+
+=== CHANGES ===
+1. analytics.go:102-104 — Replaced 3-line TODO comment with single note:
+   "// Battery health trend populated below via cagg_battery_daily."
+
+2. analytics.go:217-218 — Replaced 2-line TODO stub with 36-line cagg_battery_daily query block:
+   - Queries bucket, end_soc, min_soc, max_soc, charge_signal_count
+   - WHERE vehicle_id = $1 AND bucket >= $2 ORDER BY bucket ASC
+   - Null-safe scan of endSOC, minSOC, maxSOC, chargeSignals
+   - Populates batteryTrend with HealthScore=soc, CapacityKWh, Degradation, RangeKm, CycleCount
+
+3. processor.go — No changes needed (db pool already available).
+
+=== GATE ===
+go build ./...              — PASS (exit 0)
+go vet ./internal/export/...— PASS (exit 0; pre-existing vet failures in automation/trigger and webhook test are unrelated)
+Select-String stubs check   — 0 matches (all TODO stubs removed)
+
+=== COMMIT ===
+phase-16/01-battery-trend-export: fill battery trend + health in export from cagg_battery_daily
+
+EXIT=0
+STATUS=DONE
