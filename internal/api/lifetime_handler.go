@@ -336,9 +336,9 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 			Description: def.Desc,
 			Icon:        def.Icon,
 			Unlocked:    current >= def.Target,
-			Progress:    safeFloatLifetime(math.Round(progress*1000) / 1000),
+			Progress:    safeFloat(math.Round(progress*1000) / 1000),
 			Target:      def.Target,
-			Current:     safeFloatLifetime(math.Round(current*100) / 100),
+			Current:     safeFloat(math.Round(current*100) / 100),
 		}
 		achievements = append(achievements, a)
 	}
@@ -349,29 +349,29 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 	result := map[string]interface{}{
 		// Driving
 		"total_drives":        totalDrives,
-		"total_distance_km":   safeFloatLifetime(math.Round(totalDistKm*100) / 100),
-		"total_driving_hours": safeFloatLifetime(math.Round(totalDrivingHours*100) / 100),
-		"longest_drive_km":    safeFloatLifetime(math.Round(longestDriveKm*100) / 100),
-		"highest_speed_kmh":   safeFloatLifetime(math.Round(highestSpeedKmh*10) / 10),
-		"avg_efficiency_wh_km": safeFloatLifetime(math.Round(avgEffWhKm*10) / 10),
+		"total_distance_km":   safeFloat(math.Round(totalDistKm*100) / 100),
+		"total_driving_hours": safeFloat(math.Round(totalDrivingHours*100) / 100),
+		"longest_drive_km":    safeFloat(math.Round(longestDriveKm*100) / 100),
+		"highest_speed_kmh":   safeFloat(math.Round(highestSpeedKmh*10) / 10),
+		"avg_efficiency_wh_km": safeFloat(math.Round(avgEffWhKm*10) / 10),
 
 		// Charging
 		"total_charge_sessions": totalChargeSessions,
-		"total_energy_kwh":      safeFloatLifetime(math.Round(totalEnergyKwh*100) / 100),
-		"total_charging_hours":  safeFloatLifetime(math.Round(totalChargingHours*100) / 100),
-		"total_charging_cost":   safeFloatLifetime(math.Round(totalChargingCost*100) / 100),
+		"total_energy_kwh":      safeFloat(math.Round(totalEnergyKwh*100) / 100),
+		"total_charging_hours":  safeFloat(math.Round(totalChargingHours*100) / 100),
+		"total_charging_cost":   safeFloat(math.Round(totalChargingCost*100) / 100),
 
 		// Savings
-		"gas_equivalent_cost": safeFloatLifetime(math.Round(gasEquivalentCost*100) / 100),
-		"total_savings":       safeFloatLifetime(math.Round(totalSavings*100) / 100),
-		"co2_offset_kg":       safeFloatLifetime(math.Round(co2OffsetKg*100) / 100),
+		"gas_equivalent_cost": safeFloat(math.Round(gasEquivalentCost*100) / 100),
+		"total_savings":       safeFloat(math.Round(totalSavings*100) / 100),
+		"co2_offset_kg":       safeFloat(math.Round(co2OffsetKg*100) / 100),
 		"trees_equivalent":    treesEquivalent,
 
 		// Fun facts
-		"earth_circumferences":  safeFloatLifetime(math.Round(earthCircumferences*1000) / 1000),
-		"moon_trips":            safeFloatLifetime(math.Round(moonTrips*10000) / 10000),
-		"days_on_road":          safeFloatLifetime(math.Round(daysOnRoad*100) / 100),
-		"homes_equivalent_days": safeFloatLifetime(math.Round(homesEquivalentDays*100) / 100),
+		"earth_circumferences":  safeFloat(math.Round(earthCircumferences*1000) / 1000),
+		"moon_trips":            safeFloat(math.Round(moonTrips*10000) / 10000),
+		"days_on_road":          safeFloat(math.Round(daysOnRoad*100) / 100),
+		"homes_equivalent_days": safeFloat(math.Round(homesEquivalentDays*100) / 100),
 
 		// Timeline
 		"first_drive_date":       firstDriveDateStr,
@@ -391,10 +391,3 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 	writeJSON(w, http.StatusOK, result)
 }
 
-// safeFloatLifetime guards against NaN/Inf which break json.Encode.
-func safeFloatLifetime(v float64) float64 {
-	if math.IsNaN(v) || math.IsInf(v, 0) {
-		return 0
-	}
-	return v
-}

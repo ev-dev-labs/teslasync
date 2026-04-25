@@ -2,7 +2,6 @@ package api
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -85,6 +84,4 @@ func (h *ChargingHandler) TelemetryReadings(w http.ResponseWriter, r *http.Reque
 	writeJSON(w, http.StatusOK, readings)
 }
 
-func parseInt64(s string) (int64, error) {
-	return strconv.ParseInt(s, 10, 64)
-}
+

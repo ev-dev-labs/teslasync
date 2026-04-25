@@ -46,17 +46,9 @@ type comparison struct {
 	Emoji string `json:"emoji"`
 }
 
-// safeFloat guards against NaN/Inf which break json.Encode.
-func safeFloatYR(v float64) float64 {
-	if math.IsNaN(v) || math.IsInf(v, 0) {
-		return 0
-	}
-	return v
-}
-
 func roundYR(v float64, decimals int) float64 {
 	p := math.Pow(10, float64(decimals))
-	return safeFloatYR(math.Round(v*p) / p)
+	return safeFloat(math.Round(v*p) / p)
 }
 
 // GetYearReview returns a full-year aggregation for a single vehicle.

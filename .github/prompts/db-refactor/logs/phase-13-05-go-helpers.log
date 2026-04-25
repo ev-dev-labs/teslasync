@@ -1,0 +1,49 @@
+=== SURVEY ===
+Scanned all helper function definitions across internal/ Go packages.
+
+Duplicates found:
+- toFloatOk: telemetry_handler.go:1536 (only copy in api, local)
+- formatFloat: telemetry_handler.go:1579 (only copy in api, local)
+- toString: telemetry_handler.go:1586 (only copy in api, local; also in fsm/machine.go — different package)
+- safeFloatLifetime: lifetime_handler.go:395 (NaN/Inf guard)
+- safeFloatYR: year_review_handler.go:50 (identical NaN/Inf guard)
+- parseInt64: charging_handler.go:88 (trivial strconv wrapper, used across 8+ handler files)
+- toFloat64: database/live_state_repo.go:315 (package database), telemetry/flatten.go:113 (package telemetry) — separate packages, each keeps own copy
+
+=== REASONING ===
+1. Created internal/api/converters.go with canonical versions of: toFloatOk, safeFloat, formatFloat, toString, parseInt64.
+2. Deleted local copies from: telemetry_handler.go (toFloatOk, formatFloat, toString), charging_handler.go (parseInt64), lifetime_handler.go (safeFloatLifetime), year_review_handler.go (safeFloatYR).
+3. Replaced all safeFloatLifetime() calls with safeFloat() in lifetime_handler.go (17 call sites).
+4. Replaced safeFloatYR() call in roundYR() with safeFloat() in year_review_handler.go.
+5. Removed unused strconv import from charging_handler.go.
+6. toFloat64 in database and telemetry packages left in place — one copy per package boundary, no cross-package duplicates.
+
+=== CHANGES ===
+Created:
+  internal/api/converters.go — canonical toFloatOk, safeFloat, formatFloat, toString, parseInt64
+
+Modified:
+  internal/api/telemetry_handler.go — removed toFloatOk, formatFloat, toString (85 lines)
+  internal/api/charging_handler.go — removed parseInt64 + unused strconv import
+  internal/api/lifetime_handler.go — removed safeFloatLifetime, replaced 17 calls with safeFloat
+  internal/api/year_review_handler.go — removed safeFloatYR, updated roundYR to use safeFloat
+
+=== GATE ===
+go build ./...   → EXIT=0 (clean)
+go vet ./...     → 3 pre-existing test warnings (rule_engine_test.go, location_test.go, calendar_test.go) — none from changed files
+
+Function uniqueness in internal/api/:
+  func toFloatOk  → converters.go:12  (1 copy)
+  func safeFloat  → converters.go:56  (1 copy)
+  func formatFloat → converters.go:64 (1 copy)
+  func toString   → converters.go:72  (1 copy)
+  func parseInt64 → converters.go:107 (1 copy)
+
+Cross-package (one per package, correct):
+  toFloat64 → database/live_state_repo.go:315 (database pkg)
+  toFloat64 → telemetry/flatten.go:113 (telemetry pkg)
+
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
