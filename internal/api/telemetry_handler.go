@@ -470,6 +470,11 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 	// so the frontend conversion layer works consistently.
 	normalizeFleetUnits(signals)
 
+	// Canonicalize signal names — handle Tesla renames via alias registry.
+	// Must run before any consumer (SignalStore, Redis, history writer, FSM)
+	// so all downstream code sees canonical names only.
+	telemetry.CanonicalizeMap(signals)
+
 	// Find vehicle by VIN (needed for SignalStore keying and all downstream)
 	var vehicleID int64
 	err := h.db.Pool.QueryRow(ctx, "SELECT id FROM vehicles WHERE vin = $1", vin).Scan(&vehicleID)
