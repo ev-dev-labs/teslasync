@@ -1,0 +1,82 @@
+=== SURVEY ===
+Date: 2026-04-25T00:40Z
+Prompt: 09 — Drive Completion: SnapshotAt + Unit-Aware
+Depends on: Prompts 06 (SnapshotAt), 07 (unit conversion)
+
+Files surveyed:
+- internal/api/telemetry_sessions.go (1649 lines)
+  - TelemetrySessionTracker struct: lines 23-45, fields include signalHistoryWriter, signalStore
+  - completeDriveLocked: line 1033-1236 — builds enhancedFields from in-memory accumulators,
+    then enriches via signalHistoryWriter.SnapshotAt for positions/temperatures
+  - streamingDrive struct: lines 48-112 — in-memory accumulators for speed, temp, SOC, elevation, odometer
+  - resolveFloat/resolveInt/resolveLatLon: lines 325-376 — batch→accum→SignalStore chain
+- internal/database/signal_log_reader.go (215 lines)
+  - SignalLogReader with SnapshotAt, SignalAt, SnapshotBetween, SignalTrace
+  - No DriveAggregates or RegenEnergy methods yet
+- internal/units/convert.go (67 lines)
+  - NormalizeDistance, NormalizeSpeed, NormalizeTemp, NormalizePressure, GetUnitFromSnapshot
+  - All present from prompt 07
+- internal/database/drive_repo.go
+  - drivePartialAllowed map: includes distance_mi, avg_speed_mph, max_speed_mph, avg_power_kw,
+    energy_used_kwh, regen_kwh, inside_temp_avg_c, outside_temp_avg_c, start/end positions, score
+  - CompleteWithTx: updates core drive fields in a transaction
+  - PartialUpdateWithTx: updates enhanced fields in same transaction
+
+=== REASONING ===
+
+Problem: completeDriveLocked uses in-memory accumulators (streamingDrive fields) to compute
+drive stats. If signals weren't received during the session, fields are nil/zero. The
+signalHistoryWriter.SnapshotAt only fills positions and temperatures as fallback.
+
+Solution:
+1. Add signalLogReader *database.SignalLogReader field to TelemetrySessionTracker
+2. Add SetSignalLogReader method for wiring
+3. Add DriveAggregates(ctx, vehicleID, from, to) to SignalLogReader:
+   - AVG/MAX VehicleSpeed, AVG PackCurrent × AVG PackVoltage for power
+4. Add RegenEnergy(ctx, vehicleID, from, to) to SignalLogReader:
+   - Estimates regen from negative PackCurrent samples × voltage × time fraction
+5. In completeDriveLocked, replace signalHistoryWriter block with:
+   - Primary path: signalLogReader.SnapshotAt for start/end snapshots
+     - Unit-aware distance: NormalizeDistance(odometer, SettingDistanceUnit)
+     - Unit-aware temperature: NormalizeTemp(temp, SettingTemperatureUnit)
+     - Battery, position, energy from snapshots
+     - DriveAggregates for speed/power
+     - RegenEnergy for regen kWh
+   - Fallback path: if signalLogReader is nil, use signalHistoryWriter (legacy)
+   - Ultimate fallback: if both are nil, existing accumulators stand
+6. snapFloat helper: extracts float64 from signal snapshot map, delegates to toFloatOk
+
+Key design decisions:
+- signalLogReader enrichment OVERWRITES accumulated values (it has better data from full history)
+- Both SnapshotAt errors are non-fatal: logged as Warn, snapshot defaults to empty map
+- DriveAggregates returns zero triplet on error (non-fatal)
+- RegenEnergy returns 0 on error (non-fatal)
+- units import added to telemetry_sessions.go for NormalizeDistance/Speed/Temp
+
+=== CHANGES ===
+
+1. internal/database/signal_log_reader.go
+   - Added DriveAggregates(ctx, vehicleID, from, to) → (avgSpeed, maxSpeed, avgPower)
+     Uses FILTER clauses for VehicleSpeed and PackCurrent/PackVoltage aggregation
+   - Added RegenEnergy(ctx, vehicleID, from, to) → float64
+     Estimates regen kWh from negative PackCurrent × voltage × time fraction
+
+2. internal/api/telemetry_sessions.go
+   - Added signalLogReader *database.SignalLogReader field to TelemetrySessionTracker
+   - Added SetSignalLogReader(r) setter method
+   - Added snapFloat(snap, key) helper for extracting float64 from snapshot maps
+   - Added units import
+   - Rewrote completeDriveLocked enrichment block:
+     Primary: signalLogReader path with unit-aware normalization
+     Fallback: signalHistoryWriter path (legacy, preserved verbatim)
+     Ultimate fallback: in-memory accumulators (unchanged)
+
+=== GATE ===
+
+Command: cd D:\repos\teslasync && go build ./...
+Result: EXIT=0 (clean build, no errors)
+
+STATUS=DONE
+
+=== COMMIT ===
+Committing with message: phase-14/09-drive-complete: rewrite drive completion with signal_log + unit-aware normalization

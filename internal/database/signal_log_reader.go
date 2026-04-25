@@ -190,6 +190,85 @@ func scanSignalValue(rows pgx.Rows) (string, interface{}, error) {
 	return signal, decodeValue(vNum, vStr, vBool, vJsonb), nil
 }
 
+// DriveAggregates computes average speed, max speed, and average power during
+// a time window from signal_log entries. Speed is filtered to >0 samples only
+// for the average (excluding stationary readings). Power is computed from
+// AVG(PackVoltage) × AVG(PackCurrent) / 1000.
+func (r *SignalLogReader) DriveAggregates(ctx context.Context, vehicleID int64, from, to time.Time) (avgSpeed, maxSpeed, avgPower float64) {
+	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
+	defer cancel()
+
+	query := `SELECT
+		AVG(value_num) FILTER (WHERE signal = 'VehicleSpeed' AND value_num > 0),
+		MAX(value_num) FILTER (WHERE signal = 'VehicleSpeed'),
+		AVG(value_num) FILTER (WHERE signal = 'PackCurrent'),
+		AVG(value_num) FILTER (WHERE signal = 'PackVoltage')
+	FROM signal_log
+	WHERE vehicle_id = $1 AND created_at >= $2 AND created_at <= $3
+	  AND signal IN ('VehicleSpeed', 'PackCurrent', 'PackVoltage')`
+
+	var pAvgSpeed, pMaxSpeed, pAvgCurrent, pAvgVoltage *float64
+	err := r.db.Pool.QueryRow(ctx, query, vehicleID, from, to).Scan(
+		&pAvgSpeed, &pMaxSpeed, &pAvgCurrent, &pAvgVoltage,
+	)
+	if err != nil {
+		return 0, 0, 0
+	}
+	if pAvgSpeed != nil {
+		avgSpeed = *pAvgSpeed
+	}
+	if pMaxSpeed != nil {
+		maxSpeed = *pMaxSpeed
+	}
+	if pAvgCurrent != nil && pAvgVoltage != nil {
+		avgPower = (*pAvgVoltage) * (*pAvgCurrent) / 1000.0 // kW
+	}
+	return avgSpeed, maxSpeed, avgPower
+}
+
+// RegenEnergy estimates regenerative braking energy recovered during a time
+// window. Uses negative PackCurrent samples (regen = charging the battery)
+// paired with PackVoltage readings to compute approximate kWh.
+//
+// Falls back to 0 when no negative-current samples exist.
+func (r *SignalLogReader) RegenEnergy(ctx context.Context, vehicleID int64, from, to time.Time) float64 {
+	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
+	defer cancel()
+
+	// Estimate regen energy: sum of (|negative current| × avg voltage) × avg sample interval.
+	// We approximate by using AVG(|negative current|) × AVG(voltage) × duration.
+	// More accurate would be per-sample integration, but this is sufficient for drive summary.
+	query := `SELECT
+		AVG(ABS(value_num)) FILTER (WHERE signal = 'PackCurrent' AND value_num < 0),
+		COUNT(*) FILTER (WHERE signal = 'PackCurrent' AND value_num < 0),
+		COUNT(*) FILTER (WHERE signal = 'PackCurrent'),
+		AVG(value_num) FILTER (WHERE signal = 'PackVoltage')
+	FROM signal_log
+	WHERE vehicle_id = $1 AND created_at >= $2 AND created_at <= $3
+	  AND signal IN ('PackCurrent', 'PackVoltage')`
+
+	var pAvgRegenCurrent *float64
+	var regenCount, totalCount int64
+	var pAvgVoltage *float64
+	err := r.db.Pool.QueryRow(ctx, query, vehicleID, from, to).Scan(
+		&pAvgRegenCurrent, &regenCount, &totalCount, &pAvgVoltage,
+	)
+	if err != nil || pAvgRegenCurrent == nil || pAvgVoltage == nil || totalCount == 0 {
+		return 0
+	}
+
+	// Fraction of drive time spent in regen
+	regenFraction := float64(regenCount) / float64(totalCount)
+	durationHours := to.Sub(from).Hours()
+
+	// Energy = avg_regen_current × avg_voltage × regen_time_fraction × duration / 1000
+	kwh := (*pAvgRegenCurrent) * (*pAvgVoltage) * regenFraction * durationHours / 1000.0
+	if kwh < 0 {
+		kwh = 0
+	}
+	return kwh
+}
+
 // decodeValue applies the canonical priority for multi-typed signal values:
 //
 //	value_num (float64) → value_bool (bool) → value_jsonb (map) → value_str (string).

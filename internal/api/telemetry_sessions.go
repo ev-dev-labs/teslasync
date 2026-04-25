@@ -15,6 +15,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
+	"github.com/ev-dev-labs/teslasync/internal/units"
 )
 
 // TelemetrySessionTracker detects drive starts/ends and charge starts/ends
@@ -34,6 +35,7 @@ type TelemetrySessionTracker struct {
 	geocoder          geocoding.Geocoder
 	signalStore         *signal.Store
 	signalHistoryWriter *database.SignalHistoryWriter
+	signalLogReader     *database.SignalLogReader
 
 	// Write buffers for DB outage resilience
 	driveTelBuffer  *database.WriteBuffer[*models.DriveTelemetryReading]
@@ -204,6 +206,11 @@ func (t *TelemetrySessionTracker) DriveBufferLen() int {
 // ChargeBufferLen returns the number of buffered charge telemetry readings.
 func (t *TelemetrySessionTracker) ChargeBufferLen() int {
 	return t.chargeTelBuffer.Len()
+}
+
+// SetSignalLogReader enables signal_log-based drive/charge completion enrichment.
+func (t *TelemetrySessionTracker) SetSignalLogReader(r *database.SignalLogReader) {
+	t.signalLogReader = r
 }
 
 // telemetryWriteInterval controls how often drive/charge telemetry readings are
@@ -500,6 +507,15 @@ func derefInt16AsInt(p *int16) int {
 		return 0
 	}
 	return int(*p)
+}
+
+// snapFloat extracts a float64 from a signal snapshot map (returned by SnapshotAt).
+// Returns (0, false) if the key is missing or not a numeric type.
+func snapFloat(snap map[string]interface{}, key string) (float64, bool) {
+	if snap == nil {
+		return 0, false
+	}
+	return toFloatOk(snap[key])
 }
 
 // findNearestPositionFallback approximates FindNearestPosition using ListByVehicle
@@ -1113,10 +1129,120 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	if endLat != nil { enhancedFields["end_lat"] = *endLat }
 	if endLon != nil { enhancedFields["end_lon"] = *endLon }
 
-	// Enrich with signal_history for any fields not captured during session.
-	// Signal_history reconstructs full signal state using last-known values,
+	// Enrich with signal_log for fields not captured during session.
+	// SignalLogReader reconstructs full signal state using last-known values,
 	// compensating for Tesla's delta encoding (signals not sent unless changed).
-	if t.signalHistoryWriter != nil {
+	// Falls back to signalHistoryWriter if signalLogReader is unavailable.
+	if t.signalLogReader != nil {
+		endTs := time.Now().UTC()
+		startSnap, startErr := t.signalLogReader.SnapshotAt(ctx, vehicleID, active.StartTime)
+		if startErr != nil {
+			log.Warn().Err(startErr).Int64("vehicle_id", vehicleID).
+				Msg("telemetry: signal_log start snapshot failed")
+			startSnap = map[string]interface{}{}
+		}
+		endSnap, endErr := t.signalLogReader.SnapshotAt(ctx, vehicleID, endTs)
+		if endErr != nil {
+			log.Warn().Err(endErr).Int64("vehicle_id", vehicleID).
+				Msg("telemetry: signal_log end snapshot failed")
+			endSnap = map[string]interface{}{}
+		}
+
+		// Unit preferences at start and end (may differ if user changed mid-drive)
+		startDistUnit := units.GetUnitFromSnapshot(startSnap, "SettingDistanceUnit")
+		endDistUnit := units.GetUnitFromSnapshot(endSnap, "SettingDistanceUnit")
+		endTempUnit := units.GetUnitFromSnapshot(endSnap, "SettingTemperatureUnit")
+
+		// Distance from odometer (unit-aware, normalized to miles)
+		if startOdoRaw, ok := snapFloat(startSnap, "Odometer"); ok {
+			if endOdoRaw, ok := snapFloat(endSnap, "Odometer"); ok {
+				startOdo := units.NormalizeDistance(startOdoRaw, startDistUnit)
+				endOdo := units.NormalizeDistance(endOdoRaw, endDistUnit)
+				sDist := endOdo - startOdo
+				if sDist > 0 {
+					distance = sDist
+					enhancedFields["distance_mi"] = distance
+				}
+			}
+		}
+
+		// Battery from snapshots
+		if bl, ok := snapFloat(startSnap, "BatteryLevel"); ok && bl > 0 {
+			enhancedFields["start_battery_pct"] = int16(bl)
+		}
+		if bl, ok := snapFloat(endSnap, "BatteryLevel"); ok && bl > 0 {
+			endBattery = int(bl)
+		}
+
+		// Position from snapshots (fill if missing)
+		if _, exists := enhancedFields["start_lat"]; !exists {
+			if lat, ok := snapFloat(startSnap, "Latitude"); ok {
+				enhancedFields["start_lat"] = lat
+			}
+		}
+		if _, exists := enhancedFields["start_lon"]; !exists {
+			if lon, ok := snapFloat(startSnap, "Longitude"); ok {
+				enhancedFields["start_lon"] = lon
+			}
+		}
+		if _, exists := enhancedFields["end_lat"]; !exists {
+			if lat, ok := snapFloat(endSnap, "Latitude"); ok {
+				enhancedFields["end_lat"] = lat
+			}
+		}
+		if _, exists := enhancedFields["end_lon"]; !exists {
+			if lon, ok := snapFloat(endSnap, "Longitude"); ok {
+				enhancedFields["end_lon"] = lon
+			}
+		}
+
+		// Temperature (unit-aware, normalized to °C)
+		if temp, ok := snapFloat(endSnap, "OutsideTemp"); ok {
+			normalized := units.NormalizeTemp(temp, endTempUnit)
+			enhancedFields["outside_temp_avg_c"] = normalized
+			outsideAvg = &normalized
+		}
+		if temp, ok := snapFloat(endSnap, "InsideTemp"); ok {
+			normalized := units.NormalizeTemp(temp, endTempUnit)
+			enhancedFields["inside_temp_avg_c"] = normalized
+			insideAvg = &normalized
+		}
+
+		// Energy: delta of cumulative counters
+		if startEnergy, ok := snapFloat(startSnap, "LifetimeEnergyUsed"); ok {
+			if endEnergy, ok := snapFloat(endSnap, "LifetimeEnergyUsed"); ok {
+				energyUsed := endEnergy - startEnergy
+				if energyUsed > 0 {
+					enhancedFields["energy_used_kwh"] = energyUsed
+				}
+			}
+		}
+
+		// Aggregates from signal_log during the drive window
+		slAvgSpeed, slMaxSpeed, slAvgPower := t.signalLogReader.DriveAggregates(ctx, vehicleID, active.StartTime, endTs)
+		if slAvgSpeed > 0 {
+			// Normalize speed: signal_log stores raw values in car's unit
+			normalizedAvg := units.NormalizeSpeed(slAvgSpeed, endDistUnit)
+			enhancedFields["avg_speed_mph"] = normalizedAvg
+		}
+		if slMaxSpeed > 0 {
+			normalizedMax := units.NormalizeSpeed(slMaxSpeed, endDistUnit)
+			enhancedFields["max_speed_mph"] = normalizedMax
+			maxSpeed = normalizedMax
+		}
+		if slAvgPower != 0 {
+			enhancedFields["avg_power_kw"] = math.Abs(slAvgPower)
+			p := math.Abs(slAvgPower)
+			powerMax = &p
+		}
+
+		// Regen energy
+		regenKwh := t.signalLogReader.RegenEnergy(ctx, vehicleID, active.StartTime, endTs)
+		if regenKwh > 0 {
+			enhancedFields["regen_kwh"] = regenKwh
+		}
+	} else if t.signalHistoryWriter != nil {
+		// Legacy fallback: use signalHistoryWriter for enrichment
 		startSnapshot, startErr := t.signalHistoryWriter.SnapshotAt(ctx, vehicleID, active.StartTime)
 		if startErr != nil {
 			log.Warn().Err(startErr).Int64("vehicle_id", vehicleID).
