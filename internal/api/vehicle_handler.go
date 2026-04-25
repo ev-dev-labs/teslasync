@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/service"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
@@ -18,6 +19,7 @@ type VehicleHandler struct {
 	vehicleSvc       *service.VehicleService
 	teslaClient      *tesla.Client
 	telemetryHandler *TelemetryHandler
+	signalLogReader  *database.SignalLogReader
 }
 
 func NewVehicleHandler(vehicleSvc *service.VehicleService, tc *tesla.Client) *VehicleHandler {
@@ -30,6 +32,11 @@ func NewVehicleHandler(vehicleSvc *service.VehicleService, tc *tesla.Client) *Ve
 // SetTelemetryHandler wires the telemetry handler for streaming-aware state resolution.
 func (h *VehicleHandler) SetTelemetryHandler(th *TelemetryHandler) {
 	h.telemetryHandler = th
+}
+
+// SetSignalLogReader wires the signal log reader for position queries via signal_log.
+func (h *VehicleHandler) SetSignalLogReader(slr *database.SignalLogReader) {
+	h.signalLogReader = slr
 }
 
 func (h *VehicleHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -115,17 +122,27 @@ func (h *VehicleHandler) Positions(w http.ResponseWriter, r *http.Request) {
 	limit, _ := pagination(r)
 	from := time.Now().AddDate(0, 0, -7) // default to last 7 days
 	to := time.Now()
-	positions, err := h.vehicleSvc.PositionRepo().ListByVehicle(r.Context(), id, from, to)
+
+	if h.signalLogReader == nil {
+		writeAppError(w, r, ErrDBQuery.WithMessage("signal log reader not configured"))
+		return
+	}
+
+	rows, err := h.signalLogReader.SignalTracePivotFlat(r.Context(),
+		id, positionMappings, from, to)
 	if err != nil {
-		log.Error().Err(err).Int64("vehicleID", id).Msg("failed to get positions")
+		log.Error().Err(err).Int64("vehicleID", id).Msg("failed to get positions from signal_log")
 		writeAppError(w, r, ErrDBQuery.WithMessage("failed to get positions"))
 		return
 	}
-	// Apply limit
-	if limit > 0 && len(positions) > limit {
-		positions = positions[:limit]
+	if rows == nil {
+		rows = []map[string]interface{}{}
 	}
-	writeJSON(w, http.StatusOK, positions)
+	// Apply limit
+	if limit > 0 && len(rows) > limit {
+		rows = rows[:limit]
+	}
+	writeJSON(w, http.StatusOK, rows)
 }
 
 func (h *VehicleHandler) CurrentState(w http.ResponseWriter, r *http.Request) {

@@ -1,0 +1,82 @@
+=== SURVEY ===
+Files inspected:
+  internal/api/drive_handler.go
+    - DriveHandler struct: db, driveRepo, posRepo
+    - Get: embedded *models.Drive with telemetry (empty []*DriveTelemetryReading) + positions (from posRepo)
+    - Positions: reads from posRepo.ListByVehicle → positions table
+    - TelemetryReadings: stubbed — returns empty []*DriveTelemetryReading{}
+  internal/api/vehicle_handler.go
+    - VehicleHandler struct: vehicleSvc, teslaClient, telemetryHandler
+    - Positions: reads from vehicleSvc.PositionRepo().ListByVehicle → positions table
+  internal/database/signal_log_reader.go
+    - PivotMapping: {Signal, Field string}
+    - SignalTracePivotFlat: returns []map[string]interface{} with "ts" + field names
+    - SignalTracePivot: groups by date_trunc('second'), last-write-wins per signal per bucket
+  internal/api/router.go (line 138): driveHandler := NewDriveHandler(db)
+  internal/api/router.go (line 137): vehicleHandler := NewVehicleHandler(vehicleSvc, teslaClient)
+  internal/api/router.go (line 153): signalLogReader := database.NewSignalLogReader(db)
+
+Frontend response contracts surveyed:
+  web/src/types/driving.ts:
+    - DriveTelemetryPoint: timestamp/createdAt/created_at, speed, power, batteryLevel, etc.
+    - DrivePosition: latitude, longitude, speed, batteryLevel, timestamp, etc.
+  web/src/api/types.ts:
+    - Position: vehicle_id, ts, latitude, longitude, heading, speed_mph, elevation_m, gps_state, source
+  web/src/api/hooks/useDriving.ts:
+    - useDrivePositions: request<DrivePosition[]>(`/drives/${driveId}/positions`)
+    - useDriveTelemetry: request<DriveTelemetryPoint[]>(`/drives/${driveId}/telemetry`)
+  web/src/api/hooks/useVehicles.ts:
+    - useVehiclePositions: request<Position[]>(`/vehicles/${vehicleId}/positions`)
+
+Dependency check: Prompt 23 (SignalTracePivot) — confirmed present:
+  signal_log_reader.go line 332: PivotMapping type
+  signal_log_reader.go line 351: SignalTracePivot method
+  signal_log_reader.go line 432: SignalTracePivotFlat method
+
+=== REASONING ===
+1. DriveHandler already has db *database.DB → create signalLogReader in constructor (no router change).
+2. VehicleHandler lacks db → add SetSignalLogReader setter (like SetTelemetryHandler), one-line router wiring.
+3. driveTelemetryMappings: field names match old DriveTelemetryReading JSON tags (speed, battery_level,
+   inside_temp, etc.) so camelCaseKeys preserves frontend contract.
+4. positionMappings: field names match old Position model JSON tags (speed_mph, elevation_m, heading, etc.)
+5. Telemetry timestamp: PivotFlat returns "ts" → rename to "created_at" to match old model.
+6. Position timestamp: PivotFlat "ts" matches Position model's "ts" — no rename needed.
+7. Drive Get handler: replaced embedded *models.Drive struct with explicit map to include both
+   telemetry and positions from signal_log. Errors on telemetry/positions are warnings (graceful fallback).
+8. In-progress drives (no end_ts): use time.Now() as end timestamp, same pattern as before.
+
+=== CHANGES ===
+File: internal/api/drive_handler.go
+  - Added signalLogReader *database.SignalLogReader to struct
+  - Constructor creates signalLogReader from db (no router change needed)
+  - Added driveTelemetryMappings: 13 signals → JSON fields matching DriveTelemetryReading
+  - Added positionMappings: 5 signals → JSON fields matching Position model
+  - Rewired Get: telemetry + positions from SignalTracePivotFlat; explicit map response
+  - Rewired Positions: reads from SignalTracePivotFlat with positionMappings
+  - Rewired TelemetryReadings: reads from SignalTracePivotFlat with driveTelemetryMappings,
+    renames "ts" → "created_at"
+  - Removed unused models import
+
+File: internal/api/vehicle_handler.go
+  - Added signalLogReader *database.SignalLogReader to struct
+  - Added database import
+  - Added SetSignalLogReader setter method
+  - Rewired Positions: reads from SignalTracePivotFlat with positionMappings (shared from drive_handler)
+
+File: internal/api/router.go
+  - Line 272: vehicleHandler.SetSignalLogReader(signalLogReader) — one-line wiring addition
+
+=== GATE ===
+go build ./...   → EXIT 0 (clean)
+go vet ./internal/api/... → EXIT 1 (1 pre-existing failure:
+  internal/api/rule_engine_test.go:18 unknown field Conditions — unrelated)
+
+Endpoint testing: running server binary predates this change. Cannot hot-reload.
+Build produces correct binary. Endpoints will return 200 with signal_log data
+(or empty arrays when no data) after server restart with new binary.
+
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
+See git log.

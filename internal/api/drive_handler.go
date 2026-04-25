@@ -7,22 +7,50 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // DriveHandler handles drive-related HTTP requests.
 type DriveHandler struct {
-	db           *database.DB
-	driveRepo    *database.DriveRepo
-	posRepo      *database.PositionRepo
+	db              *database.DB
+	driveRepo       *database.DriveRepo
+	posRepo         *database.PositionRepo
+	signalLogReader *database.SignalLogReader
 }
 
 func NewDriveHandler(db *database.DB) *DriveHandler {
 	return &DriveHandler{
-		db:           db,
-		driveRepo:    database.NewDriveRepo(db),
-		posRepo:      database.NewPositionRepo(db),
+		db:              db,
+		driveRepo:       database.NewDriveRepo(db),
+		posRepo:         database.NewPositionRepo(db),
+		signalLogReader: database.NewSignalLogReader(db),
 	}
+}
+
+// Drive telemetry signal → JSON field mappings (field names match the old
+// DriveTelemetryReading JSON tags so the frontend contract is unchanged).
+var driveTelemetryMappings = []database.PivotMapping{
+	{Signal: "VehicleSpeed", Field: "speed"},
+	{Signal: "PackCurrent", Field: "pack_current"},
+	{Signal: "PackVoltage", Field: "pack_voltage"},
+	{Signal: "BatteryLevel", Field: "battery_level"},
+	{Signal: "Elevation", Field: "elevation"},
+	{Signal: "InsideTemp", Field: "inside_temp"},
+	{Signal: "OutsideTemp", Field: "outside_temp"},
+	{Signal: "TpmsPressureFl", Field: "tire_pressure_fl"},
+	{Signal: "TpmsPressureFr", Field: "tire_pressure_fr"},
+	{Signal: "TpmsPressureRl", Field: "tire_pressure_rl"},
+	{Signal: "TpmsPressureRr", Field: "tire_pressure_rr"},
+	{Signal: "Latitude", Field: "latitude"},
+	{Signal: "Longitude", Field: "longitude"},
+}
+
+// Position signal → JSON field mappings (field names match Position model tags).
+var positionMappings = []database.PivotMapping{
+	{Signal: "Latitude", Field: "latitude"},
+	{Signal: "Longitude", Field: "longitude"},
+	{Signal: "GpsHeading", Field: "heading"},
+	{Signal: "VehicleSpeed", Field: "speed_mph"},
+	{Signal: "Elevation", Field: "elevation_m"},
 }
 
 func (h *DriveHandler) ListByVehicle(w http.ResponseWriter, r *http.Request) {
@@ -69,32 +97,61 @@ func (h *DriveHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Drive telemetry repo removed — return empty telemetry pending rewire (prompt 14).
-	telemetry := make([]*models.DriveTelemetryReading, 0)
-
-	// Fetch positions for this drive's time range
-	var positions []models.Position
+	endTs := time.Now()
 	if drive.EndTs != nil {
-		positions, err = h.posRepo.ListByVehicle(ctx, drive.VehicleID, drive.StartTs, *drive.EndTs)
-		if err != nil {
-			log.Warn().Err(err).Int64("driveID", id).Msg("failed to get drive positions")
+		endTs = *drive.EndTs
+	}
+
+	// Telemetry from signal_log via pivot
+	telemetry, err := h.signalLogReader.SignalTracePivotFlat(ctx,
+		drive.VehicleID, driveTelemetryMappings, drive.StartTs, endTs)
+	if err != nil {
+		log.Warn().Err(err).Int64("driveID", id).Msg("failed to get drive telemetry from signal_log")
+		telemetry = []map[string]interface{}{}
+	}
+	// Rename "ts" → "created_at" to match old DriveTelemetryReading JSON shape
+	for _, row := range telemetry {
+		if ts, ok := row["ts"]; ok {
+			row["created_at"] = ts
+			delete(row, "ts")
 		}
 	}
-	if positions == nil {
-		positions = make([]models.Position, 0)
+
+	// Positions from signal_log via pivot
+	positions, err := h.signalLogReader.SignalTracePivotFlat(ctx,
+		drive.VehicleID, positionMappings, drive.StartTs, endTs)
+	if err != nil {
+		log.Warn().Err(err).Int64("driveID", id).Msg("failed to get drive positions from signal_log")
+		positions = []map[string]interface{}{}
 	}
 
-	// Build response with embedded telemetry and positions
-	type driveDetailResponse struct {
-		*models.Drive
-		Telemetry []*models.DriveTelemetryReading `json:"telemetry"`
-		Positions []models.Position                `json:"positions"`
-	}
-
-	writeJSON(w, http.StatusOK, driveDetailResponse{
-		Drive:     drive,
-		Telemetry: telemetry,
-		Positions: positions,
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"id":                 drive.ID,
+		"vehicle_id":         drive.VehicleID,
+		"start_ts":           drive.StartTs,
+		"end_ts":             drive.EndTs,
+		"duration_min":       drive.DurationMin,
+		"distance_mi":        drive.DistanceMi,
+		"start_address":      drive.StartAddress,
+		"end_address":        drive.EndAddress,
+		"start_lat":          drive.StartLat,
+		"start_lon":          drive.StartLon,
+		"end_lat":            drive.EndLat,
+		"end_lon":            drive.EndLon,
+		"start_battery_pct":  drive.StartBatteryPct,
+		"end_battery_pct":    drive.EndBatteryPct,
+		"energy_used_kwh":    drive.EnergyUsedKwh,
+		"regen_kwh":          drive.RegenKwh,
+		"avg_speed_mph":      drive.AvgSpeedMph,
+		"max_speed_mph":      drive.MaxSpeedMph,
+		"avg_power_kw":       drive.AvgPowerKw,
+		"outside_temp_avg_c": drive.OutsideTempAvgC,
+		"inside_temp_avg_c":  drive.InsideTempAvgC,
+		"score":              drive.Score,
+		"ended_status":       drive.EndedStatus,
+		"created_at":         drive.CreatedAt,
+		"telemetry":          telemetry,
+		"positions":          positions,
 	})
 }
 
@@ -120,21 +177,61 @@ func (h *DriveHandler) Positions(w http.ResponseWriter, r *http.Request) {
 	if drive.EndTs != nil {
 		endTs = *drive.EndTs
 	}
-	positions, err := h.posRepo.ListByVehicle(r.Context(), drive.VehicleID, drive.StartTs, endTs)
+
+	rows, err := h.signalLogReader.SignalTracePivotFlat(r.Context(),
+		drive.VehicleID, positionMappings, drive.StartTs, endTs)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to get drive positions")
+		log.Error().Err(err).Int64("driveID", driveID).Msg("failed to get drive positions from signal_log")
 		writeError(w, http.StatusInternalServerError, "failed to get positions")
 		return
 	}
-	if positions == nil {
-		positions = make([]models.Position, 0)
+	if rows == nil {
+		rows = []map[string]interface{}{}
 	}
-	writeJSON(w, http.StatusOK, positions)
+	writeJSON(w, http.StatusOK, rows)
 }
 
 func (h *DriveHandler) TelemetryReadings(w http.ResponseWriter, r *http.Request) {
-	// Drive telemetry repo removed — return empty pending rewire (prompt 14).
-	writeJSON(w, http.StatusOK, []*models.DriveTelemetryReading{})
+	driveID, err := urlParamInt64(r, "driveID")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid drive ID")
+		return
+	}
+
+	drive, err := h.driveRepo.GetByID(r.Context(), driveID)
+	if err != nil {
+		log.Error().Err(err).Int64("id", driveID).Msg("failed to get drive for telemetry")
+		writeError(w, http.StatusInternalServerError, "failed to get drive")
+		return
+	}
+	if drive == nil {
+		writeError(w, http.StatusNotFound, "drive not found")
+		return
+	}
+
+	endTs := time.Now()
+	if drive.EndTs != nil {
+		endTs = *drive.EndTs
+	}
+
+	rows, err := h.signalLogReader.SignalTracePivotFlat(r.Context(),
+		drive.VehicleID, driveTelemetryMappings, drive.StartTs, endTs)
+	if err != nil {
+		log.Error().Err(err).Int64("driveID", driveID).Msg("failed to get telemetry from signal_log")
+		writeError(w, http.StatusInternalServerError, "failed to get telemetry")
+		return
+	}
+	if rows == nil {
+		rows = []map[string]interface{}{}
+	}
+	// Rename "ts" → "created_at" to match old DriveTelemetryReading JSON shape
+	for _, row := range rows {
+		if ts, ok := row["ts"]; ok {
+			row["created_at"] = ts
+			delete(row, "ts")
+		}
+	}
+	writeJSON(w, http.StatusOK, rows)
 }
 
 // Stats returns aggregate driving statistics for a vehicle.

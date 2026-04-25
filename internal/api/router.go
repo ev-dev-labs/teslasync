@@ -269,6 +269,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// Wire telemetry handler into vehicle handler for streaming-aware state
 	vehicleHandler.SetTelemetryHandler(telemetryHandler)
 
+	// Wire signal log reader into vehicle handler for position queries via signal_log
+	vehicleHandler.SetSignalLogReader(signalLogReader)
+
 	// Wire telemetry handler into settings handler for capture toggle sync
 	settingsHandler.SetTelemetryHandler(telemetryHandler)
 
