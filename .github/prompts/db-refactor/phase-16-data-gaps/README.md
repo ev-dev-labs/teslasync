@@ -34,15 +34,15 @@ instead of implementing the signal_log replacement. This phase fills those gaps.
 | `telemetry_sessions.go` (drive) | start/end lat/lon, energy, regen, score, ended_status all null | Audit + fix every field in UPDATE |
 | `telemetry_sessions.go` (charge) | charger_location, power max/avg, cost may be null | Audit + fix every field in UPDATE |
 
-## Prompt ordering (8 atomic prompts)
+## Prompt ordering (9 atomic prompts)
 
 ```
 00 — Battery trend: implement from cagg_battery_daily (battery_handler + analytics_handler)
 01 — Battery trend: implement in export/analytics.go
 02 — Remove dead snapshot dispatch (trackMedia, trackVehicleConfig, buffer callbacks)
-03 — (renumbered to 07)
 04 — Flatten compound signals in signal_history_writer (Location → Latitude + Longitude rows)
 05 — Drive completion audit: fix ALL null fields (lat/lon, energy, regen, score, ended_status)
 06 — Charge completion audit: fix ALL null fields (same pattern)
 07 — Gate: build + vet + zero TODOs + zero dead dispatch + battery data + drive field check
+08 — Chart refactor: scatter points → continuous smoothed area charts (50+ files)
 ```

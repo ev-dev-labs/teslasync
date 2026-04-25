@@ -16,7 +16,7 @@ description: "Phase-16 — Gate: build + verify battery data + zero TODOs"
 ## Logging: === SURVEY ===, === REASONING ===, === CHANGES ===, === GATE ===, === COMMIT ===.
 ## CRITICAL: Do NOT launch agents. If stuck, STATUS=BLOCKED.
 
-## Depends on: Prompts 00–06
+## Depends on: Prompts 00–08
 
 ## Step 1 — Build + Vet
 
