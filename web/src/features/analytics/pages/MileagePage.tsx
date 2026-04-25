@@ -17,6 +17,7 @@ import {
 
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSettings } from '@/hooks/useSettings';
 import { formatDate } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -56,6 +57,8 @@ export default function MileagePage() {
   const { t } = useTranslation();
   usePageTitle(t('mileage.title', 'Mileage'));
 
+  const { convertDistance, distanceUnit } = useSettings();
+
   const [vehicleId, setVehicleId] = useState('');
 
   const { data: vehicles } = useVehicles();
@@ -78,14 +81,14 @@ export default function MileagePage() {
 
   /* Odometer over time (area chart) */
   const odometerData = useMemo(
-    () => (entries ?? []).map((e) => ({ date: formatDate(e.date), odometer: e.odometer })),
-    [entries],
+    () => (entries ?? []).map((e) => ({ date: formatDate(e.date), odometer: convertDistance(e.odometer) })),
+    [entries, convertDistance],
   );
 
   /* Daily distance (bar chart) */
   const dailyData = useMemo(
-    () => (entries ?? []).map((e) => ({ date: formatDate(e.date), distance: e.distance })),
-    [entries],
+    () => (entries ?? []).map((e) => ({ date: formatDate(e.date), distance: convertDistance(e.distance) })),
+    [entries, convertDistance],
   );
 
   /* Monthly summary rows */
@@ -101,18 +104,18 @@ export default function MileagePage() {
     }
     return [...map.entries()].map(([month, v]) => ({
       month,
-      distance: v.distance,
+      distance: convertDistance(v.distance),
       drives: v.drives,
-      dailyAvg: v.drives > 0 ? v.distance / v.drives : 0,
+      dailyAvg: v.drives > 0 ? convertDistance(v.distance / v.drives) : 0,
     }));
-  }, [entries]);
+  }, [entries, convertDistance]);
 
   const monthColumns: Column<MonthRow>[] = useMemo(() => [
     { key: 'month', header: t('Month'), render: (r) => r.month, sortable: true },
-    { key: 'distance', header: t('Distance'), render: (r) => fmtNumber(r.distance), sortable: true },
+    { key: 'distance', header: `${t('Distance')} (${distanceUnit})`, render: (r) => fmtNumber(r.distance), sortable: true },
     { key: 'drives', header: t('Drives'), render: (r) => fmtInt(r.drives), sortable: true },
-    { key: 'dailyAvg', header: t('Daily Avg'), render: (r) => fmtNumber(r.dailyAvg), sortable: true },
-  ], [t]);
+    { key: 'dailyAvg', header: `${t('Daily Avg')} (${distanceUnit})`, render: (r) => fmtNumber(r.dailyAvg), sortable: true },
+  ], [t, distanceUnit]);
 
   const vehicleOptions = (vehicles ?? []).map((v) => ({
     value: String(v.id),
@@ -153,7 +156,7 @@ export default function MileagePage() {
               <>
                 <MetricCard
                   label={t('mileage.totalDistance', 'Total Distance')}
-                  value={fmtInt(stats?.total_distance)}
+                  value={`${fmtInt(convertDistance(stats?.total_distance ?? 0))} ${distanceUnit}`}
                   icon={<Gauge className="h-4 w-4" />}
                   color="cyan"
                 />
@@ -165,13 +168,13 @@ export default function MileagePage() {
                 />
                 <MetricCard
                   label={t('mileage.dailyAvg', 'Daily Avg')}
-                  value={fmtNumber(stats?.avg_daily)}
+                  value={`${fmtNumber(convertDistance(stats?.avg_daily ?? 0))} ${distanceUnit}`}
                   icon={<Calendar className="h-4 w-4" />}
                   color="purple"
                 />
                 <MetricCard
                   label={t('mileage.annualProjection', 'Annual Projection')}
-                  value={fmtInt((stats?.avg_daily ?? 0) * 365)}
+                  value={`${fmtInt(convertDistance((stats?.avg_daily ?? 0) * 365))} ${distanceUnit}`}
                   icon={<BarChart3 className="h-4 w-4" />}
                   color="cyan"
                 />
@@ -207,7 +210,7 @@ export default function MileagePage() {
                   stroke={CHART_COLORS[2]}
                   fill="url(#odoGrad)"
                   strokeWidth={2}
-                  name={t('Odometer')}
+                  name={`${t('Odometer')} (${distanceUnit})`}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -234,7 +237,7 @@ export default function MileagePage() {
                   dataKey="distance"
                   fill={CHART_COLORS[0]}
                   radius={[4, 4, 0, 0]}
-                  name={t('Distance')}
+                  name={`${t('Distance')} (${distanceUnit})`}
                 />
               </BarChart>
             </ResponsiveContainer>
