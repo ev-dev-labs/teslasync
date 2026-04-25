@@ -39,7 +39,19 @@ func (t *TelemetrySessions) completeCharge(ctx context.Context, vehicleID int64,
     energyAdded := endEnergy - startEnergy
     if energyAdded < 0 { energyAdded = 0 }
 
-    // Location for geocoding
+    // Battery
+    startBattery := toInt(startSnap["BatteryLevel"])
+    endBattery := toInt(endSnap["BatteryLevel"])
+
+    // Range added (miles): difference in rated range
+    startDistUnit := units.GetUnitFromSnapshot(startSnap, "SettingDistanceUnit")
+    endDistUnit := units.GetUnitFromSnapshot(endSnap, "SettingDistanceUnit")
+    startRange := units.NormalizeDistance(toFloat(startSnap["BatteryRange"]), startDistUnit)
+    endRange := units.NormalizeDistance(toFloat(endSnap["BatteryRange"]), endDistUnit)
+    milesAdded := endRange - startRange
+    if milesAdded < 0 { milesAdded = 0 }
+
+    // Location for geocoding (→ charger_location)
     lat := toFloat(endSnap["Latitude"])
     lng := toFloat(endSnap["Longitude"])
 
@@ -49,11 +61,47 @@ func (t *TelemetrySessions) completeCharge(ctx context.Context, vehicleID int64,
         chargerType = "DC"
     }
 
-    // Max/avg power from signal trace during charge
-    // ... query signal_log for ChargerPower signals between start-end
+    // Max/avg power from signal_log aggregate during charge
+    // SELECT
+    //   MAX(value_num) FILTER (WHERE signal = 'ACChargingPower') AS max_power,
+    //   AVG(value_num) FILTER (WHERE signal = 'ACChargingPower' AND value_num > 0) AS avg_power,
+    //   MAX(value_num) FILTER (WHERE signal = 'DCChargingPower') AS max_dc_power
+    // FROM signal_log WHERE vehicle_id = $1 AND created_at BETWEEN $2 AND $3
+    maxPower, avgPower := t.signalLogReader.ChargeAggregates(ctx, vehicleID, startTs, endTs)
 
-    // UPDATE charging_sessions SET end_ts=$1, energy_added_kwh=$2, ...
+    // Cost calculation (if geofence has electricity rate)
+    cost := 0.0
+    if lat != 0 && lng != 0 && energyAdded > 0 {
+        geofences, _ := t.geofenceRepo.FindByCoordinates(ctx, lat, lng)
+        // Apply geofence electricity rate if available
+    }
+
+    // Geocode location → charger_location
+    chargerLocation := ""
+    if lat != 0 && lng != 0 {
+        chargerLocation = geocode(lat, lng) // existing reverse geocode
+    }
+
+    // Duration
+    duration := endTs.Sub(startTs).Minutes()
+
+    // UPDATE charging_sessions SET
+    //   end_ts = $endTs, duration_min = $duration,
+    //   start_battery_pct = $startBattery, end_battery_pct = $endBattery,
+    //   energy_added_kwh = $energyAdded, miles_added = $milesAdded,
+    //   charger_type = $chargerType, charger_location = $chargerLocation,
+    //   charger_power_kw_max = $maxPower, charger_power_kw_avg = $avgPower,
+    //   cost = $cost, ended_status = 'completed'
+    // WHERE id = $active.SessionID
 }
+```
+
+### Add helper method to SignalLogReader
+
+```go
+// ChargeAggregates computes max/avg charger power during a charge window.
+// Checks both ACChargingPower and DCChargingPower, returns whichever is active.
+func (r *SignalLogReader) ChargeAggregates(ctx context.Context, vehicleID int64, from, to time.Time) (maxPower, avgPower float64)
 ```
 
 ### Constraints

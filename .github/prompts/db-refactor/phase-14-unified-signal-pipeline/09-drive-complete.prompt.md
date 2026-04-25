@@ -54,18 +54,70 @@ func (t *TelemetrySessions) completeDrive(ctx context.Context, vehicleID int64, 
     startBattery := toInt(startSnap["BatteryLevel"])
     endBattery := toInt(endSnap["BatteryLevel"])
 
+    // Start/end location
+    startLat := toFloat(startSnap["Latitude"])
+    startLon := toFloat(startSnap["Longitude"])
+    endLat := toFloat(endSnap["Latitude"])
+    endLon := toFloat(endSnap["Longitude"])
+
+    // Temperature (unit-aware)
+    endTempUnit := units.GetUnitFromSnapshot(endSnap, "SettingTemperatureUnit")
     outsideTempAvg := units.NormalizeTemp(toFloat(endSnap["OutsideTemp"]), endTempUnit)
     insideTempAvg := units.NormalizeTemp(toFloat(endSnap["InsideTemp"]), endTempUnit)
 
-    // Aggregates from signal_log during the drive window
-    // (avg speed, max speed from SignalTrace or aggregate query)
-    driveSignals, _ := t.signalLogReader.SnapshotBetween(ctx, vehicleID, startTs, endTs)
-    // ... compute avg_speed, max_speed from driveSignals or separate aggregate query
+    // Energy: delta of cumulative counters
+    startEnergy := toFloat(startSnap["LifetimeEnergyUsed"])
+    endEnergy := toFloat(endSnap["LifetimeEnergyUsed"])
+    energyUsed := endEnergy - startEnergy
+    if energyUsed < 0 { energyUsed = 0 }
 
-    // Write to drives table
-    // UPDATE drives SET end_ts=$1, distance_mi=$2, avg_speed_mph=$3, ...
+    // Aggregates from signal_log during the drive window
+    // Use a dedicated aggregate query for speed, power, regen:
+    //
+    // SELECT
+    //   AVG(value_num) FILTER (WHERE signal = 'VehicleSpeed' AND value_num > 0) AS avg_speed,
+    //   MAX(value_num) FILTER (WHERE signal = 'VehicleSpeed') AS max_speed,
+    //   AVG(value_num) FILTER (WHERE signal = 'PackCurrent') AS avg_current,
+    //   AVG(value_num) FILTER (WHERE signal = 'PackVoltage') AS avg_voltage
+    // FROM signal_log
+    // WHERE vehicle_id = $1 AND created_at BETWEEN $2 AND $3
+    avgSpeed, maxSpeed, avgPower := t.signalLogReader.DriveAggregates(ctx, vehicleID, startTs, endTs)
+
+    // Regen energy (sum of negative power samples × time interval, or delta of regen counter)
+    // If RegenPower signal exists, aggregate it. Otherwise estimate from PackCurrent < 0 periods.
+    regenKwh := t.signalLogReader.RegenEnergy(ctx, vehicleID, startTs, endTs)
+
+    // Drive score (computed from driving metrics — acceleration smoothness, regen usage, etc.)
+    score := computeDriveScore(avgSpeed, maxSpeed, distance, regenKwh, energyUsed)
+
+    // UPDATE drives with ALL computed fields
+    // UPDATE drives SET
+    //   end_ts = $endTs,
+    //   duration_min = $duration,
+    //   distance_mi = $distance,
+    //   start_lat = $startLat, start_lon = $startLon,
+    //   end_lat = $endLat, end_lon = $endLon,
+    //   start_battery_pct = $startBattery, end_battery_pct = $endBattery,
+    //   energy_used_kwh = $energyUsed, regen_kwh = $regenKwh,
+    //   avg_speed_mph = $avgSpeed, max_speed_mph = $maxSpeed,
+    //   avg_power_kw = $avgPower,
+    //   outside_temp_avg_c = $outsideTempAvg, inside_temp_avg_c = $insideTempAvg,
+    //   score = $score, ended_status = 'completed'
     // WHERE id = $active.DriveID
 }
+```
+
+### Add helper methods to SignalLogReader
+
+Add to `signal_log_reader.go` (created in prompt 06):
+
+```go
+// DriveAggregates computes avg speed, max speed, avg power during a time window.
+func (r *SignalLogReader) DriveAggregates(ctx context.Context, vehicleID int64, from, to time.Time) (avgSpeed, maxSpeed, avgPower float64)
+
+// RegenEnergy estimates regen energy recovered during a time window.
+// Sums RegenPower signal samples if available, or estimates from negative PackCurrent.
+func (r *SignalLogReader) RegenEnergy(ctx context.Context, vehicleID int64, from, to time.Time) float64
 ```
 
 ### Constraints
