@@ -1,0 +1,79 @@
+=== SURVEY ===
+Task: Create continuous aggregates over signal_log for dashboard historical reads
+Depends on: Prompt 00 (signal_log hypertable) — STATUS=DONE
+
+Files surveyed:
+  - internal/database/migrations/000043_signal_history_to_signal_log.up.sql (signal_log hypertable)
+  - internal/database/migrations/000044_drop_snapshot_tables.up.sql (highest existing migration)
+  - .github/prompts/db-refactor/logs/phase-14-00-hypertable.log (predecessor status)
+
+Current DB state:
+  signal_log: hypertable with PK (created_at, vehicle_id, signal)
+  Columns: vehicle_id, signal, value_num, value_str, value_bool, created_at, value_jsonb
+  Compression: enabled (segmentby = vehicle_id, signal)
+  Existing caggs: cagg_signal_hourly (general per-signal hourly)
+
+Migration chain: internal/database/migrations/ (highest existing: 000044)
+New migration number: 000045
+
+=== REASONING ===
+1. Three domain-specific continuous aggregates needed:
+   - cagg_vehicle_daily: fleet overview — battery_level, odometer, speed, temp (1-day bucket)
+   - cagg_climate_hourly: climate trends — inside/outside temp, HVAC state, defrost (1-hour bucket)
+   - cagg_battery_daily: degradation tracking — min/max/end SoC, pack voltage, charge count (1-day bucket)
+
+2. All use FILTER (WHERE signal = '...') to pivot the EAV signal_log rows into named columns.
+   TimescaleDB supports FILTER clauses in continuous aggregate definitions.
+
+3. All created WITH NO DATA — populated lazily by refresh policies, not at creation time.
+
+4. Refresh policies:
+   - cagg_vehicle_daily: hourly refresh, 3-day lookback, 1-hour lag
+   - cagg_climate_hourly: 30-min refresh, 2-day lookback, 1-hour lag
+   - cagg_battery_daily: hourly refresh, 3-day lookback, 1-hour lag
+
+5. Down migration drops all 3 views (CASCADE also removes policies).
+
+6. These complement the existing cagg_signal_hourly (general-purpose) with
+   domain-specific pivoted views optimized for frontend page queries.
+
+=== CHANGES ===
+Created:
+  internal/database/migrations/000045_continuous_aggregates.up.sql
+  internal/database/migrations/000045_continuous_aggregates.down.sql
+
+=== GATE ===
+Applied UP migration:
+  $ Get-Content internal/database/migrations/000045_continuous_aggregates.up.sql | docker exec -i teslasync-postgres psql -U teslasync -d teslasync
+
+  Output:
+    CREATE MATERIALIZED VIEW (x3)
+    add_continuous_aggregate_policy: 1019, 1020, 1021
+
+Verification — continuous aggregates:
+  $ docker exec teslasync-postgres psql -U teslasync -d teslasync \
+    -c "SELECT view_name FROM timescaledb_information.continuous_aggregates ORDER BY 1;"
+
+  Result:
+     view_name
+    ---------------------
+     cagg_battery_daily   ✓
+     cagg_climate_hourly  ✓
+     cagg_signal_hourly   (pre-existing)
+     cagg_vehicle_daily   ✓
+
+Rollback test (DOWN migration):
+  $ Get-Content internal/database/migrations/000045_continuous_aggregates.down.sql | docker exec -i teslasync-postgres psql -U teslasync -d teslasync
+
+  Output:
+    DROP MATERIALIZED VIEW (x3)
+
+  Post-rollback verification: only cagg_signal_hourly remains ✓
+
+Re-applied UP migration for final state: all 3 caggs present ✓
+
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
+Committed below.
