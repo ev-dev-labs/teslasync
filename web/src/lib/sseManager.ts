@@ -53,6 +53,12 @@ async function doConnect() {
   }
 
   const token = await fetchSSEToken()
+  // SECURITY NOTE: Token is passed via query string because the browser EventSource API
+  // does not support custom headers. This is a known limitation of SSE.
+  // Mitigations:
+  // - Tokens are short-lived (scoped to SSE session)
+  // - Server logs should be configured to redact query parameters
+  // - Consider migrating to WebSocket (which supports headers) if this becomes a concern
   const url = token ? `/api/v1/events?token=${encodeURIComponent(token)}` : '/api/v1/events'
 
   const es = new EventSource(url)

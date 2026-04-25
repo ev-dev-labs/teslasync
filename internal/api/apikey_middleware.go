@@ -51,10 +51,6 @@ func APIKeyAuthRequired(db *database.DB) func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			key := r.Header.Get("X-API-Key")
 			if key == "" {
-				// Also check query param (for PWA/bookmark URLs)
-				key = r.URL.Query().Get("key")
-			}
-			if key == "" {
 				writeError(w, http.StatusUnauthorized, "API key required")
 				return
 			}
