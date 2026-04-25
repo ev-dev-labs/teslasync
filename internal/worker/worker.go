@@ -12,6 +12,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
@@ -433,7 +434,7 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *models.Vehicle) {
 
 	data, err := w.teslaClient.GetVehicleData(pollCtx, vehicle.VIN, endpoints...)
 	if errors.Is(err, tesla.ErrVehicleAsleep) {
-		w.publishMQTT(vehicle, "state", "asleep")
+		w.publishMQTT(vehicle, "state", enums.StateAsleep)
 		w.recordVehicleAsleep(vehicle.ID)
 		if w.PollEngine != nil {
 			w.PollEngine.MarkSleeping(vehicle.VIN)

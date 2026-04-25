@@ -1,5 +1,7 @@
 package polling
 
+import "github.com/ev-dev-labs/teslasync/internal/enums"
+
 // ChargeEvaluator assesses vehicle charging activity based on charging state,
 // charge port status, and charge rate.
 type ChargeEvaluator struct{}
@@ -14,21 +16,21 @@ func (e *ChargeEvaluator) Evaluate(ctx *EvalContext) EvalResult {
 	cs := ctx.Current.ChargeState
 
 	switch cs.ChargingState {
-	case "Charging":
+	case enums.ChargeStateCharging:
 		return EvalResult{
 			Activity:   Active,
 			Reason:     "actively charging",
 			Confidence: 1.0,
 		}
 
-	case "Starting":
+	case enums.ChargeStateStarting:
 		return EvalResult{
 			Activity:   Active,
 			Reason:     "charge session starting",
 			Confidence: 1.0,
 		}
 
-	case "Complete":
+	case enums.ChargeStateComplete:
 		if cs.ChargePortLatch == "Engaged" || cs.ChargePortDoorOpen {
 			return EvalResult{
 				Activity:   Low,
@@ -42,7 +44,7 @@ func (e *ChargeEvaluator) Evaluate(ctx *EvalContext) EvalResult {
 			Confidence: 0.9,
 		}
 
-	case "Stopped":
+	case enums.ChargeStateStopped:
 		if cs.ChargePortLatch == "Engaged" || cs.ChargePortDoorOpen {
 			return EvalResult{
 				Activity:   Low,
@@ -56,7 +58,7 @@ func (e *ChargeEvaluator) Evaluate(ctx *EvalContext) EvalResult {
 			Confidence: 0.8,
 		}
 
-	case "Disconnected", "NoPower":
+	case enums.ChargeStateDisconnected, enums.ChargeStateNoPower:
 		return EvalResult{
 			Activity:   Idle,
 			Reason:     "no charger connected",

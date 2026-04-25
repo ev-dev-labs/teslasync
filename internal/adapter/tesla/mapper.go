@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/port/external"
 )
 
@@ -52,7 +53,7 @@ func mapVehicleState(data json.RawMessage) (external.VehicleState, error) {
 		State:            raw.State,
 		BatteryLevel:     raw.ChargeState.BatteryLevel,
 		BatteryRange:     raw.ChargeState.BatteryRange,
-		IsCharging:       raw.ChargeState.ChargingState == "Charging",
+		IsCharging:       raw.ChargeState.ChargingState == enums.ChargeStateCharging,
 		ChargeRate:       raw.ChargeState.ChargeRate,
 		ChargePowerKW:    float64(raw.ChargeState.ChargerPower),
 		OdometerMiles:    raw.VehicleState.Odometer,

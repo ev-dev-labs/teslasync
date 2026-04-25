@@ -10,6 +10,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
@@ -245,7 +246,7 @@ func (h *WatchHandler) queryWatchSummary(ctx context.Context, vehicleID int64) (
 	}
 
 	isCharging := false
-	if chargeState != nil && (*chargeState == "Charging" || *chargeState == "charging") {
+	if chargeState != nil && (*chargeState == enums.ChargeStateCharging || *chargeState == "charging") {
 		isCharging = true
 	}
 
@@ -296,13 +297,13 @@ func resolveWatchVehicleID(r *http.Request, repo *database.VehicleRepo) (int64, 
 // stateEmoji returns a colored circle emoji for vehicle state.
 func stateEmoji(state string) string {
 	switch state {
-	case "online":
+	case enums.StateOnline:
 		return "🟢"
-	case "asleep":
+	case enums.StateAsleep:
 		return "😴"
-	case "driving":
+	case enums.StateDriving:
 		return "🚗"
-	case "charging":
+	case enums.StateCharging:
 		return "⚡"
 	default:
 		return "⚫"

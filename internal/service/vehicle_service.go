@@ -290,7 +290,7 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 		}
 	}
 	if state.State == "" {
-		state.State = "online"
+		state.State = enums.StateOnline
 	}
 
 	return state

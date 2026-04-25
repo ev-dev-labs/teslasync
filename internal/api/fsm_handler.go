@@ -7,6 +7,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/fsm"
 	"github.com/ev-dev-labs/teslasync/internal/fsm/charge"
 	"github.com/ev-dev-labs/teslasync/internal/fsm/drive"
@@ -185,7 +186,7 @@ func (h *FSMHandler) getOrCreate(ctx context.Context, vehicleID int64) *fsm.Vehi
 
 	currentDB, _ := h.stateRepo.GetCurrentState(ctx, vehicleID)
 	if currentDB == "" {
-		currentDB = "online"
+		currentDB = enums.StateOnline
 	}
 	initial := fsm.State(currentDB)
 	if !initial.IsValid() {

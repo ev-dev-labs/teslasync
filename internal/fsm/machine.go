@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -305,7 +306,7 @@ func toFloat(v interface{}) (float64, bool) {
 // isChargingState returns true if the charge state string indicates active charging.
 func isChargingState(s string) bool {
 	switch s {
-	case "Charging", "Starting", "ChargeStateCharging", "ChargeStateStarting",
+	case enums.ChargeStateCharging, enums.ChargeStateStarting, "ChargeStateCharging", "ChargeStateStarting",
 		"DetailedChargeStateCharging", "DetailedChargeStateStarting", "Enable":
 		return true
 	}

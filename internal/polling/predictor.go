@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
 )
@@ -184,18 +185,18 @@ func (p *Predictor) Predict(vin string) *PredictionInfo {
 	// Return whichever is sooner (if any)
 	if bestDeparture != nil && bestCharge != nil {
 		if bestDeparture.EstimatedIn < bestCharge.EstimatedIn {
-			bestDeparture.NextState = "driving"
+			bestDeparture.NextState = enums.StateDriving
 			return bestDeparture
 		}
-		bestCharge.NextState = "charging"
+		bestCharge.NextState = enums.StateCharging
 		return bestCharge
 	}
 	if bestDeparture != nil {
-		bestDeparture.NextState = "driving"
+		bestDeparture.NextState = enums.StateDriving
 		return bestDeparture
 	}
 	if bestCharge != nil {
-		bestCharge.NextState = "charging"
+		bestCharge.NextState = enums.StateCharging
 		return bestCharge
 	}
 	return nil

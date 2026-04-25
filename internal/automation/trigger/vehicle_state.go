@@ -8,6 +8,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -45,10 +46,10 @@ type eventMatcher struct {
 // Vehicle-level events match the vehicle FSM (fsmType="vehicle").
 // Session-level events match drive/charge sub-FSMs.
 var supportedEvents = map[string]eventMatcher{
-	"wakes_up":          {fsmType: "vehicle", fromState: "asleep", toState: "online"},
-	"goes_to_sleep":     {fsmType: "vehicle", toState: "asleep"},
-	"comes_online":      {fsmType: "vehicle", fromState: "offline", toState: "online"},
-	"goes_offline":      {fsmType: "vehicle", toState: "offline"},
+	"wakes_up":          {fsmType: "vehicle", fromState: enums.StateAsleep, toState: enums.StateOnline},
+	"goes_to_sleep":     {fsmType: "vehicle", toState: enums.StateAsleep},
+	"comes_online":      {fsmType: "vehicle", fromState: enums.StateOffline, toState: enums.StateOnline},
+	"goes_offline":      {fsmType: "vehicle", toState: enums.StateOffline},
 	"drive_starts":      {fsmType: "drive_session", fromState: "pending", toState: "active"},
 	"drive_ends":        {fsmType: "drive_session", toState: "completed"},
 	"charging_starts":   {fsmType: "charge_session", fromState: "pending", toState: "active"},

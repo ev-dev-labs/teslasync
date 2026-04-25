@@ -7,6 +7,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
@@ -399,7 +400,7 @@ func (s *SessionService) completeDrive(ctx context.Context, vehicle *models.Vehi
 // TrackChargeFromAPI evaluates a polled VehicleDataResponse and starts or
 // ends a charging session as appropriate. This is the worker (API-polling) path.
 func (s *SessionService) TrackChargeFromAPI(ctx context.Context, vehicle *models.Vehicle, data *tesla.VehicleDataResponse) {
-	isCharging := data.ChargeState.ChargingState == "Charging"
+	isCharging := data.ChargeState.ChargingState == enums.ChargeStateCharging
 
 	s.mu.Lock()
 	activeChargeID, hasActiveCharge := s.activeCharges[vehicle.ID]
