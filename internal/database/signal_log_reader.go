@@ -329,6 +329,129 @@ func (r *SignalLogReader) LatestTimestamp(ctx context.Context, vehicleID int64) 
 	return *ts, nil
 }
 
+// PivotMapping maps a Tesla signal name to an output field name for pivot queries.
+type PivotMapping struct {
+	Signal string // Tesla signal name in signal_log (e.g. "VehicleSpeed")
+	Field  string // Output JSON field name (e.g. "speed_mph")
+}
+
+// PivotRow is one time-bucketed row with named fields.
+type PivotRow struct {
+	Timestamp time.Time              `json:"ts"`
+	Fields    map[string]interface{} `json:"fields,omitempty"`
+}
+
+// SignalTracePivot queries signal_log for specified signals within a time window,
+// then pivots vertical rows into horizontal PivotRows grouped by timestamp
+// (truncated to second precision).
+//
+// Signals arriving within the same second are merged into one row.
+// Missing signals in a row produce no map entry (nil-absent).
+// If the same signal appears multiple times in the same second, the last value wins.
+func (r *SignalLogReader) SignalTracePivot(
+	ctx context.Context,
+	vehicleID int64,
+	mappings []PivotMapping,
+	from, to time.Time,
+) ([]PivotRow, error) {
+	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
+	defer cancel()
+
+	signalNames := make([]string, len(mappings))
+	fieldBySignal := make(map[string]string, len(mappings))
+	for i, m := range mappings {
+		signalNames[i] = m.Signal
+		fieldBySignal[m.Signal] = m.Field
+	}
+
+	query := `SELECT date_trunc('second', created_at) AS ts,
+	                 signal, value_num, value_str, value_bool, value_jsonb
+	          FROM signal_log
+	          WHERE vehicle_id = $1 AND signal = ANY($2)
+	            AND created_at >= $3 AND created_at <= $4
+	          ORDER BY ts ASC, signal ASC, created_at ASC`
+
+	rows, err := r.db.Pool.Query(ctx, query, vehicleID, signalNames, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("signal trace pivot for vehicle %d: %w", vehicleID, err)
+	}
+	defer rows.Close()
+
+	// Collect rows grouped by truncated timestamp.
+	// Within a second, later rows for the same signal overwrite earlier ones (last-write-wins).
+	type bucketEntry struct {
+		ts     time.Time
+		fields map[string]interface{}
+	}
+	var buckets []bucketEntry
+
+	for rows.Next() {
+		var ts time.Time
+		var signal string
+		var vNum *float64
+		var vStr *string
+		var vBool *bool
+		var vJsonb []byte
+
+		if err := rows.Scan(&ts, &signal, &vNum, &vStr, &vBool, &vJsonb); err != nil {
+			return nil, fmt.Errorf("signal trace pivot scan: %w", err)
+		}
+
+		field, ok := fieldBySignal[signal]
+		if !ok {
+			continue
+		}
+		val := decodeValue(vNum, vStr, vBool, vJsonb)
+		if val == nil {
+			continue
+		}
+
+		// Append a new bucket when the timestamp changes.
+		if len(buckets) == 0 || !buckets[len(buckets)-1].ts.Equal(ts) {
+			buckets = append(buckets, bucketEntry{
+				ts:     ts,
+				fields: make(map[string]interface{}),
+			})
+		}
+		buckets[len(buckets)-1].fields[field] = val
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	result := make([]PivotRow, len(buckets))
+	for i, b := range buckets {
+		result[i] = PivotRow{Timestamp: b.ts, Fields: b.fields}
+	}
+	return result, nil
+}
+
+// SignalTracePivotFlat returns []map[string]interface{} with "ts" + field names
+// as top-level keys. Easier for JSON serialization — no nested "fields" object.
+// Each map: {"ts": "2026-04-24T14:00:01Z", "speed_mph": 65, "battery_pct": 90}
+func (r *SignalLogReader) SignalTracePivotFlat(
+	ctx context.Context,
+	vehicleID int64,
+	mappings []PivotMapping,
+	from, to time.Time,
+) ([]map[string]interface{}, error) {
+	pivoted, err := r.SignalTracePivot(ctx, vehicleID, mappings, from, to)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]map[string]interface{}, len(pivoted))
+	for i, row := range pivoted {
+		flat := make(map[string]interface{}, len(row.Fields)+1)
+		flat["ts"] = row.Timestamp
+		for k, v := range row.Fields {
+			flat[k] = v
+		}
+		result[i] = flat
+	}
+	return result, nil
+}
+
 // decodeValue applies the canonical priority for multi-typed signal values:
 //
 //	value_num (float64) → value_bool (bool) → value_jsonb (map) → value_str (string).

@@ -1,0 +1,42 @@
+=== SURVEY ===
+File: internal/database/signal_log_reader.go
+- SignalLogReader struct with methods: SnapshotAt, SignalAt, SnapshotBetween, SignalTrace,
+  DriveAggregates, RegenEnergy, ChargeAggregates, LatestTimestamp
+- SignalTraceEntry type (vertical: one row per signal per timestamp)
+- Existing decodeValue helper: value_num → value_bool → value_jsonb → value_str priority
+- queryTimeout = 10s used by all methods
+- Existing SignalMapping type in signal_catalog.go (Column + Type fields) — different purpose
+
+Dependency check: Prompt 06 (SignalTrace) — confirmed present at line 137.
+
+=== REASONING ===
+1. Need PivotMapping (not SignalMapping — name collision with signal_catalog.go)
+   to map Tesla signal names → output JSON field names.
+2. PivotRow struct: Timestamp + Fields map for nested variant.
+3. SignalTracePivot:
+   - Extract signal names from mappings, build fieldBySignal lookup.
+   - Query with date_trunc('second', created_at) for second-precision grouping.
+   - ORDER BY ts ASC, signal ASC, created_at ASC — last row per signal per bucket wins.
+   - Iterate rows, group by truncated timestamp, overwrite on duplicate (last-write-wins).
+   - Return []PivotRow (empty slice, not nil).
+4. SignalTracePivotFlat: delegates to SignalTracePivot, flattens Fields into top-level map
+   with "ts" key added.
+
+=== CHANGES ===
+File: internal/database/signal_log_reader.go
+- Added PivotMapping type (Signal, Field string fields)
+- Added PivotRow type (Timestamp time.Time + Fields map[string]interface{})
+- Added SignalTracePivot method on *SignalLogReader
+- Added SignalTracePivotFlat method on *SignalLogReader (delegates to SignalTracePivot)
+
+=== GATE ===
+go build ./...   → EXIT 0 (clean)
+go vet ./...     → EXIT 1 (3 pre-existing failures in unrelated test files:
+  - internal/automation/condition/location_test.go:105 (unknown field Latitude)
+  - internal/automation/trigger/calendar_test.go:38 (unknown field TriggerType)
+  - internal/api/rule_engine_test.go:18 (unknown field Conditions)
+  None related to signal_log_reader.go changes.)
+
+=== COMMIT ===
+EXIT=0
+STATUS=DONE
