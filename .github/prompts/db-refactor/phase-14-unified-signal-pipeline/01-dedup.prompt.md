@@ -75,3 +75,19 @@ DELETE FROM signal_log WHERE signal = 'TestDedup';
 ```
 
 Log result. STATUS=DONE only if build passes AND dedup verified.
+
+
+
+## Commit
+
+After gate passes, commit all changes:
+```powershell
+cd D:\repos\teslasync
+git add -A
+git commit -m "phase-14/01-dedup: <brief description>
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+```
+
+Include `phase-14/01-dedup` as the commit message prefix.
+

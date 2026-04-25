@@ -44,3 +44,19 @@ grep -rn "vehicle_live_state" --include="*.go" internal/api/maintenance_handler.
 ```
 
 Log result. STATUS=DONE only if build passes AND zero vehicle_live_state refs in these 4 files.
+
+
+
+## Commit
+
+After gate passes, commit all changes:
+```powershell
+cd D:\repos\teslasync
+git add -A
+git commit -m "phase-14/14a-vls-handlers: <brief description>
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+```
+
+Include `phase-14/14a-vls-handlers` as the commit message prefix.
+

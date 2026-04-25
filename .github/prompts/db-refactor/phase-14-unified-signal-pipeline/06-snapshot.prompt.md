@@ -88,3 +88,19 @@ ORDER BY signal, created_at DESC LIMIT 10;"
 ```
 
 Log result. STATUS=DONE only if build passes AND query returns data.
+
+
+
+## Commit
+
+After gate passes, commit all changes:
+```powershell
+cd D:\repos\teslasync
+git add -A
+git commit -m "phase-14/06-snapshot: <brief description>
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+```
+
+Include `phase-14/06-snapshot` as the commit message prefix.
+

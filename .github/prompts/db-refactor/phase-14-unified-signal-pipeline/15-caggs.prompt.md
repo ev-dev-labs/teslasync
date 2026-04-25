@@ -117,3 +117,19 @@ docker exec teslasync-postgres psql -U teslasync -d teslasync -c "SELECT view_na
 ```
 
 Log result. STATUS=DONE only if all 3 continuous aggregates created.
+
+
+
+## Commit
+
+After gate passes, commit all changes:
+```powershell
+cd D:\repos\teslasync
+git add -A
+git commit -m "phase-14/15-caggs: <brief description>
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+```
+
+Include `phase-14/15-caggs` as the commit message prefix.
+

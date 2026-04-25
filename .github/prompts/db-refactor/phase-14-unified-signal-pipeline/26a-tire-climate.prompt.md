@@ -74,3 +74,19 @@ grep -rn "tire_pressure_snapshot\|climate_snapshot" --include="*.go" internal/ap
 ```
 
 Log result. STATUS=DONE only if build passes AND zero snapshot refs in these 2 files.
+
+
+
+## Commit
+
+After gate passes, commit all changes:
+```powershell
+cd D:\repos\teslasync
+git add -A
+git commit -m "phase-14/26a-tire-climate: <brief description>
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+```
+
+Include `phase-14/26a-tire-climate` as the commit message prefix.
+

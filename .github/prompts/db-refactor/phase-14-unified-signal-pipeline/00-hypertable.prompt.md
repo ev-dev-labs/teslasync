@@ -102,3 +102,19 @@ docker exec teslasync-postgres psql -U teslasync -d teslasync -c "\d signal_log"
 ```
 
 Log result. STATUS=DONE only if hypertable exists AND go build passes.
+
+
+
+## Commit
+
+After gate passes, commit all changes:
+```powershell
+cd D:\repos\teslasync
+git add -A
+git commit -m "phase-14/00-hypertable: <brief description>
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+```
+
+Include `phase-14/00-hypertable` as the commit message prefix.
+

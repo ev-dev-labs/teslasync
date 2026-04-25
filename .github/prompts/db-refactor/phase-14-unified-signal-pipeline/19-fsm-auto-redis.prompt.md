@@ -86,3 +86,19 @@ grep -rn "vehicle_live_state" --include="*.go" internal/automation/ internal/fsm
 ```
 
 Log result. STATUS=DONE only if build passes AND zero vehicle_live_state refs in automation/FSM.
+
+
+
+## Commit
+
+After gate passes, commit all changes:
+```powershell
+cd D:\repos\teslasync
+git add -A
+git commit -m "phase-14/19-fsm-auto-redis: <brief description>
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+```
+
+Include `phase-14/19-fsm-auto-redis` as the commit message prefix.
+

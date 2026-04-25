@@ -75,3 +75,19 @@ npx tsc --noEmit
 ```
 
 Log result. STATUS=DONE only if tsc passes AND survey confirms conversions are applied.
+
+
+
+## Commit
+
+After gate passes, commit all changes:
+```powershell
+cd D:\repos\teslasync
+git add -A
+git commit -m "phase-14/16-fe-units: <brief description>
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+```
+
+Include `phase-14/16-fe-units` as the commit message prefix.
+

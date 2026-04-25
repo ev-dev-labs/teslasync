@@ -101,3 +101,19 @@ go build ./...
 ```
 
 Log result. STATUS=DONE only if build passes.
+
+
+
+## Commit
+
+After gate passes, commit all changes:
+```powershell
+cd D:\repos\teslasync
+git add -A
+git commit -m "phase-14/11-recovery: <brief description>
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+```
+
+Include `phase-14/11-recovery` as the commit message prefix.
+

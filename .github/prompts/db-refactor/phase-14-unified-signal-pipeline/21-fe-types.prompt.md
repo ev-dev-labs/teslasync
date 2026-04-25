@@ -89,3 +89,19 @@ grep -rn "VehicleLiveState" --include="*.ts" --include="*.tsx" src/ | head -10
 ```
 
 Log result. STATUS=DONE only if tsc passes with zero type errors.
+
+
+
+## Commit
+
+After gate passes, commit all changes:
+```powershell
+cd D:\repos\teslasync
+git add -A
+git commit -m "phase-14/21-fe-types: <brief description>
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+```
+
+Include `phase-14/21-fe-types` as the commit message prefix.
+

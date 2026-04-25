@@ -68,3 +68,19 @@ docker exec teslasync-postgres psql -U teslasync -d teslasync -c "SELECT tablena
 ```
 
 Log result. STATUS=DONE only if all tables dropped successfully.
+
+
+
+## Commit
+
+After gate passes, commit all changes:
+```powershell
+cd D:\repos\teslasync
+git add -A
+git commit -m "phase-14/13-drop-tables: <brief description>
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+```
+
+Include `phase-14/13-drop-tables` as the commit message prefix.
+

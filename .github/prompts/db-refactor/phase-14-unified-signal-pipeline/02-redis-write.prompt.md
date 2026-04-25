@@ -68,3 +68,19 @@ docker exec teslasync-redis redis-cli HGET vehicle:1:signals BatteryLevel
 ```
 
 Log result. STATUS=DONE only if build passes AND Redis HSET has data.
+
+
+
+## Commit
+
+After gate passes, commit all changes:
+```powershell
+cd D:\repos\teslasync
+git add -A
+git commit -m "phase-14/02-redis-write: <brief description>
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+```
+
+Include `phase-14/02-redis-write` as the commit message prefix.
+

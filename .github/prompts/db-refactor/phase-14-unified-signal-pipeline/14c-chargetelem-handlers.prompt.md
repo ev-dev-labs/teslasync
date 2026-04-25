@@ -56,3 +56,19 @@ grep -rn "charging_telemetry" --include="*.go" internal/api/battery_degradation_
 ```
 
 Log result. STATUS=DONE only if build passes AND zero charging_telemetry refs in these 6 files.
+
+
+
+## Commit
+
+After gate passes, commit all changes:
+```powershell
+cd D:\repos\teslasync
+git add -A
+git commit -m "phase-14/14c-chargetelem-handlers: <brief description>
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+```
+
+Include `phase-14/14c-chargetelem-handlers` as the commit message prefix.
+

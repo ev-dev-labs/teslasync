@@ -87,3 +87,19 @@ grep -rn "motor_repo\|climate_repo\|safety_repo\|tire_pressure_repo\|user_prefer
 ```
 
 Log result. STATUS=DONE only if build passes AND grep returns 0 refs to deleted repos.
+
+
+
+## Commit
+
+After gate passes, commit all changes:
+```powershell
+cd D:\repos\teslasync
+git add -A
+git commit -m "phase-14/12-drop-writers: <brief description>
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+```
+
+Include `phase-14/12-drop-writers` as the commit message prefix.
+

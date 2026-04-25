@@ -82,3 +82,19 @@ grep -rn "motor_snapshot\|climate_snapshot\|vehicle_live_state\|charging_telemet
 ```
 
 Log result. STATUS=DONE only if build passes AND zero dropped-table refs.
+
+
+
+## Commit
+
+After gate passes, commit all changes:
+```powershell
+cd D:\repos\teslasync
+git add -A
+git commit -m "phase-14/20-workers: <brief description>
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+```
+
+Include `phase-14/20-workers` as the commit message prefix.
+

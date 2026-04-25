@@ -89,3 +89,19 @@ grep -rn "location_snapshot\|user_preference_snapshot\|vehicle_config_snapshot" 
 ```
 
 Log result. STATUS=DONE only if build passes AND zero snapshot refs in these 3 files.
+
+
+
+## Commit
+
+After gate passes, commit all changes:
+```powershell
+cd D:\repos\teslasync
+git add -A
+git commit -m "phase-14/26c-loc-prefs-config: <brief description>
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+```
+
+Include `phase-14/26c-loc-prefs-config` as the commit message prefix.
+

@@ -125,3 +125,19 @@ cd web && npx tsc --noEmit
 ```
 
 Log result. STATUS=DONE only if both pass.
+
+
+
+## Commit
+
+After gate passes, commit all changes:
+```powershell
+cd D:\repos\teslasync
+git add -A
+git commit -m "phase-14/07-units: <brief description>
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+```
+
+Include `phase-14/07-units` as the commit message prefix.
+

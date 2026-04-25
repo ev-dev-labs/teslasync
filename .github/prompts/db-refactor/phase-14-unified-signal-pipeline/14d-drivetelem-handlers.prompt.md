@@ -83,3 +83,19 @@ grep -rn "drive_telemetry_readings\|fn_driving_acceleration" --include="*.go" in
 ```
 
 Log result. STATUS=DONE only if build passes AND zero dropped-table refs in these 2 files.
+
+
+
+## Commit
+
+After gate passes, commit all changes:
+```powershell
+cd D:\repos\teslasync
+git add -A
+git commit -m "phase-14/14d-drivetelem-handlers: <brief description>
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+```
+
+Include `phase-14/14d-drivetelem-handlers` as the commit message prefix.
+

@@ -110,3 +110,19 @@ curl -s http://localhost:8080/api/v1/drives/1/positions | python -m json.tool | 
 ```
 
 Log result. STATUS=DONE only if build passes AND both endpoints return 200.
+
+
+
+## Commit
+
+After gate passes, commit all changes:
+```powershell
+cd D:\repos\teslasync
+git add -A
+git commit -m "phase-14/24-drive-telem: <brief description>
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+```
+
+Include `phase-14/24-drive-telem` as the commit message prefix.
+

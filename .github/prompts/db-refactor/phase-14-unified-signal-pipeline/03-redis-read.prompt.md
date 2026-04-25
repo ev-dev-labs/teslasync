@@ -81,3 +81,19 @@ docker logs teslasync-api --since 15s 2>&1 | Select-String "loaded from Redis"
 ```
 
 Log result. STATUS=DONE only if build passes AND startup loads from Redis.
+
+
+
+## Commit
+
+After gate passes, commit all changes:
+```powershell
+cd D:\repos\teslasync
+git add -A
+git commit -m "phase-14/03-redis-read: <brief description>
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+```
+
+Include `phase-14/03-redis-read` as the commit message prefix.
+
