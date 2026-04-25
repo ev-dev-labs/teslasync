@@ -23,11 +23,26 @@ instead of implementing the signal_log replacement. This phase fills those gaps.
 | `telemetry_handler.go` | 1825 | Vehicle config write = no-op comment | Delete entire `trackVehicleConfig` function |
 | `telemetry_sessions.go` | 165 | Buffer callbacks = no-ops comment | Remove dead callback wiring |
 
-## Prompt ordering (4 atomic prompts)
+### Compound signal loss (1 critical gap — Location never reaches signal_log)
+| File | Line | What | Fix |
+|---|---|---|---|
+| `signal_history_writer.go` | 83 | `map[string]interface{}: continue` skips Location | Flatten lat/lng + store others as JSONB |
+
+### Drive/Charge completion fields null (2 gaps — SnapshotAt not filling all columns)
+| File | What | Fix |
+|---|---|---|
+| `telemetry_sessions.go` (drive) | start/end lat/lon, energy, regen, score, ended_status all null | Audit + fix every field in UPDATE |
+| `telemetry_sessions.go` (charge) | charger_location, power max/avg, cost may be null | Audit + fix every field in UPDATE |
+
+## Prompt ordering (8 atomic prompts)
 
 ```
 00 — Battery trend: implement from cagg_battery_daily (battery_handler + analytics_handler)
 01 — Battery trend: implement in export/analytics.go
 02 — Remove dead snapshot dispatch (trackMedia, trackVehicleConfig, buffer callbacks)
-03 — Gate: build + vet + grep for TODO.*signal_log + verify battery endpoint returns data
+03 — (renumbered to 07)
+04 — Flatten compound signals in signal_history_writer (Location → Latitude + Longitude rows)
+05 — Drive completion audit: fix ALL null fields (lat/lon, energy, regen, score, ended_status)
+06 — Charge completion audit: fix ALL null fields (same pattern)
+07 — Gate: build + vet + zero TODOs + zero dead dispatch + battery data + drive field check
 ```
