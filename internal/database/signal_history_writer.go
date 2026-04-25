@@ -26,6 +26,16 @@ type SignalHistoryRow struct {
 	CreatedAt  time.Time
 }
 
+const (
+	// maxBufferSize holds ~2 hours of signals at 80 signals/sec (~50 MB RAM).
+	maxBufferSize = 500_000
+	// drainBatchSize caps how many rows are flushed per tick to avoid
+	// slamming Postgres with the full backlog on recovery.
+	drainBatchSize = 10_000
+	// drainInterval is the minimum pause between successive drain batches.
+	drainInterval = 100 * time.Millisecond
+)
+
 // SignalHistoryWriter buffers incoming signals and batch-inserts them into
 // the signal_log table every flushInterval. Uses pgx CopyFrom for
 // maximum insert performance.
@@ -97,23 +107,64 @@ func (w *SignalHistoryWriter) Append(vehicleID int64, signals map[string]interfa
 		}
 		w.buffer = append(w.buffer, row)
 	}
+	// Enforce buffer capacity — drop oldest rows on overflow
+	if len(w.buffer) > maxBufferSize {
+		dropped := len(w.buffer) - maxBufferSize
+		w.buffer = w.buffer[dropped:]
+		log.Warn().Int("dropped", dropped).Int("buffer_size", maxBufferSize).
+			Msg("signal_log: buffer full, dropped oldest signals")
+	}
 	w.mu.Unlock()
 }
 
 // FlushLoop runs the periodic batch insert. Call in a goroutine.
-// Stops when ctx is cancelled, performing a final flush before returning.
+// Stops when ctx is cancelled, performing a final drain before returning.
 func (w *SignalHistoryWriter) FlushLoop(ctx context.Context) {
 	ticker := time.NewTicker(w.interval)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
-			// Final flush on shutdown
-			w.flush(context.Background())
+			// Final drain on shutdown — flush everything
+			w.drainAll(context.Background())
 			return
 		case <-ticker.C:
 			w.flush(ctx)
+			// If buffer still has rows (recovery backlog), drain in batches
+			w.drainBacklog(ctx)
 		}
+	}
+}
+
+// drainBacklog drains remaining buffer in rate-limited batches after an
+// initial flush. Stops when the buffer is empty or ctx is cancelled.
+func (w *SignalHistoryWriter) drainBacklog(ctx context.Context) {
+	for {
+		w.mu.Lock()
+		remaining := len(w.buffer)
+		w.mu.Unlock()
+		if remaining == 0 {
+			return
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(drainInterval):
+			w.flush(ctx)
+		}
+	}
+}
+
+// drainAll flushes the entire buffer (used at shutdown).
+func (w *SignalHistoryWriter) drainAll(ctx context.Context) {
+	for {
+		w.mu.Lock()
+		remaining := len(w.buffer)
+		w.mu.Unlock()
+		if remaining == 0 {
+			return
+		}
+		w.flush(ctx)
 	}
 }
 
@@ -123,8 +174,17 @@ func (w *SignalHistoryWriter) flush(ctx context.Context) {
 		w.mu.Unlock()
 		return
 	}
-	rows := w.buffer
-	w.buffer = make([]SignalHistoryRow, 0, cap(rows))
+
+	// Log buffer backlog when it's non-trivial
+	if bufLen := len(w.buffer); bufLen > 1000 {
+		log.Warn().Int("buffered", bufLen).Msg("signal_log: buffer backlog")
+	}
+
+	// Take at most drainBatchSize rows to avoid slamming Postgres on recovery
+	n := min(len(w.buffer), drainBatchSize)
+	rows := make([]SignalHistoryRow, n)
+	copy(rows, w.buffer[:n])
+	w.buffer = w.buffer[n:]
 	w.mu.Unlock()
 
 	// Dedup within the batch: same (vehicle_id, signal, truncated-to-second timestamp)
@@ -179,14 +239,13 @@ func (w *SignalHistoryWriter) flush(ctx context.Context) {
 		} else {
 			log.Warn().Err(err).Int("rows", len(rows)).Msg("signal_log: batch insert failed after retries")
 		}
-		// Re-queue failed rows for the next flush (bounded to prevent memory leak)
+		// Re-queue failed rows at front, capped to maxBufferSize
 		w.mu.Lock()
-		const maxRequeue = 10000
-		if len(rows) <= maxRequeue {
-			w.buffer = append(rows, w.buffer...)
-		} else {
-			log.Warn().Int("dropped", len(rows)-maxRequeue).Msg("signal_log: dropping oldest rows (requeue limit)")
-			w.buffer = append(rows[len(rows)-maxRequeue:], w.buffer...)
+		w.buffer = append(rows, w.buffer...)
+		if len(w.buffer) > maxBufferSize {
+			dropped := len(w.buffer) - maxBufferSize
+			w.buffer = w.buffer[dropped:]
+			log.Warn().Int("dropped", dropped).Msg("signal_log: dropping oldest rows (buffer limit)")
 		}
 		w.mu.Unlock()
 	}
