@@ -31,17 +31,20 @@ interface AutomationSSEClient {
   unsubscribe: (listener: AutomationSSEListener) => void
   onConnect: (listener: ConnectionListener) => void
   offConnect: (listener: ConnectionListener) => void
-  getState: () => 'connected' | 'reconnecting' | 'unavailable'
+  getState: () => 'connected' | 'reconnecting'
 }
 
 const eventListeners = new Set<AutomationSSEListener>()
 const connectListeners = new Set<ConnectionListener>()
 let source: EventSource | null = null
-let state: 'connected' | 'reconnecting' | 'unavailable' = 'reconnecting'
-let backoff = 1000
+let state: 'connected' | 'reconnecting' = 'reconnecting'
 let failCount = 0
 let reconnectTimer: number | undefined
 let connecting = false
+
+// Capped exponential backoff: 1s → 2s → 4s → 8s → 16s → 32s → 60s (max)
+const BASE_BACKOFF_MS = 1000
+const MAX_BACKOFF_MS = 60000
 
 const EVENT_TYPES: AutomationSSEEventType[] = [
   'automation.triggered',
@@ -93,7 +96,6 @@ async function doConnect() {
 
   es.addEventListener('connected', () => {
     state = 'connected'
-    backoff = 1000
     failCount = 0
     connecting = false
     for (const fn of connectListeners) {
@@ -120,13 +122,8 @@ async function doConnect() {
     connecting = false
     failCount++
 
-    if (failCount >= 5) {
-      state = 'unavailable'
-      return
-    }
-
     state = 'reconnecting'
-    backoff = Math.min(backoff * 2, 30000)
+    const backoff = Math.min(BASE_BACKOFF_MS * Math.pow(2, failCount - 1), MAX_BACKOFF_MS)
     reconnectTimer = window.setTimeout(() => {
       doConnect()
     }, backoff)
@@ -136,7 +133,7 @@ async function doConnect() {
 export const automationSSE: AutomationSSEClient = {
   subscribe(listener) {
     eventListeners.add(listener)
-    if (!source && !connecting && state !== 'unavailable') {
+    if (!source && !connecting) {
       doConnect()
     }
   },

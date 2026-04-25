@@ -35,7 +35,7 @@ interface UseAutomationEventsReturn {
   /** Recent automation events in reverse chronological order. */
   events: AutomationActivityEvent[]
   /** SSE connection state. */
-  connectionState: 'connected' | 'reconnecting' | 'unavailable'
+  connectionState: 'connected' | 'reconnecting'
   /** Set of automation IDs that have fired recently (within last 5 seconds). */
   firingNow: Set<number>
   /** Clear the event history. */
@@ -53,7 +53,7 @@ export function useAutomationEvents(
 ): UseAutomationEventsReturn {
   const { enabled = true, modeFilter = null } = options
   const [events, setEvents] = useState<AutomationActivityEvent[]>([])
-  const [connectionState, setConnectionState] = useState<'connected' | 'reconnecting' | 'unavailable'>(
+  const [connectionState, setConnectionState] = useState<'connected' | 'reconnecting'>(
     () => automationSSE.getState(),
   )
   const [firingNow, setFiringNow] = useState<Set<number>>(new Set())

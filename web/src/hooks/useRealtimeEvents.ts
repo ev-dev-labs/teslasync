@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { sseManager } from '../lib/sseManager'
 
-export type SSEState = 'connected' | 'reconnecting' | 'unavailable'
+export type SSEState = 'connected' | 'reconnecting'
 
 export interface SSEDiagnostics {
   state: SSEState
@@ -49,7 +49,7 @@ export function useRealtimeEvents(options: SSEOptions = {}) {
     const onDisconnected = () => {
       const s = sseManager.getState()
       setState(s)
-      if (s === 'unavailable') callbacksRef.current.onFallbackToPolling?.()
+      if (s === 'reconnecting') callbacksRef.current.onFallbackToPolling?.()
       callbacksRef.current.onDisconnected?.()
     }
 

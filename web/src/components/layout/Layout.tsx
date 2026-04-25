@@ -148,10 +148,9 @@ const navI18nKeys: Record<string, string> = {
   'Guard Mode': 'nav.guardMode',
 }
 
-type SSEState = 'connected' | 'reconnecting' | 'unavailable'
+type SSEState = 'connected' | 'reconnecting'
 
 function SSEStatusDot({ state }: { state: SSEState }) {
-  if (state === 'unavailable') return null // hide dot — polling handles everything
   const isConnected = state === 'connected'
   return (
     <span

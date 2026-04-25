@@ -108,7 +108,7 @@ interface AutomationActivityFeedProps {
   historyStats: AutomationHistoryStats | null;
   isLoading: boolean;
   liveEvents: AutomationActivityEvent[];
-  connectionState: 'connected' | 'reconnecting' | 'unavailable';
+  connectionState: 'connected' | 'reconnecting';
 }
 
 export function AutomationActivityFeed({

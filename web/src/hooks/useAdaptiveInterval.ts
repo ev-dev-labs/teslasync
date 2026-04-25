@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 /**
  * Returns adaptive polling interval based on SSE connection state.
  * - SSE connected: slow poll (fallback only) — 30s
- * - SSE reconnecting/unavailable: fast poll (primary data source) — 3s
+ * - SSE reconnecting: fast poll (primary data source) — 3s
  *
  * Usage: `refetchInterval: useAdaptiveInterval()`
  */
