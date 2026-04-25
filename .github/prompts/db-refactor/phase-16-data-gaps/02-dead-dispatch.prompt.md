@@ -1,8 +1,8 @@
 ---
-description: "Phase-16 — Remove dead snapshot dispatch code"
+description: "Phase-16 — Clean dead dispatch: trim trackVehicleConfig, delete trackMedia, remove buffer no-ops"
 ---
-# Prompt 02 — Remove Dead Snapshot Dispatch (trackMedia, trackVehicleConfig, callbacks)
-> **Severity:** Cleanup | **Atomic:** yes | **Delegation:** FORBIDDEN
+# Prompt 02 — Clean Dead Dispatch Code
+> **Severity:** Core | **Atomic:** yes | **Delegation:** FORBIDDEN
 
 | Field | Value |
 |---|---|
@@ -18,71 +18,80 @@ description: "Phase-16 — Remove dead snapshot dispatch code"
 
 ## Problem
 
-Three locations have no-op comment stubs where real code used to dispatch signals
-to now-dropped snapshot tables. The dispatch functions and their callers should
-be deleted entirely — the signal data is already written to signal_log via the
-main write path.
+Three blocks of dead code remain from the signal_log migration:
+
+1. **`telemetry_handler.go` — `trackMedia()` (~lines 1645-1712)**
+   Builds a `MediaSnapshot` struct and ends with a no-op comment.
+   Has **zero side effects** — no database writes, no event publishing. Delete entirely.
+
+2. **`telemetry_handler.go` — `trackVehicleConfig()` (~lines 1715-1826)**
+   Builds a `VehicleConfigSnapshot` struct and ends with a no-op comment at line 1825.
+   **HOWEVER**, lines 1784-1799 contain `swUpdateRepo.InsertIfChanged()` for firmware
+   version tracking — this is a **real side effect** that MUST be preserved.
+
+3. **`telemetry_sessions.go` ~line 165** — Buffer callbacks wired as no-ops.
+   Dead callback wiring that should be removed.
 
 ## Task
 
-### 1. telemetry_handler.go — delete `trackMedia` function
+### 1. Delete `trackMedia()` entirely
 
-Around line 1700-1718: the function builds a `MediaSnapshot` struct then has a
-no-op comment. Delete the ENTIRE function body or the function itself.
+The function (lines ~1645-1712) has no side effects. Delete the entire function.
+Also delete its call site (search for `trackMedia(` in the same file).
 
-Also find and delete the CALLER — somewhere in telemetry_handler.go there's a
-`h.trackMedia(ctx, vehicleID, signals)` call. Delete that call.
+### 2. Trim `trackVehicleConfig()` — KEEP firmware tracking
 
-### 2. telemetry_handler.go — delete `trackVehicleConfig` function
+**Do NOT delete the entire function.** Instead:
 
-Around line 1721-1827: the function builds a `VehicleConfigSnapshot` struct then
-has a no-op comment. Delete the ENTIRE function or gut it.
+- **KEEP** the function signature and the early-return guard (lines ~1715-1726) that checks
+  for configuration signals. Simplify the guard to only check for `"Version"` since that's
+  the only signal that triggers a real side effect.
+- **KEEP** the `Version` handling block (lines ~1784-1799) which calls
+  `swUpdateRepo.InsertIfChanged(ctx, vehicleID, version, "installed")` in a background
+  goroutine. This tracks firmware updates and MUST stay.
+- **DELETE** the `VehicleConfigSnapshot` struct building (lines ~1731-1783, 1800-1824) —
+  all the optional field population for CarType, Trim, ExteriorColor, RoofColor, WheelType,
+  boolean fields, software update percentage fields, etc. These are now captured via signal_log.
+- **DELETE** the no-op comment at line ~1825.
 
-Also find and delete the CALLER.
+The resulting function should be ~15-20 lines: guard → check Version → call InsertIfChanged → return.
 
-### 3. telemetry_sessions.go — remove dead buffer callback wiring
+### 3. Remove dead buffer callback wiring
 
-Line 165: `// Telemetry repos removed — buffer callbacks are no-ops (data lands in signal_log).`
+In `telemetry_sessions.go` around line 165, remove the no-op callback registrations.
+Search for comments like "no-op" or "signal_log" near callback wiring.
 
-Find what this refers to — likely callback registrations for snapshot repos that
-were removed. Clean up any remaining dead references.
+### 4. Keep `trackUserPreferences()` as-is
 
-### 4. Survey for other dead dispatch
-
-Run a broad search for other no-op snapshot dispatch:
-```bash
-grep -rn "trackMedia\|trackVehicleConfig\|trackSafety\|trackClimate\|trackMotor\|trackLocation\|trackTirePressure\|trackUserPref" --include="*.go" internal/api/
-```
-
-Delete ALL functions that are no-ops (just comments or empty bodies). Keep functions
-that actually write to signal_log or Redis.
-
-### Constraints
-
-- Only delete functions that are truly dead (no-op or comment-only bodies)
-- DO NOT delete functions that still do real work (e.g., `trackUserPreferences`
-  might still update `vehicle_units` table — check before deleting)
-- The signal data flows through the main `signalStore.Update()` + `signalHistoryWriter.Append()`
-  path — snapshot dispatch was a SECONDARY write that's no longer needed
+`trackUserPreferences()` writes to `vehicle_units` which is still a live table. Do NOT touch it.
 
 ## Gate
 
 ```powershell
 cd D:\repos\teslasync
+$env:CGO_ENABLED = "0"
 go build ./...
-# Verify no dead track* functions remain
-grep -n "func.*trackMedia\|func.*trackVehicleConfig" --include="*.go" internal/api/telemetry_handler.go
-# Should return 0 matches (functions deleted)
-# Verify no no-op comments about removed snapshots
-grep -n "no-op\|captured via signal_log\|no dedicated table" --include="*.go" internal/api/telemetry_handler.go
+go vet ./...
+
+# Verify trackMedia is gone:
+Select-String -Path internal\api\telemetry_handler.go -Pattern "func.*trackMedia\b"
+# Should return 0 matches
+
+# Verify swUpdateRepo.InsertIfChanged still exists:
+Select-String -Path internal\api\telemetry_handler.go -Pattern "swUpdateRepo.InsertIfChanged"
+# Should return 1 match
+
+# Verify no-op comments are gone:
+Select-String -Path internal\api\telemetry_handler.go,internal\api\telemetry_sessions.go -Pattern "no dedicated table write needed|no-op"
 # Should return 0 matches
 ```
 
 ## Commit
 
 ```powershell
+cd D:\repos\teslasync
 git add -A
-git commit -m "phase-16/02-dead-dispatch: remove dead snapshot dispatch functions
+git commit -m "phase-16/02-dead-dispatch: delete trackMedia, trim trackVehicleConfig (keep firmware tracking), remove buffer no-ops
 
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ```
