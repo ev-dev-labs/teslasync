@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"testing"
 	"time"
 
@@ -62,12 +61,10 @@ func TestThreshold_DoesNotResetOnBounce(t *testing.T) {
 		ID:          2,
 		Name:        "Battery Low",
 		CooldownMin: 15,
-		Conditions: json.RawMessage(`{
-			"signal": "BatteryLevel",
-			"compare": "<",
-			"value": 20
-		}`),
-		MsgTemplate: "Battery at {{BatteryLevel}}%",
+		SignalName:  "BatteryLevel",
+		Op:          "<",
+		ValueNum:    floatPtr(20),
+		Severity:    "warn",
 	}
 
 	vehicleID := int64(100)
@@ -114,43 +111,20 @@ func TestThreshold_DoesNotResetOnBounce(t *testing.T) {
 
 func TestIsTransitionRule(t *testing.T) {
 	tests := []struct {
-		name       string
-		conditions json.RawMessage
-		want       bool
+		name string
+		op   string
+		want bool
 	}{
-		{
-			name:       "changed_to rule",
-			conditions: json.RawMessage(`{"signal":"Gear","compare":"changed_to","value":"D"}`),
-			want:       true,
-		},
-		{
-			name:       "changed_from rule",
-			conditions: json.RawMessage(`{"signal":"Gear","compare":"changed_from","value":"P"}`),
-			want:       true,
-		},
-		{
-			name:       "threshold rule",
-			conditions: json.RawMessage(`{"signal":"BatteryLevel","compare":"<","value":20}`),
-			want:       false,
-		},
-		{
-			name:       "nil conditions",
-			conditions: nil,
-			want:       false,
-		},
-		{
-			name: "nested changed_to in AND",
-			conditions: json.RawMessage(`{"op":"AND","rules":[
-				{"signal":"Gear","compare":"changed_to","value":"D"},
-				{"signal":"Speed","compare":">","value":0}
-			]}`),
-			want: true,
-		},
+		{name: "changed_to rule", op: "changed_to", want: true},
+		{name: "changed_from rule", op: "changed_from", want: true},
+		{name: "threshold rule", op: "<", want: false},
+		{name: "equals rule", op: "=", want: false},
+		{name: "empty op", op: "", want: false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rule := &models.AlertRule{Conditions: tt.conditions}
+			rule := &models.AlertRule{Op: tt.op}
 			got := isTransitionRule(rule)
 			if got != tt.want {
 				t.Errorf("isTransitionRule() = %v, want %v", got, tt.want)
@@ -166,12 +140,10 @@ func TestChangedTo_MultipleResetCycles(t *testing.T) {
 		ID:          3,
 		Name:        "Sentry On",
 		CooldownMin: 60,
-		Conditions: json.RawMessage(`{
-			"signal": "SentryMode",
-			"compare": "changed_to",
-			"value": "true"
-		}`),
-		MsgTemplate: "Sentry activated",
+		SignalName:  "SentryMode",
+		Op:          "changed_to",
+		ValueText:   strPtr("true"),
+		Severity:    "info",
 	}
 
 	vehicleID := int64(200)
@@ -215,12 +187,10 @@ func TestChangedTo_NoPrevSignals_DoesNotFire(t *testing.T) {
 		ID:          10,
 		Name:        "Gear to Drive",
 		CooldownMin: 15,
-		Conditions: json.RawMessage(`{
-			"signal": "Gear",
-			"compare": "changed_to",
-			"value": "D"
-		}`),
-		MsgTemplate: "Gear changed to {{Gear}}",
+		SignalName:  "Gear",
+		Op:          "changed_to",
+		ValueText:   strPtr("D"),
+		Severity:    "info",
 	}
 
 	vehicleID := int64(100)
@@ -241,12 +211,10 @@ func TestChangedTo_NoPrevSignals_ThenRealChange_Fires(t *testing.T) {
 		ID:          11,
 		Name:        "Gear to Drive",
 		CooldownMin: 15,
-		Conditions: json.RawMessage(`{
-			"signal": "Gear",
-			"compare": "changed_to",
-			"value": "D"
-		}`),
-		MsgTemplate: "Gear changed to {{Gear}}",
+		SignalName:  "Gear",
+		Op:          "changed_to",
+		ValueText:   strPtr("D"),
+		Severity:    "info",
 	}
 
 	vehicleID := int64(100)
@@ -283,12 +251,10 @@ func TestChangedFrom_NoPrevSignals_DoesNotFire(t *testing.T) {
 		ID:          12,
 		Name:        "Left Park",
 		CooldownMin: 15,
-		Conditions: json.RawMessage(`{
-			"signal": "Gear",
-			"compare": "changed_from",
-			"value": "P"
-		}`),
-		MsgTemplate: "Left park gear",
+		SignalName:  "Gear",
+		Op:          "changed_from",
+		ValueText:   strPtr("P"),
+		Severity:    "info",
 	}
 
 	vehicleID := int64(100)
@@ -307,12 +273,10 @@ func TestPodRestart_LoadPrevSignals_PreventsSpurious(t *testing.T) {
 		ID:          13,
 		Name:        "Gear to Drive",
 		CooldownMin: 15,
-		Conditions: json.RawMessage(`{
-			"signal": "Gear",
-			"compare": "changed_to",
-			"value": "D"
-		}`),
-		MsgTemplate: "Gear changed to {{Gear}}",
+		SignalName:  "Gear",
+		Op:          "changed_to",
+		ValueText:   strPtr("D"),
+		Severity:    "info",
 	}
 
 	vehicleID := int64(100)
@@ -352,12 +316,10 @@ func TestCooldown_NaturalExpiry(t *testing.T) {
 		ID:          4,
 		Name:        "Speed Alert",
 		CooldownMin: 0, // will default to 15 min
-		Conditions: json.RawMessage(`{
-			"signal": "Speed",
-			"compare": ">",
-			"value": 100
-		}`),
-		MsgTemplate: "Speeding: {{Speed}}",
+		SignalName:  "Speed",
+		Op:          ">",
+		ValueNum:    floatPtr(100),
+		Severity:    "warn",
 	}
 
 	vehicleID := int64(100)
