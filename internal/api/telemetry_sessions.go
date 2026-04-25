@@ -1776,10 +1776,103 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 	if outsideAvg != nil { enhancedFields["outside_temp_avg"] = *outsideAvg }
 	if chargeEnergyUsed != nil { enhancedFields["charge_energy_used"] = *chargeEnergyUsed }
 
-	// Enrich with signal_history for any fields not captured during charge session.
-	// Signal_history reconstructs full signal state using last-known values,
+	// Enrich with signal_log for fields not captured during charge session.
+	// SignalLogReader reconstructs full signal state using last-known values,
 	// compensating for Tesla's delta encoding (signals not sent unless changed).
-	if t.signalHistoryWriter != nil {
+	// Falls back to signalHistoryWriter if signalLogReader is unavailable.
+	if t.signalLogReader != nil {
+		endTs := time.Now().UTC()
+		startSnap, startErr := t.signalLogReader.SnapshotAt(ctx, vehicleID, active.StartTime)
+		if startErr != nil {
+			log.Warn().Err(startErr).Int64("vehicle_id", vehicleID).
+				Msg("telemetry: signal_log charge start snapshot failed")
+			startSnap = map[string]interface{}{}
+		}
+		endSnap, endErr := t.signalLogReader.SnapshotAt(ctx, vehicleID, endTs)
+		if endErr != nil {
+			log.Warn().Err(endErr).Int64("vehicle_id", vehicleID).
+				Msg("telemetry: signal_log charge end snapshot failed")
+			endSnap = map[string]interface{}{}
+		}
+
+		// Unit preferences at start and end (may differ if user changed mid-charge)
+		startDistUnit := units.GetUnitFromSnapshot(startSnap, "SettingDistanceUnit")
+		endDistUnit := units.GetUnitFromSnapshot(endSnap, "SettingDistanceUnit")
+		endTempUnit := units.GetUnitFromSnapshot(endSnap, "SettingTemperatureUnit")
+
+		// Battery level from snapshots
+		if bl, ok := snapFloat(startSnap, "BatteryLevel"); ok && bl > 0 {
+			enhancedFields["start_battery_pct"] = int16(bl)
+		}
+		if bl, ok := snapFloat(endSnap, "BatteryLevel"); ok && bl > 0 {
+			endBattery = int(bl)
+		}
+
+		// Energy added: difference in cumulative energy counter
+		if startEnergy, ok := snapFloat(startSnap, "ACChargingEnergyIn"); ok {
+			if endEnergy, ok := snapFloat(endSnap, "ACChargingEnergyIn"); ok {
+				energyDelta := endEnergy - startEnergy
+				if energyDelta > 0 {
+					active.EnergyAdded = energyDelta
+					enhancedFields["energy_added_kwh"] = energyDelta
+				}
+			}
+		}
+
+		// Range added (normalized to miles)
+		if startRangeRaw, ok := snapFloat(startSnap, "BatteryRange"); ok {
+			if endRangeRaw, ok := snapFloat(endSnap, "BatteryRange"); ok {
+				startRangeMi := units.NormalizeDistance(startRangeRaw, startDistUnit)
+				endRangeMi := units.NormalizeDistance(endRangeRaw, endDistUnit)
+				milesAdded := endRangeMi - startRangeMi
+				if milesAdded > 0 {
+					endRange = floatPtr(milesAdded)
+					enhancedFields["miles_added"] = milesAdded
+				}
+			}
+		}
+
+		// Location from snapshots (for geocoding)
+		if active.Latitude == nil {
+			if lat, ok := snapFloat(endSnap, "Latitude"); ok {
+				active.Latitude = floatPtr(lat)
+				enhancedFields["latitude"] = lat
+			}
+		}
+		if active.Longitude == nil {
+			if lon, ok := snapFloat(endSnap, "Longitude"); ok {
+				active.Longitude = floatPtr(lon)
+				enhancedFields["longitude"] = lon
+			}
+		}
+
+		// Temperature (unit-aware, normalized to °C)
+		if temp, ok := snapFloat(endSnap, "InsideTemp"); ok {
+			normalized := units.NormalizeTemp(temp, endTempUnit)
+			enhancedFields["inside_temp_avg_c"] = normalized
+			insideAvg = &normalized
+		}
+		if temp, ok := snapFloat(endSnap, "OutsideTemp"); ok {
+			normalized := units.NormalizeTemp(temp, endTempUnit)
+			enhancedFields["outside_temp_avg_c"] = normalized
+			outsideAvg = &normalized
+		}
+
+		// Charger type detection from snapshot
+		if dcPower, ok := snapFloat(endSnap, "DCChargingPower"); ok && dcPower > 0 {
+			enhancedFields["charger_type"] = "DC"
+		}
+
+		// Max/avg power from signal_log aggregate during charge window
+		slMaxPower, slAvgPower := t.signalLogReader.ChargeAggregates(ctx, vehicleID, active.StartTime, endTs)
+		if slMaxPower > 0 {
+			enhancedFields["charger_power_kw_max"] = slMaxPower
+		}
+		if slAvgPower > 0 {
+			enhancedFields["charger_power_kw_avg"] = slAvgPower
+		}
+	} else if t.signalHistoryWriter != nil {
+		// Legacy fallback: use signalHistoryWriter for enrichment
 		_, startErr := t.signalHistoryWriter.SnapshotAt(ctx, vehicleID, active.StartTime)
 		if startErr != nil {
 			log.Warn().Err(startErr).Int64("vehicle_id", vehicleID).

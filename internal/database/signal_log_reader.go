@@ -269,6 +269,47 @@ func (r *SignalLogReader) RegenEnergy(ctx context.Context, vehicleID int64, from
 	return kwh
 }
 
+// ChargeAggregates computes max and average charger power during a charge
+// window. Checks both ACChargingPower and DCChargingPower, returns whichever
+// is active (DC takes precedence when present).
+func (r *SignalLogReader) ChargeAggregates(ctx context.Context, vehicleID int64, from, to time.Time) (maxPower, avgPower float64) {
+	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
+	defer cancel()
+
+	query := `SELECT
+		MAX(value_num) FILTER (WHERE signal = 'ACChargingPower'),
+		AVG(value_num) FILTER (WHERE signal = 'ACChargingPower' AND value_num > 0),
+		MAX(value_num) FILTER (WHERE signal = 'DCChargingPower'),
+		AVG(value_num) FILTER (WHERE signal = 'DCChargingPower' AND value_num > 0)
+	FROM signal_log
+	WHERE vehicle_id = $1 AND created_at >= $2 AND created_at <= $3
+	  AND signal IN ('ACChargingPower', 'DCChargingPower')`
+
+	var pACMax, pACAvg, pDCMax, pDCAvg *float64
+	err := r.db.Pool.QueryRow(ctx, query, vehicleID, from, to).Scan(
+		&pACMax, &pACAvg, &pDCMax, &pDCAvg,
+	)
+	if err != nil {
+		return 0, 0
+	}
+
+	// DC takes precedence when present
+	if pDCMax != nil && *pDCMax > 0 {
+		maxPower = *pDCMax
+		if pDCAvg != nil {
+			avgPower = *pDCAvg
+		}
+		return maxPower, avgPower
+	}
+	if pACMax != nil {
+		maxPower = *pACMax
+	}
+	if pACAvg != nil {
+		avgPower = *pACAvg
+	}
+	return maxPower, avgPower
+}
+
 // decodeValue applies the canonical priority for multi-typed signal values:
 //
 //	value_num (float64) → value_bool (bool) → value_jsonb (map) → value_str (string).
