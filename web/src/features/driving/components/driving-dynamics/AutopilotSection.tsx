@@ -6,7 +6,7 @@ import { GlassPanel } from '@/components/ui';
 import { StatCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { useVehicleLiveState } from '@/api/hooks/useVehicles';
+import { useVehicleState } from '@/api/hooks/useVehicles';
 import { useSignalObservations } from '@/api/hooks/useTelemetry';
 import { useSettings } from '@/hooks/useSettings';
 import { fmtNumber } from '@/lib/numberFormat';
@@ -18,15 +18,15 @@ interface AutopilotSectionProps {
 }
 
 /**
- * Cruise / autopilot panel. Current vehicle speed comes from vehicle_live_state
- * (hot — `VehicleSpeed` hot catalog route). Cruise set-speed & follow distance
- * are cold signals from signal_observations (ADR-005).
+ * Cruise / autopilot panel. Current vehicle speed comes from the SignalStore
+ * via /vehicles/{id}/state (VehicleState.speed). Cruise set-speed & follow
+ * distance are cold signals from signal_observations (ADR-005).
  */
 export default function AutopilotSection({ vehicleId }: AutopilotSectionProps) {
   const { t } = useTranslation();
   const { convertSpeed, speedUnit } = useSettings();
 
-  const { data: liveState } = useVehicleLiveState(vehicleId ?? undefined);
+  const { data: stateData } = useVehicleState(vehicleId ?? 0, { refetchInterval: 5_000 });
   const { data: cruiseSetObs } = useSignalObservations(
     vehicleId ?? undefined,
     { signal_name: 'CruiseSetSpeed', limit: 1 },
@@ -36,15 +36,16 @@ export default function AutopilotSection({ vehicleId }: AutopilotSectionProps) {
     limit: 1,
   });
 
-  const speedKph = liveState?.speed_kph ?? null;
+  const vehicleState = stateData?.state;
+  const speedKph = vehicleState?.speed ?? null;
   const cruiseSet = latestNumeric(cruiseSetObs);
   const followDistance = latestNumeric(followObs);
 
   const hasAny =
     speedKph != null || cruiseSet != null || followDistance != null;
 
-  // vehicle_live_state.speed_kph is km/h; convertSpeed expects mph. Convert
-  // kph → mph before running through the settings transformer.
+  // VehicleState.speed is km/h (from VehicleSpeed signal); convertSpeed
+  // expects mph. Convert kph → mph before running through the settings transformer.
   const currentSpeedDisplay =
     speedKph != null ? convertSpeed(speedKph / 1.609344) : null;
   const cruiseSetDisplay =

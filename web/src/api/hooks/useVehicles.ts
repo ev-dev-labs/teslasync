@@ -3,7 +3,7 @@ import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import type { Vehicle } from '@/types/vehicle';
-import type { VehicleState, VehicleLiveState } from '../types';
+import type { VehicleState } from '../types';
 export { deriveVehicleStatus as getVehicleStatus } from '../types';
 
 export const vehicleKeys = {
@@ -22,15 +22,9 @@ export function useVehicles() {
   });
 }
 
-export function useVehicleLiveState(vehicleId: number | string | undefined) {
-  return useQuery({
-    queryKey: ['vehicle-live-state', vehicleId],
-    queryFn: () => request<VehicleLiveState>(`/vehicles/${vehicleId}/live-state`),
-    enabled: vehicleId !== undefined && vehicleId !== null && vehicleId !== '',
-    staleTime: STALE_TIMES.REALTIME,
-    refetchInterval: INTERVALS.FAST,
-  });
-}
+// useVehicleLiveState removed — vehicle_live_state table dropped (phase-14/13).
+// The /vehicles/{id}/live-state endpoint no longer exists.
+// Use useVehicleState (reads from SignalStore) or useVehicleLive (SSE) instead.
 
 export function useVehicle(id: string) {
   return useQuery({

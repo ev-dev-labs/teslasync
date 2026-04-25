@@ -21,25 +21,11 @@ export interface Vehicle {
   updated_at: string
 }
 
-export interface VehicleLiveState {
-  vehicle_id: number
-  updated_at: string
-  battery_level: number | null
-  usable_battery_level: number | null
-  charge_state: string | null
-  shift_state: string | null
-  speed_kph: number | null
-  odometer_km: number | null
-  inside_temp_c: number | null
-  outside_temp_c: number | null
-  latitude: number | null
-  longitude: number | null
-  heading: number | null
-  is_locked: boolean | null
-  is_user_present: boolean | null
-}
+// VehicleLiveState removed — vehicle_live_state table dropped (phase-14/13).
+// Use VehicleState (from /vehicles/{id}/state via SignalStore) or
+// VehicleLiveState from hooks/useVehicleLive (SSE) instead.
 
-// Position mirrors the post-migration `positions` hypertable (Phase 3,
+// Position mirrors the post-migration `positions` hypertable(Phase 3,
 // migration 000142_baseline_typed). High-frequency GPS + motion sample.
 // Typed-only — no raw_json / JSONB carve-outs (ADR-001, ADR-005).
 // Matches Go model in internal/models/position.go.
@@ -494,10 +480,10 @@ export interface TirePressureSnapshot {
   created_at: string
 }
 
-// MotorSnapshot mirrors the post-migration `motor_snapshots` hypertable
-// (Phase 3, migration 000142_baseline_typed). Typed-only — no raw_json /
-// JSONB carve-outs (ADR-001, ADR-005). Matches Go model in
-// internal/models/motor.go.
+// MotorSnapshot matches the JSON response shape from /motor and /motor/latest.
+// Backed by signal_log after phase-14 rewire. The typed column set mirrors the
+// legacy motor_snapshots table; optional compat fields are kept for backward
+// compatibility.
 export interface MotorSnapshot {
   vehicle_id: number
   ts: string
@@ -521,10 +507,8 @@ export interface MotorSnapshot {
   gear?: string | null
 }
 
-// ClimateSnapshot mirrors the post-migration `climate_snapshots` hypertable
-// (Phase 3, migration 000142_baseline_typed). Typed-only — no raw_json /
-// JSONB carve-outs (ADR-001, ADR-005). Matches Go model in
-// internal/models/climate.go.
+// ClimateSnapshot matches the JSON response shape from /climate and /climate/latest.
+// Backed by signal_log after phase-14 rewire.
 export interface ClimateSnapshot {
   vehicle_id: number
   ts: string
@@ -1157,10 +1141,8 @@ export interface RouteDetailData {
 
 // === Charging Telemetry ===
 
-// ChargingTelemetry mirrors `charging_telemetry` hypertable (Phase 3, migration
-// 000142_baseline_typed). One row per 1 Hz sample while charging. Typed-only —
-// no raw_json / JSONB carve-outs (ADR-001, ADR-005). Matches Go model in
-// internal/models/charging_telemetry.go.
+// ChargingTelemetry matches the JSON response shape from /charging-telemetry
+// and /charging-telemetry/latest. Backed by signal_log after phase-14 rewire.
 export interface ChargingTelemetry {
   vehicle_id: number
   ts: string
