@@ -127,17 +127,42 @@ func (w *SignalHistoryWriter) flush(ctx context.Context) {
 	w.buffer = make([]SignalHistoryRow, 0, cap(rows))
 	w.mu.Unlock()
 
+	// Dedup within the batch: same (vehicle_id, signal, truncated-to-second timestamp)
+	// keeps last value. Prevents duplicate PK violations when two pods process the
+	// same MQTT message with slightly different NOW() calls within the same second.
+	seen := make(map[string]int, len(rows))
+	for i, r := range rows {
+		key := fmt.Sprintf("%d:%s:%d", r.VehicleID, r.Signal, r.CreatedAt.Unix())
+		seen[key] = i
+	}
+	if len(seen) < len(rows) {
+		deduped := make([]SignalHistoryRow, 0, len(seen))
+		for _, idx := range seen {
+			deduped = append(deduped, rows[idx])
+		}
+		log.Debug().Int("before", len(rows)).Int("after", len(deduped)).Msg("signal_log: in-memory dedup")
+		rows = deduped
+	}
+
 	flushFn := func() error {
 		return RetryOnTransient(ctx, "signal_log_flush", func(ctx context.Context) error {
-			_, copyErr := w.db.Pool.CopyFrom(ctx,
-				pgx.Identifier{"signal_log"},
-				[]string{"vehicle_id", "signal", "value_num", "value_str", "value_bool", "value_jsonb", "created_at"},
-				pgx.CopyFromSlice(len(rows), func(i int) ([]interface{}, error) {
-					r := rows[i]
-					return []interface{}{r.VehicleID, r.Signal, r.ValueNum, r.ValueStr, r.ValueBool, r.ValueJsonb, r.CreatedAt}, nil
-				}),
-			)
-			return copyErr
+			batch := &pgx.Batch{}
+			for _, r := range rows {
+				batch.Queue(
+					`INSERT INTO signal_log (vehicle_id, signal, value_num, value_str, value_bool, value_jsonb, created_at)
+					 VALUES ($1, $2, $3, $4, $5, $6, $7)
+					 ON CONFLICT (created_at, vehicle_id, signal) DO NOTHING`,
+					r.VehicleID, r.Signal, r.ValueNum, r.ValueStr, r.ValueBool, r.ValueJsonb, r.CreatedAt,
+				)
+			}
+			br := w.db.Pool.SendBatch(ctx, batch)
+			defer br.Close()
+			for range rows {
+				if _, err := br.Exec(); err != nil {
+					return fmt.Errorf("signal_log batch exec: %w", err)
+				}
+			}
+			return nil
 		})
 	}
 

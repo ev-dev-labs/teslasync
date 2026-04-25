@@ -1,0 +1,56 @@
+=== SURVEY ===
+Date: 2026-04-25
+Depends-on: phase-14/00-hypertable (commit 23515e00)
+
+Files examined:
+  - internal/database/signal_history_writer.go  (flush() uses CopyFrom into signal_log)
+  - internal/mqtt/mqtt.go                       (NewClient appends randomSuffix to ClientID)
+  - internal/mqtt/subscriber.go                 (Start() subscribes to {topicBase}/+/v/#)
+  - internal/database/migrations/000043_signal_history_to_signal_log.up.sql
+    → PK is (created_at, vehicle_id, signal) — already provides unique constraint
+
+=== REASONING ===
+Problem: During rolling deploys, two pods subscribe to the same MQTT topic.
+Both receive the same signal and INSERT into signal_log. If their NOW() calls
+differ by microseconds, both rows insert — causing SUM/AVG double-counting.
+
+Solution (two layers):
+1. In-memory dedup: Before batch insert, dedup rows with the same
+   (vehicle_id, signal, Unix-second timestamp). Last value wins. This prevents
+   most duplicate INSERTs from reaching the DB at all.
+2. ON CONFLICT DO NOTHING: Replace CopyFrom (which cannot express ON CONFLICT)
+   with pgx.Batch of individual INSERT statements using
+   ON CONFLICT (created_at, vehicle_id, signal) DO NOTHING.
+   pgx.SendBatch pipelines all queries in a single round-trip — efficient.
+3. MQTT comment: Added documentation about MQTT v5 shared subscriptions
+   ($share/teslasync/...) as a future upgrade path to eliminate duplicates
+   at the broker level.
+
+No new migration needed — PK from prompt 00 already serves as unique constraint.
+
+=== CHANGES ===
+1. internal/database/signal_history_writer.go
+   - Added in-memory dedup map before batch insert (lines 130-145)
+   - Replaced CopyFrom with pgx.Batch + INSERT ON CONFLICT DO NOTHING (lines 147-167)
+
+2. internal/mqtt/subscriber.go
+   - Added comment block near Subscribe() explaining duplicate delivery during
+     rolling deploys and the MQTT v5 shared subscription upgrade path (lines 76-85)
+
+=== GATE ===
+Build:
+  $ go build ./...
+  EXIT=0 ✓
+
+Dedup test:
+  $ docker exec teslasync-postgres psql -U teslasync -d teslasync -c "
+    INSERT INTO signal_log (...) VALUES (NOW(), 1, 'TestDedup', 42) ON CONFLICT DO NOTHING;
+    INSERT INTO signal_log (...) VALUES (NOW(), 1, 'TestDedup', 42) ON CONFLICT DO NOTHING;
+    SELECT COUNT(*) FROM signal_log WHERE signal = 'TestDedup';
+    DELETE FROM signal_log WHERE signal = 'TestDedup';"
+  Result: INSERT 0 1 / INSERT 0 0 / count=1 / DELETE 1
+  EXIT=0 ✓ (second insert rejected, count is 1 not 2)
+
+=== COMMIT ===
+EXIT=0
+STATUS=DONE
