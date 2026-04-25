@@ -17,14 +17,18 @@ type AnalyticsHandler struct {
 	driveRepo      *database.DriveRepo
 	chargingRepo   *database.ChargingRepo
 	positionRepo   *database.PositionRepo
+	db             *database.DB
+	signalLogReader *database.SignalLogReader
 }
 
-func NewAnalyticsHandler(db *database.DB) *AnalyticsHandler {
+func NewAnalyticsHandler(db *database.DB, slr *database.SignalLogReader) *AnalyticsHandler {
 	return &AnalyticsHandler{
-		vehicleRepo:  database.NewVehicleRepo(db),
-		driveRepo:    database.NewDriveRepo(db),
-		chargingRepo: database.NewChargingRepo(db),
-		positionRepo: database.NewPositionRepo(db),
+		vehicleRepo:     database.NewVehicleRepo(db),
+		driveRepo:       database.NewDriveRepo(db),
+		chargingRepo:    database.NewChargingRepo(db),
+		positionRepo:    database.NewPositionRepo(db),
+		db:              db,
+		signalLogReader: slr,
 	}
 }
 
@@ -120,8 +124,23 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 			log.Error().Err(err).Int64("vehicleID", v.ID).Msg("analytics: failed to get charging sessions")
 			sessions = nil
 		}
-		// Battery health trend: derive from signal_log in future update
-		// TODO: implement via SignalLogReader.SignalTracePivot for BatteryLevel
+		// Per-vehicle battery health from latest signal snapshot
+		if h.signalLogReader != nil {
+			snap, snapErr := h.signalLogReader.SnapshotAt(r.Context(), v.ID, time.Now())
+			if snapErr == nil && snap != nil {
+				if bl, ok := toFloatOk(snap["BatteryLevel"]); ok && bl > 0 {
+					const nomCap = 75.0
+					const nomRange = 531.0
+					batteryTrend = append(batteryTrend, batteryPoint{
+						Date:        time.Now().Format("2006-01-02"),
+						HealthScore: bl,
+						CapacityKWh: bl * nomCap / 100,
+						Degradation: 100 - bl,
+						RangeKm:     bl * nomRange / 100,
+					})
+				}
+			}
+		}
 
 		var dist float64
 		var driveCount int
@@ -265,8 +284,38 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 		fleetDrives += driveCount
 		fleetSessions += len(sessions)
 
-		// Battery trend — TODO: derive from signal_log
-		// for _, bs := range batSnaps { ... }
+		// Battery trend from cagg_battery_daily
+		if h.db != nil {
+			const btCap = 75.0
+			const btRange = 531.0
+			btRows, btErr := h.db.Pool.Query(r.Context(),
+				`SELECT bucket, end_soc, min_soc, max_soc
+				 FROM cagg_battery_daily
+				 WHERE vehicle_id = $1 AND bucket >= $2
+				 ORDER BY bucket ASC`,
+				v.ID, cutoff)
+			if btErr == nil {
+				for btRows.Next() {
+					var bucket time.Time
+					var endSOC, minSOC, maxSOC *float64
+					if scanErr := btRows.Scan(&bucket, &endSOC, &minSOC, &maxSOC); scanErr != nil {
+						continue
+					}
+					soc := 0.0
+					if endSOC != nil {
+						soc = *endSOC
+					}
+					batteryTrend = append(batteryTrend, batteryPoint{
+						Date:        bucket.Format("2006-01-02"),
+						HealthScore: soc,
+						CapacityKWh: soc * btCap / 100,
+						Degradation: 100 - soc,
+						RangeKm:     soc * btRange / 100,
+					})
+				}
+				btRows.Close()
+			}
+		}
 	}
 
 	fleetEffic := 0.0
