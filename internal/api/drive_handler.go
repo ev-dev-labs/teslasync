@@ -563,7 +563,8 @@ func (h *DriveHandler) Dynamics(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// AccelerationDistribution returns raw acceleration G readings for histogram analysis.
+// AccelerationDistribution computes acceleration G readings from consecutive
+// VehicleSpeed signals in signal_log for histogram analysis.
 func (h *DriveHandler) AccelerationDistribution(w http.ResponseWriter, r *http.Request) {
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {
@@ -577,19 +578,22 @@ func (h *DriveHandler) AccelerationDistribution(w http.ResponseWriter, r *http.R
 	}
 
 	startTime, endTime := parseDateRange(r)
+	if startTime.IsZero() {
+		startTime = time.Now().AddDate(0, 0, -30)
+	}
+	if endTime.IsZero() {
+		endTime = time.Now()
+	}
 
 	ctx := r.Context()
-	query := `SELECT acceleration_gs FROM fn_driving_acceleration_distribution($1, $2, $3)`
 
-	var pStart, pEnd interface{}
-	if !startTime.IsZero() {
-		pStart = startTime
-	}
-	if !endTime.IsZero() {
-		pEnd = endTime
-	}
-
-	rows, err := h.db.Pool.Query(ctx, query, vehicleID, pStart, pEnd)
+	rows, err := h.db.Pool.Query(ctx, `
+		SELECT created_at, value_num
+		FROM signal_log
+		WHERE vehicle_id = $1 AND signal = 'VehicleSpeed'
+		  AND value_num IS NOT NULL
+		  AND created_at >= $2 AND created_at <= $3
+		ORDER BY created_at ASC`, vehicleID, startTime, endTime)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("acceleration distribution: query failed")
 		writeError(w, http.StatusInternalServerError, "failed to get acceleration distribution")
@@ -597,19 +601,37 @@ func (h *DriveHandler) AccelerationDistribution(w http.ResponseWriter, r *http.R
 	}
 	defer rows.Close()
 
-	values := make([]float64, 0)
+	type speedPoint struct {
+		ts    time.Time
+		speed float64
+	}
+	var points []speedPoint
 	for rows.Next() {
-		var g float64
-		if err := rows.Scan(&g); err != nil {
+		var p speedPoint
+		if err := rows.Scan(&p.ts, &p.speed); err != nil {
 			log.Warn().Err(err).Msg("acceleration distribution: scan error")
 			continue
 		}
-		values = append(values, g)
+		points = append(points, p)
 	}
 	if err := rows.Err(); err != nil {
 		log.Error().Err(err).Msg("acceleration distribution: rows iteration error")
 		writeError(w, http.StatusInternalServerError, "failed to read acceleration data")
 		return
+	}
+
+	// Compute acceleration in G from consecutive speed pairs.
+	// For each pair: accel_g = (speed2 - speed1) / dt_seconds / 9.81
+	// Only use closely-spaced readings (gap < 10s) to avoid artifacts.
+	values := make([]float64, 0, len(points))
+	for i := 0; i < len(points)-1; i++ {
+		dt := points[i+1].ts.Sub(points[i].ts).Seconds()
+		if dt > 0 && dt < 10 {
+			dv := points[i+1].speed - points[i].speed
+			accelG := dv / dt / 9.81
+			accelG = math.Round(accelG*1000) / 1000
+			values = append(values, accelG)
+		}
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{

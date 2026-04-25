@@ -50,26 +50,25 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// Speed distribution from drive telemetry
+	// Speed distribution from signal_log (VehicleSpeed)
 	distRows, err := h.db.Pool.Query(ctx, `
 		SELECT
 		  CASE
-		    WHEN speed < 15 THEN '0-15'
-		    WHEN speed < 30 THEN '15-30'
-		    WHEN speed < 45 THEN '30-45'
-		    WHEN speed < 60 THEN '45-60'
-		    WHEN speed < 75 THEN '60-75'
-		    WHEN speed < 90 THEN '75-90'
-		    WHEN speed < 105 THEN '90-105'
-		    ELSE '105+'
+		    WHEN value_num < 15 THEN '0-15'
+		    WHEN value_num < 30 THEN '15-30'
+		    WHEN value_num < 45 THEN '30-45'
+		    WHEN value_num < 60 THEN '45-60'
+		    WHEN value_num < 75 THEN '60-75'
+		    ELSE '75+'
 		  END AS speed_bucket,
 		  COUNT(*) AS readings,
-		  COALESCE(AVG(power),0) AS avg_power_kw
-		FROM drive_telemetry_readings
-		WHERE vehicle_id = $1 AND speed IS NOT NULL AND speed > 0
-		  AND created_at > NOW() - interval '30 days'
+		  0 AS avg_power_kw
+		FROM signal_log
+		WHERE vehicle_id = $1 AND signal = 'VehicleSpeed'
+		  AND value_num IS NOT NULL AND value_num > 0
+		  AND created_at > NOW() - INTERVAL '30 days'
 		GROUP BY speed_bucket
-		ORDER BY MIN(speed)`, vehicleID)
+		ORDER BY MIN(value_num)`, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("speed profile: failed to query distribution")
 		writeError(w, http.StatusInternalServerError, "failed to query speed distribution")
