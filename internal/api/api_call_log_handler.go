@@ -25,10 +25,11 @@ func (h *APICallLogHandler) List(w http.ResponseWriter, r *http.Request) {
 	method := r.URL.Query().Get("method")
 	status := r.URL.Query().Get("status")
 	endpoint := r.URL.Query().Get("endpoint")
+	service := r.URL.Query().Get("service")
 	start := r.URL.Query().Get("start")
 	end := r.URL.Query().Get("end")
 
-	logs, total, err := h.repo.GetAll(r.Context(), limit, offset, method, status, endpoint, start, end)
+	logs, total, err := h.repo.GetAll(r.Context(), limit, offset, method, status, endpoint, service, start, end)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list api call logs")
 		writeError(w, http.StatusInternalServerError, "failed to list api call logs")

@@ -27,7 +27,7 @@ func (r *APICallLogRepo) Create(ctx context.Context, l *models.APICallLog) error
 	return r.db.Pool.QueryRow(ctx, query, now, l.VehicleID, l.Service, l.HTTPMethod, l.Endpoint, l.StatusCode, l.DurationMs, l.ErrorMessage, l.RateLimited).Scan(&l.ID)
 }
 
-func (r *APICallLogRepo) GetAll(ctx context.Context, limit, offset int, method, statusFilter, endpoint, startDate, endDate string) ([]*models.APICallLog, int, error) {
+func (r *APICallLogRepo) GetAll(ctx context.Context, limit, offset int, method, statusFilter, endpoint, service, startDate, endDate string) ([]*models.APICallLog, int, error) {
 	// Build dynamic query with filters
 	query := `SELECT id, ts, vehicle_id, service, http_method, endpoint, status_code, duration_ms, error_message, rate_limited FROM api_call_logs WHERE 1=1`
 	countQuery := `SELECT COUNT(*) FROM api_call_logs WHERE 1=1`
@@ -60,6 +60,12 @@ func (r *APICallLogRepo) GetAll(ctx context.Context, limit, offset int, method, 
 		query += ` AND endpoint ILIKE $` + itoa(argIdx)
 		countQuery += ` AND endpoint ILIKE $` + itoa(argIdx)
 		args = append(args, "%"+endpoint+"%")
+		argIdx++
+	}
+	if service != "" {
+		query += ` AND service = $` + itoa(argIdx)
+		countQuery += ` AND service = $` + itoa(argIdx)
+		args = append(args, service)
 		argIdx++
 	}
 	if startDate != "" {
@@ -146,6 +152,26 @@ func (r *APICallLogRepo) GetStats(ctx context.Context) (map[string]interface{}, 
 		methodCounts[method] = count
 	}
 	stats["by_method"] = methodCounts
+
+	// Calls by service
+	svcRows, err := r.db.Pool.Query(ctx, `SELECT service, COUNT(*) as count FROM api_call_logs GROUP BY service ORDER BY count DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer svcRows.Close()
+	serviceCounts := make(map[string]int)
+	for svcRows.Next() {
+		var svc string
+		var count int
+		if err := svcRows.Scan(&svc, &count); err != nil {
+			return nil, err
+		}
+		serviceCounts[svc] = count
+	}
+	if err := svcRows.Err(); err != nil {
+		return nil, err
+	}
+	stats["by_service"] = serviceCounts
 
 	return stats, nil
 }
