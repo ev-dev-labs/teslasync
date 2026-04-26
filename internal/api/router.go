@@ -311,6 +311,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
+		// ForwardAuth: protect all /api/v1/* routes via reverse-proxy header.
+		// No-op when ForwardAuthHeader is empty (dev mode / no auth configured).
+		r.Use(ForwardAuthMiddleware(cfg.Auth.ForwardAuthHeader))
+
 		// Auth (stricter rate limits to prevent brute force)
 		r.Route("/auth", func(r chi.Router) {
 			r.Use(httprate.LimitByIP(10, 1*time.Minute))
