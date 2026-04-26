@@ -460,6 +460,57 @@ func (r *SignalLogReader) SignalTracePivotFlat(
 	return result, nil
 }
 
+// BrickVoltageHistoryEntry represents one hourly-bucketed row of brick voltage data.
+type BrickVoltageHistoryEntry struct {
+	Bucket     time.Time
+	MinVoltage *float64
+	MaxVoltage *float64
+	AvgMax     *float64
+	AvgMin     *float64
+}
+
+// BrickVoltageHistory returns hourly brick voltage aggregates from signal_log
+// for the given vehicle since the provided timestamp.
+func (r *SignalLogReader) BrickVoltageHistory(ctx context.Context, vehicleID int64, since time.Time) ([]BrickVoltageHistoryEntry, error) {
+	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
+	defer cancel()
+
+	query := `SELECT
+		time_bucket('1 hour', created_at) AS bucket,
+		MIN(value_num) FILTER (WHERE signal = 'BrickVoltageMin') AS min_voltage,
+		MAX(value_num) FILTER (WHERE signal = 'BrickVoltageMax') AS max_voltage,
+		AVG(value_num) FILTER (WHERE signal = 'BrickVoltageMax') AS avg_max,
+		AVG(value_num) FILTER (WHERE signal = 'BrickVoltageMin') AS avg_min
+	FROM signal_log
+	WHERE vehicle_id = $1
+	  AND signal IN ('BrickVoltageMin', 'BrickVoltageMax')
+	  AND created_at >= $2
+	GROUP BY bucket
+	ORDER BY bucket`
+
+	rows, err := r.db.Pool.Query(ctx, query, vehicleID, since)
+	if err != nil {
+		return nil, fmt.Errorf("brick voltage history for vehicle %d: %w", vehicleID, err)
+	}
+	defer rows.Close()
+
+	var entries []BrickVoltageHistoryEntry
+	for rows.Next() {
+		var e BrickVoltageHistoryEntry
+		if err := rows.Scan(&e.Bucket, &e.MinVoltage, &e.MaxVoltage, &e.AvgMax, &e.AvgMin); err != nil {
+			return nil, fmt.Errorf("brick voltage history scan: %w", err)
+		}
+		entries = append(entries, e)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if entries == nil {
+		entries = []BrickVoltageHistoryEntry{}
+	}
+	return entries, nil
+}
+
 // decodeValue applies the canonical priority for multi-typed signal values:
 //
 //	value_num (float64) → value_bool (bool) → value_jsonb (map) → value_str (string).
