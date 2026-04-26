@@ -151,9 +151,10 @@ func (r RedisConfig) Addr() string {
 }
 
 type AuthConfig struct {
-	Enabled        bool
-	JWTSecret      string
-	AuthentikURL   string // Authentik JWKS URL for SSE token validation (RS256)
+	Enabled          bool
+	JWTSecret        string
+	ForwardAuthHeader string // Header set by reverse proxy auth (e.g. X-Forwarded-User)
+	AuthentikURL     string // Authentik JWKS URL for SSE token validation (RS256)
 	AuthentikHMACKey string // Authentik client secret for HS256 token validation
 }
 
@@ -227,9 +228,10 @@ func Load() (*Config, error) {
 		},
 
 		Auth: AuthConfig{
-			Enabled:        envBool("AUTH_ENABLED", false),
-			JWTSecret:      envStr("AUTH_JWT_SECRET", ""),
-			AuthentikURL:   envStr("AUTHENTIK_URL", ""),
+			Enabled:          envBool("AUTH_ENABLED", false),
+			JWTSecret:        envStr("AUTH_JWT_SECRET", ""),
+			ForwardAuthHeader: envStr("FORWARD_AUTH_HEADER", ""),
+			AuthentikURL:     envStr("AUTHENTIK_URL", ""),
 			AuthentikHMACKey: envStr("AUTHENTIK_HMAC_KEY", ""),
 		},
 
