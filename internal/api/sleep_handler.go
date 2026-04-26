@@ -62,6 +62,7 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 	for rows.Next() {
 		var e stateEntry
 		if err := rows.Scan(&e.State, &e.Count, &e.TotalMinutes); err != nil {
+			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("sleep: state distribution row scan failed")
 			continue
 		}
 		totalMinutesAll += e.TotalMinutes
@@ -112,6 +113,7 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 		var g sentryGroup
 		var avgDrain, avgDur, avgBat, avgTemp *float64
 		if err := sentryRows.Scan(&g.SentryMode, &g.Count, &avgDrain, &avgDur, &avgBat, &avgTemp); err != nil {
+			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("sleep: sentry comparison row scan failed")
 			continue
 		}
 		if avgDrain != nil {
@@ -171,6 +173,7 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 		var startDate, endDate interface{}
 		if err := eventRows.Scan(&e.ID, &startDate, &endDate, &e.DurationHours, &e.BatteryLost,
 			&e.DrainRate, &e.SentryMode, &e.OutsideTemp, &e.StartBattery, &e.EndBattery); err != nil {
+			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("sleep: drain event row scan failed")
 			continue
 		}
 		if t, ok := startDate.(interface{ Format(string) string }); ok {

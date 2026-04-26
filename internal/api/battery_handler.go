@@ -5,6 +5,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/rs/zerolog/log"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
@@ -26,7 +29,8 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Derive battery health from signal_log (no more battery_snapshots table)
-	var healthScore, capacityKWh, degradation, estRange, avgTemp float64
+	var healthScore, capacityKWh, degradation, estRange float64
+	var avgTemp *float64
 	var cycleCount int
 
 	{
@@ -50,14 +54,27 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 					estRange = v
 				}
 			}
+			// Derive avgTemp from ModuleTempMax/ModuleTempMin — nil means "no data"
+			if valMax, err := h.signalLogReader.SignalAt(r.Context(), vehicleID, "ModuleTempMax", now); err == nil && valMax != nil {
+				if tempMax, ok := toFloatOk(valMax); ok {
+					if valMin, errMin := h.signalLogReader.SignalAt(r.Context(), vehicleID, "ModuleTempMin", now); errMin == nil && valMin != nil {
+						if tempMin, okMin := toFloatOk(valMin); okMin {
+							avg := (tempMax + tempMin) / 2
+							avgTemp = &avg
+						}
+					}
+				}
+			}
 		}
 
 		// Count charge cycles from charging sessions (sum of SOC deltas / 100)
 		var totalSOCDelta *float64
-		_ = h.db.Pool.QueryRow(r.Context(),
+		if err := h.db.Pool.QueryRow(r.Context(),
 			`SELECT SUM(GREATEST(end_battery_pct - start_battery_pct, 0)) 
 			 FROM charging_sessions WHERE vehicle_id = $1 AND end_battery_pct > start_battery_pct`,
-			vehicleID).Scan(&totalSOCDelta)
+			vehicleID).Scan(&totalSOCDelta); err != nil && err != pgx.ErrNoRows {
+			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("battery: charge cycle SOC delta query failed")
+		}
 		if totalSOCDelta != nil {
 			cycleCount = int(*totalSOCDelta / 100)
 		}
@@ -97,6 +114,7 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 			var bucket time.Time
 			var endSOC, minSOC, maxSOC *float64
 			if scanErr := trendRows.Scan(&bucket, &endSOC, &minSOC, &maxSOC); scanErr != nil {
+				log.Warn().Err(scanErr).Int64("vehicleID", vehicleID).Msg("battery: trend row scan failed")
 				continue
 			}
 			soc := 0.0

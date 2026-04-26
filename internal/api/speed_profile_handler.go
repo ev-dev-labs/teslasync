@@ -50,25 +50,25 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// Speed distribution from signal_log (VehicleSpeed)
+	// Speed distribution from drives (avg_speed_mph + avg_power_kw)
 	distRows, err := h.db.Pool.Query(ctx, `
 		SELECT
 		  CASE
-		    WHEN value_num < 15 THEN '0-15'
-		    WHEN value_num < 30 THEN '15-30'
-		    WHEN value_num < 45 THEN '30-45'
-		    WHEN value_num < 60 THEN '45-60'
-		    WHEN value_num < 75 THEN '60-75'
+		    WHEN avg_speed_mph < 15 THEN '0-15'
+		    WHEN avg_speed_mph < 30 THEN '15-30'
+		    WHEN avg_speed_mph < 45 THEN '30-45'
+		    WHEN avg_speed_mph < 60 THEN '45-60'
+		    WHEN avg_speed_mph < 75 THEN '60-75'
 		    ELSE '75+'
 		  END AS speed_bucket,
 		  COUNT(*) AS readings,
-		  0 AS avg_power_kw
-		FROM signal_log
-		WHERE vehicle_id = $1 AND signal = 'VehicleSpeed'
-		  AND value_num IS NOT NULL AND value_num > 0
-		  AND created_at > NOW() - INTERVAL '30 days'
+		  AVG(avg_power_kw) AS avg_power_kw
+		FROM drives
+		WHERE vehicle_id = $1
+		  AND avg_speed_mph IS NOT NULL AND avg_speed_mph > 0
+		  AND start_ts > NOW() - INTERVAL '30 days'
 		GROUP BY speed_bucket
-		ORDER BY MIN(value_num)`, vehicleID)
+		ORDER BY MIN(avg_speed_mph)`, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("speed profile: failed to query distribution")
 		writeError(w, http.StatusInternalServerError, "failed to query speed distribution")
@@ -79,12 +79,15 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 	var distribution []speedBucket
 	for distRows.Next() {
 		var b speedBucket
-		if err := distRows.Scan(&b.SpeedBucket, &b.Readings, &b.AvgPowerKW); err != nil {
+		var avgPower *float64
+		if err := distRows.Scan(&b.SpeedBucket, &b.Readings, &avgPower); err != nil {
 			log.Error().Err(err).Msg("speed profile: scan distribution row")
 			writeError(w, http.StatusInternalServerError, "failed to scan speed distribution")
 			return
 		}
-		b.AvgPowerKW = math.Round(b.AvgPowerKW*100) / 100
+		if avgPower != nil {
+			b.AvgPowerKW = math.Round(*avgPower*100) / 100
+		}
 		distribution = append(distribution, b)
 	}
 	if err := distRows.Err(); err != nil {

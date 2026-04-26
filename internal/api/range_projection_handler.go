@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -615,17 +616,21 @@ func (h *RangeProjectionHandler) GetByVehicle(w http.ResponseWriter, r *http.Req
 
 	// Cycle estimate
 	var totalCycles int
-	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT COUNT(*) FROM charging_sessions WHERE vehicle_id = $1`, vehicleID).Scan(&totalCycles)
+	if err := h.db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM charging_sessions WHERE vehicle_id = $1`, vehicleID).Scan(&totalCycles); err != nil && err != pgx.ErrNoRows {
+		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: charging cycle count query failed")
+	}
 
 	// Avg daily km
 	var avgDailyKm float64
-	_ = h.db.Pool.QueryRow(ctx, `
+	if err := h.db.Pool.QueryRow(ctx, `
 		SELECT COALESCE(AVG(daily_km), 0) FROM (
 			SELECT DATE(start_ts) AS d, SUM(distance_mi) AS daily_km
 			FROM drives WHERE vehicle_id = $1 AND distance_mi > 0
 			GROUP BY DATE(start_ts)
-		) sub`, vehicleID).Scan(&avgDailyKm)
+		) sub`, vehicleID).Scan(&avgDailyKm); err != nil && err != pgx.ErrNoRows {
+		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: avg daily km query failed")
+	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"current_range_km":   math.Round(currentRange*10) / 10,

@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
@@ -139,12 +140,14 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	// Lifetime regen/drive energy — not available in current schema, use
 	// aggregated cagg_fleet_stats regen totals when available.
 	var totalRegenKWh, totalDriveKWh float64
-	_ = h.db.Pool.QueryRow(ctx, `
+	if err := h.db.Pool.QueryRow(ctx, `
 		SELECT
 			COALESCE(SUM(total_regen_kwh), 0),
 			COALESCE(SUM(total_energy_kwh), 0)
 		FROM cagg_fleet_stats
-		WHERE vehicle_id = $1`, vehicleID).Scan(&totalRegenKWh, &totalDriveKWh)
+		WHERE vehicle_id = $1`, vehicleID).Scan(&totalRegenKWh, &totalDriveKWh); err != nil && err != pgx.ErrNoRows {
+		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("regen: cagg_fleet_stats query failed")
+	}
 
 	regenRatio := 0.0
 	if totalDriveKWh > 0 {
