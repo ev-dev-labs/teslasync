@@ -68,7 +68,7 @@ jobs:
           if [ "${{ github.ref_name }}" != "main" ]; then
             BRANCH=$(echo "${{ github.ref_name }}" | sed 's/[^a-zA-Z0-9-]/-/g' | sed 's/--*/-/g' | sed 's/^-//;s/-$//')
             SHORT_SHA=$(git rev-parse --short HEAD)
-            VERSION="${BASE_VERSION}-rc.${BRANCH}.${SHORT_SHA}"
+            VERSION="${BASE_VERSION}-rc.${BRANCH}.g${SHORT_SHA}"
             NEW_TAG="v${VERSION}"
             IS_PRERELEASE="true"
           else
