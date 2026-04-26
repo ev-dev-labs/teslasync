@@ -37,6 +37,7 @@ data:
   WORKER_POLL_INTERVAL: {{ .Values.config.pollInterval | quote }}
   WORKER_SLEEP_POLL_MULT: {{ .Values.config.sleepPollMultiplier | default 4 | quote }}
   TESLASYNC_LOG_LEVEL: {{ .Values.config.logLevel | quote }}
+  FORWARD_AUTH_HEADER: {{ .Values.config.forwardAuthHeader | quote }}
   TESLASYNC_PORT: {{ .Values.service.port | quote }}
   HELM_CHART_VERSION: {{ .Chart.Version | quote }}
   {{- if .Values.config.webEndpoint }}

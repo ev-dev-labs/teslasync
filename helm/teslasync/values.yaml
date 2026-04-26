@@ -303,7 +303,7 @@ encryption:
 # The existing Secret must contain these keys:
 #   TESLA_CLIENT_ID, TESLA_CLIENT_SECRET, DATABASE_PASS,
 #   REDIS_PASSWORD, ENCRYPTION_KEY, GAS_PRICE_API_KEY,
-#   AUTHENTIK_HMAC_KEY, AZURE_MAPS_API_KEY, GOOGLE_MAPS_API_KEY, MONGODB_URI
+#   AZURE_MAPS_API_KEY, GOOGLE_MAPS_API_KEY, MONGODB_URI
 # ─────────────────────────────────────────────────────────────────────────────
 secrets:
   existingSecret: ""
@@ -450,7 +450,7 @@ ingressRoute:
   annotations: {}
   entryPoints:
     - websecure
-  # SSE bypass route — auto-added before catch-all when config.authentikURL is set.
+  # SSE bypass route — auto-added before catch-all when a ForwardAuth provider is used.
   # Bypasses ForwardAuth for /api/v1/events so the Go backend validates JWT directly.
   sseBypass:
     match: Host(`teslasync.example.com`) && PathPrefix(`/api/v1/events`)
@@ -539,6 +539,15 @@ config:
   # Priority: Google Maps → Azure Maps → Nominatim (free).
   azureMaps:
     apiKey: ""
+
+  # ── Forward Auth ─────────────────────────────────────────────────────
+  # Header set by your ForwardAuth provider. Examples:
+  #   Authentik:     X-Authentik-Username
+  #   Authelia:      Remote-User
+  #   oauth2-proxy:  X-Auth-Request-User
+  #   Keycloak:      X-Forwarded-User
+  #   Empty:         disables auth (dev mode)
+  forwardAuthHeader: ""
 
   # ── Authentik SSE Auth (DEPRECATED) ──────────────────────────────────
   # DEPRECATED: Removed in Phase 18 auth unification. Use forwardAuthHeader instead.
