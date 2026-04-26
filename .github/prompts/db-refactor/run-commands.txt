@@ -155,6 +155,12 @@
 # silent write-buffer drops, competing config systems, critical-path test coverage.
 & "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase phase-17-security-reliability
 
+# ── Phase 18 — Auth Unification (7 prompts) ──
+# Replace scattered auth (Authentik JWT exchange, API key query params, frontend SSE
+# token fetch) with provider-agnostic ForwardAuth header check. One env var:
+# FORWARD_AUTH_HEADER. Works with Authentik, Authelia, oauth2-proxy, Keycloak, etc.
+& "D:\repos\teslasync\.github\prompts\db-refactor\run-prompts.ps1" -Phase phase-18-auth-unification
+
 # ── Future-1 — Unit normalization (19 prompts) ──
 # Stamps per-row unit columns (distance_unit, temp_unit, pressure_unit) on all
 # measurement tables so historical data is self-describing. Frontend converts
