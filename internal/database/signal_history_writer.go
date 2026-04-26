@@ -77,8 +77,9 @@ func NewSignalHistoryWriter(db *DB, flushInterval time.Duration, rdb *redis.Clie
 
 // Append buffers signal values for the next batch flush. Non-blocking.
 func (w *SignalHistoryWriter) Append(vehicleID int64, signals map[string]interface{}) {
-	now := time.Now().UTC()
+	base := time.Now().UTC()
 	w.mu.Lock()
+	offset := 0
 	for name, value := range signals {
 		if value == nil {
 			continue
@@ -92,7 +93,7 @@ func (w *SignalHistoryWriter) Append(vehicleID int64, signals map[string]interfa
 			}
 		}
 
-		row := SignalHistoryRow{VehicleID: vehicleID, Signal: name, CreatedAt: now}
+		row := SignalHistoryRow{VehicleID: vehicleID, Signal: name}
 		switch v := value.(type) {
 		case float64:
 			row.ValueNum = &v
@@ -117,15 +118,17 @@ func (w *SignalHistoryWriter) Append(vehicleID int64, signals map[string]interfa
 					latVal := lat
 					w.buffer = append(w.buffer, SignalHistoryRow{
 						VehicleID: vehicleID, Signal: latName,
-						ValueNum: &latVal, CreatedAt: now,
+						ValueNum: &latVal, CreatedAt: base.Add(time.Duration(offset) * time.Nanosecond),
 					})
+					offset++
 				}
 				if lon, lonOk := v["longitude"].(float64); lonOk {
 					lonVal := lon
 					w.buffer = append(w.buffer, SignalHistoryRow{
 						VehicleID: vehicleID, Signal: lonName,
-						ValueNum: &lonVal, CreatedAt: now,
+						ValueNum: &lonVal, CreatedAt: base.Add(time.Duration(offset) * time.Nanosecond),
 					})
+					offset++
 				}
 				continue
 			}
@@ -140,7 +143,9 @@ func (w *SignalHistoryWriter) Append(vehicleID int64, signals map[string]interfa
 		default:
 			continue
 		}
+		row.CreatedAt = base.Add(time.Duration(offset) * time.Nanosecond)
 		w.buffer = append(w.buffer, row)
+		offset++
 	}
 	// Enforce buffer capacity — drop oldest rows on overflow
 	if len(w.buffer) > maxBufferSize {
@@ -303,7 +308,9 @@ func (w *SignalHistoryWriter) flush(ctx context.Context) {
 				batch.Queue(
 					`INSERT INTO signal_log (vehicle_id, signal, value_num, value_str, value_bool, value_jsonb, created_at)
 					 VALUES ($1, $2, $3, $4, $5, $6, $7)
-					 ON CONFLICT (created_at, vehicle_id, signal) DO NOTHING`,
+					 ON CONFLICT (created_at, vehicle_id, signal) DO UPDATE SET
+					 value_num = EXCLUDED.value_num, value_str = EXCLUDED.value_str,
+					 value_bool = EXCLUDED.value_bool, value_jsonb = EXCLUDED.value_jsonb`,
 					r.VehicleID, r.Signal, r.ValueNum, r.ValueStr, r.ValueBool, r.ValueJsonb, r.CreatedAt,
 				)
 			}
