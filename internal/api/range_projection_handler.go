@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
@@ -116,7 +118,7 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	// Recent driving efficiency
 	var avgEffWhKm *float64
-	_ = h.db.Pool.QueryRow(ctx, `
+	if err := h.db.Pool.QueryRow(ctx, `
 		SELECT AVG(
 			CASE WHEN distance_mi > 0 THEN
 				COALESCE(energy_used_kwh, 0) * 1000
@@ -125,21 +127,27 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 		)
 		FROM drives
 		WHERE vehicle_id = $1 AND distance_mi > 1
-		ORDER BY start_ts DESC LIMIT 30`, vehicleID).Scan(&avgEffWhKm)
+		ORDER BY start_ts DESC LIMIT 30`, vehicleID).Scan(&avgEffWhKm); err != nil {
+		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: avg efficiency query failed")
+	}
 
 	var avgTempC *float64
-	_ = h.db.Pool.QueryRow(ctx, `
+	if err := h.db.Pool.QueryRow(ctx, `
 		SELECT AVG(outside_temp_avg_c)
 		FROM drives
 		WHERE vehicle_id = $1 AND outside_temp_avg_c IS NOT NULL
-		  AND start_ts > NOW() - INTERVAL '30 days'`, vehicleID).Scan(&avgTempC)
+		  AND start_ts > NOW() - INTERVAL '30 days'`, vehicleID).Scan(&avgTempC); err != nil {
+		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: avg temp query failed")
+	}
 
 	var avgSpeedKmh *float64
-	_ = h.db.Pool.QueryRow(ctx, `
+	if err := h.db.Pool.QueryRow(ctx, `
 		SELECT AVG(avg_speed_mph)
 		FROM drives
 		WHERE vehicle_id = $1 AND avg_speed_mph IS NOT NULL AND avg_speed_mph > 0
-		  AND start_ts > NOW() - INTERVAL '30 days'`, vehicleID).Scan(&avgSpeedKmh)
+		  AND start_ts > NOW() - INTERVAL '30 days'`, vehicleID).Scan(&avgSpeedKmh); err != nil {
+		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: avg speed query failed")
+	}
 
 	// ── Efficiency matrix ────────────────────────────────
 	matrix := h.buildEfficiencyMatrix(ctx, vehicleID)
@@ -191,15 +199,13 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	effFactor = math.Max(0.3, math.Min(1.3, effFactor+totalImpact/100))
 
 	projectedRange := rated * effFactor
+	adjustedRange := rated // rated adjusted for current SOC
 	if bl > 0 && bl < 100 {
-		rated = rated * bl / 100
+		adjustedRange = rated * bl / 100
 		projectedRange = projectedRange * bl / 100
 	}
 
-	ratedAt100 := rated
-	if bl > 0 {
-		ratedAt100 = rated / bl * 100
-	}
+	ratedAt100 := rated // original rated is the 100% reference
 	projAt100 := ratedAt100 * effFactor
 
 	curve := make([]curvePoint, 0, 21)
@@ -215,20 +221,24 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	scenarios := h.buildScenarios(matrix, bl, usableCapacity, currentOutsideTemp)
 
 	// Tesla estimate (rated range at current battery level)
-	teslaEstKm := rated
+	teslaEstKm := adjustedRange
 	yourEstKm := projectedRange
 
 	// Sample count
 	var totalDrives int
-	_ = h.db.Pool.QueryRow(ctx, `
+	if err := h.db.Pool.QueryRow(ctx, `
 		SELECT COUNT(*) FROM drives WHERE vehicle_id = $1 AND distance_mi > 5 AND start_battery_pct > end_battery_pct`,
-		vehicleID).Scan(&totalDrives)
+		vehicleID).Scan(&totalDrives); err != nil {
+		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: drive count query failed")
+	}
 
 	// First drive date for accuracy note
 	var firstDrive *time.Time
-	_ = h.db.Pool.QueryRow(ctx, `
+	if err := h.db.Pool.QueryRow(ctx, `
 		SELECT MIN(start_ts) FROM drives WHERE vehicle_id = $1 AND distance_mi > 0`,
-		vehicleID).Scan(&firstDrive)
+		vehicleID).Scan(&firstDrive); err != nil {
+		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: first drive query failed")
+	}
 	monthsOfData := 0
 	if firstDrive != nil {
 		monthsOfData = int(time.Since(*firstDrive).Hours() / (24 * 30.44))
@@ -241,7 +251,7 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		// Original fields (backward compatible)
-		"current_range_km":   math.Round(rated*10) / 10,
+		"current_range_km":   math.Round(adjustedRange*10) / 10,
 		"projected_range_km": math.Round(projectedRange*10) / 10,
 		"battery_level":      math.Round(bl*10) / 10,
 		"efficiency_factor":  math.Round(effFactor*1000) / 1000,

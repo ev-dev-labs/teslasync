@@ -464,8 +464,8 @@ func (h *DriveHandler) Score(w http.ResponseWriter, r *http.Request) {
 		       AVG(CASE WHEN distance_mi > 2 AND start_battery_pct IS NOT NULL AND end_battery_pct IS NOT NULL
 		            THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 * 0.75
 		            ELSE NULL END),
-		       AVG(avg_power_kw),
-		       AVG(avg_power_kw)
+		       MAX(avg_power_kw),
+		       MIN(avg_power_kw)
 		FROM drives
 		WHERE vehicle_id = $1 AND end_ts IS NOT NULL`, vehicleID,
 	).Scan(&totalDrives, &avgWhKm, &avgPowerMax, &avgPowerMin)
@@ -515,10 +515,15 @@ func (h *DriveHandler) Score(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Smoothness: lower avg_power_kw ratio = smoother
-	smoothness := 70.0 // default
-	if avgPowerMax != nil && avgPowerMin != nil && *avgPowerMin != 0 {
-		ratio := math.Abs(*avgPowerMax / *avgPowerMin)
+	// Smoothness: lower power spread ratio = smoother driving
+	smoothness := 70.0 // default when data unavailable
+	if avgPowerMax != nil && avgPowerMin != nil {
+		absMax := math.Abs(*avgPowerMax)
+		absMin := math.Abs(*avgPowerMin)
+		var ratio float64
+		if absMin > 0.01 { // epsilon guard — avoid divide-by-zero
+			ratio = absMax / absMin
+		}
 		// ratio near 1 is smooth; ratio > 5 is harsh
 		if ratio <= 1 {
 			smoothness = 100
