@@ -494,6 +494,14 @@ var (
 		Name:      "fsm_dispatch_total",
 		Help:      "Total FSM dispatch attempts by outcome",
 	}, []string{"outcome"})
+
+	// FSMReconcileTotal tracks periodic reconciliation attempts by result.
+	// Labels: "corrected", "already_correct", "skipped_confidence", "skipped_fresh", "error"
+	FSMReconcileTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "fsm_reconcile_total",
+		Help:      "FSM reconciliation attempts by result",
+	}, []string{"result"})
 )
 
 // ── Reliability ────────────────────────────────────────────
