@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
+import { useToast } from '@/components/feedback/Toast';
 
 // ── Types ───────────────────────────────────────────────────────────────
 
@@ -69,6 +70,7 @@ export function useGuardEvents(vehicleId: number) {
 
 export function useSetGuardConfig() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: ({ vehicleId, ...body }: {
       vehicleId: number;
@@ -85,12 +87,17 @@ export function useSetGuardConfig() {
     onSuccess: (_data, { vehicleId }) => {
       queryClient.invalidateQueries({ queryKey: guardKeys.config(vehicleId) });
       queryClient.invalidateQueries({ queryKey: guardKeys.events(vehicleId) });
+      toast.success('Guard configuration updated');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to update guard config: ${err.message}`);
     },
   });
 }
 
 export function useGuardPanic() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: (vehicleId: number) =>
       request<PanicResponse>(`/vehicles/${vehicleId}/guard/panic`, {
@@ -98,12 +105,17 @@ export function useGuardPanic() {
       }),
     onSuccess: (_data, vehicleId) => {
       queryClient.invalidateQueries({ queryKey: guardKeys.events(vehicleId) });
+      toast.success('Panic alert triggered');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to trigger panic: ${err.message}`);
     },
   });
 }
 
 export function useAcknowledgeGuardEvent() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: ({ vehicleId, eventId }: { vehicleId: number; eventId: number }) =>
       request<{ status: string }>(`/vehicles/${vehicleId}/guard/events/${eventId}/acknowledge`, {
@@ -111,6 +123,10 @@ export function useAcknowledgeGuardEvent() {
       }),
     onSuccess: (_data, { vehicleId }) => {
       queryClient.invalidateQueries({ queryKey: guardKeys.events(vehicleId) });
+      toast.success('Event acknowledged');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to acknowledge event: ${err.message}`);
     },
   });
 }

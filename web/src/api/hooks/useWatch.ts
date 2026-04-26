@@ -1,6 +1,7 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { getApiBase } from '@/lib/resilience';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
+import { useToast } from '@/components/feedback/Toast';
 
 // --- Watch-specific API client ---
 // Watch requests use API key auth (X-API-Key header) instead of
@@ -106,6 +107,7 @@ export function useWatchComplication(vehicleId?: number) {
 
 /** Send a command from the watch. */
 export function useWatchCommand() {
+  const toast = useToast();
   return useMutation({
     mutationFn: ({ vehicleId, command }: { vehicleId?: number; command: string }) =>
       watchRequest<WatchCommandResult>('/watch/command', {
@@ -116,5 +118,15 @@ export function useWatchCommand() {
           command,
         }),
       }),
+    onSuccess: (data) => {
+      if (data.success) {
+        toast.success(data.message || 'Command sent');
+      } else {
+        toast.error(data.message || 'Command failed');
+      }
+    },
+    onError: (err: Error) => {
+      toast.error(`Watch command failed: ${err.message}`);
+    },
   });
 }
