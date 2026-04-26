@@ -195,8 +195,9 @@ func main() {
 		// Initialize SignalStore (in-memory; recovery via Redis → signal_log)
 		signalStore = sigsvc.New()
 		telemetryHandler.SetSignalStore(signalStore)
+		telemetryHandler.FSMHandler().SetSignalStore(signalStore)
 
-		// Wire Redis signal cache (write-through HSET mirror, fire-and-forget)
+		// Wire Redis signal cache(write-through HSET mirror, fire-and-forget)
 		if rdb := cacheStore.Underlying(); rdb != nil {
 			telemetryHandler.SetRedisCache(sigsvc.NewRedisSignalCache(rdb))
 			log.Info().Msg("redis signal cache enabled")
@@ -254,6 +255,9 @@ func main() {
 		}
 
 		log.Info().Msg("FSM vehicle state engine active — declarative transition table with 20 transitions")
+
+		// Start FSM reconciliation loop (compares FSM state against signal store)
+		telemetryHandler.FSMHandler().StartReconcileLoop()
 
 		// MongoDB raw telemetry capture (optional)
 		if cfg.MongoDB.Enabled {
@@ -578,6 +582,10 @@ func main() {
 
 	// Phase 3: Shutdown telemetry handler goroutines
 	if telemetryHandler != nil {
+		// Stop FSM reconciliation before tearing down telemetry handler
+		if fsmH := telemetryHandler.FSMHandler(); fsmH != nil {
+			fsmH.StopReconcileLoop()
+		}
 		telemetryHandler.Shutdown()
 		// Final drain of any buffered telemetry writes
 		if st := telemetryHandler.SessionTracker(); st != nil {
