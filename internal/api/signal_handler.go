@@ -19,6 +19,7 @@ type SignalHandler struct {
 	signalHistoryWriter *database.SignalHistoryWriter  // Postgres (primary)
 	db                  *database.DB
 	redisCache          *signal.RedisSignalCache
+	signalStore         *signal.Store                  // in-memory live state
 }
 
 // NewSignalHandler creates a new SignalHandler.
@@ -41,6 +42,12 @@ func (h *SignalHandler) WithSignalHistory(w *database.SignalHistoryWriter) *Sign
 // WithRedisCache sets the Redis signal cache for reading live signal keys.
 func (h *SignalHandler) WithRedisCache(cache *signal.RedisSignalCache) *SignalHandler {
 	h.redisCache = cache
+	return h
+}
+
+// WithSignalStore sets the in-memory signal store for live state queries.
+func (h *SignalHandler) WithSignalStore(store *signal.Store) *SignalHandler {
+	h.signalStore = store
 	return h
 }
 
@@ -294,6 +301,31 @@ func (h *SignalHandler) Stats(w http.ResponseWriter, r *http.Request) {
 // LiveState returns the current in-memory signal state for a vehicle.
 // GET /api/v1/signals/{vehicleID}/live
 func (h *SignalHandler) LiveState(w http.ResponseWriter, r *http.Request) {
-	// This will be set by the router when wiring — uses the telemetry handler's signal store
-	writeJSON(w, http.StatusNotImplemented, map[string]string{"error": "live state requires signal store"})
+	vehicleID, err := strconv.ParseInt(chi.URLParam(r, "vehicleID"), 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid vehicle ID")
+		return
+	}
+
+	if h.signalStore == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "signal store not initialized"})
+		return
+	}
+
+	raw := h.signalStore.GetAll(vehicleID)
+	signals := make(map[string]interface{}, len(raw))
+	for k, v := range raw {
+		if v != nil {
+			signals[k] = map[string]interface{}{
+				"value":     v.Raw,
+				"timestamp": v.Timestamp,
+			}
+		}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"vehicle_id": vehicleID,
+		"count":      len(signals),
+		"signals":    signals,
+	})
 }

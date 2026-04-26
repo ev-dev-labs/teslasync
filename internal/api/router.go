@@ -1002,38 +1002,6 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 		// Signal routes
 		r.Route("/signals/{vehicleID}", func(r chi.Router) {
-			// Live state from in-memory SignalStore (always available)
-			if telemetryHandler != nil {
-				r.Get("/live", func(w http.ResponseWriter, r *http.Request) {
-					store := telemetryHandler.GetSignalStore()
-					if store == nil {
-						writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "signal store not initialized"})
-						return
-					}
-					vid, err := strconv.ParseInt(chi.URLParam(r, "vehicleID"), 10, 64)
-					if err != nil {
-						writeError(w, http.StatusBadRequest, "invalid vehicle ID")
-						return
-					}
-					raw := store.GetAll(vid)
-					// Convert to JSON-friendly format with timestamps
-					signals := make(map[string]interface{}, len(raw))
-					for k, v := range raw {
-						if v != nil {
-							signals[k] = map[string]interface{}{
-								"value":     v.Raw,
-								"timestamp": v.Timestamp,
-							}
-						}
-					}
-					writeJSON(w, http.StatusOK, map[string]interface{}{
-						"vehicle_id": vid,
-						"count":      len(signals),
-						"signals":    signals,
-					})
-				})
-			}
-
 			// Signal History (Postgres primary, MongoDB optional fallback)
 			if telemetryHandler != nil {
 				var mongoRepo *database.SignalLogRepo
@@ -1052,6 +1020,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 						signalHandler.WithRedisCache(signal.NewRedisSignalCache(rdb))
 					}
 				}
+				if store := telemetryHandler.GetSignalStore(); store != nil {
+					signalHandler.WithSignalStore(store)
+				}
+				r.Get("/live", signalHandler.LiveState)
 				r.Get("/available", signalHandler.AvailableSignals)
 				r.Get("/stats", signalHandler.Stats)
 				r.Get("/{signalName}/history", signalHandler.History)
@@ -1066,6 +1038,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 						signalHandler.WithRedisCache(signal.NewRedisSignalCache(rdb))
 					}
 				}
+				r.Get("/live", signalHandler.LiveState)
 				r.Get("/available", signalHandler.AvailableSignals)
 				r.Get("/stats", signalHandler.Stats)
 				r.Get("/{signalName}/history", signalHandler.History)
