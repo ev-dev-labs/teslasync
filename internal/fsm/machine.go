@@ -89,7 +89,30 @@ func (m *VehicleFSM) ProcessSignals(ctx context.Context, vehicleID int64, signal
 	}
 
 	sctx := m.buildSignalContext(signals)
+
+	m.logger.Debug().
+		Int64("vehicle_id", vehicleID).
+		Str("current_state", string(m.current)).
+		Bool("has_gear", sctx.HasGearInBatch).
+		Str("gear", sctx.Gear).
+		Bool("charge_changed", sctx.ChargeStateChanged).
+		Bool("is_charging", sctx.IsCharging).
+		Float64("speed", sctx.Speed).
+		Bool("is_gear_capable", sctx.IsGearCapable).
+		Msg("fsm: signal context built")
+
 	triggers := DetectTriggers(sctx)
+
+	if len(triggers) > 0 {
+		triggerNames := make([]string, len(triggers))
+		for i, t := range triggers {
+			triggerNames[i] = t.String()
+		}
+		m.logger.Debug().
+			Int64("vehicle_id", vehicleID).
+			Strs("triggers", triggerNames).
+			Msg("fsm: triggers detected")
+	}
 
 	for _, trigger := range triggers {
 		if err := m.tryTransition(ctx, vehicleID, trigger, sctx); err != nil {
@@ -132,8 +155,22 @@ func (m *VehicleFSM) HandleSignalReceived(ctx context.Context, vehicleID int64) 
 func (m *VehicleFSM) tryTransition(ctx context.Context, vehicleID int64, trigger Trigger, sctx *SignalContext) error {
 	tr, found := LookupTransition(m.current, trigger, sctx)
 	if !found {
+		m.logger.Debug().
+			Int64("vehicle_id", vehicleID).
+			Str("current", string(m.current)).
+			Str("trigger", trigger.String()).
+			Msg("fsm: no valid transition (guard blocked or not in table)")
 		return nil // no valid transition — not an error
 	}
+
+	m.logger.Debug().
+		Int64("vehicle_id", vehicleID).
+		Str("from", string(tr.From)).
+		Str("to", string(tr.To)).
+		Str("trigger", trigger.String()).
+		Str("mode", tr.Mode.String()).
+		Str("guard", tr.GuardNameStr()).
+		Msg("fsm: transition found")
 
 	if tr.Mode == Debounced {
 		return m.handleDebounced(ctx, vehicleID, tr, sctx)
@@ -142,7 +179,7 @@ func (m *VehicleFSM) tryTransition(ctx context.Context, vehicleID int64, trigger
 	return m.commit(ctx, vehicleID, tr, sctx)
 }
 
-func (m *VehicleFSM) handleDebounced(_ context.Context, _ int64, tr Transition, sctx *SignalContext) error {
+func (m *VehicleFSM) handleDebounced(_ context.Context, vehicleID int64, tr Transition, sctx *SignalContext) error {
 	now := sctx.Now
 	if now.IsZero() {
 		now = time.Now().UTC()
@@ -151,6 +188,10 @@ func (m *VehicleFSM) handleDebounced(_ context.Context, _ int64, tr Transition, 
 	if m.pending == nil || m.pending.To != tr.To {
 		// New candidate — start the debounce timer
 		m.pending = &pendingTransition{To: tr.To, Since: now}
+		m.logger.Debug().
+			Int64("vehicle_id", vehicleID).
+			Str("to", string(tr.To)).
+			Msg("fsm: debounce started")
 		return nil
 	}
 
@@ -160,7 +201,12 @@ func (m *VehicleFSM) handleDebounced(_ context.Context, _ int64, tr Transition, 
 	}
 
 	// Confirmed — promote to a real transition and commit
-	// (we call commit via tryTransition path, but treat it as Immediate now)
+	m.logger.Debug().
+		Int64("vehicle_id", vehicleID).
+		Str("to", string(m.pending.To)).
+		Dur("elapsed", time.Since(m.pending.Since)).
+		Msg("fsm: debounce confirmed, will commit on next batch")
+
 	m.pending = nil
 	confirmedTr := tr
 	confirmedTr.Mode = Immediate
@@ -185,6 +231,10 @@ func (m *VehicleFSM) CheckPending(ctx context.Context, vehicleID int64, sctx *Si
 
 	// Confirmed — commit
 	to := m.pending.To
+	m.logger.Debug().
+		Int64("vehicle_id", vehicleID).
+		Str("to", string(to)).
+		Msg("fsm: committing confirmed debounced transition")
 	m.pending = nil
 
 	tr := Transition{
@@ -197,7 +247,13 @@ func (m *VehicleFSM) CheckPending(ctx context.Context, vehicleID int64, sctx *Si
 }
 
 // CancelPending resets any pending debounced transition (e.g., speed resumed).
-func (m *VehicleFSM) CancelPending() {
+func (m *VehicleFSM) CancelPending(vehicleID int64) {
+	if m.pending != nil {
+		m.logger.Debug().
+			Int64("vehicle_id", vehicleID).
+			Str("cancelled_to", string(m.pending.To)).
+			Msg("fsm: debounce cancelled")
+	}
 	m.pending = nil
 }
 

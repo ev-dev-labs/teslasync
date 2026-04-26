@@ -228,6 +228,16 @@ func (h *FSMHandler) getOrCreate(ctx context.Context, vehicleID int64) *fsm.Vehi
 
 // ProcessSignals runs the FSM on a signal batch and forwards to active sub-FSMs.
 func (h *FSMHandler) ProcessSignals(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
+	signalNames := make([]string, 0, len(signals))
+	for k := range signals {
+		signalNames = append(signalNames, k)
+	}
+	log.Debug().
+		Int64("vehicle_id", vehicleID).
+		Int("signal_count", len(signals)).
+		Strs("signals", signalNames).
+		Msg("fsm: processing signal batch")
+
 	m := h.getOrCreate(ctx, vehicleID)
 
 	// Wake vehicle from asleep/offline when any signal arrives
