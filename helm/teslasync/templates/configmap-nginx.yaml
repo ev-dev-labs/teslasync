@@ -10,6 +10,7 @@ data:
   default.conf: |
     {{- $apiBackend := .Values.config.apiEndpoint | default (printf "http://%s-api:%v" (include "teslasync.fullname" .) (int .Values.service.port)) }}
     {{- $browserApiBase := .Values.config.browserApiBase | default "" }}
+    {{- $forwardAuthHeader := .Values.config.forwardAuthHeader | default "" }}
     server {
         listen 80;
         server_name _;
@@ -41,6 +42,10 @@ data:
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
+            {{- if $forwardAuthHeader }}
+            # Forward the auth header from the reverse proxy (Authentik/Authelia/etc.)
+            proxy_set_header {{ $forwardAuthHeader }} $http_{{ $forwardAuthHeader | lower | replace "-" "_" }};
+            {{- end }}
             proxy_read_timeout 3600s;
             proxy_buffering off;
             proxy_cache off;
