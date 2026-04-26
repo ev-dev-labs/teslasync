@@ -15,8 +15,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
-const nominalCapacity = 75.0
-
 // RangeProjectionHandler serves projected range analytics.
 type RangeProjectionHandler struct {
 	db              *database.DB
@@ -80,6 +78,9 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
+
+	// Look up vehicle-specific battery capacity
+	capacityKWh, _ := lookupVehicleCapacity(ctx, h.db, vehicleID)
 
 	// Current battery state from signal_log
 	var batteryLevel, estRange, ratedRange, idealRange *float64
@@ -151,7 +152,7 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// ── Efficiency matrix ────────────────────────────────
-	matrix := h.buildEfficiencyMatrix(ctx, vehicleID)
+	matrix := h.buildEfficiencyMatrix(ctx, vehicleID, capacityKWh)
 
 	// ── Battery health / degradation adjustment ──────────
 	var healthScore *float64
@@ -159,7 +160,7 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 		val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "EnergyRemaining", time.Now())
 		if err == nil && val != nil {
 			if energy, ok := val.(float64); ok && energy > 0 {
-				hs := (energy / nominalCapacity) * 100
+				hs := (energy / capacityKWh) * 100
 				if hs > 100 {
 					hs = 100
 				}
@@ -172,7 +173,7 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	if healthScore != nil && *healthScore > 0 && *healthScore < 100 {
 		healthFactor = *healthScore / 100
 	}
-	usableCapacity := nominalCapacity * healthFactor
+	usableCapacity := capacityKWh * healthFactor
 
 	// ── Build original response fields ───────────────────
 	bl := ptrF64(batteryLevel)
@@ -272,7 +273,7 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 // ── Efficiency matrix ────────────────────────────────────────
 
-func (h *RangeProjectionHandler) buildEfficiencyMatrix(ctx context.Context, vehicleID int64) []efficiencyBucket {
+func (h *RangeProjectionHandler) buildEfficiencyMatrix(ctx context.Context, vehicleID int64, capacityKWh float64) []efficiencyBucket {
 	rows, err := h.db.Pool.Query(ctx, `
 		SELECT
 			CASE
@@ -293,7 +294,7 @@ func (h *RangeProjectionHandler) buildEfficiencyMatrix(ctx context.Context, vehi
 		  AND outside_temp_avg_c IS NOT NULL AND avg_speed_mph IS NOT NULL
 		GROUP BY temp_bucket, speed_bucket
 		HAVING COUNT(*) >= 3`,
-		vehicleID, nominalCapacity)
+		vehicleID, capacityKWh)
 	if err != nil {
 		return []efficiencyBucket{}
 	}
@@ -555,6 +556,9 @@ func (h *RangeProjectionHandler) GetByVehicle(w http.ResponseWriter, r *http.Req
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
+	// Look up vehicle-specific battery capacity
+	capacityKWh, _ := lookupVehicleCapacity(ctx, h.db, vehicleID)
+
 	var batteryLevel, ratedRange, idealRange *float64
 	if h.signalLogReader != nil {
 		now := time.Now()
@@ -596,7 +600,7 @@ func (h *RangeProjectionHandler) GetByVehicle(w http.ResponseWriter, r *http.Req
 		val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "EnergyRemaining", time.Now())
 		if err == nil && val != nil {
 			if energy, ok := val.(float64); ok && energy > 0 {
-				hp := (energy / nominalCapacity) * 100
+				hp := (energy / capacityKWh) * 100
 				if hp > 100 {
 					hp = 100
 				}

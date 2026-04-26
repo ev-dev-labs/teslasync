@@ -34,6 +34,9 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
+	// Look up vehicle-specific battery capacity
+	capacityKWh, capacitySource := lookupVehicleCapacity(ctx, h.db, vehicleID)
+
 	// Per-drive regen stats (last 90 days)
 	type driveRegen struct {
 		ID               int64      `json:"id"`
@@ -164,10 +167,10 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		monthlyAvgRegen = math.Round(sum/float64(len(monthly))*10) / 10
 	}
 
-	// Free charges equivalent (assuming ~60 kWh per full charge)
+	// Free charges equivalent (based on vehicle-specific estimated capacity)
 	freeCharges := 0.0
-	if totalRegenKWh > 0 {
-		freeCharges = math.Round(totalRegenKWh/60*10) / 10
+	if totalRegenKWh > 0 && capacityKWh > 0 {
+		freeCharges = math.Round(totalRegenKWh/capacityKWh*10) / 10
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
@@ -179,5 +182,8 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		"free_charges":        freeCharges,
 		"monthly_summary":     monthly,
 		"drives":              drives,
+		// Capacity estimate metadata
+		"battery_capacity_kwh": capacityKWh,
+		"capacity_source":      capacitySource,
 	})
 }

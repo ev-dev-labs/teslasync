@@ -36,6 +36,9 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 
 	ctx := r.Context()
 
+	// Look up vehicle-specific battery capacity
+	batteryCapacityKWh, capacitySource := lookupVehicleCapacity(ctx, h.db, vehicleID)
+
 	// Time in each vehicle state
 	type stateEntry struct {
 		State        string  `json:"state"`
@@ -203,8 +206,7 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 		baseCostPerKWh = 0.12
 	}
 
-	// Estimate sentry monthly cost (assuming ~75 kWh battery)
-	batteryCapacityKWh := 75.0
+	// Estimate sentry monthly cost
 	hoursPerMonth := 730.0 // avg hours in a month
 	sentryMonthlyKWh := sentryOnDrainRate / 100 * batteryCapacityKWh * hoursPerMonth
 	sentryMonthlyCost := sentryMonthlyKWh * baseCostPerKWh
@@ -248,6 +250,7 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 		"sentry_extra_monthly_kwh":  math.Round(extraMonthlyKWh*100) / 100,
 		"sentry_extra_monthly_cost": math.Round(extraMonthlyCost*100) / 100,
 		"battery_capacity_kwh":  batteryCapacityKWh,
+		"capacity_source":       capacitySource,
 		"base_cost_per_kwh":     baseCostPerKWh,
 		"recent_events":         recentEvents,
 		"total_events":          len(recentEvents),

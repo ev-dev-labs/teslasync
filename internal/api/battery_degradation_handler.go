@@ -47,6 +47,9 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 
 	ctx := r.Context()
 
+	// Look up vehicle-specific battery capacity
+	capacityKWh, capacitySource := lookupVehicleCapacity(ctx, h.db, vehicleID)
+
 	// Battery health history — reconstruct from signal_log
 	var snapshots []batterySnapshotData
 	if h.signalLogReader != nil {
@@ -60,7 +63,7 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 			writeError(w, http.StatusInternalServerError, "failed to get battery data")
 			return
 		}
-		snapshots = synthesizeBatterySnapshots(entries)
+		snapshots = synthesizeBatterySnapshots(entries, capacityKWh)
 	}
 	if snapshots == nil {
 		snapshots = []batterySnapshotData{}
@@ -117,7 +120,6 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 
 	// Fallback: derive from signal_log when no snapshots exist
 	if currentHealth == 0 {
-		const nominalCapacity = 75.0
 		var energy, rng *float64
 		if h.signalLogReader != nil {
 			now := time.Now()
@@ -134,7 +136,7 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 		}
 		if energy != nil && *energy > 0 {
 			currentCapacity = *energy
-			currentHealth = (currentCapacity / nominalCapacity) * 100
+			currentHealth = (currentCapacity / capacityKWh) * 100
 			if currentHealth > 100 { currentHealth = 100 }
 			currentDegradation = 100 - currentHealth
 		}
@@ -225,6 +227,9 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 		"projections":                   result.Projections,
 		"risk_factors":                  riskFactors,
 		"recommendations":               recommendations,
+		// Capacity estimate metadata
+		"battery_capacity_kwh": capacityKWh,
+		"capacity_source":      capacitySource,
 	})
 }
 
@@ -509,7 +514,9 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 	}
 
 	ctx := r.Context()
-	const nominalCapacity = 75.0
+
+	// Look up vehicle-specific battery capacity
+	capacityKWh, capacitySource := lookupVehicleCapacity(ctx, h.db, vehicleID)
 
 	// Battery history — reconstruct from signal_log
 	type histEntry struct {
@@ -535,7 +542,7 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 			writeError(w, http.StatusInternalServerError, "failed to get battery data")
 			return
 		}
-		snaps := synthesizeBatterySnapshots(entries)
+		snaps := synthesizeBatterySnapshots(entries, capacityKWh)
 		for _, s := range snaps {
 			if firstDate.IsZero() {
 				firstDate = s.CreatedAt
@@ -574,7 +581,7 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 		}
 		if energy != nil && *energy > 0 {
 			latestCapacity = *energy
-			latestSOH = (latestCapacity / nominalCapacity) * 100
+			latestSOH = (latestCapacity / capacityKWh) * 100
 			if latestSOH > 100 {
 				latestSOH = 100
 			}
@@ -668,10 +675,45 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 		history = []histEntry{}
 	}
 
+	// Compute temp exposure score from actual ModuleTempMax signal data
+	var tempExposureScore interface{}
+	var tempExposureReason interface{}
+	if h.signalLogReader != nil {
+		var avgTemp *float64
+		var sampleCount int
+		_ = h.db.Pool.QueryRow(ctx, `
+			SELECT AVG(value_num), COUNT(*)
+			FROM signal_log
+			WHERE vehicle_id = $1
+			  AND signal IN ('ModuleTempMax', 'ModuleTempAvg')
+			  AND created_at > NOW() - INTERVAL '90 days'
+			  AND value_num IS NOT NULL`,
+			vehicleID).Scan(&avgTemp, &sampleCount)
+		if avgTemp != nil && sampleCount >= 10 {
+			t := *avgTemp
+			score := 10
+			switch {
+			case t > 45:
+				score = 90
+			case t > 40:
+				score = 70
+			case t > 35:
+				score = 50
+			case t > 30:
+				score = 25
+			}
+			tempExposureScore = score
+		} else {
+			tempExposureReason = "insufficient_data"
+		}
+	} else {
+		tempExposureReason = "insufficient_data"
+	}
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"current_soh":            math.Round(latestSOH*10) / 10,
 		"estimated_capacity":     math.Round(latestCapacity*10) / 10,
-		"original_capacity":      nominalCapacity,
+		"original_capacity":      capacityKWh,
 		"degradation_rate_yr":    math.Round(degradationRate*100) / 100,
 		"battery_age_months":     ageMonths,
 		"total_cycles":           latestCycles,
@@ -679,17 +721,20 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 		"fast_charge_pct":        math.Round(fastChargePct*10) / 10,
 		"full_charge_pct":        math.Round(fullChargePct*10) / 10,
 		"charge_habits_score":    math.Round(chargeHabitsScore),
-		"temp_exposure_score":    80, // placeholder until temp tracking is granular
+		"temp_exposure_score":    tempExposureScore,
+		"temp_exposure_reason":   tempExposureReason,
 		"history":                history,
+		// Capacity estimate metadata
+		"battery_capacity_kwh": capacityKWh,
+		"capacity_source":      capacitySource,
 	})
 }
 
 // synthesizeBatterySnapshots converts signal trace entries into the legacy
 // batterySnapshotData shape expected by the prediction and display code.
 // Entries are grouped by timestamp; each unique timestamp yields one snapshot.
-const defaultNominalCapacity = 75.0
-
-func synthesizeBatterySnapshots(entries []database.SignalTraceEntry) []batterySnapshotData {
+// nominalCapacity is the vehicle-specific estimated capacity in kWh.
+func synthesizeBatterySnapshots(entries []database.SignalTraceEntry, nominalCapacity float64) []batterySnapshotData {
 	if len(entries) == 0 {
 		return nil
 	}
@@ -737,11 +782,11 @@ func synthesizeBatterySnapshots(entries []database.SignalTraceEntry) []batterySn
 		idCounter++
 
 		// Derive health_score from EnergyRemaining / nominal
-		capacityKWh := defaultNominalCapacity
+		capacityKWh := nominalCapacity
 		healthScore := 100.0
 		if g.energyRemain != nil && *g.energyRemain > 0 {
 			capacityKWh = *g.energyRemain
-			healthScore = (capacityKWh / defaultNominalCapacity) * 100
+			healthScore = (capacityKWh / nominalCapacity) * 100
 			if healthScore > 100 {
 				healthScore = 100
 			}
