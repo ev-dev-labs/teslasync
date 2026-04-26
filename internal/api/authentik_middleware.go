@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"crypto"
 	"crypto/hmac"
 	"crypto/rsa"
@@ -218,84 +217,4 @@ func verifyJWT(tokenStr string, cache *jwksCache, hmacKey string) (*AuthentikCla
 	return &claims, nil
 }
 
-// AuthentikSSEAuth creates middleware that validates authentik JWT tokens
-// for the SSE endpoint. Supports both RS256 (JWKS) and HS256 (shared secret).
-// It checks (in order):
-//  1. X-authentik-jwt header (when behind ForwardAuth)
-//  2. Authorization: Bearer <token> header
-//  3. ?token= query parameter (for EventSource which can't set headers)
-func AuthentikSSEAuth(jwksURL, hmacKey string) func(http.Handler) http.Handler {
-	var cache *jwksCache
-	if jwksURL != "" {
-		cache = newJWKSCache(jwksURL)
-	}
 
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			var token string
-
-			// 1. Check X-authentik-jwt header (ForwardAuth path)
-			if t := r.Header.Get("X-authentik-jwt"); t != "" {
-				token = t
-			}
-
-			// 2. Check Authorization header
-			if token == "" {
-				if auth := r.Header.Get("Authorization"); strings.HasPrefix(auth, "Bearer ") {
-					token = strings.TrimPrefix(auth, "Bearer ")
-				}
-			}
-
-			// 3. Check query parameter (EventSource fallback)
-			if token == "" {
-				token = r.URL.Query().Get("token")
-			}
-
-			// If a JWT token is available, validate it
-			if token != "" {
-				claims, err := verifyJWT(token, cache, hmacKey)
-				if err != nil {
-					log.Warn().Err(err).Msg("SSE auth: invalid token")
-					http.Error(w, `{"error":"invalid or expired token"}`, http.StatusUnauthorized)
-					return
-				}
-				ctx := context.WithValue(r.Context(), authentikUserCtxKey, claims)
-				next.ServeHTTP(w, r.WithContext(ctx))
-				return
-			}
-
-			// 4. Fallback: trust Traefik ForwardAuth identity headers.
-			// When /events is NOT on the SSE bypass route, ForwardAuth already
-			// authenticated the request via session cookie. Traefik injects
-			// identity headers that prove the user was validated by authentik.
-			if email := r.Header.Get("X-authentik-email"); email != "" {
-				claims := &AuthentikClaims{
-					Email: email,
-					Name:  r.Header.Get("X-authentik-name"),
-					Sub:   r.Header.Get("X-authentik-uid"),
-				}
-				log.Debug().Str("email", email).Msg("SSE auth: using ForwardAuth identity")
-				ctx := context.WithValue(r.Context(), authentikUserCtxKey, claims)
-				next.ServeHTTP(w, r.WithContext(ctx))
-				return
-			}
-
-			http.Error(w, `{"error":"authentication required"}`, http.StatusUnauthorized)
-		})
-	}
-}
-
-// SSETokenHandler returns the authentik JWT to the frontend.
-// This endpoint MUST be behind authentik ForwardAuth so the
-// X-authentik-jwt header is injected by Traefik.
-func SSETokenHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		token := r.Header.Get("X-authentik-jwt")
-		if token == "" {
-			http.Error(w, `{"error":"no authentik token available"}`, http.StatusUnauthorized)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"token": token})
-	}
-}

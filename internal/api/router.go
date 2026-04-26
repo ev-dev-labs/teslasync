@@ -15,7 +15,6 @@ import (
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/go-chi/httprate"
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/cache"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
@@ -536,11 +535,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/", automationHandler.Create)
 
 			// SSE stream for real-time automation events (static route before {id} param)
-			if cfg.Auth.AuthentikURL != "" || cfg.Auth.AuthentikHMACKey != "" {
-				r.With(AuthentikSSEAuth(cfg.Auth.AuthentikURL, cfg.Auth.AuthentikHMACKey)).Get("/events", SSEHandler(automationEventHub))
-			} else {
-				r.Get("/events", SSEHandler(automationEventHub))
-			}
+			// Protected by ForwardAuthMiddleware on the parent /api/v1 group
+			r.Get("/events", SSEHandler(automationEventHub))
 
 			// Import/Export (static routes before {id} param)
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/export", automationHandler.ExportBatch)
@@ -816,26 +812,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			})
 		})
 
-		// Real-time SSE stream
-		if cfg.Auth.AuthentikURL != "" || cfg.Auth.AuthentikHMACKey != "" {
-			if cfg.Auth.AuthentikURL == "" || cfg.Auth.AuthentikHMACKey == "" {
-				log.Warn().
-					Bool("has_url", cfg.Auth.AuthentikURL != "").
-					Bool("has_hmac", cfg.Auth.AuthentikHMACKey != "").
-					Msg("partial authentik config: set both AUTHENTIK_URL and AUTHENTIK_HMAC_KEY for full JWT validation; SSE will fall back to ForwardAuth headers")
-			}
-			// SSE with authentik JWT validation + ForwardAuth header fallback
-			r.With(AuthentikSSEAuth(cfg.Auth.AuthentikURL, cfg.Auth.AuthentikHMACKey)).Get("/events", SSEHandler(eventHub))
-			// Token endpoint (behind ForwardAuth ╬ô├ç├╢ returns JWT to frontend)
-			r.Get("/sse-token", SSETokenHandler())
-		} else {
-			// No auth on SSE (development)
-			r.Get("/events", SSEHandler(eventHub))
-			// Return empty token in dev mode so frontend doesn't get 404
-			r.Get("/sse-token", func(w http.ResponseWriter, r *http.Request) {
-				writeJSON(w, http.StatusOK, map[string]string{"token": ""})
-			})
-		}
+		// Real-time SSE stream — protected by ForwardAuthMiddleware on the parent /api/v1 group
+		r.Get("/events", SSEHandler(eventHub))
+		// Backward-compat stub: frontend still calls fetchSSEToken() until it is removed
+		r.Get("/sse-token", func(w http.ResponseWriter, r *http.Request) {
+			writeJSON(w, http.StatusOK, map[string]string{"token": ""})
+		})
 
 		// System endpoints
 		r.Route("/system", func(r chi.Router) {
