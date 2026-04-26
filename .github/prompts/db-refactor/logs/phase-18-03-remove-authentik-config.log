@@ -1,0 +1,57 @@
+=== SURVEY ===
+Surveyed files:
+- internal/config/config.go: Found AuthentikURL (L157) and AuthentikHMACKey (L158) fields in AuthConfig struct,
+  plus envStr loading at L234-L235.
+- internal/api/authentik_middleware.go: 221 lines — contains AuthentikClaims, jwksCache, verifyJWT,
+  parseRSAPublicKey, authentikContextKey. ALL functions are self-contained (no external callers).
+  Entire file is dead code after prompts 00-02 removed AuthentikSSEAuth + SSETokenHandler.
+- internal/platform/config/config.go: AuthConfig at L109-L114 has AuthentikURL and AuthentikHMACKey fields,
+  plus a validation check at L211 referencing AuthentikURL.
+- internal/platform/config/config_test.go: L118 sets AUTH_AUTHENTIK_URL in test.
+- helm/teslasync/values.yaml: Lines 543-561 — authentikURL and authentikHMACKey with doc comments.
+- helm/teslasync/templates/configmap.yaml: Lines 112-119 — AUTHENTIK_URL and AUTHENTIK_HMAC_KEY entries.
+- docker-compose.yml: No AUTHENTIK references found.
+
+=== REASONING ===
+- authentik_middleware.go: All types/functions (AuthentikClaims, jwksCache, verifyJWT, parseRSAPublicKey,
+  authentikContextKey, authentikUserCtxKey) have zero external callers — only referenced within the file.
+  After prompts 00-02 removed the two exported functions (AuthentikSSEAuth, SSETokenHandler),
+  the entire file became dead code. DELETE the file.
+- internal/config/config.go: Remove AuthentikURL and AuthentikHMACKey from AuthConfig struct and Load().
+- internal/platform/config/config.go: Remove AuthentikURL and AuthentikHMACKey from AuthConfig struct,
+  simplify validate() to check only JWTSecret (no longer AuthentikURL as fallback).
+- internal/platform/config/config_test.go: Remove AUTH_AUTHENTIK_URL setenv line from test.
+- helm values.yaml: Comment out authentikURL/authentikHMACKey with DEPRECATED note.
+- helm configmap.yaml: Remove AUTHENTIK_URL and AUTHENTIK_HMAC_KEY entries.
+
+=== CHANGES ===
+1. DELETED: internal/api/authentik_middleware.go (221 lines, all dead code)
+2. EDITED: internal/config/config.go
+   - Removed AuthentikURL and AuthentikHMACKey from AuthConfig struct
+   - Removed envStr("AUTHENTIK_URL", "") and envStr("AUTHENTIK_HMAC_KEY", "") from Load()
+3. EDITED: internal/platform/config/config.go
+   - Removed AuthentikURL and AuthentikHMACKey from AuthConfig struct (L112-L113)
+   - Updated validate(): check only JWTSecret instead of JWTSecret || AuthentikURL (L211)
+4. EDITED: internal/platform/config/config_test.go
+   - Removed t.Setenv("AUTH_AUTHENTIK_URL", "") from TestValidation_AuthEnabledNoSecret (L118)
+5. EDITED: helm/teslasync/values.yaml
+   - Replaced authentikURL/authentikHMACKey block with DEPRECATED comment
+6. EDITED: helm/teslasync/templates/configmap.yaml
+   - Removed AUTHENTIK_URL and AUTHENTIK_HMAC_KEY entries (lines 112-119)
+
+=== GATE ===
+$ go build ./...
+--- BUILD EXIT: 0 ---
+
+$ go vet ./...
+--- VET EXIT: 1 (pre-existing issues in automation/trigger and webhook_receiver_handler_test, unrelated) ---
+
+Gate checks:
+PASS: No AuthentikURL/AuthentikHMACKey in config.go
+PASS: No Authentik references remain in internal/
+PASS: authentik_middleware.go deleted
+PASS: No Authentik refs in Helm configmap
+
+=== COMMIT ===
+EXIT=0
+STATUS=DONE

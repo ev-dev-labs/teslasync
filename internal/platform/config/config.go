@@ -107,10 +107,8 @@ func (m MQTTConfig) BrokerURL() string {
 
 // AuthConfig holds authentication settings.
 type AuthConfig struct {
-	Enabled          bool   `env:"ENABLED" envDefault:"false"`
-	JWTSecret        string `env:"JWT_SECRET" envDefault:""`
-	AuthentikURL     string `env:"AUTHENTIK_URL" envDefault:""`
-	AuthentikHMACKey string `env:"AUTHENTIK_HMAC_KEY" envDefault:""`
+	Enabled   bool   `env:"ENABLED" envDefault:"false"`
+	JWTSecret string `env:"JWT_SECRET" envDefault:""`
 }
 
 // FeatureFlags controls optional feature toggles.
@@ -208,8 +206,8 @@ func (c *Config) validate() error {
 	if c.Database.MinConns > c.Database.MaxConns {
 		return fmt.Errorf("database min_conns (%d) must not exceed max_conns (%d)", c.Database.MinConns, c.Database.MaxConns)
 	}
-	if c.Auth.Enabled && c.Auth.JWTSecret == "" && c.Auth.AuthentikURL == "" {
-		return fmt.Errorf("auth is enabled but neither JWT_SECRET nor AUTHENTIK_URL is set")
+	if c.Auth.Enabled && c.Auth.JWTSecret == "" {
+		return fmt.Errorf("auth is enabled but JWT_SECRET is not set")
 	}
 	if c.Redis.Enabled && c.Redis.Port < 1 {
 		return fmt.Errorf("redis is enabled but port is invalid: %d", c.Redis.Port)

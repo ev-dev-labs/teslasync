@@ -540,25 +540,10 @@ config:
   azureMaps:
     apiKey: ""
 
-  # ── Authentik SSE Auth (optional) ──────────────────────────────────────
-  # Enables JWT validation for the SSE endpoint (/api/v1/events) using
-  # authentik's JWKS public keys. When set, SSE bypasses Traefik ForwardAuth
-  # and validates tokens directly in the Go backend — fixing CORS issues
-  # with EventSource redirects.
-  #
-  # Value: the JWKS endpoint URL of your authentik proxy provider.
-  # Use internal k8s DNS for reliability:
-  #   http://authentik-server.authentik.svc.cluster.local/application/o/<client-id>/jwks/
-  #
-  # Find your client ID in authentik admin → Providers → your proxy provider.
-  # When empty, SSE has no app-level auth (relies on Traefik ForwardAuth).
-  authentikURL: ""
-
-  # -- Authentik client secret for HS256 JWT validation (proxy providers).
-  # Authentik proxy providers sign JWTs with HS256 using the client secret.
-  # Find it in authentik admin → Providers → your proxy provider → Client Secret.
-  # For RS256 providers, use authentikURL (JWKS) instead.
-  authentikHMACKey: ""
+  # ── Authentik SSE Auth (DEPRECATED) ──────────────────────────────────
+  # DEPRECATED: Removed in Phase 18 auth unification. Use forwardAuthHeader instead.
+  # authentikURL: ""
+  # authentikHMACKey: ""
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Gas Price Auto-Poll (EIA API)
