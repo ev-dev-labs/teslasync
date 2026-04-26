@@ -2,6 +2,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import { STALE_TIMES, INTERVALS } from '@/lib/constants';
+import { useToast } from '@/components/feedback/Toast';
 import type { Drive as ApiDrive } from '../types';
 import type {
   Drive,
@@ -195,12 +196,19 @@ export function useDrivingCoach(vehicleId?: string, days = 30) {
 /* ── Trip Planner hooks─────────────────────────────────── */
 
 export function usePlanTrip() {
+  const toast = useToast();
   return useMutation({
     mutationFn: (params: TripPlanRequest) =>
       request<TripPlan>('/trip-planner/plan', {
         method: 'POST',
         body: JSON.stringify(params),
       }),
+    onSuccess: () => {
+      toast.success('Trip planned');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to plan trip: ${err.message}`);
+    },
   });
 }
 

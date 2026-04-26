@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
+import { useToast } from '@/components/feedback/Toast';
 import type { SignalHistoryResponse, SignalStats, TelemetryStatus, VehicleTelemetry } from '@/types/telemetry';
 import type { SignalCatalogEntry, SignalObservation } from '@/types/signals';
 
@@ -183,16 +184,30 @@ export function useFleetTelemetryErrors(vin?: string) {
 
 export function useRefreshFleetTelemetryErrorVINs() {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: () => request('/tesla/fleet-telemetry/error-vins/refresh', { method: 'POST' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['fleet-telemetry-error-vins'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['fleet-telemetry-error-vins'] });
+      toast.success('Telemetry error VINs refreshed');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to refresh error VINs: ${err.message}`);
+    },
   });
 }
 
 export function useRefreshFleetTelemetryErrors() {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: () => request('/tesla/fleet-telemetry/errors/refresh', { method: 'POST' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['fleet-telemetry-errors'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['fleet-telemetry-errors'] });
+      toast.success('Telemetry errors refreshed');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to refresh telemetry errors: ${err.message}`);
+    },
   });
 }

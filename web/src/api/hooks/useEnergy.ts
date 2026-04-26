@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
+import { useToast } from '@/components/feedback/Toast';
 import type {
   EnergyStats,
   BatteryHealth,
@@ -125,11 +126,16 @@ export function useTeslaEnergySites() {
 
 export function useRefreshTeslaEnergySites() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: () =>
       request<TeslaEnergySite[]>('/tesla/energy-sites/refresh', { method: 'POST' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tesla-energy-sites'] });
+      toast.success('Energy sites refreshed');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to refresh energy sites: ${err.message}`);
     },
   });
 }
@@ -146,6 +152,7 @@ export function useTeslaEnergySiteInfo(siteId?: number) {
 
 export function useRefreshTeslaEnergySiteInfo() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: (siteId: number) =>
       request<TeslaEnergySiteInfoResponse>(
@@ -154,12 +161,17 @@ export function useRefreshTeslaEnergySiteInfo() {
       ),
     onSuccess: (_data, siteId) => {
       queryClient.invalidateQueries({ queryKey: ['tesla-site-info', siteId] });
+      toast.success('Site info refreshed');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to refresh site info: ${err.message}`);
     },
   });
 }
 
 export function useUpdateTOUSettings() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: ({ siteId, settings }: { siteId: number; settings: TOUSettingsPayload }) =>
       request(`/tesla/energy-sites/${siteId}/tou-settings`, {
@@ -169,6 +181,10 @@ export function useUpdateTOUSettings() {
       }),
     onSuccess: (_data, { siteId }) => {
       queryClient.invalidateQueries({ queryKey: ['tesla-site-info', siteId] });
+      toast.success('TOU settings saved');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to save TOU settings: ${err.message}`);
     },
   });
 }
@@ -251,6 +267,7 @@ interface RefreshParams{
 
 export function useRefreshTeslaEnergyHistory() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: ({ siteId, period = 'day', start_date, end_date, time_zone }: RefreshParams) => {
       const params = new URLSearchParams({ period });
@@ -264,12 +281,17 @@ export function useRefreshTeslaEnergyHistory() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tesla-energy-history'] });
+      toast.success('Energy history refreshed');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to refresh energy history: ${err.message}`);
     },
   });
 }
 
 export function useRefreshTeslaBackupHistory() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: ({ siteId, period = 'day', start_date, end_date, time_zone }: RefreshParams) => {
       const params = new URLSearchParams({ period });
@@ -283,12 +305,17 @@ export function useRefreshTeslaBackupHistory() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tesla-backup-history'] });
+      toast.success('Backup history refreshed');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to refresh backup history: ${err.message}`);
     },
   });
 }
 
 export function useRefreshTeslaWCChargingHistory() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: ({ siteId, start_date, end_date, time_zone }: RefreshParams) => {
       const params = new URLSearchParams();
@@ -302,6 +329,10 @@ export function useRefreshTeslaWCChargingHistory() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tesla-wc-charging-history'] });
+      toast.success('Wall Connector charging history refreshed');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to refresh WC charging history: ${err.message}`);
     },
   });
 }
@@ -345,6 +376,7 @@ export function useTeslaEnergyLiveStatusHistory(
 
 export function useRefreshTeslaEnergyLiveStatus() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: (siteId: number) =>
       request<TeslaEnergyLiveStatus>(
@@ -354,6 +386,10 @@ export function useRefreshTeslaEnergyLiveStatus() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tesla-live-status'] });
       queryClient.invalidateQueries({ queryKey: ['tesla-live-status-history'] });
+      toast.success('Live status refreshed');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to refresh live status: ${err.message}`);
     },
   });
 }

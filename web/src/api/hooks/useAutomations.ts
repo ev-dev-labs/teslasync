@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
+import { useToast } from '@/components/feedback/Toast';
 import type {
   Automation,
   AutomationFull,
@@ -55,6 +56,7 @@ export function useAutomationHistory(limit = 20) {
 
 export function useToggleAutomation() {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: ({ id, enabled }: { id: number; enabled: boolean }) =>
       request<{ id: number; enabled: boolean }>(`/automations/${id}/toggle`, {
@@ -62,14 +64,19 @@ export function useToggleAutomation() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled }),
       }),
-    onSuccess: () => {
+    onSuccess: (_data, { enabled }) => {
       qc.invalidateQueries({ queryKey: automationKeys.all });
+      toast.success(`Automation ${enabled ? 'enabled' : 'disabled'}`);
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to toggle automation: ${err.message}`);
     },
   });
 }
 
 export function useReEnableAutomation() {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: (id: number) =>
       request<{ id: number; enabled: boolean; auto_disabled: boolean }>(
@@ -78,29 +85,43 @@ export function useReEnableAutomation() {
       ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: automationKeys.all });
+      toast.success('Automation re-enabled');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to re-enable automation: ${err.message}`);
     },
   });
 }
 
 export function useDeleteAutomation() {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: (id: number) =>
       request<void>(`/automations/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: automationKeys.all });
       qc.invalidateQueries({ queryKey: ['automation-history'] });
+      toast.success('Automation deleted');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to delete automation: ${err.message}`);
     },
   });
 }
 
 export function useTestRunAutomation() {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: (id: number) =>
       request<void>(`/automations/${id}/test-run`, { method: 'POST' }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['automation-history'] });
+      toast.success('Test run started');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to start test run: ${err.message}`);
     },
   });
 }
@@ -116,6 +137,7 @@ export function useAutomation(id: number | string | undefined) {
 
 export function useCreateAutomationFull() {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: (input: AutomationFullInput) =>
       request<AutomationFull>('/automations', {
@@ -125,12 +147,17 @@ export function useCreateAutomationFull() {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: automationKeys.all });
+      toast.success('Automation created');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to create automation: ${err.message}`);
     },
   });
 }
 
 export function useUpdateAutomationFull() {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: ({ id, input }: { id: number; input: AutomationFullInput }) =>
       request<AutomationFull>(`/automations/${id}`, {
@@ -141,6 +168,10 @@ export function useUpdateAutomationFull() {
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: automationKeys.all });
       qc.invalidateQueries({ queryKey: automationKeys.detail(vars.id) });
+      toast.success('Automation updated');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to update automation: ${err.message}`);
     },
   });
 }

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import { STALE_TIMES, INTERVALS } from '@/lib/constants';
+import { useToast } from '@/components/feedback/Toast';
 import type {
   ChargingSession,
   CostForecastData,
@@ -166,6 +167,7 @@ export function useTeslaChargingHistory(vin?: string) {
 /** Mutation to refresh Tesla charging historyfrom the Tesla API. */
 export function useRefreshTeslaChargingHistory() {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: (params?: { vin?: string; start_time?: string; end_time?: string }) => {
       const searchParams = new URLSearchParams();
@@ -178,7 +180,13 @@ export function useRefreshTeslaChargingHistory() {
         { method: 'POST' }
       );
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: teslaChargingHistoryKeys.all }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: teslaChargingHistoryKeys.all });
+      toast.success('Charging history refreshed');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to refresh charging history: ${err.message}`);
+    },
   });
 }
 
@@ -249,6 +257,7 @@ export function useTeslaChargingSessions(vin?: string) {
 /** Mutation to refresh Tesla fleet charging sessionsfrom the Tesla API. */
 export function useRefreshTeslaChargingSessions() {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: (params?: { vin?: string; date_from?: string; date_to?: string }) => {
       const searchParams = new URLSearchParams();
@@ -261,7 +270,13 @@ export function useRefreshTeslaChargingSessions() {
         { method: 'POST' }
       );
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: teslaChargingSessionKeys.all }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: teslaChargingSessionKeys.all });
+      toast.success('Charging sessions refreshed');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to refresh charging sessions: ${err.message}`);
+    },
   });
 }
 
@@ -275,25 +290,39 @@ export const chargePlannerKeys = {
 
 /** Mutation to optimize a charge schedule using TOU rates. */
 export function useOptimizeCharge() {
+  const toast = useToast();
   return useMutation({
     mutationFn: (params: OptimizeChargeRequest) =>
       request<OptimizeChargeResponse>('/charge-planner/optimize', {
         method: 'POST',
         body: JSON.stringify(params),
       }),
+    onSuccess: () => {
+      toast.success('Charge schedule optimized');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to optimize charge: ${err.message}`);
+    },
   });
 }
 
 /** Mutation to apply an optimized charge plan to the vehicle. */
 export function useApplySchedule() {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: (params: ApplyScheduleRequest) =>
       request<ApplyScheduleResponse>('/charge-planner/apply', {
         method: 'POST',
         body: JSON.stringify(params),
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: chargePlannerKeys.all }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: chargePlannerKeys.all });
+      toast.success('Charge schedule applied');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to apply schedule: ${err.message}`);
+    },
   });
 }
 
