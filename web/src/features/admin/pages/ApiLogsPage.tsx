@@ -36,6 +36,20 @@ function MethodBadge({ method }: { method: string }) {
   return <Badge variant={variant[method] ?? 'neutral'} size="sm">{method}</Badge>;
 }
 
+const SERVICE_CONFIG: Record<string, { label: string; variant: 'info' | 'success' | 'warning' | 'neutral' }> = {
+  'tesla-api':       { label: 'Tesla API',       variant: 'info' },
+  'fleet-telemetry': { label: 'Fleet Telemetry', variant: 'success' },
+  'geocoding':       { label: 'Geocoding',       variant: 'warning' },
+  'webhook':         { label: 'Webhook',         variant: 'neutral' },
+  'ntfy':            { label: 'Ntfy',            variant: 'neutral' },
+  'eia':             { label: 'EIA',             variant: 'neutral' },
+};
+
+function ServiceBadge({ service }: { service: string }) {
+  const config = SERVICE_CONFIG[service] ?? { label: service, variant: 'neutral' as const };
+  return <Badge variant={config.variant} size="sm">{config.label}</Badge>;
+}
+
 function JsonViewer({ data, label }: { data: string | null; label: string }) {
   const { t } = useTranslation();
   if (!data) return <p className="text-xs text-[var(--text-muted)] italic">{t('apiLogs.noData', { label: label.toLowerCase(), defaultValue: `No ${label.toLowerCase()}` })}</p>;
@@ -63,6 +77,7 @@ export default function ApiLogsPage() {
   const [method, setMethod] = useState('');
   const [status, setStatus] = useState('');
   const [endpoint, setEndpoint] = useState('');
+  const [service, setService] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -75,13 +90,14 @@ export default function ApiLogsPage() {
   });
 
   const { data, isLoading, error: logsError } = useQuery({
-    queryKey: ['api-logs', page, method, status, endpoint, startDate, endDate],
+    queryKey: ['api-logs', page, method, status, endpoint, service, startDate, endDate],
     queryFn: () => getAPICallLogs({
       limit,
       offset: page * limit,
       method: method || undefined,
       status: status || undefined,
       endpoint: endpoint || undefined,
+      service: service || undefined,
       start: startDate || undefined,
       end: endDate || undefined,
     }),
@@ -93,10 +109,10 @@ export default function ApiLogsPage() {
   const logs = data?.data ?? [];
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / limit);
-  const hasFilters = !!(method || status || endpoint || startDate || endDate);
+  const hasFilters = !!(method || status || endpoint || service || startDate || endDate);
 
   const clearFilters = useCallback(() => {
-    setMethod(''); setStatus(''); setEndpoint(''); setStartDate(''); setEndDate(''); setPage(0);
+    setMethod(''); setStatus(''); setEndpoint(''); setService(''); setStartDate(''); setEndDate(''); setPage(0);
   }, []);
 
   const handleExport = useCallback(() => {
@@ -111,8 +127,8 @@ export default function ApiLogsPage() {
 
   return (
     <PageContainer
-      title={t('apiLogs.title', 'Tesla API Logs')}
-      subtitle={t('apiLogs.subtitle', 'Record of all Tesla API calls with request/response details')}
+      title={t('apiLogs.title', 'API Logs')}
+      subtitle={t('apiLogs.subtitle', 'Record of all API calls with request/response details')}
     >
       {anyError && (
         <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
@@ -145,6 +161,24 @@ export default function ApiLogsPage() {
             value={stats?.last_24h != null ? fmtInt(stats.last_24h) : '—'}
           />
         </div>
+        {stats?.by_service && Object.keys(stats.by_service).length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 mt-3">
+            <span className="text-xs font-medium text-[var(--text-muted)]">
+              {t('apiLogs.byService', 'By Service')}:
+            </span>
+            {Object.entries(stats.by_service).map(([svc, count]) => (
+              <button
+                key={svc}
+                type="button"
+                onClick={() => { setService(svc); setPage(0); }}
+                className="inline-flex items-center gap-1.5 cursor-pointer bg-transparent border-0 p-0"
+              >
+                <ServiceBadge service={svc} />
+                <span className="text-xs text-[var(--text-secondary)]">{fmtInt(count)}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </FadeIn>
 
       {/* Filters */}
@@ -161,7 +195,20 @@ export default function ApiLogsPage() {
               </Button>
             )}
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
+            <Select
+              value={service}
+              onChange={(e) => { setService(e.target.value); setPage(0); }}
+              options={[
+                { value: '', label: t('apiLogs.allServices', 'All Services') },
+                { value: 'tesla-api', label: 'Tesla API' },
+                { value: 'fleet-telemetry', label: 'Fleet Telemetry' },
+                { value: 'geocoding', label: 'Geocoding' },
+                { value: 'webhook', label: 'Webhook' },
+                { value: 'ntfy', label: 'Ntfy' },
+                { value: 'eia', label: 'EIA' },
+              ]}
+            />
             <Select
               value={method}
               onChange={(e) => { setMethod(e.target.value); setPage(0); }}
@@ -253,18 +300,19 @@ export default function ApiLogsPage() {
                       className="flex items-center gap-2 px-4 py-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
                     >
                       <span className="text-xs font-mono text-[var(--text-muted)] whitespace-nowrap w-36 shrink-0 hidden sm:block">
-                        {formatDateTime(log.created_at)}
+                        {formatDateTime(log.ts)}
                       </span>
-                      <MethodBadge method={log.method} />
-                      <span className="text-xs font-mono text-[var(--text-secondary)] truncate flex-1" title={log.url}>
-                        {(log.url ?? '').replace(/^https?:\/\/[^/]+/, '')}
+                      <ServiceBadge service={log.service} />
+                      <MethodBadge method={log.http_method} />
+                      <span className="text-xs font-mono text-[var(--text-secondary)] truncate flex-1" title={log.endpoint}>
+                        {log.endpoint ?? ''}
                       </span>
                       <StatusBadge code={log.status_code} />
                       <span className="text-xs font-mono text-[var(--text-secondary)] w-16 text-right shrink-0">
                         {log.duration_ms}ms
                       </span>
                       <span className="text-xs text-red-400 truncate max-w-[150px] hidden md:block">
-                        {log.error || '—'}
+                        {log.error_message || '—'}
                       </span>
                       {expandedId === log.id
                         ? <ChevronUp className="h-3.5 w-3.5 text-[var(--text-muted)] shrink-0" />
@@ -274,8 +322,8 @@ export default function ApiLogsPage() {
                     {/* Mobile date + error (visible on small screens) */}
                     {expandedId !== log.id && (
                       <div className="px-4 pb-2 sm:hidden">
-                        <p className="text-[10px] text-[var(--text-muted)]">{formatDateTime(log.created_at)}</p>
-                        {log.error && <p className="text-[10px] text-red-400 truncate mt-0.5">{log.error}</p>}
+                        <p className="text-[10px] text-[var(--text-muted)]">{formatDateTime(log.ts)}</p>
+                        {log.error_message && <p className="text-[10px] text-red-400 truncate mt-0.5">{log.error_message}</p>}
                       </div>
                     )}
 
@@ -283,8 +331,8 @@ export default function ApiLogsPage() {
                     {expandedId === log.id && (
                       <div className="p-4 space-y-3 bg-[var(--surface-2)]">
                         <div className="sm:hidden mb-2">
-                          <p className="text-[10px] text-[var(--text-muted)]">{formatDateTime(log.created_at)}</p>
-                          {log.error && <p className="text-xs text-red-400 mt-1">{log.error}</p>}
+                          <p className="text-[10px] text-[var(--text-muted)]">{formatDateTime(log.ts)}</p>
+                          {log.error_message && <p className="text-xs text-red-400 mt-1">{log.error_message}</p>}
                         </div>
                         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                           <JsonViewer data={log.request_body} label={t('apiLogs.requestBody', 'Request Body')} />

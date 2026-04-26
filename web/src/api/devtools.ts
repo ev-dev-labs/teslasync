@@ -39,6 +39,7 @@ export const getAPICallLogs = (params: {
   method?: string
   status?: string
   endpoint?: string
+  service?: string
   start?: string
   end?: string
 } = {}) => {
@@ -48,6 +49,7 @@ export const getAPICallLogs = (params: {
   if (params.method) query.set('method', params.method)
   if (params.status) query.set('status', params.status)
   if (params.endpoint) query.set('endpoint', params.endpoint)
+  if (params.service) query.set('service', params.service)
   if (params.start) query.set('start', params.start)
   if (params.end) query.set('end', params.end)
   return request<APICallLogResponse>(`/api-logs?${query.toString()}`)

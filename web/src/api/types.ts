@@ -817,14 +817,17 @@ export interface MapConfig {
 
 export interface APICallLog {
   id: number
-  method: string
-  url: string
+  ts: string
+  vehicle_id: number | null
+  service: string
+  http_method: string
+  endpoint: string
   status_code: number | null
+  duration_ms: number
+  error_message: string | null
+  rate_limited: boolean
   request_body: string | null
   response_body: string | null
-  duration_ms: number
-  error: string | null
-  created_at: string
 }
 
 export interface APICallLogResponse {
@@ -837,6 +840,7 @@ export interface APICallLogResponse {
 export interface APICallLogStats {
   total_calls: number
   by_method: Record<string, number>
+  by_service: Record<string, number>
   error_rate: number
   error_count: number
   avg_duration_ms: number
