@@ -26,17 +26,6 @@ let connecting = false
 const BASE_BACKOFF_MS = 1000
 const MAX_BACKOFF_MS = 60000
 
-async function fetchSSEToken(): Promise<string | null> {
-  try {
-    const res = await fetch('/api/v1/sse-token')
-    if (!res.ok) return null
-    const data = await res.json()
-    return data.token || null
-  } catch {
-    return null
-  }
-}
-
 function emit(event: SSEEventType, data?: unknown) {
   const subs = listeners.get(event)
   if (subs) {
@@ -46,7 +35,7 @@ function emit(event: SSEEventType, data?: unknown) {
   }
 }
 
-async function doConnect() {
+function doConnect() {
   if (connecting) return
   connecting = true
 
@@ -55,16 +44,7 @@ async function doConnect() {
     source = null
   }
 
-  const token = await fetchSSEToken()
-  // SECURITY NOTE: Token is passed via query string because the browser EventSource API
-  // does not support custom headers. This is a known limitation of SSE.
-  // Mitigations:
-  // - Tokens are short-lived (scoped to SSE session)
-  // - Server logs should be configured to redact query parameters
-  // - Consider migrating to WebSocket (which supports headers) if this becomes a concern
-  const url = token ? `/api/v1/events?token=${encodeURIComponent(token)}` : '/api/v1/events'
-
-  const es = new EventSource(url)
+  const es = new EventSource('/api/v1/events')
   source = es
 
   es.addEventListener('connected', (e) => {

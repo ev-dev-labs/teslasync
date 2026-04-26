@@ -3,8 +3,8 @@
  * Separate from the global sseManager because this connects to
  * /api/v1/automations/events (a dedicated endpoint for automation lifecycle).
  *
- * Handles token-based auth (same pattern as sseManager), exponential
- * backoff reconnect, and typed event dispatch.
+ * Handles exponential backoff reconnect and typed event dispatch.
+ * Auth is handled via ForwardAuth cookie (same-domain, automatic).
  */
 
 import type {
@@ -54,24 +54,13 @@ const EVENT_TYPES: AutomationSSEEventType[] = [
   'automation.state_changed',
 ]
 
-async function fetchSSEToken(): Promise<string | null> {
-  try {
-    const res = await fetch('/api/v1/sse-token')
-    if (!res.ok) return null
-    const data = await res.json()
-    return data.token || null
-  } catch {
-    return null
-  }
-}
-
 function emit(type: AutomationSSEEventType, data: AutomationEventData) {
   for (const fn of eventListeners) {
     try { fn(type, data) } catch (e) { console.error('AutomationSSE listener error:', e) }
   }
 }
 
-async function doConnect() {
+function doConnect() {
   if (connecting) return
   connecting = true
 
@@ -80,18 +69,7 @@ async function doConnect() {
     source = null
   }
 
-  const token = await fetchSSEToken()
-  // SECURITY NOTE: Token is passed via query string because the browser EventSource API
-  // does not support custom headers. This is a known limitation of SSE.
-  // Mitigations:
-  // - Tokens are short-lived (scoped to SSE session)
-  // - Server logs should be configured to redact query parameters
-  // - Consider migrating to WebSocket (which supports headers) if this becomes a concern
-  const url = token
-    ? `/api/v1/automations/events?token=${encodeURIComponent(token)}`
-    : '/api/v1/automations/events'
-
-  const es = new EventSource(url)
+  const es = new EventSource('/api/v1/automations/events')
   source = es
 
   es.addEventListener('connected', () => {
