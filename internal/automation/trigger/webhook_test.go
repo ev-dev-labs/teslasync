@@ -15,19 +15,19 @@ import (
 // ─── Mock Webhook Repo ──────────────────────────────────
 
 type mockWebhookRepo struct {
-	automations map[string]*models.Automation // token → automation
+	automations map[string]*models.AutomationFull // token → automation
 	disabled    map[int64]string
 	returnErr   error
 }
 
 func newMockWebhookRepo() *mockWebhookRepo {
 	return &mockWebhookRepo{
-		automations: make(map[string]*models.Automation),
+		automations: make(map[string]*models.AutomationFull),
 		disabled:    make(map[int64]string),
 	}
 }
 
-func (r *mockWebhookRepo) GetByWebhookToken(_ context.Context, token string) (*models.Automation, error) {
+func (r *mockWebhookRepo) GetByWebhookToken(_ context.Context, token string) (*models.AutomationFull, error) {
 	if r.returnErr != nil {
 		return nil, r.returnErr
 	}
@@ -45,14 +45,14 @@ func (r *mockWebhookRepo) SetAutoDisabled(_ context.Context, id int64, reason st
 
 // ─── Helpers ────────────────────────────────────────────
 
-func makeWebhookAutomation(id int64, name string, cfg WebhookConfig) *models.Automation {
-	raw, _ := json.Marshal(cfg)
-	return &models.Automation{
-		ID:            id,
-		Name:          name,
-		Enabled:       true,
-		TriggerType:   "webhook",
-		TriggerConfig: raw,
+func makeWebhookAutomation(id int64, name string, cfg WebhookConfig) *models.AutomationFull {
+	return &models.AutomationFull{
+		Automation: models.Automation{
+			ID:      id,
+			Name:    name,
+			Enabled: true,
+		},
+		Triggers: []any{cfg},
 	}
 }
 
@@ -150,22 +150,6 @@ func TestWebhookTrigger_DisabledAutomation_ReturnsNotFound(t *testing.T) {
 	}
 	if engine.callCount() != 0 {
 		t.Fatal("should not fire for disabled automation")
-	}
-}
-
-func TestWebhookTrigger_AutoDisabledAutomation_ReturnsNotFound(t *testing.T) {
-	repo := newMockWebhookRepo()
-	engine := &mockEngine{}
-	wt := NewWebhookTrigger(repo, engine)
-
-	token := "auto-disabled-token"
-	auto := makeWebhookAutomation(3, "auto-disabled-webhook", WebhookConfig{WebhookToken: token})
-	auto.AutoDisabled = true
-	repo.automations[token] = auto
-
-	err := wt.HandleWebhook(context.Background(), token, []byte(`{}`), "", "10.0.0.1")
-	if err != ErrWebhookNotFound {
-		t.Fatalf("expected ErrWebhookNotFound for auto-disabled automation, got %v", err)
 	}
 }
 
@@ -292,12 +276,13 @@ func TestWebhookTrigger_InvalidConfig_AutoDisables(t *testing.T) {
 	wt := NewWebhookTrigger(repo, engine)
 
 	token := "bad-config-token"
-	auto := &models.Automation{
-		ID:            9,
-		Name:          "bad-config-webhook",
-		Enabled:       true,
-		TriggerType:   "webhook",
-		TriggerConfig: json.RawMessage(`{invalid-json`),
+	auto := &models.AutomationFull{
+		Automation: models.Automation{
+			ID:      9,
+			Name:    "bad-config-webhook",
+			Enabled: true,
+		},
+		Triggers: []any{json.RawMessage(`{invalid-json`)},
 	}
 	repo.automations[token] = auto
 

@@ -14,26 +14,23 @@ import (
 // ─── Mock Geofence Repo ─────────────────────────────────
 
 type mockGeofenceRepo struct {
-	automations []*models.Automation
-	disabled    map[int64]string
-	returnErr   error
+	geoAutomations map[int64][]GeofenceAutomation // vehicleID → automations
+	disabled       map[int64]string
+	returnErr      error
 }
 
 func newMockGeofenceRepo() *mockGeofenceRepo {
-	return &mockGeofenceRepo{disabled: make(map[int64]string)}
+	return &mockGeofenceRepo{
+		geoAutomations: make(map[int64][]GeofenceAutomation),
+		disabled:       make(map[int64]string),
+	}
 }
 
-func (r *mockGeofenceRepo) GetEnabledByVehicleAndTrigger(_ context.Context, _ int64, triggerType string) ([]*models.Automation, error) {
+func (r *mockGeofenceRepo) LoadEnabledGeofenceTriggers(_ context.Context, vehicleID int64) ([]GeofenceAutomation, error) {
 	if r.returnErr != nil {
 		return nil, r.returnErr
 	}
-	var result []*models.Automation
-	for _, a := range r.automations {
-		if a.TriggerType == triggerType {
-			result = append(result, a)
-		}
-	}
-	return result, nil
+	return r.geoAutomations[vehicleID], nil
 }
 
 func (r *mockGeofenceRepo) SetAutoDisabled(_ context.Context, id int64, reason string) error {
@@ -45,51 +42,51 @@ func (r *mockGeofenceRepo) SetAutoDisabled(_ context.Context, id int64, reason s
 
 type mockGeofenceDataProvider struct {
 	mu         sync.Mutex
-	geofences  []*models.Geofence
-	byID       map[int64]*models.Geofence
+	places     []*models.Place
+	byID       map[int64]*models.Place
 	findErr    error
 	getByIDErr error
 }
 
 func newMockGeofenceDataProvider() *mockGeofenceDataProvider {
 	return &mockGeofenceDataProvider{
-		byID: make(map[int64]*models.Geofence),
+		byID: make(map[int64]*models.Place),
 	}
 }
 
-func (p *mockGeofenceDataProvider) addGeofence(g *models.Geofence) {
+func (p *mockGeofenceDataProvider) addGeofence(g *models.Place) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	p.geofences = append(p.geofences, g)
+	p.places = append(p.places, g)
 	p.byID[g.ID] = g
 }
 
-// insideIDs controls which geofences the mock reports as containing the point.
+// insideIDs controls which places the mock reports as containing the point.
 // Call setInsideIDs before OnPositionUpdate to simulate position changes.
 func (p *mockGeofenceDataProvider) setInsideIDs(ids []int64) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	var inside []*models.Geofence
+	var inside []*models.Place
 	for _, id := range ids {
 		if g, ok := p.byID[id]; ok {
 			inside = append(inside, g)
 		}
 	}
-	p.geofences = inside
+	p.places = inside
 }
 
-func (p *mockGeofenceDataProvider) FindByCoordinates(_ context.Context, _, _ float64) ([]*models.Geofence, error) {
+func (p *mockGeofenceDataProvider) FindByCoordinates(_ context.Context, _, _ float64) ([]*models.Place, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.findErr != nil {
 		return nil, p.findErr
 	}
-	result := make([]*models.Geofence, len(p.geofences))
-	copy(result, p.geofences)
+	result := make([]*models.Place, len(p.places))
+	copy(result, p.places)
 	return result, nil
 }
 
-func (p *mockGeofenceDataProvider) GetByID(_ context.Context, id int64) (*models.Geofence, error) {
+func (p *mockGeofenceDataProvider) GetByID(_ context.Context, id int64) (*models.Place, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.getByIDErr != nil {
@@ -100,24 +97,23 @@ func (p *mockGeofenceDataProvider) GetByID(_ context.Context, id int64) (*models
 
 // ─── Helpers ────────────────────────────────────────────
 
-func makeGeofenceAutomation(id int64, name string, cfg GeofenceConfig) *models.Automation {
-	raw, _ := json.Marshal(cfg)
-	return &models.Automation{
-		ID:            id,
-		Name:          name,
-		Enabled:       true,
-		TriggerType:   "geofence",
-		TriggerConfig: raw,
+func makeGeofenceAutomation(id int64, name string, cfg GeofenceConfig) GeofenceAutomation {
+	return GeofenceAutomation{
+		Automation: models.Automation{ID: id, Name: name, Enabled: true},
+		Trigger: models.AutomationStepTriggerGeofence{
+			PlaceID: cfg.GeofenceID,
+			Event:   cfg.Event,
+		},
 	}
 }
 
-func makeGeofence(id int64, name string, lat, lon, radius float64) *models.Geofence {
-	return &models.Geofence{
+func makeGeofence(id int64, name string, lat, lon, radius float64) *models.Place {
+	return &models.Place{
 		ID:        id,
 		Name:      name,
 		Latitude:  lat,
 		Longitude: lon,
-		Radius:    radius,
+		RadiusM:   int32(radius),
 	}
 }
 
@@ -221,7 +217,7 @@ func TestGeofenceTrigger_FirstObservation_NoFire(t *testing.T) {
 	home := makeGeofence(1, "Home", 37.394, -122.15, 100)
 	provider.addGeofence(home)
 
-	repo.automations = []*models.Automation{
+	repo.geoAutomations[100] = []GeofenceAutomation{
 		makeGeofenceAutomation(1, "arrive-home", GeofenceConfig{GeofenceID: 1, Event: "enter"}),
 	}
 
@@ -243,7 +239,7 @@ func TestGeofenceTrigger_Enter_Fires(t *testing.T) {
 	home := makeGeofence(5, "Home", 37.394, -122.15, 100)
 	provider.addGeofence(home)
 
-	repo.automations = []*models.Automation{
+	repo.geoAutomations[100] = []GeofenceAutomation{
 		makeGeofenceAutomation(1, "arrive-home", GeofenceConfig{GeofenceID: 5, Event: "enter"}),
 	}
 
@@ -267,11 +263,11 @@ func TestGeofenceTrigger_Enter_Fires(t *testing.T) {
 	if snap.VehicleID != 100 {
 		t.Fatalf("expected vehicle_id 100, got %d", snap.VehicleID)
 	}
-	if snap.GeofenceID != 5 {
-		t.Fatalf("expected geofence_id 5, got %d", snap.GeofenceID)
+	if snap.PlaceID != 5 {
+		t.Fatalf("expected geofence_id 5, got %d", snap.PlaceID)
 	}
-	if snap.GeofenceName != "Home" {
-		t.Fatalf("expected geofence_name 'Home', got %q", snap.GeofenceName)
+	if snap.PlaceName != "Home" {
+		t.Fatalf("expected geofence_name 'Home', got %q", snap.PlaceName)
 	}
 	if snap.Event != "enter" {
 		t.Fatalf("expected event 'enter', got %q", snap.Event)
@@ -287,7 +283,7 @@ func TestGeofenceTrigger_Leave_Fires(t *testing.T) {
 	work := makeGeofence(3, "Work", 37.40, -122.10, 200)
 	provider.addGeofence(work)
 
-	repo.automations = []*models.Automation{
+	repo.geoAutomations[100] = []GeofenceAutomation{
 		makeGeofenceAutomation(1, "leave-work", GeofenceConfig{GeofenceID: 3, Event: "leave"}),
 	}
 
@@ -322,7 +318,7 @@ func TestGeofenceTrigger_StayingInside_NoFire(t *testing.T) {
 	home := makeGeofence(1, "Home", 37.394, -122.15, 100)
 	provider.addGeofence(home)
 
-	repo.automations = []*models.Automation{
+	repo.geoAutomations[100] = []GeofenceAutomation{
 		makeGeofenceAutomation(1, "arrive-home", GeofenceConfig{GeofenceID: 1, Event: "enter"}),
 	}
 
@@ -346,7 +342,7 @@ func TestGeofenceTrigger_StayingOutside_NoFire(t *testing.T) {
 
 	provider.addGeofence(makeGeofence(1, "Home", 37.394, -122.15, 100))
 
-	repo.automations = []*models.Automation{
+	repo.geoAutomations[100] = []GeofenceAutomation{
 		makeGeofenceAutomation(1, "arrive-home", GeofenceConfig{GeofenceID: 1, Event: "enter"}),
 	}
 
@@ -371,7 +367,7 @@ func TestGeofenceTrigger_EnterOnly_NoFireOnLeave(t *testing.T) {
 
 	provider.addGeofence(makeGeofence(1, "Home", 37.394, -122.15, 100))
 
-	repo.automations = []*models.Automation{
+	repo.geoAutomations[100] = []GeofenceAutomation{
 		makeGeofenceAutomation(1, "arrive-home", GeofenceConfig{GeofenceID: 1, Event: "enter"}),
 	}
 
@@ -396,7 +392,7 @@ func TestGeofenceTrigger_LeaveOnly_NoFireOnEnter(t *testing.T) {
 
 	provider.addGeofence(makeGeofence(1, "Home", 37.394, -122.15, 100))
 
-	repo.automations = []*models.Automation{
+	repo.geoAutomations[100] = []GeofenceAutomation{
 		makeGeofenceAutomation(1, "leave-home", GeofenceConfig{GeofenceID: 1, Event: "leave"}),
 	}
 
@@ -421,7 +417,7 @@ func TestGeofenceTrigger_BothEvent_FiresOnEnterAndLeave(t *testing.T) {
 
 	provider.addGeofence(makeGeofence(1, "Home", 37.394, -122.15, 100))
 
-	repo.automations = []*models.Automation{
+	repo.geoAutomations[100] = []GeofenceAutomation{
 		makeGeofenceAutomation(1, "home-both", GeofenceConfig{GeofenceID: 1, Event: "both"}),
 	}
 
@@ -456,7 +452,7 @@ func TestGeofenceTrigger_MultipleGeofences(t *testing.T) {
 	provider.addGeofence(makeGeofence(1, "Home", 37.394, -122.15, 100))
 	provider.addGeofence(makeGeofence(2, "Work", 37.40, -122.10, 200))
 
-	repo.automations = []*models.Automation{
+	repo.geoAutomations[100] = []GeofenceAutomation{
 		makeGeofenceAutomation(1, "arrive-home", GeofenceConfig{GeofenceID: 1, Event: "enter"}),
 		makeGeofenceAutomation(2, "arrive-work", GeofenceConfig{GeofenceID: 2, Event: "enter"}),
 	}
@@ -482,15 +478,13 @@ func TestGeofenceTrigger_InvalidConfig_AutoDisables(t *testing.T) {
 
 	provider.addGeofence(makeGeofence(1, "Home", 37.394, -122.15, 100))
 
-	bad := &models.Automation{
-		ID:            99,
-		Name:          "broken",
-		Enabled:       true,
-		TriggerType:   "geofence",
-		TriggerConfig: json.RawMessage(`{invalid`),
+	// Unknown PlaceID=0 will be silently skipped (not auto-disabled).
+	bad := GeofenceAutomation{
+		Automation: models.Automation{ID: 99, Name: "broken", Enabled: true},
+		Trigger:    models.AutomationStepTriggerGeofence{PlaceID: 0, Event: "enter"},
 	}
 	good := makeGeofenceAutomation(1, "arrive-home", GeofenceConfig{GeofenceID: 1, Event: "enter"})
-	repo.automations = []*models.Automation{bad, good}
+	repo.geoAutomations[100] = []GeofenceAutomation{bad, good}
 
 	gt.Seed(100, nil)
 
@@ -571,7 +565,7 @@ func TestGeofenceTrigger_EngineError_ReturnsFirstError(t *testing.T) {
 	gt := NewGeofenceTrigger(repo, provider, engine)
 
 	provider.addGeofence(makeGeofence(1, "Home", 37.394, -122.15, 100))
-	repo.automations = []*models.Automation{
+	repo.geoAutomations[100] = []GeofenceAutomation{
 		makeGeofenceAutomation(1, "arrive-home", GeofenceConfig{GeofenceID: 1, Event: "enter"}),
 	}
 
@@ -592,7 +586,7 @@ func TestGeofenceTrigger_DifferentVehicles_Independent(t *testing.T) {
 
 	provider.addGeofence(makeGeofence(1, "Home", 37.394, -122.15, 100))
 
-	repo.automations = []*models.Automation{
+	repo.geoAutomations[100] = []GeofenceAutomation{
 		makeGeofenceAutomation(1, "arrive-home", GeofenceConfig{GeofenceID: 1, Event: "enter"}),
 	}
 
@@ -624,7 +618,7 @@ func TestGeofenceTrigger_Seed_PreventsFirstObservationSkip(t *testing.T) {
 
 	provider.addGeofence(makeGeofence(1, "Home", 37.394, -122.15, 100))
 
-	repo.automations = []*models.Automation{
+	repo.geoAutomations[100] = []GeofenceAutomation{
 		makeGeofenceAutomation(1, "arrive-home", GeofenceConfig{GeofenceID: 1, Event: "enter"}),
 	}
 
@@ -649,7 +643,7 @@ func TestGeofenceTrigger_UnmatchedGeofenceID_NoFire(t *testing.T) {
 	// Automation watches geofence 5, but vehicle enters geofence 1
 	provider.addGeofence(makeGeofence(1, "Home", 37.394, -122.15, 100))
 
-	repo.automations = []*models.Automation{
+	repo.geoAutomations[100] = []GeofenceAutomation{
 		makeGeofenceAutomation(1, "arrive-office", GeofenceConfig{GeofenceID: 5, Event: "enter"}),
 	}
 
@@ -674,7 +668,7 @@ func TestGeofenceTrigger_DwellTimer_FiresAfterDwell(t *testing.T) {
 
 	provider.addGeofence(makeGeofence(1, "Home", 37.394, -122.15, 100))
 
-	repo.automations = []*models.Automation{
+	repo.geoAutomations[100] = []GeofenceAutomation{
 		makeGeofenceAutomation(1, "arrive-home-dwell", GeofenceConfig{
 			GeofenceID:   1,
 			Event:        "enter",
@@ -724,7 +718,7 @@ func TestGeofenceTrigger_DwellTimer_CancelledOnLeave(t *testing.T) {
 
 	provider.addGeofence(makeGeofence(1, "Home", 37.394, -122.15, 100))
 
-	repo.automations = []*models.Automation{
+	repo.geoAutomations[100] = []GeofenceAutomation{
 		makeGeofenceAutomation(1, "arrive-home-dwell", GeofenceConfig{
 			GeofenceID:   1,
 			Event:        "enter",
@@ -776,7 +770,7 @@ func TestGeofenceTrigger_DwellTimer_VehicleLeftBeforeFire(t *testing.T) {
 	provider.addGeofence(makeGeofence(1, "Home", 37.394, -122.15, 100))
 
 	// Automation with "both" event and dwell — enter has dwell, leave fires immediately
-	repo.automations = []*models.Automation{
+	repo.geoAutomations[100] = []GeofenceAutomation{
 		makeGeofenceAutomation(1, "home-both-dwell", GeofenceConfig{
 			GeofenceID:   1,
 			Event:        "both",
@@ -831,7 +825,7 @@ func TestGeofenceTrigger_Stop_CancelsTimers(t *testing.T) {
 
 	provider.addGeofence(makeGeofence(1, "Home", 37.394, -122.15, 100))
 
-	repo.automations = []*models.Automation{
+	repo.geoAutomations[100] = []GeofenceAutomation{
 		makeGeofenceAutomation(1, "arrive-home-dwell", GeofenceConfig{
 			GeofenceID:   1,
 			Event:        "enter",

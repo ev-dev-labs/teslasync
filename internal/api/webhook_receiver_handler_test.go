@@ -20,18 +20,18 @@ import (
 // ── Mock Webhook Repo (satisfies trigger.WebhookRepo) ───────────────────
 
 type mockWebhookReceiverRepo struct {
-	automations map[string]*models.Automation
+	automations map[string]*models.AutomationFull
 	disabled    map[int64]string
 }
 
 func newMockWebhookReceiverRepo() *mockWebhookReceiverRepo {
 	return &mockWebhookReceiverRepo{
-		automations: make(map[string]*models.Automation),
+		automations: make(map[string]*models.AutomationFull),
 		disabled:    make(map[int64]string),
 	}
 }
 
-func (r *mockWebhookReceiverRepo) GetByWebhookToken(_ context.Context, token string) (*models.Automation, error) {
+func (r *mockWebhookReceiverRepo) GetByWebhookToken(_ context.Context, token string) (*models.AutomationFull, error) {
 	a, ok := r.automations[token]
 	if !ok {
 		return nil, nil
@@ -57,18 +57,19 @@ func (e *mockReceiverEngine) Evaluate(_ context.Context, _ int64, _ json.RawMess
 
 // ── Helpers ─────────────────────────────────────────────────────────────
 
-func makeTestAutomation(id int64, token string, secret *string) *models.Automation {
+func makeTestAutomation(id int64, token string, secret *string) *models.AutomationFull {
 	cfg := map[string]interface{}{"webhook_token": token}
 	if secret != nil {
 		cfg["secret"] = *secret
 	}
 	raw, _ := json.Marshal(cfg)
-	return &models.Automation{
-		ID:            id,
-		Name:          "test-automation",
-		Enabled:       true,
-		TriggerType:   "webhook",
-		TriggerConfig: raw,
+	return &models.AutomationFull{
+		Automation: models.Automation{
+			ID:      id,
+			Name:    "test-automation",
+			Enabled: true,
+		},
+		Triggers: []any{json.RawMessage(raw)},
 	}
 }
 

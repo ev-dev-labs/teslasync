@@ -28,15 +28,15 @@ func (m *mockLocationProvider) GetHomeLocation(_ context.Context, _ int64) (floa
 
 // ─── Helpers ────────────────────────────────────────────
 
-func makeSunriseSunsetAutomation(id int64, name string, cfg SunriseSunsetConfig, vehicleID *int64) *models.Automation {
-	raw, _ := json.Marshal(cfg)
-	return &models.Automation{
-		ID:            id,
-		Name:          name,
-		Enabled:       true,
-		VehicleID:     vehicleID,
-		TriggerType:   "sunrise_sunset",
-		TriggerConfig: raw,
+func makeSunriseSunsetAutomation(id int64, name string, cfg SunriseSunsetConfig, vehicleID *int64) *models.AutomationFull {
+	return &models.AutomationFull{
+		Automation: models.Automation{
+			ID:        id,
+			Name:      name,
+			Enabled:   true,
+			VehicleID: vehicleID,
+		},
+		Triggers: []any{cfg},
 	}
 }
 
@@ -361,7 +361,7 @@ func TestSunriseSunsetTrigger_Fires_WhenInWindow(t *testing.T) {
 		Latitude:  &lat,
 		Longitude: &lon,
 	}
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeSunriseSunsetAutomation(1, "Sunset Sentry", cfg, nil),
 	}
 
@@ -405,7 +405,7 @@ func TestSunriseSunsetTrigger_DoesNotFire_OutsideWindow(t *testing.T) {
 		Latitude:  &lat,
 		Longitude: &lon,
 	}
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeSunriseSunsetAutomation(1, "Sunset Sentry", cfg, nil),
 	}
 
@@ -440,7 +440,7 @@ func TestSunriseSunsetTrigger_DayOfWeekFilter(t *testing.T) {
 	}
 
 	// April 18, 2026 is Saturday.
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeSunriseSunsetAutomation(1, "Weekday Sunrise", cfg, nil),
 	}
 
@@ -471,7 +471,7 @@ func TestSunriseSunsetTrigger_WithOffset(t *testing.T) {
 		Latitude:      &lat,
 		Longitude:     &lon,
 	}
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeSunriseSunsetAutomation(1, "30min Before Sunset", cfg, nil),
 	}
 
@@ -511,7 +511,7 @@ func TestSunriseSunsetTrigger_Dedup_NoDuplicate(t *testing.T) {
 		Latitude:  &lat,
 		Longitude: &lon,
 	}
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeSunriseSunsetAutomation(1, "Sunrise", cfg, nil),
 	}
 
@@ -544,7 +544,7 @@ func TestSunriseSunsetTrigger_LocationFallback(t *testing.T) {
 	}
 
 	vid := int64(42)
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeSunriseSunsetAutomation(1, "Home Sunrise", cfg, &vid),
 	}
 
@@ -574,13 +574,14 @@ func TestSunriseSunsetTrigger_InvalidConfig_AutoDisabled(t *testing.T) {
 	engine := &mockEngine{}
 	repo := newMockRepo()
 
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		{
-			ID:            1,
-			Name:          "Bad Config",
-			Enabled:       true,
-			TriggerType:   "sunrise_sunset",
-			TriggerConfig: json.RawMessage(`{"event": "noon"}`), // invalid
+			Automation: models.Automation{
+				ID:      1,
+				Name:    "Bad Config",
+				Enabled: true,
+			},
+			Triggers: []any{json.RawMessage(`{"event": "noon"}`)}, // invalid
 		},
 	}
 
@@ -607,7 +608,7 @@ func TestSunriseSunsetTrigger_NoVehicleNoCoords_AutoDisabled(t *testing.T) {
 		Event: "sunrise",
 		// No lat/lon, no vehicle_id.
 	}
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeSunriseSunsetAutomation(1, "No Location", cfg, nil),
 	}
 
@@ -633,7 +634,7 @@ func TestSunriseSunsetTrigger_LocationProviderError_AutoDisabled(t *testing.T) {
 
 	cfg := SunriseSunsetConfig{Event: "sunrise"}
 	vid := int64(42)
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeSunriseSunsetAutomation(1, "Bad Location", cfg, &vid),
 	}
 
@@ -663,7 +664,7 @@ func TestSunriseSunsetTrigger_CrossDayOffset(t *testing.T) {
 		Latitude:      &lat,
 		Longitude:     &lon,
 	}
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeSunriseSunsetAutomation(1, "Early Morning", cfg, nil),
 	}
 
@@ -700,7 +701,7 @@ func TestSunriseSunsetTrigger_TimezoneAwareDayFilter(t *testing.T) {
 	}
 
 	// April 18, 2026 is Saturday. Sunset at 19:45 UTC = 12:45 PDT (still Saturday).
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeSunriseSunsetAutomation(1, "Saturday Sunset", cfg, nil),
 	}
 

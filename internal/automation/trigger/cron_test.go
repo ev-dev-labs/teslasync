@@ -54,29 +54,46 @@ func (m *mockEngine) lastCall() *engineCall {
 // ─── Mock Repo ───────────────────────────────────────────
 
 type mockRepo struct {
-	mu          sync.Mutex
-	automations []*models.Automation
-	disabled    map[int64]string // id → reason
-	returnErr   error
+	mu              sync.Mutex
+	automations     []*models.AutomationFull // for calendar/sunrise_sunset tests (GetByTriggerType)
+	cronAutomations []CronAutomation         // for cron tests (LoadEnabledScheduleTriggers)
+	energyAutos     map[int64][]EnergyAutomation // siteID → automations (LoadEnabledEnergySignalTriggers)
+	disabled        map[int64]string             // id → reason
+	returnErr       error
 }
 
 func newMockRepo() *mockRepo {
-	return &mockRepo{disabled: make(map[int64]string)}
+	return &mockRepo{
+		disabled:    make(map[int64]string),
+		energyAutos: make(map[int64][]EnergyAutomation),
+	}
 }
 
-func (r *mockRepo) GetByTriggerType(_ context.Context, triggerType string) ([]*models.Automation, error) {
+func (r *mockRepo) GetByTriggerType(_ context.Context, _ string) ([]*models.AutomationFull, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.returnErr != nil {
 		return nil, r.returnErr
 	}
-	var result []*models.Automation
-	for _, a := range r.automations {
-		if a.TriggerType == triggerType {
-			result = append(result, a)
-		}
+	return r.automations, nil
+}
+
+func (r *mockRepo) LoadEnabledScheduleTriggers(_ context.Context) ([]CronAutomation, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.returnErr != nil {
+		return nil, r.returnErr
 	}
-	return result, nil
+	return r.cronAutomations, nil
+}
+
+func (r *mockRepo) LoadEnabledEnergySignalTriggers(_ context.Context, siteID int64) ([]EnergyAutomation, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.returnErr != nil {
+		return nil, r.returnErr
+	}
+	return r.energyAutos[siteID], nil
 }
 
 func (r *mockRepo) SetAutoDisabled(_ context.Context, id int64, reason string) error {
@@ -101,27 +118,17 @@ func (r *mockRepo) disabledReason(id int64) string {
 
 // ─── Helpers ─────────────────────────────────────────────
 
-func makeAutomation(id int64, name, cronExpr, tz string) *models.Automation {
-	cfg := CronConfig{CronExpr: cronExpr, Timezone: tz}
-	raw, _ := json.Marshal(cfg)
-	return &models.Automation{
-		ID:            id,
-		Name:          name,
-		Enabled:       true,
-		TriggerType:   "cron",
-		TriggerConfig: raw,
-	}
-}
-
-func makeOneTimeAutomation(id int64, name, cronExpr, tz, date string) *models.Automation {
-	cfg := CronConfig{CronExpr: cronExpr, Timezone: tz, OneTime: true, OneTimeDate: date}
-	raw, _ := json.Marshal(cfg)
-	return &models.Automation{
-		ID:            id,
-		Name:          name,
-		Enabled:       true,
-		TriggerType:   "cron",
-		TriggerConfig: raw,
+func makeAutomation(id int64, name, cronExpr, tz string) CronAutomation {
+	return CronAutomation{
+		Automation: models.Automation{
+			ID:      id,
+			Name:    name,
+			Enabled: true,
+		},
+		Trigger: models.AutomationStepTriggerSchedule{
+			CronExpr: cronExpr,
+			Timezone: tz,
+		},
 	}
 }
 
@@ -198,45 +205,6 @@ func TestLoadTimezone_Invalid(t *testing.T) {
 	_, err := loadTimezone("Mars/Olympus_Mons")
 	if err == nil {
 		t.Fatal("expected error for invalid timezone")
-	}
-}
-
-// ─── OneTimeDate Validation ──────────────────────────────
-
-func TestIsOneTimeDatePast_FutureDate(t *testing.T) {
-	future := time.Now().Add(48 * time.Hour).Format("2006-01-02")
-	past, _ := isOneTimeDatePast(future, time.UTC)
-	if past {
-		t.Fatalf("future date %s should not be past", future)
-	}
-}
-
-func TestIsOneTimeDatePast_PastDate(t *testing.T) {
-	pastDate := time.Now().Add(-48 * time.Hour).Format("2006-01-02")
-	past, reason := isOneTimeDatePast(pastDate, time.UTC)
-	if !past {
-		t.Fatalf("past date %s should be expired", pastDate)
-	}
-	if reason == "" {
-		t.Fatal("expected reason for expired date")
-	}
-}
-
-func TestIsOneTimeDatePast_Today(t *testing.T) {
-	today := time.Now().Format("2006-01-02")
-	past, _ := isOneTimeDatePast(today, time.UTC)
-	if past {
-		t.Fatal("today's date should not be considered past")
-	}
-}
-
-func TestIsOneTimeDatePast_InvalidFormat(t *testing.T) {
-	past, reason := isOneTimeDatePast("not-a-date", time.UTC)
-	if !past {
-		t.Fatal("invalid date should be considered expired")
-	}
-	if reason == "" {
-		t.Fatal("expected reason for invalid format")
 	}
 }
 
@@ -365,60 +333,11 @@ func TestUnregister_NonExistent(t *testing.T) {
 	ct.Unregister(999)
 }
 
-// ─── Register OneTime ────────────────────────────────────
-
-func TestRegister_OneTime_PastDate_Rejected(t *testing.T) {
-	repo := newMockRepo()
-	engine := &mockEngine{}
-	ct := NewCronTrigger(repo, engine)
-	defer ct.Stop()
-
-	pastDate := time.Now().Add(-48 * time.Hour).Format("2006-01-02")
-	a := makeOneTimeAutomation(1, "past-one-time", "0 8 * * *", "", pastDate)
-	if err := ct.Register(a); err == nil {
-		t.Fatal("expected error for past one-time date")
-	}
-}
-
-func TestRegister_OneTime_FutureDate_Accepted(t *testing.T) {
-	repo := newMockRepo()
-	engine := &mockEngine{}
-	ct := NewCronTrigger(repo, engine)
-	defer ct.Stop()
-
-	futureDate := time.Now().Add(48 * time.Hour).Format("2006-01-02")
-	a := makeOneTimeAutomation(1, "future-one-time", "0 8 * * *", "", futureDate)
-	if err := ct.Register(a); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !ct.IsRegistered(1) {
-		t.Fatal("expected one-time automation to be registered")
-	}
-}
-
-func TestRegister_OneTime_NoDate(t *testing.T) {
-	repo := newMockRepo()
-	engine := &mockEngine{}
-	ct := NewCronTrigger(repo, engine)
-	defer ct.Stop()
-
-	// one_time without a date should still register (fires on next cron match).
-	cfg := CronConfig{CronExpr: "0 8 * * *", OneTime: true}
-	raw, _ := json.Marshal(cfg)
-	a := &models.Automation{
-		ID: 1, Name: "no-date-one-time", Enabled: true,
-		TriggerType: "cron", TriggerConfig: raw,
-	}
-	if err := ct.Register(a); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
 // ─── Start ───────────────────────────────────────────────
 
 func TestStart_LoadsFromDB(t *testing.T) {
 	repo := newMockRepo()
-	repo.automations = []*models.Automation{
+	repo.cronAutomations = []CronAutomation{
 		makeAutomation(1, "auto-1", "0 8 * * *", ""),
 		makeAutomation(2, "auto-2", "@daily", "America/New_York"),
 	}
@@ -434,9 +353,9 @@ func TestStart_LoadsFromDB(t *testing.T) {
 	}
 }
 
-func TestStart_SkipsInvalid_DisablesInDB(t *testing.T) {
+func TestStart_SkipsInvalid(t *testing.T) {
 	repo := newMockRepo()
-	repo.automations = []*models.Automation{
+	repo.cronAutomations = []CronAutomation{
 		makeAutomation(1, "valid", "0 8 * * *", ""),
 		makeAutomation(2, "invalid-cron", "not valid", ""),
 		makeAutomation(3, "valid-2", "@hourly", ""),
@@ -449,15 +368,12 @@ func TestStart_SkipsInvalid_DisablesInDB(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// 2 valid, 1 invalid
+	// 2 valid, 1 invalid — invalid is logged and skipped per ADR-012.
 	if ct.RegisteredCount() != 2 {
 		t.Fatalf("expected 2 registered, got %d", ct.RegisteredCount())
 	}
-	if !repo.isDisabled(2) {
-		t.Fatal("expected invalid automation 2 to be auto-disabled")
-	}
-	if repo.isDisabled(1) || repo.isDisabled(3) {
-		t.Fatal("valid automations should not be disabled")
+	if ct.IsRegistered(2) {
+		t.Fatal("invalid automation 2 should not be registered")
 	}
 }
 
@@ -478,7 +394,7 @@ func TestStart_DBError(t *testing.T) {
 
 func TestReload_ReplacesSchedule(t *testing.T) {
 	repo := newMockRepo()
-	repo.automations = []*models.Automation{
+	repo.cronAutomations = []CronAutomation{
 		makeAutomation(1, "auto-1", "0 8 * * *", ""),
 	}
 	engine := &mockEngine{}
@@ -492,7 +408,7 @@ func TestReload_ReplacesSchedule(t *testing.T) {
 
 	// Change the set of automations.
 	repo.mu.Lock()
-	repo.automations = []*models.Automation{
+	repo.cronAutomations = []CronAutomation{
 		makeAutomation(10, "new-auto", "@hourly", ""),
 		makeAutomation(11, "new-auto-2", "0 9 * * *", "Europe/London"),
 	}
@@ -537,7 +453,7 @@ func TestFire_CallsEngine(t *testing.T) {
 	ct := NewCronTrigger(repo, engine)
 	defer ct.Stop()
 
-	ct.fire(42, "test-auto", "0 8 * * *", false)
+	ct.fire(42, "test-auto", "0 8 * * *")
 
 	if engine.callCount() != 1 {
 		t.Fatalf("expected 1 engine call, got %d", engine.callCount())
@@ -565,56 +481,7 @@ func TestFire_CallsEngine(t *testing.T) {
 	}
 }
 
-func TestFire_OneTime_AutoDisables(t *testing.T) {
-	repo := newMockRepo()
-	engine := &mockEngine{}
-	ct := NewCronTrigger(repo, engine)
-	defer ct.Stop()
-
-	// Register a one-time automation first.
-	a := makeAutomation(7, "one-shot", "0 8 * * *", "")
-	ct.Register(a)
-
-	// Fire as one-time.
-	ct.fire(7, "one-shot", "0 8 * * *", true)
-
-	// Should have been unregistered.
-	if ct.IsRegistered(7) {
-		t.Fatal("one-time automation should be unregistered after fire")
-	}
-
-	// Should have been auto-disabled in repo.
-	if !repo.isDisabled(7) {
-		t.Fatal("one-time automation should be auto-disabled in DB")
-	}
-
-	// Engine should still have been called.
-	if engine.callCount() != 1 {
-		t.Fatalf("expected 1 engine call, got %d", engine.callCount())
-	}
-}
-
-func TestFire_OneTime_DisablesEvenOnEngineError(t *testing.T) {
-	repo := newMockRepo()
-	engine := &mockEngine{returnErr: fmt.Errorf("evaluation failed")}
-	ct := NewCronTrigger(repo, engine)
-	defer ct.Stop()
-
-	a := makeAutomation(7, "one-shot", "0 8 * * *", "")
-	ct.Register(a)
-
-	ct.fire(7, "one-shot", "0 8 * * *", true)
-
-	// Should be disabled even though engine returned an error.
-	if !repo.isDisabled(7) {
-		t.Fatal("one-time should be auto-disabled even when evaluation fails")
-	}
-	if ct.IsRegistered(7) {
-		t.Fatal("one-time should be unregistered even when evaluation fails")
-	}
-}
-
-func TestFire_Recurring_DoesNotDisable(t *testing.T) {
+func TestFire_DoesNotDisable(t *testing.T) {
 	repo := newMockRepo()
 	engine := &mockEngine{}
 	ct := NewCronTrigger(repo, engine)
@@ -623,13 +490,13 @@ func TestFire_Recurring_DoesNotDisable(t *testing.T) {
 	a := makeAutomation(5, "recurring", "0 8 * * *", "")
 	ct.Register(a)
 
-	ct.fire(5, "recurring", "0 8 * * *", false)
+	ct.fire(5, "recurring", "0 8 * * *")
 
 	if repo.isDisabled(5) {
-		t.Fatal("recurring automation should not be auto-disabled")
+		t.Fatal("automation should not be auto-disabled after fire")
 	}
 	if !ct.IsRegistered(5) {
-		t.Fatal("recurring automation should remain registered")
+		t.Fatal("automation should remain registered after fire")
 	}
 }
 
@@ -708,38 +575,6 @@ func TestConcurrentRegisterUnregister(t *testing.T) {
 	count := ct.RegisteredCount()
 	if count < 0 {
 		t.Fatalf("invalid registered count: %d", count)
-	}
-}
-
-// ─── Empty Trigger Config ────────────────────────────────
-
-func TestRegister_EmptyTriggerConfig(t *testing.T) {
-	repo := newMockRepo()
-	engine := &mockEngine{}
-	ct := NewCronTrigger(repo, engine)
-	defer ct.Stop()
-
-	a := &models.Automation{
-		ID: 1, Name: "empty-config", Enabled: true,
-		TriggerType: "cron", TriggerConfig: nil,
-	}
-	if err := ct.Register(a); err == nil {
-		t.Fatal("expected error for nil trigger config")
-	}
-}
-
-func TestRegister_MalformedJSON(t *testing.T) {
-	repo := newMockRepo()
-	engine := &mockEngine{}
-	ct := NewCronTrigger(repo, engine)
-	defer ct.Stop()
-
-	a := &models.Automation{
-		ID: 1, Name: "bad-json", Enabled: true,
-		TriggerType: "cron", TriggerConfig: json.RawMessage(`{bad`),
-	}
-	if err := ct.Register(a); err == nil {
-		t.Fatal("expected error for malformed JSON")
 	}
 }
 

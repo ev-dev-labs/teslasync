@@ -11,14 +11,51 @@ import (
 
 // ─── Helpers ────────────────────────────────────────────
 
-func makeEnergyAutomation(id int64, name string, cfg EnergyConfig) *models.Automation {
-	raw, _ := json.Marshal(cfg)
-	return &models.Automation{
-		ID:            id,
-		Name:          name,
-		Enabled:       true,
-		TriggerType:   "energy",
-		TriggerConfig: raw,
+// energyConfigToTrigger maps the old EnergyConfig event vocabulary to
+// the typed AutomationStepTriggerSignal fields used by shouldFireEnergy.
+func energyConfigToTrigger(cfg *EnergyConfig) *models.AutomationStepTriggerSignal {
+	t := &models.AutomationStepTriggerSignal{}
+	threshold := cfg.Threshold
+	switch cfg.Event {
+	case "solar_above":
+		t.Signal, t.Op, t.ValueNum = "solar_power", "crossed_above", &threshold
+	case "solar_below":
+		t.Signal, t.Op, t.ValueNum = "solar_power", "crossed_below", &threshold
+	case "battery_above":
+		t.Signal, t.Op, t.ValueNum = "battery_level", "crossed_above", &threshold
+	case "battery_below":
+		t.Signal, t.Op, t.ValueNum = "battery_level", "crossed_below", &threshold
+	case "grid_outage":
+		t.Signal, t.Op = "grid_status", "="
+		v := "Islanded"
+		t.ValueText = &v
+	case "grid_restored":
+		t.Signal, t.Op = "grid_status", "="
+		v := "Active"
+		t.ValueText = &v
+	case "storm_mode_activated":
+		t.Signal, t.Op = "storm_mode_active", "="
+		v := true
+		t.ValueBool = &v
+	case "storm_mode_deactivated":
+		t.Signal, t.Op = "storm_mode_active", "="
+		v := false
+		t.ValueBool = &v
+	case "exporting_to_grid":
+		zero := float64(0)
+		t.Signal, t.Op, t.ValueNum = "grid_power", "crossed_below", &zero
+	default:
+		t.Signal, t.Op = cfg.Event, "="
+	}
+	return t
+}
+
+func makeEnergyAutomation(id int64, name string, cfg EnergyConfig) EnergyAutomation {
+	trig := energyConfigToTrigger(&cfg)
+	return EnergyAutomation{
+		Automation:   models.Automation{ID: id, Name: name, Enabled: true},
+		Trigger:      *trig,
+		EnergySiteID: cfg.EnergySiteID,
 	}
 }
 
@@ -38,7 +75,7 @@ func TestShouldFireEnergy_SolarAbove_CrossingUp(t *testing.T) {
 	prev := energyState{SolarPower: 4800}
 	curr := energyState{SolarPower: 5200}
 	cfg := &EnergyConfig{Event: "solar_above", Threshold: 5000}
-	if !shouldFireEnergy(prev, curr, cfg) {
+	if !shouldFireEnergy(prev, curr, energyConfigToTrigger(cfg)) {
 		t.Fatal("expected fire: solar crossing 4800→5200 with threshold 5000")
 	}
 }
@@ -47,7 +84,7 @@ func TestShouldFireEnergy_SolarAbove_AlreadyAbove(t *testing.T) {
 	prev := energyState{SolarPower: 5100}
 	curr := energyState{SolarPower: 5500}
 	cfg := &EnergyConfig{Event: "solar_above", Threshold: 5000}
-	if shouldFireEnergy(prev, curr, cfg) {
+	if shouldFireEnergy(prev, curr, energyConfigToTrigger(cfg)) {
 		t.Fatal("should not fire: already above threshold (5100→5500)")
 	}
 }
@@ -56,7 +93,7 @@ func TestShouldFireEnergy_SolarAbove_ExactThreshold(t *testing.T) {
 	prev := energyState{SolarPower: 5000}
 	curr := energyState{SolarPower: 5001}
 	cfg := &EnergyConfig{Event: "solar_above", Threshold: 5000}
-	if !shouldFireEnergy(prev, curr, cfg) {
+	if !shouldFireEnergy(prev, curr, energyConfigToTrigger(cfg)) {
 		t.Fatal("expected fire: crossing from exact threshold (5000→5001)")
 	}
 }
@@ -65,7 +102,7 @@ func TestShouldFireEnergy_SolarAbove_AtThreshold_NoFire(t *testing.T) {
 	prev := energyState{SolarPower: 4999}
 	curr := energyState{SolarPower: 5000}
 	cfg := &EnergyConfig{Event: "solar_above", Threshold: 5000}
-	if shouldFireEnergy(prev, curr, cfg) {
+	if shouldFireEnergy(prev, curr, energyConfigToTrigger(cfg)) {
 		t.Fatal("should not fire: reached threshold but not above (4999→5000)")
 	}
 }
@@ -74,7 +111,7 @@ func TestShouldFireEnergy_SolarAbove_Dropping(t *testing.T) {
 	prev := energyState{SolarPower: 5200}
 	curr := energyState{SolarPower: 4800}
 	cfg := &EnergyConfig{Event: "solar_above", Threshold: 5000}
-	if shouldFireEnergy(prev, curr, cfg) {
+	if shouldFireEnergy(prev, curr, energyConfigToTrigger(cfg)) {
 		t.Fatal("should not fire: dropping below threshold (5200→4800)")
 	}
 }
@@ -83,7 +120,7 @@ func TestShouldFireEnergy_SolarBelow_CrossingDown(t *testing.T) {
 	prev := energyState{SolarPower: 5200}
 	curr := energyState{SolarPower: 4800}
 	cfg := &EnergyConfig{Event: "solar_below", Threshold: 5000}
-	if !shouldFireEnergy(prev, curr, cfg) {
+	if !shouldFireEnergy(prev, curr, energyConfigToTrigger(cfg)) {
 		t.Fatal("expected fire: solar crossing 5200→4800 with threshold 5000")
 	}
 }
@@ -92,7 +129,7 @@ func TestShouldFireEnergy_SolarBelow_AlreadyBelow(t *testing.T) {
 	prev := energyState{SolarPower: 4500}
 	curr := energyState{SolarPower: 4200}
 	cfg := &EnergyConfig{Event: "solar_below", Threshold: 5000}
-	if shouldFireEnergy(prev, curr, cfg) {
+	if shouldFireEnergy(prev, curr, energyConfigToTrigger(cfg)) {
 		t.Fatal("should not fire: already below threshold (4500→4200)")
 	}
 }
@@ -101,7 +138,7 @@ func TestShouldFireEnergy_SolarBelow_ExactThreshold(t *testing.T) {
 	prev := energyState{SolarPower: 5000}
 	curr := energyState{SolarPower: 4999}
 	cfg := &EnergyConfig{Event: "solar_below", Threshold: 5000}
-	if !shouldFireEnergy(prev, curr, cfg) {
+	if !shouldFireEnergy(prev, curr, energyConfigToTrigger(cfg)) {
 		t.Fatal("expected fire: crossing from exact threshold (5000→4999)")
 	}
 }
@@ -110,7 +147,7 @@ func TestShouldFireEnergy_SolarBelow_AtThreshold_NoFire(t *testing.T) {
 	prev := energyState{SolarPower: 5001}
 	curr := energyState{SolarPower: 5000}
 	cfg := &EnergyConfig{Event: "solar_below", Threshold: 5000}
-	if shouldFireEnergy(prev, curr, cfg) {
+	if shouldFireEnergy(prev, curr, energyConfigToTrigger(cfg)) {
 		t.Fatal("should not fire: reached threshold but not below (5001→5000)")
 	}
 }
@@ -119,7 +156,7 @@ func TestShouldFireEnergy_BatteryAbove_CrossingUp(t *testing.T) {
 	prev := energyState{BatteryLevel: 79}
 	curr := energyState{BatteryLevel: 81}
 	cfg := &EnergyConfig{Event: "battery_above", Threshold: 80}
-	if !shouldFireEnergy(prev, curr, cfg) {
+	if !shouldFireEnergy(prev, curr, energyConfigToTrigger(cfg)) {
 		t.Fatal("expected fire: battery crossing 79→81 with threshold 80")
 	}
 }
@@ -128,7 +165,7 @@ func TestShouldFireEnergy_BatteryAbove_AlreadyAbove(t *testing.T) {
 	prev := energyState{BatteryLevel: 85}
 	curr := energyState{BatteryLevel: 90}
 	cfg := &EnergyConfig{Event: "battery_above", Threshold: 80}
-	if shouldFireEnergy(prev, curr, cfg) {
+	if shouldFireEnergy(prev, curr, energyConfigToTrigger(cfg)) {
 		t.Fatal("should not fire: already above threshold (85→90)")
 	}
 }
@@ -137,7 +174,7 @@ func TestShouldFireEnergy_BatteryBelow_CrossingDown(t *testing.T) {
 	prev := energyState{BatteryLevel: 21}
 	curr := energyState{BatteryLevel: 19}
 	cfg := &EnergyConfig{Event: "battery_below", Threshold: 20}
-	if !shouldFireEnergy(prev, curr, cfg) {
+	if !shouldFireEnergy(prev, curr, energyConfigToTrigger(cfg)) {
 		t.Fatal("expected fire: battery crossing 21→19 with threshold 20")
 	}
 }
@@ -146,7 +183,7 @@ func TestShouldFireEnergy_BatteryBelow_AlreadyBelow(t *testing.T) {
 	prev := energyState{BatteryLevel: 18}
 	curr := energyState{BatteryLevel: 15}
 	cfg := &EnergyConfig{Event: "battery_below", Threshold: 20}
-	if shouldFireEnergy(prev, curr, cfg) {
+	if shouldFireEnergy(prev, curr, energyConfigToTrigger(cfg)) {
 		t.Fatal("should not fire: already below threshold (18→15)")
 	}
 }
@@ -155,7 +192,7 @@ func TestShouldFireEnergy_GridOutage(t *testing.T) {
 	prev := energyState{GridStatus: "Active"}
 	curr := energyState{GridStatus: "Islanded"}
 	cfg := &EnergyConfig{Event: "grid_outage"}
-	if !shouldFireEnergy(prev, curr, cfg) {
+	if !shouldFireEnergy(prev, curr, energyConfigToTrigger(cfg)) {
 		t.Fatal("expected fire: grid status Active→Islanded")
 	}
 }
@@ -164,7 +201,7 @@ func TestShouldFireEnergy_GridOutage_AlreadyIslanded(t *testing.T) {
 	prev := energyState{GridStatus: "Islanded"}
 	curr := energyState{GridStatus: "Islanded"}
 	cfg := &EnergyConfig{Event: "grid_outage"}
-	if shouldFireEnergy(prev, curr, cfg) {
+	if shouldFireEnergy(prev, curr, energyConfigToTrigger(cfg)) {
 		t.Fatal("should not fire: already Islanded")
 	}
 }
@@ -173,7 +210,7 @@ func TestShouldFireEnergy_GridRestored(t *testing.T) {
 	prev := energyState{GridStatus: "Islanded"}
 	curr := energyState{GridStatus: "Active"}
 	cfg := &EnergyConfig{Event: "grid_restored"}
-	if !shouldFireEnergy(prev, curr, cfg) {
+	if !shouldFireEnergy(prev, curr, energyConfigToTrigger(cfg)) {
 		t.Fatal("expected fire: grid status Islanded→Active")
 	}
 }
@@ -182,7 +219,7 @@ func TestShouldFireEnergy_GridRestored_AlreadyActive(t *testing.T) {
 	prev := energyState{GridStatus: "Active"}
 	curr := energyState{GridStatus: "Active"}
 	cfg := &EnergyConfig{Event: "grid_restored"}
-	if shouldFireEnergy(prev, curr, cfg) {
+	if shouldFireEnergy(prev, curr, energyConfigToTrigger(cfg)) {
 		t.Fatal("should not fire: already Active")
 	}
 }
@@ -191,7 +228,7 @@ func TestShouldFireEnergy_StormModeActivated(t *testing.T) {
 	prev := energyState{StormModeActive: false}
 	curr := energyState{StormModeActive: true}
 	cfg := &EnergyConfig{Event: "storm_mode_activated"}
-	if !shouldFireEnergy(prev, curr, cfg) {
+	if !shouldFireEnergy(prev, curr, energyConfigToTrigger(cfg)) {
 		t.Fatal("expected fire: storm mode false→true")
 	}
 }
@@ -200,7 +237,7 @@ func TestShouldFireEnergy_StormModeActivated_AlreadyActive(t *testing.T) {
 	prev := energyState{StormModeActive: true}
 	curr := energyState{StormModeActive: true}
 	cfg := &EnergyConfig{Event: "storm_mode_activated"}
-	if shouldFireEnergy(prev, curr, cfg) {
+	if shouldFireEnergy(prev, curr, energyConfigToTrigger(cfg)) {
 		t.Fatal("should not fire: storm mode already active")
 	}
 }
@@ -209,7 +246,7 @@ func TestShouldFireEnergy_StormModeDeactivated(t *testing.T) {
 	prev := energyState{StormModeActive: true}
 	curr := energyState{StormModeActive: false}
 	cfg := &EnergyConfig{Event: "storm_mode_deactivated"}
-	if !shouldFireEnergy(prev, curr, cfg) {
+	if !shouldFireEnergy(prev, curr, energyConfigToTrigger(cfg)) {
 		t.Fatal("expected fire: storm mode true→false")
 	}
 }
@@ -218,7 +255,7 @@ func TestShouldFireEnergy_StormModeDeactivated_AlreadyInactive(t *testing.T) {
 	prev := energyState{StormModeActive: false}
 	curr := energyState{StormModeActive: false}
 	cfg := &EnergyConfig{Event: "storm_mode_deactivated"}
-	if shouldFireEnergy(prev, curr, cfg) {
+	if shouldFireEnergy(prev, curr, energyConfigToTrigger(cfg)) {
 		t.Fatal("should not fire: storm mode already inactive")
 	}
 }
@@ -227,7 +264,7 @@ func TestShouldFireEnergy_ExportingToGrid(t *testing.T) {
 	prev := energyState{GridPower: 500}
 	curr := energyState{GridPower: -200}
 	cfg := &EnergyConfig{Event: "exporting_to_grid"}
-	if !shouldFireEnergy(prev, curr, cfg) {
+	if !shouldFireEnergy(prev, curr, energyConfigToTrigger(cfg)) {
 		t.Fatal("expected fire: grid power 500→-200 (now exporting)")
 	}
 }
@@ -236,7 +273,7 @@ func TestShouldFireEnergy_ExportingToGrid_AlreadyExporting(t *testing.T) {
 	prev := energyState{GridPower: -100}
 	curr := energyState{GridPower: -300}
 	cfg := &EnergyConfig{Event: "exporting_to_grid"}
-	if shouldFireEnergy(prev, curr, cfg) {
+	if shouldFireEnergy(prev, curr, energyConfigToTrigger(cfg)) {
 		t.Fatal("should not fire: already exporting (-100→-300)")
 	}
 }
@@ -245,7 +282,7 @@ func TestShouldFireEnergy_ExportingToGrid_FromZero(t *testing.T) {
 	prev := energyState{GridPower: 0}
 	curr := energyState{GridPower: -100}
 	cfg := &EnergyConfig{Event: "exporting_to_grid"}
-	if !shouldFireEnergy(prev, curr, cfg) {
+	if !shouldFireEnergy(prev, curr, energyConfigToTrigger(cfg)) {
 		t.Fatal("expected fire: grid power 0→-100 (now exporting)")
 	}
 }
@@ -254,7 +291,7 @@ func TestShouldFireEnergy_ExportingToGrid_StoppedExporting(t *testing.T) {
 	prev := energyState{GridPower: -200}
 	curr := energyState{GridPower: 100}
 	cfg := &EnergyConfig{Event: "exporting_to_grid"}
-	if shouldFireEnergy(prev, curr, cfg) {
+	if shouldFireEnergy(prev, curr, energyConfigToTrigger(cfg)) {
 		t.Fatal("should not fire: stopped exporting (-200→100)")
 	}
 }
@@ -263,7 +300,7 @@ func TestShouldFireEnergy_UnknownEvent(t *testing.T) {
 	prev := energyState{}
 	curr := energyState{}
 	cfg := &EnergyConfig{Event: "unknown_event"}
-	if shouldFireEnergy(prev, curr, cfg) {
+	if shouldFireEnergy(prev, curr, energyConfigToTrigger(cfg)) {
 		t.Fatal("should not fire: unknown event")
 	}
 }
@@ -272,7 +309,7 @@ func TestShouldFireEnergy_SolarAbove_ZeroThreshold(t *testing.T) {
 	prev := energyState{SolarPower: 0}
 	curr := energyState{SolarPower: 100}
 	cfg := &EnergyConfig{Event: "solar_above", Threshold: 0}
-	if !shouldFireEnergy(prev, curr, cfg) {
+	if !shouldFireEnergy(prev, curr, energyConfigToTrigger(cfg)) {
 		t.Fatal("expected fire: solar crossing 0→100 with threshold 0")
 	}
 }
@@ -422,7 +459,7 @@ func TestEnergyTrigger_FirstObservation_NoFire(t *testing.T) {
 	engine := &mockEngine{}
 	et := NewEnergyTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
+	repo.energyAutos[100] = []EnergyAutomation{
 		makeEnergyAutomation(1, "solar-high", EnergyConfig{
 			EnergySiteID: 100, Event: "solar_above", Threshold: 5000,
 		}),
@@ -442,7 +479,7 @@ func TestEnergyTrigger_SolarCrossingUp_Fires(t *testing.T) {
 	engine := &mockEngine{}
 	et := NewEnergyTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
+	repo.energyAutos[100] = []EnergyAutomation{
 		makeEnergyAutomation(1, "solar-high", EnergyConfig{
 			EnergySiteID: 100, Event: "solar_above", Threshold: 5000,
 		}),
@@ -466,8 +503,8 @@ func TestEnergyTrigger_SolarCrossingUp_Fires(t *testing.T) {
 	if snap.EnergySiteID != 100 {
 		t.Fatalf("expected energy_site_id 100, got %d", snap.EnergySiteID)
 	}
-	if snap.Event != "solar_above" {
-		t.Fatalf("expected event 'solar_above', got %q", snap.Event)
+	if snap.Signal != "solar_power" {
+		t.Fatalf("expected signal 'solar_power', got %q", snap.Signal)
 	}
 	if snap.SolarPower != 5200 {
 		t.Fatalf("expected solar_power 5200, got %v", snap.SolarPower)
@@ -485,7 +522,7 @@ func TestEnergyTrigger_SolarAlreadyAbove_NoFire(t *testing.T) {
 	engine := &mockEngine{}
 	et := NewEnergyTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
+	repo.energyAutos[100] = []EnergyAutomation{
 		makeEnergyAutomation(1, "solar-high", EnergyConfig{
 			EnergySiteID: 100, Event: "solar_above", Threshold: 5000,
 		}),
@@ -506,7 +543,7 @@ func TestEnergyTrigger_GridOutage_Fires(t *testing.T) {
 	engine := &mockEngine{}
 	et := NewEnergyTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
+	repo.energyAutos[100] = []EnergyAutomation{
 		makeEnergyAutomation(1, "outage-alert", EnergyConfig{
 			EnergySiteID: 100, Event: "grid_outage",
 		}),
@@ -539,7 +576,7 @@ func TestEnergyTrigger_GridRestored_Fires(t *testing.T) {
 	engine := &mockEngine{}
 	et := NewEnergyTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
+	repo.energyAutos[100] = []EnergyAutomation{
 		makeEnergyAutomation(1, "grid-back", EnergyConfig{
 			EnergySiteID: 100, Event: "grid_restored",
 		}),
@@ -560,7 +597,7 @@ func TestEnergyTrigger_StormModeActivated_Fires(t *testing.T) {
 	engine := &mockEngine{}
 	et := NewEnergyTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
+	repo.energyAutos[100] = []EnergyAutomation{
 		makeEnergyAutomation(1, "storm-alert", EnergyConfig{
 			EnergySiteID: 100, Event: "storm_mode_activated",
 		}),
@@ -592,7 +629,7 @@ func TestEnergyTrigger_StormModeDeactivated_Fires(t *testing.T) {
 	engine := &mockEngine{}
 	et := NewEnergyTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
+	repo.energyAutos[100] = []EnergyAutomation{
 		makeEnergyAutomation(1, "storm-clear", EnergyConfig{
 			EnergySiteID: 100, Event: "storm_mode_deactivated",
 		}),
@@ -613,7 +650,7 @@ func TestEnergyTrigger_ExportingToGrid_Fires(t *testing.T) {
 	engine := &mockEngine{}
 	et := NewEnergyTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
+	repo.energyAutos[100] = []EnergyAutomation{
 		makeEnergyAutomation(1, "grid-export", EnergyConfig{
 			EnergySiteID: 100, Event: "exporting_to_grid",
 		}),
@@ -634,7 +671,7 @@ func TestEnergyTrigger_BatteryCrossingDown_Fires(t *testing.T) {
 	engine := &mockEngine{}
 	et := NewEnergyTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
+	repo.energyAutos[100] = []EnergyAutomation{
 		makeEnergyAutomation(1, "low-powerwall", EnergyConfig{
 			EnergySiteID: 100, Event: "battery_below", Threshold: 20,
 		}),
@@ -655,7 +692,7 @@ func TestEnergyTrigger_DifferentSite_NoFire(t *testing.T) {
 	engine := &mockEngine{}
 	et := NewEnergyTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
+	repo.energyAutos[999] = []EnergyAutomation{
 		makeEnergyAutomation(1, "solar-high", EnergyConfig{
 			EnergySiteID: 999, Event: "solar_above", Threshold: 5000,
 		}),
@@ -677,10 +714,12 @@ func TestEnergyTrigger_MultipleSites_Independent(t *testing.T) {
 	engine := &mockEngine{}
 	et := NewEnergyTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
+	repo.energyAutos[100] = []EnergyAutomation{
 		makeEnergyAutomation(1, "site1-solar", EnergyConfig{
 			EnergySiteID: 100, Event: "solar_above", Threshold: 5000,
 		}),
+	}
+	repo.energyAutos[200] = []EnergyAutomation{
 		makeEnergyAutomation(2, "site2-solar", EnergyConfig{
 			EnergySiteID: 200, Event: "solar_above", Threshold: 3000,
 		}),
@@ -711,7 +750,7 @@ func TestEnergyTrigger_MultipleAutomations_SameSite(t *testing.T) {
 	engine := &mockEngine{}
 	et := NewEnergyTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
+	repo.energyAutos[100] = []EnergyAutomation{
 		makeEnergyAutomation(1, "solar-high", EnergyConfig{
 			EnergySiteID: 100, Event: "solar_above", Threshold: 5000,
 		}),
@@ -731,22 +770,21 @@ func TestEnergyTrigger_MultipleAutomations_SameSite(t *testing.T) {
 	}
 }
 
-func TestEnergyTrigger_InvalidConfig_AutoDisables(t *testing.T) {
+func TestEnergyTrigger_InvalidConfig_Skipped(t *testing.T) {
 	repo := newMockRepo()
 	engine := &mockEngine{}
 	et := NewEnergyTrigger(repo, engine)
 
-	bad := &models.Automation{
-		ID:            99,
-		Name:          "broken",
-		Enabled:       true,
-		TriggerType:   "energy",
-		TriggerConfig: json.RawMessage(`{invalid`),
+	// In the typed model, an unknown signal is silently skipped (not auto-disabled).
+	bad := EnergyAutomation{
+		Automation:   models.Automation{ID: 99, Name: "broken", Enabled: true},
+		Trigger:      models.AutomationStepTriggerSignal{Signal: "invalid_signal", Op: "="},
+		EnergySiteID: 100,
 	}
 	good := makeEnergyAutomation(1, "solar-high", EnergyConfig{
 		EnergySiteID: 100, Event: "solar_above", Threshold: 5000,
 	})
-	repo.automations = []*models.Automation{bad, good}
+	repo.energyAutos[100] = []EnergyAutomation{bad, good}
 
 	et.Seed(100, liveStatus(4800, 50, 0, "Active", false))
 
@@ -754,11 +792,7 @@ func TestEnergyTrigger_InvalidConfig_AutoDisables(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// Bad automation should be auto-disabled.
-	if !repo.isDisabled(99) {
-		t.Fatal("expected automation 99 to be auto-disabled")
-	}
-
+	// Good automation should still fire.
 	// Good automation should still fire.
 	if engine.callCount() != 1 {
 		t.Fatalf("expected 1 fire (good automation), got %d", engine.callCount())
@@ -785,7 +819,7 @@ func TestEnergyTrigger_EngineError_ReturnsFirstError(t *testing.T) {
 	engine := &mockEngine{returnErr: fmt.Errorf("action failed")}
 	et := NewEnergyTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
+	repo.energyAutos[100] = []EnergyAutomation{
 		makeEnergyAutomation(1, "solar-high", EnergyConfig{
 			EnergySiteID: 100, Event: "solar_above", Threshold: 5000,
 		}),
@@ -819,7 +853,7 @@ func TestEnergyTrigger_Seed_PreventsFirstObservationSkip(t *testing.T) {
 	engine := &mockEngine{}
 	et := NewEnergyTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
+	repo.energyAutos[100] = []EnergyAutomation{
 		makeEnergyAutomation(1, "solar-high", EnergyConfig{
 			EnergySiteID: 100, Event: "solar_above", Threshold: 5000,
 		}),
@@ -841,7 +875,7 @@ func TestEnergyTrigger_SnapshotIncludesZeroValues(t *testing.T) {
 	engine := &mockEngine{}
 	et := NewEnergyTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
+	repo.energyAutos[100] = []EnergyAutomation{
 		makeEnergyAutomation(1, "outage-alert", EnergyConfig{
 			EnergySiteID: 100, Event: "grid_outage",
 		}),

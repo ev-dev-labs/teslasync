@@ -28,12 +28,15 @@ func (m *mockCalendarProvider) GetUpcomingCalendarEntries(_ context.Context, veh
 
 // ─── Helpers ────────────────────────────────────────────
 
-func makeCalendarAutomation(id int64, name string, cfg CalendarConfig, vehicleID *int64) *models.Automation {
-	return &models.Automation{
-		ID:        id,
-		Name:      name,
-		Enabled:   true,
-		VehicleID: vehicleID,
+func makeCalendarAutomation(id int64, name string, cfg CalendarConfig, vehicleID *int64) *models.AutomationFull {
+	return &models.AutomationFull{
+		Automation: models.Automation{
+			ID:        id,
+			Name:      name,
+			Enabled:   true,
+			VehicleID: vehicleID,
+		},
+		Triggers: []any{cfg},
 	}
 }
 
@@ -248,7 +251,7 @@ func TestCalendarTrigger_Fire30MinBefore(t *testing.T) {
 	auto := makeCalendarAutomation(1, "Pre-meeting climate", CalendarConfig{
 		OffsetMinutes: -30,
 	}, &vid)
-	repo.automations = []*models.Automation{auto}
+	repo.automations = []*models.AutomationFull{auto}
 
 	ct := NewCalendarTrigger(repo, provider, engine)
 	// Set lastTick to 15 min before fire time, now to fire time.
@@ -304,7 +307,7 @@ func TestCalendarTrigger_EventFilterMatch(t *testing.T) {
 		OffsetMinutes: -30,
 		EventFilter:   &filter,
 	}, &vid)
-	repo.automations = []*models.Automation{auto}
+	repo.automations = []*models.AutomationFull{auto}
 
 	ct := NewCalendarTrigger(repo, provider, engine)
 	ct.lastTick = time.Date(2026, 4, 18, 9, 15, 0, 0, time.UTC)
@@ -345,7 +348,7 @@ func TestCalendarTrigger_EventFilterNoMatch(t *testing.T) {
 		OffsetMinutes: -30,
 		EventFilter:   &filter,
 	}, &vid)
-	repo.automations = []*models.Automation{auto}
+	repo.automations = []*models.AutomationFull{auto}
 
 	ct := NewCalendarTrigger(repo, provider, engine)
 	ct.lastTick = time.Date(2026, 4, 18, 9, 15, 0, 0, time.UTC)
@@ -378,7 +381,7 @@ func TestCalendarTrigger_LocationRequired_WithLocation(t *testing.T) {
 		OffsetMinutes:    -30,
 		LocationRequired: true,
 	}, &vid)
-	repo.automations = []*models.Automation{auto}
+	repo.automations = []*models.AutomationFull{auto}
 
 	ct := NewCalendarTrigger(repo, provider, engine)
 	ct.lastTick = time.Date(2026, 4, 18, 9, 15, 0, 0, time.UTC)
@@ -409,7 +412,7 @@ func TestCalendarTrigger_LocationRequired_WithoutLocation(t *testing.T) {
 		OffsetMinutes:    -30,
 		LocationRequired: true,
 	}, &vid)
-	repo.automations = []*models.Automation{auto}
+	repo.automations = []*models.AutomationFull{auto}
 
 	ct := NewCalendarTrigger(repo, provider, engine)
 	ct.lastTick = time.Date(2026, 4, 18, 9, 15, 0, 0, time.UTC)
@@ -441,7 +444,7 @@ func TestCalendarTrigger_NoDoubleFire(t *testing.T) {
 	auto := makeCalendarAutomation(1, "Pre-meeting climate", CalendarConfig{
 		OffsetMinutes: -30,
 	}, &vid)
-	repo.automations = []*models.Automation{auto}
+	repo.automations = []*models.AutomationFull{auto}
 
 	ct := NewCalendarTrigger(repo, provider, engine)
 	ct.lastTick = time.Date(2026, 4, 18, 9, 15, 0, 0, time.UTC)
@@ -483,7 +486,7 @@ func TestCalendarTrigger_EventWithoutLocation_FiresWhenNotRequired(t *testing.T)
 		OffsetMinutes:    -30,
 		LocationRequired: false,
 	}, &vid)
-	repo.automations = []*models.Automation{auto}
+	repo.automations = []*models.AutomationFull{auto}
 
 	ct := NewCalendarTrigger(repo, provider, engine)
 	ct.lastTick = time.Date(2026, 4, 18, 9, 15, 0, 0, time.UTC)
@@ -508,7 +511,7 @@ func TestCalendarTrigger_NoVehicleID_AutoDisables(t *testing.T) {
 	auto := makeCalendarAutomation(1, "No vehicle", CalendarConfig{
 		OffsetMinutes: -30,
 	}, nil) // no vehicle ID
-	repo.automations = []*models.Automation{auto}
+	repo.automations = []*models.AutomationFull{auto}
 
 	ct := NewCalendarTrigger(repo, provider, engine)
 	ct.lastTick = time.Date(2026, 4, 18, 9, 15, 0, 0, time.UTC)
@@ -539,7 +542,7 @@ func TestCalendarTrigger_ProviderError_DoesNotDisable(t *testing.T) {
 	auto := makeCalendarAutomation(1, "Climate before meetings", CalendarConfig{
 		OffsetMinutes: -30,
 	}, &vid)
-	repo.automations = []*models.Automation{auto}
+	repo.automations = []*models.AutomationFull{auto}
 
 	ct := NewCalendarTrigger(repo, provider, engine)
 	ct.lastTick = time.Date(2026, 4, 18, 9, 15, 0, 0, time.UTC)
@@ -575,7 +578,7 @@ func TestCalendarTrigger_MultipleAutomationsSameVehicle_OneProviderCall(t *testi
 
 	auto1 := makeCalendarAutomation(1, "Climate ON", CalendarConfig{OffsetMinutes: -30}, &vid)
 	auto2 := makeCalendarAutomation(2, "Navigate", CalendarConfig{OffsetMinutes: -30, LocationRequired: true}, &vid)
-	repo.automations = []*models.Automation{auto1, auto2}
+	repo.automations = []*models.AutomationFull{auto1, auto2}
 
 	ct := NewCalendarTrigger(repo, provider, engine)
 	ct.lastTick = time.Date(2026, 4, 18, 9, 15, 0, 0, time.UTC)
@@ -613,7 +616,7 @@ func TestCalendarTrigger_PositiveOffset_FireAfterEvent(t *testing.T) {
 	auto := makeCalendarAutomation(1, "Post-meeting lock", CalendarConfig{
 		OffsetMinutes: 60, // 1 hour after event start
 	}, &vid)
-	repo.automations = []*models.Automation{auto}
+	repo.automations = []*models.AutomationFull{auto}
 
 	ct := NewCalendarTrigger(repo, provider, engine)
 	// Fire time = 10:00 + 60min = 11:00
@@ -646,7 +649,7 @@ func TestCalendarTrigger_FireTimeOutsideWindow_DoesNotFire(t *testing.T) {
 	auto := makeCalendarAutomation(1, "Pre-meeting", CalendarConfig{
 		OffsetMinutes: -30,
 	}, &vid)
-	repo.automations = []*models.Automation{auto}
+	repo.automations = []*models.AutomationFull{auto}
 
 	ct := NewCalendarTrigger(repo, provider, engine)
 	// Fire time = 14:00 + (-30min) = 13:30; current time is 9:30 → way outside window.
@@ -678,15 +681,16 @@ func TestCalendarTrigger_InvalidConfig_AutoDisables(t *testing.T) {
 
 	// Create automation with invalid config (offset out of range).
 	raw := json.RawMessage(`{"offset_minutes": 9999}`)
-	auto := &models.Automation{
-		ID:            1,
-		Name:          "Bad config",
-		Enabled:       true,
-		VehicleID:     &vid,
-		TriggerType:   "calendar",
-		TriggerConfig: raw,
+	auto := &models.AutomationFull{
+		Automation: models.Automation{
+			ID:        1,
+			Name:      "Bad config",
+			Enabled:   true,
+			VehicleID: &vid,
+		},
+		Triggers: []any{raw},
 	}
-	repo.automations = []*models.Automation{auto}
+	repo.automations = []*models.AutomationFull{auto}
 
 	ct := NewCalendarTrigger(repo, provider, engine)
 	ct.lastTick = time.Date(2026, 4, 18, 9, 15, 0, 0, time.UTC)
@@ -727,7 +731,7 @@ func TestCalendarTrigger_SnapshotFormat(t *testing.T) {
 		OffsetMinutes:     -30,
 		IncludeNavigation: true,
 	}, &vid)
-	repo.automations = []*models.Automation{auto}
+	repo.automations = []*models.AutomationFull{auto}
 
 	ct := NewCalendarTrigger(repo, provider, engine)
 	ct.lastTick = time.Date(2026, 4, 18, 9, 15, 0, 0, time.UTC)
@@ -833,7 +837,7 @@ func TestCalendarTrigger_CrossMidnightNegativeOffset(t *testing.T) {
 	auto := makeCalendarAutomation(1, "Pre-meeting", CalendarConfig{
 		OffsetMinutes: -30, // fires at 23:40 previous day
 	}, &vid)
-	repo.automations = []*models.Automation{auto}
+	repo.automations = []*models.AutomationFull{auto}
 
 	ct := NewCalendarTrigger(repo, provider, engine)
 	// Fire time = 00:10 - 30min = 23:40 on April 18
@@ -867,7 +871,7 @@ func TestCalendarTrigger_MultipleEventsInWindow(t *testing.T) {
 	auto := makeCalendarAutomation(1, "Pre-meeting", CalendarConfig{
 		OffsetMinutes: -30,
 	}, &vid)
-	repo.automations = []*models.Automation{auto}
+	repo.automations = []*models.AutomationFull{auto}
 
 	ct := NewCalendarTrigger(repo, provider, engine)
 	// Fire times: 09:30 and 09:35, window is (09:15, 09:45]
@@ -901,7 +905,7 @@ func TestCalendarTrigger_NilEventFilter_MatchesAll(t *testing.T) {
 		OffsetMinutes: -30,
 		EventFilter:   nil,
 	}, &vid)
-	repo.automations = []*models.Automation{auto}
+	repo.automations = []*models.AutomationFull{auto}
 
 	ct := NewCalendarTrigger(repo, provider, engine)
 	ct.lastTick = time.Date(2026, 4, 18, 9, 15, 0, 0, time.UTC)

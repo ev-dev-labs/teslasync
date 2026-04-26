@@ -1,0 +1,78 @@
+=== SURVEY ===
+Surveyed all test files in internal/automation/trigger/ and internal/api/:
+
+Broken files (stale TriggerType/TriggerConfig fields on models.Automation):
+  1. internal/automation/trigger/calendar_test.go — makeCalendarAutomation returns *models.Automation
+  2. internal/automation/trigger/cron_test.go — mockRepo.GetByTriggerType wrong return type,
+     makeAutomation/makeOneTimeAutomation set removed fields, fire() called with wrong arity
+  3. internal/api/webhook_receiver_handler_test.go — makeTestAutomation sets removed fields
+
+Additional broken files in same package (Go compiles entire package atomically):
+  4. internal/automation/trigger/webhook_test.go — same stale fields
+  5. internal/automation/trigger/vehicle_state_test.go — same stale fields + wrong mock interface
+  6. internal/automation/trigger/mqtt_test.go — same stale fields + wrong mock return type
+  7. internal/automation/trigger/sunrise_sunset_test.go — same stale fields
+  8. internal/automation/trigger/energy_test.go — stale fields + wrong repo interface (EnergyRepo)
+     + shouldFireEnergy() signature changed from *EnergyConfig to *AutomationStepTriggerSignal
+  9. internal/automation/trigger/geofence_test.go — stale fields + wrong repo interface (GeofenceRepo)
+     + models.Geofence renamed to models.Place + snapshot field renames
+
+=== REASONING ===
+Go packages compile atomically — all test files in a package must compile for
+any test or vet to succeed. The task scope listed 3 files, but 9 were broken
+with the same root cause. Fixing only 3 would leave go vet failing.
+
+Key decisions:
+- mockRepo (shared across calendar/cron/sunrise_sunset/energy tests): Added
+  cronAutomations ([]CronAutomation), energyAutos (map[int64][]EnergyAutomation),
+  and LoadEnabledScheduleTriggers/LoadEnabledEnergySignalTriggers methods.
+- makeAutomation → returns CronAutomation (was *models.Automation with stale fields)
+- makeCalendarAutomation → returns *models.AutomationFull with Triggers: []any{cfg}
+- makeWebhookAutomation → returns *models.AutomationFull with Triggers: []any{cfg}
+- Removed 10 obsolete tests:
+  - TestIsOneTimeDatePast_* (4 tests) — isOneTimeDatePast function removed
+  - TestRegister_OneTime_* (3 tests) — one-time scheduling moved out of CronTrigger
+  - TestFire_OneTime_* (2 tests) — fire() no longer has oneTime parameter
+  - TestRegister_EmptyTriggerConfig / TestRegister_MalformedJSON — duplicates of
+    existing tests; CronAutomation is typed, no JSON parsing
+- Renamed TestStart_SkipsInvalid_DisablesInDB → TestStart_SkipsInvalid (ADR-012
+  retired auto_disabled for schedule triggers)
+- TestFire_Recurring_DoesNotDisable → TestFire_DoesNotDisable (one-time concept removed)
+- energy_test.go: Added energyConfigToTrigger() bridge function mapping old EnergyConfig
+  event names to AutomationStepTriggerSignal fields
+- geofence_test.go: Changed mockGeofenceRepo from GetEnabledByVehicleAndTrigger to
+  LoadEnabledGeofenceTriggers, changed mock data provider from *models.Geofence to *models.Place
+- webhook_test.go (trigger pkg): Removed duplicate test after AutoDisabled→Disabled rename
+
+=== CHANGES ===
+Files modified (originally specified):
+  internal/automation/trigger/calendar_test.go
+  internal/automation/trigger/cron_test.go
+  internal/api/webhook_receiver_handler_test.go
+
+Additional files modified (required for package-level compilation):
+  internal/automation/trigger/webhook_test.go
+  internal/automation/trigger/vehicle_state_test.go
+  internal/automation/trigger/mqtt_test.go
+  internal/automation/trigger/sunrise_sunset_test.go
+  internal/automation/trigger/energy_test.go
+  internal/automation/trigger/geofence_test.go
+
+=== GATE ===
+$ go vet ./internal/automation/trigger/...
+EXIT=0
+
+$ go vet ./internal/api/...
+EXIT=0
+
+$ go test ./internal/automation/trigger/ -run "TestCalendar|TestCron" -v -count=1
+All 30+ Calendar and Cron tests PASS
+EXIT=0
+
+$ go test ./internal/api/ -run "TestWebhook" -v -count=1
+All 9 Webhook tests PASS
+EXIT=0
+
+=== COMMIT ===
+EXIT=0
+STATUS=DONE

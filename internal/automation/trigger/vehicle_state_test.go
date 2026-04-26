@@ -12,7 +12,7 @@ import (
 // ─── Mock Vehicle State Repo ────────────────────────────
 
 type mockVehicleStateRepo struct {
-	automations []*models.Automation
+	automations []*models.AutomationFull
 	disabled    map[int64]string
 	returnErr   error
 }
@@ -21,17 +21,11 @@ func newMockVehicleStateRepo() *mockVehicleStateRepo {
 	return &mockVehicleStateRepo{disabled: make(map[int64]string)}
 }
 
-func (r *mockVehicleStateRepo) GetEnabledByVehicleAndTrigger(_ context.Context, _ int64, triggerType string) ([]*models.Automation, error) {
+func (r *mockVehicleStateRepo) GetEnabledByVehicleAndTrigger(_ context.Context, _ int64, _ string) ([]*models.AutomationFull, error) {
 	if r.returnErr != nil {
 		return nil, r.returnErr
 	}
-	var result []*models.Automation
-	for _, a := range r.automations {
-		if a.TriggerType == triggerType {
-			result = append(result, a)
-		}
-	}
-	return result, nil
+	return r.automations, nil
 }
 
 func (r *mockVehicleStateRepo) SetAutoDisabled(_ context.Context, id int64, reason string) error {
@@ -43,14 +37,14 @@ func (r *mockVehicleStateRepo) SetAutoDisabled(_ context.Context, id int64, reas
 
 func strPtr(s string) *string { return &s }
 
-func makeVehicleStateAutomation(id int64, name string, cfg VehicleStateConfig) *models.Automation {
-	raw, _ := json.Marshal(cfg)
-	return &models.Automation{
-		ID:            id,
-		Name:          name,
-		Enabled:       true,
-		TriggerType:   "vehicle_state",
-		TriggerConfig: raw,
+func makeVehicleStateAutomation(id int64, name string, cfg VehicleStateConfig) *models.AutomationFull {
+	return &models.AutomationFull{
+		Automation: models.Automation{
+			ID:      id,
+			Name:    name,
+			Enabled: true,
+		},
+		Triggers: []any{cfg},
 	}
 }
 
@@ -312,7 +306,7 @@ func TestVehicleStateTrigger_ChargingComplete_Fires(t *testing.T) {
 	engine := &mockEngine{}
 	vst := NewVehicleStateTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeVehicleStateAutomation(1, "charge-done", VehicleStateConfig{Event: "charging_complete"}),
 	}
 
@@ -351,7 +345,7 @@ func TestVehicleStateTrigger_DriveStarts_Fires(t *testing.T) {
 	engine := &mockEngine{}
 	vst := NewVehicleStateTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeVehicleStateAutomation(1, "drive-started", VehicleStateConfig{Event: "drive_starts"}),
 	}
 
@@ -369,7 +363,7 @@ func TestVehicleStateTrigger_FromToFilters(t *testing.T) {
 	vst := NewVehicleStateTrigger(repo, engine)
 
 	from := "online"
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeVehicleStateAutomation(1, "online-goes-offline", VehicleStateConfig{
 			Event:     "goes_offline",
 			FromState: &from,
@@ -398,7 +392,7 @@ func TestVehicleStateTrigger_NoMatch_NoFire(t *testing.T) {
 	engine := &mockEngine{}
 	vst := NewVehicleStateTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeVehicleStateAutomation(1, "wakes-up", VehicleStateConfig{Event: "wakes_up"}),
 	}
 
@@ -416,7 +410,7 @@ func TestVehicleStateTrigger_MultipleAutomations(t *testing.T) {
 	engine := &mockEngine{}
 	vst := NewVehicleStateTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeVehicleStateAutomation(1, "charge-done", VehicleStateConfig{Event: "charging_complete"}),
 		makeVehicleStateAutomation(2, "charge-stopped", VehicleStateConfig{Event: "charging_stops"}),
 	}
@@ -436,7 +430,7 @@ func TestVehicleStateTrigger_NoDoubleFireSameAutomation(t *testing.T) {
 	vst := NewVehicleStateTrigger(repo, engine)
 
 	// One automation for charging_complete
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeVehicleStateAutomation(1, "charge-done", VehicleStateConfig{Event: "charging_complete"}),
 	}
 
@@ -454,15 +448,16 @@ func TestVehicleStateTrigger_InvalidConfig_AutoDisables(t *testing.T) {
 	engine := &mockEngine{}
 	vst := NewVehicleStateTrigger(repo, engine)
 
-	bad := &models.Automation{
-		ID:            99,
-		Name:          "broken",
-		Enabled:       true,
-		TriggerType:   "vehicle_state",
-		TriggerConfig: json.RawMessage(`{invalid`),
+	bad := &models.AutomationFull{
+		Automation: models.Automation{
+			ID:      99,
+			Name:    "broken",
+			Enabled: true,
+		},
+		Triggers: []any{json.RawMessage(`{invalid`)},
 	}
 	good := makeVehicleStateAutomation(1, "wakes-up", VehicleStateConfig{Event: "wakes_up"})
-	repo.automations = []*models.Automation{bad, good}
+	repo.automations = []*models.AutomationFull{bad, good}
 
 	if err := vst.OnFSMTransition(context.Background(), 42, "vehicle", "asleep", "online"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -497,7 +492,7 @@ func TestVehicleStateTrigger_EngineError_ReturnsFirstError(t *testing.T) {
 	engine := &mockEngine{returnErr: fmt.Errorf("action failed")}
 	vst := NewVehicleStateTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeVehicleStateAutomation(1, "wakes-up", VehicleStateConfig{Event: "wakes_up"}),
 	}
 
@@ -526,7 +521,7 @@ func TestVehicleStateTrigger_StateChange_MatchesAny(t *testing.T) {
 	engine := &mockEngine{}
 	vst := NewVehicleStateTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeVehicleStateAutomation(1, "any-change", VehicleStateConfig{Event: "state_change"}),
 	}
 
@@ -545,7 +540,7 @@ func TestVehicleStateTrigger_StateChange_WithUserFilter(t *testing.T) {
 	vst := NewVehicleStateTrigger(repo, engine)
 
 	to := "charging"
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeVehicleStateAutomation(1, "to-charging", VehicleStateConfig{
 			Event:   "state_change",
 			ToState: &to,
@@ -574,7 +569,7 @@ func TestVehicleStateTrigger_WakesUp_OnlyOnAsleepToOnline(t *testing.T) {
 	engine := &mockEngine{}
 	vst := NewVehicleStateTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeVehicleStateAutomation(1, "wakes-up", VehicleStateConfig{Event: "wakes_up"}),
 	}
 
@@ -613,7 +608,7 @@ func TestVehicleStateTrigger_DifferentVehicles_Independent(t *testing.T) {
 	engine := &mockEngine{}
 	vst := NewVehicleStateTrigger(repo, engine)
 
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeVehicleStateAutomation(1, "wakes-up", VehicleStateConfig{Event: "wakes_up"}),
 	}
 
@@ -647,14 +642,15 @@ func TestVehicleStateTrigger_UnsupportedEventConfig_AutoDisables(t *testing.T) {
 	vst := NewVehicleStateTrigger(repo, engine)
 
 	// Automation with an event name that does not exist in supportedEvents
-	bad := &models.Automation{
-		ID:            99,
-		Name:          "bad-trigger",
-		Enabled:       true,
-		TriggerType:   "vehicle_state",
-		TriggerConfig: json.RawMessage(`{"event":"totally_fake_event"}`),
+	bad := &models.AutomationFull{
+		Automation: models.Automation{
+			ID:      99,
+			Name:    "bad-trigger",
+			Enabled: true,
+		},
+		Triggers: []any{json.RawMessage(`{"event":"totally_fake_event"}`)},
 	}
-	repo.automations = []*models.Automation{bad}
+	repo.automations = []*models.AutomationFull{bad}
 
 	if err := vst.OnFSMTransition(context.Background(), 42, "vehicle", "online", "driving"); err != nil {
 		t.Fatalf("unexpected error: %v", err)

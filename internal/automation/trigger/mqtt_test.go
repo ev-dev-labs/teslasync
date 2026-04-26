@@ -108,7 +108,7 @@ func (m *mockMessage) Ack()               {}
 
 type mockMQTTRepo struct {
 	mu          sync.Mutex
-	automations []*models.Automation
+	automations []*models.AutomationFull
 	disabled    map[int64]string
 	returnErr   error
 }
@@ -117,19 +117,13 @@ func newMockMQTTRepo() *mockMQTTRepo {
 	return &mockMQTTRepo{disabled: make(map[int64]string)}
 }
 
-func (r *mockMQTTRepo) GetByTriggerType(_ context.Context, triggerType string) ([]*models.Automation, error) {
+func (r *mockMQTTRepo) GetByTriggerType(_ context.Context, _ string) ([]*models.AutomationFull, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.returnErr != nil {
 		return nil, r.returnErr
 	}
-	var result []*models.Automation
-	for _, a := range r.automations {
-		if a.TriggerType == triggerType {
-			result = append(result, a)
-		}
-	}
-	return result, nil
+	return r.automations, nil
 }
 
 func (r *mockMQTTRepo) SetAutoDisabled(_ context.Context, id int64, reason string) error {
@@ -148,14 +142,14 @@ func (r *mockMQTTRepo) isDisabled(id int64) bool {
 
 // ─── Helpers ────────────────────────────────────────────
 
-func makeMQTTAutomation(id int64, name string, cfg MQTTConfig) *models.Automation {
-	raw, _ := json.Marshal(cfg)
-	return &models.Automation{
-		ID:            id,
-		Name:          name,
-		Enabled:       true,
-		TriggerType:   "mqtt",
-		TriggerConfig: raw,
+func makeMQTTAutomation(id int64, name string, cfg MQTTConfig) *models.AutomationFull {
+	return &models.AutomationFull{
+		Automation: models.Automation{
+			ID:      id,
+			Name:    name,
+			Enabled: true,
+		},
+		Triggers: []any{cfg},
 	}
 }
 
@@ -748,7 +742,7 @@ func TestMQTTTrigger_Start_SubscribesToTopics(t *testing.T) {
 	engine := &mockEngine{}
 	sub := newMockMQTTSubscriber()
 
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeMQTTAutomation(1, "door-open", MQTTConfig{Topic: "home/door/state", PayloadMatch: mqttStrPtr("on")}),
 		makeMQTTAutomation(2, "temp-alert", MQTTConfig{Topic: "home/temp/value", PayloadJSONPath: mqttStrPtr("$.temperature"), PayloadOperator: "gt", PayloadValue: mqttStrPtr("30")}),
 	}
@@ -776,15 +770,16 @@ func TestMQTTTrigger_Start_DisablesInvalidConfig(t *testing.T) {
 	engine := &mockEngine{}
 	sub := newMockMQTTSubscriber()
 
-	bad := &models.Automation{
-		ID:            99,
-		Name:          "broken",
-		Enabled:       true,
-		TriggerType:   "mqtt",
-		TriggerConfig: json.RawMessage(`{invalid`),
+	bad := &models.AutomationFull{
+		Automation: models.Automation{
+			ID:      99,
+			Name:    "broken",
+			Enabled: true,
+		},
+		Triggers: []any{json.RawMessage(`{invalid`)},
 	}
 	good := makeMQTTAutomation(1, "door-open", MQTTConfig{Topic: "home/door/state", PayloadMatch: mqttStrPtr("on")})
-	repo.automations = []*models.Automation{bad, good}
+	repo.automations = []*models.AutomationFull{bad, good}
 
 	trigger := NewMQTTTrigger(repo, engine, sub)
 
@@ -806,7 +801,7 @@ func TestMQTTTrigger_SimplePayloadMatch_Fires(t *testing.T) {
 	engine := &mockEngine{}
 	sub := newMockMQTTSubscriber()
 
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeMQTTAutomation(1, "door-open", MQTTConfig{Topic: "home/door/state", PayloadMatch: mqttStrPtr("on")}),
 	}
 
@@ -845,7 +840,7 @@ func TestMQTTTrigger_SimplePayloadMismatch_NoFire(t *testing.T) {
 	engine := &mockEngine{}
 	sub := newMockMQTTSubscriber()
 
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeMQTTAutomation(1, "door-open", MQTTConfig{Topic: "home/door/state", PayloadMatch: mqttStrPtr("on")}),
 	}
 
@@ -867,7 +862,7 @@ func TestMQTTTrigger_JSONPath_NumericGt_Fires(t *testing.T) {
 	engine := &mockEngine{}
 	sub := newMockMQTTSubscriber()
 
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeMQTTAutomation(1, "temp-high", MQTTConfig{
 			Topic:           "sensors/temp",
 			PayloadJSONPath: mqttStrPtr("$.temperature"),
@@ -894,7 +889,7 @@ func TestMQTTTrigger_JSONPath_NumericLt_NoFire(t *testing.T) {
 	engine := &mockEngine{}
 	sub := newMockMQTTSubscriber()
 
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeMQTTAutomation(1, "temp-low", MQTTConfig{
 			Topic:           "sensors/temp",
 			PayloadJSONPath: mqttStrPtr("$.temperature"),
@@ -921,7 +916,7 @@ func TestMQTTTrigger_WildcardTopic_Fires(t *testing.T) {
 	engine := &mockEngine{}
 	sub := newMockMQTTSubscriber()
 
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeMQTTAutomation(1, "any-sensor", MQTTConfig{Topic: "home/+/state", PayloadMatch: mqttStrPtr("on")}),
 	}
 
@@ -943,7 +938,7 @@ func TestMQTTTrigger_RetainedMessage_SkippedByDefault(t *testing.T) {
 	engine := &mockEngine{}
 	sub := newMockMQTTSubscriber()
 
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeMQTTAutomation(1, "door-open", MQTTConfig{Topic: "home/door/state", PayloadMatch: mqttStrPtr("on")}),
 	}
 
@@ -966,7 +961,7 @@ func TestMQTTTrigger_RetainedMessage_AllowedWhenConfigured(t *testing.T) {
 	engine := &mockEngine{}
 	sub := newMockMQTTSubscriber()
 
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeMQTTAutomation(1, "door-open", MQTTConfig{
 			Topic:         "home/door/state",
 			PayloadMatch:  mqttStrPtr("on"),
@@ -992,7 +987,7 @@ func TestMQTTTrigger_TopicMismatch_NoFire(t *testing.T) {
 	engine := &mockEngine{}
 	sub := newMockMQTTSubscriber()
 
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeMQTTAutomation(1, "door-open", MQTTConfig{Topic: "home/door/state", PayloadMatch: mqttStrPtr("on")}),
 	}
 
@@ -1014,7 +1009,7 @@ func TestMQTTTrigger_MultipleAutomations_SameTopic(t *testing.T) {
 	engine := &mockEngine{}
 	sub := newMockMQTTSubscriber()
 
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeMQTTAutomation(1, "door-on", MQTTConfig{Topic: "home/door/state", PayloadMatch: mqttStrPtr("on")}),
 		makeMQTTAutomation(2, "door-any", MQTTConfig{Topic: "home/door/state"}), // match anything
 	}
@@ -1038,7 +1033,7 @@ func TestMQTTTrigger_DedupSubscriptions(t *testing.T) {
 	sub := newMockMQTTSubscriber()
 
 	// Two automations with the same topic — should only subscribe once.
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeMQTTAutomation(1, "door-on", MQTTConfig{Topic: "home/door/state", PayloadMatch: mqttStrPtr("on")}),
 		makeMQTTAutomation(2, "door-off", MQTTConfig{Topic: "home/door/state", PayloadMatch: mqttStrPtr("off")}),
 	}
@@ -1060,7 +1055,7 @@ func TestMQTTTrigger_Stop_UnsubscribesAll(t *testing.T) {
 	engine := &mockEngine{}
 	sub := newMockMQTTSubscriber()
 
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeMQTTAutomation(1, "test", MQTTConfig{Topic: "topic/a"}),
 		makeMQTTAutomation(2, "test2", MQTTConfig{Topic: "topic/b"}),
 	}
@@ -1086,7 +1081,7 @@ func TestMQTTTrigger_Reload_UpdatesSubscriptions(t *testing.T) {
 	sub := newMockMQTTSubscriber()
 
 	// Initial: subscribe to topic/a
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeMQTTAutomation(1, "test-a", MQTTConfig{Topic: "topic/a"}),
 	}
 
@@ -1102,7 +1097,7 @@ func TestMQTTTrigger_Reload_UpdatesSubscriptions(t *testing.T) {
 
 	// Reload: switch to topic/b
 	repo.mu.Lock()
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeMQTTAutomation(2, "test-b", MQTTConfig{Topic: "topic/b"}),
 	}
 	repo.mu.Unlock()
@@ -1124,7 +1119,7 @@ func TestMQTTTrigger_Reload_RepoError(t *testing.T) {
 	engine := &mockEngine{}
 	sub := newMockMQTTSubscriber()
 
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeMQTTAutomation(1, "test", MQTTConfig{Topic: "topic/a"}),
 	}
 
@@ -1163,7 +1158,7 @@ func TestMQTTTrigger_EngineError_DoesNotStopProcessing(t *testing.T) {
 	engine := &mockEngine{returnErr: fmt.Errorf("action failed")}
 	sub := newMockMQTTSubscriber()
 
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeMQTTAutomation(1, "test-1", MQTTConfig{Topic: "topic/a"}),
 		makeMQTTAutomation(2, "test-2", MQTTConfig{Topic: "topic/a"}),
 	}
@@ -1187,7 +1182,7 @@ func TestMQTTTrigger_TopicOnly_NoPayloadRules_MatchesAll(t *testing.T) {
 	engine := &mockEngine{}
 	sub := newMockMQTTSubscriber()
 
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeMQTTAutomation(1, "any-payload", MQTTConfig{Topic: "sensors/motion"}),
 	}
 
@@ -1209,7 +1204,7 @@ func TestMQTTTrigger_MultiLevelWildcard_Fires(t *testing.T) {
 	engine := &mockEngine{}
 	sub := newMockMQTTSubscriber()
 
-	repo.automations = []*models.Automation{
+	repo.automations = []*models.AutomationFull{
 		makeMQTTAutomation(1, "all-home", MQTTConfig{Topic: "home/#"}),
 	}
 
