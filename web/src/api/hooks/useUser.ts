@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
+import { useToast } from '@/components/feedback/Toast';
 import { STALE_TIMES } from '@/lib/constants';
 import type { User } from '@/types/user';
 
@@ -20,11 +21,16 @@ export function useCurrentUser() {
 
 export function useUpdateUser() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: (data: { displayName: string }) =>
       request<User>('/users/me', { method: 'PUT', body: JSON.stringify(data) }),
     onSuccess: (data) => {
       queryClient.setQueryData(userKeys.me, data);
+      toast.success('Profile updated');
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to update profile');
     },
   });
 }
@@ -46,10 +52,17 @@ export function useTeslaFeatureConfig() {
 
 export function useRefreshTeslaFeatureConfig() {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: () =>
       request<TeslaConfigEnvelope>('/tesla/user/feature-config/refresh', { method: 'POST' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: userKeys.teslaFeatureConfig }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: userKeys.teslaFeatureConfig });
+      toast.success('Feature config refreshed');
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to refresh feature config');
+    },
   });
 }
 
@@ -70,10 +83,17 @@ export function useTeslaUserRegion() {
 
 export function useRefreshTeslaRegion() {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: () =>
       request<TeslaConfigEnvelope<TeslaRegionData>>('/tesla/user/region/refresh', { method: 'POST' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: userKeys.teslaRegion }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: userKeys.teslaRegion });
+      toast.success('Region refreshed');
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to refresh region');
+    },
   });
 }
 
@@ -108,10 +128,17 @@ export function useTeslaUserOrders() {
 
 export function useRefreshTeslaOrders() {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: () =>
       request<TeslaOrdersEnvelope>('/tesla/user/orders/refresh', { method: 'POST' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: userKeys.teslaOrders }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: userKeys.teslaOrders });
+      toast.success('Orders refreshed');
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to refresh orders');
+    },
   });
 }
 
@@ -142,9 +169,16 @@ export function useTeslaUserProfile() {
 
 export function useRefreshTeslaProfile() {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: () =>
       request<TeslaProfileEnvelope>('/tesla/user/profile/refresh', { method: 'POST' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: userKeys.teslaProfile }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: userKeys.teslaProfile });
+      toast.success('Tesla profile refreshed');
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to refresh Tesla profile');
+    },
   });
 }
