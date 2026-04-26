@@ -163,7 +163,7 @@ func main() {
 			HTTPMethod: method,
 			Endpoint:   url,
 			DurationMs: int32(durationMs),
-			Service:    "tesla_api",
+			Service:    "tesla-api",
 		}
 		if statusCode > 0 {
 			sc := int16(statusCode)

@@ -19,7 +19,7 @@ func NewAPICallLogRepo(db *DB) *APICallLogRepo {
 
 func (r *APICallLogRepo) Create(ctx context.Context, l *models.APICallLog) error {
 	if l.Service == "" {
-		l.Service = "tesla-fleet"
+		l.Service = "tesla-api"
 	}
 	query := `INSERT INTO api_call_logs (ts, vehicle_id, service, http_method, endpoint, status_code, duration_ms, error_message, rate_limited)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`

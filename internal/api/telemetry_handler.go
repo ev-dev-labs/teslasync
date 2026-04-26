@@ -823,7 +823,7 @@ func (h *TelemetryHandler) TelemetryIngest(w http.ResponseWriter, r *http.Reques
 			Endpoint:   fmt.Sprintf("/api/v1/telemetry (VIN: %s)", payload.VIN),
 			StatusCode: int16(statusCode),
 			DurationMs: int32(durationMs),
-			Service:    "fleet_telemetry",
+			Service:    "fleet-telemetry",
 		}
 		_ = h.logRepo.Create(r.Context(), logEntry)
 	}
