@@ -380,6 +380,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 					r.Post("/events/{eventID}/acknowledge", guardHandler.AcknowledgeEvent)
 					r.With(httprate.LimitByIP(3, 1*time.Minute)).Post("/panic", guardHandler.Panic)
 				})
+
+				// FSM debug diagnostics
+				r.Get("/fsm/debug", func(w http.ResponseWriter, req *http.Request) {
+					fh := telemetryHandler.FSMHandler()
+					if fh == nil {
+						writeError(w, http.StatusNotFound, "FSM not enabled")
+						return
+					}
+					fh.HandleDebug(w, req)
+				})
 			})
 		})
 

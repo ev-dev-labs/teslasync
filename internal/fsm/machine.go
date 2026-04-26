@@ -368,3 +368,31 @@ func isChargingState(s string) bool {
 	}
 	return false
 }
+
+// FSMDebugInfo holds diagnostic information about a vehicle FSM.
+type FSMDebugInfo struct {
+	CurrentState     string     `json:"current_state"`
+	LastTransitionAt time.Time  `json:"last_transition_at"`
+	IsGearCapable    bool       `json:"is_gear_capable"`
+	HasPending       bool       `json:"has_pending"`
+	PendingTo        string     `json:"pending_to,omitempty"`
+	PendingSince     *time.Time `json:"pending_since,omitempty"`
+}
+
+// DebugInfo returns diagnostic information about the FSM. Thread-safe.
+func (m *VehicleFSM) DebugInfo() FSMDebugInfo {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	info := FSMDebugInfo{
+		CurrentState:     string(m.current),
+		LastTransitionAt: m.lastTransitionAt,
+		IsGearCapable:    m.isGearCapable,
+	}
+	if m.pending != nil {
+		info.HasPending = true
+		info.PendingTo = string(m.pending.To)
+		info.PendingSince = &m.pending.Since
+	}
+	return info
+}

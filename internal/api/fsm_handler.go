@@ -2,9 +2,12 @@ package api
 
 import (
 	"context"
+	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
@@ -528,4 +531,72 @@ func (h *FSMHandler) reconcileVehicle(vehicleID int64, now time.Time) {
 	h.ProcessSignals(ctx, vehicleID, signals)
 
 	metrics.FSMReconcileTotal.WithLabelValues("corrected").Inc()
+}
+
+// FSMDebugResponse is the JSON response for the FSM debug endpoint.
+type FSMDebugResponse struct {
+	VehicleID       int64            `json:"vehicle_id"`
+	FSM             fsm.FSMDebugInfo `json:"fsm"`
+	LastProcessedAt *time.Time       `json:"last_processed_at,omitempty"`
+	HasActiveDrive  bool             `json:"has_active_drive"`
+	HasActiveCharge bool             `json:"has_active_charge"`
+	Reconciliation  *ReconcileDebug  `json:"reconciliation,omitempty"`
+}
+
+// ReconcileDebug holds reconciliation diagnostics for the debug endpoint.
+type ReconcileDebug struct {
+	ExpectedState string `json:"expected_state"`
+	Confidence    string `json:"confidence"`
+	Reason        string `json:"reason"`
+	FreshestAt    string `json:"freshest_at,omitempty"`
+	Mismatch      bool   `json:"mismatch"`
+}
+
+// HandleDebug returns diagnostic FSM information for a vehicle.
+func (h *FSMHandler) HandleDebug(w http.ResponseWriter, r *http.Request) {
+	vehicleIDStr := chi.URLParam(r, "vehicleID")
+	vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
+		return
+	}
+
+	h.mu.Lock()
+	m := h.machines[vehicleID]
+	_, hasDrive := h.drives[vehicleID]
+	_, hasCharge := h.charges[vehicleID]
+	lastProc := h.lastProcessed[vehicleID]
+	store := h.signalStore
+	h.mu.Unlock()
+
+	if m == nil {
+		writeError(w, http.StatusNotFound, "no FSM for vehicle")
+		return
+	}
+
+	resp := FSMDebugResponse{
+		VehicleID:       vehicleID,
+		FSM:             m.DebugInfo(),
+		HasActiveDrive:  hasDrive,
+		HasActiveCharge: hasCharge,
+	}
+	if !lastProc.IsZero() {
+		resp.LastProcessedAt = &lastProc
+	}
+
+	if store != nil {
+		result := fsm.DeriveExpectedState(vehicleID, store, time.Now())
+		rd := &ReconcileDebug{
+			Confidence: result.Confidence.String(),
+			Reason:     result.Reason,
+		}
+		if result.Confidence > fsm.ConfidenceNone {
+			rd.ExpectedState = string(result.ExpectedState)
+			rd.FreshestAt = result.FreshestAt.Format(time.RFC3339)
+			rd.Mismatch = result.ExpectedState != fsm.State(resp.FSM.CurrentState)
+		}
+		resp.Reconciliation = rd
+	}
+
+	writeJSON(w, http.StatusOK, resp)
 }
