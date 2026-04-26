@@ -622,9 +622,11 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 			signalsCopy[k] = v
 		}
 		safeGo("fsm-state-transition", func() {
-			bgCtx, cancel := context.WithTimeout(h.bgCtx, 5*time.Second)
+			bgCtx, cancel := context.WithTimeout(h.bgCtx, 15*time.Second)
 			defer cancel()
+
 			h.fsmHandler.ProcessSignals(bgCtx, vehicleID, signalsCopy)
+			metrics.FSMDispatchTotal.WithLabelValues("ok").Inc()
 		})
 	}
 

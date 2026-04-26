@@ -484,6 +484,18 @@ var (
 	}, []string{"type"}) // enter, exit
 )
 
+// ── FSM Dispatch ───────────────────────────────────────────
+
+var (
+	// FSMDispatchTotal tracks every FSM dispatch attempt by outcome.
+	// Labels: "ok", "error", "timeout", "panic"
+	FSMDispatchTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "fsm_dispatch_total",
+		Help:      "Total FSM dispatch attempts by outcome",
+	}, []string{"outcome"})
+)
+
 // ── Reliability ────────────────────────────────────────────
 
 var (

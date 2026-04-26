@@ -7,6 +7,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/fsm"
 	"github.com/ev-dev-labs/teslasync/internal/fsm/charge"
@@ -217,18 +218,44 @@ func (h *FSMHandler) ProcessSignals(ctx context.Context, vehicleID int64, signal
 	// Wake vehicle from asleep/offline when any signal arrives
 	if state := m.Current(); state == fsm.Asleep || state == fsm.Offline {
 		if err := m.HandleSignalReceived(ctx, vehicleID); err != nil {
-			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("fsm: HandleSignalReceived error")
+			outcome := "error"
+			if ctx.Err() == context.DeadlineExceeded {
+				outcome = "timeout"
+			}
+			metrics.FSMDispatchTotal.WithLabelValues(outcome).Inc()
+			log.Warn().Err(err).
+				Int64("vehicle_id", vehicleID).
+				Str("outcome", outcome).
+				Msg("fsm: HandleSignalReceived error")
 		}
 	}
 
 	// Run vehicle FSM (may trigger sub-FSM creation/finalization via fsmAction)
 	if err := m.ProcessSignals(ctx, vehicleID, signals); err != nil {
-		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("fsm: ProcessSignals error")
+		outcome := "error"
+		if ctx.Err() == context.DeadlineExceeded {
+			outcome = "timeout"
+		}
+		metrics.FSMDispatchTotal.WithLabelValues(outcome).Inc()
+		log.Warn().Err(err).
+			Int64("vehicle_id", vehicleID).
+			Str("outcome", outcome).
+			Msg("fsm: ProcessSignals error")
 	}
 
 	// Check pending debounced transitions
 	sctx := &fsm.SignalContext{Now: time.Now().UTC()}
-	_ = m.CheckPending(ctx, vehicleID, sctx)
+	if err := m.CheckPending(ctx, vehicleID, sctx); err != nil {
+		outcome := "error"
+		if ctx.Err() == context.DeadlineExceeded {
+			outcome = "timeout"
+		}
+		metrics.FSMDispatchTotal.WithLabelValues(outcome).Inc()
+		log.Warn().Err(err).
+			Int64("vehicle_id", vehicleID).
+			Str("outcome", outcome).
+			Msg("fsm: CheckPending error")
+	}
 
 	// Forward signals to active sub-FSMs for accumulation
 	h.mu.Lock()
