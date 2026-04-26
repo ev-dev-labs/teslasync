@@ -123,8 +123,23 @@ func (h *YearReviewHandler) GetYearReview(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Range-based efficiency unavailable (range columns removed from drives)
+	// Average efficiency (Wh/km) — computed from energy_used_kwh and distance_mi
 	var avgEffWhKm float64
+	if err = h.db.Pool.QueryRow(ctx, `
+		SELECT COALESCE(AVG(
+			CASE WHEN distance_mi > 1 AND energy_used_kwh > 0
+			THEN (energy_used_kwh / (distance_mi * 1.60934)) * 1000
+			END
+		), 0)
+		FROM drives
+		WHERE vehicle_id = $1
+		  AND end_ts IS NOT NULL
+		  AND start_ts >= $2
+		  AND start_ts < $3`,
+		vehicleID, yearStart, yearEnd,
+	).Scan(&avgEffWhKm); err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("year-review: failed to get efficiency")
+	}
 
 	// ── Charging aggregates ──
 	var totalChargeSessions int

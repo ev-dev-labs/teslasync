@@ -117,12 +117,12 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Average efficiency (Wh/km) — from drives with energy consumed data
+	// Average efficiency (Wh/km) — from drives with energy used data
 	effQuery := `
 		SELECT COALESCE(AVG(
-			CASE WHEN distance_mi > 1 AND energy_consumed_kwh IS NOT NULL
-			     AND energy_consumed_kwh > 0
-			THEN (energy_consumed_kwh / (distance_mi * 1.60934)) * 1000
+			CASE WHEN distance_mi > 1 AND energy_used_kwh IS NOT NULL
+			     AND energy_used_kwh > 0
+			THEN (energy_used_kwh / (distance_mi * 1.60934)) * 1000
 			ELSE NULL END
 		), 0)
 		FROM drives
@@ -133,7 +133,9 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 		effArgs = append(effArgs, vehicleID)
 	}
 	var avgEffWhKm float64
-	_ = h.db.Pool.QueryRow(ctx, effQuery, effArgs...).Scan(&avgEffWhKm)
+	if err = h.db.Pool.QueryRow(ctx, effQuery, effArgs...).Scan(&avgEffWhKm); err != nil {
+		log.Warn().Err(err).Msg("lifetime: failed to get efficiency stats")
+	}
 
 	// ── Charging aggregates ──
 	chargeQuery := `
