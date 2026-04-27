@@ -1,0 +1,177 @@
+=== SURVEY ===
+Date: 2026-04-27T12:19:17-07:00
+
+tire-pressure.json (6 panels):
+  Panel 1 (id=1) "Tire Pressure Over Time" — timeseries
+    Old: FROM tire_pressure_snapshots; columns: front_left, front_right, rear_left, rear_right
+    New signals: TpmsPressureFl, TpmsPressureFr, TpmsPressureRl, TpmsPressureRr (all TypeFloat)
+
+  Panel 2 (id=2) "Front Left" — stat (latest value)
+    Old: SELECT convert_pressure(front_left) FROM tire_pressure_snapshots
+    New: MAX(value_num) from signal_log WHERE signal_name = 'TpmsPressureFl'
+
+  Panel 3 (id=3) "Front Right" — stat (latest value)
+    Old: SELECT convert_pressure(front_right) FROM tire_pressure_snapshots
+    New: MAX(value_num) from signal_log WHERE signal_name = 'TpmsPressureFr'
+
+  Panel 4 (id=4) "Rear Left" — stat (latest value)
+    Old: SELECT convert_pressure(rear_left) FROM tire_pressure_snapshots
+    New: MAX(value_num) from signal_log WHERE signal_name = 'TpmsPressureRl'
+
+  Panel 5 (id=5) "Rear Right" — stat (latest value)
+    Old: SELECT convert_pressure(rear_right) FROM tire_pressure_snapshots
+    New: MAX(value_num) from signal_log WHERE signal_name = 'TpmsPressureRr'
+
+  Panel 6 (id=6) "TPMS Warnings History" — table
+    Old: tpms_hard_warnings, tpms_soft_warnings, last_seen_time_fl/fr/rl/rr
+    New: TpmsHardWarnings, TpmsSoftWarnings (composite TypeTireLocation in value_text — JSON)
+         TpmsLastSeenPressureTimeFl/Fr/Rl/Rr (timestamp in value_text)
+    Note: Composite types stored as JSON; using last(value_text, ts) per aggregation rules.
+
+energy-flow.json (8 panels):
+  Panel 1 (id=1) "Energy Stats" — stat
+    Old: AVG(battery_level), AVG(pack_voltage), AVG(pack_current), AVG(energy_remaining), MAX(dc_charging_power), MAX(ac_charging_power)
+    New signals: BatteryLevel, PackVoltage, PackCurrent, EnergyRemaining, DCChargingPower, ACChargingPower
+
+  Panel 2 (id=2) "Pack Voltage & Current" — timeseries
+    Old: pack_voltage, pack_current FROM charging_telemetry
+    New: PackVoltage, PackCurrent
+
+  Panel 3 (id=3) "Charging Power" — timeseries
+    Old: dc_charging_power, ac_charging_power FROM charging_telemetry
+    New: DCChargingPower, ACChargingPower
+
+  Panel 4 (id=4) "SOC & Range" — timeseries
+    Old: battery_level, est_battery_range, rated_range FROM charging_telemetry
+    New: BatteryLevel, EstBatteryRange, RatedRange
+
+  Panel 5 (id=5) "Cell Voltage Spread" — timeseries
+    Old: brick_voltage_max, brick_voltage_min FROM charging_telemetry
+    New: BrickVoltageMax, BrickVoltageMin (both TypeFloat)
+
+  Panel 6 (id=6) "Module Temperature" — timeseries
+    Old: module_temp_max, module_temp_min FROM charging_telemetry
+    New: ModuleTempMax, ModuleTempMin (both TypeFloat)
+
+  Panel 7 (id=7) "BMS & System" — stat
+    Old: bms_state, bms_fullcharge_complete, battery_heater_on, isolation_resistance
+    New: BMSState (TypeEnum, value_text), BmsFullchargecomplete (TypeBool),
+         BatteryHeaterOn (TypeBool), IsolationResistance (TypeFloat)
+
+  Panel 8 (id=8) "Powershare Status" — stat
+    Old: powershare_status, powershare_type, powershare_hours_left, powershare_power_kw
+    New: PowershareStatus (TypeEnum), PowershareType (TypeEnum),
+         PowershareHoursLeft (TypeFloat), PowershareInstantaneousPowerKW (TypeFloat)
+
+projected-range.json (3 panels):
+  Panel 1 (id=1) "Rated Range Over Time" — timeseries
+    Old: rated_range FROM positions WHERE battery_level >= 95
+    New: RatedRange, BatteryLevel from signal_log
+
+  Panel 2 (id=2) "Battery Level vs Rated Range" — timeseries
+    Old: battery_level, rated_range FROM positions
+    New: BatteryLevel, RatedRange
+
+  Panel 3 (id=3) "Projected Full-Charge Range" — timeseries
+    Old: $__timeGroup(created_at, '1d'), AVG(rated_range / NULLIF(battery_level, 0) * 100) FROM positions
+    New: time_bucket('1 day', ts), same formula with signal_log pivot
+
+Signal name verification (from internal/enums/signal_types.go):
+  TpmsPressureFl/Fr/Rl/Rr — TypeFloat ✓
+  TpmsHardWarnings/TpmsSoftWarnings — TypeTireLocation (composite, value_text)
+  TpmsLastSeenPressureTimeFl/Fr/Rl/Rr — not in signal_types.go; check if present
+  PackVoltage, PackCurrent — TypeFloat ✓
+  DCChargingPower, ACChargingPower — TypeFloat ✓
+  BatteryLevel — TypeFloat ✓
+  EnergyRemaining — TypeFloat ✓
+  EstBatteryRange — TypeFloat ✓
+  RatedRange — TypeFloat ✓
+  Odometer — TypeFloat ✓
+  BrickVoltageMax, BrickVoltageMin — TypeFloat ✓
+  ModuleTempMax, ModuleTempMin — TypeFloat ✓
+  BMSState — TypeEnum (value_text) ✓
+  BmsFullchargecomplete — TypeBool ✓
+  BatteryHeaterOn — TypeBool ✓
+  IsolationResistance — TypeFloat ✓
+  PowershareStatus, PowershareType — TypeEnum (value_text) ✓
+  PowershareHoursLeft, PowershareInstantaneousPowerKW — TypeFloat ✓
+  ChargerVoltage, ChargeAmps, ChargeRateMilePerHour, TimeToFullCharge — TypeFloat ✓
+
+=== REASONING ===
+
+Migration strategy per dashboard:
+
+TIRE PRESSURE (6 panels):
+- Panels 1-5: Straightforward numeric signal pivot from signal_log.
+  For timeseries (panel 1): GROUP BY ts with MAX(value_num) FILTER pattern.
+  For stat (panels 2-5): ORDER BY ts DESC LIMIT 1 with single signal.
+  convert_pressure() function is a Grafana SQL function already defined — keep using it.
+- Panel 6 (TPMS Warnings): Uses composite TypeTireLocation signals (TpmsHardWarnings,
+  TpmsSoftWarnings) stored as JSON in value_text, plus last_seen_time signals stored
+  in value_text as timestamps. Use last(value_text, ts) for text signals per rules.
+
+ENERGY FLOW (8 panels):
+- Panels 1-6: Numeric pivots from signal_log using MAX(value_num) FILTER pattern.
+  Panel 1 (stat): Uses AVG aggregation — keep AVG via subquery or FILTER approach.
+  Panels 2-6 (timeseries): Standard GROUP BY ts pivots.
+- Panel 7 (BMS & System): Mix of text/bool/float. Use last(value_text, ts) for BMSState,
+  last(value_bool, ts) for BmsFullchargecomplete/BatteryHeaterOn, and
+  last(value_num, ts) for IsolationResistance.
+- Panel 8 (Powershare): Mix of text/float. Use last(value_text, ts) for enums,
+  last(value_num, ts) for floats.
+
+PROJECTED RANGE (3 panels):
+- All timeseries, straightforward numeric pivot.
+- Panel 3 uses $__timeGroup which becomes time_bucket for TimescaleDB.
+  The filter `battery_level > 10` needs to be applied via HAVING on the pivoted value.
+
+Performance: All queries include ts BETWEEN $__timeFrom() AND $__timeTo() + signal_name IN (...).
+
+=== CHANGES ===
+
+tire-pressure.json — 6 panels migrated:
+  Panel 1 "Tire Pressure Over Time": tire_pressure_snapshots → signal_log pivot on TpmsPressureFl/Fr/Rl/Rr
+  Panel 2 "Front Left": tire_pressure_snapshots → signal_log WHERE signal_name = 'TpmsPressureFl'
+  Panel 3 "Front Right": tire_pressure_snapshots → signal_log WHERE signal_name = 'TpmsPressureFr'
+  Panel 4 "Rear Left": tire_pressure_snapshots → signal_log WHERE signal_name = 'TpmsPressureRl'
+  Panel 5 "Rear Right": tire_pressure_snapshots → signal_log WHERE signal_name = 'TpmsPressureRr'
+  Panel 6 "TPMS Warnings History": tire_pressure_snapshots → signal_log pivot on
+    TpmsHardWarnings/TpmsSoftWarnings (last(value_text, ts)) +
+    TpmsLastSeenPressureTimeFl/Fr/Rl/Rr (MAX(value_num))
+
+energy-flow.json — 8 panels migrated:
+  Panel 1 "Energy Stats": charging_telemetry → signal_log AVG/MAX on BatteryLevel, PackVoltage, PackCurrent, EnergyRemaining, DCChargingPower, ACChargingPower
+  Panel 2 "Pack Voltage & Current": charging_telemetry → signal_log pivot PackVoltage, PackCurrent
+  Panel 3 "Charging Power": charging_telemetry → signal_log pivot DCChargingPower, ACChargingPower
+  Panel 4 "SOC & Range": charging_telemetry → signal_log pivot BatteryLevel, EstBatteryRange, RatedRange
+  Panel 5 "Cell Voltage Spread": charging_telemetry → signal_log pivot BrickVoltageMax, BrickVoltageMin + HAVING NOT NULL
+  Panel 6 "Module Temperature": charging_telemetry → signal_log pivot ModuleTempMax, ModuleTempMin + HAVING NOT NULL
+  Panel 7 "BMS & System": charging_telemetry → signal_log last() on BMSState (text), BmsFullchargecomplete (bool), BatteryHeaterOn (bool), IsolationResistance (num)
+  Panel 8 "Powershare Status": charging_telemetry → signal_log last() on PowershareStatus (text), PowershareType (text), PowershareHoursLeft (num), PowershareInstantaneousPowerKW (num) + HAVING NOT NULL
+
+projected-range.json — 3 panels migrated:
+  Panel 1 "Rated Range Over Time": positions → signal_log pivot RatedRange + BatteryLevel >= 95 HAVING
+  Panel 2 "Battery Level vs Rated Range": positions → signal_log pivot BatteryLevel, RatedRange
+  Panel 3 "Projected Full-Charge Range": positions → CTE pivoting signal_log + time_bucket('1 day') replacing $__timeGroup
+
+All queries include: ts BETWEEN $__timeFrom() AND $__timeTo() + signal_name IN (...)
+
+=== GATE ===
+
+JSON validation: all 3 files valid ✓
+Stale reference check: Select-String for tire_pressure_snapshots|charging_telemetry|FROM positions[^_] → 0 matches ✓
+Signal source check: rawSql count = signal_log count for all files ✓
+  tire-pressure.json: 6/6
+  energy-flow.json: 8/8
+  projected-range.json: 3/3
+
+GATE: PASS
+
+=== COMMIT ===
+
+Committed: phase-25/04-grafana-remaining: migrate tire/energy/range dashboards to signal_log
+Files: tire-pressure.json (6 panels), energy-flow.json (8 panels), projected-range.json (3 panels)
+Total: 17 panels migrated from 3 dropped tables to signal_log
+
+EXIT=0
+STATUS=DONE

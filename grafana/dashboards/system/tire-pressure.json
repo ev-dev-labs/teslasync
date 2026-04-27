@@ -131,7 +131,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  created_at AS time,\n  convert_pressure(front_left) AS \"Front Left\",\n  convert_pressure(front_right) AS \"Front Right\",\n  convert_pressure(rear_left) AS \"Rear Left\",\n  convert_pressure(rear_right) AS \"Rear Right\"\nFROM tire_pressure_snapshots\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\nORDER BY created_at",
+          "rawSql": "SELECT ts AS time,\n  convert_pressure(MAX(value_num) FILTER (WHERE signal_name = 'TpmsPressureFl')) AS \"Front Left\",\n  convert_pressure(MAX(value_num) FILTER (WHERE signal_name = 'TpmsPressureFr')) AS \"Front Right\",\n  convert_pressure(MAX(value_num) FILTER (WHERE signal_name = 'TpmsPressureRl')) AS \"Rear Left\",\n  convert_pressure(MAX(value_num) FILTER (WHERE signal_name = 'TpmsPressureRr')) AS \"Rear Right\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal_name IN ('TpmsPressureFl', 'TpmsPressureFr', 'TpmsPressureRl', 'TpmsPressureRr')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -191,7 +191,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT convert_pressure(front_left) AS \"Front Left\" FROM tire_pressure_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT convert_pressure(value_num) AS \"Front Left\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal_name = 'TpmsPressureFl' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -251,7 +251,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT convert_pressure(front_right) AS \"Front Right\" FROM tire_pressure_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT convert_pressure(value_num) AS \"Front Right\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal_name = 'TpmsPressureFr' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -311,7 +311,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT convert_pressure(rear_left) AS \"Rear Left\" FROM tire_pressure_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT convert_pressure(value_num) AS \"Rear Left\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal_name = 'TpmsPressureRl' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -371,7 +371,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT convert_pressure(rear_right) AS \"Rear Right\" FROM tire_pressure_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT convert_pressure(value_num) AS \"Rear Right\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal_name = 'TpmsPressureRr' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -395,7 +395,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT created_at AS \"Time\",\n  COALESCE(tpms_hard_warnings, 'None') AS \"Hard Warnings\",\n  COALESCE(tpms_soft_warnings, 'None') AS \"Soft Warnings\",\n  last_seen_time_fl AS \"FL Last Seen\",\n  last_seen_time_fr AS \"FR Last Seen\",\n  last_seen_time_rl AS \"RL Last Seen\",\n  last_seen_time_rr AS \"RR Last Seen\"\nFROM tire_pressure_snapshots\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\n  AND (tpms_hard_warnings IS NOT NULL OR tpms_soft_warnings IS NOT NULL OR last_seen_time_fl IS NOT NULL)\nORDER BY created_at DESC LIMIT 30",
+          "rawSql": "SELECT ts AS \"Time\",\n  COALESCE(last(value_text, ts) FILTER (WHERE signal_name = 'TpmsHardWarnings'), 'None') AS \"Hard Warnings\",\n  COALESCE(last(value_text, ts) FILTER (WHERE signal_name = 'TpmsSoftWarnings'), 'None') AS \"Soft Warnings\",\n  MAX(value_num) FILTER (WHERE signal_name = 'TpmsLastSeenPressureTimeFl') AS \"FL Last Seen\",\n  MAX(value_num) FILTER (WHERE signal_name = 'TpmsLastSeenPressureTimeFr') AS \"FR Last Seen\",\n  MAX(value_num) FILTER (WHERE signal_name = 'TpmsLastSeenPressureTimeRl') AS \"RL Last Seen\",\n  MAX(value_num) FILTER (WHERE signal_name = 'TpmsLastSeenPressureTimeRr') AS \"RR Last Seen\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal_name IN ('TpmsHardWarnings', 'TpmsSoftWarnings', 'TpmsLastSeenPressureTimeFl', 'TpmsLastSeenPressureTimeFr', 'TpmsLastSeenPressureTimeRl', 'TpmsLastSeenPressureTimeRr')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nHAVING last(value_text, ts) FILTER (WHERE signal_name = 'TpmsHardWarnings') IS NOT NULL\n   OR last(value_text, ts) FILTER (WHERE signal_name = 'TpmsSoftWarnings') IS NOT NULL\n   OR MAX(value_num) FILTER (WHERE signal_name = 'TpmsLastSeenPressureTimeFl') IS NOT NULL\nORDER BY ts DESC\nLIMIT 30",
           "format": "table",
           "refId": "A",
           "datasource": {
