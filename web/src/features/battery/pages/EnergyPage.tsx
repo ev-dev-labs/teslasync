@@ -107,8 +107,8 @@ export default function EnergyPage() {
   /* ── Derived metrics ──────────────────────────────────────────── */
   const totalEnergy = sessions?.reduce((s, c) => s + c.energy_added_kwh, 0) ?? 0;
   const totalCost = sessions?.reduce((s, c) => s + (c.cost ?? 0), 0) ?? 0;
-  const avgEfficiency = stats?.avg_efficiency_wh_km ?? 0;
-  const totalDistance = stats?.total_distance_km ?? 0;
+  const avgEfficiency = stats?.avg_efficiency_wh_per_mi ?? 0;
+  const totalDistance = stats?.total_distance_mi ?? 0;
   const co2Saved = stats?.co2_saved_kg ?? totalEnergy * 0.42;
 
   const periodDays = Math.max(
@@ -416,7 +416,7 @@ export default function EnergyPage() {
                         <Line
                           {...AREA_DEFAULTS}
                           yAxisId="right"
-                          dataKey="efficiency_wh_km"
+                          dataKey="efficiency_wh_per_mi"
                           name={efficiencyUnit}
                           stroke="#10b981"
                           animationDuration={800}
@@ -459,7 +459,7 @@ export default function EnergyPage() {
                         <Tooltip content={<ChartTooltip />} />
                         <Area
                           {...AREA_DEFAULTS}
-                          dataKey="efficiency_wh_km"
+                          dataKey="efficiency_wh_per_mi"
                           name={efficiencyUnit}
                           stroke="#10b981"
                           fill="url(#effGrad)"
@@ -467,7 +467,7 @@ export default function EnergyPage() {
                         />
                         <Area
                           {...AREA_DEFAULTS}
-                          dataKey="distance_km"
+                          dataKey="distance_mi"
                           name={t('energy.chart.distance', { unit: distanceUnit, defaultValue: `Distance (${distanceUnit})` })}
                           stroke="#00f0ff"
                           fill="url(#distGrad2)"
