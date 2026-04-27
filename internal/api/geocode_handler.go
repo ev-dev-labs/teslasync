@@ -7,14 +7,15 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 )
 
-// GeocodeHandler provides forward geocoding (address search).
+// GeocodeHandler provides forward and reverse geocoding.
 type GeocodeHandler struct {
 	searcher geocoding.Searcher
+	geocoder geocoding.Geocoder
 }
 
-// NewGeocodeHandler creates a GeocodeHandler with the given forward geocoder.
-func NewGeocodeHandler(searcher geocoding.Searcher) *GeocodeHandler {
-	return &GeocodeHandler{searcher: searcher}
+// NewGeocodeHandler creates a GeocodeHandler with forward search and optional reverse geocoder.
+func NewGeocodeHandler(searcher geocoding.Searcher, geocoder geocoding.Geocoder) *GeocodeHandler {
+	return &GeocodeHandler{searcher: searcher, geocoder: geocoder}
 }
 
 // Search handles GET /geocode/search?q=...&limit=5
@@ -40,4 +41,29 @@ func (h *GeocodeHandler) Search(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, results)
+}
+
+// Reverse handles GET /geocode/reverse?lat=X&lon=Y
+func (h *GeocodeHandler) Reverse(w http.ResponseWriter, r *http.Request) {
+	lat, err := strconv.ParseFloat(r.URL.Query().Get("lat"), 64)
+	lon, err2 := strconv.ParseFloat(r.URL.Query().Get("lon"), 64)
+	if err != nil || err2 != nil {
+		writeError(w, http.StatusBadRequest, "lat and lon query parameters are required")
+		return
+	}
+
+	result, err := h.geocoder.ReverseGeocode(r.Context(), lat, lon)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "reverse geocode failed")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"display_name": result.ShortName(),
+		"road":         result.Road,
+		"city":         result.City,
+		"state":        result.State,
+		"country":      result.Country,
+		"postcode":     result.PostCode,
+	})
 }

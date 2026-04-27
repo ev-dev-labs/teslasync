@@ -10,25 +10,37 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
   MapPin, Plus, Pencil, Trash2, Globe, Ruler, Shield,
-  LogIn, LogOut, Check, X, Activity,
+  LogIn, LogOut, Check, X, Activity, Navigation,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, Button, Input, Select, Modal, Toggle, ConfirmDialog } from '@/components/ui';
+import { GlassPanel, Badge, Button, Input, Select, Modal, Toggle, ConfirmDialog, Tabs } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { Skeleton, EmptyState, Spinner } from '@/components/feedback';
 import { useToast } from '@/components/feedback/Toast';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useVehicles } from '@/api/hooks/useVehicles';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 import type { Geofence } from '@/types/location';
+import type { Position } from '@/api/types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type AlertType = 'entry' | 'exit' | 'both' | 'none';
+type LocationSource = 'vehicle' | 'browser';
+
+interface ReverseGeocodeResult {
+  display_name: string;
+  road: string;
+  city: string;
+  state: string;
+  country: string;
+  postcode: string;
+}
 
 interface GeofenceFormData {
   name: string;
@@ -103,6 +115,9 @@ export default function GeofencesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<GeofenceFormData>(EMPTY_FORM);
   const [deleteTarget, setDeleteTarget] = useState<Geofence | null>(null);
+  const [locationSource, setLocationSource] = useState<LocationSource>('vehicle');
+  const [selectedVehicleId, setSelectedVehicleId] = useState<number>(0);
+  const [locationLoading, setLocationLoading] = useState(false);
 
   // ─── Data fetching ───────────────────────────────────────────────────────
 
@@ -110,6 +125,8 @@ export default function GeofencesPage() {
     queryKey: ['geofences'],
     queryFn: () => request<Geofence[]>('/geofences'),
   });
+
+  const { data: vehicles } = useVehicles();
 
   const createMut = useMutation({
     mutationFn: (body: Omit<Geofence, 'id' | 'createdAt'>) =>
@@ -177,6 +194,7 @@ export default function GeofencesPage() {
   const openCreate = useCallback(() => {
     setEditingId(null);
     setForm(EMPTY_FORM);
+    setLocationLoading(false);
     setModalOpen(true);
   }, []);
 
@@ -192,6 +210,68 @@ export default function GeofencesPage() {
     });
     setModalOpen(true);
   }, []);
+
+  const reverseGeocode = useCallback(async (lat: number, lon: number): Promise<string> => {
+    try {
+      const res = await request<ReverseGeocodeResult>(`/geocode/reverse?lat=${lat}&lon=${lon}`);
+      return res.display_name || `${fmtNumber(lat, 4)}, ${fmtNumber(lon, 4)}`;
+    } catch {
+      return `${fmtNumber(lat, 4)}, ${fmtNumber(lon, 4)}`;
+    }
+  }, []);
+
+  const handleGetLocation = useCallback(async () => {
+    setLocationLoading(true);
+    try {
+      let lat: number;
+      let lon: number;
+
+      if (locationSource === 'vehicle') {
+        if (selectedVehicleId <= 0) {
+          toast.error(t('geofences.selectVehicle', 'Select a vehicle first'));
+          setLocationLoading(false);
+          return;
+        }
+        const positions = await request<Position[]>(
+          `/vehicles/${selectedVehicleId}/positions?limit=1`,
+        );
+        if (!positions || positions.length === 0) {
+          toast.error(t('geofences.noPosition', 'No position data available for this vehicle'));
+          setLocationLoading(false);
+          return;
+        }
+        lat = positions[0].latitude;
+        lon = positions[0].longitude;
+      } else {
+        // Browser geolocation
+        const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+          });
+        });
+        lat = pos.coords.latitude;
+        lon = pos.coords.longitude;
+      }
+
+      const name = await reverseGeocode(lat, lon);
+      setForm((prev) => ({
+        ...prev,
+        name: prev.name || name,
+        latitude: String(lat),
+        longitude: String(lon),
+      }));
+    } catch (err) {
+      const message = err instanceof GeolocationPositionError
+        ? t('geofences.locationDenied', 'Location access denied')
+        : err instanceof Error
+          ? err.message
+          : t('geofences.locationFailed', 'Failed to get location');
+      toast.error(message);
+    } finally {
+      setLocationLoading(false);
+    }
+  }, [locationSource, selectedVehicleId, reverseGeocode, toast, t]);
 
   const handleSubmit = useCallback(() => {
     const flags = alertFlags(form.alertType);
@@ -385,6 +465,51 @@ export default function GeofencesPage() {
         size="md"
       >
         <div className="space-y-4">
+          {/* Use Current Location */}
+          {!editingId && (
+            <GlassPanel className="space-y-3 p-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-[var(--text-primary)]">
+                <Navigation className="h-4 w-4" />
+                {t('geofences.useCurrentLocation', 'Use Current Location')}
+              </div>
+
+              <Tabs
+                tabs={[
+                  { key: 'vehicle', label: `🚗 ${t('geofences.vehicle', 'Vehicle')}` },
+                  { key: 'browser', label: `📱 ${t('geofences.browser', 'Browser')}` },
+                ]}
+                activeTab={locationSource}
+                onChange={(key) => setLocationSource(key as LocationSource)}
+              />
+
+              {locationSource === 'vehicle' && (
+                <Select
+                  label={t('geofences.selectVehicle', 'Select Vehicle')}
+                  options={[
+                    { value: '0', label: t('geofences.chooseVehicle', '— Choose vehicle —') },
+                    ...(vehicles ?? []).map((v) => ({
+                      value: String(v.id),
+                      label: v.display_name || v.vin,
+                    })),
+                  ]}
+                  value={String(selectedVehicleId)}
+                  onChange={(e) => setSelectedVehicleId(Number(e.target.value))}
+                />
+              )}
+
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={locationLoading ? <Spinner size="sm" /> : <Navigation className="h-4 w-4" />}
+                onClick={handleGetLocation}
+                disabled={locationLoading || (locationSource === 'vehicle' && selectedVehicleId <= 0)}
+              >
+                {locationLoading
+                  ? t('geofences.gettingLocation', 'Getting location…')
+                  : t('geofences.getLocation', 'Get Location')}
+              </Button>
+            </GlassPanel>
+          )}
           <Input
             label={t('Name')}
             value={form.name}
