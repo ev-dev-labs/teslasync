@@ -1,0 +1,40 @@
+=== SURVEY ===
+Files read:
+  - internal/api/tire_pressure_handler.go (86 lines) — full file
+  - internal/api/helpers.go:114-126 — parseDateRange expects start/end in YYYY-MM-DD
+  - web/src/features/vehicle-systems/pages/TirePressurePage.tsx (514 lines) — full file
+
+Confirmed root causes:
+  1. SignalTracePivotFlat returns rows with "ts" key; frontend reads r.created_at → undefined → "—"
+  2. Frontend sends limit=200 (arbitrary), backend uses parseDateRange(r) for start/end params.
+     Since neither is sent, defaults to 7-day window → only 1-2 readings → single dot.
+  3. Y-axis domain hardcoded [2.0, 4.0] (bar) clips data when user unit is psi (45 psi off-scale).
+
+=== REASONING ===
+Fix 1 (backend): After SignalTracePivotFlat, copy row["ts"] → row["created_at"] and add row["id"].
+Fix 2 (frontend): Change TIME_RANGE_OPTIONS to actual day counts (7,30,90,365), compute
+  start/end dates in YYYY-MM-DD format, send as query params instead of limit.
+Fix 3 (frontend): Replace domain={[2.0, 4.0]} with domain={['auto', 'auto']} for unit-agnostic
+  Y-axis that adapts to the actual data range.
+
+=== CHANGES ===
+1. internal/api/tire_pressure_handler.go
+   - After nil guard for rows, added loop: copy row["ts"]→row["created_at"], set row["id"]=i+1
+
+2. web/src/features/vehicle-systems/pages/TirePressurePage.tsx
+   - TIME_RANGE_OPTIONS values: 50→7, 200→30, 500→90, 2000→365
+   - Default timeRange state: 200→30
+   - History query: replaced limit=${timeRange} with start=${startStr}&end=${endStr}
+     computed from timeRange days ago → today in YYYY-MM-DD format
+   - YAxis domain: [2.0, 4.0] → ['auto', 'auto']
+
+=== GATE ===
+$ go build ./...
+EXIT=0
+
+$ cd web && npx tsc --noEmit
+EXIT=0
+
+=== COMMIT ===
+EXIT=0
+STATUS=DONE

@@ -57,6 +57,12 @@ func (h *TirePressureHandler) List(w http.ResponseWriter, r *http.Request) {
 	if rows == nil {
 		rows = []map[string]interface{}{}
 	}
+	for i, row := range rows {
+		if ts, ok := row["ts"]; ok {
+			row["created_at"] = ts
+		}
+		row["id"] = i + 1
+	}
 	writeJSON(w, http.StatusOK, rows)
 }
 

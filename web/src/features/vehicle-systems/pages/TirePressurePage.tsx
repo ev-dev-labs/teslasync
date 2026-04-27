@@ -80,10 +80,10 @@ const STATUS_LABELS: Record<PressureStatus, string> = {
 };
 
 const TIME_RANGE_OPTIONS = [
-  { value: 50, label: '7 Days' },
-  { value: 200, label: '30 Days' },
-  { value: 500, label: '90 Days' },
-  { value: 2000, label: 'All' },
+  { value: 7, label: '7 Days' },
+  { value: 30, label: '30 Days' },
+  { value: 90, label: '90 Days' },
+  { value: 365, label: 'All' },
 ] as const;
 
 function getTirePressureValue(
@@ -159,7 +159,7 @@ export default function TirePressurePage() {
   const gaugeMax = convertPressure(GAUGE_MAX_BAR);
 
   const [vehicleId, setVehicleId] = useState<number | null>(null);
-  const [timeRange, setTimeRange] = useState(200);
+  const [timeRange, setTimeRange] = useState(30);
 
   /* ---- API queries ---- */
 
@@ -182,10 +182,16 @@ export default function TirePressurePage() {
 
   const { data: history, isLoading: loadingHistory, error: historyError } = useQuery({
     queryKey: ['tire-pressure-history', activeVehicleId, timeRange],
-    queryFn: () =>
-      request<TirePressureReading[]>(
-        `/tire-pressure?vehicle_id=${activeVehicleId}&limit=${timeRange}`,
-      ),
+    queryFn: () => {
+      const end = new Date();
+      const start = new Date();
+      start.setDate(start.getDate() - Number(timeRange));
+      const startStr = start.toISOString().split('T')[0];
+      const endStr = end.toISOString().split('T')[0];
+      return request<TirePressureReading[]>(
+        `/tire-pressure?vehicle_id=${activeVehicleId}&start=${startStr}&end=${endStr}`,
+      );
+    },
     enabled: activeVehicleId !== null,
   });
 
@@ -457,7 +463,7 @@ export default function TirePressurePage() {
                     tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
                   />
                   <YAxis
-                    domain={[2.0, 4.0]}
+                    domain={['auto', 'auto']}
                     tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
                     tickFormatter={(v: number) => fmtNumber(v, 1)}
                   />
