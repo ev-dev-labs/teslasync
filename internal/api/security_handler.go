@@ -18,8 +18,26 @@ type SecurityHandler struct {
 var securityMappings = []database.PivotMapping{
 	{Signal: "Locked", Field: "locked"},
 	{Signal: "SentryMode", Field: "sentry_mode"},
-	{Signal: "DoorState", Field: "doors"},
-	{Signal: "WindowState", Field: "windows"},
+	{Signal: "DoorState", Field: "door_state"},
+	{Signal: "FdWindow", Field: "fd_window"},
+	{Signal: "FpWindow", Field: "fp_window"},
+	{Signal: "RdWindow", Field: "rd_window"},
+	{Signal: "RpWindow", Field: "rp_window"},
+	{Signal: "HomelinkNearby", Field: "homelink_nearby"},
+	{Signal: "GuestModeEnabled", Field: "guest_mode"},
+	{Signal: "HomelinkDeviceCount", Field: "homelink_device_count"},
+	{Signal: "GuestModeMobileAccessState", Field: "guest_mode_mobile_access_state"},
+	{Signal: "DriverSeatOccupied", Field: "driver_seat_occupied"},
+	{Signal: "CenterDisplay", Field: "center_display"},
+	{Signal: "SpeedLimitMode", Field: "speed_limit_mode"},
+	{Signal: "ValetModeEnabled", Field: "valet_mode_enabled"},
+	{Signal: "ServiceMode", Field: "service_mode"},
+	{Signal: "PairedPhoneKeyAndKeyFobQty", Field: "paired_phone_key_count"},
+	{Signal: "LightsHazardsActive", Field: "lights_hazards_active"},
+	{Signal: "LightsHighBeams", Field: "lights_high_beams"},
+	{Signal: "LightsTurnSignal", Field: "lights_turn_signal"},
+	{Signal: "DriverSeatBelt", Field: "driver_seat_belt"},
+	{Signal: "PassengerSeatBelt", Field: "passenger_seat_belt"},
 }
 
 func NewSecurityHandler(slr *database.SignalLogReader) *SecurityHandler {

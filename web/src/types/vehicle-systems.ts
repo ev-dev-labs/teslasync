@@ -87,8 +87,8 @@ export interface SoftwareUpdate {
 }
 
 export interface SafetySnapshot {
-  id: number;
-  vehicle_id: number;
+  id?: number;
+  vehicle_id?: number;
   automatic_blind_spot_camera?: boolean | null;
   automatic_emergency_braking_off?: boolean | null;
   blind_spot_collision_warning?: boolean | null;
@@ -100,7 +100,7 @@ export interface SafetySnapshot {
   pin_to_drive_enabled?: boolean | null;
   miles_since_reset?: number | null;
   self_driving_miles_since_reset?: number | null;
-  created_at: string;
+  created_at?: string;
 }
 
 export interface MediaSnapshot {

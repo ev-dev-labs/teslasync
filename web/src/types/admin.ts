@@ -78,9 +78,8 @@ export interface AuditLogEntry {
 
 export interface SecurityEvent {
   id: string;
-  vehicleId: string;
   locked: boolean | null;
-  sentryMode: boolean | null;
+  sentryMode: string | null;
   doorState: string | null;
   fdWindow: string | null;
   fpWindow: string | null;
@@ -95,13 +94,12 @@ export interface SecurityEvent {
   speedLimitMode: string | null;
   valetModeEnabled: boolean | null;
   serviceMode: boolean | null;
-  currentLimitMph: number | null;
   pairedPhoneKeyCount: number | null;
   lightsHazardsActive: boolean | null;
   lightsHighBeams: boolean | null;
   lightsTurnSignal: string | null;
-  driverSeatBelt: boolean | null;
-  passengerSeatBelt: boolean | null;
+  driverSeatBelt: string | null;
+  passengerSeatBelt: string | null;
   createdAt: string;
 }
 

@@ -41,20 +41,20 @@ import { request } from '@/api/client';
 /* ------------------------------------------------------------------ */
 
 interface SafetySnapshot {
-  id: number;
-  vehicle_id: number;
-  automatic_emergency_braking_off: boolean;
-  automatic_blind_spot_camera: boolean;
-  blind_spot_collision_warning: boolean;
-  emergency_lane_departure_avoidance: boolean;
-  forward_collision_warning: string;
-  lane_departure_avoidance: string;
-  speed_limit_warning: string;
-  cruise_follow_distance: string;
-  pin_to_drive_enabled: boolean;
+  id?: number;
+  vehicle_id?: number;
+  automatic_emergency_braking_off?: boolean | null;
+  automatic_blind_spot_camera?: boolean | null;
+  blind_spot_collision_warning?: boolean | null;
+  emergency_lane_departure_avoidance?: boolean | null;
+  forward_collision_warning?: string | null;
+  lane_departure_avoidance?: string | null;
+  speed_limit_warning?: string | null;
+  cruise_follow_distance?: string | null;
+  pin_to_drive_enabled?: boolean | null;
   miles_since_reset?: number | null;
   self_driving_miles_since_reset?: number | null;
-  created_at: string;
+  created_at?: string;
 }
 
 interface Vehicle {
@@ -229,7 +229,7 @@ interface ChartPoint {
 
 function toChartData(history: SafetySnapshot[]): ChartPoint[] {
   return [...history]
-    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    .sort((a, b) => new Date(a.created_at ?? '').getTime() - new Date(b.created_at ?? '').getTime())
     .map((s) => ({
       time: formatDateTime(s.created_at),
       aeb: isAebEnabled(s.automatic_emergency_braking_off ?? false) ? 1 : 0,
@@ -504,7 +504,7 @@ export default function SafetySettingsPage() {
       history
         ? [...history].sort(
             (a, b) =>
-              new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+              new Date(b.created_at ?? '').getTime() - new Date(a.created_at ?? '').getTime(),
           )
         : [],
     [history],
@@ -772,7 +772,7 @@ export default function SafetySettingsPage() {
                 <DataTable<SafetySnapshot>
                   columns={historyColumns}
                   data={sortedHistory}
-                  keyExtractor={(row) => row.id}
+                  keyExtractor={(row) => row.id ?? 0}
                   compact
                   pagination
                 />

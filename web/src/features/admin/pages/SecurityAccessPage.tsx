@@ -21,6 +21,7 @@ import type { Vehicle } from '@/types/vehicle';
 import {
   doorClosed,
   allWindowsClosed,
+  isSentryActive,
   computeSentryUptime,
   findLastLockChange,
   buildSentryBuckets,
@@ -80,7 +81,10 @@ export default function SecurityAccessPage() {
   const lastLockChange = useMemo(() => findLastLockChange(history), [history]);
   const sentryBuckets = useMemo(() => buildSentryBuckets(history), [history]);
   const securityStats = useMemo(() => computeSecurityStats(history), [history]);
-  const twinState = useMemo(() => buildTwinStateFromAdmin(latest), [latest]);
+  const twinState = useMemo(() => buildTwinStateFromAdmin(latest ? {
+    ...latest,
+    sentryMode: isSentryActive(latest.sentryMode),
+  } : null), [latest]);
   const timelineEvents = useMemo(() => deriveTimeline(history), [history]);
 
   const vehicleOptions = useMemo(

@@ -123,13 +123,19 @@ export function timeSince(iso: string | null | undefined): string {
 /*  Sentry helpers                                                     */
 /* ------------------------------------------------------------------ */
 
+/** Returns true if the SentryMode enum value means armed (any non-Off state). */
+export function isSentryActive(val: string | null | undefined): boolean {
+  if (!val) return false;
+  return !val.toLowerCase().includes('off');
+}
+
 export function buildSentryBuckets(events: SecurityEvent[]): SentryDayBucket[] {
   const bucketMap = new Map<string, { on: number; off: number }>();
 
   for (const ev of events) {
     const dateKey = (ev.createdAt ?? '').slice(0, 10);
     const bucket = bucketMap.get(dateKey) ?? { on: 0, off: 0 };
-    if (ev.sentryMode) {
+    if (isSentryActive(ev.sentryMode)) {
       bucket.on += 1;
     } else {
       bucket.off += 1;
@@ -148,7 +154,7 @@ export function buildSentryBuckets(events: SecurityEvent[]): SentryDayBucket[] {
 
 export function computeSentryUptime(events: SecurityEvent[]): number {
   if (events.length === 0) return 0;
-  const sentryOnCount = events.filter((e) => e.sentryMode).length;
+  const sentryOnCount = events.filter((e) => isSentryActive(e.sentryMode)).length;
   return (sentryOnCount / events.length) * 100;
 }
 
@@ -215,7 +221,7 @@ export function deriveTimeline(events: SecurityEvent[]): TimelineEvent[] {
         kind: 'sentry',
         detail: '',
         timestamp: curr.createdAt,
-        variant: curr.sentryMode ? 'positive' : 'negative',
+        variant: isSentryActive(curr.sentryMode) ? 'positive' : 'negative',
       });
     }
 

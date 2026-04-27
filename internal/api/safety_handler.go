@@ -14,11 +14,19 @@ type SafetyHandler struct {
 	signalLogReader *database.SignalLogReader
 }
 
-// Signal → JSON field mappings for safety pivot queries.
+// Signal → JSON field mappings for safety pivot queries (ADAS signals).
 var safetyMappings = []database.PivotMapping{
-	{Signal: "AbsState", Field: "abs_state"},
-	{Signal: "StabilityControl", Field: "stability_control"},
-	{Signal: "AirbagStatus", Field: "airbag_status"},
+	{Signal: "AutomaticEmergencyBrakingOff", Field: "automatic_emergency_braking_off"},
+	{Signal: "AutomaticBlindSpotCamera", Field: "automatic_blind_spot_camera"},
+	{Signal: "BlindSpotCollisionWarningChime", Field: "blind_spot_collision_warning"},
+	{Signal: "CruiseFollowDistance", Field: "cruise_follow_distance"},
+	{Signal: "EmergencyLaneDepartureAvoidance", Field: "emergency_lane_departure_avoidance"},
+	{Signal: "ForwardCollisionWarning", Field: "forward_collision_warning"},
+	{Signal: "LaneDepartureAvoidance", Field: "lane_departure_avoidance"},
+	{Signal: "SpeedLimitWarning", Field: "speed_limit_warning"},
+	{Signal: "PinToDriveEnabled", Field: "pin_to_drive_enabled"},
+	{Signal: "MilesSinceReset", Field: "miles_since_reset"},
+	{Signal: "SelfDrivingMilesSinceReset", Field: "self_driving_miles_since_reset"},
 }
 
 func NewSafetyHandler(slr *database.SignalLogReader) *SafetyHandler {

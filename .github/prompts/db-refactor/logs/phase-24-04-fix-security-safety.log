@@ -1,0 +1,143 @@
+=== SURVEY ===
+Timestamp: 2026-04-27T10:53Z
+
+### Security Handler (security_handler.go)
+Current PivotMappings:
+  Locked → locked            ← OK but field name mismatch (no issues, stays `locked`)
+  SentryMode → sentry_mode   ← OK (camelCaseKeys → sentryMode) but TypeEnum, not boolean
+  DoorState → doors           ← WRONG field name, frontend expects `door_state` → doorState
+  WindowState → windows       ← NO SUCH SIGNAL in signal_types.go, dead mapping
+
+Missing signals (all present in signal_types.go):
+  FdWindow, FpWindow, RdWindow, RpWindow, HomelinkNearby, GuestModeEnabled,
+  HomelinkDeviceCount, GuestModeMobileAccessState, DriverSeatOccupied,
+  CenterDisplay, SpeedLimitMode, ValetModeEnabled, ServiceMode,
+  PairedPhoneKeyAndKeyFobQty, LightsHazardsActive, LightsHighBeams,
+  LightsTurnSignal, DriverSeatBelt, PassengerSeatBelt
+
+Frontend SecurityEvent type (types/admin.ts):
+  - Uses camelCase (matched via camelCaseKeys in api/client)
+  - `sentryMode: boolean | null` WRONG — SentryMode is TypeEnum → string
+  - `vehicleId: string` — never in response, dead field
+  - `currentLimitMph: number | null` — no backing signal, dead field
+  - `driverSeatBelt: boolean | null` WRONG — TypeEnum → string
+  - `passengerSeatBelt: boolean | null` WRONG — TypeEnum → string
+
+### Safety Handler (safety_handler.go)
+Current PivotMappings:
+  AbsState → abs_state              ← NOT in signal_types.go! Dead signal
+  StabilityControl → stability_control ← NOT in signal_types.go! Dead signal
+  AirbagStatus → airbag_status      ← NOT in signal_types.go! Dead signal
+
+Available ADAS signals in signal_types.go:
+  AutomaticEmergencyBrakingOff (TypeBool)
+  AutomaticBlindSpotCamera (TypeBool)
+  BlindSpotCollisionWarningChime (TypeBool)
+  CruiseFollowDistance (TypeEnum)
+  EmergencyLaneDepartureAvoidance (TypeBool)
+  ForwardCollisionWarning (TypeEnum)
+  LaneDepartureAvoidance (TypeEnum)
+  SpeedLimitWarning (TypeEnum)
+  PinToDriveEnabled (TypeBool)
+  MilesSinceReset (TypeFloat)
+  SelfDrivingMilesSinceReset (TypeFloat)
+
+Frontend SafetySnapshot type:
+  - Local type in SafetySettingsPage.tsx expects all ADAS fields
+  - types/vehicle-systems.ts SafetySnapshot already has ADAS fields (optional)
+  - Backend currently returns abs_state/stability_control/airbag_status which match NOTHING
+
+### API Client
+  resilientFetch applies camelCaseKeys: keeps original snake_case + adds camelCase.
+  Frontend types use camelCase → matched via camelCaseKeys transform.
+
+=== REASONING ===
+
+### Security Handler Fix
+1. Rename `doors` → `door_state` (camelCaseKeys → doorState ✓)
+2. Remove dead `WindowState` mapping (signal doesn't exist)
+3. Add individual window signals: FdWindow → fd_window, etc.
+4. Add all 18 missing security signals from signal_types.go
+5. All new field names use snake_case → camelCaseKeys → matching camelCase in frontend type
+
+### Safety Handler Fix
+1. Remove 3 dead signals (AbsState, StabilityControl, AirbagStatus)
+2. Add 11 real ADAS signals from signal_types.go
+3. Field names match frontend SafetySnapshot expectations
+
+### Frontend Type Fixes
+SecurityEvent (types/admin.ts):
+  - sentryMode: boolean → string (TypeEnum signal)
+  - driverSeatBelt: boolean → string (TypeEnum signal)
+  - passengerSeatBelt: boolean → string (TypeEnum signal)
+  - Remove vehicleId (never in response)
+  - Remove currentLimitMph (no backing signal)
+
+SafetySnapshot (types/vehicle-systems.ts):
+  - Make id, vehicle_id, created_at optional (not in Latest response)
+
+### Helper Fixes
+  - Add isSentryActive() to properly evaluate TypeEnum sentry string values
+  - Update computeSentryUptime, buildSentryBuckets, deriveTimeline
+
+### ADR-002 Compliance
+  - All signal-backed fields: return actual value or null
+  - No fabricated defaults for missing signals
+  - Frontend shows '—' for null/undefined via ?? operator
+
+=== CHANGES ===
+
+### Backend
+
+1. security_handler.go — Expanded securityMappings from 4 → 22 PivotMappings
+   - Fixed: `DoorState` field `doors` → `door_state` (camelCaseKeys → doorState)
+   - Removed: dead `WindowState` mapping (signal doesn't exist in catalog)
+   - Added: FdWindow, FpWindow, RdWindow, RpWindow (individual window signals)
+   - Added: HomelinkNearby, GuestModeEnabled, HomelinkDeviceCount, GuestModeMobileAccessState
+   - Added: DriverSeatOccupied, CenterDisplay, SpeedLimitMode, ValetModeEnabled, ServiceMode
+   - Added: PairedPhoneKeyAndKeyFobQty, LightsHazardsActive, LightsHighBeams, LightsTurnSignal
+   - Added: DriverSeatBelt, PassengerSeatBelt
+
+2. safety_handler.go — Replaced 3 dead signals → 11 real ADAS signals
+   - Removed: AbsState, StabilityControl, AirbagStatus (not in signal_types.go)
+   - Added: AutomaticEmergencyBrakingOff, AutomaticBlindSpotCamera, BlindSpotCollisionWarningChime
+   - Added: CruiseFollowDistance, EmergencyLaneDepartureAvoidance, ForwardCollisionWarning
+   - Added: LaneDepartureAvoidance, SpeedLimitWarning, PinToDriveEnabled
+   - Added: MilesSinceReset, SelfDrivingMilesSinceReset
+
+### Frontend Types
+
+3. types/admin.ts — SecurityEvent
+   - Changed: sentryMode from `boolean | null` to `string | null` (TypeEnum signal)
+   - Changed: driverSeatBelt from `boolean | null` to `string | null` (TypeEnum)
+   - Changed: passengerSeatBelt from `boolean | null` to `string | null` (TypeEnum)
+   - Removed: vehicleId (never in response), currentLimitMph (no backing signal)
+
+4. types/vehicle-systems.ts — SafetySnapshot
+   - Made id, vehicle_id, created_at optional (not present in Latest response)
+
+### Frontend Logic
+
+5. helpers.ts — Added isSentryActive() for proper TypeEnum evaluation
+   - Updated computeSentryUptime to use isSentryActive (prevents "SentryModeStateOff" false positive)
+   - Updated buildSentryBuckets to use isSentryActive
+   - Updated deriveTimeline variant to use isSentryActive
+
+6. SecurityAccessPage.tsx
+   - Added isSentryActive import
+   - Adapted buildTwinStateFromAdmin call to convert sentryMode string → boolean
+
+7. SafetySettingsPage.tsx
+   - Updated local SafetySnapshot interface (all ADAS fields optional, nullable)
+   - Fixed created_at sort with `?? ''` fallback for optional field
+   - Fixed keyExtractor to handle optional id
+
+=== GATE ===
+
+$ go build ./...                → EXIT 0 (clean)
+$ cd web && npx tsc --noEmit    → EXIT 0 (0 errors)
+
+=== COMMIT ===
+
+EXIT=0
+STATUS=DONE
