@@ -131,7 +131,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT ts AS time,\n  convert_pressure(MAX(value_num) FILTER (WHERE signal = 'TpmsPressureFl')) AS \"Front Left\",\n  convert_pressure(MAX(value_num) FILTER (WHERE signal = 'TpmsPressureFr')) AS \"Front Right\",\n  convert_pressure(MAX(value_num) FILTER (WHERE signal = 'TpmsPressureRl')) AS \"Rear Left\",\n  convert_pressure(MAX(value_num) FILTER (WHERE signal = 'TpmsPressureRr')) AS \"Rear Right\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('TpmsPressureFl', 'TpmsPressureFr', 'TpmsPressureRl', 'TpmsPressureRr')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts",
+          "rawSql": "SELECT created_at AS time,\n  convert_pressure(MAX(value_num) FILTER (WHERE signal = 'TpmsPressureFl')) AS \"Front Left\",\n  convert_pressure(MAX(value_num) FILTER (WHERE signal = 'TpmsPressureFr')) AS \"Front Right\",\n  convert_pressure(MAX(value_num) FILTER (WHERE signal = 'TpmsPressureRl')) AS \"Rear Left\",\n  convert_pressure(MAX(value_num) FILTER (WHERE signal = 'TpmsPressureRr')) AS \"Rear Right\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('TpmsPressureFl', 'TpmsPressureFr', 'TpmsPressureRl', 'TpmsPressureRr')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -191,7 +191,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT convert_pressure(value_num) AS \"Front Left\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'TpmsPressureFl' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
+          "rawSql": "SELECT convert_pressure(value_num) AS \"Front Left\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'TpmsPressureFl' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -251,7 +251,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT convert_pressure(value_num) AS \"Front Right\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'TpmsPressureFr' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
+          "rawSql": "SELECT convert_pressure(value_num) AS \"Front Right\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'TpmsPressureFr' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -311,7 +311,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT convert_pressure(value_num) AS \"Rear Left\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'TpmsPressureRl' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
+          "rawSql": "SELECT convert_pressure(value_num) AS \"Rear Left\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'TpmsPressureRl' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -371,7 +371,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT convert_pressure(value_num) AS \"Rear Right\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'TpmsPressureRr' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
+          "rawSql": "SELECT convert_pressure(value_num) AS \"Rear Right\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'TpmsPressureRr' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -395,7 +395,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT ts AS \"Time\",\n  COALESCE(last(value_text, ts) FILTER (WHERE signal = 'TpmsHardWarnings'), 'None') AS \"Hard Warnings\",\n  COALESCE(last(value_text, ts) FILTER (WHERE signal = 'TpmsSoftWarnings'), 'None') AS \"Soft Warnings\",\n  MAX(value_num) FILTER (WHERE signal = 'TpmsLastSeenPressureTimeFl') AS \"FL Last Seen\",\n  MAX(value_num) FILTER (WHERE signal = 'TpmsLastSeenPressureTimeFr') AS \"FR Last Seen\",\n  MAX(value_num) FILTER (WHERE signal = 'TpmsLastSeenPressureTimeRl') AS \"RL Last Seen\",\n  MAX(value_num) FILTER (WHERE signal = 'TpmsLastSeenPressureTimeRr') AS \"RR Last Seen\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('TpmsHardWarnings', 'TpmsSoftWarnings', 'TpmsLastSeenPressureTimeFl', 'TpmsLastSeenPressureTimeFr', 'TpmsLastSeenPressureTimeRl', 'TpmsLastSeenPressureTimeRr')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nHAVING last(value_text, ts) FILTER (WHERE signal = 'TpmsHardWarnings') IS NOT NULL\n   OR last(value_text, ts) FILTER (WHERE signal = 'TpmsSoftWarnings') IS NOT NULL\n   OR MAX(value_num) FILTER (WHERE signal = 'TpmsLastSeenPressureTimeFl') IS NOT NULL\nORDER BY ts DESC\nLIMIT 30",
+          "rawSql": "SELECT created_at AS \\\"Time\\\",\n  COALESCE(last(value_text, created_at) FILTER (WHERE signal = 'TpmsHardWarnings'), 'None') AS \"Hard Warnings\",\n  COALESCE(last(value_text, created_at) FILTER (WHERE signal = 'TpmsSoftWarnings'), 'None') AS \"Soft Warnings\",\n  MAX(value_num) FILTER (WHERE signal = 'TpmsLastSeenPressureTimeFl') AS \"FL Last Seen\",\n  MAX(value_num) FILTER (WHERE signal = 'TpmsLastSeenPressureTimeFr') AS \"FR Last Seen\",\n  MAX(value_num) FILTER (WHERE signal = 'TpmsLastSeenPressureTimeRl') AS \"RL Last Seen\",\n  MAX(value_num) FILTER (WHERE signal = 'TpmsLastSeenPressureTimeRr') AS \"RR Last Seen\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('TpmsHardWarnings', 'TpmsSoftWarnings', 'TpmsLastSeenPressureTimeFl', 'TpmsLastSeenPressureTimeFr', 'TpmsLastSeenPressureTimeRl', 'TpmsLastSeenPressureTimeRr')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nHAVING last(value_text, created_at) FILTER (WHERE signal = 'TpmsHardWarnings') IS NOT NULL\n   OR last(value_text, created_at) FILTER (WHERE signal = 'TpmsSoftWarnings') IS NOT NULL\n   OR MAX(value_num) FILTER (WHERE signal = 'TpmsLastSeenPressureTimeFl') IS NOT NULL\nORDER BY created_at DESC\nLIMIT 30",
           "format": "table",
           "refId": "A",
           "datasource": {

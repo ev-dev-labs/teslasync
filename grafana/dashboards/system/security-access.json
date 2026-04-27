@@ -130,7 +130,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT ts AS time,\n  CASE WHEN value_bool THEN 1 ELSE 0 END AS \"Locked\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'Locked'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts",
+          "rawSql": "SELECT created_at AS time,\n  CASE WHEN value_bool THEN 1 ELSE 0 END AS \"Locked\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'Locked'\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -210,7 +210,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT ts AS time,\n  CASE WHEN value_bool THEN 1 ELSE 0 END AS \"🛡️ Sentry\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'SentryMode'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts",
+          "rawSql": "SELECT created_at AS time,\n  CASE WHEN value_bool THEN 1 ELSE 0 END AS \"🛡️ Sentry\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'SentryMode'\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -269,7 +269,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  COUNT(DISTINCT ts) FILTER (WHERE signal = 'Locked') AS \"Total Events\",\n  COUNT(*) FILTER (WHERE signal = 'Locked' AND value_bool = true) AS \"Locked Events\",\n  COUNT(*) FILTER (WHERE signal = 'SentryMode' AND value_bool = true) AS \"Sentry Active\",\n  COUNT(*) FILTER (WHERE signal = 'DoorState' AND value_text LIKE '%Open%') AS \"Door Opens\",\n  COUNT(DISTINCT DATE(ts)) AS \"Days Tracked\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('Locked', 'SentryMode', 'DoorState')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()",
+          "rawSql": "SELECT\n  COUNT(DISTINCT created_at) FILTER (WHERE signal = 'Locked') AS \"Total Events\",\n  COUNT(*) FILTER (WHERE signal = 'Locked' AND value_bool = true) AS \"Locked Events\",\n  COUNT(*) FILTER (WHERE signal = 'SentryMode' AND value_bool = true) AS \"Sentry Active\",\n  COUNT(*) FILTER (WHERE signal = 'DoorState' AND value_text LIKE '%Open%') AS \"Door Opens\",\n  COUNT(DISTINCT DATE(created_at)) AS \"Days Tracked\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('Locked', 'SentryMode', 'DoorState')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()",
           "refId": "A"
         }
       ],
@@ -377,7 +377,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT ts AS time,\n  last(value_text, ts) FILTER (WHERE signal = 'FdWindow') AS \"Front Driver\",\n  last(value_text, ts) FILTER (WHERE signal = 'FpWindow') AS \"Front Passenger\",\n  last(value_text, ts) FILTER (WHERE signal = 'RdWindow') AS \"Rear Driver\",\n  last(value_text, ts) FILTER (WHERE signal = 'RpWindow') AS \"Rear Passenger\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('FdWindow', 'FpWindow', 'RdWindow', 'RpWindow')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts",
+          "rawSql": "SELECT created_at AS time,\n  last(value_text, created_at) FILTER (WHERE signal = 'FdWindow') AS \"Front Driver\",\n  last(value_text, created_at) FILTER (WHERE signal = 'FpWindow') AS \"Front Passenger\",\n  last(value_text, created_at) FILTER (WHERE signal = 'RdWindow') AS \"Rear Driver\",\n  last(value_text, created_at) FILTER (WHERE signal = 'RpWindow') AS \"Rear Passenger\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('FdWindow', 'FpWindow', 'RdWindow', 'RpWindow')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -435,7 +435,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT DATE(ts) AS time,\n  COUNT(*) AS \"Events\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'Locked'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY DATE(ts)\nORDER BY DATE(ts)",
+          "rawSql": "SELECT DATE(created_at) AS time,\n  COUNT(*) AS \"Events\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'Locked'\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY DATE(created_at)\nORDER BY DATE(created_at)",
           "refId": "A"
         }
       ],
@@ -501,7 +501,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(100.0 * COUNT(*) FILTER (WHERE value_bool = true) / NULLIF(COUNT(*), 0), 1) AS \"Sentry Uptime %\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'SentryMode'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()",
+          "rawSql": "SELECT ROUND(100.0 * COUNT(*) FILTER (WHERE value_bool = true) / NULLIF(COUNT(*), 0), 1) AS \"Sentry Uptime %\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'SentryMode'\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()",
           "refId": "A"
         }
       ],
@@ -552,7 +552,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ts AS \"🕐 Time\",\n  CASE WHEN last(value_bool, ts) FILTER (WHERE signal = 'Locked') THEN '🔒 Locked' ELSE '🔓 Unlocked' END AS \"🔒 Lock\",\n  CASE WHEN last(value_bool, ts) FILTER (WHERE signal = 'SentryMode') THEN '🛡️ Active' ELSE '⬜ Off' END AS \"🛡️ Sentry\",\n  COALESCE(last(value_text, ts) FILTER (WHERE signal = 'DoorState'), '-') AS \"🚪 Doors\",\n  COALESCE(last(value_text, ts) FILTER (WHERE signal = 'FdWindow'), '-') AS \"🪟 FD\",\n  COALESCE(last(value_text, ts) FILTER (WHERE signal = 'FpWindow'), '-') AS \"🪟 FP\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('Locked', 'SentryMode', 'DoorState', 'FdWindow', 'FpWindow')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts DESC\nLIMIT 50",
+          "rawSql": "SELECT created_at AS \"🕐 Time\",\n  CASE WHEN last(value_bool, created_at) FILTER (WHERE signal = 'Locked') THEN '🔒 Locked' ELSE '🔓 Unlocked' END AS \"🔒 Lock\",\n  CASE WHEN last(value_bool, created_at) FILTER (WHERE signal = 'SentryMode') THEN '🛡️ Active' ELSE '⬜ Off' END AS \"🛡️ Sentry\",\n  COALESCE(last(value_text, created_at) FILTER (WHERE signal = 'DoorState'), '-') AS \"🚪 Doors\",\n  COALESCE(last(value_text, created_at) FILTER (WHERE signal = 'FdWindow'), '-') AS \"🪟 FD\",\n  COALESCE(last(value_text, created_at) FILTER (WHERE signal = 'FpWindow'), '-') AS \"🪟 FP\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('Locked', 'SentryMode', 'DoorState', 'FdWindow', 'FpWindow')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at DESC\nLIMIT 50",
           "refId": "A"
         }
       ],
@@ -576,7 +576,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT ts AS \"Time\",\n  CASE WHEN last(value_bool, ts) FILTER (WHERE signal = 'LightsHazardsActive') THEN 'ON' ELSE 'Off' END AS \"Hazards\",\n  CASE WHEN last(value_bool, ts) FILTER (WHERE signal = 'LightsHighBeams') THEN 'ON' ELSE 'Off' END AS \"High Beams\",\n  COALESCE(last(value_text, ts) FILTER (WHERE signal = 'LightsTurnSignal'), 'Off') AS \"Turn Signal\",\n  COALESCE(last(value_text, ts) FILTER (WHERE signal = 'CenterDisplay'), '—') AS \"Center Display\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('LightsHazardsActive', 'LightsHighBeams', 'LightsTurnSignal', 'CenterDisplay')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts DESC\nLIMIT 50",
+          "rawSql": "SELECT created_at AS \\\"Time\\\",\n  CASE WHEN last(value_bool, created_at) FILTER (WHERE signal = 'LightsHazardsActive') THEN 'ON' ELSE 'Off' END AS \"Hazards\",\n  CASE WHEN last(value_bool, created_at) FILTER (WHERE signal = 'LightsHighBeams') THEN 'ON' ELSE 'Off' END AS \"High Beams\",\n  COALESCE(last(value_text, created_at) FILTER (WHERE signal = 'LightsTurnSignal'), 'Off') AS \"Turn Signal\",\n  COALESCE(last(value_text, created_at) FILTER (WHERE signal = 'CenterDisplay'), '—') AS \"Center Display\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('LightsHazardsActive', 'LightsHighBeams', 'LightsTurnSignal', 'CenterDisplay')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at DESC\nLIMIT 50",
           "format": "table",
           "refId": "A",
           "datasource": {
@@ -607,7 +607,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT ts AS \"Time\",\n  CASE WHEN last(value_bool, ts) FILTER (WHERE signal = 'ValetModeEnabled') THEN 'ON' ELSE 'Off' END AS \"Valet\",\n  CASE WHEN last(value_bool, ts) FILTER (WHERE signal = 'ServiceMode') THEN 'ON' ELSE 'Off' END AS \"Service\",\n  CASE WHEN last(value_bool, ts) FILTER (WHERE signal = 'SpeedLimitMode') THEN 'ON' ELSE 'Off' END AS \"Speed Limit\",\n  CASE WHEN last(value_bool, ts) FILTER (WHERE signal = 'GuestModeEnabled') THEN 'ON' ELSE 'Off' END AS \"Guest\",\n  MAX(value_num) FILTER (WHERE signal = 'CurrentLimitMph') AS \"Speed Limit (mph)\",\n  MAX(value_num) FILTER (WHERE signal = 'PairedPhoneKeyAndKeyFobQty') AS \"Paired Keys\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('ValetModeEnabled', 'ServiceMode', 'SpeedLimitMode', 'GuestModeEnabled', 'CurrentLimitMph', 'PairedPhoneKeyAndKeyFobQty')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts DESC\nLIMIT 50",
+          "rawSql": "SELECT created_at AS \\\"Time\\\",\n  CASE WHEN last(value_bool, created_at) FILTER (WHERE signal = 'ValetModeEnabled') THEN 'ON' ELSE 'Off' END AS \"Valet\",\n  CASE WHEN last(value_bool, created_at) FILTER (WHERE signal = 'ServiceMode') THEN 'ON' ELSE 'Off' END AS \"Service\",\n  CASE WHEN last(value_bool, created_at) FILTER (WHERE signal = 'SpeedLimitMode') THEN 'ON' ELSE 'Off' END AS \"Speed Limit\",\n  CASE WHEN last(value_bool, created_at) FILTER (WHERE signal = 'GuestModeEnabled') THEN 'ON' ELSE 'Off' END AS \"Guest\",\n  MAX(value_num) FILTER (WHERE signal = 'CurrentLimitMph') AS \"Speed Limit (mph)\",\n  MAX(value_num) FILTER (WHERE signal = 'PairedPhoneKeyAndKeyFobQty') AS \"Paired Keys\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('ValetModeEnabled', 'ServiceMode', 'SpeedLimitMode', 'GuestModeEnabled', 'CurrentLimitMph', 'PairedPhoneKeyAndKeyFobQty')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at DESC\nLIMIT 50",
           "format": "table",
           "refId": "A",
           "datasource": {
@@ -638,7 +638,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT ts AS \"Time\",\n  CASE WHEN last(value_bool, ts) FILTER (WHERE signal = 'DriverSeatOccupied') THEN 'Occupied' ELSE 'Empty' END AS \"Driver Seat\",\n  CASE WHEN last(value_bool, ts) FILTER (WHERE signal = 'DriverSeatBelt') THEN 'Buckled' ELSE 'Unbuckled' END AS \"Driver Belt\",\n  CASE WHEN last(value_bool, ts) FILTER (WHERE signal = 'PassengerSeatBelt') THEN 'Buckled' ELSE 'Unbuckled' END AS \"Passenger Belt\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('DriverSeatOccupied', 'DriverSeatBelt', 'PassengerSeatBelt')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts DESC\nLIMIT 50",
+          "rawSql": "SELECT created_at AS \\\"Time\\\",\n  CASE WHEN last(value_bool, created_at) FILTER (WHERE signal = 'DriverSeatOccupied') THEN 'Occupied' ELSE 'Empty' END AS \"Driver Seat\",\n  CASE WHEN last(value_bool, created_at) FILTER (WHERE signal = 'DriverSeatBelt') THEN 'Buckled' ELSE 'Unbuckled' END AS \"Driver Belt\",\n  CASE WHEN last(value_bool, created_at) FILTER (WHERE signal = 'PassengerSeatBelt') THEN 'Buckled' ELSE 'Unbuckled' END AS \"Passenger Belt\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('DriverSeatOccupied', 'DriverSeatBelt', 'PassengerSeatBelt')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at DESC\nLIMIT 50",
           "format": "table",
           "refId": "A",
           "datasource": {
