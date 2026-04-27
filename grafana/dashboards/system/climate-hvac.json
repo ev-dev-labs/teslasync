@@ -464,7 +464,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  COUNT(*) FILTER (WHERE signal = 'DefrostMode' AND value_text IS NOT NULL AND value_text != '') AS \"Defrost Events\",\n  COUNT(*) FILTER (WHERE signal = 'BatteryHeaterOn' AND value_bool = true) AS \"Battery Heater Events\",\n  COUNT(*) FILTER (WHERE signal = 'InsideTemp') AS \"Total Readings\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('DefrostMode', 'BatteryHeaterOn', 'InsideTemp')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()",
+          "rawSql": "SELECT\n  COUNT(*) FILTER (WHERE signal = 'DefrostMode' AND value_str IS NOT NULL AND value_str != '') AS \"Defrost Events\",\n  COUNT(*) FILTER (WHERE signal = 'BatteryHeaterOn' AND value_bool = true) AS \"Battery Heater Events\",\n  COUNT(*) FILTER (WHERE signal = 'InsideTemp') AS \"Total Readings\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('DefrostMode', 'BatteryHeaterOn', 'InsideTemp')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()",
           "refId": "A"
         }
       ],
@@ -652,7 +652,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  COUNT(*) FILTER (WHERE value_text = 'On') AS \"Overheat Protection Active\",\n  COUNT(*) AS \"Total Readings\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'CabinOverheatProtectionMode'\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()",
+          "rawSql": "SELECT\n  COUNT(*) FILTER (WHERE value_str = 'On') AS \"Overheat Protection Active\",\n  COUNT(*) AS \"Total Readings\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'CabinOverheatProtectionMode'\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()",
           "refId": "A"
         }
       ],
@@ -715,7 +715,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT created_at AS \\\"Time\\\",\n  MAX(value_num) FILTER (WHERE signal = 'HvacSteeringWheelHeatLevel') AS \"Steering Wheel Level\",\n  CASE WHEN MAX(value_text) FILTER (WHERE signal = 'DefrostMode') IS NOT NULL AND MAX(value_text) FILTER (WHERE signal = 'DefrostMode') != '' THEN 'ON' ELSE 'Off' END AS \"Defrost\",\n  CASE WHEN bool_or(value_bool) FILTER (WHERE signal = 'RearDefrostEnabled') THEN 'ON' ELSE 'Off' END AS \"Rear Defrost\",\n  CASE WHEN bool_or(value_bool) FILTER (WHERE signal = 'WiperHeatEnabled') THEN 'ON' ELSE 'Off' END AS \"Wiper Heat\",\n  COALESCE(MAX(value_text) FILTER (WHERE signal = 'ClimateKeeperMode'), 'Off') AS \"Climate Keeper\",\n  COALESCE(MAX(value_text) FILTER (WHERE signal = 'CabinOverheatProtectionMode'), 'Off') AS \"Overheat Protection\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('HvacSteeringWheelHeatLevel', 'DefrostMode', 'RearDefrostEnabled', 'WiperHeatEnabled', 'ClimateKeeperMode', 'CabinOverheatProtectionMode')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at DESC\nLIMIT 50",
+          "rawSql": "SELECT created_at AS \\\"Time\\\",\n  MAX(value_num) FILTER (WHERE signal = 'HvacSteeringWheelHeatLevel') AS \"Steering Wheel Level\",\n  CASE WHEN MAX(value_str) FILTER (WHERE signal = 'DefrostMode') IS NOT NULL AND MAX(value_str) FILTER (WHERE signal = 'DefrostMode') != '' THEN 'ON' ELSE 'Off' END AS \"Defrost\",\n  CASE WHEN bool_or(value_bool) FILTER (WHERE signal = 'RearDefrostEnabled') THEN 'ON' ELSE 'Off' END AS \"Rear Defrost\",\n  CASE WHEN bool_or(value_bool) FILTER (WHERE signal = 'WiperHeatEnabled') THEN 'ON' ELSE 'Off' END AS \"Wiper Heat\",\n  COALESCE(MAX(value_str) FILTER (WHERE signal = 'ClimateKeeperMode'), 'Off') AS \"Climate Keeper\",\n  COALESCE(MAX(value_str) FILTER (WHERE signal = 'CabinOverheatProtectionMode'), 'Off') AS \"Overheat Protection\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('HvacSteeringWheelHeatLevel', 'DefrostMode', 'RearDefrostEnabled', 'WiperHeatEnabled', 'ClimateKeeperMode', 'CabinOverheatProtectionMode')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at DESC\nLIMIT 50",
           "format": "table",
           "refId": "A",
           "datasource": {

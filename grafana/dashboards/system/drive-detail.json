@@ -151,7 +151,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(sl.created_at, '10s') AS time,\n  ((MAX(sl.value_text) FILTER (WHERE sl.signal = 'Location'))::jsonb->>'latitude')::float AS latitude,\n  ((MAX(sl.value_text) FILTER (WHERE sl.signal = 'Location'))::jsonb->>'longitude')::float AS longitude,\n  convert_speed(MAX(sl.value_num) FILTER (WHERE sl.signal = 'VehicleSpeed')) AS speed,\n  MAX(sl.value_num) FILTER (WHERE sl.signal = 'BatteryLevel') AS battery_level\nFROM signal_log sl\nJOIN drives d ON d.vehicle_id = sl.vehicle_id\n  AND sl.created_at BETWEEN d.start_ts AND COALESCE(d.end_ts, NOW())\nWHERE d.id = ${drive_id}\n  AND sl.created_at BETWEEN $__timeFrom() AND $__timeTo()\n  AND sl.signal IN ('Location', 'VehicleSpeed', 'BatteryLevel')\nGROUP BY 1\nORDER BY 1",
+          "rawSql": "SELECT\n  $__timeGroup(sl.created_at, '10s') AS time,\n  MAX(sl.value_num) FILTER (WHERE sl.signal = 'Latitude') AS latitude,\n  MAX(sl.value_num) FILTER (WHERE sl.signal = 'Longitude') AS longitude,\n  convert_speed(MAX(sl.value_num) FILTER (WHERE sl.signal = 'VehicleSpeed')) AS speed,\n  MAX(sl.value_num) FILTER (WHERE sl.signal = 'BatteryLevel') AS battery_level\nFROM signal_log sl\nJOIN drives d ON d.vehicle_id = sl.vehicle_id\n  AND sl.created_at BETWEEN d.start_ts AND COALESCE(d.end_ts, NOW())\nWHERE d.id = ${drive_id}\n  AND sl.created_at BETWEEN $__timeFrom() AND $__timeTo()\n  AND sl.signal IN ('Latitude', 'Longitude', 'VehicleSpeed', 'BatteryLevel')\nGROUP BY 1\nORDER BY 1",
           "refId": "A"
         }
       ],

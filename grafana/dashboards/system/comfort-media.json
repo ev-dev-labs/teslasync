@@ -328,7 +328,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time,\n  0 AS \"AC Enabled\",  -- Signal not available in signal_log\n  CASE WHEN MAX(value_text) FILTER (WHERE signal = 'DefrostMode') IS NOT NULL AND MAX(value_text) FILTER (WHERE signal = 'DefrostMode') != '' THEN 1 ELSE 0 END AS \"Defrost\",\n  CASE WHEN bool_or(value_bool) FILTER (WHERE signal = 'RearDefrostEnabled') THEN 1 ELSE 0 END AS \"Rear Defrost\",\n  CASE WHEN bool_or(value_bool) FILTER (WHERE signal = 'WiperHeatEnabled') THEN 1 ELSE 0 END AS \"Wiper Heat\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('DefrostMode', 'RearDefrostEnabled', 'WiperHeatEnabled')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at",
+          "rawSql": "SELECT created_at AS time,\n  0 AS \"AC Enabled\",  -- Signal not available in signal_log\n  CASE WHEN MAX(value_str) FILTER (WHERE signal = 'DefrostMode') IS NOT NULL AND MAX(value_str) FILTER (WHERE signal = 'DefrostMode') != '' THEN 1 ELSE 0 END AS \"Defrost\",\n  CASE WHEN bool_or(value_bool) FILTER (WHERE signal = 'RearDefrostEnabled') THEN 1 ELSE 0 END AS \"Rear Defrost\",\n  CASE WHEN bool_or(value_bool) FILTER (WHERE signal = 'WiperHeatEnabled') THEN 1 ELSE 0 END AS \"Wiper Heat\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('DefrostMode', 'RearDefrostEnabled', 'WiperHeatEnabled')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -467,7 +467,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS \\\"Time\\\",\n  MAX(value_text) FILTER (WHERE signal = 'MediaNowPlayingTitle') AS \"Title\",\n  MAX(value_text) FILTER (WHERE signal = 'MediaNowPlayingArtist') AS \"Artist\",\n  MAX(value_text) FILTER (WHERE signal = 'MediaNowPlayingAlbum') AS \"Album\",\n  MAX(value_text) FILTER (WHERE signal = 'MediaPlaybackStatus') AS \"Status\",\n  MAX(value_text) FILTER (WHERE signal = 'MediaPlaybackSource') AS \"Source\",\n  MAX(value_num) FILTER (WHERE signal = 'MediaAudioVolume') AS \"Volume\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('MediaNowPlayingTitle', 'MediaNowPlayingArtist', 'MediaNowPlayingAlbum', 'MediaPlaybackStatus', 'MediaPlaybackSource', 'MediaAudioVolume')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at DESC",
+          "rawSql": "SELECT created_at AS \\\"Time\\\",\n  MAX(value_str) FILTER (WHERE signal = 'MediaNowPlayingTitle') AS \"Title\",\n  MAX(value_str) FILTER (WHERE signal = 'MediaNowPlayingArtist') AS \"Artist\",\n  MAX(value_str) FILTER (WHERE signal = 'MediaNowPlayingAlbum') AS \"Album\",\n  MAX(value_str) FILTER (WHERE signal = 'MediaPlaybackStatus') AS \"Status\",\n  MAX(value_str) FILTER (WHERE signal = 'MediaPlaybackSource') AS \"Source\",\n  MAX(value_num) FILTER (WHERE signal = 'MediaAudioVolume') AS \"Volume\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('MediaNowPlayingTitle', 'MediaNowPlayingArtist', 'MediaNowPlayingAlbum', 'MediaPlaybackStatus', 'MediaPlaybackSource', 'MediaAudioVolume')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at DESC",
           "refId": "A"
         }
       ],
@@ -616,7 +616,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT value_text AS \"Source\", COUNT(*) AS \"Count\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'MediaPlaybackSource'\n  AND value_text IS NOT NULL\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY value_text\nORDER BY COUNT(*) DESC",
+          "rawSql": "SELECT value_str AS \"Source\", COUNT(*) AS \"Count\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'MediaPlaybackSource'\n  AND value_str IS NOT NULL\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY value_str\nORDER BY COUNT(*) DESC",
           "refId": "A"
         }
       ],

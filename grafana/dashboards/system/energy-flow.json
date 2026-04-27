@@ -568,7 +568,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  COALESCE(last(value_text, created_at) FILTER (WHERE signal = 'BMSState'), 'N/A') AS \"BMS State\",\n  CASE WHEN last(value_bool, created_at) FILTER (WHERE signal = 'BmsFullchargecomplete') THEN 'Yes' ELSE 'No' END AS \"Full Charge\",\n  CASE WHEN last(value_bool, created_at) FILTER (WHERE signal = 'BatteryHeaterOn') THEN 'On' ELSE 'Off' END AS \"Battery Heater\",\n  ROUND(last(value_num, created_at) FILTER (WHERE signal = 'IsolationResistance')::numeric) AS \"Isolation Ω\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('BMSState', 'BmsFullchargecomplete', 'BatteryHeaterOn', 'IsolationResistance')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()",
+          "rawSql": "SELECT\n  COALESCE(last(value_str, created_at) FILTER (WHERE signal = 'BMSState'), 'N/A') AS \"BMS State\",\n  CASE WHEN last(value_bool, created_at) FILTER (WHERE signal = 'BmsFullchargecomplete') THEN 'Yes' ELSE 'No' END AS \"Full Charge\",\n  CASE WHEN last(value_bool, created_at) FILTER (WHERE signal = 'BatteryHeaterOn') THEN 'On' ELSE 'Off' END AS \"Battery Heater\",\n  ROUND(last(value_num, created_at) FILTER (WHERE signal = 'IsolationResistance')::numeric) AS \"Isolation Ω\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('BMSState', 'BmsFullchargecomplete', 'BatteryHeaterOn', 'IsolationResistance')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()",
           "refId": "A"
         }
       ],
@@ -627,7 +627,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  COALESCE(last(value_text, created_at) FILTER (WHERE signal = 'PowershareStatus'), 'N/A') AS \"Status\",\n  COALESCE(last(value_text, created_at) FILTER (WHERE signal = 'PowershareType'), 'N/A') AS \"Type\",\n  last(value_num, created_at) FILTER (WHERE signal = 'PowershareHoursLeft') AS \"Hours Left\",\n  ROUND(last(value_num, created_at) FILTER (WHERE signal = 'PowershareInstantaneousPowerKW')::numeric, 1) AS \"Power kW\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('PowershareStatus', 'PowershareType', 'PowershareHoursLeft', 'PowershareInstantaneousPowerKW')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nHAVING last(value_text, created_at) FILTER (WHERE signal = 'PowershareStatus') IS NOT NULL",
+          "rawSql": "SELECT\n  COALESCE(last(value_str, created_at) FILTER (WHERE signal = 'PowershareStatus'), 'N/A') AS \"Status\",\n  COALESCE(last(value_str, created_at) FILTER (WHERE signal = 'PowershareType'), 'N/A') AS \"Type\",\n  last(value_num, created_at) FILTER (WHERE signal = 'PowershareHoursLeft') AS \"Hours Left\",\n  ROUND(last(value_num, created_at) FILTER (WHERE signal = 'PowershareInstantaneousPowerKW')::numeric, 1) AS \"Power kW\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('PowershareStatus', 'PowershareType', 'PowershareHoursLeft', 'PowershareInstantaneousPowerKW')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nHAVING last(value_str, created_at) FILTER (WHERE signal = 'PowershareStatus') IS NOT NULL",
           "refId": "A"
         }
       ],

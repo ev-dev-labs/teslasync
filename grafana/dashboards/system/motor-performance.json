@@ -598,7 +598,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT value_text AS \"Gear\", COUNT(*) AS \"📊 Count\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'Gear'\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\n  AND value_text IS NOT NULL\nGROUP BY value_text\nORDER BY 2 DESC",
+          "rawSql": "SELECT value_str AS \"Gear\", COUNT(*) AS \"📊 Count\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'Gear'\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\n  AND value_str IS NOT NULL\nGROUP BY value_str\nORDER BY 2 DESC",
           "refId": "A"
         }
       ],
