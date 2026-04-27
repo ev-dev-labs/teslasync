@@ -201,6 +201,8 @@ export function computeEfficiencyStats(sessions: ChargingSession[]): EfficiencyS
 
 export function computeChargerSpecs(sessions: ChargingSession[]): ChargerSpecsData | null {
   if (sessions.length === 0) return null;
+
+  // Group by charger brand/type
   const byType: Record<string, { count: number; energy: number; power: number }> = {};
   sessions.forEach((s) => {
     const typeKey = s.charger_type ?? 'AC/Home';
@@ -209,11 +211,46 @@ export function computeChargerSpecs(sessions: ChargingSession[]): ChargerSpecsDa
     byType[typeKey].energy += s.energy_added_kwh;
     byType[typeKey].power += s.charger_power_kw_max ?? 0;
   });
+
+  // Group by voltage range
+  const byVoltage: Record<string, { count: number; energy: number; power: number }> = {};
+  sessions.forEach((s) => {
+    if (s.max_charger_voltage != null) {
+      const range = s.max_charger_voltage > 300 ? 'DC (400V+)'
+        : s.max_charger_voltage > 200 ? '240V' : '120V';
+      if (!byVoltage[range]) byVoltage[range] = { count: 0, energy: 0, power: 0 };
+      byVoltage[range].count++;
+      byVoltage[range].energy += s.energy_added_kwh;
+    }
+  });
+
+  // Group by phases
+  const byPhase: Record<string, { count: number; energy: number; power: number }> = {};
+  sessions.forEach((s) => {
+    if (s.charger_phases != null) {
+      const key = `${s.charger_phases}-phase`;
+      if (!byPhase[key]) byPhase[key] = { count: 0, energy: 0, power: 0 };
+      byPhase[key].count++;
+      byPhase[key].energy += s.energy_added_kwh;
+    }
+  });
+
+  // Group by cable type
+  const byCable: Record<string, { count: number; energy: number; power: number }> = {};
+  sessions.forEach((s) => {
+    if (s.cable_type) {
+      if (!byCable[s.cable_type]) byCable[s.cable_type] = { count: 0, energy: 0, power: 0 };
+      byCable[s.cable_type].count++;
+      byCable[s.cable_type].energy += s.energy_added_kwh;
+    }
+  });
+
   const toArr = (obj: Record<string, { count: number; energy: number; power?: number }>) =>
     Object.entries(obj)
       .map(([name, v]) => ({ name, ...v, avgPower: v.power ? v.power / v.count : undefined }))
       .sort((a, b) => b.count - a.count);
-  return { voltage: [], phase: [], cable: [], brand: toArr(byType) };
+
+  return { voltage: toArr(byVoltage), phase: toArr(byPhase), cable: toArr(byCable), brand: toArr(byType) };
 }
 
 export function computeEnhancedStats(

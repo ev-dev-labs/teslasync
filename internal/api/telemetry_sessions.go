@@ -637,6 +637,17 @@ func (t *TelemetrySessionTracker) completeRecoveredCharge(ctx context.Context, c
 		enhancedFields["charger_power_kw_avg"] = slAvgPower
 	}
 
+	// Charger spec fields from signal_log snapshots
+	if v, ok := snapFloat(endSnap, "ChargerVoltage"); ok && v > 0 {
+		enhancedFields["max_charger_voltage"] = int16(v)
+	}
+	if v, ok := snapFloat(endSnap, "ChargerPhases"); ok && v > 0 {
+		enhancedFields["charger_phases"] = int16(v)
+	}
+	if v, ok := signalStr(endSnap, "ChargingCableType"); ok {
+		enhancedFields["cable_type"] = v
+	}
+
 	// Commit to DB
 	if err := t.db.WithTx(ctx, func(tx pgx.Tx) error {
 		var endBatteryPct *int16
@@ -2221,6 +2232,23 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 		}
 		if slAvgPower > 0 {
 			enhancedFields["charger_power_kw_avg"] = slAvgPower
+		}
+
+		// Charger spec fields from in-memory session data or signal_log snapshots
+		if active.Voltage != nil && *active.Voltage > 0 {
+			enhancedFields["max_charger_voltage"] = int16(*active.Voltage)
+		} else if v, ok := snapFloat(endSnap, "ChargerVoltage"); ok && v > 0 {
+			enhancedFields["max_charger_voltage"] = int16(v)
+		}
+		if active.Phases != nil && *active.Phases > 0 {
+			enhancedFields["charger_phases"] = int16(*active.Phases)
+		} else if v, ok := snapFloat(endSnap, "ChargerPhases"); ok && v > 0 {
+			enhancedFields["charger_phases"] = int16(v)
+		}
+		if active.ChargeCable != nil && *active.ChargeCable != "" {
+			enhancedFields["cable_type"] = *active.ChargeCable
+		} else if v, ok := signalStr(endSnap, "ChargingCableType"); ok {
+			enhancedFields["cable_type"] = v
 		}
 	} else if t.signalHistoryWriter != nil {
 		// Legacy fallback: use signalHistoryWriter for enrichment

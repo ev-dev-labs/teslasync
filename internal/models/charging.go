@@ -23,6 +23,9 @@ type ChargingSession struct {
 	ChargerPowerKwAvg *float64   `db:"charger_power_kw_avg" json:"charger_power_kw_avg"`
 	Cost              *float64   `db:"cost" json:"cost"`
 	CostCurrency      *string    `db:"cost_currency" json:"cost_currency"`
+	MaxChargerVoltage *int16     `db:"max_charger_voltage" json:"max_charger_voltage,omitempty"`
+	ChargerPhases     *int16     `db:"charger_phases" json:"charger_phases,omitempty"`
+	CableType         *string    `db:"cable_type" json:"cable_type,omitempty"`
 	EndedStatus       *string    `db:"ended_status" json:"ended_status"`
 	CreatedAt         time.Time  `db:"created_at" json:"created_at"`
 	UpdatedAt         time.Time  `db:"updated_at" json:"updated_at"`

@@ -85,6 +85,9 @@ export interface ChargingSession {
   charger_power_kw_avg: number | null
   cost: number | null
   cost_currency: string | null
+  max_charger_voltage: number | null
+  charger_phases: number | null
+  cable_type: string | null
   ended_status: string | null
   created_at: string
   updated_at: string

@@ -48,7 +48,8 @@ func (r *ChargingRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit,
 	query := `SELECT id, vehicle_id, start_ts, end_ts, duration_min,
 		start_battery_pct, end_battery_pct, energy_added_kwh, miles_added,
 		charger_type, charger_location, charger_power_kw_max, charger_power_kw_avg,
-		cost, cost_currency, ended_status, created_at, updated_at
+		cost, cost_currency, max_charger_voltage, charger_phases, cable_type,
+		ended_status, created_at, updated_at
 		FROM charging_sessions WHERE vehicle_id=$1`
 	args := []interface{}{vehicleID}
 	argIdx := 2
@@ -77,7 +78,8 @@ func (r *ChargingRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit,
 			&c.ID, &c.VehicleID, &c.StartTs, &c.EndTs, &c.DurationMin,
 			&c.StartBatteryPct, &c.EndBatteryPct, &c.EnergyAddedKwh, &c.MilesAdded,
 			&c.ChargerType, &c.ChargerLocation, &c.ChargerPowerKwMax, &c.ChargerPowerKwAvg,
-			&c.Cost, &c.CostCurrency, &c.EndedStatus, &c.CreatedAt, &c.UpdatedAt,
+			&c.Cost, &c.CostCurrency, &c.MaxChargerVoltage, &c.ChargerPhases, &c.CableType,
+			&c.EndedStatus, &c.CreatedAt, &c.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -90,14 +92,16 @@ func (r *ChargingRepo) GetByID(ctx context.Context, id int64) (*models.ChargingS
 	query := `SELECT id, vehicle_id, start_ts, end_ts, duration_min,
 		start_battery_pct, end_battery_pct, energy_added_kwh, miles_added,
 		charger_type, charger_location, charger_power_kw_max, charger_power_kw_avg,
-		cost, cost_currency, ended_status, created_at, updated_at
+		cost, cost_currency, max_charger_voltage, charger_phases, cable_type,
+		ended_status, created_at, updated_at
 		FROM charging_sessions WHERE id=$1`
 	c := &models.ChargingSession{}
 	err := r.db.Pool.QueryRow(ctx, query, id).Scan(
 		&c.ID, &c.VehicleID, &c.StartTs, &c.EndTs, &c.DurationMin,
 		&c.StartBatteryPct, &c.EndBatteryPct, &c.EnergyAddedKwh, &c.MilesAdded,
 		&c.ChargerType, &c.ChargerLocation, &c.ChargerPowerKwMax, &c.ChargerPowerKwAvg,
-		&c.Cost, &c.CostCurrency, &c.EndedStatus, &c.CreatedAt, &c.UpdatedAt,
+		&c.Cost, &c.CostCurrency, &c.MaxChargerVoltage, &c.ChargerPhases, &c.CableType,
+		&c.EndedStatus, &c.CreatedAt, &c.UpdatedAt,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, nil
@@ -113,7 +117,8 @@ func (r *ChargingRepo) GetStale(ctx context.Context, cutoff time.Time) ([]*model
 	query := `SELECT id, vehicle_id, start_ts, end_ts, duration_min,
 		start_battery_pct, end_battery_pct, energy_added_kwh, miles_added,
 		charger_type, charger_location, charger_power_kw_max, charger_power_kw_avg,
-		cost, cost_currency, ended_status, created_at, updated_at
+		cost, cost_currency, max_charger_voltage, charger_phases, cable_type,
+		ended_status, created_at, updated_at
 		FROM charging_sessions WHERE end_ts IS NULL AND start_ts < $1
 		ORDER BY start_ts DESC`
 	rows, err := r.db.Pool.Query(ctx, query, cutoff)
@@ -129,7 +134,8 @@ func (r *ChargingRepo) GetStale(ctx context.Context, cutoff time.Time) ([]*model
 			&c.ID, &c.VehicleID, &c.StartTs, &c.EndTs, &c.DurationMin,
 			&c.StartBatteryPct, &c.EndBatteryPct, &c.EnergyAddedKwh, &c.MilesAdded,
 			&c.ChargerType, &c.ChargerLocation, &c.ChargerPowerKwMax, &c.ChargerPowerKwAvg,
-			&c.Cost, &c.CostCurrency, &c.EndedStatus, &c.CreatedAt, &c.UpdatedAt,
+			&c.Cost, &c.CostCurrency, &c.MaxChargerVoltage, &c.ChargerPhases, &c.CableType,
+			&c.EndedStatus, &c.CreatedAt, &c.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -152,6 +158,9 @@ var chargingPartialAllowed = map[string]string{
 	"charger_power_kw_avg": "charger_power_kw_avg",
 	"cost":                 "cost",
 	"cost_currency":        "cost_currency",
+	"max_charger_voltage":  "max_charger_voltage",
+	"charger_phases":       "charger_phases",
+	"cable_type":           "cable_type",
 	"ended_status":         "ended_status",
 }
 
