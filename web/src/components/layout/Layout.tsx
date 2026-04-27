@@ -607,7 +607,7 @@ export default function Layout() {
       <BottomTabBar />
 
       {/* Command Palette */}
-      <CommandPalette />
+      <CommandPalette onOpen={() => setSidebarOpen(false)} />
 
       {/* PWA Install Prompt */}
       <InstallPrompt />

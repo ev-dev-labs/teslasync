@@ -107,7 +107,12 @@ function getIconForConfig(cfg: PaletteCommandConfig, def: CommandDef): React.Rea
 
 // ─── CommandPalette ─────────────────────────────────────────────────────────
 
-export function CommandPalette() {
+interface CommandPaletteProps {
+  /** Called when the palette opens — Layout uses this to close the mobile sidebar */
+  onOpen?: () => void
+}
+
+export function CommandPalette({ onOpen }: CommandPaletteProps) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -273,16 +278,17 @@ export function CommandPalette() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [mode, goBack])
 
-  // Focus input when opened
+  // Focus input when opened; close sidebar on mobile
   useEffect(() => {
     if (open) {
       setQuery('')
       setSelectedIndex(0)
       setMode('search')
       setPendingCommand(null)
+      onOpen?.()
       setTimeout(() => inputRef.current?.focus(), 50)
     }
-  }, [open])
+  }, [open, onOpen])
 
   // Keyboard nav within palette
   function handleInputKey(e: React.KeyboardEvent) {
@@ -347,7 +353,7 @@ export function CommandPalette() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
             transition={{ type: 'spring', bounce: 0.15, duration: 0.3 }}
-            className="fixed left-1/2 top-[10%] sm:top-[15%] z-[201] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2"
+            className="fixed left-4 right-4 top-[10%] z-[201] max-w-lg sm:left-1/2 sm:right-auto sm:top-[15%] sm:-translate-x-1/2 sm:w-[calc(100%-2rem)]"
           >
             <div className="overflow-hidden rounded-2xl shadow-2xl border border-white/[0.06] bg-white/[0.04] backdrop-blur-xl">
               {/* Search input / vehicle-select header */}
@@ -411,7 +417,7 @@ export function CommandPalette() {
                             onClick={item.action}
                             onMouseEnter={() => setSelectedIndex(globalIndex)}
                             className={cn(
-                              'flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm transition-colors',
+                              'flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm transition-colors min-h-[44px]',
                               isSelected
                                 ? 'bg-white/[0.06] text-white/90'
                                 : 'text-white/60 hover:bg-white/[0.03]'
