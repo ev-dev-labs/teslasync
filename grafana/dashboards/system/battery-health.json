@@ -93,10 +93,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 4,
+        "h": 4,
+        "w": 6,
         "x": 0,
-        "y": 0
+        "y": 46
       },
       "id": 1,
       "options": {
@@ -119,11 +119,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT health_score AS \"Health %\" FROM battery_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT NULL AS value -- Panel disabled: metric unavailable after signal_log migration (ADR-002)",
           "refId": "A"
         }
       ],
-      "title": "Battery Health Score",
+      "title": "Battery Health Score (Unavailable)",
       "type": "gauge",
       "transparent": false
     },
@@ -152,10 +152,10 @@
         }
       },
       "gridPos": {
-        "h": 6,
-        "w": 4,
-        "x": 4,
-        "y": 0
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 46
       },
       "id": 2,
       "options": {
@@ -179,11 +179,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(degradation_pct::numeric, 2) AS \"%\" FROM battery_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT NULL AS value -- Panel disabled: metric unavailable after signal_log migration (ADR-002)",
           "refId": "A"
         }
       ],
-      "title": "Degradation",
+      "title": "Degradation (Unavailable)",
       "type": "stat",
       "transparent": false
     },
@@ -212,10 +212,10 @@
         }
       },
       "gridPos": {
-        "h": 6,
-        "w": 4,
-        "x": 8,
-        "y": 0
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 46
       },
       "id": 3,
       "options": {
@@ -239,11 +239,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(capacity_kwh::numeric, 1) AS \"⚡ kWh\" FROM battery_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT NULL AS value -- Panel disabled: metric unavailable after signal_log migration (ADR-002)",
           "refId": "A"
         }
       ],
-      "title": "Capacity",
+      "title": "Capacity (Unavailable)",
       "type": "stat",
       "transparent": false
     },
@@ -271,10 +271,10 @@
         }
       },
       "gridPos": {
-        "h": 6,
-        "w": 4,
-        "x": 12,
-        "y": 0
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 46
       },
       "id": 4,
       "options": {
@@ -298,11 +298,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT cycle_count AS \"Cycles\" FROM battery_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT NULL AS value -- Panel disabled: metric unavailable after signal_log migration (ADR-002)",
           "refId": "A"
         }
       ],
-      "title": "Cycle Count",
+      "title": "Cycle Count (Unavailable)",
       "type": "stat",
       "transparent": false
     },
@@ -327,13 +327,13 @@
               }
             ]
           },
-          "unit": "none"
+          "unit": "lengthmi"
         }
       },
       "gridPos": {
         "h": 6,
-        "w": 4,
-        "x": 16,
+        "w": 6,
+        "x": 6,
         "y": 0
       },
       "id": 5,
@@ -358,11 +358,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(est_range_km::numeric, 1) AS \"km\" FROM battery_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT value_num AS \"Range (mi)\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'EstBatteryRange' AND value_num IS NOT NULL ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
-      "title": "Est. Range",
+      "title": "Est. Battery Range",
       "type": "stat",
       "transparent": false
     },
@@ -384,16 +384,24 @@
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "orange",
+                "value": 40
+              },
+              {
+                "color": "red",
+                "value": 50
               }
             ]
           },
-          "unit": "none"
+          "unit": "celsius"
         }
       },
       "gridPos": {
         "h": 6,
-        "w": 4,
-        "x": 20,
+        "w": 6,
+        "x": 18,
         "y": 0
       },
       "id": 6,
@@ -418,11 +426,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(avg_cell_temp_c::numeric, 1) AS \"Temp\" FROM battery_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT value_num AS \"°C\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'ModuleTempMax' AND value_num IS NOT NULL ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
-      "title": "Avg Cell Temp",
+      "title": "Max Module Temp",
       "type": "stat",
       "transparent": false
     },
@@ -470,10 +478,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
+        "h": 4,
+        "w": 8,
         "x": 0,
-        "y": 6
+        "y": 50
       },
       "id": 7,
       "options": {
@@ -497,13 +505,13 @@
             "uid": "DS_TESLASYNC_POSTGRESQL"
           },
           "editorMode": "code",
-          "format": "time_series",
+          "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, capacity_kwh AS \"Capacity kWh\"\nFROM battery_snapshots\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\nORDER BY created_at",
+          "rawSql": "SELECT NULL AS value -- Panel disabled: metric unavailable after signal_log migration (ADR-002)",
           "refId": "A"
         }
       ],
-      "title": "Battery Capacity Over Time",
+      "title": "Battery Capacity Over Time (Unavailable)",
       "type": "timeseries",
       "transparent": false
     },
@@ -550,10 +558,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 6
+        "h": 4,
+        "w": 8,
+        "x": 8,
+        "y": 50
       },
       "id": 8,
       "options": {
@@ -577,13 +585,13 @@
             "uid": "DS_TESLASYNC_POSTGRESQL"
           },
           "editorMode": "code",
-          "format": "time_series",
+          "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, degradation_pct AS \"Degradation %\"\nFROM battery_snapshots\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\nORDER BY created_at",
+          "rawSql": "SELECT NULL AS value -- Panel disabled: metric unavailable after signal_log migration (ADR-002)",
           "refId": "A"
         }
       ],
-      "title": "Degradation % Over Time",
+      "title": "Degradation % Over Time (Unavailable)",
       "type": "timeseries",
       "transparent": false
     },
@@ -630,10 +638,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 14
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 50
       },
       "id": 9,
       "options": {
@@ -657,13 +665,13 @@
             "uid": "DS_TESLASYNC_POSTGRESQL"
           },
           "editorMode": "code",
-          "format": "time_series",
+          "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, health_score AS \"Health %\"\nFROM battery_snapshots\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\nORDER BY created_at",
+          "rawSql": "SELECT NULL AS value -- Panel disabled: metric unavailable after signal_log migration (ADR-002)",
           "refId": "A"
         }
       ],
-      "title": "Health Score Over Time",
+      "title": "Health Score Over Time (Unavailable)",
       "type": "timeseries",
       "transparent": false
     },
@@ -703,7 +711,7 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 12,
+        "x": 0,
         "y": 14
       },
       "id": 10,
@@ -746,12 +754,12 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 0,
-        "y": 22
+        "x": 12,
+        "y": 6
       },
       "targets": [
         {
-          "rawSql": "SELECT created_at AS time,\n  brick_voltage_max AS \"Max Cell (V)\",\n  brick_voltage_min AS \"Min Cell (V)\",\n  (brick_voltage_max - brick_voltage_min) AS \"Delta (V)\"\nFROM charging_telemetry\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\n  AND brick_voltage_max IS NOT NULL\nORDER BY created_at",
+          "rawSql": "SELECT\n  $__timeGroup(created_at, '1h') AS time,\n  MAX(value_num) FILTER (WHERE signal = 'BrickVoltageMax') AS \"Max Cell (V)\",\n  MAX(value_num) FILTER (WHERE signal = 'BrickVoltageMin') AS \"Min Cell (V)\",\n  MAX(value_num) FILTER (WHERE signal = 'BrickVoltageMax') - MAX(value_num) FILTER (WHERE signal = 'BrickVoltageMin') AS \"Delta (V)\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\n  AND signal IN ('BrickVoltageMax', 'BrickVoltageMin')\nGROUP BY 1\nORDER BY 1",
           "format": "time_series",
           "refId": "A",
           "datasource": {
@@ -786,11 +794,11 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 22
+        "y": 14
       },
       "targets": [
         {
-          "rawSql": "SELECT created_at AS time,\n  module_temp_max AS \"Max Module Temp\",\n  module_temp_min AS \"Min Module Temp\",\n  (module_temp_max - module_temp_min) AS \"Temp Delta\"\nFROM charging_telemetry\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\n  AND module_temp_max IS NOT NULL\nORDER BY created_at",
+          "rawSql": "SELECT\n  $__timeGroup(created_at, '1h') AS time,\n  MAX(value_num) FILTER (WHERE signal = 'ModuleTempMax') AS \"Max Module Temp\",\n  MAX(value_num) FILTER (WHERE signal = 'ModuleTempMin') AS \"Min Module Temp\",\n  MAX(value_num) FILTER (WHERE signal = 'ModuleTempMax') - MAX(value_num) FILTER (WHERE signal = 'ModuleTempMin') AS \"Temp Delta\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\n  AND signal IN ('ModuleTempMax', 'ModuleTempMin')\nGROUP BY 1\nORDER BY 1",
           "format": "time_series",
           "refId": "A",
           "datasource": {
@@ -825,11 +833,11 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 30
+        "y": 22
       },
       "targets": [
         {
-          "rawSql": "SELECT created_at AS time,\n  pack_voltage AS \"Pack Voltage (V)\",\n  pack_current AS \"Pack Current (A)\"\nFROM charging_telemetry\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\n  AND pack_voltage IS NOT NULL\nORDER BY created_at",
+          "rawSql": "SELECT\n  $__timeGroup(created_at, '1h') AS time,\n  MAX(value_num) FILTER (WHERE signal = 'PackVoltage') AS \"Pack Voltage (V)\",\n  MAX(value_num) FILTER (WHERE signal = 'PackCurrent') AS \"Pack Current (A)\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\n  AND signal IN ('PackVoltage', 'PackCurrent')\nGROUP BY 1\nORDER BY 1",
           "format": "time_series",
           "refId": "A",
           "datasource": {
@@ -864,11 +872,11 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 38
+        "y": 30
       },
       "targets": [
         {
-          "rawSql": "SELECT created_at AS \"Time\",\n  COALESCE(bms_state, '—') AS \"BMS State\",\n  CASE WHEN bms_fullcharge_complete THEN 'Yes' ELSE 'No' END AS \"Full Charge\",\n  isolation_resistance AS \"Isolation (Ω)\",\n  lifetime_energy_used AS \"Lifetime Energy (kWh)\",\n  CASE WHEN battery_heater_on THEN 'ON' ELSE 'Off' END AS \"Battery Heater\"\nFROM charging_telemetry\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\nORDER BY created_at DESC LIMIT 20",
+          "rawSql": "SELECT\n  $__timeGroup(created_at, '5m') AS \"Time\",\n  last(value_str, created_at) FILTER (WHERE signal = 'BMSState') AS \"BMS State\",\n  last(value_num, created_at) FILTER (WHERE signal = 'IsolationResistance') AS \"Isolation (Ω)\",\n  last(value_num, created_at) FILTER (WHERE signal = 'LifetimeEnergyUsed') AS \"Lifetime Energy (kWh)\",\n  CASE WHEN last(value_bool, created_at) FILTER (WHERE signal = 'BatteryHeaterOn') THEN 'ON' ELSE 'Off' END AS \"Battery Heater\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\n  AND signal IN ('BMSState', 'IsolationResistance', 'LifetimeEnergyUsed', 'BatteryHeaterOn')\nGROUP BY 1\nORDER BY 1 DESC\nLIMIT 20",
           "format": "table",
           "refId": "A",
           "datasource": {
@@ -895,11 +903,11 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 46
+        "y": 38
       },
       "targets": [
         {
-          "rawSql": "SELECT created_at AS \"Time\",\n  COALESCE(powershare_status, '—') AS \"Status\",\n  COALESCE(powershare_type, '—') AS \"Type\",\n  powershare_power_kw AS \"Power (kW)\",\n  powershare_hours_left AS \"Hours Left\"\nFROM charging_telemetry\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\n  AND powershare_status IS NOT NULL AND powershare_status != ''\nORDER BY created_at DESC LIMIT 20",
+          "rawSql": "SELECT\n  $__timeGroup(created_at, '5m') AS \"Time\",\n  last(value_str, created_at) FILTER (WHERE signal = 'PowershareStatus') AS \"Status\",\n  last(value_str, created_at) FILTER (WHERE signal = 'PowershareType') AS \"Type\",\n  last(value_num, created_at) FILTER (WHERE signal = 'PowershareInstantaneousPowerKW') AS \"Power (kW)\",\n  last(value_num, created_at) FILTER (WHERE signal = 'PowershareHoursLeft') AS \"Hours Left\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\n  AND signal IN ('PowershareStatus', 'PowershareType', 'PowershareInstantaneousPowerKW', 'PowershareHoursLeft')\nGROUP BY 1\nHAVING last(value_str, created_at) FILTER (WHERE signal = 'PowershareStatus') IS NOT NULL\n  AND last(value_str, created_at) FILTER (WHERE signal = 'PowershareStatus') != ''\nORDER BY 1 DESC\nLIMIT 20",
           "format": "table",
           "refId": "A",
           "datasource": {
@@ -913,6 +921,218 @@
         "overrides": []
       },
       "options": {}
+    },
+    {
+      "id": 16,
+      "type": "stat",
+      "title": "Battery Level",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "green",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 20
+              },
+              {
+                "color": "green",
+                "value": 50
+              }
+            ]
+          },
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT value_num AS \"%\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'BatteryLevel' AND value_num IS NOT NULL ORDER BY created_at DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "transparent": false
+    },
+    {
+      "id": 17,
+      "type": "stat",
+      "title": "Energy Remaining",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "kwatth"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ROUND(value_num::numeric, 1) AS \"kWh\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'EnergyRemaining' AND value_num IS NOT NULL ORDER BY created_at DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "transparent": false
+    },
+    {
+      "id": 18,
+      "type": "timeseries",
+      "title": "Battery Level & Energy Over Time",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 6
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  $__timeGroup(created_at, '1h') AS time,\n  MAX(value_num) FILTER (WHERE signal = 'BatteryLevel') AS \"Battery Level (%)\",\n  MAX(value_num) FILTER (WHERE signal = 'EnergyRemaining') AS \"Energy Remaining (kWh)\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\n  AND signal IN ('BatteryLevel', 'EnergyRemaining')\nGROUP BY 1\nORDER BY 1",
+          "refId": "A"
+        }
+      ],
+      "transparent": false
     }
   ],
   "schemaVersion": 39,

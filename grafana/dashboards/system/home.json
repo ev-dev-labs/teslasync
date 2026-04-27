@@ -303,11 +303,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(COALESCE(health_score, 0)::numeric, 1) FROM battery_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT NULL AS value -- Panel disabled: metric unavailable after signal_log migration (ADR-002)",
           "refId": "A"
         }
       ],
-      "title": "Battery Health",
+      "title": "Battery Health (Unavailable)",
       "type": "stat",
       "transparent": false
     },
