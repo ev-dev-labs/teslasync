@@ -222,7 +222,9 @@ export function DashboardGrid({
   const handleDragStop = useCallback(() => {
     setIsDragging(false);
     persistCountRef.current++;
-    onLayoutChange(layoutRef.current);
+    // Defer persist to microtask: RGL v2 fires onLayoutChange (which updates
+    // layoutRef) synchronously AFTER this callback returns, so we must wait.
+    queueMicrotask(() => { onLayoutChange(layoutRef.current); });
     requestAnimationFrame(() => { interactingRef.current = false; });
   }, [onLayoutChange]);
 
@@ -232,7 +234,9 @@ export function DashboardGrid({
 
   const handleResizeStop = useCallback(() => {
     persistCountRef.current++;
-    onLayoutChange(layoutRef.current);
+    // Defer persist to microtask: RGL v2 fires onLayoutChange (which updates
+    // layoutRef) synchronously AFTER this callback returns, so we must wait.
+    queueMicrotask(() => { onLayoutChange(layoutRef.current); });
     requestAnimationFrame(() => { interactingRef.current = false; });
   }, [onLayoutChange]);
 
