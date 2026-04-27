@@ -1,0 +1,58 @@
+=== SURVEY ===
+Files read:
+- web/vite.config.ts (144 lines) — VitePWA config with registerType:'autoUpdate', workbox runtimeCaching for fonts+tiles, no skipWaiting/clientsClaim/cleanupOutdatedCaches
+- web/src/components/feedback/ReloadPrompt.tsx (59 lines) — shows banner on needRefresh, dismiss button lets user ignore update, hardcoded English, inline CSS vars
+
+Issues found:
+1. workbox missing skipWaiting: true — new SW waits for all tabs to close before activating
+2. workbox missing clientsClaim: true — new SW doesn't take control of existing tabs
+3. workbox missing cleanupOutdatedCaches: true — old precache entries linger
+4. ReloadPrompt has dismiss button — user can ignore update and stay on stale version indefinitely
+5. ReloadPrompt uses inline CSS vars: text-[var(--text-primary)], text-[var(--text-muted)] — violates no-inline-styles rule
+6. ReloadPrompt has hardcoded English strings — no i18n
+7. ReloadPrompt uses raw <button> for dismiss — violates shared component rule
+8. API routes (/api, /ws, /healthz, /readyz) correctly in navigateFallbackDenylist — no changes needed
+9. runtimeCaching only targets external fonts + tiles — API calls NOT cached ✓
+
+=== REASONING ===
+Fix approach:
+1. Add skipWaiting: true + clientsClaim: true + cleanupOutdatedCaches: true to workbox config
+   → New SW activates immediately, takes control of all tabs, cleans up old cache entries
+2. Replace ReloadPrompt with auto-reload countdown (3s) + "Reload Now" button
+   → Remove dismiss button (no reason to stay on old version)
+   → Add i18n for all strings
+   → Replace inline CSS vars with Tailwind classes (text-white/90, text-white/50)
+   → Remove raw <button>, only use shared Button component
+3. Keep 5-minute update check interval for catching updates during long sessions
+4. API caching exclusion already correct — no changes needed
+
+=== CHANGES ===
+File: web/vite.config.ts
+- Added skipWaiting: true inside workbox config
+- Added clientsClaim: true inside workbox config
+- Added cleanupOutdatedCaches: true inside workbox config
+- All existing config (manifest, runtimeCaching, devOptions) preserved unchanged
+
+File: web/src/components/feedback/ReloadPrompt.tsx
+- Removed: X icon import, useState for dismissed, dismiss button (raw <button>)
+- Added: useEffect/useRef/useCallback imports, useTranslation hook
+- Added: 3-second countdown timer that auto-reloads via updateServiceWorker(true)
+- Replaced text-[var(--text-primary)] → text-white/90
+- Replaced text-[var(--text-muted)] → text-white/50
+- Added i18n: pwa.newVersion, pwa.reloadingIn, pwa.reloadNow
+- Added spinning RefreshCw icon during countdown for visual feedback
+- Extracted doReload callback with useCallback for stable reference
+
+=== GATE ===
+TypeScript: npx tsc --noEmit → EXIT 0 (clean)
+skipWaiting: PASS (found "skipWaiting: true" in vite.config.ts)
+clientsClaim: PASS (found "clientsClaim: true" in vite.config.ts)
+cleanupOutdatedCaches: PASS (found "cleanupOutdatedCaches: true" in vite.config.ts)
+Inline CSS vars: PASS (0 occurrences of var(--text in ReloadPrompt.tsx)
+i18n: PASS (useTranslation imported and used)
+Raw <button>: PASS (0 matches via case-sensitive grep)
+API exclusion: PASS (navigateFallbackDenylist includes /^\/api/)
+
+=== COMMIT ===
+EXIT=0
+STATUS=DONE
