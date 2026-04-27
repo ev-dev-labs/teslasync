@@ -73,14 +73,15 @@ export function TourOverlay({
           animate-in fade-in slide-in-from-bottom-2 duration-200"
         style={tooltipStyle}
       >
-        {/* Close button */}
+        {/* Close button — 44px touch target for mobile */}
         <button
           onClick={onSkip}
-          className="absolute top-2 right-2 p-1 rounded-md text-white/30
-            hover:text-white/60 hover:bg-white/5 transition-colors"
+          className="absolute top-1 right-1 p-2.5 rounded-md text-white/30
+            hover:text-white/60 hover:bg-white/5 transition-colors
+            min-w-[44px] min-h-[44px] flex items-center justify-center"
           aria-label={t('tour.close', 'Close tour')}
         >
-          <X className="h-3.5 w-3.5" />
+          <X className="h-4 w-4" />
         </button>
 
         {/* Step counter */}
@@ -96,7 +97,8 @@ export function TourOverlay({
         <div className="flex items-center justify-between">
           <button
             onClick={onSkip}
-            className="text-xs text-white/30 hover:text-white/50 transition-colors"
+            className="text-xs text-white/30 hover:text-white/50 transition-colors
+              py-2.5 px-2 min-h-[44px] flex items-center"
           >
             {t('tour.skip', 'Skip tour')}
           </button>
@@ -143,17 +145,28 @@ function getTooltipPosition(
   placement: string,
   rect: DOMRect,
 ): React.CSSProperties {
-  const gap = 20;
+  const gap = 16;
+  const pad = 16;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const maxW = Math.min(360, vw - pad * 2);
+  const bottomNav = 72; // mobile bottom tab bar height
+
+  const clampLeft = (x: number) =>
+    Math.max(pad, Math.min(x, vw - maxW - pad));
+  const clampTop = (y: number) =>
+    Math.max(pad, Math.min(y, vh - bottomNav - 160));
+
   switch (placement) {
     case 'bottom':
-      return { top: rect.bottom + gap, left: rect.left, maxWidth: 360 };
+      return { top: clampTop(rect.bottom + gap), left: clampLeft(rect.left), maxWidth: maxW };
     case 'top':
-      return { bottom: window.innerHeight - rect.top + gap, left: rect.left, maxWidth: 360 };
+      return { bottom: Math.max(pad + bottomNav, vh - rect.top + gap), left: clampLeft(rect.left), maxWidth: maxW };
     case 'right':
-      return { top: rect.top, left: rect.right + gap, maxWidth: 360 };
+      return { top: clampTop(rect.top), left: clampLeft(rect.right + gap), maxWidth: maxW };
     case 'left':
-      return { top: rect.top, right: window.innerWidth - rect.left + gap, maxWidth: 360 };
+      return { top: clampTop(rect.top), right: Math.max(pad, vw - rect.left + gap), maxWidth: maxW };
     default:
-      return { top: rect.bottom + gap, left: rect.left, maxWidth: 360 };
+      return { top: clampTop(rect.bottom + gap), left: clampLeft(rect.left), maxWidth: maxW };
   }
 }

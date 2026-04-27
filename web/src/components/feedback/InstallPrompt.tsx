@@ -58,7 +58,7 @@ export default function InstallPrompt() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 60 }}
           transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[9998] w-[calc(100%-2rem)] max-w-md pb-safe"
+          className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[9998] w-[calc(100%-2rem)] max-w-md sm:bottom-4 pb-safe"
           style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
         >
           <div

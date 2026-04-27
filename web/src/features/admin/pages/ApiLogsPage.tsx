@@ -78,8 +78,15 @@ export default function ApiLogsPage() {
   const [status, setStatus] = useState('');
   const [endpoint, setEndpoint] = useState('');
   const [service, setService] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}T${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  });
+  const [endDate, setEndDate] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}T${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  });
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const limit = 25;
 
@@ -242,13 +249,13 @@ export default function ApiLogsPage() {
               />
             </div>
             <Input
-              type="date"
+              type="datetime-local"
               value={startDate}
               onChange={(e) => { setStartDate(e.target.value); setPage(0); }}
               placeholder={t('apiLogs.startDate', 'Start date')}
             />
             <Input
-              type="date"
+              type="datetime-local"
               value={endDate}
               onChange={(e) => { setEndDate(e.target.value); setPage(0); }}
               placeholder={t('apiLogs.endDate', 'End date')}

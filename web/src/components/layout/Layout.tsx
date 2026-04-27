@@ -100,7 +100,7 @@ import { BottomTabBar, BOTTOM_TAB_PATHS } from './BottomTabBar'
 import { CommandPalette, CommandPaletteTrigger } from '../ui/CommandPalette'
 import { ServiceStatusBanner, SystemHealthDot } from '../data-display/ServiceStatus'
 import Logo from '../ui/Logo'
-import OnboardingWizard from '../feedback/OnboardingWizard'
+
 import { MAIN_TOUR_STEPS } from '@/features/onboarding/tourSteps'
 import { request } from '@/api/client'
 import { getVehicleState } from '@/api/vehicles'
@@ -336,6 +336,14 @@ export default function Layout() {
       return () => clearTimeout(timer)
     }
   }, [])
+
+  // Auto-skip tour steps whose target element is missing (e.g. sidebar items on mobile)
+  useEffect(() => {
+    if (tour.isActive && tour.step && !tour.targetRect) {
+      const timer = setTimeout(() => tour.next(), 400)
+      return () => clearTimeout(timer)
+    }
+  }, [tour.isActive, tour.currentStep, tour.targetRect])
 
   // Version info
   const { data: versionInfo } = useQuery({ queryKey: ['version-info'], queryFn: () => request<VersionInfo>('/system/version'), staleTime: 60_000, refetchInterval: 60_000 })
@@ -600,9 +608,6 @@ export default function Layout() {
 
       {/* Command Palette */}
       <CommandPalette />
-
-      {/* Onboarding Wizard */}
-      <OnboardingWizard />
 
       {/* PWA Install Prompt */}
       <InstallPrompt />
