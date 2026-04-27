@@ -170,7 +170,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT route AS \"Route\", avg_wh_per_km AS \"Avg Wh/km\", trips AS \"Trips\"\nFROM fn_route_efficiency(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)\nWHERE trips >= 3\nORDER BY avg_wh_per_km\nLIMIT 15",
+          "rawSql": "WITH routes AS (\n  SELECT\n    (COALESCE(start_address, '?') || ' → ' || COALESCE(end_address, '?'))::text AS route,\n    COUNT(*)::bigint AS trips,\n    ROUND(AVG(CASE WHEN distance_mi > 0 AND energy_used_kwh IS NOT NULL\n      THEN energy_used_kwh * 1000 / (distance_mi * 1.60934)\n      ELSE NULL END)::numeric, 0) AS avg_wh_per_km\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(start_ts)\n    AND distance_mi > 1\n    AND energy_used_kwh IS NOT NULL\n  GROUP BY start_address, end_address\n  HAVING COUNT(*) >= 3\n)\nSELECT route AS \"Route\", avg_wh_per_km AS \"Avg Wh/km\", trips AS \"Trips\"\nFROM routes\nORDER BY avg_wh_per_km\nLIMIT 15",
           "refId": "A"
         }
       ],

@@ -179,7 +179,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  time,\n  score AS \"Score\",\n  ROUND(AVG(score) OVER (ORDER BY time ROWS BETWEEN 6 PRECEDING AND CURRENT ROW))::int AS \"7-Drive Avg\"\nFROM fn_drive_score_trend(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
+          "rawSql": "SELECT\n  start_ts AS time,\n  score::integer AS \"Score\",\n  ROUND(AVG(score) OVER (ORDER BY start_ts ROWS BETWEEN 6 PRECEDING AND CURRENT ROW))::int AS \"7-Drive Avg\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(start_ts)\n  AND score IS NOT NULL\nORDER BY start_ts",
           "refId": "A"
         }
       ],
@@ -341,7 +341,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  date AS \"📅 Date\",\n  ROUND(convert_distance(distance, '${unit_length}')::numeric, 1) AS \"📏 Distance\",\n  ROUND(convert_speed(avg_speed, '${unit_length}')::numeric, 1) AS \"🚗 Avg Speed\",\n  score AS \"⭐ Score\",\n  grade AS \"🏅 Grade\",\n  CASE WHEN wh_per_km IS NOT NULL\n    THEN ROUND(convert_efficiency(wh_per_km, '${unit_length}')::numeric, 0)\n    ELSE NULL\n  END AS \"⚡ Efficiency\"\nFROM fn_drive_scores_recent(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
+          "rawSql": "WITH scored AS (\n  SELECT\n    start_ts AS date,\n    distance_mi AS distance,\n    avg_speed_mph AS avg_speed,\n    score::integer AS score,\n    CASE\n      WHEN score >= 90 THEN 'A'\n      WHEN score >= 80 THEN 'B'\n      WHEN score >= 70 THEN 'C'\n      WHEN score >= 60 THEN 'D'\n      ELSE 'F'\n    END AS grade,\n    CASE WHEN distance_mi > 0 AND energy_used_kwh IS NOT NULL\n      THEN energy_used_kwh * 1000 / distance_mi\n      ELSE NULL END AS wh_per_mi\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(start_ts)\n    AND distance_mi > 1\n    AND score IS NOT NULL\n  ORDER BY start_ts DESC\n  LIMIT 30\n)\nSELECT\n  date AS \"📅 Date\",\n  ROUND(convert_distance(distance, '${unit_length}')::numeric, 1) AS \"📏 Distance\",\n  ROUND(convert_speed(avg_speed, '${unit_length}')::numeric, 1) AS \"🚗 Avg Speed\",\n  score AS \"⭐ Score\",\n  grade AS \"🏅 Grade\",\n  CASE WHEN wh_per_mi IS NOT NULL\n    THEN ROUND(convert_efficiency(wh_per_mi, '${unit_length}')::numeric, 0)\n    ELSE NULL\n  END AS \"⚡ Efficiency\"\nFROM scored",
           "refId": "A"
         }
       ],
@@ -415,7 +415,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT category AS \"Category\", score AS \"Score\"\nFROM fn_drive_score_breakdown(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
+          "rawSql": "SELECT 'Efficiency'::text AS \"Category\",\n  ROUND(AVG(score)::numeric, 0) AS \"Score\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(start_ts)\n  AND score IS NOT NULL\nUNION ALL\nSELECT 'Smoothness'::text,\n  ROUND(AVG(\n    CASE WHEN max_speed_mph > 0 AND avg_speed_mph > 0\n      THEN LEAST(100.0, 100.0 * avg_speed_mph / max_speed_mph)\n      ELSE NULL END\n  )::numeric, 0)\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(start_ts)\nUNION ALL\nSELECT 'Speed'::text,\n  ROUND(AVG(\n    CASE WHEN duration_min > 0 AND distance_mi > 0\n      THEN LEAST(100.0, (distance_mi * 1.60934 / duration_min * 60.0) / 1.2)\n      ELSE NULL END\n  )::numeric, 0)\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(start_ts)",
           "refId": "A"
         }
       ],
@@ -489,7 +489,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT score AS \"Score\"\nFROM fn_drive_score_distribution(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
+          "rawSql": "SELECT score::integer AS \"Score\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(start_ts)\n  AND score IS NOT NULL",
           "refId": "A"
         }
       ],

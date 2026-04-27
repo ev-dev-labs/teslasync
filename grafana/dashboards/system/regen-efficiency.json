@@ -229,7 +229,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT time, regen_pct AS \"Regen %\" FROM fn_regen_efficiency_trend(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
+          "rawSql": "SELECT\n  start_ts AS time,\n  CASE WHEN COALESCE(energy_used_kwh, 0) + COALESCE(regen_kwh, 0) > 0\n    THEN ROUND((COALESCE(regen_kwh, 0) / (COALESCE(energy_used_kwh, 0) + COALESCE(regen_kwh, 0)) * 100)::numeric, 1)\n    ELSE NULL END AS \"Regen %\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(start_ts)\n  AND regen_kwh IS NOT NULL\nORDER BY start_ts",
           "refId": "A"
         }
       ],
