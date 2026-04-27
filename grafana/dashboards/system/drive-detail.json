@@ -151,7 +151,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(sl.ts, '10s') AS time,\n  ((MAX(sl.value_text) FILTER (WHERE sl.signal_name = 'Location'))::jsonb->>'latitude')::float AS latitude,\n  ((MAX(sl.value_text) FILTER (WHERE sl.signal_name = 'Location'))::jsonb->>'longitude')::float AS longitude,\n  convert_speed(MAX(sl.value_num) FILTER (WHERE sl.signal_name = 'VehicleSpeed')) AS speed,\n  MAX(sl.value_num) FILTER (WHERE sl.signal_name = 'BatteryLevel') AS battery_level\nFROM signal_log sl\nJOIN drives d ON d.vehicle_id = sl.vehicle_id\n  AND sl.ts BETWEEN d.start_ts AND COALESCE(d.end_ts, NOW())\nWHERE d.id = ${drive_id}\n  AND sl.ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND sl.signal_name IN ('Location', 'VehicleSpeed', 'BatteryLevel')\nGROUP BY 1\nORDER BY 1",
+          "rawSql": "SELECT\n  $__timeGroup(sl.ts, '10s') AS time,\n  ((MAX(sl.value_text) FILTER (WHERE sl.signal = 'Location'))::jsonb->>'latitude')::float AS latitude,\n  ((MAX(sl.value_text) FILTER (WHERE sl.signal = 'Location'))::jsonb->>'longitude')::float AS longitude,\n  convert_speed(MAX(sl.value_num) FILTER (WHERE sl.signal = 'VehicleSpeed')) AS speed,\n  MAX(sl.value_num) FILTER (WHERE sl.signal = 'BatteryLevel') AS battery_level\nFROM signal_log sl\nJOIN drives d ON d.vehicle_id = sl.vehicle_id\n  AND sl.ts BETWEEN d.start_ts AND COALESCE(d.end_ts, NOW())\nWHERE d.id = ${drive_id}\n  AND sl.ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND sl.signal IN ('Location', 'VehicleSpeed', 'BatteryLevel')\nGROUP BY 1\nORDER BY 1",
           "refId": "A"
         }
       ],
@@ -257,7 +257,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(sl.ts, '30s') AS time,\n  convert_speed(MAX(sl.value_num) FILTER (WHERE sl.signal_name = 'VehicleSpeed')) AS \"Speed\"\nFROM signal_log sl\nJOIN drives d ON d.vehicle_id = sl.vehicle_id\n  AND sl.ts BETWEEN d.start_ts AND COALESCE(d.end_ts, NOW())\nWHERE d.id = ${drive_id}\n  AND sl.ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND sl.signal_name IN ('VehicleSpeed')\nGROUP BY 1\nORDER BY 1",
+          "rawSql": "SELECT\n  $__timeGroup(sl.ts, '30s') AS time,\n  convert_speed(MAX(sl.value_num) FILTER (WHERE sl.signal = 'VehicleSpeed')) AS \"Speed\"\nFROM signal_log sl\nJOIN drives d ON d.vehicle_id = sl.vehicle_id\n  AND sl.ts BETWEEN d.start_ts AND COALESCE(d.end_ts, NOW())\nWHERE d.id = ${drive_id}\n  AND sl.ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND sl.signal IN ('VehicleSpeed')\nGROUP BY 1\nORDER BY 1",
           "refId": "A"
         }
       ],
@@ -306,7 +306,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(sl.ts, '30s') AS time,\n  MAX(sl.value_num) FILTER (WHERE sl.signal_name = 'BatteryLevel') AS \"🔋 Battery %\"\nFROM signal_log sl\nJOIN drives d ON d.vehicle_id = sl.vehicle_id\n  AND sl.ts BETWEEN d.start_ts AND COALESCE(d.end_ts, NOW())\nWHERE d.id = ${drive_id}\n  AND sl.ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND sl.signal_name IN ('BatteryLevel')\nGROUP BY 1\nORDER BY 1",
+          "rawSql": "SELECT\n  $__timeGroup(sl.ts, '30s') AS time,\n  MAX(sl.value_num) FILTER (WHERE sl.signal = 'BatteryLevel') AS \"🔋 Battery %\"\nFROM signal_log sl\nJOIN drives d ON d.vehicle_id = sl.vehicle_id\n  AND sl.ts BETWEEN d.start_ts AND COALESCE(d.end_ts, NOW())\nWHERE d.id = ${drive_id}\n  AND sl.ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND sl.signal IN ('BatteryLevel')\nGROUP BY 1\nORDER BY 1",
           "refId": "A"
         }
       ],
@@ -355,7 +355,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(sl.ts, '30s') AS time,\n  convert_temp(MAX(sl.value_num) FILTER (WHERE sl.signal_name = 'InsideTemp')) AS \"Cabin\",\n  convert_temp(MAX(sl.value_num) FILTER (WHERE sl.signal_name = 'OutsideTemp')) AS \"Outside\"\nFROM signal_log sl\nJOIN drives d ON d.vehicle_id = sl.vehicle_id\n  AND sl.ts BETWEEN d.start_ts AND COALESCE(d.end_ts, NOW())\nWHERE d.id = ${drive_id}\n  AND sl.ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND sl.signal_name IN ('InsideTemp', 'OutsideTemp')\nGROUP BY 1\nORDER BY 1",
+          "rawSql": "SELECT\n  $__timeGroup(sl.ts, '30s') AS time,\n  convert_temp(MAX(sl.value_num) FILTER (WHERE sl.signal = 'InsideTemp')) AS \"Cabin\",\n  convert_temp(MAX(sl.value_num) FILTER (WHERE sl.signal = 'OutsideTemp')) AS \"Outside\"\nFROM signal_log sl\nJOIN drives d ON d.vehicle_id = sl.vehicle_id\n  AND sl.ts BETWEEN d.start_ts AND COALESCE(d.end_ts, NOW())\nWHERE d.id = ${drive_id}\n  AND sl.ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND sl.signal IN ('InsideTemp', 'OutsideTemp')\nGROUP BY 1\nORDER BY 1",
           "refId": "A"
         }
       ],
@@ -403,7 +403,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(sl.ts, '30s') AS time,\n  MAX(sl.value_num) FILTER (WHERE sl.signal_name = 'DiTorqueActualF') AS \"Torque (Nm)\",\n  convert_speed(MAX(sl.value_num) FILTER (WHERE sl.signal_name = 'VehicleSpeed')) AS \"Speed\"\nFROM signal_log sl\nJOIN drives d ON d.vehicle_id = sl.vehicle_id\n  AND sl.ts BETWEEN d.start_ts AND COALESCE(d.end_ts, NOW())\nWHERE d.id = ${drive_id}\n  AND sl.ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND sl.signal_name IN ('DiTorqueActualF', 'VehicleSpeed')\nGROUP BY 1\nORDER BY 1",
+          "rawSql": "SELECT\n  $__timeGroup(sl.ts, '30s') AS time,\n  MAX(sl.value_num) FILTER (WHERE sl.signal = 'DiTorqueActualF') AS \"Torque (Nm)\",\n  convert_speed(MAX(sl.value_num) FILTER (WHERE sl.signal = 'VehicleSpeed')) AS \"Speed\"\nFROM signal_log sl\nJOIN drives d ON d.vehicle_id = sl.vehicle_id\n  AND sl.ts BETWEEN d.start_ts AND COALESCE(d.end_ts, NOW())\nWHERE d.id = ${drive_id}\n  AND sl.ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND sl.signal IN ('DiTorqueActualF', 'VehicleSpeed')\nGROUP BY 1\nORDER BY 1",
           "refId": "A"
         }
       ],

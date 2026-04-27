@@ -130,7 +130,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT ts AS time,\n  value_num AS \"Torque (Nm)\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal_name = 'DiTorqueActualF'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts",
+          "rawSql": "SELECT ts AS time,\n  value_num AS \"Torque (Nm)\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'DiTorqueActualF'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -210,7 +210,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT ts AS time,\n  MAX(value_num) FILTER (WHERE signal_name = 'LateralAcceleration') AS \"Lateral G\",\n  MAX(value_num) FILTER (WHERE signal_name = 'LongitudinalAcceleration') AS \"Longitudinal G\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal_name IN ('LateralAcceleration', 'LongitudinalAcceleration')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts",
+          "rawSql": "SELECT ts AS time,\n  MAX(value_num) FILTER (WHERE signal = 'LateralAcceleration') AS \"Lateral G\",\n  MAX(value_num) FILTER (WHERE signal = 'LongitudinalAcceleration') AS \"Longitudinal G\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('LateralAcceleration', 'LongitudinalAcceleration')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -291,7 +291,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT ts AS time,\n  convert_temp(value_num) AS \"Stator Temp\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal_name = 'DiStatorTempR'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts",
+          "rawSql": "SELECT ts AS time,\n  convert_temp(value_num) AS \"Stator Temp\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'DiStatorTempR'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -371,7 +371,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT ts AS time,\n  value_num AS \"Axle Speed (RPM)\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal_name = 'DiAxleSpeedF'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts",
+          "rawSql": "SELECT ts AS time,\n  value_num AS \"Axle Speed (RPM)\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'DiAxleSpeedF'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -452,7 +452,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT ts AS time,\n  value_num AS \"Throttle (%)\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal_name = 'PedalPosition'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts",
+          "rawSql": "SELECT ts AS time,\n  value_num AS \"Throttle (%)\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'PedalPosition'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -533,7 +533,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT ts AS time,\n  convert_speed(value_num) AS \"Speed\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal_name = 'VehicleSpeed'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts",
+          "rawSql": "SELECT ts AS time,\n  convert_speed(value_num) AS \"Speed\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'VehicleSpeed'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -598,7 +598,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT value_text AS \"Gear\", COUNT(*) AS \"📊 Count\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal_name = 'Gear'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND value_text IS NOT NULL\nGROUP BY value_text\nORDER BY 2 DESC",
+          "rawSql": "SELECT value_text AS \"Gear\", COUNT(*) AS \"📊 Count\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'Gear'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND value_text IS NOT NULL\nGROUP BY value_text\nORDER BY 2 DESC",
           "refId": "A"
         }
       ],
@@ -657,7 +657,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  AVG(value_num) FILTER (WHERE signal_name = 'DiTorqueActualF') AS \"Avg Torque (Nm)\",\n  MAX(value_num) FILTER (WHERE signal_name = 'DiTorqueActualF') AS \"Peak Torque (Nm)\",\n  convert_temp(AVG(value_num) FILTER (WHERE signal_name = 'DiStatorTempR')) AS \"Avg Stator Temp\",\n  MAX(value_num) FILTER (WHERE signal_name = 'LateralAcceleration') AS \"Peak Lateral G\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal_name IN ('DiTorqueActualF', 'DiStatorTempR', 'LateralAcceleration')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()",
+          "rawSql": "SELECT\n  AVG(value_num) FILTER (WHERE signal = 'DiTorqueActualF') AS \"Avg Torque (Nm)\",\n  MAX(value_num) FILTER (WHERE signal = 'DiTorqueActualF') AS \"Peak Torque (Nm)\",\n  convert_temp(AVG(value_num) FILTER (WHERE signal = 'DiStatorTempR')) AS \"Avg Stator Temp\",\n  MAX(value_num) FILTER (WHERE signal = 'LateralAcceleration') AS \"Peak Lateral G\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('DiTorqueActualF', 'DiStatorTempR', 'LateralAcceleration')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()",
           "refId": "A"
         }
       ],

@@ -119,7 +119,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT value_num AS \"Battery\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal_name = 'BatteryLevel' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
+          "rawSql": "SELECT value_num AS \"Battery\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'BatteryLevel' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -179,7 +179,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(convert_distance(value_num)::numeric, 1) AS \"Range\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal_name = 'RatedRange' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
+          "rawSql": "SELECT ROUND(convert_distance(value_num)::numeric, 1) AS \"Range\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'RatedRange' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -239,7 +239,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(convert_distance(value_num)::numeric, 1) AS \"📏 Odometer\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal_name = 'Odometer' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
+          "rawSql": "SELECT ROUND(convert_distance(value_num)::numeric, 1) AS \"📏 Odometer\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'Odometer' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -358,7 +358,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(convert_temp(value_num)::numeric, 1) AS \"Temp\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal_name = 'OutsideTemp' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
+          "rawSql": "SELECT ROUND(convert_temp(value_num)::numeric, 1) AS \"Temp\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'OutsideTemp' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -984,7 +984,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  (SELECT value_num FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal_name = 'DiTorqueActualF' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1) AS \"Torque (Nm)\",\n  convert_temp((SELECT value_num FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal_name = 'DiStatorTempF' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1)) AS \"Stator Temp\",\n  convert_speed((SELECT value_num FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal_name = 'VehicleSpeed' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1)) AS \"Speed\",\n  (SELECT value_text FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal_name = 'Gear' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1) AS \"Gear\"",
+          "rawSql": "SELECT\n  (SELECT value_num FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'DiTorqueActualF' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1) AS \"Torque (Nm)\",\n  convert_temp((SELECT value_num FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'DiStatorTempF' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1)) AS \"Stator Temp\",\n  convert_speed((SELECT value_num FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'VehicleSpeed' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1)) AS \"Speed\",\n  (SELECT value_text FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'Gear' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1) AS \"Gear\"",
           "refId": "A"
         }
       ],
