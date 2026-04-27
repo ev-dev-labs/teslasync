@@ -160,16 +160,12 @@ export default function ChargingDetailPage() {
 
   const tempData = useMemo(() => {
     if (!hasTelemetry) return [];
-    return telemetry
-      .filter((r: ChargeTelemetryReading) =>
-        r.battery_temp != null || r.inside_temp != null || r.outside_temp != null,
-      )
-      .map((r: ChargeTelemetryReading) => ({
-        time: formatTime(r.created_at),
-        battery: r.battery_temp != null ? convertTemp(r.battery_temp) : null,
-        inside: r.inside_temp != null ? convertTemp(r.inside_temp) : null,
-        outside: r.outside_temp != null ? convertTemp(r.outside_temp) : null,
-      }));
+    return telemetry.map((r: ChargeTelemetryReading) => ({
+      time: formatTime(r.created_at),
+      battery: r.battery_temp != null ? convertTemp(r.battery_temp) : null,
+      inside: r.inside_temp != null ? convertTemp(r.inside_temp) : null,
+      outside: r.outside_temp != null ? convertTemp(r.outside_temp) : null,
+    }));
   }, [telemetry, hasTelemetry, convertTemp]);
 
   const voltCurrentData = useMemo(() => {

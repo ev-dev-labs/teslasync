@@ -44,6 +44,7 @@ var chargeTelemetryMappings = []database.PivotMapping{
 	{Signal: "BatteryHeaterOn", Field: "battery_heater_on"},
 	{Signal: "InsideTemp", Field: "inside_temp"},
 	{Signal: "OutsideTemp", Field: "outside_temp"},
+	{Signal: "ModuleTempMax", Field: "battery_temp"},
 }
 
 func (h *ChargingHandler) ListByVehicle(w http.ResponseWriter, r *http.Request) {
@@ -217,6 +218,19 @@ func (h *ChargingHandler) TelemetryReadings(w http.ResponseWriter, r *http.Reque
 	}
 	if rows == nil {
 		rows = []map[string]interface{}{}
+	}
+	// Merge AC/DC power into a canonical power_kw field.
+	// DC fast-charging sessions report DCChargingPower, not ACChargingPower.
+	// Per ADR-002: if neither is present, leave power_kw as nil (not zero).
+	for _, row := range rows {
+		ac, acOk := toFloatOk(row["power_kw"])
+		dc, dcOk := toFloatOk(row["dc_power_kw"])
+		if dcOk && dc > 0 {
+			row["power_kw"] = dc
+		} else if !acOk || ac == 0 {
+			// Neither AC nor DC has a positive value — leave power_kw as-is (nil)
+		}
+		delete(row, "dc_power_kw")
 	}
 	// Rename "ts" → "created_at" to match old ChargeTelemetryReading JSON shape
 	for _, row := range rows {

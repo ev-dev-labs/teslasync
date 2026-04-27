@@ -15,19 +15,24 @@ type ChargingTelemetryHandler struct {
 }
 
 // Signal → JSON field mappings for charging telemetry pivot queries.
+// Field names match the frontend ChargingTelemetry interface in api/types.ts.
 var chargingTelemetryMappings = []database.PivotMapping{
 	{Signal: "ChargerVoltage", Field: "charger_voltage"},
-	{Signal: "ChargerActualCurrent", Field: "charger_current"},
-	{Signal: "ChargeRateMilePerHour", Field: "charge_rate"},
+	{Signal: "ChargerActualCurrent", Field: "charger_actual_current"},
+	{Signal: "ChargeRateMilePerHour", Field: "charge_rate_mph"},
 	{Signal: "PackVoltage", Field: "pack_voltage"},
 	{Signal: "PackCurrent", Field: "pack_current"},
 	{Signal: "Soc", Field: "soc"},
 	{Signal: "BatteryLevel", Field: "battery_level"},
-	{Signal: "ACChargingEnergyIn", Field: "energy_added_ac"},
+	{Signal: "ACChargingEnergyIn", Field: "charge_energy_added_kwh"},
 	{Signal: "DCChargingEnergyIn", Field: "energy_added_dc"},
 	{Signal: "TimeToFullCharge", Field: "time_to_full_charge"},
 	{Signal: "BrickVoltageMax", Field: "brick_voltage_max"},
 	{Signal: "BrickVoltageMin", Field: "brick_voltage_min"},
+	{Signal: "ACChargingPower", Field: "charger_power_kw"},
+	{Signal: "ChargerPhases", Field: "charger_phases"},
+	{Signal: "IdealBatteryRange", Field: "battery_range_mi"},
+	{Signal: "ChargeState", Field: "charging_state"},
 }
 
 func NewChargingTelemetryHandler(slr *database.SignalLogReader) *ChargingTelemetryHandler {
@@ -83,6 +88,13 @@ func (h *ChargingTelemetryHandler) Latest(w http.ResponseWriter, r *http.Request
 	for _, m := range chargingTelemetryMappings {
 		if v, ok := snap[m.Signal]; ok {
 			result[m.Field] = v
+		}
+	}
+	// Merge DC power: for DC fast-charging, DCChargingPower is the active value.
+	// Override charger_power_kw (from ACChargingPower) when DC power is positive.
+	if dcVal, ok := snap["DCChargingPower"]; ok {
+		if dc, dcOk := toFloatOk(dcVal); dcOk && dc > 0 {
+			result["charger_power_kw"] = dcVal
 		}
 	}
 	writeJSON(w, http.StatusOK, result)
