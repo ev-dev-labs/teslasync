@@ -1,0 +1,102 @@
+=== SURVEY ===
+Surveyed the following files:
+
+1. internal/api/notification_handler.go
+   - CreateChannel: body struct expects { type, name, config, enabled }
+   - Frontend sends { kind, name, enabled, webhook_url, ... } (flat, no nested config)
+   - body.Type is always empty → fails validTypes check → "invalid channel type"
+   - UpdateChannel has the same body struct issue
+   - ListChannels / GetChannel return raw models.NotificationChannel (json:"type")
+   - Frontend expects "kind" field and flat config fields in response
+
+2. internal/database/notification_repo.go
+   - CreateChannel: INSERT into notification_channels (name, kind, enabled) only
+   - Does NOT insert into per-kind CTI child tables (discord, slack, etc.)
+   - Config is NEVER persisted — always reconstructed as empty map on read
+   - GetChannel / GetAllChannels: SELECT from parent table only, set Config=empty map
+
+3. internal/models/models.go
+   - NotificationChannel.Type has json:"type" db:"kind"
+   - Config has json:"config" db:"-" — comment says "populated from per-kind child tables"
+   - Config is never actually populated from child tables in current code
+
+4. DB schema (000142_baseline_typed.up.sql):
+   - notification_channels: id, name, kind (ENUM), enabled, created_at, updated_at
+   - NO config JSONB column — uses CTI (class-table-inheritance) pattern
+   - Child tables: notification_channel_discord, _slack, _telegram, _email, _webhook, _ntfy, _pushover
+   - Each child has channel_id FK → notification_channels(id)
+
+5. Frontend (web/src/types/notifications.ts):
+   - Discriminated union keyed by "kind" field
+   - Flat typed fields per kind (webhook_url, bot_token, etc.)
+   - No nested config map
+
+6. Frontend (web/src/features/notifications/pages/NotificationsPage.tsx):
+   - buildChannelPayload() outputs { kind, name, enabled, ...flat_fields }
+   - channelToFormConfig() reads from ch.kind + flat fields
+
+7. Frontend (web/src/api/hooks/useNotifications.ts):
+   - useSaveChannel() sends JSON.stringify(data) as-is → flat payload with kind
+
+=== REASONING ===
+Two distinct bugs:
+
+BUG 1 — kind vs type mismatch:
+  Frontend sends { kind: "discord", ... } but handler reads body.Type (json:"type")
+  → body.Type is "" → fails validTypes check.
+  Fix: decode into raw map, check both "type" and "kind".
+
+BUG 2 — config never persisted:
+  Frontend sends flat fields (webhook_url, bot_token, etc.) at top level.
+  Handler expected them in a nested "config" map → body.Config was always nil/empty.
+  Repo never wrote to CTI child tables → config was lost even if it reached the repo.
+  Fix: extract flat fields into config map at handler level, then persist to CTI child
+  tables in the repo.
+
+RESPONSE NORMALIZATION:
+  Frontend expects "kind" + flat fields in responses.
+  Model uses Type (json:"type") + Config map.
+  Fix: normalize at handler boundary — all response paths emit { kind, ...flat_fields }.
+
+Approach:
+  1. Handler: new decodeChannelBody() accepts kind OR type + flat OR nested config
+  2. Handler: new normalizeChannelResponse() converts model → frontend shape
+  3. Repo: new upsertChannelConfig() writes to appropriate CTI child table
+  4. Repo: new loadChannelConfig() reads from CTI child table into config map
+  5. All CRUD response paths use normalizeChannelResponse()
+
+=== CHANGES ===
+Files modified:
+
+1. internal/api/notification_handler.go
+   - Replaced CreateChannel body struct with decodeChannelBody() call
+   - Replaced UpdateChannel body struct with decodeChannelBody() call
+   - ListChannels: normalize each channel through normalizeChannelResponse()
+   - GetChannel: normalize through normalizeChannelResponse()
+   - CreateChannel: normalize response through normalizeChannelResponse()
+   - UpdateChannel: normalize response through normalizeChannelResponse()
+   - Added decodeChannelBody(): decodes raw map, accepts type/kind, merges flat fields into config
+   - Added normalizeChannelResponse(): emits { kind, ...flat_config_fields } for frontend
+
+2. internal/database/notification_repo.go
+   - CreateChannel: now calls upsertChannelConfig() after parent insert
+   - UpdateChannel: now calls upsertChannelConfig() after parent update
+   - GetChannel: now calls loadChannelConfig() to populate Config from child table
+   - GetAllChannels: now calls loadChannelConfig() for each channel
+   - Added upsertChannelConfig(): INSERT ON CONFLICT DO UPDATE into per-kind child table
+   - Added loadChannelConfig(): SELECT from per-kind child table, return as map[string]string
+   - Added nilIfEmpty(): helper to convert "" → nil for nullable DB columns
+   - Added imports: fmt, github.com/jackc/pgx/v5
+
+3. internal/models/models.go — NO CHANGES (model is already correct)
+
+=== GATE ===
+$ go build ./...
+EXIT CODE: 0
+
+$ go vet ./...
+EXIT CODE: 0
+
+=== COMMIT ===
+EXIT=0
+STATUS=DONE
