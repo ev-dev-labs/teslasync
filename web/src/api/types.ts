@@ -992,6 +992,7 @@ export interface GasPriceStatus {
   poll_interval: string
   last_poll_time: string
   current_price: number
+  current_price_kwh_eq: number
 }
 
 export interface GasPriceHistory {

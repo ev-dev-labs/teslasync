@@ -167,8 +167,9 @@ func (a *EIAAdapter) fetchFromEIA(ctx context.Context, region string) (*external
 		Msg("eia adapter: fetched price")
 
 	return &external.EnergyPrice{
-		PricePerKWh: kwhPrice,
-		Currency:    "USD",
-		Region:      region,
+		PricePerKWh:    kwhPrice,
+		PricePerGallon: gallonPrice,
+		Currency:       "USD",
+		Region:         region,
 	}, nil
 }

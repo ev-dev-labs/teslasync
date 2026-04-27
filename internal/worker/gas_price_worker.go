@@ -13,17 +13,22 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/port/external"
 )
 
+// gallonToKWhFactor converts a gallon price to kWh-equivalent cost.
+// Must match the factor in the EIA adapter.
+const gallonToKWhFactor = 7.14
+
 // GasPriceWorker polls an external price provider for the latest gasoline price.
 type GasPriceWorker struct {
 	db       *database.DB
 	cfg      config.GasPriceConfig
 	provider external.GasPriceProvider
 
-	mu           sync.Mutex
-	pollInterval string
-	lastPollTime time.Time
-	lastPrice    float64
-	running      atomic.Bool
+	mu              sync.Mutex
+	pollInterval    string
+	lastPollTime    time.Time
+	lastPrice       float64 // gallon price
+	lastPriceKWhEq  float64 // kWh-equivalent price
+	running         atomic.Bool
 
 	// stopCh is used to signal the ticker loop to stop.
 	stopCh chan struct{}
@@ -110,7 +115,8 @@ func (w *GasPriceWorker) Poll(ctx context.Context) {
 		return
 	}
 
-	price := result.PricePerKWh
+	price := result.PricePerGallon
+	kwhEqPrice := result.PricePerKWh
 
 	// Record in gas_price_history (close current period, insert new)
 	if err := w.recordPrice(ctx, price); err != nil {
@@ -127,6 +133,7 @@ func (w *GasPriceWorker) Poll(ctx context.Context) {
 	w.mu.Lock()
 	w.lastPollTime = time.Now()
 	w.lastPrice = price
+	w.lastPriceKWhEq = kwhEqPrice
 	w.mu.Unlock()
 
 	// Persist poll state
@@ -217,19 +224,21 @@ func (w *GasPriceWorker) Status() GasPriceStatus {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	return GasPriceStatus{
-		Enabled:      w.IsRunning(),
-		PollInterval: w.pollInterval,
-		LastPollTime: w.lastPollTime,
-		CurrentPrice: w.lastPrice,
+		Enabled:        w.IsRunning(),
+		PollInterval:   w.pollInterval,
+		LastPollTime:   w.lastPollTime,
+		CurrentPrice:   w.lastPrice,
+		CurrentPriceKWhEq: w.lastPriceKWhEq,
 	}
 }
 
 // GasPriceStatus holds the polling status for the API response.
 type GasPriceStatus struct {
-	Enabled      bool      `json:"enabled"`
-	PollInterval string    `json:"poll_interval"`
-	LastPollTime time.Time `json:"last_poll_time"`
-	CurrentPrice float64   `json:"current_price"`
+	Enabled           bool      `json:"enabled"`
+	PollInterval      string    `json:"poll_interval"`
+	LastPollTime      time.Time `json:"last_poll_time"`
+	CurrentPrice      float64   `json:"current_price"`
+	CurrentPriceKWhEq float64   `json:"current_price_kwh_eq"`
 }
 
 // tickerDuration converts the poll interval string to a time.Duration.
@@ -295,6 +304,9 @@ func (w *GasPriceWorker) restoreState(ctx context.Context) {
 	w.pollInterval = interval
 	w.lastPollTime = lastPoll
 	w.lastPrice = lastPrice
+	if lastPrice > 0 {
+		w.lastPriceKWhEq = lastPrice / gallonToKWhFactor
+	}
 	w.mu.Unlock()
 
 	w.running.Store(enabled)
