@@ -21,6 +21,7 @@ interface ModeTheme {
   surface1: string
   surface2: string
   surface3: string
+  glassBg: string
   glassBorder: string
   textPrimary: string
   textSecondary: string
@@ -107,6 +108,7 @@ const modes: Record<ModeId, ModeTheme> = {
     surface1: '#0f1019',
     surface2: '#151621',
     surface3: '#1a1b2e',
+    glassBg: 'rgba(255, 255, 255, 0.04)',
     glassBorder: 'rgba(255, 255, 255, 0.08)',
     textPrimary: '#ffffff',
     textSecondary: '#9ca3af',
@@ -120,6 +122,7 @@ const modes: Record<ModeId, ModeTheme> = {
     surface1: '#ffffff',
     surface2: '#f1f5f9',
     surface3: '#e2e8f0',
+    glassBg: 'rgba(255, 255, 255, 0.8)',
     glassBorder: 'rgba(0, 0, 0, 0.08)',
     textPrimary: '#0f172a',
     textSecondary: '#475569',
@@ -133,6 +136,7 @@ const modes: Record<ModeId, ModeTheme> = {
     surface1: '#050505',
     surface2: '#0a0a0a',
     surface3: '#111111',
+    glassBg: 'rgba(255, 255, 255, 0.03)',
     glassBorder: 'rgba(255, 255, 255, 0.05)',
     textPrimary: '#ffffff',
     textSecondary: '#9ca3af',
@@ -146,6 +150,7 @@ const modes: Record<ModeId, ModeTheme> = {
     surface1: '#0f1425',
     surface2: '#141a30',
     surface3: '#1a2240',
+    glassBg: 'rgba(100, 150, 255, 0.04)',
     glassBorder: 'rgba(100, 150, 255, 0.08)',
     textPrimary: '#e0e7ff',
     textSecondary: '#94a3c8',
@@ -159,6 +164,7 @@ const modes: Record<ModeId, ModeTheme> = {
     surface1: '#0f1019',
     surface2: '#151621',
     surface3: '#1a1b2e',
+    glassBg: 'rgba(255, 255, 255, 0.04)',
     glassBorder: 'rgba(255, 255, 255, 0.08)',
     textPrimary: '#ffffff',
     textSecondary: '#9ca3af',
@@ -172,6 +178,7 @@ const modes: Record<ModeId, ModeTheme> = {
     surface1: '#241410',
     surface2: '#2e1a14',
     surface3: '#3a221a',
+    glassBg: 'rgba(255, 160, 100, 0.04)',
     glassBorder: 'rgba(255, 160, 100, 0.10)',
     textPrimary: '#fff0e0',
     textSecondary: '#c8a894',
@@ -185,6 +192,7 @@ const modes: Record<ModeId, ModeTheme> = {
     surface1: '#3b4252',
     surface2: '#434c5e',
     surface3: '#4c566a',
+    glassBg: 'rgba(136, 192, 208, 0.04)',
     glassBorder: 'rgba(136, 192, 208, 0.10)',
     textPrimary: '#eceff4',
     textSecondary: '#d8dee9',
@@ -223,6 +231,7 @@ function applyThemeCSS(theme: ColorTheme, mode: ModeTheme) {
   root.style.setProperty('--surface-1', mode.surface1)
   root.style.setProperty('--surface-2', mode.surface2)
   root.style.setProperty('--surface-3', mode.surface3)
+  root.style.setProperty('--glass-bg', mode.glassBg)
   root.style.setProperty('--glass-border', mode.glassBorder)
   root.style.setProperty('--text-primary', mode.textPrimary)
   root.style.setProperty('--text-secondary', mode.textSecondary)

@@ -16,6 +16,7 @@
   --surface-1: #0f1019;
   --surface-2: #151621;
   --surface-3: #1a1b2e;
+  --glass-bg: rgba(255, 255, 255, 0.04);
   --glass-border: rgba(255, 255, 255, 0.12);
   --text-primary: #ffffff;
   --text-secondary: #9ca3af;
@@ -395,6 +396,28 @@ select option:checked {
   background-color: rgba(0, 0, 0, 0.03) !important;
 }
 
+/* bg-white with Tailwind percentage notation (different selector from bracket notation) */
+:root.light-mode .bg-white\/5,
+:root.light-mode .bg-white\/8 {
+  background-color: rgba(0, 0, 0, 0.03) !important;
+}
+:root.light-mode .bg-white\/10,
+:root.light-mode .bg-white\/15 {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+}
+:root.light-mode .bg-white\/20 {
+  background-color: rgba(0, 0, 0, 0.08) !important;
+}
+:root.light-mode .bg-white\/30 {
+  background-color: rgba(0, 0, 0, 0.12) !important;
+}
+:root.light-mode .bg-white\/40 {
+  background-color: rgba(0, 0, 0, 0.15) !important;
+}
+:root.light-mode .bg-white\/80 {
+  background-color: rgba(0, 0, 0, 0.12) !important;
+}
+
 /* Override white border translucent */
 :root.light-mode .border-white\/5,
 :root.light-mode .border-white\/\[0\.03\],
@@ -405,7 +428,8 @@ select option:checked {
 :root.light-mode .border-white\/10,
 :root.light-mode .border-white\/\[0\.1\],
 :root.light-mode .border-white\/\[0\.12\],
-:root.light-mode .border-white\/20 {
+:root.light-mode .border-white\/20,
+:root.light-mode .border-white\/30 {
   border-color: rgba(0, 0, 0, 0.08) !important;
 }
 
@@ -431,11 +455,21 @@ select option:checked {
   background-color: rgba(0, 0, 0, 0.04) !important;
 }
 
+/* hover:bg-white with Tailwind percentage notation */
+:root.light-mode .hover\:bg-white\/5:hover,
+:root.light-mode .hover\:bg-white\/10:hover {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+:root.light-mode .hover\:bg-white\/20:hover {
+  background-color: rgba(0, 0, 0, 0.08) !important;
+}
+
 /* Override hover border */
 :root.light-mode .hover\:border-white\/10:hover,
 :root.light-mode .hover\:border-white\/\[0\.08\]:hover,
 :root.light-mode .hover\:border-white\/15:hover,
-:root.light-mode .hover\:border-white\/20:hover {
+:root.light-mode .hover\:border-white\/20:hover,
+:root.light-mode .hover\:border-white\/30:hover {
   border-color: rgba(0, 0, 0, 0.12) !important;
 }
 
@@ -482,6 +516,67 @@ select option:checked {
 :root.light-mode select option {
   background: white;
   color: #0f172a;
+}
+
+/* Recharts light mode — axis ticks, tooltips, legend */
+:root.light-mode .recharts-cartesian-axis-tick-value {
+  fill: #64748b !important;
+}
+:root.light-mode .recharts-default-tooltip {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  color: #0f172a !important;
+}
+:root.light-mode .recharts-tooltip-item {
+  color: #334155 !important;
+}
+:root.light-mode .recharts-legend-item-text {
+  color: #334155 !important;
+}
+
+/* Glass glow effects: replace white inset with subtle shadow */
+:root.light-mode .glass-glow-cyan { box-shadow: 0 0 20px rgba(8, 145, 178, 0.1), 0 1px 3px rgba(0, 0, 0, 0.06); }
+:root.light-mode .glass-glow-green { box-shadow: 0 0 20px rgba(21, 128, 61, 0.1), 0 1px 3px rgba(0, 0, 0, 0.06); }
+:root.light-mode .glass-glow-purple { box-shadow: 0 0 20px rgba(124, 58, 237, 0.1), 0 1px 3px rgba(0, 0, 0, 0.06); }
+:root.light-mode .glass-glow-amber { box-shadow: 0 0 20px rgba(180, 83, 9, 0.1), 0 1px 3px rgba(0, 0, 0, 0.06); }
+:root.light-mode .glass-glow-red { box-shadow: 0 0 20px rgba(220, 38, 38, 0.1), 0 1px 3px rgba(0, 0, 0, 0.06); }
+
+/* Neon text glow: remove glow effect in light mode */
+:root.light-mode .neon-text-cyan {
+  color: #0891b2;
+  text-shadow: none;
+}
+:root.light-mode .neon-text-red {
+  color: #dc2626;
+  text-shadow: none;
+}
+
+/* Glow line animation: dark tint on light backgrounds */
+:root.light-mode .glow-line {
+  background: linear-gradient(90deg, transparent, rgba(8, 145, 178, 0.12), transparent);
+  background-size: 200% 100%;
+}
+
+/* Pulse glow: subtler on light backgrounds */
+:root.light-mode .pulse-glow {
+  animation: none;
+  box-shadow: 0 0 8px currentColor;
+}
+
+/* Glass panel hover border: use theme-aware colors */
+:root.light-mode .glass-panel-hover:hover {
+  border-color: rgba(var(--theme-primary-rgb), 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+/* SVG text elements: ensure dark fill in light mode */
+:root.light-mode svg text {
+  fill: #334155;
+}
+:root.light-mode svg text[fill="white"],
+:root.light-mode svg text[fill="#fff"],
+:root.light-mode svg text[fill="#ffffff"] {
+  fill: #334155 !important;
 }
 
 /* === MOBILE SIDEBAR SCROLL FIX === */
