@@ -189,7 +189,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  f.soc AS \"SoC %\",\n  f.power_kw AS \"Power (kW)\",\n  TO_CHAR(cs.start_date, 'YYYY-MM-DD HH24:MI') AS \"Session\"\nFROM fn_charging_rate_vs_soc(${vehicle_id}::bigint) f\nJOIN charging_sessions cs ON f.session_id = cs.id",
+          "rawSql": "WITH recent_sessions AS (\n  SELECT id, vehicle_id, start_ts, COALESCE(end_ts, NOW()) AS end_ts\n  FROM charging_sessions\n  WHERE vehicle_id = ${vehicle_id}\n  ORDER BY start_ts DESC\n  LIMIT 5\n),\nbucketed AS (\n  SELECT\n    rs.id AS session_id,\n    rs.start_ts,\n    time_bucket('1 minute', sl.created_at) AS bucket,\n    MAX(CASE WHEN sl.signal = 'BatteryLevel' THEN sl.value_num END) AS soc,\n    MAX(CASE WHEN sl.signal IN ('ACChargingPower', 'DCChargingPower') THEN sl.value_num END) AS power_kw\n  FROM recent_sessions rs\n  JOIN signal_log sl\n    ON sl.vehicle_id = rs.vehicle_id\n    AND sl.signal IN ('BatteryLevel', 'ACChargingPower', 'DCChargingPower')\n    AND sl.created_at BETWEEN rs.start_ts AND rs.end_ts\n  GROUP BY rs.id, rs.start_ts, time_bucket('1 minute', sl.created_at)\n)\nSELECT\n  soc AS \"SoC %\",\n  COALESCE(power_kw, 0) AS \"Power (kW)\",\n  TO_CHAR(start_ts, 'YYYY-MM-DD HH24:MI') AS \"Session\"\nFROM bucketed\nWHERE soc IS NOT NULL\nORDER BY soc",
           "refId": "A"
         }
       ],
@@ -334,7 +334,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  time,\n  battery_temp AS \"Battery Temp\",\n  outside_temp AS \"Outside Temp\"\nFROM fn_charging_temperature(${session_id}::bigint)",
+          "rawSql": "SELECT\n  time_bucket('1 minute', sl.created_at) AS time,\n  MAX(CASE WHEN sl.signal = 'ModuleTempMax' THEN sl.value_num END) AS \"Battery Temp\",\n  MAX(CASE WHEN sl.signal = 'OutsideTemp' THEN sl.value_num END) AS \"Outside Temp\"\nFROM signal_log sl\nJOIN charging_sessions cs ON cs.id = ${session_id}\nWHERE sl.vehicle_id = cs.vehicle_id\n  AND sl.signal IN ('ModuleTempMax', 'OutsideTemp')\n  AND sl.created_at BETWEEN cs.start_ts AND COALESCE(cs.end_ts, NOW())\nGROUP BY time_bucket('1 minute', sl.created_at)\nORDER BY 1",
           "refId": "A"
         }
       ],
@@ -375,13 +375,13 @@
           "type": "grafana-postgresql-datasource",
           "uid": "DS_TESLASYNC_POSTGRESQL"
         },
-        "definition": "SELECT id AS __value, TO_CHAR(start_date, 'YYYY-MM-DD HH24:MI') || ' (ID ' || id || ')' AS __text FROM charging_sessions WHERE vehicle_id = ${vehicle_id} ORDER BY start_date DESC LIMIT 20",
+        "definition": "SELECT id AS __value, TO_CHAR(start_ts, 'YYYY-MM-DD HH24:MI') || ' (ID ' || id || ')' AS __text FROM charging_sessions WHERE vehicle_id = ${vehicle_id} ORDER BY start_ts DESC LIMIT 20",
         "hide": 0,
         "includeAll": false,
         "multi": false,
         "name": "session_id",
         "options": [],
-        "query": "SELECT id AS __value, TO_CHAR(start_date, 'YYYY-MM-DD HH24:MI') || ' (ID ' || id || ')' AS __text FROM charging_sessions WHERE vehicle_id = ${vehicle_id} ORDER BY start_date DESC LIMIT 20",
+        "query": "SELECT id AS __value, TO_CHAR(start_ts, 'YYYY-MM-DD HH24:MI') || ' (ID ' || id || ')' AS __text FROM charging_sessions WHERE vehicle_id = ${vehicle_id} ORDER BY start_ts DESC LIMIT 20",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,

@@ -133,7 +133,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT time, sessions AS \"Sessions\" FROM fn_charging_calendar_heatmap(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
+          "rawSql": "SELECT\n  DATE_TRUNC('day', cs.start_ts) AS time,\n  COUNT(*)::bigint AS \"Sessions\"\nFROM charging_sessions cs\nWHERE cs.vehicle_id = ${vehicle_id}\n  AND cs.start_ts >= $__timeFrom()::timestamptz\n  AND cs.start_ts <= $__timeTo()::timestamptz\nGROUP BY DATE_TRUNC('day', cs.start_ts)\nORDER BY 1",
           "refId": "A"
         }
       ],
@@ -235,7 +235,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT day AS \"Day\", day_num, sessions AS \"Sessions\", energy_kwh AS \"Energy (kWh)\" FROM fn_charging_weekday_distribution(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
+          "rawSql": "SELECT\n  TO_CHAR(cs.start_ts, 'Dy') AS \"Day\",\n  EXTRACT(ISODOW FROM cs.start_ts)::double precision AS day_num,\n  COUNT(*)::bigint AS \"Sessions\",\n  ROUND(SUM(COALESCE(cs.energy_added_kwh, 0))::numeric, 1) AS \"Energy (kWh)\"\nFROM charging_sessions cs\nWHERE cs.vehicle_id = ${vehicle_id}\n  AND cs.start_ts >= $__timeFrom()::timestamptz\n  AND cs.start_ts <= $__timeTo()::timestamptz\nGROUP BY TO_CHAR(cs.start_ts, 'Dy'), EXTRACT(ISODOW FROM cs.start_ts)\nORDER BY EXTRACT(ISODOW FROM cs.start_ts)",
           "refId": "A"
         }
       ],

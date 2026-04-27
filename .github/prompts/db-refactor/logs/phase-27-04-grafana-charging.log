@@ -1,0 +1,81 @@
+=== SURVEY ===
+Files inspected:
+  - grafana/dashboards/system/charging-curve.json (404 lines, 2 panels + 2 template vars)
+  - grafana/dashboards/system/charging-heatmap.json (285 lines, 2 panels + 1 template var)
+
+Function references found:
+  charging-curve.json:
+    - Panel 1 rawSql: fn_charging_rate_vs_soc(${vehicle_id}::bigint)
+    - Panel 2 rawSql: fn_charging_temperature(${session_id}::bigint)
+  charging-heatmap.json:
+    - Panel 1 rawSql: fn_charging_calendar_heatmap(...)
+    - Panel 2 rawSql: fn_charging_weekday_distribution(...)
+
+start_date/end_date references found:
+  charging-curve.json:
+    - Panel 1 rawSql: TO_CHAR(cs.start_date, ...) in JOIN
+    - Template var session_id definition: start_date (x2, definition + query)
+  charging-heatmap.json:
+    - None (heatmap functions used start_date internally in fn_ bodies, not in dashboard SQL)
+
+Schema confirmed (000142_baseline_typed.up.sql):
+  - charging_sessions: start_ts (NOT start_date), end_ts, energy_added_kwh, vehicle_id
+  - signal_log (from 000040+000145): vehicle_id, signal, value_num, value_str, value_bool, value_jsonb, created_at
+
+=== REASONING ===
+
+### charging-curve.json — Panel 1 (fn_charging_rate_vs_soc)
+Old: Called fn_charging_rate_vs_soc which queried charge_telemetry_readings for battery_level and power_kw.
+New: CTE-based query on signal_log. Gets last 5 charging sessions, joins BatteryLevel +
+     ACChargingPower/DCChargingPower from signal_log within each session's time window.
+     Uses time_bucket('1 minute') to align SOC and power readings into matching rows.
+     Pivots signals via CASE WHEN. Filters out rows where SOC is NULL.
+
+### charging-curve.json — Panel 2 (fn_charging_temperature)
+Old: Called fn_charging_temperature which queried charge_telemetry_readings for battery_temp/outside_temp.
+New: Inline query on signal_log for ModuleTempMax and OutsideTemp during the selected session.
+     Uses time_bucket('1 minute') to align temperature readings. JOINs charging_sessions
+     to get time window (start_ts to end_ts).
+
+### charging-curve.json — Template variable (session_id)
+Old: Referenced start_date in definition and query.
+New: Changed to start_ts to match 000142 schema.
+
+### charging-heatmap.json — Panel 1 (fn_charging_calendar_heatmap)
+Old: Called fn_charging_calendar_heatmap which grouped by DATE_TRUNC('day', cs.start_date).
+New: Inline query on charging_sessions, DATE_TRUNC('day', cs.start_ts), COUNT(*).
+     Time-filtered with $__timeFrom/$__timeTo.
+
+### charging-heatmap.json — Panel 2 (fn_charging_weekday_distribution)
+Old: Called fn_charging_weekday_distribution. Used cs.start_date and cs.charge_energy_added.
+New: Inline query on charging_sessions. Uses start_ts. Uses energy_added_kwh (correct column
+     per 000142 schema — old fn used charge_energy_added which was pre-142 schema).
+
+=== CHANGES ===
+1. charging-curve.json Panel 1 rawSql: Replaced fn_charging_rate_vs_soc call with inline
+   CTE query against signal_log (BatteryLevel, ACChargingPower, DCChargingPower).
+   Also fixed start_date → start_ts in the Session label.
+
+2. charging-curve.json Panel 2 rawSql: Replaced fn_charging_temperature call with inline
+   signal_log query for ModuleTempMax + OutsideTemp during session time window.
+
+3. charging-curve.json template var session_id: Fixed start_date → start_ts in both
+   definition and query fields.
+
+4. charging-heatmap.json Panel 1 rawSql: Replaced fn_charging_calendar_heatmap call with
+   inline charging_sessions query grouped by DATE_TRUNC('day', start_ts).
+
+5. charging-heatmap.json Panel 2 rawSql: Replaced fn_charging_weekday_distribution call
+   with inline charging_sessions query. Fixed column charge_energy_added → energy_added_kwh.
+
+=== GATE ===
+Check: Select-String -Pattern 'fn_' on both files → no matches
+Check: Select-String -Pattern 'start_date|end_date' on both files → no matches
+Check: ConvertFrom-Json on both files → valid JSON
+Result: PASS
+
+=== COMMIT ===
+git commit -m "phase-27/04-grafana-charging: rewrite charging curve + heatmap without fn_"
+
+EXIT=0
+STATUS=DONE
