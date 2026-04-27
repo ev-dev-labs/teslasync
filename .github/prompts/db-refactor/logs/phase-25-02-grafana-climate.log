@@ -1,0 +1,59 @@
+=== SURVEY ===
+Files: grafana/dashboards/system/climate-hvac.json (11 panels), grafana/dashboards/system/comfort-media.json (8 panels)
+All panels query climate_snapshots (16 panels) or media_snapshots (3 panels) — both dropped tables.
+Signal mappings verified against prompt spec (24 climate signals, 6 media signals).
+
+=== REASONING ===
+Climate-HVAC (11 panels):
+  P1  Cabin & Outside Temperature  → InsideTemp + OutsideTemp via MAX(value_num) FILTER pivot, convert_temp()
+  P2  HVAC Power Consumption       → DISABLED: HvacPower is enum, not numeric kW (ADR-002)
+  P3  Fan Speed Level              → HvacFanSpeed single-signal query
+  P4  Temperature Targets vs Actual→ InsideTemp + HvacLeftTemperatureRequest + HvacRightTemperatureRequest pivot
+  P5  Defrost Activity             → DefrostMode(text) + BatteryHeaterOn(bool) + InsideTemp(ref count) conditional counts
+  P6  Average Temperatures         → AVG(value_num) on InsideTemp, convert_temp()
+  P7  HVAC Stats                   → PARTIALLY DISABLED: HvacPower AVG/MAX → NULL; HvacFanSpeed AVG retained
+  P8  Cabin Overheat Protection    → CabinOverheatProtectionMode text='On' count
+  P9  Seat Heater Levels Over Time → 5 seat heater signals pivoted via MAX FILTER
+  P10 Steering Wheel & Defrost     → 6 mixed signals (num, text, bool) pivoted with bool_or/MAX
+  P11 Seat Cooling & Auto Climate  → 5 signals (num, bool) pivoted with HAVING filter
+
+Comfort-Media (8 panels):
+  P1  Seat Heaters                 → 5 subqueries for latest value_num per seat heater signal
+  P2  Climate Details              → hvac_auto_mode/hvac_ac_enabled NOT in signal mapping → NULL; HvacSteeringWheelHeatLevel retained
+  P3  Seat Heater History          → 5 seat heater signals pivoted (same as climate P9)
+  P4  HVAC Mode History            → hvac_ac_enabled NOT mapped → 0; DefrostMode/RearDefrostEnabled/WiperHeatEnabled migrated
+  P5  Fan Speed & Status           → HvacFanSpeed + HvacFanStatus pivoted
+  P6  Now Playing                  → 6 media signals (5 text + 1 num) pivoted by ts
+  P7  Volume Over Time             → MediaAudioVolume single-signal query
+  P8  Playback Source              → MediaPlaybackSource COUNT grouped by value_text
+
+Aggregation strategy:
+  - Numeric signals: MAX(value_num) FILTER (WHERE signal_name = '...') — correct for per-ts pivot
+  - Text signals:    MAX(value_text) FILTER (WHERE signal_name = '...') — safe within GROUP BY ts (1 row per signal)
+  - Bool signals:    bool_or(value_bool) FILTER (WHERE signal_name = '...') — safe within GROUP BY ts
+  - Latest text:     Used in comfort-media P2 via subquery ORDER BY ts DESC LIMIT 1
+  - HvacPower:       DISABLED in P2 (climate) and P7 (climate) — enum, not numeric
+
+Performance:
+  - All queries use ts BETWEEN $__timeFrom() AND $__timeTo()
+  - All queries use signal_name IN (...) or signal_name = '...'
+
+=== CHANGES ===
+Modified: grafana/dashboards/system/climate-hvac.json
+  - 11 panels migrated from climate_snapshots → signal_log
+  - 2 panels disabled (P2 HVAC Power, P7 partial) due to HvacPower being enum
+
+Modified: grafana/dashboards/system/comfort-media.json
+  - 5 panels migrated from climate_snapshots → signal_log
+  - 3 panels migrated from media_snapshots → signal_log
+  - 2 fields set to NULL (hvac_auto_mode, hvac_ac_enabled) — not available in signal_log
+
+=== GATE ===
+Gate command output: PASS
+  - No references to climate_snapshots, media_snapshots, or signal_history
+  - signal_log references found in climate-hvac.json: confirmed ≥1
+  - Both files are valid JSON
+  - All active queries include ts BETWEEN and signal_name filter
+
+EXIT=0
+STATUS=DONE
