@@ -1,0 +1,82 @@
+=== SURVEY ===
+Date: 2026-04-27T15:49Z
+Files examined:
+  - grafana/dashboards/system/quick-stats.json (1119 lines, 26.5 KB)
+  - grafana/dashboards/system/weekly-digest.json (739 lines, 17.6 KB)
+
+quick-stats.json panels with fn_ calls (13 total):
+  id 17: Today Distance         -> fn_driving_stats(..., 'today') -> distance
+  id 18: Today Drives           -> fn_driving_stats(..., 'today') -> drives
+  id 19: Today Energy           -> fn_driving_stats(..., 'today') -> energy_kwh
+  id 20: Today Drive Min        -> fn_driving_stats(..., 'today') -> drive_min
+  id  2: All Time Distance      -> fn_driving_stats(..., 'all')   -> distance
+  id  3: All Time Drives        -> fn_driving_stats(..., 'all')   -> drives
+  id  4: All Time Energy        -> fn_driving_stats(..., 'all')   -> energy_kwh
+  id  7: This Month Distance    -> fn_driving_stats(..., 'month') -> distance
+  id  8: This Month Drives      -> fn_driving_stats(..., 'month') -> drives
+  id  9: This Month Energy      -> fn_driving_stats(..., 'month') -> energy_kwh
+  id 12: This Week Distance     -> fn_driving_stats(..., 'week')  -> distance
+  id 13: This Week Drives       -> fn_driving_stats(..., 'week')  -> drives
+  id 14: This Week Energy       -> fn_driving_stats(..., 'week')  -> energy_kwh
+  (3 panels already direct SQL: id 5 Total Cost, id 10 Month Cost, id 15 Week Charges)
+
+weekly-digest.json panels with fn_ calls (7 total across 4 functions):
+  id 10: Distance (km)              -> fn_weekly_summary        -> distance
+  id 11: Drives                     -> fn_weekly_summary        -> drives
+  id 12: Energy (kWh)               -> fn_weekly_summary        -> energy_kwh
+  id 13: Drive Time (min)           -> fn_weekly_summary        -> drive_min
+  id  4: Week-over-Week Comparison  -> fn_driving_week_over_week
+  id  3: Daily Breakdown            -> fn_driving_daily_breakdown
+  id  6: Weekly Activity            -> fn_weekly_activity
+
+Schema references verified:
+  - drives: vehicle_id, start_ts, distance_mi, energy_used_kwh, duration_min, start_address, end_address
+  - charging_sessions: vehicle_id, start_ts, duration_min, energy_added_kwh, charger_location
+  - convert_distance() function exists (migration 000018)
+
+=== REASONING ===
+fn_driving_stats(vehicle_id, period) returned: distance, drives, energy_kwh, drive_min.
+  - distance = convert_distance(SUM(distance_mi))
+  - drives = COUNT(*)
+  - energy_kwh = SUM(energy_used_kwh)
+  - drive_min = SUM(duration_min)
+Period mapping:
+  'today'  -> start_ts >= DATE_TRUNC('day', NOW())
+  'week'   -> start_ts >= DATE_TRUNC('week', NOW())
+  'month'  -> start_ts >= DATE_TRUNC('month', NOW())
+  'all'    -> no time filter
+
+fn_weekly_summary → same as fn_driving_stats with 7-day window
+fn_driving_week_over_week → CTE with ISODOW grouping, current vs previous week
+fn_driving_daily_breakdown → GROUP BY DATE(start_ts) for last 7 days
+fn_weekly_activity → UNION ALL of drives + charging_sessions
+
+Per ADR-002: COALESCE with 0 for SUM aggregates.
+All queries include time filters for chunk pruning (except 'all' which is intentionally unbounded).
+convert_distance() used for all distance outputs to respect user unit preference.
+
+=== CHANGES ===
+quick-stats.json: 13/13 fn_driving_stats calls replaced with direct SQL against drives table
+  - Today: 4 panels (distance, drives, energy, drive_min) with DATE_TRUNC('day', NOW())
+  - All Time: 3 panels (distance, drives, energy) with no time filter
+  - Month: 3 panels (distance, drives, energy) with DATE_TRUNC('month', NOW())
+  - Week: 3 panels (distance, drives, energy) with DATE_TRUNC('week', NOW())
+
+weekly-digest.json: 7/7 fn_ calls replaced
+  - fn_weekly_summary: 4 panels rewritten with drives WHERE start_ts >= NOW() - INTERVAL '7 days'
+  - fn_driving_week_over_week: CTE with ISODOW grouping, convert_distance(), generate_series(1,7)
+  - fn_driving_daily_breakdown: GROUP BY DATE(start_ts), convert_distance + SUM(energy_used_kwh)
+  - fn_weekly_activity: UNION ALL of drives + charging_sessions with proper column mapping:
+      drives: start_address -> "From", end_address -> "To", convert_distance(distance_mi) -> "Distance"
+      charging: charger_location -> "From"/"To", energy_added_kwh -> "Energy Added"
+
+=== GATE ===
+Gate command:
+  Select-String -Path quick-stats.json,weekly-digest.json -Pattern 'fn_'
+
+Result: PASS — 0 fn_ references in either file
+JSON validation: PASS — both files parse as valid JSON
+
+=== COMMIT ===
+EXIT=0
+STATUS=DONE
