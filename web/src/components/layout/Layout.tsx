@@ -408,8 +408,7 @@ export default function Layout() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[55] bg-black/60 backdrop-blur-sm lg:hidden"
-            style={{ top: '56px' }}
+            className="fixed inset-0 z-[65] bg-black/60 backdrop-blur-sm lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
@@ -422,7 +421,7 @@ export default function Layout() {
         data-tour="sidebar"
         data-sidebar-open={sidebarOpen}
         className={clsx(
-          'fixed left-0 bottom-0 top-14 z-[56] w-[clamp(240px,70vw,256px)] transform transition-transform duration-300 ease-out lg:top-0 lg:static lg:z-auto lg:w-64 lg:translate-x-0',
+          'fixed left-0 bottom-0 top-14 z-[66] w-[clamp(240px,70vw,256px)] transform transition-transform duration-300 ease-out lg:top-0 lg:static lg:z-auto lg:w-64 lg:translate-x-0',
           'border-r border-white/[0.06] backdrop-blur-xl flex flex-col bg-white/[0.04]',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
