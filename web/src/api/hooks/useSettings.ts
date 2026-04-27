@@ -11,6 +11,7 @@ export const settingsKeys = {
   vehicles: ['vehicles'] as const,
   gasPriceStatus: ['gas-price-status'] as const,
   carPrefs: (vehicleId: number | null) => ['car-prefs', vehicleId] as const,
+  dashboardLayouts: ['dashboard-layouts'] as const,
 };
 
 // ─── Settings ────────────────────────────────────────────────────────────────
@@ -203,6 +204,34 @@ export function useUpdateGasPriceConfig() {
     onError: (err: Error) => {
       toast.error(err.message || 'Failed to update gas price config');
     },
+  });
+}
+
+// ─── Dashboard Layouts ───────────────────────────────────────────────────────
+
+export interface DashboardLayoutsPayload {
+  dashboards: unknown[];
+  active_id: string;
+}
+
+export function useDashboardLayouts() {
+  return useQuery({
+    queryKey: settingsKeys.dashboardLayouts,
+    queryFn: () => request<DashboardLayoutsPayload>('/settings/dashboard-layouts'),
+    staleTime: STALE_TIMES.SLOW,
+    retry: 1,
+  });
+}
+
+export function useSaveDashboardLayouts() {
+  return useMutation({
+    mutationFn: (data: DashboardLayoutsPayload) =>
+      request<DashboardLayoutsPayload>('/settings/dashboard-layouts', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      }),
+    // Silent — this is a background sync, errors are non-fatal
   });
 }
 

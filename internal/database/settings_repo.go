@@ -294,6 +294,37 @@ func (r *SettingsRepo) IsAPISuspended(ctx context.Context) (bool, error) {
 	return *suspended, nil
 }
 
+// GetDashboardLayouts reads the raw JSON stored under key "dashboard_layouts".
+// Returns empty string if the key does not exist.
+func (r *SettingsRepo) GetDashboardLayouts(ctx context.Context) (string, error) {
+	const query = `SELECT value_text FROM settings WHERE key = 'dashboard_layouts'`
+	var valueText *string
+	err := r.db.Pool.QueryRow(ctx, query).Scan(&valueText)
+	if errors.Is(err, pgx.ErrNoRows) || valueText == nil {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("settings get_dashboard_layouts: %w", err)
+	}
+	return *valueText, nil
+}
+
+// UpsertDashboardLayouts stores the raw JSON string under key "dashboard_layouts".
+func (r *SettingsRepo) UpsertDashboardLayouts(ctx context.Context, jsonStr string) error {
+	const query = `
+		INSERT INTO settings (key, value_text, data_kind)
+		VALUES ('dashboard_layouts', $1, 'text')
+		ON CONFLICT (key) DO UPDATE SET
+			value_text = EXCLUDED.value_text,
+			value_num  = NULL,
+			value_bool = NULL,
+			data_kind  = 'text'`
+	if _, err := r.db.Pool.Exec(ctx, query, jsonStr); err != nil {
+		return fmt.Errorf("settings upsert_dashboard_layouts: %w", err)
+	}
+	return nil
+}
+
 // GetPollingConfig returns the first polling configuration row, or nil if
 // the polling_config table is empty. The action.SettingsChecker interface
 // uses this to retrieve timing parameters for command wake-up sequences.

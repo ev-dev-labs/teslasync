@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import type {
   WidgetInstance,
   WidgetConfig,
@@ -10,6 +10,11 @@ import type {
 } from '../widgets/types';
 import { WIDGET_REGISTRY, getWidgetDef } from '../widgets/registry';
 import { useUndoRedo } from './useUndoRedo';
+import {
+  useDashboardLayouts,
+  useSaveDashboardLayouts,
+} from '@/api/hooks/useSettings';
+import type { DashboardLayoutsPayload } from '@/api/hooks/useSettings';
 
 const DASHBOARDS_KEY = 'teslasync-dashboards';
 const ACTIVE_KEY = 'teslasync-active-dashboard';
@@ -364,11 +369,85 @@ function loadActiveId(): string {
   }
 }
 
+/** Returns true if localStorage contains only the default dashboard (no custom data). */
+function isLocalStorageDefaultOnly(): boolean {
+  try {
+    const raw = localStorage.getItem(DASHBOARDS_KEY);
+    if (!raw) return true;
+    const parsed = JSON.parse(raw) as SavedDashboard[];
+    return parsed.length <= 1 && parsed[0]?.id === 'default';
+  } catch {
+    return true;
+  }
+}
+
 /* ─── Hook ─── */
 export function useDashboardLayout() {
   const [dashboards, setDashboards] = useState<SavedDashboard[]>(loadDashboards);
   const [activeId, setActiveId] = useState<string>(loadActiveId);
   const [editMode, setEditMode] = useState(false);
+  const [hydratedFromBackend, setHydratedFromBackend] = useState(false);
+
+  /* ─── Backend sync hooks ─── */
+  const { data: backendLayouts } = useDashboardLayouts();
+  const saveMutation = useSaveDashboardLayouts();
+
+  /* ─── Debounced backend write ─── */
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const syncToBackend = useCallback(
+    (dbs: SavedDashboard[], active: string) => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = setTimeout(() => {
+        const payload: DashboardLayoutsPayload = {
+          dashboards: dbs,
+          active_id: active,
+        };
+        saveMutation.mutate(payload);
+      }, 2000);
+    },
+    [saveMutation],
+  );
+
+  /* ─── Hydrate from backend on first load ─── */
+  useEffect(() => {
+    if (hydratedFromBackend || !backendLayouts) return;
+    setHydratedFromBackend(true);
+
+    const hasBackendData =
+      Array.isArray(backendLayouts.dashboards) && backendLayouts.dashboards.length > 0;
+    if (!hasBackendData) return;
+
+    // Only hydrate if localStorage has no custom data (default-only or empty)
+    if (!isLocalStorageDefaultOnly()) return;
+
+    // Use backend data — user switched browser or cleared cookies
+    const restored = backendLayouts.dashboards as SavedDashboard[];
+    const restoredActiveId = backendLayouts.active_id || 'default';
+
+    // Reconcile restored dashboards against current widget registry
+    const reconciled = restored.map((d) => {
+      const validWidgets = (d.widgets ?? []).filter((w) =>
+        WIDGET_REGISTRY.some((def) => def.id === w.widgetId),
+      );
+      return {
+        ...d,
+        widgets: validWidgets,
+        layouts: sanitizeLayouts(
+          reconcileLayouts(d.layouts ?? {}, validWidgets),
+        ),
+      };
+    });
+
+    if (reconciled.length === 0) return;
+
+    setDashboards(reconciled);
+    localStorage.setItem(DASHBOARDS_KEY, JSON.stringify(reconciled));
+    const finalActiveId = reconciled.some((d) => d.id === restoredActiveId)
+      ? restoredActiveId
+      : reconciled[0].id;
+    setActiveId(finalActiveId);
+    localStorage.setItem(ACTIVE_KEY, finalActiveId);
+  }, [backendLayouts, hydratedFromBackend]);
 
   const activeDashboard = useMemo(() => {
     return dashboards.find((d) => d.id === activeId) ?? dashboards[0] ?? DEFAULT_DASHBOARD;
@@ -395,11 +474,13 @@ export function useDashboardLayout() {
   const persist = useCallback((dbs: SavedDashboard[], active?: string) => {
     setDashboards(dbs);
     localStorage.setItem(DASHBOARDS_KEY, JSON.stringify(dbs));
+    const resolvedActive = active !== undefined ? active : activeId;
     if (active !== undefined) {
       setActiveId(active);
       localStorage.setItem(ACTIVE_KEY, active);
     }
-  }, []);
+    syncToBackend(dbs, resolvedActive);
+  }, [activeId, syncToBackend]);
 
   const updateActive = useCallback(
     (updater: (d: SavedDashboard) => SavedDashboard) => {
@@ -408,10 +489,11 @@ export function useDashboardLayout() {
           d.id === activeId ? updater({ ...d, updatedAt: new Date().toISOString() }) : d,
         );
         localStorage.setItem(DASHBOARDS_KEY, JSON.stringify(updated));
+        syncToBackend(updated, activeId);
         return updated;
       });
     },
-    [activeId],
+    [activeId, syncToBackend],
   );
 
   /* ─── Layout actions ─── */
@@ -529,10 +611,11 @@ export function useDashboardLayout() {
         const [moved] = result.splice(fromIndex, 1);
         result.splice(toIndex, 0, moved);
         localStorage.setItem(DASHBOARDS_KEY, JSON.stringify(result));
+        syncToBackend(result, activeId);
         return result;
       });
     },
-    [],
+    [activeId, syncToBackend],
   );
 
   const duplicateDashboard = useCallback(
