@@ -56,6 +56,15 @@ func (h *VehicleConfigHandler) List(w http.ResponseWriter, r *http.Request) {
 			row["created_at"] = ts
 		}
 		row["id"] = i + 1
+		// VehicleConfig is a compound JSONB signal — flatten to top level
+		if configVal, ok := row["config"]; ok {
+			if configMap, ok := configVal.(map[string]interface{}); ok {
+				for k, v := range configMap {
+					row[k] = v
+				}
+				delete(row, "config")
+			}
+		}
 	}
 	writeJSON(w, http.StatusOK, rows)
 }
@@ -78,7 +87,14 @@ func (h *VehicleConfigHandler) Latest(w http.ResponseWriter, r *http.Request) {
 	result := make(map[string]interface{})
 	for _, m := range vehicleConfigMappings {
 		if v, ok := snap[m.Signal]; ok {
-			result[m.Field] = v
+			// VehicleConfig is a compound JSONB signal — flatten to top level
+			if configMap, ok := v.(map[string]interface{}); ok {
+				for k, val := range configMap {
+					result[k] = val
+				}
+			} else {
+				result[m.Field] = v
+			}
 		}
 	}
 	writeJSON(w, http.StatusOK, result)

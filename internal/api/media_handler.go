@@ -15,12 +15,19 @@ type MediaHandler struct {
 }
 
 // Signal → JSON field mappings for media pivot queries.
+// Signal names must match signal_types.go; field names must match models.MediaSnapshot JSON tags.
 var mediaMappings = []database.PivotMapping{
 	{Signal: "MediaPlaybackStatus", Field: "playback_status"},
-	{Signal: "MediaArtist", Field: "artist"},
-	{Signal: "MediaTitle", Field: "title"},
-	{Signal: "MediaAlbum", Field: "album"},
-	{Signal: "MediaSource", Field: "source"},
+	{Signal: "MediaNowPlayingTitle", Field: "now_playing_title"},
+	{Signal: "MediaNowPlayingArtist", Field: "now_playing_artist"},
+	{Signal: "MediaNowPlayingAlbum", Field: "now_playing_album"},
+	{Signal: "MediaPlaybackSource", Field: "playback_source"},
+	{Signal: "MediaAudioVolume", Field: "audio_volume"},
+	{Signal: "MediaAudioVolumeMax", Field: "audio_volume_max"},
+	{Signal: "MediaAudioVolumeIncrement", Field: "audio_volume_increment"},
+	{Signal: "MediaNowPlayingStation", Field: "now_playing_station"},
+	{Signal: "MediaNowPlayingDuration", Field: "now_playing_duration"},
+	{Signal: "MediaNowPlayingElapsed", Field: "now_playing_elapsed"},
 }
 
 func NewMediaHandler(slr *database.SignalLogReader) *MediaHandler {
