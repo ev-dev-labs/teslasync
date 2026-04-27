@@ -144,7 +144,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT * FROM fn_battery_soh_trend(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
+          "rawSql": "WITH daily_cap AS (SELECT time_bucket('1 day', created_at) AS \"time\", AVG(value_num) FILTER (WHERE signal = 'EnergyRemaining') / NULLIF(AVG(value_num) FILTER (WHERE signal = 'BatteryLevel'), 0) * 100 AS est_capacity FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal IN ('EnergyRemaining', 'BatteryLevel') AND created_at BETWEEN $__timeFrom() AND $__timeTo() AND value_num > 0 GROUP BY 1) SELECT \"time\", est_capacity / MAX(est_capacity) OVER () * 100 AS \"SoH %\" FROM daily_cap WHERE est_capacity IS NOT NULL ORDER BY 1",
           "refId": "A"
         }
       ],
@@ -293,7 +293,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT * FROM fn_battery_capacity_over_time(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
+          "rawSql": "WITH daily_cap AS (SELECT time_bucket('1 day', created_at) AS \"time\", AVG(value_num) FILTER (WHERE signal = 'EnergyRemaining') / NULLIF(AVG(value_num) FILTER (WHERE signal = 'BatteryLevel'), 0) * 100 AS estimated_capacity FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal IN ('EnergyRemaining', 'BatteryLevel') AND created_at BETWEEN $__timeFrom() AND $__timeTo() AND value_num > 0 GROUP BY 1) SELECT \"time\", estimated_capacity, MAX(estimated_capacity) OVER () AS original_capacity FROM daily_cap WHERE estimated_capacity IS NOT NULL ORDER BY 1",
           "refId": "A"
         }
       ],
@@ -365,7 +365,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT * FROM fn_battery_charge_cycles(${vehicle_id}::bigint)",
+          "rawSql": "SELECT COUNT(*) AS \"Charge Cycles\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id}",
           "refId": "A"
         }
       ],
@@ -441,7 +441,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT * FROM fn_battery_degradation_rate(${vehicle_id}::bigint)",
+          "rawSql": "WITH daily_cap AS (SELECT time_bucket('1 day', created_at) AS day, AVG(value_num) FILTER (WHERE signal = 'EnergyRemaining') / NULLIF(AVG(value_num) FILTER (WHERE signal = 'BatteryLevel'), 0) * 100 AS est_cap FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal IN ('EnergyRemaining', 'BatteryLevel') AND created_at BETWEEN $__timeFrom() AND $__timeTo() AND value_num > 0 GROUP BY 1 HAVING AVG(value_num) FILTER (WHERE signal = 'BatteryLevel') > 0), regression AS (SELECT regr_slope(est_cap, EXTRACT(EPOCH FROM day)) AS slope_per_sec, AVG(est_cap) AS avg_cap FROM daily_cap WHERE est_cap IS NOT NULL) SELECT ABS(slope_per_sec * 86400 * 365 / NULLIF(avg_cap, 0) * 100) AS \"Annual Degradation %\" FROM regression",
           "refId": "A"
         }
       ],
@@ -518,11 +518,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT * FROM fn_battery_risk_factors(${vehicle_id}::bigint)",
+          "rawSql": "SELECT NULL AS value -- Panel disabled: risk factor computation requires complex business logic not available from raw signals (ADR-002)",
           "refId": "A"
         }
       ],
-      "title": "Battery Risk Factors",
+      "title": "Battery Risk Factors (Unavailable)",
       "type": "bargauge",
       "transparent": false
     }
