@@ -238,7 +238,11 @@ export default function AlertStudio() {
 
   const toggleMut = useMutation({
     mutationFn: ({ id, enabled }: { id: number; enabled: boolean }) => request<AlertRule>(`/alerts/rules/${id}`, { method: 'PUT', body: JSON.stringify({ enabled }) }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['alert-rules'] }),
+    onSuccess: (_data, { enabled }) => {
+      queryClient.invalidateQueries({ queryKey: ['alert-rules'] })
+      toast.success(enabled ? 'Rule enabled' : 'Rule disabled')
+    },
+    onError: (err: Error) => toast.error(err.message || 'Failed to toggle rule'),
   })
 
   // Handlers

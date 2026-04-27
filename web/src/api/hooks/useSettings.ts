@@ -61,6 +61,9 @@ export function useAuthURL() {
   const toast = useToast();
   return useMutation({
     mutationFn: () => request<{ auth_url: string }>('/auth/url', { method: 'POST' }),
+    onSuccess: () => {
+      toast.success('Auth URL generated');
+    },
     onError: (err: Error) => {
       toast.error(err.message || 'Failed to get auth URL');
     },
@@ -224,6 +227,7 @@ export function useDashboardLayouts() {
 }
 
 export function useSaveDashboardLayouts() {
+  const toast = useToast();
   return useMutation({
     mutationFn: (data: DashboardLayoutsPayload) =>
       request<DashboardLayoutsPayload>('/settings/dashboard-layouts', {
@@ -231,7 +235,12 @@ export function useSaveDashboardLayouts() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       }),
-    // Silent — this is a background sync, errors are non-fatal
+    onSuccess: () => {
+      toast.success('Dashboard layout saved');
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to save dashboard layout');
+    },
   });
 }
 

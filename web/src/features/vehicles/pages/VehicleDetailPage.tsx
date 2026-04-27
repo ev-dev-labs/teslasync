@@ -9,6 +9,7 @@ import { FadeIn } from '@/components/motion'
 
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useBreadcrumbs } from '@/hooks/useBreadcrumbs'
+import { useToast } from '@/components/feedback/Toast'
 import { request } from '@/api/client'
 import type {
   Vehicle,
@@ -120,10 +121,15 @@ export default function VehicleDetailPage() {
     refetchInterval: 30_000,
   })
 
+  const toast = useToast()
   const wakeMutation = useMutation({
     mutationFn: () => request<{ status: string }>(`/vehicles/${vehicleId}/wake`, { method: 'POST' }),
     onSuccess: () => {
+      toast.success(t('vehicles.detail.wakeSuccess', 'Wake command sent'))
       setTimeout(() => { refetchState() }, 5000)
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || t('vehicles.detail.wakeFailed', 'Failed to wake vehicle'))
     },
   })
 

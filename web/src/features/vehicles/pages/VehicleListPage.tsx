@@ -16,6 +16,7 @@ import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSettings } from '@/hooks/useSettings';
 import { useVehicleLive } from '@/hooks/useVehicleLive';
+import { useToast } from '@/components/feedback/Toast';
 import { cn } from '@/lib/cn';
 import { fmtNumber } from '@/lib/numberFormat';
 import { batteryColor } from '@/lib/colors';
@@ -77,10 +78,17 @@ export default function VehicleListPage() {
   }, [fleetStates]);
 
   /* ── Mutations ── */
+  const toast = useToast();
   const syncMut = useMutation({
     mutationFn: () =>
       request<{ synced: number }>('/vehicles/sync', { method: 'POST' }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vehicles'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      toast.success(t('vehicles.syncToast', 'Vehicles synced successfully'));
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || t('vehicles.syncFailed', 'Failed to sync vehicles'));
+    },
   });
 
   const deleteMut = useMutation({
@@ -90,6 +98,10 @@ export default function VehicleListPage() {
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
       queryClient.invalidateQueries({ queryKey: ['fleet-vehicle-states'] });
       setDeleteTarget(null);
+      toast.success(t('vehicles.deleteSuccess', 'Vehicle removed'));
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || t('vehicles.deleteFailed', 'Failed to remove vehicle'));
     },
   });
 
