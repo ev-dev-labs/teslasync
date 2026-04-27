@@ -28,6 +28,21 @@ import type {
 // === Telemetry Capture ===
 export const getCaptureStats = () => request<CaptureStats>('/dev-tools/telemetry-capture/stats')
 
+// === Redis Signal Cache ===
+export interface RedisSignalEntry {
+  value: number | string | boolean
+  type: 'number' | 'string' | 'boolean'
+}
+
+export interface RedisSignalsResponse {
+  vehicle_id: number
+  signal_count: number
+  signals: Record<string, RedisSignalEntry>
+}
+
+export const getRedisSignals = (vehicleId: number) =>
+  request<RedisSignalsResponse>(`/dev-tools/redis-signals?vehicle_id=${vehicleId}`)
+
 // === Fleet Telemetry ===
 export const getTelemetryStatus = () =>
   request<TelemetryStatus>('/telemetry')

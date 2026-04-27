@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -22,6 +23,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
@@ -36,6 +38,7 @@ type DevToolsHandler struct {
 	cfg              *config.Config
 	fleetSubRepo     *database.FleetSubscriptionRepo
 	settingsRepo     *database.SettingsRepo
+	redisCache       *signal.RedisSignalCache
 }
 
 // DevToolsOption is a functional option for configuring DevToolsHandler.
@@ -54,6 +57,11 @@ func WithMQTTClient(mc *mqtt.Client) DevToolsOption {
 // WithConfig adds configuration to the handler.
 func WithConfig(cfg *config.Config) DevToolsOption {
 	return func(h *DevToolsHandler) { h.cfg = cfg }
+}
+
+// WithRedisSignalCache adds a Redis signal cache for the redis-signals diagnostic endpoint.
+func WithRedisSignalCache(rc *signal.RedisSignalCache) DevToolsOption {
+	return func(h *DevToolsHandler) { h.redisCache = rc }
 }
 
 // NewDevToolsHandler creates a new developer tools handler.
@@ -1115,4 +1123,57 @@ func errStringOrDefault(err error, def string) string {
 		return err.Error()
 	}
 	return def
+}
+
+// RedisSignals returns all cached signal values from Redis for a vehicle.
+// GET /api/v1/dev-tools/redis-signals?vehicle_id=X
+func (h *DevToolsHandler) RedisSignals(w http.ResponseWriter, r *http.Request) {
+	if h.redisCache == nil {
+		writeError(w, http.StatusServiceUnavailable, "Redis signal cache is not available")
+		return
+	}
+
+	vidStr := r.URL.Query().Get("vehicle_id")
+	if vidStr == "" {
+		writeError(w, http.StatusBadRequest, "vehicle_id query parameter is required")
+		return
+	}
+	vehicleID, err := strconv.ParseInt(vidStr, 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "vehicle_id must be a valid integer")
+		return
+	}
+
+	signals, err := h.redisCache.GetAll(r.Context(), vehicleID)
+	if err != nil {
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("redis signal cache: GetAll failed")
+		writeError(w, http.StatusServiceUnavailable, "Redis is unreachable")
+		return
+	}
+
+	// Build typed signal response
+	type signalEntry struct {
+		Value interface{} `json:"value"`
+		Type  string      `json:"type"`
+	}
+
+	result := make(map[string]signalEntry, len(signals))
+	for name, val := range signals {
+		var sType string
+		switch val.(type) {
+		case float64:
+			sType = "number"
+		case bool:
+			sType = "boolean"
+		default:
+			sType = "string"
+		}
+		result[name] = signalEntry{Value: val, Type: sType}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"vehicle_id":   vehicleID,
+		"signal_count": len(result),
+		"signals":      result,
+	})
 }

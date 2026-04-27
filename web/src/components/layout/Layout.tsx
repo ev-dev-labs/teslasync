@@ -85,6 +85,7 @@ import {
   Receipt,
   Key,
   Home,
+  Server,
 } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
@@ -146,6 +147,7 @@ const navI18nKeys: Record<string, string> = {
   'Digital Twin': 'nav.digitalTwin',
   'Smart Charge': 'nav.smartCharge',
   'Guard Mode': 'nav.guardMode',
+  'Redis Signals': 'nav.redisSignals',
 }
 
 type SSEState = 'connected' | 'reconnecting'
@@ -303,6 +305,7 @@ export const navSections = [
       { to: '/signal-gaps', icon: Wifi, label: 'Gap Detector', color: 'text-amber-400' },
       { to: '/state-debugger', icon: Bug, label: 'State Machine', color: 'text-purple-400' },
       { to: '/mqtt-inspector', icon: Radio, label: 'MQTT Inspector', color: 'text-blue-400' },
+      { to: '/redis-signals', icon: Server, label: 'Redis Signals', color: 'text-orange-400' },
       { to: '/db-health', icon: HardDrive, label: 'DB Health', color: 'text-emerald-400' },
       { to: '/anomaly-detection', icon: ScanSearch, label: 'Anomaly Detection', color: 'text-red-400' },
     ],

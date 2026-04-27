@@ -115,6 +115,7 @@ const FleetAPI = lazy(() => import('./features/admin/pages/FleetAPIPage'))
 const SecurityAccess = lazy(() => import('./features/admin/pages/SecurityAccessPage'))
 const BackupRestore = lazy(() => import('./features/admin/pages/BackupRestorePage'))
 const ApiPlayground = lazy(() => import('./features/admin/pages/ApiPlaygroundPage'))
+const RedisSignalViewer = lazy(() => import('./features/admin/pages/RedisSignalViewerPage'))
 
 // System & Ops
 const SystemStatus = lazy(() => import('./features/system/pages/SystemStatusPage'))
@@ -224,6 +225,7 @@ export default function App() {
         <Route path="fleet-api" element={<SafeRoute name="FleetAPI"><FleetAPI /></SafeRoute>} />
         <Route path="dev-tools" element={<SafeRoute name="DevTools"><DevTools /></SafeRoute>} />
         <Route path="api-playground" element={<SafeRoute name="ApiPlayground"><ApiPlayground /></SafeRoute>} />
+        <Route path="redis-signals" element={<SafeRoute name="RedisSignalViewer"><RedisSignalViewer /></SafeRoute>} />
         <Route path="signal-explorer" element={<SafeRoute name="SignalExplorer"><SignalExplorer /></SafeRoute>} />
         <Route path="signal-log" element={<SafeRoute name="SignalLogViewer"><SignalLogViewer /></SafeRoute>} />
         <Route path="live-monitor" element={<SafeRoute name="LiveSignalMonitor"><LiveSignalMonitor /></SafeRoute>} />
