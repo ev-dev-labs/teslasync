@@ -424,8 +424,8 @@ export default function Layout() {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        {/* Logo */}
-        <NavLink to="/" className="flex items-center gap-3 px-5 py-5 border-b border-white/[0.06] shrink-0 hover:bg-white/[0.02] transition-colors" onClick={() => setSidebarOpen(false)}>
+        {/* Logo — hidden on mobile (header already shows it) */}
+        <NavLink to="/" className="hidden lg:flex items-center gap-3 px-5 py-5 border-b border-white/[0.06] shrink-0 hover:bg-white/[0.02] transition-colors" onClick={() => setSidebarOpen(false)}>
           <Logo size={32} showWordmark />
           <span className="ml-auto rounded-md bg-neon-cyan/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-neon-cyan">
             {versionInfo?.chart_version && versionInfo.chart_version !== 'unknown'
@@ -437,19 +437,19 @@ export default function Layout() {
         </NavLink>
 
         {/* Sticky search trigger */}
-        <div className="px-4 py-3 border-b border-white/[0.06] shrink-0">
+        <div className="px-3 py-2 lg:px-4 lg:py-3 border-b border-white/[0.06] shrink-0">
           <CommandPaletteTrigger />
         </div>
 
         {/* Navigation */}
         <nav
-          className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-4 px-3 space-y-6 scrollbar-thin"
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-2 lg:py-4 px-3 space-y-4 lg:space-y-6 scrollbar-thin"
           style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehaviorY: 'contain' }}
         >
 
           {navSections.map(section => (
             <div key={section.title}>
-              <p className="mb-2 px-4 text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)]">
+              <p className="mb-1 lg:mb-2 px-4 text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)]">
                 {section.title}
               </p>
               <div className="space-y-0.5">
