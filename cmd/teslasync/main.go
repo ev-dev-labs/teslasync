@@ -173,6 +173,21 @@ func main() {
 			s := callErr.Error()
 			logEntry.ErrorMessage = &s
 		}
+		const maxBodyBytes = 10 * 1024 // 10KB
+		if len(reqBody) > 0 {
+			s := string(reqBody)
+			if len(s) > maxBodyBytes {
+				s = s[:maxBodyBytes] + "... [truncated]"
+			}
+			logEntry.RequestBody = &s
+		}
+		if len(respBody) > 0 {
+			s := string(respBody)
+			if len(s) > maxBodyBytes {
+				s = s[:maxBodyBytes] + "... [truncated]"
+			}
+			logEntry.ResponseBody = &s
+		}
 		logCtx, logCancel := context.WithTimeout(context.Background(), 5*time.Second)
 		if err := apiLogRepo.Create(logCtx, logEntry); err != nil {
 			log.Error().Err(err).Msg("failed to log API call")

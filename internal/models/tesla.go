@@ -30,8 +30,8 @@ func (t *TeslaToken) IsActive() bool {
 
 // APICallLog mirrors the post-migration api_call_logs schema (hypertable).
 //
-// ADR-005: no raw_json bodies. Only URL/status/duration are recorded;
-// request/response payloads are intentionally excluded.
+// Request/response bodies are stored as nullable TEXT, truncated to 10 KB
+// on the Go side to prevent storage bloat.
 type APICallLog struct {
 	ID           int64     `db:"id" json:"id"`
 	Ts           time.Time `db:"ts" json:"ts"`
@@ -43,4 +43,6 @@ type APICallLog struct {
 	DurationMs   int32     `db:"duration_ms" json:"duration_ms"`
 	ErrorMessage *string   `db:"error_message" json:"error_message,omitempty"`
 	RateLimited  bool      `db:"rate_limited" json:"rate_limited"`
+	RequestBody  *string   `db:"request_body" json:"request_body,omitempty"`
+	ResponseBody *string   `db:"response_body" json:"response_body,omitempty"`
 }

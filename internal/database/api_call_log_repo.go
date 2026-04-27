@@ -21,15 +21,15 @@ func (r *APICallLogRepo) Create(ctx context.Context, l *models.APICallLog) error
 	if l.Service == "" {
 		l.Service = "tesla-api"
 	}
-	query := `INSERT INTO api_call_logs (ts, vehicle_id, service, http_method, endpoint, status_code, duration_ms, error_message, rate_limited)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`
+	query := `INSERT INTO api_call_logs (ts, vehicle_id, service, http_method, endpoint, status_code, duration_ms, error_message, rate_limited, request_body, response_body)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`
 	now := time.Now().UTC()
-	return r.db.Pool.QueryRow(ctx, query, now, l.VehicleID, l.Service, l.HTTPMethod, l.Endpoint, l.StatusCode, l.DurationMs, l.ErrorMessage, l.RateLimited).Scan(&l.ID)
+	return r.db.Pool.QueryRow(ctx, query, now, l.VehicleID, l.Service, l.HTTPMethod, l.Endpoint, l.StatusCode, l.DurationMs, l.ErrorMessage, l.RateLimited, l.RequestBody, l.ResponseBody).Scan(&l.ID)
 }
 
 func (r *APICallLogRepo) GetAll(ctx context.Context, limit, offset int, method, statusFilter, endpoint, service, startDate, endDate string) ([]*models.APICallLog, int, error) {
 	// Build dynamic query with filters
-	query := `SELECT id, ts, vehicle_id, service, http_method, endpoint, status_code, duration_ms, error_message, rate_limited FROM api_call_logs WHERE 1=1`
+	query := `SELECT id, ts, vehicle_id, service, http_method, endpoint, status_code, duration_ms, error_message, rate_limited, request_body, response_body FROM api_call_logs WHERE 1=1`
 	countQuery := `SELECT COUNT(*) FROM api_call_logs WHERE 1=1`
 	args := []interface{}{}
 	argIdx := 1
@@ -101,7 +101,7 @@ func (r *APICallLogRepo) GetAll(ctx context.Context, limit, offset int, method, 
 	var logs []*models.APICallLog
 	for rows.Next() {
 		l := &models.APICallLog{}
-		if err := rows.Scan(&l.ID, &l.Ts, &l.VehicleID, &l.Service, &l.HTTPMethod, &l.Endpoint, &l.StatusCode, &l.DurationMs, &l.ErrorMessage, &l.RateLimited); err != nil {
+		if err := rows.Scan(&l.ID, &l.Ts, &l.VehicleID, &l.Service, &l.HTTPMethod, &l.Endpoint, &l.StatusCode, &l.DurationMs, &l.ErrorMessage, &l.RateLimited, &l.RequestBody, &l.ResponseBody); err != nil {
 			return nil, 0, err
 		}
 		logs = append(logs, l)

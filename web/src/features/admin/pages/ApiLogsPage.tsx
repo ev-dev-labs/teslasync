@@ -311,14 +311,14 @@ export default function ApiLogsPage() {
                       </span>
                       <ServiceBadge service={log.service} />
                       <MethodBadge method={log.http_method} />
-                      <span className="text-xs font-mono text-[var(--text-secondary)] truncate flex-1" title={log.endpoint}>
+                      <span className="text-xs font-mono text-[var(--text-secondary)] line-clamp-1 break-all flex-1" title={log.endpoint}>
                         {log.endpoint ?? ''}
                       </span>
                       <StatusBadge code={log.status_code} />
                       <span className="text-xs font-mono text-[var(--text-secondary)] w-16 text-right shrink-0">
                         {log.duration_ms}ms
                       </span>
-                      <span className="text-xs text-red-400 truncate max-w-[150px] hidden md:block">
+                      <span className="text-xs text-red-400 truncate max-w-[250px] hidden md:block">
                         {log.error_message || '—'}
                       </span>
                       {expandedId === log.id
@@ -341,6 +341,20 @@ export default function ApiLogsPage() {
                           <p className="text-[10px] text-[var(--text-muted)]">{formatDateTime(log.ts)}</p>
                           {log.error_message && <p className="text-xs text-red-400 mt-1">{log.error_message}</p>}
                         </div>
+                        <div>
+                          <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)] mb-1">{t('apiLogs.requestUrl', 'Request URL')}</p>
+                          <GlassPanel className="!p-3 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all">
+                            {log.http_method} {log.endpoint}
+                          </GlassPanel>
+                        </div>
+                        {log.error_message && (
+                          <div>
+                            <p className="text-[10px] font-medium uppercase tracking-wider text-red-400 mb-1">{t('apiLogs.error', 'Error')}</p>
+                            <GlassPanel className="!p-3 text-xs font-mono text-red-300 overflow-x-auto whitespace-pre-wrap break-all">
+                              {log.error_message}
+                            </GlassPanel>
+                          </div>
+                        )}
                         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                           <JsonViewer data={log.request_body} label={t('apiLogs.requestBody', 'Request Body')} />
                           <JsonViewer data={log.response_body} label={t('apiLogs.responseBody', 'Response Body')} />
