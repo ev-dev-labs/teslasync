@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -138,9 +139,23 @@ func (h *VehicleHandler) Positions(w http.ResponseWriter, r *http.Request) {
 	if rows == nil {
 		rows = []map[string]interface{}{}
 	}
-	// Apply limit
+	// Reverse to newest-first (query returns ascending by ts)
+	for i, j := 0, len(rows)-1; i < j; i, j = i+1, j-1 {
+		rows[i], rows[j] = rows[j], rows[i]
+	}
+	// Apply limit after reversal so we keep the most recent positions
 	if limit > 0 && len(rows) > limit {
 		rows = rows[:limit]
+	}
+	// Alias ts→created_at and speed_mph→speed for frontend PositionRecord
+	for _, row := range rows {
+		if ts, ok := row["ts"]; ok {
+			row["created_at"] = ts
+			row["id"] = fmt.Sprintf("%v", ts)
+		}
+		if v, ok := row["speed_mph"]; ok {
+			row["speed"] = v
+		}
 	}
 	writeJSON(w, http.StatusOK, rows)
 }

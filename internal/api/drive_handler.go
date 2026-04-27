@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"net/http"
 	"time"
@@ -293,6 +294,16 @@ func (h *DriveHandler) Positions(w http.ResponseWriter, r *http.Request) {
 	}
 	if rows == nil {
 		rows = []map[string]interface{}{}
+	}
+	// Alias ts→created_at and speed_mph→speed for frontend PositionRecord
+	for _, row := range rows {
+		if ts, ok := row["ts"]; ok {
+			row["created_at"] = ts
+			row["id"] = fmt.Sprintf("%v", ts)
+		}
+		if v, ok := row["speed_mph"]; ok {
+			row["speed"] = v
+		}
 	}
 	writeJSON(w, http.StatusOK, rows)
 }
