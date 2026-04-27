@@ -1,0 +1,132 @@
+=== SURVEY ===
+Files:
+  grafana/dashboards/system/drivetrain-thermal.json  — 8 panels, all query motor_snapshots
+  grafana/dashboards/system/motor-performance.json   — 8 panels, all query motor_snapshots
+  grafana/dashboards/system/security-access.json     — 10 panels, all query security_events
+
+Total panels to migrate: 26
+
+Motor signal mappings used:
+  di_stator_temp_f        → DiStatorTempF      (value_num)
+  di_stator_temp/r        → DiStatorTempR      (value_num)
+  di_stator_temp_rel      → DiStatorTempREL    (value_num)
+  di_stator_temp_rer      → DiStatorTempRER    (value_num)
+  di_heatsink_t_f         → DiHeatsinkTF       (value_num)
+  di_heatsink_t_r         → DiHeatsinkTR       (value_num)
+  di_heatsink_t_rel       → DiHeatsinkTREL     (value_num)
+  di_heatsink_t_rer       → DiHeatsinkTRER     (value_num)
+  di_inverter_t_f         → DiInverterTF       (value_num)
+  di_inverter_t_r         → DiInverterTR       (value_num)
+  di_inverter_t_rel       → DiInverterTREL     (value_num)
+  di_inverter_t_rer       → DiInverterTRER     (value_num)
+  di_motor_current_f      → DiMotorCurrentF    (value_num)
+  di_motor_current_r      → DiMotorCurrentR    (value_num)
+  di_motor_current_rel    → DiMotorCurrentREL  (value_num)
+  di_motor_current_rer    → DiMotorCurrentRER  (value_num)
+  di_v_bat_f              → DiVBatF            (value_num)
+  di_v_bat_r              → DiVBatR            (value_num)
+  di_v_bat_rel            → DiVBatREL          (value_num)
+  di_v_bat_rer            → DiVBatRER          (value_num)
+  di_axle_speed/f         → DiAxleSpeedF       (value_num)
+  di_axle_speed_rel       → DiAxleSpeedREL     (value_num)
+  di_axle_speed_rer       → DiAxleSpeedRER     (value_num)
+  di_torque               → DiTorqueActualF    (value_num) — NOT DiTorqueF
+  lateral_accel           → LateralAcceleration   (value_num)
+  longitudinal_accel      → LongitudinalAcceleration (value_num)
+  pedal_position          → PedalPosition      (value_num)
+  vehicle_speed           → VehicleSpeed       (value_num)
+  gear                    → Gear               (value_text)
+
+Security signal mappings used:
+  locked                  → Locked             (value_bool)
+  sentry_mode             → SentryMode         (value_bool)
+  door_state              → DoorState          (value_text, JSON)
+  fd_window               → FdWindow           (value_text)
+  fp_window               → FpWindow           (value_text)
+  rd_window               → RdWindow           (value_text)
+  rp_window               → RpWindow           (value_text)
+  valet_mode_enabled      → ValetModeEnabled   (value_bool)
+  service_mode            → ServiceMode        (value_bool)
+  speed_limit_mode        → SpeedLimitMode     (value_bool)
+  guest_mode              → GuestModeEnabled   (value_bool)
+  current_limit_mph       → CurrentLimitMph    (value_num)
+  paired_phone_key_count  → PairedPhoneKeyAndKeyFobQty (value_num)
+  driver_seat_occupied    → DriverSeatOccupied (value_bool)
+  driver_seat_belt        → DriverSeatBelt     (value_bool)
+  passenger_seat_belt     → PassengerSeatBelt  (value_bool)
+  lights_hazards_active   → LightsHazardsActive (value_bool)
+  lights_high_beams       → LightsHighBeams    (value_bool)
+  lights_turn_signal      → LightsTurnSignal   (value_text)
+  center_display          → CenterDisplay      (value_text)
+
+=== REASONING ===
+Aggregation rules applied:
+  - Numeric signals: MAX(value_num) FILTER (WHERE signal_name = '...')
+  - Text/enum signals: last(value_text, ts) — TimescaleDB latest-state, NOT MAX
+  - Boolean signals: last(value_bool, ts) — latest bool state
+  - Single-signal panels: direct value_num/value_bool/value_text (no GROUP BY needed)
+  - Multi-signal panels: GROUP BY ts with FILTER aggregates to pivot rows back to columns
+
+Performance:
+  - All queries include: ts BETWEEN $__timeFrom() AND $__timeTo()
+  - All queries include: signal_name IN (...) for index selectivity
+
+Special cases:
+  - di_torque mapped to DiTorqueActualF (NOT DiTorqueF) per spec
+  - di_axle_speed and di_axle_speed_f both map to DiAxleSpeedF (single signal)
+  - speed_limit_mode was text in old schema, now value_bool — adjusted CASE WHEN
+  - DoorState is JSON in value_text — Door Opens count uses LIKE '%Open%'
+  - convert_temp() and convert_speed() preserved for unit conversion
+
+=== CHANGES ===
+drivetrain-thermal.json (8 panels):
+  [1] Thermal Stats (stat)           — motor_snapshots → signal_log, 6 temp signals
+  [2] Stator Temperatures (ts)       — motor_snapshots → signal_log, 4 stator signals
+  [3] Heatsink Temperatures (ts)     — motor_snapshots → signal_log, 4 heatsink signals
+  [4] Inverter Temperatures (ts)     — motor_snapshots → signal_log, 4 inverter signals
+  [5] Motor Currents (ts)            — motor_snapshots → signal_log, 4 current signals
+  [6] Battery Voltage (ts)           — motor_snapshots → signal_log, 2 vbat signals
+  [7] Per-Motor Battery Voltage (ts) — motor_snapshots → signal_log, 4 vbat signals
+  [8] Per-Motor Axle Speed (ts)      — motor_snapshots → signal_log, 3 axle signals
+
+motor-performance.json (8 panels):
+  [1] Motor Torque (ts)              — motor_snapshots → signal_log, DiTorqueActualF
+  [2] G-Force (ts)                   — motor_snapshots → signal_log, 2 accel signals
+  [3] Stator Temperature (ts)        — motor_snapshots → signal_log, DiStatorTempR
+  [4] Motor Speed RPM (ts)           — motor_snapshots → signal_log, DiAxleSpeedF
+  [5] Pedal Position (ts)            — motor_snapshots → signal_log, PedalPosition
+  [6] Vehicle Speed (ts)             — motor_snapshots → signal_log, VehicleSpeed
+  [7] Gear Distribution (piechart)   — motor_snapshots → signal_log, Gear (value_text)
+  [8] Motor Stats (stat)             — motor_snapshots → signal_log, 3 signals aggregated
+
+security-access.json (10 panels):
+  [1]  Lock Status (ts)              — security_events → signal_log, Locked (value_bool)
+  [2]  Sentry Mode (ts)              — security_events → signal_log, SentryMode (value_bool)
+  [3]  Security Summary Stats (stat) — security_events → signal_log, 3 signals
+  [4]  Window States (ts)            — security_events → signal_log, 4 window signals (last)
+  [5]  Daily Security Events (bar)   — security_events → signal_log, Locked as ref
+  [6]  Sentry Uptime % (gauge)       — security_events → signal_log, SentryMode
+  [7]  Recent Events Table (table)   — security_events → signal_log, 5 signals pivoted
+  [8]  Lights & Turn Signal (table)  — security_events → signal_log, 4 signals pivoted
+  [9]  Access Modes Timeline (table) — security_events → signal_log, 6 signals pivoted
+  [10] Driver & Seatbelt (table)     — security_events → signal_log, 3 signals pivoted
+
+=== GATE ===
+Stale reference check (motor_snapshots|security_events):
+  drivetrain-thermal.json: 0 matches
+  motor-performance.json:  0 matches
+  security-access.json:    0 matches
+RESULT: PASS
+
+signal_log reference check:
+  drivetrain-thermal.json: 8 refs (8 panels)
+  motor-performance.json:  8 refs (8 panels)
+  security-access.json:    10 refs (10 panels)
+RESULT: PASS
+
+JSON validity: all 3 files parse successfully
+MAX(value_text) check: 0 occurrences — PASS (using last() for text/enum/bool)
+
+=== COMMIT ===
+EXIT=0
+STATUS=DONE

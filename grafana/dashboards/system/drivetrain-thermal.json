@@ -109,7 +109,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT convert_temp(di_stator_temp_f) AS \"Front Stator\", convert_temp(di_stator_temp) AS \"Rear Stator\", convert_temp(di_heatsink_t_f) AS \"Front Heatsink\", convert_temp(di_heatsink_t_r) AS \"Rear Heatsink\", convert_temp(di_inverter_t_f) AS \"Front Inverter\", convert_temp(di_inverter_t_r) AS \"Rear Inverter\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT\n  convert_temp(MAX(value_num) FILTER (WHERE signal_name = 'DiStatorTempF')) AS \"Front Stator\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal_name = 'DiStatorTempR')) AS \"Rear Stator\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal_name = 'DiHeatsinkTF')) AS \"Front Heatsink\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal_name = 'DiHeatsinkTR')) AS \"Rear Heatsink\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal_name = 'DiInverterTF')) AS \"Front Inverter\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal_name = 'DiInverterTR')) AS \"Rear Inverter\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal_name IN ('DiStatorTempF', 'DiStatorTempR', 'DiHeatsinkTF', 'DiHeatsinkTR', 'DiInverterTF', 'DiInverterTR')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()",
           "refId": "A"
         }
       ],
@@ -189,7 +189,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, convert_temp(di_stator_temp_f) AS \"Front Stator\", convert_temp(di_stator_temp) AS \"Rear Stator\", convert_temp(di_stator_temp_rel) AS \"Rear L Stator\", convert_temp(di_stator_temp_rer) AS \"Rear R Stator\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "rawSql": "SELECT ts AS time,\n  convert_temp(MAX(value_num) FILTER (WHERE signal_name = 'DiStatorTempF')) AS \"Front Stator\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal_name = 'DiStatorTempR')) AS \"Rear Stator\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal_name = 'DiStatorTempREL')) AS \"Rear L Stator\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal_name = 'DiStatorTempRER')) AS \"Rear R Stator\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal_name IN ('DiStatorTempF', 'DiStatorTempR', 'DiStatorTempREL', 'DiStatorTempRER')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -269,7 +269,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, convert_temp(di_heatsink_t_f) AS \"Front Heatsink\", convert_temp(di_heatsink_t_r) AS \"Rear Heatsink\", convert_temp(di_heatsink_t_rel) AS \"Rear L Heatsink\", convert_temp(di_heatsink_t_rer) AS \"Rear R Heatsink\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "rawSql": "SELECT ts AS time,\n  convert_temp(MAX(value_num) FILTER (WHERE signal_name = 'DiHeatsinkTF')) AS \"Front Heatsink\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal_name = 'DiHeatsinkTR')) AS \"Rear Heatsink\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal_name = 'DiHeatsinkTREL')) AS \"Rear L Heatsink\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal_name = 'DiHeatsinkTRER')) AS \"Rear R Heatsink\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal_name IN ('DiHeatsinkTF', 'DiHeatsinkTR', 'DiHeatsinkTREL', 'DiHeatsinkTRER')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -349,7 +349,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, convert_temp(di_inverter_t_f) AS \"Front Inverter\", convert_temp(di_inverter_t_r) AS \"Rear Inverter\", convert_temp(di_inverter_t_rel) AS \"Rear L Inverter\", convert_temp(di_inverter_t_rer) AS \"Rear R Inverter\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "rawSql": "SELECT ts AS time,\n  convert_temp(MAX(value_num) FILTER (WHERE signal_name = 'DiInverterTF')) AS \"Front Inverter\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal_name = 'DiInverterTR')) AS \"Rear Inverter\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal_name = 'DiInverterTREL')) AS \"Rear L Inverter\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal_name = 'DiInverterTRER')) AS \"Rear R Inverter\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal_name IN ('DiInverterTF', 'DiInverterTR', 'DiInverterTREL', 'DiInverterTRER')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -429,7 +429,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, di_motor_current_f AS \"Front Current\", di_motor_current_r AS \"Rear Current\", di_motor_current_rel AS \"Rear L Current\", di_motor_current_rer AS \"Rear R Current\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "rawSql": "SELECT ts AS time,\n  MAX(value_num) FILTER (WHERE signal_name = 'DiMotorCurrentF') AS \"Front Current\",\n  MAX(value_num) FILTER (WHERE signal_name = 'DiMotorCurrentR') AS \"Rear Current\",\n  MAX(value_num) FILTER (WHERE signal_name = 'DiMotorCurrentREL') AS \"Rear L Current\",\n  MAX(value_num) FILTER (WHERE signal_name = 'DiMotorCurrentRER') AS \"Rear R Current\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal_name IN ('DiMotorCurrentF', 'DiMotorCurrentR', 'DiMotorCurrentREL', 'DiMotorCurrentRER')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -509,7 +509,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, di_v_bat_f AS \"Front Battery V\", di_v_bat_r AS \"Rear Battery V\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "rawSql": "SELECT ts AS time,\n  MAX(value_num) FILTER (WHERE signal_name = 'DiVBatF') AS \"Front Battery V\",\n  MAX(value_num) FILTER (WHERE signal_name = 'DiVBatR') AS \"Rear Battery V\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal_name IN ('DiVBatF', 'DiVBatR')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -533,7 +533,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT created_at AS time,\n  di_v_bat_f AS \"Front (V)\",\n  di_v_bat_r AS \"Rear (V)\",\n  di_v_bat_rel AS \"Rear-Left (V)\",\n  di_v_bat_rer AS \"Rear-Right (V)\"\nFROM motor_snapshots\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\n  AND di_v_bat_f IS NOT NULL\nORDER BY created_at",
+          "rawSql": "SELECT ts AS time,\n  MAX(value_num) FILTER (WHERE signal_name = 'DiVBatF') AS \"Front (V)\",\n  MAX(value_num) FILTER (WHERE signal_name = 'DiVBatR') AS \"Rear (V)\",\n  MAX(value_num) FILTER (WHERE signal_name = 'DiVBatREL') AS \"Rear-Left (V)\",\n  MAX(value_num) FILTER (WHERE signal_name = 'DiVBatRER') AS \"Rear-Right (V)\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal_name IN ('DiVBatF', 'DiVBatR', 'DiVBatREL', 'DiVBatRER')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts",
           "format": "time_series",
           "refId": "A",
           "datasource": {
@@ -572,7 +572,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT created_at AS time,\n  di_axle_speed AS \"Rear (RPM)\",\n  di_axle_speed_f AS \"Front (RPM)\",\n  di_axle_speed_rel AS \"Rear-Left (RPM)\",\n  di_axle_speed_rer AS \"Rear-Right (RPM)\"\nFROM motor_snapshots\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\n  AND (di_axle_speed IS NOT NULL OR di_axle_speed_f IS NOT NULL)\nORDER BY created_at",
+          "rawSql": "SELECT ts AS time,\n  MAX(value_num) FILTER (WHERE signal_name = 'DiAxleSpeedF') AS \"Front (RPM)\",\n  MAX(value_num) FILTER (WHERE signal_name = 'DiAxleSpeedREL') AS \"Rear-Left (RPM)\",\n  MAX(value_num) FILTER (WHERE signal_name = 'DiAxleSpeedRER') AS \"Rear-Right (RPM)\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal_name IN ('DiAxleSpeedF', 'DiAxleSpeedREL', 'DiAxleSpeedRER')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts",
           "format": "time_series",
           "refId": "A",
           "datasource": {
