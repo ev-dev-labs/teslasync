@@ -1,38 +1,44 @@
 export interface ClimateState {
-  id: string;
-  vehicleId: string;
-  insideTemp: number;
-  outsideTemp: number;
-  hvacPower: number;
-  fanSpeed: number;
-  hvacFanStatus?: number;
-  driverTempSetting: number;
-  passengerTempSetting: number;
-  isAcOn: boolean;
-  isAutoClimate: boolean;
-  climateKeeperMode: string;
-  defrostMode: string;
-  defrostForPreconditioning?: boolean;
-  rearDefrostEnabled?: boolean;
-  wiperHeatEnabled?: boolean;
-  rearDisplayHvacEnabled?: boolean;
-  batteryHeater: boolean;
-  steeringWheelHeat: boolean;
-  hvacSteeringWheelHeatAuto?: boolean;
-  hvacSteeringWheelHeatLevel?: number;
-  seatHeaterLeft: number;
-  seatHeaterRight: number;
-  seatHeaterRearLeft: number;
-  seatHeaterRearRight: number;
-  seatHeaterRearCenter: number;
-  autoSeatClimateLeft?: boolean;
-  autoSeatClimateRight?: boolean;
-  climateSeatCoolingFrontLeft?: number;
-  climateSeatCoolingFrontRight?: number;
-  seatVentEnabled?: boolean;
-  overheatProtection: string;
-  cabinOverheatProtectionTempLimit?: string;
-  timestamp: string;
+  id?: number;
+  created_at?: string;
+  timestamp?: string;
+  // Temperatures (°C from Fleet Telemetry)
+  insideTemp?: number | null;
+  outsideTemp?: number | null;
+  driverTempSetting?: number | null;
+  passengerTempSetting?: number | null;
+  // HVAC system
+  hvacPower?: string | null;
+  isAcOn?: boolean | null;
+  hvacAutoMode?: string | null;
+  fanSpeed?: number | null;
+  hvacFanStatus?: number | null;
+  // Climate modes
+  climateKeeperMode?: string | null;
+  defrostMode?: string | null;
+  defrostForPreconditioning?: boolean | null;
+  rearDefrostEnabled?: boolean | null;
+  wiperHeatEnabled?: boolean | null;
+  rearDisplayHvacEnabled?: boolean | null;
+  // Battery & protection
+  batteryHeater?: boolean | null;
+  overheatProtection?: string | null;
+  cabinOverheatProtectionTempLimit?: string | null;
+  // Steering wheel
+  hvacSteeringWheelHeatAuto?: boolean | null;
+  hvacSteeringWheelHeatLevel?: number | null;
+  // Seat heaters
+  seatHeaterLeft?: number | null;
+  seatHeaterRight?: number | null;
+  seatHeaterRearLeft?: number | null;
+  seatHeaterRearRight?: number | null;
+  seatHeaterRearCenter?: number | null;
+  // Seat climate
+  autoSeatClimateLeft?: boolean | null;
+  autoSeatClimateRight?: boolean | null;
+  climateSeatCoolingFrontLeft?: number | null;
+  climateSeatCoolingFrontRight?: number | null;
+  seatVentEnabled?: boolean | null;
 }
 
 export interface TirePressureReading {
