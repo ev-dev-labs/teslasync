@@ -15,24 +15,26 @@ type MotorHandler struct {
 }
 
 // Signal → JSON field mappings for motor/powertrain pivot queries.
+// Field names match the frontend MotorSnapshot interface in web/src/api/types.ts.
 var motorMappings = []database.PivotMapping{
 	{Signal: "DiMotorCurrentF", Field: "motor_current_front"},
 	{Signal: "DiMotorCurrentR", Field: "motor_current_rear"},
-	{Signal: "DiTorqueActualF", Field: "torque_front"},
-	{Signal: "DiTorqueActualR", Field: "torque_rear"},
-	{Signal: "DiTorquemotor", Field: "torque_motor"},
-	{Signal: "DiAxleSpeedF", Field: "axle_speed_front"},
-	{Signal: "DiAxleSpeedR", Field: "axle_speed_rear"},
-	{Signal: "DiStatorTempF", Field: "stator_temp_front"},
-	{Signal: "DiStatorTempR", Field: "stator_temp_rear"},
+	{Signal: "DiTorqueActualF", Field: "torque_nm_front"},
+	{Signal: "DiTorqueActualR", Field: "torque_nm_rear"},
+	{Signal: "DiTorquemotor", Field: "di_torque"},
+	{Signal: "DiAxleSpeedF", Field: "motor_rpm_front"},
+	{Signal: "DiAxleSpeedR", Field: "motor_rpm_rear"},
+	{Signal: "DiStatorTempF", Field: "motor_temp_c_front"},
+	{Signal: "DiStatorTempR", Field: "motor_temp_c_rear"},
 	{Signal: "DiHeatsinkTF", Field: "heatsink_temp_front"},
 	{Signal: "DiHeatsinkTR", Field: "heatsink_temp_rear"},
-	{Signal: "DiInverterTF", Field: "inverter_temp_front"},
+	{Signal: "DiInverterTF", Field: "inverter_temp_c"},
 	{Signal: "DiInverterTR", Field: "inverter_temp_rear"},
 	{Signal: "DiStateF", Field: "state_front"},
 	{Signal: "DiStateR", Field: "state_rear"},
 	{Signal: "DiVBatF", Field: "vbat_front"},
 	{Signal: "DiVBatR", Field: "vbat_rear"},
+	{Signal: "Gear", Field: "shift_state"},
 }
 
 func NewMotorHandler(slr *database.SignalLogReader) *MotorHandler {

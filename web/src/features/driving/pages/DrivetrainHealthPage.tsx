@@ -112,7 +112,7 @@ export default function DrivetrainHealthPage() {
       statorRel: s.motor_temp_c_rear != null ? convertTemp(s.motor_temp_c_rear) : null,
       statorRer: s.inverter_temp_c != null ? convertTemp(s.inverter_temp_c) : null,
       torque: s.torque_nm_front ?? s.torque_nm_rear ?? null,
-      speed: s.power_kw != null ? convertSpeed(s.power_kw) : null,
+      speed: null, // no direct power signal in motor pivot; field unused by charts
       axle: s.motor_rpm_front ?? s.motor_rpm_rear ?? null,
     }));
   }, [motorHistory, convertTemp, convertSpeed]);

@@ -482,28 +482,43 @@ export interface TirePressureSnapshot {
 }
 
 // MotorSnapshot matches the JSON response shape from /motor and /motor/latest.
-// Backed by signal_log after phase-14 rewire. The typed column set mirrors the
-// legacy motor_snapshots table; optional compat fields are kept for backward
-// compatibility.
+// Backed by signal_log pivot via motorMappings in motor_handler.go.
+// Field names are the PivotMapping.Field values; fields with no backing signal
+// are optional and will be undefined in the response.
 export interface MotorSnapshot {
-  vehicle_id: number
+  id?: number
   ts: string
-  power_kw: number | null
-  motor_rpm_front: number | null
-  motor_rpm_rear: number | null
+  created_at?: string
+  vehicle_id?: number
+  // Torque (DiTorqueActualF/R, DiTorquemotor)
   torque_nm_front: number | null
   torque_nm_rear: number | null
+  di_torque: number | null
+  // Axle speed (DiAxleSpeedF/R)
+  motor_rpm_front: number | null
+  motor_rpm_rear: number | null
+  // Temperatures (DiStatorTempF/R, DiInverterTF/R, DiHeatsinkTF/R)
   motor_temp_c_front: number | null
   motor_temp_c_rear: number | null
   inverter_temp_c: number | null
-  battery_temp_c: number | null
-  regen_kw: number | null
+  inverter_temp_rear: number | null
+  heatsink_temp_front: number | null
+  heatsink_temp_rear: number | null
+  // Motor current (DiMotorCurrentF/R)
+  motor_current_front: number | null
+  motor_current_rear: number | null
+  // State (DiStateF/R, Gear)
+  state_front: string | null
+  state_rear: string | null
   shift_state: string | null
-  source: string
-  // Legacy / compat-view field aliases (present when reading via v_motor_snapshots
-  // or JSONB hydrate; undefined when reading the typed column set). Optional so
-  // pages that reference these names still compile.
-  di_torque?: number | null
+  // Battery voltage (DiVBatF/R)
+  vbat_front: number | null
+  vbat_rear: number | null
+  // Fields with no backing motor signal — always undefined from signal_log backend
+  power_kw?: number | null
+  regen_kw?: number | null
+  battery_temp_c?: number | null
+  source?: string | null
   di_stator_temp?: number | null
   gear?: string | null
 }
