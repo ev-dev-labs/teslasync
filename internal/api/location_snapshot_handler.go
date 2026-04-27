@@ -16,12 +16,29 @@ type LocationSnapshotHandler struct {
 
 // Signal → JSON field mappings for location pivot queries.
 var locationMappings = []database.PivotMapping{
+	// Position & GPS
 	{Signal: "Latitude", Field: "latitude"},
 	{Signal: "Longitude", Field: "longitude"},
 	{Signal: "GpsHeading", Field: "heading"},
 	{Signal: "GpsState", Field: "gps_state"},
 	{Signal: "Elevation", Field: "elevation_m"},
 	{Signal: "VehicleSpeed", Field: "speed_mph"},
+	// Navigation & route
+	{Signal: "DestinationName", Field: "destination_name"},
+	{Signal: "MilesToArrival", Field: "miles_to_arrival"},
+	{Signal: "MinutesToArrival", Field: "minutes_to_arrival"},
+	{Signal: "RouteTrafficMinutesDelay", Field: "route_traffic_delay_min"},
+	{Signal: "RouteLastUpdated", Field: "route_last_updated"},
+	// Destination/origin coords (from unpacked Location compounds — Latest only)
+	{Signal: "DestinationLatitude", Field: "destination_lat"},
+	{Signal: "DestinationLongitude", Field: "destination_lon"},
+	{Signal: "OriginLatitude", Field: "origin_lat"},
+	{Signal: "OriginLongitude", Field: "origin_lon"},
+	// Presence
+	{Signal: "LocatedAtHome", Field: "located_at_home"},
+	{Signal: "LocatedAtWork", Field: "located_at_work"},
+	{Signal: "LocatedAtFavorite", Field: "located_at_favorite"},
+	{Signal: "HomelinkNearby", Field: "homelink_nearby"},
 }
 
 func NewLocationSnapshotHandler(slr *database.SignalLogReader) *LocationSnapshotHandler {
@@ -81,7 +98,7 @@ func (h *LocationSnapshotHandler) Latest(w http.ResponseWriter, r *http.Request)
 
 	result := make(map[string]interface{})
 	for _, m := range locationMappings {
-		if v, ok := snap[m.Signal]; ok {
+		if v, ok := snap[m.Signal]; ok && v != nil {
 			result[m.Field] = v
 		}
 	}

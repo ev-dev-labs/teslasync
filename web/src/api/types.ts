@@ -1247,20 +1247,31 @@ export interface VehicleConfigSnapshot {
 
 export interface LocationSnapshot {
   id: number
-  vehicle_id: number
+  vehicle_id?: number
+  // Position & GPS (from signal_log pivot)
+  latitude?: number
+  longitude?: number
+  heading?: number
+  gps_state?: string
+  elevation_m?: number
+  speed_mph?: number
+  // Navigation & route
   destination_name?: string
+  miles_to_arrival?: number
+  minutes_to_arrival?: number
+  route_traffic_delay_min?: number
+  route_last_updated?: string
+  // Destination/origin coords (Latest only — from unpacked compounds)
   destination_lat?: number
   destination_lon?: number
   origin_lat?: number
   origin_lon?: number
-  miles_to_arrival?: number
-  minutes_to_arrival?: number
-  route_line?: string
-  route_traffic_delay_min?: number
+  // Presence
   located_at_home?: boolean
   located_at_work?: boolean
   located_at_favorite?: boolean
-  gps_state?: string
+  homelink_nearby?: boolean
+  // Timestamps
   created_at: string
 }
 

@@ -65,38 +65,32 @@ import { useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 
 interface LocationSnapshot {
   id: number;
-  vehicle_id: number;
-  current_lat: number | null;
-  current_lon: number | null;
-  destination_name: string | null;
-  destination_lat: number | null;
-  destination_lon: number | null;
-  origin_lat: number | null;
-  origin_lon: number | null;
-  miles_to_arrival: number | null;
-  minutes_to_arrival: number | null;
-  route_line: string | null;
-  route_traffic_delay_min: number | null;
-  located_at_home: boolean | null;
-  located_at_work: boolean | null;
-  located_at_favorite: boolean | null;
-  gps_state: string | null;
-  route_last_updated: string | null;
-  active_route: boolean;
-  homelink_nearby?: boolean | null;
+  vehicle_id?: number;
+  // Position & GPS (from signal_log pivot)
+  latitude?: number;
+  longitude?: number;
+  heading?: number;
+  gps_state?: string;
+  elevation_m?: number;
+  speed_mph?: number;
+  // Navigation & route
+  destination_name?: string;
+  miles_to_arrival?: number;
+  minutes_to_arrival?: number;
+  route_traffic_delay_min?: number;
+  route_last_updated?: string;
+  // Destination/origin coords (Latest only — from unpacked compounds)
+  destination_lat?: number;
+  destination_lon?: number;
+  origin_lat?: number;
+  origin_lon?: number;
+  // Presence
+  located_at_home?: boolean;
+  located_at_work?: boolean;
+  located_at_favorite?: boolean;
+  homelink_nearby?: boolean;
+  // Timestamps
   created_at: string;
-  // camelCase duplicates from camelCaseKeys transform
-  currentLat?: number | null;
-  currentLon?: number | null;
-  locatedAtHome?: boolean | null;
-  locatedAtWork?: boolean | null;
-  locatedAtFavorite?: boolean | null;
-  homelinkNearby?: boolean;
-  destinationName?: string | null;
-  milesToArrival?: number | null;
-  minutesToArrival?: number | null;
-  routeTrafficDelayMin?: number | null;
-  energyAtArrival?: number | null;
 }
 
 interface Vehicle {
@@ -109,9 +103,8 @@ interface Vehicle {
 /*  Helper: heading label                                              */
 /* ------------------------------------------------------------------ */
 
-// @ts-expect-error -- kept for future use when GPS data is available
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function headingToCardinal(deg: number): string {
+function headingToCardinal(deg: number | null | undefined): string {
+  if (deg == null) return '—';
   const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
   return dirs[Math.round(deg / 45) % 8] ?? '—';
 }
@@ -187,13 +180,13 @@ interface Waypoint {
 }
 
 function buildWaypoints(latest: LocationSnapshot): Waypoint[] {
-  const destName = latest.destination_name ?? latest.destinationName;
-  if (!latest.active_route || !destName) return [];
+  const destName = latest.destination_name;
+  if (!destName) return [];
   return [
     {
       name: destName,
       type: 'destination',
-      distance: latest.miles_to_arrival ?? latest.milesToArrival ?? 0,
+      distance: latest.miles_to_arrival ?? 0,
     },
   ];
 }
@@ -277,9 +270,9 @@ export default function NavigationRoutePage() {
   /* ---- derived ---- */
   const anyError = [vehiclesError, latestError, historyError].find(Boolean);
   const isLoading = vehiclesLoading || latestLoading;
-  const hasActiveRoute = latest?.active_route ?? false;
-  const lat = latest?.current_lat ?? latest?.currentLat ?? null;
-  const lon = latest?.current_lon ?? latest?.currentLon ?? null;
+  const hasActiveRoute = latest?.destination_name != null;
+  const lat = latest?.latitude ?? null;
+  const lon = latest?.longitude ?? null;
   const hasValidLocation = lat != null && lon != null
     && typeof lat === 'number' && typeof lon === 'number'
     && (lat !== 0 || lon !== 0);
@@ -298,14 +291,19 @@ export default function NavigationRoutePage() {
         )
         .map((s) => ({
           time: formatDateTime(s.created_at),
-          miles: s.miles_to_arrival ?? s.milesToArrival ?? 0,
-          minutes: s.minutes_to_arrival ?? s.minutesToArrival ?? 0,
+          speed: s.speed_mph ?? 0,
+          miles: s.miles_to_arrival ?? 0,
         })),
     [history],
   );
 
   /* ---- avg speed ---- */
-  const avgSpeed = 0; // speed not available from location_snapshots API
+  const avgSpeed = useMemo(() => {
+    if (!history?.length) return 0;
+    const speeds = history.map((s) => s.speed_mph).filter((v): v is number => v != null && v > 0);
+    if (!speeds.length) return 0;
+    return speeds.reduce((a, b) => a + b, 0) / speeds.length;
+  }, [history]);
 
   /* ---- recent destinations (unique, from history with active routes) ---- */
   const recentDestinations = useMemo(() => {
@@ -313,14 +311,14 @@ export default function NavigationRoutePage() {
     const seen = new Set<string>();
     const result: { time: string; destination: string; distance: number; eta: number }[] = [];
     for (const s of history) {
-      const name = s.destination_name ?? s.destinationName;
+      const name = s.destination_name;
       if (!name || seen.has(name)) continue;
       seen.add(name);
       result.push({
         time: formatDateTime(s.created_at),
         destination: name,
-        distance: s.miles_to_arrival ?? s.milesToArrival ?? 0,
-        eta: s.minutes_to_arrival ?? s.minutesToArrival ?? 0,
+        distance: s.miles_to_arrival ?? 0,
+        eta: s.minutes_to_arrival ?? 0,
       });
     }
     return result.slice(0, 20);
@@ -333,9 +331,9 @@ export default function NavigationRoutePage() {
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
       .map((s) => ({
         time: formatDateTime(s.created_at),
-        home: (s.located_at_home ?? s.locatedAtHome) ? 1 : 0,
-        work: (s.located_at_work ?? s.locatedAtWork) ? 1 : 0,
-        homelink: (s.homelink_nearby ?? s.homelinkNearby) ? 1 : 0,
+        home: s.located_at_home ? 1 : 0,
+        work: s.located_at_work ? 1 : 0,
+        homelink: s.homelink_nearby ? 1 : 0,
       }));
   }, [history]);
 
@@ -364,56 +362,44 @@ export default function NavigationRoutePage() {
         ),
       },
       {
-        key: 'current_lat',
+        key: 'latitude',
         header: t('nav.col.lat', 'Lat'),
         sortable: true,
-        render: (row: LocationSnapshot) => {
-          const la = row.current_lat ?? row.currentLat;
-          return (
-            <span className="font-mono text-[var(--text-primary)]">
-              {la != null && la !== 0 ? fmtNumber(la, 6) : '—'}
-            </span>
-          );
-        },
+        render: (row: LocationSnapshot) => (
+          <span className="font-mono text-[var(--text-primary)]">
+            {row.latitude != null && row.latitude !== 0 ? fmtNumber(row.latitude, 6) : '—'}
+          </span>
+        ),
       },
       {
-        key: 'current_lon',
+        key: 'longitude',
         header: t('nav.col.lon', 'Lon'),
         sortable: true,
-        render: (row: LocationSnapshot) => {
-          const lo = row.current_lon ?? row.currentLon;
-          return (
-            <span className="font-mono text-[var(--text-primary)]">
-              {lo != null && lo !== 0 ? fmtNumber(lo, 6) : '—'}
-            </span>
-          );
-        },
+        render: (row: LocationSnapshot) => (
+          <span className="font-mono text-[var(--text-primary)]">
+            {row.longitude != null && row.longitude !== 0 ? fmtNumber(row.longitude, 6) : '—'}
+          </span>
+        ),
       },
       {
         key: 'located_at_home',
         header: t('nav.col.home', 'Home'),
         sortable: true,
-        render: (row: LocationSnapshot) => {
-          const home = row.located_at_home ?? row.locatedAtHome;
-          return (
-            <span className={home ? 'text-green-400' : 'text-[var(--text-muted)]'}>
-              {home === true ? 'Yes' : home === false ? 'No' : '—'}
-            </span>
-          );
-        },
+        render: (row: LocationSnapshot) => (
+          <span className={row.located_at_home ? 'text-green-400' : 'text-[var(--text-muted)]'}>
+            {row.located_at_home === true ? 'Yes' : row.located_at_home === false ? 'No' : '—'}
+          </span>
+        ),
       },
       {
         key: 'located_at_work',
         header: t('nav.col.work', 'Work'),
         sortable: true,
-        render: (row: LocationSnapshot) => {
-          const work = row.located_at_work ?? row.locatedAtWork;
-          return (
-            <span className={work ? 'text-blue-400' : 'text-[var(--text-muted)]'}>
-              {work === true ? 'Yes' : work === false ? 'No' : '—'}
-            </span>
-          );
-        },
+        render: (row: LocationSnapshot) => (
+          <span className={row.located_at_work ? 'text-blue-400' : 'text-[var(--text-muted)]'}>
+            {row.located_at_work === true ? 'Yes' : row.located_at_work === false ? 'No' : '—'}
+          </span>
+        ),
       },
       {
         key: 'destination_name',
@@ -421,7 +407,7 @@ export default function NavigationRoutePage() {
         sortable: true,
         render: (row: LocationSnapshot) => (
           <span className="text-[var(--text-primary)] truncate max-w-[150px] block">
-            {row.destination_name ?? row.destinationName ?? '—'}
+            {row.destination_name ?? '—'}
           </span>
         ),
       },
@@ -501,16 +487,16 @@ export default function NavigationRoutePage() {
       switch (key) {
         case 'time':
           return row.created_at;
-        case 'current_lat':
-          return row.current_lat ?? row.currentLat ?? 0;
-        case 'current_lon':
-          return row.current_lon ?? row.currentLon ?? 0;
+        case 'latitude':
+          return row.latitude ?? 0;
+        case 'longitude':
+          return row.longitude ?? 0;
         case 'located_at_home':
-          return (row.located_at_home ?? row.locatedAtHome) ? 1 : 0;
+          return row.located_at_home ? 1 : 0;
         case 'located_at_work':
-          return (row.located_at_work ?? row.locatedAtWork) ? 1 : 0;
+          return row.located_at_work ? 1 : 0;
         case 'destination_name':
-          return row.destination_name ?? row.destinationName ?? '';
+          return row.destination_name ?? '';
         default:
           return '';
       }
@@ -604,7 +590,7 @@ export default function NavigationRoutePage() {
                     {t('nav.destination', 'Destination')}
                   </span>
                   <span className="block text-sm font-medium text-[var(--text-primary)]">
-                    {latest.destination_name ?? latest.destinationName ?? '—'}
+                    {latest.destination_name ?? '—'}
                   </span>
                 </span>
 
@@ -613,7 +599,7 @@ export default function NavigationRoutePage() {
                     {t('nav.eta', 'ETA')}
                   </span>
                   <span className="block text-sm font-medium text-[var(--text-primary)]">
-                    {fmtNumber(latest.minutes_to_arrival ?? latest.minutesToArrival ?? 0, 0)}{' '}
+                    {fmtNumber(latest.minutes_to_arrival ?? 0, 0)}{' '}
                     {t('nav.minutes', 'min')}
                   </span>
                 </span>
@@ -623,7 +609,7 @@ export default function NavigationRoutePage() {
                     {t('nav.distanceRemaining', 'Distance Remaining')}
                   </span>
                   <span className="block text-sm font-medium text-[var(--text-primary)]">
-                    {fmtNumber(convertDistance(latest.miles_to_arrival ?? latest.milesToArrival ?? 0), 1)}{' '}
+                    {fmtNumber(convertDistance(latest.miles_to_arrival ?? 0), 1)}{' '}
                     {distanceUnit}
                   </span>
                 </span>
@@ -633,7 +619,7 @@ export default function NavigationRoutePage() {
                     {t('nav.trafficDelay', 'Traffic Delay')}
                   </span>
                   <TrafficDelayBadge
-                    minutes={latest.route_traffic_delay_min ?? latest.routeTrafficDelayMin ?? 0}
+                    minutes={latest.route_traffic_delay_min ?? 0}
                     t={t}
                   />
                 </span>
@@ -674,7 +660,7 @@ export default function NavigationRoutePage() {
                 label={t('nav.gpsFixQuality', 'GPS Fix Quality')}
                 value={
                   latest?.gps_state
-                    ? t(`nav.gpsState.${latest.gps_state}`, latest.gps_state)
+                    ? `${t(`nav.gpsState.${latest.gps_state}`, latest.gps_state)} ${headingToCardinal(latest?.heading)}`
                     : t('nav.unknown', 'Unknown')
                 }
                 active={
@@ -686,27 +672,27 @@ export default function NavigationRoutePage() {
                 icon={<Home className="h-5 w-5" />}
                 label={t('nav.homeStatus', 'Home Status')}
                 value={
-                  (latest?.located_at_home ?? latest?.locatedAtHome) === true
+                  latest?.located_at_home === true
                     ? t('nav.atHome', 'At Home')
-                    : (latest?.located_at_home ?? latest?.locatedAtHome) === false
-                      ? (latest?.homelink_nearby ?? latest?.homelinkNearby)
+                    : latest?.located_at_home === false
+                      ? latest?.homelink_nearby
                         ? t('nav.homelinkNearby', 'HomeLink Nearby')
                         : t('nav.awayFromHome', 'Away')
                       : t('nav.unknown', 'Unknown')
                 }
-                active={(latest?.located_at_home ?? latest?.locatedAtHome) === true}
+                active={latest?.located_at_home === true}
               />
               <LocationStatusCard
                 icon={<Briefcase className="h-5 w-5" />}
                 label={t('nav.workStatus', 'Work Status')}
                 value={
-                  (latest?.located_at_work ?? latest?.locatedAtWork) === true
+                  latest?.located_at_work === true
                     ? t('nav.atWork', 'At Work')
-                    : (latest?.located_at_work ?? latest?.locatedAtWork) === false
+                    : latest?.located_at_work === false
                       ? t('nav.notAtWork', 'Away')
                       : t('nav.unknown', 'Unknown')
                 }
-                active={(latest?.located_at_work ?? latest?.locatedAtWork) === true}
+                active={latest?.located_at_work === true}
               />
             </span>
           </FadeIn>
@@ -718,7 +704,7 @@ export default function NavigationRoutePage() {
                 label={t('nav.metric.distance', 'Distance')}
                 value={
                   hasActiveRoute
-                    ? `${fmtNumber(convertDistance(latest?.miles_to_arrival ?? latest?.milesToArrival ?? 0), 1)} ${distanceUnit}`
+                    ? `${fmtNumber(convertDistance(latest?.miles_to_arrival ?? 0), 1)} ${distanceUnit}`
                     : '—'
                 }
                 icon={<Route className="h-5 w-5" />}
@@ -728,7 +714,7 @@ export default function NavigationRoutePage() {
                 label={t('nav.metric.eta', 'ETA')}
                 value={
                   hasActiveRoute
-                    ? `${fmtNumber(latest?.minutes_to_arrival ?? latest?.minutesToArrival ?? 0, 0)} min`
+                    ? `${fmtNumber(latest?.minutes_to_arrival ?? 0, 0)} min`
                     : '—'
                 }
                 icon={<Clock className="h-5 w-5" />}
@@ -738,7 +724,7 @@ export default function NavigationRoutePage() {
                 label={t('nav.metric.trafficDelay', 'Traffic Delay')}
                 value={
                   hasActiveRoute
-                    ? `${fmtNumber(latest?.route_traffic_delay_min ?? latest?.routeTrafficDelayMin ?? 0, 0)} min`
+                    ? `${fmtNumber(latest?.route_traffic_delay_min ?? 0, 0)} min`
                     : '—'
                 }
                 icon={<BatteryCharging className="h-5 w-5" />}
@@ -818,7 +804,7 @@ export default function NavigationRoutePage() {
                       orientation="right"
                       tick={axisTick}
                       label={{
-                        value: t('nav.chartOdometer', 'Odometer (mi)'),
+                        value: t('nav.chartDistance', 'Miles to Arrival'),
                         angle: 90,
                         position: 'insideRight',
                         style: { fill: 'var(--text-muted)', fontSize: 10 },
@@ -841,11 +827,11 @@ export default function NavigationRoutePage() {
                     <Area
                       {...AREA_DEFAULTS}
                       yAxisId="odo"
-                      dataKey="odometer"
+                      dataKey="miles"
                       stroke={CHART_COLORS[1]}
                       fill="url(#odoGrad)"
                       strokeWidth={1.5}
-                      name={t('nav.legendOdometer', 'Odometer (mi)')}
+                      name={t('nav.legendMilesToArrival', 'Miles to Arrival')}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -896,19 +882,19 @@ export default function NavigationRoutePage() {
                     <span
                       className={cn(
                         'text-3xl font-bold',
-                        (latest?.route_traffic_delay_min ?? latest?.routeTrafficDelayMin ?? 0) === 0
+                        (latest?.route_traffic_delay_min ?? 0) === 0
                           ? 'text-green-400'
-                          : (latest?.route_traffic_delay_min ?? latest?.routeTrafficDelayMin ?? 0) <= 5
+                          : (latest?.route_traffic_delay_min ?? 0) <= 5
                             ? 'text-amber-400'
                             : 'text-red-400',
                       )}
                     >
-                      {latest?.route_traffic_delay_min ?? latest?.routeTrafficDelayMin ?? 0}
+                      {latest?.route_traffic_delay_min ?? 0}
                     </span>
                     <span className="text-sm text-white/40">{t('nav.min', 'min')}</span>
                   </div>
                   <TrafficDelayBadge
-                    minutes={latest?.route_traffic_delay_min ?? latest?.routeTrafficDelayMin ?? 0}
+                    minutes={latest?.route_traffic_delay_min ?? 0}
                     t={t}
                   />
                 </div>
