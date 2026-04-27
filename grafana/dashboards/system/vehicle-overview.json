@@ -1043,7 +1043,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT convert_temp(inside_temp) AS \"Cabin\", convert_temp(outside_temp) AS \"Outside\", hvac_power AS \"HVAC (kW)\", hvac_fan_speed AS \"Fan Speed\" FROM climate_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT\n  convert_temp((SELECT value_num FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'InsideTemp' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1)) AS \"Cabin\",\n  convert_temp((SELECT value_num FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'OutsideTemp' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1)) AS \"Outside\",\n  (SELECT value_str FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'HvacPower' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1) AS \"HVAC State\",\n  (SELECT value_num FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'HvacFanSpeed' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1) AS \"Fan Speed\"",
           "refId": "A"
         }
       ],
@@ -1102,7 +1102,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT CASE WHEN locked THEN 'Locked' ELSE 'Unlocked' END AS \"🔒 Lock\", CASE WHEN sentry_mode THEN 'Active' ELSE 'Off' END AS \"🛡️ Sentry\", COALESCE(door_state, 'Unknown') AS \"🚪 Doors\", COALESCE(fd_window, '-') AS \"FD Window\", COALESCE(fp_window, '-') AS \"FP Window\" FROM security_events WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT\n  CASE WHEN (SELECT value_bool FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'Locked' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1) THEN 'Locked' ELSE 'Unlocked' END AS \"🔒 Lock\",\n  CASE WHEN (SELECT value_bool FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'SentryMode' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1) THEN 'Active' ELSE 'Off' END AS \"🛡️ Sentry\",\n  COALESCE((SELECT value_str FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'DoorState' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1), 'Unknown') AS \"🚪 Doors\"",
           "refId": "A"
         }
       ],

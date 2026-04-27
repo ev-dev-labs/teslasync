@@ -505,7 +505,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, CASE WHEN lights_hazards_active THEN 1 ELSE 0 END AS \"Hazards Active\", CASE WHEN lights_high_beams THEN 1 ELSE 0 END AS \"High Beams\" FROM security_events WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "rawSql": "SELECT\n  $__timeGroup(created_at, '1m') AS time,\n  MAX(CASE WHEN value_bool THEN 1 ELSE 0 END) FILTER (WHERE signal = 'LightsHazardsActive') AS \"Hazards Active\",\n  MAX(CASE WHEN value_bool THEN 1 ELSE 0 END) FILTER (WHERE signal = 'LightsHighBeams') AS \"High Beams\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('LightsHazardsActive', 'LightsHighBeams')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY 1\nORDER BY 1",
           "refId": "A"
         }
       ],
@@ -585,7 +585,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, tonneau_open_percent AS \"Tonneau Open %\" FROM security_events WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) AND tonneau_open_percent IS NOT NULL ORDER BY created_at",
+          "rawSql": "SELECT\n  $__timeGroup(created_at, '1m') AS time,\n  MAX(value_num) AS \"Tonneau Open %\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'TonneauOpenPercent'\n  AND value_num IS NOT NULL\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY 1\nORDER BY 1",
           "refId": "A"
         }
       ],
