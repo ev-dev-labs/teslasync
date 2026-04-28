@@ -1,0 +1,34 @@
+=== SURVEY ===
+Target: VehicleUpgradesWidget (new widget) + registry entry
+Hooks required:
+  - useVehicleUpgrades(vehicleId) from @/api/hooks/useVehicles → returns VehicleInfoEnvelope<Record<string, unknown>>
+  - useShareLinks(driveId) from @/api/hooks/useSharing → returns ShareToken[]
+  - useDrives(vehicleId) from @/api/hooks/useDriving → needed to get recent driveId for share links
+  - useVehicles() from @/api/hooks/useVehicles → fallback vehicleId
+Existing widget patterns reviewed: SubscriptionsWidget, WidgetDetailCard, WidgetShell
+
+=== REASONING ===
+- Compact (1×2): Shows eligible upgrade count or "Up to date" green badge. Touch-friendly min-h-[44px].
+- Standard (2×4): Two sections: upgrades list (name + price badge + description) with "All upgrades applied ✅" empty state,
+  divider, then share links section showing active count + nearest expiry.
+- Wide (3×4+): Adds per-upgrade eligibility detail text below description.
+- useShareLinks requires a driveId → use useDrives(stringId) to get the most recent drive, extract its ID.
+- All data null-safe: upgrades ?? [], shareLinks ?? []. All strings i18n via useTranslation('dashboard').
+- All freshness props forwarded to WidgetShell.
+
+=== CHANGES ===
+1. Created: web/src/features/dashboard/widgets/VehicleUpgradesWidget.tsx
+   - 3 layout modes: compact, standard, wide
+   - Parses upgrades from VehicleInfoEnvelope (handles array + object fallback)
+   - Share links via useDrives → useShareLinks chain
+   - Full i18n, null-safe, freshness props
+2. Modified: web/src/features/dashboard/widgets/registry.ts
+   - Added ArrowUpCircle to lucide-react imports
+   - Added vehicle-upgrades entry after subscriptions (category: vehicle, default 2×4, min 1×2, max 4×40)
+
+=== GATE ===
+Command: cd D:\repos\teslasync\web && npx tsc --noEmit
+Result: exit code 0 — clean compile, no errors
+
+EXIT=0
+STATUS=DONE

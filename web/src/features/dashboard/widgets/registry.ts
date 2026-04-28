@@ -14,6 +14,7 @@ import {
   HardDrive,
   Info,
   Users,
+  ArrowUpCircle,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -1219,6 +1220,19 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./SubscriptionsWidget')),
+  },
+
+  // ── Upgrades & Sharing ──
+  {
+    id: 'vehicle-upgrades',
+    name: 'Upgrades & Sharing',
+    description: 'Available OTA upgrades with pricing + active drive share links',
+    icon: ArrowUpCircle,
+    category: 'vehicle',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./VehicleUpgradesWidget')),
   },
 
   // ── System Health ──
