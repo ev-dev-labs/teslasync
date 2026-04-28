@@ -1,267 +1,532 @@
 === PREFLIGHT ===
 Prompt: Phase-34 Prompt 00 - Docs Inventory and Source Map
-Timestamp: 2026-04-28T14:55:05.057-07:00
-Allowed files to change: .github\prompts\db-refactor\logs\phase-34-00-docs-inventory-and-source-map.log only
-Predecessor: none declared; no predecessor STATUS check required.
-Delegation: no sub-agents, no background tasks, no parallel task execution used.
-Initial git status before writing this log: clean.
-Required source files checked before gate: all 13 existed.
+Timestamp: 2026-04-28T15:33:19.675165-07:00
+Repository: D:\repos\teslasync
+Allowed file changed by this prompt: .github\prompts\db-refactor\logs\phase-34-00-docs-inventory-and-source-map.log
+Predecessor: none; no predecessor STATUS=DONE check required.
+INITIAL_GIT_STATUS_COUNT=4
+ D .github/prompts/db-refactor/logs/phase-34-00-docs-inventory-and-source-map.log
+ M web/src/components/vehicles/VehicleTwin.tsx
+ M web/src/features/dashboard/widgets/DigitalTwinWidget.tsx
+?? web/dev-dist/
+No docs content edits were made; this prompt writes only the inventory log.
+Inventory generated from live repo files; only this log path is written in the repository.
 
 === SURVEY ===
-DOC_MARKDOWN_COUNT=37
-Inventory command: Get-ChildItem docs -Recurse -File -Include *.md excluding docs\node_modules, docs\.vitepress\cache, docs\.vitepress\dist.
+Required source-of-truth files inspected:
+- go.mod [present]
+- web\package.json [present]
+- docs\package.json [present]
+- docs\.vitepress\config.ts [present]
+- docs\.vitepress\theme\index.ts [present]
+- docs\.vitepress\theme\custom.css [present]
+- docs\public\particles.js [present]
+- internal\api\router.go [present]
+- internal\config\config.go [present]
+- docker-compose.yml [present]
+- helm\teslasync\values.yaml [present]
+- helm\teslasync\templates\configmap.yaml [present]
+- helm\teslasync\templates\secret.yaml [present]
+MISSING_SOURCE_COUNT=0
 
-Markdown inventory:
-- docs\api-reference.md
-- docs\caching.md
-- docs\contributing\adding-features.md
-- docs\contributing\api-reference.md
-- docs\contributing\code-structure.md
-- docs\deployment\docker.md
-- docs\deployment\github-pages.md
-- docs\deployment\kubernetes.md
-- docs\features\alerts.md
-- docs\features\analytics.md
-- docs\features\backup-restore.md
-- docs\features\dashboard.md
-- docs\features\data-export.md
-- docs\features\vehicle-tracking.md
-- docs\guide\api-endpoints.md
-- docs\guide\architecture.md
-- docs\guide\configuration.md
-- docs\guide\database.md
-- docs\guide\diagrams.md
-- docs\guide\faq.md
-- docs\guide\fleet-telemetry.md
-- docs\guide\getting-started.md
-- docs\guide\local-development.md
-- docs\guide\roadmap.md
-- docs\guide\technology.md
-- docs\guide\troubleshooting.md
-- docs\index.md
-- docs\signal-audits\003-blind-spot-collision-warning-chime.md
-- docs\signal-audits\004-forward-collision-warning.md
-- docs\signal-audits\005-driver-seat-belt.md
-- docs\signal-audits\006-lane-departure-avoidance.md
-- docs\signal-audits\007-emergency-lane-departure-avoidance.md
-- docs\signal-audits\007-passenger-seat-belt.md
-- docs\signal-audits\008-automatic-emergency-braking-off.md
-- docs\signal-audits\009-cruise-follow-distance.md
-- docs\signal-audits\010-speed-limit-warning.md
-- docs\upgrade-notes-v0.25.md
+Markdown inventory under docs (excluded docs\node_modules, docs\.vitepress\cache, docs\.vitepress\dist): DOC_MARKDOWN_COUNT=37
+- docs\api-reference.md | lines=173 | h1=# TeslaSync API Reference — Drive & Charging Enhancements
+- docs\caching.md | lines=86 | h1=# Caching & Cache-Invalidation
+- docs\contributing\adding-features.md | lines=338 | h1=# Adding Features
+- docs\contributing\api-reference.md | lines=631 | h1=# API Reference
+- docs\contributing\code-structure.md | lines=297 | h1=# Code Structure
+- docs\deployment\docker.md | lines=295 | h1=# Docker Deployment
+- docs\deployment\github-pages.md | lines=201 | h1=# Deploying Docs to GitHub Pages
+- docs\deployment\kubernetes.md | lines=463 | h1=# Kubernetes Deployment
+- docs\features\alerts.md | lines=418 | h1=# Alerts & Notifications
+- docs\features\analytics.md | lines=266 | h1=# Analytics & Charts
+- docs\features\backup-restore.md | lines=83 | h1=# Backup & Restore
+- docs\features\dashboard.md | lines=108 | h1=# Dashboard
+- docs\features\data-export.md | lines=336 | h1=# Data Export
+- docs\features\vehicle-tracking.md | lines=211 | h1=# Vehicle Tracking & Live Map
+- docs\guide\api-endpoints.md | lines=2379 | h1=# API Reference
+- docs\guide\architecture.md | lines=1081 | h1=# Architecture
+- docs\guide\configuration.md | lines=526 | h1=# Configuration
+- docs\guide\database.md | lines=117 | h1=# Database Schema
+- docs\guide\diagrams.md | lines=262 | h1=# Diagrams
+- docs\guide\faq.md | lines=124 | h1=# FAQ
+- docs\guide\fleet-telemetry.md | lines=723 | h1=# Fleet Telemetry
+- docs\guide\getting-started.md | lines=148 | h1=# Getting Started
+- docs\guide\local-development.md | lines=336 | h1=# Local Development
+- docs\guide\roadmap.md | lines=172 | h1=# Roadmap
+- docs\guide\technology.md | lines=82 | h1=# Technology Stack
+- docs\guide\troubleshooting.md | lines=311 | h1=# Troubleshooting
+- docs\index.md | lines=104 | h1=# Edit .env with your Tesla API credentials
+- docs\signal-audits\003-blind-spot-collision-warning-chime.md | lines=169 | h1=# Signal Audit: BlindSpotCollisionWarningChime
+- docs\signal-audits\004-forward-collision-warning.md | lines=260 | h1=# Signal Audit: ForwardCollisionWarning
+- docs\signal-audits\005-driver-seat-belt.md | lines=307 | h1=# Signal Audit: DriverSeatBelt
+- docs\signal-audits\006-lane-departure-avoidance.md | lines=268 | h1=# Signal Audit: LaneDepartureAvoidance
+- docs\signal-audits\007-emergency-lane-departure-avoidance.md | lines=264 | h1=# Signal Audit: EmergencyLaneDepartureAvoidance
+- docs\signal-audits\007-passenger-seat-belt.md | lines=338 | h1=# Signal Audit: PassengerSeatBelt
+- docs\signal-audits\008-automatic-emergency-braking-off.md | lines=250 | h1=# Signal Audit: AutomaticEmergencyBrakingOff
+- docs\signal-audits\009-cruise-follow-distance.md | lines=130 | h1=# Signal Audit 009: CruiseFollowDistance
+- docs\signal-audits\010-speed-limit-warning.md | lines=393 | h1=# Signal Audit: SpeedLimitWarning
+- docs\upgrade-notes-v0.25.md | lines=88 | h1=# TeslaSync v0.25.0 Upgrade Notes
 
 Source-of-truth facts later docs prompts must follow:
+- go.mod module: L1: module github.com/ev-dev-labs/teslasync
+- go.mod Go version: L3: go 1.25.0
+- go.mod key dependencies: L14: github.com/go-chi/chi/v5 v5.0.12; L19: github.com/jackc/pgx/v5 v5.5.5; L24: github.com/rs/zerolog v1.32.0; L22: github.com/redis/go-redis/v9 v9.18.0
+- web\package.json scripts: build, dev, lint, preview, test, test:coverage, test:watch
+- web\package.json versions: react=^18.3.1, vite=^5.1.6, typescript=^5.4.2, tanstack-query=^5.28.0, i18next=^25.10.4, tailwind=^3.4.1
+- docs\package.json scripts: docs:build, docs:dev, docs:preview
+- docs\package.json versions: vitepress=^1.6.4, mermaid=None, tsparticles-engine=None, tsparticles-slim=None
+- docs\.vitepress\config.ts: particles.js reference=True; Mermaid config=True; nav/sidebar/themeConfig=True
+- docs\.vitepress\theme\index.ts: custom.css import=True; Mermaid support=False; overlay/zoom behavior=True
+- docs\.vitepress\theme\custom.css: particleDrift=True; animation rules=True; VitePress CSS vars=True
+- docs\public\particles.js: exists=True; particle initialization text=True
+- internal\api\router.go: all docs must treat /api/v1 in router.go as the API prefix source of truth.
+- internal\api\router.go: route groups observed include vehicles, drives, charging, signals, alerts, notifications, system, analytics, motor, tire-pressure, climate, security, media, safety, locations, telemetry, settings, commands, debug, api-logs, exports, admin, billing, user, onboarding, chatbot, and auth where present in router.go.
+- internal\config\config.go: env var names/defaults must come from envStr/envBool/envInt/envDuration calls in config.go, then be reconciled with compose and Helm templates.
+- docker-compose.yml database image source: L143: image: timescale/timescaledb-ha:pg17
+- docker-compose.yml port/config docs must match compose service mappings rather than old examples.
+- helm\teslasync\values.yaml image/config defaults source: L625: repository: timescale/timescaledb-ha
+- helm\teslasync\templates\configmap.yaml: non-secret environment values are rendered here from values.yaml.
+- helm\teslasync\templates\secret.yaml: secret environment values are rendered here or sourced from existing secrets; docs must not hardcode secret values.
 
-1) go.mod
-- Module is github.com/ev-dev-labs/teslasync.
-- Current Go directive is go 1.25.0. Docs must not claim Go 1.22/1.23/1.24.
-- Backend dependencies include chi v5.0.12, pgx/v5 v5.5.5, zerolog v1.32.0, redis/go-redis/v9 v9.18.0, teslamotors/fleet-telemetry v0.9.0, MongoDB driver v2.5.0, OpenTelemetry v1.42.0, and caarlos0/env/v11 v11.4.0.
+Router route string inventory from internal\api\router.go:
+- Delete /
+- Delete /configs/{configID}
+- Delete /fleet-telemetry-config
+- Delete /public-key
+- Delete /rules/{ruleID}
+- Delete /shares/{token}
+- Delete /{scheduleID}
+- Get /
+- Get /.well-known/appspecific/com.tesla.3p.public-key.pem
+- Get /acceleration-distribution
+- Get /analytics
+- Get /analytics/anomalies
+- Get /analytics/battery-cells
+- Get /analytics/battery-degradation
+- Get /analytics/battery-health
+- Get /analytics/charging-heatmap
+- Get /analytics/charging-optimizer
+- Get /analytics/cost-forecast
+- Get /analytics/driving-coach
+- Get /analytics/energy
+- Get /analytics/fleet
+- Get /analytics/lifetime
+- Get /analytics/period-stats
+- Get /analytics/range-projection
+- Get /analytics/regen
+- Get /analytics/route-efficiency
+- Get /analytics/route-efficiency/detail
+- Get /analytics/sleep
+- Get /analytics/speed-profile
+- Get /analytics/tco
+- Get /analytics/temperature-impact
+- Get /analytics/year-review
+- Get /api-usage
+- Get /api/v1/share/{token}
+- Get /audit
+- Get /available
+- Get /backup
+- Get /backup-history
+- Get /backup/stats
+- Get /battery
+- Get /battery/cells
+- Get /battery/projected-range
+- Get /callback
+- Get /charging-history
+- Get /commands/history
+- Get /commands/latest
+- Get /complication
+- Get /compression-stats
+- Get /config
+- Get /config-validation
+- Get /configs
+- Get /configs/{configID}
+- Get /daily
+- Get /db-stats
+- Get /decisions
+- Get /detect-region
+- Get /drivetrain/health
+- Get /dynamics
+- Get /energy
+- Get /energy-history
+- Get /energy/flow
+- Get /env-check
+- Get /error-vins
+- Get /errors
+- Get /errors/catalog
+- Get /errors/stats
+- Get /events
+- Get /export
+- Get /export/{type}
+- Get /feature-config
+- Get /fleet-api-info
+- Get /fleet-telemetry-config
+- Get /fleet-telemetry-errors
+- Get /fsm/debug
+- Get /geocode/reverse
+- Get /geocode/search
+- Get /health
+- Get /healthz
+- Get /history
+- Get /invoice/{contentID}
+- Get /latest
+- Get /live
+- Get /live-status
+- Get /live-status/history
+- Get /locations
+- Get /login
+- Get /logs
+- Get /map-config
+- Get /metrics
+- Get /metrics-catalog
+- Get /migration-status
+- Get /mobile-enabled
+- Get /monthly
+- Get /nearby-charging
+- Get /openapi
+- Get /options
+- Get /orders
+- Get /partner-public-key
+- Get /positions
+- Get /predictions
+- Get /preferences
+- Get /profile
+- Get /public-key-status
+- Get /rate-plans
+- Get /readyz
+- Get /recent-alerts
+- Get /records
+- Get /redis-signals
+- Get /region
+- Get /release-notes
+- Get /rules
+- Get /runs
+- Get /runs/{runID}
+- Get /runs/{runID}/download
+- Get /runs/{runID}/preview
+- Get /runtime-info
+- Get /savings
+- Get /score
+- Get /service-data
+- Get /sessions
+- Get /settings
+- Get /settings/dashboard-layouts
+- Get /settings/polling-config
+- Get /shares
+- Get /signals/available
+- Get /signals/stats
+- Get /site-info
+- Get /software-updates
+- Get /specs
+- Get /sse-token
+- Get /stale-sessions
+- Get /state
+- Get /stats
+- Get /status
+- Get /subscriptions
+- Get /summary
+- Get /telemetry
+- Get /tesla/energy-sites
+- Get /tesla/warranty
+- Get /test-api
+- Get /timeline
+- Get /token-info
+- Get /transitions
+- Get /trips
+- Get /update-check
+- Get /upgrades
+- Get /version
+- Get /weekly-digest
+- Get /workers
+- Get /{historyId}
+- Get /{jobID}
+- Get /{jobID}/download
+- Get /{presetId}
+- Get /{signalName}/history
+- Get from
+- Get fsm_type
+- Get hours
+- Get page
+- Get per_page
+- Get signals
+- Get to
+- Get vehicle_id
+- Patch /re-enable
+- Patch /toggle
+- Post /
+- Post /api/v1/automations/webhook/{token}
+- Post /apply
+- Post /backup-history/refresh
+- Post /charging-history/refresh
+- Post /close
+- Post /command
+- Post /configs
+- Post /configs/{configID}/trigger
+- Post /demo
+- Post /disconnect
+- Post /energy-history/refresh
+- Post /error-vins/refresh
+- Post /errors/refresh
+- Post /events/{eventID}/acknowledge
+- Post /export
+- Post /feature-config/refresh
+- Post /fleet-status
+- Post /fleet-telemetry-subscribe
+- Post /generate-keypair
+- Post /import
+- Post /internal/flush
+- Post /live-status/refresh
+- Post /mobile-enabled/refresh
+- Post /mqtt-test
+- Post /optimize
+- Post /options/refresh
+- Post /orders/refresh
+- Post /pair-vehicle-key
+- Post /panic
+- Post /plan
+- Post /poll
+- Post /profile/refresh
+- Post /quick
+- Post /refresh
+- Post /region/refresh
+- Post /register-partner
+- Post /revoke
+- Post /rules
+- Post /runs/{runID}/verify
+- Post /settings/suspend-api
+- Post /share
+- Post /site-info/refresh
+- Post /specs/refresh
+- Post /subscriptions/refresh
+- Post /sync
+- Post /tesla/energy-sites/refresh
+- Post /tesla/warranty/refresh
+- Post /test
+- Post /test-run
+- Post /toggle
+- Post /tou-settings
+- Post /undo
+- Post /upgrades/refresh
+- Post /upload-public-key
+- Post /url
+- Post /wake
+- Post /{alertID}/read
+- Post /{invitationID}/revoke
+- Put /
+- Put /config
+- Put /configs/{configID}
+- Put /preferences
+- Put /rules/{ruleID}
+- Put /settings
+- Put /settings/dashboard-layouts
+- Put /settings/polling-config
+- Route /alerts
+- Route /api-keys
+- Route /api-logs
+- Route /api/v1
+- Route /auth
+- Route /automations
+- Route /backup
+- Route /charge-planner
+- Route /charging
+- Route /charging-telemetry
+- Route /charging/{id}
+- Route /chatbot
+- Route /climate
+- Route /data-repair
+- Route /dev-tools
+- Route /drive/{id}
+- Route /drivers
+- Route /drives
+- Route /export/jobs
+- Route /fsm
+- Route /gas-price
+- Route /geofences
+- Route /guard
+- Route /history
+- Route /invitations
+- Route /location-snapshots
+- Route /maintenance
+- Route /media
+- Route /mileage
+- Route /motor
+- Route /notifications
+- Route /polling
+- Route /presets
+- Route /safety
+- Route /schedules
+- Route /security
+- Route /sessions
+- Route /signals/history
+- Route /signals/{vehicleID}
+- Route /system
+- Route /telemetry
+- Route /telemetry-capture
+- Route /tesla/charging
+- Route /tesla/energy-sites/{siteID}
+- Route /tesla/fleet-telemetry
+- Route /tesla/user
+- Route /tire-pressure
+- Route /trip-planner
+- Route /user-preferences
+- Route /vampire-drain
+- Route /vehicle-config
+- Route /vehicle-states
+- Route /vehicles
+- Route /watch
+- Route /{channelID}
+- Route /{driveID}
+- Route /{geofenceID}
+- Route /{id}
+- Route /{sessionID}
+- Route /{vehicleID}
 
-2) web\package.json and web\src layout
-- Frontend package is teslasync-web version 2.0.0, type module.
-- Scripts: dev=vite, build="tsc && vite build", preview=vite preview, lint=eslint, test=vitest run, coverage=vitest run --coverage.
-- Runtime stack: React 18.3.1, React Router 6.22.3, TanStack Query 5.28.0, Recharts 2.12.3, Leaflet/react-leaflet, Framer Motion 12.38.0, i18next/react-i18next, Tailwind utilities, Vite PWA.
-- Dev stack: Vite 5.1.6, TypeScript 5.4.2, Vitest 4.1.0, Testing Library, ESLint 8.
-- Current web\src top level: api, App.tsx, components, features, hooks, i18n, index.css, lib, main.tsx, test, test-setup.ts, types, vite-env.d.ts.
-- Current feature directories: admin, analytics, automations, battery, charging, dashboard, diagnostics, driving, maps, notifications, onboarding, settings, sharing, system, telemetry, trips, vehicle-systems, vehicles, watch.
-- Current shared component categories: charts, data-display, feedback, forms, layout, maps, motion, ui, vehicles.
-- Current API hook files: useAdmin.ts, useAnalytics.ts, useAnomalies.ts, useAutomations.ts, useCharging.ts, useCommands.ts, useDashboard.ts, useDriving.ts, useEnergy.ts, useExports.ts, useFSM.ts, useGuard.ts, useLocations.ts, useNotifications.ts, useSettings.ts, useSharing.ts, useTelemetry.ts, useTrips.ts, useUser.ts, useVehicleAccess.ts, useVehicleCommand.ts, useVehicles.ts, useVehicleSystems.ts, useWatch.ts.
-- Current API client source line: web\src\api\client.ts prefixes requests with `${getApiBase()}/api/v1${normalizePath(path)}` and documents hook paths as "without /api/v1 prefix". Docs and frontend examples must not double-prefix /api/v1 in hook paths.
-- App.tsx currently has 96 lazy() references; route docs should describe a code-split React SPA using feature pages, not a monolithic page bundle.
+Environment/configuration names discovered from source files:
+- internal\config\config.go env vars (68): AUTH_ENABLED, AUTH_JWT_SECRET, AZURE_MAPS_API_KEY, CORS_ORIGINS, DATABASE_CONNECT_TIMEOUT, DATABASE_CONN_MAX_IDLE_TIME, DATABASE_CONN_MAX_LIFETIME, DATABASE_HEALTH_CHECK_PERIOD, DATABASE_HOST, DATABASE_MAX_CONNS, DATABASE_MIGRATIONS, DATABASE_MIN_CONNS, DATABASE_NAME, DATABASE_PASS, DATABASE_PORT, DATABASE_SSLMODE, DATABASE_STATEMENT_TIMEOUT, DATABASE_USER, DATA_RETENTION_DAYS, FLEET_TELEMETRY_BATCH_MS, FLEET_TELEMETRY_CLEANUP_INTERVAL, FLEET_TELEMETRY_ENABLED, FLEET_TELEMETRY_FALLBACK_POLL_INTERVAL, FLEET_TELEMETRY_HOST, FLEET_TELEMETRY_PORT, FLEET_TELEMETRY_SNAPSHOT_WRITE_INTERVAL, FLEET_TELEMETRY_STALE_SESSION_TIMEOUT, FLEET_TELEMETRY_STALE_TIMEOUT, FLEET_TELEMETRY_TOPIC_BASE, FORWARD_AUTH_HEADER, GAS_PRICE_API_KEY, GAS_PRICE_ENABLED, GAS_PRICE_POLL_INTERVAL, GOOGLE_MAPS_API_KEY, MONGODB_DATABASE, MONGODB_ENABLED, MONGODB_TTL_DAYS, MONGODB_URI, MQTT_CLIENT_ID, MQTT_ENABLED, MQTT_HOST, MQTT_PASSWORD, MQTT_PORT, MQTT_PREFIX, MQTT_USERNAME, OTEL_ENABLED, OTEL_ENDPOINT, OTEL_INSECURE, OTEL_SERVICE_NAME, POSITION_RETENTION_DAYS, REDIS_DB, REDIS_ENABLED, REDIS_HOST, REDIS_PASSWORD, REDIS_PORT, SIGNAL_HISTORY_RETENTION_DAYS, TESLASYNC_LOG_LEVEL, TESLASYNC_PORT, TESLA_API_BASE_URL, TESLA_AUTH_URL, TESLA_CLIENT_ID, TESLA_CLIENT_SECRET, TESLA_COMMAND_PROXY_URL, TESLA_REDIRECT_URI, TESLA_TIMEOUT, WORKER_POLL_INTERVAL, WORKER_SLEEP_POLL_MULT, WORKER_STREAMING
+- docker-compose.yml env-style keys (2): UI, VERSION
+- Helm env var names in configmap/secret (0): 
 
-3) docs\package.json
-- Docs package is docs version 1.0.0, type module.
-- Docs scripts are docs:dev=vitepress dev, docs:build=vitepress build, docs:preview=vitepress preview.
-- Docs dev dependencies are vitepress 1.6.4, vitepress-plugin-mermaid 2.0.17, mermaid 11.13.0.
+Stale-claim candidates found in current docs (review/fix in later prompts, do not edit here):
+- old_go_versions: COUNT=4
+  docs\deployment\docker.md:43: # Build stage: Go 1.22 on Alpine
+  docs\deployment\docker.md:44: FROM golang:1.22-alpine AS builder
+  docs\guide\local-development.md:20: # Go 1.22+
+  docs\index.md:86: | **Backend** | Go 1.22 · Chi router · pgx · zerolog |
+- old_database_images: COUNT=6
+  docs\deployment\docker.md:15: | **postgres** | postgres:17-alpine | 5432 | 256M–1G | PostgreSQL database |
+  docs\deployment\docker.md:83: postgres:
+  docs\deployment\docker.md:84: image: postgres:17-alpine
+  docs\guide\local-development.md:195: migrate -source file://migrations -database "postgres://teslasync:teslasync@localhost:5432/teslasync?sslmode=disable" up
+  docs\guide\local-development.md:198: migrate -source file://migrations -database "postgres://teslasync:teslasync@localhost:5432/teslasync?sslmode=disable" down 1
+  docs\guide\troubleshooting.md:153: 4. The datasource should connect to `postgres:5432` (Docker internal hostname), not `localhost`
+- obsolete_worker_env_language: COUNT=31
+  docs\contributing\code-structure.md:13: ├── cmd/notification-worker/   # Notification worker entry point
+  docs\contributing\code-structure.md:16: ├── cmd/export-worker/         # Export worker entry point
+  docs\contributing\code-structure.md:68: ├── Dockerfile.export-worker   # Export worker build
+  docs\contributing\code-structure.md:272: | `make build-worker` | Compile notification worker to `./bin/notification-worker` |
+  docs\contributing\code-structure.md:273: | `make build-export-worker` | Compile export worker to `./bin/export-worker` |
+  docs\deployment\docker.md:12: | **teslasync-notification-worker** | Custom (Dockerfile.notification) | 8081 | 32M–128M | Async notification delivery |
+  docs\deployment\docker.md:13: | **teslasync-export-worker** | Custom (Dockerfile.export-worker) | 8082 | 64M–512M | Async data export & backup processing |
+  docs\deployment\kubernetes.md:23: ├── deployment-export-worker.yaml   # Export Worker Deployment
+  docs\guide\architecture.md:162: - **Active vehicles:** Polled every `WORKER_POLL_INTERVAL` (default 15s)
+  docs\guide\architecture.md:163: - **Sleeping vehicles:** Polled at `interval × WORKER_SLEEP_POLL_MULT` (default 60s)
+  docs\guide\configuration.md:72: | `WORKER_POLL_INTERVAL` | duration | `15s` | Polling interval for online/idle vehicles (vehicle_data calls) |
+  docs\guide\configuration.md:73: | `WORKER_SLEEP_POLL_INTERVAL` | duration | `0` | Polling interval for sleeping/offline vehicles (0 = never poll) |
+  docs\guide\configuration.md:74: | `WORKER_DRIVING_POLL_INTERVAL` | duration | `120s` | Polling interval when vehicle is actively driving |
+  docs\guide\configuration.md:75: | `WORKER_CHARGING_POLL_INTERVAL` | duration | `600s` | Polling interval when vehicle is charging |
+  docs\guide\configuration.md:76: | `WORKER_STATUS_CHECK_INTERVAL` | duration | `900s` | How often to call ListVehicles to check all vehicle states |
+  docs\guide\configuration.md:77: | `WORKER_SLEEP_POLL_MULT` | int | `4` | Backoff multiplier for sleeping vehicles. When vehicle returns 408, polling backs off: PollInterval × SleepPollMult, then doubles each consecutive asleep response, capping at 10 minutes. |
+  docs\guide\configuration.md:78: | `WORKER_STREAMING` | bool | `false` | Enable Tesla Streaming API (experimental) |
+  docs\guide\configuration.md:295: - Increase `WORKER_DRIVING_POLL_INTERVAL` (e.g., `180s` or `300s`)
+  docs\guide\configuration.md:296: - Increase `WORKER_CHARGING_POLL_INTERVAL` (e.g., `900s`)
+  docs\guide\fleet-telemetry.md:270: WORKER_STREAMING=true
+  docs\guide\fleet-telemetry.md:554: WORKER_STREAMING=true
+  docs\guide\fleet-telemetry.md:555: WORKER_POLL_INTERVAL=60s       # Reduce polling frequency
+  docs\guide\fleet-telemetry.md:556: WORKER_SLEEP_POLL_MULT=4       # 240s when asleep
+  docs\guide\fleet-telemetry.md:560: In hybrid mode, increase `WORKER_POLL_INTERVAL` to reduce API costs while keeping telemetry for real-time data. Polling at 60 s instead of 15 s cuts API costs by **75%**.
+  docs\guide\local-development.md:291: WORKER_POLL_INTERVAL=30s
+  docs\guide\troubleshooting.md:88: 3. Check `WORKER_SLEEP_POLL_MULT` — a high value means less frequent sleeping-vehicle polls
+  docs\guide\troubleshooting.md:207: **Symptom:** `teslasync-command-proxy` in `CrashLoopBackOff` with log:
+  docs\guide\troubleshooting.md:223: **Cause:** The `tesla-command-proxy` secret needs three files: `private-key.pem`, `tls-cert.pem`, and `tls-key.pem`.
+  docs\guide\troubleshooting.md:232: kubectl create secret generic tesla-command-proxy \
+  docs\guide\troubleshooting.md:239: kubectl rollout restart deployment teslasync-command-proxy -n teslasync
+  docs\guide\troubleshooting.md:303: kubectl logs -n teslasync -l app.kubernetes.io/component=command-proxy
+- mongodb_signal_log_language: COUNT=1
+  docs\guide\fleet-telemetry.md:92: ├─ signalLogger.Write()       — MongoDB signal_log (every signal, forever)
+- wrong_or_legacy_ports: COUNT=15
+  docs\deployment\docker.md:12: | **teslasync-notification-worker** | Custom (Dockerfile.notification) | 8081 | 32M–128M | Async notification delivery |
+  docs\deployment\docker.md:14: | **web** | Custom (Dockerfile.web) | 3000 | 32M–128M | React SPA via Nginx |
+  docs\deployment\github-pages.md:67: This starts a local dev server at `http://localhost:5173/TeslaSync/` with hot reload.
+  docs\deployment\kubernetes.md:383: kubectl port-forward svc/teslasync-web 3000:80
+  docs\guide\configuration.md:166: | `WEB_PORT` | int | `3000` | Frontend host port mapping |
+  docs\guide\configuration.md:193: WEB_PORT=3000
+  docs\guide\diagrams.md:12: Web["teslasync-web<br/>Nginx + React SPA<br/>:3000"]
+  docs\guide\getting-started.md:79: | **web** | [localhost:3000](http://localhost:3000) | React frontend (Nginx) |
+  docs\guide\getting-started.md:103: 1. Open the TeslaSync web UI at [http://localhost:3000](http://localhost:3000).
+  docs\guide\getting-started.md:134: Open [http://localhost:3000](http://localhost:3000) to access the full web interface:
+  docs\guide\local-development.md:10: - **Frontend (React)** — Vite dev server on port 5173 with API proxy to the backend
+  docs\guide\local-development.md:136: The Vite dev server starts on `http://localhost:5173` with:
+  docs\guide\local-development.md:145: make web-dev      # Start Vite dev server (port 5173)
+  docs\guide\local-development.md:182: - Access the frontend at `http://localhost:5173`
+  docs\index.md:104: Open [http://localhost:3000](http://localhost:3000) for the web UI, or [http://localhost:3001](http://localhost:3001) for Grafana dashboards.
+- wrong_clone_urls: COUNT=1
+  docs\guide\fleet-telemetry.md:170: git clone https://github.com/teslamotors/fleet-telemetry.git
+- placeholder_language: COUNT=0
 
-4) docs\.vitepress\config.ts
-- VitePress title is "TeslaSync Docs" and description is "Documentation for TeslaSync - Tesla Fleet Intelligence Platform".
-- VitePress base is /teslasync/ (lowercase). GitHub Pages docs must not use /TeslaSync/.
-- ignoreDeadLinks is true.
-- Head includes /teslasync/logo.svg favicon, theme-color #00f0ff, OG metadata, and deferred /teslasync/particles.js.
-- Nav groups: Guide, Deployment, Features, Contributing.
-- Sidebar groups include guide, deployment, features, contributing. Guide links include getting started, configuration, local development, architecture, API reference, OpenAPI asset, diagrams, database, technology, fleet telemetry, troubleshooting, FAQ, roadmap.
-- Search provider is local. Outline levels are 2 and 3.
-- Mermaid is enabled through withMermaid with dark theme and TeslaSync colors.
+Prompt ownership map for every docs page (non-overlap guidance for later prompts):
+- docs\api-reference.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\caching.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\contributing\adding-features.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\contributing\api-reference.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\contributing\code-structure.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\deployment\docker.md => Deployment prompt: Docker/Helm/runtime config; source from docker-compose.yml and helm\teslasync\*.yaml.
+- docs\deployment\github-pages.md => Deployment prompt: Docker/Helm/runtime config; source from docker-compose.yml and helm\teslasync\*.yaml.
+- docs\deployment\kubernetes.md => Deployment prompt: Docker/Helm/runtime config; source from docker-compose.yml and helm\teslasync\*.yaml.
+- docs\features\alerts.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\features\analytics.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\features\backup-restore.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\features\dashboard.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\features\data-export.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\features\vehicle-tracking.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\guide\api-endpoints.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\guide\architecture.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\guide\configuration.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\guide\database.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\guide\diagrams.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\guide\faq.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\guide\fleet-telemetry.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\guide\getting-started.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\guide\local-development.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\guide\roadmap.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\guide\technology.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\guide\troubleshooting.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\index.md => Home page prompt: VitePress home content and animations; preserve custom theme/particles/hero behavior.
+- docs\signal-audits\003-blind-spot-collision-warning-chime.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\signal-audits\004-forward-collision-warning.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\signal-audits\005-driver-seat-belt.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\signal-audits\006-lane-departure-avoidance.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\signal-audits\007-emergency-lane-departure-avoidance.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\signal-audits\007-passenger-seat-belt.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\signal-audits\008-automatic-emergency-braking-off.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\signal-audits\009-cruise-follow-distance.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\signal-audits\010-speed-limit-warning.md => General docs prompt: assign by nearest source-of-truth area before editing.
+- docs\upgrade-notes-v0.25.md => General docs prompt: assign by nearest source-of-truth area before editing.
 
-5) docs\.vitepress\theme\index.ts
-- Theme extends DefaultTheme and imports ./custom.css.
-- enhanceApp registers click-to-enlarge behavior for .mermaid diagrams and .vp-doc img images.
-- Overlay behavior creates a div.diagram-overlay, uses inline cssText for overlay/wrapper/clone sizing, supports zoom-out click and Escape close.
-- Mermaid SVGs are cloned, width/height removed, and viewBox populated if missing. Images are cloned into the overlay.
-
-6) docs\.vitepress\theme\custom.css
-- Custom dark/light Tesla-inspired theme is a source-of-truth UI asset and must be preserved.
-- CSS defines global theme variables, light-theme overrides, animated grid background, body::before particleDrift, hero gradientShift, roadMove animation, feature-card hover effects, contentFadeIn, lineExpand, logoPulse, Mermaid styling, mobile responsive rules, diagram/image zoom hints.
-- Home page animations that must survive docs rewrites include hero gradientShift, roadMove, feature-card hover shine/lift, particleDrift, contentFadeIn, lineExpand, and logoPulse.
-
-7) docs\public\particles.js
-- particles.js injects a fixed canvas #particles-bg, prepends it to body, tracks mouse/resizes, and draws animated particles, cars, bolts, batteries, signal waves, speed lines, and charge stations.
-- It supports dark and light color palettes and drives animation with requestAnimationFrame.
-
-8) internal\api\router.go
-- Router source of truth is chi in internal\api\router.go.
-- Public non-/api endpoints: /healthz, /readyz, /metrics, /.well-known/appspecific/com.tesla.3p.public-key.pem.
-- Public unauthenticated API exceptions: /api/v1/automations/webhook/{token} when webhook trigger is configured, and /api/v1/share/{token}.
-- Main API prefix is /api/v1. ForwardAuthMiddleware protects this group when FORWARD_AUTH_HEADER is set.
-- Core route groups under /api/v1 include auth, vehicles, drives, charging, tesla/charging, tesla/energy-sites, tesla/fleet-telemetry, tesla/user, geofences, settings, gas-price, alerts, automations, analytics, charge-planner, trip-planner, geocode, notifications, chatbot, tire-pressure, motor, climate, security, charging-telemetry, media, vehicle-config, location-snapshots, safety, user-preferences, software-updates, vampire-drain, locations, mileage, trips, vehicle-states, fsm, events, sse-token, system, api-logs, polling, api-keys, telemetry, dev-tools, signals/history, signals/available, signals/stats, signals/{vehicleID}, data-repair, backup, export/{type}, export/jobs, dashboard/stats, charging-sessions, exports, users/me, and watch.
-- System endpoints include /system/status, /system/health, /system/api-usage, /system/compression-stats, /system/backup, /system/backup/stats, /system/config-validation, /system/audit, /system/errors/stats, /system/errors/catalog, /system/map-config, /system/version, /system/update-check, /system/workers, /system/metrics-catalog, /system/openapi.
-- Analytics endpoints include fleet, tco, sleep, regen, battery-degradation, battery-health, charging-heatmap, speed-profile, temperature-impact, route-efficiency, route-efficiency/detail, battery-cells, energy, range-projection, period-stats, driving-coach, cost-forecast, charging-optimizer, anomalies, lifetime, year-review.
-- Signal history routes are Postgres-backed and always available when signalHistoryWriter is wired; /signals/{vehicleID} uses DB/Redis/signal store fallbacks and MongoDB only as optional fallback/capture plumbing.
-- Static SPA fallback serves /web/dist or ./web/dist and deliberately does not intercept /api/ paths.
-- Docs API examples must be checked against router.go, not against stale markdown.
-
-9) internal\config\config.go
-- Config.Load env vars and defaults are source of truth for Go runtime config.
-- App: TESLASYNC_PORT default 4000; TESLASYNC_LOG_LEVEL default info; CORS_ORIGINS default empty.
-- Database: DATABASE_HOST localhost, DATABASE_PORT 5432, DATABASE_USER teslasync, DATABASE_PASS teslasync, DATABASE_NAME teslasync, DATABASE_SSLMODE disable, DATABASE_MAX_CONNS 25, DATABASE_MIN_CONNS 5, DATABASE_CONN_MAX_LIFETIME 5m, DATABASE_CONN_MAX_IDLE_TIME 1m, DATABASE_MIGRATIONS file:///migrations, DATABASE_CONNECT_TIMEOUT 5, DATABASE_STATEMENT_TIMEOUT 30000, DATABASE_HEALTH_CHECK_PERIOD 5s.
-- Tesla: TESLA_CLIENT_ID, TESLA_CLIENT_SECRET, TESLA_API_BASE_URL default https://fleet-api.prd.na.vn.cloud.tesla.com, TESLA_AUTH_URL default https://auth.tesla.com, TESLA_REDIRECT_URI default http://localhost:4000/api/v1/auth/callback, TESLA_COMMAND_PROXY_URL, TESLA_TIMEOUT 30s.
-- MQTT: MQTT_ENABLED true, MQTT_HOST localhost, MQTT_PORT 1883, MQTT_USERNAME, MQTT_PASSWORD, MQTT_CLIENT_ID teslasync, MQTT_PREFIX teslasync.
-- Worker: WORKER_POLL_INTERVAL 15s, WORKER_SLEEP_POLL_MULT 4, WORKER_STREAMING false.
-- Redis: REDIS_ENABLED false, REDIS_HOST localhost, REDIS_PORT 6379, REDIS_PASSWORD, REDIS_DB 0.
-- Auth: AUTH_ENABLED false, AUTH_JWT_SECRET, FORWARD_AUTH_HEADER.
-- Retention: DATA_RETENTION_DAYS 0, POSITION_RETENTION_DAYS 0, SIGNAL_HISTORY_RETENTION_DAYS 0.
-- Fleet telemetry: FLEET_TELEMETRY_ENABLED false, FLEET_TELEMETRY_HOST empty, FLEET_TELEMETRY_PORT 4443, FLEET_TELEMETRY_TOPIC_BASE telemetry, FLEET_TELEMETRY_BATCH_MS 100, FLEET_TELEMETRY_STALE_TIMEOUT 15m, FLEET_TELEMETRY_FALLBACK_POLL_INTERVAL 5m, FLEET_TELEMETRY_SNAPSHOT_WRITE_INTERVAL 10s, FLEET_TELEMETRY_CLEANUP_INTERVAL 2m, FLEET_TELEMETRY_STALE_SESSION_TIMEOUT 5m.
-- MongoDB optional capture: MONGODB_ENABLED false, MONGODB_URI mongodb://localhost:27017, MONGODB_DATABASE teslasync, MONGODB_TTL_DAYS 7.
-- Gas price: GAS_PRICE_ENABLED false, GAS_PRICE_POLL_INTERVAL 7d, GAS_PRICE_API_KEY.
-- OpenTelemetry: OTEL_ENABLED false, OTEL_ENDPOINT localhost:4317, OTEL_SERVICE_NAME teslasync, OTEL_INSECURE true.
-- Maps: GOOGLE_MAPS_API_KEY, AZURE_MAPS_API_KEY.
-- Important drift to document carefully: config.go expects DATABASE_PASS and DATABASE_SSLMODE, while docker-compose.yml currently uses DATABASE_PASSWORD and DATABASE_SSL_MODE for several services. Helm secret/configmap use DATABASE_PASS and DATABASE_SSLMODE.
-
-10) docker-compose.yml
-- Current compose services include teslasync-api, web, notification-worker, postgres, grafana, prometheus, mosquitto, redis, export-worker, automation-worker, optional jaeger, optional fleet-telemetry, optional vehicle-command-proxy.
-- API container exposes host ${TESLASYNC_PORT:-8080} to container 8080 and sets TESLASYNC_PORT=8080.
-- Web container exposes host ${WEB_PORT:-3000} to container 80.
-- Postgres service image is timescale/timescaledb-ha:pg17, not postgres:17-alpine. PGDATA is /home/postgres/pgdata/data with volume mounted at /home/postgres/pgdata.
-- Postgres host port is ${POSTGRES_PORT:-5432}; Grafana host port ${GRAFANA_PORT:-3001}; Prometheus host port ${PROMETHEUS_PORT:-9099}; Mosquitto ${MQTT_PORT:-1883} plus 9001; Redis ${REDIS_PORT:-6379}; Jaeger UI ${JAEGER_UI_PORT:-16686}; Jaeger OTLP ${JAEGER_OTLP_PORT:-4317}; Fleet telemetry ${FLEET_TELEMETRY_PORT:-4443}.
-- Redis image is redis:7-alpine; Mosquitto image is eclipse-mosquitto:2; Grafana image grafana/grafana:10.4.0; Prometheus image prom/prometheus:v2.51.0; Fleet Telemetry image tesla/fleet-telemetry:latest; command proxy image tesla/vehicle-command:latest.
-- API compose sets fleet telemetry snapshot write interval to 1s, while config.go fallback is 10s; docs should describe deployment defaults per deployment file when applicable.
-- Worker containers have health ports: notification 8081, export 8082, automation 8083.
-
-11) helm\teslasync\values.yaml
-- API image repository ghcr.io/ev-dev-labs/teslasync-api; web ghcr.io/ev-dev-labs/teslasync-web; notification/export/automation worker images are ghcr.io/ev-dev-labs/teslasync-*-worker.
-- API service port is 8080; web service port 80; notification 8081; export 8082; automation 8083; command proxy 4443.
-- Fleet telemetry chart section is disabled by default, image tesla/fleet-telemetry:latest, service port 4443, topicBase telemetry, batchMs 100, staleTimeout 15m, fallbackPollInterval 5m, snapshotWriteInterval 1s, cleanupInterval 2m, staleSessionTimeout 5m.
-- config.logLevel default info; config.pollInterval 30s; config.sleepPollMultiplier 4; config.apiEndpoint is internal for Nginx proxy; config.browserApiBase should usually remain empty for relative /api/v1 paths; config.webEndpoint controls CORS origins; config.forwardAuthHeader controls ForwardAuth.
-- Tesla values: redirectUri default http://localhost:8080/api/v1/auth/callback, API base URL default https://fleet-api.prd.na.vn.cloud.tesla.com, auth URL https://auth.tesla.com, timeout 30s.
-- Embedded postgresql.enabled true by default; image repository timescale/timescaledb-ha tag pg17; init extensions timescaledb, vector, pg_stat_statements; service port 5432; external sslMode disable.
-- Redis enabled true, image redis:7-alpine, service port 6379, command uses appendonly yes and maxmemory-policy noeviction.
-- MQTT enabled true, image eclipse-mosquitto:2, service port 1883, websocketPort 9001.
-- MongoDB disabled by default; image mongo:7; optional raw telemetry signal capture with TTL; service port 27017.
-- Grafana enabled true on service port 3000; Jaeger disabled by default.
-
-12) helm\teslasync\templates\configmap.yaml
-- ConfigMap emits DATABASE_HOST, DATABASE_PORT, DATABASE_USER, DATABASE_NAME, DATABASE_SSLMODE, pool/timeouts, MQTT_HOST/PORT/CLIENT_ID/PREFIX/USERNAME, REDIS_ENABLED/HOST/PORT/DB, GRAFANA_HOST/PORT, API_ENDPOINT, TESLA_REDIRECT_URI/API_BASE_URL/AUTH_URL/TIMEOUT, WORKER_POLL_INTERVAL, WORKER_SLEEP_POLL_MULT, TESLASYNC_LOG_LEVEL, FORWARD_AUTH_HEADER, TESLASYNC_PORT, HELM_CHART_VERSION, optional CORS_ORIGINS, fleet telemetry env vars, MongoDB env vars, retention env vars, worker host/port env vars, TESLA_COMMAND_PROXY_URL, gas price env vars, OTEL env vars, and map API keys when no existing secret is used.
-
-13) helm\teslasync\templates\secret.yaml
-- Secret emits TESLA_CLIENT_ID, TESLA_CLIENT_SECRET, DATABASE_PASS, optional REDIS_PASSWORD, GRAFANA_ADMIN_PASSWORD, ENCRYPTION_KEY, GAS_PRICE_API_KEY, MQTT_PASSWORD, AUTH_JWT_SECRET, GOOGLE_MAPS_API_KEY, AZURE_MAPS_API_KEY.
-
-Stale or suspicious docs claims found in current Markdown:
-- Old Go version claims:
-  - docs\deployment\docker.md:43: "# Build stage: Go 1.22 on Alpine"
-  - docs\guide\local-development.md:20: "# Go 1.22+"
-  - docs\index.md:86: "Go 1.22" in backend stack table
-  Current source is go.mod: go 1.25.0.
-- Old database image claims:
-  - docs\deployment\docker.md:15: postgres service shown as postgres:17-alpine
-  - docs\deployment\docker.md:84: image: postgres:17-alpine
-  Current compose and Helm source is timescale/timescaledb-ha:pg17.
-- MongoDB signal-log language:
-  - docs\guide\fleet-telemetry.md:92 says signalLogger.Write() writes to "MongoDB signal_log (every signal, forever)".
-  Current router/config/helm indicate Postgres-backed signal history is primary and MongoDB is optional raw capture/fallback with TTL.
-- Obsolete worker env vars or stale worker defaults:
-  - docs\guide\configuration.md:73 WORKER_SLEEP_POLL_INTERVAL is not in config.go.
-  - docs\guide\configuration.md:74 WORKER_DRIVING_POLL_INTERVAL is not in config.go.
-  - docs\guide\configuration.md:75 WORKER_CHARGING_POLL_INTERVAL is not in config.go.
-  - docs\guide\configuration.md:76 WORKER_STATUS_CHECK_INTERVAL is not in config.go.
-  - docs\guide\fleet-telemetry.md:270 and :554 recommend WORKER_STREAMING=true; config.go still has WORKER_STREAMING but fleet telemetry docs should verify whether this is still the correct switch versus FLEET_TELEMETRY_ENABLED/MQTT path.
-  - docs\guide\configuration.md:72 says WORKER_POLL_INTERVAL default 15s. config.go fallback is 15s, but compose and Helm deployment defaults use 30s; later docs must distinguish code defaults from deployment defaults.
-- Env var name mismatches:
-  - docs\guide\configuration.md:44 documents DATABASE_PASSWORD, but config.go and Helm secret use DATABASE_PASS.
-  - docs\guide\local-development.md:281 uses DATABASE_PASSWORD=teslasync, but config.go uses DATABASE_PASS.
-  - docs\guide\configuration.md:195 uses LOG_LEVEL=info, but config.go uses TESLASYNC_LOG_LEVEL.
-  - docker-compose.yml currently uses DATABASE_PASSWORD, DATABASE_SSL_MODE, and LOG_LEVEL despite config.go using DATABASE_PASS, DATABASE_SSLMODE, TESLASYNC_LOG_LEVEL. Docs prompts should note this deployment drift rather than inventing a third convention.
-- Wrong or inconsistent clone/repo URLs:
-  - docs\deployment\docker.md:24 uses https://github.com/ev-dev-labs/TeslaSync.git.
-  - docs\guide\getting-started.md:39 uses https://github.com/ev-dev-labs/TeslaSync.git.
-  - docs\index.md:14 and :97 use ev-dev-labs/TeslaSync casing.
-  - docs\guide\troubleshooting.md:159 links ev-dev-labs/TeslaSync/issues.
-  Current repository is ev-dev-labs/teslasync lowercase.
-- Port/path claims to verify in rewrite:
-  - docs\deployment\github-pages.md:67 says local docs dev server is http://localhost:5173/TeslaSync/; current VitePress base is /teslasync/ lowercase.
-  - Docs frequently use http://localhost:8080 for API examples. This is correct for compose/Helm service exposure, but config.go default TESLASYNC_PORT is 4000 and compose overrides to 8080; later prompts must label context explicitly.
-- Placeholder language scan: COUNT=0 for TODO/TBD/FIXME/Coming soon/placeholder/under construction/lorem/WIP/not yet implemented.
-
-Prompt ownership map for docs rewrites (only the owner prompt should edit the page):
-- docs\index.md -> Phase-34 Prompt 01 (landing/home page, VitePress hero/features/actions)
-- docs\guide\getting-started.md -> Phase-34 Prompt 01 (getting started quickstart)
-- docs\guide\configuration.md -> Phase-34 Prompt 02 (runtime configuration/env vars)
-- docs\guide\local-development.md -> Phase-34 Prompt 02 (local development)
-- docs\guide\troubleshooting.md -> Phase-34 Prompt 02 (troubleshooting)
-- docs\guide\faq.md -> Phase-34 Prompt 02 (FAQ)
-- docs\guide\roadmap.md -> Phase-34 Prompt 02 (roadmap/status)
-- docs\guide\technology.md -> Phase-34 Prompt 03 (technology stack/source map)
-- docs\guide\architecture.md -> Phase-34 Prompt 03 (architecture/current route and service topology)
-- docs\guide\api-endpoints.md -> Phase-34 Prompt 03 (API route examples)
-- docs\api-reference.md -> Phase-34 Prompt 03 (top-level API reference)
-- docs\contributing\api-reference.md -> Phase-34 Prompt 03 (contributor API reference)
-- docs\guide\diagrams.md -> Phase-34 Prompt 03 (diagrams/Mermaid architecture)
-- docs\guide\database.md -> Phase-34 Prompt 04 (database/schema/migrations)
-- docs\guide\fleet-telemetry.md -> Phase-34 Prompt 04 (fleet telemetry and signal pipeline)
-- docs\caching.md -> Phase-34 Prompt 04 (Redis/cache behavior)
-- docs\upgrade-notes-v0.25.md -> Phase-34 Prompt 04 (upgrade/data notes)
-- docs\deployment\docker.md -> Phase-34 Prompt 05 (Docker Compose)
-- docs\deployment\kubernetes.md -> Phase-34 Prompt 05 (Helm/Kubernetes)
-- docs\deployment\github-pages.md -> Phase-34 Prompt 05 (docs deployment/GitHub Pages)
-- docs\features\dashboard.md -> Phase-34 Prompt 06 (feature pages)
-- docs\features\vehicle-tracking.md -> Phase-34 Prompt 06 (feature pages)
-- docs\features\alerts.md -> Phase-34 Prompt 06 (feature pages)
-- docs\features\data-export.md -> Phase-34 Prompt 06 (feature pages)
-- docs\features\analytics.md -> Phase-34 Prompt 06 (feature pages)
-- docs\features\backup-restore.md -> Phase-34 Prompt 06 (feature pages)
-- docs\contributing\code-structure.md -> Phase-34 Prompt 07 (contributor code structure)
-- docs\contributing\adding-features.md -> Phase-34 Prompt 07 (contributor feature workflow)
-- docs\signal-audits\003-blind-spot-collision-warning-chime.md -> Phase-34 Prompt 08 (signal audits only)
-- docs\signal-audits\004-forward-collision-warning.md -> Phase-34 Prompt 08 (signal audits only)
-- docs\signal-audits\005-driver-seat-belt.md -> Phase-34 Prompt 08 (signal audits only)
-- docs\signal-audits\006-lane-departure-avoidance.md -> Phase-34 Prompt 08 (signal audits only)
-- docs\signal-audits\007-emergency-lane-departure-avoidance.md -> Phase-34 Prompt 08 (signal audits only)
-- docs\signal-audits\007-passenger-seat-belt.md -> Phase-34 Prompt 08 (signal audits only)
-- docs\signal-audits\008-automatic-emergency-braking-off.md -> Phase-34 Prompt 08 (signal audits only)
-- docs\signal-audits\009-cruise-follow-distance.md -> Phase-34 Prompt 08 (signal audits only)
-- docs\signal-audits\010-speed-limit-warning.md -> Phase-34 Prompt 08 (signal audits only)
-
-Preservation requirements for later prompts:
-- Preserve VitePress UI and navigation/sidebar structure unless a later prompt explicitly changes it.
-- Preserve custom theme import docs\.vitepress\theme\custom.css and all custom CSS animation behavior.
-- Preserve docs\public\particles.js and the /teslasync/particles.js head script reference.
-- Preserve Mermaid support through vitepress-plugin-mermaid and the configured dark theme/colors.
-- Preserve image and Mermaid click-to-enlarge overlay behavior in docs\.vitepress\theme\index.ts.
-- Preserve home-page animations and visual identity: particleDrift, gradientShift, roadMove, feature-card hover motion/shine, contentFadeIn, lineExpand, logoPulse, Tesla-inspired colors, and glass/dark theme treatment.
+UI preservation anchors that later docs prompts must preserve explicitly:
+- Preserve VitePress UI structure and config in docs\.vitepress\config.ts.
+- Preserve custom theme registration in docs\.vitepress\theme\index.ts.
+- Preserve docs\.vitepress\theme\custom.css including home-page animations and particleDrift/animation rules.
+- Preserve docs\public\particles.js and the config.ts reference to particles.js.
+- Preserve Mermaid support in VitePress markdown/theme integration.
+- Preserve image overlay behavior implemented in theme index.ts, including zoom/overlay DOM styling.
+- Preserve home-page animations and do not flatten custom visual behavior during docs rewrites.
 
 === REASONING ===
-This prompt is an inventory/source-map prompt only. Docs content must not be edited here, even where stale claims are obvious.
-The source map prioritizes current code and deployment files over existing Markdown because the stated problem is that docs predate the refactor.
-Router facts come from internal\api\router.go and frontend API paths must be cross-checked there without adding /api/v1 inside hook request paths.
-Config facts separate config.go defaults from docker-compose and Helm deployment defaults because those files intentionally or accidentally differ in several values/names.
-Prompt ownership is page-granular so later docs rewrite prompts do not overlap; pages may reference each other, but only the assigned owner should edit each page.
-UI preservation is explicit because VitePress theme, Mermaid, overlay, particles, and home animations are functional documentation assets, not incidental styling.
+This prompt is inventory-only. Later docs prompts need a current source map because docs may contain stale claims from older refactors. The safe approach is to read live code/config/deployment sources and log ownership boundaries for every docs page, while avoiding any content rewrite now.
+No predecessor exists, so no predecessor bypass risk applies. The only allowed file change is this log, and the gate will enforce that git status contains no other paths.
+Docs rewrite prompts should use router.go for routes, config.go plus compose/Helm for env vars, package manifests for tool versions/scripts, and VitePress/theme/public assets for docs UI behavior.
 
 === CHANGES ===
-Changed files intended: .github\prompts\db-refactor\logs\phase-34-00-docs-inventory-and-source-map.log only.
-No docs Markdown content was edited.
-No source, config, route, deployment, frontend, or Helm file was edited.
-This log contains the required inventory, source-of-truth map, stale-claim list, prompt ownership map, and UI preservation anchors.
+Changed only: .github\prompts\db-refactor\logs\phase-34-00-docs-inventory-and-source-map.log
+No Markdown docs content was edited.
+No source code, config, deployment template, package manifest, or docs theme file was edited.
+Gate section will be appended by the exact gate command from the prompt.
 === GATE ===
 MISSING_SOURCE_COUNT=0
 DOC_MARKDOWN_COUNT=37
 THEME_CUSTOM_CSS=True
-THEME_OVERLAY=True
-PUBLIC_PARTICLES=True
 CSS_ANIMATION=True
 CONFIG_PARTICLES=True
-UNEXPECTED_STATUS_COUNT=0
-EXIT=0
-STATUS=DONE
+PUBLIC_PARTICLES=True
+THEME_OVERLAY=True
+UNEXPECTED_STATUS_COUNT=3
+ M web/src/components/vehicles/VehicleTwin.tsx
+ M web/src/features/dashboard/widgets/DigitalTwinWidget.tsx
+?? web/dev-dist/
+EXIT=1
+STATUS=BLOCKED
 === COMMIT ===
-Commit command: git add -f -- .github\prompts\db-refactor\logs\phase-34-00-docs-inventory-and-source-map.log; git commit -m phase-34/00-docs-inventory: map docs rewrite sources
+Gate result: EXIT=1, STATUS=BLOCKED due to unexpected git status outside the allowed log file.
+Committing only the allowed log file per blocked path.
+PRE_COMMIT_CACHED_FILES=0
