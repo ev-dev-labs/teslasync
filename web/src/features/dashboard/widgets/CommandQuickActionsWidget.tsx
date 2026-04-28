@@ -33,7 +33,7 @@ const COMMANDS: QuickCommand[] = [
 
 export default function CommandQuickActionsWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { data: vehicles } = useVehicles();
+  const { data: vehicles, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const mutation = useVehicleCommand();
   const [activeCommand, setActiveCommand] = useState<string | null>(null);
@@ -60,6 +60,11 @@ export default function CommandQuickActionsWidget({ vehicleId, size }: WidgetPro
     <WidgetShell
       title={isCompact ? undefined : t('widget.quickActions.title', 'Quick Actions')}
       icon={isCompact ? undefined : <Zap className="h-3.5 w-3.5 text-neon-cyan" />}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
     >
       {id ? (
         <div
