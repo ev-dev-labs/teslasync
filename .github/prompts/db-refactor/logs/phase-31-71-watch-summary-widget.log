@@ -1,0 +1,37 @@
+=== SURVEY ===
+Surveyed existing widget patterns: WidgetShell, WidgetBigNumber, RadialGauge, StatusBadge, registry.ts.
+Confirmed useWatch hook exports: useWatchSummary (WatchSummary type), useWatchComplication (WatchComplication type).
+WatchSummary fields: vehicle_name, state, battery_level, range_km, is_charging, charge_rate, time_to_full, is_locked, sentry_mode, inside_temp_c, outside_temp_c, is_climate_on, last_updated.
+WatchComplication fields: battery, range, state, charging.
+Watch icon confirmed available in lucide-react.
+Unit conversion: range_km is in km (need kmToMiles for imperial), inside_temp_c is in Celsius (use convertTemp).
+useSettings provides: convertTemp, tempUnit, distanceUnit, isMiles.
+
+=== REASONING ===
+Compact (1×2): Watch-face circular display — RadialGauge for battery %, StatusBadge below, range underneath. No title (WidgetShell handles freshness as overlay dot).
+Standard (2×2+): WidgetShell with title + WidgetBigNumber hero for battery, then 2-column grid for Range, Lock, Cabin Temp, Last Seen.
+Unit conversion: range_km → if isMiles then kmToMiles(range_km), else raw km. Temp via convertTemp(insideTempC).
+All fields null-safe with ?? null fallback, EmptyState when no data.
+All strings use i18n t() function.
+Touch targets: min-h-[44px] on grid cells.
+
+=== CHANGES ===
+1. Created web/src/features/dashboard/widgets/WatchSummaryWidget.tsx
+   - Compact view: RadialGauge (80px) + StatusBadge + range text
+   - Standard view: WidgetBigNumber hero + 2-col detail grid (range, lock, cabin temp, last seen)
+   - Imports: Watch/Lock/Unlock from lucide, RadialGauge, StatusBadge, AnimatedNumber, Badge, EmptyState, useWatchSummary, useWatchComplication, useSettings, kmToMiles, formatRelative, fmtNumber, WidgetShell, WidgetBigNumber
+   - All freshness props passed to WidgetShell
+   - convertTemp for cabin temperature, kmToMiles for range when isMiles
+   - i18n on all strings, null-safe access throughout
+
+2. Modified web/src/features/dashboard/widgets/registry.ts
+   - Added Watch to lucide-react imports
+   - Added watch-summary entry in vehicle category: id='watch-summary', defaultSize={1,2}, minSize={1,2}, maxSize={2,40}
+
+=== GATE ===
+npx tsc --noEmit → exit code 0, zero errors
+STATUS=DONE
+
+=== COMMIT ===
+EXIT=0
+STATUS=DONE

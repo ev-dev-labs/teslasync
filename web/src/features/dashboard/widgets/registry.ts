@@ -15,6 +15,7 @@ import {
   Info,
   Users,
   ArrowUpCircle,
+  Watch,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -141,6 +142,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./VehicleSpecsWidget')),
+  },
+  {
+    id: 'watch-summary',
+    name: 'Watch Summary',
+    description: 'Apple Watch-style compact view: battery, range, state, lock status',
+    icon: Watch,
+    category: 'vehicle',
+    defaultSize: { cols: 1, rows: 2 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 2, rows: 40 },
+    component: lazy(() => import('./WatchSummaryWidget')),
   },
 
   // ── Battery ──
