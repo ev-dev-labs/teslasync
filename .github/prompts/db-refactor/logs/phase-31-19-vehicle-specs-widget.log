@@ -1,0 +1,41 @@
+=== SURVEY ===
+Surveyed existing widget patterns:
+- WidgetShell: accepts title, icon, loading, freshness props (updatedAt, isFetching, isStale, isError, onRefresh)
+- WidgetDetailCard from ./shared: takes DetailEntry[] with label/value/badge/mono, supports compact (slices to 4), handles empty state
+- useVehicleSpecs(vehicleId?: string) → VehicleInfoEnvelope<Record<string, unknown>> (staleTime STATIC)
+- useVehicleOptions(vehicleId?: string) → VehicleInfoEnvelope<Record<string, unknown>> (staleTime STATIC)
+- useVehicleConfigLatest(vehicleId: number, refetchInterval?) → VehicleConfigSnapshot | null
+- VehicleConfigSnapshot fields: car_type, trim, exterior_color, wheel_type, version (no aux_battery_type)
+- Registry pattern: id, name, description, icon, category, defaultSize, minSize, maxSize, component (lazy)
+
+=== REASONING ===
+- Standard (2×4): build DetailEntry[] from specs + config data for model/trim/paint/wheels/interior/auxBattery/carVersion + option badges
+- Compact (1×2): centered model + trim text only (no options)
+- Three hooks aggregated: specs (string vehicleId), options (string), config (number)
+- Freshness props: max of all three dataUpdatedAt, OR-combine isFetching/isStale/isError
+- Null safety: asString() helper for unknown → string | null; fallback chains across specs/config
+- aux_battery_type not on VehicleConfigSnapshot — sourced from specs only
+- configData cast to Record<string, unknown> for CompactView prop compatibility
+
+=== CHANGES ===
+1. Created web/src/features/dashboard/widgets/VehicleSpecsWidget.tsx
+   - Default export VehicleSpecsWidget(WidgetProps)
+   - Uses all three hooks, aggregates freshness
+   - Standard view: WidgetDetailCard with 7 core entries + up to 8 option badges
+   - Compact view: centered model + trim
+   - Null-safe: asString() helper, ?? operators, EmptyState fallback
+   - i18n: all strings via useTranslation('dashboard')
+
+2. Updated web/src/features/dashboard/widgets/registry.ts
+   - Added FileText to lucide-react imports
+   - Added vehicle-specs entry after drivetrain-health, category: 'vehicle'
+   - defaultSize 2×4, minSize 1×2, maxSize 4×40
+
+=== GATE ===
+Running: cd D:\repos\teslasync\web && npx tsc --noEmit
+Result: exit code 0 — no errors
+STATUS=DONE
+
+=== COMMIT ===
+EXIT=0
+STATUS=DONE

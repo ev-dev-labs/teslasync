@@ -6,7 +6,7 @@ import {
   MonitorSmartphone, List, Grid3X3, Workflow, DoorOpen, Eye,
   Command, CalendarRange, Bell, Music, HeartPulse, Moon, Navigation,
   Cpu, RotateCcw, Route, Lightbulb, Trophy, Clock, AlertTriangle,
-  Sparkles, Cog, Wrench,
+  Sparkles, Cog, Wrench, FileText,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -89,6 +89,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./DrivetrainHealthWidget')),
+  },
+  {
+    id: 'vehicle-specs',
+    name: 'Vehicle Specs',
+    description: 'Configuration reference: model, trim, paint, wheels, options',
+    icon: FileText,
+    category: 'vehicle',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./VehicleSpecsWidget')),
   },
 
   // ── Battery ──
