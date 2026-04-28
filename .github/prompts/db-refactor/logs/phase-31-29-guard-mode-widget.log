@@ -1,0 +1,49 @@
+=== SURVEY ===
+Files examined:
+  - web/src/features/dashboard/widgets/types.ts (WidgetProps, WidgetDef, WidgetCategory)
+  - web/src/features/dashboard/widgets/WidgetShell.tsx (freshness props interface)
+  - web/src/features/dashboard/widgets/shared/WidgetEventFeed.tsx (EventFeedItem interface)
+  - web/src/features/dashboard/widgets/registry.ts (security category, existing entries)
+  - web/src/api/hooks/useGuard.ts (useGuardConfig, useGuardEvents, GuardConfig, GuardEvent)
+  - web/src/features/dashboard/widgets/SecurityStatusWidget.tsx (security widget pattern)
+  - web/src/features/dashboard/widgets/SentryEventLogWidget.tsx (event log pattern)
+  - web/src/components/data-display/StatusBadge.tsx (StatusBadge props — no label prop)
+
+Hook shapes:
+  - useGuardConfig(vehicleId) → GuardConfig { vehicle_id, enabled, home_geofence_id, sensitivity, auto_panic, created_at, updated_at }
+  - useGuardEvents(vehicleId) → GuardEvent[] { id, vehicle_id, event_type, latitude, longitude, speed, details, notified_channels, acknowledged, acknowledged_at, created_at }
+
+Event types: vehicle_moved | unauthorized_unlock | unauthorized_drive | sentry_triggered | manual_panic | test_alert
+
+=== REASONING ===
+1. Widget needs two hooks (config + events) combined via two separate useQuery calls.
+2. Compact (1×2): Armed/Disarmed badge + event count. Touch-friendly min-h-[44px].
+3. Standard (2×4): Status card with shield icon + sensitivity/auto-panic info, then WidgetEventFeed (max 5 items).
+4. Map each GuardEvent → EventFeedItem using event_type for icon/color/severity.
+5. StatusBadge doesn't accept a `label` prop — it uses `status` as the display text. Used Badge component instead.
+6. All strings via t() from 'dashboard' namespace.
+7. Null-safe: config?.enabled ?? false, events ?? [], sensitivity ?? '—'.
+8. Freshness: combined updatedAt = max of both queries.
+9. Registry: inserted after safety-features in security category.
+
+=== CHANGES ===
+1. Created: web/src/features/dashboard/widgets/GuardModeWidget.tsx
+   - CompactView: badge for armed/disarmed + event count
+   - StandardView: status card + WidgetEventFeed with mapped GuardEvent items
+   - All freshness props passed to WidgetShell
+   - isCompact = size.cols <= 1 branching
+   - EmptyState when no config data
+
+2. Modified: web/src/features/dashboard/widgets/registry.ts
+   - Added guard-mode entry after safety-features, category: 'security'
+   - id: 'guard-mode', icon: Shield, defaultSize: {cols:2, rows:4}, minSize: {cols:1, rows:2}, maxSize: {cols:4, rows:40}
+
+=== GATE ===
+cd web && npx tsc --noEmit
+Result: exit code 0, no errors
+STATUS=DONE
+
+=== COMMIT ===
+feat(web): add GuardModeWidget to dashboard gallery
+EXIT=0
+STATUS=DONE

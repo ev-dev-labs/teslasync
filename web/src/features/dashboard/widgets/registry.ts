@@ -587,6 +587,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./SafetyFeaturesWidget')),
   },
+  {
+    id: 'guard-mode',
+    name: 'Guard Mode',
+    description: 'Anti-theft guard status, recent security events, panic button',
+    icon: Shield,
+    category: 'security',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./GuardModeWidget')),
+  },
 
   // ── Commands ──
   {
