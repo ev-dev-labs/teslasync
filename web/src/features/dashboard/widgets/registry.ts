@@ -1,7 +1,7 @@
 import { lazy } from 'react';
 import {
   Battery, BatteryFull, BatteryWarning, Zap, Car, MapPin, Shield, Thermometer,
-  Activity, BarChart3, Gauge, Wifi, TrendingUp, Monitor, Download,
+  Activity, BarChart2, BarChart3, Gauge, Wifi, TrendingUp, Monitor, Download,
   DollarSign, Calendar, CloudSun, CircleDot, CreditCard, Hash,
   MonitorSmartphone, List, Grid3X3, Workflow, DoorOpen, Eye,
   Command, CalendarRange, CalendarDays, Bell, Music, HeartPulse, Moon, Navigation, Terminal,
@@ -955,6 +955,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 2, rows: 2 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./QuickNavWidget')),
+  },
+  {
+    id: 'api-usage',
+    name: 'API Usage',
+    description: 'API call volume, response times, error rates, top endpoints',
+    icon: BarChart2,
+    category: 'system',
+    defaultSize: { cols: 2, rows: 2 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./APIUsageWidget')),
   },
   {
     id: 'location-map',
