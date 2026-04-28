@@ -1,11 +1,10 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Battery } from 'lucide-react';
-import { RadialGauge } from '@/components/charts';
-import { AnimatedNumber } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { WidgetShell } from './WidgetShell';
+import { WidgetGaugeHero, type GaugeHeroStat } from './shared';
 import type { WidgetProps } from './types';
 
 const STROKE_WIDTH = 8;
@@ -25,23 +24,25 @@ function ChargeLimitRing({ value, max, gaugeSize }: { value: number; max: number
   const offset = circumference - (clamped / max) * circumference;
 
   return (
-    <svg
-      width={gaugeSize}
-      height={gaugeSize}
-      className="absolute inset-0 -rotate-90 pointer-events-none"
-    >
-      <circle
-        cx={center}
-        cy={center}
-        r={radius}
-        fill="none"
-        stroke="rgba(255,255,255,0.25)"
-        strokeWidth={2}
-        strokeLinecap="round"
-        strokeDasharray={circumference}
-        strokeDashoffset={offset}
-      />
-    </svg>
+    <div className="absolute inset-x-0 top-0 flex justify-center pointer-events-none">
+      <svg
+        width={gaugeSize}
+        height={gaugeSize}
+        className="-rotate-90"
+      >
+        <circle
+          cx={center}
+          cy={center}
+          r={radius}
+          fill="none"
+          stroke="rgba(255,255,255,0.25)"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+        />
+      </svg>
+    </div>
   );
 }
 
@@ -61,7 +62,17 @@ export default function BatteryRadialGaugeWidget({ vehicleId, size }: WidgetProp
 
   const color = useMemo(() => (state ? getBatteryColor(batteryLevel) : '#374151'), [state, batteryLevel]);
 
-  const gaugeSize = isLarge ? 140 : isCompact ? 80 : 100;
+  const gaugeSize = isCompact ? 70 : 100;
+
+  const stats = useMemo<GaugeHeroStat[]>(() => {
+    const s: GaugeHeroStat[] = [
+      { label: t('widget.level', 'Level'), value: batteryLevel, unit: '%' },
+    ];
+    if (chargeLimitSoc != null) {
+      s.push({ label: t('widget.chargeLimit', 'Limit'), value: chargeLimitSoc, unit: '%' });
+    }
+    return s;
+  }, [t, batteryLevel, chargeLimitSoc]);
 
   return (
     <WidgetShell
@@ -77,46 +88,23 @@ export default function BatteryRadialGaugeWidget({ vehicleId, size }: WidgetProp
       <div className="h-full flex flex-col items-center justify-center gap-1">
         {state ? (
           <>
-            <div className="relative inline-flex items-center justify-center">
-              <RadialGauge
-                value={batteryLevel}
-                max={100}
-                label={isCompact ? '' : t('widget.battery', 'Battery')}
-                unit="%"
-                color={color}
-                size={gaugeSize}
-              />
-              {chargeLimitSoc != null && (
-                <ChargeLimitRing value={chargeLimitSoc} max={100} gaugeSize={gaugeSize} />
-              )}
-            </div>
-
-            {isLarge && (
-              <div className="flex items-center gap-4 mt-2">
-                <div className="text-center">
-                  <p className="text-[10px] text-white/40 uppercase tracking-wider">
-                    {t('widget.level', 'Level')}
-                  </p>
-                  <AnimatedNumber
-                    value={batteryLevel}
-                    suffix="%"
-                    className="text-lg font-bold text-white/90"
-                  />
-                </div>
+            <div className="relative">
+              <WidgetGaugeHero
+                gauge={{
+                  value: batteryLevel,
+                  max: 100,
+                  label: isCompact ? '' : t('widget.battery', 'Battery'),
+                  unit: '%',
+                  color,
+                }}
+                stats={isLarge ? stats : undefined}
+                compact={isCompact}
+              >
                 {chargeLimitSoc != null && (
-                  <div className="text-center">
-                    <p className="text-[10px] text-white/40 uppercase tracking-wider">
-                      {t('widget.chargeLimit', 'Limit')}
-                    </p>
-                    <AnimatedNumber
-                      value={chargeLimitSoc}
-                      suffix="%"
-                      className="text-lg font-bold text-white/50"
-                    />
-                  </div>
+                  <ChargeLimitRing value={chargeLimitSoc} max={100} gaugeSize={gaugeSize} />
                 )}
-              </div>
-            )}
+              </WidgetGaugeHero>
+            </div>
 
             {state.is_charging && (
               <p className="text-[10px] text-neon-green animate-pulse mt-1">
