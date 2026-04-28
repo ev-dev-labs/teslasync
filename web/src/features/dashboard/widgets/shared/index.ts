@@ -8,3 +8,4 @@ export { WidgetComparisonCard, type ComparisonMetric } from './WidgetComparisonC
 export { WidgetBigNumber } from './WidgetBigNumber';
 export { WidgetMapView } from './WidgetMapView';
 export { WidgetStatusGrid, type StatusCell } from './WidgetStatusGrid';
+export { WidgetTipCards, type TipItem } from './WidgetTipCards';
