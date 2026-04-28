@@ -8,11 +8,12 @@ import {
   AREA_DEFAULTS, areaGradient,
 } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
-import { EmptyState } from '@/components/feedback';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useBatteryDegradation } from '@/api/hooks/useEnergy';
 import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
+import { WidgetChartSummary } from './shared';
+import type { ChartSummaryStat } from './shared';
 import type { WidgetProps } from './types';
 
 export default function BatteryDegradationTrendWidget({ vehicleId, size }: WidgetProps) {
@@ -38,10 +39,57 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
   const isCompact = size.cols <= 1 && size.rows <= 1;
   const currentHealth = data?.current_health_pct ?? data?.current_health ?? null;
   const degradationRate = data?.degradation_rate_pct_per_month ?? null;
+  const totalCycles = data?.current_cycles ?? null;
 
-  const healthColor = currentHealth != null
-    ? currentHealth > 90 ? '#10b981' : currentHealth >= 80 ? '#f59e0b' : '#ef4444'
-    : '#374151';
+  const stats = useMemo<ChartSummaryStat[]>(() => {
+    const items: ChartSummaryStat[] = [];
+    items.push({
+      label: t('widget.soh', 'SoH'),
+      value: currentHealth != null ? `${fmtNumber(currentHealth, 1)}%` : '—',
+    });
+    if (degradationRate != null && degradationRate > 0) {
+      items.push({
+        label: t('widget.degradation', 'Degradation'),
+        value: `−${fmtNumber(degradationRate, 2)}%`,
+        unit: `/${t('widget.mo', 'mo')}`,
+      });
+    }
+    items.push({
+      label: t('widget.cycles', 'Cycles'),
+      value: totalCycles != null ? fmtNumber(totalCycles, 0) : '—',
+    });
+    return items;
+  }, [currentHealth, degradationRate, totalCycles, t]);
+
+  const chart = chartData.length > 1 ? (
+    <ResponsiveContainer width="100%" height="100%">
+      <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+        {areaGradient('degradation-grad', CHART_COLORS[1])}
+        <CartesianGrid {...chartGrid} />
+        <XAxis dataKey="month" {...axisTickSm} />
+        <YAxis
+          domain={['dataMin - 2', 100]}
+          tickFormatter={(v: number) => `${v}%`}
+          {...axisTickSm}
+        />
+        <Tooltip content={<ChartTooltip />} />
+        <ReferenceLine y={80} stroke="#ef4444" strokeDasharray="4 4" strokeOpacity={0.4} />
+        <Area
+          {...AREA_DEFAULTS}
+          dataKey="health"
+          stroke={CHART_COLORS[1]}
+          fill="url(#degradation-grad)"
+          name={t('widget.healthPct', 'Health %')}
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  ) : (
+    <div className="flex h-full items-center justify-center">
+      <p className="text-xs text-white/30">
+        {t('widget.needMoreData', 'More data needed for trend')}
+      </p>
+    </div>
+  );
 
   return (
     <WidgetShell
@@ -54,81 +102,14 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
       isError={isError}
       onRefresh={() => refetch()}
     >
-      {currentHealth != null || chartData.length > 0 ? (
-        isCompact ? (
-          <div className="h-full flex flex-col items-center justify-center">
-            <p className="text-2xl font-bold" style={{ color: healthColor }}>
-              {currentHealth != null ? `${fmtNumber(currentHealth, 1)}%` : '—'}
-            </p>
-            <p className="text-[10px] text-white/40">
-              {t('widget.soh', 'SoH')}
-            </p>
-            {degradationRate != null && degradationRate > 0 && (
-              <p className="text-[9px] text-white/30 mt-0.5">
-                −{fmtNumber(degradationRate, 2)}%/{t('widget.mo', 'mo')}
-              </p>
-            )}
-          </div>
-        ) : (
-          <div className="h-full flex flex-col min-h-0">
-            {/* Summary stats row */}
-            <div className="flex items-center gap-4 mb-2 flex-shrink-0">
-              <div>
-                <span className="text-lg font-bold" style={{ color: healthColor }}>
-                  {currentHealth != null ? `${fmtNumber(currentHealth, 1)}%` : '—'}
-                </span>
-                <span className="text-[10px] text-white/40 ml-1">
-                  {t('widget.soh', 'SoH')}
-                </span>
-              </div>
-              {degradationRate != null && degradationRate > 0 && (
-                <div className="text-[10px] text-white/30">
-                  −{fmtNumber(degradationRate, 2)}%/{t('widget.mo', 'mo')}
-                </div>
-              )}
-            </div>
-
-            {/* Chart */}
-            {chartData.length > 1 ? (
-              <div className="flex-1 min-h-0">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
-                    {areaGradient('degradation-grad', CHART_COLORS[1])}
-                    <CartesianGrid {...chartGrid} />
-                    <XAxis dataKey="month" {...axisTickSm} />
-                    <YAxis
-                      domain={['dataMin - 2', 100]}
-                      tickFormatter={(v: number) => `${v}%`}
-                      {...axisTickSm}
-                    />
-                    <Tooltip content={<ChartTooltip />} />
-                    <ReferenceLine y={80} stroke="#ef4444" strokeDasharray="4 4" strokeOpacity={0.4} />
-                    <Area
-                      {...AREA_DEFAULTS}
-                      dataKey="health"
-                      stroke={CHART_COLORS[1]}
-                      fill="url(#degradation-grad)"
-                      name={t('widget.healthPct', 'Health %')}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <div className="flex-1 flex items-center justify-center">
-                <p className="text-xs text-white/30">
-                  {t('widget.needMoreData', 'More data needed for trend')}
-                </p>
-              </div>
-            )}
-          </div>
-        )
-      ) : (
-        <EmptyState
-          icon={<TrendingDown className="h-5 w-5" />}
-          message={t('widget.noDegradation', 'No degradation data')}
-          className="py-4"
-        />
-      )}
+      <WidgetChartSummary
+        stats={stats}
+        chart={chart}
+        compact={isCompact}
+        isEmpty={currentHealth == null && chartData.length === 0}
+        emptyMessage={t('widget.noDegradation', 'No degradation data')}
+        emptyIcon={<TrendingDown className="h-5 w-5" />}
+      />
     </WidgetShell>
   );
 }
