@@ -812,7 +812,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(COALESCE(SUM(cost), 0)::numeric, 2) AS \"Cost ($)\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND start_date >= DATE_TRUNC('month', NOW())",
+          "rawSql": "SELECT ROUND(COALESCE(SUM(cost), 0)::numeric, 2) AS \"Cost ($)\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND start_ts >= DATE_TRUNC('month', NOW())",
           "refId": "A"
         }
       ],
@@ -1065,7 +1065,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COUNT(*) AS \"Charges\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND start_date >= DATE_TRUNC('week', NOW())",
+          "rawSql": "SELECT COUNT(*) AS \"Charges\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND start_ts >= DATE_TRUNC('week', NOW())",
           "refId": "A"
         }
       ],

@@ -100,7 +100,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  t.name AS \"✈️ Trip\",\n  t.start_date AS \"📅 Start\",\n  t.end_date AS \"📅 End\",\n  ROUND(convert_distance(t.total_distance_km)::numeric, 1) AS \"📏 Distance\",\n  ROUND(t.total_energy_kwh::numeric, 1) AS \"⚡ Energy\",\n  ROUND(t.total_cost::numeric, 2) AS \"💰 Cost\",\n  t.drive_count AS \"🛣️ Drives\",\n  t.charge_count AS \"⚡ Charges\",\n  ROUND((convert_efficiency(t.total_energy_kwh * 1000 / NULLIF(t.total_distance_km, 0)))::numeric, 1) AS \"⚡ Efficiency\"\nFROM trips t\nWHERE t.vehicle_id = ${vehicle_id}\nORDER BY t.start_date DESC\nLIMIT 50",
+          "rawSql": "SELECT\n  t.name AS \"✈️ Trip\",\n  t.start_ts AS \"📅 Start\",\n  t.end_ts AS \"📅 End\",\n  ROUND(convert_distance(t.total_distance_mi)::numeric, 1) AS \"📏 Distance\",\n  ROUND(t.total_energy_kwh::numeric, 1) AS \"⚡ Energy\",\n  ROUND(t.NULL::numeric, 2) AS \"💰 Cost\",\n  t.NULL AS \"🛣️ Drives\",\n  t.NULL AS \"⚡ Charges\",\n  ROUND((convert_efficiency(t.total_energy_kwh * 1000 / NULLIF(t.total_distance_mi, 0)))::numeric, 1) AS \"⚡ Efficiency\"\nFROM trips t\nWHERE t.vehicle_id = ${vehicle_id}\nORDER BY t.start_ts DESC\nLIMIT 50",
           "refId": "A"
         }
       ],

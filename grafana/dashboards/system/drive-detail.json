@@ -112,7 +112,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  ROUND(convert_distance(distance)::numeric, 1) AS \"🛣️ Distance\",\n  ROUND(duration_min::numeric) AS \"⏱️ Duration (min)\",\n  ROUND(convert_speed(speed_max)::numeric) AS \"🏎️ Max Speed\",\n  start_battery_level AS \"🔋 Start %\",\n  end_battery_level AS \"🔋 End %\",\n  ROUND(convert_temp(outside_temp_avg)::numeric, 1) AS \"🌡️ Temp\"\nFROM v_drives WHERE id = ${drive_id}",
+          "rawSql": "SELECT\n  ROUND(convert_distance(distance_mi)::numeric, 1) AS \"🛣️ Distance\",\n  ROUND(duration_min::numeric) AS \"⏱️ Duration (min)\",\n  ROUND(convert_speed(max_speed_mph)::numeric) AS \"🏎️ Max Speed\",\n  start_battery_pct AS \"🔋 Start %\",\n  end_battery_pct AS \"🔋 End %\",\n  ROUND(convert_temp(outside_temp_avg_c)::numeric, 1) AS \"🌡️ Temp\"\nFROM drives WHERE id = ${drive_id}",
           "refId": "A"
         }
       ],

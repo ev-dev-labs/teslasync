@@ -109,7 +109,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT car_type AS \"Car Type\", trim AS \"Trim\", exterior_color AS \"Exterior Color\", wheel_type AS \"Wheel Type\", roof_color AS \"Roof Color\", efficiency_package AS \"Efficiency Pkg\", rear_seat_heaters AS \"Rear Heaters\", sunroof_installed AS \"Sunroof\", CASE WHEN europe_vehicle THEN 'Yes' ELSE 'No' END AS \"EU Vehicle\", CASE WHEN right_hand_drive THEN 'Yes' ELSE 'No' END AS \"RHD\", charge_port AS \"Charge Port\", created_at AS \"Snapshot Time\" FROM vehicle_config_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT NULL AS value -- Panel disabled: table removed in migration (ADR-002)",
           "refId": "A"
         }
       ],
@@ -168,7 +168,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT version AS \"Version\", software_update_version AS \"Update Version\", software_update_download_pct AS \"Download %\", software_update_install_pct AS \"Install %\" FROM vehicle_config_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT NULL AS value -- Panel disabled: table removed in migration (ADR-002)",
           "refId": "A"
         }
       ],
@@ -227,7 +227,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT forward_collision_warning AS \"FCW\", automatic_emergency_braking_off AS \"AEB\", blind_spot_collision_warning AS \"BSW\", lane_departure_avoidance AS \"LDA\", speed_limit_warning AS \"Speed Limit Warn\", created_at AS \"Snapshot Time\" FROM safety_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT NULL AS value -- Panel disabled: table removed in migration (ADR-002)",
           "refId": "A"
         }
       ],
@@ -286,7 +286,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT destination_name AS \"Destination\", miles_to_arrival AS \"Miles to Arrival\", minutes_to_arrival AS \"Minutes to Arrival\", route_traffic_delay_min AS \"Traffic Delay Min\", CASE WHEN located_at_home THEN 'Yes' ELSE 'No' END AS \"At Home\", CASE WHEN located_at_work THEN 'Yes' ELSE 'No' END AS \"At Work\", created_at AS \"Time\" FROM location_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at DESC LIMIT 10",
+          "rawSql": "SELECT NULL AS value -- Panel disabled: table removed in migration (ADR-002)",
           "refId": "A"
         }
       ],
@@ -345,7 +345,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(setting_distance_unit, 'N/A') AS \"Distance Units\", COALESCE(setting_temperature_unit, 'N/A') AS \"Temp Units\", COALESCE(setting_charge_unit, 'N/A') AS \"Charge Rate Units\", CASE WHEN setting_24hr_time THEN '24h' ELSE '12h' END AS \"Time Format\" FROM user_preference_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT NULL AS value -- Panel disabled: table removed in migration (ADR-002)",
           "refId": "A"
         }
       ],
@@ -425,7 +425,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, CASE WHEN located_at_home THEN 1 ELSE 0 END AS \"At Home\", CASE WHEN located_at_work THEN 1 ELSE 0 END AS \"At Work\" FROM location_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "rawSql": "SELECT NULL AS value -- Panel disabled: table removed in migration (ADR-002)",
           "refId": "A"
         }
       ],
