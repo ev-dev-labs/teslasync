@@ -4,7 +4,7 @@
  */
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { request } from '../api/client'
+import { request } from '@/api/client'
 import { GlassPanel, Badge, Button, Input, DataTable, type Column } from './ui'
 import { fmtInt } from '../lib/numberFormat'
 import { TIME_RANGE_PRESETS } from '../lib/constants'

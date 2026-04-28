@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { getPollingStatus, getPollingSavings, type PollEngineStatus, type CostSnapshot, type VehiclePollingStatus } from '../../api/polling'
+import { getPollingStatus, getPollingSavings, type PollEngineStatus, type CostSnapshot, type VehiclePollingStatus } from '@/api/polling'
 import {
   Gauge, Zap, BatteryCharging, Moon, TrendingDown,
   Activity, Clock, ChevronDown,

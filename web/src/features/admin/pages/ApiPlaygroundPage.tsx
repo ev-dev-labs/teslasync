@@ -8,7 +8,7 @@ import { GlassPanel } from '@/components/ui';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { getApiBase } from '@/api/client';
+import { apiUrl, request } from '@/api/client';
 import EndpointSidebar, { type ParsedEndpoint, type ParsedParam, type ParsedBody } from '../components/EndpointSidebar';
 import RequestBuilder from '../components/RequestBuilder';
 import ResponseViewer, { SnippetPanel, type ApiResponse, type HistoryEntry } from '../components/ResponseViewer';
@@ -148,7 +148,7 @@ async function executeRequest(
   headers?: Record<string, string>,
 ): Promise<ApiResponse> {
   const start = performance.now();
-  const fullUrl = `${getApiBase()}/api/v1${url}`;
+  const fullUrl = apiUrl(url);
 
   const options: RequestInit = {
     method,
@@ -226,14 +226,15 @@ export default function ApiPlaygroundPage() {
   const [history, setHistory] = useState<HistoryEntry[]>(loadHistory);
   const lastRequestRef = useRef<{ method: string; url: string; body?: string }>({ method: 'GET', url: '' });
 
-  // Fetch and parse OpenAPI spec — plain fetch to avoid camelCaseKeys corruption
+  // Fetch and parse OpenAPI spec as text so YAML keys are preserved.
   const { data: endpoints, isLoading: specLoading, error: specError } = useQuery<ParsedEndpoint[]>({
     queryKey: ['openapi-spec'],
     queryFn: async () => {
-      const base = getApiBase();
-      const resp = await fetch(`${base}/api/v1/system/openapi`, { credentials: 'same-origin' });
-      if (!resp.ok) throw new Error(`Failed to load OpenAPI spec: ${resp.status}`);
-      const text = await resp.text();
+      const text = await request<string>('/system/openapi', {
+        responseType: 'text',
+        credentials: 'same-origin',
+        headers: { Accept: 'text/yaml' },
+      });
       const spec = yaml.load(text) as OpenAPISpec;
       return parseSpec(spec);
     },
@@ -348,7 +349,7 @@ export default function ApiPlaygroundPage() {
                 {response && (
                   <SnippetPanel
                     method={lastRequestRef.current.method}
-                    url={`${getApiBase()}/api/v1${lastRequestRef.current.url}`}
+                    url={apiUrl(lastRequestRef.current.url)}
                     body={lastRequestRef.current.body}
                   />
                 )}

@@ -1,4 +1,4 @@
-import { request, getApiBase } from './client'
+import { request } from './client'
 import type {
   AppSettings,
   PollingConfig,
@@ -120,8 +120,4 @@ export const getGasPriceHistory = (limit = 50, offset = 0) =>
   request<GasPriceHistory[]>(`/gas-price/history?limit=${limit}&offset=${offset}`)
 
 // === Map Config ===
-export async function getMapConfig(): Promise<MapConfig> {
-  const res = await fetch(`${getApiBase()}/api/v1/system/map-config`)
-  if (!res.ok) return { provider: 'free', api_key: '' }
-  return res.json()
-}
+export const getMapConfig = () => request<MapConfig>('/system/map-config')

@@ -1,5 +1,6 @@
 import { useEffect, useCallback, useState, useRef } from 'react'
 import { useRealtimeEvents } from './useRealtimeEvents'
+import { useVehicleLiveSignals } from '@/api/hooks/useTelemetry'
 import { parseEnumBool, parseBuckleStatus } from '../lib/parseEnums'
 
 /**
@@ -407,6 +408,7 @@ export function useVehicleLive(vehicleId?: number) {
   const [state, setState] = useState<VehicleLiveState>({ ...EMPTY_STATE })
   const stateRef = useRef(state)
   stateRef.current = state
+  const { data: initialLiveSignals } = useVehicleLiveSignals(vehicleId)
 
   const handleUpdate = useCallback((data: unknown) => {
     const update = data as { vehicle_id?: number; state?: Record<string, unknown>; signals?: Record<string, unknown> }
@@ -430,34 +432,26 @@ export function useVehicleLive(vehicleId?: number) {
     enabled: true,
   })
 
-  // Initial fetch from the live API endpoint
   useEffect(() => {
-    if (!vehicleId) return
-    fetch(`/api/v1/signals/${vehicleId}/live`)
-      .then(r => r.json())
-      .then(data => {
-        if (data.signals) {
-          // The /live endpoint wraps each signal as {value, timestamp}.
-          // Unwrap to flat key→value format that parseSignals expects.
-          const flat: Record<string, unknown> = {}
-          for (const [k, v] of Object.entries(data.signals)) {
-            if (v && typeof v === 'object' && 'value' in (v as Record<string, unknown>)) {
-              flat[k] = (v as Record<string, unknown>).value
-            } else {
-              flat[k] = v
-            }
-          }
-          const parsed = parseSignals(flat)
-          setState(prev => ({
-            ...prev,
-            ...parsed,
-            lastUpdated: new Date(),
-            signalCount: Object.keys(flat).length,
-          }))
-        }
-      })
-      .catch(() => {}) // Silent fail — SSE will provide updates
-  }, [vehicleId])
+    if (!initialLiveSignals?.signals) return
+
+    const flat: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(initialLiveSignals.signals)) {
+      if (v && typeof v === 'object' && 'value' in (v as Record<string, unknown>)) {
+        flat[k] = (v as Record<string, unknown>).value
+      } else {
+        flat[k] = v
+      }
+    }
+
+    const parsed = parseSignals(flat)
+    setState(prev => ({
+      ...prev,
+      ...parsed,
+      lastUpdated: new Date(),
+      signalCount: Object.keys(flat).length,
+    }))
+  }, [initialLiveSignals])
 
   return { state, connected }
 }

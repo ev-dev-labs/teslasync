@@ -8,6 +8,7 @@ import type { SignalCatalogEntry, SignalObservation } from '@/types/signals';
 
 export const telemetryKeys = {
   signals: (vehicleId: number) => ['signals', vehicleId] as const,
+  liveSignals: (vehicleId?: number) => ['live-signals', vehicleId] as const,
   signalStats: (vehicleId: number) => ['signal-stats', vehicleId] as const,
   signalHistory: (vehicleId: number, signal: string, hours: number) => ['signal-history', vehicleId, signal, hours] as const,
   signalLog: (vehicleId: number, signal: string, hours: number, page: number) => ['signal-log', vehicleId, signal, hours, page] as const,
@@ -15,6 +16,16 @@ export const telemetryKeys = {
   signalGaps: (vehicleId: number) => ['signal-gaps', vehicleId] as const,
   mqttStatus: ['mqtt-status'] as const,
 };
+
+export interface VehicleLiveSignal {
+  value: unknown;
+  timestamp?: string;
+}
+
+export interface VehicleLiveSignalsResponse {
+  vehicle_id?: number;
+  signals?: Record<string, VehicleLiveSignal | unknown>;
+}
 
 export function useSignals(vehicleId: number) {
   return useQuery({
@@ -28,6 +39,20 @@ export function useSignals(vehicleId: number) {
     enabled: vehicleId > 0,
     staleTime: STALE_TIMES.STANDARD,
     select: safeArray,
+  });
+}
+
+export function getVehicleLiveSignals(vehicleId: number) {
+  return request<VehicleLiveSignalsResponse>(`/signals/${vehicleId}/live`);
+}
+
+export function useVehicleLiveSignals(vehicleId?: number) {
+  return useQuery({
+    queryKey: telemetryKeys.liveSignals(vehicleId),
+    queryFn: () => getVehicleLiveSignals(vehicleId ?? 0),
+    enabled: !!vehicleId,
+    staleTime: STALE_TIMES.REALTIME,
+    retry: 1,
   });
 }
 

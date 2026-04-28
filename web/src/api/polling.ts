@@ -1,4 +1,4 @@
-import { getApiBase } from '../lib/resilience'
+import { request } from '@/api/client'
 
 export interface PollEngineStatus {
   enabled: boolean
@@ -45,29 +45,16 @@ export interface CostSnapshot {
   projected_month_end: number
 }
 
-export async function getPollingStatus(): Promise<PollEngineStatus> {
-  const res = await fetch(`${getApiBase()}/api/v1/polling/status`)
-  if (!res.ok) throw new Error('Failed to fetch polling status')
-  return res.json()
-}
+export const getPollingStatus = () => request<PollEngineStatus>('/polling/status')
 
-export async function getPollingDecisions(vin: string, limit = 50): Promise<{ vin: string; decisions: PollDecision[] }> {
-  const res = await fetch(`${getApiBase()}/api/v1/polling/decisions?vin=${encodeURIComponent(vin)}&limit=${limit}`)
-  if (!res.ok) throw new Error('Failed to fetch polling decisions')
-  return res.json()
-}
+export const getPollingDecisions = (vin: string, limit = 50) =>
+  request<{ vin: string; decisions: PollDecision[] }>(
+    `/polling/decisions?vin=${encodeURIComponent(vin)}&limit=${limit}`,
+  )
 
-export async function getPollingSavings(): Promise<CostSnapshot> {
-  const res = await fetch(`${getApiBase()}/api/v1/polling/savings`)
-  if (!res.ok) throw new Error('Failed to fetch polling savings')
-  return res.json()
-}
+export const getPollingSavings = () => request<CostSnapshot>('/polling/savings')
 
-export async function getPollingPredictions(vin?: string): Promise<{ predictions: Record<string, PredictionInfo> | PredictionInfo | null }> {
-  const url = vin
-    ? `${getApiBase()}/api/v1/polling/predictions?vin=${encodeURIComponent(vin)}`
-    : `${getApiBase()}/api/v1/polling/predictions`
-  const res = await fetch(url)
-  if (!res.ok) throw new Error('Failed to fetch polling predictions')
-  return res.json()
-}
+export const getPollingPredictions = (vin?: string) =>
+  request<{ predictions: Record<string, PredictionInfo> | PredictionInfo | null }>(
+    `/polling/predictions${vin ? `?vin=${encodeURIComponent(vin)}` : ''}`,
+  )

@@ -7,7 +7,7 @@ import type {
   AutomationFailedEvent,
   AutomationSkippedEvent,
   AutomationStateChangedEvent,
-} from '../api/types'
+} from '@/api/types'
 
 /** A single automation SSE event with its type and receive timestamp. */
 export interface AutomationActivityEvent {
@@ -46,7 +46,7 @@ let eventCounter = 0
 
 /**
  * React hook for real-time automation SSE events.
- * Subscribes to the dedicated /api/v1/automations/events stream.
+ * Subscribes to the dedicated automation events stream.
  */
 export function useAutomationEvents(
   options: UseAutomationEventsOptions = {},

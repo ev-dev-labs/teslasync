@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { getApiBase } from '@/lib/resilience';
+import { request } from '@/api/client';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { useToast } from '@/components/feedback/Toast';
 
@@ -21,28 +21,19 @@ function getWatchApiKey(): string {
 }
 
 async function watchRequest<T>(path: string, options?: RequestInit): Promise<T> {
-  const base = getApiBase();
   const apiKey = getWatchApiKey();
+  const headers = new Headers(options?.headers);
 
-  const headers: Record<string, string> = {
-    'Accept': 'application/json',
-    ...(options?.headers as Record<string, string>),
-  };
+  headers.set('Accept', 'application/json');
   if (apiKey) {
-    headers['X-API-Key'] = apiKey;
+    headers.set('X-API-Key', apiKey);
   }
 
-  const res = await fetch(`${base}/api/v1${path}`, {
+  return request<T>(path, {
     ...options,
+    skipAuthRefresh: true,
     headers,
   });
-
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(body.error ?? `Request failed: ${res.status}`);
-  }
-
-  return res.json();
 }
 
 // --- Types ---
