@@ -196,7 +196,13 @@ export default function WarrantyStatusWidget({ size }: WidgetProps) {
   // ── Compact layout (1×2): days remaining + Active/Expired badge ──
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}>
+      <WidgetShell {...shellProps}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
+    >
         <div className="h-full flex flex-col items-center justify-center gap-1.5 min-h-[44px]">
           {warrantyData ? (
             <>

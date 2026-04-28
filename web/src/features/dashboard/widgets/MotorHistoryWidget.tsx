@@ -138,7 +138,13 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
 
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}>
+      <WidgetShell {...shellProps}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
+    >
         <WidgetChartSummary
           compact
           isEmpty={!hasData}

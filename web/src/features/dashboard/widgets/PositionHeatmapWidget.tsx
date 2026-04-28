@@ -120,7 +120,13 @@ export default function PositionHeatmapWidget({ vehicleId, size }: WidgetProps) 
   // ─── Compact layout (1-col) ───
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps} noPadding>
+      <WidgetShell {...shellProps} noPadding
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
+    >
         <WidgetMapView
           center={center}
           zoom={11}

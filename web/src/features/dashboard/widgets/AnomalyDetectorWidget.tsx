@@ -105,7 +105,13 @@ export default function AnomalyDetectorWidget({ vehicleId, size }: WidgetProps) 
     const badgeVariant = SEVERITY_BADGE[sev] ?? 'neutral';
 
     return (
-      <WidgetShell {...shellProps}>
+      <WidgetShell {...shellProps}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
+    >
         <div className="flex h-full flex-col items-center justify-center gap-2 min-h-[44px]">
           {count > 0 ? (
             <>

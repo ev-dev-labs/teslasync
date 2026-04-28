@@ -109,7 +109,13 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
   // ── Compact layout (1×2): days until next + item name ──
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}>
+      <WidgetShell {...shellProps}
+      updatedAt={maintUpdatedAt}
+      isFetching={maintFetching}
+      isStale={maintStale}
+      isError={maintIsError}
+      onRefresh={() => maintRefetch()}
+    >
         <div className="h-full flex flex-col items-center justify-center gap-1.5 min-h-[44px]">
           {nextItem ? (
             <>

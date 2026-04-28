@@ -57,7 +57,13 @@ export default function DrivingCoachWidget({ vehicleId, size }: WidgetProps) {
 
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}>
+      <WidgetShell {...shellProps}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
+    >
         <div className="flex h-full flex-col items-center justify-center gap-2 min-h-[44px]">
           <span className="text-2xl font-bold text-white/90">
             {fmtInt(score)}

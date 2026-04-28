@@ -87,7 +87,13 @@ export default function BatteryHealthAnalyticsWidget({ vehicleId, size }: Widget
 
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}>
+      <WidgetShell {...shellProps}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
+    >
         <div className="h-full flex flex-col items-center justify-center min-h-[44px]">
           {hasData ? (
             <WidgetGaugeHero gauge={gaugeConfig} compact />

@@ -99,7 +99,13 @@ export default function DrivetrainHealthWidget({ vehicleId, size }: WidgetProps)
 
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}>
+      <WidgetShell {...shellProps}
+      updatedAt={healthUpdatedAt}
+      isFetching={healthFetching}
+      isStale={healthStale}
+      isError={healthIsError}
+      onRefresh={() => healthRefetch()}
+    >
         <div className="h-full flex flex-col items-center justify-center min-h-[44px]">
           {hasData ? (
             <WidgetGaugeHero gauge={gaugeConfig} compact />

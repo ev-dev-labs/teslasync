@@ -109,7 +109,13 @@ export default function EnergyStatsWidget({ vehicleId, size }: WidgetProps) {
   // ── Compact (1×2): large number only ──
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}>
+      <WidgetShell {...shellProps}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
+    >
         {hasData ? (
           <div className="h-full flex flex-col items-center justify-center gap-0.5 min-h-[44px]">
             <AnimatedNumber

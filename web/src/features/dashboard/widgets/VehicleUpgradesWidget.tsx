@@ -136,7 +136,13 @@ export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) 
   // ── Compact layout (1×2): upgrade count ──
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}>
+      <WidgetShell {...shellProps}
+      updatedAt={upgradesUpdatedAt}
+      isFetching={upgradesFetching}
+      isStale={upgradesStale}
+      isError={upgradesError}
+      onRefresh={() => refetchUpgrades()}
+    >
         <div className="h-full flex flex-col items-center justify-center gap-1.5 min-h-[44px]">
           <ArrowUpCircle className="h-4 w-4 text-emerald-400" />
           {upgrades.length > 0 ? (

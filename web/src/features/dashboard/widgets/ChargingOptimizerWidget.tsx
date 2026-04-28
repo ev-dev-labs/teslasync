@@ -77,7 +77,13 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
   // ── Compact (1 col) ──
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}>
+      <WidgetShell {...shellProps}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
+    >
         {!data ? (
           <EmptyState
             icon={<Sparkles className="h-5 w-5" />}

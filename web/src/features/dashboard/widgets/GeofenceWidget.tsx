@@ -119,7 +119,13 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
   // ─── Compact layout (1×2) ───
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}>
+      <WidgetShell {...shellProps}
+      updatedAt={stateUpdatedAt}
+      isFetching={stateFetching}
+      isStale={stateStale}
+      isError={stateIsError}
+      onRefresh={() => stateRefetch()}
+    >
         <div className="flex h-full flex-col items-center justify-center gap-1 min-h-[44px]">
           <Crosshair className="h-5 w-5 text-neon-cyan" />
           {currentZone ? (

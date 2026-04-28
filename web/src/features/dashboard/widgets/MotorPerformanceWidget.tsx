@@ -57,7 +57,13 @@ export default function MotorPerformanceWidget({ vehicleId, size }: WidgetProps)
 
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}>
+      <WidgetShell {...shellProps}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
+    >
         <div className="h-full flex flex-col items-center justify-center gap-1 min-h-[44px]">
           {hasData ? (
             <>

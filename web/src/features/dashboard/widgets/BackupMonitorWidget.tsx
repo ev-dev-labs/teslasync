@@ -104,7 +104,13 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
   // ── Compact layout (1×2) ──
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}>
+      <WidgetShell {...shellProps}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
+    >
         {runs.length === 0 && !isLoading ? (
           <EmptyState
             icon={<HardDrive className="h-5 w-5" />}

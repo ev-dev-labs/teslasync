@@ -84,7 +84,13 @@ export default function LocationFavoritesWidget({ vehicleId, size }: WidgetProps
 
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}>
+      <WidgetShell {...shellProps}
+      updatedAt={locUpdatedAt}
+      isFetching={locFetching}
+      isStale={locStale}
+      isError={locIsError}
+      onRefresh={() => locRefetch()}
+    >
         <div className="flex h-full flex-col items-center justify-center gap-1 min-h-[44px]">
           <span className="text-2xl" role="img" aria-label={locBadge.label}>
             {locBadge.emoji}

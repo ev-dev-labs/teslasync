@@ -79,7 +79,13 @@ export default function RouteEfficiencyWidget({ vehicleId, size }: WidgetProps) 
 
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}>
+      <WidgetShell {...shellProps}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
+    >
         <div className="flex h-full flex-col min-h-[44px]">
           {routes.length > 0 ? (
             <WidgetRankedList

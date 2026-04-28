@@ -68,7 +68,13 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
   if (isCompact) {
     if (!snapshot) {
       return (
-        <WidgetShell {...shellProps}>
+        <WidgetShell {...shellProps}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
+    >
           <EmptyState
             icon={<Navigation2 className="h-5 w-5" />}
             message={t('widget.destinationETA.noData', 'No location data')}
@@ -80,7 +86,13 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
 
     if (isNavigating) {
       return (
-        <WidgetShell {...shellProps}>
+        <WidgetShell {...shellProps}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
+    >
           <WidgetBigNumber
             value={Math.round(minutesToArrival)}
             unit={t('widget.destinationETA.min', 'min')}
@@ -91,7 +103,13 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
     }
 
     return (
-      <WidgetShell {...shellProps}>
+      <WidgetShell {...shellProps}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
+    >
         <div className="flex h-full flex-col items-center justify-center gap-1 min-h-[44px]">
           <span className="text-2xl" role="img" aria-label={locBadge.label}>
             {locBadge.emoji}

@@ -170,7 +170,13 @@ export default function SubscriptionsWidget({ vehicleId, size }: WidgetProps) {
   // ── Compact layout (1×2): active count + next expiry ──
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}>
+      <WidgetShell {...shellProps}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
+    >
         <div className="h-full flex flex-col items-center justify-center gap-1.5 min-h-[44px]">
           {parsed.length > 0 ? (
             <>

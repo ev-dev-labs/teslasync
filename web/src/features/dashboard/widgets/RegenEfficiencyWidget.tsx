@@ -67,7 +67,13 @@ export default function RegenEfficiencyWidget({ vehicleId, size }: WidgetProps) 
 
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}>
+      <WidgetShell {...shellProps}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => refetch()}
+    >
         <div className="h-full flex flex-col items-center justify-center min-h-[44px]">
           {data ? (
             <WidgetGaugeHero gauge={gaugeConfig} compact />
