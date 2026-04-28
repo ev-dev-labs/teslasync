@@ -5,7 +5,7 @@ import {
   DollarSign, Calendar, CloudSun, CircleDot, CreditCard, Hash,
   MonitorSmartphone, List, Grid3X3, Workflow, DoorOpen, Eye,
   Command, CalendarRange, Bell, Music, HeartPulse, Moon, Navigation,
-  Cpu, RotateCcw, Route, Lightbulb, Trophy, Clock,
+  Cpu, RotateCcw, Route, Lightbulb, Trophy, Clock, AlertTriangle,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -605,6 +605,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./StateTimelineWidget')),
+  },
+  {
+    id: 'anomaly-detector',
+    name: 'Anomaly Detector',
+    description: 'Statistical outlier alerts: unusual battery, temp, or driving anomalies',
+    icon: AlertTriangle,
+    category: 'analytics',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./AnomalyDetectorWidget')),
   },
 
   // ── Alerts ──
