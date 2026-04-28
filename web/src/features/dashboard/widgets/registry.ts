@@ -8,7 +8,7 @@ import {
   Cpu, RotateCcw, Route, Lightbulb, Trophy, Clock, AlertTriangle,
   Sparkles, Cog, Wrench, FileText, ShieldCheck, ShieldAlert, ThermometerSun,
   Sun, Plug, TrendingDown, GitBranch, Radio, ListMusic, Home,
-  PieChart as PieIcon,
+  PieChart as PieIcon, Server,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -1014,6 +1014,19 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 3, rows: 40 },
     component: lazy(() => import('./WarrantyStatusWidget')),
+  },
+
+  // ── System Health ──
+  {
+    id: 'system-health',
+    name: 'System Health',
+    description: 'Server health: DB, MQTT, Tesla API status, memory, connections',
+    icon: Server,
+    category: 'system',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./SystemHealthWidget')),
   },
 ];
 
