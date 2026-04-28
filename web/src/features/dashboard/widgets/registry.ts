@@ -8,6 +8,7 @@ import {
   Cpu, RotateCcw, Route, Lightbulb, Trophy, Clock, AlertTriangle,
   Sparkles, Cog, Wrench, FileText, ShieldCheck, ShieldAlert, ThermometerSun,
   Sun, Plug, TrendingDown, GitBranch, Radio,
+  PieChart as PieIcon,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -794,6 +795,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./FSMDistributionWidget')),
+  },
+  {
+    id: 'cost-breakdown',
+    name: 'Cost Breakdown',
+    description: 'Charging cost by source: home vs Supercharger vs destination, gas savings',
+    icon: PieIcon,
+    category: 'analytics',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./CostBreakdownWidget')),
   },
 
   // ── Alerts ──
