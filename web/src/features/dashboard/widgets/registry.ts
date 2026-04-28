@@ -573,6 +573,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./SuperchargerHistoryWidget')),
   },
+  {
+    id: 'charge-plans',
+    name: 'Charge Plans',
+    description: 'Active charge plan, rate schedule: peak/off-peak hours with rates',
+    icon: Clock,
+    category: 'charging',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./ChargePlansWidget')),
+  },
 
   // ── Climate ──
   {
