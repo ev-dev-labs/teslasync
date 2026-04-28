@@ -1,0 +1,31 @@
+=== SURVEY ===
+Checked widgets/shared/ directory: 7 existing shared widget components.
+Checked barrel: index.ts exports all 7.
+Confirmed AnimatedNumber exported from @/components/data-display (value: number, className).
+Confirmed Badge exported from @/components/ui (variants: info/success/warning/danger/neutral).
+Badge uses 'danger' not 'error' — need mapping in WidgetBigNumber.
+
+=== REASONING ===
+- AnimatedNumber.value is non-nullable (number), so null handling must guard before rendering.
+- Badge variant 'error' from the prompt interface maps to 'danger' in Badge component.
+  Created a const map: { success→success, warning→warning, error→danger, neutral→neutral }.
+- animated=false renders a plain <span> with tabular-nums for consistency.
+- valueColor defaults to 'text-white' (Tailwind class, not CSS var — no inline styles).
+- nullDisplay renders in muted text (text-white/30) for visual distinction.
+
+=== CHANGES ===
+1. Created web/src/features/dashboard/widgets/shared/WidgetBigNumber.tsx
+   - WidgetBigNumberProps interface matching spec
+   - badgeVariantMap for error→danger mapping
+   - Null-safe value rendering with AnimatedNumber or plain span
+   - All layout classes per spec: flex-col, items-center, gap-1, etc.
+2. Updated web/src/features/dashboard/widgets/shared/index.ts
+   - Added: export { WidgetBigNumber } from './WidgetBigNumber';
+
+=== GATE ===
+npx tsc --noEmit → exit code 0, zero errors.
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
+feat(web): add WidgetBigNumber shared component for dashboard widgets
