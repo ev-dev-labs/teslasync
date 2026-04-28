@@ -1,0 +1,24 @@
+=== PREFLIGHT ===
+PREDECESSOR .github\prompts\db-refactor\logs\phase-34-00-docs-inventory-and-source-map.log STATUS_DONE=True
+PREDECESSOR .github\prompts\db-refactor\logs\phase-34-01-home-onboarding-and-faq.log STATUS_DONE=False
+PREDECESSOR .github\prompts\db-refactor\logs\phase-34-02-architecture-technology-diagrams.log STATUS_DONE=False
+--- git status --short ---
+ M .github/prompts/db-refactor/logs/phase-34-02-architecture-technology-diagrams.log
+ M docs/guide/faq.md
+ M docs/guide/getting-started.md
+ M docs/guide/local-development.md
+ M docs/index.md
+=== SURVEY ===
+Predecessor check failed before source survey. Required source-of-truth files were not rewritten because phase dependencies are not complete.
+Initial git status also contains modified files outside this phase allowed-file list.
+=== REASONING ===
+Honesty Covenant item 7 forbids predecessor bypass. The phase must stop before changing target docs because phase-34-01 and phase-34-02 are not STATUS=DONE.
+Honesty Covenant item 9 treats git status outside allowed files as BLOCKED. Existing modified docs are outside this prompt allowed-file list.
+=== CHANGES ===
+No target documentation files were changed. This log records the blocked state.
+=== COMMIT ===
+Blocked path: commit only the log file if possible.
+=== GATE ===
+.github\prompts\db-refactor\logs\phase-34-01-home-onboarding-and-faq.log is not DONE.
+EXIT=1
+STATUS=BLOCKED
