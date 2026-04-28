@@ -6,3 +6,4 @@ export { WidgetDetailCard, type DetailEntry } from './WidgetDetailCard';
 export { WidgetRankedList, type RankedItem } from './WidgetRankedList';
 export { WidgetComparisonCard, type ComparisonMetric } from './WidgetComparisonCard';
 export { WidgetBigNumber } from './WidgetBigNumber';
+export { WidgetMapView } from './WidgetMapView';
