@@ -1,0 +1,47 @@
+=== SURVEY ===
+- Hook: useSafetyHistory(vehicleId) from @/api/hooks/useVehicleSystems returns SafetySnapshot[]
+- SafetySnapshot fields: id, vehicle_id, automatic_blind_spot_camera, automatic_emergency_braking_off, blind_spot_collision_warning, cruise_follow_distance, emergency_lane_departure_avoidance, forward_collision_warning, lane_departure_avoidance, speed_limit_warning, pin_to_drive_enabled, miles_since_reset, self_driving_miles_since_reset, created_at
+- WidgetEventFeed from ./shared handles sorting, layout, empty state
+- EventFeedItem interface: id, icon, title, subtitle?, timestamp, color, severity?
+- StatCard props: label, value, unit?, icon?, trend?, sublabel?, loading?, className?
+- Badge variants: info, success, warning, danger, neutral (no destructive/default)
+- WidgetShell freshness props: updatedAt, isFetching, isStale, isError, onRefresh
+- Registry uses lazy() imports, AlertOctagon not yet imported
+
+=== REASONING ===
+- Classify each SafetySnapshot into event types: AEB, FCW, Lane Departure, Blind Spot Warning, Emergency Lane, General
+- Map to EventFeedItem with appropriate severity/color per classification
+- Compute 30-day stats: total events, most common type, trend vs prior 30 days
+- Compact layout (cols<=1): single summary line with event count + most common + trend
+- Standard layout: 3 StatCards in a row + WidgetEventFeed timeline
+- No Badge children on StatCard (not supported), use sublabel for trend description
+- All strings via useTranslation('dashboard'), null-safe with ?? operators
+
+=== CHANGES ===
+1. Created web/src/features/dashboard/widgets/SafetyHistoryWidget.tsx
+   - classifySnapshot() maps snapshot fields to typed safety events
+   - buildSubtitle() creates context string from speed_limit_warning + cruise_follow_distance
+   - CompactView for mobile (cols<=1) with min-h-[44px] touch targets
+   - Standard view: 3 StatCards (total, most common, trend) + WidgetEventFeed
+   - All freshness props passed to WidgetShell
+   - Null-safe: data ?? [], snap.id ?? Math.random(), snap.created_at ?? new Date(0).toISOString()
+
+2. Updated web/src/features/dashboard/widgets/registry.ts
+   - Added AlertOctagon to lucide-react import
+   - Added safety-history entry after safety-features:
+     id: 'safety-history', category: 'security', defaultSize: {2,4}, minSize: {2,4}, maxSize: {4,40}
+
+=== GATE ===
+- npx tsc --noEmit: PASS (exit code 0)
+- No inline styles (only Tailwind classes)
+- No raw HTML elements (uses StatCard, EmptyState, WidgetEventFeed, WidgetShell)
+- No direct recharts/leaflet imports (none needed)
+- Imports from @/components/data-display, @/components/feedback, @/api/hooks/, ./shared
+- All strings wrapped in t()
+- Null-safe throughout
+
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
+feat(web): add SafetyHistoryWidget to dashboard gallery
