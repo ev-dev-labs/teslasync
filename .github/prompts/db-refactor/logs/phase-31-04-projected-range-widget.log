@@ -1,0 +1,49 @@
+=== SURVEY ===
+Files inspected:
+  - web/src/features/dashboard/widgets/types.ts — WidgetProps, WidgetDef, WidgetSize types
+  - web/src/features/dashboard/widgets/WidgetShell.tsx — freshness props interface
+  - web/src/features/dashboard/widgets/shared/WidgetBigNumber.tsx — value/unit/label/badge interface
+  - web/src/features/dashboard/widgets/shared/index.ts — barrel exports
+  - web/src/features/dashboard/widgets/registry.ts — 47 existing widget entries, lucide icons
+  - web/src/api/hooks/useEnergy.ts — useProjectedRange(vehicleId: string | null) → ProjectedRangeData
+  - web/src/types/energy.ts — ProjectedRangeData: current_range_km, new_range_km, degradation_pct, total_cycles, health_score, current_capacity_pct, avg_daily_km
+  - web/src/hooks/useSettings.ts — convertDistance (miles→user), distanceUnit, isMiles
+  - web/src/lib/unitConversion.ts — kmToMiles export
+  - .github/instructions/unit-conversion.instructions.md — conversion pipeline rules
+  - Existing widget patterns: VampireDrainWidget (compact/standard/wide branching), OdometerCounterWidget (convertDistance + WidgetBigNumber), RangeEstimateWidget
+
+=== REASONING ===
+1. ProjectedRangeData fields are in km (field names end _km). convertDistance expects miles input.
+   → Convert km→miles via kmToMiles(), then apply convertDistance() for correct user-unit display.
+2. Compact (cols<=1): WidgetBigNumber with Math.round(projectedRange), distanceUnit, health badge.
+3. Standard (cols 2): Primary range AnimatedNumber + Badge + ComparisonBar (projected vs EPA/new range).
+4. Wide (cols>=3): Same as standard + scrollable factors list derived from data fields:
+   degradation_pct, avg_daily_km, current_capacity_pct, total_cycles.
+5. healthBadge maps health_score to success/warning/error variant thresholds.
+6. ComparisonBar uses projected/EPA ratio as % fill, color-coded green/amber/red.
+7. All strings i18n via t('dashboard:widget.projectedRange.*').
+8. Null safety: ?? operators on all data fields, useMemo with null checks.
+9. Touch targets: min-h-[44px] on factor list rows. Compact uses WidgetBigNumber (centered, large text).
+10. All freshness props forwarded to WidgetShell.
+11. Registry: category='battery', Navigation icon, defaultSize 2×2, minSize 1×2, maxSize 3×40.
+
+=== CHANGES ===
+1. CREATED web/src/features/dashboard/widgets/ProjectedRangeWidget.tsx (230 lines)
+   - Compact: WidgetBigNumber with rounded projected range + health badge
+   - Standard: AnimatedNumber + Badge + ComparisonBar (projected vs EPA)
+   - Wide: Standard + factors list (degradation, daily usage, capacity, cycles)
+   - Unit conversion: kmToMiles → convertDistance pipeline
+   - All WidgetShell freshness props passed through
+
+2. MODIFIED web/src/features/dashboard/widgets/registry.ts
+   - Added Navigation to lucide-react imports
+   - Added projected-range entry in battery category after energy-flow
+
+=== GATE ===
+npx tsc --noEmit → exit code 0, zero errors
+STATUS=DONE
+
+=== COMMIT ===
+feat(web): add ProjectedRangeWidget to dashboard gallery
+EXIT=0
+STATUS=DONE

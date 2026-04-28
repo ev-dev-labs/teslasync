@@ -4,7 +4,7 @@ import {
   Activity, BarChart3, Gauge, Wifi, TrendingUp, Monitor,
   DollarSign, Calendar, CloudSun, CircleDot, CreditCard, Hash,
   MonitorSmartphone, List, Grid3X3, Workflow, DoorOpen, Eye,
-  Command, CalendarRange, Bell, Music, HeartPulse, Moon,
+  Command, CalendarRange, Bell, Music, HeartPulse, Moon, Navigation,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -144,6 +144,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 2, rows: 4 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./EnergyFlowWidget')),
+  },
+  {
+    id: 'projected-range',
+    name: 'Projected Range',
+    description: 'AI-predicted range based on driving habits, weather, elevation',
+    icon: Navigation,
+    category: 'battery',
+    defaultSize: { cols: 2, rows: 2 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 3, rows: 40 },
+    component: lazy(() => import('./ProjectedRangeWidget')),
   },
 
   // ── Energy ──
