@@ -298,7 +298,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT state AS \"📊 State\" FROM vehicles WHERE id = ${vehicle_id} LIMIT 1",
+          "rawSql": "SELECT COALESCE((SELECT vs.state FROM vehicle_states vs WHERE vs.vehicle_id = ${vehicle_id} ORDER BY vs.start_date DESC LIMIT 1), 'Unknown') AS \"📊 State\"",
           "refId": "A"
         }
       ],
@@ -825,7 +825,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT display_name AS \"🚗 Name\", model AS \"🚗 Model\", trim_level AS \"✨ Trim\", vin AS \"🔑 VIN\",\n  color AS \"🎨 Color\", NULL AS \"🛞 Wheels\", state AS \"📊 State\",\n  created_at AS \"📅 Added\"\nFROM vehicles WHERE id = ${vehicle_id}",
+          "rawSql": "SELECT display_name AS \"🚗 Name\", model AS \"🚗 Model\", trim_level AS \"✨ Trim\", vin AS \"🔑 VIN\",\n  color AS \"🎨 Color\", NULL::text AS \"🛞 Wheels\", (SELECT vs.state FROM vehicle_states vs WHERE vs.vehicle_id = vehicles.id ORDER BY vs.start_date DESC LIMIT 1) AS \"📊 State\",\n  created_at AS \"📅 Added\"\nFROM vehicles WHERE id = ${vehicle_id}",
           "refId": "A"
         }
       ],
@@ -1202,6 +1202,6 @@
   "timezone": "",
   "title": "TeslaSync 🚘 Vehicle Overview",
   "uid": "teslasync-vehicle-overview",
-  "version": 1,
+  "version": 999,
   "weekStart": ""
 }
