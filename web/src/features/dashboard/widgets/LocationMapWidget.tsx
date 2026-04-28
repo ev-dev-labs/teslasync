@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { MapPin, Navigation } from 'lucide-react';
-import { EmptyState } from '@/components/feedback';
-import { MapContainer, MapTileLayer, AnimatedMarker } from '@/components/maps';
+import { AnimatedMarker } from '@/components/maps';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { WidgetShell } from './WidgetShell';
+import { WidgetMapView } from './shared';
 import type { WidgetProps } from './types';
 
 export default function LocationMapWidget({ vehicleId, size }: WidgetProps) {
@@ -19,6 +19,9 @@ export default function LocationMapWidget({ vehicleId, size }: WidgetProps) {
   const isCompact = size.cols <= 1;
   const isExpanded = size.cols >= 3 || size.rows >= 3;
 
+  const lat = state?.latitude ?? 0;
+  const lng = state?.longitude ?? 0;
+
   return (
     <WidgetShell
       title={isCompact ? undefined : t('widget.locationMap.title', 'Vehicle Location Map')}
@@ -31,52 +34,43 @@ export default function LocationMapWidget({ vehicleId, size }: WidgetProps) {
       isError={isError}
       onRefresh={() => refetch()}
     >
-      {hasCoords ? (
-        <div className="h-full relative">
-          <MapContainer
-            center={[state.latitude, state.longitude]}
-            zoom={isCompact ? 13 : 14}
-            scrollWheelZoom={false}
-            className="h-full w-full"
-            style={{ background: '#1a1a2e' }}
-          >
-            <MapTileLayer style="dark" />
-            <AnimatedMarker
-              position={[state.latitude, state.longitude]}
-              heading={heading}
-            />
-          </MapContainer>
+      <div className="h-full relative">
+        <WidgetMapView
+          center={[lat, lng]}
+          zoom={isCompact ? 13 : 14}
+          compact={isCompact}
+          isEmpty={!hasCoords}
+          emptyMessage={t('widget.locationMap.noData', 'No location data available')}
+        >
+          <AnimatedMarker
+            position={[lat, lng]}
+            heading={heading}
+          />
+        </WidgetMapView>
 
-          {/* Status overlay */}
-          {!isCompact && (
-            <div className="absolute bottom-2 left-2 z-[1000] flex flex-col gap-1">
-              {!isLive && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/70 text-[10px] text-amber-400 backdrop-blur-sm">
-                  <MapPin className="h-2.5 w-2.5" />
-                  {t('widget.locationMap.lastKnown', 'Last known position')}
-                </span>
-              )}
-              {isExpanded && heading != null && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/70 text-[10px] text-white/70 backdrop-blur-sm">
-                  <Navigation className="h-2.5 w-2.5" />
-                  {t('widget.locationMap.heading', 'Heading')}: {Math.round(heading)}°
-                </span>
-              )}
-              {isExpanded && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/70 text-[10px] text-white/50 backdrop-blur-sm">
-                  {state.latitude.toFixed(4)}, {state.longitude.toFixed(4)}
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-      ) : (
-        <EmptyState
-          icon={<MapPin className="h-6 w-6" />}
-          message={t('widget.locationMap.noData', 'No location data available')}
-          className="py-4"
-        />
-      )}
+        {/* Status overlay */}
+        {hasCoords && !isCompact && (
+          <div className="absolute bottom-2 left-2 z-[1000] flex flex-col gap-1">
+            {!isLive && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/70 text-[10px] text-amber-400 backdrop-blur-sm">
+                <MapPin className="h-2.5 w-2.5" />
+                {t('widget.locationMap.lastKnown', 'Last known position')}
+              </span>
+            )}
+            {isExpanded && heading != null && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/70 text-[10px] text-white/70 backdrop-blur-sm">
+                <Navigation className="h-2.5 w-2.5" />
+                {t('widget.locationMap.heading', 'Heading')}: {Math.round(heading)}°
+              </span>
+            )}
+            {isExpanded && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/70 text-[10px] text-white/50 backdrop-blur-sm">
+                {lat.toFixed(4)}, {lng.toFixed(4)}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
     </WidgetShell>
   );
 }
