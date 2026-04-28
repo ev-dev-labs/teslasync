@@ -16,6 +16,7 @@ import {
   Users,
   ArrowUpCircle,
   Watch,
+  Map as MapIcon,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -1193,6 +1194,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 3, rows: 40 },
     component: lazy(() => import('./DestinationETAWidget')),
+  },
+  {
+    id: 'position-heatmap',
+    name: 'Position Heatmap',
+    description: 'GPS position density heatmap: frequently visited locations glow brighter',
+    icon: MapIcon,
+    category: 'maps',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 2, rows: 4 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./PositionHeatmapWidget')),
   },
 
   // ── Maintenance ──
