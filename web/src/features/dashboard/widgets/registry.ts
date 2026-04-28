@@ -5,7 +5,7 @@ import {
   DollarSign, Calendar, CloudSun, CircleDot, CreditCard, Hash,
   MonitorSmartphone, List, Grid3X3, Workflow, DoorOpen, Eye,
   Command, CalendarRange, Bell, Music, HeartPulse, Moon, Navigation,
-  Cpu, RotateCcw, Route, Lightbulb,
+  Cpu, RotateCcw, Route, Lightbulb, Trophy,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -583,6 +583,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 2, rows: 4 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./MonthlyMileageWidget')),
+  },
+  {
+    id: 'lifetime-stats',
+    name: 'Lifetime Stats',
+    description: 'All-time totals: distance, drives, energy, CO₂ saved, ownership days',
+    icon: Trophy,
+    category: 'analytics',
+    defaultSize: { cols: 2, rows: 2 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./LifetimeStatsWidget')),
   },
 
   // ── Alerts ──

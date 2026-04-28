@@ -1,0 +1,39 @@
+=== SURVEY ===
+- Hook: useLifetimeStats() from @/api/hooks/useAnalytics — returns LifetimeStats with total_distance_km, total_drives, total_energy_kwh, co2_offset_kg, total_charging_cost, ownership_days, etc.
+- Shared: WidgetStatGrid from ./shared — handles stat card grid layout, compact mode, empty state.
+- WidgetShell freshness props: updatedAt, isFetching, isStale, isError, onRefresh.
+- useSettings provides: convertDistance (mi→user pref), distanceUnit, formatCurrency.
+- API total_distance_km is in km; must convert km→mi (× UNITS.KM_TO_MI) then pass to convertDistance.
+- Registry: analytics category, after monthly-mileage entry. Trophy icon from lucide-react.
+- Existing pattern reference: WeeklySummaryCardWidget.tsx — compact/standard layout branching, UNITS.KM_TO_MI conversion.
+
+=== REASONING ===
+- Compact (cols<=1): Single AnimatedNumber showing total miles with "lifetime" label. Min touch target 44px.
+- Standard (2×2): WidgetStatGrid with 4 core stats: Total Distance, Total Drives, Total Energy, CO₂ Saved.
+- Wide (cols>=3): Add Total Cost, Ownership Days, Avg Daily Distance via wideStats appended to coreStats. cols=4 layout.
+- Distance conversion: total_distance_km × KM_TO_MI → convertDistance → display. Same for avg daily.
+- All strings via useTranslation('dashboard'). Null-safe with ?? 0 on every field.
+- No recharts/leaflet needed — pure stat grid widget.
+
+=== CHANGES ===
+1. Created: web/src/features/dashboard/widgets/LifetimeStatsWidget.tsx
+   - Compact: AnimatedNumber + distanceUnit label
+   - Standard: WidgetStatGrid with 4 stats (cols=2)
+   - Wide: WidgetStatGrid with 7 stats (cols=4)
+   - Full WidgetShell freshness props wired
+   - EmptyState for null data at all sizes
+   - Unit conversion via UNITS.KM_TO_MI + convertDistance
+
+2. Modified: web/src/features/dashboard/widgets/registry.ts
+   - Added Trophy to lucide-react imports
+   - Added lifetime-stats entry: category=analytics, defaultSize=2×2, minSize=1×2, maxSize=4×40
+
+=== GATE ===
+cd D:\repos\teslasync\web && npx tsc --noEmit
+Result: exit code 0 — no type errors.
+
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
+feat(web): add LifetimeStatsWidget to dashboard gallery
