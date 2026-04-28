@@ -6,6 +6,7 @@ import {
   MonitorSmartphone, List, Grid3X3, Workflow, DoorOpen, Eye,
   Command, CalendarRange, Bell, Music, HeartPulse, Moon, Navigation,
   Cpu, RotateCcw, Route, Lightbulb, Trophy, Clock, AlertTriangle,
+  Sparkles,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -404,6 +405,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./CostForecastWidget')),
+  },
+  {
+    id: 'charging-optimizer',
+    name: 'Charging Optimizer',
+    description: 'Smart charging schedule: optimal time, target SOC, cost savings',
+    icon: Sparkles,
+    category: 'charging',
+    defaultSize: { cols: 2, rows: 2 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./ChargingOptimizerWidget')),
   },
 
   // ── Climate ──

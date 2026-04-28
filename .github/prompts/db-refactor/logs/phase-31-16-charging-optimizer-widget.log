@@ -1,0 +1,40 @@
+=== SURVEY ===
+- Examined WidgetTipCards shared component (TipItem interface: id, icon, title, description, impact, impactLabel)
+- Examined ChargingOptimizerData type: current_schedule, cost_analysis, battery_health_score, recommendations, weekly_heatmap
+- OptimizerRecommendation: type, priority (high|medium|low), title, detail, estimated_savings
+- OptimizerCostAnalysis: peak_hours, offpeak_hours, peak/offpeak_cost_per_kwh, sessions_during_peak_pct, potential_monthly_savings
+- OptimizerSchedule: most_common_start_hour, most_common_day, avg_sessions_per_week, home_charging_pct, avg_charge_to_pct
+- useChargingOptimizer(vehicleId: string | null) hook in useCharging.ts
+- DrivingCoachWidget as reference for WidgetTipCards usage pattern
+- Registry has Charging section ending with cost-forecast entry (line 406)
+
+=== REASONING ===
+- Standard (2x2): three metric cards (optimal start hour, target SOC, savings/mo) + schedule match badge + WidgetTipCards for recommendations
+- Wide (2x4+): adds 24h timeline bar showing peak (red) vs off-peak (green) hours with schedule marker
+- Compact (1 col): centered display with start hour, SOC, savings badge
+- Map recommendations -> TipItem[] with priority -> impact mapping
+- No unit conversions needed (cost is currency, SOC is %, hours are time — none are distance/temp/pressure)
+- All strings via useTranslation('dashboard')
+- Null-safe: all data fields use ?? operator
+- Touch targets: min-h-[44px] on interactive cards
+
+=== CHANGES ===
+1. Created: web/src/features/dashboard/widgets/ChargingOptimizerWidget.tsx
+   - Compact layout: centered hour + SOC + savings badge
+   - Standard layout: 3-col metric grid + badge + WidgetTipCards
+   - Wide layout: adds 24h timeline bar with peak/off-peak coloring + Zap icon at optimal start
+   - All freshness props passed to WidgetShell
+   - EmptyState for null data
+   - WidgetTipCards for recommendations (maps priority -> impact)
+2. Modified: web/src/features/dashboard/widgets/registry.ts
+   - Added Sparkles import from lucide-react
+   - Added charging-optimizer entry in Charging section
+
+=== GATE ===
+cd web && npx tsc --noEmit => exit code 0 (clean)
+STATUS=DONE
+
+=== COMMIT ===
+feat(web): add ChargingOptimizerWidget to dashboard gallery
+EXIT=0
+STATUS=DONE
