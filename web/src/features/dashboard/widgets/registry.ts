@@ -7,7 +7,7 @@ import {
   Command, CalendarRange, Bell, Music, HeartPulse, Moon, Navigation, Terminal,
   Cpu, RotateCcw, Route, Lightbulb, Trophy, Clock, AlertTriangle,
   Sparkles, Cog, Wrench, FileText, ShieldCheck, ShieldAlert, ThermometerSun,
-  Sun, Plug, TrendingDown,
+  Sun, Plug, TrendingDown, GitBranch,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -783,6 +783,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./AnomalyDetectorWidget')),
+  },
+  {
+    id: 'fsm-distribution',
+    name: 'State Distribution',
+    description: 'Donut chart of time in each state + recent state transitions feed',
+    icon: GitBranch,
+    category: 'analytics',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./FSMDistributionWidget')),
   },
 
   // ── Alerts ──

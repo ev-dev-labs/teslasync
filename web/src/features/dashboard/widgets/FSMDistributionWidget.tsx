@@ -1,0 +1,277 @@
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { GitBranch } from 'lucide-react';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from '@/components/charts';
+import { Badge } from '@/components/ui';
+import { EmptyState } from '@/components/feedback';
+import { useFSMStats, useFSMTransitions } from '@/api/hooks/useFSM';
+import { useVehicles } from '@/api/hooks/useVehicles';
+import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { formatRelative } from '@/lib/dateFormat';
+import { WidgetShell } from './WidgetShell';
+import type { WidgetProps } from './types';
+
+/* ── State colors for donut chart ──────────────────────────────── */
+const STATE_COLORS: Record<string, string> = {
+  driving: '#22d3ee',   // cyan-400
+  charging: '#22c55e',  // green-500
+  asleep: '#a855f7',    // purple-500
+  idle: '#f59e0b',      // amber-500
+  offline: '#6b7280',   // gray-500
+};
+
+function stateColor(state: string): string {
+  return STATE_COLORS[state.toLowerCase()] ?? '#6b7280';
+}
+
+/* ── Duration formatter (ms → human readable) ──────────────────── */
+function fmtDuration(ms: number, t: (k: string, d: string) => string): string {
+  const totalMin = ms / 60_000;
+  const hrs = Math.floor(totalMin / 60);
+  const mins = Math.round(totalMin % 60);
+  if (hrs === 0) return `${mins}${t('widget.fsmDistribution.min', 'm')}`;
+  return `${hrs}${t('widget.fsmDistribution.hr', 'h')} ${mins}${t('widget.fsmDistribution.min', 'm')}`;
+}
+
+/* ── Donut segment data ────────────────────────────────────────── */
+interface DonutSegment {
+  state: string;
+  value: number;
+  pct: number;
+}
+
+function buildDonutData(stats: Record<string, number>): DonutSegment[] {
+  const entries = Object.entries(stats).filter(([, v]) => (v ?? 0) > 0);
+  const total = entries.reduce((sum, [, v]) => sum + (v ?? 0), 0);
+  if (total === 0) return [];
+  return entries
+    .map(([state, value]) => ({
+      state,
+      value: value ?? 0,
+      pct: ((value ?? 0) / total) * 100,
+    }))
+    .sort((a, b) => b.value - a.value);
+}
+
+/* ── Custom tooltip ────────────────────────────────────────────── */
+function DonutTooltip({
+  active,
+  payload,
+  t,
+}: {
+  active?: boolean;
+  payload?: Array<{ payload: DonutSegment }>;
+  t: (k: string, d: string) => string;
+}) {
+  if (!active || !payload?.[0]) return null;
+  const seg = payload[0].payload;
+  return (
+    <div className="rounded-lg border border-white/10 bg-gray-900/95 px-3 py-2 text-xs shadow-lg">
+      <div className="flex items-center gap-2">
+        <span
+          className="inline-block h-2.5 w-2.5 rounded-full flex-shrink-0"
+          style={{ backgroundColor: stateColor(seg.state) }}
+        />
+        <span className="text-white/80 capitalize">
+          {t(`widget.fsmDistribution.state.${seg.state}`, seg.state)}
+        </span>
+      </div>
+      <div className="mt-1 text-white/60">
+        {fmtDuration(seg.value, t)} · {fmtNumber(seg.pct, 1)}%
+      </div>
+    </div>
+  );
+}
+
+/* ── Transition feed row ───────────────────────────────────────── */
+function TransitionRow({
+  from,
+  to,
+  timestamp,
+  t,
+}: {
+  from: string;
+  to: string;
+  timestamp: string;
+  t: (k: string, d: string) => string;
+}) {
+  return (
+    <div className="flex items-center justify-between min-h-[44px] gap-2">
+      <div className="flex items-center gap-1.5 min-w-0">
+        <Badge variant="neutral" className="text-[10px] capitalize truncate max-w-[72px]">
+          {t(`widget.fsmDistribution.state.${from}`, from)}
+        </Badge>
+        <span className="text-[10px] text-white/40">→</span>
+        <Badge variant="neutral" className="text-[10px] capitalize truncate max-w-[72px]">
+          {t(`widget.fsmDistribution.state.${to}`, to)}
+        </Badge>
+      </div>
+      <span className="text-[10px] text-white/40 flex-shrink-0 tabular-nums">
+        {formatRelative(timestamp)}
+      </span>
+    </div>
+  );
+}
+
+/* ── Main widget ───────────────────────────────────────────────── */
+export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) {
+  const { t } = useTranslation('dashboard');
+  const { data: vehicles } = useVehicles();
+  const id = vehicleId ?? vehicles?.[0]?.id ?? null;
+  const idStr = id != null ? String(id) : '';
+
+  const statsQuery = useFSMStats(idStr);
+  const transitionsQuery = useFSMTransitions(idStr, 'vehicle', 24, 1, 5);
+
+  const isCompact = size.cols <= 1;
+
+  const segments = useMemo(
+    () => buildDonutData(statsQuery.data?.stats ?? {}),
+    [statsQuery.data],
+  );
+
+  const transitions = useMemo(
+    () => (transitionsQuery.data?.data ?? []).slice(0, isCompact ? 3 : 5),
+    [transitionsQuery.data, isCompact],
+  );
+
+  const hasData = segments.length > 0;
+
+  /* Freshness: merge from both queries */
+  const updatedAt = Math.max(statsQuery.dataUpdatedAt ?? 0, transitionsQuery.dataUpdatedAt ?? 0);
+  const isFetching = statsQuery.isFetching || transitionsQuery.isFetching;
+  const isStale = statsQuery.isStale || transitionsQuery.isStale;
+  const isError = statsQuery.isError || transitionsQuery.isError;
+  const isLoading = statsQuery.isLoading || transitionsQuery.isLoading;
+
+  /* Compact view: current state badge + time in current state */
+  if (isCompact) {
+    const currentState = segments[0]?.state ?? '—';
+    const currentMs = segments[0]?.value ?? 0;
+
+    return (
+      <WidgetShell
+        loading={isLoading}
+        updatedAt={updatedAt}
+        isFetching={isFetching}
+        isStale={isStale}
+        isError={isError}
+        onRefresh={() => {
+          statsQuery.refetch();
+          transitionsQuery.refetch();
+        }}
+      >
+        {hasData ? (
+          <div className="flex flex-col items-center justify-center gap-2 h-full py-2">
+            <span
+              className="inline-block h-3 w-3 rounded-full"
+              style={{ backgroundColor: stateColor(currentState) }}
+            />
+            <span className="text-sm font-semibold text-white/90 capitalize">
+              {t(`widget.fsmDistribution.state.${currentState}`, currentState)}
+            </span>
+            <span className="text-xs text-white/50">
+              {fmtDuration(currentMs, t)}
+            </span>
+          </div>
+        ) : (
+          <EmptyState
+            icon={<GitBranch className="h-5 w-5" />}
+            message={t('widget.fsmDistribution.noData', 'No state data')}
+            className="py-4"
+          />
+        )}
+      </WidgetShell>
+    );
+  }
+
+  /* Standard (2×4) view: donut chart + transitions feed */
+  return (
+    <WidgetShell
+      title={t('widget.fsmDistribution.title', 'State Distribution')}
+      icon={<GitBranch className="h-3.5 w-3.5 text-cyan-400" />}
+      loading={isLoading}
+      updatedAt={updatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={() => {
+        statsQuery.refetch();
+        transitionsQuery.refetch();
+      }}
+    >
+      {hasData ? (
+        <div className="flex flex-col gap-3 h-full">
+          {/* Donut chart */}
+          <div className="flex-1 min-h-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={segments}
+                  dataKey="value"
+                  nameKey="state"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius="55%"
+                  outerRadius="80%"
+                  paddingAngle={2}
+                  strokeWidth={0}
+                >
+                  {segments.map((seg) => (
+                    <Cell key={seg.state} fill={stateColor(seg.state)} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  content={<DonutTooltip t={t} />}
+                  wrapperStyle={{ outline: 'none' }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Legend */}
+          <div className="flex flex-wrap gap-x-3 gap-y-1 justify-center">
+            {segments.map((seg) => (
+              <div key={seg.state} className="flex items-center gap-1">
+                <span
+                  className="inline-block h-2 w-2 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: stateColor(seg.state) }}
+                />
+                <span className="text-[10px] text-white/60 capitalize">
+                  {t(`widget.fsmDistribution.state.${seg.state}`, seg.state)}
+                </span>
+                <span className="text-[10px] text-white/40 tabular-nums">
+                  {fmtInt(seg.pct)}%
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Transitions feed */}
+          {transitions.length > 0 && (
+            <div className="flex flex-col gap-0.5 overflow-y-auto">
+              <span className="text-[10px] uppercase tracking-wider text-white/40">
+                {t('widget.fsmDistribution.recentTransitions', 'Recent Transitions')}
+              </span>
+              {transitions.map((tr) => (
+                <TransitionRow
+                  key={tr.id}
+                  from={tr.from_state ?? '—'}
+                  to={tr.to_state ?? '—'}
+                  timestamp={tr.created_at ?? ''}
+                  t={t}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <EmptyState
+          icon={<GitBranch className="h-5 w-5" />}
+          message={t('widget.fsmDistribution.noData', 'No state data available')}
+          className="py-4"
+        />
+      )}
+    </WidgetShell>
+  );
+}
