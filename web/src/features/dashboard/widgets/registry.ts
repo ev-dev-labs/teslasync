@@ -226,6 +226,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./BatteryDegradationForecastWidget')),
   },
+  {
+    id: 'battery-health-analytics',
+    name: 'Battery Analytics',
+    description: 'Deep battery health: cycles, charge depth, temp exposure, DC fast ratio',
+    icon: HeartPulse,
+    category: 'battery',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./BatteryHealthAnalyticsWidget')),
+  },
 
   // ── Energy ──
   {
