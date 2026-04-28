@@ -950,6 +950,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./YearReviewWidget')),
   },
+  {
+    id: 'analytics-summary',
+    name: 'Analytics Summary',
+    description: 'Fleet-wide snapshot: distance, efficiency, energy, cost per mile',
+    icon: BarChart3,
+    category: 'analytics',
+    defaultSize: { cols: 2, rows: 2 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./AnalyticsSummaryWidget')),
+  },
 
   // ── Alerts ──
   {

@@ -1,0 +1,46 @@
+=== SURVEY ===
+- Reviewed AnalyticsSummary type: totalDistanceKm, totalEnergyKwh, totalCost, avgEfficiencyWhKm, co2SavedKg, vehicleComparison[]
+- Hook: useAnalyticsSummary() in @/api/hooks/useAnalytics → /analytics/fleet?days=30
+- WidgetStatGrid: accepts StatGridItem[], compact, cols (2|3|4). Renders StatCard per item.
+- WidgetShell: freshness props (updatedAt, isFetching, isStale, isError, onRefresh)
+- WidgetBigNumber: value, unit, label, subtitle, badge, animated
+- AnimatedNumber: value, suffix, className, decimals
+- Sparkline: data (number[]), color, height, width — returns null for empty arrays
+- useSettings: convertDistance (mi→user), distanceUnit, currencySymbol
+- unit-conversion.instructions.md: data is in km, useSettings.convertDistance takes miles
+- Data flow: totalDistanceKm → kmToMiles if user wants mi, else keep km
+- avgEfficiencyWhKm → multiply by MI_TO_KM if user wants Wh/mi, else keep Wh/km
+
+=== REASONING ===
+- Compact (1×2): AnimatedNumber showing total distance with suffix distanceUnit
+- Standard (2×2): 4 stat cards via WidgetStatGrid cols=2: distance, efficiency, energy, cost/dist
+- Wide (4×2): WidgetStatGrid cols=4 + sparkline row (renders when API provides trend arrays)
+- Unit conversion: API returns km-based data. Use kmToMiles() for mi users, keep raw for km.
+- Efficiency: Wh/km × 1.60934 = Wh/mi
+- Cost per distance: totalCost / displayDist
+- Null safety: all fields ?? 0, hasData check gates content vs EmptyState
+- Sparkline future-proofing: cast data to Record and check for optional trend arrays
+- All strings i18n via useTranslation('dashboard')
+
+=== CHANGES ===
+1. Created: web/src/features/dashboard/widgets/AnalyticsSummaryWidget.tsx
+   - Compact: AnimatedNumber + distanceUnit suffix, centered layout
+   - Standard: WidgetStatGrid cols=2, 4 stat cards (distance, efficiency, energy, cost/dist)
+   - Wide: WidgetStatGrid cols=4 + optional sparkline row
+   - Freshness props forwarded to WidgetShell
+   - Unit conversion via kmToMiles + distanceUnit branching
+   - EmptyState for null/empty data
+
+2. Modified: web/src/features/dashboard/widgets/registry.ts
+   - Added analytics-summary entry after year-review, before alerts section
+   - id: 'analytics-summary', category: 'analytics', icon: BarChart3
+   - defaultSize: {cols:2, rows:2}, minSize: {cols:1, rows:2}, maxSize: {cols:4, rows:40}
+
+=== GATE ===
+npx tsc --noEmit → exit code 0 (clean)
+STATUS=DONE
+
+=== COMMIT ===
+feat(web): add AnalyticsSummaryWidget to dashboard gallery
+EXIT=0
+STATUS=DONE
