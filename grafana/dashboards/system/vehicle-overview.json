@@ -875,7 +875,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT d.start_ts AS \"📅 Date\",\n  COALESCE(scs.charger_location, 'Unknown') AS \"📍 From\",\n  COALESCE(ecs.charger_location, 'Unknown') AS \"📍 To\",\n  ROUND(convert_distance(d.distance_mi)::numeric, 1) AS \"📏 Distance\",\n  ROUND(d.duration_min::numeric) AS \"⏱️ Duration\",\n  d.start_battery_pct AS \"🔋 Start %\",\n  d.end_battery_pct AS \"🔋 End %\"\nFROM drives d\nLEFT JOIN addresses sa ON d.start_address_id = sa.id\nLEFT JOIN addresses ea ON d.end_address_id = ea.id\nWHERE d.vehicle_id = ${vehicle_id}\nORDER BY d.start_ts DESC LIMIT 1",
+          "rawSql": "SELECT d.start_ts AS \"📅 Date\",\n  COALESCE(d.start_address, 'Unknown') AS \"📍 From\",\n  COALESCE(d.end_address, 'Unknown') AS \"📍 To\",\n  ROUND(convert_distance(d.distance_mi)::numeric, 1) AS \"📏 Distance\",\n  ROUND(d.duration_min::numeric) AS \"⏱️ Duration\",\n  d.start_battery_pct AS \"🔋 Start %\",\n  d.end_battery_pct AS \"🔋 End %\"\nFROM drives d\nWHERE d.vehicle_id = ${vehicle_id}\nORDER BY d.start_ts DESC LIMIT 1",
           "refId": "A"
         }
       ],

@@ -109,7 +109,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(convert_efficiency((SUM(NULL - NULL) * 1000) / NULLIF(SUM(distance_mi), 0))::numeric, 1) AS \"⚡ Efficiency\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts) AND distance_mi > 1",
+          "rawSql": "SELECT NULL AS \"⚡ Efficiency\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts) AND distance_mi > 1",
           "refId": "A"
         }
       ],
@@ -168,7 +168,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(MIN((convert_efficiency((NULL - NULL) * 1000 / NULLIF(distance_mi, 0))))::numeric, 1) AS \"⚡ Efficiency\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts) AND distance_mi > 5",
+          "rawSql": "SELECT NULL AS \"⚡ Efficiency\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts) AND distance_mi > 5",
           "refId": "A"
         }
       ],
@@ -227,7 +227,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(MAX((convert_efficiency((NULL - NULL) * 1000 / NULLIF(distance_mi, 0))))::numeric, 1) AS \"⚡ Efficiency\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts) AND distance_mi > 5",
+          "rawSql": "SELECT NULL AS \"⚡ Efficiency\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts) AND distance_mi > 5",
           "refId": "A"
         }
       ],
@@ -367,7 +367,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(start_ts, '1d') AS time,\n  ROUND(convert_efficiency((SUM(NULL - NULL) * 1000) / NULLIF(SUM(distance_mi), 0))::numeric, 1) AS \"⚡ Efficiency\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts) AND distance_mi > 1\nGROUP BY time ORDER BY time",
+          "rawSql": "SELECT\n  $__timeGroup(start_ts, '1d') AS time,\n  NULL AS \"⚡ Efficiency\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts) AND distance_mi > 1\nGROUP BY time ORDER BY time",
           "refId": "A"
         }
       ],
@@ -447,7 +447,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  start_ts AS time,\n  ROUND(convert_speed(distance_mi / NULLIF(duration_min, 0) * 60)::numeric, 1) AS \"🚗 Avg Speed\",\n  ROUND((convert_efficiency((NULL - NULL) * 1000 / NULLIF(distance_mi, 0)))::numeric, 1) AS \"⚡ Efficiency\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts) AND distance_mi > 5\nORDER BY start_ts",
+          "rawSql": "SELECT\n  start_ts AS time,\n  ROUND(convert_speed(distance_mi / NULLIF(duration_min, 0) * 60)::numeric, 1) AS \"🚗 Avg Speed\",\n  NULL AS \"⚡ Efficiency\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts) AND distance_mi > 5\nORDER BY start_ts",
           "refId": "A"
         }
       ],
@@ -527,7 +527,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  start_ts AS time,\n  ROUND(convert_temp(outside_temp_avg_c)::numeric, 1) AS \"🌡️ Temp\",\n  ROUND((convert_efficiency((NULL - NULL) * 1000 / NULLIF(distance_mi, 0)))::numeric, 1) AS \"⚡ Efficiency\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts) AND distance_mi > 5 AND outside_temp_avg_c IS NOT NULL\nORDER BY start_ts",
+          "rawSql": "SELECT\n  start_ts AS time,\n  ROUND(convert_temp(outside_temp_avg_c)::numeric, 1) AS \"🌡️ Temp\",\n  NULL AS \"⚡ Efficiency\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts) AND distance_mi > 5 AND outside_temp_avg_c IS NOT NULL\nORDER BY start_ts",
           "refId": "A"
         }
       ],

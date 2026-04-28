@@ -243,7 +243,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT NULL AS value -- Panel disabled: HvacPower is enum, not numeric kW (ADR-002)",
+          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: HvacPower is enum, not numeric kW (ADR-002)",
           "refId": "A"
         }
       ],

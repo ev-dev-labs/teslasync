@@ -749,7 +749,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  COALESCE(cs.charger_location, '-') AS \"📍 Location\",\n  COUNT(*) AS \"🔄 Sessions\",\n  ROUND(SUM(cs.energy_added_kwh)::numeric, 1) AS \"⚡ Total kWh\",\n  ROUND(SUM(cs.cost)::numeric, 2) AS \"💰 Total Cost\",\n  ROUND(AVG(cs.energy_added_kwh)::numeric, 1) AS \"⚡ Avg kWh\"\nFROM charging_sessions cs\nWHERE cs.vehicle_id = ${vehicle_id} AND $__timeFilter(cs.start_ts)\nGROUP BY a.id, cs.charger_location, '-'\nORDER BY 2 DESC\nLIMIT 20",
+          "rawSql": "SELECT\n  COALESCE(cs.charger_location, '-') AS \"📍 Location\",\n  COUNT(*) AS \"🔄 Sessions\",\n  ROUND(SUM(cs.energy_added_kwh)::numeric, 1) AS \"⚡ Total kWh\",\n  ROUND(SUM(cs.cost)::numeric, 2) AS \"💰 Total Cost\",\n  ROUND(AVG(cs.energy_added_kwh)::numeric, 1) AS \"⚡ Avg kWh\"\nFROM charging_sessions cs\nWHERE cs.vehicle_id = ${vehicle_id} AND $__timeFilter(cs.start_ts)\nGROUP BY cs.charger_location\nORDER BY 2 DESC\nLIMIT 20",
           "refId": "A"
         }
       ],

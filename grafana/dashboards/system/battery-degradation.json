@@ -518,7 +518,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NULL AS value -- Panel disabled: risk factor computation requires complex business logic not available from raw signals (ADR-002)",
+          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: risk factor computation requires complex business logic not available from raw signals (ADR-002)",
           "refId": "A"
         }
       ],

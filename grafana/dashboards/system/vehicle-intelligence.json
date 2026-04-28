@@ -109,7 +109,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NULL AS value -- Panel disabled: table removed in migration (ADR-002)",
+          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: table removed in migration (ADR-002)",
           "refId": "A"
         }
       ],
@@ -168,7 +168,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NULL AS value -- Panel disabled: table removed in migration (ADR-002)",
+          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: table removed in migration (ADR-002)",
           "refId": "A"
         }
       ],
@@ -227,7 +227,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NULL AS value -- Panel disabled: table removed in migration (ADR-002)",
+          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: table removed in migration (ADR-002)",
           "refId": "A"
         }
       ],
@@ -286,7 +286,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NULL AS value -- Panel disabled: table removed in migration (ADR-002)",
+          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: table removed in migration (ADR-002)",
           "refId": "A"
         }
       ],
@@ -345,7 +345,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NULL AS value -- Panel disabled: table removed in migration (ADR-002)",
+          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: table removed in migration (ADR-002)",
           "refId": "A"
         }
       ],
@@ -425,7 +425,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT NULL AS value -- Panel disabled: table removed in migration (ADR-002)",
+          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: table removed in migration (ADR-002)",
           "refId": "A"
         }
       ],

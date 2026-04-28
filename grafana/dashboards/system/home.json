@@ -303,7 +303,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NULL AS value -- Panel disabled: metric unavailable after signal_log migration (ADR-002)",
+          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: metric unavailable after signal_log migration (ADR-002)",
           "refId": "A"
         }
       ],

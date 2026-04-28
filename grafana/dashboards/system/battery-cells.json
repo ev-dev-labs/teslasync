@@ -162,7 +162,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NULL AS value -- Panel disabled: per-cell data not available from Fleet Telemetry (ADR-002)",
+          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: per-cell data not available from Fleet Telemetry (ADR-002)",
           "refId": "A"
         }
       ],
@@ -343,7 +343,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NULL AS value -- Panel disabled: per-cell data not available from Fleet Telemetry (ADR-002)",
+          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: per-cell data not available from Fleet Telemetry (ADR-002)",
           "refId": "A"
         }
       ],
@@ -421,7 +421,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT NULL AS value -- Panel disabled: per-cell temperature data not available from Fleet Telemetry (ADR-002)",
+          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: per-cell temperature data not available from Fleet Telemetry (ADR-002)",
           "refId": "A"
         }
       ],
