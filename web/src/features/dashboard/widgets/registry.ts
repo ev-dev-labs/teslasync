@@ -472,6 +472,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./TripSummaryWidget')),
   },
+  {
+    id: 'drive-telemetry',
+    name: 'Drive Telemetry',
+    description: 'Last drive replay: speed, power, battery over time with route',
+    icon: Activity,
+    category: 'driving',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 2, rows: 4 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./DriveTelemetryWidget')),
+  },
 
   // ── Charging ──
   {
