@@ -13,6 +13,7 @@ import {
   FileSearch,
   HardDrive,
   Info,
+  Users,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -756,6 +757,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./GuardModeWidget')),
+  },
+  {
+    id: 'vehicle-access',
+    name: 'Vehicle Access',
+    description: 'Authorized drivers, pending invitations, mobile access status',
+    icon: Users,
+    category: 'security',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./VehicleAccessWidget')),
   },
 
   // ── Commands ──
