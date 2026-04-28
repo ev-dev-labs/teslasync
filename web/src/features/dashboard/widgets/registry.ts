@@ -6,7 +6,7 @@ import {
   MonitorSmartphone, List, Grid3X3, Workflow, DoorOpen, Eye,
   Command, CalendarRange, Bell, Music, HeartPulse, Moon, Navigation,
   Cpu, RotateCcw, Route, Lightbulb, Trophy, Clock, AlertTriangle,
-  Sparkles, Cog, Wrench, FileText, ShieldCheck,
+  Sparkles, Cog, Wrench, FileText, ShieldCheck, ThermometerSun,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -473,6 +473,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 3, rows: 40 },
     component: lazy(() => import('./WeatherAtCarWidget')),
+  },
+  {
+    id: 'climate-history',
+    name: 'Climate History',
+    description: 'Inside vs outside temperature chart over time',
+    icon: ThermometerSun,
+    category: 'climate',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 2, rows: 4 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./ClimateHistoryWidget')),
   },
 
   // ── Security ──
