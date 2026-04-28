@@ -8,7 +8,7 @@ import {
   Cpu, RotateCcw, Route, Lightbulb, Trophy, Clock, AlertTriangle, AlertOctagon,
   Sparkles, Cog, Wrench, FileText, ShieldCheck, ShieldAlert, ThermometerSun,
   Sun, Plug, TrendingDown, GitBranch, Radio, ListMusic, Home,
-  PieChart as PieIcon, Server, PlayCircle, Crosshair, AlertCircle,
+  PieChart as PieIcon, Server, PlayCircle, Crosshair, AlertCircle, BookOpen,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -859,6 +859,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./SignalHealthWidget')),
+  },
+  {
+    id: 'signal-catalog',
+    name: 'Signal Catalog',
+    description: 'Browse all available telemetry signals with categories and observation counts',
+    icon: BookOpen,
+    category: 'telemetry',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 2, rows: 4 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./SignalCatalogWidget')),
   },
 
   // ── Analytics ──
