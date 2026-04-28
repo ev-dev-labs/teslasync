@@ -30,6 +30,7 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
           vehicle={vehicle as unknown as Vehicle}
           state={(stateData?.state ?? null) as VehicleState | null}
           firmwareVersion={firmwareVersion}
+          lastFetchedAt={dataUpdatedAt}
           convertDistance={convertDistance}
           convertSpeed={convertSpeed}
           convertTemp={convertTemp}
