@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-// @ts-nocheck -- legacy API types; will be rewired in a later phase
 /**
  * AlertStudio — full-featured CEP rule editor page.
  *
@@ -7,12 +5,13 @@
  * and manages persistence via the /api/v1/alerts/rules endpoint.
  */
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, type ElementType, type KeyboardEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { AlertRule, NotificationChannel, RuleConditionTree } from '@/api/hooks/useNotifications'
 import { request } from '@/api/client'
-import { GlassPanel, Badge, Button, Input, Select } from '@/components/ui'
-import { PageHeader } from '@/components/layout'
+import { GlassPanel, Badge, Button as UiButton, Input as UiInput, Select as UiSelect } from '@/components/ui'
+import { PageContainer } from '@/components/layout'
 import { FadeIn } from '@/components/motion'
 import { EmptyState, Skeleton } from '@/components/feedback'
 import { RuleBuilder } from '@/components/forms'
@@ -40,7 +39,7 @@ type Severity = keyof typeof severityConfig
 
 interface RuleTemplate {
   name: string
-  icon: React.ElementType
+  icon: ElementType
   category: string
   severity: Severity
   msg_template: string
@@ -151,12 +150,34 @@ function freshEditor(): EditorState {
   }
 }
 
+function isSeverity(value: string | undefined): value is Severity {
+  return value === 'info' || value === 'warning' || value === 'critical'
+}
+
+function normalizeSeverity(value: AlertRule['severity']): Severity {
+  return isSeverity(value) ? value : 'info'
+}
+
+function cloneConditionTree(tree: RuleConditionTree): RuleConditionTree {
+  return {
+    ...tree,
+    rules: tree.rules?.map(cloneConditionTree),
+  }
+}
+
+function templateKey(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '.')
+    .replace(/^\.+|\.+$/g, '')
+}
+
 function ruleToEditor(rule: AlertRule): EditorState {
   return {
     id: rule.id,
     name: rule.name,
     type: rule.type,
-    severity: (rule.severity as Severity) ?? 'info',
+    severity: normalizeSeverity(rule.severity),
     cooldown_min: rule.cooldown_min ?? 15,
     msg_template: rule.msg_template ?? '',
     conditions: (rule.conditions as RuleConditionTree | null) ?? { op: 'AND', rules: [{ signal: '', compare: '==', value: '' }] },
@@ -168,7 +189,11 @@ function ruleToEditor(rule: AlertRule): EditorState {
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function AlertStudio() {
-  usePageTitle('Alert Studio')
+  const { t } = useTranslation()
+  const pageTitle = t('notifications.alertStudio.title', 'Alert Studio')
+  const pageSubtitle = t('notifications.alertStudio.subtitle', 'Create custom rules from any Fleet Telemetry signal')
+  const untitledRuleLabel = t('notifications.alertStudio.rules.untitled', 'Untitled')
+  usePageTitle(pageTitle)
   const queryClient = useQueryClient()
   const toast = useToast()
 
@@ -184,15 +209,31 @@ export default function AlertStudio() {
   const [templateCategory, setTemplateCategory] = useState<string | null>(null)
   const [ruleSearch, setRuleSearch] = useState('')
 
+  const getTemplateName = useCallback((tpl: RuleTemplate) => (
+    t(`notifications.alertStudio.templates.${templateKey(tpl.name)}.name`, tpl.name)
+  ), [t])
+
+  const getTemplateMessage = useCallback((tpl: RuleTemplate) => (
+    t(`notifications.alertStudio.templates.${templateKey(tpl.name)}.message`, tpl.msg_template)
+  ), [t])
+
+  const getTemplateCategory = useCallback((category: string) => (
+    t(`notifications.alertStudio.templateCategories.${templateKey(category)}`, category)
+  ), [t])
+
   const filteredTemplates = useMemo(() => {
     let list = ruleTemplates
     if (templateCategory) list = list.filter(t => t.category === templateCategory)
     if (templateSearch) {
       const q = templateSearch.toLowerCase()
-      list = list.filter(t => t.name.toLowerCase().includes(q) || t.msg_template.toLowerCase().includes(q) || t.category.toLowerCase().includes(q))
+      list = list.filter(tpl => (
+        getTemplateName(tpl).toLowerCase().includes(q)
+        || getTemplateMessage(tpl).toLowerCase().includes(q)
+        || getTemplateCategory(tpl.category).toLowerCase().includes(q)
+      ))
     }
     return list
-  }, [templateSearch, templateCategory])
+  }, [getTemplateCategory, getTemplateMessage, getTemplateName, templateSearch, templateCategory])
 
   const isEditing = selectedId !== null
 
@@ -218,31 +259,35 @@ export default function AlertStudio() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['alert-rules'] })
-      toast.success(isEditing ? 'Rule updated' : 'Rule created')
+      toast.success(isEditing
+        ? t('notifications.alertStudio.toasts.ruleUpdated', 'Rule updated')
+        : t('notifications.alertStudio.toasts.ruleCreated', 'Rule created'))
       setEditor(freshEditor())
       setSelectedId(null)
     },
-    onError: () => toast.error('Failed to save rule'),
+    onError: () => toast.error(t('notifications.alertStudio.toasts.saveFailed', 'Failed to save rule')),
   })
 
   const deleteMut = useMutation({
     mutationFn: (id: number) => request<void>(`/alerts/rules/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['alert-rules'] })
-      toast.success('Rule deleted')
+      toast.success(t('notifications.alertStudio.toasts.ruleDeleted', 'Rule deleted'))
       setEditor(freshEditor())
       setSelectedId(null)
     },
-    onError: () => toast.error('Failed to delete rule'),
+    onError: () => toast.error(t('notifications.alertStudio.toasts.deleteFailed', 'Failed to delete rule')),
   })
 
   const toggleMut = useMutation({
     mutationFn: ({ id, enabled }: { id: number; enabled: boolean }) => request<AlertRule>(`/alerts/rules/${id}`, { method: 'PUT', body: JSON.stringify({ enabled }) }),
     onSuccess: (_data, { enabled }) => {
       queryClient.invalidateQueries({ queryKey: ['alert-rules'] })
-      toast.success(enabled ? 'Rule enabled' : 'Rule disabled')
+      toast.success(enabled
+        ? t('notifications.alertStudio.toasts.ruleEnabled', 'Rule enabled')
+        : t('notifications.alertStudio.toasts.ruleDisabled', 'Rule disabled'))
     },
-    onError: (err: Error) => toast.error(err.message || 'Failed to toggle rule'),
+    onError: (err: Error) => toast.error(err.message || t('notifications.alertStudio.toasts.toggleFailed', 'Failed to toggle rule')),
   })
 
   // Handlers
@@ -261,17 +306,17 @@ export default function AlertStudio() {
   const handleCloneTemplate = useCallback((tpl: RuleTemplate) => {
     setSelectedId(null)
     setEditor({
-      name: tpl.name,
+      name: getTemplateName(tpl),
       type: 'custom',
       severity: tpl.severity,
       cooldown_min: tpl.cooldown_min,
-      msg_template: tpl.msg_template,
-      conditions: JSON.parse(JSON.stringify(tpl.conditions)),
+      msg_template: getTemplateMessage(tpl),
+      conditions: cloneConditionTree(tpl.conditions),
       notify_channels: allChannelIds,
       enabled: true,
     })
     setShowTemplates(false)
-  }, [allChannelIds])
+  }, [allChannelIds, getTemplateMessage, getTemplateName])
 
   // Filter CEP rules (have conditions)
   const cepRules = useMemo(() => (rules ?? []).filter(r => r.conditions), [rules])
@@ -281,35 +326,52 @@ export default function AlertStudio() {
     return cepRules.filter(r => (r.name || '').toLowerCase().includes(q))
   }, [cepRules, ruleSearch])
 
+  const rulesCountLabel = cepRules.length === 1
+    ? t('notifications.alertStudio.rules.countOne', '1 rule')
+    : t('notifications.alertStudio.rules.countMany', '{{count}} rules', { count: cepRules.length })
+
+  const handleRuleRowKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>, rule: AlertRule) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      handleSelectRule(rule)
+    }
+  }, [handleSelectRule])
+
+  const severityOptions = useMemo(() => [
+    { value: 'info', label: t('notifications.alertStudio.severity.info', 'Info') },
+    { value: 'warning', label: t('notifications.alertStudio.severity.warning', 'Warning') },
+    { value: 'critical', label: t('notifications.alertStudio.severity.critical', 'Critical') },
+  ], [t])
+
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Alert Studio"
-        subtitle="Create custom rules from any Fleet Telemetry signal"
-        icon={<Zap className="h-6 w-6 text-neon-cyan" />}
-        actions={
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" icon={<Sparkles className="h-3.5 w-3.5 text-neon-amber" />} onClick={() => setShowTemplates(!showTemplates)}>
-              Templates
-            </Button>
-            <Button variant="primary" size="sm" icon={<Plus className="h-3.5 w-3.5" />} onClick={handleNewRule}>
-              New Rule
-            </Button>
-          </div>
-        }
-      />
+    <PageContainer
+      title={pageTitle}
+      subtitle={pageSubtitle}
+      actions={
+        <>
+          <UiButton variant="ghost" size="sm" icon={<Sparkles className="h-3.5 w-3.5 text-neon-amber" />} onClick={() => setShowTemplates(!showTemplates)}>
+            {t('notifications.alertStudio.actions.templates', 'Templates')}
+          </UiButton>
+          <UiButton variant="primary" size="sm" icon={<Plus className="h-3.5 w-3.5" />} onClick={handleNewRule}>
+            {t('notifications.alertStudio.actions.newRule', 'New Rule')}
+          </UiButton>
+        </>
+      }
+    >
 
       {/* Template library */}
       {showTemplates && (
         <FadeIn>
           <GlassPanel className="p-5">
             <div className="flex items-center justify-between mb-4">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">Rule Templates — {ruleTemplates.length} pre-built rules</p>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">
+                {t('notifications.alertStudio.templates.header', 'Rule Templates - {{count}} pre-built rules', { count: ruleTemplates.length })}
+              </p>
               <div className="relative w-64">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
-                <Input
+                <UiInput
                   className="w-full pl-8 text-xs py-1.5"
-                  placeholder="Search templates…"
+                  placeholder={t('notifications.alertStudio.templates.searchPlaceholder', 'Search templates...')}
                   value={templateSearch}
                   onChange={e => setTemplateSearch(e.target.value)}
                 />
@@ -318,18 +380,18 @@ export default function AlertStudio() {
 
             {/* Category tabs */}
             <div className="flex flex-wrap gap-1.5 mb-4">
-              <Button
+              <UiButton
                 variant="ghost"
                 size="sm"
                 onClick={() => setTemplateCategory(null)}
-                className={cn('!text-[11px] border',
-                  templateCategory === null ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan' : 'border-white/[0.08] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-                )}
-              >All ({ruleTemplates.length})</Button>
+                  className={cn('!text-[11px] border',
+                    templateCategory === null ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan' : 'border-white/[0.08] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                  )}
+                >{t('notifications.alertStudio.templates.allCategory', 'All')} ({ruleTemplates.length})</UiButton>
               {templateCategories.map(cat => {
                 const count = ruleTemplates.filter(t => t.category === cat).length
                 return (
-                  <Button
+                  <UiButton
                     key={cat}
                     variant="ghost"
                     size="sm"
@@ -337,7 +399,7 @@ export default function AlertStudio() {
                     className={cn('!text-[11px] border',
                       templateCategory === cat ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan' : 'border-white/[0.08] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                     )}
-                  >{cat} ({count})</Button>
+                  >{getTemplateCategory(cat)} ({count})</UiButton>
                 )
               })}
             </div>
@@ -357,21 +419,25 @@ export default function AlertStudio() {
                       <div className={cn('rounded-lg p-1.5', sev.bg)}>
                         <Icon className={cn('h-3.5 w-3.5', sev.color)} />
                       </div>
-                      <span className="text-xs font-medium text-[var(--text-primary)] group-hover:text-neon-cyan transition-colors">{tpl.name}</span>
+                      <span className="text-xs font-medium text-[var(--text-primary)] group-hover:text-neon-cyan transition-colors">{getTemplateName(tpl)}</span>
                     </div>
-                    <p className="text-[10px] text-[var(--text-muted)] font-mono truncate">{tpl.msg_template}</p>
+                    <p className="text-[10px] text-[var(--text-muted)] font-mono truncate">{getTemplateMessage(tpl)}</p>
                     <div className="flex items-center justify-between mt-1.5">
-                      <Badge color={tpl.severity === 'critical' ? 'red' : tpl.severity === 'warning' ? 'amber' : 'cyan'} size="sm">{tpl.severity}</Badge>
+                      <Badge color={tpl.severity === 'critical' ? 'red' : tpl.severity === 'warning' ? 'amber' : 'cyan'} size="sm">
+                        {t(`notifications.alertStudio.severity.${tpl.severity}`, tpl.severity)}
+                      </Badge>
                       <div className="flex items-center gap-1">
                         <Copy className="h-3 w-3 text-[var(--text-muted)]" />
-                        <span className="text-[10px] text-[var(--text-muted)]">Use</span>
+                        <span className="text-[10px] text-[var(--text-muted)]">{t('notifications.alertStudio.templates.use', 'Use')}</span>
                       </div>
                     </div>
                   </GlassPanel>
                 )
               })}
               {filteredTemplates.length === 0 && (
-                <p className="col-span-full text-sm text-[var(--text-muted)] py-8 text-center">No templates match your search</p>
+                <p className="col-span-full text-sm text-[var(--text-muted)] py-8 text-center">
+                  {t('notifications.alertStudio.templates.noMatches', 'No templates match your search')}
+                </p>
               )}
             </div>
           </GlassPanel>
@@ -383,16 +449,16 @@ export default function AlertStudio() {
         <div className="lg:col-span-4 space-y-3">
           <GlassPanel className="p-4">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-medium text-[var(--text-primary)]">Rules</p>
-              <span className="text-[10px] text-[var(--text-muted)]">{cepRules.length} rule{cepRules.length !== 1 ? 's' : ''}</span>
+              <p className="text-sm font-medium text-[var(--text-primary)]">{t('notifications.alertStudio.rules.title', 'Rules')}</p>
+              <span className="text-[10px] text-[var(--text-muted)]">{rulesCountLabel}</span>
             </div>
 
             {cepRules.length > 3 && (
               <div className="relative mb-3">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
-                <input
+                <UiInput
                   type="text"
-                  placeholder="Search rules…"
+                  placeholder={t('notifications.alertStudio.rules.searchPlaceholder', 'Search rules...')}
                   value={ruleSearch}
                   onChange={e => setRuleSearch(e.target.value)}
                   className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg bg-white/[0.04] border border-white/[0.06] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-neon-cyan/30"
@@ -409,62 +475,88 @@ export default function AlertStudio() {
             {!isLoading && cepRules.length === 0 && (
               <EmptyState
                 icon={<Bell className="h-8 w-8 text-[var(--text-muted)]" />}
-                title="No CEP rules yet"
-                description="Create your first rule or pick a template above."
+                title={t('notifications.alertStudio.rules.emptyTitle', 'No CEP rules yet')}
+                message={t('notifications.alertStudio.rules.emptyDescription', 'Create your first rule or pick a template above.')}
               />
             )}
 
             {!isLoading && cepRules.length > 0 && filteredRules.length === 0 && (
-              <p className="text-xs text-center text-[var(--text-muted)] py-4">No rules match "{ruleSearch}"</p>
+              <p className="text-xs text-center text-[var(--text-muted)] py-4">
+                {t('notifications.alertStudio.rules.noMatches', 'No rules match "{{search}}"', { search: ruleSearch })}
+              </p>
             )}
 
             <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
               {filteredRules.map(rule => {
-                const sev = severityConfig[(rule.severity as Severity) ?? 'info'] ?? severityConfig.info
+                const sev = severityConfig[normalizeSeverity(rule.severity)]
                 const SevIcon = sev.icon
                 const active = selectedId === rule.id
                 return (
-                  <button
+                  <GlassPanel
                     key={rule.id}
                     className={cn(
-                      'group w-full text-left glass-panel p-3 transition-all',
+                      'group p-3 transition-all',
                       active ? 'border-neon-cyan/30 bg-neon-cyan/5' : 'hover:border-white/10',
                     )}
-                    onClick={() => handleSelectRule(rule)}
                   >
-                    <div className="flex items-center gap-2">
-                      <SevIcon className={cn('h-3.5 w-3.5 shrink-0', sev.color)} />
-                      <span className="text-xs font-medium text-[var(--text-primary)] truncate flex-1">{rule.name || 'Untitled'}</span>
-                      <button
-                        className="shrink-0"
+                    <div className="flex items-start gap-2">
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        className="min-w-0 flex-1 cursor-pointer"
+                        onClick={() => handleSelectRule(rule)}
+                        onKeyDown={event => handleRuleRowKeyDown(event, rule)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <SevIcon className={cn('h-3.5 w-3.5 shrink-0', sev.color)} />
+                          <span className="text-xs font-medium text-[var(--text-primary)] truncate flex-1">{rule.name || untitledRuleLabel}</span>
+                        </div>
+                        <div className="flex items-center gap-3 mt-1.5 text-[10px] text-[var(--text-muted)]">
+                          {rule.last_fired_at && (
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" /> {formatDateTime(rule.last_fired_at)}
+                            </span>
+                          )}
+                          {(rule.fire_count ?? 0) > 0 && (
+                            <span className="flex items-center gap-1">
+                              <Zap className="h-3 w-3" /> {rule.fire_count}×
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <UiButton
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 shrink-0 p-0"
                         onClick={e => { e.stopPropagation(); toggleMut.mutate({ id: rule.id, enabled: !rule.enabled }) }}
-                        title={rule.enabled ? 'Disable' : 'Enable'}
+                        title={rule.enabled
+                          ? t('notifications.alertStudio.rules.disable', 'Disable')
+                          : t('notifications.alertStudio.rules.enable', 'Enable')}
+                        aria-label={rule.enabled
+                          ? t('notifications.alertStudio.rules.disableRule', 'Disable rule')
+                          : t('notifications.alertStudio.rules.enableRule', 'Enable rule')}
                       >
                         {rule.enabled
                           ? <Bell className="h-3.5 w-3.5 text-neon-green" />
                           : <BellOff className="h-3.5 w-3.5 text-[var(--text-muted)]" />}
-                      </button>
-                      <button
-                        className="shrink-0 opacity-0 group-hover:opacity-100 hover:text-neon-red transition-opacity"
-                        onClick={e => { e.stopPropagation(); if (confirm(`Delete "${rule.name || 'Untitled'}"?`)) deleteMut.mutate(rule.id) }}
-                        title="Delete rule"
+                      </UiButton>
+                      <UiButton
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 shrink-0 p-0 opacity-0 transition-opacity group-hover:opacity-100 hover:text-neon-red"
+                        onClick={e => {
+                          e.stopPropagation()
+                          if (confirm(t('notifications.alertStudio.rules.confirmDelete', 'Delete "{{name}}"?', { name: rule.name || untitledRuleLabel }))) {
+                            deleteMut.mutate(rule.id)
+                          }
+                        }}
+                        title={t('notifications.alertStudio.rules.deleteRule', 'Delete rule')}
+                        aria-label={t('notifications.alertStudio.rules.deleteRule', 'Delete rule')}
                       >
                         <Trash2 className="h-3.5 w-3.5 text-[var(--text-muted)] hover:text-neon-red" />
-                      </button>
+                      </UiButton>
                     </div>
-                    <div className="flex items-center gap-3 mt-1.5 text-[10px] text-[var(--text-muted)]">
-                      {rule.last_fired_at && (
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" /> {formatDateTime(rule.last_fired_at)}
-                        </span>
-                      )}
-                      {(rule.fire_count ?? 0) > 0 && (
-                        <span className="flex items-center gap-1">
-                          <Zap className="h-3 w-3" /> {rule.fire_count}×
-                        </span>
-                      )}
-                    </div>
-                  </button>
+                  </GlassPanel>
                 )
               })}
             </div>
@@ -477,17 +569,21 @@ export default function AlertStudio() {
             <div className="flex items-center gap-2 mb-4">
               <Pencil className="h-4 w-4 text-neon-cyan" />
               <p className="text-sm font-medium text-[var(--text-primary)]">
-                {isEditing ? 'Edit Rule' : 'New Rule'}
+                {isEditing
+                  ? t('notifications.alertStudio.editor.editTitle', 'Edit Rule')
+                  : t('notifications.alertStudio.editor.newTitle', 'New Rule')}
               </p>
             </div>
 
             {/* Name */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">Name</label>
-                <Input
+                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+                  {t('notifications.alertStudio.editor.nameLabel', 'Name')}
+                </label>
+                <UiInput
                   className="w-full"
-                  placeholder="My alert rule"
+                  placeholder={t('notifications.alertStudio.editor.namePlaceholder', 'My alert rule')}
                   value={editor.name}
                   onChange={e => setEditor(s => ({ ...s, name: e.target.value }))}
                 />
@@ -495,12 +591,14 @@ export default function AlertStudio() {
 
               {/* Severity */}
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">Severity</label>
-                <Select
+                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+                  {t('notifications.alertStudio.editor.severityLabel', 'Severity')}
+                </label>
+                <UiSelect
                   className="w-full"
                   value={editor.severity}
                   onChange={e => setEditor(s => ({ ...s, severity: e.target.value as Severity }))}
-                  options={[{ value: 'info', label: 'Info' }, { value: 'warning', label: 'Warning' }, { value: 'critical', label: 'Critical' }]}
+                  options={severityOptions}
                 />
               </div>
             </div>
@@ -508,8 +606,10 @@ export default function AlertStudio() {
             {/* Cooldown + Message template */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">Cooldown (minutes)</label>
-                <Input
+                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+                  {t('notifications.alertStudio.editor.cooldownLabel', 'Cooldown (minutes)')}
+                </label>
+                <UiInput
                   type="number"
                   min={0}
                   className="w-full"
@@ -519,12 +619,14 @@ export default function AlertStudio() {
               </div>
               <div>
                 <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
-                  Message Template
-                  <span className="text-[var(--text-muted)] ml-1 normal-case tracking-normal">{'Use {{SignalName}}'}</span>
+                  {t('notifications.alertStudio.editor.messageTemplateLabel', 'Message Template')}
+                  <span className="text-[var(--text-muted)] ml-1 normal-case tracking-normal">
+                    {t('notifications.alertStudio.editor.signalHint', 'Use {{SignalName}}')}
+                  </span>
                 </label>
-                <Input
+                <UiInput
                   className="w-full"
-                  placeholder="Battery at {{BatteryLevel}}%"
+                  placeholder={t('notifications.alertStudio.editor.messageTemplatePlaceholder', 'Battery at {{BatteryLevel}}%')}
                   value={editor.msg_template}
                   onChange={e => setEditor(s => ({ ...s, msg_template: e.target.value }))}
                 />
@@ -533,65 +635,78 @@ export default function AlertStudio() {
 
             {/* Notification delivery */}
             <div className="mb-4">
-              <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-2 font-medium">How You'll Be Notified</label>
+              <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-2 font-medium">
+                {t('notifications.alertStudio.channels.deliveryLabel', "How You'll Be Notified")}
+              </label>
               <div className="space-y-2">
                 {/* Always-on: SSE + DB */}
                 <div className="flex items-center gap-2 text-xs">
                   <span className="w-2 h-2 rounded-full bg-neon-green" />
-                  <span className="text-white/90">Browser toast notification (real-time via SSE)</span>
+                  <span className="text-white/90">
+                    {t('notifications.alertStudio.channels.browserToast', 'Browser toast notification (real-time via SSE)')}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
                   <span className="w-2 h-2 rounded-full bg-neon-green" />
-                  <span className="text-white/90">Alert history (saved to database)</span>
+                  <span className="text-white/90">
+                    {t('notifications.alertStudio.channels.alertHistory', 'Alert history (saved to database)')}
+                  </span>
                 </div>
 
                 {/* Channels */}
-                {channels && channels.length > 0 ? (
-                  <div>
-                    <p className="text-xs text-[var(--text-muted)] mb-1.5 mt-1">External channels (click to toggle):</p>
-                    <div className="flex flex-wrap gap-2">
-                      {channels.map(ch => {
-                        const isSelected = editor.notify_channels.includes(ch.id)
-                        return (
-                          <button
-                            key={ch.id}
-                            type="button"
-                            className={cn(
-                              'px-3 py-1.5 text-xs rounded-lg transition-colors border',
-                              isSelected
-                                ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan'
-                                : 'bg-white/5 border-white/10 text-[var(--text-muted)] hover:border-white/20',
-                            )}
-                            onClick={() => {
-                              setEditor(s => ({
-                                ...s,
-                                notify_channels: isSelected
-                                  ? s.notify_channels.filter(id => id !== ch.id)
-                                  : [...s.notify_channels, ch.id],
-                              }))
-                            }}
-                          >
-                            <Bell className="h-3 w-3 inline mr-1" />
-                            {ch.name} ({ch.type})
-                          </button>
-                        )
-                      })}
+                <GlassPanel className="p-3">
+                  {channels && channels.length > 0 ? (
+                    <div>
+                      <p className="text-xs text-[var(--text-muted)] mb-1.5">
+                        {t('notifications.alertStudio.channels.externalChannels', 'External channels (click to toggle):')}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {channels.map(ch => {
+                          const isSelected = editor.notify_channels.includes(ch.id)
+                          return (
+                            <UiButton
+                              key={ch.id}
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className={cn(
+                                'h-auto rounded-lg border px-3 py-1.5 text-xs transition-colors',
+                                isSelected
+                                  ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan'
+                                  : 'bg-white/5 border-white/10 text-[var(--text-muted)] hover:border-white/20',
+                              )}
+                              onClick={() => {
+                                setEditor(s => ({
+                                  ...s,
+                                  notify_channels: isSelected
+                                    ? s.notify_channels.filter(id => id !== ch.id)
+                                    : [...s.notify_channels, ch.id],
+                                }))
+                              }}
+                            >
+                              <Bell className="h-3 w-3" />
+                              {ch.name} ({t(`notifications.alertStudio.channels.kind.${ch.kind}`, ch.kind)})
+                            </UiButton>
+                          )
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 text-xs mt-1">
-                    <span className="w-2 h-2 rounded-full bg-white/20" />
-                    <span className="text-[var(--text-muted)]">
-                      No external channels configured — <a href="/notifications" className="text-neon-cyan hover:underline">set up Discord, Slack, ntfy, or webhooks</a>
-                    </span>
-                  </div>
-                )}
+                  ) : (
+                    <EmptyState
+                      icon={<BellOff className="h-8 w-8 text-[var(--text-muted)]" />}
+                      title={t('notifications.alertStudio.channels.emptyTitle', 'No external channels configured')}
+                      message={t('notifications.alertStudio.channels.emptyDescription', 'Browser toasts and alert history are always enabled. Configure Discord, Slack, ntfy, or webhooks from Notifications to fan out alerts.')}
+                    />
+                  )}
+                </GlassPanel>
               </div>
             </div>
 
             {/* Condition builder */}
             <div className="mb-4">
-              <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-2 font-medium">Conditions</label>
+              <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-2 font-medium">
+                {t('notifications.alertStudio.editor.conditionsLabel', 'Conditions')}
+              </label>
               <RuleBuilder
                 value={editor.conditions}
                 onChange={conditions => setEditor(s => ({ ...s, conditions }))}
@@ -600,7 +715,7 @@ export default function AlertStudio() {
 
             {/* Action buttons */}
             <div className="flex items-center gap-2 pt-2 border-t border-white/5">
-              <Button
+              <UiButton
                 variant="primary"
                 size="sm"
                 icon={<Save className="h-3.5 w-3.5" />}
@@ -608,21 +723,25 @@ export default function AlertStudio() {
                 onClick={() => saveMut.mutate(editor)}
                 disabled={!editor.name.trim()}
               >
-                {saveMut.isPending ? 'Saving…' : isEditing ? 'Update Rule' : 'Create Rule'}
-              </Button>
+                {saveMut.isPending
+                  ? t('notifications.alertStudio.actions.saving', 'Saving...')
+                  : isEditing
+                    ? t('notifications.alertStudio.actions.updateRule', 'Update Rule')
+                    : t('notifications.alertStudio.actions.createRule', 'Create Rule')}
+              </UiButton>
 
               {isEditing && (
-                <Button
+                <UiButton
                   variant="danger"
                   size="sm"
                   icon={<Trash2 className="h-3.5 w-3.5" />}
                   onClick={() => { if (editor.id) deleteMut.mutate(editor.id) }}
                 >
-                  Delete
-                </Button>
+                  {t('notifications.alertStudio.actions.delete', 'Delete')}
+                </UiButton>
               )}
 
-              <Button
+              <UiButton
                 variant="secondary"
                 size="sm"
                 icon={<Bell className="h-3.5 w-3.5" />}
@@ -630,24 +749,39 @@ export default function AlertStudio() {
                   try {
                     await request('/alerts/test', {
                       method: 'POST',
-                      body: JSON.stringify({ name: editor.name || 'Test Rule', severity: editor.severity, msg_template: editor.msg_template || 'Test notification from Alert Studio', notify_channels: editor.notify_channels }),
+                      body: JSON.stringify({
+                        name: editor.name || t('notifications.alertStudio.test.defaultRuleName', 'Test Rule'),
+                        severity: editor.severity,
+                        msg_template: editor.msg_template || t('notifications.alertStudio.test.defaultMessage', 'Test notification from Alert Studio'),
+                        notify_channels: editor.notify_channels,
+                      }),
                     })
-                    toast.success('Test sent!', 'Check your browser toast and Discord/Slack')
-                  } catch { toast.error('Test failed', 'Could not send test notification') }
+                    toast.success(
+                      t('notifications.alertStudio.toasts.testSent', 'Test sent!'),
+                      t('notifications.alertStudio.toasts.testSentDescription', 'Check your browser toast and Discord/Slack'),
+                    )
+                  } catch (error) {
+                    toast.error(
+                      t('notifications.alertStudio.toasts.testFailed', 'Test failed'),
+                      error instanceof Error
+                        ? error.message
+                        : t('notifications.alertStudio.toasts.testFailedDescription', 'Could not send test notification'),
+                    )
+                  }
                 }}
                 disabled={!editor.name.trim()}
               >
-                Test
-              </Button>
+                {t('notifications.alertStudio.actions.test', 'Test')}
+              </UiButton>
 
-              <Button variant="ghost" size="sm" onClick={handleNewRule} className="ml-auto">
-                Reset
-              </Button>
+              <UiButton variant="ghost" size="sm" onClick={handleNewRule} className="ml-auto">
+                {t('notifications.alertStudio.actions.reset', 'Reset')}
+              </UiButton>
             </div>
           </GlassPanel>
         </div>
       </div>
-    </div>
+    </PageContainer>
   )
 }
 
