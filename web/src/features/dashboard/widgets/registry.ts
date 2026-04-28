@@ -807,6 +807,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./CostBreakdownWidget')),
   },
+  {
+    id: 'year-review',
+    name: 'Year in Review',
+    description: 'Annual recap: total miles, drives, energy, highlights, achievements',
+    icon: Calendar,
+    category: 'analytics',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 2, rows: 4 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./YearReviewWidget')),
+  },
 
   // ── Alerts ──
   {
