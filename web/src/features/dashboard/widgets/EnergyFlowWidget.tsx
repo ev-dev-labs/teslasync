@@ -1,9 +1,11 @@
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Activity, BatteryCharging, Zap, ArrowDown, ArrowUp } from 'lucide-react';
+import { Activity, BatteryCharging, Zap, Plug } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
+import { WidgetFlowDiagram, type FlowNode, type FlowArrow } from './shared';
 import type { WidgetProps } from './types';
 
 export default function EnergyFlowWidget({ vehicleId }: WidgetProps) {
@@ -17,6 +19,78 @@ export default function EnergyFlowWidget({ vehicleId }: WidgetProps) {
   const isConsuming = power > 0;
   const isRegen = power < 0;
   const absPower = Math.abs(power);
+  const isCharging = state?.is_charging ?? false;
+  const chargerPower = state?.charger_power ?? 0;
+  const batteryLevel = state?.battery_level ?? 0;
+
+  const nodes = useMemo<FlowNode[]>(() => {
+    const result: FlowNode[] = [
+      {
+        id: 'battery',
+        label: t('widget.battery', 'Battery'),
+        value: batteryLevel,
+        formattedValue: `${batteryLevel}%`,
+        icon: <BatteryCharging className="h-2.5 w-2.5 text-emerald-400" />,
+        position: 'left',
+      },
+      {
+        id: 'motor',
+        label: isConsuming
+          ? t('widget.consuming', 'Consuming')
+          : isRegen
+            ? t('widget.regenerating', 'Regenerating')
+            : t('widget.standby', 'Standby'),
+        value: absPower,
+        formattedValue: absPower > 0 ? `${fmtNumber(absPower, 1)} kW` : '—',
+        icon: <Zap className="h-2.5 w-2.5 text-purple-400" />,
+        position: 'right',
+      },
+    ];
+
+    if (isCharging) {
+      result.push({
+        id: 'charger',
+        label: t('widget.charger', 'Charger'),
+        value: chargerPower,
+        formattedValue: `${fmtNumber(chargerPower, 1)} kW`,
+        icon: <Plug className="h-2.5 w-2.5 text-amber-400" />,
+        position: 'top',
+      });
+    }
+
+    return result;
+  }, [batteryLevel, absPower, isConsuming, isRegen, isCharging, chargerPower, t]);
+
+  const arrows = useMemo<FlowArrow[]>(() => {
+    const result: FlowArrow[] = [
+      {
+        from: 'battery',
+        to: 'motor',
+        value: isConsuming ? absPower : 0,
+        active: isConsuming,
+        color: 'text-cyan-400',
+      },
+      {
+        from: 'motor',
+        to: 'battery',
+        value: isRegen ? absPower : 0,
+        active: isRegen,
+        color: 'text-emerald-400',
+      },
+    ];
+
+    if (isCharging) {
+      result.push({
+        from: 'charger',
+        to: 'battery',
+        value: chargerPower,
+        active: true,
+        color: 'text-amber-400',
+      });
+    }
+
+    return result;
+  }, [absPower, isConsuming, isRegen, isCharging, chargerPower]);
 
   return (
     <WidgetShell
@@ -30,65 +104,11 @@ export default function EnergyFlowWidget({ vehicleId }: WidgetProps) {
       onRefresh={() => refetch()}
     >
       {state ? (
-        <div className="h-full flex flex-col items-center justify-center gap-4">
-          {/* Battery block */}
-          <div className="flex flex-col items-center">
-            <BatteryCharging className="h-8 w-8 text-neon-green mb-1" />
-            <span className="text-2xl font-bold text-white/90">
-              {state.battery_level}%
-            </span>
-            <span className="text-[10px] text-white/40">
-              {t('widget.battery', 'Battery')}
-            </span>
-          </div>
-
-          {/* Flow arrow */}
-          <div className="flex items-center gap-2">
-            {isConsuming ? (
-              <>
-                <ArrowUp className="h-5 w-5 text-neon-red animate-bounce" />
-                <span className="text-sm font-bold text-neon-red">
-                  {fmtNumber(absPower, 1)} kW
-                </span>
-              </>
-            ) : isRegen ? (
-              <>
-                <ArrowDown className="h-5 w-5 text-neon-green animate-bounce" />
-                <span className="text-sm font-bold text-neon-green">
-                  {fmtNumber(absPower, 1)} kW
-                </span>
-              </>
-            ) : (
-              <span className="text-sm text-white/40">
-                {t('widget.idle', 'Idle')}
-              </span>
-            )}
-          </div>
-
-          {/* Motor block */}
-          <div className="flex flex-col items-center">
-            <Zap className="h-6 w-6 text-neon-purple mb-1" />
-            <span className="text-xs text-white/40">
-              {isConsuming
-                ? t('widget.consuming', 'Consuming')
-                : isRegen
-                  ? t('widget.regenerating', 'Regenerating')
-                  : t('widget.standby', 'Standby')}
-            </span>
-          </div>
-
-          {/* Charge info if charging */}
-          {state.is_charging && (
-            <div className="text-center mt-2 p-2 rounded-lg bg-neon-green/5 border border-neon-green/10 w-full">
-              <span className="text-xs text-neon-green font-medium">
-                ⚡ {fmtNumber(state.charger_power)} kW ·{' '}
-                {state.time_to_full_charge > 0
-                  ? `${fmtNumber(state.time_to_full_charge, 1)}h left`
-                  : t('widget.almostDone', 'Almost done')}
-              </span>
-            </div>
-          )}
-        </div>
+        <WidgetFlowDiagram
+          nodes={nodes}
+          arrows={arrows}
+          emptyMessage={t('widget.noEnergyData', 'No energy data available')}
+        />
       ) : (
         <EmptyState
           icon={<Activity className="h-5 w-5" />}
