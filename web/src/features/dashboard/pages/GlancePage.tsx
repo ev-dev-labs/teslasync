@@ -15,8 +15,9 @@ import { Badge, GlassPanel } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { RadialGauge } from '@/components/charts';
 import { FreshnessIndicator } from '@/components/data-display';
-import { EmptyState, Spinner } from '@/components/feedback';
+import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
+import { PageContainer } from '@/components/layout';
 import { useVehicles, useVehicleState, useLocationSnapshotLatest } from '@/api/hooks/useVehicles';
 import { useVehicleCommand } from '@/api/hooks/useVehicleCommand';
 import { useSettings } from '@/hooks/useSettings';
@@ -90,12 +91,13 @@ function QuickAction({ icon: Icon, label, onClick, disabled, loading }: QuickAct
 
 export default function GlancePage() {
   const { t } = useTranslation();
-  usePageTitle(t('glance.title', 'Quick Glance'));
+  const title = t('glance.title', 'Quick Glance');
+  usePageTitle(title);
 
   const [searchParams] = useSearchParams();
   const vehicleIdParam = searchParams.get('vehicle_id');
 
-  const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
+  const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = useVehicles();
 
   // Support ?vehicle_id= query param; fall back to first vehicle
   const vehicle = useMemo(() => {
@@ -130,149 +132,145 @@ export default function GlancePage() {
     [dataUpdatedAt],
   );
 
-  // ── Loading / empty states ───────────────────────────────────────
-  if (vehiclesLoading) {
-    return (
-      <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center">
-        <Spinner className="h-8 w-8" />
-      </div>
-    );
-  }
-
-  if (!vehicle) {
-    return (
-      <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center p-6">
-        <EmptyState
-          icon={<Battery className="h-8 w-8" />}
-          message={t('glance.noVehicle', 'No vehicle found')}
-        />
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-[var(--bg)] flex flex-col items-center justify-center p-6">
-      <FadeIn>
-        {/* Vehicle name + status */}
-        <div className="flex flex-col items-center gap-2 mb-6">
-          <h1 className="text-xl font-semibold text-white/90">
-            {vehicle.display_name || vehicle.model || t('glance.defaultName', 'Tesla')}
-          </h1>
-          <Badge
-            variant={isOnline ? 'success' : 'neutral'}
-            dot
-          >
-            {state?.state ?? t('glance.unknown', 'Unknown')}
-          </Badge>
-        </div>
+    <PageContainer
+      title={title}
+      loading={vehiclesLoading}
+      error={vehiclesError}
+      className="min-h-screen"
+    >
+      {!vehicle ? (
+        <GlassPanel className="p-8">
+          <EmptyState
+            icon={<Battery className="h-8 w-8" />}
+            message={t('glance.noVehicle', 'No vehicle found')}
+          />
+        </GlassPanel>
+      ) : (
+        <div className="flex min-h-[calc(100vh-12rem)] flex-col items-center justify-center p-6">
+          <FadeIn>
+            {/* Vehicle name + status */}
+            <div className="flex flex-col items-center gap-2 mb-6">
+              <h1 className="text-xl font-semibold text-white/90">
+                {vehicle.display_name || vehicle.model || t('glance.defaultName', 'Tesla')}
+              </h1>
+              <Badge
+                variant={isOnline ? 'success' : 'neutral'}
+                dot
+              >
+                {state?.state ?? t('glance.unknown', 'Unknown')}
+              </Badge>
+            </div>
 
-        {/* Big battery ring */}
-        <div className="flex justify-center my-8 relative">
-          <RadialGauge
-            value={state?.battery_level ?? 0}
-            max={100}
-            label={t('glance.battery', 'Battery')}
-            unit="%"
-            size={180}
-            color={state?.battery_level != null ? batteryColor(state.battery_level) : COLOR.MUTED}
-          />
-        </div>
+            {/* Big battery ring */}
+            <div className="flex justify-center my-8 relative">
+              <RadialGauge
+                value={state?.battery_level ?? 0}
+                max={100}
+                label={t('glance.battery', 'Battery')}
+                unit="%"
+                size={180}
+                color={state?.battery_level != null ? batteryColor(state.battery_level) : COLOR.MUTED}
+              />
+            </div>
 
-        {/* Key metrics grid */}
-        <div className="grid grid-cols-2 gap-3 w-full max-w-xs mx-auto">
-          <MetricTile
-            icon={Battery}
-            label={t('glance.range', 'Range')}
-            value={
-              state?.rated_range != null
-                ? `${fmtNumber(convertDistance(state.rated_range), 0)} ${distanceUnit}`
-                : '—'
-            }
-          />
-          <MetricTile
-            icon={Thermometer}
-            label={t('glance.temp', 'Interior')}
-            value={
-              state?.inside_temp != null
-                ? `${fmtNumber(convertTemp(state.inside_temp), 1)}${tempUnit}`
-                : '—'
-            }
-          />
-          <MetricTile
-            icon={state?.is_locked ? Lock : Unlock}
-            label={
-              state?.is_locked
-                ? t('glance.locked', 'Locked')
-                : t('glance.unlocked', 'Unlocked')
-            }
-          />
-          <MetricTile
-            icon={MapPin}
-            label={t('glance.locationLabel', 'Location')}
-            value={locationLabel}
-          />
-        </div>
+            {/* Key metrics grid */}
+            <div className="grid grid-cols-2 gap-3 w-full max-w-xs mx-auto">
+              <MetricTile
+                icon={Battery}
+                label={t('glance.range', 'Range')}
+                value={
+                  state?.rated_range != null
+                    ? `${fmtNumber(convertDistance(state.rated_range), 0)} ${distanceUnit}`
+                    : '—'
+                }
+              />
+              <MetricTile
+                icon={Thermometer}
+                label={t('glance.temp', 'Interior')}
+                value={
+                  state?.inside_temp != null
+                    ? `${fmtNumber(convertTemp(state.inside_temp), 1)}${tempUnit}`
+                    : '—'
+                }
+              />
+              <MetricTile
+                icon={state?.is_locked ? Lock : Unlock}
+                label={
+                  state?.is_locked
+                    ? t('glance.locked', 'Locked')
+                    : t('glance.unlocked', 'Unlocked')
+                }
+              />
+              <MetricTile
+                icon={MapPin}
+                label={t('glance.locationLabel', 'Location')}
+                value={locationLabel}
+              />
+            </div>
 
-        {/* Quick actions */}
-        <div className="flex justify-center gap-3 mt-8">
-          <QuickAction
-            icon={state?.is_locked ? Unlock : Lock}
-            label={
-              state?.is_locked
-                ? t('glance.action.unlock', 'Unlock')
-                : t('glance.action.lock', 'Lock')
-            }
-            disabled={!canSendCommands}
-            loading={sendCommand.isPending && sendCommand.variables?.command === 'lock'}
-            onClick={() =>
-              sendCommand.mutate({
-                vehicleId,
-                command: state?.is_locked ? 'unlock' : 'lock',
-              })
-            }
-          />
-          <QuickAction
-            icon={Wind}
-            label={
-              state?.is_climate_on
-                ? t('glance.action.climateOff', 'Climate Off')
-                : t('glance.action.climateOn', 'Climate On')
-            }
-            disabled={!canSendCommands}
-            loading={sendCommand.isPending && (sendCommand.variables?.command === 'climate_on' || sendCommand.variables?.command === 'climate_off')}
-            onClick={() =>
-              sendCommand.mutate({
-                vehicleId,
-                command: state?.is_climate_on ? 'climate_off' : 'climate_on',
-              })
-            }
-          />
-          <QuickAction
-            icon={Volume2}
-            label={t('glance.action.horn', 'Horn')}
-            disabled={!canSendCommands}
-            loading={sendCommand.isPending && sendCommand.variables?.command === 'honk_horn'}
-            onClick={() =>
-              sendCommand.mutate({ vehicleId, command: 'honk_horn' })
-            }
-          />
-        </div>
+            {/* Quick actions */}
+            <div className="flex justify-center gap-3 mt-8">
+              <QuickAction
+                icon={state?.is_locked ? Unlock : Lock}
+                label={
+                  state?.is_locked
+                    ? t('glance.action.unlock', 'Unlock')
+                    : t('glance.action.lock', 'Lock')
+                }
+                disabled={!canSendCommands}
+                loading={sendCommand.isPending && sendCommand.variables?.command === 'lock'}
+                onClick={() =>
+                  sendCommand.mutate({
+                    vehicleId,
+                    command: state?.is_locked ? 'unlock' : 'lock',
+                  })
+                }
+              />
+              <QuickAction
+                icon={Wind}
+                label={
+                  state?.is_climate_on
+                    ? t('glance.action.climateOff', 'Climate Off')
+                    : t('glance.action.climateOn', 'Climate On')
+                }
+                disabled={!canSendCommands}
+                loading={sendCommand.isPending && (sendCommand.variables?.command === 'climate_on' || sendCommand.variables?.command === 'climate_off')}
+                onClick={() =>
+                  sendCommand.mutate({
+                    vehicleId,
+                    command: state?.is_climate_on ? 'climate_off' : 'climate_on',
+                  })
+                }
+              />
+              <QuickAction
+                icon={Volume2}
+                label={t('glance.action.horn', 'Horn')}
+                disabled={!canSendCommands}
+                loading={sendCommand.isPending && sendCommand.variables?.command === 'honk_horn'}
+                onClick={() =>
+                  sendCommand.mutate({ vehicleId, command: 'honk_horn' })
+                }
+              />
+            </div>
 
-        {/* Freshness */}
-        <div className="flex justify-center mt-6">
-          <FreshnessIndicator timestamp={freshnessTimestamp} size="md" />
-        </div>
+            {/* Freshness */}
+            <div className="flex justify-center mt-6">
+              <FreshnessIndicator timestamp={freshnessTimestamp} size="md" />
+            </div>
 
-        {/* Link to full app */}
-        <div className="flex justify-center mt-4">
-          <Link
-            to="/"
-            className="text-xs text-white/30 hover:text-white/50 transition-colors"
-          >
-            {t('glance.openApp', 'Open full app →')}
-          </Link>
+            {/* Link to full app */}
+            <div className="flex justify-center mt-4">
+              <Link
+                to="/"
+                className="text-xs text-white/30 hover:text-white/50 transition-colors"
+              >
+                {t('glance.openApp', 'Open full app →')}
+              </Link>
+            </div>
+          </FadeIn>
         </div>
-      </FadeIn>
-    </div>
+      )}
+    </PageContainer>
   );
 }

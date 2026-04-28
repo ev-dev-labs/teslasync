@@ -18,6 +18,10 @@ interface CostForecastSectionProps {
 
 export function CostForecastSection({ forecastData }: CostForecastSectionProps) {
   const { t } = useTranslation();
+  const historicalData = forecastData?.historical ?? [];
+  const forecast = forecastData?.forecast ?? [];
+  const hasForecast = historicalData.length >= 3 && forecast.length > 0;
+  const hasCostPerKwhTrend = historicalData.length > 1;
 
   return (
     <>
@@ -28,18 +32,18 @@ export function CostForecastSection({ forecastData }: CostForecastSectionProps) 
             <TrendingUp className="h-4 w-4 text-neon-purple" />
             {t('costAnalysis.forecast.title', 'Cost Forecast')}
           </h3>
-          {(forecastData?.historical ?? []).length >= 3 && (forecastData?.forecast ?? []).length > 0 ? (
+          {hasForecast ? (
             <ResponsiveContainer width="100%" height={300}>
               <ComposedChart
                 data={[
-                  ...(forecastData?.historical ?? []).map((h) => ({
+                  ...historicalData.map((h) => ({
                     month: h.month,
                     actual: h.cost,
                     forecast: undefined as number | undefined,
                     ci_low: undefined as number | undefined,
                     ci_band: undefined as number | undefined,
                   })),
-                  ...(forecastData?.forecast ?? []).map((f) => ({
+                  ...forecast.map((f) => ({
                     month: f.month,
                     actual: undefined as number | undefined,
                     forecast: f.cost,
@@ -70,14 +74,14 @@ export function CostForecastSection({ forecastData }: CostForecastSectionProps) 
       <ForecastDetails forecastData={forecastData} />
 
       {/* Cost per kWh trend from forecast historical data */}
-      {(forecastData?.historical ?? []).length > 1 && (
-        <FadeIn>
-          <GlassPanel className="p-6">
-            <h3 className="mb-4 text-sm font-semibold text-white">
-              {t('costAnalysis.forecast.costPerKwhTrend', 'Cost per kWh Trend')}
-            </h3>
+      <FadeIn>
+        <GlassPanel className="p-6">
+          <h3 className="mb-4 text-sm font-semibold text-white">
+            {t('costAnalysis.forecast.costPerKwhTrend', 'Cost per kWh Trend')}
+          </h3>
+          {hasCostPerKwhTrend ? (
             <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={forecastData?.historical ?? []}>
+              <LineChart data={historicalData}>
                 <CartesianGrid {...chartGrid} />
                 <XAxis dataKey="month" tick={axisTickSm} tickLine={false} axisLine={false} />
                 <YAxis tick={axisTickSm} tickLine={false} axisLine={false} unit="$" />
@@ -85,9 +89,11 @@ export function CostForecastSection({ forecastData }: CostForecastSectionProps) 
                 <Line {...AREA_DEFAULTS} dataKey="cost_per_kwh" stroke="#06b6d4" dot={{ fill: '#06b6d4', r: 3 }} name={t('costAnalysis.forecast.costPerKwh', '$/kWh')} />
               </LineChart>
             </ResponsiveContainer>
-          </GlassPanel>
-        </FadeIn>
-      )}
+          ) : (
+            <EmptyState message={t('costAnalysis.forecast.needTrendData', 'Need at least 2 months of charging data to show the cost per kWh trend.')} />
+          )}
+        </GlassPanel>
+      </FadeIn>
     </>
   );
 }

@@ -10,6 +10,7 @@ import { cn } from '@/lib/cn';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { SlideRenderer, SLIDE_DEFS } from '../components/review';
 
+// EXCEPTION: full-screen story route intentionally covers app chrome for swipe-style annual review slides.
 export default function YearReviewPage() {
   const { t } = useTranslation();
   const { year: yearParam } = useParams<{ year: string }>();

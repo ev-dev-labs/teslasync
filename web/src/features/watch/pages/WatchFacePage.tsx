@@ -13,6 +13,7 @@ import { Zap, Lock, Unlock, Thermometer, Shield } from 'lucide-react';
  * - Tap-friendly status icons (44px+ targets)
  * - No scrolling — single screen
  * - Auto-refresh every 30s
+ * EXCEPTION: watch/PWA route is chrome-less to fit 40-45mm wearable displays.
  */
 export default function WatchFacePage() {
   const [searchParams] = useSearchParams();

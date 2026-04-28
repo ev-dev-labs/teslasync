@@ -70,6 +70,7 @@ function ExpiredShareView() {
 /*  SharedDrivePage                                                   */
 /* ------------------------------------------------------------------ */
 
+// EXCEPTION: public share route is chrome-less so unauthenticated recipients see only the branded report.
 export default function SharedDrivePage() {
   const { token } = useParams<{ token: string }>();
   const { t } = useTranslation();

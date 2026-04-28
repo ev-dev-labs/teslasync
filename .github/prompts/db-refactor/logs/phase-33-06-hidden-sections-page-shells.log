@@ -1,0 +1,45 @@
+=== PREFLIGHT ===
+Verified predecessor logs phase-33-00 through phase-33-05 all ended with EXIT=0 and STATUS=DONE.
+Initial git status was clean before edits.
+Applicable frontend and unit-conversion instructions were reviewed before changing web files.
+
+=== SURVEY ===
+CostForecastSection hid the Cost per kWh Trend GlassPanel behind forecastData historical length.
+TemperatureSection hid the temperature summary body behind stats.hasAnyTemp and used custom empty markup for missing chart data.
+DrivingSection hid the Top Drive GlassPanel behind metrics.topDrive and did not provide an EmptyState in that section.
+GlancePage was a real route page without PageContainer.
+YearReviewPage is a full-screen annual review story route.
+SharedDrivePage is a public share route with branded chrome-less presentation for unauthenticated recipients.
+WatchFacePage is a watch/PWA route for wearable-sized screens.
+
+=== REASONING ===
+Panels and chart shells should remain mounted so users see stable sections and explicit empty states instead of disappearing content.
+GlancePage should use PageContainer because it is a normal authenticated route page.
+YearReviewPage, SharedDrivePage, and WatchFacePage intentionally cannot use normal app chrome without breaking their full-screen, public share, or wearable UX, so each now has a code exception comment.
+
+=== CHANGES ===
+CostForecastSection now always renders the Cost per kWh Trend panel and shows EmptyState when historical data is insufficient.
+TemperatureSection now renders EmptyState fallbacks for missing temperature summary or chart data and avoids data-only && rendering for summary cards and chart lines.
+DrivingSection now keeps the daily distance chart shell and Top Drive panel visible with EmptyState fallbacks.
+GlancePage now renders inside PageContainer while preserving loading, error, no-vehicle, command, and freshness states.
+YearReviewPage, SharedDrivePage, and WatchFacePage now document their route-shell exceptions in code.
+
+=== GATE ===
+Exact gate output follows.
+=== GATE ===
+HIDDEN_SECTION_PATTERN_COUNT=1
+MISSING_EMPTY_STATE_COUNT=0
+web\src\features\driving\components\drive-detail\TemperatureSection.tsx: data-conditional component rendering remains
+EXIT=1
+STATUS=BLOCKED
+=== GATE ===
+HIDDEN_SECTION_PATTERN_COUNT=0
+MISSING_EMPTY_STATE_COUNT=0
+MISSING_PAGE_CONTAINER_COUNT=0
+MISSING_SHELL_EXCEPTION_COUNT=0
+TS_EXIT=0
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
+Final gate ended with EXIT=0 and STATUS=DONE. Committing the allowed source files and this log with the requested phase message.
