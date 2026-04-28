@@ -1104,6 +1104,19 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     component: lazy(() => import('./WarrantyStatusWidget')),
   },
 
+  // ── Subscriptions ──
+  {
+    id: 'subscriptions',
+    name: 'Subscriptions',
+    description: 'Tesla subscriptions: Premium Connectivity, FSD, expiry dates, renewal',
+    icon: CreditCard,
+    category: 'vehicle',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./SubscriptionsWidget')),
+  },
+
   // ── System Health ──
   {
     id: 'system-health',
