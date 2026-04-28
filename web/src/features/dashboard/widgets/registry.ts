@@ -1253,6 +1253,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./BackupMonitorWidget')),
   },
+  {
+    id: 'export-status',
+    name: 'Export Status',
+    description: 'Data export jobs: progress, format, size, success/fail status',
+    icon: Download,
+    category: 'system',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./ExportStatusWidget')),
+  },
 ];
 
 export function getWidgetDef(widgetId: string): WidgetDef | undefined {
