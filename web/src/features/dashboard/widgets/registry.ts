@@ -1,6 +1,6 @@
 import { lazy } from 'react';
 import {
-  Battery, Zap, Car, MapPin, Shield, Thermometer,
+  Battery, BatteryWarning, Zap, Car, MapPin, Shield, Thermometer,
   Activity, BarChart3, Gauge, Wifi, TrendingUp, Monitor,
   DollarSign, Calendar, CloudSun, CircleDot, CreditCard, Hash,
   MonitorSmartphone, List, Grid3X3, Workflow, DoorOpen, Eye,
@@ -157,6 +157,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 2, rows: 4 },
     maxSize: { cols: 3, rows: 40 },
     component: lazy(() => import('./EnergyFlowAnimatedWidget')),
+  },
+  {
+    id: 'vampire-drain',
+    name: 'Vampire Drain',
+    description: 'Phantom drain rate: avg %/day, recent drain events',
+    icon: BatteryWarning,
+    category: 'energy',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./VampireDrainWidget')),
   },
 
   // ── Driving ──
