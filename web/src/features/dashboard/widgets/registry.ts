@@ -7,7 +7,7 @@ import {
   Command, CalendarRange, Bell, Music, HeartPulse, Moon, Navigation, Terminal,
   Cpu, RotateCcw, Route, Lightbulb, Trophy, Clock, AlertTriangle,
   Sparkles, Cog, Wrench, FileText, ShieldCheck, ShieldAlert, ThermometerSun,
-  Sun, Plug, TrendingDown, GitBranch,
+  Sun, Plug, TrendingDown, GitBranch, Radio,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -844,6 +844,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./UptimeMonitorWidget')),
+  },
+  {
+    id: 'mqtt-status',
+    name: 'MQTT Status',
+    description: 'Fleet Telemetry MQTT connection: status, message rate, throughput',
+    icon: Radio,
+    category: 'system',
+    defaultSize: { cols: 2, rows: 2 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 3, rows: 40 },
+    component: lazy(() => import('./MQTTStatusWidget')),
   },
   {
     id: 'quick-nav',
