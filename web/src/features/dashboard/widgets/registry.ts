@@ -8,7 +8,7 @@ import {
   Cpu, RotateCcw, Route, Lightbulb, Trophy, Clock, AlertTriangle, AlertOctagon,
   Sparkles, Cog, Wrench, FileText, ShieldCheck, ShieldAlert, ThermometerSun,
   Sun, Plug, TrendingDown, GitBranch, Radio, ListMusic, Home,
-  PieChart as PieIcon, Server, PlayCircle, Crosshair,
+  PieChart as PieIcon, Server, PlayCircle, Crosshair, AlertCircle,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -1128,6 +1128,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./SystemHealthWidget')),
+  },
+  {
+    id: 'telemetry-errors',
+    name: 'Telemetry Errors',
+    description: 'Fleet Telemetry error monitor: VINs with errors, error types, counts',
+    icon: AlertCircle,
+    category: 'system',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./TelemetryErrorsWidget')),
   },
 ];
 
