@@ -7,7 +7,7 @@ import {
   Command, CalendarRange, CalendarDays, Bell, Music, HeartPulse, Moon, Navigation, Terminal,
   Cpu, RotateCcw, Route, Lightbulb, Trophy, Clock, AlertTriangle,
   Sparkles, Cog, Wrench, FileText, ShieldCheck, ShieldAlert, ThermometerSun,
-  Sun, Plug, TrendingDown, GitBranch, Radio,
+  Sun, Plug, TrendingDown, GitBranch, Radio, ListMusic,
   PieChart as PieIcon,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
@@ -668,6 +668,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./MediaNowPlayingWidget')),
+  },
+  {
+    id: 'media-history',
+    name: 'Media History',
+    description: 'Recently played tracks: title, artist, source, playback history',
+    icon: ListMusic,
+    category: 'media',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./MediaHistoryWidget')),
   },
 
   // ── Tires ──
