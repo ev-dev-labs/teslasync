@@ -122,6 +122,7 @@ export interface VehicleTwinState {
   trunkOpen: boolean | null;
   chargePortOpen: boolean | null;
   isCharging: boolean;
+  isDriving: boolean;
   locked: boolean | null;
   sentryMode: boolean | null;
   headlights: boolean | null;
@@ -142,6 +143,7 @@ const EMPTY_TWIN_STATE: VehicleTwinState = {
   trunkOpen: null,
   chargePortOpen: null,
   isCharging: false,
+  isDriving: false,
   locked: null,
   sentryMode: null,
   headlights: null,
@@ -152,13 +154,18 @@ const EMPTY_TWIN_STATE: VehicleTwinState = {
   lastUpdated: null,
 };
 
+function isVehicleDriving(vehicleState: { state?: string; speed?: number } | null | undefined): boolean {
+  if (!vehicleState) return false;
+  return vehicleState.state?.toLowerCase() === 'driving' || (vehicleState.speed ?? 0) > 0;
+}
+
 /**
  * Merges SecurityEvent + VehicleState + ChargingTelemetry into a single
  * view-model for the VehicleTwin component.
  */
 export function buildTwinState(
   security: SecurityEvent | null | undefined,
-  vehicleState: { is_charging?: boolean; is_locked?: boolean; sentry_mode?: boolean } | null | undefined,
+  vehicleState: { state?: string; speed?: number; is_charging?: boolean; is_locked?: boolean; sentry_mode?: boolean } | null | undefined,
   charging: ChargingTelemetry | null | undefined,
 ): VehicleTwinState {
   if (!security && !vehicleState) return { ...EMPTY_TWIN_STATE };
@@ -173,6 +180,7 @@ export function buildTwinState(
     trunkOpen: doors.trunkRear,
     chargePortOpen: charging?.charge_port_door_open ?? null,
     isCharging: vehicleState?.is_charging ?? false,
+    isDriving: isVehicleDriving(vehicleState),
     locked: security?.locked ?? vehicleState?.is_locked ?? null,
     sentryMode: security?.sentry_mode ?? vehicleState?.sentry_mode ?? null,
     headlights: security?.lights_high_beams ?? null,
@@ -197,6 +205,7 @@ export function mapLiveToTwinState(live: VehicleLiveState): VehicleTwinState {
     trunkOpen: doors.trunkRear,
     chargePortOpen: null,
     isCharging: live.isCharging,
+    isDriving: live.speed > 0 || live.gear.toUpperCase() === 'D',
     locked: live.locked,
     sentryMode: live.sentryMode,
     headlights: live.lightsHighBeams,
@@ -237,6 +246,7 @@ export function buildTwinStateFromAdmin(
     trunkOpen: doors.trunkRear,
     chargePortOpen: null,
     isCharging: false,
+    isDriving: false,
     locked: ev.locked ?? null,
     sentryMode: ev.sentryMode ?? null,
     headlights: ev.lightsHighBeams ?? null,

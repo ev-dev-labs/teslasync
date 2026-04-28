@@ -74,6 +74,7 @@ export default function DigitalTwinWidget({ vehicleId, size }: WidgetProps) {
             <VehicleTwin
               {...twinState}
               size={twinSize}
+              driveIn
               className="relative z-10 drop-shadow-2xl"
             />
           </div>

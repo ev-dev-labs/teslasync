@@ -104,7 +104,7 @@ export default function DigitalTwinPage() {
           {/* Main visualization */}
           <FadeIn className="flex-1 flex items-center justify-center">
             <GlassPanel className="p-6 md:p-8">
-              <VehicleTwin {...twinState} size="lg" interactive />
+              <VehicleTwin {...twinState} size="lg" interactive driveIn />
               {twinState.lastUpdated && (
                 <p className="text-center text-xs text-white/40 mt-4">
                   {t('digitalTwin.lastUpdated', 'Last updated')}: {new Date(twinState.lastUpdated).toLocaleTimeString()}

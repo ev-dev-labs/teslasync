@@ -9,12 +9,14 @@ const VIEWBOX_WIDTH = 560;
 const VIEWBOX_MIN_Y = 52;
 const VIEWBOX_HEIGHT = 220;
 const ASPECT_RATIO = VIEWBOX_HEIGHT / VIEWBOX_WIDTH;
+const DRIVE_IN_DURATION = 1.35;
 
 export type VehicleTwinSize = keyof typeof SIZE_MAP;
 
 export interface VehicleTwinProps extends VehicleTwinState {
   size?: VehicleTwinSize;
   interactive?: boolean;
+  driveIn?: boolean;
   className?: string;
 }
 
@@ -156,9 +158,20 @@ function ChargingUnderglow() {
   );
 }
 
-function WheelSVG({ cx, cy }: { cx: number; cy: number }) {
+function WheelSVG({
+  cx,
+  cy,
+  driveIn = false,
+  driving = false,
+}: {
+  cx: number;
+  cy: number;
+  driveIn?: boolean;
+  driving?: boolean;
+}) {
   const blades = [0, 36, 72, 108, 144, 180, 216, 252, 288, 324];
   const lugs = [0, 72, 144, 216, 288];
+  const shouldSpin = driveIn || driving;
 
   return (
     <g>
@@ -166,17 +179,6 @@ function WheelSVG({ cx, cy }: { cx: number; cy: number }) {
       <circle cx={cx} cy={cy} r={39} fill={C.wheelDark} stroke={C.wheelStroke} strokeWidth={2} />
       <circle cx={cx} cy={cy} r={34} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={2} />
       <circle cx={cx} cy={cy} r={30} fill={C.wheelSidewall} stroke="rgba(255,255,255,0.08)" strokeWidth={1.5} />
-      <motion.circle
-        cx={cx}
-        cy={cy}
-        r={36}
-        fill="none"
-        stroke="rgba(255,255,255,0.045)"
-        strokeWidth={0.8}
-        strokeDasharray="2,5"
-        animate={{ strokeDashoffset: [0, -28] }}
-        transition={{ duration: 7, repeat: Infinity, ease: 'linear' }}
-      />
       <circle cx={cx} cy={cy} r={32} fill="none" stroke="rgba(0,0,0,0.35)" strokeWidth={1.2} />
       <path
         d={`M ${cx + 26} ${cy + 11} C ${cx + 30} ${cy + 16} ${cx + 29} ${cy + 23} ${cx + 24} ${cy + 27}`}
@@ -185,48 +187,64 @@ function WheelSVG({ cx, cy }: { cx: number; cy: number }) {
         strokeWidth={3}
         strokeLinecap="round"
       />
-      <circle cx={cx} cy={cy} r={25} fill="url(#twin-rim-grad)" stroke="rgba(255,255,255,0.16)" strokeWidth={1.2} />
-      {blades.map((angle) => (
-        <g key={angle} transform={`rotate(${angle} ${cx} ${cy})`}>
-          <path
-            d={`M ${cx + 4} ${cy - 4} C ${cx + 11} ${cy - 19} ${cx + 23} ${cy - 26} ${cx + 31} ${cy - 18} C ${cx + 25} ${cy - 12} ${cx + 18} ${cy - 3} ${cx + 7} ${cy + 10} Z`}
-            fill="rgba(2,6,23,0.82)"
-            stroke="rgba(148,163,184,0.18)"
-            strokeWidth={0.6}
-          />
-          <path
-            d={`M ${cx + 9} ${cy - 3} C ${cx + 17} ${cy - 13} ${cx + 24} ${cy - 17} ${cx + 28} ${cy - 14}`}
-            fill="none"
-            stroke="rgba(255,255,255,0.14)"
-            strokeWidth={0.8}
-            strokeLinecap="round"
-          />
-        </g>
-      ))}
-      <motion.path
-        d={`M ${cx - 18} ${cy - 15} C ${cx - 5} ${cy - 27} ${cx + 18} ${cy - 24} ${cx + 27} ${cy - 10}`}
-        fill="none"
-        stroke="rgba(255,255,255,0.16)"
-        strokeWidth={1.2}
-        strokeLinecap="round"
-        animate={{ opacity: [0.12, 0.42, 0.12] }}
-        transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
-      />
-      <circle cx={cx} cy={cy} r={13} fill="rgba(3,7,18,0.88)" stroke="rgba(255,255,255,0.16)" strokeWidth={1} />
-      {lugs.map((angle) => {
-        const rad = (angle * Math.PI) / 180;
-        return (
-          <circle
-            key={angle}
-            cx={cx + Math.cos(rad) * 7}
-            cy={cy + Math.sin(rad) * 7}
-            r={1.5}
-            fill="rgba(203,213,225,0.45)"
-          />
-        );
-      })}
-      <circle cx={cx} cy={cy} r={6} fill="rgba(30,41,59,0.95)" stroke="rgba(255,255,255,0.22)" strokeWidth={1} />
-      <circle cx={cx - 9} cy={cy - 10} r={2.5} fill="rgba(255,255,255,0.25)" />
+      <motion.g
+        initial={shouldSpin ? { rotate: 0 } : false}
+        animate={shouldSpin ? { rotate: driving ? -360 : -1080 } : undefined}
+        transition={
+          shouldSpin
+            ? {
+              duration: driving ? 0.9 : DRIVE_IN_DURATION,
+              repeat: driving ? Infinity : 0,
+              ease: 'linear',
+            }
+            : undefined
+        }
+        transformOrigin={`${cx}px ${cy}px`}
+      >
+        <circle cx={cx} cy={cy} r={36} fill="none" stroke="rgba(255,255,255,0.045)" strokeWidth={0.8} strokeDasharray="2,5" />
+        <circle cx={cx} cy={cy} r={25} fill="url(#twin-rim-grad)" stroke="rgba(255,255,255,0.16)" strokeWidth={1.2} />
+        {blades.map((angle) => (
+          <g key={angle} transform={`rotate(${angle} ${cx} ${cy})`}>
+            <path
+              d={`M ${cx + 4} ${cy - 4} C ${cx + 11} ${cy - 19} ${cx + 23} ${cy - 26} ${cx + 31} ${cy - 18} C ${cx + 25} ${cy - 12} ${cx + 18} ${cy - 3} ${cx + 7} ${cy + 10} Z`}
+              fill="rgba(2,6,23,0.82)"
+              stroke="rgba(148,163,184,0.18)"
+              strokeWidth={0.6}
+            />
+            <path
+              d={`M ${cx + 9} ${cy - 3} C ${cx + 17} ${cy - 13} ${cx + 24} ${cy - 17} ${cx + 28} ${cy - 14}`}
+              fill="none"
+              stroke="rgba(255,255,255,0.14)"
+              strokeWidth={0.8}
+              strokeLinecap="round"
+            />
+          </g>
+        ))}
+        <motion.path
+          d={`M ${cx - 18} ${cy - 15} C ${cx - 5} ${cy - 27} ${cx + 18} ${cy - 24} ${cx + 27} ${cy - 10}`}
+          fill="none"
+          stroke="rgba(255,255,255,0.16)"
+          strokeWidth={1.2}
+          strokeLinecap="round"
+          animate={{ opacity: [0.12, 0.42, 0.12] }}
+          transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        <circle cx={cx} cy={cy} r={13} fill="rgba(3,7,18,0.88)" stroke="rgba(255,255,255,0.16)" strokeWidth={1} />
+        {lugs.map((angle) => {
+          const rad = (angle * Math.PI) / 180;
+          return (
+            <circle
+              key={angle}
+              cx={cx + Math.cos(rad) * 7}
+              cy={cy + Math.sin(rad) * 7}
+              r={1.5}
+              fill="rgba(203,213,225,0.45)"
+            />
+          );
+        })}
+        <circle cx={cx} cy={cy} r={6} fill="rgba(30,41,59,0.95)" stroke="rgba(255,255,255,0.22)" strokeWidth={1} />
+        <circle cx={cx - 9} cy={cy - 10} r={2.5} fill="rgba(255,255,255,0.25)" />
+      </motion.g>
       <circle cx={cx} cy={cy} r={40} fill="none" stroke="rgba(0,0,0,0.42)" strokeWidth={5} />
     </g>
   );
@@ -718,19 +736,22 @@ function HeadlightGlows({
   on,
   hazards,
   turnSignal,
+  driveIn = false,
 }: {
   on: boolean | null;
   hazards: boolean | null;
   turnSignal: TurnSignalState;
+  driveIn?: boolean;
 }) {
   const flashing = hazards === true || turnSignal === 'left' || turnSignal === 'both';
+  const headlightsActive = on === true || driveIn;
 
   return (
     <g>
       <path
         d="M 53 184 C 67 177 83 177 96 183"
         fill="url(#twin-headlight-lens)"
-        stroke={on ? C.headlightOn : C.headlightOff}
+        stroke={headlightsActive ? C.headlightOn : C.headlightOff}
         strokeWidth={2.5}
         strokeLinecap="round"
       />
@@ -741,7 +762,7 @@ function HeadlightGlows({
         strokeWidth={1}
         strokeLinecap="round"
       />
-      {on && (
+      {headlightsActive && (
         <>
           <motion.ellipse
             cx={70}
@@ -750,14 +771,14 @@ function HeadlightGlows({
             ry={7}
             fill={C.headlightGlow}
             filter="url(#twin-glow)"
-            animate={{ opacity: [0.35, 0.85, 0.35] }}
-            transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+            animate={{ opacity: driveIn ? [0.1, 0.95, 0.22, 0.85, 0.28] : [0.35, 0.85, 0.35] }}
+            transition={driveIn ? { duration: 1.35, ease: 'easeInOut' } : { duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
           />
           <motion.path
             d="M 52 184 L 0 168 L 0 204 Z"
             fill={C.headlightBeam}
-            animate={{ opacity: [0.45, 0.8, 0.45] }}
-            transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+            animate={{ opacity: driveIn ? [0, 0.72, 0.18, 0.58, 0.12] : [0.45, 0.8, 0.45] }}
+            transition={driveIn ? { duration: 1.35, ease: 'easeInOut' } : { duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
           />
         </>
       )}
@@ -779,9 +800,11 @@ function HeadlightGlows({
 function TaillightGlows({
   hazards,
   turnSignal,
+  driveIn = false,
 }: {
   hazards: boolean | null;
   turnSignal: TurnSignalState;
+  driveIn?: boolean;
 }) {
   const flashing = hazards === true || turnSignal === 'right' || turnSignal === 'both';
 
@@ -819,6 +842,29 @@ function TaillightGlows({
           animate={{ opacity: [1, 0.15, 1] }}
           transition={{ duration: 0.8, repeat: Infinity }}
         />
+      )}
+      {driveIn && (
+        <>
+          <motion.ellipse
+            cx={536}
+            cy={176}
+            rx={24}
+            ry={10}
+            fill={C.taillightActive}
+            filter="url(#twin-glow)"
+            animate={{ opacity: [0, 0.95, 0.18, 0.9, 0.22] }}
+            transition={{ delay: 1.2, duration: 0.75, ease: 'easeOut' }}
+          />
+          <motion.path
+            d="M 516 162 C 531 164 543 171 550 181"
+            fill="none"
+            stroke={C.taillightActive}
+            strokeWidth={4.2}
+            strokeLinecap="round"
+            animate={{ opacity: [0, 1, 0.2, 1, 0.35] }}
+            transition={{ delay: 1.2, duration: 0.75, ease: 'easeOut' }}
+          />
+        </>
       )}
     </g>
   );
@@ -1018,6 +1064,7 @@ export function VehicleTwin({
   trunkOpen,
   chargePortOpen,
   isCharging,
+  isDriving,
   locked,
   sentryMode,
   headlights,
@@ -1026,16 +1073,20 @@ export function VehicleTwin({
   driverSeatOccupied,
   size = 'md',
   interactive = false,
+  driveIn = false,
   className,
 }: VehicleTwinProps) {
   const width = SIZE_MAP[size];
   const height = Math.round(width * ASPECT_RATIO);
 
   return (
-    <div
+    <motion.div
       className={cn('inline-flex items-center justify-center', className)}
       role="img"
       aria-label="Vehicle digital twin showing current physical state"
+      initial={driveIn ? { x: '115%', opacity: 0.18, scale: 0.96 } : false}
+      animate={driveIn ? { x: 0, opacity: 1, scale: 1 } : undefined}
+      transition={driveIn ? { duration: DRIVE_IN_DURATION, ease: 'easeOut' } : undefined}
     >
       <svg
         viewBox={`0 ${VIEWBOX_MIN_Y} ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}
@@ -1087,15 +1138,15 @@ export function VehicleTwin({
             charging={isCharging}
             interactive={interactive}
           />
-          <HeadlightGlows on={headlights} hazards={hazards} turnSignal={turnSignal} />
-          <TaillightGlows hazards={hazards} turnSignal={turnSignal} />
+          <HeadlightGlows on={headlights} hazards={hazards} turnSignal={turnSignal} driveIn={driveIn} />
+          <TaillightGlows hazards={hazards} turnSignal={turnSignal} driveIn={driveIn} />
         </g>
         <g id="wheels">
-          <WheelSVG cx={151} cy={226} />
-          <WheelSVG cx={402} cy={226} />
+          <WheelSVG cx={151} cy={226} driveIn={driveIn} driving={isDriving} />
+          <WheelSVG cx={402} cy={226} driveIn={driveIn} driving={isDriving} />
         </g>
         <SecurityOverlay locked={locked} sentryMode={sentryMode} interactive={interactive} />
       </svg>
-    </div>
+    </motion.div>
   );
 }
