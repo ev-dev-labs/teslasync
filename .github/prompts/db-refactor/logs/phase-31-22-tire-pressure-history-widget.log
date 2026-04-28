@@ -1,0 +1,38 @@
+=== SURVEY ===
+- Reviewed useTirePressureHistory hook in useVehicleSystems.ts (returns TirePressureReading[])
+- TirePressureReading: { id, vehicleId, frontLeft, frontRight, rearLeft, rearRight, tpmsHardWarning, tpmsSoftWarning, timestamp }
+- Reviewed WidgetChartSummary shared component (stats + chart + compact/empty handling)
+- Reviewed ClimateHistoryWidget as reference for WidgetChartSummary + LineChart pattern
+- Reviewed TirePressureVisualWidget for pressure conversion + useSettings usage
+- Charts barrel exports: LineChart, Line, XAxis, YAxis, Tooltip, ReferenceLine, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt
+- ReferenceArea NOT exported — using two ReferenceLine for recommended range band
+- Registry tires section at line 550; insertion after tire-pressure-visual
+
+=== REASONING ===
+- Four-line LineChart (FL blue, FR cyan, RL green, RR purple) with time on X-axis, converted pressure on Y
+- Two dashed ReferenceLines mark the recommended PSI range (2.4–2.8 bar converted to user units)
+- Stats header shows latest FL/FR/RL/RR values via WidgetChartSummary
+- Compact mode (cols<=1): stats only, no chart (via WidgetChartSummary compact prop)
+- All freshness props passed to WidgetShell
+- Null-safe: data ?? [], value ?? null, fmtNumber fallback to '—'
+- All strings via useTranslation('dashboard')
+- Unit conversion via useSettings().convertPressure + pressureUnit
+- No inline styles except Recharts contentStyle (allowed exception)
+- Imports all recharts via @/components/charts barrel
+
+=== CHANGES ===
+1. Created: web/src/features/dashboard/widgets/TirePressureHistoryWidget.tsx
+   - useTirePressureHistory hook for data
+   - buildChartData() maps TirePressureReading[] → ChartDatum[] with convertPressure
+   - 4-line LineChart (FL/FR/RL/RR) with recommended range reference lines
+   - WidgetChartSummary for stats + chart + compact + empty handling
+   - WidgetShell with all freshness props
+2. Modified: web/src/features/dashboard/widgets/registry.ts
+   - Added tire-pressure-history entry after tire-pressure-visual in tires section
+
+=== GATE ===
+$ cd D:\repos\teslasync\web && npx tsc --noEmit
+Exit code: 0 (clean)
+
+STATUS=DONE
+EXIT=0
