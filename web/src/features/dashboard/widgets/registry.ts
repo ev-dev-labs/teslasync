@@ -9,6 +9,7 @@ import {
   Sparkles, Cog, Wrench, FileText, ShieldCheck, ShieldAlert, ThermometerSun,
   Sun, Plug, TrendingDown, GitBranch, Radio, ListMusic, Home,
   PieChart as PieIcon, Server, PlayCircle, Crosshair, AlertCircle, BookOpen,
+  ScrollText,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -870,6 +871,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 2, rows: 4 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./SignalCatalogWidget')),
+  },
+  {
+    id: 'signal-log',
+    name: 'Signal Log',
+    description: 'Live feed of raw signal updates: timestamp, signal, old→new value, source',
+    icon: ScrollText,
+    category: 'telemetry',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 2, rows: 4 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./SignalLogWidget')),
   },
 
   // ── Analytics ──
