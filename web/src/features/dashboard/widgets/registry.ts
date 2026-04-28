@@ -7,7 +7,7 @@ import {
   Command, CalendarRange, Bell, Music, HeartPulse, Moon, Navigation,
   Cpu, RotateCcw, Route, Lightbulb, Trophy, Clock, AlertTriangle,
   Sparkles, Cog, Wrench, FileText, ShieldCheck, ShieldAlert, ThermometerSun,
-  Sun, Plug,
+  Sun, Plug, TrendingDown,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -191,6 +191,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 2, rows: 4 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./BatteryCellsWidget')),
+  },
+  {
+    id: 'battery-degradation-forecast',
+    name: 'Battery Forecast',
+    description: 'Predictive degradation: when battery hits 80%, risk factors, recommendations',
+    icon: TrendingDown,
+    category: 'battery',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./BatteryDegradationForecastWidget')),
   },
 
   // ── Energy ──
