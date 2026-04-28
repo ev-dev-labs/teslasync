@@ -3,3 +3,4 @@ export { WidgetGaugeHero, type GaugeHeroConfig, type GaugeHeroStat } from './Wid
 export { WidgetStatGrid, type StatGridItem } from './WidgetStatGrid';
 export { WidgetChartSummary, type ChartSummaryStat } from './WidgetChartSummary';
 export { WidgetDetailCard, type DetailEntry } from './WidgetDetailCard';
+export { WidgetRankedList, type RankedItem } from './WidgetRankedList';
