@@ -1,6 +1,6 @@
 import { lazy } from 'react';
 import {
-  Battery, BatteryWarning, Zap, Car, MapPin, Shield, Thermometer,
+  Battery, BatteryFull, BatteryWarning, Zap, Car, MapPin, Shield, Thermometer,
   Activity, BarChart3, Gauge, Wifi, TrendingUp, Monitor, Download,
   DollarSign, Calendar, CloudSun, CircleDot, CreditCard, Hash,
   MonitorSmartphone, List, Grid3X3, Workflow, DoorOpen, Eye,
@@ -293,6 +293,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./EnergySiteInfoWidget')),
+  },
+  {
+    id: 'backup-history',
+    name: 'Backup History',
+    description: 'Power outage events: Powerwall backup triggers, duration, energy used',
+    icon: BatteryFull,
+    category: 'energy',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./BackupHistoryWidget')),
   },
 
   // ── Driving ──
