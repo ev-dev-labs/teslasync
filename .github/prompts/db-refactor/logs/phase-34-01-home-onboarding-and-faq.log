@@ -1,0 +1,36 @@
+=== PREFLIGHT ===
+PREV_STATUS_LINE=STATUS=DONE
+PREFLIGHT_STATUS=OK
+=== SURVEY ===
+Read allowed docs: docs/index.md, docs/guide/getting-started.md, docs/guide/local-development.md, docs/guide/faq.md.
+Read source defaults: docker-compose.yml, internal/config/config.go, go.mod, web/package.json, docs/package.json, Makefile, internal/api/router.go.
+Confirmed predecessor log contains STATUS=DONE.
+=== REASONING ===
+Rewrite focuses on accurate product positioning, first-run setup, contributor loops, and concrete FAQ answers.
+Docker Compose exposes web on http://localhost:3000 and API on http://localhost:8080; the API container sets TESLASYNC_PORT=8080.
+Project versions verified as Go 1.25.0, React 18, Vite 5, VitePress docs, TimescaleDB-HA pg17, Redis 7, and Mosquitto 2.
+Preserve VitePress home frontmatter, hero/features keys, and inline SVG animation.
+=== CHANGES ===
+Rewrote docs/index.md for product positioning while preserving VitePress home layout, hero actions, features, and SVG animation.
+Rewrote docs/guide/getting-started.md as an end-to-end first-run path using current Docker Compose defaults.
+Rewrote docs/guide/local-development.md for backend, frontend, docs, database, MQTT, Redis, and worker development loops.
+Rewrote docs/guide/faq.md with concrete user, telemetry, privacy, deployment, and contributor answers.
+=== GATE ===
+STALE_PATTERN_COUNT=3
+
+docs\index.md:100:git clone https://github.com/ev-dev-labs/teslasync.git
+docs\guide\getting-started.md:34:git clone https://github.com/ev-dev-labs/teslasync.git
+docs\guide\local-development.md:23:git clone https://github.com/ev-dev-labs/teslasync.git
+
+EXIT=1
+STATUS=BLOCKED
+=== GATE ===
+STALE_PATTERN_COUNT=1
+
+docs\guide\getting-started.md:34:git clone https://github.com/ev-dev-labs/teslasync.git
+
+EXIT=1
+STATUS=BLOCKED
+=== COMMIT ===
+Gate is BLOCKED before docs build because the required getting-started clone line is matched by the stale TeslaSync\.git pattern under PowerShell case-insensitive Select-String.
+Committing only the blocked log per prompt blocked path; docs rewrites remain unstaged because no commit on red.
