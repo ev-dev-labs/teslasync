@@ -316,6 +316,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./BackupHistoryWidget')),
   },
+  {
+    id: 'power-flow-history',
+    name: 'Power Flow History',
+    description: 'Historical solar/battery/grid/home power routing over 24 hours',
+    icon: TrendingUp,
+    category: 'energy',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 2, rows: 4 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./PowerFlowHistoryWidget')),
+  },
 
   // ── Driving ──
   {
