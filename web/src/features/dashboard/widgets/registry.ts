@@ -10,6 +10,7 @@ import {
   Sun, Plug, TrendingDown, GitBranch, Radio, ListMusic, Home,
   PieChart as PieIcon, Server, PlayCircle, Crosshair, AlertCircle, BookOpen,
   ScrollText,
+  FileSearch,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -1228,6 +1229,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./TelemetryErrorsWidget')),
+  },
+  {
+    id: 'audit-log',
+    name: 'Audit Log',
+    description: 'Security audit trail: user actions, auth events, permission changes',
+    icon: FileSearch,
+    category: 'system',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 2, rows: 4 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./AuditLogWidget')),
   },
 ];
 

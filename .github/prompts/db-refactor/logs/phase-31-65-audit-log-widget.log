@@ -1,0 +1,39 @@
+=== SURVEY ===
+Checked: WidgetEventFeed shared component (shared/WidgetEventFeed.tsx) — sorts, slices, renders TimelineItem.
+Checked: WidgetBigNumber shared component — renders big number + badge for compact mode.
+Checked: useAuditLogs() → GET /system/audit → AuditLogEntry[] (id, action, resource, details, createdAt).
+Checked: useSecurityEvents(vehicleId) → GET /security?vehicle_id=X → SecurityEvent[] (id, locked, sentryMode, doorState, …, createdAt).
+Checked: CommandHistoryWidget, AlertFeedWidget for WidgetShell freshness pattern and compact layout pattern.
+Checked: registry.ts — last entry is telemetry-errors, system category exists.
+Checked: types.ts — WidgetProps has vehicleId?: number, size: WidgetSize.
+
+=== REASONING ===
+Widget merges two data sources (audit logs + security events) into a single EventFeedItem[] feed.
+Standard (2×4): WidgetEventFeed with maxItems=15, sorted by timestamp (handled by shared component).
+Compact (1×2): WidgetBigNumber showing 24h event count + worst-severity badge.
+Security events get severity from locked/sentryMode fields; audit entries infer from action keyword.
+useSecurityEvents requires vehicleId string — follow CommandHistoryWidget pattern (props → first vehicle fallback).
+Both hooks pass freshness props to WidgetShell; combined isLoading/isFetching/isStale/isError.
+
+=== CHANGES ===
+1. Created: web/src/features/dashboard/widgets/AuditLogWidget.tsx
+   - Imports: FileSearch, Info, AlertTriangle, AlertOctagon, ShieldAlert from lucide-react
+   - Uses WidgetEventFeed (shared) for standard layout, WidgetBigNumber for compact
+   - useMemo merges auditLogs + securityEvents into EventFeedItem[]
+   - useMemo computes 24h stats (count + worst severity) for compact view
+   - Null-safe: auditLogs ?? [], securityEvents ?? []
+   - All strings use t() with i18n fallbacks
+   - WidgetShell receives all freshness props
+
+2. Modified: web/src/features/dashboard/widgets/registry.ts
+   - Added FileSearch to lucide-react imports
+   - Added audit-log entry: category=system, defaultSize=2×4, minSize=2×4, maxSize=4×40
+
+=== GATE ===
+npx tsc --noEmit → exit code 0, zero errors.
+
+=== COMMIT ===
+feat(web): add AuditLogWidget to dashboard gallery
+
+EXIT=0
+STATUS=DONE
