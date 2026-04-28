@@ -8,6 +8,7 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useVampireDrainStats, useVampireDrainEvents } from '@/api/hooks/useEnergy';
 import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
+import { WidgetEventFeed, type EventFeedItem } from './shared';
 import type { WidgetProps } from './types';
 
 function drainColor(pctPerDay: number): string {
@@ -54,8 +55,23 @@ export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
 
   const avgDrainPctPerDay = (stats?.avg_drain_rate ?? 0) * 24;
 
-  // Last 5 events for the standard list
-  const recentEvents = useMemo(() => events.slice(0, 5), [events]);
+  // Map drain events → EventFeedItem[] for shared feed
+  const eventItems: EventFeedItem[] = useMemo(
+    () =>
+      events.map((ev) => {
+        const drainDay = (ev.drain_rate_pct_per_hour ?? 0) * 24;
+        return {
+          id: ev.id,
+          icon: <BatteryWarning className="h-3.5 w-3.5" style={{ color: drainColor(drainDay) }} />,
+          title: `${fmtNumber(ev.battery_lost ?? 0, 1)}% · ${formatDuration(ev.duration_hours ?? 0, t)}${ev.sentry_mode ? ` · ${t('widget.vampireDrain.sentry', 'Sentry')}` : ''}`,
+          subtitle: `${fmtNumber(drainDay, 1)}%/${t('widget.vampireDrain.perDay', '/day').replace('/', '')}`,
+          timestamp: ev.start_date,
+          color: drainColor(drainDay),
+          severity: drainDay >= 3 ? 'critical' as const : drainDay >= 1 ? 'warning' as const : 'info' as const,
+        };
+      }),
+    [events, t],
+  );
 
   // Sparkline: daily drain rate from events (most recent 30)
   const sparklineData = useMemo(() => {
@@ -133,50 +149,13 @@ export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
               </div>
             )}
 
-            {/* Recent events list */}
-            {recentEvents.length > 0 ? (
-              <div className="flex-1 min-h-0 overflow-y-auto">
-                <p className="text-[10px] text-white/40 uppercase tracking-wider mb-1">
-                  {t('widget.vampireDrain.recent', 'Recent Events')}
-                </p>
-                <div className="flex flex-col gap-1.5">
-                  {recentEvents.map((ev) => {
-                    const drainDay = (ev.drain_rate_pct_per_hour ?? 0) * 24;
-                    return (
-                      <div
-                        key={ev.id}
-                        className="flex items-center justify-between text-xs gap-2 py-1 border-b border-white/[0.04] last:border-0"
-                      >
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-white/70 truncate">
-                            {new Date(ev.start_date).toLocaleDateString()}
-                          </span>
-                          <span className="text-[10px] text-white/40">
-                            {formatDuration(ev.duration_hours ?? 0, t)}
-                            {ev.sentry_mode && ` · ${t('widget.vampireDrain.sentry', 'Sentry')}`}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <span className="text-white/60">
-                            {fmtNumber(ev.battery_lost ?? 0, 1)}%
-                          </span>
-                          <span
-                            className="font-medium text-[11px]"
-                            style={{ color: drainColor(drainDay) }}
-                          >
-                            {fmtNumber(drainDay, 1)}%/d
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : (
-              <p className="text-xs text-white/30 text-center py-2">
-                {t('widget.vampireDrain.noEvents', 'No recent drain events')}
-              </p>
-            )}
+            {/* Recent events feed */}
+            <WidgetEventFeed
+              items={eventItems}
+              maxItems={5}
+              emptyMessage={t('widget.vampireDrain.noEvents', 'No recent drain events')}
+              emptyIcon={<BatteryWarning className="h-4 w-4" />}
+            />
           </div>
         )
       ) : (
