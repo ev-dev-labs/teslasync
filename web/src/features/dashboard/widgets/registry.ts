@@ -5,7 +5,7 @@ import {
   DollarSign, Calendar, CloudSun, CircleDot, CreditCard, Hash,
   MonitorSmartphone, List, Grid3X3, Workflow, DoorOpen, Eye,
   Command, CalendarRange, Bell, Music, HeartPulse, Moon, Navigation,
-  Cpu, RotateCcw, Route, Lightbulb, Trophy,
+  Cpu, RotateCcw, Route, Lightbulb, Trophy, Clock,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -594,6 +594,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./LifetimeStatsWidget')),
+  },
+  {
+    id: 'state-timeline',
+    name: 'State Timeline',
+    description: 'Vehicle state distribution: driving, charging, asleep, idle breakdown',
+    icon: Clock,
+    category: 'analytics',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./StateTimelineWidget')),
   },
 
   // ── Alerts ──
