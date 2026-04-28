@@ -118,6 +118,7 @@ describe('buildTwinState', () => {
     expect(result.sentryMode).toBeNull();
     expect(result.windowFD).toBeNull();
     expect(result.isCharging).toBe(false);
+    expect(result.isDriving).toBe(false);
   });
 
   it('maps SecurityEvent fields correctly', () => {
@@ -152,5 +153,44 @@ describe('buildTwinState', () => {
     expect(result.turnSignal).toBe('left');
     expect(result.driverSeatOccupied).toBe(true);
     expect(result.isCharging).toBe(true);
+    expect(result.isDriving).toBe(false);
+  });
+
+  it('maps motion, charge, trunk, and window summary fields', () => {
+    const result = buildTwinState(
+      {
+        vehicle_id: 1,
+        ts: '2024-01-01',
+        event_type: 'security',
+        doors_open: 'driver_front,trunk_rear',
+        windows_open: 'fd,rp',
+        locked: false,
+        sentry_mode: false,
+        user_present: null,
+        detail: null,
+        source: 'test',
+      },
+      { state: 'driving', speed: 12, is_charging: false },
+      { vehicle_id: 1, ts: '2024-01-01', session_id: null, battery_level: null, battery_range_mi: null, charging_state: 'Charging', charger_voltage: null, charger_actual_current: null, charger_power_kw: 7, charger_phases: null, charge_energy_added_kwh: null, charge_miles_added: null, charge_rate_mph: null, charger_pilot_current: null, scheduled_charging_at: null, source: 'test' },
+    );
+
+    expect(result.isDriving).toBe(true);
+    expect(result.isCharging).toBe(true);
+    expect(result.chargePortOpen).toBe(true);
+    expect(result.doors.driverFront).toBe(true);
+    expect(result.trunkOpen).toBe(true);
+    expect(result.windowFD).toBe('open');
+    expect(result.windowRP).toBe('open');
+  });
+
+  it('maps charging state when only charging telemetry is available', () => {
+    const result = buildTwinState(
+      null,
+      null,
+      { vehicle_id: 1, ts: '2024-01-01', session_id: null, battery_level: null, battery_range_mi: null, charging_state: 'Charging', charger_voltage: null, charger_actual_current: null, charger_power_kw: 3, charger_phases: null, charge_energy_added_kwh: null, charge_miles_added: null, charge_rate_mph: null, charger_pilot_current: null, scheduled_charging_at: null, source: 'test' },
+    );
+
+    expect(result.isCharging).toBe(true);
+    expect(result.chargePortOpen).toBe(true);
   });
 });

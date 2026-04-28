@@ -32,7 +32,13 @@ export default function DigitalTwinWidget({ vehicleId, size }: WidgetProps) {
   const windowStates = [twinState.windowFD, twinState.windowFP, twinState.windowRD, twinState.windowRP];
   const hasWindowData = windowStates.some((windowState) => windowState !== null);
   const openWindowCount = windowStates.filter((windowState) => windowState !== null && windowState !== 'closed').length;
-  const openDoorCount = Object.values(twinState.doors).filter(Boolean).length;
+  const sideDoorStates = [
+    twinState.doors.driverFront,
+    twinState.doors.passengerFront,
+    twinState.doors.driverRear,
+    twinState.doors.passengerRear,
+  ];
+  const openDoorCount = sideDoorStates.filter(Boolean).length;
   const twinSize = size.cols >= 3 || size.rows >= 5 ? 'md' : 'sm';
 
   const lockBadgeVariant = twinState.locked === null ? 'neutral' : twinState.locked ? 'success' : 'danger';
@@ -91,9 +97,44 @@ export default function DigitalTwinWidget({ vehicleId, size }: WidgetProps) {
             <Badge variant={windowBadgeVariant}>
               {windowLabel}
             </Badge>
+            {twinState.isDriving ? (
+              <Badge variant="info" dot>
+                {t('widget.driving', 'Driving')}
+              </Badge>
+            ) : null}
+            {twinState.isCharging ? (
+              <Badge variant="info" dot>
+                {t('widget.charging', 'Charging')}
+              </Badge>
+            ) : null}
+            {twinState.sentryMode ? (
+              <Badge variant="warning" dot>
+                {t('widget.sentryOn', 'Sentry')}
+              </Badge>
+            ) : null}
+            {twinState.headlights ? (
+              <Badge variant="neutral" dot>
+                {t('widget.headlightsOn', 'Lights On')}
+              </Badge>
+            ) : null}
+            {twinState.hazards ? (
+              <Badge variant="warning" dot>
+                {t('widget.hazardsOn', 'Hazards')}
+              </Badge>
+            ) : null}
             {openDoorCount > 0 ? (
               <Badge variant="warning">
                 {openDoorCount} {t('widget.doorsOpen', 'Doors Open')}
+              </Badge>
+            ) : null}
+            {twinState.frunkOpen ? (
+              <Badge variant="warning">
+                {t('widget.frunkOpen', 'Frunk Open')}
+              </Badge>
+            ) : null}
+            {twinState.trunkOpen ? (
+              <Badge variant="warning">
+                {t('widget.trunkOpen', 'Trunk Open')}
               </Badge>
             ) : null}
           </div>

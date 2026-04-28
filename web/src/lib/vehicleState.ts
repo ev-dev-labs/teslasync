@@ -35,7 +35,7 @@ export function parseDoorState(doorState: string | null | undefined): DoorStates
 
   // Check for "all closed" shorthand values
   const lower = trimmed.toLowerCase();
-  if (lower === 'closedall' || lower === 'closed' || lower === '0' || lower === 'false') {
+  if (lower === 'closedall' || lower === 'closed' || lower === 'none' || lower === '[]' || lower === '0' || lower === 'false') {
     return {
       driverFront: false,
       passengerFront: false,
@@ -69,8 +69,15 @@ export function parseDoorState(doorState: string | null | undefined): DoorStates
     passengerFront: lower.includes('passenger') && lower.includes('front') ? true : null,
     driverRear: (lower.includes('driver') && lower.includes('rear')) || lower.includes('driverrear') ? true : null,
     passengerRear: (lower.includes('passenger') && lower.includes('rear')) || lower.includes('passengerrear') ? true : null,
-    trunkFront: null,
-    trunkRear: null,
+    trunkFront: lower.includes('frunk') || lower.includes('fronttrunk') || lower.includes('front_trunk') || lower.includes('trunkfront') || lower.includes('trunk_front') ? true : null,
+    trunkRear: (
+      lower.includes('reartrunk') ||
+      lower.includes('rear_trunk') ||
+      lower.includes('trunkrear') ||
+      lower.includes('trunk_rear') ||
+      lower.includes('liftgate') ||
+      (lower.includes('trunk') && !lower.includes('frunk') && !lower.includes('front'))
+    ) ? true : null,
   };
 }
 
@@ -159,27 +166,51 @@ function isVehicleDriving(vehicleState: { state?: string; speed?: number } | nul
   return vehicleState.state?.toLowerCase() === 'driving' || (vehicleState.speed ?? 0) > 0;
 }
 
+function isChargingActive(
+  vehicleState: { is_charging?: boolean; charger_power?: number } | null | undefined,
+  charging: { charging_state?: string | null; charger_power_kw?: number | null } | null | undefined,
+): boolean {
+  const normalizedState = charging?.charging_state?.toLowerCase().replace(/[\s_-]/g, '') ?? '';
+  return Boolean(vehicleState?.is_charging) ||
+    (vehicleState?.charger_power ?? 0) > 0 ||
+    (charging?.charger_power_kw ?? 0) > 0 ||
+    normalizedState === 'charging' ||
+    normalizedState === 'starting';
+}
+
+function parseWindowOpenSummary(
+  windowsOpen: string | null | undefined,
+  aliases: string[],
+): WindowState {
+  if (!windowsOpen) return null;
+  const normalized = windowsOpen.toLowerCase();
+  if (normalized === 'closed' || normalized === 'none' || normalized === '[]' || normalized === 'false') return 'closed';
+  return aliases.some((alias) => normalized.includes(alias)) ? 'open' : null;
+}
+
 /**
  * Merges SecurityEvent + VehicleState + ChargingTelemetry into a single
  * view-model for the VehicleTwin component.
  */
 export function buildTwinState(
   security: SecurityEvent | null | undefined,
-  vehicleState: { state?: string; speed?: number; is_charging?: boolean; is_locked?: boolean; sentry_mode?: boolean } | null | undefined,
+  vehicleState: { state?: string; speed?: number; is_charging?: boolean; charger_power?: number; is_locked?: boolean; sentry_mode?: boolean } | null | undefined,
   charging: ChargingTelemetry | null | undefined,
 ): VehicleTwinState {
-  if (!security && !vehicleState) return { ...EMPTY_TWIN_STATE };
-  const doors = parseDoorState(security?.door_state);
+  if (!security && !vehicleState && !charging) return { ...EMPTY_TWIN_STATE };
+  const doors = parseDoorState(security?.door_state ?? security?.doors_open);
+  const chargingActive = isChargingActive(vehicleState, charging);
+  const windowsOpen = security?.windows_open ?? null;
   return {
     doors,
-    windowFD: parseWindowState(security?.fd_window),
-    windowFP: parseWindowState(security?.fp_window),
-    windowRD: parseWindowState(security?.rd_window),
-    windowRP: parseWindowState(security?.rp_window),
+    windowFD: parseWindowState(security?.fd_window) ?? parseWindowOpenSummary(windowsOpen, ['fd', 'front driver', 'driver front', 'driver_front']),
+    windowFP: parseWindowState(security?.fp_window) ?? parseWindowOpenSummary(windowsOpen, ['fp', 'front passenger', 'passenger front', 'passenger_front']),
+    windowRD: parseWindowState(security?.rd_window) ?? parseWindowOpenSummary(windowsOpen, ['rd', 'rear driver', 'driver rear', 'driver_rear']),
+    windowRP: parseWindowState(security?.rp_window) ?? parseWindowOpenSummary(windowsOpen, ['rp', 'rear passenger', 'passenger rear', 'passenger_rear']),
     frunkOpen: doors.trunkFront,
     trunkOpen: doors.trunkRear,
-    chargePortOpen: charging?.charge_port_door_open ?? null,
-    isCharging: vehicleState?.is_charging ?? false,
+    chargePortOpen: charging?.charge_port_door_open ?? (chargingActive ? true : null),
+    isCharging: chargingActive,
     isDriving: isVehicleDriving(vehicleState),
     locked: security?.locked ?? vehicleState?.is_locked ?? null,
     sentryMode: security?.sentry_mode ?? vehicleState?.sentry_mode ?? null,
