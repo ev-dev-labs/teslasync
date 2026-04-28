@@ -823,6 +823,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./LocationMapWidget')),
   },
+  {
+    id: 'location-favorites',
+    name: 'Favorite Locations',
+    description: 'Frequently visited places, current location status (home/work/other)',
+    icon: MapPin,
+    category: 'maps',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./LocationFavoritesWidget')),
+  },
 
   // ── Maintenance ──
   {

@@ -1,0 +1,41 @@
+=== SURVEY ===
+- Reviewed WidgetShell props: title, icon, loading, error, updatedAt, isFetching, isStale, isError, onRefresh
+- Reviewed WidgetRankedList shared component: RankedItem interface (id, label, value, formattedValue, badge?, barColor?)
+- Reviewed RouteEfficiencyWidget as reference pattern for WidgetRankedList usage
+- Reviewed useLocations hook: returns Location[] (id, addressName, latitude, longitude, visitCount, totalDurationMin, lastVisited)
+- Reviewed useLocationSnapshotLatest hook: returns LocationSnapshot (located_at_home, located_at_work, located_at_favorite, destination_name, miles_to_arrival)
+- Reviewed types.ts, location.ts for field shapes
+- Confirmed MapPin already imported in registry.ts
+
+=== REASONING ===
+- Widget uses two data sources: useLocations (ranked list) and useLocationSnapshotLatest (current badge)
+- Standard (2×4): current location badge (Home/Work/Favorite/Other) + top 5 places via WidgetRankedList
+- Compact (1×2): badge only with emoji + label
+- WidgetRankedList handles sorting, limiting, empty state, bars, touch targets
+- Map Location.visitCount → RankedItem.value, addressName → label, formattedValue shows count + relative time
+- Null safety: locations ?? [], visitCount ?? 0, addressName ?? '—', lastVisited checked before formatRelative
+- No unit conversions needed (visit counts are unit-less; miles_to_arrival not shown in widget spec)
+- All strings via useTranslation('dashboard')
+- Freshness props merged from both hooks (max updatedAt, OR'd booleans)
+
+=== CHANGES ===
+1. Created: web/src/features/dashboard/widgets/LocationFavoritesWidget.tsx
+   - Default export LocationFavoritesWidget
+   - Uses useLocations + useLocationSnapshotLatest
+   - Compact mode: emoji + badge centered
+   - Standard mode: location badge header + WidgetRankedList
+   - All freshness props passed to WidgetShell
+   - All strings via t() with fallbacks
+
+2. Modified: web/src/features/dashboard/widgets/registry.ts
+   - Added 'location-favorites' entry after 'location-map' in maps category
+   - Reused existing MapPin icon import
+
+=== GATE ===
+cd D:\repos\teslasync\web && npx tsc --noEmit
+Result: exit code 0 — clean compile, no errors.
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
+feat(web): add LocationFavoritesWidget to dashboard gallery
