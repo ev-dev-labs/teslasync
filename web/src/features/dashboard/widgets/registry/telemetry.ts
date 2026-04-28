@@ -1,0 +1,61 @@
+import { lazy } from 'react';
+import { Wifi, Activity, BookOpen, ScrollText } from 'lucide-react';
+import type { WidgetDef } from '../types';
+
+export const TELEMETRY_WIDGETS: WidgetDef[] = [
+  {
+    id: 'live-signals',
+    name: 'Live Signals',
+    description: 'Real-time signal values with sparklines',
+    icon: Wifi,
+    category: 'telemetry',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 2, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('../LiveSignalsWidget')),
+  },
+  {
+    id: 'live-signal-sparklines',
+    name: 'Live Signal Sparklines',
+    description: 'Configurable list of 4-6 signals with mini sparkline charts (last 5 min)',
+    icon: Activity,
+    category: 'telemetry',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 2, rows: 4 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('../LiveSignalSparklinesWidget')),
+  },
+  {
+    id: 'signal-health',
+    name: 'Signal Health',
+    description: 'Telemetry signal coverage: active signals, data gaps, freshness',
+    icon: Activity,
+    category: 'telemetry',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('../SignalHealthWidget')),
+  },
+  {
+    id: 'signal-catalog',
+    name: 'Signal Catalog',
+    description: 'Browse all available telemetry signals with categories and observation counts',
+    icon: BookOpen,
+    category: 'telemetry',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 2, rows: 4 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('../SignalCatalogWidget')),
+  },
+  {
+    id: 'signal-log',
+    name: 'Signal Log',
+    description: 'Live feed of raw signal updates: timestamp, signal, old→new value, source',
+    icon: ScrollText,
+    category: 'telemetry',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 2, rows: 4 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('../SignalLogWidget')),
+  },
+];

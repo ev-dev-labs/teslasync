@@ -1,0 +1,61 @@
+import { lazy } from 'react';
+import { MapPin, Crosshair, Navigation2, Map as MapIcon } from 'lucide-react';
+import type { WidgetDef } from '../types';
+
+export const MAP_WIDGETS: WidgetDef[] = [
+  {
+    id: 'location-map',
+    name: 'Vehicle Location Map',
+    description: 'Live map of vehicle position with heading arrow',
+    icon: MapPin,
+    category: 'maps',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 4 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('../LocationMapWidget')),
+  },
+  {
+    id: 'location-favorites',
+    name: 'Favorite Locations',
+    description: 'Frequently visited places, current location status (home/work/other)',
+    icon: MapPin,
+    category: 'maps',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('../LocationFavoritesWidget')),
+  },
+  {
+    id: 'geofence-status',
+    name: 'Geofence Status',
+    description: 'Configured geofences with inside/outside status for current vehicle',
+    icon: Crosshair,
+    category: 'maps',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('../GeofenceWidget')),
+  },
+  {
+    id: 'destination-eta',
+    name: 'Destination ETA',
+    description: 'Active navigation: destination, distance remaining, arrival countdown',
+    icon: Navigation2,
+    category: 'maps',
+    defaultSize: { cols: 2, rows: 2 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 3, rows: 40 },
+    component: lazy(() => import('../DestinationETAWidget')),
+  },
+  {
+    id: 'position-heatmap',
+    name: 'Position Heatmap',
+    description: 'GPS position density heatmap: frequently visited locations glow brighter',
+    icon: MapIcon,
+    category: 'maps',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 2, rows: 4 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('../PositionHeatmapWidget')),
+  },
+];
