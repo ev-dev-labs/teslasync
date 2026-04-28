@@ -7,7 +7,7 @@ import {
   Command, CalendarRange, CalendarDays, Bell, Music, HeartPulse, Moon, Navigation, Terminal,
   Cpu, RotateCcw, Route, Lightbulb, Trophy, Clock, AlertTriangle,
   Sparkles, Cog, Wrench, FileText, ShieldCheck, ShieldAlert, ThermometerSun,
-  Sun, Plug, TrendingDown, GitBranch, Radio, ListMusic,
+  Sun, Plug, TrendingDown, GitBranch, Radio, ListMusic, Home,
   PieChart as PieIcon,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
@@ -282,6 +282,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 2, rows: 4 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./LivePowerFlowWidget')),
+  },
+  {
+    id: 'energy-site-info',
+    name: 'Energy Site',
+    description: 'Tesla Energy system: solar capacity, Powerwall count, gateway firmware',
+    icon: Home,
+    category: 'energy',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./EnergySiteInfoWidget')),
   },
 
   // ── Driving ──

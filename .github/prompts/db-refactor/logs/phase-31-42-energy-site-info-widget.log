@@ -1,0 +1,39 @@
+=== SURVEY ===
+Surveyed:
+- api/hooks/useEnergy.ts: useTeslaEnergySites (L118) and useTeslaEnergySiteInfo (L143) confirmed.
+- types/energy.ts: TeslaEnergySite (L240), TeslaEnergySiteInfo (L265), TeslaEnergySiteInfoResponse (L287).
+- shared/WidgetDetailCard.tsx: DetailEntry interface, compact slicing, empty state handling.
+- WidgetShell.tsx: freshness props (updatedAt, isFetching, isStale, isError, onRefresh).
+- registry.ts: energy category ends at live-power-flow (L284). Home icon not yet imported.
+- WallConnectorWidget.tsx: reference pattern for dual-hook (sites + detail), freshness merging.
+
+=== REASONING ===
+- Widget uses two hooks: useTeslaEnergySites to discover site IDs, useTeslaEnergySiteInfo for detail.
+- WidgetDetailCard handles compact mode (slices to 4 entries), empty state, row layout.
+- Four KV rows: Solar System (kW), Powerwalls (count × kWh), Gateway Firmware (mono), Installation Timezone.
+- nameplate_power and nameplate_energy are in watts/watt-hours → divide by 1000 for kW/kWh.
+- No unit conversions needed (kW/kWh are universal energy units, not distance/temp/speed/pressure).
+- Compact mode handled by passing compact=true to WidgetDetailCard.
+
+=== CHANGES ===
+1. Created: web/src/features/dashboard/widgets/EnergySiteInfoWidget.tsx
+   - Default export EnergySiteInfoWidget
+   - Dual hooks: useTeslaEnergySites + useTeslaEnergySiteInfo
+   - Freshness props merged and passed to WidgetShell
+   - 4 DetailEntry rows: Solar System, Powerwalls, Gateway Firmware, Installation Timezone
+   - Null-safe: sites ?? [], info?.field ?? null, batteryCount ?? 0
+   - All strings via useTranslation('dashboard')
+   - Compact mode via isCompact = size.cols <= 1 → passed to WidgetDetailCard
+   - Empty states: no site linked vs no data available
+
+2. Modified: web/src/features/dashboard/widgets/registry.ts
+   - Added Home to lucide-react imports
+   - Added energy-site-info entry after live-power-flow (energy category)
+   - defaultSize: { cols: 2, rows: 4 }, minSize: { cols: 1, rows: 2 }, maxSize: { cols: 4, rows: 40 }
+
+=== GATE ===
+TypeScript: npx tsc --noEmit → exit code 0 (clean)
+
+=== COMMIT ===
+EXIT=0
+STATUS=DONE
