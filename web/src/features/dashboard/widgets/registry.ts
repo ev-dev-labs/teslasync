@@ -327,6 +327,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./PowerFlowHistoryWidget')),
   },
+  {
+    id: 'energy-stats',
+    name: 'Energy Stats',
+    description: 'Energy overview: daily usage chart, total used/charged, efficiency, CO₂ saved',
+    icon: Zap,
+    category: 'energy',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./EnergyStatsWidget')),
+  },
 
   // ── Driving ──
   {
