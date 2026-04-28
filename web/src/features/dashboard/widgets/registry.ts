@@ -282,6 +282,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./DrivingDynamicsWidget')),
   },
+  {
+    id: 'speed-profile',
+    name: 'Speed Profile',
+    description: 'Speed distribution histogram with efficiency overlay — find your optimal speed',
+    icon: Activity,
+    category: 'driving',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 2, rows: 4 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./SpeedProfileWidget')),
+  },
 
   // ── Charging ──
   {
