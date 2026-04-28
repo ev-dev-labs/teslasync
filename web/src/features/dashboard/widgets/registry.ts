@@ -6,7 +6,7 @@ import {
   MonitorSmartphone, List, Grid3X3, Workflow, DoorOpen, Eye,
   Command, CalendarRange, Bell, Music, HeartPulse, Moon, Navigation,
   Cpu, RotateCcw, Route, Lightbulb, Trophy, Clock, AlertTriangle,
-  Sparkles, Cog,
+  Sparkles, Cog, Wrench,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -700,6 +700,19 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 4 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./LocationMapWidget')),
+  },
+
+  // ── Maintenance ──
+  {
+    id: 'maintenance-tracker',
+    name: 'Maintenance',
+    description: 'Upcoming maintenance reminders + recent service history',
+    icon: Wrench,
+    category: 'vehicle',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./MaintenanceTrackerWidget')),
   },
 ];
 
