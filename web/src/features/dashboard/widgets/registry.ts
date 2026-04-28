@@ -115,6 +115,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     component: lazy(() => import('./MotorPerformanceWidget')),
   },
   {
+    id: 'motor-history',
+    name: 'Motor History',
+    description: 'Motor torque and stator temp over time with danger zone highlighting',
+    icon: Cog,
+    category: 'vehicle',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 2, rows: 4 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./MotorHistoryWidget')),
+  },
+  {
     id: 'vehicle-specs',
     name: 'Vehicle Specs',
     description: 'Configuration reference: model, trim, paint, wheels, options',
