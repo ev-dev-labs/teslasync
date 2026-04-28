@@ -1,0 +1,43 @@
+=== SURVEY ===
+Surveyed:
+- web/src/features/dashboard/widgets/ (directory listing, types.ts, WidgetShell.tsx)
+- web/src/features/dashboard/widgets/shared/WidgetBigNumber.tsx (interface, rendering)
+- web/src/features/dashboard/widgets/shared/index.ts (exports)
+- web/src/features/dashboard/widgets/registry.ts (import pattern, maps category entries)
+- web/src/features/dashboard/widgets/LocationFavoritesWidget.tsx (reference: locationBadge, hook usage)
+- web/src/api/hooks/useVehicles.ts (useLocationSnapshotLatest, useVehicles)
+- web/src/api/types.ts (LocationSnapshot: destination_name, miles_to_arrival, minutes_to_arrival, located_at_home/work/favorite)
+- web/src/hooks/useSettings.ts (convertDistance, distanceUnit)
+- web/src/lib/numberFormat.ts (fmtNumber, fmtInt)
+- .github/instructions/unit-conversion.instructions.md
+- .github/instructions/react-frontend.instructions.md
+
+=== REASONING ===
+- Hook: useLocationSnapshotLatest(vehicleId) returns LocationSnapshot with nav + presence fields.
+- Navigating state: destination_name is non-null and non-empty.
+- Standard (2×2): when navigating → destination name, distance (converted), ETA countdown, progress bar.
+  When not navigating → location badge (Home/Work/Other) + "No active navigation" message.
+- Compact (1×2): ETA minutes via WidgetBigNumber when navigating, location badge when not.
+- Distance conversion: miles_to_arrival → convertDistance() from useSettings.
+- All freshness props passed to WidgetShell.
+- Progress bar uses inline style for dynamic width (allowed per guidelines — dynamic computed value).
+- All strings via useTranslation('dashboard').
+
+=== CHANGES ===
+1. Created: web/src/features/dashboard/widgets/DestinationETAWidget.tsx
+   - Compact: WidgetBigNumber(minutes) or location badge
+   - Standard: destination name + ETA countdown + distance + progress bar, or location badge
+   - Null-safe, i18n, freshness props, unit conversion
+2. Modified: web/src/features/dashboard/widgets/registry.ts
+   - Added Navigation2 to lucide-react imports
+   - Added 'destination-eta' entry in maps category after geofence-status
+
+=== GATE ===
+cd D:\repos\teslasync\web && npx tsc --noEmit
+Result: exit code 0 (clean)
+
+=== COMMIT ===
+git add -A && git commit -m "feat(web): add DestinationETAWidget to dashboard gallery"
+
+EXIT=0
+STATUS=DONE

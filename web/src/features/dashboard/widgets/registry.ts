@@ -4,7 +4,7 @@ import {
   Activity, BarChart2, BarChart3, Gauge, Wifi, TrendingUp, Monitor, Download,
   DollarSign, Calendar, CloudSun, CircleDot, CreditCard, Hash,
   MonitorSmartphone, List, Grid3X3, Workflow, DoorOpen, Eye,
-  Command, CalendarRange, CalendarDays, Bell, Music, HeartPulse, Moon, Navigation, Terminal,
+  Command, CalendarRange, CalendarDays, Bell, Music, HeartPulse, Moon, Navigation, Navigation2, Terminal,
   Cpu, RotateCcw, Route, Lightbulb, Trophy, Clock, AlertTriangle,
   Sparkles, Cog, Wrench, FileText, ShieldCheck, ShieldAlert, ThermometerSun,
   Sun, Plug, TrendingDown, GitBranch, Radio, ListMusic, Home,
@@ -1010,6 +1010,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./GeofenceWidget')),
+  },
+  {
+    id: 'destination-eta',
+    name: 'Destination ETA',
+    description: 'Active navigation: destination, distance remaining, arrival countdown',
+    icon: Navigation2,
+    category: 'maps',
+    defaultSize: { cols: 2, rows: 2 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 3, rows: 40 },
+    component: lazy(() => import('./DestinationETAWidget')),
   },
 
   // ── Maintenance ──
