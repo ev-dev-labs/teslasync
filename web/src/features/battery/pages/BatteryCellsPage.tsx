@@ -191,29 +191,17 @@ function CellHeatmap({
   );
 }
 
-/* ── InsightCard ────────────────────────────────────────────────── */
+const insightPanelClass = {
+  good: 'border-neon-green/20 bg-neon-green/5',
+  warning: 'border-neon-amber/20 bg-neon-amber/5',
+  critical: 'border-neon-red/20 bg-neon-red/5',
+} as const;
 
-function InsightCard({ icon, title, description, status }: {
-  icon: React.ReactNode; title: string; description: string; status: 'good' | 'warning' | 'critical';
-}) {
-  const bgCls = {
-    good: 'border-neon-green/20 bg-neon-green/5',
-    warning: 'border-neon-amber/20 bg-neon-amber/5',
-    critical: 'border-neon-red/20 bg-neon-red/5',
-  };
-  const iconCls = { good: 'text-neon-green', warning: 'text-neon-amber', critical: 'text-neon-red' };
-  return (
-    <div className={cn('rounded-xl border p-4 transition-all duration-200', bgCls[status])}>
-      <div className="flex items-start gap-3">
-        <div className={cn('mt-0.5', iconCls[status])}>{icon}</div>
-        <div>
-          <p className="text-sm font-medium text-white/90">{title}</p>
-          <p className="text-xs text-white/60 mt-0.5">{description}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
+const insightIconClass = {
+  good: 'text-neon-green',
+  warning: 'text-neon-amber',
+  critical: 'text-neon-red',
+} as const;
 
 /* ── Page Component ────────────────────────────────────────────── */
 
@@ -808,7 +796,18 @@ export default function BatteryCellsPage() {
           {insights.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {insights.map((ins, i) => (
-                <InsightCard key={i} {...ins} />
+                <GlassPanel
+                  key={i}
+                  className={cn('border p-4 transition-all duration-200', insightPanelClass[ins.status])}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={cn('mt-0.5', insightIconClass[ins.status])}>{ins.icon}</div>
+                    <div>
+                      <p className="text-sm font-medium text-white/90">{ins.title}</p>
+                      <p className="mt-0.5 text-xs text-white/60">{ins.description}</p>
+                    </div>
+                  </div>
+                </GlassPanel>
               ))}
             </div>
           ) : (

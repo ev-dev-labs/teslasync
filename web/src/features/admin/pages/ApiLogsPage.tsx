@@ -22,21 +22,17 @@ import type { APICallLog, APICallLogStats } from '@/api/types';
 /*  Local helpers                                                      */
 /* ------------------------------------------------------------------ */
 
-function StatusBadge({ code }: { code: number | null }) {
-  if (!code) return <Badge variant="neutral" size="sm">N/A</Badge>;
-  const variant: 'success' | 'info' | 'warning' | 'danger' =
-    code < 300 ? 'success' : code < 400 ? 'info' : code < 500 ? 'warning' : 'danger';
-  return <Badge variant={variant} size="sm">{code}</Badge>;
-}
+type LogBadgeVariant = 'success' | 'info' | 'warning' | 'danger' | 'neutral';
 
-function MethodBadge({ method }: { method: string }) {
-  const variant: Record<string, 'success' | 'info' | 'warning' | 'danger'> = {
-    GET: 'success', POST: 'info', PUT: 'warning', PATCH: 'warning', DELETE: 'danger',
-  };
-  return <Badge variant={variant[method] ?? 'neutral'} size="sm">{method}</Badge>;
-}
+const METHOD_VARIANTS: Record<string, LogBadgeVariant> = {
+  GET: 'success',
+  POST: 'info',
+  PUT: 'warning',
+  PATCH: 'warning',
+  DELETE: 'danger',
+};
 
-const SERVICE_CONFIG: Record<string, { label: string; variant: 'info' | 'success' | 'warning' | 'neutral' }> = {
+const SERVICE_CONFIG: Record<string, { label: string; variant: LogBadgeVariant }> = {
   'tesla-api':       { label: 'Tesla API',       variant: 'info' },
   'fleet-telemetry': { label: 'Fleet Telemetry', variant: 'success' },
   'geocoding':       { label: 'Geocoding',       variant: 'warning' },
@@ -45,9 +41,16 @@ const SERVICE_CONFIG: Record<string, { label: string; variant: 'info' | 'success
   'eia':             { label: 'EIA',             variant: 'neutral' },
 };
 
-function ServiceBadge({ service }: { service: string }) {
-  const config = SERVICE_CONFIG[service] ?? { label: service, variant: 'neutral' as const };
-  return <Badge variant={config.variant} size="sm">{config.label}</Badge>;
+function statusBadgeVariant(code: number | null): LogBadgeVariant {
+  if (!code) return 'neutral';
+  if (code < 300) return 'success';
+  if (code < 400) return 'info';
+  if (code < 500) return 'warning';
+  return 'danger';
+}
+
+function serviceBadgeConfig(service: string): { label: string; variant: LogBadgeVariant } {
+  return SERVICE_CONFIG[service] ?? { label: service, variant: 'neutral' };
 }
 
 function JsonViewer({ data, label }: { data: string | null; label: string }) {
@@ -173,18 +176,21 @@ export default function ApiLogsPage() {
             <span className="text-xs font-medium text-[var(--text-muted)]">
               {t('apiLogs.byService', 'By Service')}:
             </span>
-            {Object.entries(stats.by_service).map(([svc, count]) => (
-              <UiButton
-                key={svc}
-                type="button"
-                variant="ghost"
-                onClick={() => { setService(svc); setPage(0); }}
-                className="!h-auto cursor-pointer gap-1.5 border-0 !bg-transparent !p-0"
-              >
-                <ServiceBadge service={svc} />
-                <span className="text-xs text-[var(--text-secondary)]">{fmtInt(count)}</span>
-              </UiButton>
-            ))}
+            {Object.entries(stats.by_service).map(([svc, count]) => {
+              const config = serviceBadgeConfig(svc);
+              return (
+                <UiButton
+                  key={svc}
+                  type="button"
+                  variant="ghost"
+                  onClick={() => { setService(svc); setPage(0); }}
+                  className="!h-auto cursor-pointer gap-1.5 border-0 !bg-transparent !p-0"
+                >
+                  <Badge variant={config.variant} size="sm">{config.label}</Badge>
+                  <span className="text-xs text-[var(--text-secondary)]">{fmtInt(count)}</span>
+                </UiButton>
+              );
+            })}
           </div>
         )}
       </FadeIn>
@@ -302,69 +308,76 @@ export default function ApiLogsPage() {
             <>
               {/* Log entries */}
               <div className="divide-y divide-[var(--glass-border)]">
-                {logs.map((log: APICallLog) => (
-                  <div key={log.id}>
-                    <div
-                      onClick={() => setExpandedId(expandedId === log.id ? null : log.id)}
-                      className="flex items-center gap-2 px-4 py-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
-                    >
-                      <span className="text-xs font-mono text-[var(--text-muted)] whitespace-nowrap w-36 shrink-0 hidden sm:block">
-                        {formatDateTime(log.ts)}
-                      </span>
-                      <ServiceBadge service={log.service} />
-                      <MethodBadge method={log.http_method} />
-                      <span className="text-xs font-mono text-[var(--text-secondary)] line-clamp-1 break-all flex-1" title={log.endpoint}>
-                        {log.endpoint ?? ''}
-                      </span>
-                      <StatusBadge code={log.status_code} />
-                      <span className="text-xs font-mono text-[var(--text-secondary)] w-16 text-right shrink-0">
-                        {log.duration_ms}ms
-                      </span>
-                      <span className="text-xs text-red-400 truncate max-w-[250px] hidden md:block">
-                        {log.error_message || '—'}
-                      </span>
-                      {expandedId === log.id
-                        ? <ChevronUp className="h-3.5 w-3.5 text-[var(--text-muted)] shrink-0" />
-                        : <ChevronDown className="h-3.5 w-3.5 text-[var(--text-muted)] shrink-0" />}
-                    </div>
-
-                    {/* Mobile date + error (visible on small screens) */}
-                    {expandedId !== log.id && (
-                      <div className="px-4 pb-2 sm:hidden">
-                        <p className="text-[10px] text-[var(--text-muted)]">{formatDateTime(log.ts)}</p>
-                        {log.error_message && <p className="text-[10px] text-red-400 truncate mt-0.5">{log.error_message}</p>}
+                {logs.map((log: APICallLog) => {
+                  const serviceConfig = serviceBadgeConfig(log.service);
+                  return (
+                    <div key={log.id}>
+                      <div
+                        onClick={() => setExpandedId(expandedId === log.id ? null : log.id)}
+                        className="flex items-center gap-2 px-4 py-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
+                      >
+                        <span className="text-xs font-mono text-[var(--text-muted)] whitespace-nowrap w-36 shrink-0 hidden sm:block">
+                          {formatDateTime(log.ts)}
+                        </span>
+                        <Badge variant={serviceConfig.variant} size="sm">{serviceConfig.label}</Badge>
+                        <Badge variant={METHOD_VARIANTS[log.http_method] ?? 'neutral'} size="sm">
+                          {log.http_method}
+                        </Badge>
+                        <span className="text-xs font-mono text-[var(--text-secondary)] line-clamp-1 break-all flex-1" title={log.endpoint}>
+                          {log.endpoint ?? ''}
+                        </span>
+                        <Badge variant={statusBadgeVariant(log.status_code)} size="sm">
+                          {log.status_code ?? 'N/A'}
+                        </Badge>
+                        <span className="text-xs font-mono text-[var(--text-secondary)] w-16 text-right shrink-0">
+                          {log.duration_ms}ms
+                        </span>
+                        <span className="text-xs text-red-400 truncate max-w-[250px] hidden md:block">
+                          {log.error_message || '—'}
+                        </span>
+                        {expandedId === log.id
+                          ? <ChevronUp className="h-3.5 w-3.5 text-[var(--text-muted)] shrink-0" />
+                          : <ChevronDown className="h-3.5 w-3.5 text-[var(--text-muted)] shrink-0" />}
                       </div>
-                    )}
 
-                    {/* Expanded detail */}
-                    {expandedId === log.id && (
-                      <div className="p-4 space-y-3 bg-[var(--surface-2)]">
-                        <div className="sm:hidden mb-2">
+                      {/* Mobile date + error (visible on small screens) */}
+                      {expandedId !== log.id && (
+                        <div className="px-4 pb-2 sm:hidden">
                           <p className="text-[10px] text-[var(--text-muted)]">{formatDateTime(log.ts)}</p>
-                          {log.error_message && <p className="text-xs text-red-400 mt-1">{log.error_message}</p>}
+                          {log.error_message && <p className="text-[10px] text-red-400 truncate mt-0.5">{log.error_message}</p>}
                         </div>
-                        <div>
-                          <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)] mb-1">{t('apiLogs.requestUrl', 'Request URL')}</p>
-                          <GlassPanel className="!p-3 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all">
-                            {log.http_method} {log.endpoint}
-                          </GlassPanel>
-                        </div>
-                        {log.error_message && (
+                      )}
+
+                      {/* Expanded detail */}
+                      {expandedId === log.id && (
+                        <div className="p-4 space-y-3 bg-[var(--surface-2)]">
+                          <div className="sm:hidden mb-2">
+                            <p className="text-[10px] text-[var(--text-muted)]">{formatDateTime(log.ts)}</p>
+                            {log.error_message && <p className="text-xs text-red-400 mt-1">{log.error_message}</p>}
+                          </div>
                           <div>
-                            <p className="text-[10px] font-medium uppercase tracking-wider text-red-400 mb-1">{t('apiLogs.error', 'Error')}</p>
-                            <GlassPanel className="!p-3 text-xs font-mono text-red-300 overflow-x-auto whitespace-pre-wrap break-all">
-                              {log.error_message}
+                            <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)] mb-1">{t('apiLogs.requestUrl', 'Request URL')}</p>
+                            <GlassPanel className="!p-3 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all">
+                              {log.http_method} {log.endpoint}
                             </GlassPanel>
                           </div>
-                        )}
-                        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                          <JsonViewer data={log.request_body} label={t('apiLogs.requestBody', 'Request Body')} />
-                          <JsonViewer data={log.response_body} label={t('apiLogs.responseBody', 'Response Body')} />
+                          {log.error_message && (
+                            <div>
+                              <p className="text-[10px] font-medium uppercase tracking-wider text-red-400 mb-1">{t('apiLogs.error', 'Error')}</p>
+                              <GlassPanel className="!p-3 text-xs font-mono text-red-300 overflow-x-auto whitespace-pre-wrap break-all">
+                                {log.error_message}
+                              </GlassPanel>
+                            </div>
+                          )}
+                          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                            <JsonViewer data={log.request_body} label={t('apiLogs.requestBody', 'Request Body')} />
+                            <JsonViewer data={log.response_body} label={t('apiLogs.responseBody', 'Response Body')} />
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </>
           )}

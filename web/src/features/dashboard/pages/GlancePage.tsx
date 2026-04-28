@@ -14,7 +14,7 @@ import type { LucideIcon } from 'lucide-react';
 import { Badge, GlassPanel } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { RadialGauge } from '@/components/charts';
-import { FreshnessIndicator } from '@/components/data-display';
+import { FreshnessIndicator, MetricCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { PageContainer } from '@/components/layout';
@@ -39,28 +39,6 @@ function getLocationLabel(
 }
 
 // ── Local sub-components ─────────────────────────────────────────────
-
-interface MetricTileProps {
-  icon: LucideIcon;
-  label: string;
-  value?: string;
-}
-
-function MetricTile({ icon: Icon, label, value }: MetricTileProps) {
-  return (
-    <GlassPanel className="p-3 flex items-center gap-3">
-      <Icon className="h-4 w-4 shrink-0 text-white/40" />
-      <div className="min-w-0">
-        <span className="text-[10px] text-white/40 block">{label}</span>
-        {value && (
-          <span className="text-sm font-medium text-white/90 truncate block">
-            {value}
-          </span>
-        )}
-      </div>
-    </GlassPanel>
-  );
-}
 
 interface QuickActionProps {
   icon: LucideIcon;
@@ -176,36 +154,45 @@ export default function GlancePage() {
 
             {/* Key metrics grid */}
             <div className="grid grid-cols-2 gap-3 w-full max-w-xs mx-auto">
-              <MetricTile
-                icon={Battery}
+              <MetricCard
                 label={t('glance.range', 'Range')}
                 value={
                   state?.rated_range != null
                     ? `${fmtNumber(convertDistance(state.rated_range), 0)} ${distanceUnit}`
                     : '—'
                 }
+                icon={<Battery className="h-4 w-4" />}
+                color="green"
+                className="bg-white/5 border-white/[0.06]"
               />
-              <MetricTile
-                icon={Thermometer}
+              <MetricCard
                 label={t('glance.temp', 'Interior')}
                 value={
                   state?.inside_temp != null
                     ? `${fmtNumber(convertTemp(state.inside_temp), 1)}${tempUnit}`
                     : '—'
                 }
+                icon={<Thermometer className="h-4 w-4" />}
+                color="amber"
+                className="bg-white/5 border-white/[0.06]"
               />
-              <MetricTile
-                icon={state?.is_locked ? Lock : Unlock}
-                label={
+              <MetricCard
+                label={t('glance.security', 'Security')}
+                value={
                   state?.is_locked
                     ? t('glance.locked', 'Locked')
                     : t('glance.unlocked', 'Unlocked')
                 }
+                icon={state?.is_locked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                color={state?.is_locked ? 'green' : 'red'}
+                className="bg-white/5 border-white/[0.06]"
               />
-              <MetricTile
-                icon={MapPin}
+              <MetricCard
                 label={t('glance.locationLabel', 'Location')}
                 value={locationLabel}
+                icon={<MapPin className="h-4 w-4" />}
+                color="cyan"
+                className="bg-white/5 border-white/[0.06]"
               />
             </div>
 

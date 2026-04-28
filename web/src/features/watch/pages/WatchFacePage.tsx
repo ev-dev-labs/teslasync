@@ -1,7 +1,7 @@
 import { useSearchParams } from 'react-router-dom';
 import { useWatchSummary, useWatchCommand } from '@/api/hooks/useWatch';
 import { Spinner } from '@/components/feedback';
-import { Button as ControlButton } from '@/components/ui';
+import { Badge, Button as ControlButton } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { Zap, Lock, Unlock, Thermometer, Shield } from 'lucide-react';
 
@@ -64,7 +64,13 @@ export default function WatchFacePage() {
         )}
 
         {/* State badge */}
-        <StateBadge state={data.state} />
+        <Badge
+          variant={watchStateVariant(data.state)}
+          size="sm"
+          className={cn('mt-2 text-[10px] font-medium', watchStateClassName(data.state))}
+        >
+          {data.state}
+        </Badge>
       </div>
 
       {/* Quick action icons */}
@@ -138,20 +144,6 @@ function BatteryGauge({ level, rangeKm }: { level: number; rangeKm: number }) {
           {Math.round(rangeKm)} km
         </span>
       </div>
-    </div>
-  );
-}
-
-function StateBadge({ state }: { state: string }) {
-  return (
-    <div className={cn(
-      'mt-2 px-2 py-0.5 rounded-full text-[10px] font-medium',
-      state === 'driving' && 'bg-blue-500/20 text-blue-400',
-      state === 'charging' && 'bg-emerald-500/20 text-emerald-400',
-      state === 'asleep' && 'bg-white/5 text-white/30',
-      state === 'online' && 'bg-white/10 text-white/60',
-    )}>
-      {state}
     </div>
   );
 }
@@ -231,6 +223,27 @@ function getBatteryColor(level: number): string {
   if (level > 40) return '#22c55e'; // green
   if (level > 20) return '#f59e0b'; // amber
   return '#ef4444'; // red
+}
+
+function watchStateVariant(state: string): 'info' | 'success' | 'neutral' {
+  if (state === 'driving') return 'info';
+  if (state === 'charging') return 'success';
+  return 'neutral';
+}
+
+function watchStateClassName(state: string): string {
+  switch (state) {
+    case 'driving':
+      return 'bg-blue-500/20 text-blue-400';
+    case 'charging':
+      return 'bg-emerald-500/20 text-emerald-400';
+    case 'asleep':
+      return 'bg-white/5 text-white/30';
+    case 'online':
+      return 'bg-white/10 text-white/60';
+    default:
+      return '';
+  }
 }
 
 function formatRelativeTime(isoTimestamp: string): string {
