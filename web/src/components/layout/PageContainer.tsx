@@ -1,6 +1,7 @@
 import { type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import { Breadcrumbs, type BreadcrumbItem } from './Breadcrumbs';
+import { Spinner } from '@/components/feedback/Spinner';
 
 interface PageContainerProps {
   title: string;
@@ -33,7 +34,7 @@ export function PageContainer({
 
       {loading ? (
         <div className="flex justify-center py-20">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+          <Spinner size="lg" />
         </div>
       ) : error ? (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
