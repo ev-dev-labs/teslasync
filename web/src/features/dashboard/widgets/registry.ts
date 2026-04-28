@@ -7,6 +7,7 @@ import {
   Command, CalendarRange, Bell, Music, HeartPulse, Moon, Navigation,
   Cpu, RotateCcw, Route, Lightbulb, Trophy, Clock, AlertTriangle,
   Sparkles, Cog, Wrench, FileText, ShieldCheck, ShieldAlert, ThermometerSun,
+  Sun,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -225,6 +226,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 3, rows: 40 },
     component: lazy(() => import('./SleepEfficiencyWidget')),
+  },
+  {
+    id: 'solar-production',
+    name: 'Solar Production',
+    description: 'Daily solar generation chart from Tesla Energy / Powerwall',
+    icon: Sun,
+    category: 'energy',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./SolarProductionWidget')),
   },
 
   // ── Driving ──
