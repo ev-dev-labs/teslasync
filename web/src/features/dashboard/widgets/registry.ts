@@ -797,6 +797,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./AlertFeedWidget')),
   },
+  {
+    id: 'notification-stats',
+    name: 'Notification Stats',
+    description: 'Notification delivery rate, active channels, recent delivery log',
+    icon: Bell,
+    category: 'alerts',
+    defaultSize: { cols: 2, rows: 2 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./NotificationStatsWidget')),
+  },
 
   // ── Automations ──
   {
