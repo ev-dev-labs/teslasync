@@ -5,7 +5,7 @@ import {
   DollarSign, Calendar, CloudSun, CircleDot, CreditCard, Hash,
   MonitorSmartphone, List, Grid3X3, Workflow, DoorOpen, Eye,
   Command, CalendarRange, Bell, Music, HeartPulse, Moon, Navigation,
-  Cpu, RotateCcw,
+  Cpu, RotateCcw, Route,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -303,6 +303,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 3, rows: 40 },
     component: lazy(() => import('./RegenEfficiencyWidget')),
+  },
+  {
+    id: 'route-efficiency',
+    name: 'Route Efficiency',
+    description: 'Recurring routes ranked by energy efficiency with weather/elevation impact',
+    icon: Route,
+    category: 'driving',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 2, rows: 4 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./RouteEfficiencyWidget')),
   },
 
   // ── Charging ──
