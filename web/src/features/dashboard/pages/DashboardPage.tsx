@@ -47,7 +47,7 @@ export default function DashboardPage() {
   const {
     dashboards, activeDashboard, activeId,
     editMode, setEditMode,
-    addWidget, removeWidget, updateWidgetConfig,
+    addWidgets, removeWidget, updateWidgetConfig,
     updateLayouts, autoArrange, getWidgetSize,
     switchDashboard, createDashboard, renameDashboard, deleteDashboard,
     reorderDashboards, duplicateDashboard, updateDashboardSettings, updateDashboardIcon,
@@ -347,7 +347,7 @@ export default function DashboardPage() {
       <WidgetPicker
         open={showPicker}
         onClose={() => setShowPicker(false)}
-        onAddWidget={addWidget}
+        onAddWidgets={addWidgets}
         onApplyPreset={applyPreset}
         activeWidgetIds={activeDashboard.widgets.map((w) => w.widgetId)}
       />

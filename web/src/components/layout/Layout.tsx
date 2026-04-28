@@ -101,6 +101,7 @@ import { BottomTabBar, BOTTOM_TAB_PATHS } from './BottomTabBar'
 import { CommandPalette, CommandPaletteTrigger } from '../ui/CommandPalette'
 import { ServiceStatusBanner, SystemHealthDot } from '../data-display/ServiceStatus'
 import Logo from '../ui/Logo'
+import { Button } from '@/components/ui'
 
 import { MAIN_TOUR_STEPS } from '@/features/onboarding/tourSteps'
 import { request } from '@/api/client'
@@ -380,6 +381,11 @@ export default function Layout() {
     if (h > 0) return `${h}h ${m}m uptime`
     return `${m}m uptime`
   })()
+  const versionLabel = versionInfo?.chart_version && versionInfo.chart_version !== 'unknown'
+    ? `v${versionInfo.chart_version}`
+    : versionInfo?.app_version && versionInfo.app_version !== 'unknown'
+      ? versionInfo.app_version
+      : ''
 
   const mainRef = useRef<HTMLElement>(null)
 
@@ -421,21 +427,42 @@ export default function Layout() {
         data-tour="sidebar"
         data-sidebar-open={sidebarOpen}
         className={clsx(
-          'fixed left-0 bottom-0 top-14 z-[66] w-[clamp(240px,70vw,256px)] transform transition-transform duration-300 ease-out lg:top-0 lg:static lg:z-auto lg:w-64 lg:translate-x-0',
+          'fixed left-0 bottom-0 z-[66] w-[clamp(240px,70vw,256px)] transform transition-transform duration-300 ease-out lg:top-0 lg:static lg:z-auto lg:w-64 lg:translate-x-0',
           'border-r border-white/[0.06] backdrop-blur-xl flex flex-col bg-white/[0.04]',
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          sidebarOpen ? 'top-0 translate-x-0' : 'top-14 -translate-x-full'
         )}
       >
-        {/* Logo — hidden on mobile (header already shows it) */}
+        {/* Mobile sidebar brand, shown only while the drawer is open */}
+        <div className="flex items-center gap-2 border-b border-white/[0.06] px-5 py-4 shrink-0 lg:hidden">
+          <NavLink to="/" className="min-w-0 flex flex-1 items-center gap-3 rounded-xl transition-colors" onClick={() => setSidebarOpen(false)}>
+            <Logo size={32} showWordmark />
+          </NavLink>
+          {versionLabel && (
+            <span className="rounded-md bg-neon-cyan/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-neon-cyan">
+              {versionLabel}
+            </span>
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-label={t('nav.closeSidebar', 'Close sidebar')}
+            aria-expanded={sidebarOpen}
+            onClick={() => setSidebarOpen(false)}
+            className="h-10 w-10 shrink-0 rounded-xl p-0 text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)] active:scale-95 [-webkit-tap-highlight-color:transparent] [touch-action:manipulation]"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+
+        {/* Logo — desktop sidebar header */}
         <NavLink to="/" className="hidden lg:flex items-center gap-3 px-5 py-5 border-b border-white/[0.06] shrink-0 hover:bg-white/[0.02] transition-colors" onClick={() => setSidebarOpen(false)}>
           <Logo size={32} showWordmark />
-          <span className="ml-auto rounded-md bg-neon-cyan/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-neon-cyan">
-            {versionInfo?.chart_version && versionInfo.chart_version !== 'unknown'
-              ? `v${versionInfo.chart_version}`
-              : versionInfo?.app_version && versionInfo.app_version !== 'unknown'
-                ? versionInfo.app_version
-                : ''}
-          </span>
+          {versionLabel && (
+            <span className="ml-auto rounded-md bg-neon-cyan/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-neon-cyan">
+              {versionLabel}
+            </span>
+          )}
         </NavLink>
 
         {/* Sticky search trigger */}
@@ -562,25 +589,25 @@ export default function Layout() {
         </div>
       </aside>
 
-      {/* Mobile top bar — hidden when sidebar is open (sidebar has its own close button) */}
       {/* Mobile top bar */}
-      <header className="fixed top-0 left-0 right-0 z-[60] flex items-center border-b border-[var(--glass-border)] bg-[var(--surface-1)] backdrop-blur-xl px-4 py-3 lg:hidden [touch-action:manipulation]">
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          type="button"
-          aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
-          aria-expanded={sidebarOpen}
-          style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
-          className="relative z-10 rounded-xl p-2.5 -ml-1 text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)] transition-colors active:scale-95"
-        >
-          {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
-        {!sidebarOpen && (
+      {!sidebarOpen && (
+        <header className="fixed top-0 left-0 right-0 z-[60] flex items-center border-b border-[var(--glass-border)] bg-[var(--surface-1)] backdrop-blur-xl px-4 py-3 lg:hidden [touch-action:manipulation]">
+          <Button
+            onClick={() => setSidebarOpen(true)}
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-label={t('nav.openSidebar', 'Open sidebar')}
+            aria-expanded={false}
+            className="relative z-10 h-11 w-11 -ml-1 rounded-xl p-0 text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)] active:scale-95 [-webkit-tap-highlight-color:transparent] [touch-action:manipulation]"
+          >
+            <Menu className="h-6 w-6" />
+          </Button>
           <div className="flex-1 flex justify-center -ml-10">
             <Logo size={26} showWordmark />
           </div>
-        )}
-      </header>
+        </header>
+      )}
 
       {/* Main content */}
       <div className="relative z-10 flex flex-1 flex-col overflow-hidden">

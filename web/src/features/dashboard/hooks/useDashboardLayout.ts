@@ -19,6 +19,7 @@ import type { DashboardLayoutsPayload } from '@/api/hooks/useSettings';
 const DASHBOARDS_KEY = 'teslasync-dashboards';
 const ACTIVE_KEY = 'teslasync-active-dashboard';
 const LEGACY_KEY = 'teslasync-dashboard-layout';
+const WIDGET_REGISTRY_IDS = new Set(WIDGET_REGISTRY.map((w) => w.id));
 
 /* ─── Breakpoint constants ─── */
 export const GRID_BREAKPOINTS = { lg: 1200, md: 996, sm: 768, xs: 480 } as const;
@@ -505,21 +506,34 @@ export function useDashboardLayout() {
     [updateActive, pushSnapshot],
   );
 
-  const addWidget = useCallback(
-    (widgetId: string) => {
-      const def = WIDGET_REGISTRY.find((w) => w.id === widgetId);
-      if (!def) return;
-      const newWidget: WidgetInstance = {
-        id: generateId(),
-        widgetId,
-      };
+  const addWidgets = useCallback(
+    (widgetIds: string[]) => {
       const current = activeDashRef.current;
-      const widgets = [...current.widgets, newWidget];
+      const existingWidgetIds = new Set(current.widgets.map((w) => w.widgetId));
+      const newWidgets: WidgetInstance[] = [];
+
+      for (const widgetId of widgetIds) {
+        if (existingWidgetIds.has(widgetId) || !WIDGET_REGISTRY_IDS.has(widgetId)) continue;
+        existingWidgetIds.add(widgetId);
+        newWidgets.push({
+          id: generateId(),
+          widgetId,
+        });
+      }
+
+      if (newWidgets.length === 0) return;
+
+      const widgets = [...current.widgets, ...newWidgets];
       const layouts = reconcileLayouts(current.layouts, widgets);
       pushSnapshot({ widgets, layouts });
       updateActive((d) => ({ ...d, widgets, layouts }));
     },
     [updateActive, pushSnapshot],
+  );
+
+  const addWidget = useCallback(
+    (widgetId: string) => addWidgets([widgetId]),
+    [addWidgets],
   );
 
   const removeWidget = useCallback(
@@ -812,6 +826,7 @@ export function useDashboardLayout() {
     setEditMode,
     // Widget CRUD
     addWidget,
+    addWidgets,
     removeWidget,
     updateWidgetConfig,
     // Layout

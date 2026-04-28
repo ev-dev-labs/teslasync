@@ -14,7 +14,7 @@ interface DataFreshnessProps {
   isError: boolean;
   /** Manual refresh callback */
   onRefresh?: () => void;
-  /** Compact mode (dot only, no text) for small widgets */
+  /** Compact mode (condensed icon, no text) for small widgets */
   compact?: boolean;
 }
 
@@ -111,7 +111,8 @@ export function DataFreshness({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 text-[10px] leading-none transition-colors',
+        'inline-flex items-center text-[10px] leading-none transition-colors',
+        compact ? 'gap-0.5' : 'gap-1',
         cfg.color,
         onRefresh && !isFetching && 'cursor-pointer hover:text-white/60',
       )}
@@ -133,17 +134,13 @@ export function DataFreshness({
         <span className={cn('relative rounded-full h-1.5 w-1.5', cfg.dotColor)} />
       </span>
 
-      {!compact && (
-        <>
-          <Icon
-            className={cn(
-              'h-2.5 w-2.5',
-              status === 'fetching' && 'animate-spin',
-            )}
-          />
-          <span>{relativeTime}</span>
-        </>
-      )}
+      <Icon
+        className={cn(
+          compact ? 'h-2 w-2' : 'h-2.5 w-2.5',
+          status === 'fetching' && 'animate-spin',
+        )}
+      />
+      {!compact && <span>{relativeTime}</span>}
     </span>
   );
 }
