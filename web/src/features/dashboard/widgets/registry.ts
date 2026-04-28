@@ -6,7 +6,7 @@ import {
   MonitorSmartphone, List, Grid3X3, Workflow, DoorOpen, Eye,
   Command, CalendarRange, Bell, Music, HeartPulse, Moon, Navigation,
   Cpu, RotateCcw, Route, Lightbulb, Trophy, Clock, AlertTriangle,
-  Sparkles, Cog, Wrench, FileText, ShieldCheck, ThermometerSun,
+  Sparkles, Cog, Wrench, FileText, ShieldCheck, ShieldAlert, ThermometerSun,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -519,6 +519,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 2, rows: 4 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./SentryEventLogWidget')),
+  },
+  {
+    id: 'safety-features',
+    name: 'Safety Features',
+    description: 'ADAS status: autopilot, collision warning, lane departure, blind spot',
+    icon: ShieldAlert,
+    category: 'security',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./SafetyFeaturesWidget')),
   },
 
   // ── Commands ──
