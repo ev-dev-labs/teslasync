@@ -238,6 +238,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./SolarProductionWidget')),
   },
+  {
+    id: 'live-power-flow',
+    name: 'Live Power Flow',
+    description: 'Real-time solar→battery→home→grid power routing diagram',
+    icon: Workflow,
+    category: 'energy',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 2, rows: 4 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./LivePowerFlowWidget')),
+  },
 
   // ── Driving ──
   {
