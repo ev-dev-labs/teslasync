@@ -1,11 +1,13 @@
 import { useMemo } from 'react';
 import { GlassPanel } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
-import { MapContainer, Polyline, Popup, CircleMarker } from '@/components/maps';
-import { MapTileLayer } from '@/components/maps';
+import {
+  MapContainer, Polyline, Popup, CircleMarker,
+  MapTileLayer,
+  type LatLngExpression,
+} from '@/components/maps';
 import { useTranslation } from 'react-i18next';
 import type { TripLocation, TripLeg, TripChargeStop } from '@/types/driving';
-import type { LatLngExpression } from 'leaflet';
 
 interface TripPlannerMapProps {
   origin: TripLocation | null;

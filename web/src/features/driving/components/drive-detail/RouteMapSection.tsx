@@ -6,13 +6,13 @@ import { FadeIn } from '@/components/motion';
 import {
   MapContainer, Polyline, CircleMarker, Popup, useMap,
   MapTileLayer, MapInvalidator, MapLayerSwitcher,
+  latLngBounds,
+  type LatLngExpression,
   type MapStyle,
 } from '@/components/maps';
 import { useSettings } from '@/hooks/useSettings';
 import { formatTime, formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
-import { latLngBounds } from 'leaflet';
-import type { LatLngExpression } from 'leaflet';
 import type { DriveDetail } from '@/types/driving';
 import type { SpeedSegment } from './types';
 

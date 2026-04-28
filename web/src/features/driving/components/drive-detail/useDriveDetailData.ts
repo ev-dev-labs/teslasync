@@ -3,7 +3,7 @@ import { useDrive } from '@/api/hooks/useDriving';
 import { useVehicle } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { fmtNumber } from '@/lib/numberFormat';
-import type { LatLngExpression } from 'leaflet';
+import type { LatLngExpression } from '@/components/maps';
 import type { ChartDataPoint, DriveStats, RoutePoint, SpeedSegment, SpeedHistogramBucket } from './types';
 
 export function useDriveDetailData(id: string) {

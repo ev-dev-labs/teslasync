@@ -5,19 +5,20 @@ import {
   AREA_DEFAULTS, areaGradient,
 } from '@/components/charts'
 import { Navigation, Activity, Car, Settings } from 'lucide-react'
-import { MapContainer, Polyline, Marker, vehicleIcon } from '@/components/maps'
+import {
+  MapContainer, Polyline, Marker, vehicleIcon,
+  MapTileLayer, MapInvalidator, MapLayerSwitcher,
+  type LatLngExpression,
+  type MapStyle,
+} from '@/components/maps'
 import { GlassPanel } from '@/components/ui/GlassPanel'
 import { FadeIn } from '@/components/motion/FadeIn'
 import { MetricCard } from '@/components/data-display/MetricCard'
-import { MapTileLayer, MapInvalidator } from '@/components/maps/MapTileLayer'
-import { MapLayerSwitcher } from '@/components/maps/MapLayerSwitcher'
-import type { MapStyle } from '@/components/maps/MapTileLayer'
 import { useSettings } from '@/hooks/useSettings'
 import { cleanNil } from '@/lib/cleanNil'
 import { fmtNumber } from '@/lib/numberFormat'
 import { formatTime } from '@/lib/dateFormat'
 import { parseSettingEnum } from '@/lib/parseSettingEnum'
-import type { LatLngExpression } from 'leaflet'
 import type { VehicleState, Position, VehicleConfigSnapshot, UserPreferenceSnapshot } from '@/api/types'
 
 interface VehicleChartsProps {

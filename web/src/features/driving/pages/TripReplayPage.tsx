@@ -22,7 +22,8 @@ import { ElevationProfile, type ElevationDataPoint } from '@/components/charts';
 import {
   MapContainer, Polyline, CircleMarker, useMap,
   MapTileLayer, MapInvalidator, MapLayerSwitcher,
-  AnimatedMarker,
+  AnimatedMarker, latLngBounds,
+  type LatLngExpression,
   type MapStyle,
 } from '@/components/maps';
 import { useDrive } from '@/api/hooks/useDriving';
@@ -32,8 +33,6 @@ import { useTripReplay } from '@/hooks/useTripReplay';
 import { haversineDistance } from '@/lib/geo';
 import { formatDate } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
-import type { LatLngExpression } from 'leaflet';
-import { latLngBounds } from 'leaflet';
 import type { DrivePosition } from '@/types/driving';
 
 /* ================================================================== */

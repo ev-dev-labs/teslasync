@@ -25,7 +25,6 @@ import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { request } from '@/api/client';
-import 'leaflet/dist/leaflet.css';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */

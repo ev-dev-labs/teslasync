@@ -1,0 +1,55 @@
+=== PREFLIGHT ===
+PWD=D:\repos\teslasync
+GIT_STATUS_START
+GIT_STATUS_END
+=== SURVEY ===
+=== SURVEY ===
+FEATURE_DIRECT_MAP_IMPORT_COUNT=10
+
+web\src\features\driving\components\drive-detail\RouteMapSection.tsx:14:import { latLngBounds } from 'leaflet';
+web\src\features\driving\components\drive-detail\RouteMapSection.tsx:15:import type { LatLngExpression } from 'leaflet';
+web\src\features\driving\components\drive-detail\types.ts:1:import type { LatLngExpression } from 'leaflet';
+web\src\features\driving\components\drive-detail\useDriveDetailData.ts:6:import type { LatLngExpression } from 'leaflet';
+web\src\features\driving\components\TripPlannerMap.tsx:8:import type { LatLngExpression } from 'leaflet';
+web\src\features\driving\pages\TripReplayPage.tsx:35:import type { LatLngExpression } from 'leaflet';
+web\src\features\driving\pages\TripReplayPage.tsx:36:import { latLngBounds } from 'leaflet';
+web\src\features\maps\pages\MapOverviewPage.tsx:28:import 'leaflet/dist/leaflet.css';
+web\src\features\sharing\pages\SharedDrivePage.tsx:24:import type { LatLngExpression } from 'leaflet';
+web\src\features\vehicles\components\VehicleCharts.tsx:20:import type { LatLngExpression } from 'leaflet'
+
+COMPONENT_MAP_FILES_START
+AnimatedMarker.tsx
+index.ts
+MapLayerSwitcher.tsx
+MapTileLayer.tsx
+vehicleIcon.ts
+COMPONENT_MAP_FILES_END
+=== REASONING ===
+Leaflet runtime CSS belongs in the shared map barrel so feature pages only depend on @/components/maps.
+LatLngExpression and latLngBounds can be exposed from the map barrel without changing route geometry behavior.
+=== CHANGES ===
+Updated web\src\components\maps\index.ts to import Leaflet CSS and export latLngBounds plus LatLngExpression.
+Replaced direct Leaflet type/helper imports in listed feature files with @/components/maps imports.
+Removed Leaflet CSS side-effect import from MapOverviewPage.
+GIT_STATUS_AFTER_CHANGES_START
+ M web/src/components/maps/index.ts
+ M web/src/features/driving/components/TripPlannerMap.tsx
+ M web/src/features/driving/components/drive-detail/RouteMapSection.tsx
+ M web/src/features/driving/components/drive-detail/types.ts
+ M web/src/features/driving/components/drive-detail/useDriveDetailData.ts
+ M web/src/features/driving/pages/TripReplayPage.tsx
+ M web/src/features/maps/pages/MapOverviewPage.tsx
+ M web/src/features/sharing/pages/SharedDrivePage.tsx
+ M web/src/features/vehicles/components/VehicleCharts.tsx
+GIT_STATUS_AFTER_CHANGES_END
+POST_CHANGE_FEATURE_DIRECT_MAP_IMPORT_COUNT=0
+=== GATE ===
+FEATURE_DIRECT_MAP_IMPORT_COUNT=0
+UNEXPECTED_MAP_FILE_COUNT=0
+MAP_BARREL_LATLNG_EXPORT_COUNT=1
+MAP_BARREL_BOUNDS_EXPORT_COUNT=1
+TS_EXIT=0
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
+Committing allowed map boundary changes after gate STATUS=DONE.

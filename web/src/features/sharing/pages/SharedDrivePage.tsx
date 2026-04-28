@@ -17,11 +17,11 @@ import {
 import {
   MapContainer, Polyline, CircleMarker,
   MapTileLayer,
+  type LatLngExpression,
 } from '@/components/maps';
 import Logo from '@/components/ui/Logo';
 import { useSharedDrive } from '@/api/hooks/useSharing';
 import { FadeIn } from '@/components/motion';
-import type { LatLngExpression } from 'leaflet';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
