@@ -170,7 +170,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  a.latitude,\n  a.longitude,\n  COALESCE(cs.charger_location, '-') AS \"name\",\n  vl.visit_count AS \"visits\",\n  '-' AS \"city\",\n  a.state AS \"state\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\n  AND a.latitude IS NOT NULL\nORDER BY vl.visit_count DESC",
+          "rawSql": "SELECT \n  a.latitude,\n  a.longitude,\n  COALESCE(a.display_name, '-') AS \"name\",\n  vl.visit_count AS \"visits\",\n  '-' AS \"city\",\n  a.state AS \"state\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\n  AND a.latitude IS NOT NULL\nORDER BY vl.visit_count DESC",
           "refId": "A"
         }
       ],
@@ -380,7 +380,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  CASE\n    WHEN cs.charger_location LIKE '%Home%' THEN '🏠'\n    WHEN cs.charger_location LIKE '%Office%' THEN '🏢'\n    WHEN cs.charger_location LIKE '%Supercharger%' THEN '⚡'\n    WHEN cs.charger_location LIKE '%Hotel%' THEN '🏨'\n    WHEN cs.charger_location LIKE '%Resort%' THEN '🏖️'\n    WHEN cs.charger_location LIKE '%Costco%' OR cs.charger_location LIKE '%Walmart%' THEN '🛒'\n    WHEN cs.charger_location LIKE '%Service%' THEN '🔧'\n    ELSE '📍'\n  END || ' ' || COALESCE(cs.charger_location, 'Unknown') AS \"📍 Location\",\n  COALESCE('-', '') AS \"🏙️ City\",\n  COALESCE(a.state, '') AS \"🗺️ State\",\n  COALESCE(a.country, '') AS \"🌍 Country\",\n  vl.visit_count AS \"🔄 Visits\",\n  ROUND(vl.total_duration_min / 60) AS \"⏱️ Hours\",\n  TO_CHAR(vl.last_visited, 'YYYY-MM-DD') AS \"📅 Last Visit\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nORDER BY vl.visit_count DESC\nLIMIT 30",
+          "rawSql": "SELECT\n  CASE\n    WHEN a.display_name LIKE '%Home%' THEN '🏠'\n    WHEN a.display_name LIKE '%Office%' THEN '🏢'\n    WHEN a.display_name LIKE '%Supercharger%' THEN '⚡'\n    WHEN a.display_name LIKE '%Hotel%' THEN '🏨'\n    WHEN a.display_name LIKE '%Resort%' THEN '🏖️'\n    WHEN a.display_name LIKE '%Costco%' OR a.display_name LIKE '%Walmart%' THEN '🛒'\n    WHEN a.display_name LIKE '%Service%' THEN '🔧'\n    ELSE '📍'\n  END || ' ' || COALESCE(a.display_name, 'Unknown') AS \"📍 Location\",\n  COALESCE('-', '') AS \"🏙️ City\",\n  COALESCE(a.state, '') AS \"🗺️ State\",\n  COALESCE(a.country, '') AS \"🌍 Country\",\n  vl.visit_count AS \"🔄 Visits\",\n  ROUND(vl.total_duration_min / 60) AS \"⏱️ Hours\",\n  TO_CHAR(vl.last_visited, 'YYYY-MM-DD') AS \"📅 Last Visit\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nORDER BY vl.visit_count DESC\nLIMIT 30",
           "refId": "A"
         }
       ],
@@ -436,7 +436,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  CASE\n    WHEN cs.charger_location LIKE '%Home%' OR cs.charger_location LIKE '%Residence%' THEN '🏠 Home'\n    WHEN cs.charger_location LIKE '%Office%' THEN '🏢 Work'\n    WHEN cs.charger_location LIKE '%Supercharger%' THEN '⚡ Supercharger'\n    WHEN cs.charger_location LIKE '%Hotel%' THEN '🏨 Hotel'\n    WHEN cs.charger_location LIKE '%Costco%' OR cs.charger_location LIKE '%Walmart%' THEN '🛒 Shopping'\n    WHEN cs.charger_location LIKE '%Service%' THEN '🔧 Service'\n    ELSE '📍 Other'\n  END AS \"🏷️ Type\",\n  SUM(vl.visit_count) AS \"🔄 Visits\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nGROUP BY 1\nORDER BY 2 DESC",
+          "rawSql": "SELECT\n  CASE\n    WHEN a.display_name LIKE '%Home%' OR a.display_name LIKE '%Residence%' THEN '🏠 Home'\n    WHEN a.display_name LIKE '%Office%' THEN '🏢 Work'\n    WHEN a.display_name LIKE '%Supercharger%' THEN '⚡ Supercharger'\n    WHEN a.display_name LIKE '%Hotel%' THEN '🏨 Hotel'\n    WHEN a.display_name LIKE '%Costco%' OR a.display_name LIKE '%Walmart%' THEN '🛒 Shopping'\n    WHEN a.display_name LIKE '%Service%' THEN '🔧 Service'\n    ELSE '📍 Other'\n  END AS \"🏷️ Type\",\n  SUM(vl.visit_count) AS \"🔄 Visits\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nGROUP BY 1\nORDER BY 2 DESC",
           "refId": "A"
         }
       ],
