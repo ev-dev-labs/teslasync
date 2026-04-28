@@ -10,7 +10,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Check, Search } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { Drawer, Badge, Button, Input } from '@/components/ui';
+import { Drawer, Badge, Button as UiButton, Input as UiInput } from '@/components/ui';
 import { WIDGET_REGISTRY } from '../widgets/registry';
 import { DASHBOARD_PRESETS } from '../hooks/useDashboardLayout';
 import type { WidgetCategory, WidgetDef } from '../widgets/types';
@@ -233,7 +233,10 @@ export function WidgetPicker({
   const renderWidgetCard = (w: WidgetDef) => {
     const isAdded = activeWidgetIdSet.has(w.id);
     return (
-      <button
+      <UiButton
+        type="button"
+        variant="ghost"
+        size="sm"
         key={w.id}
         ref={(node) => {
           if (node) widgetButtonRefs.current.set(w.id, node);
@@ -243,7 +246,7 @@ export function WidgetPicker({
         onClick={() => handleAdd(w)}
         onKeyDown={(event) => handleWidgetKeyDown(event, w)}
         className={cn(
-          'w-full text-left rounded-xl p-3 border transition-all',
+          'h-auto w-full flex-col items-stretch justify-start gap-0 rounded-xl border p-3 text-left transition-all',
           'bg-white/[0.03] border-white/[0.06]',
           isAdded
             ? 'opacity-40 cursor-not-allowed'
@@ -274,7 +277,7 @@ export function WidgetPicker({
             </p>
           </div>
         </div>
-      </button>
+      </UiButton>
     );
   };
 
@@ -294,9 +297,9 @@ export function WidgetPicker({
             <Check className="h-4 w-4 text-emerald-400" aria-hidden="true" />
             <span>{addedCountText}</span>
           </div>
-          <Button size="sm" onClick={onClose}>
+          <UiButton size="sm" onClick={onClose}>
             {t('dashboard.done', 'Done')}
-          </Button>
+          </UiButton>
         </div>
       ) : undefined}
     >
@@ -306,7 +309,7 @@ export function WidgetPicker({
       <div className="space-y-4">
         {/* Search input — sticky at top */}
         <div className="sticky top-0 z-10 pb-3">
-          <Input
+          <UiInput
             ref={inputRef}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -329,14 +332,17 @@ export function WidgetPicker({
               </h3>
               <div className="grid grid-cols-1 gap-2">
                 {DASHBOARD_PRESETS.map((preset) => (
-                  <button
+                  <UiButton
+                    type="button"
+                    variant="ghost"
+                    size="sm"
                     key={preset.id}
                     onClick={() => {
                       onApplyPreset(preset.id);
                       onClose();
                     }}
                     className={cn(
-                      'w-full text-left rounded-xl p-3 border transition-all',
+                      'h-auto w-full flex-col items-stretch justify-start gap-0 rounded-xl border p-3 text-left transition-all',
                       'bg-white/[0.03] border-white/[0.06]',
                       'hover:bg-white/[0.06] hover:border-white/[0.12] cursor-pointer',
                     )}
@@ -347,7 +353,7 @@ export function WidgetPicker({
                     <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
                       {preset.widgets.length} {t('dashboard.widgets', 'widgets')}
                     </p>
-                  </button>
+                  </UiButton>
                 ))}
               </div>
             </div>
@@ -367,7 +373,7 @@ export function WidgetPicker({
                       query: search.trim(),
                     })}
                   </span>
-                  <Button
+                  <UiButton
                     variant="ghost"
                     size="sm"
                     disabled={addableSearchWidgets.length === 0}
@@ -377,7 +383,7 @@ export function WidgetPicker({
                     {t('widgets.addAllCount', '+ Add all {{count}}', {
                       count: addableSearchWidgets.length,
                     })}
-                  </Button>
+                  </UiButton>
                 </div>
               )}
               <div className="grid grid-cols-1 gap-2">
@@ -398,7 +404,7 @@ export function WidgetPicker({
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-white/40">
                     {CATEGORY_LABELS[cat]}
                   </h3>
-                  <Button
+                    <UiButton
                     variant="ghost"
                     size="sm"
                     disabled={addableCategoryWidgets.length === 0}
@@ -408,7 +414,7 @@ export function WidgetPicker({
                     {t('widgets.addAllCount', '+ Add all {{count}}', {
                       count: addableCategoryWidgets.length,
                     })}
-                  </Button>
+                    </UiButton>
                 </div>
                 <div className="grid grid-cols-1 gap-2">
                   {widgets.map(renderWidgetCard)}

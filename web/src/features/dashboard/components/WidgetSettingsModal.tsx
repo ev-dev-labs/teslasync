@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, Select, Toggle } from '@/components/ui';
+import {
+  Button as UiButton,
+  Modal,
+  Select as UiSelect,
+  Toggle,
+} from '@/components/ui';
 import { FormSection } from '@/components/forms';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import type { WidgetConfig, WidgetDef, WidgetInstance } from '../widgets/types';
@@ -41,7 +46,7 @@ export function WidgetSettingsModal({
         {/* Vehicle selector */}
         {isVehicleWidget && (
           <FormSection title={t('dashboard.settings.vehicle', 'Vehicle')}>
-            <Select
+            <UiSelect
               value={config.vehicleId?.toString() ?? 'all'}
               options={[
                 { value: 'all', label: t('dashboard.settings.allVehicles', 'All Vehicles (first)') },
@@ -63,7 +68,7 @@ export function WidgetSettingsModal({
 
         {/* Refresh rate */}
         <FormSection title={t('dashboard.settings.refreshInterval', 'Refresh Interval')}>
-          <Select
+          <UiSelect
             value={config.refreshRate?.toString() ?? 'default'}
             options={[
               { value: 'default', label: t('dashboard.settings.default', 'Default') },
@@ -85,7 +90,7 @@ export function WidgetSettingsModal({
         {/* Time range (for chart widgets) */}
         {isChartWidget && (
           <FormSection title={t('dashboard.settings.timeRange', 'Time Range')}>
-            <Select
+            <UiSelect
               value={config.timeRange ?? '7d'}
               options={[
                 { value: '24h', label: t('dashboard.settings.24h', 'Last 24 hours') },
@@ -113,18 +118,22 @@ export function WidgetSettingsModal({
 
         {/* Actions */}
         <div className="flex gap-2 justify-end pt-2">
-          <button
+          <UiButton
+            type="button"
+            variant="ghost"
             onClick={onClose}
-            className="px-4 py-2 text-sm rounded-lg text-white/60 hover:text-white/80 hover:bg-white/5 transition-colors"
+            className="h-auto rounded-lg px-4 py-2 text-sm text-white/60 hover:text-white/80 hover:bg-white/5 transition-colors"
           >
             {t('common.cancel', 'Cancel')}
-          </button>
-          <button
+          </UiButton>
+          <UiButton
+            type="button"
+            variant="ghost"
             onClick={handleSave}
-            className="px-4 py-2 text-sm rounded-lg bg-[var(--theme-primary)]/10 text-[var(--theme-primary)] hover:bg-[var(--theme-primary)]/20 transition-colors font-medium"
+            className="h-auto rounded-lg bg-[var(--theme-primary)]/10 px-4 py-2 text-sm font-medium text-[var(--theme-primary)] hover:bg-[var(--theme-primary)]/20 transition-colors"
           >
             {t('common.save', 'Save')}
-          </button>
+          </UiButton>
         </div>
       </div>
     </Modal>

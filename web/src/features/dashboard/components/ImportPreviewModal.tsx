@@ -5,7 +5,14 @@ import {
   AlertTriangle, FileUp,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { Modal, Button, Tabs, Textarea, Input, Badge } from '@/components/ui';
+import {
+  Modal,
+  Button as UiButton,
+  Tabs,
+  Textarea as UiTextarea,
+  Input as UiInput,
+  Badge,
+} from '@/components/ui';
 import { AlertBanner, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { MiniGridPreview } from './MiniGridPreview';
@@ -184,16 +191,17 @@ export function ImportPreviewModal({
               <p className="text-sm text-white/50 mb-3">
                 {t('import.dropFile', 'Drop a .json file here or click to browse')}
               </p>
-              <Button variant="ghost" onClick={() => fileInputRef.current?.click()}>
+              <UiButton variant="ghost" onClick={() => fileInputRef.current?.click()}>
                 <FileUp className="h-4 w-4 mr-2" />
                 {t('import.browse', 'Browse Files')}
-              </Button>
-              <input
+              </UiButton>
+              <UiInput
                 ref={fileInputRef}
                 type="file"
                 accept=".json"
                 onChange={handleFileChange}
                 className="hidden"
+                aria-label={t('import.fileInput', 'Dashboard JSON file')}
               />
             </div>
           </FadeIn>
@@ -202,21 +210,21 @@ export function ImportPreviewModal({
         {activeTab === 'paste' && (
           <FadeIn>
             <div className="space-y-3">
-              <Textarea
+              <UiTextarea
                 value={pastedJson}
                 onChange={(e) => setPastedJson(e.target.value)}
                 placeholder='{"name": "My Dashboard", "widgets": [...], "layouts": {...}}'
                 rows={10}
                 className="font-mono text-xs"
               />
-              <Button
+              <UiButton
                 variant="primary"
                 onClick={() => handleValidate(pastedJson)}
                 disabled={!pastedJson.trim()}
               >
                 <FileJson className="h-4 w-4 mr-2" />
                 {t('import.validate', 'Validate & Preview')}
-              </Button>
+              </UiButton>
             </div>
           </FadeIn>
         )}
@@ -224,19 +232,19 @@ export function ImportPreviewModal({
         {activeTab === 'url' && (
           <FadeIn>
             <div className="space-y-3">
-              <Input
+              <UiInput
                 value={importUrl}
                 onChange={(e) => setImportUrl(e.target.value)}
                 placeholder="https://teslasync.example.com/dashboard#import=..."
                 icon={<Link2 className="h-4 w-4" />}
               />
-              <Button
+              <UiButton
                 variant="primary"
                 onClick={() => handleUrlImport(importUrl)}
                 disabled={!importUrl.trim()}
               >
                 {t('import.loadUrl', 'Load from URL')}
-              </Button>
+              </UiButton>
             </div>
           </FadeIn>
         )}
@@ -358,14 +366,14 @@ function ImportPreview({
 
       {/* Actions */}
       <div className="flex gap-2 pt-2">
-        <Button variant="ghost" size="sm" onClick={onBack}>
+        <UiButton variant="ghost" size="sm" onClick={onBack}>
           {t('import.back', 'Back')}
-        </Button>
+        </UiButton>
         {isValid && dashboard && (
-          <Button variant="primary" size="sm" onClick={onConfirm}>
+          <UiButton variant="primary" size="sm" onClick={onConfirm}>
             <CheckCircle2 className="h-4 w-4 mr-2" />
             {t('import.confirm', 'Import Dashboard')}
-          </Button>
+          </UiButton>
         )}
       </div>
     </div>

@@ -9,7 +9,7 @@ import {
   GripHorizontal, X, Settings, Maximize2, Minimize2,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { GlassPanel, Button } from '@/components/ui';
+import { GlassPanel, Button as UiButton } from '@/components/ui';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { getWidgetDef } from '../widgets/registry';
 import {
@@ -84,22 +84,28 @@ function WidgetChrome({
           <span className="text-[11px] text-white/50 font-medium">{def.name}</span>
         </div>
         <div className="flex items-center gap-1">
-          <button
+          <UiButton
+            type="button"
+            variant="ghost"
+            size="sm"
             onClick={(e) => { e.stopPropagation(); onSettings(); }}
             onMouseDown={(e) => e.stopPropagation()}
-            className="p-1 rounded hover:bg-white/10 text-white/40 hover:text-white/70 transition-colors"
+            className="h-auto p-1 rounded text-white/40 hover:bg-white/10 hover:text-white/70 transition-colors"
             aria-label={`Settings for ${def.name}`}
           >
             <Settings className="h-3.5 w-3.5" />
-          </button>
-          <button
+          </UiButton>
+          <UiButton
+            type="button"
+            variant="ghost"
+            size="sm"
             onClick={(e) => { e.stopPropagation(); onRemove(); }}
             onMouseDown={(e) => e.stopPropagation()}
-            className="p-1 rounded hover:bg-red-500/20 text-white/40 hover:text-red-400 transition-colors"
+            className="h-auto p-1 rounded text-white/40 hover:bg-red-500/20 hover:text-red-400 transition-colors"
             aria-label={`Remove ${def.name}`}
           >
             <X className="h-3.5 w-3.5" />
-          </button>
+          </UiButton>
         </div>
       </div>
 
@@ -131,9 +137,9 @@ function FullscreenOverlay({ widget, def, onClose, getWidgetSize }: FullscreenOv
     <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl p-6 flex flex-col">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold text-white/90">{def.name}</h2>
-        <Button variant="ghost" size="sm" onClick={onClose}>
+        <UiButton variant="ghost" size="sm" onClick={onClose}>
           <Minimize2 className="h-4 w-4 mr-1" /> Exit Fullscreen
-        </Button>
+        </UiButton>
       </div>
       <GlassPanel className="flex-1 overflow-hidden">
         <Suspense fallback={<Skeleton className="h-full" />}>
@@ -322,15 +328,18 @@ export function DashboardGrid({
 
               {/* Fullscreen button (view mode) */}
               {!editMode && (
-                <button
+                <UiButton
+                  type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setFullscreenWidget(widget.id)}
-                  className="absolute top-2 right-2 z-10 p-1.5 rounded-lg bg-black/40
+                  className="absolute top-2 right-2 z-10 h-auto p-1.5 rounded-lg bg-black/40
                     text-white/30 hover:text-white/70 hover:bg-black/60
                     opacity-0 group-hover:opacity-100 transition-all"
                   aria-label={`Expand ${def.name}`}
                 >
                   <Maximize2 className="h-3.5 w-3.5" />
-                </button>
+                </UiButton>
               )}
 
               {/* Visual resize affordance bar at bottom edge in edit mode */}

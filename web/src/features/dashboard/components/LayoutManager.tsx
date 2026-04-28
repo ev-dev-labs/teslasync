@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, Trash2, Check, X, Copy, Settings } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { Button as UiButton, Input as UiInput } from '@/components/ui';
 import type { SavedDashboard } from '../widgets/types';
 
 interface LayoutManagerProps {
@@ -32,11 +33,14 @@ function CtxItem({
   disabled?: boolean;
 }) {
   return (
-    <button
+    <UiButton
+      type="button"
+      variant="ghost"
+      size="sm"
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        'flex items-center gap-2 w-full px-3 py-1.5 text-xs transition-colors',
+        'h-auto w-full justify-start rounded-none px-3 py-1.5 text-xs transition-colors',
         danger
           ? 'text-red-400 hover:bg-red-500/10'
           : 'text-white/70 hover:bg-white/10',
@@ -45,7 +49,7 @@ function CtxItem({
     >
       <Icon className="h-3.5 w-3.5" />
       {label}
-    </button>
+    </UiButton>
   );
 }
 
@@ -175,7 +179,7 @@ export function LayoutManager({
           <div key={d.id} className="flex items-center shrink-0">
             {editingId === d.id ? (
               <div className="flex items-center gap-1">
-                <input
+                <UiInput
                   ref={inputRef}
                   type="text"
                   value={editName}
@@ -184,21 +188,30 @@ export function LayoutManager({
                     if (e.key === 'Enter') confirmRename();
                     if (e.key === 'Escape') setEditingId(null);
                   }}
-                  className="px-2 py-1 text-xs rounded-lg bg-white/10 border border-white/20
-                    text-white/90 outline-none focus:border-[var(--theme-primary)]/40 w-28"
+                  className="h-auto w-28 rounded-lg border-white/20 bg-white/10 px-2 py-1
+                    text-xs text-white/90 focus:border-[var(--theme-primary)]/40
+                    focus:ring-0 focus:ring-offset-0"
                 />
-                <button
+                <UiButton
+                  type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={confirmRename}
-                  className="p-1 text-emerald-400 hover:bg-emerald-500/10 rounded"
+                  className="h-auto rounded p-1 text-emerald-400 hover:bg-emerald-500/10"
+                  aria-label={t('dashboard.confirmRename', 'Confirm rename')}
                 >
                   <Check className="h-3 w-3" />
-                </button>
-                <button
+                </UiButton>
+                <UiButton
+                  type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setEditingId(null)}
-                  className="p-1 text-white/40 hover:bg-white/10 rounded"
+                  className="h-auto rounded p-1 text-white/40 hover:bg-white/10"
+                  aria-label={t('dashboard.cancelRename', 'Cancel rename')}
                 >
                   <X className="h-3 w-3" />
-                </button>
+                </UiButton>
               </div>
             ) : (
               <div
@@ -235,7 +248,7 @@ export function LayoutManager({
         {/* New layout button / input */}
         {isCreating ? (
           <div className="flex items-center gap-1 shrink-0">
-            <input
+            <UiInput
               ref={inputRef}
               type="text"
               value={newName}
@@ -245,32 +258,44 @@ export function LayoutManager({
                 if (e.key === 'Escape') setIsCreating(false);
               }}
               placeholder={t('dashboard.newName', 'Layout name...')}
-              className="px-2 py-1 text-xs rounded-lg bg-white/10 border border-white/20
-                text-white/90 outline-none focus:border-[var(--theme-primary)]/40 w-28
-                placeholder:text-white/30"
+              className="h-auto w-28 rounded-lg border-white/20 bg-white/10 px-2 py-1
+                text-xs text-white/90 placeholder:text-white/30
+                focus:border-[var(--theme-primary)]/40 focus:ring-0 focus:ring-offset-0"
             />
-            <button
+            <UiButton
+              type="button"
+              variant="ghost"
+              size="sm"
               onClick={confirmCreate}
-              className="p-1 text-emerald-400 hover:bg-emerald-500/10 rounded"
+              className="h-auto rounded p-1 text-emerald-400 hover:bg-emerald-500/10"
+              aria-label={t('dashboard.confirmCreate', 'Confirm create')}
             >
               <Check className="h-3 w-3" />
-            </button>
-            <button
+            </UiButton>
+            <UiButton
+              type="button"
+              variant="ghost"
+              size="sm"
               onClick={() => setIsCreating(false)}
-              className="p-1 text-white/40 hover:bg-white/10 rounded"
+              className="h-auto rounded p-1 text-white/40 hover:bg-white/10"
+              aria-label={t('dashboard.cancelCreate', 'Cancel create')}
             >
               <X className="h-3 w-3" />
-            </button>
+            </UiButton>
           </div>
         ) : (
-          <button
+          <UiButton
+            type="button"
+            variant="ghost"
+            size="sm"
             onClick={startCreate}
-            className="px-3 py-1.5 rounded-lg text-xs text-white/30 border border-dashed border-white/10
+            className="h-auto shrink-0 rounded-lg border border-dashed border-white/10 px-3 py-1.5
+              text-xs text-white/30
               hover:border-white/20 hover:text-white/50 transition-colors shrink-0"
           >
             <Plus className="h-3 w-3 inline mr-1" />
             {t('dashboard.newLayout', 'New Layout')}
-          </button>
+          </UiButton>
         )}
       </div>
 

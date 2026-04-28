@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, Input, Select, Toggle, Button } from '@/components/ui';
+import {
+  Modal,
+  Input as UiInput,
+  Select as UiSelect,
+  Toggle,
+  Button as UiButton,
+} from '@/components/ui';
 import { cn } from '@/lib/cn';
 import type { SavedDashboard, DashboardSettings } from '../widgets/types';
 import { DEFAULT_DASHBOARD_SETTINGS } from '../widgets/types';
@@ -21,18 +27,21 @@ function EmojiPicker({
   return (
     <div className="grid grid-cols-8 gap-1">
       {DASHBOARD_EMOJIS.map((emoji) => (
-        <button
+        <UiButton
           key={emoji}
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={() => onSelect(emoji)}
           className={cn(
-            'w-8 h-8 rounded-md flex items-center justify-center text-lg',
+            'h-8 w-8 rounded-md p-0 text-lg',
             'hover:bg-white/10 transition-colors',
             selected === emoji && 'bg-white/10 ring-1 ring-[var(--theme-primary)]',
           )}
+          aria-label={emoji}
         >
           {emoji}
-        </button>
+        </UiButton>
       ))}
     </div>
   );
@@ -121,7 +130,7 @@ export function DashboardSettingsModal({
             {t('dashSettings.identity', 'Identity')}
           </h3>
           <div className="space-y-3">
-            <Input
+            <UiInput
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={t('dashSettings.name', 'Dashboard name')}
@@ -147,7 +156,7 @@ export function DashboardSettingsModal({
               'Show data for a specific vehicle in all widgets. Widget-level filters take precedence.',
             )}
           </p>
-          <Select
+          <UiSelect
             value={settings.vehicleId?.toString() ?? ''}
             onChange={(e) =>
               setSettings((s) => ({
@@ -164,7 +173,7 @@ export function DashboardSettingsModal({
           <h3 className="text-sm font-medium text-gray-300 mb-3">
             {t('dashSettings.refresh', 'Auto-Refresh')}
           </h3>
-          <Select
+          <UiSelect
             value={settings.refreshInterval.toString()}
             onChange={(e) =>
               setSettings((s) => ({ ...s, refreshInterval: Number(e.target.value) }))
@@ -197,12 +206,12 @@ export function DashboardSettingsModal({
 
         {/* Actions */}
         <div className="flex gap-2 justify-end pt-2 border-t border-white/5">
-          <Button variant="ghost" onClick={onClose}>
+          <UiButton variant="ghost" onClick={onClose}>
             {t('common.cancel', 'Cancel')}
-          </Button>
-          <Button onClick={handleSave}>
+          </UiButton>
+          <UiButton onClick={handleSave}>
             {t('common.save', 'Save')}
-          </Button>
+          </UiButton>
         </div>
       </div>
     </Modal>

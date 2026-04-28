@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { Button as UiButton } from '@/components/ui';
 import type { KioskConfig } from '../hooks/useKioskMode';
 
 interface KioskOverlayProps {
@@ -114,16 +115,19 @@ export function KioskOverlay({
           showExit ? 'opacity-100' : 'opacity-0',
         )}
       >
-        <button
+        <UiButton
+          type="button"
+          variant="ghost"
+          size="sm"
           onClick={onExit}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-black/60 backdrop-blur-sm
+          className="h-auto px-3 py-2 rounded-lg bg-black/60 backdrop-blur-sm
             text-white/50 text-xs hover:text-white/90 hover:bg-black/80 transition-colors
-            focus:outline-none focus:ring-2 focus:ring-white/20"
+            focus:ring-white/20 focus:ring-offset-0"
           aria-label={t('kiosk.exit', 'Exit kiosk mode')}
         >
           <X className="h-3.5 w-3.5" />
           {t('kiosk.exitLabel', 'Exit Kiosk')}
-        </button>
+        </UiButton>
       </div>
     </>
   );

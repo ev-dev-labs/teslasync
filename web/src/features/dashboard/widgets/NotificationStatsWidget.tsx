@@ -1,13 +1,14 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Bell, Send, AlertTriangle, Radio, CheckCircle, XCircle, Clock } from 'lucide-react';
-import { Badge } from '@/components/ui';
+import { Badge, DataTable, type Column } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useNotificationStats, useNotificationLogs } from '@/api/hooks/useNotifications';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
+import type { NotificationLog } from '@/api/types';
 
 function formatLogTime(isoStr: string): string {
   const d = new Date(isoStr);
@@ -98,6 +99,51 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
       .slice(0, limit);
   }, [logs, isCompact]);
 
+  const logColumns = useMemo<Column<NotificationLog>[]>(() => [
+    {
+      key: 'channel',
+      header: t('widget.notificationStats.channel', 'Channel'),
+      className: 'max-w-[120px]',
+      render: (log) => (
+        <span className="block truncate text-white/70">
+          {log.title ?? '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'type',
+      header: t('widget.notificationStats.type', 'Type'),
+      className: 'max-w-[100px]',
+      render: (log) => (
+        <span className="block truncate text-white/50">
+          {log.message ?? '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'status',
+      header: t('widget.notificationStats.status', 'Status'),
+      render: (log) => (
+        <Badge variant={STATUS_VARIANT[log.status] ?? 'warning'}>
+          {log.status === 'sent' && <CheckCircle className="h-3 w-3 mr-1" />}
+          {log.status === 'failed' && <XCircle className="h-3 w-3 mr-1" />}
+          {log.status === 'pending' && <Clock className="h-3 w-3 mr-1" />}
+          {log.status ?? '—'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'time',
+      header: t('widget.notificationStats.time', 'Time'),
+      className: 'text-right whitespace-nowrap',
+      render: (log) => (
+        <span className="text-white/40">
+          {formatLogTime(log.created_at)}
+        </span>
+      ),
+    },
+  ], [t]);
+
   const handleRefresh = () => {
     statsRefetch();
     logsRefetch();
@@ -158,49 +204,13 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
           <WidgetStatGrid stats={coreStats} cols={isWide ? 4 : 2} />
 
           {isWide && recentLogs.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-white/40 border-b border-white/5">
-                    <th className="text-left py-1.5 px-2 font-medium">
-                      {t('widget.notificationStats.channel', 'Channel')}
-                    </th>
-                    <th className="text-left py-1.5 px-2 font-medium">
-                      {t('widget.notificationStats.type', 'Type')}
-                    </th>
-                    <th className="text-left py-1.5 px-2 font-medium">
-                      {t('widget.notificationStats.status', 'Status')}
-                    </th>
-                    <th className="text-right py-1.5 px-2 font-medium">
-                      {t('widget.notificationStats.time', 'Time')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentLogs.map((log) => (
-                    <tr key={log.id} className="border-b border-white/5 last:border-0">
-                      <td className="py-1.5 px-2 text-white/70 truncate max-w-[120px]">
-                        {log.title ?? '—'}
-                      </td>
-                      <td className="py-1.5 px-2 text-white/50 truncate max-w-[100px]">
-                        {log.message ?? '—'}
-                      </td>
-                      <td className="py-1.5 px-2">
-                        <Badge variant={STATUS_VARIANT[log.status] ?? 'warning'}>
-                          {log.status === 'sent' && <CheckCircle className="h-3 w-3 mr-1" />}
-                          {log.status === 'failed' && <XCircle className="h-3 w-3 mr-1" />}
-                          {log.status === 'pending' && <Clock className="h-3 w-3 mr-1" />}
-                          {log.status ?? '—'}
-                        </Badge>
-                      </td>
-                      <td className="py-1.5 px-2 text-right text-white/40 whitespace-nowrap">
-                        {formatLogTime(log.created_at)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              columns={logColumns}
+              data={recentLogs}
+              keyExtractor={(log) => log.id}
+              compact
+              className="text-xs"
+            />
           )}
         </div>
       ) : (

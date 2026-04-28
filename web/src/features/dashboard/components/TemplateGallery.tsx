@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LayoutGrid, ArrowLeft, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { Modal, Button, Badge } from '@/components/ui';
+import { Modal, Button as UiButton, Badge } from '@/components/ui';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { DASHBOARD_PRESETS } from '../hooks/useDashboardLayout';
 import { getWidgetDef } from '../widgets/registry';
@@ -74,14 +74,14 @@ function TemplateDetail({
         </div>
 
         <div className="flex gap-2 pt-2">
-          <Button variant="ghost" size="sm" onClick={onBack}>
+          <UiButton variant="ghost" size="sm" onClick={onBack}>
             <ArrowLeft className="h-3.5 w-3.5 mr-1" />
             {t('common.back', 'Back')}
-          </Button>
-          <Button size="sm" onClick={onApply}>
+          </UiButton>
+          <UiButton size="sm" onClick={onApply}>
             <Sparkles className="h-3.5 w-3.5 mr-1" />
             {t('templates.apply', 'Use This Template')}
-          </Button>
+          </UiButton>
         </div>
       </div>
     </FadeIn>
@@ -117,10 +117,13 @@ function TemplateCard({
   const desc = TEMPLATE_DESCRIPTIONS[template.id];
 
   return (
-    <button
+    <UiButton
+      type="button"
+      variant="ghost"
+      size="sm"
       onClick={onClick}
       className={cn(
-        'w-full text-left rounded-xl border transition-all group',
+        'h-auto w-full flex-col items-stretch justify-start gap-0 p-0 text-left rounded-xl border transition-all group',
         'bg-white/[0.02] border-white/[0.06]',
         'hover:bg-white/[0.05] hover:border-white/[0.12]',
         'hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/20',
@@ -161,7 +164,7 @@ function TemplateCard({
           ))}
         </div>
       </div>
-    </button>
+    </UiButton>
   );
 }
 
@@ -215,16 +218,19 @@ export function TemplateGallery({ open, onClose, onApply }: TemplateGalleryProps
         <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {/* Blank option */}
           <StaggerItem>
-            <button
+            <UiButton
+              type="button"
+              variant="ghost"
+              size="sm"
               onClick={() => {
                 onApply('__blank__');
                 setSelectedId(null);
               }}
               className={cn(
-                'w-full text-left rounded-xl border transition-all',
+                'h-auto w-full justify-start rounded-xl border p-6 text-left transition-all',
                 'bg-white/[0.02] border-dashed border-white/[0.10]',
                 'hover:bg-white/[0.05] hover:border-white/[0.18]',
-                'hover:-translate-y-0.5 p-6',
+                'hover:-translate-y-0.5',
               )}
             >
               <div className="flex items-center gap-3">
@@ -240,7 +246,7 @@ export function TemplateGallery({ open, onClose, onApply }: TemplateGalleryProps
                   </p>
                 </div>
               </div>
-            </button>
+            </UiButton>
           </StaggerItem>
 
           {/* Preset templates */}

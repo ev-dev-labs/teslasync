@@ -1,7 +1,13 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Maximize2, Monitor } from 'lucide-react';
-import { Modal, Button, Toggle, Select } from '@/components/ui';
+import {
+  Modal,
+  Button as UiButton,
+  Toggle,
+  Select as UiSelect,
+  Input as UiInput,
+} from '@/components/ui';
 import { FormSection } from '@/components/forms';
 import type { KioskConfig } from '../hooks/useKioskMode';
 import type { SavedDashboard } from '../widgets/types';
@@ -87,7 +93,7 @@ export function KioskSettingsModal({
         {/* Rotation */}
         <FormSection title={t('kiosk.rotation', 'Dashboard Rotation')}>
           <div className="space-y-3">
-            <Select
+            <UiSelect
               label={t('kiosk.rotationInterval', 'Rotation Interval')}
               options={ROTATION_OPTIONS}
               value={String(config.rotateInterval)}
@@ -106,12 +112,13 @@ export function KioskSettingsModal({
                       className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.03]
                         hover:bg-white/[0.06] transition-colors cursor-pointer"
                     >
-                      <input
+                      <UiInput
                         type="checkbox"
                         checked={selectedIds.has(d.id)}
                         onChange={() => toggleDashboard(d.id)}
-                        className="rounded border-white/20 bg-white/5 text-blue-500
+                        className="h-4 w-4 rounded border-white/20 bg-white/5 p-0 text-blue-500
                           focus:ring-blue-500/30 focus:ring-offset-0"
+                        aria-label={d.name}
                       />
                       <span className="text-sm text-white/80">{d.name}</span>
                       {d.isDefault && (
@@ -138,7 +145,7 @@ export function KioskSettingsModal({
                 onChange={(v) => onUpdateConfig({ hideCursor: v })}
               />
               {config.hideCursor && (
-                <Select
+                <UiSelect
                   label={t('kiosk.cursorTimeout', 'Hide After')}
                   options={CURSOR_TIMEOUT_OPTIONS}
                   value={String(config.cursorTimeout)}
@@ -149,7 +156,7 @@ export function KioskSettingsModal({
 
             {/* Screen dimming */}
             <div className="space-y-2">
-              <Select
+              <UiSelect
                 label={t('kiosk.dimAfter', 'Dim Screen After')}
                 options={DIM_AFTER_OPTIONS}
                 value={String(config.dimAfter)}
@@ -160,13 +167,13 @@ export function KioskSettingsModal({
                   <label className="text-sm font-medium text-white/70">
                     {t('kiosk.brightness', 'Dimmed Brightness')}: {Math.round(config.dimLevel * 100)}%
                   </label>
-                  <input
+                  <UiInput
                     type="range"
                     min={30}
                     max={90}
                     value={config.dimLevel * 100}
                     onChange={(e) => onUpdateConfig({ dimLevel: Number(e.target.value) / 100 })}
-                    className="w-full accent-blue-500"
+                    className="w-full border-0 bg-transparent p-0 accent-blue-500 dark:bg-transparent focus:ring-0 focus:ring-offset-0"
                   />
                 </div>
               )}
@@ -180,7 +187,7 @@ export function KioskSettingsModal({
                 onChange={(v) => onUpdateConfig({ showClock: v })}
               />
               {config.showClock && (
-                <Select
+                <UiSelect
                   label={t('kiosk.clockPosition', 'Clock Position')}
                   options={CLOCK_POSITION_OPTIONS}
                   value={config.clockPosition}
@@ -211,14 +218,14 @@ export function KioskSettingsModal({
                 {Math.round((config.widgetOpacity ?? 1) * 100)}%
               </span>
             </div>
-            <input
+            <UiInput
               type="range"
               min={30}
               max={100}
               step={5}
               value={Math.round((config.widgetOpacity ?? 1) * 100)}
               onChange={(e) => onUpdateConfig({ widgetOpacity: Number(e.target.value) / 100 })}
-              className="w-full accent-[var(--theme-primary)]"
+              className="w-full border-0 bg-transparent p-0 accent-[var(--theme-primary)] dark:bg-transparent focus:ring-0 focus:ring-offset-0"
             />
             <div className="flex justify-between text-[10px] text-white/20">
               <span>{t('kiosk.transparent', 'Transparent')}</span>
@@ -236,14 +243,14 @@ export function KioskSettingsModal({
                 {Math.round((config.backgroundOpacity ?? 1) * 100)}%
               </span>
             </div>
-            <input
+            <UiInput
               type="range"
               min={0}
               max={100}
               step={5}
               value={Math.round((config.backgroundOpacity ?? 1) * 100)}
               onChange={(e) => onUpdateConfig({ backgroundOpacity: Number(e.target.value) / 100 })}
-              className="w-full accent-[var(--theme-primary)]"
+              className="w-full border-0 bg-transparent p-0 accent-[var(--theme-primary)] dark:bg-transparent focus:ring-0 focus:ring-offset-0"
             />
             <div className="flex justify-between text-[10px] text-white/20">
               <span>{t('kiosk.transparent', 'Transparent')}</span>
@@ -282,13 +289,13 @@ export function KioskSettingsModal({
 
         {/* Actions */}
         <div className="flex gap-2 justify-end pt-2">
-          <Button variant="ghost" size="sm" onClick={onClose}>
+          <UiButton variant="ghost" size="sm" onClick={onClose}>
             {t('common.cancel', 'Cancel')}
-          </Button>
-          <Button size="sm" onClick={handleEnter}>
+          </UiButton>
+          <UiButton size="sm" onClick={handleEnter}>
             <Maximize2 className="h-4 w-4 mr-2" />
             {t('kiosk.enter', 'Enter Kiosk Mode')}
-          </Button>
+          </UiButton>
         </div>
       </div>
     </Modal>
