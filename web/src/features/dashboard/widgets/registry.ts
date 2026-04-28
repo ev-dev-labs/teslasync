@@ -4,7 +4,7 @@ import {
   Activity, BarChart3, Gauge, Wifi, TrendingUp, Monitor,
   DollarSign, Calendar, CloudSun, CircleDot, CreditCard, Hash,
   MonitorSmartphone, List, Grid3X3, Workflow, DoorOpen, Eye,
-  Command, CalendarRange, Bell, Music, HeartPulse,
+  Command, CalendarRange, Bell, Music, HeartPulse, Moon,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -168,6 +168,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./VampireDrainWidget')),
+  },
+  {
+    id: 'sleep-efficiency',
+    name: 'Sleep Efficiency',
+    description: 'How well the car sleeps: efficiency %, drain rate, wake events',
+    icon: Moon,
+    category: 'energy',
+    defaultSize: { cols: 1, rows: 2 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 3, rows: 40 },
+    component: lazy(() => import('./SleepEfficiencyWidget')),
   },
 
   // ── Driving ──

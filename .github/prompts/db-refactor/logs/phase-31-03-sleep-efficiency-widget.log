@@ -1,0 +1,38 @@
+=== SURVEY ===
+- Examined WidgetShell props (freshness: updatedAt, isFetching, isStale, isError, onRefresh)
+- Examined WidgetProps type (vehicleId, size, config)
+- Examined useSleepEfficiency hook: returns SleepEfficiencyData with sleep_efficiency_pct,
+  sentry_off_drain_rate, state_distribution, recent_events
+- Examined RadialGauge props: value, max, label, unit, color, size
+- Examined StatCard props: label, value, unit, icon, sublabel
+- Examined peer widgets: VampireDrainWidget, BatteryRadialGaugeWidget for patterns
+- Registry: 46 widgets, energy section at lines 149-171; Moon icon not yet imported
+
+=== REASONING ===
+- Compact (cols<=1): Show RadialGauge centered with sleep efficiency %, label below
+- Standard (cols>=2): RadialGauge top + 3 stat cards grid (avg drain/day, total sleep hours, wake events)
+- Efficiency color: green >95%, amber >85%, red <=85% per spec
+- avg drain/day derived from sentry_off_drain_rate * 24 (rate is %/hr)
+- total sleep hours summed from state_distribution (asleep + offline states)
+- wake events count from recent_events.length
+- All strings wrapped in t() with fallback. Null-safe with ?? operators.
+- Freshness props passed through to WidgetShell
+
+=== CHANGES ===
+1. Created web/src/features/dashboard/widgets/SleepEfficiencyWidget.tsx (113 lines)
+   - Compact: RadialGauge + text label, min-h-[44px] touch target
+   - Standard: RadialGauge + 3-col StatCard grid
+   - All WidgetShell freshness props wired
+   - i18n on every string, null-safe throughout
+2. Updated web/src/features/dashboard/widgets/registry.ts
+   - Added Moon to lucide-react imports
+   - Added sleep-efficiency entry in energy section (after vampire-drain)
+   - defaultSize 1×2, minSize 1×2, maxSize 3×40
+
+=== GATE ===
+TypeScript: npx tsc --noEmit → exit code 0 (clean)
+STATUS=DONE
+
+=== COMMIT ===
+EXIT=0
+STATUS=DONE
