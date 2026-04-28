@@ -17,6 +17,7 @@ import {
   ArrowUpCircle,
   Watch,
   Map as MapIcon,
+  LayoutDashboard,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -1325,6 +1326,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./VersionInfoWidget')),
+  },
+  {
+    id: 'dashboard-stats',
+    name: 'Dashboard Stats',
+    description: 'Meta-widget: dashboard usage, widgets placed, FSM current state',
+    icon: LayoutDashboard,
+    category: 'system',
+    defaultSize: { cols: 2, rows: 2 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./DashboardStatsWidget')),
   },
 ];
 

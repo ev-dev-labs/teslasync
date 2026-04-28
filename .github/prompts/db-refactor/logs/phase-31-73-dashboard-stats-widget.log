@@ -1,0 +1,42 @@
+=== SURVEY ===
+- Checked WidgetStatGrid shared component: accepts StatGridItem[] with label/value/unit/icon/trend
+- Checked useDashboardStats hook: returns DashboardStats (totalVehicles, totalMiles, totalEnergyKwh, totalChargingSessions, totalTrips, avgEfficiency, totalCostCents)
+- Checked useVehicleStateMachine hook: returns VehicleState (state, since, vehicleId)
+- Checked useStateTimeline hook: returns { transitions: StateTransition[] } (state, startedAt, endedAt, durationSeconds)
+- Checked StatusBadge component: accepts status string + size sm/md
+- Checked WidgetShell: freshness props (updatedAt, isFetching, isStale, isError, onRefresh)
+- Checked registry.ts: last entry is version-info, system category, need LayoutDashboard import
+
+=== REASONING ===
+- DashboardStats type has vehicle/energy fields (not dashboard-meta fields) — used actual typed fields
+- Mapped 4 stat cards: Vehicles, Trips, Charge Sessions, FSM State
+- Compact (cols<=1): big number (totalTrips) + "active" label, centered
+- Standard (2×2): WidgetStatGrid with 2 cols + StatusBadge row for FSM state
+- Wide (cols>=3): adds recent state transitions mini-timeline (max 5 items)
+- All strings wrapped in t() with fallback defaults
+- Null-safe: dashStats optional chaining, transitions ?? [], fsmState ?? '—'
+- Touch targets: min-h-[44px] on all interactive/list rows
+- Freshness merged from all 3 queries
+
+=== CHANGES ===
+1. Created: web/src/features/dashboard/widgets/DashboardStatsWidget.tsx
+   - Default export DashboardStatsWidget
+   - Uses useDashboardStats, useVehicleStateMachine, useStateTimeline, useVehicles
+   - Imports WidgetStatGrid from ./shared, StatusBadge from @/components/data-display
+   - 3 size modes: compact (1×2), standard (2×2), wide (2×4)
+   - All freshness props passed to WidgetShell
+   - i18n on all user-visible strings
+   - Null-safe data access throughout
+
+2. Modified: web/src/features/dashboard/widgets/registry.ts
+   - Added LayoutDashboard to lucide-react import
+   - Added 'dashboard-stats' entry at end of WIDGET_REGISTRY
+   - Category: system, defaultSize 2×2, minSize 1×2, maxSize 4×40
+
+=== GATE ===
+npx tsc --noEmit → exit code 0 (clean)
+STATUS=DONE
+
+=== COMMIT ===
+EXIT=0
+STATUS=DONE
