@@ -5,6 +5,7 @@ import {
   DollarSign, Calendar, CloudSun, CircleDot, CreditCard, Hash,
   MonitorSmartphone, List, Grid3X3, Workflow, DoorOpen, Eye,
   Command, CalendarRange, Bell, Music, HeartPulse, Moon, Navigation,
+  Cpu,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -155,6 +156,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 3, rows: 40 },
     component: lazy(() => import('./ProjectedRangeWidget')),
+  },
+  {
+    id: 'battery-cells',
+    name: 'Battery Cells',
+    description: 'Cell-level voltage heatmap, min/max/avg, temperature per module',
+    icon: Cpu,
+    category: 'battery',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 2, rows: 4 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./BatteryCellsWidget')),
   },
 
   // ── Energy ──
