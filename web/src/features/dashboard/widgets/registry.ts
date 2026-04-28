@@ -6,7 +6,7 @@ import {
   MonitorSmartphone, List, Grid3X3, Workflow, DoorOpen, Eye,
   Command, CalendarRange, Bell, Music, HeartPulse, Moon, Navigation,
   Cpu, RotateCcw, Route, Lightbulb, Trophy, Clock, AlertTriangle,
-  Sparkles,
+  Sparkles, Cog,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -78,6 +78,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 2, rows: 40 },
     component: lazy(() => import('./OdometerCounterWidget')),
+  },
+  {
+    id: 'drivetrain-health',
+    name: 'Drivetrain Health',
+    description: 'Motor temp, stator temp, inverter health, overall powertrain score',
+    icon: Cog,
+    category: 'vehicle',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./DrivetrainHealthWidget')),
   },
 
   // ── Battery ──
