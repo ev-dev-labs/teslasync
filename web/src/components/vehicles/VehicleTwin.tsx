@@ -1,13 +1,13 @@
-import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, Unlock, Shield } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Tooltip } from '@/components/ui';
 import type { VehicleTwinState, WindowState, TurnSignalState } from '@/lib/vehicleState';
 
-// ── Size presets ────────────────────────────────────────────────────────
-
-const SIZE_MAP = { sm: 240, md: 380, lg: 500 } as const;
+const SIZE_MAP = { sm: 300, md: 440, lg: 560 } as const;
+const VIEWBOX_WIDTH = 560;
+const VIEWBOX_HEIGHT = 280;
+const ASPECT_RATIO = VIEWBOX_HEIGHT / VIEWBOX_WIDTH;
 
 export type VehicleTwinSize = keyof typeof SIZE_MAP;
 
@@ -17,48 +17,39 @@ export interface VehicleTwinProps extends VehicleTwinState {
   className?: string;
 }
 
-// ── Color constants (Tailwind-compatible rgba, no CSS vars) ────────────
-
 const C = {
-  bodyTop: 'rgba(255,255,255,0.07)',
-  bodySide: 'rgba(255,255,255,0.04)',
-  bodyRear: 'rgba(255,255,255,0.03)',
-  bodyStroke: 'rgba(255,255,255,0.12)',
-  bodyHighlight: 'rgba(255,255,255,0.10)',
-  glassClosed: 'rgba(100,200,255,0.08)',
-  glassStroke: 'rgba(100,200,255,0.15)',
-  glassOpen: 'rgba(0,0,0,0.3)',
-  glassPartial: 'rgba(100,200,255,0.04)',
-  glassUnknown: 'rgba(255,255,255,0.03)',
-  doorClosed: 'rgba(255,255,255,0.08)',
-  doorOpen: 'rgba(251,191,36,0.55)',
-  doorUnknown: 'rgba(255,255,255,0.06)',
-  headlightOff: 'rgba(255,255,255,0.08)',
-  headlightOn: 'rgba(255,255,200,0.85)',
-  headlightBeam: 'rgba(255,255,200,0.05)',
+  bodyStroke: 'rgba(255,255,255,0.14)',
+  bodyHighlight: 'rgba(255,255,255,0.18)',
+  glassClosed: 'rgba(100,200,255,0.12)',
+  glassStroke: 'rgba(100,200,255,0.24)',
+  glassOpen: 'rgba(3,7,18,0.72)',
+  glassPartial: 'rgba(100,200,255,0.05)',
+  glassUnknown: 'rgba(255,255,255,0.04)',
+  doorClosed: 'rgba(255,255,255,0.13)',
+  doorOpen: 'rgba(251,191,36,0.72)',
+  doorUnknown: 'rgba(255,255,255,0.07)',
+  headlightOff: 'rgba(255,255,255,0.14)',
+  headlightOn: 'rgba(255,255,220,0.9)',
+  headlightBeam: 'rgba(255,255,220,0.08)',
   headlightGlow: 'rgba(34,211,238,0.35)',
-  taillightBase: 'rgba(239,68,68,0.3)',
-  taillightActive: 'rgba(239,68,68,0.8)',
-  amber: 'rgba(251,191,36,0.7)',
-  amberFill: 'rgba(251,191,36,0.2)',
-  chargeGreen: 'rgba(34,197,94,0.7)',
-  chargeGreenFill: 'rgba(34,197,94,0.3)',
-  lockedGreen: 'rgba(34,197,94,0.8)',
-  unlockedRed: 'rgba(239,68,68,0.8)',
-  sentryRed: 'rgba(239,68,68,0.7)',
-  sentryGlow: 'rgba(239,68,68,0.3)',
-  seatOccupied: 'rgba(34,211,238,0.25)',
-  frunkTrunkOpen: 'rgba(251,191,36,0.25)',
-  neutral: 'rgba(255,255,255,0.04)',
-  shadow: 'rgba(0,0,0,0.35)',
-  wheelDark: 'rgba(255,255,255,0.06)',
-  wheelStroke: 'rgba(255,255,255,0.12)',
-  tirePressureOk: 'rgba(34,197,94,0.6)',
-  tirePressureLow: 'rgba(251,191,36,0.6)',
-  tirePressureCritical: 'rgba(239,68,68,0.6)',
+  taillightBase: 'rgba(239,68,68,0.45)',
+  taillightActive: 'rgba(239,68,68,0.85)',
+  amber: 'rgba(251,191,36,0.78)',
+  amberFill: 'rgba(251,191,36,0.18)',
+  chargeGreen: 'rgba(34,197,94,0.82)',
+  chargeGreenFill: 'rgba(34,197,94,0.22)',
+  lockedGreen: 'rgba(34,197,94,0.9)',
+  unlockedRed: 'rgba(239,68,68,0.9)',
+  sentryRed: 'rgba(239,68,68,0.8)',
+  sentryGlow: 'rgba(239,68,68,0.35)',
+  seatOccupied: 'rgba(34,211,238,0.32)',
+  frunkTrunkOpen: 'rgba(251,191,36,0.2)',
+  neutral: 'rgba(255,255,255,0.05)',
+  shadow: 'rgba(0,0,0,0.42)',
+  wheelDark: 'rgba(2,6,23,0.92)',
+  wheelSidewall: 'rgba(15,23,42,0.92)',
+  wheelStroke: 'rgba(255,255,255,0.16)',
 } as const;
-
-// ── Helpers ─────────────────────────────────────────────────────────────
 
 function windowFill(state: WindowState): string {
   switch (state) {
@@ -71,10 +62,10 @@ function windowFill(state: WindowState): string {
 
 function windowStroke(state: WindowState): string {
   switch (state) {
-    case 'open': return 'rgba(245,158,11,0.5)';
-    case 'partial': return 'rgba(245,158,11,0.3)';
+    case 'open': return C.amber;
+    case 'partial': return 'rgba(245,158,11,0.45)';
     case 'closed': return C.glassStroke;
-    default: return 'rgba(255,255,255,0.06)';
+    default: return 'rgba(255,255,255,0.08)';
   }
 }
 
@@ -89,46 +80,83 @@ function windowLabel(state: WindowState): string {
 
 function doorStroke(open: boolean | null): string {
   if (open === null) return C.doorUnknown;
-  return open ? C.amber : C.doorClosed;
+  return open ? C.doorOpen : C.doorClosed;
 }
 
-// ── SVG Sub-components (isometric 3/4 view) ────────────────────────────
+function stateLabel(value: boolean | null, trueText: string, falseText: string): string {
+  if (value === null) return 'Unknown';
+  return value ? trueText : falseText;
+}
+
+function InteractiveHotspot({
+  enabled,
+  x,
+  y,
+  width,
+  height,
+  label,
+  side = 'top',
+}: {
+  enabled?: boolean;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  label: string;
+  side?: 'top' | 'bottom' | 'left' | 'right';
+}) {
+  if (!enabled) return null;
+
+  return (
+    <foreignObject x={x} y={y} width={width} height={height}>
+      <Tooltip content={label} side={side}>
+        <span className="block w-full h-full" />
+      </Tooltip>
+    </foreignObject>
+  );
+}
 
 function GroundShadow() {
   return (
     <ellipse
-      cx={200}
-      cy={330}
-      rx={160}
-      ry={18}
+      cx={280}
+      cy={244}
+      rx={226}
+      ry={20}
       fill={C.shadow}
       filter="url(#twin-shadow-blur)"
     />
   );
 }
 
-function WheelSVG({ cx, cy, visible }: { cx: number; cy: number; visible: 'full' | 'partial' }) {
-  const rOuter = visible === 'full' ? 18 : 16;
-  const rInner = visible === 'full' ? 10 : 9;
+function WheelSVG({ cx, cy }: { cx: number; cy: number }) {
+  const spokes = [0, 45, 90, 135, 180, 225, 270, 315];
+
   return (
     <g>
-      {/* Tire */}
-      <ellipse cx={cx} cy={cy} rx={rOuter} ry={rOuter * 0.55}
-        fill={C.wheelDark} stroke={C.wheelStroke} strokeWidth={1.2} />
-      {/* Rim */}
-      <ellipse cx={cx} cy={cy} rx={rInner} ry={rInner * 0.55}
-        fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" strokeWidth={0.8} />
-      {/* Spoke lines */}
-      {[0, 60, 120].map(angle => {
+      <circle cx={cx} cy={cy} r={38} fill={C.wheelDark} stroke={C.wheelStroke} strokeWidth={2} />
+      <circle cx={cx} cy={cy} r={29} fill={C.wheelSidewall} stroke="rgba(255,255,255,0.1)" strokeWidth={1.5} />
+      <circle cx={cx} cy={cy} r={19} fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.16)" strokeWidth={1.2} />
+      {spokes.map((angle) => {
         const rad = (angle * Math.PI) / 180;
-        const dx = Math.cos(rad) * rInner * 0.8;
-        const dy = Math.sin(rad) * rInner * 0.4;
+        const x2 = cx + Math.cos(rad) * 17;
+        const y2 = cy + Math.sin(rad) * 17;
+
         return (
-          <line key={angle}
-            x1={cx - dx} y1={cy - dy} x2={cx + dx} y2={cy + dy}
-            stroke="rgba(255,255,255,0.06)" strokeWidth={0.6} />
+          <line
+            key={angle}
+            x1={cx}
+            y1={cy}
+            x2={x2}
+            y2={y2}
+            stroke="rgba(255,255,255,0.2)"
+            strokeWidth={1.5}
+            strokeLinecap="round"
+          />
         );
       })}
+      <circle cx={cx} cy={cy} r={5} fill="rgba(255,255,255,0.25)" />
+      <circle cx={cx} cy={cy} r={40} fill="none" stroke="rgba(0,0,0,0.3)" strokeWidth={5} />
     </g>
   );
 }
@@ -144,107 +172,128 @@ function BodyShell({
 }) {
   return (
     <g>
-      {/* ── Left side panel (main visible side) ── */}
       <path
-        d="M 62,175 L 62,305 Q 62,315 72,318 L 310,318 Q 322,318 325,305 L 338,175 Z"
-        fill="url(#bodyGradSide)"
+        d="M 68 196 C 77 173 101 158 139 153 L 187 146 C 216 114 255 99 307 99 C 367 99 413 117 449 146 L 501 155 C 529 160 546 176 552 196 L 548 211 C 536 222 515 226 477 227 L 454 227 C 450 201 429 182 402 182 C 374 182 351 202 347 228 L 205 228 C 201 202 179 182 151 182 C 123 182 101 202 97 227 L 82 226 C 68 224 61 212 68 196 Z"
+        fill="url(#twin-body-grad)"
         stroke={C.bodyStroke}
+        strokeWidth={1.4}
+      />
+      <path
+        d="M 91 190 C 150 181 226 178 307 180 C 400 182 481 187 543 198"
+        fill="none"
+        stroke={C.bodyHighlight}
         strokeWidth={1}
+        strokeLinecap="round"
+        opacity={0.55}
+      />
+      <path
+        d="M 121 219 C 170 231 245 235 334 232 C 416 229 491 221 540 209"
+        fill="none"
+        stroke="rgba(255,255,255,0.08)"
+        strokeWidth={1.2}
+        strokeLinecap="round"
       />
 
-      {/* Side panel body line / belt line */}
-      <line x1={65} y1={192} x2={336} y2={192}
-        stroke={C.bodyHighlight} strokeWidth={0.5} />
-
-      {/* ── Roof (top face with perspective) ── */}
       <path
-        d="M 100,68 L 78,155 L 310,155 L 332,68 Z"
-        fill="url(#bodyGradRoof)"
-        stroke={C.bodyStroke}
+        d="M 207 145 C 238 128 280 120 324 123 C 369 126 407 136 437 148"
+        fill="none"
+        stroke="rgba(255,255,255,0.16)"
         strokeWidth={1}
+        strokeLinecap="round"
       />
 
-      {/* Roof centerline (subtle detail) */}
-      <line x1={190} y1={72} x2={194} y2={152}
-        stroke="rgba(255,255,255,0.04)" strokeWidth={0.5} />
-
-      {/* ── Hood / Frunk (front top face) ── */}
       <path
-        d="M 62,155 L 78,155 L 100,68 L 72,82 Q 60,92 58,120 Z"
-        fill={frunkOpen ? C.frunkTrunkOpen : 'url(#bodyGradHood)'}
-        stroke={frunkOpen ? C.amber : C.bodyStroke}
-        strokeWidth={frunkOpen ? 1.5 : 1}
+        d="M 98 227 C 101 199 123 178 151 178 C 180 178 202 200 205 228"
+        fill="none"
+        stroke="rgba(0,0,0,0.48)"
+        strokeWidth={7}
+        strokeLinecap="round"
+      />
+      <path
+        d="M 347 228 C 350 200 373 178 402 178 C 431 178 453 200 456 227"
+        fill="none"
+        stroke="rgba(0,0,0,0.48)"
+        strokeWidth={7}
+        strokeLinecap="round"
+      />
+      <path
+        d="M 98 227 C 101 199 123 178 151 178 C 180 178 202 200 205 228"
+        fill="none"
+        stroke="rgba(255,255,255,0.14)"
+        strokeWidth={1.2}
+        strokeLinecap="round"
+      />
+      <path
+        d="M 347 228 C 350 200 373 178 402 178 C 431 178 453 200 456 227"
+        fill="none"
+        stroke="rgba(255,255,255,0.14)"
+        strokeWidth={1.2}
+        strokeLinecap="round"
+      />
+
+      <path
+        d="M 439 147 C 471 149 512 159 545 180"
+        fill="none"
+        stroke={frunkOpen ? C.doorOpen : 'rgba(255,255,255,0.08)'}
+        strokeWidth={frunkOpen ? 1.8 : 1}
+        strokeLinecap="round"
       />
       <AnimatePresence>
         {frunkOpen && (
           <motion.path
-            d="M 72,82 Q 60,60 68,40 L 100,30 L 100,68 Z"
+            d="M 442 146 C 478 120 523 132 553 166 L 543 178 C 513 160 478 153 442 153 Z"
             fill={C.frunkTrunkOpen}
-            stroke={C.amber}
-            strokeWidth={1}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
+            stroke={C.doorOpen}
+            strokeWidth={1.2}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.25 }}
           />
         )}
       </AnimatePresence>
-      {interactive && (
-        <foreignObject x={58} y={60} width={50} height={100}>
-          <Tooltip content={`Frunk: ${frunkOpen === null ? 'Unknown' : frunkOpen ? 'Open' : 'Closed'}`} side="left">
-            <span className="block w-full h-full" />
-          </Tooltip>
-        </foreignObject>
-      )}
 
-      {/* ── Rear face (back of car visible in 3/4) ── */}
       <path
-        d="M 325,155 L 338,175 L 338,305 Q 338,315 332,318 L 310,318 Q 322,318 325,305 L 332,175 Z"
-        fill={C.bodyRear}
-        stroke={C.bodyStroke}
-        strokeWidth={0.8}
-      />
-
-      {/* ── Trunk/Liftgate rear section ── */}
-      <path
-        d="M 310,155 L 332,68 L 340,82 Q 342,110 340,140 L 338,175 L 325,155 Z"
-        fill={trunkOpen ? C.frunkTrunkOpen : C.bodyRear}
-        stroke={trunkOpen ? C.amber : C.bodyStroke}
-        strokeWidth={trunkOpen ? 1.5 : 0.8}
+        d="M 186 146 C 157 143 122 148 86 165"
+        fill="none"
+        stroke={trunkOpen ? C.doorOpen : 'rgba(255,255,255,0.08)'}
+        strokeWidth={trunkOpen ? 1.8 : 1}
+        strokeLinecap="round"
       />
       <AnimatePresence>
         {trunkOpen && (
           <motion.path
-            d="M 332,68 L 340,82 L 355,70 L 345,50 Z"
+            d="M 187 146 C 154 117 113 124 83 154 L 96 164 C 124 146 158 142 187 154 Z"
             fill={C.frunkTrunkOpen}
-            stroke={C.amber}
-            strokeWidth={1}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
+            stroke={C.doorOpen}
+            strokeWidth={1.2}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.25 }}
           />
         )}
       </AnimatePresence>
-      {interactive && (
-        <foreignObject x={310} y={60} width={50} height={100}>
-          <Tooltip content={`Trunk: ${trunkOpen === null ? 'Unknown' : trunkOpen ? 'Open' : 'Closed'}`} side="right">
-            <span className="block w-full h-full" />
-          </Tooltip>
-        </foreignObject>
-      )}
-    </g>
-  );
-}
 
-function Windshield() {
-  return (
-    <path
-      d="M 82,160 L 100,74 L 328,74 L 334,160 Z"
-      fill={C.glassClosed}
-      stroke={C.glassStroke}
-      strokeWidth={0.8}
-    />
+      <InteractiveHotspot
+        enabled={interactive}
+        x={430}
+        y={128}
+        width={120}
+        height={55}
+        label={`Frunk: ${stateLabel(frunkOpen, 'Open', 'Closed')}`}
+        side="right"
+      />
+      <InteractiveHotspot
+        enabled={interactive}
+        x={80}
+        y={128}
+        width={118}
+        height={50}
+        label={`Trunk: ${stateLabel(trunkOpen, 'Open', 'Closed')}`}
+        side="left"
+      />
+    </g>
   );
 }
 
@@ -261,154 +310,170 @@ function SideWindows({
   windowRP: WindowState;
   interactive?: boolean;
 }) {
-  // Windows visible on the left (driver) side in isometric view
-  const driverFrontPath = "M 68,172 L 80,162 L 80,228 L 68,232 Z";
-  const driverRearPath = "M 68,238 L 80,234 L 80,295 L 68,300 Z";
-
-  // Partial windows visible on the right (passenger) side at rear
-  const passengerRearPath = "M 330,234 L 336,238 L 336,295 L 330,295 Z";
+  const passengerAlert = wFP === 'open' || wFP === 'partial' || wRP === 'open' || wRP === 'partial';
 
   return (
     <g>
-      {/* Driver front window */}
-      <motion.path
-        d={driverFrontPath}
-        fill={windowFill(wFD)}
-        stroke={windowStroke(wFD)}
-        strokeWidth={0.8}
-        animate={{ opacity: wFD === 'open' ? 0.3 : 1 }}
-        transition={{ duration: 0.4 }}
-      />
-      {interactive && (
-        <foreignObject x={60} y={160} width={30} height={75}>
-          <Tooltip content={`Front driver window: ${windowLabel(wFD)}`} side="left">
-            <span className="block w-full h-full" />
-          </Tooltip>
-        </foreignObject>
-      )}
-
-      {/* Driver rear window */}
-      <motion.path
-        d={driverRearPath}
+      <path
+        d="M 194 145 C 217 119 252 106 299 104 L 294 149 L 204 150 Z"
         fill={windowFill(wRD)}
         stroke={windowStroke(wRD)}
-        strokeWidth={0.8}
-        animate={{ opacity: wRD === 'open' ? 0.3 : 1 }}
-        transition={{ duration: 0.4 }}
+        strokeWidth={1}
       />
-      {interactive && (
-        <foreignObject x={60} y={232} width={30} height={70}>
-          <Tooltip content={`Rear driver window: ${windowLabel(wRD)}`} side="left">
-            <span className="block w-full h-full" />
-          </Tooltip>
-        </foreignObject>
-      )}
-
-      {/* Passenger rear window (partially visible) */}
-      <motion.path
-        d={passengerRearPath}
-        fill={windowFill(wRP)}
-        stroke={windowStroke(wRP)}
-        strokeWidth={0.6}
-        animate={{ opacity: wRP === 'open' ? 0.3 : 1 }}
-        transition={{ duration: 0.4 }}
-      />
-
-      {/* Passenger front (mostly hidden, just a sliver on the roof edge) */}
       <path
-        d="M 330,172 L 336,175 L 336,230 L 330,228 Z"
-        fill={windowFill(wFP)}
-        stroke={windowStroke(wFP)}
-        strokeWidth={0.5}
-        opacity={0.5}
+        d="M 309 104 C 363 105 399 122 431 145 L 411 150 L 305 149 Z"
+        fill={windowFill(wFD)}
+        stroke={windowStroke(wFD)}
+        strokeWidth={1}
       />
-
-      {/* B-pillar divider on driver side */}
-      <line x1={68} y1={233} x2={80} y2={230}
-        stroke={C.bodyStroke} strokeWidth={1.8} />
-
-      {/* B-pillar divider on passenger side */}
-      <line x1={330} y1={233} x2={336} y2={233}
-        stroke={C.bodyStroke} strokeWidth={1.2} />
+      <path
+        d="M 299 105 L 305 149"
+        stroke="rgba(255,255,255,0.18)"
+        strokeWidth={2}
+        strokeLinecap="round"
+      />
+      <path
+        d="M 204 150 L 411 150"
+        stroke="rgba(255,255,255,0.1)"
+        strokeWidth={1}
+        strokeLinecap="round"
+      />
+      {passengerAlert && (
+        <motion.path
+          d="M 203 139 C 250 124 346 123 428 140"
+          fill="none"
+          stroke={C.amber}
+          strokeWidth={2}
+          strokeLinecap="round"
+          animate={{ opacity: [0.35, 1, 0.35] }}
+          transition={{ duration: 1.4, repeat: Infinity }}
+        />
+      )}
+      <InteractiveHotspot
+        enabled={interactive}
+        x={301}
+        y={101}
+        width={134}
+        height={55}
+        label={`Front driver window: ${windowLabel(wFD)}`}
+      />
+      <InteractiveHotspot
+        enabled={interactive}
+        x={190}
+        y={101}
+        width={112}
+        height={55}
+        label={`Rear driver window: ${windowLabel(wRD)}`}
+      />
+      <title>
+        Front passenger window: {windowLabel(wFP)}. Rear passenger window: {windowLabel(wRP)}.
+      </title>
     </g>
   );
 }
 
 function DoorOverlay({
-  y1,
-  y2,
+  kind,
   open,
   label,
   interactive,
 }: {
-  y1: number;
-  y2: number;
+  kind: 'front' | 'rear';
   open: boolean | null;
   label: string;
   interactive?: boolean;
 }) {
-  const x = 65;
-  const stroke = doorStroke(open);
+  const isFront = kind === 'front';
+  const seam = isFront
+    ? { x1: 313, y1: 151, x2: 306, y2: 222, handleX: 355, handleY: 173 }
+    : { x1: 222, y1: 151, x2: 218, y2: 222, handleX: 258, handleY: 173 };
+  const doorPath = isFront
+    ? 'M 313 153 L 386 140 L 395 216 L 307 224 Z'
+    : 'M 222 153 L 155 140 L 146 216 L 218 224 Z';
+  const hotspot = isFront
+    ? { x: 302, y: 150, width: 104, height: 76, side: 'right' as const }
+    : { x: 145, y: 150, width: 86, height: 76, side: 'left' as const };
 
   return (
     <g>
-      {/* Door seam on left side */}
-      <line x1={x} y1={y1} x2={x} y2={y2}
-        stroke={stroke}
-        strokeWidth={open ? 2 : 1}
-        strokeDasharray={open ? undefined : '3,3'} />
-
-      {/* Door handle */}
-      <rect x={x + 4} y={(y1 + y2) / 2 - 2} width={10} height={4} rx={2}
-        fill={open ? C.amber : 'rgba(255,255,255,0.08)'} />
-
-      {/* Door swung open (outward from left side) */}
       <AnimatePresence>
         {open && (
           <motion.path
-            d={`M ${x},${y1 + 5} L ${x - 28},${y1 + 15} L ${x - 28},${y2 - 15} L ${x},${y2 - 5} Z`}
+            d={doorPath}
             fill={C.amberFill}
-            stroke={C.amber}
-            strokeWidth={1.2}
-            initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 10 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
+            stroke={C.doorOpen}
+            strokeWidth={1.4}
+            initial={{ opacity: 0, scaleX: 0.9 }}
+            animate={{ opacity: 1, scaleX: 1 }}
+            exit={{ opacity: 0, scaleX: 0.9 }}
+            transition={{ duration: 0.25 }}
           />
         )}
       </AnimatePresence>
-
-      {interactive && (
-        <foreignObject x={x - 30} y={y1} width={40} height={y2 - y1}>
-          <Tooltip content={`${label}: ${open === null ? 'Unknown' : open ? 'Open' : 'Closed'}`} side="left">
-            <span className="block w-full h-full" />
-          </Tooltip>
-        </foreignObject>
-      )}
-
-      <title>{label}: {open === null ? 'Unknown' : open ? 'Open' : 'Closed'}</title>
+      <line
+        x1={seam.x1}
+        y1={seam.y1}
+        x2={seam.x2}
+        y2={seam.y2}
+        stroke={doorStroke(open)}
+        strokeWidth={open ? 2 : 1}
+        strokeDasharray={open ? undefined : '4,4'}
+      />
+      <rect
+        x={seam.handleX}
+        y={seam.handleY}
+        width={17}
+        height={4}
+        rx={2}
+        fill={open ? C.doorOpen : 'rgba(255,255,255,0.16)'}
+      />
+      <InteractiveHotspot
+        enabled={interactive}
+        x={hotspot.x}
+        y={hotspot.y}
+        width={hotspot.width}
+        height={hotspot.height}
+        label={`${label}: ${stateLabel(open, 'Open', 'Closed')}`}
+        side={hotspot.side}
+      />
+      <title>{label}: {stateLabel(open, 'Open', 'Closed')}</title>
     </g>
   );
 }
 
-function PassengerDoorSeams({
+function PassengerDoorAlerts({
   passengerFront,
   passengerRear,
 }: {
   passengerFront: boolean | null;
   passengerRear: boolean | null;
 }) {
-  // Only subtle seam lines visible on the far side
+  if (!passengerFront && !passengerRear) return null;
+
   return (
-    <g opacity={0.5}>
-      <line x1={333} y1={172} x2={333} y2={230}
-        stroke={doorStroke(passengerFront)}
-        strokeWidth={passengerFront ? 1.5 : 0.6}
-        strokeDasharray={passengerFront ? undefined : '2,2'} />
-      <line x1={333} y1={238} x2={333} y2={298}
-        stroke={doorStroke(passengerRear)}
-        strokeWidth={passengerRear ? 1.5 : 0.6}
-        strokeDasharray={passengerRear ? undefined : '2,2'} />
+    <g>
+      {passengerFront && (
+        <motion.path
+          d="M 312 154 L 384 130"
+          fill="none"
+          stroke={C.doorOpen}
+          strokeWidth={2}
+          strokeLinecap="round"
+          animate={{ opacity: [0.45, 1, 0.45] }}
+          transition={{ duration: 1.2, repeat: Infinity }}
+        />
+      )}
+      {passengerRear && (
+        <motion.path
+          d="M 222 154 L 156 130"
+          fill="none"
+          stroke={C.doorOpen}
+          strokeWidth={2}
+          strokeLinecap="round"
+          animate={{ opacity: [0.45, 1, 0.45] }}
+          transition={{ duration: 1.2, repeat: Infinity }}
+        />
+      )}
     </g>
   );
 }
@@ -422,48 +487,32 @@ function HeadlightGlows({
   hazards: boolean | null;
   turnSignal: TurnSignalState;
 }) {
-  const leftAmber = hazards === true || turnSignal === 'left' || turnSignal === 'both';
-  const rightAmber = hazards === true || turnSignal === 'right' || turnSignal === 'both';
+  const flashing = hazards === true || turnSignal === 'right' || turnSignal === 'both';
 
   return (
     <g>
-      {/* Left headlight (front-left, fully visible) */}
-      <ellipse cx={66} cy={158} rx={8} ry={5}
-        fill={on ? C.headlightOn : C.headlightOff} />
+      <path
+        d="M 521 180 C 532 177 542 181 548 188"
+        fill="none"
+        stroke={on ? C.headlightOn : C.headlightOff}
+        strokeWidth={3}
+        strokeLinecap="round"
+      />
       {on && (
         <>
-          <ellipse cx={66} cy={158} rx={12} ry={7}
-            fill={C.headlightGlow} filter="url(#twin-glow)" />
-          {/* Light beam cone */}
-          <path d="M 66,158 L 30,140 L 30,176 Z"
-            fill={C.headlightBeam} />
+          <ellipse cx={536} cy={184} rx={16} ry={7} fill={C.headlightGlow} filter="url(#twin-glow)" />
+          <path d="M 544 184 L 560 168 L 560 205 Z" fill={C.headlightBeam} />
         </>
       )}
-
-      {/* Right headlight (front-right, partially visible) */}
-      <ellipse cx={332} cy={158} rx={6} ry={4}
-        fill={on ? C.headlightOn : C.headlightOff} opacity={0.7} />
-      {on && (
-        <ellipse cx={332} cy={158} rx={9} ry={5}
-          fill={C.headlightGlow} filter="url(#twin-glow)" opacity={0.5} />
-      )}
-
-      {/* Turn signal indicators (front corners) */}
-      {leftAmber && (
+      {flashing && (
         <motion.ellipse
-          cx={60} cy={168} rx={5} ry={3}
+          cx={514}
+          cy={193}
+          rx={7}
+          ry={4}
           fill={C.amber}
           animate={{ opacity: [1, 0.15, 1] }}
           transition={{ duration: 0.8, repeat: Infinity }}
-        />
-      )}
-      {rightAmber && (
-        <motion.ellipse
-          cx={336} cy={168} rx={4} ry={2.5}
-          fill={C.amber}
-          animate={{ opacity: [1, 0.15, 1] }}
-          transition={{ duration: 0.8, repeat: Infinity }}
-          opacity={0.6}
         />
       )}
     </g>
@@ -477,36 +526,36 @@ function TaillightGlows({
   hazards: boolean | null;
   turnSignal: TurnSignalState;
 }) {
-  const leftFlash = hazards === true || turnSignal === 'left' || turnSignal === 'both';
-  const rightFlash = hazards === true || turnSignal === 'right' || turnSignal === 'both';
+  const flashing = hazards === true || turnSignal === 'left' || turnSignal === 'both';
 
   return (
     <g>
-      {/* Left taillight (visible at rear-left) */}
-      <rect x={306} y={300} width={4} height={14} rx={2} fill={C.taillightBase} />
-      {leftFlash && (
-        <motion.rect
-          x={306} y={300} width={4} height={14} rx={2}
-          fill={C.amber}
+      <path
+        d="M 74 184 C 82 178 91 178 99 184"
+        fill="none"
+        stroke={flashing ? C.amber : C.taillightBase}
+        strokeWidth={4}
+        strokeLinecap="round"
+      />
+      <path
+        d="M 78 193 C 86 196 95 196 104 194"
+        fill="none"
+        stroke={C.taillightActive}
+        strokeWidth={2}
+        strokeLinecap="round"
+        opacity={0.65}
+      />
+      {flashing && (
+        <motion.path
+          d="M 74 184 C 82 178 91 178 99 184"
+          fill="none"
+          stroke={C.amber}
+          strokeWidth={4}
+          strokeLinecap="round"
           animate={{ opacity: [1, 0.15, 1] }}
           transition={{ duration: 0.8, repeat: Infinity }}
         />
       )}
-
-      {/* Right taillight (on rear face) */}
-      <rect x={334} y={298} width={3} height={12} rx={1.5} fill={C.taillightBase} />
-      {rightFlash && (
-        <motion.rect
-          x={334} y={298} width={3} height={12} rx={1.5}
-          fill={C.amber}
-          animate={{ opacity: [1, 0.15, 1] }}
-          transition={{ duration: 0.8, repeat: Infinity }}
-        />
-      )}
-
-      {/* Rear light bar connecting taillights (Tesla signature) */}
-      <line x1={309} y1={307} x2={334} y2={304}
-        stroke={C.taillightBase} strokeWidth={1.2} />
     </g>
   );
 }
@@ -520,44 +569,45 @@ function ChargePortIndicator({
   charging: boolean;
   interactive?: boolean;
 }) {
-  const cx = 295;
-  const cy = 290;
-  const fill = charging ? C.chargeGreenFill : open ? C.chargeGreenFill : C.neutral;
-  const stroke = charging ? C.chargeGreen : open ? C.chargeGreen : C.bodyStroke;
-  const label = charging ? 'Charging' : open ? 'Open' : open === false ? 'Closed' : 'Unknown';
+  const cx = 132;
+  const cy = 165;
+  const fill = charging || open ? C.chargeGreenFill : C.neutral;
+  const stroke = charging || open ? C.chargeGreen : C.bodyStroke;
+  const label = charging ? 'Charging' : stateLabel(open, 'Open', 'Closed');
 
   return (
     <g>
-      <circle cx={cx} cy={cy} r={5}
-        fill={fill} stroke={stroke} strokeWidth={1.2} />
-
-      {/* Charging pulse rings */}
+      <circle cx={cx} cy={cy} r={7} fill={fill} stroke={stroke} strokeWidth={1.3} />
       {charging && (
         <>
           <motion.circle
-            cx={cx} cy={cy} r={8}
-            fill="none" stroke={C.chargeGreen} strokeWidth={1}
-            animate={{ opacity: [0.8, 0, 0.8], r: [6, 14, 6] }}
+            cx={cx}
+            cy={cy}
+            r={10}
+            fill="none"
+            stroke={C.chargeGreen}
+            strokeWidth={1}
+            animate={{ opacity: [0.75, 0, 0.75], r: [8, 18, 8] }}
             transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
           />
-          {/* Lightning bolt */}
-          <text x={cx - 3} y={cy + 3} fontSize="7" fill={C.chargeGreen}>⚡</text>
+          <path
+            d="M 132 158 L 126 167 L 132 167 L 129 174 L 139 163 L 133 163 Z"
+            fill={C.chargeGreen}
+          />
         </>
       )}
-
-      {/* Open indicator ring */}
       {open && !charging && (
-        <circle cx={cx} cy={cy} r={8}
-          fill="none" stroke={C.chargeGreen} strokeWidth={0.8} />
+        <circle cx={cx} cy={cy} r={11} fill="none" stroke={C.chargeGreen} strokeWidth={0.8} />
       )}
-
-      {interactive && (
-        <foreignObject x={cx - 10} y={cy - 10} width={20} height={20}>
-          <Tooltip content={`Charge port: ${label}`} side="right">
-            <span className="block w-full h-full" />
-          </Tooltip>
-        </foreignObject>
-      )}
+      <InteractiveHotspot
+        enabled={interactive}
+        x={cx - 14}
+        y={cy - 14}
+        width={28}
+        height={28}
+        label={`Charge port: ${label}`}
+        side="left"
+      />
     </g>
   );
 }
@@ -571,65 +621,58 @@ function SecurityOverlay({
   sentryMode: boolean | null;
   interactive?: boolean;
 }) {
-  const iconSize = 16;
-  // Position on the center of the roof
-  const cx = 194;
-  const cy = 110;
+  const iconSize = 18;
+  const cx = 304;
+  const cy = 84;
 
   return (
     <g>
-      {/* Lock indicator (center of roof) */}
+      {sentryMode && (
+        <motion.ellipse
+          cx={cx}
+          cy={cy - 24}
+          rx={18}
+          ry={9}
+          fill="none"
+          stroke={C.sentryGlow}
+          strokeWidth={1.4}
+          animate={{ opacity: [0.7, 0.2, 0.7], rx: [14, 24, 14] }}
+          transition={{ duration: 2, repeat: Infinity }}
+        />
+      )}
+      {sentryMode && (
+        <foreignObject x={cx - iconSize / 2} y={cy - 34} width={iconSize} height={iconSize}>
+          <Tooltip content="Sentry mode active" side="top">
+            <motion.span
+              className="flex items-center justify-center w-full h-full"
+              animate={{ opacity: [1, 0.45, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            >
+              <Shield className="w-4 h-4" fill={C.sentryRed} stroke={C.sentryRed} />
+            </motion.span>
+          </Tooltip>
+        </foreignObject>
+      )}
       {locked !== null && (
-        <foreignObject
-          x={cx - iconSize / 2}
-          y={cy - iconSize / 2}
-          width={iconSize}
-          height={iconSize}
-        >
+        <foreignObject x={cx - iconSize / 2} y={cy - iconSize / 2} width={iconSize} height={iconSize}>
           {interactive ? (
             <Tooltip content={locked ? 'Locked' : 'Unlocked'} side="top">
               <span className="flex items-center justify-center w-full h-full">
                 {locked
-                  ? <Lock className="w-3.5 h-3.5" fill={C.lockedGreen} stroke={C.lockedGreen} />
-                  : <Unlock className="w-3.5 h-3.5" fill={C.unlockedRed} stroke={C.unlockedRed} />
+                  ? <Lock className="w-4 h-4" fill={C.lockedGreen} stroke={C.lockedGreen} />
+                  : <Unlock className="w-4 h-4" fill={C.unlockedRed} stroke={C.unlockedRed} />
                 }
               </span>
             </Tooltip>
           ) : (
             <span className="flex items-center justify-center w-full h-full">
               {locked
-                ? <Lock className="w-3.5 h-3.5" fill={C.lockedGreen} stroke={C.lockedGreen} />
-                : <Unlock className="w-3.5 h-3.5" fill={C.unlockedRed} stroke={C.unlockedRed} />
+                ? <Lock className="w-4 h-4" fill={C.lockedGreen} stroke={C.lockedGreen} />
+                : <Unlock className="w-4 h-4" fill={C.unlockedRed} stroke={C.unlockedRed} />
               }
             </span>
           )}
         </foreignObject>
-      )}
-
-      {/* Sentry mode indicator (front of roof) */}
-      {sentryMode && (
-        <foreignObject x={cx - iconSize / 2} y={cy - 28} width={iconSize} height={iconSize}>
-          <motion.span
-            className="flex items-center justify-center w-full h-full"
-            animate={{ opacity: [1, 0.4, 1] }}
-            transition={{ duration: 2, repeat: Infinity }}
-          >
-            <Shield className="w-3.5 h-3.5" fill={C.sentryRed} stroke={C.sentryRed} />
-          </motion.span>
-        </foreignObject>
-      )}
-
-      {/* Sentry mode glow ring on roof */}
-      {sentryMode && (
-        <motion.ellipse
-          cx={cx} cy={cy - 20}
-          rx={12} ry={6}
-          fill="none"
-          stroke={C.sentryGlow}
-          strokeWidth={1}
-          animate={{ opacity: [0.6, 0.2, 0.6] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        />
       )}
     </g>
   );
@@ -637,56 +680,33 @@ function SecurityOverlay({
 
 function DriverSeatIndicator({ occupied }: { occupied: boolean | null }) {
   if (!occupied) return null;
-  // Positioned in the driver seat area on the left side
+
   return (
-    <ellipse cx={120} cy={200} rx={6} ry={8}
-      fill={C.seatOccupied} opacity={0.8} />
+    <ellipse cx={336} cy={137} rx={9} ry={12} fill={C.seatOccupied} stroke="rgba(34,211,238,0.35)" />
   );
 }
-
-// ── SVG Definitions (gradients, filters) ───────────────────────────────
 
 function SvgDefs() {
   return (
     <defs>
-      {/* Shadow blur */}
       <filter id="twin-shadow-blur" x="-50%" y="-50%" width="200%" height="200%">
-        <feGaussianBlur stdDeviation="8" />
+        <feGaussianBlur stdDeviation={8} />
       </filter>
-
-      {/* Glow filter for active elements */}
       <filter id="twin-glow" x="-50%" y="-50%" width="200%" height="200%">
-        <feGaussianBlur stdDeviation="3" result="blur" />
+        <feGaussianBlur stdDeviation={4} result="blur" />
         <feMerge>
           <feMergeNode in="blur" />
           <feMergeNode in="SourceGraphic" />
         </feMerge>
       </filter>
-
-      {/* Body side gradient — top lighter, bottom darker */}
-      <linearGradient id="bodyGradSide" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor="rgba(255,255,255,0.08)" />
-        <stop offset="60%" stopColor="rgba(255,255,255,0.04)" />
-        <stop offset="100%" stopColor="rgba(0,0,0,0.05)" />
-      </linearGradient>
-
-      {/* Roof gradient — center lighter, edges darker */}
-      <linearGradient id="bodyGradRoof" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stopColor="rgba(255,255,255,0.10)" />
-        <stop offset="50%" stopColor="rgba(255,255,255,0.07)" />
-        <stop offset="100%" stopColor="rgba(255,255,255,0.04)" />
-      </linearGradient>
-
-      {/* Hood gradient */}
-      <linearGradient id="bodyGradHood" x1="0" y1="0" x2="0.5" y2="1">
-        <stop offset="0%" stopColor="rgba(255,255,255,0.09)" />
-        <stop offset="100%" stopColor="rgba(255,255,255,0.05)" />
+      <linearGradient id="twin-body-grad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="rgba(255,255,255,0.12)" />
+        <stop offset="42%" stopColor="rgba(255,255,255,0.07)" />
+        <stop offset="100%" stopColor="rgba(255,255,255,0.025)" />
       </linearGradient>
     </defs>
   );
 }
-
-// ── Main Component ─────────────────────────────────────────────────────
 
 export function VehicleTwin({
   doors,
@@ -709,8 +729,7 @@ export function VehicleTwin({
   className,
 }: VehicleTwinProps) {
   const width = SIZE_MAP[size];
-  const aspect = 350 / 400;
-  const height = useMemo(() => Math.round(width * aspect), [width, aspect]);
+  const height = Math.round(width * ASPECT_RATIO);
 
   return (
     <div
@@ -719,32 +738,15 @@ export function VehicleTwin({
       aria-label="Vehicle digital twin showing current physical state"
     >
       <svg
-        viewBox="0 0 400 350"
+        viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}
         width={width}
         height={height}
         xmlns="http://www.w3.org/2000/svg"
         className="select-none"
       >
         <SvgDefs />
-
-        {/* 1. Ground shadow */}
         <GroundShadow />
-
-        {/* 2. Rear wheels (behind body) */}
-        <WheelSVG cx={290} cy={318} visible="partial" />
-        <WheelSVG cx={98} cy={318} visible="full" />
-
-        {/* 3. Front wheels */}
-        <WheelSVG cx={290} cy={178} visible="partial" />
-        <WheelSVG cx={98} cy={178} visible="full" />
-
-        {/* 4. Body shell (side, roof, hood, rear) */}
         <BodyShell frunkOpen={frunkOpen} trunkOpen={trunkOpen} interactive={interactive} />
-
-        {/* 5. Windshield */}
-        <Windshield />
-
-        {/* 6. Side windows */}
         <SideWindows
           windowFD={windowFD}
           windowFP={windowFP}
@@ -752,46 +754,32 @@ export function VehicleTwin({
           windowRP={windowRP}
           interactive={interactive}
         />
-
-        {/* 7. Door overlays (driver side visible) */}
-        <DoorOverlay
-          y1={170}
-          y2={230}
-          open={doors.driverFront}
-          label="Driver Front"
-          interactive={interactive}
+        <PassengerDoorAlerts
+          passengerFront={doors.passengerFront}
+          passengerRear={doors.passengerRear}
         />
         <DoorOverlay
-          y1={237}
-          y2={300}
+          kind="rear"
           open={doors.driverRear}
           label="Driver Rear"
           interactive={interactive}
         />
-
-        {/* 8. Passenger door seams (far side, subtle) */}
-        <PassengerDoorSeams
-          passengerFront={doors.passengerFront}
-          passengerRear={doors.passengerRear}
+        <DoorOverlay
+          kind="front"
+          open={doors.driverFront}
+          label="Driver Front"
+          interactive={interactive}
         />
-
-        {/* 9. Driver seat occupancy */}
         <DriverSeatIndicator occupied={driverSeatOccupied} />
-
-        {/* 10. Headlights with beams */}
-        <HeadlightGlows on={headlights} hazards={hazards} turnSignal={turnSignal} />
-
-        {/* 11. Taillights */}
-        <TaillightGlows hazards={hazards} turnSignal={turnSignal} />
-
-        {/* 12. Charge port (left rear quarter) */}
         <ChargePortIndicator
           open={chargePortOpen}
           charging={isCharging}
           interactive={interactive}
         />
-
-        {/* 13. Security overlay (lock + sentry) */}
+        <HeadlightGlows on={headlights} hazards={hazards} turnSignal={turnSignal} />
+        <TaillightGlows hazards={hazards} turnSignal={turnSignal} />
+        <WheelSVG cx={151} cy={226} />
+        <WheelSVG cx={402} cy={226} />
         <SecurityOverlay locked={locked} sentryMode={sentryMode} interactive={interactive} />
       </svg>
     </div>

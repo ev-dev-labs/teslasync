@@ -1,41 +1,58 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Monitor, Lock, Unlock, ArrowUpRight } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
-import { useVehicles, useVehicleState, useSecurityLatest } from '@/api/hooks/useVehicles';
+import { VehicleTwin } from '@/components/vehicles';
+import { useVehicles, useVehicleState, useSecurityLatest, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
+import { buildTwinState } from '@/lib/vehicleState';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
-export default function DigitalTwinWidget({ vehicleId }: WidgetProps) {
+const REFRESH_INTERVAL = 5_000;
+
+export default function DigitalTwinWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vehicle = vehicleId
     ? vehicles?.find((v) => v.id === vehicleId) ?? vehicles?.[0]
     : vehicles?.[0];
   const id = vehicle?.id ?? 0;
-  const { data: stateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id);
-  const { data: security } = useSecurityLatest(id, 5_000);
+  const { data: stateData, isLoading: stateLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id, { refetchInterval: REFRESH_INTERVAL });
+  const { data: security, isLoading: securityLoading } = useSecurityLatest(id, REFRESH_INTERVAL);
+  const { data: charging } = useChargingTelemetryLatest(id, REFRESH_INTERVAL);
   const state = stateData?.state;
 
-  const doorStates = (security?.door_state ?? '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-  const openDoors = doorStates.filter((s) => s.toLowerCase().includes('open'));
-  const windows = [
-    security?.fd_window,
-    security?.fp_window,
-    security?.rd_window,
-    security?.rp_window,
-  ];
-  const openWindows = windows.filter((w) => w && w.toLowerCase() !== 'closed');
+  const twinState = useMemo(
+    () => buildTwinState(security, state, charging),
+    [security, state, charging],
+  );
+
+  const windowStates = [twinState.windowFD, twinState.windowFP, twinState.windowRD, twinState.windowRP];
+  const hasWindowData = windowStates.some((windowState) => windowState !== null);
+  const openWindowCount = windowStates.filter((windowState) => windowState !== null && windowState !== 'closed').length;
+  const openDoorCount = Object.values(twinState.doors).filter(Boolean).length;
+  const twinSize = size.cols >= 3 || size.rows >= 5 ? 'md' : 'sm';
+
+  const lockBadgeVariant = twinState.locked === null ? 'neutral' : twinState.locked ? 'success' : 'danger';
+  const lockLabel = twinState.locked === null
+    ? t('widget.lockUnknown', 'Lock Unknown')
+    : twinState.locked
+      ? t('widget.locked', 'Locked')
+      : t('widget.unlocked', 'Unlocked');
+  const windowBadgeVariant = !hasWindowData ? 'neutral' : openWindowCount === 0 ? 'success' : 'warning';
+  const windowLabel = !hasWindowData
+    ? t('widget.windowsUnknown', 'Windows Unknown')
+    : openWindowCount === 0
+      ? t('widget.windowsClosed', 'Windows Closed')
+      : `${openWindowCount} ${t('widget.windowsOpen', 'Open')}`;
 
   return (
     <WidgetShell
       title={t('widget.digitalTwin', 'Digital Twin')}
       icon={<Monitor className="h-3.5 w-3.5 text-neon-purple" />}
-      loading={isLoading}
+      loading={stateLoading || securityLoading}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
@@ -51,47 +68,36 @@ export default function DigitalTwinWidget({ vehicleId }: WidgetProps) {
       }
     >
       {vehicle ? (
-        <div className="h-full flex flex-col items-center justify-center gap-3">
-          {/* Simplified car visualization */}
-          <div className="relative w-28 h-20 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center">
-            <Monitor className="h-10 w-10 text-neon-purple/60" />
-            {/* Door indicators */}
-            <div className="absolute -left-1.5 top-2 flex flex-col gap-1">
-              <div
-                className={`w-1 h-4 rounded-full ${openDoors.some((d) => d.includes('FD') || d.includes('driver')) ? 'bg-neon-red' : 'bg-neon-green/50'}`}
-              />
-              <div
-                className={`w-1 h-4 rounded-full ${openDoors.some((d) => d.includes('RD') || d.includes('rear')) ? 'bg-neon-red' : 'bg-neon-green/50'}`}
-              />
-            </div>
-            <div className="absolute -right-1.5 top-2 flex flex-col gap-1">
-              <div
-                className={`w-1 h-4 rounded-full ${openDoors.some((d) => d.includes('FP') || d.includes('passenger')) ? 'bg-neon-red' : 'bg-neon-green/50'}`}
-              />
-              <div
-                className={`w-1 h-4 rounded-full ${openDoors.some((d) => d.includes('RP')) ? 'bg-neon-red' : 'bg-neon-green/50'}`}
-              />
-            </div>
+        <div className="h-full min-h-0 flex flex-col items-center justify-center gap-3">
+          <div className="relative flex-1 min-h-[170px] w-full flex items-center justify-center overflow-hidden">
+            <div className="absolute inset-x-8 bottom-2 h-16 rounded-full bg-neon-purple/10 blur-2xl" />
+            <VehicleTwin
+              {...twinState}
+              size={twinSize}
+              className="relative z-10 drop-shadow-2xl"
+            />
           </div>
 
-          {/* Status badges */}
-          <div className="flex flex-wrap gap-1.5 justify-center">
-            <Badge variant={state?.is_locked ? 'success' : 'danger'}>
-              {state?.is_locked ? (
-                <Lock className="h-2.5 w-2.5 mr-0.5" />
-              ) : (
+          <div className="flex flex-shrink-0 flex-wrap gap-1.5 justify-center">
+            <Badge variant={lockBadgeVariant}>
+              {twinState.locked === false ? (
                 <Unlock className="h-2.5 w-2.5 mr-0.5" />
+              ) : (
+                <Lock className="h-2.5 w-2.5 mr-0.5" />
               )}
-              {state?.is_locked ? t('widget.locked', 'Locked') : t('widget.unlocked', 'Unlocked')}
+              {lockLabel}
             </Badge>
-            <Badge variant={openWindows.length === 0 ? 'success' : 'warning'}>
-              {openWindows.length === 0
-                ? t('widget.windowsClosed', 'Windows Closed')
-                : `${openWindows.length} ${t('widget.windowsOpen', 'Open')}`}
+            <Badge variant={windowBadgeVariant}>
+              {windowLabel}
             </Badge>
+            {openDoorCount > 0 ? (
+              <Badge variant="warning">
+                {openDoorCount} {t('widget.doorsOpen', 'Doors Open')}
+              </Badge>
+            ) : null}
           </div>
 
-          <p className="text-xs text-white/40">
+          <p className="flex-shrink-0 text-xs text-white/40">
             {vehicle.display_name || vehicle.vin}
           </p>
         </div>
