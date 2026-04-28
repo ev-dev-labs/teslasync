@@ -4,7 +4,7 @@ import {
   Activity, BarChart3, Gauge, Wifi, TrendingUp, Monitor,
   DollarSign, Calendar, CloudSun, CircleDot, CreditCard, Hash,
   MonitorSmartphone, List, Grid3X3, Workflow, DoorOpen, Eye,
-  Command, CalendarRange, Bell, Music, HeartPulse, Moon, Navigation,
+  Command, CalendarRange, Bell, Music, HeartPulse, Moon, Navigation, Terminal,
   Cpu, RotateCcw, Route, Lightbulb, Trophy, Clock, AlertTriangle,
   Sparkles, Cog, Wrench, FileText, ShieldCheck, ShieldAlert, ThermometerSun,
   Sun, Plug, TrendingDown,
@@ -610,6 +610,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./CommandQuickActionsWidget')),
+  },
+  {
+    id: 'command-history',
+    name: 'Command History',
+    description: 'Recent vehicle commands: lock, unlock, climate — with success/fail status',
+    icon: Terminal,
+    category: 'commands',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./CommandHistoryWidget')),
   },
 
   // ── Media ──
