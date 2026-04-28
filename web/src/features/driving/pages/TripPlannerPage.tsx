@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSettings } from '@/hooks/useSettings';
 import { PageContainer, Grid } from '@/components/layout';
-import { GlassPanel, Button, Select } from '@/components/ui';
+import {
+  GlassPanel, Button as ControlButton, Input as ControlInput, Select as ControlSelect,
+} from '@/components/ui';
 import { StatCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -157,7 +159,7 @@ export default function TripPlannerPage() {
                 <label className="block text-xs font-medium text-white/60 mb-1">
                   {t('tripPlanner.form.vehicle', 'Vehicle')}
                 </label>
-                <Select
+                <ControlSelect
                   options={vehicleOptions}
                   value={activeVehicle}
                   onChange={(e) => setSelectedVehicle(e.target.value)}
@@ -169,14 +171,17 @@ export default function TripPlannerPage() {
                 {t('tripPlanner.form.currentSOC', 'Current SOC')}
               </label>
               <div className="flex items-center gap-2">
-                <input
-                  type="range"
-                  min={10}
-                  max={100}
-                  value={currentSOC}
-                  onChange={(e) => setCurrentSOC(Number(e.target.value))}
-                  className="flex-1 accent-emerald-400"
-                />
+                <div className="flex-1">
+                  <ControlInput
+                    type="range"
+                    min={10}
+                    max={100}
+                    value={currentSOC}
+                    onChange={(e) => setCurrentSOC(Number(e.target.value))}
+                    aria-label={t('tripPlanner.form.currentSOC', 'Current SOC')}
+                    className="h-2 w-full cursor-pointer appearance-none border-0 bg-transparent p-0 accent-emerald-400 dark:bg-transparent"
+                  />
+                </div>
                 <span className="text-sm text-white/80 w-10 text-right">{currentSOC}%</span>
               </div>
             </div>
@@ -185,14 +190,17 @@ export default function TripPlannerPage() {
                 {t('tripPlanner.form.minArrival', 'Min Arrival SOC')}
               </label>
               <div className="flex items-center gap-2">
-                <input
-                  type="range"
-                  min={5}
-                  max={50}
-                  value={minArrivalSOC}
-                  onChange={(e) => setMinArrivalSOC(Number(e.target.value))}
-                  className="flex-1 accent-amber-400"
-                />
+                <div className="flex-1">
+                  <ControlInput
+                    type="range"
+                    min={5}
+                    max={50}
+                    value={minArrivalSOC}
+                    onChange={(e) => setMinArrivalSOC(Number(e.target.value))}
+                    aria-label={t('tripPlanner.form.minArrival', 'Min Arrival SOC')}
+                    className="h-2 w-full cursor-pointer appearance-none border-0 bg-transparent p-0 accent-amber-400 dark:bg-transparent"
+                  />
+                </div>
                 <span className="text-sm text-white/80 w-10 text-right">{minArrivalSOC}%</span>
               </div>
             </div>
@@ -200,7 +208,7 @@ export default function TripPlannerPage() {
               <label className="block text-xs font-medium text-white/60 mb-1">
                 {t('tripPlanner.form.drivingSpeed', 'Driving Speed')}
               </label>
-              <Select
+              <ControlSelect
                 options={speedOptions}
                 value={String(speedFactor)}
                 onChange={(e) => setSpeedFactor(Number(e.target.value))}
@@ -209,7 +217,7 @@ export default function TripPlannerPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Button
+            <ControlButton
               onClick={handlePlan}
               disabled={!canPlan || planMutation.isPending}
               className="gap-2"
@@ -218,16 +226,16 @@ export default function TripPlannerPage() {
               {planMutation.isPending
                 ? t('tripPlanner.form.planning', 'Planning...')
                 : t('tripPlanner.form.planTrip', 'Plan Trip')}
-            </Button>
+            </ControlButton>
             {plan && destination && (
-              <Button
+              <ControlButton
                 onClick={handleSendToCar}
                 variant="secondary"
                 className="gap-2"
               >
                 <Send className="h-4 w-4" />
                 {t('tripPlanner.form.sendToCar', 'Send to Car')}
-              </Button>
+              </ControlButton>
             )}
             {currentVehicle?.battery_level != null && (
               <span className="text-sm text-white/50 flex items-center gap-1">

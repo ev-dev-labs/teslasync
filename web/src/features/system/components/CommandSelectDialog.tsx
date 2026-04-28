@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-import { Modal, Button } from '@/components/ui';
+import { Modal, Button as ControlButton } from '@/components/ui';
 import type { CommandDef } from '../commands';
 
 interface CommandSelectDialogProps {
@@ -48,13 +48,15 @@ export function CommandSelectDialog({
 
         <div className="space-y-2">
           {sc.options.map(opt => (
-            <button
+            <ControlButton
               key={opt.value}
               type="button"
+              variant="ghost"
+              size="sm"
               disabled={loading}
               onClick={() => onSelect(opt.value)}
               className={cn(
-                'w-full rounded-lg p-3 text-left transition-all duration-200',
+                'h-auto w-full flex-col items-start gap-0.5 rounded-lg p-3 text-left font-normal transition-all duration-200',
                 'bg-white/5 border border-white/10',
                 'hover:bg-white/10 hover:border-neon-cyan/30',
                 'focus:outline-none focus:ring-2 focus:ring-neon-cyan/30',
@@ -69,12 +71,12 @@ export function CommandSelectDialog({
                   {opt.description}
                 </span>
               )}
-            </button>
+            </ControlButton>
           ))}
         </div>
 
         <div className="flex justify-end pt-4">
-          <Button
+          <ControlButton
             type="button"
             variant="ghost"
             size="sm"
@@ -82,7 +84,7 @@ export function CommandSelectDialog({
             className="text-white/50 hover:text-white/80 hover:bg-white/5"
           >
             {t('common.cancel', 'Cancel')}
-          </Button>
+          </ControlButton>
         </div>
       </div>
     </Modal>

@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, Select } from '@/components/ui';
+import { GlassPanel, Badge, Input as ControlInput, Select as ControlSelect } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import {
   RadialGauge, ChartTooltip,
@@ -159,7 +159,7 @@ export default function ProjectedRangePage() {
       error={error instanceof Error ? error : null}
       actions={
         vehicles && vehicles.length > 1 ? (
-          <Select
+          <ControlSelect
             options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
             value={activeId}
             onChange={(e) => setVehicleId(e.target.value)}
@@ -334,10 +334,15 @@ export default function ProjectedRangePage() {
                   <span>{t('range.speed', 'Speed')}</span>
                   <span className="font-bold text-white">{whatIfSpeed} km/h</span>
                 </div>
-                <input
-                  type="range" min={30} max={150} step={5} value={whatIfSpeed}
+                <ControlInput
+                  type="range"
+                  min={30}
+                  max={150}
+                  step={5}
+                  value={whatIfSpeed}
                   onChange={(e) => setWhatIfSpeed(Number(e.target.value))}
-                  className="w-full accent-neon-cyan h-1.5 rounded-full appearance-none bg-white/10 cursor-pointer"
+                  aria-label={t('range.speed', 'Speed')}
+                  className="h-1.5 w-full cursor-pointer appearance-none rounded-full border-0 bg-white/10 p-0 accent-neon-cyan dark:bg-white/10"
                 />
                 <div className="flex justify-between text-[9px] text-white/30 mt-0.5">
                   <span>30</span><span>90</span><span>150</span>
@@ -348,10 +353,15 @@ export default function ProjectedRangePage() {
                   <span>{t('range.temperature', 'Temperature')}</span>
                   <span className="font-bold text-white">{whatIfTemp}°C</span>
                 </div>
-                <input
-                  type="range" min={-20} max={40} step={1} value={whatIfTemp}
+                <ControlInput
+                  type="range"
+                  min={-20}
+                  max={40}
+                  step={1}
+                  value={whatIfTemp}
                   onChange={(e) => setWhatIfTemp(Number(e.target.value))}
-                  className="w-full accent-neon-amber h-1.5 rounded-full appearance-none bg-white/10 cursor-pointer"
+                  aria-label={t('range.temperature', 'Temperature')}
+                  className="h-1.5 w-full cursor-pointer appearance-none rounded-full border-0 bg-white/10 p-0 accent-neon-amber dark:bg-white/10"
                 />
                 <div className="flex justify-between text-[9px] text-white/30 mt-0.5">
                   <span>-20°C</span><span>10°C</span><span>40°C</span>

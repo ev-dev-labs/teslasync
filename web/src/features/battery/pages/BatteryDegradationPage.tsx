@@ -6,7 +6,9 @@ import {
 } from 'lucide-react';
 
 import { PageContainer, Grid } from '@/components/layout';
-import { GlassPanel, Badge, Select, DataTable, type Column } from '@/components/ui';
+import {
+  GlassPanel, Badge, Button as ControlButton, Select as ControlSelect, DataTable, type Column,
+} from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import {
   RadialGauge, ChartTooltip, renderAnnotationLines, AddAnnotationPopover, AnnotationList,
@@ -243,7 +245,7 @@ export default function BatteryDegradationPage() {
       error={error as Error | null}
       actions={
         vehicles && vehicles.length > 1 ? (
-          <Select
+          <ControlSelect
             options={vehicles.map((v) => ({
               value: String(v.id),
               label: v.display_name || v.vin,
@@ -384,11 +386,13 @@ export default function BatteryDegradationPage() {
               <span className="text-sm font-semibold">
                 {t('battery.degradation.trendTitle', 'Health Trend & Projection')}
               </span>
-              <button
+              <ControlButton
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => setIsAnnotating((v) => !v)}
                 className={cn(
-                  'rounded p-1 text-xs transition-colors',
+                  'h-auto rounded p-1 text-xs',
                   isAnnotating
                     ? 'text-blue-400'
                     : 'text-white/30 hover:text-white/50',
@@ -397,7 +401,7 @@ export default function BatteryDegradationPage() {
                 title={isAnnotating ? t('annotation.clickChart', 'Click on chart to annotate') : t('annotation.enable', 'Enable annotations')}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/></svg>
-              </button>
+              </ControlButton>
             </div>
             <div className={isAnnotating ? 'cursor-crosshair' : undefined}>
               <ResponsiveContainer width="100%" height={300}>

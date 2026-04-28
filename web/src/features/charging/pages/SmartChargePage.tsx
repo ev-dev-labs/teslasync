@@ -12,7 +12,9 @@ import {
 } from 'lucide-react';
 
 import { PageContainer, Grid } from '@/components/layout';
-import { GlassPanel, Button, Select, Input } from '@/components/ui';
+import {
+  GlassPanel, Button as ControlButton, Select as ControlSelect, Input as ControlInput,
+} from '@/components/ui';
 import { StatCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { EmptyState, Spinner } from '@/components/feedback';
@@ -144,7 +146,7 @@ export default function SmartChargePage() {
           </h2>
 
           <Grid cols={{ default: 1, sm: 2, lg: 4 }} gap={4}>
-            <Select
+            <ControlSelect
               label={t('chargePlanner.vehicle', 'Vehicle')}
               options={vehicleOptions}
               value={vehicleId}
@@ -152,7 +154,7 @@ export default function SmartChargePage() {
               placeholder={t('chargePlanner.selectVehicle', 'Select vehicle...')}
             />
 
-            <Select
+            <ControlSelect
               label={t('chargePlanner.ratePlan', 'Rate Plan')}
               options={ratePlanOptions.length > 0 ? ratePlanOptions : [
                 { value: 'pge-ev2a', label: 'PG&E EV2-A' },
@@ -163,29 +165,26 @@ export default function SmartChargePage() {
               onChange={e => setRatePlanId(e.target.value)}
             />
 
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-300">
-                {t('chargePlanner.targetSoc', 'Target SOC')} — {targetSoc}%
-              </label>
-              <input
-                type="range"
-                min={20}
-                max={100}
-                step={5}
-                value={targetSoc}
-                onChange={e => setTargetSoc(Number(e.target.value))}
-                className="w-full accent-cyan-400"
-              />
-            </div>
+            <ControlInput
+              id="smart-charge-target-soc"
+              label={`${t('chargePlanner.targetSoc', 'Target SOC')} - ${targetSoc}%`}
+              type="range"
+              min={20}
+              max={100}
+              step={5}
+              value={targetSoc}
+              onChange={e => setTargetSoc(Number(e.target.value))}
+              className="h-2 w-full cursor-pointer appearance-none border-0 bg-transparent p-0 accent-cyan-400 dark:bg-transparent"
+            />
 
-            <Input
+            <ControlInput
               label={t('chargePlanner.departBy', 'Depart By')}
               type="datetime-local"
               value={departBy}
               onChange={e => setDepartBy(e.target.value)}
             />
 
-            <Input
+            <ControlInput
               label={t('chargePlanner.maxAmps', 'Max Amps')}
               type="number"
               min={8}
@@ -194,7 +193,7 @@ export default function SmartChargePage() {
               onChange={e => setMaxAmps(Number(e.target.value))}
             />
 
-            <Input
+            <ControlInput
               label={t('chargePlanner.batteryCapacity', 'Battery Capacity (kWh)')}
               type="number"
               min={40}
@@ -205,7 +204,7 @@ export default function SmartChargePage() {
           </Grid>
 
           <div className="mt-4 flex justify-end">
-            <Button
+            <ControlButton
               onClick={handleOptimize}
               disabled={!vehicleId || optimizeMutation.isPending}
               className="gap-2"
@@ -216,7 +215,7 @@ export default function SmartChargePage() {
                 <CalendarClock className="h-4 w-4" />
               )}
               {t('chargePlanner.optimize', 'Find Cheapest Window')}
-            </Button>
+            </ControlButton>
           </div>
 
           {optimizeMutation.isError && (
@@ -287,7 +286,7 @@ export default function SmartChargePage() {
                 {t('chargePlanner.schedule', 'Recommended Schedule')}
               </h2>
               {!applied ? (
-                <Button
+                <ControlButton
                   onClick={handleApply}
                   disabled={applyMutation.isPending}
                   className="gap-2"
@@ -298,7 +297,7 @@ export default function SmartChargePage() {
                     <Zap className="h-4 w-4" />
                   )}
                   {t('chargePlanner.applySchedule', 'Apply Schedule')}
-                </Button>
+                </ControlButton>
               ) : (
                 <span className="flex items-center gap-2 text-emerald-400 text-sm font-medium">
                   <CheckCircle2 className="h-4 w-4" />

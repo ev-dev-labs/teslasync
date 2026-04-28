@@ -5,6 +5,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useYearReview } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { Spinner } from '@/components/feedback';
+import { Button as ControlButton, Select as ControlSelect } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { SlideRenderer, SLIDE_DEFS } from '../components/review';
@@ -22,6 +23,10 @@ export default function YearReviewPage() {
   const vehicleIdParam = searchParams.get('vehicle_id') ?? '';
   const { data: vehicles } = useVehicles();
   const vehicleList = vehicles ?? [];
+  const vehicleOptions = useMemo(
+    () => vehicleList.map((v) => ({ value: String(v.id), label: v.display_name })),
+    [vehicleList],
+  );
 
   // Auto-select first vehicle if none specified
   useEffect(() => {
@@ -84,12 +89,14 @@ export default function YearReviewPage() {
           <p className="text-white/30 mb-6">
             {t('yearReview.noDataHint', 'Start driving and charging to build your annual review!')}
           </p>
-          <button
+          <ControlButton
+            type="button"
+            variant="ghost"
             onClick={() => navigate(-1)}
-            className="px-6 py-2 rounded-lg bg-white/10 text-white/70 hover:bg-white/20 transition-colors"
+            className="h-auto rounded-lg bg-white/10 px-6 py-2 text-white/70 hover:bg-white/20"
           >
             {t('yearReview.goBack', 'Go Back')}
-          </button>
+          </ControlButton>
         </div>
       </div>
     );
@@ -116,20 +123,16 @@ export default function YearReviewPage() {
       {/* Vehicle selector (if multiple) */}
       {vehicleList.length > 1 && (
         <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20">
-          <select
+          <ControlSelect
+            aria-label={t('yearReview.selectVehicle', 'Select vehicle')}
+            options={vehicleOptions}
             value={vehicleIdParam}
             onChange={(e) => {
               setSearchParams({ vehicle_id: e.target.value }, { replace: true });
               setSlideIndex(0);
             }}
-            className="bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-sm text-white/70 backdrop-blur-sm appearance-none cursor-pointer"
-          >
-            {vehicleList.map((v) => (
-              <option key={v.id} value={String(v.id)} className="bg-gray-900 text-white">
-                {v.display_name}
-              </option>
-            ))}
-          </select>
+            className="cursor-pointer appearance-none rounded-lg border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white/70 backdrop-blur-sm dark:bg-white/10"
+          />
         </div>
       )}
 
@@ -149,32 +152,41 @@ export default function YearReviewPage() {
 
       {/* Navigation arrows (desktop hint) */}
       {slideIndex > 0 && (
-        <button
+        <ControlButton
+          type="button"
+          variant="ghost"
+          size="sm"
           onClick={goPrev}
-          className="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors hidden md:block"
+          className="absolute left-4 top-1/2 z-20 hidden h-auto -translate-y-1/2 rounded-full bg-white/5 p-2 hover:bg-white/10 md:inline-flex"
           aria-label={t('yearReview.prev', 'Previous')}
         >
           <ChevronLeft className="h-5 w-5 text-white/40" />
-        </button>
+        </ControlButton>
       )}
       {slideIndex < slides.length - 1 && (
-        <button
+        <ControlButton
+          type="button"
+          variant="ghost"
+          size="sm"
           onClick={goNext}
-          className="absolute right-14 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors hidden md:block"
+          className="absolute right-14 top-1/2 z-20 hidden h-auto -translate-y-1/2 rounded-full bg-white/5 p-2 hover:bg-white/10 md:inline-flex"
           aria-label={t('yearReview.next', 'Next')}
         >
           <ChevronRight className="h-5 w-5 text-white/40" />
-        </button>
+        </ControlButton>
       )}
 
       {/* Close button */}
-      <button
+      <ControlButton
+        type="button"
+        variant="ghost"
+        size="sm"
         onClick={() => navigate(-1)}
-        className="absolute top-3 right-4 z-20 p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+        className="absolute right-4 top-3 z-20 h-auto rounded-full bg-white/5 p-2 hover:bg-white/10"
         aria-label={t('yearReview.close', 'Close')}
       >
         <X className="h-5 w-5 text-white/60" />
-      </button>
+      </ControlButton>
 
       {/* Slide counter */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 text-xs text-white/30">

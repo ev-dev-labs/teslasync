@@ -1,6 +1,7 @@
 import { useSearchParams } from 'react-router-dom';
 import { useWatchSummary, useWatchCommand } from '@/api/hooks/useWatch';
 import { Spinner } from '@/components/feedback';
+import { Button as ControlButton } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { Zap, Lock, Unlock, Thermometer, Shield } from 'lucide-react';
 
@@ -172,13 +173,14 @@ function StatusIcon({ icon: Icon, active, color, label, onClick, loading }: Stat
   const activeColor = color ? colorClasses[color] : 'text-cyan-400';
 
   return (
-    <button
+    <ControlButton
       type="button"
+      variant="ghost"
+      size="sm"
       onClick={onClick}
       disabled={loading}
       className={cn(
-        'flex flex-col items-center justify-center w-11 h-11 rounded-full',
-        'transition-colors duration-200',
+        'h-11 w-11 flex-col rounded-full px-0 py-0 font-normal transition-colors duration-200',
         active ? `bg-white/10 ${activeColor}` : 'bg-white/5 text-white/30',
         onClick && 'active:scale-95',
         loading && 'opacity-50',
@@ -187,7 +189,7 @@ function StatusIcon({ icon: Icon, active, color, label, onClick, loading }: Stat
     >
       <Icon className="h-4 w-4" />
       {label && <span className="text-[8px] mt-0.5">{label}</span>}
-    </button>
+    </ControlButton>
   );
 }
 

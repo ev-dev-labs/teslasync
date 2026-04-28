@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TrendingUp } from 'lucide-react';
-import { GlassPanel } from '@/components/ui';
+import { Button as ControlButton, GlassPanel } from '@/components/ui';
 import {
   ChartTooltip, chartGrid, axisTickSm,
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -53,17 +53,19 @@ export function MonthlyCostChart({ data, vehicleId }: MonthlyCostChartProps) {
             <TrendingUp className="h-4 w-4 text-cyan-400" />
             {t('costAnalysis.charts.monthlyCost', 'Monthly Cost Trend')}
           </h3>
-          <button
+          <ControlButton
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => setIsAnnotating((v) => !v)}
             className={cn(
-              'rounded p-1 text-xs transition-colors',
+              'h-auto rounded p-1 text-xs',
               isAnnotating ? 'text-blue-400' : 'text-white/30 hover:text-white/50',
             )}
             aria-label={t('annotation.toggle', 'Toggle annotations')}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/></svg>
-          </button>
+          </ControlButton>
         </div>
         {data.length > 0 ? (
           <div className={isAnnotating ? 'cursor-crosshair' : undefined}>

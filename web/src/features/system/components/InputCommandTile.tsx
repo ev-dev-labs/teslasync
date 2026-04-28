@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-import { GlassPanel } from '@/components/ui';
+import { Button as ControlButton, GlassPanel } from '@/components/ui';
 import { Loader2, Star } from 'lucide-react';
 import type { CommandDef } from '../commands';
 
@@ -38,16 +38,19 @@ export function InputCommandTile({ def, onRequestDialog, loading, lastStatus, is
       )}
       onClick={handleClick}
     >
-      <button
+      <ControlButton
+        type="button"
+        variant="ghost"
+        size="sm"
         onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
         className={cn(
-          'absolute top-1.5 left-1.5 p-0.5 rounded transition-opacity',
+          'absolute left-1.5 top-1.5 h-auto rounded p-0.5 transition-opacity hover:bg-transparent',
           isFavorite ? 'opacity-100 text-neon-amber' : 'opacity-0 group-hover:opacity-50 text-white/30',
         )}
         aria-label={t('commands.toggleFavorite', 'Toggle favorite')}
       >
         <Star className={cn('h-3 w-3', isFavorite && 'fill-current')} />
-      </button>
+      </ControlButton>
 
       <div className="rounded-xl p-2.5 transition-colors bg-white/5 text-white/40">
         {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Icon className="h-5 w-5" />}

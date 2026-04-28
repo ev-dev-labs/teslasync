@@ -1,5 +1,5 @@
 import { useMemo, useRef, useEffect, useState, useCallback } from 'react';
-import { Input } from '@/components/ui';
+import { Button as ControlButton, Input as ControlInput } from '@/components/ui';
 import { Spinner } from '@/components/feedback';
 import { useGeocodeSearch } from '@/api/hooks/useDriving';
 import { MapPin } from 'lucide-react';
@@ -52,7 +52,7 @@ export function AddressInput({ value, onChange, onSelect, placeholder, label }: 
       )}
       <div className="relative">
         <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
-        <Input
+        <ControlInput
           value={value}
           onChange={(e) => {
             onChange(e.target.value);
@@ -71,15 +71,17 @@ export function AddressInput({ value, onChange, onSelect, placeholder, label }: 
       {isOpen && suggestions.length > 0 && (
         <div className="absolute z-50 mt-1 w-full rounded-lg border border-white/10 bg-gray-900/95 backdrop-blur-xl shadow-xl max-h-60 overflow-y-auto">
           {suggestions.map((result, idx) => (
-            <button
+            <ControlButton
               key={`${result.lat}-${result.lng}-${idx}`}
               type="button"
-              className="flex items-start gap-2 w-full px-3 py-2 text-left text-sm text-white/80 hover:bg-white/5 transition-colors"
+              variant="ghost"
+              size="sm"
+              className="h-auto w-full items-start justify-start gap-2 rounded-none px-3 py-2 text-left text-sm font-normal text-white/80 hover:bg-white/5"
               onClick={() => handleSelect(result)}
             >
               <MapPin className="h-4 w-4 shrink-0 mt-0.5 text-white/40" />
               <span className="line-clamp-2">{result.display_name}</span>
-            </button>
+            </ControlButton>
           ))}
         </div>
       )}

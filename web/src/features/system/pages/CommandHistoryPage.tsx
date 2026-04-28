@@ -10,7 +10,9 @@ import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { PageContainer, Grid } from '@/components/layout';
-import { GlassPanel, TabNav, Pagination } from '@/components/ui';
+import {
+  GlassPanel, Input as ControlInput, Select as ControlSelect, TabNav, Pagination,
+} from '@/components/ui';
 import { StatCard, Timeline } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer } from '@/components/motion';
@@ -258,18 +260,16 @@ export default function CommandHistoryPage() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               {/* Vehicle selector */}
               {vehicleList.length > 1 && (
-                <select
+                <ControlSelect
+                  options={vehicleList.map((v) => ({
+                    value: String(v.id),
+                    label: v.display_name || `Vehicle ${v.id}`,
+                  }))}
                   value={activeVehicleId ?? ''}
                   onChange={handleVehicleChange}
                   aria-label={t('commandHistory.selectVehicle', 'Select vehicle')}
-                  className="rounded-lg bg-white/[0.04] px-3 py-1.5 text-xs text-gray-300 outline-none ring-1 ring-white/[0.08] min-w-[140px]"
-                >
-                  {vehicleList.map((v) => (
-                    <option key={v.id} value={v.id} className="bg-[var(--bg)]">
-                      {v.display_name || `Vehicle ${v.id}`}
-                    </option>
-                  ))}
-                </select>
+                  className="min-w-[140px] rounded-lg border-0 bg-white/[0.04] px-3 py-1.5 text-xs text-gray-300 ring-1 ring-white/[0.08] dark:bg-white/[0.04]"
+                />
               )}
 
               {/* Status filter */}
@@ -277,15 +277,15 @@ export default function CommandHistoryPage() {
             </div>
 
             {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/30" />
-              <input
+            <div className="sm:w-56">
+              <ControlInput
                 type="text"
                 value={searchQuery}
                 onChange={handleSearchChange}
                 placeholder={t('commandHistory.searchPlaceholder', 'Search commands…')}
                 aria-label={t('commandHistory.searchCommands', 'Search commands')}
-                className="rounded-lg bg-white/[0.04] pl-8 pr-3 py-1.5 text-xs text-gray-300 outline-none ring-1 ring-white/[0.08] placeholder:text-white/20 w-full sm:w-56"
+                icon={<Search className="h-3.5 w-3.5 text-white/30" />}
+                className="h-auto w-full rounded-lg border-0 bg-white/[0.04] py-1.5 pl-8 pr-3 text-xs text-gray-300 ring-1 ring-white/[0.08] placeholder:text-white/20 dark:bg-white/[0.04]"
               />
             </div>
           </div>
