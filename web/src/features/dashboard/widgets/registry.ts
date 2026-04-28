@@ -885,6 +885,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     component: lazy(() => import('./LifetimeStatsWidget')),
   },
   {
+    id: 'mileage-stats',
+    name: 'Mileage Stats',
+    description: 'Driving averages: daily, weekly, monthly distance + milestone projection',
+    icon: TrendingUp,
+    category: 'analytics',
+    defaultSize: { cols: 2, rows: 2 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./MileageStatsWidget')),
+  },
+  {
     id: 'state-timeline',
     name: 'State Timeline',
     description: 'Vehicle state distribution: driving, charging, asleep, idle breakdown',
