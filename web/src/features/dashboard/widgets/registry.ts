@@ -92,6 +92,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     component: lazy(() => import('./DrivetrainHealthWidget')),
   },
   {
+    id: 'motor-performance',
+    name: 'Motor Performance',
+    description: 'Live motor data: torque, stator temp, gear state, g-forces',
+    icon: Zap,
+    category: 'vehicle',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./MotorPerformanceWidget')),
+  },
+  {
     id: 'vehicle-specs',
     name: 'Vehicle Specs',
     description: 'Configuration reference: model, trim, paint, wheels, options',

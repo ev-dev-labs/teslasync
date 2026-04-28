@@ -1,0 +1,38 @@
+=== SURVEY ===
+- Examined WidgetShell props: title, icon, loading, error, updatedAt, isFetching, isStale, isError, onRefresh
+- Examined WidgetProps: vehicleId?, size (cols/rows), config?
+- Examined useMotorLatest hook: returns MotorSnapshot | null with di_torque, di_stator_temp, gear, shift_state, motor_temp_c_front
+- Examined MotorSnapshot interface (api/types.ts:491): di_torque, di_stator_temp, gear, shift_state are optional/nullable; lateral_accel/longitudinal_accel not on type yet
+- Examined DrivetrainHealthWidget as reference pattern: same hook, WidgetGaugeHero, convertTemp, isCompact branching
+- RadialGauge accepts value, max, label, unit, color, size
+- StatCard from @/components/data-display
+- useSettings provides convertTemp, tempUnit
+- fmtNumber, fmtInt from @/lib/numberFormat
+
+=== REASONING ===
+- Standard (2×4): RadialGauge for torque centered, 2×2 grid of StatCards below for stator temp, gear, lateral g, longitudinal g
+- Torque color thresholds: green (<200), amber (<400), red (≥400) per spec
+- Compact (1×2): gear + torque as centered text values, no gauge (too small)
+- lateral_accel/longitudinal_accel: not on MotorSnapshot type — use unknown cast to access safely
+- Stator temp: convert with convertTemp from useSettings
+- Null safety: all fields ?? 0 or ?? '—', EmptyState for no data
+
+=== CHANGES ===
+1. Created web/src/features/dashboard/widgets/MotorPerformanceWidget.tsx
+   - Standard layout: RadialGauge (torque Nm, color-coded), 4 StatCards (stator temp, gear, lateral g, longitudinal g)
+   - Compact layout: centered gear + torque text
+   - Full freshness props to WidgetShell
+   - EmptyState for null data
+   - All strings via useTranslation('dashboard')
+   - Unit conversion for stator temp via useSettings().convertTemp
+
+2. Updated web/src/features/dashboard/widgets/registry.ts
+   - Added 'motor-performance' entry after 'drivetrain-health' in vehicle category
+   - icon: Zap, defaultSize: 2×4, minSize: 1×2, maxSize: 4×40
+   - lazy import for code splitting
+
+=== GATE ===
+npx tsc --noEmit → exit code 0 (clean)
+
+EXIT=0
+STATUS=DONE
