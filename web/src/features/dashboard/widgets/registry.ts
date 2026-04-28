@@ -11,6 +11,7 @@ import {
   PieChart as PieIcon, Server, PlayCircle, Crosshair, AlertCircle, BookOpen,
   ScrollText,
   FileSearch,
+  HardDrive,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -1240,6 +1241,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 2, rows: 4 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./AuditLogWidget')),
+  },
+  {
+    id: 'backup-monitor',
+    name: 'Backup Monitor',
+    description: 'Database backup status: last run, size, retention, success/fail history',
+    icon: HardDrive,
+    category: 'system',
+    defaultSize: { cols: 2, rows: 2 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./BackupMonitorWidget')),
   },
 ];
 
