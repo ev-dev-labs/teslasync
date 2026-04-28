@@ -7,17 +7,11 @@ import { EmptyState } from '@/components/feedback';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { request } from '@/api/client';
+import { formatDurationMinutes } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import type { Drive } from '../types';
-
-function formatDuration(minutes: number): string {
-  if (minutes < 1) return '<1m';
-  const h = Math.floor(minutes / 60);
-  const m = Math.round(minutes % 60);
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
-}
 
 function truncateAddress(addr: string | undefined, maxLen: number): string {
   if (!addr) return '—';
@@ -81,7 +75,7 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
                     <div className="flex items-center gap-1 mt-0.5">
                       <Clock className="h-2.5 w-2.5 text-white/30" />
                       <span className="text-[10px] text-white/40 tabular-nums">
-                        {formatDuration(d.duration_min ?? 0)}
+                        {formatDurationMinutes(d.duration_min ?? 0, { subMinuteLabel: '<1m' })}
                       </span>
                     </div>
                   </div>

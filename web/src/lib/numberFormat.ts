@@ -39,3 +39,20 @@ export function fmtPercent(v: unknown, decimals?: number): string {
 export function fmtInt(v: unknown): string {
   return fmtNumber(v, 0)
 }
+
+interface FormatBytesOptions {
+  zeroAsEmpty?: boolean
+  empty?: string
+  gbDecimals?: number
+}
+
+/** Format a byte count with binary units while preserving existing dashboard/file-table output. */
+export function formatBytes(bytes: number | null | undefined, options: FormatBytesOptions = {}): string {
+  const empty = options.empty ?? '—'
+  if (bytes == null || !Number.isFinite(bytes)) return empty
+  if (options.zeroAsEmpty && bytes === 0) return empty
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(options.gbDecimals ?? 1)} GB`
+}

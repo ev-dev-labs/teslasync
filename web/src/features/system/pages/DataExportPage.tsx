@@ -23,7 +23,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { fmtNumber as fmtNum } from '@/lib/numberFormat';
+import { formatBytes } from '@/lib/numberFormat';
 
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
@@ -38,7 +38,7 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useToast } from '@/components/feedback/Toast';
-import { formatDateTime, formatRelative } from '@/lib/dateFormat';
+import { formatDateTime, formatDurationMsLong, formatRelative } from '@/lib/dateFormat';
 import { request } from '@/api/client';
 import type { Vehicle } from '@/api/types';
 
@@ -139,27 +139,10 @@ const TYPE_BADGE_VARIANT: Record<ExportType, 'info' | 'success' | 'warning' | 'd
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
-function formatFileSize(bytes: number | undefined): string {
-  if (!bytes || bytes === 0) return '—';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-}
-
 function daysAgo(days: number): string {
   const d = new Date();
   d.setDate(d.getDate() - days);
   return d.toISOString().split('T')[0];
-}
-
-function formatDuration(ms: number | undefined): string {
-  if (!ms) return '—';
-  if (ms < 1000) return `${ms}ms`;
-  const sec = ms / 1000;
-  if (sec < 60) return `${sec.toFixed(1)}s`;
-  const min = Math.floor(sec / 60);
-  return `${min}m ${fmtNum(sec % 60, 0)}s`;
 }
 
 function fmtInt(n: number | undefined): string {
@@ -489,7 +472,7 @@ function StatsRow({
       />
       <MetricCard
         label={t('Total Size')}
-        value={formatFileSize(totalSize)}
+        value={formatBytes(totalSize, { zeroAsEmpty: true, gbDecimals: 2 })}
         icon={<HardDrive className="h-4 w-4" />}
         color="blue"
       />
@@ -724,7 +707,7 @@ function ExportHistoryTable({
         sortable: true,
         render: (row) => (
           <span className="text-xs text-[var(--text-secondary)]">
-            {formatFileSize(row.file_size)}
+            {formatBytes(row.file_size, { zeroAsEmpty: true, gbDecimals: 2 })}
           </span>
         ),
       },
@@ -733,7 +716,7 @@ function ExportHistoryTable({
         header: t('Duration'),
         render: (row) => (
           <span className="text-xs text-[var(--text-muted)]">
-            {formatDuration(row.duration_ms)}
+            {formatDurationMsLong(row.duration_ms)}
           </span>
         ),
       },

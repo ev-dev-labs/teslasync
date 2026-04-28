@@ -18,7 +18,7 @@ import {
 
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { formatDateTime } from '@/lib/dateFormat';
+import { formatDateTime, formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
 import { fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { getErrorMessage } from '@/lib/errorMessage';
@@ -89,13 +89,6 @@ const STATE_BADGE: Record<string, 'success' | 'info' | 'warning' | 'neutral' | '
   parked: 'warning',
   asleep: 'neutral',
 };
-
-function formatDuration(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = (seconds % 3600) / 60;
-  if (h === 0) return `${fmtInt(m)}m`;
-  return m >= 0.5 ? `${h}h ${fmtInt(m)}m` : `${h}h`;
-}
 
 function formatHours(minutes: number): string {
   const hours = minutes / 60;
@@ -242,7 +235,7 @@ export default function TimelinePage() {
         sortable: true,
         render: (row) => (
           <span className="text-sm font-medium">
-            {formatDuration(row.duration_seconds)}
+            {formatDurationSecondsAsMinutes(row.duration_seconds)}
           </span>
         ),
       },
@@ -338,7 +331,7 @@ export default function TimelinePage() {
                       backgroundColor:
                         STATE_COLORS[rec.state] ?? STATE_COLORS.offline,
                     }}
-                    title={`${rec.state}: ${formatDuration(rec.duration_seconds)}`}
+                    title={`${rec.state}: ${formatDurationSecondsAsMinutes(rec.duration_seconds)}`}
                   />
                 );
               })}

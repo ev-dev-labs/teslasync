@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Music, Radio, Volume2 } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles, useMediaLatest } from '@/api/hooks/useVehicles';
+import { formatDurationClock } from '@/lib/dateFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
@@ -15,13 +16,6 @@ function ProgressBar({ elapsed, duration }: { elapsed: number; duration: number 
       />
     </div>
   );
-}
-
-function formatDuration(ms: number): string {
-  const totalSec = Math.floor(ms / 1000);
-  const m = Math.floor(totalSec / 60);
-  const s = totalSec % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
 export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) {
@@ -89,8 +83,8 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
               <div className="space-y-1">
                 <ProgressBar elapsed={elapsed} duration={duration} />
                 <div className="flex items-center justify-between text-[10px] text-white/40">
-                  <span>{formatDuration(elapsed)}</span>
-                  <span>{formatDuration(duration)}</span>
+                  <span>{formatDurationClock(elapsed)}</span>
+                  <span>{formatDurationClock(duration)}</span>
                 </div>
               </div>
             )}

@@ -4,6 +4,7 @@ import { PlayCircle, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useAutomationHistory } from '@/api/hooks/useAutomations';
+import { formatDurationMs, formatRelativeTime } from '@/lib/dateFormat';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetEventFeed } from './shared';
@@ -32,25 +33,6 @@ const DEFAULT_STATUS = {
   color: '#6b7280',
   severity: 'info' as const,
 };
-
-function formatDuration(ms: number | null): string {
-  if (ms == null) return '—';
-  if (ms < 1000) return `${fmtInt(ms)}ms`;
-  return `${fmtNumber(ms / 1000, 1)}s`;
-}
-
-function formatRelativeTime(dateStr: string | null): string {
-  if (!dateStr) return '—';
-  const d = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const diffMin = Math.floor(diffMs / 60_000);
-  if (diffMin < 1) return 'Just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHrs = Math.floor(diffMin / 60);
-  if (diffHrs < 24) return `${diffHrs}h ago`;
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
 
 // ── Compact layout (1×2) ─────────────────────────────────────────────
 
@@ -97,7 +79,7 @@ export default function AutomationHistoryWidget({ size }: WidgetProps) {
     () =>
       items.map((entry) => {
         const mapped = STATUS_MAP[entry.status] ?? DEFAULT_STATUS;
-        const durationStr = formatDuration(entry.duration_ms ?? null);
+        const durationStr = formatDurationMs(entry.duration_ms ?? null);
         const statusLabel = entry.status ?? '—';
         return {
           id: entry.id,

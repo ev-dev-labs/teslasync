@@ -7,7 +7,7 @@ import { GlassPanel } from '@/components/ui';
 import { Badge } from '@/components/ui';
 import { ProgressRing, InlineMetric } from '@/components/data-display';
 import { useTranslation } from 'react-i18next';
-import { formatDateTime } from '@/lib/dateFormat';
+import { formatDateTime, formatDurationMinutes } from '@/lib/dateFormat';
 import { CHARGER_COLORS } from '@/lib/colors';
 import { fmtNumber, fmtWithUnit, fmtInt } from '@/lib/numberFormat';
 import type { ChargingSession } from '@/api/types';
@@ -26,11 +26,7 @@ export function getChargerCategory(type: string | null): ChargerCategory {
   return 'home';
 }
 
-export function formatDuration(min: number): string {
-  const h = Math.floor(min / 60);
-  const m = fmtInt(min % 60);
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
-}
+export { formatDurationMinutes as formatDuration };
 
 interface ChargingSessionCardProps {
   session: ChargingSession;
@@ -92,7 +88,7 @@ export function ChargingSessionCard({ session, convertDistance, distanceUnit }: 
               />
               <InlineMetric
                 icon={<Clock className="h-3 w-3" />}
-                value={formatDuration(session.duration_min)}
+                value={formatDurationMinutes(session.duration_min)}
               />
               {session.charger_power_kw_max != null && (
                 <InlineMetric

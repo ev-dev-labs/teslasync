@@ -31,7 +31,7 @@ import { useDrives, useDrivingStats } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { formatDateTime, formatDateShort } from '@/lib/dateFormat';
+import { formatDateTime, formatDateShort, formatDurationMinutes } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import type { Drive } from '@/types/driving';
@@ -39,12 +39,6 @@ import type { Drive } from '@/types/driving';
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
 /* ------------------------------------------------------------------ */
-
-function formatDuration(min: number): string {
-  const h = Math.floor(min / 60);
-  const m = Math.round(min % 60);
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
-}
 
 function getEfficiency(drive: Drive): number | null {
   const batteryUsed = (drive.startBatteryPct ?? 0) - (drive.endBatteryPct ?? 0);
@@ -128,7 +122,7 @@ function DriveCard({
             </div>
 
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
-              <InlineMetric icon={<Clock />} value={formatDuration(drive.durationMin)} />
+              <InlineMetric icon={<Clock />} value={formatDurationMinutes(drive.durationMin)} />
               <InlineMetric icon={<Gauge />} value={`${t('drives.avg', 'Avg')} ${avgSpeed} ${speedUnit}`} />
               {drive.maxSpeedMph !== null && (
                 <InlineMetric
@@ -376,7 +370,7 @@ export default function DrivesListPage() {
                   max={Math.max(computedStats.totalDur, 600)}
                   color="#00f0ff"
                 />
-                <p className="text-[10px] text-[var(--text-muted)] mt-1">{formatDuration(computedStats.totalDur)}</p>
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">{formatDurationMinutes(computedStats.totalDur)}</p>
               </div>
               <div>
                 <MetricBar
@@ -408,7 +402,7 @@ export default function DrivesListPage() {
                   color="#f59e0b"
                 />
                 <p className="text-[10px] text-[var(--text-muted)] mt-1">
-                  {formatDuration(computedStats.totalDur / computedStats.count)}
+                  {formatDurationMinutes(computedStats.totalDur / computedStats.count)}
                 </p>
               </div>
             </div>

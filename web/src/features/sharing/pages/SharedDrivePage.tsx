@@ -22,16 +22,11 @@ import {
 import Logo from '@/components/ui/Logo';
 import { useSharedDrive } from '@/api/hooks/useSharing';
 import { FadeIn } from '@/components/motion';
+import { formatDurationMinutes } from '@/lib/dateFormat';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
 /* ------------------------------------------------------------------ */
-
-function formatDuration(min: number): string {
-  const h = Math.floor(min / 60);
-  const m = Math.round(min % 60);
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
-}
 
 function formatDistance(km: number): string {
   return km >= 10 ? `${Math.round(km)} km` : `${km.toFixed(1)} km`;
@@ -205,7 +200,7 @@ export default function SharedDrivePage() {
             />
             <StatCard
               label={t('share.duration', 'Duration')}
-              value={formatDuration(drive.duration_min)}
+              value={formatDurationMinutes(drive.duration_min)}
               icon={<Clock className="h-4 w-4" />}
             />
             {drive.efficiency_wh_km != null && (

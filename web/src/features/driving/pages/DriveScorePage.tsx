@@ -53,7 +53,7 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useAnnotations } from '@/hooks/useAnnotations';
-import { formatDateShort } from '@/lib/dateFormat';
+import { formatDateShort, formatDurationMinutes } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt, fmtWithUnit } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 
@@ -190,13 +190,6 @@ function scoreTextClass(score: number | null): string {
   if (score >= 80) return 'text-green-400';
   if (score >= 60) return 'text-amber-400';
   return 'text-red-400';
-}
-
-function formatDuration(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = Math.round(minutes % 60);
-  if (h === 0) return `${m}m`;
-  return `${h}h ${m}m`;
 }
 
 function getDefaultStartDate(): string {
@@ -1224,7 +1217,7 @@ export default function DriveScorePage() {
                         </div>
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-[var(--text-muted)]">{t('driveScore.durationLabel', 'Duration')}</span>
-                          <span className="text-[var(--text-primary)]">{formatDuration(bestDrive.drive.durationMin)}</span>
+                          <span className="text-[var(--text-primary)]">{formatDurationMinutes(bestDrive.drive.durationMin)}</span>
                         </div>
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-[var(--text-muted)]">{t('driveScore.consumption', 'Consumption')}</span>
@@ -1268,7 +1261,7 @@ export default function DriveScorePage() {
                         </div>
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-[var(--text-muted)]">{t('driveScore.durationLabel', 'Duration')}</span>
-                          <span className="text-[var(--text-primary)]">{formatDuration(worstDrive.drive.durationMin)}</span>
+                          <span className="text-[var(--text-primary)]">{formatDurationMinutes(worstDrive.drive.durationMin)}</span>
                         </div>
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-[var(--text-muted)]">{t('driveScore.consumption', 'Consumption')}</span>
@@ -1368,7 +1361,7 @@ export default function DriveScorePage() {
 
                       {/* Duration */}
                       <span className="text-sm text-white/80">
-                        {formatDuration(drive.durationMin)}
+                        {formatDurationMinutes(drive.durationMin)}
                       </span>
 
                       {/* Consumption */}
@@ -1662,7 +1655,7 @@ export default function DriveScorePage() {
                     },
                     {
                       label: t('driveScore.totalDuration', 'Total Duration'),
-                      value: formatDuration(
+                      value: formatDurationMinutes(
                         filteredDrives.reduce(
                           (sum, d) => sum + d.durationMin,
                           0,
@@ -1688,7 +1681,7 @@ export default function DriveScorePage() {
                         'driveScore.avgDuration',
                         'Avg Duration/Drive',
                       ),
-                      value: formatDuration(
+                      value: formatDurationMinutes(
                         filteredDrives.length > 0
                           ? filteredDrives.reduce(
                               (sum, d) => sum + d.durationMin,

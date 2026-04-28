@@ -6,20 +6,11 @@ import { StatCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useTrips } from '@/api/hooks/useTrips';
 import { useSettings } from '@/hooks/useSettings';
+import { formatDurationRange } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { kmToMiles } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
-
-function formatDuration(start: string, end: string | null): string {
-  if (!end) return '—';
-  const ms = new Date(end).getTime() - new Date(start).getTime();
-  if (ms <= 0) return '—';
-  const totalMin = Math.round(ms / 60_000);
-  const h = Math.floor(totalMin / 60);
-  const m = totalMin % 60;
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
-}
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, {
@@ -88,7 +79,7 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
                 />
                 <StatCard
                   label={t('widget.duration', 'Duration')}
-                  value={formatDuration(lastTrip.start_date, lastTrip.end_date)}
+                  value={formatDurationRange(lastTrip.start_date, lastTrip.end_date)}
                   icon={<Clock className="h-3 w-3" />}
                 />
                 <StatCard
@@ -130,7 +121,7 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
                         {fmtNumber(displayDist(trip.total_distance_km ?? 0), 1)} {distanceUnit}
                       </span>
                       <span className="text-[10px] text-white/40 tabular-nums">
-                        {formatDuration(trip.start_date, trip.end_date)}
+                        {formatDurationRange(trip.start_date, trip.end_date)}
                       </span>
                       <Badge className="text-[10px]">
                         {fmtInt(trip.drive_count ?? 0)} {t('widget.drivesShort', 'drv')}
