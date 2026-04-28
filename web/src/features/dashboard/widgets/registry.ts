@@ -5,7 +5,7 @@ import {
   DollarSign, Calendar, CloudSun, CircleDot, CreditCard, Hash,
   MonitorSmartphone, List, Grid3X3, Workflow, DoorOpen, Eye,
   Command, CalendarRange, Bell, Music, HeartPulse, Moon, Navigation,
-  Cpu, RotateCcw, Route,
+  Cpu, RotateCcw, Route, Lightbulb,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -314,6 +314,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 2, rows: 4 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./RouteEfficiencyWidget')),
+  },
+  {
+    id: 'driving-coach',
+    name: 'Driving Coach',
+    description: 'AI-powered driving tips: personalized efficiency recommendations',
+    icon: Lightbulb,
+    category: 'driving',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./DrivingCoachWidget')),
   },
 
   // ── Charging ──
