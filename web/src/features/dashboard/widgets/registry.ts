@@ -12,6 +12,7 @@ import {
   ScrollText,
   FileSearch,
   HardDrive,
+  Info,
 } from 'lucide-react';
 import type { WidgetDef } from './types';
 
@@ -1263,6 +1264,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./ExportStatusWidget')),
+  },
+  {
+    id: 'version-info',
+    name: 'Version Info',
+    description: 'TeslaSync version, build info, uptime, data capture rates',
+    icon: Info,
+    category: 'system',
+    defaultSize: { cols: 2, rows: 2 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./VersionInfoWidget')),
   },
 ];
 
