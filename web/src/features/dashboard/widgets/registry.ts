@@ -750,6 +750,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./LiveSignalSparklinesWidget')),
   },
+  {
+    id: 'signal-health',
+    name: 'Signal Health',
+    description: 'Telemetry signal coverage: active signals, data gaps, freshness',
+    icon: Activity,
+    category: 'telemetry',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./SignalHealthWidget')),
+  },
 
   // ── Analytics ──
   {
