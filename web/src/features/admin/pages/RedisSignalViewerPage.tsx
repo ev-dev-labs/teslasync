@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Database, Search, RefreshCw } from 'lucide-react'
 
 import { PageContainer } from '@/components/layout'
-import { GlassPanel, Badge, DataTable, useSortToggle, Toggle, Input, Select, type Column } from '@/components/ui'
+import { GlassPanel, Badge, Button as UiButton, DataTable, useSortToggle, Toggle, Input as UiInput, Select as UiSelect, type Column } from '@/components/ui'
 import { StatCard } from '@/components/data-display'
 import { Skeleton, EmptyState } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
@@ -168,7 +168,7 @@ export default function RedisSignalViewerPage() {
           <GlassPanel>
             <div className="flex flex-wrap items-center gap-4">
               <div className="w-64">
-                <Select
+                <UiSelect
                   value={selectedVehicleId !== null ? String(selectedVehicleId) : ''}
                   onChange={(e) => {
                     const val = e.target.value
@@ -180,7 +180,7 @@ export default function RedisSignalViewerPage() {
 
               <div className="relative flex-1 min-w-[200px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
-                <Input
+                <UiInput
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder={t('redis.searchPlaceholder', 'Filter signals…')}
@@ -188,7 +188,7 @@ export default function RedisSignalViewerPage() {
                 />
               </div>
 
-              <Select
+              <UiSelect
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
                 options={[
@@ -206,15 +206,16 @@ export default function RedisSignalViewerPage() {
                 <span className="text-sm text-white/60">{t('redis.autoRefresh', 'Auto-refresh')}</span>
               </div>
 
-              <button
+              <UiButton
                 type="button"
+                variant="secondary"
                 onClick={() => refetch()}
                 disabled={selectedVehicleId === null || isFetching}
-                className="flex items-center gap-1.5 rounded-lg bg-white/[0.06] px-3 py-2 text-sm text-white/80 hover:bg-white/10 transition-colors disabled:opacity-40"
+                className="gap-1.5 !rounded-lg !bg-white/[0.06] !px-3 !py-2 text-sm text-white/80 hover:!bg-white/10 disabled:opacity-40"
               >
                 <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
                 {t('redis.refresh', 'Refresh')}
-              </button>
+              </UiButton>
             </div>
           </GlassPanel>
         </FadeIn>

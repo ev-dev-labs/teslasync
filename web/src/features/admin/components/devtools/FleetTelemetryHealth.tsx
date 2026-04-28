@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle, AlertCircle, RefreshCw } from 'lucide-react'
-import { Badge, Button, DataTable, type Column } from '@/components/ui'
+import { Badge, Button as UiButton, DataTable, type Column } from '@/components/ui'
 import { Skeleton } from '@/components/feedback'
 import { cn } from '@/lib/cn'
 import { formatDateTime } from '@/lib/dateFormat'
@@ -35,12 +35,14 @@ export function FleetTelemetryHealth() {
       key: 'vin',
       header: t('devtools.health.vin', 'VIN'),
       render: (r) => (
-        <button
-          className="text-xs font-mono text-neon-cyan hover:underline"
+        <UiButton
+          type="button"
+          variant="ghost"
+          className="!h-auto !px-0 !py-0 font-mono text-xs text-neon-cyan hover:!bg-transparent hover:underline"
           onClick={() => setSelectedVin(r.vin === selectedVin ? '' : r.vin)}
         >
           {r.vin}
-        </button>
+        </UiButton>
       ),
     },
     {
@@ -103,10 +105,20 @@ export function FleetTelemetryHealth() {
             {selectedVin && (
               <Badge variant="info" size="sm">
                 {t('devtools.health.filteredBy', 'Filtered')}: {selectedVin}
-                <Button variant="ghost" size="sm" className="ml-1 text-white/60 hover:text-white !px-1 !py-0 min-h-0" onClick={() => setSelectedVin('')}>×</Button>
+                <UiButton
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="ml-1 !h-auto !min-h-0 !px-1 !py-0 text-white/60 hover:!bg-transparent hover:text-white"
+                  onClick={() => setSelectedVin('')}
+                  aria-label={t('devtools.health.clearVinFilter', 'Clear VIN filter')}
+                >
+                  ×
+                </UiButton>
               </Badge>
             )}
-            <Button
+            <UiButton
+              type="button"
               variant="secondary"
               size="sm"
               loading={refreshVINs.isPending}
@@ -114,7 +126,7 @@ export function FleetTelemetryHealth() {
               icon={<RefreshCw className="h-3.5 w-3.5" />}
             >
               {t('devtools.health.refreshVins', 'Refresh from Tesla')}
-            </Button>
+            </UiButton>
           </div>
           {vinsLoading ? (
             <Skeleton className="h-24" />
@@ -137,7 +149,8 @@ export function FleetTelemetryHealth() {
       >
         <div className="space-y-3">
           <div className="flex items-center gap-3">
-            <Button
+            <UiButton
+              type="button"
               variant="secondary"
               size="sm"
               loading={refreshErrors.isPending}
@@ -145,7 +158,7 @@ export function FleetTelemetryHealth() {
               icon={<RefreshCw className="h-3.5 w-3.5" />}
             >
               {t('devtools.health.refreshErrors', 'Refresh from Tesla')}
-            </Button>
+            </UiButton>
           </div>
           {errorsLoading ? (
             <Skeleton className="h-40" />

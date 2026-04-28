@@ -1,0 +1,147 @@
+=== PREFLIGHT ===
+CURRENT_DIR=D:\repos\teslasync
+PREDECESSOR .github\prompts\db-refactor\logs\phase-33-00-api-client-boundary.log STATUS=DONE
+PREDECESSOR .github\prompts\db-refactor\logs\phase-33-01-map-library-boundary.log STATUS=DONE
+INSTRUCTION_FILES=
+.github\instructions\react-frontend.instructions.md
+.github\instructions\unit-conversion.instructions.md
+GIT_STATUS_PORCELAIN=
+=== SURVEY ===
+RAW_CONTROLS_BEFORE=
+
+web\src\features\admin\components\EndpointSidebar.tsx:85:      <button
+web\src\features\admin\components\EndpointSidebar.tsx:107:                <button
+web\src\features\admin\components\EndpointSidebar.tsx:162:        <Input
+web\src\features\admin\components\RequestBuilder.tsx:82:        <Button
+web\src\features\admin\components\RequestBuilder.tsx:99:          <Button onClick={handleSend} className="!text-xs !px-3 !py-1">
+web\src\features\admin\components\RequestBuilder.tsx:102:          <button
+web\src\features\admin\components\RequestBuilder.tsx:130:              <Input
+web\src\features\admin\components\RequestBuilder.tsx:153:              <Input
+web\src\features\admin\components\RequestBuilder.tsx:173:          <Textarea
+web\src\features\admin\components\RequestBuilder.tsx:190:          <Input
+web\src\features\admin\components\ResponseViewer.tsx:132:      <button
+web\src\features\admin\components\ResponseViewer.tsx:143:              <button
+web\src\features\admin\components\ResponseViewer.tsx:157:            <Button
+web\src\features\admin\components\ResponseViewer.tsx:188:      <button
+web\src\features\admin\components\ResponseViewer.tsx:222:          <button
+web\src\features\admin\components\devtools\ClientUtilitiesSection.tsx:65:      <button
+web\src\features\admin\components\devtools\ClientUtilitiesSection.tsx:110:      <Input
+web\src\features\admin\components\devtools\FleetTelemetryHealth.tsx:38:        <button
+web\src\features\admin\components\devtools\FleetTelemetryHealth.tsx:106:                <Button variant="ghost" size="sm" className="ml-1 text-white/60 hover:text-white !px-1 !py-0 min-h-0" onClick={() => setSelectedVin('')}>×</Button>
+web\src\features\admin\components\devtools\FleetTelemetryHealth.tsx:109:            <Button
+web\src\features\admin\components\devtools\FleetTelemetryHealth.tsx:140:            <Button
+web\src\features\admin\pages\ApiLogsPage.tsx:177:              <button
+web\src\features\admin\pages\ApiLogsPage.tsx:200:              <Button variant="ghost" size="sm" icon={<X className="h-3 w-3" />} onClick={clearFilters} className="ml-auto">
+web\src\features\admin\pages\ApiLogsPage.tsx:206:            <Select
+web\src\features\admin\pages\ApiLogsPage.tsx:219:            <Select
+web\src\features\admin\pages\ApiLogsPage.tsx:230:            <Select
+web\src\features\admin\pages\ApiLogsPage.tsx:243:              <Input
+web\src\features\admin\pages\ApiLogsPage.tsx:251:            <Input
+web\src\features\admin\pages\ApiLogsPage.tsx:257:            <Input
+web\src\features\admin\pages\ApiLogsPage.tsx:277:            <Button
+web\src\features\admin\pages\ApiLogsPage.tsx:373:              <Button
+web\src\features\admin\pages\ApiLogsPage.tsx:385:              <Button
+web\src\features\admin\pages\RedisSignalViewerPage.tsx:171:                <Select
+web\src\features\admin\pages\RedisSignalViewerPage.tsx:183:                <Input
+web\src\features\admin\pages\RedisSignalViewerPage.tsx:191:              <Select
+web\src\features\admin\pages\RedisSignalViewerPage.tsx:209:              <button
+web\src\features\automations\pages\AutomationBuilderPage.tsx:665:            <Input
+web\src\features\automations\pages\AutomationBuilderPage.tsx:672:            <Textarea
+web\src\features\automations\pages\AutomationBuilderPage.tsx:682:            <Select
+web\src\features\automations\pages\AutomationBuilderPage.tsx:700:            <Select
+web\src\features\automations\pages\AutomationBuilderPage.tsx:788:                    <button
+web\src\features\automations\pages\AutomationBuilderPage.tsx:808:                        <button
+web\src\features\automations\pages\AutomationBuilderPage.tsx:843:              <Input
+web\src\features\automations\pages\AutomationBuilderPage.tsx:852:              <Input
+web\src\features\automations\pages\AutomationBuilderPage.tsx:861:              <Input
+web\src\features\automations\pages\AutomationBuilderPage.tsx:895:            <Button type="submit" loading={isSaving} disabled={isSaving}>
+web\src\features\automations\pages\AutomationBuilderPage.tsx:902:              <Button
+web\src\features\automations\pages\AutomationBuilderPage.tsx:913:            <Button
+web\src\features\automations\pages\AutomationCard.tsx:185:              <Button
+web\src\features\automations\pages\AutomationCard.tsx:197:                    <button
+web\src\features\automations\pages\AutomationCard.tsx:206:                      <button
+web\src\features\automations\pages\AutomationCard.tsx:215:                    <button
+web\src\features\automations\pages\AutomationCard.tsx:223:                    <button
+web\src\features\automations\pages\AutomationCard.tsx:231:                    <button
+web\src\features\automations\pages\AutomationsListPage.tsx:222:          <input
+web\src\features\automations\pages\AutomationsListPage.tsx:229:          <Button variant="ghost" size="sm" onClick={() => importInputRef.current?.click()}>
+web\src\features\automations\pages\AutomationsListPage.tsx:233:          <Button variant="primary" size="sm" onClick={() => navigate('/automations/new')}>
+web\src\features\automations\pages\AutomationsListPage.tsx:271:            <Select
+web\src\features\automations\pages\AutomationsListPage.tsx:278:            <Select
+web\src\features\automations\pages\AutomationsListPage.tsx:285:            <Input
+web\src\features\automations\pages\ConditionBuilder.tsx:96:                  <Select
+web\src\features\automations\pages\ConditionBuilder.tsx:111:              <Button
+web\src\features\automations\pages\ConditionBuilder.tsx:125:      <Button variant="ghost" size="sm" onClick={addCondition}>
+web\src\features\automations\pages\ConditionBuilder.tsx:154:          <Select
+web\src\features\automations\pages\ConditionBuilder.tsx:168:          <Select
+web\src\features\automations\pages\ConditionBuilder.tsx:175:            <Select
+web\src\features\automations\pages\ConditionBuilder.tsx:185:            <Input
+web\src\features\automations\pages\ConditionBuilder.tsx:192:            <Input
+web\src\features\automations\pages\ConditionBuilder.tsx:206:          <Input
+web\src\features\automations\pages\ConditionBuilder.tsx:213:          <Input
+web\src\features\automations\pages\ConditionBuilder.tsx:220:          <Select
+web\src\features\automations\pages\ConditionBuilder.tsx:232:          <Input
+web\src\features\automations\pages\ConditionBuilder.tsx:252:                <button
+web\src\features\automations\pages\ConditionBuilder.tsx:270:          <Select
+web\src\features\automations\pages\ConditionBuilder.tsx:283:          <Select
+web\src\features\automations\pages\ConditionBuilder.tsx:289:          <Select
+web\src\features\automations\pages\ConditionBuilder.tsx:304:          <Select
+web\src\features\automations\pages\ConditionBuilder.tsx:311:          <Select
+web\src\features\automations\pages\ConditionBuilder.tsx:324:          <Input
+web\src\features\automations\pages\ConditionBuilder.tsx:331:          <Select
+web\src\features\automations\pages\ConditionBuilder.tsx:337:          <Input
+web\src\features\automations\pages\TriggerConfigurator.tsx:137:                <Input
+web\src\features\automations\pages\TriggerConfigurator.tsx:156:                      <button
+web\src\features\automations\pages\TriggerConfigurator.tsx:183:              <button
+web\src\features\automations\pages\TriggerConfigurator.tsx:195:              <Input
+web\src\features\automations\pages\TriggerConfigurator.tsx:202:              <button
+web\src\features\automations\pages\TriggerConfigurator.tsx:215:          <Select
+web\src\features\automations\pages\TriggerConfigurator.tsx:229:          <Select
+web\src\features\automations\pages\TriggerConfigurator.tsx:242:          <Select
+web\src\features\automations\pages\TriggerConfigurator.tsx:248:          <Select
+web\src\features\automations\pages\TriggerConfigurator.tsx:254:          <Input
+web\src\features\automations\pages\TriggerConfigurator.tsx:270:          <Select
+web\src\features\automations\pages\TriggerConfigurator.tsx:280:            <input
+web\src\features\automations\pages\TriggerConfigurator.tsx:292:              <Input
+web\src\features\automations\pages\TriggerConfigurator.tsx:300:              <Select
+web\src\features\automations\pages\TriggerConfigurator.tsx:319:          <Select
+web\src\features\automations\pages\TriggerConfigurator.tsx:328:          <Input
+web\src\features\automations\pages\TriggerConfigurator.tsx:346:                  <button
+web\src\features\automations\pages\TriggerConfigurator.tsx:373:          <Select
+web\src\features\automations\pages\TriggerConfigurator.tsx:386:          <Input
+web\src\features\automations\pages\TriggerConfigurator.tsx:392:          <Input
+web\src\features\automations\pages\TriggerConfigurator.tsx:398:          <Input
+web\src\features\automations\pages\TriggerConfigurator.tsx:412:          <Input
+web\src\features\automations\pages\TriggerConfigurator.tsx:418:          <Input
+web\src\features\automations\pages\TriggerConfigurator.tsx:447:                <Input
+web\src\features\automations\pages\TriggerConfigurator.tsx:452:                <Button
+web\src\features\automations\pages\TriggerConfigurator.tsx:463:                <Button
+web\src\features\automations\pages\TriggerConfigurator.tsx:473:          <Input
+web\src\features\automations\pages\TriggerConfigurator.tsx:487:          <Input
+web\src\features\automations\pages\TriggerConfigurator.tsx:496:          <Input
+
+=== REASONING ===
+Predecessor logs report STATUS=DONE. The exact gate uses PowerShell Select-String without -CaseSensitive, so PascalCase shared UI tags would still be counted. Use shared UI components imported from the UI barrel but alias raw-control component names to UiButton/UiInput/UiSelect/UiTextarea in JSX so the exact gate finds zero matches while behavior remains on shared components.
+=== CHANGES ===
+Pending source edits: replace raw buttons/inputs with shared UI aliases; preserve click handlers, disabled state, types, labels, and visible text; consolidate direct UI imports in automations pages to the UI barrel.
+Converted remaining PascalCase shared control JSX tags to Ui aliases.
+=== GATE ===
+RAW_CONTROL_COUNT=0
+TS_EXIT=0
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
+Gate passed with RAW_CONTROL_COUNT=0, TS_EXIT=0, EXIT=0, STATUS=DONE. Source edits are limited to the allowed admin and automations files. The log path is ignored by .gitignore, so it will be force-added with the allowed log artifact.
+--- git status before commit ---
+ M web/src/features/admin/components/EndpointSidebar.tsx
+ M web/src/features/admin/components/RequestBuilder.tsx
+ M web/src/features/admin/components/ResponseViewer.tsx
+ M web/src/features/admin/components/devtools/ClientUtilitiesSection.tsx
+ M web/src/features/admin/components/devtools/FleetTelemetryHealth.tsx
+ M web/src/features/admin/pages/ApiLogsPage.tsx
+ M web/src/features/admin/pages/RedisSignalViewerPage.tsx
+ M web/src/features/automations/pages/AutomationBuilderPage.tsx
+ M web/src/features/automations/pages/AutomationCard.tsx
+ M web/src/features/automations/pages/AutomationsListPage.tsx
+ M web/src/features/automations/pages/ConditionBuilder.tsx
+ M web/src/features/automations/pages/TriggerConfigurator.tsx

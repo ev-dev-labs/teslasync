@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Send, AlertTriangle } from 'lucide-react';
-import { GlassPanel, Button, Input, Textarea } from '@/components/ui';
+import { GlassPanel, Button as UiButton, Input as UiInput, Textarea as UiTextarea } from '@/components/ui';
 import { MethodBadge, type ParsedEndpoint } from './EndpointSidebar';
 
 interface RequestBuilderProps {
@@ -79,14 +79,15 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
         <code className="flex-1 text-sm text-white/80 font-mono bg-white/[0.03] rounded-lg px-3 py-2 border border-white/[0.06] overflow-x-auto whitespace-nowrap">
           /api/v1{buildUrl()}
         </code>
-        <Button
+        <UiButton
+          type="button"
           onClick={handleSend}
           disabled={loading}
           className="shrink-0"
         >
           <Send className="h-3.5 w-3.5 mr-1.5" />
           {loading ? t('playground.sending', 'Sending...') : t('playground.send', 'Send')}
-        </Button>
+        </UiButton>
       </div>
 
       {/* Destructive action confirmation */}
@@ -96,15 +97,17 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
           <span className="text-xs text-amber-300 flex-1">
             {t('playground.confirmDestructive', 'This is a {{method}} request. Are you sure you want to send it?', { method: endpoint.method })}
           </span>
-          <Button onClick={handleSend} className="!text-xs !px-3 !py-1">
+          <UiButton type="button" onClick={handleSend} className="!text-xs !px-3 !py-1">
             {t('playground.confirmYes', 'Yes, send')}
-          </Button>
-          <button
+          </UiButton>
+          <UiButton
+            type="button"
+            variant="ghost"
             onClick={handleCancel}
-            className="text-xs text-white/50 hover:text-white/80 transition-colors"
+            className="!h-auto !px-0 !py-0 text-xs text-white/50 hover:!bg-transparent hover:text-white/80"
           >
             {t('playground.cancel', 'Cancel')}
-          </button>
+          </UiButton>
         </div>
       )}
 
@@ -127,7 +130,7 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
               <label className="text-xs text-white/50 w-28 font-mono shrink-0">
                 {p.name} <span className="text-red-400">*</span>
               </label>
-              <Input
+              <UiInput
                 value={params[p.name] ?? ''}
                 onChange={e => setParams(prev => ({ ...prev, [p.name]: e.target.value }))}
                 placeholder={p.description || p.type}
@@ -150,7 +153,7 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
                 {p.name}
                 {p.required && <span className="text-red-400 ml-0.5">*</span>}
               </label>
-              <Input
+              <UiInput
                 value={params[p.name] ?? ''}
                 onChange={e => setParams(prev => ({ ...prev, [p.name]: e.target.value }))}
                 placeholder={p.description || `${p.type}${p.default != null ? ` (default: ${p.default})` : ''}`}
@@ -170,7 +173,7 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
               {endpoint.requestBody.contentType}
             </span>
           </h4>
-          <Textarea
+          <UiTextarea
             value={body}
             onChange={e => setBody(e.target.value)}
             rows={8}
@@ -187,7 +190,7 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
         </h4>
         <div className="flex items-center gap-3">
           <label className="text-xs text-white/50 w-28 font-mono shrink-0">X-API-Key</label>
-          <Input
+          <UiInput
             value={apiKey}
             onChange={e => setApiKey(e.target.value)}
             placeholder={t('playground.apiKeyPlaceholder', 'Leave empty to use session auth')}

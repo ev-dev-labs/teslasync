@@ -6,16 +6,13 @@
  */
 import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
-import { Toggle } from '@/components/ui/Toggle';
+import { Input as UiInput, Select as UiSelect, Toggle, Button as UiButton } from '@/components/ui';
 import { useGeofences } from '@/api/hooks/useLocations';
 import { DAYS, COMMON_TIMEZONES } from '@/lib/constants';
 import {
   Clock, Zap, MapPin, Battery, Sunrise, Sun, Radio, Globe, Calendar,
   Copy,
 } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -134,7 +131,7 @@ export function TriggerConfigurator({ triggerType, config, onChange }: TriggerCo
           {isSimple ? (
             <>
               <div className="flex gap-3 items-end">
-                <Input
+                <UiInput
                   label={t('automations.builder.time', 'Time')}
                   type="time"
                   value={`${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`}
@@ -153,13 +150,16 @@ export function TriggerConfigurator({ triggerType, config, onChange }: TriggerCo
                   {DAYS.map((label, i) => {
                     const active = selectedDays.length === 0 || selectedDays.includes(i);
                     return (
-                      <button
+                      <UiButton
                         key={i}
                         type="button"
-                        className={`w-10 h-10 rounded-lg text-xs font-medium transition-colors ${
+                        variant="ghost"
+                        size="sm"
+                        aria-pressed={active}
+                        className={`!h-10 !w-10 !rounded-lg !p-0 text-xs font-medium ${
                           active
-                            ? 'bg-[var(--accent)]/20 text-[var(--accent)] ring-1 ring-[var(--accent)]/50'
-                            : 'bg-white/[0.03] text-white/40 hover:bg-white/[0.06]'
+                            ? '!bg-[var(--accent)]/20 text-[var(--accent)] ring-1 ring-[var(--accent)]/50'
+                            : '!bg-white/[0.03] text-white/40 hover:!bg-white/[0.06]'
                         }`}
                         onClick={() => {
                           let next: number[];
@@ -175,33 +175,35 @@ export function TriggerConfigurator({ triggerType, config, onChange }: TriggerCo
                         }}
                       >
                         {label}
-                      </button>
+                      </UiButton>
                     );
                   })}
                 </div>
               </div>
-              <button
+              <UiButton
                 type="button"
-                className="text-xs text-white/40 hover:text-white/60 underline"
+                variant="ghost"
+                className="!h-auto !px-0 !py-0 text-xs text-white/40 underline hover:!bg-transparent hover:text-white/60"
                 onClick={() => {
                   if (cronExpr === '') onChange({ ...config, cron_expr: '0 8 * * *' });
                 }}
               >
                 {t('automations.builder.advancedCron', 'Switch to advanced cron expression')}
-              </button>
+              </UiButton>
             </>
           ) : (
             <>
-              <Input
+              <UiInput
                 label={t('automations.builder.cronExpr', 'Cron Expression')}
                 value={cronExpr}
                 onChange={(e) => set('cron_expr', e.target.value)}
                 placeholder="0 8 * * 1-5"
                 hint="minute hour day-of-month month day-of-week"
               />
-              <button
+              <UiButton
                 type="button"
-                className="text-xs text-white/40 hover:text-white/60 underline"
+                variant="ghost"
+                className="!h-auto !px-0 !py-0 text-xs text-white/40 underline hover:!bg-transparent hover:text-white/60"
                 onClick={() => {
                   const p = parseCronExpr(cronExpr);
                   if (p) onChange({ ...config, cron_expr: cronExpr });
@@ -209,10 +211,10 @@ export function TriggerConfigurator({ triggerType, config, onChange }: TriggerCo
                 }}
               >
                 {t('automations.builder.simpleCron', 'Switch to simple mode')}
-              </button>
+              </UiButton>
             </>
           )}
-          <Select
+          <UiSelect
             label={t('automations.builder.timezone', 'Timezone')}
             options={COMMON_TIMEZONES}
             value={str(config.timezone)}
@@ -226,7 +228,7 @@ export function TriggerConfigurator({ triggerType, config, onChange }: TriggerCo
     case 'vehicle_state':
       return (
         <div className="space-y-4">
-          <Select
+          <UiSelect
             label={t('automations.builder.event', 'Event')}
             options={[{ value: '', label: t('automations.builder.selectEvent', 'Select event...') }, ...VEHICLE_STATE_EVENTS]}
             value={str(config.event)}
@@ -239,19 +241,19 @@ export function TriggerConfigurator({ triggerType, config, onChange }: TriggerCo
     case 'geofence':
       return (
         <div className="space-y-4">
-          <Select
+          <UiSelect
             label={t('automations.builder.geofence', 'Geofence')}
             options={[{ value: '', label: t('automations.builder.selectGeofence', 'Select geofence...') }, ...geofenceOptions]}
             value={String(config.geofence_id ?? '')}
             onChange={(e) => set('geofence_id', e.target.value ? Number(e.target.value) : 0)}
           />
-          <Select
+          <UiSelect
             label={t('automations.builder.geofenceEvent', 'Event')}
             options={GEOFENCE_EVENTS}
             value={str(config.event) || 'enter'}
             onChange={(e) => set('event', e.target.value)}
           />
-          <Input
+          <UiInput
             label={t('automations.builder.dwellMinutes', 'Dwell Minutes')}
             type="number"
             min={0}
@@ -267,7 +269,7 @@ export function TriggerConfigurator({ triggerType, config, onChange }: TriggerCo
     case 'battery':
       return (
         <div className="space-y-4">
-          <Select
+          <UiSelect
             label={t('automations.builder.operator', 'Operator')}
             options={BATTERY_OPERATORS}
             value={str(config.operator) || 'below'}
@@ -277,19 +279,19 @@ export function TriggerConfigurator({ triggerType, config, onChange }: TriggerCo
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
               {t('automations.builder.threshold', 'Threshold')}: {num(config.threshold, 50)}%
             </label>
-            <input
+            <UiInput
               type="range"
               min={0}
               max={100}
               step={1}
               value={num(config.threshold, 50)}
               onChange={(e) => set('threshold', parseInt(e.target.value, 10))}
-              className="w-full mt-1 accent-[var(--accent)]"
+              className="!mt-1 !w-full !border-0 !bg-transparent !px-0 !py-0 accent-[var(--accent)]"
             />
           </div>
           {str(config.operator) === 'changes_by' && (
             <>
-              <Input
+              <UiInput
                 label={t('automations.builder.delta', 'Delta (%)')}
                 type="number"
                 min={1}
@@ -297,7 +299,7 @@ export function TriggerConfigurator({ triggerType, config, onChange }: TriggerCo
                 value={num(config.delta, 10)}
                 onChange={(e) => set('delta', parseInt(e.target.value, 10) || 1)}
               />
-              <Select
+              <UiSelect
                 label={t('automations.builder.direction', 'Direction')}
                 options={[
                   { value: 'any', label: 'Any' },
@@ -316,7 +318,7 @@ export function TriggerConfigurator({ triggerType, config, onChange }: TriggerCo
     case 'sunrise_sunset':
       return (
         <div className="space-y-4">
-          <Select
+          <UiSelect
             label={t('automations.builder.solarEvent', 'Solar Event')}
             options={[
               { value: 'sunrise', label: 'Sunrise' },
@@ -325,7 +327,7 @@ export function TriggerConfigurator({ triggerType, config, onChange }: TriggerCo
             value={str(config.event) || 'sunrise'}
             onChange={(e) => set('event', e.target.value)}
           />
-          <Input
+          <UiInput
             label={t('automations.builder.offsetMinutes', 'Offset (minutes)')}
             type="number"
             min={-120}
@@ -343,13 +345,16 @@ export function TriggerConfigurator({ triggerType, config, onChange }: TriggerCo
                 const days = numArr(config.days_of_week);
                 const active = days.length === 0 || days.includes(i);
                 return (
-                  <button
+                  <UiButton
                     key={i}
                     type="button"
-                    className={`w-10 h-10 rounded-lg text-xs font-medium transition-colors ${
+                    variant="ghost"
+                    size="sm"
+                    aria-pressed={active}
+                    className={`!h-10 !w-10 !rounded-lg !p-0 text-xs font-medium ${
                       active
-                        ? 'bg-[var(--accent)]/20 text-[var(--accent)] ring-1 ring-[var(--accent)]/50'
-                        : 'bg-white/[0.03] text-white/40 hover:bg-white/[0.06]'
+                        ? '!bg-[var(--accent)]/20 text-[var(--accent)] ring-1 ring-[var(--accent)]/50'
+                        : '!bg-white/[0.03] text-white/40 hover:!bg-white/[0.06]'
                     }`}
                     onClick={() => {
                       let next: number[];
@@ -365,12 +370,12 @@ export function TriggerConfigurator({ triggerType, config, onChange }: TriggerCo
                     }}
                   >
                     {label}
-                  </button>
+                  </UiButton>
                 );
               })}
             </div>
           </div>
-          <Select
+          <UiSelect
             label={t('automations.builder.timezone', 'Timezone')}
             options={COMMON_TIMEZONES}
             value={str(config.timezone)}
@@ -383,19 +388,19 @@ export function TriggerConfigurator({ triggerType, config, onChange }: TriggerCo
     case 'energy':
       return (
         <div className="space-y-4">
-          <Input
+          <UiInput
             label={t('automations.builder.energySiteId', 'Energy Site ID')}
             type="number"
             value={num(config.energy_site_id)}
             onChange={(e) => set('energy_site_id', parseInt(e.target.value, 10) || 0)}
           />
-          <Input
+          <UiInput
             label={t('automations.builder.energyEvent', 'Event')}
             value={str(config.event)}
             onChange={(e) => set('event', e.target.value)}
             placeholder="solar_above, battery_below, etc."
           />
-          <Input
+          <UiInput
             label={t('automations.builder.threshold', 'Threshold')}
             type="number"
             value={num(config.threshold)}
@@ -409,13 +414,13 @@ export function TriggerConfigurator({ triggerType, config, onChange }: TriggerCo
     case 'mqtt':
       return (
         <div className="space-y-4">
-          <Input
+          <UiInput
             label={t('automations.builder.mqttTopic', 'MQTT Topic')}
             value={str(config.topic)}
             onChange={(e) => set('topic', e.target.value)}
             placeholder="teslasync/+/battery_level"
           />
-          <Input
+          <UiInput
             label={t('automations.builder.payloadMatch', 'Payload Match (optional)')}
             value={str(config.payload_match)}
             onChange={(e) => set('payload_match', e.target.value || undefined)}
@@ -444,33 +449,35 @@ export function TriggerConfigurator({ triggerType, config, onChange }: TriggerCo
             </label>
             {token ? (
               <div className="mt-1 flex gap-2">
-                <Input
+                <UiInput
                   value={webhookUrl}
                   readOnly
                   className="flex-1 font-mono text-xs"
                 />
-                <Button
+                <UiButton
+                  type="button"
                   variant="ghost"
                   size="sm"
                   onClick={() => navigator.clipboard.writeText(webhookUrl)}
                   aria-label={t('automations.builder.copyUrl', 'Copy URL')}
                 >
                   <Copy className="h-4 w-4" />
-                </Button>
+                </UiButton>
               </div>
             ) : (
               <div className="mt-1">
-                <Button
+                <UiButton
+                  type="button"
                   variant="secondary"
                   size="sm"
                   onClick={() => set('webhook_token', crypto.randomUUID())}
                 >
                   {t('automations.builder.generateToken', 'Generate Webhook Token')}
-                </Button>
+                </UiButton>
               </div>
             )}
           </div>
-          <Input
+          <UiInput
             label={t('automations.builder.webhookSecret', 'HMAC Secret (optional)')}
             value={str(config.secret)}
             onChange={(e) => set('secret', e.target.value || undefined)}
@@ -484,7 +491,7 @@ export function TriggerConfigurator({ triggerType, config, onChange }: TriggerCo
     case 'calendar':
       return (
         <div className="space-y-4">
-          <Input
+          <UiInput
             label={t('automations.builder.calendarOffset', 'Offset (minutes)')}
             type="number"
             min={-120}
@@ -493,7 +500,7 @@ export function TriggerConfigurator({ triggerType, config, onChange }: TriggerCo
             onChange={(e) => set('offset_minutes', parseInt(e.target.value, 10) || 0)}
             hint={t('automations.builder.calendarOffsetHint', 'Negative = before event start, positive = after')}
           />
-          <Input
+          <UiInput
             label={t('automations.builder.eventFilter', 'Event Title Filter (regex, optional)')}
             value={str(config.event_filter)}
             onChange={(e) => set('event_filter', e.target.value || undefined)}

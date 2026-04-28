@@ -8,11 +8,7 @@ import { useState, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
-import { Badge } from '@/components/ui/Badge';
+import { GlassPanel, Button as UiButton, Input as UiInput, Select as UiSelect, Badge } from '@/components/ui';
 import { StatCard } from '@/components/data-display/StatCard';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { FadeIn } from '@/components/motion/FadeIn';
@@ -219,21 +215,21 @@ export default function AutomationsListPage() {
       loading={isLoading}
       actions={
         <div className="flex items-center gap-2">
-          <input
+          <UiInput
             ref={importInputRef}
             type="file"
             accept=".json"
             className="hidden"
             onChange={handleImportFile}
           />
-          <Button variant="ghost" size="sm" onClick={() => importInputRef.current?.click()}>
+          <UiButton type="button" variant="ghost" size="sm" onClick={() => importInputRef.current?.click()}>
             <Upload className="mr-1.5 h-4 w-4" />
             {t('automations.import', 'Import')}
-          </Button>
-          <Button variant="primary" size="sm" onClick={() => navigate('/automations/new')}>
+          </UiButton>
+          <UiButton type="button" variant="primary" size="sm" onClick={() => navigate('/automations/new')}>
             <Plus className="mr-1.5 h-4 w-4" />
             {t('automations.create', 'Create')}
-          </Button>
+          </UiButton>
         </div>
       }
     >
@@ -268,21 +264,21 @@ export default function AutomationsListPage() {
       <FadeIn delay={0.03}>
         <GlassPanel className="p-4">
           <div className="flex flex-wrap items-center gap-3">
-            <Select
+            <UiSelect
               options={statusFilterOptions}
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
               className="w-40"
               aria-label={t('automations.filterStatus', 'Filter by status')}
             />
-            <Select
+            <UiSelect
               options={triggerTypeOptions}
               value={triggerFilter}
               onChange={(e) => setTriggerFilter(e.target.value as TriggerFilter)}
               className="w-44"
               aria-label={t('automations.filterTrigger', 'Filter by trigger')}
             />
-            <Input
+            <UiInput
               placeholder={t('automations.search', 'Search automations...')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}

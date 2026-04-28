@@ -11,12 +11,14 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
-import { Button } from '@/components/ui/Button';
-import { Toggle } from '@/components/ui/Toggle';
-import { Textarea } from '@/components/ui/Textarea';
+import {
+  GlassPanel,
+  Input as UiInput,
+  Select as UiSelect,
+  Button as UiButton,
+  Toggle,
+  Textarea as UiTextarea,
+} from '@/components/ui';
 import { AlertBanner } from '@/components/feedback/AlertBanner';
 import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 import { EmptyState } from '@/components/feedback/EmptyState';
@@ -662,14 +664,14 @@ export default function AutomationBuilderPage() {
         {/* ── General info ───────────────────────────────────────────── */}
         <FadeIn>
           <FormSection title={t('automations.builder.general', 'General')}>
-            <Input
+            <UiInput
               label={t('automations.builder.name', 'Name')}
               value={form.name}
               onChange={(e) => update('name', e.target.value)}
               placeholder={t('automations.builder.namePlaceholder', 'Morning Commute Prep')}
               required
             />
-            <Textarea
+            <UiTextarea
               label={t('automations.builder.description', 'Description')}
               value={form.description}
               onChange={(e) => update('description', e.target.value)}
@@ -679,7 +681,7 @@ export default function AutomationBuilderPage() {
               )}
               rows={2}
             />
-            <Select
+            <UiSelect
               label={t('automations.builder.vehicle', 'Vehicle')}
               options={vehicleOptions}
               value={form.vehicle_id != null ? String(form.vehicle_id) : ''}
@@ -697,7 +699,7 @@ export default function AutomationBuilderPage() {
               'Choose what starts this automation.',
             )}
           >
-            <Select
+            <UiSelect
               label={t('automations.builder.triggerType', 'Trigger Type')}
               options={triggerOptions}
               value={form.trigger_type}
@@ -785,9 +787,10 @@ export default function AutomationBuilderPage() {
                     </span>
                   </div>
                   {(channels ?? []).length > 0 && (
-                    <button
+                    <UiButton
                       type="button"
-                      className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
+                      variant="ghost"
+                      className="!h-auto !px-0 !py-0 text-xs text-cyan-400 hover:!bg-transparent hover:text-cyan-300"
                       onClick={() => {
                         const allIds = (channels ?? []).filter(c => c.enabled).map(c => c.id);
                         const allSelected = allIds.every(id => form.notify_channels.includes(id));
@@ -797,7 +800,7 @@ export default function AutomationBuilderPage() {
                       {(channels ?? []).filter(c => c.enabled).every(c => form.notify_channels.includes(c.id))
                         ? t('automations.builder.deselectAll', 'Deselect all')
                         : t('automations.builder.selectAll', 'Select all')}
-                    </button>
+                    </UiButton>
                   )}
                 </div>
                 {(channels ?? []).length > 0 ? (
@@ -805,22 +808,24 @@ export default function AutomationBuilderPage() {
                     {(channels ?? []).map((ch) => {
                       const selected = form.notify_channels.includes(ch.id);
                       return (
-                        <button
+                        <UiButton
                           key={ch.id}
                           type="button"
+                          variant="ghost"
                           disabled={!ch.enabled}
+                          aria-pressed={selected}
                           onClick={() => {
                             const next = selected
                               ? form.notify_channels.filter(id => id !== ch.id)
                               : [...form.notify_channels, ch.id];
                             update('notify_channels', next);
                           }}
-                          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
+                          className={`!h-auto gap-1.5 !rounded-full border !px-3 !py-1.5 text-xs font-medium ${
                             !ch.enabled
-                              ? 'border-white/[0.04] bg-white/[0.02] text-white/30 cursor-not-allowed'
+                              ? 'border-white/[0.04] !bg-white/[0.02] text-white/30 cursor-not-allowed'
                               : selected
-                                ? 'border-cyan-500/40 bg-cyan-500/10 text-cyan-300 shadow-[0_0_8px_rgba(0,200,255,0.1)]'
-                                : 'border-white/[0.08] bg-white/[0.03] text-white/50 hover:border-white/[0.15] hover:text-white/70'
+                                ? 'border-cyan-500/40 !bg-cyan-500/10 text-cyan-300 shadow-[0_0_8px_rgba(0,200,255,0.1)]'
+                                : 'border-white/[0.08] !bg-white/[0.03] text-white/50 hover:border-white/[0.15] hover:text-white/70 hover:!bg-white/[0.03]'
                           }`}
                         >
                           <span className={`h-1.5 w-1.5 rounded-full ${
@@ -828,7 +833,7 @@ export default function AutomationBuilderPage() {
                           }`} />
                           {ch.name ?? ch.kind}
                           <span className="text-[10px] text-white/30 ml-0.5">({ch.kind})</span>
-                        </button>
+                        </UiButton>
                       );
                     })}
                   </div>
@@ -840,7 +845,7 @@ export default function AutomationBuilderPage() {
               </div>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
-              <Input
+              <UiInput
                 label={t('automations.builder.cooldown', 'Cooldown (minutes)')}
                 type="number"
                 min={0}
@@ -849,7 +854,7 @@ export default function AutomationBuilderPage() {
                 onChange={(e) => update('cooldown_minutes', parseInt(e.target.value, 10) || 0)}
                 hint={t('automations.builder.cooldownHint', '0 = no cooldown')}
               />
-              <Input
+              <UiInput
                 label={t('automations.builder.maxExec', 'Max Executions / Hour')}
                 type="number"
                 min={0}
@@ -858,7 +863,7 @@ export default function AutomationBuilderPage() {
                 onChange={(e) => update('max_executions_hour', parseInt(e.target.value, 10) || 0)}
                 hint={t('automations.builder.maxExecHint', '0 = unlimited')}
               />
-              <Input
+              <UiInput
                 label={t('automations.builder.priority', 'Priority')}
                 type="number"
                 min={0}
@@ -892,14 +897,14 @@ export default function AutomationBuilderPage() {
         {/* ── Action buttons ─────────────────────────────────────────── */}
         <FadeIn delay={0.3}>
           <div className="flex gap-3 items-center flex-wrap">
-            <Button type="submit" loading={isSaving} disabled={isSaving}>
+            <UiButton type="submit" loading={isSaving} disabled={isSaving}>
               <Save className="h-4 w-4 mr-2" />
               {isEdit
                 ? t('automations.builder.save', 'Save')
                 : t('automations.builder.create', 'Create')}
-            </Button>
+            </UiButton>
             {(savedId ?? automationId) && (
-              <Button
+              <UiButton
                 type="button"
                 variant="secondary"
                 onClick={handleTestRun}
@@ -908,16 +913,16 @@ export default function AutomationBuilderPage() {
               >
                 <PlayCircle className="h-4 w-4 mr-2" />
                 {t('automations.builder.testRun', 'Test Run')}
-              </Button>
+              </UiButton>
             )}
-            <Button
+            <UiButton
               type="button"
               variant="ghost"
               onClick={() => navigate('/automations')}
             >
               <X className="h-4 w-4 mr-2" />
               {t('automations.builder.cancel', 'Cancel')}
-            </Button>
+            </UiButton>
 
             {testRunMutation.isSuccess && (
               <span className="text-sm text-green-400">

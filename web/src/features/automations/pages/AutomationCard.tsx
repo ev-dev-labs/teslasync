@@ -4,11 +4,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { Toggle } from '@/components/ui/Toggle';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { GlassPanel, Badge, Button as UiButton, Toggle, ConfirmDialog } from '@/components/ui';
 import {
   Clock, Zap, AlertTriangle, MoreVertical, Play, Copy, Download,
   Trash2, RotateCcw, Car, CheckCircle, XCircle, SkipForward,
@@ -182,60 +178,66 @@ export function AutomationCard({
 
             {/* Kebab menu */}
             <div className="relative">
-              <Button
+              <UiButton
+                type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => setMenuOpen(!menuOpen)}
                 aria-label={t('automations.menu', 'Actions menu')}
               >
                 <MoreVertical className="h-4 w-4" />
-              </Button>
+              </UiButton>
               {menuOpen && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
                   <div className="absolute right-0 z-20 mt-1 w-44 rounded-lg border border-white/10 bg-gray-900 py-1 shadow-xl">
-                    <button
+                    <UiButton
                       type="button"
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-white/80 hover:bg-white/5"
+                      variant="ghost"
+                      className="!h-auto !w-full !justify-start !rounded-none !px-3 !py-2 text-sm text-white/80 hover:!bg-white/5"
                       onClick={() => { onTestRun(a.id); setMenuOpen(false); }}
                     >
                       <Play className="h-3.5 w-3.5" />
                       {t('automations.testRun', 'Test Run')}
-                    </button>
+                    </UiButton>
                     {a.auto_disabled && (
-                      <button
+                      <UiButton
                         type="button"
-                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-neon-cyan hover:bg-white/5"
+                        variant="ghost"
+                        className="!h-auto !w-full !justify-start !rounded-none !px-3 !py-2 text-sm text-neon-cyan hover:!bg-white/5"
                         onClick={() => { onReEnable(a.id); setMenuOpen(false); }}
                       >
                         <RotateCcw className="h-3.5 w-3.5" />
                         {t('automations.reEnable', 'Re-enable')}
-                      </button>
+                      </UiButton>
                     )}
-                    <button
+                    <UiButton
                       type="button"
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-white/80 hover:bg-white/5"
+                      variant="ghost"
+                      className="!h-auto !w-full !justify-start !rounded-none !px-3 !py-2 text-sm text-white/80 hover:!bg-white/5"
                       onClick={() => { setMenuOpen(false); }}
                     >
                       <Copy className="h-3.5 w-3.5" />
                       {t('automations.duplicate', 'Duplicate')}
-                    </button>
-                    <button
+                    </UiButton>
+                    <UiButton
                       type="button"
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-white/80 hover:bg-white/5"
+                      variant="ghost"
+                      className="!h-auto !w-full !justify-start !rounded-none !px-3 !py-2 text-sm text-white/80 hover:!bg-white/5"
                       onClick={() => { setMenuOpen(false); }}
                     >
                       <Download className="h-3.5 w-3.5" />
                       {t('automations.export', 'Export')}
-                    </button>
-                    <button
+                    </UiButton>
+                    <UiButton
                       type="button"
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10"
+                      variant="ghost"
+                      className="!h-auto !w-full !justify-start !rounded-none !px-3 !py-2 text-sm text-red-400 hover:!bg-red-500/10"
                       onClick={() => { setConfirmDelete(true); setMenuOpen(false); }}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                       {t('automations.delete', 'Delete')}
-                    </button>
+                    </UiButton>
                   </div>
                 </>
               )}

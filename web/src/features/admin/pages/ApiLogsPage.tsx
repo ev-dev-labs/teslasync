@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel, Button, Select, Input, Badge } from '@/components/ui';
+import { GlassPanel, Button as UiButton, Select as UiSelect, Input as UiInput, Badge } from '@/components/ui';
 import { StatCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { Spinner, AlertBanner } from '@/components/feedback';
@@ -174,15 +174,16 @@ export default function ApiLogsPage() {
               {t('apiLogs.byService', 'By Service')}:
             </span>
             {Object.entries(stats.by_service).map(([svc, count]) => (
-              <button
+              <UiButton
                 key={svc}
                 type="button"
+                variant="ghost"
                 onClick={() => { setService(svc); setPage(0); }}
-                className="inline-flex items-center gap-1.5 cursor-pointer bg-transparent border-0 p-0"
+                className="!h-auto cursor-pointer gap-1.5 border-0 !bg-transparent !p-0"
               >
                 <ServiceBadge service={svc} />
                 <span className="text-xs text-[var(--text-secondary)]">{fmtInt(count)}</span>
-              </button>
+              </UiButton>
             ))}
           </div>
         )}
@@ -197,13 +198,13 @@ export default function ApiLogsPage() {
               {t('apiLogs.filters', 'Filters')}
             </span>
             {hasFilters && (
-              <Button variant="ghost" size="sm" icon={<X className="h-3 w-3" />} onClick={clearFilters} className="ml-auto">
+              <UiButton type="button" variant="ghost" size="sm" icon={<X className="h-3 w-3" />} onClick={clearFilters} className="ml-auto">
                 {t('apiLogs.clear', 'Clear')}
-              </Button>
+              </UiButton>
             )}
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
-            <Select
+            <UiSelect
               value={service}
               onChange={(e) => { setService(e.target.value); setPage(0); }}
               options={[
@@ -216,7 +217,7 @@ export default function ApiLogsPage() {
                 { value: 'eia', label: 'EIA' },
               ]}
             />
-            <Select
+            <UiSelect
               value={method}
               onChange={(e) => { setMethod(e.target.value); setPage(0); }}
               options={[
@@ -227,7 +228,7 @@ export default function ApiLogsPage() {
                 { value: 'DELETE', label: 'DELETE' },
               ]}
             />
-            <Select
+            <UiSelect
               value={status}
               onChange={(e) => { setStatus(e.target.value); setPage(0); }}
               options={[
@@ -240,7 +241,7 @@ export default function ApiLogsPage() {
             />
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
-              <Input
+              <UiInput
                 type="text"
                 placeholder={t('apiLogs.filterEndpoint', 'Filter by endpoint...')}
                 value={endpoint}
@@ -248,13 +249,13 @@ export default function ApiLogsPage() {
                 className="pl-8"
               />
             </div>
-            <Input
+            <UiInput
               type="datetime-local"
               value={startDate}
               onChange={(e) => { setStartDate(e.target.value); setPage(0); }}
               placeholder={t('apiLogs.startDate', 'Start date')}
             />
-            <Input
+            <UiInput
               type="datetime-local"
               value={endDate}
               onChange={(e) => { setEndDate(e.target.value); setPage(0); }}
@@ -274,7 +275,8 @@ export default function ApiLogsPage() {
                 ? t('apiLogs.showing', { from: page * limit + 1, to: Math.min((page + 1) * limit, total), total: fmtInt(total), defaultValue: `Showing ${page * limit + 1}–${Math.min((page + 1) * limit, total)} of ${fmtInt(total)}` })
                 : t('apiLogs.noLogs', 'No logs found')}
             </p>
-            <Button
+            <UiButton
+              type="button"
               variant="secondary"
               size="sm"
               icon={<Download className="h-3.5 w-3.5" />}
@@ -282,7 +284,7 @@ export default function ApiLogsPage() {
               disabled={logs.length === 0}
             >
               {t('apiLogs.exportJson', 'Export JSON')}
-            </Button>
+            </UiButton>
           </div>
 
           {isLoading ? (
@@ -370,7 +372,8 @@ export default function ApiLogsPage() {
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-between p-4 border-t border-[var(--glass-border)]">
-              <Button
+              <UiButton
+                type="button"
                 variant="secondary"
                 size="sm"
                 icon={<ChevronLeft className="h-3.5 w-3.5" />}
@@ -378,18 +381,19 @@ export default function ApiLogsPage() {
                 disabled={page === 0}
               >
                 {t('apiLogs.previous', 'Previous')}
-              </Button>
+              </UiButton>
               <span className="text-xs text-[var(--text-muted)]">
                 {t('apiLogs.pageOf', { page: page + 1, total: totalPages, defaultValue: `Page ${page + 1} of ${totalPages}` })}
               </span>
-              <Button
+              <UiButton
+                type="button"
                 variant="secondary"
                 size="sm"
                 onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                 disabled={page >= totalPages - 1}
               >
                 {t('apiLogs.next', 'Next')} <ChevronRight className="h-3.5 w-3.5" />
-              </Button>
+              </UiButton>
             </div>
           )}
         </GlassPanel>

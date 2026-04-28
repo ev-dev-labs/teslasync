@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, Search } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { Input } from '@/components/ui';
+import { Button as UiButton, Input as UiInput } from '@/components/ui';
 
 /* ─── types ───────────────────────────────────────────────────────────── */
 
@@ -82,10 +82,12 @@ function TagGroup({
 
   return (
     <div>
-      <button
+      <UiButton
+        type="button"
+        variant="ghost"
         onClick={() => setOpen(o => !o)}
         aria-expanded={open}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-white/[0.03] transition-colors"
+        className="!h-auto !w-full !justify-start !rounded-none !px-3 !py-2 text-left hover:!bg-white/[0.03]"
       >
         <ChevronDown
           className={cn(
@@ -97,20 +99,22 @@ function TagGroup({
           {tag}
         </span>
         <span className="text-[10px] text-white/30 font-mono">{endpoints.length}</span>
-      </button>
+      </UiButton>
       {open && (
         <div>
           {endpoints.map(ep => {
               const isSelected =
                 selected?.path === ep.path && selected?.method === ep.method;
               return (
-                <button
+                <UiButton
                   key={`${ep.method}-${ep.path}`}
+                  type="button"
+                  variant="ghost"
                   onClick={() => onSelect(ep)}
                   className={cn(
-                    'w-full text-left px-3 py-1.5 text-xs flex items-center gap-2',
-                    'hover:bg-white/[0.05] transition-colors',
-                    isSelected && 'bg-white/[0.07] border-l-2 border-cyan-400',
+                    '!h-auto !w-full !justify-start !rounded-none !px-3 !py-1.5 text-left text-xs',
+                    'hover:!bg-white/[0.05]',
+                    isSelected && '!bg-white/[0.07] border-l-2 border-cyan-400',
                   )}
                   title={ep.summary}
                 >
@@ -118,7 +122,7 @@ function TagGroup({
                   <span className="truncate text-white/70 font-mono text-[11px]">
                     {ep.path}
                   </span>
-                </button>
+                </UiButton>
               );
             })}
           </div>
@@ -159,7 +163,7 @@ export default function EndpointSidebar({ endpoints, selected, onSelect }: Endpo
     <div className="flex flex-col h-full border-r border-white/[0.06]">
       {/* Search */}
       <div className="p-2 border-b border-white/[0.06]">
-        <Input
+        <UiInput
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder={t('playground.search', 'Search endpoints...')}

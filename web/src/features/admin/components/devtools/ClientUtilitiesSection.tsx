@@ -4,7 +4,7 @@ import {
   Car, Key, Clock, Braces, Link, Fingerprint, Hash, HardDrive,
   Palette, Timer, Network, BookOpen, Regex, Lock, ChevronDown,
 } from 'lucide-react'
-import { Input, GlassPanel } from '@/components/ui'
+import { Button as UiButton, Input as UiInput, GlassPanel } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { ICON_COLOR_MAP } from './constants'
 
@@ -62,9 +62,12 @@ function ExpandableToolCard({ tool, expanded, onToggle }: { tool: ToolEntry; exp
   const Icon = tool.icon
   return (
     <GlassPanel hover className="overflow-hidden transition-all duration-200">
-      <button
+      <UiButton
+        type="button"
+        variant="ghost"
         onClick={onToggle}
-        className="flex w-full items-center gap-3 p-4 text-left"
+        aria-expanded={expanded}
+        className="!h-auto !w-full !justify-start !rounded-none !p-4 text-left hover:!bg-transparent"
       >
         <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg', ICON_COLOR_MAP[tool.color] ?? ICON_COLOR_MAP.cyan)}>
           <Icon className="h-5 w-5" />
@@ -74,7 +77,7 @@ function ExpandableToolCard({ tool, expanded, onToggle }: { tool: ToolEntry; exp
           <p className="text-xs text-white/50">{tool.desc}</p>
         </div>
         <ChevronDown className={cn('h-4 w-4 text-white/40 transition-transform duration-200', expanded && 'rotate-180')} />
-      </button>
+      </UiButton>
       {expanded && (
         <div className="border-t border-white/[0.04] p-4">
           <tool.Component />
@@ -107,7 +110,7 @@ export function ClientUtilitiesSection() {
 
   return (
     <div className="space-y-4">
-      <Input
+      <UiInput
         placeholder={t('devtools.searchTools', 'Search tools...')}
         value={search}
         onChange={(e) => setSearch(e.target.value)}

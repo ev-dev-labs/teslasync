@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Copy, Check, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { GlassPanel, Button } from '@/components/ui';
+import { GlassPanel, Button as UiButton } from '@/components/ui';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
@@ -129,32 +129,39 @@ function SnippetPanel({ method, url, body }: { method: string; url: string; body
 
   return (
     <div className="mt-3">
-      <button
+      <UiButton
+        type="button"
+        variant="ghost"
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1.5 text-[11px] text-white/40 hover:text-white/60 transition-colors"
+        aria-expanded={open}
+        className="!h-auto !px-0 !py-0 text-[11px] text-white/40 hover:!bg-transparent hover:text-white/60"
       >
         <ChevronDown className={cn('h-3 w-3 transition-transform', open && 'rotate-180')} />
         {t('playground.codeSnippet', 'Code Snippet')}
-      </button>
+      </UiButton>
       {open && (
         <div className="mt-2 rounded-lg border border-white/[0.06] bg-black/30 overflow-hidden">
           <div className="flex items-center gap-1 p-2 border-b border-white/[0.04]">
             {formats.map(f => (
-              <button
+              <UiButton
                 key={f.value}
+                type="button"
+                variant="ghost"
                 onClick={() => setFormat(f.value)}
+                aria-pressed={format === f.value}
                 className={cn(
-                  'px-2 py-0.5 rounded text-[10px] font-medium transition-colors',
+                  '!h-auto !px-2 !py-0.5 text-[10px] font-medium',
                   format === f.value
-                    ? 'bg-white/10 text-white/80'
-                    : 'text-white/40 hover:text-white/60',
+                    ? '!bg-white/10 text-white/80'
+                    : 'text-white/40 hover:!bg-transparent hover:text-white/60',
                 )}
               >
                 {f.label}
-              </button>
+              </UiButton>
             ))}
             <div className="flex-1" />
-            <Button
+            <UiButton
+              type="button"
               onClick={handleCopy}
               className="!text-[10px] !px-2 !py-0.5"
             >
@@ -163,7 +170,7 @@ function SnippetPanel({ method, url, body }: { method: string; url: string; body
               ) : (
                 <><Copy className="h-3 w-3 mr-1" />{t('playground.copy', 'Copy')}</>
               )}
-            </Button>
+            </UiButton>
           </div>
           <pre className="p-3 text-[11px] font-mono text-white/60 overflow-x-auto whitespace-pre">
             {snippet}
@@ -185,13 +192,16 @@ function ResponseHeaders({ headers }: { headers: Record<string, string> }) {
 
   return (
     <div className="mt-2">
-      <button
+      <UiButton
+        type="button"
+        variant="ghost"
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1.5 text-[11px] text-white/40 hover:text-white/60 transition-colors"
+        aria-expanded={open}
+        className="!h-auto !px-0 !py-0 text-[11px] text-white/40 hover:!bg-transparent hover:text-white/60"
       >
         <ChevronDown className={cn('h-3 w-3 transition-transform', open && 'rotate-180')} />
         {t('playground.responseHeaders', 'Response Headers')} ({entries.length})
-      </button>
+      </UiButton>
       {open && (
         <div className="mt-1 rounded-lg border border-white/[0.04] bg-black/20 p-2 text-[10px] font-mono text-white/40 space-y-0.5 max-h-40 overflow-y-auto">
           {entries.map(([k, v]) => (
@@ -219,10 +229,12 @@ function RequestHistory({ history, onReplay }: { history: HistoryEntry[]; onRepl
       </h4>
       <div className="flex gap-1.5 overflow-x-auto pb-1">
         {history.map((h, i) => (
-          <button
+          <UiButton
             key={i}
+            type="button"
+            variant="ghost"
             onClick={() => onReplay(h)}
-            className="flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-mono bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.04] transition-colors"
+            className="!h-auto flex-shrink-0 gap-1.5 !rounded-md border border-white/[0.04] !bg-white/[0.03] !px-2 !py-1 font-mono text-[10px] hover:!bg-white/[0.06]"
             title={`${h.method} ${h.path} → ${h.status} (${h.duration}ms)`}
           >
             <span
@@ -241,7 +253,7 @@ function RequestHistory({ history, onReplay }: { history: HistoryEntry[]; onRepl
               {h.status}
             </span>
             <span className="text-white/25">{h.duration}ms</span>
-          </button>
+          </UiButton>
         ))}
       </div>
     </GlassPanel>
