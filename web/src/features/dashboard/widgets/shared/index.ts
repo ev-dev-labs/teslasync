@@ -9,3 +9,4 @@ export { WidgetBigNumber } from './WidgetBigNumber';
 export { WidgetMapView } from './WidgetMapView';
 export { WidgetStatusGrid, type StatusCell } from './WidgetStatusGrid';
 export { WidgetTipCards, type TipItem } from './WidgetTipCards';
+export { WidgetFlowDiagram, type FlowNode, type FlowArrow } from './WidgetFlowDiagram';
