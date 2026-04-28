@@ -271,6 +271,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./SpeedHeatmapWidget')),
   },
+  {
+    id: 'driving-dynamics',
+    name: 'Driving Dynamics',
+    description: 'Acceleration, braking, lateral g-forces with driving style indicator',
+    icon: Gauge,
+    category: 'driving',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./DrivingDynamicsWidget')),
+  },
 
   // ── Charging ──
   {
