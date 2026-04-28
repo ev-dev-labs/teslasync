@@ -1,0 +1,40 @@
+=== SURVEY ===
+- Examined WidgetChartSummary shared component (shared/WidgetChartSummary.tsx)
+- Examined SpeedProfileWidget and CostForecastWidget as reference patterns
+- Checked useMonthlyMileage hook (useAnalytics.ts:44) — returns MonthlyStat[]
+- MonthlyStat: { month: string; distance: number; drives: number }
+- useSettings provides convertDistance (mi→user unit) and distanceUnit label
+- Charts barrel exports BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell
+- Registry analytics section ends after weekly-summary-card (line 575)
+
+=== REASONING ===
+- Widget follows CostForecastWidget pattern: WidgetShell → WidgetChartSummary w/ bar chart
+- MonthlyStat.distance is in miles (DB internal); apply convertDistance() on each datum
+- Current month highlighted via Cell fill: cyan (#22d3ee) vs white/10
+- Compact mode (cols≤1): stats only via WidgetChartSummary compact=true, chart=null
+- Standard mode: stat header (this month + 12-mo total) + vertical BarChart
+- shortMonth() converts "2026-04" → "Apr" for x-axis labels
+- All strings i18n'd via useTranslation('dashboard')
+- Null safety: data ?? [], distance ?? 0, month ?? ''
+
+=== CHANGES ===
+1. Created MonthlyMileageWidget.tsx (180 lines)
+   - Compact layout: 2 stats (This Month, 12-Mo Total) via WidgetChartSummary compact
+   - Standard layout: same stats + BarChart with Cell-based current-month highlighting
+   - All freshness props passed to WidgetShell
+   - Unit conversion via useSettings().convertDistance
+   - fmtInt / fmtNumber from @/lib/numberFormat
+   - Recharts via @/components/charts barrel only
+
+2. Updated registry.ts — added monthly-mileage entry in analytics section
+   - id: 'monthly-mileage', category: 'analytics'
+   - defaultSize 2×4, minSize 2×4, maxSize 4×40
+   - icon: BarChart3
+
+=== GATE ===
+npx tsc --noEmit → exit code 0 (clean)
+STATUS=DONE
+
+=== COMMIT ===
+EXIT=0
+STATUS=DONE

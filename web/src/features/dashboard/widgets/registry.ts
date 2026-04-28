@@ -573,6 +573,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./WeeklySummaryCardWidget')),
   },
+  {
+    id: 'monthly-mileage',
+    name: 'Monthly Mileage',
+    description: 'Bar chart of monthly driving distance over last 12 months',
+    icon: BarChart3,
+    category: 'analytics',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 2, rows: 4 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./MonthlyMileageWidget')),
+  },
 
   // ── Alerts ──
   {
