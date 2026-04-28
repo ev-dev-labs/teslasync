@@ -23,6 +23,9 @@ export interface VehicleTwinProps extends VehicleTwinState {
 const C = {
   bodyStroke: 'rgba(255,255,255,0.16)',
   bodyHighlight: 'rgba(255,255,255,0.2)',
+  bodyChrome: 'rgba(226,232,240,0.82)',
+  bodyShadow: 'rgba(15,23,42,0.42)',
+  cladding: 'rgba(2,6,23,0.7)',
   glassClosed: 'url(#twin-glass-grad)',
   glassStroke: 'rgba(125,211,252,0.32)',
   glassOpen: 'rgba(3,7,18,0.72)',
@@ -121,14 +124,23 @@ function InteractiveHotspot({
 
 function GroundShadow() {
   return (
-    <ellipse
-      cx={280}
-      cy={244}
-      rx={226}
-      ry={20}
-      fill={C.shadow}
-      filter="url(#twin-shadow-blur)"
-    />
+    <g>
+      <ellipse
+        cx={286}
+        cy={246}
+        rx={230}
+        ry={21}
+        fill={C.shadow}
+        filter="url(#twin-shadow-blur)"
+      />
+      <ellipse
+        cx={285}
+        cy={239}
+        rx={182}
+        ry={9}
+        fill="rgba(0,0,0,0.56)"
+      />
+    </g>
   );
 }
 
@@ -175,7 +187,8 @@ function WheelSVG({
 
   return (
     <g>
-      <circle cx={cx} cy={cy} r={43} fill="rgba(0,0,0,0.58)" />
+      <ellipse cx={cx + 8} cy={cy + 2} rx={44} ry={40} fill="rgba(0,0,0,0.46)" />
+      <circle cx={cx} cy={cy} r={43} fill="url(#twin-tire-outer)" />
       <circle cx={cx} cy={cy} r={39} fill={C.wheelDark} stroke={C.wheelStroke} strokeWidth={2} />
       <circle cx={cx} cy={cy} r={34} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={2} />
       <circle cx={cx} cy={cy} r={30} fill={C.wheelSidewall} stroke="rgba(255,255,255,0.08)" strokeWidth={1.5} />
@@ -185,6 +198,13 @@ function WheelSVG({
         fill="none"
         stroke="rgba(185,28,28,0.42)"
         strokeWidth={3}
+        strokeLinecap="round"
+      />
+      <path
+        d={`M ${cx + 18} ${cy + 18} C ${cx + 25} ${cy + 12} ${cx + 30} ${cy + 3} ${cx + 30} ${cy - 8}`}
+        fill="none"
+        stroke="rgba(239,68,68,0.7)"
+        strokeWidth={5}
         strokeLinecap="round"
       />
       <motion.g
@@ -202,7 +222,8 @@ function WheelSVG({
         transformOrigin={`${cx}px ${cy}px`}
       >
         <circle cx={cx} cy={cy} r={36} fill="none" stroke="rgba(255,255,255,0.045)" strokeWidth={0.8} strokeDasharray="2,5" />
-        <circle cx={cx} cy={cy} r={25} fill="url(#twin-rim-grad)" stroke="rgba(255,255,255,0.16)" strokeWidth={1.2} />
+        <circle cx={cx} cy={cy} r={28} fill="url(#twin-rim-depth)" stroke="rgba(255,255,255,0.1)" strokeWidth={1} />
+        <circle cx={cx} cy={cy} r={25} fill="url(#twin-rim-grad)" stroke="rgba(255,255,255,0.18)" strokeWidth={1.2} />
         {blades.map((angle) => (
           <g key={angle} transform={`rotate(${angle} ${cx} ${cy})`}>
             <path
@@ -245,7 +266,124 @@ function WheelSVG({
         <circle cx={cx} cy={cy} r={6} fill="rgba(30,41,59,0.95)" stroke="rgba(255,255,255,0.22)" strokeWidth={1} />
         <circle cx={cx - 9} cy={cy - 10} r={2.5} fill="rgba(255,255,255,0.25)" />
       </motion.g>
-      <circle cx={cx} cy={cy} r={40} fill="none" stroke="rgba(0,0,0,0.42)" strokeWidth={5} />
+      <circle cx={cx} cy={cy} r={40} fill="none" stroke="rgba(0,0,0,0.5)" strokeWidth={5} />
+      <path
+        d={`M ${cx - 33} ${cy - 14} C ${cx - 18} ${cy - 36} ${cx + 20} ${cy - 38} ${cx + 35} ${cy - 14}`}
+        fill="none"
+        stroke="rgba(255,255,255,0.08)"
+        strokeWidth={1.2}
+        strokeLinecap="round"
+      />
+    </g>
+  );
+}
+
+function Body3DDetails() {
+  return (
+    <g id="body-3d-details" pointerEvents="none">
+      <path
+        d="M 64 176 C 96 158 138 149 190 145 L 205 157 C 147 157 100 165 58 188 Z"
+        fill="url(#twin-hood-surface)"
+        opacity={0.72}
+      />
+      <path
+        d="M 205 158 L 316 155 L 307 221 L 201 218 C 199 197 200 176 205 158 Z"
+        fill="url(#twin-front-door-surface)"
+        opacity={0.72}
+      />
+      <path
+        d="M 320 155 L 458 154 L 450 220 L 311 221 Z"
+        fill="url(#twin-rear-door-surface)"
+        opacity={0.68}
+      />
+      <path
+        d="M 456 154 C 486 150 523 159 558 190 C 550 207 518 216 483 219 C 480 193 470 171 456 154 Z"
+        fill="url(#twin-quarter-surface)"
+        opacity={0.72}
+      />
+      <path
+        d="M 58 191 C 136 180 248 178 352 181 C 447 184 520 193 556 203"
+        fill="none"
+        stroke="rgba(255,255,255,0.24)"
+        strokeWidth={1.6}
+        strokeLinecap="round"
+      />
+      <path
+        d="M 74 205 C 167 198 296 197 390 200 C 469 203 526 209 554 217"
+        fill="none"
+        stroke="rgba(0,0,0,0.38)"
+        strokeWidth={2.4}
+        strokeLinecap="round"
+      />
+      <path
+        d="M 53 215 C 120 226 214 230 332 229 C 432 228 513 221 552 211 L 542 224 C 476 238 361 243 219 239 C 131 236 75 229 44 219 Z"
+        fill="url(#twin-rocker-depth)"
+        opacity={0.82}
+      />
+      <path
+        d="M 202 152 C 245 121 289 107 336 109 C 390 111 437 128 489 152"
+        fill="none"
+        stroke="rgba(255,255,255,0.3)"
+        strokeWidth={2.2}
+        strokeLinecap="round"
+      />
+      <path
+        d="M 205 156 L 307 155"
+        fill="none"
+        stroke="rgba(255,255,255,0.3)"
+        strokeWidth={1.1}
+        strokeLinecap="round"
+      />
+      <path
+        d="M 320 154 L 456 154"
+        fill="none"
+        stroke="rgba(255,255,255,0.22)"
+        strokeWidth={1.1}
+        strokeLinecap="round"
+      />
+      <path
+        d="M 254 174 L 275 173"
+        fill="none"
+        stroke="rgba(2,6,23,0.72)"
+        strokeWidth={3.2}
+        strokeLinecap="round"
+      />
+      <path
+        d="M 374 174 L 397 173"
+        fill="none"
+        stroke="rgba(2,6,23,0.72)"
+        strokeWidth={3.2}
+        strokeLinecap="round"
+      />
+      <path
+        d="M 58 189 C 70 181 85 178 101 181"
+        fill="none"
+        stroke="rgba(255,255,255,0.58)"
+        strokeWidth={3}
+        strokeLinecap="round"
+        opacity={0.55}
+      />
+      <path
+        d="M 524 158 C 541 163 553 174 559 188"
+        fill="none"
+        stroke="rgba(239,68,68,0.62)"
+        strokeWidth={4}
+        strokeLinecap="round"
+      />
+      <path
+        d="M 50 205 C 45 197 47 190 55 181 C 65 169 83 162 112 158"
+        fill="none"
+        stroke="rgba(255,255,255,0.16)"
+        strokeWidth={1.2}
+        strokeLinecap="round"
+      />
+      <path
+        d="M 496 151 C 528 156 552 173 559 192 C 562 205 551 216 531 221"
+        fill="none"
+        stroke="rgba(0,0,0,0.28)"
+        strokeWidth={1.8}
+        strokeLinecap="round"
+      />
     </g>
   );
 }
@@ -262,13 +400,21 @@ function BodyShell({
   return (
     <g>
       <path
-        d="M 43 205 C 42 188 52 175 73 164 C 100 150 136 144 188 140 C 220 108 263 91 319 91 C 386 91 438 115 488 145 C 519 150 542 163 552 184 C 559 199 551 212 531 219 C 506 227 480 228 456 227 C 452 199 431 180 402 180 C 372 180 350 201 347 228 L 205 228 C 202 201 180 180 151 180 C 122 180 100 201 97 228 L 70 226 C 53 224 44 216 43 205 Z"
+        d="M 42 208 C 40 196 50 184 72 171 C 100 157 140 149 190 145 C 225 118 282 104 335 106 C 392 108 443 129 493 153 C 526 157 550 173 558 191 C 563 207 552 218 532 224 C 505 232 480 231 456 228 C 452 198 429 178 430 178 C 399 178 375 201 372 229 L 190 229 C 187 201 163 179 132 179 C 101 179 80 201 77 228 L 63 226 C 49 224 42 217 42 208 Z"
         fill="url(#twin-body-grad)"
         stroke={C.bodyStroke}
         strokeWidth={1.4}
       />
       <path
-        d="M 72 190 C 147 179 244 177 342 180 C 435 183 506 190 548 199"
+        d="M 64 174 C 100 157 139 149 190 145 C 228 120 284 108 335 109 C 391 111 438 129 492 153"
+        fill="none"
+        stroke={C.bodyChrome}
+        strokeWidth={3.4}
+        strokeLinecap="round"
+        opacity={0.36}
+      />
+      <path
+        d="M 61 190 C 138 178 247 177 353 180 C 448 183 521 192 556 201"
         fill="none"
         stroke={C.bodyHighlight}
         strokeWidth={1}
@@ -276,28 +422,33 @@ function BodyShell({
         opacity={0.55}
       />
       <path
-        d="M 65 177 C 96 157 136 148 188 146"
+        d="M 56 184 C 89 161 132 150 190 146"
         fill="none"
         stroke="rgba(255,255,255,0.09)"
         strokeWidth={1.2}
         strokeLinecap="round"
       />
       <path
-        d="M 433 143 C 475 148 521 162 548 185"
+        d="M 459 150 C 492 153 536 169 558 190"
         fill="none"
         stroke="rgba(255,255,255,0.11)"
         strokeWidth={1.2}
         strokeLinecap="round"
       />
       <path
-        d="M 63 211 C 116 224 203 231 333 230 C 424 229 501 221 541 210"
+        d="M 45 211 C 108 224 207 231 335 230 C 440 229 514 221 552 211"
         fill="none"
         stroke="rgba(255,255,255,0.08)"
         strokeWidth={1.2}
         strokeLinecap="round"
       />
       <path
-        d="M 97 223 C 178 225 274 226 369 223 C 443 220 506 215 544 207"
+        d="M 70 211 C 164 216 291 216 387 213 C 468 210 523 205 556 198 L 548 214 C 488 227 391 231 278 230 C 187 229 107 224 48 214 Z"
+        fill="url(#twin-lower-shadow)"
+        opacity={0.72}
+      />
+      <path
+        d="M 78 223 C 166 226 282 226 390 223 C 466 220 522 215 555 208"
         fill="none"
         stroke="rgba(0,0,0,0.4)"
         strokeWidth={2.2}
@@ -306,82 +457,109 @@ function BodyShell({
       />
 
       <path
-        d="M 198 143 C 234 116 278 103 329 104 C 377 105 416 118 451 143"
+        d="M 202 146 C 242 120 286 109 335 111 C 390 113 438 130 487 152"
         fill="none"
         stroke="rgba(255,255,255,0.16)"
         strokeWidth={1}
         strokeLinecap="round"
       />
       <path
-        d="M 168 151 C 181 144 197 146 207 154 C 193 158 178 157 168 153 Z"
-        fill="rgba(255,255,255,0.09)"
-        stroke="rgba(255,255,255,0.18)"
+        d="M 177 153 C 191 145 208 147 221 156 C 205 161 190 160 177 155 Z"
+        fill="url(#twin-mirror-grad)"
+        stroke="rgba(255,255,255,0.26)"
         strokeWidth={0.8}
       />
       <path
-        d="M 168 151 C 181 148 196 150 205 154"
+        d="M 177 153 C 193 150 209 152 219 156"
         fill="none"
-        stroke="rgba(255,255,255,0.22)"
+        stroke="rgba(255,255,255,0.34)"
         strokeWidth={0.7}
         strokeLinecap="round"
       />
       <path
-        d="M 445 145 C 460 164 469 188 472 218"
+        d="M 107 161 L 125 154 L 144 157 L 128 166 Z"
+        fill="rgba(2,6,23,0.7)"
+        stroke="rgba(255,255,255,0.1)"
+        strokeWidth={0.8}
+      />
+      <path
+        d="M 109 158 C 124 154 139 154 152 158"
+        fill="none"
+        stroke="rgba(255,255,255,0.26)"
+        strokeWidth={1}
+        strokeLinecap="round"
+      />
+      <path
+        d="M 466 150 C 477 169 483 190 486 219"
         fill="none"
         stroke="rgba(255,255,255,0.09)"
         strokeWidth={1}
         strokeLinecap="round"
       />
       <path
-        d="M 483 149 C 506 153 528 164 540 181 L 512 175 C 500 163 490 155 483 149 Z"
+        d="M 489 149 C 516 150 542 160 558 178 L 526 176 C 515 164 502 154 489 149 Z"
         fill="rgba(0,0,0,0.16)"
         stroke="rgba(255,255,255,0.06)"
         strokeWidth={0.8}
       />
       <path
-        d="M 488 144 C 504 137 526 138 543 145 C 526 150 507 150 488 145 Z"
+        d="M 492 144 C 512 137 544 136 560 144 C 543 151 516 151 492 145 Z"
         fill="rgba(0,0,0,0.36)"
         stroke="rgba(255,255,255,0.08)"
         strokeWidth={0.8}
       />
       <path
-        d="M 98 160 L 112 154 L 128 157 L 115 164 Z"
-        fill="rgba(0,0,0,0.34)"
+        d="M 504 139 C 527 134 551 137 562 145 C 542 149 519 148 500 145 Z"
+        fill="rgba(2,6,23,0.78)"
+        stroke="rgba(255,255,255,0.1)"
+        strokeWidth={0.9}
+      />
+
+      <path
+        d="M 74 228 C 79 195 103 173 132 173 C 164 173 188 198 192 228"
+        fill="none"
+        stroke={C.cladding}
+        strokeWidth={13}
+        strokeLinecap="round"
+      />
+      <path
+        d="M 371 229 C 376 196 400 173 430 173 C 462 173 486 199 490 228"
+        fill="none"
+        stroke={C.cladding}
+        strokeWidth={13}
+        strokeLinecap="round"
+      />
+      <path
+        d="M 78 227 C 82 199 104 178 132 178 C 161 178 184 200 188 228"
+        fill="none"
+        stroke="rgba(255,255,255,0.14)"
+        strokeWidth={1.2}
+        strokeLinecap="round"
+      />
+      <path
+        d="M 376 228 C 380 200 402 178 430 178 C 460 178 482 201 486 228"
+        fill="none"
+        stroke="rgba(255,255,255,0.14)"
+        strokeWidth={1.2}
+        strokeLinecap="round"
+      />
+      <path
+        d="M 76 205 C 104 194 166 193 195 204"
+        fill="none"
         stroke="rgba(255,255,255,0.08)"
-        strokeWidth={0.8}
-      />
-
-      <path
-        d="M 98 227 C 101 199 123 178 151 178 C 180 178 202 200 205 228"
-        fill="none"
-        stroke="rgba(0,0,0,0.48)"
-        strokeWidth={7}
+        strokeWidth={1.1}
         strokeLinecap="round"
       />
       <path
-        d="M 347 228 C 350 200 373 178 402 178 C 431 178 453 200 456 227"
+        d="M 374 205 C 405 193 463 194 491 205"
         fill="none"
-        stroke="rgba(0,0,0,0.48)"
-        strokeWidth={7}
-        strokeLinecap="round"
-      />
-      <path
-        d="M 98 227 C 101 199 123 178 151 178 C 180 178 202 200 205 228"
-        fill="none"
-        stroke="rgba(255,255,255,0.14)"
-        strokeWidth={1.2}
-        strokeLinecap="round"
-      />
-      <path
-        d="M 347 228 C 350 200 373 178 402 178 C 431 178 453 200 456 227"
-        fill="none"
-        stroke="rgba(255,255,255,0.14)"
-        strokeWidth={1.2}
+        stroke="rgba(255,255,255,0.08)"
+        strokeWidth={1.1}
         strokeLinecap="round"
       />
 
       <path
-        d="M 69 168 C 105 151 146 143 190 141"
+        d="M 62 176 C 100 156 139 148 190 145"
         fill="none"
         stroke={frunkOpen ? C.doorOpen : 'rgba(255,255,255,0.08)'}
         strokeWidth={frunkOpen ? 1.8 : 1}
@@ -390,7 +568,7 @@ function BodyShell({
       <AnimatePresence>
         {frunkOpen && (
           <motion.path
-            d="M 72 165 C 102 134 151 127 190 141 L 184 153 C 143 149 104 156 72 172 Z"
+            d="M 62 176 C 92 146 140 134 190 145 L 181 158 C 132 153 93 161 62 184 Z"
             fill={C.frunkTrunkOpen}
             stroke={C.doorOpen}
             strokeWidth={1.2}
@@ -403,7 +581,7 @@ function BodyShell({
       </AnimatePresence>
 
       <path
-        d="M 450 142 C 492 146 529 159 551 184"
+        d="M 469 148 C 508 150 542 165 558 188"
         fill="none"
         stroke={trunkOpen ? C.doorOpen : 'rgba(255,255,255,0.08)'}
         strokeWidth={trunkOpen ? 1.8 : 1}
@@ -412,7 +590,7 @@ function BodyShell({
       <AnimatePresence>
         {trunkOpen && (
           <motion.path
-            d="M 451 142 C 487 116 532 130 553 168 L 547 184 C 522 164 486 152 451 151 Z"
+            d="M 470 148 C 510 126 548 137 560 169 L 557 188 C 535 169 503 155 470 156 Z"
             fill={C.frunkTrunkOpen}
             stroke={C.doorOpen}
             strokeWidth={1.2}
@@ -426,18 +604,18 @@ function BodyShell({
 
       <InteractiveHotspot
         enabled={interactive}
-        x={58}
+        x={50}
         y={128}
-        width={120}
+        width={135}
         height={55}
         label={`Frunk: ${stateLabel(frunkOpen, 'Open', 'Closed')}`}
         side="left"
       />
       <InteractiveHotspot
         enabled={interactive}
-        x={430}
+        x={455}
         y={128}
-        width={118}
+        width={100}
         height={50}
         label={`Trunk: ${stateLabel(trunkOpen, 'Open', 'Closed')}`}
         side="right"
@@ -450,7 +628,7 @@ function BodyReflections() {
   return (
     <g id="body-reflections" pointerEvents="none">
       <motion.path
-        d="M 79 184 C 144 169 236 166 340 170 C 434 174 511 184 544 195"
+        d="M 65 185 C 140 169 246 166 356 170 C 452 174 525 184 557 198"
         fill="none"
         stroke="url(#twin-shoulder-highlight)"
         strokeWidth={1.4}
@@ -459,20 +637,20 @@ function BodyReflections() {
         transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
       />
       <path
-        d="M 113 205 C 170 213 262 216 356 214 C 430 212 497 205 536 196"
+        d="M 88 205 C 154 214 267 216 378 214 C 459 212 520 206 552 198"
         fill="none"
         stroke="rgba(255,255,255,0.08)"
         strokeWidth={1.2}
         strokeLinecap="round"
       />
       <motion.path
-        d="M 211 155 C 267 151 354 152 432 159 L 425 167 C 346 161 273 160 218 163 Z"
+        d="M 208 156 C 276 152 374 153 461 160 L 453 168 C 366 162 277 161 214 164 Z"
         fill="url(#twin-soft-reflection)"
         animate={{ opacity: [0.38, 0.78, 0.38] }}
         transition={{ duration: 6.5, repeat: Infinity, ease: 'easeInOut' }}
       />
       <motion.path
-        d="M 152 174 C 244 160 385 164 503 184"
+        d="M 118 176 C 230 160 398 164 526 186"
         fill="none"
         stroke="rgba(255,255,255,0.12)"
         strokeWidth={1.1}
@@ -482,21 +660,21 @@ function BodyReflections() {
         transition={{ duration: 7.5, repeat: Infinity, ease: 'easeInOut' }}
       />
       <path
-        d="M 225 191 C 281 187 360 188 428 194"
+        d="M 230 192 C 293 187 387 188 458 195"
         fill="none"
         stroke="rgba(255,255,255,0.06)"
         strokeWidth={5}
         strokeLinecap="round"
       />
       <path
-        d="M 92 174 C 118 161 153 154 188 153"
+        d="M 73 178 C 106 161 149 153 190 153"
         fill="none"
         stroke="rgba(255,255,255,0.12)"
         strokeWidth={1.1}
         strokeLinecap="round"
       />
       <path
-        d="M 464 153 C 499 159 528 171 544 188"
+        d="M 486 154 C 519 160 546 174 558 190"
         fill="none"
         stroke="rgba(255,255,255,0.1)"
         strokeWidth={1.1}
@@ -524,45 +702,45 @@ function SideWindows({
   return (
     <g>
       <path
-        d="M 190 146 C 222 112 263 98 319 98 C 372 99 418 114 454 142 L 432 153 L 203 154 Z"
-        fill="rgba(0,0,0,0.55)"
-        stroke="rgba(0,0,0,0.55)"
-        strokeWidth={2.5}
+        d="M 194 148 C 230 121 276 108 331 108 C 386 109 431 126 478 151 L 448 159 L 207 159 Z"
+        fill="rgba(2,6,23,0.74)"
+        stroke="rgba(2,6,23,0.82)"
+        strokeWidth={3}
         strokeLinejoin="round"
       />
       <path
-        d="M 194 143 C 222 116 260 104 302 104 L 296 149 L 204 150 Z"
+        d="M 202 147 C 232 124 274 113 316 113 L 307 152 L 212 153 Z"
         fill={windowFill(wFD)}
         stroke={windowStroke(wFD)}
-        strokeWidth={1}
+        strokeWidth={1.1}
       />
       <path
-        d="M 312 104 C 364 105 410 119 448 143 L 426 150 L 307 149 Z"
+        d="M 327 113 C 382 114 424 128 469 149 L 441 153 L 318 152 Z"
         fill={windowFill(wRD)}
         stroke={windowStroke(wRD)}
-        strokeWidth={1}
+        strokeWidth={1.1}
       />
       <path
-        d="M 303 105 L 306 149"
+        d="M 316 114 L 318 153"
+        stroke="rgba(2,6,23,0.7)"
+        strokeWidth={5}
+        strokeLinecap="round"
+      />
+      <path
+        d="M 212 153 L 441 153"
         stroke="rgba(255,255,255,0.18)"
-        strokeWidth={2}
+        strokeWidth={1.2}
         strokeLinecap="round"
       />
       <path
-        d="M 204 150 L 426 150"
-        stroke="rgba(255,255,255,0.1)"
-        strokeWidth={1}
-        strokeLinecap="round"
-      />
-      <path
-        d="M 214 140 C 271 127 366 129 425 141"
+        d="M 222 139 C 286 126 381 128 448 143"
         fill="none"
-        stroke="rgba(255,255,255,0.12)"
-        strokeWidth={1}
+        stroke="url(#twin-glass-reflection)"
+        strokeWidth={1.4}
         strokeLinecap="round"
       />
       <motion.path
-        d="M 217 133 C 272 119 363 121 424 137"
+        d="M 225 134 C 286 122 379 124 446 140"
         fill="none"
         stroke="rgba(255,255,255,0.16)"
         strokeWidth={1}
@@ -572,21 +750,28 @@ function SideWindows({
         transition={{ duration: 6.8, repeat: Infinity, ease: 'easeInOut' }}
       />
       <path
-        d="M 238 133 C 254 122 273 115 294 112"
+        d="M 245 134 C 265 123 288 117 310 115"
         fill="none"
         stroke="rgba(255,255,255,0.1)"
         strokeWidth={1}
         strokeLinecap="round"
       />
       <path
-        d="M 333 111 L 322 146"
+        d="M 348 116 L 334 148"
         fill="none"
-        stroke="rgba(0,0,0,0.28)"
-        strokeWidth={5}
+        stroke="rgba(2,6,23,0.82)"
+        strokeWidth={5.4}
         strokeLinecap="round"
       />
       <path
-        d="M 360 119 C 388 124 411 133 431 144"
+        d="M 475 149 L 443 156"
+        fill="none"
+        stroke="rgba(2,6,23,0.7)"
+        strokeWidth={4}
+        strokeLinecap="round"
+      />
+      <path
+        d="M 377 122 C 407 128 432 138 455 148"
         fill="none"
         stroke="rgba(255,255,255,0.08)"
         strokeWidth={1.1}
@@ -594,7 +779,7 @@ function SideWindows({
       />
       {passengerAlert && (
         <motion.path
-          d="M 203 139 C 250 124 346 123 428 140"
+          d="M 210 141 C 268 126 363 126 449 144"
           fill="none"
           stroke={C.amber}
           strokeWidth={2}
@@ -605,17 +790,17 @@ function SideWindows({
       )}
       <InteractiveHotspot
         enabled={interactive}
-        x={190}
+        x={198}
         y={101}
-        width={112}
+        width={118}
         height={55}
         label={`Front driver window: ${windowLabel(wFD)}`}
       />
       <InteractiveHotspot
         enabled={interactive}
-        x={306}
+        x={320}
         y={101}
-        width={134}
+        width={132}
         height={55}
         label={`Rear driver window: ${windowLabel(wRD)}`}
       />
@@ -639,14 +824,14 @@ function DoorOverlay({
 }) {
   const isFront = kind === 'front';
   const seam = isFront
-    ? { x1: 303, y1: 151, x2: 296, y2: 222, handleX: 250, handleY: 173 }
-    : { x1: 417, y1: 150, x2: 421, y2: 221, handleX: 354, handleY: 173 };
+    ? { x1: 318, y1: 153, x2: 307, y2: 223, handleX: 254, handleY: 174 }
+    : { x1: 444, y1: 153, x2: 450, y2: 222, handleX: 374, handleY: 174 };
   const doorPath = isFront
-    ? 'M 303 153 L 219 136 L 207 216 L 296 224 Z'
-    : 'M 417 152 L 488 137 L 501 216 L 421 224 Z';
+    ? 'M 318 154 L 232 138 L 213 217 L 307 224 Z'
+    : 'M 444 154 L 501 140 L 514 216 L 450 224 Z';
   const hotspot = isFront
-    ? { x: 190, y: 150, width: 116, height: 76, side: 'left' as const }
-    : { x: 320, y: 150, width: 116, height: 76, side: 'right' as const };
+    ? { x: 208, y: 151, width: 112, height: 76, side: 'left' as const }
+    : { x: 330, y: 151, width: 124, height: 76, side: 'right' as const };
 
   return (
     <g>
@@ -708,7 +893,7 @@ function PassengerDoorAlerts({
     <g>
       {passengerFront && (
         <motion.path
-          d="M 303 154 L 221 132"
+          d="M 318 154 L 233 136"
           fill="none"
           stroke={C.doorOpen}
           strokeWidth={2}
@@ -719,7 +904,7 @@ function PassengerDoorAlerts({
       )}
       {passengerRear && (
         <motion.path
-          d="M 417 154 L 488 132"
+          d="M 444 154 L 501 138"
           fill="none"
           stroke={C.doorOpen}
           strokeWidth={2}
@@ -749,14 +934,14 @@ function HeadlightGlows({
   return (
     <g>
       <path
-        d="M 53 184 C 67 177 83 177 96 183"
+        d="M 52 188 C 67 181 85 179 101 183"
         fill="url(#twin-headlight-lens)"
         stroke={headlightsActive ? C.headlightOn : C.headlightOff}
         strokeWidth={2.5}
         strokeLinecap="round"
       />
       <path
-        d="M 56 187 C 68 183 83 182 94 186"
+        d="M 56 191 C 69 185 86 183 99 186"
         fill="none"
         stroke="rgba(147,197,253,0.55)"
         strokeWidth={1}
@@ -765,8 +950,8 @@ function HeadlightGlows({
       {headlightsActive && (
         <>
           <motion.ellipse
-            cx={70}
-            cy={184}
+            cx={72}
+            cy={186}
             rx={17}
             ry={7}
             fill={C.headlightGlow}
@@ -775,7 +960,7 @@ function HeadlightGlows({
             transition={driveIn ? { duration: 1.35, ease: 'easeInOut' } : { duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
           />
           <motion.path
-            d="M 52 184 L 0 168 L 0 204 Z"
+            d="M 51 188 L 0 174 L 0 210 Z"
             fill={C.headlightBeam}
             animate={{ opacity: driveIn ? [0, 0.72, 0.18, 0.58, 0.12] : [0.45, 0.8, 0.45] }}
             transition={driveIn ? { duration: 1.35, ease: 'easeInOut' } : { duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
@@ -784,7 +969,7 @@ function HeadlightGlows({
       )}
       {flashing && (
         <motion.ellipse
-          cx={101}
+          cx={102}
           cy={193}
           rx={7}
           ry={4}
@@ -811,14 +996,14 @@ function TaillightGlows({
   return (
     <g>
       <path
-        d="M 516 162 C 531 164 543 171 550 181"
+        d="M 527 158 C 542 162 554 171 560 183"
         fill="rgba(127,29,29,0.25)"
         stroke={flashing ? C.amber : C.taillightBase}
         strokeWidth={3.2}
         strokeLinecap="round"
       />
       <path
-        d="M 522 171 C 532 174 541 179 548 186"
+        d="M 531 167 C 543 172 553 178 559 185"
         fill="none"
         stroke={C.taillightActive}
         strokeWidth={1.8}
@@ -826,7 +1011,7 @@ function TaillightGlows({
         opacity={0.7}
       />
       <path
-        d="M 527 165 C 536 168 544 174 548 181 C 540 177 532 174 524 172"
+        d="M 532 161 C 543 165 554 173 559 181 C 549 177 540 172 531 169"
         fill="none"
         stroke="rgba(248,113,113,0.55)"
         strokeWidth={1.2}
@@ -834,7 +1019,7 @@ function TaillightGlows({
       />
       {flashing && (
         <motion.path
-          d="M 516 162 C 531 164 543 171 550 181"
+          d="M 527 158 C 542 162 554 171 560 183"
           fill="none"
           stroke={C.amber}
           strokeWidth={3.2}
@@ -846,8 +1031,8 @@ function TaillightGlows({
       {driveIn && (
         <>
           <motion.ellipse
-            cx={536}
-            cy={176}
+            cx={546}
+            cy={174}
             rx={24}
             ry={10}
             fill={C.taillightActive}
@@ -856,7 +1041,7 @@ function TaillightGlows({
             transition={{ delay: 1.2, duration: 0.75, ease: 'easeOut' }}
           />
           <motion.path
-            d="M 516 162 C 531 164 543 171 550 181"
+            d="M 527 158 C 542 162 554 171 560 183"
             fill="none"
             stroke={C.taillightActive}
             strokeWidth={4.2}
@@ -879,8 +1064,8 @@ function ChargePortIndicator({
   charging: boolean;
   interactive?: boolean;
 }) {
-  const cx = 474;
-  const cy = 162;
+  const cx = 498;
+  const cy = 160;
   const fill = charging || open ? C.chargeGreenFill : C.neutral;
   const stroke = charging || open ? C.chargeGreen : C.bodyStroke;
   const label = charging ? 'Charging' : stateLabel(open, 'Open', 'Closed');
@@ -909,7 +1094,7 @@ function ChargePortIndicator({
             transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
           />
           <path
-            d="M 474 155 L 468 164 L 474 164 L 471 171 L 481 160 L 475 160 Z"
+            d="M 498 153 L 492 162 L 498 162 L 495 169 L 505 158 L 499 158 Z"
             fill={C.chargeGreen}
           />
         </>
@@ -940,8 +1125,8 @@ function SecurityOverlay({
   interactive?: boolean;
 }) {
   const iconSize = 18;
-  const cx = 304;
-  const cy = 130;
+  const cx = 322;
+  const cy = 132;
   const sentryY = cy - 23;
 
   return (
@@ -1019,26 +1204,67 @@ function SvgDefs() {
         </feMerge>
       </filter>
       <linearGradient id="twin-body-grad" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor="rgba(51,65,85,0.72)" />
-        <stop offset="42%" stopColor="rgba(30,41,59,0.64)" />
-        <stop offset="100%" stopColor="rgba(15,23,42,0.72)" />
+        <stop offset="0%" stopColor="rgba(226,232,240,0.9)" />
+        <stop offset="28%" stopColor="rgba(148,163,184,0.78)" />
+        <stop offset="58%" stopColor="rgba(71,85,105,0.7)" />
+        <stop offset="100%" stopColor="rgba(15,23,42,0.78)" />
+      </linearGradient>
+      <linearGradient id="twin-lower-shadow" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="rgba(51,65,85,0.1)" />
+        <stop offset="48%" stopColor="rgba(15,23,42,0.46)" />
+        <stop offset="100%" stopColor="rgba(0,0,0,0.78)" />
+      </linearGradient>
+      <linearGradient id="twin-hood-surface" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stopColor="rgba(248,250,252,0.34)" />
+        <stop offset="48%" stopColor="rgba(148,163,184,0.16)" />
+        <stop offset="100%" stopColor="rgba(15,23,42,0.18)" />
+      </linearGradient>
+      <linearGradient id="twin-front-door-surface" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stopColor="rgba(241,245,249,0.24)" />
+        <stop offset="48%" stopColor="rgba(100,116,139,0.14)" />
+        <stop offset="100%" stopColor="rgba(15,23,42,0.38)" />
+      </linearGradient>
+      <linearGradient id="twin-rear-door-surface" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stopColor="rgba(226,232,240,0.18)" />
+        <stop offset="48%" stopColor="rgba(71,85,105,0.18)" />
+        <stop offset="100%" stopColor="rgba(2,6,23,0.42)" />
+      </linearGradient>
+      <linearGradient id="twin-quarter-surface" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stopColor="rgba(226,232,240,0.2)" />
+        <stop offset="52%" stopColor="rgba(71,85,105,0.18)" />
+        <stop offset="100%" stopColor="rgba(0,0,0,0.5)" />
+      </linearGradient>
+      <linearGradient id="twin-rocker-depth" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="rgba(30,41,59,0.5)" />
+        <stop offset="52%" stopColor="rgba(2,6,23,0.78)" />
+        <stop offset="100%" stopColor="rgba(0,0,0,0.96)" />
+      </linearGradient>
+      <linearGradient id="twin-mirror-grad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stopColor="rgba(248,250,252,0.74)" />
+        <stop offset="45%" stopColor="rgba(100,116,139,0.64)" />
+        <stop offset="100%" stopColor="rgba(15,23,42,0.76)" />
       </linearGradient>
       <linearGradient id="twin-shoulder-highlight" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0%" stopColor="rgba(255,255,255,0.02)" />
-        <stop offset="18%" stopColor="rgba(255,255,255,0.18)" />
-        <stop offset="64%" stopColor="rgba(255,255,255,0.12)" />
-        <stop offset="100%" stopColor="rgba(255,255,255,0.02)" />
+        <stop offset="0%" stopColor="rgba(255,255,255,0.04)" />
+        <stop offset="18%" stopColor="rgba(255,255,255,0.34)" />
+        <stop offset="64%" stopColor="rgba(255,255,255,0.18)" />
+        <stop offset="100%" stopColor="rgba(255,255,255,0.03)" />
       </linearGradient>
       <linearGradient id="twin-soft-reflection" x1="0" y1="0" x2="1" y2="0">
         <stop offset="0%" stopColor="rgba(255,255,255,0)" />
-        <stop offset="22%" stopColor="rgba(255,255,255,0.08)" />
-        <stop offset="75%" stopColor="rgba(255,255,255,0.05)" />
+        <stop offset="22%" stopColor="rgba(255,255,255,0.18)" />
+        <stop offset="75%" stopColor="rgba(255,255,255,0.08)" />
         <stop offset="100%" stopColor="rgba(255,255,255,0)" />
       </linearGradient>
+      <linearGradient id="twin-glass-reflection" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stopColor="rgba(255,255,255,0.08)" />
+        <stop offset="36%" stopColor="rgba(255,255,255,0.34)" />
+        <stop offset="100%" stopColor="rgba(255,255,255,0.02)" />
+      </linearGradient>
       <linearGradient id="twin-glass-grad" x1="0" y1="0" x2="0.8" y2="1">
-        <stop offset="0%" stopColor="rgba(125,211,252,0.22)" />
-        <stop offset="55%" stopColor="rgba(56,189,248,0.12)" />
-        <stop offset="100%" stopColor="rgba(15,23,42,0.28)" />
+        <stop offset="0%" stopColor="rgba(148,163,184,0.34)" />
+        <stop offset="42%" stopColor="rgba(15,23,42,0.42)" />
+        <stop offset="100%" stopColor="rgba(2,6,23,0.72)" />
       </linearGradient>
       <linearGradient id="twin-headlight-lens" x1="0" y1="0" x2="1" y2="1">
         <stop offset="0%" stopColor="rgba(255,255,255,0.3)" />
@@ -1049,6 +1275,16 @@ function SvgDefs() {
         <stop offset="0%" stopColor="rgba(71,85,105,0.62)" />
         <stop offset="50%" stopColor="rgba(15,23,42,0.9)" />
         <stop offset="100%" stopColor="rgba(0,0,0,0.96)" />
+      </radialGradient>
+      <radialGradient id="twin-rim-depth" cx="42%" cy="38%" r="68%">
+        <stop offset="0%" stopColor="rgba(226,232,240,0.22)" />
+        <stop offset="48%" stopColor="rgba(51,65,85,0.42)" />
+        <stop offset="100%" stopColor="rgba(0,0,0,0.92)" />
+      </radialGradient>
+      <radialGradient id="twin-tire-outer" cx="42%" cy="35%" r="70%">
+        <stop offset="0%" stopColor="rgba(51,65,85,0.72)" />
+        <stop offset="46%" stopColor="rgba(2,6,23,0.96)" />
+        <stop offset="100%" stopColor="rgba(0,0,0,1)" />
       </radialGradient>
     </defs>
   );
@@ -1102,6 +1338,7 @@ export function VehicleTwin({
         {isCharging && <ChargingUnderglow />}
         <g id="body">
           <BodyShell frunkOpen={frunkOpen} trunkOpen={trunkOpen} interactive={interactive} />
+          <Body3DDetails />
           <BodyReflections />
         </g>
         <g id="windows">
@@ -1142,8 +1379,8 @@ export function VehicleTwin({
           <TaillightGlows hazards={hazards} turnSignal={turnSignal} driveIn={driveIn} />
         </g>
         <g id="wheels">
-          <WheelSVG cx={151} cy={226} driveIn={driveIn} driving={isDriving} />
-          <WheelSVG cx={402} cy={226} driveIn={driveIn} driving={isDriving} />
+          <WheelSVG cx={132} cy={226} driveIn={driveIn} driving={isDriving} />
+          <WheelSVG cx={430} cy={226} driveIn={driveIn} driving={isDriving} />
         </g>
         <SecurityOverlay locked={locked} sentryMode={sentryMode} interactive={interactive} />
       </svg>
