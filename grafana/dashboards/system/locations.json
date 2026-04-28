@@ -222,7 +222,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  COALESCE('-', 'Unknown') AS \"🏙️ City\",\n  SUM(vl.visit_count) AS \"🔄 Visits\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nGROUP BY '-'\nORDER BY 2 DESC\nLIMIT 15",
+          "rawSql": "SELECT \n  COALESCE('-', 'Unknown') AS \"🏙️ City\",\n  SUM(vl.visit_count) AS \"🔄 Visits\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nGROUP BY 1\nORDER BY 2 DESC\nLIMIT 15",
           "refId": "A"
         }
       ],
@@ -278,7 +278,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  COALESCE('-', 'Unknown') AS \"🏙️ City\",\n  ROUND(SUM(vl.total_duration_min) / 60) AS \"⏱️ Hours\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nGROUP BY '-'\nORDER BY 2 DESC\nLIMIT 10",
+          "rawSql": "SELECT \n  COALESCE('-', 'Unknown') AS \"🏙️ City\",\n  ROUND(SUM(vl.total_duration_min) / 60) AS \"⏱️ Hours\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nGROUP BY 1\nORDER BY 2 DESC\nLIMIT 10",
           "refId": "A"
         }
       ],
