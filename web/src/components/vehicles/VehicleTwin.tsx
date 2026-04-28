@@ -6,7 +6,8 @@ import type { VehicleTwinState, WindowState, TurnSignalState } from '@/lib/vehic
 
 const SIZE_MAP = { sm: 300, md: 440, lg: 560 } as const;
 const VIEWBOX_WIDTH = 560;
-const VIEWBOX_HEIGHT = 280;
+const VIEWBOX_MIN_Y = 52;
+const VIEWBOX_HEIGHT = 220;
 const ASPECT_RATIO = VIEWBOX_HEIGHT / VIEWBOX_WIDTH;
 
 export type VehicleTwinSize = keyof typeof SIZE_MAP;
@@ -18,10 +19,10 @@ export interface VehicleTwinProps extends VehicleTwinState {
 }
 
 const C = {
-  bodyStroke: 'rgba(255,255,255,0.14)',
-  bodyHighlight: 'rgba(255,255,255,0.18)',
-  glassClosed: 'rgba(100,200,255,0.12)',
-  glassStroke: 'rgba(100,200,255,0.24)',
+  bodyStroke: 'rgba(255,255,255,0.16)',
+  bodyHighlight: 'rgba(255,255,255,0.2)',
+  glassClosed: 'url(#twin-glass-grad)',
+  glassStroke: 'rgba(125,211,252,0.32)',
   glassOpen: 'rgba(3,7,18,0.72)',
   glassPartial: 'rgba(100,200,255,0.05)',
   glassUnknown: 'rgba(255,255,255,0.04)',
@@ -45,10 +46,10 @@ const C = {
   seatOccupied: 'rgba(34,211,238,0.32)',
   frunkTrunkOpen: 'rgba(251,191,36,0.2)',
   neutral: 'rgba(255,255,255,0.05)',
-  shadow: 'rgba(0,0,0,0.42)',
-  wheelDark: 'rgba(2,6,23,0.92)',
-  wheelSidewall: 'rgba(15,23,42,0.92)',
-  wheelStroke: 'rgba(255,255,255,0.16)',
+  shadow: 'rgba(0,0,0,0.48)',
+  wheelDark: 'rgba(0,0,0,0.94)',
+  wheelSidewall: 'rgba(7,12,24,0.96)',
+  wheelStroke: 'rgba(255,255,255,0.12)',
 } as const;
 
 function windowFill(state: WindowState): string {
@@ -129,34 +130,104 @@ function GroundShadow() {
   );
 }
 
+function ChargingUnderglow() {
+  return (
+    <g pointerEvents="none">
+      <motion.ellipse
+        cx={292}
+        cy={239}
+        rx={190}
+        ry={18}
+        fill="rgba(34,197,94,0.18)"
+        filter="url(#twin-glow)"
+        animate={{ opacity: [0.2, 0.55, 0.2], rx: [160, 205, 160] }}
+        transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+      />
+      <motion.path
+        d="M 154 232 C 236 239 354 239 440 231"
+        fill="none"
+        stroke="rgba(34,197,94,0.38)"
+        strokeWidth={2}
+        strokeLinecap="round"
+        animate={{ opacity: [0.18, 0.75, 0.18] }}
+        transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+      />
+    </g>
+  );
+}
+
 function WheelSVG({ cx, cy }: { cx: number; cy: number }) {
-  const spokes = [0, 45, 90, 135, 180, 225, 270, 315];
+  const blades = [0, 36, 72, 108, 144, 180, 216, 252, 288, 324];
+  const lugs = [0, 72, 144, 216, 288];
 
   return (
     <g>
-      <circle cx={cx} cy={cy} r={38} fill={C.wheelDark} stroke={C.wheelStroke} strokeWidth={2} />
-      <circle cx={cx} cy={cy} r={29} fill={C.wheelSidewall} stroke="rgba(255,255,255,0.1)" strokeWidth={1.5} />
-      <circle cx={cx} cy={cy} r={19} fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.16)" strokeWidth={1.2} />
-      {spokes.map((angle) => {
-        const rad = (angle * Math.PI) / 180;
-        const x2 = cx + Math.cos(rad) * 17;
-        const y2 = cy + Math.sin(rad) * 17;
-
-        return (
-          <line
-            key={angle}
-            x1={cx}
-            y1={cy}
-            x2={x2}
-            y2={y2}
-            stroke="rgba(255,255,255,0.2)"
-            strokeWidth={1.5}
+      <circle cx={cx} cy={cy} r={43} fill="rgba(0,0,0,0.58)" />
+      <circle cx={cx} cy={cy} r={39} fill={C.wheelDark} stroke={C.wheelStroke} strokeWidth={2} />
+      <circle cx={cx} cy={cy} r={34} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={2} />
+      <circle cx={cx} cy={cy} r={30} fill={C.wheelSidewall} stroke="rgba(255,255,255,0.08)" strokeWidth={1.5} />
+      <motion.circle
+        cx={cx}
+        cy={cy}
+        r={36}
+        fill="none"
+        stroke="rgba(255,255,255,0.045)"
+        strokeWidth={0.8}
+        strokeDasharray="2,5"
+        animate={{ strokeDashoffset: [0, -28] }}
+        transition={{ duration: 7, repeat: Infinity, ease: 'linear' }}
+      />
+      <circle cx={cx} cy={cy} r={32} fill="none" stroke="rgba(0,0,0,0.35)" strokeWidth={1.2} />
+      <path
+        d={`M ${cx + 26} ${cy + 11} C ${cx + 30} ${cy + 16} ${cx + 29} ${cy + 23} ${cx + 24} ${cy + 27}`}
+        fill="none"
+        stroke="rgba(185,28,28,0.42)"
+        strokeWidth={3}
+        strokeLinecap="round"
+      />
+      <circle cx={cx} cy={cy} r={25} fill="url(#twin-rim-grad)" stroke="rgba(255,255,255,0.16)" strokeWidth={1.2} />
+      {blades.map((angle) => (
+        <g key={angle} transform={`rotate(${angle} ${cx} ${cy})`}>
+          <path
+            d={`M ${cx + 4} ${cy - 4} C ${cx + 11} ${cy - 19} ${cx + 23} ${cy - 26} ${cx + 31} ${cy - 18} C ${cx + 25} ${cy - 12} ${cx + 18} ${cy - 3} ${cx + 7} ${cy + 10} Z`}
+            fill="rgba(2,6,23,0.82)"
+            stroke="rgba(148,163,184,0.18)"
+            strokeWidth={0.6}
+          />
+          <path
+            d={`M ${cx + 9} ${cy - 3} C ${cx + 17} ${cy - 13} ${cx + 24} ${cy - 17} ${cx + 28} ${cy - 14}`}
+            fill="none"
+            stroke="rgba(255,255,255,0.14)"
+            strokeWidth={0.8}
             strokeLinecap="round"
+          />
+        </g>
+      ))}
+      <motion.path
+        d={`M ${cx - 18} ${cy - 15} C ${cx - 5} ${cy - 27} ${cx + 18} ${cy - 24} ${cx + 27} ${cy - 10}`}
+        fill="none"
+        stroke="rgba(255,255,255,0.16)"
+        strokeWidth={1.2}
+        strokeLinecap="round"
+        animate={{ opacity: [0.12, 0.42, 0.12] }}
+        transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
+      />
+      <circle cx={cx} cy={cy} r={13} fill="rgba(3,7,18,0.88)" stroke="rgba(255,255,255,0.16)" strokeWidth={1} />
+      {lugs.map((angle) => {
+        const rad = (angle * Math.PI) / 180;
+        return (
+          <circle
+            key={angle}
+            cx={cx + Math.cos(rad) * 7}
+            cy={cy + Math.sin(rad) * 7}
+            r={1.5}
+            fill="rgba(203,213,225,0.45)"
           />
         );
       })}
-      <circle cx={cx} cy={cy} r={5} fill="rgba(255,255,255,0.25)" />
-      <circle cx={cx} cy={cy} r={40} fill="none" stroke="rgba(0,0,0,0.3)" strokeWidth={5} />
+      <circle cx={cx} cy={cy} r={6} fill="rgba(30,41,59,0.95)" stroke="rgba(255,255,255,0.22)" strokeWidth={1} />
+      <circle cx={cx - 9} cy={cy - 10} r={2.5} fill="rgba(255,255,255,0.25)" />
+      <circle cx={cx} cy={cy} r={40} fill="none" stroke="rgba(0,0,0,0.42)" strokeWidth={5} />
     </g>
   );
 }
@@ -173,13 +244,13 @@ function BodyShell({
   return (
     <g>
       <path
-        d="M 68 196 C 77 173 101 158 139 153 L 187 146 C 216 114 255 99 307 99 C 367 99 413 117 449 146 L 501 155 C 529 160 546 176 552 196 L 548 211 C 536 222 515 226 477 227 L 454 227 C 450 201 429 182 402 182 C 374 182 351 202 347 228 L 205 228 C 201 202 179 182 151 182 C 123 182 101 202 97 227 L 82 226 C 68 224 61 212 68 196 Z"
+        d="M 43 205 C 42 188 52 175 73 164 C 100 150 136 144 188 140 C 220 108 263 91 319 91 C 386 91 438 115 488 145 C 519 150 542 163 552 184 C 559 199 551 212 531 219 C 506 227 480 228 456 227 C 452 199 431 180 402 180 C 372 180 350 201 347 228 L 205 228 C 202 201 180 180 151 180 C 122 180 100 201 97 228 L 70 226 C 53 224 44 216 43 205 Z"
         fill="url(#twin-body-grad)"
         stroke={C.bodyStroke}
         strokeWidth={1.4}
       />
       <path
-        d="M 91 190 C 150 181 226 178 307 180 C 400 182 481 187 543 198"
+        d="M 72 190 C 147 179 244 177 342 180 C 435 183 506 190 548 199"
         fill="none"
         stroke={C.bodyHighlight}
         strokeWidth={1}
@@ -187,20 +258,80 @@ function BodyShell({
         opacity={0.55}
       />
       <path
-        d="M 121 219 C 170 231 245 235 334 232 C 416 229 491 221 540 209"
+        d="M 65 177 C 96 157 136 148 188 146"
+        fill="none"
+        stroke="rgba(255,255,255,0.09)"
+        strokeWidth={1.2}
+        strokeLinecap="round"
+      />
+      <path
+        d="M 433 143 C 475 148 521 162 548 185"
+        fill="none"
+        stroke="rgba(255,255,255,0.11)"
+        strokeWidth={1.2}
+        strokeLinecap="round"
+      />
+      <path
+        d="M 63 211 C 116 224 203 231 333 230 C 424 229 501 221 541 210"
         fill="none"
         stroke="rgba(255,255,255,0.08)"
         strokeWidth={1.2}
         strokeLinecap="round"
       />
+      <path
+        d="M 97 223 C 178 225 274 226 369 223 C 443 220 506 215 544 207"
+        fill="none"
+        stroke="rgba(0,0,0,0.4)"
+        strokeWidth={2.2}
+        strokeLinecap="round"
+        opacity={0.55}
+      />
 
       <path
-        d="M 207 145 C 238 128 280 120 324 123 C 369 126 407 136 437 148"
+        d="M 198 143 C 234 116 278 103 329 104 C 377 105 416 118 451 143"
         fill="none"
         stroke="rgba(255,255,255,0.16)"
         strokeWidth={1}
         strokeLinecap="round"
       />
+      <path
+        d="M 168 151 C 181 144 197 146 207 154 C 193 158 178 157 168 153 Z"
+        fill="rgba(255,255,255,0.09)"
+        stroke="rgba(255,255,255,0.18)"
+        strokeWidth={0.8}
+      />
+      <path
+        d="M 168 151 C 181 148 196 150 205 154"
+        fill="none"
+        stroke="rgba(255,255,255,0.22)"
+        strokeWidth={0.7}
+        strokeLinecap="round"
+      />
+      <path
+        d="M 445 145 C 460 164 469 188 472 218"
+        fill="none"
+        stroke="rgba(255,255,255,0.09)"
+        strokeWidth={1}
+        strokeLinecap="round"
+      />
+      <path
+        d="M 483 149 C 506 153 528 164 540 181 L 512 175 C 500 163 490 155 483 149 Z"
+        fill="rgba(0,0,0,0.16)"
+        stroke="rgba(255,255,255,0.06)"
+        strokeWidth={0.8}
+      />
+      <path
+        d="M 488 144 C 504 137 526 138 543 145 C 526 150 507 150 488 145 Z"
+        fill="rgba(0,0,0,0.36)"
+        stroke="rgba(255,255,255,0.08)"
+        strokeWidth={0.8}
+      />
+      <path
+        d="M 98 160 L 112 154 L 128 157 L 115 164 Z"
+        fill="rgba(0,0,0,0.34)"
+        stroke="rgba(255,255,255,0.08)"
+        strokeWidth={0.8}
+      />
 
       <path
         d="M 98 227 C 101 199 123 178 151 178 C 180 178 202 200 205 228"
@@ -232,7 +363,7 @@ function BodyShell({
       />
 
       <path
-        d="M 439 147 C 471 149 512 159 545 180"
+        d="M 69 168 C 105 151 146 143 190 141"
         fill="none"
         stroke={frunkOpen ? C.doorOpen : 'rgba(255,255,255,0.08)'}
         strokeWidth={frunkOpen ? 1.8 : 1}
@@ -241,7 +372,7 @@ function BodyShell({
       <AnimatePresence>
         {frunkOpen && (
           <motion.path
-            d="M 442 146 C 478 120 523 132 553 166 L 543 178 C 513 160 478 153 442 153 Z"
+            d="M 72 165 C 102 134 151 127 190 141 L 184 153 C 143 149 104 156 72 172 Z"
             fill={C.frunkTrunkOpen}
             stroke={C.doorOpen}
             strokeWidth={1.2}
@@ -254,7 +385,7 @@ function BodyShell({
       </AnimatePresence>
 
       <path
-        d="M 186 146 C 157 143 122 148 86 165"
+        d="M 450 142 C 492 146 529 159 551 184"
         fill="none"
         stroke={trunkOpen ? C.doorOpen : 'rgba(255,255,255,0.08)'}
         strokeWidth={trunkOpen ? 1.8 : 1}
@@ -263,7 +394,7 @@ function BodyShell({
       <AnimatePresence>
         {trunkOpen && (
           <motion.path
-            d="M 187 146 C 154 117 113 124 83 154 L 96 164 C 124 146 158 142 187 154 Z"
+            d="M 451 142 C 487 116 532 130 553 168 L 547 184 C 522 164 486 152 451 151 Z"
             fill={C.frunkTrunkOpen}
             stroke={C.doorOpen}
             strokeWidth={1.2}
@@ -277,21 +408,81 @@ function BodyShell({
 
       <InteractiveHotspot
         enabled={interactive}
-        x={430}
+        x={58}
         y={128}
         width={120}
         height={55}
         label={`Frunk: ${stateLabel(frunkOpen, 'Open', 'Closed')}`}
-        side="right"
+        side="left"
       />
       <InteractiveHotspot
         enabled={interactive}
-        x={80}
+        x={430}
         y={128}
         width={118}
         height={50}
         label={`Trunk: ${stateLabel(trunkOpen, 'Open', 'Closed')}`}
-        side="left"
+        side="right"
+      />
+    </g>
+  );
+}
+
+function BodyReflections() {
+  return (
+    <g id="body-reflections" pointerEvents="none">
+      <motion.path
+        d="M 79 184 C 144 169 236 166 340 170 C 434 174 511 184 544 195"
+        fill="none"
+        stroke="url(#twin-shoulder-highlight)"
+        strokeWidth={1.4}
+        strokeLinecap="round"
+        animate={{ opacity: [0.55, 0.86, 0.55] }}
+        transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
+      />
+      <path
+        d="M 113 205 C 170 213 262 216 356 214 C 430 212 497 205 536 196"
+        fill="none"
+        stroke="rgba(255,255,255,0.08)"
+        strokeWidth={1.2}
+        strokeLinecap="round"
+      />
+      <motion.path
+        d="M 211 155 C 267 151 354 152 432 159 L 425 167 C 346 161 273 160 218 163 Z"
+        fill="url(#twin-soft-reflection)"
+        animate={{ opacity: [0.38, 0.78, 0.38] }}
+        transition={{ duration: 6.5, repeat: Infinity, ease: 'easeInOut' }}
+      />
+      <motion.path
+        d="M 152 174 C 244 160 385 164 503 184"
+        fill="none"
+        stroke="rgba(255,255,255,0.12)"
+        strokeWidth={1.1}
+        strokeLinecap="round"
+        strokeDasharray="58 420"
+        animate={{ strokeDashoffset: [0, -420], opacity: [0, 0.45, 0] }}
+        transition={{ duration: 7.5, repeat: Infinity, ease: 'easeInOut' }}
+      />
+      <path
+        d="M 225 191 C 281 187 360 188 428 194"
+        fill="none"
+        stroke="rgba(255,255,255,0.06)"
+        strokeWidth={5}
+        strokeLinecap="round"
+      />
+      <path
+        d="M 92 174 C 118 161 153 154 188 153"
+        fill="none"
+        stroke="rgba(255,255,255,0.12)"
+        strokeWidth={1.1}
+        strokeLinecap="round"
+      />
+      <path
+        d="M 464 153 C 499 159 528 171 544 188"
+        fill="none"
+        stroke="rgba(255,255,255,0.1)"
+        strokeWidth={1.1}
+        strokeLinecap="round"
       />
     </g>
   );
@@ -315,27 +506,72 @@ function SideWindows({
   return (
     <g>
       <path
-        d="M 194 145 C 217 119 252 106 299 104 L 294 149 L 204 150 Z"
-        fill={windowFill(wRD)}
-        stroke={windowStroke(wRD)}
-        strokeWidth={1}
+        d="M 190 146 C 222 112 263 98 319 98 C 372 99 418 114 454 142 L 432 153 L 203 154 Z"
+        fill="rgba(0,0,0,0.55)"
+        stroke="rgba(0,0,0,0.55)"
+        strokeWidth={2.5}
+        strokeLinejoin="round"
       />
       <path
-        d="M 309 104 C 363 105 399 122 431 145 L 411 150 L 305 149 Z"
+        d="M 194 143 C 222 116 260 104 302 104 L 296 149 L 204 150 Z"
         fill={windowFill(wFD)}
         stroke={windowStroke(wFD)}
         strokeWidth={1}
       />
       <path
-        d="M 299 105 L 305 149"
+        d="M 312 104 C 364 105 410 119 448 143 L 426 150 L 307 149 Z"
+        fill={windowFill(wRD)}
+        stroke={windowStroke(wRD)}
+        strokeWidth={1}
+      />
+      <path
+        d="M 303 105 L 306 149"
         stroke="rgba(255,255,255,0.18)"
         strokeWidth={2}
         strokeLinecap="round"
       />
       <path
-        d="M 204 150 L 411 150"
+        d="M 204 150 L 426 150"
         stroke="rgba(255,255,255,0.1)"
         strokeWidth={1}
+        strokeLinecap="round"
+      />
+      <path
+        d="M 214 140 C 271 127 366 129 425 141"
+        fill="none"
+        stroke="rgba(255,255,255,0.12)"
+        strokeWidth={1}
+        strokeLinecap="round"
+      />
+      <motion.path
+        d="M 217 133 C 272 119 363 121 424 137"
+        fill="none"
+        stroke="rgba(255,255,255,0.16)"
+        strokeWidth={1}
+        strokeLinecap="round"
+        strokeDasharray="42 260"
+        animate={{ strokeDashoffset: [0, -260], opacity: [0.1, 0.42, 0.1] }}
+        transition={{ duration: 6.8, repeat: Infinity, ease: 'easeInOut' }}
+      />
+      <path
+        d="M 238 133 C 254 122 273 115 294 112"
+        fill="none"
+        stroke="rgba(255,255,255,0.1)"
+        strokeWidth={1}
+        strokeLinecap="round"
+      />
+      <path
+        d="M 333 111 L 322 146"
+        fill="none"
+        stroke="rgba(0,0,0,0.28)"
+        strokeWidth={5}
+        strokeLinecap="round"
+      />
+      <path
+        d="M 360 119 C 388 124 411 133 431 144"
+        fill="none"
+        stroke="rgba(255,255,255,0.08)"
+        strokeWidth={1.1}
         strokeLinecap="round"
       />
       {passengerAlert && (
@@ -351,17 +587,17 @@ function SideWindows({
       )}
       <InteractiveHotspot
         enabled={interactive}
-        x={301}
+        x={190}
         y={101}
-        width={134}
+        width={112}
         height={55}
         label={`Front driver window: ${windowLabel(wFD)}`}
       />
       <InteractiveHotspot
         enabled={interactive}
-        x={190}
+        x={306}
         y={101}
-        width={112}
+        width={134}
         height={55}
         label={`Rear driver window: ${windowLabel(wRD)}`}
       />
@@ -385,14 +621,14 @@ function DoorOverlay({
 }) {
   const isFront = kind === 'front';
   const seam = isFront
-    ? { x1: 313, y1: 151, x2: 306, y2: 222, handleX: 355, handleY: 173 }
-    : { x1: 222, y1: 151, x2: 218, y2: 222, handleX: 258, handleY: 173 };
+    ? { x1: 303, y1: 151, x2: 296, y2: 222, handleX: 250, handleY: 173 }
+    : { x1: 417, y1: 150, x2: 421, y2: 221, handleX: 354, handleY: 173 };
   const doorPath = isFront
-    ? 'M 313 153 L 386 140 L 395 216 L 307 224 Z'
-    : 'M 222 153 L 155 140 L 146 216 L 218 224 Z';
+    ? 'M 303 153 L 219 136 L 207 216 L 296 224 Z'
+    : 'M 417 152 L 488 137 L 501 216 L 421 224 Z';
   const hotspot = isFront
-    ? { x: 302, y: 150, width: 104, height: 76, side: 'right' as const }
-    : { x: 145, y: 150, width: 86, height: 76, side: 'left' as const };
+    ? { x: 190, y: 150, width: 116, height: 76, side: 'left' as const }
+    : { x: 320, y: 150, width: 116, height: 76, side: 'right' as const };
 
   return (
     <g>
@@ -454,7 +690,7 @@ function PassengerDoorAlerts({
     <g>
       {passengerFront && (
         <motion.path
-          d="M 312 154 L 384 130"
+          d="M 303 154 L 221 132"
           fill="none"
           stroke={C.doorOpen}
           strokeWidth={2}
@@ -465,7 +701,7 @@ function PassengerDoorAlerts({
       )}
       {passengerRear && (
         <motion.path
-          d="M 222 154 L 156 130"
+          d="M 417 154 L 488 132"
           fill="none"
           stroke={C.doorOpen}
           strokeWidth={2}
@@ -487,26 +723,47 @@ function HeadlightGlows({
   hazards: boolean | null;
   turnSignal: TurnSignalState;
 }) {
-  const flashing = hazards === true || turnSignal === 'right' || turnSignal === 'both';
+  const flashing = hazards === true || turnSignal === 'left' || turnSignal === 'both';
 
   return (
     <g>
       <path
-        d="M 521 180 C 532 177 542 181 548 188"
-        fill="none"
+        d="M 53 184 C 67 177 83 177 96 183"
+        fill="url(#twin-headlight-lens)"
         stroke={on ? C.headlightOn : C.headlightOff}
-        strokeWidth={3}
+        strokeWidth={2.5}
+        strokeLinecap="round"
+      />
+      <path
+        d="M 56 187 C 68 183 83 182 94 186"
+        fill="none"
+        stroke="rgba(147,197,253,0.55)"
+        strokeWidth={1}
         strokeLinecap="round"
       />
       {on && (
         <>
-          <ellipse cx={536} cy={184} rx={16} ry={7} fill={C.headlightGlow} filter="url(#twin-glow)" />
-          <path d="M 544 184 L 560 168 L 560 205 Z" fill={C.headlightBeam} />
+          <motion.ellipse
+            cx={70}
+            cy={184}
+            rx={17}
+            ry={7}
+            fill={C.headlightGlow}
+            filter="url(#twin-glow)"
+            animate={{ opacity: [0.35, 0.85, 0.35] }}
+            transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+          />
+          <motion.path
+            d="M 52 184 L 0 168 L 0 204 Z"
+            fill={C.headlightBeam}
+            animate={{ opacity: [0.45, 0.8, 0.45] }}
+            transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+          />
         </>
       )}
       {flashing && (
         <motion.ellipse
-          cx={514}
+          cx={101}
           cy={193}
           rx={7}
           ry={4}
@@ -526,31 +783,38 @@ function TaillightGlows({
   hazards: boolean | null;
   turnSignal: TurnSignalState;
 }) {
-  const flashing = hazards === true || turnSignal === 'left' || turnSignal === 'both';
+  const flashing = hazards === true || turnSignal === 'right' || turnSignal === 'both';
 
   return (
     <g>
       <path
-        d="M 74 184 C 82 178 91 178 99 184"
-        fill="none"
+        d="M 516 162 C 531 164 543 171 550 181"
+        fill="rgba(127,29,29,0.25)"
         stroke={flashing ? C.amber : C.taillightBase}
-        strokeWidth={4}
+        strokeWidth={3.2}
         strokeLinecap="round"
       />
       <path
-        d="M 78 193 C 86 196 95 196 104 194"
+        d="M 522 171 C 532 174 541 179 548 186"
         fill="none"
         stroke={C.taillightActive}
-        strokeWidth={2}
+        strokeWidth={1.8}
         strokeLinecap="round"
-        opacity={0.65}
+        opacity={0.7}
+      />
+      <path
+        d="M 527 165 C 536 168 544 174 548 181 C 540 177 532 174 524 172"
+        fill="none"
+        stroke="rgba(248,113,113,0.55)"
+        strokeWidth={1.2}
+        strokeLinecap="round"
       />
       {flashing && (
         <motion.path
-          d="M 74 184 C 82 178 91 178 99 184"
+          d="M 516 162 C 531 164 543 171 550 181"
           fill="none"
           stroke={C.amber}
-          strokeWidth={4}
+          strokeWidth={3.2}
           strokeLinecap="round"
           animate={{ opacity: [1, 0.15, 1] }}
           transition={{ duration: 0.8, repeat: Infinity }}
@@ -569,8 +833,8 @@ function ChargePortIndicator({
   charging: boolean;
   interactive?: boolean;
 }) {
-  const cx = 132;
-  const cy = 165;
+  const cx = 474;
+  const cy = 162;
   const fill = charging || open ? C.chargeGreenFill : C.neutral;
   const stroke = charging || open ? C.chargeGreen : C.bodyStroke;
   const label = charging ? 'Charging' : stateLabel(open, 'Open', 'Closed');
@@ -583,6 +847,14 @@ function ChargePortIndicator({
           <motion.circle
             cx={cx}
             cy={cy}
+            r={5}
+            fill={C.chargeGreen}
+            animate={{ opacity: [0.45, 1, 0.45] }}
+            transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+          />
+          <motion.circle
+            cx={cx}
+            cy={cy}
             r={10}
             fill="none"
             stroke={C.chargeGreen}
@@ -591,7 +863,7 @@ function ChargePortIndicator({
             transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
           />
           <path
-            d="M 132 158 L 126 167 L 132 167 L 129 174 L 139 163 L 133 163 Z"
+            d="M 474 155 L 468 164 L 474 164 L 471 171 L 481 160 L 475 160 Z"
             fill={C.chargeGreen}
           />
         </>
@@ -606,7 +878,7 @@ function ChargePortIndicator({
         width={28}
         height={28}
         label={`Charge port: ${label}`}
-        side="left"
+        side="right"
       />
     </g>
   );
@@ -623,28 +895,29 @@ function SecurityOverlay({
 }) {
   const iconSize = 18;
   const cx = 304;
-  const cy = 84;
+  const cy = 130;
+  const sentryY = cy - 23;
 
   return (
     <g>
       {sentryMode && (
         <motion.ellipse
           cx={cx}
-          cy={cy - 24}
-          rx={18}
-          ry={9}
+          cy={sentryY}
+          rx={16}
+          ry={7}
           fill="none"
           stroke={C.sentryGlow}
-          strokeWidth={1.4}
-          animate={{ opacity: [0.7, 0.2, 0.7], rx: [14, 24, 14] }}
+          strokeWidth={1.2}
+          animate={{ opacity: [0.65, 0.18, 0.65], rx: [13, 21, 13] }}
           transition={{ duration: 2, repeat: Infinity }}
         />
       )}
       {sentryMode && (
-        <foreignObject x={cx - iconSize / 2} y={cy - 34} width={iconSize} height={iconSize}>
+        <foreignObject x={cx - iconSize / 2} y={sentryY - iconSize / 2} width={iconSize} height={iconSize}>
           <Tooltip content="Sentry mode active" side="top">
             <motion.span
-              className="flex items-center justify-center w-full h-full"
+              className="flex items-center justify-center w-full h-full rounded-full bg-slate-950/45"
               animate={{ opacity: [1, 0.45, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
             >
@@ -657,7 +930,7 @@ function SecurityOverlay({
         <foreignObject x={cx - iconSize / 2} y={cy - iconSize / 2} width={iconSize} height={iconSize}>
           {interactive ? (
             <Tooltip content={locked ? 'Locked' : 'Unlocked'} side="top">
-              <span className="flex items-center justify-center w-full h-full">
+              <span className="flex items-center justify-center w-full h-full rounded-full bg-slate-950/45">
                 {locked
                   ? <Lock className="w-4 h-4" fill={C.lockedGreen} stroke={C.lockedGreen} />
                   : <Unlock className="w-4 h-4" fill={C.unlockedRed} stroke={C.unlockedRed} />
@@ -665,7 +938,7 @@ function SecurityOverlay({
               </span>
             </Tooltip>
           ) : (
-            <span className="flex items-center justify-center w-full h-full">
+            <span className="flex items-center justify-center w-full h-full rounded-full bg-slate-950/45">
               {locked
                 ? <Lock className="w-4 h-4" fill={C.lockedGreen} stroke={C.lockedGreen} />
                 : <Unlock className="w-4 h-4" fill={C.unlockedRed} stroke={C.unlockedRed} />
@@ -682,7 +955,7 @@ function DriverSeatIndicator({ occupied }: { occupied: boolean | null }) {
   if (!occupied) return null;
 
   return (
-    <ellipse cx={336} cy={137} rx={9} ry={12} fill={C.seatOccupied} stroke="rgba(34,211,238,0.35)" />
+    <ellipse cx={246} cy={137} rx={9} ry={12} fill={C.seatOccupied} stroke="rgba(34,211,238,0.35)" />
   );
 }
 
@@ -700,10 +973,37 @@ function SvgDefs() {
         </feMerge>
       </filter>
       <linearGradient id="twin-body-grad" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor="rgba(255,255,255,0.12)" />
-        <stop offset="42%" stopColor="rgba(255,255,255,0.07)" />
-        <stop offset="100%" stopColor="rgba(255,255,255,0.025)" />
+        <stop offset="0%" stopColor="rgba(51,65,85,0.72)" />
+        <stop offset="42%" stopColor="rgba(30,41,59,0.64)" />
+        <stop offset="100%" stopColor="rgba(15,23,42,0.72)" />
       </linearGradient>
+      <linearGradient id="twin-shoulder-highlight" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stopColor="rgba(255,255,255,0.02)" />
+        <stop offset="18%" stopColor="rgba(255,255,255,0.18)" />
+        <stop offset="64%" stopColor="rgba(255,255,255,0.12)" />
+        <stop offset="100%" stopColor="rgba(255,255,255,0.02)" />
+      </linearGradient>
+      <linearGradient id="twin-soft-reflection" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stopColor="rgba(255,255,255,0)" />
+        <stop offset="22%" stopColor="rgba(255,255,255,0.08)" />
+        <stop offset="75%" stopColor="rgba(255,255,255,0.05)" />
+        <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+      </linearGradient>
+      <linearGradient id="twin-glass-grad" x1="0" y1="0" x2="0.8" y2="1">
+        <stop offset="0%" stopColor="rgba(125,211,252,0.22)" />
+        <stop offset="55%" stopColor="rgba(56,189,248,0.12)" />
+        <stop offset="100%" stopColor="rgba(15,23,42,0.28)" />
+      </linearGradient>
+      <linearGradient id="twin-headlight-lens" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stopColor="rgba(255,255,255,0.3)" />
+        <stop offset="55%" stopColor="rgba(147,197,253,0.18)" />
+        <stop offset="100%" stopColor="rgba(255,255,255,0.05)" />
+      </linearGradient>
+      <radialGradient id="twin-rim-grad" cx="45%" cy="40%" r="65%">
+        <stop offset="0%" stopColor="rgba(71,85,105,0.62)" />
+        <stop offset="50%" stopColor="rgba(15,23,42,0.9)" />
+        <stop offset="100%" stopColor="rgba(0,0,0,0.96)" />
+      </radialGradient>
     </defs>
   );
 }
@@ -738,48 +1038,62 @@ export function VehicleTwin({
       aria-label="Vehicle digital twin showing current physical state"
     >
       <svg
-        viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}
+        viewBox={`0 ${VIEWBOX_MIN_Y} ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}
         width={width}
         height={height}
         xmlns="http://www.w3.org/2000/svg"
         className="select-none"
       >
         <SvgDefs />
+        <title>Tesla-inspired performance crossover side view digital twin</title>
+        <desc>Original scalable layered SVG vehicle illustration with dynamic telemetry overlays for doors, windows, lights, lock, sentry mode, and charging status.</desc>
         <GroundShadow />
-        <BodyShell frunkOpen={frunkOpen} trunkOpen={trunkOpen} interactive={interactive} />
-        <SideWindows
-          windowFD={windowFD}
-          windowFP={windowFP}
-          windowRD={windowRD}
-          windowRP={windowRP}
-          interactive={interactive}
-        />
-        <PassengerDoorAlerts
-          passengerFront={doors.passengerFront}
-          passengerRear={doors.passengerRear}
-        />
-        <DoorOverlay
-          kind="rear"
-          open={doors.driverRear}
-          label="Driver Rear"
-          interactive={interactive}
-        />
-        <DoorOverlay
-          kind="front"
-          open={doors.driverFront}
-          label="Driver Front"
-          interactive={interactive}
-        />
+        {isCharging && <ChargingUnderglow />}
+        <g id="body">
+          <BodyShell frunkOpen={frunkOpen} trunkOpen={trunkOpen} interactive={interactive} />
+          <BodyReflections />
+        </g>
+        <g id="windows">
+          <SideWindows
+            windowFD={windowFD}
+            windowFP={windowFP}
+            windowRD={windowRD}
+            windowRP={windowRP}
+            interactive={interactive}
+          />
+        </g>
+        <g id="doors">
+          <PassengerDoorAlerts
+            passengerFront={doors.passengerFront}
+            passengerRear={doors.passengerRear}
+          />
+          <DoorOverlay
+            kind="rear"
+            open={doors.driverRear}
+            label="Driver Rear"
+            interactive={interactive}
+          />
+          <DoorOverlay
+            kind="front"
+            open={doors.driverFront}
+            label="Driver Front"
+            interactive={interactive}
+          />
+        </g>
         <DriverSeatIndicator occupied={driverSeatOccupied} />
-        <ChargePortIndicator
-          open={chargePortOpen}
-          charging={isCharging}
-          interactive={interactive}
-        />
-        <HeadlightGlows on={headlights} hazards={hazards} turnSignal={turnSignal} />
-        <TaillightGlows hazards={hazards} turnSignal={turnSignal} />
-        <WheelSVG cx={151} cy={226} />
-        <WheelSVG cx={402} cy={226} />
+        <g id="lighting">
+          <ChargePortIndicator
+            open={chargePortOpen}
+            charging={isCharging}
+            interactive={interactive}
+          />
+          <HeadlightGlows on={headlights} hazards={hazards} turnSignal={turnSignal} />
+          <TaillightGlows hazards={hazards} turnSignal={turnSignal} />
+        </g>
+        <g id="wheels">
+          <WheelSVG cx={151} cy={226} />
+          <WheelSVG cx={402} cy={226} />
+        </g>
         <SecurityOverlay locked={locked} sentryMode={sentryMode} interactive={interactive} />
       </svg>
     </div>
