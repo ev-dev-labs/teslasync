@@ -6,10 +6,10 @@ import {
   BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell,
   chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
 } from '@/components/charts';
-import { EmptyState } from '@/components/feedback';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { request } from '@/api/client';
 import { CHARGER_COLORS } from '@/lib/colors';
+import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import type { ChargingSession } from '@/api/types';
@@ -60,14 +60,23 @@ export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProp
     [sessions],
   );
 
+  const hasData = chartData.length > 0;
   const isCompact = size.cols <= 1 && size.rows <= 1;
   const isWide = size.cols >= 3;
-  const showYAxis = !isCompact;
   const tick = isWide ? axisTick : axisTickSm;
 
-  // Compact: show single summary metric
+  const stats: ChartSummaryStat[] = useMemo(() => {
+    if (!hasData) return [];
+    const total = chartData.reduce((sum, d) => sum + d.energy, 0);
+    const avg = total / chartData.length;
+    return [
+      { label: t('widget.chargeSessionChart.total', 'Total'), value: fmt(total, 1), unit: 'kWh' },
+      { label: t('widget.chargeSessionChart.avg', 'Avg'), value: fmt(avg, 1), unit: 'kWh' },
+      { label: t('widget.chargeSessionChart.sessions', 'Sessions'), value: String(chartData.length) },
+    ];
+  }, [chartData, hasData, t]);
+
   if (isCompact) {
-    const totalEnergy = chartData.reduce((sum, d) => sum + d.energy, 0);
     return (
       <WidgetShell
         loading={isLoading}
@@ -78,12 +87,14 @@ export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProp
         isError={isError}
         onRefresh={() => refetch()}
       >
-        <div className="h-full flex flex-col items-center justify-center gap-0.5">
-          <span className="text-2xl font-bold text-white/90">{fmt(totalEnergy, 1)}</span>
-          <span className="text-[10px] text-white/40 uppercase tracking-wider">
-            {t('widget.chargeSessionChart.unitKwh', 'kWh')}
-          </span>
-        </div>
+        <WidgetChartSummary
+          compact
+          isEmpty={!hasData}
+          emptyMessage={t('widget.chargeSessionChart.empty', 'No charge sessions yet')}
+          emptyIcon={<Zap className="h-5 w-5" />}
+          stats={stats}
+          chart={null}
+        />
       </WidgetShell>
     );
   }
@@ -101,13 +112,17 @@ export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProp
       onRefresh={() => refetch()}
       noPadding
     >
-      {chartData.length > 0 ? (
-        <div className="h-full w-full px-2 pb-1">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={chartMargin} {...chartAnimation}>
-              {chartGrid}
-              <XAxis dataKey="label" tick={tick} tickLine={false} axisLine={false} />
-              {showYAxis && (
+      <WidgetChartSummary
+        isEmpty={!hasData}
+        emptyMessage={t('widget.chargeSessionChart.empty', 'No charge sessions yet')}
+        emptyIcon={<Zap className="h-5 w-5" />}
+        stats={stats}
+        chart={
+          <div className="h-full w-full px-2 pb-1">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={chartMargin} {...chartAnimation}>
+                {chartGrid}
+                <XAxis dataKey="label" tick={tick} tickLine={false} axisLine={false} />
                 <YAxis
                   tick={tick}
                   tickLine={false}
@@ -115,51 +130,45 @@ export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProp
                   width={36}
                   tickFormatter={(v: number) => `${fmt(v, 0)}`}
                 />
-              )}
-              <Tooltip
-                contentStyle={{
-                  background: 'rgba(0,0,0,0.85)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: 8,
-                  fontSize: 12,
-                }}
-                formatter={(value: number, _name: string, props: { payload?: ChartDatum }) => [
-                  `${fmt(value, 1)} kWh`,
-                  CHARGER_TYPE_LABEL[props.payload?.type ?? ''] ?? props.payload?.type ?? '',
-                ]}
-                labelFormatter={(label: string) => label}
-                cursor={{ fill: 'rgba(255,255,255,0.04)' }}
-              />
-              <Bar dataKey="energy" radius={[4, 4, 0, 0]} maxBarSize={32}>
-                {chartData.map((d, i) => (
-                  <Cell key={i} fill={CHARGER_COLORS[d.type] ?? '#6366f1'} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-
-          {/* Legend */}
-          <div className="flex items-center justify-center gap-3 pb-1">
-            {(['home', 'supercharger', 'dc'] as const).map((type) => (
-              <div key={type} className="flex items-center gap-1">
-                <span
-                  className="inline-block h-2 w-2 rounded-full"
-                  style={{ background: CHARGER_COLORS[type] }}
+                <Tooltip
+                  contentStyle={{
+                    background: 'rgba(0,0,0,0.85)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: 8,
+                    fontSize: 12,
+                  }}
+                  formatter={(value: number, _name: string, props: { payload?: ChartDatum }) => [
+                    `${fmt(value, 1)} kWh`,
+                    CHARGER_TYPE_LABEL[props.payload?.type ?? ''] ?? props.payload?.type ?? '',
+                  ]}
+                  labelFormatter={(label: string) => label}
+                  cursor={{ fill: 'rgba(255,255,255,0.04)' }}
                 />
-                <span className="text-[10px] text-white/50">
-                  {t(`widget.chargeSessionChart.type.${type}`, CHARGER_TYPE_LABEL[type])}
-                </span>
-              </div>
-            ))}
+                <Bar dataKey="energy" radius={[4, 4, 0, 0]} maxBarSize={32}>
+                  {chartData.map((d, i) => (
+                    <Cell key={i} fill={CHARGER_COLORS[d.type] ?? '#6366f1'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+
+            {/* Legend */}
+            <div className="flex items-center justify-center gap-3 pb-1">
+              {(['home', 'supercharger', 'dc'] as const).map((type) => (
+                <div key={type} className="flex items-center gap-1">
+                  <span
+                    className="inline-block h-2 w-2 rounded-full"
+                    style={{ background: CHARGER_COLORS[type] }}
+                  />
+                  <span className="text-[10px] text-white/50">
+                    {t(`widget.chargeSessionChart.type.${type}`, CHARGER_TYPE_LABEL[type])}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      ) : (
-        <EmptyState
-          icon={<Zap className="h-5 w-5" />}
-          message={t('widget.chargeSessionChart.empty', 'No charge sessions yet')}
-          className="py-4"
-        />
-      )}
+        }
+      />
     </WidgetShell>
   );
 }
