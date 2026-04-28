@@ -1,7 +1,7 @@
 import { lazy } from 'react';
 import {
   Battery, BatteryWarning, Zap, Car, MapPin, Shield, Thermometer,
-  Activity, BarChart3, Gauge, Wifi, TrendingUp, Monitor,
+  Activity, BarChart3, Gauge, Wifi, TrendingUp, Monitor, Download,
   DollarSign, Calendar, CloudSun, CircleDot, CreditCard, Hash,
   MonitorSmartphone, List, Grid3X3, Workflow, DoorOpen, Eye,
   Command, CalendarRange, CalendarDays, Bell, Music, HeartPulse, Moon, Navigation, Terminal,
@@ -69,6 +69,17 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('./SoftwareUpdateStatusWidget')),
+  },
+  {
+    id: 'software-update-history',
+    name: 'Update History',
+    description: 'Firmware update timeline: versions installed, dates, changelogs',
+    icon: Download,
+    category: 'vehicle',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 4 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('./SoftwareUpdateHistoryWidget')),
   },
   {
     id: 'odometer-counter',
