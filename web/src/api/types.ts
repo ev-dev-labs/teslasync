@@ -279,36 +279,54 @@ export interface Alert {
   created_at: string
 }
 
+export type AlertRuleSeverity = 'info' | 'warn' | 'critical'
+export type AlertRuleOp = '=' | '!=' | '<' | '<=' | '>' | '>=' | 'changed' | 'between' | 'outside'
+
 export interface AlertRule {
   id: number
   name: string
-  type: string
+  description?: string | null
   enabled: boolean
-  threshold: number
-  vehicle_id: number | null
+  vehicle_id?: number | null
+  signal_name: string
+  op: AlertRuleOp
+  value_num?: number | null
+  value_text?: string | null
+  value_bool?: boolean | null
+  value_min?: number | null
+  value_max?: number | null
+  severity: AlertRuleSeverity
+  cooldown_min: number
   created_at: string
   updated_at: string
-  // CEP rule engine fields
-  conditions?: RuleConditionTree | null
-  expression?: string
-  cooldown_min?: number
-  for_duration_s?: number | null
-  severity?: 'info' | 'warning' | 'critical'
-  msg_template?: string
-  notify_channels?: number[]
-  last_fired_at?: string | null
-  fire_count?: number
-  tags?: string[]
 }
 
-/** Condition tree node — matches backend models.RuleCondition. */
-export interface RuleConditionTree {
-  op?: 'AND' | 'OR' | 'NOT'
-  rules?: RuleConditionTree[]
-  signal?: string
-  compare?: string
-  value?: string | number | boolean
-  for_seconds?: number
+export interface AlertRuleInput {
+  name: string
+  description?: string | null
+  enabled?: boolean
+  vehicle_id?: number | null
+  signal_name: string
+  op: AlertRuleOp
+  value_num?: number | null
+  value_text?: string | null
+  value_bool?: boolean | null
+  value_min?: number | null
+  value_max?: number | null
+  severity?: AlertRuleSeverity
+  cooldown_min?: number
+}
+
+export type AlertRuleUpdate = Partial<AlertRuleInput>
+
+export interface AlertTestTarget {
+  all_channels?: boolean
+  channel_ids?: number[]
+}
+
+export interface AlertTestRequest {
+  message?: string
+  target?: AlertTestTarget | null
 }
 
 export interface StatsSummary {
@@ -1524,7 +1542,6 @@ export interface Automation {
   stop_on_failure: boolean
   notify_on_run: boolean
   notify_on_failure: boolean
-  notify_channels?: number[] | null
   seasonal_start: number | null
   seasonal_end: number | null
   priority: number

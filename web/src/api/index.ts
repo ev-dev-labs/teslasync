@@ -24,6 +24,12 @@ export type {
   BatteryReport,
   Alert,
   AlertRule,
+  AlertRuleSeverity,
+  AlertRuleOp,
+  AlertRuleInput,
+  AlertRuleUpdate,
+  AlertTestTarget,
+  AlertTestRequest,
   StatsSummary,
   FleetAnalytics,
   CommandResult,
@@ -106,7 +112,6 @@ export type {
   SleepAnalytics,
   RegenData,
   BatteryDegradationData,
-  RuleConditionTree,
 } from './types'
 
 export { getAuthStatus, getAuthURL, refreshAuth, disconnectAuth } from './auth'

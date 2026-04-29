@@ -5,6 +5,8 @@ import type {
   Geofence,
   Alert,
   AlertRule,
+  AlertRuleInput,
+  AlertRuleUpdate,
   NotificationChannel,
   NotificationLog,
   NotificationStats,
@@ -48,10 +50,10 @@ export const getAlerts = (limit = 50, offset = 0) => request<Alert[]>(`/alerts?l
 export const markAlertRead = (id: number) => request<void>(`/alerts/${id}/read`, { method: 'POST' })
 /** Fetches all configured alert rules. */
 export const getAlertRules = () => request<AlertRule[]>('/alerts/rules')
-/** Updates an alert rule (e.g. threshold, enabled state). */
-export const updateAlertRule = (id: number, r: Partial<AlertRule>) => request<AlertRule>(`/alerts/rules/${id}`, { method: 'PUT', body: JSON.stringify(r) })
+/** Updates an alert rule using the typed operand contract. */
+export const updateAlertRule = (id: number, r: AlertRuleUpdate) => request<AlertRule>(`/alerts/rules/${id}`, { method: 'PUT', body: JSON.stringify(r) })
 /** Creates a new alert rule. */
-export const createAlertRule = (r: Omit<AlertRule, 'id' | 'created_at' | 'updated_at'>) => request<AlertRule>('/alerts/rules', { method: 'POST', body: JSON.stringify(r) })
+export const createAlertRule = (r: AlertRuleInput) => request<AlertRule>('/alerts/rules', { method: 'POST', body: JSON.stringify(r) })
 /** Deletes an alert rule by ID. */
 export const deleteAlertRule = (id: number) => request<void>(`/alerts/rules/${id}`, { method: 'DELETE' })
 

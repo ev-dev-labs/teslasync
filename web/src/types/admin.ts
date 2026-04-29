@@ -173,16 +173,26 @@ export interface Alert {
   createdAt: string;
 }
 
+export type AlertRuleSeverity = 'info' | 'warn' | 'critical';
+export type AlertRuleOp = '=' | '!=' | '<' | '<=' | '>' | '>=' | 'changed' | 'between' | 'outside';
+
 export interface AlertRule {
-  id: string;
+  id: number;
   name: string;
-  type: string;
-  severity: 'info' | 'warning' | 'critical';
+  description?: string | null;
   enabled: boolean;
-  cooldownMin: number;
-  msgTemplate: string;
-  conditions: Record<string, unknown>;
-  notifyChannels: string[];
+  vehicle_id?: number | null;
+  signal_name: string;
+  op: AlertRuleOp;
+  value_num?: number | null;
+  value_text?: string | null;
+  value_bool?: boolean | null;
+  value_min?: number | null;
+  value_max?: number | null;
+  severity: AlertRuleSeverity;
+  cooldown_min: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface NotificationChannel {

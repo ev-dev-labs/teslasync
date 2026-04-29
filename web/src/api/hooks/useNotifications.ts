@@ -3,9 +3,31 @@ import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS } from '@/lib/constants';
 import { useToast } from '@/components/feedback/Toast';
-import type { Alert, AlertRule, NotificationChannel, NotificationLog, NotificationStats, RuleConditionTree } from '@/api/types';
+import type {
+  Alert,
+  AlertRule,
+  AlertRuleInput,
+  AlertRuleUpdate,
+  AlertTestRequest,
+  AlertTestTarget,
+  NotificationChannel,
+  NotificationLog,
+  NotificationStats,
+} from '@/api/types';
 
-export type { Alert, AlertRule, NotificationChannel, RuleConditionTree, NotificationLog, NotificationStats };
+export type {
+  Alert,
+  AlertRule,
+  AlertRuleInput,
+  AlertRuleUpdate,
+  AlertTestRequest,
+  AlertTestTarget,
+  NotificationChannel,
+  NotificationLog,
+  NotificationStats,
+};
+
+export type AlertRuleSaveRequest = AlertRuleInput | (AlertRuleUpdate & Pick<AlertRule, 'id'>);
 
 /**
  * Payload for creating a notification channel: omits server-managed fields.
@@ -69,12 +91,21 @@ export function useSaveAlertRule() {
   const qc = useQueryClient();
   const toast = useToast();
   return useMutation({
-    mutationFn: (data: Partial<AlertRule>) =>
-      request<AlertRule>(data.id ? `/alerts/rules/${data.id}` : '/alerts/rules', {
-        method: data.id ? 'PUT' : 'POST',
+    mutationFn: (data: AlertRuleSaveRequest) => {
+      if ('id' in data) {
+        const { id, ...payload } = data;
+        return request<AlertRule>(`/alerts/rules/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      }
+      return request<AlertRule>('/alerts/rules', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
-      }),
+      });
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: notificationKeys.alertRules });
       toast.success('Alert rule saved');
@@ -105,12 +136,14 @@ export function useToggleAlertRule() {
   const qc = useQueryClient();
   const toast = useToast();
   return useMutation({
-    mutationFn: ({ id, enabled }: { id: number; enabled: boolean }) =>
-      request<AlertRule>(`/alerts/rules/${id}`, {
+    mutationFn: ({ id, enabled }: { id: number; enabled: boolean }) => {
+      const payload: AlertRuleUpdate = { enabled };
+      return request<AlertRule>(`/alerts/rules/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled }),
-      }),
+        body: JSON.stringify(payload),
+      });
+    },
     onSuccess: (_data, { enabled }) => {
       qc.invalidateQueries({ queryKey: notificationKeys.alertRules });
       toast.success(`Alert rule ${enabled ? 'enabled' : 'disabled'}`);
@@ -124,7 +157,7 @@ export function useToggleAlertRule() {
 export function useTestAlertRule() {
   const toast = useToast();
   return useMutation({
-    mutationFn: (data: { name: string; severity: string; msg_template: string; notify_channels: number[] }) =>
+    mutationFn: (data: AlertTestRequest) =>
       request<void>('/alerts/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
