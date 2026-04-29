@@ -38,6 +38,12 @@ import { PresetGallery } from './PresetGallery';
 
 type StatusFilter = 'all' | 'active' | 'disabled' | 'auto-disabled';
 
+interface AutomationImportEnvelope {
+  version: number;
+  exported_at?: string;
+  automations: unknown[];
+}
+
 const statusFilterOptions: { value: StatusFilter; key: string; fallback: string }[] = [
   { value: 'all', key: 'automations.filters.all', fallback: 'All' },
   { value: 'active', key: 'automations.filters.active', fallback: 'Active' },
@@ -82,6 +88,17 @@ function buildVehicleLookup(vehicles: { id: number; display_name: string }[]): M
   return map;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isAutomationImportEnvelope(value: unknown): value is AutomationImportEnvelope {
+  if (!isRecord(value)) {
+    return false;
+  }
+  return typeof value.version === 'number' && Array.isArray(value.automations);
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AutomationsListPage() {
@@ -108,17 +125,34 @@ export default function AutomationsListPage() {
     if (!file) return;
     try {
       const text = await file.text();
-      const data = JSON.parse(text);
-      const body = Array.isArray(data) ? data : [data];
+      const data: unknown = JSON.parse(text);
+      if (!isAutomationImportEnvelope(data)) {
+        throw new Error(t(
+          'automations.importTypedEnvelopeRequired',
+          'Import a typed TeslaSync automation export file. Older automation files are not supported.',
+        ));
+      }
       const { request } = await import('@/api/client');
-      await request('/automations/import', { method: 'POST', body: JSON.stringify(body) });
+      await request('/automations/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
       window.location.reload();
     } catch (err) {
       console.error('Import failed:', err);
+      const message = err instanceof Error
+        ? err.message
+        : t('automations.importUnknownError', 'Unknown error');
+      window.alert(t(
+        'automations.importFailedWithReason',
+        'Automation import failed: {{message}}',
+        { message },
+      ));
     } finally {
       if (importInputRef.current) importInputRef.current.value = '';
     }
-  }, []);
+  }, [t]);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');

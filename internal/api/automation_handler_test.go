@@ -246,6 +246,30 @@ func TestAutomationImportExportContract_TypedStepArraysRoundTrip(t *testing.T) {
 	if len(req.Actions) != 2 || req.Actions[0].Kind != models.AutomationStepKindActionCommand {
 		t.Fatalf("actions = %#v", req.Actions)
 	}
+
+	repo := &automationPersistenceFakeRepo{}
+	h := &AutomationHandler{repo: repo}
+	httpReq := httptest.NewRequest(http.MethodPost, "/automations/import", strings.NewReader(string(data)))
+	rec := httptest.NewRecorder()
+	h.Import(rec, httpReq)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("import status = %d, want %d; body=%s", rec.Code, http.StatusCreated, rec.Body.String())
+	}
+	if repo.committedParent == nil {
+		t.Fatal("expected imported parent to be persisted")
+	}
+	if repo.committedParent.Enabled {
+		t.Fatal("imported automation must start disabled")
+	}
+	if len(repo.committedSteps) != 4 {
+		t.Fatalf("imported typed steps = %d, want 4", len(repo.committedSteps))
+	}
+	if repo.committedSteps[0].Kind != models.AutomationStepKindTriggerSchedule ||
+		repo.committedSteps[1].Kind != models.AutomationStepKindConditionTimeWindow ||
+		repo.committedSteps[2].Kind != models.AutomationStepKindActionCommand ||
+		repo.committedSteps[3].Kind != models.AutomationStepKindActionNotify {
+		t.Fatalf("imported step order = %#v", repo.committedSteps)
+	}
 }
 
 func TestEvaluateTestConditions_Empty(t *testing.T) {
@@ -638,35 +662,106 @@ func TestValidateActionConfig_UnknownType(t *testing.T) {
 
 // ── Import / Export Tests ───────────────────────────────────────────────
 
-func TestAutomationToPortable(t *testing.T) {
+func TestAutomationExportContract_EmitsTypedStepArrays(t *testing.T) {
 	desc := "A test"
-	a := &models.Automation{
-		ID:          1,
-		Name:        "Test Automation",
-		Description: &desc,
-		VehicleID:   int64Ptr(42),
-		Enabled:     true,
+	start, err := parseAutomationClockTime("06:00")
+	if err != nil {
+		t.Fatalf("start time: %v", err)
+	}
+	end, err := parseAutomationClockTime("22:00")
+	if err != nil {
+		t.Fatalf("end time: %v", err)
+	}
+	full := &models.AutomationFull{
+		Automation: models.Automation{
+			ID:          1,
+			Name:        "Test Automation",
+			Description: &desc,
+			VehicleID:   int64Ptr(42),
+			Enabled:     true,
+		},
+		Steps: []models.AutomationStep{
+			{ID: 10, AutomationID: 1, StepOrder: 1, Kind: models.AutomationStepKindTriggerSchedule},
+			{ID: 11, AutomationID: 1, StepOrder: 2, Kind: models.AutomationStepKindConditionTimeWindow},
+			{ID: 12, AutomationID: 1, StepOrder: 3, Kind: models.AutomationStepKindActionCommand},
+		},
+	}
+	payloads := newAutomationExportPayloads()
+	payloads.triggers[10] = &models.AutomationStepTriggerSchedule{
+		StepID:   10,
+		CronExpr: "0 8 * * *",
+		Timezone: "UTC",
+	}
+	payloads.conditions[11] = &models.AutomationStepConditionTimeWindow{
+		StepID:     11,
+		StartTime:  start,
+		EndTime:    end,
+		Timezone:   "UTC",
+		DaysOfWeek: []int16{1, 2, 3, 4, 5},
+	}
+	payloads.actions[12] = &models.AutomationAction{
+		StepID:        12,
+		CommandName:   "climate_on",
+		CommandParams: json.RawMessage(`{"temperature":21}`),
 	}
 
-	p := automationToPortable(a)
+	p, err := automationToPortable(full, payloads)
+	if err != nil {
+		t.Fatalf("automationToPortable() unexpected error: %v", err)
+	}
 
-	if p.Name != a.Name {
-		t.Errorf("Name = %q, want %q", p.Name, a.Name)
+	if p.Name != full.Name {
+		t.Errorf("Name = %q, want %q", p.Name, full.Name)
 	}
 	if p.Description != desc {
 		t.Errorf("Description = %q, want %q", p.Description, desc)
 	}
+	if len(p.Triggers) != 1 || len(p.Conditions) != 1 || len(p.Actions) != 1 {
+		t.Fatalf("typed step counts = triggers:%d conditions:%d actions:%d", len(p.Triggers), len(p.Conditions), len(p.Actions))
+	}
+	var trigger automationTriggerScheduleDTO
+	if err := json.Unmarshal(p.Triggers[0], &trigger); err != nil {
+		t.Fatalf("trigger unmarshal: %v", err)
+	}
+	if trigger.Kind != models.AutomationStepKindTriggerSchedule || trigger.StepOrder == nil || *trigger.StepOrder != 1 {
+		t.Fatalf("trigger export = %#v", trigger)
+	}
+	var condition automationConditionTimeWindowDTO
+	if err := json.Unmarshal(p.Conditions[0], &condition); err != nil {
+		t.Fatalf("condition unmarshal: %v", err)
+	}
+	if condition.StartTime != "06:00:00" || condition.EndTime != "22:00:00" || len(condition.DaysOfWeek) != 5 {
+		t.Fatalf("condition export = %#v", condition)
+	}
+	var action automationActionCommandDTO
+	if err := json.Unmarshal(p.Actions[0], &action); err != nil {
+		t.Fatalf("action unmarshal: %v", err)
+	}
+	if action.Kind != models.AutomationStepKindActionCommand || action.CommandName != "climate_on" {
+		t.Fatalf("action export = %#v", action)
+	}
+	if _, err := validateAutomationPortable(p); err != nil {
+		t.Fatalf("exported typed payload did not validate for import: %v", err)
+	}
 }
 
-func TestAutomationToPortable_WebhookStripsSecrets(t *testing.T) {
-	a := &models.Automation{
-		Name: "Webhook Auto",
+func TestAutomationExportContract_EmptyStepsUseTypedArrays(t *testing.T) {
+	full := &models.AutomationFull{
+		Automation: models.Automation{
+			Name: "Empty Auto",
+		},
 	}
 
-	p := automationToPortable(a)
+	p, err := automationToPortable(full, newAutomationExportPayloads())
+	if err != nil {
+		t.Fatalf("automationToPortable() unexpected error: %v", err)
+	}
 
-	if p.Name != "Webhook Auto" {
-		t.Errorf("Name = %q, want %q", p.Name, "Webhook Auto")
+	if p.Name != "Empty Auto" {
+		t.Errorf("Name = %q, want %q", p.Name, "Empty Auto")
+	}
+	if p.Triggers == nil || p.Conditions == nil || p.Actions == nil {
+		t.Fatalf("typed arrays must be present, got triggers:%v conditions:%v actions:%v", p.Triggers, p.Conditions, p.Actions)
 	}
 }
 

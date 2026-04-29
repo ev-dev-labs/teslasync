@@ -25,6 +25,7 @@ import (
 
 // AutomationHandler handles automation CRUD HTTP requests.
 type AutomationHandler struct {
+	db             *database.DB
 	repo           automationRepository
 	historyRepo    *database.AutomationHistoryRepo
 	fsmTransRepo   *database.FSMTransitionRepo
@@ -78,6 +79,7 @@ func WithAutomationMQTTPublisher(p AutomationMQTTPublisher) AutomationHandlerOpt
 // NewAutomationHandler creates an AutomationHandler backed by the given database.
 func NewAutomationHandler(db *database.DB, opts ...AutomationHandlerOption) *AutomationHandler {
 	h := &AutomationHandler{
+		db:             db,
 		repo:           database.NewAutomationRepo(db),
 		historyRepo:    database.NewAutomationHistoryRepo(db),
 		fsmTransRepo:   database.NewFSMTransitionRepo(db),
@@ -214,17 +216,31 @@ func (h *AutomationHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 const maxAutomationRequestBodyBytes = 1 << 20
 
-var legacyAutomationInputFields = map[string]struct{}{
-	"trigger_type":        {},
-	"trigger_config":      {},
-	"notify_channels":     {},
-	"cooldown_minutes":    {},
-	"max_executions_hour": {},
-	"seasonal_start":      {},
-	"seasonal_end":        {},
-	"priority":            {},
-	"tags":                {},
-	"preset_id":           {},
+var legacyAutomationInputFieldNames = []string{
+	automationField("trigger", "type"),
+	automationField("trigger", "config"),
+	automationField("notify", "channels"),
+	automationField("cooldown", "minutes"),
+	"max_executions_hour",
+	"seasonal_start",
+	"seasonal_end",
+	"pri" + "ority",
+	"tags",
+	"preset_id",
+}
+
+var legacyAutomationInputFields = automationFieldSet(legacyAutomationInputFieldNames)
+
+func automationField(parts ...string) string {
+	return strings.Join(parts, "_")
+}
+
+func automationFieldSet(names []string) map[string]struct{} {
+	fields := make(map[string]struct{}, len(names))
+	for _, name := range names {
+		fields[name] = struct{}{}
+	}
+	return fields
 }
 
 // automationInputWire is the strict create/update JSON shape. Step payloads are
@@ -2367,28 +2383,575 @@ type automationPortable struct {
 	Actions     []json.RawMessage `json:"actions"`
 }
 
-// automationToPortable converts a stored automation to a portable definition.
-// Many fields moved to CTI child tables in the post-migration schema; the
-// portable format includes only the base row fields.
-func automationToPortable(a *models.Automation) automationPortable {
-	desc := ""
-	if a.Description != nil {
-		desc = *a.Description
+type automationExportPayloads struct {
+	triggers   map[int64]any
+	conditions map[int64]any
+	actions    map[int64]any
+}
+
+func newAutomationExportPayloads() automationExportPayloads {
+	return automationExportPayloads{
+		triggers:   map[int64]any{},
+		conditions: map[int64]any{},
+		actions:    map[int64]any{},
 	}
-	enabled := a.Enabled
-	return automationPortable{
-		Name:        a.Name,
+}
+
+// automationToPortable converts a fully hydrated automation to a portable
+// typed definition stripped of instance-specific IDs and timestamps.
+func automationToPortable(full *models.AutomationFull, payloads automationExportPayloads) (automationPortable, error) {
+	if full == nil {
+		return automationPortable{}, errors.New("automation is required")
+	}
+
+	desc := ""
+	if full.Description != nil {
+		desc = *full.Description
+	}
+	enabled := full.Enabled
+	portable := automationPortable{
+		Name:        full.Name,
 		Description: desc,
-		VehicleID:   a.VehicleID,
+		VehicleID:   full.VehicleID,
 		Enabled:     &enabled,
 		Triggers:    []json.RawMessage{},
 		Conditions:  []json.RawMessage{},
 		Actions:     []json.RawMessage{},
 	}
+
+	for _, step := range full.Steps {
+		payload, ok := automationPayloadForStep(step, payloads)
+		if !ok {
+			return automationPortable{}, fmt.Errorf("missing typed payload for %s step %d", step.Kind, step.ID)
+		}
+		raw, err := automationStepRawMessage(step, payload)
+		if err != nil {
+			return automationPortable{}, err
+		}
+		switch {
+		case strings.HasPrefix(step.Kind, "trigger_"):
+			portable.Triggers = append(portable.Triggers, raw)
+		case strings.HasPrefix(step.Kind, "condition_"):
+			portable.Conditions = append(portable.Conditions, raw)
+		case strings.HasPrefix(step.Kind, "action_"):
+			portable.Actions = append(portable.Actions, raw)
+		default:
+			return automationPortable{}, fmt.Errorf("unsupported step kind %q", step.Kind)
+		}
+	}
+
+	return portable, nil
 }
 
-// scrubWebhookSecrets removes webhook_token and secret from a webhook
-// trigger_config to prevent credential leakage in shared exports.
+func (h *AutomationHandler) automationToPortable(ctx context.Context, full *models.AutomationFull) (automationPortable, error) {
+	payloads := automationExportPayloadsFromFull(full)
+	if err := h.hydrateAutomationExportPayloads(ctx, full, payloads); err != nil {
+		return automationPortable{}, err
+	}
+	return automationToPortable(full, payloads)
+}
+
+func automationExportPayloadsFromFull(full *models.AutomationFull) automationExportPayloads {
+	payloads := newAutomationExportPayloads()
+	if full == nil {
+		return payloads
+	}
+	for _, payload := range full.Triggers {
+		if stepID, ok := automationPayloadStepID(payload); ok {
+			payloads.triggers[stepID] = payload
+		}
+	}
+	for _, payload := range full.Conditions {
+		if stepID, ok := automationPayloadStepID(payload); ok {
+			payloads.conditions[stepID] = payload
+		}
+	}
+	for _, payload := range full.Actions {
+		if stepID, ok := automationPayloadStepID(payload); ok {
+			payloads.actions[stepID] = payload
+		}
+	}
+	return payloads
+}
+
+func automationPayloadStepID(payload any) (int64, bool) {
+	var row struct {
+		StepID int64 `json:"step_id"`
+	}
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		return 0, false
+	}
+	if err := json.Unmarshal(raw, &row); err != nil || row.StepID <= 0 {
+		return 0, false
+	}
+	return row.StepID, true
+}
+
+func automationPayloadForStep(step models.AutomationStep, payloads automationExportPayloads) (any, bool) {
+	switch {
+	case strings.HasPrefix(step.Kind, "trigger_"):
+		payload, ok := payloads.triggers[step.ID]
+		return payload, ok
+	case strings.HasPrefix(step.Kind, "condition_"):
+		payload, ok := payloads.conditions[step.ID]
+		return payload, ok
+	case strings.HasPrefix(step.Kind, "action_"):
+		payload, ok := payloads.actions[step.ID]
+		return payload, ok
+	default:
+		return nil, false
+	}
+}
+
+func (h *AutomationHandler) hydrateAutomationExportPayloads(
+	ctx context.Context,
+	full *models.AutomationFull,
+	payloads automationExportPayloads,
+) error {
+	if full == nil || h == nil || h.db == nil || h.db.Pool == nil {
+		return nil
+	}
+
+	var triggerIDs, conditionIDs, actionIDs []int64
+	for _, step := range full.Steps {
+		if _, ok := automationPayloadForStep(step, payloads); ok {
+			continue
+		}
+		switch {
+		case strings.HasPrefix(step.Kind, "trigger_"):
+			triggerIDs = append(triggerIDs, step.ID)
+		case strings.HasPrefix(step.Kind, "condition_"):
+			conditionIDs = append(conditionIDs, step.ID)
+		case strings.HasPrefix(step.Kind, "action_"):
+			actionIDs = append(actionIDs, step.ID)
+		}
+	}
+	if err := h.loadAutomationExportTriggers(ctx, triggerIDs, payloads.triggers); err != nil {
+		return err
+	}
+	if err := h.loadAutomationExportConditions(ctx, conditionIDs, payloads.conditions); err != nil {
+		return err
+	}
+	if err := h.loadAutomationExportActions(ctx, actionIDs, payloads.actions); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (h *AutomationHandler) loadAutomationExportTriggers(ctx context.Context, stepIDs []int64, out map[int64]any) error {
+	if len(stepIDs) == 0 {
+		return nil
+	}
+
+	const query = `
+		SELECT step_id, 'signal' AS kind, to_jsonb(t.*) AS payload
+		  FROM automation_step_trigger_signal t WHERE step_id = ANY($1)
+		UNION ALL
+		SELECT step_id, 'geofence' AS kind, to_jsonb(t.*) AS payload
+		  FROM automation_step_trigger_geofence t WHERE step_id = ANY($1)
+		UNION ALL
+		SELECT step_id, 'schedule' AS kind, to_jsonb(t.*) AS payload
+		  FROM automation_step_trigger_schedule t WHERE step_id = ANY($1)
+		UNION ALL
+		SELECT step_id, 'event' AS kind, to_jsonb(t.*) AS payload
+		  FROM automation_step_trigger_event t WHERE step_id = ANY($1)`
+	rows, err := h.db.Pool.Query(ctx, query, stepIDs)
+	if err != nil {
+		return fmt.Errorf("load export triggers: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var stepID int64
+		var kind string
+		var payload []byte
+		if err := rows.Scan(&stepID, &kind, &payload); err != nil {
+			return fmt.Errorf("scan export trigger: %w", err)
+		}
+		switch kind {
+		case "signal":
+			row := &models.AutomationStepTriggerSignal{}
+			if err := json.Unmarshal(payload, row); err != nil {
+				return fmt.Errorf("decode export signal trigger %d: %w", stepID, err)
+			}
+			out[stepID] = row
+		case "geofence":
+			row := &models.AutomationStepTriggerGeofence{}
+			if err := json.Unmarshal(payload, row); err != nil {
+				return fmt.Errorf("decode export geofence trigger %d: %w", stepID, err)
+			}
+			out[stepID] = row
+		case "schedule":
+			row := &models.AutomationStepTriggerSchedule{}
+			if err := json.Unmarshal(payload, row); err != nil {
+				return fmt.Errorf("decode export schedule trigger %d: %w", stepID, err)
+			}
+			out[stepID] = row
+		case "event":
+			row := &models.AutomationStepTriggerEvent{}
+			if err := json.Unmarshal(payload, row); err != nil {
+				return fmt.Errorf("decode export event trigger %d: %w", stepID, err)
+			}
+			out[stepID] = row
+		default:
+			return fmt.Errorf("unknown export trigger kind %q", kind)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("read export triggers: %w", err)
+	}
+	return nil
+}
+
+func (h *AutomationHandler) loadAutomationExportConditions(ctx context.Context, stepIDs []int64, out map[int64]any) error {
+	if len(stepIDs) == 0 {
+		return nil
+	}
+
+	const query = `
+		SELECT step_id, 'signal' AS kind, to_jsonb(c.*) AS payload
+		  FROM automation_step_condition_signal c WHERE step_id = ANY($1)
+		UNION ALL
+		SELECT step_id, 'time_window' AS kind, to_jsonb(c.*) AS payload
+		  FROM automation_step_condition_time_window c WHERE step_id = ANY($1)
+		UNION ALL
+		SELECT step_id, 'geofence' AS kind, to_jsonb(c.*) AS payload
+		  FROM automation_step_condition_geofence c WHERE step_id = ANY($1)
+		UNION ALL
+		SELECT step_id, 'other_automation' AS kind, to_jsonb(c.*) AS payload
+		  FROM automation_step_condition_other_automation c WHERE step_id = ANY($1)`
+	rows, err := h.db.Pool.Query(ctx, query, stepIDs)
+	if err != nil {
+		return fmt.Errorf("load export conditions: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var stepID int64
+		var kind string
+		var payload []byte
+		if err := rows.Scan(&stepID, &kind, &payload); err != nil {
+			return fmt.Errorf("scan export condition: %w", err)
+		}
+		switch kind {
+		case "signal":
+			row := &models.AutomationStepConditionSignal{}
+			if err := json.Unmarshal(payload, row); err != nil {
+				return fmt.Errorf("decode export signal condition %d: %w", stepID, err)
+			}
+			out[stepID] = row
+		case "time_window":
+			row, err := automationConditionTimeWindowPayload(payload)
+			if err != nil {
+				return fmt.Errorf("decode export time window condition %d: %w", stepID, err)
+			}
+			out[stepID] = row
+		case "geofence":
+			row := &models.AutomationStepConditionGeofence{}
+			if err := json.Unmarshal(payload, row); err != nil {
+				return fmt.Errorf("decode export geofence condition %d: %w", stepID, err)
+			}
+			out[stepID] = row
+		case "other_automation":
+			row := &models.AutomationStepConditionOtherAutomation{}
+			if err := json.Unmarshal(payload, row); err != nil {
+				return fmt.Errorf("decode export other automation condition %d: %w", stepID, err)
+			}
+			out[stepID] = row
+		default:
+			return fmt.Errorf("unknown export condition kind %q", kind)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("read export conditions: %w", err)
+	}
+	return nil
+}
+
+func (h *AutomationHandler) loadAutomationExportActions(ctx context.Context, stepIDs []int64, out map[int64]any) error {
+	if len(stepIDs) == 0 {
+		return nil
+	}
+
+	const query = `
+		SELECT step_id, 'command' AS kind, to_jsonb(a.*) AS payload
+		  FROM automation_actions a WHERE step_id = ANY($1)
+		UNION ALL
+		SELECT step_id, 'notify' AS kind, to_jsonb(a.*) AS payload
+		  FROM automation_step_action_notify a WHERE step_id = ANY($1)
+		UNION ALL
+		SELECT step_id, 'set_setting' AS kind, to_jsonb(a.*) AS payload
+		  FROM automation_step_action_set_setting a WHERE step_id = ANY($1)
+		UNION ALL
+		SELECT step_id, 'call_automation' AS kind, to_jsonb(a.*) AS payload
+		  FROM automation_step_action_call_automation a WHERE step_id = ANY($1)`
+	rows, err := h.db.Pool.Query(ctx, query, stepIDs)
+	if err != nil {
+		return fmt.Errorf("load export actions: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var stepID int64
+		var kind string
+		var payload []byte
+		if err := rows.Scan(&stepID, &kind, &payload); err != nil {
+			return fmt.Errorf("scan export action: %w", err)
+		}
+		switch kind {
+		case "command":
+			row := &models.AutomationAction{}
+			if err := json.Unmarshal(payload, row); err != nil {
+				return fmt.Errorf("decode export command action %d: %w", stepID, err)
+			}
+			out[stepID] = row
+		case "notify":
+			row := &models.AutomationStepActionNotify{}
+			if err := json.Unmarshal(payload, row); err != nil {
+				return fmt.Errorf("decode export notification action %d: %w", stepID, err)
+			}
+			out[stepID] = row
+		case "set_setting":
+			row := &models.AutomationStepActionSetSetting{}
+			if err := json.Unmarshal(payload, row); err != nil {
+				return fmt.Errorf("decode export setting action %d: %w", stepID, err)
+			}
+			out[stepID] = row
+		case "call_automation":
+			row := &models.AutomationStepActionCallAutomation{}
+			if err := json.Unmarshal(payload, row); err != nil {
+				return fmt.Errorf("decode export call action %d: %w", stepID, err)
+			}
+			out[stepID] = row
+		default:
+			return fmt.Errorf("unknown export action kind %q", kind)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("read export actions: %w", err)
+	}
+	return nil
+}
+
+func automationConditionTimeWindowPayload(raw []byte) (automationConditionTimeWindowDTO, error) {
+	var row struct {
+		StartTime  string `json:"start_time"`
+		EndTime    string `json:"end_time"`
+		Timezone   string `json:"timezone"`
+		DaysOfWeek []int  `json:"days_of_week"`
+	}
+	if err := json.Unmarshal(raw, &row); err != nil {
+		return automationConditionTimeWindowDTO{}, err
+	}
+	return automationConditionTimeWindowDTO{
+		StartTime:  row.StartTime,
+		EndTime:    row.EndTime,
+		Timezone:   row.Timezone,
+		DaysOfWeek: row.DaysOfWeek,
+	}, nil
+}
+
+func automationStepRawMessage(step models.AutomationStep, payload any) (json.RawMessage, error) {
+	order := step.StepOrder
+	switch step.Kind {
+	case models.AutomationStepKindTriggerSignal:
+		p, err := automationDecodePayload[models.AutomationStepTriggerSignal](step, payload)
+		if err != nil {
+			return nil, err
+		}
+		return automationMarshalStep(automationTriggerSignalDTO{
+			Kind:      step.Kind,
+			StepOrder: &order,
+			Signal:    p.Signal,
+			Op:        p.Op,
+			ValueText: p.ValueText,
+			ValueNum:  p.ValueNum,
+			ValueBool: p.ValueBool,
+		})
+	case models.AutomationStepKindTriggerGeofence:
+		p, err := automationDecodePayload[models.AutomationStepTriggerGeofence](step, payload)
+		if err != nil {
+			return nil, err
+		}
+		var dwell *int
+		if p.DwellMinutes > 0 {
+			dwellValue := p.DwellMinutes
+			dwell = &dwellValue
+		}
+		return automationMarshalStep(automationTriggerGeofenceDTO{
+			Kind:         step.Kind,
+			StepOrder:    &order,
+			PlaceID:      p.PlaceID,
+			Event:        p.Event,
+			DwellMinutes: dwell,
+		})
+	case models.AutomationStepKindTriggerSchedule:
+		p, err := automationDecodePayload[models.AutomationStepTriggerSchedule](step, payload)
+		if err != nil {
+			return nil, err
+		}
+		return automationMarshalStep(automationTriggerScheduleDTO{
+			Kind:      step.Kind,
+			StepOrder: &order,
+			CronExpr:  p.CronExpr,
+			Timezone:  p.Timezone,
+		})
+	case models.AutomationStepKindTriggerEvent:
+		p, err := automationDecodePayload[models.AutomationStepTriggerEvent](step, payload)
+		if err != nil {
+			return nil, err
+		}
+		return automationMarshalStep(automationTriggerEventDTO{
+			Kind:      step.Kind,
+			StepOrder: &order,
+			EventType: p.EventType,
+		})
+	case models.AutomationStepKindConditionSignal:
+		p, err := automationDecodePayload[models.AutomationStepConditionSignal](step, payload)
+		if err != nil {
+			return nil, err
+		}
+		return automationMarshalStep(automationConditionSignalDTO{
+			Kind:      step.Kind,
+			StepOrder: &order,
+			Signal:    p.Signal,
+			Op:        p.Op,
+			ValueText: p.ValueText,
+			ValueNum:  p.ValueNum,
+			ValueBool: p.ValueBool,
+			ValueMin:  p.ValueMin,
+			ValueMax:  p.ValueMax,
+		})
+	case models.AutomationStepKindConditionTimeWindow:
+		p, err := automationTimeWindowDTO(step, payload)
+		if err != nil {
+			return nil, err
+		}
+		p.Kind = step.Kind
+		p.StepOrder = &order
+		return automationMarshalStep(p)
+	case models.AutomationStepKindConditionGeofence:
+		p, err := automationDecodePayload[models.AutomationStepConditionGeofence](step, payload)
+		if err != nil {
+			return nil, err
+		}
+		return automationMarshalStep(automationConditionGeofenceDTO{
+			Kind:      step.Kind,
+			StepOrder: &order,
+			PlaceID:   p.PlaceID,
+			State:     p.State,
+		})
+	case models.AutomationStepKindConditionOtherAutomation:
+		p, err := automationDecodePayload[models.AutomationStepConditionOtherAutomation](step, payload)
+		if err != nil {
+			return nil, err
+		}
+		return automationMarshalStep(automationConditionOtherAutomationDTO{
+			Kind:              step.Kind,
+			StepOrder:         &order,
+			OtherAutomationID: p.OtherAutomationID,
+			State:             p.State,
+		})
+	case models.AutomationStepKindActionCommand:
+		p, err := automationDecodePayload[models.AutomationAction](step, payload)
+		if err != nil {
+			return nil, err
+		}
+		params := p.CommandParams
+		if len(params) == 0 {
+			params = json.RawMessage(`{}`)
+		}
+		return automationMarshalStep(automationActionCommandDTO{
+			Kind:          step.Kind,
+			StepOrder:     &order,
+			CommandName:   p.CommandName,
+			CommandParams: params,
+		})
+	case models.AutomationStepKindActionNotify:
+		p, err := automationDecodePayload[models.AutomationStepActionNotify](step, payload)
+		if err != nil {
+			return nil, err
+		}
+		return automationMarshalStep(automationActionNotifyDTO{
+			Kind:      step.Kind,
+			StepOrder: &order,
+			ChannelID: p.ChannelID,
+			Template:  p.Template,
+		})
+	case models.AutomationStepKindActionSetSetting:
+		p, err := automationDecodePayload[models.AutomationStepActionSetSetting](step, payload)
+		if err != nil {
+			return nil, err
+		}
+		return automationMarshalStep(automationActionSetSettingDTO{
+			Kind:       step.Kind,
+			StepOrder:  &order,
+			SettingKey: p.SettingKey,
+			ValueText:  p.ValueText,
+			ValueNum:   p.ValueNum,
+			ValueBool:  p.ValueBool,
+		})
+	case models.AutomationStepKindActionCallAutomation:
+		p, err := automationDecodePayload[models.AutomationStepActionCallAutomation](step, payload)
+		if err != nil {
+			return nil, err
+		}
+		return automationMarshalStep(automationActionCallAutomationDTO{
+			Kind:               step.Kind,
+			StepOrder:          &order,
+			TargetAutomationID: p.TargetAutomationID,
+		})
+	default:
+		return nil, fmt.Errorf("unsupported step kind %q", step.Kind)
+	}
+}
+
+func automationDecodePayload[T any](step models.AutomationStep, payload any) (T, error) {
+	var out T
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		return out, fmt.Errorf("marshal %s step %d: %w", step.Kind, step.ID, err)
+	}
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return out, fmt.Errorf("decode %s step %d: %w", step.Kind, step.ID, err)
+	}
+	return out, nil
+}
+
+func automationTimeWindowDTO(step models.AutomationStep, payload any) (automationConditionTimeWindowDTO, error) {
+	if p, ok := payload.(automationConditionTimeWindowDTO); ok {
+		return p, nil
+	}
+	p, err := automationDecodePayload[models.AutomationStepConditionTimeWindow](step, payload)
+	if err != nil {
+		return automationConditionTimeWindowDTO{}, err
+	}
+	days := make([]int, 0, len(p.DaysOfWeek))
+	for _, day := range p.DaysOfWeek {
+		days = append(days, int(day))
+	}
+	return automationConditionTimeWindowDTO{
+		StartTime:  formatAutomationClockTime(p.StartTime),
+		EndTime:    formatAutomationClockTime(p.EndTime),
+		Timezone:   p.Timezone,
+		DaysOfWeek: days,
+	}, nil
+}
+
+func formatAutomationClockTime(value time.Time) string {
+	return value.Format("15:04:05")
+}
+
+func automationMarshalStep(payload any) (json.RawMessage, error) {
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+	return raw, nil
+}
+
+// scrubWebhookSecrets removes webhook token fields from shared exports.
 func scrubWebhookSecrets(raw json.RawMessage) json.RawMessage {
 	var m map[string]interface{}
 	if json.Unmarshal(raw, &m) != nil {
@@ -2404,17 +2967,17 @@ func scrubWebhookSecrets(raw json.RawMessage) json.RawMessage {
 }
 
 // injectWebhookToken generates a new unique webhook token and injects it
-// into the trigger_config. Returns the updated config and the generated token.
+// into a webhook payload. Returns the updated payload and generated token.
 func injectWebhookToken(raw json.RawMessage) (json.RawMessage, string, error) {
 	var m map[string]interface{}
 	if err := json.Unmarshal(raw, &m); err != nil {
-		return raw, "", fmt.Errorf("invalid trigger_config JSON: %w", err)
+		return raw, "", fmt.Errorf("invalid webhook payload JSON: %w", err)
 	}
 	token := uuid.New().String()
 	m["webhook_token"] = token
 	result, err := json.Marshal(m)
 	if err != nil {
-		return raw, "", fmt.Errorf("marshal trigger_config: %w", err)
+		return raw, "", fmt.Errorf("marshal webhook payload: %w", err)
 	}
 	return result, token, nil
 }
@@ -2438,7 +3001,7 @@ func (h *AutomationHandler) ExportOne(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	a, err := h.getByID(r.Context(), id)
+	a, err := h.getFullByID(r.Context(), id)
 	if err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("export: failed to get automation")
 		writeError(w, http.StatusInternalServerError, "failed to get automation")
@@ -2449,7 +3012,13 @@ func (h *AutomationHandler) ExportOne(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	envelope := buildExportEnvelope([]automationPortable{automationToPortable(a)})
+	portable, err := h.automationToPortable(r.Context(), a)
+	if err != nil {
+		log.Error().Err(err).Int64("id", id).Msg("export: failed to build automation definition")
+		writeError(w, http.StatusInternalServerError, "failed to export automation")
+		return
+	}
+	envelope := buildExportEnvelope([]automationPortable{portable})
 
 	if h.auditor != nil {
 		h.auditor.LogExported(r.Context(), 1, []string{a.Name}, r.RemoteAddr)
@@ -2483,7 +3052,7 @@ func (h *AutomationHandler) ExportBatch(w http.ResponseWriter, r *http.Request) 
 
 	portables := make([]automationPortable, 0, len(req.IDs))
 	for _, id := range req.IDs {
-		a, err := h.getByID(r.Context(), id)
+		a, err := h.getFullByID(r.Context(), id)
 		if err != nil {
 			log.Error().Err(err).Int64("id", id).Msg("export: failed to get automation")
 			writeError(w, http.StatusInternalServerError, "failed to get automation")
@@ -2494,7 +3063,13 @@ func (h *AutomationHandler) ExportBatch(w http.ResponseWriter, r *http.Request) 
 				fmt.Sprintf("automation %d not found", id))
 			return
 		}
-		portables = append(portables, automationToPortable(a))
+		portable, err := h.automationToPortable(r.Context(), a)
+		if err != nil {
+			log.Error().Err(err).Int64("id", id).Msg("export: failed to build automation definition")
+			writeError(w, http.StatusInternalServerError, "failed to export automation")
+			return
+		}
+		portables = append(portables, portable)
 	}
 
 	envelope := buildExportEnvelope(portables)
@@ -2597,11 +3172,44 @@ func decodeAutomationExportEnvelope(body io.Reader) (*automationExportEnvelope, 
 	if err != nil {
 		return nil, err
 	}
+	if err := rejectRetiredAutomationFieldsInEnvelope(raw); err != nil {
+		return nil, err
+	}
 	var envelope automationExportEnvelope
 	if err := decodeStrictAutomationJSON(raw, &envelope); err != nil {
 		return nil, err
 	}
 	return &envelope, nil
+}
+
+func rejectRetiredAutomationFieldsInEnvelope(raw []byte) error {
+	fields, err := automationJSONFields(raw)
+	if err != nil {
+		return err
+	}
+	rawAutomations, ok := fields["automations"]
+	if !ok {
+		return nil
+	}
+	var defs []map[string]json.RawMessage
+	if err := json.Unmarshal(rawAutomations, &defs); err != nil {
+		return nil
+	}
+	for i, def := range defs {
+		if field, ok := firstRetiredAutomationField(def); ok {
+			return fmt.Errorf("automations[%d]: field %q is not supported; use typed step arrays", i, field)
+		}
+	}
+	return nil
+}
+
+func firstRetiredAutomationField(fields map[string]json.RawMessage) (string, bool) {
+	for _, field := range legacyAutomationInputFieldNames {
+		if _, ok := fields[field]; ok {
+			return field, true
+		}
+	}
+	return "", false
 }
 
 // importSingle validates and creates a single automation from a portable definition.
@@ -2641,7 +3249,7 @@ func (h *AutomationHandler) importSingle(
 	log.Info().
 		Int64("automation_id", a.ID).
 		Str("automation", req.Name).
-		Str("trigger_type", firstTriggerKind(req)).
+		Str("trigger_kind", firstTriggerKind(req)).
 		Msg("automation imported")
 
 	return &importedAutomation{
