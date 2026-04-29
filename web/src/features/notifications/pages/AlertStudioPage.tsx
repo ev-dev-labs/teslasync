@@ -18,10 +18,11 @@ import {
   useTestAlertRule,
   useToggleAlertRule,
 } from '@/api/hooks/useNotifications'
+import type { SignalValueType } from '@/types/signals'
 import { GlassPanel, Badge, Button as UiButton, Input as UiInput, Select as UiSelect } from '@/components/ui'
 import { PageContainer } from '@/components/layout'
 import { FadeIn } from '@/components/motion'
-import { EmptyState, Skeleton } from '@/components/feedback'
+import { EmptyState, ErrorDisplay, Skeleton } from '@/components/feedback'
 import {
   Zap, Plus, Save, Trash2, Copy, Bell, BellOff,
   AlertTriangle, AlertCircle, Info, Battery, Gauge, Lock,
@@ -68,6 +69,12 @@ interface RuleTemplate {
   value_bool?: boolean
   value_min?: number
   value_max?: number
+}
+
+interface SignalDefinition {
+  name: string
+  category: string
+  value_type: SignalValueType
 }
 
 const ruleTemplates: RuleTemplate[] = [
@@ -133,7 +140,9 @@ const ruleTemplates: RuleTemplate[] = [
 
 const templateCategories = [...new Set(ruleTemplates.map(t => t.category))].sort()
 
-const operatorOptions: RuleOp[] = ['=', '!=', '<', '<=', '>', '>=', 'changed', 'between', 'outside']
+const numericOperatorOptions: RuleOp[] = ['=', '!=', '<', '<=', '>', '>=', 'changed', 'between', 'outside']
+const scalarOperatorOptions: RuleOp[] = ['=', '!=', 'changed']
+const customSignalCategory = '__custom__'
 
 interface EditorState {
   id?: number
@@ -218,11 +227,81 @@ function isRangeOp(op: RuleOp): boolean {
   return op === 'between' || op === 'outside'
 }
 
-function valueKindForOp(op: RuleOp, valueKind: ValueKind): ValueKind {
-  if (isRangeOp(op)) return 'range'
-  if (isNumericOnlyOp(op)) return 'number'
-  if (op !== 'changed' && valueKind === 'none') return 'number'
-  return valueKind === 'range' ? 'number' : valueKind
+function inferTemplateSignalType(template: RuleTemplate): SignalValueType {
+  if (
+    template.value_num != null
+    || template.value_min != null
+    || template.value_max != null
+    || isNumericOnlyOp(template.op)
+    || isRangeOp(template.op)
+  ) {
+    return 'numeric'
+  }
+  if (template.value_bool != null) return 'bool'
+  return 'text'
+}
+
+function mergeSignalType(current: SignalValueType, next: SignalValueType): SignalValueType {
+  if (current === next) return current
+  if (current === 'numeric' || next === 'numeric') return 'numeric'
+  if (current === 'bool' || next === 'bool') return 'bool'
+  return 'text'
+}
+
+function buildSignalCatalog(templates: RuleTemplate[]): SignalDefinition[] {
+  const byName = new Map<string, SignalDefinition>()
+  templates.forEach(template => {
+    const valueType = inferTemplateSignalType(template)
+    const existing = byName.get(template.signal_name)
+    if (existing) {
+      existing.value_type = mergeSignalType(existing.value_type, valueType)
+      return
+    }
+    byName.set(template.signal_name, {
+      name: template.signal_name,
+      category: template.category,
+      value_type: valueType,
+    })
+  })
+  return [...byName.values()].sort((a, b) => (
+    a.category.localeCompare(b.category) || a.name.localeCompare(b.name)
+  ))
+}
+
+const signalCatalog = buildSignalCatalog(ruleTemplates)
+const signalCatalogByName = new Map(signalCatalog.map(signal => [signal.name, signal]))
+
+function signalTypeForValueKind(valueKind: ValueKind): SignalValueType {
+  if (valueKind === 'bool') return 'bool'
+  if (valueKind === 'text' || valueKind === 'none') return 'text'
+  return 'numeric'
+}
+
+function signalTypeForName(signalName: string, fallbackKind: ValueKind): SignalValueType {
+  return signalCatalogByName.get(signalName)?.value_type ?? signalTypeForValueKind(fallbackKind)
+}
+
+function allowedOpsForSignalType(valueType: SignalValueType): RuleOp[] {
+  return valueType === 'numeric' ? numericOperatorOptions : scalarOperatorOptions
+}
+
+function coerceOperatorForSignalType(op: RuleOp, valueType: SignalValueType): RuleOp {
+  return allowedOpsForSignalType(valueType).includes(op) ? op : '='
+}
+
+function valueKindForSignalOp(valueType: SignalValueType, op: RuleOp): ValueKind {
+  if (op === 'changed') return 'none'
+  if (valueType === 'numeric') return isRangeOp(op) ? 'range' : 'number'
+  if (valueType === 'bool') return 'bool'
+  return 'text'
+}
+
+function valueKindForState(state: Pick<EditorState, 'signal_name' | 'op' | 'value_kind'>): ValueKind {
+  return valueKindForSignalOp(signalTypeForName(state.signal_name, state.value_kind), state.op)
+}
+
+function isOperatorAllowedForState(state: Pick<EditorState, 'signal_name' | 'op' | 'value_kind'>): boolean {
+  return allowedOpsForSignalType(signalTypeForName(state.signal_name, state.value_kind)).includes(state.op)
 }
 
 function inferValueKind(rule: Pick<AlertRule, 'op' | 'value_num' | 'value_text' | 'value_bool' | 'value_min' | 'value_max'>): ValueKind {
@@ -234,11 +313,7 @@ function inferValueKind(rule: Pick<AlertRule, 'op' | 'value_num' | 'value_text' 
 }
 
 function inferTemplateValueKind(template: RuleTemplate): ValueKind {
-  if (isRangeOp(template.op) || template.value_min != null || template.value_max != null) return 'range'
-  if (template.value_bool != null) return 'bool'
-  if (template.value_text != null) return 'text'
-  if (template.value_num != null) return 'number'
-  return template.op === 'changed' ? 'none' : 'number'
+  return valueKindForSignalOp(inferTemplateSignalType(template), template.op)
 }
 
 function ruleToEditor(rule: AlertRule): EditorState {
@@ -280,7 +355,7 @@ function templateToEditor(template: RuleTemplate, name: string, message: string)
 }
 
 function buildSavePayload(state: EditorState): AlertRuleInput {
-  const valueKind = valueKindForOp(state.op, state.value_kind)
+  const valueKind = valueKindForState(state)
   const payload: AlertRuleInput = {
     name: state.name.trim(),
     enabled: state.enabled,
@@ -311,7 +386,7 @@ function buildSavePayload(state: EditorState): AlertRuleInput {
 }
 
 function hasRequiredTypedValue(state: EditorState): boolean {
-  const valueKind = valueKindForOp(state.op, state.value_kind)
+  const valueKind = valueKindForState(state)
   if (valueKind === 'none') return state.op === 'changed'
   if (valueKind === 'bool') return true
   if (valueKind === 'text') return state.value_text.trim().length > 0
@@ -335,7 +410,7 @@ export default function AlertStudio() {
   usePageTitle(pageTitle)
 
   const { data: rules, isLoading, error } = useAlertRules()
-  const { data: channels } = useNotificationChannels()
+  const { data: channels, isLoading: channelsLoading, error: channelsError } = useNotificationChannels()
   const saveRuleMut = useSaveAlertRule()
   const deleteRuleMut = useDeleteAlertRule()
   const toggleRuleMut = useToggleAlertRule()
@@ -401,22 +476,58 @@ export default function AlertStudio() {
     { value: 'false', label: t('notifications.alertStudio.editor.disabled', 'Disabled') },
   ], [t])
 
-  const operatorSelectOptions = useMemo(() => operatorOptions.map(op => ({
+  const signalTypeLabels = useMemo<Record<SignalValueType, string>>(() => ({
+    numeric: t('notifications.alertStudio.signalTypes.numeric', 'Numeric'),
+    text: t('notifications.alertStudio.signalTypes.text', 'Text'),
+    bool: t('notifications.alertStudio.signalTypes.bool', 'Boolean'),
+  }), [t])
+
+  const getSignalCategoryLabel = useCallback((category: string) => (
+    category === customSignalCategory
+      ? t('notifications.alertStudio.signalCategories.custom', 'Custom')
+      : getTemplateCategory(category)
+  ), [getTemplateCategory, t])
+
+  const selectedSignal = useMemo<SignalDefinition | null>(() => {
+    const knownSignal = signalCatalogByName.get(editor.signal_name)
+    if (knownSignal) return knownSignal
+    const signalName = editor.signal_name.trim()
+    if (!signalName) return null
+    return {
+      name: signalName,
+      category: customSignalCategory,
+      value_type: signalTypeForValueKind(editor.value_kind),
+    }
+  }, [editor.signal_name, editor.value_kind])
+
+  const selectedSignalType = selectedSignal?.value_type ?? 'numeric'
+
+  const signalSelectOptions = useMemo(() => {
+    const options = signalCatalog.map(signal => ({
+      value: signal.name,
+      label: t('notifications.alertStudio.signals.optionLabel', '{{name}} - {{type}} - {{category}}', {
+        name: signal.name,
+        type: signalTypeLabels[signal.value_type],
+        category: getSignalCategoryLabel(signal.category),
+      }),
+    }))
+    if (!selectedSignal || signalCatalogByName.has(selectedSignal.name)) return options
+    return [
+      {
+        value: selectedSignal.name,
+        label: t('notifications.alertStudio.signals.customOptionLabel', '{{name}} - {{type}} - Custom', {
+          name: selectedSignal.name,
+          type: signalTypeLabels[selectedSignal.value_type],
+        }),
+      },
+      ...options,
+    ]
+  }, [getSignalCategoryLabel, selectedSignal, signalTypeLabels, t])
+
+  const operatorSelectOptions = useMemo(() => allowedOpsForSignalType(selectedSignalType).map(op => ({
     value: op,
     label: t(`notifications.alertStudio.operators.${op}`, op),
-  })), [t])
-
-  const valueKindOptions = useMemo(() => {
-    const options = [
-      { value: 'number', label: t('notifications.alertStudio.valueKind.number', 'Number') },
-      { value: 'text', label: t('notifications.alertStudio.valueKind.text', 'Text') },
-      { value: 'bool', label: t('notifications.alertStudio.valueKind.bool', 'Boolean') },
-    ]
-    if (editor.op === 'changed') {
-      options.unshift({ value: 'none', label: t('notifications.alertStudio.valueKind.none', 'Any change') })
-    }
-    return options
-  }, [editor.op, t])
+  })), [selectedSignalType, t])
 
   const boolOptions = useMemo(() => [
     { value: 'true', label: t('notifications.alertStudio.boolean.true', 'True') },
@@ -428,12 +539,20 @@ export default function AlertStudio() {
     && editor.signal_name.trim().length > 0
     && editor.cooldown_min > 0
     && hasValidVehicleID(editor.vehicle_id)
+    && isOperatorAllowedForState(editor)
     && hasRequiredTypedValue(editor)
   ), [editor])
 
   const handleSelectRule = useCallback((rule: AlertRule) => {
+    const nextEditor = ruleToEditor(rule)
+    const signalType = signalTypeForName(nextEditor.signal_name, nextEditor.value_kind)
+    const nextOp = coerceOperatorForSignalType(nextEditor.op, signalType)
     setSelectedId(rule.id)
-    setEditor(ruleToEditor(rule))
+    setEditor({
+      ...nextEditor,
+      op: nextOp,
+      value_kind: valueKindForSignalOp(signalType, nextOp),
+    })
   }, [])
 
   const handleNewRule = useCallback(() => {
@@ -446,6 +565,33 @@ export default function AlertStudio() {
     setEditor(templateToEditor(tpl, getTemplateName(tpl), getTemplateMessage(tpl)))
     setShowTemplates(false)
   }, [getTemplateMessage, getTemplateName])
+
+  const handleSignalChange = useCallback((signalName: string) => {
+    setEditor(current => {
+      const signalType = signalName
+        ? signalTypeForName(signalName, current.value_kind)
+        : 'numeric'
+      const nextOp = coerceOperatorForSignalType(current.op, signalType)
+      return {
+        ...current,
+        signal_name: signalName,
+        op: nextOp,
+        value_kind: valueKindForSignalOp(signalType, nextOp),
+      }
+    })
+  }, [])
+
+  const handleOperatorChange = useCallback((nextOp: RuleOp) => {
+    setEditor(current => {
+      const signalType = signalTypeForName(current.signal_name, current.value_kind)
+      const coercedOp = coerceOperatorForSignalType(nextOp, signalType)
+      return {
+        ...current,
+        op: coercedOp,
+        value_kind: valueKindForSignalOp(signalType, coercedOp),
+      }
+    })
+  }, [])
 
   const handleRuleRowKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>, rule: AlertRule) => {
     if (event.key === 'Enter' || event.key === ' ') {
@@ -495,7 +641,17 @@ export default function AlertStudio() {
   }, [allChannelIds, editor.message, t, testChannelIds, testRuleMut])
 
   const renderValueEditor = () => {
-    const valueKind = valueKindForOp(editor.op, editor.value_kind)
+    if (!editor.signal_name.trim()) {
+      return (
+        <EmptyState
+          icon={<Info className="h-8 w-8 text-[var(--text-muted)]" />}
+          title={t('notifications.alertStudio.editor.noSignalTitle', 'Choose a signal')}
+          message={t('notifications.alertStudio.editor.noSignalDescription', 'Select a telemetry signal before entering a comparison value.')}
+        />
+      )
+    }
+
+    const valueKind = valueKindForState(editor)
 
     if (valueKind === 'range') {
       return (
@@ -683,9 +839,13 @@ export default function AlertStudio() {
                 )
               })}
               {filteredTemplates.length === 0 && (
-                <p className="col-span-full text-sm text-[var(--text-muted)] py-8 text-center">
-                  {t('notifications.alertStudio.templates.noMatches', 'No templates match your search')}
-                </p>
+                <div className="col-span-full">
+                  <EmptyState
+                    icon={<Sparkles className="h-8 w-8 text-[var(--text-muted)]" />}
+                    title={t('notifications.alertStudio.templates.noMatchesTitle', 'No templates found')}
+                    message={t('notifications.alertStudio.templates.noMatches', 'No templates match your search')}
+                  />
+                </div>
               )}
             </div>
           </GlassPanel>
@@ -728,9 +888,11 @@ export default function AlertStudio() {
             )}
 
             {!isLoading && rulesList.length > 0 && filteredRules.length === 0 && (
-              <p className="text-xs text-center text-[var(--text-muted)] py-4">
-                {t('notifications.alertStudio.rules.noMatches', 'No rules match "{{search}}"', { search: ruleSearch })}
-              </p>
+              <EmptyState
+                icon={<Search className="h-8 w-8 text-[var(--text-muted)]" />}
+                title={t('notifications.alertStudio.rules.noMatchesTitle', 'No matching rules')}
+                message={t('notifications.alertStudio.rules.noMatches', 'No rules match "{{search}}"', { search: ruleSearch })}
+              />
             )}
 
             <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
@@ -861,14 +1023,23 @@ export default function AlertStudio() {
               </div>
               <div>
                 <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
-                  {t('notifications.alertStudio.editor.signalNameLabel', 'Signal Name')}
+                  {t('notifications.alertStudio.editor.signalNameLabel', 'Signal')}
                 </label>
-                <UiInput
+                <UiSelect
                   className="w-full"
-                  placeholder={t('notifications.alertStudio.editor.signalNamePlaceholder', 'BatteryLevel')}
                   value={editor.signal_name}
-                  onChange={e => setEditor(s => ({ ...s, signal_name: e.target.value }))}
+                  onChange={e => handleSignalChange(e.target.value)}
+                  placeholder={t('notifications.alertStudio.editor.signalNamePlaceholder', 'Select a telemetry signal')}
+                  options={signalSelectOptions}
                 />
+                {selectedSignal && (
+                  <p className="mt-1 text-[10px] text-[var(--text-muted)]">
+                    {t('notifications.alertStudio.editor.signalTypeHint', '{{type}} signal from {{category}}', {
+                      type: signalTypeLabels[selectedSignal.value_type],
+                      category: getSignalCategoryLabel(selectedSignal.category),
+                    })}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
@@ -877,29 +1048,14 @@ export default function AlertStudio() {
                 <UiSelect
                   className="w-full"
                   value={editor.op}
-                  onChange={e => {
-                    const nextOp = e.target.value as RuleOp
-                    setEditor(s => ({ ...s, op: nextOp, value_kind: valueKindForOp(nextOp, s.value_kind) }))
-                  }}
+                  onChange={e => handleOperatorChange(e.target.value as RuleOp)}
                   options={operatorSelectOptions}
+                  disabled={!editor.signal_name.trim()}
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-              {!isRangeOp(editor.op) && !isNumericOnlyOp(editor.op) && (
-                <div>
-                  <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
-                    {t('notifications.alertStudio.editor.valueKindLabel', 'Value Type')}
-                  </label>
-                  <UiSelect
-                    className="w-full"
-                    value={valueKindForOp(editor.op, editor.value_kind)}
-                    onChange={e => setEditor(s => ({ ...s, value_kind: e.target.value as ValueKind }))}
-                    options={valueKindOptions}
-                  />
-                </div>
-              )}
               <div>
                 <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
                   {t('notifications.alertStudio.editor.severityLabel', 'Severity')}
@@ -911,6 +1067,16 @@ export default function AlertStudio() {
                   options={severityOptions}
                 />
               </div>
+              <GlassPanel className="p-3">
+                <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+                  {t('notifications.alertStudio.editor.allowedOperatorsLabel', 'Allowed Operators')}
+                </p>
+                <p className="text-xs text-[var(--text-primary)]">
+                  {editor.signal_name.trim()
+                    ? operatorSelectOptions.map(option => option.label).join('  ')
+                    : t('notifications.alertStudio.editor.allowedOperatorsPlaceholder', 'Select a signal to see its operators')}
+                </p>
+              </GlassPanel>
             </div>
 
             <div className="mb-4">
@@ -968,7 +1134,16 @@ export default function AlertStudio() {
                 </div>
 
                 <GlassPanel className="p-3">
-                  {channelsList.length > 0 ? (
+                  {channelsLoading ? (
+                    <div className="space-y-2">
+                      <Skeleton className="h-5 w-48 rounded-lg" />
+                      <div className="flex flex-wrap gap-2">
+                        {[1, 2, 3].map(i => <Skeleton key={i} className="h-8 w-28 rounded-lg" />)}
+                      </div>
+                    </div>
+                  ) : channelsError ? (
+                    <ErrorDisplay error={channelsError} compact />
+                  ) : channelsList.length > 0 ? (
                     <div>
                       <p className="text-xs text-[var(--text-muted)] mb-1.5">
                         {t('notifications.alertStudio.channels.externalChannels', 'External channels for test notifications:')}
