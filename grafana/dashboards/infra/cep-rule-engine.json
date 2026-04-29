@@ -1,10 +1,10 @@
 {
   "uid": "teslasync-infra-cep",
-  "title": "TeslaSync - CEP Rule Engine",
+  "title": "TeslaSync - Rules Engine",
   "tags": [
     "teslasync",
     "infra",
-    "cep",
+    "typed-rules",
     "alerts"
   ],
   "timezone": "browser",
@@ -17,7 +17,7 @@
   "panels": [
     {
       "type": "stat",
-      "title": "Active CEP Rules",
+      "title": "Active Typed Rules",
       "gridPos": {
         "h": 4,
         "w": 4,
@@ -290,7 +290,7 @@
     },
     {
       "type": "timeseries",
-      "title": "CEP Evaluation Latency",
+      "title": "Rules Engine Evaluation Latency",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -331,7 +331,7 @@
     },
     {
       "type": "timeseries",
-      "title": "CEP Rules Fired by Rule",
+      "title": "Typed Rules Fired by Rule",
       "gridPos": {
         "h": 8,
         "w": 12,

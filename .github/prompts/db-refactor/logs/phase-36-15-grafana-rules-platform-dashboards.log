@@ -1,0 +1,303 @@
+=== PREFLIGHT ===
+PREV_EXISTS=True
+PREV_EXIT_DONE=True
+--- git status --short ---
+=== SURVEY ===
+Allowed dashboard references before changes:
+SURVEY_NOTE=rg executable unavailable in shell; using Select-String
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:2:"uid": "teslasync-infra-cep",
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:3:"title": "TeslaSync - CEP Rule Engine",
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:7:"cep",
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:20:"title": "Active CEP Rules",
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:33:"expr": "teslasync_cep_active_rules",
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:39:"thresholds": {
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:49:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:70:"expr": "rate(teslasync_cep_rules_evaluated_total[5m])",
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:76:"unit": "ops",
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:77:"thresholds": {
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:87:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:115:"thresholds": {
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:133:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:154:"expr": "rate(teslasync_cep_rules_cooldown_skipped_total[5m]) * 60",
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:161:"thresholds": {
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:171:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:192:"expr": "histogram_quantile(0.95, sum by (le) (rate(teslasync_cep_eval_duration_seconds_bucket[5m])))",
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:199:"thresholds": {
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:217:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:244:"thresholds": {
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:254:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:282:"unit": "ops"
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:285:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:293:"title": "CEP Evaluation Latency",
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:306:"expr": "histogram_quantile(0.50, sum by (le) (rate(teslasync_cep_eval_duration_seconds_bucket[5m])))",
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:311:"expr": "histogram_quantile(0.95, sum by (le) (rate(teslasync_cep_eval_duration_seconds_bucket[5m])))",
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:316:"expr": "histogram_quantile(0.99, sum by (le) (rate(teslasync_cep_eval_duration_seconds_bucket[5m])))",
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:326:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:334:"title": "CEP Rules Fired by Rule",
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:347:"expr": "sum by (rule_name) (rate(teslasync_cep_rules_fired_total[5m]))",
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:354:"unit": "ops"
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:357:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:386:"unit": "ops"
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:389:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:410:"expr": "rate(teslasync_cep_rules_cooldown_skipped_total[5m])",
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:422:"unit": "ops"
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:425:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:446:"rawSql": "SELECT a.created_at AS \"Time\", a.severity AS \"Severity\", a.title AS \"Rule\", a.message AS \"Message\", a.type AS \"Type\" FROM alerts a ORDER BY a.created_at DESC LIMIT 20",
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:454:"options": {}
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:460:"asDropdown": false,
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:472:"asDropdown": true,
+D:\repos\teslasync\grafana\dashboards\infra\cep-rule-engine.json:484:"asDropdown": false,
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:57:"fillOpacity": 15,
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:76:"thresholdsStyle": {
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:84:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:139:"fillOpacity": 10,
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:158:"thresholdsStyle": {
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:166:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:234:"mode": "thresholds"
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:236:"thresholds": {
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:258:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:259:"reduceOptions": {
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:314:"fillOpacity": 15,
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:333:"thresholdsStyle": {
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:341:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:387:"mode": "thresholds"
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:389:"thresholds": {
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:404:"options": "failure"
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:406:"properties": [
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:408:"id": "thresholds",
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:423:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:424:"reduceOptions": {
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:472:"title": "Top Endpoints by Request Count",
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:473:"description": "Top 10 endpoints ranked by request rate",
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:483:"mode": "thresholds"
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:485:"thresholds": {
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:497:"cellOptions": {
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:507:"options": "path"
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:509:"properties": [
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:518:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:534:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:550:"expr": "topk(10, sum by (path) (rate(teslasync_http_requests_total[5m])))",
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:585:"fillOpacity": 20,
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:604:"thresholdsStyle": {
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:608:"unit": "ops"
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:612:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:680:"fillOpacity": 15,
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:699:"thresholdsStyle": {
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:703:"unit": "ops"
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:707:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:763:"fillOpacity": 25,
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:782:"thresholdsStyle": {
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:786:"unit": "ops"
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:790:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:831:"asDropdown": false,
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:843:"asDropdown": true,
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:855:"asDropdown": false,
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:862:"tooltip": "TeslaSync - CEP Rule Engine",
+D:\repos\teslasync\grafana\dashboards\infra\api-performance.json:864:"url": "/d/teslasync-infra-cep"
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:51:"thresholds": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:64:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:65:"reduceOptions": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:111:"mode": "thresholds"
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:113:"thresholds": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:135:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:136:"reduceOptions": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:182:"mode": "thresholds"
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:184:"thresholds": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:206:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:207:"reduceOptions": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:256:"thresholds": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:270:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:271:"reduceOptions": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:339:"fillOpacity": 10,
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:358:"thresholdsStyle": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:366:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:402:"description": "Rate of database queries grouped by operation type",
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:421:"fillOpacity": 15,
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:440:"thresholdsStyle": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:444:"unit": "ops"
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:448:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:503:"fillOpacity": 20,
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:522:"thresholdsStyle": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:530:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:585:"fillOpacity": 15,
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:604:"thresholdsStyle": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:608:"unit": "ops"
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:612:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:681:"fillOpacity": 15,
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:700:"thresholdsStyle": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:708:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:763:"fillOpacity": 30,
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:782:"thresholdsStyle": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:786:"unit": "ops"
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:790:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:842:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:843:"reduceOptions": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:899:"description": "Ratio of cache hits to total cache operations",
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:919:"fillOpacity": 15,
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:938:"thresholdsStyle": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:948:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:1004:"fillOpacity": 15,
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:1023:"thresholdsStyle": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:1027:"unit": "ops"
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:1031:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:1086:"fillOpacity": 15,
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:1105:"thresholdsStyle": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:1109:"unit": "ops"
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:1113:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:1148:"title": "Notifications & Operations",
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:1181:"fillOpacity": 15,
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:1200:"thresholdsStyle": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:1204:"unit": "ops"
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:1208:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:1244:"description": "Rate of OAuth token refresh operations by result",
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:1263:"fillOpacity": 15,
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:1282:"thresholdsStyle": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:1286:"unit": "ops"
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:1290:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:1336:"mode": "thresholds"
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:1338:"thresholds": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:1352:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:1353:"reduceOptions": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:1399:"mode": "thresholds"
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:1401:"thresholds": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:1415:"options": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:1416:"reduceOptions": {
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:1457:"asDropdown": false,
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:1464:"tooltip": "TeslaSync - CEP Rule Engine",
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:1466:"url": "/d/teslasync-infra-cep"
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:1469:"asDropdown": true,
+D:\repos\teslasync\grafana\dashboards\infra\infrastructure.json:1481:"asDropdown": false,
+D:\repos\teslasync\grafana\dashboards\system\alerts-notifications.json:24:"asDropdown": false,
+D:\repos\teslasync\grafana\dashboards\system\alerts-notifications.json:36:"asDropdown": true,
+D:\repos\teslasync\grafana\dashboards\system\alerts-notifications.json:48:"asDropdown": false,
+D:\repos\teslasync\grafana\dashboards\system\alerts-notifications.json:86:"thresholds": {
+D:\repos\teslasync\grafana\dashboards\system\alerts-notifications.json:105:"options": {
+D:\repos\teslasync\grafana\dashboards\system\alerts-notifications.json:106:"reduceOptions": {
+D:\repos\teslasync\grafana\dashboards\system\alerts-notifications.json:126:"rawSql": "SELECT COUNT(*) FROM alert_rules WHERE enabled = true",
+D:\repos\teslasync\grafana\dashboards\system\alerts-notifications.json:146:"thresholds": {
+D:\repos\teslasync\grafana\dashboards\system\alerts-notifications.json:165:"options": {
+D:\repos\teslasync\grafana\dashboards\system\alerts-notifications.json:166:"reduceOptions": {
+D:\repos\teslasync\grafana\dashboards\system\alerts-notifications.json:206:"thresholds": {
+D:\repos\teslasync\grafana\dashboards\system\alerts-notifications.json:225:"options": {
+D:\repos\teslasync\grafana\dashboards\system\alerts-notifications.json:226:"reduceOptions": {
+D:\repos\teslasync\grafana\dashboards\system\alerts-notifications.json:266:"thresholds": {
+D:\repos\teslasync\grafana\dashboards\system\alerts-notifications.json:285:"options": {
+D:\repos\teslasync\grafana\dashboards\system\alerts-notifications.json:286:"reduceOptions": {
+D:\repos\teslasync\grafana\dashboards\system\alerts-notifications.json:339:"fillOpacity": 20,
+D:\repos\teslasync\grafana\dashboards\system\alerts-notifications.json:347:"thresholds": {
+D:\repos\teslasync\grafana\dashboards\system\alerts-notifications.json:366:"options": {
+D:\repos\teslasync\grafana\dashboards\system\alerts-notifications.json:414:"mode": "thresholds"
+D:\repos\teslasync\grafana\dashboards\system\alerts-notifications.json:417:"thresholds": {
+D:\repos\teslasync\grafana\dashboards\system\alerts-notifications.json:436:"options": {
+D:\repos\teslasync\grafana\dashboards\system\alerts-notifications.json:452:"rawSql": "SELECT name AS \"Rule\", type AS \"Type\", expression AS \"Expression\", threshold::text AS \"Threshold\", severity AS \"Severity\", CASE WHEN enabled THEN '✅' ELSE '❌' END AS \"Enabled\" FROM alert_rules ORDER BY severity, name",
+D:\repos\teslasync\grafana\dashboards\system\alerts-notifications.json:481:"mode": "thresholds"
+D:\repos\teslasync\grafana\dashboards\system\alerts-notifications.json:484:"thresholds": {
+D:\repos\teslasync\grafana\dashboards\system\alerts-notifications.json:503:"options": {
+D:\repos\teslasync\grafana\dashboards\system\alerts-notifications.json:548:"mode": "thresholds"
+D:\repos\teslasync\grafana\dashboards\system\alerts-notifications.json:551:"thresholds": {
+D:\repos\teslasync\grafana\dashboards\system\alerts-notifications.json:570:"options": {
+D:\repos\teslasync\grafana\dashboards\system\alerts-notifications.json:616:"options": [],
+=== REASONING ===
+Keep Prometheus teslasync_cep_* metric identifiers and dashboard UID/URLs because they are external observability contracts.
+Change only visible dashboard labels/tooltips/tags from CEP to typed rules/rules engine wording.
+Replace legacy alert_rules type/expression/threshold display with typed signal_name/op/operand columns derived from value_* fields.
+=== CHANGES ===
+diff --git a/grafana/dashboards/infra/api-performance.json b/grafana/dashboards/infra/api-performance.json
+index ed3cb382..a74b277d 100644
+--- a/grafana/dashboards/infra/api-performance.json
++++ b/grafana/dashboards/infra/api-performance.json
+@@ -859,7 +859,7 @@
+       "tags": [],
+       "targetBlank": false,
+       "title": "Next Γû╢",
+-      "tooltip": "TeslaSync - CEP Rule Engine",
++      "tooltip": "TeslaSync - Rules Engine",
+       "type": "link",
+       "url": "/d/teslasync-infra-cep"
+     }
+diff --git a/grafana/dashboards/infra/cep-rule-engine.json b/grafana/dashboards/infra/cep-rule-engine.json
+index 6d6ae199..5fd0162a 100644
+--- a/grafana/dashboards/infra/cep-rule-engine.json
++++ b/grafana/dashboards/infra/cep-rule-engine.json
+@@ -1,10 +1,10 @@
+ {
+   "uid": "teslasync-infra-cep",
+-  "title": "TeslaSync - CEP Rule Engine",
++  "title": "TeslaSync - Rules Engine",
+   "tags": [
+     "teslasync",
+     "infra",
+-    "cep",
++    "typed-rules",
+     "alerts"
+   ],
+   "timezone": "browser",
+@@ -17,7 +17,7 @@
+   "panels": [
+     {
+       "type": "stat",
+-      "title": "Active CEP Rules",
++      "title": "Active Typed Rules",
+       "gridPos": {
+         "h": 4,
+         "w": 4,
+@@ -290,7 +290,7 @@
+     },
+     {
+       "type": "timeseries",
+-      "title": "CEP Evaluation Latency",
++      "title": "Rules Engine Evaluation Latency",
+       "gridPos": {
+         "h": 8,
+         "w": 12,
+@@ -331,7 +331,7 @@
+     },
+     {
+       "type": "timeseries",
+-      "title": "CEP Rules Fired by Rule",
++      "title": "Typed Rules Fired by Rule",
+       "gridPos": {
+         "h": 8,
+         "w": 12,
+diff --git a/grafana/dashboards/infra/infrastructure.json b/grafana/dashboards/infra/infrastructure.json
+index 408879ac..0b762d25 100644
+--- a/grafana/dashboards/infra/infrastructure.json
++++ b/grafana/dashboards/infra/infrastructure.json
+@@ -1461,7 +1461,7 @@
+       "tags": [],
+       "targetBlank": false,
+       "title": "ΓùÇ Prev",
+-      "tooltip": "TeslaSync - CEP Rule Engine",
++      "tooltip": "TeslaSync - Rules Engine",
+       "type": "link",
+       "url": "/d/teslasync-infra-cep"
+     },
+diff --git a/grafana/dashboards/system/alerts-notifications.json b/grafana/dashboards/system/alerts-notifications.json
+index 6ce5f3f5..20a3dfd6 100644
+--- a/grafana/dashboards/system/alerts-notifications.json
++++ b/grafana/dashboards/system/alerts-notifications.json
+@@ -449,7 +449,7 @@
+           "editorMode": "code",
+           "format": "table",
+           "rawQuery": true,
+-          "rawSql": "SELECT name AS \"Rule\", type AS \"Type\", expression AS \"Expression\", threshold::text AS \"Threshold\", severity AS \"Severity\", CASE WHEN enabled THEN 'Γ£à' ELSE 'Γ¥î' END AS \"Enabled\" FROM alert_rules ORDER BY severity, name",
++          "rawSql": "SELECT name AS \"Rule\", signal_name AS \"Signal\", op AS \"Op\", CASE WHEN op IN ('between', 'outside') THEN concat(value_min::text, ' - ', value_max::text) WHEN value_num IS NOT NULL THEN value_num::text WHEN value_text IS NOT NULL THEN value_text WHEN value_bool IS NOT NULL THEN value_bool::text ELSE '-' END AS \"Operand\", severity AS \"Severity\", CASE WHEN enabled THEN 'Γ£à' ELSE 'Γ¥î' END AS \"Enabled\" FROM alert_rules ORDER BY severity, name",
+           "refId": "A"
+         }
+       ],
+=== GATE ===
+JSON_VALID=grafana\dashboards\infra\cep-rule-engine.json
+JSON_VALID=grafana\dashboards\infra\api-performance.json
+JSON_VALID=grafana\dashboards\infra\infrastructure.json
+JSON_VALID=grafana\dashboards\system\alerts-notifications.json
+UID_PRESERVED=True
+MISSING_PROM_CEP_METRIC_COUNT=0
+MISSING_STABLE_DASHBOARD_LINK_COUNT=0
+OLD_ALERT_SQL_REF_COUNT=0
+TYPED_ALERT_SQL=True
+VISIBLE_CEP_LABEL_COUNT=0
+UNEXPECTED_STATUS_COUNT=0
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
+COMMIT_ACTION=git add -f allowed dashboard files and phase log, then git commit with requested message

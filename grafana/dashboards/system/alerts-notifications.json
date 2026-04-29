@@ -449,7 +449,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT name AS \"Rule\", type AS \"Type\", expression AS \"Expression\", threshold::text AS \"Threshold\", severity AS \"Severity\", CASE WHEN enabled THEN '✅' ELSE '❌' END AS \"Enabled\" FROM alert_rules ORDER BY severity, name",
+          "rawSql": "SELECT name AS \"Rule\", signal_name AS \"Signal\", op AS \"Op\", CASE WHEN op IN ('between', 'outside') THEN concat(value_min::text, ' - ', value_max::text) WHEN value_num IS NOT NULL THEN value_num::text WHEN value_text IS NOT NULL THEN value_text WHEN value_bool IS NOT NULL THEN value_bool::text ELSE '-' END AS \"Operand\", severity AS \"Severity\", CASE WHEN enabled THEN '✅' ELSE '❌' END AS \"Enabled\" FROM alert_rules ORDER BY severity, name",
           "refId": "A"
         }
       ],
