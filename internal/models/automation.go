@@ -1,9 +1,6 @@
 package models
 
-import (
-	"strings"
-	"time"
-)
+import "time"
 
 const (
 	AutomationStepKindTriggerSignal   = "trigger_signal"
@@ -90,18 +87,6 @@ type AutomationFull struct {
 	Triggers   []any            `json:"triggers,omitempty"`
 	Conditions []any            `json:"conditions,omitempty"`
 	Actions    []any            `json:"actions,omitempty"`
-}
-
-// TriggerType returns the kind discriminator of the first trigger step,
-// or "" if no trigger steps exist. Used by conflict detection and
-// trigger evaluation consumers.
-func (af *AutomationFull) TriggerType() string {
-	for _, s := range af.Steps {
-		if strings.HasPrefix(s.Kind, "trigger_") {
-			return s.Kind
-		}
-	}
-	return ""
 }
 
 // AutoDisabled derives whether this automation has been auto-disabled

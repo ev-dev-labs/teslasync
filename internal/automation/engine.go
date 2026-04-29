@@ -241,7 +241,7 @@ func (e *Engine) Evaluate(ctx context.Context, automationID int64, triggerSnapsh
 				Int64("automation_id", automationID).
 				Str("automation", a.Name).
 				Msg("automation blocked by loop/rapid-fire detection")
-			e.recordSkipped(ctx, a, triggerSnapshot, start, "loop_detected: "+err.Error())
+			e.recordSkipped(ctx, a, triggerSnapshot, triggerKind, start, "loop_detected: "+err.Error())
 			return nil
 		}
 		ctx = newCtx
@@ -254,7 +254,7 @@ func (e *Engine) Evaluate(ctx context.Context, automationID int64, triggerSnapsh
 			Int64("automation_id", automationID).
 			Str("automation", a.Name).
 			Msg("conditions not met, skipping actions")
-		e.recordSkipped(ctx, a, triggerSnapshot, start, "conditions_not_met")
+		e.recordSkipped(ctx, a, triggerSnapshot, triggerKind, start, "conditions_not_met")
 		return nil
 	}
 
@@ -772,7 +772,7 @@ func distanceMeters(lat1, lon1, lat2, lon2 float64) float64 {
 // ── History Helpers ────────────────────────────────────────────────────
 
 // recordSkipped writes a history record for a skipped execution.
-func (e *Engine) recordSkipped(ctx context.Context, a *models.AutomationFull, triggerSnapshot json.RawMessage, start time.Time, reason string) {
+func (e *Engine) recordSkipped(ctx context.Context, a *models.AutomationFull, triggerSnapshot json.RawMessage, triggerKind string, start time.Time, reason string) {
 	durationMs := int(time.Since(start).Milliseconds())
 	completedAt := time.Now().UTC()
 	hist := &models.AutomationHistory{
@@ -782,7 +782,7 @@ func (e *Engine) recordSkipped(ctx context.Context, a *models.AutomationFull, tr
 		TriggeredAt:     start,
 		CompletedAt:     &completedAt,
 		DurationMs:      &durationMs,
-		TriggerType:     a.TriggerType(),
+		TriggerType:     triggerKind,
 		TriggerSnapshot: triggerSnapshot,
 		Status:          "skipped",
 		Error:           &reason,

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // ─── Mock History Counter ───────────────────────────────
@@ -230,15 +232,10 @@ func TestDefaultLimit_AllTriggerTypes(t *testing.T) {
 		triggerType string
 		want        int
 	}{
-		{"cron", DefaultRateLimitCron},
-		{"battery", DefaultRateLimitBattery},
-		{"vehicle_state", DefaultRateLimitState},
-		{"mqtt", DefaultRateLimitMQTT},
-		{"geofence", DefaultRateLimitGeofence},
-		{"webhook", DefaultRateLimitWebhook},
-		{"sunrise_sunset", DefaultRateLimitSunriseSunset},
-		{"energy", DefaultRateLimitEnergy},
-		{"calendar", DefaultRateLimitCalendar},
+		{models.AutomationStepKindTriggerSchedule, DefaultRateLimitSchedule},
+		{models.AutomationStepKindTriggerSignal, DefaultRateLimitSignal},
+		{models.AutomationStepKindTriggerGeofence, DefaultRateLimitGeofence},
+		{models.AutomationStepKindTriggerEvent, DefaultRateLimitEvent},
 	}
 
 	for _, tt := range tests {
@@ -246,6 +243,27 @@ func TestDefaultLimit_AllTriggerTypes(t *testing.T) {
 			got := DefaultLimit(tt.triggerType)
 			if got != tt.want {
 				t.Errorf("DefaultLimit(%q) = %d, want %d", tt.triggerType, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDefaultLimit_LegacyTriggerFamiliesUnavailable(t *testing.T) {
+	legacyTypes := []string{
+		"calendar",
+		"mqtt",
+		"webhook",
+		"sunrise_sunset",
+		"vehicle_state",
+		"battery",
+		"energy",
+	}
+
+	for _, triggerType := range legacyTypes {
+		t.Run(triggerType, func(t *testing.T) {
+			got := DefaultLimit(triggerType)
+			if got != 0 {
+				t.Errorf("DefaultLimit(%q) = %d, want 0 for unsupported legacy trigger family", triggerType, got)
 			}
 		})
 	}

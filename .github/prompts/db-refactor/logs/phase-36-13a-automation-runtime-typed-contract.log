@@ -1,52 +1,35 @@
 === PREFLIGHT ===
-Predecessor DONE: .github\prompts\db-refactor\logs\phase-36-13-automation-import-export-reset.log
+PRED_LOG_EXISTS=True
+PRED_STATUS_DONE=True
 === SURVEY ===
+RUNTIME_FILE_COUNT=58
+LEGACY_RUNTIME_CONFIG_REF_COUNT_PRE=0
+LEGACY_PRESET_REF_COUNT_PRE=0
+TYPED_RUNTIME_KIND_DISPATCH_PRE=True
 === REASONING ===
-Survey found legacy runtime bridges in AutomationFull.TriggerConfig, trigger modules, conflict detection, and presets. Runtime will hydrate CTI children via AutomationStepChildRepo and dispatch typed trigger/condition/action payloads; legacy preset entries and unsupported trigger modules will be removed from active paths.
+Runtime trigger dispatch already validates AutomationFull.Steps and typed Triggers children instead of trigger_config payloads.
+Skipped execution history still derived trigger kind through AutomationFull.TriggerType(); passing the validated typed trigger kind removes that runtime helper dependency.
+Rate-limit defaults exposed legacy trigger family names even though Phase 36 supports only trigger_signal, trigger_geofence, trigger_schedule, and trigger_event.
 === CHANGES ===
-Removed AutomationFull.TriggerConfig bridge; hydrated AutomationFull CTI children through AutomationStepChildRepo in list/detail repo paths; removed legacy trigger modules and legacy preset entries; added typed signal/event trigger adapters; typed runtime now dispatches typed condition/action payloads and rejects raw trigger payloads; removed forbidden positions SQL from maintenance worker.
+Removed AutomationFull.TriggerType() and changed skipped execution history to use the validated typed trigger kind from validateTypedTriggers().
+Updated automation runtime rate-limit defaults to expose only trigger_signal, trigger_geofence, trigger_schedule, and trigger_event.
+Added a regression test that legacy trigger family names receive no Phase 36 runtime default.
 === GATE ===
 LEGACY_RUNTIME_CONFIG_REF_COUNT=0
 LEGACY_PRESET_REF_COUNT=0
 FORBIDDEN_RUNTIME_DATA_SOURCE_COUNT=0
 TYPED_RUNTIME_KIND_DISPATCH=True
-# github.com/ev-dev-labs/teslasync/internal/api [github.com/ev-dev-labs/teslasync/internal/api.test]
-internal\api\automation_handler.go:1821:25: undefined: condition.ParseTimeWindowConfig
-internal\api\automation_handler.go:1832:25: undefined: condition.ParseDayFilterConfig
-internal\api\automation_handler.go:1843:25: undefined: condition.ParseSeasonalConfig
-internal\api\automation_handler.go:1854:25: undefined: condition.ParseCooldownConfig
-internal\api\automation_handler.go:1865:26: undefined: condition.ParseStateCheckConfig
-internal\api\automation_handler.go:1871:26: undefined: condition.ParseLocationConfig
-internal\api\automation_handler.go:1877:26: undefined: condition.ParseVariableCheckConfig
-internal\api\automation_handler.go:2098:20: undefined: action.ParseCommandConfig
-internal\api\automation_handler.go:2101:20: undefined: action.ParseNotifyConfig
-internal\api\automation_handler.go:2104:20: undefined: action.ParseWaitConfig
-internal\api\automation_handler.go:2104:20: too many errors
-ok  	github.com/ev-dev-labs/teslasync/internal/automation	0.183s
-ok  	github.com/ev-dev-labs/teslasync/internal/automation/action	0.173s
-ok  	github.com/ev-dev-labs/teslasync/internal/automation/condition	0.638s
+ok  	github.com/ev-dev-labs/teslasync/internal/automation	0.156s
+ok  	github.com/ev-dev-labs/teslasync/internal/automation/action	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/automation/condition	(cached)
 ?   	github.com/ev-dev-labs/teslasync/internal/automation/presets	[no test files]
-ok  	github.com/ev-dev-labs/teslasync/internal/automation/safety	0.172s
+ok  	github.com/ev-dev-labs/teslasync/internal/automation/safety	0.156s
 ?   	github.com/ev-dev-labs/teslasync/internal/automation/trigger	[no test files]
-FAIL	github.com/ev-dev-labs/teslasync/internal/api [build failed]
-FAIL
-GO_AUTOMATION_RUNTIME_TEST_EXIT=1
-EXIT=1
-STATUS=BLOCKED
-=== GATE ===
-LEGACY_RUNTIME_CONFIG_REF_COUNT=0
-LEGACY_PRESET_REF_COUNT=0
-FORBIDDEN_RUNTIME_DATA_SOURCE_COUNT=0
-TYPED_RUNTIME_KIND_DISPATCH=True
-ok  	github.com/ev-dev-labs/teslasync/internal/automation	0.210s
-ok  	github.com/ev-dev-labs/teslasync/internal/automation/action	0.215s
-ok  	github.com/ev-dev-labs/teslasync/internal/automation/condition	0.671s
-?   	github.com/ev-dev-labs/teslasync/internal/automation/presets	[no test files]
-ok  	github.com/ev-dev-labs/teslasync/internal/automation/safety	(cached)
-?   	github.com/ev-dev-labs/teslasync/internal/automation/trigger	[no test files]
-ok  	github.com/ev-dev-labs/teslasync/internal/api	0.160s
+ok  	github.com/ev-dev-labs/teslasync/internal/api	0.158s
 GO_AUTOMATION_RUNTIME_TEST_EXIT=0
 UNEXPECTED_STATUS_COUNT=0
 EXIT=0
 STATUS=DONE
 === COMMIT ===
+Gate completed with EXIT=0 and STATUS=DONE.
+Committing allowed files for phase-36/13a automation runtime typed contract.

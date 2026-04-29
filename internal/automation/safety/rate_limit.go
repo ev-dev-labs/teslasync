@@ -8,21 +8,18 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+
+	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
-// Recommended default rate limits per trigger type.
-// These are advisory constants for the UI/API layer when creating automations;
-// enforcement uses the automation's max_executions_hour field.
+// Recommended default rate limits per Phase 36 typed trigger kind.
+// These are advisory constants for callers that need a safe starting point;
+// enforcement is driven by run history, not retired trigger JSON payloads.
 const (
-	DefaultRateLimitCron          = 0  // unlimited — cron fires on a known schedule
-	DefaultRateLimitBattery       = 10 // battery events cluster during charge/discharge
-	DefaultRateLimitState         = 20 // state changes can be frequent
-	DefaultRateLimitMQTT          = 30 // external MQTT can be high-frequency
-	DefaultRateLimitGeofence      = 20
-	DefaultRateLimitWebhook       = 30
-	DefaultRateLimitSunriseSunset = 0 // fires at most twice per day
-	DefaultRateLimitEnergy        = 10
-	DefaultRateLimitCalendar      = 0 // fires at most a few times per day
+	DefaultRateLimitSchedule = 0  // unlimited — schedules fire on known cadence
+	DefaultRateLimitSignal   = 20 // signal updates can be frequent
+	DefaultRateLimitGeofence = 20
+	DefaultRateLimitEvent    = 20
 )
 
 // HistoryCounter queries the count of recent executions for an automation.
@@ -116,28 +113,19 @@ func (rl *RateLimiter) Check(ctx context.Context, automationID int64, maxPerHour
 	}, nil
 }
 
-// DefaultLimit returns the recommended default hourly rate limit for a trigger type.
-// Returns 0 (unlimited) for unknown trigger types.
+// DefaultLimit returns the recommended default hourly rate limit for a typed
+// automation trigger kind. Unknown or legacy trigger families are unavailable
+// in the Phase 36 runtime contract and return 0.
 func DefaultLimit(triggerType string) int {
 	switch triggerType {
-	case "cron":
-		return DefaultRateLimitCron
-	case "battery":
-		return DefaultRateLimitBattery
-	case "vehicle_state":
-		return DefaultRateLimitState
-	case "mqtt":
-		return DefaultRateLimitMQTT
-	case "geofence":
+	case models.AutomationStepKindTriggerSchedule:
+		return DefaultRateLimitSchedule
+	case models.AutomationStepKindTriggerSignal:
+		return DefaultRateLimitSignal
+	case models.AutomationStepKindTriggerGeofence:
 		return DefaultRateLimitGeofence
-	case "webhook":
-		return DefaultRateLimitWebhook
-	case "sunrise_sunset":
-		return DefaultRateLimitSunriseSunset
-	case "energy":
-		return DefaultRateLimitEnergy
-	case "calendar":
-		return DefaultRateLimitCalendar
+	case models.AutomationStepKindTriggerEvent:
+		return DefaultRateLimitEvent
 	default:
 		return 0
 	}
