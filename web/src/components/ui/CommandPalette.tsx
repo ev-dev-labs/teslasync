@@ -5,7 +5,7 @@ import { Search, Command, ArrowRight, Zap, ChevronLeft, Car } from 'lucide-react
 import { useTranslation } from 'react-i18next'
 import { Input } from '@/components/ui'
 import { cn } from '@/lib/cn'
-import { navSections } from '@/components/layout/Layout'
+import { navSearchKeywords, navSections } from '@/components/layout/Layout'
 import { useVehicles } from '@/api/hooks/useVehicles'
 import { useVehicleCommand } from '@/api/hooks/useVehicleCommand'
 import { COMMANDS, type CommandDef } from '@/features/system/commands'
@@ -168,14 +168,22 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
 
   const navItems: PaletteItem[] = useMemo(() =>
     navSections.flatMap(section =>
-      section.items.map(item => ({
-        id: item.to,
-        label: item.label,
-        section: section.title,
-        icon: <item.icon className="h-4 w-4" />,
-        action: () => go(item.to),
-        type: 'navigate' as const,
-      }))
+      section.items.map(item => {
+        const keywords = navSearchKeywords[item.to] ?? []
+        const sublabel = keywords.length > 0
+          ? `${section.title} · ${keywords.slice(0, 3).join(', ')}`
+          : section.title
+        return {
+          id: item.to,
+          label: item.label,
+          section: section.title,
+          icon: <item.icon className="h-4 w-4" />,
+          action: () => go(item.to),
+          keywords,
+          sublabel,
+          type: 'navigate' as const,
+        }
+      })
     ),
   [go])
 
@@ -246,11 +254,15 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
   const filtered = useMemo(() => {
     if (!query.trim()) return allItems
     const q = query.toLowerCase()
-    return allItems.filter(cmd =>
-      cmd.label.toLowerCase().includes(q) ||
-      cmd.section.toLowerCase().includes(q) ||
-      (cmd.keywords ?? []).some(k => k.includes(q))
-    )
+    return allItems.filter(cmd => {
+      const haystack = [
+        cmd.label,
+        cmd.section,
+        cmd.sublabel ?? '',
+        ...(cmd.keywords ?? []),
+      ]
+      return haystack.some(value => value.toLowerCase().includes(q))
+    })
   }, [allItems, query])
 
   const displayItems = mode === 'vehicle-select' ? vehicleItems : filtered

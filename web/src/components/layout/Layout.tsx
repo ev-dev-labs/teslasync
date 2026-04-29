@@ -27,7 +27,6 @@ import {
   Clock,
   Milestone,
   Target,
-  Navigation,
   Activity,
   GitCompare,
   ArrowLeftRight,
@@ -38,7 +37,6 @@ import {
   Wrench,
   Thermometer,
   Lock,
-  Cog,
   TrendingUp,
   TrendingDown,
   DollarSign,
@@ -60,7 +58,6 @@ import {
   Workflow,
   BellPlus,
   Cloud,
-  Grid3X3,
   PieChart,
   ShieldCheck,
   CircleDot,
@@ -72,7 +69,6 @@ import {
   Cpu,
   KeyRound,
   ScanSearch,
-  Map,
   RadioTower,
   SlidersHorizontal,
   Award,
@@ -86,8 +82,10 @@ import {
   Key,
   Home,
   Server,
+  ChevronDown,
+  Star,
 } from 'lucide-react'
-import { useState, useRef, useEffect } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { useTour, isTourCompleted } from '@/hooks/useTour'
 import { GotoIndicator } from '../feedback/GotoIndicator'
@@ -96,12 +94,13 @@ import { TourOverlay } from '../feedback/TourOverlay'
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
-import clsx from 'clsx'
+import { cn } from '@/lib/cn'
 import { BottomTabBar, BOTTOM_TAB_PATHS } from './BottomTabBar'
 import { CommandPalette, CommandPaletteTrigger } from '../ui/CommandPalette'
 import { ServiceStatusBanner, SystemHealthDot } from '../data-display/ServiceStatus'
 import Logo from '../ui/Logo'
 import { Button } from '@/components/ui'
+import { Breadcrumbs } from './Breadcrumbs'
 
 import { MAIN_TOUR_STEPS } from '@/features/onboarding/tourSteps'
 import { request } from '@/api/client'
@@ -151,6 +150,112 @@ const navI18nKeys: Record<string, string> = {
   'Redis Signals': 'nav.redisSignals',
 }
 
+export const navSearchKeywords: Record<string, string[]> = {
+  '/': ['home', 'overview', 'start', 'summary'],
+  '/live': ['map', 'location', 'tracking', 'realtime', 'vehicle position'],
+  '/vehicles': ['cars', 'fleet', 'garage', 'vehicle list'],
+  '/compare': ['comparison', 'vehicles', 'side by side'],
+  '/weekly-digest': ['digest', 'weekly', 'summary', 'report'],
+  '/navigation': ['route', 'directions', 'map', 'nav'],
+  '/drives': ['drive history', 'sessions', 'trips'],
+  '/trips': ['trip history', 'journeys', 'routes'],
+  '/trip-planner': ['plan trip', 'route planner', 'range planning'],
+  '/drive-score': ['score', 'driving score', 'safe driving'],
+  '/speed-profile': ['speed', 'profile', 'velocity'],
+  '/driving-dynamics': ['dynamics', 'handling', 'performance', 'acceleration'],
+  '/regen-efficiency': ['regen', 'regenerative', 'braking', 'recovery'],
+  '/battery': ['battery', 'health', 'range', 'capacity', 'soh'],
+  '/battery-cells': ['cells', 'cell voltage', 'battery module'],
+  '/battery-degradation': ['degradation', 'battery loss', 'range loss', 'aging'],
+  '/charging': ['charge', 'charging sessions', 'plug', 'charger'],
+  '/tesla-charging-history': ['supercharger', 'tesla charging', 'charge cost', 'invoice', 'receipt'],
+  '/charging-heatmap': ['charging patterns', 'heatmap', 'schedule', 'when charging'],
+  '/charging-curve': ['curve', 'charging speed', 'kw', 'power curve'],
+  '/smart-charge': ['smart charging', 'schedule', 'automation'],
+  '/powershare': ['power share', 'home backup', 'v2h'],
+  '/energy': ['energy usage', 'consumption', 'kwh'],
+  '/energy-flow': ['flow', 'energy graph', 'power path'],
+  '/power-flow': ['power', 'flow', 'dashboard'],
+  '/energy-products': ['powerwall', 'solar', 'home energy'],
+  '/efficiency': ['efficiency', 'wh per mile', 'consumption'],
+  '/route-efficiency': ['route', 'efficiency', 'trip energy'],
+  '/projected-range': ['range', 'forecast', 'projection'],
+  '/mileage': ['odometer', 'miles', 'distance'],
+  '/temperature-impact': ['temperature', 'weather', 'climate impact'],
+  '/cost-analysis': ['cost', 'money', 'expense', 'savings'],
+  '/tco': ['ownership', 'total cost', 'tco'],
+  '/digital-twin': ['digital twin', 'vehicle state', 'doors', 'windows', 'lights'],
+  '/tire-pressure': ['tires', 'tpms', 'pressure'],
+  '/climate-control': ['climate', 'temperature', 'hvac', 'ac', 'heat'],
+  '/drivetrain-health': ['motor', 'drive unit', 'health'],
+  '/vampire-drain': ['vampire', 'phantom drain', 'idle drain'],
+  '/sleep-efficiency': ['sleep', 'standby', 'idle'],
+  '/software-updates': ['software', 'firmware', 'ota'],
+  '/maintenance': ['service', 'maintenance', 'repairs'],
+  '/analytics': ['analytics', 'insights', 'charts'],
+  '/statistics': ['stats', 'numbers', 'metrics'],
+  '/lifetime-stats': ['lifetime', 'all time', 'totals'],
+  '/vehicle-comparison': ['compare vehicles', 'fleet comparison'],
+  '/timeline': ['timeline', 'events', 'history'],
+  '/locations': ['places', 'locations', 'visited'],
+  '/commands': ['commands', 'control', 'remote'],
+  '/command-history': ['command log', 'remote history'],
+  '/automations': ['automation', 'rules', 'workflows'],
+  '/alerts': ['alerts', 'warnings', 'notifications'],
+  '/alert-studio': ['alert rules', 'studio', 'conditions'],
+  '/geofences': ['geofence', 'zones', 'places'],
+  '/notifications': ['notifications', 'messages'],
+  '/guard-mode': ['guard', 'sentry', 'security'],
+  '/chatbot': ['ai', 'assistant', 'chat'],
+  '/media-player': ['media', 'music', 'player'],
+  '/tesla-account': ['account', 'tesla login', 'oauth'],
+  '/system-status': ['system', 'status', 'health'],
+  '/api-logs': ['api logs', 'requests', 'debug'],
+  '/fleet-api': ['fleet api', 'tesla api'],
+  '/settings': ['settings', 'preferences', 'configuration'],
+  '/api-keys': ['keys', 'tokens', 'api key'],
+  '/admin': ['admin', 'administration'],
+  '/data-export': ['export', 'download', 'csv'],
+  '/backup': ['backup', 'restore'],
+  '/data-repair': ['repair', 'data repair', 'fix sessions'],
+  '/dev-tools': ['developer', 'tools', 'debug'],
+  '/api-playground': ['playground', 'api test'],
+  '/roadmap': ['roadmap', 'plans'],
+  '/changelog': ['changes', 'release notes'],
+  '/live-monitor': ['live signals', 'monitor', 'telemetry'],
+  '/signal-log': ['signals', 'signal log', 'telemetry log'],
+  '/signal-explorer': ['explore signals', 'signal explorer'],
+  '/signal-diff': ['diff', 'signal compare'],
+  '/signal-gaps': ['gaps', 'missing signals'],
+  '/state-debugger': ['state machine', 'debugger', 'fsm'],
+  '/mqtt-inspector': ['mqtt', 'broker', 'telemetry stream'],
+  '/redis-signals': ['redis', 'cache', 'signals'],
+  '/db-health': ['database', 'db', 'postgres'],
+  '/anomaly-detection': ['anomaly', 'outliers', 'diagnostics'],
+}
+
+const DEFAULT_PINNED_NAV_PATHS = ['/', '/digital-twin', '/vehicles', '/charging', '/live']
+const MAX_PINNED_NAV_ITEMS = 8
+const MAX_RECENT_NAV_ITEMS = 3
+const EXPANDED_NAV_STORAGE_KEY = 'teslasync-expanded-nav-sections'
+const RECENT_NAV_STORAGE_KEY = 'teslasync-recent-nav-paths'
+const PINNED_NAV_STORAGE_KEY = 'teslasync-pinned-nav-paths'
+
+const SECTION_ICON_STYLES: Record<string, { accent: string; surface: string; ring: string; dot: string }> = {
+  Monitor: { accent: 'text-sky-300', surface: 'bg-sky-400/10', ring: 'ring-sky-400/20', dot: 'bg-sky-400' },
+  Drive: { accent: 'text-violet-300', surface: 'bg-violet-400/10', ring: 'ring-violet-400/20', dot: 'bg-violet-400' },
+  'Charge & Battery': { accent: 'text-emerald-300', surface: 'bg-emerald-400/10', ring: 'ring-emerald-400/20', dot: 'bg-emerald-400' },
+  Energy: { accent: 'text-amber-300', surface: 'bg-amber-400/10', ring: 'ring-amber-400/20', dot: 'bg-amber-400' },
+  Vehicle: { accent: 'text-cyan-300', surface: 'bg-cyan-400/10', ring: 'ring-cyan-400/20', dot: 'bg-cyan-400' },
+  Analyze: { accent: 'text-indigo-300', surface: 'bg-indigo-400/10', ring: 'ring-indigo-400/20', dot: 'bg-indigo-400' },
+  Manage: { accent: 'text-rose-300', surface: 'bg-rose-400/10', ring: 'ring-rose-400/20', dot: 'bg-rose-400' },
+  Assist: { accent: 'text-fuchsia-300', surface: 'bg-fuchsia-400/10', ring: 'ring-fuchsia-400/20', dot: 'bg-fuchsia-400' },
+  System: { accent: 'text-slate-300', surface: 'bg-slate-400/10', ring: 'ring-slate-400/20', dot: 'bg-slate-400' },
+  Data: { accent: 'text-teal-300', surface: 'bg-teal-400/10', ring: 'ring-teal-400/20', dot: 'bg-teal-400' },
+  Developer: { accent: 'text-orange-300', surface: 'bg-orange-400/10', ring: 'ring-orange-400/20', dot: 'bg-orange-400' },
+  Diagnostics: { accent: 'text-lime-300', surface: 'bg-lime-400/10', ring: 'ring-lime-400/20', dot: 'bg-lime-400' },
+}
+
 type SSEState = 'connected' | 'reconnecting'
 
 function SSEStatusDot({ state }: { state: SSEState }) {
@@ -158,7 +263,7 @@ function SSEStatusDot({ state }: { state: SSEState }) {
   return (
     <span
       title={isConnected ? 'Live updates active' : 'Reconnecting live updates…'}
-      className={clsx(
+      className={cn(
         'inline-block h-2 w-2 rounded-full shrink-0',
         isConnected ? 'bg-neon-green' : 'bg-amber-400 animate-pulse',
       )}
@@ -169,44 +274,44 @@ function SSEStatusDot({ state }: { state: SSEState }) {
 
 export const navSections = [
   {
-    title: 'Overview',
+    title: 'Monitor',
     items: [
       { to: '/', icon: LayoutDashboard, label: 'Dashboard', color: 'text-blue-400' },
       { to: '/live', icon: Radar, label: 'Live Map', color: 'text-emerald-400' },
       { to: '/vehicles', icon: Car, label: 'Fleet', color: 'text-sky-400', dataTour: 'vehicle-section' },
       { to: '/compare', icon: GitCompare, label: 'Compare', color: 'text-orange-400' },
       { to: '/weekly-digest', icon: CalendarCheck, label: 'Weekly Digest', color: 'text-purple-400' },
-      { to: '/navigation', icon: Navigation, label: 'Navigation', color: 'text-teal-400' },
+      { to: '/navigation', icon: Signpost, label: 'Navigation', color: 'text-teal-400' },
     ],
   },
   {
-    title: 'Driving',
+    title: 'Drive',
     items: [
       { to: '/drives', icon: Route, label: 'Drives', color: 'text-violet-400' },
-      { to: '/trips', icon: MapPinned, label: 'Trips', color: 'text-teal-400' },
-      { to: '/trip-planner', icon: MapPin, label: 'Trip Planner', color: 'text-emerald-400' },
+      { to: '/trips', icon: Milestone, label: 'Trips', color: 'text-teal-400' },
+      { to: '/trip-planner', icon: MapPinned, label: 'Trip Planner', color: 'text-emerald-400' },
       { to: '/drive-score', icon: Trophy, label: 'Drive Score', color: 'text-yellow-400' },
       { to: '/speed-profile', icon: Gauge, label: 'Speed Profile', color: 'text-rose-400' },
-      { to: '/driving-dynamics', icon: Cog, label: 'Driving Dynamics', color: 'text-red-400' },
+      { to: '/driving-dynamics', icon: Activity, label: 'Driving Dynamics', color: 'text-red-400' },
       { to: '/regen-efficiency', icon: Recycle, label: 'Regen Braking', color: 'text-green-400' },
     ],
   },
   {
-    title: 'Battery & Charging',
+    title: 'Charge & Battery',
     items: [
       { to: '/battery', icon: HeartPulse, label: 'Battery Health', color: 'text-rose-400' },
       { to: '/battery-cells', icon: Battery, label: 'Battery Cells', color: 'text-purple-400' },
       { to: '/battery-degradation', icon: TrendingDown, label: 'Degradation', color: 'text-orange-400' },
       { to: '/charging', icon: BatteryCharging, label: 'Charging', color: 'text-green-400' },
       { to: '/tesla-charging-history', icon: Receipt, label: 'Tesla Charge History', color: 'text-emerald-400' },
-      { to: '/charging-heatmap', icon: Grid3X3, label: 'Charging Patterns', color: 'text-cyan-400' },
+      { to: '/charging-heatmap', icon: CalendarClock, label: 'Charging Patterns', color: 'text-cyan-400' },
       { to: '/charging-curve', icon: TrendingUp, label: 'Charging Curve', color: 'text-lime-400' },
       { to: '/smart-charge', icon: CalendarClock, label: 'Smart Charge', color: 'text-cyan-400' },
       { to: '/powershare', icon: Zap, label: 'Powershare', color: 'text-amber-400' },
     ],
   },
   {
-    title: 'Energy & Efficiency',
+    title: 'Energy',
     items: [
       { to: '/energy', icon: Bolt, label: 'Energy', color: 'text-yellow-400' },
       { to: '/energy-flow', icon: ArrowRightLeft, label: 'Energy Flow', color: 'text-yellow-400' },
@@ -235,18 +340,18 @@ export const navSections = [
     ],
   },
   {
-    title: 'Analytics',
+    title: 'Analyze',
     items: [
       { to: '/analytics', icon: BarChart3, label: 'Analytics', color: 'text-indigo-400' },
       { to: '/statistics', icon: PieChart, label: 'Statistics', color: 'text-cyan-400' },
       { to: '/lifetime-stats', icon: Award, label: 'Lifetime Stats', color: 'text-yellow-400' },
       { to: '/vehicle-comparison', icon: ArrowLeftRight, label: 'Vehicle Comparison', color: 'text-orange-400', minVehicles: 2 },
       { to: '/timeline', icon: Clock, label: 'Timeline', color: 'text-sky-400' },
-      { to: '/locations', icon: Map, label: 'Locations', color: 'text-emerald-400' },
+      { to: '/locations', icon: MapPin, label: 'Locations', color: 'text-emerald-400' },
     ],
   },
   {
-    title: 'Control',
+    title: 'Manage',
     items: [
       { to: '/commands', icon: Gamepad2, label: 'Commands', color: 'text-fuchsia-400', dataTour: 'commands-section' },
       { to: '/command-history', icon: History, label: 'Command History', color: 'text-violet-400' },
@@ -261,7 +366,7 @@ export const navSections = [
     ],
   },
   {
-    title: 'AI',
+    title: 'Assist',
     items: [
       { to: '/chatbot', icon: Bot, label: 'Chatbot', color: 'text-cyan-400' },
       { to: '/media-player', icon: Headphones, label: 'Media Player', color: 'text-pink-400' },
@@ -313,8 +418,64 @@ export const navSections = [
   },
 ]
 
+type NavSection = (typeof navSections)[number]
+type NavItem = NavSection['items'][number]
+
+function isVisibleNavItem(item: NavItem, vehicleCount: number) {
+  return !('minVehicles' in item) || vehicleCount >= (item as { minVehicles?: number }).minVehicles!
+}
+
+function isActiveNavPath(pathname: string, to: string) {
+  return to === '/'
+    ? pathname === '/'
+    : pathname === to || pathname.startsWith(to + '/')
+}
+
+function findNavItemByPath(pathname: string) {
+  for (const section of navSections) {
+    const item = section.items.find(candidate => isActiveNavPath(pathname, candidate.to))
+    if (item) return { section, item }
+  }
+  return null
+}
+
+function findNavItemByExactPath(to: string) {
+  for (const section of navSections) {
+    const item = section.items.find(candidate => candidate.to === to)
+    if (item) return { section, item }
+  }
+  return null
+}
+
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(() => {
+    try {
+      const stored = window.localStorage.getItem(EXPANDED_NAV_STORAGE_KEY)
+      const parsed = stored ? JSON.parse(stored) as string[] : []
+      return new Set(parsed.length > 0 ? parsed : ['Monitor'])
+    } catch {
+      return new Set(['Monitor'])
+    }
+  })
+  const [recentNavPaths, setRecentNavPaths] = useState<string[]>(() => {
+    try {
+      const stored = window.localStorage.getItem(RECENT_NAV_STORAGE_KEY)
+      const parsed = stored ? JSON.parse(stored) as string[] : []
+      return parsed.slice(0, MAX_RECENT_NAV_ITEMS)
+    } catch {
+      return []
+    }
+  })
+  const [pinnedNavPaths, setPinnedNavPaths] = useState<string[]>(() => {
+    try {
+      const stored = window.localStorage.getItem(PINNED_NAV_STORAGE_KEY)
+      const parsed = stored ? JSON.parse(stored) as string[] : []
+      return (stored ? parsed : DEFAULT_PINNED_NAV_PATHS).slice(0, MAX_PINNED_NAV_ITEMS)
+    } catch {
+      return DEFAULT_PINNED_NAV_PATHS
+    }
+  })
   const location = useLocation()
   const { t } = useTranslation()
 
@@ -364,12 +525,128 @@ export default function Layout() {
     refetchInterval: 60_000,
   })
   const unreadAlerts = alerts?.filter(a => !a.is_read).length ?? 0
+  const vehicleCount = vehicles?.length ?? 0
   const onlineVehicles = vehicles?.filter(v => v.state === 'online').length ?? 0
   const isConnected = !!primaryState?.live
 
   // Stale sessions count for Data Repair badge
   const { data: staleSessions } = useQuery({ queryKey: ['stale-sessions-sidebar'], queryFn: () => request<StaleSessionsResponse>('/data-repair/stale-sessions'), refetchInterval: 60_000, retry: 1 })
   const staleCount = (staleSessions?.stale_charging?.length ?? 0) + (staleSessions?.stale_drives?.length ?? 0)
+
+  const activeNavEntry = useMemo(() => findNavItemByPath(location.pathname), [location.pathname])
+  const activeSectionTitle = activeNavEntry?.section.title
+  const visibleNavSections = useMemo(() =>
+    navSections
+      .map(section => ({
+        ...section,
+        items: section.items.filter(item => isVisibleNavItem(item, vehicleCount)),
+      }))
+      .filter(section => section.items.length > 0),
+    [vehicleCount],
+  )
+  const pinnedNavItems = useMemo(() =>
+    pinnedNavPaths
+      .map(path => findNavItemByExactPath(path))
+      .filter((entry): entry is { section: NavSection; item: NavItem } => Boolean(entry))
+      .map(entry => entry.item)
+      .filter(item => isVisibleNavItem(item, vehicleCount)),
+    [pinnedNavPaths, vehicleCount],
+  )
+  const recentNavItems = useMemo(() =>
+    recentNavPaths
+      .map(path => findNavItemByExactPath(path))
+      .filter((entry): entry is { section: NavSection; item: NavItem } => Boolean(entry))
+      .map(entry => entry.item)
+      .filter(item => isVisibleNavItem(item, vehicleCount)),
+    [recentNavPaths, vehicleCount],
+  )
+
+  useEffect(() => {
+    if (!activeSectionTitle) return
+    setExpandedSections(prev => {
+      if (prev.has(activeSectionTitle)) return prev
+      const next = new Set(prev)
+      next.add(activeSectionTitle)
+      return next
+    })
+  }, [activeSectionTitle])
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(EXPANDED_NAV_STORAGE_KEY, JSON.stringify([...expandedSections]))
+    } catch {
+      // Ignore storage failures; navigation still works without persisted sections.
+    }
+  }, [expandedSections])
+
+  useEffect(() => {
+    const activeTo = activeNavEntry?.item.to
+    if (!activeTo || activeTo === '/' || pinnedNavPaths.includes(activeTo)) return
+    setRecentNavPaths(prev => {
+      const next = [activeTo, ...prev.filter(path => path !== activeTo)].slice(0, MAX_RECENT_NAV_ITEMS)
+      return next.join('|') === prev.join('|') ? prev : next
+    })
+  }, [activeNavEntry, pinnedNavPaths])
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(RECENT_NAV_STORAGE_KEY, JSON.stringify(recentNavPaths))
+    } catch {
+      // Ignore storage failures; recent links are convenience-only.
+    }
+  }, [recentNavPaths])
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(PINNED_NAV_STORAGE_KEY, JSON.stringify(pinnedNavPaths))
+    } catch {
+      // Ignore storage failures; pinned links still work for the current session.
+    }
+  }, [pinnedNavPaths])
+
+  const toggleSection = useCallback((title: string) => {
+    setExpandedSections(prev => {
+      const next = new Set(prev)
+      if (next.has(title) && title !== activeSectionTitle) {
+        next.delete(title)
+      } else {
+        next.add(title)
+      }
+      return next
+    })
+  }, [activeSectionTitle])
+  const expandedSectionCount = visibleNavSections.filter(section => expandedSections.has(section.title)).length
+  const expandAllSections = useCallback(() => {
+    setExpandedSections(new Set(visibleNavSections.map(section => section.title)))
+  }, [visibleNavSections])
+  const collapseAllSections = useCallback(() => {
+    setExpandedSections(new Set())
+  }, [])
+
+  const navLabel = useCallback((label: string) => {
+    if (!navI18nKeys[label]) return label
+    const translated = t(navI18nKeys[label])
+    return translated === navI18nKeys[label] ? label : translated
+  }, [t])
+  const activeNavPath = activeNavEntry?.item.to
+  const activeIsPinned = activeNavPath ? pinnedNavPaths.includes(activeNavPath) : false
+  const pinNavPath = useCallback((to: string) => {
+    setPinnedNavPaths(prev => {
+      if (prev.includes(to)) return prev
+      return [to, ...prev].slice(0, MAX_PINNED_NAV_ITEMS)
+    })
+    setRecentNavPaths(prev => prev.filter(path => path !== to))
+  }, [])
+  const unpinNavPath = useCallback((to: string) => {
+    setPinnedNavPaths(prev => prev.filter(path => path !== to))
+  }, [])
+  const currentPageTitle = activeNavEntry ? navLabel(activeNavEntry.item.label) : t('nav.currentPage', 'Current page')
+  const breadcrumbItems = activeNavEntry
+    ? [
+        { label: activeNavEntry.section.title },
+        { label: currentPageTitle },
+      ]
+    : []
 
   const uptimeStr= (() => {
     const secs = versionInfo?.uptime_seconds
@@ -388,6 +665,69 @@ export default function Layout() {
       : ''
 
   const mainRef = useRef<HTMLElement>(null)
+  const renderNavLink = (item: NavItem, compact = false) => {
+    const { to, icon: Icon, label, color, ...rest } = item
+    const dataTour = 'dataTour' in rest ? (rest as { dataTour?: string }).dataTour : undefined
+    const isActive = isActiveNavPath(location.pathname, to)
+    const isInTabBar = BOTTOM_TAB_PATHS.has(to)
+    const sectionStyle = SECTION_ICON_STYLES[findNavItemByExactPath(to)?.section.title ?? '']
+    return (
+      <NavLink
+        key={to}
+        to={to}
+        onClick={() => setSidebarOpen(false)}
+        aria-label={label}
+        aria-current={isActive ? 'page' : undefined}
+        data-tour={dataTour}
+        className={cn(
+          'group relative flex min-h-9 items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-[13px] font-medium transition-all duration-200',
+          isInTabBar && 'opacity-50 lg:opacity-100'
+        )}
+      >
+        {isActive && (
+          <motion.div
+            layoutId={compact ? `nav-active-${to}` : 'nav-active'}
+            className="absolute inset-0 rounded-xl bg-white/[0.06] border border-white/[0.08]"
+            style={{ boxShadow: '0 0 20px rgba(0, 240, 255, 0.05)' }}
+            transition={{ type: 'spring', bounce: 0.15, duration: 0.5 }}
+          />
+        )}
+        <span
+          className={cn(
+            'relative z-10 grid shrink-0 place-items-center border border-white/[0.06] transition-all duration-200',
+            'h-7 w-7 rounded-lg',
+            sectionStyle?.surface ?? 'bg-white/[0.035]',
+            sectionStyle?.ring && 'ring-1',
+            sectionStyle?.ring,
+            isActive ? 'bg-white/[0.09] ring-white/20' : 'group-hover:bg-white/[0.07] group-hover:ring-white/15'
+          )}
+        >
+          <Icon className={cn('h-4 w-4 transition-all duration-200', color, isActive ? 'opacity-100 drop-shadow-[0_0_8px_currentColor]' : 'opacity-75 group-hover:opacity-100')} />
+        </span>
+        <span className={cn('relative z-10 min-w-0 truncate transition-colors', isActive ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]')}>
+          {navLabel(label)}
+        </span>
+        {to === '/alerts' && unreadAlerts > 0 && (
+          <span className="relative z-10 ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-neon-red/20 px-1.5 text-[10px] font-bold text-neon-red ring-1 ring-neon-red/30">
+            {unreadAlerts > 9 ? '9+' : unreadAlerts}
+          </span>
+        )}
+        {to === '/vehicles' && vehicles && vehicles.length > 0 && (
+          <span className="relative z-10 ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-neon-cyan/10 px-1.5 text-[10px] font-bold text-neon-cyan ring-1 ring-neon-cyan/20">
+            {vehicles.length}
+          </span>
+        )}
+        {to === '/data-repair' && staleCount > 0 && (
+          <span className="relative z-10 ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-neon-amber/20 px-1.5 text-[10px] font-bold text-neon-amber ring-1 ring-neon-amber/30">
+            {staleCount > 9 ? '9+' : staleCount}
+          </span>
+        )}
+        {isActive && !compact && (
+          <span className="absolute right-3 h-1.5 w-1.5 rounded-full bg-neon-cyan shadow-[0_0_6px_rgba(0,240,255,0.5)]" />
+        )}
+      </NavLink>
+    )
+  }
 
   return (
     <div className="flex h-dvh bg-[var(--bg)] text-white/90">
@@ -426,7 +766,7 @@ export default function Layout() {
         aria-label="Main navigation"
         data-tour="sidebar"
         data-sidebar-open={sidebarOpen}
-        className={clsx(
+        className={cn(
           'fixed left-0 bottom-0 z-[66] w-[clamp(240px,70vw,256px)] transform transition-transform duration-300 ease-out lg:top-0 lg:static lg:z-auto lg:w-64 lg:translate-x-0',
           'border-r border-white/[0.06] backdrop-blur-xl flex flex-col bg-white/[0.04]',
           sidebarOpen ? 'top-0 translate-x-0' : 'top-14 -translate-x-full'
@@ -472,78 +812,159 @@ export default function Layout() {
 
         {/* Navigation */}
         <nav
-          className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-2 lg:py-4 px-3 space-y-4 lg:space-y-6 scrollbar-thin"
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-2 lg:py-4 px-3 space-y-3 scrollbar-thin"
           style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehaviorY: 'contain' }}
         >
-
-          {navSections.map(section => (
-            <div key={section.title}>
-              <p className="mb-1 lg:mb-2 px-4 text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)]">
-                {section.title}
-              </p>
-              <div className="space-y-0.5">
-                {section.items
-                  .filter((item) => !('minVehicles' in item) || (vehicles?.length ?? 0) >= (item as { minVehicles?: number }).minVehicles!)
-                  .map(({ to, icon: Icon, label, color, ...rest }) => {
-                  const dataTour = 'dataTour' in rest ? (rest as { dataTour?: string }).dataTour : undefined;
-                  const isActive = to === '/'
-                    ? location.pathname === '/'
-                    : location.pathname === to || location.pathname.startsWith(to + '/')
-                  const isInTabBar = BOTTOM_TAB_PATHS.has(to)
-                  return (
-                    <NavLink
-                      key={to}
-                      to={to}
-                      onClick={() => setSidebarOpen(false)}
-                      aria-label={label}
-                      aria-current={isActive ? 'page' : undefined}
-                      data-tour={dataTour}
-                      className={clsx(
-                        'group relative flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200',
-                        isInTabBar && 'opacity-50 lg:opacity-100'
-                      )}
-                    >
-                      {isActive && (
-                        <motion.div
-                          layoutId="nav-active"
-                          className="absolute inset-0 rounded-xl bg-white/[0.06] border border-white/[0.08]"
-                          style={{ boxShadow: '0 0 20px rgba(0, 240, 255, 0.05)' }}
-                          transition={{ type: 'spring', bounce: 0.15, duration: 0.5 }}
-                        />
-                      )}
-                      <span className="relative z-10">
-                        <Icon className={clsx('h-[18px] w-[18px] transition-all duration-200', color, isActive ? 'opacity-100 drop-shadow-[0_0_6px_currentColor]' : 'opacity-40 group-hover:opacity-80')} />
-                      </span>
-                      <span className={clsx('relative z-10 transition-colors', isActive ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]')}>
-                        {navI18nKeys[label] ? (t(navI18nKeys[label]) === navI18nKeys[label] ? label : t(navI18nKeys[label])) : label}
-                      </span>
-                      {/* Badge for Alerts */}
-                      {to === '/alerts' && unreadAlerts > 0 && (
-                        <span className="relative z-10 ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-neon-red/20 px-1.5 text-[10px] font-bold text-neon-red ring-1 ring-neon-red/30">
-                          {unreadAlerts > 9 ? '9+' : unreadAlerts}
-                        </span>
-                      )}
-                      {/* Badge for Fleet */}
-                      {to === '/vehicles' && vehicles && vehicles.length > 0 && (
-                        <span className="relative z-10 ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-neon-cyan/10 px-1.5 text-[10px] font-bold text-neon-cyan ring-1 ring-neon-cyan/20">
-                          {vehicles.length}
-                        </span>
-                      )}
-                      {/* Badge for Data Repair */}
-                      {to === '/data-repair' && staleCount > 0 && (
-                        <span className="relative z-10 ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-neon-amber/20 px-1.5 text-[10px] font-bold text-neon-amber ring-1 ring-neon-amber/30">
-                          {staleCount > 9 ? '9+' : staleCount}
-                        </span>
-                      )}
-                      {isActive && (
-                        <span className="absolute right-3 h-1.5 w-1.5 rounded-full bg-neon-cyan shadow-[0_0_6px_rgba(0,240,255,0.5)]" />
-                      )}
-                    </NavLink>
-                  )
-                })}
+          {activeNavEntry && (
+            <div className="rounded-2xl border border-neon-cyan/10 bg-neon-cyan/[0.035] px-3 py-2.5">
+              <div className="flex items-start gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-neon-cyan/60">
+                    {t('nav.currentSection', 'Current')}
+                  </p>
+                  <p className="mt-1 truncate text-sm font-semibold text-[var(--text-primary)]">
+                    {navLabel(activeNavEntry.item.label)}
+                  </p>
+                  <p className="truncate text-[11px] text-[var(--text-muted)]">
+                    {activeNavEntry.section.title}
+                  </p>
+                </div>
+                {activeNavPath && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    aria-pressed={activeIsPinned}
+                    aria-label={activeIsPinned ? t('nav.unpinCurrent', 'Remove current page from pinned') : t('nav.pinCurrent', 'Pin current page')}
+                    onClick={() => activeIsPinned ? unpinNavPath(activeNavPath) : pinNavPath(activeNavPath)}
+                    className={cn(
+                      'h-8 shrink-0 rounded-lg px-2 text-[11px] hover:bg-white/[0.08]',
+                      activeIsPinned ? 'text-amber-300' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                    )}
+                  >
+                    <Star className={cn('h-3.5 w-3.5', activeIsPinned && 'fill-current')} />
+                    <span>{activeIsPinned ? t('nav.pinnedAction', 'Pinned') : t('nav.pinAction', 'Pin')}</span>
+                  </Button>
+                )}
               </div>
             </div>
-          ))}
+          )}
+
+          {pinnedNavItems.length > 0 && (
+            <div>
+              <p className="mb-1.5 px-3 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                {t('nav.pinned', 'Pinned')}
+              </p>
+              <div className="space-y-0.5">
+                {pinnedNavItems.map(item => (
+                  <div key={item.to} className="flex items-center gap-1">
+                    <div className="min-w-0 flex-1">
+                      {renderNavLink(item, true)}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      aria-label={t('nav.unpinPage', { page: navLabel(item.label), defaultValue: `Unpin ${navLabel(item.label)}` })}
+                      onClick={() => unpinNavPath(item.to)}
+                      className="h-7 w-7 shrink-0 rounded-lg p-0 text-white/30 opacity-70 hover:bg-white/[0.08] hover:text-white/70"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {recentNavItems.length > 0 && (
+            <div>
+              <p className="mb-1.5 px-3 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                {t('nav.recentlyUsed', 'Recently Used')}
+              </p>
+              <div className="space-y-0.5">
+                {recentNavItems.map(item => renderNavLink(item, true))}
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-1">
+            <div className="mb-1 flex items-center justify-between gap-2 px-3">
+              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                {t('nav.sections', 'Sections')}
+              </p>
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={expandedSectionCount === visibleNavSections.length}
+                  onClick={expandAllSections}
+                  className="h-6 rounded-lg px-2 text-[10px] text-white/40 hover:bg-white/[0.06] hover:text-white/70 disabled:opacity-30"
+                >
+                  {t('nav.expandAll', 'Expand')}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={expandedSectionCount === 0}
+                  onClick={collapseAllSections}
+                  className="h-6 rounded-lg px-2 text-[10px] text-white/40 hover:bg-white/[0.06] hover:text-white/70 disabled:opacity-30"
+                >
+                  {t('nav.collapseAll', 'Collapse')}
+                </Button>
+              </div>
+            </div>
+            {visibleNavSections.map(section => {
+              const isExpanded = expandedSections.has(section.title)
+              const isActiveSection = section.title === activeSectionTitle
+              const sectionStyle = SECTION_ICON_STYLES[section.title]
+              return (
+                <div key={section.title}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    aria-expanded={isExpanded}
+                    aria-controls={`nav-section-${section.title.replace(/\W+/g, '-').toLowerCase()}`}
+                    onClick={() => toggleSection(section.title)}
+                    className={cn(
+                      'mb-1 h-8 w-full justify-between rounded-xl px-3 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)] hover:bg-white/[0.05] hover:text-[var(--text-primary)]',
+                      isActiveSection && (sectionStyle?.accent ?? 'text-neon-cyan')
+                    )}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className={cn('h-1.5 w-1.5 rounded-full opacity-80', sectionStyle?.dot ?? 'bg-neon-cyan')} />
+                      <span>{section.title}</span>
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <span className="rounded-full bg-white/[0.05] px-1.5 py-0.5 text-[9px] text-white/35">
+                        {section.items.length}
+                      </span>
+                      <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', isExpanded && 'rotate-180')} />
+                    </span>
+                  </Button>
+                  <AnimatePresence initial={false}>
+                    {isExpanded && (
+                      <motion.div
+                        id={`nav-section-${section.title.replace(/\W+/g, '-').toLowerCase()}`}
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.18, ease: 'easeOut' }}
+                        className="overflow-hidden"
+                      >
+                        <div className="space-y-0.5 pb-2">
+                          {section.items.map(item => renderNavLink(item, true))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )
+            })}
+          </div>
         </nav>
 
         {/* Bottom status */}
@@ -561,7 +982,7 @@ export default function Layout() {
           {/* Live vehicle mini-status */}
           {primaryVehicle && primaryState?.state && (
             <GlassPanel className="!p-2.5 flex items-center gap-2.5">
-              <div className={clsx('h-2 w-2 rounded-full', primaryState.state.battery_level > 20 ? 'bg-neon-green' : 'bg-neon-red')}
+              <div className={cn('h-2 w-2 rounded-full', primaryState.state.battery_level > 20 ? 'bg-neon-green' : 'bg-neon-red')}
                 style={{ boxShadow: `0 0 6px ${primaryState.state.battery_level > 20 ? 'rgba(16,185,129,0.5)' : 'rgba(239,68,68,0.5)'}` }} />
               <div className="flex-1 min-w-0">
                 <p className="text-[11px] font-medium text-[var(--text-secondary)] truncate">{primaryVehicle.display_name || 'Vehicle'}</p>
@@ -617,6 +1038,14 @@ export default function Layout() {
         <ServiceStatusBanner />
         <main id="main-content" ref={mainRef} role="main" tabIndex={-1} className="flex-1 overflow-y-auto outline-none pb-16 lg:pb-0">
           <div className="mx-auto max-w-[1600px] px-3 py-4 pb-safe sm:px-5 sm:py-5 lg:px-8 lg:py-8">
+            {activeNavEntry && (
+              <div className="mb-3 flex min-h-8 items-center justify-between gap-3 border-b border-white/[0.06] pb-2">
+                <Breadcrumbs items={breadcrumbItems} className="min-w-0 text-xs" />
+                <p className="hidden shrink-0 text-[10px] text-[var(--text-muted)] lg:block">
+                  {t('nav.quickSearchHint', 'Ctrl+K to jump')}
+                </p>
+              </div>
+            )}
             <AnimatePresence mode="wait">
               <motion.div
                 key={location.pathname}
