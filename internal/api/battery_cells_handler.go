@@ -7,21 +7,21 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
+	"github.com/rs/zerolog/log"
 )
 
 // BatteryCellsHandler serves battery cell analytics derived from signal store
 // (real-time) and signal_log hypertable (historical).
 type BatteryCellsHandler struct {
 	db              *database.DB
-	signalStore     *signal.Store
+	liveSignals     signal.LiveSignalStore
 	signalLogReader *database.SignalLogReader
 }
 
-func NewBatteryCellsHandler(db *database.DB, ss *signal.Store, slr *database.SignalLogReader) *BatteryCellsHandler {
-	return &BatteryCellsHandler{db: db, signalStore: ss, signalLogReader: slr}
+func NewBatteryCellsHandler(db *database.DB, liveStore signal.LiveSignalStore, slr *database.SignalLogReader) *BatteryCellsHandler {
+	return &BatteryCellsHandler{db: db, liveSignals: liveStore, signalLogReader: slr}
 }
 
 type cellReading struct {
@@ -174,12 +174,16 @@ func round4(v float64) float64 {
 	return math.Round(v*10000) / 10000
 }
 
-// getLatestSignal reads a signal value from the in-memory signal store first
-// (nanosecond latency), falling back to signal_log (latest DB row).
+// getLatestSignal reads a fresh live signal first, falling back to signal_log.
 func (h *BatteryCellsHandler) getLatestSignal(ctx context.Context, vehicleID int64, signalName string) (float64, bool) {
-	if h.signalStore != nil {
-		if v, ok := h.signalStore.GetFloat(vehicleID, signalName); ok {
-			return v, true
+	if h.liveSignals != nil {
+		value, err := h.liveSignals.GetSignal(ctx, vehicleID, signalName, signal.LiveSignalReadDistributed)
+		if err == nil && value != nil {
+			if v, ok := toFloatOk(value.Raw); ok {
+				return v, true
+			}
+		} else if err != nil {
+			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Str("signal", signalName).Msg("battery cells: live signal read failed")
 		}
 	}
 	if h.signalLogReader != nil {

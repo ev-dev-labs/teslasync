@@ -668,7 +668,7 @@ export default function Layout() {
       : ''
 
   const mainRef = useRef<HTMLElement>(null)
-  const renderNavLink = (item: NavItem, compact = false) => {
+  const renderNavLink = (item: NavItem, compact = false, activeScope = 'main') => {
     const { to, icon: Icon, label, color, ...rest } = item
     const dataTour = 'dataTour' in rest ? (rest as { dataTour?: string }).dataTour : undefined
     const isActive = isActiveNavPath(location.pathname, to)
@@ -689,7 +689,7 @@ export default function Layout() {
       >
         {isActive && (
           <motion.div
-            layoutId={compact ? `nav-active-${to}` : 'nav-active'}
+            layoutId={compact ? `nav-active-${activeScope}-${to}` : 'nav-active'}
             className="absolute inset-0 rounded-xl bg-white/[0.06] border border-white/[0.08]"
             style={{ boxShadow: '0 0 20px rgba(0, 240, 255, 0.05)' }}
             transition={{ type: 'spring', bounce: 0.15, duration: 0.5 }}
@@ -868,7 +868,7 @@ export default function Layout() {
                 {pinnedNavItems.map(item => (
                   <div key={item.to} className="flex items-center gap-1">
                     <div className="min-w-0 flex-1">
-                      {renderNavLink(item, true)}
+                      {renderNavLink(item, true, 'pinned')}
                     </div>
                     <Button
                       type="button"
@@ -892,7 +892,7 @@ export default function Layout() {
                 {t('nav.recentlyUsed', 'Recently Used')}
               </p>
               <div className="space-y-0.5">
-                {recentNavItems.map(item => renderNavLink(item, true))}
+                {recentNavItems.map(item => renderNavLink(item, true, 'recent'))}
               </div>
             </div>
           )}
@@ -984,7 +984,7 @@ export default function Layout() {
                         className="overflow-hidden"
                       >
                         <div className="space-y-0.5 pb-2">
-                          {section.items.map(item => renderNavLink(item, true))}
+                          {section.items.map(item => renderNavLink(item, true, `section-${section.title}`))}
                         </div>
                       </motion.div>
                     )}

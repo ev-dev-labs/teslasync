@@ -20,7 +20,9 @@ type mockVehicleRepo struct {
 	byID     map[int64]*models.Vehicle
 	err      error
 	// getByIDFunc allows per-call state overrides for polling tests.
-	getByIDFunc func(id int64) (*models.Vehicle, error)
+	getByIDFunc  func(id int64) (*models.Vehicle, error)
+	stateByID    map[int64]string
+	getStateFunc func(id int64) (string, error)
 }
 
 func (m *mockVehicleRepo) GetByID(_ context.Context, id int64) (*models.Vehicle, error) {
@@ -40,6 +42,16 @@ func (m *mockVehicleRepo) GetAll(_ context.Context) ([]*models.Vehicle, error) {
 	return m.vehicles, nil
 }
 
+func (m *mockVehicleRepo) GetLiveState(_ context.Context, id int64) (string, error) {
+	if m.getStateFunc != nil {
+		return m.getStateFunc(id)
+	}
+	if m.stateByID != nil {
+		return m.stateByID[id], nil
+	}
+	return "online", nil
+}
+
 type mockCommandLogRepo struct {
 	logs []*models.CommandLog
 	err  error
@@ -54,10 +66,10 @@ func (m *mockCommandLogRepo) Create(_ context.Context, cl *models.CommandLog) er
 }
 
 type mockSettingsChecker struct {
-	suspended    bool
-	suspendErr   error
-	pollingCfg   *models.PollingConfig
-	pollingErr   error
+	suspended  bool
+	suspendErr error
+	pollingCfg *models.PollingConfig
+	pollingErr error
 }
 
 func (m *mockSettingsChecker) IsAPISuspended(_ context.Context) (bool, error) {
@@ -126,9 +138,8 @@ func testVehicle(id int64, vin, name string) *models.Vehicle {
 	return &models.Vehicle{ID: id, VIN: vin, DisplayName: name}
 }
 
-func testVehicleWithState(id int64, vin, name, _ string) *models.Vehicle {
-	// Vehicle no longer carries State; kept for caller compatibility.
-	return &models.Vehicle{ID: id, VIN: vin, DisplayName: name}
+func testVehicleWithState(id int64, vin, name, state string) *models.Vehicle {
+	return testVehicle(id, vin, name)
 }
 
 func makeConfig(t *testing.T, typ, command string, params map[string]interface{}) json.RawMessage {
@@ -577,20 +588,17 @@ func TestAutoWake_VehicleOnline_NoWakeAttempted(t *testing.T) {
 func TestAutoWake_VehicleAsleep_WakeSucceeds(t *testing.T) {
 	v := testVehicleWithState(1, "VIN001", "Model 3", "asleep")
 
-	// getByIDFunc is called once for the initial lookup (returns asleep),
-	// then again on each wake poll. Simulate the vehicle waking on the 2nd poll.
+	// getStateFunc is called before wake and on each wake poll.
+	// Simulate the vehicle waking on the 2nd poll.
 	var callCount atomic.Int32
 	vehicleRepo := &mockVehicleRepo{
 		byID: map[int64]*models.Vehicle{1: v},
-		getByIDFunc: func(id int64) (*models.Vehicle, error) {
+		getStateFunc: func(id int64) (string, error) {
 			n := callCount.Add(1)
-			// Call 1: initial lookup in Execute → asleep
-			// Call 2: first wake poll → still asleep
-			// Call 3+: second wake poll → online
 			if n >= 3 {
-				return testVehicle(1, "VIN001", "Model 3"), nil
+				return "online", nil
 			}
-			return testVehicleWithState(1, "VIN001", "Model 3", "asleep"), nil
+			return "asleep", nil
 		},
 	}
 	commandRepo := &mockCommandLogRepo{}
@@ -654,16 +662,16 @@ func TestAutoWake_VehicleAsleep_WakeSucceeds(t *testing.T) {
 func TestAutoWake_VehicleOffline_WakeSucceeds(t *testing.T) {
 	v := testVehicleWithState(1, "VIN001", "Model 3", "offline")
 
-	// Call 1: initial lookup → offline. Call 2+: first wake poll → online.
+	// Call 1: pre-wake state check → offline. Call 2+: first wake poll → online.
 	var callCount atomic.Int32
 	vehicleRepo := &mockVehicleRepo{
 		byID: map[int64]*models.Vehicle{1: v},
-		getByIDFunc: func(_ int64) (*models.Vehicle, error) {
+		getStateFunc: func(_ int64) (string, error) {
 			n := callCount.Add(1)
 			if n >= 2 {
-				return testVehicle(1, "VIN001", "Model 3"), nil
+				return "online", nil
 			}
-			return testVehicleWithState(1, "VIN001", "Model 3", "offline"), nil
+			return "offline", nil
 		},
 	}
 	commandRepo := &mockCommandLogRepo{}
@@ -698,7 +706,10 @@ func TestAutoWake_VehicleOffline_WakeSucceeds(t *testing.T) {
 
 func TestAutoWake_WakeCommandFails(t *testing.T) {
 	v := testVehicleWithState(1, "VIN001", "Model 3", "asleep")
-	vehicleRepo := &mockVehicleRepo{byID: map[int64]*models.Vehicle{1: v}}
+	vehicleRepo := &mockVehicleRepo{
+		byID:      map[int64]*models.Vehicle{1: v},
+		stateByID: map[int64]string{1: "asleep"},
+	}
 	commandRepo := &mockCommandLogRepo{}
 	settings := &mockSettingsChecker{pollingCfg: defaultPollingConfig()}
 	teslaCmd := &mockTeslaCommander{
@@ -753,10 +764,8 @@ func TestAutoWake_WakeTimeout(t *testing.T) {
 
 	// Vehicle never comes online.
 	vehicleRepo := &mockVehicleRepo{
-		byID: map[int64]*models.Vehicle{1: v},
-		getByIDFunc: func(_ int64) (*models.Vehicle, error) {
-			return testVehicleWithState(1, "VIN001", "Model 3", "asleep"), nil
-		},
+		byID:      map[int64]*models.Vehicle{1: v},
+		stateByID: map[int64]string{1: "asleep"},
 	}
 	commandRepo := &mockCommandLogRepo{}
 	settings := &mockSettingsChecker{pollingCfg: defaultPollingConfig()}
@@ -804,7 +813,10 @@ func TestAutoWake_WakeTimeout(t *testing.T) {
 
 func TestAutoWake_WakeUpCommand_SkipsAutoWake(t *testing.T) {
 	v := testVehicleWithState(1, "VIN001", "Model 3", "asleep")
-	vehicleRepo := &mockVehicleRepo{byID: map[int64]*models.Vehicle{1: v}}
+	vehicleRepo := &mockVehicleRepo{
+		byID:      map[int64]*models.Vehicle{1: v},
+		stateByID: map[int64]string{1: "asleep"},
+	}
 	commandRepo := &mockCommandLogRepo{}
 	settings := &mockSettingsChecker{pollingCfg: defaultPollingConfig()}
 	teslaCmd := &mockTeslaCommander{hasToken: true}
@@ -846,7 +858,10 @@ func TestAutoWake_WakeUpCommand_SkipsAutoWake(t *testing.T) {
 
 func TestAutoWake_WakeDisabledInPollingConfig(t *testing.T) {
 	v := testVehicleWithState(1, "VIN001", "Model 3", "asleep")
-	vehicleRepo := &mockVehicleRepo{byID: map[int64]*models.Vehicle{1: v}}
+	vehicleRepo := &mockVehicleRepo{
+		byID:      map[int64]*models.Vehicle{1: v},
+		stateByID: map[int64]string{1: "asleep"},
+	}
 	commandRepo := &mockCommandLogRepo{}
 
 	pc := defaultPollingConfig()
@@ -890,10 +905,8 @@ func TestAutoWake_ContextCancelledDuringWake(t *testing.T) {
 	v := testVehicleWithState(1, "VIN001", "Model 3", "asleep")
 
 	vehicleRepo := &mockVehicleRepo{
-		byID: map[int64]*models.Vehicle{1: v},
-		getByIDFunc: func(_ int64) (*models.Vehicle, error) {
-			return testVehicleWithState(1, "VIN001", "Model 3", "asleep"), nil
-		},
+		byID:      map[int64]*models.Vehicle{1: v},
+		stateByID: map[int64]string{1: "asleep"},
 	}
 	commandRepo := &mockCommandLogRepo{}
 	settings := &mockSettingsChecker{pollingCfg: defaultPollingConfig()}

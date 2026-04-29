@@ -29,6 +29,8 @@ API responses and SSE streams should come from the network. Static bundles, font
 
 Redis is the cross-process live signal cache and restart-recovery layer. It does not eliminate the per-process SignalStore: Fleet Telemetry updates both the in-memory map and Redis. Durable history/current-state tables still matter for recovery and analytics, so Redis loss should degrade to database/in-memory behavior after fresh telemetry arrives rather than silently claiming fresh live telemetry.
 
+The live-state contract is layered: SignalStore is the L1 hot cache for local telemetry, FSM, CEP, and session logic; Redis is the L2 shared live cache for API reader pods, restart recovery, and SSE fanout; `signal_log` remains durable history. Telemetry ingest is write-through: update local SignalStore first, then mirror to Redis and append history. `LIVE_SIGNAL_STORE_MODE=hybrid|local` controls whether Redis-backed distributed live reads are enabled. Redis Pub/Sub fanout is best-effort, so clients recover missed current state through polling/live reads. Phase 35 does not make reconciliation active-active; only the telemetry/FSM owner should run FSM/reconciliation for a vehicle until ownership leases or pod affinity exist. Legacy scalar Redis values without timestamps have unknown freshness, and `vehicle_live_state` is legacy/superseded rather than the current live-state source of truth.
+
 ## Frontend invalidation guidance
 
 - Use the hook domain key factories in `web/src/api/hooks/`.

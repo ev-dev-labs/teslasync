@@ -30,9 +30,9 @@ type ruleKey struct {
 }
 
 type ruleState struct {
-	PrevSignals       map[string]interface{} // previous signal values (for changed_to/from)
-	ConditionTrueSince *time.Time            // when the condition first became true (for temporal)
-	LastFiredAt       *time.Time             // cooldown tracking
+	PrevSignals        map[string]interface{} // previous signal values (for changed_to/from)
+	ConditionTrueSince *time.Time             // when the condition first became true (for temporal)
+	LastFiredAt        *time.Time             // cooldown tracking
 }
 
 // NewRuleEngine creates a new CEP rule engine.
@@ -55,7 +55,7 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 	key := ruleKey{RuleID: rule.ID, VehicleID: vehicleID}
 	e.mu.RLock()
 	st, hasState := e.state[key]
-	
+
 	// Copy state under lock to avoid concurrent map access
 	var prevSignals map[string]interface{}
 	var lastFiredAt *time.Time
@@ -311,7 +311,7 @@ func evalNode(node *models.RuleCondition, signals, prevSignals map[string]interf
 	current, hasCurrent := signals[node.Signal]
 	if !hasCurrent {
 		// Signal not in this batch — check if it's a transition operator
-		if node.Compare == "changed_to" || node.Compare == "changed_from" {
+		if node.Compare == "changed" || node.Compare == "changed_to" || node.Compare == "changed_from" {
 			return false // can't detect change without current value
 		}
 		// Fall back to last-known value from previous batches (accumulated across sparse deliveries).
@@ -345,6 +345,18 @@ func evalNode(node *models.RuleCondition, signals, prevSignals map[string]interf
 		return toBool(current)
 	case "is_false":
 		return !toBool(current)
+	case "changed":
+		prev, hasPrev := prevSignals[node.Signal]
+		if !hasPrev {
+			return false
+		}
+		if compareEq(prev, current) {
+			return false
+		}
+		if node.Value == nil {
+			return true
+		}
+		return compareEq(current, node.Value)
 	case "changed_to":
 		prev, hasPrev := prevSignals[node.Signal]
 		if !hasPrev {
@@ -418,7 +430,7 @@ func compareNum(a, b interface{}) int {
 // changed_from operator. Cooldown reset only applies to transition rules — threshold
 // rules should NOT reset on brief bounces to avoid notification storms.
 func isTransitionRule(rule *models.AlertRule) bool {
-	return rule.Op == "changed_to" || rule.Op == "changed_from"
+	return rule.Op == "changed" || rule.Op == "changed_to" || rule.Op == "changed_from"
 }
 
 var templateRe = regexp.MustCompile(`\{\{(\w+)\}\}`)

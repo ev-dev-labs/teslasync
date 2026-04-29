@@ -47,6 +47,7 @@ type TelemetryHandler struct {
 	cleanupInterval       time.Duration
 	staleSessionTimeout   time.Duration
 	signalStore           *signal.Store
+	liveSignalStore       signal.LiveSignalStore
 	startTime             time.Time
 
 	// Cancellable context for background goroutines ╬ô├ç├╢ cancelled on Shutdown()
@@ -85,7 +86,7 @@ type TelemetryHandler struct {
 	// Domain event bus for publishing state change events
 	eventBus *events.Bus
 
-	// Redis write-through cache for signal values (fire-and-forget)
+	// Redis cache used for SSE Pub/Sub and as L2 when attached to LiveSignalStore.
 	redisCache *signal.RedisSignalCache
 }
 
@@ -117,19 +118,19 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 	}
 	bgCtx, bgCancel := context.WithCancel(context.Background())
 	return &TelemetryHandler{
-		db:                    db,
-		posRepo:               database.NewPositionRepo(db),
-		vehicleRepo:           database.NewVehicleRepo(db),
-		stateRepo:             database.NewVehicleStateRepo(db),
-		mileageRepo:           database.NewMileageRepo(db),
-		securityRepo:          database.NewSecurityRepo(db),
-		swUpdateRepo:          database.NewSoftwareUpdateRepo(db),
-		signalCatalogRepo:     database.NewSignalCatalogRepo(db),
-		signalObsRepo:         database.NewSignalObservationRepo(db),
-		mqttClient:            mc,
-		logRepo:               database.NewAPICallLogRepo(db),
-		eventHub:              hub,
-		sessionTracker:        NewTelemetrySessionTracker(db, eventBus, geocoder, nil),
+		db:                db,
+		posRepo:           database.NewPositionRepo(db),
+		vehicleRepo:       database.NewVehicleRepo(db),
+		stateRepo:         database.NewVehicleStateRepo(db),
+		mileageRepo:       database.NewMileageRepo(db),
+		securityRepo:      database.NewSecurityRepo(db),
+		swUpdateRepo:      database.NewSoftwareUpdateRepo(db),
+		signalCatalogRepo: database.NewSignalCatalogRepo(db),
+		signalObsRepo:     database.NewSignalObservationRepo(db),
+		mqttClient:        mc,
+		logRepo:           database.NewAPICallLogRepo(db),
+		eventHub:          hub,
+		sessionTracker:    NewTelemetrySessionTracker(db, eventBus, geocoder, nil),
 		alertEvaluator: NewTelemetryAlertEvaluator(db, eventBus, hub, func() pahomqtt.Client {
 			if mc != nil {
 				return mc.Underlying()
@@ -174,16 +175,20 @@ func (h *TelemetryHandler) SetTimings(snapshotWrite, cleanup, staleSession time.
 func (h *TelemetryHandler) SetSignalStore(store *signal.Store) {
 	h.signalStore = store
 	if h.sessionTracker != nil {
-		h.sessionTracker.signalStore = store
+		h.sessionTracker.localSignals = store
 	}
-	if h.redisCache != nil {
+	if store != nil && h.redisCache != nil {
 		store.SetRedisCache(h.redisCache)
 	}
 }
 
-// SetRedisCache sets the Redis write-through cache for signal values.
-// When set, signal updates are mirrored to Redis HSET in a fire-and-forget goroutine.
-// Also forwards the cache to the signal store for Redis-first startup recovery.
+// SetLiveSignalStore sets the live signal boundary used by telemetry ingestion.
+func (h *TelemetryHandler) SetLiveSignalStore(store signal.LiveSignalStore) {
+	h.liveSignalStore = store
+}
+
+// SetRedisCache sets the Redis cache used by SSE Pub/Sub and startup recovery.
+// Live-state writes are routed through LiveSignalStore to avoid duplicate HSETs.
 func (h *TelemetryHandler) SetRedisCache(cache *signal.RedisSignalCache) {
 	h.redisCache = cache
 	if h.signalStore != nil {
@@ -199,6 +204,36 @@ func (h *TelemetryHandler) SetEventHub(hub *EventHub) {
 // GetSignalStore returns the signal store (for use by other handlers).
 func (h *TelemetryHandler) GetSignalStore() *signal.Store {
 	return h.signalStore
+}
+
+// GetLiveSignalStore returns the live-signal boundary for cross-pod API reads.
+func (h *TelemetryHandler) GetLiveSignalStore() signal.LiveSignalStore {
+	return h.liveSignalStore
+}
+
+func (h *TelemetryHandler) liveStoreForTelemetry() signal.LiveSignalStore {
+	if h.liveSignalStore != nil {
+		return h.liveSignalStore
+	}
+	if h.signalStore == nil {
+		return nil
+	}
+	liveStore, err := signal.NewHybridLiveSignalStore(h.signalStore, h.redisCache, signal.LiveSignalStoreModeHybrid)
+	if err != nil {
+		log.Error().Err(err).Msg("telemetry: failed to construct fallback live signal store")
+		return nil
+	}
+	return liveStore
+}
+
+func (h *TelemetryHandler) updateLiveSignals(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
+	liveStore := h.liveStoreForTelemetry()
+	if liveStore == nil {
+		return
+	}
+	if err := liveStore.UpdateNonBlocking(ctx, vehicleID, signals); err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: live signal store update failed")
+	}
 }
 
 // SessionTracker returns the underlying session tracker for backfill tasks.
@@ -460,23 +495,10 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 		log.Warn().Err(err).Str("vin", vin).Msg("telemetry: vehicle not found or DB error")
 	}
 
-	// Update in-memory SignalStore — always complete, never has null fields.
-	// This is the primary source of truth for dashboard, state machine, and sessions.
-	if vehicleID > 0 && h.signalStore != nil {
-		h.signalStore.Update(vehicleID, signals)
-	}
-
-	// Mirror to Redis HSET (fire-and-forget, non-blocking)
-	if vehicleID > 0 && h.redisCache != nil {
-		redisCopy := make(map[string]interface{}, len(signals))
-		for k, v := range signals {
-			redisCopy[k] = v
-		}
-		safeGo("redis-signal-cache", func() {
-			redisCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			h.redisCache.Update(redisCtx, vehicleID, redisCopy)
-		})
+	// Update LiveSignalStore once per batch: local L1 is synchronous for FSM,
+	// sessions, and snapshot merge; Redis L2 mirroring is bounded and async.
+	if vehicleID > 0 {
+		h.updateLiveSignals(ctx, vehicleID, signals)
 	}
 
 	// Log every signal to MongoDB for full history (async, non-blocking)
@@ -1639,7 +1661,6 @@ func (h *TelemetryHandler) trackSecurity(ctx context.Context, vehicleID int64, s
 		log.Debug().Int64("vehicle_id", vehicleID).Int("count", len(events)).Msg("telemetry: security events stored")
 	}
 }
-
 
 // trackVehicleConfig tracks firmware version changes via swUpdateRepo.
 func (h *TelemetryHandler) trackVehicleConfig(ctx context.Context, vehicleID int64, signals map[string]interface{}) {

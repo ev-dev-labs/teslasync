@@ -380,6 +380,10 @@ fleetTelemetry:
   # -- Close drive/charge sessions idle longer than this.
   staleSessionTimeout: "5m"
 
+  # -- Live signal store mode. "hybrid" keeps local L1 and Redis-backed
+  # distributed live reads; "local" disables Redis-backed live reads/writes for rollback.
+  liveSignalStoreMode: "hybrid"
+
   # -- Traefik IngressRouteTCP for TLS passthrough.
   # Required because vehicles connect with mTLS (client certificates).
   # Traefik must forward raw TCP — it must NOT terminate TLS.

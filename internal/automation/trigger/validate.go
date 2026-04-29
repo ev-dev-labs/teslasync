@@ -107,6 +107,19 @@ func parseGeofenceConfig(raw json.RawMessage) (*GeofenceConfig, error) {
 	if err := json.Unmarshal(raw, &cfg); err != nil {
 		return nil, fmt.Errorf("unmarshal trigger config: %w", err)
 	}
+	if cfg.GeofenceID <= 0 {
+		return nil, fmt.Errorf("geofence_id is required")
+	}
+	switch cfg.Event {
+	case "enter", "leave", "both":
+	case "":
+		return nil, fmt.Errorf("event is required (enter, leave, or both)")
+	default:
+		return nil, fmt.Errorf("invalid geofence event %q: must be enter, leave, or both", cfg.Event)
+	}
+	if cfg.DwellMinutes < 0 {
+		return nil, fmt.Errorf("dwell_minutes must be non-negative")
+	}
 	return &cfg, nil
 }
 
@@ -126,6 +139,31 @@ func parseBatteryConfig(raw json.RawMessage) (*BatteryConfig, error) {
 	if err := json.Unmarshal(raw, &cfg); err != nil {
 		return nil, fmt.Errorf("unmarshal trigger config: %w", err)
 	}
+	switch cfg.Operator {
+	case "above", "below", "reaches":
+		if cfg.Threshold < 0 || cfg.Threshold > 100 {
+			return nil, fmt.Errorf("threshold must be 0-100, got %.1f", cfg.Threshold)
+		}
+	case "changes_by":
+		if cfg.Delta == nil {
+			return nil, fmt.Errorf("delta is required for changes_by")
+		}
+		if *cfg.Delta < 0 || *cfg.Delta > 100 {
+			return nil, fmt.Errorf("delta must be 0-100, got %.1f", *cfg.Delta)
+		}
+		if cfg.Direction == "" {
+			cfg.Direction = "any"
+		}
+		switch cfg.Direction {
+		case "any", "up", "down":
+		default:
+			return nil, fmt.Errorf("invalid changes_by direction %q", cfg.Direction)
+		}
+	case "":
+		return nil, fmt.Errorf("operator is required for battery trigger")
+	default:
+		return nil, fmt.Errorf("invalid battery operator %q", cfg.Operator)
+	}
 	return &cfg, nil
 }
 
@@ -144,6 +182,24 @@ func parseEnergyConfig(raw json.RawMessage) (*EnergyConfig, error) {
 	var cfg EnergyConfig
 	if err := json.Unmarshal(raw, &cfg); err != nil {
 		return nil, fmt.Errorf("unmarshal trigger config: %w", err)
+	}
+	if cfg.EnergySiteID <= 0 {
+		return nil, fmt.Errorf("energy_site_id is required")
+	}
+	switch cfg.Event {
+	case "solar_above", "solar_below":
+		if cfg.Threshold < 0 {
+			return nil, fmt.Errorf("solar threshold must be non-negative")
+		}
+	case "battery_above", "battery_below":
+		if cfg.Threshold < 0 || cfg.Threshold > 100 {
+			return nil, fmt.Errorf("battery threshold must be 0-100")
+		}
+	case "grid_outage", "grid_restored", "storm_mode_activated", "storm_mode_deactivated", "exporting_to_grid", "importing_from_grid":
+	case "":
+		return nil, fmt.Errorf("event is required for energy trigger")
+	default:
+		return nil, fmt.Errorf("invalid energy event %q", cfg.Event)
 	}
 	return &cfg, nil
 }
@@ -188,41 +244,13 @@ func validateVehicleStateTrigger(raw json.RawMessage) error {
 }
 
 func validateGeofenceTrigger(raw json.RawMessage) error {
-	cfg, err := parseGeofenceConfig(raw)
-	if err != nil {
-		return err
-	}
-	if cfg.GeofenceID == 0 {
-		return fmt.Errorf("geofence_id is required")
-	}
-	switch cfg.Event {
-	case "enter", "leave", "both":
-		// valid
-	case "":
-		return fmt.Errorf("event is required (enter, leave, or both)")
-	default:
-		return fmt.Errorf("invalid geofence event %q: must be enter, leave, or both", cfg.Event)
-	}
-	return nil
+	_, err := parseGeofenceConfig(raw)
+	return err
 }
 
 func validateBatteryTrigger(raw json.RawMessage) error {
-	cfg, err := parseBatteryConfig(raw)
-	if err != nil {
-		return err
-	}
-	switch cfg.Operator {
-	case "above", "below", "reaches", "changes_by":
-		// valid
-	case "":
-		return fmt.Errorf("operator is required for battery trigger")
-	default:
-		return fmt.Errorf("invalid battery operator %q", cfg.Operator)
-	}
-	if cfg.Threshold < 0 || cfg.Threshold > 100 {
-		return fmt.Errorf("threshold must be 0-100, got %.1f", cfg.Threshold)
-	}
-	return nil
+	_, err := parseBatteryConfig(raw)
+	return err
 }
 
 func validateSunriseSunsetTrigger(raw json.RawMessage) error {
@@ -247,14 +275,8 @@ func validateSunriseSunsetTrigger(raw json.RawMessage) error {
 }
 
 func validateEnergyTrigger(raw json.RawMessage) error {
-	cfg, err := parseEnergyConfig(raw)
-	if err != nil {
-		return err
-	}
-	if cfg.Event == "" {
-		return fmt.Errorf("event is required for energy trigger")
-	}
-	return nil
+	_, err := parseEnergyConfig(raw)
+	return err
 }
 
 func validateMQTTTrigger(raw json.RawMessage) error {

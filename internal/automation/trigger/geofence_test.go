@@ -101,8 +101,9 @@ func makeGeofenceAutomation(id int64, name string, cfg GeofenceConfig) GeofenceA
 	return GeofenceAutomation{
 		Automation: models.Automation{ID: id, Name: name, Enabled: true},
 		Trigger: models.AutomationStepTriggerGeofence{
-			PlaceID: cfg.GeofenceID,
-			Event:   cfg.Event,
+			PlaceID:      cfg.GeofenceID,
+			Event:        cfg.Event,
+			DwellMinutes: cfg.DwellMinutes,
 		},
 	}
 }
@@ -586,14 +587,13 @@ func TestGeofenceTrigger_DifferentVehicles_Independent(t *testing.T) {
 
 	provider.addGeofence(makeGeofence(1, "Home", 37.394, -122.15, 100))
 
-	repo.geoAutomations[100] = []GeofenceAutomation{
+	repo.geoAutomations[1] = []GeofenceAutomation{
 		makeGeofenceAutomation(1, "arrive-home", GeofenceConfig{GeofenceID: 1, Event: "enter"}),
 	}
 
 	// Both vehicles start outside
 	gt.Seed(1, nil)
 	gt.Seed(2, nil)
-
 	// Vehicle 1 enters
 	provider.setInsideIDs([]int64{1})
 	if err := gt.OnPositionUpdate(context.Background(), 1, 37.394, -122.15); err != nil {

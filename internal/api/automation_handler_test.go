@@ -13,7 +13,7 @@ import (
 
 func TestEvaluateTestConditions_Empty(t *testing.T) {
 	h := &AutomationHandler{}
-	a := &models.Automation{}
+	a := testAutomationFull()
 	results := h.evaluateTestConditions(a, time.Now().UTC())
 	if len(results) != 0 {
 		t.Errorf("expected 0 results for empty conditions, got %d", len(results))
@@ -22,7 +22,7 @@ func TestEvaluateTestConditions_Empty(t *testing.T) {
 
 func TestEvaluateTestConditions_NullConditions(t *testing.T) {
 	h := &AutomationHandler{}
-	a := &models.Automation{}
+	a := testAutomationFull()
 	results := h.evaluateTestConditions(a, time.Now().UTC())
 	if len(results) != 0 {
 		t.Errorf("expected 0 results for null conditions, got %d", len(results))
@@ -31,7 +31,7 @@ func TestEvaluateTestConditions_NullConditions(t *testing.T) {
 
 func TestEvaluateTestConditions_InvalidJSON(t *testing.T) {
 	h := &AutomationHandler{}
-	a := &models.Automation{}
+	a := testAutomationFullWithConditions(`{not json}`)
 	results := h.evaluateTestConditions(a, time.Now().UTC())
 	if len(results) != 1 || results[0].Result != "unknown" {
 		t.Errorf("expected 1 unknown result for invalid JSON, got %v", results)
@@ -41,7 +41,7 @@ func TestEvaluateTestConditions_InvalidJSON(t *testing.T) {
 func TestEvaluateTestConditions_TimeWindowMet(t *testing.T) {
 	h := &AutomationHandler{}
 	// Build a time window that is currently active (00:00 - 23:59).
-	a := &models.Automation{}
+	a := testAutomationFullWithConditions(`{"type":"time_window","start_time":"00:00","end_time":"23:59","timezone":"UTC"}`)
 	results := h.evaluateTestConditions(a, time.Now().UTC())
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(results))
@@ -54,7 +54,7 @@ func TestEvaluateTestConditions_TimeWindowMet(t *testing.T) {
 func TestEvaluateTestConditions_TimeWindowNotMet(t *testing.T) {
 	h := &AutomationHandler{}
 	// Use a fixed time of 12:00 and a window of 01:00-02:00.
-	a := &models.Automation{}
+	a := testAutomationFullWithConditions(`{"type":"time_window","start_time":"01:00","end_time":"02:00","timezone":"UTC"}`)
 	noon := time.Date(2026, 4, 18, 12, 0, 0, 0, time.UTC)
 	results := h.evaluateTestConditions(a, noon)
 	if len(results) != 1 {
@@ -69,7 +69,7 @@ func TestEvaluateTestConditions_DayFilter(t *testing.T) {
 	h := &AutomationHandler{}
 	// Saturday = 6 in Go's time.Weekday
 	sat := time.Date(2026, 4, 18, 12, 0, 0, 0, time.UTC) // April 18, 2026 is a Saturday
-	a := &models.Automation{}
+	a := testAutomationFullWithConditions(`{"type":"day_filter","days":[6],"timezone":"UTC"}`)
 	results := h.evaluateTestConditions(a, sat)
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(results))
@@ -82,7 +82,7 @@ func TestEvaluateTestConditions_DayFilter(t *testing.T) {
 func TestEvaluateTestConditions_SeasonalMet(t *testing.T) {
 	h := &AutomationHandler{}
 	april := time.Date(2026, 4, 18, 12, 0, 0, 0, time.UTC)
-	a := &models.Automation{}
+	a := testAutomationFullWithConditions(`{"type":"seasonal","start_month":3,"end_month":9}`)
 	results := h.evaluateTestConditions(a, april)
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(results))
@@ -95,7 +95,7 @@ func TestEvaluateTestConditions_SeasonalMet(t *testing.T) {
 func TestEvaluateTestConditions_CooldownMet(t *testing.T) {
 	h := &AutomationHandler{}
 	now := time.Now().UTC()
-	a := &models.Automation{}
+	a := testAutomationFullWithCreatedAt(now.Add(-2*time.Hour), `{"type":"cooldown","minutes":30}`)
 	results := h.evaluateTestConditions(a, now)
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(results))
@@ -108,7 +108,7 @@ func TestEvaluateTestConditions_CooldownMet(t *testing.T) {
 func TestEvaluateTestConditions_CooldownNotMet(t *testing.T) {
 	h := &AutomationHandler{}
 	now := time.Now().UTC()
-	a := &models.Automation{}
+	a := testAutomationFullWithCreatedAt(now.Add(-5*time.Minute), `{"type":"cooldown","minutes":30}`)
 	results := h.evaluateTestConditions(a, now)
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(results))
@@ -120,7 +120,7 @@ func TestEvaluateTestConditions_CooldownNotMet(t *testing.T) {
 
 func TestEvaluateTestConditions_StateCheckUnknown(t *testing.T) {
 	h := &AutomationHandler{}
-	a := &models.Automation{}
+	a := testAutomationFullWithConditions(`{"type":"state_check","field":"state","operator":"eq","value":"online"}`)
 	results := h.evaluateTestConditions(a, time.Now().UTC())
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(results))
@@ -132,7 +132,7 @@ func TestEvaluateTestConditions_StateCheckUnknown(t *testing.T) {
 
 func TestEvaluateTestConditions_LocationUnknown(t *testing.T) {
 	h := &AutomationHandler{}
-	a := &models.Automation{}
+	a := testAutomationFullWithConditions(`{"type":"location","geofence_id":1,"operator":"inside"}`)
 	results := h.evaluateTestConditions(a, time.Now().UTC())
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(results))
@@ -144,7 +144,7 @@ func TestEvaluateTestConditions_LocationUnknown(t *testing.T) {
 
 func TestEvaluateTestConditions_VariableCheckUnknown(t *testing.T) {
 	h := &AutomationHandler{}
-	a := &models.Automation{}
+	a := testAutomationFullWithConditions(`{"type":"variable_check","key":"foo","operator":"eq","value":"bar"}`)
 	results := h.evaluateTestConditions(a, time.Now().UTC())
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(results))
@@ -156,7 +156,11 @@ func TestEvaluateTestConditions_VariableCheckUnknown(t *testing.T) {
 
 func TestEvaluateTestConditions_MultipleConditions(t *testing.T) {
 	h := &AutomationHandler{}
-	a := &models.Automation{}
+	a := testAutomationFullWithConditions(
+		`{"type":"time_window","start_time":"00:00","end_time":"23:59","timezone":"UTC"}`,
+		`{"type":"state_check","field":"state","operator":"eq","value":"online"}`,
+		`{"type":"seasonal","start_month":3,"end_month":9}`,
+	)
 	results := h.evaluateTestConditions(a, time.Now().UTC())
 	if len(results) != 3 {
 		t.Fatalf("expected 3 results, got %d", len(results))
@@ -176,7 +180,7 @@ func TestEvaluateTestConditions_MultipleConditions(t *testing.T) {
 
 func TestSimulateActions_Empty(t *testing.T) {
 	h := &AutomationHandler{}
-	a := &models.Automation{}
+	a := testAutomationFull()
 	results, valid := h.simulateActions(a, true)
 	if len(results) != 0 {
 		t.Errorf("expected 0 results for empty actions, got %d", len(results))
@@ -188,7 +192,7 @@ func TestSimulateActions_Empty(t *testing.T) {
 
 func TestSimulateActions_ValidCommand(t *testing.T) {
 	h := &AutomationHandler{}
-	a := &models.Automation{}
+	a := testAutomationFullWithActions(`{"type":"command","command":"lock"}`)
 	results, valid := h.simulateActions(a, true)
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(results))
@@ -215,7 +219,7 @@ func TestSimulateActions_ValidCommand(t *testing.T) {
 
 func TestSimulateActions_InvalidCommand(t *testing.T) {
 	h := &AutomationHandler{}
-	a := &models.Automation{}
+	a := testAutomationFullWithActions(`{"type":"command","command":"fly_to_mars"}`)
 	results, valid := h.simulateActions(a, true)
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(results))
@@ -233,7 +237,10 @@ func TestSimulateActions_InvalidCommand(t *testing.T) {
 
 func TestSimulateActions_ConditionsNotMet(t *testing.T) {
 	h := &AutomationHandler{}
-	a := &models.Automation{}
+	a := testAutomationFullWithActions(
+		`{"type":"command","command":"lock"}`,
+		`{"type":"wait","duration_seconds":10}`,
+	)
 	results, _ := h.simulateActions(a, false)
 	if len(results) != 2 {
 		t.Fatalf("expected 2 results, got %d", len(results))
@@ -250,7 +257,10 @@ func TestSimulateActions_ConditionsNotMet(t *testing.T) {
 
 func TestSimulateActions_StopOnFailure(t *testing.T) {
 	h := &AutomationHandler{}
-	a := &models.Automation{}
+	a := testAutomationFullWithActions(
+		`{"type":"command","command":"fly_to_mars"}`,
+		`{"type":"command","command":"lock"}`,
+	)
 	results, valid := h.simulateActions(a, true)
 	if len(results) != 2 {
 		t.Fatalf("expected 2 results, got %d", len(results))
@@ -268,7 +278,12 @@ func TestSimulateActions_StopOnFailure(t *testing.T) {
 
 func TestSimulateActions_MixedTypes(t *testing.T) {
 	h := &AutomationHandler{}
-	a := &models.Automation{}
+	a := testAutomationFullWithActions(
+		`{"type":"command","command":"lock"}`,
+		`{"type":"wait","duration_seconds":10}`,
+		`{"type":"notify","channel":"all","message":"hello"}`,
+		`{"type":"set_variable","key":"foo","value":"bar"}`,
+	)
 	results, valid := h.simulateActions(a, true)
 	if len(results) != 4 {
 		t.Fatalf("expected 4 results, got %d", len(results))
@@ -389,11 +404,11 @@ func TestValidateActionConfig_UnknownType(t *testing.T) {
 func TestAutomationToPortable(t *testing.T) {
 	desc := "A test"
 	a := &models.Automation{
-		ID:        1,
-		Name:      "Test Automation",
+		ID:          1,
+		Name:        "Test Automation",
 		Description: &desc,
-		VehicleID: int64Ptr(42),
-		Enabled:   true,
+		VehicleID:   int64Ptr(42),
+		Enabled:     true,
 	}
 
 	p := automationToPortable(a)
@@ -607,6 +622,36 @@ func TestWriteJSONIndent(t *testing.T) {
 // ── test helpers ────────────────────────────────────────────────────────
 
 func int64Ptr(v int64) *int64 { return &v }
+
+func testAutomationFull() *models.AutomationFull {
+	return &models.AutomationFull{
+		Automation: models.Automation{
+			CreatedAt: time.Now().UTC(),
+		},
+	}
+}
+
+func testAutomationFullWithCreatedAt(createdAt time.Time, conditions ...string) *models.AutomationFull {
+	a := testAutomationFullWithConditions(conditions...)
+	a.CreatedAt = createdAt
+	return a
+}
+
+func testAutomationFullWithConditions(conditions ...string) *models.AutomationFull {
+	a := testAutomationFull()
+	for _, condition := range conditions {
+		a.Conditions = append(a.Conditions, json.RawMessage(condition))
+	}
+	return a
+}
+
+func testAutomationFullWithActions(actions ...string) *models.AutomationFull {
+	a := testAutomationFull()
+	for _, action := range actions {
+		a.Actions = append(a.Actions, json.RawMessage(action))
+	}
+	return a
+}
 
 func containsSubstring(s, sub string) bool {
 	return len(s) >= len(sub) && searchSubstring(s, sub)

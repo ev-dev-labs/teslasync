@@ -22,7 +22,8 @@ graph LR
     V["🚗 Tesla Vehicle"] -->|"wss:// telemetry"| FT["Fleet Telemetry Server"]
     FT -->|"MQTT publish"| MQ["Mosquitto"]
     MQ -->|"subscribe"| TS["TeslaSync API"]
-    TS -->|"UPSERT"| Live[(vehicle_live_state)]
+    TS -->|"update L1"| Live[(SignalStore)]
+    TS -->|"mirror L2"| Redis[(Redis)]
     TS -->|"append"| History[(signal_log / telemetry history)]
     TS -->|"broadcast"| SSE["SSE Hub"]
     SSE --> UI["React live pages"]
@@ -32,6 +33,7 @@ graph LR
     style TS fill:#141430,stroke:#00f0ff,color:#e4e4ef
     style Live fill:#141430,stroke:#f59e0b,color:#e4e4ef
     style MQ fill:#141430,stroke:#10b981,color:#e4e4ef
+    style Redis fill:#141430,stroke:#f59e0b,color:#e4e4ef
 ```
 
 ## Signal pipeline
@@ -106,5 +108,5 @@ The response should be a PEM public key. Keep the private key secret.
 |---|---|
 | Tesla cannot verify domain | `/.well-known` route bypasses app auth and returns the public key. |
 | No telemetry arrives | MQTT broker is reachable, topic base matches config, and Fleet Telemetry server logs show vehicle connections. |
-| Live UI stale | `/vehicles/{id}/state`, Redis, and `vehicle_live_state` are updating; SSE connection is not blocked by auth/CORS. |
+| Live UI stale | SignalStore L1 and Redis L2 are updating, `signal_log` append is healthy, and the SSE connection is not blocked by auth/CORS. |
 | Polling still active | This is expected for setup, refresh, commands, and stale telemetry fallback. |

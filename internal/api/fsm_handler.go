@@ -7,30 +7,30 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/fsm"
 	"github.com/ev-dev-labs/teslasync/internal/fsm/charge"
 	"github.com/ev-dev-labs/teslasync/internal/fsm/drive"
+	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
+	"github.com/go-chi/chi/v5"
+	"github.com/rs/zerolog/log"
 )
 
 // FSMHandler owns the new FSM-based vehicle state management.
 // Manages vehicle FSM + drive/charge sub-FSMs.
 type FSMHandler struct {
-	mu        sync.Mutex
-	machines  map[int64]*fsm.VehicleFSM
-	drives    map[int64]*drive.SessionFSM  // active drive sub-FSMs per vehicle
-	charges   map[int64]*charge.SessionFSM // active charge sub-FSMs per vehicle
+	mu          sync.Mutex
+	machines    map[int64]*fsm.VehicleFSM
+	drives      map[int64]*drive.SessionFSM  // active drive sub-FSMs per vehicle
+	charges     map[int64]*charge.SessionFSM // active charge sub-FSMs per vehicle
 	stateRepo   *database.VehicleStateRepo
 	vehicleRepo *database.VehicleRepo
 	transRepo   *database.FSMTransitionRepo
 
 	// Reconciliation
-	signalStore   *signal.Store  // set by SetSignalStore() — prompt 02b
+	localSignals  *signal.Store // set by SetSignalStore() — prompt 02b
 	reconcileStop chan struct{}
 	lastProcessed map[int64]time.Time
 }
@@ -53,7 +53,7 @@ func NewFSMHandler(stateRepo *database.VehicleStateRepo, vehicleRepo *database.V
 // Called after construction because the signal store may not exist yet at
 // FSMHandler creation time.
 func (h *FSMHandler) SetSignalStore(store *signal.Store) {
-	h.signalStore = store
+	h.localSignals = store
 }
 
 // fsmAction handles all side effects of a vehicle state transition:
@@ -394,11 +394,11 @@ func (h *FSMHandler) Stats() map[string]int {
 // Exposed via /fsm/stats so the frontend can flag FSMs that are stale despite
 // the vehicle actively streaming telemetry.
 type VehicleFSMSnapshot struct {
-	VehicleID            int64     `json:"vehicle_id"`
-	State                string    `json:"state"`
-	LastTransitionAt     time.Time `json:"last_transition_at"`
-	SecondsSinceLastTransition float64 `json:"seconds_since_last_transition"`
-	IsGearCapable        bool      `json:"is_gear_capable"`
+	VehicleID                  int64     `json:"vehicle_id"`
+	State                      string    `json:"state"`
+	LastTransitionAt           time.Time `json:"last_transition_at"`
+	SecondsSinceLastTransition float64   `json:"seconds_since_last_transition"`
+	IsGearCapable              bool      `json:"is_gear_capable"`
 }
 
 // VehicleSnapshots returns one snapshot per known vehicle FSM.
@@ -457,11 +457,11 @@ func (h *FSMHandler) StopReconcileLoop() {
 
 // reconcileAll iterates over all vehicles in the signal store and reconciles each.
 func (h *FSMHandler) reconcileAll() {
-	if h.signalStore == nil {
+	if h.localSignals == nil {
 		return
 	}
 
-	vehicleIDs := h.signalStore.VehicleIDs()
+	vehicleIDs := h.localSignals.VehicleIDs()
 	now := time.Now()
 
 	for _, vid := range vehicleIDs {
@@ -473,7 +473,7 @@ func (h *FSMHandler) reconcileAll() {
 // expected state and replays signals through ProcessSignals if a mismatch is found.
 func (h *FSMHandler) reconcileVehicle(vehicleID int64, now time.Time) {
 	// Derive expected state from signal store
-	result := fsm.DeriveExpectedState(vehicleID, h.signalStore, now)
+	result := fsm.DeriveExpectedState(vehicleID, h.localSignals, now)
 
 	// Skip if confidence is too low to act on
 	if result.Confidence < fsm.ConfidenceMedium {
@@ -512,7 +512,7 @@ func (h *FSMHandler) reconcileVehicle(vehicleID int64, now time.Time) {
 	}
 
 	// Mismatch detected — replay signal store snapshot through ProcessSignals
-	signals := h.signalStore.GetRawMap(vehicleID)
+	signals := h.localSignals.GetRawMap(vehicleID)
 	if signals == nil {
 		metrics.FSMReconcileTotal.WithLabelValues("error").Inc()
 		return
@@ -566,7 +566,7 @@ func (h *FSMHandler) HandleDebug(w http.ResponseWriter, r *http.Request) {
 	_, hasDrive := h.drives[vehicleID]
 	_, hasCharge := h.charges[vehicleID]
 	lastProc := h.lastProcessed[vehicleID]
-	store := h.signalStore
+	store := h.localSignals
 	h.mu.Unlock()
 
 	if m == nil {

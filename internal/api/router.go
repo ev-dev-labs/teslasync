@@ -11,10 +11,6 @@ import (
 	"time"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/go-chi/chi/v5"
-	chimw "github.com/go-chi/chi/v5/middleware"
-	"github.com/go-chi/cors"
-	"github.com/go-chi/httprate"
 	"github.com/ev-dev-labs/teslasync/internal/cache"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
@@ -28,6 +24,10 @@ import (
 	signal "github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/worker"
+	"github.com/go-chi/chi/v5"
+	chimw "github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
+	"github.com/go-chi/httprate"
 
 	"github.com/ev-dev-labs/teslasync/internal/automation"
 	"github.com/ev-dev-labs/teslasync/internal/automation/action"
@@ -45,12 +45,12 @@ import (
 type RouterOptions struct {
 	AppVersion       string
 	Encryptor        *crypto.Encryptor
-	TelemetryHandler *TelemetryHandler       // If set, reuses existing handler (for hybrid mode wiring)
-	GasPriceWorker   *worker.GasPriceWorker  // If set, enables gas price management endpoints
-	PollEngine       *polling.PollEngine      // If set, enables polling engine dashboard endpoints
-	SignalStore      *signal.Store            // If set, enables /internal/flush endpoint
-	WebhookTrigger   WebhookProcessor         // If set, enables public webhook receiver endpoint
-	CacheStore       *cache.Store             // If set, enables cached endpoints (trip planner, etc.)
+	TelemetryHandler *TelemetryHandler      // If set, reuses existing handler (for hybrid mode wiring)
+	GasPriceWorker   *worker.GasPriceWorker // If set, enables gas price management endpoints
+	PollEngine       *polling.PollEngine    // If set, enables polling engine dashboard endpoints
+	SignalStore      *signal.Store          // If set, enables /internal/flush endpoint
+	WebhookTrigger   WebhookProcessor       // If set, enables public webhook receiver endpoint
+	CacheStore       *cache.Store           // If set, enables cached endpoints (trip planner, etc.)
 }
 
 // settingsCheckerAdapter wraps *database.SettingsRepo to satisfy action.SettingsChecker.
@@ -93,9 +93,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	r.Use(chimw.RealIP)
 	r.Use(TracingMiddleware)
 	r.Use(LoggerMiddleware)
-	r.Use(RecoveryMiddleware) // Enhanced recovery that logs panics as structured errors
+	r.Use(RecoveryMiddleware)                    // Enhanced recovery that logs panics as structured errors
 	r.Use(ErrorTrackingMiddleware(errorTracker)) // Centralized error aggregation
-	r.Use(PrometheusMiddleware) // HTTP request metrics (duration, count, size)
+	r.Use(PrometheusMiddleware)                  // HTTP request metrics (duration, count, size)
 	r.Use(chimw.Compress(5))
 
 	// CORS ╬ô├ç├╢ use explicit origins in production. The wildcard is kept for
@@ -106,10 +106,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		corsOrigins = []string{cfg.CORSOrigins}
 	}
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   corsOrigins,
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Request-ID", "X-API-Key"},
-		ExposedHeaders:   []string{"X-Request-ID", "X-Response-Time"},
+		AllowedOrigins: corsOrigins,
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
+		AllowedHeaders: []string{"Accept", "Authorization", "Content-Type", "X-Request-ID", "X-API-Key"},
+		ExposedHeaders: []string{"X-Request-ID", "X-Response-Time"},
 		// AllowCredentials is only enabled when explicit origins are set.
 		// With wildcard ("*"), credentials are disabled per the Fetch spec,
 		// preventing cookie/auth header leakage to arbitrary origins.
@@ -140,12 +140,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	authHandler := NewAuthHandler(db, teslaClient, opt.Encryptor)
 	settingsHandler := NewSettingsHandler(db)
 	var pahoForAlerts pahomqtt.Client
-	if mqttClient != nil { pahoForAlerts = mqttClient.Underlying() }
-	var alertSignalStore *signal.Store
-	if opt.TelemetryHandler != nil {
-		alertSignalStore = opt.TelemetryHandler.GetSignalStore()
+	if mqttClient != nil {
+		pahoForAlerts = mqttClient.Underlying()
 	}
-	alertHandler := NewAlertHandler(db, eventHub, pahoForAlerts, alertSignalStore)
+	var alertLiveSignalStore signal.LiveSignalStore
+	if opt.TelemetryHandler != nil {
+		alertLiveSignalStore = opt.TelemetryHandler.GetLiveSignalStore()
+	}
+	alertHandler := NewAlertHandler(db, eventHub, pahoForAlerts, alertLiveSignalStore)
 	commandHandler := NewCommandHandler(db, teslaClient)
 	guardHandler := NewGuardHandler(db, teslaClient)
 	energyHandler := NewEnergyHandler(energySvc)
@@ -185,7 +187,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	dataRepairHandler := NewDataRepairHandler(db)
 	tempImpactHandler := NewTempImpactHandler(db)
 	routeEfficiencyHandler := NewRouteEfficiencyHandler(db)
-	batteryCellsHandler := NewBatteryCellsHandler(db, alertSignalStore, signalLogReader)
+	batteryCellsHandler := NewBatteryCellsHandler(db, alertLiveSignalStore, signalLogReader)
 	rangeProjectionHandler := NewRangeProjectionHandler(db, signalLogReader)
 	drivetrainHealthHandler := NewDrivetrainHealthHandler(db, signalLogReader)
 	maintenanceHandler := NewMaintenanceHandler(db)
@@ -822,9 +824,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 					return
 				}
 				writeJSON(w, http.StatusOK, map[string]interface{}{
-					"data":  records,
-					"total": total,
-					"page":  page,
+					"data":     records,
+					"total":    total,
+					"page":     page,
 					"per_page": perPage,
 				})
 			})
@@ -955,7 +957,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				// GET /api/v1/signals/history?vehicle_id=1&signals=BatteryLevel,Gear&from=...&to=...&page=1&per_page=50
 				r.Get("/", func(w http.ResponseWriter, req *http.Request) {
 					vid, _ := strconv.ParseInt(req.URL.Query().Get("vehicle_id"), 10, 64)
-					if vid == 0 { vid = 1 }
+					if vid == 0 {
+						vid = 1
+					}
 					signalNames := strings.Split(req.URL.Query().Get("signals"), ",")
 					if len(signalNames) == 0 || signalNames[0] == "" {
 						writeError(w, http.StatusBadRequest, "signals parameter required")
@@ -963,8 +967,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 					}
 					from, _ := time.Parse(time.RFC3339, req.URL.Query().Get("from"))
 					to, _ := time.Parse(time.RFC3339, req.URL.Query().Get("to"))
-					if from.IsZero() { from = time.Now().UTC().Add(-1 * time.Hour) }
-					if to.IsZero() { to = time.Now().UTC() }
+					if from.IsZero() {
+						from = time.Now().UTC().Add(-1 * time.Hour)
+					}
+					if to.IsZero() {
+						to = time.Now().UTC()
+					}
 					page, _ := strconv.Atoi(req.URL.Query().Get("page"))
 					perPage, _ := strconv.Atoi(req.URL.Query().Get("per_page"))
 					entries, total, err := shw.Query(req.Context(), vid, signalNames, from, to, page, perPage)
@@ -973,7 +981,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 						return
 					}
 					totalPages := (total + int64(perPage) - 1) / int64(perPage)
-					if perPage == 0 { totalPages = 0 }
+					if perPage == 0 {
+						totalPages = 0
+					}
 					writeJSON(w, http.StatusOK, map[string]interface{}{
 						"data": entries,
 						"pagination": map[string]interface{}{
@@ -984,7 +994,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			})
 			r.Get("/signals/available", func(w http.ResponseWriter, req *http.Request) {
 				vid, _ := strconv.ParseInt(req.URL.Query().Get("vehicle_id"), 10, 64)
-				if vid == 0 { vid = 1 }
+				if vid == 0 {
+					vid = 1
+				}
 				signals, err := shw.AvailableSignals(req.Context(), vid)
 				if err != nil {
 					writeError(w, http.StatusInternalServerError, "query failed")
@@ -994,12 +1006,18 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			})
 			r.Get("/signals/stats", func(w http.ResponseWriter, req *http.Request) {
 				vid, _ := strconv.ParseInt(req.URL.Query().Get("vehicle_id"), 10, 64)
-				if vid == 0 { vid = 1 }
+				if vid == 0 {
+					vid = 1
+				}
 				signalNames := strings.Split(req.URL.Query().Get("signals"), ",")
 				from, _ := time.Parse(time.RFC3339, req.URL.Query().Get("from"))
 				to, _ := time.Parse(time.RFC3339, req.URL.Query().Get("to"))
-				if from.IsZero() { from = time.Now().UTC().Add(-1 * time.Hour) }
-				if to.IsZero() { to = time.Now().UTC() }
+				if from.IsZero() {
+					from = time.Now().UTC().Add(-1 * time.Hour)
+				}
+				if to.IsZero() {
+					to = time.Now().UTC()
+				}
 				stats, err := shw.Stats(req.Context(), vid, signalNames, from, to)
 				if err != nil {
 					writeError(w, http.StatusInternalServerError, "query failed")
@@ -1029,8 +1047,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 						signalHandler.WithRedisCache(signal.NewRedisSignalCache(rdb))
 					}
 				}
-				if store := telemetryHandler.GetSignalStore(); store != nil {
-					signalHandler.WithSignalStore(store)
+				if store := telemetryHandler.GetLiveSignalStore(); store != nil {
+					signalHandler.WithLiveSignalStore(store)
 				}
 				r.Get("/live", signalHandler.LiveState)
 				r.Get("/available", signalHandler.AvailableSignals)
@@ -1130,10 +1148,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		v1UserHandler := v1handlers.NewUserHandler()
 
 		// Register new routes (paths that DON'T exist in the legacy router above)
-		v1DashboardHandler.Register(r)    // /dashboard/stats ╬ô├ç├╢ NEW
-		v1ChargingHandler.Register(r)     // /charging-sessions ╬ô├ç├╢ NEW (old uses /charging)
-		v1ExportHandler.Register(r)       // /exports ╬ô├ç├╢ NEW (old uses /export/jobs)
-		v1UserHandler.Register(r)         // /users/me ╬ô├ç├╢ NEW
+		v1DashboardHandler.Register(r) // /dashboard/stats ╬ô├ç├╢ NEW
+		v1ChargingHandler.Register(r)  // /charging-sessions ╬ô├ç├╢ NEW (old uses /charging)
+		v1ExportHandler.Register(r)    // /exports ╬ô├ç├╢ NEW (old uses /export/jobs)
+		v1UserHandler.Register(r)      // /users/me ╬ô├ç├╢ NEW
 		// NOTE: /vehicles conflicts with legacy vehicleHandler above; skip new vehicle handler.
 
 		// Suppress unused warnings

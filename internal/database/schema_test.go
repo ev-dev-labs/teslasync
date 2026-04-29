@@ -67,29 +67,6 @@ func TestRepoColumnsMatchSchema(t *testing.T) {
 		table  string
 		column string
 	}{
-		// vehicle_live_state — signal flush targets
-		{"vehicle_live_state", "vehicle_id"},
-		{"vehicle_live_state", "power_kw"},
-		{"vehicle_live_state", "speed_mph"},
-		{"vehicle_live_state", "elevation_m"},
-		{"vehicle_live_state", "inside_temp_c"},
-		{"vehicle_live_state", "outside_temp_c"},
-		{"vehicle_live_state", "battery_level"},
-		{"vehicle_live_state", "shift_state"},
-		{"vehicle_live_state", "locked"},
-		{"vehicle_live_state", "sentry_mode"},
-		{"vehicle_live_state", "charger_power_kw"},
-		{"vehicle_live_state", "battery_range_mi"},
-		{"vehicle_live_state", "charging_state"},
-		{"vehicle_live_state", "latitude"},
-		{"vehicle_live_state", "longitude"},
-		{"vehicle_live_state", "heading"},
-		{"vehicle_live_state", "hvac_state"},
-		{"vehicle_live_state", "is_climate_on"},
-		{"vehicle_live_state", "drive_state"},
-		{"vehicle_live_state", "user_present"},
-		{"vehicle_live_state", "software_version"},
-
 		// drives — field renames from db-refactor
 		{"drives", "id"},
 		{"drives", "vehicle_id"},
@@ -155,13 +132,6 @@ func TestRepoColumnsMatchSchema(t *testing.T) {
 		table  string
 		column string
 	}{
-		// vehicle_live_state — old ambiguous names
-		{"vehicle_live_state", "power"},
-		{"vehicle_live_state", "speed"},
-		{"vehicle_live_state", "elevation"},
-		{"vehicle_live_state", "hvac_power"},
-		{"vehicle_live_state", "driver_seat_belt"},
-
 		// drives — old date/ambiguous names
 		{"drives", "start_date"},
 		{"drives", "end_date"},
@@ -169,7 +139,6 @@ func TestRepoColumnsMatchSchema(t *testing.T) {
 		{"drives", "speed_max"},
 
 		// fsm_transitions — removed fields
-		{"fsm_transitions", "fsm_type"},
 		{"fsm_transitions", "fsm_instance_id"},
 	}
 

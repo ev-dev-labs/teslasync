@@ -21,43 +21,44 @@ type Conflict struct {
 // oppositeCommands maps commands to their logical opposite.
 // Both directions are listed explicitly for O(1) lookup.
 var oppositeCommands = map[string]string{
-	"lock":          "unlock",
-	"unlock":        "lock",
-	"climate_on":    "climate_off",
-	"climate_off":   "climate_on",
-	"sentry_on":     "sentry_off",
-	"sentry_off":    "sentry_on",
-	"charge_start":  "charge_stop",
-	"charge_stop":   "charge_start",
+	"lock":              "unlock",
+	"unlock":            "lock",
+	"climate_on":        "climate_off",
+	"climate_off":       "climate_on",
+	"sentry_on":         "sentry_off",
+	"sentry_off":        "sentry_on",
+	"charge_start":      "charge_stop",
+	"charge_stop":       "charge_start",
 	"open_charge_port":  "close_charge_port",
 	"close_charge_port": "open_charge_port",
 	"charge_port_open":  "charge_port_close",
 	"charge_port_close": "charge_port_open",
-	"vent_windows":  "close_windows",
-	"close_windows": "vent_windows",
-	"valet_on":      "valet_off",
-	"valet_off":     "valet_on",
-	"guest_mode_on":  "guest_mode_off",
-	"guest_mode_off": "guest_mode_on",
+	"vent_windows":      "close_windows",
+	"close_windows":     "vent_windows",
+	"valet_on":          "valet_off",
+	"valet_off":         "valet_on",
+	"guest_mode_on":     "guest_mode_off",
+	"guest_mode_off":    "guest_mode_on",
 }
 
 // actionEntry represents a single action parsed from the automation's actions JSON.
 type actionEntry struct {
-	Type    string          `json:"type"`
-	Command string          `json:"command"`
-	Params  json.RawMessage `json:"params"`
+	Type        string          `json:"type"`
+	Command     string          `json:"command"`
+	CommandName string          `json:"command_name"`
+	Params      json.RawMessage `json:"params"`
 }
 
 // triggerSummary normalizes trigger details for comparison.
 type triggerSummary struct {
 	triggerType string
-	cronExpr   string
-	timezone   string
-	event      string   // vehicle_state event name, geofence event
-	fromState  *string  // vehicle_state optional filter
-	toState    *string  // vehicle_state optional filter
-	geofenceID int64    // geofence trigger
-	events     []string // expanded event list (geofence "both" → ["enter","leave"])
+	cronExpr    string
+	timezone    string
+	event       string   // vehicle_state event name, geofence event
+	fromState   *string  // vehicle_state optional filter
+	toState     *string  // vehicle_state optional filter
+	geofenceID  int64    // geofence trigger
+	events      []string // expanded event list (geofence "both" → ["enter","leave"])
 }
 
 // DetectConflicts scans other automations for potential conflicts with the candidate.
@@ -261,6 +262,7 @@ func geofenceEventsOverlap(aEvents, bEvents []string) bool {
 // ── Parsing helpers ─────────────────────────────────────
 
 func parseTriggerSummary(triggerType string, raw json.RawMessage) triggerSummary {
+	triggerType = strings.TrimPrefix(triggerType, "trigger_")
 	ts := triggerSummary{triggerType: triggerType}
 	if len(raw) == 0 {
 		return ts
@@ -334,6 +336,9 @@ func extractCommands(actions []actionEntry) []string {
 	for _, a := range actions {
 		if a.Command != "" {
 			cmds = append(cmds, a.Command)
+		}
+		if a.CommandName != "" {
+			cmds = append(cmds, a.CommandName)
 		}
 	}
 	return cmds
@@ -427,5 +432,3 @@ func intersectStrings(a, b []string) []string {
 	}
 	return result
 }
-
-

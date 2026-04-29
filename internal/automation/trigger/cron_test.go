@@ -14,10 +14,10 @@ import (
 // ─── Mock Engine ─────────────────────────────────────────
 
 type mockEngine struct {
-	mu          sync.Mutex
-	calls       []engineCall
-	returnErr   error
-	onEvaluate  func(automationID int64, snapshot json.RawMessage)
+	mu         sync.Mutex
+	calls      []engineCall
+	returnErr  error
+	onEvaluate func(automationID int64, snapshot json.RawMessage)
 }
 
 type engineCall struct {
@@ -55,8 +55,8 @@ func (m *mockEngine) lastCall() *engineCall {
 
 type mockRepo struct {
 	mu              sync.Mutex
-	automations     []*models.AutomationFull // for calendar/sunrise_sunset tests (GetByTriggerType)
-	cronAutomations []CronAutomation         // for cron tests (LoadEnabledScheduleTriggers)
+	automations     []*models.AutomationFull     // for calendar/sunrise_sunset tests (GetByTriggerType)
+	cronAutomations []CronAutomation             // for cron tests (LoadEnabledScheduleTriggers)
 	energyAutos     map[int64][]EnergyAutomation // siteID → automations (LoadEnabledEnergySignalTriggers)
 	disabled        map[int64]string             // id → reason
 	returnErr       error
@@ -598,17 +598,7 @@ func TestLiveScheduler_FiresWithinWindow(t *testing.T) {
 	ct := NewCronTrigger(repo, engine)
 	defer ct.Stop()
 
-	// Schedule to fire every minute — we'll wait up to 70 seconds.
-	// To avoid waiting that long, we compute a cron that fires in ~2 seconds.
-	now := time.Now().UTC()
-	targetSec := now.Add(2 * time.Second)
-	cronExpr := fmt.Sprintf("%d %d * * *", targetSec.Minute(), targetSec.Hour())
-
-	// If minute is about to roll, adjust.
-	if now.Second() > 57 {
-		targetSec = now.Add(5 * time.Second)
-		cronExpr = fmt.Sprintf("%d %d * * *", targetSec.Minute(), targetSec.Hour())
-	}
+	cronExpr := "@every 1s"
 
 	a := makeAutomation(1, "live-test", cronExpr, "UTC")
 	ct.Register(a)

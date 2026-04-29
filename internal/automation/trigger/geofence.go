@@ -44,6 +44,10 @@ type GeofenceRepo interface {
 	LoadEnabledGeofenceTriggers(ctx context.Context, vehicleID int64) ([]GeofenceAutomation, error)
 }
 
+type geofenceAutoDisabler interface {
+	SetAutoDisabled(ctx context.Context, id int64, reason string) error
+}
+
 // PlaceDataProvider abstracts place lookups (point + radius geofences)
 // so the trigger can be tested without a real database. Per ADR-003 the
 // runtime is responsible for any geometry math; the database surface is
@@ -205,10 +209,16 @@ func (t *GeofenceTrigger) OnPositionUpdate(ctx context.Context, vehicleID int64,
 		ga := &hydrated[i]
 		event := ga.Trigger.Event
 		placeID := ga.Trigger.PlaceID
+		dwellMinutes := ga.Trigger.DwellMinutes
+
+		if placeID <= 0 {
+			t.autoDisableGeofence(ctx, ga.Automation.ID, "geofence place_id is required")
+			continue
+		}
 
 		// Validate event vocabulary; skip silently per ADR-012 (ii).
 		switch event {
-		case "enter", "exit", "dwell":
+		case "enter", "exit", "leave", "both", "dwell":
 		default:
 			t.logger.Warn().
 				Int64("automation_id", ga.Automation.ID).
@@ -232,6 +242,21 @@ func (t *GeofenceTrigger) OnPositionUpdate(ctx context.Context, vehicleID int64,
 			switch event {
 			case "enter":
 				t.cancelDwellTimer(vehicleID, ga.Automation.ID)
+				if dwellMinutes > 0 {
+					t.startDwellTimer(ctx, vehicleID, &ga.Automation, pid, name, lat, lon)
+					continue
+				}
+				if evalErr := t.fireAutomation(ctx, &ga.Automation, vehicleID, pid, name, "enter", lat, lon); evalErr != nil {
+					if firstErr == nil {
+						firstErr = evalErr
+					}
+				}
+			case "both":
+				t.cancelDwellTimer(vehicleID, ga.Automation.ID)
+				if dwellMinutes > 0 {
+					t.startDwellTimer(ctx, vehicleID, &ga.Automation, pid, name, lat, lon)
+					continue
+				}
 				if evalErr := t.fireAutomation(ctx, &ga.Automation, vehicleID, pid, name, "enter", lat, lon); evalErr != nil {
 					if firstErr == nil {
 						firstErr = evalErr
@@ -250,12 +275,16 @@ func (t *GeofenceTrigger) OnPositionUpdate(ctx context.Context, vehicleID int64,
 			}
 			t.cancelDwellTimer(vehicleID, ga.Automation.ID)
 
-			if event != "exit" {
+			if event != "exit" && event != "leave" && event != "both" {
 				continue
 			}
 
 			name := t.lookupPlaceName(ctx, pid)
-			if evalErr := t.fireAutomation(ctx, &ga.Automation, vehicleID, pid, name, "exit", lat, lon); evalErr != nil {
+			fireEvent := event
+			if event == "both" {
+				fireEvent = "leave"
+			}
+			if evalErr := t.fireAutomation(ctx, &ga.Automation, vehicleID, pid, name, fireEvent, lat, lon); evalErr != nil {
 				if firstErr == nil {
 					firstErr = evalErr
 				}
@@ -388,6 +417,19 @@ func (t *GeofenceTrigger) cancelDwellTimer(vehicleID, automationID int64) {
 			Msg("dwell timer cancelled")
 	}
 	t.mu.Unlock()
+}
+
+func (t *GeofenceTrigger) autoDisableGeofence(ctx context.Context, automationID int64, reason string) {
+	disabler, ok := t.repo.(geofenceAutoDisabler)
+	if !ok {
+		return
+	}
+	if err := disabler.SetAutoDisabled(ctx, automationID, reason); err != nil {
+		t.logger.Warn().Err(err).
+			Int64("automation_id", automationID).
+			Str("reason", reason).
+			Msg("failed to auto-disable invalid geofence automation")
+	}
 }
 
 // lookupPlaceName fetches the place name by ID. Returns empty string on error.

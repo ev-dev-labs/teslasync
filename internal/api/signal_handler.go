@@ -7,19 +7,19 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
+	"github.com/go-chi/chi/v5"
 )
 
 // SignalHandler provides API endpoints for querying signal history
 // (Postgres primary, MongoDB optional fallback).
 type SignalHandler struct {
 	signalLogRepo       *database.SignalLogRepo       // MongoDB (optional)
-	signalHistoryWriter *database.SignalHistoryWriter  // Postgres (primary)
+	signalHistoryWriter *database.SignalHistoryWriter // Postgres (primary)
 	db                  *database.DB
 	redisCache          *signal.RedisSignalCache
-	signalStore         *signal.Store                  // in-memory live state
+	liveSignals         signal.LiveSignalStore
 }
 
 // NewSignalHandler creates a new SignalHandler.
@@ -45,9 +45,9 @@ func (h *SignalHandler) WithRedisCache(cache *signal.RedisSignalCache) *SignalHa
 	return h
 }
 
-// WithSignalStore sets the in-memory signal store for live state queries.
-func (h *SignalHandler) WithSignalStore(store *signal.Store) *SignalHandler {
-	h.signalStore = store
+// WithLiveSignalStore sets the live signal boundary for cross-pod live reads.
+func (h *SignalHandler) WithLiveSignalStore(store signal.LiveSignalStore) *SignalHandler {
+	h.liveSignals = store
 	return h
 }
 
@@ -307,12 +307,16 @@ func (h *SignalHandler) LiveState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if h.signalStore == nil {
-		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "signal store not initialized"})
+	if h.liveSignals == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "live signal store not initialized"})
 		return
 	}
 
-	raw := h.signalStore.GetAll(vehicleID)
+	raw, err := h.liveSignals.GetAll(r.Context(), vehicleID, signal.LiveSignalReadDistributed)
+	if err != nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "live signal store unavailable"})
+		return
+	}
 	signals := make(map[string]interface{}, len(raw))
 	for k, v := range raw {
 		if v != nil {
@@ -328,4 +332,14 @@ func (h *SignalHandler) LiveState(w http.ResponseWriter, r *http.Request) {
 		"count":      len(signals),
 		"signals":    signals,
 	})
+}
+
+func liveSignalValuesToRaw(values map[string]*signal.Value) map[string]interface{} {
+	raw := make(map[string]interface{}, len(values))
+	for name, value := range values {
+		if value != nil {
+			raw[name] = value.Raw
+		}
+	}
+	return raw
 }

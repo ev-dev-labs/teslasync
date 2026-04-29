@@ -70,6 +70,7 @@ type FleetTelemetryConfig struct {
 	SnapshotWriteInterval time.Duration // How often to flush accumulated signals to DB per vehicle (default 10s)
 	CleanupInterval       time.Duration // How often to run stale-session cleanup (default 2m)
 	StaleSessionTimeout   time.Duration // Close drive/charge sessions idle longer than this (default 5m)
+	LiveSignalStoreMode   string        // hybrid uses Redis-backed live reads; local keeps L1-only rollback mode
 }
 
 type DatabaseConfig struct {
@@ -248,6 +249,7 @@ func Load() (*Config, error) {
 			SnapshotWriteInterval: envDuration("FLEET_TELEMETRY_SNAPSHOT_WRITE_INTERVAL", 10*time.Second),
 			CleanupInterval:       envDuration("FLEET_TELEMETRY_CLEANUP_INTERVAL", 2*time.Minute),
 			StaleSessionTimeout:   envDuration("FLEET_TELEMETRY_STALE_SESSION_TIMEOUT", 5*time.Minute),
+			LiveSignalStoreMode:   envStr("LIVE_SIGNAL_STORE_MODE", "hybrid"),
 		},
 
 		MongoDB: MongoDBConfig{

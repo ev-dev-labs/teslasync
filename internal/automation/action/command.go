@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -19,6 +20,10 @@ import (
 type VehicleRepo interface {
 	GetByID(ctx context.Context, id int64) (*models.Vehicle, error)
 	GetAll(ctx context.Context) ([]*models.Vehicle, error)
+}
+
+type VehicleStateProvider interface {
+	GetLiveState(ctx context.Context, id int64) (string, error)
 }
 
 // CommandLogRepo is the subset of database.CommandLogRepo needed by CommandExecutor.
@@ -153,6 +158,11 @@ func (e *CommandExecutor) Execute(ctx context.Context, vehicleID *int64, raw jso
 		return nil, fmt.Errorf("not authenticated with Tesla")
 	}
 
+	pollingCfg, err := e.settingsRepo.GetPollingConfig(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get polling config: %w", err)
+	}
+
 	var vehicles []*models.Vehicle
 	if vehicleID != nil {
 		v, err := e.vehicleRepo.GetByID(ctx, *vehicleID)
@@ -160,6 +170,9 @@ func (e *CommandExecutor) Execute(ctx context.Context, vehicleID *int64, raw jso
 			return nil, fmt.Errorf("look up vehicle %d: %w", *vehicleID, err)
 		}
 		if v == nil {
+			if pollingCfg != nil && !pollingCfg.Enabled {
+				return nil, fmt.Errorf("wake_up endpoint is disabled")
+			}
 			return nil, fmt.Errorf("vehicle %d not found", *vehicleID)
 		}
 		vehicles = []*models.Vehicle{v}
@@ -253,12 +266,32 @@ func (e *CommandExecutor) sendToVehicle(ctx context.Context, v *models.Vehicle, 
 }
 
 // wakeIfNeeded sends an auto-wake command before dispatching a vehicle command.
-// Vehicle.State is no longer available on the model (live state lives in the
-// Redis signal cache), so we always attempt the wake — the Tesla WakeUp call
-// is idempotent and returns quickly when the vehicle is already online.
 func (e *CommandExecutor) wakeIfNeeded(ctx context.Context, v *models.Vehicle) *WakeResult {
+	state, err := e.currentVehicleState(ctx, v)
+	if err != nil {
+		return &WakeResult{
+			Attempted: true,
+			Error:     fmt.Sprintf("read vehicle live state: %v", err),
+		}
+	}
+	if state == "online" {
+		return nil
+	}
+
 	wr := &WakeResult{Attempted: true}
 	start := time.Now()
+
+	pollingCfg, err := e.settingsRepo.GetPollingConfig(ctx)
+	if err != nil {
+		wr.Error = fmt.Sprintf("get polling config: %v", err)
+		wr.DurationMs = time.Since(start).Milliseconds()
+		return wr
+	}
+	if pollingCfg != nil && !pollingCfg.Enabled {
+		wr.Error = "wake_up endpoint is disabled"
+		wr.DurationMs = time.Since(start).Milliseconds()
+		return wr
+	}
 
 	e.logger.Info().
 		Int64("vehicle_id", v.ID).
@@ -271,15 +304,56 @@ func (e *CommandExecutor) wakeIfNeeded(ctx context.Context, v *models.Vehicle) *
 		return wr
 	}
 
-	wr.Success = true
-	wr.DurationMs = time.Since(start).Milliseconds()
+	timer := time.NewTimer(e.wakeTimeout)
+	defer timer.Stop()
+	ticker := time.NewTicker(e.wakePollInterval)
+	defer ticker.Stop()
 
-	e.logger.Info().
-		Int64("vehicle_id", v.ID).
-		Int64("duration_ms", wr.DurationMs).
-		Msg("auto-wake command completed successfully")
+	for {
+		select {
+		case <-ctx.Done():
+			wr.Error = ctx.Err().Error()
+			wr.DurationMs = time.Since(start).Milliseconds()
+			return wr
+		case <-timer.C:
+			wr.Error = "vehicle did not wake up within timeout"
+			wr.DurationMs = time.Since(start).Milliseconds()
+			return wr
+		case <-ticker.C:
+			wr.PollCount++
+			state, err := e.currentVehicleState(ctx, v)
+			if err != nil {
+				continue
+			}
+			if state == "online" {
+				wr.Success = true
+				wr.DurationMs = time.Since(start).Milliseconds()
 
-	return wr
+				e.logger.Info().
+					Int64("vehicle_id", v.ID).
+					Int64("duration_ms", wr.DurationMs).
+					Int("poll_count", wr.PollCount).
+					Msg("auto-wake completed successfully")
+
+				return wr
+			}
+		}
+	}
+}
+
+func (e *CommandExecutor) currentVehicleState(ctx context.Context, v *models.Vehicle) (string, error) {
+	if v == nil {
+		return "", nil
+	}
+	provider, ok := e.vehicleRepo.(VehicleStateProvider)
+	if !ok {
+		return "", nil
+	}
+	state, err := provider.GetLiveState(ctx, v.ID)
+	if err != nil {
+		return "", err
+	}
+	return strings.ToLower(strings.TrimSpace(state)), nil
 }
 
 // logCommand writes a command_logs row for audit. Errors are logged but not propagated.

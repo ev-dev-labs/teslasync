@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 )
 
 type fakeRedisSignalClient struct {
+	mu     sync.RWMutex
 	hashes map[string]map[string]string
 }
 
@@ -25,6 +27,10 @@ func (f *fakeRedisSignalClient) HSet(ctx context.Context, key string, values ...
 	if len(values)%2 != 0 {
 		return redis.NewIntResult(0, errors.New("HSet requires field/value pairs"))
 	}
+
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
 	hash, ok := f.hashes[key]
 	if !ok {
 		hash = make(map[string]string, len(values)/2)
@@ -41,6 +47,9 @@ func (f *fakeRedisSignalClient) Expire(ctx context.Context, key string, expirati
 }
 
 func (f *fakeRedisSignalClient) HGetAll(ctx context.Context, key string) *redis.MapStringStringCmd {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+
 	hash, ok := f.hashes[key]
 	if !ok {
 		return redis.NewMapStringStringResult(nil, nil)
@@ -53,6 +62,9 @@ func (f *fakeRedisSignalClient) HGetAll(ctx context.Context, key string) *redis.
 }
 
 func (f *fakeRedisSignalClient) HGet(ctx context.Context, key string, field string) *redis.StringCmd {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+
 	hash, ok := f.hashes[key]
 	if !ok {
 		return redis.NewStringResult("", redis.Nil)

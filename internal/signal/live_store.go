@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -26,6 +28,8 @@ const (
 	LiveSignalStoreModeLocal  LiveSignalStoreMode = "local"
 )
 
+const liveSignalRedisMirrorTimeout = 5 * time.Second
+
 // LiveSignalReadPreference tells the boundary which layer a caller is allowed to use.
 type LiveSignalReadPreference int
 
@@ -39,6 +43,7 @@ const (
 // LiveSignalStore is the package boundary for current live vehicle signals.
 type LiveSignalStore interface {
 	Update(ctx context.Context, vehicleID int64, signals map[string]interface{}) error
+	UpdateNonBlocking(ctx context.Context, vehicleID int64, signals map[string]interface{}) error
 	GetSignal(ctx context.Context, vehicleID int64, name string, preference LiveSignalReadPreference) (*Value, error)
 	GetAll(ctx context.Context, vehicleID int64, preference LiveSignalReadPreference) (map[string]*Value, error)
 	Warm(ctx context.Context, vehicleID int64) error
@@ -122,12 +127,42 @@ func (s *HybridLiveSignalStore) Update(ctx context.Context, vehicleID int64, sig
 	}
 
 	s.l1.Update(vehicleID, signals)
-	if len(signals) == 0 || !s.redisEnabled() {
+	l2 := s.redisCache()
+	if len(signals) == 0 || l2 == nil {
 		return nil
 	}
-	if err := s.l2.Update(ctx, vehicleID, signals); err != nil {
+	if err := l2.Update(ctx, vehicleID, signals); err != nil {
 		return fmt.Errorf("mirror live signals to Redis for vehicle %d: %w", vehicleID, err)
 	}
+	return nil
+}
+
+// UpdateNonBlocking writes L1 synchronously, then mirrors to L2 in a bounded goroutine.
+func (s *HybridLiveSignalStore) UpdateNonBlocking(ctx context.Context, vehicleID int64, signals map[string]interface{}) error {
+	if err := validateLiveSignalContext(ctx); err != nil {
+		return err
+	}
+	if err := validateLiveSignalVehicleID(vehicleID); err != nil {
+		return err
+	}
+	if signals == nil {
+		return ErrNilLiveSignalBatch
+	}
+
+	s.l1.Update(vehicleID, signals)
+	l2 := s.redisCache()
+	if len(signals) == 0 || l2 == nil {
+		return nil
+	}
+
+	signalsCopy := copyLiveSignalBatch(signals)
+	go func() {
+		redisCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), liveSignalRedisMirrorTimeout)
+		defer cancel()
+		if err := l2.Update(redisCtx, vehicleID, signalsCopy); err != nil {
+			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("live signal store: Redis mirror failed")
+		}
+	}()
 	return nil
 }
 
@@ -142,11 +177,12 @@ func (s *HybridLiveSignalStore) GetSignal(ctx context.Context, vehicleID int64, 
 	if strings.TrimSpace(name) == "" {
 		return nil, ErrEmptyLiveSignalName
 	}
-	if preference != LiveSignalReadDistributed || !s.redisEnabled() {
+	l2 := s.redisCache()
+	if preference != LiveSignalReadDistributed || l2 == nil {
 		return cloneSignalValue(s.l1.Get(vehicleID, name)), nil
 	}
 
-	value, err := s.l2.GetSignalValue(ctx, vehicleID, name)
+	value, err := l2.GetSignalValue(ctx, vehicleID, name)
 	if err != nil {
 		return nil, fmt.Errorf("read Redis live signal %d/%s: %w", vehicleID, name, err)
 	}
@@ -167,11 +203,12 @@ func (s *HybridLiveSignalStore) GetAll(ctx context.Context, vehicleID int64, pre
 	if err := validateLiveSignalVehicleID(vehicleID); err != nil {
 		return nil, err
 	}
-	if preference != LiveSignalReadDistributed || !s.redisEnabled() {
+	l2 := s.redisCache()
+	if preference != LiveSignalReadDistributed || l2 == nil {
 		return cloneSignalValues(s.l1.GetAll(vehicleID)), nil
 	}
 
-	values, err := s.l2.GetAllValues(ctx, vehicleID)
+	values, err := l2.GetAllValues(ctx, vehicleID)
 	if err != nil {
 		return nil, fmt.Errorf("read Redis live signals for vehicle %d: %w", vehicleID, err)
 	}
@@ -189,11 +226,12 @@ func (s *HybridLiveSignalStore) Warm(ctx context.Context, vehicleID int64) error
 	if err := validateLiveSignalVehicleID(vehicleID); err != nil {
 		return err
 	}
-	if !s.redisEnabled() {
+	l2 := s.redisCache()
+	if l2 == nil {
 		return nil
 	}
 
-	values, err := s.l2.GetAllValues(ctx, vehicleID)
+	values, err := l2.GetAllValues(ctx, vehicleID)
 	if err != nil {
 		return fmt.Errorf("warm live signals from Redis for vehicle %d: %w", vehicleID, err)
 	}
@@ -206,10 +244,13 @@ func (s *HybridLiveSignalStore) LocalVehicleIDs() []int64 {
 	return s.l1.VehicleIDs()
 }
 
-func (s *HybridLiveSignalStore) redisEnabled() bool {
+func (s *HybridLiveSignalStore) redisCache() *RedisSignalCache {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.mode == LiveSignalStoreModeHybrid && s.l2 != nil
+	if s.mode != LiveSignalStoreModeHybrid {
+		return nil
+	}
+	return s.l2
 }
 
 func (s *HybridLiveSignalStore) hydrateMissingValues(vehicleID int64, values map[string]*Value) {
@@ -226,6 +267,10 @@ func (s *HybridLiveSignalStore) hydrateMissingValues(vehicleID int64, values map
 	}
 	for name, value := range values {
 		if value == nil || value.Raw == nil {
+			continue
+		}
+		// Legacy Redis scalars have unknown freshness; let signal_log hydration fill them.
+		if value.Timestamp.IsZero() {
 			continue
 		}
 		if _, exists := signals[name]; exists {
@@ -256,6 +301,14 @@ func validateLiveSignalVehicleID(vehicleID int64) error {
 		return ErrInvalidLiveSignalVehicleID
 	}
 	return nil
+}
+
+func copyLiveSignalBatch(signals map[string]interface{}) map[string]interface{} {
+	copied := make(map[string]interface{}, len(signals))
+	for name, value := range signals {
+		copied[name] = value
+	}
+	return copied
 }
 
 func cloneSignalValues(values map[string]*Value) map[string]*Value {

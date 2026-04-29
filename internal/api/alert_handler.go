@@ -20,16 +20,16 @@ type AlertHandler struct {
 	notifRepo     *database.NotificationRepo
 	eventHub      *EventHub
 	mqttClient    pahomqtt.Client
-	signalStore   *signal.Store
+	liveSignals   signal.LiveSignalStore
 }
 
-func NewAlertHandler(db *database.DB, hub *EventHub, mc pahomqtt.Client, store *signal.Store) *AlertHandler {
+func NewAlertHandler(db *database.DB, hub *EventHub, mc pahomqtt.Client, store signal.LiveSignalStore) *AlertHandler {
 	return &AlertHandler{
 		alertRuleRepo: database.NewAlertRuleRepo(db),
 		notifRepo:     database.NewNotificationRepo(db),
 		eventHub:      hub,
 		mqttClient:    mc,
-		signalStore:   store,
+		liveSignals:   store,
 	}
 }
 
@@ -271,11 +271,16 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 		message = "This is a test notification from Alert Studio"
 	}
 
-	// Render template with current signal values from SignalStore
-	if h.signalStore != nil {
-		for _, vid := range h.signalStore.VehicleIDs() {
-			raw := h.signalStore.GetRawMap(vid)
-			if raw != nil {
+	// Render template with current signal values from the live-state boundary.
+	if h.liveSignals != nil {
+		for _, vid := range h.liveSignals.LocalVehicleIDs() {
+			values, err := h.liveSignals.GetAll(r.Context(), vid, signal.LiveSignalReadDistributed)
+			if err != nil {
+				log.Warn().Err(err).Int64("vehicle_id", vid).Msg("alert test: live signal read failed")
+				continue
+			}
+			raw := liveSignalValuesToRaw(values)
+			if len(raw) > 0 {
 				message = renderTemplate(message, raw)
 				break
 			}

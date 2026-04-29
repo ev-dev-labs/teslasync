@@ -108,6 +108,9 @@ func (g *Geofence) Centroid() (lat, lon float64) {
 	}
 	coords := g.PolygonWKT[start+2 : end]
 	pairs := strings.Split(coords, ",")
+	if len(pairs) > 1 && strings.TrimSpace(pairs[0]) == strings.TrimSpace(pairs[len(pairs)-1]) {
+		pairs = pairs[:len(pairs)-1]
+	}
 
 	var sumLat, sumLon float64
 	var count int
@@ -178,7 +181,7 @@ func (g *Geofence) Radius() float64 {
 			maxDist = d
 		}
 	}
-	return maxDist
+	return math.Round(maxDist)
 }
 
 // geofenceHaversineM returns the great-circle distance between two points in meters.

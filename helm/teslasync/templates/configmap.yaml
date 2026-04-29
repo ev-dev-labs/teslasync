@@ -26,6 +26,7 @@ data:
   REDIS_HOST: {{ include "teslasync.redis.host" . | quote }}
   REDIS_PORT: {{ include "teslasync.redis.port" . | quote }}
   REDIS_DB: {{ .Values.redis.db | default 0 | quote }}
+  LIVE_SIGNAL_STORE_MODE: {{ .Values.fleetTelemetry.liveSignalStoreMode | default "hybrid" | quote }}
   GRAFANA_HOST: {{ include "teslasync.grafana.host" . | quote }}
   GRAFANA_PORT: {{ include "teslasync.grafana.port" . | quote }}
   {{- $apiEndpoint := .Values.config.apiEndpoint | default (printf "http://%s-api:%v" (include "teslasync.fullname" .) (int .Values.service.port)) }}

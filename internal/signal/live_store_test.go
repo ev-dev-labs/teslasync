@@ -71,6 +71,27 @@ func TestHybridLiveSignalStoreUpdateWritesL1AndL2(t *testing.T) {
 	}
 }
 
+func TestHybridLiveSignalStoreUpdateNonBlockingWritesL1AndAttemptsL2(t *testing.T) {
+	ctx := context.Background()
+	local := New()
+	redisClient := newFakeRedisSignalClient()
+	redisCache := &RedisSignalCache{rdb: redisClient}
+	liveStore, err := NewHybridLiveSignalStore(local, redisCache, LiveSignalStoreModeHybrid)
+	if err != nil {
+		t.Fatalf("NewHybridLiveSignalStore() error = %v", err)
+	}
+
+	if err := liveStore.UpdateNonBlocking(ctx, 8, map[string]interface{}{
+		"BatteryLevel": 45.0,
+	}); err != nil {
+		t.Fatalf("UpdateNonBlocking() error = %v", err)
+	}
+
+	assertFloat64(t, local.Get(8, "BatteryLevel").Raw, 45)
+	redisValue := waitForRedisSignalValue(t, redisCache, 8, "BatteryLevel")
+	assertFloat64(t, redisValue.Raw, 45)
+}
+
 func TestHybridLiveSignalStoreLocalModeDoesNotUseRedisBackedReadsOrWrites(t *testing.T) {
 	ctx := context.Background()
 	local := New()
@@ -204,6 +225,22 @@ func TestHybridLiveSignalStoreRedisFailureDoesNotCorruptL1State(t *testing.T) {
 	assertFloat64(t, local.Get(13, "BatteryLevel").Raw, 66)
 }
 
+func TestHybridLiveSignalStoreUpdateNonBlockingRedisFailureStillUpdatesL1(t *testing.T) {
+	ctx := context.Background()
+	local := New()
+	redisErr := errors.New("redis unavailable")
+	redisCache := &RedisSignalCache{rdb: failingRedisSignalClient{err: redisErr}}
+	liveStore, err := NewHybridLiveSignalStore(local, redisCache, LiveSignalStoreModeHybrid)
+	if err != nil {
+		t.Fatalf("NewHybridLiveSignalStore() error = %v", err)
+	}
+
+	if err := liveStore.UpdateNonBlocking(ctx, 14, map[string]interface{}{"Gear": "D"}); err != nil {
+		t.Fatalf("UpdateNonBlocking() error = %v", err)
+	}
+	assertString(t, local.Get(14, "Gear").Raw, "D")
+}
+
 func TestHybridLiveSignalStoreRejectsInvalidInputs(t *testing.T) {
 	ctx := context.Background()
 	liveStore, err := NewHybridLiveSignalStore(New(), nil, LiveSignalStoreModeHybrid)
@@ -258,6 +295,29 @@ func TestHybridLiveSignalStoreWarmHydratesL1FromRedis(t *testing.T) {
 	assertString(t, local.Get(15, "ShiftState").Raw, "N")
 }
 
+func TestHybridLiveSignalStoreWarmSkipsTimestamplessRedisForHistoryHydrate(t *testing.T) {
+	ctx := context.Background()
+	local := New()
+	redisClient := newFakeRedisSignalClient()
+	redisClient.hashes[redisSignalKey(16)] = map[string]string{
+		"BatteryLevel": "12",
+	}
+	redisCache := &RedisSignalCache{rdb: redisClient}
+	liveStore, err := NewHybridLiveSignalStore(local, redisCache, LiveSignalStoreModeHybrid)
+	if err != nil {
+		t.Fatalf("NewHybridLiveSignalStore() error = %v", err)
+	}
+	if err := liveStore.Warm(ctx, 16); err != nil {
+		t.Fatalf("Warm() error = %v", err)
+	}
+
+	if got := local.Get(16, "BatteryLevel"); got != nil {
+		t.Fatalf("timestamp-less Redis value warmed into L1 = %#v, want history fallback to fill it", got)
+	}
+	local.Hydrate(16, map[string]interface{}{"BatteryLevel": 88.0})
+	assertFloat64(t, local.Get(16, "BatteryLevel").Raw, 88)
+}
+
 type failingRedisSignalClient struct {
 	err error
 }
@@ -304,4 +364,21 @@ func ExampleParseLiveSignalStoreMode() {
 	mode, err := ParseLiveSignalStoreMode("hybrid")
 	fmt.Println(mode, err)
 	// Output: hybrid <nil>
+}
+
+func waitForRedisSignalValue(t *testing.T, redisCache *RedisSignalCache, vehicleID int64, name string) *Value {
+	t.Helper()
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		value, err := redisCache.GetSignalValue(context.Background(), vehicleID, name)
+		if err != nil {
+			t.Fatalf("GetSignalValue() error = %v", err)
+		}
+		if value != nil {
+			return value
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("timed out waiting for Redis signal %d/%s", vehicleID, name)
+	return nil
 }

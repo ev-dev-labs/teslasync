@@ -10,18 +10,16 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/api"
 	"github.com/ev-dev-labs/teslasync/internal/cache"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/events"
-	"github.com/ev-dev-labs/teslasync/internal/models"
-	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
+	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/polling"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
@@ -29,6 +27,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 	"github.com/ev-dev-labs/teslasync/internal/worker"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/adapter/gasprices"
 )
@@ -212,36 +212,69 @@ func main() {
 		telemetryHandler.SetSignalStore(signalStore)
 		telemetryHandler.FSMHandler().SetSignalStore(signalStore)
 
-		// Wire Redis signal cache(write-through HSET mirror, fire-and-forget)
+		var redisSignalCache *sigsvc.RedisSignalCache
+		// Wire Redis signal cache for LiveSignalStore L2 and SSE Pub/Sub fanout.
 		if rdb := cacheStore.Underlying(); rdb != nil {
-			telemetryHandler.SetRedisCache(sigsvc.NewRedisSignalCache(rdb))
+			redisSignalCache = sigsvc.NewRedisSignalCache(rdb)
+			telemetryHandler.SetRedisCache(redisSignalCache)
 			log.Info().Msg("redis signal cache enabled")
 		}
 
-		// Load existing state from Redis/signal_log (pod restart recovery)
-		if vehicles, err := database.NewVehicleRepo(db).GetAll(ctx); err == nil {
-			for _, v := range vehicles {
-				signalStore.LoadFromDB(ctx, v.ID)
-			}
+		liveSignalStore, err := sigsvc.NewLiveSignalStore(signalStore, redisSignalCache, cfg.FleetTelemetry.LiveSignalStoreMode)
+		if err != nil {
+			log.Fatal().Err(err).Str("mode", cfg.FleetTelemetry.LiveSignalStoreMode).Msg("invalid LIVE_SIGNAL_STORE_MODE")
 		}
-		log.Info().Msg("signal store initialized")
+		telemetryHandler.SetLiveSignalStore(liveSignalStore)
+		log.Info().
+			Str("mode", cfg.FleetTelemetry.LiveSignalStoreMode).
+			Bool("redis_l2", redisSignalCache != nil).
+			Msg("live signal store initialized")
+
+		vehicleRepo := database.NewVehicleRepo(db)
+		vehicles, err := vehicleRepo.GetAll(ctx)
+		if err != nil {
+			log.Warn().Err(err).Msg("live signal store: vehicle list unavailable during warmup")
+		}
+
+		// Warm each pod's local L1 from Redis first. This is best-effort restart
+		// recovery, not leader election; history fallback below is bounded so API
+		// pods do not wait indefinitely behind a thundering-herd signal scan.
+		for _, v := range vehicles {
+			warmCtx, warmCancel := context.WithTimeout(ctx, 5*time.Second)
+			if err := liveSignalStore.Warm(warmCtx, v.ID); err != nil {
+				log.Warn().Err(err).Int64("vehicle_id", v.ID).Msg("live signal store: Redis warmup failed")
+			}
+			warmCancel()
+		}
+		if len(vehicles) > 0 {
+			log.Info().Int("vehicles", len(vehicles)).Msg("live signal store warmed from Redis")
+		}
 
 		// Postgres signal_history writer (always-on per-signal history)
 		signalHistoryWriter = database.NewSignalHistoryWriter(db, 2*time.Second, cacheStore.Underlying())
 		telemetryHandler.SetSignalHistoryWriter(signalHistoryWriter)
 
-		// Hydrate remaining signals from signal_history (covers all 230+ signals)
-		// Must run before session/alert recovery so they see the full signal set.
-		if vehicles, err := database.NewVehicleRepo(db).GetAll(ctx); err == nil {
-			for _, v := range vehicles {
-				if extra, err := signalHistoryWriter.GetLatestPerSignal(ctx, v.ID); err == nil {
-					signalStore.Hydrate(v.ID, extra)
-				} else {
-					log.Warn().Err(err).Int64("vehicle_id", v.ID).Msg("signal store: hydration from signal_history failed")
-				}
+		// Hydrate remaining signals from signal_history (covers missing or legacy
+		// timestamp-less Redis values). Must run before session/alert recovery so
+		// they see the full local L1 signal set on this pod.
+		historyWarmCtx, historyWarmCancel := context.WithTimeout(ctx, 30*time.Second)
+		for _, v := range vehicles {
+			if historyWarmCtx.Err() != nil {
+				log.Warn().Err(historyWarmCtx.Err()).Msg("signal store: bounded signal_history hydration stopped early")
+				break
+			}
+			if extra, err := signalHistoryWriter.GetLatestPerSignal(historyWarmCtx, v.ID); err == nil {
+				signalStore.Hydrate(v.ID, extra)
+			} else {
+				log.Warn().Err(err).Int64("vehicle_id", v.ID).Msg("signal store: hydration from signal_history failed")
 			}
 		}
-		log.Info().Msg("signal store hydrated from signal_history")
+		historyWarmCancel()
+		if len(vehicles) > 0 {
+			log.Info().Int("vehicles", len(vehicles)).Msg("signal store hydrated from signal_history")
+		}
+
+		log.Info().Msg("signal store initialized")
 
 		go signalHistoryWriter.FlushLoop(ctx)
 		log.Info().Int("retention_days", cfg.Retention.SignalHistoryRetentionDays).Msg("Postgres signal_history writer started")

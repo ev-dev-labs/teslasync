@@ -26,7 +26,7 @@ type AutomationHandler struct {
 	repo           *database.AutomationRepo
 	historyRepo    *database.AutomationHistoryRepo
 	fsmTransRepo   *database.FSMTransitionRepo
-	cmdExecutor    *action.CommandExecutor // optional, enables undo
+	cmdExecutor    *action.CommandExecutor   // optional, enables undo
 	eventPublisher *AutomationEventPublisher // optional, enables SSE events
 	auditor        *automation.Auditor       // optional, enables audit trail
 	presetRegistry *presets.Registry         // built-in preset templates
@@ -566,7 +566,7 @@ type historyListResponse struct {
 // historyDetailResponse wraps a single execution record with FSM transitions.
 type historyDetailResponse struct {
 	*models.AutomationHistory
-	SuccessRate    float64                       `json:"success_rate"`
+	SuccessRate    float64                        `json:"success_rate"`
 	FSMTransitions []database.FSMTransitionRecord `json:"fsm_transitions"`
 }
 
@@ -779,17 +779,17 @@ func (h *AutomationHandler) checkWebhookTokenUniqueness(r *http.Request, config 
 
 // testRunResponse is the top-level response for a dry-run test.
 type testRunResponse struct {
-	AutomationID   int64                `json:"automation_id"`
-	AutomationName string               `json:"automation_name"`
-	VehicleID      *int64               `json:"vehicle_id"`
-	TriggerType    string               `json:"trigger_type"`
-	Status         string               `json:"status"` // always "test"
-	ConditionsMet  bool                 `json:"conditions_met"`
+	AutomationID   int64                 `json:"automation_id"`
+	AutomationName string                `json:"automation_name"`
+	VehicleID      *int64                `json:"vehicle_id"`
+	TriggerType    string                `json:"trigger_type"`
+	Status         string                `json:"status"` // always "test"
+	ConditionsMet  bool                  `json:"conditions_met"`
 	Conditions     []testConditionResult `json:"conditions"`
-	Actions        []testActionResult   `json:"actions"`
-	ExecutionPlan  testExecutionPlan    `json:"execution_plan"`
-	HistoryID      int64                `json:"history_id"`
-	Timestamp      time.Time            `json:"timestamp"`
+	Actions        []testActionResult    `json:"actions"`
+	ExecutionPlan  testExecutionPlan     `json:"execution_plan"`
+	HistoryID      int64                 `json:"history_id"`
+	Timestamp      time.Time             `json:"timestamp"`
 }
 
 // testConditionResult captures the evaluation of a single condition during dry-run.
@@ -837,21 +837,22 @@ func (h *AutomationHandler) TestRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	a, err := h.getByID(r.Context(), id)
+	af, err := h.getFullByID(r.Context(), id)
 	if err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("test-run: failed to get automation")
 		writeError(w, http.StatusInternalServerError, "failed to get automation")
 		return
 	}
-	if a == nil {
+	if af == nil {
 		writeError(w, http.StatusNotFound, "automation not found")
 		return
 	}
+	a := &af.Automation
 
 	now := time.Now().UTC()
 
 	// ── Evaluate conditions ───────────────────────────────────────────
-	condResults := h.evaluateTestConditions(a, now)
+	condResults := h.evaluateTestConditions(af, now)
 
 	allMet := true
 	hasUnknown := false
@@ -865,7 +866,7 @@ func (h *AutomationHandler) TestRun(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// ── Validate & simulate actions ───────────────────────────────────
-	actionResults, validCount := h.simulateActions(a, allMet)
+	actionResults, validCount := h.simulateActions(af, allMet)
 
 	// ── Persist history record with status "test" ─────────────────────
 	conditionsJSON, _ := json.Marshal(condResults)
@@ -937,7 +938,7 @@ func (h *AutomationHandler) TestRun(w http.ResponseWriter, r *http.Request) {
 		ExecutionPlan: testExecutionPlan{
 			TotalActions:         len(actionResults),
 			ValidActions:         validCount,
-			StopOnFailure:        false,
+			StopOnFailure:        testRunStopOnFailure(af),
 			ConditionsCount:      len(condResults),
 			AllConditionsMet:     allMet,
 			HasUnknownConditions: hasUnknown,
@@ -947,31 +948,37 @@ func (h *AutomationHandler) TestRun(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// evaluateTestConditions parses and evaluates each condition in the
-// automation. Time-based conditions use real time; state-dependent
-// conditions that require unavailable context are reported as "unknown".
-func (h *AutomationHandler) evaluateTestConditions(a *models.Automation, now time.Time) []testConditionResult {
-	if len(json.RawMessage("[]")) == 0 || string(json.RawMessage("[]")) == "[]" || string(json.RawMessage("[]")) == "null" {
+type testRunConditionConfig struct {
+	condType string
+	raw      json.RawMessage
+	err      error
+}
+
+// evaluateTestConditions parses and evaluates each condition in the automation.
+// Time-based conditions use real time; state-dependent conditions that require
+// unavailable context are reported as "unknown".
+func (h *AutomationHandler) evaluateTestConditions(af *models.AutomationFull, now time.Time) []testConditionResult {
+	if af == nil || len(af.Conditions) == 0 {
 		return []testConditionResult{}
 	}
 
-	var rawConditions []json.RawMessage
-	if err := json.Unmarshal(json.RawMessage("[]"), &rawConditions); err != nil {
-		return []testConditionResult{{
-			Index:  0,
-			Type:   "parse_error",
-			Result: "unknown",
-			Reason: "failed to parse conditions array: " + err.Error(),
-		}}
-	}
-
+	rawConditions := testRunConditionConfigs(af)
 	results := make([]testConditionResult, 0, len(rawConditions))
 
-	for i, raw := range rawConditions {
+	for i, cfg := range rawConditions {
+		if cfg.err != nil {
+			results = append(results, testConditionResult{
+				Index:  i,
+				Type:   cfg.condType,
+				Result: "unknown",
+				Reason: cfg.err.Error(),
+			})
+			continue
+		}
 		var peek struct {
 			Type string `json:"type"`
 		}
-		if err := json.Unmarshal(raw, &peek); err != nil {
+		if err := json.Unmarshal(cfg.raw, &peek); err != nil {
 			results = append(results, testConditionResult{
 				Index:  i,
 				Type:   "unknown",
@@ -980,12 +987,129 @@ func (h *AutomationHandler) evaluateTestConditions(a *models.Automation, now tim
 			})
 			continue
 		}
+		if peek.Type == "" {
+			peek.Type = cfg.condType
+		}
 
-		cr := h.evaluateSingleCondition(i, peek.Type, raw, a, now)
+		cr := h.evaluateSingleCondition(i, peek.Type, cfg.raw, &af.Automation, now)
 		results = append(results, cr)
 	}
 
 	return results
+}
+
+func testRunConditionConfigs(af *models.AutomationFull) []testRunConditionConfig {
+	configs := make([]testRunConditionConfig, 0, len(af.Conditions))
+	for _, item := range af.Conditions {
+		configs = append(configs, testRunConditionConfigFrom(item))
+	}
+	return configs
+}
+
+func testRunConditionConfigFrom(item any) testRunConditionConfig {
+	switch c := item.(type) {
+	case json.RawMessage:
+		return testRunConditionConfig{raw: c}
+	case []byte:
+		return testRunConditionConfig{raw: json.RawMessage(c)}
+	case *models.AutomationStepConditionTimeWindow:
+		return testRunConditionTimeWindow(c)
+	case models.AutomationStepConditionTimeWindow:
+		return testRunConditionTimeWindow(&c)
+	case *models.AutomationStepConditionSignal:
+		return testRunConditionSignal(c)
+	case models.AutomationStepConditionSignal:
+		return testRunConditionSignal(&c)
+	case *models.AutomationStepConditionGeofence:
+		return testRunConditionGeofence(c)
+	case models.AutomationStepConditionGeofence:
+		return testRunConditionGeofence(&c)
+	case *models.AutomationStepConditionOtherAutomation:
+		return marshalTestRunCondition("other_automation", map[string]any{
+			"type":                "other_automation",
+			"other_automation_id": c.OtherAutomationID,
+			"state":               c.State,
+		})
+	case models.AutomationStepConditionOtherAutomation:
+		return testRunConditionConfigFrom(&c)
+	default:
+		raw, err := json.Marshal(item)
+		return testRunConditionConfig{raw: raw, err: err}
+	}
+}
+
+func testRunConditionTimeWindow(c *models.AutomationStepConditionTimeWindow) testRunConditionConfig {
+	if c == nil {
+		return testRunConditionConfig{condType: "time_window", err: fmt.Errorf("time_window condition is nil")}
+	}
+	return marshalTestRunCondition("time_window", map[string]any{
+		"type":       "time_window",
+		"start_time": c.StartTime.Format("15:04"),
+		"end_time":   c.EndTime.Format("15:04"),
+		"timezone":   c.Timezone,
+	})
+}
+
+func testRunConditionSignal(c *models.AutomationStepConditionSignal) testRunConditionConfig {
+	if c == nil {
+		return testRunConditionConfig{condType: "state_check", err: fmt.Errorf("signal condition is nil")}
+	}
+	operator := mapSignalConditionOperator(c.Op)
+	value := signalConditionValue(c)
+	return marshalTestRunCondition("state_check", map[string]any{
+		"type":     "state_check",
+		"field":    c.Signal,
+		"operator": operator,
+		"value":    value,
+	})
+}
+
+func testRunConditionGeofence(c *models.AutomationStepConditionGeofence) testRunConditionConfig {
+	if c == nil {
+		return testRunConditionConfig{condType: "location", err: fmt.Errorf("geofence condition is nil")}
+	}
+	return marshalTestRunCondition("location", map[string]any{
+		"type":        "location",
+		"geofence_id": c.PlaceID,
+		"operator":    c.State,
+	})
+}
+
+func marshalTestRunCondition(condType string, payload map[string]any) testRunConditionConfig {
+	raw, err := json.Marshal(payload)
+	return testRunConditionConfig{condType: condType, raw: raw, err: err}
+}
+
+func mapSignalConditionOperator(op string) string {
+	switch op {
+	case "=":
+		return "eq"
+	case "!=":
+		return "neq"
+	case ">":
+		return "gt"
+	case "<":
+		return "lt"
+	case ">=":
+		return "gte"
+	case "<=":
+		return "lte"
+	default:
+		return op
+	}
+}
+
+func signalConditionValue(c *models.AutomationStepConditionSignal) any {
+	switch {
+	case c.ValueText != nil:
+		return *c.ValueText
+	case c.ValueNum != nil:
+		return *c.ValueNum
+	case c.ValueBool != nil:
+		return *c.ValueBool
+	default:
+		return nil
+	}
 }
 
 // evaluateSingleCondition evaluates one condition, dispatching to the
@@ -1083,15 +1207,14 @@ func withUnknown(base testConditionResult, reason string) testConditionResult {
 	return base
 }
 
-// simulateActions parses the automation's action chain, validates each
-// action config, and returns simulated results. Returns the results and
-// the count of valid actions.
-func (h *AutomationHandler) simulateActions(a *models.Automation, conditionsMet bool) ([]testActionResult, int) {
-	if len(json.RawMessage("[]")) == 0 || string(json.RawMessage("[]")) == "[]" || string(json.RawMessage("[]")) == "null" {
+// simulateActions parses the automation's action chain, validates each action
+// config, and returns simulated results. Returns the results and valid count.
+func (h *AutomationHandler) simulateActions(af *models.AutomationFull, conditionsMet bool) ([]testActionResult, int) {
+	if af == nil || len(af.Actions) == 0 {
 		return []testActionResult{}, 0
 	}
 
-	configs, err := action.ParseActions(json.RawMessage("[]"))
+	configs, err := testRunActionConfigs(af)
 	if err != nil {
 		return []testActionResult{{
 			Index:      0,
@@ -1109,6 +1232,7 @@ func (h *AutomationHandler) simulateActions(a *models.Automation, conditionsMet 
 	results := make([]testActionResult, 0, len(configs))
 	validCount := 0
 	stopped := false
+	stopOnFailure := testRunStopOnFailure(af)
 
 	for i, cfg := range configs {
 		result := testActionResult{
@@ -1137,7 +1261,7 @@ func (h *AutomationHandler) simulateActions(a *models.Automation, conditionsMet 
 		// Validate per-type config.
 		if parseErr := validateActionConfig(cfg); parseErr != nil {
 			result.Error = parseErr.Error()
-			if false {
+			if stopOnFailure {
 				stopped = true
 			}
 		} else {
@@ -1150,6 +1274,125 @@ func (h *AutomationHandler) simulateActions(a *models.Automation, conditionsMet 
 	}
 
 	return results, validCount
+}
+
+func testRunActionConfigs(af *models.AutomationFull) ([]action.ActionConfig, error) {
+	configs := make([]action.ActionConfig, 0, len(af.Actions))
+	for _, item := range af.Actions {
+		next, err := testRunActionConfigFrom(item)
+		if err != nil {
+			return nil, err
+		}
+		configs = append(configs, next...)
+	}
+	return configs, nil
+}
+
+func testRunActionConfigFrom(item any) ([]action.ActionConfig, error) {
+	switch a := item.(type) {
+	case json.RawMessage:
+		return parseTestRunActionRaw(a)
+	case []byte:
+		return parseTestRunActionRaw(json.RawMessage(a))
+	case *models.AutomationAction:
+		return parseTestRunActionRaw(testRunCommandActionRaw(a))
+	case models.AutomationAction:
+		return testRunActionConfigFrom(&a)
+	case *models.AutomationStepActionNotify:
+		return parseTestRunActionRaw(testRunNotifyActionRaw(a))
+	case models.AutomationStepActionNotify:
+		return testRunActionConfigFrom(&a)
+	case *models.AutomationStepActionSetSetting:
+		return parseTestRunActionRaw(testRunSetSettingActionRaw(a))
+	case models.AutomationStepActionSetSetting:
+		return testRunActionConfigFrom(&a)
+	case *models.AutomationStepActionCallAutomation:
+		return parseTestRunActionRaw(testRunCallAutomationActionRaw(a))
+	case models.AutomationStepActionCallAutomation:
+		return testRunActionConfigFrom(&a)
+	default:
+		raw, err := json.Marshal(item)
+		if err != nil {
+			return nil, err
+		}
+		return parseTestRunActionRaw(raw)
+	}
+}
+
+func parseTestRunActionRaw(raw json.RawMessage) ([]action.ActionConfig, error) {
+	trimmed := strings.TrimSpace(string(raw))
+	if trimmed == "" || trimmed == "null" {
+		return []action.ActionConfig{}, nil
+	}
+	if strings.HasPrefix(trimmed, "[") {
+		return action.ParseActions(raw)
+	}
+
+	var peek struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(raw, &peek); err != nil {
+		return nil, fmt.Errorf("action 0: invalid JSON: %w", err)
+	}
+	if peek.Type == "" {
+		peek.Type = "command"
+	}
+	return []action.ActionConfig{{Type: peek.Type, Raw: raw}}, nil
+}
+
+func testRunCommandActionRaw(a *models.AutomationAction) json.RawMessage {
+	payload := map[string]any{
+		"type":    "command",
+		"command": a.CommandName,
+	}
+	if len(a.CommandParams) > 0 && string(a.CommandParams) != "null" {
+		payload["params"] = a.CommandParams
+	}
+	raw, _ := json.Marshal(payload)
+	return raw
+}
+
+func testRunNotifyActionRaw(a *models.AutomationStepActionNotify) json.RawMessage {
+	raw, _ := json.Marshal(map[string]any{
+		"type":    "notify",
+		"channel": "all",
+		"message": a.Template,
+	})
+	return raw
+}
+
+func testRunSetSettingActionRaw(a *models.AutomationStepActionSetSetting) json.RawMessage {
+	raw, _ := json.Marshal(map[string]any{
+		"type":  "set_variable",
+		"key":   a.SettingKey,
+		"value": testRunSettingValue(a),
+	})
+	return raw
+}
+
+func testRunCallAutomationActionRaw(a *models.AutomationStepActionCallAutomation) json.RawMessage {
+	raw, _ := json.Marshal(map[string]any{
+		"type":                 "call_automation",
+		"target_automation_id": a.TargetAutomationID,
+	})
+	return raw
+}
+
+func testRunSettingValue(a *models.AutomationStepActionSetSetting) string {
+	switch {
+	case a.ValueText != nil:
+		return *a.ValueText
+	case a.ValueNum != nil:
+		return fmt.Sprint(*a.ValueNum)
+	case a.ValueBool != nil:
+		return fmt.Sprint(*a.ValueBool)
+	default:
+		return ""
+	}
+}
+
+func testRunStopOnFailure(_ *models.AutomationFull) bool {
+	return true
 }
 
 // validateActionConfig runs the per-type parser for deeper config validation.
@@ -1185,32 +1428,32 @@ func (e *duplicateTokenError) Error() string {
 // reverseCommands maps Tesla commands to their logical inverse.
 // Commands not in this map are considered irreversible.
 var reverseCommands = map[string]string{
-	"lock":        "unlock",
-	"unlock":      "lock",
-	"climate_on":  "climate_off",
-	"climate_off": "climate_on",
-	"sentry_on":   "sentry_off",
-	"sentry_off":  "sentry_on",
-	"charge_start": "charge_stop",
-	"charge_stop":  "charge_start",
-	"vent_windows":  "close_windows",
-	"close_windows": "vent_windows",
-	"valet_on":     "valet_off",
-	"valet_off":    "valet_on",
-	"guest_mode_on":  "guest_mode_off",
-	"guest_mode_off": "guest_mode_on",
-	"cop_on":   "cop_off",
-	"cop_off":  "cop_on",
-	"bioweapon_on":  "bioweapon_off",
-	"bioweapon_off": "bioweapon_on",
-	"speed_limit_on":  "speed_limit_off",
-	"speed_limit_off": "speed_limit_on",
-	"sunroof_vent":  "sunroof_close",
-	"sunroof_close": "sunroof_vent",
+	"lock":               "unlock",
+	"unlock":             "lock",
+	"climate_on":         "climate_off",
+	"climate_off":        "climate_on",
+	"sentry_on":          "sentry_off",
+	"sentry_off":         "sentry_on",
+	"charge_start":       "charge_stop",
+	"charge_stop":        "charge_start",
+	"vent_windows":       "close_windows",
+	"close_windows":      "vent_windows",
+	"valet_on":           "valet_off",
+	"valet_off":          "valet_on",
+	"guest_mode_on":      "guest_mode_off",
+	"guest_mode_off":     "guest_mode_on",
+	"cop_on":             "cop_off",
+	"cop_off":            "cop_on",
+	"bioweapon_on":       "bioweapon_off",
+	"bioweapon_off":      "bioweapon_on",
+	"speed_limit_on":     "speed_limit_off",
+	"speed_limit_off":    "speed_limit_on",
+	"sunroof_vent":       "sunroof_close",
+	"sunroof_close":      "sunroof_vent",
 	"climate_keeper_on":  "climate_keeper_off",
 	"climate_keeper_off": "climate_keeper_on",
-	"dog_mode":  "climate_keeper_off",
-	"camp_mode": "climate_keeper_off",
+	"dog_mode":           "climate_keeper_off",
+	"camp_mode":          "climate_keeper_off",
 }
 
 // undoResponse is the top-level response for the undo endpoint.
@@ -1427,9 +1670,9 @@ const exportVersion = 1
 
 // automationExportEnvelope is the top-level JSON document for import/export.
 type automationExportEnvelope struct {
-	Version     int                    `json:"version"`
-	ExportedAt  string                 `json:"exported_at"`
-	Automations []automationPortable   `json:"automations"`
+	Version     int                  `json:"version"`
+	ExportedAt  string               `json:"exported_at"`
+	Automations []automationPortable `json:"automations"`
 }
 
 // automationPortable is a shareable automation definition stripped of

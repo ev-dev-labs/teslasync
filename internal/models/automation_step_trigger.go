@@ -28,12 +28,13 @@ type AutomationStepTriggerSignal struct {
 
 // AutomationStepTriggerGeofence mirrors `automation_step_trigger_geofence`.
 //
-// Event is one of: 'enter', 'exit', 'dwell' (enforced by CHECK constraint).
+// Event is one of: 'enter', 'exit', 'leave', 'both', or 'dwell'.
 // PlaceID is a FK to places(id) ON DELETE RESTRICT (added in prompt 23).
 type AutomationStepTriggerGeofence struct {
-	StepID  int64  `db:"step_id"  json:"step_id"`
-	PlaceID int64  `db:"place_id" json:"place_id"`
-	Event   string `db:"event"    json:"event"`
+	StepID       int64  `db:"step_id" json:"step_id"`
+	PlaceID      int64  `db:"place_id" json:"place_id"`
+	Event        string `db:"event" json:"event"`
+	DwellMinutes int    `db:"-" json:"dwell_minutes,omitempty"`
 }
 
 // AutomationStepTriggerSchedule mirrors `automation_step_trigger_schedule`.

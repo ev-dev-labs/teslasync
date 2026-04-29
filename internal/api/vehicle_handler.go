@@ -5,11 +5,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/service"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
+	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel/attribute"
 )
 
@@ -178,17 +179,25 @@ func (h *VehicleHandler) CurrentState(w http.ResponseWriter, r *http.Request) {
 	}
 	span.SetAttributes(attribute.String("vehicle.vin", vehicle.VIN))
 
-	// PRIMARY: Build state from in-memory SignalStore + DB fallbacks (never nil, <5ms)
+	// PRIMARY: Build state from the live signal boundary + DB fallbacks.
 	if h.telemetryHandler != nil {
-		store := h.telemetryHandler.GetSignalStore()
+		store := signal.New()
+		var hasLiveSignals bool
+		if liveStore := h.telemetryHandler.GetLiveSignalStore(); liveStore != nil {
+			values, err := liveStore.GetAll(ctx, vehicle.ID, signal.LiveSignalReadDistributed)
+			if err != nil {
+				log.Warn().Err(err).Int64("vehicle_id", vehicle.ID).Msg("vehicle current state: live signal read failed")
+			} else if len(values) > 0 {
+				store.Hydrate(vehicle.ID, liveSignalValuesToRaw(values))
+				hasLiveSignals = true
+			}
+		}
 		state := h.vehicleSvc.BuildStateFromSignalStore(store, vehicle)
 		// Enrich with state-since timestamp from vehicle_states table
 		if _, since, err := h.vehicleSvc.StateRepo().GetCurrentStateSince(ctx, vehicle.ID); err == nil && since != nil {
 			state.Since = since
 		}
-		// Determine if we have live telemetry data vs pure DB fallback
-		hasLiveSignals := store != nil && len(store.GetAll(vehicle.ID)) > 0
-		dataSource := "signal_store"
+		dataSource := "live_signal_store"
 		if !hasLiveSignals {
 			dataSource = "db_fallback"
 		}
