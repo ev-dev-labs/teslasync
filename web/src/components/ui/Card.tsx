@@ -13,7 +13,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
       <div
         ref={ref}
         className={cn(
-          'rounded-lg border bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800',
+          'rounded-lg border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-sm',
           paddings[padding],
           hover && 'cursor-pointer transition-shadow hover:shadow-md',
           className,
@@ -47,7 +47,7 @@ export function CardHeader({ title, subtitle, action }: CardHeaderProps) {
 
 export function CardFooter({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn('mt-4 flex items-center justify-end gap-2 border-t pt-4 dark:border-gray-700', className)}>
+    <div className={cn('mt-4 flex items-center justify-end gap-2 border-t border-[var(--glass-border)] pt-4', className)}>
       {children}
     </div>
   );

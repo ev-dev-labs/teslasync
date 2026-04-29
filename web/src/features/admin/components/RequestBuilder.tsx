@@ -76,7 +76,7 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
       {/* URL bar */}
       <div className="flex items-center gap-2">
         <MethodBadge method={endpoint.method} className="text-xs !w-14 !py-1" />
-        <code className="flex-1 text-sm text-white/80 font-mono bg-white/[0.03] rounded-lg px-3 py-2 border border-white/[0.06] overflow-x-auto whitespace-nowrap">
+        <code className="flex-1 overflow-x-auto whitespace-nowrap rounded-lg border border-[var(--glass-border)] bg-[var(--surface-2)] px-3 py-2 font-mono text-sm text-[var(--text-primary)]">
           /api/v1{buildUrl()}
         </code>
         <UiButton
@@ -104,7 +104,7 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
             type="button"
             variant="ghost"
             onClick={handleCancel}
-            className="!h-auto !px-0 !py-0 text-xs text-white/50 hover:!bg-transparent hover:text-white/80"
+            className="!h-auto !px-0 !py-0 text-xs text-[var(--text-muted)] hover:!bg-transparent hover:text-[var(--text-secondary)]"
           >
             {t('playground.cancel', 'Cancel')}
           </UiButton>
@@ -113,21 +113,21 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
 
       {/* Summary & description */}
       {endpoint.summary && (
-        <p className="text-sm text-white/60">{endpoint.summary}</p>
+        <p className="text-sm text-[var(--text-secondary)]">{endpoint.summary}</p>
       )}
       {endpoint.description && endpoint.description !== endpoint.summary && (
-        <p className="text-xs text-white/40">{endpoint.description}</p>
+        <p className="text-xs text-[var(--text-muted)]">{endpoint.description}</p>
       )}
 
       {/* Path parameters */}
       {pathParams.length > 0 && (
         <GlassPanel className="p-4 space-y-3">
-          <h4 className="text-xs font-semibold text-white/50 uppercase tracking-wider">
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
             {t('playground.pathParams', 'Path Parameters')}
           </h4>
           {pathParams.map(p => (
             <div key={p.name} className="flex items-center gap-3">
-              <label className="text-xs text-white/50 w-28 font-mono shrink-0">
+              <label className="w-28 shrink-0 font-mono text-xs text-[var(--text-muted)]">
                 {p.name} <span className="text-red-400">*</span>
               </label>
               <UiInput
@@ -144,12 +144,12 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
       {/* Query parameters */}
       {queryParams.length > 0 && (
         <GlassPanel className="p-4 space-y-3">
-          <h4 className="text-xs font-semibold text-white/50 uppercase tracking-wider">
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
             {t('playground.queryParams', 'Query Parameters')}
           </h4>
           {queryParams.map(p => (
             <div key={p.name} className="flex items-center gap-3">
-              <label className="text-xs text-white/50 w-28 font-mono shrink-0">
+              <label className="w-28 shrink-0 font-mono text-xs text-[var(--text-muted)]">
                 {p.name}
                 {p.required && <span className="text-red-400 ml-0.5">*</span>}
               </label>
@@ -167,9 +167,9 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
       {/* Request body */}
       {endpoint.requestBody && (
         <GlassPanel className="p-4">
-          <h4 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">
+          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
             {t('playground.requestBody', 'Request Body')}
-            <span className="text-white/30 font-normal ml-2">
+            <span className="ml-2 font-normal text-[var(--text-muted)]">
               {endpoint.requestBody.contentType}
             </span>
           </h4>
@@ -185,11 +185,11 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
 
       {/* API Key header (optional) */}
       <GlassPanel className="p-4">
-        <h4 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">
+        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
           {t('playground.authHeader', 'Authentication (Optional)')}
         </h4>
         <div className="flex items-center gap-3">
-          <label className="text-xs text-white/50 w-28 font-mono shrink-0">X-API-Key</label>
+          <label className="w-28 shrink-0 font-mono text-xs text-[var(--text-muted)]">X-API-Key</label>
           <UiInput
             value={apiKey}
             onChange={e => setApiKey(e.target.value)}
@@ -198,7 +198,7 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
             type="password"
           />
         </div>
-        <p className="text-[10px] text-white/30 mt-2">
+        <p className="mt-2 text-[10px] text-[var(--text-muted)]">
           {t('playground.authHint', 'Requests use your browser session by default. Enter an API key to test key-based auth.')}
         </p>
       </GlassPanel>

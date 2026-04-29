@@ -535,6 +535,7 @@ export default function Layout() {
 
   const activeNavEntry = useMemo(() => findNavItemByPath(location.pathname), [location.pathname])
   const activeSectionTitle = activeNavEntry?.section.title
+  const activeSectionStyle = activeSectionTitle ? SECTION_ICON_STYLES[activeSectionTitle] : undefined
   const visibleNavSections = useMemo(() =>
     navSections
       .map(section => ({
@@ -730,7 +731,7 @@ export default function Layout() {
   }
 
   return (
-    <div className="flex h-dvh bg-[var(--bg)] text-white/90">
+    <div className="flex h-dvh bg-[var(--bg)] text-[var(--text-primary)]">
       {/* Skip to content */}
       <a
         href="#main-content"
@@ -754,7 +755,7 @@ export default function Layout() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[65] bg-black/60 backdrop-blur-sm lg:hidden"
+            className="fixed inset-0 z-[65] bg-slate-950/35 backdrop-blur-sm dark:bg-black/60 lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
@@ -768,12 +769,12 @@ export default function Layout() {
         data-sidebar-open={sidebarOpen}
         className={cn(
           'fixed left-0 bottom-0 z-[66] w-[clamp(240px,70vw,256px)] transform transition-transform duration-300 ease-out lg:top-0 lg:static lg:z-auto lg:w-64 lg:translate-x-0',
-          'border-r border-white/[0.06] backdrop-blur-xl flex flex-col bg-white/[0.04]',
+          'flex flex-col border-r border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-2xl backdrop-blur-xl lg:shadow-none',
           sidebarOpen ? 'top-0 translate-x-0' : 'top-14 -translate-x-full'
         )}
       >
         {/* Mobile sidebar brand, shown only while the drawer is open */}
-        <div className="flex items-center gap-2 border-b border-white/[0.06] px-5 py-4 shrink-0 lg:hidden">
+        <div className="flex items-center gap-2 border-b border-[var(--glass-border)] px-5 py-4 shrink-0 lg:hidden">
           <NavLink to="/" className="min-w-0 flex flex-1 items-center gap-3 rounded-xl transition-colors" onClick={() => setSidebarOpen(false)}>
             <Logo size={32} showWordmark />
           </NavLink>
@@ -796,7 +797,7 @@ export default function Layout() {
         </div>
 
         {/* Logo — desktop sidebar header */}
-        <NavLink to="/" className="hidden lg:flex items-center gap-3 px-5 py-5 border-b border-white/[0.06] shrink-0 hover:bg-white/[0.02] transition-colors" onClick={() => setSidebarOpen(false)}>
+        <NavLink to="/" className="hidden lg:flex items-center gap-3 px-5 py-5 border-b border-[var(--glass-border)] shrink-0 hover:bg-[var(--surface-2)] transition-colors" onClick={() => setSidebarOpen(false)}>
           <Logo size={32} showWordmark />
           {versionLabel && (
             <span className="ml-auto rounded-md bg-neon-cyan/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-neon-cyan">
@@ -806,7 +807,7 @@ export default function Layout() {
         </NavLink>
 
         {/* Sticky search trigger */}
-        <div className="px-3 py-2 lg:px-4 lg:py-3 border-b border-white/[0.06] shrink-0">
+        <div className="px-3 py-2 lg:px-4 lg:py-3 border-b border-[var(--glass-border)] shrink-0">
           <CommandPaletteTrigger />
         </div>
 
@@ -816,10 +817,16 @@ export default function Layout() {
           style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehaviorY: 'contain' }}
         >
           {activeNavEntry && (
-            <div className="rounded-2xl border border-neon-cyan/10 bg-neon-cyan/[0.035] px-3 py-2.5">
+            <div
+              className={cn(
+                'rounded-2xl border border-[var(--glass-border)] px-3 py-2.5 ring-1',
+                activeSectionStyle?.surface ?? 'bg-[rgba(var(--theme-primary-rgb),0.07)]',
+                activeSectionStyle?.ring ?? 'ring-[rgba(var(--theme-primary-rgb),0.18)]',
+              )}
+            >
               <div className="flex items-start gap-2">
                 <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-neon-cyan/60">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
                     {t('nav.currentSection', 'Current')}
                   </p>
                   <p className="mt-1 truncate text-sm font-semibold text-[var(--text-primary)]">
@@ -867,7 +874,7 @@ export default function Layout() {
                       size="sm"
                       aria-label={t('nav.unpinPage', { page: navLabel(item.label), defaultValue: `Unpin ${navLabel(item.label)}` })}
                       onClick={() => unpinNavPath(item.to)}
-                      className="h-7 w-7 shrink-0 rounded-lg p-0 text-white/30 opacity-70 hover:bg-white/[0.08] hover:text-white/70"
+                      className="h-7 w-7 shrink-0 rounded-lg p-0 text-[var(--text-muted)] opacity-80 hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
                     >
                       <X className="h-3.5 w-3.5" />
                     </Button>
@@ -900,7 +907,7 @@ export default function Layout() {
                   size="sm"
                   disabled={expandedSectionCount === visibleNavSections.length}
                   onClick={expandAllSections}
-                  className="h-6 rounded-lg px-2 text-[10px] text-white/40 hover:bg-white/[0.06] hover:text-white/70 disabled:opacity-30"
+                  className="h-6 rounded-lg px-2 text-[10px] text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] disabled:opacity-40"
                 >
                   {t('nav.expandAll', 'Expand')}
                 </Button>
@@ -910,7 +917,7 @@ export default function Layout() {
                   size="sm"
                   disabled={expandedSectionCount === 0}
                   onClick={collapseAllSections}
-                  className="h-6 rounded-lg px-2 text-[10px] text-white/40 hover:bg-white/[0.06] hover:text-white/70 disabled:opacity-30"
+                  className="h-6 rounded-lg px-2 text-[10px] text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] disabled:opacity-40"
                 >
                   {t('nav.collapseAll', 'Collapse')}
                 </Button>
@@ -930,8 +937,12 @@ export default function Layout() {
                     aria-controls={`nav-section-${section.title.replace(/\W+/g, '-').toLowerCase()}`}
                     onClick={() => toggleSection(section.title)}
                     className={cn(
-                      'mb-1 h-8 w-full justify-between rounded-xl px-3 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)] hover:bg-white/[0.05] hover:text-[var(--text-primary)]',
-                      isActiveSection && (sectionStyle?.accent ?? 'text-neon-cyan')
+                      'mb-1 h-8 w-full justify-between rounded-xl px-3 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
+                      isActiveSection && [
+                        'text-[var(--text-primary)] ring-1',
+                        sectionStyle?.surface ?? 'bg-[rgba(var(--theme-primary-rgb),0.07)]',
+                        sectionStyle?.ring ?? 'ring-[rgba(var(--theme-primary-rgb),0.16)]',
+                      ]
                     )}
                   >
                     <span className="flex items-center gap-2">
@@ -939,7 +950,18 @@ export default function Layout() {
                       <span>{section.title}</span>
                     </span>
                     <span className="flex items-center gap-2">
-                      <span className="rounded-full bg-white/[0.05] px-1.5 py-0.5 text-[9px] text-white/35">
+                      <span
+                        className={cn(
+                          'flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[9px] font-bold ring-1',
+                          isActiveSection
+                            ? [
+                              'text-[var(--text-primary)]',
+                              sectionStyle?.surface ?? 'bg-[rgba(var(--theme-primary-rgb),0.12)]',
+                              sectionStyle?.ring ?? 'ring-[rgba(var(--theme-primary-rgb),0.24)]',
+                            ]
+                            : 'bg-[var(--surface-2)] text-[var(--text-secondary)] ring-[var(--glass-border)]'
+                        )}
+                      >
                         {section.items.length}
                       </span>
                       <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', isExpanded && 'rotate-180')} />
@@ -968,7 +990,7 @@ export default function Layout() {
         </nav>
 
         {/* Bottom status */}
-        <div className="border-t border-white/[0.06] px-4 py-3 space-y-2 shrink-0 safe-bottom">
+        <div className="border-t border-[var(--glass-border)] px-4 py-3 space-y-2 shrink-0 safe-bottom">
           {/* Update available banner */}
           {updateCheck?.update_available && (
             <GlassPanel className="!p-2.5 flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg">
@@ -1004,8 +1026,8 @@ export default function Layout() {
             <SystemHealthDot />
             <SSEStatusDot state={sseState} />
           </GlassPanel>
-          <p data-tour="keyboard-hint" className="text-center text-[10px] text-white/20 mt-1">
-            {t('shortcuts.hint', 'Press')} <kbd className="px-1 rounded bg-white/5 text-white/30">?</kbd> {t('shortcuts.hintSuffix', 'for shortcuts')}
+          <p data-tour="keyboard-hint" className="text-center text-[10px] text-[var(--text-muted)] mt-1">
+            {t('shortcuts.hint', 'Press')} <kbd className="px-1 rounded bg-[var(--surface-2)] text-[var(--text-secondary)]">?</kbd> {t('shortcuts.hintSuffix', 'for shortcuts')}
           </p>
         </div>
       </aside>

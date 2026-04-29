@@ -238,7 +238,8 @@ function applyThemeCSS(theme: ColorTheme, mode: ModeTheme) {
   root.style.setProperty('--text-muted', mode.textMuted)
   root.style.setProperty('color-scheme', mode.colorScheme)
   document.body.style.background = mode.bg
-  // Toggle class for light mode CSS overrides
+  // Keep Tailwind dark: utilities aligned with the selected app theme, not the static index.html default.
+  root.classList.toggle('dark', mode.colorScheme === 'dark')
   root.classList.toggle('light-mode', mode.colorScheme === 'light')
 }
 
