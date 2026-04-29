@@ -1,0 +1,16 @@
+=== PREFLIGHT ===
+PREDECESSOR_EXISTS=True
+PREDECESSOR_EXIT_0=False
+PREDECESSOR_STATUS_DONE=False
+EXIT=1
+STATUS=BLOCKED
+=== REASONING ===
+Predecessor phase-36-01 log did not contain both required success markers, so no frontend code changes are allowed for this prompt.
+=== CHANGES ===
+No code changes made. BLOCKED by predecessor status.
+=== GATE ===
+Predecessor log missing or not DONE: .github\prompts\db-refactor\logs\phase-36-01-backend-typed-alert-contract.log
+EXIT=1
+STATUS=BLOCKED
+=== COMMIT ===
+Committing blocked log only because predecessor gate failed.
