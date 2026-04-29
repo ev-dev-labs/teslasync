@@ -83,6 +83,8 @@ import {
   Home,
   Server,
   ChevronDown,
+  ChevronsDown,
+  ChevronsUp,
   Star,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -911,10 +913,7 @@ export default function Layout() {
                   onClick={expandAllSections}
                   className="h-7 w-7 shrink-0 rounded-lg p-0 text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] disabled:opacity-40"
                 >
-                  <span className="relative block h-4 w-4" aria-hidden="true">
-                    <ChevronDown className="absolute left-0 top-0 h-3.5 w-3.5 -translate-y-0.5" />
-                    <ChevronDown className="absolute left-0 top-0 h-3.5 w-3.5 translate-y-1" />
-                  </span>
+                  <ChevronsDown className="h-4 w-4" aria-hidden="true" />
                 </Button>
                 <Button
                   type="button"
@@ -926,10 +925,7 @@ export default function Layout() {
                   onClick={collapseAllSections}
                   className="h-7 w-7 shrink-0 rounded-lg p-0 text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] disabled:opacity-40"
                 >
-                  <span className="relative block h-4 w-4" aria-hidden="true">
-                    <ChevronDown className="absolute left-0 top-0 h-3.5 w-3.5 -translate-y-0.5 rotate-180" />
-                    <ChevronDown className="absolute left-0 top-0 h-3.5 w-3.5 translate-y-1 rotate-180" />
-                  </span>
+                  <ChevronsUp className="h-4 w-4" aria-hidden="true" />
                 </Button>
               </div>
             </div>
