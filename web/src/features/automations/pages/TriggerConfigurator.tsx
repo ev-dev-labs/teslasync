@@ -21,7 +21,7 @@ import type {
   AutomationTriggerKind,
   AutomationTriggerSignalOp,
 } from '@/types/automations';
-import type { BuilderTriggerInput } from '../components/builderTypes';
+import type { AutomationTriggerStepInput } from '../components/stepInputTypes';
 
 type TriggerTypeOption = {
   value: AutomationTriggerKind;
@@ -92,8 +92,8 @@ const SIGNAL_OPERATORS: {
 ];
 
 interface TriggerConfiguratorProps {
-  trigger: BuilderTriggerInput;
-  onChange: (trigger: BuilderTriggerInput) => void;
+  trigger: AutomationTriggerStepInput;
+  onChange: (trigger: AutomationTriggerStepInput) => void;
 }
 
 function buildCronExpr(hour: number, minute: number, days: number[]): string {
@@ -115,7 +115,7 @@ function parseCronExpr(expr: string): { hour: number; minute: number; days: numb
   return { hour, minute, days };
 }
 
-export function createDefaultTrigger(kind: AutomationTriggerKind): BuilderTriggerInput {
+export function createDefaultTrigger(kind: AutomationTriggerKind): AutomationTriggerStepInput {
   switch (kind) {
     case 'trigger_schedule':
       return { kind, cron_expr: '0 8 * * *', timezone: 'UTC' };
@@ -129,9 +129,9 @@ export function createDefaultTrigger(kind: AutomationTriggerKind): BuilderTrigge
 }
 
 function signalValueFromInput(
-  trigger: Extract<BuilderTriggerInput, { kind: 'trigger_signal' }>,
+  trigger: Extract<AutomationTriggerStepInput, { kind: 'trigger_signal' }>,
   value: string,
-): BuilderTriggerInput {
+): AutomationTriggerStepInput {
   if (trigger.op === 'changed') {
     return {
       kind: 'trigger_signal',
@@ -373,7 +373,7 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
             value={trigger.signal}
             onChange={(event) => {
               const signal = event.target.value;
-              const next: BuilderTriggerInput = BOOL_FIELD_KEYS.has(signal)
+              const next: AutomationTriggerStepInput = BOOL_FIELD_KEYS.has(signal)
                 ? { kind: 'trigger_signal', signal, op: '=', value_bool: true }
                 : signal === 'state'
                   ? { kind: 'trigger_signal', signal, op: '=', value_text: 'online' }

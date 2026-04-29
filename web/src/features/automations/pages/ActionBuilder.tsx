@@ -13,10 +13,10 @@ import type {
   AutomationActionKind,
 } from '@/types/automations';
 import type {
-  BuilderActionCommandInput,
-  BuilderActionInput,
-  BuilderActionSetSettingInput,
-} from '../components/builderTypes';
+  AutomationActionCommandStepInput,
+  AutomationActionSetSettingStepInput,
+  AutomationActionStepInput,
+} from '../components/stepInputTypes';
 
 type ActionKindOption = {
   value: AutomationActionKind;
@@ -24,7 +24,7 @@ type ActionKindOption = {
   fallback: string;
 };
 
-type CommandParams = NonNullable<BuilderActionCommandInput['command_params']>;
+type CommandParams = NonNullable<AutomationActionCommandStepInput['command_params']>;
 type SettingValueKind = 'text' | 'number' | 'boolean';
 
 export const ACTION_TYPES: ActionKindOption[] = [
@@ -165,22 +165,22 @@ const COMMAND_GROUPS: {
 ];
 
 interface ActionBuilderProps {
-  actions: BuilderActionInput[];
+  actions: AutomationActionStepInput[];
   channels: NotificationChannel[];
-  onChange: (actions: BuilderActionInput[]) => void;
+  onChange: (actions: AutomationActionStepInput[]) => void;
 }
 
 interface ActionFieldsProps {
-  action: BuilderActionInput;
+  action: AutomationActionStepInput;
   channelOptions: { value: string; label: string; disabled?: boolean }[];
-  onChange: (action: BuilderActionInput) => void;
+  onChange: (action: AutomationActionStepInput) => void;
 }
 
 function isCommandParams(value: unknown): value is CommandParams {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function createDefaultAction(kind: AutomationActionKind, channelId = 0): BuilderActionInput {
+function createDefaultAction(kind: AutomationActionKind, channelId = 0): AutomationActionStepInput {
   switch (kind) {
     case 'action_command':
       return { kind, command_name: 'climate_on' };
@@ -193,17 +193,17 @@ function createDefaultAction(kind: AutomationActionKind, channelId = 0): Builder
   }
 }
 
-function settingValueKind(action: BuilderActionSetSettingInput): SettingValueKind {
+function settingValueKind(action: AutomationActionSetSettingStepInput): SettingValueKind {
   if (action.value_num != null) return 'number';
   if (action.value_bool != null) return 'boolean';
   return 'text';
 }
 
 function actionWithSettingValue(
-  action: BuilderActionSetSettingInput,
+  action: AutomationActionSetSettingStepInput,
   kind: SettingValueKind,
   value: string,
-): BuilderActionInput {
+): AutomationActionStepInput {
   if (kind === 'number') {
     return {
       kind: 'action_set_setting',
@@ -260,7 +260,7 @@ export function ActionBuilder({ actions, channels, onChange }: ActionBuilderProp
   );
 
   const replaceAction = useCallback(
-    (index: number, nextAction: BuilderActionInput) => {
+    (index: number, nextAction: AutomationActionStepInput) => {
       onChange(actions.map((action, currentIndex) => (
         currentIndex === index ? nextAction : action
       )));

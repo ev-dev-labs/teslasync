@@ -41,24 +41,30 @@ import {
 import { ConditionBuilder } from './ConditionBuilder';
 import { ActionBuilder } from './ActionBuilder';
 import { ConflictWarnings } from './ConflictWarnings';
-import type { AutomationFull, AutomationConflict } from '@/api/types';
+import type {
+  AutomationActionStep,
+  AutomationConditionStep,
+  AutomationConflict,
+  AutomationFull,
+  AutomationTriggerStep,
+} from '@/api/types';
 import type {
   AutomationTriggerKind,
 } from '@/types/automations';
 import type {
-  BuilderActionInput,
-  BuilderConditionInput,
-  BuilderTriggerInput,
-} from '../components/builderTypes';
+  AutomationActionStepInput,
+  AutomationConditionStepInput,
+  AutomationTriggerStepInput,
+} from '../components/stepInputTypes';
 
 interface FormState {
   name: string;
   description: string;
   vehicle_id: number | null;
   enabled: boolean;
-  triggers: BuilderTriggerInput[];
-  conditions: BuilderConditionInput[];
-  actions: BuilderActionInput[];
+  triggers: AutomationTriggerStepInput[];
+  conditions: AutomationConditionStepInput[];
+  actions: AutomationActionStepInput[];
 }
 
 function getInitialForm(): FormState {
@@ -73,24 +79,126 @@ function getInitialForm(): FormState {
   };
 }
 
+function normalizeTriggerInput(
+  trigger: AutomationTriggerStepInput | AutomationTriggerStep,
+): AutomationTriggerStepInput {
+  switch (trigger.kind) {
+    case 'trigger_schedule':
+      return {
+        kind: 'trigger_schedule',
+        cron_expr: trigger.cron_expr,
+        timezone: trigger.timezone,
+      };
+    case 'trigger_event':
+      return {
+        kind: 'trigger_event',
+        event_type: trigger.event_type,
+      };
+    case 'trigger_geofence':
+      return {
+        kind: 'trigger_geofence',
+        place_id: trigger.place_id,
+        event: trigger.event,
+        ...(trigger.dwell_minutes != null ? { dwell_minutes: trigger.dwell_minutes } : {}),
+      };
+    case 'trigger_signal': {
+      const input: AutomationTriggerStepInput = {
+        kind: 'trigger_signal',
+        signal: trigger.signal,
+        op: trigger.op,
+      };
+      if (trigger.value_num != null) input.value_num = trigger.value_num;
+      if (trigger.value_text != null) input.value_text = trigger.value_text;
+      if (trigger.value_bool != null) input.value_bool = trigger.value_bool;
+      return input;
+    }
+  }
+}
+
+function normalizeConditionInput(
+  condition: AutomationConditionStepInput | AutomationConditionStep,
+): AutomationConditionStepInput {
+  switch (condition.kind) {
+    case 'condition_signal': {
+      const input: AutomationConditionStepInput = {
+        kind: 'condition_signal',
+        signal: condition.signal,
+        op: condition.op,
+      };
+      if (condition.value_num != null) input.value_num = condition.value_num;
+      if (condition.value_text != null) input.value_text = condition.value_text;
+      if (condition.value_bool != null) input.value_bool = condition.value_bool;
+      if (condition.value_min != null) input.value_min = condition.value_min;
+      if (condition.value_max != null) input.value_max = condition.value_max;
+      return input;
+    }
+    case 'condition_time_window':
+      return {
+        kind: 'condition_time_window',
+        start_time: condition.start_time,
+        end_time: condition.end_time,
+        timezone: condition.timezone,
+        days_of_week: [...condition.days_of_week],
+      };
+    case 'condition_geofence':
+      return {
+        kind: 'condition_geofence',
+        place_id: condition.place_id,
+        state: condition.state,
+      };
+    case 'condition_other_automation':
+      return {
+        kind: 'condition_other_automation',
+        other_automation_id: condition.other_automation_id,
+        state: condition.state,
+      };
+  }
+}
+
+function normalizeActionInput(
+  action: AutomationActionStepInput | AutomationActionStep,
+): AutomationActionStepInput {
+  switch (action.kind) {
+    case 'action_command':
+      return {
+        kind: 'action_command',
+        command_name: action.command_name,
+        ...(action.command_params ? { command_params: action.command_params } : {}),
+      };
+    case 'action_notify':
+      return {
+        kind: 'action_notify',
+        channel_id: action.channel_id,
+        template: action.template,
+      };
+    case 'action_set_setting': {
+      const input: AutomationActionStepInput = {
+        kind: 'action_set_setting',
+        setting_key: action.setting_key,
+      };
+      if (action.value_num != null) input.value_num = action.value_num;
+      if (action.value_text != null) input.value_text = action.value_text;
+      if (action.value_bool != null) input.value_bool = action.value_bool;
+      return input;
+    }
+    case 'action_call_automation':
+      return {
+        kind: 'action_call_automation',
+        target_automation_id: action.target_automation_id,
+      };
+  }
+}
+
 function automationToForm(automation: AutomationFull): FormState {
   return {
     name: automation.name,
     description: automation.description ?? '',
     vehicle_id: automation.vehicle_id,
     enabled: automation.enabled,
-    triggers: automation.triggers,
-    conditions: automation.conditions,
-    actions: automation.actions,
+    triggers: automation.triggers.map(normalizeTriggerInput),
+    conditions: automation.conditions.map(normalizeConditionInput),
+    actions: automation.actions.map(normalizeActionInput),
   };
-}
-
-function withoutStepOrder<T extends { step_order?: number }>(steps: T[]): T[] {
-  return steps.map((step) => {
-    const next = { ...step };
-    delete next.step_order;
-    return next;
-  });
 }
 
 function formToPayload(form: FormState): AutomationFullInput {
@@ -99,21 +207,21 @@ function formToPayload(form: FormState): AutomationFullInput {
     description: form.description.trim(),
     vehicle_id: form.vehicle_id,
     enabled: form.enabled,
-    triggers: withoutStepOrder(form.triggers),
-    conditions: withoutStepOrder(form.conditions),
-    actions: withoutStepOrder(form.actions),
+    triggers: form.triggers.map(normalizeTriggerInput),
+    conditions: form.conditions.map(normalizeConditionInput),
+    actions: form.actions.map(normalizeActionInput),
   };
 }
 
-function triggerNeedsPlace(trigger: BuilderTriggerInput): boolean {
+function triggerNeedsPlace(trigger: AutomationTriggerStepInput): boolean {
   return trigger.kind === 'trigger_geofence' && trigger.place_id <= 0;
 }
 
-function conditionNeedsPlace(condition: BuilderConditionInput): boolean {
+function conditionNeedsPlace(condition: AutomationConditionStepInput): boolean {
   return condition.kind === 'condition_geofence' && condition.place_id <= 0;
 }
 
-function actionIsIncomplete(action: BuilderActionInput): boolean {
+function actionIsIncomplete(action: AutomationActionStepInput): boolean {
   switch (action.kind) {
     case 'action_command':
       return action.command_name.trim() === '';
@@ -188,9 +296,15 @@ export default function AutomationBuilderPage() {
         description: preset.description,
         vehicle_id: null,
         enabled: true,
-        triggers: preset.triggers.map((trigger) => trigger as BuilderTriggerInput),
-        conditions: (preset.conditions ?? []).map((condition) => condition as BuilderConditionInput),
-        actions: preset.actions.map((action) => action as BuilderActionInput),
+        triggers: preset.triggers.map((trigger) => (
+          normalizeTriggerInput(trigger as AutomationTriggerStepInput)
+        )),
+        conditions: (preset.conditions ?? []).map((condition) => (
+          normalizeConditionInput(condition as AutomationConditionStepInput)
+        )),
+        actions: preset.actions.map((action) => (
+          normalizeActionInput(action as AutomationActionStepInput)
+        )),
       });
       setHydrated(true);
     }

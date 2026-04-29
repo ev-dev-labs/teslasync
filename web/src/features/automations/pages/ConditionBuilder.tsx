@@ -16,7 +16,7 @@ import type {
   AutomationGeofenceState,
   AutomationOtherAutomationState,
 } from '@/types/automations';
-import type { BuilderConditionInput } from '../components/builderTypes';
+import type { AutomationConditionStepInput } from '../components/stepInputTypes';
 
 type ConditionKindOption = {
   value: AutomationConditionKind;
@@ -84,17 +84,17 @@ const OTHER_AUTOMATION_STATES: {
 ];
 
 interface ConditionBuilderProps {
-  conditions: BuilderConditionInput[];
-  onChange: (conditions: BuilderConditionInput[]) => void;
+  conditions: AutomationConditionStepInput[];
+  onChange: (conditions: AutomationConditionStepInput[]) => void;
 }
 
 interface ConditionFieldsProps {
-  condition: BuilderConditionInput;
-  onChange: (condition: BuilderConditionInput) => void;
+  condition: AutomationConditionStepInput;
+  onChange: (condition: AutomationConditionStepInput) => void;
   geofenceOptions: { value: string; label: string }[];
 }
 
-export function createDefaultCondition(kind: AutomationConditionKind): BuilderConditionInput {
+export function createDefaultCondition(kind: AutomationConditionKind): AutomationConditionStepInput {
   switch (kind) {
     case 'condition_signal':
       return { kind, signal: 'battery_level', op: '<', value_num: 20 };
@@ -114,9 +114,9 @@ export function createDefaultCondition(kind: AutomationConditionKind): BuilderCo
 }
 
 function conditionValueFromInput(
-  condition: Extract<BuilderConditionInput, { kind: 'condition_signal' }>,
+  condition: Extract<AutomationConditionStepInput, { kind: 'condition_signal' }>,
   value: string,
-): BuilderConditionInput {
+): AutomationConditionStepInput {
   if (BOOL_FIELD_KEYS.has(condition.signal)) {
     return {
       kind: 'condition_signal',
@@ -175,7 +175,7 @@ export function ConditionBuilder({ conditions, onChange }: ConditionBuilderProps
   );
 
   const replaceCondition = useCallback(
-    (index: number, nextCondition: BuilderConditionInput) => {
+    (index: number, nextCondition: AutomationConditionStepInput) => {
       onChange(conditions.map((condition, currentIndex) => (
         currentIndex === index ? nextCondition : condition
       )));
@@ -270,7 +270,7 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
             value={condition.signal}
             onChange={(event) => {
               const signal = event.target.value;
-              const nextCondition: BuilderConditionInput = BOOL_FIELD_KEYS.has(signal)
+              const nextCondition: AutomationConditionStepInput = BOOL_FIELD_KEYS.has(signal)
                 ? { kind: 'condition_signal', signal, op: '=', value_bool: true }
                 : signal === 'state'
                   ? { kind: 'condition_signal', signal, op: '=', value_text: 'online' }
