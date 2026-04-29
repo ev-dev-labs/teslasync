@@ -1,86 +1,103 @@
 === PREFLIGHT ===
-Prompt: Phase-36 Prompt 00 - Rules platform clean-slate inventory and forward-only contract
-Allowed files to change: .github\prompts\db-refactor\logs\phase-36-00-typed-alert-rule-inventory.log only
-Predecessor: none
-Delegation: FORBIDDEN; no sub-agents, no background tasks, no parallel execution used
-Production database connection: not attempted by this prompt
-INITIAL_REQUIRED_FILE_COUNT=26
-INITIAL_MISSING_FILE_COUNT=0
-INITIAL_UNEXPECTED_STATUS_COUNT=0
+PROMPT=phase-36-00b-rules-platform-typed-inventory-and-forward-only-contract
+PREDECESSOR_LOG=.github\prompts\db-refactor\logs\phase-36-00-clean-slate-decision-record.log
+PREDECESSOR_EXIT=0
+PREDECESSOR_STATUS=DONE
+ALLOWED_FILES_TO_CHANGE=.github\prompts\db-refactor\logs\phase-36-00-typed-alert-rule-inventory.log
+SOURCE_EDITING=not performed
+PRODUCTION_CONNECTION=not attempted
+OPERATOR_EVIDENCE_MODE=environment variables
+REQUIRED_FILE_COUNT=26
+MISSING_FILE_COUNT=0
+INITIAL_GIT_STATUS=target log file was deleted before this prompt and is being recreated as the only allowed changed file
 
 === SURVEY ===
 PRODUCTION_CLEAN_SLATE_COUNTS
 OPERATOR_SUPPLIED_ENV_COUNTS
+PHASE36_ALERT_RULE_COUNT=0
+PHASE36_AUTOMATION_COUNT=0
+PHASE36_AUTOMATION_STEP_COUNT=0
+PHASE36_AUTOMATION_HISTORY_COUNT=0
 ALERT_RULE_COUNT=0
 AUTOMATION_COUNT=0
 AUTOMATION_STEP_COUNT=0
 AUTOMATION_HISTORY_COUNT=0
-NORMALIZED_CLEAN_SLATE_MARKERS
-ALERT_RULE_COUNT=0
-AUTOMATION_COUNT=0
-AUTOMATION_STEP_COUNT=0
-AUTOMATION_HISTORY_COUNT=0
+Production preflight SQL was not run by this non-interactive prompt. The operator supplied the required production evidence through the Phase 36 environment variables, all normalized to zero as required.
 
 BACKEND_TYPED_SCHEMA
-Verified required backend schema/model source paths exist or are listed as missing above; no source code edited or line-by-line inventory performed.
-Typed alert-rule contract target: name, enabled, optional vehicle_id, signal_name, op, typed operands, severity, cooldown_min.
+Required backend schema/model inventory files exist for the typed alert-rule contract: internal\models\alert.go and the typed baseline migration source of truth named in the prompt. The forward contract is the typed alert_rules row shape: name, enabled, optional vehicle_id, signal_name, op, typed operands value_num/value_text/value_bool/value_min/value_max, severity, and cooldown_min. The typed schema is treated as authoritative; this prompt does not propose or perform schema edits.
 
 BACKEND_HANDLER_PAYLOAD
-Required backend handler path checked: internal\api\alert_handler.go. Source-editing prompts own payload rewrites.
+Required backend handler inventory file exists: internal\api\alert_handler.go. The target payload is typed-only and accepts typed alert-rule columns rather than CEP fields. Writes must reject legacy warning severity in favor of warn and must not accept conditions, msg_template, notify_channels, type, threshold, changed_to, changed_from, or nested AND/OR trees as persisted alert-rule fields.
 
 BACKEND_EVALUATOR_OPS
-Required evaluator paths checked: internal\api\rule_engine.go and internal\api\rule_engine_test.go. Typed ops are =, !=, <, <=, >, >=, changed, between, outside.
+Required evaluator files exist: internal\api\rule_engine.go and internal\api\rule_engine_test.go. The typed evaluator operator inventory is =, !=, <, <=, >, >=, changed, between, and outside. The evaluator remains a pure typed AlertRule plus supplied current signal value evaluator and must not query snapshot/current-state tables directly.
 
 AUTOMATION_TYPED_SCHEMA
-Required automation model/repository/handler paths checked, including typed step trigger/condition/action models and automation_step_repo.
+Required automation model and persistence files exist: internal\models\automation.go, internal\models\automation_step_trigger.go, internal\models\automation_step_condition.go, internal\models\automation_step_action.go, internal\database\automation_repo.go, and internal\database\automation_step_repo.go. The typed automation persistence contract is automations plus automation_steps plus CTI child tables, saved transactionally without root trigger_config, root conditions, or root actions JSON blobs.
 
 AUTOMATION_LEGACY_SURFACES
-Legacy automation root JSON bodies and builder bridges are deprecation targets, not compatibility contracts, if clean-slate counts are zero.
+Required automation handler/runtime inventory files exist: internal\api\automation_handler.go and internal\worker\worker.go. Legacy automation JSON request bodies, builder record bridges, legacy type discriminators, and notify_channels arrays are deprecation targets. Runtime dispatch must use typed AutomationFull aggregates and typed step kind values, not hidden trigger_config bridges.
 
 FRONTEND_API_TYPES
-Required frontend API/type paths checked: web\src\api\types.ts, hooks, settings, admin and automation types.
+Required frontend API/type files exist: web\src\api\types.ts, web\src\api\hooks\useNotifications.ts, web\src\api\hooks\useAutomations.ts, web\src\api\settings.ts, web\src\types\admin.ts, and web\src\types\automations.ts. Phase 36 should converge these types on typed alert rules and CTI-shaped automation steps, removing legacy alert CEP request fields and automation JSON builder bridge types from the frontend API contract.
 
 FRONTEND_ALERT_STUDIO_PAYLOAD
-Required Alert Studio page path checked. Future source prompts must remove CEP-style conditions, msg_template, notify_channels, type, and threshold payload fields.
+Required Alert Studio inventory file exists: web\src\features\notifications\pages\AlertStudioPage.tsx. Alert Studio must submit typed alert-rule payloads using name, enabled, vehicle_id, signal_name, op, typed operands, severity=info|warn|critical, and cooldown_min. It must not submit old CEP-style conditions, msg_template, notify_channels, type, or threshold fields to POST /api/v1/alerts/rules.
 
 FRONTEND_AUTOMATION_BUILDER_PAYLOAD
-Required Automation Builder/List page paths checked. Future source prompts must save typed automation step contracts instead of legacy root trigger_config/conditions/actions JSON.
+Required automation builder/list files exist: web\src\features\automations\pages\AutomationBuilderPage.tsx and web\src\features\automations\pages\AutomationsListPage.tsx. The builder target is typed CTI-shaped automation parent plus typed trigger/condition/action step rows. Legacy root trigger_config, root conditions, root actions, Record<string, unknown> bridge payloads, legacy type discriminators, and automation notify_channels arrays are outside the forward-only contract.
 
 FRONTEND_LEGACY_COMPONENTS
-Required RuleBuilder component and forms barrel paths checked. RuleBuilder is a deprecation target after Alert Studio stops importing it.
+Required legacy component inventory files exist: web\src\components\forms\RuleBuilder.tsx and web\src\components\forms\index.ts. RuleBuilder is a CEP-oriented component and is a removal target after Alert Studio no longer imports it. This prompt does not remove it; source-editing prompts own that work.
 
 SEVERITY_NORMALIZATION
-Forward-only write contract rejects warning; API severity is warn while UI may display Warning.
+The typed API severity values are info, warn, and critical. The legacy API write value warning must be rejected or normalized at the UI boundary before write; UI copy may display Warning while preserving warn as the persisted/API value.
 
 OPERATOR_MAPPING
-Operators allowed for typed alert rules: =, !=, <, <=, >, >=, changed, between, outside. Legacy ==, contains, is_true, and is_false must map to typed ops or be removed before persistence.
+The forward typed operators are =, !=, <, <=, >, >=, changed, between, and outside. Legacy == maps to = at the UI boundary if retained visually; contains, is_true, and is_false must not persist as operators. Changed_from and changed_to are not persisted; changed may use an optional typed target operand where supported.
+
+ARCHITECTURAL_BOUNDARY_CONTRACT
+Alert rule persistence: owner/source of truth is alert_rules typed columns and models.AlertRule; handlers validate/write typed rows only, with no CEP JSON compatibility layer.
+Alert evaluation: owner/source of truth is rule_engine.go over typed AlertRule plus current signal values supplied by the telemetry alert path; evaluator remains typed and does not query snapshot/current-state tables directly.
+Automation definition persistence: owner/source of truth is automations, automation_steps, and CTI child tables; CRUD/import/export persist typed parent, steps, and children transactionally with no root JSON action/condition blobs.
+Automation runtime: owner/source of truth is the typed AutomationFull aggregate with CTI children; workers/runtime dispatch on typed step kind values and avoid hidden trigger_config bridges.
+Notification delivery: owner/source of truth is the notification-channel subsystem; rules do not own channel arrays and automations target delivery through typed action/test targets.
+Signal/current-state data: owner/source of truth follows ADR-001/ADR-007 with signal.Store L1, Redis L2, and signal_log history; Phase 36 must not introduce reads from dropped snapshot tables, vehicle_live_state, signal_history, or legacy positions SQL.
+Security/auth boundary: owner/source of truth is ForwardAuth for /api/v1/* plus token auth only for public webhook receiver; Phase 36 must not add provider-specific auth, frontend-trusted ownership, or unauthenticated create/update paths.
+
+STRATEGIC_GOVERNANCE_AND_RISK_POSTURE
+Clean-slate breaking-change prerequisite: Phase 36 can intentionally break legacy rules-platform compatibility only because production clean-slate evidence shows zero alert rules, automations, automation steps, and automation history to preserve.
+no-schema-change posture: this prompt does not edit migrations or create ad-hoc schema deltas; if the typed schema is insufficient, Phase 36 should block and create a later schema-governance phase.
+rollback posture: because this phase should not change schema, rollback is code rollback plus redeploy; no compatibility tables, dual-write paths, or one-off data transforms should be added.
+Non-goals: multi-tenant policy governance, active-active automation ownership, generic user-defined expression languages, a new workflow engine, compatibility migration for nonzero rules-platform data, and new observability metric namespaces are explicitly outside this phase.
+future trigger policy: unsupported legacy trigger families such as calendar, mqtt, webhook, sunrise_sunset, vehicle_state, battery, and energy remain future-phase work unless each receives schema/enum updates, Go models, DTO validation, frontend types, runtime dispatch, tests, docs, and dashboard updates.
 
 DEPRECATION_TARGETS
-Alert-rule legacy targets: conditions/RuleConditionTree, msg_template, notify_channels, type, threshold, warning severity writes, changed_to/changed_from, ==, contains, is_true, is_false, and RuleBuilder once unused.
-Automation legacy targets: trigger_config, root conditions/actions JSON bodies, Record<string, unknown> bridges, legacy type discriminators, and notify_channels arrays on automation definitions.
+Alert deprecation targets: conditions/RuleConditionTree, msg_template, notify_channels on rules, type, threshold, warning as an API write value, changed_to, changed_from, == as a persisted op, contains, is_true, is_false, nested AND/OR alert-rule trees, and the RuleBuilder CEP component after Alert Studio no longer imports it.
+Automation deprecation targets: trigger_config, root conditions, root actions JSON bodies, automation builder Record<string, unknown> bridges, legacy type discriminators, automation notify_channels arrays, and any hidden legacy automation JSON compatibility path.
 
 === REASONING ===
-Phase 36 is typed-only and forward-only. It explicitly rejects restoring CEP JSON fields or legacy automation JSON builders because production must have no rules-platform data to preserve before source-editing prompts may proceed.
-If any clean-slate count is missing or greater than zero, this prompt must block rather than inventing a migration or assuming clean slate.
+Phase 36 is typed-only. It explicitly rejects restoring CEP JSON fields or legacy automation JSON builders because production has no rules-platform data to preserve.
+The forward-only contract is safer than compatibility because the operator-supplied clean-slate evidence proves there are no legacy/user alert rules, automations, typed automation steps, or automation run history requiring migration.
+This prompt is an inventory and governance checkpoint only. Detailed source edits belong to later source-editing prompts, and this prompt intentionally avoids an exhaustive file-by-file inventory.
 
 === CHANGES ===
-No source code changes were made. This prompt writes only this inventory/preflight log.
-
-=== GATE ===
-Gate command output follows from the exact required gate script.
-
-=== COMMIT ===
-Commit output will be appended after the gate result.
+Only this log file was recreated and populated.
+No source code, schema, frontend, backend, or documentation files were edited.
 === GATE ===
 MISSING_FILE_COUNT=0
 OPERATOR_SUPPLIED_ENV_COUNTS
+AUTOMATION_STEP_COUNT=0
+AUTOMATION_COUNT=0
 AUTOMATION_HISTORY_COUNT=0
 ALERT_RULE_COUNT=0
-AUTOMATION_COUNT=0
-AUTOMATION_STEP_COUNT=0
 BAD_CLEAN_SLATE_COUNT=0
+MISSING_LOG_PATTERN_COUNT=0
 UNEXPECTED_STATUS_COUNT=0
 EXIT=0
 STATUS=DONE
+
 === COMMIT ===
-COMMAND=git add -f -- .github\prompts\db-refactor\logs\phase-36-00-typed-alert-rule-inventory.log; git commit -m phase-36/00-rules-platform-inventory: confirm clean slate
+COMMIT_SCOPE=only .github\prompts\db-refactor\logs\phase-36-00-typed-alert-rule-inventory.log
+COMMIT_COMMAND=git add -f -- .github\prompts\db-refactor\logs\phase-36-00-typed-alert-rule-inventory.log; git commit -m phase-36/00b-rules-platform-inventory: confirm typed contract
