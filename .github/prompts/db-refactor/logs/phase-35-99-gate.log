@@ -1,0 +1,1044 @@
+=== PREFLIGHT ===
+=== SURVEY ===
+Final gate surveys predecessor logs, Go tests, race tests, TypeScript, direct SignalStore reads, Redis freshness anchors, SSE fanout, docs build, non-regression anchors, and drift.
+=== REASONING ===
+This gate does not modify files; it blocks if live-state scale-out work is incomplete.
+=== CHANGES ===
+No code or docs changes are allowed in this prompt.
+=== GATE ===
+=== CHECK 1: predecessor logs ===
+BAD_LOG_COUNT=8
+.github\prompts\db-refactor\logs\phase-35-03-ingest-and-startup-wiring.log missing EXIT=0
+.github\prompts\db-refactor\logs\phase-35-03-ingest-and-startup-wiring.log missing STATUS=DONE
+.github\prompts\db-refactor\logs\phase-35-04-api-and-worker-read-paths.log missing EXIT=0
+.github\prompts\db-refactor\logs\phase-35-04-api-and-worker-read-paths.log missing STATUS=DONE
+.github\prompts\db-refactor\logs\phase-35-05-sse-fanout-contract.log missing EXIT=0
+.github\prompts\db-refactor\logs\phase-35-05-sse-fanout-contract.log missing STATUS=DONE
+.github\prompts\db-refactor\logs\phase-35-06-observability-tests-docs.log missing EXIT=0
+.github\prompts\db-refactor\logs\phase-35-06-observability-tests-docs.log missing STATUS=DONE
+=== CHECK 2: compatibility anchors ===
+SSE_REDIS_PUBLISH=True
+TELEMETRY_LIVE_STORE=True
+SSE_REDIS_SUBSCRIBE=True
+SSE_LOCAL_FALLBACK=True
+REDIS_PUBSUB_CHANNEL_COMPAT=True
+REDIS_BACKLOG_KEY_COMPAT=True
+FSM_LOCAL_SIGNALSTORE=True
+TELEMETRY_LOCAL_SIGNALSTORE=True
+LIVE_STORE_INTERFACE=True
+SIGNAL_HANDLER_LIVE_STORE=False
+REDIS_TIMESTAMP_READS=True
+ROLLBACK_MODE_CONFIG=True
+REDIS_HSET_KEY_COMPAT=True
+SIGNAL_HISTORY_ENDPOINT=True
+FRESHNESS_THRESHOLD=True
+=== CHECK 3: unsafe cross-pod direct SignalStore reads ===
+UNSAFE_API_SIGNALSTORE_READ_COUNT=18
+
+internal\api\alert_handler.go:277:			raw := h.signalStore.GetRawMap(vid)
+internal\api\battery_cells_handler.go:181:		if v, ok := h.signalStore.GetFloat(vehicleID, signalName); ok {
+internal\api\fsm_handler.go:515:	signals := h.signalStore.GetRawMap(vehicleID)
+internal\api\router.go:146:		alertSignalStore = opt.TelemetryHandler.GetSignalStore()
+internal\api\router.go:1032:				if store := telemetryHandler.GetSignalStore(); store != nil {
+internal\api\signal_handler.go:315:	raw := h.signalStore.GetAll(vehicleID)
+internal\api\telemetry_sessions.go:260:			if gear, ok := t.signalStore.GetString(vehicleID, "Gear"); ok && gear == enums.GearPark {
+internal\api\telemetry_sessions.go:276:			if state, ok := t.signalStore.GetString(vehicleID, "DetailedChargeState"); ok {
+internal\api\telemetry_sessions.go:713:			if v, ok := t.signalStore.GetFloat(vehicleID, k); ok {
+internal\api\telemetry_sessions.go:731:			if fv, ok := t.signalStore.GetFloat(vehicleID, k); ok {
+internal\api\telemetry_sessions.go:748:		lat, latOk := t.signalStore.GetFloat(vehicleID, "Latitude")
+internal\api\telemetry_sessions.go:749:		lon, lonOk := t.signalStore.GetFloat(vehicleID, "Longitude")
+internal\api\telemetry_sessions.go:1030:				if gv := t.signalStore.Get(vehicleID, "Gear"); gv != nil {
+internal\api\telemetry_sessions.go:1320:		it, hasIT = t.signalStore.GetFloat(active.VehicleID, "InsideTemp")
+internal\api\telemetry_sessions.go:1324:		ot, hasOT = t.signalStore.GetFloat(active.VehicleID, "OutsideTemp")
+internal\api\telemetry_sessions.go:2031:			it, hasIT = t.signalStore.GetFloat(vehicleID, "InsideTemp")
+internal\api\telemetry_sessions.go:2035:			ot, hasOT = t.signalStore.GetFloat(vehicleID, "OutsideTemp")
+internal\api\vehicle_handler.go:183:		store := h.telemetryHandler.GetSignalStore()
+
+=== CHECK 4: hot-path and history non-regression ===
+FSM_DISTRIBUTED_READ_COUNT=0
+HISTORY_ENDPOINT_LIVE_READ_COUNT=0
+=== CHECK 5: Go tests ===
+ok  	github.com/ev-dev-labs/teslasync/internal/signal	(cached)
+{"level":"error","method":"GET","path":"/boom","request_id":"","stack":"goroutine 178 [running]:\nruntime/debug.Stack()\n\tC:/Program Files/Go/src/runtime/debug/stack.go:26 +0x5e\ngithub.com/ev-dev-labs/teslasync/internal/api.RecoveryMiddleware.func1.1()\n\tD:/repos/teslasync/internal/api/middleware.go:54 +0x58\npanic({0x7ff76adecbc0?, 0x7ff76b262db0?})\n\tC:/Program Files/Go/src/runtime/panic.go:860 +0x13a\ngithub.com/ev-dev-labs/teslasync/internal/api.TestAcceptance_PanicRecovery.func1({0x3c89f43282a0?, 0x7ff76b1d058e?}, 0x0?)\n\tD:/repos/teslasync/internal/api/acceptance_test.go:149 +0x25\nnet/http.HandlerFunc.ServeHTTP(0x3c89f43482d0?, {0x7ff76b2931f0?, 0x3c89f43540c0?}, 0x3c89f3d8219c?)\n\tC:/Program Files/Go/src/net/http/server.go:2286 +0x29\ngithub.com/go-chi/chi/v5.(*Mux).routeHTTP(0x3c89f43300c0, {0x7ff76b2931f0, 0x3c89f43540c0}, 0x3c89f434e640)\n\tC:/Users/AtulM/go/pkg/mod/github.com/go-chi/chi/v5@v5.0.12/mux.go:459 +0x2d0\nnet/http.HandlerFunc.ServeHTTP(0x7ff76b1a7400?, {0x7ff76b2931f0?, 0x3c89f43540c0?}, 0x3c89f434e640?)\n\tC:/Program Files/Go/src/net/http/server.go:2286 +0x29\ngithub.com/ev-dev-labs/teslasync/internal/api.RecoveryMiddleware.func1({0x7ff76b2931f0?, 0x3c89f43540c0?}, 0x3c89f434e640?)\n\tD:/repos/teslasync/internal/api/middleware.go:66 +0x6c\nnet/http.HandlerFunc.ServeHTTP(0x7ff76b2967d0?, {0x7ff76b2931f0?, 0x3c89f43540c0?}, 0x7ff76c264390?)\n\tC:/Program Files/Go/src/net/http/server.go:2286 +0x29\ngithub.com/go-chi/chi/v5.(*Mux).ServeHTTP(0x3c89f43300c0, {0x7ff76b2931f0, 0x3c89f43540c0}, 0x3c89f434e500)\n\tC:/Users/AtulM/go/pkg/mod/github.com/go-chi/chi/v5@v5.0.12/mux.go:90 +0x322\ngithub.com/ev-dev-labs/teslasync/internal/api.TestAcceptance_PanicRecovery(0x3c89f433a200)\n\tD:/repos/teslasync/internal/api/acceptance_test.go:154 +0x265\ntesting.tRunner(0x3c89f433a200, 0x7ff76b258a10)\n\tC:/Program Files/Go/src/testing/testing.go:2036 +0xc3\ncreated by testing.(*T).Run in goroutine 1\n\tC:/Program Files/Go/src/testing/testing.go:2101 +0x4a9\n","panic":"kaboom","time":"2026-04-28T23:31:21-07:00","message":"panic recovered in HTTP handler"}
+{"level":"error","method":"GET","path":"/panic","request_id":"","stack":"goroutine 195 [running]:\nruntime/debug.Stack()\n\tC:/Program Files/Go/src/runtime/debug/stack.go:26 +0x5e\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddleware_CatchesPanic.RecoveryMiddleware.func2.1()\n\tD:/repos/teslasync/internal/api/middleware.go:54 +0x58\npanic({0x7ff76adecbc0?, 0x7ff76b262da0?})\n\tC:/Program Files/Go/src/runtime/panic.go:860 +0x13a\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddleware_CatchesPanic.func1({0x1000?, 0x1000?}, 0x7ff76b26b460?)\n\tD:/repos/teslasync/internal/api/api_test.go:165 +0x25\nnet/http.HandlerFunc.ServeHTTP(0x0?, {0x7ff76b2931f0?, 0x3c89f4298c40?}, 0xffffffffffffffff?)\n\tC:/Program Files/Go/src/net/http/server.go:2286 +0x29\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddleware_CatchesPanic.RecoveryMiddleware.func2({0x7ff76b2931f0?, 0x3c89f4298c40?}, 0x7ff76b1cf2d1?)\n\tD:/repos/teslasync/internal/api/middleware.go:66 +0x6c\nnet/http.HandlerFunc.ServeHTTP(...)\n\tC:/Program Files/Go/src/net/http/server.go:2286\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddleware_CatchesPanic(0x3c89f4045600)\n\tD:/repos/teslasync/internal/api/api_test.go:171 +0x103\ntesting.tRunner(0x3c89f4045600, 0x7ff76b258c20)\n\tC:/Program Files/Go/src/testing/testing.go:2036 +0xc3\ncreated by testing.(*T).Run in goroutine 1\n\tC:/Program Files/Go/src/testing/testing.go:2101 +0x4a9\n","panic":"something went wrong","time":"2026-04-28T23:31:21-07:00","message":"panic recovered in HTTP handler"}
+--- FAIL: TestEvaluateTestConditions_InvalidJSON (0.00s)
+    automation_handler_test.go:37: expected 1 unknown result for invalid JSON, got []
+--- FAIL: TestEvaluateTestConditions_TimeWindowMet (0.00s)
+    automation_handler_test.go:47: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_TimeWindowNotMet (0.00s)
+    automation_handler_test.go:61: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_DayFilter (0.00s)
+    automation_handler_test.go:75: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_SeasonalMet (0.00s)
+    automation_handler_test.go:88: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_CooldownMet (0.00s)
+    automation_handler_test.go:101: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_CooldownNotMet (0.00s)
+    automation_handler_test.go:114: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_StateCheckUnknown (0.00s)
+    automation_handler_test.go:126: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_LocationUnknown (0.00s)
+    automation_handler_test.go:138: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_VariableCheckUnknown (0.00s)
+    automation_handler_test.go:150: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_MultipleConditions (0.00s)
+    automation_handler_test.go:162: expected 3 results, got 0
+--- FAIL: TestSimulateActions_ValidCommand (0.00s)
+    automation_handler_test.go:194: expected 1 result, got 0
+--- FAIL: TestSimulateActions_InvalidCommand (0.00s)
+    automation_handler_test.go:221: expected 1 result, got 0
+--- FAIL: TestSimulateActions_ConditionsNotMet (0.00s)
+    automation_handler_test.go:239: expected 2 results, got 0
+--- FAIL: TestSimulateActions_StopOnFailure (0.00s)
+    automation_handler_test.go:256: expected 2 results, got 0
+--- FAIL: TestSimulateActions_MixedTypes (0.00s)
+    automation_handler_test.go:274: expected 4 results, got 0
+{"level":"error","method":"GET","path":"/panic","request_id":"","stack":"goroutine 405 [running]:\nruntime/debug.Stack()\n\tC:/Program Files/Go/src/runtime/debug/stack.go:26 +0x5e\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddlewareCatchesPanic.RecoveryMiddleware.func2.1()\n\tD:/repos/teslasync/internal/api/middleware.go:54 +0x58\npanic({0x7ff76adecbc0?, 0x7ff76b262d90?})\n\tC:/Program Files/Go/src/runtime/panic.go:860 +0x13a\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddlewareCatchesPanic.func1({0x19a29191b90?, 0x40?}, 0x3c89f3de7808?)\n\tD:/repos/teslasync/internal/api/middleware_extra_test.go:59 +0x25\nnet/http.HandlerFunc.ServeHTTP(0x7ff769d68d85?, {0x7ff76b2931f0?, 0x3c89f43883c0?}, 0x3c89f3f5fea0?)\n\tC:/Program Files/Go/src/net/http/server.go:2286 +0x29\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddlewareCatchesPanic.RecoveryMiddleware.func2({0x7ff76b2931f0?, 0x3c89f43883c0?}, 0x7ff76b1cf2d1?)\n\tD:/repos/teslasync/internal/api/middleware.go:66 +0x6c\nnet/http.HandlerFunc.ServeHTTP(...)\n\tC:/Program Files/Go/src/net/http/server.go:2286\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddlewareCatchesPanic(0x3c89f440a600)\n\tD:/repos/teslasync/internal/api/middleware_extra_test.go:64 +0x105\ntesting.tRunner(0x3c89f440a600, 0x7ff76b258c10)\n\tC:/Program Files/Go/src/testing/testing.go:2036 +0xc3\ncreated by testing.(*T).Run in goroutine 1\n\tC:/Program Files/Go/src/testing/testing.go:2101 +0x4a9\n","panic":"boom","time":"2026-04-28T23:31:21-07:00","message":"panic recovered in HTTP handler"}
+{"level":"info","method":"GET","path":"/","status":200,"bytes":0,"duration":0,"ip":"192.0.2.1:1234","request_id":"","time":"2026-04-28T23:31:21-07:00","message":"http request"}
+--- FAIL: TestChangedTo_ResetsAfterConditionFalse (0.00s)
+    rule_engine_test.go:33: expected PΓåÆD to trigger
+{"level":"warn","error":"redis unavailable","vehicle_id":103,"time":"2026-04-28T23:31:21-07:00","message":"telemetry: live signal store update failed"}
+{"level":"info","component":"webhook_trigger","automation_id":1,"automation":"test-automation","remote_ip":"192.0.2.1:1234","time":"2026-04-28T23:31:21-07:00","message":"webhook trigger fired"}
+{"level":"info","component":"webhook_trigger","automation_id":2,"automation":"test-automation","remote_ip":"192.0.2.1:1234","time":"2026-04-28T23:31:21-07:00","message":"webhook trigger fired"}
+{"level":"warn","component":"webhook_trigger","automation_id":3,"automation":"test-automation","enabled":false,"auto_disabled":false,"time":"2026-04-28T23:31:21-07:00","message":"webhook received for disabled automation"}
+{"level":"info","component":"webhook_trigger","automation_id":4,"automation":"test-automation","remote_ip":"192.0.2.1:1234","time":"2026-04-28T23:31:21-07:00","message":"webhook trigger fired"}
+{"level":"warn","component":"webhook_trigger","automation_id":5,"automation":"test-automation","time":"2026-04-28T23:31:21-07:00","message":"webhook HMAC signature validation failed"}
+{"level":"warn","component":"webhook_trigger","automation_id":6,"automation":"test-automation","time":"2026-04-28T23:31:21-07:00","message":"webhook HMAC signature validation failed"}
+FAIL
+FAIL	github.com/ev-dev-labs/teslasync/internal/api	0.250s
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm	1.361s
+?   	github.com/ev-dev-labs/teslasync/internal/metrics	[no test files]
+FAIL
+TARGETED_GO_TEST_EXIT=1
+==================
+WARNING: DATA RACE
+Write at 0x00c0002053b0 by goroutine 84:
+  runtime.mapassign_faststr()
+      C:/Program Files/Go/src/internal/runtime/maps/runtime_faststr.go:263 +0x0
+  github.com/ev-dev-labs/teslasync/internal/signal.(*fakeRedisSignalClient).HSet()
+      D:/repos/teslasync/internal/signal/redis_cache_test.go:31 +0x116
+  github.com/ev-dev-labs/teslasync/internal/signal.(*RedisSignalCache).Update()
+      D:/repos/teslasync/internal/signal/redis_cache.go:98 +0x864
+  github.com/ev-dev-labs/teslasync/internal/signal.(*HybridLiveSignalStore).UpdateNonBlocking.func1()
+      D:/repos/teslasync/internal/signal/live_store.go:162 +0xed
+
+Previous read at 0x00c0002053b0 by goroutine 83:
+  runtime.mapaccess2_faststr()
+      C:/Program Files/Go/src/internal/runtime/maps/runtime_faststr.go:161 +0x0
+  github.com/ev-dev-labs/teslasync/internal/signal.(*fakeRedisSignalClient).HGet()
+      D:/repos/teslasync/internal/signal/redis_cache_test.go:56 +0x74
+  github.com/ev-dev-labs/teslasync/internal/signal.(*RedisSignalCache).GetSignalValue()
+      D:/repos/teslasync/internal/signal/redis_cache.go:192 +0x129
+  github.com/ev-dev-labs/teslasync/internal/signal.waitForRedisSignalValue()
+      D:/repos/teslasync/internal/signal/live_store_test.go:373 +0xe4
+  github.com/ev-dev-labs/teslasync/internal/signal.TestHybridLiveSignalStoreUpdateNonBlockingWritesL1AndAttemptsL2()
+      D:/repos/teslasync/internal/signal/live_store_test.go:91 +0x44b
+  testing.tRunner()
+      C:/Program Files/Go/src/testing/testing.go:2036 +0x1ca
+  testing.(*T).Run.gowrap1()
+      C:/Program Files/Go/src/testing/testing.go:2101 +0x38
+
+Goroutine 84 (running) created at:
+  github.com/ev-dev-labs/teslasync/internal/signal.(*HybridLiveSignalStore).UpdateNonBlocking()
+      D:/repos/teslasync/internal/signal/live_store.go:159 +0x484
+  github.com/ev-dev-labs/teslasync/internal/signal.TestHybridLiveSignalStoreUpdateNonBlockingWritesL1AndAttemptsL2()
+      D:/repos/teslasync/internal/signal/live_store_test.go:84 +0x34a
+  testing.tRunner()
+      C:/Program Files/Go/src/testing/testing.go:2036 +0x1ca
+  testing.(*T).Run.gowrap1()
+      C:/Program Files/Go/src/testing/testing.go:2101 +0x38
+
+Goroutine 83 (running) created at:
+  testing.(*T).Run()
+      C:/Program Files/Go/src/testing/testing.go:2101 +0xb2a
+  testing.runTests.func1()
+      C:/Program Files/Go/src/testing/testing.go:2585 +0x85
+  testing.tRunner()
+      C:/Program Files/Go/src/testing/testing.go:2036 +0x1ca
+  testing.runTests()
+      C:/Program Files/Go/src/testing/testing.go:2583 +0x9f7
+  testing.(*M).Run()
+      C:/Program Files/Go/src/testing/testing.go:2443 +0xf4b
+  main.main()
+      _testmain.go:90 +0x164
+==================
+==================
+WARNING: DATA RACE
+Read at 0x00c00002d398 by goroutine 83:
+  github.com/ev-dev-labs/teslasync/internal/signal.(*fakeRedisSignalClient).HGet()
+      D:/repos/teslasync/internal/signal/redis_cache_test.go:56 +0x84
+  github.com/ev-dev-labs/teslasync/internal/signal.(*RedisSignalCache).GetSignalValue()
+      D:/repos/teslasync/internal/signal/redis_cache.go:192 +0x129
+  github.com/ev-dev-labs/teslasync/internal/signal.waitForRedisSignalValue()
+      D:/repos/teslasync/internal/signal/live_store_test.go:373 +0xe4
+  github.com/ev-dev-labs/teslasync/internal/signal.TestHybridLiveSignalStoreUpdateNonBlockingWritesL1AndAttemptsL2()
+      D:/repos/teslasync/internal/signal/live_store_test.go:91 +0x44b
+  testing.tRunner()
+      C:/Program Files/Go/src/testing/testing.go:2036 +0x1ca
+  testing.(*T).Run.gowrap1()
+      C:/Program Files/Go/src/testing/testing.go:2101 +0x38
+
+Previous write at 0x00c00002d398 by goroutine 84:
+  github.com/ev-dev-labs/teslasync/internal/signal.(*fakeRedisSignalClient).HSet()
+      D:/repos/teslasync/internal/signal/redis_cache_test.go:31 +0x124
+  github.com/ev-dev-labs/teslasync/internal/signal.(*RedisSignalCache).Update()
+      D:/repos/teslasync/internal/signal/redis_cache.go:98 +0x864
+  github.com/ev-dev-labs/teslasync/internal/signal.(*HybridLiveSignalStore).UpdateNonBlocking.func1()
+      D:/repos/teslasync/internal/signal/live_store.go:162 +0xed
+
+Goroutine 83 (running) created at:
+  testing.(*T).Run()
+      C:/Program Files/Go/src/testing/testing.go:2101 +0xb2a
+  testing.runTests.func1()
+      C:/Program Files/Go/src/testing/testing.go:2585 +0x85
+  testing.tRunner()
+      C:/Program Files/Go/src/testing/testing.go:2036 +0x1ca
+  testing.runTests()
+      C:/Program Files/Go/src/testing/testing.go:2583 +0x9f7
+  testing.(*M).Run()
+      C:/Program Files/Go/src/testing/testing.go:2443 +0xf4b
+  main.main()
+      _testmain.go:90 +0x164
+
+Goroutine 84 (finished) created at:
+  github.com/ev-dev-labs/teslasync/internal/signal.(*HybridLiveSignalStore).UpdateNonBlocking()
+      D:/repos/teslasync/internal/signal/live_store.go:159 +0x484
+  github.com/ev-dev-labs/teslasync/internal/signal.TestHybridLiveSignalStoreUpdateNonBlockingWritesL1AndAttemptsL2()
+      D:/repos/teslasync/internal/signal/live_store_test.go:84 +0x34a
+  testing.tRunner()
+      C:/Program Files/Go/src/testing/testing.go:2036 +0x1ca
+  testing.(*T).Run.gowrap1()
+      C:/Program Files/Go/src/testing/testing.go:2101 +0x38
+==================
+==================
+WARNING: DATA RACE
+Read at 0x00c0001a2210 by goroutine 83:
+  runtime.mapaccess2_faststr()
+      C:/Program Files/Go/src/internal/runtime/maps/runtime_faststr.go:161 +0x0
+  github.com/ev-dev-labs/teslasync/internal/signal.(*fakeRedisSignalClient).HGet()
+      D:/repos/teslasync/internal/signal/redis_cache_test.go:60 +0xb5
+  github.com/ev-dev-labs/teslasync/internal/signal.(*RedisSignalCache).GetSignalValue()
+      D:/repos/teslasync/internal/signal/redis_cache.go:192 +0x129
+  github.com/ev-dev-labs/teslasync/internal/signal.waitForRedisSignalValue()
+      D:/repos/teslasync/internal/signal/live_store_test.go:373 +0xe4
+  github.com/ev-dev-labs/teslasync/internal/signal.TestHybridLiveSignalStoreUpdateNonBlockingWritesL1AndAttemptsL2()
+      D:/repos/teslasync/internal/signal/live_store_test.go:91 +0x44b
+  testing.tRunner()
+      C:/Program Files/Go/src/testing/testing.go:2036 +0x1ca
+  testing.(*T).Run.gowrap1()
+      C:/Program Files/Go/src/testing/testing.go:2101 +0x38
+
+Previous write at 0x00c0001a2210 by goroutine 84:
+  runtime.mapassign_faststr()
+      C:/Program Files/Go/src/internal/runtime/maps/runtime_faststr.go:263 +0x0
+  github.com/ev-dev-labs/teslasync/internal/signal.(*fakeRedisSignalClient).HSet()
+      D:/repos/teslasync/internal/signal/redis_cache_test.go:34 +0x3fb
+  github.com/ev-dev-labs/teslasync/internal/signal.(*RedisSignalCache).Update()
+      D:/repos/teslasync/internal/signal/redis_cache.go:98 +0x864
+  github.com/ev-dev-labs/teslasync/internal/signal.(*HybridLiveSignalStore).UpdateNonBlocking.func1()
+      D:/repos/teslasync/internal/signal/live_store.go:162 +0xed
+
+Goroutine 83 (running) created at:
+  testing.(*T).Run()
+      C:/Program Files/Go/src/testing/testing.go:2101 +0xb2a
+  testing.runTests.func1()
+      C:/Program Files/Go/src/testing/testing.go:2585 +0x85
+  testing.tRunner()
+      C:/Program Files/Go/src/testing/testing.go:2036 +0x1ca
+  testing.runTests()
+      C:/Program Files/Go/src/testing/testing.go:2583 +0x9f7
+  testing.(*M).Run()
+      C:/Program Files/Go/src/testing/testing.go:2443 +0xf4b
+  main.main()
+      _testmain.go:90 +0x164
+
+Goroutine 84 (finished) created at:
+  github.com/ev-dev-labs/teslasync/internal/signal.(*HybridLiveSignalStore).UpdateNonBlocking()
+      D:/repos/teslasync/internal/signal/live_store.go:159 +0x484
+  github.com/ev-dev-labs/teslasync/internal/signal.TestHybridLiveSignalStoreUpdateNonBlockingWritesL1AndAttemptsL2()
+      D:/repos/teslasync/internal/signal/live_store_test.go:84 +0x34a
+  testing.tRunner()
+      C:/Program Files/Go/src/testing/testing.go:2036 +0x1ca
+  testing.(*T).Run.gowrap1()
+      C:/Program Files/Go/src/testing/testing.go:2101 +0x38
+==================
+==================
+WARNING: DATA RACE
+Read at 0x00c0000ec378 by goroutine 83:
+  github.com/ev-dev-labs/teslasync/internal/signal.(*fakeRedisSignalClient).HGet()
+      D:/repos/teslasync/internal/signal/redis_cache_test.go:60 +0xc4
+  github.com/ev-dev-labs/teslasync/internal/signal.(*RedisSignalCache).GetSignalValue()
+      D:/repos/teslasync/internal/signal/redis_cache.go:192 +0x129
+  github.com/ev-dev-labs/teslasync/internal/signal.waitForRedisSignalValue()
+      D:/repos/teslasync/internal/signal/live_store_test.go:373 +0xe4
+  github.com/ev-dev-labs/teslasync/internal/signal.TestHybridLiveSignalStoreUpdateNonBlockingWritesL1AndAttemptsL2()
+      D:/repos/teslasync/internal/signal/live_store_test.go:91 +0x44b
+  testing.tRunner()
+      C:/Program Files/Go/src/testing/testing.go:2036 +0x1ca
+  testing.(*T).Run.gowrap1()
+      C:/Program Files/Go/src/testing/testing.go:2101 +0x38
+
+Previous write at 0x00c0000ec378 by goroutine 84:
+  github.com/ev-dev-labs/teslasync/internal/signal.(*fakeRedisSignalClient).HSet()
+      D:/repos/teslasync/internal/signal/redis_cache_test.go:34 +0x407
+  github.com/ev-dev-labs/teslasync/internal/signal.(*RedisSignalCache).Update()
+      D:/repos/teslasync/internal/signal/redis_cache.go:98 +0x864
+  github.com/ev-dev-labs/teslasync/internal/signal.(*HybridLiveSignalStore).UpdateNonBlocking.func1()
+      D:/repos/teslasync/internal/signal/live_store.go:162 +0xed
+
+Goroutine 83 (running) created at:
+  testing.(*T).Run()
+      C:/Program Files/Go/src/testing/testing.go:2101 +0xb2a
+  testing.runTests.func1()
+      C:/Program Files/Go/src/testing/testing.go:2585 +0x85
+  testing.tRunner()
+      C:/Program Files/Go/src/testing/testing.go:2036 +0x1ca
+  testing.runTests()
+      C:/Program Files/Go/src/testing/testing.go:2583 +0x9f7
+  testing.(*M).Run()
+      C:/Program Files/Go/src/testing/testing.go:2443 +0xf4b
+  main.main()
+      _testmain.go:90 +0x164
+
+Goroutine 84 (finished) created at:
+  github.com/ev-dev-labs/teslasync/internal/signal.(*HybridLiveSignalStore).UpdateNonBlocking()
+      D:/repos/teslasync/internal/signal/live_store.go:159 +0x484
+  github.com/ev-dev-labs/teslasync/internal/signal.TestHybridLiveSignalStoreUpdateNonBlockingWritesL1AndAttemptsL2()
+      D:/repos/teslasync/internal/signal/live_store_test.go:84 +0x34a
+  testing.tRunner()
+      C:/Program Files/Go/src/testing/testing.go:2036 +0x1ca
+  testing.(*T).Run.gowrap1()
+      C:/Program Files/Go/src/testing/testing.go:2101 +0x38
+==================
+--- FAIL: TestHybridLiveSignalStoreUpdateNonBlockingWritesL1AndAttemptsL2 (0.01s)
+    testing.go:1712: race detected during execution of test
+{"level":"warn","error":"redis unavailable","vehicle_id":13,"time":"2026-04-28T23:33:01-07:00","message":"redis signal cache: HSET failed"}
+{"level":"warn","error":"redis unavailable","vehicle_id":14,"time":"2026-04-28T23:33:01-07:00","message":"redis signal cache: HSET failed"}
+{"level":"warn","error":"redis unavailable","vehicle_id":14,"time":"2026-04-28T23:33:01-07:00","message":"live signal store: Redis mirror failed"}
+{"level":"debug","vehicle_id":16,"hydrated":1,"skipped":0,"time":"2026-04-28T23:33:01-07:00","message":"signal store: hydrated from signal_history"}
+FAIL
+FAIL	github.com/ev-dev-labs/teslasync/internal/signal	3.409s
+{"level":"error","method":"GET","path":"/boom","request_id":"","stack":"goroutine 141 [running]:\nruntime/debug.Stack()\n\tC:/Program Files/Go/src/runtime/debug/stack.go:26 +0x68\ngithub.com/ev-dev-labs/teslasync/internal/api.RecoveryMiddleware.func1.1()\n\tD:/repos/teslasync/internal/api/middleware.go:54 +0x65\npanic({0x141cfbea0?, 0x14217f720?})\n\tC:/Program Files/Go/src/runtime/panic.go:860 +0x13a\ngithub.com/ev-dev-labs/teslasync/internal/api.TestAcceptance_PanicRecovery.func1({0xc0002c0da8?, 0xc0002c0dd0?}, 0xc000298ca0?)\n\tD:/repos/teslasync/internal/api/acceptance_test.go:149 +0x2b\nnet/http.HandlerFunc.ServeHTTP(0x1421730a8, {0x1421b0df0, 0xc0003f7b40}, 0xc00070d400)\n\tC:/Program Files/Go/src/net/http/server.go:2286 +0x48\ngithub.com/go-chi/chi/v5.(*Mux).routeHTTP(0xc000289260, {0x1421b0df0, 0xc0003f7b40}, 0xc00070d400)\n\tC:/Users/AtulM/go/pkg/mod/github.com/go-chi/chi/v5@v5.0.12/mux.go:459 +0x582\nnet/http.HandlerFunc.ServeHTTP(0xc000298c90, {0x1421b0df0, 0xc0003f7b40}, 0xc00070d400)\n\tC:/Program Files/Go/src/net/http/server.go:2286 +0x48\ngithub.com/ev-dev-labs/teslasync/internal/api.RecoveryMiddleware.func1({0x1421b0df0, 0xc0003f7b40}, 0xc00070d400)\n\tD:/repos/teslasync/internal/api/middleware.go:66 +0xed\nnet/http.HandlerFunc.ServeHTTP(0xc00000b5a8, {0x1421b0df0, 0xc0003f7b40}, 0xc00070d400)\n\tC:/Program Files/Go/src/net/http/server.go:2286 +0x48\ngithub.com/go-chi/chi/v5.(*Mux).ServeHTTP(0xc000289260, {0x1421b0df0, 0xc0003f7b40}, 0xc00070d2c0)\n\tC:/Users/AtulM/go/pkg/mod/github.com/go-chi/chi/v5@v5.0.12/mux.go:90 +0x6b2\ngithub.com/ev-dev-labs/teslasync/internal/api.TestAcceptance_PanicRecovery(0xc00031c600)\n\tD:/repos/teslasync/internal/api/acceptance_test.go:154 +0x4e7\ntesting.tRunner(0xc00031c600, 0x142172c18)\n\tC:/Program Files/Go/src/testing/testing.go:2036 +0x1cb\ncreated by testing.(*T).Run in goroutine 1\n\tC:/Program Files/Go/src/testing/testing.go:2101 +0xb2b\n","panic":"kaboom","time":"2026-04-28T23:33:15-07:00","message":"panic recovered in HTTP handler"}
+{"level":"error","method":"GET","path":"/panic","request_id":"","stack":"goroutine 148 [running]:\nruntime/debug.Stack()\n\tC:/Program Files/Go/src/runtime/debug/stack.go:26 +0x68\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddleware_CatchesPanic.RecoveryMiddleware.func2.1()\n\tD:/repos/teslasync/internal/api/middleware.go:54 +0x65\npanic({0x141cfbea0?, 0x14217f710?})\n\tC:/Program Files/Go/src/runtime/panic.go:860 +0x13a\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddleware_CatchesPanic.func1({0x1400991b9?, 0x14009d6f1?}, 0x141981249?)\n\tD:/repos/teslasync/internal/api/api_test.go:165 +0x2b\nnet/http.HandlerFunc.ServeHTTP(0x1421730c0, {0x1421b0df0, 0xc0004ee7c0}, 0xc0001d5900)\n\tC:/Program Files/Go/src/net/http/server.go:2286 +0x48\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddleware_CatchesPanic.RecoveryMiddleware.func2({0x1421b0df0, 0xc0004ee7c0}, 0xc0001d5900)\n\tD:/repos/teslasync/internal/api/middleware.go:66 +0xed\nnet/http.HandlerFunc.ServeHTTP(...)\n\tC:/Program Files/Go/src/net/http/server.go:2286\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddleware_CatchesPanic(0xc00031d400)\n\tD:/repos/teslasync/internal/api/api_test.go:171 +0x1c9\ntesting.tRunner(0xc00031d400, 0x142172e28)\n\tC:/Program Files/Go/src/testing/testing.go:2036 +0x1cb\ncreated by testing.(*T).Run in goroutine 1\n\tC:/Program Files/Go/src/testing/testing.go:2101 +0xb2b\n","panic":"something went wrong","time":"2026-04-28T23:33:15-07:00","message":"panic recovered in HTTP handler"}
+--- FAIL: TestEvaluateTestConditions_InvalidJSON (0.00s)
+    automation_handler_test.go:37: expected 1 unknown result for invalid JSON, got []
+--- FAIL: TestEvaluateTestConditions_TimeWindowMet (0.00s)
+    automation_handler_test.go:47: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_TimeWindowNotMet (0.00s)
+    automation_handler_test.go:61: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_DayFilter (0.00s)
+    automation_handler_test.go:75: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_SeasonalMet (0.00s)
+    automation_handler_test.go:88: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_CooldownMet (0.00s)
+    automation_handler_test.go:101: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_CooldownNotMet (0.00s)
+    automation_handler_test.go:114: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_StateCheckUnknown (0.00s)
+    automation_handler_test.go:126: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_LocationUnknown (0.00s)
+    automation_handler_test.go:138: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_VariableCheckUnknown (0.00s)
+    automation_handler_test.go:150: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_MultipleConditions (0.00s)
+    automation_handler_test.go:162: expected 3 results, got 0
+--- FAIL: TestSimulateActions_ValidCommand (0.00s)
+    automation_handler_test.go:194: expected 1 result, got 0
+--- FAIL: TestSimulateActions_InvalidCommand (0.00s)
+    automation_handler_test.go:221: expected 1 result, got 0
+--- FAIL: TestSimulateActions_ConditionsNotMet (0.00s)
+    automation_handler_test.go:239: expected 2 results, got 0
+--- FAIL: TestSimulateActions_StopOnFailure (0.00s)
+    automation_handler_test.go:256: expected 2 results, got 0
+--- FAIL: TestSimulateActions_MixedTypes (0.00s)
+    automation_handler_test.go:274: expected 4 results, got 0
+{"level":"error","method":"GET","path":"/panic","request_id":"","stack":"goroutine 367 [running]:\nruntime/debug.Stack()\n\tC:/Program Files/Go/src/runtime/debug/stack.go:26 +0x68\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddlewareCatchesPanic.RecoveryMiddleware.func2.1()\n\tD:/repos/teslasync/internal/api/middleware.go:54 +0x65\npanic({0x141cfbea0?, 0x14217f700?})\n\tC:/Program Files/Go/src/runtime/panic.go:860 +0x13a\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddlewareCatchesPanic.func1({0x1400991b9?, 0x14009d6f1?}, 0x141994384?)\n\tD:/repos/teslasync/internal/api/middleware_extra_test.go:59 +0x2b\nnet/http.HandlerFunc.ServeHTTP(0x1421730b0, {0x1421b0df0, 0xc0006ee340}, 0xc000792dc0)\n\tC:/Program Files/Go/src/net/http/server.go:2286 +0x48\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddlewareCatchesPanic.RecoveryMiddleware.func2({0x1421b0df0, 0xc0006ee340}, 0xc000792dc0)\n\tD:/repos/teslasync/internal/api/middleware.go:66 +0xed\nnet/http.HandlerFunc.ServeHTTP(...)\n\tC:/Program Files/Go/src/net/http/server.go:2286\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddlewareCatchesPanic(0xc0007a0000)\n\tD:/repos/teslasync/internal/api/middleware_extra_test.go:64 +0x1c4\ntesting.tRunner(0xc0007a0000, 0x142172e18)\n\tC:/Program Files/Go/src/testing/testing.go:2036 +0x1cb\ncreated by testing.(*T).Run in goroutine 1\n\tC:/Program Files/Go/src/testing/testing.go:2101 +0xb2b\n","panic":"boom","time":"2026-04-28T23:33:15-07:00","message":"panic recovered in HTTP handler"}
+{"level":"info","method":"GET","path":"/","status":200,"bytes":0,"duration":0,"ip":"192.0.2.1:1234","request_id":"","time":"2026-04-28T23:33:15-07:00","message":"http request"}
+--- FAIL: TestChangedTo_ResetsAfterConditionFalse (0.00s)
+    rule_engine_test.go:33: expected PΓåÆD to trigger
+{"level":"warn","error":"redis unavailable","vehicle_id":103,"time":"2026-04-28T23:33:15-07:00","message":"telemetry: live signal store update failed"}
+{"level":"info","component":"webhook_trigger","automation_id":1,"automation":"test-automation","remote_ip":"192.0.2.1:1234","time":"2026-04-28T23:33:15-07:00","message":"webhook trigger fired"}
+{"level":"info","component":"webhook_trigger","automation_id":2,"automation":"test-automation","remote_ip":"192.0.2.1:1234","time":"2026-04-28T23:33:15-07:00","message":"webhook trigger fired"}
+{"level":"warn","component":"webhook_trigger","automation_id":3,"automation":"test-automation","enabled":false,"auto_disabled":false,"time":"2026-04-28T23:33:15-07:00","message":"webhook received for disabled automation"}
+{"level":"info","component":"webhook_trigger","automation_id":4,"automation":"test-automation","remote_ip":"192.0.2.1:1234","time":"2026-04-28T23:33:15-07:00","message":"webhook trigger fired"}
+{"level":"warn","component":"webhook_trigger","automation_id":5,"automation":"test-automation","time":"2026-04-28T23:33:15-07:00","message":"webhook HMAC signature validation failed"}
+{"level":"warn","component":"webhook_trigger","automation_id":6,"automation":"test-automation","time":"2026-04-28T23:33:15-07:00","message":"webhook HMAC signature validation failed"}
+FAIL
+FAIL	github.com/ev-dev-labs/teslasync/internal/api	0.278s
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm	2.162s
+FAIL
+TARGETED_GO_RACE_EXIT=1
+?   	github.com/ev-dev-labs/teslasync/cmd/automation-worker	[no test files]
+?   	github.com/ev-dev-labs/teslasync/cmd/export-worker	[no test files]
+?   	github.com/ev-dev-labs/teslasync/cmd/notification-worker	[no test files]
+?   	github.com/ev-dev-labs/teslasync/cmd/teslasync	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/adapter/gasprices	6.278s
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/geocoding	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/mqtt	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/postgres	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/postgres/queries	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/redis	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/storage	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/tesla	[no test files]
+{"level":"error","method":"GET","path":"/boom","request_id":"","stack":"goroutine 138 [running]:\nruntime/debug.Stack()\n\tC:/Program Files/Go/src/runtime/debug/stack.go:26 +0x5e\ngithub.com/ev-dev-labs/teslasync/internal/api.RecoveryMiddleware.func1.1()\n\tD:/repos/teslasync/internal/api/middleware.go:54 +0x58\npanic({0x7ff6ac2ecbc0?, 0x7ff6ac762db0?})\n\tC:/Program Files/Go/src/runtime/panic.go:860 +0x13a\ngithub.com/ev-dev-labs/teslasync/internal/api.TestAcceptance_PanicRecovery.func1({0x1b8037e856b0?, 0x7ff6ac6d058e?}, 0x0?)\n\tD:/repos/teslasync/internal/api/acceptance_test.go:149 +0x25\nnet/http.HandlerFunc.ServeHTTP(0x1b8037cab2c0?, {0x7ff6ac7931f0?, 0x1b8037a2ad40?}, 0x1b8037c1870c?)\n\tC:/Program Files/Go/src/net/http/server.go:2286 +0x29\ngithub.com/go-chi/chi/v5.(*Mux).routeHTTP(0x1b8037bbbce0, {0x7ff6ac7931f0, 0x1b8037a2ad40}, 0x1b8037ac9cc0)\n\tC:/Users/AtulM/go/pkg/mod/github.com/go-chi/chi/v5@v5.0.12/mux.go:459 +0x2d0\nnet/http.HandlerFunc.ServeHTTP(0x12d57b51b90?, {0x7ff6ac7931f0?, 0x1b8037a2ad40?}, 0x1b8037ac9cc0?)\n\tC:/Program Files/Go/src/net/http/server.go:2286 +0x29\ngithub.com/ev-dev-labs/teslasync/internal/api.RecoveryMiddleware.func1({0x7ff6ac7931f0?, 0x1b8037a2ad40?}, 0x7ff6ad764301?)\n\tD:/repos/teslasync/internal/api/middleware.go:66 +0x6c\nnet/http.HandlerFunc.ServeHTTP(0x7ff6ac7967d0?, {0x7ff6ac7931f0?, 0x1b8037a2ad40?}, 0x7ff6ad764390?)\n\tC:/Program Files/Go/src/net/http/server.go:2286 +0x29\ngithub.com/go-chi/chi/v5.(*Mux).ServeHTTP(0x1b8037bbbce0, {0x7ff6ac7931f0, 0x1b8037a2ad40}, 0x1b8037ac9b80)\n\tC:/Users/AtulM/go/pkg/mod/github.com/go-chi/chi/v5@v5.0.12/mux.go:90 +0x322\ngithub.com/ev-dev-labs/teslasync/internal/api.TestAcceptance_PanicRecovery(0x1b80378e1c00)\n\tD:/repos/teslasync/internal/api/acceptance_test.go:154 +0x265\ntesting.tRunner(0x1b80378e1c00, 0x7ff6ac758a10)\n\tC:/Program Files/Go/src/testing/testing.go:2036 +0xc3\ncreated by testing.(*T).Run in goroutine 1\n\tC:/Program Files/Go/src/testing/testing.go:2101 +0x4a9\n","panic":"kaboom","time":"2026-04-28T23:33:43-07:00","message":"panic recovered in HTTP handler"}
+{"level":"error","method":"GET","path":"/panic","request_id":"","stack":"goroutine 145 [running]:\nruntime/debug.Stack()\n\tC:/Program Files/Go/src/runtime/debug/stack.go:26 +0x5e\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddleware_CatchesPanic.RecoveryMiddleware.func2.1()\n\tD:/repos/teslasync/internal/api/middleware.go:54 +0x58\npanic({0x7ff6ac2ecbc0?, 0x7ff6ac762da0?})\n\tC:/Program Files/Go/src/runtime/panic.go:860 +0x13a\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddleware_CatchesPanic.func1({0x1000?, 0x1000?}, 0x7ff6ac76b460?)\n\tD:/repos/teslasync/internal/api/api_test.go:165 +0x25\nnet/http.HandlerFunc.ServeHTTP(0x0?, {0x7ff6ac7931f0?, 0x1b8037a2b8c0?}, 0xffffffffffffffff?)\n\tC:/Program Files/Go/src/net/http/server.go:2286 +0x29\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddleware_CatchesPanic.RecoveryMiddleware.func2({0x7ff6ac7931f0?, 0x1b8037a2b8c0?}, 0x7ff6ac6cf2d1?)\n\tD:/repos/teslasync/internal/api/middleware.go:66 +0x6c\nnet/http.HandlerFunc.ServeHTTP(...)\n\tC:/Program Files/Go/src/net/http/server.go:2286\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddleware_CatchesPanic(0x1b8037ed4000)\n\tD:/repos/teslasync/internal/api/api_test.go:171 +0x103\ntesting.tRunner(0x1b8037ed4000, 0x7ff6ac758c20)\n\tC:/Program Files/Go/src/testing/testing.go:2036 +0xc3\ncreated by testing.(*T).Run in goroutine 1\n\tC:/Program Files/Go/src/testing/testing.go:2101 +0x4a9\n","panic":"something went wrong","time":"2026-04-28T23:33:43-07:00","message":"panic recovered in HTTP handler"}
+--- FAIL: TestEvaluateTestConditions_InvalidJSON (0.00s)
+    automation_handler_test.go:37: expected 1 unknown result for invalid JSON, got []
+--- FAIL: TestEvaluateTestConditions_TimeWindowMet (0.00s)
+    automation_handler_test.go:47: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_TimeWindowNotMet (0.00s)
+    automation_handler_test.go:61: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_DayFilter (0.00s)
+    automation_handler_test.go:75: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_SeasonalMet (0.00s)
+    automation_handler_test.go:88: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_CooldownMet (0.00s)
+    automation_handler_test.go:101: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_CooldownNotMet (0.00s)
+    automation_handler_test.go:114: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_StateCheckUnknown (0.00s)
+    automation_handler_test.go:126: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_LocationUnknown (0.00s)
+    automation_handler_test.go:138: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_VariableCheckUnknown (0.00s)
+    automation_handler_test.go:150: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_MultipleConditions (0.00s)
+    automation_handler_test.go:162: expected 3 results, got 0
+--- FAIL: TestSimulateActions_ValidCommand (0.00s)
+    automation_handler_test.go:194: expected 1 result, got 0
+--- FAIL: TestSimulateActions_InvalidCommand (0.00s)
+    automation_handler_test.go:221: expected 1 result, got 0
+--- FAIL: TestSimulateActions_ConditionsNotMet (0.00s)
+    automation_handler_test.go:239: expected 2 results, got 0
+--- FAIL: TestSimulateActions_StopOnFailure (0.00s)
+    automation_handler_test.go:256: expected 2 results, got 0
+--- FAIL: TestSimulateActions_MixedTypes (0.00s)
+    automation_handler_test.go:274: expected 4 results, got 0
+{"level":"error","method":"GET","path":"/panic","request_id":"","stack":"goroutine 360 [running]:\nruntime/debug.Stack()\n\tC:/Program Files/Go/src/runtime/debug/stack.go:26 +0x5e\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddlewareCatchesPanic.RecoveryMiddleware.func2.1()\n\tD:/repos/teslasync/internal/api/middleware.go:54 +0x58\npanic({0x7ff6ac2ecbc0?, 0x7ff6ac762d90?})\n\tC:/Program Files/Go/src/runtime/panic.go:860 +0x13a\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddlewareCatchesPanic.func1({0x12d57b6bec0?, 0x40?}, 0x7ff6ad7c8ca0?)\n\tD:/repos/teslasync/internal/api/middleware_extra_test.go:59 +0x25\nnet/http.HandlerFunc.ServeHTTP(0x7ff6ab268d85?, {0x7ff6ac7931f0?, 0x1b8037bbd580?}, 0x1b803790fea0?)\n\tC:/Program Files/Go/src/net/http/server.go:2286 +0x29\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddlewareCatchesPanic.RecoveryMiddleware.func2({0x7ff6ac7931f0?, 0x1b8037bbd580?}, 0x7ff6ac6cf2d1?)\n\tD:/repos/teslasync/internal/api/middleware.go:66 +0x6c\nnet/http.HandlerFunc.ServeHTTP(...)\n\tC:/Program Files/Go/src/net/http/server.go:2286\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddlewareCatchesPanic(0x1b8037fb0000)\n\tD:/repos/teslasync/internal/api/middleware_extra_test.go:64 +0x105\ntesting.tRunner(0x1b8037fb0000, 0x7ff6ac758c10)\n\tC:/Program Files/Go/src/testing/testing.go:2036 +0xc3\ncreated by testing.(*T).Run in goroutine 1\n\tC:/Program Files/Go/src/testing/testing.go:2101 +0x4a9\n","panic":"boom","time":"2026-04-28T23:33:43-07:00","message":"panic recovered in HTTP handler"}
+{"level":"info","method":"GET","path":"/","status":200,"bytes":0,"duration":0,"ip":"192.0.2.1:1234","request_id":"","time":"2026-04-28T23:33:43-07:00","message":"http request"}
+--- FAIL: TestChangedTo_ResetsAfterConditionFalse (0.00s)
+    rule_engine_test.go:33: expected PΓåÆD to trigger
+{"level":"warn","error":"redis unavailable","vehicle_id":103,"time":"2026-04-28T23:33:43-07:00","message":"telemetry: live signal store update failed"}
+{"level":"info","component":"webhook_trigger","automation_id":1,"automation":"test-automation","remote_ip":"192.0.2.1:1234","time":"2026-04-28T23:33:43-07:00","message":"webhook trigger fired"}
+{"level":"info","component":"webhook_trigger","automation_id":2,"automation":"test-automation","remote_ip":"192.0.2.1:1234","time":"2026-04-28T23:33:43-07:00","message":"webhook trigger fired"}
+{"level":"warn","component":"webhook_trigger","automation_id":3,"automation":"test-automation","enabled":false,"auto_disabled":false,"time":"2026-04-28T23:33:43-07:00","message":"webhook received for disabled automation"}
+{"level":"info","component":"webhook_trigger","automation_id":4,"automation":"test-automation","remote_ip":"192.0.2.1:1234","time":"2026-04-28T23:33:43-07:00","message":"webhook trigger fired"}
+{"level":"warn","component":"webhook_trigger","automation_id":5,"automation":"test-automation","time":"2026-04-28T23:33:43-07:00","message":"webhook HMAC signature validation failed"}
+{"level":"warn","component":"webhook_trigger","automation_id":6,"automation":"test-automation","time":"2026-04-28T23:33:43-07:00","message":"webhook HMAC signature validation failed"}
+FAIL
+FAIL	github.com/ev-dev-labs/teslasync/internal/api	0.534s
+ok  	github.com/ev-dev-labs/teslasync/internal/app/chargingsvc	1.204s
+ok  	github.com/ev-dev-labs/teslasync/internal/app/dashboardsvc	1.141s
+ok  	github.com/ev-dev-labs/teslasync/internal/app/exportsvc	1.400s
+ok  	github.com/ev-dev-labs/teslasync/internal/app/notificationsvc	1.183s
+ok  	github.com/ev-dev-labs/teslasync/internal/app/tripsvc	1.200s
+ok  	github.com/ev-dev-labs/teslasync/internal/app/vehiclesvc	1.459s
+ok  	github.com/ev-dev-labs/teslasync/internal/automation	0.578s
+{"level":"debug","component":"chain_executor","index":0,"action_type":"command","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"chain action succeeded"}
+{"level":"debug","component":"chain_executor","index":1,"action_type":"wait","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"chain action succeeded"}
+{"level":"debug","component":"chain_executor","index":2,"action_type":"command","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"chain action succeeded"}
+{"level":"debug","component":"chain_executor","index":0,"action_type":"good","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"chain action succeeded"}
+{"level":"warn","component":"chain_executor","error":"action failed","index":1,"action_type":"bad","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"chain action failed"}
+{"level":"debug","component":"chain_executor","index":0,"action_type":"good","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"chain action succeeded"}
+{"level":"warn","component":"chain_executor","error":"action failed","index":1,"action_type":"bad","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"chain action failed"}
+{"level":"debug","component":"chain_executor","index":2,"action_type":"good","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"chain action succeeded"}
+{"level":"debug","component":"chain_executor","index":0,"action_type":"command","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"chain action succeeded"}
+{"level":"error","component":"chain_executor","index":1,"action_type":"teleport","time":"2026-04-28T23:33:43-07:00","message":"unknown action type in chain"}
+{"level":"error","component":"chain_executor","index":0,"action_type":"teleport","time":"2026-04-28T23:33:43-07:00","message":"unknown action type in chain"}
+{"level":"debug","component":"chain_executor","index":0,"action_type":"cancel_me","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"chain action succeeded"}
+{"level":"debug","component":"chain_executor","index":0,"action_type":"command","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"chain action succeeded"}
+{"level":"debug","component":"chain_executor","index":0,"action_type":"command","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"chain action succeeded"}
+{"level":"debug","component":"chain_executor","index":0,"action_type":"command","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"chain action succeeded"}
+{"level":"debug","component":"chain_executor","index":0,"action_type":"slow","duration_ms":10,"time":"2026-04-28T23:33:43-07:00","message":"chain action succeeded"}
+{"level":"warn","component":"chain_executor","error":"partial failure","index":0,"action_type":"command","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"chain action failed"}
+{"level":"info","component":"chain_executor","vehicle_id":1,"vehicle_name":"Model 3","action_count":2,"time":"2026-04-28T23:33:43-07:00","message":"executing chain for vehicle"}
+{"level":"debug","component":"chain_executor","index":0,"action_type":"action","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"chain action succeeded"}
+{"level":"debug","component":"chain_executor","index":1,"action_type":"action","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"chain action succeeded"}
+{"level":"info","component":"chain_executor","vehicle_id":2,"vehicle_name":"Model Y","action_count":2,"time":"2026-04-28T23:33:43-07:00","message":"executing chain for vehicle"}
+{"level":"debug","component":"chain_executor","index":0,"action_type":"action","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"chain action succeeded"}
+{"level":"debug","component":"chain_executor","index":1,"action_type":"action","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"chain action succeeded"}
+{"level":"info","component":"chain_executor","vehicle_id":1,"vehicle_name":"Model 3","action_count":2,"time":"2026-04-28T23:33:43-07:00","message":"executing chain for vehicle"}
+{"level":"warn","component":"chain_executor","error":"v1 step 1 failed","index":0,"action_type":"action","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"chain action failed"}
+{"level":"info","component":"chain_executor","vehicle_id":2,"vehicle_name":"Model Y","action_count":2,"time":"2026-04-28T23:33:43-07:00","message":"executing chain for vehicle"}
+{"level":"debug","component":"chain_executor","index":0,"action_type":"action","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"chain action succeeded"}
+{"level":"debug","component":"chain_executor","index":1,"action_type":"action","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"chain action succeeded"}
+{"level":"debug","component":"chain_executor","index":0,"action_type":"command","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"chain action succeeded"}
+{"level":"debug","component":"chain_executor","index":0,"action_type":"command","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"chain action succeeded"}
+{"level":"debug","component":"chain_executor","index":1,"action_type":"wait","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"chain action succeeded"}
+{"level":"debug","component":"chain_executor","index":2,"action_type":"command","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"chain action succeeded"}
+{"level":"debug","component":"chain_executor","index":3,"action_type":"set_variable","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"chain action succeeded"}
+{"level":"debug","component":"chain_executor","index":4,"action_type":"notify","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"chain action succeeded"}
+{"level":"info","component":"command_action","vehicle_id":1,"vehicle_name":"Model 3","time":"2026-04-28T23:33:43-07:00","message":"attempting auto-wake before command"}
+{"level":"info","component":"command_action","vehicle_id":1,"duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"auto-wake command completed successfully"}
+{"level":"info","component":"command_action","vehicle_id":1,"vehicle_name":"Model 3","command":"climate_on","status":"success","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"automation command executed"}
+{"level":"info","component":"command_action","vehicle_id":1,"vehicle_name":"Model 3","time":"2026-04-28T23:33:43-07:00","message":"attempting auto-wake before command"}
+{"level":"info","component":"command_action","vehicle_id":1,"duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"auto-wake command completed successfully"}
+{"level":"info","component":"command_action","vehicle_id":1,"vehicle_name":"Model 3","command":"lock","status":"failed","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"automation command executed"}
+{"level":"info","component":"command_action","vehicle_id":1,"vehicle_name":"Model 3","time":"2026-04-28T23:33:43-07:00","message":"attempting auto-wake before command"}
+{"level":"info","component":"command_action","vehicle_id":1,"duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"auto-wake command completed successfully"}
+{"level":"info","component":"command_action","vehicle_id":1,"vehicle_name":"Model 3","command":"flash_lights","status":"success","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"automation command executed"}
+{"level":"info","component":"command_action","vehicle_id":2,"vehicle_name":"Model Y","time":"2026-04-28T23:33:43-07:00","message":"attempting auto-wake before command"}
+{"level":"info","component":"command_action","vehicle_id":2,"duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"auto-wake command completed successfully"}
+{"level":"info","component":"command_action","vehicle_id":2,"vehicle_name":"Model Y","command":"flash_lights","status":"failed","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"automation command executed"}
+{"level":"info","component":"command_action","vehicle_id":3,"vehicle_name":"Model S","time":"2026-04-28T23:33:43-07:00","message":"attempting auto-wake before command"}
+{"level":"info","component":"command_action","vehicle_id":3,"duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"auto-wake command completed successfully"}
+{"level":"info","component":"command_action","vehicle_id":3,"vehicle_name":"Model S","command":"flash_lights","status":"success","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"automation command executed"}
+--- FAIL: TestExecute_CommandsDisabled (0.00s)
+    command_test.go:409: expected disabled error, got: vehicle 1 not found
+{"level":"info","component":"command_action","vehicle_id":1,"vehicle_name":"Model 3","time":"2026-04-28T23:33:43-07:00","message":"attempting auto-wake before command"}
+{"level":"info","component":"command_action","vehicle_id":1,"duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"auto-wake command completed successfully"}
+{"level":"info","component":"command_action","vehicle_id":1,"vehicle_name":"Model 3","command":"set_charge_limit","status":"success","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"automation command executed"}
+{"level":"info","component":"command_action","vehicle_id":1,"vehicle_name":"Model 3","time":"2026-04-28T23:33:43-07:00","message":"attempting auto-wake before command"}
+{"level":"info","component":"command_action","vehicle_id":1,"duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"auto-wake command completed successfully"}
+{"level":"info","component":"command_action","vehicle_id":1,"vehicle_name":"Model 3","command":"lock","status":"success","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"automation command executed"}
+--- FAIL: TestAutoWake_VehicleOnline_NoWakeAttempted (0.00s)
+    command_test.go:567: expected no wake result for online vehicle, got &{Attempted:true Success:true Error: DurationMs:0 PollCount:0}
+    command_test.go:573: expected 0 wake calls, got 1
+{"level":"info","component":"command_action","vehicle_id":1,"vehicle_name":"Model 3","time":"2026-04-28T23:33:43-07:00","message":"attempting auto-wake before command"}
+{"level":"info","component":"command_action","vehicle_id":1,"duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"auto-wake command completed successfully"}
+{"level":"info","component":"command_action","vehicle_id":1,"vehicle_name":"Model 3","command":"climate_on","status":"success","duration_ms":1,"time":"2026-04-28T23:33:43-07:00","message":"automation command executed"}
+--- FAIL: TestAutoWake_VehicleAsleep_WakeSucceeds (0.00s)
+    command_test.go:634: expected at least 2 polls, got 0
+{"level":"info","component":"command_action","vehicle_id":1,"vehicle_name":"Model 3","time":"2026-04-28T23:33:43-07:00","message":"attempting auto-wake before command"}
+{"level":"info","component":"command_action","vehicle_id":1,"duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"auto-wake command completed successfully"}
+{"level":"info","component":"command_action","vehicle_id":1,"vehicle_name":"Model 3","command":"lock","status":"success","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"automation command executed"}
+{"level":"info","component":"command_action","vehicle_id":1,"vehicle_name":"Model 3","time":"2026-04-28T23:33:43-07:00","message":"attempting auto-wake before command"}
+{"level":"info","component":"command_action","vehicle_id":1,"vehicle_name":"Model 3","time":"2026-04-28T23:33:43-07:00","message":"attempting auto-wake before command"}
+{"level":"info","component":"command_action","vehicle_id":1,"duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"auto-wake command completed successfully"}
+{"level":"info","component":"command_action","vehicle_id":1,"vehicle_name":"Model 3","command":"lock","status":"success","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"automation command executed"}
+--- FAIL: TestAutoWake_WakeTimeout (0.00s)
+    command_test.go:774: expected error, got nil
+{"level":"info","component":"command_action","vehicle_id":1,"vehicle_name":"Model 3","command":"wake_up","status":"success","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"automation command executed"}
+{"level":"info","component":"command_action","vehicle_id":1,"vehicle_name":"Model 3","time":"2026-04-28T23:33:43-07:00","message":"attempting auto-wake before command"}
+{"level":"info","component":"command_action","vehicle_id":1,"duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"auto-wake command completed successfully"}
+{"level":"info","component":"command_action","vehicle_id":1,"vehicle_name":"Model 3","command":"lock","status":"success","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"automation command executed"}
+--- FAIL: TestAutoWake_WakeDisabledInPollingConfig (0.00s)
+    command_test.go:864: expected error, got nil
+{"level":"info","component":"command_action","vehicle_id":1,"vehicle_name":"Model 3","time":"2026-04-28T23:33:43-07:00","message":"attempting auto-wake before command"}
+{"level":"info","component":"command_action","vehicle_id":1,"duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"auto-wake command completed successfully"}
+{"level":"info","component":"command_action","vehicle_id":1,"vehicle_name":"Model 3","command":"lock","status":"success","duration_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"automation command executed"}
+--- FAIL: TestAutoWake_ContextCancelledDuringWake (0.00s)
+    command_test.go:919: expected error, got nil
+{"level":"info","component":"notify_action","channel_id":1,"channel_name":"Discord","channel_type":"discord","time":"2026-04-28T23:33:43-07:00","message":"notify action delivered"}
+{"level":"info","component":"notify_action","channel_id":2,"channel_name":"Slack","channel_type":"slack","time":"2026-04-28T23:33:43-07:00","message":"notify action delivered"}
+{"level":"info","component":"notify_action","channel_id":2,"channel_name":"Slack","channel_type":"slack","time":"2026-04-28T23:33:43-07:00","message":"notify action delivered"}
+{"level":"info","component":"notify_action","channel_id":1,"channel_name":"Discord","channel_type":"discord","time":"2026-04-28T23:33:43-07:00","message":"notify action delivered"}
+{"level":"warn","component":"notify_action","error":"slack timeout","channel_id":2,"channel_name":"Slack","channel_type":"slack","time":"2026-04-28T23:33:43-07:00","message":"notify action delivery failed"}
+{"level":"info","component":"notify_action","channel_id":1,"channel_name":"Discord","channel_type":"discord","time":"2026-04-28T23:33:43-07:00","message":"notify action delivered"}
+{"level":"info","component":"notify_action","channel_id":1,"channel_name":"Discord","channel_type":"discord","time":"2026-04-28T23:33:43-07:00","message":"notify action delivered"}
+{"level":"info","component":"notify_action","channel_id":1,"channel_name":"Discord","channel_type":"discord","time":"2026-04-28T23:33:43-07:00","message":"notify action delivered"}
+{"level":"info","component":"notify_action","channel_id":1,"channel_name":"Discord","channel_type":"discord","time":"2026-04-28T23:33:43-07:00","message":"notify action delivered"}
+{"level":"info","component":"notify_action","channel_id":1,"channel_name":"Discord","channel_type":"discord","time":"2026-04-28T23:33:43-07:00","message":"notify action delivered"}
+{"level":"info","component":"set_variable_action","key":"last_charge_level","value":"85","time":"2026-04-28T23:33:43-07:00","message":"automation variable set"}
+{"level":"info","component":"set_variable_action","key":"counter","value":"11","time":"2026-04-28T23:33:43-07:00","message":"automation variable set"}
+{"level":"info","component":"set_variable_action","key":"test","value":"val","time":"2026-04-28T23:33:43-07:00","message":"automation variable set"}
+{"level":"info","component":"set_variable_action","key":"test","value":"{{unknown}}","time":"2026-04-28T23:33:43-07:00","message":"automation variable set"}
+{"level":"warn","component":"set_variable_action","error":"db connection failed","key":"test","time":"2026-04-28T23:33:43-07:00","message":"failed to read previous variable value"}
+{"level":"info","component":"wait_action","duration_seconds":5,"time":"2026-04-28T23:33:43-07:00","message":"wait action starting"}
+{"level":"info","component":"wait_action","duration_seconds":5,"waited_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"wait action completed"}
+{"level":"info","component":"wait_action","duration_seconds":2,"time":"2026-04-28T23:33:43-07:00","message":"wait action starting"}
+{"level":"info","component":"wait_action","duration_seconds":2,"waited_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"wait action completed"}
+{"level":"info","component":"wait_action","duration_seconds":60,"time":"2026-04-28T23:33:43-07:00","message":"wait action starting"}
+{"level":"warn","component":"wait_action","duration_seconds":60,"waited_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"wait action cancelled"}
+{"level":"info","component":"wait_action","duration_seconds":42,"time":"2026-04-28T23:33:43-07:00","message":"wait action starting"}
+{"level":"info","component":"wait_action","duration_seconds":42,"waited_ms":0,"time":"2026-04-28T23:33:43-07:00","message":"wait action completed"}
+{"level":"info","component":"wait_action","duration_seconds":1,"time":"2026-04-28T23:33:43-07:00","message":"wait action starting"}
+{"level":"info","component":"wait_action","duration_seconds":1,"waited_ms":1001,"time":"2026-04-28T23:33:44-07:00","message":"wait action completed"}
+{"level":"info","component":"wait_action","duration_seconds":60,"time":"2026-04-28T23:33:44-07:00","message":"wait action starting"}
+{"level":"warn","component":"wait_action","duration_seconds":60,"waited_ms":100,"time":"2026-04-28T23:33:44-07:00","message":"wait action cancelled"}
+FAIL
+FAIL	github.com/ev-dev-labs/teslasync/internal/automation/action	1.531s
+--- FAIL: TestDetectConflicts_CronSameScheduleOppositeActions (0.00s)
+    conflict_test.go:126: expected 1 conflict, got 0
+--- FAIL: TestDetectConflicts_CronSameExprSameTimezone (0.00s)
+    conflict_test.go:174: expected 1 conflict, got 0
+--- FAIL: TestDetectConflicts_VehicleState_SameEvent_OppositeActions (0.00s)
+    conflict_test.go:204: expected 1 conflict, got 0
+--- FAIL: TestDetectConflicts_VehicleState_StateChangeWildcard (0.00s)
+    conflict_test.go:232: expected 1 conflict (state_change overlaps any event), got 0
+--- FAIL: TestDetectConflicts_VehicleState_SameEventOneFilteredOneNot (0.00s)
+    conflict_test.go:261: expected 1 conflict (one unfiltered overlaps with filtered), got 0
+--- FAIL: TestDetectConflicts_Geofence_SameGeofenceSameEvent (0.00s)
+    conflict_test.go:277: expected 1 conflict, got 0
+--- FAIL: TestDetectConflicts_Geofence_BothEventOverlapsEnter (0.00s)
+    conflict_test.go:305: expected 1 conflict (both overlaps enter), got 0
+--- FAIL: TestDetectConflicts_GlobalVsSpecific_Conflict (0.00s)
+    conflict_test.go:349: expected 1 conflict (global overlaps specific), got 0
+--- FAIL: TestDetectConflicts_SameVehicle_Conflict (0.00s)
+    conflict_test.go:364: expected 1 conflict for same vehicle, got 0
+--- FAIL: TestDetectConflicts_ConditionsDowngradeSeverity (0.00s)
+    conflict_test.go:382: expected 1 conflict, got 0
+--- FAIL: TestDetectConflicts_MultipleOppositeCommandPairs (0.00s)
+    conflict_test.go:401: expected 1 conflict (single entry per automation), got 0
+--- FAIL: TestDetectConflicts_MultipleOtherAutomations (0.00s)
+    conflict_test.go:423: expected 2 conflicts, got 0
+--- FAIL: TestEvaluateLocation_SnapshotContent (0.00s)
+    location_test.go:322: snapshot radius_m = 1532.253087, want 1000
+    location_test.go:328: snapshot distance_m = 255.381528, want ~0 (same point)
+FAIL
+FAIL	github.com/ev-dev-labs/teslasync/internal/automation/condition	1.425s
+ok  	github.com/ev-dev-labs/teslasync/internal/automation/presets	0.502s
+ok  	github.com/ev-dev-labs/teslasync/internal/automation/safety	0.643s
+--- FAIL: TestParseBatteryConfig_ChangesBy_DefaultDirection (0.00s)
+    battery_test.go:212: expected default direction 'any', got ""
+--- FAIL: TestParseBatteryConfig_UnknownOperator (0.00s)
+    battery_test.go:234: expected error for unknown operator
+--- FAIL: TestParseBatteryConfig_ThresholdOutOfRange (0.00s)
+    battery_test.go:242: expected error for threshold > 100
+--- FAIL: TestParseBatteryConfig_NegativeThreshold (0.00s)
+    battery_test.go:250: expected error for negative threshold
+--- FAIL: TestParseBatteryConfig_ChangesBy_MissingDelta (0.00s)
+    battery_test.go:258: expected error for changes_by without delta
+--- FAIL: TestParseBatteryConfig_ChangesBy_InvalidDirection (0.00s)
+    battery_test.go:266: expected error for invalid direction
+{"level":"debug","component":"battery_trigger","vehicle_id":1,"battery_level":15,"time":"2026-04-28T23:33:43-07:00","message":"battery level seeded (first observation)"}
+{"level":"info","component":"battery_trigger","automation_id":1,"automation":"low-battery","vehicle_id":100,"previous_level":21,"current_level":19,"operator":"crossed_below","threshold":20,"time":"2026-04-28T23:33:43-07:00","message":"battery trigger fired"}
+{"level":"info","component":"battery_trigger","automation_id":1,"automation":"high-battery","vehicle_id":100,"previous_level":79,"current_level":81,"operator":"crossed_above","threshold":80,"time":"2026-04-28T23:33:43-07:00","message":"battery trigger fired"}
+{"level":"info","component":"battery_trigger","automation_id":1,"automation":"reach-80","vehicle_id":100,"previous_level":79,"current_level":80,"operator":"=","threshold":80,"time":"2026-04-28T23:33:43-07:00","message":"battery trigger fired"}
+{"level":"info","component":"battery_trigger","automation_id":1,"automation":"any-change","vehicle_id":100,"previous_level":50,"current_level":58,"operator":"changed","threshold":0,"time":"2026-04-28T23:33:43-07:00","message":"battery trigger fired"}
+{"level":"info","component":"battery_trigger","automation_id":1,"automation":"low-battery","vehicle_id":100,"previous_level":21,"current_level":14,"operator":"crossed_below","threshold":20,"time":"2026-04-28T23:33:43-07:00","message":"battery trigger fired"}
+{"level":"info","component":"battery_trigger","automation_id":2,"automation":"critical-battery","vehicle_id":100,"previous_level":21,"current_level":14,"operator":"crossed_below","threshold":15,"time":"2026-04-28T23:33:43-07:00","message":"battery trigger fired"}
+{"level":"warn","component":"battery_trigger","automation_id":99,"automation":"wrong-signal","signal":"tire_pressure","time":"2026-04-28T23:33:43-07:00","message":"battery trigger loader returned non-battery_level signal; skipping"}
+{"level":"info","component":"battery_trigger","automation_id":1,"automation":"low-battery","vehicle_id":100,"previous_level":21,"current_level":19,"operator":"crossed_below","threshold":20,"time":"2026-04-28T23:33:43-07:00","message":"battery trigger fired"}
+{"level":"info","component":"battery_trigger","automation_id":1,"automation":"low-battery","vehicle_id":100,"previous_level":25,"current_level":15,"operator":"crossed_below","threshold":20,"time":"2026-04-28T23:33:43-07:00","message":"battery trigger fired"}
+{"level":"info","component":"battery_trigger","automation_id":1,"automation":"low-battery","vehicle_id":1,"previous_level":21,"current_level":19,"operator":"crossed_below","threshold":20,"time":"2026-04-28T23:33:43-07:00","message":"battery trigger fired"}
+{"level":"info","component":"battery_trigger","automation_id":1,"automation":"low-battery","vehicle_id":100,"previous_level":21,"current_level":19,"operator":"crossed_below","threshold":20,"time":"2026-04-28T23:33:43-07:00","message":"battery trigger fired"}
+{"level":"error","component":"battery_trigger","error":"action failed","automation_id":1,"automation":"low-battery","time":"2026-04-28T23:33:43-07:00","message":"automation evaluation failed"}
+{"level":"info","component":"calendar_trigger","automation_id":1,"automation":"Pre-meeting climate","event_title":"Team Standup","event_start":"2026-04-18T10:00:00Z","event_location":"Conference Room A","fire_time":"2026-04-18T09:30:00Z","offset_minutes":-30,"time":"2026-04-28T23:33:43-07:00","message":"calendar trigger fired"}
+{"level":"info","component":"calendar_trigger","automation_id":1,"automation":"Team events only","event_title":"Team Standup","event_start":"2026-04-18T10:00:00Z","event_location":"","fire_time":"2026-04-18T09:30:00Z","offset_minutes":-30,"time":"2026-04-28T23:33:43-07:00","message":"calendar trigger fired"}
+{"level":"info","component":"calendar_trigger","automation_id":1,"automation":"Navigate to meetings","event_title":"Offsite Meeting","event_start":"2026-04-18T10:00:00Z","event_location":"123 Main St","fire_time":"2026-04-18T09:30:00Z","offset_minutes":-30,"time":"2026-04-28T23:33:43-07:00","message":"calendar trigger fired"}
+{"level":"info","component":"calendar_trigger","automation_id":1,"automation":"Pre-meeting climate","event_title":"Daily Standup","event_start":"2026-04-18T10:00:00Z","event_location":"","fire_time":"2026-04-18T09:30:00Z","offset_minutes":-30,"time":"2026-04-28T23:33:43-07:00","message":"calendar trigger fired"}
+{"level":"info","component":"calendar_trigger","automation_id":1,"automation":"Climate for calls","event_title":"Phone Call","event_start":"2026-04-18T10:00:00Z","event_location":"","fire_time":"2026-04-18T09:30:00Z","offset_minutes":-30,"time":"2026-04-28T23:33:43-07:00","message":"calendar trigger fired"}
+{"level":"warn","component":"calendar_trigger","automation_id":1,"automation":"No vehicle","time":"2026-04-28T23:33:43-07:00","message":"calendar automation has no vehicle_id, auto-disabling"}
+{"level":"warn","component":"calendar_trigger","error":"Tesla API timeout","vehicle_id":1,"time":"2026-04-28T23:33:43-07:00","message":"failed to fetch calendar entries, skipping vehicle this tick"}
+{"level":"info","component":"calendar_trigger","automation_id":1,"automation":"Climate ON","event_title":"Meeting","event_start":"2026-04-18T10:00:00Z","event_location":"Office","fire_time":"2026-04-18T09:30:00Z","offset_minutes":-30,"time":"2026-04-28T23:33:43-07:00","message":"calendar trigger fired"}
+{"level":"info","component":"calendar_trigger","automation_id":2,"automation":"Navigate","event_title":"Meeting","event_start":"2026-04-18T10:00:00Z","event_location":"Office","fire_time":"2026-04-18T09:30:00Z","offset_minutes":-30,"time":"2026-04-28T23:33:43-07:00","message":"calendar trigger fired"}
+{"level":"info","component":"calendar_trigger","automation_id":1,"automation":"Post-meeting lock","event_title":"Meeting","event_start":"2026-04-18T10:00:00Z","event_location":"","fire_time":"2026-04-18T11:00:00Z","offset_minutes":60,"time":"2026-04-28T23:33:43-07:00","message":"calendar trigger fired"}
+{"level":"warn","component":"calendar_trigger","error":"offset_minutes must be between -1440 and 1440, got 9999","automation_id":1,"automation":"Bad config","time":"2026-04-28T23:33:43-07:00","message":"invalid calendar config, auto-disabling"}
+{"level":"info","component":"calendar_trigger","automation_id":1,"automation":"Pre-meeting","event_title":"Team Standup","event_start":"2026-04-18T10:00:00Z","event_location":"123 Main St","fire_time":"2026-04-18T09:30:00Z","offset_minutes":-30,"time":"2026-04-28T23:33:43-07:00","message":"calendar trigger fired"}
+{"level":"info","component":"calendar_trigger","automation_id":1,"automation":"Pre-meeting","event_title":"Early Meeting","event_start":"2026-04-19T00:10:00Z","event_location":"","fire_time":"2026-04-18T23:40:00Z","offset_minutes":-30,"time":"2026-04-28T23:33:43-07:00","message":"calendar trigger fired"}
+{"level":"info","component":"calendar_trigger","automation_id":1,"automation":"Pre-meeting","event_title":"Meeting A","event_start":"2026-04-18T10:00:00Z","event_location":"","fire_time":"2026-04-18T09:30:00Z","offset_minutes":-30,"time":"2026-04-28T23:33:43-07:00","message":"calendar trigger fired"}
+{"level":"info","component":"calendar_trigger","automation_id":1,"automation":"Pre-meeting","event_title":"Meeting B","event_start":"2026-04-18T10:05:00Z","event_location":"","fire_time":"2026-04-18T09:35:00Z","offset_minutes":-30,"time":"2026-04-28T23:33:43-07:00","message":"calendar trigger fired"}
+{"level":"info","component":"calendar_trigger","automation_id":1,"automation":"All events","event_title":"Anything Goes","event_start":"2026-04-18T10:00:00Z","event_location":"","fire_time":"2026-04-18T09:30:00Z","offset_minutes":-30,"time":"2026-04-28T23:33:43-07:00","message":"calendar trigger fired"}
+{"level":"info","component":"cron_trigger","automation_id":1,"automation":"morning-charge","cron_expr":"15 7 * * 1-5","timezone":"America/Los_Angeles","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","time":"2026-04-28T23:33:43-07:00","message":"cron trigger stopped"}
+{"level":"info","component":"cron_trigger","time":"2026-04-28T23:33:43-07:00","message":"cron trigger stopped"}
+{"level":"info","component":"cron_trigger","time":"2026-04-28T23:33:43-07:00","message":"cron trigger stopped"}
+{"level":"info","component":"cron_trigger","time":"2026-04-28T23:33:43-07:00","message":"cron trigger stopped"}
+{"level":"info","component":"cron_trigger","automation_id":1,"automation":"hourly","cron_expr":"@hourly","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","time":"2026-04-28T23:33:43-07:00","message":"cron trigger stopped"}
+{"level":"info","component":"cron_trigger","automation_id":1,"automation":"test","cron_expr":"0 8 * * *","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":1,"automation":"test","cron_expr":"0 9 * * *","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","time":"2026-04-28T23:33:43-07:00","message":"cron trigger stopped"}
+{"level":"info","component":"cron_trigger","automation_id":1,"automation":"test","cron_expr":"0 8 * * *","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":1,"time":"2026-04-28T23:33:43-07:00","message":"unregistered cron automation"}
+{"level":"info","component":"cron_trigger","time":"2026-04-28T23:33:43-07:00","message":"cron trigger stopped"}
+{"level":"info","component":"cron_trigger","time":"2026-04-28T23:33:43-07:00","message":"cron trigger stopped"}
+{"level":"info","component":"cron_trigger","automation_id":1,"automation":"auto-1","cron_expr":"0 8 * * *","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":2,"automation":"auto-2","cron_expr":"@daily","timezone":"America/New_York","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","registered":2,"total":2,"time":"2026-04-28T23:33:43-07:00","message":"cron trigger started"}
+{"level":"info","component":"cron_trigger","time":"2026-04-28T23:33:43-07:00","message":"cron trigger stopped"}
+{"level":"info","component":"cron_trigger","automation_id":1,"automation":"valid","cron_expr":"0 8 * * *","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"warn","component":"cron_trigger","error":"register cron schedule \"CRON_TZ=UTC not valid\": expected exactly 5 fields, found 2: [not valid]","automation_id":2,"automation":"invalid-cron","time":"2026-04-28T23:33:43-07:00","message":"skipping invalid cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":3,"automation":"valid-2","cron_expr":"@hourly","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","registered":2,"total":3,"time":"2026-04-28T23:33:43-07:00","message":"cron trigger started"}
+{"level":"info","component":"cron_trigger","time":"2026-04-28T23:33:43-07:00","message":"cron trigger stopped"}
+{"level":"info","component":"cron_trigger","time":"2026-04-28T23:33:43-07:00","message":"cron trigger stopped"}
+{"level":"info","component":"cron_trigger","automation_id":1,"automation":"auto-1","cron_expr":"0 8 * * *","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","registered":1,"total":1,"time":"2026-04-28T23:33:43-07:00","message":"cron trigger started"}
+{"level":"info","component":"cron_trigger","automation_id":10,"automation":"new-auto","cron_expr":"@hourly","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":11,"automation":"new-auto-2","cron_expr":"0 9 * * *","timezone":"Europe/London","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","registered":2,"total":2,"time":"2026-04-28T23:33:43-07:00","message":"cron trigger reloaded"}
+{"level":"info","component":"cron_trigger","time":"2026-04-28T23:33:43-07:00","message":"cron trigger stopped"}
+{"level":"info","component":"cron_trigger","registered":0,"total":0,"time":"2026-04-28T23:33:43-07:00","message":"cron trigger started"}
+{"level":"info","component":"cron_trigger","time":"2026-04-28T23:33:43-07:00","message":"cron trigger stopped"}
+{"level":"info","component":"cron_trigger","automation_id":42,"automation":"test-auto","cron_expr":"0 8 * * *","time":"2026-04-28T23:33:43-07:00","message":"cron trigger fired"}
+{"level":"info","component":"cron_trigger","time":"2026-04-28T23:33:43-07:00","message":"cron trigger stopped"}
+{"level":"info","component":"cron_trigger","automation_id":5,"automation":"recurring","cron_expr":"0 8 * * *","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":5,"automation":"recurring","cron_expr":"0 8 * * *","time":"2026-04-28T23:33:43-07:00","message":"cron trigger fired"}
+{"level":"info","component":"cron_trigger","time":"2026-04-28T23:33:43-07:00","message":"cron trigger stopped"}
+{"level":"info","component":"cron_trigger","automation_id":1,"automation":"tz-America/Los_Angeles","cron_expr":"0 8 * * *","timezone":"America/Los_Angeles","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":2,"automation":"tz-America/New_York","cron_expr":"0 8 * * *","timezone":"America/New_York","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":3,"automation":"tz-Europe/London","cron_expr":"0 8 * * *","timezone":"Europe/London","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":4,"automation":"tz-Asia/Tokyo","cron_expr":"0 8 * * *","timezone":"Asia/Tokyo","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":5,"automation":"tz-Australia/Sydney","cron_expr":"0 8 * * *","timezone":"Australia/Sydney","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","time":"2026-04-28T23:33:43-07:00","message":"cron trigger stopped"}
+{"level":"info","component":"cron_trigger","automation_id":1,"automation":"utc-default","cron_expr":"0 8 * * *","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","time":"2026-04-28T23:33:43-07:00","message":"cron trigger stopped"}
+{"level":"info","component":"cron_trigger","automation_id":0,"automation":"concurrent-0","cron_expr":"0 8 * * *","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":1,"automation":"concurrent-1","cron_expr":"0 8 * * *","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":2,"automation":"concurrent-2","cron_expr":"0 8 * * *","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":3,"automation":"concurrent-3","cron_expr":"0 8 * * *","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":4,"automation":"concurrent-4","cron_expr":"0 8 * * *","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":5,"automation":"concurrent-5","cron_expr":"0 8 * * *","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":6,"automation":"concurrent-6","cron_expr":"0 8 * * *","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":7,"automation":"concurrent-7","cron_expr":"0 8 * * *","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":8,"automation":"concurrent-8","cron_expr":"0 8 * * *","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":9,"automation":"concurrent-9","cron_expr":"0 8 * * *","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":10,"automation":"concurrent-10","cron_expr":"0 8 * * *","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":11,"automation":"concurrent-11","cron_expr":"0 8 * * *","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":12,"automation":"concurrent-12","cron_expr":"0 8 * * *","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":13,"automation":"concurrent-13","cron_expr":"0 8 * * *","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":14,"automation":"concurrent-14","cron_expr":"0 8 * * *","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":15,"automation":"concurrent-15","cron_expr":"0 8 * * *","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":16,"automation":"concurrent-16","cron_expr":"0 8 * * *","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":17,"automation":"concurrent-17","cron_expr":"0 8 * * *","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":3,"time":"2026-04-28T23:33:43-07:00","message":"unregistered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":6,"time":"2026-04-28T23:33:43-07:00","message":"unregistered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":1,"time":"2026-04-28T23:33:43-07:00","message":"unregistered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":2,"time":"2026-04-28T23:33:43-07:00","message":"unregistered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":4,"time":"2026-04-28T23:33:43-07:00","message":"unregistered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":5,"time":"2026-04-28T23:33:43-07:00","message":"unregistered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":8,"time":"2026-04-28T23:33:43-07:00","message":"unregistered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":0,"time":"2026-04-28T23:33:43-07:00","message":"unregistered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":7,"time":"2026-04-28T23:33:43-07:00","message":"unregistered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":18,"automation":"concurrent-18","cron_expr":"0 8 * * *","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","automation_id":19,"automation":"concurrent-19","cron_expr":"0 8 * * *","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","time":"2026-04-28T23:33:43-07:00","message":"cron trigger stopped"}
+{"level":"info","component":"cron_trigger","automation_id":1,"automation":"live-test","cron_expr":"33 6 * * *","timezone":"UTC","time":"2026-04-28T23:33:43-07:00","message":"registered cron automation"}
+{"level":"info","component":"cron_trigger","time":"2026-04-28T23:35:13-07:00","message":"cron trigger stopped"}
+--- FAIL: TestLiveScheduler_FiresWithinWindow (90.00s)
+    cron_test.go:621: timed out waiting for cron to fire
+--- FAIL: TestParseEnergyConfig_MissingSiteID (0.00s)
+    energy_test.go:392: expected error for missing energy_site_id
+--- FAIL: TestParseEnergyConfig_ZeroSiteID (0.00s)
+    energy_test.go:400: expected error for zero energy_site_id
+--- FAIL: TestParseEnergyConfig_NegativeSiteID (0.00s)
+    energy_test.go:408: expected error for negative energy_site_id
+--- FAIL: TestParseEnergyConfig_UnknownEvent (0.00s)
+    energy_test.go:416: expected error for unknown event
+--- FAIL: TestParseEnergyConfig_NegativeSolarThreshold (0.00s)
+    energy_test.go:424: expected error for negative solar threshold
+--- FAIL: TestParseEnergyConfig_BatteryThresholdOutOfRange (0.00s)
+    energy_test.go:432: expected error for battery threshold > 100
+--- FAIL: TestParseEnergyConfig_NegativeBatteryThreshold (0.00s)
+    energy_test.go:440: expected error for negative battery threshold
+{"level":"debug","component":"energy_trigger","energy_site_id":100,"time":"2026-04-28T23:35:13-07:00","message":"energy state seeded (first observation)"}
+{"level":"info","component":"energy_trigger","automation_id":1,"automation":"solar-high","energy_site_id":100,"signal":"solar_power","operator":"crossed_above","time":"2026-04-28T23:35:13-07:00","message":"energy trigger fired"}
+{"level":"info","component":"energy_trigger","automation_id":1,"automation":"outage-alert","energy_site_id":100,"signal":"grid_status","operator":"=","time":"2026-04-28T23:35:13-07:00","message":"energy trigger fired"}
+{"level":"info","component":"energy_trigger","automation_id":1,"automation":"grid-back","energy_site_id":100,"signal":"grid_status","operator":"=","time":"2026-04-28T23:35:13-07:00","message":"energy trigger fired"}
+{"level":"info","component":"energy_trigger","automation_id":1,"automation":"storm-alert","energy_site_id":100,"signal":"storm_mode_active","operator":"=","time":"2026-04-28T23:35:13-07:00","message":"energy trigger fired"}
+{"level":"info","component":"energy_trigger","automation_id":1,"automation":"storm-clear","energy_site_id":100,"signal":"storm_mode_active","operator":"=","time":"2026-04-28T23:35:13-07:00","message":"energy trigger fired"}
+{"level":"info","component":"energy_trigger","automation_id":1,"automation":"grid-export","energy_site_id":100,"signal":"grid_power","operator":"crossed_below","time":"2026-04-28T23:35:13-07:00","message":"energy trigger fired"}
+{"level":"info","component":"energy_trigger","automation_id":1,"automation":"low-powerwall","energy_site_id":100,"signal":"battery_level","operator":"crossed_below","time":"2026-04-28T23:35:13-07:00","message":"energy trigger fired"}
+{"level":"info","component":"energy_trigger","automation_id":1,"automation":"site1-solar","energy_site_id":100,"signal":"solar_power","operator":"crossed_above","time":"2026-04-28T23:35:13-07:00","message":"energy trigger fired"}
+{"level":"info","component":"energy_trigger","automation_id":2,"automation":"site2-solar","energy_site_id":200,"signal":"solar_power","operator":"crossed_above","time":"2026-04-28T23:35:13-07:00","message":"energy trigger fired"}
+{"level":"info","component":"energy_trigger","automation_id":1,"automation":"solar-high","energy_site_id":100,"signal":"solar_power","operator":"crossed_above","time":"2026-04-28T23:35:13-07:00","message":"energy trigger fired"}
+{"level":"info","component":"energy_trigger","automation_id":2,"automation":"solar-very-high","energy_site_id":100,"signal":"solar_power","operator":"crossed_above","time":"2026-04-28T23:35:13-07:00","message":"energy trigger fired"}
+{"level":"info","component":"energy_trigger","automation_id":1,"automation":"solar-high","energy_site_id":100,"signal":"solar_power","operator":"crossed_above","time":"2026-04-28T23:35:13-07:00","message":"energy trigger fired"}
+{"level":"info","component":"energy_trigger","automation_id":1,"automation":"solar-high","energy_site_id":100,"signal":"solar_power","operator":"crossed_above","time":"2026-04-28T23:35:13-07:00","message":"energy trigger fired"}
+{"level":"error","component":"energy_trigger","error":"action failed","automation_id":1,"automation":"solar-high","time":"2026-04-28T23:35:13-07:00","message":"automation evaluation failed"}
+{"level":"info","component":"energy_trigger","automation_id":1,"automation":"solar-high","energy_site_id":100,"signal":"solar_power","operator":"crossed_above","time":"2026-04-28T23:35:13-07:00","message":"energy trigger fired"}
+{"level":"info","component":"energy_trigger","automation_id":1,"automation":"outage-alert","energy_site_id":100,"signal":"grid_status","operator":"=","time":"2026-04-28T23:35:13-07:00","message":"energy trigger fired"}
+--- FAIL: TestParseGeofenceConfig_MissingGeofenceID (0.00s)
+    geofence_test.go:173: expected error for missing geofence_id
+--- FAIL: TestParseGeofenceConfig_NegativeGeofenceID (0.00s)
+    geofence_test.go:181: expected error for negative geofence_id
+--- FAIL: TestParseGeofenceConfig_MissingEvent (0.00s)
+    geofence_test.go:189: expected error for missing event
+--- FAIL: TestParseGeofenceConfig_InvalidEvent (0.00s)
+    geofence_test.go:197: expected error for invalid event
+--- FAIL: TestParseGeofenceConfig_NegativeDwell (0.00s)
+    geofence_test.go:205: expected error for negative dwell_minutes
+{"level":"debug","component":"geofence_trigger","vehicle_id":100,"inside_count":1,"time":"2026-04-28T23:35:13-07:00","message":"geofence state seeded (first observation)"}
+{"level":"info","component":"geofence_trigger","automation_id":1,"automation":"arrive-home","vehicle_id":100,"place_id":5,"place_name":"Home","event":"enter","lat":37.394,"lon":-122.15,"time":"2026-04-28T23:35:13-07:00","message":"geofence trigger fired"}
+{"level":"warn","component":"geofence_trigger","automation_id":1,"automation":"leave-work","event":"leave","time":"2026-04-28T23:35:13-07:00","message":"unknown geofence trigger event, skipping"}
+--- FAIL: TestGeofenceTrigger_Leave_Fires (0.00s)
+    geofence_test.go:299: expected 1 fire, got 0
+{"level":"warn","component":"geofence_trigger","automation_id":1,"automation":"leave-home","event":"leave","time":"2026-04-28T23:35:13-07:00","message":"unknown geofence trigger event, skipping"}
+{"level":"warn","component":"geofence_trigger","automation_id":1,"automation":"home-both","event":"both","time":"2026-04-28T23:35:13-07:00","message":"unknown geofence trigger event, skipping"}
+--- FAIL: TestGeofenceTrigger_BothEvent_FiresOnEnterAndLeave (0.00s)
+    geofence_test.go:433: expected 1 fire (enter), got 0
+{"level":"info","component":"geofence_trigger","automation_id":1,"automation":"arrive-home","vehicle_id":100,"place_id":1,"place_name":"Home","event":"enter","lat":37.394,"lon":-122.15,"time":"2026-04-28T23:35:13-07:00","message":"geofence trigger fired"}
+{"level":"info","component":"geofence_trigger","automation_id":2,"automation":"arrive-work","vehicle_id":100,"place_id":2,"place_name":"Work","event":"enter","lat":37.394,"lon":-122.15,"time":"2026-04-28T23:35:13-07:00","message":"geofence trigger fired"}
+{"level":"info","component":"geofence_trigger","automation_id":1,"automation":"arrive-home","vehicle_id":100,"place_id":1,"place_name":"Home","event":"enter","lat":37.394,"lon":-122.15,"time":"2026-04-28T23:35:13-07:00","message":"geofence trigger fired"}
+--- FAIL: TestGeofenceTrigger_InvalidConfig_AutoDisables (0.00s)
+    geofence_test.go:499: expected automation 99 to be auto-disabled
+{"level":"info","component":"geofence_trigger","automation_id":1,"automation":"arrive-home","vehicle_id":100,"place_id":1,"place_name":"Home","event":"enter","lat":37.394,"lon":-122.15,"time":"2026-04-28T23:35:13-07:00","message":"geofence trigger fired"}
+{"level":"error","component":"geofence_trigger","error":"action failed","automation_id":1,"automation":"arrive-home","time":"2026-04-28T23:35:13-07:00","message":"automation evaluation failed"}
+--- FAIL: TestGeofenceTrigger_DifferentVehicles_Independent (0.00s)
+    geofence_test.go:609: expected 1 fire (vehicle 1 only), got 0
+{"level":"info","component":"geofence_trigger","automation_id":1,"automation":"arrive-home","vehicle_id":100,"place_id":1,"place_name":"Home","event":"enter","lat":37.394,"lon":-122.15,"time":"2026-04-28T23:35:13-07:00","message":"geofence trigger fired"}
+{"level":"info","component":"geofence_trigger","automation_id":1,"automation":"arrive-home-dwell","vehicle_id":100,"place_id":1,"place_name":"Home","event":"enter","lat":37.394,"lon":-122.15,"time":"2026-04-28T23:35:13-07:00","message":"geofence trigger fired"}
+--- FAIL: TestGeofenceTrigger_DwellTimer_FiresAfterDwell (0.00s)
+    geofence_test.go:698: should not fire immediately with dwell_minutes > 0
+{"level":"info","component":"geofence_trigger","automation_id":1,"automation":"arrive-home-dwell","vehicle_id":100,"place_id":1,"place_name":"Home","event":"enter","lat":37.394,"lon":-122.15,"time":"2026-04-28T23:35:13-07:00","message":"geofence trigger fired"}
+--- FAIL: TestGeofenceTrigger_DwellTimer_CancelledOnLeave (0.00s)
+    geofence_test.go:745: should not fire immediately with dwell
+{"level":"warn","component":"geofence_trigger","automation_id":1,"automation":"home-both-dwell","event":"both","time":"2026-04-28T23:35:13-07:00","message":"unknown geofence trigger event, skipping"}
+{"level":"warn","component":"geofence_trigger","automation_id":1,"automation":"home-both-dwell","event":"both","time":"2026-04-28T23:35:13-07:00","message":"unknown geofence trigger event, skipping"}
+--- FAIL: TestGeofenceTrigger_DwellTimer_VehicleLeftBeforeFire (0.00s)
+    geofence_test.go:806: expected 1 fire (leave), got 0
+{"level":"info","component":"geofence_trigger","automation_id":1,"automation":"arrive-home-dwell","vehicle_id":100,"place_id":1,"place_name":"Home","event":"enter","lat":37.394,"lon":-122.15,"time":"2026-04-28T23:35:13-07:00","message":"geofence trigger fired"}
+{"level":"info","component":"geofence_trigger","time":"2026-04-28T23:35:13-07:00","message":"geofence trigger stopped"}
+{"level":"debug","component":"mqtt_trigger","topic":"home/door/state","time":"2026-04-28T23:35:13-07:00","message":"subscribed to mqtt topic"}
+{"level":"debug","component":"mqtt_trigger","topic":"home/temp/value","time":"2026-04-28T23:35:13-07:00","message":"subscribed to mqtt topic"}
+{"level":"info","component":"mqtt_trigger","registered":2,"invalid":0,"total":2,"topics":2,"time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger started"}
+{"level":"info","component":"mqtt_trigger","time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger stopped"}
+{"level":"warn","component":"mqtt_trigger","error":"trigger_config is empty","automation_id":99,"automation":"broken","time":"2026-04-28T23:35:13-07:00","message":"invalid mqtt trigger config, auto-disabling"}
+{"level":"debug","component":"mqtt_trigger","topic":"home/door/state","time":"2026-04-28T23:35:13-07:00","message":"subscribed to mqtt topic"}
+{"level":"info","component":"mqtt_trigger","registered":1,"invalid":1,"total":2,"topics":1,"time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger started"}
+{"level":"info","component":"mqtt_trigger","time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger stopped"}
+{"level":"debug","component":"mqtt_trigger","topic":"home/door/state","time":"2026-04-28T23:35:13-07:00","message":"subscribed to mqtt topic"}
+{"level":"info","component":"mqtt_trigger","registered":1,"invalid":0,"total":1,"topics":1,"time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger started"}
+{"level":"info","component":"mqtt_trigger","automation_id":1,"automation":"door-open","topic":"home/door/state","time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger fired"}
+{"level":"info","component":"mqtt_trigger","time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger stopped"}
+{"level":"debug","component":"mqtt_trigger","topic":"home/door/state","time":"2026-04-28T23:35:13-07:00","message":"subscribed to mqtt topic"}
+{"level":"info","component":"mqtt_trigger","registered":1,"invalid":0,"total":1,"topics":1,"time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger started"}
+{"level":"info","component":"mqtt_trigger","time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger stopped"}
+{"level":"debug","component":"mqtt_trigger","topic":"sensors/temp","time":"2026-04-28T23:35:13-07:00","message":"subscribed to mqtt topic"}
+{"level":"info","component":"mqtt_trigger","registered":1,"invalid":0,"total":1,"topics":1,"time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger started"}
+{"level":"info","component":"mqtt_trigger","automation_id":1,"automation":"temp-high","topic":"sensors/temp","time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger fired"}
+{"level":"info","component":"mqtt_trigger","time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger stopped"}
+{"level":"debug","component":"mqtt_trigger","topic":"sensors/temp","time":"2026-04-28T23:35:13-07:00","message":"subscribed to mqtt topic"}
+{"level":"info","component":"mqtt_trigger","registered":1,"invalid":0,"total":1,"topics":1,"time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger started"}
+{"level":"info","component":"mqtt_trigger","time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger stopped"}
+{"level":"debug","component":"mqtt_trigger","topic":"home/+/state","time":"2026-04-28T23:35:13-07:00","message":"subscribed to mqtt topic"}
+{"level":"info","component":"mqtt_trigger","registered":1,"invalid":0,"total":1,"topics":1,"time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger started"}
+{"level":"info","component":"mqtt_trigger","automation_id":1,"automation":"any-sensor","topic":"home/door/state","time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger fired"}
+{"level":"info","component":"mqtt_trigger","time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger stopped"}
+{"level":"debug","component":"mqtt_trigger","topic":"home/door/state","time":"2026-04-28T23:35:13-07:00","message":"subscribed to mqtt topic"}
+{"level":"info","component":"mqtt_trigger","registered":1,"invalid":0,"total":1,"topics":1,"time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger started"}
+{"level":"info","component":"mqtt_trigger","time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger stopped"}
+{"level":"debug","component":"mqtt_trigger","topic":"home/door/state","time":"2026-04-28T23:35:13-07:00","message":"subscribed to mqtt topic"}
+{"level":"info","component":"mqtt_trigger","registered":1,"invalid":0,"total":1,"topics":1,"time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger started"}
+{"level":"info","component":"mqtt_trigger","automation_id":1,"automation":"door-open","topic":"home/door/state","time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger fired"}
+{"level":"info","component":"mqtt_trigger","time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger stopped"}
+{"level":"debug","component":"mqtt_trigger","topic":"home/door/state","time":"2026-04-28T23:35:13-07:00","message":"subscribed to mqtt topic"}
+{"level":"info","component":"mqtt_trigger","registered":1,"invalid":0,"total":1,"topics":1,"time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger started"}
+{"level":"info","component":"mqtt_trigger","time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger stopped"}
+{"level":"debug","component":"mqtt_trigger","topic":"home/door/state","time":"2026-04-28T23:35:13-07:00","message":"subscribed to mqtt topic"}
+{"level":"info","component":"mqtt_trigger","registered":2,"invalid":0,"total":2,"topics":1,"time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger started"}
+{"level":"info","component":"mqtt_trigger","automation_id":1,"automation":"door-on","topic":"home/door/state","time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger fired"}
+{"level":"info","component":"mqtt_trigger","automation_id":2,"automation":"door-any","topic":"home/door/state","time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger fired"}
+{"level":"info","component":"mqtt_trigger","time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger stopped"}
+{"level":"debug","component":"mqtt_trigger","topic":"home/door/state","time":"2026-04-28T23:35:13-07:00","message":"subscribed to mqtt topic"}
+{"level":"info","component":"mqtt_trigger","registered":2,"invalid":0,"total":2,"topics":1,"time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger started"}
+{"level":"info","component":"mqtt_trigger","time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger stopped"}
+{"level":"debug","component":"mqtt_trigger","topic":"topic/a","time":"2026-04-28T23:35:13-07:00","message":"subscribed to mqtt topic"}
+{"level":"debug","component":"mqtt_trigger","topic":"topic/b","time":"2026-04-28T23:35:13-07:00","message":"subscribed to mqtt topic"}
+{"level":"info","component":"mqtt_trigger","registered":2,"invalid":0,"total":2,"topics":2,"time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger started"}
+{"level":"info","component":"mqtt_trigger","time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger stopped"}
+{"level":"debug","component":"mqtt_trigger","topic":"topic/a","time":"2026-04-28T23:35:13-07:00","message":"subscribed to mqtt topic"}
+{"level":"info","component":"mqtt_trigger","registered":1,"invalid":0,"total":1,"topics":1,"time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger started"}
+{"level":"debug","component":"mqtt_trigger","topic":"topic/b","time":"2026-04-28T23:35:13-07:00","message":"subscribed to mqtt topic"}
+{"level":"info","component":"mqtt_trigger","automations":1,"topics":1,"time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger reloaded"}
+{"level":"info","component":"mqtt_trigger","time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger stopped"}
+{"level":"debug","component":"mqtt_trigger","topic":"topic/a","time":"2026-04-28T23:35:13-07:00","message":"subscribed to mqtt topic"}
+{"level":"info","component":"mqtt_trigger","registered":1,"invalid":0,"total":1,"topics":1,"time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger started"}
+{"level":"info","component":"mqtt_trigger","time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger stopped"}
+{"level":"debug","component":"mqtt_trigger","topic":"topic/a","time":"2026-04-28T23:35:13-07:00","message":"subscribed to mqtt topic"}
+{"level":"info","component":"mqtt_trigger","registered":2,"invalid":0,"total":2,"topics":1,"time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger started"}
+{"level":"info","component":"mqtt_trigger","automation_id":1,"automation":"test-1","topic":"topic/a","time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger fired"}
+{"level":"error","component":"mqtt_trigger","error":"action failed","automation_id":1,"automation":"test-1","time":"2026-04-28T23:35:13-07:00","message":"automation evaluation failed"}
+{"level":"info","component":"mqtt_trigger","automation_id":2,"automation":"test-2","topic":"topic/a","time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger fired"}
+{"level":"error","component":"mqtt_trigger","error":"action failed","automation_id":2,"automation":"test-2","time":"2026-04-28T23:35:13-07:00","message":"automation evaluation failed"}
+{"level":"info","component":"mqtt_trigger","time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger stopped"}
+{"level":"debug","component":"mqtt_trigger","topic":"sensors/motion","time":"2026-04-28T23:35:13-07:00","message":"subscribed to mqtt topic"}
+{"level":"info","component":"mqtt_trigger","registered":1,"invalid":0,"total":1,"topics":1,"time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger started"}
+{"level":"info","component":"mqtt_trigger","automation_id":1,"automation":"any-payload","topic":"sensors/motion","time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger fired"}
+{"level":"info","component":"mqtt_trigger","time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger stopped"}
+{"level":"debug","component":"mqtt_trigger","topic":"home/#","time":"2026-04-28T23:35:13-07:00","message":"subscribed to mqtt topic"}
+{"level":"info","component":"mqtt_trigger","registered":1,"invalid":0,"total":1,"topics":1,"time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger started"}
+{"level":"info","component":"mqtt_trigger","automation_id":1,"automation":"all-home","topic":"home/bedroom/light/state","time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger fired"}
+{"level":"info","component":"mqtt_trigger","time":"2026-04-28T23:35:13-07:00","message":"mqtt trigger stopped"}
+{"level":"info","component":"sunrise_sunset_trigger","automation_id":1,"automation":"Sunset Sentry","event":"sunset","offset_minutes":0,"solar_time":"2026-04-18T19:45:00Z","fire_time":"2026-04-18T19:45:00Z","lat":37.394,"lon":-122.15,"time":"2026-04-28T23:35:13-07:00","message":"sunrise/sunset trigger fired"}
+{"level":"info","component":"sunrise_sunset_trigger","automation_id":1,"automation":"30min Before Sunset","event":"sunset","offset_minutes":-30,"solar_time":"2026-04-18T19:45:00Z","fire_time":"2026-04-18T19:15:00Z","lat":37.394,"lon":-122.15,"time":"2026-04-28T23:35:13-07:00","message":"sunrise/sunset trigger fired"}
+{"level":"info","component":"sunrise_sunset_trigger","automation_id":1,"automation":"Sunrise","event":"sunrise","offset_minutes":0,"solar_time":"2026-04-18T06:30:00Z","fire_time":"2026-04-18T06:30:00Z","lat":37.394,"lon":-122.15,"time":"2026-04-28T23:35:13-07:00","message":"sunrise/sunset trigger fired"}
+{"level":"info","component":"sunrise_sunset_trigger","automation_id":1,"automation":"Home Sunrise","event":"sunrise","offset_minutes":0,"solar_time":"2026-04-18T06:30:00Z","fire_time":"2026-04-18T06:30:00Z","lat":40.7128,"lon":-74.006,"time":"2026-04-28T23:35:13-07:00","message":"sunrise/sunset trigger fired"}
+{"level":"warn","component":"sunrise_sunset_trigger","error":"invalid event \"noon\", must be sunrise/sunset","automation_id":1,"automation":"Bad Config","time":"2026-04-28T23:35:13-07:00","message":"invalid sunrise_sunset config, auto-disabling"}
+{"level":"warn","component":"sunrise_sunset_trigger","error":"no explicit lat/lon and no vehicle_id on automation 1","automation_id":1,"automation":"No Location","time":"2026-04-28T23:35:13-07:00","message":"cannot resolve location, auto-disabling"}
+{"level":"warn","component":"sunrise_sunset_trigger","error":"get home location for vehicle 42: no home geofence","automation_id":1,"automation":"Bad Location","time":"2026-04-28T23:35:13-07:00","message":"cannot resolve location, auto-disabling"}
+{"level":"info","component":"sunrise_sunset_trigger","automation_id":1,"automation":"Early Morning","event":"sunrise","offset_minutes":-60,"solar_time":"2026-04-18T00:30:00Z","fire_time":"2026-04-17T23:30:00Z","lat":70,"lon":25,"time":"2026-04-28T23:35:13-07:00","message":"sunrise/sunset trigger fired"}
+{"level":"info","component":"sunrise_sunset_trigger","automation_id":1,"automation":"Saturday Sunset","event":"sunset","offset_minutes":0,"solar_time":"2026-04-18T19:45:00Z","fire_time":"2026-04-18T19:45:00Z","lat":37.394,"lon":-122.15,"time":"2026-04-28T23:35:13-07:00","message":"sunrise/sunset trigger fired"}
+{"level":"info","component":"vehicle_state_trigger","automation_id":1,"automation":"charge-done","vehicle_id":42,"event":"charging_complete","fsm_type":"charge_session","from_state":"completing","to_state":"done","time":"2026-04-28T23:35:13-07:00","message":"vehicle_state trigger fired"}
+{"level":"info","component":"vehicle_state_trigger","automation_id":1,"automation":"drive-started","vehicle_id":42,"event":"drive_starts","fsm_type":"drive_session","from_state":"pending","to_state":"active","time":"2026-04-28T23:35:13-07:00","message":"vehicle_state trigger fired"}
+{"level":"info","component":"vehicle_state_trigger","automation_id":1,"automation":"online-goes-offline","vehicle_id":42,"event":"goes_offline","fsm_type":"vehicle","from_state":"online","to_state":"offline","time":"2026-04-28T23:35:13-07:00","message":"vehicle_state trigger fired"}
+{"level":"info","component":"vehicle_state_trigger","automation_id":1,"automation":"charge-done","vehicle_id":42,"event":"charging_complete","fsm_type":"charge_session","from_state":"active","to_state":"done","time":"2026-04-28T23:35:13-07:00","message":"vehicle_state trigger fired"}
+{"level":"info","component":"vehicle_state_trigger","automation_id":2,"automation":"charge-stopped","vehicle_id":42,"event":"charging_stops","fsm_type":"charge_session","from_state":"active","to_state":"done","time":"2026-04-28T23:35:13-07:00","message":"vehicle_state trigger fired"}
+{"level":"info","component":"vehicle_state_trigger","automation_id":1,"automation":"charge-done","vehicle_id":42,"event":"charging_complete","fsm_type":"charge_session","from_state":"completing","to_state":"done","time":"2026-04-28T23:35:13-07:00","message":"vehicle_state trigger fired"}
+{"level":"warn","component":"vehicle_state_trigger","error":"trigger_config is empty","automation_id":99,"automation":"broken","time":"2026-04-28T23:35:13-07:00","message":"invalid vehicle_state trigger config, auto-disabling"}
+{"level":"info","component":"vehicle_state_trigger","automation_id":1,"automation":"wakes-up","vehicle_id":42,"event":"wakes_up","fsm_type":"vehicle","from_state":"asleep","to_state":"online","time":"2026-04-28T23:35:13-07:00","message":"vehicle_state trigger fired"}
+{"level":"info","component":"vehicle_state_trigger","automation_id":1,"automation":"wakes-up","vehicle_id":42,"event":"wakes_up","fsm_type":"vehicle","from_state":"asleep","to_state":"online","time":"2026-04-28T23:35:13-07:00","message":"vehicle_state trigger fired"}
+{"level":"error","component":"vehicle_state_trigger","error":"action failed","automation_id":1,"automation":"wakes-up","time":"2026-04-28T23:35:13-07:00","message":"automation evaluation failed"}
+{"level":"info","component":"vehicle_state_trigger","automation_id":1,"automation":"any-change","vehicle_id":42,"event":"state_change","fsm_type":"vehicle","from_state":"online","to_state":"driving","time":"2026-04-28T23:35:13-07:00","message":"vehicle_state trigger fired"}
+{"level":"info","component":"vehicle_state_trigger","automation_id":1,"automation":"to-charging","vehicle_id":42,"event":"state_change","fsm_type":"vehicle","from_state":"online","to_state":"charging","time":"2026-04-28T23:35:13-07:00","message":"vehicle_state trigger fired"}
+{"level":"info","component":"vehicle_state_trigger","automation_id":1,"automation":"wakes-up","vehicle_id":42,"event":"wakes_up","fsm_type":"vehicle","from_state":"asleep","to_state":"online","time":"2026-04-28T23:35:13-07:00","message":"vehicle_state trigger fired"}
+{"level":"info","component":"vehicle_state_trigger","automation_id":1,"automation":"wakes-up","vehicle_id":1,"event":"wakes_up","fsm_type":"vehicle","from_state":"asleep","to_state":"online","time":"2026-04-28T23:35:13-07:00","message":"vehicle_state trigger fired"}
+{"level":"warn","component":"vehicle_state_trigger","error":"unsupported event \"totally_fake_event\"","automation_id":99,"automation":"bad-trigger","time":"2026-04-28T23:35:13-07:00","message":"invalid vehicle_state trigger config, auto-disabling"}
+{"level":"info","component":"webhook_trigger","automation_id":1,"automation":"door-webhook","remote_ip":"192.168.1.100","time":"2026-04-28T23:35:13-07:00","message":"webhook trigger fired"}
+{"level":"warn","component":"webhook_trigger","automation_id":2,"automation":"disabled-webhook","enabled":false,"auto_disabled":false,"time":"2026-04-28T23:35:13-07:00","message":"webhook received for disabled automation"}
+{"level":"info","component":"webhook_trigger","automation_id":4,"automation":"hmac-webhook","remote_ip":"10.0.0.1","time":"2026-04-28T23:35:13-07:00","message":"webhook trigger fired"}
+{"level":"warn","component":"webhook_trigger","automation_id":5,"automation":"hmac-webhook","time":"2026-04-28T23:35:13-07:00","message":"webhook HMAC signature validation failed"}
+{"level":"warn","component":"webhook_trigger","automation_id":6,"automation":"hmac-webhook","time":"2026-04-28T23:35:13-07:00","message":"webhook HMAC signature validation failed"}
+{"level":"info","component":"webhook_trigger","automation_id":7,"automation":"empty-payload-webhook","remote_ip":"10.0.0.1","time":"2026-04-28T23:35:13-07:00","message":"webhook trigger fired"}
+{"level":"warn","component":"webhook_trigger","error":"trigger_config is empty","automation_id":9,"automation":"bad-config-webhook","time":"2026-04-28T23:35:13-07:00","message":"invalid webhook trigger config, auto-disabling"}
+{"level":"info","component":"webhook_trigger","automation_id":10,"automation":"engine-error-webhook","remote_ip":"10.0.0.1","time":"2026-04-28T23:35:13-07:00","message":"webhook trigger fired"}
+{"level":"error","component":"webhook_trigger","error":"action failed","automation_id":10,"automation":"engine-error-webhook","time":"2026-04-28T23:35:13-07:00","message":"automation evaluation failed"}
+{"level":"info","component":"webhook_trigger","automation_id":11,"automation":"no-secret-webhook","remote_ip":"10.0.0.1","time":"2026-04-28T23:35:13-07:00","message":"webhook trigger fired"}
+FAIL
+FAIL	github.com/ev-dev-labs/teslasync/internal/automation/trigger	90.360s
+ok  	github.com/ev-dev-labs/teslasync/internal/backup	0.567s
+ok  	github.com/ev-dev-labs/teslasync/internal/cache	2.288s
+ok  	github.com/ev-dev-labs/teslasync/internal/config	1.149s
+ok  	github.com/ev-dev-labs/teslasync/internal/crypto	1.233s
+{"level":"warn","breaker":"db-test-open","from":"closed","to":"open","time":"2026-04-28T23:33:44-07:00","message":"DB circuit breaker state change"}
+{"level":"warn","breaker":"db-test-err-open","from":"closed","to":"open","time":"2026-04-28T23:33:44-07:00","message":"DB circuit breaker state change"}
+{"level":"warn","error":"connection refused","operation":"test","attempt":1,"max":3,"next_wait":200,"time":"2026-04-28T23:33:44-07:00","message":"retrying DB operation after transient failure"}
+{"level":"warn","error":"connection refused","operation":"test","attempt":2,"max":3,"next_wait":500,"time":"2026-04-28T23:33:44-07:00","message":"retrying DB operation after transient failure"}
+{"level":"info","operation":"test","attempt":3,"time":"2026-04-28T23:33:45-07:00","message":"DB operation succeeded after retry"}
+{"level":"warn","error":"connection refused","operation":"test","attempt":1,"max":3,"next_wait":200,"time":"2026-04-28T23:33:45-07:00","message":"retrying DB operation after transient failure"}
+{"level":"warn","error":"connection refused","operation":"test","attempt":2,"max":3,"next_wait":500,"time":"2026-04-28T23:33:45-07:00","message":"retrying DB operation after transient failure"}
+{"level":"warn","error":"connection refused","operation":"test","attempt":1,"max":3,"next_wait":200,"time":"2026-04-28T23:33:45-07:00","message":"retrying DB operation after transient failure"}
+{"level":"warn","error":"connection refused","operation":"test","attempt":1,"max":3,"next_wait":200,"time":"2026-04-28T23:33:45-07:00","message":"retrying DB operation after transient failure"}
+--- FAIL: TestRepoColumnsMatchSchema (0.20s)
+    schema_test.go:179: table "vehicle_live_state" does not exist in schema
+    schema_test.go:179: table "vehicle_live_state" does not exist in schema
+    schema_test.go:179: table "vehicle_live_state" does not exist in schema
+    schema_test.go:179: table "vehicle_live_state" does not exist in schema
+    schema_test.go:179: table "vehicle_live_state" does not exist in schema
+    schema_test.go:179: table "vehicle_live_state" does not exist in schema
+    schema_test.go:179: table "vehicle_live_state" does not exist in schema
+    schema_test.go:179: table "vehicle_live_state" does not exist in schema
+    schema_test.go:179: table "vehicle_live_state" does not exist in schema
+    schema_test.go:179: table "vehicle_live_state" does not exist in schema
+    schema_test.go:179: table "vehicle_live_state" does not exist in schema
+    schema_test.go:179: table "vehicle_live_state" does not exist in schema
+    schema_test.go:179: table "vehicle_live_state" does not exist in schema
+    schema_test.go:179: table "vehicle_live_state" does not exist in schema
+    schema_test.go:179: table "vehicle_live_state" does not exist in schema
+    schema_test.go:179: table "vehicle_live_state" does not exist in schema
+    schema_test.go:179: table "vehicle_live_state" does not exist in schema
+    schema_test.go:179: table "vehicle_live_state" does not exist in schema
+    schema_test.go:179: table "vehicle_live_state" does not exist in schema
+    schema_test.go:179: table "vehicle_live_state" does not exist in schema
+    schema_test.go:179: table "vehicle_live_state" does not exist in schema
+    schema_test.go:190: column "fsm_type" should NOT exist in table "fsm_transitions" (old name ΓÇö was it renamed?)
+{"level":"warn","buffer":"test","dropped":1,"total_dropped":1,"time":"2026-04-28T23:33:46-07:00","message":"write buffer full, dropping oldest items"}
+{"level":"warn","buffer":"test","dropped":10,"total_dropped":10,"time":"2026-04-28T23:33:46-07:00","message":"write buffer full, dropping oldest items"}
+{"level":"info","buffer":"test","inserted":3,"remaining":0,"time":"2026-04-28T23:33:46-07:00","message":"write buffer drained"}
+{"level":"info","buffer":"test","inserted":2,"remaining":1,"time":"2026-04-28T23:33:46-07:00","message":"write buffer drained"}
+{"level":"info","buffer":"test","inserted":5,"remaining":5,"time":"2026-04-28T23:33:46-07:00","message":"write buffer drained"}
+{"level":"info","buffer":"test","inserted":1,"remaining":0,"time":"2026-04-28T23:33:46-07:00","message":"write buffer drained"}
+{"level":"info","buffer":"test","inserted":74,"remaining":0,"time":"2026-04-28T23:33:46-07:00","message":"write buffer drained"}
+{"level":"info","buffer":"test","inserted":20,"remaining":0,"time":"2026-04-28T23:33:46-07:00","message":"write buffer drained"}
+{"level":"info","buffer":"test","inserted":70,"remaining":0,"time":"2026-04-28T23:33:46-07:00","message":"write buffer drained"}
+{"level":"info","buffer":"test","inserted":60,"remaining":0,"time":"2026-04-28T23:33:46-07:00","message":"write buffer drained"}
+{"level":"info","buffer":"test","inserted":50,"remaining":0,"time":"2026-04-28T23:33:46-07:00","message":"write buffer drained"}
+{"level":"info","buffer":"test","inserted":43,"remaining":0,"time":"2026-04-28T23:33:46-07:00","message":"write buffer drained"}
+{"level":"info","buffer":"test","inserted":57,"remaining":0,"time":"2026-04-28T23:33:46-07:00","message":"write buffer drained"}
+{"level":"info","buffer":"test","inserted":13,"remaining":0,"time":"2026-04-28T23:33:46-07:00","message":"write buffer drained"}
+{"level":"info","buffer":"test","inserted":21,"remaining":0,"time":"2026-04-28T23:33:46-07:00","message":"write buffer drained"}
+{"level":"info","buffer":"test","inserted":51,"remaining":0,"time":"2026-04-28T23:33:46-07:00","message":"write buffer drained"}
+{"level":"info","buffer":"test","inserted":61,"remaining":0,"time":"2026-04-28T23:33:46-07:00","message":"write buffer drained"}
+{"level":"info","buffer":"test","inserted":30,"remaining":0,"time":"2026-04-28T23:33:46-07:00","message":"write buffer drained"}
+{"level":"info","buffer":"test","inserted":70,"remaining":0,"time":"2026-04-28T23:33:46-07:00","message":"write buffer drained"}
+{"level":"info","buffer":"test","inserted":44,"remaining":0,"time":"2026-04-28T23:33:46-07:00","message":"write buffer drained"}
+{"level":"info","buffer":"test","inserted":91,"remaining":0,"time":"2026-04-28T23:33:46-07:00","message":"write buffer drained"}
+{"level":"info","buffer":"test","inserted":10,"remaining":0,"time":"2026-04-28T23:33:46-07:00","message":"write buffer drained"}
+{"level":"info","buffer":"test","inserted":80,"remaining":0,"time":"2026-04-28T23:33:46-07:00","message":"write buffer drained"}
+{"level":"info","buffer":"test","inserted":38,"remaining":0,"time":"2026-04-28T23:33:46-07:00","message":"write buffer drained"}
+{"level":"info","buffer":"test","inserted":80,"remaining":0,"time":"2026-04-28T23:33:46-07:00","message":"write buffer drained"}
+{"level":"info","buffer":"test","inserted":37,"remaining":0,"time":"2026-04-28T23:33:46-07:00","message":"write buffer drained"}
+FAIL
+FAIL	github.com/ev-dev-labs/teslasync/internal/database	3.037s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain	1.085s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/charging	1.107s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/export	1.076s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/fsm	1.126s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/notification	1.044s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/trip	1.020s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/user	1.098s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/vehicle	1.193s
+ok  	github.com/ev-dev-labs/teslasync/internal/enums	1.923s
+ok  	github.com/ev-dev-labs/teslasync/internal/events	1.801s
+ok  	github.com/ev-dev-labs/teslasync/internal/export	0.417s
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/automation	1.395s
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/charge	1.202s
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/command	1.249s
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/drive	1.278s
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/notification	1.208s
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/telemetry	0.902s
+ok  	github.com/ev-dev-labs/teslasync/internal/geocoding	1.474s
+?   	github.com/ev-dev-labs/teslasync/internal/handler/dto	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/handler/middleware	0.318s
+?   	github.com/ev-dev-labs/teslasync/internal/handler/v1	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/metrics	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/models	1.074s
+ok  	github.com/ev-dev-labs/teslasync/internal/mqtt	2.073s
+ok  	github.com/ev-dev-labs/teslasync/internal/notification	0.440s
+ok  	github.com/ev-dev-labs/teslasync/internal/platform/buildinfo	1.491s
+?   	github.com/ev-dev-labs/teslasync/internal/platform/cache	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/platform/config	1.207s
+?   	github.com/ev-dev-labs/teslasync/internal/platform/database	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/platform/httputil	2.201s
+?   	github.com/ev-dev-labs/teslasync/internal/platform/telemetry	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/polling	0.374s
+?   	github.com/ev-dev-labs/teslasync/internal/port/external	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/port/messaging	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/port/repository	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/resilience	5.856s
+?   	github.com/ev-dev-labs/teslasync/internal/service	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/signal	(cached)
+--- FAIL: TestFlattenAgainstSampleBatch (0.01s)
+    flatten_e2e_test.go:53: orphan atomics from real batch: [BatteryLevel Gear ScheduledChargingStartTime InsideTemp ChargerVoltage]
+    flatten_e2e_test.go:58: compound expansions observed: map[DoorState:6 Location:2 ShiftState:1 WindowState:4]
+--- FAIL: TestHotCatalogCoverage (0.00s)
+    hot_catalog_coverage_test.go:226: orphan signals (neither hot nor explicitly cold): [ACChargingEnergyIn ACChargingPower BatteryLevel CabinOverheatProtectionMode ChargeLimitSoc ChargeRateMilePerHour ChargeState ChargerPhases ChargerVoltage DCChargingEnergyIn DCChargingPower DefrostForPreconditioning DefrostMode Gear GpsHeading GpsState HvacAutoMode HvacFanStatus HvacLeftTemperatureRequest HvacPower HvacRightTemperatureRequest HvacSteeringWheelHeatAuto InsideTemp OutsideTemp RatedRange ScheduledChargingPending ScheduledChargingStartTime SeatHeaterLeft SeatHeaterRearLeft SeatHeaterRearRight SeatHeaterRight Soc Version]
+FAIL
+FAIL	github.com/ev-dev-labs/teslasync/internal/telemetry	1.384s
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla	1.966s
+?   	github.com/ev-dev-labs/teslasync/internal/tracing	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/units	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/worker	0.344s
+?   	github.com/ev-dev-labs/teslasync/web/node_modules/flatted/golang/pkg/flatted	[no test files]
+FAIL
+ALL_GO_TEST_EXIT=1
+=== CHECK 6: frontend typecheck ===
+TSC_EXIT=0
+=== CHECK 7: docs build and wording ===
+
+> docs@1.0.0 docs:build
+> vitepress build
+
+
+  [32m[1mvitepress[22m v1.6.4[39m
+
+- building client + server bundles...
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+Γ£ô building client + server bundles...
+- rendering pages...
+Γ£ô rendering pages...
+build complete in 12.76s.
+DOCS_BUILD_EXIT=0
+MISSING_DOC_TERM_COUNT=7
+L1
+L2
+write-through
+LIVE_SIGNAL_STORE_MODE
+best-effort
+telemetry/FSM owner
+legacy scalar
+REDIS_ONLY_CLAIM_COUNT=0
+FSM_ACTIVE_ACTIVE_CLAIM_COUNT=0
+=== CHECK 8: frontend API convention regression scan ===
+FRONTEND_API_CONVENTION_VIOLATION_COUNT=0
+=== CHECK 9: drift ===
+UNEXPECTED_STATUS_COUNT=9
+ M cmd/teslasync/main.go
+ M docker-compose.yml
+ M helm/teslasync/templates/configmap.yaml
+ M helm/teslasync/values.yaml
+ M internal/api/telemetry_handler.go
+ M internal/config/config.go
+ M internal/signal/live_store.go
+ M internal/signal/live_store_test.go
+?? internal/api/telemetry_handler_test.go
+EXIT=1
+STATUS=BLOCKED
+=== COMMIT ===
