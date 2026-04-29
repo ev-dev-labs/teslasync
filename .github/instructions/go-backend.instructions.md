@@ -244,6 +244,12 @@ result, err := h.teslaClient.GetVehicle(ctx, vehicleID)
 ## Caching Strategy
 
 ### Redis Cache Pattern
+
+General read-through cache rules apply to ordinary cached API data. **Live vehicle
+signals are different**: they follow the SignalStore L1 + RedisSignalCache L2 +
+signal_log history contract in `.github/ARCHITECTURE.md` and
+`.github/instructions/telemetry-pipeline.instructions.md`.
+
 ```go
 // Check cache first, fall back to DB
 cached, err := h.cache.Get(ctx, cacheKey)
@@ -271,6 +277,9 @@ writeJSON(w, http.StatusOK, data)
 - Invalidate on writes: after CREATE/UPDATE/DELETE, delete related cache keys
 - Never cache user-specific data without user-scoped keys
 - Redis fallback: if Redis is down, serve from DB (never fail on cache miss)
+- Live signal exception: if Redis is down, keep telemetry/FSM on local SignalStore
+  and use signal_log for historical fallback. Do not make Redis a synchronous
+  blocker for telemetry ingest.
 
 ## Structured Logging Standards
 

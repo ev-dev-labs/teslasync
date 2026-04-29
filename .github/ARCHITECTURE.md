@@ -19,8 +19,8 @@ DECISION:
 
 RULES:
   ✅ READ from signal_log for any historical telemetry query
-  ✅ READ from signal.Store (in-memory) for real-time latest values
-  ✅ READ from Redis HSET vehicle:{id}:signals for cross-pod cache
+  ✅ READ from signal.Store (in-memory L1) for telemetry/FSM/session hot paths
+  ✅ READ from Redis HSET vehicle:{id}:signals for cross-pod current-state reads
   ✅ READ from drives / charging_sessions for session-level aggregates
   ✅ READ from cagg_* continuous aggregates for pre-computed analytics
   ✅ USE SignalTracePivotFlat() for telemetry trace endpoints
@@ -32,6 +32,70 @@ RULES:
      - location_snapshots, safety_snapshots, user_preference_snapshots
   ❌ NEVER read from legacy `positions` table (use signal_log Latitude/Longitude)
   ❌ NEVER reference `signal_history` (renamed to `signal_log` in migration 000145)
+```
+
+### ADR-007: Live Signal State Layering (Scale-Out Contract)
+
+```
+STATUS: APPROVED (PA/PE)
+DATE: 2026-04-28
+
+DECISION:
+  Live signal state is a layered runtime contract:
+
+    L1: signal.Store              Per-process hot cache
+    L2: RedisSignalCache          Cross-pod live cache + Pub/Sub fanout
+    L3: signal_log / TimescaleDB  Durable history and reconstruction
+
+  Redis does NOT replace signal.Store. signal.Store does NOT provide distributed truth.
+  Each layer has a separate purpose and must remain compatible with the others.
+
+  Scale-out topology:
+    - Phase 35 does not make FSM/reconciliation active-active across API pods.
+    - FSM/reconciliation may run only on the telemetry-owner pod for a vehicle.
+    - Until vehicle ownership/leases or pod affinity exist, production multi-pod
+      deployments must use one telemetry/FSM owner plus API-only reader pods, or
+      remain single-pod for telemetry/FSM.
+
+  Rollback/degradation:
+    - `LIVE_SIGNAL_STORE_MODE=hybrid|local` is the runtime rollback switch.
+    - `hybrid` enables Redis-backed distributed live reads.
+    - `local` disables Redis-backed distributed live reads while preserving local
+      SignalStore behavior and durable signal_log writes.
+
+  Freshness:
+    - Cross-pod live reads treat values older than 2 minutes as stale.
+    - Timestamp-less legacy Redis scalar values have unknown freshness.
+
+  SSE:
+    - Redis Pub/Sub `vehicle_update` fanout is best-effort, not durable replay.
+    - Clients recover missed current state through polling/live reads, not SSE replay.
+
+RULES:
+  ✅ Update signal.Store first on telemetry ingest so FSM/session/snapshot merge paths
+     have a local, synchronous, last-known-good view.
+  ✅ Mirror live telemetry to Redis HSET `vehicle:{vehicleID}:signals` for restart
+     recovery and cross-pod current-state reads.
+  ✅ Use Redis Pub/Sub channel `vehicle_signals` for cross-pod `vehicle_update` SSE
+     fanout, with local in-process fallback when Redis is unavailable.
+  ✅ Use Redis list `signal_log:backlog` only as a bounded secondary WAL for
+     signal_log overflow/crash recovery.
+  ✅ Use signal_log for history, charts, point-in-time reconstruction, drive/charge
+     completion, analytics, and durable replay.
+  ✅ Treat timestamp-less legacy Redis values as unknown freshness, not fresh data.
+  ✅ Preserve Redis optionality: Redis failures may degrade cross-pod/live recovery
+     behavior, but must not block MQTT ingest or erase local signal.Store state.
+  ✅ Keep existing Redis scalar HSET values readable indefinitely; they are replaced
+     naturally on the next telemetry write.
+
+  ❌ NEVER remove signal.Store merely because Redis exists.
+  ❌ NEVER route FSM/reconciliation/session hot-path reads through Redis by default.
+  ❌ NEVER use Redis as historical storage or analytics truth.
+  ❌ NEVER change Redis keys/channels without a compatibility shim and migration note.
+  ❌ NEVER claim FSM/reconciliation is active-active across pods without vehicle-owner
+     routing, leases, or an explicit ADR that supersedes this one.
+  ❌ NEVER claim "Redis replaced SignalStore" in docs or prompts unless code and tests
+     actually remove SignalStore and prove equivalent latency/freshness semantics.
 ```
 
 ### ADR-002: No Fabricated Data
@@ -147,7 +211,8 @@ RULES:
 ┌─────────────────────────┬──────────────────────────────────────┐
 │ Need                    │ Source                               │
 ├─────────────────────────┼──────────────────────────────────────┤
-│ Real-time signal value  │ signal.Store.Get(vehicleID, signal)  │
+│ Hot-path live signal    │ signal.Store.Get(vehicleID, signal)  │
+│ Cross-pod live signal   │ Redis HSET vehicle:{id}:signals      │
 │ Signal trace/history    │ signal_log via SignalTracePivotFlat  │
 │ Drive aggregates        │ drives table                         │
 │ Charge aggregates       │ charging_sessions table              │

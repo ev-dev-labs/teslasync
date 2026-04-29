@@ -4,225 +4,216 @@ applyTo: "internal/api/telemetry*,internal/database/*_repo.go,internal/models/**
 
 # Telemetry Data Pipeline Instructions
 
-## Data Flow
+These rules protect the current Redis + SignalStore + signal_log architecture. They
+are non-regression requirements for any telemetry, repository, model, or worker change.
 
+## Current Data Flow
+
+```text
+Tesla Fleet Telemetry -> MQTT -> TelemetryHandler
+                                  |
+                +-----------------+-----------------+
+                |                 |                 |
+                v                 v                 v
+        signal.Store (L1)  RedisSignalCache (L2)   signal_log
+        local hot cache    shared live cache        durable history
+        FSM/session/merge  SSE fanout/recovery      charts/replay/PIT
 ```
-Tesla Car → Fleet Telemetry (protobuf) → MQTT → TelemetryHandler
-                                                     │
-                              ┌───────────────────────┼────────────────────┐
-                              ▼                       ▼                    ▼
-                      SignalStore (mem)     Snapshot Repos (DB)    vehicle_live_state
-                      (hot cache for       (time-series history)  (single-row current)
-                       live UI + alerts)
+
+## Live State Layering - Non-Regression Contract
+
+TeslaSync intentionally keeps both SignalStore and Redis. They are not interchangeable.
+
+| Layer | Role | Allowed reads |
+|---|---|---|
+| `signal.Store` | Local in-process L1 hot cache | Telemetry merge context, FSM/reconciliation, session logic, alert/template hot path |
+| `RedisSignalCache` | Shared L2 live cache | Cross-pod API/current-state reads, restart recovery, SSE fanout |
+| `signal_log` | Durable TimescaleDB history | Charts, history, point-in-time reconstruction, drive/charge completion, analytics |
+
+```text
+DO NOT read current state from snapshot tables or legacy `positions`.
+DO NOT add new endpoints that query snapshot tables for "latest" values.
+DO NOT remove SignalStore because Redis exists.
+DO NOT route FSM/reconciliation/session hot-path reads through Redis by default.
+DO NOT make Redis a synchronous blocker for telemetry ingestion.
+DO NOT use Redis as historical truth.
+DO NOT claim FSM/reconciliation is active-active across pods without vehicle ownership.
+
+DO update SignalStore first on every telemetry batch.
+DO mirror to Redis HSET `vehicle:{vehicleID}:signals` for cross-pod live state.
+DO publish `vehicle_update` through Redis channel `vehicle_signals` for multi-pod SSE.
+DO use Redis list `signal_log:backlog` only as bounded overflow/crash recovery.
+DO use signal_log for history, charts, replay, and point-in-time snapshots.
+DO use `LIVE_SIGNAL_STORE_MODE=local` as the rollback switch for Redis-backed live reads.
 ```
+
+## Scale-Out Topology and Rollback
+
+Phase 35 does not make FSM/reconciliation active-active across API pods. FSM and
+reconciliation may run only on the telemetry-owner pod for a vehicle. Until vehicle
+ownership/leases or pod affinity exist, production multi-pod deployments must use one
+telemetry/FSM owner plus API-only reader pods, or remain single-pod for telemetry/FSM.
+
+`LIVE_SIGNAL_STORE_MODE` is the runtime rollback switch:
+
+| Mode | Behavior |
+|---|---|
+| `hybrid` | Redis-backed distributed live reads are enabled. |
+| `local` | Redis-backed distributed live reads are disabled for rollback; local SignalStore and signal_log still operate. |
+
+## Freshness and SSE Semantics
+
+Cross-pod live reads use a 2-minute freshness threshold. Values older than that are
+stale. Legacy scalar Redis values that lack timestamps have unknown freshness and must
+not be presented as fresh live data.
+
+Redis Pub/Sub `vehicle_update` SSE fanout is best-effort. It is not durable replay.
+Clients must recover missed current state through polling/live reads. Alert when the
+`vehicle_update` drop rate is sustained above 0.1% over 5 minutes or Redis subscription
+failure lasts more than 60 seconds.
 
 ## Signal Processing Rules
 
 ### Signal Names
 
-Tesla signals arrive with various naming conventions. The telemetry handler
-normalizes them using a fallback chain:
+Tesla signals arrive with different names across firmware versions. Normalize through
+the existing alias/canonicalization path before adding new per-signal logic.
 
 ```go
-// Try canonical name first, then alternates
+// Try canonical name first, then alternates.
 fl, flOk := signals["TirePressureFrontLeft"]
 if !flOk { fl, flOk = signals["TPMS_FL"] }
 if !flOk { fl, flOk = signals["TpmsPressureFl"] }
 if !flOk { fl, flOk = signals["TpmsFl"] }
 ```
 
-When adding new signal processing:
-1. Check Tesla Fleet Telemetry proto for the canonical name
-2. Check `internal/enums/signal_types.go` for the registered name
-3. Add alternate names as fallbacks (Tesla changes naming between firmware versions)
+When adding signal processing:
 
-### Unit-Aware Write Path
+1. Check Tesla Fleet Telemetry proto for the canonical name.
+2. Check `internal/enums/signal_types.go` for the registered type.
+3. Check `internal/telemetry/signal_alias.go` for canonical/alternate names.
+4. Add alternate names only when needed for known Tesla naming drift.
 
-Raw values are stored AS RECEIVED from Tesla (no conversion). But each INSERT
-must stamp the car's current unit preference from `vehicle_units`:
+### Raw Values and Units
+
+Raw telemetry values are stored as received from Tesla. Do not convert values before
+writing `signal.Store`, Redis, or `signal_log`. Convert only in derived aggregates,
+API projection helpers, or frontend display code.
 
 ```go
-// In trackTirePressure(), after collecting values:
-var pressurePref string
-_ = h.db.Pool.QueryRow(ctx,
-    `SELECT car_pressure_pref FROM vehicle_units WHERE vehicle_id = $1`,
-    vehicleID).Scan(&pressurePref)
-snap.PressureUnit = models.ParsePressureUnit(pressurePref)
-h.tirePressureRepo.Insert(ctx, snap)
+// Good: keep the raw signal value in all live/history layers.
+h.signalStore.Update(vehicleID, signals)
+h.redisCache.Update(ctx, vehicleID, signals)
+h.signalHistoryWriter.Append(vehicleID, signals)
 ```
 
-### High-Frequency Tables — Cache the Unit Lookup
+## Ingest Ordering and Failure Behavior
 
-For tables with high write rates (positions: every 1–5s), don't query
-`vehicle_units` on every INSERT. Instead, cache per-vehicle:
+Telemetry ingest is the hot path. Dependency failures must be bounded and visible.
 
 ```go
-type TelemetryHandler struct {
-    // ...
-    unitCache sync.Map  // map[int64]*cachedUnits
-}
+// Required ordering: local L1 first, then bounded side effects.
+h.signalStore.Update(vehicleID, signals)
 
-type cachedUnits struct {
-    distanceUnit    models.DistanceUnit
-    tempUnit        models.TemperatureUnit
-    pressureUnit    models.PressureUnit
-    updatedAt       time.Time
-}
-
-func (h *TelemetryHandler) getUnits(vehicleID int64) *cachedUnits {
-    if cached, ok := h.unitCache.Load(vehicleID); ok {
-        cu := cached.(*cachedUnits)
-        if time.Since(cu.updatedAt) < 5*time.Minute {
-            return cu
-        }
+safeGo("redis-signal-cache", func() {
+    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+    defer cancel()
+    if err := h.redisCache.Update(ctx, vehicleID, copySignals(signals)); err != nil {
+        log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("redis signal cache update failed")
     }
-    // Refresh from DB
-    // ...
-}
+})
 ```
 
-The cache is refreshed when `SettingDistanceUnit` / `SettingTirePressureUnit`
-signals arrive (rare) or every 5 minutes (fallback).
+Rules:
 
-## vehicle_live_state — Single Source of Truth for Current State
+- SignalStore update must not depend on Redis or Postgres success.
+- Redis writes must have bounded context timeouts.
+- Redis failures must be logged or surfaced according to the caller contract.
+- Redis failure must not erase or corrupt local SignalStore state.
+- SSE Redis Pub/Sub must keep a local in-process fallback for single-pod mode.
 
-`vehicle_live_state` is a **write-through single-row** table per vehicle.
-Updated on every telemetry batch with zero lag.
+## Redis Live Signal Contract
 
-```
-❌ DO NOT read current state from snapshot tables (positions, climate_snapshots, etc.)
-❌ DO NOT add new endpoints that query snapshot tables for "latest" values
-✅ DO read current state from /vehicles/{id}/state → vehicle_live_state
-✅ DO use snapshot tables ONLY for historical data (charts, timelines)
-```
+Redis live signals use these stable compatibility anchors:
 
-### Why?
+| Purpose | Key/channel |
+|---|---|
+| Current signal HSET | `vehicle:{vehicleID}:signals` |
+| Cross-pod SSE fanout | `vehicle_signals` |
+| signal_log overflow backlog | `signal_log:backlog` |
 
-Snapshot tables are time-series (hypertables). Querying `ORDER BY ts DESC LIMIT 1`
-on a hypertable is expensive (full chunk scan) vs. a single-row PK lookup on
-`vehicle_live_state`.
+Do not rename these without a compatibility shim, migration note, and tests. Timestamp-less
+legacy Redis values must be treated as unknown freshness, not fresh data. Existing scalar
+HSET values are supported indefinitely and naturally replaced by timestamped values on
+the next telemetry write; no manual Redis migration is required unless scalar compatibility
+is explicitly removed by a future ADR.
 
-## Snapshot Table Conventions
+## signal_log Conventions
 
-### Table Structure
+Telemetry history is stored in `signal_log`.
 
-All snapshot tables follow this pattern:
 ```sql
-CREATE TABLE <entity>_snapshots (
-  vehicle_id   bigint NOT NULL REFERENCES vehicles(id),
-  ts           timestamptz NOT NULL,
-  -- ... entity-specific columns ...
-  PRIMARY KEY (vehicle_id, ts)  -- composite PK for hypertable
+CREATE TABLE signal_log (
+  created_at  timestamptz NOT NULL,
+  vehicle_id  bigint NOT NULL REFERENCES vehicles(id),
+  signal      text NOT NULL,
+  value_num   double precision,
+  value_str   text,
+  value_bool  boolean,
+  value_jsonb jsonb,
+  PRIMARY KEY (created_at, vehicle_id, signal)
 );
 ```
 
-- Composite PK `(vehicle_id, ts)` is required for TimescaleDB hypertables
-- No auto-increment ID (the PK IS vehicle_id + timestamp)
-- No `created_at` / `updated_at` (ts IS the timestamp)
-- Exception: non-hypertable tables (drives, charging_sessions) keep `id` as PK
+- Store exactly one typed value column per row.
+- Use `ON CONFLICT (created_at, vehicle_id, signal)` for replay/idempotency.
+- Use pivot helpers such as `SignalTracePivotFlat` or point-in-time reconstruction.
+- Do not resurrect snapshot tables or `vehicle_live_state` for new telemetry.
 
-### Repo Pattern for Snapshots
+## Idempotent Writes
 
-```go
-func (r *ClimateRepo) Insert(ctx context.Context, snap *models.ClimateSnapshot) error {
-    query := `INSERT INTO climate_snapshots (vehicle_id, ts, inside_temp_c, ...)
-              VALUES ($1, $2, $3, ...)
-              ON CONFLICT (vehicle_id, ts) DO NOTHING`  // idempotent
-    _, err := r.db.Pool.Exec(ctx, query, snap.VehicleID, snap.Ts, snap.InsideTempC, ...)
-    return err
-}
-```
-
-Key points:
-- `ON CONFLICT DO NOTHING` for idempotent replay
-- No RETURNING (we don't need the row back)
-- The `ts` value comes from Tesla, not `time.Now()` — preserves event time
-
-## Repo Method Naming
-
-```go
-// Standard CRUD
-Create(ctx, entity)           // INSERT, returns error
-GetByID(ctx, id)              // SELECT ... WHERE id = $1, returns (*Entity, error)
-GetAll(ctx, limit, offset)    // SELECT with pagination
-Update(ctx, id, entity)       // UPDATE ... WHERE id = $1
-Delete(ctx, id)               // DELETE ... WHERE id = $1
-
-// Snapshot-specific
-Insert(ctx, snap)             // INSERT ... ON CONFLICT DO NOTHING
-GetByVehicle(ctx, vid, limit) // SELECT ... WHERE vehicle_id = $1 ORDER BY ts DESC
-GetLatest(ctx, vid)           // Convenience: GetByVehicle(ctx, vid, 1)[0]
-
-// Batch
-BatchInsert(ctx, snaps)       // Multiple INSERTs in one transaction
-
-// Query-specific (named by what they return, not how)
-ListByDateRange(ctx, vid, from, to, limit, offset)
-GetDrivingStats(ctx, vid)     // aggregate query
-```
-
-## Data Integrity Rules
-
-### No Silent Data Loss
-
-```go
-// ❌ BAD — silently drops data on error
-if err := repo.Insert(ctx, snap); err != nil {
-    return // data lost, no log
-}
-
-// ✅ GOOD — log + continue (telemetry handler shouldn't crash on one bad row)
-if err := repo.Insert(ctx, snap); err != nil {
-    log.Warn().Err(err).Int64("vehicle_id", snap.VehicleID).Msg("failed to insert snapshot")
-    // continue processing other signals in this batch
-}
-```
-
-### Idempotent Writes
-
-Telemetry can be replayed (pod restart, MQTT retry). All writes must be idempotent:
+Telemetry can be replayed after pod restart or MQTT retry. All durable writes must be
+idempotent.
 
 ```sql
--- ✅ Snapshot tables: ON CONFLICT DO NOTHING
-INSERT INTO positions (...) VALUES (...) ON CONFLICT (vehicle_id, ts) DO NOTHING;
+-- Good: signal_log replay is idempotent.
+INSERT INTO signal_log (...) VALUES (...);
+ON CONFLICT (created_at, vehicle_id, signal) DO UPDATE SET ...;
 
--- ✅ Singleton tables: UPSERT
-INSERT INTO vehicle_live_state (vehicle_id, ...) VALUES ($1, ...)
-ON CONFLICT (vehicle_id) DO UPDATE SET ...;
-
--- ❌ BAD — duplicate rows on replay
-INSERT INTO positions (...) VALUES (...);
+-- Bad: duplicate rows on replay.
+INSERT INTO signal_log (...) VALUES (...);
 ```
 
-### Zero/Null Filtering
+## Zero/Null Filtering
 
-Some signals arrive as zero when the car is asleep or sensor unavailable:
+Some signals arrive as zero, null, or invalid markers when the car is asleep or a
+sensor is unavailable.
 
 ```go
-// ✅ GOOD — skip all-zero readings (car asleep)
-if (snap.FrontLeft == nil || *snap.FrontLeft == 0) &&
-   (snap.FrontRight == nil || *snap.FrontRight == 0) {
-    return nil // skip
+// Good: skip Tesla invalid markers.
+if m, ok := value.(map[string]interface{}); ok {
+    if invalid, ok := m["invalid"].(bool); ok && invalid {
+        return
+    }
 }
-
-// ❌ BAD — stores meaningless zeros
-repo.Insert(ctx, snap) // all zeros stored, pollutes charts
 ```
+
+Do not store fabricated zeros for missing measurements. Preserve null/missing state
+unless the signal truly reports zero.
 
 ## Adding a New Telemetry Signal
 
-Checklist for adding a new signal (e.g., "TireTempFrontLeft"):
+Checklist for a new signal, for example `TireTempFrontLeft`:
 
-```
-□ 1. Register in internal/enums/signal_types.go (TypeFloat64/TypeEnum/etc.)
-□ 2. Add field to the snapshot model struct (models/*.go) with db + json tags
-□ 3. Add column to migration (ALTER TABLE ... ADD COLUMN IF NOT EXISTS)
-□ 4. Add to repo INSERT SQL + Scan + args (verify counts match!)
-□ 5. Add signal extraction in telemetry_handler.go trackXxx() method
-□ 6. Add to vehicle_live_state column mapping in live_state_repo.go
-□ 7. Add to SignalStore hot catalog if needed for real-time UI
-□ 8. Add to fleet-telemetry-config.json subscription list
-□ 9. Add unit column or reuse existing (distance_unit, temp_unit, pressure_unit)
-□ 10. Update frontend type in web/src/api/types.ts
-□ 11. Wire into relevant frontend page with unit conversion
+```text
+[ ] 1. Register the signal in internal/enums/signal_types.go.
+[ ] 2. Add canonical/alternate aliases in internal/telemetry/signal_alias.go if Tesla names vary.
+[ ] 3. Add the signal to fleet-telemetry-config.json subscription list.
+[ ] 4. Ensure telemetry_handler.go passes the normalized signal through SignalStore, Redis, and signal_log.
+[ ] 5. If used by a derived endpoint, add it to the appropriate pivot/mapping helper.
+[ ] 6. If local hot-path logic needs direct SignalStore reads, document why.
+[ ] 7. Update web/src/api/types.ts only when an API response shape changes.
+[ ] 8. Wire frontend usage with unit conversion, null safety, loading, error, and empty states.
+[ ] 9. Add tests for Redis nil/failure behavior if the signal affects live-state reads.
+[ ] 10. Do not add snapshot-table or vehicle_live_state columns for new telemetry.
 ```
