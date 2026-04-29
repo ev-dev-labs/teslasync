@@ -1,0 +1,60 @@
+=== PREFLIGHT ===
+Predecessor log: .github\prompts\db-refactor\logs\phase-35-00-live-state-inventory.log
+Predecessor verification: EXIT=0 and STATUS=DONE were present before this decision log was written.
+Scope: source code was not edited; this prompt is limited to recording binding architecture decisions in this log.
+Initial worktree check: no changes were present before creating this log.
+
+=== SURVEY ===
+Required guidance reviewed:
+- .github\ARCHITECTURE.md
+- .github\instructions\telemetry-pipeline.instructions.md
+- .github\prompts\db-refactor\phase-35\00-live-state-inventory.prompt.md
+
+Architecture guidance alignment:
+- ADR-007 defines Live Signal State Layering with signal.Store as L1, RedisSignalCache as L2, and signal_log as L3.
+- Redis does NOT replace signal.Store.
+- Redis HSET vehicle:{vehicleID}:signals, Pub/Sub channel vehicle_signals, and Redis list signal_log:backlog are stable compatibility anchors.
+- Phase 35 must not claim FSM/reconciliation is active-active across API pods without vehicle-owner routing, leases, or pod affinity.
+- Redis Pub/Sub vehicle_update fanout is best-effort, not durable replay.
+- Existing scalar HSET values remain readable indefinitely and are replaced naturally on the next telemetry write.
+
+Conflict survey:
+- No conflict was found between the binding decisions below and the required guidance.
+- No implementation prompt should proceed by narrowing these decisions or treating Redis as a replacement for SignalStore.
+
+=== REASONING ===
+ROLLBACK_MODE_DECISION
+Phase 35 binds rollback/degradation to a runtime LIVE_SIGNAL_STORE_MODE setting with hybrid and local modes. The hybrid mode keeps Redis-backed distributed live reads enabled. The local mode disables Redis-backed distributed reads and preserves SignalStore-only behavior for rollback while durable signal_log writes continue.
+
+FSM_TOPOLOGY_DECISION
+Phase 35 does not make FSM/reconciliation active-active across API pods. FSM/reconciliation remains local-L1 and may run only on the telemetry-owner pod for a vehicle. Until ownership, leases, or pod affinity are implemented, production multi-pod deployments must use one telemetry/FSM owner plus API-only readers, or remain single API pod for telemetry/FSM.
+
+WARMUP_TOPOLOGY_DECISION
+Redis warmup is per-pod local L1 hydration. History hydration is also per-pod local and must run after Redis warmup, preferably asynchronously or behind readiness so cold-start herds do not block the cluster.
+
+FRESHNESS_DECISION
+Cross-pod live reads treat values older than 2 minutes as stale. Timestamp-less legacy Redis values have unknown freshness and must not be presented as fresh live data.
+
+SSE_DURABILITY_DECISION
+Redis Pub/Sub vehicle_update is best-effort fanout. Critical state recovery comes from polling/live reads against Redis or signal_log, not SSE replay. Drop/failure metrics must have an alert threshold.
+
+REDIS_MIGRATION_DECISION
+Existing legacy scalar HSET values remain supported indefinitely and are replaced naturally on the next telemetry write. No manual Redis migration is required unless a future prompt removes scalar compatibility.
+
+Decision outcome:
+These decisions are consistent with the existing architecture guidance and record a hard gate before later Phase 35 implementation prompts.
+
+=== CHANGES ===
+Changed files:
+- .github\prompts\db-refactor\logs\phase-35-00a-scaleout-architecture-decision.log
+
+No source code, configuration, migrations, tests, or documentation files were changed.
+=== GATE ===
+MISSING_LOG_PATTERN_COUNT=0
+MISSING_GUIDANCE_PATTERN_COUNT=0
+UNEXPECTED_STATUS_COUNT=0
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
+Commit command will add and commit only this log file after the gate passed.
