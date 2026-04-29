@@ -1,0 +1,93 @@
+=== PREFLIGHT ===
+Prompt 08 is log-only. Source files were not edited.
+
+Instruction file read:
+- .github\instructions\prompt-engineering.instructions.md
+
+Architecture file read:
+- .github\ARCHITECTURE.md
+
+Predecessor check command output:
+PREV_EXISTS=True
+PREV_EXIT0=True
+PREV_DONE=True
+---GIT_STATUS---
+
+Predecessor phase-36-07-alert-legacy-cleanup.log is present, contains EXIT=0, and contains STATUS=DONE.
+Initial git status output was empty, so there was no drift before creating this log.
+
+=== SURVEY ===
+Existing automation handler test coverage was surveyed in internal\api\automation_handler_test.go.
+
+High-level coverage currently present:
+- evaluateTestConditions helper coverage for empty, null, invalid JSON, time window, day filter, seasonal, cooldown, unknown state/location/variable, and multiple-condition behavior.
+- simulateActions helper coverage for empty actions, valid and invalid command actions, conditions-not-met behavior, stop-on-failure behavior, and mixed action types.
+- validateActionConfig helper coverage for command, wait, notify, set_variable, and unknown action type config validation.
+- import/export helper coverage for automationToPortable, webhook secret scrubbing/injection, export envelope construction, JSON envelope round-trip, and indented JSON writing.
+- undo handler coverage for nil command executor returning 501.
+
+No create/update HTTP contract tests were found for the typed automation API shape. No tests were found that assert import rejects old JSON automation payloads. Existing import/export tests still exercise legacy portable fields such as trigger_type, trigger_config, cooldown_minutes, priority, tags, and JSON action blobs rather than typed automation_steps arrays.
+
+=== REASONING ===
+Automation API behavior must be specified before backend implementation changes. Prompt 09 must add these automation API contract tests before implementation and must end with green tests. This prompt does not add failing tests and does not edit source files.
+
+The contract should drive the implementation away from legacy root-level JSON fields and toward typed step arrays backed by automation_steps.kind. Tests must prove both accepted typed payloads and rejected legacy/frontend-only payloads so implementation cannot accidentally resurrect deleted fields or aliases.
+
+=== CHANGES ===
+Required Prompt 09 test matrix:
+
+1. Create and update accept typed input using exactly the API fields name, description, enabled, vehicle_id, triggers, conditions, and actions.
+
+2. Typed step arrays use backend automation_steps.kind values only:
+   - trigger_signal
+   - trigger_geofence
+   - trigger_schedule
+   - trigger_event
+   - condition_signal
+   - condition_time_window
+   - condition_geofence
+   - condition_other_automation
+   - action_command
+   - action_notify
+   - action_set_setting
+   - action_call_automation
+
+3. Create and update reject frontend-only aliases:
+   - trigger_time
+   - trigger_webhook
+   - condition_day_of_week
+   - action_notification
+   - action_vehicle_command
+   - action_set_state
+
+4. Create and update reject legacy/root-level fields:
+   - trigger_type
+   - trigger_config
+   - root JSON action blobs
+   - notify_channels
+   - cooldown_minutes
+   - max_executions_hour
+   - seasonal_start
+   - seasonal_end
+   - priority
+   - tags
+   - preset_id
+
+5. Import rejects old JSON automation payloads.
+
+6. Typed import/export round-trips typed step arrays.
+
+=== GATE ===
+Gate output is appended below by the exact gate command from this prompt.
+
+=== COMMIT ===
+Commit only this log file after the gate completes.
+=== GATE ===
+LEGACY_AUTOMATION_REJECTION_SPECIFIED=True
+BACKEND_KIND_MAPPING_SPECIFIED=True
+IMPORT_REJECTION_SPECIFIED=True
+TYPED_AUTOMATION_INPUT_SPECIFIED=True
+PROMPT_09_GREEN_TESTS_REQUIRED=True
+UNEXPECTED_STATUS_COUNT=0
+EXIT=0
+STATUS=DONE
