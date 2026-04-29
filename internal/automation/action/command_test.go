@@ -160,9 +160,9 @@ func makeConfig(t *testing.T, typ, command string, params map[string]interface{}
 	return b
 }
 
-// --- ParseCommandConfig Tests ---
+// --- DecodeCommandSpec Tests ---
 
-func TestParseCommandConfig(t *testing.T) {
+func TestDecodeCommandSpec(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   json.RawMessage
@@ -213,7 +213,7 @@ func TestParseCommandConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg, err := ParseCommandConfig(tt.input)
+			cfg, err := DecodeCommandSpec(tt.input)
 			if tt.wantErr != "" {
 				if err == nil {
 					t.Fatalf("expected error containing %q, got nil", tt.wantErr)
@@ -536,7 +536,7 @@ func TestExecute_AllCommandsFromWhitelist(t *testing.T) {
 	for _, cmd := range commands {
 		t.Run(cmd, func(t *testing.T) {
 			raw := json.RawMessage(fmt.Sprintf(`{"command":%q}`, cmd))
-			cfg, err := ParseCommandConfig(raw)
+			cfg, err := DecodeCommandSpec(raw)
 			if err != nil {
 				t.Fatalf("command %q should be valid, got: %v", cmd, err)
 			}

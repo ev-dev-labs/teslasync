@@ -70,8 +70,8 @@ func EvaluateDayFilter(cfg *DayFilterConfig, now time.Time) (Result, json.RawMes
 	return Result{Met: met, Reason: reason}, snapshot, nil
 }
 
-// ParseDayFilterConfig unmarshals and validates a day_filter condition config.
-func ParseDayFilterConfig(raw json.RawMessage) (*DayFilterConfig, error) {
+// DecodeDayFilterSpec unmarshals and validates a day_filter condition config.
+func DecodeDayFilterSpec(raw json.RawMessage) (*DayFilterConfig, error) {
 	if len(raw) == 0 {
 		return nil, fmt.Errorf("condition config is empty")
 	}
@@ -108,6 +108,8 @@ func ParseDayFilterConfig(raw json.RawMessage) (*DayFilterConfig, error) {
 
 	return &cfg, nil
 }
+
+var ParseDayFilterConfig = DecodeDayFilterSpec
 
 // dayShortNames maps day numbers (0–6) to abbreviated names.
 var dayShortNames = [7]string{"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"}

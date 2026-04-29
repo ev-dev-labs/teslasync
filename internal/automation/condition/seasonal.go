@@ -69,8 +69,8 @@ func EvaluateSeasonal(cfg *SeasonalConfig, now time.Time) (Result, json.RawMessa
 	return Result{Met: met, Reason: reason}, snapshot, nil
 }
 
-// ParseSeasonalConfig unmarshals and validates a seasonal condition config.
-func ParseSeasonalConfig(raw json.RawMessage) (*SeasonalConfig, error) {
+// DecodeSeasonalSpec unmarshals and validates a seasonal condition config.
+func DecodeSeasonalSpec(raw json.RawMessage) (*SeasonalConfig, error) {
 	if len(raw) == 0 {
 		return nil, fmt.Errorf("condition config is empty")
 	}
@@ -96,3 +96,5 @@ func ParseSeasonalConfig(raw json.RawMessage) (*SeasonalConfig, error) {
 
 	return &cfg, nil
 }
+
+var ParseSeasonalConfig = DecodeSeasonalSpec

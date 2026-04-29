@@ -20,9 +20,9 @@ const (
 	DefaultRateLimitMQTT          = 30 // external MQTT can be high-frequency
 	DefaultRateLimitGeofence      = 20
 	DefaultRateLimitWebhook       = 30
-	DefaultRateLimitSunriseSunset = 0  // fires at most twice per day
+	DefaultRateLimitSunriseSunset = 0 // fires at most twice per day
 	DefaultRateLimitEnergy        = 10
-	DefaultRateLimitCalendar      = 0  // fires at most a few times per day
+	DefaultRateLimitCalendar      = 0 // fires at most a few times per day
 )
 
 // HistoryCounter queries the count of recent executions for an automation.

@@ -1,7 +1,6 @@
 package models
 
 import (
-	"encoding/json"
 	"strings"
 	"time"
 )
@@ -103,19 +102,6 @@ func (af *AutomationFull) TriggerType() string {
 		}
 	}
 	return ""
-}
-
-// TriggerConfig returns the raw JSON config of the first trigger.
-// Returns nil if no triggers. Used by trigger/*.go evaluation consumers.
-func (af *AutomationFull) TriggerConfig() json.RawMessage {
-	if len(af.Triggers) == 0 {
-		return nil
-	}
-	b, err := json.Marshal(af.Triggers[0])
-	if err != nil {
-		return nil
-	}
-	return b
 }
 
 // AutoDisabled derives whether this automation has been auto-disabled

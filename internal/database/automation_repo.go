@@ -165,11 +165,9 @@ func (r *AutomationRepo) ListSummaries(ctx context.Context) ([]models.Automation
 	return out, nil
 }
 
-// ListFull returns every automation with its ordered steps fully hydrated.
-// CTI child payloads (trigger/condition/action specifics) are intentionally
-// not loaded here; callers that need them must use the step-children loader
-// (Phase-5 prompts 49-51) per ADR-004. Steps are fetched in a single grouped
-// query to avoid per-automation fan-out.
+// ListFull returns every automation with ordered steps and typed CTI children
+// fully hydrated. Steps are fetched in a single grouped query; CTI children are
+// attached by AutomationStepChildRepo one lane at a time to avoid N+1 fan-out.
 func (r *AutomationRepo) ListFull(ctx context.Context) ([]models.AutomationFull, error) {
 	parents, err := r.ListSummaries(ctx)
 	if err != nil {
@@ -212,6 +210,13 @@ func (r *AutomationRepo) ListFull(ctx context.Context) ([]models.AutomationFull,
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("automations-repo-list-full-steps-rows: %w", err)
+	}
+	ptrs := make([]*models.AutomationFull, 0, len(out))
+	for i := range out {
+		ptrs = append(ptrs, &out[i])
+	}
+	if err := NewAutomationStepChildRepo(r.db).HydrateAutomations(ctx, ptrs); err != nil {
+		return nil, fmt.Errorf("automations-repo-list-full-children: %w", err)
 	}
 	return out, nil
 }
@@ -260,6 +265,9 @@ func (r *AutomationRepo) GetByID(ctx context.Context, id int64) (*models.Automat
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("automations-repo-get-by-id-steps-rows: %w", err)
+	}
+	if err := NewAutomationStepChildRepo(r.db).HydrateAutomation(ctx, out); err != nil {
+		return nil, fmt.Errorf("automations-repo-get-by-id-children: %w", err)
 	}
 	return out, nil
 }
@@ -325,97 +333,11 @@ func (r *AutomationRepo) LoadEnabledScheduleTriggers(ctx context.Context) ([]tri
 	return out, nil
 }
 
-// ── trigger.MQTTRepo / trigger.SunriseSunsetRepo ───────────────────────
+// ── trigger.SignalRepo ─────────────────────────────────────────────────
 
-// GetByTriggerType returns all enabled automations whose first trigger step
-// matches the given trigger type. The triggerType is mapped to the step kind
-// by prefixing "trigger_" (e.g. "mqtt" → kind = "trigger_mqtt"). If the
-// resulting kind is not present in the automation_step_kind enum, zero rows
-// are returned — this is correct for trigger types that are not yet modeled
-// in the CTI schema and will automatically work once the enum is extended.
-func (r *AutomationRepo) GetByTriggerType(ctx context.Context, triggerType string) ([]*models.AutomationFull, error) {
-	kind := "trigger_" + triggerType
-
-	const query = `
-		SELECT a.id, a.name, a.description, a.enabled, a.vehicle_id, a.created_at, a.updated_at
-		FROM automations a
-		JOIN automation_steps s ON s.automation_id = a.id
-		WHERE s.kind::text = $1
-		  AND a.enabled = true
-		ORDER BY a.id`
-	rows, err := r.db.Pool.Query(ctx, query, kind)
-	if err != nil {
-		return nil, fmt.Errorf("automations-repo-get-by-trigger-type: %w", err)
-	}
-	defer rows.Close()
-
-	parentByID := make(map[int64]*models.AutomationFull)
-	var order []int64
-	for rows.Next() {
-		var a models.Automation
-		if err := rows.Scan(
-			&a.ID, &a.Name, &a.Description, &a.Enabled, &a.VehicleID, &a.CreatedAt, &a.UpdatedAt,
-		); err != nil {
-			return nil, fmt.Errorf("automations-repo-get-by-trigger-type-scan: %w", err)
-		}
-		if _, ok := parentByID[a.ID]; !ok {
-			parentByID[a.ID] = &models.AutomationFull{
-				Automation: a,
-				Steps:      []models.AutomationStep{},
-			}
-			order = append(order, a.ID)
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("automations-repo-get-by-trigger-type-rows: %w", err)
-	}
-
-	if len(parentByID) == 0 {
-		return nil, nil
-	}
-
-	// Load steps for matched automations.
-	ids := make([]int64, 0, len(order))
-	ids = append(ids, order...)
-
-	const stepsQuery = `
-		SELECT id, automation_id, step_order, kind
-		FROM automation_steps
-		WHERE automation_id = ANY($1)
-		ORDER BY automation_id, step_order`
-	stepRows, err := r.db.Pool.Query(ctx, stepsQuery, ids)
-	if err != nil {
-		return nil, fmt.Errorf("automations-repo-get-by-trigger-type-steps: %w", err)
-	}
-	defer stepRows.Close()
-
-	for stepRows.Next() {
-		var s models.AutomationStep
-		if err := stepRows.Scan(&s.ID, &s.AutomationID, &s.StepOrder, &s.Kind); err != nil {
-			return nil, fmt.Errorf("automations-repo-get-by-trigger-type-steps-scan: %w", err)
-		}
-		if af, ok := parentByID[s.AutomationID]; ok {
-			af.Steps = append(af.Steps, s)
-		}
-	}
-	if err := stepRows.Err(); err != nil {
-		return nil, fmt.Errorf("automations-repo-get-by-trigger-type-steps-rows: %w", err)
-	}
-
-	out := make([]*models.AutomationFull, 0, len(order))
-	for _, id := range order {
-		out = append(out, parentByID[id])
-	}
-	return out, nil
-}
-
-// ── trigger.BatteryRepo ────────────────────────────────────────────────
-
-// LoadEnabledBatterySignalTriggers returns all enabled automations whose
-// trigger step is a signal trigger on the 'battery_level' signal, scoped to
-// the given vehicle (or unscoped, i.e. vehicle_id IS NULL for all-vehicle
-// automations). Each result pairs the parent with the typed signal CTI row.
-func (r *AutomationRepo) LoadEnabledBatterySignalTriggers(ctx context.Context, vehicleID int64) ([]trigger.BatteryAutomation, error) {
+// LoadEnabledSignalTriggers returns enabled automations whose trigger step is
+// a typed signal trigger for the requested vehicle and signal.
+func (r *AutomationRepo) LoadEnabledSignalTriggers(ctx context.Context, vehicleID int64, signal string) ([]trigger.SignalAutomation, error) {
 	const query = `
 		SELECT a.id, a.name, a.description, a.enabled, a.vehicle_id, a.created_at, a.updated_at,
 		       ts.step_id, ts.signal, ts.op, ts.value_text, ts.value_num, ts.value_bool
@@ -423,19 +345,19 @@ func (r *AutomationRepo) LoadEnabledBatterySignalTriggers(ctx context.Context, v
 		JOIN automation_steps s ON s.automation_id = a.id
 		JOIN automation_step_trigger_signal ts ON ts.step_id = s.id
 		WHERE s.kind = 'trigger_signal'
-		  AND ts.signal = 'battery_level'
+		  AND ts.signal = $2
 		  AND a.enabled = true
 		  AND (a.vehicle_id = $1 OR a.vehicle_id IS NULL)
 		ORDER BY a.id`
-	rows, err := r.db.Pool.Query(ctx, query, vehicleID)
+	rows, err := r.db.Pool.Query(ctx, query, vehicleID, signal)
 	if err != nil {
-		return nil, fmt.Errorf("automations-repo-load-battery-triggers: %w", err)
+		return nil, fmt.Errorf("automations-repo-load-signal-triggers: %w", err)
 	}
 	defer rows.Close()
 
-	var out []trigger.BatteryAutomation
+	var out []trigger.SignalAutomation
 	for rows.Next() {
-		var ba trigger.BatteryAutomation
+		var ba trigger.SignalAutomation
 		if err := rows.Scan(
 			&ba.Automation.ID, &ba.Automation.Name, &ba.Automation.Description,
 			&ba.Automation.Enabled, &ba.Automation.VehicleID,
@@ -443,147 +365,93 @@ func (r *AutomationRepo) LoadEnabledBatterySignalTriggers(ctx context.Context, v
 			&ba.Trigger.StepID, &ba.Trigger.Signal, &ba.Trigger.Op,
 			&ba.Trigger.ValueText, &ba.Trigger.ValueNum, &ba.Trigger.ValueBool,
 		); err != nil {
-			return nil, fmt.Errorf("automations-repo-load-battery-triggers-scan: %w", err)
+			return nil, fmt.Errorf("automations-repo-load-signal-triggers-scan: %w", err)
 		}
 		out = append(out, ba)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("automations-repo-load-battery-triggers-rows: %w", err)
+		return nil, fmt.Errorf("automations-repo-load-signal-triggers-rows: %w", err)
 	}
 	return out, nil
 }
 
-// ── trigger.VehicleStateRepo ───────────────────────────────────────────
+// ── trigger.GeofenceRepo ───────────────────────────────────────────────
 
-// GetEnabledByVehicleAndTrigger returns all enabled automations for a given
-// vehicle whose first trigger step matches the specified type. Used by
-// VehicleStateTrigger to load event-based automations.
-func (r *AutomationRepo) GetEnabledByVehicleAndTrigger(ctx context.Context, vehicleID int64, triggerType string) ([]*models.AutomationFull, error) {
-	kind := "trigger_" + triggerType
-
-	const query = `
-		SELECT a.id, a.name, a.description, a.enabled, a.vehicle_id, a.created_at, a.updated_at
-		FROM automations a
-		JOIN automation_steps s ON s.automation_id = a.id
-		WHERE s.kind::text = $1
-		  AND a.enabled = true
-		  AND (a.vehicle_id = $2 OR a.vehicle_id IS NULL)
-		ORDER BY a.id`
-	rows, err := r.db.Pool.Query(ctx, query, kind, vehicleID)
-	if err != nil {
-		return nil, fmt.Errorf("automations-repo-get-enabled-by-vehicle-and-trigger: %w", err)
-	}
-	defer rows.Close()
-
-	parentByID := make(map[int64]*models.AutomationFull)
-	var order []int64
-	for rows.Next() {
-		var a models.Automation
-		if err := rows.Scan(
-			&a.ID, &a.Name, &a.Description, &a.Enabled, &a.VehicleID, &a.CreatedAt, &a.UpdatedAt,
-		); err != nil {
-			return nil, fmt.Errorf("automations-repo-get-enabled-by-vehicle-scan: %w", err)
-		}
-		if _, ok := parentByID[a.ID]; !ok {
-			parentByID[a.ID] = &models.AutomationFull{
-				Automation: a,
-				Steps:      []models.AutomationStep{},
-			}
-			order = append(order, a.ID)
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("automations-repo-get-enabled-by-vehicle-rows: %w", err)
-	}
-
-	if len(parentByID) == 0 {
-		return nil, nil
-	}
-
-	ids := make([]int64, 0, len(order))
-	ids = append(ids, order...)
-
-	const stepsQuery = `
-		SELECT id, automation_id, step_order, kind
-		FROM automation_steps
-		WHERE automation_id = ANY($1)
-		ORDER BY automation_id, step_order`
-	stepRows, err := r.db.Pool.Query(ctx, stepsQuery, ids)
-	if err != nil {
-		return nil, fmt.Errorf("automations-repo-get-enabled-by-vehicle-steps: %w", err)
-	}
-	defer stepRows.Close()
-
-	for stepRows.Next() {
-		var s models.AutomationStep
-		if err := stepRows.Scan(&s.ID, &s.AutomationID, &s.StepOrder, &s.Kind); err != nil {
-			return nil, fmt.Errorf("automations-repo-get-enabled-by-vehicle-steps-scan: %w", err)
-		}
-		if af, ok := parentByID[s.AutomationID]; ok {
-			af.Steps = append(af.Steps, s)
-		}
-	}
-	if err := stepRows.Err(); err != nil {
-		return nil, fmt.Errorf("automations-repo-get-enabled-by-vehicle-steps-rows: %w", err)
-	}
-
-	out := make([]*models.AutomationFull, 0, len(order))
-	for _, id := range order {
-		out = append(out, parentByID[id])
-	}
-	return out, nil
-}
-
-// ── trigger.EnergyRepo ─────────────────────────────────────────────────
-
-// energySignals lists the signal names that map to energy-site data per
-// ADR-012. These correspond to fields on models.TeslaEnergyLiveStatus.
-var energySignals = []string{
-	"solar_power", "battery_level", "grid_power",
-	"grid_status", "storm_mode_active",
-}
-
-// LoadEnabledEnergySignalTriggers returns all enabled automations whose
-// trigger step is a signal trigger on an energy-related signal. The
-// energySiteID parameter is currently not directly matchable because the
-// post-142 schema scopes automations by vehicle_id, not energy_site_id; a
-// mapping table is expected in a future migration. For now all enabled
-// energy-signal automations are returned and callers filter by site at
-// evaluation time (see EnergyTrigger.OnEnergyUpdate).
-func (r *AutomationRepo) LoadEnabledEnergySignalTriggers(ctx context.Context, energySiteID int64) ([]trigger.EnergyAutomation, error) {
+// LoadEnabledGeofenceTriggers returns enabled automations with typed geofence
+// triggers scoped to the requested vehicle.
+func (r *AutomationRepo) LoadEnabledGeofenceTriggers(ctx context.Context, vehicleID int64) ([]trigger.GeofenceAutomation, error) {
 	const query = `
 		SELECT a.id, a.name, a.description, a.enabled, a.vehicle_id, a.created_at, a.updated_at,
-		       ts.step_id, ts.signal, ts.op, ts.value_text, ts.value_num, ts.value_bool
+		       tg.step_id, tg.place_id, tg.event
 		FROM automations a
 		JOIN automation_steps s ON s.automation_id = a.id
-		JOIN automation_step_trigger_signal ts ON ts.step_id = s.id
-		WHERE s.kind = 'trigger_signal'
-		  AND ts.signal = ANY($1)
+		JOIN automation_step_trigger_geofence tg ON tg.step_id = s.id
+		WHERE s.kind = 'trigger_geofence'
 		  AND a.enabled = true
+		  AND (a.vehicle_id = $1 OR a.vehicle_id IS NULL)
 		ORDER BY a.id`
-	rows, err := r.db.Pool.Query(ctx, query, energySignals)
+	rows, err := r.db.Pool.Query(ctx, query, vehicleID)
 	if err != nil {
-		return nil, fmt.Errorf("automations-repo-load-energy-triggers: %w", err)
+		return nil, fmt.Errorf("automations-repo-load-geofence-triggers: %w", err)
 	}
 	defer rows.Close()
 
-	var out []trigger.EnergyAutomation
+	var out []trigger.GeofenceAutomation
 	for rows.Next() {
-		var ea trigger.EnergyAutomation
+		var ga trigger.GeofenceAutomation
+		if err := rows.Scan(
+			&ga.Automation.ID, &ga.Automation.Name, &ga.Automation.Description,
+			&ga.Automation.Enabled, &ga.Automation.VehicleID,
+			&ga.Automation.CreatedAt, &ga.Automation.UpdatedAt,
+			&ga.Trigger.StepID, &ga.Trigger.PlaceID, &ga.Trigger.Event,
+		); err != nil {
+			return nil, fmt.Errorf("automations-repo-load-geofence-triggers-scan: %w", err)
+		}
+		out = append(out, ga)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("automations-repo-load-geofence-triggers-rows: %w", err)
+	}
+	return out, nil
+}
+
+// ── trigger.EventRepo ──────────────────────────────────────────────────
+
+// LoadEnabledEventTriggers returns enabled automations with typed event
+// triggers for the requested vehicle and event type.
+func (r *AutomationRepo) LoadEnabledEventTriggers(ctx context.Context, vehicleID int64, eventType string) ([]trigger.EventAutomation, error) {
+	const query = `
+		SELECT a.id, a.name, a.description, a.enabled, a.vehicle_id, a.created_at, a.updated_at,
+		       te.step_id, te.event_type
+		FROM automations a
+		JOIN automation_steps s ON s.automation_id = a.id
+		JOIN automation_step_trigger_event te ON te.step_id = s.id
+		WHERE s.kind = 'trigger_event'
+		  AND te.event_type = $2
+		  AND a.enabled = true
+		  AND (a.vehicle_id = $1 OR a.vehicle_id IS NULL)
+		ORDER BY a.id`
+	rows, err := r.db.Pool.Query(ctx, query, vehicleID, eventType)
+	if err != nil {
+		return nil, fmt.Errorf("automations-repo-load-event-triggers: %w", err)
+	}
+	defer rows.Close()
+
+	var out []trigger.EventAutomation
+	for rows.Next() {
+		var ea trigger.EventAutomation
 		if err := rows.Scan(
 			&ea.Automation.ID, &ea.Automation.Name, &ea.Automation.Description,
 			&ea.Automation.Enabled, &ea.Automation.VehicleID,
 			&ea.Automation.CreatedAt, &ea.Automation.UpdatedAt,
-			&ea.Trigger.StepID, &ea.Trigger.Signal, &ea.Trigger.Op,
-			&ea.Trigger.ValueText, &ea.Trigger.ValueNum, &ea.Trigger.ValueBool,
+			&ea.Trigger.StepID, &ea.Trigger.EventType,
 		); err != nil {
-			return nil, fmt.Errorf("automations-repo-load-energy-triggers-scan: %w", err)
+			return nil, fmt.Errorf("automations-repo-load-event-triggers-scan: %w", err)
 		}
-		ea.EnergySiteID = energySiteID
 		out = append(out, ea)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("automations-repo-load-energy-triggers-rows: %w", err)
+		return nil, fmt.Errorf("automations-repo-load-event-triggers-rows: %w", err)
 	}
 	return out, nil
 }

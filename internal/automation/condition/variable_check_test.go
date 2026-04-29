@@ -8,7 +8,7 @@ import (
 
 // ─── Config Parsing Tests ───────────────────────────────
 
-func TestParseVariableCheckConfig_Valid(t *testing.T) {
+func TestDecodeVariableCheckSpec_Valid(t *testing.T) {
 	raw := json.RawMessage(`{
 		"type": "variable_check",
 		"key": "last_charge_level",
@@ -16,7 +16,7 @@ func TestParseVariableCheckConfig_Valid(t *testing.T) {
 		"value": "50"
 	}`)
 
-	cfg, err := ParseVariableCheckConfig(raw)
+	cfg, err := DecodeVariableCheckSpec(raw)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -31,9 +31,9 @@ func TestParseVariableCheckConfig_Valid(t *testing.T) {
 	}
 }
 
-func TestParseVariableCheckConfig_MinimalValid(t *testing.T) {
+func TestDecodeVariableCheckSpec_MinimalValid(t *testing.T) {
 	raw := json.RawMessage(`{"key": "flag", "operator": "eq", "value": "true"}`)
-	cfg, err := ParseVariableCheckConfig(raw)
+	cfg, err := DecodeVariableCheckSpec(raw)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -42,9 +42,9 @@ func TestParseVariableCheckConfig_MinimalValid(t *testing.T) {
 	}
 }
 
-func TestParseVariableCheckConfig_EmptyValueAllowed(t *testing.T) {
+func TestDecodeVariableCheckSpec_EmptyValueAllowed(t *testing.T) {
 	raw := json.RawMessage(`{"key": "flag", "operator": "eq", "value": ""}`)
-	cfg, err := ParseVariableCheckConfig(raw)
+	cfg, err := DecodeVariableCheckSpec(raw)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -53,7 +53,7 @@ func TestParseVariableCheckConfig_EmptyValueAllowed(t *testing.T) {
 	}
 }
 
-func TestParseVariableCheckConfig_Errors(t *testing.T) {
+func TestDecodeVariableCheckSpec_Errors(t *testing.T) {
 	tests := []struct {
 		name    string
 		json    string
@@ -73,7 +73,7 @@ func TestParseVariableCheckConfig_Errors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := ParseVariableCheckConfig(json.RawMessage(tt.json))
+			_, err := DecodeVariableCheckSpec(json.RawMessage(tt.json))
 			if err == nil {
 				t.Fatal("expected error, got nil")
 			}

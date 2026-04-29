@@ -203,7 +203,7 @@ func NewRetryPolicy(opts ...RetryPolicyOption) *RetryPolicy {
 type RetryDecision struct {
 	ShouldRetry bool          `json:"should_retry"`
 	Delay       time.Duration `json:"delay"`
-	Attempt     int           `json:"attempt"`     // the attempt that just failed (0-indexed)
+	Attempt     int           `json:"attempt"`      // the attempt that just failed (0-indexed)
 	MaxAttempts int           `json:"max_attempts"` // from FSM config
 	ErrorClass  ErrorClass    `json:"error_class"`
 	Reason      string        `json:"reason"`

@@ -33,9 +33,9 @@ type capturedRequest struct {
 	ChannelID   int64
 }
 
-// --- ParseNotifyConfig Tests ---
+// --- DecodeNotifySpec Tests ---
 
-func TestParseNotifyConfig(t *testing.T) {
+func TestDecodeNotifySpec(t *testing.T) {
 	tests := []struct {
 		name        string
 		input       json.RawMessage
@@ -131,7 +131,7 @@ func TestParseNotifyConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg, err := ParseNotifyConfig(tt.input)
+			cfg, err := DecodeNotifySpec(tt.input)
 			if tt.wantErr != "" {
 				if err == nil {
 					t.Fatalf("expected error containing %q, got nil", tt.wantErr)

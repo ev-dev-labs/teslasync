@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -85,8 +86,8 @@ func NewNotifyExecutor(channelRepo ChannelRepo, vehicleRepo VehicleRepo, sender 
 	}
 }
 
-// ParseNotifyConfig unmarshals and validates a notify action config.
-func ParseNotifyConfig(raw json.RawMessage) (*NotifyConfig, error) {
+// DecodeNotifySpec unmarshals and validates a notify action config.
+func DecodeNotifySpec(raw json.RawMessage) (*NotifyConfig, error) {
 	if len(raw) == 0 {
 		return nil, fmt.Errorf("action config is empty")
 	}
@@ -115,15 +116,41 @@ func ParseNotifyConfig(raw json.RawMessage) (*NotifyConfig, error) {
 	return &cfg, nil
 }
 
+var ParseNotifyConfig = DecodeNotifySpec
+
 // Execute runs the notify action: resolves templates, loads matching channels,
 // and dispatches notifications. Returns a JSON NotifyResult and a summary error
 // if any channels failed.
 func (e *NotifyExecutor) Execute(ctx context.Context, vehicleID *int64, raw json.RawMessage) (json.RawMessage, error) {
-	cfg, err := ParseNotifyConfig(raw)
+	cfg, err := DecodeNotifySpec(raw)
 	if err != nil {
 		return nil, fmt.Errorf("invalid notify action config: %w", err)
 	}
+	return e.executeNotifyConfig(ctx, vehicleID, cfg)
+}
 
+// ExecuteTyped runs an action_notify CTI child without decoding legacy action
+// wrappers. The typed row references one configured notification channel.
+func (e *NotifyExecutor) ExecuteTyped(ctx context.Context, vehicleID *int64, payload any) (json.RawMessage, error) {
+	action, ok := payload.(*models.AutomationStepActionNotify)
+	if !ok {
+		return nil, fmt.Errorf("notify action payload type %T is not *models.AutomationStepActionNotify", payload)
+	}
+	cfg := &NotifyConfig{
+		Type:    "notify",
+		Channel: fmt.Sprintf("id:%d", action.ChannelID),
+		Message: action.Template,
+	}
+	if action.ChannelID <= 0 {
+		return nil, fmt.Errorf("channel_id is required")
+	}
+	if action.Template == "" {
+		return nil, fmt.Errorf("template is required")
+	}
+	return e.executeNotifyConfig(ctx, vehicleID, cfg)
+}
+
+func (e *NotifyExecutor) executeNotifyConfig(ctx context.Context, vehicleID *int64, cfg *NotifyConfig) (json.RawMessage, error) {
 	// Build template variables from context.
 	vars := e.buildVars(ctx, vehicleID, cfg.Vars)
 
@@ -237,6 +264,18 @@ func resolveTemplate(tmpl string, vars map[string]string) string {
 // "all" matches every enabled channel; a specific type matches only that type.
 func filterChannels(channels []*models.NotificationChannel, filter string) []*models.NotificationChannel {
 	var matched []*models.NotificationChannel
+	if strings.HasPrefix(filter, "id:") {
+		id, err := strconv.ParseInt(strings.TrimPrefix(filter, "id:"), 10, 64)
+		if err != nil {
+			return matched
+		}
+		for _, ch := range channels {
+			if ch.Enabled && ch.ID == id {
+				matched = append(matched, ch)
+			}
+		}
+		return matched
+	}
 	for _, ch := range channels {
 		if !ch.Enabled {
 			continue

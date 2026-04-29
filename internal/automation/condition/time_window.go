@@ -99,8 +99,8 @@ func EvaluateTimeWindow(cfg *TimeWindowConfig, now time.Time) (Result, json.RawM
 	return Result{Met: met, Reason: reason}, snapshot, nil
 }
 
-// ParseTimeWindowConfig unmarshals and validates a time_window condition config.
-func ParseTimeWindowConfig(raw json.RawMessage) (*TimeWindowConfig, error) {
+// DecodeTimeWindowSpec unmarshals and validates a time_window condition config.
+func DecodeTimeWindowSpec(raw json.RawMessage) (*TimeWindowConfig, error) {
 	if len(raw) == 0 {
 		return nil, fmt.Errorf("condition config is empty")
 	}
@@ -142,6 +142,8 @@ func ParseTimeWindowConfig(raw json.RawMessage) (*TimeWindowConfig, error) {
 
 	return &cfg, nil
 }
+
+var ParseTimeWindowConfig = DecodeTimeWindowSpec
 
 // parseHHMM parses a "HH:MM" string into hour and minute components.
 // Enforces zero-padded 24-hour format: 00:00–23:59.

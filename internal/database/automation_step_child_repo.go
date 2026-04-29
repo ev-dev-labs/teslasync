@@ -21,6 +21,81 @@ func NewAutomationStepChildRepo(db *DB) *AutomationStepChildRepo {
 	return &AutomationStepChildRepo{db: db}
 }
 
+// HydrateAutomation attaches typed CTI children to an AutomationFull aggregate.
+// Children are appended in automation_steps.step_order order and grouped into
+// the Triggers, Conditions, and Actions lanes expected by the runtime.
+func (r *AutomationStepChildRepo) HydrateAutomation(ctx context.Context, automation *models.AutomationFull) error {
+	if automation == nil || len(automation.Steps) == 0 {
+		return nil
+	}
+	return r.HydrateAutomations(ctx, []*models.AutomationFull{automation})
+}
+
+// HydrateAutomations attaches typed CTI children to a batch of AutomationFull
+// aggregates using one loader call per CTI lane.
+func (r *AutomationStepChildRepo) HydrateAutomations(ctx context.Context, automations []*models.AutomationFull) error {
+	stepIDs := make([]int64, 0)
+	for _, automation := range automations {
+		if automation == nil {
+			continue
+		}
+		automation.Triggers = nil
+		automation.Conditions = nil
+		automation.Actions = nil
+		for _, step := range automation.Steps {
+			stepIDs = append(stepIDs, step.ID)
+		}
+	}
+	if len(stepIDs) == 0 {
+		return nil
+	}
+
+	triggers, err := r.loadTriggers(ctx, stepIDs)
+	if err != nil {
+		return err
+	}
+	conditions, err := r.loadConditions(ctx, stepIDs)
+	if err != nil {
+		return err
+	}
+	actions, err := r.loadActions(ctx, stepIDs)
+	if err != nil {
+		return err
+	}
+
+	for _, automation := range automations {
+		if automation == nil {
+			continue
+		}
+		for _, step := range automation.Steps {
+			switch step.Kind {
+			case models.AutomationStepKindTriggerSignal,
+				models.AutomationStepKindTriggerGeofence,
+				models.AutomationStepKindTriggerSchedule,
+				models.AutomationStepKindTriggerEvent:
+				if child, ok := triggers[step.ID]; ok {
+					automation.Triggers = append(automation.Triggers, child)
+				}
+			case models.AutomationStepKindConditionSignal,
+				models.AutomationStepKindConditionTimeWindow,
+				models.AutomationStepKindConditionGeofence,
+				models.AutomationStepKindConditionOtherAutomation:
+				if child, ok := conditions[step.ID]; ok {
+					automation.Conditions = append(automation.Conditions, child)
+				}
+			case models.AutomationStepKindActionCommand,
+				models.AutomationStepKindActionNotify,
+				models.AutomationStepKindActionSetSetting,
+				models.AutomationStepKindActionCallAutomation:
+				if child, ok := actions[step.ID]; ok {
+					automation.Actions = append(automation.Actions, child)
+				}
+			}
+		}
+	}
+	return nil
+}
+
 // loadTriggers fetches the trigger CTI child row for each step ID in the
 // batch using a single UNION ALL query across the four trigger tables
 // (signal, geofence, schedule, event). The heterogeneous per-table columns

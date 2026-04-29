@@ -110,9 +110,9 @@ func NewCommandExecutor(
 	}
 }
 
-// ParseCommandConfig unmarshals and validates a command action config.
+// DecodeCommandSpec unmarshals and validates a command action config.
 // Rejects unknown commands at parse time to prevent recurring failures.
-func ParseCommandConfig(raw json.RawMessage) (*CommandConfig, error) {
+func DecodeCommandSpec(raw json.RawMessage) (*CommandConfig, error) {
 	if len(raw) == 0 {
 		return nil, fmt.Errorf("action config is empty")
 	}
@@ -137,16 +137,48 @@ func ParseCommandConfig(raw json.RawMessage) (*CommandConfig, error) {
 	return &cfg, nil
 }
 
+var ParseCommandConfig = DecodeCommandSpec
+
 // Execute runs the command action for the given automation context.
 // If vehicleID is non-nil, the command targets that single vehicle.
 // If vehicleID is nil (fleet-wide automation), the command is sent to all vehicles.
 // Returns a JSON array of CommandResult and a summary error (nil if all succeeded).
 func (e *CommandExecutor) Execute(ctx context.Context, vehicleID *int64, raw json.RawMessage) (json.RawMessage, error) {
-	cfg, err := ParseCommandConfig(raw)
+	cfg, err := DecodeCommandSpec(raw)
 	if err != nil {
 		return nil, fmt.Errorf("invalid command action config: %w", err)
 	}
+	return e.executeCommandConfig(ctx, vehicleID, cfg)
+}
 
+// ExecuteTyped runs an action_command CTI child without decoding legacy action
+// wrappers. CommandParams remains the sole schema-on-read JSON carve-out.
+func (e *CommandExecutor) ExecuteTyped(ctx context.Context, vehicleID *int64, payload any) (json.RawMessage, error) {
+	action, ok := payload.(*models.AutomationAction)
+	if !ok {
+		return nil, fmt.Errorf("command action payload type %T is not *models.AutomationAction", payload)
+	}
+	params := map[string]interface{}{}
+	if len(action.CommandParams) > 0 && string(action.CommandParams) != "null" {
+		if err := json.Unmarshal(action.CommandParams, &params); err != nil {
+			return nil, fmt.Errorf("decode command_params: %w", err)
+		}
+	}
+	cfg := &CommandConfig{
+		Type:    "command",
+		Command: action.CommandName,
+		Params:  params,
+	}
+	if cfg.Command == "" {
+		return nil, fmt.Errorf("command_name is required")
+	}
+	if !tesla.IsKnownCommand(cfg.Command) {
+		return nil, fmt.Errorf("unknown command %q", cfg.Command)
+	}
+	return e.executeCommandConfig(ctx, vehicleID, cfg)
+}
+
+func (e *CommandExecutor) executeCommandConfig(ctx context.Context, vehicleID *int64, cfg *CommandConfig) (json.RawMessage, error) {
 	// Safety gate: respect global API suspension.
 	if suspended, err := e.settingsRepo.IsAPISuspended(ctx); err != nil {
 		return nil, fmt.Errorf("check API suspension: %w", err)

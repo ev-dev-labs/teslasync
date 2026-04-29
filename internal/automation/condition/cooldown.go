@@ -16,14 +16,14 @@ type CooldownConfig struct {
 // cooldownSnapshot provides detailed diagnostics for conditions_snapshot logging.
 type cooldownSnapshot struct {
 	LastTriggeredAt *time.Time `json:"last_triggered_at"`
-	CooldownMinutes int       `json:"cooldown_minutes"`
-	ElapsedMinutes  float64   `json:"elapsed_minutes"` // -1 when never triggered
-	Met             bool      `json:"met"`
-	Reason          string    `json:"reason"`
+	CooldownMinutes int        `json:"cooldown_minutes"`
+	ElapsedMinutes  float64    `json:"elapsed_minutes"` // -1 when never triggered
+	Met             bool       `json:"met"`
+	Reason          string     `json:"reason"`
 }
 
-// ParseCooldownConfig unmarshals and validates a cooldown condition config.
-func ParseCooldownConfig(raw json.RawMessage) (*CooldownConfig, error) {
+// DecodeCooldownSpec unmarshals and validates a cooldown condition config.
+func DecodeCooldownSpec(raw json.RawMessage) (*CooldownConfig, error) {
 	if len(raw) == 0 {
 		return nil, fmt.Errorf("condition config is empty")
 	}
@@ -43,6 +43,8 @@ func ParseCooldownConfig(raw json.RawMessage) (*CooldownConfig, error) {
 
 	return &cfg, nil
 }
+
+var ParseCooldownConfig = DecodeCooldownSpec
 
 // EvaluateCooldown checks whether enough time has elapsed since the automation's
 // last execution. If lastTriggeredAt is nil (never triggered), the condition is met.

@@ -8,7 +8,7 @@ import (
 
 // ─── Config Parsing Tests ───────────────────────────────
 
-func TestParseTimeWindowConfig_Valid(t *testing.T) {
+func TestDecodeTimeWindowSpec_Valid(t *testing.T) {
 	raw := json.RawMessage(`{
 		"type": "time_window",
 		"start_time": "22:00",
@@ -16,7 +16,7 @@ func TestParseTimeWindowConfig_Valid(t *testing.T) {
 		"timezone": "America/Los_Angeles"
 	}`)
 
-	cfg, err := ParseTimeWindowConfig(raw)
+	cfg, err := DecodeTimeWindowSpec(raw)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -34,9 +34,9 @@ func TestParseTimeWindowConfig_Valid(t *testing.T) {
 	}
 }
 
-func TestParseTimeWindowConfig_MinimalValid(t *testing.T) {
+func TestDecodeTimeWindowSpec_MinimalValid(t *testing.T) {
 	raw := json.RawMessage(`{"start_time": "09:00", "end_time": "17:00"}`)
-	cfg, err := ParseTimeWindowConfig(raw)
+	cfg, err := DecodeTimeWindowSpec(raw)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -45,7 +45,7 @@ func TestParseTimeWindowConfig_MinimalValid(t *testing.T) {
 	}
 }
 
-func TestParseTimeWindowConfig_Errors(t *testing.T) {
+func TestDecodeTimeWindowSpec_Errors(t *testing.T) {
 	tests := []struct {
 		name string
 		json string
@@ -67,7 +67,7 @@ func TestParseTimeWindowConfig_Errors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := ParseTimeWindowConfig(json.RawMessage(tt.json))
+			_, err := DecodeTimeWindowSpec(json.RawMessage(tt.json))
 			if err == nil {
 				t.Fatalf("expected error for %q, got nil", tt.name)
 			}
@@ -90,12 +90,12 @@ func TestParseHHMM(t *testing.T) {
 		{"09:05", 9, 5, false},
 		{"24:00", 0, 0, true},
 		{"12:60", 0, 0, true},
-		{"9:00", 0, 0, true},   // not zero-padded
-		{"0900", 0, 0, true},   // no colon
-		{"", 0, 0, true},       // empty
-		{"AB:CD", 0, 0, true},  // non-digits
-		{"12:3", 0, 0, true},   // short minute
-		{"1:30", 0, 0, true},   // short hour
+		{"9:00", 0, 0, true},     // not zero-padded
+		{"0900", 0, 0, true},     // no colon
+		{"", 0, 0, true},         // empty
+		{"AB:CD", 0, 0, true},    // non-digits
+		{"12:3", 0, 0, true},     // short minute
+		{"1:30", 0, 0, true},     // short hour
 		{"12:30:00", 0, 0, true}, // too long
 	}
 

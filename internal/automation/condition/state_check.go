@@ -64,8 +64,8 @@ type stateCheckSnapshot struct {
 	Reason   string `json:"reason"`
 }
 
-// ParseStateCheckConfig unmarshals and validates a state_check condition config.
-func ParseStateCheckConfig(raw json.RawMessage) (*StateCheckConfig, error) {
+// DecodeStateCheckSpec unmarshals and validates a state_check condition config.
+func DecodeStateCheckSpec(raw json.RawMessage) (*StateCheckConfig, error) {
 	if len(raw) == 0 {
 		return nil, fmt.Errorf("condition config is empty")
 	}
@@ -142,6 +142,8 @@ func ParseStateCheckConfig(raw json.RawMessage) (*StateCheckConfig, error) {
 
 	return cfg, nil
 }
+
+var ParseStateCheckConfig = DecodeStateCheckSpec
 
 // EvaluateStateCheck checks whether the given vehicle state satisfies the
 // configured field/operator/value condition.

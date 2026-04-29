@@ -31,8 +31,8 @@ type locationSnapshot struct {
 	Reason       string  `json:"reason"`
 }
 
-// ParseLocationConfig unmarshals and validates a location condition config.
-func ParseLocationConfig(raw json.RawMessage) (*LocationConfig, error) {
+// DecodeLocationSpec unmarshals and validates a location condition config.
+func DecodeLocationSpec(raw json.RawMessage) (*LocationConfig, error) {
 	if len(raw) == 0 {
 		return nil, fmt.Errorf("condition config is empty")
 	}
@@ -61,6 +61,8 @@ func ParseLocationConfig(raw json.RawMessage) (*LocationConfig, error) {
 
 	return &cfg, nil
 }
+
+var ParseLocationConfig = DecodeLocationSpec
 
 // EvaluateLocation checks whether the vehicle's last known position is inside
 // or outside the specified geofence. Uses the spherical law of cosines

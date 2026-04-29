@@ -9,7 +9,7 @@ import (
 
 // ─── Config Parsing Tests ───────────────────────────────
 
-func TestParseStateCheckConfig_Valid(t *testing.T) {
+func TestDecodeStateCheckSpec_Valid(t *testing.T) {
 	raw := json.RawMessage(`{
 		"type": "state_check",
 		"field": "battery_level",
@@ -17,7 +17,7 @@ func TestParseStateCheckConfig_Valid(t *testing.T) {
 		"value": 20
 	}`)
 
-	cfg, err := ParseStateCheckConfig(raw)
+	cfg, err := DecodeStateCheckSpec(raw)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -35,9 +35,9 @@ func TestParseStateCheckConfig_Valid(t *testing.T) {
 	}
 }
 
-func TestParseStateCheckConfig_BoolField(t *testing.T) {
+func TestDecodeStateCheckSpec_BoolField(t *testing.T) {
 	raw := json.RawMessage(`{"field": "is_locked", "operator": "eq", "value": true}`)
-	cfg, err := ParseStateCheckConfig(raw)
+	cfg, err := DecodeStateCheckSpec(raw)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -46,9 +46,9 @@ func TestParseStateCheckConfig_BoolField(t *testing.T) {
 	}
 }
 
-func TestParseStateCheckConfig_StringField(t *testing.T) {
+func TestDecodeStateCheckSpec_StringField(t *testing.T) {
 	raw := json.RawMessage(`{"field": "state", "operator": "eq", "value": "online"}`)
-	cfg, err := ParseStateCheckConfig(raw)
+	cfg, err := DecodeStateCheckSpec(raw)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -57,9 +57,9 @@ func TestParseStateCheckConfig_StringField(t *testing.T) {
 	}
 }
 
-func TestParseStateCheckConfig_MinimalValid(t *testing.T) {
+func TestDecodeStateCheckSpec_MinimalValid(t *testing.T) {
 	raw := json.RawMessage(`{"field": "speed", "operator": "lte", "value": 100}`)
-	cfg, err := ParseStateCheckConfig(raw)
+	cfg, err := DecodeStateCheckSpec(raw)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -71,7 +71,7 @@ func TestParseStateCheckConfig_MinimalValid(t *testing.T) {
 	}
 }
 
-func TestParseStateCheckConfig_Errors(t *testing.T) {
+func TestDecodeStateCheckSpec_Errors(t *testing.T) {
 	tests := []struct {
 		name string
 		json string
@@ -98,7 +98,7 @@ func TestParseStateCheckConfig_Errors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := ParseStateCheckConfig(json.RawMessage(tt.json))
+			_, err := DecodeStateCheckSpec(json.RawMessage(tt.json))
 			if err == nil {
 				t.Fatalf("expected error for %q, got nil", tt.name)
 			}
@@ -106,7 +106,7 @@ func TestParseStateCheckConfig_Errors(t *testing.T) {
 	}
 }
 
-func TestParseStateCheckConfig_AllFields(t *testing.T) {
+func TestDecodeStateCheckSpec_AllFields(t *testing.T) {
 	fields := []struct {
 		name     string
 		value    string
@@ -128,7 +128,7 @@ func TestParseStateCheckConfig_AllFields(t *testing.T) {
 	for _, tt := range fields {
 		t.Run(tt.name, func(t *testing.T) {
 			raw := json.RawMessage(`{"field": "` + tt.name + `", "operator": "eq", "value": ` + tt.value + `}`)
-			cfg, err := ParseStateCheckConfig(raw)
+			cfg, err := DecodeStateCheckSpec(raw)
 			if err != nil {
 				t.Fatalf("unexpected error for field %q: %v", tt.name, err)
 			}
@@ -690,7 +690,7 @@ func TestStateCheck_EndToEnd(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg, err := ParseStateCheckConfig(json.RawMessage(tt.json))
+			cfg, err := DecodeStateCheckSpec(json.RawMessage(tt.json))
 			if err != nil {
 				t.Fatalf("parse error: %v", err)
 			}

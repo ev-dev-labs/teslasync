@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/rs/zerolog/log"
 )
 
 // StartMaintenanceWorker runs periodic database cleanup on a 24-hour schedule.
@@ -49,11 +49,6 @@ func runMaintenance(ctx context.Context, db *database.DB, cfg *config.Config) {
 	// Use a separate context with a generous timeout for maintenance operations
 	maintCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
 	defer cancel()
-
-	// Compress old positions into hourly summaries before deletion
-	if err := compressOldPositions(maintCtx, db); err != nil {
-		log.Error().Err(err).Msg("position compression failed")
-	}
 
 	// Clean up old positions that may remain in the default partition
 	var posDeleted int64
@@ -124,60 +119,6 @@ func refreshFleetStats(ctx context.Context, db *database.DB) error {
 	return nil
 }
 
-// compressOldPositions aggregates positions older than 30 days into hourly
-// summaries (avg speed, coordinates, heading, elevation) and removes the
-// redundant individual rows. This dramatically reduces storage for historical
-// data while preserving meaningful trends.
-func compressOldPositions(ctx context.Context, db *database.DB) error {
-	log.Info().Msg("compressing old positions into hourly summaries")
-
-	// Insert one representative row per (vehicle, hour) with averaged values
-	query := `
-	WITH hourly AS (
-		SELECT
-			vehicle_id,
-			date_trunc('hour', ts) as hour,
-			AVG(speed_mph) as avg_speed,
-			AVG(latitude) as avg_lat,
-			AVG(longitude) as avg_lng,
-			AVG(heading) as avg_heading,
-			AVG(elevation_m) as avg_elevation,
-			COUNT(*) as sample_count,
-			MIN(ts) as first_at
-		FROM positions
-		WHERE ts < NOW() - INTERVAL '30 days'
-		GROUP BY vehicle_id, date_trunc('hour', ts)
-		HAVING COUNT(*) > 1
-	)
-	INSERT INTO positions (vehicle_id, speed_mph, latitude, longitude, heading, elevation_m, ts)
-	SELECT vehicle_id, avg_speed, avg_lat, avg_lng, avg_heading, avg_elevation, first_at
-	FROM hourly
-	ON CONFLICT DO NOTHING;
-	`
-	_, err := db.Pool.Exec(ctx, query)
-	if err != nil {
-		return fmt.Errorf("compress positions insert: %w", err)
-	}
-
-	// Delete the now-compressed individual records, keeping the single
-	// representative row (MIN(ts)) for each (vehicle, hour) bucket.
-	res, err := db.Pool.Exec(ctx, `
-		DELETE FROM positions
-		WHERE ts < NOW() - INTERVAL '30 days'
-		AND (vehicle_id, ts) NOT IN (
-			SELECT vehicle_id, MIN(ts) FROM positions
-			WHERE ts < NOW() - INTERVAL '30 days'
-			GROUP BY vehicle_id, date_trunc('hour', ts)
-		)
-	`)
-	if err != nil {
-		return fmt.Errorf("compress positions delete: %w", err)
-	}
-
-	log.Info().Int64("rows_removed", res.RowsAffected()).Msg("position compression complete")
-	return nil
-}
-
 func cleanupOldLogs(ctx context.Context, db *database.DB, table, tsCol string, retentionDays int) (int64, error) {
 	query := fmt.Sprintf("DELETE FROM %s WHERE %s < NOW() - ($1 || ' days')::INTERVAL", table, tsCol)
 	tag, err := db.Pool.Exec(ctx, query, fmt.Sprintf("%d", retentionDays))
@@ -190,4 +131,3 @@ func cleanupOldLogs(ctx context.Context, db *database.DB, table, tsCol string, r
 	}
 	return deleted, nil
 }
-

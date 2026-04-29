@@ -45,8 +45,8 @@ type sentNotification struct {
 type trackingSender struct {
 	mu    sync.Mutex
 	sent  []sentNotification
-	err   error            // if non-nil, all sends fail
-	errAt map[int64]error  // per-channel errors (keyed by channel ID)
+	err   error           // if non-nil, all sends fail
+	errAt map[int64]error // per-channel errors (keyed by channel ID)
 }
 
 func newTrackingSender() *trackingSender {

@@ -43,8 +43,8 @@ func NewWaitExecutor() *WaitExecutor {
 	}
 }
 
-// ParseWaitConfig unmarshals and validates a wait action config.
-func ParseWaitConfig(raw json.RawMessage) (*WaitConfig, error) {
+// DecodeWaitSpec unmarshals and validates a wait action config.
+func DecodeWaitSpec(raw json.RawMessage) (*WaitConfig, error) {
 	if len(raw) == 0 {
 		return nil, fmt.Errorf("action config is empty")
 	}
@@ -69,9 +69,11 @@ func ParseWaitConfig(raw json.RawMessage) (*WaitConfig, error) {
 	return &cfg, nil
 }
 
+var ParseWaitConfig = DecodeWaitSpec
+
 // Execute pauses for the configured duration, respecting context cancellation.
 func (e *WaitExecutor) Execute(ctx context.Context, _ *int64, raw json.RawMessage) (json.RawMessage, error) {
-	cfg, err := ParseWaitConfig(raw)
+	cfg, err := DecodeWaitSpec(raw)
 	if err != nil {
 		return nil, fmt.Errorf("invalid wait action config: %w", err)
 	}
