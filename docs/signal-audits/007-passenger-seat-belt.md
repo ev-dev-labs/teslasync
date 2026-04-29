@@ -8,7 +8,7 @@ Passenger seat-belt telemetry is related to occupancy and safety. This page pres
 
 - Differentiate buckled, unbuckled, no passenger/unknown, and stale states where Tesla data allows it.
 - Avoid assuming occupancy from belt state alone.
-- Keep alert templates clear about which seat is referenced.
+- Keep typed alert copy clear about which seat is referenced.
 - Preserve raw values for diagnostics.
 
 ## Verification checklist

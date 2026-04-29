@@ -14,7 +14,7 @@ This historical audit record tracks how TeslaSync handles the blind-spot collisi
 ## Verification checklist
 
 1. Confirm the Tesla signal name and enum/value mapping in `web/src/lib/signalCatalog.ts`.
-2. Confirm backend ingestion accepts the signal without dropping unknown enum values.
+2. Confirm backend ingestion handles the signal without dropping unknown enum values.
 3. Confirm history/live endpoints can expose the signal for diagnostics.
 4. Confirm alert rules can reference the signal and notification text is unambiguous.
 5. Confirm test data does not claim a collision-warning state unless generated intentionally.

@@ -129,7 +129,7 @@ export default function AutomationsListPage() {
       if (!isAutomationImportEnvelope(data)) {
         throw new Error(t(
           'automations.importTypedEnvelopeRequired',
-          'Import a typed TeslaSync automation export file. Older automation files are not supported.',
+          'Import a typed TeslaSync CTI automation export file. Legacy automation exports are rejected rather than translated.',
         ));
       }
       const { request } = await import('@/api/client');
@@ -146,7 +146,7 @@ export default function AutomationsListPage() {
         : t('automations.importUnknownError', 'Unknown error');
       window.alert(t(
         'automations.importFailedWithReason',
-        'Automation import failed: {{message}}',
+        'Typed automation import failed: {{message}}',
         { message },
       ));
     } finally {
@@ -234,7 +234,7 @@ export default function AutomationsListPage() {
   return (
     <PageContainer
       title={t('automations.title', 'Automations')}
-      subtitle={t('automations.subtitle', 'Automate vehicle actions with triggers, conditions, and action chains')}
+      subtitle={t('automations.subtitle', 'Automate vehicle actions with typed triggers, conditions, and action chains')}
       loading={isLoading}
       actions={
         <div className="flex items-center gap-2">
@@ -366,7 +366,7 @@ export default function AutomationsListPage() {
               icon={<Zap className="h-8 w-8" />}
               message={
                 items.length === 0
-                  ? t('automations.empty', 'No automations yet. Create one to get started!')
+                  ? t('automations.empty', 'No automations yet. Create a typed automation to get started!')
                   : t('automations.noMatch', 'No automations match your filters')
               }
             />

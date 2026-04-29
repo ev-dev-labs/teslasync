@@ -28,7 +28,7 @@ features:
     details: Cost of ownership, efficiency, speed profile, route efficiency, sleep/vampire drain, signal explorer, anomaly views, and Grafana.
   - icon: 🔔
     title: Alerts and automation
-    details: Alert Studio, notification channels, automation builder, webhooks, scheduled checks, guard mode, and command workflows.
+    details: Typed Alert Studio rules, notification channels, automation builder, webhooks, scheduled checks, guard mode, and command workflows.
   - icon: 🧭
     title: Location and trips
     details: Live map, geofences, navigation routes, locations, trips, route replay, and map-tile caching for PWA installs.

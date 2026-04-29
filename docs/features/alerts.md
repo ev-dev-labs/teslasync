@@ -7,7 +7,7 @@ TeslaSync supports alert rules, notification channels, alert history, and automa
 | Page | Purpose |
 |---|---|
 | Alerts | Alert history and current alert status |
-| Alert Studio | Rule builder for signal/vehicle conditions |
+| Alert Studio | Typed rule management for supported signal and vehicle conditions |
 | Notifications | Channel configuration, delivery logs, stats, schedules |
 | Automations | Workflow list and execution state |
 | Automation Builder | Build and edit trigger/action workflows |
@@ -15,7 +15,17 @@ TeslaSync supports alert rules, notification channels, alert history, and automa
 
 ## Rule model
 
-Rules evaluate live or recent vehicle state and produce alerts, notifications, or automation events. The exact condition tree is stored as structured data so new operators can be added without redesigning the page.
+Rules evaluate live or recent vehicle state and produce alerts, notifications, or automation events through typed CTI contracts. Supported operators and trigger families are explicit platform contracts rather than free-form payloads.
+
+## Phase 36 operator note
+
+| Topic | Phase 36 platform decision |
+|---|---|
+| Clean-slate prerequisite | Phase 36 is safe only when alert-rule, automation, automation-step, and automation-history production counts are zero. |
+| Breaking change posture | Legacy rules-platform payloads are not migrated in this phase; unsupported payloads are rejected rather than silently translated. |
+| Rollback | No schema change is expected; rollback is code rollback/redeploy if the phase causes unexpected behavior. |
+| Future extensibility | Future automation trigger families or new alert operators require schema/model/API/frontend/runtime/docs/tests work in a later explicit phase before they become typed CTI contracts. |
+| Unsupported legacy surfaces | Old JSON automation imports, legacy rule builders, and unsupported trigger families are unavailable until redesigned as typed CTI contracts. |
 
 ## Notification channels
 

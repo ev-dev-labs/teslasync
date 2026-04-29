@@ -34,7 +34,7 @@ graph TB
     SSE --> Browser[React hooks]
 ```
 
-Fleet Telemetry is preferred for high-frequency state. The current runtime uses both an in-memory SignalStore and Redis: SignalStore is per-process for FSM/CEP/session evaluation, while Redis mirrors live signals for cross-process reads, Pub/Sub fanout, and restart recovery. This is a layered L1/L2 contract: SignalStore is L1, Redis is L2, and `signal_log` is durable history. The telemetry path is write-through to local memory first, then Redis/history. `LIVE_SIGNAL_STORE_MODE` can disable Redis-backed distributed reads for rollback, Redis Pub/Sub is best-effort, and the telemetry/FSM owner remains the only safe reconciliation owner until ownership routing exists. Legacy scalar Redis values are readable but have unknown freshness; `vehicle_live_state` is legacy/superseded, not the freshest source for live UI decisions. Polling remains available for setup, commands, refresh operations, and fallback when streaming is stale.
+Fleet Telemetry is preferred for high-frequency state. The current runtime uses both an in-memory SignalStore and Redis: SignalStore is per-process for FSM/typed-rules/session evaluation, while Redis mirrors live signals for cross-process reads, Pub/Sub fanout, and restart recovery. This is a layered L1/L2 contract: SignalStore is L1, Redis is L2, and `signal_log` is durable history. The telemetry path is write-through to local memory first, then Redis/history. `LIVE_SIGNAL_STORE_MODE` can disable Redis-backed distributed reads for rollback, Redis Pub/Sub is best-effort, and the telemetry/FSM owner remains the only safe reconciliation owner until ownership routing exists. Legacy scalar Redis values are readable but have unknown freshness; `vehicle_live_state` is legacy/superseded, not the freshest source for live UI decisions. Polling remains available for setup, commands, refresh operations, and fallback when streaming is stale.
 
 ## Backend layers
 
@@ -44,7 +44,7 @@ Fleet Telemetry is preferred for high-frequency state. The current runtime uses 
 | Database | `internal/database` | pgx pool, repositories, migrations, query helpers |
 | Models | `internal/models` | JSON/db structs with snake_case JSON tags |
 | Tesla integration | `internal/tesla` | Fleet API client and command integrations |
-| Telemetry | `internal/api/telemetry*`, MQTT packages | Signal ingestion, state flushing, session tracking, CEP evaluation |
+| Telemetry | `internal/api/telemetry*`, MQTT packages | Signal ingestion, state flushing, session tracking, typed rules evaluation |
 | Workers | `internal/worker`, worker commands | Polling, notifications, exports, automations |
 | Platform | resilience, tracing, metrics, crypto | Circuit breakers, OpenTelemetry, Prometheus, encryption |
 

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This page preserves the audit trail for forward collision warning telemetry. It should be reviewed before changing safety-signal ingestion, alert templates, or diagnostics pages.
+This page preserves the audit trail for forward collision warning telemetry. It should be reviewed before changing safety-signal ingestion, typed alert copy, or diagnostics pages.
 
 ## Current expectations
 

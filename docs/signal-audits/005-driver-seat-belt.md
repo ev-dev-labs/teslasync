@@ -17,4 +17,4 @@ Driver seat-belt telemetry can be used by safety dashboards and alerts. This pag
 2. Verify parser output for all known values.
 3. Verify live-state and history availability.
 4. Verify Alert Studio condition options.
-5. Verify notification templates mention vehicle and timestamp.
+5. Verify notification copy mentions vehicle and timestamp.

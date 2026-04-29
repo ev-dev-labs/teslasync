@@ -463,7 +463,7 @@ export default function AutomationBuilderPage() {
         : t('automations.builder.createTitle', 'Create Automation')}
       subtitle={t(
         'automations.builder.subtitle',
-        'Configure trigger, conditions, and actions for your automation.',
+        'Configure supported typed triggers, conditions, and actions for your automation.',
       )}
       breadcrumbs={breadcrumbs}
     >
@@ -523,7 +523,7 @@ export default function AutomationBuilderPage() {
             title={t('automations.builder.when', 'When (Trigger)')}
             description={t(
               'automations.builder.whenDesc',
-              'Choose what starts this automation.',
+              'Choose the supported typed contract that starts this automation.',
             )}
           >
             <UiSelect
@@ -544,7 +544,7 @@ export default function AutomationBuilderPage() {
                 <EmptyState
                   message={t(
                     'automations.builder.emptyTrigger',
-                    'Select a trigger type to configure when this automation starts.',
+                    'Select a supported trigger type to configure when this automation starts.',
                   )}
                 />
               </GlassPanel>
@@ -643,7 +643,7 @@ export default function AutomationBuilderPage() {
               <p className="text-sm text-white/50">
                 {t(
                   'automations.builder.presetHint',
-                  'Not sure where to start? Browse pre-built automation templates.',
+                   'Not sure where to start? Browse typed automation templates.',
                 )}
               </p>
             </GlassPanel>
