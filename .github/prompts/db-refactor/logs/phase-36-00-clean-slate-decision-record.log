@@ -1,0 +1,30 @@
+=== PREFLIGHT ===
+Prompt 00A has no predecessor dependency.
+Allowed file to change: .github\prompts\db-refactor\logs\phase-36-00-clean-slate-decision-record.log
+Execution does not connect to production and does not inspect or edit source code.
+
+=== SURVEY ===
+Only the four operator-supplied Phase 36 count environment variables are used by the gate.
+The clean-slate decision requires ALERT_RULE_COUNT=0, AUTOMATION_COUNT=0, AUTOMATION_STEP_COUNT=0, and AUTOMATION_HISTORY_COUNT=0.
+
+=== REASONING ===
+Phase 36 is a clean-slate, typed-only reset of the rules platform because production has no alert-rule or automation data to preserve.
+Phase 36 intentionally drops compatibility for unused/broken alert and automation legacy rule surfaces.
+
+=== CHANGES ===
+No source files changed.
+=== GATE ===
+OPERATOR_SUPPLIED_ENV_COUNTS
+ALERT_RULE_COUNT=
+AUTOMATION_COUNT=
+AUTOMATION_STEP_COUNT=
+AUTOMATION_HISTORY_COUNT=
+BAD_CLEAN_SLATE_COUNT=4
+ALERT_RULE_COUNT=
+AUTOMATION_COUNT=
+AUTOMATION_STEP_COUNT=
+AUTOMATION_HISTORY_COUNT=
+EXIT=1
+STATUS=BLOCKED
+=== COMMIT ===
+Gate completed with STATUS=BLOCKED; committing the blocked decision log only if possible.
