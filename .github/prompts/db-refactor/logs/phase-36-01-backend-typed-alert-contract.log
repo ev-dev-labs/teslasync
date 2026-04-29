@@ -1,15 +1,18 @@
 === PREFLIGHT ===
-Predecessor log missing or not DONE: .github\prompts\db-refactor\logs\phase-36-00-typed-alert-rule-inventory.log
-PREFLIGHT_EXIT=1
+PREDECESSOR_EXISTS=True
+PREDECESSOR_EXIT_0=False
+PREDECESSOR_STATUS_DONE=False
 === SURVEY ===
-Skipped: predecessor gate did not pass.
+Skipped backend survey because predecessor gate failed; no source files were edited.
 === REASONING ===
-Blocked by Honesty Covenant item 7: predecessor STATUS=DONE with EXIT=0 is required before source edits.
+Prompt covenant requires predecessor STATUS=DONE and EXIT=0 before backend changes. The predecessor log exists but does not contain EXIT=0 or STATUS=DONE, so continuing would bypass the predecessor.
 === CHANGES ===
-No source files changed. Wrote blocked output log only.
+Changed only this output log. Backend typed alert contract changes were not attempted.
 === GATE ===
 Predecessor log missing or not DONE: .github\prompts\db-refactor\logs\phase-36-00-typed-alert-rule-inventory.log
-=== COMMIT ===
-Committing blocked log only if possible.
 EXIT=1
 STATUS=BLOCKED
+=== COMMIT ===
+Preparing to commit only the blocked-phase log.
+COMMIT_ATTEMPT_1_EXIT=1
+COMMIT_ATTEMPT_2=git commit --only log
