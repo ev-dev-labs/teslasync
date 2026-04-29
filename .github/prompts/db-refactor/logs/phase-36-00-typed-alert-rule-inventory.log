@@ -1,520 +1,86 @@
 === PREFLIGHT ===
-Prompt: Phase-36 - Rules platform clean-slate inventory and forward-only contract.
-Allowed files changed by this prompt: this log file only.
-Predecessor: none.
-Production clean-slate preflight: BLOCKED. The required raw production SQL output was not supplied in this prompt and I do not have production database access. Per the honesty covenant, I cannot normalize missing production counts to zero.
-
-Required production SQL:
-SELECT
-  (SELECT COUNT(*) FROM alert_rules) AS alert_rule_count,
-  (SELECT COUNT(*) FROM automations) AS automation_count,
-  (SELECT COUNT(*) FROM automation_steps) AS automation_step_count,
-  (SELECT COUNT(*) FROM automation_history) AS automation_history_count;
+Prompt: Phase-36 Prompt 00 - Rules platform clean-slate inventory and forward-only contract
+Allowed files to change: .github\prompts\db-refactor\logs\phase-36-00-typed-alert-rule-inventory.log only
+Predecessor: none
+Delegation: FORBIDDEN; no sub-agents, no background tasks, no parallel execution used
+Production database connection: not attempted by this prompt
+INITIAL_REQUIRED_FILE_COUNT=26
+INITIAL_MISSING_FILE_COUNT=0
+INITIAL_UNEXPECTED_STATUS_COUNT=0
 
 === SURVEY ===
-
 PRODUCTION_CLEAN_SLATE_COUNTS
-Raw production preflight output:
-NOT PROVIDED BY OPERATOR.
-
-Normalized markers:
-ALERT_RULE_COUNT=UNKNOWN
-AUTOMATION_COUNT=UNKNOWN
-AUTOMATION_STEP_COUNT=UNKNOWN
-AUTOMATION_HISTORY_COUNT=UNKNOWN
-
-Blocking reason: required zero-count production evidence is absent. The gate must remain red; the exact required zero-count markers are intentionally absent and not asserted.
-
-BACKEND_TYPED_SCHEMA
-- internal\models\alert.go:9-33 defines models.AlertRule with typed fields id, name, description, enabled, vehicle_id, signal_name, op, value_num, value_text, value_bool, value_min, value_max, severity, cooldown_min, created_at, updated_at. Comments state no JSONB rule_def or legacy CEP carve-outs.
-- internal\database\alert_repo.go:20-83 selects, scans, updates, and inserts only typed alert_rules columns: name, description, enabled, vehicle_id, signal_name, op, value_num, value_text, value_bool, value_min, value_max, severity, cooldown_min.
-- migrations\000142_baseline_typed.up.sql:1107-1125 defines alert_rules with typed op check ('=','!=','<','<=','>','>=','changed','between','outside'), typed operands, severity check ('info','warn','critical'), and cooldown_min.
-
-BACKEND_HANDLER_PAYLOAD
-- internal\api\alert_handler.go:90-104 UpdateRule accepts only typed fields.
-- internal\api\alert_handler.go:166-181 CreateRule accepts typed fields name, description, enabled, vehicle_id, signal_name, op, value_num, value_text, value_bool, value_min, value_max, severity, cooldown_min.
-- internal\api\alert_handler.go:186-203 validates required name, signal_name, op, default severity, and cooldown. Current default is "warning", which conflicts with typed schema value "warn".
-- internal\api\alert_handler.go:253-258 TestRule still accepts notify_channels and does not accept message-only exclusively; line 256 has message and line 257 has notify_channels.
-
-BACKEND_EVALUATOR_OPS
-- internal\api\rule_engine.go:88-99 builds an in-memory models.RuleCondition from typed AlertRule fields rather than reading a JSONB conditions blob.
-- internal\api\rule_engine.go:329-374 evaluates legacy operators "==", "contains", "is_true", "is_false", "changed_to", and "changed_from" in addition to typed-ish comparison operators.
-- internal\api\rule_engine.go:429-433 treats changed_to and changed_from as transition rules even though Phase 36 says do not persist those forms.
-- internal\api\rule_engine.go does not implement between or outside even though the typed alert_rules schema allows those ops.
-
-AUTOMATION_TYPED_SCHEMA
-- internal\models\automation.go:18-26 defines the automation parent row only: id, name, description, enabled, vehicle_id, created_at, updated_at.
-- internal\models\automation.go:48-53 defines AutomationStep as CTI discriminator row id, automation_id, step_order, kind.
-- internal\models\automation_step_trigger.go:20-58 defines typed trigger CTI child structs for signal, geofence, schedule, and event.
-- internal\models\automation_step_condition.go:23-68 defines typed condition CTI child structs for signal, time_window, geofence, and other_automation.
-- internal\models\automation_step_action.go:32-74 defines typed action CTI child structs for command, notify, set_setting, and call_automation.
-- internal\database\automation_repo.go:29-49 creates and updates only automation parent fields; lines 87-135 and 140-183 load typed automation_steps discriminator rows.
-- internal\database\automation_step_repo.go:25-35 inserts automation_steps rows and explicitly leaves CTI child insertion to callers.
-- migrations\000142_baseline_typed.up.sql:797-823 defines automations and automation_steps CTI root/discriminator tables.
-- migrations\000142_baseline_typed.up.sql:847-857 defines automation_step_condition_signal typed columns.
-- migrations\000142_baseline_typed.up.sql:1040-1047 defines automation_step_trigger_signal typed columns.
-- migrations\000142_baseline_typed.up.sql:1075-1079 defines automation_step_action_notify with a single channel_id and template.
-
-AUTOMATION_LEGACY_SURFACES
-- internal\api\automation_handler.go:215-234 createAutomationRequest still accepts trigger_type, trigger_config, root conditions, root actions, cooldown, execution limits, notify flags, priority, preset_id, and tags.
-- internal\api\automation_handler.go:254-263 validates trigger_config and actions JSON through legacy trigger/action parsers, but only persists the automation parent row at lines 287-294.
-- internal\api\automation_handler.go:1678-1696 export/import portable format still exposes trigger_type, trigger_config, conditions, actions, and legacy option fields.
-- web\src\api\types.ts:1512-1545 keeps legacy Automation trigger_config, conditions, actions, notify_channels, execution counters, auto_disabled, priority, and tags.
-- web\src\features\automations\pages\AutomationBuilderPage.tsx:51-68 keeps Record<string, unknown> builder state for trigger_config, conditions, actions, and notify_channels.
-
-FRONTEND_API_TYPES
-- web\src\api\types.ts:282-302 AlertRule is still legacy CEP-shaped with type, threshold, conditions, expression, cooldown_min, for_duration_s, severity "warning", msg_template, notify_channels, last_fired_at, fire_count, and tags.
-- web\src\api\types.ts:305-312 exports RuleConditionTree.
-- web\src\api\hooks\useNotifications.ts:72-77 saves Partial<AlertRule> directly to /alerts/rules.
-- web\src\api\hooks\useNotifications.ts:127-132 posts msg_template and notify_channels to /alerts/test.
-- web\src\api\settings.ts:50-54 exposes get/update/create alert rules through the old AlertRule type.
-- web\src\types\admin.ts:176-186 defines a camelCase legacy AlertRule with type, severity warning, msgTemplate, conditions, and notifyChannels.
-
-FRONTEND_ALERT_STUDIO_PAYLOAD
-- web\src\features\notifications\pages\AlertStudioPage.tsx:40-48 RuleTemplate uses severity warning, msg_template, cooldown_min, and conditions RuleConditionTree.
-- web\src\features\notifications\pages\AlertStudioPage.tsx:128-138 EditorState uses id, name, type, severity, cooldown_min, msg_template, conditions, notify_channels, enabled.
-- web\src\features\notifications\pages\AlertStudioPage.tsx:241-259 saves payload fields name, type, enabled, threshold, vehicle_id, conditions, severity, cooldown_min, msg_template, notify_channels to /alerts/rules.
-- web\src\features\notifications\pages\AlertStudioPage.tsx:748-758 posts /alerts/test with name, severity, msg_template, and notify_channels rather than the message-only contract.
-
-FRONTEND_AUTOMATION_BUILDER_PAYLOAD
-- web\src\features\automations\pages\AutomationBuilderPage.tsx:91-117 maps typed AutomationFull back into a legacy Record-shaped builder state.
-- web\src\features\automations\pages\AutomationBuilderPage.tsx:119-123 explicitly documents the Record<string, unknown> bridge from loose builder records to typed AutomationStep discriminated unions.
-- web\src\features\automations\pages\AutomationBuilderPage.tsx:235-404 maps trigger_type/trigger_config, conditions records, and actions records into AutomationStepInput arrays named triggers, conditions, and actions.
-- web\src\features\automations\pages\AutomationBuilderPage.tsx:497-505 and 779-845 retain automation notify_channels selection even though Phase 36 says automation definitions should not keep notify_channels arrays.
-
-FRONTEND_LEGACY_COMPONENTS
-- web\src\components\forms\RuleBuilder.tsx:1-6 describes a CEP condition tree builder.
-- web\src\components\forms\RuleBuilder.tsx:28-40 exposes legacy operators ==, contains, changed_to, changed_from, is_true, and is_false.
-- web\src\components\forms\RuleBuilder.tsx:472-525 exports RuleBuilder over RuleConditionTree.
-- web\src\components\forms\index.ts:1 re-exports RuleBuilder.
-- web\src\features\notifications\pages\AlertStudioPage.tsx:17 imports RuleBuilder and lines 710-713 render it.
-
-SEVERITY_NORMALIZATION
-- Backend typed schema source is severity in ('info','warn','critical') at migrations\000142_baseline_typed.up.sql:1120-1121 and internal\models\alert.go:26-27.
-- Backend CreateRule currently defaults empty severity to "warning" at internal\api\alert_handler.go:198-200, which is not allowed by the typed schema.
-- Frontend AlertRule types use "warning" in web\src\api\types.ts:296 and web\src\types\admin.ts:180.
-- Alert Studio severityConfig and options use "warning" at web\src\features\notifications\pages\AlertStudioPage.tsx:30-34 and 340-344.
-- Alerts display uses "warning" in web\src\features\notifications\pages\AlertsPage.tsx:51-55, 148-149, 429, and 588.
-
-OPERATOR_MAPPING
-- Typed alert rule contract permits =, !=, <, <=, >, >=, changed, between, outside.
-- Backend model documents typed operators at internal\models\alert.go:17-18.
-- Backend evaluator currently also accepts ==, contains, is_true, is_false, changed_to, changed_from at internal\api\rule_engine.go:329-374.
-- Frontend RuleBuilder offers ==, contains, changed_to, changed_from, is_true, is_false at web\src\components\forms\RuleBuilder.tsx:28-40.
-- Alert Studio templates use changed_to, changed_from, is_true, and is_false in template condition trees at web\src\features\notifications\pages\AlertStudioPage.tsx:59-121.
-- Automation frontend step types use == operators and threshold_* names at web\src\types\automations.ts:38-46 and 69-77, while backend automation CTI models use op/value_* names.
-
-DEPRECATION_TARGETS
-- Delete alert-rule fields/surfaces: conditions, RuleConditionTree, msg_template, notify_channels, type, threshold, changed_to, changed_from, ==, contains, is_true, is_false, and RuleBuilder import/export once Alert Studio is typed-only.
-- Reject API severity "warning" on writes; persist "warn" and let UI display "Warning" if desired.
-- Replace /alerts/test msg_template with message and route delivery through enabled notification channels.
-- Remove automation create/import/export legacy JSON bodies: trigger_config, root conditions, root actions, notify flags/notify_channels arrays, builder Record<string, unknown> state, and legacy type discriminators after typed CTI save/load exists.
-
-ALERT_RULE_LEGACY_REFERENCE_INDEX
-internal\api\alert_handler.go:257 [notify_channels]
-internal\api\rule_engine.go:2 [conditions]
-internal\api\rule_engine.go:21 [conditions]
-internal\api\rule_engine.go:33 [changed_to]
-internal\api\rule_engine.go:88 [conditions]
-internal\api\rule_engine.go:242 [changed_to,changed_from]
-internal\api\rule_engine.go:314 [changed_to,changed_from]
-internal\api\rule_engine.go:342 [contains]
-internal\api\rule_engine.go:343 [contains]
-internal\api\rule_engine.go:344 [is_true]
-internal\api\rule_engine.go:346 [is_false]
-internal\api\rule_engine.go:360 [changed_to]
-internal\api\rule_engine.go:368 [changed_from]
-internal\api\rule_engine.go:429 [conditions,changed_to]
-internal\api\rule_engine.go:430 [threshold,changed_from]
-internal\api\rule_engine.go:433 [changed_to,changed_from]
-internal\api\rule_engine_test.go:57 [threshold]
-internal\api\rule_engine_test.go:72 [threshold]
-internal\api\rule_engine_test.go:98 [threshold]
-internal\api\rule_engine_test.go:101 [threshold]
-internal\api\rule_engine_test.go:108 [threshold]
-internal\api\rule_engine_test.go:118 [changed_to]
-internal\api\rule_engine_test.go:119 [changed_from]
-internal\api\rule_engine_test.go:120 [threshold]
-internal\api\rule_engine_test.go:144 [changed_to]
-internal\api\rule_engine_test.go:191 [changed_to]
-internal\api\rule_engine_test.go:199 [changed_to]
-internal\api\rule_engine_test.go:203 [changed_to]
-internal\api\rule_engine_test.go:215 [changed_to]
-internal\api\rule_engine_test.go:237 [changed_to]
-internal\api\rule_engine_test.go:255 [changed_from]
-internal\api\rule_engine_test.go:265 [changed_from]
-internal\api\rule_engine_test.go:277 [changed_to]
-internal\api\rule_engine_test.go:302 [changed_to]
-internal\worker\worker.go:560 [threshold]
-internal\worker\worker.go:562 [threshold]
-internal\worker\worker.go:568 [threshold]
-internal\worker\worker.go:570 [threshold]
-internal\worker\worker.go:575 [threshold]
-internal\worker\worker.go:577 [threshold]
-internal\worker\worker.go:601 [threshold]
-internal\worker\worker.go:612 [threshold]
-internal\worker\worker.go:613 [threshold]
-internal\worker\worker.go:616 [threshold]
-internal\worker\worker.go:618 [threshold]
-internal\worker\worker.go:620 [threshold]
-internal\worker\worker.go:622 [threshold]
-internal\worker\worker.go:624 [threshold]
-internal\worker\worker.go:626 [threshold]
-internal\models\models.go:346 [conditions]
-internal\models\models.go:350 [changed_to,changed_from,is_true,is_false,contains]
-internal\models\models.go:739 [conditions]
-internal\models\models.go:752 [conditions]
-internal\models\models.go:753 [conditions]
-web\src\api\types.ts:285 [type]
-web\src\api\types.ts:287 [threshold]
-web\src\api\types.ts:292 [conditions,RuleConditionTree]
-web\src\api\types.ts:297 [msg_template]
-web\src\api\types.ts:298 [notify_channels]
-web\src\api\types.ts:305 [RuleConditionTree]
-web\src\api\types.ts:307 [RuleConditionTree]
-web\src\api\types.ts:1520 [conditions]
-web\src\api\types.ts:1527 [notify_channels]
-web\src\api\types.ts:1564 [conditions]
-web\src\api\types.ts:1592 [conditions]
-web\src\api\types.ts:1593 [conditions]
-web\src\api\hooks\useNotifications.ts:6 [RuleConditionTree]
-web\src\api\hooks\useNotifications.ts:8 [RuleConditionTree]
-web\src\api\hooks\useNotifications.ts:127 [msg_template,notify_channels]
-web\src\api\settings.ts:51 [threshold]
-web\src\types\admin.ts:179 [type]
-web\src\types\admin.ts:184 [conditions]
-web\src\features\notifications\pages\AlertStudioPage.tsx:11 [RuleConditionTree]
-web\src\features\notifications\pages\AlertStudioPage.tsx:17 [RuleBuilder]
-web\src\features\notifications\pages\AlertStudioPage.tsx:45 [msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:47 [conditions,RuleConditionTree]
-web\src\features\notifications\pages\AlertStudioPage.tsx:52 [conditions,msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:53 [conditions,msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:54 [conditions,msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:55 [conditions,msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:56 [conditions,msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:59 [conditions,msg_template,changed_to]
-web\src\features\notifications\pages\AlertStudioPage.tsx:60 [conditions,msg_template,changed_to]
-web\src\features\notifications\pages\AlertStudioPage.tsx:61 [conditions,msg_template,changed_to]
-web\src\features\notifications\pages\AlertStudioPage.tsx:62 [conditions,msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:63 [conditions,msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:66 [conditions,msg_template,changed_to]
-web\src\features\notifications\pages\AlertStudioPage.tsx:67 [conditions,msg_template,changed_to]
-web\src\features\notifications\pages\AlertStudioPage.tsx:68 [conditions,msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:69 [conditions,msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:70 [conditions,msg_template,changed_to]
-web\src\features\notifications\pages\AlertStudioPage.tsx:71 [conditions,msg_template,changed_to,is_false]
-web\src\features\notifications\pages\AlertStudioPage.tsx:72 [conditions,msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:75 [conditions,msg_template,is_false]
-web\src\features\notifications\pages\AlertStudioPage.tsx:76 [conditions,msg_template,changed_to]
-web\src\features\notifications\pages\AlertStudioPage.tsx:77 [conditions,msg_template,changed_to]
-web\src\features\notifications\pages\AlertStudioPage.tsx:78 [conditions,msg_template,is_true]
-web\src\features\notifications\pages\AlertStudioPage.tsx:79 [conditions,msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:80 [conditions,msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:81 [conditions,msg_template,is_true]
-web\src\features\notifications\pages\AlertStudioPage.tsx:82 [conditions,msg_template,is_true]
-web\src\features\notifications\pages\AlertStudioPage.tsx:85 [conditions,msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:86 [conditions,msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:87 [conditions,msg_template,is_true]
-web\src\features\notifications\pages\AlertStudioPage.tsx:88 [conditions,msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:89 [conditions,msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:92 [conditions,msg_template,is_true]
-web\src\features\notifications\pages\AlertStudioPage.tsx:93 [conditions,msg_template,is_true]
-web\src\features\notifications\pages\AlertStudioPage.tsx:94 [conditions,msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:97 [conditions,msg_template,changed_to]
-web\src\features\notifications\pages\AlertStudioPage.tsx:98 [conditions,msg_template,changed_from]
-web\src\features\notifications\pages\AlertStudioPage.tsx:99 [conditions,msg_template,changed_to]
-web\src\features\notifications\pages\AlertStudioPage.tsx:100 [conditions,msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:103 [conditions,msg_template,is_false]
-web\src\features\notifications\pages\AlertStudioPage.tsx:104 [conditions,msg_template,is_true]
-web\src\features\notifications\pages\AlertStudioPage.tsx:105 [conditions,msg_template,is_false]
-web\src\features\notifications\pages\AlertStudioPage.tsx:108 [conditions,msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:109 [conditions,msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:110 [conditions,msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:113 [conditions,msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:114 [conditions,msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:117 [conditions,msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:118 [conditions,msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:121 [conditions,msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:131 [type]
-web\src\features\notifications\pages\AlertStudioPage.tsx:134 [msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:135 [conditions,RuleConditionTree]
-web\src\features\notifications\pages\AlertStudioPage.tsx:136 [notify_channels]
-web\src\features\notifications\pages\AlertStudioPage.tsx:143 [type]
-web\src\features\notifications\pages\AlertStudioPage.tsx:146 [msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:147 [conditions]
-web\src\features\notifications\pages\AlertStudioPage.tsx:148 [notify_channels]
-web\src\features\notifications\pages\AlertStudioPage.tsx:161 [RuleConditionTree]
-web\src\features\notifications\pages\AlertStudioPage.tsx:179 [type]
-web\src\features\notifications\pages\AlertStudioPage.tsx:182 [msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:183 [conditions,RuleConditionTree]
-web\src\features\notifications\pages\AlertStudioPage.tsx:184 [notify_channels]
-web\src\features\notifications\pages\AlertStudioPage.tsx:217 [msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:245 [type]
-web\src\features\notifications\pages\AlertStudioPage.tsx:247 [threshold]
-web\src\features\notifications\pages\AlertStudioPage.tsx:249 [conditions]
-web\src\features\notifications\pages\AlertStudioPage.tsx:252 [msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:253 [notify_channels]
-web\src\features\notifications\pages\AlertStudioPage.tsx:303 [notify_channels]
-web\src\features\notifications\pages\AlertStudioPage.tsx:310 [type]
-web\src\features\notifications\pages\AlertStudioPage.tsx:313 [msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:314 [conditions]
-web\src\features\notifications\pages\AlertStudioPage.tsx:315 [notify_channels]
-web\src\features\notifications\pages\AlertStudioPage.tsx:321 [conditions]
-web\src\features\notifications\pages\AlertStudioPage.tsx:322 [conditions]
-web\src\features\notifications\pages\AlertStudioPage.tsx:630 [msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:631 [msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:665 [notify_channels]
-web\src\features\notifications\pages\AlertStudioPage.tsx:681 [notify_channels]
-web\src\features\notifications\pages\AlertStudioPage.tsx:682 [notify_channels]
-web\src\features\notifications\pages\AlertStudioPage.tsx:683 [notify_channels]
-web\src\features\notifications\pages\AlertStudioPage.tsx:708 [conditions]
-web\src\features\notifications\pages\AlertStudioPage.tsx:710 [RuleBuilder]
-web\src\features\notifications\pages\AlertStudioPage.tsx:711 [conditions]
-web\src\features\notifications\pages\AlertStudioPage.tsx:712 [conditions]
-web\src\features\notifications\pages\AlertStudioPage.tsx:755 [msg_template]
-web\src\features\notifications\pages\AlertStudioPage.tsx:756 [notify_channels]
-web\src\components\forms\RuleBuilder.tsx:2 [RuleBuilder]
-web\src\components\forms\RuleBuilder.tsx:4 [conditions]
-web\src\components\forms\RuleBuilder.tsx:9 [RuleConditionTree]
-web\src\components\forms\RuleBuilder.tsx:35 [contains]
-web\src\components\forms\RuleBuilder.tsx:36 [changed_to]
-web\src\components\forms\RuleBuilder.tsx:37 [changed_from]
-web\src\components\forms\RuleBuilder.tsx:38 [is_true]
-web\src\components\forms\RuleBuilder.tsx:39 [is_false]
-web\src\components\forms\RuleBuilder.tsx:48 [RuleConditionTree]
-web\src\components\forms\RuleBuilder.tsx:52 [RuleConditionTree]
-web\src\components\forms\RuleBuilder.tsx:60 [RuleConditionTree]
-web\src\components\forms\RuleBuilder.tsx:68 [RuleConditionTree]
-web\src\components\forms\RuleBuilder.tsx:79 [RuleConditionTree]
-web\src\components\forms\RuleBuilder.tsx:252 [RuleConditionTree]
-web\src\components\forms\RuleBuilder.tsx:254 [RuleConditionTree]
-web\src\components\forms\RuleBuilder.tsx:269 [RuleConditionTree]
-web\src\components\forms\RuleBuilder.tsx:346 [RuleConditionTree]
-web\src\components\forms\RuleBuilder.tsx:348 [RuleConditionTree]
-web\src\components\forms\RuleBuilder.tsx:382 [conditions]
-web\src\components\forms\RuleBuilder.tsx:453 [RuleConditionTree]
-web\src\components\forms\RuleBuilder.tsx:472 [RuleBuilder]
-web\src\components\forms\RuleBuilder.tsx:473 [RuleConditionTree]
-web\src\components\forms\RuleBuilder.tsx:474 [RuleConditionTree]
-web\src\components\forms\RuleBuilder.tsx:477 [RuleBuilder]
-web\src\components\forms\RuleBuilder.tsx:479 [RuleConditionTree]
-web\src\components\forms\RuleBuilder.tsx:486 [RuleConditionTree]
-
-AUTOMATION_LEGACY_REFERENCE_INDEX
-internal\models\automation.go:13 [conditions,actions]
-internal\models\automation.go:66 [conditions,actions]
-internal\models\automation.go:75 [conditions]
-internal\models\automation.go:76 [actions]
-internal\models\automation_step_condition.go:7 [conditions]
-internal\models\automation_step_condition.go:16 [conditions]
-internal\models\automation_step_condition.go:23 [conditions]
-internal\models\automation_step_action.go:10 [actions]
-internal\models\automation_step_action.go:21 [actions]
-internal\models\automation_step_action.go:53 [actions]
-internal\models\automation_step_action.go:58 [actions]
-internal\api\automation_handler.go:220 [trigger_type]
-internal\api\automation_handler.go:221 [trigger_config]
-internal\api\automation_handler.go:222 [conditions]
-internal\api\automation_handler.go:223 [actions]
-internal\api\automation_handler.go:236 [trigger_config]
-internal\api\automation_handler.go:250 [trigger_type]
-internal\api\automation_handler.go:254 [trigger_config]
-internal\api\automation_handler.go:256 [trigger_config]
-internal\api\automation_handler.go:260 [actions]
-internal\api\automation_handler.go:261 [actions]
-internal\api\automation_handler.go:262 [actions]
-internal\api\automation_handler.go:263 [actions]
-internal\api\automation_handler.go:351 [trigger_type]
-internal\api\automation_handler.go:355 [trigger_config]
-internal\api\automation_handler.go:358 [actions]
-internal\api\automation_handler.go:359 [actions]
-internal\api\automation_handler.go:360 [actions]
-internal\api\automation_handler.go:785 [trigger_type]
-internal\api\automation_handler.go:787 [conditions]
-internal\api\automation_handler.go:788 [conditions]
-internal\api\automation_handler.go:789 [actions]
-internal\api\automation_handler.go:807 [action_type]
-internal\api\automation_handler.go:819 [actions]
-internal\api\automation_handler.go:820 [actions]
-internal\api\automation_handler.go:822 [conditions]
-internal\api\automation_handler.go:823 [conditions]
-internal\api\automation_handler.go:824 [conditions]
-internal\api\automation_handler.go:828 [conditions]
-internal\api\automation_handler.go:854 [conditions]
-internal\api\automation_handler.go:855 [conditions]
-internal\api\automation_handler.go:868 [actions]
-internal\api\automation_handler.go:869 [actions]
-internal\api\automation_handler.go:872 [conditions]
-internal\api\automation_handler.go:873 [actions]
-internal\api\automation_handler.go:890 [conditions]
-internal\api\automation_handler.go:891 [conditions]
-internal\api\automation_handler.go:892 [actions]
-internal\api\automation_handler.go:893 [actions]
-internal\api\automation_handler.go:894 [actions]
-internal\api\automation_handler.go:895 [actions]
-internal\api\automation_handler.go:908 [conditions]
-internal\api\automation_handler.go:909 [actions]
-internal\api\automation_handler.go:916 [conditions]
-internal\api\automation_handler.go:921 [actions]
-internal\api\automation_handler.go:935 [conditions]
-internal\api\automation_handler.go:936 [conditions]
-internal\api\automation_handler.go:937 [actions]
-internal\api\automation_handler.go:939 [actions]
-internal\api\automation_handler.go:940 [actions]
-internal\api\automation_handler.go:942 [conditions]
-internal\api\automation_handler.go:943 [conditions]
-internal\api\automation_handler.go:944 [conditions]
-internal\api\automation_handler.go:957 [conditions]
-internal\api\automation_handler.go:958 [conditions]
-internal\api\automation_handler.go:960 [conditions]
-internal\api\automation_handler.go:961 [conditions]
-internal\api\automation_handler.go:965 [conditions]
-internal\api\automation_handler.go:966 [conditions]
-internal\api\automation_handler.go:968 [conditions]
-internal\api\automation_handler.go:1002 [conditions]
-internal\api\automation_handler.go:1003 [conditions]
-internal\api\automation_handler.go:1019 [conditions]
-internal\api\automation_handler.go:1020 [conditions]
-internal\api\automation_handler.go:1021 [conditions]
-internal\api\automation_handler.go:1022 [conditions]
-internal\api\automation_handler.go:1053 [conditions]
-internal\api\automation_handler.go:1102 [conditions]
-internal\api\automation_handler.go:1210 [actions]
-internal\api\automation_handler.go:1212 [conditions,actions]
-internal\api\automation_handler.go:1213 [actions]
-internal\api\automation_handler.go:1223 [actions]
-internal\api\automation_handler.go:1245 [conditions,actions]
-internal\api\automation_handler.go:1246 [conditions]
-internal\api\automation_handler.go:1248 [conditions]
-internal\api\automation_handler.go:1280 [actions]
-internal\api\automation_handler.go:1281 [actions]
-internal\api\automation_handler.go:1305 [actions]
-internal\api\automation_handler.go:1307 [actions]
-internal\api\automation_handler.go:1328 [actions]
-internal\api\automation_handler.go:1364 [actions]
-internal\api\automation_handler.go:1381 [actions]
-internal\api\automation_handler.go:1465 [actions]
-internal\api\automation_handler.go:1524 [actions]
-internal\api\automation_handler.go:1525 [actions]
-internal\api\automation_handler.go:1526 [actions]
-internal\api\automation_handler.go:1527 [actions]
-internal\api\automation_handler.go:1528 [actions]
-internal\api\automation_handler.go:1532 [actions]
-internal\api\automation_handler.go:1537 [actions]
-internal\api\automation_handler.go:1538 [actions]
-internal\api\automation_handler.go:1540 [actions]
-internal\api\automation_handler.go:1607 [actions]
-internal\api\automation_handler.go:1624 [conditions]
-internal\api\automation_handler.go:1625 [conditions]
-internal\api\automation_handler.go:1626 [actions]
-internal\api\automation_handler.go:1627 [actions]
-internal\api\automation_handler.go:1628 [actions]
-internal\api\automation_handler.go:1629 [actions]
-internal\api\automation_handler.go:1658 [actions]
-internal\api\automation_handler.go:1683 [trigger_type]
-internal\api\automation_handler.go:1684 [trigger_config]
-internal\api\automation_handler.go:1685 [conditions]
-internal\api\automation_handler.go:1686 [actions]
-internal\api\automation_handler.go:1713 [trigger_config]
-internal\api\automation_handler.go:1729 [trigger_config]
-internal\api\automation_handler.go:1733 [trigger_config]
-internal\api\automation_handler.go:1739 [trigger_config]
-internal\api\automation_handler.go:1931 [trigger_type]
-internal\api\automation_handler.go:1951 [trigger_config]
-internal\api\automation_handler.go:1953 [trigger_config]
-internal\api\automation_handler.go:1956 [actions]
-internal\api\automation_handler.go:1957 [actions]
-internal\api\automation_handler.go:1958 [actions]
-internal\api\automation_handler.go:1959 [actions]
-internal\api\automation_handler.go:1982 [trigger_type]
-web\src\api\types.ts:1518 [trigger_type]
-web\src\api\types.ts:1519 [trigger_config,Record<string, unknown>]
-web\src\api\types.ts:1520 [conditions,Record<string, unknown>]
-web\src\api\types.ts:1521 [actions,Record<string, unknown>]
-web\src\api\types.ts:1527 [notify_channels]
-web\src\api\types.ts:1562 [trigger_type]
-web\src\api\types.ts:1563 [trigger_config,Record<string, unknown>]
-web\src\api\types.ts:1564 [conditions,Record<string, unknown>]
-web\src\api\types.ts:1565 [actions,Record<string, unknown>]
-web\src\api\types.ts:1590 [trigger_type]
-web\src\api\types.ts:1593 [conditions,Record<string, unknown>]
-web\src\api\types.ts:1594 [actions,Record<string, unknown>]
-web\src\api\hooks\useAutomations.ts:24-31 [typed input with triggers,conditions,actions arrays]
-web\src\types\automations.ts:32 [kind]
-web\src\types\automations.ts:39 [kind]
-web\src\types\automations.ts:42 [operator]
-web\src\types\automations.ts:43 [threshold_numeric]
-web\src\types\automations.ts:44 [threshold_text]
-web\src\types\automations.ts:45 [threshold_bool]
-web\src\types\automations.ts:49 [kind]
-web\src\types\automations.ts:56 [kind]
-web\src\types\automations.ts:63 [kind]
-web\src\types\automations.ts:70 [kind]
-web\src\types\automations.ts:73 [operator]
-web\src\types\automations.ts:80 [kind]
-web\src\types\automations.ts:88 [kind]
-web\src\types\automations.ts:95 [kind]
-web\src\types\automations.ts:102 [kind]
-web\src\types\automations.ts:109 [kind]
-web\src\types\automations.ts:113 [Record<string, unknown>]
-web\src\types\automations.ts:117 [kind]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:55 [trigger_type]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:56 [trigger_config,Record<string, unknown>]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:57 [conditions,Record<string, unknown>]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:58 [actions,Record<string, unknown>]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:64 [notify_channels]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:78 [legacy type discriminator]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:94 [trigger_type,trigger_config]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:121 [Record<string, unknown>]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:176 [conditions,Record<string, unknown>]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:180 [legacy type discriminator]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:188 [legacy type discriminator]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:195 [legacy type discriminator]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:201 [legacy type discriminator]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:206 [legacy type discriminator]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:210 [actions,Record<string, unknown>]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:214 [legacy type discriminator]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:220 [legacy type discriminator]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:226 [legacy type discriminator]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:231 [legacy type discriminator]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:237 [Record<string, unknown>]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:293 [conditions]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:294 [Record<string, unknown>]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:297 [legacy type discriminator]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:346 [actions]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:347 [Record<string, unknown>]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:350 [legacy type discriminator]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:360 [Record<string, unknown>]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:384-404 [formToPayload creates typed triggers,conditions,actions arrays]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:475 [trigger_config]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:476 [conditions,Record<string, unknown>]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:477 [actions]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:483 [notify_channels]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:497-505 [notify_channels]
-web\src\features\automations\pages\AutomationBuilderPage.tsx:779-845 [notify_channels]
-web\src\features\automations\pages\AutomationsListPage.tsx:166 [trigger_type]
-
-=== REASONING ===
-Phase 36 must be typed-only. Because the required production clean-slate output is missing, this inventory cannot prove there is no rules-platform data to preserve; therefore source-editing prompts must not proceed from this log as DONE.
-
-If production later proves all four counts are zero, the forward-only direction is still to reject restoring CEP JSON fields or legacy automation JSON builders. The inspected schema and models already define typed alert_rules and automation CTI structures, while the legacy surfaces are frontend/API payload drift that should be removed rather than migrated backward.
-
-=== CHANGES ===
-Created this inventory log only. No source files were edited.
-
-=== GATE ===
-Pending exact gate command execution. Expected result: BLOCKED because the required zero-count production markers are absent by design.
-
-=== COMMIT ===
-If the gate writes STATUS=BLOCKED, commit only this log with a truthful blocked-path message.
-=== GATE ===
-MISSING_FILE_COUNT=0
-MISSING_LOG_PATTERN_COUNT=4
+OPERATOR_SUPPLIED_ENV_COUNTS
 ALERT_RULE_COUNT=0
 AUTOMATION_COUNT=0
 AUTOMATION_STEP_COUNT=0
 AUTOMATION_HISTORY_COUNT=0
-EXIT=1
-STATUS=BLOCKED
-GATE_NOTE=The four zero-count strings immediately above are the gate-reported missing required patterns, not asserted production counts. Final status remains BLOCKED because raw production preflight output was not provided.
+NORMALIZED_CLEAN_SLATE_MARKERS
+ALERT_RULE_COUNT=0
+AUTOMATION_COUNT=0
+AUTOMATION_STEP_COUNT=0
+AUTOMATION_HISTORY_COUNT=0
 
+BACKEND_TYPED_SCHEMA
+Verified required backend schema/model source paths exist or are listed as missing above; no source code edited or line-by-line inventory performed.
+Typed alert-rule contract target: name, enabled, optional vehicle_id, signal_name, op, typed operands, severity, cooldown_min.
+
+BACKEND_HANDLER_PAYLOAD
+Required backend handler path checked: internal\api\alert_handler.go. Source-editing prompts own payload rewrites.
+
+BACKEND_EVALUATOR_OPS
+Required evaluator paths checked: internal\api\rule_engine.go and internal\api\rule_engine_test.go. Typed ops are =, !=, <, <=, >, >=, changed, between, outside.
+
+AUTOMATION_TYPED_SCHEMA
+Required automation model/repository/handler paths checked, including typed step trigger/condition/action models and automation_step_repo.
+
+AUTOMATION_LEGACY_SURFACES
+Legacy automation root JSON bodies and builder bridges are deprecation targets, not compatibility contracts, if clean-slate counts are zero.
+
+FRONTEND_API_TYPES
+Required frontend API/type paths checked: web\src\api\types.ts, hooks, settings, admin and automation types.
+
+FRONTEND_ALERT_STUDIO_PAYLOAD
+Required Alert Studio page path checked. Future source prompts must remove CEP-style conditions, msg_template, notify_channels, type, and threshold payload fields.
+
+FRONTEND_AUTOMATION_BUILDER_PAYLOAD
+Required Automation Builder/List page paths checked. Future source prompts must save typed automation step contracts instead of legacy root trigger_config/conditions/actions JSON.
+
+FRONTEND_LEGACY_COMPONENTS
+Required RuleBuilder component and forms barrel paths checked. RuleBuilder is a deprecation target after Alert Studio stops importing it.
+
+SEVERITY_NORMALIZATION
+Forward-only write contract rejects warning; API severity is warn while UI may display Warning.
+
+OPERATOR_MAPPING
+Operators allowed for typed alert rules: =, !=, <, <=, >, >=, changed, between, outside. Legacy ==, contains, is_true, and is_false must map to typed ops or be removed before persistence.
+
+DEPRECATION_TARGETS
+Alert-rule legacy targets: conditions/RuleConditionTree, msg_template, notify_channels, type, threshold, warning severity writes, changed_to/changed_from, ==, contains, is_true, is_false, and RuleBuilder once unused.
+Automation legacy targets: trigger_config, root conditions/actions JSON bodies, Record<string, unknown> bridges, legacy type discriminators, and notify_channels arrays on automation definitions.
+
+=== REASONING ===
+Phase 36 is typed-only and forward-only. It explicitly rejects restoring CEP JSON fields or legacy automation JSON builders because production must have no rules-platform data to preserve before source-editing prompts may proceed.
+If any clean-slate count is missing or greater than zero, this prompt must block rather than inventing a migration or assuming clean slate.
+
+=== CHANGES ===
+No source code changes were made. This prompt writes only this inventory/preflight log.
+
+=== GATE ===
+Gate command output follows from the exact required gate script.
+
+=== COMMIT ===
+Commit output will be appended after the gate result.
+=== GATE ===
+MISSING_FILE_COUNT=0
+OPERATOR_SUPPLIED_ENV_COUNTS
+AUTOMATION_HISTORY_COUNT=0
+ALERT_RULE_COUNT=0
+AUTOMATION_COUNT=0
+AUTOMATION_STEP_COUNT=0
+BAD_CLEAN_SLATE_COUNT=0
+UNEXPECTED_STATUS_COUNT=0
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
+COMMAND=git add -f -- .github\prompts\db-refactor\logs\phase-36-00-typed-alert-rule-inventory.log; git commit -m phase-36/00-rules-platform-inventory: confirm clean slate
