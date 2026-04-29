@@ -1,18 +1,43 @@
 === PREFLIGHT ===
-PREDECESSOR_EXISTS=True
-PREDECESSOR_EXIT_0=False
-PREDECESSOR_STATUS_DONE=False
+Prompt: Phase-36 Prompt 01 - Backend typed alert rule contract
+Allowed source files: internal\api\alert_handler.go, internal\api\rule_engine.go, internal\api\rule_engine_test.go, internal\api\telemetry_alerts.go, internal\metrics\metrics.go, internal\models\alert.go, internal\models\models.go, internal\database\alert_repo.go, internal\worker\worker.go, internal\api\alert_handler_test.go
+Allowed artifact file: .github\prompts\db-refactor\logs\phase-36-01-backend-typed-alert-contract.log
+Predecessor log verified: .github\prompts\db-refactor\logs\phase-36-00-typed-alert-rule-inventory.log has EXIT=0 and STATUS=DONE.
+Read before backend edits: .github\ARCHITECTURE.md, .github\instructions\go-backend.instructions.md, .github\instructions\telemetry-pipeline.instructions.md, .github\instructions\data-modeling.instructions.md, .github\instructions\prompt-engineering.instructions.md.
+Delegation: FORBIDDEN; no sub-agents, no background tasks, no parallel execution used.
+
 === SURVEY ===
-Skipped backend survey because predecessor gate failed; no source files were edited.
+Inspected alert rule handler, typed alert model, rule engine, rule engine tests, telemetry alert evaluator, metrics declarations, alert repository, worker polling alert path, signal catalog repository, and static known signal names.
+Found legacy leaks: CreateRule defaulted severity to warning; create/update accepted legacy fields and unvalidated op/severity operands; TestRule accepted notify_channels and defaulted message; RuleEngine still built models.RuleCondition and evaluated legacy operators; models.RuleCondition remained only for the alert-rule engine; telemetry logs/metrics help still used CEP wording; worker polling alert path still used threshold terminology and only a narrow snake_case signal subset.
+
 === REASONING ===
-Prompt covenant requires predecessor STATUS=DONE and EXIT=0 before backend changes. The predecessor log exists but does not contain EXIT=0 or STATUS=DONE, so continuing would bypass the predecessor.
+Production clean-slate from Prompt 00 allows forward-only typed enforcement with no legacy payload preservation. The handler now rejects legacy alert-rule fields before persistence, validates final create/update models against typed op/severity/operand rules, rejects unknown signal_name values when signal_catalog loads, and falls back to strict operand-shape validation only when the catalog cannot be loaded.
+The evaluator now reads typed AlertRule columns directly instead of rebuilding condition trees. changed rules retain restart baseline behavior and are the only rules whose cooldown resets when the condition becomes false. Prometheus metric Name values are preserved while Go identifiers/help text move to typed alert-rule wording.
+
 === CHANGES ===
-Changed only this output log. Backend typed alert contract changes were not attempted.
+Updated internal\api\alert_handler.go with typed JSON field decoders, forbidden legacy field rejection, strict severity/op/operand validation, signal catalog checks, create defaults (severity warn, cooldown_min 15, enabled true), nullable update handling, and /alerts/test message + typed target DTO support.
+Updated internal\api\rule_engine.go to evaluate typed AlertRule fields directly, remove legacy transition/string/bool pseudo-ops, preserve changed restart baseline state, and reset cooldowns only for op == changed.
+Updated internal\api\rule_engine_test.go for typed changed/range behavior only and added internal\api\alert_handler_test.go for strict severity, forbidden legacy payload, create defaults, operand validation, and typed test target parsing.
+Updated internal\api\telemetry_alerts.go and internal\metrics\metrics.go terminology while preserving exported Prometheus metric names.
+Removed models.RuleCondition from internal\models\models.go because no production code uses it after the evaluator refactor.
+Updated internal\worker\worker.go polling alert evaluation to use typed signal names, typed operands, and typed event payload fields without type/threshold rule fields.
 === GATE ===
-Predecessor log missing or not DONE: .github\prompts\db-refactor\logs\phase-36-00-typed-alert-rule-inventory.log
+TYPED_OP_VALIDATION=True
+NO_CEP_ENGINE_WORDING=True
+SEVERITY_WARN=True
+FORBIDDEN_LEGACY_FIELDS=True
+WARNING_REJECTED=True
+TEST_TARGET_DTO=True
+NO_CHANGED_TO_ENGINE=True
+NO_MODELS_RULECONDITION_USE=True
+ok  	github.com/ev-dev-labs/teslasync/internal/api	0.165s
+GO_API_TEST_EXIT=0
+ok  	github.com/ev-dev-labs/teslasync/internal/worker	0.181s
+GO_WORKER_TEST_EXIT=0
+UNEXPECTED_STATUS_COUNT=1
+ D .github/prompts/db-refactor/phase-36/00-typed-alert-rule-inventory.prompt.md
 EXIT=1
 STATUS=BLOCKED
 === COMMIT ===
-Preparing to commit only the blocked-phase log.
-COMMIT_ATTEMPT_1_EXIT=1
-COMMIT_ATTEMPT_2=git commit --only log
+Blocked by unexpected git status outside the allowed file list: .github/prompts/db-refactor/phase-36/00-typed-alert-rule-inventory.prompt.md
+Per blocked path, only this log file will be committed if possible.
