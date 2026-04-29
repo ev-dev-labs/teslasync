@@ -148,6 +148,17 @@ function Test-LogSaysRed {
     return @($false, '')
 }
 
+function Get-PromptArtifactLogPath {
+    param([string]$PromptContent)
+
+    $match = [regex]::Match($PromptContent, '\|\s*Output log\s*\|\s*`([^`]+)`\s*\|')
+    if (-not $match.Success) { return $null }
+
+    $path = $match.Groups[1].Value.Replace('/', '\')
+    if ([System.IO.Path]::IsPathRooted($path)) { return $path }
+    return (Join-Path $RepoRoot $path)
+}
+
 # ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
@@ -230,12 +241,16 @@ foreach ($p in $prompts) {
 
     $promptContent = (Get-Content $p.FullPath -Raw).Trim()
     $logFile       = Join-Path $logDir "prompt-$($p.Index.ToString('D3'))-$($p.Label).log"
+    $artifactLog   = Get-PromptArtifactLogPath $promptContent
 
     Write-Host ""
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
     Write-Host "$tag $($p.Phase)/$($p.Label)" -ForegroundColor Green
     Write-Host "  Prompt    : $($p.RelPath)" -ForegroundColor DarkYellow
     Write-Host "  Log       : $logFile"
+    if ($artifactLog) {
+        Write-Host "  Artifact  : $artifactLog"
+    }
 
     $overallPct = [math]::Round((($successCount + $failCount + $skipCount) / $total) * 100)
     Write-Progress -Activity "TeslaSync db-refactor Runner" `
@@ -342,14 +357,29 @@ foreach ($p in $prompts) {
         }
     }
     else {
-        # Log-gate: even if CLI exited 0, check the child log for red markers
+        # Log-gate: even if CLI exited 0, check the transcript and declared artifact log for red markers.
+        $gateFailures = @()
         $logGate = Test-LogSaysRed $logFile
         if ($logGate[0]) {
+            $gateFailures += "transcript log: $($logGate[1])"
+        }
+        if ($artifactLog) {
+            $artifactGate = Test-LogSaysRed $artifactLog
+            if ($artifactGate[0]) {
+                $artifactRel = $artifactLog
+                if ($artifactLog.StartsWith($RepoRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+                    $artifactRel = $artifactLog.Substring($RepoRoot.Length).TrimStart('\')
+                }
+                $gateFailures += "artifact log $artifactRel`: $($artifactGate[1])"
+            }
+        }
+
+        if ($gateFailures.Count -gt 0) {
             $failCount++
-            Log "$tag LOG-GATE FAILED ($($logGate[1])) after $mins min"
+            Log "$tag LOG-GATE FAILED ($($gateFailures -join '; ')) after $mins min"
             Write-Host ""
             Write-Host "  LOG-GATE FAILED after $mins min" -ForegroundColor Red
-            Write-Host "  Reason: $($logGate[1])" -ForegroundColor Red
+            Write-Host "  Reason: $($gateFailures -join '; ')" -ForegroundColor Red
             Write-Host "  CLI exited 0 but child log contains red markers." -ForegroundColor Red
             Write-Host "  Log: $logFile" -ForegroundColor Red
             Write-Host ""
