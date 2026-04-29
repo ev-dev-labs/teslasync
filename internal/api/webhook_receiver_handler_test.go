@@ -3,9 +3,6 @@ package api
 import (
 	"bytes"
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -57,19 +54,13 @@ func (e *mockReceiverEngine) Evaluate(_ context.Context, _ int64, _ json.RawMess
 
 // ── Helpers ─────────────────────────────────────────────────────────────
 
-func makeTestAutomation(id int64, token string, secret *string) *models.AutomationFull {
-	cfg := map[string]interface{}{"webhook_token": token}
-	if secret != nil {
-		cfg["secret"] = *secret
-	}
-	raw, _ := json.Marshal(cfg)
+func makeTestAutomation(id int64) *models.AutomationFull {
 	return &models.AutomationFull{
 		Automation: models.Automation{
 			ID:      id,
 			Name:    "test-automation",
 			Enabled: true,
 		},
-		Triggers: []any{json.RawMessage(raw)},
 	}
 }
 
@@ -82,23 +73,25 @@ func setupWebhookReceiver(repo *mockWebhookReceiverRepo, engine *mockReceiverEng
 	return handler, r
 }
 
-func testHMAC(payload []byte, secret string) string {
-	mac := hmac.New(sha256.New, []byte(secret))
-	mac.Write(payload)
-	return hex.EncodeToString(mac.Sum(nil))
+func assertWebhookUnavailable(t *testing.T, rec *httptest.ResponseRecorder, engine *mockReceiverEngine) {
+	t.Helper()
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 for unavailable typed webhook kind, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if engine.callCount != 0 {
+		t.Fatalf("engine should not be called for unavailable typed webhook kind, got %d calls", engine.callCount)
+	}
 }
-
-// strPtr is already defined in telemetry_sessions.go (same package).
 
 // ── Tests ───────────────────────────────────────────────────────────────
 
-func TestWebhookReceiver_ValidPayload_Returns200(t *testing.T) {
+func TestWebhookReceiver_ValidPayload_Returns404WhenWebhookKindUnavailable(t *testing.T) {
 	repo := newMockWebhookReceiverRepo()
 	engine := &mockReceiverEngine{}
 	_, router := setupWebhookReceiver(repo, engine)
 
 	token := "test-token-abc123"
-	repo.automations[token] = makeTestAutomation(1, token, nil)
+	repo.automations[token] = makeTestAutomation(1)
 
 	body := []byte(`{"event":"door_opened","value":true}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/automations/webhook/"+token, bytes.NewReader(body))
@@ -107,38 +100,23 @@ func TestWebhookReceiver_ValidPayload_Returns200(t *testing.T) {
 
 	router.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
-	}
-
-	var resp map[string]bool
-	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
-		t.Fatalf("failed to decode response: %v", err)
-	}
-	if !resp["accepted"] {
-		t.Fatal("expected accepted=true")
-	}
-	if engine.callCount != 1 {
-		t.Fatalf("expected engine called once, got %d", engine.callCount)
-	}
+	assertWebhookUnavailable(t, rec, engine)
 }
 
-func TestWebhookReceiver_EmptyBody_Returns200(t *testing.T) {
+func TestWebhookReceiver_EmptyBody_Returns404WhenWebhookKindUnavailable(t *testing.T) {
 	repo := newMockWebhookReceiverRepo()
 	engine := &mockReceiverEngine{}
 	_, router := setupWebhookReceiver(repo, engine)
 
 	token := "empty-body-token"
-	repo.automations[token] = makeTestAutomation(2, token, nil)
+	repo.automations[token] = makeTestAutomation(2)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/automations/webhook/"+token, nil)
 	rec := httptest.NewRecorder()
 
 	router.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200 for empty body, got %d: %s", rec.Code, rec.Body.String())
-	}
+	assertWebhookUnavailable(t, rec, engine)
 }
 
 func TestWebhookReceiver_UnknownToken_Returns404(t *testing.T) {
@@ -165,7 +143,7 @@ func TestWebhookReceiver_DisabledAutomation_Returns404(t *testing.T) {
 	_, router := setupWebhookReceiver(repo, engine)
 
 	token := "disabled-token"
-	auto := makeTestAutomation(3, token, nil)
+	auto := makeTestAutomation(3)
 	auto.Enabled = false
 	repo.automations[token] = auto
 
@@ -179,37 +157,31 @@ func TestWebhookReceiver_DisabledAutomation_Returns404(t *testing.T) {
 	}
 }
 
-func TestWebhookReceiver_ValidHMAC_Returns200(t *testing.T) {
+func TestWebhookReceiver_ValidHMAC_Returns404WhenWebhookKindUnavailable(t *testing.T) {
 	repo := newMockWebhookReceiverRepo()
 	engine := &mockReceiverEngine{}
 	_, router := setupWebhookReceiver(repo, engine)
 
-	secret := "super-secret-key"
 	token := "hmac-token"
-	repo.automations[token] = makeTestAutomation(4, token, strPtr(secret))
+	repo.automations[token] = makeTestAutomation(4)
 
 	payload := []byte(`{"temperature":42}`)
-	sig := testHMAC(payload, secret)
-
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/automations/webhook/"+token, bytes.NewReader(payload))
-	req.Header.Set("X-Webhook-Signature", sig)
+	req.Header.Set("X-Webhook-Signature", "typed-webhook-unavailable")
 	rec := httptest.NewRecorder()
 
 	router.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200 for valid HMAC, got %d: %s", rec.Code, rec.Body.String())
-	}
+	assertWebhookUnavailable(t, rec, engine)
 }
 
-func TestWebhookReceiver_InvalidHMAC_Returns403(t *testing.T) {
+func TestWebhookReceiver_InvalidHMAC_Returns404WhenWebhookKindUnavailable(t *testing.T) {
 	repo := newMockWebhookReceiverRepo()
 	engine := &mockReceiverEngine{}
 	_, router := setupWebhookReceiver(repo, engine)
 
-	secret := "super-secret-key"
 	token := "hmac-fail-token"
-	repo.automations[token] = makeTestAutomation(5, token, strPtr(secret))
+	repo.automations[token] = makeTestAutomation(5)
 
 	payload := []byte(`{"temperature":42}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/automations/webhook/"+token, bytes.NewReader(payload))
@@ -218,51 +190,40 @@ func TestWebhookReceiver_InvalidHMAC_Returns403(t *testing.T) {
 
 	router.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusForbidden {
-		t.Fatalf("expected 403 for invalid HMAC, got %d: %s", rec.Code, rec.Body.String())
-	}
-	if engine.callCount != 0 {
-		t.Fatal("engine should not be called with invalid HMAC")
-	}
+	assertWebhookUnavailable(t, rec, engine)
 }
 
-func TestWebhookReceiver_MissingSignatureWithSecret_Returns403(t *testing.T) {
+func TestWebhookReceiver_MissingSignature_Returns404WhenWebhookKindUnavailable(t *testing.T) {
 	repo := newMockWebhookReceiverRepo()
 	engine := &mockReceiverEngine{}
 	_, router := setupWebhookReceiver(repo, engine)
 
-	secret := "super-secret-key"
 	token := "hmac-missing-sig-token"
-	repo.automations[token] = makeTestAutomation(6, token, strPtr(secret))
+	repo.automations[token] = makeTestAutomation(6)
 
 	payload := []byte(`{"temperature":42}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/automations/webhook/"+token, bytes.NewReader(payload))
-	// No X-Webhook-Signature header
 	rec := httptest.NewRecorder()
 
 	router.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusForbidden {
-		t.Fatalf("expected 403 when secret configured but no signature sent, got %d", rec.Code)
-	}
+	assertWebhookUnavailable(t, rec, engine)
 }
 
-func TestWebhookReceiver_InvalidJSON_Returns400(t *testing.T) {
+func TestWebhookReceiver_InvalidJSON_Returns404WhenWebhookKindUnavailable(t *testing.T) {
 	repo := newMockWebhookReceiverRepo()
 	engine := &mockReceiverEngine{}
 	_, router := setupWebhookReceiver(repo, engine)
 
 	token := "invalid-json-token"
-	repo.automations[token] = makeTestAutomation(7, token, nil)
+	repo.automations[token] = makeTestAutomation(7)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/automations/webhook/"+token, bytes.NewReader([]byte(`not-json{`)))
 	rec := httptest.NewRecorder()
 
 	router.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400 for invalid JSON, got %d: %s", rec.Code, rec.Body.String())
-	}
+	assertWebhookUnavailable(t, rec, engine)
 }
 
 func TestWebhookReceiver_WrongMethod_Returns405(t *testing.T) {
