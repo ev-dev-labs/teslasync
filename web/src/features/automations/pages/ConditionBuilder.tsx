@@ -1,350 +1,470 @@
-/**
- * ConditionBuilder — manages an array of conditions, each with a type-specific sub-form.
- *
- * Condition types: state_check, time_window, cooldown, day_filter, location, seasonal, variable_check
- */
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Input as UiInput, Select as UiSelect, Button as UiButton, GlassPanel } from '@/components/ui';
-import { useGeofences } from '@/api/hooks/useLocations';
 import {
-  CONDITION_TYPES, NUMERIC_OPERATORS, BOOL_OPERATORS,
-  MONTHS, DAYS, COMMON_TIMEZONES,
-} from '@/lib/constants';
+  Input as UiInput,
+  Select as UiSelect,
+  Button as UiButton,
+  GlassPanel,
+} from '@/components/ui';
+import { useGeofences } from '@/api/hooks/useLocations';
+import { DAYS, COMMON_TIMEZONES } from '@/lib/constants';
 import { Plus, Trash2 } from 'lucide-react';
 import { SIGNAL_FIELD_OPTIONS, BOOL_FIELD_KEYS } from '@/lib/signals';
+import type {
+  AutomationConditionKind,
+  AutomationConditionSignalOp,
+  AutomationGeofenceState,
+  AutomationOtherAutomationState,
+} from '@/types/automations';
+import type { BuilderConditionInput } from '../components/builderTypes';
 
-// Re-export so existing consumers of CONDITION_TYPES from this file keep working
-export { CONDITION_TYPES } from '@/lib/constants';
+type ConditionKindOption = {
+  value: AutomationConditionKind;
+  labelKey: string;
+  fallback: string;
+};
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+export const CONDITION_TYPES: ConditionKindOption[] = [
+  {
+    value: 'condition_signal',
+    labelKey: 'automations.conditions.signal',
+    fallback: 'Signal Check',
+  },
+  {
+    value: 'condition_time_window',
+    labelKey: 'automations.conditions.timeWindow',
+    fallback: 'Time Window',
+  },
+  {
+    value: 'condition_geofence',
+    labelKey: 'automations.conditions.geofence',
+    fallback: 'Geofence State',
+  },
+  {
+    value: 'condition_other_automation',
+    labelKey: 'automations.conditions.otherAutomation',
+    fallback: 'Other Automation',
+  },
+];
 
-function str(v: unknown): string {
-  return typeof v === 'string' ? v : '';
-}
-function num(v: unknown, fallback = 0): number {
-  return typeof v === 'number' ? v : fallback;
-}
-function numArr(v: unknown): number[] {
-  return Array.isArray(v) ? v.filter((x): x is number => typeof x === 'number') : [];
-}
+const CONDITION_SIGNAL_OPERATORS: {
+  value: AutomationConditionSignalOp;
+  labelKey: string;
+  fallback: string;
+  numericOnly?: boolean;
+}[] = [
+  { value: '=', labelKey: 'automations.operators.equals', fallback: '=' },
+  { value: '!=', labelKey: 'automations.operators.notEquals', fallback: '!=' },
+  { value: '<', labelKey: 'automations.operators.lessThan', fallback: '<', numericOnly: true },
+  { value: '<=', labelKey: 'automations.operators.lessThanOrEqual', fallback: '<=', numericOnly: true },
+  { value: '>', labelKey: 'automations.operators.greaterThan', fallback: '>', numericOnly: true },
+  { value: '>=', labelKey: 'automations.operators.greaterThanOrEqual', fallback: '>=', numericOnly: true },
+  { value: 'between', labelKey: 'automations.operators.between', fallback: 'Between', numericOnly: true },
+  { value: 'in', labelKey: 'automations.operators.in', fallback: 'In' },
+];
 
-// ─── Props ────────────────────────────────────────────────────────────────────
+const GEOFENCE_STATES: { value: AutomationGeofenceState; labelKey: string; fallback: string }[] = [
+  { value: 'inside', labelKey: 'automations.geofence.inside', fallback: 'Inside' },
+  { value: 'outside', labelKey: 'automations.geofence.outside', fallback: 'Outside' },
+  { value: 'dwell', labelKey: 'automations.geofence.dwell', fallback: 'Dwell' },
+];
+
+const OTHER_AUTOMATION_STATES: {
+  value: AutomationOtherAutomationState;
+  labelKey: string;
+  fallback: string;
+}[] = [
+  { value: 'enabled', labelKey: 'automations.otherAutomation.enabled', fallback: 'Enabled' },
+  { value: 'disabled', labelKey: 'automations.otherAutomation.disabled', fallback: 'Disabled' },
+  {
+    value: 'recently_triggered',
+    labelKey: 'automations.otherAutomation.recentlyTriggered',
+    fallback: 'Recently Triggered',
+  },
+];
 
 interface ConditionBuilderProps {
-  conditions: Record<string, unknown>[];
-  onChange: (conditions: Record<string, unknown>[]) => void;
+  conditions: BuilderConditionInput[];
+  onChange: (conditions: BuilderConditionInput[]) => void;
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+interface ConditionFieldsProps {
+  condition: BuilderConditionInput;
+  onChange: (condition: BuilderConditionInput) => void;
+  geofenceOptions: { value: string; label: string }[];
+}
+
+export function createDefaultCondition(kind: AutomationConditionKind): BuilderConditionInput {
+  switch (kind) {
+    case 'condition_signal':
+      return { kind, signal: 'battery_level', op: '<', value_num: 20 };
+    case 'condition_time_window':
+      return {
+        kind,
+        start_time: '06:00',
+        end_time: '09:00',
+        timezone: 'UTC',
+        days_of_week: [1, 2, 3, 4, 5],
+      };
+    case 'condition_geofence':
+      return { kind, place_id: 0, state: 'inside' };
+    case 'condition_other_automation':
+      return { kind, other_automation_id: 0, state: 'enabled' };
+  }
+}
+
+function conditionValueFromInput(
+  condition: Extract<BuilderConditionInput, { kind: 'condition_signal' }>,
+  value: string,
+): BuilderConditionInput {
+  if (BOOL_FIELD_KEYS.has(condition.signal)) {
+    return {
+      kind: 'condition_signal',
+      signal: condition.signal,
+      op: condition.op,
+      value_bool: value === 'true',
+    };
+  }
+  if (condition.signal === 'state' || condition.op === 'in') {
+    return {
+      kind: 'condition_signal',
+      signal: condition.signal,
+      op: condition.op,
+      value_text: value,
+    };
+  }
+  return {
+    kind: 'condition_signal',
+    signal: condition.signal,
+    op: condition.op,
+    value_num: Number.parseFloat(value) || 0,
+  };
+}
+
+function numericValue(value: number | null | undefined, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
 
 export function ConditionBuilder({ conditions, onChange }: ConditionBuilderProps) {
   const { t } = useTranslation();
   const { data: geofences } = useGeofences();
 
   const geofenceOptions = useMemo(
-    () => (geofences ?? []).map((g) => ({ value: String(g.id), label: g.name })),
-    [geofences],
+    () => [
+      { value: '', label: t('automations.builder.selectGeofence', 'Select geofence...') },
+      ...(geofences ?? []).map((g) => ({ value: String(g.id), label: g.name })),
+    ],
+    [geofences, t],
+  );
+
+  const conditionTypeOptions = useMemo(
+    () => CONDITION_TYPES.map((condition) => ({
+      value: condition.value,
+      label: t(condition.labelKey, condition.fallback),
+    })),
+    [t],
   );
 
   const addCondition = useCallback(() => {
-    onChange([...conditions, { type: 'state_check', field: 'battery_level', operator: 'lt', value: 20 }]);
+    onChange([...conditions, createDefaultCondition('condition_signal')]);
   }, [conditions, onChange]);
 
   const removeCondition = useCallback(
-    (index: number) => onChange(conditions.filter((_, i) => i !== index)),
+    (index: number) => onChange(conditions.filter((_, currentIndex) => currentIndex !== index)),
     [conditions, onChange],
   );
 
-  const updateCondition = useCallback(
-    (index: number, patch: Record<string, unknown>) => {
-      const next = conditions.map((c, i) => (i === index ? { ...c, ...patch } : c));
-      onChange(next);
-    },
-    [conditions, onChange],
-  );
-
-  const replaceConditionType = useCallback(
-    (index: number, newType: string) => {
-      const defaults: Record<string, Record<string, unknown>> = {
-        state_check: { type: 'state_check', field: 'battery_level', operator: 'lt', value: 20 },
-        time_window: { type: 'time_window', start_time: '06:00', end_time: '09:00', timezone: '' },
-        cooldown: { type: 'cooldown', minutes: 30 },
-        day_filter: { type: 'day_filter', days: [1, 2, 3, 4, 5], timezone: '' },
-        location: { type: 'location', geofence_id: 0, operator: 'inside' },
-        seasonal: { type: 'seasonal', start_month: 1, end_month: 12 },
-        variable_check: { type: 'variable_check', key: '', operator: 'eq', value: '' },
-      };
-      const next = conditions.map((c, i) => (i === index ? (defaults[newType] ?? { type: newType }) : c));
-      onChange(next);
+  const replaceCondition = useCallback(
+    (index: number, nextCondition: BuilderConditionInput) => {
+      onChange(conditions.map((condition, currentIndex) => (
+        currentIndex === index ? nextCondition : condition
+      )));
     },
     [conditions, onChange],
   );
 
   return (
     <div className="space-y-3">
-      {conditions.map((cond, index) => {
-        const condType = str(cond.type);
-        return (
-          <GlassPanel key={index} className="p-4">
-            <div className="flex items-start gap-3">
-              <div className="flex-1 space-y-3">
-                <div className="flex gap-3 items-end">
-                  <UiSelect
-                    label={index === 0 ? t('automations.builder.conditionType', 'Condition Type') : undefined}
-                    options={CONDITION_TYPES.map((ct) => ({ value: ct.value, label: ct.label }))}
-                    value={condType}
-                    onChange={(e) => replaceConditionType(index, e.target.value)}
-                    className="w-48"
-                  />
-                  <ConditionFields
-                    type={condType}
-                    config={cond}
-                    onChange={(patch) => updateCondition(index, patch)}
-                    geofenceOptions={geofenceOptions}
-                  />
-                </div>
+      {conditions.map((condition, index) => (
+        <GlassPanel key={`${condition.kind}-${index}`} className="p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex-1 space-y-3">
+              <div className="flex flex-wrap items-end gap-3">
+                <UiSelect
+                  label={index === 0
+                    ? t('automations.builder.conditionType', 'Condition Type')
+                    : undefined}
+                  options={conditionTypeOptions}
+                  value={condition.kind}
+                  onChange={(event) => replaceCondition(
+                    index,
+                    createDefaultCondition(event.target.value as AutomationConditionKind),
+                  )}
+                  className="w-56"
+                />
+                <ConditionFields
+                  condition={condition}
+                  onChange={(nextCondition) => replaceCondition(index, nextCondition)}
+                  geofenceOptions={geofenceOptions}
+                />
               </div>
-              <UiButton
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => removeCondition(index)}
-                aria-label={t('automations.builder.removeCondition', 'Remove condition')}
-                className="mt-6 text-red-400 hover:text-red-300"
-              >
-                <Trash2 className="h-4 w-4" />
-              </UiButton>
             </div>
-          </GlassPanel>
-        );
-      })}
+            <UiButton
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => removeCondition(index)}
+              aria-label={t('automations.builder.removeCondition', 'Remove condition')}
+              className="mt-6 text-red-400 hover:text-red-300"
+            >
+              <Trash2 className="h-4 w-4" />
+            </UiButton>
+          </div>
+        </GlassPanel>
+      ))}
 
       <UiButton type="button" variant="ghost" size="sm" onClick={addCondition}>
-        <Plus className="h-4 w-4 mr-1" />
+        <Plus className="mr-1 h-4 w-4" />
         {t('automations.builder.addCondition', 'Add Condition')}
       </UiButton>
     </div>
   );
 }
 
-// ─── Condition-type fields ────────────────────────────────────────────────────
-
-interface ConditionFieldsProps {
-  type: string;
-  config: Record<string, unknown>;
-  onChange: (patch: Record<string, unknown>) => void;
-  geofenceOptions: { value: string; label: string }[];
-}
-
-function ConditionFields({ type, config, onChange, geofenceOptions }: ConditionFieldsProps) {
+function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFieldsProps) {
   const { t } = useTranslation();
 
-  switch (type) {
-    case 'state_check': {
-      const field = str(config.field);
-      const isBool = BOOL_FIELD_KEYS.has(field);
-      const isString = field === 'state';
-      const operators = isBool ? BOOL_OPERATORS : NUMERIC_OPERATORS;
+  const operatorOptions = useMemo(() => {
+    const isBool = condition.kind === 'condition_signal' && BOOL_FIELD_KEYS.has(condition.signal);
+    return CONDITION_SIGNAL_OPERATORS
+      .filter((operator) => !isBool || !operator.numericOnly)
+      .map((operator) => ({
+        value: operator.value,
+        label: t(operator.labelKey, operator.fallback),
+      }));
+  }, [condition, t]);
+
+  const timezoneOptions = useMemo(
+    () => COMMON_TIMEZONES.map((option) => ({
+      value: option.value,
+      label: t(`timezones.${option.value || 'utc'}`, option.label),
+    })),
+    [t],
+  );
+
+  switch (condition.kind) {
+    case 'condition_signal': {
+      const isBool = BOOL_FIELD_KEYS.has(condition.signal);
+      const isRange = condition.op === 'between';
+      const value = isBool
+        ? String(condition.value_bool ?? true)
+        : condition.signal === 'state' || condition.op === 'in'
+          ? (condition.value_text ?? '')
+          : String(condition.value_num ?? 20);
 
       return (
-        <div className="flex gap-3 items-end flex-wrap flex-1">
+        <div className="flex flex-1 flex-wrap items-end gap-3">
           <UiSelect
+            label={t('automations.builder.signal', 'Signal')}
             options={SIGNAL_FIELD_OPTIONS}
-            value={field}
-            onChange={(e) => {
-              const newField = e.target.value;
-              const newIsBool = BOOL_FIELD_KEYS.has(newField);
-              onChange({
-                field: newField,
-                operator: newIsBool ? 'eq' : str(config.operator) || 'lt',
-                value: newIsBool ? true : (newField === 'state' ? 'online' : 20),
-              });
+            value={condition.signal}
+            onChange={(event) => {
+              const signal = event.target.value;
+              const nextCondition: BuilderConditionInput = BOOL_FIELD_KEYS.has(signal)
+                ? { kind: 'condition_signal', signal, op: '=', value_bool: true }
+                : signal === 'state'
+                  ? { kind: 'condition_signal', signal, op: '=', value_text: 'online' }
+                  : { kind: 'condition_signal', signal, op: '<', value_num: 20 };
+              onChange(nextCondition);
             }}
-            className="w-40"
+            className="w-44"
           />
           <UiSelect
-            options={operators}
-            value={str(config.operator)}
-            onChange={(e) => onChange({ operator: e.target.value })}
-            className="w-20"
+            label={t('automations.builder.operator', 'Operator')}
+            options={operatorOptions}
+            value={condition.op}
+            onChange={(event) => {
+              const op = event.target.value as AutomationConditionSignalOp;
+              if (op === 'between') {
+                onChange({
+                  kind: 'condition_signal',
+                  signal: condition.signal,
+                  op,
+                  value_min: numericValue(condition.value_min ?? condition.value_num, 0),
+                  value_max: numericValue(condition.value_max, 100),
+                });
+                return;
+              }
+              onChange(conditionValueFromInput({ ...condition, op }, value));
+            }}
+            className="w-36"
           />
-          {isBool ? (
+          {isRange ? (
+            <>
+              <UiInput
+                label={t('automations.builder.minValue', 'Min')}
+                type="number"
+                value={numericValue(condition.value_min, 0)}
+                onChange={(event) => onChange({
+                  ...condition,
+                  value_min: Number.parseFloat(event.target.value) || 0,
+                })}
+                className="w-28"
+              />
+              <UiInput
+                label={t('automations.builder.maxValue', 'Max')}
+                type="number"
+                value={numericValue(condition.value_max, 100)}
+                onChange={(event) => onChange({
+                  ...condition,
+                  value_max: Number.parseFloat(event.target.value) || 0,
+                })}
+                className="w-28"
+              />
+            </>
+          ) : isBool ? (
             <UiSelect
+              label={t('automations.builder.value', 'Value')}
               options={[
-                { value: 'true', label: 'True' },
-                { value: 'false', label: 'False' },
+                { value: 'true', label: t('common.true', 'True') },
+                { value: 'false', label: t('common.false', 'False') },
               ]}
-              value={String(config.value)}
-              onChange={(e) => onChange({ value: e.target.value === 'true' })}
-              className="w-24"
-            />
-          ) : isString ? (
-            <UiInput
-              value={str(config.value)}
-              onChange={(e) => onChange({ value: e.target.value })}
-              placeholder="online, asleep, offline"
-              className="w-36"
+              value={value}
+              onChange={(event) => onChange(conditionValueFromInput(condition, event.target.value))}
+              className="w-28"
             />
           ) : (
             <UiInput
-              type="number"
-              value={num(config.value)}
-              onChange={(e) => onChange({ value: parseFloat(e.target.value) || 0 })}
-              className="w-24"
+              label={t('automations.builder.value', 'Value')}
+              type={condition.signal === 'state' || condition.op === 'in' ? 'text' : 'number'}
+              value={value}
+              onChange={(event) => onChange(conditionValueFromInput(condition, event.target.value))}
+              placeholder={condition.signal === 'state'
+                ? t('automations.builder.statePlaceholder', 'online')
+                : undefined}
+              className="w-40"
             />
           )}
         </div>
       );
     }
 
-    case 'time_window':
+    case 'condition_time_window':
       return (
-        <div className="flex gap-3 items-end flex-1">
+        <div className="flex flex-1 flex-wrap items-end gap-3">
           <UiInput
             label={t('automations.builder.startTime', 'Start')}
             type="time"
-            value={str(config.start_time)}
-            onChange={(e) => onChange({ start_time: e.target.value })}
+            value={condition.start_time}
+            onChange={(event) => onChange({ ...condition, start_time: event.target.value })}
             className="w-32"
           />
           <UiInput
             label={t('automations.builder.endTime', 'End')}
             type="time"
-            value={str(config.end_time)}
-            onChange={(e) => onChange({ end_time: e.target.value })}
+            value={condition.end_time}
+            onChange={(event) => onChange({ ...condition, end_time: event.target.value })}
             className="w-32"
           />
           <UiSelect
-            options={COMMON_TIMEZONES}
-            value={str(config.timezone)}
-            onChange={(e) => onChange({ timezone: e.target.value })}
-            className="w-40"
+            label={t('automations.builder.timezone', 'Timezone')}
+            options={timezoneOptions}
+            value={condition.timezone}
+            onChange={(event) => onChange({ ...condition, timezone: event.target.value })}
+            className="w-44"
+          />
+          <div>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              {t('automations.builder.days', 'Days')}
+            </span>
+            <div className="mt-1 flex gap-1">
+              {DAYS.map((label, day) => {
+                const active = condition.days_of_week.includes(day);
+                return (
+                  <UiButton
+                    key={label}
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    aria-pressed={active}
+                    className={`!h-9 !w-9 !rounded !p-0 text-xs font-medium ${
+                      active
+                        ? '!bg-[var(--accent)]/20 text-[var(--accent)] ring-1 ring-[var(--accent)]/50'
+                        : '!bg-white/[0.03] text-white/40 hover:!bg-white/[0.06]'
+                    }`}
+                    onClick={() => {
+                      const days = active
+                        ? condition.days_of_week.filter((currentDay) => currentDay !== day)
+                        : [...condition.days_of_week, day].sort();
+                      onChange({ ...condition, days_of_week: days });
+                    }}
+                  >
+                    {t(`common.days.short.${day}`, label)}
+                  </UiButton>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      );
+
+    case 'condition_geofence':
+      return (
+        <div className="flex flex-1 flex-wrap items-end gap-3">
+          <UiSelect
+            label={t('automations.builder.geofence', 'Geofence')}
+            options={geofenceOptions}
+            value={condition.place_id > 0 ? String(condition.place_id) : ''}
+            onChange={(event) => onChange({
+              ...condition,
+              place_id: event.target.value ? Number(event.target.value) : 0,
+            })}
+            className="w-52"
+          />
+          <UiSelect
+            label={t('automations.builder.state', 'State')}
+            options={GEOFENCE_STATES.map((state) => ({
+              value: state.value,
+              label: t(state.labelKey, state.fallback),
+            }))}
+            value={condition.state}
+            onChange={(event) => onChange({
+              ...condition,
+              state: event.target.value as AutomationGeofenceState,
+            })}
+            className="w-32"
           />
         </div>
       );
 
-    case 'cooldown':
+    case 'condition_other_automation':
       return (
-        <div className="flex gap-3 items-end flex-1">
+        <div className="flex flex-1 flex-wrap items-end gap-3">
           <UiInput
-            label={t('automations.builder.cooldownMinutes', 'Minutes')}
+            label={t('automations.builder.otherAutomationId', 'Automation ID')}
             type="number"
             min={1}
-            max={1440}
-            value={num(config.minutes, 30)}
-            onChange={(e) => onChange({ minutes: parseInt(e.target.value, 10) || 1 })}
-            className="w-28"
-          />
-        </div>
-      );
-
-    case 'day_filter': {
-      const days = numArr(config.days);
-      return (
-        <div className="flex gap-3 items-end flex-wrap flex-1">
-          <div className="flex gap-1">
-            {DAYS.map((label, i) => {
-              const active = days.includes(i);
-              return (
-                <UiButton
-                  key={i}
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  aria-pressed={active}
-                  className={`!h-9 !w-9 !rounded !p-0 text-xs font-medium ${
-                    active
-                      ? '!bg-[var(--accent)]/20 text-[var(--accent)] ring-1 ring-[var(--accent)]/50'
-                      : '!bg-white/[0.03] text-white/40 hover:!bg-white/[0.06]'
-                  }`}
-                  onClick={() => {
-                    const next = active ? days.filter((d) => d !== i) : [...days, i].sort();
-                    onChange({ days: next });
-                  }}
-                >
-                  {label}
-                </UiButton>
-              );
+            value={condition.other_automation_id || ''}
+            onChange={(event) => onChange({
+              ...condition,
+              other_automation_id: Number.parseInt(event.target.value, 10) || 0,
             })}
-          </div>
-          <UiSelect
-            options={COMMON_TIMEZONES}
-            value={str(config.timezone)}
-            onChange={(e) => onChange({ timezone: e.target.value })}
             className="w-40"
           />
-        </div>
-      );
-    }
-
-    case 'location':
-      return (
-        <div className="flex gap-3 items-end flex-1">
           <UiSelect
-            options={[{ value: '', label: 'Select geofence...' }, ...geofenceOptions]}
-            value={String(config.geofence_id ?? '')}
-            onChange={(e) => onChange({ geofence_id: e.target.value ? Number(e.target.value) : 0 })}
+            label={t('automations.builder.state', 'State')}
+            options={OTHER_AUTOMATION_STATES.map((state) => ({
+              value: state.value,
+              label: t(state.labelKey, state.fallback),
+            }))}
+            value={condition.state}
+            onChange={(event) => onChange({
+              ...condition,
+              state: event.target.value as AutomationOtherAutomationState,
+            })}
             className="w-48"
           />
-          <UiSelect
-            options={[
-              { value: 'inside', label: 'Inside' },
-              { value: 'outside', label: 'Outside' },
-            ]}
-            value={str(config.operator) || 'inside'}
-            onChange={(e) => onChange({ operator: e.target.value })}
-            className="w-28"
-          />
         </div>
       );
-
-    case 'seasonal':
-      return (
-        <div className="flex gap-3 items-end flex-1">
-          <UiSelect
-            label={t('automations.builder.startMonth', 'From')}
-            options={MONTHS}
-            value={String(num(config.start_month, 1))}
-            onChange={(e) => onChange({ start_month: parseInt(e.target.value, 10) })}
-            className="w-36"
-          />
-          <UiSelect
-            label={t('automations.builder.endMonth', 'To')}
-            options={MONTHS}
-            value={String(num(config.end_month, 12))}
-            onChange={(e) => onChange({ end_month: parseInt(e.target.value, 10) })}
-            className="w-36"
-          />
-        </div>
-      );
-
-    case 'variable_check':
-      return (
-        <div className="flex gap-3 items-end flex-1">
-          <UiInput
-            label={t('automations.builder.variableKey', 'Variable Key')}
-            value={str(config.key)}
-            onChange={(e) => onChange({ key: e.target.value })}
-            placeholder="my_var"
-            className="w-36"
-          />
-          <UiSelect
-            options={NUMERIC_OPERATORS}
-            value={str(config.operator) || 'eq'}
-            onChange={(e) => onChange({ operator: e.target.value })}
-            className="w-20"
-          />
-          <UiInput
-            label={t('automations.builder.variableValue', 'Value')}
-            value={str(config.value)}
-            onChange={(e) => onChange({ value: e.target.value })}
-            className="w-28"
-          />
-        </div>
-      );
-
-    default:
-      return null;
   }
 }

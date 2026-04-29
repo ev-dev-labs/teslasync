@@ -1,0 +1,85 @@
+=== PREFLIGHT ===
+Predecessor phase-36-11 log exists with EXIT=0 and STATUS=DONE.
+Initial workspace status contained no tracked or untracked paths outside the phase-36-12 allowed scope.
+=== SURVEY ===
+Automation builder form state bridged typed automation API steps through legacy root trigger fields and loose record arrays.
+Trigger, condition, and action configurators emitted legacy records rather than backend CTI step inputs.
+Sibling automation page consumers still referenced removed root automation or preset fields and would keep the TypeScript gate red.
+=== REASONING ===
+Keep the builder state aligned with the strict backend create/update shape: name, description, vehicle, enabled, and typed trigger/condition/action arrays.
+Use only current backend CTI kind strings in configurator selections and emitted steps.
+Use local distributive builder input types because the shared API input aliases are currently non-distributive and hide kind-specific fields in page code.
+=== CHANGES ===
+Replaced builder form state with typed triggers, conditions, and actions arrays.
+Refactored trigger, condition, and action configurators to edit typed backend step inputs directly.
+Removed builder UI and state for unsupported legacy notification-channel and root option fields.
+Updated automation list, card, and preset gallery consumers away from removed root automation and preset fields.
+=== GATE ===
+AUTOMATION_BUILDER_LEGACY_REF_COUNT=0
+RAW_CONTROL_COUNT=52
+
+web\src\features\automations\pages\ActionBuilder.tsx:286:                <Select
+web\src\features\automations\pages\ActionBuilder.tsx:304:              <Button
+web\src\features\automations\pages\ActionBuilder.tsx:315:              <Button
+web\src\features\automations\pages\ActionBuilder.tsx:326:              <Button
+web\src\features\automations\pages\ActionBuilder.tsx:341:      <Button type="button" variant="ghost" size="sm" onClick={addAction}>
+web\src\features\automations\pages\ActionBuilder.tsx:382:          <Select
+web\src\features\automations\pages\ActionBuilder.tsx:390:            <Textarea
+web\src\features\automations\pages\ActionBuilder.tsx:430:          <Select
+web\src\features\automations\pages\ActionBuilder.tsx:443:            <Textarea
+web\src\features\automations\pages\ActionBuilder.tsx:464:          <Input
+web\src\features\automations\pages\ActionBuilder.tsx:471:          <Select
+web\src\features\automations\pages\ActionBuilder.tsx:487:            <Select
+web\src\features\automations\pages\ActionBuilder.tsx:498:            <Input
+web\src\features\automations\pages\ActionBuilder.tsx:516:          <Input
+web\src\features\automations\pages\AutomationBuilderPage.tsx:366:            <Input
+web\src\features\automations\pages\AutomationBuilderPage.tsx:373:            <Textarea
+web\src\features\automations\pages\AutomationBuilderPage.tsx:383:            <Select
+web\src\features\automations\pages\AutomationBuilderPage.tsx:408:            <Select
+web\src\features\automations\pages\AutomationBuilderPage.tsx:483:            <Button type="submit" loading={isSaving} disabled={isSaving}>
+web\src\features\automations\pages\AutomationBuilderPage.tsx:490:              <Button
+web\src\features\automations\pages\AutomationBuilderPage.tsx:501:            <Button
+web\src\features\automations\pages\ConditionBuilder.tsx:188:                <Select
+web\src\features\automations\pages\ConditionBuilder.tsx:207:            <Button
+web\src\features\automations\pages\ConditionBuilder.tsx:221:      <Button type="button" variant="ghost" size="sm" onClick={addCondition}>
+web\src\features\automations\pages\ConditionBuilder.tsx:262:          <Select
+web\src\features\automations\pages\ConditionBuilder.tsx:277:          <Select
+web\src\features\automations\pages\ConditionBuilder.tsx:299:              <Input
+web\src\features\automations\pages\ConditionBuilder.tsx:309:              <Input
+web\src\features\automations\pages\ConditionBuilder.tsx:321:            <Select
+web\src\features\automations\pages\ConditionBuilder.tsx:332:            <Input
+web\src\features\automations\pages\ConditionBuilder.tsx:350:          <Input
+web\src\features\automations\pages\ConditionBuilder.tsx:357:          <Input
+web\src\features\automations\pages\ConditionBuilder.tsx:364:          <Select
+web\src\features\automations\pages\ConditionBuilder.tsx:379:                  <Button
+web\src\features\automations\pages\ConditionBuilder.tsx:409:          <Select
+web\src\features\automations\pages\ConditionBuilder.tsx:419:          <Select
+web\src\features\automations\pages\ConditionBuilder.tsx:438:          <Input
+web\src\features\automations\pages\ConditionBuilder.tsx:449:          <Select
+web\src\features\automations\pages\PresetGallery.tsx:84:      <Button
+web\src\features\automations\pages\TriggerConfigurator.tsx:223:              <Input
+web\src\features\automations\pages\TriggerConfigurator.tsx:241:                      <Button
+web\src\features\automations\pages\TriggerConfigurator.tsx:262:            <Input
+web\src\features\automations\pages\TriggerConfigurator.tsx:273:          <Button
+web\src\features\automations\pages\TriggerConfigurator.tsx:288:          <Select
+web\src\features\automations\pages\TriggerConfigurator.tsx:304:          <Select
+web\src\features\automations\pages\TriggerConfigurator.tsx:319:          <Select
+web\src\features\automations\pages\TriggerConfigurator.tsx:328:          <Select
+web\src\features\automations\pages\TriggerConfigurator.tsx:339:            <Input
+web\src\features\automations\pages\TriggerConfigurator.tsx:365:          <Select
+web\src\features\automations\pages\TriggerConfigurator.tsx:379:          <Select
+web\src\features\automations\pages\TriggerConfigurator.tsx:394:              <Select
+web\src\features\automations\pages\TriggerConfigurator.tsx:404:              <Input
+
+EXIT=1
+STATUS=BLOCKED
+=== GATE ===
+AUTOMATION_BUILDER_LEGACY_REF_COUNT=0
+RAW_CONTROL_COUNT=0
+TSC_EXIT=0
+ESLINT_AUTOMATION_BUILDER_EXIT=0
+UNEXPECTED_STATUS_COUNT=0
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
+Commit pending after successful gate.

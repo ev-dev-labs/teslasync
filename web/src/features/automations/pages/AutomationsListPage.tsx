@@ -37,24 +37,12 @@ import { PresetGallery } from './PresetGallery';
 // ─── Filter types ─────────────────────────────────────────────────────────────
 
 type StatusFilter = 'all' | 'active' | 'disabled' | 'auto-disabled';
-type TriggerFilter = 'all' | string;
 
-const statusFilterOptions = [
-  { value: 'all', label: 'All' },
-  { value: 'active', label: 'Active' },
-  { value: 'disabled', label: 'Disabled' },
-  { value: 'auto-disabled', label: 'Auto-Disabled' },
-];
-
-const triggerTypeOptions = [
-  { value: 'all', label: 'All Triggers' },
-  { value: 'cron', label: 'Schedule' },
-  { value: 'state_change', label: 'State Change' },
-  { value: 'geofence', label: 'Geofence' },
-  { value: 'threshold', label: 'Threshold' },
-  { value: 'webhook', label: 'Webhook' },
-  { value: 'sunrise_sunset', label: 'Sunrise/Sunset' },
-  { value: 'manual', label: 'Manual' },
+const statusFilterOptions: { value: StatusFilter; key: string; fallback: string }[] = [
+  { value: 'all', key: 'automations.filters.all', fallback: 'All' },
+  { value: 'active', key: 'automations.filters.active', fallback: 'Active' },
+  { value: 'disabled', key: 'automations.filters.disabled', fallback: 'Disabled' },
+  { value: 'auto-disabled', key: 'automations.filters.autoDisabled', fallback: 'Auto-Disabled' },
 ];
 
 // ─── Stats computation ────────────────────────────────────────────────────────
@@ -134,11 +122,17 @@ export default function AutomationsListPage() {
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [triggerFilter, setTriggerFilter] = useState<TriggerFilter>('all');
   const [search, setSearch] = useState('');
 
   // Safe data
   const items = automations ?? [];
+  const localizedStatusFilterOptions = useMemo(
+    () => statusFilterOptions.map((option) => ({
+      value: option.value,
+      label: t(option.key, option.fallback),
+    })),
+    [t],
+  );
   const vehicleLookup = useMemo(
     () => buildVehicleLookup(vehicles ?? []),
     [vehicles],
@@ -162,22 +156,17 @@ export default function AutomationsListPage() {
       });
     }
 
-    if (triggerFilter !== 'all') {
-      result = result.filter((a) => a.trigger_type === triggerFilter);
-    }
-
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(
         (a) =>
           (a.name ?? '').toLowerCase().includes(q) ||
-          (a.description ?? '').toLowerCase().includes(q) ||
-          (a.tags ?? []).some((tag) => tag.toLowerCase().includes(q)),
+          (a.description ?? '').toLowerCase().includes(q),
       );
     }
 
     return result;
-  }, [items, statusFilter, triggerFilter, search]);
+  }, [items, statusFilter, search]);
 
   // Callbacks
   const handleToggle = useCallback(
@@ -265,18 +254,11 @@ export default function AutomationsListPage() {
         <GlassPanel className="p-4">
           <div className="flex flex-wrap items-center gap-3">
             <UiSelect
-              options={statusFilterOptions}
+              options={localizedStatusFilterOptions}
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
               className="w-40"
               aria-label={t('automations.filterStatus', 'Filter by status')}
-            />
-            <UiSelect
-              options={triggerTypeOptions}
-              value={triggerFilter}
-              onChange={(e) => setTriggerFilter(e.target.value as TriggerFilter)}
-              className="w-44"
-              aria-label={t('automations.filterTrigger', 'Filter by trigger')}
             />
             <UiInput
               placeholder={t('automations.search', 'Search automations...')}
@@ -284,7 +266,7 @@ export default function AutomationsListPage() {
               onChange={(e) => setSearch(e.target.value)}
               className="w-64"
             />
-            {(statusFilter !== 'all' || triggerFilter !== 'all' || search) && (
+            {(statusFilter !== 'all' || search) && (
               <Badge variant="neutral" className="text-xs">
                 {filteredItems.length} / {items.length}
               </Badge>

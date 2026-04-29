@@ -7,9 +7,7 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
+import { GlassPanel, Button as UiButton, Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { FadeIn } from '@/components/motion/FadeIn';
@@ -21,6 +19,7 @@ import {
   Plus, Clock, type LucideIcon,
 } from 'lucide-react';
 import type { AutomationPreset } from '@/api/types';
+import type { AutomationTriggerKind } from '@/types/automations';
 
 const iconMap: Record<string, LucideIcon> = {
   Shield,
@@ -33,19 +32,21 @@ const iconMap: Record<string, LucideIcon> = {
   Siren,
 };
 
-const triggerLabels: Record<string, string> = {
-  cron: 'Schedule',
-  vehicle_state: 'Vehicle State',
-  geofence: 'Geofence',
-  battery: 'Battery',
-  sunrise_sunset: 'Sunrise/Sunset',
-  webhook: 'Webhook',
+const triggerLabels: Record<AutomationTriggerKind, { key: string; fallback: string }> = {
+  trigger_schedule: { key: 'automations.builder.triggerSchedule', fallback: 'Schedule' },
+  trigger_event: { key: 'automations.builder.triggerEvent', fallback: 'Vehicle Event' },
+  trigger_geofence: { key: 'automations.builder.triggerGeofence', fallback: 'Geofence' },
+  trigger_signal: { key: 'automations.builder.triggerSignal', fallback: 'Signal Threshold' },
 };
 
 function PresetCard({ preset }: { preset: AutomationPreset }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const Icon = iconMap[preset.icon] ?? Shield;
+  const firstTrigger = preset.triggers[0];
+  const triggerLabel = firstTrigger
+    ? triggerLabels[firstTrigger.kind]
+    : null;
 
   const handleInstall = () => {
     navigate(`/automations/new?preset=${preset.id}`);
@@ -62,29 +63,23 @@ function PresetCard({ preset }: { preset: AutomationPreset }) {
             {preset.name}
           </h3>
           <p className="text-xs text-white/50 mt-0.5">
-            {triggerLabels[preset.trigger_type] ?? preset.trigger_type}
+            {triggerLabel
+              ? t(triggerLabel.key, triggerLabel.fallback)
+              : t('automations.builder.noTrigger', 'No trigger configured')}
           </p>
         </div>
-        {preset.priority <= 5 && (
-          <Badge variant="danger" size="sm">
-            {t('automations.presets.critical', 'Critical')}
-          </Badge>
-        )}
+        <Badge variant="neutral" size="sm">
+          {t('automations.presets.actionCount', '{{count}} actions', {
+            count: preset.actions.length,
+          })}
+        </Badge>
       </div>
 
       <p className="text-xs text-white/60 leading-relaxed line-clamp-2">
         {preset.description}
       </p>
 
-      <div className="flex flex-wrap gap-1.5 mt-auto">
-        {preset.tags.map((tag) => (
-          <Badge key={tag} variant="neutral" size="sm">
-            {tag}
-          </Badge>
-        ))}
-      </div>
-
-      <Button
+      <UiButton
         size="sm"
         variant="secondary"
         onClick={handleInstall}
@@ -92,7 +87,7 @@ function PresetCard({ preset }: { preset: AutomationPreset }) {
       >
         <Plus className="h-3.5 w-3.5 mr-1.5" />
         {t('automations.presets.install', 'Install')}
-      </Button>
+      </UiButton>
     </GlassPanel>
   );
 }
