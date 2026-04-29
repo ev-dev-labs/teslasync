@@ -3,7 +3,8 @@ package models
 import "time"
 
 // AlertRule mirrors the post-migration `alert_rules` schema (Phase 3, ADR-001).
-// Typed alert rule storage — no JSONB rule_def, no legacy CEP carve-outs.
+// Typed alert rule storage: handlers reject legacy CEP request fields such as
+// rule_def, conditions, threshold, msg_template, and notify_channels.
 //
 // Schema source: .github/prompts/db-refactor/schema/18-alert-rules.sql
 type AlertRule struct {
@@ -23,7 +24,8 @@ type AlertRule struct {
 	ValueBool *bool    `db:"value_bool" json:"value_bool,omitempty"`
 	ValueMin  *float64 `db:"value_min"  json:"value_min,omitempty"`
 	ValueMax  *float64 `db:"value_max"  json:"value_max,omitempty"`
-	// Severity is one of: 'info','warn','critical'.
+	// Severity is one of: 'info','warn','critical'. The legacy literal
+	// 'warning' is rejected at the API boundary.
 	Severity string `db:"severity" json:"severity"`
 	// CooldownMin is the minimum minutes between consecutive alerts from this
 	// rule, regardless of signal value.
