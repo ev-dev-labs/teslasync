@@ -1,0 +1,15 @@
+=== PREFLIGHT ===
+Predecessor log missing or not DONE: .github\prompts\db-refactor\logs\phase-36-00-typed-alert-rule-inventory.log
+PREFLIGHT_EXIT=1
+=== SURVEY ===
+Skipped: predecessor gate did not pass.
+=== REASONING ===
+Blocked by Honesty Covenant item 7: predecessor STATUS=DONE with EXIT=0 is required before source edits.
+=== CHANGES ===
+No source files changed. Wrote blocked output log only.
+=== GATE ===
+Predecessor log missing or not DONE: .github\prompts\db-refactor\logs\phase-36-00-typed-alert-rule-inventory.log
+=== COMMIT ===
+Committing blocked log only if possible.
+EXIT=1
+STATUS=BLOCKED
