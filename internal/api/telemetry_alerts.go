@@ -49,11 +49,11 @@ func NewTelemetryAlertEvaluator(db *database.DB, eventBus *events.Bus, hub *Even
 func (e *TelemetryAlertEvaluator) LoadState(ctx context.Context) {
 	rules, err := e.alertRuleRepo.GetAll(ctx)
 	if err != nil {
-		log.Warn().Err(err).Msg("cep: failed to load rules for state recovery")
+		log.Warn().Err(err).Msg("alert_rules: failed to load rules for state recovery")
 		return
 	}
 	e.ruleEngine.LoadCooldownFromDB(ctx, rules)
-	log.Info().Int("rules", len(rules)).Msg("cep: loaded rule cooldown state from DB")
+	log.Info().Int("rules", len(rules)).Msg("alert_rules: loaded rule cooldown state from DB")
 }
 
 // RuleEngine returns the underlying rule engine for state recovery.
@@ -68,7 +68,7 @@ func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64,
 	evalStart := time.Now()
 	rules, err := e.alertRuleRepo.GetAll(ctx)
 	if err != nil {
-		log.Warn().Err(err).Msg("cep: failed to load alert rules, skipping evaluation")
+		log.Warn().Err(err).Msg("alert_rules: failed to load alert rules, skipping evaluation")
 		return
 	}
 
@@ -82,7 +82,7 @@ func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64,
 		}
 		enabledCount++
 
-		metrics.CEPRulesEvaluated.Inc()
+		metrics.AlertRulesEvaluated.Inc()
 		result := e.ruleEngine.Evaluate(rule, vehicleID, signals)
 		triggered := result.Triggered
 		message := result.Message
@@ -106,7 +106,7 @@ func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64,
 				e.fireAlert(ctx, rule, vehicleID, vin, message)
 			} else {
 				log.Debug().Int64("rule_id", rule.ID).Int64("vehicle_id", vehicleID).
-					Msg("cep: alert suppressed by cooldown FSM")
+					Msg("alert_rules: alert suppressed by cooldown FSM")
 			}
 		} else if isTransitionRule(rule) {
 			// Condition is false for a transition rule — reset cooldown FSM
@@ -118,8 +118,8 @@ func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64,
 			e.cooldownMu.Unlock()
 		}
 	}
-	metrics.CEPActiveRules.Set(float64(enabledCount))
-	metrics.CEPEvalDuration.Observe(time.Since(evalStart).Seconds())
+	metrics.ActiveAlertRules.Set(float64(enabledCount))
+	metrics.AlertRuleEvalDuration.Observe(time.Since(evalStart).Seconds())
 }
 
 // fireAlert broadcasts via SSE and dispatches to notification channels.
@@ -148,11 +148,11 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.Al
 	now := time.Now().UTC()
 
 	log.Info().Int64("rule_id", rule.ID).Str("name", rule.Name).Str("severity", severity).
-		Int64("vehicle_id", vehicleID).Str("message", message).Msg("cep: alert fired")
+		Int64("vehicle_id", vehicleID).Str("message", message).Msg("alert_rules: alert fired")
 
 	// Prometheus metrics
 	metrics.AlertsFired.WithLabelValues(severity).Inc()
-	metrics.CEPRulesFired.WithLabelValues(rule.Name, severity).Inc()
+	metrics.AlertRulesFired.WithLabelValues(rule.Name, severity).Inc()
 
 	// Check quiet hours — suppress non-critical notifications during quiet hours
 	quietSuppressed := false
@@ -195,7 +195,7 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.Al
 				"rule_type": rule.Op,
 				"message":   message,
 				"severity":  severity,
-				"source":    "cep_engine",
+				"source":    "alert_rule_engine",
 			},
 		})
 	}
@@ -220,7 +220,7 @@ func (e *TelemetryAlertEvaluator) dispatchNotifications(title, message string) {
 
 	channels, err := e.notifRepo.GetAllChannels(ctx)
 	if err != nil {
-		log.Warn().Err(err).Msg("cep: failed to list notification channels")
+		log.Warn().Err(err).Msg("alert_rules: failed to list notification channels")
 		return
 	}
 	for _, ch := range channels {
@@ -235,10 +235,10 @@ func (e *TelemetryAlertEvaluator) dispatchNotifications(title, message string) {
 			ChannelID:   ch.ID,
 		}
 		if err := notification.Publish(e.mqttClient, req); err != nil {
-			log.Warn().Int64("channel_id", ch.ID).Str("type", ch.Type).Err(err).Msg("cep: notification dispatch failed")
+			log.Warn().Int64("channel_id", ch.ID).Str("type", ch.Type).Err(err).Msg("alert_rules: notification dispatch failed")
 		} else {
 			metrics.NotificationsDispatched.WithLabelValues(ch.Type).Inc()
-			log.Info().Int64("channel_id", ch.ID).Str("type", ch.Type).Msg("cep: notification dispatched to worker")
+			log.Info().Int64("channel_id", ch.ID).Str("type", ch.Type).Msg("alert_rules: notification dispatched to worker")
 		}
 	}
 }

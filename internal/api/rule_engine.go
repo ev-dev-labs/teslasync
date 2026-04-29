@@ -1,5 +1,4 @@
-// Package api provides the CEP (Complex Event Processing) rule engine
-// for evaluating alert conditions against real-time telemetry signals.
+// Package api provides alert rule evaluation against real-time telemetry signals.
 package api
 
 import (
@@ -16,7 +15,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
-// RuleEngine evaluates CEP rules against incoming telemetry signals.
+// RuleEngine evaluates alert rules against incoming telemetry signals.
 // It tracks per-rule cooldown and previous signal state.
 type RuleEngine struct {
 	mu    sync.RWMutex
@@ -33,7 +32,7 @@ type ruleState struct {
 	LastFiredAt *time.Time             // cooldown tracking
 }
 
-// NewRuleEngine creates a new CEP rule engine.
+// NewRuleEngine creates a new alert rule engine.
 func NewRuleEngine() *RuleEngine {
 	return &RuleEngine{
 		state: make(map[ruleKey]*ruleState),
@@ -76,7 +75,7 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 		}
 		if time.Since(*lastFiredAt) < cooldown {
 			if !isTransitionRule(rule) {
-				metrics.CEPRulesCooldownSkipped.Inc()
+				metrics.AlertRulesCooldownSkipped.Inc()
 				return EvalResult{} // still in cooldown — non-transition rules skip evaluation
 			}
 			inCooldown = true // transition rules continue to evaluate for reset detection
@@ -106,7 +105,7 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 
 	// Transition rules that matched but are still in cooldown get suppressed
 	if inCooldown {
-		metrics.CEPRulesCooldownSkipped.Inc()
+		metrics.AlertRulesCooldownSkipped.Inc()
 		return EvalResult{}
 	}
 

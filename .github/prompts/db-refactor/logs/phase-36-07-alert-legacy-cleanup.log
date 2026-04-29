@@ -1,0 +1,157 @@
+=== PREFLIGHT ===
+PREDECESSOR_EXISTS=True
+PREDECESSOR_EXIT_0=True
+PREDECESSOR_DONE=True
+--- git status --short ---
+--- instruction files present ---
+.github\ARCHITECTURE.md=True
+.github\instructions\unit-conversion.instructions.md=True
+.github\instructions\react-frontend.instructions.md=True
+.github\instructions\telemetry-pipeline.instructions.md=True
+.github\instructions\go-backend.instructions.md=True
+.github\instructions\data-modeling.instructions.md=True
+=== SURVEY ===
+--- RuleBuilder refs outside component file ---
+RULE_BUILDER_REF_COUNT=1
+
+web\src\components\forms\index.ts:1:export { default as RuleBuilder } from './RuleBuilder';
+
+--- legacy alert terms in allowed gate files ---
+ALERT_LEGACY_REF_COUNT=0
+--- repo-wide production references for RuleCondition/RuleConditionTree (excluding .git,node_modules,migrations,logs) ---
+PRODUCTION_RULE_CONDITION_REF_COUNT=16
+
+web\src\components\forms\RuleBuilder.tsx:9:import type { RuleConditionTree } from '@/api/types'
+web\src\components\forms\RuleBuilder.tsx:48:function emptyLeaf(): RuleConditionTree {
+web\src\components\forms\RuleBuilder.tsx:52:function emptyGroup(): RuleConditionTree {
+web\src\components\forms\RuleBuilder.tsx:60:function updateAtPath(tree: RuleConditionTree, path: Path, updater: (n: RuleConditionTree) => RuleConditionTree): RuleConditionTree {
+web\src\components\forms\RuleBuilder.tsx:68:function removeAtPath(tree: RuleConditionTree, path: Path): RuleConditionTree {
+web\src\components\forms\RuleBuilder.tsx:79:function addAtPath(tree: RuleConditionTree, parentPath: Path, child: RuleConditionTree): RuleConditionTree {
+web\src\components\forms\RuleBuilder.tsx:252:  node: RuleConditionTree
+web\src\components\forms\RuleBuilder.tsx:254:  onUpdate: (path: Path, updates: Partial<RuleConditionTree>) => void
+web\src\components\forms\RuleBuilder.tsx:269:          const updates: Partial<RuleConditionTree> = { signal }
+web\src\components\forms\RuleBuilder.tsx:346:  node: RuleConditionTree
+web\src\components\forms\RuleBuilder.tsx:348:  onUpdate: (path: Path, updates: Partial<RuleConditionTree>) => void
+web\src\components\forms\RuleBuilder.tsx:453:function humanize(node: RuleConditionTree, depth = 0): string {
+web\src\components\forms\RuleBuilder.tsx:473:  value: RuleConditionTree
+web\src\components\forms\RuleBuilder.tsx:474:  onChange: (tree: RuleConditionTree) => void
+web\src\components\forms\RuleBuilder.tsx:479:  const tree = useMemo<RuleConditionTree>(() => {
+web\src\components\forms\RuleBuilder.tsx:486:  const handleUpdate = useCallback((path: Path, updates: Partial<RuleConditionTree>) => {
+
+--- form barrel ---
+export { default as RuleBuilder } from './RuleBuilder';
+export { DateRangeFilter } from './DateRangeFilter';
+export { FormSection } from './FormSection';
+--- metrics names containing alert/rule ---
+
+internal\metrics\metrics.go:16:		Name:      "app_info",
+internal\metrics\metrics.go:22:		Name:      "uptime_seconds",
+internal\metrics\metrics.go:28:		Name:      "migration_version",
+internal\metrics\metrics.go:34:		Name:      "startup_duration_seconds",
+internal\metrics\metrics.go:44:		Name:      "http_requests_total",
+internal\metrics\metrics.go:50:		Name:      "http_request_duration_seconds",
+internal\metrics\metrics.go:57:		Name:      "http_response_size_bytes",
+internal\metrics\metrics.go:68:		Name:      "telemetry_signals_processed_total",
+internal\metrics\metrics.go:74:		Name:      "telemetry_messages_received_total",
+internal\metrics\metrics.go:80:		Name:      "telemetry_processing_duration_seconds",
+internal\metrics\metrics.go:87:		Name:      "streaming_vehicles_active",
+internal\metrics\metrics.go:97:		Name:      "drive_sessions_active",
+internal\metrics\metrics.go:103:		Name:      "drive_sessions_completed_total",
+internal\metrics\metrics.go:109:		Name:      "charge_sessions_active",
+internal\metrics\metrics.go:115:		Name:      "charge_sessions_completed_total",
+internal\metrics\metrics.go:121:		Name:      "telemetry_buffer_size",
+internal\metrics\metrics.go:127:		Name:      "telemetry_buffer_dropped_total",
+internal\metrics\metrics.go:137:		Name:      "db_query_duration_seconds",
+internal\metrics\metrics.go:144:		Name:      "db_pool_connections",
+internal\metrics\metrics.go:150:		Name:      "db_transactions_total",
+internal\metrics\metrics.go:156:		Name:      "signal_write_buffer_dropped_total",
+internal\metrics\metrics.go:161:// ── Alerts & Notifications ─────────────────────────────────
+internal\metrics\metrics.go:164:	AlertsEvaluated = promauto.NewCounter(prometheus.CounterOpts{
+internal\metrics\metrics.go:166:		Name:      "alerts_evaluated_total",
+internal\metrics\metrics.go:167:		Help:      "Total alert rule evaluations",
+internal\metrics\metrics.go:170:	AlertsFired = promauto.NewCounterVec(prometheus.CounterOpts{
+internal\metrics\metrics.go:172:		Name:      "alerts_fired_total",
+internal\metrics\metrics.go:173:		Help:      "Total alerts fired by severity",
+internal\metrics\metrics.go:178:		Name:      "notifications_sent_total",
+internal\metrics\metrics.go:182:	// CEP Rule Engine metrics
+internal\metrics\metrics.go:183:	CEPRulesEvaluated = promauto.NewCounter(prometheus.CounterOpts{
+internal\metrics\metrics.go:185:		Name:      "cep_rules_evaluated_total",
+internal\metrics\metrics.go:186:		Help:      "Total CEP rule evaluations (conditions checked)",
+internal\metrics\metrics.go:189:	CEPRulesFired = promauto.NewCounterVec(prometheus.CounterOpts{
+internal\metrics\metrics.go:191:		Name:      "cep_rules_fired_total",
+internal\metrics\metrics.go:192:		Help:      "CEP rules fired by rule name and severity",
+internal\metrics\metrics.go:193:	}, []string{"rule_name", "severity"})
+internal\metrics\metrics.go:195:	CEPRulesCooldownSkipped = promauto.NewCounter(prometheus.CounterOpts{
+internal\metrics\metrics.go:197:		Name:      "cep_rules_cooldown_skipped_total",
+internal\metrics\metrics.go:198:		Help:      "CEP rule evaluations skipped due to cooldown",
+internal\metrics\metrics.go:201:	CEPEvalDuration = promauto.NewHistogram(prometheus.HistogramOpts{
+internal\metrics\metrics.go:203:		Name:      "cep_eval_duration_seconds",
+internal\metrics\metrics.go:204:		Help:      "Time to evaluate all CEP rules for a signal batch",
+internal\metrics\metrics.go:208:	CEPActiveRules = promauto.NewGauge(prometheus.GaugeOpts{
+internal\metrics\metrics.go:210:		Name:      "cep_active_rules",
+internal\metrics\metrics.go:211:		Help:      "Number of enabled CEP rules currently loaded",
+internal\metrics\metrics.go:216:		Name:      "notifications_dispatched_total",
+internal\metrics\metrics.go:226:		Name:      "api_errors_total",
+internal\metrics\metrics.go:232:		Name:      "tesla_api_calls_total",
+internal\metrics\metrics.go:242:		Name:      "vehicles_registered",
+internal\metrics\metrics.go:248:		Name:      "vehicles_by_state",
+internal\metrics\metrics.go:258:		Name:      "geocoding_total",
+internal\metrics\metrics.go:264:		Name:      "geocoding_duration_seconds",
+internal\metrics\metrics.go:271:		Name:      "address_backfill_remaining",
+internal\metrics\metrics.go:277:		Name:      "address_backfill_completed_total",
+internal\metrics\metrics.go:287:		Name:      "mqtt_connected",
+internal\metrics\metrics.go:293:		Name:      "mqtt_messages_published_total",
+internal\metrics\metrics.go:299:		Name:      "mqtt_reconnects_total",
+internal\metrics\metrics.go:305:		Name:      "sse_connections_active",
+internal\metrics\metrics.go:311:		Name:      "sse_events_sent_total",
+internal\metrics\metrics.go:317:		Name:      "sse_events_dropped_total",
+internal\metrics\metrics.go:323:		Name:      "sse_connections_total",
+internal\metrics\metrics.go:329:		Name:      "sse_broadcast_duration_seconds",
+internal\metrics\metrics.go:336:		Name:      "sse_bytes_sent_total",
+internal\metrics\metrics.go:346:		Name:      "poll_cycle_duration_seconds",
+internal\metrics\metrics.go:353:		Name:      "polls_total",
+internal\metrics\metrics.go:359:		Name:      "polls_saved_total",
+internal\metrics\metrics.go:365:		Name:      "export_jobs_total",
+internal\metrics\metrics.go:371:		Name:      "maintenance_runs_total",
+internal\metrics\metrics.go:381:		Name:      "cache_operations_total",
+internal\metrics\metrics.go:387:		Name:      "cache_entries",
+internal\metrics\metrics.go:393:		Name:      "cache_evictions_total",
+internal\metrics\metrics.go:403:		Name:      "auth_attempts_total",
+internal\metrics\metrics.go:409:		Name:      "token_refreshes_total",
+internal\metrics\metrics.go:415:		Name:      "rate_limit_exceeded_total",
+internal\metrics\metrics.go:425:		Name:      "db_circuit_breaker_state",
+internal\metrics\metrics.go:435:		Name:      "vehicle_last_seen_seconds",
+internal\metrics\metrics.go:441:		Name:      "signal_store_entries",
+internal\metrics\metrics.go:447:		Name:      "signal_flush_duration_seconds",
+internal\metrics\metrics.go:458:		Name:      "total_distance_km",
+internal\metrics\metrics.go:464:		Name:      "total_energy_kwh",
+internal\metrics\metrics.go:470:		Name:      "total_drives",
+internal\metrics\metrics.go:476:		Name:      "total_charges",
+internal\metrics\metrics.go:482:		Name:      "geofence_events_total",
+internal\metrics\metrics.go:494:		Name:      "fsm_dispatch_total",
+internal\metrics\metrics.go:502:		Name:      "fsm_reconcile_total",
+internal\metrics\metrics.go:514:		Name:      "panics_recovered_total",
+
+=== REASONING ===
+Predecessor phase-36-06 log exists with EXIT=0 and STATUS=DONE.
+RuleBuilder has no production consumers beyond the forms barrel export; all RuleConditionTree references are self-contained in RuleBuilder.tsx.
+Gate-target backend/type files already contain no RuleConditionTree, models.RuleCondition, or deleted legacy operators, so no field resurrection is needed.
+Prometheus metric Name values must remain unchanged; only safe Go identifiers/comments/help text can move from CEP wording to alert-rule wording.
+=== CHANGES ===
+Deleted unused web/src/components/forms/RuleBuilder.tsx.
+Removed RuleBuilder from web/src/components/forms/index.ts.
+Renamed safe Go metric identifiers from CEP* to alert-rule wording while preserving Prometheus Name values.
+Updated rule engine comments away from CEP wording.
+GOFMT_EXIT=0
+Updated alert evaluator log/source identifiers away from CEP wording.
+GOFMT_TELEMETRY_ALERTS_EXIT=0
+=== GATE ===
+RULE_BUILDER_REF_COUNT=0
+ALERT_LEGACY_REF_COUNT=0
+ok  	github.com/ev-dev-labs/teslasync/internal/api	0.166s
+GO_ALERT_CLEANUP_TEST_EXIT=0
+TSC_EXIT=0
+UNEXPECTED_STATUS_COUNT=0
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
