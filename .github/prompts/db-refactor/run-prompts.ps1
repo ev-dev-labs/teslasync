@@ -271,6 +271,11 @@ foreach ($p in $prompts) {
     $startTime = Get-Date
     Log "$tag START  $($p.RelPath)"
 
+    if ($artifactLog -and (Test-Path $artifactLog)) {
+        Remove-Item $artifactLog -Force
+        Log "$tag Cleared stale artifact log $artifactLog"
+    }
+
     $tempArgsFile = Join-Path $env:TEMP "teslasync-dbrefactor-$($p.Index).json"
     $copilotArgs | ConvertTo-Json | Set-Content -Path $tempArgsFile -Encoding UTF8
 
