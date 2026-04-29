@@ -1,0 +1,88 @@
+=== PREFLIGHT ===
+Predecessor phase-35-02-live-signal-store-boundary.log was present with EXIT=0 and STATUS=DONE.
+Read required architecture and instruction files before editing: .github\ARCHITECTURE.md, .github\instructions\go-backend.instructions.md, .github\instructions\telemetry-pipeline.instructions.md, and .github\instructions\helm-docker.instructions.md.
+Initial git status showed no unexpected output outside the task scope.
+
+=== SURVEY ===
+Read cmd\teslasync\main.go, internal\api\telemetry_handler.go, internal\signal\live_store.go, internal\signal\store.go, internal\signal\redis_cache.go, internal\signal\live_store_test.go, internal\config\config.go, docker-compose.yml, helm\teslasync\values.yaml, and helm\teslasync\templates\configmap.yaml.
+Found telemetry ingestion updating signal.Store and Redis separately.
+Found startup calling signalStore.LoadFromDB before signal_history hydration.
+Found LiveSignalStore boundary with hybrid/local modes and Redis-first Warm support.
+
+=== REASONING ===
+Telemetry ingestion must keep local L1 writes synchronous for FSM/session/snapshot merge while avoiding duplicate direct Redis writes in telemetry_handler.go.
+The live-store boundary now provides a non-blocking telemetry update path that performs L1 synchronously and mirrors Redis asynchronously with a bounded timeout.
+Startup should construct the live store from the local Store plus optional Redis cache, warm Redis before history, and leave FSM/session/alert hot paths on local SignalStore.
+LIVE_SIGNAL_STORE_MODE is non-secret configuration, so it was added to config binding, Docker Compose, Helm values, and Helm configmap.
+
+=== CHANGES ===
+Added TelemetryHandler.liveSignalStore plus SetLiveSignalStore and routed ProcessSignals live-state writes through LiveSignalStore.UpdateNonBlocking once per batch.
+Kept signalStore for local-hot-path consumers and snapshot merge context.
+Kept redisCache in TelemetryHandler for SSE Pub/Sub and startup cache forwarding only; removed direct Redis HSET updates from telemetry_handler.go.
+Added LiveSignalStore.UpdateNonBlocking with synchronous L1 update and bounded asynchronous Redis mirror.
+Adjusted Redis warmup to skip timestamp-less legacy values so signal_history Hydrate can fill missing or unknown-freshness keys.
+Constructed and wired the live store in cmd\teslasync\main.go with Redis-first Warm followed by bounded signal_history Hydrate.
+Added LIVE_SIGNAL_STORE_MODE=hybrid|local config wiring across internal config, docker-compose, and Helm.
+Added unit tests for L1-only telemetry writes, live-store call count, Redis failure preserving L1, non-blocking L2 attempts, local mode, and Redis-before-history warmup behavior.
+=== GATE ===
+MISSING_TELEMETRY_PATTERN_COUNT=0
+MISSING_MAIN_PATTERN_COUNT=0
+REDIS_WARM_LINE=239
+HISTORY_WARM_LINE=266
+MISSING_MODE_PATTERN_COUNT=0
+DIRECT_REDIS_UPDATE_IN_TELEMETRY_COUNT=0
+ok  	github.com/ev-dev-labs/teslasync/internal/signal	(cached)
+{"level":"error","method":"GET","path":"/boom","request_id":"","stack":"goroutine 184 [running]:\nruntime/debug.Stack()\n\tC:/Program Files/Go/src/runtime/debug/stack.go:26 +0x5e\ngithub.com/ev-dev-labs/teslasync/internal/api.RecoveryMiddleware.func1.1()\n\tD:/repos/teslasync/internal/api/middleware.go:54 +0x58\npanic({0x7ff60a18cbc0?, 0x7ff60a602db0?})\n\tC:/Program Files/Go/src/runtime/panic.go:860 +0x13a\ngithub.com/ev-dev-labs/teslasync/internal/api.TestAcceptance_PanicRecovery.func1({0x249af04c4690?, 0x7ff60a57058e?}, 0x0?)\n\tD:/repos/teslasync/internal/api/acceptance_test.go:149 +0x25\nnet/http.HandlerFunc.ServeHTTP(0x249af04a73b0?, {0x7ff60a6331f0?, 0x249af04bb540?}, 0x249aefeba4cc?)\n\tC:/Program Files/Go/src/net/http/server.go:2286 +0x29\ngithub.com/go-chi/chi/v5.(*Mux).routeHTTP(0x249af0508660, {0x7ff60a6331f0, 0x249af04bb540}, 0x249af04ceb40)\n\tC:/Users/AtulM/go/pkg/mod/github.com/go-chi/chi/v5@v5.0.12/mux.go:459 +0x2d0\nnet/http.HandlerFunc.ServeHTTP(0x232f6fc7510?, {0x7ff60a6331f0?, 0x249af04bb540?}, 0x249af04ceb40?)\n\tC:/Program Files/Go/src/net/http/server.go:2286 +0x29\ngithub.com/ev-dev-labs/teslasync/internal/api.RecoveryMiddleware.func1({0x7ff60a6331f0?, 0x249af04bb540?}, 0x7ff60b604301?)\n\tD:/repos/teslasync/internal/api/middleware.go:66 +0x6c\nnet/http.HandlerFunc.ServeHTTP(0x7ff60a6367d0?, {0x7ff60a6331f0?, 0x249af04bb540?}, 0x7ff60b604390?)\n\tC:/Program Files/Go/src/net/http/server.go:2286 +0x29\ngithub.com/go-chi/chi/v5.(*Mux).ServeHTTP(0x249af0508660, {0x7ff60a6331f0, 0x249af04bb540}, 0x249af04cea00)\n\tC:/Users/AtulM/go/pkg/mod/github.com/go-chi/chi/v5@v5.0.12/mux.go:90 +0x322\ngithub.com/ev-dev-labs/teslasync/internal/api.TestAcceptance_PanicRecovery(0x249af04bea00)\n\tD:/repos/teslasync/internal/api/acceptance_test.go:154 +0x265\ntesting.tRunner(0x249af04bea00, 0x7ff60a5f8a10)\n\tC:/Program Files/Go/src/testing/testing.go:2036 +0xc3\ncreated by testing.(*T).Run in goroutine 1\n\tC:/Program Files/Go/src/testing/testing.go:2101 +0x4a9\n","panic":"kaboom","time":"2026-04-28T23:21:50-07:00","message":"panic recovered in HTTP handler"}
+{"level":"error","method":"GET","path":"/panic","request_id":"","stack":"goroutine 191 [running]:\nruntime/debug.Stack()\n\tC:/Program Files/Go/src/runtime/debug/stack.go:26 +0x5e\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddleware_CatchesPanic.RecoveryMiddleware.func2.1()\n\tD:/repos/teslasync/internal/api/middleware.go:54 +0x58\npanic({0x7ff60a18cbc0?, 0x7ff60a602da0?})\n\tC:/Program Files/Go/src/runtime/panic.go:860 +0x13a\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddleware_CatchesPanic.func1({0x1000?, 0x1000?}, 0x7ff60a60b460?)\n\tD:/repos/teslasync/internal/api/api_test.go:165 +0x25\nnet/http.HandlerFunc.ServeHTTP(0x0?, {0x7ff60a6331f0?, 0x249af04ea1c0?}, 0xffffffffffffffff?)\n\tC:/Program Files/Go/src/net/http/server.go:2286 +0x29\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddleware_CatchesPanic.RecoveryMiddleware.func2({0x7ff60a6331f0?, 0x249af04ea1c0?}, 0x7ff60a56f2d1?)\n\tD:/repos/teslasync/internal/api/middleware.go:66 +0x6c\nnet/http.HandlerFunc.ServeHTTP(...)\n\tC:/Program Files/Go/src/net/http/server.go:2286\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddleware_CatchesPanic(0x249af04bf800)\n\tD:/repos/teslasync/internal/api/api_test.go:171 +0x103\ntesting.tRunner(0x249af04bf800, 0x7ff60a5f8c20)\n\tC:/Program Files/Go/src/testing/testing.go:2036 +0xc3\ncreated by testing.(*T).Run in goroutine 1\n\tC:/Program Files/Go/src/testing/testing.go:2101 +0x4a9\n","panic":"something went wrong","time":"2026-04-28T23:21:50-07:00","message":"panic recovered in HTTP handler"}
+--- FAIL: TestEvaluateTestConditions_InvalidJSON (0.00s)
+    automation_handler_test.go:37: expected 1 unknown result for invalid JSON, got []
+--- FAIL: TestEvaluateTestConditions_TimeWindowMet (0.00s)
+    automation_handler_test.go:47: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_TimeWindowNotMet (0.00s)
+    automation_handler_test.go:61: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_DayFilter (0.00s)
+    automation_handler_test.go:75: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_SeasonalMet (0.00s)
+    automation_handler_test.go:88: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_CooldownMet (0.00s)
+    automation_handler_test.go:101: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_CooldownNotMet (0.00s)
+    automation_handler_test.go:114: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_StateCheckUnknown (0.00s)
+    automation_handler_test.go:126: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_LocationUnknown (0.00s)
+    automation_handler_test.go:138: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_VariableCheckUnknown (0.00s)
+    automation_handler_test.go:150: expected 1 result, got 0
+--- FAIL: TestEvaluateTestConditions_MultipleConditions (0.00s)
+    automation_handler_test.go:162: expected 3 results, got 0
+--- FAIL: TestSimulateActions_ValidCommand (0.00s)
+    automation_handler_test.go:194: expected 1 result, got 0
+--- FAIL: TestSimulateActions_InvalidCommand (0.00s)
+    automation_handler_test.go:221: expected 1 result, got 0
+--- FAIL: TestSimulateActions_ConditionsNotMet (0.00s)
+    automation_handler_test.go:239: expected 2 results, got 0
+--- FAIL: TestSimulateActions_StopOnFailure (0.00s)
+    automation_handler_test.go:256: expected 2 results, got 0
+--- FAIL: TestSimulateActions_MixedTypes (0.00s)
+    automation_handler_test.go:274: expected 4 results, got 0
+{"level":"error","method":"GET","path":"/panic","request_id":"","stack":"goroutine 418 [running]:\nruntime/debug.Stack()\n\tC:/Program Files/Go/src/runtime/debug/stack.go:26 +0x5e\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddlewareCatchesPanic.RecoveryMiddleware.func2.1()\n\tD:/repos/teslasync/internal/api/middleware.go:54 +0x58\npanic({0x7ff60a18cbc0?, 0x7ff60a602d90?})\n\tC:/Program Files/Go/src/runtime/panic.go:860 +0x13a\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddlewareCatchesPanic.func1({0x232f6fc6c38?, 0x40?}, 0x249aeff1f808?)\n\tD:/repos/teslasync/internal/api/middleware_extra_test.go:59 +0x25\nnet/http.HandlerFunc.ServeHTTP(0x7ff609108d85?, {0x7ff60a6331f0?, 0x249af04ea340?}, 0x249af00cfea0?)\n\tC:/Program Files/Go/src/net/http/server.go:2286 +0x29\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddlewareCatchesPanic.RecoveryMiddleware.func2({0x7ff60a6331f0?, 0x249af04ea340?}, 0x7ff60a56f2d1?)\n\tD:/repos/teslasync/internal/api/middleware.go:66 +0x6c\nnet/http.HandlerFunc.ServeHTTP(...)\n\tC:/Program Files/Go/src/net/http/server.go:2286\ngithub.com/ev-dev-labs/teslasync/internal/api.TestRecoveryMiddlewareCatchesPanic(0x249af0670000)\n\tD:/repos/teslasync/internal/api/middleware_extra_test.go:64 +0x105\ntesting.tRunner(0x249af0670000, 0x7ff60a5f8c10)\n\tC:/Program Files/Go/src/testing/testing.go:2036 +0xc3\ncreated by testing.(*T).Run in goroutine 1\n\tC:/Program Files/Go/src/testing/testing.go:2101 +0x4a9\n","panic":"boom","time":"2026-04-28T23:21:50-07:00","message":"panic recovered in HTTP handler"}
+{"level":"info","method":"GET","path":"/","status":200,"bytes":0,"duration":0,"ip":"192.0.2.1:1234","request_id":"","time":"2026-04-28T23:21:50-07:00","message":"http request"}
+--- FAIL: TestChangedTo_ResetsAfterConditionFalse (0.00s)
+    rule_engine_test.go:33: expected PΓåÆD to trigger
+{"level":"warn","error":"redis unavailable","vehicle_id":103,"time":"2026-04-28T23:21:50-07:00","message":"telemetry: live signal store update failed"}
+{"level":"info","component":"webhook_trigger","automation_id":1,"automation":"test-automation","remote_ip":"192.0.2.1:1234","time":"2026-04-28T23:21:50-07:00","message":"webhook trigger fired"}
+{"level":"info","component":"webhook_trigger","automation_id":2,"automation":"test-automation","remote_ip":"192.0.2.1:1234","time":"2026-04-28T23:21:50-07:00","message":"webhook trigger fired"}
+{"level":"warn","component":"webhook_trigger","automation_id":3,"automation":"test-automation","enabled":false,"auto_disabled":false,"time":"2026-04-28T23:21:50-07:00","message":"webhook received for disabled automation"}
+{"level":"info","component":"webhook_trigger","automation_id":4,"automation":"test-automation","remote_ip":"192.0.2.1:1234","time":"2026-04-28T23:21:50-07:00","message":"webhook trigger fired"}
+{"level":"warn","component":"webhook_trigger","automation_id":5,"automation":"test-automation","time":"2026-04-28T23:21:50-07:00","message":"webhook HMAC signature validation failed"}
+{"level":"warn","component":"webhook_trigger","automation_id":6,"automation":"test-automation","time":"2026-04-28T23:21:50-07:00","message":"webhook HMAC signature validation failed"}
+FAIL
+FAIL	github.com/ev-dev-labs/teslasync/internal/api	0.201s
+FAIL
+GO_TEST_SIGNAL_API_EXIT=1
+EXIT=1
+STATUS=BLOCKED
+=== COMMIT ===
+Gate returned nonzero, so STATUS=BLOCKED.
+Per the blocked path and no-commit-on-red covenant, committing only this log file.
