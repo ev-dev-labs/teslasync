@@ -2,7 +2,10 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
+	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -10,6 +13,210 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
+
+func TestAutomationDTOContract_AcceptsTypedCreateAndUpdateFields(t *testing.T) {
+	req, err := decodeAutomationInputDTO(strings.NewReader(validAutomationDTOPayload()))
+	if err != nil {
+		t.Fatalf("decodeAutomationInputDTO() unexpected error: %v", err)
+	}
+	if req.Name != "Typed Automation" {
+		t.Fatalf("Name = %q, want Typed Automation", req.Name)
+	}
+	if req.VehicleID == nil || *req.VehicleID != 42 {
+		t.Fatalf("VehicleID = %v, want 42", req.VehicleID)
+	}
+	if req.Enabled == nil || !*req.Enabled {
+		t.Fatalf("Enabled = %v, want true", req.Enabled)
+	}
+	if len(req.Triggers) != 4 {
+		t.Fatalf("Triggers count = %d, want 4", len(req.Triggers))
+	}
+	if len(req.Conditions) != 4 {
+		t.Fatalf("Conditions count = %d, want 4", len(req.Conditions))
+	}
+	if len(req.Actions) != 4 {
+		t.Fatalf("Actions count = %d, want 4", len(req.Actions))
+	}
+	if req.Triggers[0].Kind != models.AutomationStepKindTriggerSignal ||
+		req.Triggers[1].Kind != models.AutomationStepKindTriggerGeofence ||
+		req.Triggers[2].Kind != models.AutomationStepKindTriggerSchedule ||
+		req.Triggers[3].Kind != models.AutomationStepKindTriggerEvent {
+		t.Fatalf("trigger kinds = %#v", req.Triggers)
+	}
+	schedule, ok := req.Triggers[2].Payload.(automationTriggerScheduleDTO)
+	if !ok {
+		t.Fatalf("schedule payload type = %T", req.Triggers[2].Payload)
+	}
+	if schedule.Timezone != "UTC" {
+		t.Fatalf("schedule timezone = %q, want UTC default", schedule.Timezone)
+	}
+	if req.Conditions[3].Kind != models.AutomationStepKindConditionOtherAutomation {
+		t.Fatalf("condition[3] kind = %q", req.Conditions[3].Kind)
+	}
+	if req.Actions[1].Kind != models.AutomationStepKindActionNotify ||
+		req.Actions[3].Kind != models.AutomationStepKindActionCallAutomation {
+		t.Fatalf("action kinds = %#v", req.Actions)
+	}
+}
+
+func TestAutomationDTOValidation_RejectsFrontendAliases(t *testing.T) {
+	tests := []struct {
+		name    string
+		payload string
+	}{
+		{"trigger_time", automationPayloadWithTrigger(`{"kind":"trigger_time","cron_expr":"0 8 * * *","timezone":"UTC"}`)},
+		{"trigger_webhook", automationPayloadWithTrigger(`{"kind":"trigger_webhook","webhook_token":"abc","require_signature":false}`)},
+		{"condition_day_of_week", automationPayloadWithCondition(`{"kind":"condition_day_of_week","days_of_week":[1],"timezone":"UTC"}`)},
+		{"action_notification", automationPayloadWithAction(`{"kind":"action_notification","channel_id":1,"template":"hi"}`)},
+		{"action_vehicle_command", automationPayloadWithAction(`{"kind":"action_vehicle_command","command":"lock","command_params":{}}`)},
+		{"action_set_state", automationPayloadWithAction(`{"kind":"action_set_state","state_key":"mode","state_value":"away"}`)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := decodeAutomationInputDTO(strings.NewReader(tt.payload)); err == nil {
+				t.Fatalf("expected alias %s to be rejected", tt.name)
+			}
+		})
+	}
+}
+
+func TestAutomationDTOValidation_RejectsLegacyFields(t *testing.T) {
+	tests := []struct {
+		field string
+		value string
+	}{
+		{"trigger_type", `"cron"`},
+		{"trigger_config", `{}`},
+		{"notify_channels", `[]`},
+		{"cooldown_minutes", `10`},
+		{"max_executions_hour", `1`},
+		{"seasonal_start", `1`},
+		{"seasonal_end", `12`},
+		{"priority", `5`},
+		{"tags", `["legacy"]`},
+		{"preset_id", `"morning-preheat"`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.field, func(t *testing.T) {
+			payload := injectAutomationRootField(validAutomationDTOPayload(), tt.field, tt.value)
+			if _, err := decodeAutomationInputDTO(strings.NewReader(payload)); err == nil {
+				t.Fatalf("expected legacy field %s to be rejected", tt.field)
+			}
+		})
+	}
+	t.Run("root JSON action blobs", func(t *testing.T) {
+		payload := automationPayloadWithAction(`{"type":"command","command":"lock"}`)
+		if _, err := decodeAutomationInputDTO(strings.NewReader(payload)); err == nil {
+			t.Fatal("expected legacy root JSON action blob to be rejected")
+		}
+	})
+}
+
+func TestAutomationDTOValidation_RejectsUnknownFields(t *testing.T) {
+	t.Run("root", func(t *testing.T) {
+		payload := injectAutomationRootField(validAutomationDTOPayload(), "unexpected", `true`)
+		if _, err := decodeAutomationInputDTO(strings.NewReader(payload)); err == nil {
+			t.Fatal("expected unknown root field to be rejected")
+		}
+	})
+	t.Run("step", func(t *testing.T) {
+		payload := automationPayloadWithTrigger(`{"kind":"trigger_signal","signal":"BatteryLevel","op":">","value_num":80,"signal_name":"legacy"}`)
+		if _, err := decodeAutomationInputDTO(strings.NewReader(payload)); err == nil {
+			t.Fatal("expected unknown step field to be rejected")
+		}
+	})
+}
+
+func TestAutomationDTOValidation_RejectsInvalidStepPayloads(t *testing.T) {
+	tests := []struct {
+		name    string
+		payload string
+	}{
+		{"trigger_signal missing value", automationPayloadWithTrigger(`{"kind":"trigger_signal","signal":"BatteryLevel","op":">"}`)},
+		{"trigger_signal changed with value", automationPayloadWithTrigger(`{"kind":"trigger_signal","signal":"BatteryLevel","op":"changed","value_num":80}`)},
+		{"trigger_geofence dwell minutes on enter", automationPayloadWithTrigger(`{"kind":"trigger_geofence","place_id":1,"event":"enter","dwell_minutes":5}`)},
+		{"condition_signal between missing max", automationPayloadWithCondition(`{"kind":"condition_signal","signal":"BatteryLevel","op":"between","value_min":20}`)},
+		{"action_set_setting multiple values", automationPayloadWithAction(`{"kind":"action_set_setting","setting_key":"charge_limit","value_num":80,"value_bool":true}`)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := decodeAutomationInputDTO(strings.NewReader(tt.payload)); err == nil {
+				t.Fatalf("expected invalid payload %q to be rejected", tt.name)
+			}
+		})
+	}
+}
+
+func TestAutomationImportContract_RejectsOldJSONAutomationPayloads(t *testing.T) {
+	body := `{
+		"version": 1,
+		"exported_at": "2026-04-18T12:00:00Z",
+		"automations": [{
+			"name": "Legacy",
+			"description": "old",
+			"trigger_type": "cron",
+			"trigger_config": {"cron_expr":"0 8 * * *"},
+			"conditions": [],
+			"actions": [{"type":"command","command":"lock"}],
+			"cooldown_minutes": 60,
+			"priority": 10
+		}]
+	}`
+	h := &AutomationHandler{}
+	req := httptest.NewRequest("POST", "/automations/import", strings.NewReader(body))
+	rec := httptest.NewRecorder()
+	h.Import(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusBadRequest, rec.Body.String())
+	}
+}
+
+func TestAutomationImportExportContract_TypedStepArraysRoundTrip(t *testing.T) {
+	enabled := true
+	original := automationExportEnvelope{
+		Version:    1,
+		ExportedAt: "2026-04-18T12:00:00Z",
+		Automations: []automationPortable{
+			{
+				Name:        "Morning Preheat",
+				Description: "Turn on climate at 8am",
+				Enabled:     &enabled,
+				Triggers: []json.RawMessage{
+					json.RawMessage(`{"kind":"trigger_schedule","cron_expr":"0 8 * * *","timezone":"America/New_York"}`),
+				},
+				Conditions: []json.RawMessage{
+					json.RawMessage(`{"kind":"condition_time_window","start_time":"06:00","end_time":"22:00","timezone":"America/New_York","days_of_week":[1,2,3,4,5]}`),
+				},
+				Actions: []json.RawMessage{
+					json.RawMessage(`{"kind":"action_command","command_name":"climate_on","command_params":{"temperature":21}}`),
+					json.RawMessage(`{"kind":"action_notify","channel_id":7,"template":"Preheat started"}`),
+				},
+			},
+		},
+	}
+
+	data, err := json.Marshal(original)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	var restored automationExportEnvelope
+	if err := json.Unmarshal(data, &restored); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if len(restored.Automations) != 1 {
+		t.Fatalf("Automations count = %d, want 1", len(restored.Automations))
+	}
+	req, err := validateAutomationPortable(restored.Automations[0])
+	if err != nil {
+		t.Fatalf("validateAutomationPortable() unexpected error: %v", err)
+	}
+	if len(req.Triggers) != 1 || req.Triggers[0].Kind != models.AutomationStepKindTriggerSchedule {
+		t.Fatalf("triggers = %#v", req.Triggers)
+	}
+	if len(req.Actions) != 2 || req.Actions[0].Kind != models.AutomationStepKindActionCommand {
+		t.Fatalf("actions = %#v", req.Actions)
+	}
+}
 
 func TestEvaluateTestConditions_Empty(t *testing.T) {
 	h := &AutomationHandler{}
@@ -521,8 +728,8 @@ func TestInjectWebhookToken_InvalidJSON(t *testing.T) {
 
 func TestBuildExportEnvelope(t *testing.T) {
 	defs := []automationPortable{
-		{Name: "Auto 1", TriggerType: "cron"},
-		{Name: "Auto 2", TriggerType: "battery"},
+		{Name: "Auto 1", Triggers: []json.RawMessage{json.RawMessage(`{"kind":"trigger_schedule","cron_expr":"0 8 * * *"}`)}},
+		{Name: "Auto 2", Triggers: []json.RawMessage{json.RawMessage(`{"kind":"trigger_event","event_type":"drive_start"}`)}},
 	}
 
 	env := buildExportEnvelope(defs)
@@ -542,26 +749,24 @@ func TestBuildExportEnvelope(t *testing.T) {
 }
 
 func TestExportEnvelope_RoundTrip(t *testing.T) {
+	enabled := true
 	original := automationExportEnvelope{
 		Version:    1,
 		ExportedAt: "2026-04-18T12:00:00Z",
 		Automations: []automationPortable{
 			{
-				Name:              "Morning Preheat",
-				Description:       "Turn on climate at 8am",
-				TriggerType:       "cron",
-				TriggerConfig:     json.RawMessage(`{"cron_expr":"0 8 * * *","timezone":"America/New_York"}`),
-				Conditions:        json.RawMessage(`[{"type":"time_window","start_time":"06:00","end_time":"22:00"}]`),
-				Actions:           json.RawMessage(`[{"type":"command","command":"climate_on"}]`),
-				CooldownMinutes:   60,
-				MaxExecutionsHour: 1,
-				StopOnFailure:     true,
-				NotifyOnRun:       false,
-				NotifyOnFailure:   true,
-				SeasonalStart:     intPtr(10),
-				SeasonalEnd:       intPtr(4),
-				Priority:          25,
-				Tags:              []string{"climate", "winter"},
+				Name:        "Morning Preheat",
+				Description: "Turn on climate at 8am",
+				Enabled:     &enabled,
+				Triggers: []json.RawMessage{
+					json.RawMessage(`{"kind":"trigger_schedule","cron_expr":"0 8 * * *","timezone":"America/New_York"}`),
+				},
+				Conditions: []json.RawMessage{
+					json.RawMessage(`{"kind":"condition_time_window","start_time":"06:00","end_time":"22:00"}`),
+				},
+				Actions: []json.RawMessage{
+					json.RawMessage(`{"kind":"action_command","command_name":"climate_on","command_params":{}}`),
+				},
 			},
 		},
 	}
@@ -587,17 +792,17 @@ func TestExportEnvelope_RoundTrip(t *testing.T) {
 	if a.Name != "Morning Preheat" {
 		t.Errorf("Name = %q, want %q", a.Name, "Morning Preheat")
 	}
-	if a.TriggerType != "cron" {
-		t.Errorf("TriggerType = %q, want %q", a.TriggerType, "cron")
+	if a.Enabled == nil || !*a.Enabled {
+		t.Errorf("Enabled = %v, want true", a.Enabled)
 	}
-	if a.CooldownMinutes != 60 {
-		t.Errorf("CooldownMinutes = %d, want 60", a.CooldownMinutes)
+	if len(a.Triggers) != 1 || !containsSubstring(string(a.Triggers[0]), "trigger_schedule") {
+		t.Errorf("Triggers = %v, want trigger_schedule", a.Triggers)
 	}
-	if *a.SeasonalStart != 10 || *a.SeasonalEnd != 4 {
-		t.Errorf("Seasonal = %v-%v, want 10-4", a.SeasonalStart, a.SeasonalEnd)
+	if len(a.Conditions) != 1 || !containsSubstring(string(a.Conditions[0]), "condition_time_window") {
+		t.Errorf("Conditions = %v, want condition_time_window", a.Conditions)
 	}
-	if len(a.Tags) != 2 || a.Tags[0] != "climate" || a.Tags[1] != "winter" {
-		t.Errorf("Tags = %v, want [climate, winter]", a.Tags)
+	if len(a.Actions) != 1 || !containsSubstring(string(a.Actions[0]), "action_command") {
+		t.Errorf("Actions = %v, want action_command", a.Actions)
 	}
 }
 
@@ -622,6 +827,73 @@ func TestWriteJSONIndent(t *testing.T) {
 // ── test helpers ────────────────────────────────────────────────────────
 
 func int64Ptr(v int64) *int64 { return &v }
+
+func validAutomationDTOPayload() string {
+	return `{
+		"name": "Typed Automation",
+		"description": "A typed automation",
+		"enabled": true,
+		"vehicle_id": 42,
+		"triggers": [
+			{"kind":"trigger_signal","signal":"BatteryLevel","op":">","value_num":80},
+			{"kind":"trigger_geofence","place_id":1,"event":"dwell","dwell_minutes":10},
+			{"kind":"trigger_schedule","cron_expr":"0 8 * * *"},
+			{"kind":"trigger_event","event_type":"drive_start"}
+		],
+		"conditions": [
+			{"kind":"condition_signal","signal":"InsideTemp","op":"between","value_min":10,"value_max":30},
+			{"kind":"condition_time_window","start_time":"07:00","end_time":"09:00","timezone":"UTC","days_of_week":[1,2,3]},
+			{"kind":"condition_geofence","place_id":1,"state":"inside"},
+			{"kind":"condition_other_automation","other_automation_id":2,"state":"enabled"}
+		],
+		"actions": [
+			{"kind":"action_command","command_name":"climate_on","command_params":{"temperature":21}},
+			{"kind":"action_notify","channel_id":5,"template":"Hello"},
+			{"kind":"action_set_setting","setting_key":"charge_limit","value_num":80},
+			{"kind":"action_call_automation","target_automation_id":7}
+		]
+	}`
+}
+
+func automationPayloadWithTrigger(trigger string) string {
+	return fmt.Sprintf(`{
+		"name": "Typed Automation",
+		"description": "A typed automation",
+		"enabled": true,
+		"vehicle_id": 42,
+		"triggers": [%s],
+		"conditions": [],
+		"actions": [{"kind":"action_command","command_name":"lock","command_params":{}}]
+	}`, trigger)
+}
+
+func automationPayloadWithCondition(condition string) string {
+	return fmt.Sprintf(`{
+		"name": "Typed Automation",
+		"description": "A typed automation",
+		"enabled": true,
+		"vehicle_id": 42,
+		"triggers": [{"kind":"trigger_schedule","cron_expr":"0 8 * * *","timezone":"UTC"}],
+		"conditions": [%s],
+		"actions": [{"kind":"action_command","command_name":"lock","command_params":{}}]
+	}`, condition)
+}
+
+func automationPayloadWithAction(action string) string {
+	return fmt.Sprintf(`{
+		"name": "Typed Automation",
+		"description": "A typed automation",
+		"enabled": true,
+		"vehicle_id": 42,
+		"triggers": [{"kind":"trigger_schedule","cron_expr":"0 8 * * *","timezone":"UTC"}],
+		"conditions": [],
+		"actions": [%s]
+	}`, action)
+}
+
+func injectAutomationRootField(payload, field, value string) string {
+	return strings.Replace(payload, `"actions":`, fmt.Sprintf(`"%s": %s, "actions":`, field, value), 1)
+}
 
 func testAutomationFull() *models.AutomationFull {
 	return &models.AutomationFull{

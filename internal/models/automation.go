@@ -6,6 +6,23 @@ import (
 	"time"
 )
 
+const (
+	AutomationStepKindTriggerSignal   = "trigger_signal"
+	AutomationStepKindTriggerGeofence = "trigger_geofence"
+	AutomationStepKindTriggerSchedule = "trigger_schedule"
+	AutomationStepKindTriggerEvent    = "trigger_event"
+
+	AutomationStepKindConditionSignal          = "condition_signal"
+	AutomationStepKindConditionTimeWindow      = "condition_time_window"
+	AutomationStepKindConditionGeofence        = "condition_geofence"
+	AutomationStepKindConditionOtherAutomation = "condition_other_automation"
+
+	AutomationStepKindActionCommand        = "action_command"
+	AutomationStepKindActionNotify         = "action_notify"
+	AutomationStepKindActionSetSetting     = "action_set_setting"
+	AutomationStepKindActionCallAutomation = "action_call_automation"
+)
+
 // Automation mirrors the post-migration `automations` table (see migration
 // 000142_baseline_typed and .github/prompts/db-refactor/phase-3-schema/_baseline_source/14-automations.sql).
 //
