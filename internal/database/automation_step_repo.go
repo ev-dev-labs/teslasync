@@ -23,11 +23,17 @@ func NewAutomationStepRepo(db *DB) *AutomationStepRepo {
 // model. The caller is responsible for inserting the matching CTI child row
 // keyed by the returned step ID (ADR-004).
 func (r *AutomationStepRepo) Insert(ctx context.Context, s *models.AutomationStep) error {
+	return r.InsertTx(ctx, r.db.Pool, s)
+}
+
+// InsertTx adds a new step row using the supplied executor. Passing pgx.Tx keeps
+// parent automation, discriminator step, and CTI child writes in one transaction.
+func (r *AutomationStepRepo) InsertTx(ctx context.Context, exec DBTX, s *models.AutomationStep) error {
 	const query = `
 		INSERT INTO automation_steps (automation_id, step_order, kind)
 		VALUES ($1, $2, $3)
 		RETURNING id`
-	if err := r.db.Pool.QueryRow(ctx, query, s.AutomationID, s.StepOrder, s.Kind).
+	if err := exec.QueryRow(ctx, query, s.AutomationID, s.StepOrder, s.Kind).
 		Scan(&s.ID); err != nil {
 		return fmt.Errorf("automation-steps-repo-insert: %w", err)
 	}
@@ -95,6 +101,17 @@ func (r *AutomationStepRepo) Delete(ctx context.Context, stepID int64) error {
 	const query = `DELETE FROM automation_steps WHERE id=$1`
 	if _, err := r.db.Pool.Exec(ctx, query, stepID); err != nil {
 		return fmt.Errorf("automation-steps-repo-delete: %w", err)
+	}
+	return nil
+}
+
+// DeleteByAutomationTx removes all step discriminator rows for an automation
+// using the supplied transaction/executor. CTI child rows are removed by FK
+// cascade from automation_steps.
+func (r *AutomationStepRepo) DeleteByAutomationTx(ctx context.Context, exec DBTX, automationID int64) error {
+	const query = `DELETE FROM automation_steps WHERE automation_id = $1`
+	if _, err := exec.Exec(ctx, query, automationID); err != nil {
+		return fmt.Errorf("automation-steps-repo-delete-by-automation: %w", err)
 	}
 	return nil
 }

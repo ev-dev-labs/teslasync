@@ -25,7 +25,7 @@ import (
 
 // AutomationHandler handles automation CRUD HTTP requests.
 type AutomationHandler struct {
-	repo           *database.AutomationRepo
+	repo           automationRepository
 	historyRepo    *database.AutomationHistoryRepo
 	fsmTransRepo   *database.FSMTransitionRepo
 	cmdExecutor    *action.CommandExecutor   // optional, enables undo
@@ -33,6 +33,16 @@ type AutomationHandler struct {
 	auditor        *automation.Auditor       // optional, enables audit trail
 	presetRegistry *presets.Registry         // built-in preset templates
 	mqttPublisher  AutomationMQTTPublisher   // optional, notifies worker on config changes
+}
+
+type automationRepository interface {
+	ListFull(ctx context.Context) ([]models.AutomationFull, error)
+	GetByID(ctx context.Context, id int64) (*models.AutomationFull, error)
+	Create(ctx context.Context, a *models.Automation) error
+	CreateWithSteps(ctx context.Context, a *models.Automation, steps []database.AutomationStepWrite) error
+	Update(ctx context.Context, a *models.Automation) error
+	UpdateWithSteps(ctx context.Context, a *models.Automation, steps []database.AutomationStepWrite) error
+	Delete(ctx context.Context, id int64) error
 }
 
 // AutomationMQTTPublisher publishes automation config change notifications.
@@ -91,33 +101,22 @@ func newAutomationResponse(a *models.Automation) automationResponse {
 	return automationResponse{Automation: a}
 }
 
-// getByID fetches a single automation by ID from the full list.
+// getByID fetches a single automation by ID.
 // Returns nil, nil if not found.
 func (h *AutomationHandler) getByID(ctx context.Context, id int64) (*models.Automation, error) {
-	all, err := h.repo.ListFull(ctx)
+	full, err := h.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	for i := range all {
-		if all[i].ID == id {
-			return &all[i].Automation, nil
-		}
+	if full == nil {
+		return nil, nil
 	}
-	return nil, nil
+	return &full.Automation, nil
 }
 
-// getFullByID fetches a single AutomationFull by ID from the full list.
+// getFullByID fetches a single AutomationFull by ID.
 func (h *AutomationHandler) getFullByID(ctx context.Context, id int64) (*models.AutomationFull, error) {
-	all, err := h.repo.ListFull(ctx)
-	if err != nil {
-		return nil, err
-	}
-	for i := range all {
-		if all[i].ID == id {
-			return &all[i], nil
-		}
-	}
-	return nil, nil
+	return h.repo.GetByID(ctx, id)
 }
 
 // ── List ────────────────────────────────────────────────────────────────
@@ -242,7 +241,7 @@ type automationInputWire struct {
 }
 
 // createAutomationRequest is the normalized request body for creating or
-// updating an automation. Step persistence is added by a later phase.
+// updating an automation.
 type createAutomationRequest struct {
 	Name        string
 	Description string
@@ -254,12 +253,14 @@ type createAutomationRequest struct {
 }
 
 type automationTypedStep struct {
-	Kind    string
-	Payload interface{}
+	Kind      string
+	StepOrder *int
+	Payload   interface{}
 }
 
 type automationTriggerSignalDTO struct {
 	Kind      string   `json:"kind"`
+	StepOrder *int     `json:"step_order,omitempty"`
 	Signal    string   `json:"signal"`
 	Op        string   `json:"op"`
 	ValueText *string  `json:"value_text,omitempty"`
@@ -269,24 +270,28 @@ type automationTriggerSignalDTO struct {
 
 type automationTriggerGeofenceDTO struct {
 	Kind         string `json:"kind"`
+	StepOrder    *int   `json:"step_order,omitempty"`
 	PlaceID      int64  `json:"place_id"`
 	Event        string `json:"event"`
 	DwellMinutes *int   `json:"dwell_minutes,omitempty"`
 }
 
 type automationTriggerScheduleDTO struct {
-	Kind     string `json:"kind"`
-	CronExpr string `json:"cron_expr"`
-	Timezone string `json:"timezone,omitempty"`
+	Kind      string `json:"kind"`
+	StepOrder *int   `json:"step_order,omitempty"`
+	CronExpr  string `json:"cron_expr"`
+	Timezone  string `json:"timezone,omitempty"`
 }
 
 type automationTriggerEventDTO struct {
 	Kind      string `json:"kind"`
+	StepOrder *int   `json:"step_order,omitempty"`
 	EventType string `json:"event_type"`
 }
 
 type automationConditionSignalDTO struct {
 	Kind      string   `json:"kind"`
+	StepOrder *int     `json:"step_order,omitempty"`
 	Signal    string   `json:"signal"`
 	Op        string   `json:"op"`
 	ValueText *string  `json:"value_text,omitempty"`
@@ -298,6 +303,7 @@ type automationConditionSignalDTO struct {
 
 type automationConditionTimeWindowDTO struct {
 	Kind       string `json:"kind"`
+	StepOrder  *int   `json:"step_order,omitempty"`
 	StartTime  string `json:"start_time"`
 	EndTime    string `json:"end_time"`
 	Timezone   string `json:"timezone,omitempty"`
@@ -305,31 +311,36 @@ type automationConditionTimeWindowDTO struct {
 }
 
 type automationConditionGeofenceDTO struct {
-	Kind    string `json:"kind"`
-	PlaceID int64  `json:"place_id"`
-	State   string `json:"state"`
+	Kind      string `json:"kind"`
+	StepOrder *int   `json:"step_order,omitempty"`
+	PlaceID   int64  `json:"place_id"`
+	State     string `json:"state"`
 }
 
 type automationConditionOtherAutomationDTO struct {
 	Kind              string `json:"kind"`
+	StepOrder         *int   `json:"step_order,omitempty"`
 	OtherAutomationID int64  `json:"other_automation_id"`
 	State             string `json:"state"`
 }
 
 type automationActionCommandDTO struct {
 	Kind          string          `json:"kind"`
+	StepOrder     *int            `json:"step_order,omitempty"`
 	CommandName   string          `json:"command_name"`
 	CommandParams json.RawMessage `json:"command_params,omitempty"`
 }
 
 type automationActionNotifyDTO struct {
 	Kind      string `json:"kind"`
+	StepOrder *int   `json:"step_order,omitempty"`
 	ChannelID int64  `json:"channel_id"`
 	Template  string `json:"template"`
 }
 
 type automationActionSetSettingDTO struct {
 	Kind       string   `json:"kind"`
+	StepOrder  *int     `json:"step_order,omitempty"`
 	SettingKey string   `json:"setting_key"`
 	ValueText  *string  `json:"value_text,omitempty"`
 	ValueNum   *float64 `json:"value_num,omitempty"`
@@ -338,6 +349,7 @@ type automationActionSetSettingDTO struct {
 
 type automationActionCallAutomationDTO struct {
 	Kind               string `json:"kind"`
+	StepOrder          *int   `json:"step_order,omitempty"`
 	TargetAutomationID int64  `json:"target_automation_id"`
 }
 
@@ -439,6 +451,9 @@ func validateAutomationInputWire(wire automationInputWire) (*createAutomationReq
 		}
 		req.Actions = append(req.Actions, step)
 	}
+	if err := validateAutomationStepOrders(req); err != nil {
+		return nil, err
+	}
 	return req, nil
 }
 
@@ -456,7 +471,7 @@ func parseAutomationTriggerStep(raw json.RawMessage) (automationTypedStep, error
 		if err := validateAutomationTriggerSignal(step); err != nil {
 			return automationTypedStep{}, err
 		}
-		return automationTypedStep{Kind: kind, Payload: step}, nil
+		return automationTypedStep{Kind: kind, StepOrder: step.StepOrder, Payload: step}, nil
 	case models.AutomationStepKindTriggerGeofence:
 		var step automationTriggerGeofenceDTO
 		if err := decodeStrictAutomationJSON(raw, &step); err != nil {
@@ -465,7 +480,7 @@ func parseAutomationTriggerStep(raw json.RawMessage) (automationTypedStep, error
 		if err := validateAutomationTriggerGeofence(step); err != nil {
 			return automationTypedStep{}, err
 		}
-		return automationTypedStep{Kind: kind, Payload: step}, nil
+		return automationTypedStep{Kind: kind, StepOrder: step.StepOrder, Payload: step}, nil
 	case models.AutomationStepKindTriggerSchedule:
 		var step automationTriggerScheduleDTO
 		if err := decodeStrictAutomationJSON(raw, &step); err != nil {
@@ -474,7 +489,7 @@ func parseAutomationTriggerStep(raw json.RawMessage) (automationTypedStep, error
 		if err := validateAutomationTriggerSchedule(&step); err != nil {
 			return automationTypedStep{}, err
 		}
-		return automationTypedStep{Kind: kind, Payload: step}, nil
+		return automationTypedStep{Kind: kind, StepOrder: step.StepOrder, Payload: step}, nil
 	case models.AutomationStepKindTriggerEvent:
 		var step automationTriggerEventDTO
 		if err := decodeStrictAutomationJSON(raw, &step); err != nil {
@@ -483,7 +498,7 @@ func parseAutomationTriggerStep(raw json.RawMessage) (automationTypedStep, error
 		if err := validateAutomationTriggerEvent(step); err != nil {
 			return automationTypedStep{}, err
 		}
-		return automationTypedStep{Kind: kind, Payload: step}, nil
+		return automationTypedStep{Kind: kind, StepOrder: step.StepOrder, Payload: step}, nil
 	default:
 		return automationTypedStep{}, fmt.Errorf("unsupported trigger kind %q", kind)
 	}
@@ -503,7 +518,7 @@ func parseAutomationConditionStep(raw json.RawMessage) (automationTypedStep, err
 		if err := validateAutomationConditionSignal(step); err != nil {
 			return automationTypedStep{}, err
 		}
-		return automationTypedStep{Kind: kind, Payload: step}, nil
+		return automationTypedStep{Kind: kind, StepOrder: step.StepOrder, Payload: step}, nil
 	case models.AutomationStepKindConditionTimeWindow:
 		var step automationConditionTimeWindowDTO
 		if err := decodeStrictAutomationJSON(raw, &step); err != nil {
@@ -512,7 +527,7 @@ func parseAutomationConditionStep(raw json.RawMessage) (automationTypedStep, err
 		if err := validateAutomationConditionTimeWindow(step); err != nil {
 			return automationTypedStep{}, err
 		}
-		return automationTypedStep{Kind: kind, Payload: step}, nil
+		return automationTypedStep{Kind: kind, StepOrder: step.StepOrder, Payload: step}, nil
 	case models.AutomationStepKindConditionGeofence:
 		var step automationConditionGeofenceDTO
 		if err := decodeStrictAutomationJSON(raw, &step); err != nil {
@@ -521,7 +536,7 @@ func parseAutomationConditionStep(raw json.RawMessage) (automationTypedStep, err
 		if err := validateAutomationConditionGeofence(step); err != nil {
 			return automationTypedStep{}, err
 		}
-		return automationTypedStep{Kind: kind, Payload: step}, nil
+		return automationTypedStep{Kind: kind, StepOrder: step.StepOrder, Payload: step}, nil
 	case models.AutomationStepKindConditionOtherAutomation:
 		var step automationConditionOtherAutomationDTO
 		if err := decodeStrictAutomationJSON(raw, &step); err != nil {
@@ -530,7 +545,7 @@ func parseAutomationConditionStep(raw json.RawMessage) (automationTypedStep, err
 		if err := validateAutomationConditionOtherAutomation(step); err != nil {
 			return automationTypedStep{}, err
 		}
-		return automationTypedStep{Kind: kind, Payload: step}, nil
+		return automationTypedStep{Kind: kind, StepOrder: step.StepOrder, Payload: step}, nil
 	default:
 		return automationTypedStep{}, fmt.Errorf("unsupported condition kind %q", kind)
 	}
@@ -550,7 +565,7 @@ func parseAutomationActionStep(raw json.RawMessage) (automationTypedStep, error)
 		if strings.TrimSpace(step.CommandName) == "" {
 			return automationTypedStep{}, errors.New("command_name is required")
 		}
-		return automationTypedStep{Kind: kind, Payload: step}, nil
+		return automationTypedStep{Kind: kind, StepOrder: step.StepOrder, Payload: step}, nil
 	case models.AutomationStepKindActionNotify:
 		var step automationActionNotifyDTO
 		if err := decodeStrictAutomationJSON(raw, &step); err != nil {
@@ -562,7 +577,7 @@ func parseAutomationActionStep(raw json.RawMessage) (automationTypedStep, error)
 		if strings.TrimSpace(step.Template) == "" {
 			return automationTypedStep{}, errors.New("template is required")
 		}
-		return automationTypedStep{Kind: kind, Payload: step}, nil
+		return automationTypedStep{Kind: kind, StepOrder: step.StepOrder, Payload: step}, nil
 	case models.AutomationStepKindActionSetSetting:
 		var step automationActionSetSettingDTO
 		if err := decodeStrictAutomationJSON(raw, &step); err != nil {
@@ -574,7 +589,7 @@ func parseAutomationActionStep(raw json.RawMessage) (automationTypedStep, error)
 		if automationScalarValueCount(step.ValueText, step.ValueNum, step.ValueBool) != 1 {
 			return automationTypedStep{}, errors.New("exactly one of value_text, value_num, or value_bool is required")
 		}
-		return automationTypedStep{Kind: kind, Payload: step}, nil
+		return automationTypedStep{Kind: kind, StepOrder: step.StepOrder, Payload: step}, nil
 	case models.AutomationStepKindActionCallAutomation:
 		var step automationActionCallAutomationDTO
 		if err := decodeStrictAutomationJSON(raw, &step); err != nil {
@@ -583,7 +598,7 @@ func parseAutomationActionStep(raw json.RawMessage) (automationTypedStep, error)
 		if step.TargetAutomationID <= 0 {
 			return automationTypedStep{}, errors.New("target_automation_id is required")
 		}
-		return automationTypedStep{Kind: kind, Payload: step}, nil
+		return automationTypedStep{Kind: kind, StepOrder: step.StepOrder, Payload: step}, nil
 	default:
 		return automationTypedStep{}, fmt.Errorf("unsupported action kind %q", kind)
 	}
@@ -636,7 +651,7 @@ func validateAutomationTriggerGeofence(step automationTriggerGeofenceDTO) error 
 		return errors.New("place_id is required")
 	}
 	switch step.Event {
-	case "enter", "exit", "leave", "both":
+	case "enter", "exit":
 		if step.DwellMinutes != nil {
 			return errors.New("dwell_minutes is only allowed when event is dwell")
 		}
@@ -770,6 +785,175 @@ func automationScalarValueCount(valueText *string, valueNum *float64, valueBool 
 	return count
 }
 
+func validateAutomationStepOrders(req *createAutomationRequest) error {
+	_, err := automationStepOrderValues(automationTypedStepsInPersistenceOrder(req))
+	return err
+}
+
+func automationTypedStepsInPersistenceOrder(req *createAutomationRequest) []automationTypedStep {
+	if req == nil {
+		return nil
+	}
+	steps := make([]automationTypedStep, 0, len(req.Triggers)+len(req.Conditions)+len(req.Actions))
+	steps = append(steps, req.Triggers...)
+	steps = append(steps, req.Conditions...)
+	steps = append(steps, req.Actions...)
+	return steps
+}
+
+func automationStepOrderValues(steps []automationTypedStep) ([]int, error) {
+	orders := make([]int, len(steps))
+	used := make(map[int]struct{}, len(steps))
+	for i, step := range steps {
+		if step.StepOrder == nil {
+			continue
+		}
+		order := *step.StepOrder
+		if order <= 0 || order > len(steps) {
+			return nil, fmt.Errorf("step_order for step %d must be between 1 and %d", i, len(steps))
+		}
+		if _, ok := used[order]; ok {
+			return nil, fmt.Errorf("step_order %d is duplicated", order)
+		}
+		orders[i] = order
+		used[order] = struct{}{}
+	}
+
+	next := 1
+	for i := range orders {
+		if orders[i] != 0 {
+			continue
+		}
+		for {
+			if _, ok := used[next]; !ok {
+				break
+			}
+			next++
+		}
+		orders[i] = next
+		used[next] = struct{}{}
+	}
+	return orders, nil
+}
+
+func automationStepWrites(req *createAutomationRequest) ([]database.AutomationStepWrite, error) {
+	steps := automationTypedStepsInPersistenceOrder(req)
+	orders, err := automationStepOrderValues(steps)
+	if err != nil {
+		return nil, err
+	}
+	writes := make([]database.AutomationStepWrite, 0, len(steps))
+	for i, step := range steps {
+		payload, err := automationStepPayloadModel(step)
+		if err != nil {
+			return nil, fmt.Errorf("step %d: %w", i, err)
+		}
+		writes = append(writes, database.AutomationStepWrite{
+			StepOrder: orders[i],
+			Kind:      step.Kind,
+			Payload:   payload,
+		})
+	}
+	return writes, nil
+}
+
+func automationStepPayloadModel(step automationTypedStep) (any, error) {
+	switch p := step.Payload.(type) {
+	case automationTriggerSignalDTO:
+		return &models.AutomationStepTriggerSignal{
+			Signal:    strings.TrimSpace(p.Signal),
+			Op:        strings.TrimSpace(p.Op),
+			ValueText: p.ValueText,
+			ValueNum:  p.ValueNum,
+			ValueBool: p.ValueBool,
+		}, nil
+	case automationTriggerGeofenceDTO:
+		return &models.AutomationStepTriggerGeofence{
+			PlaceID: p.PlaceID,
+			Event:   strings.TrimSpace(p.Event),
+		}, nil
+	case automationTriggerScheduleDTO:
+		return &models.AutomationStepTriggerSchedule{
+			CronExpr: strings.TrimSpace(p.CronExpr),
+			Timezone: strings.TrimSpace(p.Timezone),
+		}, nil
+	case automationTriggerEventDTO:
+		return &models.AutomationStepTriggerEvent{
+			EventType: strings.TrimSpace(p.EventType),
+		}, nil
+	case automationConditionSignalDTO:
+		return &models.AutomationStepConditionSignal{
+			Signal:    strings.TrimSpace(p.Signal),
+			Op:        strings.TrimSpace(p.Op),
+			ValueText: p.ValueText,
+			ValueNum:  p.ValueNum,
+			ValueBool: p.ValueBool,
+			ValueMin:  p.ValueMin,
+			ValueMax:  p.ValueMax,
+		}, nil
+	case automationConditionTimeWindowDTO:
+		startTime, err := parseAutomationClockTime(p.StartTime)
+		if err != nil {
+			return nil, fmt.Errorf("start_time: %w", err)
+		}
+		endTime, err := parseAutomationClockTime(p.EndTime)
+		if err != nil {
+			return nil, fmt.Errorf("end_time: %w", err)
+		}
+		timezone := strings.TrimSpace(p.Timezone)
+		if timezone == "" {
+			timezone = "UTC"
+		}
+		days := make([]int16, 0, len(p.DaysOfWeek))
+		for _, day := range p.DaysOfWeek {
+			days = append(days, int16(day))
+		}
+		return &models.AutomationStepConditionTimeWindow{
+			StartTime:  startTime,
+			EndTime:    endTime,
+			Timezone:   timezone,
+			DaysOfWeek: days,
+		}, nil
+	case automationConditionGeofenceDTO:
+		return &models.AutomationStepConditionGeofence{
+			PlaceID: p.PlaceID,
+			State:   strings.TrimSpace(p.State),
+		}, nil
+	case automationConditionOtherAutomationDTO:
+		return &models.AutomationStepConditionOtherAutomation{
+			OtherAutomationID: p.OtherAutomationID,
+			State:             strings.TrimSpace(p.State),
+		}, nil
+	case automationActionCommandDTO:
+		params := p.CommandParams
+		if len(params) == 0 {
+			params = json.RawMessage(`{}`)
+		}
+		return &models.AutomationAction{
+			CommandName:   strings.TrimSpace(p.CommandName),
+			CommandParams: params,
+		}, nil
+	case automationActionNotifyDTO:
+		return &models.AutomationStepActionNotify{
+			ChannelID: p.ChannelID,
+			Template:  p.Template,
+		}, nil
+	case automationActionSetSettingDTO:
+		return &models.AutomationStepActionSetSetting{
+			SettingKey: strings.TrimSpace(p.SettingKey),
+			ValueText:  p.ValueText,
+			ValueNum:   p.ValueNum,
+			ValueBool:  p.ValueBool,
+		}, nil
+	case automationActionCallAutomationDTO:
+		return &models.AutomationStepActionCallAutomation{
+			TargetAutomationID: p.TargetAutomationID,
+		}, nil
+	default:
+		return nil, fmt.Errorf("unsupported step payload type %T", step.Payload)
+	}
+}
+
 func firstTriggerKind(req *createAutomationRequest) string {
 	if req == nil || len(req.Triggers) == 0 {
 		return ""
@@ -802,8 +986,13 @@ func (h *AutomationHandler) Create(w http.ResponseWriter, r *http.Request) {
 		VehicleID:   req.VehicleID,
 		Enabled:     enabled,
 	}
+	steps, err := automationStepWrites(req)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body: "+err.Error())
+		return
+	}
 
-	if err := h.repo.Create(r.Context(), a); err != nil {
+	if err := h.repo.CreateWithSteps(r.Context(), a, steps); err != nil {
 		log.Error().Err(err).Str("name", a.Name).Msg("failed to create automation")
 		writeError(w, http.StatusInternalServerError, "failed to create automation")
 		return
@@ -867,8 +1056,13 @@ func (h *AutomationHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	existing.VehicleID = req.VehicleID
 	existing.Enabled = enabled
+	steps, err := automationStepWrites(req)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body: "+err.Error())
+		return
+	}
 
-	if err := h.repo.Update(r.Context(), existing); err != nil {
+	if err := h.repo.UpdateWithSteps(r.Context(), existing, steps); err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to update automation")
 		writeError(w, http.StatusInternalServerError, "failed to update automation")
 		return
@@ -2434,8 +2628,12 @@ func (h *AutomationHandler) importSingle(
 		VehicleID:   req.VehicleID,
 		Enabled:     false, // always disabled on import
 	}
+	steps, err := automationStepWrites(req)
+	if err != nil {
+		return nil, mkErr(err.Error())
+	}
 
-	if err := h.repo.Create(r.Context(), a); err != nil {
+	if err := h.repo.CreateWithSteps(r.Context(), a, steps); err != nil {
 		log.Error().Err(err).Str("name", name).Msg("import: failed to create automation")
 		return nil, mkErr("failed to create automation")
 	}

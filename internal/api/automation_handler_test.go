@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/automation/action"
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
@@ -144,6 +146,34 @@ func TestAutomationDTOValidation_RejectsInvalidStepPayloads(t *testing.T) {
 				t.Fatalf("expected invalid payload %q to be rejected", tt.name)
 			}
 		})
+	}
+}
+
+func TestAutomationPersistenceRollbackOnChildStepError(t *testing.T) {
+	repo := &automationPersistenceFakeRepo{failKind: models.AutomationStepKindActionNotify}
+	h := &AutomationHandler{repo: repo}
+	req := httptest.NewRequest(http.MethodPost, "/automations", strings.NewReader(validAutomationDTOPayload()))
+	rec := httptest.NewRecorder()
+
+	h.Create(rec, req)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusInternalServerError, rec.Body.String())
+	}
+	if repo.createCalled {
+		t.Fatal("Create used non-transactional parent-only persistence path")
+	}
+	if repo.committedParent != nil {
+		t.Fatalf("parent committed after child-step error: %#v", repo.committedParent)
+	}
+	if len(repo.committedSteps) != 0 {
+		t.Fatalf("steps committed after child-step error: %#v", repo.committedSteps)
+	}
+	if repo.stagedParent == nil {
+		t.Fatal("expected parent row to be staged before forced child-step error")
+	}
+	if len(repo.stagedSteps) == 0 {
+		t.Fatal("expected prior new steps to be staged before forced child-step error")
 	}
 }
 
@@ -825,6 +855,60 @@ func TestWriteJSONIndent(t *testing.T) {
 }
 
 // ── test helpers ────────────────────────────────────────────────────────
+
+type automationPersistenceFakeRepo struct {
+	failKind        string
+	createCalled    bool
+	stagedParent    *models.Automation
+	stagedSteps     []database.AutomationStepWrite
+	committedParent *models.Automation
+	committedSteps  []database.AutomationStepWrite
+}
+
+func (r *automationPersistenceFakeRepo) ListFull(context.Context) ([]models.AutomationFull, error) {
+	return nil, nil
+}
+
+func (r *automationPersistenceFakeRepo) GetByID(context.Context, int64) (*models.AutomationFull, error) {
+	return nil, nil
+}
+
+func (r *automationPersistenceFakeRepo) Create(context.Context, *models.Automation) error {
+	r.createCalled = true
+	return fmt.Errorf("unexpected non-transactional create")
+}
+
+func (r *automationPersistenceFakeRepo) CreateWithSteps(_ context.Context, a *models.Automation, steps []database.AutomationStepWrite) error {
+	stagedParent := *a
+	stagedParent.ID = 101
+	r.stagedParent = &stagedParent
+	r.stagedSteps = r.stagedSteps[:0]
+
+	for _, step := range steps {
+		if step.Kind == r.failKind {
+			return fmt.Errorf("forced child-step persistence error for %s", step.Kind)
+		}
+		r.stagedSteps = append(r.stagedSteps, step)
+	}
+
+	a.ID = stagedParent.ID
+	committedParent := stagedParent
+	r.committedParent = &committedParent
+	r.committedSteps = append([]database.AutomationStepWrite(nil), r.stagedSteps...)
+	return nil
+}
+
+func (r *automationPersistenceFakeRepo) Update(context.Context, *models.Automation) error {
+	return nil
+}
+
+func (r *automationPersistenceFakeRepo) UpdateWithSteps(context.Context, *models.Automation, []database.AutomationStepWrite) error {
+	return nil
+}
+
+func (r *automationPersistenceFakeRepo) Delete(context.Context, int64) error {
+	return nil
+}
 
 func int64Ptr(v int64) *int64 { return &v }
 
