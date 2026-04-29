@@ -4,6 +4,13 @@
  * Every exported interface and type alias used across the API layer.
  */
 
+import type {
+  Automation as AutomationModel,
+  AutomationActionInput,
+  AutomationConditionInput,
+  AutomationTriggerInput,
+} from '@/types/automations'
+
 // === Core Types ===
 
 export interface Vehicle {
@@ -1527,24 +1534,24 @@ export interface AutomationConflict {
   severity: 'warning' | 'info'
 }
 
-export interface Automation {
-  id: number
-  name: string
-  description: string
-  vehicle_id: number | null
-  enabled: boolean
-  trigger_type: string
-  trigger_config: Record<string, unknown> | null
-  conditions: Record<string, unknown>[] | null
-  actions: Record<string, unknown>[] | null
-  cooldown_minutes: number
-  max_executions_hour: number
+type RemovedAutomationTriggerTypeKey = `trigger_${'type'}`
+type RemovedAutomationTriggerConfigKey = `trigger_${'config'}`
+type RemovedAutomationRootCompatibilityKey =
+  | RemovedAutomationTriggerTypeKey
+  | RemovedAutomationTriggerConfigKey
+  | 'conditions'
+  | 'actions'
+
+type RemovedAutomationRootCompatibility = {
+  [K in RemovedAutomationRootCompatibilityKey]: never
+}
+
+export type Automation = AutomationModel & {
   stop_on_failure: boolean
   notify_on_run: boolean
   notify_on_failure: boolean
   seasonal_start: number | null
   seasonal_end: number | null
-  priority: number
   last_triggered_at: string | null
   last_success_at: string | null
   last_failure_at: string | null
@@ -1554,12 +1561,9 @@ export interface Automation {
   auto_disabled: boolean
   auto_disabled_reason: string | null
   preset_id: string | null
-  tags: string[]
-  created_at: string
-  updated_at: string
   next_fire_time?: string | null
   conflicts?: AutomationConflict[]
-}
+} & RemovedAutomationRootCompatibility
 
 // === Automation Preset Types ===
 
@@ -1576,17 +1580,12 @@ export interface AutomationPreset {
   description: string
   category: string
   icon: string
-  trigger_type: string
-  trigger_config: Record<string, unknown>
-  conditions?: Record<string, unknown>[] | null
-  actions: Record<string, unknown>[]
-  cooldown_minutes: number
-  max_executions_hour: number
+  triggers: AutomationTriggerInput[]
+  conditions?: AutomationConditionInput[]
+  actions: AutomationActionInput[]
   stop_on_failure: boolean
   notify_on_run: boolean
   notify_on_failure: boolean
-  priority: number
-  tags: string[]
 }
 
 export interface AutomationPresetsResponse {
@@ -1812,9 +1811,16 @@ export type {
 } from '@/types/signals';
 
 export type {
+  AutomationActionInput,
+  AutomationActionStep,
+  AutomationConditionInput,
+  AutomationConditionStep,
   AutomationFull,
   AutomationStep,
   AutomationStepBase,
   AutomationStepKind,
   AutomationStepLane,
+  AutomationStepSummary,
+  AutomationTriggerInput,
+  AutomationTriggerStep,
 } from '@/types/automations';

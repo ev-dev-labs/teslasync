@@ -6,28 +6,27 @@ import { useToast } from '@/components/feedback/Toast';
 import type {
   Automation,
   AutomationFull,
-  AutomationStep,
+  AutomationActionInput,
+  AutomationConditionInput,
   AutomationHistoryListResponse,
   AutomationPresetsResponse,
   AutomationPreset,
+  AutomationTriggerInput,
 } from '@/api/types';
 
-// Distributes over the AutomationStep discriminated union so variant-specific
-// fields (e.g. cron_expr on trigger_time) survive the Omit. Without this
-// conditional, TS would collapse to the intersection of common keys only.
-export type AutomationStepInput = AutomationStep extends infer T
-  ? T extends AutomationStep
-    ? Omit<T, 'id' | 'automation_id' | 'created_at'>
-    : never
-  : never;
+export type AutomationStepInput =
+  | AutomationTriggerInput
+  | AutomationConditionInput
+  | AutomationActionInput;
 
-export type AutomationFullInput = Omit<
-  AutomationFull,
-  'id' | 'created_at' | 'updated_at' | 'triggers' | 'conditions' | 'actions'
-> & {
-  triggers: AutomationStepInput[];
-  conditions: AutomationStepInput[];
-  actions: AutomationStepInput[];
+export type AutomationFullInput = {
+  name: string;
+  description?: string;
+  vehicle_id?: number | null;
+  enabled?: boolean;
+  triggers: AutomationTriggerInput[];
+  conditions: AutomationConditionInput[];
+  actions: AutomationActionInput[];
 };
 
 export const automationKeys = {
