@@ -1,0 +1,229 @@
+=== PREFLIGHT ===
+PROMPT=phase-35-00-live-state-inventory
+DEPENDENCY_STATUS=none
+ALLOWED_CHANGE=.github\prompts\db-refactor\logs\phase-35-00-live-state-inventory.log
+SOURCE_CODE_EDITED=no
+REQUIRED_FILE_PRECHECK=all listed files exist
+MISSING_FILE_COUNT_PRECHECK=0
+INITIAL_GIT_STATUS_OUTSIDE_ALLOWED=present before this log was created:
+ M .github/ARCHITECTURE.md
+ M .github/copilot-instructions.md
+ M .github/instructions/go-backend.instructions.md
+ M .github/instructions/telemetry-pipeline.instructions.md
+PREFLIGHT_NOTE=The exact gate is expected to report STATUS=BLOCKED because git status already contains modified files outside the allowed log path.
+INSPECTED_FILES:
+- cmd\teslasync\main.go
+- internal\signal\store.go
+- internal\signal\redis_cache.go
+- internal\api\telemetry_handler.go
+- internal\api\fsm_handler.go
+- internal\api\signal_handler.go
+- internal\api\sse_handler.go
+- internal\api\router.go
+- internal\api\alert_handler.go
+- internal\api\charging_handler.go
+- internal\api\command_handler.go
+- internal\api\drive_handler.go
+- internal\api\maintenance_handler.go
+- internal\api\range_projection_handler.go
+- internal\api\watch_handler.go
+- internal\fsm\reconciler.go
+ADDITIONAL_CONTRACT_FILES_INSPECTED:
+- internal\api\telemetry_sessions.go
+- internal\api\battery_cells_handler.go
+- internal\api\vehicle_handler.go
+- internal\api\devtools_handler.go
+- internal\database\signal_history_writer.go
+
+=== SURVEY ===
+WRITE_PATH_SUMMARY
+- Fleet telemetry write order in internal\api\telemetry_handler.go:446-500: normalize units, canonicalize names, resolve vehicle ID, update local SignalStore, mirror Redis HSET asynchronously, optionally write Mongo signal log asynchronously, and append to Postgres signal_log through SignalHistoryWriter.
+- LOCAL_HOT_PATH write: internal\api\telemetry_handler.go:466 calls h.signalStore.Update(vehicleID, signals). internal\signal\store.go:51-78 merges non-nil/non-invalid values into the per-process map and stamps each value with time.Now().UTC().
+- CROSS_POD_READ mirror write: internal\api\telemetry_handler.go:475-478 launches safeGo("redis-signal-cache") and calls h.redisCache.Update(redisCtx, vehicleID, redisCopy). internal\signal\redis_cache.go:38-77 writes one Redis HSET key per vehicle and refreshes TTL.
+- Redis HSET shape today: internal\signal\redis_cache.go:21 documents key "vehicle:{vehicleID}:signals"; internal\signal\redis_cache.go:43 uses fmt.Sprintf("vehicle:%d:signals", vehicleID); fields are signal names; values are encodeSignalValue(val) strings from internal\signal\redis_cache.go:138-164.
+- Redis stores values only today: internal\signal\redis_cache.go:59 appends name and encodeSignalValue(val). There is no per-field timestamp in Redis HSET. Freshness exists only in local internal\signal.Store Value.Timestamp at internal\signal\store.go:19-22 and in durable signal_log rows.
+- SSE fanout write: internal\api\telemetry_handler.go:1235-1267 publishes preformatted vehicle_update SSE payloads through Redis Pub/Sub when Redis exists; internal\api\telemetry_handler.go:1258 calls h.redisCache.PublishSignals(ctx, msg); internal\api\telemetry_handler.go:1266-1267 falls back to local EventHub broadcast when Redis is absent.
+- Durable history write: internal\api\telemetry_handler.go:499-500 calls h.signalHistoryWriter.Append(vehicleID, signals). internal\database\signal_history_writer.go:51-56 defines the signal_log writer; internal\database\signal_history_writer.go:309-313 inserts into signal_log with conflict update.
+- Durable backlog key: internal\database\signal_history_writer.go:20-22 defines Redis list signal_log:backlog. internal\database\signal_history_writer.go:257-259 pushes overflow rows and sets TTL; internal\database\signal_history_writer.go:223-240 drains backlog on startup.
+- Startup write/hydration into local L1: cmd\teslasync\main.go:224 calls signalStore.LoadFromDB(ctx, v.ID), which uses Redis HSET first via internal\signal\store.go:176-184. cmd\teslasync\main.go:237-238 calls signalHistoryWriter.GetLatestPerSignal then signalStore.Hydrate(v.ID, extra); internal\signal\store.go:194-218 hydrates without overwriting existing values.
+
+READ_PATH_CLASSIFICATION
+- LOCAL_HOT_PATH: internal\api\telemetry_handler.go:681 uses h.signalStore.GetRawMap(vehicleID) as snapshot merge context before throttled snapshot writes. This must stay process-local and low latency.
+- LOCAL_HOT_PATH: internal\api\telemetry_sessions.go:260 and 276 read t.signalStore.GetString during recovered drive/charge validation. These reads operate after startup hydration and decide local session cleanup.
+- LOCAL_HOT_PATH: internal\api\telemetry_sessions.go:713,731,748,749 resolve sparse telemetry from batch -> accumulated -> SignalStore for session accumulation. These are telemetry/session hot-path reads.
+- LOCAL_HOT_PATH: internal\api\telemetry_sessions.go:1030 reads t.signalStore.Get(vehicleID, "Gear") to avoid ending drives during long stops when last-known gear is D/R.
+- LOCAL_HOT_PATH: internal\api\telemetry_sessions.go:1320,1324,2031,2035 use SignalStore temperature fallbacks for drive/charge aggregate stats.
+- LOCAL_HOT_PATH: internal\api\fsm_handler.go:464 iterates h.signalStore.VehicleIDs(); internal\api\fsm_handler.go:515 reads h.signalStore.GetRawMap(vehicleID) to replay snapshots into ProcessSignals during reconciliation.
+- LOCAL_HOT_PATH: internal\fsm\reconciler.go:59-63 reads store.Get for Gear, DetailedChargeState, ChargeState, ChargeAmps, and VehicleSpeed; internal\fsm\reconciler.go:66-78 relies on local Value.Timestamp freshness.
+- CROSS_POD_READ currently local L1: internal\api\signal_handler.go:315 reads h.signalStore.GetAll(vehicleID) for GET /api/v1/signals/{vehicleID}/live. Any pod may serve this route, so the current local-only read is a scale-out risk.
+- CROSS_POD_READ currently local L1: internal\api\vehicle_handler.go:183 gets telemetryHandler.GetSignalStore(), and internal\api\vehicle_handler.go:190 checks len(store.GetAll(vehicle.ID)) for vehicle state responses. Any pod may serve vehicle state.
+- CROSS_POD_READ currently local L1: internal\api\battery_cells_handler.go:181 reads h.signalStore.GetFloat(vehicleID, signalName) before signal_log fallback for battery cells. Any pod may serve the endpoint.
+- CROSS_POD_READ currently local L1: internal\api\alert_handler.go:276-277 uses h.signalStore.VehicleIDs() and h.signalStore.GetRawMap(vid) to render alert test templates from current values.
+- CROSS_POD_READ via Redis: internal\api\charging_handler.go:174 calls h.redisCache.GetAll(ctx, vehicleID) for in-progress charging current state, with signal_log SnapshotAt fallback at internal\api\charging_handler.go:180-185.
+- CROSS_POD_READ via Redis: internal\api\drive_handler.go:251 calls h.redisCache.GetAll(ctx, vehicleID) for in-progress drive current state, with signal_log SnapshotAt fallback at internal\api\drive_handler.go:257-262.
+- CROSS_POD_READ via Redis: internal\api\maintenance_handler.go:110 calls h.redisCache.GetAll(ctx, vehicleID) for odometer.
+- CROSS_POD_READ via Redis: internal\api\range_projection_handler.go:114 calls h.redisCache.GetSignal(ctx, vehicleID, "OutsideTemp") for current outside temperature; battery/range/health also use signalLogReader SignalAt at internal\api\range_projection_handler.go:89,95,100,104,600.
+- CROSS_POD_READ via Redis: internal\api\watch_handler.go:233 calls h.redisCache.GetAll(ctx, vehicleID) for watch summary.
+- CROSS_POD_READ via Redis: internal\api\command_handler.go:186 calls h.redisCache.GetSignal(r.Context(), vehicleID, "ShiftState") as command wake-state evidence.
+- CROSS_POD_READ via Redis diagnostics: internal\api\devtools_handler.go:1147 calls h.redisCache.GetAll(r.Context(), vehicleID) for /dev-tools/redis-signals.
+- CROSS_POD_READ fallback for signal discovery: internal\api\signal_handler.go:223 calls h.redisCache.GetAll(ctx, vehicleID) only after signal_history and Mongo signal-log sources have no data.
+- RESTART_RECOVERY: internal\signal\store.go:176-184 reads s.redisCache.GetAll(ctx, vehicleID) during LoadFromDB and hydrates local L1. cmd\teslasync\main.go:224 calls this for each vehicle.
+- RESTART_RECOVERY: cmd\teslasync\main.go:237-238 hydrates remaining signals from signalHistoryWriter.GetLatestPerSignal into local SignalStore; internal\signal\store.go:194-218 does not overwrite values already loaded from Redis.
+- RESTART_RECOVERY: cmd\teslasync\main.go:254-257 recovers sessions, validates them, recovers incomplete sessions, and starts buffer drains after SignalStore and signalLogReader are wired.
+- RESTART_RECOVERY: cmd\teslasync\main.go:263-266 reads signalStore.VehicleIDs() and signalStore.GetRawMap(vid) to populate alert prevSignals after hydration.
+- DURABLE_HISTORY: internal\api\signal_handler.go:100 reads signalHistoryWriter.GetHistory; internal\api\signal_handler.go:130 reads signalLogRepo.GetHistory fallback; internal\api\signal_handler.go:266 reads signalHistoryWriter.GetGlobalStats.
+- DURABLE_HISTORY: internal\api\charging_handler.go:133 reads signalLogReader.SnapshotAt at session start; internal\api\charging_handler.go:180 reads signalLogReader.SnapshotAt(now) fallback; internal\api\charging_handler.go:212-215 reads SignalTracePivotFlat for charge telemetry.
+- DURABLE_HISTORY: internal\api\drive_handler.go:122-140 reads SignalTracePivotFlat for telemetry and positions; internal\api\drive_handler.go:179 reads start snapshot; internal\api\drive_handler.go:257 reads current fallback snapshot; internal\api\drive_handler.go:809-815 queries signal_log directly for VehicleSpeed histogram.
+- DURABLE_HISTORY: internal\api\range_projection_handler.go:89,95,100,104,600 read point-in-time signal values from SignalLogReader.
+
+REDIS_CONTRACT_TODAY
+- Redis is optional for ingestion: internal\api\telemetry_handler.go:469-480 mirrors to Redis in a safeGo goroutine with a 5s timeout after local SignalStore update. Failure is logged by internal\signal\redis_cache.go:67 and does not undo local L1.
+- Redis live HSET key compatibility: internal\signal\redis_cache.go:21 documents "vehicle:{vehicleID}:signals"; internal\signal\redis_cache.go:43,83,104 construct "vehicle:%d:signals".
+- Redis Pub/Sub channel compatibility: internal\signal\redis_cache.go:18 defines vehicleSignalsChannel = "vehicle_signals"; internal\api\sse_handler.go:81 and internal\api\telemetry_handler.go:1236 document cross-pod SSE through this channel.
+- Redis durable backlog compatibility: internal\database\signal_history_writer.go:22 defines redisBacklogKey = "signal_log:backlog".
+- Redis per-signal timestamp status: Redis stores only encoded values in HSET fields, not timestamps. This is a Phase 35 scale risk because cross-pod readers cannot distinguish fresh values from values still inside the 7-day key TTL without consulting signal_log or adding a compatible timestamp/freshness side channel.
+- Direct Redis contract references:
+  - cmd\teslasync\main.go:217 telemetryHandler.SetRedisCache(sigsvc.NewRedisSignalCache(rdb))
+  - internal\api\charging_handler.go:29 WithRedisCache definition; internal\api\charging_handler.go:174 h.redisCache.GetAll(ctx, vehicleID)
+  - internal\api\command_handler.go:35 WithRedisCache definition; internal\api\command_handler.go:186 h.redisCache.GetSignal(r.Context(), vehicleID, "ShiftState")
+  - internal\api\drive_handler.go:35 WithRedisCache definition; internal\api\drive_handler.go:251 h.redisCache.GetAll(ctx, vehicleID)
+  - internal\api\maintenance_handler.go:23 WithRedisCache definition; internal\api\maintenance_handler.go:110 h.redisCache.GetAll(ctx, vehicleID)
+  - internal\api\range_projection_handler.go:30 WithRedisCache definition; internal\api\range_projection_handler.go:114 h.redisCache.GetSignal(ctx, vehicleID, "OutsideTemp")
+  - internal\api\watch_handler.go:63 WithRedisCache definition; internal\api\watch_handler.go:233 h.redisCache.GetAll(ctx, vehicleID)
+  - internal\api\router.go:221 signal.NewRedisSignalCache(rdb)
+  - internal\api\router.go:222 maintenanceHandler.WithRedisCache(redisSignalCache)
+  - internal\api\router.go:223 commandHandler.WithRedisCache(redisSignalCache)
+  - internal\api\router.go:224 watchHandler.WithRedisCache(redisSignalCache)
+  - internal\api\router.go:225 driveHandler.WithRedisCache(redisSignalCache)
+  - internal\api\router.go:226 chargingHandler.WithRedisCache(redisSignalCache)
+  - internal\api\router.go:227 rangeProjectionHandler.WithRedisCache(redisSignalCache)
+  - internal\api\router.go:236 eventHub.SubscribeRedis(context.Background(), signal.NewRedisSignalCache(rdb))
+  - internal\api\router.go:271 devToolsHandler.redisCache = signal.NewRedisSignalCache(rdb)
+  - internal\api\router.go:1029 signalHandler.WithRedisCache(signal.NewRedisSignalCache(rdb))
+  - internal\api\router.go:1047 signalHandler.WithRedisCache(signal.NewRedisSignalCache(rdb))
+  - internal\api\signal_handler.go:43 WithRedisCache definition; internal\api\signal_handler.go:223 h.redisCache.GetAll(ctx, vehicleID)
+  - internal\api\sse_handler.go:88 SubscribeRedis definition; internal\api\sse_handler.go:92 redisCache.SubscribeSignals(ctx)
+  - internal\api\telemetry_handler.go:187 SetRedisCache definition; internal\api\telemetry_handler.go:190 h.signalStore.SetRedisCache(cache)
+  - internal\api\telemetry_handler.go:478 h.redisCache.Update(redisCtx, vehicleID, redisCopy)
+  - internal\api\telemetry_handler.go:1258 h.redisCache.PublishSignals(ctx, msg)
+  - internal\api\devtools_handler.go:63 WithRedisSignalCache definition; internal\api\devtools_handler.go:1147 h.redisCache.GetAll(r.Context(), vehicleID)
+  - internal\signal\redis_cache.go:38 RedisSignalCache.Update definition
+  - internal\signal\redis_cache.go:82 RedisSignalCache.GetAll definition
+  - internal\signal\redis_cache.go:103 RedisSignalCache.GetSignal definition
+  - internal\signal\redis_cache.go:169 RedisSignalCache.PublishSignals definition
+  - internal\signal\redis_cache.go:176 RedisSignalCache.SubscribeSignals definition
+  - internal\signal\store.go:44 Store.SetRedisCache definition
+
+SIGNALSTORE_CONTRACT_TODAY
+- internal\signal.Store is a per-process L1 hot working set. internal\signal\store.go:25-31 defines vehicles map[int64]map[string]*Value plus optional RedisSignalCache for recovery. It is not a distributed store.
+- Store values include timestamps: internal\signal\store.go:19-22 Value has Raw and Timestamp; internal\signal\store.go:72 sets m[k] = &Value{Raw: v, Timestamp: now}. FSM reconciliation depends on those timestamps.
+- Store update semantics: internal\signal\store.go:48-52 documents never overwriting with nil; internal\signal\store.go:61-72 skips nil and invalid markers. This is the local last-known-good contract.
+- Store restart semantics: internal\signal\store.go:170-188 tries Redis HSET first; internal\signal\store.go:191-218 allows signal_log hydration after Redis without overwriting existing Redis-loaded values.
+- Direct SignalStore contract references:
+  - cmd\teslasync\main.go:212 telemetryHandler.SetSignalStore(signalStore)
+  - cmd\teslasync\main.go:213 telemetryHandler.FSMHandler().SetSignalStore(signalStore)
+  - cmd\teslasync\main.go:224 signalStore.LoadFromDB(ctx, v.ID)
+  - cmd\teslasync\main.go:238 signalStore.Hydrate(v.ID, extra)
+  - cmd\teslasync\main.go:263 signalStore.VehicleIDs()
+  - cmd\teslasync\main.go:264 signalStore.GetRawMap(vid)
+  - internal\api\alert_handler.go:276 h.signalStore.VehicleIDs()
+  - internal\api\alert_handler.go:277 h.signalStore.GetRawMap(vid)
+  - internal\api\battery_cells_handler.go:181 h.signalStore.GetFloat(vehicleID, signalName)
+  - internal\api\fsm_handler.go:55 SetSignalStore definition
+  - internal\api\fsm_handler.go:464 h.signalStore.VehicleIDs()
+  - internal\api\fsm_handler.go:515 h.signalStore.GetRawMap(vehicleID)
+  - internal\api\router.go:146 opt.TelemetryHandler.GetSignalStore()
+  - internal\api\router.go:1032 telemetryHandler.GetSignalStore()
+  - internal\api\router.go:1033 signalHandler.WithSignalStore(store)
+  - internal\api\signal_handler.go:49 WithSignalStore definition
+  - internal\api\signal_handler.go:315 h.signalStore.GetAll(vehicleID)
+  - internal\api\telemetry_handler.go:174 SetSignalStore definition
+  - internal\api\telemetry_handler.go:190 h.signalStore.SetRedisCache(cache)
+  - internal\api\telemetry_handler.go:200 GetSignalStore definition
+  - internal\api\telemetry_handler.go:466 h.signalStore.Update(vehicleID, signals)
+  - internal\api\telemetry_handler.go:681 h.signalStore.GetRawMap(vehicleID)
+  - internal\api\telemetry_sessions.go:260 t.signalStore.GetString(vehicleID, "Gear")
+  - internal\api\telemetry_sessions.go:276 t.signalStore.GetString(vehicleID, "DetailedChargeState")
+  - internal\api\telemetry_sessions.go:713 t.signalStore.GetFloat(vehicleID, k)
+  - internal\api\telemetry_sessions.go:731 t.signalStore.GetFloat(vehicleID, k)
+  - internal\api\telemetry_sessions.go:748 t.signalStore.GetFloat(vehicleID, "Latitude")
+  - internal\api\telemetry_sessions.go:749 t.signalStore.GetFloat(vehicleID, "Longitude")
+  - internal\api\telemetry_sessions.go:1030 t.signalStore.Get(vehicleID, "Gear")
+  - internal\api\telemetry_sessions.go:1320 t.signalStore.GetFloat(active.VehicleID, "InsideTemp")
+  - internal\api\telemetry_sessions.go:1324 t.signalStore.GetFloat(active.VehicleID, "OutsideTemp")
+  - internal\api\telemetry_sessions.go:2031 t.signalStore.GetFloat(vehicleID, "InsideTemp")
+  - internal\api\telemetry_sessions.go:2035 t.signalStore.GetFloat(vehicleID, "OutsideTemp")
+  - internal\api\vehicle_handler.go:183 h.telemetryHandler.GetSignalStore()
+  - internal\api\vehicle_handler.go:190 store.GetAll(vehicle.ID)
+  - internal\fsm\reconciler.go:59 store.Get(vehicleID, "Gear")
+  - internal\fsm\reconciler.go:60 store.Get(vehicleID, "DetailedChargeState")
+  - internal\fsm\reconciler.go:61 store.Get(vehicleID, "ChargeState")
+  - internal\fsm\reconciler.go:62 store.Get(vehicleID, "ChargeAmps")
+  - internal\fsm\reconciler.go:63 store.Get(vehicleID, "VehicleSpeed")
+
+SSE_FANOUT_CONTRACT_TODAY
+- Single-pod path: EventHub.Broadcast writes to in-process clients at internal\api\sse_handler.go:47-72.
+- Redis cross-pod path: router wires eventHub.SubscribeRedis at internal\api\router.go:236; SubscribeRedis subscribes at internal\api\sse_handler.go:92 and forwards preformatted payloads to local clients at internal\api\sse_handler.go:95-110.
+- Telemetry publisher path: internal\api\telemetry_handler.go:1244-1263 publishes through Redis when h.redisCache exists. internal\api\telemetry_handler.go:1258 calls PublishSignals.
+- Fallback behavior: internal\api\telemetry_handler.go:1249-1252 falls back to local broadcast on marshal failure; internal\api\telemetry_handler.go:1258-1260 falls back to local broadcast on Redis publish failure; internal\api\telemetry_handler.go:1266-1267 uses local broadcast when Redis is absent.
+- Contract risk: when Redis is configured, the local originating pod receives the event through its own SubscribeRedis subscription rather than direct Broadcast on the success path. Pub/Sub is not durable replay; disconnected clients recover only via later reads.
+
+RESTART_RECOVERY_CONTRACT_TODAY
+- Local SignalStore startup order in cmd\teslasync\main.go:210-244: create Store, wire TelemetryHandler and FSMHandler, wire Redis cache if available, LoadFromDB for each vehicle, create SignalHistoryWriter, then hydrate missing signals from signal_log latest-per-signal.
+- Redis-first L1 recovery: internal\signal\store.go:176-181 reads Redis HSET through s.redisCache.GetAll and Hydrate; internal\signal\store.go:183-184 logs Redis read failures and continues.
+- signal_log hydration: cmd\teslasync\main.go:237-238 calls GetLatestPerSignal and Hydrate; internal\signal\store.go:194-218 skips existing fields so Redis-loaded values win.
+- Session recovery after hydration: cmd\teslasync\main.go:253 wires SignalLogReader into the session tracker; cmd\teslasync\main.go:254-257 calls RecoverSessions, ValidateRecoveredSessions, RecoverIncompleteSessions, and StartBufferDrains.
+- Alert recovery after hydration: cmd\teslasync\main.go:263-266 seeds rule-engine prevSignals from local SignalStore.
+- signal_log backlog recovery: internal\database\signal_history_writer.go:162-164 drains Redis backlog at FlushLoop startup; internal\database\signal_history_writer.go:214-240 LPOP drains signal_log:backlog into the in-memory history buffer.
+
+NON_REGRESSION_BASELINE
+- SignalStore hot path must remain local L1 for telemetry ingestion, FSM/reconciliation, session tracking, and snapshot merge context.
+- Redis optionality must remain: Redis HSET and Pub/Sub errors cannot block telemetry ingestion or erase local SignalStore state.
+- Redis compatibility must preserve HSET key vehicle:{vehicleID}:signals, Pub/Sub channel vehicle_signals, and backlog key signal_log:backlog unless a later prompt adds an explicit migration and compatibility shim.
+- Historical reads must continue using signal_log/TimescaleDB and existing signal history paths for charts, point-in-time reconstruction, telemetry traces, and completion logic. Redis must not become the source of history.
+- API/frontend contract must remain compatible: route paths, response shapes, and hook URL conventions are not changed in this prompt.
+- Docs must describe layered state truthfully: SignalStore L1 + Redis live cache/PubSub/backlog + signal_log durable history. Do not claim Redis replaced SignalStore while SignalStore remains required by the hot path.
+
+SCALE_RISKS
+- Redis HSET has no per-signal timestamps. Cross-pod readers using Redis cannot enforce the same 2-minute freshness contract used by FSM reconciliation in internal\fsm\reconciler.go:43-45.
+- /signals/{vehicleID}/live currently reads local SignalStore only in internal\api\signal_handler.go:315; a pod without the telemetry stream may return empty or stale data.
+- Vehicle state responses currently use local SignalStore through internal\api\vehicle_handler.go:183-190; cross-pod HTTP serving can diverge from the pod receiving MQTT.
+- Battery cells and alert test template rendering currently prefer local SignalStore in internal\api\battery_cells_handler.go:181 and internal\api\alert_handler.go:276-277; these are user-facing cross-pod reads that may see pod-local state.
+- Redis Pub/Sub SSE is non-durable. It fans out live events but cannot replay missed updates; API reads must be the recovery path for clients.
+- SignalHistoryWriter overflow uses Redis backlog as a secondary WAL, but pushToRedisBacklog is explicitly best-effort and logs failures. This must not be confused with live state.
+- FSM/reconciliation reads local SignalStore timestamps and should not become active-active across pods without vehicle-owner routing, leases, or pod affinity.
+- Several handlers already use Redis for cross-pod reads but fall back to signal_log SnapshotAt(now). Without timestamped Redis values, the fallback does not run when Redis returns old-but-present values.
+
+=== REASONING ===
+TARGET_ARCHITECTURE:
+- Keep signal.Store as L1 for local hot paths.
+- Use Redis-backed live state for cross-pod reads and restart recovery.
+- Do not remove signal.Store in Phase 35.
+- Do not make Redis a synchronous blocker for telemetry ingestion unless a bounded fallback is present.
+REASONING_SUMMARY:
+- The current code already has the intended layered shape but not a complete cross-pod read contract. Telemetry writes local L1 first, mirrors Redis asynchronously, and writes durable history asynchronously/buffered.
+- Local-hot-path reads are latency-sensitive and timestamp-sensitive. They include telemetry snapshot merge, FSM reconciliation, and session completion/accumulation logic; these should continue to use SignalStore unless a later design provides equivalent local freshness and performance.
+- User-facing/API reads are the main scale-out risk. Some already use Redis with signal_log fallback, while /signals/live, vehicle state, battery cell current values, and alert test template rendering still read local SignalStore.
+- Redis HSET currently stores decoded values only. Later prompts need a freshness contract before Redis can safely become the default cross-pod live source for all user-facing reads.
+- Durable history remains signal_log/TimescaleDB. Redis Pub/Sub and Redis HSET are live/current-state mechanisms, not historical sources.
+
+=== CHANGES ===
+- Created this inventory log only.
+- No source code was edited.
+- No route, response shape, hook, migration, configuration, or production behavior changed.
+
+=== GATE ===
+GATE_STATUS=not yet run in this section; the exact gate command will append its own GATE block and EXIT/STATUS lines.
+EXPECTED_GATE_RESULT=BLOCKED because pre-existing git status contains files outside the allowed log path.
+
+=== COMMIT ===
+COMMIT_STATUS=pending exact gate result.
+COMMIT_PLAN=If the gate blocks only on unexpected pre-existing status drift, commit only this log file with git add -f as required by the blocked path.
+=== GATE ===
+MISSING_FILE_COUNT=0
+MISSING_LOG_PATTERN_COUNT=0
+SIGNALSTORE_REFERENCE_COUNT=42
+REDIS_REFERENCE_COUNT=60
+UNEXPECTED_STATUS_COUNT=0
+EXIT=0
+STATUS=DONE
