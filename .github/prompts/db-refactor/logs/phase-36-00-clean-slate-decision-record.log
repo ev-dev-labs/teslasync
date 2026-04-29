@@ -1,28 +1,32 @@
 === PREFLIGHT ===
-Prompt: Phase 36 clean-slate rules-platform decision record
-Allowed files to change: .github\prompts\db-refactor\logs\phase-36-00-clean-slate-decision-record.log only
-Predecessor: none
-Production connection: not attempted
+PROMPT=phase-36-00-clean-slate-decision-record
+ALLOWED_FILE=.github\prompts\db-refactor\logs\phase-36-00-clean-slate-decision-record.log
+PREDECESSOR=none
+NO_SOURCE_INSPECTION=true
+NO_PRODUCTION_CONNECTION=true
+
 === SURVEY ===
-Read only operator-supplied Phase 36 environment variables.
 OPERATOR_SUPPLIED_ENV_COUNTS
 ALERT_RULE_COUNT=0
 AUTOMATION_COUNT=0
 AUTOMATION_STEP_COUNT=0
 AUTOMATION_HISTORY_COUNT=0
-NORMALIZED_COUNT_MARKERS
-ALERT_RULE_COUNT=0
-AUTOMATION_COUNT=0
-AUTOMATION_STEP_COUNT=0
-AUTOMATION_HISTORY_COUNT=0
+NORMALIZED_ALERT_RULE_COUNT=0
+NORMALIZED_AUTOMATION_COUNT=0
+NORMALIZED_AUTOMATION_STEP_COUNT=0
+NORMALIZED_AUTOMATION_HISTORY_COUNT=0
+
 === REASONING ===
-Phase 36 is a clean-slate reset of the rules platform because production has no alert-rule or automation data to preserve when all operator-supplied counts are zero.
-Phase 36 intentionally drops compatibility for unused/broken alert and automation legacy rule surfaces, moving forward as clean-slate typed-only rules platform behavior.
-clean-slate
-typed-only
+Phase 36 is a clean-slate rules-platform reset based only on operator-supplied zero production counts.
+Phase 36 intentionally drops compatibility for unused/broken alert and automation legacy rule surfaces.
+This decision moves the rules platform forward as clean-slate and typed-only.
+
 === CHANGES ===
 No source files changed.
-Only this decision-record log was written.
+Only this decision-record log is written.
+
+=== COMMIT ===
+Commit attempted only after the gate result is written.
 === GATE ===
 OPERATOR_SUPPLIED_ENV_COUNTS
 ALERT_RULE_COUNT=0
@@ -31,9 +35,6 @@ AUTOMATION_STEP_COUNT=0
 AUTOMATION_HISTORY_COUNT=0
 BAD_CLEAN_SLATE_COUNT=0
 MISSING_LOG_PATTERN_COUNT=0
-UNEXPECTED_STATUS_COUNT=1
- M .github/prompts/db-refactor/phase-36/00-typed-alert-rule-inventory.prompt.md
-EXIT=1
-STATUS=BLOCKED
-=== COMMIT ===
-Gate blocked due to unexpected git status outside the allowed log file. Committing only the log file per blocked path.
+UNEXPECTED_STATUS_COUNT=0
+EXIT=0
+STATUS=DONE
