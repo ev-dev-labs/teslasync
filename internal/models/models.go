@@ -127,10 +127,10 @@ type Address struct {
 
 // SoftwareUpdate represents a vehicle software update.
 type SoftwareUpdate struct {
-	ID          int64     `json:"id" db:"id"`
-	VehicleID   int64     `json:"vehicle_id" db:"vehicle_id"`
-	Version     string    `json:"version" db:"version"`
-	Status      string    `json:"status" db:"status"` // available, downloading, installing, installed
+	ID          int64      `json:"id" db:"id"`
+	VehicleID   int64      `json:"vehicle_id" db:"vehicle_id"`
+	Version     string     `json:"version" db:"version"`
+	Status      string     `json:"status" db:"status"` // available, downloading, installing, installed
 	ScheduledAt *time.Time `json:"scheduled_at,omitempty" db:"scheduled_at"`
 	InstalledAt *time.Time `json:"installed_at,omitempty" db:"installed_at"`
 	CreatedAt   time.Time  `json:"created_at" db:"created_at"`
@@ -153,27 +153,27 @@ type Token struct {
 // that internal/database/settings_repo.go and internal/api/settings_handler.go
 // continue to build; these will be rewritten in phase-5 prompts 30-66.
 type LegacySettings struct {
-	ID              int64   `json:"id" db:"id"`
-	UnitOfLength    string  `json:"unit_of_length" db:"unit_of_length"`       // km, mi
-	UnitOfTemp      string  `json:"unit_of_temp" db:"unit_of_temp"`           // C, F
-	UnitOfPressure  string  `json:"unit_of_pressure" db:"unit_of_pressure"`   // bar, psi
-	PreferredRange  string  `json:"preferred_range" db:"preferred_range"`     // ideal, rated
-	Language        string  `json:"language" db:"language"`
-	BaseCostPerKWh  float64 `json:"base_cost_per_kwh" db:"base_cost_per_kwh"`
-	APISuspended    bool    `json:"api_suspended" db:"api_suspended"`
-	Theme           string  `json:"theme" db:"theme"`                         // neon-cyan, tesla-red, etc.
-	Mode            string  `json:"mode" db:"mode"`                           // dark, light, oled, midnight
-	CustomPrimary   string  `json:"custom_primary" db:"custom_primary"`       // hex color for custom theme
-	CustomAccent    string  `json:"custom_accent" db:"custom_accent"`         // hex color for custom theme
-	GasPricePerUnit float64 `json:"gas_price_per_unit" db:"gas_price_per_unit"` // price per gallon/liter
-	GasUnit         string  `json:"gas_unit" db:"gas_unit"`                   // gallon, liter
-	GasEfficiencyMPG float64 `json:"gas_efficiency_mpg" db:"gas_efficiency_mpg"` // equivalent ICE car MPG for comparison
-	DecimalPrecision int     `json:"decimal_precision" db:"decimal_precision"`   // 1, 2, 3, or 4 decimal places for display
-	QuietHoursEnabled bool   `json:"quiet_hours_enabled" db:"quiet_hours_enabled"`
-	QuietHoursStart   string `json:"quiet_hours_start" db:"quiet_hours_start"`   // HH:MM (24h)
-	QuietHoursEnd     string `json:"quiet_hours_end" db:"quiet_hours_end"`       // HH:MM (24h)
-	AlertDigestMode   string `json:"alert_digest_mode" db:"alert_digest_mode"`   // instant, hourly, daily
-	PollingConfig   LegacyPollingConfig `json:"polling_config" db:"polling_config"`
+	ID                int64               `json:"id" db:"id"`
+	UnitOfLength      string              `json:"unit_of_length" db:"unit_of_length"`     // km, mi
+	UnitOfTemp        string              `json:"unit_of_temp" db:"unit_of_temp"`         // C, F
+	UnitOfPressure    string              `json:"unit_of_pressure" db:"unit_of_pressure"` // bar, psi
+	PreferredRange    string              `json:"preferred_range" db:"preferred_range"`   // ideal, rated
+	Language          string              `json:"language" db:"language"`
+	BaseCostPerKWh    float64             `json:"base_cost_per_kwh" db:"base_cost_per_kwh"`
+	APISuspended      bool                `json:"api_suspended" db:"api_suspended"`
+	Theme             string              `json:"theme" db:"theme"`                           // neon-cyan, tesla-red, etc.
+	Mode              string              `json:"mode" db:"mode"`                             // dark, light, oled, midnight
+	CustomPrimary     string              `json:"custom_primary" db:"custom_primary"`         // hex color for custom theme
+	CustomAccent      string              `json:"custom_accent" db:"custom_accent"`           // hex color for custom theme
+	GasPricePerUnit   float64             `json:"gas_price_per_unit" db:"gas_price_per_unit"` // price per gallon/liter
+	GasUnit           string              `json:"gas_unit" db:"gas_unit"`                     // gallon, liter
+	GasEfficiencyMPG  float64             `json:"gas_efficiency_mpg" db:"gas_efficiency_mpg"` // equivalent ICE car MPG for comparison
+	DecimalPrecision  int                 `json:"decimal_precision" db:"decimal_precision"`   // 1, 2, 3, or 4 decimal places for display
+	QuietHoursEnabled bool                `json:"quiet_hours_enabled" db:"quiet_hours_enabled"`
+	QuietHoursStart   string              `json:"quiet_hours_start" db:"quiet_hours_start"` // HH:MM (24h)
+	QuietHoursEnd     string              `json:"quiet_hours_end" db:"quiet_hours_end"`     // HH:MM (24h)
+	AlertDigestMode   string              `json:"alert_digest_mode" db:"alert_digest_mode"` // instant, hourly, daily
+	PollingConfig     LegacyPollingConfig `json:"polling_config" db:"polling_config"`
 }
 
 // LegacyPollingConfig controls which Tesla Fleet API endpoints are enabled.
@@ -209,8 +209,8 @@ type LegacyPollingConfig struct {
 	ServiceData         bool `json:"service_data"`          // GET /vehicles/{vin}/service_data
 
 	// Commands
-	WakeUp   bool `json:"wake_up"`   // POST /vehicles/{vin}/wake_up
-	Commands bool `json:"commands"`  // POST /vehicles/{vin}/command/*
+	WakeUp   bool `json:"wake_up"`  // POST /vehicles/{vin}/wake_up
+	Commands bool `json:"commands"` // POST /vehicles/{vin}/command/*
 
 	// Telemetry capture (raw signal recording to MongoDB)
 	TelemetryCapture              bool `json:"telemetry_capture"`                // enable raw signal recording
@@ -223,26 +223,26 @@ type LegacyPollingConfig struct {
 // `PollingConfig` from system.go. Will be removed in phase-5 prompts 30-66.
 func DefaultPollingConfig() LegacyPollingConfig {
 	return LegacyPollingConfig{
-		VehicleDiscovery:         true,
-		ChargeState:              true,
-		ClimateState:             true,
-		DriveState:               true,
-		LocationData:             true,
-		VehicleState:             true,
-		VehicleConfig:            true,
-		OnDemandVehicleDiscovery: true,
-		OnDemandChargeState:      true,
-		OnDemandClimateState:     true,
-		OnDemandDriveState:       true,
-		OnDemandLocationData:     true,
-		OnDemandVehicleState:     true,
-		OnDemandVehicleConfig:    true,
-		NearbyChargingSites:      true,
-		ReleaseNotes:             true,
-		RecentAlerts:             true,
-		ServiceData:              true,
-		WakeUp:                   true,
-		Commands:                 true,
+		VehicleDiscovery:              true,
+		ChargeState:                   true,
+		ClimateState:                  true,
+		DriveState:                    true,
+		LocationData:                  true,
+		VehicleState:                  true,
+		VehicleConfig:                 true,
+		OnDemandVehicleDiscovery:      true,
+		OnDemandChargeState:           true,
+		OnDemandClimateState:          true,
+		OnDemandDriveState:            true,
+		OnDemandLocationData:          true,
+		OnDemandVehicleState:          true,
+		OnDemandVehicleConfig:         true,
+		NearbyChargingSites:           true,
+		ReleaseNotes:                  true,
+		RecentAlerts:                  true,
+		ServiceData:                   true,
+		WakeUp:                        true,
+		Commands:                      true,
 		TelemetryCapture:              false,
 		TelemetryCaptureRetentionDays: 7,
 	}
@@ -338,22 +338,6 @@ type VehicleState struct {
 // dropped by the Phase 4 baseline migration; only `alert_rules` remains and is
 // modeled by AlertRule in alert.go.
 
-// RuleCondition represents a node in the condition tree.
-// Can be a leaf (signal comparison) or a branch (AND/OR/NOT combinator).
-type RuleCondition struct {
-	// Branch fields (combinator)
-	Op    string          `json:"op,omitempty"`    // "AND", "OR", "NOT"
-	Rules []RuleCondition `json:"rules,omitempty"` // child conditions
-
-	// Leaf fields (signal comparison)
-	Signal  string      `json:"signal,omitempty"`  // e.g. "BatteryLevel", "Gear"
-	Compare string      `json:"compare,omitempty"` // "==", "!=", ">", "<", ">=", "<=", "contains", "changed_to", "changed_from", "is_true", "is_false"
-	Value   interface{} `json:"value,omitempty"`   // comparison target
-
-	// Temporal (applies to branch or leaf)
-	ForSeconds *int `json:"for_seconds,omitempty"` // condition must hold for this duration
-}
-
 // CommandLog records a vehicle command execution.
 type CommandLog struct {
 	ID        int64     `json:"id" db:"id"`
@@ -367,24 +351,24 @@ type CommandLog struct {
 
 // EnergyStatsRow represents a single day of energy data from cagg_fleet_stats.
 type EnergyStatsRow struct {
-	Date             string  `json:"date"`
-	EnergyKWh        float64 `json:"energy_kwh"`
-	DistanceMi       float64 `json:"distance_mi"`
+	Date              string  `json:"date"`
+	EnergyKWh         float64 `json:"energy_kwh"`
+	DistanceMi        float64 `json:"distance_mi"`
 	EfficiencyWhPerMi float64 `json:"efficiency_wh_per_mi"`
-	Cost             float64 `json:"cost"`
+	Cost              float64 `json:"cost"`
 }
 
 // BatterySnapshot represents a point-in-time battery health reading.
 type BatterySnapshot struct {
-	ID              int64     `json:"id" db:"id"`
-	VehicleID       int64     `json:"vehicle_id" db:"vehicle_id"`
-	HealthScore     float64   `json:"health_score" db:"health_score"`
-	CapacityKWh     float64   `json:"capacity_kwh" db:"capacity_kwh"`
-	DegradationPct  float64   `json:"degradation_pct" db:"degradation_pct"`
-	EstRangeKm      float64   `json:"est_range_km" db:"est_range_km"`
-	CycleCount      int       `json:"cycle_count" db:"cycle_count"`
-	AvgCellTempC    float64   `json:"avg_cell_temp_c" db:"avg_cell_temp_c"`
-	CreatedAt       time.Time `json:"created_at" db:"created_at"`
+	ID             int64     `json:"id" db:"id"`
+	VehicleID      int64     `json:"vehicle_id" db:"vehicle_id"`
+	HealthScore    float64   `json:"health_score" db:"health_score"`
+	CapacityKWh    float64   `json:"capacity_kwh" db:"capacity_kwh"`
+	DegradationPct float64   `json:"degradation_pct" db:"degradation_pct"`
+	EstRangeKm     float64   `json:"est_range_km" db:"est_range_km"`
+	CycleCount     int       `json:"cycle_count" db:"cycle_count"`
+	AvgCellTempC   float64   `json:"avg_cell_temp_c" db:"avg_cell_temp_c"`
+	CreatedAt      time.Time `json:"created_at" db:"created_at"`
 }
 
 // NotificationChannel represents a configured notification delivery channel.
@@ -475,19 +459,19 @@ type TirePressureSnapshot struct {
 
 // VampireDrainEvent represents an energy loss event while parked.
 type VampireDrainEvent struct {
-	ID                 int64      `json:"id" db:"id"`
-	VehicleID          int64      `json:"vehicle_id" db:"vehicle_id"`
-	StartDate          time.Time  `json:"start_date" db:"start_date"`
-	EndDate            *time.Time `json:"end_date,omitempty" db:"end_date"`
-	StartBattery       int        `json:"start_battery" db:"start_battery"`
-	EndBattery         *int       `json:"end_battery,omitempty" db:"end_battery"`
-	BatteryLost        int        `json:"battery_lost" db:"battery_lost"`
-	RangeLostKm        float64    `json:"range_lost_km" db:"range_lost_km"`
-	DurationHours      float64    `json:"duration_hours" db:"duration_hours"`
-	DrainRatePctPerHr  float64    `json:"drain_rate_pct_per_hour" db:"drain_rate_pct_per_hour"`
-	OutsideTempAvg     *float64   `json:"outside_temp_avg,omitempty" db:"outside_temp_avg"`
-	SentryMode         bool       `json:"sentry_mode" db:"sentry_mode"`
-	CreatedAt          time.Time  `json:"created_at" db:"created_at"`
+	ID                int64      `json:"id" db:"id"`
+	VehicleID         int64      `json:"vehicle_id" db:"vehicle_id"`
+	StartDate         time.Time  `json:"start_date" db:"start_date"`
+	EndDate           *time.Time `json:"end_date,omitempty" db:"end_date"`
+	StartBattery      int        `json:"start_battery" db:"start_battery"`
+	EndBattery        *int       `json:"end_battery,omitempty" db:"end_battery"`
+	BatteryLost       int        `json:"battery_lost" db:"battery_lost"`
+	RangeLostKm       float64    `json:"range_lost_km" db:"range_lost_km"`
+	DurationHours     float64    `json:"duration_hours" db:"duration_hours"`
+	DrainRatePctPerHr float64    `json:"drain_rate_pct_per_hour" db:"drain_rate_pct_per_hour"`
+	OutsideTempAvg    *float64   `json:"outside_temp_avg,omitempty" db:"outside_temp_avg"`
+	SentryMode        bool       `json:"sentry_mode" db:"sentry_mode"`
+	CreatedAt         time.Time  `json:"created_at" db:"created_at"`
 }
 
 // DailyMileage represents mileage data for a single day.
@@ -499,7 +483,7 @@ type DailyMileage struct {
 	OdometerStart float64   `json:"odometer_start" db:"odometer_start"`
 	OdometerEnd   float64   `json:"odometer_end" db:"odometer_end"`
 	DriveCount    int       `json:"drive_count" db:"drive_count"`
-	EnergyUsedKWh float64  `json:"energy_used_kwh" db:"energy_used_kwh"`
+	EnergyUsedKWh float64   `json:"energy_used_kwh" db:"energy_used_kwh"`
 }
 
 // VisitedLocation represents an aggregated visited place.
@@ -582,73 +566,72 @@ type ExportJobRequest struct {
 
 // ChargingTelemetry moved to charging_telemetry.go (regenerated for post-migration schema).
 
-
 // MediaSnapshot represents a point-in-time media playback telemetry reading.
 type MediaSnapshot struct {
-	ID                  int64     `json:"id" db:"id"`
-	VehicleID           int64     `json:"vehicle_id" db:"vehicle_id"`
-	NowPlayingTitle     *string   `json:"now_playing_title,omitempty" db:"now_playing_title"`
-	NowPlayingArtist    *string   `json:"now_playing_artist,omitempty" db:"now_playing_artist"`
-	NowPlayingAlbum     *string   `json:"now_playing_album,omitempty" db:"now_playing_album"`
-	NowPlayingStation   *string   `json:"now_playing_station,omitempty" db:"now_playing_station"`
-	NowPlayingDuration  *int      `json:"now_playing_duration,omitempty" db:"now_playing_duration"`
-	NowPlayingElapsed   *int      `json:"now_playing_elapsed,omitempty" db:"now_playing_elapsed"`
-	PlaybackStatus      *string   `json:"playback_status,omitempty" db:"playback_status"`
-	PlaybackSource      *string   `json:"playback_source,omitempty" db:"playback_source"`
-	AudioVolume         *float64  `json:"audio_volume,omitempty" db:"audio_volume"`
-	AudioVolumeMax      *float64  `json:"audio_volume_max,omitempty" db:"audio_volume_max"`
-	AudioVolumeIncrement *float64 `json:"audio_volume_increment,omitempty" db:"audio_volume_increment"`
-	CreatedAt           time.Time `json:"created_at" db:"created_at"`
+	ID                   int64     `json:"id" db:"id"`
+	VehicleID            int64     `json:"vehicle_id" db:"vehicle_id"`
+	NowPlayingTitle      *string   `json:"now_playing_title,omitempty" db:"now_playing_title"`
+	NowPlayingArtist     *string   `json:"now_playing_artist,omitempty" db:"now_playing_artist"`
+	NowPlayingAlbum      *string   `json:"now_playing_album,omitempty" db:"now_playing_album"`
+	NowPlayingStation    *string   `json:"now_playing_station,omitempty" db:"now_playing_station"`
+	NowPlayingDuration   *int      `json:"now_playing_duration,omitempty" db:"now_playing_duration"`
+	NowPlayingElapsed    *int      `json:"now_playing_elapsed,omitempty" db:"now_playing_elapsed"`
+	PlaybackStatus       *string   `json:"playback_status,omitempty" db:"playback_status"`
+	PlaybackSource       *string   `json:"playback_source,omitempty" db:"playback_source"`
+	AudioVolume          *float64  `json:"audio_volume,omitempty" db:"audio_volume"`
+	AudioVolumeMax       *float64  `json:"audio_volume_max,omitempty" db:"audio_volume_max"`
+	AudioVolumeIncrement *float64  `json:"audio_volume_increment,omitempty" db:"audio_volume_increment"`
+	CreatedAt            time.Time `json:"created_at" db:"created_at"`
 }
 
 // VehicleConfigSnapshot represents a point-in-time vehicle configuration snapshot.
 type VehicleConfigSnapshot struct {
-	ID                          int64     `json:"id" db:"id"`
-	VehicleID                   int64     `json:"vehicle_id" db:"vehicle_id"`
-	CarType                     *string   `json:"car_type,omitempty" db:"car_type"`
-	Trim                        *string   `json:"trim,omitempty" db:"trim"`
-	ExteriorColor               *string   `json:"exterior_color,omitempty" db:"exterior_color"`
-	RoofColor                   *string   `json:"roof_color,omitempty" db:"roof_color"`
-	WheelType                   *string   `json:"wheel_type,omitempty" db:"wheel_type"`
-	RearSeatHeaters             *string   `json:"rear_seat_heaters,omitempty" db:"rear_seat_heaters"`
-	SunroofInstalled            *string   `json:"sunroof_installed,omitempty" db:"sunroof_installed"`
-	EfficiencyPackage           *string   `json:"efficiency_package,omitempty" db:"efficiency_package"`
-	EuropeVehicle               *bool     `json:"europe_vehicle,omitempty" db:"europe_vehicle"`
-	RightHandDrive              *bool     `json:"right_hand_drive,omitempty" db:"right_hand_drive"`
-	RemoteStartEnabled          *bool     `json:"remote_start_enabled,omitempty" db:"remote_start_enabled"`
-	ChargePort                  *string   `json:"charge_port,omitempty" db:"charge_port"`
-	OffroadLightbarPresent      *bool     `json:"offroad_lightbar_present,omitempty" db:"offroad_lightbar_present"`
-	Version                     *string   `json:"version,omitempty" db:"version"`
-	VehicleName                 *string   `json:"vehicle_name,omitempty" db:"vehicle_name"`
-	SoftwareUpdateVersion       *string   `json:"software_update_version,omitempty" db:"software_update_version"`
-	SoftwareUpdateDownloadPct   *int      `json:"software_update_download_pct,omitempty" db:"software_update_download_pct"`
-	SoftwareUpdateInstallPct    *int      `json:"software_update_install_pct,omitempty" db:"software_update_install_pct"`
-	SoftwareUpdateExpectedDuration *int   `json:"software_update_expected_duration,omitempty" db:"software_update_expected_duration"`
-	SoftwareUpdateScheduledStart  *string `json:"software_update_scheduled_start,omitempty" db:"software_update_scheduled_start"`
-	CreatedAt                   time.Time `json:"created_at" db:"created_at"`
+	ID                             int64     `json:"id" db:"id"`
+	VehicleID                      int64     `json:"vehicle_id" db:"vehicle_id"`
+	CarType                        *string   `json:"car_type,omitempty" db:"car_type"`
+	Trim                           *string   `json:"trim,omitempty" db:"trim"`
+	ExteriorColor                  *string   `json:"exterior_color,omitempty" db:"exterior_color"`
+	RoofColor                      *string   `json:"roof_color,omitempty" db:"roof_color"`
+	WheelType                      *string   `json:"wheel_type,omitempty" db:"wheel_type"`
+	RearSeatHeaters                *string   `json:"rear_seat_heaters,omitempty" db:"rear_seat_heaters"`
+	SunroofInstalled               *string   `json:"sunroof_installed,omitempty" db:"sunroof_installed"`
+	EfficiencyPackage              *string   `json:"efficiency_package,omitempty" db:"efficiency_package"`
+	EuropeVehicle                  *bool     `json:"europe_vehicle,omitempty" db:"europe_vehicle"`
+	RightHandDrive                 *bool     `json:"right_hand_drive,omitempty" db:"right_hand_drive"`
+	RemoteStartEnabled             *bool     `json:"remote_start_enabled,omitempty" db:"remote_start_enabled"`
+	ChargePort                     *string   `json:"charge_port,omitempty" db:"charge_port"`
+	OffroadLightbarPresent         *bool     `json:"offroad_lightbar_present,omitempty" db:"offroad_lightbar_present"`
+	Version                        *string   `json:"version,omitempty" db:"version"`
+	VehicleName                    *string   `json:"vehicle_name,omitempty" db:"vehicle_name"`
+	SoftwareUpdateVersion          *string   `json:"software_update_version,omitempty" db:"software_update_version"`
+	SoftwareUpdateDownloadPct      *int      `json:"software_update_download_pct,omitempty" db:"software_update_download_pct"`
+	SoftwareUpdateInstallPct       *int      `json:"software_update_install_pct,omitempty" db:"software_update_install_pct"`
+	SoftwareUpdateExpectedDuration *int      `json:"software_update_expected_duration,omitempty" db:"software_update_expected_duration"`
+	SoftwareUpdateScheduledStart   *string   `json:"software_update_scheduled_start,omitempty" db:"software_update_scheduled_start"`
+	CreatedAt                      time.Time `json:"created_at" db:"created_at"`
 }
 
 // LocationSnapshot represents a point-in-time navigation/location telemetry reading.
 type LocationSnapshot struct {
-	ID                     int64     `json:"id" db:"id"`
-	VehicleID              int64     `json:"vehicle_id" db:"vehicle_id"`
-	DestinationName        *string   `json:"destination_name,omitempty" db:"destination_name"`
-	DestinationLat         *float64  `json:"destination_lat,omitempty" db:"destination_lat"`
-	DestinationLon         *float64  `json:"destination_lon,omitempty" db:"destination_lon"`
-	OriginLat              *float64  `json:"origin_lat,omitempty" db:"origin_lat"`
-	OriginLon              *float64  `json:"origin_lon,omitempty" db:"origin_lon"`
-	MilesToArrival         *float64  `json:"miles_to_arrival,omitempty" db:"miles_to_arrival"`
-	MinutesToArrival       *float64  `json:"minutes_to_arrival,omitempty" db:"minutes_to_arrival"`
-	RouteLine              *string   `json:"route_line,omitempty" db:"route_line"`
-	RouteTrafficDelayMin   *float64  `json:"route_traffic_delay_min,omitempty" db:"route_traffic_delay_min"`
-	LocatedAtHome          *bool     `json:"located_at_home,omitempty" db:"located_at_home"`
-	LocatedAtWork          *bool     `json:"located_at_work,omitempty" db:"located_at_work"`
-	LocatedAtFavorite      *bool     `json:"located_at_favorite,omitempty" db:"located_at_favorite"`
-	GpsState               *string   `json:"gps_state,omitempty" db:"gps_state"`
-	RouteLastUpdated       *time.Time `json:"route_last_updated,omitempty" db:"route_last_updated"`
-	CurrentLat             *float64  `json:"current_lat,omitempty" db:"current_lat"`
-	CurrentLon             *float64  `json:"current_lon,omitempty" db:"current_lon"`
-	CreatedAt              time.Time `json:"created_at" db:"created_at"`
+	ID                   int64      `json:"id" db:"id"`
+	VehicleID            int64      `json:"vehicle_id" db:"vehicle_id"`
+	DestinationName      *string    `json:"destination_name,omitempty" db:"destination_name"`
+	DestinationLat       *float64   `json:"destination_lat,omitempty" db:"destination_lat"`
+	DestinationLon       *float64   `json:"destination_lon,omitempty" db:"destination_lon"`
+	OriginLat            *float64   `json:"origin_lat,omitempty" db:"origin_lat"`
+	OriginLon            *float64   `json:"origin_lon,omitempty" db:"origin_lon"`
+	MilesToArrival       *float64   `json:"miles_to_arrival,omitempty" db:"miles_to_arrival"`
+	MinutesToArrival     *float64   `json:"minutes_to_arrival,omitempty" db:"minutes_to_arrival"`
+	RouteLine            *string    `json:"route_line,omitempty" db:"route_line"`
+	RouteTrafficDelayMin *float64   `json:"route_traffic_delay_min,omitempty" db:"route_traffic_delay_min"`
+	LocatedAtHome        *bool      `json:"located_at_home,omitempty" db:"located_at_home"`
+	LocatedAtWork        *bool      `json:"located_at_work,omitempty" db:"located_at_work"`
+	LocatedAtFavorite    *bool      `json:"located_at_favorite,omitempty" db:"located_at_favorite"`
+	GpsState             *string    `json:"gps_state,omitempty" db:"gps_state"`
+	RouteLastUpdated     *time.Time `json:"route_last_updated,omitempty" db:"route_last_updated"`
+	CurrentLat           *float64   `json:"current_lat,omitempty" db:"current_lat"`
+	CurrentLon           *float64   `json:"current_lon,omitempty" db:"current_lon"`
+	CreatedAt            time.Time  `json:"created_at" db:"created_at"`
 }
 
 // SafetySnapshot represents a point-in-time safety settings telemetry reading.
@@ -702,24 +685,24 @@ type BackupConfig struct {
 
 // BackupRun represents a single backup or restore execution.
 type BackupRun struct {
-	ID            int64           `json:"id" db:"id"`
-	ConfigID      *int64          `json:"config_id,omitempty" db:"config_id"`
-	RunType       string          `json:"run_type" db:"run_type"`           // backup, restore
-	BackupType    string          `json:"backup_type" db:"backup_type"`     // full, incremental
-	Status        string          `json:"status" db:"status"`               // queued, running, completed, failed, cancelled
-	Provider      string          `json:"provider" db:"provider"`
-	FileName      *string         `json:"file_name,omitempty" db:"file_name"`
-	FilePath      *string         `json:"file_path,omitempty" db:"file_path"`
-	FileSize      int64           `json:"file_size" db:"file_size"`
-	RecordCount   int             `json:"record_count" db:"record_count"`
-	TableCount    int             `json:"table_count" db:"table_count"`
-	Checksum      *string         `json:"checksum,omitempty" db:"checksum"`
-	DurationMs    int64           `json:"duration_ms" db:"duration_ms"`
-	ErrorMessage  *string         `json:"error_message,omitempty" db:"error_message"`
-	Metadata      json.RawMessage `json:"metadata,omitempty" db:"metadata"`
-	StartedAt     *time.Time      `json:"started_at,omitempty" db:"started_at"`
-	CompletedAt   *time.Time      `json:"completed_at,omitempty" db:"completed_at"`
-	CreatedAt     time.Time       `json:"created_at" db:"created_at"`
+	ID           int64           `json:"id" db:"id"`
+	ConfigID     *int64          `json:"config_id,omitempty" db:"config_id"`
+	RunType      string          `json:"run_type" db:"run_type"`       // backup, restore
+	BackupType   string          `json:"backup_type" db:"backup_type"` // full, incremental
+	Status       string          `json:"status" db:"status"`           // queued, running, completed, failed, cancelled
+	Provider     string          `json:"provider" db:"provider"`
+	FileName     *string         `json:"file_name,omitempty" db:"file_name"`
+	FilePath     *string         `json:"file_path,omitempty" db:"file_path"`
+	FileSize     int64           `json:"file_size" db:"file_size"`
+	RecordCount  int             `json:"record_count" db:"record_count"`
+	TableCount   int             `json:"table_count" db:"table_count"`
+	Checksum     *string         `json:"checksum,omitempty" db:"checksum"`
+	DurationMs   int64           `json:"duration_ms" db:"duration_ms"`
+	ErrorMessage *string         `json:"error_message,omitempty" db:"error_message"`
+	Metadata     json.RawMessage `json:"metadata,omitempty" db:"metadata"`
+	StartedAt    *time.Time      `json:"started_at,omitempty" db:"started_at"`
+	CompletedAt  *time.Time      `json:"completed_at,omitempty" db:"completed_at"`
+	CreatedAt    time.Time       `json:"created_at" db:"created_at"`
 }
 
 // RawTelemetrySignal previously stored a raw signal batch from Tesla fleet
@@ -740,25 +723,25 @@ type RawTelemetrySignal struct {
 
 // AutomationHistory records the result of a single automation execution.
 type AutomationHistory struct {
-	ID                int64           `json:"id" db:"id"`
-	AutomationID      int64           `json:"automation_id" db:"automation_id"`
-	AutomationName    string          `json:"automation_name" db:"automation_name"`
-	VehicleID         *int64          `json:"vehicle_id" db:"vehicle_id"`
-	TriggeredAt       time.Time       `json:"triggered_at" db:"triggered_at"`
-	CompletedAt       *time.Time      `json:"completed_at" db:"completed_at"`
-	DurationMs        *int            `json:"duration_ms" db:"duration_ms"`
-	TriggerType       string          `json:"trigger_type" db:"trigger_type"`
-	TriggerSnapshot   json.RawMessage `json:"trigger_snapshot" db:"trigger_snapshot"`
-	ConditionsMet     bool            `json:"conditions_met" db:"conditions_met"`
+	ID                 int64           `json:"id" db:"id"`
+	AutomationID       int64           `json:"automation_id" db:"automation_id"`
+	AutomationName     string          `json:"automation_name" db:"automation_name"`
+	VehicleID          *int64          `json:"vehicle_id" db:"vehicle_id"`
+	TriggeredAt        time.Time       `json:"triggered_at" db:"triggered_at"`
+	CompletedAt        *time.Time      `json:"completed_at" db:"completed_at"`
+	DurationMs         *int            `json:"duration_ms" db:"duration_ms"`
+	TriggerType        string          `json:"trigger_type" db:"trigger_type"`
+	TriggerSnapshot    json.RawMessage `json:"trigger_snapshot" db:"trigger_snapshot"`
+	ConditionsMet      bool            `json:"conditions_met" db:"conditions_met"`
 	ConditionsSnapshot json.RawMessage `json:"conditions_snapshot" db:"conditions_snapshot"`
-	ActionsExecuted   json.RawMessage `json:"actions_executed" db:"actions_executed"`
-	ActionsTotal      int             `json:"actions_total" db:"actions_total"`
-	ActionsSucceeded  int             `json:"actions_succeeded" db:"actions_succeeded"`
-	ActionsFailed     int             `json:"actions_failed" db:"actions_failed"`
-	Status            string          `json:"status" db:"status"`
-	Error             *string         `json:"error" db:"error"`
-	FSMState          *string         `json:"fsm_state" db:"fsm_state"`
-	CreatedAt         time.Time       `json:"created_at" db:"created_at"`
+	ActionsExecuted    json.RawMessage `json:"actions_executed" db:"actions_executed"`
+	ActionsTotal       int             `json:"actions_total" db:"actions_total"`
+	ActionsSucceeded   int             `json:"actions_succeeded" db:"actions_succeeded"`
+	ActionsFailed      int             `json:"actions_failed" db:"actions_failed"`
+	Status             string          `json:"status" db:"status"`
+	Error              *string         `json:"error" db:"error"`
+	FSMState           *string         `json:"fsm_state" db:"fsm_state"`
+	CreatedAt          time.Time       `json:"created_at" db:"created_at"`
 }
 
 // TeslaEnergySite represents a Tesla energy product (Powerwall, Solar Roof, Wall Connector).
@@ -910,17 +893,17 @@ type TeslaChargingSessionSummary struct {
 // TeslaEnergyHistory represents an energy measurement from Tesla calendar_history (kind=energy).
 // Values are stored in watt-hours as returned by the Tesla API.
 type TeslaEnergyHistory struct {
-	ID                 int64      `json:"id" db:"id"`
-	EnergySiteID       int64      `json:"energy_site_id" db:"energy_site_id"`
-	Period             string     `json:"period" db:"period"`
-	Timestamp          time.Time  `json:"timestamp" db:"timestamp"`
-	SolarEnergyWh      *float64   `json:"solar_energy_wh" db:"solar_energy_wh"`
-	BatteryEnergyInWh  *float64   `json:"battery_energy_in_wh" db:"battery_energy_in_wh"`
-	BatteryEnergyOutWh *float64   `json:"battery_energy_out_wh" db:"battery_energy_out_wh"`
-	GridEnergyInWh     *float64   `json:"grid_energy_in_wh" db:"grid_energy_in_wh"`
-	GridEnergyOutWh    *float64   `json:"grid_energy_out_wh" db:"grid_energy_out_wh"`
-	ConsumerEnergyWh   *float64   `json:"consumer_energy_wh" db:"consumer_energy_wh"`
-	FetchedAt          time.Time  `json:"fetched_at" db:"fetched_at"`
+	ID                 int64     `json:"id" db:"id"`
+	EnergySiteID       int64     `json:"energy_site_id" db:"energy_site_id"`
+	Period             string    `json:"period" db:"period"`
+	Timestamp          time.Time `json:"timestamp" db:"timestamp"`
+	SolarEnergyWh      *float64  `json:"solar_energy_wh" db:"solar_energy_wh"`
+	BatteryEnergyInWh  *float64  `json:"battery_energy_in_wh" db:"battery_energy_in_wh"`
+	BatteryEnergyOutWh *float64  `json:"battery_energy_out_wh" db:"battery_energy_out_wh"`
+	GridEnergyInWh     *float64  `json:"grid_energy_in_wh" db:"grid_energy_in_wh"`
+	GridEnergyOutWh    *float64  `json:"grid_energy_out_wh" db:"grid_energy_out_wh"`
+	ConsumerEnergyWh   *float64  `json:"consumer_energy_wh" db:"consumer_energy_wh"`
+	FetchedAt          time.Time `json:"fetched_at" db:"fetched_at"`
 }
 
 // TeslaEnergyBackupEvent represents an off-grid backup event from Tesla calendar_history (kind=backup).
@@ -936,12 +919,12 @@ type TeslaEnergyBackupEvent struct {
 // TeslaEnergyWCCharging represents a wall connector charging record from Tesla telemetry_history (kind=charge).
 // Energy is stored in watt-hours as returned by the Tesla API.
 type TeslaEnergyWCCharging struct {
-	ID             int64     `json:"id" db:"id"`
-	EnergySiteID   int64     `json:"energy_site_id" db:"energy_site_id"`
-	DIN            *string   `json:"din" db:"din"`
-	Timestamp      time.Time `json:"timestamp" db:"timestamp"`
-	EnergyWh       *float64  `json:"energy_wh" db:"energy_wh"`
-	FetchedAt      time.Time `json:"fetched_at" db:"fetched_at"`
+	ID           int64     `json:"id" db:"id"`
+	EnergySiteID int64     `json:"energy_site_id" db:"energy_site_id"`
+	DIN          *string   `json:"din" db:"din"`
+	Timestamp    time.Time `json:"timestamp" db:"timestamp"`
+	EnergyWh     *float64  `json:"energy_wh" db:"energy_wh"`
+	FetchedAt    time.Time `json:"fetched_at" db:"fetched_at"`
 }
 
 // TeslaFleetTelemetryError represents a fleet telemetry error from the partner endpoint.

@@ -7,13 +7,13 @@ import (
 	"time"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	notifFSM "github.com/ev-dev-labs/teslasync/internal/fsm/notification"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
+	"github.com/rs/zerolog/log"
 )
 
 // TelemetryAlertEvaluator runs alert rules against incoming streaming signals.
@@ -62,8 +62,8 @@ func (e *TelemetryAlertEvaluator) RuleEngine() *RuleEngine {
 }
 
 // Evaluate checks all alert rules against the given signals for a vehicle.
-// accumulatedSignals contains last-known values from recent batches — used as
-// fallback for legacy rules when a signal isn't in the current sparse batch.
+// accumulatedSignals is supplied by the telemetry path for callers that need
+// last-known context; the typed rule engine keeps its own transition baseline.
 func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64, vin string, signals, accumulatedSignals map[string]interface{}) {
 	evalStart := time.Now()
 	rules, err := e.alertRuleRepo.GetAll(ctx)

@@ -17,8 +17,7 @@ import (
 )
 
 // RuleEngine evaluates CEP rules against incoming telemetry signals.
-// It tracks per-rule state (cooldowns, previous signals, temporal windows)
-// and dispatches alerts when conditions are met.
+// It tracks per-rule cooldown and previous signal state.
 type RuleEngine struct {
 	mu    sync.RWMutex
 	state map[ruleKey]*ruleState // per (ruleID, vehicleID) state
@@ -30,9 +29,8 @@ type ruleKey struct {
 }
 
 type ruleState struct {
-	PrevSignals        map[string]interface{} // previous signal values (for changed_to/from)
-	ConditionTrueSince *time.Time             // when the condition first became true (for temporal)
-	LastFiredAt        *time.Time             // cooldown tracking
+	PrevSignals map[string]interface{} // previous signal values for transition baselines
+	LastFiredAt *time.Time             // cooldown tracking
 }
 
 // NewRuleEngine creates a new CEP rule engine.
@@ -51,21 +49,21 @@ type EvalResult struct {
 // Evaluate checks a single rule against the current signal batch.
 // Returns whether the rule triggered and the rendered message.
 func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals map[string]interface{}) EvalResult {
-	// === COOLDOWN CHECK ===
+	// Cooldown check.
 	key := ruleKey{RuleID: rule.ID, VehicleID: vehicleID}
 	e.mu.RLock()
 	st, hasState := e.state[key]
 
-	// Copy state under lock to avoid concurrent map access
+	// Copy state under lock to avoid concurrent map access.
 	var prevSignals map[string]interface{}
 	var lastFiredAt *time.Time
 	if hasState {
 		lastFiredAt = st.LastFiredAt
-		if st.PrevSignals != nil {
-			prevSignals = make(map[string]interface{}, len(st.PrevSignals))
-			for k, v := range st.PrevSignals {
-				prevSignals[k] = v
-			}
+		prevSignals = cloneSignals(st.PrevSignals)
+	}
+	if len(prevSignals) < 1 {
+		if baseline, ok := e.state[ruleKey{RuleID: 0, VehicleID: vehicleID}]; ok {
+			prevSignals = cloneSignals(baseline.PrevSignals)
 		}
 	}
 	e.mu.RUnlock()
@@ -85,52 +83,13 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 		}
 	}
 
-	// Build condition from typed AlertRule fields (no JSONB conditions blob)
-	cond := models.RuleCondition{
-		Signal:  rule.SignalName,
-		Compare: rule.Op,
-	}
-	if rule.ValueNum != nil {
-		cond.Value = *rule.ValueNum
-	} else if rule.ValueText != nil {
-		cond.Value = *rule.ValueText
-	} else if rule.ValueBool != nil {
-		cond.Value = *rule.ValueBool
-	}
+	// Evaluate typed rule fields.
+	matched := evalRule(rule, signals, prevSignals)
 
-	// === EVALUATE CONDITION TREE ===
-	matched := evalNode(&cond, signals, prevSignals)
-
-	// === TEMPORAL CHECK (FOR duration) ===
-	if matched && cond.ForSeconds != nil && *cond.ForSeconds > 0 {
-		e.mu.Lock()
-		if st == nil {
-			st = &ruleState{}
-			e.state[key] = st
-		}
-		if st.ConditionTrueSince == nil {
-			now := time.Now().UTC()
-			st.ConditionTrueSince = &now
-			e.mu.Unlock()
-			// Not sustained long enough yet
-			e.updatePrevSignals(key, signals)
-			return EvalResult{}
-		}
-		elapsed := time.Since(*st.ConditionTrueSince)
-		required := time.Duration(*cond.ForSeconds) * time.Second
-		if elapsed < required {
-			e.mu.Unlock()
-			e.updatePrevSignals(key, signals)
-			return EvalResult{} // not sustained long enough
-		}
-		// Reset temporal tracker after firing
-		st.ConditionTrueSince = nil
-		e.mu.Unlock()
-	} else if !matched {
-		// Condition is false — reset temporal tracker and cooldown for transition rules
+	if !matched {
+		// Condition is false — reset cooldown for transition rules.
 		e.mu.Lock()
 		if st != nil {
-			st.ConditionTrueSince = nil
 			if st.LastFiredAt != nil && isTransitionRule(rule) {
 				st.LastFiredAt = nil
 			}
@@ -138,7 +97,7 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 		e.mu.Unlock()
 	}
 
-	// === UPDATE STATE ===
+	// Update state.
 	e.updatePrevSignals(key, signals)
 
 	if !matched {
@@ -151,15 +110,16 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 		return EvalResult{}
 	}
 
-	// === FIRE ===
+	// Fire.
 	now := time.Now().UTC()
 	e.mu.Lock()
-	if st == nil {
+	if st != nil {
+		st.LastFiredAt = &now
+	} else {
 		st = &ruleState{}
 		e.state[key] = st
+		st.LastFiredAt = &now
 	}
-	st.LastFiredAt = &now
-	st.ConditionTrueSince = nil // reset after firing
 	e.mu.Unlock()
 
 	// Render message template — merge prevSignals with current batch so template
@@ -177,7 +137,7 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 	// that includes the rule name and the triggering signal value.
 	defaultTmpl := rule.Name + ": {{" + rule.SignalName + "}}"
 	message := renderTemplate(defaultTmpl, mergedSignals)
-	if message == "" {
+	if len(message) < 1 {
 		message = rule.Name
 	}
 
@@ -185,6 +145,17 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 		Triggered: true,
 		Message:   message,
 	}
+}
+
+func cloneSignals(signals map[string]interface{}) map[string]interface{} {
+	if signals != nil {
+		cloned := make(map[string]interface{}, len(signals))
+		for k, v := range signals {
+			cloned[k] = v
+		}
+		return cloned
+	}
+	return nil
 }
 
 // updatePrevSignals stores the current signals as previous for next evaluation.
@@ -197,7 +168,9 @@ func (e *RuleEngine) updatePrevSignals(key ruleKey, signals map[string]interface
 		e.state[key] = st
 	}
 	// Merge (don't overwrite — partial batches shouldn't erase known values)
-	if st.PrevSignals == nil {
+	if st.PrevSignals != nil {
+		// Merge into the existing baseline.
+	} else {
 		st.PrevSignals = make(map[string]interface{}, len(signals))
 	}
 	for k, v := range signals {
@@ -207,7 +180,7 @@ func (e *RuleEngine) updatePrevSignals(key ruleKey, signals map[string]interface
 	}
 }
 
-// SetLastFired updates the cooldown state (called after external dedup check, e.g. Redis).
+// SetLastFired updates the cooldown state after an external dedup check.
 func (e *RuleEngine) SetLastFired(ruleID, vehicleID int64, t time.Time) {
 	key := ruleKey{RuleID: ruleID, VehicleID: vehicleID}
 	e.mu.Lock()
@@ -239,9 +212,9 @@ func (e *RuleEngine) LoadCooldownFromDB(ctx context.Context, rules []*models.Ale
 }
 
 // LoadPrevSignalsFromStore populates prevSignals for all rules from the SignalStore.
-// Called after pod restart so changed_to/changed_from operators have a baseline.
+// Called after pod restart so changed operators have a baseline.
 func (e *RuleEngine) LoadPrevSignalsFromStore(vehicleID int64, signals map[string]interface{}) {
-	if len(signals) == 0 {
+	if len(signals) < 1 {
 		return
 	}
 	e.mu.Lock()
@@ -249,13 +222,16 @@ func (e *RuleEngine) LoadPrevSignalsFromStore(vehicleID int64, signals map[strin
 
 	// Update existing state entries
 	for key, st := range e.state {
-		if key.VehicleID == vehicleID || key.VehicleID == 0 {
-			if st.PrevSignals == nil {
-				st.PrevSignals = make(map[string]interface{}, len(signals))
-			}
-			for k, v := range signals {
-				st.PrevSignals[k] = v
-			}
+		if key.VehicleID != vehicleID && key.VehicleID != 0 {
+			continue
+		}
+		if st.PrevSignals != nil {
+			// Merge into the existing baseline.
+		} else {
+			st.PrevSignals = make(map[string]interface{}, len(signals))
+		}
+		for k, v := range signals {
+			st.PrevSignals[k] = v
 		}
 	}
 
@@ -274,50 +250,28 @@ func (e *RuleEngine) LoadPrevSignalsFromStore(vehicleID int64, signals map[strin
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// Condition tree evaluation
+// Typed rule evaluation
 // ──────────────────────────────────────────────────────────────────────
 
-func evalNode(node *models.RuleCondition, signals, prevSignals map[string]interface{}) bool {
-	// Branch node (combinator)
-	if node.Op != "" && len(node.Rules) > 0 {
-		switch strings.ToUpper(node.Op) {
-		case "AND":
-			for _, child := range node.Rules {
-				if !evalNode(&child, signals, prevSignals) {
-					return false
-				}
-			}
-			return true
-		case "OR":
-			for _, child := range node.Rules {
-				if evalNode(&child, signals, prevSignals) {
-					return true
-				}
-			}
-			return false
-		case "NOT":
-			if len(node.Rules) > 0 {
-				return !evalNode(&node.Rules[0], signals, prevSignals)
-			}
-			return false
-		}
+func evalRule(rule *models.AlertRule, signals, prevSignals map[string]interface{}) bool {
+	if rule != nil {
+		// Continue with typed rule evaluation.
+	} else {
+		return false
 	}
-
-	// Leaf node (signal comparison)
-	if node.Signal == "" || node.Compare == "" {
+	if len(rule.SignalName) < 1 || len(rule.Op) < 1 {
 		return false
 	}
 
-	current, hasCurrent := signals[node.Signal]
+	current, hasCurrent := signals[rule.SignalName]
 	if !hasCurrent {
-		// Signal not in this batch — check if it's a transition operator
-		if node.Compare == "changed" || node.Compare == "changed_to" || node.Compare == "changed_from" {
-			return false // can't detect change without current value
+		switch rule.Op {
+		case "changed":
+			return false
 		}
-		// Fall back to last-known value from previous batches (accumulated across sparse deliveries).
-		// Tesla delta-streams only changed values, so a signal may be absent from this batch
-		// but still valid from a recent batch. prevSignals accumulates across batches.
-		if prev, hasPrev := prevSignals[node.Signal]; hasPrev {
+		// Tesla delta-streams only changed values, so a signal may be absent
+		// from this batch but still valid from a recent batch.
+		if prev, hasPrev := prevSignals[rule.SignalName]; hasPrev {
 			current = prev
 			hasCurrent = true
 		}
@@ -326,53 +280,70 @@ func evalNode(node *models.RuleCondition, signals, prevSignals map[string]interf
 		}
 	}
 
-	switch node.Compare {
-	case "==":
-		return compareEq(current, node.Value)
+	switch rule.Op {
+	case "=":
+		operand, ok := alertRuleOperand(rule)
+		return ok && compareEq(current, operand)
 	case "!=":
-		return !compareEq(current, node.Value)
+		operand, ok := alertRuleOperand(rule)
+		return ok && !compareEq(current, operand)
 	case ">":
-		return compareNum(current, node.Value) > 0
+		operand, ok := alertRuleOperand(rule)
+		return ok && compareNum(current, operand) > 0
 	case "<":
-		return compareNum(current, node.Value) < 0
+		operand, ok := alertRuleOperand(rule)
+		return ok && compareNum(current, operand) < 0
 	case ">=":
-		return compareNum(current, node.Value) >= 0
+		operand, ok := alertRuleOperand(rule)
+		return ok && compareNum(current, operand) >= 0
 	case "<=":
-		return compareNum(current, node.Value) <= 0
-	case "contains":
-		return strings.Contains(toString(current), toString(node.Value))
-	case "is_true":
-		return toBool(current)
-	case "is_false":
-		return !toBool(current)
+		operand, ok := alertRuleOperand(rule)
+		return ok && compareNum(current, operand) <= 0
 	case "changed":
-		prev, hasPrev := prevSignals[node.Signal]
+		prev, hasPrev := prevSignals[rule.SignalName]
 		if !hasPrev {
 			return false
 		}
 		if compareEq(prev, current) {
 			return false
 		}
-		if node.Value == nil {
+		operand, hasOperand := alertRuleOperand(rule)
+		if !hasOperand {
 			return true
 		}
-		return compareEq(current, node.Value)
-	case "changed_to":
-		prev, hasPrev := prevSignals[node.Signal]
-		if !hasPrev {
-			// No baseline — record current value but don't fire.
-			// The next evaluation will have prevSignals and can detect real changes.
-			return false
-		}
-		return !compareEq(prev, node.Value) && compareEq(current, node.Value)
-	case "changed_from":
-		prev, hasPrev := prevSignals[node.Signal]
-		if !hasPrev {
-			return false
-		}
-		return compareEq(prev, node.Value) && !compareEq(current, node.Value)
+		return compareEq(current, operand)
+	case "between":
+		return evalRange(rule, current, true)
+	case "outside":
+		return evalRange(rule, current, false)
 	}
 
+	return false
+}
+
+func alertRuleOperand(rule *models.AlertRule) (interface{}, bool) {
+	if rule.ValueNum != nil {
+		return *rule.ValueNum, true
+	}
+	if rule.ValueText != nil {
+		return *rule.ValueText, true
+	}
+	if rule.ValueBool != nil {
+		return *rule.ValueBool, true
+	}
+	return nil, false
+}
+
+func evalRange(rule *models.AlertRule, current interface{}, inside bool) bool {
+	if rule.ValueMin != nil && rule.ValueMax != nil {
+		aboveMin := compareNum(current, *rule.ValueMin) >= 0
+		belowMax := compareNum(current, *rule.ValueMax) <= 0
+		inRange := aboveMin && belowMax
+		if inside {
+			return inRange
+		}
+		return !inRange
+	}
 	return false
 }
 
@@ -426,17 +397,23 @@ func compareNum(a, b interface{}) int {
 // Template rendering
 // ──────────────────────────────────────────────────────────────────────
 
-// isTransitionRule returns true if the rule's conditions contain a changed_to or
-// changed_from operator. Cooldown reset only applies to transition rules — threshold
-// rules should NOT reset on brief bounces to avoid notification storms.
+// isTransitionRule returns true for baseline-aware transition rules. Cooldown
+// reset only applies to transitions; threshold rules should not reset on brief
+// bounces to avoid notification storms.
 func isTransitionRule(rule *models.AlertRule) bool {
-	return rule.Op == "changed" || rule.Op == "changed_to" || rule.Op == "changed_from"
+	if rule != nil {
+		switch rule.Op {
+		case "changed":
+			return true
+		}
+	}
+	return false
 }
 
 var templateRe = regexp.MustCompile(`\{\{(\w+)\}\}`)
 
 func renderTemplate(tmpl string, signals map[string]interface{}) string {
-	if tmpl == "" {
+	if len(tmpl) < 1 {
 		return ""
 	}
 	return templateRe.ReplaceAllStringFunc(tmpl, func(match string) string {
