@@ -1,0 +1,417 @@
+=== PREFLIGHT ===
+PREDECESSOR_PATH=.github\prompts\db-refactor\logs\phase-36-10-automation-step-persistence.log
+PREDECESSOR_EXIT0=True
+PREDECESSOR_DONE=True
+--- GIT STATUS PREFLIGHT ---
+=== SURVEY ===
+Read frontend instructions: react-frontend and unit-conversion.
+Read prompt-engineering logging requirements for .github/prompts logs.
+Verified predecessor phase-36-10 log has EXIT=0 and STATUS=DONE.
+Surveyed web/src/types/automations.ts, web/src/api/hooks/useAutomations.ts, web/src/api/types.ts, web/src/lib/automations.ts.
+Surveyed backend automation models and strict handler DTOs for CTI names: step_order, signal, op, value_* fields, place_id, event, channel_id, command_name, setting_key.
+=== REASONING ===
+Use backend CTI kind discriminators and JSON tag field names in shared frontend types.
+Remove explicit legacy root automation fields from API types and remove frontend-only step kind aliases from shared step unions.
+Define create/update payloads explicitly as name/description/vehicle_id/enabled plus typed step arrays so old root JSON fields are not accepted by hook input.
+=== CHANGES ===
+diff --git a/web/src/api/hooks/useAutomations.ts b/web/src/api/hooks/useAutomations.ts
+index 6083f4eb..9f6d3896 100644
+--- a/web/src/api/hooks/useAutomations.ts
++++ b/web/src/api/hooks/useAutomations.ts
+@@ -12,23 +12,23 @@ import type {
+   AutomationPreset,
+ } from '@/api/types';
+ 
+-// Distributes over the AutomationStep discriminated union so variant-specific
+-// fields (e.g. cron_expr on trigger_time) survive the Omit. Without this
+-// conditional, TS would collapse to the intersection of common keys only.
++// Distributes over the AutomationStep union so variant-specific fields survive
++// the Omit. Without this conditional, TS would collapse to common keys only.
+ export type AutomationStepInput = AutomationStep extends infer T
+   ? T extends AutomationStep
+-    ? Omit<T, 'id' | 'automation_id' | 'created_at'>
++    ? Omit<T, 'id' | 'automation_id' | 'step_id'>
+     : never
+   : never;
+ 
+-export type AutomationFullInput = Omit<
+-  AutomationFull,
+-  'id' | 'created_at' | 'updated_at' | 'triggers' | 'conditions' | 'actions'
+-> & {
++export interface AutomationFullInput {
++  name: string;
++  description?: string | null;
++  vehicle_id?: number | null;
++  enabled?: boolean;
+   triggers: AutomationStepInput[];
+   conditions: AutomationStepInput[];
+   actions: AutomationStepInput[];
+-};
++}
+ 
+ export const automationKeys = {
+   all: ['automations'] as const,
+diff --git a/web/src/api/types.ts b/web/src/api/types.ts
+index ea53aa38..51aa510c 100644
+--- a/web/src/api/types.ts
++++ b/web/src/api/types.ts
+@@ -1527,24 +1527,12 @@ export interface AutomationConflict {
+   severity: 'warning' | 'info'
+ }
+ 
+-export interface Automation {
++export interface AutomationResponseFields {
+   id: number
+   name: string
+-  description: string
++  description?: string | null
+   vehicle_id: number | null
+   enabled: boolean
+-  trigger_type: string
+-  trigger_config: Record<string, unknown> | null
+-  conditions: Record<string, unknown>[] | null
+-  actions: Record<string, unknown>[] | null
+-  cooldown_minutes: number
+-  max_executions_hour: number
+-  stop_on_failure: boolean
+-  notify_on_run: boolean
+-  notify_on_failure: boolean
+-  seasonal_start: number | null
+-  seasonal_end: number | null
+-  priority: number
+   last_triggered_at: string | null
+   last_success_at: string | null
+   last_failure_at: string | null
+@@ -1553,14 +1541,14 @@ export interface Automation {
+   consecutive_failures: number
+   auto_disabled: boolean
+   auto_disabled_reason: string | null
+-  preset_id: string | null
+-  tags: string[]
+   created_at: string
+   updated_at: string
+   next_fire_time?: string | null
+   conflicts?: AutomationConflict[]
+ }
+ 
++export type Automation = AutomationResponseFields & Record<string, never>
++
+ // === Automation Preset Types ===
+ 
+ export interface AutomationPresetCategory {
+@@ -1570,25 +1558,19 @@ export interface AutomationPresetCategory {
+   icon: string
+ }
+ 
+-export interface AutomationPreset {
++export interface AutomationPresetFields {
+   id: string
+   name: string
+   description: string
+   category: string
+   icon: string
+-  trigger_type: string
+-  trigger_config: Record<string, unknown>
+-  conditions?: Record<string, unknown>[] | null
+-  actions: Record<string, unknown>[]
+-  cooldown_minutes: number
+-  max_executions_hour: number
+   stop_on_failure: boolean
+   notify_on_run: boolean
+   notify_on_failure: boolean
+-  priority: number
+-  tags: string[]
+ }
+ 
++export type AutomationPreset = AutomationPresetFields & Record<string, never>
++
+ export interface AutomationPresetsResponse {
+   categories: AutomationPresetCategory[]
+   presets: AutomationPreset[]
+@@ -1812,9 +1794,13 @@ export type {
+ } from '@/types/signals';
+ 
+ export type {
++  AutomationActionStep,
++  AutomationConditionStep,
+   AutomationFull,
++  AutomationLooseStep,
+   AutomationStep,
+   AutomationStepBase,
+   AutomationStepKind,
+   AutomationStepLane,
++  AutomationTriggerStep,
+ } from '@/types/automations';
+diff --git a/web/src/types/automations.ts b/web/src/types/automations.ts
+index 3113f02d..e686ba67 100644
+--- a/web/src/types/automations.ts
++++ b/web/src/types/automations.ts
+@@ -8,133 +8,185 @@ export interface Automation {
+   updated_at: string;
+ }
+ 
+-export type AutomationStepKind =
+-  // triggers
++export type AutomationTriggerStepKind =
+   | 'trigger_signal'
+   | 'trigger_geofence'
+-  | 'trigger_time'
+-  | 'trigger_webhook'
+-  // conditions
++  | 'trigger_schedule'
++  | 'trigger_event';
++
++export type AutomationConditionStepKind =
+   | 'condition_signal'
+   | 'condition_time_window'
+   | 'condition_geofence'
+-  | 'condition_day_of_week'
+-  // actions
+-  | 'action_notification'
+-  | 'action_vehicle_command'
+-  | 'action_set_state';
++  | 'condition_other_automation';
++
++export type AutomationActionStepKind =
++  | 'action_command'
++  | 'action_notify'
++  | 'action_set_setting'
++  | 'action_call_automation';
++
++export type AutomationStepKind =
++  | AutomationTriggerStepKind
++  | AutomationConditionStepKind
++  | AutomationActionStepKind;
+ 
+ export type AutomationStepLane = 'trigger' | 'condition' | 'action';
+ 
++export type AutomationTriggerSignalOp =
++  | '='
++  | '!='
++  | '<'
++  | '<='
++  | '>'
++  | '>='
++  | 'changed'
++  | 'crossed_above'
++  | 'crossed_below';
++
++export type AutomationConditionSignalOp =
++  | '='
++  | '!='
++  | '<'
++  | '<='
++  | '>'
++  | '>='
++  | 'between'
++  | 'in';
++
+ export interface AutomationStepBase {
+-  id: number;
+-  automation_id: number;
++  id?: number;
++  automation_id?: number;
++  step_id?: number;
++  step_order: number;
+   kind: AutomationStepKind;
+-  lane: AutomationStepLane;
+-  position: number;
+-  created_at: string;
++  [key: string]: unknown;
+ }
+ 
+ export interface AutomationStepTriggerSignal extends AutomationStepBase {
+   kind: 'trigger_signal';
+-  lane: 'trigger';
+-  signal_name: string;
+-  operator: '>' | '<' | '>=' | '<=' | '==' | '!=' | 'changed';
+-  threshold_numeric: number | null;
+-  threshold_text: string | null;
+-  threshold_bool: boolean | null;
++  signal: string;
++  op: AutomationTriggerSignalOp;
++  value_text?: string | null;
++  value_num?: number | null;
++  value_bool?: boolean | null;
+ }
+ 
+ export interface AutomationStepTriggerGeofence extends AutomationStepBase {
+   kind: 'trigger_geofence';
+-  lane: 'trigger';
+-  geofence_id: number;
+-  direction: 'enter' | 'exit' | 'either';
++  place_id: number;
++  event: 'enter' | 'exit' | 'leave' | 'both' | 'dwell';
++  dwell_minutes?: number | null;
+ }
+ 
+-export interface AutomationStepTriggerTime extends AutomationStepBase {
+-  kind: 'trigger_time';
+-  lane: 'trigger';
++export interface AutomationStepTriggerSchedule extends AutomationStepBase {
++  kind: 'trigger_schedule';
+   cron_expr: string;
+   timezone: string;
+ }
+ 
+-export interface AutomationStepTriggerWebhook extends AutomationStepBase {
+-  kind: 'trigger_webhook';
+-  lane: 'trigger';
+-  webhook_token: string;
+-  require_signature: boolean;
++export interface AutomationStepTriggerEvent extends AutomationStepBase {
++  kind: 'trigger_event';
++  event_type:
++    | 'drive_start'
++    | 'drive_end'
++    | 'charge_start'
++    | 'charge_end'
++    | 'sleep_start'
++    | 'sleep_end'
++    | 'online'
++    | 'offline'
++    | 'sentry_alert';
+ }
+ 
+ export interface AutomationStepConditionSignal extends AutomationStepBase {
+   kind: 'condition_signal';
+-  lane: 'condition';
+-  signal_name: string;
+-  operator: '>' | '<' | '>=' | '<=' | '==' | '!=';
+-  compare_numeric: number | null;
+-  compare_text: string | null;
+-  compare_bool: boolean | null;
++  signal: string;
++  op: AutomationConditionSignalOp;
++  value_text?: string | null;
++  value_num?: number | null;
++  value_bool?: boolean | null;
++  value_min?: number | null;
++  value_max?: number | null;
+ }
+ 
+ export interface AutomationStepConditionTimeWindow extends AutomationStepBase {
+   kind: 'condition_time_window';
+-  lane: 'condition';
+   start_time: string;
+   end_time: string;
+   timezone: string;
++  days_of_week: number[];
+ }
+ 
+ export interface AutomationStepConditionGeofence extends AutomationStepBase {
+   kind: 'condition_geofence';
+-  lane: 'condition';
+-  geofence_id: number;
+-  must_be_inside: boolean;
++  place_id: number;
++  state: 'inside' | 'outside' | 'dwell';
+ }
+ 
+-export interface AutomationStepConditionDayOfWeek extends AutomationStepBase {
+-  kind: 'condition_day_of_week';
+-  lane: 'condition';
+-  days_of_week: number[];
+-  timezone: string;
++export interface AutomationStepConditionOtherAutomation extends AutomationStepBase {
++  kind: 'condition_other_automation';
++  other_automation_id: number;
++  state: 'enabled' | 'disabled' | 'recently_triggered';
+ }
+ 
+-export interface AutomationStepActionNotification extends AutomationStepBase {
+-  kind: 'action_notification';
+-  lane: 'action';
++export interface AutomationStepActionCommand extends AutomationStepBase {
++  kind: 'action_command';
++  command_name: string;
++  command_params: Record<string, unknown>;
++}
++
++export interface AutomationStepActionNotify extends AutomationStepBase {
++  kind: 'action_notify';
+   channel_id: number;
+   template: string;
+ }
+ 
+-export interface AutomationStepActionVehicleCommand extends AutomationStepBase {
+-  kind: 'action_vehicle_command';
+-  lane: 'action';
+-  command: string;
+-  /** Sole jsonb carve-out (ADR-001). Tesla command params are inherently dynamic. */
+-  command_params: Record<string, unknown>;
++export interface AutomationStepActionSetSetting extends AutomationStepBase {
++  kind: 'action_set_setting';
++  setting_key: string;
++  value_text?: string | null;
++  value_num?: number | null;
++  value_bool?: boolean | null;
+ }
+ 
+-export interface AutomationStepActionSetState extends AutomationStepBase {
+-  kind: 'action_set_state';
+-  lane: 'action';
+-  state_key: string;
+-  state_value: string;
++export interface AutomationStepActionCallAutomation extends AutomationStepBase {
++  kind: 'action_call_automation';
++  target_automation_id: number;
+ }
+ 
+-// Discriminated union ΓÇö children added by prompts 13-23
+-export type AutomationStep =
++export type AutomationTriggerStep =
+   | AutomationStepTriggerSignal
+   | AutomationStepTriggerGeofence
+-  | AutomationStepTriggerTime
+-  | AutomationStepTriggerWebhook
++  | AutomationStepTriggerSchedule
++  | AutomationStepTriggerEvent;
++
++export type AutomationConditionStep =
+   | AutomationStepConditionSignal
+   | AutomationStepConditionTimeWindow
+   | AutomationStepConditionGeofence
+-  | AutomationStepConditionDayOfWeek
+-  | AutomationStepActionNotification
+-  | AutomationStepActionVehicleCommand
+-  | AutomationStepActionSetState;
++  | AutomationStepConditionOtherAutomation;
++
++export type AutomationActionStep =
++  | AutomationStepActionCommand
++  | AutomationStepActionNotify
++  | AutomationStepActionSetSetting
++  | AutomationStepActionCallAutomation;
++
++export interface AutomationLooseStep {
++  kind: string;
++  step_order?: number;
++  [key: string]: unknown;
++}
++
++export type AutomationStep =
++  | AutomationTriggerStep
++  | AutomationConditionStep
++  | AutomationActionStep
++  | AutomationLooseStep;
+ 
+ export interface AutomationFull extends Automation {
++  steps?: AutomationStepBase[];
+   triggers: AutomationStep[];
+   conditions: AutomationStep[];
+   actions: AutomationStep[];
+=== GATE ===
+AUTOMATION_FULL_INPUT=True
+TYPED_KINDS=True
+TYPED_STEP_FIELDS=True
+AUTOMATION_LEGACY_TYPE_REF_COUNT=0
+src/features/automations/pages/AutomationsListPage.tsx(175,26): error TS2339: Property 'some' does not exist on type 'never'.
+src/features/automations/pages/AutomationsListPage.tsx(175,32): error TS7006: Parameter 'tag' implicitly has an 'any' type.
+src/features/automations/pages/PresetGallery.tsx(80,22): error TS2339: Property 'map' does not exist on type 'never'.
+src/features/automations/pages/PresetGallery.tsx(80,27): error TS7006: Parameter 'tag' implicitly has an 'any' type.
+TSC_EXIT=2
+EXIT=2
+STATUS=BLOCKED
+=== COMMIT ===
+Gate blocked with TSC_EXIT=2; staging log only per blocked path.
