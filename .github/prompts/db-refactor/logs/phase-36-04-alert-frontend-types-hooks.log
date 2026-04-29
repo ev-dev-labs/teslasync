@@ -1,0 +1,46 @@
+=== PREFLIGHT ===
+Predecessor log .github\prompts\db-refactor\logs\phase-36-03-alert-evaluator-typed-ops.log exists and contains EXIT=0 and STATUS=DONE.
+Initial git status --short had no output.
+Baseline TypeScript check before changes exited 0.
+=== SURVEY ===
+Read applicable frontend instructions: .github\instructions\react-frontend.instructions.md and .github\instructions\unit-conversion.instructions.md.
+Read backend alert contract in internal\models\alert.go and internal\api\alert_handler.go.
+Backend alert rules use typed fields: name, description, enabled, vehicle_id, signal_name, op, value_num/value_text/value_bool/value_min/value_max, severity, cooldown_min, created_at, updated_at.
+Backend alert test requests use message plus optional target with all_channels or channel_ids.
+Survey found legacy alert-rule API references in allowed files and legacy condition-tree consumers in out-of-scope files src\components\forms\RuleBuilder.tsx and src\features\notifications\pages\AlertStudioPage.tsx.
+=== REASONING ===
+The allowed API files can be changed to expose only the typed backend contract, but TypeScript still checks out-of-scope legacy Alert Studio and RuleBuilder files.
+Keeping or re-exporting RuleConditionTree or old AlertRule fields from the allowed API files would hide the TypeScript failure by resurrecting the legacy contract, which this prompt explicitly forbids.
+Therefore the typed-contract edit must be treated as blocked unless those out-of-scope consumers are also rewritten in a later prompt.
+=== CHANGES ===
+Attempted typed AlertRuleSeverity, AlertRuleOp, AlertRule, AlertRuleInput, AlertRuleUpdate, AlertTestTarget, and AlertTestRequest/Response definitions in web\src\api\types.ts.
+Attempted typed notification hooks and settings helpers using AlertRuleInput, AlertRuleUpdate, and AlertTestRequest.
+Attempted removal of alert legacy exports from web\src\api\index.ts and admin AlertRule legacy fields from web\src\types\admin.ts.
+Gate below records the exact failure from that allowed-file edit attempt.
+=== GATE ===
+ALERT_RULE_OP=True
+TEST_TARGET=True
+ALERT_RULE_SEVERITY=True
+ALERT_LEGACY_API_REF_COUNT=0
+DOUBLE_PREFIX_COUNT=0
+src/components/forms/RuleBuilder.tsx(9,15): error TS2305: Module '"@/api/types"' has no exported member 'RuleConditionTree'.
+src/components/forms/RuleBuilder.tsx(399,34): error TS7006: Parameter 'child' implicitly has an 'any' type.
+src/components/forms/RuleBuilder.tsx(399,41): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/components/forms/RuleBuilder.tsx(455,34): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/features/notifications/pages/AlertStudioPage.tsx(11,47): error TS2305: Module '"@/api/hooks/useNotifications"' has no exported member 'RuleConditionTree'.
+src/features/notifications/pages/AlertStudioPage.tsx(179,16): error TS2339: Property 'type' does not exist on type 'AlertRule'.
+src/features/notifications/pages/AlertStudioPage.tsx(182,24): error TS2339: Property 'msg_template' does not exist on type 'AlertRule'.
+src/features/notifications/pages/AlertStudioPage.tsx(183,23): error TS2339: Property 'conditions' does not exist on type 'AlertRule'.
+src/features/notifications/pages/AlertStudioPage.tsx(184,27): error TS2339: Property 'notify_channels' does not exist on type 'AlertRule'.
+src/features/notifications/pages/AlertStudioPage.tsx(322,62): error TS2339: Property 'conditions' does not exist on type 'AlertRule'.
+src/features/notifications/pages/AlertStudioPage.tsx(515,33): error TS2339: Property 'last_fired_at' does not exist on type 'AlertRule'.
+src/features/notifications/pages/AlertStudioPage.tsx(517,82): error TS2339: Property 'last_fired_at' does not exist on type 'AlertRule'.
+src/features/notifications/pages/AlertStudioPage.tsx(520,34): error TS2339: Property 'fire_count' does not exist on type 'AlertRule'.
+src/features/notifications/pages/AlertStudioPage.tsx(522,65): error TS2339: Property 'fire_count' does not exist on type 'AlertRule'.
+TSC_EXIT=2
+EXIT=2
+STATUS=BLOCKED
+=== COMMIT ===
+Gate blocked with TSC_EXIT=2 after the allowed-file typed contract edit attempt.
+The failure is caused by out-of-scope legacy consumers still importing RuleConditionTree and reading legacy AlertRule fields in src\components\forms\RuleBuilder.tsx and src\features\notifications\pages\AlertStudioPage.tsx.
+Per blocked path, reverted attempted code edits and committing only this log.
