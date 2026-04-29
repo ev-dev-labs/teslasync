@@ -74,6 +74,7 @@ scripts/signals-export.json
 scripts/signal-dump/
 
 web/svg-compare.html
+web/dev-dist/
 # Refactoring tracking docs (local reference, not committed)
 REFACTORING_PROGRESS.md
 REFACTORING_PROMPTS.md

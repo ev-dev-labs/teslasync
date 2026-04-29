@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useWatchSummary, useWatchCommand } from '@/api/hooks/useWatch';
 import { Spinner } from '@/components/feedback';
@@ -189,31 +190,54 @@ function StatusIcon({ icon: Icon, active, color, label, onClick, loading }: Stat
 // --- PWA Meta ---
 
 function WatchPWAMeta() {
-  // Inject meta tags for PWA capabilities
-  // Using useEffect to set document head attributes
-  if (typeof document !== 'undefined') {
+  useEffect(() => {
     const setMeta = (name: string, content: string) => {
-      let tag = document.querySelector(`meta[name="${name}"]`);
+      let tag = document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
+      const existed = Boolean(tag);
+      const previous = tag?.getAttribute('content');
       if (!tag) {
         tag = document.createElement('meta');
         tag.setAttribute('name', name);
         document.head.appendChild(tag);
       }
       tag.setAttribute('content', content);
+      return () => {
+        if (!tag) return;
+        if (!existed) {
+          tag.remove();
+        } else if (previous != null) {
+          tag.setAttribute('content', previous);
+        }
+      };
     };
 
-    setMeta('apple-mobile-web-app-capable', 'yes');
-    setMeta('apple-mobile-web-app-status-bar-style', 'black');
-    setMeta('theme-color', '#000000');
+    const cleanupMeta = [
+      setMeta('apple-mobile-web-app-capable', 'yes'),
+      setMeta('apple-mobile-web-app-status-bar-style', 'black'),
+      setMeta('theme-color', '#000000'),
+    ];
 
-    // Add manifest link if not present
-    if (!document.querySelector('link[rel="manifest"][href="/watch-manifest.json"]')) {
-      const link = document.createElement('link');
+    let link = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+    const linkExisted = Boolean(link);
+    const previousHref = link?.getAttribute('href');
+    if (!link) {
+      link = document.createElement('link');
       link.rel = 'manifest';
-      link.href = '/watch-manifest.json';
       document.head.appendChild(link);
     }
-  }
+    link.href = '/watch-manifest.json';
+
+    return () => {
+      cleanupMeta.forEach(cleanup => cleanup());
+      if (!link) return;
+      if (!linkExisted) {
+        link.remove();
+      } else if (previousHref != null) {
+        link.href = previousHref;
+      }
+    };
+  }, []);
+
   return null;
 }
 

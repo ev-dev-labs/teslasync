@@ -905,21 +905,31 @@ export default function Layout() {
                   type="button"
                   variant="ghost"
                   size="sm"
+                  aria-label={t('nav.expandAll', 'Expand all sections')}
+                  title={t('nav.expandAll', 'Expand all sections')}
                   disabled={expandedSectionCount === visibleNavSections.length}
                   onClick={expandAllSections}
-                  className="h-6 rounded-lg px-2 text-[10px] text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] disabled:opacity-40"
+                  className="h-7 w-7 shrink-0 rounded-lg p-0 text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] disabled:opacity-40"
                 >
-                  {t('nav.expandAll', 'Expand')}
+                  <span className="relative block h-4 w-4" aria-hidden="true">
+                    <ChevronDown className="absolute left-0 top-0 h-3.5 w-3.5 -translate-y-0.5" />
+                    <ChevronDown className="absolute left-0 top-0 h-3.5 w-3.5 translate-y-1" />
+                  </span>
                 </Button>
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
+                  aria-label={t('nav.collapseAll', 'Collapse all sections')}
+                  title={t('nav.collapseAll', 'Collapse all sections')}
                   disabled={expandedSectionCount === 0}
                   onClick={collapseAllSections}
-                  className="h-6 rounded-lg px-2 text-[10px] text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] disabled:opacity-40"
+                  className="h-7 w-7 shrink-0 rounded-lg p-0 text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] disabled:opacity-40"
                 >
-                  {t('nav.collapseAll', 'Collapse')}
+                  <span className="relative block h-4 w-4" aria-hidden="true">
+                    <ChevronDown className="absolute left-0 top-0 h-3.5 w-3.5 -translate-y-0.5 rotate-180" />
+                    <ChevronDown className="absolute left-0 top-0 h-3.5 w-3.5 translate-y-1 rotate-180" />
+                  </span>
                 </Button>
               </div>
             </div>

@@ -10,6 +10,19 @@ import App from './App'
 import './i18n'
 import './index.css'
 
+if (import.meta.env.DEV && import.meta.env.VITE_PWA_DEV !== 'true' && 'serviceWorker' in navigator) {
+  navigator.serviceWorker
+    .getRegistrations()
+    .then(registrations => {
+      registrations.forEach(registration => {
+        void registration.unregister()
+      })
+    })
+    .catch(error => {
+      console.warn('[SW] Failed to clear development service worker:', error)
+    })
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

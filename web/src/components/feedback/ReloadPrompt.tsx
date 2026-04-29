@@ -39,6 +39,7 @@ export default function ReloadPrompt() {
   useEffect(() => {
     if (!needRefresh) return
 
+    setCountdown(COUNTDOWN_SECONDS)
     timerRef.current = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
@@ -64,10 +65,10 @@ export default function ReloadPrompt() {
           <RefreshCw className="h-5 w-5 text-neon-cyan animate-spin" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-white/90">
+          <p className="text-sm font-semibold text-[var(--text-primary)]">
             {t('pwa.newVersion', 'New version available')}
           </p>
-          <p className="text-xs text-white/50">
+          <p className="text-xs text-[var(--text-secondary)]">
             {t('pwa.reloadingIn', 'Reloading in {{seconds}}s...', { seconds: countdown })}
           </p>
         </div>

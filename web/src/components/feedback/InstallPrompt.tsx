@@ -9,14 +9,27 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
+interface NavigatorWithStandalone extends Navigator {
+  standalone?: boolean
+}
+
 const DISMISS_KEY = 'teslasync-pwa-install-dismissed'
 const DISMISS_DAYS = 14
 
 function wasDismissedRecently(): boolean {
-  const raw = localStorage.getItem(DISMISS_KEY)
-  if (!raw) return false
-  const ts = Number(raw)
-  return Date.now() - ts < DISMISS_DAYS * 86_400_000
+  try {
+    const raw = localStorage.getItem(DISMISS_KEY)
+    if (!raw) return false
+    const ts = Number(raw)
+    return Number.isFinite(ts) && Date.now() - ts < DISMISS_DAYS * 86_400_000
+  } catch {
+    return false
+  }
+}
+
+function isStandaloneMode(): boolean {
+  return window.matchMedia('(display-mode: standalone)').matches
+    || (window.navigator as NavigatorWithStandalone).standalone === true
 }
 
 export default function InstallPrompt() {
@@ -25,16 +38,26 @@ export default function InstallPrompt() {
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
-    if (wasDismissedRecently()) return
+    if (isStandaloneMode() || wasDismissedRecently()) return
 
     const handler = (e: Event) => {
+      if (isStandaloneMode()) return
       e.preventDefault()
       setDeferredPrompt(e as BeforeInstallPromptEvent)
       setVisible(true)
     }
 
+    const installedHandler = () => {
+      setVisible(false)
+      setDeferredPrompt(null)
+    }
+
     window.addEventListener('beforeinstallprompt', handler)
-    return () => window.removeEventListener('beforeinstallprompt', handler)
+    window.addEventListener('appinstalled', installedHandler)
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler)
+      window.removeEventListener('appinstalled', installedHandler)
+    }
   }, [])
 
   const handleInstall = useCallback(async () => {
@@ -50,7 +73,11 @@ export default function InstallPrompt() {
   const handleDismiss = useCallback(() => {
     setVisible(false)
     setDeferredPrompt(null)
-    localStorage.setItem(DISMISS_KEY, String(Date.now()))
+    try {
+      localStorage.setItem(DISMISS_KEY, String(Date.now()))
+    } catch {
+      // Ignore storage failures; dismissing still hides the prompt for this render.
+    }
   }, [])
 
   return (
@@ -64,16 +91,16 @@ export default function InstallPrompt() {
           className="fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-[9998] mx-auto max-w-md lg:inset-x-auto lg:right-4 lg:bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] lg:w-[28rem]"
         >
           <div
-            className="flex w-full items-start gap-3 rounded-2xl border border-white/[0.08] bg-slate-950/90 px-3 py-3 shadow-xl backdrop-blur-xl sm:items-center sm:px-4"
+            className="flex w-full items-start gap-3 rounded-2xl border border-[var(--glass-border)] bg-[var(--surface-1)] px-3 py-3 text-[var(--text-primary)] shadow-xl backdrop-blur-xl sm:items-center sm:px-4"
           >
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#00f0ff] to-[#10b981]">
               <Download className="h-5 w-5 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold leading-tight text-white/90">
+              <p className="text-sm font-semibold leading-tight text-[var(--text-primary)]">
                 {t('installPrompt.title', 'Install TeslaSync')}
               </p>
-              <p className="text-xs leading-tight mt-0.5 text-white/40">
+              <p className="text-xs leading-tight mt-0.5 text-[var(--text-secondary)]">
                 {t('installPrompt.subtitle', 'Add to home screen for native experience')}
               </p>
             </div>
@@ -90,10 +117,10 @@ export default function InstallPrompt() {
               onClick={handleDismiss}
               variant="ghost"
               size="sm"
-              className="h-8 w-8 shrink-0 rounded-lg p-0 text-white/40 hover:bg-white/10"
+              className="h-8 w-8 shrink-0 rounded-lg p-0 text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
               aria-label={t('installPrompt.dismiss', 'Dismiss install prompt')}
             >
-              <X className="h-4 w-4 text-white/40" />
+              <X className="h-4 w-4" />
             </Button>
           </div>
         </motion.div>

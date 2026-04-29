@@ -4,11 +4,13 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
 
+const enablePwaInDev = process.env.VITE_PWA_DEV === 'true'
+
 export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: ['favicon.svg', 'icons/*.svg', 'icons/*.png'],
       manifest: {
         name: 'TeslaSync',
@@ -56,8 +58,6 @@ export default defineConfig({
         ],
       },
       workbox: {
-        skipWaiting: true,
-        clientsClaim: true,
         cleanupOutdatedCaches: true,
         // Never precache API / SSE / WebSocket traffic
         navigateFallback: '/index.html',
@@ -95,7 +95,7 @@ export default defineConfig({
         ],
       },
       devOptions: {
-        enabled: true,
+        enabled: enablePwaInDev,
       },
     }),
   ],
