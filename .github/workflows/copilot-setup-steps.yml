@@ -2,6 +2,14 @@ name: "Copilot Setup Steps"
 
 on:
   workflow_dispatch:
+    inputs:
+      runner:
+        description: 'Runner to use (manual runs only)'
+        type: choice
+        options:
+          - arc-runner
+          - ubuntu-latest
+        default: arc-runner
   push:
     paths:
       - .github/workflows/copilot-setup-steps.yml
@@ -11,7 +19,7 @@ on:
 
 jobs:
   copilot-setup-steps:
-    runs-on: arc-runner
+    runs-on: ${{ inputs.runner || 'arc-runner' }}
     timeout-minutes: 15
 
     permissions:

@@ -4,6 +4,14 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      runner:
+        description: 'Runner to use (manual runs only)'
+        type: choice
+        options:
+          - arc-runner
+          - ubuntu-latest
+        default: arc-runner
 
 concurrency:
   group: release-${{ github.ref_name }}
@@ -25,7 +33,7 @@ env:
 jobs:
   version-tag:
     name: Version & Tag
-    runs-on: arc-runner
+    runs-on: ${{ inputs.runner || 'arc-runner' }}
     outputs:
       new_tag: ${{ steps.bump.outputs.new_tag }}
       version: ${{ steps.bump.outputs.version }}
@@ -92,7 +100,7 @@ jobs:
   docker:
     name: Docker · ${{ matrix.image }}
     needs: version-tag
-    runs-on: arc-runner
+    runs-on: ${{ inputs.runner || 'arc-runner' }}
     strategy:
       fail-fast: false
       matrix:
@@ -166,7 +174,7 @@ jobs:
   helm:
     name: Publish Helm Chart
     needs: [version-tag, docker]
-    runs-on: arc-runner
+    runs-on: ${{ inputs.runner || 'arc-runner' }}
     permissions:
       contents: read
       packages: write
@@ -192,7 +200,7 @@ jobs:
     name: Create GitHub Release
     needs: [version-tag, docker, helm]
     if: ${{ !cancelled() && needs.docker.result == 'success' && needs.helm.result == 'success' }}
-    runs-on: arc-runner
+    runs-on: ${{ inputs.runner || 'arc-runner' }}
     steps:
       - uses: actions/checkout@v4
         with:

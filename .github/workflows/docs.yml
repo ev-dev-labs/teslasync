@@ -6,6 +6,14 @@ on:
     paths:
       - "docs/**"
   workflow_dispatch:
+    inputs:
+      runner:
+        description: 'Runner to use (manual runs only)'
+        type: choice
+        options:
+          - arc-runner
+          - ubuntu-latest
+        default: arc-runner
 
 concurrency:
   group: pages
@@ -19,7 +27,7 @@ permissions:
 jobs:
   deploy:
     name: Build & Deploy Docs
-    runs-on: arc-runner
+    runs-on: ${{ inputs.runner || 'arc-runner' }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
