@@ -6,18 +6,31 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
-// ClimateHandler serves climate/HVAC endpoints backed by signal_log.
+// ClimateHandler serves climate/HVAC endpoints backed by the signal-log
+// change feed via signal.StateReader (ADR-002 / phase-39).
+//
+// Phase-39 migration: the legacy *database.SignalLogReader (the old pivot +
+// snapshot helpers) has been replaced with the canonical signal.StateReader.
+// Climate fields (cabin temp, HVAC state, seat heaters) change rarely once
+// set — many emissions occur once per day. The legacy raw-pivot
+// implementation rendered later rows as having NULL for every signal that
+// did not re-emit inside the bucket, so the climate history chart on the
+// frontend showed sawtooth gaps. With StateReader.Timeline forward-folding
+// (chart mode — empty CollapseBy so every emission becomes one row), every
+// row carries the most recently observed value of every projected signal,
+// fixing the "blank cabin temp" rendering bug across long stable runs.
 type ClimateHandler struct {
-	signalLogReader *database.SignalLogReader
+	state signal.StateReader
 }
 
-// Signal → JSON field mappings for climate pivot queries.
+// Signal → JSON field mappings for climate timeline / state projection.
 // Field names are snake_case; the frontend camelCaseKeys transform produces
 // matching camelCase keys (e.g. inside_temp → insideTemp).
-var climateMappings = []database.PivotMapping{
+var climateMappings = []signal.FieldMapping{
 	// Temperatures
 	{Signal: "InsideTemp", Field: "inside_temp"},
 	{Signal: "OutsideTemp", Field: "outside_temp"},
@@ -57,11 +70,16 @@ var climateMappings = []database.PivotMapping{
 	{Signal: "SeatVentEnabled", Field: "seat_vent_enabled"},
 }
 
-func NewClimateHandler(slr *database.SignalLogReader) *ClimateHandler {
-	return &ClimateHandler{signalLogReader: slr}
+func NewClimateHandler(state signal.StateReader) *ClimateHandler {
+	return &ClimateHandler{state: state}
 }
 
-// List returns climate history from signal_log via SignalTracePivotFlat.
+// List returns climate history from the signal-log change feed via
+// StateReader.Timeline in CHART MODE (empty CollapseBy). Each emission
+// becomes one row; forward-folding ensures rare HVAC fields (cabin temp,
+// seat heaters, defrost mode) carry their most-recent value across rows
+// where they did not re-emit, fixing the legacy "blank panel" bug for
+// long stable climate runs.
 func (h *ClimateHandler) List(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
 	if err != nil || vehicleID == 0 {
@@ -78,16 +96,14 @@ func (h *ClimateHandler) List(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	rows, err := h.signalLogReader.SignalTracePivotFlat(r.Context(),
-		vehicleID, climateMappings, from, to)
+	timelineRows, err := h.state.Timeline(r.Context(),
+		vehicleID, climateMappings, from, to, signal.TimelineOptions{})
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get climate data from signal_log")
 		writeError(w, http.StatusInternalServerError, "failed to get climate data")
 		return
 	}
-	if rows == nil {
-		rows = []map[string]interface{}{}
-	}
+	rows := timelineRowsToFlat(timelineRows)
 	for i, row := range rows {
 		if ts, ok := row["ts"]; ok {
 			row["created_at"] = ts
@@ -98,7 +114,10 @@ func (h *ClimateHandler) List(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, rows)
 }
 
-// Latest returns the most recent climate values via SnapshotAt(now).
+// Latest returns the most recent climate values, derived from the
+// forward-folded signal-log state at time.Now() via StateReader.State.
+// Every climateMappings entry whose Signal is present in State is
+// projected under its mapped Field name.
 func (h *ClimateHandler) Latest(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
 	if err != nil || vehicleID == 0 {
@@ -106,7 +125,7 @@ func (h *ClimateHandler) Latest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	snap, err := h.signalLogReader.SnapshotAt(r.Context(), vehicleID, time.Now())
+	snap, err := h.state.State(r.Context(), vehicleID, time.Now())
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get latest climate data")
 		writeError(w, http.StatusInternalServerError, "failed to get latest climate data")
