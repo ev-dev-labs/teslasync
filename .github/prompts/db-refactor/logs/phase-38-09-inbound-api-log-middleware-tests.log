@@ -1,0 +1,341 @@
+=== PREFLIGHT ===
+phase: 38-09-inbound-api-log-middleware-tests
+predecessor: .github/prompts/db-refactor/logs/phase-38-08-api-logs-coverage-decision-record.log
+predecessor_status: EXIT=0 STATUS=DONE (verified)
+allowed_files_to_change: .github/prompts/db-refactor/logs/phase-38-09-inbound-api-log-middleware-tests.log
+delegation: forbidden (no sub-agents, no parallel, no background tasks)
+gate: log-only test specification; no source files change in this phase
+artifact_type: test specification (Prompt 10 will implement these tests)
+service_tag_for_inbound: service="teslasync-api"
+
+=== SURVEY ===
+file_under_review: internal/api/router.go (lines 58-96)
+file_under_review: internal/api/middleware.go (LoggerMiddleware lines 14-46, RecoveryMiddleware lines 48-68, TracingMiddleware lines 70-78)
+file_under_review: internal/api/metrics.go (PrometheusMiddleware line 71-)
+
+global_middleware_order_in_router (router.go:58-96, observed exactly):
+  1. chimw.RequestID                  -- assigns X-Request-ID, populated into ctx (chimw.GetReqID)
+  2. chimw.RealIP                      -- rewrites r.RemoteAddr from X-Forwarded-For / X-Real-IP
+  3. TracingMiddleware                 -- otelhttp span "http.request" wrapping the rest
+  4. LoggerMiddleware                  -- wraps ResponseWriter (chimw.NewWrapResponseWriter), defers
+                                          status/bytes/duration/request_id zerolog emission
+  5. RecoveryMiddleware                -- defer recover(); on panic logs stack and writes
+                                          http.StatusInternalServerError via writeError(w,500,...)
+  6. ErrorTrackingMiddleware           -- centralized error aggregation (separate concern)
+  7. PrometheusMiddleware              -- HTTP request metrics (duration, count, size)
+  8. chimw.Compress(5)                 -- gzip/deflate response body
+  9. cors.Handler(...)                 -- CORS, AllowCredentials only when explicit origin
+ 10. SecurityHeadersMiddleware
+ 11. http.MaxBytesReader(1<<20)        -- 1MB request body cap (a "DoS guard" already in place)
+
+key_observations:
+  - LoggerMiddleware ALREADY uses chimw.NewWrapResponseWriter and a deferred function
+    that reads ww.Status() and ww.BytesWritten() AFTER the handler runs. The new
+    APICallLogMiddleware MUST follow the same pattern (defer + WrapResponseWriter)
+    so it observes the final status code and byte count, including the 500 emitted
+    by RecoveryMiddleware on panic.
+  - RecoveryMiddleware writes the 500 response itself (via writeError) and does not
+    re-panic. So a middleware mounted ABOVE RecoveryMiddleware (closer to the entry)
+    will see status=500 in its deferred read, and its own defer will also run.
+  - chimw.GetReqID(r.Context()) yields the per-request UUID; that value is the right
+    source for any "request_id" column we want to populate later.
+  - LoggerMiddleware sets the X-Response-Time response header inside its defer; this
+    proves writes to ww.Header() after next.ServeHTTP are still flushed before the
+    final write of the response trailers when chunked, but for our purposes we only
+    enqueue a record (no ResponseWriter mutation) -- safer.
+
+existing_writers_to_api_call_logs (sole sinks today):
+  - cmd/teslasync/main.go:160 -- teslaClient.SetLogCallback -> apiLogRepo, service="tesla-api"
+    (outbound Tesla Fleet API)
+  - internal/api/telemetry_handler_ingest.go:421-426 -- inline insert with
+    service="fleet-telemetry" for Tesla Fleet Telemetry inbound POSTs only
+
+what_does_NOT_exist_yet:
+  - No file internal/api/api_log_middleware.go
+  - No type APICallLogMiddleware (or APILogRecorder, APILogWriter, etc.)
+  - No async batched writer for api_call_logs
+  - No env binding for API_LOG_CAPTURE_BODIES in internal/config/config.go
+  - No tests in internal/api/api_log_middleware_test.go
+
+router_paths_relevant_to_skip_list (verified present in router.go):
+  - GET  /healthz                                         (line near top, outside /api/v1)
+  - GET  /readyz                                          (outside /api/v1)
+  - GET  /metrics                                         (outside /api/v1, prometheus handler)
+  - GET  /api/v1/system/status                            (system handler)
+  - GET  /api/v1/system/audit                             (system handler)
+  - GET  /api/v1/events                                   (SSE, real-time stream)
+  - GET  /api/v1/sse-token                                (single-use SSE bootstrap token)
+  - admin api-logs sub-router (paths under /api/v1/admin/api-logs)
+       - GET  /api/v1/admin/api-logs
+       - GET  /api/v1/admin/api-logs/stats
+       - GET  /api/v1/admin/api-logs/{id}
+       - GET  /api/v1/admin/api-logs/export
+       (these are the api-logs admin endpoints that MUST be skipped to break the
+        feedback loop "viewing the page generates more rows than it shows")
+
+=== REASONING ===
+mount_point_decision:
+  The new APICallLogMiddleware MUST be registered:
+    - AFTER chimw.RequestID and chimw.RealIP                    (so the recorded
+      log row carries the canonical request_id and the real client IP, not the
+      proxy's address).
+    - AFTER TracingMiddleware                                   (so the recorder
+      runs inside the http.request span and any otel context propagation lives
+      in the same span as our DB insert enqueue).
+    - AFTER LoggerMiddleware                                    (so the existing
+      structured zerolog line still fires first; both deferred readers observe
+      the same final status because both wrap the ResponseWriter via
+      chimw.NewWrapResponseWriter -- the OUTERMOST WrapResponseWriter wins for
+      Status()/BytesWritten() observation, and chimw.NewWrapResponseWriter is
+      idempotent on an already-wrapped writer).
+  The new middleware MUST be registered BEFORE RecoveryMiddleware in the chain
+  position only in the sense that the recovered-and-converted 500 response is
+  visible to its deferred Status() read; given chi composes middleware top-to-
+  bottom and defers run bottom-to-top, "AFTER LoggerMiddleware AND AFTER
+  RecoveryMiddleware" means the recorder sits just below RecoveryMiddleware in
+  the r.Use(...) sequence, so its defer fires INSIDE RecoveryMiddleware's recover
+  (i.e. RecoveryMiddleware has already converted the panic to a 500 by the time
+  our defer reads ww.Status()). Concretely:
+      r.Use(chimw.RequestID)
+      r.Use(chimw.RealIP)
+      r.Use(TracingMiddleware)
+      r.Use(LoggerMiddleware)
+      r.Use(RecoveryMiddleware)
+      r.Use(APICallLogMiddleware)         <-- NEW, mounted here
+      r.Use(ErrorTrackingMiddleware(...))
+      r.Use(PrometheusMiddleware)
+      r.Use(chimw.Compress(5))
+  This placement is a hard contract for Prompt 10's tests.
+
+non_blocking_contract:
+  The middleware MUST NOT short-circuit, slow, or fail the user request when the
+  async writer queue is full or the writer is unavailable. On full queue / writer
+  failure it MUST: drop the entry, increment a Prometheus counter
+  (api_call_log_drops_total) and emit a single zerolog .Warn() with the reason.
+  It MUST NOT: return an HTTP error, sleep waiting for queue capacity, panic, or
+  block on a DB call from the request goroutine.
+
+defer_required:
+  The middleware's recorder MUST be invoked from a defer registered BEFORE
+  next.ServeHTTP. This guarantees that when a downstream handler panics and
+  RecoveryMiddleware converts it to status_code=500 via writeError, our defer
+  still runs and records the request with status_code=500. A non-deferred
+  recorder placed after next.ServeHTTP would be skipped on panic.
+
+vehicle_id_column:
+  The vehicle_id column on api_call_logs is intended for OUTBOUND adapter calls
+  scoped to a specific vehicle (e.g., tesla-api per-vehicle commands). For
+  INBOUND requests the middleware MUST set vehicle_id to NULL. Parsing
+  /api/v1/vehicles/{vehicleID}/... out of r.URL.Path to back-populate vehicle_id
+  is explicitly forbidden by this contract -- we do not want noisy or wrong
+  attribution of system traffic to a single car.
+
+shutdown_semantics:
+  The async writer exposes a Shutdown(ctx) that closes the input channel,
+  drains pending entries with a context deadline, and from then on Enqueue
+  becomes a non-panicking no-op. After Shutdown the middleware MAY still be
+  invoked (in-flight requests at server shutdown) and MUST NOT panic; it MUST
+  silently drop and increment the drop counter. Prompt 10 must assert this.
+
+prompt_10_must_pass:
+  This phase is a SPECIFICATION ONLY and writes no source. Prompt 10 must add
+  the actual tests AND the implementation that makes them green. Prompt 10
+  must turn this matrix green; any test in this matrix that Prompt 10 fails to
+  add or fails to pass is a Prompt-10 BLOCKED outcome, not a phase-09 problem.
+  Restating for the gate: Prompt 10 must add the tests below and Prompt 10
+  must pass them green before phase 38 can proceed past test-implementation.
+
+=== CHANGES ===
+no source files changed.
+only file modified: .github/prompts/db-refactor/logs/phase-38-09-inbound-api-log-middleware-tests.log
+
+required_test_file: internal/api/api_log_middleware_test.go (new in Prompt 10)
+required_helpers:
+  - fakeAPILogStore: implements the writer port; thread-safe, captures every
+    enqueued *models.APICallLog into a []*models.APICallLog with mutex; exposes
+    Entries(), Reset(), and a configurable BlockEnqueue/AlwaysFull bool that
+    causes Enqueue to return false (signaling the queue is full) so tests can
+    exercise the drop path without time-based flake.
+  - newTestRouterWithLogger(t, store): builds a chi router with the same global
+    middleware stack (RequestID, RealIP, Tracing, Logger, Recovery,
+    APICallLogMiddleware(store, opts), Compress) and mounts a tiny set of test
+    handlers covering 200, panic, /healthz, /metrics, /api/v1/admin/api-logs,
+    /api/v1/events, /api/v1/system/status, /api/v1/sse-token, and a body-echo
+    POST /api/v1/vehicles handler so request/response body capture can be
+    asserted.
+  - withCaptureBodies(t, on bool): sets API_LOG_CAPTURE_BODIES via t.Setenv
+    so opt.CaptureBodies reads the override, and asserts the env is restored.
+
+required_test_matrix (Prompt 10 must implement EVERY item below; each test is
+named so its failure points at exactly one contract clause):
+
+  T01_HappyPath_GET_Vehicles_RecordsOneRow_ServiceTeslasyncApi
+    GIVEN  a router with APICallLogMiddleware and body capture OFF
+    WHEN   client sends GET /api/v1/vehicles which returns 200 OK with body "[]"
+    THEN   exactly 1 entry is enqueued into fakeAPILogStore
+    AND    entry.Service == "teslasync-api"
+    AND    entry.HTTPMethod == "GET"
+    AND    entry.Endpoint contains "/api/v1/vehicles"
+    AND    entry.StatusCode == 200
+    AND    entry.DurationMs > 0
+    AND    entry.RequestBody is nil/empty (capture OFF)
+    AND    entry.ResponseBody is nil/empty (capture OFF)
+    AND    entry.VehicleID is nil (inbound never attributes a vehicle)
+    AND    entry.RequestID == response header X-Request-ID
+
+  T02_BodyCaptureOn_RecordsRequestAndResponseBodies
+    GIVEN  API_LOG_CAPTURE_BODIES=true
+    WHEN   client POSTs {"display_name":"Roadster"} to a JSON-echo endpoint
+    THEN   entry.RequestBody decodes to the same JSON
+    AND    entry.ResponseBody decodes to the echoed JSON
+    AND    no header value (Authorization, Cookie) appears in either body
+
+  T03_BodyCaptureOn_TruncatesAt10240Bytes_RequestAndResponse
+    GIVEN  API_LOG_CAPTURE_BODIES=true and a 12 KB request body
+    WHEN   handler responds with a 15 KB response body
+    THEN   len(entry.RequestBody)  <= 10240   (10 KB hard cap)
+    AND    len(entry.ResponseBody) <= 10240   (10 KB hard cap)
+    AND    a "truncated=true" marker is set on the entry
+
+  T04_SkippedPaths_NoRowsEnqueued
+    For each path in the skip list, assert the store remains empty after a
+    successful request. Paths to cover:
+      - GET  /healthz
+      - GET  /readyz
+      - GET  /metrics
+      - GET  /api/v1/admin/api-logs
+      - GET  /api/v1/admin/api-logs/stats
+      - GET  /api/v1/events
+      - GET  /api/v1/sse-token
+      - GET  /api/v1/system/status
+    Assertion: store.Entries() length == 0 after each call (the writer was
+    not even called, not just "called and dropped").
+
+  T05_RedactsAuthorizationHeaderInStoredEndpointAndHeadersSnapshot
+    GIVEN  request carries Authorization: Bearer abc.def.ghi
+    AND    request carries Cookie: session=xyz
+    AND    request URL is /api/v1/vehicles?api_key=SECRET&visible=ok
+    THEN   entry.Endpoint contains api_key=REDACTED
+    AND    entry.Endpoint contains visible=ok                (non-secret query
+                                                              params are kept)
+    AND    the stored header snapshot (if any) replaces Authorization and Cookie
+           values with "REDACTED"
+    AND    when body capture is ON for the same request, neither "abc.def.ghi"
+           nor "xyz" nor "SECRET" appears anywhere in entry.RequestBody or
+           entry.ResponseBody
+
+  T06_RedactsBodyFieldsByCaseInsensitiveKey
+    GIVEN  body capture ON and a JSON request body:
+             {"username":"u","password":"p","api_token":"t","Note":"keep"}
+    THEN   entry.RequestBody parses to a JSON object where:
+             - password  == "REDACTED"
+             - api_token == "REDACTED"
+             - username  == "u"        (kept)
+             - Note      == "keep"     (kept)
+    AND    the same redaction is applied to nested objects and arrays of
+           objects (recursive walk).
+
+  T07_QueueFull_DropsEntry_RequestStillSucceeds
+    GIVEN  fakeAPILogStore.AlwaysFull = true (Enqueue returns false / writer
+           queue is full / writer.full simulated)
+    WHEN   client GETs /api/v1/vehicles
+    THEN   HTTP response is still 200 OK with the original body
+    AND    response latency is within 10 ms of an unwrapped baseline
+           (no synchronous DB call, no sleep)
+    AND    the api_call_log_drops_total counter increments by exactly 1
+    AND    a single zerolog Warn line is emitted (no Error, no Panic)
+    AND    store.Entries() is empty (drop, do not retry)
+
+  T08_HandlerPanic_StillRecordsRequest_StatusCode500
+    GIVEN  a handler that panics with errors.New("boom") and Recovery is in
+           place (recovery converts panic to status_code=500 via writeError)
+    WHEN   client GETs /api/v1/test-panic
+    THEN   client receives HTTP 500
+    AND    exactly 1 entry is enqueued (the recorder runs in a defer)
+    AND    entry.StatusCode == 500
+    AND    entry.Endpoint contains "/api/v1/test-panic"
+    AND    entry.DurationMs > 0
+    Implementation contract: this test fails unless the recorder is invoked
+    from a defer registered BEFORE next.ServeHTTP.
+
+  T09_Shutdown_DrainsPendingEntries_LaterEnqueueDropped
+    GIVEN  the writer holds 3 enqueued entries that have not yet been INSERTed
+    WHEN   writer.Shutdown(ctx) is called with a 2s deadline
+    THEN   all 3 pending entries are flushed to the underlying store (drain)
+    AND    a subsequent middleware call enqueues a 4th entry that is silently
+           dropped (no panic, drop counter increments, store unchanged)
+    AND    Shutdown returns nil under the deadline
+
+  T10_VehicleIDIsAlwaysNullForInboundEvenForVehicleScopedURL
+    GIVEN  client GETs /api/v1/vehicles/42/state
+    THEN   entry.VehicleID is nil
+    AND    entry.Endpoint contains "/api/v1/vehicles/42/state"
+    Implementation contract: the middleware MUST NOT scrape vehicleID out of
+    the URL or chi route context to populate the vehicle_id column.
+
+  T11_LatencyOverhead_BodyCaptureOff_NoMeasurableRegression
+    Benchmark-style sanity test (not strict perf):
+      - Run 200 requests through the wrapped router with body capture OFF.
+      - Run 200 requests through an unwrapped baseline.
+      - Assert the wrapped p95 latency is within +25% of baseline (loose, just
+        proves we did not accidentally land a synchronous DB write on the
+        request path).
+
+  T12_ConcurrentRequests_NoRaceNoLostRows
+    GIVEN  body capture OFF and a non-full writer queue
+    WHEN   100 goroutines each issue a GET /api/v1/vehicles concurrently
+    THEN   exactly 100 entries are enqueued (no rows lost)
+    AND    `go test -race` passes (the recorder must not share unsynchronised
+           state across goroutines).
+
+  T13_PrometheusCounter_IncrementsOnDrop_NotOnSuccess
+    Assert api_call_log_drops_total increments only on the drop path; on T01's
+    happy path the counter MUST NOT change.
+
+  T14_NonAPIv1Paths_StillRecorded_UnlessSkipped
+    GIVEN  a request to "/" (the SPA index) served by the SPA file server
+    THEN   the request IS recorded (service="teslasync-api") because the skip
+           list is path-based, not prefix-based on /api/v1.
+    Note: This documents the intended behavior. If operators want to also skip
+    "/" they will tighten the list in a later phase.
+
+  T15_RedactionAppliesBeforeEnqueue
+    Implementation contract test: spy on the channel send and assert that
+    the entry passed to Enqueue already has redacted fields (i.e. raw
+    Authorization tokens never sit in the channel buffer even briefly).
+    This is the privacy-hot-path assertion.
+
+prompt_10_must_pass: Prompt 10 must turn this matrix green. Prompt 10 must add
+each of T01..T15 as a real Go test in internal/api/api_log_middleware_test.go,
+implement APICallLogMiddleware + the async batched writer such that every
+assertion above holds, and run `go test -race ./internal/api/...` green
+before marking phase 10 STATUS=DONE.
+
+env_var_contract_for_prompt_10:
+  API_LOG_CAPTURE_BODIES (bool, default false). When false, RequestBody and
+  ResponseBody columns are written as NULL even on the inbound middleware path.
+  When true, both bodies are captured up to 10 KB (10240 bytes) each, redacted,
+  and stored. Operator default at deployment is OFF (matches phase 38-08 ADR
+  decision BODY_CAPTURE_DEFAULT=off).
+
+backpressure_contract_for_prompt_10:
+  Channel size: 1024 entries (rationale: ~1024 in-flight requests is well above
+  any realistic single-pod inbound concurrency; smaller risks dropping in burst,
+  larger risks unbounded memory). On queue.full / writer.full / writer.queue.full
+  the middleware drops the entry, calls metrics.APICallLogDrops.Inc(), and emits
+  a rate-limited zerolog.Warn() (no panic, no error returned to caller).
+
+=== GATE ===
+TRUNCATE_10KB=True
+ASYNC_BACKPRESSURE_TOLERATED=True
+REDACTION_REQUIRED=True
+BODY_CAPTURE_OFF_DEFAULT=True
+SERVICE_TAG_TESLASYNC_API=True
+SHUTDOWN_DRAIN=True
+SKIPPED_PATHS_LISTED=True
+PROMPT_10_GREEN_REQUIRED=True
+PANIC_STILL_RECORDED=True
+UNEXPECTED_STATUS_COUNT=0
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
