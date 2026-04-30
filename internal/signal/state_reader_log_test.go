@@ -432,3 +432,456 @@ func TestLogStateReader_SignalAt_RejectsEmptySignal(t *testing.T) {
 		t.Fatalf("Query must not be called for empty signal; got %d calls", got)
 	}
 }
+
+// --- Timeline() chart mode tests -----------------------------------------
+
+// timelineSeedRow is the in-memory analogue of a single signal_log row
+// returned by the seed (DISTINCT ON) query: 5 columns, no created_at.
+type timelineSeedRow struct {
+	signal string
+	vNum   *float64
+	vStr   *string
+	vBool  *bool
+	vJsonb []byte
+}
+
+// timelineSeedPgxRows implements the relevant subset of pgx.Rows used by
+// LogStateReader.Timeline's seed scan. Only Next/Scan/Err/Close are
+// exercised; the rest of pgx.Rows is satisfied with zero-value stubs so
+// the type compiles.
+type timelineSeedPgxRows struct {
+	rows []timelineSeedRow
+	pos  int
+	err  error
+}
+
+func (s *timelineSeedPgxRows) Close()                                       {}
+func (s *timelineSeedPgxRows) Err() error                                   { return s.err }
+func (s *timelineSeedPgxRows) CommandTag() pgconn.CommandTag                { return pgconn.CommandTag{} }
+func (s *timelineSeedPgxRows) FieldDescriptions() []pgconn.FieldDescription { return nil }
+func (s *timelineSeedPgxRows) Next() bool {
+	if s.pos >= len(s.rows) {
+		return false
+	}
+	s.pos++
+	return true
+}
+func (s *timelineSeedPgxRows) Scan(dest ...any) error {
+	if s.pos == 0 || s.pos > len(s.rows) {
+		return errors.New("timelineSeedPgxRows: Scan called out of order")
+	}
+	if len(dest) != 5 {
+		return fmt.Errorf("timelineSeedPgxRows: expected 5 destinations, got %d", len(dest))
+	}
+	row := s.rows[s.pos-1]
+	*(dest[0].(*string)) = row.signal
+	*(dest[1].(**float64)) = row.vNum
+	*(dest[2].(**string)) = row.vStr
+	*(dest[3].(**bool)) = row.vBool
+	*(dest[4].(*[]byte)) = row.vJsonb
+	return nil
+}
+func (s *timelineSeedPgxRows) Values() ([]any, error) { return nil, nil }
+func (s *timelineSeedPgxRows) RawValues() [][]byte    { return nil }
+func (s *timelineSeedPgxRows) Conn() *pgx.Conn        { return nil }
+
+// timelineWindowRow is the in-memory analogue of one signal_log row
+// returned by the window query: 6 columns including created_at first.
+type timelineWindowRow struct {
+	createdAt time.Time
+	signal    string
+	vNum      *float64
+	vStr      *string
+	vBool     *bool
+	vJsonb    []byte
+}
+
+// timelineWindowPgxRows is the window-query counterpart to
+// timelineSeedPgxRows. Same minimal pgx.Rows surface.
+type timelineWindowPgxRows struct {
+	rows []timelineWindowRow
+	pos  int
+	err  error
+}
+
+func (w *timelineWindowPgxRows) Close()                                       {}
+func (w *timelineWindowPgxRows) Err() error                                   { return w.err }
+func (w *timelineWindowPgxRows) CommandTag() pgconn.CommandTag                { return pgconn.CommandTag{} }
+func (w *timelineWindowPgxRows) FieldDescriptions() []pgconn.FieldDescription { return nil }
+func (w *timelineWindowPgxRows) Next() bool {
+	if w.pos >= len(w.rows) {
+		return false
+	}
+	w.pos++
+	return true
+}
+func (w *timelineWindowPgxRows) Scan(dest ...any) error {
+	if w.pos == 0 || w.pos > len(w.rows) {
+		return errors.New("timelineWindowPgxRows: Scan called out of order")
+	}
+	if len(dest) != 6 {
+		return fmt.Errorf("timelineWindowPgxRows: expected 6 destinations, got %d", len(dest))
+	}
+	row := w.rows[w.pos-1]
+	*(dest[0].(*time.Time)) = row.createdAt
+	*(dest[1].(*string)) = row.signal
+	*(dest[2].(**float64)) = row.vNum
+	*(dest[3].(**string)) = row.vStr
+	*(dest[4].(**bool)) = row.vBool
+	*(dest[5].(*[]byte)) = row.vJsonb
+	return nil
+}
+func (w *timelineWindowPgxRows) Values() ([]any, error) { return nil, nil }
+func (w *timelineWindowPgxRows) RawValues() [][]byte    { return nil }
+func (w *timelineWindowPgxRows) Conn() *pgx.Conn        { return nil }
+
+// timelineQuerier dispatches Query calls to a seed or window response
+// based on whether the SQL contains "DISTINCT ON" (the unique seed-query
+// marker). The atomic counter lets tests assert exactly N queries
+// executed (e.g. the No-N+1 invariant).
+type timelineQuerier struct {
+	seedRows   pgx.Rows
+	windowRows pgx.Rows
+	seedErr    error
+	windowErr  error
+	calls      atomic.Int64
+}
+
+func (t *timelineQuerier) Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error) {
+	t.calls.Add(1)
+	if strings.Contains(sql, "DISTINCT ON") {
+		if t.seedErr != nil {
+			return nil, t.seedErr
+		}
+		if t.seedRows != nil {
+			return t.seedRows, nil
+		}
+		return emptyPgxRows{}, nil
+	}
+	if t.windowErr != nil {
+		return nil, t.windowErr
+	}
+	if t.windowRows != nil {
+		return t.windowRows, nil
+	}
+	return emptyPgxRows{}, nil
+}
+
+func ptrFloat64(v float64) *float64 { return &v }
+
+// validWindow returns a (from, to) pair safely inside the 366-day guard
+// so happy-path tests do not have to spell out time literals.
+func validWindow() (time.Time, time.Time) {
+	from := time.Date(2026, 4, 30, 12, 0, 0, 0, time.UTC)
+	return from, from.Add(time.Hour)
+}
+
+func TestLogStateReader_Timeline_ChartMode_EmptyMappings(t *testing.T) {
+	q := &timelineQuerier{}
+	r := &LogStateReader{pool: q, log: zerolog.Nop()}
+	from, to := validWindow()
+
+	rows, err := r.Timeline(context.Background(), 1, nil, from, to, TimelineOptions{})
+	if err != nil {
+		t.Fatalf("Timeline: want nil error, got %v", err)
+	}
+	if len(rows) != 0 {
+		t.Fatalf("rows: want 0, got %d", len(rows))
+	}
+	if got := q.calls.Load(); got != 0 {
+		t.Fatalf("Query must not be called for empty mappings; got %d calls", got)
+	}
+
+	// Same expectation for an explicit zero-length slice.
+	rows, err = r.Timeline(context.Background(), 1, []FieldMapping{}, from, to, TimelineOptions{})
+	if err != nil {
+		t.Fatalf("Timeline (empty slice): want nil error, got %v", err)
+	}
+	if len(rows) != 0 {
+		t.Fatalf("rows (empty slice): want 0, got %d", len(rows))
+	}
+	if got := q.calls.Load(); got != 0 {
+		t.Fatalf("Query must not be called for empty slice mappings; got %d calls", got)
+	}
+}
+
+func TestLogStateReader_Timeline_ChartMode_SeedOnly_NoEvents(t *testing.T) {
+	q := &timelineQuerier{
+		seedRows:   &timelineSeedPgxRows{rows: []timelineSeedRow{{signal: "Speed", vNum: ptrFloat64(50)}}},
+		windowRows: emptyPgxRows{},
+	}
+	r := &LogStateReader{pool: q, log: zerolog.Nop()}
+	from, to := validWindow()
+
+	rows, err := r.Timeline(context.Background(), 1, []FieldMapping{{Signal: "Speed", Field: "speed"}}, from, to, TimelineOptions{})
+	if err != nil {
+		t.Fatalf("Timeline: %v", err)
+	}
+	if len(rows) != 0 {
+		t.Fatalf("rows: want 0 (no events = no timestamps), got %d (%+v)", len(rows), rows)
+	}
+	if got := q.calls.Load(); got != 2 {
+		t.Fatalf("calls: want 2 (seed + window), got %d", got)
+	}
+}
+
+func TestLogStateReader_Timeline_ChartMode_SingleEvent(t *testing.T) {
+	t1 := time.Date(2026, 4, 30, 12, 30, 0, 0, time.UTC)
+	q := &timelineQuerier{
+		windowRows: &timelineWindowPgxRows{rows: []timelineWindowRow{
+			{createdAt: t1, signal: "Speed", vNum: ptrFloat64(50)},
+		}},
+	}
+	r := &LogStateReader{pool: q, log: zerolog.Nop()}
+	from, to := validWindow()
+
+	rows, err := r.Timeline(context.Background(), 1, []FieldMapping{{Signal: "Speed", Field: "speed"}}, from, to, TimelineOptions{})
+	if err != nil {
+		t.Fatalf("Timeline: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("rows: want 1, got %d (%+v)", len(rows), rows)
+	}
+	if !rows[0].Timestamp.Equal(t1) {
+		t.Fatalf("ts: want %v, got %v", t1, rows[0].Timestamp)
+	}
+	if rows[0].Fields["speed"] != 50.0 {
+		t.Fatalf("speed: want 50.0, got %v", rows[0].Fields["speed"])
+	}
+}
+
+func TestLogStateReader_Timeline_ChartMode_CarryForward(t *testing.T) {
+	t1 := time.Date(2026, 4, 30, 12, 30, 0, 0, time.UTC)
+	q := &timelineQuerier{
+		seedRows: &timelineSeedPgxRows{rows: []timelineSeedRow{
+			{signal: "Soc", vNum: ptrFloat64(80)},
+		}},
+		windowRows: &timelineWindowPgxRows{rows: []timelineWindowRow{
+			{createdAt: t1, signal: "Speed", vNum: ptrFloat64(50)},
+		}},
+	}
+	r := &LogStateReader{pool: q, log: zerolog.Nop()}
+	from, to := validWindow()
+
+	mappings := []FieldMapping{
+		{Signal: "Speed", Field: "speed"},
+		{Signal: "Soc", Field: "soc"},
+	}
+	rows, err := r.Timeline(context.Background(), 1, mappings, from, to, TimelineOptions{})
+	if err != nil {
+		t.Fatalf("Timeline: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("rows: want 1, got %d (%+v)", len(rows), rows)
+	}
+	if rows[0].Fields["speed"] != 50.0 {
+		t.Fatalf("speed: want 50.0, got %v", rows[0].Fields["speed"])
+	}
+	if rows[0].Fields["soc"] != 80.0 {
+		t.Fatalf("soc: want 80.0 (carried from seed), got %v", rows[0].Fields["soc"])
+	}
+}
+
+func TestLogStateReader_Timeline_ChartMode_MergeSameTimestamp(t *testing.T) {
+	t1 := time.Date(2026, 4, 30, 12, 30, 0, 0, time.UTC)
+	q := &timelineQuerier{
+		windowRows: &timelineWindowPgxRows{rows: []timelineWindowRow{
+			{createdAt: t1, signal: "Speed", vNum: ptrFloat64(50)},
+			{createdAt: t1, signal: "Soc", vNum: ptrFloat64(80)},
+		}},
+	}
+	r := &LogStateReader{pool: q, log: zerolog.Nop()}
+	from, to := validWindow()
+
+	mappings := []FieldMapping{
+		{Signal: "Speed", Field: "speed"},
+		{Signal: "Soc", Field: "soc"},
+	}
+	rows, err := r.Timeline(context.Background(), 1, mappings, from, to, TimelineOptions{})
+	if err != nil {
+		t.Fatalf("Timeline: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("rows: want 1 (merged on same ts), got %d (%+v)", len(rows), rows)
+	}
+	if rows[0].Fields["speed"] != 50.0 {
+		t.Fatalf("speed: want 50.0, got %v", rows[0].Fields["speed"])
+	}
+	if rows[0].Fields["soc"] != 80.0 {
+		t.Fatalf("soc: want 80.0, got %v", rows[0].Fields["soc"])
+	}
+}
+
+func TestLogStateReader_Timeline_ChartMode_DropsLeadingNilRows(t *testing.T) {
+	t1 := time.Date(2026, 4, 30, 12, 30, 0, 0, time.UTC)
+	t2 := t1.Add(time.Minute)
+	// Empty seed + first window event is an explicit nil emission for
+	// the only mapped signal → the t1 row projects to {speed: nil} and
+	// must be dropped by the leading-all-nil rule. The t2 row carries a
+	// real value and survives.
+	q := &timelineQuerier{
+		windowRows: &timelineWindowPgxRows{rows: []timelineWindowRow{
+			{createdAt: t1, signal: "Speed"},
+			{createdAt: t2, signal: "Speed", vNum: ptrFloat64(50)},
+		}},
+	}
+	r := &LogStateReader{pool: q, log: zerolog.Nop()}
+	from, to := validWindow()
+
+	rows, err := r.Timeline(context.Background(), 1, []FieldMapping{{Signal: "Speed", Field: "speed"}}, from, to, TimelineOptions{})
+	if err != nil {
+		t.Fatalf("Timeline: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("rows: want 1 (leading nil dropped), got %d (%+v)", len(rows), rows)
+	}
+	if !rows[0].Timestamp.Equal(t2) {
+		t.Fatalf("ts: want %v, got %v", t2, rows[0].Timestamp)
+	}
+	if rows[0].Fields["speed"] != 50.0 {
+		t.Fatalf("speed: want 50.0, got %v", rows[0].Fields["speed"])
+	}
+}
+
+func TestLogStateReader_Timeline_ChartMode_RejectsCollapseByForNow(t *testing.T) {
+	q := &timelineQuerier{}
+	r := &LogStateReader{pool: q, log: zerolog.Nop()}
+	from, to := validWindow()
+
+	_, err := r.Timeline(context.Background(), 1,
+		[]FieldMapping{{Signal: "Speed", Field: "speed"}},
+		from, to,
+		TimelineOptions{CollapseBy: []string{"title"}})
+	if err == nil {
+		t.Fatal("want error for collapse mode (deferred to Prompt 08)")
+	}
+	if !strings.Contains(err.Error(), "phase-39-08") {
+		t.Fatalf("want 'phase-39-08' in error, got %q", err.Error())
+	}
+}
+
+func TestLogStateReader_Timeline_ChartMode_PropagatesContextCancel(t *testing.T) {
+	q := &timelineQuerier{seedErr: context.Canceled}
+	r := &LogStateReader{pool: q, log: zerolog.Nop()}
+
+	from := time.Date(2026, 4, 30, 12, 0, 0, 0, time.UTC)
+	to := from.Add(time.Hour)
+	_, err := r.Timeline(context.Background(), 42,
+		[]FieldMapping{{Signal: "Speed", Field: "speed"}},
+		from, to, TimelineOptions{})
+	if err == nil {
+		t.Fatal("want error from cancelled query")
+	}
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("want wrapped context.Canceled, got %v", err)
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, "vehicle 42") {
+		t.Fatalf("want vehicle id in error, got %q", msg)
+	}
+	if !strings.Contains(msg, from.Format(time.RFC3339)) {
+		t.Fatalf("want from in error, got %q", msg)
+	}
+	if !strings.Contains(msg, to.Format(time.RFC3339)) {
+		t.Fatalf("want to in error, got %q", msg)
+	}
+}
+
+func TestLogStateReader_Timeline_ChartMode_NoNPlusOne(t *testing.T) {
+	q := &timelineQuerier{}
+	r := &LogStateReader{pool: q, log: zerolog.Nop()}
+	from, to := validWindow()
+
+	mappings := []FieldMapping{
+		{Signal: "Speed", Field: "speed"},
+		{Signal: "Soc", Field: "soc"},
+		{Signal: "Power", Field: "power"},
+		{Signal: "Heading", Field: "heading"},
+		{Signal: "Odometer", Field: "odo"},
+	}
+	_, err := r.Timeline(context.Background(), 1, mappings, from, to, TimelineOptions{})
+	if err != nil {
+		t.Fatalf("Timeline: %v", err)
+	}
+	if got := q.calls.Load(); got != 2 {
+		t.Fatalf("calls: want exactly 2 (seed + window) regardless of mapping count, got %d", got)
+	}
+}
+
+func TestLogStateReader_Timeline_ChartMode_RejectsZeroFrom(t *testing.T) {
+	q := &timelineQuerier{}
+	r := &LogStateReader{pool: q, log: zerolog.Nop()}
+
+	_, err := r.Timeline(context.Background(), 1,
+		[]FieldMapping{{Signal: "Speed", Field: "speed"}},
+		time.Time{}, time.Now(), TimelineOptions{})
+	if err == nil {
+		t.Fatal("want error for zero from")
+	}
+	if !strings.Contains(err.Error(), "from/to must be non-zero") {
+		t.Fatalf("want 'from/to must be non-zero' in error, got %q", err.Error())
+	}
+	if got := q.calls.Load(); got != 0 {
+		t.Fatalf("Query must not be called for zero from; got %d calls", got)
+	}
+}
+
+func TestLogStateReader_Timeline_ChartMode_RejectsZeroTo(t *testing.T) {
+	q := &timelineQuerier{}
+	r := &LogStateReader{pool: q, log: zerolog.Nop()}
+
+	_, err := r.Timeline(context.Background(), 1,
+		[]FieldMapping{{Signal: "Speed", Field: "speed"}},
+		time.Now().Add(-time.Hour), time.Time{}, TimelineOptions{})
+	if err == nil {
+		t.Fatal("want error for zero to")
+	}
+	if !strings.Contains(err.Error(), "from/to must be non-zero") {
+		t.Fatalf("want 'from/to must be non-zero' in error, got %q", err.Error())
+	}
+	if got := q.calls.Load(); got != 0 {
+		t.Fatalf("Query must not be called for zero to; got %d calls", got)
+	}
+}
+
+func TestLogStateReader_Timeline_ChartMode_RejectsInvertedRange(t *testing.T) {
+	q := &timelineQuerier{}
+	r := &LogStateReader{pool: q, log: zerolog.Nop()}
+
+	from := time.Date(2026, 4, 30, 13, 0, 0, 0, time.UTC)
+	to := from.Add(-time.Hour)
+	_, err := r.Timeline(context.Background(), 1,
+		[]FieldMapping{{Signal: "Speed", Field: "speed"}},
+		from, to, TimelineOptions{})
+	if err == nil {
+		t.Fatal("want error for inverted from > to")
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, "from") || !strings.Contains(msg, "to") {
+		t.Fatalf("want 'from' and 'to' in error, got %q", msg)
+	}
+	if got := q.calls.Load(); got != 0 {
+		t.Fatalf("Query must not be called for inverted range; got %d calls", got)
+	}
+}
+
+func TestLogStateReader_Timeline_ChartMode_RejectsExcessiveWindow(t *testing.T) {
+	q := &timelineQuerier{}
+	r := &LogStateReader{pool: q, log: zerolog.Nop()}
+
+	from := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	to := from.Add(367 * 24 * time.Hour)
+	_, err := r.Timeline(context.Background(), 1,
+		[]FieldMapping{{Signal: "Speed", Field: "speed"}},
+		from, to, TimelineOptions{})
+	if err == nil {
+		t.Fatal("want error for window > 366 days")
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, "366") && !strings.Contains(msg, "window") {
+		t.Fatalf("want '366' or 'window' in error, got %q", msg)
+	}
+	if got := q.calls.Load(); got != 0 {
+		t.Fatalf("Query must not be called for excessive window; got %d calls", got)
+	}
+}

@@ -2,10 +2,13 @@
 //
 // state_reader_log.go is the signal_log-backed implementation of the
 // StateReader interface declared in state_reader.go. This file provides
-// LogStateReader, State() (Prompt 05), and SignalAt() (Prompt 06);
-// Timeline stub-panics until Prompts 07/08 implement chart and list modes.
-// The interface assertion at the bottom forces the stub method to exist so
-// the package compiles.
+// LogStateReader, State() (Prompt 05), SignalAt() (Prompt 06), and
+// Timeline() chart mode (Prompt 07). Timeline list-mode (collapse) is
+// deferred to Prompt 08; calling Timeline with a non-empty CollapseBy
+// returns a phase-39-08 error rather than panicking, so the type can be
+// safely wired into chart-mode handlers before Prompt 08 lands.
+// The interface assertion at the bottom forces every method on
+// StateReader to exist on this type so the package compiles.
 package signal
 
 import (
@@ -305,12 +308,248 @@ LIMIT 1`
 	return value, nil
 }
 
-// Timeline is declared on the StateReader interface but implemented in
-// Prompts 07 (chart mode) and 08 (collapse mode). Calling this method
-// panics; the panic message contains the prompt slug to make the gap easy
-// to grep when bisecting failures.
+// Timeline returns one TimelineRow per change-feed emission timestamp in
+// the half-open interval (from, to] for vehicleID, projecting only the
+// signals named in `fields`. Rows are sorted ascending by Timestamp. Each
+// row's Fields map carries every mapping.Field key, with the value
+// forward-filled from the most recent emission at-or-before that row's
+// timestamp (the "seed" comes from a DISTINCT ON lookup at-or-before
+// `from`). This is the shape every chart endpoint expects.
+//
+// # Mode
+//
+// Prompt 07 implements CHART MODE only: opts.CollapseBy MUST be empty/nil.
+// Passing a non-empty CollapseBy returns a phase-39-08 error rather than
+// panicking, so callers can safely wire Timeline into chart-mode handlers
+// before list-mode collapse is implemented.
+//
+// # Context contract
+//
+// The caller MUST pass a context with a deadline; this method does NOT
+// impose an internal timeout. The deadline policy is the caller's (handler
+// vs warmup vs background reconciliation), and adding an internal timeout
+// here would silently shorten the caller's deadline.
+//
+// # Hot-path contract
+//
+// Hot-path callers MUST NOT use this method. Telemetry ingest, FSM, and
+// session boundary detection MUST continue to read from signal.Store (L1)
+// and Redis HSET (L2) per ADR-007. This method is intended for cold-path
+// HTTP chart handlers, history endpoints, and chatbot/RAG range queries.
+//
+// # Edge guards
+//
+// Bad inputs are rejected BEFORE any SQL executes so a misconfigured
+// caller cannot accidentally scan signal_log unbounded:
+//
+//   - Zero from or zero to: rejected (almost always a programming error;
+//     a zero time would silently match every row through pgx).
+//   - from after to: rejected (an inverted window is unambiguously a bug
+//     and would silently yield zero rows).
+//   - len(fields) == 0: returns (nil, nil) immediately. There is nothing
+//     to project, so the cheapest correct answer is no SQL and no rows.
+//   - to-from greater than 366 days: rejected. Defensive guard against an
+//     accidental whole-history scan that would slip past the zero/from-to
+//     guards (e.g. callers computing from=time.Now().AddDate(-100, 0, 0)).
+//     A year is the largest legitimate chart window we ship.
+//
+// # Slow-query observability
+//
+// If either underlying query takes longer than 1s, a Warn log is emitted
+// with vehicle_id, from, to, duration, and rows. On query failure an Error
+// log is emitted BEFORE returning the wrapped error so operators see the
+// failure even if the caller swallows it. The success-fast-path emits no
+// logs (zero noise for the cold path's own latency budget).
+//
+// # Schema
+//
+// signal_log stores values across four typed columns (value_num, value_str,
+// value_bool, value_jsonb). Both the seed query and the window query
+// select all four and decode each row into a SignalValue using the
+// canonical priority num → bool → jsonb → str. When "Location" is in
+// the projected signal set the seed map is post-processed via
+// unpackLocationCompounds so callers asking for the Location compound
+// also see flattened Latitude/Longitude in the seed.
 func (r *LogStateReader) Timeline(ctx context.Context, vehicleID int64, fields []FieldMapping, from, to time.Time, opts TimelineOptions) ([]TimelineRow, error) {
-	panic("phase-39-07 not yet implemented")
+	// Edge guards run BEFORE any SQL. A misconfigured caller (zero `at`,
+	// inverted window, accidental whole-history scan) must be a loud error
+	// at the contract boundary, not a silent zero-row result or an
+	// unbounded sequential scan against signal_log.
+	if from.IsZero() || to.IsZero() {
+		return nil, fmt.Errorf("timeline: from/to must be non-zero")
+	}
+	if from.After(to) {
+		return nil, fmt.Errorf("timeline: from (%s) must be <= to (%s)", from.Format(time.RFC3339), to.Format(time.RFC3339))
+	}
+	if len(fields) == 0 {
+		// No projection requested → nothing to read or fold. Returning a
+		// typed nil slice (rather than an empty slice) is the cheapest
+		// correct answer and is range-safe in Go.
+		return nil, nil
+	}
+	if window := to.Sub(from); window > 366*24*time.Hour {
+		return nil, fmt.Errorf("timeline: window > 366 days is not supported (got %s)", window)
+	}
+
+	// Build the unique signal set the SQL needs to filter by. Preserve
+	// the first-seen order from `fields` for deterministic logging, but
+	// dedupe so the SQL ANY($) array stays minimal when callers map
+	// several output Fields off the same source Signal.
+	seen := make(map[string]struct{}, len(fields))
+	signals := make([]string, 0, len(fields))
+	hasLocation := false
+	for _, f := range fields {
+		if _, ok := seen[f.Signal]; ok {
+			continue
+		}
+		seen[f.Signal] = struct{}{}
+		signals = append(signals, f.Signal)
+		if f.Signal == "Location" {
+			hasLocation = true
+		}
+	}
+
+	start := time.Now()
+
+	// Seed query: DISTINCT ON (signal) over the at-or-before-from slice.
+	// Mirrors the pattern in State() but constrained to the requested
+	// signal set so the planner can pick the (vehicle_id, signal,
+	// created_at) composite index for a tight backward scan.
+	const seedQuery = `SELECT DISTINCT ON (signal) signal,
+       value_num, value_str, value_bool, value_jsonb
+FROM signal_log
+WHERE vehicle_id = $1 AND created_at <= $2 AND signal = ANY($3)
+ORDER BY signal, created_at DESC`
+
+	seedRows, err := r.pool.Query(ctx, seedQuery, vehicleID, from, signals)
+	if err != nil {
+		r.log.Error().
+			Err(err).
+			Int64("vehicle_id", vehicleID).
+			Time("from", from).
+			Time("to", to).
+			Msg("timeline seed read failed")
+		return nil, fmt.Errorf("timeline seed %s..%s for vehicle %d: %w", from.Format(time.RFC3339), to.Format(time.RFC3339), vehicleID, err)
+	}
+
+	seed := make(map[string]SignalValue, len(signals))
+	for seedRows.Next() {
+		var sig string
+		var vNum *float64
+		var vStr *string
+		var vBool *bool
+		var vJsonb []byte
+		if err := seedRows.Scan(&sig, &vNum, &vStr, &vBool, &vJsonb); err != nil {
+			seedRows.Close()
+			r.log.Error().
+				Err(err).
+				Int64("vehicle_id", vehicleID).
+				Time("from", from).
+				Time("to", to).
+				Msg("timeline seed read failed")
+			return nil, fmt.Errorf("timeline seed %s..%s for vehicle %d: %w", from.Format(time.RFC3339), to.Format(time.RFC3339), vehicleID, err)
+		}
+		seed[sig] = decodeSignalLogRow(vNum, vStr, vBool, vJsonb)
+	}
+	seedErr := seedRows.Err()
+	// Close the seed connection BEFORE issuing the window query so a
+	// pool of size 1 (test/CI configs) does not deadlock waiting for a
+	// connection that this method itself is holding.
+	seedRows.Close()
+	if seedErr != nil {
+		r.log.Error().
+			Err(seedErr).
+			Int64("vehicle_id", vehicleID).
+			Time("from", from).
+			Time("to", to).
+			Msg("timeline seed read failed")
+		return nil, fmt.Errorf("timeline seed %s..%s for vehicle %d: %w", from.Format(time.RFC3339), to.Format(time.RFC3339), vehicleID, seedErr)
+	}
+
+	if hasLocation {
+		// Treat seed as a State to reuse the canonical Location flatten;
+		// after this call the seed exposes Latitude/Longitude scalars in
+		// addition to (or replacing) the original Location compound.
+		seed = map[string]SignalValue(unpackLocationCompounds(State(seed)))
+	}
+
+	// Window query: every emission in (from, to] for the requested
+	// signals, ordered ascending so forwardFold can stream events in
+	// chronological order without an in-memory sort.
+	const windowQuery = `SELECT created_at, signal,
+       value_num, value_str, value_bool, value_jsonb
+FROM signal_log
+WHERE vehicle_id = $1 AND created_at > $2 AND created_at <= $3 AND signal = ANY($4)
+ORDER BY created_at ASC`
+
+	windowRows, err := r.pool.Query(ctx, windowQuery, vehicleID, from, to, signals)
+	if err != nil {
+		r.log.Error().
+			Err(err).
+			Int64("vehicle_id", vehicleID).
+			Time("from", from).
+			Time("to", to).
+			Msg("timeline window read failed")
+		return nil, fmt.Errorf("timeline window %s..%s for vehicle %d: %w", from.Format(time.RFC3339), to.Format(time.RFC3339), vehicleID, err)
+	}
+	defer windowRows.Close()
+
+	var events []rawEvent
+	for windowRows.Next() {
+		var eventTs time.Time
+		var sig string
+		var vNum *float64
+		var vStr *string
+		var vBool *bool
+		var vJsonb []byte
+		if err := windowRows.Scan(&eventTs, &sig, &vNum, &vStr, &vBool, &vJsonb); err != nil {
+			r.log.Error().
+				Err(err).
+				Int64("vehicle_id", vehicleID).
+				Time("from", from).
+				Time("to", to).
+				Msg("timeline window read failed")
+			return nil, fmt.Errorf("timeline window %s..%s for vehicle %d: %w", from.Format(time.RFC3339), to.Format(time.RFC3339), vehicleID, err)
+		}
+		events = append(events, rawEvent{
+			Ts:     eventTs,
+			Signal: sig,
+			Value:  decodeSignalLogRow(vNum, vStr, vBool, vJsonb),
+		})
+	}
+	if err := windowRows.Err(); err != nil {
+		r.log.Error().
+			Err(err).
+			Int64("vehicle_id", vehicleID).
+			Time("from", from).
+			Time("to", to).
+			Msg("timeline window read failed")
+		return nil, fmt.Errorf("timeline window %s..%s for vehicle %d: %w", from.Format(time.RFC3339), to.Format(time.RFC3339), vehicleID, err)
+	}
+
+	rows := forwardFold(seed, events, fields, from, to)
+
+	if elapsed := time.Since(start); elapsed > time.Second {
+		r.log.Warn().
+			Int64("vehicle_id", vehicleID).
+			Time("from", from).
+			Time("to", to).
+			Dur("duration", elapsed).
+			Int("rows", len(rows)).
+			Int("events", len(events)).
+			Int("seed", len(seed)).
+			Msg("slow timeline read")
+	}
+
+	if len(opts.CollapseBy) > 0 {
+		// Prompt 08 will swap this for `collapseTimeline(rows, opts.CollapseBy), nil`.
+		// Until then the contract is "chart mode works, list mode is an
+		// explicit not-implemented error" so callers wired up early do
+		// not silently fall through to chart-mode behavior.
+		return nil, fmt.Errorf("phase-39-08 not yet implemented: TimelineOptions.CollapseBy")
+	}
+
+	return rows, nil
 }
 
 // assembleState walks a row iterator emitted by the State SQL query and
