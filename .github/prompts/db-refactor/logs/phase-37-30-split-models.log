@@ -1,0 +1,113 @@
+## PREFLIGHT
+start_utc=2026-04-30T05:48:22.7301834+00:00
+go_version=go version go1.26.1 windows/amd64
+engineer_email=iamatulmgupta@gmail.com
+powershell_version=7.6.1
+os_platform=Win32NT
+exports invariant ok: 229 exported identifiers preserved
+import-graph invariant ok: 5 imports preserved
+## SURVEY
+source_lines_after=646
+new_file=internal/models/vehicle.go lines=250
+new_file=internal/models/drive.go lines=86
+new_file=internal/models/charging.go lines=56
+new_file=internal/models/telemetry.go lines=52
+## REASONING
+mechanical decomposition: split internal/models/models.go into internal/models/vehicle.go, internal/models/drive.go, internal/models/charging.go, internal/models/telemetry.go
+no behavior, API, SQL, JSON, route, config, or runtime ordering changes
+
+### Split map (per-prompt)
+source: internal/models/models.go (1054 lines at HEAD)
+destinations:
+- internal/models/vehicle.go (pre-existing; appends per-vehicle telemetry/snapshot/config types)
+- internal/models/drive.go (pre-existing; appends drive telemetry + share-link types)
+- internal/models/charging.go (pre-existing; appends charging telemetry type)
+- internal/models/telemetry.go (NEW; cross-domain Tesla Fleet Telemetry types)
+
+top-level identifiers being moved (all stay in package models):
+
+moves to internal/models/vehicle.go (in source order from models.go):
+- type SoftwareUpdate (verbatim, originally at line 129)
+- type VehicleState (verbatim, originally at line 312)
+- type CommandLog (verbatim, originally at line 342)
+- type BatterySnapshot (verbatim, originally at line 362)
+- type TirePressureSnapshot (verbatim, originally at line 444)
+- type VampireDrainEvent (verbatim, originally at line 461)
+- type DailyMileage (verbatim, originally at line 478)
+- type VehicleStateRecord (verbatim, originally at line 504)
+- type MediaSnapshot (verbatim, originally at line 570)
+- type VehicleConfigSnapshot (verbatim, originally at line 588)
+- type LocationSnapshot (verbatim, originally at line 615)
+- type SafetySnapshot (verbatim, originally at line 638)
+- type UserPreferenceSnapshot (verbatim, originally at line 656)
+- type GuardConfig (verbatim, originally at line 1015)
+- type GuardEvent (verbatim, originally at line 1042)
+
+moves to internal/models/drive.go (in source order from models.go):
+- type DriveTelemetryReading (verbatim, originally at line 30)
+- type ShareToken (verbatim, originally at line 1026)
+
+moves to internal/models/charging.go (in source order from models.go):
+- type ChargeTelemetryReading (verbatim, originally at line 63)
+
+moves to internal/models/telemetry.go (in source order from models.go):
+- type FleetTelemetrySubscription (verbatim, originally at line 87)
+- type RawTelemetrySignal (verbatim, originally at line 713 with full doc comment)
+- type TeslaFleetTelemetryError (verbatim, originally at line 932)
+- type TeslaFleetTelemetryErrorVIN (verbatim, originally at line 943)
+
+stays in internal/models/models.go (everything else):
+- type APIKey, type Address, type Token
+- type LegacySettings, type LegacyPollingConfig (with methods DefaultPollingConfig,
+  EnabledVehicleDataEndpoints, VehicleDataEndpointsString, HasAnyVehicleDataEndpoint,
+  EnabledOnDemandVehicleDataEndpoints) -- still requires "strings" import
+- type EnergyStatsRow
+- type NotificationChannel, NotificationLog, NotificationSchedule,
+  NotificationPreference, NotificationMetric
+- type ChatMessage, type VisitedLocation
+- type ExportJob, ExportJobSummary, ExportJobRequest
+- type BackupConfig, BackupRun (still requires "encoding/json" for json.RawMessage)
+- type AutomationHistory (json.RawMessage), type AutomationVariable
+- type TeslaEnergySite, TeslaEnergyLiveStatus, TeslaEnergyHistory,
+  TeslaEnergyBackupEvent, TeslaEnergyWCCharging
+- func DerefFloat64, DerefString, DerefBool
+- type TeslaChargingHistoryEntry, TeslaChargingHistorySummary,
+  TeslaChargingSession, TeslaChargingSessionSummary
+- type TeslaUserConfig, TeslaUserOrder, TeslaUserProfile,
+  TeslaVehicleDriver, TeslaVehicleInvitation
+- pre-existing "moved to ..." breadcrumb comments are retained verbatim;
+  new one-line breadcrumbs were inserted in place of each removed type, in the
+  same convention used by the file (zero behavior impact, zero added exports)
+
+cross-file unexported references retained in same package: none required.
+None of the moved types depend on unexported helpers; all are bare struct
+declarations with `time.Time` and stdlib types only. No methods are moved.
+
+import handling:
+- vehicle.go: already imports "time"; new types only need "time" -> unchanged
+- drive.go: already imports "time"; new types only need "time" -> unchanged
+- charging.go: already imports "time"; new types only need "time" -> unchanged
+- telemetry.go (new): imports only "time"
+- models.go: still imports "encoding/json" (BackupConfig/BackupRun/AutomationHistory),
+  "strings" (LegacyPollingConfig methods), "time" (most remaining types) -> unchanged
+- net package import-graph union for internal/models: 5 imports preserved
+
+per-prompt split map must be appended above this line by the engineer before edits
+## CHANGES
+internal/models/models.go sha256=448F9C23595A9B76C9AEDAB22B61E78E947CE54FA5980770C2D0F1FCDF06BDF3
+internal/models/vehicle.go sha256=1FA2AACC427ACC264EACACEE1006EA1CB6253A5AEAB636B41B2DB5271E3E28A3
+internal/models/drive.go sha256=F8565F72E123118089D8741298794F485AD458BC18493B69E4AEC274C9180247
+internal/models/charging.go sha256=9DEC37DC4647313178E9CC90D16B166AE33D4987C73319AF863167E675D1580B
+internal/models/telemetry.go sha256=5BB5BB7793384F44F62FA836777B69C3ABAF689B51859DA415E76AD93F423019
+## GATE
+go build ./internal/models/... exit=0
+
+go build ./... exit=0
+
+go vet exit=0
+
+go test exit=0
+ok  	github.com/ev-dev-labs/teslasync/internal/models	0.421s
+
+EXIT=0
+STATUS=DONE

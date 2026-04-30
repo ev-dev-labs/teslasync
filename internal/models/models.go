@@ -26,82 +26,11 @@ type APIKey struct {
 
 // Drive has moved to drive.go (regenerated for post-migration schema).
 
-// DriveTelemetryReading represents a single telemetry snapshot during a drive.
-type DriveTelemetryReading struct {
-	ID              int64     `json:"id" db:"id"`
-	DriveID         int64     `json:"drive_id" db:"drive_id"`
-	VehicleID       int64     `json:"vehicle_id" db:"vehicle_id"`
-	Latitude        *float64  `json:"latitude,omitempty" db:"latitude"`
-	Longitude       *float64  `json:"longitude,omitempty" db:"longitude"`
-	Elevation       *float64  `json:"elevation,omitempty" db:"elevation"`
-	Heading         *int      `json:"heading,omitempty" db:"heading"`
-	Odometer        *float64  `json:"odometer,omitempty" db:"odometer"`
-	Speed           *float64  `json:"speed,omitempty" db:"speed"`
-	Power           *float64  `json:"power,omitempty" db:"power"`
-	BatteryLevel    *int      `json:"battery_level,omitempty" db:"battery_level"`
-	Soc             *float64  `json:"soc,omitempty" db:"soc"`
-	UsableSoc       *float64  `json:"usable_soc,omitempty" db:"usable_soc"`
-	RatedRange      *float64  `json:"rated_range,omitempty" db:"rated_range"`
-	IdealRange      *float64  `json:"ideal_range,omitempty" db:"ideal_range"`
-	EstRange        *float64  `json:"est_range,omitempty" db:"est_range"`
-	InsideTemp      *float64  `json:"inside_temp,omitempty" db:"inside_temp"`
-	OutsideTemp     *float64  `json:"outside_temp,omitempty" db:"outside_temp"`
-	DriverTemp      *float64  `json:"driver_temp,omitempty" db:"driver_temp"`
-	PassengerTemp   *float64  `json:"passenger_temp,omitempty" db:"passenger_temp"`
-	FanStatus       *int      `json:"fan_status,omitempty" db:"fan_status"`
-	IsClimateOn     *bool     `json:"is_climate_on,omitempty" db:"is_climate_on"`
-	TirePressureFL  *float64  `json:"tire_pressure_fl,omitempty" db:"tire_pressure_fl"`
-	TirePressureFR  *float64  `json:"tire_pressure_fr,omitempty" db:"tire_pressure_fr"`
-	TirePressureRL  *float64  `json:"tire_pressure_rl,omitempty" db:"tire_pressure_rl"`
-	TirePressureRR  *float64  `json:"tire_pressure_rr,omitempty" db:"tire_pressure_rr"`
-	BatteryHeaterOn *bool     `json:"battery_heater_on,omitempty" db:"battery_heater_on"`
-	AccelerationGs  *float64  `json:"acceleration_gs,omitempty" db:"acceleration_gs"`
-	CreatedAt       time.Time `json:"created_at" db:"created_at"`
-}
+// DriveTelemetryReading has moved to drive.go.
 
-// ChargeTelemetryReading represents a single telemetry snapshot during a charging session.
-type ChargeTelemetryReading struct {
-	ID           int64     `json:"id" db:"id"`
-	SessionID    int64     `json:"session_id" db:"session_id"`
-	VehicleID    int64     `json:"vehicle_id" db:"vehicle_id"`
-	BatteryLevel *int      `json:"battery_level,omitempty" db:"battery_level"`
-	Soc          *float64  `json:"soc,omitempty" db:"soc"`
-	PowerKW      *float64  `json:"power_kw,omitempty" db:"power_kw"`
-	Voltage      *float64  `json:"voltage,omitempty" db:"voltage"`
-	CurrentAmps  *float64  `json:"current_amps,omitempty" db:"current_amps"`
-	Phases       *int      `json:"phases,omitempty" db:"phases"`
-	EnergyAdded  *float64  `json:"energy_added,omitempty" db:"energy_added"`
-	RatedRange   *float64  `json:"rated_range,omitempty" db:"rated_range"`
-	IdealRange   *float64  `json:"ideal_range,omitempty" db:"ideal_range"`
-	EstRange     *float64  `json:"est_range,omitempty" db:"est_range"`
-	InsideTemp   *float64  `json:"inside_temp,omitempty" db:"inside_temp"`
-	OutsideTemp  *float64  `json:"outside_temp,omitempty" db:"outside_temp"`
-	BatteryTemp  *float64  `json:"battery_temp,omitempty" db:"battery_temp"`
-	Latitude     *float64  `json:"latitude,omitempty" db:"latitude"`
-	Longitude    *float64  `json:"longitude,omitempty" db:"longitude"`
-	ChargeRate   *float64  `json:"charge_rate,omitempty" db:"charge_rate"`
-	CreatedAt    time.Time `json:"created_at" db:"created_at"`
-}
+// ChargeTelemetryReading has moved to charging.go.
 
-// FleetTelemetrySubscription records a subscription request to Tesla Fleet Telemetry.
-type FleetTelemetrySubscription struct {
-	ID              int64          `json:"id" db:"id"`
-	VehicleID       *int64         `json:"vehicle_id,omitempty" db:"vehicle_id"`
-	VIN             string         `json:"vin" db:"vin"`
-	Signals         []string       `json:"signals" db:"signals"`
-	IntervalSeconds int            `json:"interval_seconds" db:"interval_seconds"`
-	FieldIntervals  map[string]int `json:"field_intervals,omitempty" db:"field_intervals"`
-	Hostname        string         `json:"hostname" db:"hostname"`
-	Port            int            `json:"port" db:"port"`
-	Protocol        string         `json:"protocol" db:"protocol"`
-	CaPEM           *string        `json:"ca_pem,omitempty" db:"ca_pem"`
-	SubscribedAt    time.Time      `json:"subscribed_at" db:"subscribed_at"`
-	ExpiresAt       *time.Time     `json:"expires_at,omitempty" db:"expires_at"`
-	Status          string         `json:"status" db:"status"`
-	ResponseCode    *int           `json:"response_code,omitempty" db:"response_code"`
-	ResponseBody    *string        `json:"response_body,omitempty" db:"response_body"`
-	CreatedAt       time.Time      `json:"created_at" db:"created_at"`
-}
+// FleetTelemetrySubscription has moved to telemetry.go.
 
 // ChargingSession is defined in charging.go to mirror the post-migration
 // `charging_sessions` schema (migrations/000142_baseline_typed.up.sql).
@@ -125,16 +54,7 @@ type Address struct {
 
 // Geofence has moved to system.go (regenerated for post-migration schema).
 
-// SoftwareUpdate represents a vehicle software update.
-type SoftwareUpdate struct {
-	ID          int64      `json:"id" db:"id"`
-	VehicleID   int64      `json:"vehicle_id" db:"vehicle_id"`
-	Version     string     `json:"version" db:"version"`
-	Status      string     `json:"status" db:"status"` // available, downloading, installing, installed
-	ScheduledAt *time.Time `json:"scheduled_at,omitempty" db:"scheduled_at"`
-	InstalledAt *time.Time `json:"installed_at,omitempty" db:"installed_at"`
-	CreatedAt   time.Time  `json:"created_at" db:"created_at"`
-}
+// SoftwareUpdate has moved to vehicle.go.
 
 // Token represents stored OAuth tokens.
 type Token struct {
@@ -308,46 +228,13 @@ func (pc *LegacyPollingConfig) EnabledOnDemandVehicleDataEndpoints() []string {
 	return endpoints
 }
 
-// VehicleState represents a snapshot of vehicle state at a point in time.
-type VehicleState struct {
-	VehicleID       int64      `json:"vehicle_id"`
-	State           string     `json:"state"`
-	Since           *time.Time `json:"since,omitempty"`
-	Latitude        float64    `json:"latitude"`
-	Longitude       float64    `json:"longitude"`
-	Heading         *float64   `json:"heading,omitempty"`
-	Speed           float64    `json:"speed"`
-	Power           float64    `json:"power"`
-	BatteryLevel    int        `json:"battery_level"`
-	RatedRange      float64    `json:"rated_range"`
-	IdealRange      float64    `json:"ideal_range"`
-	Odometer        float64    `json:"odometer"`
-	InsideTemp      float64    `json:"inside_temp"`
-	OutsideTemp     float64    `json:"outside_temp"`
-	IsClimateOn     bool       `json:"is_climate_on"`
-	IsCharging      bool       `json:"is_charging"`
-	ChargerPower    float64    `json:"charger_power"`
-	ChargeRate      float64    `json:"charge_rate"`
-	TimeToFullChg   float64    `json:"time_to_full_charge"`
-	IsLocked        bool       `json:"is_locked"`
-	SentryMode      bool       `json:"sentry_mode"`
-	SoftwareVersion string     `json:"software_version"`
-}
+// VehicleState has moved to vehicle.go.
 
 // Alert and AlertRule have moved to alert.go. The legacy `alerts` table is
 // dropped by the Phase 4 baseline migration; only `alert_rules` remains and is
 // modeled by AlertRule in alert.go.
 
-// CommandLog records a vehicle command execution.
-type CommandLog struct {
-	ID        int64     `json:"id" db:"id"`
-	VehicleID int64     `json:"vehicle_id" db:"vehicle_id"`
-	Command   string    `json:"command" db:"command"`
-	Params    string    `json:"params,omitempty" db:"params"`
-	Status    string    `json:"status" db:"status"` // success, failed, pending
-	Error     string    `json:"error,omitempty" db:"error"`
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
-}
+// CommandLog has moved to vehicle.go.
 
 // EnergyStatsRow represents a single day of energy data from cagg_fleet_stats.
 type EnergyStatsRow struct {
@@ -358,18 +245,7 @@ type EnergyStatsRow struct {
 	Cost              float64 `json:"cost"`
 }
 
-// BatterySnapshot represents a point-in-time battery health reading.
-type BatterySnapshot struct {
-	ID             int64     `json:"id" db:"id"`
-	VehicleID      int64     `json:"vehicle_id" db:"vehicle_id"`
-	HealthScore    float64   `json:"health_score" db:"health_score"`
-	CapacityKWh    float64   `json:"capacity_kwh" db:"capacity_kwh"`
-	DegradationPct float64   `json:"degradation_pct" db:"degradation_pct"`
-	EstRangeKm     float64   `json:"est_range_km" db:"est_range_km"`
-	CycleCount     int       `json:"cycle_count" db:"cycle_count"`
-	AvgCellTempC   float64   `json:"avg_cell_temp_c" db:"avg_cell_temp_c"`
-	CreatedAt      time.Time `json:"created_at" db:"created_at"`
-}
+// BatterySnapshot has moved to vehicle.go.
 
 // NotificationChannel represents a configured notification delivery channel.
 type NotificationChannel struct {
@@ -440,51 +316,11 @@ type ChatMessage struct {
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }
 
-// TirePressureSnapshot represents a point-in-time tire pressure reading.
-type TirePressureSnapshot struct {
-	ID             int64      `json:"id" db:"id"`
-	VehicleID      int64      `json:"vehicle_id" db:"vehicle_id"`
-	FrontLeft      *float64   `json:"front_left" db:"front_left"`
-	FrontRight     *float64   `json:"front_right" db:"front_right"`
-	RearLeft       *float64   `json:"rear_left" db:"rear_left"`
-	RearRight      *float64   `json:"rear_right" db:"rear_right"`
-	TpmsHardWarn   *string    `json:"tpms_hard_warnings,omitempty" db:"tpms_hard_warnings"`
-	TpmsSoftWarn   *string    `json:"tpms_soft_warnings,omitempty" db:"tpms_soft_warnings"`
-	LastSeenTimeFl *time.Time `json:"last_seen_time_fl,omitempty" db:"last_seen_time_fl"`
-	LastSeenTimeFr *time.Time `json:"last_seen_time_fr,omitempty" db:"last_seen_time_fr"`
-	LastSeenTimeRl *time.Time `json:"last_seen_time_rl,omitempty" db:"last_seen_time_rl"`
-	LastSeenTimeRr *time.Time `json:"last_seen_time_rr,omitempty" db:"last_seen_time_rr"`
-	CreatedAt      time.Time  `json:"created_at" db:"created_at"`
-}
+// TirePressureSnapshot has moved to vehicle.go.
 
-// VampireDrainEvent represents an energy loss event while parked.
-type VampireDrainEvent struct {
-	ID                int64      `json:"id" db:"id"`
-	VehicleID         int64      `json:"vehicle_id" db:"vehicle_id"`
-	StartDate         time.Time  `json:"start_date" db:"start_date"`
-	EndDate           *time.Time `json:"end_date,omitempty" db:"end_date"`
-	StartBattery      int        `json:"start_battery" db:"start_battery"`
-	EndBattery        *int       `json:"end_battery,omitempty" db:"end_battery"`
-	BatteryLost       int        `json:"battery_lost" db:"battery_lost"`
-	RangeLostKm       float64    `json:"range_lost_km" db:"range_lost_km"`
-	DurationHours     float64    `json:"duration_hours" db:"duration_hours"`
-	DrainRatePctPerHr float64    `json:"drain_rate_pct_per_hour" db:"drain_rate_pct_per_hour"`
-	OutsideTempAvg    *float64   `json:"outside_temp_avg,omitempty" db:"outside_temp_avg"`
-	SentryMode        bool       `json:"sentry_mode" db:"sentry_mode"`
-	CreatedAt         time.Time  `json:"created_at" db:"created_at"`
-}
+// VampireDrainEvent has moved to vehicle.go.
 
-// DailyMileage represents mileage data for a single day.
-type DailyMileage struct {
-	ID            int64     `json:"id" db:"id"`
-	VehicleID     int64     `json:"vehicle_id" db:"vehicle_id"`
-	Date          time.Time `json:"date" db:"date"`
-	DistanceKm    float64   `json:"distance_km" db:"distance_km"`
-	OdometerStart float64   `json:"odometer_start" db:"odometer_start"`
-	OdometerEnd   float64   `json:"odometer_end" db:"odometer_end"`
-	DriveCount    int       `json:"drive_count" db:"drive_count"`
-	EnergyUsedKWh float64   `json:"energy_used_kwh" db:"energy_used_kwh"`
-}
+// DailyMileage has moved to vehicle.go.
 
 // VisitedLocation represents an aggregated visited place.
 type VisitedLocation struct {
@@ -500,16 +336,7 @@ type VisitedLocation struct {
 
 // Trip is defined in trip.go (regenerated to match post-migration schema).
 
-// VehicleStateRecord represents a vehicle state change record from the DB.
-type VehicleStateRecord struct {
-	ID          int64      `json:"id" db:"id"`
-	VehicleID   int64      `json:"vehicle_id" db:"vehicle_id"`
-	State       string     `json:"state" db:"state"`
-	StartDate   time.Time  `json:"start_date" db:"start_date"`
-	EndDate     *time.Time `json:"end_date,omitempty" db:"end_date"`
-	DurationMin float64    `json:"duration_min" db:"duration_min"`
-	CreatedAt   time.Time  `json:"created_at" db:"created_at"`
-}
+// VehicleStateRecord has moved to vehicle.go.
 
 // APICallLog has been moved to tesla.go and regenerated to match the
 // post-migration api_call_logs schema (ADR-005: no raw_json bodies).
@@ -566,103 +393,15 @@ type ExportJobRequest struct {
 
 // ChargingTelemetry moved to charging_telemetry.go (regenerated for post-migration schema).
 
-// MediaSnapshot represents a point-in-time media playback telemetry reading.
-type MediaSnapshot struct {
-	ID                   int64     `json:"id" db:"id"`
-	VehicleID            int64     `json:"vehicle_id" db:"vehicle_id"`
-	NowPlayingTitle      *string   `json:"now_playing_title,omitempty" db:"now_playing_title"`
-	NowPlayingArtist     *string   `json:"now_playing_artist,omitempty" db:"now_playing_artist"`
-	NowPlayingAlbum      *string   `json:"now_playing_album,omitempty" db:"now_playing_album"`
-	NowPlayingStation    *string   `json:"now_playing_station,omitempty" db:"now_playing_station"`
-	NowPlayingDuration   *int      `json:"now_playing_duration,omitempty" db:"now_playing_duration"`
-	NowPlayingElapsed    *int      `json:"now_playing_elapsed,omitempty" db:"now_playing_elapsed"`
-	PlaybackStatus       *string   `json:"playback_status,omitempty" db:"playback_status"`
-	PlaybackSource       *string   `json:"playback_source,omitempty" db:"playback_source"`
-	AudioVolume          *float64  `json:"audio_volume,omitempty" db:"audio_volume"`
-	AudioVolumeMax       *float64  `json:"audio_volume_max,omitempty" db:"audio_volume_max"`
-	AudioVolumeIncrement *float64  `json:"audio_volume_increment,omitempty" db:"audio_volume_increment"`
-	CreatedAt            time.Time `json:"created_at" db:"created_at"`
-}
+// MediaSnapshot has moved to vehicle.go.
 
-// VehicleConfigSnapshot represents a point-in-time vehicle configuration snapshot.
-type VehicleConfigSnapshot struct {
-	ID                             int64     `json:"id" db:"id"`
-	VehicleID                      int64     `json:"vehicle_id" db:"vehicle_id"`
-	CarType                        *string   `json:"car_type,omitempty" db:"car_type"`
-	Trim                           *string   `json:"trim,omitempty" db:"trim"`
-	ExteriorColor                  *string   `json:"exterior_color,omitempty" db:"exterior_color"`
-	RoofColor                      *string   `json:"roof_color,omitempty" db:"roof_color"`
-	WheelType                      *string   `json:"wheel_type,omitempty" db:"wheel_type"`
-	RearSeatHeaters                *string   `json:"rear_seat_heaters,omitempty" db:"rear_seat_heaters"`
-	SunroofInstalled               *string   `json:"sunroof_installed,omitempty" db:"sunroof_installed"`
-	EfficiencyPackage              *string   `json:"efficiency_package,omitempty" db:"efficiency_package"`
-	EuropeVehicle                  *bool     `json:"europe_vehicle,omitempty" db:"europe_vehicle"`
-	RightHandDrive                 *bool     `json:"right_hand_drive,omitempty" db:"right_hand_drive"`
-	RemoteStartEnabled             *bool     `json:"remote_start_enabled,omitempty" db:"remote_start_enabled"`
-	ChargePort                     *string   `json:"charge_port,omitempty" db:"charge_port"`
-	OffroadLightbarPresent         *bool     `json:"offroad_lightbar_present,omitempty" db:"offroad_lightbar_present"`
-	Version                        *string   `json:"version,omitempty" db:"version"`
-	VehicleName                    *string   `json:"vehicle_name,omitempty" db:"vehicle_name"`
-	SoftwareUpdateVersion          *string   `json:"software_update_version,omitempty" db:"software_update_version"`
-	SoftwareUpdateDownloadPct      *int      `json:"software_update_download_pct,omitempty" db:"software_update_download_pct"`
-	SoftwareUpdateInstallPct       *int      `json:"software_update_install_pct,omitempty" db:"software_update_install_pct"`
-	SoftwareUpdateExpectedDuration *int      `json:"software_update_expected_duration,omitempty" db:"software_update_expected_duration"`
-	SoftwareUpdateScheduledStart   *string   `json:"software_update_scheduled_start,omitempty" db:"software_update_scheduled_start"`
-	CreatedAt                      time.Time `json:"created_at" db:"created_at"`
-}
+// VehicleConfigSnapshot has moved to vehicle.go.
 
-// LocationSnapshot represents a point-in-time navigation/location telemetry reading.
-type LocationSnapshot struct {
-	ID                   int64      `json:"id" db:"id"`
-	VehicleID            int64      `json:"vehicle_id" db:"vehicle_id"`
-	DestinationName      *string    `json:"destination_name,omitempty" db:"destination_name"`
-	DestinationLat       *float64   `json:"destination_lat,omitempty" db:"destination_lat"`
-	DestinationLon       *float64   `json:"destination_lon,omitempty" db:"destination_lon"`
-	OriginLat            *float64   `json:"origin_lat,omitempty" db:"origin_lat"`
-	OriginLon            *float64   `json:"origin_lon,omitempty" db:"origin_lon"`
-	MilesToArrival       *float64   `json:"miles_to_arrival,omitempty" db:"miles_to_arrival"`
-	MinutesToArrival     *float64   `json:"minutes_to_arrival,omitempty" db:"minutes_to_arrival"`
-	RouteLine            *string    `json:"route_line,omitempty" db:"route_line"`
-	RouteTrafficDelayMin *float64   `json:"route_traffic_delay_min,omitempty" db:"route_traffic_delay_min"`
-	LocatedAtHome        *bool      `json:"located_at_home,omitempty" db:"located_at_home"`
-	LocatedAtWork        *bool      `json:"located_at_work,omitempty" db:"located_at_work"`
-	LocatedAtFavorite    *bool      `json:"located_at_favorite,omitempty" db:"located_at_favorite"`
-	GpsState             *string    `json:"gps_state,omitempty" db:"gps_state"`
-	RouteLastUpdated     *time.Time `json:"route_last_updated,omitempty" db:"route_last_updated"`
-	CurrentLat           *float64   `json:"current_lat,omitempty" db:"current_lat"`
-	CurrentLon           *float64   `json:"current_lon,omitempty" db:"current_lon"`
-	CreatedAt            time.Time  `json:"created_at" db:"created_at"`
-}
+// LocationSnapshot has moved to vehicle.go.
 
-// SafetySnapshot represents a point-in-time safety settings telemetry reading.
-type SafetySnapshot struct {
-	ID                              int64     `json:"id" db:"id"`
-	VehicleID                       int64     `json:"vehicle_id" db:"vehicle_id"`
-	AutomaticBlindSpotCamera        *bool     `json:"automatic_blind_spot_camera,omitempty" db:"automatic_blind_spot_camera"`
-	AutomaticEmergencyBrakingOff    *bool     `json:"automatic_emergency_braking_off,omitempty" db:"automatic_emergency_braking_off"`
-	BlindSpotCollisionWarning       *bool     `json:"blind_spot_collision_warning,omitempty" db:"blind_spot_collision_warning"`
-	CruiseFollowDistance            *string   `json:"cruise_follow_distance,omitempty" db:"cruise_follow_distance"`
-	EmergencyLaneDepartureAvoidance *bool     `json:"emergency_lane_departure_avoidance,omitempty" db:"emergency_lane_departure_avoidance"`
-	ForwardCollisionWarning         *string   `json:"forward_collision_warning,omitempty" db:"forward_collision_warning"`
-	LaneDepartureAvoidance          *string   `json:"lane_departure_avoidance,omitempty" db:"lane_departure_avoidance"`
-	SpeedLimitWarning               *string   `json:"speed_limit_warning,omitempty" db:"speed_limit_warning"`
-	PinToDriveEnabled               *bool     `json:"pin_to_drive_enabled,omitempty" db:"pin_to_drive_enabled"`
-	MilesSinceReset                 *float64  `json:"miles_since_reset,omitempty" db:"miles_since_reset"`
-	SelfDrivingMilesSinceReset      *float64  `json:"self_driving_miles_since_reset,omitempty" db:"self_driving_miles_since_reset"`
-	CreatedAt                       time.Time `json:"created_at" db:"created_at"`
-}
+// SafetySnapshot has moved to vehicle.go.
 
-// UserPreferenceSnapshot represents a point-in-time user preference telemetry reading.
-type UserPreferenceSnapshot struct {
-	ID                      int64     `json:"id" db:"id"`
-	VehicleID               int64     `json:"vehicle_id" db:"vehicle_id"`
-	Setting24hrTime         *bool     `json:"setting_24hr_time,omitempty" db:"setting_24hr_time"`
-	SettingChargeUnit       *string   `json:"setting_charge_unit,omitempty" db:"setting_charge_unit"`
-	SettingDistanceUnit     *string   `json:"setting_distance_unit,omitempty" db:"setting_distance_unit"`
-	SettingTemperatureUnit  *string   `json:"setting_temperature_unit,omitempty" db:"setting_temperature_unit"`
-	SettingTirePressureUnit *string   `json:"setting_tire_pressure_unit,omitempty" db:"setting_tire_pressure_unit"`
-	CreatedAt               time.Time `json:"created_at" db:"created_at"`
-}
+// UserPreferenceSnapshot has moved to vehicle.go.
 
 // BackupConfig represents a user-defined backup schedule configuration.
 type BackupConfig struct {
@@ -705,17 +444,7 @@ type BackupRun struct {
 	CreatedAt    time.Time       `json:"created_at" db:"created_at"`
 }
 
-// RawTelemetrySignal previously stored a raw signal batch from Tesla fleet
-// telemetry for debugging. ADR-001/ADR-005 eliminated the `signals` JSONB
-// blob — typed columns now hold each signal. This struct is retained for
-// metadata-only use (vin/source/count/timestamp) until the raw_telemetry repo
-// is removed in its own prompt.
-type RawTelemetrySignal struct {
-	VIN         string    `json:"vin" bson:"vin"`
-	Source      string    `json:"source" bson:"source"`
-	SignalCount int       `json:"signal_count" bson:"signal_count"`
-	CreatedAt   time.Time `json:"created_at" bson:"created_at"`
-}
+// RawTelemetrySignal has moved to telemetry.go.
 
 // Automation has been moved to automation.go to match the post-migration
 // schema (ADR-001 typed-by-default, ADR-004 class-table-inheritance root).
@@ -927,27 +656,9 @@ type TeslaEnergyWCCharging struct {
 	FetchedAt    time.Time `json:"fetched_at" db:"fetched_at"`
 }
 
-// TeslaFleetTelemetryError represents a fleet telemetry error from the partner endpoint.
-// Persisted for historical tracking and alerting.
-type TeslaFleetTelemetryError struct {
-	ID             int64      `json:"id" db:"id"`
-	VIN            string     `json:"vin" db:"vin"`
-	ErrorCode      *string    `json:"error_code" db:"error_code"`
-	ErrorMessage   *string    `json:"error_message" db:"error_message"`
-	ReportedAt     *time.Time `json:"reported_at" db:"reported_at"`
-	TeslaUpdatedAt *time.Time `json:"tesla_updated_at" db:"tesla_updated_at"`
-	FetchedAt      time.Time  `json:"fetched_at" db:"fetched_at"`
-}
+// TeslaFleetTelemetryError has moved to telemetry.go.
 
-// TeslaFleetTelemetryErrorVIN tracks a VIN with active or previously active telemetry errors.
-type TeslaFleetTelemetryErrorVIN struct {
-	ID          int64      `json:"id" db:"id"`
-	VIN         string     `json:"vin" db:"vin"`
-	Active      bool       `json:"active" db:"active"`
-	FirstSeenAt time.Time  `json:"first_seen_at" db:"first_seen_at"`
-	LastSeenAt  time.Time  `json:"last_seen_at" db:"last_seen_at"`
-	ResolvedAt  *time.Time `json:"resolved_at" db:"resolved_at"`
-}
+// TeslaFleetTelemetryErrorVIN has moved to telemetry.go.
 
 // TeslaUserConfig stores a Tesla user configuration blob (feature_config, region, etc.)
 type TeslaUserConfig struct {
@@ -1011,44 +722,8 @@ type TeslaVehicleInvitation struct {
 	CreatedAt    time.Time  `json:"created_at" db:"created_at"`
 }
 
-// GuardConfig holds per-vehicle anti-theft guard mode configuration.
-type GuardConfig struct {
-	VehicleID      int64     `json:"vehicle_id" db:"vehicle_id"`
-	Enabled        bool      `json:"enabled" db:"enabled"`
-	HomeGeofenceID *int64    `json:"home_geofence_id" db:"home_geofence_id"`
-	Sensitivity    string    `json:"sensitivity" db:"sensitivity"`
-	AutoPanic      bool      `json:"auto_panic" db:"auto_panic"`
-	CreatedAt      time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at" db:"updated_at"`
-}
+// GuardConfig has moved to vehicle.go.
 
-// ShareToken represents a public share link for a drive.
-type ShareToken struct {
-	ID               int64      `json:"id" db:"id"`
-	Token            string     `json:"token" db:"token"`
-	DriveID          int64      `json:"drive_id" db:"drive_id"`
-	CreatedBy        *string    `json:"created_by,omitempty" db:"created_by"`
-	Title            *string    `json:"title,omitempty" db:"title"`
-	Description      *string    `json:"description,omitempty" db:"description"`
-	IncludeMap       bool       `json:"include_map" db:"include_map"`
-	IncludeTelemetry bool       `json:"include_telemetry" db:"include_telemetry"`
-	IncludeSpeed     bool       `json:"include_speed" db:"include_speed"`
-	Views            int        `json:"views" db:"views"`
-	ExpiresAt        *time.Time `json:"expires_at,omitempty" db:"expires_at"`
-	CreatedAt        time.Time  `json:"created_at" db:"created_at"`
-}
+// ShareToken has moved to drive.go.
 
-// GuardEvent records a guard mode alert (movement, unlock, panic, etc.).
-type GuardEvent struct {
-	ID               int64                  `json:"id" db:"id"`
-	VehicleID        int64                  `json:"vehicle_id" db:"vehicle_id"`
-	EventType        string                 `json:"event_type" db:"event_type"`
-	Latitude         *float64               `json:"latitude" db:"latitude"`
-	Longitude        *float64               `json:"longitude" db:"longitude"`
-	Speed            *float64               `json:"speed" db:"speed"`
-	Details          map[string]interface{} `json:"details" db:"details"`
-	NotifiedChannels []string               `json:"notified_channels" db:"notified_channels"`
-	Acknowledged     bool                   `json:"acknowledged" db:"acknowledged"`
-	AcknowledgedAt   *time.Time             `json:"acknowledged_at" db:"acknowledged_at"`
-	CreatedAt        time.Time              `json:"created_at" db:"created_at"`
-}
+// GuardEvent has moved to vehicle.go.

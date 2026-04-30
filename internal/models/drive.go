@@ -45,3 +45,52 @@ type Drive struct {
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }
+
+// DriveTelemetryReading represents a single telemetry snapshot during a drive.
+type DriveTelemetryReading struct {
+	ID              int64     `json:"id" db:"id"`
+	DriveID         int64     `json:"drive_id" db:"drive_id"`
+	VehicleID       int64     `json:"vehicle_id" db:"vehicle_id"`
+	Latitude        *float64  `json:"latitude,omitempty" db:"latitude"`
+	Longitude       *float64  `json:"longitude,omitempty" db:"longitude"`
+	Elevation       *float64  `json:"elevation,omitempty" db:"elevation"`
+	Heading         *int      `json:"heading,omitempty" db:"heading"`
+	Odometer        *float64  `json:"odometer,omitempty" db:"odometer"`
+	Speed           *float64  `json:"speed,omitempty" db:"speed"`
+	Power           *float64  `json:"power,omitempty" db:"power"`
+	BatteryLevel    *int      `json:"battery_level,omitempty" db:"battery_level"`
+	Soc             *float64  `json:"soc,omitempty" db:"soc"`
+	UsableSoc       *float64  `json:"usable_soc,omitempty" db:"usable_soc"`
+	RatedRange      *float64  `json:"rated_range,omitempty" db:"rated_range"`
+	IdealRange      *float64  `json:"ideal_range,omitempty" db:"ideal_range"`
+	EstRange        *float64  `json:"est_range,omitempty" db:"est_range"`
+	InsideTemp      *float64  `json:"inside_temp,omitempty" db:"inside_temp"`
+	OutsideTemp     *float64  `json:"outside_temp,omitempty" db:"outside_temp"`
+	DriverTemp      *float64  `json:"driver_temp,omitempty" db:"driver_temp"`
+	PassengerTemp   *float64  `json:"passenger_temp,omitempty" db:"passenger_temp"`
+	FanStatus       *int      `json:"fan_status,omitempty" db:"fan_status"`
+	IsClimateOn     *bool     `json:"is_climate_on,omitempty" db:"is_climate_on"`
+	TirePressureFL  *float64  `json:"tire_pressure_fl,omitempty" db:"tire_pressure_fl"`
+	TirePressureFR  *float64  `json:"tire_pressure_fr,omitempty" db:"tire_pressure_fr"`
+	TirePressureRL  *float64  `json:"tire_pressure_rl,omitempty" db:"tire_pressure_rl"`
+	TirePressureRR  *float64  `json:"tire_pressure_rr,omitempty" db:"tire_pressure_rr"`
+	BatteryHeaterOn *bool     `json:"battery_heater_on,omitempty" db:"battery_heater_on"`
+	AccelerationGs  *float64  `json:"acceleration_gs,omitempty" db:"acceleration_gs"`
+	CreatedAt       time.Time `json:"created_at" db:"created_at"`
+}
+
+// ShareToken represents a public share link for a drive.
+type ShareToken struct {
+	ID               int64      `json:"id" db:"id"`
+	Token            string     `json:"token" db:"token"`
+	DriveID          int64      `json:"drive_id" db:"drive_id"`
+	CreatedBy        *string    `json:"created_by,omitempty" db:"created_by"`
+	Title            *string    `json:"title,omitempty" db:"title"`
+	Description      *string    `json:"description,omitempty" db:"description"`
+	IncludeMap       bool       `json:"include_map" db:"include_map"`
+	IncludeTelemetry bool       `json:"include_telemetry" db:"include_telemetry"`
+	IncludeSpeed     bool       `json:"include_speed" db:"include_speed"`
+	Views            int        `json:"views" db:"views"`
+	ExpiresAt        *time.Time `json:"expires_at,omitempty" db:"expires_at"`
+	CreatedAt        time.Time  `json:"created_at" db:"created_at"`
+}
