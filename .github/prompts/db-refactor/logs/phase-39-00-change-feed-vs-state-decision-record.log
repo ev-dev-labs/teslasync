@@ -142,10 +142,11 @@ Go tests (prompts 41-42) make the rule machine-checkable in CI:
     internal/api/ contains a "current state" SQL pattern such as
     `FROM positions ... ORDER BY ts DESC LIMIT 1`,
     `FROM security_events ... ORDER BY ts DESC LIMIT 1`, etc., on
-    snapshot tables. (chatbot_handler_chat.go:176 is one such call site
-    surfaced by phase 38 final gate; it must be migrated to
-    signal.StateReader in prompt 36 and the audit will then guard the
-    floor.)
+    snapshot tables. Phase 38 final gate already cleared the
+    chatbot_handler_chat.go raw-positions read it had previously
+    surfaced (commit 2b8ff5123 "fix(api): route chatbot battery query
+    through layered live-state contract"); the audit in prompt 42 will
+    then guard the floor against re-introduction.
 
 Migration scope and atomicity:
 25+ handler files in internal/api/ plus cmd/teslasync/main.go warmup plus
@@ -161,25 +162,32 @@ batches:
 Prompts 41-42 add the layering audits. Prompt 99 is the final gate that
 re-runs everything end-to-end and verifies the phase is green.
 
-Why this prompt is BLOCKED today (honest disclosure):
+Predecessor status (honest disclosure):
 The predecessor log .github\prompts\db-refactor\logs\phase-38-99-final-gate.log
-exists but reports EXIT=1 / STATUS=BLOCKED (final gate surfaced unmigrated
-"FROM positions ... ORDER BY ts DESC LIMIT 1" in chatbot_handler_chat.go:176
-and stale snapshot/live-state references in tracking and signal handlers
-that phase 38 was supposed to clear). Per the honesty covenant rules 1
-("no red-as-green") and 7 ("no predecessor bypass"), this prompt's gate
-will report STATUS=BLOCKED. The decision record reasoning above is
-preserved verbatim in this log so the rationale is not lost; once phase
-38 final gate is re-run and reports DONE, this prompt can be re-run and
-will pass cleanly. No source files were touched. No scope was narrowed.
-No code-change predecessor was bypassed. The exact gate command in the
-prompt body is run unmodified below.
+now reports EXIT=0 / STATUS=DONE (commit 033f077c5
+"phase-38/99-final: re-run gate with tightened anti-snapshot audit",
+following the chatbot_handler fix in commit 2b8ff5123). The earlier run
+of this prompt (commit 7182b57e6) was correctly BLOCKED under honesty
+covenant rules 1 ("no red-as-green") and 7 ("no predecessor bypass")
+because phase 38's final gate had not yet reported DONE. With the
+predecessor now green, this prompt's gate is expected to pass cleanly.
+No source files are touched. No scope is narrowed. No code-change
+predecessor is bypassed. The exact gate command in the prompt body is
+run unmodified below.
 
 === CHANGES ===
 No source files changed.
+Only this log file is added under
+  .github\prompts\db-refactor\logs\phase-39-00-change-feed-vs-state-decision-record.log
 git status outside the allowed log path: none expected (verified in === GATE === below).
+
+=== COMMIT ===
+On gate success, the commit script in the prompt body will:
+  git add -f -- .github\prompts\db-refactor\logs\phase-39-00-change-feed-vs-state-decision-record.log
+  git commit -m "phase-39/00-decision: change-feed-vs-state architectural fix scope"
+with the standard Co-authored-by trailer. No other paths are committed.
 === GATE ===
-=== GATE ===
-Predecessor log missing or not DONE: .github\prompts\db-refactor\logs\phase-38-99-final-gate.log
-EXIT=1
-STATUS=BLOCKED
+MISSING_LOG_PATTERN_COUNT=0
+UNEXPECTED_STATUS_COUNT=0
+EXIT=0
+STATUS=DONE
