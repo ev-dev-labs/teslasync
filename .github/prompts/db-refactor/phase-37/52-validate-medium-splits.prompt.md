@@ -191,9 +191,12 @@ if ($exit -eq 0) {
 }
 
 if ($exit -eq 0) {
+  # -race requires CGO. Scope CGO_ENABLED=1 to the test step only; restore project default after.
+  $env:CGO_ENABLED = '1'
   $testOut = & go test ./internal/api -race -count=1 2>&1
   $testExit = $LASTEXITCODE
-  "go test exit=$testExit" | Add-Content $log
+  $env:CGO_ENABLED = '0'
+  "go test exit=$testExit (race=on, cgo=1 for this step only)" | Add-Content $log
   $testOut | Out-String | Add-Content $log
   if ($testExit -ne 0) { $exit = 1 }
 } else {
