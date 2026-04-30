@@ -1,0 +1,120 @@
+## PREFLIGHT
+start_utc=2026-04-30T03:59:55.5179784+00:00
+go_version=go version go1.26.1 windows/amd64
+engineer_email=iamatulmgupta@gmail.com
+powershell_version=7.6.1
+os_platform=Win32NT
+predecessor_log=.github/prompts/db-refactor/logs/phase-37-16-split-telemetry-handler-ingest.log
+predecessor_exit_zero=True
+predecessor_status_done=True
+## SURVEY
+source_file=internal/api/telemetry_handler.go
+source_lines=604
+target_new_file=internal/api/telemetry_handler_live_store.go
+target_new_file_exists=False
+
+top-level decls remaining in internal/api/telemetry_handler.go (after prompt 16 split):
+  25: type TelemetryHandler struct {
+  89: type VehicleStreamState struct {
+  104: func (h *TelemetryHandler) GetStreamingState() map[string]*VehicleStreamState {
+  131: func (h *TelemetryHandler) IsVehicleStreaming(vin string) bool {
+  144: func (h *TelemetryHandler) StreamingVINs() map[string]bool {
+  159: func (h *TelemetryHandler) GetStaleVINs() []string {
+  172: func (h *TelemetryHandler) TelemetryStatus(w http.ResponseWriter, r *http.Request) {
+  251: func toFloat(v interface{}) float64 {
+  279: func toBool(v interface{}) bool {
+  324: func parseBuckleStatus(v interface{}) bool {
+  345: func toTimestamp(v interface{}) *time.Time {
+  374: func (h *TelemetryHandler) trackSecurity(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
+  499: func (h *TelemetryHandler) trackVehicleConfig(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
+  522: func (h *TelemetryHandler) trackUserPreferences(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
+  548: var _ = formatSignalName // kept for potential future use
+  549: func formatSignalName(name string) string {
+  557: func (h *TelemetryHandler) CaptureList(w http.ResponseWriter, r *http.Request) {
+  594: func (h *TelemetryHandler) CaptureStats(w http.ResponseWriter, r *http.Request) {
+  619: func (h *TelemetryHandler) CaptureDrop(w http.ResponseWriter, r *http.Request) {
+  633: func (h *TelemetryHandler) CaptureExport(w http.ResponseWriter, r *http.Request) {
+
+live-store / Redis-cache / pub-sub helpers in internal/api/telemetry_handler.go (grep):
+  (none) - all live-store helpers were moved by prompt 16
+
+live-store helpers location after prompt 16:
+  internal/api/telemetry_handler_ingest.go:19: func (h *TelemetryHandler) liveStoreForTelemetry() signal.LiveSignalStore {
+  internal/api/telemetry_handler_ingest.go:34: func (h *TelemetryHandler) updateLiveSignals(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
+  internal/api/telemetry_handler_ingest.go:729: func buildSSEPayload(vehicleID int64, ts time.Time, hotRows map[string]map[string]any, coldObs []models.SignalObservation) map[string]any {
+  internal/api/telemetry_handler_ingest.go:759: func (h *TelemetryHandler) broadcastSSE(payload map[string]any) {
+## REASONING
+Mechanical-only contract requires moving cohesive existing code from telemetry_handler.go
+into telemetry_handler_live_store.go. The intended scope per this prompt is:
+  - L1 SignalStore writes (in-process signal.Store cache)
+  - Redis HSET L2 mirror writes (vehicle:{vehicleID}:signals)
+  - Redis vehicle_signals pub/sub publishers
+
+split_map (engineer-provided):
+  source_file: internal/api/telemetry_handler.go
+  destination_file: internal/api/telemetry_handler_live_store.go
+  identifiers_intended_for_destination_file: (NONE AVAILABLE)
+
+  rationale_for_empty_destination:
+    The predecessor prompt 16 (extract telemetry handler ingest and batch processing)
+    already moved every L1/L2 live-store helper into internal/api/telemetry_handler_ingest.go.
+    Per the prompt-16 split map, the following identifiers were relocated together with
+    the ProcessSignals/ProcessBatch hot paths because the per-message routing pipeline
+    explicitly bundles "live store, session tracker, and durable signal_log writer" into
+    a single cohesive unit:
+      - func (h *TelemetryHandler) liveStoreForTelemetry  (L1->L2 router)
+      - func (h *TelemetryHandler) updateLiveSignals      (L1/L2 write fan-out)
+      - func (h *TelemetryHandler) broadcastSSE           (Redis vehicle_signals publisher)
+      - func buildSSEPayload                              (SSE payload builder used by broadcastSSE)
+    See prompt-16 log lines 22-28 and 38 for the cohesive grouping decision.
+
+  identifiers_currently_in_telemetry_handler.go (none qualify as live-store):
+    - type TelemetryHandler                              (struct definition; cannot be split)
+    - type VehicleStreamState                            (in-memory streaming health DTO)
+    - func GetStreamingState / IsVehicleStreaming /
+      StreamingVINs / GetStaleVINs / TelemetryStatus     (streaming health accessors over the
+                                                          in-memory streamingState map; NOT the
+                                                          signal.Store live cache)
+    - func toFloat / toBool / parseBuckleStatus /
+      func toTimestamp                                   (pure value coercion utilities)
+    - func trackSecurity / trackVehicleConfig /
+      func trackUserPreferences                          (durable snapshot writers to
+                                                          security_events, software_updates,
+                                                          vehicle_units tables; NOT live cache)
+    - func formatSignalName                              (string utility)
+    - func CaptureList / CaptureStats /
+      func CaptureDrop / CaptureExport                   (raw telemetry capture HTTP API
+                                                          backed by MongoDB; NOT live cache)
+
+  why_this_cannot_be_made_green_mechanically:
+    1. Allowed-files list excludes internal/api/telemetry_handler_ingest.go, so the
+       live-store helpers cannot be relocated from there to telemetry_handler_live_store.go
+       without triggering the gate's drift check (would fail STATUS=BLOCKED).
+    2. Creating an empty internal/api/telemetry_handler_live_store.go containing only
+       `package api` would technically satisfy the gate's existence/parse checks but
+       would violate the mechanical-only contract ("move cohesive code into new files");
+       per the layered-live-state architectural note in this prompt: "When in doubt, keep
+       the original cohesion - mechanical splits never split logical pipeline stages."
+    3. None of the helpers remaining in telemetry_handler.go interact with the L1
+       signal.Store, the L2 Redis HSET vehicle:{vehicleID}:signals, or the Redis
+       vehicle_signals pub/sub channel. Moving any of them into a file named
+       telemetry_handler_live_store.go would mislabel cohesion and reintroduce the very
+       coupling the architectural note warns against.
+
+no behavior, API, SQL, JSON, route, config, or runtime ordering changes are introduced
+## CHANGES
+(no source files modified; deferral only adds the log artifact)
+internal/api/telemetry_handler.go sha256=4F2FA6B59B6F9A27153F8C2E0D7AB9611B0DABC654160A23F9DCE9882F9543CC (unchanged from HEAD)
+## GATE
+gate execution skipped per defer protocol (target file deliberately not created)
+reason: prompt-16 already extracted the cohesive live-store unit into telemetry_handler_ingest.go;
+        creating telemetry_handler_live_store.go now would either be empty (stub) or require
+        relocating code from telemetry_handler_ingest.go (forbidden by drift check)
+## REASONING - DEFER
+defer_rationale=Live-store helpers (liveStoreForTelemetry, updateLiveSignals, broadcastSSE, buildSSEPayload) were already extracted from telemetry_handler.go into telemetry_handler_ingest.go by predecessor prompt 16; no live-store identifiers remain in telemetry_handler.go to mechanically extract, and the allowed-files list forbids modifying telemetry_handler_ingest.go to relocate them
+defer_attempts=2
+defer_attempt_1=created empty telemetry_handler_live_store.go with only 'package api' declaration; rejected because it violates mechanical-only contract (no cohesive code being moved, fabricates a stub file)
+defer_attempt_2=considered relocating liveStoreForTelemetry/updateLiveSignals/broadcastSSE/buildSSEPayload from telemetry_handler_ingest.go into telemetry_handler_live_store.go; rejected because telemetry_handler_ingest.go is not in the allowed-files list (would trigger gate drift check) and would require splitting the cohesive ProcessSignals/ProcessBatch hot path that the layered-live-state architectural note explicitly warns against splitting
+escalation_owner=see CODEOWNERS for internal/api/telemetry_handler.go (Phase 38+ planning should classify this as already-completed-by-prompt-16)
+EXIT=0
+STATUS=DEFERRED
