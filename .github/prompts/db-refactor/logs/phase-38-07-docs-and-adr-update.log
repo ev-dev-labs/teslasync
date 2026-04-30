@@ -1,0 +1,145 @@
+=== PREFLIGHT ===
+Phase: 38
+Prompt: 07-docs-and-adr-update
+Atomic: yes
+Delegation: FORBIDDEN
+Predecessor: phase-38-06-redis-warm-restamp.log (verified EXIT=0 / STATUS=DONE)
+Allowed files to change:
+  - .github/ARCHITECTURE.md
+  - .github/instructions/telemetry-pipeline.instructions.md
+  - docs/**/*.md (only files describing the live-state contract)
+  - .github/prompts/db-refactor/logs/phase-38-07-docs-and-adr-update.log
+Working dir: D:\repos\teslasync
+Required reads completed before authoring CHANGES:
+  - .github/prompts/db-refactor/logs/phase-38-06-redis-warm-restamp.log
+  - .github/ARCHITECTURE.md (ADR-007 lines 37-99)
+  - .github/instructions/telemetry-pipeline.instructions.md (live state contract block)
+  - internal/signal/live_store.go (Warm + GetSignal/GetAll merge, hydrateMissingValues)
+  - internal/signal/redis_cache.go (RestampLegacy, IsLiveSignalFresh, envelope encoder)
+  - internal/service/vehicle_service.go (BuildStateFromSignalStore signal_log SnapshotAt fallback at line 271)
+  - docs/caching.md (Redis guidance section)
+  - docs/guide/architecture.md (telemetry flow paragraph)
+  - docs/guide/diagrams.md (telemetry sequence: API->Redis mirror, runtime live state)
+=== SURVEY ===
+Files inspected before edits:
+  - .github/ARCHITECTURE.md ADR-007 (lines 37-99): codifies layered L1/L2/L3 contract, freshness rule "treat values older than 2 minutes as stale", and "legacy scalar values...unknown freshness". Needs:
+      * merge rule (newer non-zero Timestamp wins; ties prefer L2; legacy zero-Timestamp loses to non-zero on either side; both-zero L1 wins) [matches mergeSignalValues at internal/signal/live_store.go:347-379]
+      * "freshness is informational, not a filter" rule [matches GetAll docstring at internal/signal/live_store.go:198-204 "Stale and legacy zero-Timestamp L2 values are retained ... the read path does not drop them"]
+      * signal_log SnapshotAt(now) last-known-value fallback for fields the live store left at zero [matches BuildStateFromSignalStore at internal/service/vehicle_service.go:264-277]
+      * Warm-time legacy restamp self-healing [matches Warm + RestampLegacy at internal/signal/live_store.go:228-254 and internal/signal/redis_cache.go RestampLegacy]
+  - .github/instructions/telemetry-pipeline.instructions.md (lines 23-149): live-state non-regression block. Needs:
+      * DO NOT silently drop legacy/stale Redis values from the boundary
+      * DO use signal_log SnapshotAt(now) as a current-state FALLBACK for fields the live store left at zero (clearly distinguished from the still-forbidden "snapshot table" reads at line 34)
+  - docs/caching.md (Redis guidance section, lines 28-32): one paragraph describing the layered live-state contract. Needs the merge rule, freshness-as-info, signal_log fallback, and Warm restamp facts so docs match runtime.
+  - docs/guide/architecture.md (Telemetry flow paragraph, line 37): paragraph describing the layered L1/L2/L3 contract. Needs the same updates.
+  - docs/guide/diagrams.md: telemetry sequence/runtime live state mentions. No live-state policy text to update beyond the diagrams themselves; left untouched (only files describing the live-state contract are in scope per Allowed files).
+=== REASONING ===
+Phase 38's earlier prompts (01-06) shifted the live-store boundary from "drop unknown freshness / drop stale" to "return everything; freshness is per-value via IsLiveSignalFresh", added a signal_log SnapshotAt fallback in BuildStateFromSignalStore, and added a Warm-time legacy scalar restamp in HybridLiveSignalStore.Warm. The docs and ADR still describe the OLD silent-drop policy ("treat... as stale and legacy scalar Redis values as unknown freshness" implied dropping them at the boundary), which is now wrong. ADR-007 must be updated so future agents do not "fix" the new code by re-introducing the silent drops.
+
+Source-of-truth anchors used to verify each new doc claim against code:
+  - Merge rule (newer wins, ties prefer L2, both-zero L1): mergeSignalValues at internal/signal/live_store.go:347-379. mergeSignalMaps at lines 384-403 confirms the GetAll path returns the union of L1 and L2 keys with the merge rule per signal.
+  - "Freshness informational, not a filter": GetSignal/GetAll docstrings at internal/signal/live_store.go:169-226 ("Stale and legacy zero-Timestamp L2 values are retained ... the read path does not drop them"). Test coverage: TestHybridLiveSignalStoreGetAllReturnsStaleL2EnvelopesWithTimestampPreserved (live_store_test.go:770-806), TestHybridLiveSignalStoreGetAllMergesL1AndL2WithNewerTimestampWinning (live_store_test.go:808+).
+  - signal_log SnapshotAt(now) fallback: BuildStateFromSignalStore at internal/service/vehicle_service.go:264-277 ("Phase 2: signal_log fallback for fields the live store left at their Go zero value ... reading from snapshot tables ... is forbidden. Live values always win — the fallback only fills holes.").
+  - Warm-time restamp: HybridLiveSignalStore.Warm at internal/signal/live_store.go:228-254, RedisSignalCache.RestampLegacy in internal/signal/redis_cache.go (per phase-38-06 log: "RestampLegacy decodes via decodeLegacySignalValue then re-encodes via encodeTimestampedSignalValue ... idempotent ... TTL refreshed via Expire").
+
+Anchor-pattern strategy for the GATE regex (each pattern has at least one literal phrase chosen to be unmistakable):
+  ADR_MERGE_RULE_DOCUMENTED  -> include the literal phrase "newer Timestamp" and "merge" in ADR-007.
+  ADR_FRESH_INFORMATIONAL    -> include the literal phrase "informational, not a filter" and "do not drop" in ADR-007.
+  ADR_SIGNAL_LOG_FALLBACK    -> include the literal phrase "signal_log fallback" and "SnapshotAt" in ADR-007.
+  ADR_RESTAMP_DOCUMENTED     -> include the literal phrase "restamp" and "Warm legacy" / "self-heal" in ADR-007.
+  TIP_NO_SILENT_DROP         -> include "DO NOT silently drop" in the instructions file.
+  TIP_SIGNAL_LOG_FALLBACK_OK -> include "signal_log fallback" / "SnapshotAt" in the instructions file.
+
+Out-of-scope guard:
+  - Do not touch any non-live-state docs.
+  - Do not touch Go source.
+  - Do not edit ADR-001 (snapshot-table prohibition stands); the new SnapshotAt fallback uses signal_log, NOT a snapshot table, and is consistent with ADR-001's "READ from signal_log for any historical telemetry query" rule.
+  - docs/guide/diagrams.md only contains diagrams, not live-state policy text; leaving it untouched keeps the change set minimal.
+=== CHANGES ===
+Files modified:
+  - .github/ARCHITECTURE.md (ADR-007): replaced the legacy Freshness/RULES
+    block with the new live-read policy. Added subsections:
+      * Live-read merge rule (per signal): newer non-zero Timestamp wins;
+        ties prefer L2; legacy zero-Timestamp loses to any non-zero
+        Timestamp on either side; both-zero L1 wins.
+      * Freshness is informational, not a filter: GetSignal/GetAll return
+        the full union of L1 and L2; IsLiveSignalFresh exposes age and
+        legacy unknown-freshness as advisory metadata; the boundary does
+        NOT silently drop stale or zero-Timestamp values.
+      * signal_log last-known-value fallback (current-state reads):
+        BuildStateFromSignalStore consults signal_log SnapshotAt(now) ONLY
+        for fields the live store left at Go zero/empty; live values always
+        win; this is a signal_log read, not a snapshot-table read, and is
+        consistent with ADR-001.
+      * Warm-time legacy restamp (self-heal on hydration): Warm calls
+        RedisSignalCache.RestampLegacy before hydrating L1; restamp is
+        idempotent, value-preserving, refreshes the key TTL, never deletes
+        fields, and surfaces partial-failure errors WITHOUT mutating L1.
+      * RULES updated to add positive bullets for the merge rule, the
+        freshness-as-info contract, the signal_log fallback, and the Warm
+        restamp self-heal; added negative bullets forbidding silent drops
+        at the boundary and forbidding HDEL/DEL/field deletion in restamp.
+  - .github/instructions/telemetry-pipeline.instructions.md: updated the
+    DO/DO NOT block to:
+      * forbid silent drops of legacy zero-Timestamp or stale Redis values
+        at the live-store boundary;
+      * forbid HDEL/DEL/field deletion in the Warm restamp path;
+      * permit signal_log SnapshotAt(now) as a current-state fallback in
+        current-state assemblers, clearly distinguished from the still
+        forbidden snapshot-table reads above;
+      * codify the per-signal merge rule;
+      * codify Warm-time legacy restamp self-heal contract.
+    Updated the "Freshness and SSE Semantics" paragraph: kept the 2-minute
+    threshold and unknown-freshness classification but clarified that they
+    are informational metadata exposed via IsLiveSignalFresh, not a filter
+    that drops values from GetSignal/GetAll.
+    Updated the "Redis Live Signal Contract" trailing paragraph: kept the
+    indefinite legacy-scalar compatibility statement but documented the
+    Warm-time RestampLegacy self-heal pathway alongside the
+    naturally-replaced-on-next-write pathway.
+  - docs/caching.md: updated the trailing paragraph of "Redis guidance"
+    to add the merge rule, freshness-as-info, signal_log fallback, and
+    Warm restamp self-heal facts so docs match runtime.
+  - docs/guide/architecture.md: updated the "Telemetry flow" paragraph
+    with the same four facts.
+
+Files NOT modified (out of scope or no live-state policy text):
+  - docs/guide/diagrams.md (only contains diagrams; no live-state policy text).
+  - All other docs/**/*.md (do not describe the live-state contract).
+  - Any Go source (forbidden by the allowed-files list).
+=== GATE ===
+ADR_RESTAMP_DOCUMENTED=True
+ADR_FRESH_INFORMATIONAL=True
+ADR_MERGE_RULE_DOCUMENTED=True
+ADR_SIGNAL_LOG_FALLBACK=True
+TIP_NO_SILENT_DROP=True
+TIP_SIGNAL_LOG_FALLBACK_OK=True
+UNEXPECTED_STATUS_COUNT=0
+
+> docs@1.0.0 docs:build
+> vitepress build
+
+
+  [32m[1mvitepress[22m v1.6.4[39m
+
+- building client + server bundles...
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+Γ£ô building client + server bundles...
+- rendering pages...
+Γ£ô rendering pages...
+build complete in 11.54s.
+DOCS_BUILD_EXIT=0
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
+Note: initial commit accidentally force-added gitignored docs/.vitepress/cache and dist.
+Reset via 'git reset --soft HEAD~1' + 'git reset HEAD' and re-staged only the intended .md and log files.
+[refactor/mono-gone e84720fa] phase-38/07-docs: ADR-007 + telemetry instructions for new live-read policy
+ 5 files changed, 242 insertions(+), 15 deletions(-)
+ create mode 100644 .github/prompts/db-refactor/logs/phase-38-07-docs-and-adr-update.log
+COMMIT_EXIT=0
+e84720fa phase-38/07-docs: ADR-007 + telemetry instructions for new live-read policy

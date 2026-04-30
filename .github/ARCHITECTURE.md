@@ -63,9 +63,50 @@ DECISION:
     - `local` disables Redis-backed distributed live reads while preserving local
       SignalStore behavior and durable signal_log writes.
 
-  Freshness:
-    - Cross-pod live reads treat values older than 2 minutes as stale.
-    - Timestamp-less legacy Redis scalar values have unknown freshness.
+  Live-read merge rule (per signal):
+    - GetSignal/GetAll merge the L1 (signal.Store) and L2 (Redis) values per signal.
+    - The value with the strictly newer non-zero Timestamp wins.
+    - Ties on identical non-zero Timestamps prefer L2 (cross-pod authoritative).
+    - If exactly one side has a zero Timestamp (legacy unknown freshness), the
+      non-zero side wins regardless of which layer it came from.
+    - If both sides have zero Timestamp, L1 wins (local hot-path observation).
+
+  Freshness is informational, not a filter:
+    - The live-store boundary returns ALL known per-signal values to callers,
+      including stale and legacy zero-Timestamp envelopes. The boundary does
+      not silently drop values based on age or missing timestamps.
+    - Callers inspect freshness via `signal.IsLiveSignalFresh(value, now)` which
+      returns false for nil values, zero-Timestamp legacy entries, and entries
+      older than the cross-pod 2-minute freshness window. The result is
+      advisory metadata for callers to render/route appropriately, not a gate
+      that erases data at the boundary.
+    - Cross-pod live reads still treat values older than 2 minutes as stale and
+      timestamp-less legacy Redis scalars as unknown freshness, but that
+      classification is exposed to callers — never used to delete the value.
+
+  signal_log last-known-value fallback (current-state reads):
+    - `BuildStateFromSignalStore` (and any equivalent current-state assembler)
+      consults `signal_log` via `SignalLogReader.SnapshotAt(ctx, vehicleID, now)`
+      ONLY for fields the live store left at their Go zero / empty value.
+    - Live (L1+L2) values always win; the signal_log fallback only fills holes
+      after a pod restart, after a Warm miss, or before fresh telemetry
+      arrives. This is a `signal_log` read (ADR-001 compliant), NOT a snapshot
+      table read — the per-table snapshot prohibition in ADR-001 is unchanged.
+
+  Warm-time legacy restamp (self-heal on hydration):
+    - `HybridLiveSignalStore.Warm` calls `RedisSignalCache.RestampLegacy` BEFORE
+      hydrating L1 from L2. RestampLegacy reads the vehicle's Redis HSET, skips
+      every field that is already a valid timestamped envelope, and re-encodes
+      every legacy scalar entry as a full envelope stamped with `now()`, then
+      issues one HSET (variadic) and refreshes the key TTL via Expire.
+    - This is idempotent (a second Warm sees only envelopes and writes nothing),
+      partial-failure safe (HSET error returns wrapped error WITHOUT mutating
+      L1, deleting fields, or issuing HDEL/DEL), and value-preserving (the
+      decoded raw value is round-tripped bit-for-bit through
+      `encodeTimestampedSignalValue`).
+    - After RestampLegacy succeeds, `hydrateMissingValues` no longer skips
+      zero-Timestamp entries — restamped legacy values now flow into L1 with a
+      non-zero Timestamp and are usable by hot paths.
 
   SSE:
     - Redis Pub/Sub `vehicle_update` fanout is best-effort, not durable replay.
@@ -82,16 +123,29 @@ RULES:
      signal_log overflow/crash recovery.
   ✅ Use signal_log for history, charts, point-in-time reconstruction, drive/charge
      completion, analytics, and durable replay.
-  ✅ Treat timestamp-less legacy Redis values as unknown freshness, not fresh data.
+  ✅ Use the `signal_log` SnapshotAt(now) fallback in current-state assemblers
+     (e.g. BuildStateFromSignalStore) for fields the live store left at zero;
+     this is a signal_log read, not a snapshot-table read.
+  ✅ Apply the per-signal merge rule (newer non-zero Timestamp wins; ties prefer L2;
+     legacy zero-Timestamp loses to any non-zero Timestamp; both-zero L1 wins)
+     when combining L1 and L2 in any new live-read code path.
+  ✅ Treat freshness as informational metadata via `IsLiveSignalFresh`; expose it
+     to callers but do not drop the underlying value at the boundary.
   ✅ Preserve Redis optionality: Redis failures may degrade cross-pod/live recovery
      behavior, but must not block MQTT ingest or erase local signal.Store state.
-  ✅ Keep existing Redis scalar HSET values readable indefinitely; they are replaced
-     naturally on the next telemetry write.
+  ✅ Keep existing Redis scalar HSET values readable indefinitely; they are restamped
+     by Warm legacy self-heal on the next pod start AND replaced naturally on the
+     next telemetry write. Restamp is idempotent and value-preserving.
 
   ❌ NEVER remove signal.Store merely because Redis exists.
   ❌ NEVER route FSM/reconciliation/session hot-path reads through Redis by default.
   ❌ NEVER use Redis as historical storage or analytics truth.
   ❌ NEVER change Redis keys/channels without a compatibility shim and migration note.
+  ❌ NEVER silently drop stale or legacy zero-Timestamp values at the live-store
+     boundary; freshness is informational, not a filter, and callers expect the
+     full per-signal union of L1 and L2.
+  ❌ NEVER add HDEL / DEL / field deletion to the Warm restamp path; restamp must
+     only re-encode in place under the existing `vehicle:{vehicleID}:signals` key.
   ❌ NEVER claim FSM/reconciliation is active-active across pods without vehicle-owner
      routing, leases, or an explicit ADR that supersedes this one.
   ❌ NEVER claim "Redis replaced SignalStore" in docs or prompts unless code and tests
