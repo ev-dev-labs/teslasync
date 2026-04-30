@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/service"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
@@ -17,28 +16,45 @@ import (
 // VehicleHandler handles vehicle-related HTTP requests.
 // Business logic (state assembly, Tesla sync) is delegated to
 // VehicleService; the handler focuses on HTTP concerns.
+//
+// state is the signal-log-backed cold-path reader (ADR-002 / phase-39)
+// used by Positions to derive a chart-mode timeline of GPS samples by
+// forward-folding the change feed; every emission becomes a row, even
+// when the projected fields are unchanged from the previous emission.
 type VehicleHandler struct {
 	vehicleSvc       *service.VehicleService
 	teslaClient      *tesla.Client
 	telemetryHandler *TelemetryHandler
-	signalLogReader  *database.SignalLogReader
+	state            signal.StateReader
 }
 
-func NewVehicleHandler(vehicleSvc *service.VehicleService, tc *tesla.Client) *VehicleHandler {
+// vehiclePositionMappings projects the signal_log change feed into the
+// Position JSON shape consumed by the frontend. Field names match the
+// legacy Position model JSON tags so the wire contract is unchanged.
+//
+// NOTE: kept distinct from drive_handler_dtos.go's positionMappings
+// (which still uses the legacy pivot type for the not-yet-migrated
+// drive handler) — both will collapse onto a single signal.FieldMapping
+// definition once drive_handler_detail.go is migrated in a later prompt.
+var vehiclePositionMappings = []signal.FieldMapping{
+	{Signal: "Latitude", Field: "latitude"},
+	{Signal: "Longitude", Field: "longitude"},
+	{Signal: "GpsHeading", Field: "heading"},
+	{Signal: "VehicleSpeed", Field: "speed_mph"},
+	{Signal: "Elevation", Field: "elevation_m"},
+}
+
+func NewVehicleHandler(vehicleSvc *service.VehicleService, tc *tesla.Client, state signal.StateReader) *VehicleHandler {
 	return &VehicleHandler{
 		vehicleSvc:  vehicleSvc,
 		teslaClient: tc,
+		state:       state,
 	}
 }
 
 // SetTelemetryHandler wires the telemetry handler for streaming-aware state resolution.
 func (h *VehicleHandler) SetTelemetryHandler(th *TelemetryHandler) {
 	h.telemetryHandler = th
-}
-
-// SetSignalLogReader wires the signal log reader for position queries via signal_log.
-func (h *VehicleHandler) SetSignalLogReader(slr *database.SignalLogReader) {
-	h.signalLogReader = slr
 }
 
 func (h *VehicleHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -125,22 +141,28 @@ func (h *VehicleHandler) Positions(w http.ResponseWriter, r *http.Request) {
 	from := time.Now().AddDate(0, 0, -7) // default to last 7 days
 	to := time.Now()
 
-	if h.signalLogReader == nil {
-		writeAppError(w, r, ErrDBQuery.WithMessage("signal log reader not configured"))
-		return
-	}
-
-	rows, err := h.signalLogReader.SignalTracePivotFlat(r.Context(),
-		id, positionMappings, from, to)
+	// Chart mode: empty CollapseBy so every change-feed emission becomes a
+	// row, preserving the legacy flat-pivot semantics consumed by the
+	// frontend map/timeline.
+	timelineRows, err := h.state.Timeline(r.Context(),
+		id, vehiclePositionMappings, from, to, signal.TimelineOptions{})
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", id).Msg("failed to get positions from signal_log")
 		writeAppError(w, r, ErrDBQuery.WithMessage("failed to get positions"))
 		return
 	}
-	if rows == nil {
-		rows = []map[string]interface{}{}
+
+	rows := make([]map[string]interface{}, 0, len(timelineRows))
+	for _, tr := range timelineRows {
+		row := make(map[string]interface{}, len(tr.Fields)+4)
+		for k, v := range tr.Fields {
+			row[k] = v
+		}
+		row["ts"] = tr.Timestamp
+		rows = append(rows, row)
 	}
-	// Reverse to newest-first (query returns ascending by ts)
+
+	// Reverse to newest-first (Timeline returns ascending by ts)
 	for i, j := 0, len(rows)-1; i < j; i, j = i+1, j-1 {
 		rows[i], rows[j] = rows[j], rows[i]
 	}
