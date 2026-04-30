@@ -1,0 +1,29 @@
+=== PREFLIGHT ===
+PREDECESSOR_OK=true
+=== CALL_SITES ===
+tire_pressure_handler.go: 1x SignalTracePivotFlat (List), 1x SnapshotAt (Latest); router.go: 1x NewTirePressureHandler ctor
+=== CHANGES ===
+Migrate tire_pressure_handler to signal.StateReader (Timeline chart mode + State); add unit tests; update router constructor wiring.
+=== GATE ===
+USES_TIMELINE=True
+TEST_ERR=True
+USES_SIGNAL_STATEREADER=True
+TEST_CARRY=True
+NO_OLD_PIVOTMAPPING=True
+ROUTER=True
+NO_SNAPSHOTAT=True
+USES_STATE=True
+NO_PIVOT=True
+MAPPINGS_RETYPED=True
+TEST_LATEST=True
+ok  	github.com/ev-dev-labs/teslasync/internal/api	0.407s
+GO_TEST_EXIT=0
+UNEXPECTED_STATUS_COUNT=1
+ M .github/prompts/db-refactor/logs/phase-39-15-migrate-climate-handler.log
+EXIT=1
+STATUS=BLOCKED
+=== GATE (rerun) ===
+UNEXPECTED_STATUS_COUNT=0
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
