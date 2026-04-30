@@ -1,0 +1,61 @@
+## PREFLIGHT
+start_utc=2026-04-30T06:24:36.1157023+00:00
+go_version=go version go1.26.1 windows/amd64
+engineer_email=iamatulmgupta@gmail.com
+powershell_version=7.6.1
+os_platform=Win32NT
+exports invariant ok: 523 exported identifiers preserved
+import-graph invariant ok: 31 imports preserved
+## SURVEY
+source_lines_after=12
+new_file=internal/database/automation_step_child_repo_persistence.go lines=302
+new_file=internal/database/automation_step_child_repo_query.go lines=312
+## REASONING
+mechanical decomposition: split internal/database/automation_step_child_repo.go into internal/database/automation_step_child_repo_persistence.go, internal/database/automation_step_child_repo_query.go
+no behavior, API, SQL, JSON, route, config, or runtime ordering changes
+split_map_source=internal/database/automation_step_child_repo.go
+split_map_stays_in_source:
+  type AutomationStepChildRepo
+  func NewAutomationStepChildRepo
+split_map_dest_query=internal/database/automation_step_child_repo_query.go
+  method AutomationStepChildRepo.HydrateAutomation
+  method AutomationStepChildRepo.HydrateAutomations
+  method AutomationStepChildRepo.loadTriggers (unexported, called by HydrateAutomations in same file)
+  method AutomationStepChildRepo.loadConditions (unexported, called by HydrateAutomations in same file)
+  method AutomationStepChildRepo.loadActions (unexported, called by HydrateAutomations in same file)
+split_map_dest_persistence=internal/database/automation_step_child_repo_persistence.go
+  method AutomationStepChildRepo.Upsert
+  method AutomationStepChildRepo.UpsertTx
+  method AutomationStepChildRepo.upsertTriggerSignal (unexported, called by UpsertTx in same file)
+  method AutomationStepChildRepo.upsertTriggerGeofence (unexported, called by UpsertTx in same file)
+  method AutomationStepChildRepo.upsertTriggerSchedule (unexported, called by UpsertTx in same file)
+  method AutomationStepChildRepo.upsertTriggerEvent (unexported, called by UpsertTx in same file)
+  method AutomationStepChildRepo.upsertConditionSignal (unexported, called by UpsertTx in same file)
+  method AutomationStepChildRepo.upsertConditionTimeWindow (unexported, called by UpsertTx in same file)
+  method AutomationStepChildRepo.upsertConditionGeofence (unexported, called by UpsertTx in same file)
+  method AutomationStepChildRepo.upsertConditionOtherAutomation (unexported, called by UpsertTx in same file)
+  method AutomationStepChildRepo.upsertActionCommand (unexported, called by UpsertTx in same file)
+  method AutomationStepChildRepo.upsertActionNotification (unexported, called by UpsertTx in same file)
+  method AutomationStepChildRepo.upsertActionSetSetting (unexported, called by UpsertTx in same file)
+  method AutomationStepChildRepo.upsertActionCallAutomation (unexported, called by UpsertTx in same file)
+cross_file_unexported_refs:
+  AutomationStepChildRepo.db (struct field) - referenced by query and persistence files; defined in source file (stays)
+  DB (type) - referenced by source file (struct field type) and indirectly by query (r.db.Pool); defined elsewhere in package
+  DBTX (type) - referenced by persistence file (UpsertTx exec param + all upsert helpers); defined elsewhere in package
+per-prompt split map must be appended above this line by the engineer before edits
+## CHANGES
+internal/database/automation_step_child_repo.go sha256=824381E20B5654223B13516542DC15522722196613547EBF9D8DD185FBD730C8
+internal/database/automation_step_child_repo_persistence.go sha256=55A52C5DA5743749C8C5ACF3D2D473E7196CC27AF551B66625F648EE8B6569AB
+internal/database/automation_step_child_repo_query.go sha256=EAF40C4ADF451159D825831A309041ACE9DDAA9453C45E3AF8F3EEFB13FAE242
+## GATE
+go build ./internal/database/... exit=0
+
+go build ./... exit=0
+
+go vet exit=0
+
+go test exit=0
+ok  	github.com/ev-dev-labs/teslasync/internal/database	2.513s
+
+EXIT=0
+STATUS=DONE
