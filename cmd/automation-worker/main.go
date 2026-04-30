@@ -8,17 +8,20 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api"
 	"github.com/ev-dev-labs/teslasync/internal/automation"
 	"github.com/ev-dev-labs/teslasync/internal/automation/action"
 	"github.com/ev-dev-labs/teslasync/internal/automation/safety"
 	"github.com/ev-dev-labs/teslasync/internal/automation/trigger"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
@@ -58,6 +61,34 @@ func main() {
 	}
 	defer db.Close()
 	log.Info().Msg("database connected")
+
+	// ── Outbound api_call_logs sink ──────────────────────────────────
+	// The automation worker fires Tesla OAuth refresh exchanges (via
+	// internal/tesla.SetAuthSink) and notification webhooks (via
+	// internal/notification.SetSink). Each worker process owns its own
+	// asyncAPICallLogger because the API server's logger lives in another
+	// process. When cfg.APILogs.Enabled=false we install a nil sink
+	// (LoggedTransport then logs zerolog only).
+	var inboundAPILogger api.APICallLogger
+	if cfg.APILogs.Enabled {
+		apiLogRepo := database.NewAPICallLogRepo(db)
+		inboundAPILogger = api.NewAsyncAPICallLogger(apiLogRepo, api.AsyncLoggerOptions{
+			QueueCapacity: cfg.APILogs.QueueCapacity,
+			BatchSize:     cfg.APILogs.BatchSize,
+			FlushInterval: cfg.APILogs.FlushInterval,
+		})
+		log.Info().
+			Bool("capture_bodies", cfg.APILogs.CaptureBodies).
+			Int("queue_capacity", cfg.APILogs.QueueCapacity).
+			Int("batch_size", cfg.APILogs.BatchSize).
+			Dur("flush_interval", cfg.APILogs.FlushInterval).
+			Msg("automation-worker outbound api_call_logs sink enabled")
+	} else {
+		log.Info().Msg("automation-worker outbound api_call_logs sink disabled (API_LOGS_INBOUND_ENABLED=false)")
+	}
+	outboundAPILogSink := api.APICallSinkAdapter(inboundAPILogger, cfg.APILogs.CaptureBodies)
+	notification.SetSink(outboundAPILogSink)
+	tesla.SetAuthSink(outboundAPILogSink, cfg.Tesla.Timeout)
 
 	// ── MQTT (raw paho for trigger subscriptions) ──────────────────────
 	opts := pahomqtt.NewClientOptions().
@@ -212,6 +243,19 @@ func main() {
 	log.Info().Str("signal", sig.String()).Msg("shutting down automation worker")
 	engine.Stop()
 	cancel()
+	// Drain the outbound api_call_logs writer with a FRESH context so
+	// queued rows still reach Postgres after the root ctx has been
+	// cancelled. Reusing the cancelled ctx here would short-circuit
+	// CreateBatch on its very first call and drop everything in flight.
+	if inboundAPILogger != nil {
+		drainCtx, drainCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		if err := inboundAPILogger.Shutdown(drainCtx); err != nil {
+			log.Warn().Err(err).Msg("automation-worker api_call_logs writer shutdown timed out — pending entries may have been dropped")
+		} else {
+			log.Info().Msg("automation-worker api_call_logs writer drained")
+		}
+		drainCancel()
+	}
 	log.Info().Msg("automation worker stopped")
 }
 

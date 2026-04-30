@@ -240,11 +240,25 @@ func main() {
 	log.Info().
 		Bool("capture_bodies", cfg.APILogs.CaptureBodies).
 		Bool("logger_enabled", inboundAPILogger != nil).
-		Msg("outbound api_call_logs sink ready (wiring to non-Tesla httputil.NewClient adapters lands in Prompt 13)")
-	// Reference the sink so future Prompt 13 wiring has a stable identifier
-	// and the var is not unused. The cast also asserts at compile time that
-	// the adapter satisfies the httputil.APICallSink interface.
+		Msg("outbound api_call_logs sink ready")
+	// Compile-time assertion that the adapter satisfies httputil.APICallSink.
 	var _ httputil.APICallSink = outboundAPILogSink
+
+	// Phase 38 / Prompt 13: route every non-Tesla outbound HTTP adapter
+	// through the shared sink. Each SetSink/SetOutboundSink/SetAuthSink
+	// call MUST happen BEFORE the corresponding adapter is constructed
+	// (geocoding.NewGeocoder, gasprices.NewEIAAdapter, tesla auth flows,
+	// notification.Send) so the very first request already lands in
+	// api_call_logs.
+	//
+	// Tesla Fleet API client (internal/tesla/client.go) is intentionally
+	// excluded — it persists outbound rows via tesla.Client.SetLogCallback
+	// (configured below) so wiring it through this sink would
+	// double-record every call.
+	api.SetOutboundSink(outboundAPILogSink)
+	notification.SetSink(outboundAPILogSink)
+	geocoding.SetSink(outboundAPILogSink)
+	tesla.SetAuthSink(outboundAPILogSink, cfg.Tesla.Timeout)
 
 	// Fleet Telemetry handler — created early so the worker can check streaming state
 	var telemetryHandler *api.TelemetryHandler
@@ -521,7 +535,15 @@ func main() {
 	// Gas price worker — polls EIA API for US average gasoline price
 	var gasPriceWorker *worker.GasPriceWorker
 	if cfg.GasPrice.APIKey != "" {
-		eiaAdapter := gasprices.NewEIAAdapter(cfg.GasPrice.APIKey)
+		eiaAdapter := gasprices.NewEIAAdapter(
+			cfg.GasPrice.APIKey,
+			gasprices.WithHTTPClient(httputil.NewClient(httputil.ClientConfig{
+				Name:          "eia",
+				Timeout:       config.HTTPClientTimeout,
+				Sink:          outboundAPILogSink,
+				EnableLogging: true,
+			})),
+		)
 		gasPriceWorker = worker.NewGasPriceWorker(db, cfg.GasPrice, eiaAdapter)
 		resilience.SafeGoLoop(ctx, "gas-price-worker", func(loopCtx context.Context) {
 			gasPriceWorker.Start(loopCtx)

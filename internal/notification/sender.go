@@ -12,9 +12,12 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/rs/zerolog/log"
+
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
 
 // Request describes a notification to be delivered.
@@ -52,7 +55,69 @@ func Send(req *Request) error {
 	}
 }
 
-var httpClient = &http.Client{Timeout: 10 * time.Second}
+var httpClient *http.Client
+
+var (
+	// senderClientMu guards swaps of the package-level httpClient. The
+	// pointer is read on every notification dispatch so the swap MUST be
+	// race-safe.
+	senderClientMu sync.RWMutex
+)
+
+// senderClientTimeout matches the historical 10s budget retained for
+// backwards compatibility with the previous bare http.Client.
+const senderClientTimeout = 10 * time.Second
+
+func init() {
+	// Initialise the package-level client at import time so callers that
+	// never invoke SetSink (tests, off-by-default disabled-sink mode) keep
+	// today's behaviour: zerolog-only, no api_call_logs persistence.
+	httpClient = newSenderClient(nil)
+}
+
+// SetSink rebuilds the package-level outbound HTTP client to route every
+// notification dispatch through the supplied APICallSink. Production wiring
+// (cmd/teslasync/main.go, cmd/notification-worker/main.go,
+// cmd/automation-worker/main.go) calls this once at startup, AFTER the
+// async api_call_logs writer has been constructed and BEFORE the MQTT
+// notification consumer starts.
+//
+// Passing a nil sink reverts to the no-sink default (zerolog only) — useful
+// for tests that need to undo a previous SetSink call (use t.Cleanup).
+//
+// Safe to call concurrently with in-flight notification dispatches: the
+// pointer swap is guarded by senderClientMu and round-trips already
+// resolved their *http.Client before the swap remain valid for the
+// lifetime of that round-trip.
+func SetSink(sink httputil.APICallSink) {
+	c := newSenderClient(sink)
+	senderClientMu.Lock()
+	httpClient = c
+	senderClientMu.Unlock()
+}
+
+// newSenderClient builds the *http.Client used for every channel dispatch in
+// this package. A single client is reused (Name="notify-generic") because
+// the notification worker fan-outs over channel types in-process; per-call
+// LoggedTransport tags every entry with service="notify-generic" so
+// downstream queries see one consolidated stream.
+func newSenderClient(sink httputil.APICallSink) *http.Client {
+	return httputil.NewClient(httputil.ClientConfig{
+		Name:          "notify-generic",
+		Timeout:       senderClientTimeout,
+		Sink:          sink,
+		EnableLogging: true,
+	})
+}
+
+// senderClient returns the current package-level outbound client under the
+// senderClientMu read lock so the pointer is observed coherently with the
+// last SetSink swap.
+func senderClient() *http.Client {
+	senderClientMu.RLock()
+	defer senderClientMu.RUnlock()
+	return httpClient
+}
 
 func sendDiscord(webhookURL, title, message string) error {
 	payload := map[string]interface{}{
@@ -96,7 +161,7 @@ func sendWebhook(url, method, title, message string) error {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := httpClient.Do(req)
+	resp, err := senderClient().Do(req)
 	if err != nil {
 		return err
 	}
@@ -115,7 +180,7 @@ func sendNtfy(serverURL, topic, title, message string) error {
 		return err
 	}
 	req.Header.Set("Title", title)
-	resp, err := httpClient.Do(req)
+	resp, err := senderClient().Do(req)
 	if err != nil {
 		return err
 	}
@@ -139,7 +204,7 @@ func postJSON(url string, payload interface{}) error {
 	if err != nil {
 		return err
 	}
-	resp, err := httpClient.Post(url, "application/json", bytes.NewReader(body))
+	resp, err := senderClient().Post(url, "application/json", bytes.NewReader(body))
 	if err != nil {
 		return err
 	}

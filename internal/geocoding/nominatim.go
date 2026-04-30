@@ -9,7 +9,50 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
+
+// ---------------------------------------------------------------------------
+// Outbound api_call_logs sink registry for package geocoding
+// (Phase 38 / Prompt 13)
+//
+// All four geocoding adapters (nominatim, google, azure, search) share a
+// single outbound APICallSink installed once at startup via SetSink. Each
+// adapter's constructor builds its own httputil.NewClient inline (so the
+// service tag is local to the file) and reads the shared sink via
+// currentGeoSink(). Constructing the client in the file owning the
+// adapter — instead of in a helper — keeps the service-name literal
+// alongside the adapter and lets the gate verify that every migrated
+// file references httputil.NewClient directly.
+//
+// Disabled mode (cfg.APILogs.Enabled=false) installs nil — LoggedTransport
+// tolerates a nil sink (zerolog only).
+// ---------------------------------------------------------------------------
+
+var (
+	geoOutboundSinkMu sync.RWMutex
+	geoOutboundSink   httputil.APICallSink
+)
+
+// SetSink installs the package-level APICallSink that every constructor in
+// package geocoding (NewClient, NewGoogleClient, NewAzureClient,
+// NewSearcher) reads when building its *http.Client. cmd/teslasync/main.go
+// must call this BEFORE constructing any geocoder so the first request
+// already routes through LoggedTransport's tee.
+func SetSink(sink httputil.APICallSink) {
+	geoOutboundSinkMu.Lock()
+	geoOutboundSink = sink
+	geoOutboundSinkMu.Unlock()
+}
+
+// currentGeoSink returns the most recently installed sink under the
+// package-level RWMutex so each constructor's inline httputil.NewClient
+// call captures the current value into its adapter.
+func currentGeoSink() httputil.APICallSink {
+	geoOutboundSinkMu.RLock()
+	defer geoOutboundSinkMu.RUnlock()
+	return geoOutboundSink
+}
 
 // NominatimResult represents the JSON response from Nominatim reverse geocoding.
 type NominatimResult struct {
@@ -40,8 +83,13 @@ type Client struct {
 // NewClient creates a Nominatim client that respects the 1 req/sec rate limit.
 func NewClient(userAgent string) *Client {
 	return &Client{
-		httpClient: &http.Client{Timeout: config.HTTPClientTimeout},
-		userAgent:  userAgent,
+		httpClient: httputil.NewClient(httputil.ClientConfig{
+			Name:          "geocoder-nominatim",
+			Timeout:       config.HTTPClientTimeout,
+			Sink:          currentGeoSink(),
+			EnableLogging: true,
+		}),
+		userAgent: userAgent,
 	}
 }
 

@@ -23,6 +23,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
@@ -256,7 +257,16 @@ func (h *DevToolsHandler) TestAPIConnectivity(w http.ResponseWriter, r *http.Req
 	}
 
 	start := time.Now()
-	resp, err := http.DefaultClient.Do(req)
+	// devtools-tile-probe is the prompt-mandated service tag for the
+	// outbound HEAD probe of the Tesla Fleet API base URL. Constructed
+	// per-call so the latest SetOutboundSink wiring is honoured.
+	probeClient := httputil.NewClient(httputil.ClientConfig{
+		Name:          "devtools-tile-probe",
+		Timeout:       10 * time.Second,
+		Sink:          currentOutboundSink(),
+		EnableLogging: true,
+	})
+	resp, err := probeClient.Do(req)
 	latency := time.Since(start)
 
 	if err != nil {

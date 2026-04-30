@@ -6,12 +6,55 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 )
+
+// ---------------------------------------------------------------------------
+// Outbound api_call_logs sink registry (Phase 38 / Prompt 13)
+//
+// Several handlers in package api (system_handler, notification_handler,
+// devtools_handler) need to make outbound HTTP calls that should be
+// recorded into api_call_logs alongside inbound traffic. They cannot accept
+// the sink as a constructor argument because their entry points are loose
+// http.HandlerFunc factories, so the sink lives here as package-level
+// state. cmd/teslasync/main.go calls SetOutboundSink once at startup; per-
+// call construction in each handler reads the current value via
+// currentOutboundSink() when constructing httputil.NewClient.
+//
+// Disabled mode (cfg.APILogs.Enabled=false) installs a nil sink, which
+// httputil.LoggedTransport tolerates — the call still flows zerolog logs.
+// ---------------------------------------------------------------------------
+
+var (
+	apiOutboundSinkMu sync.RWMutex
+	apiOutboundSink   httputil.APICallSink
+)
+
+// SetOutboundSink installs the package-level APICallSink consumed by every
+// outbound HTTP client constructed inside package api (system_handler.go,
+// notification_handler.go, devtools_handler.go). main.go calls this once
+// after constructing the inbound async writer's adapter; passing nil
+// reverts to the no-sink default (zerolog only).
+func SetOutboundSink(sink httputil.APICallSink) {
+	apiOutboundSinkMu.Lock()
+	apiOutboundSink = sink
+	apiOutboundSinkMu.Unlock()
+}
+
+// currentOutboundSink returns the most recently installed sink under the
+// shared RWMutex so per-call helpers in sibling handler files build their
+// httputil.NewClient with the latest wiring.
+func currentOutboundSink() httputil.APICallSink {
+	apiOutboundSinkMu.RLock()
+	defer apiOutboundSinkMu.RUnlock()
+	return apiOutboundSink
+}
 
 // VersionHandler returns the application and Helm chart version.
 func VersionHandler(appVersion string, cfg *config.Config) http.HandlerFunc {
@@ -62,10 +105,10 @@ func UpdateCheckHandler() http.HandlerFunc {
 		currentChart := os.Getenv("HELM_CHART_VERSION")
 		if currentChart == "" {
 			writeJSON(w, http.StatusOK, map[string]interface{}{
-				"current":       "unknown",
-				"latest":        "unknown",
+				"current":          "unknown",
+				"latest":           "unknown",
 				"update_available": false,
-				"message":       "HELM_CHART_VERSION not set",
+				"message":          "HELM_CHART_VERSION not set",
 			})
 			return
 		}
@@ -82,7 +125,12 @@ func UpdateCheckHandler() http.HandlerFunc {
 		}
 
 		// Check GitHub releases
-		client := &http.Client{Timeout: 5 * time.Second}
+		client := httputil.NewClient(httputil.ClientConfig{
+			Name:          "github-releases",
+			Timeout:       5 * time.Second,
+			Sink:          currentOutboundSink(),
+			EnableLogging: true,
+		})
 		resp, err := client.Get("https://api.github.com/repos/ev-dev-labs/teslasync/releases/latest")
 		if err != nil {
 			writeJSON(w, http.StatusOK, map[string]interface{}{
@@ -231,7 +279,15 @@ func WorkersHealthHandler() http.HandlerFunc {
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		client := &http.Client{Timeout: 3 * time.Second}
+		// system-dns-check is the prompt-mandated service name for this
+		// per-call worker /healthz probe. The 3s timeout matches the
+		// historical bare-client budget.
+		client := httputil.NewClient(httputil.ClientConfig{
+			Name:          "system-dns-check",
+			Timeout:       3 * time.Second,
+			Sink:          currentOutboundSink(),
+			EnableLogging: true,
+		})
 		results := make([]workerStatus, len(workers))
 
 		for i, wk := range workers {

@@ -11,6 +11,8 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+
+	"github.com/ev-dev-labs/teslasync/internal/api"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
@@ -53,6 +55,33 @@ func main() {
 	}
 	defer db.Close()
 	log.Info().Msg("database connected")
+
+	// ── Outbound api_call_logs sink ──────────────────────────────────
+	// The notification worker fires HTTP webhooks (Discord/Slack/ntfy/
+	// generic) via internal/notification, which builds its outbound
+	// *http.Client through httputil.NewClient(Name="notify-generic").
+	// Each worker process owns its own asyncAPICallLogger because the
+	// API server's logger lives in another process and cannot be shared
+	// over a function call boundary. When cfg.APILogs.Enabled=false we
+	// install a nil sink (LoggedTransport then logs zerolog only).
+	var inboundAPILogger api.APICallLogger
+	if cfg.APILogs.Enabled {
+		apiLogRepo := database.NewAPICallLogRepo(db)
+		inboundAPILogger = api.NewAsyncAPICallLogger(apiLogRepo, api.AsyncLoggerOptions{
+			QueueCapacity: cfg.APILogs.QueueCapacity,
+			BatchSize:     cfg.APILogs.BatchSize,
+			FlushInterval: cfg.APILogs.FlushInterval,
+		})
+		log.Info().
+			Bool("capture_bodies", cfg.APILogs.CaptureBodies).
+			Int("queue_capacity", cfg.APILogs.QueueCapacity).
+			Int("batch_size", cfg.APILogs.BatchSize).
+			Dur("flush_interval", cfg.APILogs.FlushInterval).
+			Msg("notification-worker outbound api_call_logs sink enabled")
+	} else {
+		log.Info().Msg("notification-worker outbound api_call_logs sink disabled (API_LOGS_INBOUND_ENABLED=false)")
+	}
+	notification.SetSink(api.APICallSinkAdapter(inboundAPILogger, cfg.APILogs.CaptureBodies))
 
 	// MQTT connection
 	opts := pahomqtt.NewClientOptions().
@@ -155,6 +184,19 @@ func main() {
 	log.Info().Str("signal", sig.String()).Msg("shutting down notification worker")
 	cancel()
 	worker.Shutdown()
+	// Drain the outbound api_call_logs writer with a FRESH context so
+	// queued rows still reach Postgres after the root ctx has been
+	// cancelled. Reusing the cancelled ctx here would short-circuit
+	// CreateBatch on its very first call and drop everything in flight.
+	if inboundAPILogger != nil {
+		drainCtx, drainCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		if err := inboundAPILogger.Shutdown(drainCtx); err != nil {
+			log.Warn().Err(err).Msg("notification-worker api_call_logs writer shutdown timed out — pending entries may have been dropped")
+		} else {
+			log.Info().Msg("notification-worker api_call_logs writer drained")
+		}
+		drainCancel()
+	}
 	log.Info().Msg("notification worker stopped")
 }
 

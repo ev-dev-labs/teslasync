@@ -10,10 +10,25 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
+
+// notifyOutboundClient builds a fresh *http.Client for the named
+// notification adapter (notify-discord/notify-slack/notify-webhook). The
+// sink is read on every call so the most recent SetOutboundSink wins;
+// LoggedTransport tags every entry with service=name in api_call_logs.
+func notifyOutboundClient(name string) *http.Client {
+	return httputil.NewClient(httputil.ClientConfig{
+		Name:          name,
+		Timeout:       config.HTTPClientTimeout,
+		Sink:          currentOutboundSink(),
+		EnableLogging: true,
+	})
+}
 
 // NotificationHandler handles notification channel CRUD and test delivery.
 type NotificationHandler struct {
@@ -326,7 +341,7 @@ func sendDiscord(webhookURL, title, message string) error {
 			{"title": title, "description": message, "color": 0xE82127},
 		},
 	}
-	return postJSON(webhookURL, payload)
+	return postJSON("notify-discord", webhookURL, payload)
 }
 
 func sendSlack(webhookURL, title, message string) error {
@@ -336,7 +351,7 @@ func sendSlack(webhookURL, title, message string) error {
 	payload := map[string]interface{}{
 		"text": fmt.Sprintf("*%s*\n%s", title, message),
 	}
-	return postJSON(webhookURL, payload)
+	return postJSON("notify-slack", webhookURL, payload)
 }
 
 func sendTelegram(botToken, chatID, title, message string) error {
@@ -349,7 +364,7 @@ func sendTelegram(botToken, chatID, title, message string) error {
 		"text":       fmt.Sprintf("*%s*\n%s", title, message),
 		"parse_mode": "Markdown",
 	}
-	return postJSON(url, payload)
+	return postJSON("notify-webhook", url, payload)
 }
 
 func sendWebhook(url, method, title, message string) error {
@@ -366,7 +381,7 @@ func sendWebhook(url, method, title, message string) error {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := (&http.Client{Timeout: config.HTTPClientTimeout}).Do(req)
+	resp, err := notifyOutboundClient("notify-webhook").Do(req)
 	if err != nil {
 		return err
 	}
@@ -393,7 +408,7 @@ func sendNtfy(serverURL, topic, title, message string) error {
 	req.Header.Set("Title", title)
 	req.Header.Set("Priority", "default")
 	req.Header.Set("Tags", "electric_plug")
-	resp, err := (&http.Client{Timeout: config.HTTPClientTimeout}).Do(req)
+	resp, err := notifyOutboundClient("notify-webhook").Do(req)
 	if err != nil {
 		return err
 	}
@@ -414,15 +429,19 @@ func sendPushover(appToken, userKey, title, message string) error {
 		"title":   title,
 		"message": message,
 	}
-	return postJSON("https://api.pushover.net/1/messages.json", payload)
+	return postJSON("notify-webhook", "https://api.pushover.net/1/messages.json", payload)
 }
 
-func postJSON(url string, payload interface{}) error {
+// postJSON dispatches a JSON payload to the supplied URL using the named
+// outbound client. clientName flows through LoggedTransport as the
+// api_call_logs.service tag so Discord/Slack/generic webhook calls are
+// distinguishable in the hypertable.
+func postJSON(clientName, url string, payload interface{}) error {
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
-	resp, err := (&http.Client{Timeout: config.HTTPClientTimeout}).Post(url, "application/json", bytes.NewReader(body))
+	resp, err := notifyOutboundClient(clientName).Post(url, "application/json", bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
