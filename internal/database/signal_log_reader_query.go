@@ -1,0 +1,380 @@
+package database
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+)
+
+// SignalTraceEntry represents a single signal value at a point in time,
+// returned by SignalTrace for time-series reconstruction (position traces,
+// energy curves, etc.).
+//
+// Named SignalTraceEntry (not SignalLogEntry) to avoid conflict with
+// the MongoDB-based SignalLogEntry in signal_log_repo.go.
+type SignalTraceEntry struct {
+	Timestamp time.Time
+	Signal    string
+	ValueNum  *float64
+	ValueStr  *string
+	ValueBool *bool
+	ValueJson map[string]interface{}
+}
+
+// SnapshotAt returns the latest value of every signal for a vehicle at or before
+// the given timestamp. Reconstructs full signal context at any point in time.
+//
+// Uses DISTINCT ON with the (vehicle_id, signal, created_at DESC) index for
+// efficient last-value-per-signal lookups on the hypertable.
+func (r *SignalLogReader) SnapshotAt(ctx context.Context, vehicleID int64, at time.Time) (map[string]interface{}, error) {
+	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
+	defer cancel()
+
+	query := `SELECT DISTINCT ON (signal) signal, value_num, value_str, value_bool, value_jsonb
+	          FROM signal_log
+	          WHERE vehicle_id = $1 AND created_at <= $2
+	          ORDER BY signal, created_at DESC`
+
+	rows, err := r.db.Pool.Query(ctx, query, vehicleID, at)
+	if err != nil {
+		return nil, fmt.Errorf("snapshot at %v for vehicle %d: %w", at, vehicleID, err)
+	}
+	defer rows.Close()
+
+	result := make(map[string]interface{})
+	for rows.Next() {
+		signal, val, err := scanSignalValue(rows)
+		if err != nil {
+			return nil, fmt.Errorf("snapshot at scan: %w", err)
+		}
+		if val != nil {
+			result[signal] = val
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Unpack historical Location compounds stored as value_jsonb.
+	// Newer flattened rows (Latitude/Longitude) take precedence.
+	unpackLocationCompounds(result)
+
+	return result, nil
+}
+
+// SignalAt returns a single signal's value at or before the given timestamp.
+// Returns (nil, nil) if the signal was never recorded before that time.
+func (r *SignalLogReader) SignalAt(ctx context.Context, vehicleID int64, signal string, at time.Time) (interface{}, error) {
+	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
+	defer cancel()
+
+	query := `SELECT value_num, value_str, value_bool, value_jsonb
+	          FROM signal_log
+	          WHERE vehicle_id = $1 AND signal = $2 AND created_at <= $3
+	          ORDER BY created_at DESC
+	          LIMIT 1`
+
+	var vNum *float64
+	var vStr *string
+	var vBool *bool
+	var vJsonb []byte
+
+	err := r.db.Pool.QueryRow(ctx, query, vehicleID, signal, at).Scan(&vNum, &vStr, &vBool, &vJsonb)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("signal %q at %v for vehicle %d: %w", signal, at, vehicleID, err)
+	}
+
+	return decodeValue(vNum, vStr, vBool, vJsonb), nil
+}
+
+// SnapshotBetween returns the latest value of every signal received within a
+// time window. Useful for answering "what signals changed during this
+// drive/charge session".
+func (r *SignalLogReader) SnapshotBetween(ctx context.Context, vehicleID int64, from, to time.Time) (map[string]interface{}, error) {
+	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
+	defer cancel()
+
+	query := `SELECT DISTINCT ON (signal) signal, value_num, value_str, value_bool, value_jsonb
+	          FROM signal_log
+	          WHERE vehicle_id = $1 AND created_at >= $2 AND created_at <= $3
+	          ORDER BY signal, created_at DESC`
+
+	rows, err := r.db.Pool.Query(ctx, query, vehicleID, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("snapshot between %v–%v for vehicle %d: %w", from, to, vehicleID, err)
+	}
+	defer rows.Close()
+
+	result := make(map[string]interface{})
+	for rows.Next() {
+		signal, val, err := scanSignalValue(rows)
+		if err != nil {
+			return nil, fmt.Errorf("snapshot between scan: %w", err)
+		}
+		if val != nil {
+			result[signal] = val
+		}
+	}
+	return result, rows.Err()
+}
+
+// SignalTrace returns all values of specific signals within a time window,
+// sorted by timestamp ASC. Designed for position traces, energy curves, and
+// other time-series visualizations.
+func (r *SignalLogReader) SignalTrace(ctx context.Context, vehicleID int64, signals []string, from, to time.Time) ([]SignalTraceEntry, error) {
+	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
+	defer cancel()
+
+	query := `SELECT created_at, signal, value_num, value_str, value_bool, value_jsonb
+	          FROM signal_log
+	          WHERE vehicle_id = $1 AND signal = ANY($2)
+	            AND created_at >= $3 AND created_at <= $4
+	          ORDER BY created_at ASC`
+
+	rows, err := r.db.Pool.Query(ctx, query, vehicleID, signals, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("signal trace for vehicle %d: %w", vehicleID, err)
+	}
+	defer rows.Close()
+
+	var entries []SignalTraceEntry
+	for rows.Next() {
+		var e SignalTraceEntry
+		var vJsonb []byte
+		if err := rows.Scan(&e.Timestamp, &e.Signal, &e.ValueNum, &e.ValueStr, &e.ValueBool, &vJsonb); err != nil {
+			return nil, fmt.Errorf("signal trace scan: %w", err)
+		}
+		if len(vJsonb) > 0 {
+			var m map[string]interface{}
+			if err := json.Unmarshal(vJsonb, &m); err == nil {
+				e.ValueJson = m
+			}
+		}
+		entries = append(entries, e)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if entries == nil {
+		entries = []SignalTraceEntry{}
+	}
+	return entries, nil
+}
+
+// scanSignalValue scans a row with columns (signal, value_num, value_str,
+// value_bool, value_jsonb) and returns the decoded value using the priority:
+// value_num → value_bool → value_jsonb → value_str.
+func scanSignalValue(rows pgx.Rows) (string, interface{}, error) {
+	var signal string
+	var vNum *float64
+	var vStr *string
+	var vBool *bool
+	var vJsonb []byte
+
+	if err := rows.Scan(&signal, &vNum, &vStr, &vBool, &vJsonb); err != nil {
+		return "", nil, err
+	}
+	return signal, decodeValue(vNum, vStr, vBool, vJsonb), nil
+}
+
+// LatestTimestamp returns the most recent signal timestamp for a vehicle.
+// Returns (zero time, nil) if no signals exist for the vehicle.
+func (r *SignalLogReader) LatestTimestamp(ctx context.Context, vehicleID int64) (time.Time, error) {
+	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
+	defer cancel()
+
+	query := `SELECT MAX(created_at) FROM signal_log WHERE vehicle_id = $1`
+
+	var ts *time.Time
+	err := r.db.Pool.QueryRow(ctx, query, vehicleID).Scan(&ts)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("latest timestamp for vehicle %d: %w", vehicleID, err)
+	}
+	if ts == nil {
+		return time.Time{}, nil
+	}
+	return *ts, nil
+}
+
+// PivotMapping maps a Tesla signal name to an output field name for pivot queries.
+type PivotMapping struct {
+	Signal string // Tesla signal name in signal_log (e.g. "VehicleSpeed")
+	Field  string // Output JSON field name (e.g. "speed_mph")
+}
+
+// PivotRow is one time-bucketed row with named fields.
+type PivotRow struct {
+	Timestamp time.Time              `json:"ts"`
+	Fields    map[string]interface{} `json:"fields,omitempty"`
+}
+
+// SignalTracePivot queries signal_log for specified signals within a time window,
+// then pivots vertical rows into horizontal PivotRows grouped by timestamp
+// (truncated to second precision).
+//
+// Signals arriving within the same second are merged into one row.
+// Missing signals in a row produce no map entry (nil-absent).
+// If the same signal appears multiple times in the same second, the last value wins.
+func (r *SignalLogReader) SignalTracePivot(
+	ctx context.Context,
+	vehicleID int64,
+	mappings []PivotMapping,
+	from, to time.Time,
+) ([]PivotRow, error) {
+	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
+	defer cancel()
+
+	signalNames := make([]string, len(mappings))
+	fieldBySignal := make(map[string]string, len(mappings))
+	for i, m := range mappings {
+		signalNames[i] = m.Signal
+		fieldBySignal[m.Signal] = m.Field
+	}
+
+	query := `SELECT date_trunc('second', created_at) AS ts,
+	                 signal, value_num, value_str, value_bool, value_jsonb
+	          FROM signal_log
+	          WHERE vehicle_id = $1 AND signal = ANY($2)
+	            AND created_at >= $3 AND created_at <= $4
+	          ORDER BY ts ASC, signal ASC, created_at ASC`
+
+	rows, err := r.db.Pool.Query(ctx, query, vehicleID, signalNames, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("signal trace pivot for vehicle %d: %w", vehicleID, err)
+	}
+	defer rows.Close()
+
+	// Collect rows grouped by truncated timestamp.
+	// Within a second, later rows for the same signal overwrite earlier ones (last-write-wins).
+	type bucketEntry struct {
+		ts     time.Time
+		fields map[string]interface{}
+	}
+	var buckets []bucketEntry
+
+	for rows.Next() {
+		var ts time.Time
+		var signal string
+		var vNum *float64
+		var vStr *string
+		var vBool *bool
+		var vJsonb []byte
+
+		if err := rows.Scan(&ts, &signal, &vNum, &vStr, &vBool, &vJsonb); err != nil {
+			return nil, fmt.Errorf("signal trace pivot scan: %w", err)
+		}
+
+		field, ok := fieldBySignal[signal]
+		if !ok {
+			continue
+		}
+		val := decodeValue(vNum, vStr, vBool, vJsonb)
+		if val == nil {
+			continue
+		}
+
+		// Append a new bucket when the timestamp changes.
+		if len(buckets) == 0 || !buckets[len(buckets)-1].ts.Equal(ts) {
+			buckets = append(buckets, bucketEntry{
+				ts:     ts,
+				fields: make(map[string]interface{}),
+			})
+		}
+		buckets[len(buckets)-1].fields[field] = val
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	result := make([]PivotRow, len(buckets))
+	for i, b := range buckets {
+		result[i] = PivotRow{Timestamp: b.ts, Fields: b.fields}
+	}
+	return result, nil
+}
+
+// SignalTracePivotFlat returns []map[string]interface{} with "ts" + field names
+// as top-level keys. Easier for JSON serialization — no nested "fields" object.
+// Each map: {"ts": "2026-04-24T14:00:01Z", "speed_mph": 65, "battery_pct": 90}
+func (r *SignalLogReader) SignalTracePivotFlat(
+	ctx context.Context,
+	vehicleID int64,
+	mappings []PivotMapping,
+	from, to time.Time,
+) ([]map[string]interface{}, error) {
+	pivoted, err := r.SignalTracePivot(ctx, vehicleID, mappings, from, to)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]map[string]interface{}, len(pivoted))
+	for i, row := range pivoted {
+		flat := make(map[string]interface{}, len(row.Fields)+1)
+		flat["ts"] = row.Timestamp
+		for k, v := range row.Fields {
+			flat[k] = v
+		}
+		result[i] = flat
+	}
+	return result, nil
+}
+
+// decodeValue applies the canonical priority for multi-typed signal values:
+//
+//	value_num (float64) → value_bool (bool) → value_jsonb (map) → value_str (string).
+//
+// Returns nil when all columns are NULL.
+func decodeValue(vNum *float64, vStr *string, vBool *bool, vJsonb []byte) interface{} {
+	switch {
+	case vNum != nil:
+		return *vNum
+	case vBool != nil:
+		return *vBool
+	case len(vJsonb) > 0:
+		var m map[string]interface{}
+		if err := json.Unmarshal(vJsonb, &m); err == nil {
+			return m
+		}
+		// Malformed JSONB — fall through to string
+	case vStr != nil:
+		return *vStr
+	}
+	return nil
+}
+
+// unpackLocationCompounds expands historical Location compound blobs (stored
+// as value_jsonb) into flat Latitude/Longitude keys. Only sets the flat key
+// if it doesn't already exist — newer flattened rows take precedence.
+func unpackLocationCompounds(result map[string]interface{}) {
+	for _, loc := range []struct{ compound, lat, lon string }{
+		{"Location", "Latitude", "Longitude"},
+		{"OriginLocation", "OriginLatitude", "OriginLongitude"},
+		{"DestinationLocation", "DestinationLatitude", "DestinationLongitude"},
+	} {
+		locRaw, ok := result[loc.compound]
+		if !ok {
+			continue
+		}
+		locMap, mapOk := locRaw.(map[string]interface{})
+		if !mapOk {
+			continue
+		}
+		if lat, latOk := locMap["latitude"]; latOk {
+			if _, exists := result[loc.lat]; !exists {
+				result[loc.lat] = lat
+			}
+		}
+		if lon, lonOk := locMap["longitude"]; lonOk {
+			if _, exists := result[loc.lon]; !exists {
+				result[loc.lon] = lon
+			}
+		}
+	}
+}

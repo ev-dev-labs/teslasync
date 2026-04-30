@@ -1,0 +1,76 @@
+## PREFLIGHT
+start_utc=2026-04-30T07:46:39.2448059+00:00
+go_version=go version go1.26.1 windows/amd64
+engineer_email=iamatulmgupta@gmail.com
+powershell_version=7.6.1
+os_platform=Win32NT
+exports invariant ok: 523 exported identifiers preserved
+import-graph invariant ok: 31 imports preserved
+## SURVEY
+source_lines_after=15
+new_file=internal/database/signal_log_reader_query.go lines=337
+new_file=internal/database/signal_log_reader_aggregations.go lines=160
+## REASONING
+mechanical decomposition: split internal/database/signal_log_reader.go into internal/database/signal_log_reader_query.go, internal/database/signal_log_reader_aggregations.go
+no behavior, API, SQL, JSON, route, config, or runtime ordering changes
+
+split map:
+source: internal/database/signal_log_reader.go (HEAD: 565 lines, 21 top-level decls)
+
+destination: internal/database/signal_log_reader_query.go
+  type SignalTraceEntry
+  type PivotMapping
+  type PivotRow
+  method SignalLogReader.SnapshotAt           (point-in-time)
+  method SignalLogReader.SignalAt             (point-in-time)
+  method SignalLogReader.SnapshotBetween      (range scan)
+  method SignalLogReader.SignalTrace          (range scan, time-series)
+  method SignalLogReader.LatestTimestamp      (metadata point query)
+  method SignalLogReader.SignalTracePivot     (range scan, pivot)
+  method SignalLogReader.SignalTracePivotFlat (range scan, pivot)
+  func   scanSignalValue                      (unexported helper - shared by Snapshot* methods)
+  func   decodeValue                          (unexported helper - shared by SignalAt, scanSignalValue, SignalTracePivot)
+  func   unpackLocationCompounds              (unexported helper - used by SnapshotAt)
+
+destination: internal/database/signal_log_reader_aggregations.go
+  type   BrickVoltageHistoryEntry
+  method SignalLogReader.DriveAggregates      (window aggregation)
+  method SignalLogReader.RegenEnergy          (window aggregation)
+  method SignalLogReader.ChargeAggregates     (window aggregation)
+  method SignalLogReader.BrickVoltageHistory  (time_bucket downsampling, hourly)
+
+remaining in internal/database/signal_log_reader.go:
+  type  SignalLogReader      (struct - shared receiver for all moved methods)
+  func  NewSignalLogReader   (constructor)
+  const queryTimeout         (used by every method in both new files)
+
+cross-file unexported references (same package, no import needed):
+  - scanSignalValue, decodeValue, unpackLocationCompounds: defined in
+    signal_log_reader_query.go, referenced only by methods in the same file.
+    No cross-file unexported call paths from aggregations -> query helpers.
+  - queryTimeout: defined in signal_log_reader.go, referenced by every method
+    in both new files (cross-file constant - permitted within package).
+  - SignalLogReader struct + NewSignalLogReader: defined in
+    signal_log_reader.go; methods in both new files attach to *SignalLogReader.
+
+import distribution (subset of original {context, encoding/json, errors, fmt, time, github.com/jackc/pgx/v5}):
+  - signal_log_reader.go            : time
+  - signal_log_reader_query.go      : context, encoding/json, errors, fmt, time, github.com/jackc/pgx/v5
+  - signal_log_reader_aggregations.go: context, fmt, time
+  union preserved (import-graph invariant gate passed at 31 imports)
+## CHANGES
+internal/database/signal_log_reader.go sha256=63DE4CC462AA52C21CF326025DC4AA3ACDD24638EE68B8B6A8BD348B19C61D20
+internal/database/signal_log_reader_query.go sha256=1C47B395E3A69B86F0534F1498D03B3DA25DB55CFAFF673A883B67B83C8D557F
+internal/database/signal_log_reader_aggregations.go sha256=BD543B0816684E94F9B398643D3C039D6499AFE4A291991C469681D1EDF6C7AA
+## GATE
+go build ./internal/database/... exit=0
+
+go build ./... exit=0
+
+go vet exit=0
+
+go test exit=0
+ok  	github.com/ev-dev-labs/teslasync/internal/database	2.561s
+
+EXIT=0
+STATUS=DONE
