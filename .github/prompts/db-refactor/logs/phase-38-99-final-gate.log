@@ -1,0 +1,140 @@
+=== PREFLIGHT ===
+=== SURVEY ===
+Final gate checks predecessor logs, ADR-001 boundary, live-store merge regression, signal_log fallback wiring, restamp wiring, and full test/lint suites.
+=== REASONING ===
+No code changes are allowed in this gate.
+=== CHANGES ===
+No source files changed.
+=== GATE ===
+FORBIDDEN_SNAPSHOT_READS_FOUND
+D:\repos\teslasync\internal\api\chatbot_handler_chat.go:176:SELECT battery_level, rated_range FROM positions WHERE vehicle_id = v.id ORDER BY ts DESC LIMIT 1
+D:\repos\teslasync\internal\api\share_handler.go:287:// Build map, elevation, and speed profiles from positions/telemetry
+D:\repos\teslasync\internal\api\signal_handler.go:36:// WithSignalHistory adds the Postgres signal_history writer for primary queries.
+D:\repos\teslasync\internal\api\signal_handler.go:98:// Try Postgres signal_history first
+D:\repos\teslasync\internal\api\signal_handler.go:170:// Try Postgres signal_history first (most accurate — actual observed signals)
+D:\repos\teslasync\internal\api\signal_handler.go:178:"source":     "signal_history",
+D:\repos\teslasync\internal\api\signal_handler.go:264:// Try Postgres signal_history first
+D:\repos\teslasync\internal\api\telemetry_handler_ingest.go:126:// Log every signal to Postgres signal_history (buffered, non-blocking)
+D:\repos\teslasync\internal\api\telemetry_handler_ingest.go:469:// vehicle_live_state and signal_history; writing 0,0 coordinates here
+D:\repos\teslasync\internal\api\telemetry_handler_ingest.go:653:// Tables whose repos were removed (vehicle_live_state, charging_telemetry,
+D:\repos\teslasync\internal\api\telemetry_handler_integration_test.go:27://     charging_telemetry / motor_snapshots / vehicle_live_state / etc).
+D:\repos\teslasync\internal\api\telemetry_handler_integration_test.go:99:t.Errorf("vehicle_live_state row missing for vehicle %d", vehicleID)
+D:\repos\teslasync\internal\api\telemetry_handler_integration_test.go:283:c.liveState = countByVehicle(t, ctx, db, "vehicle_live_state", vehicleID)
+D:\repos\teslasync\internal\api\telemetry_handler.go:74:// Per-signal history to Postgres (signal_history table)
+D:\repos\teslasync\internal\api\telemetry_sessions_charge_tracking.go:431:Msg("telemetry: signal_history charge start snapshot failed")
+D:\repos\teslasync\internal\api\telemetry_sessions_charge_tracking.go:436:Msg("telemetry: signal_history charge end snapshot failed")
+D:\repos\teslasync\internal\api\telemetry_sessions_drive_tracking.go:838:Msg("telemetry: signal_history start snapshot failed")
+D:\repos\teslasync\internal\api\telemetry_sessions_drive_tracking.go:843:Msg("telemetry: signal_history end snapshot failed")
+D:\repos\teslasync\internal\config\config.go:257:SignalHistoryRetentionDays: envInt("SIGNAL_HISTORY_RETENTION_DAYS", 0),
+D:\repos\teslasync\internal\database\maintenance.go:26:`DELETE FROM positions WHERE ts < $1 AND ctid IN (
+D:\repos\teslasync\internal\database\maintenance.go:27:SELECT ctid FROM positions WHERE ts < $1 LIMIT $2
+D:\repos\teslasync\internal\database\maintenance.go:127:err := db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM positions`).Scan(&stats.Total)
+D:\repos\teslasync\internal\database\maintenance.go:138:FROM positions
+D:\repos\teslasync\internal\database\position_repo.go:68:FROM positions
+D:\repos\teslasync\internal\models\enum_vehicle_states.go:3:// This file defines typed string enums for vehicle_live_state columns so
+D:\repos\teslasync\internal\models\enum_vehicle_states.go:10:// state lives in vehicle_live_state), ADR-004 (no JSONB carve-outs).
+D:\repos\teslasync\internal\models\enum_vehicle_states.go:12:// ChargingStateKind enumerates the value of vehicle_live_state.charging_state.
+D:\repos\teslasync\internal\models\enum_vehicle_states.go:29:// vehicle_live_state.charging_state values. Keep exhaustive and in sync
+D:\repos\teslasync\internal\models\enum_vehicle_states.go:45:// HVACStateKind enumerates the value of vehicle_live_state.hvac_state.
+D:\repos\teslasync\internal\models\enum_vehicle_states.go:62:// vehicle_live_state.hvac_state values. Keep exhaustive and in sync with
+D:\repos\teslasync\internal\models\enum_vehicle_states.go:78:// ShiftStateKind enumerates the value of vehicle_live_state.shift_state.
+D:\repos\teslasync\internal\models\enum_vehicle_states.go:95:// vehicle_live_state.shift_state values. Keep exhaustive and in sync
+D:\repos\teslasync\internal\signal\store.go:43:// falling back to the Postgres vehicle_live_state table (~30 columns).
+D:\repos\teslasync\internal\signal\store.go:192:// Used on startup to warm the store from signal_history.
+D:\repos\teslasync\internal\signal\store.go:217:log.Debug().Int64("vehicle_id", vehicleID).Int("hydrated", added).Int("skipped", len(signals)-added).Msg("signal store: hydrated from signal_history")
+D:\repos\teslasync\internal\telemetry\normalize.go:39://     strings because downstream consumers (signal_history,
+D:\repos\teslasync\internal\telemetry\normalize.go:40://     vehicle_live_state, snapshot tables) expect scalar string values.
+READER_IN_ROUTER=True
+RESTAMP_HOOKED=True
+FALLBACK_WIRED=True
+MAIN_WIRES_SINK=True
+INBOUND_MIDDLEWARE_REGISTERED=True
+OUTBOUND_SINK_INTERFACE=True
+BATCH_INSERT_PRESENT=True
+OUTBOUND_SINK_FILE=True
+CONFIG_BINDINGS_PRESENT=True
+INBOUND_MIDDLEWARE_FILE=True
+ADAPTER_EXPOSED=True
+LOGGED_TRANSPORT_USES_SINK=True
+FAILED_BEFORE_TESTS=True
+?   	github.com/ev-dev-labs/teslasync/cmd/automation-worker	[no test files]
+?   	github.com/ev-dev-labs/teslasync/cmd/export-worker	[no test files]
+?   	github.com/ev-dev-labs/teslasync/cmd/notification-worker	[no test files]
+?   	github.com/ev-dev-labs/teslasync/cmd/teslasync	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/adapter/gasprices	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/geocoding	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/mqtt	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/postgres	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/postgres/queries	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/redis	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/storage	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/tesla	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/api	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/app/chargingsvc	0.913s
+ok  	github.com/ev-dev-labs/teslasync/internal/app/dashboardsvc	0.834s
+ok  	github.com/ev-dev-labs/teslasync/internal/app/exportsvc	0.807s
+ok  	github.com/ev-dev-labs/teslasync/internal/app/notificationsvc	0.902s
+ok  	github.com/ev-dev-labs/teslasync/internal/app/tripsvc	0.991s
+ok  	github.com/ev-dev-labs/teslasync/internal/app/vehiclesvc	1.036s
+ok  	github.com/ev-dev-labs/teslasync/internal/automation	0.302s
+ok  	github.com/ev-dev-labs/teslasync/internal/automation/action	1.575s
+ok  	github.com/ev-dev-labs/teslasync/internal/automation/condition	1.162s
+?   	github.com/ev-dev-labs/teslasync/internal/automation/presets	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/automation/safety	0.551s
+?   	github.com/ev-dev-labs/teslasync/internal/automation/trigger	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/backup	0.360s
+ok  	github.com/ev-dev-labs/teslasync/internal/cache	1.351s
+ok  	github.com/ev-dev-labs/teslasync/internal/config	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/crypto	0.819s
+ok  	github.com/ev-dev-labs/teslasync/internal/database	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/domain	0.734s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/charging	0.714s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/export	0.653s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/fsm	0.760s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/notification	0.719s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/trip	0.684s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/user	0.687s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/vehicle	0.700s
+ok  	github.com/ev-dev-labs/teslasync/internal/enums	1.131s
+ok  	github.com/ev-dev-labs/teslasync/internal/events	1.075s
+ok  	github.com/ev-dev-labs/teslasync/internal/export	0.245s
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm	1.403s
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/automation	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/charge	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/command	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/drive	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/notification	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/telemetry	0.834s
+ok  	github.com/ev-dev-labs/teslasync/internal/geocoding	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/handler/dto	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/handler/middleware	0.194s
+?   	github.com/ev-dev-labs/teslasync/internal/handler/v1	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/metrics	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/models	0.630s
+ok  	github.com/ev-dev-labs/teslasync/internal/mqtt	0.204s
+ok  	github.com/ev-dev-labs/teslasync/internal/notification	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/platform/buildinfo	0.764s
+?   	github.com/ev-dev-labs/teslasync/internal/platform/cache	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/platform/config	0.628s
+?   	github.com/ev-dev-labs/teslasync/internal/platform/database	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/platform/httputil	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/platform/telemetry	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/polling	0.238s
+?   	github.com/ev-dev-labs/teslasync/internal/port/external	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/port/messaging	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/port/repository	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/resilience	4.896s
+ok  	github.com/ev-dev-labs/teslasync/internal/service	0.219s
+ok  	github.com/ev-dev-labs/teslasync/internal/signal	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/telemetry	0.858s
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/tracing	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/units	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/worker	0.211s
+?   	github.com/ev-dev-labs/teslasync/web/node_modules/flatted/golang/pkg/flatted	[no test files]
+GO_TEST_EXIT=0
+TSC_EXIT=0
+HELM_TEMPLATE_EXIT=0
+UNEXPECTED_STATUS_COUNT=0
+EXIT=1
+STATUS=BLOCKED
