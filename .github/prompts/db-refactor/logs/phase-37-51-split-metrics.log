@@ -1,0 +1,39 @@
+## PREFLIGHT
+start_utc=2026-04-30T08:30:56.1576980+00:00
+go_version=go version go1.26.1 windows/amd64
+engineer_email=iamatulmgupta@gmail.com
+powershell_version=7.6.1
+os_platform=Win32NT
+exports invariant ok: 74 exported identifiers preserved
+import-graph invariant ok: 2 imports preserved
+## SURVEY
+source_lines_after=322
+new_file=internal/metrics/metrics_telemetry.go lines=81
+new_file=internal/metrics/metrics_drive_charging.go lines=41
+## REASONING
+mechanical decomposition: split internal/metrics/metrics.go into internal/metrics/metrics_telemetry.go, internal/metrics/metrics_drive_charging.go
+no behavior, API, SQL, JSON, route, config, or runtime ordering changes
+split map:
+  source: internal/metrics/metrics.go
+  destinations: internal/metrics/metrics_telemetry.go, internal/metrics/metrics_drive_charging.go
+  metrics.go (remaining): vars AppInfo, UptimeSeconds, MigrationVersion, StartupDuration (App Info & Startup); HTTPRequestsTotal, HTTPRequestDuration, HTTPResponseSize (HTTP); DBQueryDuration, DBConnectionPoolSize, DBTransactionsTotal, WriteBufferDroppedTotal (Database); AlertsEvaluated, AlertsFired, NotificationsSent, AlertRulesEvaluated, AlertRulesFired, AlertRulesCooldownSkipped, AlertRuleEvalDuration, ActiveAlertRules, NotificationsDispatched (Alerts & Notifications); APIErrors, TeslaAPICallsTotal (API Errors); VehiclesRegistered, VehicleStateGauge (Vehicles); GeocodingTotal, GeocodingDuration, AddressBackfillRemaining, AddressBackfillCompleted (Geocoding & Addresses); PollCycleDuration, PollsTotal, PollsSaved, ExportJobsTotal, MaintenanceRuns (Polling & Workers); CacheOperations, CacheEntries, CacheEvictions (Cache); AuthAttempts, TokenRefreshes, RateLimitExceeded (Auth & Security); DBCircuitBreakerState (Circuit Breaker); VehicleLastSeen, SignalStoreEntries, SignalFlushDuration (Data Freshness & Pipeline); TotalDistanceKm, TotalEnergyKwh, TotalDrives, TotalCharges, GeofenceEvents (Business); FSMDispatchTotal, FSMReconcileTotal (FSM Dispatch); PanicsRecovered (Reliability)
+  metrics_telemetry.go: vars TelemetrySignalsProcessed, TelemetryMessagesReceived, TelemetryProcessingDuration, ActiveStreamingVehicles (Telemetry section); MQTTConnected, MQTTMessagesPublished, MQTTReconnects, SSEConnectionsActive, SSEEventsSent, SSEEventsDropped, SSEConnectionsTotal, SSEBroadcastDuration, SSEBytesSent (MQTT & SSE Connections section)
+  metrics_drive_charging.go: vars DriveSessionsActive, DriveSessionsCompleted, ChargeSessionsActive, ChargeSessionsCompleted, TelemetryBufferSize, TelemetryBufferDropped (Sessions section)
+  cross-file unexported references: none - package contains only top-level exported var declarations using promauto with no shared unexported helpers
+  note: this package uses promauto which auto-registers metrics at package init via its constructor calls; there are no Init() or MustRegister() entrypoints in the source to preserve, and the requested "Init()/MustRegister(...) must remain in metrics.go" sentence in the prompt does not apply to this package - the mechanical split preserves promauto-driven init order within Go's deterministic per-file alphabetical init ordering
+## CHANGES
+internal/metrics/metrics.go sha256=E2C4A621B0004DD2727F90E9D017950802310A71246362E2349CC1BD2106158D
+internal/metrics/metrics_telemetry.go sha256=78A4A87E14BDC403E70AD968EAE027C1AB6E79AD81EE9BF0D663FF42BC0A7754
+internal/metrics/metrics_drive_charging.go sha256=C8F8BE4CF8A331FD5BBCA1D297CEE041281927E638453EDCF0652EA43694655D
+## GATE
+go build ./internal/metrics/... exit=0
+
+go build ./... exit=0
+
+go vet exit=0
+
+go test exit=0
+?   	github.com/ev-dev-labs/teslasync/internal/metrics	[no test files]
+
+EXIT=0
+STATUS=DONE

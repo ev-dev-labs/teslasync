@@ -1,0 +1,97 @@
+// Package metrics provides all Prometheus metric declarations for TeslaSync.
+// This is a standalone package to avoid import cycles between api, polling,
+// signal, and worker packages.
+package metrics
+
+import (
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+)
+
+// ── Telemetry ──────────────────────────────────────────────
+
+var (
+	TelemetrySignalsProcessed = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "telemetry_signals_processed_total",
+		Help:      "Total telemetry signals processed by signal name",
+	}, []string{"signal"})
+
+	TelemetryMessagesReceived = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "telemetry_messages_received_total",
+		Help:      "Total MQTT telemetry messages received",
+	})
+
+	TelemetryProcessingDuration = promauto.NewHistogram(prometheus.HistogramOpts{
+		Namespace: "teslasync",
+		Name:      "telemetry_processing_duration_seconds",
+		Help:      "Time to process a telemetry message batch",
+		Buckets:   []float64{.001, .005, .01, .025, .05, .1, .25, .5, 1},
+	})
+
+	ActiveStreamingVehicles = promauto.NewGauge(prometheus.GaugeOpts{
+		Namespace: "teslasync",
+		Name:      "streaming_vehicles_active",
+		Help:      "Number of vehicles currently streaming telemetry",
+	})
+)
+
+// ── MQTT & SSE Connections ─────────────────────────────────
+
+var (
+	MQTTConnected = promauto.NewGauge(prometheus.GaugeOpts{
+		Namespace: "teslasync",
+		Name:      "mqtt_connected",
+		Help:      "Whether MQTT broker is connected (1=yes, 0=no)",
+	})
+
+	MQTTMessagesPublished = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "mqtt_messages_published_total",
+		Help:      "Total MQTT messages published",
+	})
+
+	MQTTReconnects = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "mqtt_reconnects_total",
+		Help:      "Total MQTT reconnection attempts",
+	})
+
+	SSEConnectionsActive = promauto.NewGauge(prometheus.GaugeOpts{
+		Namespace: "teslasync",
+		Name:      "sse_connections_active",
+		Help:      "Number of active SSE client connections",
+	})
+
+	SSEEventsSent = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "sse_events_sent_total",
+		Help:      "Total SSE events sent by event type",
+	}, []string{"event_type"})
+
+	SSEEventsDropped = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "sse_events_dropped_total",
+		Help:      "Total SSE events dropped due to full client buffer",
+	}, []string{"event_type"})
+
+	SSEConnectionsTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "sse_connections_total",
+		Help:      "Total SSE connections established since startup",
+	})
+
+	SSEBroadcastDuration = promauto.NewHistogram(prometheus.HistogramOpts{
+		Namespace: "teslasync",
+		Name:      "sse_broadcast_duration_seconds",
+		Help:      "Time spent broadcasting SSE events to all clients",
+		Buckets:   []float64{0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1},
+	})
+
+	SSEBytesSent = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "sse_bytes_sent_total",
+		Help:      "Total bytes sent via SSE connections",
+	})
+)
