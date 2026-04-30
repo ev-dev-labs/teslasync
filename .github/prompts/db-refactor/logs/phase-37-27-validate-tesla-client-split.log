@@ -1,0 +1,31 @@
+## PREFLIGHT
+start_utc=2026-04-30T05:11:41.5754416+00:00
+go_version=go version go1.26.1 windows/amd64
+engineer_email=iamatulmgupta@gmail.com
+powershell_version=7.6.1
+os_platform=Win32NT
+## SURVEY
+expected_file=internal/tesla/client.go lines=224
+expected_file=internal/tesla/client_auth.go lines=170
+expected_file=internal/tesla/client_vehicle_data.go lines=134
+expected_file=internal/tesla/client_commands.go lines=269
+expected_file=internal/tesla/client_fleet_telemetry.go lines=77
+expected_file=internal/tesla/client_partner_devtools.go lines=30
+expected_file=internal/tesla/client_energy_charging.go lines=99
+## REASONING
+validation only - confirm split preserved behavior, no source edits
+existing_files_count=7
+## CHANGES
+none (validation only)
+## GATE
+go build ./internal/tesla/... exit=0
+
+go build ./... exit=0
+
+go vet exit=0
+
+go test exit=0 (race=on, cgo=1 for this step only)
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla	2.146s
+
+EXIT=0
+STATUS=DONE
