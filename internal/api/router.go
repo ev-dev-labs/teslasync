@@ -11,19 +11,14 @@ import (
 	"time"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/ev-dev-labs/teslasync/internal/cache"
 	"github.com/ev-dev-labs/teslasync/internal/config"
-	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
-	"github.com/ev-dev-labs/teslasync/internal/polling"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/service"
 	signal "github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
-	"github.com/ev-dev-labs/teslasync/internal/worker"
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -40,34 +35,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/app/vehiclesvc"
 	v1handlers "github.com/ev-dev-labs/teslasync/internal/handler/v1"
 )
-
-// RouterOptions holds optional parameters for NewRouter.
-type RouterOptions struct {
-	AppVersion       string
-	Encryptor        *crypto.Encryptor
-	TelemetryHandler *TelemetryHandler      // If set, reuses existing handler (for hybrid mode wiring)
-	GasPriceWorker   *worker.GasPriceWorker // If set, enables gas price management endpoints
-	PollEngine       *polling.PollEngine    // If set, enables polling engine dashboard endpoints
-	SignalStore      *signal.Store          // If set, enables /internal/flush endpoint
-	WebhookTrigger   WebhookProcessor       // If set, enables public webhook receiver endpoint
-	CacheStore       *cache.Store           // If set, enables cached endpoints (trip planner, etc.)
-}
-
-// settingsCheckerAdapter wraps *database.SettingsRepo to satisfy action.SettingsChecker.
-// GetPollingConfig returns a default PollingConfig since per-vehicle polling tuning
-// now lives in the `polling_config` table (ADR-011), not on the global settings repo.
-type settingsCheckerAdapter struct {
-	*database.SettingsRepo
-}
-
-func (a *settingsCheckerAdapter) GetPollingConfig(_ context.Context) (*models.PollingConfig, error) {
-	return &models.PollingConfig{
-		AwakeIntervalSec:   60,
-		AsleepIntervalSec:  600,
-		DrivingIntervalSec: 10,
-		Enabled:            true,
-	}, nil
-}
 
 // NewRouter creates and configures the main HTTP router with all API routes,
 // middleware (logging, recovery, CORS, rate limiting, security headers), and
