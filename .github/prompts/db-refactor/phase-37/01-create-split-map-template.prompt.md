@@ -66,12 +66,16 @@ $log = '.github/prompts/db-refactor/logs/phase-37-01-create-split-map-template.l
 New-Item -ItemType Directory -Force -Path (Split-Path $log) | Out-Null
 "## PREFLIGHT" | Set-Content -Path $log
 "start_utc=$([DateTimeOffset]::UtcNow.ToString('o'))" | Add-Content $log
+"go_version=$((go version 2>$null) -replace '\s+',' ')" | Add-Content $log
+"engineer_email=$((git config user.email 2>$null))" | Add-Content $log
+"powershell_version=$($PSVersionTable.PSVersion.ToString())" | Add-Content $log
+"os_platform=$($PSVersionTable.Platform)" | Add-Content $log
 $exit = 0
 
 $prev = '.github/prompts/db-refactor/logs/phase-37-00-go-monolith-inventory.log'
 if (-not (Test-Path $prev)) { "predecessor log missing: $prev" | Add-Content $log; $exit = 1 }
 elseif (-not (Select-String -Path $prev -Pattern '^EXIT=0$' -Quiet)) { "predecessor not EXIT=0" | Add-Content $log; $exit = 1 }
-elseif (-not (Select-String -Path $prev -Pattern '^STATUS=DONE$' -Quiet)) { "predecessor not STATUS=DONE" | Add-Content $log; $exit = 1 }
+elseif (-not (Select-String -Path $prev -Pattern '^STATUS=(DONE|DEFERRED)$' -Quiet)) { "predecessor STATUS not DONE or DEFERRED" | Add-Content $log; $exit = 1 }
 
 "## SURVEY" | Add-Content $log
 "template recorded inline (see REASONING section)" | Add-Content $log

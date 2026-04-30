@@ -71,12 +71,16 @@ $log = '.github/prompts/db-refactor/logs/phase-37-27-validate-tesla-client-split
 New-Item -ItemType Directory -Force -Path (Split-Path $log) | Out-Null
 "## PREFLIGHT" | Set-Content -Path $log
 "start_utc=$([DateTimeOffset]::UtcNow.ToString('o'))" | Add-Content $log
+"go_version=$((go version 2>$null) -replace '\s+',' ')" | Add-Content $log
+"engineer_email=$((git config user.email 2>$null))" | Add-Content $log
+"powershell_version=$($PSVersionTable.PSVersion.ToString())" | Add-Content $log
+"os_platform=$($PSVersionTable.Platform)" | Add-Content $log
 $exit = 0
 
 $prev = '.github/prompts/db-refactor/logs/phase-37-26-split-tesla-client-energy-charging.log'
 if (-not (Test-Path $prev)) { "predecessor log missing: $prev" | Add-Content $log; $exit = 1 }
 elseif (-not (Select-String -Path $prev -Pattern '^EXIT=0$' -Quiet)) { "predecessor not EXIT=0" | Add-Content $log; $exit = 1 }
-elseif (-not (Select-String -Path $prev -Pattern '^STATUS=DONE$' -Quiet)) { "predecessor not STATUS=DONE" | Add-Content $log; $exit = 1 }
+elseif (-not (Select-String -Path $prev -Pattern '^STATUS=(DONE|DEFERRED)$' -Quiet)) { "predecessor STATUS not DONE or DEFERRED" | Add-Content $log; $exit = 1 }
 
 "## SURVEY" | Add-Content $log
 $expected = @('internal/tesla/client.go', 'internal/tesla/client_auth.go', 'internal/tesla/client_vehicle_data.go', 'internal/tesla/client_commands.go', 'internal/tesla/client_fleet_telemetry.go', 'internal/tesla/client_partner_devtools.go', 'internal/tesla/client_energy_charging.go')

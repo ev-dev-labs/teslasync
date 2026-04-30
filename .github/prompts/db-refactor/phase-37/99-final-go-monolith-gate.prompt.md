@@ -74,6 +74,10 @@ $log = '.github/prompts/db-refactor/logs/phase-37-99-final-go-monolith-gate.log'
 New-Item -ItemType Directory -Force -Path (Split-Path $log) | Out-Null
 "## PREFLIGHT" | Set-Content -Path $log
 "start_utc=$([DateTimeOffset]::UtcNow.ToString('o'))" | Add-Content $log
+"go_version=$((go version 2>$null) -replace '\s+',' ')" | Add-Content $log
+"engineer_email=$((git config user.email 2>$null))" | Add-Content $log
+"powershell_version=$($PSVersionTable.PSVersion.ToString())" | Add-Content $log
+"os_platform=$($PSVersionTable.Platform)" | Add-Content $log
 $exit = 0
 
 $p = '.github/prompts/db-refactor/logs/phase-37-02-split-automation-handler-dtos.log'
@@ -437,9 +441,43 @@ foreach ($entry in $baseline.GetEnumerator()) {
 
 # Re-export baseline SHA captured by prompt 00 if available, for rollback reference
 $inventoryLog = '.github/prompts/db-refactor/logs/phase-37-00-go-monolith-inventory.log'
+$baselineShaForScan = ''
 if (Test-Path $inventoryLog) {
   $baselineLine = Select-String -Path $inventoryLog -Pattern '^phase_37_baseline_sha=' | Select-Object -First 1
-  if ($baselineLine) { $baselineLine.Line | Add-Content $log }
+  if ($baselineLine) {
+    $baselineLine.Line | Add-Content $log
+    $baselineShaForScan = ($baselineLine.Line -split '=',2)[1]
+  }
+}
+
+# Compliance gate: secret scan over the diff from baseline SHA to HEAD.
+# Phase 37 is mechanical and should not introduce new code, but a careless split
+# could expose embedded credentials previously buried in the monolith. Block on hits.
+"## SECRET_SCAN" | Add-Content $log
+if ($baselineShaForScan) {
+  $diffOut = git --no-pager diff $baselineShaForScan HEAD -- internal/ cmd/ 2>$null
+  $secretPatterns = @(
+    @{ name = 'aws_access_key';      pattern = 'AKIA[0-9A-Z]{16}' },
+    @{ name = 'jwt_token';           pattern = 'eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}' },
+    @{ name = 'private_key_header';  pattern = '-----BEGIN [A-Z ]+PRIVATE KEY-----' },
+    @{ name = 'high_entropy_secret'; pattern = '(?i)(password|passwd|pwd|secret|token|api[_-]?key|client[_-]?secret)\s*[:=]\s*["''`][^"''`\s]{20,}' }
+  )
+  $hits = @()
+  foreach ($spec in $secretPatterns) {
+    $matches = $diffOut | Select-String -Pattern $spec.pattern
+    if ($matches) {
+      foreach ($m in $matches) { $hits += "[$($spec.name)] $($m.Line.Trim())" }
+    }
+  }
+  if ($hits) {
+    "secret-scan: SUSPECT patterns introduced in diff (review and remediate before merge):" | Add-Content $log
+    $hits | Add-Content $log
+    $exit = 1
+  } else {
+    "secret-scan: no suspect patterns introduced in diff (baseline=$baselineShaForScan)" | Add-Content $log
+  }
+} else {
+  "secret-scan: skipped - baseline SHA not recorded by inventory prompt" | Add-Content $log
 }
 
 "## REASONING" | Add-Content $log

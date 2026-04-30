@@ -79,12 +79,16 @@ $log = '.github/prompts/db-refactor/logs/phase-37-02-split-automation-handler-dt
 New-Item -ItemType Directory -Force -Path (Split-Path $log) | Out-Null
 "## PREFLIGHT" | Set-Content -Path $log
 "start_utc=$([DateTimeOffset]::UtcNow.ToString('o'))" | Add-Content $log
+"go_version=$((go version 2>$null) -replace '\s+',' ')" | Add-Content $log
+"engineer_email=$((git config user.email 2>$null))" | Add-Content $log
+"powershell_version=$($PSVersionTable.PSVersion.ToString())" | Add-Content $log
+"os_platform=$($PSVersionTable.Platform)" | Add-Content $log
 $exit = 0
 
 $prev = '.github/prompts/db-refactor/logs/phase-37-01-create-split-map-template.log'
 if (-not (Test-Path $prev)) { "predecessor log missing: $prev" | Add-Content $log; $exit = 1 }
 elseif (-not (Select-String -Path $prev -Pattern '^EXIT=0$' -Quiet)) { "predecessor not EXIT=0" | Add-Content $log; $exit = 1 }
-elseif (-not (Select-String -Path $prev -Pattern '^STATUS=DONE$' -Quiet)) { "predecessor not STATUS=DONE" | Add-Content $log; $exit = 1 }
+elseif (-not (Select-String -Path $prev -Pattern '^STATUS=(DONE|DEFERRED)$' -Quiet)) { "predecessor STATUS not DONE or DEFERRED" | Add-Content $log; $exit = 1 }
 
 # Exported-identifier invariant: package's top-level exports at HEAD must equal the working tree's exports
 # (mechanical splits move exports between files but never add or remove them).
@@ -306,3 +310,35 @@ git revert --no-edit HEAD
 
 After recovery, re-run this prompt's gate. Do not skip ahead to the next
 prompt.
+
+### Defer with rationale (escape hatch)
+
+If after **2** clean recovery attempts the split still cannot be made green
+without introducing new abstractions, renaming exports, or relaxing the
+mechanical-only contract, the engineer MAY declare a deferral instead of
+forcing a violation. This is an explicit governance escape hatch:
+
+```powershell
+# 1. Restore source to HEAD so no partial changes leak forward
+git checkout HEAD -- 'internal/api/automation_handler.go'
+Remove-Item -LiteralPath 'internal/api/automation_handler_dtos.go' -ErrorAction SilentlyContinue
+# 2. Append rationale and STATUS=DEFERRED to the log (do NOT delete prior content)
+"## REASONING - DEFER" | Add-Content $log
+"defer_rationale=<one-line technical reason: e.g. circular ref to unexported helper, init() ordering hazard, etc.>" | Add-Content $log
+"defer_attempts=2" | Add-Content $log
+"EXIT=0" | Add-Content $log
+"STATUS=DEFERRED" | Add-Content $log
+```
+
+```powershell
+# 3. Commit ONLY the log (no source files in this commit)
+git add -f '.github/prompts/db-refactor/logs/phase-37-02-split-automation-handler-dtos.log'
+git commit -m "chore(phase-37): prompt 02 deferred - <short reason>" -m "Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+```
+
+The successor prompt's predecessor check accepts both `STATUS=DONE` and
+`STATUS=DEFERRED`, so the chain continues. The final gate (prompt 99) will
+classify this file as `deferred` in its TSV summary and surface the rationale
+for Phase 38+ planning. Deferral is an enterprise-level decision and should
+not be used to bypass solvable failures - if in doubt, escalate to the team
+that owns this package (see CODEOWNERS) before deferring.

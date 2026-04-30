@@ -63,6 +63,32 @@ This prompt is **inventory only**. It does not modify any `.go` file.
    absent).
 5. Write the full inventory and classification to the output log under the
    `## SURVEY` section. Do not edit any `.go` file.
+6. After the SURVEY block, append a `## PARALLEL_FAMILIES` block listing the
+   independent prompt families that may be executed concurrently by different
+   engineers. Phase 37 currently defines these families (each entry is the
+   prompt-number range that touches a single source file or related cluster):
+
+   - **automation_handler family** (02 - 08): `internal/api/automation_handler.go`
+   - **telemetry_sessions family** (09 - 14): `internal/api/telemetry_sessions.go`
+   - **telemetry_handler family** (15 - 20): `internal/api/telemetry_handler.go`
+   - **tesla_client family** (21 - 27): `internal/tesla/client.go`
+   - **medium_singletons family** (28 - 52): one source file per prompt; each
+     prompt is independent of the others in this family
+
+   The strict predecessor chain in each prompt is preserved within a family;
+   the families themselves are independent because they touch disjoint source
+   files. Any engineer executing Phase 37 in parallel MUST still respect each
+   family's internal predecessor chain.
+7. Append a `## CONVENTIONS_LOCK` block declaring the file-naming convention
+   that Phase 37 commits to:
+
+   - All split destination files use `<orig_basename>_<suffix>.go` (e.g.,
+     `automation_handler_dtos.go`, `automation_handler_crud.go`).
+   - Suffixes are lowercase, snake_case, and describe the cohesive concern.
+   - This convention is **locked** after Phase 37 completes. Phase 38+ may
+     elevate split files to subpackages via `git mv`, but MUST NOT rename
+     the suffix or change the convention without a separate governance
+     decision.
 
 ## Gate
 
@@ -71,6 +97,10 @@ $log = '.github/prompts/db-refactor/logs/phase-37-00-go-monolith-inventory.log'
 New-Item -ItemType Directory -Force -Path (Split-Path $log) | Out-Null
 "## PREFLIGHT" | Set-Content -Path $log
 "start_utc=$([DateTimeOffset]::UtcNow.ToString('o'))" | Add-Content $log
+"go_version=$((go version 2>$null) -replace '\s+',' ')" | Add-Content $log
+"engineer_email=$((git config user.email 2>$null))" | Add-Content $log
+"powershell_version=$($PSVersionTable.PSVersion.ToString())" | Add-Content $log
+"os_platform=$($PSVersionTable.Platform)" | Add-Content $log
 $exit = 0
 
 "## SURVEY" | Add-Content $log
@@ -88,6 +118,20 @@ $rows = foreach ($f in $files) {
 $rows | Sort-Object -Property Lines -Descending |
   ForEach-Object { "{0,6}`t{1}" -f $_.Lines, $_.Path } |
   Add-Content $log
+
+"## PARALLEL_FAMILIES" | Add-Content $log
+"automation_handler`t02-08`tinternal/api/automation_handler.go" | Add-Content $log
+"telemetry_sessions`t09-14`tinternal/api/telemetry_sessions.go" | Add-Content $log
+"telemetry_handler`t15-20`tinternal/api/telemetry_handler.go" | Add-Content $log
+"tesla_client`t21-27`tinternal/tesla/client.go" | Add-Content $log
+"medium_singletons`t28-52`tone-source-per-prompt; independent of each other" | Add-Content $log
+"families are independent across source files; honor predecessor chain within each family" | Add-Content $log
+
+"## CONVENTIONS_LOCK" | Add-Content $log
+"naming_convention=<orig_basename>_<suffix>.go" | Add-Content $log
+"suffix_style=lowercase_snake_case" | Add-Content $log
+"locked_after=phase-37" | Add-Content $log
+"future_extraction=Phase 38+ may git mv to subpackage; MUST NOT rename suffix without separate governance decision" | Add-Content $log
 
 "## REASONING" | Add-Content $log
 "Inventory only. No source edits." | Add-Content $log
