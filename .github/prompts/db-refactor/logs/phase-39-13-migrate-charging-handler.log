@@ -1,0 +1,36 @@
+=== PREFLIGHT ===
+predecessor=phase-39-12-migrate-drive-detail.log
+branch=refactor/mono-gone
+head=d9677ee5
+
+=== CALL_SITES ===
+charging_handler.go:133: startSnap, err := h.signalLogReader.SnapshotAt(ctx, session.VehicleID, session.StartTs)
+charging_handler.go:180: snap, err := h.signalLogReader.SnapshotAt(ctx, vehicleID, time.Now().UTC())
+charging_handler.go:212: rows, err := h.signalLogReader.SignalTracePivotFlat(ctx, ...
+
+=== CHANGES ===
+charging_handler.go: SignalLogReader removed; ChargingHandler now holds signal.StateReader (state) + chargingByIDFetcher (charging interface). NewChargingHandler signature: (db, state). chargeTelemetryMappings -> chargeTelemetryFieldMappings ([]signal.FieldMapping). enrichLiveCharge: 2x SnapshotAt -> h.state.State + h.currentSignals; returns error and Get propagates 500. currentSignals: SnapshotAt(now) -> h.state.State; returns (map, error) so failures bubble. TelemetryReadings: SignalTracePivotFlat -> h.state.Timeline (chart mode) + timelineRowsToFlat reuse.
+charging_handler_test.go: NEW - 5 tests (SessionDetails_UsesStartSnapshot, Latest_UsesNowSnapshot, Telemetry_ChartMode, Telemetry_PropagatesError, Latest_PropagatesError) using fakeStateReader + fakeChargingByIDFetcher.
+router.go: NewChargingHandler(db) -> NewChargingHandler(db, stateReader).
+
+=== GATE ===
+USES_SIGNAL_STATEREADER=True
+MAPPINGS_RETYPED=True
+NO_OLD_PIVOTMAPPING=True
+NO_PIVOT=True
+NO_SNAPSHOTAT=True
+USES_TIMELINE=True
+USES_STATE=True
+TEST_START=True
+TEST_NOW=True
+TEST_TELEMETRY=True
+TEST_TL_ERR=True
+TEST_LATEST_ERR=True
+ROUTER=True
+ok  	github.com/ev-dev-labs/teslasync/internal/api	0.404s
+GO_TEST_EXIT=0
+UNEXPECTED_STATUS_COUNT=0
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===

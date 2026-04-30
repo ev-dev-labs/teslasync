@@ -114,7 +114,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// Handlers
 	vehicleHandler := NewVehicleHandler(vehicleSvc, teslaClient, stateReader)
 	driveHandler := NewDriveDetail(db, stateReader)
-	chargingHandler := NewChargingHandler(db)
+	chargingHandler := NewChargingHandler(db, stateReader)
 	geofenceHandler := NewGeofenceHandler(db)
 	authHandler := NewAuthHandler(db, teslaClient, opt.Encryptor)
 	settingsHandler := NewSettingsHandler(db)
