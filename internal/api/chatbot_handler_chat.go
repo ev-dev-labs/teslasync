@@ -169,35 +169,33 @@ func (h *ChatbotHandler) queryEfficiency(ctx context.Context, days int) string {
 }
 
 func (h *ChatbotHandler) queryBatteryStatus(ctx context.Context) string {
-	rows, err := h.db.Pool.Query(ctx,
-		`SELECT v.display_name, p.battery_level, p.rated_range
-		 FROM vehicles v
-		 LEFT JOIN LATERAL (
-		   SELECT battery_level, rated_range FROM positions WHERE vehicle_id = v.id ORDER BY ts DESC LIMIT 1
-		 ) p ON true
-		 ORDER BY v.display_name`)
+	if h.vehicleSvc == nil {
+		return "I couldn't retrieve battery info right now."
+	}
+	vehicles, err := h.vehicleSvc.VehicleRepo().GetAll(ctx)
 	if err != nil {
 		return "I couldn't retrieve battery info right now."
 	}
-	defer rows.Close()
 
 	var lines []string
-	for rows.Next() {
-		var name string
-		var battery *int
-		var rng *float64
-		if err := rows.Scan(&name, &battery, &rng); err != nil {
+	for _, v := range vehicles {
+		if v == nil {
 			continue
 		}
+		name := v.DisplayName
 		if name == "" {
 			name = "Unknown"
 		}
-		if battery != nil {
+		// Build current state through the layered live-state contract:
+		// SignalStore L1 → Redis L2 → signal_log L3 fallback.
+		// Never read battery_level directly from snapshot tables.
+		state := h.vehicleSvc.BuildStateFromSignalStore(nil, v)
+		if state != nil && state.BatteryLevel > 0 {
 			rangeStr := ""
-			if rng != nil {
-				rangeStr = fmt.Sprintf(" (%.0f km)", *rng)
+			if state.RatedRange > 0 {
+				rangeStr = fmt.Sprintf(" (%.0f km)", state.RatedRange)
 			}
-			lines = append(lines, fmt.Sprintf("- **%s**: %d%%%s", name, *battery, rangeStr))
+			lines = append(lines, fmt.Sprintf("- **%s**: %d%%%s", name, state.BatteryLevel, rangeStr))
 		} else {
 			lines = append(lines, fmt.Sprintf("- **%s**: No data yet", name))
 		}
