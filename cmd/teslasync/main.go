@@ -27,7 +27,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 	"github.com/ev-dev-labs/teslasync/internal/worker"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/adapter/gasprices"
@@ -653,60 +652,4 @@ func main() {
 	}
 
 	log.Info().Msg("TeslaSync stopped cleanly")
-}
-
-func setupLogger(level string) {
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-
-	lvl, err := zerolog.ParseLevel(level)
-	if err != nil {
-		lvl = zerolog.InfoLevel
-	}
-	zerolog.SetGlobalLevel(lvl)
-
-	if os.Getenv("TESLASYNC_DEV") == "true" {
-		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-	}
-}
-
-func componentDisplayName(name string) string {
-	switch name {
-	case "database":
-		return "PostgreSQL"
-	case "mqtt":
-		return "MQTT Broker"
-	case "tesla_api":
-		return "Tesla Fleet API"
-	case "worker":
-		return "Vehicle Poller"
-	case "redis":
-		return "Redis Cache"
-	default:
-		return name
-	}
-}
-
-func sendSystemNotification(ctx context.Context, notifRepo *database.NotificationRepo, mqttClient *mqtt.Client, title, message string) {
-	if mqttClient == nil {
-		return
-	}
-	channels, err := notifRepo.GetAllChannels(ctx)
-	if err != nil {
-		return
-	}
-	for _, ch := range channels {
-		if !ch.Enabled {
-			continue
-		}
-		req := &notification.Request{
-			ChannelType: ch.Type,
-			Config:      ch.Config,
-			Title:       title,
-			Message:     message,
-			ChannelID:   ch.ID,
-		}
-		if err := notification.Publish(mqttClient.Underlying(), req); err != nil {
-			log.Warn().Err(err).Int64("channel_id", ch.ID).Msg("failed to send system notification")
-		}
-	}
 }

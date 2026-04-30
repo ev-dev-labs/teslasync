@@ -1,0 +1,69 @@
+## PREFLIGHT
+start_utc=2026-04-30T06:10:02.5532533+00:00
+go_version=go version go1.26.1 windows/amd64
+engineer_email=iamatulmgupta@gmail.com
+powershell_version=7.6.1
+os_platform=Win32NT
+exports invariant ok: 6 exported identifiers preserved
+import-graph invariant ok: 28 imports preserved
+## SURVEY
+source_lines_after=580
+new_file=cmd/teslasync/setup.go lines=17
+new_file=cmd/teslasync/lifecycle.go lines=48
+## REASONING
+mechanical decomposition: split cmd/teslasync/main.go into cmd/teslasync/setup.go, cmd/teslasync/lifecycle.go
+no behavior, API, SQL, JSON, route, config, or runtime ordering changes
+
+per-prompt split map:
+  source: cmd/teslasync/main.go (712 lines pre-split, 580 lines post-split)
+  destinations:
+    cmd/teslasync/setup.go (dependency / process setup concerns):
+      func setupLogger(level string)
+        - moved verbatim from main.go lines 658-670
+        - configures zerolog global level + console writer when TESLASYNC_DEV=true
+        - called once from main() before any other setup
+    cmd/teslasync/lifecycle.go (process lifecycle / health-watchdog helpers):
+      func componentDisplayName(name string) string
+        - moved verbatim from main.go lines 672-687
+        - maps internal component IDs to human-readable display names
+        - called from the health-watchdog goroutine inside main() when emitting system alerts
+      func sendSystemNotification(ctx context.Context, notifRepo *database.NotificationRepo, mqttClient *mqtt.Client, title, message string)
+        - moved verbatim from main.go lines 689-712
+        - publishes a system notification across all enabled channels via MQTT
+        - called from the health-watchdog goroutine inside main() on component degraded/recovered transitions
+    cmd/teslasync/main.go (orchestrator, unchanged after removal):
+      func main()
+        - retains full body verbatim; only the three moved helpers and the now-unused "github.com/rs/zerolog" import are removed
+  cross-file unexported references (all resolve within package main):
+    main() -> setupLogger          (defined in setup.go)
+    main() -> componentDisplayName (defined in lifecycle.go)
+    main() -> sendSystemNotification (defined in lifecycle.go)
+  imports adjusted:
+    main.go: dropped "github.com/rs/zerolog" (only setupLogger referenced it); all other imports retained
+    setup.go: imports "os", "github.com/rs/zerolog", "github.com/rs/zerolog/log"
+    lifecycle.go: imports "context", "github.com/ev-dev-labs/teslasync/internal/database",
+                  "github.com/ev-dev-labs/teslasync/internal/mqtt",
+                  "github.com/ev-dev-labs/teslasync/internal/notification",
+                  "github.com/rs/zerolog/log"
+  invariants preserved:
+    - exports invariant: 6 exported identifiers preserved (Version, Commit are the only exports in this package)
+    - import-graph invariant: 28 imports preserved (union across all package files unchanged)
+    - runtime ordering: every statement inside main() retains its original position; only top-level helper definitions moved
+    - no new abstractions introduced; no rename/restructure of remaining declarations
+per-prompt split map must be appended above this line by the engineer before edits
+## CHANGES
+cmd/teslasync/main.go sha256=06670A512C65CE632484E35DBA6BDC9A37D753323C66004AD737DCA8F8BAA58F
+cmd/teslasync/setup.go sha256=BA05DFF757E77F273E89D479929B0FB9F6157DDB88CB54024063C7D72569E9FC
+cmd/teslasync/lifecycle.go sha256=64EABCDF4F39EF3E0BC725A890D5CDD3A93B4D2E4AFB08CA4DC08023CCD9CF5A
+## GATE
+go build ./cmd/teslasync/... exit=0
+
+go build ./... exit=0
+
+go vet exit=0
+
+go test exit=0
+?   	github.com/ev-dev-labs/teslasync/cmd/teslasync	[no test files]
+
+EXIT=0
+STATUS=DONE
