@@ -751,56 +751,83 @@ that owns this package (see CODEOWNERS) before deferring.
     return out
 
 
-def render_validation(p, file_to_prompt):
+def render_validation(p, file_to_prompt, file_to_pkg):
     num = p["num"]
     slug = p["slug"]
     title = p["title"]
     description = p["description"]
     src = p["source"].replace("\\", "/")
     pkg = pkg_for(src)
-    test_target = test_target_for(src)
     log_path = pred_log(num, slug)
     pred_num = p["predecessor"][0]
     pred_slug = p["predecessor"][1]
     prev_log = pred_log(pred_num, pred_slug)
 
-    # Build per-expected-file metadata: (path, source_prompt_num, source_prompt_slug).
+    # Build per-expected-file metadata: (path, source_prompt_num, source_prompt_slug, expected_pkg).
     # The original `src` file is unconditionally required (no source split prompt).
     # Each new file is paired with the split prompt that produced it; if that prompt
     # later DEFERRED via the G3 escape hatch, the gate skips the missing-file check.
+    # The expected_pkg for each new file is derived from the source split's source-file
+    # package - this is required for multi-package validations like prompt 52, where
+    # expected files span api, models, database, automation, worker, enums, metrics,
+    # and main, and a single hardcoded package regex would falsely flag every non-api
+    # file as drift.
     expected_paths = [src] + [nf.replace("\\", "/") for nf in p["expected_files"]]
-    expected_md = "\n".join(f"  - `{e}`" for e in expected_paths)
+    expected_md = "\n".join(f"  - `{e}` (package `{file_to_pkg.get(e, pkg_for(e))}`)" for e in expected_paths)
 
     expected_entries = []
+    involved_pkgs = set()
+    test_targets_set = set()
     for ef in expected_paths:
+        ef_pkg = file_to_pkg.get(ef, pkg_for(ef))
+        ef_test_target = test_target_for(ef)
+        involved_pkgs.add(ef_pkg)
+        test_targets_set.add(ef_test_target)
         if ef == src:
-            expected_entries.append((ef, 0, ""))
+            expected_entries.append((ef, 0, "", ef_pkg))
         else:
             src_prompt = file_to_prompt.get(ef)
             if src_prompt is None:
                 # Should not happen if PROMPTS is internally consistent; treat as
                 # unconditionally required so the gate still catches drift.
-                expected_entries.append((ef, 0, ""))
+                expected_entries.append((ef, 0, "", ef_pkg))
             else:
-                expected_entries.append((ef, src_prompt[0], src_prompt[1]))
+                expected_entries.append((ef, src_prompt[0], src_prompt[1], ef_pkg))
+
+    test_targets = sorted(test_targets_set)
+    is_multi_pkg = len(involved_pkgs) > 1
 
     expected_ps = ",\n  ".join(
-        "@{{ Path = '{path}'; SrcNum = {num}; SrcSlug = '{slug}' }}".format(
-            path=e[0], num=e[1], slug=e[2]
+        "@{{ Path = '{path}'; SrcNum = {num}; SrcSlug = '{slug}'; Pkg = '{pkg}' }}".format(
+            path=e[0], num=e[1], slug=e[2], pkg=e[3]
         )
         for e in expected_entries
     )
+
+    test_targets_ps = ", ".join(repr(t) for t in test_targets)
+
+    if is_multi_pkg:
+        scope_md = (
+            f"This prompt validates multiple cohesive splits across {len(involved_pkgs)} "
+            f"packages: `" + "`, `".join(sorted(involved_pkgs)) + "`. The split-gate "
+            f"per-file checks (gofmt, package decl) and per-package gates "
+            f"(`go vet`, `go test`) are run for each involved package."
+        )
+    else:
+        scope_md = (
+            f"The preceding split prompts decomposed `{src}` into multiple cohesive "
+            f"files in package `{pkg}`."
+        )
 
     allowed_md = f"`{log_path}` (validation log only - no source edits permitted)"
     depends_on_md = f"[`{prev_log}`](../logs/phase-37-{pred_num:02d}-{pred_slug}.log) STATUS=DONE"
     out = header(num, slug, title, "Gate", description, depends_on_md, allowed_md)
     out += f"""## Problem
 
-The preceding split prompts decomposed `{src}` into multiple cohesive files in
-package `{pkg}`. This prompt validates that the split preserved all behavior,
-public APIs, SQL, JSON, route, config, and runtime ordering. **No `.go` file
-may be edited in this prompt.** If a regression is found, mark BLOCKED and
-defer the fix to a follow-up prompt.
+{scope_md} This prompt validates that each split preserved all behavior, public
+APIs, SQL, JSON, route, config, and runtime ordering. **No `.go` file may be
+edited in this prompt.** If a regression is found, mark BLOCKED and defer the
+fix to a follow-up prompt.
 
 Some predecessor split prompts may have legitimately taken the **G3 deferral
 escape hatch** (`STATUS=DEFERRED`) - typically because an earlier split already
@@ -813,15 +840,15 @@ A file missing while its source split is `STATUS=DONE` is real drift and BLOCKS.
 
 1. Verify predecessor: `{prev_log}` exists with `EXIT=0` and
    `STATUS=DONE` or `STATUS=DEFERRED`.
-2. For every expected file, look up the split prompt that was supposed to
-   produce it and check that prompt's log STATUS:
+2. For every expected file (with its expected package), look up the split prompt
+   that was supposed to produce it and check that prompt's log STATUS:
 {expected_md}
-   - If file exists: confirm it declares `package {pkg}`.
+   - If file exists: confirm it declares the expected `package` directive.
    - If file missing and source split STATUS=DEFERRED: record SKIP-DEFERRED.
    - If file missing and source split STATUS=DONE: BLOCKED.
 3. Re-run `gofmt -l` on every expected file that exists (output must be empty).
-4. Re-run `go build ./...`, `go vet {test_target}`, and
-   `go test {test_target} -race -count=1`.
+4. Re-run `go build ./...`, then `go vet` and `go test ... -race -count=1` for
+   each involved package: `{', '.join(test_targets)}`.
 5. Inspect the diff range covered by the split commits and confirm:
    - no exported identifier was renamed or removed
    - no JSON tag, SQL string literal, error message, or log field changed
@@ -858,12 +885,13 @@ foreach ($e in $expected) {{
   $f = $e.Path
   if (Test-Path $f) {{
     $head = (Get-Content -LiteralPath $f -TotalCount 80) -join "`n"
-    if ($head -notmatch '(?m)^package\\s+{pkg}\\b') {{
-      "wrong package decl in $f (expected package {pkg})" | Add-Content $log
+    $expectedPkgPattern = '(?m)^package\\s+' + [regex]::Escape($e.Pkg) + '\\b'
+    if ($head -notmatch $expectedPkgPattern) {{
+      "wrong package decl in $f (expected package $($e.Pkg))" | Add-Content $log
       $exit = 1
     }}
     $lc = (Get-Content -LiteralPath $f | Measure-Object -Line).Lines
-    "expected_file=$f lines=$lc" | Add-Content $log
+    "expected_file=$f lines=$lc pkg=$($e.Pkg)" | Add-Content $log
     $existing.Add($f) | Out-Null
   }} else {{
     if ($e.SrcNum -eq 0) {{
@@ -890,6 +918,7 @@ foreach ($e in $expected) {{
 "## REASONING" | Add-Content $log
 "validation only - confirm split preserved behavior, no source edits" | Add-Content $log
 "existing_files_count=$($existing.Count)" | Add-Content $log
+"involved_packages={', '.join(sorted(involved_pkgs))}" | Add-Content $log
 
 "## CHANGES" | Add-Content $log
 "none (validation only)" | Add-Content $log
@@ -908,12 +937,17 @@ if ($existing.Count -gt 0) {{
   $exit = 1
 }}
 
-# Fast-fail: build the affected package first, then the whole repo
-$pkgDir = '{test_target.lstrip("./").rstrip("/")}'
-$pkgBuildOut = & go build "./$pkgDir/..." 2>&1
-$pkgBuildExit = $LASTEXITCODE
-"go build ./$pkgDir/... exit=$pkgBuildExit" | Add-Content $log
-$pkgBuildOut | Out-String | Add-Content $log
+# Per-involved-package fast-fail: build each involved package, then the whole repo.
+$testTargets = @({test_targets_ps})
+$pkgBuildExit = 0
+foreach ($t in $testTargets) {{
+  $pkgDirNormalized = $t.TrimStart('.','/').TrimEnd('/')
+  $out = & go build "./$pkgDirNormalized/..." 2>&1
+  $localExit = $LASTEXITCODE
+  "go build $t/... exit=$localExit" | Add-Content $log
+  $out | Out-String | Add-Content $log
+  if ($localExit -ne 0) {{ $pkgBuildExit = 1 }}
+}}
 if ($pkgBuildExit -ne 0) {{ $exit = 1 }}
 
 if ($exit -eq 0) {{
@@ -923,15 +957,17 @@ if ($exit -eq 0) {{
   $buildOut | Out-String | Add-Content $log
   if ($buildExit -ne 0) {{ $exit = 1 }}
 }} else {{
-  "skipping go build ./... because package build failed" | Add-Content $log
+  "skipping go build ./... because per-package build failed" | Add-Content $log
 }}
 
 if ($exit -eq 0) {{
-  $vetOut = & go vet {test_target} 2>&1
-  $vetExit = $LASTEXITCODE
-  "go vet exit=$vetExit" | Add-Content $log
-  $vetOut | Out-String | Add-Content $log
-  if ($vetExit -ne 0) {{ $exit = 1 }}
+  foreach ($t in $testTargets) {{
+    $vetOut = & go vet $t 2>&1
+    $localExit = $LASTEXITCODE
+    "go vet $t exit=$localExit" | Add-Content $log
+    $vetOut | Out-String | Add-Content $log
+    if ($localExit -ne 0) {{ $exit = 1 }}
+  }}
 }} else {{
   "skipping go vet because earlier step failed" | Add-Content $log
 }}
@@ -939,12 +975,14 @@ if ($exit -eq 0) {{
 if ($exit -eq 0) {{
   # -race requires CGO. Scope CGO_ENABLED=1 to the test step only; restore project default after.
   $env:CGO_ENABLED = '1'
-  $testOut = & go test {test_target} -race -count=1 2>&1
-  $testExit = $LASTEXITCODE
+  foreach ($t in $testTargets) {{
+    $testOut = & go test $t -race -count=1 2>&1
+    $localExit = $LASTEXITCODE
+    "go test $t exit=$localExit (race=on, cgo=1 for this step only)" | Add-Content $log
+    $testOut | Out-String | Add-Content $log
+    if ($localExit -ne 0) {{ $exit = 1 }}
+  }}
   $env:CGO_ENABLED = '0'
-  "go test exit=$testExit (race=on, cgo=1 for this step only)" | Add-Content $log
-  $testOut | Out-String | Add-Content $log
-  if ($testExit -ne 0) {{ $exit = 1 }}
 }} else {{
   "skipping go test because earlier step failed" | Add-Content $log
 }}
@@ -2085,12 +2123,19 @@ def main():
     # Defer-aware validation: build map from each new file produced by a SPLIT prompt
     # to the (num, slug) of that prompt, so render_validation can teach the gate to
     # skip a missing expected file when its source split was DEFERRED (G3 escape hatch).
+    # Multi-package-aware validation: also map each new file to its expected package
+    # name, so the gate's package-decl check uses the correct regex per-file (prompt 52
+    # spans api, models, database, automation, worker, enums, metrics, main).
     file_to_prompt = {}
+    file_to_pkg = {}
     for p in PROMPTS:
         if p["kind"] != "split":
             continue
+        src_pkg = pkg_for(p["source"].replace("\\", "/"))
         for nf in p.get("new_files", []):
-            file_to_prompt[nf.replace("\\", "/")] = (p["num"], p["slug"])
+            nf_fwd = nf.replace("\\", "/")
+            file_to_prompt[nf_fwd] = (p["num"], p["slug"])
+            file_to_pkg[nf_fwd] = src_pkg
 
     written = []
 
@@ -2108,7 +2153,7 @@ def main():
         if p["kind"] == "split":
             md = render_split(p)
         else:
-            md = render_validation(p, file_to_prompt)
+            md = render_validation(p, file_to_prompt, file_to_pkg)
         fp = PHASE_DIR / f"{p['num']:02d}-{p['slug']}.prompt.md"
         fp.write_text(md, encoding="utf-8")
         written.append(fp)

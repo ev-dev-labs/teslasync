@@ -35,11 +35,10 @@ Append the following sections to the log in order: `## PREFLIGHT`, `## SURVEY`, 
 
 ## Problem
 
-The preceding split prompts decomposed `internal/api/automation_handler.go` into multiple cohesive files in
-package `api`. This prompt validates that the split preserved all behavior,
-public APIs, SQL, JSON, route, config, and runtime ordering. **No `.go` file
-may be edited in this prompt.** If a regression is found, mark BLOCKED and
-defer the fix to a follow-up prompt.
+The preceding split prompts decomposed `internal/api/automation_handler.go` into multiple cohesive files in package `api`. This prompt validates that each split preserved all behavior, public
+APIs, SQL, JSON, route, config, and runtime ordering. **No `.go` file may be
+edited in this prompt.** If a regression is found, mark BLOCKED and defer the
+fix to a follow-up prompt.
 
 Some predecessor split prompts may have legitimately taken the **G3 deferral
 escape hatch** (`STATUS=DEFERRED`) - typically because an earlier split already
@@ -52,21 +51,21 @@ A file missing while its source split is `STATUS=DONE` is real drift and BLOCKS.
 
 1. Verify predecessor: `.github/prompts/db-refactor/logs/phase-37-07-split-automation-handler-test-run.log` exists with `EXIT=0` and
    `STATUS=DONE` or `STATUS=DEFERRED`.
-2. For every expected file, look up the split prompt that was supposed to
-   produce it and check that prompt's log STATUS:
-  - `internal/api/automation_handler.go`
-  - `internal/api/automation_handler_dtos.go`
-  - `internal/api/automation_handler_decode.go`
-  - `internal/api/automation_handler_step_parsers.go`
-  - `internal/api/automation_handler_crud.go`
-  - `internal/api/automation_handler_history.go`
-  - `internal/api/automation_handler_test_run.go`
-   - If file exists: confirm it declares `package api`.
+2. For every expected file (with its expected package), look up the split prompt
+   that was supposed to produce it and check that prompt's log STATUS:
+  - `internal/api/automation_handler.go` (package `api`)
+  - `internal/api/automation_handler_dtos.go` (package `api`)
+  - `internal/api/automation_handler_decode.go` (package `api`)
+  - `internal/api/automation_handler_step_parsers.go` (package `api`)
+  - `internal/api/automation_handler_crud.go` (package `api`)
+  - `internal/api/automation_handler_history.go` (package `api`)
+  - `internal/api/automation_handler_test_run.go` (package `api`)
+   - If file exists: confirm it declares the expected `package` directive.
    - If file missing and source split STATUS=DEFERRED: record SKIP-DEFERRED.
    - If file missing and source split STATUS=DONE: BLOCKED.
 3. Re-run `gofmt -l` on every expected file that exists (output must be empty).
-4. Re-run `go build ./...`, `go vet ./internal/api`, and
-   `go test ./internal/api -race -count=1`.
+4. Re-run `go build ./...`, then `go vet` and `go test ... -race -count=1` for
+   each involved package: `./internal/api`.
 5. Inspect the diff range covered by the split commits and confirm:
    - no exported identifier was renamed or removed
    - no JSON tag, SQL string literal, error message, or log field changed
@@ -96,25 +95,26 @@ elseif (-not (Select-String -Path $prev -Pattern '^STATUS=(DONE|DEFERRED)$' -Qui
 
 "## SURVEY" | Add-Content $log
 $expected = @(
-  @{ Path = 'internal/api/automation_handler.go'; SrcNum = 0; SrcSlug = '' },
-  @{ Path = 'internal/api/automation_handler_dtos.go'; SrcNum = 2; SrcSlug = 'split-automation-handler-dtos' },
-  @{ Path = 'internal/api/automation_handler_decode.go'; SrcNum = 3; SrcSlug = 'split-automation-handler-decode-validate' },
-  @{ Path = 'internal/api/automation_handler_step_parsers.go'; SrcNum = 4; SrcSlug = 'split-automation-handler-step-parsers' },
-  @{ Path = 'internal/api/automation_handler_crud.go'; SrcNum = 5; SrcSlug = 'split-automation-handler-crud' },
-  @{ Path = 'internal/api/automation_handler_history.go'; SrcNum = 6; SrcSlug = 'split-automation-handler-history' },
-  @{ Path = 'internal/api/automation_handler_test_run.go'; SrcNum = 7; SrcSlug = 'split-automation-handler-test-run' }
+  @{ Path = 'internal/api/automation_handler.go'; SrcNum = 0; SrcSlug = ''; Pkg = 'api' },
+  @{ Path = 'internal/api/automation_handler_dtos.go'; SrcNum = 2; SrcSlug = 'split-automation-handler-dtos'; Pkg = 'api' },
+  @{ Path = 'internal/api/automation_handler_decode.go'; SrcNum = 3; SrcSlug = 'split-automation-handler-decode-validate'; Pkg = 'api' },
+  @{ Path = 'internal/api/automation_handler_step_parsers.go'; SrcNum = 4; SrcSlug = 'split-automation-handler-step-parsers'; Pkg = 'api' },
+  @{ Path = 'internal/api/automation_handler_crud.go'; SrcNum = 5; SrcSlug = 'split-automation-handler-crud'; Pkg = 'api' },
+  @{ Path = 'internal/api/automation_handler_history.go'; SrcNum = 6; SrcSlug = 'split-automation-handler-history'; Pkg = 'api' },
+  @{ Path = 'internal/api/automation_handler_test_run.go'; SrcNum = 7; SrcSlug = 'split-automation-handler-test-run'; Pkg = 'api' }
 )
 $existing = New-Object System.Collections.Generic.List[string]
 foreach ($e in $expected) {
   $f = $e.Path
   if (Test-Path $f) {
     $head = (Get-Content -LiteralPath $f -TotalCount 80) -join "`n"
-    if ($head -notmatch '(?m)^package\s+api\b') {
-      "wrong package decl in $f (expected package api)" | Add-Content $log
+    $expectedPkgPattern = '(?m)^package\s+' + [regex]::Escape($e.Pkg) + '\b'
+    if ($head -notmatch $expectedPkgPattern) {
+      "wrong package decl in $f (expected package $($e.Pkg))" | Add-Content $log
       $exit = 1
     }
     $lc = (Get-Content -LiteralPath $f | Measure-Object -Line).Lines
-    "expected_file=$f lines=$lc" | Add-Content $log
+    "expected_file=$f lines=$lc pkg=$($e.Pkg)" | Add-Content $log
     $existing.Add($f) | Out-Null
   } else {
     if ($e.SrcNum -eq 0) {
@@ -141,6 +141,7 @@ foreach ($e in $expected) {
 "## REASONING" | Add-Content $log
 "validation only - confirm split preserved behavior, no source edits" | Add-Content $log
 "existing_files_count=$($existing.Count)" | Add-Content $log
+"involved_packages=api" | Add-Content $log
 
 "## CHANGES" | Add-Content $log
 "none (validation only)" | Add-Content $log
@@ -159,12 +160,17 @@ if ($existing.Count -gt 0) {
   $exit = 1
 }
 
-# Fast-fail: build the affected package first, then the whole repo
-$pkgDir = 'internal/api'
-$pkgBuildOut = & go build "./$pkgDir/..." 2>&1
-$pkgBuildExit = $LASTEXITCODE
-"go build ./$pkgDir/... exit=$pkgBuildExit" | Add-Content $log
-$pkgBuildOut | Out-String | Add-Content $log
+# Per-involved-package fast-fail: build each involved package, then the whole repo.
+$testTargets = @('./internal/api')
+$pkgBuildExit = 0
+foreach ($t in $testTargets) {
+  $pkgDirNormalized = $t.TrimStart('.','/').TrimEnd('/')
+  $out = & go build "./$pkgDirNormalized/..." 2>&1
+  $localExit = $LASTEXITCODE
+  "go build $t/... exit=$localExit" | Add-Content $log
+  $out | Out-String | Add-Content $log
+  if ($localExit -ne 0) { $pkgBuildExit = 1 }
+}
 if ($pkgBuildExit -ne 0) { $exit = 1 }
 
 if ($exit -eq 0) {
@@ -174,15 +180,17 @@ if ($exit -eq 0) {
   $buildOut | Out-String | Add-Content $log
   if ($buildExit -ne 0) { $exit = 1 }
 } else {
-  "skipping go build ./... because package build failed" | Add-Content $log
+  "skipping go build ./... because per-package build failed" | Add-Content $log
 }
 
 if ($exit -eq 0) {
-  $vetOut = & go vet ./internal/api 2>&1
-  $vetExit = $LASTEXITCODE
-  "go vet exit=$vetExit" | Add-Content $log
-  $vetOut | Out-String | Add-Content $log
-  if ($vetExit -ne 0) { $exit = 1 }
+  foreach ($t in $testTargets) {
+    $vetOut = & go vet $t 2>&1
+    $localExit = $LASTEXITCODE
+    "go vet $t exit=$localExit" | Add-Content $log
+    $vetOut | Out-String | Add-Content $log
+    if ($localExit -ne 0) { $exit = 1 }
+  }
 } else {
   "skipping go vet because earlier step failed" | Add-Content $log
 }
@@ -190,12 +198,14 @@ if ($exit -eq 0) {
 if ($exit -eq 0) {
   # -race requires CGO. Scope CGO_ENABLED=1 to the test step only; restore project default after.
   $env:CGO_ENABLED = '1'
-  $testOut = & go test ./internal/api -race -count=1 2>&1
-  $testExit = $LASTEXITCODE
+  foreach ($t in $testTargets) {
+    $testOut = & go test $t -race -count=1 2>&1
+    $localExit = $LASTEXITCODE
+    "go test $t exit=$localExit (race=on, cgo=1 for this step only)" | Add-Content $log
+    $testOut | Out-String | Add-Content $log
+    if ($localExit -ne 0) { $exit = 1 }
+  }
   $env:CGO_ENABLED = '0'
-  "go test exit=$testExit (race=on, cgo=1 for this step only)" | Add-Content $log
-  $testOut | Out-String | Add-Content $log
-  if ($testExit -ne 0) { $exit = 1 }
 } else {
   "skipping go test because earlier step failed" | Add-Content $log
 }
