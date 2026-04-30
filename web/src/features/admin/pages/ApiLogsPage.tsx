@@ -33,6 +33,7 @@ const METHOD_VARIANTS: Record<string, LogBadgeVariant> = {
 };
 
 const SERVICE_CONFIG: Record<string, { label: string; variant: LogBadgeVariant }> = {
+  'teslasync-api':   { label: 'TeslaSync API',   variant: 'info' },
   'tesla-api':       { label: 'Tesla API',       variant: 'info' },
   'fleet-telemetry': { label: 'Fleet Telemetry', variant: 'success' },
   'geocoding':       { label: 'Geocoding',       variant: 'warning' },
@@ -51,6 +52,17 @@ function statusBadgeVariant(code: number | null): LogBadgeVariant {
 
 function serviceBadgeConfig(service: string): { label: string; variant: LogBadgeVariant } {
   return SERVICE_CONFIG[service] ?? { label: service, variant: 'neutral' };
+}
+
+// localDateTimeToISO converts a `<input type="datetime-local">` value (local
+// wall-clock, no offset, e.g. `2026-04-29T12:00`) to a UTC ISO string the
+// backend can compare against api_call_logs.ts (timestamptz). Returns
+// undefined for empty / unparseable input so the query param is omitted.
+function localDateTimeToISO(local: string): string | undefined {
+  if (!local) return undefined;
+  const d = new Date(local);
+  if (Number.isNaN(d.getTime())) return undefined;
+  return d.toISOString();
 }
 
 function JsonViewer({ data, label }: { data: string | null; label: string }) {
@@ -108,8 +120,12 @@ export default function ApiLogsPage() {
       status: status || undefined,
       endpoint: endpoint || undefined,
       service: service || undefined,
-      start: startDate || undefined,
-      end: endDate || undefined,
+      // datetime-local inputs are local-time (no offset); the backend stores
+      // ts as UTC (timestamptz). Convert via Date() so the comparison window
+      // matches what the user actually picked, not the same wall-clock time
+      // re-interpreted as UTC.
+      start: localDateTimeToISO(startDate),
+      end: localDateTimeToISO(endDate),
     }),
     refetchInterval: 10_000,
   });
@@ -215,6 +231,7 @@ export default function ApiLogsPage() {
               onChange={(e) => { setService(e.target.value); setPage(0); }}
               options={[
                 { value: '', label: t('apiLogs.allServices', 'All Services') },
+                { value: 'teslasync-api', label: 'TeslaSync API' },
                 { value: 'tesla-api', label: 'Tesla API' },
                 { value: 'fleet-telemetry', label: 'Fleet Telemetry' },
                 { value: 'geocoding', label: 'Geocoding' },

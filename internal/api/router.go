@@ -149,6 +149,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	auditHandler := NewAuditHandler(db)
 	apiCallLogHandler := NewAPICallLogHandler(db)
 	apiKeyHandler := NewAPIKeyHandler(db)
+	signalCatalogHandler := NewSignalCatalogHandler(db)
 	chargingHeatmapHandler := NewChargingHeatmapHandler(db)
 	speedProfileHandler := NewSpeedProfileHandler(db)
 	dataRepairHandler := NewDataRepairHandler(db)
@@ -1004,6 +1005,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				writeJSON(w, http.StatusOK, stats)
 			})
 		}
+
+		// Signal Catalog & Observations (cold-path, ADR-002 + ADR-009).
+		// Registered before /signals/{vehicleID} so chi's trie prefers the
+		// literal segment over the {vehicleID} param.
+		r.Get("/signals/catalog", signalCatalogHandler.ListCatalog)
+		r.Get("/signals/observations", signalCatalogHandler.ListObservations)
 
 		// Signal routes
 		r.Route("/signals/{vehicleID}", func(r chi.Router) {
