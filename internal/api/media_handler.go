@@ -6,17 +6,23 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
-// MediaHandler serves media playback endpoints backed by signal_log.
+// MediaHandler serves media playback endpoints backed by the signal-log
+// change feed via signal.StateReader (ADR-002 / phase-39). The reader
+// forward-folds emissions, so consecutive rows always carry the most
+// recently observed value for every projected signal — eliminating the
+// "Spotify vanishing" phantom-empty-row regression on /media/playback-history.
 type MediaHandler struct {
-	signalLogReader *database.SignalLogReader
+	state signal.StateReader
 }
 
-// Signal → JSON field mappings for media pivot queries.
-// Signal names must match signal_types.go; field names must match models.MediaSnapshot JSON tags.
-var mediaMappings = []database.PivotMapping{
+// Signal → JSON field mappings for media projection.
+// Signal names must match signal_types.go; field names must match
+// models.MediaSnapshot JSON tags.
+var mediaMappings = []signal.FieldMapping{
 	{Signal: "MediaPlaybackStatus", Field: "playback_status"},
 	{Signal: "MediaNowPlayingTitle", Field: "now_playing_title"},
 	{Signal: "MediaNowPlayingArtist", Field: "now_playing_artist"},
@@ -30,11 +36,27 @@ var mediaMappings = []database.PivotMapping{
 	{Signal: "MediaNowPlayingElapsed", Field: "now_playing_elapsed"},
 }
 
-func NewMediaHandler(slr *database.SignalLogReader) *MediaHandler {
-	return &MediaHandler{signalLogReader: slr}
+// mediaIdentityCollapseFields is the tuple that defines a "distinct"
+// playback-history row in the UI: a row is considered the same listening
+// session as the previous row when status / title / artist / album / source
+// are all identical, and Timeline collapses consecutive duplicates of this
+// tuple. Volume changes, elapsed-position ticks, and station re-tunes do
+// NOT split a row.
+var mediaIdentityCollapseFields = []string{
+	"playback_status",
+	"now_playing_title",
+	"now_playing_artist",
+	"now_playing_album",
+	"playback_source",
 }
 
-// List returns media history from signal_log via SignalTracePivotFlat.
+func NewMediaHandler(state signal.StateReader) *MediaHandler {
+	return &MediaHandler{state: state}
+}
+
+// List returns media history derived from the signal-log change feed.
+// In list mode the reader forward-folds emissions and collapses
+// consecutive rows whose media-identity tuple is unchanged.
 func (h *MediaHandler) List(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
 	if err != nil || vehicleID == 0 {
@@ -51,26 +73,34 @@ func (h *MediaHandler) List(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	rows, err := h.signalLogReader.SignalTracePivotFlat(r.Context(),
-		vehicleID, mediaMappings, from, to)
+	rows, err := h.state.Timeline(r.Context(), vehicleID, mediaMappings, from, to, signal.TimelineOptions{
+		CollapseBy: mediaIdentityCollapseFields,
+	})
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get media data from signal_log")
 		writeError(w, http.StatusInternalServerError, "failed to get media data")
 		return
 	}
-	if rows == nil {
-		rows = []map[string]interface{}{}
-	}
+
+	result := make([]map[string]any, 0, len(rows))
 	for i, row := range rows {
-		if ts, ok := row["ts"]; ok {
-			row["created_at"] = ts
+		m := make(map[string]any, len(row.Fields)+3)
+		for k, v := range row.Fields {
+			m[k] = v
 		}
-		row["id"] = i + 1
+		m["ts"] = row.Timestamp
+		m["created_at"] = row.Timestamp
+		m["id"] = i + 1
+		result = append(result, m)
 	}
-	writeJSON(w, http.StatusOK, rows)
+	writeJSON(w, http.StatusOK, result)
 }
 
-// Latest returns the most recent media values via SnapshotAt(now).
+// Latest returns the most-recent media values as of now, derived from
+// the forward-folded signal-log state. When the vehicle has no
+// signal_log rows yet (fresh import, brand-new VIN, or post-purge) the
+// canonical 11-key media shape is returned with all values nil — the
+// frontend handles per-field nil but crashes on absent keys.
 func (h *MediaHandler) Latest(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
 	if err != nil || vehicleID == 0 {
@@ -78,17 +108,19 @@ func (h *MediaHandler) Latest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	snap, err := h.signalLogReader.SnapshotAt(r.Context(), vehicleID, time.Now())
+	snap, err := h.state.State(r.Context(), vehicleID, time.Now())
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get latest media data")
 		writeError(w, http.StatusInternalServerError, "failed to get latest media data")
 		return
 	}
 
-	result := make(map[string]interface{})
+	result := make(map[string]any, len(mediaMappings))
 	for _, m := range mediaMappings {
 		if v, ok := snap[m.Signal]; ok {
 			result[m.Field] = v
+		} else {
+			result[m.Field] = nil
 		}
 	}
 	writeJSON(w, http.StatusOK, result)
