@@ -1,0 +1,119 @@
+## PREFLIGHT
+start_utc=2026-04-30T03:40:12.5856590+00:00
+go_version=go version go1.26.1 windows/amd64
+engineer_email=iamatulmgupta@gmail.com
+powershell_version=7.6.1
+os_platform=Win32NT
+exports invariant ok: 1273 exported identifiers preserved
+import-graph invariant ok: 80 imports preserved
+## SURVEY
+source_lines_after=1427
+new_file=internal/api/telemetry_handler_wiring.go lines=251
+## REASONING
+mechanical decomposition: split internal/api/telemetry_handler.go into internal/api/telemetry_handler_wiring.go
+no behavior, API, SQL, JSON, route, config, or runtime ordering changes
+
+split_map (engineer-provided):
+  source_file: internal/api/telemetry_handler.go
+  destination_file: internal/api/telemetry_handler_wiring.go
+
+  identifiers_moved_to_telemetry_handler_wiring.go (verbatim, in source order):
+    Constructor:
+      - func NewTelemetryHandler
+    Config setters / getters / option functions:
+      - func (h *TelemetryHandler) SetRawTelemetryRepo
+      - func (h *TelemetryHandler) SetTimings
+      - func (h *TelemetryHandler) SetSignalStore
+      - func (h *TelemetryHandler) SetLiveSignalStore
+      - func (h *TelemetryHandler) SetRedisCache
+      - func (h *TelemetryHandler) SetEventHub
+      - func (h *TelemetryHandler) GetSignalStore
+      - func (h *TelemetryHandler) GetLiveSignalStore
+      - func (h *TelemetryHandler) SessionTracker
+      - func (h *TelemetryHandler) AlertEvaluator
+      - func (h *TelemetryHandler) SetSignalLogRepo
+      - func (h *TelemetryHandler) SetSignalHistoryWriter
+      - func (h *TelemetryHandler) FSMHandler
+      - func (h *TelemetryHandler) SetCaptureEnabled
+      - func (h *TelemetryHandler) IsCaptureEnabled
+    Lifecycle hooks (own background goroutines / channels):
+      - func (h *TelemetryHandler) StartCleanup
+      - func (h *TelemetryHandler) checkConnFSMTimeouts (only invoked from StartCleanup goroutine)
+      - func (h *TelemetryHandler) cleanupStaleEntries  (only invoked from StartCleanup goroutine)
+      - func (h *TelemetryHandler) Shutdown
+
+  identifiers_kept_in_telemetry_handler.go:
+    - type TelemetryHandler (struct definition)
+    - type VehicleStreamState
+    - type telemetrySignal, type telemetryPayload
+    - type bucketResult
+    - func (h *TelemetryHandler) liveStoreForTelemetry  (hot-path helper for ProcessSignals)
+    - func (h *TelemetryHandler) updateLiveSignals      (hot-path helper for ProcessSignals)
+    - func (h *TelemetryHandler) GetStreamingState
+    - func (h *TelemetryHandler) IsVehicleStreaming
+    - func (h *TelemetryHandler) ProcessSignals (hot path - SignalStore L1)
+    - func (h *TelemetryHandler) trackMileage
+    - func (h *TelemetryHandler) StreamingVINs
+    - func (h *TelemetryHandler) GetStaleVINs
+    - func (h *TelemetryHandler) TelemetryIngest
+    - func (h *TelemetryHandler) extractPosition
+    - func (h *TelemetryHandler) TelemetryStatus
+    - func (h *TelemetryHandler) ProcessBatch (hot path)
+    - func boolToInt, func pickValue
+    - func buildSSEPayload
+    - func (h *TelemetryHandler) broadcastSSE
+    - func (h *TelemetryHandler) buildColdObservations
+    - func (h *TelemetryHandler) buildHotRow
+    - func bucketAtomics
+    - func normalizeFleetUnits
+    - func toFloat, func toBool, func parseBuckleStatus, func toTimestamp
+    - func (h *TelemetryHandler) trackSecurity
+    - func (h *TelemetryHandler) trackVehicleConfig
+    - func (h *TelemetryHandler) trackUserPreferences
+    - func formatSignalName
+    - func (h *TelemetryHandler) CaptureList
+    - func (h *TelemetryHandler) CaptureStats
+    - func (h *TelemetryHandler) CaptureDrop
+    - func (h *TelemetryHandler) CaptureExport
+
+  cross_file_unexported_references (both files share package api):
+    - safeGo (defined in internal/api/safe.go) - called from StartCleanup goroutines
+    - TelemetrySessionTracker / NewTelemetrySessionTracker (telemetry_sessions.go) - referenced by NewTelemetryHandler
+    - TelemetryAlertEvaluator  / NewTelemetryAlertEvaluator  (telemetry_alerts.go)  - referenced by NewTelemetryHandler
+    - FSMHandler / NewFSMHandler (fsm_handler.go) - referenced by NewTelemetryHandler
+    - EventHub (events / sse plumbing) - referenced by NewTelemetryHandler / SetEventHub
+    - sessionTracker.signalHistoryWriter unexported field write
+    - All *TelemetryHandler unexported field accesses (db, posRepo, mu, connFSMs, ...) remain valid (same package)
+
+  imports_moved_only_to_wiring (no longer used in original):
+    - github.com/ev-dev-labs/teslasync/internal/geocoding
+    - github.com/eclipse/paho.mqtt.golang (alias pahomqtt)
+
+  imports_duplicated_in_both_files (used by both):
+    - context, time, github.com/ev-dev-labs/teslasync/internal/database,
+      github.com/ev-dev-labs/teslasync/internal/events,
+      github.com/ev-dev-labs/teslasync/internal/fsm/telemetry (alias telemetryfsm),
+      github.com/ev-dev-labs/teslasync/internal/mqtt,
+      github.com/ev-dev-labs/teslasync/internal/signal
+
+  layered_live_state_invariant:
+    SignalStore L1 hot path (liveStoreForTelemetry / updateLiveSignals /
+    ProcessSignals / ProcessBatch) stays co-located in telemetry_handler.go.
+    Only construction wiring (which sets signalStore/redisCache/liveSignalStore
+    fields once at startup) and the lifecycle goroutines moved to the wiring
+    file. No FSM / Redis / signal_log code paths were split across files.
+## CHANGES
+internal/api/telemetry_handler.go sha256=C5838A18696A7CA1E627889DD154175C2784584ACA49AC6AFAD0360B02C28264
+internal/api/telemetry_handler_wiring.go sha256=0B8BD71C0DF7F670E7394D42D8A47257C78FD77A41791BB00D45863409F4965D
+## GATE
+go build ./internal/api/... exit=0
+
+go build ./... exit=0
+
+go vet exit=0
+
+go test exit=0
+ok  	github.com/ev-dev-labs/teslasync/internal/api	0.154s
+
+EXIT=0
+STATUS=DONE
