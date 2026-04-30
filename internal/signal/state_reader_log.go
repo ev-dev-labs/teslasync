@@ -3,12 +3,9 @@
 // state_reader_log.go is the signal_log-backed implementation of the
 // StateReader interface declared in state_reader.go. This file provides
 // LogStateReader, State() (Prompt 05), SignalAt() (Prompt 06), and
-// Timeline() chart mode (Prompt 07). Timeline list-mode (collapse) is
-// deferred to Prompt 08; calling Timeline with a non-empty CollapseBy
-// returns a phase-39-08 error rather than panicking, so the type can be
-// safely wired into chart-mode handlers before Prompt 08 lands.
-// The interface assertion at the bottom forces every method on
-// StateReader to exist on this type so the package compiles.
+// Timeline() in both chart mode (Prompt 07) and list/collapse mode
+// (Prompt 08). The interface assertion at the bottom forces every method
+// on StateReader to exist on this type so the package compiles.
 package signal
 
 import (
@@ -318,10 +315,18 @@ LIMIT 1`
 //
 // # Mode
 //
-// Prompt 07 implements CHART MODE only: opts.CollapseBy MUST be empty/nil.
-// Passing a non-empty CollapseBy returns a phase-39-08 error rather than
-// panicking, so callers can safely wire Timeline into chart-mode handlers
-// before list-mode collapse is implemented.
+// CHART MODE (opts.CollapseBy empty/nil): every change-feed emission
+// becomes one TimelineRow. This is the stepped-line / time-series shape
+// chart components consume.
+//
+// LIST MODE (opts.CollapseBy non-empty): consecutive rows whose
+// projections over the listed Field names are equal collapse to the
+// earliest row of the run. Use this for tabular history endpoints
+// (/media/playback-history, /security/events, etc.) that should not
+// render duplicate "still on D, still 65 mph" rows. Each entry in
+// opts.CollapseBy MUST appear as a mapping.Field in `fields`; otherwise
+// Timeline returns an error BEFORE issuing SQL so typos at the call
+// site do not silently produce duplicate rows.
 //
 // # Context contract
 //
@@ -389,6 +394,23 @@ func (r *LogStateReader) Timeline(ctx context.Context, vehicleID int64, fields [
 	}
 	if window := to.Sub(from); window > 366*24*time.Hour {
 		return nil, fmt.Errorf("timeline: window > 366 days is not supported (got %s)", window)
+	}
+	// Validate opts.CollapseBy entries reference declared output Field
+	// names. Run BEFORE any SQL so a misconfigured caller (typo in a
+	// collapse-key name) fails loudly at the contract boundary instead
+	// of silently issuing a window scan whose rows then collapse on a
+	// non-existent key (which projectCollapseKey would treat as nil for
+	// every row, producing exactly one collapsed output row).
+	if len(opts.CollapseBy) > 0 {
+		fieldSet := make(map[string]struct{}, len(fields))
+		for _, f := range fields {
+			fieldSet[f.Field] = struct{}{}
+		}
+		for _, c := range opts.CollapseBy {
+			if _, ok := fieldSet[c]; !ok {
+				return nil, fmt.Errorf("timeline: collapse field %q not in mappings", c)
+			}
+		}
 	}
 
 	// Build the unique signal set the SQL needs to filter by. Preserve
@@ -542,11 +564,14 @@ ORDER BY created_at ASC`
 	}
 
 	if len(opts.CollapseBy) > 0 {
-		// Prompt 08 will swap this for `collapseTimeline(rows, opts.CollapseBy), nil`.
-		// Until then the contract is "chart mode works, list mode is an
-		// explicit not-implemented error" so callers wired up early do
-		// not silently fall through to chart-mode behavior.
-		return nil, fmt.Errorf("phase-39-08 not yet implemented: TimelineOptions.CollapseBy")
+		// LIST MODE: drop consecutive rows whose projection over the
+		// collapse-key fields is equal to the previous KEPT row. The
+		// CollapseBy entries were validated against `fields` above so
+		// projectCollapseKey cannot silently render every row's key as
+		// nil. Empty CollapseBy is a no-op inside collapseTimeline, so
+		// the chart-mode return below is functionally equivalent — the
+		// branch exists only to keep the chart-mode code path zero-alloc.
+		return collapseTimeline(rows, opts.CollapseBy), nil
 	}
 
 	return rows, nil

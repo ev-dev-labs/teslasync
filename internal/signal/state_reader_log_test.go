@@ -568,6 +568,7 @@ func (t *timelineQuerier) Query(ctx context.Context, sql string, args ...any) (p
 }
 
 func ptrFloat64(v float64) *float64 { return &v }
+func ptrString(v string) *string    { return &v }
 
 // validWindow returns a (from, to) pair safely inside the 366-day guard
 // so happy-path tests do not have to spell out time literals.
@@ -743,23 +744,6 @@ func TestLogStateReader_Timeline_ChartMode_DropsLeadingNilRows(t *testing.T) {
 	}
 }
 
-func TestLogStateReader_Timeline_ChartMode_RejectsCollapseByForNow(t *testing.T) {
-	q := &timelineQuerier{}
-	r := &LogStateReader{pool: q, log: zerolog.Nop()}
-	from, to := validWindow()
-
-	_, err := r.Timeline(context.Background(), 1,
-		[]FieldMapping{{Signal: "Speed", Field: "speed"}},
-		from, to,
-		TimelineOptions{CollapseBy: []string{"title"}})
-	if err == nil {
-		t.Fatal("want error for collapse mode (deferred to Prompt 08)")
-	}
-	if !strings.Contains(err.Error(), "phase-39-08") {
-		t.Fatalf("want 'phase-39-08' in error, got %q", err.Error())
-	}
-}
-
 func TestLogStateReader_Timeline_ChartMode_PropagatesContextCancel(t *testing.T) {
 	q := &timelineQuerier{seedErr: context.Canceled}
 	r := &LogStateReader{pool: q, log: zerolog.Nop()}
@@ -883,5 +867,190 @@ func TestLogStateReader_Timeline_ChartMode_RejectsExcessiveWindow(t *testing.T) 
 	}
 	if got := q.calls.Load(); got != 0 {
 		t.Fatalf("Query must not be called for excessive window; got %d calls", got)
+	}
+}
+
+func TestLogStateReader_Timeline_CollapseMode_DropsConsecutiveDuplicates(t *testing.T) {
+	t1 := time.Date(2026, 4, 30, 12, 0, 0, 0, time.UTC)
+	t2 := t1.Add(time.Minute)
+	t3 := t2.Add(time.Minute)
+	// Three Title emissions whose values are A, A, B. forwardFold
+	// produces three rows; collapseTimeline on ["title"] keeps the 1st
+	// and 3rd (A is the leading run, B is a new value). The middle
+	// duplicate row is dropped.
+	q := &timelineQuerier{
+		windowRows: &timelineWindowPgxRows{rows: []timelineWindowRow{
+			{createdAt: t1, signal: "Title", vStr: ptrString("A")},
+			{createdAt: t2, signal: "Title", vStr: ptrString("A")},
+			{createdAt: t3, signal: "Title", vStr: ptrString("B")},
+		}},
+	}
+	r := &LogStateReader{pool: q, log: zerolog.Nop()}
+	from, to := validWindow()
+
+	rows, err := r.Timeline(context.Background(), 1,
+		[]FieldMapping{{Signal: "Title", Field: "title"}},
+		from, to,
+		TimelineOptions{CollapseBy: []string{"title"}})
+	if err != nil {
+		t.Fatalf("Timeline: %v", err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("rows: want 2 (consecutive A,A collapsed), got %d (%+v)", len(rows), rows)
+	}
+	if !rows[0].Timestamp.Equal(t1) {
+		t.Fatalf("rows[0].ts: want %v (first A kept), got %v", t1, rows[0].Timestamp)
+	}
+	if rows[0].Fields["title"] != "A" {
+		t.Fatalf("rows[0].title: want A, got %v", rows[0].Fields["title"])
+	}
+	if !rows[1].Timestamp.Equal(t3) {
+		t.Fatalf("rows[1].ts: want %v (B kept after collapse), got %v", t3, rows[1].Timestamp)
+	}
+	if rows[1].Fields["title"] != "B" {
+		t.Fatalf("rows[1].title: want B, got %v", rows[1].Fields["title"])
+	}
+}
+
+func TestLogStateReader_Timeline_CollapseMode_KeepsFirstAlways(t *testing.T) {
+	t1 := time.Date(2026, 4, 30, 12, 0, 0, 0, time.UTC)
+	t2 := t1.Add(time.Minute)
+	// At t1 only Speed emits, so the row's collapse-key projection over
+	// ["title"] is all-nil. The collapse contract says the first kept
+	// row is ALWAYS kept regardless of its collapse-key shape; verify
+	// that nil-projection first row survives and the second row (with
+	// title="A") is kept as the first non-nil collapse value.
+	q := &timelineQuerier{
+		windowRows: &timelineWindowPgxRows{rows: []timelineWindowRow{
+			{createdAt: t1, signal: "Speed", vNum: ptrFloat64(50)},
+			{createdAt: t2, signal: "Title", vStr: ptrString("A")},
+		}},
+	}
+	r := &LogStateReader{pool: q, log: zerolog.Nop()}
+	from, to := validWindow()
+
+	rows, err := r.Timeline(context.Background(), 1,
+		[]FieldMapping{
+			{Signal: "Speed", Field: "speed"},
+			{Signal: "Title", Field: "title"},
+		},
+		from, to,
+		TimelineOptions{CollapseBy: []string{"title"}})
+	if err != nil {
+		t.Fatalf("Timeline: %v", err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("rows: want 2 (first nil-key row kept, then transition to A), got %d (%+v)", len(rows), rows)
+	}
+	if !rows[0].Timestamp.Equal(t1) {
+		t.Fatalf("rows[0].ts: want %v (first row always kept), got %v", t1, rows[0].Timestamp)
+	}
+	if rows[0].Fields["title"] != nil {
+		t.Fatalf("rows[0].title: want nil (no Title emission yet), got %v", rows[0].Fields["title"])
+	}
+	if rows[0].Fields["speed"] != 50.0 {
+		t.Fatalf("rows[0].speed: want 50.0 (non-collapsed field carries real value), got %v", rows[0].Fields["speed"])
+	}
+}
+
+func TestLogStateReader_Timeline_CollapseMode_RejectsUnknownCollapseField(t *testing.T) {
+	q := &timelineQuerier{}
+	r := &LogStateReader{pool: q, log: zerolog.Nop()}
+	from, to := validWindow()
+
+	_, err := r.Timeline(context.Background(), 1,
+		[]FieldMapping{{Signal: "X", Field: "x"}},
+		from, to,
+		TimelineOptions{CollapseBy: []string{"does_not_exist"}})
+	if err == nil {
+		t.Fatal("want error for unknown collapse field")
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, "does_not_exist") {
+		t.Fatalf("want 'does_not_exist' in error, got %q", msg)
+	}
+	if !strings.Contains(msg, "not in mappings") {
+		t.Fatalf("want 'not in mappings' in error, got %q", msg)
+	}
+	if got := q.calls.Load(); got != 0 {
+		t.Fatalf("Query must not be called when CollapseBy validation fails; got %d calls", got)
+	}
+}
+
+func TestLogStateReader_Timeline_CollapseMode_PreservesNonCollapsedFields(t *testing.T) {
+	t1 := time.Date(2026, 4, 30, 12, 0, 0, 0, time.UTC)
+	t2 := t1.Add(time.Minute)
+	t3 := t2.Add(time.Minute)
+	// Three timestamps. Title is "A" at t1+t2 (consecutive duplicates
+	// under CollapseBy=["title"]), then "B" at t3. Artist changes at
+	// every timestamp: X, Y, Z. After collapse, t2's row is dropped, so
+	// the kept rows must carry artist=X (state at t1) and artist=Z
+	// (state at t3). Crucially, artist=Y from the dropped t2 row must
+	// NOT bleed into the kept row 1's artist value.
+	q := &timelineQuerier{
+		windowRows: &timelineWindowPgxRows{rows: []timelineWindowRow{
+			{createdAt: t1, signal: "Title", vStr: ptrString("A")},
+			{createdAt: t1, signal: "Artist", vStr: ptrString("X")},
+			{createdAt: t2, signal: "Title", vStr: ptrString("A")},
+			{createdAt: t2, signal: "Artist", vStr: ptrString("Y")},
+			{createdAt: t3, signal: "Title", vStr: ptrString("B")},
+			{createdAt: t3, signal: "Artist", vStr: ptrString("Z")},
+		}},
+	}
+	r := &LogStateReader{pool: q, log: zerolog.Nop()}
+	from, to := validWindow()
+
+	rows, err := r.Timeline(context.Background(), 1,
+		[]FieldMapping{
+			{Signal: "Title", Field: "title"},
+			{Signal: "Artist", Field: "artist"},
+		},
+		from, to,
+		TimelineOptions{CollapseBy: []string{"title"}})
+	if err != nil {
+		t.Fatalf("Timeline: %v", err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("rows: want 2 (t2 dropped as duplicate of t1's title), got %d (%+v)", len(rows), rows)
+	}
+	if !rows[0].Timestamp.Equal(t1) {
+		t.Fatalf("rows[0].ts: want %v (first A kept), got %v", t1, rows[0].Timestamp)
+	}
+	if rows[0].Fields["title"] != "A" {
+		t.Fatalf("rows[0].title: want A, got %v", rows[0].Fields["title"])
+	}
+	if rows[0].Fields["artist"] != "X" {
+		t.Fatalf("rows[0].artist: want X (state at kept t1, NOT Y from dropped t2), got %v", rows[0].Fields["artist"])
+	}
+	if !rows[1].Timestamp.Equal(t3) {
+		t.Fatalf("rows[1].ts: want %v (B kept), got %v", t3, rows[1].Timestamp)
+	}
+	if rows[1].Fields["title"] != "B" {
+		t.Fatalf("rows[1].title: want B, got %v", rows[1].Fields["title"])
+	}
+	if rows[1].Fields["artist"] != "Z" {
+		t.Fatalf("rows[1].artist: want Z (state at t3), got %v", rows[1].Fields["artist"])
+	}
+}
+
+func TestLogStateReader_Timeline_CollapseMode_NoNPlusOne(t *testing.T) {
+	q := &timelineQuerier{}
+	r := &LogStateReader{pool: q, log: zerolog.Nop()}
+	from, to := validWindow()
+
+	mappings := []FieldMapping{
+		{Signal: "Speed", Field: "speed"},
+		{Signal: "Soc", Field: "soc"},
+		{Signal: "Power", Field: "power"},
+		{Signal: "Heading", Field: "heading"},
+		{Signal: "Odometer", Field: "odo"},
+	}
+	_, err := r.Timeline(context.Background(), 1, mappings, from, to,
+		TimelineOptions{CollapseBy: []string{"speed"}})
+	if err != nil {
+		t.Fatalf("Timeline: %v", err)
+	}
+	if got := q.calls.Load(); got != 2 {
+		t.Fatalf("calls: want exactly 2 (seed + window) regardless of mapping count or collapse mode, got %d", got)
 	}
 }

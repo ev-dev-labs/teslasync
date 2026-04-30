@@ -1,0 +1,49 @@
+=== PREFLIGHT ===
+Predecessor phase-39-07 STATUS=DONE (verified)
+Stub at internal/signal/state_reader_log.go:544-550 (returns 'phase-39-08 not yet implemented')
+collapseTimeline(rows, fields []string) []TimelineRow available in pivot.go:162
+Existing test ChartMode_RejectsCollapseByForNow (line 746) will become obsolete and must be removed
+Existing helper ptrFloat64 at line 570; need ptrString for new tests
+
+=== ALGORITHM ===
+1. Validate opts.CollapseBy BEFORE SQL: every entry must appear as mapping.Field in fields
+2. On unknown collapse field: return fmt.Errorf("timeline: collapse field %q not in mappings", missing)
+3. Replace deferred error with: return collapseTimeline(rows, opts.CollapseBy), nil
+4. Update package doc and Timeline doc to reflect both modes supported
+5. Remove obsolete TestLogStateReader_Timeline_ChartMode_RejectsCollapseByForNow
+6. Add ptrString helper alongside ptrFloat64
+7. Add 5 new tests for collapse mode (drops dups, keeps first, rejects unknown, preserves other, no n+1)
+=== CHANGES ===
+ internal/signal/state_reader_log.go      |  55 ++++++---
+ internal/signal/state_reader_log_test.go | 203 ++++++++++++++++++++++++++++---
+ 2 files changed, 226 insertions(+), 32 deletions(-)
+=== GATE ===
+TEST_NO_NPLUS1=True
+TEST_KEEP_FIRST=True
+TEST_REJECT_UNKNOWN=True
+TEST_DROP_DUPS=True
+TEST_PRESERVE_OTHER=True
+CALLS_COLLAPSE=True
+VALIDATES_COLLAPSE_KEYS=True
+DEFERRAL_REMOVED=True
+ok  	github.com/ev-dev-labs/teslasync/internal/signal	(cached)
+GO_TEST_EXIT=0
+UNEXPECTED_STATUS_COUNT=1
+ M .github/prompts/db-refactor/logs/phase-39-07-state-reader-impl-timeline-chart.log
+EXIT=1
+STATUS=BLOCKED
+=== GATE ===
+CALLS_COLLAPSE=True
+TEST_PRESERVE_OTHER=True
+TEST_REJECT_UNKNOWN=True
+DEFERRAL_REMOVED=True
+TEST_KEEP_FIRST=True
+VALIDATES_COLLAPSE_KEYS=True
+TEST_DROP_DUPS=True
+TEST_NO_NPLUS1=True
+ok  	github.com/ev-dev-labs/teslasync/internal/signal	(cached)
+GO_TEST_EXIT=0
+UNEXPECTED_STATUS_COUNT=0
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
