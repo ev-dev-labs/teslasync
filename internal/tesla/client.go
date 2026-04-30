@@ -14,9 +14,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/rs/zerolog/log"
 	"github.com/sony/gobreaker"
-	"github.com/ev-dev-labs/teslasync/internal/config"
 	"golang.org/x/time/rate"
 )
 
@@ -95,39 +95,6 @@ func NewClient(cfg config.TeslaConfig) *Client {
 	return c
 }
 
-// SetTokens sets the current OAuth tokens.
-func (c *Client) SetTokens(access, refresh string, expiresAt time.Time) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.accessToken = access
-	c.refreshTok = refresh
-	c.expiresAt = expiresAt
-}
-
-// GetAuthURL returns the Tesla OAuth authorization URL.
-func (c *Client) GetAuthURL(state string) string {
-	return fmt.Sprintf(
-		"%s/oauth2/v3/authorize?client_id=%s&redirect_uri=%s&response_type=code&scope=%s&state=%s&prompt=consent",
-		c.authURL, c.clientID, c.redirectURI,
-		"openid+offline_access+vehicle_device_data+vehicle_location+vehicle_cmds+vehicle_charging_cmds",
-		state,
-	)
-}
-
-// HasValidToken returns whether a valid token is available.
-func (c *Client) HasValidToken() bool {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.accessToken != "" && time.Now().Before(c.expiresAt)
-}
-
-// ExpiresWithin returns true if the token will expire within the given duration.
-func (c *Client) ExpiresWithin(d time.Duration) bool {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.accessToken != "" && time.Until(c.expiresAt) < d
-}
-
 // SetLogCallback sets the callback function for logging API calls.
 func (c *Client) SetLogCallback(cb func(method, url string, statusCode int, reqBody, respBody []byte, durationMs int, err error)) {
 	c.logCallback = cb
@@ -150,17 +117,8 @@ func (c *Client) CircuitBreakerCounts() map[string]interface{} {
 	}
 }
 
-// ErrUnauthorized is returned when the Tesla API rejects the current token.
-var ErrUnauthorized = fmt.Errorf("unauthorized (401): token expired or invalid")
-
 // BaseURL returns the configured Fleet API base URL.
 func (c *Client) BaseURL() string { return c.baseURL }
-
-// ClientID returns the configured OAuth client ID.
-func (c *Client) ClientID() string { return c.clientID }
-
-// ClientSecret returns the configured OAuth client secret.
-func (c *Client) ClientSecret() string { return c.clientSec }
 
 // GetUserRegion calls GET /api/1/users/region to detect the account's Fleet API region.
 func (c *Client) GetUserRegion(ctx context.Context) ([]byte, int, error) {
@@ -364,89 +322,24 @@ func (c *Client) RevokeVehicleInvitation(ctx context.Context, vin, invitationID 
 
 // FleetTelemetrySubscription is the configuration payload for fleet telemetry.
 type FleetTelemetrySubscription struct {
-	VINs   []string                       `json:"vins"`
-	Config FleetTelemetryConfigPayload    `json:"config"`
+	VINs   []string                    `json:"vins"`
+	Config FleetTelemetryConfigPayload `json:"config"`
 }
 
 // FleetTelemetryConfigPayload describes the streaming server and fields to subscribe.
 type FleetTelemetryConfigPayload struct {
-	Hostname   string                          `json:"hostname"`
-	CA         *string                         `json:"ca,omitempty"`
-	Fields     map[string]FleetTelemetryField  `json:"fields"`
-	AlertTypes []string                        `json:"alert_types,omitempty"`
-	Port       int                             `json:"port"`
-	Exp        int64                           `json:"exp,omitempty"`
+	Hostname   string                         `json:"hostname"`
+	CA         *string                        `json:"ca,omitempty"`
+	Fields     map[string]FleetTelemetryField `json:"fields"`
+	AlertTypes []string                       `json:"alert_types,omitempty"`
+	Port       int                            `json:"port"`
+	Exp        int64                          `json:"exp,omitempty"`
 }
 
 // FleetTelemetryField describes a single telemetry field subscription.
 type FleetTelemetryField struct {
 	IntervalSeconds int      `json:"interval_seconds"`
 	MinimumDelta    *float64 `json:"minimum_delta,omitempty"`
-}
-
-// GetPartnerToken obtains a client_credentials token for partner-level API calls.
-// Partner tokens use a separate auth endpoint (fleet-auth) from the user OAuth flow.
-func (c *Client) GetPartnerToken(ctx context.Context) (string, error) {
-	// Partner token endpoint is fleet-auth, not auth.tesla.com.
-	// Derive from base URL: https://fleet-api.prd.na.vn.cloud.tesla.com
-	//                     → https://fleet-auth.prd.vn.cloud.tesla.com
-	partnerAuthURL := c.partnerAuthURL()
-
-	formData := url.Values{
-		"grant_type":    {"client_credentials"},
-		"client_id":     {c.clientID},
-		"client_secret": {c.clientSec},
-		"scope":         {"openid vehicle_device_data vehicle_location vehicle_cmds vehicle_charging_cmds"},
-		"audience":      {c.baseURL},
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, partnerAuthURL+"/oauth2/v3/token", bytes.NewReader([]byte(formData.Encode())))
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	log.Debug().
-		Str("url", partnerAuthURL+"/oauth2/v3/token").
-		Str("client_id", c.clientID).
-		Str("audience", c.baseURL).
-		Msg("requesting partner token")
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("partner token request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	respBody, _ := io.ReadAll(resp.Body)
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("partner token failed (%d): %s", resp.StatusCode, string(respBody))
-	}
-
-	var result struct {
-		AccessToken string `json:"access_token"`
-	}
-	if err := json.Unmarshal(respBody, &result); err != nil {
-		return "", fmt.Errorf("decode partner token: %w", err)
-	}
-	return result.AccessToken, nil
-}
-
-// partnerAuthURL derives the fleet-auth URL from the configured base URL.
-// e.g. https://fleet-api.prd.na.vn.cloud.tesla.com → https://fleet-auth.prd.vn.cloud.tesla.com
-// Falls back to https://fleet-auth.prd.vn.cloud.tesla.com if parsing fails.
-func (c *Client) partnerAuthURL() string {
-	// Known mappings
-	regionMap := map[string]string{
-		"https://fleet-api.prd.na.vn.cloud.tesla.com": "https://fleet-auth.prd.vn.cloud.tesla.com",
-		"https://fleet-api.prd.eu.vn.cloud.tesla.com": "https://fleet-auth.prd.vn.cloud.tesla.com",
-		"https://fleet-api.prd.cn.vn.cloud.tesla.com": "https://fleet-auth.prd.vn.cloud.tesla.com",
-	}
-	if authURL, ok := regionMap[c.baseURL]; ok {
-		return authURL
-	}
-	// Default fallback
-	return "https://fleet-auth.prd.vn.cloud.tesla.com"
 }
 
 // PairKey pairs the public key with a vehicle for command signing.
@@ -553,86 +446,6 @@ type apiResponse struct {
 	Body       []byte
 }
 
-// doRequestWithToken performs an API request using a custom bearer token (e.g. partner token)
-// instead of the stored user access token. Runs through the circuit breaker and logging.
-func (c *Client) doRequestWithToken(ctx context.Context, method, path string, body io.Reader, token string) ([]byte, int, error) {
-	if err := c.limiter.Wait(ctx); err != nil {
-		return nil, 0, fmt.Errorf("rate limiter: %w", err)
-	}
-
-	url := c.baseURL + path
-	start := time.Now()
-
-	var reqBodyBytes []byte
-	if body != nil {
-		reqBodyBytes, _ = io.ReadAll(body)
-		body = bytes.NewReader(reqBodyBytes)
-	}
-
-	result, err := c.cb.Execute(func() (interface{}, error) {
-		req, err := http.NewRequestWithContext(ctx, method, url, body)
-		if err != nil {
-			return nil, fmt.Errorf("create request: %w", err)
-		}
-
-		req.Header.Set("Authorization", "Bearer "+token)
-		req.Header.Set("Content-Type", "application/json")
-
-		resp, err := c.httpClient.Do(req)
-		if err != nil {
-			return nil, fmt.Errorf("do request: %w", err)
-		}
-		defer resp.Body.Close()
-
-		data, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("read body: %w", err)
-		}
-
-		if resp.StatusCode == http.StatusUnauthorized {
-			return &apiResponse{StatusCode: resp.StatusCode, Body: data}, ErrUnauthorized
-		}
-		if resp.StatusCode == http.StatusTooManyRequests {
-			return &apiResponse{StatusCode: resp.StatusCode, Body: data}, nil
-		}
-		if resp.StatusCode >= 500 {
-			return &apiResponse{StatusCode: resp.StatusCode, Body: data}, fmt.Errorf("server error: %d", resp.StatusCode)
-		}
-
-		return &apiResponse{StatusCode: resp.StatusCode, Body: data}, nil
-	})
-
-	durationMs := int(time.Since(start).Milliseconds())
-
-	if err != nil {
-		if c.logCallback != nil {
-			statusCode := 0
-			var respBody []byte
-			if result != nil {
-				if resp, ok := result.(*apiResponse); ok {
-					statusCode = resp.StatusCode
-					respBody = resp.Body
-				}
-			}
-			c.logCallback(method, url, statusCode, reqBodyBytes, respBody, durationMs, err)
-		}
-		if result != nil {
-			if resp, ok := result.(*apiResponse); ok {
-				return resp.Body, resp.StatusCode, err
-			}
-		}
-		return nil, 0, err
-	}
-
-	resp := result.(*apiResponse)
-
-	if c.logCallback != nil {
-		c.logCallback(method, url, resp.StatusCode, reqBodyBytes, resp.Body, durationMs, nil)
-	}
-
-	return resp.Body, resp.StatusCode, nil
-}
-
 // ListVehicles returns all vehicles associated with the authenticated Tesla account.
 func (c *Client) ListVehicles(ctx context.Context) ([]VehicleData, error) {
 	data, status, err := c.doRequest(ctx, http.MethodGet, "/api/1/vehicles", nil)
@@ -714,19 +527,19 @@ var commands = map[string]commandDef{
 	"wake_up": {endpoint: "wake_up", noProxy: true},
 
 	// Security & Access
-	"lock":             {endpoint: "door_lock"},
-	"unlock":           {endpoint: "door_unlock"},
-	"set_sentry_mode":  {endpoint: "set_sentry_mode", params: map[string]interface{}{"on": true}},
-	"sentry_on":        {endpoint: "set_sentry_mode", params: map[string]interface{}{"on": true}},
-	"sentry_off":       {endpoint: "set_sentry_mode", params: map[string]interface{}{"on": false}},
+	"lock":                        {endpoint: "door_lock"},
+	"unlock":                      {endpoint: "door_unlock"},
+	"set_sentry_mode":             {endpoint: "set_sentry_mode", params: map[string]interface{}{"on": true}},
+	"sentry_on":                   {endpoint: "set_sentry_mode", params: map[string]interface{}{"on": true}},
+	"sentry_off":                  {endpoint: "set_sentry_mode", params: map[string]interface{}{"on": false}},
 	"speed_limit_on":              {endpoint: "speed_limit_activate"},
 	"speed_limit_off":             {endpoint: "speed_limit_deactivate"},
 	"speed_limit_set_limit":       {endpoint: "speed_limit_set_limit"},
 	"speed_limit_clear_pin":       {endpoint: "speed_limit_clear_pin"},
 	"speed_limit_clear_pin_admin": {endpoint: "speed_limit_clear_pin_admin"},
-	"guest_mode_on":    {endpoint: "guest_mode", params: map[string]interface{}{"enable": true}},
-	"guest_mode_off":   {endpoint: "guest_mode", params: map[string]interface{}{"enable": false}},
-	"erase_user_data":  {endpoint: "erase_user_data"},
+	"guest_mode_on":               {endpoint: "guest_mode", params: map[string]interface{}{"enable": true}},
+	"guest_mode_off":              {endpoint: "guest_mode", params: map[string]interface{}{"enable": false}},
+	"erase_user_data":             {endpoint: "erase_user_data"},
 
 	// Valet Mode
 	"valet_on":        {endpoint: "set_valet_mode", params: map[string]interface{}{"on": true}},
