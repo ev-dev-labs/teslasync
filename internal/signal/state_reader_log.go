@@ -2,9 +2,10 @@
 //
 // state_reader_log.go is the signal_log-backed implementation of the
 // StateReader interface declared in state_reader.go. This file provides
-// LogStateReader and the State() method (Prompt 05); SignalAt and Timeline
-// stub-panic until Prompts 06/07/08 implement them. The interface assertion
-// at the bottom forces the stub methods to exist so the package compiles.
+// LogStateReader, State() (Prompt 05), and SignalAt() (Prompt 06);
+// Timeline stub-panics until Prompts 07/08 implement chart and list modes.
+// The interface assertion at the bottom forces the stub method to exist so
+// the package compiles.
 package signal
 
 import (
@@ -182,11 +183,126 @@ ORDER BY signal, created_at DESC`
 	return state, nil
 }
 
-// SignalAt is declared on the StateReader interface but implemented in
-// Prompt 06. Calling this method panics; the panic message contains the
-// prompt slug to make the gap easy to grep when bisecting failures.
+// SignalAt returns the latest value of `signal` at-or-before `at` for
+// vehicleID by issuing a single LIMIT 1 lookup against signal_log. It is
+// the cheap counterpart to State when the caller only needs one signal —
+// no DISTINCT ON, no in-process map assembly, no Location flatten.
+//
+// # Context contract
+//
+// The caller MUST pass a context with a deadline; this method does NOT
+// impose an internal timeout. The deadline policy is the caller's (handler
+// vs warmup vs background reconciliation), and adding an internal timeout
+// here would silently shorten the caller's deadline.
+//
+// # Hot-path contract
+//
+// Hot-path callers MUST NOT use this method. Telemetry ingest, FSM, and
+// session boundary detection MUST continue to read from signal.Store (L1)
+// and Redis HSET (L2) per ADR-007. This method is intended for cold-path
+// HTTP handler reads, warmup reconstruction, and chatbot/RAG state lookups.
+//
+// # Absence vs error
+//
+// A signal that has never been emitted at-or-before `at` returns
+// (nil, nil). The absence of a value is NOT an error — the caller decides
+// how to interpret a missing observation (forward-fill from earlier state,
+// treat as unknown, etc.). A non-nil error means transport / query failure
+// only.
+//
+// # Slow-query observability
+//
+// If the underlying query takes longer than 200ms, a Warn log is emitted
+// (the bar is lower than State's 500ms because SignalAt is a single-row
+// LIMIT 1 lookup against the same composite index). On query failure an
+// Error log is emitted BEFORE returning the wrapped error, so operators
+// see the failure even if the caller swallows the error. The
+// success-fast-path emits no logs.
+//
+// # Schema
+//
+// signal_log stores values across four typed columns (value_num, value_str,
+// value_bool, value_jsonb). SignalAt selects all four and decodes them
+// into a single SignalValue using the same canonical priority as State
+// (num → bool → jsonb → str). When `signal == "Location"` the returned
+// value is the raw decoded compound (typically map[string]any{"Lat", "Lng"});
+// callers who want flattened Latitude/Longitude scalars MUST use State,
+// which performs the unpack at the State-map level.
 func (r *LogStateReader) SignalAt(ctx context.Context, vehicleID int64, signal string, at time.Time) (SignalValue, error) {
-	panic("phase-39-06 not yet implemented")
+	if at.IsZero() {
+		// A zero `at` would silently match no rows because every created_at
+		// is after time.Time{} when serialized through pgx — but worse, a
+		// zero `at` is almost always a programming error (forgot to pass
+		// time.Now() at the call site). Fail loud instead of returning
+		// (nil, nil) which the caller would mistake for "never emitted".
+		return nil, fmt.Errorf("signal_at: at must be non-zero (use time.Now())")
+	}
+	if signal == "" {
+		// An empty signal name would scan the whole vehicle's history with
+		// no matching rows (cheap on the index) but is unambiguously a
+		// programming error (typo, uninitialized string). Fail loud so
+		// callers catch it in tests, not in latency graphs.
+		return nil, fmt.Errorf("signal_at: signal name must not be empty")
+	}
+
+	const query = `SELECT value_num, value_str, value_bool, value_jsonb
+FROM signal_log
+WHERE vehicle_id = $1 AND signal = $2 AND created_at <= $3
+ORDER BY created_at DESC
+LIMIT 1`
+
+	start := time.Now()
+	rows, err := r.pool.Query(ctx, query, vehicleID, signal, at)
+	if err != nil {
+		// Log BEFORE returning so operators see the failure even if the
+		// caller swallows the error in a `_ = err` or aggregated handler.
+		r.log.Error().
+			Err(err).
+			Int64("vehicle_id", vehicleID).
+			Str("signal", signal).
+			Time("at", at).
+			Msg("signal_at read failed")
+		return nil, fmt.Errorf("signal_at %s for vehicle %d: %w", signal, vehicleID, err)
+	}
+	defer rows.Close()
+
+	var value SignalValue
+	if rows.Next() {
+		var vNum *float64
+		var vStr *string
+		var vBool *bool
+		var vJsonb []byte
+		if err := rows.Scan(&vNum, &vStr, &vBool, &vJsonb); err != nil {
+			r.log.Error().
+				Err(err).
+				Int64("vehicle_id", vehicleID).
+				Str("signal", signal).
+				Time("at", at).
+				Msg("signal_at read failed")
+			return nil, fmt.Errorf("signal_at %s for vehicle %d: %w", signal, vehicleID, err)
+		}
+		value = decodeSignalLogRow(vNum, vStr, vBool, vJsonb)
+	}
+	if err := rows.Err(); err != nil {
+		r.log.Error().
+			Err(err).
+			Int64("vehicle_id", vehicleID).
+			Str("signal", signal).
+			Time("at", at).
+			Msg("signal_at read failed")
+		return nil, fmt.Errorf("signal_at %s for vehicle %d: %w", signal, vehicleID, err)
+	}
+
+	if elapsed := time.Since(start); elapsed > 200*time.Millisecond {
+		r.log.Warn().
+			Int64("vehicle_id", vehicleID).
+			Str("signal", signal).
+			Time("at", at).
+			Dur("duration", elapsed).
+			Msg("slow signal_at read")
+	}
+
+	return value, nil
 }
 
 // Timeline is declared on the StateReader interface but implemented in

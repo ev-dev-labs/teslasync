@@ -1,0 +1,28 @@
+=== PREFLIGHT ===
+Predecessor phase-39-05 STATUS=DONE EXIT=0 verified
+Allowed files: internal\signal\state_reader_log.go, internal\signal\state_reader_log_test.go, log file
+Restored predecessor log .github\prompts\db-refactor\logs\phase-39-05-state-reader-impl-state.log to committed state (had uncommitted COMMIT-section drift from predecessor session)
+=== SQL ===
+SELECT value_num, value_str, value_bool, value_jsonb FROM signal_log WHERE vehicle_id = $1 AND signal = $2 AND created_at <= $3 ORDER BY created_at DESC LIMIT 1
+Index used: idx_signal_log_vehicle_signal_time ON (vehicle_id, signal, created_at DESC)
+=== CHANGES ===
+Replaced SignalAt panic stub with impl matching State() observability/error patterns (200ms slow-query bar, error-log-before-return, snake_case zerolog fields).
+Added 6 SignalAt unit tests + signalAtPgxRows fake (ReturnsValueWhenFound, ReturnsNilNilWhenNotFound, PropagatesContextCancel, PropagatesScanError, RejectsZeroAt, RejectsEmptySignal).
+Updated package header comment: SignalAt now Prompt 06; Timeline still Prompt 07/08 stub.
+=== GATE ===
+TEST_NOTFOUND=True
+TEST_FOUND=True
+TEST_SCAN_ERROR=True
+TEST_CTX_CANCEL=True
+TEST_REJECT_ZERO_AT=True
+FN_SIGNALAT_REAL=True
+STUB_PANIC_07_PRESENT=True
+STUB_PANIC_06_REMOVED=True
+SIGNALAT_LIMIT1=True
+TEST_REJECT_EMPTY_SIG=True
+ok  	github.com/ev-dev-labs/teslasync/internal/signal	(cached)
+GO_TEST_EXIT=0
+UNEXPECTED_STATUS_COUNT=0
+EXIT=0
+STATUS=DONE
+=== COMMIT ===

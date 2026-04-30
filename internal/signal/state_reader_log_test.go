@@ -81,6 +81,48 @@ func (emptyPgxRows) Values() ([]any, error)                       { return nil, 
 func (emptyPgxRows) RawValues() [][]byte                          { return nil }
 func (emptyPgxRows) Conn() *pgx.Conn                              { return nil }
 
+// signalAtPgxRows is a single-row pgx.Rows for the SignalAt 4-column query
+// (value_num, value_str, value_bool, value_jsonb). hasRow=false simulates
+// "signal never emitted before at"; scanErr forces Scan to fail without
+// touching the destinations, exercising the SignalAt scan-error branch.
+type signalAtPgxRows struct {
+	hasRow    bool
+	delivered bool
+	vNum      *float64
+	vStr      *string
+	vBool     *bool
+	vJsonb    []byte
+	scanErr   error
+}
+
+func (s *signalAtPgxRows) Close()                                       {}
+func (s *signalAtPgxRows) Err() error                                   { return nil }
+func (s *signalAtPgxRows) CommandTag() pgconn.CommandTag                { return pgconn.CommandTag{} }
+func (s *signalAtPgxRows) FieldDescriptions() []pgconn.FieldDescription { return nil }
+func (s *signalAtPgxRows) Next() bool {
+	if !s.hasRow || s.delivered {
+		return false
+	}
+	s.delivered = true
+	return true
+}
+func (s *signalAtPgxRows) Scan(dest ...any) error {
+	if s.scanErr != nil {
+		return s.scanErr
+	}
+	if len(dest) != 4 {
+		return fmt.Errorf("signalAtPgxRows: expected 4 destinations, got %d", len(dest))
+	}
+	*(dest[0].(**float64)) = s.vNum
+	*(dest[1].(**string)) = s.vStr
+	*(dest[2].(**bool)) = s.vBool
+	*(dest[3].(*[]byte)) = s.vJsonb
+	return nil
+}
+func (s *signalAtPgxRows) Values() ([]any, error) { return nil, nil }
+func (s *signalAtPgxRows) RawValues() [][]byte    { return nil }
+func (s *signalAtPgxRows) Conn() *pgx.Conn        { return nil }
+
 // fakeQuerier implements the unexported pgxQuerier interface for tests that
 // need to drive the LogStateReader.State end-to-end (context cancel, slow
 // query, error logging). The calls counter lets tests assert that Query was
@@ -287,5 +329,106 @@ func TestLogStateReader_State_LogsErrorBeforeReturn(t *testing.T) {
 	}
 	if !strings.Contains(out, `"vehicle_id":99`) {
 		t.Fatalf("want vehicle_id field in log, got %q", out)
+	}
+}
+
+// --- SignalAt() end-to-end tests -----------------------------------------
+
+func TestLogStateReader_SignalAt_ReturnsValueWhenFound(t *testing.T) {
+	speed := 50.0
+	q := &fakeQuerier{rows: &signalAtPgxRows{hasRow: true, vNum: &speed}}
+	r := &LogStateReader{pool: q, log: zerolog.Nop()}
+
+	v, err := r.SignalAt(context.Background(), 1, "Speed", time.Now())
+	if err != nil {
+		t.Fatalf("SignalAt: %v", err)
+	}
+	if v != 50.0 {
+		t.Fatalf("value: want 50.0, got %v", v)
+	}
+}
+
+func TestLogStateReader_SignalAt_ReturnsNilNilWhenNotFound(t *testing.T) {
+	q := &fakeQuerier{rows: emptyPgxRows{}}
+	r := &LogStateReader{pool: q, log: zerolog.Nop()}
+
+	v, err := r.SignalAt(context.Background(), 1, "Speed", time.Now())
+	if err != nil {
+		t.Fatalf("SignalAt: want nil error, got %v", err)
+	}
+	if v != nil {
+		t.Fatalf("value: want nil, got %v", v)
+	}
+}
+
+func TestLogStateReader_SignalAt_PropagatesContextCancel(t *testing.T) {
+	q := &fakeQuerier{err: context.Canceled}
+	r := &LogStateReader{pool: q, log: zerolog.Nop()}
+
+	at := time.Date(2026, 4, 30, 12, 34, 56, 0, time.UTC)
+	_, err := r.SignalAt(context.Background(), 42, "Speed", at)
+	if err == nil {
+		t.Fatal("want error from cancelled query")
+	}
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("want wrapped context.Canceled, got %v", err)
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, "vehicle 42") {
+		t.Fatalf("want vehicle id in error, got %q", msg)
+	}
+	if !strings.Contains(msg, "Speed") {
+		t.Fatalf("want signal name in error, got %q", msg)
+	}
+}
+
+func TestLogStateReader_SignalAt_PropagatesScanError(t *testing.T) {
+	q := &fakeQuerier{rows: &signalAtPgxRows{hasRow: true, scanErr: errors.New("scan boom")}}
+	r := &LogStateReader{pool: q, log: zerolog.Nop()}
+
+	_, err := r.SignalAt(context.Background(), 7, "Soc", time.Now())
+	if err == nil {
+		t.Fatal("want error from scan failure")
+	}
+	if !strings.Contains(err.Error(), "scan boom") {
+		t.Fatalf("want wrapped 'scan boom' in error, got %q", err.Error())
+	}
+	if !strings.Contains(err.Error(), "Soc") {
+		t.Fatalf("want signal name in error, got %q", err.Error())
+	}
+	if !strings.Contains(err.Error(), "vehicle 7") {
+		t.Fatalf("want vehicle id in error, got %q", err.Error())
+	}
+}
+
+func TestLogStateReader_SignalAt_RejectsZeroAt(t *testing.T) {
+	q := &fakeQuerier{}
+	r := &LogStateReader{pool: q, log: zerolog.Nop()}
+
+	_, err := r.SignalAt(context.Background(), 1, "Speed", time.Time{})
+	if err == nil {
+		t.Fatal("want error for zero at")
+	}
+	if !strings.Contains(err.Error(), "must be non-zero") {
+		t.Fatalf("want 'must be non-zero' in error, got %q", err.Error())
+	}
+	if got := q.calls.Load(); got != 0 {
+		t.Fatalf("Query must not be called for zero at; got %d calls", got)
+	}
+}
+
+func TestLogStateReader_SignalAt_RejectsEmptySignal(t *testing.T) {
+	q := &fakeQuerier{}
+	r := &LogStateReader{pool: q, log: zerolog.Nop()}
+
+	_, err := r.SignalAt(context.Background(), 1, "", time.Now())
+	if err == nil {
+		t.Fatal("want error for empty signal")
+	}
+	if !strings.Contains(err.Error(), "must not be empty") {
+		t.Fatalf("want 'must not be empty' in error, got %q", err.Error())
+	}
+	if got := q.calls.Load(); got != 0 {
+		t.Fatalf("Query must not be called for empty signal; got %d calls", got)
 	}
 }
