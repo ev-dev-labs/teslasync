@@ -1,0 +1,36 @@
+## PREFLIGHT
+start_utc=2026-04-30T08:23:36.8639695+00:00
+go_version=go version go1.26.1 windows/amd64
+engineer_email=iamatulmgupta@gmail.com
+powershell_version=7.6.1
+os_platform=Win32NT
+exports invariant ok: 1273 exported identifiers preserved
+import-graph invariant ok: 80 imports preserved
+## SURVEY
+source_lines_after=15
+new_file=internal/api/chatbot_handler_dtos.go lines=37
+new_file=internal/api/chatbot_handler_chat.go lines=389
+## REASONING
+mechanical decomposition: split internal/api/chatbot_handler.go into internal/api/chatbot_handler_dtos.go, internal/api/chatbot_handler_chat.go
+no behavior, API, SQL, JSON, route, config, or runtime ordering changes
+split map:
+  chatbot_handler.go (remaining): type ChatbotHandler; func NewChatbotHandler
+  chatbot_handler_dtos.go: method ChatbotHandler.History; method ChatbotHandler.Sessions (conversation model retrieval endpoints)
+  chatbot_handler_chat.go: method ChatbotHandler.Chat; method ChatbotHandler.processQuery; methods ChatbotHandler.queryVehicleCount, queryDriveCount, queryTotalDistance, queryEfficiency, queryBatteryStatus, queryChargingSummary, queryChargingCost, queryLongestDrive, queryMaxSpeed, queryLastDrive, queryLastCharge, queryAlerts, queryGeofences, queryVehicleStates, helpMessage; package-level utility funcs matchAny, extractDays, plural, humanDuration
+cross-file unexported references kept package-visible: ChatbotHandler.chat, ChatbotHandler.db (struct fields used by methods in chat & dtos files); writeError, writeJSON (existing package helpers); matchAny/extractDays/plural/humanDuration are unexported but only consumed within chatbot_handler_chat.go
+## CHANGES
+internal/api/chatbot_handler.go sha256=CA8E3A332F84F5B235BF08529F2CFF0B5FBA4ABD79310409DBC2CC255A7C9DCA
+internal/api/chatbot_handler_dtos.go sha256=0F654F021BA54EF9287AD329135CC46103451BAE90F1ABE08B4A582D49A1A746
+internal/api/chatbot_handler_chat.go sha256=30FF60DEF7B4FB03B7598327F91C25FCF21FBB214DC5DF42DEA762CCCDFA58DF
+## GATE
+go build ./internal/api/... exit=0
+
+go build ./... exit=0
+
+go vet exit=0
+
+go test exit=0
+ok  	github.com/ev-dev-labs/teslasync/internal/api	0.183s
+
+EXIT=0
+STATUS=DONE
