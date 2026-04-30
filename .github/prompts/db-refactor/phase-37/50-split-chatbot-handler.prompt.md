@@ -140,6 +140,45 @@ if ($beforeDecls -and $afterDecls) {
   $exit = 1
 }
 
+# Import-graph invariant: package's union of imports at HEAD must equal the working tree's
+# (mechanical splits never add or remove dependencies). Catches accidental coupling.
+function Get-GoImports {
+  param([string[]]$lines)
+  $set = @{}
+  $inImport = $false
+  foreach ($line in $lines) {
+    if ($line -match '^import\s+(?:\w+\s+)?"([^"]+)"') { $set[$matches[1]] = $true; continue }
+    if ($line -match '^import\s*\(\s*$') { $inImport = $true; continue }
+    if ($inImport -and $line -match '^\s*\)\s*$') { $inImport = $false; continue }
+    if ($inImport -and $line -match '^\s*(?:\w+\s+)?"([^"]+)"') { $set[$matches[1]] = $true; continue }
+  }
+  return ($set.Keys | Sort-Object)
+}
+
+$beforeImports = @()
+foreach ($f in $headFiles) {
+  $content = git show "HEAD:$f" 2>$null
+  if ($content) { $beforeImports += Get-GoImports -lines ($content -split "`n") }
+}
+$beforeImports = $beforeImports | Sort-Object -Unique
+
+$afterImports = @()
+foreach ($f in $afterFiles) {
+  $afterImports += Get-GoImports -lines (Get-Content -LiteralPath $f.FullName)
+}
+$afterImports = $afterImports | Sort-Object -Unique
+
+if ($beforeImports -and $afterImports) {
+  $diff = Compare-Object $beforeImports $afterImports
+  if ($diff) {
+    "import-graph drift in package $pkgDir (split must not add/remove imports):" | Add-Content $log
+    $diff | ForEach-Object { "  $($_.SideIndicator) $($_.InputObject)" } | Add-Content $log
+    $exit = 1
+  } else {
+    "import-graph invariant ok: $($afterImports.Count) imports preserved" | Add-Content $log
+  }
+}
+
 "## SURVEY" | Add-Content $log
 $src = 'internal/api/chatbot_handler.go'
 if (-not (Test-Path $src)) { "source missing: $src" | Add-Content $log; $exit = 1 }

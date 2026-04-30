@@ -45,6 +45,8 @@ the following sub-area into one or more new files in the same Go package
 
 > Mechanical decomposition only. Move cohesive code into new files in the same package. Do not change behavior, exported names, public APIs, route paths, SQL, JSON tags, config, migrations, logging semantics, error wrapping, validation behavior, or runtime ordering. Do not introduce new abstractions unless required to preserve behavior. Run `gofmt` on touched Go files and targeted `go test` for the affected package.
 
+> **Architectural note - layered live-state contract.** TeslaSync's telemetry pipeline maintains a 3-layer contract: SignalStore L1 (in-process hot path for FSM, sessions, and merge context), Redis L2 (`vehicle:{vehicleID}:signals` HSET for cross-pod current state and restart recovery), and `signal_log` (durable TimescaleDB history for charts, replay, and point-in-time reconstruction). Mechanical splits MUST preserve which functions touch which layer. Do NOT co-locate SignalStore hot-path code with `signal_log` query code, do NOT interleave Redis cache writes with FSM commit logic, and do NOT split a function chain across files in a way that would later require an exported helper to re-stitch it. When in doubt, keep the original cohesion - mechanical splits never split logical pipeline stages.
+
 ## Action Steps
 
 1. Verify predecessor: `.github/prompts/db-refactor/logs/phase-37-09-split-telemetry-sessions-recovery.log` exists with `EXIT=0` and `STATUS=DONE`.
@@ -138,6 +140,45 @@ if ($beforeDecls -and $afterDecls) {
 } elseif (-not $beforeDecls) {
   "could not snapshot HEAD exports for $pkgDir (no files at HEAD?)" | Add-Content $log
   $exit = 1
+}
+
+# Import-graph invariant: package's union of imports at HEAD must equal the working tree's
+# (mechanical splits never add or remove dependencies). Catches accidental coupling.
+function Get-GoImports {
+  param([string[]]$lines)
+  $set = @{}
+  $inImport = $false
+  foreach ($line in $lines) {
+    if ($line -match '^import\s+(?:\w+\s+)?"([^"]+)"') { $set[$matches[1]] = $true; continue }
+    if ($line -match '^import\s*\(\s*$') { $inImport = $true; continue }
+    if ($inImport -and $line -match '^\s*\)\s*$') { $inImport = $false; continue }
+    if ($inImport -and $line -match '^\s*(?:\w+\s+)?"([^"]+)"') { $set[$matches[1]] = $true; continue }
+  }
+  return ($set.Keys | Sort-Object)
+}
+
+$beforeImports = @()
+foreach ($f in $headFiles) {
+  $content = git show "HEAD:$f" 2>$null
+  if ($content) { $beforeImports += Get-GoImports -lines ($content -split "`n") }
+}
+$beforeImports = $beforeImports | Sort-Object -Unique
+
+$afterImports = @()
+foreach ($f in $afterFiles) {
+  $afterImports += Get-GoImports -lines (Get-Content -LiteralPath $f.FullName)
+}
+$afterImports = $afterImports | Sort-Object -Unique
+
+if ($beforeImports -and $afterImports) {
+  $diff = Compare-Object $beforeImports $afterImports
+  if ($diff) {
+    "import-graph drift in package $pkgDir (split must not add/remove imports):" | Add-Content $log
+    $diff | ForEach-Object { "  $($_.SideIndicator) $($_.InputObject)" } | Add-Content $log
+    $exit = 1
+  } else {
+    "import-graph invariant ok: $($afterImports.Count) imports preserved" | Add-Content $log
+  }
 }
 
 "## SURVEY" | Add-Content $log

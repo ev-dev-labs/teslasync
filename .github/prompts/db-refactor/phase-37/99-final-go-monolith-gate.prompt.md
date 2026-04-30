@@ -407,6 +407,34 @@ foreach ($entry in $baseline.GetEnumerator()) {
 }
 '```' | Add-Content $log
 
+# Future-package mapping hint for Phase 38+ (informational; not a gate enforcement).
+# Records the proposed package extraction target for each split, derived from the file
+# naming convention `<base>_<suffix>.go` -> `<base>/<suffix>.go` after stripping
+# `_handler` and `_repo` suffixes. Phase 38+ can consume this directly.
+"" | Add-Content $log
+"## FUTURE_PACKAGE_HINT" | Add-Content $log
+"informational only - not enforced by this gate. Phase 38+ may consume this map." | Add-Content $log
+'```tsv' | Add-Content $log
+"current_file`tproposed_future_package`tproposed_future_file" | Add-Content $log
+foreach ($entry in $baseline.GetEnumerator()) {
+  $rel = $entry.Key
+  $srcDir = Split-Path -Parent $rel
+  $srcBaseNoExt = [io.path]::GetFileNameWithoutExtension($rel)
+  $cleanBase = $srcBaseNoExt -replace '_handler$','' -replace '_repo$',''
+  $proposedPkg = (Join-Path $srcDir $cleanBase) -replace '\','/'
+  $siblings = Get-ChildItem -Path $srcDir -Filter "${srcBaseNoExt}_*.go" -File -ErrorAction SilentlyContinue
+  if ($siblings) {
+    foreach ($sib in $siblings) {
+      $suffix = $sib.BaseName.Substring($srcBaseNoExt.Length + 1)
+      "$($sib.FullName -replace [regex]::Escape((Get-Location).Path + ''),'' -replace '\','/')`t$proposedPkg`t$proposedPkg/$suffix.go" | Add-Content $log
+    }
+    "$rel`t$proposedPkg`t$proposedPkg/$cleanBase.go" | Add-Content $log
+  } else {
+    "$rel`t(no_split_yet)`t(no_split_yet)" | Add-Content $log
+  }
+}
+'```' | Add-Content $log
+
 # Re-export baseline SHA captured by prompt 00 if available, for rollback reference
 $inventoryLog = '.github/prompts/db-refactor/logs/phase-37-00-go-monolith-inventory.log'
 if (Test-Path $inventoryLog) {
