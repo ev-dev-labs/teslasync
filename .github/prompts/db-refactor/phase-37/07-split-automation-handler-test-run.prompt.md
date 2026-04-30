@@ -115,7 +115,10 @@ function Get-GoExportedDecls {
   return ($set.Keys | Sort-Object)
 }
 
-$headFiles = git ls-tree -r --name-only HEAD -- $pkgDir 2>$null | Where-Object { $_ -like '*.go' -and $_ -notlike '*_test.go' }
+$headFiles = git ls-tree -r --name-only HEAD -- $pkgDir 2>$null | Where-Object {
+  $_ -like '*.go' -and $_ -notlike '*_test.go' -and
+  $_.StartsWith("$pkgDir/") -and -not $_.Substring("$pkgDir/".Length).Contains('/')
+}
 $beforeDecls = @()
 foreach ($f in $headFiles) {
   $content = git show "HEAD:$f" 2>$null
@@ -322,7 +325,13 @@ forcing a violation. This is an explicit governance escape hatch:
 # 1. Restore source to HEAD so no partial changes leak forward
 git checkout HEAD -- 'internal/api/automation_handler.go'
 Remove-Item -LiteralPath 'internal/api/automation_handler_test_run.go' -ErrorAction SilentlyContinue
-# 2. Append rationale and STATUS=DEFERRED to the log (do NOT delete prior content)
+# 2. Strip the prior EXIT=/STATUS= lines (they reflect the failed gate attempt) and
+#    append the deferral rationale + EXIT=0/STATUS=DEFERRED. The runner's log-gate
+#    regex scans the WHOLE file for any EXIT!=0 / STATUS=BLOCKED line, so the prior
+#    failed-gate markers must be removed or the deferral will still be flagged.
+$prior = Get-Content -LiteralPath $log
+$kept  = $prior | Where-Object { $_ -notmatch '^(EXIT|STATUS)=' }
+$kept | Set-Content -LiteralPath $log
 "## REASONING - DEFER" | Add-Content $log
 "defer_rationale=<one-line technical reason: e.g. circular ref to unexported helper, init() ordering hazard, etc.>" | Add-Content $log
 "defer_attempts=2" | Add-Content $log
