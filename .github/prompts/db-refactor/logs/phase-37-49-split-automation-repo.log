@@ -1,0 +1,78 @@
+## PREFLIGHT
+start_utc=2026-04-30T08:16:52.9280957+00:00
+go_version=go version go1.26.1 windows/amd64
+engineer_email=iamatulmgupta@gmail.com
+powershell_version=7.6.1
+os_platform=Win32NT
+exports invariant ok: 523 exported identifiers preserved
+import-graph invariant ok: 31 imports preserved
+## SURVEY
+source_lines_after=18
+new_file=internal/database/automation_repo_query.go lines=302
+new_file=internal/database/automation_repo_mutation.go lines=126
+## REASONING
+mechanical decomposition: split internal/database/automation_repo.go into internal/database/automation_repo_query.go, internal/database/automation_repo_mutation.go
+no behavior, API, SQL, JSON, route, config, or runtime ordering changes
+
+split map (engineer-provided):
+source: internal/database/automation_repo.go (HEAD: 481 lines, 21 top-level decls)
+
+destination: internal/database/automation_repo_query.go  (read methods)
+  method AutomationRepo.ListSummaries                (list - parent rows only)
+  method AutomationRepo.ListFull                     (list - parents + steps + CTI children)
+  method AutomationRepo.GetByID                      (get-by-id - parent + steps + CTI children)
+  method AutomationRepo.LoadEnabledScheduleTriggers  (read - cron trigger join)
+  method AutomationRepo.LoadEnabledSignalTriggers    (read - signal trigger join)
+  method AutomationRepo.LoadEnabledGeofenceTriggers  (read - geofence trigger join)
+  method AutomationRepo.LoadEnabledEventTriggers     (read - event trigger join)
+  method AutomationRepo.GetByWebhookToken            (read - webhook lookup, currently no-op)
+  func   safeTokenPrefix                             (unexported helper - used only by GetByWebhookToken)
+
+destination: internal/database/automation_repo_mutation.go  (write methods + no-op writers)
+  method AutomationRepo.Create                       (insert parent only)
+  method AutomationRepo.createTx                     (unexported helper - shared by Create + CreateWithSteps)
+  method AutomationRepo.CreateWithSteps              (insert parent + steps in one tx)
+  method AutomationRepo.Update                       (update parent name/enabled)
+  method AutomationRepo.UpdateWithSteps              (update parent + replace steps in one tx)
+  method AutomationRepo.insertStepsTx                (unexported helper - shared by CreateWithSteps + UpdateWithSteps)
+  method AutomationRepo.Delete                       (delete parent, cascades to children)
+  method AutomationRepo.IncrementExecution           (no-op writer - column retired post-142)
+  method AutomationRepo.SetAutoDisabled              (no-op writer - column retired per ADR-012)
+
+remaining in internal/database/automation_repo.go:
+  type  AutomationRepo       (struct - shared receiver for all moved methods)
+  type  AutomationStepWrite  (DTO - parameter type for CreateWithSteps + UpdateWithSteps)
+  func  NewAutomationRepo    (constructor)
+
+cross-file unexported references (same package, no import needed):
+  - AutomationRepo struct + NewAutomationRepo: defined in automation_repo.go;
+    methods in both new files attach to *AutomationRepo via pointer receiver
+    and reference r.db (unexported field) - permitted within package.
+  - AutomationStepWrite: defined in automation_repo.go; consumed by
+    CreateWithSteps + UpdateWithSteps + insertStepsTx in mutation file.
+  - DBTX interface: defined in internal/database/database.go; referenced by
+    createTx (mutation file) - same-package interface, no cross-file move.
+  - createTx + insertStepsTx + safeTokenPrefix: each defined and consumed
+    only within a single new file (no cross-file unexported call paths).
+
+import distribution (subset of original {context, fmt, github.com/jackc/pgx/v5, github.com/rs/zerolog/log, github.com/ev-dev-labs/teslasync/internal/automation/trigger, github.com/ev-dev-labs/teslasync/internal/models}):
+  - automation_repo.go            : (none - struct/constructor only)
+  - automation_repo_query.go      : context, fmt, github.com/jackc/pgx/v5, github.com/rs/zerolog/log, github.com/ev-dev-labs/teslasync/internal/automation/trigger, github.com/ev-dev-labs/teslasync/internal/models
+  - automation_repo_mutation.go   : context, fmt, github.com/jackc/pgx/v5, github.com/rs/zerolog/log, github.com/ev-dev-labs/teslasync/internal/models
+  union preserved (import-graph invariant gate passed at 31 imports)
+## CHANGES
+internal/database/automation_repo.go sha256=CEDA0816F6459127D4B47EAD365A7B97B8621BEA4AD7C2DA8CF3593D1D33CC42
+internal/database/automation_repo_query.go sha256=1FDFDF874B270D980AE2F7FEEEBB6AC8D603E1BCB5B0F3260F707A88FEC07762
+internal/database/automation_repo_mutation.go sha256=D58E3E7F6C88712BE1BD276491349FF70B2A0282D788712198AC122E0FFD2C49
+## GATE
+go build ./internal/database/... exit=0
+
+go build ./... exit=0
+
+go vet exit=0
+
+go test exit=0
+ok  	github.com/ev-dev-labs/teslasync/internal/database	2.505s
+
+EXIT=0
+STATUS=DONE
