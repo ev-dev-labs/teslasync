@@ -649,7 +649,13 @@ func main() {
 	}
 
 	// HTTP API
-	router := api.NewRouter(db, teslaClient, mqttClient, cfg, health, api.RouterOptions{
+	// stateReader is the signal-log-backed cold-path reader introduced in
+	// phase-39 (ADR-002). It is constructed once here and passed to NewRouter
+	// so that handler-migration prompts (phases 10–36) can adopt it
+	// incrementally. The pre-existing database.SignalLogReader continues to
+	// live alongside it until the deletion prompts (phases 37–40).
+	stateReader := sigsvc.NewLogStateReader(db.Pool, log.With().Str("component", "state_reader").Logger())
+	router := api.NewRouter(db, teslaClient, mqttClient, cfg, health, stateReader, api.RouterOptions{
 		AppVersion:       Version,
 		Encryptor:        encryptor,
 		TelemetryHandler: telemetryHandler,

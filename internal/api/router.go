@@ -40,8 +40,20 @@ import (
 // middleware (logging, recovery, CORS, rate limiting, security headers), and
 // a static file server for the SPA frontend. It wires up handler dependencies
 // and returns the ready-to-serve http.Handler.
-func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Client, cfg *config.Config, health *resilience.HealthMonitor, opts ...RouterOptions) http.Handler {
+//
+// stateReader is the new signal-log-backed cold-path reader (ADR-002 / phase-39).
+// It is threaded through here so that handler migrations in phases 10–36 can
+// take it as a constructor dependency one file at a time. The legacy
+// *database.SignalLogReader (signalLogReader below) is intentionally preserved
+// alongside it during the migration window so the build stays green between
+// prompts; both readers will coexist until the deletion prompts (phases 37–40).
+func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Client, cfg *config.Config, health *resilience.HealthMonitor, stateReader signal.StateReader, opts ...RouterOptions) http.Handler {
 	r := chi.NewRouter()
+	// stateReader is intentionally not wired into individual handlers in this
+	// prompt — handler-migration prompts (phases 10–36) consume it one file at
+	// a time. The reference below keeps it visible to readers and lets static
+	// analyzers see it as a live dependency rather than a dead parameter.
+	_ = stateReader
 
 	var opt RouterOptions
 	if len(opts) > 0 {
