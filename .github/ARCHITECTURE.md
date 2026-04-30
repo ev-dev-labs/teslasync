@@ -6,7 +6,7 @@ These decisions were reviewed and approved by Principal Architect and Principal 
 They are **binding for all agents, all phases, all prompts.** Violating any of these is
 a regression that must be caught in review.
 
-### ADR-001: Unified Signal Log (Single Source of Truth)
+## ADR-001: Unified Signal Log (Single Source of Truth)
 
 ```
 STATUS: APPROVED (PA)
@@ -32,6 +32,170 @@ RULES:
      - location_snapshots, safety_snapshots, user_preference_snapshots
   ❌ NEVER read from legacy `positions` table (use signal_log Latitude/Longitude)
   ❌ NEVER reference `signal_history` (renamed to `signal_log` in migration 000145)
+```
+
+## ADR-002: Change Feed vs State Separation
+
+```
+STATUS: Accepted (PA/PE)
+DATE: 2026-04-30
+SUPERSEDES: Ad-hoc state reads in ADR-001 implementation
+RELATED: ADR-001 (canonical signal_log), ADR-007 (live signal layering)
+
+CONTEXT:
+  Tesla Fleet Telemetry only emits a field when BOTH the signal's interval_seconds has
+  elapsed AND the value has changed (see https://developer.tesla.com/docs/fleet-api/fleet-telemetry#system-behavior).
+  Unchanged signals are NEVER re-sent. As a result, signal_log is a sparse change-feed
+  where any given (vehicle_id, signal, timestamp) row reflects the moment a value
+  CHANGED, not the prevailing value at that moment.
+
+  Phase 39 entry audit found 25 HTTP handlers (battery, charging, climate, security,
+  motor, tire pressure, etc.) reading signal_log as if it were a state table. They
+  called helpers like SignalTracePivot / SignalTracePivotFlat / SnapshotAt and bound
+  the result to UI panels expecting "current value at time T". Because change-feed
+  rows do not include unchanged columns, those panels rendered empty rows on every
+  vehicle that had not just emitted that exact signal — the empty-row class of bug.
+
+  The root cause is structural: one reader surface (SignalLogReader) served two
+  semantically incompatible read patterns (raw change events vs derived state).
+  Patching individual call sites would not prevent the next handler from making
+  the same mistake. The fix has to be at the type boundary.
+
+DECISION:
+  Two reader surfaces. Each one returns ONE shape of result. Compile-time enforced
+  by removing the shape-confused helpers from SignalLogReader entirely.
+
+  1. database.SignalLogReader (in internal/database/) exposes ONLY:
+       - SignalTrace          (raw change-feed rows in time order)
+       - BrickVoltageHistory  (per-brick aggregations)
+       - DriveAggregates      (per-drive sums/averages)
+       - RegenEnergy          (regen-window sums)
+       - ChargeAggregates     (per-session sums/averages)
+       - LatestTimestamp      (max(created_at) for liveness checks)
+     This surface owns CHANGE-FEED + AGGREGATION reads — raw events, sums,
+     averages, time-bucketed rollups. It does NOT carry values forward.
+
+  2. signal.StateReader (in internal/signal/) exposes ONLY:
+       - State(ctx, vehicleID, at)             → current per-signal map at time
+       - SignalAt(ctx, vehicleID, signal, at)  → single-signal value at time
+       - Timeline(ctx, vehicleID, opts TimelineOptions) → ordered events
+                                                  (opts.CollapseBy controls dedup)
+     The default implementation (signal.LogStateReader) forward-folds over
+     signal_log: for every requested signal it returns the most recent row at or
+     before `at`, carrying the prior value forward in time. This is the ONLY
+     correct way to derive state from a change feed.
+
+DATA OWNERSHIP (CRITICAL — three-way split, do not "consolidate"):
+  The signal_log table has three legitimate accessors. This is intentional
+  CQRS-lite separation; it is NOT redundancy to be cleaned up:
+
+  1. database.SignalHistoryWriter (internal/database/)
+       owns INSERT path, schema migrations, hypertable maintenance.
+  2. signal.LogStateReader (internal/signal/)
+       owns FORWARD-FOLD STATE reads — point-in-time, carry-forward derivation.
+  3. database.SignalLogReader (internal/database/)
+       owns CHANGE-FEED + AGGREGATION reads — raw events, sums, averages,
+       time-bucketed rollups.
+
+  Three legitimate accessors, three distinct read/write patterns. A future
+  refactor that "merges" state-reads back into internal/database/ "to keep DB
+  concerns together" re-creates the entire bug class this ADR exists to prevent.
+  Reviewers MUST reject any such merge unless this ADR is formally superseded.
+  The package boundary IS the fix.
+
+HOT-PATH vs COLD-PATH READS:
+  signal.StateReader is for COLD-PATH reads only: HTTP handlers, the
+  cmd/teslasync/main.go warmup path, chatbot/RAG state lookups. It hits the
+  database (signal_log) on every call.
+
+  The HOT PATH — telemetry ingest, FSM/reconciliation, session boundary
+  detection — MUST continue to read from the in-process signal.Store (L1
+  cache) and Redis HSET (L2 shared cache) per the existing layered live-state
+  contract documented in .github/instructions/telemetry-pipeline.instructions.md
+  and ADR-007. signal.StateReader MUST NOT be wired into the telemetry hot
+  path: doing so would couple every signal write to a synchronous DB roundtrip
+  and defeat the L1/L2 cache architecture.
+
+SECURITY MODEL (trusted-caller):
+  signal.StateReader does NOT enforce per-vehicle authorization. Callers own
+  the authorization decision before invoking the reader:
+    - HTTP handlers authorize via Authentik ForwardAuth middleware and the
+      vehicle-scoped routing in internal/api/router.go.
+    - Warmup runs as the application identity and reads all vehicles by design.
+  Implementations of StateReader are responsible only for the correctness of
+  the change-feed → state derivation, not for who is allowed to ask. Any future
+  cross-tenant deployment MUST add an authorization layer in front of the
+  reader, not inside it.
+
+EXTENSION PATTERN (future implementations compose, do not extend):
+  New StateReader implementations — e.g. RedisStateReader for hot-vehicle
+  caching, CompositeStateReader chaining cache-then-fallback, an in-memory
+  MockStateReader for tests — compose via the existing three-method interface.
+  They MUST NOT add new methods. The recommended extension pattern for future
+  caching is a CompositeStateReader composite decorator (RedisStateReader →
+  LogStateReader fallback), NOT an interface change. Adding methods bloats
+  the contract and re-opens the door to shape-confused helpers.
+
+STORAGE CONTRACT (required index):
+  Correct performance of LogStateReader.State and LogStateReader.Timeline
+  REQUIRES the composite index on signal_log keyed (vehicle_id, signal, created_at DESC).
+  This index is part of the architectural contract, not an implementation detail.
+  The State query relies on DISTINCT ON (signal) ORDER BY signal, created_at DESC,
+  which is O(log n) per signal with the index and O(n) without it. Removing or
+  altering the (vehicle_id, signal, created_at DESC) index changes the cost model
+  and silently regresses every cold-path state read in the application.
+
+CONSEQUENCES:
+  ✅ Handlers needing "value at time T" depend on signal.StateReader.
+  ✅ Handlers needing raw change events or aggregations depend on
+     database.SignalLogReader.
+  ✅ Timeline accepts TimelineOptions{CollapseBy []string}. Chart mode
+     (no collapse) returns one row per emission timestamp. List mode
+     (collapse keys provided) returns one row per distinct key tuple,
+     dropping consecutive duplicates of the same tuple.
+  ✅ Compatibility views (compat views v_charging_telemetry, v_motor_snapshots,
+     v_climate_snapshots, etc.) are unchanged. They serve EXTERNAL consumers
+     (Grafana dashboards, ad-hoc SQL, external BI tooling) and are out of
+     scope for this ADR. Internal Go code MUST go through signal.StateReader.
+  ❌ The following helpers are REMOVED from database.SignalLogReader after
+     the migration (compile-time enforcement; deletion is the load-bearing step):
+       - SnapshotAt
+       - SignalAt              (the database-layer one — not signal.StateReader.SignalAt)
+       - SignalTracePivot
+       - SignalTracePivotFlat
+       - SnapshotBetween
+
+REJECTED ALTERNATIVES:
+  - Patch SignalTracePivot in place to forward-fill: rejected because it leaves the broken signature available; downstream callers re-introduce the bug the next time someone writes a similar handler.
+  - Add SignalTraceForwardFill alongside the broken function: rejected for the same reason, plus the name confusion between two near-identical helpers practically guarantees the wrong one gets imported.
+  - Materialized state cache table: rejected for now. signal_log already supports forward-fold via DISTINCT ON ... ORDER BY ... DESC; a separate cache table adds write-path latency and source-of-truth divergence risk. A RedisStateReader decorator is the lower-cost alternative if profiling ever shows the cold-path read is a bottleneck.
+  - Wire signal.StateReader into the telemetry hot path: rejected because it violates the L1/L2 cache architecture in ADR-007 — every signal write would couple to a synchronous DB read and the cache stops being a cache.
+  - Move state-fold logic into internal/database/ to "keep DB concerns together": rejected because the bug class came from exactly this co-location. The package boundary between internal/database/ (raw rows + aggregations) and internal/signal/ (derived state) IS the fix and MUST NOT be collapsed.
+
+FOLLOW-UP WORK (post-Phase-39, separate phases):
+  - Consolidate per-handler `fakeStateReader` test fakes into a shared
+    internal/signal/signaltest package once Phase 39 stabilizes. DRY
+    cleanup, low risk; deferred to avoid widening Phase 39 scope.
+  - Add Prometheus histograms (signal_state_read_duration_seconds{vehicle_id,
+    method}) wrapping the StateReader calls so we can detect cold-path
+    regressions before users do.
+  - If profiling shows hotspots, add a 90-day window bound to State() SQL
+    with an unbounded fallback when the windowed query returns 0 rows.
+    The 90-day bound caps the worst-case scan; the unbounded fallback
+    preserves correctness for vehicles with sparse emission histories.
+  - Consider renaming database.SignalLogReader → database.SignalAggregationReader
+    after the deletions land, to make post-deletion intent unambiguous to
+    future readers.
+
+REFERENCES:
+  - Tesla Fleet Telemetry System Behavior:
+    https://developer.tesla.com/docs/fleet-api/fleet-telemetry#system-behavior
+  - Phase 39 prompt directory: .github/prompts/db-refactor/
+  - signal.StateReader interface (created in Phase 39 / Prompt 03):
+    internal/signal/state_reader.go
+  - Layered live-state contract (hot path / L1+L2):
+    .github/instructions/telemetry-pipeline.instructions.md
+  - ADR-001 (canonical signal_log) and ADR-007 (live signal layering) above.
 ```
 
 ### ADR-007: Live Signal State Layering (Scale-Out Contract)
