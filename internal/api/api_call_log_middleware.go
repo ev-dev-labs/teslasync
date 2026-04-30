@@ -35,6 +35,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -578,3 +579,86 @@ type teeReader struct {
 
 func (t *teeReader) Read(p []byte) (int, error) { return t.r.Read(p) }
 func (t *teeReader) Close() error               { return t.c.Close() }
+
+// ---------------------------------------------------------------------------
+// Outbound APICallSink adapter (Phase 38 / Prompt 12)
+//
+// APICallSinkAdapter wraps an APICallLogger so it satisfies the
+// httputil.APICallSink interface, converting outbound httputil.APICallRecord
+// values into *models.APICallLog entries that flow through the same async
+// writer (and therefore the same api_call_logs hypertable) as the inbound
+// middleware.
+//
+// Layering: the adapter lives in internal/api so internal/platform/httputil
+// never imports internal/database (or internal/models, transitively). The
+// httputil package only knows about its locally-defined APICallSink port.
+//
+// captureBodies is captured by value at adapter-construction time and
+// returned from CaptureBodies() on every round-trip. Operator default is
+// false; flip via API_LOGS_CAPTURE_BODIES at startup. The toggle is read
+// once per round-trip by httputil.LoggedTransport so the operator can
+// reconstruct the adapter to flip it without restarting the API server.
+// ---------------------------------------------------------------------------
+
+// APICallSinkAdapter constructs an httputil.APICallSink backed by the
+// supplied APICallLogger. A nil logger yields a no-op sink so production
+// wiring with API_LOGS_INBOUND_ENABLED=false is safe.
+func APICallSinkAdapter(logger APICallLogger, captureBodies bool) httputil.APICallSink {
+	if logger == nil {
+		return &nullOutboundSink{}
+	}
+	return &apiCallSinkAdapter{
+		logger:        logger,
+		captureBodies: captureBodies,
+	}
+}
+
+// apiCallSinkAdapter is the production binding of httputil.APICallSink to
+// the existing inbound asyncAPICallLogger. Enqueue is non-blocking by
+// inheritance from APICallLogger.Enqueue (drop-on-full).
+type apiCallSinkAdapter struct {
+	logger        APICallLogger
+	captureBodies bool
+}
+
+func (a *apiCallSinkAdapter) Enqueue(record httputil.APICallRecord) {
+	if a == nil || a.logger == nil {
+		return
+	}
+	entry := &models.APICallLog{
+		Ts:         time.Now().UTC(),
+		Service:    record.Service,
+		HTTPMethod: record.Method,
+		Endpoint:   record.URL,
+		StatusCode: int16(record.StatusCode),
+		DurationMs: int32(record.DurationMs),
+	}
+	if record.ErrorMessage != "" {
+		s := record.ErrorMessage
+		entry.ErrorMessage = &s
+	}
+	if len(record.RequestBody) > 0 {
+		s := string(record.RequestBody)
+		entry.RequestBody = &s
+	}
+	if len(record.ResponseBody) > 0 {
+		s := string(record.ResponseBody)
+		entry.ResponseBody = &s
+	}
+	a.logger.Enqueue(entry)
+}
+
+func (a *apiCallSinkAdapter) CaptureBodies() bool {
+	if a == nil {
+		return false
+	}
+	return a.captureBodies
+}
+
+// nullOutboundSink is the disabled-mode adapter: every method is a silent
+// no-op. Used when APICallSinkAdapter is constructed with a nil logger
+// (which happens when API_LOGS_INBOUND_ENABLED=false).
+type nullOutboundSink struct{}
+
+func (n *nullOutboundSink) Enqueue(httputil.APICallRecord) {}
+func (n *nullOutboundSink) CaptureBodies() bool            { return false }

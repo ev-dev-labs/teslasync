@@ -21,6 +21,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 	"github.com/ev-dev-labs/teslasync/internal/polling"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	sigsvc "github.com/ev-dev-labs/teslasync/internal/signal"
@@ -216,6 +217,34 @@ func main() {
 		}
 		logCancel()
 	})
+
+	// Outbound api_call_logs sink (Phase 38 / Prompt 12). The adapter wraps
+	// the same async writer used by the inbound middleware, so outbound
+	// rows land in the same hypertable with the same drop-on-full and
+	// shutdown-drain semantics.
+	//
+	// IMPORTANT — single source of truth for service="tesla-api":
+	//   The Tesla Fleet API client in internal/tesla/client.go does NOT
+	//   call httputil.NewClient (verified by grep + the layering test in
+	//   internal/platform/httputil/sink_test.go). It owns its own *http.Client
+	//   and persists outbound calls through the SetLogCallback path above —
+	//   that path has access to decoded request/response bodies and the
+	//   401-then-refresh retry context that the generic LoggedTransport
+	//   sink does not. Wiring this sink into the Tesla client would
+	//   double-record every call, so the Tesla path is intentionally left
+	//   unchanged.
+	//
+	// Future non-Tesla outbound adapters (EIA, Geocoder, gas prices, ...)
+	// will receive this sink as ClientConfig.Sink in Prompt 13.
+	outboundAPILogSink := api.APICallSinkAdapter(inboundAPILogger, cfg.APILogs.CaptureBodies)
+	log.Info().
+		Bool("capture_bodies", cfg.APILogs.CaptureBodies).
+		Bool("logger_enabled", inboundAPILogger != nil).
+		Msg("outbound api_call_logs sink ready (wiring to non-Tesla httputil.NewClient adapters lands in Prompt 13)")
+	// Reference the sink so future Prompt 13 wiring has a stable identifier
+	// and the var is not unused. The cast also asserts at compile time that
+	// the adapter satisfies the httputil.APICallSink interface.
+	var _ httputil.APICallSink = outboundAPILogSink
 
 	// Fleet Telemetry handler — created early so the worker can check streaming state
 	var telemetryHandler *api.TelemetryHandler
