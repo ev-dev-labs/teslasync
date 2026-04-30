@@ -165,7 +165,6 @@ func parseLiveStatusResponse(body []byte, siteID int64) (*models.TeslaEnergyLive
 		GridStatus:        data.GridStatus,
 		BackupCapable:     data.BackupCapable,
 		StormModeActive:   data.StormModeActive,
-		RawJSON:           string(resp.Response),
 		Timestamp:         ts,
 	}, nil
 }

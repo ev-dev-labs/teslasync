@@ -7,7 +7,7 @@ import type {
   AutomationFailedEvent,
   AutomationSkippedEvent,
   AutomationStateChangedEvent,
-} from '../api/types'
+} from '@/api/types'
 
 /** A single automation SSE event with its type and receive timestamp. */
 export interface AutomationActivityEvent {
@@ -35,7 +35,7 @@ interface UseAutomationEventsReturn {
   /** Recent automation events in reverse chronological order. */
   events: AutomationActivityEvent[]
   /** SSE connection state. */
-  connectionState: 'connected' | 'reconnecting' | 'unavailable'
+  connectionState: 'connected' | 'reconnecting'
   /** Set of automation IDs that have fired recently (within last 5 seconds). */
   firingNow: Set<number>
   /** Clear the event history. */
@@ -46,14 +46,14 @@ let eventCounter = 0
 
 /**
  * React hook for real-time automation SSE events.
- * Subscribes to the dedicated /api/v1/automations/events stream.
+ * Subscribes to the dedicated automation events stream.
  */
 export function useAutomationEvents(
   options: UseAutomationEventsOptions = {},
 ): UseAutomationEventsReturn {
   const { enabled = true, modeFilter = null } = options
   const [events, setEvents] = useState<AutomationActivityEvent[]>([])
-  const [connectionState, setConnectionState] = useState<'connected' | 'reconnecting' | 'unavailable'>(
+  const [connectionState, setConnectionState] = useState<'connected' | 'reconnecting'>(
     () => automationSSE.getState(),
   )
   const [firingNow, setFiringNow] = useState<Set<number>>(new Set())

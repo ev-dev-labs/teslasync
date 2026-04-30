@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
@@ -34,7 +33,7 @@ func (h *TCOHandler) GetTCO(w http.ResponseWriter, r *http.Request) {
 	var totalChargingCost, totalKWh float64
 	var totalSessions int
 	err = h.db.Pool.QueryRow(ctx,
-		`SELECT COALESCE(SUM(cost), 0), COALESCE(SUM(charge_energy_added), 0), COUNT(*)
+		`SELECT COALESCE(SUM(cost), 0), COALESCE(SUM(energy_added_kwh), 0), COUNT(*)
 		 FROM charging_sessions WHERE vehicle_id = $1 AND cost > 0`, vehicleID,
 	).Scan(&totalChargingCost, &totalKWh, &totalSessions)
 	if err != nil {
@@ -59,17 +58,15 @@ func (h *TCOHandler) GetTCO(w http.ResponseWriter, r *http.Request) {
 	// Get gas price and efficiency from settings
 	var baseCostPerKWh, gasPrice, gasEfficiencyMPG float64
 	err = h.db.Pool.QueryRow(ctx,
-		`SELECT COALESCE(base_cost_per_kwh, 0.12), COALESCE(gas_price_per_unit, 3.50), COALESCE(gas_efficiency_mpg, 25) FROM settings LIMIT 1`,
+		`SELECT
+		   COALESCE((SELECT value_num FROM settings WHERE key = 'base_cost_per_kwh'), 0.12),
+		   COALESCE((SELECT value_num FROM settings WHERE key = 'gas_price_per_unit'), 3.50),
+		   COALESCE((SELECT value_num FROM settings WHERE key = 'gas_efficiency_mpg'), 25)`,
 	).Scan(&baseCostPerKWh, &gasPrice, &gasEfficiencyMPG)
-	if err != nil && err != pgx.ErrNoRows {
+	if err != nil {
 		log.Error().Err(err).Msg("tco: failed to get settings")
 		writeError(w, http.StatusInternalServerError, "failed to get TCO data")
 		return
-	}
-	if err == pgx.ErrNoRows {
-		baseCostPerKWh = 0.12
-		gasPrice = 3.50
-		gasEfficiencyMPG = 25
 	}
 	// Guard against zero/negative values that would cause division-by-zero (producing +Inf/NaN in JSON)
 	if gasEfficiencyMPG <= 0 {
@@ -119,12 +116,12 @@ func (h *TCOHandler) GetTCO(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := h.db.Pool.Query(ctx,
-		`SELECT TO_CHAR(start_date, 'YYYY-MM') as month,
+		`SELECT TO_CHAR(start_ts, 'YYYY-MM') as month,
 		        COALESCE(SUM(cost), 0) as monthly_cost,
-		        COALESCE(SUM(charge_energy_added), 0) as monthly_kwh
+		        COALESCE(SUM(energy_added_kwh), 0) as monthly_kwh
 		 FROM charging_sessions
 		 WHERE vehicle_id = $1 AND cost > 0
-		 GROUP BY TO_CHAR(start_date, 'YYYY-MM')
+		 GROUP BY TO_CHAR(start_ts, 'YYYY-MM')
 		 ORDER BY month`, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Msg("tco: failed to get monthly breakdown")

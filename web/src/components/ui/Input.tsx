@@ -15,21 +15,20 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="space-y-1">
         {label && (
-          <label htmlFor={inputId} className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label htmlFor={inputId} className="text-sm font-medium text-[var(--text-secondary)]">
             {label}
           </label>
         )}
         <div className="relative">
-          {icon && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">{icon}</span>}
+          {icon && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">{icon}</span>}
           <input
             ref={ref}
             id={inputId}
             className={cn(
-              'w-full rounded-md border bg-white px-3 py-2 text-sm transition-colors',
-              'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1',
-              'dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100',
+              'w-full rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] px-3 py-2 text-sm text-[var(--text-primary)] transition-colors',
+              'placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-[var(--bg)]',
               'disabled:cursor-not-allowed disabled:opacity-50',
-              error ? 'border-red-500' : 'border-gray-300',
+              error && 'border-red-500',
               icon && 'pl-10',
               suffix && 'pr-10',
               className,
@@ -41,7 +40,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           {suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2">{suffix}</span>}
         </div>
         {error && <p id={`${inputId}-error`} className="text-xs text-red-500">{error}</p>}
-        {hint && !error && <p id={`${inputId}-hint`} className="text-xs text-gray-500">{hint}</p>}
+        {hint && !error && <p id={`${inputId}-hint`} className="text-xs text-[var(--text-muted)]">{hint}</p>}
       </div>
     );
   },

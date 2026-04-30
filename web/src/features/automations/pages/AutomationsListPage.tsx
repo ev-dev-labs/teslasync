@@ -8,11 +8,7 @@ import { useState, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
-import { Badge } from '@/components/ui/Badge';
+import { GlassPanel, Button as UiButton, Input as UiInput, Select as UiSelect, Badge } from '@/components/ui';
 import { StatCard } from '@/components/data-display/StatCard';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { FadeIn } from '@/components/motion/FadeIn';
@@ -41,24 +37,18 @@ import { PresetGallery } from './PresetGallery';
 // ─── Filter types ─────────────────────────────────────────────────────────────
 
 type StatusFilter = 'all' | 'active' | 'disabled' | 'auto-disabled';
-type TriggerFilter = 'all' | string;
 
-const statusFilterOptions = [
-  { value: 'all', label: 'All' },
-  { value: 'active', label: 'Active' },
-  { value: 'disabled', label: 'Disabled' },
-  { value: 'auto-disabled', label: 'Auto-Disabled' },
-];
+interface AutomationImportEnvelope {
+  version: number;
+  exported_at?: string;
+  automations: unknown[];
+}
 
-const triggerTypeOptions = [
-  { value: 'all', label: 'All Triggers' },
-  { value: 'cron', label: 'Schedule' },
-  { value: 'state_change', label: 'State Change' },
-  { value: 'geofence', label: 'Geofence' },
-  { value: 'threshold', label: 'Threshold' },
-  { value: 'webhook', label: 'Webhook' },
-  { value: 'sunrise_sunset', label: 'Sunrise/Sunset' },
-  { value: 'manual', label: 'Manual' },
+const statusFilterOptions: { value: StatusFilter; key: string; fallback: string }[] = [
+  { value: 'all', key: 'automations.filters.all', fallback: 'All' },
+  { value: 'active', key: 'automations.filters.active', fallback: 'Active' },
+  { value: 'disabled', key: 'automations.filters.disabled', fallback: 'Disabled' },
+  { value: 'auto-disabled', key: 'automations.filters.autoDisabled', fallback: 'Auto-Disabled' },
 ];
 
 // ─── Stats computation ────────────────────────────────────────────────────────
@@ -98,6 +88,17 @@ function buildVehicleLookup(vehicles: { id: number; display_name: string }[]): M
   return map;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isAutomationImportEnvelope(value: unknown): value is AutomationImportEnvelope {
+  if (!isRecord(value)) {
+    return false;
+  }
+  return typeof value.version === 'number' && Array.isArray(value.automations);
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AutomationsListPage() {
@@ -124,25 +125,48 @@ export default function AutomationsListPage() {
     if (!file) return;
     try {
       const text = await file.text();
-      const data = JSON.parse(text);
-      const body = Array.isArray(data) ? data : [data];
+      const data: unknown = JSON.parse(text);
+      if (!isAutomationImportEnvelope(data)) {
+        throw new Error(t(
+          'automations.importTypedEnvelopeRequired',
+          'Import a typed TeslaSync CTI automation export file. Legacy automation exports are rejected rather than translated.',
+        ));
+      }
       const { request } = await import('@/api/client');
-      await request('/automations/import', { method: 'POST', body: JSON.stringify(body) });
+      await request('/automations/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
       window.location.reload();
     } catch (err) {
       console.error('Import failed:', err);
+      const message = err instanceof Error
+        ? err.message
+        : t('automations.importUnknownError', 'Unknown error');
+      window.alert(t(
+        'automations.importFailedWithReason',
+        'Typed automation import failed: {{message}}',
+        { message },
+      ));
     } finally {
       if (importInputRef.current) importInputRef.current.value = '';
     }
-  }, []);
+  }, [t]);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [triggerFilter, setTriggerFilter] = useState<TriggerFilter>('all');
   const [search, setSearch] = useState('');
 
   // Safe data
   const items = automations ?? [];
+  const localizedStatusFilterOptions = useMemo(
+    () => statusFilterOptions.map((option) => ({
+      value: option.value,
+      label: t(option.key, option.fallback),
+    })),
+    [t],
+  );
   const vehicleLookup = useMemo(
     () => buildVehicleLookup(vehicles ?? []),
     [vehicles],
@@ -166,22 +190,17 @@ export default function AutomationsListPage() {
       });
     }
 
-    if (triggerFilter !== 'all') {
-      result = result.filter((a) => a.trigger_type === triggerFilter);
-    }
-
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(
         (a) =>
-          a.name.toLowerCase().includes(q) ||
-          a.description.toLowerCase().includes(q) ||
-          (a.tags ?? []).some((tag) => tag.toLowerCase().includes(q)),
+          (a.name ?? '').toLowerCase().includes(q) ||
+          (a.description ?? '').toLowerCase().includes(q),
       );
     }
 
     return result;
-  }, [items, statusFilter, triggerFilter, search]);
+  }, [items, statusFilter, search]);
 
   // Callbacks
   const handleToggle = useCallback(
@@ -215,25 +234,25 @@ export default function AutomationsListPage() {
   return (
     <PageContainer
       title={t('automations.title', 'Automations')}
-      subtitle={t('automations.subtitle', 'Automate vehicle actions with triggers, conditions, and action chains')}
+      subtitle={t('automations.subtitle', 'Automate vehicle actions with typed triggers, conditions, and action chains')}
       loading={isLoading}
       actions={
         <div className="flex items-center gap-2">
-          <input
+          <UiInput
             ref={importInputRef}
             type="file"
             accept=".json"
             className="hidden"
             onChange={handleImportFile}
           />
-          <Button variant="ghost" size="sm" onClick={() => importInputRef.current?.click()}>
+          <UiButton type="button" variant="ghost" size="sm" onClick={() => importInputRef.current?.click()}>
             <Upload className="mr-1.5 h-4 w-4" />
             {t('automations.import', 'Import')}
-          </Button>
-          <Button variant="primary" size="sm" onClick={() => navigate('/automations/new')}>
+          </UiButton>
+          <UiButton type="button" variant="primary" size="sm" onClick={() => navigate('/automations/new')}>
             <Plus className="mr-1.5 h-4 w-4" />
             {t('automations.create', 'Create')}
-          </Button>
+          </UiButton>
         </div>
       }
     >
@@ -268,27 +287,20 @@ export default function AutomationsListPage() {
       <FadeIn delay={0.03}>
         <GlassPanel className="p-4">
           <div className="flex flex-wrap items-center gap-3">
-            <Select
-              options={statusFilterOptions}
+            <UiSelect
+              options={localizedStatusFilterOptions}
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
               className="w-40"
               aria-label={t('automations.filterStatus', 'Filter by status')}
             />
-            <Select
-              options={triggerTypeOptions}
-              value={triggerFilter}
-              onChange={(e) => setTriggerFilter(e.target.value as TriggerFilter)}
-              className="w-44"
-              aria-label={t('automations.filterTrigger', 'Filter by trigger')}
-            />
-            <Input
+            <UiInput
               placeholder={t('automations.search', 'Search automations...')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-64"
             />
-            {(statusFilter !== 'all' || triggerFilter !== 'all' || search) && (
+            {(statusFilter !== 'all' || search) && (
               <Badge variant="neutral" className="text-xs">
                 {filteredItems.length} / {items.length}
               </Badge>
@@ -354,7 +366,7 @@ export default function AutomationsListPage() {
               icon={<Zap className="h-8 w-8" />}
               message={
                 items.length === 0
-                  ? t('automations.empty', 'No automations yet. Create one to get started!')
+                  ? t('automations.empty', 'No automations yet. Create a typed automation to get started!')
                   : t('automations.noMatch', 'No automations match your filters')
               }
             />

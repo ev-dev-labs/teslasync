@@ -29,8 +29,8 @@ import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useToast } from '@/components/feedback/Toast';
-import { formatDateTime, formatRelative } from '@/lib/dateFormat';
-import { fmtInt } from '@/lib/numberFormat';
+import { formatDateTime, formatDurationMsCompact, formatRelative } from '@/lib/dateFormat';
+import { formatBytes, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { request, getApiBase } from '@/api/client';
@@ -139,23 +139,6 @@ const BACKUP_TYPE_OPTIONS = [
 ];
 
 const PROVIDER_OPTIONS = PROVIDERS.map((p) => ({ value: p.value, label: p.label }));
-
-/* ------------------------------------------------------------------ */
-/*  Helpers                                                            */
-/* ------------------------------------------------------------------ */
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-}
-
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
-  return `${(ms / 60_000).toFixed(1)}m`;
-}
 
 const PROVIDER_FIELDS: Record<string, { key: string; label: string; type?: string; required?: boolean; placeholder?: string }[]> = {
   local: [
@@ -547,7 +530,7 @@ export default function BackupRestorePage() {
       header: t('backup.duration', 'Duration'),
       render: (row) => (
         <span className="text-sm tabular-nums text-white/40">
-          {row.duration_ms > 0 ? formatDuration(row.duration_ms) : '—'}
+          {row.duration_ms > 0 ? formatDurationMsCompact(row.duration_ms) : '—'}
         </span>
       ),
     },

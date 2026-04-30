@@ -2,12 +2,12 @@ package service
 
 import (
 	"context"
-	"math"
 	"sync"
 	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
@@ -122,15 +122,14 @@ func (s *SessionService) startDrive(ctx context.Context, vehicle *models.Vehicle
 	idealRange := data.ChargeState.IdealBatteryRange
 	estRange := data.ChargeState.EstBatteryRange
 	soc := float64(batteryLevel)
+	bl := int16(batteryLevel)
 
 	drive := &models.Drive{
 		VehicleID:       vehicle.ID,
-		StartDate:       now,
-		StartBatteryLvl: &batteryLevel,
-		StartRangeKm:    &ratedRange,
-		StartOdometer:   &odometer,
-		StartLatitude:   &lat,
-		StartLongitude:  &lon,
+		StartTs:         now,
+		StartBatteryPct: &bl,
+		StartLat:        &lat,
+		StartLon:        &lon,
 	}
 
 	if err := s.driveRepo.Create(ctx, drive); err != nil {
@@ -140,13 +139,8 @@ func (s *SessionService) startDrive(ctx context.Context, vehicle *models.Vehicle
 
 	// Write additional start fields via PartialUpdate
 	startFields := map[string]interface{}{
-		"start_odometer":        odometer,
-		"start_rated_range_km":  ratedRange,
-		"start_ideal_range_km":  idealRange,
-		"start_est_range_km":    estRange,
-		"soc_start":             soc,
-		"start_latitude":        lat,
-		"start_longitude":       lon,
+		"start_lat": lat,
+		"start_lon": lon,
 	}
 	if err := s.driveRepo.PartialUpdate(ctx, drive.ID, startFields); err != nil {
 		log.Warn().Err(err).Int64("driveID", drive.ID).Msg("failed to write drive start enhanced fields")
@@ -291,14 +285,14 @@ func (s *SessionService) updateActiveDrive(vehicle *models.Vehicle, data *tesla.
 
 func (s *SessionService) completeDrive(ctx context.Context, vehicle *models.Vehicle, driveID int64, state *apiDriveState, data *tesla.VehicleDataResponse) {
 	now := time.Now().UTC()
-	endRange := data.ChargeState.BatteryRange
 	endBattery := data.ChargeState.BatteryLevel
 
 	// If state is nil (shouldn't happen, but safety), fall back to old behavior
 	if state == nil {
 		log.Warn().Int64("driveID", driveID).Msg("completing drive without accumulator state — data will be incomplete")
+		eb := int16(endBattery)
 		if err := s.driveRepo.Complete(ctx, driveID, now,
-			nil, nil, 0, 0, &endRange, &endBattery, nil, nil, nil, nil, nil); err != nil {
+			0, 0, &eb, nil, nil, nil, nil); err != nil {
 			log.Error().Err(err).Int64("driveID", driveID).Msg("failed to complete drive")
 		}
 		s.mu.Lock()
@@ -322,20 +316,15 @@ func (s *SessionService) completeDrive(ctx context.Context, vehicle *models.Vehi
 	duration := now.Sub(state.StartTime).Minutes()
 	maxSpeed := state.MaxSpeed
 
-	var speedAvg, speedMin *float64
+	var speedAvg *float64
 	if state.SpeedCount > 0 {
 		avg := state.SpeedSum / float64(state.SpeedCount)
 		speedAvg = &avg
-		min := state.MinSpeed
-		speedMin = &min
 	}
 
-	var powerMax, powerMin *float64
-	if state.SpeedCount > 0 {
-		powerMax = &state.PowerMax
-		if state.PowerMin < math.MaxFloat64 {
-			powerMin = &state.PowerMin
-		}
+	// Fallback: estimate distance from avg speed when odometer delta is zero
+	if distance == 0 && speedAvg != nil && duration > 0 {
+		distance = (*speedAvg) * (duration / 60.0) // mph × hours = miles
 	}
 
 	var insideAvg, outsideAvg *float64
@@ -347,86 +336,32 @@ func (s *SessionService) completeDrive(ctx context.Context, vehicle *models.Vehi
 	}
 
 	// Complete with core fields
+	endBatteryPct := int16(endBattery)
 	if err := s.driveRepo.Complete(ctx, driveID, now,
-		nil, nil, distance, duration, &endRange, &endBattery,
-		&maxSpeed, powerMax, powerMin, insideAvg, outsideAvg); err != nil {
+		distance, duration, &endBatteryPct, &maxSpeed, nil, insideAvg, outsideAvg); err != nil {
 		log.Error().Err(err).Int64("driveID", driveID).Msg("failed to complete drive")
 	}
 
 	// Build enhanced fields map (same as telemetry path)
 	enhanced := map[string]interface{}{}
 
-	// Odometer
-	if state.StartOdometer != nil {
-		enhanced["start_odometer"] = *state.StartOdometer
-	}
-	if state.LastOdometer != nil {
-		enhanced["end_odometer"] = *state.LastOdometer
-	}
-
 	// Speed
 	if speedAvg != nil {
-		enhanced["speed_avg"] = *speedAvg
-	}
-	if speedMin != nil {
-		enhanced["speed_min"] = *speedMin
-	}
-
-	// Range stats
-	if state.StartRatedRange != nil {
-		enhanced["start_rated_range_km"] = *state.StartRatedRange
-	}
-	enhanced["end_rated_range_km"] = endRange
-	if state.RangeCount > 0 {
-		enhanced["rated_range_avg"] = state.RatedRangeSum / float64(state.RangeCount)
-		enhanced["rated_range_max"] = state.RatedRangeMax
-		enhanced["rated_range_min"] = state.RatedRangeMin
-		enhanced["ideal_range_avg"] = state.IdealRangeSum / float64(state.RangeCount)
-		enhanced["ideal_range_max"] = state.IdealRangeMax
-		enhanced["ideal_range_min"] = state.IdealRangeMin
-		enhanced["est_range_avg"] = state.EstRangeSum / float64(state.RangeCount)
-		enhanced["est_range_max"] = state.EstRangeMax
-		enhanced["est_range_min"] = state.EstRangeMin
-	}
-	if state.StartIdealRange != nil {
-		enhanced["start_ideal_range_km"] = *state.StartIdealRange
-	}
-	enhanced["end_ideal_range_km"] = data.ChargeState.IdealBatteryRange
-	if state.StartEstRange != nil {
-		enhanced["start_est_range_km"] = *state.StartEstRange
-	}
-	enhanced["end_est_range_km"] = data.ChargeState.EstBatteryRange
-
-	// SOC
-	if state.StartSoc != nil {
-		enhanced["soc_start"] = *state.StartSoc
-	}
-	endSoc := float64(endBattery)
-	enhanced["soc_end"] = endSoc
-	if state.SocCount > 0 {
-		enhanced["soc_avg"] = state.SocSum / float64(state.SocCount)
-		enhanced["soc_max"] = state.SocMax
-		enhanced["soc_min"] = state.SocMin
-	}
-
-	// Temperature
-	if state.TempCount > 0 {
-		enhanced["driver_temp_avg"] = state.DriverTempSum / float64(state.TempCount)
-		enhanced["passenger_temp_avg"] = state.PassengerTempSum / float64(state.TempCount)
+		enhanced["avg_speed_mph"] = *speedAvg
 	}
 
 	// Coordinates
 	if state.StartLatitude != nil {
-		enhanced["start_latitude"] = *state.StartLatitude
+		enhanced["start_lat"] = *state.StartLatitude
 	}
 	if state.StartLongitude != nil {
-		enhanced["start_longitude"] = *state.StartLongitude
+		enhanced["start_lon"] = *state.StartLongitude
 	}
 	if state.LastLatitude != nil {
-		enhanced["end_latitude"] = *state.LastLatitude
+		enhanced["end_lat"] = *state.LastLatitude
 	}
 	if state.LastLongitude != nil {
-		enhanced["end_longitude"] = *state.LastLongitude
+		enhanced["end_lon"] = *state.LastLongitude
 	}
 
 	if len(enhanced) > 0 {
@@ -465,20 +400,19 @@ func (s *SessionService) completeDrive(ctx context.Context, vehicle *models.Vehi
 // TrackChargeFromAPI evaluates a polled VehicleDataResponse and starts or
 // ends a charging session as appropriate. This is the worker (API-polling) path.
 func (s *SessionService) TrackChargeFromAPI(ctx context.Context, vehicle *models.Vehicle, data *tesla.VehicleDataResponse) {
-	isCharging := data.ChargeState.ChargingState == "Charging"
+	isCharging := data.ChargeState.ChargingState == enums.ChargeStateCharging
 
 	s.mu.Lock()
 	activeChargeID, hasActiveCharge := s.activeCharges[vehicle.ID]
 	s.mu.Unlock()
 
 	if isCharging && !hasActiveCharge {
+		cbl := int16(data.ChargeState.BatteryLevel)
 		session := &models.ChargingSession{
-			VehicleID:         vehicle.ID,
-			StartDate:         time.Now().UTC(),
-			StartBatteryLevel: data.ChargeState.BatteryLevel,
+			VehicleID:       vehicle.ID,
+			StartTs:         time.Now().UTC(),
+			StartBatteryPct: &cbl,
 		}
-		range_ := data.ChargeState.BatteryRange
-		session.StartRangeKm = &range_
 
 		if err := s.chargeRepo.Create(ctx, session); err != nil {
 			log.Error().Err(err).Int64("vehicleID", vehicle.ID).Msg("failed to create charging session")
@@ -493,15 +427,14 @@ func (s *SessionService) TrackChargeFromAPI(ctx context.Context, vehicle *models
 		}
 	} else if !isCharging && hasActiveCharge {
 		endBattery := data.ChargeState.BatteryLevel
-		endRange := data.ChargeState.BatteryRange
 		power := data.ChargeState.ChargerPower
-		voltage := data.ChargeState.ChargerVoltage
-		current := data.ChargeState.ChargerActualCurrent
+		energyAdded := data.ChargeState.ChargeEnergyAdded
+		ceb := int16(endBattery)
 
 		if err := s.chargeRepo.Complete(ctx, activeChargeID, time.Now().UTC(),
-			data.ChargeState.ChargeEnergyAdded, nil, &endBattery, &endRange,
-			data.ChargeState.ChargerPhases, &voltage, &current, &power,
-			nil, nil, nil, nil, 0); err != nil {
+			&energyAdded, &ceb, nil,
+			&power, nil,
+			nil, nil, nil, nil); err != nil {
 			log.Error().Err(err).Int64("sessionID", activeChargeID).Msg("failed to complete charging session")
 		}
 		s.mu.Lock()

@@ -4,74 +4,13 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { Toggle } from '@/components/ui/Toggle';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { GlassPanel, Badge, Button as UiButton, Toggle, ConfirmDialog } from '@/components/ui';
 import {
-  Clock, Zap, AlertTriangle, MoreVertical, Play, Copy, Download,
+  Zap, AlertTriangle, MoreVertical, Play, Copy, Download,
   Trash2, RotateCcw, Car, CheckCircle, XCircle, SkipForward,
 } from 'lucide-react';
 import type { Automation } from '@/api/types';
 import { formatDateTime } from '@/lib/dateFormat';
-
-// ─── Trigger display helpers ──────────────────────────────────────────────────
-
-const triggerLabels: Record<string, string> = {
-  cron: 'Schedule',
-  state_change: 'State Change',
-  geofence: 'Geofence',
-  threshold: 'Threshold',
-  webhook: 'Webhook',
-  sunrise_sunset: 'Sunrise/Sunset',
-  manual: 'Manual',
-};
-
-function getTriggerLabel(type: string): string {
-  return triggerLabels[type] ?? type;
-}
-
-function getTriggerSummary(type: string, config: Record<string, unknown> | null): string {
-  if (!config) return getTriggerLabel(type);
-  if (type === 'cron' && config.cron_expr) {
-    const tz = config.timezone ? ` (${config.timezone})` : '';
-    return `${config.cron_expr}${tz}`;
-  }
-  if (type === 'state_change' && config.signal) {
-    return `When ${config.signal} changes`;
-  }
-  if (type === 'geofence' && config.zone_name) {
-    return `${config.event ?? 'enter/exit'} ${config.zone_name}`;
-  }
-  if (type === 'sunrise_sunset') {
-    return `${config.event ?? 'sunrise'}${config.offset_minutes ? ` ±${config.offset_minutes}m` : ''}`;
-  }
-  return getTriggerLabel(type);
-}
-
-function getActionsSummary(actions: Record<string, unknown>[] | null): string {
-  if (!actions || actions.length === 0) return 'No actions';
-  const names = actions.map((a) => {
-    const cmd = (a.command as string) ?? (a.type as string) ?? '?';
-    return cmd.replace(/_/g, ' ');
-  });
-  if (names.length <= 3) return names.join(' → ');
-  return `${names.slice(0, 2).join(' → ')} → +${names.length - 2} more`;
-}
-
-function getConditionsSummary(conditions: Record<string, unknown>[] | null): string | null {
-  if (!conditions || conditions.length === 0) return null;
-  const parts = conditions.map((c) => {
-    if (c.type === 'state_check' && c.signal && c.operator && c.value !== undefined) {
-      return `${c.signal} ${c.operator} ${c.value}`;
-    }
-    if (c.type === 'time_window') return 'Time window';
-    if (c.type === 'cooldown') return 'Cooldown';
-    return (c.type as string) ?? 'condition';
-  });
-  return parts.join(' & ');
-}
 
 // ─── Time-ago helper ──────────────────────────────────────────────────────────
 
@@ -129,9 +68,6 @@ export function AutomationCard({
 
   const uiStatus = useMemo(() => getUIStatus(a), [a]);
   const status = statusStyles[uiStatus];
-  const triggerSummary = useMemo(() => getTriggerSummary(a.trigger_type, a.trigger_config), [a.trigger_type, a.trigger_config]);
-  const actionsSummary = useMemo(() => getActionsSummary(a.actions), [a.actions]);
-  const conditionsSummary = useMemo(() => getConditionsSummary(a.conditions), [a.conditions]);
   const conflicts = a.conflicts ?? [];
 
   const handleToggle = useCallback(
@@ -182,60 +118,66 @@ export function AutomationCard({
 
             {/* Kebab menu */}
             <div className="relative">
-              <Button
+              <UiButton
+                type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => setMenuOpen(!menuOpen)}
                 aria-label={t('automations.menu', 'Actions menu')}
               >
                 <MoreVertical className="h-4 w-4" />
-              </Button>
+              </UiButton>
               {menuOpen && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
                   <div className="absolute right-0 z-20 mt-1 w-44 rounded-lg border border-white/10 bg-gray-900 py-1 shadow-xl">
-                    <button
+                    <UiButton
                       type="button"
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-white/80 hover:bg-white/5"
+                      variant="ghost"
+                      className="!h-auto !w-full !justify-start !rounded-none !px-3 !py-2 text-sm text-white/80 hover:!bg-white/5"
                       onClick={() => { onTestRun(a.id); setMenuOpen(false); }}
                     >
                       <Play className="h-3.5 w-3.5" />
                       {t('automations.testRun', 'Test Run')}
-                    </button>
+                    </UiButton>
                     {a.auto_disabled && (
-                      <button
+                      <UiButton
                         type="button"
-                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-neon-cyan hover:bg-white/5"
+                        variant="ghost"
+                        className="!h-auto !w-full !justify-start !rounded-none !px-3 !py-2 text-sm text-neon-cyan hover:!bg-white/5"
                         onClick={() => { onReEnable(a.id); setMenuOpen(false); }}
                       >
                         <RotateCcw className="h-3.5 w-3.5" />
                         {t('automations.reEnable', 'Re-enable')}
-                      </button>
+                      </UiButton>
                     )}
-                    <button
+                    <UiButton
                       type="button"
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-white/80 hover:bg-white/5"
+                      variant="ghost"
+                      className="!h-auto !w-full !justify-start !rounded-none !px-3 !py-2 text-sm text-white/80 hover:!bg-white/5"
                       onClick={() => { setMenuOpen(false); }}
                     >
                       <Copy className="h-3.5 w-3.5" />
                       {t('automations.duplicate', 'Duplicate')}
-                    </button>
-                    <button
+                    </UiButton>
+                    <UiButton
                       type="button"
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-white/80 hover:bg-white/5"
+                      variant="ghost"
+                      className="!h-auto !w-full !justify-start !rounded-none !px-3 !py-2 text-sm text-white/80 hover:!bg-white/5"
                       onClick={() => { setMenuOpen(false); }}
                     >
                       <Download className="h-3.5 w-3.5" />
                       {t('automations.export', 'Export')}
-                    </button>
-                    <button
+                    </UiButton>
+                    <UiButton
                       type="button"
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10"
+                      variant="ghost"
+                      className="!h-auto !w-full !justify-start !rounded-none !px-3 !py-2 text-sm text-red-400 hover:!bg-red-500/10"
                       onClick={() => { setConfirmDelete(true); setMenuOpen(false); }}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                       {t('automations.delete', 'Delete')}
-                    </button>
+                    </UiButton>
                   </div>
                 </>
               )}
@@ -243,42 +185,20 @@ export function AutomationCard({
           </div>
         </div>
 
-        {/* Trigger + Vehicle row */}
+        {/* Vehicle row */}
         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-white/60">
-          <span className="flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            {getTriggerLabel(a.trigger_type)}
-          </span>
-          <span className="text-white/30">·</span>
-          <span className="text-white/50">{triggerSummary}</span>
           {vehicleName && (
-            <>
-              <span className="text-white/30">·</span>
-              <span className="flex items-center gap-1">
-                <Car className="h-3 w-3" />
-                {vehicleName}
-              </span>
-            </>
+            <span className="flex items-center gap-1">
+              <Car className="h-3 w-3" />
+              {vehicleName}
+            </span>
+          )}
+          {!vehicleName && (
+            <span className="text-white/50">
+              {t('automations.allVehicles', 'All vehicles')}
+            </span>
           )}
         </div>
-
-        {/* Actions chain */}
-        <div className="mt-2 text-xs text-white/50">
-          <span className="font-medium text-white/70">
-            {t('automations.actions', 'Actions')}:
-          </span>{' '}
-          {actionsSummary}
-        </div>
-
-        {/* Conditions */}
-        {conditionsSummary && (
-          <div className="mt-1 text-xs text-white/50">
-            <span className="font-medium text-white/70">
-              {t('automations.conditions', 'IF')}:
-            </span>{' '}
-            {conditionsSummary}
-          </div>
-        )}
 
         {/* Stats row */}
         <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-white/50">

@@ -31,7 +31,7 @@ type efficiencyCategory struct {
 }
 
 type efficiencyPoint struct {
-	SpeedAvg   float64 `json:"speed_avg"`
+	SpeedAvg   float64 `json:"avg_speed_mph"`
 	Distance   float64 `json:"distance"`
 	Efficiency float64 `json:"efficiency"`
 }
@@ -50,26 +50,25 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// Speed distribution from drive telemetry
+	// Speed distribution from drives (avg_speed_mph + avg_power_kw)
 	distRows, err := h.db.Pool.Query(ctx, `
 		SELECT
 		  CASE
-		    WHEN speed < 15 THEN '0-15'
-		    WHEN speed < 30 THEN '15-30'
-		    WHEN speed < 45 THEN '30-45'
-		    WHEN speed < 60 THEN '45-60'
-		    WHEN speed < 75 THEN '60-75'
-		    WHEN speed < 90 THEN '75-90'
-		    WHEN speed < 105 THEN '90-105'
-		    ELSE '105+'
+		    WHEN avg_speed_mph < 15 THEN '0-15'
+		    WHEN avg_speed_mph < 30 THEN '15-30'
+		    WHEN avg_speed_mph < 45 THEN '30-45'
+		    WHEN avg_speed_mph < 60 THEN '45-60'
+		    WHEN avg_speed_mph < 75 THEN '60-75'
+		    ELSE '75+'
 		  END AS speed_bucket,
 		  COUNT(*) AS readings,
-		  COALESCE(AVG(power),0) AS avg_power_kw
-		FROM drive_telemetry_readings
-		WHERE vehicle_id = $1 AND speed IS NOT NULL AND speed > 0
-		  AND created_at > NOW() - interval '30 days'
+		  AVG(avg_power_kw) AS avg_power_kw
+		FROM drives
+		WHERE vehicle_id = $1
+		  AND avg_speed_mph IS NOT NULL AND avg_speed_mph > 0
+		  AND start_ts > NOW() - INTERVAL '30 days'
 		GROUP BY speed_bucket
-		ORDER BY MIN(speed)`, vehicleID)
+		ORDER BY MIN(avg_speed_mph)`, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("speed profile: failed to query distribution")
 		writeError(w, http.StatusInternalServerError, "failed to query speed distribution")
@@ -80,12 +79,15 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 	var distribution []speedBucket
 	for distRows.Next() {
 		var b speedBucket
-		if err := distRows.Scan(&b.SpeedBucket, &b.Readings, &b.AvgPowerKW); err != nil {
+		var avgPower *float64
+		if err := distRows.Scan(&b.SpeedBucket, &b.Readings, &avgPower); err != nil {
 			log.Error().Err(err).Msg("speed profile: scan distribution row")
 			writeError(w, http.StatusInternalServerError, "failed to scan speed distribution")
 			return
 		}
-		b.AvgPowerKW = math.Round(b.AvgPowerKW*100) / 100
+		if avgPower != nil {
+			b.AvgPowerKW = math.Round(*avgPower*100) / 100
+		}
 		distribution = append(distribution, b)
 	}
 	if err := distRows.Err(); err != nil {
@@ -98,17 +100,17 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 	catRows, err := h.db.Pool.Query(ctx, `
 		SELECT
 		  CASE
-		    WHEN speed_avg < 30 THEN 'City (<30)'
-		    WHEN speed_avg < 60 THEN 'Suburban (30-60)'
-		    WHEN speed_avg < 90 THEN 'Highway (60-90)'
+		    WHEN avg_speed_mph < 30 THEN 'City (<30)'
+		    WHEN avg_speed_mph < 60 THEN 'Suburban (30-60)'
+		    WHEN avg_speed_mph < 90 THEN 'Highway (60-90)'
 		    ELSE 'High Speed (90+)'
 		  END AS category,
 		  COUNT(*) AS drive_count,
-		  AVG(distance / NULLIF(duration_min,0) * 60) AS avg_speed,
-		  AVG(CASE WHEN distance > 0 THEN (start_battery_level - end_battery_level)::float / distance * 100 ELSE 0 END) AS battery_pct_per_100km
+		  AVG(distance_mi / NULLIF(duration_min,0) * 60) AS avg_speed,
+		  AVG(CASE WHEN distance_mi > 0 THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 ELSE 0 END) AS battery_pct_per_100km
 		FROM drives
-		WHERE vehicle_id = $1 AND distance > 1 AND duration_min > 1
-		  AND start_date > NOW() - interval '90 days'
+		WHERE vehicle_id = $1 AND distance_mi > 1 AND duration_min > 1
+		  AND start_ts > NOW() - interval '90 days'
 		GROUP BY category`, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("speed profile: failed to query efficiency categories")
@@ -142,12 +144,12 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	// Optimal speed data points
 	ptRows, err := h.db.Pool.Query(ctx, `
-		SELECT speed_avg, distance,
-		  CASE WHEN distance > 0 THEN (start_battery_level - end_battery_level)::float / distance * 100 ELSE 0 END AS efficiency
+		SELECT avg_speed_mph, distance_mi,
+		  CASE WHEN distance_mi > 0 THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 ELSE 0 END AS efficiency
 		FROM drives
-		WHERE vehicle_id = $1 AND distance > 5 AND duration_min > 5
-		  AND speed_avg IS NOT NULL
-		ORDER BY start_date DESC LIMIT 100`, vehicleID)
+		WHERE vehicle_id = $1 AND distance_mi > 5 AND duration_min > 5
+		  AND avg_speed_mph IS NOT NULL
+		ORDER BY start_ts DESC LIMIT 100`, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("speed profile: failed to query efficiency points")
 		writeError(w, http.StatusInternalServerError, "failed to query efficiency points")

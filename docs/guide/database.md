@@ -1,16 +1,16 @@
 # Database Schema
 
-Interactive visual diagram of the complete TeslaSync database — **47 tables**, **778 columns**, and **37 foreign key relationships**.
+TeslaSync stores relational and time-series data in PostgreSQL/TimescaleDB. The interactive diagram below is preserved for schema exploration; verify exact table counts against your checked-out migrations because the schema changes frequently.
 
 ## Features
 
 - 🎨 **Color-coded** by domain — Core, Drives, Charging, Snapshots, Alerts, Geofences, Commands, Fleet, Audit, Export, Efficiency
 - 🔑 **PK / FK indicators** on every column with type and nullability
-- ➡️ **Relationship lines** — bezier curves showing all foreign key connections
-- 🔍 **Search** — filter tables or columns by name
-- 🖱️ **Interactive** — drag tables to rearrange, scroll to zoom, drag background to pan
-- ✨ **Hover highlighting** — hover a table to see only its relationships (dims unrelated tables)
-- 🗺️ **Minimap** — bottom-right corner for quick navigation
+- ➡️ **Relationship lines** showing foreign key connections
+- 🔍 **Search** tables or columns by name
+- 🖱️ **Interactive** drag, zoom, pan, and rearrange
+- ✨ **Hover highlighting** for relationship focus
+- 🗺️ **Minimap** for navigation
 
 ## Interactive Diagram
 
@@ -38,80 +38,45 @@ Interactive visual diagram of the complete TeslaSync database — **47 tables**,
 </div>
 
 ::: tip Navigation
-- **Zoom**: Scroll wheel or use the + / − buttons in the toolbar
-- **Pan**: Click and drag on the background
-- **Move tables**: Click and drag any table header
-- **Search**: Use the search box in the toolbar to filter by table or column name
-- **Highlight**: Hover over any table to see its foreign key relationships
+- **Zoom**: Scroll wheel or the diagram controls
+- **Pan**: Click and drag the background
+- **Move tables**: Drag table headers
+- **Search**: Use the search box to filter tables/columns
+- **Highlight**: Hover a table to focus its relationships
 :::
 
-## Domain Groups
+## Storage domains
 
-| Group | Color | Description |
-|-------|-------|-------------|
-| **Core** | 🔵 Blue | Vehicles, tokens, settings, addresses, API keys |
-| **Drives** | 🟢 Green | Drives, positions, telemetry readings, trips, mileage |
-| **Charging** | 🟡 Amber | Charging sessions, charge telemetry, charging data |
-| **Snapshots** | 🟣 Purple | Battery, tire pressure, climate, vehicle state, motor, media, location, safety |
-| **Alerts** | 🔴 Red | Alert rules, alerts, notification channels & logs |
-| **Geofences** | 🩵 Cyan | Geofences and geofence events |
-| **Commands** | 🟠 Orange | Command queue and command logs |
-| **Fleet** | 🩷 Pink | Fleet telemetry subscriptions |
-| **Audit** | ⚫ Gray | Audit logs, API call logs |
-| **Export** | 🟩 Lime | Export jobs |
-| **Efficiency** | 🩵 Teal | Efficiency factors |
-
-## Key Relationships
-
-The central table is **`vehicles`** — nearly every other table references it via `vehicle_id`.
-
-**Core chains:**
-- `vehicles` → `drives` → `drive_telemetry_readings`
-- `vehicles` → `charging_sessions` → `charge_telemetry_readings`
-- `vehicles` → `positions` (partitioned by month)
-- `vehicles` → all snapshot tables (battery, tire pressure, climate, etc.)
-- `drives` → `addresses` (start/end location)
-- `trips` → `trip_drives` → `drives`
-- `geofences` → `geofence_events` → `vehicles`
+| Domain | Tables and data |
+|---|---|
+| Core | vehicles, settings, tokens, addresses, API keys |
+| Live state | `vehicle_live_state`, Redis signal cache, SignalStore warm-start from Redis/signal history |
+| Time-series | positions, signal logs, telemetry snapshots, continuous aggregates |
+| Drives | drives, drive telemetry, trip grouping, route replay |
+| Charging | charging sessions, charging telemetry, Tesla charging invoices/sessions |
+| Analytics | daily/hourly aggregates, cost, efficiency, battery, route metrics |
+| Operations | API logs, audit logs, exports, backup history, repair jobs |
+| Alerts | rules, alerts, notifications, automations, webhooks |
 
 ## Migrations
 
-TeslaSync uses `golang-migrate` for schema versioning. All 57 migrations run automatically on startup.
+Migrations live in the root `migrations/` directory and run automatically on API startup. The current root sequence is squashed around a typed baseline and continues through recent function, continuous aggregate, API log, and charging-spec migrations.
 
-### Recent Migrations (030–057)
+Use these checks before writing schema-dependent docs or SQL:
 
-Migrations 030–039 were added for the CEP Rule Engine, signal coverage, and state machine features. Migrations 040–057 cover materialized views, snapshot fixes, battery health, and data quality improvements:
+```bash
+Get-ChildItem migrations -Filter '*.up.sql' | Sort-Object Name | Select-Object -Last 10
+```
 
-| Migration | Description |
-|-----------|-------------|
-| **030** | Add vehicle state + config columns to `vehicle_live_state` |
-| **031** | Add `decimal_precision` setting |
-| **032** | Seed `software_updates` from `vehicle_config_snapshots` |
-| **033** | Create enriched views (`v_drives`, `v_charging_sessions`) with NULLIF for zero-value protection |
-| **034** | Add state machine persistence columns (`last_gear`, `last_speed_time`) to `vehicle_live_state` |
-| **035** | Add 158 columns to `vehicle_live_state` for 100% signal coverage (229/230 signals) |
-| **036** | CEP Rule Engine: add `conditions` (JSONB), `cooldown_min`, `severity`, `msg_template`, `notify_channels`, `tags`, `fire_count`, `last_fired_at` to `alert_rules` |
-| **037** | Fix column types: boolean → varchar for enum signals (e.g., `HvacAutoModeState`) |
-| **038** | Fix `vehicle_config` column types: boolean → varchar |
-| **039** | Add `quiet_hours_start`, `quiet_hours_end`, `quiet_hours_enabled`, `alert_digest_mode` to `settings` |
-| **040–056** | Materialized views (`mv_energy_daily`, `mv_position_hourly`, `mv_signal_stats`), snapshot column fixes, zero-value filtering, tire pressure labels, decimal precision enforcement |
-| **057** | Battery health snapshot backfill — generates daily snapshots from historical charging telemetry |
+```sql
+SELECT version, dirty FROM schema_migrations;
+SELECT extname FROM pg_extension WHERE extname IN ('timescaledb', 'vector', 'pg_stat_statements');
+```
 
-### Materialized Views
+## TimescaleDB and pgvector
 
-TeslaSync uses 3 materialized views to accelerate analytics queries. Each has a unique index to support `REFRESH CONCURRENTLY`, and the maintenance worker refreshes them daily.
+The default Compose stack uses `timescale/timescaledb-ha:pg17`. TimescaleDB supports hypertables/continuous aggregates for telemetry analytics, and pgvector supports embedded search/chatbot capabilities.
 
-| View | Purpose |
-|------|---------|
-| **`mv_energy_daily`** | Daily energy stats per vehicle — FULL OUTER JOIN of charging sessions and drives to produce combined consumption/regen totals per day |
-| **`mv_position_hourly`** | Hourly averages of speed, power, battery level, and coordinates per vehicle — used for map trail rendering and driving pattern analysis |
-| **`mv_signal_stats`** | Per (vehicle, signal, hour) aggregation of min/max/avg/count — powers the signal analytics dashboards |
+## Current-state rule
 
-### vehicle_live_state
-
-The `vehicle_live_state` table stores the **always-complete vehicle state** — one row per vehicle, UPSERT'd every 5 seconds from the in-memory SignalStore. It has **236 columns** (77 original + 158 added in migration 035) covering all Tesla Fleet Telemetry signal categories.
-
-This table enables:
-- **Pod restart recovery** — `LoadFromDB()` restores the SignalStore from the last flush
-- **Historical snapshots** — state at the time of the last telemetry flush
-- **CEP evaluation** — rules can reference any persisted signal
+For current vehicle state, prefer `vehicle_live_state` and the `/vehicles/{id}/state` API. Historical snapshot tables and signal logs are for charts, diagnostics, and audits; they should not be treated as the freshest source for live UI decisions.

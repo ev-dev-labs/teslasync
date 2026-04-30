@@ -16,46 +16,15 @@ import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSettings } from '@/hooks/useSettings';
 import { useVehicleLive } from '@/hooks/useVehicleLive';
+import { useToast } from '@/components/feedback/Toast';
 import { cn } from '@/lib/cn';
 import { fmtNumber } from '@/lib/numberFormat';
+import { batteryColor } from '@/lib/colors';
 import { request } from '@/api/client';
 import { fetchVehicleState } from '@/api/hooks/useVehicles';
+import { deriveVehicleStatus, statusVariant } from '@/api/types';
 import type { Vehicle } from '@/types/vehicle';
 import type { VehicleState } from '@/api/types';
-
-/* ── Helpers ─────────────────────────────────────────────── */
-
-function batteryColor(level: number): string {
-  if (level > 60) return '#10b981';
-  if (level > 30) return '#f59e0b';
-  return '#ef4444';
-}
-
-type StatusKey = 'online' | 'asleep' | 'driving' | 'charging' | 'offline';
-
-function deriveStatus(vehicle: Vehicle, state?: VehicleState | null): StatusKey {
-  if (state?.is_charging) return 'charging';
-  if (state?.speed && state.speed > 0) return 'driving';
-  if (vehicle.state === 'online') return 'online';
-  if (vehicle.state === 'asleep') return 'asleep';
-  return 'offline';
-}
-
-const STATUS_VARIANT: Record<StatusKey, 'success' | 'warning' | 'info' | 'danger' | 'neutral'> = {
-  online: 'success',
-  charging: 'warning',
-  driving: 'info',
-  asleep: 'neutral',
-  offline: 'danger',
-};
-
-const STATUS_LABEL: Record<StatusKey, string> = {
-  online: 'Online',
-  charging: 'Charging',
-  driving: 'Driving',
-  asleep: 'Asleep',
-  offline: 'Offline',
-};
 
 /* ── Page ────────────────────────────────────────────────── */
 
@@ -109,10 +78,17 @@ export default function VehicleListPage() {
   }, [fleetStates]);
 
   /* ── Mutations ── */
+  const toast = useToast();
   const syncMut = useMutation({
     mutationFn: () =>
       request<{ synced: number }>('/vehicles/sync', { method: 'POST' }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vehicles'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      toast.success(t('vehicles.syncToast', 'Vehicles synced successfully'));
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || t('vehicles.syncFailed', 'Failed to sync vehicles'));
+    },
   });
 
   const deleteMut = useMutation({
@@ -122,6 +98,10 @@ export default function VehicleListPage() {
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
       queryClient.invalidateQueries({ queryKey: ['fleet-vehicle-states'] });
       setDeleteTarget(null);
+      toast.success(t('vehicles.deleteSuccess', 'Vehicle removed'));
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || t('vehicles.deleteFailed', 'Failed to remove vehicle'));
     },
   });
 
@@ -308,7 +288,7 @@ export default function VehicleListPage() {
             {vehicleList.map((vehicle) => {
               const entry = fleet.entries.find(e => e.vehicle.id === vehicle.id);
               const state = entry?.state ?? null;
-              const status = deriveStatus(vehicle, state);
+              const status = deriveVehicleStatus(state);
               const level = state?.battery_level ?? 0;
               const color = batteryColor(level);
 
@@ -328,8 +308,8 @@ export default function VehicleListPage() {
                             >
                               {vehicle.display_name || vehicle.vin}
                             </Link>
-                            <Badge variant={STATUS_VARIANT[status]} dot size="sm">
-                              {STATUS_LABEL[status]}
+                            <Badge variant={statusVariant(status)} dot size="sm">
+                              {status}
                             </Badge>
                           </div>
 

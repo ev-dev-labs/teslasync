@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
+import { useToast } from '@/components/feedback/Toast';
 import { safeArray } from '@/lib/safeArray';
+import { INTERVALS } from '@/lib/constants';
 import type {
   APIKey, APICallLog, APICallLogStats, BackupConfig, BackupRun,
   SystemHealth, AuditLogEntry, SecurityEvent, DBStats, MigrationStatus,
@@ -34,6 +36,7 @@ export function useApiKeys() {
 
 export function useCreateApiKey() {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: (data: { name: string; permissions: string }) =>
       request<APIKey & { key: string }>('/api-keys', {
@@ -41,23 +44,43 @@ export function useCreateApiKey() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: adminKeys.apiKeys }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: adminKeys.apiKeys });
+      toast.success('API key created');
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to create API key');
+    },
   });
 }
 
 export function useDeleteApiKey() {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: (id: string) => request<void>(`/api-keys/${id}`, { method: 'DELETE' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: adminKeys.apiKeys }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: adminKeys.apiKeys });
+      toast.success('API key deleted');
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to delete API key');
+    },
   });
 }
 
 export function useRevokeApiKey() {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: (id: string) => request<void>(`/api-keys/${id}/revoke`, { method: 'POST' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: adminKeys.apiKeys }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: adminKeys.apiKeys });
+      toast.success('API key revoked');
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to revoke API key');
+    },
   });
 }
 
@@ -73,7 +96,7 @@ export function useApiLogStats() {
   return useQuery({
     queryKey: adminKeys.apiLogStats,
     queryFn: () => request<APICallLogStats>('/api-logs/stats'),
-    refetchInterval: 30_000,
+    refetchInterval: INTERVALS.STANDARD,
   });
 }
 
@@ -89,7 +112,7 @@ export function useBackupRuns() {
   return useQuery({
     queryKey: adminKeys.backupRuns,
     queryFn: () => request<BackupRun[]>('/backup/runs'),
-    refetchInterval: 10_000,
+    refetchInterval: INTERVALS.FAST,
     select: safeArray,
   });
 }
@@ -98,7 +121,7 @@ export function useSystemHealth() {
   return useQuery({
     queryKey: adminKeys.systemHealth,
     queryFn: () => request<SystemHealth>('/system/health'),
-    refetchInterval: 30_000,
+    refetchInterval: INTERVALS.STANDARD,
   });
 }
 
@@ -123,7 +146,7 @@ export function useDBStats() {
   return useQuery({
     queryKey: adminKeys.dbStats,
     queryFn: () => request<DBStats>('/dev-tools/db-stats'),
-    refetchInterval: 30_000,
+    refetchInterval: INTERVALS.STANDARD,
   });
 }
 
@@ -131,7 +154,7 @@ export function useMigrations() {
   return useQuery({
     queryKey: adminKeys.migrations,
     queryFn: () => request<MigrationStatus>('/dev-tools/migration-status'),
-    refetchInterval: 60_000,
+    refetchInterval: INTERVALS.SLOW,
   });
 }
 
@@ -139,7 +162,7 @@ export function useConnectionPool() {
   return useQuery({
     queryKey: adminKeys.connectionPool,
     queryFn: () => request<ConnectionPool>('/dev-tools/runtime-info'),
-    refetchInterval: 30_000,
+    refetchInterval: INTERVALS.STANDARD,
   });
 }
 
@@ -153,6 +176,7 @@ export function useExportJobs() {
 
 export function useCreateExport() {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: (data: { type: string; format: string; vehicleId?: string }) =>
       request<ExportJob>('/exports', {
@@ -160,7 +184,13 @@ export function useCreateExport() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: adminKeys.exportJobs }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: adminKeys.exportJobs });
+      toast.success('Export job created');
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to create export');
+    },
   });
 }
 
@@ -169,7 +199,7 @@ export function useVehicleStateMachine(vehicleId: string) {
     queryKey: adminKeys.vehicleState(vehicleId),
     queryFn: () => request<VehicleState>(`/vehicles/${vehicleId}/state`),
     enabled: !!vehicleId,
-    refetchInterval: 3_000,
+    refetchInterval: INTERVALS.CRITICAL,
   });
 }
 
@@ -178,6 +208,6 @@ export function useStateTimeline(vehicleId: string, days = 7) {
     queryKey: [...adminKeys.stateTimeline(vehicleId), days],
     queryFn: () => request<{ transitions: StateTransition[] }>(`/vehicle-states/timeline?vehicle_id=${vehicleId}&days=${days}`),
     enabled: !!vehicleId,
-    refetchInterval: 10_000,
+    refetchInterval: INTERVALS.FAST,
   });
 }

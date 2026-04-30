@@ -1,0 +1,1 @@
+-- No-op: cannot restore original prefixed values once stripped.

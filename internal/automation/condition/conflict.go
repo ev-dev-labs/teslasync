@@ -2,7 +2,6 @@ package condition
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -21,54 +20,51 @@ type Conflict struct {
 // oppositeCommands maps commands to their logical opposite.
 // Both directions are listed explicitly for O(1) lookup.
 var oppositeCommands = map[string]string{
-	"lock":          "unlock",
-	"unlock":        "lock",
-	"climate_on":    "climate_off",
-	"climate_off":   "climate_on",
-	"sentry_on":     "sentry_off",
-	"sentry_off":    "sentry_on",
-	"charge_start":  "charge_stop",
-	"charge_stop":   "charge_start",
+	"lock":              "unlock",
+	"unlock":            "lock",
+	"climate_on":        "climate_off",
+	"climate_off":       "climate_on",
+	"sentry_on":         "sentry_off",
+	"sentry_off":        "sentry_on",
+	"charge_start":      "charge_stop",
+	"charge_stop":       "charge_start",
 	"open_charge_port":  "close_charge_port",
 	"close_charge_port": "open_charge_port",
 	"charge_port_open":  "charge_port_close",
 	"charge_port_close": "charge_port_open",
-	"vent_windows":  "close_windows",
-	"close_windows": "vent_windows",
-	"valet_on":      "valet_off",
-	"valet_off":     "valet_on",
-	"guest_mode_on":  "guest_mode_off",
-	"guest_mode_off": "guest_mode_on",
+	"vent_windows":      "close_windows",
+	"close_windows":     "vent_windows",
+	"valet_on":          "valet_off",
+	"valet_off":         "valet_on",
+	"guest_mode_on":     "guest_mode_off",
+	"guest_mode_off":    "guest_mode_on",
 }
 
-// actionEntry represents a single action parsed from the automation's actions JSON.
+// actionEntry represents a single typed command action.
 type actionEntry struct {
-	Type    string          `json:"type"`
-	Command string          `json:"command"`
-	Params  json.RawMessage `json:"params"`
+	Type        string
+	CommandName string
 }
 
 // triggerSummary normalizes trigger details for comparison.
 type triggerSummary struct {
 	triggerType string
-	cronExpr   string
-	timezone   string
-	event      string   // vehicle_state event name, geofence event
-	fromState  *string  // vehicle_state optional filter
-	toState    *string  // vehicle_state optional filter
-	geofenceID int64    // geofence trigger
-	events     []string // expanded event list (geofence "both" → ["enter","leave"])
+	cronExpr    string
+	timezone    string
+	event       string
+	geofenceID  int64
+	events      []string // expanded event list (geofence "both" → ["enter","leave"])
 }
 
 // DetectConflicts scans other automations for potential conflicts with the candidate.
 // Returns a list of advisory Conflict warnings. The context parameter is reserved
 // for future use (e.g., condition-aware analysis that may need data lookups).
-func DetectConflicts(_ context.Context, candidate *models.Automation, others []*models.Automation) []Conflict {
+func DetectConflicts(_ context.Context, candidate *models.AutomationFull, others []*models.AutomationFull) []Conflict {
 	if candidate == nil || len(others) == 0 {
 		return nil
 	}
 
-	candidateActions := parseActions(candidate.Actions)
+	candidateActions := typedCommandActions(candidate.Actions)
 	if len(candidateActions) == 0 {
 		return nil
 	}
@@ -78,21 +74,21 @@ func DetectConflicts(_ context.Context, candidate *models.Automation, others []*
 		return nil
 	}
 
-	candidateTrigger := parseTriggerSummary(candidate.TriggerType, candidate.TriggerConfig)
+	candidateTrigger := typedTriggerSummary(candidate.Triggers)
 
 	var conflicts []Conflict
 	for _, other := range others {
 		if other.ID == candidate.ID {
 			continue
 		}
-		if !other.Enabled || other.AutoDisabled {
+		if !other.Enabled || other.AutoDisabled() {
 			continue
 		}
 		if !vehicleScopeOverlaps(candidate.VehicleID, other.VehicleID) {
 			continue
 		}
 
-		otherActions := parseActions(other.Actions)
+		otherActions := typedCommandActions(other.Actions)
 		otherCommands := extractCommands(otherActions)
 		if len(otherCommands) == 0 {
 			continue
@@ -103,7 +99,7 @@ func DetectConflicts(_ context.Context, candidate *models.Automation, others []*
 			continue
 		}
 
-		otherTrigger := parseTriggerSummary(other.TriggerType, other.TriggerConfig)
+		otherTrigger := typedTriggerSummary(other.Triggers)
 
 		if reason := checkTriggerOverlap(candidateTrigger, otherTrigger, opposites); reason != "" {
 			severity := "warning"
@@ -133,24 +129,14 @@ func checkTriggerOverlap(a, b triggerSummary, opposites []commandPair) string {
 	cmdDesc := formatCommandPairs(opposites)
 
 	switch a.triggerType {
-	case "cron":
+	case models.AutomationStepKindTriggerSchedule:
 		return checkCronOverlap(a, b, cmdDesc)
-	case "vehicle_state":
-		return checkVehicleStateOverlap(a, b, cmdDesc)
-	case "geofence":
+	case models.AutomationStepKindTriggerEvent:
+		return checkSameTriggerOverlap("event", a, b, cmdDesc)
+	case models.AutomationStepKindTriggerGeofence:
 		return checkGeofenceOverlap(a, b, cmdDesc)
-	case "battery":
-		return checkSameTriggerOverlap("battery threshold", a, b, cmdDesc)
-	case "sunrise_sunset":
-		return checkSameTriggerOverlap("sunrise/sunset", a, b, cmdDesc)
-	case "energy":
-		return checkSameTriggerOverlap("energy", a, b, cmdDesc)
-	case "mqtt":
-		return checkSameTriggerOverlap("MQTT", a, b, cmdDesc)
-	case "webhook":
-		return checkSameTriggerOverlap("webhook", a, b, cmdDesc)
-	case "calendar":
-		return checkSameTriggerOverlap("calendar", a, b, cmdDesc)
+	case models.AutomationStepKindTriggerSignal:
+		return checkSameTriggerOverlap("signal", a, b, cmdDesc)
 	default:
 		return ""
 	}
@@ -169,14 +155,6 @@ func checkCronOverlap(a, b triggerSummary, cmdDesc string) string {
 			a.cronExpr, aTZ, cmdDesc)
 	}
 	return ""
-}
-
-func checkVehicleStateOverlap(a, b triggerSummary, cmdDesc string) string {
-	if !vehicleStateEventsOverlap(a, b) {
-		return ""
-	}
-	return fmt.Sprintf("same vehicle state event (%s) with contradicting actions: %s",
-		describeVehicleStateEvent(a, b), cmdDesc)
 }
 
 func checkGeofenceOverlap(a, b triggerSummary, cmdDesc string) string {
@@ -209,44 +187,6 @@ func checkSameTriggerOverlap(triggerLabel string, a, b triggerSummary, cmdDesc s
 	return ""
 }
 
-// vehicleStateEventsOverlap checks if two vehicle_state triggers can fire
-// on the same FSM transition. The "state_change" event is a wildcard that
-// matches any transition, so it overlaps with all other events.
-func vehicleStateEventsOverlap(a, b triggerSummary) bool {
-	// state_change is a wildcard — overlaps everything.
-	if a.event == "state_change" || b.event == "state_change" {
-		return true
-	}
-
-	if a.event != b.event {
-		return false
-	}
-
-	// Same event — check if from_state/to_state filters are mutually exclusive.
-	if a.fromState != nil && b.fromState != nil && *a.fromState != *b.fromState {
-		return false
-	}
-	if a.toState != nil && b.toState != nil && *a.toState != *b.toState {
-		return false
-	}
-
-	return true
-}
-
-func describeVehicleStateEvent(a, b triggerSummary) string {
-	if a.event == "state_change" || b.event == "state_change" {
-		specific := a.event
-		if specific == "state_change" {
-			specific = b.event
-		}
-		if specific == "state_change" {
-			return "state_change (any transition)"
-		}
-		return fmt.Sprintf("state_change overlaps %s", specific)
-	}
-	return a.event
-}
-
 func geofenceEventsOverlap(aEvents, bEvents []string) bool {
 	for _, ae := range aEvents {
 		for _, be := range bEvents {
@@ -258,82 +198,63 @@ func geofenceEventsOverlap(aEvents, bEvents []string) bool {
 	return false
 }
 
-// ── Parsing helpers ─────────────────────────────────────
+// ── Typed helpers ─────────────────────────────────────
 
-func parseTriggerSummary(triggerType string, raw json.RawMessage) triggerSummary {
-	ts := triggerSummary{triggerType: triggerType}
-	if len(raw) == 0 {
-		return ts
+func typedTriggerSummary(triggers []any) triggerSummary {
+	if len(triggers) == 0 {
+		return triggerSummary{}
 	}
-
-	switch triggerType {
-	case "cron":
-		var cfg struct {
-			CronExpr string `json:"cron_expr"`
-			Timezone string `json:"timezone"`
-		}
-		if json.Unmarshal(raw, &cfg) == nil {
-			ts.cronExpr = cfg.CronExpr
-			ts.timezone = cfg.Timezone
-		}
-
-	case "vehicle_state":
-		var cfg struct {
-			Event     string  `json:"event"`
-			FromState *string `json:"from_state"`
-			ToState   *string `json:"to_state"`
-		}
-		if json.Unmarshal(raw, &cfg) == nil {
-			ts.event = cfg.Event
-			ts.fromState = cfg.FromState
-			ts.toState = cfg.ToState
-		}
-
-	case "geofence":
-		var cfg struct {
-			GeofenceID int64  `json:"geofence_id"`
-			Event      string `json:"event"`
-		}
-		if json.Unmarshal(raw, &cfg) == nil {
-			ts.geofenceID = cfg.GeofenceID
-			ts.event = cfg.Event
-			switch cfg.Event {
-			case "both":
-				ts.events = []string{"enter", "leave"}
-			case "enter", "leave":
-				ts.events = []string{cfg.Event}
-			}
-		}
-
+	switch t := triggers[0].(type) {
+	case *models.AutomationStepTriggerSchedule:
+		return triggerSummary{triggerType: models.AutomationStepKindTriggerSchedule, cronExpr: t.CronExpr, timezone: t.Timezone}
+	case models.AutomationStepTriggerSchedule:
+		return triggerSummary{triggerType: models.AutomationStepKindTriggerSchedule, cronExpr: t.CronExpr, timezone: t.Timezone}
+	case *models.AutomationStepTriggerGeofence:
+		return geofenceSummary(t.PlaceID, t.Event)
+	case models.AutomationStepTriggerGeofence:
+		return geofenceSummary(t.PlaceID, t.Event)
+	case *models.AutomationStepTriggerEvent:
+		return triggerSummary{triggerType: models.AutomationStepKindTriggerEvent, event: t.EventType}
+	case models.AutomationStepTriggerEvent:
+		return triggerSummary{triggerType: models.AutomationStepKindTriggerEvent, event: t.EventType}
+	case *models.AutomationStepTriggerSignal:
+		return triggerSummary{triggerType: models.AutomationStepKindTriggerSignal, event: t.Signal}
+	case models.AutomationStepTriggerSignal:
+		return triggerSummary{triggerType: models.AutomationStepKindTriggerSignal, event: t.Signal}
 	default:
-		// Generic: try to extract an "event" field if present.
-		var cfg struct {
-			Event string `json:"event"`
-		}
-		if json.Unmarshal(raw, &cfg) == nil {
-			ts.event = cfg.Event
-		}
+		return triggerSummary{}
 	}
+}
 
+func geofenceSummary(placeID int64, event string) triggerSummary {
+	ts := triggerSummary{triggerType: models.AutomationStepKindTriggerGeofence, geofenceID: placeID, event: event}
+	switch event {
+	case "both":
+		ts.events = []string{"enter", "leave"}
+	case "enter", "leave", "exit", "dwell":
+		ts.events = []string{event}
+	}
 	return ts
 }
 
-func parseActions(raw json.RawMessage) []actionEntry {
-	if len(raw) == 0 {
-		return nil
+func typedCommandActions(actions []any) []actionEntry {
+	entries := make([]actionEntry, 0, len(actions))
+	for _, item := range actions {
+		switch a := item.(type) {
+		case *models.AutomationAction:
+			entries = append(entries, actionEntry{Type: models.AutomationStepKindActionCommand, CommandName: a.CommandName})
+		case models.AutomationAction:
+			entries = append(entries, actionEntry{Type: models.AutomationStepKindActionCommand, CommandName: a.CommandName})
+		}
 	}
-	var actions []actionEntry
-	if err := json.Unmarshal(raw, &actions); err != nil {
-		return nil
-	}
-	return actions
+	return entries
 }
 
 func extractCommands(actions []actionEntry) []string {
 	var cmds []string
 	for _, a := range actions {
-		if a.Command != "" {
-			cmds = append(cmds, a.Command)
+		if a.CommandName != "" {
+			cmds = append(cmds, a.CommandName)
 		}
 	}
 	return cmds
@@ -390,8 +311,8 @@ func vehicleScopeOverlaps(a, b *int64) bool {
 	return *a == *b
 }
 
-func hasConditions(a *models.Automation) bool {
-	return len(a.Conditions) > 2 // "[]" is 2 bytes
+func hasConditions(a *models.AutomationFull) bool {
+	return len(a.Conditions) > 0
 }
 
 func normalizeTimezone(tz string) string {
@@ -414,5 +335,3 @@ func intersectStrings(a, b []string) []string {
 	}
 	return result
 }
-
-

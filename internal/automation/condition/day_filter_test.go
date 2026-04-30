@@ -8,14 +8,14 @@ import (
 
 // ─── Config Parsing Tests ───────────────────────────────
 
-func TestParseDayFilterConfig_Valid(t *testing.T) {
+func TestDecodeDayFilterSpec_Valid(t *testing.T) {
 	raw := json.RawMessage(`{
 		"type": "day_filter",
 		"days": [1, 2, 3, 4, 5],
 		"timezone": "America/Los_Angeles"
 	}`)
 
-	cfg, err := ParseDayFilterConfig(raw)
+	cfg, err := DecodeDayFilterSpec(raw)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -30,9 +30,9 @@ func TestParseDayFilterConfig_Valid(t *testing.T) {
 	}
 }
 
-func TestParseDayFilterConfig_MinimalValid(t *testing.T) {
+func TestDecodeDayFilterSpec_MinimalValid(t *testing.T) {
 	raw := json.RawMessage(`{"days": [0]}`)
-	cfg, err := ParseDayFilterConfig(raw)
+	cfg, err := DecodeDayFilterSpec(raw)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -44,7 +44,7 @@ func TestParseDayFilterConfig_MinimalValid(t *testing.T) {
 	}
 }
 
-func TestParseDayFilterConfig_Errors(t *testing.T) {
+func TestDecodeDayFilterSpec_Errors(t *testing.T) {
 	tests := []struct {
 		name string
 		json string
@@ -62,7 +62,7 @@ func TestParseDayFilterConfig_Errors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := ParseDayFilterConfig(json.RawMessage(tt.json))
+			_, err := DecodeDayFilterSpec(json.RawMessage(tt.json))
 			if err == nil {
 				t.Fatalf("expected error for %q, got nil", tt.name)
 			}

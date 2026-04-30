@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Zap, TrendingUp, Thermometer, Fuel, Gauge } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -7,7 +7,8 @@ import { Select } from '@/components/ui/Select';
 import { DataTable } from '@/components/ui/DataTable';
 import { MetricBar } from '@/components/data-display/MetricBar';
 import {
-  ChartContainer, ChartTooltip, ChartGradient,
+  ChartContainer, ChartTooltip, renderAnnotationLines, AddAnnotationPopover,
+  AREA_DEFAULTS, areaGradient,
   AreaChart, Area, BarChart, Bar, ScatterChart, Scatter,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from '@/components/charts';
@@ -22,6 +23,7 @@ import { useDrivingStats, useDrives } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useAnnotations } from '@/hooks/useAnnotations';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import type { Drive } from '@/types/driving';
@@ -39,8 +41,8 @@ function efficiencyColor(wh: number): string {
 }
 
 function getEfficiency(drive: Drive): number | null {
-  const battUsed = (drive.startBatteryLevel ?? 0) - (drive.endBatteryLevel ?? 0);
-  if (drive.distance > 0 && battUsed > 0) return (battUsed * 0.75 * 1000) / drive.distance;
+  const battUsed = (drive.startBatteryPct ?? 0) - (drive.endBatteryPct ?? 0);
+  if (drive.distanceMi > 0 && battUsed > 0) return (battUsed * 0.75 * 1000) / drive.distanceMi;
   return null;
 }
 
@@ -60,6 +62,31 @@ export default function EfficiencyPage() {
   const { data: stats } = useDrivingStats(vehicleIdStr);
   const { data: drives } = useDrives(vehicleIdStr);
 
+  /* Annotations */
+  const { annotations, addAnnotation, removeAnnotation } = useAnnotations('efficiency', vehicleId);
+  const [isAnnotating, setIsAnnotating] = useState(false);
+  const [pendingTimestamp, setPendingTimestamp] = useState<string | null>(null);
+
+  const handleChartClick = useCallback(
+    (state: { activeLabel?: string }) => {
+      if (isAnnotating && state?.activeLabel) {
+        setPendingTimestamp(String(state.activeLabel));
+      }
+    },
+    [isAnnotating],
+  );
+
+  const handleAddAnnotation = useCallback(
+    (label: string, category: Parameters<typeof addAnnotation>[2], description?: string) => {
+      if (pendingTimestamp) {
+        addAnnotation(pendingTimestamp, label, category, description);
+        setPendingTimestamp(null);
+        setIsAnnotating(false);
+      }
+    },
+    [pendingTimestamp, addAnnotation],
+  );
+
   const {
     convertDistance, convertSpeed, convertTemp, convertEfficiency,
     distanceUnit, speedUnit, tempUnit, efficiencyUnit, isFahrenheit,
@@ -75,7 +102,7 @@ export default function EfficiencyPage() {
   const filteredDrives = useMemo(() => {
     if (!drives) return [];
     return drives.filter((d) => {
-      const driveDate = d.startDate?.split('T')[0];
+      const driveDate = d.startTs?.split('T')[0];
       if (!driveDate) return true;
       if (startDate && driveDate < startDate) return false;
       if (endDate && driveDate > endDate) return false;
@@ -90,18 +117,18 @@ export default function EfficiencyPage() {
       .slice(0, 30)
       .reverse()
       .map((d) => ({
-        date: formatDateShort(d.startDate),
+        date: formatDateShort(d.startTs),
         efficiency: Math.round(convertEfficiency(getEfficiency(d)!)),
-        distance: parseFloat(fmtNumber(convertDistance(d.distance ?? 0), 1)),
+        distance: parseFloat(fmtNumber(convertDistance(d.distanceMi ?? 0), 1)),
       }));
   }, [filteredDrives, convertEfficiency, convertDistance]);
 
   /* ---- Speed vs Efficiency scatter ---- */
   const speedVsEff = useMemo(() => {
     return filteredDrives
-      .filter((d) => d.speedAvg && getEfficiency(d))
+      .filter((d) => d.avgSpeedMph && getEfficiency(d))
       .map((d) => ({
-        speed: Math.round(convertSpeed(d.speedAvg!)),
+        speed: Math.round(convertSpeed(d.avgSpeedMph!)),
         efficiency: Math.round(convertEfficiency(getEfficiency(d)!)),
       }));
   }, [filteredDrives, convertSpeed, convertEfficiency]);
@@ -109,9 +136,9 @@ export default function EfficiencyPage() {
   /* ---- Temp vs Efficiency scatter ---- */
   const tempVsEff = useMemo(() => {
     return filteredDrives
-      .filter((d) => d.outsideTempAvg !== null && getEfficiency(d))
+      .filter((d) => d.outsideTempAvgC !== null && getEfficiency(d))
       .map((d) => ({
-        temp: Math.round(convertTemp(d.outsideTempAvg!)),
+        temp: Math.round(convertTemp(d.outsideTempAvgC!)),
         efficiency: Math.round(convertEfficiency(getEfficiency(d)!)),
       }));
   }, [filteredDrives, convertTemp, convertEfficiency]);
@@ -126,10 +153,10 @@ export default function EfficiencyPage() {
       { range: `120+`, min: 120, max: 999, count: 0, totalEff: 0 },
     ];
     filteredDrives.forEach((d) => {
-      if (d.speedAvg == null) return;
+      if (d.avgSpeedMph == null) return;
       const eff = getEfficiency(d);
       if (!eff) return;
-      const b = buckets.find((bk) => d.speedAvg! >= bk.min && d.speedAvg! < bk.max);
+      const b = buckets.find((bk) => d.avgSpeedMph! >= bk.min && d.avgSpeedMph! < bk.max);
       if (b) { b.count++; b.totalEff += eff; }
     });
     return buckets.filter((b) => b.count > 0).map((b) => ({
@@ -164,15 +191,15 @@ export default function EfficiencyPage() {
       totalSpeed: 0,
     }));
     filteredDrives.forEach((d) => {
-      if (d.outsideTempAvg == null) return;
+      if (d.outsideTempAvgC == null) return;
       const eff = getEfficiency(d);
       if (!eff) return;
-      const b = buckets.find((bk) => d.outsideTempAvg! >= bk.min && d.outsideTempAvg! < bk.max);
+      const b = buckets.find((bk) => d.outsideTempAvgC! >= bk.min && d.outsideTempAvgC! < bk.max);
       if (b) {
         b.count++;
         b.totalEff += eff;
-        b.totalDist += d.distance;
-        b.totalSpeed += d.speedAvg ?? 0;
+        b.totalDist += d.distanceMi;
+        b.totalSpeed += d.avgSpeedMph ?? 0;
       }
     });
     return buckets
@@ -299,18 +326,32 @@ export default function EfficiencyPage() {
       {dailyTrend.length > 2 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <FadeIn>
-            <ChartContainer title={t('efficiency.dailyTrend', `Daily Efficiency (${efficiencyUnit})`)} height={240}>
+            <ChartContainer
+              title={t('efficiency.dailyTrend', `Daily Efficiency (${efficiencyUnit})`)}
+              height={240}
+              annotations={annotations}
+              isAnnotating={isAnnotating}
+              onAnnotateToggle={() => setIsAnnotating((v) => !v)}
+              onRemoveAnnotation={removeAnnotation}
+            >
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={dailyTrend}>
-                  <defs><ChartGradient id="effGrad" color="#00f0ff" /></defs>
+                <AreaChart data={dailyTrend} onClick={handleChartClick}>
+                  {areaGradient('effGrad', '#00f0ff')}
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                   <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} />
                   <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                   <Tooltip content={<ChartTooltip />} />
-                  <Area type="monotone" dataKey="efficiency" stroke="#00f0ff" fill="url(#effGrad)" strokeWidth={2} name={efficiencyUnit} />
+                  {renderAnnotationLines(annotations, (ts) => ts)}
+                  <Area {...AREA_DEFAULTS} dataKey="efficiency" stroke="#00f0ff" fill="url(#effGrad)" name={efficiencyUnit} />
                 </AreaChart>
               </ResponsiveContainer>
             </ChartContainer>
+            <AddAnnotationPopover
+              open={pendingTimestamp != null}
+              timestamp={pendingTimestamp ?? ''}
+              onAdd={handleAddAnnotation}
+              onCancel={() => setPendingTimestamp(null)}
+            />
           </FadeIn>
 
           <FadeIn>

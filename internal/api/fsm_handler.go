@@ -2,38 +2,58 @@ package api
 
 import (
 	"context"
+	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/fsm"
 	"github.com/ev-dev-labs/teslasync/internal/fsm/charge"
 	"github.com/ev-dev-labs/teslasync/internal/fsm/drive"
+	"github.com/ev-dev-labs/teslasync/internal/metrics"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
+	"github.com/go-chi/chi/v5"
+	"github.com/rs/zerolog/log"
 )
 
 // FSMHandler owns the new FSM-based vehicle state management.
 // Manages vehicle FSM + drive/charge sub-FSMs.
 type FSMHandler struct {
-	mu        sync.Mutex
-	machines  map[int64]*fsm.VehicleFSM
-	drives    map[int64]*drive.SessionFSM  // active drive sub-FSMs per vehicle
-	charges   map[int64]*charge.SessionFSM // active charge sub-FSMs per vehicle
+	mu          sync.Mutex
+	machines    map[int64]*fsm.VehicleFSM
+	drives      map[int64]*drive.SessionFSM  // active drive sub-FSMs per vehicle
+	charges     map[int64]*charge.SessionFSM // active charge sub-FSMs per vehicle
 	stateRepo   *database.VehicleStateRepo
 	vehicleRepo *database.VehicleRepo
 	transRepo   *database.FSMTransitionRepo
+
+	// Reconciliation
+	localSignals  *signal.Store // set by SetSignalStore() — prompt 02b
+	reconcileStop chan struct{}
+	lastProcessed map[int64]time.Time
 }
 
 // NewFSMHandler creates an authoritative FSM handler.
 func NewFSMHandler(stateRepo *database.VehicleStateRepo, vehicleRepo *database.VehicleRepo, transRepo *database.FSMTransitionRepo) *FSMHandler {
 	return &FSMHandler{
-		machines:    make(map[int64]*fsm.VehicleFSM),
-		drives:      make(map[int64]*drive.SessionFSM),
-		charges:     make(map[int64]*charge.SessionFSM),
-		stateRepo:   stateRepo,
-		vehicleRepo: vehicleRepo,
-		transRepo:   transRepo,
+		machines:      make(map[int64]*fsm.VehicleFSM),
+		drives:        make(map[int64]*drive.SessionFSM),
+		charges:       make(map[int64]*charge.SessionFSM),
+		stateRepo:     stateRepo,
+		vehicleRepo:   vehicleRepo,
+		transRepo:     transRepo,
+		reconcileStop: make(chan struct{}),
+		lastProcessed: make(map[int64]time.Time),
 	}
+}
+
+// SetSignalStore wires the signal store dependency for reconciliation.
+// Called after construction because the signal store may not exist yet at
+// FSMHandler creation time.
+func (h *FSMHandler) SetSignalStore(store *signal.Store) {
+	h.localSignals = store
 }
 
 // fsmAction handles all side effects of a vehicle state transition:
@@ -47,22 +67,35 @@ type fsmAction struct {
 }
 
 func (a *fsmAction) Execute(ctx context.Context, vehicleID int64, from, to fsm.State, sctx *fsm.SignalContext) error {
+	// Best-effort writes; collect the first error so the FSM can decide whether to
+	// roll back its in-memory transition. We continue past failures so that, e.g.,
+	// a vehicle_states write failure doesn't block the vehicles.state update that
+	// the UI relies on.
+	var firstErr error
+	keep := func(err error) {
+		if err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+
 	// 1. End current state record
 	if err := a.stateRepo.EndCurrent(ctx, vehicleID); err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("fsm: failed to end current state")
+		keep(err)
 	}
 
 	// 2. Insert new state record
 	if _, err := a.stateRepo.Insert(ctx, vehicleID, string(to)); err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Str("state", string(to)).Msg("fsm: failed to insert state")
+		keep(err)
 	}
 
-	// 3. Update vehicles table
-	if err := a.vehicleRepo.UpdateState(ctx, vehicleID, string(to), true); err != nil {
-		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("fsm: failed to update vehicle state")
-	}
+	// 3. State is now tracked in the Redis signal cache and in-memory signal store.
+	// The live-state repo is the single source of truth for current vehicle state.
 
-	// 4. Log transition to fsm_transitions
+	// 4. Gear capability is now derived from the signal store, not stored on the vehicle row.
+
+	// 5. Log transition to fsm_transitions
 	if a.transRepo != nil {
 		snapshot := map[string]interface{}{}
 		if sctx.Gear != "" {
@@ -80,10 +113,10 @@ func (a *fsmAction) Execute(ctx context.Context, vehicleID int64, from, to fsm.S
 		}
 	}
 
-	// 5. Manage sub-FSM lifecycle based on state transitions
+	// 6. Manage sub-FSM lifecycle based on state transitions
 	a.handler.manageSubFSMs(ctx, vehicleID, from, to, sctx)
 
-	return nil
+	return firstErr
 }
 
 // manageSubFSMs creates/finalizes drive and charge sub-FSMs on state transitions.
@@ -172,7 +205,7 @@ func (h *FSMHandler) getOrCreate(ctx context.Context, vehicleID int64) *fsm.Vehi
 
 	currentDB, _ := h.stateRepo.GetCurrentState(ctx, vehicleID)
 	if currentDB == "" {
-		currentDB = "online"
+		currentDB = enums.StateOnline
 	}
 	initial := fsm.State(currentDB)
 	if !initial.IsValid() {
@@ -186,6 +219,10 @@ func (h *FSMHandler) getOrCreate(ctx context.Context, vehicleID int64) *fsm.Vehi
 		transRepo:   h.transRepo,
 	}
 	m = fsm.NewVehicleFSM(initial, action)
+
+	// Gear capability is now derived from the signal store.
+	// No need to rehydrate from the vehicle row.
+
 	h.machines[vehicleID] = m
 
 	log.Info().Int64("vehicle_id", vehicleID).Str("state", currentDB).Msg("fsm: initialized vehicle FSM from DB")
@@ -194,23 +231,59 @@ func (h *FSMHandler) getOrCreate(ctx context.Context, vehicleID int64) *fsm.Vehi
 
 // ProcessSignals runs the FSM on a signal batch and forwards to active sub-FSMs.
 func (h *FSMHandler) ProcessSignals(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
+	signalNames := make([]string, 0, len(signals))
+	for k := range signals {
+		signalNames = append(signalNames, k)
+	}
+	log.Debug().
+		Int64("vehicle_id", vehicleID).
+		Int("signal_count", len(signals)).
+		Strs("signals", signalNames).
+		Msg("fsm: processing signal batch")
+
 	m := h.getOrCreate(ctx, vehicleID)
 
 	// Wake vehicle from asleep/offline when any signal arrives
 	if state := m.Current(); state == fsm.Asleep || state == fsm.Offline {
 		if err := m.HandleSignalReceived(ctx, vehicleID); err != nil {
-			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("fsm: HandleSignalReceived error")
+			outcome := "error"
+			if ctx.Err() == context.DeadlineExceeded {
+				outcome = "timeout"
+			}
+			metrics.FSMDispatchTotal.WithLabelValues(outcome).Inc()
+			log.Warn().Err(err).
+				Int64("vehicle_id", vehicleID).
+				Str("outcome", outcome).
+				Msg("fsm: HandleSignalReceived error")
 		}
 	}
 
 	// Run vehicle FSM (may trigger sub-FSM creation/finalization via fsmAction)
 	if err := m.ProcessSignals(ctx, vehicleID, signals); err != nil {
-		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("fsm: ProcessSignals error")
+		outcome := "error"
+		if ctx.Err() == context.DeadlineExceeded {
+			outcome = "timeout"
+		}
+		metrics.FSMDispatchTotal.WithLabelValues(outcome).Inc()
+		log.Warn().Err(err).
+			Int64("vehicle_id", vehicleID).
+			Str("outcome", outcome).
+			Msg("fsm: ProcessSignals error")
 	}
 
 	// Check pending debounced transitions
 	sctx := &fsm.SignalContext{Now: time.Now().UTC()}
-	_ = m.CheckPending(ctx, vehicleID, sctx)
+	if err := m.CheckPending(ctx, vehicleID, sctx); err != nil {
+		outcome := "error"
+		if ctx.Err() == context.DeadlineExceeded {
+			outcome = "timeout"
+		}
+		metrics.FSMDispatchTotal.WithLabelValues(outcome).Inc()
+		log.Warn().Err(err).
+			Int64("vehicle_id", vehicleID).
+			Str("outcome", outcome).
+			Msg("fsm: CheckPending error")
+	}
 
 	// Forward signals to active sub-FSMs for accumulation
 	h.mu.Lock()
@@ -224,6 +297,11 @@ func (h *FSMHandler) ProcessSignals(ctx context.Context, vehicleID int64, signal
 	if activeCharge != nil {
 		activeCharge.ProcessSignals(signals)
 	}
+
+	// Track last-processed time for reconciliation staleness checks
+	h.mu.Lock()
+	h.lastProcessed[vehicleID] = time.Now()
+	h.mu.Unlock()
 }
 
 // HandleTimeout transitions a vehicle to offline/asleep when telemetry stops.
@@ -310,4 +388,215 @@ func (h *FSMHandler) Stats() map[string]int {
 		"drives":   len(h.drives),
 		"charges":  len(h.charges),
 	}
+}
+
+// VehicleFSMSnapshot is a point-in-time view of one vehicle's FSM state.
+// Exposed via /fsm/stats so the frontend can flag FSMs that are stale despite
+// the vehicle actively streaming telemetry.
+type VehicleFSMSnapshot struct {
+	VehicleID                  int64     `json:"vehicle_id"`
+	State                      string    `json:"state"`
+	LastTransitionAt           time.Time `json:"last_transition_at"`
+	SecondsSinceLastTransition float64   `json:"seconds_since_last_transition"`
+	IsGearCapable              bool      `json:"is_gear_capable"`
+}
+
+// VehicleSnapshots returns one snapshot per known vehicle FSM.
+func (h *FSMHandler) VehicleSnapshots() []VehicleFSMSnapshot {
+	h.mu.Lock()
+	machines := make(map[int64]*fsm.VehicleFSM, len(h.machines))
+	for id, m := range h.machines {
+		machines[id] = m
+	}
+	h.mu.Unlock()
+
+	now := time.Now()
+	out := make([]VehicleFSMSnapshot, 0, len(machines))
+	for id, m := range machines {
+		last := m.LastTransitionAt()
+		out = append(out, VehicleFSMSnapshot{
+			VehicleID:                  id,
+			State:                      string(m.Current()),
+			LastTransitionAt:           last,
+			SecondsSinceLastTransition: now.Sub(last).Seconds(),
+			IsGearCapable:              m.IsGearCapable(),
+		})
+	}
+	return out
+}
+
+// reconcileInterval is the period between reconciliation sweeps.
+const reconcileInterval = 15 * time.Second
+
+// StartReconcileLoop begins the periodic reconciliation goroutine.
+// It compares the FSM state of each known vehicle against the signal store
+// and replays signals when a mismatch is detected.
+func (h *FSMHandler) StartReconcileLoop() {
+	go func() {
+		ticker := time.NewTicker(reconcileInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				h.reconcileAll()
+			case <-h.reconcileStop:
+				return
+			}
+		}
+	}()
+	log.Info().Dur("interval", reconcileInterval).Msg("fsm: reconciliation loop started")
+}
+
+// StopReconcileLoop stops the periodic reconciliation goroutine.
+func (h *FSMHandler) StopReconcileLoop() {
+	select {
+	case h.reconcileStop <- struct{}{}:
+	default:
+	}
+}
+
+// reconcileAll iterates over all vehicles in the signal store and reconciles each.
+func (h *FSMHandler) reconcileAll() {
+	if h.localSignals == nil {
+		return
+	}
+
+	vehicleIDs := h.localSignals.VehicleIDs()
+	now := time.Now()
+
+	for _, vid := range vehicleIDs {
+		h.reconcileVehicle(vid, now)
+	}
+}
+
+// reconcileVehicle checks one vehicle's FSM state against the signal-derived
+// expected state and replays signals through ProcessSignals if a mismatch is found.
+func (h *FSMHandler) reconcileVehicle(vehicleID int64, now time.Time) {
+	// Derive expected state from signal store
+	result := fsm.DeriveExpectedState(vehicleID, h.localSignals, now)
+
+	// Skip if confidence is too low to act on
+	if result.Confidence < fsm.ConfidenceMedium {
+		metrics.FSMReconcileTotal.WithLabelValues("skipped_confidence").Inc()
+		return
+	}
+
+	// Skip if signals were processed more recently than the freshest signal —
+	// the FSM is already up to date.
+	h.mu.Lock()
+	lastProc, hasLastProc := h.lastProcessed[vehicleID]
+	h.mu.Unlock()
+
+	if hasLastProc && lastProc.After(result.FreshestAt) {
+		metrics.FSMReconcileTotal.WithLabelValues("skipped_fresh").Inc()
+		return
+	}
+
+	// Check current FSM state
+	h.mu.Lock()
+	m, exists := h.machines[vehicleID]
+	h.mu.Unlock()
+
+	if !exists {
+		// No FSM yet — nothing to reconcile (will be created on next signal batch)
+		metrics.FSMReconcileTotal.WithLabelValues("skipped_confidence").Inc()
+		return
+	}
+
+	currentState := m.Current()
+
+	// Already in the expected state — no correction needed
+	if currentState == result.ExpectedState {
+		metrics.FSMReconcileTotal.WithLabelValues("already_correct").Inc()
+		return
+	}
+
+	// Mismatch detected — replay signal store snapshot through ProcessSignals
+	signals := h.localSignals.GetRawMap(vehicleID)
+	if signals == nil {
+		metrics.FSMReconcileTotal.WithLabelValues("error").Inc()
+		return
+	}
+
+	log.Warn().
+		Int64("vehicle_id", vehicleID).
+		Str("current", string(currentState)).
+		Str("expected", string(result.ExpectedState)).
+		Str("confidence", result.Confidence.String()).
+		Str("reason", result.Reason).
+		Msg("fsm: reconciliation mismatch — replaying signals")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	h.ProcessSignals(ctx, vehicleID, signals)
+
+	metrics.FSMReconcileTotal.WithLabelValues("corrected").Inc()
+}
+
+// FSMDebugResponse is the JSON response for the FSM debug endpoint.
+type FSMDebugResponse struct {
+	VehicleID       int64            `json:"vehicle_id"`
+	FSM             fsm.FSMDebugInfo `json:"fsm"`
+	LastProcessedAt *time.Time       `json:"last_processed_at,omitempty"`
+	HasActiveDrive  bool             `json:"has_active_drive"`
+	HasActiveCharge bool             `json:"has_active_charge"`
+	Reconciliation  *ReconcileDebug  `json:"reconciliation,omitempty"`
+}
+
+// ReconcileDebug holds reconciliation diagnostics for the debug endpoint.
+type ReconcileDebug struct {
+	ExpectedState string `json:"expected_state"`
+	Confidence    string `json:"confidence"`
+	Reason        string `json:"reason"`
+	FreshestAt    string `json:"freshest_at,omitempty"`
+	Mismatch      bool   `json:"mismatch"`
+}
+
+// HandleDebug returns diagnostic FSM information for a vehicle.
+func (h *FSMHandler) HandleDebug(w http.ResponseWriter, r *http.Request) {
+	vehicleIDStr := chi.URLParam(r, "vehicleID")
+	vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
+		return
+	}
+
+	h.mu.Lock()
+	m := h.machines[vehicleID]
+	_, hasDrive := h.drives[vehicleID]
+	_, hasCharge := h.charges[vehicleID]
+	lastProc := h.lastProcessed[vehicleID]
+	store := h.localSignals
+	h.mu.Unlock()
+
+	if m == nil {
+		writeError(w, http.StatusNotFound, "no FSM for vehicle")
+		return
+	}
+
+	resp := FSMDebugResponse{
+		VehicleID:       vehicleID,
+		FSM:             m.DebugInfo(),
+		HasActiveDrive:  hasDrive,
+		HasActiveCharge: hasCharge,
+	}
+	if !lastProc.IsZero() {
+		resp.LastProcessedAt = &lastProc
+	}
+
+	if store != nil {
+		result := fsm.DeriveExpectedState(vehicleID, store, time.Now())
+		rd := &ReconcileDebug{
+			Confidence: result.Confidence.String(),
+			Reason:     result.Reason,
+		}
+		if result.Confidence > fsm.ConfidenceNone {
+			rd.ExpectedState = string(result.ExpectedState)
+			rd.FreshestAt = result.FreshestAt.Format(time.RFC3339)
+			rd.Mismatch = result.ExpectedState != fsm.State(resp.FSM.CurrentState)
+		}
+		resp.Reconciliation = rd
+	}
+
+	writeJSON(w, http.StatusOK, resp)
 }

@@ -7,7 +7,7 @@ import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Select, DataTable, type Column, useSortToggle } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import {
-  RadialGauge, ChartTooltip,
+  RadialGauge, ChartTooltip, AREA_DEFAULTS,
   chartMargin, axisTick, CHART_COLORS,
   LineChart, Line, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -155,7 +155,7 @@ export default function VampireDrainPage() {
                   <XAxis dataKey="date" tick={axisTick} tickFormatter={(v: string) => formatDate(v)} />
                   <YAxis tick={axisTick} unit="%/hr" width={55} />
                   <Tooltip content={<ChartTooltip />} />
-                  <Line type="monotone" dataKey="drain_rate_pct_hr" name={t('Drain Rate')} stroke={CHART_COLORS[2]} strokeWidth={2} dot={false} />
+                  <Line {...AREA_DEFAULTS} dataKey="drain_rate_pct_hr" name={t('Drain Rate')} stroke={CHART_COLORS[2]} />
                 </LineChart>
               </ResponsiveContainer>
             ) : (

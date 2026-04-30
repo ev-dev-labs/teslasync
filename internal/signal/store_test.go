@@ -1,301 +1,90 @@
 package signal
 
-import (
-	"context"
-	"errors"
-	"sync"
-	"sync/atomic"
-	"testing"
-	"time"
+import "testing"
 
-	"github.com/sony/gobreaker"
-	"github.com/ev-dev-labs/teslasync/internal/database"
-)
+func TestSmoke_Store_UpdateGet(t *testing.T) {
+	s := New()
 
-// mockFlusher records flush calls for testing.
-type mockFlusher struct {
-	mu         sync.Mutex
-	flushCalls []int64
-	flushErr   error
-	loadData   map[string]interface{}
-	loadErr    error
-}
+	signals := map[string]interface{}{
+		"BatteryLevel": 72.5,
+		"VehicleSpeed": 65,
+		"ShiftState":   "D",
+		"Locked":       true,
+	}
+	s.Update(1, signals)
 
-func (m *mockFlusher) FlushLiveState(_ context.Context, vehicleID int64, _ map[string]interface{}) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.flushCalls = append(m.flushCalls, vehicleID)
-	return m.flushErr
-}
-
-func (m *mockFlusher) LoadLiveState(_ context.Context, _ int64) (map[string]interface{}, error) {
-	return m.loadData, m.loadErr
-}
-
-func (m *mockFlusher) getFlushCalls() []int64 {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	cp := make([]int64, len(m.flushCalls))
-	copy(cp, m.flushCalls)
-	return cp
-}
-
-func (m *mockFlusher) resetCalls() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.flushCalls = nil
-}
-
-func TestMarkDirtyCoalesces(t *testing.T) {
-	f := &mockFlusher{}
-	s := New(f, 0, nil)
-
-	// Update same vehicle multiple times — should only mark dirty once
-	s.Update(1, map[string]interface{}{"speed": 60.0})
-	s.Update(1, map[string]interface{}{"speed": 65.0})
-	s.Update(1, map[string]interface{}{"speed": 70.0})
-
-	s.dirtyMu.Lock()
-	dirtyCount := len(s.dirty)
-	s.dirtyMu.Unlock()
-
-	if dirtyCount != 1 {
-		t.Errorf("expected 1 dirty vehicle, got %d", dirtyCount)
+	// Verify Get returns each signal
+	if v := s.Get(1, "BatteryLevel"); v == nil || v.Raw != 72.5 {
+		t.Errorf("Get(1, BatteryLevel) = %v, want 72.5", v)
+	}
+	if v := s.Get(1, "ShiftState"); v == nil || v.Raw != "D" {
+		t.Errorf("Get(1, ShiftState) = %v, want D", v)
 	}
 
-	// No flush calls yet (no FlushLoop running)
-	calls := f.getFlushCalls()
-	if len(calls) != 0 {
-		t.Errorf("expected 0 flush calls before FlushLoop, got %d", len(calls))
+	// Typed accessors
+	if f, ok := s.GetFloat(1, "BatteryLevel"); !ok || f != 72.5 {
+		t.Errorf("GetFloat(1, BatteryLevel) = (%v, %v), want (72.5, true)", f, ok)
+	}
+	if str, ok := s.GetString(1, "ShiftState"); !ok || str != "D" {
+		t.Errorf("GetString(1, ShiftState) = (%v, %v), want (D, true)", str, ok)
+	}
+	if b, ok := s.GetBool(1, "Locked"); !ok || !b {
+		t.Errorf("GetBool(1, Locked) = (%v, %v), want (true, true)", b, ok)
 	}
 }
 
-func TestFlushDirtyFlushesAndClears(t *testing.T) {
-	f := &mockFlusher{}
-	s := New(f, 0, nil)
+func TestSmoke_Store_NilIgnored(t *testing.T) {
+	s := New()
+	s.Update(1, map[string]interface{}{"BatteryLevel": 80.0})
+	s.Update(1, map[string]interface{}{"BatteryLevel": nil})
 
-	s.Update(1, map[string]interface{}{"speed": 60.0})
-	s.Update(2, map[string]interface{}{"battery": 80.0})
-
-	ctx := context.Background()
-	s.flushDirty(ctx)
-
-	calls := f.getFlushCalls()
-	if len(calls) != 2 {
-		t.Fatalf("expected 2 flush calls, got %d", len(calls))
-	}
-
-	// Dirty map should be empty
-	s.dirtyMu.Lock()
-	dirtyCount := len(s.dirty)
-	s.dirtyMu.Unlock()
-	if dirtyCount != 0 {
-		t.Errorf("expected 0 dirty vehicles after flush, got %d", dirtyCount)
+	// nil must not overwrite existing value
+	if v := s.Get(1, "BatteryLevel"); v == nil || v.Raw != 80.0 {
+		t.Errorf("nil overwrote existing value: got %v, want 80.0", v)
 	}
 }
 
-func TestFlushDirtyRemarksDirtyOnError(t *testing.T) {
-	f := &mockFlusher{flushErr: errors.New("connection refused")}
-	s := New(f, 0, nil)
+func TestSmoke_Store_InvalidMarkerSkipped(t *testing.T) {
+	s := New()
+	s.Update(1, map[string]interface{}{
+		"Speed": map[string]interface{}{"invalid": true},
+		"SOC":   55.0,
+	})
 
-	s.Update(1, map[string]interface{}{"speed": 60.0})
-
-	ctx := context.Background()
-	s.flushDirty(ctx)
-
-	// Vehicle should be re-marked dirty
-	s.dirtyMu.Lock()
-	dirty := s.dirty[1]
-	s.dirtyMu.Unlock()
-	if !dirty {
-		t.Error("expected vehicle 1 to be re-marked dirty after flush error")
+	if v := s.Get(1, "Speed"); v != nil {
+		t.Errorf("invalid marker was stored: got %v, want nil", v)
+	}
+	if v := s.Get(1, "SOC"); v == nil || v.Raw != 55.0 {
+		t.Errorf("valid signal missing: got %v, want 55.0", v)
 	}
 }
 
-func TestFlushLoopRunsAndStops(t *testing.T) {
-	f := &mockFlusher{}
-	s := New(f, 0, nil)
+func TestSmoke_Store_GetAll_Snapshot(t *testing.T) {
+	s := New()
+	s.Update(1, map[string]interface{}{"A": 1, "B": 2})
 
-	s.Update(1, map[string]interface{}{"speed": 60.0})
-
-	ctx, cancel := context.WithCancel(context.Background())
-	go s.FlushLoop(ctx)
-
-	// Wait for at least one tick
-	time.Sleep(1500 * time.Millisecond)
-
-	calls := f.getFlushCalls()
-	if len(calls) == 0 {
-		t.Error("expected FlushLoop to flush at least once")
+	all := s.GetAll(1)
+	if len(all) != 2 {
+		t.Fatalf("GetAll returned %d signals, want 2", len(all))
 	}
 
-	// Cancel and wait for loop to exit
-	cancel()
-	s.WaitForFlushLoop()
-
-	// Verify loop exited — further updates should accumulate dirty but not flush
-	f.resetCalls()
-	s.Update(2, map[string]interface{}{"battery": 90.0})
-	time.Sleep(200 * time.Millisecond)
-
-	calls = f.getFlushCalls()
-	if len(calls) != 0 {
-		t.Errorf("expected 0 flush calls after loop stopped, got %d", len(calls))
+	// Mutating returned map must not affect store
+	delete(all, "A")
+	if v := s.Get(1, "A"); v == nil {
+		t.Error("deleting from GetAll snapshot affected the store")
 	}
 }
 
-func TestFlushLoopNilFlusher(t *testing.T) {
-	s := New(nil, 0, nil)
+func TestSmoke_Store_UnknownVehicle(t *testing.T) {
+	s := New()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Should return immediately without blocking
-	done := make(chan struct{})
-	go func() {
-		s.FlushLoop(ctx)
-		close(done)
-	}()
-
-	select {
-	case <-done:
-		// OK — returned immediately
-	case <-time.After(500 * time.Millisecond):
-		t.Error("FlushLoop with nil flusher should return immediately")
+	if v := s.Get(999, "anything"); v != nil {
+		t.Errorf("Get on unknown vehicle returned %v, want nil", v)
 	}
-}
-
-func TestFlushLoopAdaptiveInterval(t *testing.T) {
-	f := &mockFlusher{}
-	cb := database.NewDBCircuitBreaker("test-adaptive")
-	s := New(f, 0, cb)
-
-	// Trip the circuit breaker by failing 5 times
-	for i := 0; i < 5; i++ {
-		_ = cb.Execute(func() error {
-			return errors.New("connection refused")
-		})
+	if all := s.GetAll(999); all != nil {
+		t.Errorf("GetAll on unknown vehicle returned %v, want nil", all)
 	}
-
-	if cb.State() != gobreaker.StateOpen {
-		t.Fatalf("expected breaker to be open, got %v", cb.State())
-	}
-
-	// Mark dirty — flush should fail due to open breaker, re-mark dirty
-	s.Update(1, map[string]interface{}{"speed": 60.0})
-
-	ctx, cancel := context.WithCancel(context.Background())
-	go s.FlushLoop(ctx)
-
-	// Give it time to detect open breaker and adjust interval
-	time.Sleep(2500 * time.Millisecond)
-
-	cancel()
-	s.WaitForFlushLoop()
-	// If we get here without hanging, the adaptive interval worked
-}
-
-func TestFlushAllDoesNotUseDirtyMap(t *testing.T) {
-	f := &mockFlusher{}
-	s := New(f, 0, nil)
-
-	// Add data without marking dirty
-	s.mu.Lock()
-	s.vehicles[1] = map[string]*Value{"speed": {Raw: 60.0, Timestamp: time.Now()}}
-	s.vehicles[2] = map[string]*Value{"battery": {Raw: 80.0, Timestamp: time.Now()}}
-	s.mu.Unlock()
-
-	ctx := context.Background()
-	s.FlushAll(ctx)
-
-	calls := f.getFlushCalls()
-	if len(calls) != 2 {
-		t.Errorf("FlushAll should flush all vehicles regardless of dirty map, got %d calls", len(calls))
-	}
-}
-
-func TestUpdateDoesNotSpawnGoroutines(t *testing.T) {
-	// Use an atomic counter to detect if flushes happen synchronously
-	var flushCount atomic.Int64
-	f := &mockFlusher{}
-	s := New(f, 0, nil)
-
-	// Call Update 100 times rapidly — no goroutines should spawn
-	for i := 0; i < 100; i++ {
-		s.Update(int64(i%5), map[string]interface{}{"speed": float64(i)})
-	}
-
-	// No flush calls should happen (no FlushLoop running)
-	calls := f.getFlushCalls()
-	if len(calls) != 0 {
-		t.Errorf("expected 0 flush calls without FlushLoop, got %d", len(calls))
-	}
-
-	// But dirty map should have 5 vehicles
-	s.dirtyMu.Lock()
-	dirtyCount := len(s.dirty)
-	s.dirtyMu.Unlock()
-	if dirtyCount != 5 {
-		t.Errorf("expected 5 dirty vehicles, got %d", dirtyCount)
-	}
-
-	_ = flushCount // suppress unused warning
-}
-
-func TestConcurrentUpdateAndFlush(t *testing.T) {
-	f := &mockFlusher{}
-	s := New(f, 0, nil)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	go s.FlushLoop(ctx)
-
-	// Hammer updates from multiple goroutines
-	var wg sync.WaitGroup
-	for g := 0; g < 10; g++ {
-		wg.Add(1)
-		go func(goroutineID int) {
-			defer wg.Done()
-			for i := 0; i < 50; i++ {
-				vid := int64(goroutineID%5 + 1)
-				s.Update(vid, map[string]interface{}{
-					"speed":   float64(i),
-					"battery": float64(100 - i),
-				})
-				time.Sleep(time.Millisecond)
-			}
-		}(g)
-	}
-
-	wg.Wait()
-	time.Sleep(1500 * time.Millisecond) // let final tick flush
-
-	cancel()
-	s.WaitForFlushLoop()
-
-	calls := f.getFlushCalls()
-	if len(calls) == 0 {
-		t.Error("expected at least some flush calls during concurrent updates")
-	}
-	// Key assertion: calls should be << 500 (10 goroutines × 50 updates)
-	// because debouncing coalesces per-vehicle updates
-	if len(calls) > 100 {
-		t.Errorf("debouncing failed: expected << 500 flush calls, got %d", len(calls))
-	}
-}
-
-func TestWaitForFlushLoopReturnsImmediatelyIfNotStarted(t *testing.T) {
-	s := New(nil, 0, nil)
-
-	done := make(chan struct{})
-	go func() {
-		s.WaitForFlushLoop()
-		close(done)
-	}()
-
-	select {
-	case <-done:
-		// OK
-	case <-time.After(500 * time.Millisecond):
-		t.Error("WaitForFlushLoop should return immediately if FlushLoop was never started")
+	if f, ok := s.GetFloat(999, "x"); ok || f != 0 {
+		t.Errorf("GetFloat on unknown vehicle = (%v, %v), want (0, false)", f, ok)
 	}
 }

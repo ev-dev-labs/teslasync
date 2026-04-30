@@ -13,34 +13,62 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
-// GeofenceRepo is the subset of database.AutomationRepo needed by GeofenceTrigger.
+// GeofenceAutomation is the hydrated view GeofenceTrigger consumes: an
+// enabled automation paired with its typed geofence-trigger CTI row.
+//
+// Per ADR-012 (Option A), consumers receive Go-typed CTI children rather
+// than reading any JSONB blob from the parent row; the relevant CTI table
+// is `automation_step_trigger_geofence` (PlaceID + Event), exposed here as
+// `models.AutomationStepTriggerGeofence`.
+//
+// Per ADR-001 (typed-by-default) the post-142 schema models geofence
+// targeting against `places` (point + radius), not against polygonal
+// `geofences`. Polygon geofences continue to exist as a separate concept
+// but are not addressable from automation triggers.
+type GeofenceAutomation struct {
+	Automation models.Automation
+	Trigger    models.AutomationStepTriggerGeofence
+}
+
+// GeofenceRepo is the narrow port GeofenceTrigger needs from the
+// persistence layer. The implementation is expected to load enabled
+// automations whose (single) trigger step is a geofence trigger, scoped to
+// the given vehicle, returning each parent paired with its typed CTI row
+// in one batched query (ADR-012 Option A; ADR-005 N+1 prevention).
+//
+// Per ADR-012 sub-decision (ii), `auto_disabled` is retired: invalid or
+// unknown place references and event values are simply skipped at
+// evaluation time; no database write is performed against the parent
+// automation.
 type GeofenceRepo interface {
-	GetEnabledByVehicleAndTrigger(ctx context.Context, vehicleID int64, triggerType string) ([]*models.Automation, error)
+	LoadEnabledGeofenceTriggers(ctx context.Context, vehicleID int64) ([]GeofenceAutomation, error)
+}
+
+type geofenceAutoDisabler interface {
 	SetAutoDisabled(ctx context.Context, id int64, reason string) error
 }
 
-// GeofenceDataProvider abstracts geofence lookups so the trigger can be tested
-// without a real database.
-type GeofenceDataProvider interface {
-	FindByCoordinates(ctx context.Context, lat, lng float64) ([]*models.Geofence, error)
-	GetByID(ctx context.Context, id int64) (*models.Geofence, error)
+// PlaceDataProvider abstracts place lookups (point + radius geofences)
+// so the trigger can be tested without a real database. Per ADR-003 the
+// runtime is responsible for any geometry math; the database surface is
+// limited to row reads.
+type PlaceDataProvider interface {
+	// FindByCoordinates returns every place whose circle (lat/lon, radius_m)
+	// contains the given point.
+	FindByCoordinates(ctx context.Context, lat, lng float64) ([]*models.Place, error)
+	// GetByID returns the place with the given id, or nil if not found.
+	GetByID(ctx context.Context, id int64) (*models.Place, error)
 }
 
-// GeofenceConfig represents the parsed trigger_config for geofence automations.
-type GeofenceConfig struct {
-	GeofenceID   int64  `json:"geofence_id"`
-	Event        string `json:"event"`         // "enter", "leave", "both"
-	DwellMinutes int    `json:"dwell_minutes"` // 0 = fire immediately on transition
-}
-
-// geofenceSnapshot is the JSON payload passed to engine.Evaluate when a geofence trigger fires.
+// geofenceSnapshot is the JSON payload passed to engine.Evaluate when a
+// geofence trigger fires.
 type geofenceSnapshot struct {
-	VehicleID    int64   `json:"vehicle_id"`
-	GeofenceID   int64   `json:"geofence_id"`
-	GeofenceName string  `json:"geofence_name"`
-	Event        string  `json:"event"` // "enter" or "leave"
-	Lat          float64 `json:"lat"`
-	Lon          float64 `json:"lon"`
+	VehicleID int64   `json:"vehicle_id"`
+	PlaceID   int64   `json:"place_id"`
+	PlaceName string  `json:"place_name"`
+	Event     string  `json:"event"` // "enter", "exit", or "dwell"
+	Lat       float64 `json:"lat"`
+	Lon       float64 `json:"lon"`
 }
 
 // dwellKey uniquely identifies a pending dwell timer per automation per vehicle.
@@ -49,21 +77,30 @@ type dwellKey struct {
 	automationID int64
 }
 
+// dwellDuration is the fixed period a vehicle must remain inside a place
+// before a 'dwell' event fires. The post-142 typed CTI schema does not
+// carry a per-trigger dwell duration column (ADR-001 typed-by-default), so
+// the evaluator applies a single platform-wide default.
+const dwellDuration = 5 * time.Minute
+
 // TimerFunc creates a timer that fires f after d. Defaults to time.AfterFunc.
 // Override in tests for deterministic control.
 type TimerFunc func(d time.Duration, f func()) *time.Timer
 
-// GeofenceTrigger evaluates geofence-based automations when vehicle positions update.
+// GeofenceTrigger evaluates geofence-based automations when vehicle
+// positions update. It detects enter/exit transitions against the set of
+// places containing the current position, and schedules deferred 'dwell'
+// firings for automations configured with the 'dwell' event.
 type GeofenceTrigger struct {
-	mu         sync.Mutex
-	repo       GeofenceRepo
-	geofences  GeofenceDataProvider
-	engine     AutomationEngine
-	timerFunc  TimerFunc
-	logger     zerolog.Logger
+	mu        sync.Mutex
+	repo      GeofenceRepo
+	places    PlaceDataProvider
+	engine    AutomationEngine
+	timerFunc TimerFunc
+	logger    zerolog.Logger
 
-	// insideState tracks which geofences each vehicle is currently inside.
-	// vehicleID → set of geofenceIDs
+	// insideState tracks which places each vehicle is currently inside.
+	// vehicleID → set of placeIDs
 	insideState map[int64]map[int64]bool
 
 	// dwellTimers tracks pending dwell timers keyed by vehicle+automation.
@@ -71,10 +108,10 @@ type GeofenceTrigger struct {
 }
 
 // NewGeofenceTrigger creates a new geofence trigger evaluator.
-func NewGeofenceTrigger(repo GeofenceRepo, geofences GeofenceDataProvider, engine AutomationEngine) *GeofenceTrigger {
+func NewGeofenceTrigger(repo GeofenceRepo, places PlaceDataProvider, engine AutomationEngine) *GeofenceTrigger {
 	return &GeofenceTrigger{
 		repo:        repo,
-		geofences:   geofences,
+		places:      places,
 		engine:      engine,
 		timerFunc:   time.AfterFunc,
 		insideState: make(map[int64]map[int64]bool),
@@ -95,30 +132,29 @@ func (t *GeofenceTrigger) SetTimerFunc(fn TimerFunc) {
 // Seed pre-populates the inside state for a vehicle. Call at startup to
 // hydrate from the last known position, preventing false enter events on
 // the first update after a restart.
-func (t *GeofenceTrigger) Seed(vehicleID int64, insideGeofenceIDs []int64) {
+func (t *GeofenceTrigger) Seed(vehicleID int64, insidePlaceIDs []int64) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	geoSet := make(map[int64]bool, len(insideGeofenceIDs))
-	for _, gid := range insideGeofenceIDs {
-		geoSet[gid] = true
+	placeSet := make(map[int64]bool, len(insidePlaceIDs))
+	for _, pid := range insidePlaceIDs {
+		placeSet[pid] = true
 	}
-	t.insideState[vehicleID] = geoSet
+	t.insideState[vehicleID] = placeSet
 }
 
 // OnPositionUpdate is called when a vehicle's position updates. It detects
-// enter/leave transitions for all geofences and fires matching automations.
+// enter/exit transitions for all places and fires matching automations.
 func (t *GeofenceTrigger) OnPositionUpdate(ctx context.Context, vehicleID int64, lat, lon float64) error {
-	// Find all geofences containing the current position.
-	currentGeofences, err := t.geofences.FindByCoordinates(ctx, lat, lon)
+	currentPlaces, err := t.places.FindByCoordinates(ctx, lat, lon)
 	if err != nil {
-		return fmt.Errorf("find geofences for vehicle %d at (%f, %f): %w", vehicleID, lat, lon, err)
+		return fmt.Errorf("find places for vehicle %d at (%f, %f): %w", vehicleID, lat, lon, err)
 	}
 
-	currentSet := make(map[int64]bool, len(currentGeofences))
-	geofenceNames := make(map[int64]string, len(currentGeofences))
-	for _, g := range currentGeofences {
-		currentSet[g.ID] = true
-		geofenceNames[g.ID] = g.Name
+	currentSet := make(map[int64]bool, len(currentPlaces))
+	placeNames := make(map[int64]string, len(currentPlaces))
+	for _, p := range currentPlaces {
+		currentSet[p.ID] = true
+		placeNames[p.ID] = p.Name
 	}
 
 	t.mu.Lock()
@@ -137,17 +173,17 @@ func (t *GeofenceTrigger) OnPositionUpdate(ctx context.Context, vehicleID int64,
 
 	// Detect enter transitions: in current but not in previous.
 	var enters []int64
-	for gid := range currentSet {
-		if !previousSet[gid] {
-			enters = append(enters, gid)
+	for pid := range currentSet {
+		if !previousSet[pid] {
+			enters = append(enters, pid)
 		}
 	}
 
-	// Detect leave transitions: in previous but not in current.
-	var leaves []int64
-	for gid := range previousSet {
-		if !currentSet[gid] {
-			leaves = append(leaves, gid)
+	// Detect exit transitions: in previous but not in current.
+	var exits []int64
+	for pid := range previousSet {
+		if !currentSet[pid] {
+			exits = append(exits, pid)
 		}
 	}
 
@@ -156,78 +192,99 @@ func (t *GeofenceTrigger) OnPositionUpdate(ctx context.Context, vehicleID int64,
 	t.mu.Unlock()
 
 	// No transitions — nothing to evaluate.
-	if len(enters) == 0 && len(leaves) == 0 {
+	if len(enters) == 0 && len(exits) == 0 {
 		return nil
 	}
 
-	// Load automations for this vehicle.
-	automations, err := t.repo.GetEnabledByVehicleAndTrigger(ctx, vehicleID, "geofence")
+	hydrated, err := t.repo.LoadEnabledGeofenceTriggers(ctx, vehicleID)
 	if err != nil {
 		return fmt.Errorf("load geofence automations for vehicle %d: %w", vehicleID, err)
 	}
-	if len(automations) == 0 {
+	if len(hydrated) == 0 {
 		return nil
 	}
 
 	var firstErr error
-	for _, a := range automations {
-		cfg, err := parseGeofenceConfig(a.TriggerConfig)
-		if err != nil {
-			t.logger.Warn().Err(err).
-				Int64("automation_id", a.ID).
-				Str("automation", a.Name).
-				Msg("invalid geofence trigger config, auto-disabling")
-			if disableErr := t.repo.SetAutoDisabled(ctx, a.ID, fmt.Sprintf("invalid geofence config: %v", err)); disableErr != nil {
-				t.logger.Error().Err(disableErr).
-					Int64("automation_id", a.ID).
-					Msg("failed to auto-disable invalid automation")
-			}
+	for i := range hydrated {
+		ga := &hydrated[i]
+		event := ga.Trigger.Event
+		placeID := ga.Trigger.PlaceID
+		dwellMinutes := ga.Trigger.DwellMinutes
+
+		if placeID <= 0 {
+			t.autoDisableGeofence(ctx, ga.Automation.ID, "geofence place_id is required")
 			continue
 		}
 
-		// Check enter events.
-		for _, gid := range enters {
-			if gid != cfg.GeofenceID {
+		// Validate event vocabulary; skip silently per ADR-012 (ii).
+		switch event {
+		case "enter", "exit", "leave", "both", "dwell":
+		default:
+			t.logger.Warn().
+				Int64("automation_id", ga.Automation.ID).
+				Str("automation", ga.Automation.Name).
+				Str("event", event).
+				Msg("unknown geofence trigger event, skipping")
+			continue
+		}
+
+		// Enter transitions fire 'enter' immediately and start the dwell
+		// timer for 'dwell' triggers.
+		for _, pid := range enters {
+			if pid != placeID {
 				continue
 			}
-			if cfg.Event != "enter" && cfg.Event != "both" {
-				continue
-			}
-
-			// Cancel any pending leave dwell timer for this automation.
-			t.cancelDwellTimer(vehicleID, a.ID)
-
-			name := geofenceNames[gid]
+			name := placeNames[pid]
 			if name == "" {
-				name = t.lookupGeofenceName(ctx, gid)
+				name = t.lookupPlaceName(ctx, pid)
 			}
 
-			if cfg.DwellMinutes > 0 {
-				t.startDwellTimer(ctx, vehicleID, a, cfg, gid, name, lat, lon)
-			} else {
-				if evalErr := t.fireAutomation(ctx, a, vehicleID, gid, name, "enter", lat, lon); evalErr != nil {
+			switch event {
+			case "enter":
+				t.cancelDwellTimer(vehicleID, ga.Automation.ID)
+				if dwellMinutes > 0 {
+					t.startDwellTimer(ctx, vehicleID, &ga.Automation, pid, name, lat, lon)
+					continue
+				}
+				if evalErr := t.fireAutomation(ctx, &ga.Automation, vehicleID, pid, name, "enter", lat, lon); evalErr != nil {
 					if firstErr == nil {
 						firstErr = evalErr
 					}
 				}
+			case "both":
+				t.cancelDwellTimer(vehicleID, ga.Automation.ID)
+				if dwellMinutes > 0 {
+					t.startDwellTimer(ctx, vehicleID, &ga.Automation, pid, name, lat, lon)
+					continue
+				}
+				if evalErr := t.fireAutomation(ctx, &ga.Automation, vehicleID, pid, name, "enter", lat, lon); evalErr != nil {
+					if firstErr == nil {
+						firstErr = evalErr
+					}
+				}
+			case "dwell":
+				t.startDwellTimer(ctx, vehicleID, &ga.Automation, pid, name, lat, lon)
 			}
 		}
 
-		// Check leave events.
-		for _, gid := range leaves {
-			if gid != cfg.GeofenceID {
+		// Exit transitions fire 'exit' immediately and cancel any pending
+		// dwell timer for the automation.
+		for _, pid := range exits {
+			if pid != placeID {
 				continue
 			}
-			if cfg.Event != "leave" && cfg.Event != "both" {
+			t.cancelDwellTimer(vehicleID, ga.Automation.ID)
+
+			if event != "exit" && event != "leave" && event != "both" {
 				continue
 			}
 
-			// Cancel any pending enter dwell timer — vehicle left before dwell elapsed.
-			t.cancelDwellTimer(vehicleID, a.ID)
-
-			name := t.lookupGeofenceName(ctx, gid)
-
-			if evalErr := t.fireAutomation(ctx, a, vehicleID, gid, name, "leave", lat, lon); evalErr != nil {
+			name := t.lookupPlaceName(ctx, pid)
+			fireEvent := event
+			if event == "both" {
+				fireEvent = "leave"
+			}
+			if evalErr := t.fireAutomation(ctx, &ga.Automation, vehicleID, pid, name, fireEvent, lat, lon); evalErr != nil {
 				if firstErr == nil {
 					firstErr = evalErr
 				}
@@ -239,14 +296,14 @@ func (t *GeofenceTrigger) OnPositionUpdate(ctx context.Context, vehicleID int64,
 }
 
 // fireAutomation marshals the snapshot and calls the engine.
-func (t *GeofenceTrigger) fireAutomation(ctx context.Context, a *models.Automation, vehicleID, geofenceID int64, geofenceName, event string, lat, lon float64) error {
+func (t *GeofenceTrigger) fireAutomation(ctx context.Context, a *models.Automation, vehicleID, placeID int64, placeName, event string, lat, lon float64) error {
 	snapshot, err := json.Marshal(geofenceSnapshot{
-		VehicleID:    vehicleID,
-		GeofenceID:   geofenceID,
-		GeofenceName: geofenceName,
-		Event:        event,
-		Lat:          lat,
-		Lon:          lon,
+		VehicleID: vehicleID,
+		PlaceID:   placeID,
+		PlaceName: placeName,
+		Event:     event,
+		Lat:       lat,
+		Lon:       lon,
 	})
 	if err != nil {
 		t.logger.Error().Err(err).
@@ -259,8 +316,8 @@ func (t *GeofenceTrigger) fireAutomation(ctx context.Context, a *models.Automati
 		Int64("automation_id", a.ID).
 		Str("automation", a.Name).
 		Int64("vehicle_id", vehicleID).
-		Int64("geofence_id", geofenceID).
-		Str("geofence_name", geofenceName).
+		Int64("place_id", placeID).
+		Str("place_name", placeName).
 		Str("event", event).
 		Float64("lat", lat).
 		Float64("lon", lon).
@@ -276,25 +333,23 @@ func (t *GeofenceTrigger) fireAutomation(ctx context.Context, a *models.Automati
 	return nil
 }
 
-// startDwellTimer starts a delayed fire for enter events with dwell_minutes > 0.
-// The timer callback re-checks that the vehicle is still inside under lock.
-func (t *GeofenceTrigger) startDwellTimer(ctx context.Context, vehicleID int64, a *models.Automation, cfg *GeofenceConfig, geofenceID int64, geofenceName string, lat, lon float64) {
+// startDwellTimer starts a delayed fire for 'dwell' triggers. The timer
+// callback re-checks under lock that the vehicle is still inside the
+// place; if it has already exited, the firing is skipped.
+func (t *GeofenceTrigger) startDwellTimer(ctx context.Context, vehicleID int64, a *models.Automation, placeID int64, placeName string, lat, lon float64) {
 	dk := dwellKey{vehicleID: vehicleID, automationID: a.ID}
-	duration := time.Duration(cfg.DwellMinutes) * time.Minute
 	automationID := a.ID
 	automationName := a.Name
 
 	t.mu.Lock()
-	// Cancel any existing timer for this key.
 	if existing, ok := t.dwellTimers[dk]; ok {
 		existing.Stop()
 	}
 
-	timer := t.timerFunc(duration, func() {
-		// Re-check under lock that the vehicle is still inside.
+	timer := t.timerFunc(dwellDuration, func() {
 		t.mu.Lock()
-		geoSet := t.insideState[vehicleID]
-		stillInside := geoSet != nil && geoSet[geofenceID]
+		placeSet := t.insideState[vehicleID]
+		stillInside := placeSet != nil && placeSet[placeID]
 		delete(t.dwellTimers, dk)
 		t.mu.Unlock()
 
@@ -302,7 +357,7 @@ func (t *GeofenceTrigger) startDwellTimer(ctx context.Context, vehicleID int64, 
 			t.logger.Debug().
 				Int64("automation_id", automationID).
 				Int64("vehicle_id", vehicleID).
-				Int64("geofence_id", geofenceID).
+				Int64("place_id", placeID).
 				Msg("dwell timer fired but vehicle already left, skipping")
 			return
 		}
@@ -311,17 +366,17 @@ func (t *GeofenceTrigger) startDwellTimer(ctx context.Context, vehicleID int64, 
 			Int64("automation_id", automationID).
 			Str("automation", automationName).
 			Int64("vehicle_id", vehicleID).
-			Int64("geofence_id", geofenceID).
-			Int("dwell_minutes", cfg.DwellMinutes).
+			Int64("place_id", placeID).
+			Dur("dwell_duration", dwellDuration).
 			Msg("dwell period elapsed, firing geofence trigger")
 
 		snapshot, err := json.Marshal(geofenceSnapshot{
-			VehicleID:    vehicleID,
-			GeofenceID:   geofenceID,
-			GeofenceName: geofenceName,
-			Event:        "enter",
-			Lat:          lat,
-			Lon:          lon,
+			VehicleID: vehicleID,
+			PlaceID:   placeID,
+			PlaceName: placeName,
+			Event:     "dwell",
+			Lat:       lat,
+			Lon:       lon,
 		})
 		if err != nil {
 			t.logger.Error().Err(err).
@@ -344,8 +399,8 @@ func (t *GeofenceTrigger) startDwellTimer(ctx context.Context, vehicleID int64, 
 	t.logger.Debug().
 		Int64("automation_id", automationID).
 		Int64("vehicle_id", vehicleID).
-		Int64("geofence_id", geofenceID).
-		Int("dwell_minutes", cfg.DwellMinutes).
+		Int64("place_id", placeID).
+		Dur("dwell_duration", dwellDuration).
 		Msg("dwell timer started")
 }
 
@@ -364,13 +419,26 @@ func (t *GeofenceTrigger) cancelDwellTimer(vehicleID, automationID int64) {
 	t.mu.Unlock()
 }
 
-// lookupGeofenceName fetches the geofence name by ID. Returns empty string on error.
-func (t *GeofenceTrigger) lookupGeofenceName(ctx context.Context, geofenceID int64) string {
-	g, err := t.geofences.GetByID(ctx, geofenceID)
-	if err != nil || g == nil {
+func (t *GeofenceTrigger) autoDisableGeofence(ctx context.Context, automationID int64, reason string) {
+	disabler, ok := t.repo.(geofenceAutoDisabler)
+	if !ok {
+		return
+	}
+	if err := disabler.SetAutoDisabled(ctx, automationID, reason); err != nil {
+		t.logger.Warn().Err(err).
+			Int64("automation_id", automationID).
+			Str("reason", reason).
+			Msg("failed to auto-disable invalid geofence automation")
+	}
+}
+
+// lookupPlaceName fetches the place name by ID. Returns empty string on error.
+func (t *GeofenceTrigger) lookupPlaceName(ctx context.Context, placeID int64) string {
+	p, err := t.places.GetByID(ctx, placeID)
+	if err != nil || p == nil {
 		return ""
 	}
-	return g.Name
+	return p.Name
 }
 
 // Stop cancels all pending dwell timers. Call on shutdown.
@@ -382,34 +450,4 @@ func (t *GeofenceTrigger) Stop() {
 		delete(t.dwellTimers, dk)
 	}
 	t.logger.Info().Msg("geofence trigger stopped")
-}
-
-// parseGeofenceConfig unmarshals and validates the trigger_config JSON.
-func parseGeofenceConfig(raw json.RawMessage) (*GeofenceConfig, error) {
-	if len(raw) == 0 {
-		return nil, fmt.Errorf("trigger_config is empty")
-	}
-	var cfg GeofenceConfig
-	if err := json.Unmarshal(raw, &cfg); err != nil {
-		return nil, fmt.Errorf("unmarshal trigger config: %w", err)
-	}
-
-	if cfg.GeofenceID <= 0 {
-		return nil, fmt.Errorf("geofence_id must be positive, got %d", cfg.GeofenceID)
-	}
-
-	switch cfg.Event {
-	case "enter", "leave", "both":
-		// valid
-	case "":
-		return nil, fmt.Errorf("event is required")
-	default:
-		return nil, fmt.Errorf("invalid event %q, must be enter/leave/both", cfg.Event)
-	}
-
-	if cfg.DwellMinutes < 0 {
-		return nil, fmt.Errorf("dwell_minutes must be non-negative, got %d", cfg.DwellMinutes)
-	}
-
-	return &cfg, nil
 }

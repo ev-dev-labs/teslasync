@@ -4,9 +4,10 @@
  */
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { request } from '../api/client'
+import { request } from '@/api/client'
 import { GlassPanel, Badge, Button, Input, DataTable, type Column } from './ui'
 import { fmtInt } from '../lib/numberFormat'
+import { TIME_RANGE_PRESETS } from '../lib/constants'
 import { Search, X, Play, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 
 
@@ -70,13 +71,6 @@ export const TYPE_VALUE_COLOR: Record<string, string> = {
 }
 
 export const PAGE_SIZES = [25, 50, 100]
-
-export const TIME_PRESETS = [
-  { label: '1h', hours: 1 },
-  { label: '6h', hours: 6 },
-  { label: '24h', hours: 24 },
-  { label: '7d', hours: 168 },
-]
 
 /* ── Signal Multi-Select ── */
 
@@ -201,7 +195,7 @@ export function DateTimeRangeControls({ fromStr, toStr, onFromChange, onToChange
       <div className="space-y-1.5">
         <label className="metric-label">Quick Range</label>
         <div className="flex items-center gap-1">
-          {TIME_PRESETS.map(tp => (
+          {TIME_RANGE_PRESETS.map(tp => (
             <button
               key={tp.label}
               onClick={() => onPreset(tp.hours)}

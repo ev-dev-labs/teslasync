@@ -70,19 +70,20 @@ type driveScoreEntry struct {
 
 // Internal per-drive analysis (not serialised).
 type driveAnalysis struct {
-	id          int64
-	date        time.Time
-	distance    float64
-	speedMax    float64
-	speedAvg    float64
-	powerMax    float64
-	powerMin    float64
-	socStart    float64
-	socEnd      float64
-	outsideTemp float64
-	efficiency  float64
-	style       string
-	score       int
+	id            int64
+	date          time.Time
+	distance      float64
+	speedMax      float64
+	speedAvg      float64
+	powerMax      float64
+	powerMin      float64
+	hasPowerRange bool // false when powerMin is unavailable (drives table lacks min power)
+	socStart      float64
+	socEnd        float64
+	outsideTemp   float64
+	efficiency    float64
+	style         string
+	score         int
 }
 
 // ── Handler ──────────────────────────────────────────────────
@@ -109,16 +110,16 @@ func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request
 	since := time.Now().AddDate(0, 0, -days)
 
 	rows, err := h.db.Pool.Query(ctx, `
-		SELECT id, start_date, distance,
-		       COALESCE(speed_max, 0), COALESCE(speed_avg, 0),
-		       COALESCE(power_max, 0), COALESCE(power_min, 0),
-		       COALESCE(soc_start, 0), COALESCE(soc_end, 0),
-		       COALESCE(outside_temp_avg, 20)
+		SELECT id, start_ts, distance_mi,
+		       COALESCE(max_speed_mph, 0), COALESCE(avg_speed_mph, 0),
+		       COALESCE(avg_power_kw, 0), NULL::double precision,
+		       COALESCE(start_battery_pct, 0), COALESCE(end_battery_pct, 0),
+		       COALESCE(outside_temp_avg_c, 20)
 		FROM drives
 		WHERE vehicle_id = $1
-		  AND start_date >= $2
-		  AND distance > 0.5
-		ORDER BY start_date DESC`, vehicleID, since)
+		  AND start_ts >= $2
+		  AND distance_mi > 0.5
+		ORDER BY start_ts DESC`, vehicleID, since)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("driving-coach: query failed")
 		writeError(w, http.StatusInternalServerError, "failed to get driving data")
@@ -129,11 +130,16 @@ func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request
 	var drives []driveAnalysis
 	for rows.Next() {
 		var d driveAnalysis
+		var powerMinPtr *float64
 		if err := rows.Scan(&d.id, &d.date, &d.distance,
-			&d.speedMax, &d.speedAvg, &d.powerMax, &d.powerMin,
+			&d.speedMax, &d.speedAvg, &d.powerMax, &powerMinPtr,
 			&d.socStart, &d.socEnd, &d.outsideTemp); err != nil {
 			log.Warn().Err(err).Msg("driving-coach: scan error")
 			continue
+		}
+		if powerMinPtr != nil {
+			d.powerMin = *powerMinPtr
+			d.hasPowerRange = true
 		}
 		drives = append(drives, d)
 	}
@@ -160,7 +166,7 @@ func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request
 				bestEfficiency = d.efficiency
 			}
 		}
-		d.style = classifyDrivingStyle(d.powerMax, d.powerMin, d.speedMax, d.speedAvg)
+		d.style = classifyDrivingStyle(d.powerMax, d.powerMin, d.speedMax, d.speedAvg, d.hasPowerRange)
 	}
 	if bestEfficiency == math.MaxFloat64 {
 		bestEfficiency = 0
@@ -202,7 +208,7 @@ func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request
 		if d.powerMax > 100 {
 			hardAccel++
 		}
-		if d.powerMin < -60 {
+		if d.hasPowerRange && d.powerMin < -60 {
 			hardBrake++
 		}
 		if d.speedAvg > 80 {
@@ -312,17 +318,24 @@ func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request
 
 // ── Helpers ──────────────────────────────────────────────────
 
-func classifyDrivingStyle(powerMax, powerMin, speedMax, speedAvg float64) string {
+func classifyDrivingStyle(powerMax, powerMin, speedMax, speedAvg float64, hasPowerRange bool) string {
 	if powerMax > 150 || speedMax > 130 {
 		return "aggressive"
 	}
 	speedSpread := speedMax - speedAvg
-	regenRatio := 0.0
-	if powerMax > 0 {
-		regenRatio = math.Abs(powerMin) / powerMax
-	}
-	if powerMax < 80 && speedSpread < 30 && regenRatio > 0.3 {
-		return "efficient"
+	if hasPowerRange {
+		regenRatio := 0.0
+		if powerMax > 0 {
+			regenRatio = math.Abs(powerMin) / powerMax
+		}
+		if powerMax < 80 && speedSpread < 30 && regenRatio > 0.3 {
+			return "efficient"
+		}
+	} else {
+		// Without regen data, classify based on speed patterns only
+		if powerMax < 80 && speedSpread < 30 {
+			return "efficient"
+		}
 	}
 	return "moderate"
 }

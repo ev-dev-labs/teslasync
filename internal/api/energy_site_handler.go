@@ -291,7 +291,6 @@ func parseProductsResponse(body []byte) ([]*models.TeslaEnergySite, error) {
 			HasLoadMeter:      product.Components.LoadMeter,
 			TOUCapable:        product.Components.TOUCapable,
 			StormModeCapable:  product.Components.StormModeCapable,
-			RawJSON:           string(raw),
 		})
 	}
 

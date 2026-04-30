@@ -1,20 +1,12 @@
 import { cn } from '@/lib/cn';
-
-type KnownStatus = 'online' | 'offline' | 'asleep' | 'driving' | 'charging';
+import { getStateDefinition } from '@/types/fsm';
+import type { VehicleStatus } from '@/api/types';
 
 interface StatusBadgeProps {
-  status: KnownStatus | (string & {});
+  status: VehicleStatus | (string & {});
   size?: 'sm' | 'md';
   className?: string;
 }
-
-const dotColors: Record<KnownStatus, string> = {
-  online: 'bg-green-500',
-  charging: 'bg-yellow-400',
-  driving: 'bg-blue-500',
-  asleep: 'bg-purple-500',
-  offline: 'bg-red-500',
-};
 
 const sizes = {
   sm: { dot: 'h-1.5 w-1.5', text: 'text-xs', gap: 'gap-1', px: 'px-1.5 py-0.5' },
@@ -23,7 +15,7 @@ const sizes = {
 
 export function StatusBadge({ status, size = 'md', className }: StatusBadgeProps) {
   const s = sizes[size];
-  const dotColor = dotColors[status as KnownStatus] ?? 'bg-gray-400';
+  const dotColor = getStateDefinition('vehicle', status).badgeDot;
 
   return (
     <span

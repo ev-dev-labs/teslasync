@@ -26,8 +26,9 @@ import { formatDateTime } from '@/lib/dateFormat';
 import {
   useNotificationChannels, useNotificationLogs, useNotificationStats,
   useSaveChannel, useDeleteChannel, useToggleChannel, useTestChannel,
+  type NotificationChannelInput,
 } from '@/api/hooks/useNotifications';
-import type { NotificationChannel, NotificationLog } from '@/api/types';
+import type { NotificationChannel, NotificationChannelKind, NotificationLog } from '@/api/types';
 import {
   Bell, Plus, Trash2, Send, MessageSquare, Mail, Webhook, Hash,
   Megaphone, Smartphone, CheckCircle, XCircle, Clock, BarChart3,
@@ -50,17 +51,19 @@ const CHANNEL_TYPES = [
   { value: 'email', label: 'Email', icon: Mail, color: '#EA4335', fields: [
     { key: 'smtp_host', label: 'SMTP Host', placeholder: 'smtp.gmail.com', type: 'text' },
     { key: 'smtp_port', label: 'SMTP Port', placeholder: '587', type: 'text' },
-    { key: 'from', label: 'From Address', placeholder: 'alerts@example.com', type: 'email' },
-    { key: 'to', label: 'Recipient', placeholder: 'you@example.com', type: 'email' },
-    { key: 'password', label: 'SMTP Password', placeholder: '••••••••', type: 'password' },
+    { key: 'smtp_username', label: 'SMTP Username', placeholder: 'alerts@example.com', type: 'text' },
+    { key: 'smtp_password', label: 'SMTP Password', placeholder: '••••••••', type: 'password' },
+    { key: 'from_address', label: 'From Address', placeholder: 'alerts@example.com', type: 'email' },
+    { key: 'to_addresses', label: 'Recipients (comma-separated)', placeholder: 'you@example.com,ops@example.com', type: 'text' },
   ] },
   { value: 'webhook', label: 'Webhook', icon: Webhook, color: '#FF6B35', fields: [
     { key: 'url', label: 'URL', placeholder: 'https://example.com/webhook', type: 'url' },
     { key: 'method', label: 'HTTP Method', placeholder: 'POST', type: 'text' },
     { key: 'headers', label: 'Headers (JSON)', placeholder: '{"Authorization": "Bearer ..."}', type: 'text' },
+    { key: 'body_template', label: 'Body Template', placeholder: '{"text": "{{message}}"}', type: 'text' },
   ] },
   { value: 'ntfy', label: 'ntfy', icon: Megaphone, color: '#57A773', fields: [
-    { key: 'server', label: 'Server URL', placeholder: 'https://ntfy.sh', type: 'url' },
+    { key: 'server_url', label: 'Server URL', placeholder: 'https://ntfy.sh', type: 'url' },
     { key: 'topic', label: 'Topic', placeholder: 'teslasync', type: 'text' },
   ] },
   { value: 'pushover', label: 'Pushover', icon: Smartphone, color: '#249DF1', fields: [
@@ -69,10 +72,154 @@ const CHANNEL_TYPES = [
   ] },
 ] as const;
 
-type ChannelType = typeof CHANNEL_TYPES[number]['value'];
+type ChannelType = NotificationChannelKind;
 
-function getChannelMeta(type: string) {
-  return CHANNEL_TYPES.find(t => t.value === type) ?? CHANNEL_TYPES[4];
+function getChannelMeta(kind: string) {
+  return CHANNEL_TYPES.find(t => t.value === kind) ?? CHANNEL_TYPES[4];
+}
+
+/**
+ * Extract the editable, flat string-keyed view of a typed channel for use in
+ * the generic form state. The inverse of `buildChannelPayload`.
+ */
+function channelToFormConfig(ch: NotificationChannel): Record<string, string> {
+  switch (ch.kind) {
+    case 'discord':
+      return { webhook_url: ch.webhook_url };
+    case 'slack':
+      return { webhook_url: ch.webhook_url };
+    case 'telegram':
+      return { bot_token: ch.bot_token, chat_id: ch.chat_id };
+    case 'email':
+      return {
+        smtp_host: ch.smtp_host,
+        smtp_port: String(ch.smtp_port),
+        smtp_username: ch.smtp_username,
+        smtp_password: ch.smtp_password,
+        from_address: ch.from_address,
+        to_addresses: (ch.to_addresses ?? []).join(', '),
+      };
+    case 'webhook':
+      return {
+        url: ch.url,
+        method: ch.method,
+        headers: JSON.stringify(ch.headers ?? {}),
+        body_template: ch.body_template,
+      };
+    case 'ntfy':
+      return { server_url: ch.server_url, topic: ch.topic };
+    case 'pushover':
+      return { user_key: ch.user_key, app_token: ch.app_token };
+  }
+}
+
+/**
+ * Build a typed, discriminated-union payload from the flat form state.
+ * Mirrors the server-side NotificationChannelInput shape for each kind.
+ */
+function buildChannelPayload(
+  kind: ChannelType,
+  name: string,
+  enabled: boolean,
+  config: Record<string, string>,
+  id?: number,
+): NotificationChannelInput {
+  const idPart = id !== undefined ? { id } : {};
+  switch (kind) {
+    case 'discord':
+      return {
+        ...idPart,
+        kind: 'discord',
+        name,
+        enabled,
+        webhook_url: config.webhook_url ?? '',
+        username: null,
+        avatar_url: null,
+      } as NotificationChannelInput;
+    case 'slack':
+      return {
+        ...idPart,
+        kind: 'slack',
+        name,
+        enabled,
+        webhook_url: config.webhook_url ?? '',
+        channel: null,
+        username: null,
+      } as NotificationChannelInput;
+    case 'telegram':
+      return {
+        ...idPart,
+        kind: 'telegram',
+        name,
+        enabled,
+        bot_token: config.bot_token ?? '',
+        chat_id: config.chat_id ?? '',
+      } as NotificationChannelInput;
+    case 'email': {
+      const port = Number(config.smtp_port);
+      return {
+        ...idPart,
+        kind: 'email',
+        name,
+        enabled,
+        smtp_host: config.smtp_host ?? '',
+        smtp_port: Number.isFinite(port) ? port : 587,
+        smtp_username: config.smtp_username ?? '',
+        smtp_password: config.smtp_password ?? '',
+        from_address: config.from_address ?? '',
+        to_addresses: (config.to_addresses ?? '')
+          .split(',')
+          .map(s => s.trim())
+          .filter(Boolean),
+        use_tls: true,
+      } as NotificationChannelInput;
+    }
+    case 'webhook': {
+      let headers: Record<string, string> = {};
+      try {
+        const parsed = JSON.parse(config.headers || '{}');
+        if (parsed && typeof parsed === 'object') headers = parsed as Record<string, string>;
+      } catch {
+        headers = {};
+      }
+      const method = (config.method ?? 'POST').toUpperCase();
+      const safeMethod: 'GET' | 'POST' | 'PUT' =
+        method === 'GET' || method === 'PUT' ? method : 'POST';
+      return {
+        ...idPart,
+        kind: 'webhook',
+        name,
+        enabled,
+        url: config.url ?? '',
+        method: safeMethod,
+        headers,
+        body_template: config.body_template ?? '',
+      } as NotificationChannelInput;
+    }
+    case 'ntfy':
+      return {
+        ...idPart,
+        kind: 'ntfy',
+        name,
+        enabled,
+        server_url: config.server_url ?? 'https://ntfy.sh',
+        topic: config.topic ?? '',
+        priority: 3,
+        username: null,
+        password: null,
+      } as NotificationChannelInput;
+    case 'pushover':
+      return {
+        ...idPart,
+        kind: 'pushover',
+        name,
+        enabled,
+        user_key: config.user_key ?? '',
+        app_token: config.app_token ?? '',
+        device: null,
+        priority: 0,
+      } as NotificationChannelInput;
+  }
 }
 
 // ─── Channel Form Modal ──────────────────────────────────────────────────────
@@ -85,14 +232,16 @@ function ChannelFormModal({ channel, onClose, onSaved, t }: {
 }) {
   const toast = useToast();
   const isEdit = !!channel;
-  const [type, setType] = useState<ChannelType>((channel?.type as ChannelType) ?? 'discord');
+  const [kind, setKind] = useState<ChannelType>(channel?.kind ?? 'discord');
   const [name, setName] = useState(channel?.name ?? '');
   const [enabled, setEnabled] = useState(channel?.enabled ?? true);
-  const [config, setConfig] = useState<Record<string, string>>(channel?.config ?? {});
+  const [config, setConfig] = useState<Record<string, string>>(
+    channel ? channelToFormConfig(channel) : {},
+  );
   const [formError, setFormError] = useState('');
   const [testResult, setTestResult] = useState<{ success: boolean; message?: string } | null>(null);
 
-  const meta = getChannelMeta(type);
+  const meta = getChannelMeta(kind);
   const saveMut = useSaveChannel();
   const testMut = useTestChannel();
 
@@ -101,8 +250,13 @@ function ChannelFormModal({ channel, onClose, onSaved, t }: {
     setFormError('');
     setTestResult(null);
     if (!name.trim()) { setFormError(t('Name is required')); return; }
-    const payload: Partial<NotificationChannel> = { name, type: type as NotificationChannel['type'], config, enabled };
-    if (isEdit && channel) payload.id = channel.id;
+    const payload = buildChannelPayload(
+      kind,
+      name,
+      enabled,
+      config,
+      isEdit && channel ? channel.id : undefined,
+    );
     saveMut.mutate(payload, {
       onSuccess: () => { toast.success(isEdit ? t('Channel updated') : t('Channel created')); onSaved(); },
       onError: (e) => setFormError(String(e)),
@@ -147,12 +301,12 @@ function ChannelFormModal({ channel, onClose, onSaved, t }: {
                         key={ct.value}
                         className={cn(
                           'flex flex-col items-center gap-1.5 p-3 text-xs font-medium cursor-pointer transition-all',
-                          type === ct.value ? 'border-neon-cyan/40 bg-neon-cyan/10' : 'hover:bg-white/10',
+                          kind === ct.value ? 'border-neon-cyan/40 bg-neon-cyan/10' : 'hover:bg-white/10',
                         )}
-                        onClick={() => { setType(ct.value); setConfig({}); setTestResult(null); }}
+                        onClick={() => { setKind(ct.value); setConfig({}); setTestResult(null); }}
                       >
-                        <TIcon className="h-5 w-5" style={{ color: type === ct.value ? ct.color : 'var(--text-secondary)' }} />
-                        <span style={{ color: type === ct.value ? ct.color : 'var(--text-secondary)' }}>{ct.label}</span>
+                        <TIcon className="h-5 w-5" style={{ color: kind === ct.value ? ct.color : 'var(--text-secondary)' }} />
+                        <span style={{ color: kind === ct.value ? ct.color : 'var(--text-secondary)' }}>{ct.label}</span>
                       </GlassPanel>
                     );
                   })}
@@ -259,7 +413,7 @@ export default function NotificationsPage() {
       { key: 'channel', header: t('Channel'), render: (log) => {
         const ch = channelMap[log.channel_id];
         if (!ch) return <span className="text-[var(--text-primary)]">{`#${log.channel_id}`}</span>;
-        const m = getChannelMeta(ch.type);
+        const m = getChannelMeta(ch.kind);
         const CIcon = m.icon;
         return (
           <div className="flex items-center gap-2 text-[var(--text-primary)]">
@@ -308,9 +462,10 @@ export default function NotificationsPage() {
           {isLoading && [1, 2, 3].map(i => <Skeleton key={i} className="h-48" />)}
 
           {channels.map(ch => {
-            const meta = getChannelMeta(ch.type);
+            const meta = getChannelMeta(ch.kind);
             const Icon = meta.icon;
             const isTestingThis = testMut.isPending && testMut.variables === ch.id;
+            const configPreview = channelToFormConfig(ch);
             return (
               <GlassPanel
                 key={ch.id}
@@ -327,7 +482,7 @@ export default function NotificationsPage() {
                     <div>
                       <span className="font-semibold text-[var(--text-primary)] block">{ch.name}</span>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-xs capitalize" style={{ color: meta.color }}>{ch.type}</span>
+                        <span className="text-xs capitalize" style={{ color: meta.color }}>{ch.kind}</span>
                         <Badge variant={ch.enabled ? 'success' : 'neutral'} size="sm">
                           {ch.enabled ? t('Active') : t('Disabled')}
                         </Badge>
@@ -345,7 +500,7 @@ export default function NotificationsPage() {
 
                 {/* Config preview */}
                 <div className="space-y-1 rounded-lg bg-white/[0.02] p-2.5">
-                  {Object.entries(ch.config || {}).slice(0, 3).map(([k, v]) => (
+                  {Object.entries(configPreview).slice(0, 3).map(([k, v]) => (
                     <span key={k} className="text-xs truncate block text-[var(--text-muted)]">
                       <span className="font-medium text-[var(--text-secondary)]">{k}:</span>{' '}
                       {k.includes('token') || k.includes('key') || k.includes('password') ? '••••••••' : v}

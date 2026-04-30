@@ -25,6 +25,7 @@ import {
   axisTick,
   chartMargin,
   CHART_COLORS,
+  AREA_DEFAULTS,
 } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -40,20 +41,20 @@ import { request } from '@/api/client';
 /* ------------------------------------------------------------------ */
 
 interface SafetySnapshot {
-  id: number;
-  vehicle_id: number;
-  automatic_emergency_braking_off: boolean;
-  automatic_blind_spot_camera: boolean;
-  blind_spot_collision_warning: boolean;
-  emergency_lane_departure_avoidance: boolean;
-  forward_collision_warning: string;
-  lane_departure_avoidance: string;
-  speed_limit_warning: string;
-  cruise_follow_distance: string;
-  pin_to_drive_enabled: boolean;
+  id?: number;
+  vehicle_id?: number;
+  automatic_emergency_braking_off?: boolean | null;
+  automatic_blind_spot_camera?: boolean | null;
+  blind_spot_collision_warning?: boolean | null;
+  emergency_lane_departure_avoidance?: boolean | null;
+  forward_collision_warning?: string | null;
+  lane_departure_avoidance?: string | null;
+  speed_limit_warning?: string | null;
+  cruise_follow_distance?: string | null;
+  pin_to_drive_enabled?: boolean | null;
   miles_since_reset?: number | null;
   self_driving_miles_since_reset?: number | null;
-  created_at: string;
+  created_at?: string;
 }
 
 interface Vehicle {
@@ -109,6 +110,7 @@ function boolFeatures(snap: SafetySnapshot): boolean[] {
     cleanEnum(snap.forward_collision_warning ?? 'Off', 'forward_collision_warning') !== 'Off',
     cleanEnum(snap.lane_departure_avoidance ?? 'Off', 'lane_departure_avoidance') !== 'Off',
     cleanEnum(snap.speed_limit_warning ?? 'Off', 'speed_limit_warning') !== 'Off',
+    Number(cleanEnum(snap.cruise_follow_distance ?? '0', 'cruise_follow_distance')) > 0,
   ];
 }
 
@@ -227,7 +229,7 @@ interface ChartPoint {
 
 function toChartData(history: SafetySnapshot[]): ChartPoint[] {
   return [...history]
-    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    .sort((a, b) => new Date(a.created_at ?? '').getTime() - new Date(b.created_at ?? '').getTime())
     .map((s) => ({
       time: formatDateTime(s.created_at),
       aeb: isAebEnabled(s.automatic_emergency_braking_off ?? false) ? 1 : 0,
@@ -381,6 +383,15 @@ function buildHistoryColumns(t: (k: string) => string): Column<SafetySnapshot>[]
       render: (row) => boolCell(row.emergency_lane_departure_avoidance ?? false),
     },
     {
+      key: 'cfd',
+      header: t('CFD'),
+      render: (row) => (
+        <span className="text-xs text-[var(--text-secondary)]">
+          {cleanEnum(row.cruise_follow_distance ?? '—', 'cruise_follow_distance')}
+        </span>
+      ),
+    },
+    {
       key: 'slw',
       header: t('SLW'),
       render: (row) => (
@@ -493,7 +504,7 @@ export default function SafetySettingsPage() {
       history
         ? [...history].sort(
             (a, b) =>
-              new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+              new Date(b.created_at ?? '').getTime() - new Date(a.created_at ?? '').getTime(),
           )
         : [],
     [history],
@@ -718,30 +729,27 @@ export default function SafetySettingsPage() {
                     <Tooltip content={<ChartTooltip />} />
                     <Legend />
                     <Line
+                      {...AREA_DEFAULTS}
                       type="stepAfter"
                       dataKey="aeb"
                       name={t('AEB')}
                       stroke={CHART_COLORS[0]}
-                      dot={false}
-                      strokeWidth={2}
                       isAnimationActive={false}
                     />
                     <Line
+                      {...AREA_DEFAULTS}
                       type="stepAfter"
                       dataKey="bscw"
                       name={t('BSCW')}
                       stroke={CHART_COLORS[1]}
-                      dot={false}
-                      strokeWidth={2}
                       isAnimationActive={false}
                     />
                     <Line
+                      {...AREA_DEFAULTS}
                       type="stepAfter"
                       dataKey="elda"
                       name={t('ELDA')}
                       stroke={CHART_COLORS[2]}
-                      dot={false}
-                      strokeWidth={2}
                       isAnimationActive={false}
                     />
                   </LineChart>
@@ -764,7 +772,7 @@ export default function SafetySettingsPage() {
                 <DataTable<SafetySnapshot>
                   columns={historyColumns}
                   data={sortedHistory}
-                  keyExtractor={(row) => row.id}
+                  keyExtractor={(row) => row.id ?? 0}
                   compact
                   pagination
                 />

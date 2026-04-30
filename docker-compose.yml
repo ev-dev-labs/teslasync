@@ -1,3 +1,11 @@
+# ⚠️  TimescaleDB-HA migration (ADR-007):
+#   This compose file was migrated to timescale/timescaledb-ha:pg17.
+#   If upgrading from a postgres:17-alpine deployment, you MUST wipe the volume:
+#       docker compose down
+#       docker volume rm teslasync_postgres_data
+#       docker compose up -d
+#   Existing data is replaced; staging losses accepted per ADR-009.
+
 services:
   teslasync-api:
     build:
@@ -24,12 +32,13 @@ services:
       - MQTT_PORT=1883
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - REDIS_ENABLED=true
       - TESLA_CLIENT_ID=${TESLA_CLIENT_ID}
       - TESLA_CLIENT_SECRET=${TESLA_CLIENT_SECRET}
       - TESLA_REDIRECT_URI=${TESLA_REDIRECT_URI:-http://localhost:8080/api/v1/auth/callback}
       - TESLA_API_BASE_URL=${TESLA_API_BASE_URL:-https://fleet-api.prd.na.vn.cloud.tesla.com}
       - WORKER_POLL_INTERVAL=${WORKER_POLL_INTERVAL:-30s}
-      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_LEVEL=${LOG_LEVEL:-error}
       - FLEET_TELEMETRY_ENABLED=${FLEET_TELEMETRY_ENABLED:-false}
       - FLEET_TELEMETRY_HOST=${FLEET_TELEMETRY_HOST:-}
       - FLEET_TELEMETRY_PORT=${FLEET_TELEMETRY_PORT:-4443}
@@ -38,6 +47,7 @@ services:
       - FLEET_TELEMETRY_STALE_TIMEOUT=${FLEET_TELEMETRY_STALE_TIMEOUT:-15m}
       - FLEET_TELEMETRY_FALLBACK_POLL_INTERVAL=${FLEET_TELEMETRY_FALLBACK_POLL_INTERVAL:-5m}
       - FLEET_TELEMETRY_SNAPSHOT_WRITE_INTERVAL=${FLEET_TELEMETRY_SNAPSHOT_WRITE_INTERVAL:-1s}
+      - LIVE_SIGNAL_STORE_MODE=${LIVE_SIGNAL_STORE_MODE:-hybrid}
       - OTEL_ENABLED=${OTEL_ENABLED:-false}
       - OTEL_ENDPOINT=${OTEL_ENDPOINT:-jaeger:4317}
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-teslasync-api}
@@ -99,7 +109,7 @@ services:
       - DATABASE_SSL_MODE=disable
       - MQTT_HOST=mosquitto
       - MQTT_PORT=1883
-      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_LEVEL=${LOG_LEVEL:-error}
       - HEALTH_PORT=8081
       - OTEL_ENABLED=${OTEL_ENABLED:-false}
       - OTEL_ENDPOINT=${OTEL_ENDPOINT:-jaeger:4317}
@@ -124,17 +134,27 @@ services:
           memory: 32M
 
   postgres:
-    image: postgres:17-alpine
+    # ⚠️  TimescaleDB-HA migration (ADR-007):
+    #   Migrated from postgres:17-alpine to timescale/timescaledb-ha:pg17.
+    #   If upgrading an existing deployment, you MUST wipe the volume:
+    #       docker compose down
+    #       docker volume rm teslasync_postgres_data
+    #       docker compose up -d
+    #   Existing data is replaced; staging losses accepted per ADR-009.
+    image: timescale/timescaledb-ha:pg17
     container_name: teslasync-postgres
     restart: unless-stopped
+    command: ["postgres", "-c", "max_connections=100", "-c", "shared_buffers=256MB"]
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-teslasync}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-teslasync}
       - POSTGRES_DB=${POSTGRES_DB:-teslasync}
+      - PGDATA=/home/postgres/pgdata/data
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/home/postgres/pgdata
+      - ./scripts/init-timescaledb.sql:/docker-entrypoint-initdb.d/00-init-timescaledb.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-teslasync}"]
       interval: 10s
@@ -262,7 +282,7 @@ services:
       - DATABASE_SSL_MODE=disable
       - MQTT_HOST=mosquitto
       - MQTT_PORT=1883
-      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_LEVEL=${LOG_LEVEL:-error}
       - HEALTH_PORT=8082
       - OTEL_ENABLED=${OTEL_ENABLED:-false}
       - OTEL_ENDPOINT=${OTEL_ENDPOINT:-jaeger:4317}
@@ -306,7 +326,7 @@ services:
       - TESLA_CLIENT_ID=${TESLA_CLIENT_ID}
       - TESLA_CLIENT_SECRET=${TESLA_CLIENT_SECRET}
       - TESLA_API_BASE_URL=${TESLA_API_BASE_URL:-https://fleet-api.prd.na.vn.cloud.tesla.com}
-      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_LEVEL=${LOG_LEVEL:-error}
       - HEALTH_PORT=8083
       - OTEL_ENABLED=${OTEL_ENABLED:-false}
       - OTEL_ENDPOINT=${OTEL_ENDPOINT:-jaeger:4317}

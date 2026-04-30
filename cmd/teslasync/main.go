@@ -10,18 +10,16 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/api"
 	"github.com/ev-dev-labs/teslasync/internal/cache"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/events"
-	"github.com/ev-dev-labs/teslasync/internal/models"
-	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
+	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/polling"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
@@ -29,6 +27,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 	"github.com/ev-dev-labs/teslasync/internal/worker"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/adapter/gasprices"
 )
@@ -160,29 +160,33 @@ func main() {
 	apiLogRepo := database.NewAPICallLogRepo(db)
 	teslaClient.SetLogCallback(func(method, url string, statusCode int, reqBody, respBody []byte, durationMs int, callErr error) {
 		logEntry := &models.APICallLog{
-			Method:     method,
-			URL:        url,
-			DurationMs: durationMs,
-			Source:     "tesla_api",
+			HTTPMethod: method,
+			Endpoint:   url,
+			DurationMs: int32(durationMs),
+			Service:    "tesla-api",
 		}
 		if statusCode > 0 {
-			logEntry.StatusCode = &statusCode
-		}
-		if len(reqBody) > 0 {
-			s := string(reqBody)
-			logEntry.RequestBody = &s
-		}
-		// Truncate response body to prevent excessive storage
-		if len(respBody) > 0 {
-			s := string(respBody)
-			if len(s) > 10000 {
-				s = s[:10000] + "...(truncated)"
-			}
-			logEntry.ResponseBody = &s
+			sc := int16(statusCode)
+			logEntry.StatusCode = sc
 		}
 		if callErr != nil {
 			s := callErr.Error()
-			logEntry.Error = &s
+			logEntry.ErrorMessage = &s
+		}
+		const maxBodyBytes = 10 * 1024 // 10KB
+		if len(reqBody) > 0 {
+			s := string(reqBody)
+			if len(s) > maxBodyBytes {
+				s = s[:maxBodyBytes] + "... [truncated]"
+			}
+			logEntry.RequestBody = &s
+		}
+		if len(respBody) > 0 {
+			s := string(respBody)
+			if len(s) > maxBodyBytes {
+				s = s[:maxBodyBytes] + "... [truncated]"
+			}
+			logEntry.ResponseBody = &s
 		}
 		logCtx, logCancel := context.WithTimeout(context.Background(), 5*time.Second)
 		if err := apiLogRepo.Create(logCtx, logEntry); err != nil {
@@ -203,47 +207,86 @@ func main() {
 			cfg.FleetTelemetry.StaleSessionTimeout,
 		)
 
-		// Initialize SignalStore with write-through Postgres flusher
-		liveStateRepo := database.NewLiveStateRepo(db)
-		signalStore = sigsvc.New(liveStateRepo, 0, db.WriteBreaker)
+		// Initialize SignalStore (in-memory; recovery via Redis → signal_log)
+		signalStore = sigsvc.New()
 		telemetryHandler.SetSignalStore(signalStore)
+		telemetryHandler.FSMHandler().SetSignalStore(signalStore)
 
-		// Start debounced flush loop (coalesces MQTT batches into 1 DB write/vehicle/sec)
-		go signalStore.FlushLoop(ctx)
-
-		// Load existing live state from DB (pod restart recovery)
-		if vehicles, err := database.NewVehicleRepo(db).GetAll(ctx); err == nil {
-			for _, v := range vehicles {
-				signalStore.LoadFromDB(ctx, v.ID)
-			}
+		var redisSignalCache *sigsvc.RedisSignalCache
+		// Wire Redis signal cache for LiveSignalStore L2 and SSE Pub/Sub fanout.
+		if rdb := cacheStore.Underlying(); rdb != nil {
+			redisSignalCache = sigsvc.NewRedisSignalCache(rdb)
+			telemetryHandler.SetRedisCache(redisSignalCache)
+			log.Info().Msg("redis signal cache enabled")
 		}
-		log.Info().Msg("signal store initialized")
+
+		liveSignalStore, err := sigsvc.NewLiveSignalStore(signalStore, redisSignalCache, cfg.FleetTelemetry.LiveSignalStoreMode)
+		if err != nil {
+			log.Fatal().Err(err).Str("mode", cfg.FleetTelemetry.LiveSignalStoreMode).Msg("invalid LIVE_SIGNAL_STORE_MODE")
+		}
+		telemetryHandler.SetLiveSignalStore(liveSignalStore)
+		log.Info().
+			Str("mode", cfg.FleetTelemetry.LiveSignalStoreMode).
+			Bool("redis_l2", redisSignalCache != nil).
+			Msg("live signal store initialized")
+
+		vehicleRepo := database.NewVehicleRepo(db)
+		vehicles, err := vehicleRepo.GetAll(ctx)
+		if err != nil {
+			log.Warn().Err(err).Msg("live signal store: vehicle list unavailable during warmup")
+		}
+
+		// Warm each pod's local L1 from Redis first. This is best-effort restart
+		// recovery, not leader election; history fallback below is bounded so API
+		// pods do not wait indefinitely behind a thundering-herd signal scan.
+		for _, v := range vehicles {
+			warmCtx, warmCancel := context.WithTimeout(ctx, 5*time.Second)
+			if err := liveSignalStore.Warm(warmCtx, v.ID); err != nil {
+				log.Warn().Err(err).Int64("vehicle_id", v.ID).Msg("live signal store: Redis warmup failed")
+			}
+			warmCancel()
+		}
+		if len(vehicles) > 0 {
+			log.Info().Int("vehicles", len(vehicles)).Msg("live signal store warmed from Redis")
+		}
 
 		// Postgres signal_history writer (always-on per-signal history)
-		signalHistoryWriter = database.NewSignalHistoryWriter(db, 2*time.Second)
+		signalHistoryWriter = database.NewSignalHistoryWriter(db, 2*time.Second, cacheStore.Underlying())
 		telemetryHandler.SetSignalHistoryWriter(signalHistoryWriter)
 
-		// Hydrate remaining signals from signal_history (covers all 230+ signals)
-		// Must run before session/alert recovery so they see the full signal set.
-		if vehicles, err := database.NewVehicleRepo(db).GetAll(ctx); err == nil {
-			for _, v := range vehicles {
-				if extra, err := signalHistoryWriter.GetLatestPerSignal(ctx, v.ID); err == nil {
-					signalStore.Hydrate(v.ID, extra)
-				} else {
-					log.Warn().Err(err).Int64("vehicle_id", v.ID).Msg("signal store: hydration from signal_history failed")
-				}
+		// Hydrate remaining signals from signal_history (covers missing or legacy
+		// timestamp-less Redis values). Must run before session/alert recovery so
+		// they see the full local L1 signal set on this pod.
+		historyWarmCtx, historyWarmCancel := context.WithTimeout(ctx, 30*time.Second)
+		for _, v := range vehicles {
+			if historyWarmCtx.Err() != nil {
+				log.Warn().Err(historyWarmCtx.Err()).Msg("signal store: bounded signal_history hydration stopped early")
+				break
+			}
+			if extra, err := signalHistoryWriter.GetLatestPerSignal(historyWarmCtx, v.ID); err == nil {
+				signalStore.Hydrate(v.ID, extra)
+			} else {
+				log.Warn().Err(err).Int64("vehicle_id", v.ID).Msg("signal store: hydration from signal_history failed")
 			}
 		}
-		log.Info().Msg("signal store hydrated from signal_history")
+		historyWarmCancel()
+		if len(vehicles) > 0 {
+			log.Info().Int("vehicles", len(vehicles)).Msg("signal store hydrated from signal_history")
+		}
+
+		log.Info().Msg("signal store initialized")
 
 		go signalHistoryWriter.FlushLoop(ctx)
 		log.Info().Int("retention_days", cfg.Retention.SignalHistoryRetentionDays).Msg("Postgres signal_history writer started")
 
 		// Recover active drive/charge sessions from Postgres (pod restart resilience)
 		sessionTracker := telemetryHandler.SessionTracker()
+		signalLogReader := database.NewSignalLogReader(db)
 		if sessionTracker != nil {
+			sessionTracker.SetSignalLogReader(signalLogReader)
 			sessionTracker.RecoverSessions(ctx)
 			sessionTracker.ValidateRecoveredSessions(ctx)
+			sessionTracker.RecoverIncompleteSessions(ctx)
 			sessionTracker.StartBufferDrains(ctx)
 		}
 
@@ -260,6 +303,9 @@ func main() {
 		}
 
 		log.Info().Msg("FSM vehicle state engine active — declarative transition table with 20 transitions")
+
+		// Start FSM reconciliation loop (compares FSM state against signal store)
+		telemetryHandler.FSMHandler().StartReconcileLoop()
 
 		// MongoDB raw telemetry capture (optional)
 		if cfg.MongoDB.Enabled {
@@ -279,11 +325,10 @@ func main() {
 
 				// Read initial capture toggle from settings
 				settingsRepo := database.NewSettingsRepo(db)
-				if pc, err := settingsRepo.GetPollingConfig(ctx); err == nil {
-					telemetryHandler.SetCaptureEnabled(pc.TelemetryCapture)
-					if pc.TelemetryCapture {
-						log.Info().Msg("raw telemetry capture is ENABLED (from settings)")
-					}
+				if _, err := settingsRepo.GetPollingConfig(ctx); err == nil {
+					// TelemetryCapture toggle was removed in the typed-schema migration.
+					// Raw capture is now controlled via MongoDB availability only.
+					log.Debug().Msg("polling config loaded (telemetry capture toggle removed)")
 				}
 			}
 		}
@@ -436,8 +481,7 @@ func main() {
 			Msg("gas price worker started")
 	}
 
-	// Periodic component health checker — creates system alerts on state changes
-	alertRepo := database.NewAlertRepo(db)
+	// Periodic component health checker — sends notifications on state changes
 	notifRepo := database.NewNotificationRepo(db)
 	prevHealthState := make(map[string]resilience.ComponentStatus)
 	resilience.SafeGo("health-watchdog", func() {
@@ -492,27 +536,15 @@ func main() {
 						}
 						title := fmt.Sprintf("%s is %s", componentDisplayName(name), comp.Status.String())
 						message := fmt.Sprintf("Component %s has %d consecutive failures. Last error: %s", name, comp.ConsecFails, comp.LastError)
-						_ = alertRepo.Create(ctx, &models.Alert{
-							Type:     "system_" + name,
-							Severity: severity,
-							Title:    title,
-							Message:  message,
-						})
-						// Send notifications to all enabled channels
+						_ = severity // logged below
 						sendSystemNotification(ctx, notifRepo, mqttClient, "⚠️ "+title, message)
-						log.Warn().Str("component", name).Str("status", comp.Status.String()).Msg("system alert: component degraded")
+						log.Warn().Str("component", name).Str("status", comp.Status.String()).Str("severity", severity).Msg("system alert: component degraded")
 					}
 
 					// Component recovered
 					if prev >= resilience.StatusDegraded && comp.Status == resilience.StatusHealthy {
 						title := fmt.Sprintf("%s recovered", componentDisplayName(name))
 						message := fmt.Sprintf("Component %s is healthy again", name)
-						_ = alertRepo.Create(ctx, &models.Alert{
-							Type:     "system_" + name,
-							Severity: "info",
-							Title:    title,
-							Message:  message,
-						})
 						sendSystemNotification(ctx, notifRepo, mqttClient, "✅ "+title, message)
 						log.Info().Str("component", name).Msg("system alert: component recovered")
 					}
@@ -533,6 +565,16 @@ func main() {
 		}
 	})
 
+	// Provide OpenAPI spec to API layer (best-effort; non-fatal if missing)
+	// Try absolute path first (Docker), then relative (local dev)
+	specPaths := []string{"/docs/public/openapi.yaml", "docs/public/openapi.yaml"}
+	for _, p := range specPaths {
+		if specBytes, err := os.ReadFile(p); err == nil {
+			api.SetOpenAPISpec(specBytes)
+			break
+		}
+	}
+
 	// HTTP API
 	router := api.NewRouter(db, teslaClient, mqttClient, cfg, health, api.RouterOptions{
 		AppVersion:       Version,
@@ -541,6 +583,7 @@ func main() {
 		GasPriceWorker:   gasPriceWorker,
 		PollEngine:       pollEngine,
 		SignalStore:      signalStore,
+		CacheStore:       cacheStore,
 	})
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Port),
@@ -582,17 +625,15 @@ func main() {
 	// Phase 1: Stop accepting new work
 	cancel()
 
-	// Phase 2: Flush SignalStore to Postgres (write-through belt-and-suspenders)
-	if signalStore != nil {
-		// Wait for FlushLoop goroutine to exit before final flush
-		signalStore.WaitForFlushLoop()
-		flushCtx, flushCancel := context.WithTimeout(context.Background(), 30*time.Second)
-		signalStore.FlushAll(flushCtx)
-		flushCancel()
-	}
+	// Phase 2: Signal store no longer has Postgres flush (uses Redis + signal_log)
+	// Nothing to flush here.
 
 	// Phase 3: Shutdown telemetry handler goroutines
 	if telemetryHandler != nil {
+		// Stop FSM reconciliation before tearing down telemetry handler
+		if fsmH := telemetryHandler.FSMHandler(); fsmH != nil {
+			fsmH.StopReconcileLoop()
+		}
 		telemetryHandler.Shutdown()
 		// Final drain of any buffered telemetry writes
 		if st := telemetryHandler.SessionTracker(); st != nil {

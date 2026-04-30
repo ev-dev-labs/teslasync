@@ -14,6 +14,7 @@ import { FadeIn } from '@/components/motion';
 import {
   MapContainer, Marker, Popup, Polyline,
   MapTileLayer, MapInvalidator, MapLayerSwitcher,
+  vehicleIcon,
   type MapStyle,
 } from '@/components/maps';
 
@@ -24,7 +25,6 @@ import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { request } from '@/api/client';
-import 'leaflet/dist/leaflet.css';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -191,7 +191,7 @@ export default function MapOverviewPage() {
         header: t('mapOverview.colHeading', 'Heading'),
         render: (r) => (
           <span className="text-xs">
-            {r.elevation != null ? `${fmtNumber(r.elevation, 0)} m` : '—'}
+            {r.heading != null ? `${fmtNumber(r.heading, 0)}°` : '—'}
           </span>
         ),
       },
@@ -248,7 +248,7 @@ export default function MapOverviewPage() {
               >
                 <MapTileLayer style={mapStyle} />
                 <MapInvalidator />
-                <Marker position={[latest!.latitude, latest!.longitude]}>
+                <Marker position={[latest!.latitude, latest!.longitude]} icon={vehicleIcon()}>
                   <Popup>{vehicle?.display_name ?? t('mapOverview.vehicle', 'Vehicle')}</Popup>
                 </Marker>
                 {trailPositions.length > 1 && (
@@ -286,7 +286,7 @@ export default function MapOverviewPage() {
             />
             <MetricCard
               label={t('mapOverview.heading', 'Heading')}
-              value={latest.elevation != null ? `${fmtNumber(latest.elevation, 0)} m` : '—'}
+              value={latest.heading != null ? `${fmtNumber(latest.heading, 0)}°` : '—'}
               icon={<Compass className="h-4 w-4" />}
               color="purple"
             />

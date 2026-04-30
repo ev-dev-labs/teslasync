@@ -33,10 +33,10 @@ func (r *BackupRunRepo) UpdateStatus(ctx context.Context, id int64, status strin
 	return err
 }
 
-func (r *BackupRunRepo) Complete(ctx context.Context, id int64, fileName, filePath string, fileSize int64, recordCount, tableCount int, checksum string, durationMs int64) error {
+func (r *BackupRunRepo) Complete(ctx context.Context, id int64, status string, fileName, filePath string, fileSize int64, recordCount, tableCount int, checksum string, durationMs int64) error {
 	now := time.Now().UTC()
-	query := `UPDATE backup_runs SET status='completed', file_name=$2, file_path=$3, file_size=$4, record_count=$5, table_count=$6, checksum=$7, duration_ms=$8, completed_at=$9 WHERE id=$1`
-	_, err := r.db.Pool.Exec(ctx, query, id, fileName, filePath, fileSize, recordCount, tableCount, checksum, durationMs, now)
+	query := `UPDATE backup_runs SET status=$2, file_name=$3, file_path=$4, file_size=$5, record_count=$6, table_count=$7, checksum=$8, duration_ms=$9, completed_at=$10 WHERE id=$1`
+	_, err := r.db.Pool.Exec(ctx, query, id, status, fileName, filePath, fileSize, recordCount, tableCount, checksum, durationMs, now)
 	return err
 }
 

@@ -12,6 +12,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/port/external"
 )
 
@@ -73,7 +74,7 @@ func WithBaseURL(url string) Option {
 func NewEIAAdapter(apiKey string, opts ...Option) *EIAAdapter {
 	a := &EIAAdapter{
 		apiKey:      apiKey,
-		httpClient:  &http.Client{Timeout: 10 * time.Second},
+		httpClient:  &http.Client{Timeout: config.HTTPClientTimeout},
 		baseURL:     defaultEIABaseURL,
 		gallonToKWh: defaultGallonToKWhFactor,
 		cacheTTL:    time.Hour,
@@ -166,8 +167,9 @@ func (a *EIAAdapter) fetchFromEIA(ctx context.Context, region string) (*external
 		Msg("eia adapter: fetched price")
 
 	return &external.EnergyPrice{
-		PricePerKWh: kwhPrice,
-		Currency:    "USD",
-		Region:      region,
+		PricePerKWh:    kwhPrice,
+		PricePerGallon: gallonPrice,
+		Currency:       "USD",
+		Region:         region,
 	}, nil
 }

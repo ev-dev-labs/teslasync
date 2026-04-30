@@ -4,19 +4,20 @@ import { createPortal } from 'react-dom'
 import { cn } from '../../lib/cn'
 import { X } from 'lucide-react'
 
-const FOCUSABLE_SELECTOR = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+const FOCUSABLE_SELECTOR = 'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'
 
 interface DrawerProps {
   open: boolean
   onClose: () => void
   title?: string
   children: ReactNode
+  footer?: ReactNode
   side?: 'left' | 'right'
   className?: string
 }
 
 /** Slide-in side panel. */
-export function Drawer({ open, onClose, title, children, side = 'right', className }: DrawerProps) {
+export function Drawer({ open, onClose, title, children, footer, side = 'right', className }: DrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -31,8 +32,9 @@ export function Drawer({ open, onClose, title, children, side = 'right', classNa
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') { onClose(); return }
       if (e.key !== 'Tab') return
-      const first = focusable[0]
-      const last = focusable[focusable.length - 1]
+      const currentFocusable = drawer.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+      const first = currentFocusable[0]
+      const last = currentFocusable[currentFocusable.length - 1]
       if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus() }
       else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus() }
     }
@@ -61,7 +63,7 @@ export function Drawer({ open, onClose, title, children, side = 'right', classNa
         exit={{ x: side === 'right' ? '100%' : '-100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
         className={cn(
-          'absolute top-0 bottom-0 w-full max-w-md glass-panel rounded-none border-0',
+          'absolute top-0 bottom-0 flex w-full max-w-md flex-col glass-panel rounded-none border-0',
           side === 'right' ? 'right-0 border-l border-white/[0.06]' : 'left-0 border-r border-white/[0.06]',
           className,
         )}
@@ -74,9 +76,14 @@ export function Drawer({ open, onClose, title, children, side = 'right', classNa
             </button>
           </div>
         )}
-        <div className="overflow-y-auto p-6" style={{ maxHeight: title ? 'calc(100vh - 65px)' : '100vh' }}>
+        <div className="flex-1 overflow-y-auto p-6">
           {children}
         </div>
+        {footer && (
+          <div className="shrink-0 border-t border-white/[0.06] bg-black/20 px-6 py-4 backdrop-blur-xl">
+            {footer}
+          </div>
+        )}
       </motion.div>
     </div>,
     document.body,

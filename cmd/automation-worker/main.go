@@ -127,23 +127,13 @@ func main() {
 	cronTrig := trigger.NewCronTrigger(automationRepo, engine)
 	engine.SetCronTrigger(cronTrig)
 
-	mqttTrig := trigger.NewMQTTTrigger(automationRepo, engine, mqttClient)
-	engine.SetMQTTTrigger(mqttTrig)
+	signalTrig := trigger.NewSignalTrigger(automationRepo, engine)
+	engine.SetSignalTrigger(signalTrig)
 
-	sunTrig := trigger.NewSunriseSunsetTrigger(automationRepo, nil, engine)
-	engine.SetSunriseSunsetTrigger(sunTrig)
-
-	batteryTrig := trigger.NewBatteryTrigger(automationRepo, engine)
-	engine.SetBatteryTrigger(batteryTrig)
-
-	vehicleStateTrig := trigger.NewVehicleStateTrigger(automationRepo, engine)
-	engine.SetVehicleStateTrigger(vehicleStateTrig)
-
-	energyTrig := trigger.NewEnergyTrigger(automationRepo, engine)
-	engine.SetEnergyTrigger(energyTrig)
+	eventTrig := trigger.NewEventTrigger(automationRepo, engine)
+	engine.SetEventTrigger(eventTrig)
 
 	webhookTrig := trigger.NewWebhookTrigger(automationRepo, engine)
-	engine.SetWebhookTrigger(webhookTrig)
 
 	// ── Start Engine ──────────────────────────────────────────────────
 	if err := engine.Start(ctx); err != nil {

@@ -1,6 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
+import { STALE_TIMES, INTERVALS } from '@/lib/constants';
+import { useToast } from '@/components/feedback/Toast';
 import type { Drive as ApiDrive } from '../types';
 import type {
   Drive,
@@ -16,6 +18,9 @@ import type {
   RegenEfficiencyData,
   RouteEfficiencyData,
   DrivingCoachData,
+  TripPlan,
+  TripPlanRequest,
+  GeocodeResult,
 } from '@/types/driving';
 
 /** Fetches paginated driving sessions for a vehicle, optionally filtered by date range. */
@@ -55,6 +60,10 @@ export function useDrive(id: string) {
     queryKey: drivingKeys.drive(id),
     queryFn: () => request<DriveDetail>(`/drives/${id}`),
     enabled: !!id,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      return data?.live === true ? INTERVALS.FAST : false;
+    },
   });
 }
 
@@ -180,6 +189,35 @@ export function useDrivingCoach(vehicleId?: string, days = 30) {
     queryKey: drivingKeys.coach(vehicleId, days),
     queryFn: () => request<DrivingCoachData>(`/analytics/driving-coach?vehicle_id=${vehicleId}&days=${days}`),
     enabled: !!vehicleId,
-    staleTime: 5 * 60_000,
+    staleTime: STALE_TIMES.SLOW,
+  });
+}
+
+/* ── Trip Planner hooks─────────────────────────────────── */
+
+export function usePlanTrip() {
+  const toast = useToast();
+  return useMutation({
+    mutationFn: (params: TripPlanRequest) =>
+      request<TripPlan>('/trip-planner/plan', {
+        method: 'POST',
+        body: JSON.stringify(params),
+      }),
+    onSuccess: () => {
+      toast.success('Trip planned');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to plan trip: ${err.message}`);
+    },
+  });
+}
+
+export function useGeocodeSearch(query: string, enabled = true) {
+  return useQuery({
+    queryKey: ['geocode-search', query],
+    queryFn: () => request<GeocodeResult[]>(`/geocode/search?q=${encodeURIComponent(query)}&limit=5`),
+    enabled: enabled && query.length >= 3,
+    staleTime: STALE_TIMES.SLOW,
+    select: safeArray,
   });
 }

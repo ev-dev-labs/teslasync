@@ -30,7 +30,7 @@ type StaleSessionsResponse struct {
 	StaleDrives   []*models.Drive           `json:"stale_drives"`
 }
 
-// GetStaleSessions returns sessions with no end_date that started more than 24 hours ago.
+// GetStaleSessions returns sessions with no end_ts that started more than 24 hours ago.
 func (h *DataRepairHandler) GetStaleSessions(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	cutoff := time.Now().UTC().Add(-24 * time.Hour)
@@ -144,7 +144,7 @@ func (h *DataRepairHandler) UpdateDrive(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, updated)
 }
 
-// CloseCharging sets end_date=NOW() and calculates duration from start_date.
+// CloseCharging sets end_ts=NOW() and calculates duration from start_ts.
 func (h *DataRepairHandler) CloseCharging(w http.ResponseWriter, r *http.Request) {
 	id, err := urlParamInt64(r, "id")
 	if err != nil {
@@ -165,10 +165,10 @@ func (h *DataRepairHandler) CloseCharging(w http.ResponseWriter, r *http.Request
 	}
 
 	now := time.Now().UTC()
-	duration := math.Round(now.Sub(session.StartDate).Minutes()*100) / 100
+	duration := math.Round(now.Sub(session.StartTs).Minutes()*100) / 100
 
 	patch := map[string]interface{}{
-		"end_date":     now.Format(time.RFC3339),
+		"end_ts":       now.Format(time.RFC3339),
 		"duration_min": duration,
 	}
 	if err := h.chargingRepo.PartialUpdate(ctx, id, patch); err != nil {
@@ -179,7 +179,7 @@ func (h *DataRepairHandler) CloseCharging(w http.ResponseWriter, r *http.Request
 	writeJSON(w, http.StatusOK, map[string]string{"status": "closed"})
 }
 
-// CloseDrive sets end_date=NOW() and calculates duration from start_date.
+// CloseDrive sets end_ts=NOW() and calculates duration from start_ts.
 func (h *DataRepairHandler) CloseDrive(w http.ResponseWriter, r *http.Request) {
 	id, err := urlParamInt64(r, "id")
 	if err != nil {
@@ -200,10 +200,10 @@ func (h *DataRepairHandler) CloseDrive(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := time.Now().UTC()
-	duration := math.Round(now.Sub(drive.StartDate).Minutes()*100) / 100
+	duration := math.Round(now.Sub(drive.StartTs).Minutes()*100) / 100
 
 	patch := map[string]interface{}{
-		"end_date":     now.Format(time.RFC3339),
+		"end_ts":       now.Format(time.RFC3339),
 		"duration_min": duration,
 	}
 	if err := h.driveRepo.PartialUpdate(ctx, id, patch); err != nil {

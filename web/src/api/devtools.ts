@@ -1,4 +1,4 @@
-import { request, getApiBase } from './client'
+import { apiUrl, request } from './client'
 import type {
   CaptureStats,
   TelemetryStatus,
@@ -28,6 +28,21 @@ import type {
 // === Telemetry Capture ===
 export const getCaptureStats = () => request<CaptureStats>('/dev-tools/telemetry-capture/stats')
 
+// === Redis Signal Cache ===
+export interface RedisSignalEntry {
+  value: number | string | boolean
+  type: 'number' | 'string' | 'boolean'
+}
+
+export interface RedisSignalsResponse {
+  vehicle_id: number
+  signal_count: number
+  signals: Record<string, RedisSignalEntry>
+}
+
+export const getRedisSignals = (vehicleId: number) =>
+  request<RedisSignalsResponse>(`/dev-tools/redis-signals?vehicle_id=${vehicleId}`)
+
 // === Fleet Telemetry ===
 export const getTelemetryStatus = () =>
   request<TelemetryStatus>('/telemetry')
@@ -39,6 +54,7 @@ export const getAPICallLogs = (params: {
   method?: string
   status?: string
   endpoint?: string
+  service?: string
   start?: string
   end?: string
 } = {}) => {
@@ -48,6 +64,7 @@ export const getAPICallLogs = (params: {
   if (params.method) query.set('method', params.method)
   if (params.status) query.set('status', params.status)
   if (params.endpoint) query.set('endpoint', params.endpoint)
+  if (params.service) query.set('service', params.service)
   if (params.start) query.set('start', params.start)
   if (params.end) query.set('end', params.end)
   return request<APICallLogResponse>(`/api-logs?${query.toString()}`)
@@ -56,29 +73,13 @@ export const getAPICallLogs = (params: {
 export const getAPICallLogStats = () => request<APICallLogStats>('/api-logs/stats')
 
 // === System / Admin ===
-export async function getAPIUsage(): Promise<APIUsage> {
-  const res = await fetch(`${getApiBase()}/api/v1/system/api-usage`)
-  if (!res.ok) throw new Error('Failed to fetch API usage')
-  return res.json()
-}
+export const getAPIUsage = () => request<APIUsage>('/system/api-usage')
 
-export async function getCompressionStats(): Promise<CompressionStats> {
-  const res = await fetch(`${getApiBase()}/api/v1/system/compression-stats`)
-  if (!res.ok) throw new Error('Failed to fetch compression stats')
-  return res.json()
-}
+export const getCompressionStats = () => request<CompressionStats>('/system/compression-stats')
 
-export async function getExtendedHealth(): Promise<ExtendedHealthResponse> {
-  const res = await fetch(`${getApiBase()}/api/v1/system/health`)
-  if (!res.ok) throw new Error('Failed to fetch health')
-  return res.json()
-}
+export const getExtendedHealth = () => request<ExtendedHealthResponse>('/system/health')
 
-export async function getBackupStats(): Promise<BackupStats> {
-  const res = await fetch(`${getApiBase()}/api/v1/system/backup/stats`)
-  if (!res.ok) throw new Error('Failed to fetch backup stats')
-  return res.json()
-}
+export const getBackupStats = () => request<BackupStats>('/system/backup/stats')
 
 // === Workers Health ===
 /** Fetches health status of background worker services. */
@@ -114,7 +115,7 @@ export const triggerBackup = (configId: number) => request<BackupRun>(`/backup/c
 export const triggerQuickBackup = () => request<BackupRun>('/backup/quick', { method: 'POST' })
 export const getBackupRuns = (limit = 50, offset = 0) => request<BackupRun[]>(`/backup/runs?limit=${limit}&offset=${offset}`)
 export const getBackupRun = (id: number) => request<BackupRun>(`/backup/runs/${id}`)
-export const downloadBackup = (runId: number) => window.open(`${getApiBase()}/api/v1/backup/runs/${runId}/download`, '_blank')
+export const downloadBackup = (runId: number) => window.open(apiUrl(`/backup/runs/${runId}/download`), '_blank')
 export const verifyBackup = (runId: number) => request<{ verified: boolean; error?: string; checksum?: string }>(`/backup/runs/${runId}/verify`, { method: 'POST' })
 export const previewRestore = (runId: number) => request<{ tables: { name: string; rows: number }[]; metadata: Record<string, unknown>; checksum_verified: boolean }>(`/backup/runs/${runId}/preview`)
 
@@ -139,7 +140,7 @@ export const getExportJobs = (limit?: number, offset?: number) =>
 export const getExportJob = (jobId: string) =>
   request<ExportJobSummary>(`/export/jobs/${jobId}`)
 export const getExportJobDownloadUrl = (jobId: string) =>
-  `${getApiBase()}/export/jobs/${jobId}/download`
+  apiUrl(`/export/jobs/${jobId}/download`)
 export const submitImportJob = (type: 'import_drives' | 'import_charging', file: File) => {
   const formData = new FormData()
   formData.append('type', type)

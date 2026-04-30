@@ -184,7 +184,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  time,\n  CASE WHEN severity = 'critical' THEN z_score END AS \"Critical\",\n  CASE WHEN severity = 'warning' THEN z_score END AS \"Warning\",\n  CASE WHEN severity = 'info' THEN z_score END AS \"Info\",\n  signal AS \"Signal\",\n  type AS \"Type\"\nFROM fn_anomaly_timeline(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
+          "rawSql": "SELECT\n  a.created_at AS time,\n  CASE WHEN a.severity = 'critical' THEN NULL::double precision END AS \"Critical\",\n  CASE WHEN a.severity = 'warning' THEN NULL::double precision END AS \"Warning\",\n  CASE WHEN a.severity = 'info' THEN NULL::double precision END AS \"Info\",\n  a.title AS \"Signal\",\n  a.type AS \"Type\"\nFROM alerts a\nWHERE a.vehicle_id = ${vehicle_id}\n  AND a.created_at >= $__timeFrom()::timestamptz\n  AND a.created_at <= $__timeTo()::timestamptz\nORDER BY a.created_at",
           "refId": "A"
         }
       ],
@@ -298,7 +298,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT severity AS \"Severity\", count AS \"Count\"\nFROM fn_anomaly_severity_distribution(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
+          "rawSql": "SELECT a.severity AS \"Severity\", COUNT(*)::bigint AS \"Count\"\nFROM alerts a\nWHERE a.vehicle_id = ${vehicle_id}\n  AND a.created_at >= $__timeFrom()::timestamptz\n  AND a.created_at <= $__timeTo()::timestamptz\nGROUP BY a.severity\nORDER BY CASE a.severity WHEN 'critical' THEN 1 WHEN 'warning' THEN 2 WHEN 'info' THEN 3 ELSE 4 END",
           "refId": "A"
         }
       ],
@@ -476,7 +476,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  time AS \"Time\",\n  signal AS \"Signal\",\n  type AS \"Type\",\n  severity AS \"Severity\",\n  z_score AS \"Z-Score\",\n  description AS \"Description\"\nFROM fn_anomaly_recent(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
+          "rawSql": "SELECT\n  a.created_at AS \"Time\",\n  a.title AS \"Signal\",\n  a.type AS \"Type\",\n  a.severity AS \"Severity\",\n  NULL::numeric AS \"Z-Score\",\n  a.message AS \"Description\"\nFROM alerts a\nWHERE a.vehicle_id = ${vehicle_id}\n  AND a.created_at >= $__timeFrom()::timestamptz\n  AND a.created_at <= $__timeTo()::timestamptz\nORDER BY a.created_at DESC LIMIT 50",
           "refId": "A"
         }
       ],
@@ -550,7 +550,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT * FROM fn_anomaly_count_by_type(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
+          "rawSql": "SELECT a.type AS category, COUNT(*)::bigint AS count\nFROM alerts a\nWHERE a.vehicle_id = ${vehicle_id}\n  AND a.created_at >= $__timeFrom()::timestamptz\n  AND a.created_at <= $__timeTo()::timestamptz\nGROUP BY a.type\nORDER BY COUNT(*) DESC",
           "refId": "A"
         }
       ],

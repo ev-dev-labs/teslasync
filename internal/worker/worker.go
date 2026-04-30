@@ -12,6 +12,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
@@ -39,7 +40,6 @@ type Worker struct {
 	chargeRepo    *database.ChargingRepo
 	tokenRepo     *database.TokenRepo
 	alertRuleRepo *database.AlertRuleRepo
-	alertRepo     *database.AlertRepo
 	settingsRepo  *database.SettingsRepo
 	teslaClient   *tesla.Client
 	mqttClient    *mqtt.Client
@@ -66,7 +66,7 @@ type Worker struct {
 	fallbackPollInterval time.Duration // overrides cfg.PollInterval when fleet telemetry is primary
 
 	// Cached polling config — refreshed each poll cycle from the database.
-	pollingConfig *models.PollingConfig
+	pollingConfig *models.LegacyPollingConfig
 
 	// Adaptive polling engine — evaluates API responses to determine optimal
 	// poll intervals. When set, replaces the fixed-interval backoff logic.
@@ -84,7 +84,6 @@ func New(db *database.DB, tc *tesla.Client, mc *mqtt.Client, cfg config.WorkerCo
 		chargeRepo:        database.NewChargingRepo(db),
 		tokenRepo:         database.NewTokenRepo(db, enc),
 		alertRuleRepo:     database.NewAlertRuleRepo(db),
-		alertRepo:         database.NewAlertRepo(db),
 		settingsRepo:      database.NewSettingsRepo(db),
 		teslaClient:       tc,
 		mqttClient:        mc,
@@ -130,7 +129,7 @@ func (w *Worker) Start(ctx context.Context) {
 	defer ticker.Stop()
 
 	// Token refresh ticker (every 30 minutes)
-	refreshTicker := time.NewTicker(30 * time.Minute)
+	refreshTicker := time.NewTicker(config.AuthRefreshInterval)
 	defer refreshTicker.Stop()
 
 	for {
@@ -224,13 +223,11 @@ func (w *Worker) pollAllVehicles(ctx context.Context) {
 		return
 	}
 
-	// Load polling config for this cycle
-	pc, err := w.settingsRepo.GetPollingConfig(ctx)
-	if err != nil {
-		log.Warn().Err(err).Msg("failed to load polling config, using defaults")
-		defaultPC := models.DefaultPollingConfig()
-		pc = &defaultPC
-	}
+	// Load polling config for this cycle (per-vehicle configs are in the
+	// polling_config table; the worker still uses the legacy feature-flag
+	// struct for endpoint selection until the full migration is complete).
+	defaultPC := models.DefaultPollingConfig()
+	pc := &defaultPC
 	w.pollingConfig = pc
 
 	// When fleet telemetry is primary, periodically discover new vehicles
@@ -337,11 +334,9 @@ func (w *Worker) discoverVehicles(ctx context.Context) {
 
 		// New vehicle discovered — create it
 		v := &models.Vehicle{
-			VehicleID:   tv.VehicleID,
+			TeslaID:     tv.VehicleID,
 			VIN:         tv.VIN,
 			DisplayName: tv.DisplayName,
-			State:       tv.State,
-			Healthy:     true,
 		}
 		if err := w.vehicleRepo.Create(ctx, v); err != nil {
 			log.Error().Err(err).Str("vin", tv.VIN).Msg("fleet telemetry: failed to create discovered vehicle")
@@ -439,10 +434,7 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *models.Vehicle) {
 
 	data, err := w.teslaClient.GetVehicleData(pollCtx, vehicle.VIN, endpoints...)
 	if errors.Is(err, tesla.ErrVehicleAsleep) {
-		if err := w.vehicleRepo.UpdateState(ctx, vehicle.ID, "asleep", true); err != nil {
-			logger.Error().Err(err).Msg("failed to update vehicle state")
-		}
-		w.publishMQTT(vehicle, "state", "asleep")
+		w.publishMQTT(vehicle, "state", enums.StateAsleep)
 		w.recordVehicleAsleep(vehicle.ID)
 		if w.PollEngine != nil {
 			w.PollEngine.MarkSleeping(vehicle.VIN)
@@ -478,9 +470,6 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *models.Vehicle) {
 	} else if err != nil {
 		logger.Warn().Err(err).Msg("failed to get vehicle data")
 		metrics.PollsTotal.WithLabelValues("error").Inc()
-		if err := w.vehicleRepo.UpdateState(ctx, vehicle.ID, vehicle.State, false); err != nil {
-			logger.Error().Err(err).Msg("failed to mark vehicle unhealthy")
-		}
 		w.recordVehicleFailure(vehicle.ID)
 		return
 	}
@@ -490,14 +479,9 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *models.Vehicle) {
 	metrics.PollsTotal.WithLabelValues("success").Inc()
 	metrics.PollCycleDuration.Observe(time.Since(pollStart).Seconds())
 
-	// Update vehicle state
-	if err := w.vehicleRepo.UpdateState(ctx, vehicle.ID, data.State, true); err != nil {
-		logger.Error().Err(err).Msg("failed to update vehicle state")
-	}
-
 	// Store position
 	pos := w.buildPosition(vehicle.ID, data)
-	if err := w.posRepo.Insert(ctx, pos); err != nil {
+	if err := w.posRepo.BulkInsert(ctx, []models.Position{*pos}); err != nil {
 		logger.Error().Err(err).Msg("failed to insert position")
 	}
 
@@ -530,34 +514,19 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *models.Vehicle) {
 
 func (w *Worker) buildPosition(vehicleID int64, data *tesla.VehicleDataResponse) *models.Position {
 	p := &models.Position{
-		VehicleID:  vehicleID,
-		Latitude:   data.DriveState.Latitude,
-		Longitude:  data.DriveState.Longitude,
-		Odometer:   data.VehicleState.Odometer,
-		BatteryLvl: data.ChargeState.BatteryLevel,
+		VehicleID: vehicleID,
+		Ts:        time.Now(),
+		Latitude:  data.DriveState.Latitude,
+		Longitude: data.DriveState.Longitude,
+		Source:    "polling",
 	}
 
 	if data.DriveState.Speed != nil {
 		s := float64(*data.DriveState.Speed)
-		p.Speed = &s
+		p.SpeedMph = &s
 	}
-	power := float64(data.DriveState.Power)
-	p.Power = &power
-	heading := data.DriveState.Heading
+	heading := int16(data.DriveState.Heading)
 	p.Heading = &heading
-
-	idealRange := data.ChargeState.IdealBatteryRange
-	p.IdealRange = &idealRange
-	ratedRange := data.ChargeState.BatteryRange
-	p.RatedRange = &ratedRange
-	insideTemp := data.ClimateState.InsideTemp
-	p.InsideTemp = &insideTemp
-	outsideTemp := data.ClimateState.OutsideTemp
-	p.OutsideTemp = &outsideTemp
-	fanStatus := data.ClimateState.FanStatus
-	p.FanStatus = &fanStatus
-	isClimate := data.ClimateState.IsClimateOn
-	p.IsClimate = &isClimate
 
 	return p
 }
@@ -588,55 +557,48 @@ func (w *Worker) evaluateAlerts(ctx context.Context, vehicle *models.Vehicle, da
 		var triggered bool
 		var message string
 
-		switch rule.Type {
-		case "battery_low":
-			if float64(data.ChargeState.BatteryLevel) <= rule.Threshold {
+		threshold := float64(0)
+		if rule.ValueNum != nil {
+			threshold = *rule.ValueNum
+		}
+
+		switch rule.SignalName {
+		case "battery_level":
+			val := float64(data.ChargeState.BatteryLevel)
+			if alertNumericOp(val, rule.Op, threshold) {
 				triggered = true
-				message = fmt.Sprintf("Battery at %d%% (threshold: %.0f%%)", data.ChargeState.BatteryLevel, rule.Threshold)
+				message = fmt.Sprintf("Battery at %d%% (threshold: %.0f%%)", data.ChargeState.BatteryLevel, threshold)
 			}
-		case "battery_high":
-			if float64(data.ChargeState.BatteryLevel) >= rule.Threshold {
-				triggered = true
-				message = fmt.Sprintf("Battery at %d%% (threshold: %.0f%%)", data.ChargeState.BatteryLevel, rule.Threshold)
+		case "vehicle_speed":
+			if data.DriveState.Speed != nil {
+				val := float64(*data.DriveState.Speed)
+				if alertNumericOp(val, rule.Op, threshold) {
+					triggered = true
+					message = fmt.Sprintf("Speed %d km/h exceeds limit of %.0f km/h", *data.DriveState.Speed, threshold)
+				}
 			}
-		case "speed_limit":
-			if data.DriveState.Speed != nil && float64(*data.DriveState.Speed) > rule.Threshold {
-				triggered = true
-				message = fmt.Sprintf("Speed %d km/h exceeds limit of %.0f km/h", *data.DriveState.Speed, rule.Threshold)
-			}
-		case "charge_complete":
-			if data.ChargeState.ChargingState == "Complete" {
+		case "charging_state":
+			if rule.ValueText != nil && data.ChargeState.ChargingState == *rule.ValueText {
 				triggered = true
 				message = fmt.Sprintf("Charging complete at %d%%", data.ChargeState.BatteryLevel)
 			}
-		case "vehicle_offline":
-			if data.State == "offline" {
+		case "vehicle_state":
+			if rule.ValueText != nil && data.State == *rule.ValueText {
 				triggered = true
-				message = "Vehicle is offline"
+				message = fmt.Sprintf("Vehicle is %s", data.State)
 			}
 		}
 
 		if triggered {
-			vid := vehicle.ID
-			alert := &models.Alert{
-				VehicleID: &vid,
-				Type:      rule.Type,
-				Title:     rule.Name,
-				Message:   message,
-			}
-			if err := w.alertRepo.Create(ctx, alert); err != nil {
-				log.Warn().Err(err).Str("type", rule.Type).Msg("failed to create alert")
-			}
-
 			if w.eventBus != nil {
 				w.eventBus.Publish(events.Event{
 					Type:      events.AlertTriggered,
 					VehicleID: vehicle.ID,
 					VIN:       vehicle.VIN,
 					Data: map[string]interface{}{
-						"rule_type": rule.Type,
+						"rule_type": rule.SignalName,
 						"message":   message,
-						"threshold": rule.Threshold,
+						"threshold": threshold,
 					},
 				})
 			}
@@ -645,6 +607,25 @@ func (w *Worker) evaluateAlerts(ctx context.Context, vehicle *models.Vehicle, da
 			w.sendAlertNotifications(ctx, vehicle, rule.Name, message)
 		}
 	}
+}
+
+// alertNumericOp evaluates val <op> threshold for alert rule evaluation.
+func alertNumericOp(val float64, op string, threshold float64) bool {
+	switch op {
+	case "<=":
+		return val <= threshold
+	case ">=":
+		return val >= threshold
+	case ">":
+		return val > threshold
+	case "<":
+		return val < threshold
+	case "=":
+		return val == threshold
+	case "!=":
+		return val != threshold
+	}
+	return false
 }
 
 func (w *Worker) sendAlertNotifications(ctx context.Context, vehicle *models.Vehicle, title, message string) {

@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
+import { INTERVALS, STALE_TIMES } from '@/lib/constants';
+import { useToast } from '@/components/feedback/Toast';
 import type {
   EnergyStats,
   BatteryHealth,
@@ -43,7 +45,7 @@ export function useBatteryCells(vehicleId: string | null) {
     queryFn: () => request<BatteryCellSummary>(`/vehicles/${vehicleId}/battery/cells`),
     enabled: vehicleId !== null,
     retry: false,
-    staleTime: Infinity,
+    staleTime: STALE_TIMES.STATIC,
   });
 }
 
@@ -68,9 +70,9 @@ export function useEnergyFlow(vehicleId: string | null) {
     queryKey: ['energy-flow', vehicleId],
     queryFn: () => request<EnergyFlowData>(`/vehicles/${vehicleId}/energy/flow`),
     enabled: vehicleId !== null,
-    refetchInterval: 5000,
+    refetchInterval: INTERVALS.REALTIME,
     retry: false,
-    staleTime: Infinity,
+    staleTime: STALE_TIMES.STATIC,
   });
 }
 
@@ -97,7 +99,7 @@ export function useProjectedRange(vehicleId: string | null) {
     queryFn: () => request<ProjectedRangeData>(`/vehicles/${vehicleId}/battery/projected-range`),
     enabled: vehicleId !== null,
     retry: false,
-    staleTime: Infinity,
+    staleTime: STALE_TIMES.STATIC,
   });
 }
 
@@ -117,18 +119,23 @@ export function useTeslaEnergySites() {
   return useQuery({
     queryKey: ['tesla-energy-sites'],
     queryFn: () => request<TeslaEnergySite[]>('/tesla/energy-sites'),
-    staleTime: 60_000,
+    staleTime: STALE_TIMES.STANDARD,
     select: safeArray,
   });
 }
 
 export function useRefreshTeslaEnergySites() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: () =>
       request<TeslaEnergySite[]>('/tesla/energy-sites/refresh', { method: 'POST' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tesla-energy-sites'] });
+      toast.success('Energy sites refreshed');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to refresh energy sites: ${err.message}`);
     },
   });
 }
@@ -139,12 +146,13 @@ export function useTeslaEnergySiteInfo(siteId?: number) {
     queryFn: () =>
       request<TeslaEnergySiteInfoResponse>(`/tesla/energy-sites/${siteId}/site-info`),
     enabled: !!siteId,
-    staleTime: 5 * 60_000,
+    staleTime: STALE_TIMES.SLOW,
   });
 }
 
 export function useRefreshTeslaEnergySiteInfo() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: (siteId: number) =>
       request<TeslaEnergySiteInfoResponse>(
@@ -153,12 +161,17 @@ export function useRefreshTeslaEnergySiteInfo() {
       ),
     onSuccess: (_data, siteId) => {
       queryClient.invalidateQueries({ queryKey: ['tesla-site-info', siteId] });
+      toast.success('Site info refreshed');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to refresh site info: ${err.message}`);
     },
   });
 }
 
 export function useUpdateTOUSettings() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: ({ siteId, settings }: { siteId: number; settings: TOUSettingsPayload }) =>
       request(`/tesla/energy-sites/${siteId}/tou-settings`, {
@@ -168,6 +181,10 @@ export function useUpdateTOUSettings() {
       }),
     onSuccess: (_data, { siteId }) => {
       queryClient.invalidateQueries({ queryKey: ['tesla-site-info', siteId] });
+      toast.success('TOU settings saved');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to save TOU settings: ${err.message}`);
     },
   });
 }
@@ -193,7 +210,7 @@ export function useTeslaEnergyHistory(
         `/tesla/energy-sites/${siteId}/energy-history?${params.toString()}`,
       ),
     enabled: !!siteId,
-    staleTime: 5 * 60_000,
+    staleTime: STALE_TIMES.SLOW,
     select: safeArray,
   });
 }
@@ -214,7 +231,7 @@ export function useTeslaBackupHistory(
         `/tesla/energy-sites/${siteId}/backup-history?${params.toString()}`,
       ),
     enabled: !!siteId,
-    staleTime: 5 * 60_000,
+    staleTime: STALE_TIMES.SLOW,
     select: safeArray,
   });
 }
@@ -235,12 +252,12 @@ export function useTeslaWCChargingHistory(
         `/tesla/energy-sites/${siteId}/charging-history?${params.toString()}`,
       ),
     enabled: !!siteId,
-    staleTime: 5 * 60_000,
+    staleTime: STALE_TIMES.SLOW,
     select: safeArray,
   });
 }
 
-interface RefreshParams {
+interface RefreshParams{
   siteId: number;
   start_date?: string;
   end_date?: string;
@@ -250,6 +267,7 @@ interface RefreshParams {
 
 export function useRefreshTeslaEnergyHistory() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: ({ siteId, period = 'day', start_date, end_date, time_zone }: RefreshParams) => {
       const params = new URLSearchParams({ period });
@@ -263,12 +281,17 @@ export function useRefreshTeslaEnergyHistory() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tesla-energy-history'] });
+      toast.success('Energy history refreshed');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to refresh energy history: ${err.message}`);
     },
   });
 }
 
 export function useRefreshTeslaBackupHistory() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: ({ siteId, period = 'day', start_date, end_date, time_zone }: RefreshParams) => {
       const params = new URLSearchParams({ period });
@@ -282,12 +305,17 @@ export function useRefreshTeslaBackupHistory() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tesla-backup-history'] });
+      toast.success('Backup history refreshed');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to refresh backup history: ${err.message}`);
     },
   });
 }
 
 export function useRefreshTeslaWCChargingHistory() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: ({ siteId, start_date, end_date, time_zone }: RefreshParams) => {
       const params = new URLSearchParams();
@@ -301,6 +329,10 @@ export function useRefreshTeslaWCChargingHistory() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tesla-wc-charging-history'] });
+      toast.success('Wall Connector charging history refreshed');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to refresh WC charging history: ${err.message}`);
     },
   });
 }
@@ -315,7 +347,7 @@ export function useTeslaEnergyLiveStatus(siteId?: number) {
     queryFn: () =>
       request<TeslaEnergyLiveStatus>(`/tesla/energy-sites/${siteId}/live-status`),
     enabled: !!siteId,
-    refetchInterval: 30_000,
+    refetchInterval: INTERVALS.STANDARD,
   });
 }
 
@@ -337,13 +369,14 @@ export function useTeslaEnergyLiveStatusHistory(
         `/tesla/energy-sites/${siteId}/live-status/history?${params.toString()}`,
       ),
     enabled: !!siteId,
-    staleTime: 60_000,
+    staleTime: STALE_TIMES.STANDARD,
     select: safeArray,
   });
 }
 
 export function useRefreshTeslaEnergyLiveStatus() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: (siteId: number) =>
       request<TeslaEnergyLiveStatus>(
@@ -353,6 +386,10 @@ export function useRefreshTeslaEnergyLiveStatus() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tesla-live-status'] });
       queryClient.invalidateQueries({ queryKey: ['tesla-live-status-history'] });
+      toast.success('Live status refreshed');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to refresh live status: ${err.message}`);
     },
   });
 }

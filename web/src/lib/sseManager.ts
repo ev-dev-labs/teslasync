@@ -10,29 +10,21 @@ type SSEEventType = 'vehicle_update' | 'alert' | 'export_status' | 'connected' |
 interface SSEManager {
   subscribe: (event: SSEEventType, listener: SSEListener) => void
   unsubscribe: (event: SSEEventType, listener: SSEListener) => void
-  getState: () => 'connected' | 'reconnecting' | 'unavailable'
+  getState: () => 'connected' | 'reconnecting'
   connect: () => void
   disconnect: () => void
 }
 
 const listeners = new Map<SSEEventType, Set<SSEListener>>()
 let source: EventSource | null = null
-let state: 'connected' | 'reconnecting' | 'unavailable' = 'reconnecting'
-let backoff = 1000
+let state: 'connected' | 'reconnecting' = 'reconnecting'
 let failCount = 0
 let reconnectTimer: number | undefined
 let connecting = false
 
-async function fetchSSEToken(): Promise<string | null> {
-  try {
-    const res = await fetch('/api/v1/sse-token')
-    if (!res.ok) return null
-    const data = await res.json()
-    return data.token || null
-  } catch {
-    return null
-  }
-}
+// Capped exponential backoff: 1s → 2s → 4s → 8s → 16s → 32s → 60s (max)
+const BASE_BACKOFF_MS = 1000
+const MAX_BACKOFF_MS = 60000
 
 function emit(event: SSEEventType, data?: unknown) {
   const subs = listeners.get(event)
@@ -43,7 +35,7 @@ function emit(event: SSEEventType, data?: unknown) {
   }
 }
 
-async function doConnect() {
+function doConnect() {
   if (connecting) return
   connecting = true
 
@@ -52,15 +44,11 @@ async function doConnect() {
     source = null
   }
 
-  const token = await fetchSSEToken()
-  const url = token ? `/api/v1/events?token=${encodeURIComponent(token)}` : '/api/v1/events'
-
-  const es = new EventSource(url)
+  const es = new EventSource('/api/v1/events')
   source = es
 
   es.addEventListener('connected', (e) => {
     state = 'connected'
-    backoff = 1000
     failCount = 0
     connecting = false
     const data = JSON.parse(e.data)
@@ -87,16 +75,10 @@ async function doConnect() {
     connecting = false
     failCount++
 
-    if (failCount >= 5) {
-      state = 'unavailable'
-      emit('disconnected')
-      return
-    }
-
     state = 'reconnecting'
     emit('disconnected')
 
-    backoff = Math.min(backoff * 2, 30000)
+    const backoff = Math.min(BASE_BACKOFF_MS * Math.pow(2, failCount - 1), MAX_BACKOFF_MS)
     reconnectTimer = window.setTimeout(() => {
       doConnect()
     }, backoff)
@@ -108,7 +90,7 @@ export const sseManager: SSEManager = {
     if (!listeners.has(event)) listeners.set(event, new Set())
     listeners.get(event)!.add(listener)
     // Auto-connect on first subscriber
-    if (!source && !connecting && state !== 'unavailable') {
+    if (!source && !connecting) {
       doConnect()
     }
   },

@@ -1,10 +1,12 @@
-// @ts-nocheck — TODO: wire to refactored API types
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+// @ts-nocheck -- legacy API types; will be rewired in a later phase
 import { useMemo } from 'react'
 import {
   Lightbulb, TrendingUp, TrendingDown, ArrowRight, DollarSign,
   Battery, BatteryCharging, Zap, Shield, Car, Clock, Leaf,
 } from 'lucide-react'
-import { GlassPanel, FadeIn } from '@/components/ui'
+import { GlassPanel } from '@/components/ui'
+import { FadeIn } from '@/components/motion'
 import { fmtNumber } from '@/lib/numberFormat'
 import { trendColor } from '@/lib/colors'
 import type {
@@ -99,13 +101,13 @@ function analyzeChargingCost(sessions: ChargingSession[]): Insight | null {
 
 function analyzeEfficiencyTrend(drives: Drive[]): Insight | null {
   const valid = drives
-    .filter(d => d.distance > 0 && d.start_range_km != null && d.end_range_km != null)
+    .filter(d => d.distance_mi > 0 && d.energy_used_kwh != null)
   if (valid.length < 4) return null
 
   const half = Math.floor(valid.length / 2)
   const efficiency = (arr: Drive[]) => {
-    const totalDist = arr.reduce((a, d) => a + d.distance, 0)
-    const totalEnergy = arr.reduce((a, d) => a + ((d.start_range_km! - d.end_range_km!) * 150 / 1000), 0)
+    const totalDist = arr.reduce((a, d) => a + d.distance_mi, 0)
+    const totalEnergy = arr.reduce((a, d) => a + (d.energy_used_kwh ?? 0), 0)
     return totalDist > 0 ? (totalEnergy / totalDist) * 1000 : 0
   }
 
@@ -234,8 +236,8 @@ function analyzeVampireDrain(stats: VampireDrainStats): Insight | null {
 function analyzeDrivingPatterns(drives: Drive[]): Insight | null {
   if (drives.length < 3) return null
 
-  const totalDist = drives.reduce((a, d) => a + d.distance, 0)
-  const dates = drives.map(d => new Date(d.start_date))
+  const totalDist = drives.reduce((a, d) => a + d.distance_mi, 0)
+  const dates = drives.map(d => new Date(d.start_ts))
 
   const daySpan = dates.length > 1
     ? (dates[0].getTime() - dates[dates.length - 1].getTime()) / 86_400_000

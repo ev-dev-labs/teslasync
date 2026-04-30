@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
@@ -30,10 +31,11 @@ func (h *NotificationHandler) ListChannels(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusInternalServerError, "failed to list channels")
 		return
 	}
-	if channels == nil {
-		channels = []*models.NotificationChannel{}
+	resp := make([]map[string]interface{}, 0, len(channels))
+	for _, ch := range channels {
+		resp = append(resp, normalizeChannelResponse(ch))
 	}
-	writeJSON(w, http.StatusOK, channels)
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func (h *NotificationHandler) GetChannel(w http.ResponseWriter, r *http.Request) {
@@ -47,47 +49,33 @@ func (h *NotificationHandler) GetChannel(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusNotFound, "channel not found")
 		return
 	}
-	writeJSON(w, http.StatusOK, ch)
+	writeJSON(w, http.StatusOK, normalizeChannelResponse(ch))
 }
 
 func (h *NotificationHandler) CreateChannel(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		Name    string            `json:"name"`
-		Type    string            `json:"type"`
-		Config  map[string]string `json:"config"`
-		Enabled bool              `json:"enabled"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	ch, errMsg := decodeChannelBody(r)
+	if errMsg != "" {
+		writeError(w, http.StatusBadRequest, errMsg)
 		return
 	}
 
 	validTypes := map[string]bool{"discord": true, "email": true, "slack": true, "telegram": true, "webhook": true, "ntfy": true, "pushover": true}
-	if !validTypes[body.Type] {
+	if !validTypes[ch.Type] {
 		writeError(w, http.StatusBadRequest, "invalid channel type")
 		return
 	}
-	if strings.TrimSpace(body.Name) == "" {
+	if strings.TrimSpace(ch.Name) == "" {
 		writeError(w, http.StatusBadRequest, "name is required")
 		return
 	}
-
-	ch := &models.NotificationChannel{
-		Name:    strings.TrimSpace(body.Name),
-		Type:    body.Type,
-		Config:  body.Config,
-		Enabled: body.Enabled,
-	}
-	if ch.Config == nil {
-		ch.Config = make(map[string]string)
-	}
+	ch.Name = strings.TrimSpace(ch.Name)
 
 	if err := h.repo.CreateChannel(r.Context(), ch); err != nil {
 		log.Error().Err(err).Msg("failed to create notification channel")
 		writeError(w, http.StatusInternalServerError, "failed to create channel")
 		return
 	}
-	writeJSON(w, http.StatusCreated, ch)
+	writeJSON(w, http.StatusCreated, normalizeChannelResponse(ch))
 }
 
 func (h *NotificationHandler) UpdateChannel(w http.ResponseWriter, r *http.Request) {
@@ -97,34 +85,107 @@ func (h *NotificationHandler) UpdateChannel(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	var body struct {
-		Name    string            `json:"name"`
-		Type    string            `json:"type"`
-		Config  map[string]string `json:"config"`
-		Enabled bool              `json:"enabled"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	ch, errMsg := decodeChannelBody(r)
+	if errMsg != "" {
+		writeError(w, http.StatusBadRequest, errMsg)
 		return
 	}
-
-	ch := &models.NotificationChannel{
-		ID:      id,
-		Name:    strings.TrimSpace(body.Name),
-		Type:    body.Type,
-		Config:  body.Config,
-		Enabled: body.Enabled,
-	}
-	if ch.Config == nil {
-		ch.Config = make(map[string]string)
-	}
+	ch.ID = id
 
 	if err := h.repo.UpdateChannel(r.Context(), ch); err != nil {
 		log.Error().Err(err).Msg("failed to update notification channel")
 		writeError(w, http.StatusInternalServerError, "failed to update channel")
 		return
 	}
-	writeJSON(w, http.StatusOK, ch)
+	writeJSON(w, http.StatusOK, normalizeChannelResponse(ch))
+}
+
+// decodeChannelBody decodes a channel create/update request, accepting both
+// the old shape (type + nested config map) and the new frontend shape
+// (kind + flat channel-specific fields). Returns the canonical model or an
+// error message string.
+func decodeChannelBody(r *http.Request) (*models.NotificationChannel, string) {
+	var raw map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
+		return nil, "invalid request body"
+	}
+
+	// Accept both "type" and "kind" for backward compatibility.
+	channelType, _ := raw["type"].(string)
+	if channelType == "" {
+		channelType, _ = raw["kind"].(string)
+	}
+
+	name, _ := raw["name"].(string)
+	enabled, _ := raw["enabled"].(bool)
+
+	// Build config map: prefer nested "config" if present, then merge
+	// any top-level channel-specific fields.
+	config := make(map[string]string)
+	if nested, ok := raw["config"].(map[string]interface{}); ok {
+		for k, v := range nested {
+			if s, ok := v.(string); ok {
+				config[k] = s
+			} else if v != nil {
+				config[k] = fmt.Sprintf("%v", v)
+			}
+		}
+	}
+
+	// Metadata keys that are NOT channel-specific config fields.
+	metaKeys := map[string]bool{
+		"id": true, "name": true, "type": true, "kind": true,
+		"enabled": true, "config": true, "created_at": true, "updated_at": true,
+	}
+	for k, v := range raw {
+		if metaKeys[k] {
+			continue
+		}
+		if _, exists := config[k]; exists {
+			continue // nested config takes precedence
+		}
+		switch val := v.(type) {
+		case string:
+			config[k] = val
+		case float64:
+			// JSON numbers — emit as int when whole, otherwise float.
+			if val == float64(int64(val)) {
+				config[k] = fmt.Sprintf("%d", int64(val))
+			} else {
+				config[k] = fmt.Sprintf("%g", val)
+			}
+		case bool:
+			config[k] = fmt.Sprintf("%t", val)
+		case nil:
+			// skip null values
+		default:
+			config[k] = fmt.Sprintf("%v", val)
+		}
+	}
+
+	return &models.NotificationChannel{
+		Name:    name,
+		Type:    channelType,
+		Config:  config,
+		Enabled: enabled,
+	}, ""
+}
+
+// normalizeChannelResponse converts a canonical NotificationChannel (type +
+// config map) into the shape the frontend expects (kind + flat fields).
+func normalizeChannelResponse(ch *models.NotificationChannel) map[string]interface{} {
+	resp := map[string]interface{}{
+		"id":         ch.ID,
+		"kind":       ch.Type,
+		"name":       ch.Name,
+		"enabled":    ch.Enabled,
+		"created_at": ch.CreatedAt,
+		"updated_at": ch.UpdatedAt,
+	}
+	for k, v := range ch.Config {
+		resp[k] = v
+	}
+	return resp
 }
 
 func (h *NotificationHandler) DeleteChannel(w http.ResponseWriter, r *http.Request) {
@@ -305,7 +366,7 @@ func sendWebhook(url, method, title, message string) error {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := (&http.Client{Timeout: 10 * time.Second}).Do(req)
+	resp, err := (&http.Client{Timeout: config.HTTPClientTimeout}).Do(req)
 	if err != nil {
 		return err
 	}
@@ -332,7 +393,7 @@ func sendNtfy(serverURL, topic, title, message string) error {
 	req.Header.Set("Title", title)
 	req.Header.Set("Priority", "default")
 	req.Header.Set("Tags", "electric_plug")
-	resp, err := (&http.Client{Timeout: 10 * time.Second}).Do(req)
+	resp, err := (&http.Client{Timeout: config.HTTPClientTimeout}).Do(req)
 	if err != nil {
 		return err
 	}
@@ -361,7 +422,7 @@ func postJSON(url string, payload interface{}) error {
 	if err != nil {
 		return err
 	}
-	resp, err := (&http.Client{Timeout: 10 * time.Second}).Post(url, "application/json", bytes.NewReader(body))
+	resp, err := (&http.Client{Timeout: config.HTTPClientTimeout}).Post(url, "application/json", bytes.NewReader(body))
 	if err != nil {
 		return err
 	}

@@ -1,0 +1,11 @@
+{
+  "_doc": "Five unknown / cold-only signals. None should match HotCatalog. All five rows must land in signal_observations and signal_catalog must grow by 5.",
+  "vin": "5YJ3E1EA1NF000005",
+  "signals": [
+    {"name": "ExperimentalAlpha",   "value": 1.5},
+    {"name": "ExperimentalBeta",    "value": "engaged"},
+    {"name": "ExperimentalGamma",   "value": true},
+    {"name": "ExperimentalDelta",   "value": 42},
+    {"name": "ExperimentalEpsilon", "value": "Diagnostic"}
+  ]
+}

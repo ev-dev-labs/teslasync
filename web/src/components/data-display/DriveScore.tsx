@@ -7,13 +7,26 @@ function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v))
 }
 
-export function computeDriveScore(drive: any): { total: number; efficiency: number; speed: number; range: number; trip: number } {
-  const distance = drive.distance ?? 0
+type DriveLike = {
+  distance_mi?: number | null
+  distanceMi?: number | null
+  duration_min?: number | null
+  max_speed_mph?: number | null
+  maxSpeedMph?: number | null
+  start_battery_pct?: number | null
+  startBatteryPct?: number | null
+  end_battery_pct?: number | null
+  endBatteryPct?: number | null
+  [key: string]: unknown
+}
+
+export function computeDriveScore(drive: DriveLike): { total: number; efficiency: number; speed: number; range: number; trip: number } {
+  const distance = drive.distance_mi ?? drive.distanceMi ?? 0
   const durationMin = drive.duration_min ?? 0
   const avgSpeed = durationMin > 0 ? (distance / (durationMin / 60)) : 0
-  const maxSpeed = drive.speed_max ?? avgSpeed
-  const startBattery = drive.start_battery_level ?? 100
-  const endBattery = drive.end_battery_level ?? startBattery
+  const maxSpeed = drive.max_speed_mph ?? drive.maxSpeedMph ?? avgSpeed
+  const startBattery = drive.start_battery_pct ?? drive.startBatteryPct ?? 100
+  const endBattery = drive.end_battery_pct ?? drive.endBatteryPct ?? startBattery
 
   // Efficiency component (40 pts): closer to optimal 150 Wh/km is better
   const batteryUsed = Math.max(startBattery - endBattery, 0)
@@ -46,7 +59,7 @@ export function getScoreColor(score: number): string {
   return COLOR.GOOD
 }
 
-export function DriveScore({ drive }: { drive: any }) {
+export function DriveScore({ drive }: { drive: DriveLike }) {
   const score = useMemo(() => computeDriveScore(drive), [drive])
   const color = getScoreColor(score.total)
 

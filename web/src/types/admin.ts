@@ -78,9 +78,8 @@ export interface AuditLogEntry {
 
 export interface SecurityEvent {
   id: string;
-  vehicleId: string;
   locked: boolean | null;
-  sentryMode: boolean | null;
+  sentryMode: string | null;
   doorState: string | null;
   fdWindow: string | null;
   fpWindow: string | null;
@@ -95,13 +94,12 @@ export interface SecurityEvent {
   speedLimitMode: string | null;
   valetModeEnabled: boolean | null;
   serviceMode: boolean | null;
-  currentLimitMph: number | null;
   pairedPhoneKeyCount: number | null;
   lightsHazardsActive: boolean | null;
   lightsHighBeams: boolean | null;
   lightsTurnSignal: string | null;
-  driverSeatBelt: boolean | null;
-  passengerSeatBelt: boolean | null;
+  driverSeatBelt: string | null;
+  passengerSeatBelt: string | null;
   createdAt: string;
 }
 
@@ -175,16 +173,26 @@ export interface Alert {
   createdAt: string;
 }
 
+export type AlertRuleSeverity = 'info' | 'warn' | 'critical';
+export type AlertRuleOp = '=' | '!=' | '<' | '<=' | '>' | '>=' | 'changed' | 'between' | 'outside';
+
 export interface AlertRule {
-  id: string;
+  id: number;
   name: string;
-  type: string;
-  severity: 'info' | 'warning' | 'critical';
+  description?: string | null;
   enabled: boolean;
-  cooldownMin: number;
-  msgTemplate: string;
-  conditions: Record<string, unknown>;
-  notifyChannels: string[];
+  vehicle_id?: number | null;
+  signal_name: string;
+  op: AlertRuleOp;
+  value_num?: number | null;
+  value_text?: string | null;
+  value_bool?: boolean | null;
+  value_min?: number | null;
+  value_max?: number | null;
+  severity: AlertRuleSeverity;
+  cooldown_min: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface NotificationChannel {

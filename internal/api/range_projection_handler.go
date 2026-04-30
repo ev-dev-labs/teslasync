@@ -8,18 +8,28 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
-)
+	"github.com/jackc/pgx/v5"
+	"github.com/rs/zerolog/log"
 
-const nominalCapacity = 75.0
+	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
+)
 
 // RangeProjectionHandler serves projected range analytics.
 type RangeProjectionHandler struct {
-	db *database.DB
+	db              *database.DB
+	signalLogReader *database.SignalLogReader
+	redisCache      *signal.RedisSignalCache
 }
 
-func NewRangeProjectionHandler(db *database.DB) *RangeProjectionHandler {
-	return &RangeProjectionHandler{db: db}
+func NewRangeProjectionHandler(db *database.DB, slr *database.SignalLogReader) *RangeProjectionHandler {
+	return &RangeProjectionHandler{db: db, signalLogReader: slr}
+}
+
+// WithRedisCache sets the Redis signal cache for reading live vehicle state.
+func (h *RangeProjectionHandler) WithRedisCache(cache *signal.RedisSignalCache) *RangeProjectionHandler {
+	h.redisCache = cache
+	return h
 }
 
 type rangeFactor struct {
@@ -69,63 +79,101 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
-	// Current battery state
-	var batteryLevel, estRange, ratedRange, idealRange *float64
-	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT battery_level, est_battery_range, rated_range, ideal_battery_range
-		FROM charging_telemetry
-		WHERE vehicle_id = $1
-			AND (battery_level IS NOT NULL OR est_battery_range IS NOT NULL)
-		ORDER BY created_at DESC LIMIT 1`, vehicleID).Scan(&batteryLevel, &estRange, &ratedRange, &idealRange)
+	// Look up vehicle-specific battery capacity
+	capacityKWh, _ := lookupVehicleCapacity(ctx, h.db, vehicleID)
 
-	// Current outside temp from vehicle_live_state
+	// Current battery state from signal_log
+	var batteryLevel, estRange, ratedRange, idealRange *float64
+	if h.signalLogReader != nil {
+		now := time.Now()
+		if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "BatteryLevel", now); err == nil && val != nil {
+			if v, ok := toFloatOk(val); ok {
+				batteryLevel = &v
+			}
+		}
+		if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "EstBatteryRange", now); err == nil && val != nil {
+			if v, ok := toFloatOk(val); ok {
+				estRange = &v
+			}
+		}
+		if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "RatedRange", now); err == nil && val != nil {
+			if v, ok := toFloatOk(val); ok {
+				ratedRange = &v
+			}
+		}
+		if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "IdealBatteryRange", now); err == nil && val != nil {
+			if v, ok := toFloatOk(val); ok {
+				idealRange = &v
+			}
+		}
+	}
+
+	// Current outside temp from Redis signal cache
 	var currentOutsideTemp *float64
-	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT outside_temp FROM vehicle_live_state WHERE vehicle_id = $1`,
-		vehicleID).Scan(&currentOutsideTemp)
+	if h.redisCache != nil {
+		if val, err := h.redisCache.GetSignal(ctx, vehicleID, "OutsideTemp"); err == nil {
+			if f, ok := val.(float64); ok {
+				currentOutsideTemp = &f
+			}
+		}
+	}
 
 	// Recent driving efficiency
 	var avgEffWhKm *float64
-	_ = h.db.Pool.QueryRow(ctx, `
+	if err := h.db.Pool.QueryRow(ctx, `
 		SELECT AVG(
-			CASE WHEN distance > 0 THEN
-				(COALESCE(start_rated_range_km, 0) - COALESCE(end_rated_range_km, 0))
-				/ NULLIF(distance, 0) * 1000
+			CASE WHEN distance_mi > 0 THEN
+				COALESCE(energy_used_kwh, 0) * 1000
+				/ NULLIF(distance_mi * 1.60934, 0)
 			END
 		)
 		FROM drives
-		WHERE vehicle_id = $1 AND distance > 1
-		ORDER BY start_date DESC LIMIT 30`, vehicleID).Scan(&avgEffWhKm)
+		WHERE vehicle_id = $1 AND distance_mi > 1
+		ORDER BY start_ts DESC LIMIT 30`, vehicleID).Scan(&avgEffWhKm); err != nil {
+		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: avg efficiency query failed")
+	}
 
 	var avgTempC *float64
-	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT AVG(outside_temp_avg)
+	if err := h.db.Pool.QueryRow(ctx, `
+		SELECT AVG(outside_temp_avg_c)
 		FROM drives
-		WHERE vehicle_id = $1 AND outside_temp_avg IS NOT NULL
-		  AND start_date > NOW() - INTERVAL '30 days'`, vehicleID).Scan(&avgTempC)
+		WHERE vehicle_id = $1 AND outside_temp_avg_c IS NOT NULL
+		  AND start_ts > NOW() - INTERVAL '30 days'`, vehicleID).Scan(&avgTempC); err != nil {
+		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: avg temp query failed")
+	}
 
 	var avgSpeedKmh *float64
-	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT AVG(speed_avg)
+	if err := h.db.Pool.QueryRow(ctx, `
+		SELECT AVG(avg_speed_mph)
 		FROM drives
-		WHERE vehicle_id = $1 AND speed_avg IS NOT NULL AND speed_avg > 0
-		  AND start_date > NOW() - INTERVAL '30 days'`, vehicleID).Scan(&avgSpeedKmh)
+		WHERE vehicle_id = $1 AND avg_speed_mph IS NOT NULL AND avg_speed_mph > 0
+		  AND start_ts > NOW() - INTERVAL '30 days'`, vehicleID).Scan(&avgSpeedKmh); err != nil {
+		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: avg speed query failed")
+	}
 
 	// ── Efficiency matrix ────────────────────────────────
-	matrix := h.buildEfficiencyMatrix(ctx, vehicleID)
+	matrix := h.buildEfficiencyMatrix(ctx, vehicleID, capacityKWh)
 
 	// ── Battery health / degradation adjustment ──────────
 	var healthScore *float64
-	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT health_score FROM battery_snapshots
-		WHERE vehicle_id = $1 AND health_score IS NOT NULL
-		ORDER BY created_at DESC LIMIT 1`, vehicleID).Scan(&healthScore)
+	if h.signalLogReader != nil {
+		val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "EnergyRemaining", time.Now())
+		if err == nil && val != nil {
+			if energy, ok := val.(float64); ok && energy > 0 {
+				hs := (energy / capacityKWh) * 100
+				if hs > 100 {
+					hs = 100
+				}
+				healthScore = &hs
+			}
+		}
+	}
 
 	healthFactor := 1.0
 	if healthScore != nil && *healthScore > 0 && *healthScore < 100 {
 		healthFactor = *healthScore / 100
 	}
-	usableCapacity := nominalCapacity * healthFactor
+	usableCapacity := capacityKWh * healthFactor
 
 	// ── Build original response fields ───────────────────
 	bl := ptrF64(batteryLevel)
@@ -153,15 +201,13 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	effFactor = math.Max(0.3, math.Min(1.3, effFactor+totalImpact/100))
 
 	projectedRange := rated * effFactor
+	adjustedRange := rated // rated adjusted for current SOC
 	if bl > 0 && bl < 100 {
-		rated = rated * bl / 100
+		adjustedRange = rated * bl / 100
 		projectedRange = projectedRange * bl / 100
 	}
 
-	ratedAt100 := rated
-	if bl > 0 {
-		ratedAt100 = rated / bl * 100
-	}
+	ratedAt100 := rated // original rated is the 100% reference
 	projAt100 := ratedAt100 * effFactor
 
 	curve := make([]curvePoint, 0, 21)
@@ -177,20 +223,24 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	scenarios := h.buildScenarios(matrix, bl, usableCapacity, currentOutsideTemp)
 
 	// Tesla estimate (rated range at current battery level)
-	teslaEstKm := rated
+	teslaEstKm := adjustedRange
 	yourEstKm := projectedRange
 
 	// Sample count
 	var totalDrives int
-	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT COUNT(*) FROM drives WHERE vehicle_id = $1 AND distance > 5 AND soc_start > soc_end`,
-		vehicleID).Scan(&totalDrives)
+	if err := h.db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM drives WHERE vehicle_id = $1 AND distance_mi > 5 AND start_battery_pct > end_battery_pct`,
+		vehicleID).Scan(&totalDrives); err != nil {
+		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: drive count query failed")
+	}
 
 	// First drive date for accuracy note
 	var firstDrive *time.Time
-	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT MIN(start_date) FROM drives WHERE vehicle_id = $1 AND distance > 0`,
-		vehicleID).Scan(&firstDrive)
+	if err := h.db.Pool.QueryRow(ctx, `
+		SELECT MIN(start_ts) FROM drives WHERE vehicle_id = $1 AND distance_mi > 0`,
+		vehicleID).Scan(&firstDrive); err != nil {
+		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: first drive query failed")
+	}
 	monthsOfData := 0
 	if firstDrive != nil {
 		monthsOfData = int(time.Since(*firstDrive).Hours() / (24 * 30.44))
@@ -203,7 +253,7 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		// Original fields (backward compatible)
-		"current_range_km":   math.Round(rated*10) / 10,
+		"current_range_km":   math.Round(adjustedRange*10) / 10,
 		"projected_range_km": math.Round(projectedRange*10) / 10,
 		"battery_level":      math.Round(bl*10) / 10,
 		"efficiency_factor":  math.Round(effFactor*1000) / 1000,
@@ -223,28 +273,28 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 // ── Efficiency matrix ────────────────────────────────────────
 
-func (h *RangeProjectionHandler) buildEfficiencyMatrix(ctx context.Context, vehicleID int64) []efficiencyBucket {
+func (h *RangeProjectionHandler) buildEfficiencyMatrix(ctx context.Context, vehicleID int64, capacityKWh float64) []efficiencyBucket {
 	rows, err := h.db.Pool.Query(ctx, `
 		SELECT
 			CASE
-				WHEN outside_temp_avg < 0 THEN 'freezing'
-				WHEN outside_temp_avg < 10 THEN 'cold'
-				WHEN outside_temp_avg < 25 THEN 'mild'
+				WHEN outside_temp_avg_c < 0 THEN 'freezing'
+				WHEN outside_temp_avg_c < 10 THEN 'cold'
+				WHEN outside_temp_avg_c < 25 THEN 'mild'
 				ELSE 'hot'
 			END AS temp_bucket,
 			CASE
-				WHEN speed_avg < 50 THEN 'city'
-				WHEN speed_avg < 90 THEN 'suburban'
+				WHEN avg_speed_mph < 50 THEN 'city'
+				WHEN avg_speed_mph < 90 THEN 'suburban'
 				ELSE 'highway'
 			END AS speed_bucket,
-			AVG((soc_start - soc_end) * $2 * 10 / NULLIF(distance, 0)) AS wh_per_km,
+			AVG((start_battery_pct - end_battery_pct) * $2 * 10 / NULLIF(distance_mi, 0)) AS wh_per_km,
 			COUNT(*) AS sample_count
 		FROM drives
-		WHERE vehicle_id = $1 AND distance > 5 AND soc_start > soc_end
-		  AND outside_temp_avg IS NOT NULL AND speed_avg IS NOT NULL
+		WHERE vehicle_id = $1 AND distance_mi > 5 AND start_battery_pct > end_battery_pct
+		  AND outside_temp_avg_c IS NOT NULL AND avg_speed_mph IS NOT NULL
 		GROUP BY temp_bucket, speed_bucket
 		HAVING COUNT(*) >= 3`,
-		vehicleID, nominalCapacity)
+		vehicleID, capacityKWh)
 	if err != nil {
 		return []efficiencyBucket{}
 	}
@@ -506,12 +556,28 @@ func (h *RangeProjectionHandler) GetByVehicle(w http.ResponseWriter, r *http.Req
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
+	// Look up vehicle-specific battery capacity
+	capacityKWh, _ := lookupVehicleCapacity(ctx, h.db, vehicleID)
+
 	var batteryLevel, ratedRange, idealRange *float64
-	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT battery_level, rated_range, ideal_battery_range
-		FROM charging_telemetry
-		WHERE vehicle_id = $1 AND battery_level IS NOT NULL
-		ORDER BY created_at DESC LIMIT 1`, vehicleID).Scan(&batteryLevel, &ratedRange, &idealRange)
+	if h.signalLogReader != nil {
+		now := time.Now()
+		if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "BatteryLevel", now); err == nil && val != nil {
+			if v, ok := toFloatOk(val); ok {
+				batteryLevel = &v
+			}
+		}
+		if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "RatedRange", now); err == nil && val != nil {
+			if v, ok := toFloatOk(val); ok {
+				ratedRange = &v
+			}
+		}
+		if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "IdealBatteryRange", now); err == nil && val != nil {
+			if v, ok := toFloatOk(val); ok {
+				idealRange = &v
+			}
+		}
+	}
 
 	bl := ptrF64(batteryLevel)
 	rated := ptrF64(ratedRange)
@@ -528,12 +594,20 @@ func (h *RangeProjectionHandler) GetByVehicle(w http.ResponseWriter, r *http.Req
 		currentRange = rated
 	}
 
-	// Degradation estimate from battery snapshots
+	// Degradation estimate from signal_log
 	var healthPct *float64
-	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT battery_health_pct FROM battery_snapshots
-		WHERE vehicle_id = $1 AND battery_health_pct IS NOT NULL
-		ORDER BY created_at DESC LIMIT 1`, vehicleID).Scan(&healthPct)
+	if h.signalLogReader != nil {
+		val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "EnergyRemaining", time.Now())
+		if err == nil && val != nil {
+			if energy, ok := val.(float64); ok && energy > 0 {
+				hp := (energy / capacityKWh) * 100
+				if hp > 100 {
+					hp = 100
+				}
+				healthPct = &hp
+			}
+		}
+	}
 
 	degradation := 0.0
 	healthScore := 100.0
@@ -546,17 +620,21 @@ func (h *RangeProjectionHandler) GetByVehicle(w http.ResponseWriter, r *http.Req
 
 	// Cycle estimate
 	var totalCycles int
-	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT COUNT(*) FROM charging_sessions WHERE vehicle_id = $1`, vehicleID).Scan(&totalCycles)
+	if err := h.db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM charging_sessions WHERE vehicle_id = $1`, vehicleID).Scan(&totalCycles); err != nil && err != pgx.ErrNoRows {
+		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: charging cycle count query failed")
+	}
 
 	// Avg daily km
 	var avgDailyKm float64
-	_ = h.db.Pool.QueryRow(ctx, `
+	if err := h.db.Pool.QueryRow(ctx, `
 		SELECT COALESCE(AVG(daily_km), 0) FROM (
-			SELECT DATE(start_date) AS d, SUM(distance) AS daily_km
-			FROM drives WHERE vehicle_id = $1 AND distance > 0
-			GROUP BY DATE(start_date)
-		) sub`, vehicleID).Scan(&avgDailyKm)
+			SELECT DATE(start_ts) AS d, SUM(distance_mi) AS daily_km
+			FROM drives WHERE vehicle_id = $1 AND distance_mi > 0
+			GROUP BY DATE(start_ts)
+		) sub`, vehicleID).Scan(&avgDailyKm); err != nil && err != pgx.ErrNoRows {
+		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: avg daily km query failed")
+	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"current_range_km":   math.Round(currentRange*10) / 10,

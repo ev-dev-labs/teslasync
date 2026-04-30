@@ -4,6 +4,13 @@
  * Every exported interface and type alias used across the API layer.
  */
 
+import type {
+  Automation as AutomationModel,
+  AutomationActionInput,
+  AutomationConditionInput,
+  AutomationTriggerInput,
+} from '@/types/automations'
+
 // === Core Types ===
 
 export interface Vehicle {
@@ -21,133 +28,77 @@ export interface Vehicle {
   updated_at: string
 }
 
+// VehicleLiveState removed — vehicle_live_state table dropped (phase-14/13).
+// Use VehicleState (from /vehicles/{id}/state via SignalStore) or
+// VehicleLiveState from hooks/useVehicleLive (SSE) instead.
+
+// Position mirrors the post-migration `positions` hypertable(Phase 3,
+// migration 000142_baseline_typed). High-frequency GPS + motion sample.
+// Typed-only — no raw_json / JSONB carve-outs (ADR-001, ADR-005).
+// Matches Go model in internal/models/position.go.
 export interface Position {
-  id: number
   vehicle_id: number
+  ts: string
   latitude: number
   longitude: number
-  speed: number | null
-  power: number | null
   heading: number | null
-  elevation: number | null
-  odometer: number
-  ideal_range: number | null
-  rated_range: number | null
-  battery_level: number
-  inside_temp: number | null
-  outside_temp: number | null
-  is_climate_on: boolean | null
-  created_at: string
-  fan_status?: number
+  speed_mph: number | null
+  elevation_m: number | null
+  gps_state: string | null
+  source: string
 }
 
 export interface Drive {
   id: number
   vehicle_id: number
-  start_date: string
-  end_date: string | null
-  start_position_id: number | null
-  end_position_id: number | null
-  start_address_id: number | null
-  end_address_id: number | null
-  distance: number
+  start_ts: string
+  end_ts: string | null
   duration_min: number
-  start_range_km: number | null
-  end_range_km: number | null
-  speed_max: number | null
-  power_max: number | null
-  power_min: number | null
-  start_battery_level: number | null
-  end_battery_level: number | null
-  inside_temp_avg: number | null
-  outside_temp_avg: number | null
-  // Enhanced tracking (migration 21)
-  start_odometer: number | null
-  end_odometer: number | null
-  speed_avg: number | null
-  speed_min: number | null
-  start_rated_range_km: number | null
-  end_rated_range_km: number | null
-  rated_range_avg: number | null
-  rated_range_max: number | null
-  rated_range_min: number | null
-  start_ideal_range_km: number | null
-  end_ideal_range_km: number | null
-  ideal_range_avg: number | null
-  ideal_range_max: number | null
-  ideal_range_min: number | null
-  start_est_range_km: number | null
-  end_est_range_km: number | null
-  est_range_avg: number | null
-  est_range_max: number | null
-  est_range_min: number | null
-  soc_start: number | null
-  soc_end: number | null
-  soc_avg: number | null
-  soc_max: number | null
-  soc_min: number | null
-  usable_soc_start: number | null
-  usable_soc_end: number | null
-  usable_soc_avg: number | null
-  usable_soc_max: number | null
-  usable_soc_min: number | null
-  elevation_start: number | null
-  elevation_end: number | null
-  elevation_gain: number | null
-  elevation_loss: number | null
-  driver_temp_avg: number | null
-  passenger_temp_avg: number | null
-  battery_heater_on: boolean | null
+  distance_mi: number
   start_address: string | null
   end_address: string | null
-  start_latitude: number | null
-  start_longitude: number | null
-  end_latitude: number | null
-  end_longitude: number | null
+  start_lat: number | null
+  start_lon: number | null
+  end_lat: number | null
+  end_lon: number | null
+  start_battery_pct: number | null
+  end_battery_pct: number | null
+  energy_used_kwh: number | null
+  regen_kwh: number | null
+  avg_speed_mph: number | null
+  max_speed_mph: number | null
+  avg_power_kw: number | null
+  outside_temp_avg_c: number | null
+  inside_temp_avg_c: number | null
+  score: number | null
+  ended_status: string | null
+  created_at: string
+  updated_at: string
 }
 
 export interface ChargingSession {
   id: number
   vehicle_id: number
-  start_date: string
-  end_date: string | null
-  address_id: number | null
-  charge_energy_added: number
-  charge_energy_used: number | null
-  start_battery_level: number
-  end_battery_level: number | null
-  start_range_km: number | null
-  end_range_km: number | null
-  charger_phases: number | null
-  charger_voltage: number | null
-  charger_actual_current: number | null
-  charger_power: number | null
-  fast_charger_type: string | null
-  fast_charger_brand: string | null
-  conn_charge_cable: string | null
-  cost: number | null
+  start_ts: string
+  end_ts: string | null
   duration_min: number
-  // Enhanced tracking (migration 21)
-  latitude: number | null
-  longitude: number | null
-  location_name: string | null
-  inside_temp_avg: number | null
-  outside_temp_avg: number | null
-  // Joined address details (detail view only)
-  address?: {
-    id: number
-    display_name: string
-    latitude: number
-    longitude: number
-    name: string | null
-    house_number: string | null
-    road: string | null
-    city: string | null
-    county: string | null
-    state: string | null
-    country: string | null
-    postcode: string | null
-  }
+  start_battery_pct: number
+  end_battery_pct: number | null
+  energy_added_kwh: number
+  miles_added: number | null
+  charger_type: string | null
+  charger_location: string | null
+  charger_power_kw_max: number | null
+  charger_power_kw_avg: number | null
+  cost: number | null
+  cost_currency: string | null
+  max_charger_voltage: number | null
+  charger_phases: number | null
+  cable_type: string | null
+  ended_status: string | null
+  created_at: string
+  updated_at: string
+  live?: boolean
 }
 
 export interface DriveTelemetryReading {
@@ -273,8 +224,10 @@ export interface PollingConfig {
 export interface VehicleState {
   vehicle_id: number
   state: string
+  since?: string
   latitude: number
   longitude: number
+  heading?: number | null
   speed: number
   power: number
   battery_level: number
@@ -333,36 +286,54 @@ export interface Alert {
   created_at: string
 }
 
+export type AlertRuleSeverity = 'info' | 'warn' | 'critical'
+export type AlertRuleOp = '=' | '!=' | '<' | '<=' | '>' | '>=' | 'changed' | 'between' | 'outside'
+
 export interface AlertRule {
   id: number
   name: string
-  type: string
+  description?: string | null
   enabled: boolean
-  threshold: number
-  vehicle_id: number | null
+  vehicle_id?: number | null
+  signal_name: string
+  op: AlertRuleOp
+  value_num?: number | null
+  value_text?: string | null
+  value_bool?: boolean | null
+  value_min?: number | null
+  value_max?: number | null
+  severity: AlertRuleSeverity
+  cooldown_min: number
   created_at: string
   updated_at: string
-  // CEP rule engine fields
-  conditions?: RuleConditionTree | null
-  expression?: string
-  cooldown_min?: number
-  for_duration_s?: number | null
-  severity?: 'info' | 'warning' | 'critical'
-  msg_template?: string
-  notify_channels?: number[]
-  last_fired_at?: string | null
-  fire_count?: number
-  tags?: string[]
 }
 
-/** Condition tree node — matches backend models.RuleCondition. */
-export interface RuleConditionTree {
-  op?: 'AND' | 'OR' | 'NOT'
-  rules?: RuleConditionTree[]
-  signal?: string
-  compare?: string
-  value?: string | number | boolean
-  for_seconds?: number
+export interface AlertRuleInput {
+  name: string
+  description?: string | null
+  enabled?: boolean
+  vehicle_id?: number | null
+  signal_name: string
+  op: AlertRuleOp
+  value_num?: number | null
+  value_text?: string | null
+  value_bool?: boolean | null
+  value_min?: number | null
+  value_max?: number | null
+  severity?: AlertRuleSeverity
+  cooldown_min?: number
+}
+
+export type AlertRuleUpdate = Partial<AlertRuleInput>
+
+export interface AlertTestTarget {
+  all_channels?: boolean
+  channel_ids?: number[]
+}
+
+export interface AlertTestRequest {
+  message?: string
+  target?: AlertTestTarget | null
 }
 
 export interface StatsSummary {
@@ -421,15 +392,18 @@ export interface CommandResult {
 
 // === Notification Types ===
 
-export interface NotificationChannel {
-  id: number
-  name: string
-  type: 'discord' | 'email' | 'slack' | 'telegram' | 'webhook' | 'ntfy' | 'pushover'
-  config: Record<string, string>
-  enabled: boolean
-  created_at: string
-  updated_at: string
-}
+export type {
+  NotificationChannel,
+  NotificationChannelKind,
+  NotificationChannelBase,
+  NotificationChannelDiscord,
+  NotificationChannelSlack,
+  NotificationChannelTelegram,
+  NotificationChannelEmail,
+  NotificationChannelWebhook,
+  NotificationChannelNtfy,
+  NotificationChannelPushover,
+} from '@/types/notifications'
 
 export interface NotificationLog {
   id: number
@@ -485,7 +459,37 @@ export interface ChatResponse {
   session_id: string
 }
 
-export type VehicleStatus = 'online' | 'offline' | 'asleep' | 'driving' | 'charging' | 'updating'
+import { resolveStyle, VEHICLE_STATE_ENTRIES, VEHICLE_STATES } from '@/types/fsm'
+import type { BadgeVariant, VehicleState as _VehicleState } from '@/types/fsm'
+export type { BadgeVariant } from '@/types/fsm'
+
+/* ── Vehicle status — single source from @/types/fsm ── */
+
+export type VehicleStatus = _VehicleState
+export const VEHICLE_STATUSES = VEHICLE_STATES as unknown as VehicleStatus[]
+
+/** Derives a display-friendly status from live vehicle state. */
+export function deriveVehicleStatus(state?: VehicleState | null): VehicleStatus {
+  if (!state) return 'offline'
+  if (state.is_charging) return 'charging'
+  if (state.speed && state.speed > 0) return 'driving'
+  const s = (state.state ?? '').toLowerCase()
+  if ((VEHICLE_STATES as readonly string[]).includes(s)) return s as VehicleStatus
+  return 'online'
+}
+
+/** Maps VehicleStatus → badge variant. */
+export function statusVariant(status: VehicleStatus | string): BadgeVariant {
+  const entry = VEHICLE_STATE_ENTRIES[status as _VehicleState]
+  return entry?.variant ?? 'danger'
+}
+
+/** Maps VehicleStatus → Tailwind badge dot color class. */
+export function statusDotColor(status: VehicleStatus | string): string {
+  const entry = VEHICLE_STATE_ENTRIES[status as _VehicleState]
+  if (!entry) return 'bg-gray-400'
+  return resolveStyle(entry).badgeDot
+}
 
 // === New Data Types ===
 
@@ -505,122 +509,177 @@ export interface TirePressureSnapshot {
   created_at: string
 }
 
+// MotorSnapshot matches the JSON response shape from /motor and /motor/latest.
+// Backed by signal_log pivot via motorMappings in motor_handler.go.
+// Field names are the PivotMapping.Field values; fields with no backing signal
+// are optional and will be undefined in the response.
 export interface MotorSnapshot {
-  id: number
-  vehicle_id: number
-  di_state?: string
-  di_torque?: number
-  di_axle_speed?: number
-  di_stator_temp?: number
-  pedal_position?: number
-  brake_pedal?: boolean
-  lateral_accel?: number
-  longitudinal_accel?: number
-  vehicle_speed?: number
-  gear?: string
-  di_torque_actual_f?: number
-  di_torque_actual_r?: number
-  di_torque_actual_rel?: number
-  di_torque_actual_rer?: number
-  di_axle_speed_f?: number
-  di_axle_speed_rel?: number
-  di_axle_speed_rer?: number
-  di_state_f?: string
-  di_state_rel?: string
-  di_state_rer?: string
-  di_stator_temp_f?: number
-  di_stator_temp_rel?: number
-  di_stator_temp_rer?: number
-  di_heatsink_t_f?: number
-  di_heatsink_t_r?: number
-  di_heatsink_t_rel?: number
-  di_heatsink_t_rer?: number
-  di_inverter_t_f?: number
-  di_inverter_t_r?: number
-  di_inverter_t_rel?: number
-  di_inverter_t_rer?: number
-  di_motor_current_f?: number
-  di_motor_current_r?: number
-  di_motor_current_rel?: number
-  di_motor_current_rer?: number
-  di_v_bat_f?: number
-  di_v_bat_r?: number
-  di_v_bat_rel?: number
-  di_v_bat_rer?: number
-  di_slave_torque_cmd?: number
-  hvil?: string
-  brake_pedal_pos?: number
-  cruise_set_speed?: number
-  drive_rail?: boolean
-  created_at: string
+  id?: number
+  ts: string
+  created_at?: string
+  vehicle_id?: number
+  // Torque (DiTorqueActualF/R, DiTorquemotor)
+  torque_nm_front: number | null
+  torque_nm_rear: number | null
+  di_torque: number | null
+  // Axle speed (DiAxleSpeedF/R)
+  motor_rpm_front: number | null
+  motor_rpm_rear: number | null
+  // Temperatures (DiStatorTempF/R, DiInverterTF/R, DiHeatsinkTF/R)
+  motor_temp_c_front: number | null
+  motor_temp_c_rear: number | null
+  inverter_temp_c: number | null
+  inverter_temp_rear: number | null
+  heatsink_temp_front: number | null
+  heatsink_temp_rear: number | null
+  // Motor current (DiMotorCurrentF/R)
+  motor_current_front: number | null
+  motor_current_rear: number | null
+  // State (DiStateF/R, Gear)
+  state_front: string | null
+  state_rear: string | null
+  shift_state: string | null
+  // Battery voltage (DiVBatF/R)
+  vbat_front: number | null
+  vbat_rear: number | null
+  // Fields with no backing motor signal — always undefined from signal_log backend
+  power_kw?: number | null
+  regen_kw?: number | null
+  battery_temp_c?: number | null
+  source?: string | null
+  di_stator_temp?: number | null
+  gear?: string | null
 }
 
+// ClimateSnapshot matches the JSON response shape from /climate and /climate/latest.
+// Backed by signal_log after phase-14 rewire.
 export interface ClimateSnapshot {
-  id: number
   vehicle_id: number
-  inside_temp?: number
-  outside_temp?: number
-  hvac_power?: number
-  hvac_fan_speed?: number
-  hvac_left_temp_request?: number
-  hvac_right_temp_request?: number
-  cabin_overheat_mode?: string
-  defrost_mode?: boolean
-  battery_heater_on?: boolean
-  hvac_ac_enabled?: boolean
-  hvac_auto_mode?: string
-  hvac_fan_status?: number
-  hvac_steering_wheel_heat_auto?: boolean
-  hvac_steering_wheel_heat_level?: number
-  climate_keeper_mode?: string
-  cabin_overheat_protection_temp_limit?: string
-  defrost_for_preconditioning?: boolean
-  seat_heater_left?: number
-  seat_heater_right?: number
-  seat_heater_rear_left?: number
-  seat_heater_rear_center?: number
-  seat_heater_rear_right?: number
-  seat_vent_enabled?: boolean
-  climate_seat_cooling_front_left?: number
-  climate_seat_cooling_front_right?: number
-  auto_seat_climate_left?: boolean
-  auto_seat_climate_right?: boolean
-  rear_defrost_enabled?: boolean
-  rear_display_hvac_enabled?: boolean
-  wiper_heat_enabled?: boolean
-  created_at: string
+  ts: string
+  inside_temp_c: number | null
+  outside_temp_c: number | null
+  driver_setpoint_c: number | null
+  passenger_setpoint_c: number | null
+  hvac_state: string | null
+  defrost_mode: string | null
+  is_climate_on: boolean | null
+  is_preconditioning: boolean | null
+  fan_status: number | null
+  seat_heater_left: number | null
+  seat_heater_right: number | null
+  seat_heater_rear_left: number | null
+  seat_heater_rear_right: number | null
+  steering_wheel_heater: boolean | null
+  cabin_overheat_protection: boolean | null
+  source: string
+  // Legacy / compat-view field aliases (pre-migration column names, JSONB
+  // carve-out fields). Optional so widgets that still reference these names
+  // compile; values are undefined when reading the typed column set.
+  inside_temp?: number | null
+  outside_temp?: number | null
+  hvac_power?: number | null
+  hvac_ac_enabled?: boolean | null
+  hvac_fan_speed?: number | null
+  hvac_steering_wheel_heat_level?: number | null
+  battery_heater_on?: boolean | null
+  seat_heater_rear_center?: number | null
 }
 
+// SecurityEvent mirrors the post-migration `security_events` hypertable
+// (Phase 3, migration 000142_baseline_typed). Event-driven door/lock/sentry
+// history with 5-year audit retention. Typed-only — no raw_json / JSONB
+// carve-outs (ADR-001, ADR-005). Matches Go model in
+// internal/models/security.go. PK: (vehicle_id, ts, event_type).
 export interface SecurityEvent {
-  id: number
   vehicle_id: number
-  locked?: boolean
-  sentry_mode?: boolean
-  door_state?: string
-  fd_window?: string
-  fp_window?: string
-  rd_window?: string
-  rp_window?: string
-  homelink_nearby?: boolean
-  guest_mode?: boolean
-  homelink_device_count?: number
-  guest_mode_mobile_access_state?: string
-  driver_seat_occupied?: boolean
-  center_display?: string
-  speed_limit_mode?: boolean
-  valet_mode_enabled?: boolean
-  service_mode?: boolean
-  current_limit_mph?: number
-  paired_phone_key_count?: number
-  lights_hazards_active?: boolean
-  lights_high_beams?: boolean
-  lights_turn_signal?: string
-  tonneau_position?: string
-  tonneau_open_percent?: number
-  tonneau_tent_mode?: string
-  driver_seat_belt?: boolean
-  passenger_seat_belt?: boolean
-  created_at: string
+  ts: string
+  event_type: string
+  doors_open: string | null
+  windows_open: string | null
+  locked: boolean | null
+  sentry_mode: boolean | null
+  user_present: boolean | null
+  detail: string | null
+  source: string
+  // Legacy / compat-view field aliases (pre-migration individual door/window
+  // columns, seat/belt/light JSONB carve-outs). Optional so existing widgets
+  // compile; values are undefined when reading the typed column set.
+  id?: number
+  created_at?: string
+  door_state?: string | null
+  fd_window?: string | null
+  fp_window?: string | null
+  rd_window?: string | null
+  rp_window?: string | null
+  driver_seat_belt?: boolean | null
+  passenger_seat_belt?: boolean | null
+  driver_seat_occupied?: boolean | null
+  lights_high_beams?: boolean | null
+  lights_hazards_active?: boolean | null
+  lights_turn_signal?: string | null
+}
+
+// VehicleMetaSnapshot mirrors the post-migration `vehicle_meta_snapshots`
+// consolidated hypertable (Phase 3, migration 000142_baseline_typed). The
+// `category` discriminator selects which column group is populated; unused
+// groups remain null. Typed-only — no raw_json / JSONB carve-outs
+// (ADR-001, ADR-005). Matches Go model in internal/models/vehicle_meta.go.
+export type VehicleMetaCategory =
+  | 'tire'
+  | 'media'
+  | 'safety'
+  | 'config'
+  | 'preference'
+
+export interface VehicleMetaSnapshot {
+  vehicle_id: number
+  ts: string
+  category: VehicleMetaCategory
+
+  // Tire (category='tire')
+  tire_pressure_fl_psi?: number | null
+  tire_pressure_fr_psi?: number | null
+  tire_pressure_rl_psi?: number | null
+  tire_pressure_rr_psi?: number | null
+  tire_temp_fl_c?: number | null
+  tire_temp_fr_c?: number | null
+  tire_temp_rl_c?: number | null
+  tire_temp_rr_c?: number | null
+
+  // Media (category='media')
+  media_source?: string | null
+  media_track_title?: string | null
+  media_track_artist?: string | null
+  media_track_album?: string | null
+  media_volume?: number | null
+  media_is_playing?: boolean | null
+  media_track_duration_sec?: number | null
+
+  // Safety (category='safety')
+  autopilot_state?: string | null
+  fcw_active?: boolean | null
+  blind_spot_active?: boolean | null
+  emergency_lane_assist?: boolean | null
+  abs_active?: boolean | null
+  speed_limit_mode?: string | null
+
+  // Config (category='config')
+  software_version?: string | null
+  car_type?: string | null
+  exterior_color?: string | null
+  wheel_type?: string | null
+  spoiler_type?: string | null
+  has_ludicrous_mode?: boolean | null
+
+  // Preference (category='preference')
+  drive_mode?: string | null
+  regen_level?: string | null
+  steering_mode?: string | null
+  acceleration_mode?: string | null
+  climate_keeper_mode?: string | null
+  pet_mode?: boolean | null
+
+  source: string
 }
 
 export interface SoftwareUpdate {
@@ -801,14 +860,17 @@ export interface MapConfig {
 
 export interface APICallLog {
   id: number
-  method: string
-  url: string
+  ts: string
+  vehicle_id: number | null
+  service: string
+  http_method: string
+  endpoint: string
   status_code: number | null
+  duration_ms: number
+  error_message: string | null
+  rate_limited: boolean
   request_body: string | null
   response_body: string | null
-  duration_ms: number
-  error: string | null
-  created_at: string
 }
 
 export interface APICallLogResponse {
@@ -821,6 +883,7 @@ export interface APICallLogResponse {
 export interface APICallLogStats {
   total_calls: number
   by_method: Record<string, number>
+  by_service: Record<string, number>
   error_rate: number
   error_count: number
   avg_duration_ms: number
@@ -972,6 +1035,7 @@ export interface GasPriceStatus {
   poll_interval: string
   last_poll_time: string
   current_price: number
+  current_price_kwh_eq: number
 }
 
 export interface GasPriceHistory {
@@ -1126,64 +1190,38 @@ export interface RouteDetailData {
 
 // === Charging Telemetry ===
 
+// ChargingTelemetry matches the JSON response shape from /charging-telemetry
+// and /charging-telemetry/latest. Backed by signal_log after phase-14 rewire.
 export interface ChargingTelemetry {
-  id: number
   vehicle_id: number
-  battery_level?: number
-  soc?: number
-  charge_state?: string
-  detailed_charge_state?: string
-  charge_limit_soc?: number
-  charge_amps?: number
-  charge_current_request?: number
-  charge_current_request_max?: number
-  charge_enable_request?: boolean
-  charger_voltage?: number
-  charger_phases?: number
-  charge_rate_mph?: number
-  dc_charging_power?: number
-  dc_charging_energy_in?: number
-  ac_charging_power?: number
-  ac_charging_energy_in?: number
-  energy_remaining?: number
-  est_battery_range?: number
-  ideal_battery_range?: number
-  rated_range?: number
-  pack_voltage?: number
-  pack_current?: number
-  charge_port_door_open?: boolean
-  charge_port_latch?: string
-  charge_port_cold_weather_mode?: boolean
-  charging_cable_type?: string
-  fast_charger_present?: boolean
-  fast_charger_type?: string
-  time_to_full_charge?: number
-  estimated_hours_to_charge?: number
-  scheduled_charging_mode?: string
-  scheduled_charging_pending?: boolean
-  preconditioning_enabled?: boolean
-  brick_voltage_max?: number
-  brick_voltage_min?: number
-  num_brick_voltage_max?: number
-  num_brick_voltage_min?: number
-  module_temp_max?: number
-  module_temp_min?: number
-  num_module_temp_max?: number
-  num_module_temp_min?: number
-  battery_heater_on?: boolean
-  not_enough_power_to_heat?: boolean
-  bms_state?: string
-  bms_fullcharge_complete?: boolean
-  dcdc_enable?: boolean
-  isolation_resistance?: number
-  lifetime_energy_used?: number
-  supercharger_session_trip_planner?: boolean
-  powershare_status?: string
-  powershare_type?: string
-  powershare_stop_reason?: string
-  powershare_hours_left?: number
-  powershare_power_kw?: number
-  created_at: string
+  ts: string
+  session_id: number | null
+  battery_level: number | null
+  battery_range_mi: number | null
+  charging_state: string | null
+  charger_voltage: number | null
+  charger_actual_current: number | null
+  charger_power_kw: number | null
+  charger_phases: number | null
+  charge_energy_added_kwh: number | null
+  charge_miles_added: number | null
+  charge_rate_mph: number | null
+  charger_pilot_current: number | null
+  scheduled_charging_at: string | null
+  source: string
+  // Legacy / compat-view field aliases (BMS/module/energy JSONB carve-outs,
+  // charge-port & navigation helpers). Optional so existing pages compile;
+  // values are undefined when reading the typed column set.
+  bms_fullcharge_complete?: boolean | null
+  module_temp_max?: number | null
+  module_temp_min?: number | null
+  num_module_temp_max?: number | null
+  num_module_temp_min?: number | null
+  battery_heater_on?: boolean | null
+  lifetime_energy_used?: number | null
+  expected_energy_pct_at_arrival?: number | null
+  not_enough_power_to_heat?: boolean | null
+  charge_port_door_open?: boolean | null
 }
 
 // === Media ===
@@ -1201,6 +1239,7 @@ export interface MediaSnapshot {
   playback_source?: string
   audio_volume?: number
   audio_volume_max?: number
+  audio_volume_increment?: number
   created_at: string
 }
 
@@ -1228,6 +1267,7 @@ export interface VehicleConfigSnapshot {
   software_update_download_pct?: number
   software_update_install_pct?: number
   software_update_expected_duration?: number
+  software_update_scheduled_start?: string
   created_at: string
 }
 
@@ -1235,20 +1275,31 @@ export interface VehicleConfigSnapshot {
 
 export interface LocationSnapshot {
   id: number
-  vehicle_id: number
+  vehicle_id?: number
+  // Position & GPS (from signal_log pivot)
+  latitude?: number
+  longitude?: number
+  heading?: number
+  gps_state?: string
+  elevation_m?: number
+  speed_mph?: number
+  // Navigation & route
   destination_name?: string
+  miles_to_arrival?: number
+  minutes_to_arrival?: number
+  route_traffic_delay_min?: number
+  route_last_updated?: string
+  // Destination/origin coords (Latest only — from unpacked compounds)
   destination_lat?: number
   destination_lon?: number
   origin_lat?: number
   origin_lon?: number
-  miles_to_arrival?: number
-  minutes_to_arrival?: number
-  route_line?: string
-  route_traffic_delay_min?: number
+  // Presence
   located_at_home?: boolean
   located_at_work?: boolean
   located_at_favorite?: boolean
-  gps_state?: boolean
+  homelink_nearby?: boolean
+  // Timestamps
   created_at: string
 }
 
@@ -1319,8 +1370,7 @@ export interface BackupRun {
   checksum: string | null
   duration_ms: number
   error_message: string | null
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  metadata: Record<string, any>
+  metadata: Record<string, unknown>
   started_at: string | null
   completed_at: string | null
   created_at: string
@@ -1484,25 +1534,24 @@ export interface AutomationConflict {
   severity: 'warning' | 'info'
 }
 
-export interface Automation {
-  id: number
-  name: string
-  description: string
-  vehicle_id: number | null
-  enabled: boolean
-  trigger_type: string
-  trigger_config: Record<string, unknown> | null
-  conditions: Record<string, unknown>[] | null
-  actions: Record<string, unknown>[] | null
-  cooldown_minutes: number
-  max_executions_hour: number
+type RemovedAutomationTriggerTypeKey = `trigger_${'type'}`
+type RemovedAutomationTriggerConfigKey = `trigger_${'config'}`
+type RemovedAutomationRootCompatibilityKey =
+  | RemovedAutomationTriggerTypeKey
+  | RemovedAutomationTriggerConfigKey
+  | 'conditions'
+  | 'actions'
+
+type RemovedAutomationRootCompatibility = {
+  [K in RemovedAutomationRootCompatibilityKey]: never
+}
+
+export type Automation = AutomationModel & {
   stop_on_failure: boolean
   notify_on_run: boolean
   notify_on_failure: boolean
-  notify_channels?: number[] | null
   seasonal_start: number | null
   seasonal_end: number | null
-  priority: number
   last_triggered_at: string | null
   last_success_at: string | null
   last_failure_at: string | null
@@ -1512,12 +1561,9 @@ export interface Automation {
   auto_disabled: boolean
   auto_disabled_reason: string | null
   preset_id: string | null
-  tags: string[]
-  created_at: string
-  updated_at: string
   next_fire_time?: string | null
   conflicts?: AutomationConflict[]
-}
+} & RemovedAutomationRootCompatibility
 
 // === Automation Preset Types ===
 
@@ -1534,17 +1580,12 @@ export interface AutomationPreset {
   description: string
   category: string
   icon: string
-  trigger_type: string
-  trigger_config: Record<string, unknown>
-  conditions?: Record<string, unknown>[] | null
-  actions: Record<string, unknown>[]
-  cooldown_minutes: number
-  max_executions_hour: number
+  triggers: AutomationTriggerInput[]
+  conditions?: AutomationConditionInput[]
+  actions: AutomationActionInput[]
   stop_on_failure: boolean
   notify_on_run: boolean
   notify_on_failure: boolean
-  priority: number
-  tags: string[]
 }
 
 export interface AutomationPresetsResponse {
@@ -1583,6 +1624,18 @@ export interface AutomationHistoryStats {
   partial: number
   success_rate: number
   avg_duration_ms: number
+}
+
+/** Per-signal history response from /signals/{vehicleID}/{signalName}/history */
+export interface SignalHistoryResp {
+  signal: string
+  count: number
+  data: Array<{
+    created_at: string
+    value_num?: number | null
+    value_str?: string | null
+    value_bool?: boolean | null
+  }>
 }
 
 export interface AutomationHistoryListResponse {
@@ -1676,3 +1729,98 @@ export interface VehicleInvitation {
   fetched_at: string
   created_at: string
 }
+
+// === Year in Review Types ===
+
+export interface YearReviewDriveHighlight {
+  drive_id: number
+  date: string
+  distance_km: number
+  duration_min: number
+  start_address: string
+  end_address: string
+  efficiency_wh_km: number
+}
+
+export interface YearReviewMonthStat {
+  month: number
+  drives: number
+  distance_km: number
+  energy_kwh: number
+  cost: number
+}
+
+export interface YearReviewComparison {
+  label: string
+  value: string
+  emoji: string
+}
+
+export interface YearReview {
+  year: number
+  vehicle: {
+    id: number
+    display_name: string
+    model: string
+  }
+
+  // Headline stats
+  total_drives: number
+  total_distance_km: number
+  total_energy_kwh: number
+  total_charge_sessions: number
+  total_driving_minutes: number
+  total_charging_cost: number
+  gas_savings: number
+  co2_offset_kg: number
+
+  // Extremes
+  longest_drive: YearReviewDriveHighlight | null
+  shortest_drive: YearReviewDriveHighlight | null
+  most_efficient_drive: YearReviewDriveHighlight | null
+  least_efficient_drive: YearReviewDriveHighlight | null
+  fastest_speed_kmh: number
+  coldest_drive_temp_c: number
+  hottest_drive_temp_c: number
+
+  // Monthly breakdown
+  monthly_stats: YearReviewMonthStat[]
+
+  // Patterns
+  most_active_day_of_week: string
+  most_active_hour: number
+  avg_drives_per_week: number
+  avg_distance_per_drive_km: number
+  avg_efficiency_wh_km: number
+
+  // Charging habits
+  supercharger_pct: number
+  dc_fast_pct: number
+  ac_other_pct: number
+  avg_charge_start_soc: number
+
+  // Fun comparisons
+  comparisons: YearReviewComparison[]
+}
+
+export type {
+  SignalObservation,
+  SignalSource,
+  SignalCatalogEntry,
+  SignalValueType,
+} from '@/types/signals';
+
+export type {
+  AutomationActionInput,
+  AutomationActionStep,
+  AutomationConditionInput,
+  AutomationConditionStep,
+  AutomationFull,
+  AutomationStep,
+  AutomationStepBase,
+  AutomationStepKind,
+  AutomationStepLane,
+  AutomationStepSummary,
+  AutomationTriggerInput,
+  AutomationTriggerStep,
+} from '@/types/automations';

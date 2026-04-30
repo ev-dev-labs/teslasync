@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
@@ -26,7 +27,7 @@ var allowedBackupTables = map[string]bool{
 	"positions": true, "addresses": true, "geofences": true,
 	"alerts": true, "alert_rules": true, "settings": true,
 	"daily_mileage": true, "vehicle_states": true, "software_updates": true,
-	"tire_pressure_snapshots": true, "vampire_drain_events": true,
+	"signal_log": true, "vampire_drain_events": true,
 	"visited_locations": true, "trips": true,
 }
 
@@ -75,15 +76,21 @@ func (h *BackupHandler) BackupStats(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var dbSize string
-	_ = h.db.Pool.QueryRow(ctx, "SELECT pg_size_pretty(pg_database_size(current_database()))").Scan(&dbSize)
+	if err := h.db.Pool.QueryRow(ctx, "SELECT pg_size_pretty(pg_database_size(current_database()))").Scan(&dbSize); err != nil && err != pgx.ErrNoRows {
+		log.Warn().Err(err).Msg("backup: database size query failed")
+	}
 
 	var tableCount int
-	_ = h.db.Pool.QueryRow(ctx, "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'").Scan(&tableCount)
+	if err := h.db.Pool.QueryRow(ctx, "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'").Scan(&tableCount); err != nil && err != pgx.ErrNoRows {
+		log.Warn().Err(err).Msg("backup: table count query failed")
+	}
 
 	tableCounts := make(map[string]int)
 	for t := range allowedBackupTables {
 		var count int
-		_ = h.db.Pool.QueryRow(ctx, fmt.Sprintf(`SELECT count(*) FROM "%s"`, t)).Scan(&count)
+		if err := h.db.Pool.QueryRow(ctx, fmt.Sprintf(`SELECT count(*) FROM "%s"`, t)).Scan(&count); err != nil && err != pgx.ErrNoRows {
+			log.Warn().Err(err).Str("table", t).Msg("backup: row count query failed")
+		}
 		tableCounts[t] = count
 	}
 

@@ -85,10 +85,16 @@ Collects, analyzes, and visualizes Tesla vehicle data via Fleet API + Fleet Tele
 ```
 React SPA (Vite 5) ──▶ Nginx reverse proxy ──▶ Go API Server (:8080)
                                                   │   │   │   │
-                                            Postgres Redis MQTT Tesla API
+                                          TimescaleDB Redis MQTT Tesla API
+                                              │
+                                          signal_log (hypertable)
+                                          drives / charging_sessions
+                                          cagg_fleet_stats / cagg_battery_daily
 ```
 
-**Services:** teslasync (:8080), web (:3000), notification-worker (:8081), export-worker (:8082), postgres, redis, mosquitto, grafana, fleet-telemetry (optional)
+**Services:** teslasync-api (:8080), teslasync-web (:80), notification-worker, export-worker, automation-worker, command-proxy, timescaledb, redis, mosquitto
+
+**Data flow:** Tesla Fleet Telemetry → MQTT → Go API → signal.Store L1 + Redis HSET/PubSub L2 + signal_log history → FSM/SSE/API → Frontend
 
 ## Language Servers (LSP) — Use for Code Intelligence
 
@@ -293,14 +299,25 @@ When adding, renaming, or removing an environment variable in `internal/config/c
 - If the var has a sensible default in config.go, use the same default in docker-compose and values.yaml
 - Verify with: `helm template test helm/teslasync | grep YOUR_NEW_VAR`
 
-### Signal Data — Single Source of Truth
-`vehicle_live_state` is the single source of truth for current vehicle state. It is write-through
-from the in-memory SignalStore (flushed on every telemetry batch, zero lag).
+### Signal Data — Layered Live-State Contract
+TeslaSync uses layered live signal state. `signal.Store` is the local in-process L1
+for telemetry/FSM/session hot paths. Redis HSET `vehicle:{vehicleID}:signals` is the
+shared L2 for cross-pod current-state reads and restart recovery. `signal_log` is the
+durable TimescaleDB history for charts, point-in-time reconstruction, analytics, and
+completion logic.
 ```
 ❌ DO NOT read current state from snapshot tables (positions, security_events, climate_snapshots)
 ❌ DO NOT add new endpoints that query snapshot tables for "latest" current values
-✅ DO read current state from /vehicles/{id}/state which uses vehicle_live_state
-✅ DO use snapshot tables ONLY for historical data (charts, timelines, history pages)
+❌ DO NOT remove or bypass SignalStore hot-path reads just because Redis exists
+❌ DO NOT make Redis a synchronous blocker for MQTT/telemetry ingestion
+✅ DO keep SignalStore as local L1 for telemetry, FSM/reconciliation, sessions, and merge context
+✅ DO use Redis for cross-pod live reads, restart recovery, and SSE fanout
+✅ DO use signal_log for historical data, charts, timelines, replay, and point-in-time snapshots
+✅ DO preserve Redis keys/channels: vehicle:{vehicleID}:signals, vehicle_signals, signal_log:backlog
+✅ DO treat cross-pod live values older than 2 minutes as stale and legacy scalar Redis values as unknown freshness
+✅ DO use LIVE_SIGNAL_STORE_MODE=local as the rollback switch for Redis-backed distributed live reads
+❌ DO NOT claim FSM/reconciliation is active-active across pods without vehicle-owner routing, leases, or pod affinity
+❌ DO NOT treat Redis Pub/Sub SSE as durable replay; clients recover missed state through polling/live reads
 ```
 
 ## Engineering Principles
@@ -387,7 +404,7 @@ refactor/extract-shared-chart-container
 ### Backend Performance
 - **Database:** Use indexes for frequently-queried columns. Use `EXPLAIN ANALYZE` for slow queries
 - **Connection Pool:** pgx pool sized for expected concurrency (MaxConns=25)
-- **Caching:** Redis for frequently-accessed, rarely-changing data (vehicle state, user preferences)
+- **Caching:** Redis for shared live signal cache, SSE fanout, restart recovery, and ordinary cached data; keep telemetry/FSM hot paths on local SignalStore.
 - **Pagination:** All list endpoints support `limit` + `offset` parameters
 - **N+1 Prevention:** Batch queries instead of querying in loops
 - **Timeouts:** All external API calls have `context.WithTimeout` (Tesla API: 30s, geocoding: 10s)
@@ -496,3 +513,10 @@ log.Info().Msg(fmt.Sprintf("vehicle %d state: %v", id, state))
 - **API documentation:** Router is the source of truth. Keep route comments in `router.go`
 - **README:** Keep deployment/setup docs in `docs/` (VitePress)
 - **Type documentation:** Complex types get JSDoc comments explaining fields
+
+---
+
+## Architecture Decisions
+
+See [ARCHITECTURE.md](.github/ARCHITECTURE.md) for all PA/PE-approved architecture decision records (ADRs).
+Agents: you MUST read ARCHITECTURE.md before modifying any backend handler or data query.

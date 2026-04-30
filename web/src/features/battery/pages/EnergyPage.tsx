@@ -10,6 +10,7 @@ import {
   chartGrid, axisTickSm,
   AreaChart, Area, BarChart, Bar, ComposedChart, Line,
   PieChart, Pie, Cell, Brush, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  AREA_DEFAULTS,
 } from '@/components/charts';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { Skeleton, QueryError, EmptyState } from '@/components/feedback';
@@ -17,7 +18,7 @@ import { DateRangeFilter } from '@/components/forms';
 
 import { useEnergyStats } from '@/api/hooks/useEnergy';
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useVehicles, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateShort } from '@/lib/dateFormat';
@@ -101,11 +102,13 @@ export default function EnergyPage() {
     limit: 100, start: startDate, end: endDate,
   });
 
+  const { data: liveCharging } = useChargingTelemetryLatest(vehicleId ?? 0);
+
   /* ── Derived metrics ──────────────────────────────────────────── */
-  const totalEnergy = sessions?.reduce((s, c) => s + c.charge_energy_added, 0) ?? 0;
+  const totalEnergy = sessions?.reduce((s, c) => s + c.energy_added_kwh, 0) ?? 0;
   const totalCost = sessions?.reduce((s, c) => s + (c.cost ?? 0), 0) ?? 0;
-  const avgEfficiency = stats?.avg_efficiency_wh_km ?? 0;
-  const totalDistance = stats?.total_distance_km ?? 0;
+  const avgEfficiency = stats?.avg_efficiency_wh_per_mi ?? 0;
+  const totalDistance = stats?.total_distance_mi ?? 0;
   const co2Saved = stats?.co2_saved_kg ?? totalEnergy * 0.42;
 
   const periodDays = Math.max(
@@ -132,10 +135,10 @@ export default function EnergyPage() {
     const buckets: Record<string, { count: number; energy: number }> = {};
     labels.forEach((l) => { buckets[l] = { count: 0, energy: 0 }; });
     sessions.forEach((s) => {
-      const hour = new Date(s.start_date).getHours();
+      const hour = new Date(s.start_ts).getHours();
       const idx = hour < 6 ? 0 : hour < 12 ? 1 : hour < 18 ? 2 : 3;
       buckets[labels[idx]].count++;
-      buckets[labels[idx]].energy += s.charge_energy_added;
+      buckets[labels[idx]].energy += s.energy_added_kwh;
     });
     return labels.map((name) => ({ name, ...buckets[name] }));
   }, [sessions, t]);
@@ -145,12 +148,12 @@ export default function EnergyPage() {
     if (!sessions || sessions.length === 0) return [];
     const types: Record<string, { count: number; energy: number; cost: number }> = {};
     sessions.forEach((s) => {
-      const label = s.fast_charger_type?.toLowerCase().includes('tesla')
+      const label = s.charger_type?.toLowerCase().includes('tesla')
         ? 'Supercharger'
-        : s.fast_charger_type ? 'DC Fast' : 'Home/AC';
+        : s.charger_type ? 'DC Fast' : 'Home/AC';
       if (!types[label]) types[label] = { count: 0, energy: 0, cost: 0 };
       types[label].count++;
-      types[label].energy += s.charge_energy_added;
+      types[label].energy += s.energy_added_kwh;
       types[label].cost += s.cost ?? 0;
     });
     return Object.entries(types).map(([name, data]) => ({
@@ -167,7 +170,7 @@ export default function EnergyPage() {
       header: t('energy.table.date', 'Date'),
       render: (s) => (
         <Link to={`/charging/${s.id}`} className="hover:text-neon-cyan transition-colors">
-          {formatDateShort(s.start_date)}
+          {formatDateShort(s.start_ts)}
         </Link>
       ),
     },
@@ -176,7 +179,7 @@ export default function EnergyPage() {
       header: t('energy.table.energy', 'Energy'),
       render: (s) => (
         <span className="text-neon-cyan font-medium">
-          {fmtNumber(s.charge_energy_added ?? 0)} kWh
+          {fmtNumber(s.energy_added_kwh ?? 0)} kWh
         </span>
       ),
     },
@@ -185,29 +188,29 @@ export default function EnergyPage() {
       header: t('energy.table.battery', 'Battery'),
       render: (s) => (
         <>
-          <span className="text-[var(--text-muted)]">{s.start_battery_level}%</span>
+          <span className="text-[var(--text-muted)]">{s.start_battery_pct}%</span>
           <span className="text-gray-700 mx-1">→</span>
-          <span className="text-neon-green">{s.end_battery_level ?? '—'}%</span>
+          <span className="text-neon-green">{s.end_battery_pct ?? '—'}%</span>
         </>
       ),
     },
     {
       key: 'power',
       header: t('energy.table.power', 'Power'),
-      render: (s) => <>{s.charger_power != null ? `${fmtNumber(s.charger_power)} kW` : '—'}</>,
+      render: (s) => <>{s.charger_power_kw_max != null ? `${fmtNumber(s.charger_power_kw_max)} kW` : '—'}</>,
     },
     {
       key: 'type',
       header: t('energy.table.type', 'Type'),
       render: (s) => {
-        const isTesla = s.fast_charger_type?.toLowerCase().includes('tesla');
-        const isFast = !!s.fast_charger_type;
+        const isTesla = s.charger_type?.toLowerCase().includes('tesla');
+        const isFast = !!s.charger_type;
         const cls = isTesla
           ? 'bg-neon-red/10 text-neon-red ring-neon-red/20'
           : isFast
             ? 'bg-neon-amber/10 text-neon-amber ring-neon-amber/20'
             : 'bg-neon-green/10 text-neon-green ring-neon-green/20';
-        const label = isTesla ? 'Supercharger' : s.fast_charger_type || 'AC';
+        const label = isTesla ? 'Supercharger' : s.charger_type || 'AC';
         return (
           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ring-1 ${cls}`}>
             {label}
@@ -225,8 +228,8 @@ export default function EnergyPage() {
       header: t('energy.table.perKwh', '$/kWh'),
       render: (s) => (
         <span className="text-[var(--text-muted)]">
-          {typeof s.cost === 'number' && s.charge_energy_added > 0
-            ? `$${fmtNumber(s.cost / s.charge_energy_added)}`
+          {typeof s.cost === 'number' && s.energy_added_kwh > 0
+            ? `$${fmtNumber(s.cost / s.energy_added_kwh)}`
             : '—'}
         </span>
       ),
@@ -316,6 +319,48 @@ export default function EnergyPage() {
         ))}
       </StaggerContainer>
 
+      {/* ── Lifetime Metrics ─────────────────────────────────────── */}
+      <FadeIn delay={0.05}>
+        <GlassPanel className="p-4 sm:p-6">
+          <h3 className="section-title mb-3 flex items-center gap-2">
+            <Zap className="h-4 w-4 text-neon-cyan" />
+            {t('energy.lifetime.title', 'Lifetime Metrics')}
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="rounded-lg bg-white/[0.03] ring-1 ring-white/[0.06] p-4">
+              <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
+                {t('energy.lifetime.energyUsed', 'Lifetime Energy Used')}
+              </p>
+              {liveCharging?.lifetime_energy_used != null ? (
+                <>
+                  <p className="text-2xl font-bold text-neon-cyan">
+                    {fmtNumber(liveCharging.lifetime_energy_used)}
+                    <span className="text-sm font-normal text-[var(--text-muted)] ml-1">kWh</span>
+                  </p>
+                  <p className="text-[11px] text-[var(--text-muted)] mt-1">
+                    {t('energy.lifetime.energyUsedDesc', 'Total energy consumed since vehicle delivery')}
+                  </p>
+                </>
+              ) : (
+                <p className="text-lg font-semibold text-[var(--text-muted)]">—</p>
+              )}
+            </div>
+            <div className="rounded-lg bg-white/[0.03] ring-1 ring-white/[0.06] p-4">
+              <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
+                {t('energy.lifetime.periodEnergy', { days: periodDays, defaultValue: `Last ${periodDays} Days` })}
+              </p>
+              <p className="text-2xl font-bold text-neon-green">
+                {fmtNumber(totalEnergy)}
+                <span className="text-sm font-normal text-[var(--text-muted)] ml-1">kWh</span>
+              </p>
+              <p className="text-[11px] text-[var(--text-muted)] mt-1">
+                {t('energy.lifetime.periodEnergyDesc', 'Energy added during selected date range')}
+              </p>
+            </div>
+          </div>
+        </GlassPanel>
+      </FadeIn>
+
       {isLoading ? (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <Skeleton className="h-56 sm:h-80" />
@@ -369,13 +414,11 @@ export default function EnergyPage() {
                           animationDuration={800}
                         />
                         <Line
+                          {...AREA_DEFAULTS}
                           yAxisId="right"
-                          type="monotone"
-                          dataKey="efficiency_wh_km"
+                          dataKey="efficiency_wh_per_mi"
                           name={efficiencyUnit}
                           stroke="#10b981"
-                          strokeWidth={2}
-                          dot={false}
                           animationDuration={800}
                         />
                         {dailyEnergy.length > 14 && (
@@ -415,17 +458,16 @@ export default function EnergyPage() {
                         <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
                         <Tooltip content={<ChartTooltip />} />
                         <Area
-                          type="monotone"
-                          dataKey="efficiency_wh_km"
+                          {...AREA_DEFAULTS}
+                          dataKey="efficiency_wh_per_mi"
                           name={efficiencyUnit}
                           stroke="#10b981"
                           fill="url(#effGrad)"
-                          strokeWidth={2}
                           animationDuration={800}
                         />
                         <Area
-                          type="monotone"
-                          dataKey="distance_km"
+                          {...AREA_DEFAULTS}
+                          dataKey="distance_mi"
                           name={t('energy.chart.distance', { unit: distanceUnit, defaultValue: `Distance (${distanceUnit})` })}
                           stroke="#00f0ff"
                           fill="url(#distGrad2)"

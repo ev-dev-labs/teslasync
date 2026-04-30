@@ -20,7 +20,7 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
     };
 
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div className="fixed inset-0 bg-black/50" onClick={onClose} aria-hidden="true" />
         <div
           ref={ref}
@@ -28,21 +28,24 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
           aria-modal="true"
           aria-label={title}
           className={cn(
-            'relative z-10 w-full rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800',
+            'relative z-10 w-full rounded-lg bg-white shadow-xl dark:bg-gray-800',
+            'max-h-[90vh] flex flex-col',
             sizes[size],
             className,
           )}
           {...props}
         >
           {title && (
-            <div className="mb-4 flex items-center justify-between">
+            <div className="px-6 pt-6 pb-4 flex items-center justify-between shrink-0">
               <h2 className="text-lg font-semibold">{title}</h2>
               <button onClick={onClose} className="text-gray-400 hover:text-gray-600" aria-label="Close">
                 ✕
               </button>
             </div>
           )}
-          {children}
+          <div className="px-6 pb-6 overflow-y-auto">
+            {children}
+          </div>
         </div>
       </div>
     );

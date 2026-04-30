@@ -5,7 +5,7 @@
  * and view configured API endpoints.
  */
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
@@ -96,12 +96,20 @@ export default function FleetAPIPage() {
     { key: 'commands', label: t('Vehicle Commands'), desc: t('Lock, unlock, climate, etc.') },
   ];
 
+  const allEndpointKeys = useMemo(() => {
+    const keys = new Set([
+      ...pollingEndpoints.map(e => e.key),
+      ...onDemandEndpoints.map(e => e.key),
+      ...commandEndpoints.map(e => e.key),
+      'telemetry_capture',
+    ]);
+    return keys;
+  }, [pollingEndpoints, onDemandEndpoints, commandEndpoints]);
+
   const enabledCount = pollingConfig
-    ? Object.keys(pollingConfig).filter(k => k !== 'telemetry_capture_retention_days' && pollingConfig[k]).length
+    ? Array.from(allEndpointKeys).filter(k => pollingConfig[k]).length
     : 0;
-  const totalCount = pollingConfig
-    ? Object.keys(pollingConfig).filter(k => k !== 'telemetry_capture_retention_days').length
-    : 0;
+  const totalCount = allEndpointKeys.size;
 
   return (
     <PageContainer

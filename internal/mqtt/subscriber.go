@@ -4,12 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/rs/zerolog/log"
+
+	"github.com/ev-dev-labs/teslasync/internal/metrics"
 )
 
 // SignalBatch contains batched signals for a single VIN.
@@ -71,6 +74,15 @@ func (s *Subscriber) Start() error {
 	// Resubscribe on reconnect
 	s.client.AddRoute(topic, s.onMessage)
 
+	// NOTE: Each pod gets a unique client ID (cfg.ClientID + random suffix), so
+	// Mosquitto delivers every message to ALL subscribers — causing duplicate
+	// processing during rolling deploys. The DB layer guards against this with
+	// ON CONFLICT DO NOTHING on signal_log's composite PK.
+	//
+	// If DB-level dedup proves insufficient under high load, switch to MQTT v5
+	// shared subscriptions: subscribe to "$share/teslasync/{topic}" instead.
+	// The broker then delivers each message to exactly ONE subscriber in the
+	// "teslasync" group, eliminating duplicates at the source.
 	token := s.client.Subscribe(topic, 1, s.onMessage)
 	if !token.WaitTimeout(10 * time.Second) {
 		return fmt.Errorf("fleet-telemetry MQTT subscribe timeout for topic %s", topic)
@@ -158,7 +170,12 @@ func (s *Subscriber) addSignal(vin, fieldName string, value interface{}) {
 		batch.timer = time.AfterFunc(time.Duration(s.batchMs)*time.Millisecond, func() {
 			defer func() {
 				if r := recover(); r != nil {
-					log.Error().Interface("panic", r).Str("vin", vin).Msg("mqtt: panic in batch flush")
+					metrics.PanicsRecovered.WithLabelValues("mqtt-batch-flush").Inc()
+					log.Error().
+						Interface("panic", r).
+						Str("vin", vin).
+						Bytes("stack", debug.Stack()).
+						Msg("mqtt: panic in batch flush")
 				}
 			}()
 			s.flushBatch(vin)

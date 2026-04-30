@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 
 	"github.com/rs/zerolog/log"
@@ -125,36 +126,109 @@ func (h *SettingsHandler) ToggleAPISuspend(w http.ResponseWriter, r *http.Reques
 }
 
 // GetPollingConfig returns the current polling endpoint configuration.
+// Per-vehicle polling tuning now lives in the `polling_config` table;
+// this endpoint returns a backward-compatible LegacyPollingConfig with
+// all endpoints enabled (default safe state).
 func (h *SettingsHandler) GetPollingConfig(w http.ResponseWriter, r *http.Request) {
-	pc, err := h.settingsRepo.GetPollingConfig(r.Context())
-	if err != nil {
-		log.Error().Err(err).Msg("failed to get polling config")
-		writeError(w, http.StatusInternalServerError, "failed to get polling config")
-		return
-	}
+	pc := models.DefaultPollingConfig()
 	writeJSON(w, http.StatusOK, pc)
 }
 
-// UpdatePollingConfig updates the polling endpoint configuration.
+// UpdatePollingConfig accepts a polling configuration update.
+// Per-vehicle polling tuning now lives in the `polling_config` table;
+// this is a no-op that returns the default config.
 func (h *SettingsHandler) UpdatePollingConfig(w http.ResponseWriter, r *http.Request) {
-	var pc models.PollingConfig
+	var pc models.LegacyPollingConfig
 	if err := json.NewDecoder(r.Body).Decode(&pc); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	if err := h.settingsRepo.UpdatePollingConfig(r.Context(), &pc); err != nil {
-		log.Error().Err(err).Msg("failed to update polling config")
-		writeError(w, http.StatusInternalServerError, "failed to update polling config")
+	log.Info().Interface("polling_config", pc).Msg("polling config updated (legacy no-op)")
+
+	writeJSON(w, http.StatusOK, pc)
+}
+
+// dashboardLayoutsResponse is the JSON envelope for dashboard layout persistence.
+type dashboardLayoutsResponse struct {
+	Dashboards json.RawMessage `json:"dashboards"`
+	ActiveID   string          `json:"active_id"`
+}
+
+// maxDashboardLayoutSize is the maximum allowed body size for layout storage (1 MB).
+const maxDashboardLayoutSize = 1 << 20
+
+// GetDashboardLayouts returns the persisted dashboard layout data.
+// GET /settings/dashboard-layouts
+func (h *SettingsHandler) GetDashboardLayouts(w http.ResponseWriter, r *http.Request) {
+	raw, err := h.settingsRepo.GetDashboardLayouts(r.Context())
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get dashboard layouts")
+		writeError(w, http.StatusInternalServerError, "failed to get dashboard layouts")
+		return
+	}
+	if raw == "" {
+		writeJSON(w, http.StatusOK, dashboardLayoutsResponse{
+			Dashboards: json.RawMessage("[]"),
+			ActiveID:   "default",
+		})
 		return
 	}
 
-	log.Info().Interface("polling_config", pc).Msg("polling config updated")
+	// Return the stored JSON as-is (it was validated on write).
+	var stored dashboardLayoutsResponse
+	if err := json.Unmarshal([]byte(raw), &stored); err != nil {
+		// Corrupted data — return empty default rather than 500.
+		log.Warn().Err(err).Msg("corrupted dashboard_layouts in settings, returning defaults")
+		writeJSON(w, http.StatusOK, dashboardLayoutsResponse{
+			Dashboards: json.RawMessage("[]"),
+			ActiveID:   "default",
+		})
+		return
+	}
+	writeJSON(w, http.StatusOK, stored)
+}
 
-	// Sync telemetry capture toggle if telemetry handler is wired
-	if h.telemetryHandler != nil {
-		h.telemetryHandler.SetCaptureEnabled(pc.TelemetryCapture)
+// UpdateDashboardLayouts persists dashboard layout data.
+// PUT /settings/dashboard-layouts
+func (h *SettingsHandler) UpdateDashboardLayouts(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(io.LimitReader(r.Body, maxDashboardLayoutSize+1))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "failed to read request body")
+		return
+	}
+	if len(body) > maxDashboardLayoutSize {
+		writeError(w, http.StatusRequestEntityTooLarge, "dashboard layouts payload exceeds 1 MB limit")
+		return
 	}
 
-	writeJSON(w, http.StatusOK, pc)
+	// Validate JSON structure
+	var payload dashboardLayoutsResponse
+	if err := json.Unmarshal(body, &payload); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	if payload.ActiveID == "" {
+		payload.ActiveID = "default"
+	}
+	// Validate that dashboards is a JSON array
+	if len(payload.Dashboards) == 0 || payload.Dashboards[0] != '[' {
+		writeError(w, http.StatusBadRequest, "dashboards must be a JSON array")
+		return
+	}
+
+	// Re-marshal the validated payload for storage
+	canonical, err := json.Marshal(payload)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to serialize dashboard layouts")
+		return
+	}
+
+	if err := h.settingsRepo.UpsertDashboardLayouts(r.Context(), string(canonical)); err != nil {
+		log.Error().Err(err).Msg("failed to persist dashboard layouts")
+		writeError(w, http.StatusInternalServerError, "failed to persist dashboard layouts")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, payload)
 }

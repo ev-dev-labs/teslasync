@@ -8,6 +8,8 @@ import { StatusBadge } from '@/components/data-display/StatusBadge';
 import { StatCard } from '@/components/data-display/StatCard';
 import { Badge } from '@/components/ui/Badge';
 import { Grid } from '@/components/layout/Grid';
+import { FSM_REGISTRY } from '@/types/fsm';
+import type { VehicleStatus } from '@/api/types';
 
 export interface VehicleHeroCardProps extends HTMLAttributes<HTMLDivElement> {
   vehicle: {
@@ -28,18 +30,13 @@ export interface VehicleHeroCardProps extends HTMLAttributes<HTMLDivElement> {
     sentry_mode: boolean;
     software_version: string;
     power: number;
+    state?: string;
   } | null;
   className?: string;
 }
 
-type VehicleStatus = 'online' | 'offline' | 'asleep' | 'driving' | 'charging' | 'updating';
-
-const VALID_STATUSES: ReadonlySet<string> = new Set<VehicleStatus>([
-  'online', 'offline', 'asleep', 'driving', 'charging', 'updating',
-]);
-
 function toStatus(state: string): VehicleStatus {
-  return VALID_STATUSES.has(state) ? (state as VehicleStatus) : 'offline';
+  return state in FSM_REGISTRY.vehicle.states ? (state as VehicleStatus) : 'offline';
 }
 
 export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
@@ -61,7 +58,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                 {vehicle.display_name}
               </h2>
-              <StatusBadge status={toStatus(vehicle.state)} />
+              <StatusBadge status={toStatus(vehicleState?.state ?? vehicle.state ?? 'offline')} />
             </div>
             <p className="text-xs font-mono text-gray-500 dark:text-gray-400">
               {vehicle.vin}

@@ -27,6 +27,7 @@ import {
   ChartContainer,
   ChartTooltip,
   RadialGauge,
+  AREA_DEFAULTS,
   LineChart,
   Line,
   BarChart,
@@ -39,6 +40,8 @@ import {
   Cell,
   ReferenceLine,
   Legend,
+  renderAnnotationLines,
+  AddAnnotationPopover,
 } from '@/components/charts';
 import { AnimatedNumber, StatCard, MetricBar, InlineMetric, KVList } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
@@ -49,7 +52,8 @@ import { useDriveScore, useDrives } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { formatDateShort } from '@/lib/dateFormat';
+import { useAnnotations } from '@/hooks/useAnnotations';
+import { formatDateShort, formatDurationMinutes } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt, fmtWithUnit } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 
@@ -69,21 +73,19 @@ interface DriveScore {
 interface Drive {
   id: number;
   vehicleId: number;
-  startDate: string;
-  endDate: string | null;
-  distance: number;
+  startTs: string;
+  endTs: string | null;
+  distanceMi: number;
   durationMin: number;
-  speedMax: number | null;
-  speedAvg: number | null;
-  startBatteryLevel: number | null;
-  endBatteryLevel: number | null;
+  maxSpeedMph: number | null;
+  avgSpeedMph: number | null;
+  startBatteryPct: number | null;
+  endBatteryPct: number | null;
   startAddress: string | null;
   endAddress: string | null;
-  outsideTempAvg: number | null;
-  powerMax: number | null;
-  powerMin: number | null;
-  startOdometer: number | null;
-  endOdometer: number | null;
+  outsideTempAvgC: number | null;
+  avgPowerKw: number | null;
+  energyUsedKwh: number | null;
 }
 
 type SortField = 'date' | 'distance' | 'score' | 'efficiency';
@@ -115,15 +117,15 @@ const DRIVES_PER_PAGE = 10;
 /* ------------------------------------------------------------------ */
 
 function scoreDrive(drive: Drive): DriveScore {
-  const battUsed = (drive.startBatteryLevel ?? 50) - (drive.endBatteryLevel ?? 45);
-  const energyKwh = (battUsed / 100) * 75;
+  const battUsed = (drive.startBatteryPct ?? 50) - (drive.endBatteryPct ?? 45);
+  const energyKwh = drive.energyUsedKwh ?? (battUsed / 100) * 75;
   const whPerKm =
-    drive.distance > 0 ? (energyKwh * 1000) / drive.distance : 200;
+    drive.distanceMi > 0 ? (energyKwh * 1000) / drive.distanceMi : 200;
 
   const effScore = Math.max(0, Math.min(40, 40 - (whPerKm - 130) / 3));
-  const powerRange = (drive.powerMax ?? 50) - (drive.powerMin ?? -20);
-  const smoothScore = Math.max(0, Math.min(30, 30 - powerRange / 5));
-  const maxSpeed = drive.speedMax ?? 80;
+  const avgPower = drive.avgPowerKw ?? 30;
+  const smoothScore = Math.max(0, Math.min(30, 30 - avgPower / 3));
+  const maxSpeed = drive.maxSpeedMph ?? 80;
   const speedScore = Math.max(
     0,
     Math.min(30, 30 - Math.max(0, maxSpeed - 90) / 2),
@@ -188,13 +190,6 @@ function scoreTextClass(score: number | null): string {
   if (score >= 80) return 'text-green-400';
   if (score >= 60) return 'text-amber-400';
   return 'text-red-400';
-}
-
-function formatDuration(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = Math.round(minutes % 60);
-  if (h === 0) return `${m}m`;
-  return `${h}h ${m}m`;
 }
 
 function getDefaultStartDate(): string {
@@ -442,6 +437,31 @@ export default function DriveScorePage() {
     efficiencyUnit,
   } = useSettings();
 
+  /* ---- annotations ---- */
+  const { annotations, addAnnotation, removeAnnotation } = useAnnotations('drive-score', vehicleId);
+  const [isAnnotating, setIsAnnotating] = useState(false);
+  const [pendingTimestamp, setPendingTimestamp] = useState<string | null>(null);
+
+  const handleAnnotateChartClick = useCallback(
+    (state: { activeLabel?: string }) => {
+      if (isAnnotating && state?.activeLabel) {
+        setPendingTimestamp(String(state.activeLabel));
+      }
+    },
+    [isAnnotating],
+  );
+
+  const handleAddAnnotation = useCallback(
+    (label: string, category: Parameters<typeof addAnnotation>[2], description?: string) => {
+      if (pendingTimestamp) {
+        addAnnotation(pendingTimestamp, label, category, description);
+        setPendingTimestamp(null);
+        setIsAnnotating(false);
+      }
+    },
+    [pendingTimestamp, addAnnotation],
+  );
+
   /* ---- date filter ---- */
   const [startDate, setStartDate] = useState<string>(getDefaultStartDate);
   const [endDate, setEndDate] = useState<string>(getDefaultEndDate);
@@ -459,7 +479,7 @@ export default function DriveScorePage() {
     const start = new Date(startDate).getTime();
     const end = new Date(endDate).getTime() + 86_400_000;
     return drives.filter((d) => {
-      const ts = new Date(d.startDate).getTime();
+      const ts = new Date(d.startTs).getTime();
       return ts >= start && ts <= end;
     });
   }, [drives, startDate, endDate]);
@@ -481,11 +501,11 @@ export default function DriveScorePage() {
       switch (sortField) {
         case 'date':
           cmp =
-            new Date(a.drive.startDate).getTime() -
-            new Date(b.drive.startDate).getTime();
+            new Date(a.drive.startTs).getTime() -
+            new Date(b.drive.startTs).getTime();
           break;
         case 'distance':
-          cmp = a.drive.distance - b.drive.distance;
+          cmp = a.drive.distanceMi - b.drive.distanceMi;
           break;
         case 'score':
           cmp = a.score.total - b.score.total;
@@ -558,12 +578,12 @@ export default function DriveScorePage() {
     const recent = [...scoredDrives]
       .sort(
         (a, b) =>
-          new Date(a.drive.startDate).getTime() -
-          new Date(b.drive.startDate).getTime(),
+          new Date(a.drive.startTs).getTime() -
+          new Date(b.drive.startTs).getTime(),
       )
       .slice(-20);
     return recent.map((sd) => ({
-      date: formatDateShort(sd.drive.startDate),
+      date: formatDateShort(sd.drive.startTs),
       score: sd.score.total,
       efficiency: sd.score.efficiency,
       smoothness: sd.score.smoothness,
@@ -687,15 +707,15 @@ export default function DriveScorePage() {
 
     const avg = (items: typeof scoredDrives) => items.length > 0 ? Math.round(items.reduce((s, d) => s + d.score.total, 0) / items.length) : null;
 
-    const thisWeekDrives = scoredDrives.filter((sd) => new Date(sd.drive.startDate) >= weekStart);
-    const lastWeekDrives = scoredDrives.filter((sd) => { const d = new Date(sd.drive.startDate); return d >= lastWeekStart && d < weekStart; });
-    const thisMonthDrives = scoredDrives.filter((sd) => new Date(sd.drive.startDate) >= monthStart);
-    const lastMonthDrives = scoredDrives.filter((sd) => { const d = new Date(sd.drive.startDate); return d >= lastMonthStart && d <= lastMonthEnd; });
+    const thisWeekDrives = scoredDrives.filter((sd) => new Date(sd.drive.startTs) >= weekStart);
+    const lastWeekDrives = scoredDrives.filter((sd) => { const d = new Date(sd.drive.startTs); return d >= lastWeekStart && d < weekStart; });
+    const thisMonthDrives = scoredDrives.filter((sd) => new Date(sd.drive.startTs) >= monthStart);
+    const lastMonthDrives = scoredDrives.filter((sd) => { const d = new Date(sd.drive.startTs); return d >= lastMonthStart && d <= lastMonthEnd; });
 
     const weekMap = new Map<string, typeof scoredDrives>();
     const monthMap = new Map<string, typeof scoredDrives>();
     scoredDrives.forEach((sd) => {
-      const d = new Date(sd.drive.startDate);
+      const d = new Date(sd.drive.startTs);
       const wk = `${d.getFullYear()}-W${Math.ceil((d.getDate() + new Date(d.getFullYear(), d.getMonth(), 1).getDay()) / 7)}`;
       const mo = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       if (!weekMap.has(wk)) weekMap.set(wk, []);
@@ -960,8 +980,7 @@ export default function DriveScorePage() {
                       ? scoredDrives.reduce(
                             (sum, sd) =>
                               sum +
-                              ((sd.drive.powerMax ?? 50) -
-                                (sd.drive.powerMin ?? -20)),
+                              (sd.drive.avgPowerKw ?? 30),
                             0,
                           ) / scoredDrives.length
                       : 0,
@@ -1002,7 +1021,7 @@ export default function DriveScorePage() {
                       ? convertSpeed(
                             scoredDrives.reduce(
                               (sum, sd) =>
-                                sum + (sd.drive.speedMax ?? 80),
+                                sum + (sd.drive.maxSpeedMph ?? 80),
                               0,
                             ) / scoredDrives.length,
                           )
@@ -1018,9 +1037,16 @@ export default function DriveScorePage() {
           {/* -------- Section 4: Score trend chart -------- */}
           <StaggerItem>
             <GlassPanel>
-              <ChartContainer title={t('driveScore.scoreTrend', 'Score Trend')} height={300}>
+              <ChartContainer
+                title={t('driveScore.scoreTrend', 'Score Trend')}
+                height={300}
+                annotations={annotations}
+                isAnnotating={isAnnotating}
+                onAnnotateToggle={() => setIsAnnotating((v) => !v)}
+                onRemoveAnnotation={removeAnnotation}
+              >
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={trendChartData}>
+                  <LineChart data={trendChartData} onClick={handleAnnotateChartClick}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                     <XAxis dataKey="date" stroke="#94a3b8" fontSize={12} />
                     <YAxis domain={[0, 100]} stroke="#94a3b8" fontSize={12} />
@@ -1036,45 +1062,48 @@ export default function DriveScorePage() {
                         fontSize: 11,
                       }}
                     />
+                    {renderAnnotationLines(annotations, (ts) => ts)}
                     <Line
-                      type="monotone"
+                      {...AREA_DEFAULTS}
                       dataKey="score"
                       name={t('driveScore.totalScore', 'Total Score')}
                       stroke={gradeColor(overallGrade)}
-                      strokeWidth={2}
                       dot={{ r: 3, fill: gradeColor(overallGrade) }}
                       activeDot={{ r: 5 }}
                     />
                     <Line
-                      type="monotone"
+                      {...AREA_DEFAULTS}
                       dataKey="efficiency"
                       name={t('driveScore.efficiency', 'Efficiency')}
                       stroke={CATEGORY_COLORS.efficiency}
                       strokeWidth={1}
                       strokeDasharray="4 2"
-                      dot={false}
                     />
                     <Line
-                      type="monotone"
+                      {...AREA_DEFAULTS}
                       dataKey="smoothness"
                       name={t('driveScore.smoothness', 'Smoothness')}
                       stroke={CATEGORY_COLORS.smoothness}
                       strokeWidth={1}
                       strokeDasharray="4 2"
-                      dot={false}
                     />
                     <Line
-                      type="monotone"
+                      {...AREA_DEFAULTS}
                       dataKey="speed"
                       name={t('driveScore.speedDiscipline', 'Speed Discipline')}
                       stroke={CATEGORY_COLORS.speed}
                       strokeWidth={1}
                       strokeDasharray="4 2"
-                      dot={false}
                     />
                   </LineChart>
                 </ResponsiveContainer>
               </ChartContainer>
+              <AddAnnotationPopover
+                open={pendingTimestamp != null}
+                timestamp={pendingTimestamp ?? ''}
+                onAdd={handleAddAnnotation}
+                onCancel={() => setPendingTimestamp(null)}
+              />
             </GlassPanel>
           </StaggerItem>
 
@@ -1176,7 +1205,7 @@ export default function DriveScorePage() {
                 {bestDrive ? (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-[var(--text-muted)]">{formatDateShort(bestDrive.drive.startDate)}</span>
+                      <span className="text-xs text-[var(--text-muted)]">{formatDateShort(bestDrive.drive.startTs)}</span>
                       <Badge variant={gradeVariant(bestDrive.score.grade)} size="sm">{bestDrive.score.grade}</Badge>
                     </div>
                     <div className="flex items-center gap-4">
@@ -1184,11 +1213,11 @@ export default function DriveScorePage() {
                       <div className="flex-1 space-y-2">
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-[var(--text-muted)]">{t('driveScore.distance', 'Distance')}</span>
-                          <span className="text-[var(--text-primary)]">{fmtNumber(convertDistance(bestDrive.drive.distance))} {distanceUnit}</span>
+                          <span className="text-[var(--text-primary)]">{fmtNumber(convertDistance(bestDrive.drive.distanceMi))} {distanceUnit}</span>
                         </div>
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-[var(--text-muted)]">{t('driveScore.durationLabel', 'Duration')}</span>
-                          <span className="text-[var(--text-primary)]">{formatDuration(bestDrive.drive.durationMin)}</span>
+                          <span className="text-[var(--text-primary)]">{formatDurationMinutes(bestDrive.drive.durationMin)}</span>
                         </div>
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-[var(--text-muted)]">{t('driveScore.consumption', 'Consumption')}</span>
@@ -1220,7 +1249,7 @@ export default function DriveScorePage() {
                 {worstDrive ? (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-[var(--text-muted)]">{formatDateShort(worstDrive.drive.startDate)}</span>
+                      <span className="text-xs text-[var(--text-muted)]">{formatDateShort(worstDrive.drive.startTs)}</span>
                       <Badge variant={gradeVariant(worstDrive.score.grade)} size="sm">{worstDrive.score.grade}</Badge>
                     </div>
                     <div className="flex items-center gap-4">
@@ -1228,11 +1257,11 @@ export default function DriveScorePage() {
                       <div className="flex-1 space-y-2">
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-[var(--text-muted)]">{t('driveScore.distance', 'Distance')}</span>
-                          <span className="text-[var(--text-primary)]">{fmtNumber(convertDistance(worstDrive.drive.distance))} {distanceUnit}</span>
+                          <span className="text-[var(--text-primary)]">{fmtNumber(convertDistance(worstDrive.drive.distanceMi))} {distanceUnit}</span>
                         </div>
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-[var(--text-muted)]">{t('driveScore.durationLabel', 'Duration')}</span>
-                          <span className="text-[var(--text-primary)]">{formatDuration(worstDrive.drive.durationMin)}</span>
+                          <span className="text-[var(--text-primary)]">{formatDurationMinutes(worstDrive.drive.durationMin)}</span>
                         </div>
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-[var(--text-muted)]">{t('driveScore.consumption', 'Consumption')}</span>
@@ -1312,7 +1341,7 @@ export default function DriveScorePage() {
                     >
                       {/* Date */}
                       <span className="text-sm text-white/80 truncate">
-                        {formatDateShort(drive.startDate)}
+                        {formatDateShort(drive.startTs)}
                       </span>
 
                       {/* Route */}
@@ -1325,14 +1354,14 @@ export default function DriveScorePage() {
                       {/* Distance */}
                       <span className="text-sm text-white/80">
                         {fmtWithUnit(
-                          convertDistance(drive.distance),
+                          convertDistance(drive.distanceMi),
                           distanceUnit,
                         )}
                       </span>
 
                       {/* Duration */}
                       <span className="text-sm text-white/80">
-                        {formatDuration(drive.durationMin)}
+                        {formatDurationMinutes(drive.durationMin)}
                       </span>
 
                       {/* Consumption */}
@@ -1617,7 +1646,7 @@ export default function DriveScorePage() {
                       value: fmtWithUnit(
                         convertDistance(
                           filteredDrives.reduce(
-                            (sum, d) => sum + d.distance,
+                            (sum, d) => sum + d.distanceMi,
                             0,
                           ),
                         ),
@@ -1626,7 +1655,7 @@ export default function DriveScorePage() {
                     },
                     {
                       label: t('driveScore.totalDuration', 'Total Duration'),
-                      value: formatDuration(
+                      value: formatDurationMinutes(
                         filteredDrives.reduce(
                           (sum, d) => sum + d.durationMin,
                           0,
@@ -1639,7 +1668,7 @@ export default function DriveScorePage() {
                         filteredDrives.length > 0
                           ? convertDistance(
                               filteredDrives.reduce(
-                                (sum, d) => sum + d.distance,
+                                (sum, d) => sum + d.distanceMi,
                                 0,
                               ) / filteredDrives.length,
                             )
@@ -1652,7 +1681,7 @@ export default function DriveScorePage() {
                         'driveScore.avgDuration',
                         'Avg Duration/Drive',
                       ),
-                      value: formatDuration(
+                      value: formatDurationMinutes(
                         filteredDrives.length > 0
                           ? filteredDrives.reduce(
                               (sum, d) => sum + d.durationMin,
@@ -1668,7 +1697,7 @@ export default function DriveScorePage() {
                           ? convertSpeed(
                               Math.max(
                                 ...filteredDrives.map(
-                                  (d) => d.speedMax ?? 0,
+                                  (d) => d.maxSpeedMph ?? 0,
                                 ),
                               ),
                             )

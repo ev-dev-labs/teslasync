@@ -115,10 +115,9 @@ func TestValidation_MinConnsExceedsMaxConns(t *testing.T) {
 func TestValidation_AuthEnabledNoSecret(t *testing.T) {
 	t.Setenv("AUTH_ENABLED", "true")
 	t.Setenv("AUTH_JWT_SECRET", "")
-	t.Setenv("AUTH_AUTHENTIK_URL", "")
 	_, err := Load()
 	if err == nil {
-		t.Error("expected error when auth enabled but no secret/URL set")
+		t.Error("expected error when auth enabled but no secret set")
 	}
 }
 

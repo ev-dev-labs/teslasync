@@ -9,9 +9,9 @@ import (
 	"time"
 )
 
-// --- ParseWaitConfig Tests ---
+// --- DecodeWaitSpec Tests ---
 
-func TestParseWaitConfig(t *testing.T) {
+func TestDecodeWaitSpec(t *testing.T) {
 	tests := []struct {
 		name        string
 		input       json.RawMessage
@@ -77,7 +77,7 @@ func TestParseWaitConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg, err := ParseWaitConfig(tt.input)
+			cfg, err := DecodeWaitSpec(tt.input)
 			if tt.wantErr != "" {
 				if err == nil {
 					t.Fatalf("expected error containing %q, got nil", tt.wantErr)

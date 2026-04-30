@@ -13,17 +13,22 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/port/external"
 )
 
+// gallonToKWhFactor converts a gallon price to kWh-equivalent cost.
+// Must match the factor in the EIA adapter.
+const gallonToKWhFactor = 7.14
+
 // GasPriceWorker polls an external price provider for the latest gasoline price.
 type GasPriceWorker struct {
 	db       *database.DB
 	cfg      config.GasPriceConfig
 	provider external.GasPriceProvider
 
-	mu           sync.Mutex
-	pollInterval string
-	lastPollTime time.Time
-	lastPrice    float64
-	running      atomic.Bool
+	mu              sync.Mutex
+	pollInterval    string
+	lastPollTime    time.Time
+	lastPrice       float64 // gallon price
+	lastPriceKWhEq  float64 // kWh-equivalent price
+	running         atomic.Bool
 
 	// stopCh is used to signal the ticker loop to stop.
 	stopCh chan struct{}
@@ -110,7 +115,8 @@ func (w *GasPriceWorker) Poll(ctx context.Context) {
 		return
 	}
 
-	price := result.PricePerKWh
+	price := result.PricePerGallon
+	kwhEqPrice := result.PricePerKWh
 
 	// Record in gas_price_history (close current period, insert new)
 	if err := w.recordPrice(ctx, price); err != nil {
@@ -127,6 +133,7 @@ func (w *GasPriceWorker) Poll(ctx context.Context) {
 	w.mu.Lock()
 	w.lastPollTime = time.Now()
 	w.lastPrice = price
+	w.lastPriceKWhEq = kwhEqPrice
 	w.mu.Unlock()
 
 	// Persist poll state
@@ -153,13 +160,14 @@ func (w *GasPriceWorker) recordPrice(ctx context.Context, price float64) error {
 		return fmt.Errorf("close period: %w", err)
 	}
 
-	// Get current efficiency from settings
-	var efficiencyMPG float64
+	// Get current efficiency from settings (key-value table)
 	var gasUnit string
+	var efficiencyMPG float64
 	err = tx.QueryRow(ctx,
-		`SELECT gas_unit, gas_efficiency_mpg FROM settings WHERE id = 1`).Scan(&gasUnit, &efficiencyMPG)
+		`SELECT
+			COALESCE((SELECT value_text FROM settings WHERE key = 'gas_unit'), 'gallon'),
+			COALESCE((SELECT value_num FROM settings WHERE key = 'gas_efficiency_mpg'), 25)`).Scan(&gasUnit, &efficiencyMPG)
 	if err != nil {
-		// Defaults if settings not found
 		gasUnit = "gallon"
 		efficiencyMPG = 25
 	}
@@ -174,10 +182,12 @@ func (w *GasPriceWorker) recordPrice(ctx context.Context, price float64) error {
 	return tx.Commit(ctx)
 }
 
-// updateSettingsPrice updates the gas_price_per_unit in the settings table.
+// updateSettingsPrice upserts the gas_price_per_unit in the key-value settings table.
 func (w *GasPriceWorker) updateSettingsPrice(ctx context.Context, price float64) error {
 	_, err := w.db.Pool.Exec(ctx,
-		`UPDATE settings SET gas_price_per_unit = $1 WHERE id = 1`, price)
+		`INSERT INTO settings (key, value_num, data_kind, created_at, updated_at)
+		VALUES ('gas_price_per_unit', $1, 'number', NOW(), NOW())
+		ON CONFLICT (key) DO UPDATE SET value_num = $1, updated_at = NOW()`, price)
 	return err
 }
 
@@ -214,19 +224,21 @@ func (w *GasPriceWorker) Status() GasPriceStatus {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	return GasPriceStatus{
-		Enabled:      w.IsRunning(),
-		PollInterval: w.pollInterval,
-		LastPollTime: w.lastPollTime,
-		CurrentPrice: w.lastPrice,
+		Enabled:        w.IsRunning(),
+		PollInterval:   w.pollInterval,
+		LastPollTime:   w.lastPollTime,
+		CurrentPrice:   w.lastPrice,
+		CurrentPriceKWhEq: w.lastPriceKWhEq,
 	}
 }
 
 // GasPriceStatus holds the polling status for the API response.
 type GasPriceStatus struct {
-	Enabled      bool      `json:"enabled"`
-	PollInterval string    `json:"poll_interval"`
-	LastPollTime time.Time `json:"last_poll_time"`
-	CurrentPrice float64   `json:"current_price"`
+	Enabled           bool      `json:"enabled"`
+	PollInterval      string    `json:"poll_interval"`
+	LastPollTime      time.Time `json:"last_poll_time"`
+	CurrentPrice      float64   `json:"current_price"`
+	CurrentPriceKWhEq float64   `json:"current_price_kwh_eq"`
 }
 
 // tickerDuration converts the poll interval string to a time.Duration.
@@ -292,6 +304,9 @@ func (w *GasPriceWorker) restoreState(ctx context.Context) {
 	w.pollInterval = interval
 	w.lastPollTime = lastPoll
 	w.lastPrice = lastPrice
+	if lastPrice > 0 {
+		w.lastPriceKWhEq = lastPrice / gallonToKWhFactor
+	}
 	w.mu.Unlock()
 
 	w.running.Store(enabled)

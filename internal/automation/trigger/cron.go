@@ -21,18 +21,29 @@ type AutomationEngine interface {
 	Evaluate(ctx context.Context, automationID int64, triggerSnapshot json.RawMessage) error
 }
 
-// CronRepo is the subset of database.AutomationRepo needed by CronTrigger.
-type CronRepo interface {
-	GetByTriggerType(ctx context.Context, triggerType string) ([]*models.Automation, error)
-	SetAutoDisabled(ctx context.Context, id int64, reason string) error
+// CronAutomation is the hydrated view CronTrigger consumes: an enabled
+// automation paired with the typed schedule-trigger CTI row that drives it.
+//
+// Per ADR-012 (Option A), consumers receive Go-typed CTI children rather than
+// reading JSONB blobs from the parent row; per ADR-004 the legacy "cron"
+// trigger kind is expressed as a schedule trigger, so the relevant CTI table
+// is `automation_step_trigger_schedule`.
+type CronAutomation struct {
+	Automation models.Automation
+	Trigger    models.AutomationStepTriggerSchedule
 }
 
-// CronConfig represents the parsed trigger_config for cron automations.
-type CronConfig struct {
-	CronExpr    string `json:"cron_expr"`
-	Timezone    string `json:"timezone"`
-	OneTime     bool   `json:"one_time"`
-	OneTimeDate string `json:"one_time_date"`
+// CronRepo is the narrow port CronTrigger needs from the persistence layer.
+// The implementation is expected to load enabled automations whose (single)
+// trigger step is a schedule trigger, returning each parent paired with its
+// typed CTI row in one batched query (ADR-012 Option A; ADR-005 N+1
+// prevention).
+//
+// Per ADR-012 sub-decision (ii), `auto_disabled` is retired: invalid
+// schedules are logged and skipped at registration time; no database write
+// is performed against the parent automation.
+type CronRepo interface {
+	LoadEnabledScheduleTriggers(ctx context.Context) ([]CronAutomation, error)
 }
 
 // cronSnapshot is the JSON payload passed to engine.Evaluate when a cron fires.
@@ -76,26 +87,21 @@ func NewCronTrigger(repo CronRepo, engine AutomationEngine) *CronTrigger {
 	}
 }
 
-// Start loads all enabled cron automations from the database and registers
-// them with the scheduler. Registration is best-effort: invalid automations
-// are auto-disabled and skipped rather than aborting startup.
+// Start loads all enabled schedule-triggered automations from the database
+// and registers them with the scheduler. Registration is best-effort:
+// invalid automations are logged and skipped rather than aborting startup.
 func (t *CronTrigger) Start(ctx context.Context) error {
-	automations, err := t.repo.GetByTriggerType(ctx, "cron")
+	automations, err := t.repo.LoadEnabledScheduleTriggers(ctx)
 	if err != nil {
 		return fmt.Errorf("load cron automations: %w", err)
 	}
 
-	for _, a := range automations {
-		if err := t.Register(a); err != nil {
+	for _, ca := range automations {
+		if err := t.Register(ca); err != nil {
 			t.logger.Warn().Err(err).
-				Int64("automation_id", a.ID).
-				Str("automation", a.Name).
+				Int64("automation_id", ca.Automation.ID).
+				Str("automation", ca.Automation.Name).
 				Msg("skipping invalid cron automation")
-			if disableErr := t.repo.SetAutoDisabled(ctx, a.ID, fmt.Sprintf("invalid cron config: %v", err)); disableErr != nil {
-				t.logger.Error().Err(disableErr).
-					Int64("automation_id", a.ID).
-					Msg("failed to auto-disable invalid automation")
-			}
 		}
 	}
 
@@ -115,41 +121,28 @@ func (t *CronTrigger) Stop() {
 	t.logger.Info().Msg("cron trigger stopped")
 }
 
-// Register adds a single automation to the cron scheduler.
-// Returns an error if the trigger config is malformed, has an invalid
-// cron expression, or specifies an unknown timezone.
-func (t *CronTrigger) Register(automation *models.Automation) error {
-	cfg, err := parseCronConfig(automation.TriggerConfig)
-	if err != nil {
-		return fmt.Errorf("parse trigger config: %w", err)
-	}
-
-	if cfg.CronExpr == "" {
+// Register adds a single hydrated automation to the cron scheduler.
+// Returns an error if the schedule's cron expression is empty/invalid or
+// specifies an unknown timezone.
+func (t *CronTrigger) Register(ca CronAutomation) error {
+	if ca.Trigger.CronExpr == "" {
 		return fmt.Errorf("cron_expr is required")
 	}
 
-	loc, err := loadTimezone(cfg.Timezone)
+	loc, err := loadTimezone(ca.Trigger.Timezone)
 	if err != nil {
-		return fmt.Errorf("load timezone %q: %w", cfg.Timezone, err)
-	}
-
-	// For one-time triggers with a specific date, check if the date has passed.
-	if cfg.OneTime && cfg.OneTimeDate != "" {
-		if pastDate, reason := isOneTimeDatePast(cfg.OneTimeDate, loc); pastDate {
-			return fmt.Errorf("one-time date expired: %s", reason)
-		}
+		return fmt.Errorf("load timezone %q: %w", ca.Trigger.Timezone, err)
 	}
 
 	// Prefix the cron expression with CRON_TZ for timezone support.
-	spec := fmt.Sprintf("CRON_TZ=%s %s", loc.String(), cfg.CronExpr)
+	spec := fmt.Sprintf("CRON_TZ=%s %s", loc.String(), ca.Trigger.CronExpr)
 
-	automationID := automation.ID
-	automationName := automation.Name
-	isOneTime := cfg.OneTime
-	cronExpr := cfg.CronExpr
+	automationID := ca.Automation.ID
+	automationName := ca.Automation.Name
+	cronExpr := ca.Trigger.CronExpr
 
 	entryID, err := t.scheduler.AddFunc(spec, func() {
-		t.fire(automationID, automationName, cronExpr, isOneTime)
+		t.fire(automationID, automationName, cronExpr)
 	})
 	if err != nil {
 		return fmt.Errorf("register cron schedule %q: %w", spec, err)
@@ -168,7 +161,6 @@ func (t *CronTrigger) Register(automation *models.Automation) error {
 		Str("automation", automationName).
 		Str("cron_expr", cronExpr).
 		Str("timezone", loc.String()).
-		Bool("one_time", isOneTime).
 		Msg("registered cron automation")
 
 	return nil
@@ -191,10 +183,10 @@ func (t *CronTrigger) Unregister(automationID int64) {
 	}
 }
 
-// Reload re-reads all enabled cron automations from the database and
-// replaces the current schedule. Uses best-effort registration.
+// Reload re-reads all enabled schedule-triggered automations from the
+// database and replaces the current schedule. Uses best-effort registration.
 func (t *CronTrigger) Reload(ctx context.Context) error {
-	automations, err := t.repo.GetByTriggerType(ctx, "cron")
+	automations, err := t.repo.LoadEnabledScheduleTriggers(ctx)
 	if err != nil {
 		return fmt.Errorf("reload cron automations: %w", err)
 	}
@@ -208,17 +200,12 @@ func (t *CronTrigger) Reload(ctx context.Context) error {
 	t.mu.Unlock()
 
 	// Re-register all.
-	for _, a := range automations {
-		if err := t.Register(a); err != nil {
+	for _, ca := range automations {
+		if err := t.Register(ca); err != nil {
 			t.logger.Warn().Err(err).
-				Int64("automation_id", a.ID).
-				Str("automation", a.Name).
+				Int64("automation_id", ca.Automation.ID).
+				Str("automation", ca.Automation.Name).
 				Msg("skipping invalid cron automation on reload")
-			if disableErr := t.repo.SetAutoDisabled(ctx, a.ID, fmt.Sprintf("invalid cron config: %v", err)); disableErr != nil {
-				t.logger.Error().Err(disableErr).
-					Int64("automation_id", a.ID).
-					Msg("failed to auto-disable invalid automation on reload")
-			}
 		}
 	}
 
@@ -245,7 +232,7 @@ func (t *CronTrigger) IsRegistered(automationID int64) bool {
 }
 
 // fire is the callback invoked by the cron scheduler when a job triggers.
-func (t *CronTrigger) fire(automationID int64, automationName, cronExpr string, oneTime bool) {
+func (t *CronTrigger) fire(automationID int64, automationName, cronExpr string) {
 	firedAt := time.Now().UTC()
 
 	snapshot, err := json.Marshal(cronSnapshot{
@@ -263,19 +250,7 @@ func (t *CronTrigger) fire(automationID int64, automationName, cronExpr string, 
 		Int64("automation_id", automationID).
 		Str("automation", automationName).
 		Str("cron_expr", cronExpr).
-		Bool("one_time", oneTime).
 		Msg("cron trigger fired")
-
-	// For one-time triggers, unregister and disable before evaluation
-	// to guarantee at-most-once semantics regardless of evaluation outcome.
-	if oneTime {
-		t.Unregister(automationID)
-		if disableErr := t.repo.SetAutoDisabled(t.ctx, automationID, "one-time cron trigger executed"); disableErr != nil {
-			t.logger.Error().Err(disableErr).
-				Int64("automation_id", automationID).
-				Msg("failed to auto-disable one-time automation")
-		}
-	}
 
 	if evalErr := t.engine.Evaluate(t.ctx, automationID, snapshot); evalErr != nil {
 		t.logger.Error().Err(evalErr).
@@ -285,40 +260,10 @@ func (t *CronTrigger) fire(automationID int64, automationName, cronExpr string, 
 	}
 }
 
-// parseCronConfig unmarshals the trigger_config JSON into a CronConfig.
-func parseCronConfig(raw json.RawMessage) (*CronConfig, error) {
-	if len(raw) == 0 {
-		return nil, fmt.Errorf("trigger_config is empty")
-	}
-	var cfg CronConfig
-	if err := json.Unmarshal(raw, &cfg); err != nil {
-		return nil, fmt.Errorf("unmarshal trigger config: %w", err)
-	}
-	return &cfg, nil
-}
-
 // loadTimezone loads an IANA timezone. Falls back to UTC for empty strings.
 func loadTimezone(tz string) (*time.Location, error) {
 	if tz == "" {
 		return time.UTC, nil
 	}
 	return time.LoadLocation(tz)
-}
-
-// isOneTimeDatePast checks whether a one_time_date (YYYY-MM-DD) has already
-// passed in the given timezone. Returns true with a reason if expired.
-func isOneTimeDatePast(dateStr string, loc *time.Location) (bool, string) {
-	targetDate, err := time.Parse("2006-01-02", dateStr)
-	if err != nil {
-		return true, fmt.Sprintf("invalid date format %q: %v", dateStr, err)
-	}
-
-	now := time.Now().In(loc)
-	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
-	target := time.Date(targetDate.Year(), targetDate.Month(), targetDate.Day(), 0, 0, 0, 0, loc)
-
-	if target.Before(today) {
-		return true, fmt.Sprintf("target date %s is before today %s", dateStr, today.Format("2006-01-02"))
-	}
-	return false, ""
 }

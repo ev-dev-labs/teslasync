@@ -31,58 +31,66 @@ func TestToken_Expired(t *testing.T) {
 }
 
 func TestVehicle_Fields(t *testing.T) {
+	model := "Model 3"
 	v := Vehicle{
 		VIN:         "5YJ3E1EA1PF000001",
 		DisplayName: "Test Car",
-		Model:       "Model 3",
-		State:       "online",
+		Model:       &model,
 	}
 	if v.VIN == "" {
 		t.Error("expected non-empty VIN")
 	}
-	if v.State != "online" {
-		t.Errorf("expected state 'online', got '%s'", v.State)
+	if v.Model == nil || *v.Model != "Model 3" {
+		t.Errorf("expected model 'Model 3', got %v", v.Model)
 	}
 	if v.DisplayName != "Test Car" {
 		t.Errorf("expected display name 'Test Car', got '%s'", v.DisplayName)
 	}
+	if !v.IsActive() {
+		t.Errorf("expected vehicle with nil ArchivedAt to be active")
+	}
 }
 
-func TestVehicle_States(t *testing.T) {
-	states := []string{"online", "asleep", "offline"}
-	for _, state := range states {
-		v := Vehicle{State: state}
-		if v.State != state {
-			t.Errorf("expected state '%s', got '%s'", state, v.State)
-		}
+func TestVehicle_Archived(t *testing.T) {
+	now := time.Now()
+	v := Vehicle{ArchivedAt: &now}
+	if v.IsActive() {
+		t.Error("expected archived vehicle to not be active")
 	}
 }
 
 func TestChargingSession_Fields(t *testing.T) {
+	energy := 45.5
+	pct := int16(20)
 	cs := ChargingSession{
-		VehicleID:         1,
-		StartDate:         time.Now(),
-		ChargeEnergyAdded: 45.5,
-		StartBatteryLevel: 20,
-		DurationMin:       60.0,
+		VehicleID:       1,
+		StartTs:         time.Now(),
+		EnergyAddedKwh:  &energy,
+		StartBatteryPct: &pct,
 	}
-	if cs.ChargeEnergyAdded != 45.5 {
-		t.Errorf("expected charge energy 45.5, got %f", cs.ChargeEnergyAdded)
+	if cs.EnergyAddedKwh == nil || *cs.EnergyAddedKwh != 45.5 {
+		t.Errorf("expected energy added 45.5, got %v", cs.EnergyAddedKwh)
 	}
-	if cs.StartBatteryLevel != 20 {
-		t.Errorf("expected start battery 20, got %d", cs.StartBatteryLevel)
+	if cs.StartBatteryPct == nil || *cs.StartBatteryPct != 20 {
+		t.Errorf("expected start battery 20, got %v", cs.StartBatteryPct)
+	}
+	if !cs.IsActive() {
+		t.Errorf("expected session with nil EndTs to be active")
 	}
 }
 
 func TestDrive_Fields(t *testing.T) {
+	start := time.Now()
+	endTs := start.Add(30 * time.Minute)
 	d := Drive{
 		VehicleID:   1,
-		StartDate:   time.Now(),
-		Distance:    25.5,
+		StartTs:     start,
+		EndTs:       &endTs,
+		DistanceMi:  25.5,
 		DurationMin: 30.0,
 	}
-	if d.Distance != 25.5 {
-		t.Errorf("expected distance 25.5, got %f", d.Distance)
+	if d.DistanceMi != 25.5 {
+		t.Errorf("expected distance 25.5, got %f", d.DistanceMi)
 	}
 	if d.DurationMin != 30.0 {
 		t.Errorf("expected duration 30.0, got %f", d.DurationMin)

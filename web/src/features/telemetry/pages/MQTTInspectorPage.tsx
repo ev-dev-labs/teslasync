@@ -95,7 +95,7 @@ export default function MQTTInspectorPage() {
   const { t } = useTranslation();
   usePageTitle(t('mqtt.title', 'MQTT Inspector'));
 
-  const { data: status, isLoading } = useMQTTStatus();
+  const { data: status, isLoading, error } = useMQTTStatus();
 
   /* ---- throughput history ---- */
   const [throughputHistory, setThroughputHistory] = useState<ThroughputPoint[]>([]);
@@ -130,8 +130,6 @@ export default function MQTTInspectorPage() {
     <PageContainer
       title={t('mqtt.title', 'MQTT Inspector')}
       subtitle={t('mqtt.subtitle', 'MQTT connection status and streaming telemetry')}
-      loading={isLoading}
-      error={null}
       actions={
         <div className="flex items-center gap-3">
           <span className="text-xs text-[var(--text-muted)]">
@@ -146,6 +144,23 @@ export default function MQTTInspectorPage() {
         </div>
       }
     >
+      {error && !status && (
+        <FadeIn>
+          <GlassPanel className="p-4 border border-red-500/30 bg-red-500/5">
+            <div className="flex items-start gap-3 text-sm">
+              <AlertTriangle className="h-4 w-4 text-red-400 mt-0.5 shrink-0" />
+              <div>
+                <p className="font-medium text-red-300">
+                  {t('mqtt.fetchError', 'Unable to load MQTT status')}
+                </p>
+                <p className="mt-1 text-[var(--text-muted)]">
+                  {(error as Error)?.message ?? String(error)}
+                </p>
+              </div>
+            </div>
+          </GlassPanel>
+        </FadeIn>
+      )}
       {/* Summary Cards */}
       <FadeIn delay={0.1}>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">

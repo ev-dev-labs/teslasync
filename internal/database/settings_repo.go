@@ -2,13 +2,29 @@ package database
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
-// SettingsRepo provides settings data access.
+// SettingsRepo provides settings data access over the typed key/value
+// `settings` table introduced by migration 000142.
+//
+// ADR-011 Option A — typed-struct facade.
+//
+// Callers continue to operate on a single *models.Settings value; the
+// repo is responsible for hydrating that struct from N rows of the
+// `settings` table on read and decomposing it back into N upserts on
+// write. Each setting is one row keyed by its JSON tag, with `data_kind`
+// selecting which value_* column is meaningful (text / number / boolean).
+//
+// Per-vehicle polling tuning is intentionally NOT modeled here — it
+// lives in the sibling `polling_config` table and is owned by
+// PollingConfigRepo. The pre-refactor `polling_config` JSONB column on
+// the wide settings row no longer exists (ADR-001, ADR-005, ADR-011).
 type SettingsRepo struct {
 	db *DB
 }
@@ -17,125 +33,317 @@ func NewSettingsRepo(db *DB) *SettingsRepo {
 	return &SettingsRepo{db: db}
 }
 
-func (r *SettingsRepo) Get(ctx context.Context) (*models.Settings, error) {
-	query := `SELECT id, unit_of_length, unit_of_temp, unit_of_pressure, preferred_range, language, base_cost_per_kwh, api_suspended, theme, mode, custom_primary, custom_accent, gas_price_per_unit, gas_unit, gas_efficiency_mpg, decimal_precision, quiet_hours_enabled, quiet_hours_start, quiet_hours_end, alert_digest_mode, polling_config FROM settings WHERE id = 1`
-	s := &models.Settings{}
-	var pollingConfigJSON []byte
-	err := r.db.Pool.QueryRow(ctx, query).Scan(
-		&s.ID, &s.UnitOfLength, &s.UnitOfTemp, &s.UnitOfPressure, &s.PreferredRange, &s.Language, &s.BaseCostPerKWh, &s.APISuspended,
-		&s.Theme, &s.Mode, &s.CustomPrimary, &s.CustomAccent, &s.GasPricePerUnit, &s.GasUnit, &s.GasEfficiencyMPG,
-		&s.DecimalPrecision, &s.QuietHoursEnabled, &s.QuietHoursStart, &s.QuietHoursEnd, &s.AlertDigestMode,
-		&pollingConfigJSON,
-	)
-	if err == pgx.ErrNoRows {
-		defaults := r.defaults()
-		return defaults, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	s.PollingConfig = models.DefaultPollingConfig()
-	if len(pollingConfigJSON) > 0 && string(pollingConfigJSON) != "{}" {
-		json.Unmarshal(pollingConfigJSON, &s.PollingConfig)
-	}
-	return s, nil
-}
-
-func (r *SettingsRepo) Upsert(ctx context.Context, s *models.Settings) error {
-	pollingConfigJSON, err := json.Marshal(s.PollingConfig)
-	if err != nil {
-		return err
-	}
-	query := `
-		INSERT INTO settings (id, unit_of_length, unit_of_temp, unit_of_pressure, preferred_range, language, base_cost_per_kwh, api_suspended, theme, mode, custom_primary, custom_accent, gas_price_per_unit, gas_unit, gas_efficiency_mpg, decimal_precision, quiet_hours_enabled, quiet_hours_start, quiet_hours_end, alert_digest_mode, polling_config)
-		VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
-		ON CONFLICT (id) DO UPDATE SET
-			unit_of_length = EXCLUDED.unit_of_length,
-			unit_of_temp = EXCLUDED.unit_of_temp,
-			unit_of_pressure = EXCLUDED.unit_of_pressure,
-			preferred_range = EXCLUDED.preferred_range,
-			language = EXCLUDED.language,
-			base_cost_per_kwh = EXCLUDED.base_cost_per_kwh,
-			api_suspended = EXCLUDED.api_suspended,
-			theme = EXCLUDED.theme,
-			mode = EXCLUDED.mode,
-			custom_primary = EXCLUDED.custom_primary,
-			custom_accent = EXCLUDED.custom_accent,
-			gas_price_per_unit = EXCLUDED.gas_price_per_unit,
-			gas_unit = EXCLUDED.gas_unit,
-			gas_efficiency_mpg = EXCLUDED.gas_efficiency_mpg,
-			decimal_precision = EXCLUDED.decimal_precision,
-			quiet_hours_enabled = EXCLUDED.quiet_hours_enabled,
-			quiet_hours_start = EXCLUDED.quiet_hours_start,
-			quiet_hours_end = EXCLUDED.quiet_hours_end,
-			alert_digest_mode = EXCLUDED.alert_digest_mode,
-			polling_config = EXCLUDED.polling_config`
-	_, err = r.db.Pool.Exec(ctx, query, s.UnitOfLength, s.UnitOfTemp, s.UnitOfPressure, s.PreferredRange, s.Language, s.BaseCostPerKWh, s.APISuspended,
-		s.Theme, s.Mode, s.CustomPrimary, s.CustomAccent, s.GasPricePerUnit, s.GasUnit, s.GasEfficiencyMPG, s.DecimalPrecision,
-		s.QuietHoursEnabled, s.QuietHoursStart, s.QuietHoursEnd, s.AlertDigestMode,
-		pollingConfigJSON)
-	return err
-}
-
-// IsAPISuspended returns true if the user has suspended all Tesla API calls.
-func (r *SettingsRepo) IsAPISuspended(ctx context.Context) (bool, error) {
-	var suspended bool
-	err := r.db.Pool.QueryRow(ctx, `SELECT api_suspended FROM settings WHERE id = 1`).Scan(&suspended)
-	if err == pgx.ErrNoRows {
-		return false, nil
-	}
-	return suspended, err
-}
-
-// GetPollingConfig returns the current polling configuration. If no config
-// is stored, returns DefaultPollingConfig with all endpoints enabled.
-func (r *SettingsRepo) GetPollingConfig(ctx context.Context) (*models.PollingConfig, error) {
-	var pollingConfigJSON []byte
-	err := r.db.Pool.QueryRow(ctx, `SELECT polling_config FROM settings WHERE id = 1`).Scan(&pollingConfigJSON)
-	if err == pgx.ErrNoRows {
-		pc := models.DefaultPollingConfig()
-		return &pc, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	pc := models.DefaultPollingConfig()
-	if len(pollingConfigJSON) > 0 && string(pollingConfigJSON) != "{}" {
-		json.Unmarshal(pollingConfigJSON, &pc)
-	}
-	return &pc, nil
-}
-
-// UpdatePollingConfig updates only the polling_config column.
-func (r *SettingsRepo) UpdatePollingConfig(ctx context.Context, pc *models.PollingConfig) error {
-	pollingConfigJSON, err := json.Marshal(pc)
-	if err != nil {
-		return err
-	}
-	_, err = r.db.Pool.Exec(ctx, `UPDATE settings SET polling_config = $1 WHERE id = 1`, pollingConfigJSON)
-	return err
-}
-
-func (r *SettingsRepo) defaults() *models.Settings {
+// settingsDefaults returns a fully-populated Settings with the same
+// defaults the pre-refactor wide-row schema used. Get() overlays stored
+// rows on top of this baseline so missing keys fall back to these
+// values without an extra round-trip.
+func settingsDefaults() *models.Settings {
 	return &models.Settings{
-		ID:               1,
-		UnitOfLength:     "km",
-		UnitOfTemp:       "C",
-		UnitOfPressure:   "bar",
-		PreferredRange:   "rated",
-		Language:         "en",
-		Theme:            "neon-cyan",
-		Mode:             "dark",
-		CustomPrimary:    "#00b4d8",
-		CustomAccent:     "#e63946",
-		GasPricePerUnit:  3.50,
-		GasUnit:          "gallon",
-		GasEfficiencyMPG: 25,
-		DecimalPrecision: 1,
+		UnitOfLength:      "km",
+		UnitOfTemp:        "C",
+		UnitOfPressure:    "bar",
+		PreferredRange:    "rated",
+		Language:          "en",
+		BaseCostPerKWh:    0,
+		APISuspended:      false,
+		Theme:             "neon-cyan",
+		Mode:              "dark",
+		CustomPrimary:     "#00b4d8",
+		CustomAccent:      "#e63946",
+		GasPricePerUnit:   3.50,
+		GasUnit:           "gallon",
+		GasEfficiencyMPG:  25,
+		DecimalPrecision:  1,
 		QuietHoursEnabled: false,
 		QuietHoursStart:   "22:00",
 		QuietHoursEnd:     "07:00",
 		AlertDigestMode:   "instant",
-		PollingConfig:    models.DefaultPollingConfig(),
 	}
+}
+
+// Get reads every row from the `settings` table and hydrates a typed
+// Settings struct keyed by JSON tag. Missing keys fall back to defaults.
+func (r *SettingsRepo) Get(ctx context.Context) (*models.Settings, error) {
+	const query = `
+		SELECT key, value_text, value_num, value_bool, data_kind
+		FROM settings`
+	rows, err := r.db.Pool.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("settings get query: %w", err)
+	}
+	defer rows.Close()
+
+	out := settingsDefaults()
+	for rows.Next() {
+		var (
+			key       string
+			valueText *string
+			valueNum  *float64
+			valueBool *bool
+			dataKind  string
+		)
+		if err := rows.Scan(&key, &valueText, &valueNum, &valueBool, &dataKind); err != nil {
+			return nil, fmt.Errorf("settings get scan: %w", err)
+		}
+		applySettingsRow(out, key, dataKind, valueText, valueNum, valueBool)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("settings get rows: %w", err)
+	}
+	return out, nil
+}
+
+// applySettingsRow maps one persisted row onto the typed Settings
+// struct. Unknown keys are tolerated (forward-compat) and silently
+// ignored. NULL value_* columns leave the default in place.
+func applySettingsRow(s *models.Settings, key, _ string, vText *string, vNum *float64, vBool *bool) {
+	switch key {
+	case "unit_of_length":
+		if vText != nil {
+			s.UnitOfLength = *vText
+		}
+	case "unit_of_temp":
+		if vText != nil {
+			s.UnitOfTemp = *vText
+		}
+	case "unit_of_pressure":
+		if vText != nil {
+			s.UnitOfPressure = *vText
+		}
+	case "preferred_range":
+		if vText != nil {
+			s.PreferredRange = *vText
+		}
+	case "language":
+		if vText != nil {
+			s.Language = *vText
+		}
+	case "base_cost_per_kwh":
+		if vNum != nil {
+			s.BaseCostPerKWh = *vNum
+		}
+	case "api_suspended":
+		if vBool != nil {
+			s.APISuspended = *vBool
+		}
+	case "theme":
+		if vText != nil {
+			s.Theme = *vText
+		}
+	case "mode":
+		if vText != nil {
+			s.Mode = *vText
+		}
+	case "custom_primary":
+		if vText != nil {
+			s.CustomPrimary = *vText
+		}
+	case "custom_accent":
+		if vText != nil {
+			s.CustomAccent = *vText
+		}
+	case "gas_price_per_unit":
+		if vNum != nil {
+			s.GasPricePerUnit = *vNum
+		}
+	case "gas_unit":
+		if vText != nil {
+			s.GasUnit = *vText
+		}
+	case "gas_efficiency_mpg":
+		if vNum != nil {
+			s.GasEfficiencyMPG = *vNum
+		}
+	case "decimal_precision":
+		if vNum != nil {
+			s.DecimalPrecision = int(*vNum)
+		}
+	case "quiet_hours_enabled":
+		if vBool != nil {
+			s.QuietHoursEnabled = *vBool
+		}
+	case "quiet_hours_start":
+		if vText != nil {
+			s.QuietHoursStart = *vText
+		}
+	case "quiet_hours_end":
+		if vText != nil {
+			s.QuietHoursEnd = *vText
+		}
+	case "alert_digest_mode":
+		if vText != nil {
+			s.AlertDigestMode = *vText
+		}
+	}
+}
+
+// Upsert decomposes a Settings struct into N upserts (one per scalar
+// field) executed inside a single transaction. Either all fields are
+// persisted or none are. Each upsert clears the sibling value_* columns
+// so `data_kind` always agrees with the populated column.
+func (r *SettingsRepo) Upsert(ctx context.Context, s *models.Settings) error {
+	if s == nil {
+		return errors.New("settings upsert: nil settings")
+	}
+	tx, err := r.db.Pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("settings upsert begin: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	const upsertText = `
+		INSERT INTO settings (key, value_text, data_kind)
+		VALUES ($1, $2, 'text')
+		ON CONFLICT (key) DO UPDATE SET
+			value_text = EXCLUDED.value_text,
+			value_num  = NULL,
+			value_bool = NULL,
+			data_kind  = 'text'`
+	const upsertNum = `
+		INSERT INTO settings (key, value_num, data_kind)
+		VALUES ($1, $2, 'number')
+		ON CONFLICT (key) DO UPDATE SET
+			value_text = NULL,
+			value_num  = EXCLUDED.value_num,
+			value_bool = NULL,
+			data_kind  = 'number'`
+	const upsertBool = `
+		INSERT INTO settings (key, value_bool, data_kind)
+		VALUES ($1, $2, 'boolean')
+		ON CONFLICT (key) DO UPDATE SET
+			value_text = NULL,
+			value_num  = NULL,
+			value_bool = EXCLUDED.value_bool,
+			data_kind  = 'boolean'`
+
+	type rowText struct {
+		key, value string
+	}
+	type rowNum struct {
+		key   string
+		value float64
+	}
+	type rowBool struct {
+		key   string
+		value bool
+	}
+
+	textRows := []rowText{
+		{"unit_of_length", s.UnitOfLength},
+		{"unit_of_temp", s.UnitOfTemp},
+		{"unit_of_pressure", s.UnitOfPressure},
+		{"preferred_range", s.PreferredRange},
+		{"language", s.Language},
+		{"theme", s.Theme},
+		{"mode", s.Mode},
+		{"custom_primary", s.CustomPrimary},
+		{"custom_accent", s.CustomAccent},
+		{"gas_unit", s.GasUnit},
+		{"quiet_hours_start", s.QuietHoursStart},
+		{"quiet_hours_end", s.QuietHoursEnd},
+		{"alert_digest_mode", s.AlertDigestMode},
+	}
+	numRows := []rowNum{
+		{"base_cost_per_kwh", s.BaseCostPerKWh},
+		{"gas_price_per_unit", s.GasPricePerUnit},
+		{"gas_efficiency_mpg", s.GasEfficiencyMPG},
+		{"decimal_precision", float64(s.DecimalPrecision)},
+	}
+	boolRows := []rowBool{
+		{"api_suspended", s.APISuspended},
+		{"quiet_hours_enabled", s.QuietHoursEnabled},
+	}
+
+	for _, rw := range textRows {
+		if _, err := tx.Exec(ctx, upsertText, rw.key, rw.value); err != nil {
+			return fmt.Errorf("settings upsert %s: %w", rw.key, err)
+		}
+	}
+	for _, rw := range numRows {
+		if _, err := tx.Exec(ctx, upsertNum, rw.key, rw.value); err != nil {
+			return fmt.Errorf("settings upsert %s: %w", rw.key, err)
+		}
+	}
+	for _, rw := range boolRows {
+		if _, err := tx.Exec(ctx, upsertBool, rw.key, rw.value); err != nil {
+			return fmt.Errorf("settings upsert %s: %w", rw.key, err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("settings upsert commit: %w", err)
+	}
+	return nil
+}
+
+// IsAPISuspended returns true if the user has globally suspended Tesla
+// Fleet API polling. Reads the single `api_suspended` row.
+func (r *SettingsRepo) IsAPISuspended(ctx context.Context) (bool, error) {
+	const query = `SELECT value_bool FROM settings WHERE key = 'api_suspended'`
+	var suspended *bool
+	err := r.db.Pool.QueryRow(ctx, query).Scan(&suspended)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("settings is_api_suspended: %w", err)
+	}
+	if suspended == nil {
+		return false, nil
+	}
+	return *suspended, nil
+}
+
+// GetDashboardLayouts reads the raw JSON stored under key "dashboard_layouts".
+// Returns empty string if the key does not exist.
+func (r *SettingsRepo) GetDashboardLayouts(ctx context.Context) (string, error) {
+	const query = `SELECT value_text FROM settings WHERE key = 'dashboard_layouts'`
+	var valueText *string
+	err := r.db.Pool.QueryRow(ctx, query).Scan(&valueText)
+	if errors.Is(err, pgx.ErrNoRows) || valueText == nil {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("settings get_dashboard_layouts: %w", err)
+	}
+	return *valueText, nil
+}
+
+// UpsertDashboardLayouts stores the raw JSON string under key "dashboard_layouts".
+func (r *SettingsRepo) UpsertDashboardLayouts(ctx context.Context, jsonStr string) error {
+	const query = `
+		INSERT INTO settings (key, value_text, data_kind)
+		VALUES ('dashboard_layouts', $1, 'text')
+		ON CONFLICT (key) DO UPDATE SET
+			value_text = EXCLUDED.value_text,
+			value_num  = NULL,
+			value_bool = NULL,
+			data_kind  = 'text'`
+	if _, err := r.db.Pool.Exec(ctx, query, jsonStr); err != nil {
+		return fmt.Errorf("settings upsert_dashboard_layouts: %w", err)
+	}
+	return nil
+}
+
+// GetPollingConfig returns the first polling configuration row, or nil if
+// the polling_config table is empty. The action.SettingsChecker interface
+// uses this to retrieve timing parameters for command wake-up sequences.
+func (r *SettingsRepo) GetPollingConfig(ctx context.Context) (*models.PollingConfig, error) {
+	const query = `
+		SELECT vehicle_id, awake_interval_sec, asleep_interval_sec,
+		       driving_interval_sec, enabled, created_at, updated_at
+		FROM polling_config
+		LIMIT 1`
+	pc := &models.PollingConfig{}
+	err := r.db.Pool.QueryRow(ctx, query).Scan(
+		&pc.VehicleID, &pc.AwakeIntervalSec, &pc.AsleepIntervalSec,
+		&pc.DrivingIntervalSec, &pc.Enabled, &pc.CreatedAt, &pc.UpdatedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("settings get_polling_config: %w", err)
+	}
+	return pc, nil
 }

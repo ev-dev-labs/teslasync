@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { getPollingStatus, getPollingSavings, type PollEngineStatus, type CostSnapshot, type VehiclePollingStatus } from '../../api/polling'
+import { getPollingStatus, getPollingSavings, type PollEngineStatus, type CostSnapshot, type VehiclePollingStatus } from '@/api/polling'
 import {
   Gauge, Zap, BatteryCharging, Moon, TrendingDown,
   Activity, Clock, ChevronDown,
@@ -10,17 +10,7 @@ import { AnimatedNumber } from './AnimatedNumber'
 import { motion } from 'framer-motion'
 import clsx from 'clsx'
 import { useState } from 'react'
-
-function activityColor(activity: string): string {
-  switch (activity) {
-    case 'active': case 'critical': return '#10b981'
-    case 'moderate': return '#3b82f6'
-    case 'low': return '#f59e0b'
-    case 'idle': return '#6b7280'
-    case 'sleeping': return '#4b5563'
-    default: return '#6b7280'
-  }
-}
+import { activityColor } from '@/lib/colors'
 
 function activityIcon(activity: string) {
   switch (activity) {

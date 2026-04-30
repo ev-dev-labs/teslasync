@@ -30,7 +30,7 @@ func (r *TeslaEnergyHistoryRepo) GetByRange(ctx context.Context, siteID int64, p
 	query := `SELECT id, energy_site_id, period, timestamp,
 		solar_energy_wh, battery_energy_in_wh, battery_energy_out_wh,
 		grid_energy_in_wh, grid_energy_out_wh, consumer_energy_wh,
-		raw_json, fetched_at
+		fetched_at
 		FROM tesla_energy_history
 		WHERE energy_site_id = $1 AND period = $2 AND timestamp >= $3 AND timestamp <= $4
 		ORDER BY timestamp ASC
@@ -49,7 +49,7 @@ func (r *TeslaEnergyHistoryRepo) GetByRange(ctx context.Context, siteID int64, p
 			&e.ID, &e.EnergySiteID, &e.Period, &e.Timestamp,
 			&e.SolarEnergyWh, &e.BatteryEnergyInWh, &e.BatteryEnergyOutWh,
 			&e.GridEnergyInWh, &e.GridEnergyOutWh, &e.ConsumerEnergyWh,
-			&e.RawJSON, &e.FetchedAt,
+			&e.FetchedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan tesla energy history: %w", err)
 		}
@@ -68,8 +68,8 @@ func (r *TeslaEnergyHistoryRepo) UpsertBatch(ctx context.Context, entries []*mod
 		energy_site_id, period, timestamp,
 		solar_energy_wh, battery_energy_in_wh, battery_energy_out_wh,
 		grid_energy_in_wh, grid_energy_out_wh, consumer_energy_wh,
-		raw_json, fetched_at
-	) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+		fetched_at
+	) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
 	ON CONFLICT (energy_site_id, period, timestamp) DO UPDATE SET
 		solar_energy_wh = EXCLUDED.solar_energy_wh,
 		battery_energy_in_wh = EXCLUDED.battery_energy_in_wh,
@@ -77,18 +77,16 @@ func (r *TeslaEnergyHistoryRepo) UpsertBatch(ctx context.Context, entries []*mod
 		grid_energy_in_wh = EXCLUDED.grid_energy_in_wh,
 		grid_energy_out_wh = EXCLUDED.grid_energy_out_wh,
 		consumer_energy_wh = EXCLUDED.consumer_energy_wh,
-		raw_json = EXCLUDED.raw_json,
 		fetched_at = EXCLUDED.fetched_at`
 
 	now := time.Now().UTC()
 	upserted := 0
 	for _, e := range entries {
-		rawJSON := validJSON(e.RawJSON)
 		_, err := r.db.Pool.Exec(ctx, query,
 			e.EnergySiteID, e.Period, e.Timestamp,
 			e.SolarEnergyWh, e.BatteryEnergyInWh, e.BatteryEnergyOutWh,
 			e.GridEnergyInWh, e.GridEnergyOutWh, e.ConsumerEnergyWh,
-			rawJSON, now,
+			now,
 		)
 		if err != nil {
 			return upserted, fmt.Errorf("upsert tesla energy history: %w", err)
@@ -116,7 +114,7 @@ func (r *TeslaEnergyBackupEventRepo) GetByRange(ctx context.Context, siteID int6
 	if limit <= 0 || limit > 1000 {
 		limit = 500
 	}
-	query := `SELECT id, energy_site_id, period, timestamp, duration_seconds, raw_json, fetched_at
+	query := `SELECT id, energy_site_id, period, timestamp, duration_seconds, fetched_at
 		FROM tesla_energy_backup_events
 		WHERE energy_site_id = $1 AND timestamp >= $2 AND timestamp <= $3
 		ORDER BY timestamp ASC
@@ -133,7 +131,7 @@ func (r *TeslaEnergyBackupEventRepo) GetByRange(ctx context.Context, siteID int6
 		e := &models.TeslaEnergyBackupEvent{}
 		if err := rows.Scan(
 			&e.ID, &e.EnergySiteID, &e.Period, &e.Timestamp,
-			&e.DurationSeconds, &e.RawJSON, &e.FetchedAt,
+			&e.DurationSeconds, &e.FetchedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan tesla energy backup event: %w", err)
 		}
@@ -149,20 +147,18 @@ func (r *TeslaEnergyBackupEventRepo) UpsertBatch(ctx context.Context, entries []
 	}
 
 	query := `INSERT INTO tesla_energy_backup_events (
-		energy_site_id, period, timestamp, duration_seconds, raw_json, fetched_at
-	) VALUES ($1,$2,$3,$4,$5,$6)
+		energy_site_id, period, timestamp, duration_seconds, fetched_at
+	) VALUES ($1,$2,$3,$4,$5)
 	ON CONFLICT (energy_site_id, period, timestamp) DO UPDATE SET
 		duration_seconds = EXCLUDED.duration_seconds,
-		raw_json = EXCLUDED.raw_json,
 		fetched_at = EXCLUDED.fetched_at`
 
 	now := time.Now().UTC()
 	upserted := 0
 	for _, e := range entries {
-		rawJSON := validJSON(e.RawJSON)
 		_, err := r.db.Pool.Exec(ctx, query,
 			e.EnergySiteID, e.Period, e.Timestamp,
-			e.DurationSeconds, rawJSON, now,
+			e.DurationSeconds, now,
 		)
 		if err != nil {
 			return upserted, fmt.Errorf("upsert tesla energy backup event: %w", err)
@@ -190,7 +186,7 @@ func (r *TeslaEnergyWCChargingRepo) GetByRange(ctx context.Context, siteID int64
 	if limit <= 0 || limit > 1000 {
 		limit = 500
 	}
-	query := `SELECT id, energy_site_id, din, timestamp, energy_wh, raw_json, fetched_at
+	query := `SELECT id, energy_site_id, din, timestamp, energy_wh, fetched_at
 		FROM tesla_energy_wc_charging
 		WHERE energy_site_id = $1 AND timestamp >= $2 AND timestamp <= $3
 		ORDER BY timestamp ASC
@@ -207,7 +203,7 @@ func (r *TeslaEnergyWCChargingRepo) GetByRange(ctx context.Context, siteID int64
 		e := &models.TeslaEnergyWCCharging{}
 		if err := rows.Scan(
 			&e.ID, &e.EnergySiteID, &e.DIN, &e.Timestamp,
-			&e.EnergyWh, &e.RawJSON, &e.FetchedAt,
+			&e.EnergyWh, &e.FetchedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan tesla energy wc charging: %w", err)
 		}
@@ -223,20 +219,18 @@ func (r *TeslaEnergyWCChargingRepo) UpsertBatch(ctx context.Context, entries []*
 	}
 
 	query := `INSERT INTO tesla_energy_wc_charging (
-		energy_site_id, din, timestamp, energy_wh, raw_json, fetched_at
-	) VALUES ($1,$2,$3,$4,$5,$6)
+		energy_site_id, din, timestamp, energy_wh, fetched_at
+	) VALUES ($1,$2,$3,$4,$5)
 	ON CONFLICT (energy_site_id, COALESCE(din, ''), timestamp) DO UPDATE SET
 		energy_wh = EXCLUDED.energy_wh,
-		raw_json = EXCLUDED.raw_json,
 		fetched_at = EXCLUDED.fetched_at`
 
 	now := time.Now().UTC()
 	upserted := 0
 	for _, e := range entries {
-		rawJSON := validJSON(e.RawJSON)
 		_, err := r.db.Pool.Exec(ctx, query,
 			e.EnergySiteID, e.DIN, e.Timestamp,
-			e.EnergyWh, rawJSON, now,
+			e.EnergyWh, now,
 		)
 		if err != nil {
 			return upserted, fmt.Errorf("upsert tesla energy wc charging: %w", err)

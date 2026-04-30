@@ -4,6 +4,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/rs/zerolog/log"
 )
@@ -248,7 +249,7 @@ func (e *PollEngine) computeInterval(activity ActivityLevel, vs *VehiclePollingS
 	switch {
 	case activity >= Active:
 		// Determine if driving or charging from current response
-		if data != nil && data.ChargeState.ChargingState == "Charging" {
+		if data != nil && data.ChargeState.ChargingState == enums.ChargeStateCharging {
 			return ProfileCharging, e.config.Intervals.Charging
 		}
 		return ProfileDriving, e.config.Intervals.Driving

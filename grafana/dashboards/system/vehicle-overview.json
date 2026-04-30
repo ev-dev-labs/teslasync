@@ -119,7 +119,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT battery_level AS \"Battery\" FROM positions WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT value_num AS \"Battery\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'BatteryLevel' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -179,7 +179,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(convert_distance(rated_range)::numeric, 1) AS \"Range\" FROM positions WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT ROUND(convert_distance(value_num)::numeric, 1) AS \"Range\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'RatedRange' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -239,7 +239,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(convert_distance(odometer)::numeric, 1) AS \"📏 Odometer\" FROM positions WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT ROUND(convert_distance(value_num)::numeric, 1) AS \"📏 Odometer\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'Odometer' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -298,7 +298,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT state AS \"📊 State\" FROM vehicles WHERE id = ${vehicle_id} LIMIT 1",
+          "rawSql": "SELECT COALESCE((SELECT vs.state FROM vehicle_states vs WHERE vs.vehicle_id = ${vehicle_id} ORDER BY vs.start_date DESC LIMIT 1), 'Unknown') AS \"📊 State\"",
           "refId": "A"
         }
       ],
@@ -358,7 +358,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(convert_temp(outside_temp)::numeric, 1) AS \"Temp\" FROM positions WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT ROUND(convert_temp(value_num)::numeric, 1) AS \"Temp\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'OutsideTemp' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -476,7 +476,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COUNT(*) AS \"🛣️ Drives\" FROM v_drives WHERE vehicle_id = ${vehicle_id}",
+          "rawSql": "SELECT COUNT(*) AS \"🛣️ Drives\" FROM drives WHERE vehicle_id = ${vehicle_id}",
           "refId": "A"
         }
       ],
@@ -536,7 +536,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(convert_distance(SUM(distance))::numeric, 1) AS \"Distance\" FROM v_drives WHERE vehicle_id = ${vehicle_id}",
+          "rawSql": "SELECT ROUND(convert_distance(SUM(distance_mi))::numeric, 1) AS \"Distance\" FROM drives WHERE vehicle_id = ${vehicle_id}",
           "refId": "A"
         }
       ],
@@ -595,7 +595,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COUNT(*) AS \"⚡ Charges\" FROM v_charging_sessions WHERE vehicle_id = ${vehicle_id}",
+          "rawSql": "SELECT COUNT(*) AS \"⚡ Charges\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id}",
           "refId": "A"
         }
       ],
@@ -655,7 +655,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(SUM(charge_energy_added)::numeric, 1) AS \"⚡ kWh\" FROM v_charging_sessions WHERE vehicle_id = ${vehicle_id}",
+          "rawSql": "SELECT ROUND(SUM(energy_added_kwh)::numeric, 1) AS \"⚡ kWh\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id}",
           "refId": "A"
         }
       ],
@@ -716,7 +716,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(SUM(cost)::numeric, 2) AS \"$\" FROM v_charging_sessions WHERE vehicle_id = ${vehicle_id}",
+          "rawSql": "SELECT ROUND(SUM(cost)::numeric, 2) AS \"$\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id}",
           "refId": "A"
         }
       ],
@@ -775,7 +775,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND((convert_efficiency(SUM(charge_energy_added) * 1000 / NULLIF(SUM(d.distance), 0)))::numeric, 1) AS \"⚡ Efficiency\" FROM v_charging_sessions cs JOIN v_drives d ON d.vehicle_id = cs.vehicle_id WHERE cs.vehicle_id = ${vehicle_id}",
+          "rawSql": "SELECT ROUND((convert_efficiency(SUM(energy_added_kwh) * 1000 / NULLIF(SUM(d.distance_mi), 0)))::numeric, 1) AS \"⚡ Efficiency\" FROM charging_sessions cs JOIN drives d ON d.vehicle_id = cs.vehicle_id WHERE cs.vehicle_id = ${vehicle_id}",
           "refId": "A"
         }
       ],
@@ -825,7 +825,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT display_name AS \"🚗 Name\", model AS \"🚗 Model\", trim_badging AS \"✨ Trim\", vin AS \"🔑 VIN\",\n  exterior_color AS \"🎨 Color\", wheel_type AS \"🛞 Wheels\", state AS \"📊 State\",\n  created_at AS \"📅 Added\"\nFROM vehicles WHERE id = ${vehicle_id}",
+          "rawSql": "SELECT display_name AS \"🚗 Name\", model AS \"🚗 Model\", trim_level AS \"✨ Trim\", vin AS \"🔑 VIN\",\n  color AS \"🎨 Color\", NULL::text AS \"🛞 Wheels\", (SELECT vs.state FROM vehicle_states vs WHERE vs.vehicle_id = vehicles.id ORDER BY vs.start_date DESC LIMIT 1) AS \"📊 State\",\n  created_at AS \"📅 Added\"\nFROM vehicles WHERE id = ${vehicle_id}",
           "refId": "A"
         }
       ],
@@ -875,7 +875,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT d.start_date AS \"📅 Date\",\n  COALESCE(sa.display_name, 'Unknown') AS \"📍 From\",\n  COALESCE(ea.display_name, 'Unknown') AS \"📍 To\",\n  ROUND(convert_distance(d.distance)::numeric, 1) AS \"📏 Distance\",\n  ROUND(d.duration_min::numeric) AS \"⏱️ Duration\",\n  d.start_battery_level AS \"🔋 Start %\",\n  d.end_battery_level AS \"🔋 End %\"\nFROM v_drives d\nLEFT JOIN addresses sa ON d.start_address_id = sa.id\nLEFT JOIN addresses ea ON d.end_address_id = ea.id\nWHERE d.vehicle_id = ${vehicle_id}\nORDER BY d.start_date DESC LIMIT 1",
+          "rawSql": "SELECT d.start_ts AS \"📅 Date\",\n  COALESCE(d.start_address, 'Unknown') AS \"📍 From\",\n  COALESCE(d.end_address, 'Unknown') AS \"📍 To\",\n  ROUND(convert_distance(d.distance_mi)::numeric, 1) AS \"📏 Distance\",\n  ROUND(d.duration_min::numeric) AS \"⏱️ Duration\",\n  d.start_battery_pct AS \"🔋 Start %\",\n  d.end_battery_pct AS \"🔋 End %\"\nFROM drives d\nWHERE d.vehicle_id = ${vehicle_id}\nORDER BY d.start_ts DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -925,7 +925,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT cs.start_date AS \"📅 Date\",\n  COALESCE(a.display_name, 'Unknown') AS \"📍 Location\",\n  ROUND(cs.charge_energy_added::numeric, 1) AS \"⚡ kWh\",\n  cs.start_battery_level AS \"🔋 Start %\",\n  cs.end_battery_level AS \"🔋 End %\",\n  ROUND(cs.duration_min::numeric) AS \"⏱️ Duration\"\nFROM v_charging_sessions cs\nLEFT JOIN addresses a ON cs.address_id = a.id\nWHERE cs.vehicle_id = ${vehicle_id}\nORDER BY cs.start_date DESC LIMIT 1",
+          "rawSql": "SELECT cs.start_ts AS \"📅 Date\",\n  COALESCE(cs.charger_location, 'Unknown') AS \"📍 Location\",\n  ROUND(cs.energy_added_kwh::numeric, 1) AS \"⚡ kWh\",\n  cs.start_battery_pct AS \"🔋 Start %\",\n  cs.end_battery_pct AS \"🔋 End %\",\n  ROUND(cs.duration_min::numeric) AS \"⏱️ Duration\"\nFROM charging_sessions cs\nWHERE cs.vehicle_id = ${vehicle_id}\nORDER BY cs.start_ts DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -984,7 +984,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT di_torque AS \"Torque (Nm)\", convert_temp(di_stator_temp) AS \"Stator Temp\", convert_speed(vehicle_speed) AS \"Speed\", gear AS \"Gear\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT\n  (SELECT value_num FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'DiTorqueActualF' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1) AS \"Torque (Nm)\",\n  convert_temp((SELECT value_num FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'DiStatorTempF' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1)) AS \"Stator Temp\",\n  convert_speed((SELECT value_num FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'VehicleSpeed' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1)) AS \"Speed\",\n  (SELECT value_str FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'Gear' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1) AS \"Gear\"",
           "refId": "A"
         }
       ],
@@ -1043,7 +1043,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT convert_temp(inside_temp) AS \"Cabin\", convert_temp(outside_temp) AS \"Outside\", hvac_power AS \"HVAC (kW)\", hvac_fan_speed AS \"Fan Speed\" FROM climate_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT\n  convert_temp((SELECT value_num FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'InsideTemp' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1)) AS \"Cabin\",\n  convert_temp((SELECT value_num FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'OutsideTemp' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1)) AS \"Outside\",\n  (SELECT value_str FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'HvacPower' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1) AS \"HVAC State\",\n  (SELECT value_num FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'HvacFanSpeed' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1) AS \"Fan Speed\"",
           "refId": "A"
         }
       ],
@@ -1102,7 +1102,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT CASE WHEN locked THEN 'Locked' ELSE 'Unlocked' END AS \"🔒 Lock\", CASE WHEN sentry_mode THEN 'Active' ELSE 'Off' END AS \"🛡️ Sentry\", COALESCE(door_state, 'Unknown') AS \"🚪 Doors\", COALESCE(fd_window, '-') AS \"FD Window\", COALESCE(fp_window, '-') AS \"FP Window\" FROM security_events WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT\n  CASE WHEN (SELECT value_bool FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'Locked' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1) THEN 'Locked' ELSE 'Unlocked' END AS \"🔒 Lock\",\n  CASE WHEN (SELECT value_bool FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'SentryMode' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1) THEN 'Active' ELSE 'Off' END AS \"🛡️ Sentry\",\n  COALESCE((SELECT value_str FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'DoorState' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1), 'Unknown') AS \"🚪 Doors\"",
           "refId": "A"
         }
       ],
@@ -1202,6 +1202,6 @@
   "timezone": "",
   "title": "TeslaSync 🚘 Vehicle Overview",
   "uid": "teslasync-vehicle-overview",
-  "version": 1,
+  "version": 999,
   "weekStart": ""
 }

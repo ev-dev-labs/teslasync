@@ -3,6 +3,7 @@ package notification
 import (
 	"context"
 	"encoding/json"
+	"sync"
 	"time"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
@@ -17,6 +18,7 @@ import (
 type Worker struct {
 	repo       *database.NotificationRepo
 	metricRepo *database.NotificationMetricRepo
+	wg         sync.WaitGroup
 }
 
 // NewWorker creates a notification worker.
@@ -53,7 +55,11 @@ func (w *Worker) Start(ctx context.Context, mqttClient pahomqtt.Client) {
 				log.Error().Err(err).Msg("notification worker: invalid message")
 				return
 			}
-			w.processNotification(ctx, &req)
+			w.wg.Add(1)
+			go func() {
+				defer w.wg.Done()
+				w.processNotification(ctx, &req)
+			}()
 		})
 
 		if token.WaitTimeout(10*time.Second) && token.Error() != nil {
@@ -137,6 +143,23 @@ func (w *Worker) processNotification(ctx context.Context, req *Request) {
 		}
 	}
 	log.Error().Err(lastErr).Str("channel", req.ChannelType).Msg("notification delivery failed after retries")
+}
+
+// Shutdown waits for all in-flight notification deliveries to complete,
+// with a bounded 30-second timeout to prevent hanging indefinitely.
+func (w *Worker) Shutdown() {
+	log.Info().Msg("shutting down: waiting for in-flight notifications...")
+	done := make(chan struct{})
+	go func() {
+		w.wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+		log.Info().Msg("all notifications completed, exiting cleanly")
+	case <-time.After(30 * time.Second):
+		log.Warn().Msg("shutdown timeout exceeded (30s), forcing exit with in-flight work abandoned")
+	}
 }
 
 // Publish sends a notification request to the MQTT topic for async delivery.

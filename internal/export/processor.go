@@ -103,13 +103,13 @@ func (p *Processor) processDrives(ctx context.Context, req *models.ExportJobRequ
 				ed := exportDrive{
 					ID:        d.ID,
 					VehicleID: d.VehicleID,
-					StartDate: d.StartDate.Format("2006-01-02T15:04:05Z"),
-					Distance:  d.Distance,
+					StartDate: d.StartTs.Format("2006-01-02T15:04:05Z"),
+					Distance:  d.DistanceMi,
 					Duration:  d.DurationMin,
-					SpeedMax:  ptrFloat(d.SpeedMax),
+					SpeedMax:  ptrFloat(d.MaxSpeedMph),
 				}
-				if d.EndDate != nil {
-					ed.EndDate = d.EndDate.Format("2006-01-02T15:04:05Z")
+				if d.EndTs != nil {
+					ed.EndDate = d.EndTs.Format("2006-01-02T15:04:05Z")
 				}
 				allDrives = append(allDrives, ed)
 			}
@@ -196,15 +196,15 @@ func (p *Processor) processCharging(ctx context.Context, req *models.ExportJobRe
 				es := exportSession{
 					ID:           s.ID,
 					VehicleID:    s.VehicleID,
-					StartDate:    s.StartDate.Format("2006-01-02T15:04:05Z"),
-					EnergyAdded:  s.ChargeEnergyAdded,
-					StartBattery: s.StartBatteryLevel,
-					EndBattery:   ptrInt(s.EndBatteryLevel),
-					ChargerPower: ptrFloat(s.ChargerPower),
-					Duration:     s.DurationMin,
+					StartDate:    s.StartTs.Format("2006-01-02T15:04:05Z"),
+					EnergyAdded:  ptrFloat(s.EnergyAddedKwh),
+					StartBattery: ptrInt16(s.StartBatteryPct),
+					EndBattery:   ptrInt16(s.EndBatteryPct),
+					ChargerPower: ptrFloat(s.ChargerPowerKwMax),
+					Duration:     ptrFloat(s.DurationMin),
 				}
-				if s.EndDate != nil {
-					es.EndDate = s.EndDate.Format("2006-01-02T15:04:05Z")
+				if s.EndTs != nil {
+					es.EndDate = s.EndTs.Format("2006-01-02T15:04:05Z")
 				}
 				allSessions = append(allSessions, es)
 			}
@@ -254,7 +254,7 @@ var allowedBackupTables = map[string]bool{
 	"positions": true, "addresses": true, "geofences": true,
 	"alerts": true, "alert_rules": true, "settings": true,
 	"daily_mileage": true, "vehicle_states": true, "software_updates": true,
-	"tire_pressure_snapshots": true, "vampire_drain_events": true,
+	"vampire_drain_events": true, "signal_log": true,
 	"visited_locations": true, "trips": true,
 }
 
@@ -313,6 +313,13 @@ func ptrFloat(p *float64) float64 {
 func ptrInt(p *int) int {
 	if p != nil {
 		return *p
+	}
+	return 0
+}
+
+func ptrInt16(p *int16) int {
+	if p != nil {
+		return int(*p)
 	}
 	return 0
 }

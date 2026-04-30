@@ -16,6 +16,7 @@
   --surface-1: #0f1019;
   --surface-2: #151621;
   --surface-3: #1a1b2e;
+  --glass-bg: rgba(255, 255, 255, 0.04);
   --glass-border: rgba(255, 255, 255, 0.12);
   --text-primary: #ffffff;
   --text-secondary: #9ca3af;
@@ -395,6 +396,28 @@ select option:checked {
   background-color: rgba(0, 0, 0, 0.03) !important;
 }
 
+/* bg-white with Tailwind percentage notation (different selector from bracket notation) */
+:root.light-mode .bg-white\/5,
+:root.light-mode .bg-white\/8 {
+  background-color: rgba(0, 0, 0, 0.03) !important;
+}
+:root.light-mode .bg-white\/10,
+:root.light-mode .bg-white\/15 {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+}
+:root.light-mode .bg-white\/20 {
+  background-color: rgba(0, 0, 0, 0.08) !important;
+}
+:root.light-mode .bg-white\/30 {
+  background-color: rgba(0, 0, 0, 0.12) !important;
+}
+:root.light-mode .bg-white\/40 {
+  background-color: rgba(0, 0, 0, 0.15) !important;
+}
+:root.light-mode .bg-white\/80 {
+  background-color: rgba(0, 0, 0, 0.12) !important;
+}
+
 /* Override white border translucent */
 :root.light-mode .border-white\/5,
 :root.light-mode .border-white\/\[0\.03\],
@@ -405,7 +428,8 @@ select option:checked {
 :root.light-mode .border-white\/10,
 :root.light-mode .border-white\/\[0\.1\],
 :root.light-mode .border-white\/\[0\.12\],
-:root.light-mode .border-white\/20 {
+:root.light-mode .border-white\/20,
+:root.light-mode .border-white\/30 {
   border-color: rgba(0, 0, 0, 0.08) !important;
 }
 
@@ -431,11 +455,21 @@ select option:checked {
   background-color: rgba(0, 0, 0, 0.04) !important;
 }
 
+/* hover:bg-white with Tailwind percentage notation */
+:root.light-mode .hover\:bg-white\/5:hover,
+:root.light-mode .hover\:bg-white\/10:hover {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+:root.light-mode .hover\:bg-white\/20:hover {
+  background-color: rgba(0, 0, 0, 0.08) !important;
+}
+
 /* Override hover border */
 :root.light-mode .hover\:border-white\/10:hover,
 :root.light-mode .hover\:border-white\/\[0\.08\]:hover,
 :root.light-mode .hover\:border-white\/15:hover,
-:root.light-mode .hover\:border-white\/20:hover {
+:root.light-mode .hover\:border-white\/20:hover,
+:root.light-mode .hover\:border-white\/30:hover {
   border-color: rgba(0, 0, 0, 0.12) !important;
 }
 
@@ -482,6 +516,67 @@ select option:checked {
 :root.light-mode select option {
   background: white;
   color: #0f172a;
+}
+
+/* Recharts light mode — axis ticks, tooltips, legend */
+:root.light-mode .recharts-cartesian-axis-tick-value {
+  fill: #64748b !important;
+}
+:root.light-mode .recharts-default-tooltip {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  color: #0f172a !important;
+}
+:root.light-mode .recharts-tooltip-item {
+  color: #334155 !important;
+}
+:root.light-mode .recharts-legend-item-text {
+  color: #334155 !important;
+}
+
+/* Glass glow effects: replace white inset with subtle shadow */
+:root.light-mode .glass-glow-cyan { box-shadow: 0 0 20px rgba(8, 145, 178, 0.1), 0 1px 3px rgba(0, 0, 0, 0.06); }
+:root.light-mode .glass-glow-green { box-shadow: 0 0 20px rgba(21, 128, 61, 0.1), 0 1px 3px rgba(0, 0, 0, 0.06); }
+:root.light-mode .glass-glow-purple { box-shadow: 0 0 20px rgba(124, 58, 237, 0.1), 0 1px 3px rgba(0, 0, 0, 0.06); }
+:root.light-mode .glass-glow-amber { box-shadow: 0 0 20px rgba(180, 83, 9, 0.1), 0 1px 3px rgba(0, 0, 0, 0.06); }
+:root.light-mode .glass-glow-red { box-shadow: 0 0 20px rgba(220, 38, 38, 0.1), 0 1px 3px rgba(0, 0, 0, 0.06); }
+
+/* Neon text glow: remove glow effect in light mode */
+:root.light-mode .neon-text-cyan {
+  color: #0891b2;
+  text-shadow: none;
+}
+:root.light-mode .neon-text-red {
+  color: #dc2626;
+  text-shadow: none;
+}
+
+/* Glow line animation: dark tint on light backgrounds */
+:root.light-mode .glow-line {
+  background: linear-gradient(90deg, transparent, rgba(8, 145, 178, 0.12), transparent);
+  background-size: 200% 100%;
+}
+
+/* Pulse glow: subtler on light backgrounds */
+:root.light-mode .pulse-glow {
+  animation: none;
+  box-shadow: 0 0 8px currentColor;
+}
+
+/* Glass panel hover border: use theme-aware colors */
+:root.light-mode .glass-panel-hover:hover {
+  border-color: rgba(var(--theme-primary-rgb), 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+/* SVG text elements: ensure dark fill in light mode */
+:root.light-mode svg text {
+  fill: #334155;
+}
+:root.light-mode svg text[fill="white"],
+:root.light-mode svg text[fill="#fff"],
+:root.light-mode svg text[fill="#ffffff"] {
+  fill: #334155 !important;
 }
 
 /* === MOBILE SIDEBAR SCROLL FIX === */
@@ -549,4 +644,164 @@ select option:checked {
 .scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* ─── react-grid-layout overrides ─── */
+.react-grid-item {
+  overflow: visible !important;
+}
+.react-grid-item > .widget-container {
+  overflow: hidden;
+  height: 100%;
+  border-radius: 0.75rem;
+}
+
+/* Smooth transitions for widgets settling after drag/resize */
+.react-grid-item:not(.react-draggable-dragging):not(.resizing) {
+  transition: transform 200ms ease, width 200ms ease, height 200ms ease;
+}
+
+/* Kill transitions on ALL siblings during active drag for snappy rearrangement */
+.dragging-active .react-grid-item {
+  transition: none !important;
+}
+
+/* Dragged widget lifts off the grid with shadow + scale */
+.react-grid-item.react-draggable-dragging {
+  z-index: 100 !important;
+  opacity: 0.92;
+  border: 1px solid rgba(var(--theme-primary-rgb), 0.3);
+  border-radius: 0.75rem;
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.4),
+    0 0 30px rgba(var(--theme-primary-rgb), 0.15);
+  transition: box-shadow 150ms ease, opacity 150ms ease !important;
+}
+
+/* Resizing widget gets subtle visual feedback */
+.react-grid-item.resizing {
+  z-index: 100 !important;
+  opacity: 0.95;
+  box-shadow:
+    0 10px 25px rgba(0, 0, 0, 0.3),
+    0 0 20px rgba(var(--theme-primary-rgb), 0.1);
+}
+
+/* Resize handles — must be above widget chrome (z-10) and GlassPanel */
+.react-grid-item > .react-resizable-handle {
+  z-index: 30 !important;
+  position: absolute !important;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  background: none !important;
+}
+.react-grid-item:hover > .react-resizable-handle {
+  opacity: 0.6;
+}
+.react-resizable-handle::after {
+  border-color: var(--theme-primary) !important;
+}
+
+/* South-east handle (corner) */
+.react-grid-item > .react-resizable-handle-se {
+  bottom: 0;
+  right: 0;
+  cursor: se-resize !important;
+  width: 20px !important;
+  height: 20px !important;
+}
+.react-grid-item > .react-resizable-handle-se::after {
+  content: "" !important;
+  position: absolute !important;
+  right: 3px !important;
+  bottom: 3px !important;
+  width: 8px !important;
+  height: 8px !important;
+  border-right: 2px solid var(--theme-primary) !important;
+  border-bottom: 2px solid var(--theme-primary) !important;
+  border-top: none !important;
+  border-left: none !important;
+}
+
+/* South handle (bottom edge for vertical resize) */
+.react-grid-item > .react-resizable-handle-s {
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: s-resize !important;
+  width: 40px !important;
+  height: 10px !important;
+}
+.react-grid-item > .react-resizable-handle-s::after {
+  content: "" !important;
+  position: absolute !important;
+  left: 50% !important;
+  bottom: 2px !important;
+  transform: translateX(-50%) !important;
+  width: 24px !important;
+  height: 3px !important;
+  border-radius: 2px !important;
+  background: var(--theme-primary) !important;
+  border: none !important;
+}
+
+/* East handle (right edge for horizontal resize) */
+.react-grid-item > .react-resizable-handle-e {
+  right: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: e-resize !important;
+  width: 10px !important;
+  height: 40px !important;
+}
+.react-grid-item > .react-resizable-handle-e::after {
+  content: "" !important;
+  position: absolute !important;
+  top: 50% !important;
+  right: 2px !important;
+  transform: translateY(-50%) !important;
+  width: 3px !important;
+  height: 24px !important;
+  border-radius: 2px !important;
+  background: var(--theme-primary) !important;
+  border: none !important;
+}
+
+/* Drop zone placeholder — clearly visible themed dashed outline */
+.react-grid-item.react-grid-placeholder {
+  background: rgba(var(--theme-primary-rgb), 0.08) !important;
+  border: 2px dashed rgba(var(--theme-primary-rgb), 0.4) !important;
+  border-radius: 0.75rem !important;
+  opacity: 1 !important;
+  transition: all 150ms ease !important;
+}
+
+/* ─── Edit mode visual cues ─── */
+@keyframes widget-wobble {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-0.3deg); }
+  75% { transform: rotate(0.3deg); }
+}
+
+.edit-mode .react-grid-item > .widget-container {
+  animation: widget-wobble 2s ease-in-out infinite;
+}
+.edit-mode .react-grid-item:nth-child(odd) > .widget-container {
+  animation-delay: 0.5s;
+}
+.edit-mode .react-grid-item:nth-child(3n) > .widget-container {
+  animation-delay: 1s;
+}
+
+/* Stop wobble on actively dragged/resized widgets */
+.edit-mode .react-grid-item.react-draggable-dragging > .widget-container,
+.edit-mode .react-grid-item.resizing > .widget-container {
+  animation: none;
+}
+
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .edit-mode .react-grid-item > .widget-container {
+    animation: none !important;
+  }
 }

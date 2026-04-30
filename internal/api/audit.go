@@ -12,10 +12,10 @@ import (
 
 // logAudit records an audit log entry for a mutation action.
 func logAudit(db *database.DB, ctx context.Context, action, resource, details, ip string) {
-	query := `INSERT INTO audit_logs (action, resource, details, ip, created_at) VALUES ($1, $2, $3, $4, $5)`
-	_, err := db.Pool.Exec(ctx, query, action, resource, details, ip, time.Now().UTC())
+	query := `INSERT INTO audit_logs (ts, actor, action, entity_type, detail) VALUES ($1, $2, $3, $4, $5)`
+	_, err := db.Pool.Exec(ctx, query, time.Now().UTC(), ip, action, resource, details)
 	if err != nil {
-		log.Warn().Err(err).Str("action", action).Str("resource", resource).Msg("failed to write audit log")
+		log.Warn().Err(err).Str("action", action).Str("entity_type", resource).Msg("failed to write audit log")
 	}
 }
 
@@ -53,7 +53,7 @@ func (h *AuditHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := h.db.Pool.Query(r.Context(),
-		`SELECT id, action, resource, details, ip, created_at FROM audit_logs ORDER BY created_at DESC LIMIT $1`, limit)
+		`SELECT id, ts, actor, action, entity_type, entity_id, detail FROM audit_logs ORDER BY ts DESC LIMIT $1`, limit)
 	if err != nil {
 		// Table may not exist yet — return empty array instead of 500
 		// to avoid tripping the frontend circuit breaker
@@ -65,7 +65,7 @@ func (h *AuditHandler) List(w http.ResponseWriter, r *http.Request) {
 	logs := []models.AuditLog{}
 	for rows.Next() {
 		var l models.AuditLog
-		if err := rows.Scan(&l.ID, &l.Action, &l.Resource, &l.Details, &l.IP, &l.CreatedAt); err != nil {
+		if err := rows.Scan(&l.ID, &l.Ts, &l.Actor, &l.Action, &l.EntityType, &l.EntityID, &l.Detail); err != nil {
 			continue
 		}
 		logs = append(logs, l)

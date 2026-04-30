@@ -14,6 +14,7 @@ import {
   chartGrid, axisTick, axisTickSm, chartMargin, chartMarginLabeled, CHART_COLORS,
   BarChart, Bar, LineChart, Line, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine,
+  AREA_DEFAULTS,
 } from '@/components/charts';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -130,6 +131,16 @@ function CellHeatmap({
 
   return (
     <GlassPanel className="p-4">
+      <style>{`
+        @keyframes cell-fade-in {
+          from { opacity: 0; transform: scale(0.8); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes cell-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 transparent; }
+          50% { box-shadow: 0 0 8px currentColor; }
+        }
+      `}</style>
       <span className="mb-3 block text-sm font-medium text-[var(--text-secondary)]">
         {label}
       </span>
@@ -137,20 +148,30 @@ function CellHeatmap({
         className="grid gap-1"
         style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
       >
-        {cells.map((cell) => (
-          <div
-            key={cell.cell_id}
-            className={cn(
-              'flex flex-col items-center justify-center rounded-md p-1 text-[9px] font-mono',
-              'transition-transform hover:scale-110',
-            )}
-            style={{ backgroundColor: `${cellColor(cell.voltage, avg)}20`, color: cellColor(cell.voltage, avg) }}
-            title={`${t('Cell')} ${cell.cell_id}: ${fmtNumber(cell.voltage ?? 0, 3)} V (${(cell.delta_from_avg ?? 0) >= 0 ? '+' : ''}${fmtNumber((cell.delta_from_avg ?? 0) * 1000, 1)} mV)`}
-          >
-            <span className="font-semibold">{cell.cell_id}</span>
-            <span>{fmtNumber(cell.voltage ?? 0, 3)}</span>
-          </div>
-        ))}
+        {cells.map((cell, i) => {
+          const deviation = Math.abs(cell.delta_from_avg ?? 0);
+          const isDeviation = deviation > 0.005; // > 5mV
+          return (
+            <div
+              key={cell.cell_id}
+              className={cn(
+                'flex flex-col items-center justify-center rounded-md p-1 text-[9px] font-mono',
+                'transition-all hover:scale-110 hover:z-10 hover:shadow-lg',
+                'animate-[cell-fade-in_0.4s_ease-out_both]',
+                isDeviation && 'animate-[cell-fade-in_0.4s_ease-out_both,cell-pulse_3s_ease-in-out_infinite_0.5s]',
+              )}
+              style={{
+                backgroundColor: `${cellColor(cell.voltage, avg)}20`,
+                color: cellColor(cell.voltage, avg),
+                animationDelay: `${i * 15}ms`,
+              }}
+              title={`${t('Cell')} ${cell.cell_id}: ${fmtNumber(cell.voltage ?? 0, 3)} V (${(cell.delta_from_avg ?? 0) >= 0 ? '+' : ''}${fmtNumber((cell.delta_from_avg ?? 0) * 1000, 1)} mV)`}
+            >
+              <span className="font-semibold">{cell.cell_id}</span>
+              <span>{fmtNumber(cell.voltage ?? 0, 3)}</span>
+            </div>
+          );
+        })}
       </div>
       <div className="mt-3 flex items-center justify-center gap-4 text-[10px] text-[var(--text-muted)]">
         <span className="flex items-center gap-1">
@@ -170,29 +191,17 @@ function CellHeatmap({
   );
 }
 
-/* ── InsightCard ────────────────────────────────────────────────── */
+const insightPanelClass = {
+  good: 'border-neon-green/20 bg-neon-green/5',
+  warning: 'border-neon-amber/20 bg-neon-amber/5',
+  critical: 'border-neon-red/20 bg-neon-red/5',
+} as const;
 
-function InsightCard({ icon, title, description, status }: {
-  icon: React.ReactNode; title: string; description: string; status: 'good' | 'warning' | 'critical';
-}) {
-  const bgCls = {
-    good: 'border-neon-green/20 bg-neon-green/5',
-    warning: 'border-neon-amber/20 bg-neon-amber/5',
-    critical: 'border-neon-red/20 bg-neon-red/5',
-  };
-  const iconCls = { good: 'text-neon-green', warning: 'text-neon-amber', critical: 'text-neon-red' };
-  return (
-    <div className={cn('rounded-xl border p-4 transition-all duration-200', bgCls[status])}>
-      <div className="flex items-start gap-3">
-        <div className={cn('mt-0.5', iconCls[status])}>{icon}</div>
-        <div>
-          <p className="text-sm font-medium text-white/90">{title}</p>
-          <p className="text-xs text-white/60 mt-0.5">{description}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
+const insightIconClass = {
+  good: 'text-neon-green',
+  warning: 'text-neon-amber',
+  critical: 'text-neon-red',
+} as const;
 
 /* ── Page Component ────────────────────────────────────────────── */
 
@@ -582,12 +591,10 @@ export default function BatteryCellsPage() {
                   />
                   <Legend />
                   <Line
-                    type="monotone"
+                    {...AREA_DEFAULTS}
                     dataKey="imbalance_mv"
                     name={t('Imbalance (mV)')}
                     stroke={CHART_COLORS[3]}
-                    strokeWidth={2}
-                    dot={false}
                     activeDot={{ r: 4 }}
                   />
                   <ReferenceLine
@@ -639,29 +646,23 @@ export default function BatteryCellsPage() {
                 />
                 <Legend />
                 <Line
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="min_voltage"
                   name={t('Min Voltage')}
                   stroke={CHART_COLORS[5]}
-                  strokeWidth={2}
-                  dot={false}
                   strokeDasharray="4 2"
                 />
                 <Line
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="avg_voltage"
                   name={t('Avg Voltage')}
                   stroke={CHART_COLORS[0]}
-                  strokeWidth={2}
-                  dot={false}
                 />
                 <Line
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="max_voltage"
                   name={t('Max Voltage')}
                   stroke={CHART_COLORS[1]}
-                  strokeWidth={2}
-                  dot={false}
                   strokeDasharray="4 2"
                 />
               </LineChart>
@@ -722,12 +723,11 @@ export default function BatteryCellsPage() {
                   <ReferenceLine y={5} stroke={CHART_COLORS[1]} strokeDasharray="4 4" />
                   <ReferenceLine y={15} stroke={CHART_COLORS[5]} strokeDasharray="4 4" />
                   <Area
-                    type="monotone"
+                    {...AREA_DEFAULTS}
                     dataKey="spreadRaw"
                     name={t('battery.cells.chart.voltageSpread', 'Voltage Spread (mV)')}
                     stroke="#a855f7"
                     fill="url(#spreadGrad)"
-                    strokeWidth={2}
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -796,7 +796,18 @@ export default function BatteryCellsPage() {
           {insights.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {insights.map((ins, i) => (
-                <InsightCard key={i} {...ins} />
+                <GlassPanel
+                  key={i}
+                  className={cn('border p-4 transition-all duration-200', insightPanelClass[ins.status])}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={cn('mt-0.5', insightIconClass[ins.status])}>{ins.icon}</div>
+                    <div>
+                      <p className="text-sm font-medium text-white/90">{ins.title}</p>
+                      <p className="mt-0.5 text-xs text-white/60">{ins.description}</p>
+                    </div>
+                  </div>
+                </GlassPanel>
               ))}
             </div>
           ) : (

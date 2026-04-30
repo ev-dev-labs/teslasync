@@ -5,6 +5,7 @@ import {
   Heart, Battery, BatteryFull, Gauge, RefreshCcw, Clock,
   Zap, ArrowRight, Lightbulb, AlertTriangle,
   CheckCircle, Info, Target, Activity,
+  Thermometer, ThermometerSun, ThermometerSnowflake, Flame,
 } from 'lucide-react';
 
 import { PageContainer, Grid } from '@/components/layout';
@@ -14,6 +15,7 @@ import {
   chartGrid, axisTickSm, CHART_COLORS,
   AreaChart, Area, BarChart, Bar, ComposedChart, Line, ReferenceLine,
   PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
+  AREA_DEFAULTS,
 } from '@/components/charts';
 import { MetricCard, MetricBar } from '@/components/data-display';
 import { Skeleton, EmptyState } from '@/components/feedback';
@@ -21,7 +23,7 @@ import { FadeIn } from '@/components/motion';
 
 import { useBatteryHealthAnalytics, useBatteryDegradation } from '@/api/hooks/useEnergy';
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useVehicles, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { cn } from '@/lib/cn';
@@ -39,29 +41,17 @@ interface InsightItem {
   status: 'good' | 'warning' | 'critical';
 }
 
-function InsightCard({ icon, title, description, status }: InsightItem) {
-  const bgCls = {
-    good: 'border-neon-green/20 bg-neon-green/5',
-    warning: 'border-neon-amber/20 bg-neon-amber/5',
-    critical: 'border-neon-red/20 bg-neon-red/5',
-  };
-  const iconCls = {
-    good: 'text-neon-green',
-    warning: 'text-neon-amber',
-    critical: 'text-neon-red',
-  };
-  return (
-    <div className={cn('rounded-xl border p-4 transition-all duration-200', bgCls[status])}>
-      <div className="flex items-start gap-3">
-        <div className={cn('mt-0.5', iconCls[status])}>{icon}</div>
-        <div>
-          <p className="text-sm font-medium text-white/90">{title}</p>
-          <p className="text-xs text-white/60 mt-0.5">{description}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
+const insightPanelClass = {
+  good: 'border-neon-green/20 bg-neon-green/5',
+  warning: 'border-neon-amber/20 bg-neon-amber/5',
+  critical: 'border-neon-red/20 bg-neon-red/5',
+} as const;
+
+const insightIconClass = {
+  good: 'text-neon-green',
+  warning: 'text-neon-amber',
+  critical: 'text-neon-red',
+} as const;
 
 function gaugeColor(score: number): string {
   if (score >= 90) return CHART_COLORS[1];
@@ -134,7 +124,7 @@ function buildInsights(
   }
 
   if (sessions) {
-    const deepDischarges = sessions.filter((s) => s.start_battery_level < 10).length;
+    const deepDischarges = sessions.filter((s) => s.start_battery_pct < 10).length;
     if (deepDischarges > 3) {
       items.push({
         icon: <AlertTriangle className="h-4 w-4" />,
@@ -145,7 +135,7 @@ function buildInsights(
     }
 
     const superchargerCount = sessions.filter((s) =>
-      s.fast_charger_type?.toLowerCase().includes('tesla'),
+      s.charger_type?.toLowerCase().includes('tesla'),
     ).length;
     if (superchargerCount > sessions.length * 0.6) {
       items.push({
@@ -201,7 +191,7 @@ const QUICK_LINKS: { to: string; labelKey: string; fallback: string }[] = [
 export default function BatteryHealthPage() {
   const { t } = useTranslation();
   usePageTitle(t('battery.title', 'Battery Health'));
-  const { convertDistance, distanceUnit } = useSettings();
+  const { convertDistance, distanceUnit, convertTemp, tempUnit } = useSettings();
 
   /* ── Vehicle selector ──────────────────────────────────────────── */
   const { data: vehicles } = useVehicles();
@@ -214,6 +204,7 @@ export default function BatteryHealthPage() {
     useBatteryHealthAnalytics(vehicleIdStr);
   const { data: degradation } = useBatteryDegradation(vehicleIdStr);
   const { data: sessions } = useChargingSessionsPaginated(vehicleId, { limit: 100 });
+  const { data: chargingLive } = useChargingTelemetryLatest(vehicleId ?? 0);
 
   /* ── Derived: insights & recommendations ───────────────────────── */
   const insights = useMemo(
@@ -264,10 +255,10 @@ export default function BatteryHealthPage() {
       endCount: 0,
     }));
     items.forEach((s) => {
-      const si = Math.min(Math.floor(s.start_battery_level / 10), 9);
+      const si = Math.min(Math.floor(s.start_battery_pct / 10), 9);
       buckets[si].startCount++;
-      if (s.end_battery_level != null) {
-        const ei = Math.min(Math.floor(s.end_battery_level / 10), 9);
+      if (s.end_battery_pct != null) {
+        const ei = Math.min(Math.floor(s.end_battery_pct / 10), 9);
         buckets[ei].endCount++;
       }
     });
@@ -278,12 +269,12 @@ export default function BatteryHealthPage() {
   const chargingHabits = useMemo(() => {
     const items = sessions ?? [];
     if (items.length === 0) return null;
-    const startLevels = items.map((s) => s.start_battery_level);
-    const endLevels = items.filter((s) => s.end_battery_level != null).map((s) => s.end_battery_level!);
+    const startLevels = items.map((s) => s.start_battery_pct);
+    const endLevels = items.filter((s) => s.end_battery_pct != null).map((s) => s.end_battery_pct!);
     const avgStart = startLevels.length > 0 ? startLevels.reduce((a, b) => a + b, 0) / startLevels.length : 0;
     const avgEnd = endLevels.length > 0 ? endLevels.reduce((a, b) => a + b, 0) / endLevels.length : 80;
-    const superchargerCount = items.filter((s) => s.fast_charger_type?.toLowerCase().includes('tesla')).length;
-    const dcFastCount = items.filter((s) => s.fast_charger_type && !s.fast_charger_type.toLowerCase().includes('tesla')).length;
+    const superchargerCount = items.filter((s) => s.charger_type?.toLowerCase().includes('tesla')).length;
+    const dcFastCount = items.filter((s) => s.charger_type && !s.charger_type.toLowerCase().includes('tesla')).length;
     return { avgStart, avgEnd, superchargerCount, dcFastCount, total: items.length };
   }, [sessions]);
 
@@ -294,9 +285,9 @@ export default function BatteryHealthPage() {
     let acEnergy = 0, dcEnergy = 0, acCount = 0, dcCount = 0;
     items.forEach((s) => {
       const isDC =
-        (s.fast_charger_type != null && s.fast_charger_type.length > 0) ||
-        (s.charger_power != null && s.charger_power > 20);
-      const energy = s.charge_energy_added ?? 0;
+        (s.charger_type != null && s.charger_type.length > 0) ||
+        (s.charger_power_kw_max != null && s.charger_power_kw_max > 20);
+      const energy = s.energy_added_kwh ?? 0;
       if (isDC) { dcEnergy += energy; dcCount++; }
       else { acEnergy += energy; acCount++; }
     });
@@ -497,7 +488,93 @@ export default function BatteryHealthPage() {
             icon={<Clock className="h-5 w-5" />}
             color="red"
           />
+          <MetricCard
+            label={t('battery.metric.fullChargeComplete', 'Full Charge Complete')}
+            value={
+              chargingLive?.bms_fullcharge_complete == null
+                ? '—'
+                : chargingLive.bms_fullcharge_complete
+                  ? t('common.yes', 'Yes')
+                  : t('common.no', 'No')
+            }
+            icon={<CheckCircle className="h-5 w-5" />}
+            color={chargingLive?.bms_fullcharge_complete ? 'green' : 'cyan'}
+          />
         </Grid>
+      </FadeIn>
+
+      {/* ── 3b. Thermal Monitoring ───────────────────────────────── */}
+      <FadeIn delay={0.12}>
+        <GlassPanel className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Thermometer className="h-4 w-4 text-neon-amber" />
+            <h3 className="text-sm font-semibold text-white/90">
+              {t('battery.thermal.title', 'Thermal Monitoring')}
+            </h3>
+          </div>
+          <Grid cols={{ default: 2, lg: 4 }} gap={4}>
+            <MetricCard
+              label={t('battery.thermal.moduleTempMax', 'Module Temp (Max)')}
+              value={
+                chargingLive?.module_temp_max != null
+                  ? `${fmtNumber(convertTemp(chargingLive.module_temp_max), 1)} ${tempUnit}`
+                  : '—'
+              }
+              subtitle={
+                chargingLive?.num_module_temp_max != null
+                  ? t('battery.thermal.moduleNumber', 'Module #{{n}}', {
+                      n: chargingLive.num_module_temp_max,
+                    })
+                  : undefined
+              }
+              icon={<ThermometerSun className="h-5 w-5" />}
+              color="amber"
+            />
+            <MetricCard
+              label={t('battery.thermal.moduleTempMin', 'Module Temp (Min)')}
+              value={
+                chargingLive?.module_temp_min != null
+                  ? `${fmtNumber(convertTemp(chargingLive.module_temp_min), 1)} ${tempUnit}`
+                  : '—'
+              }
+              subtitle={
+                chargingLive?.num_module_temp_min != null
+                  ? t('battery.thermal.moduleNumber', 'Module #{{n}}', {
+                      n: chargingLive.num_module_temp_min,
+                    })
+                  : undefined
+              }
+              icon={<ThermometerSnowflake className="h-5 w-5" />}
+              color="cyan"
+            />
+            <MetricCard
+              label={t('battery.thermal.heater', 'Battery Heater')}
+              value={
+                chargingLive?.battery_heater_on == null
+                  ? '—'
+                  : chargingLive.battery_heater_on
+                    ? t('common.on', 'On')
+                    : t('common.off', 'Off')
+              }
+              icon={<Flame className="h-5 w-5" />}
+              color={chargingLive?.battery_heater_on ? 'red' : 'green'}
+            />
+            <MetricCard
+              label={t('battery.thermal.tempSpread', 'Temperature Spread')}
+              value={
+                chargingLive?.module_temp_max != null && chargingLive?.module_temp_min != null
+                  ? `${fmtNumber(
+                      convertTemp(chargingLive.module_temp_max) -
+                        convertTemp(chargingLive.module_temp_min),
+                      1,
+                    )} ${tempUnit}`
+                  : '—'
+              }
+              icon={<Activity className="h-5 w-5" />}
+              color="purple"
+            />
+          </Grid>
+        </GlassPanel>
       </FadeIn>
 
       {/* ── 4. Smart Insights ────────────────────────────────────── */}
@@ -510,7 +587,18 @@ export default function BatteryHealthPage() {
           {insights.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {insights.map((ins, i) => (
-                <InsightCard key={i} {...ins} />
+                <GlassPanel
+                  key={i}
+                  className={cn('border p-4 transition-all duration-200', insightPanelClass[ins.status])}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={cn('mt-0.5', insightIconClass[ins.status])}>{ins.icon}</div>
+                    <div>
+                      <p className="text-sm font-medium text-white/90">{ins.title}</p>
+                      <p className="mt-0.5 text-xs text-white/60">{ins.description}</p>
+                    </div>
+                  </div>
+                </GlassPanel>
               ))}
             </div>
           ) : (
@@ -544,9 +632,9 @@ export default function BatteryHealthPage() {
                   <Tooltip content={<ChartTooltip />} />
                   <ReferenceLine y={70} stroke="#ef4444" strokeDasharray="8 4" />
                   <ReferenceLine y={80} stroke="#f59e0b" strokeDasharray="4 4" />
-                  <Area type="monotone" dataKey="actual" name={t('battery.chart.actual', 'Actual %')} stroke="transparent" fill="url(#healthGrad)" />
-                  <Line type="monotone" dataKey="actual" name={t('battery.chart.actual', 'Actual %')} stroke="#00f0ff" strokeWidth={2} dot={{ fill: '#00f0ff', r: 2 }} connectNulls={false} />
-                  <Line type="monotone" dataKey="predicted" name={t('battery.chart.predicted', 'Predicted %')} stroke="#00f0ff" strokeWidth={2} strokeDasharray="6 4" dot={false} opacity={0.5} />
+                  <Area {...AREA_DEFAULTS} dataKey="actual" name={t('battery.chart.actual', 'Actual %')} stroke="transparent" fill="url(#healthGrad)" />
+                  <Line {...AREA_DEFAULTS} dataKey="actual" name={t('battery.chart.actual', 'Actual %')} stroke="#00f0ff" dot={{ fill: '#00f0ff', r: 2 }} connectNulls={false} />
+                  <Line {...AREA_DEFAULTS} dataKey="predicted" name={t('battery.chart.predicted', 'Predicted %')} stroke="#00f0ff" strokeDasharray="6 4" opacity={0.5} />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
@@ -575,12 +663,11 @@ export default function BatteryHealthPage() {
                   <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
                   <Tooltip content={<ChartTooltip />} />
                   <Area
-                    type="monotone"
+                    {...AREA_DEFAULTS}
                     dataKey="range"
                     name={`${t('battery.chart.range', 'Range')} (${distanceUnit})`}
                     stroke="#10b981"
                     fill="url(#rangeGrad)"
-                    strokeWidth={2}
                   />
                 </AreaChart>
               </ResponsiveContainer>

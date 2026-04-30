@@ -3,19 +3,23 @@ package api
 import (
 	"context"
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
+	"github.com/go-chi/chi/v5"
 )
 
 // SignalHandler provides API endpoints for querying signal history
 // (Postgres primary, MongoDB optional fallback).
 type SignalHandler struct {
 	signalLogRepo       *database.SignalLogRepo       // MongoDB (optional)
-	signalHistoryWriter *database.SignalHistoryWriter  // Postgres (primary)
+	signalHistoryWriter *database.SignalHistoryWriter // Postgres (primary)
 	db                  *database.DB
+	redisCache          *signal.RedisSignalCache
+	liveSignals         signal.LiveSignalStore
 }
 
 // NewSignalHandler creates a new SignalHandler.
@@ -32,6 +36,18 @@ func (h *SignalHandler) WithDB(db *database.DB) *SignalHandler {
 // WithSignalHistory adds the Postgres signal_history writer for primary queries.
 func (h *SignalHandler) WithSignalHistory(w *database.SignalHistoryWriter) *SignalHandler {
 	h.signalHistoryWriter = w
+	return h
+}
+
+// WithRedisCache sets the Redis signal cache for reading live signal keys.
+func (h *SignalHandler) WithRedisCache(cache *signal.RedisSignalCache) *SignalHandler {
+	h.redisCache = cache
+	return h
+}
+
+// WithLiveSignalStore sets the live signal boundary for cross-pod live reads.
+func (h *SignalHandler) WithLiveSignalStore(store signal.LiveSignalStore) *SignalHandler {
+	h.liveSignals = store
 	return h
 }
 
@@ -178,15 +194,15 @@ func (h *SignalHandler) AvailableSignals(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	// Fallback: query distinct signal columns from vehicle_live_state
-	if h.db != nil {
-		signals, err := h.getSignalNamesFromPG(r.Context(), vehicleID)
+	// Fallback: query signal keys from Redis HSET
+	if h.redisCache != nil {
+		signals, err := h.getSignalNamesFromRedis(r.Context(), vehicleID)
 		if err == nil && len(signals) > 0 {
 			writeJSON(w, http.StatusOK, map[string]interface{}{
 				"vehicle_id": vehicleID,
 				"count":      len(signals),
 				"signals":    signals,
-				"source":     "postgresql",
+				"source":     "redis",
 			})
 			return
 		}
@@ -202,26 +218,18 @@ func (h *SignalHandler) AvailableSignals(w http.ResponseWriter, r *http.Request)
 	})
 }
 
-// getSignalNamesFromPG queries column names from vehicle_live_state that contain data.
-func (h *SignalHandler) getSignalNamesFromPG(ctx context.Context, vehicleID int64) ([]string, error) {
-	query := `
-		SELECT column_name FROM information_schema.columns
-		WHERE table_name = 'vehicle_live_state'
-		  AND column_name NOT IN ('id', 'vehicle_id', 'created_at', 'updated_at')
-		ORDER BY column_name`
-	rows, err := h.db.Pool.Query(ctx, query)
+// getSignalNamesFromRedis returns sorted signal names from the Redis HSET for a vehicle.
+func (h *SignalHandler) getSignalNamesFromRedis(ctx context.Context, vehicleID int64) ([]string, error) {
+	signals, err := h.redisCache.GetAll(ctx, vehicleID)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	var signals []string
-	for rows.Next() {
-		var name string
-		if err := rows.Scan(&name); err == nil {
-			signals = append(signals, name)
-		}
+	names := make([]string, 0, len(signals))
+	for name := range signals {
+		names = append(names, name)
 	}
-	return signals, rows.Err()
+	sort.Strings(names)
+	return names, nil
 }
 
 // getKnownSignalNames returns a static list of commonly available Fleet Telemetry signals.
@@ -293,6 +301,45 @@ func (h *SignalHandler) Stats(w http.ResponseWriter, r *http.Request) {
 // LiveState returns the current in-memory signal state for a vehicle.
 // GET /api/v1/signals/{vehicleID}/live
 func (h *SignalHandler) LiveState(w http.ResponseWriter, r *http.Request) {
-	// This will be set by the router when wiring — uses the telemetry handler's signal store
-	writeJSON(w, http.StatusNotImplemented, map[string]string{"error": "live state requires signal store"})
+	vehicleID, err := strconv.ParseInt(chi.URLParam(r, "vehicleID"), 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid vehicle ID")
+		return
+	}
+
+	if h.liveSignals == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "live signal store not initialized"})
+		return
+	}
+
+	raw, err := h.liveSignals.GetAll(r.Context(), vehicleID, signal.LiveSignalReadDistributed)
+	if err != nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "live signal store unavailable"})
+		return
+	}
+	signals := make(map[string]interface{}, len(raw))
+	for k, v := range raw {
+		if v != nil {
+			signals[k] = map[string]interface{}{
+				"value":     v.Raw,
+				"timestamp": v.Timestamp,
+			}
+		}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"vehicle_id": vehicleID,
+		"count":      len(signals),
+		"signals":    signals,
+	})
+}
+
+func liveSignalValuesToRaw(values map[string]*signal.Value) map[string]interface{} {
+	raw := make(map[string]interface{}, len(values))
+	for name, value := range values {
+		if value != nil {
+			raw[name] = value.Raw
+		}
+	}
+	return raw
 }

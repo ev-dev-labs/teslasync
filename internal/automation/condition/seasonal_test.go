@@ -8,14 +8,14 @@ import (
 
 // ─── Config Parsing Tests ───────────────────────────────
 
-func TestParseSeasonalConfig_Valid(t *testing.T) {
+func TestDecodeSeasonalSpec_Valid(t *testing.T) {
 	raw := json.RawMessage(`{
 		"type": "seasonal",
 		"start_month": 11,
 		"end_month": 3
 	}`)
 
-	cfg, err := ParseSeasonalConfig(raw)
+	cfg, err := DecodeSeasonalSpec(raw)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -30,9 +30,9 @@ func TestParseSeasonalConfig_Valid(t *testing.T) {
 	}
 }
 
-func TestParseSeasonalConfig_MinimalValid(t *testing.T) {
+func TestDecodeSeasonalSpec_MinimalValid(t *testing.T) {
 	raw := json.RawMessage(`{"start_month": 4, "end_month": 9}`)
-	cfg, err := ParseSeasonalConfig(raw)
+	cfg, err := DecodeSeasonalSpec(raw)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -41,7 +41,7 @@ func TestParseSeasonalConfig_MinimalValid(t *testing.T) {
 	}
 }
 
-func TestParseSeasonalConfig_Errors(t *testing.T) {
+func TestDecodeSeasonalSpec_Errors(t *testing.T) {
 	tests := []struct {
 		name string
 		json string
@@ -60,7 +60,7 @@ func TestParseSeasonalConfig_Errors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := ParseSeasonalConfig(json.RawMessage(tt.json))
+			_, err := DecodeSeasonalSpec(json.RawMessage(tt.json))
 			if err == nil {
 				t.Fatalf("expected error for %q, got nil", tt.name)
 			}

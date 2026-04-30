@@ -9,7 +9,7 @@ import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Button, Select, DataTable, type Column } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import {
-  RadialGauge, ChartTooltip, CHART_COLORS,
+  RadialGauge, ChartTooltip, CHART_COLORS, AREA_DEFAULTS,
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend,
 } from '@/components/charts';
@@ -36,14 +36,26 @@ interface TirePressureReading {
   front_right: number;
   rear_left: number;
   rear_right: number;
-  tpms_hard_warnings: boolean;
-  tpms_soft_warnings: boolean;
+  tpms_hard_warnings?: string | null;
+  tpms_soft_warnings?: string | null;
   created_at: string;
 }
 
 /* ------------------------------------------------------------------ */
 /*  Constants & helpers                                                */
 /* ------------------------------------------------------------------ */
+
+/** Check if a TPMS warning JSON string contains any true value. */
+function hasTpmsWarning(val: string | null | undefined): boolean {
+  if (!val) return false;
+  try {
+    const parsed = JSON.parse(val) as Record<string, boolean>;
+    return Object.values(parsed).some(Boolean);
+  } catch {
+    // Fallback: treat non-empty non-JSON strings as truthy
+    return val !== 'false' && val !== '';
+  }
+}
 
 // Thresholds in Bar (internal unit — DB stores Bar)
 const NORMAL_MIN_BAR = 2.5;
@@ -68,10 +80,10 @@ const STATUS_LABELS: Record<PressureStatus, string> = {
 };
 
 const TIME_RANGE_OPTIONS = [
-  { value: 50, label: '7 Days' },
-  { value: 200, label: '30 Days' },
-  { value: 500, label: '90 Days' },
-  { value: 2000, label: 'All' },
+  { value: 7, label: '7 Days' },
+  { value: 30, label: '30 Days' },
+  { value: 90, label: '90 Days' },
+  { value: 365, label: 'All' },
 ] as const;
 
 function getTirePressureValue(
@@ -147,7 +159,7 @@ export default function TirePressurePage() {
   const gaugeMax = convertPressure(GAUGE_MAX_BAR);
 
   const [vehicleId, setVehicleId] = useState<number | null>(null);
-  const [timeRange, setTimeRange] = useState(200);
+  const [timeRange, setTimeRange] = useState(30);
 
   /* ---- API queries ---- */
 
@@ -170,10 +182,16 @@ export default function TirePressurePage() {
 
   const { data: history, isLoading: loadingHistory, error: historyError } = useQuery({
     queryKey: ['tire-pressure-history', activeVehicleId, timeRange],
-    queryFn: () =>
-      request<TirePressureReading[]>(
-        `/tire-pressure?vehicle_id=${activeVehicleId}&limit=${timeRange}`,
-      ),
+    queryFn: () => {
+      const end = new Date();
+      const start = new Date();
+      start.setDate(start.getDate() - Number(timeRange));
+      const startStr = start.toISOString().split('T')[0];
+      const endStr = end.toISOString().split('T')[0];
+      return request<TirePressureReading[]>(
+        `/tire-pressure?vehicle_id=${activeVehicleId}&start=${startStr}&end=${endStr}`,
+      );
+    },
     enabled: activeVehicleId !== null,
   });
 
@@ -181,7 +199,7 @@ export default function TirePressurePage() {
 
   /* ---- Derived data ---- */
 
-  const hasWarning = latest?.tpms_hard_warnings || latest?.tpms_soft_warnings;
+  const hasWarning = hasTpmsWarning(latest?.tpms_hard_warnings) || hasTpmsWarning(latest?.tpms_soft_warnings);
 
   const summaryStats = useMemo(() => {
     if (!latest) return null;
@@ -235,14 +253,14 @@ export default function TirePressurePage() {
         key: 'warnings',
         header: t('Warnings'),
         render: (row: TirePressureReading) => {
-          if (row.tpms_hard_warnings) {
+          if (hasTpmsWarning(row.tpms_hard_warnings)) {
             return (
               <Badge variant="danger" size="sm" dot>
                 {t('Hard Warning')}
               </Badge>
             );
           }
-          if (row.tpms_soft_warnings) {
+          if (hasTpmsWarning(row.tpms_soft_warnings)) {
             return (
               <Badge variant="warning" size="sm" dot>
                 {t('Soft Warning')}
@@ -295,7 +313,7 @@ export default function TirePressurePage() {
           <GlassPanel
             className={cn(
               'mb-6 flex items-center gap-3 px-4 py-3',
-              latest?.tpms_hard_warnings
+              hasTpmsWarning(latest?.tpms_hard_warnings)
                 ? 'border-red-500/40'
                 : 'border-amber-500/40',
             )}
@@ -303,11 +321,11 @@ export default function TirePressurePage() {
             <AlertTriangle
               className={cn(
                 'h-5 w-5 shrink-0',
-                latest?.tpms_hard_warnings ? 'text-red-400' : 'text-amber-400',
+                hasTpmsWarning(latest?.tpms_hard_warnings) ? 'text-red-400' : 'text-amber-400',
               )}
             />
-            <Badge variant={latest?.tpms_hard_warnings ? 'danger' : 'warning'}>
-              {latest?.tpms_hard_warnings
+            <Badge variant={hasTpmsWarning(latest?.tpms_hard_warnings) ? 'danger' : 'warning'}>
+              {hasTpmsWarning(latest?.tpms_hard_warnings)
                 ? t('Hard Warning Active')
                 : t('Soft Warning Active')}
             </Badge>
@@ -445,7 +463,7 @@ export default function TirePressurePage() {
                     tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
                   />
                   <YAxis
-                    domain={[2.0, 4.0]}
+                    domain={['auto', 'auto']}
                     tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
                     tickFormatter={(v: number) => fmtNumber(v, 1)}
                   />
@@ -454,12 +472,10 @@ export default function TirePressurePage() {
                   {TIRE_POSITIONS.map((pos) => (
                     <Line
                       key={pos}
-                      type="monotone"
+                      {...AREA_DEFAULTS}
                       dataKey={pos}
                       name={TIRE_LABELS[pos]}
                       stroke={LINE_COLORS[pos]}
-                      strokeWidth={2}
-                      dot={false}
                     />
                   ))}
                 </LineChart>

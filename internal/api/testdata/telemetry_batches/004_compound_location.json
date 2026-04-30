@@ -1,0 +1,14 @@
+{
+  "_doc": "Compound Location {latitude, longitude} expanded to atomic Latitude + Longitude. Routes to positions table.",
+  "vin": "5YJ3E1EA1NF000004",
+  "signals": [
+    {
+      "name": "Location",
+      "value": {
+        "latitude":  47.6062,
+        "longitude": -122.3321
+      }
+    },
+    {"name": "VehicleSpeed", "value": 0.0}
+  ]
+}

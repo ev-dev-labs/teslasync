@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/models"
@@ -72,46 +73,6 @@ func (r *CommandLogRepo) GetHistoryByVehicle(ctx context.Context, vehicleID int6
 	return results, rows.Err()
 }
 
-// BatterySnapshotRepo tracks battery health over time.
-type BatterySnapshotRepo struct {
-	db *DB
-}
-
-func NewBatterySnapshotRepo(db *DB) *BatterySnapshotRepo {
-	return &BatterySnapshotRepo{db: db}
-}
-
-func (r *BatterySnapshotRepo) DB() *DB {
-	return r.db
-}
-
-func (r *BatterySnapshotRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit int) ([]*models.BatterySnapshot, error) {
-	query := `SELECT id, vehicle_id, health_score, capacity_kwh, degradation_pct, est_range_km, cycle_count, avg_cell_temp_c, created_at
-		FROM battery_snapshots WHERE vehicle_id=$1 ORDER BY created_at DESC LIMIT $2`
-	rows, err := r.db.Pool.Query(ctx, query, vehicleID, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var snaps []*models.BatterySnapshot
-	for rows.Next() {
-		s := &models.BatterySnapshot{}
-		if err := rows.Scan(&s.ID, &s.VehicleID, &s.HealthScore, &s.CapacityKWh, &s.DegradationPct, &s.EstRangeKm, &s.CycleCount, &s.AvgCellTempC, &s.CreatedAt); err != nil {
-			return nil, err
-		}
-		snaps = append(snaps, s)
-	}
-	return snaps, rows.Err()
-}
-
-func (r *BatterySnapshotRepo) Create(ctx context.Context, s *models.BatterySnapshot) error {
-	query := `INSERT INTO battery_snapshots (vehicle_id, health_score, capacity_kwh, degradation_pct, est_range_km, cycle_count, avg_cell_temp_c, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`
-	now := time.Now().UTC()
-	return r.db.Pool.QueryRow(ctx, query, s.VehicleID, s.HealthScore, s.CapacityKWh, s.DegradationPct, s.EstRangeKm, s.CycleCount, s.AvgCellTempC, now).Scan(&s.ID)
-}
-
 // EnergyStatsRepo computes energy statistics from charging sessions.
 type EnergyStatsRepo struct {
 	db *DB
@@ -121,20 +82,32 @@ func NewEnergyStatsRepo(db *DB) *EnergyStatsRepo {
 	return &EnergyStatsRepo{db: db}
 }
 
+// isNotPopulated detects the Postgres error raised when querying a
+// materialized view that was created WITH NO DATA and never refreshed.
+func isNotPopulated(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "has not been populated")
+}
+
 func (r *EnergyStatsRepo) GetDailyBreakdown(ctx context.Context, vehicleID int64, days int) ([]*models.EnergyStatsRow, error) {
 	query := `SELECT
-		TO_CHAR(mv.day, 'YYYY-MM-DD') AS date,
-		mv.energy_kwh,
-		mv.distance_km,
-		mv.efficiency,
-		mv.cost
-	FROM mv_energy_daily mv
-	WHERE mv.vehicle_id = $1
-	  AND mv.day >= (NOW() - make_interval(days := $2))::date
-	  AND (mv.energy_kwh > 0 OR mv.distance_km > 0)
-	ORDER BY mv.day`
+		TO_CHAR(day, 'YYYY-MM-DD') AS date,
+		COALESCE(total_energy_kwh, 0) AS energy_kwh,
+		COALESCE(total_distance_mi, 0) AS distance_mi,
+		CASE WHEN COALESCE(total_distance_mi, 0) > 0
+			THEN COALESCE(total_energy_kwh, 0) / total_distance_mi * 1000
+			ELSE 0
+		END AS efficiency_wh_per_mi,
+		0 AS cost
+	FROM cagg_fleet_stats
+	WHERE vehicle_id = $1
+	  AND day >= (NOW() - make_interval(days := $2))::date
+	  AND (COALESCE(total_energy_kwh, 0) > 0 OR COALESCE(total_distance_mi, 0) > 0)
+	ORDER BY day`
 	rows, err := r.db.Pool.Query(ctx, query, vehicleID, days)
 	if err != nil {
+		if isNotPopulated(err) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	defer rows.Close()
@@ -142,7 +115,7 @@ func (r *EnergyStatsRepo) GetDailyBreakdown(ctx context.Context, vehicleID int64
 	var stats []*models.EnergyStatsRow
 	for rows.Next() {
 		s := &models.EnergyStatsRow{}
-		if err := rows.Scan(&s.Date, &s.EnergyKWh, &s.DistanceKm, &s.Efficiency, &s.Cost); err != nil {
+		if err := rows.Scan(&s.Date, &s.EnergyKWh, &s.DistanceMi, &s.EfficiencyWhPerMi, &s.Cost); err != nil {
 			return nil, err
 		}
 		stats = append(stats, s)
@@ -152,13 +125,18 @@ func (r *EnergyStatsRepo) GetDailyBreakdown(ctx context.Context, vehicleID int64
 
 func (r *EnergyStatsRepo) GetTotalEnergy(ctx context.Context, vehicleID int64, days int) (float64, float64, float64, error) {
 	query := `SELECT
-		COALESCE(SUM(energy_kwh), 0),
-		COALESCE(SUM(cost), 0),
-		COALESCE(SUM(distance_km), 0)
-	FROM mv_energy_daily
+		COALESCE(SUM(total_energy_kwh), 0),
+		0,
+		COALESCE(SUM(total_distance_mi), 0)
+	FROM cagg_fleet_stats
 	WHERE vehicle_id = $1
 	  AND day >= (NOW() - make_interval(days := $2))::date`
 	var energy, cost, distance float64
 	err := r.db.Pool.QueryRow(ctx, query, vehicleID, days).Scan(&energy, &cost, &distance)
+	if err != nil {
+		if isNotPopulated(err) {
+			return 0, 0, 0, nil
+		}
+	}
 	return energy, cost, distance, err
 }

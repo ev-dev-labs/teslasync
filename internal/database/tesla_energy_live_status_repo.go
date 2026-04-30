@@ -24,21 +24,20 @@ func (r *TeslaEnergyLiveStatusRepo) Create(ctx context.Context, s *models.TeslaE
 		energy_site_id, solar_power, battery_power, load_power,
 		grid_power, grid_services_power, energy_left, total_pack_energy,
 		percentage_charged, grid_status, backup_capable, storm_mode_active,
-		raw_json, timestamp, fetched_at
-	) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+		timestamp, fetched_at
+	) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
 	RETURNING id`
 
 	now := time.Now().UTC()
 	if s.Timestamp.IsZero() {
 		s.Timestamp = now
 	}
-	rawJSON := validJSON(s.RawJSON)
 
 	return r.db.Pool.QueryRow(ctx, query,
 		s.EnergySiteID, s.SolarPower, s.BatteryPower, s.LoadPower,
 		s.GridPower, s.GridServicesPower, s.EnergyLeft, s.TotalPackEnergy,
 		s.PercentageCharged, s.GridStatus, s.BackupCapable, s.StormModeActive,
-		rawJSON, s.Timestamp, now,
+		s.Timestamp, now,
 	).Scan(&s.ID)
 }
 
@@ -47,7 +46,7 @@ func (r *TeslaEnergyLiveStatusRepo) GetLatest(ctx context.Context, energySiteID 
 	query := `SELECT id, energy_site_id, solar_power, battery_power, load_power,
 		grid_power, grid_services_power, energy_left, total_pack_energy,
 		percentage_charged, grid_status, backup_capable, storm_mode_active,
-		raw_json, timestamp, fetched_at
+		timestamp, fetched_at
 		FROM tesla_energy_live_status
 		WHERE energy_site_id = $1
 		ORDER BY timestamp DESC
@@ -58,7 +57,7 @@ func (r *TeslaEnergyLiveStatusRepo) GetLatest(ctx context.Context, energySiteID 
 		&s.ID, &s.EnergySiteID, &s.SolarPower, &s.BatteryPower, &s.LoadPower,
 		&s.GridPower, &s.GridServicesPower, &s.EnergyLeft, &s.TotalPackEnergy,
 		&s.PercentageCharged, &s.GridStatus, &s.BackupCapable, &s.StormModeActive,
-		&s.RawJSON, &s.Timestamp, &s.FetchedAt,
+		&s.Timestamp, &s.FetchedAt,
 	)
 	if err != nil {
 		if err.Error() == "no rows in result set" {
@@ -77,7 +76,7 @@ func (r *TeslaEnergyLiveStatusRepo) GetHistory(ctx context.Context, energySiteID
 	query := `SELECT id, energy_site_id, solar_power, battery_power, load_power,
 		grid_power, grid_services_power, energy_left, total_pack_energy,
 		percentage_charged, grid_status, backup_capable, storm_mode_active,
-		raw_json, timestamp, fetched_at
+		timestamp, fetched_at
 		FROM tesla_energy_live_status
 		WHERE energy_site_id = $1 AND timestamp >= $2 AND timestamp <= $3
 		ORDER BY timestamp ASC
@@ -96,7 +95,7 @@ func (r *TeslaEnergyLiveStatusRepo) GetHistory(ctx context.Context, energySiteID
 			&s.ID, &s.EnergySiteID, &s.SolarPower, &s.BatteryPower, &s.LoadPower,
 			&s.GridPower, &s.GridServicesPower, &s.EnergyLeft, &s.TotalPackEnergy,
 			&s.PercentageCharged, &s.GridStatus, &s.BackupCapable, &s.StormModeActive,
-			&s.RawJSON, &s.Timestamp, &s.FetchedAt,
+			&s.Timestamp, &s.FetchedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan energy live status: %w", err)
 		}

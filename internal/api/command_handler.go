@@ -9,6 +9,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	cmdFSM "github.com/ev-dev-labs/teslasync/internal/fsm/command"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
@@ -18,6 +19,7 @@ type CommandHandler struct {
 	commandRepo  *database.CommandLogRepo
 	settingsRepo *database.SettingsRepo
 	teslaClient  *tesla.Client
+	redisCache   *signal.RedisSignalCache
 }
 
 func NewCommandHandler(db *database.DB, tc *tesla.Client) *CommandHandler {
@@ -27,6 +29,12 @@ func NewCommandHandler(db *database.DB, tc *tesla.Client) *CommandHandler {
 		settingsRepo: database.NewSettingsRepo(db),
 		teslaClient:  tc,
 	}
+}
+
+// WithRedisCache sets the Redis signal cache for reading vehicle wake state.
+func (h *CommandHandler) WithRedisCache(cache *signal.RedisSignalCache) *CommandHandler {
+	h.redisCache = cache
+	return h
 }
 
 // allowedCommands is the whitelist of Tesla commands that can be sent via the API.
@@ -130,11 +138,6 @@ func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, "Tesla API calls are suspended")
 		return
 	}
-	// Check if commands endpoint is enabled in polling config
-	if pc, err := h.settingsRepo.GetPollingConfig(r.Context()); err == nil && !pc.Commands {
-		writeAppError(w, r, ErrTeslaEndpointDisabled.WithMessage("vehicle commands endpoint is disabled in polling config"))
-		return
-	}
 
 	vehicleID, err := urlParamInt64(r, "vehicleID")
 	if err != nil {
@@ -178,13 +181,13 @@ func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {
 	// Track command lifecycle via FSM
 	fsm := cmdFSM.NewExecutionFSM(0, vehicleID, body.Command)
 
-	// Check if vehicle is awake (state from DB)
-	if vehicle.State == "asleep" || vehicle.State == "offline" {
-		fsm.MarkVehicleAsleep()
-		// Tesla client handles wake internally, but we track the lifecycle
-		fsm.MarkWakeConfirmed()
-		fsm.StartSending()
+	// Check wake state from Redis signal cache
+	if h.redisCache != nil {
+		if shift, err := h.redisCache.GetSignal(r.Context(), vehicleID, "ShiftState"); err == nil && shift != nil {
+			fsm.MarkVehicleAwake()
+		}
 	} else {
+		// No Redis — assume awake; Tesla client handles wake internally
 		fsm.MarkVehicleAwake()
 	}
 

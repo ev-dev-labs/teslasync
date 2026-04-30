@@ -140,7 +140,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT * FROM fn_driving_acceleration_distribution(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
+          "rawSql": "SELECT value_num AS acceleration_gs\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'LongitudinalAcceleration'\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\n  AND value_num IS NOT NULL",
           "refId": "A"
         }
       ],
@@ -210,7 +210,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH readings AS (\n  SELECT\n    dtr.speed,\n    dtr.created_at,\n    LAG(dtr.speed)      OVER (PARTITION BY dtr.drive_id ORDER BY dtr.created_at) AS prev_speed,\n    LAG(dtr.created_at) OVER (PARTITION BY dtr.drive_id ORDER BY dtr.created_at) AS prev_time\n  FROM drive_telemetry_readings dtr\n  JOIN drives d ON d.id = dtr.drive_id\n  WHERE d.vehicle_id = ${vehicle_id}\n    AND $__timeFilter(d.start_date)\n    AND dtr.speed IS NOT NULL\n),\naccel AS (\n  SELECT\n    ((speed - prev_speed) * 0.44704)\n    / NULLIF(EXTRACT(EPOCH FROM (created_at - prev_time)), 0)\n    / 9.81 AS g\n  FROM readings\n  WHERE prev_speed IS NOT NULL\n    AND prev_time IS NOT NULL\n    AND EXTRACT(EPOCH FROM (created_at - prev_time)) BETWEEN 1 AND 30\n    AND ABS(\n      ((speed - prev_speed) * 0.44704)\n      / NULLIF(EXTRACT(EPOCH FROM (created_at - prev_time)), 0)\n      / 9.81\n    ) <= 0.5\n)\nSELECT\n  ROUND(AVG(ABS(g))::numeric, 3) AS \"Mean |g|\",\n  ROUND(STDDEV(g)::numeric, 3) AS \"Std Dev (g)\",\n  ROUND(PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY ABS(g))::numeric, 3) AS \"P95 |g|\",\n  ROUND(MAX(ABS(g))::numeric, 3) AS \"Peak |g|\",\n  COUNT(*) AS \"Samples\"\nFROM accel",
+          "rawSql": "SELECT\n  ROUND(AVG(ABS(value_num))::numeric, 3) AS \"Mean |g|\",\n  ROUND(STDDEV(value_num)::numeric, 3) AS \"Std Dev (g)\",\n  ROUND(PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY ABS(value_num))::numeric, 3) AS \"P95 |g|\",\n  ROUND(MAX(ABS(value_num))::numeric, 3) AS \"Peak |g|\",\n  COUNT(*) AS \"Samples\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('LateralAcceleration', 'LongitudinalAcceleration')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()",
           "refId": "A"
         }
       ],
@@ -343,7 +343,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT * FROM fn_driving_braking_intensity(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
+          "rawSql": "SELECT\n  d.start_ts AS time,\n  COUNT(*) FILTER (WHERE sl.value_num < -0.3)::bigint AS \"Hard Brakes\",\n  COUNT(*) FILTER (WHERE sl.value_num < -0.2 AND sl.value_num >= -0.3)::bigint AS \"Moderate Brakes\",\n  ROUND(AVG(sl.value_num) FILTER (WHERE sl.value_num < 0)::numeric, 3) AS \"Avg Decel (g)\"\nFROM signal_log sl\nJOIN drives d ON sl.vehicle_id = d.vehicle_id\n  AND sl.created_at BETWEEN d.start_ts AND d.end_ts\nWHERE d.vehicle_id = ${vehicle_id}\n  AND $__timeFilter(d.start_ts)\n  AND sl.signal = 'LongitudinalAcceleration'\n  AND sl.value_num IS NOT NULL\nGROUP BY d.id, d.start_ts\nORDER BY d.start_ts",
           "refId": "A"
         }
       ],
@@ -356,7 +356,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "DS_TESLASYNC_POSTGRESQL"
       },
-      "description": "Driving style breakdown: gentle / moderate / aggressive percentages based on average speed and energy efficiency per drive. Uses fn_driving_style_summary().",
+      "description": "Driving style breakdown: gentle / moderate / aggressive percentages based on average speed and energy efficiency per drive.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -459,7 +459,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT * FROM fn_driving_style_summary(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
+          "rawSql": "WITH classified AS (\n  SELECT\n    CASE\n      WHEN avg_speed_mph < 25 AND COALESCE(energy_used_kwh * 1000 / NULLIF(distance_mi * 1.60934, 0), 0) < 150 THEN 'Gentle'\n      WHEN avg_speed_mph > 50 OR COALESCE(energy_used_kwh * 1000 / NULLIF(distance_mi * 1.60934, 0), 0) > 250 THEN 'Aggressive'\n      ELSE 'Moderate'\n    END AS style\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(start_ts)\n    AND distance_mi > 1\n    AND avg_speed_mph IS NOT NULL\n)\nSELECT style, ROUND(100.0 * COUNT(*) / NULLIF((SELECT COUNT(*) FROM classified), 0), 1) AS percent\nFROM classified\nGROUP BY style",
           "refId": "A"
         }
       ],
@@ -577,7 +577,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT avg_speed AS \"Avg Speed\", wh_per_km AS \"Wh/km\" FROM fn_driving_speed_vs_efficiency(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
+          "rawSql": "SELECT\n  ROUND(avg_speed_mph::numeric, 1) AS \"Avg Speed\",\n  CASE WHEN distance_mi > 0 AND energy_used_kwh IS NOT NULL\n    THEN ROUND((energy_used_kwh * 1000 / (distance_mi * 1.60934))::numeric, 0)\n    ELSE NULL END AS \"Wh/km\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(start_ts)\n  AND distance_mi > 1\n  AND avg_speed_mph > 0\n  AND energy_used_kwh IS NOT NULL",
           "refId": "A"
         }
       ],

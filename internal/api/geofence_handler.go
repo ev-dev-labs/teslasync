@@ -11,13 +11,13 @@ import (
 )
 
 func validateGeofence(g *models.Geofence) error {
-	if g.Latitude < -90 || g.Latitude > 90 {
+	if g.Latitude() < -90 || g.Latitude() > 90 {
 		return fmt.Errorf("latitude must be between -90 and 90")
 	}
-	if g.Longitude < -180 || g.Longitude > 180 {
+	if g.Longitude() < -180 || g.Longitude() > 180 {
 		return fmt.Errorf("longitude must be between -180 and 180")
 	}
-	if g.Radius > 100000 {
+	if g.Radius() > 100000 {
 		return fmt.Errorf("radius must be 100km or less")
 	}
 	if len(g.Name) > 200 {
@@ -51,7 +51,7 @@ func (h *GeofenceHandler) Create(w http.ResponseWriter, r *http.Request) {
 		writeAppError(w, r, ErrInvalidJSON)
 		return
 	}
-	if g.Name == "" || g.Radius <= 0 {
+	if g.Name == "" || g.Radius() <= 0 {
 		writeAppError(w, r, ErrMissingField.WithMessage("name and positive radius required"))
 		return
 	}
@@ -102,7 +102,7 @@ func (h *GeofenceHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	g.ID = id
 
-	if g.Name == "" || g.Radius <= 0 {
+	if g.Name == "" || g.Radius() <= 0 {
 		writeAppError(w, r, ErrMissingField.WithMessage("name and positive radius required"))
 		return
 	}

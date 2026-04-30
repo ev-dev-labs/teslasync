@@ -5,6 +5,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/config"
 )
 
 type memItem struct {
@@ -64,7 +66,7 @@ func (m *memStore) Close() {
 }
 
 func (m *memStore) evictLoop() {
-	ticker := time.NewTicker(60 * time.Second)
+	ticker := time.NewTicker(config.MemCacheCleanup)
 	defer ticker.Stop()
 	for {
 		select {

@@ -72,16 +72,16 @@ func (p *Processor) processImportDrives(ctx context.Context, req *models.ExportJ
 
 		d := &models.Drive{
 			VehicleID:   vehicleID,
-			StartDate:   startDate,
-			Distance:    distance,
+			StartTs:     startDate,
+			DistanceMi:  distance,
 			DurationMin: duration,
 		}
 		if speedMax > 0 {
-			d.SpeedMax = &speedMax
+			d.MaxSpeedMph = &speedMax
 		}
 		if record[2] != "" {
 			if endDate, err := time.Parse("2006-01-02T15:04:05Z", record[2]); err == nil {
-				d.EndDate = &endDate
+				d.EndTs = &endDate
 			}
 		}
 
@@ -152,27 +152,29 @@ func (p *Processor) processImportCharging(ctx context.Context, req *models.Expor
 			errors++
 			continue
 		}
+		startBatteryI16 := int16(startBattery)
 
 		c := &models.ChargingSession{
-			VehicleID:         vehicleID,
-			StartDate:         startDate,
-			ChargeEnergyAdded: energyAdded,
-			StartBatteryLevel: startBattery,
+			VehicleID:       vehicleID,
+			StartTs:         startDate,
+			EnergyAddedKwh:  &energyAdded,
+			StartBatteryPct: &startBatteryI16,
 		}
 
 		if record[2] != "" {
 			if endDate, err := time.Parse("2006-01-02T15:04:05Z", record[2]); err == nil {
-				c.EndDate = &endDate
+				c.EndTs = &endDate
 			}
 		}
 		if endBatt, err := strconv.Atoi(record[5]); err == nil {
-			c.EndBatteryLevel = &endBatt
+			endBattI16 := int16(endBatt)
+			c.EndBatteryPct = &endBattI16
 		}
 		if power, err := strconv.ParseFloat(record[6], 64); err == nil {
-			c.ChargerPower = &power
+			c.ChargerPowerKwMax = &power
 		}
 		durationMin, _ := strconv.ParseFloat(record[7], 64)
-		c.DurationMin = durationMin
+		c.DurationMin = &durationMin
 
 		if err := p.chargingRepo.Create(ctx, c); err != nil {
 			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("import: failed to import charging session")

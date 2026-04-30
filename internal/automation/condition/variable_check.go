@@ -29,8 +29,8 @@ type variableCheckSnapshot struct {
 	Reason   string  `json:"reason"`
 }
 
-// ParseVariableCheckConfig unmarshals and validates a variable_check condition config.
-func ParseVariableCheckConfig(raw json.RawMessage) (*VariableCheckConfig, error) {
+// DecodeVariableCheckSpec unmarshals and validates a variable_check condition config.
+func DecodeVariableCheckSpec(raw json.RawMessage) (*VariableCheckConfig, error) {
 	if len(raw) == 0 {
 		return nil, fmt.Errorf("condition config is empty")
 	}
@@ -67,6 +67,8 @@ func ParseVariableCheckConfig(raw json.RawMessage) (*VariableCheckConfig, error)
 
 	return &cfg, nil
 }
+
+var ParseVariableCheckConfig = DecodeVariableCheckSpec
 
 // EvaluateVariableCheck checks whether a stored automation variable satisfies
 // the configured key/operator/value condition.
@@ -117,7 +119,7 @@ func EvaluateVariableCheck(cfg *VariableCheckConfig, currentValue *string) (Resu
 			})
 			return Result{Met: false, Reason: reason}, snapshot, nil
 		}
-		// Numeric parse of expected was already validated in ParseVariableCheckConfig.
+		// Numeric parse of expected was already validated in DecodeVariableCheckSpec.
 		expectedNum, _ := strconv.ParseFloat(expected, 64)
 
 		switch cfg.Operator {

@@ -36,6 +36,9 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 
 	ctx := r.Context()
 
+	// Look up vehicle-specific battery capacity
+	batteryCapacityKWh, capacitySource := lookupVehicleCapacity(ctx, h.db, vehicleID)
+
 	// Time in each vehicle state
 	type stateEntry struct {
 		State        string  `json:"state"`
@@ -62,6 +65,7 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 	for rows.Next() {
 		var e stateEntry
 		if err := rows.Scan(&e.State, &e.Count, &e.TotalMinutes); err != nil {
+			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("sleep: state distribution row scan failed")
 			continue
 		}
 		totalMinutesAll += e.TotalMinutes
@@ -112,6 +116,7 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 		var g sentryGroup
 		var avgDrain, avgDur, avgBat, avgTemp *float64
 		if err := sentryRows.Scan(&g.SentryMode, &g.Count, &avgDrain, &avgDur, &avgBat, &avgTemp); err != nil {
+			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("sleep: sentry comparison row scan failed")
 			continue
 		}
 		if avgDrain != nil {
@@ -171,6 +176,7 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 		var startDate, endDate interface{}
 		if err := eventRows.Scan(&e.ID, &startDate, &endDate, &e.DurationHours, &e.BatteryLost,
 			&e.DrainRate, &e.SentryMode, &e.OutsideTemp, &e.StartBattery, &e.EndBattery); err != nil {
+			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("sleep: drain event row scan failed")
 			continue
 		}
 		if t, ok := startDate.(interface{ Format(string) string }); ok {
@@ -191,7 +197,7 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 	// Get settings for cost calculations
 	var baseCostPerKWh float64
 	err = h.db.Pool.QueryRow(ctx,
-		`SELECT COALESCE(base_cost_per_kwh, 0.12) FROM settings LIMIT 1`,
+		`SELECT COALESCE((SELECT value_num FROM settings WHERE key = 'base_cost_per_kwh'), 0.12)`,
 	).Scan(&baseCostPerKWh)
 	if err != nil && err != pgx.ErrNoRows {
 		baseCostPerKWh = 0.12
@@ -200,8 +206,7 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 		baseCostPerKWh = 0.12
 	}
 
-	// Estimate sentry monthly cost (assuming ~75 kWh battery)
-	batteryCapacityKWh := 75.0
+	// Estimate sentry monthly cost
 	hoursPerMonth := 730.0 // avg hours in a month
 	sentryMonthlyKWh := sentryOnDrainRate / 100 * batteryCapacityKWh * hoursPerMonth
 	sentryMonthlyCost := sentryMonthlyKWh * baseCostPerKWh
@@ -245,6 +250,7 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 		"sentry_extra_monthly_kwh":  math.Round(extraMonthlyKWh*100) / 100,
 		"sentry_extra_monthly_cost": math.Round(extraMonthlyCost*100) / 100,
 		"battery_capacity_kwh":  batteryCapacityKWh,
+		"capacity_source":       capacitySource,
 		"base_cost_per_kwh":     baseCostPerKWh,
 		"recent_events":         recentEvents,
 		"total_events":          len(recentEvents),

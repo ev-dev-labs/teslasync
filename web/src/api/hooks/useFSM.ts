@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { request } from '../client';
+import { INTERVALS } from '@/lib/constants';
 import type { FSMStats, FSMTransitionResponse, FSMType } from '@/types/fsm';
 
 export const fsmKeys = {
@@ -19,7 +20,7 @@ export function useFSMStats(entityId: string) {
     queryFn: () =>
       request<FSMStats>(`/fsm/stats?vehicle_id=${entityId}`),
     enabled: !!entityId,
-    refetchInterval: 10_000,
+    refetchInterval: INTERVALS.FAST,
   });
 }
 
@@ -38,6 +39,6 @@ export function useFSMTransitions(
         `/fsm/transitions?vehicle_id=${entityId}&hours=${hours}&page=${page}&per_page=${perPage}${typeParam}`,
       ),
     enabled: !!entityId,
-    refetchInterval: 10_000,
+    refetchInterval: INTERVALS.FAST,
   });
 }

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { request } from '../client';
+import { STALE_TIMES } from '@/lib/constants';
 
 export interface CommandLogEntry {
   id: number;
@@ -23,7 +24,7 @@ export function useCommandHistory(vehicleId: string | undefined) {
     queryFn: () =>
       request<CommandLogEntry[]>(`/vehicles/${vehicleId}/commands/history?limit=200`),
     enabled: !!vehicleId,
-    staleTime: 10_000,
+    staleTime: STALE_TIMES.QUICK,
     select: (data) => data ?? [],
   });
 }
@@ -35,7 +36,7 @@ export function useCommandLatest(vehicleId: string | undefined) {
     queryFn: () =>
       request<CommandLogEntry[]>(`/vehicles/${vehicleId}/commands/latest`),
     enabled: !!vehicleId,
-    staleTime: 15_000,
+    staleTime: STALE_TIMES.MODERATE,
     select: (data) => data ?? [],
   });
 }

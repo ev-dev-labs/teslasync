@@ -109,7 +109,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT AVG(battery_level) AS \"🔋 Avg SOC\", AVG(pack_voltage) AS \"⚡ Avg Pack V\", AVG(pack_current) AS \"🔌 Avg Pack A\", AVG(energy_remaining) AS \"🔋 Energy kWh\", MAX(dc_charging_power) AS \"⚡ Peak DC kW\", MAX(ac_charging_power) AS \"🔌 Peak AC kW\" FROM charging_telemetry WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)",
+          "rawSql": "SELECT\n  AVG(value_num) FILTER (WHERE signal = 'BatteryLevel') AS \"🔋 Avg SOC\",\n  AVG(value_num) FILTER (WHERE signal = 'PackVoltage') AS \"⚡ Avg Pack V\",\n  AVG(value_num) FILTER (WHERE signal = 'PackCurrent') AS \"🔌 Avg Pack A\",\n  AVG(value_num) FILTER (WHERE signal = 'EnergyRemaining') AS \"🔋 Energy kWh\",\n  MAX(value_num) FILTER (WHERE signal = 'DCChargingPower') AS \"⚡ Peak DC kW\",\n  MAX(value_num) FILTER (WHERE signal = 'ACChargingPower') AS \"🔌 Peak AC kW\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('BatteryLevel', 'PackVoltage', 'PackCurrent', 'EnergyRemaining', 'DCChargingPower', 'ACChargingPower')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()",
           "refId": "A"
         }
       ],
@@ -189,7 +189,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, pack_voltage AS \"Pack Voltage (V)\", pack_current AS \"Pack Current (A)\" FROM charging_telemetry WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "rawSql": "SELECT created_at AS time,\n  MAX(value_num) FILTER (WHERE signal = 'PackVoltage') AS \"Pack Voltage (V)\",\n  MAX(value_num) FILTER (WHERE signal = 'PackCurrent') AS \"Pack Current (A)\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('PackVoltage', 'PackCurrent')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -269,7 +269,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, dc_charging_power AS \"DC Power (kW)\", ac_charging_power AS \"AC Power (kW)\" FROM charging_telemetry WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "rawSql": "SELECT created_at AS time,\n  MAX(value_num) FILTER (WHERE signal = 'DCChargingPower') AS \"DC Power (kW)\",\n  MAX(value_num) FILTER (WHERE signal = 'ACChargingPower') AS \"AC Power (kW)\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('DCChargingPower', 'ACChargingPower')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -349,7 +349,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, battery_level AS \"SOC %\", convert_distance(est_battery_range) AS \"Est Range\", convert_distance(rated_range) AS \"Rated Range\" FROM charging_telemetry WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "rawSql": "SELECT created_at AS time,\n  MAX(value_num) FILTER (WHERE signal = 'BatteryLevel') AS \"SOC %\",\n  convert_distance(MAX(value_num) FILTER (WHERE signal = 'EstBatteryRange')) AS \"Est Range\",\n  convert_distance(MAX(value_num) FILTER (WHERE signal = 'RatedRange')) AS \"Rated Range\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('BatteryLevel', 'EstBatteryRange', 'RatedRange')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -429,7 +429,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, brick_voltage_max AS \"Max Cell V\", brick_voltage_min AS \"Min Cell V\", (brick_voltage_max - brick_voltage_min) AS \"Spread\" FROM charging_telemetry WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) AND brick_voltage_max IS NOT NULL ORDER BY created_at",
+          "rawSql": "SELECT created_at AS time,\n  MAX(value_num) FILTER (WHERE signal = 'BrickVoltageMax') AS \"Max Cell V\",\n  MAX(value_num) FILTER (WHERE signal = 'BrickVoltageMin') AS \"Min Cell V\",\n  (MAX(value_num) FILTER (WHERE signal = 'BrickVoltageMax') - MAX(value_num) FILTER (WHERE signal = 'BrickVoltageMin')) AS \"Spread\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('BrickVoltageMax', 'BrickVoltageMin')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nHAVING MAX(value_num) FILTER (WHERE signal = 'BrickVoltageMax') IS NOT NULL\nORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -509,7 +509,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, convert_temp(module_temp_max) AS \"Max Module Temp\", convert_temp(module_temp_min) AS \"Min Module Temp\" FROM charging_telemetry WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) AND module_temp_max IS NOT NULL ORDER BY created_at",
+          "rawSql": "SELECT created_at AS time,\n  convert_temp(MAX(value_num) FILTER (WHERE signal = 'ModuleTempMax')) AS \"Max Module Temp\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal = 'ModuleTempMin')) AS \"Min Module Temp\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('ModuleTempMax', 'ModuleTempMin')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nHAVING MAX(value_num) FILTER (WHERE signal = 'ModuleTempMax') IS NOT NULL\nORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -568,7 +568,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(bms_state, 'N/A') AS \"BMS State\", CASE WHEN bms_fullcharge_complete THEN 'Yes' ELSE 'No' END AS \"Full Charge\", CASE WHEN battery_heater_on THEN 'On' ELSE 'Off' END AS \"Battery Heater\", ROUND(isolation_resistance::numeric) AS \"Isolation Ω\" FROM charging_telemetry WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT\n  COALESCE(last(value_str, created_at) FILTER (WHERE signal = 'BMSState'), 'N/A') AS \"BMS State\",\n  CASE WHEN last(value_bool, created_at) FILTER (WHERE signal = 'BmsFullchargecomplete') THEN 'Yes' ELSE 'No' END AS \"Full Charge\",\n  CASE WHEN last(value_bool, created_at) FILTER (WHERE signal = 'BatteryHeaterOn') THEN 'On' ELSE 'Off' END AS \"Battery Heater\",\n  ROUND(last(value_num, created_at) FILTER (WHERE signal = 'IsolationResistance')::numeric) AS \"Isolation Ω\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('BMSState', 'BmsFullchargecomplete', 'BatteryHeaterOn', 'IsolationResistance')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()",
           "refId": "A"
         }
       ],
@@ -627,7 +627,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(powershare_status, 'N/A') AS \"Status\", COALESCE(powershare_type, 'N/A') AS \"Type\", powershare_hours_left AS \"Hours Left\", ROUND(powershare_power_kw::numeric, 1) AS \"Power kW\" FROM charging_telemetry WHERE vehicle_id = ${vehicle_id} AND powershare_status IS NOT NULL ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT\n  COALESCE(last(value_str, created_at) FILTER (WHERE signal = 'PowershareStatus'), 'N/A') AS \"Status\",\n  COALESCE(last(value_str, created_at) FILTER (WHERE signal = 'PowershareType'), 'N/A') AS \"Type\",\n  last(value_num, created_at) FILTER (WHERE signal = 'PowershareHoursLeft') AS \"Hours Left\",\n  ROUND(last(value_num, created_at) FILTER (WHERE signal = 'PowershareInstantaneousPowerKW')::numeric, 1) AS \"Power kW\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('PowershareStatus', 'PowershareType', 'PowershareHoursLeft', 'PowershareInstantaneousPowerKW')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nHAVING last(value_str, created_at) FILTER (WHERE signal = 'PowershareStatus') IS NOT NULL",
           "refId": "A"
         }
       ],

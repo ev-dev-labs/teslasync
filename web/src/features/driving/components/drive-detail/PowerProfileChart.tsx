@@ -1,0 +1,52 @@
+import { useTranslation } from 'react-i18next';
+import { Activity } from 'lucide-react';
+import {
+  ChartContainer, ChartTooltip,
+  AREA_DEFAULTS, areaGradient,
+  AreaChart, Area, ReferenceLine,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from '@/components/charts';
+import { FadeIn } from '@/components/motion';
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+import type { ChartDataPoint, DriveStats } from './types';
+
+interface PowerProfileChartProps {
+  chartData: ChartDataPoint[];
+  stats: DriveStats;
+}
+
+export function PowerProfileChart({ chartData, stats }: PowerProfileChartProps) {
+  const { t } = useTranslation();
+
+  return (
+    <FadeIn>
+      <ChartContainer title={t('driveDetail.powerProfile', 'Power Profile')} height={220}>
+        {chartData.length > 1 ? (
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+              <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} interval="preserveStartEnd" />
+              <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+              <Tooltip content={<ChartTooltip />} />
+              <ReferenceLine y={0} stroke="rgba(255,255,255,0.15)" />
+              {areaGradient('powerGrad', '#f59e0b')}
+              <Area {...AREA_DEFAULTS} dataKey="power" stroke="#f59e0b" fill="url(#powerGrad)" name={`${t('driveDetail.power', 'Power')} kW`} />
+            </AreaChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="h-full flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
+            <Activity className="h-8 w-8 opacity-20" />
+            <p className="text-xs">{t('driveDetail.noChartData', 'No telemetry data available')}</p>
+          </div>
+        )}
+      </ChartContainer>
+      {chartData.length > 1 && (
+        <div className="mt-3 flex items-center justify-center gap-6 text-xs text-[var(--text-secondary)]">
+          <span>{t('driveDetail.maxPower', 'Max Power')}: <strong className="text-amber-400">{fmtInt(stats.powerMax)} kW</strong></span>
+          <span>{t('driveDetail.maxRegen', 'Max Regen')}: <strong className="text-cyan-400">{fmtInt(stats.powerMin)} kW</strong></span>
+          <span>{t('driveDetail.avgLabel', 'Avg')}: <strong className="text-[var(--text-primary)]">{fmtNumber(stats.avgPower)} kW</strong></span>
+        </div>
+      )}
+    </FadeIn>
+  );
+}

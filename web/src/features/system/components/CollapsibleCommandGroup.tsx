@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { ChevronDown } from 'lucide-react';
 import { FadeIn } from '@/components/motion';
+import { Button as ControlButton } from '@/components/ui';
 import { CATEGORY_META, type CommandCategory } from '../commands';
 
 interface CollapsibleCommandGroupProps {
@@ -43,10 +44,13 @@ export function CollapsibleCommandGroup({
 
   return (
     <div>
-      <button
+      <ControlButton
+        type="button"
+        variant="ghost"
+        size="sm"
         onClick={toggle}
         aria-expanded={open}
-        className="flex items-center gap-2 w-full text-left py-2 group"
+        className="group h-auto w-full justify-start py-2 text-left font-normal hover:bg-transparent"
       >
         <Icon className="h-4 w-4 text-white/40" />
         <span className="text-xs uppercase tracking-wider text-white/50 font-medium">
@@ -57,7 +61,7 @@ export function CollapsibleCommandGroup({
           'h-3.5 w-3.5 text-white/30 ml-auto transition-transform duration-200',
           open && 'rotate-180',
         )} />
-      </button>
+      </ControlButton>
       {open && (
         <FadeIn>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mt-2">

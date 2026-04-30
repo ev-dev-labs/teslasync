@@ -2,6 +2,7 @@ package condition
 
 import (
 	"encoding/json"
+	"fmt"
 	"math"
 	"testing"
 
@@ -10,13 +11,13 @@ import (
 
 // ─── Config Parsing Tests ───────────────────────────────
 
-func TestParseLocationConfig_Valid(t *testing.T) {
+func TestDecodeLocationSpec_Valid(t *testing.T) {
 	raw := json.RawMessage(`{
 		"type": "location",
 		"geofence_id": 5,
 		"operator": "inside"
 	}`)
-	cfg, err := ParseLocationConfig(raw)
+	cfg, err := DecodeLocationSpec(raw)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -31,9 +32,9 @@ func TestParseLocationConfig_Valid(t *testing.T) {
 	}
 }
 
-func TestParseLocationConfig_MinimalValid(t *testing.T) {
+func TestDecodeLocationSpec_MinimalValid(t *testing.T) {
 	raw := json.RawMessage(`{"geofence_id": 1, "operator": "outside"}`)
-	cfg, err := ParseLocationConfig(raw)
+	cfg, err := DecodeLocationSpec(raw)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -45,7 +46,7 @@ func TestParseLocationConfig_MinimalValid(t *testing.T) {
 	}
 }
 
-func TestParseLocationConfig_InvalidCases(t *testing.T) {
+func TestDecodeLocationSpec_InvalidCases(t *testing.T) {
 	tests := []struct {
 		name string
 		raw  string
@@ -61,7 +62,7 @@ func TestParseLocationConfig_InvalidCases(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := ParseLocationConfig(json.RawMessage(tt.raw))
+			_, err := DecodeLocationSpec(json.RawMessage(tt.raw))
 			if err == nil {
 				t.Fatalf("expected error for %q, got nil", tt.raw)
 			}
@@ -99,12 +100,21 @@ func TestSphericalDistance_Antipodal(t *testing.T) {
 // ─── Evaluate Tests ─────────────────────────────────────
 
 func makeGeofence(id int64, name string, lat, lon, radius float64) *models.Geofence {
+	// Build a simple square polygon around the center point
+	// Approximate square whose farthest vertex is radius meters from center.
+	deltaLat := (radius / math.Sqrt2) / earthRadiusM * 180 / math.Pi
+	deltaLon := deltaLat / math.Cos(lat*math.Pi/180)
+	wkt := fmt.Sprintf("POLYGON((%f %f,%f %f,%f %f,%f %f,%f %f))",
+		lon-deltaLon, lat-deltaLat,
+		lon+deltaLon, lat-deltaLat,
+		lon+deltaLon, lat+deltaLat,
+		lon-deltaLon, lat+deltaLat,
+		lon-deltaLon, lat-deltaLat,
+	)
 	return &models.Geofence{
-		ID:        id,
-		Name:      name,
-		Latitude:  lat,
-		Longitude: lon,
-		Radius:    radius,
+		ID:         id,
+		Name:       name,
+		PolygonWKT: wkt,
 	}
 }
 

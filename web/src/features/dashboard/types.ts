@@ -63,15 +63,17 @@ export interface Alert {
 export interface Drive {
   id: number;
   vehicle_id: number;
-  start_date: string;
-  end_date: string | null;
-  distance: number;
+  start_ts: string;
+  end_ts: string | null;
+  distance_mi: number;
   duration_min: number;
-  speed_max: number | null;
-  power_max: number | null;
-  power_min: number | null;
-  start_battery_level: number | null;
-  end_battery_level: number | null;
+  max_speed_mph: number | null;
+  avg_speed_mph: number | null;
+  avg_power_kw: number | null;
+  start_battery_pct: number | null;
+  end_battery_pct: number | null;
+  energy_used_kwh: number | null;
+  regen_kwh: number | null;
   start_address?: string;
   end_address?: string;
 }
@@ -79,11 +81,11 @@ export interface Drive {
 export interface ChargingSession {
   id: number;
   vehicle_id: number;
-  start_date: string;
-  end_date: string | null;
-  charge_energy_added: number;
-  start_battery_level: number;
-  end_battery_level: number | null;
+  start_ts: string;
+  end_ts: string | null;
+  energy_added_kwh: number;
+  start_battery_pct: number;
+  end_battery_pct: number | null;
   cost: number | null;
   duration_min: number;
 }
@@ -101,7 +103,7 @@ export interface ClimateData {
   outside_temp: number | null;
   hvac_power: number | null;
   hvac_fan_speed: number | null;
-  defrost_mode: boolean;
+  defrost_mode: string | null;
   battery_heater_on: boolean;
 }
 

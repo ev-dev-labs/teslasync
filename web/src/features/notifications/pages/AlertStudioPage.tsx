@@ -1,21 +1,28 @@
-// @ts-nocheck — TODO: wire to refactored API types
 /**
- * AlertStudio — full-featured CEP rule editor page.
+ * AlertStudio - typed alert-rule editor page.
  *
- * Lists existing rules, provides a visual builder, template library,
- * and manages persistence via the /api/v1/alerts/rules endpoint.
+ * Lists existing rules, provides typed templates, and persists through the
+ * /api/v1/alerts/rules endpoint using the current alert-rule contract.
  */
 
-import { useState, useMemo, useCallback } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import type { AlertRule, NotificationChannel, RuleConditionTree } from '@/api/hooks/useNotifications'
-import { request } from '@/api/client'
-import { GlassPanel, Badge, Button, Input, Select } from '@/components/ui'
-import { PageHeader } from '@/components/layout'
+import { useState, useMemo, useCallback, type ElementType, type KeyboardEvent } from 'react'
+import { useTranslation } from 'react-i18next'
+import {
+  type AlertRule,
+  type AlertRuleInput,
+  type AlertTestTarget,
+  useAlertRules,
+  useDeleteAlertRule,
+  useNotificationChannels,
+  useSaveAlertRule,
+  useTestAlertRule,
+  useToggleAlertRule,
+} from '@/api/hooks/useNotifications'
+import type { SignalValueType } from '@/types/signals'
+import { GlassPanel, Badge, Button as UiButton, Input as UiInput, Select as UiSelect } from '@/components/ui'
+import { PageContainer } from '@/components/layout'
 import { FadeIn } from '@/components/motion'
-import { EmptyState, Skeleton } from '@/components/feedback'
-import { RuleBuilder } from '@/components/forms'
-import { useToast } from '@/components/feedback/Toast'
+import { EmptyState, ErrorDisplay, Skeleton } from '@/components/feedback'
 import {
   Zap, Plus, Save, Trash2, Copy, Bell, BellOff,
   AlertTriangle, AlertCircle, Info, Battery, Gauge, Lock,
@@ -25,319 +32,783 @@ import { cn } from '@/lib/cn'
 import { formatDateTime } from '@/lib/dateFormat'
 import { usePageTitle } from '@/hooks/usePageTitle'
 
-// ─── Severity config ─────────────────────────────────────────────────────────
+type Severity = NonNullable<AlertRuleInput['severity']>
+type RuleOp = AlertRuleInput['op']
+type ValueKind = 'none' | 'number' | 'text' | 'bool' | 'range'
 
-const severityConfig = {
-  info: { icon: Info, color: 'text-neon-cyan', bg: 'bg-neon-cyan/10', border: 'border-neon-cyan/20', hex: '#00f0ff' },
-  warning: { icon: AlertTriangle, color: 'text-neon-amber', bg: 'bg-neon-amber/10', border: 'border-neon-amber/20', hex: '#f59e0b' },
-  critical: { icon: AlertCircle, color: 'text-neon-red', bg: 'bg-neon-red/10', border: 'border-neon-red/20', hex: '#ef4444' },
-} as const
+interface SeverityConfig {
+  icon: ElementType
+  color: string
+  bg: string
+  border: string
+}
 
-type Severity = keyof typeof severityConfig
+const severityConfig: Record<Severity, SeverityConfig> = {
+  info: { icon: Info, color: 'text-neon-cyan', bg: 'bg-neon-cyan/10', border: 'border-neon-cyan/20' },
+  warn: { icon: AlertTriangle, color: 'text-neon-amber', bg: 'bg-neon-amber/10', border: 'border-neon-amber/20' },
+  critical: { icon: AlertCircle, color: 'text-neon-red', bg: 'bg-neon-red/10', border: 'border-neon-red/20' },
+}
 
-// ─── Templates ───────────────────────────────────────────────────────────────
+const severityBadgeColor: Record<Severity, 'cyan' | 'amber' | 'red'> = {
+  info: 'cyan',
+  warn: 'amber',
+  critical: 'red',
+}
 
 interface RuleTemplate {
   name: string
-  icon: React.ElementType
+  icon: ElementType
   category: string
   severity: Severity
-  msg_template: string
+  message: string
   cooldown_min: number
-  conditions: RuleConditionTree
+  signal_name: string
+  op: RuleOp
+  value_num?: number
+  value_text?: string
+  value_bool?: boolean
+  value_min?: number
+  value_max?: number
+}
+
+interface SignalDefinition {
+  name: string
+  category: string
+  value_type: SignalValueType
 }
 
 const ruleTemplates: RuleTemplate[] = [
-  // ── Battery ────────────────────────────────────────
-  { name: 'Battery Low (< 20%)', icon: Battery, category: 'Battery', severity: 'warning', msg_template: 'Battery at {{BatteryLevel}}%', cooldown_min: 30, conditions: { op: 'AND', rules: [{ signal: 'BatteryLevel', compare: '<', value: 20 }] } },
-  { name: 'Battery Critical (< 10%)', icon: Battery, category: 'Battery', severity: 'critical', msg_template: 'Battery critically low at {{BatteryLevel}}%!', cooldown_min: 15, conditions: { op: 'AND', rules: [{ signal: 'BatteryLevel', compare: '<', value: 10 }] } },
-  { name: 'Battery Full (≥ 90%)', icon: Battery, category: 'Battery', severity: 'info', msg_template: 'Battery reached {{BatteryLevel}}%', cooldown_min: 60, conditions: { op: 'AND', rules: [{ signal: 'BatteryLevel', compare: '>=', value: 90 }] } },
-  { name: 'Charge Limit Reached', icon: Battery, category: 'Battery', severity: 'info', msg_template: 'Battery at charge limit {{ChargeLimitSoc}}%', cooldown_min: 60, conditions: { op: 'AND', rules: [{ signal: 'BatteryLevel', compare: '>=', value: 80 }] } },
-  { name: 'Range Below 50 km', icon: Battery, category: 'Battery', severity: 'warning', msg_template: 'Range low: {{RatedRange}} km remaining', cooldown_min: 30, conditions: { op: 'AND', rules: [{ signal: 'RatedRange', compare: '<', value: 50 }] } },
+  { name: 'Battery Low (< 20%)', icon: Battery, category: 'Battery', severity: 'warn', message: 'Battery at {{BatteryLevel}}%', cooldown_min: 30, signal_name: 'BatteryLevel', op: '<', value_num: 20 },
+  { name: 'Battery Critical (< 10%)', icon: Battery, category: 'Battery', severity: 'critical', message: 'Battery critically low at {{BatteryLevel}}%!', cooldown_min: 15, signal_name: 'BatteryLevel', op: '<', value_num: 10 },
+  { name: 'Battery Full (>= 90%)', icon: Battery, category: 'Battery', severity: 'info', message: 'Battery reached {{BatteryLevel}}%', cooldown_min: 60, signal_name: 'BatteryLevel', op: '>=', value_num: 90 },
+  { name: 'Charge Limit Reached', icon: Battery, category: 'Battery', severity: 'info', message: 'Battery at charge limit {{ChargeLimitSoc}}%', cooldown_min: 60, signal_name: 'BatteryLevel', op: '>=', value_num: 80 },
+  { name: 'Range Below 50 km', icon: Battery, category: 'Battery', severity: 'warn', message: 'Range low: {{RatedRange}} km remaining', cooldown_min: 30, signal_name: 'RatedRange', op: '<', value_num: 50 },
 
-  // ── Charging ───────────────────────────────────────
-  { name: 'Charge Complete', icon: Zap, category: 'Charging', severity: 'info', msg_template: 'Charging complete at {{BatteryLevel}}%', cooldown_min: 60, conditions: { op: 'AND', rules: [{ signal: 'ChargeState', compare: 'changed_to', value: 'Complete' }] } },
-  { name: 'Charging Started', icon: Zap, category: 'Charging', severity: 'info', msg_template: 'Charging started — {{DetailedChargeState}}', cooldown_min: 15, conditions: { op: 'AND', rules: [{ signal: 'DetailedChargeState', compare: 'changed_to', value: 'Charging' }] } },
-  { name: 'Charging Stopped Unexpectedly', icon: Zap, category: 'Charging', severity: 'warning', msg_template: 'Charging stopped — {{DetailedChargeState}}', cooldown_min: 30, conditions: { op: 'AND', rules: [{ signal: 'DetailedChargeState', compare: 'changed_to', value: 'Stopped' }] } },
-  { name: 'Supercharging (DC Fast)', icon: Zap, category: 'Charging', severity: 'info', msg_template: 'Supercharging at {{DCChargingPower}} kW', cooldown_min: 30, conditions: { op: 'AND', rules: [{ signal: 'DCChargingPower', compare: '>', value: 50 }] } },
-  { name: 'Slow Charge Rate', icon: Zap, category: 'Charging', severity: 'warning', msg_template: 'Charging slow: {{ChargeAmps}}A at {{ChargerVoltage}}V', cooldown_min: 60, conditions: { op: 'AND', rules: [{ signal: 'ChargeAmps', compare: '<', value: 5 }, { signal: 'ChargeAmps', compare: '>', value: 0 }] } },
+  { name: 'Charge Complete', icon: Zap, category: 'Charging', severity: 'info', message: 'Charging complete at {{BatteryLevel}}%', cooldown_min: 60, signal_name: 'ChargeState', op: '=', value_text: 'Complete' },
+  { name: 'Charging Started', icon: Zap, category: 'Charging', severity: 'info', message: 'Charging started - {{DetailedChargeState}}', cooldown_min: 15, signal_name: 'DetailedChargeState', op: '=', value_text: 'Charging' },
+  { name: 'Charging Stopped Unexpectedly', icon: Zap, category: 'Charging', severity: 'warn', message: 'Charging stopped - {{DetailedChargeState}}', cooldown_min: 30, signal_name: 'DetailedChargeState', op: '=', value_text: 'Stopped' },
+  { name: 'Supercharging (DC Fast)', icon: Zap, category: 'Charging', severity: 'info', message: 'Supercharging at {{DCChargingPower}} kW', cooldown_min: 30, signal_name: 'DCChargingPower', op: '>', value_num: 50 },
+  { name: 'Slow Charge Rate', icon: Zap, category: 'Charging', severity: 'warn', message: 'Charging slow: {{ChargeAmps}}A', cooldown_min: 60, signal_name: 'ChargeAmps', op: 'between', value_min: 0.01, value_max: 5 },
 
-  // ── Driving ────────────────────────────────────────
-  { name: 'Drive Started', icon: Car, category: 'Driving', severity: 'info', msg_template: 'Drive started — gear is {{Gear}}', cooldown_min: 5, conditions: { op: 'AND', rules: [{ signal: 'Gear', compare: 'changed_to', value: 'D' }] } },
-  { name: 'Drive Ended', icon: Car, category: 'Driving', severity: 'info', msg_template: 'Drive ended — gear is {{Gear}}', cooldown_min: 5, conditions: { op: 'AND', rules: [{ signal: 'Gear', compare: 'changed_to', value: 'P' }] } },
-  { name: 'Speed Limit Exceeded', icon: Gauge, category: 'Driving', severity: 'warning', msg_template: 'Speed {{VehicleSpeed}} km/h exceeded limit', cooldown_min: 15, conditions: { op: 'AND', rules: [{ signal: 'VehicleSpeed', compare: '>', value: 120 }] } },
-  { name: 'High Speed Alert (> 160 km/h)', icon: Gauge, category: 'Driving', severity: 'critical', msg_template: 'Very high speed: {{VehicleSpeed}} km/h!', cooldown_min: 5, conditions: { op: 'AND', rules: [{ signal: 'VehicleSpeed', compare: '>', value: 160 }] } },
-  { name: 'Reverse Gear Engaged', icon: Car, category: 'Driving', severity: 'info', msg_template: 'Vehicle in reverse', cooldown_min: 5, conditions: { op: 'AND', rules: [{ signal: 'Gear', compare: 'changed_to', value: 'R' }] } },
-  { name: 'Drive Started Away from Home', icon: Car, category: 'Driving', severity: 'warning', msg_template: 'Driving from non-home location', cooldown_min: 15, conditions: { op: 'AND', rules: [{ signal: 'Gear', compare: 'changed_to', value: 'D' }, { signal: 'LocatedAtHome', compare: 'is_false' }] } },
-  { name: 'Odometer Milestone (100k km)', icon: Car, category: 'Driving', severity: 'info', msg_template: 'Odometer: {{Odometer}} km', cooldown_min: 1440, conditions: { op: 'AND', rules: [{ signal: 'Odometer', compare: '>', value: 100000 }] } },
+  { name: 'Drive Started', icon: Car, category: 'Driving', severity: 'info', message: 'Drive started - gear is {{Gear}}', cooldown_min: 5, signal_name: 'Gear', op: '=', value_text: 'D' },
+  { name: 'Drive Ended', icon: Car, category: 'Driving', severity: 'info', message: 'Drive ended - gear is {{Gear}}', cooldown_min: 5, signal_name: 'Gear', op: '=', value_text: 'P' },
+  { name: 'Speed Limit Exceeded', icon: Gauge, category: 'Driving', severity: 'warn', message: 'Speed {{VehicleSpeed}} km/h exceeded limit', cooldown_min: 15, signal_name: 'VehicleSpeed', op: '>', value_num: 120 },
+  { name: 'High Speed Alert (> 160 km/h)', icon: Gauge, category: 'Driving', severity: 'critical', message: 'Very high speed: {{VehicleSpeed}} km/h!', cooldown_min: 5, signal_name: 'VehicleSpeed', op: '>', value_num: 160 },
+  { name: 'Reverse Gear Engaged', icon: Car, category: 'Driving', severity: 'info', message: 'Vehicle in reverse', cooldown_min: 5, signal_name: 'Gear', op: '=', value_text: 'R' },
+  { name: 'Odometer Milestone (100k km)', icon: Car, category: 'Driving', severity: 'info', message: 'Odometer: {{Odometer}} km', cooldown_min: 1440, signal_name: 'Odometer', op: '>', value_num: 100000 },
 
-  // ── Security ───────────────────────────────────────
-  { name: 'Car Unlocked While Parked', icon: Lock, category: 'Security', severity: 'critical', msg_template: 'Vehicle is unlocked and parked!', cooldown_min: 30, conditions: { op: 'AND', rules: [{ signal: 'Locked', compare: 'is_false' }, { signal: 'Gear', compare: '==', value: 'P' }] } },
-  { name: 'Vehicle Locked', icon: Lock, category: 'Security', severity: 'info', msg_template: 'Vehicle locked', cooldown_min: 5, conditions: { op: 'AND', rules: [{ signal: 'Locked', compare: 'changed_to', value: true }] } },
-  { name: 'Vehicle Unlocked', icon: Lock, category: 'Security', severity: 'info', msg_template: 'Vehicle unlocked', cooldown_min: 5, conditions: { op: 'AND', rules: [{ signal: 'Locked', compare: 'changed_to', value: false }] } },
-  { name: 'Sentry Mode Activated', icon: Shield, category: 'Security', severity: 'info', msg_template: 'Sentry mode activated', cooldown_min: 30, conditions: { op: 'AND', rules: [{ signal: 'SentryMode', compare: 'is_true' }] } },
-  { name: 'Door Opened While Parked', icon: Lock, category: 'Security', severity: 'warning', msg_template: 'Door opened — {{DoorState}}', cooldown_min: 15, conditions: { op: 'AND', rules: [{ signal: 'DoorState', compare: '!=', value: 'Closed' }, { signal: 'Gear', compare: '==', value: 'P' }] } },
-  { name: 'Window Left Open', icon: Car, category: 'Security', severity: 'warning', msg_template: 'Window open — FD: {{FdWindow}}', cooldown_min: 60, conditions: { op: 'OR', rules: [{ signal: 'FdWindow', compare: '!=', value: 'Closed' }, { signal: 'FpWindow', compare: '!=', value: 'Closed' }, { signal: 'RdWindow', compare: '!=', value: 'Closed' }, { signal: 'RpWindow', compare: '!=', value: 'Closed' }] } },
-  { name: 'Valet Mode Enabled', icon: Shield, category: 'Security', severity: 'info', msg_template: 'Valet mode enabled', cooldown_min: 60, conditions: { op: 'AND', rules: [{ signal: 'ValetModeEnabled', compare: 'is_true' }] } },
-  { name: 'Guest Mode Enabled', icon: Shield, category: 'Security', severity: 'warning', msg_template: 'Guest mode enabled', cooldown_min: 60, conditions: { op: 'AND', rules: [{ signal: 'GuestModeEnabled', compare: 'is_true' }] } },
+  { name: 'Car Unlocked While Parked', icon: Lock, category: 'Security', severity: 'critical', message: 'Vehicle is unlocked and parked!', cooldown_min: 30, signal_name: 'Locked', op: '=', value_bool: false },
+  { name: 'Vehicle Locked', icon: Lock, category: 'Security', severity: 'info', message: 'Vehicle locked', cooldown_min: 5, signal_name: 'Locked', op: '=', value_bool: true },
+  { name: 'Vehicle Unlocked', icon: Lock, category: 'Security', severity: 'info', message: 'Vehicle unlocked', cooldown_min: 5, signal_name: 'Locked', op: '=', value_bool: false },
+  { name: 'Sentry Mode Activated', icon: Shield, category: 'Security', severity: 'info', message: 'Sentry mode activated', cooldown_min: 30, signal_name: 'SentryMode', op: '=', value_bool: true },
+  { name: 'Door Opened While Parked', icon: Lock, category: 'Security', severity: 'warn', message: 'Door opened - {{DoorState}}', cooldown_min: 15, signal_name: 'DoorState', op: '!=', value_text: 'Closed' },
+  { name: 'Window Left Open', icon: Car, category: 'Security', severity: 'warn', message: 'Front driver window is {{FdWindow}}', cooldown_min: 60, signal_name: 'FdWindow', op: '!=', value_text: 'Closed' },
+  { name: 'Valet Mode Enabled', icon: Shield, category: 'Security', severity: 'info', message: 'Valet mode enabled', cooldown_min: 60, signal_name: 'ValetModeEnabled', op: '=', value_bool: true },
+  { name: 'Guest Mode Enabled', icon: Shield, category: 'Security', severity: 'warn', message: 'Guest mode enabled', cooldown_min: 60, signal_name: 'GuestModeEnabled', op: '=', value_bool: true },
 
-  // ── Climate ────────────────────────────────────────
-  { name: 'Cabin Overheat (> 40°C)', icon: Thermometer, category: 'Climate', severity: 'warning', msg_template: 'Cabin temp: {{InsideTemp}}°C', cooldown_min: 30, conditions: { op: 'AND', rules: [{ signal: 'InsideTemp', compare: '>', value: 40 }] } },
-  { name: 'Cabin Freezing (< 0°C)', icon: Thermometer, category: 'Climate', severity: 'warning', msg_template: 'Cabin temp: {{InsideTemp}}°C — freezing!', cooldown_min: 60, conditions: { op: 'AND', rules: [{ signal: 'InsideTemp', compare: '<', value: 0 }] } },
-  { name: 'HVAC Left On While Parked', icon: Thermometer, category: 'Climate', severity: 'info', msg_template: 'HVAC running while parked', cooldown_min: 30, conditions: { op: 'AND', rules: [{ signal: 'HvacPower', compare: 'is_true' }, { signal: 'Gear', compare: '==', value: 'P' }] } },
-  { name: 'Climate Keeper Active', icon: Thermometer, category: 'Climate', severity: 'info', msg_template: 'Climate keeper: {{ClimateKeeperMode}}', cooldown_min: 60, conditions: { op: 'AND', rules: [{ signal: 'ClimateKeeperMode', compare: '!=', value: 'Off' }] } },
-  { name: 'Steering Wheel Heater On', icon: Thermometer, category: 'Climate', severity: 'info', msg_template: 'Steering wheel heater level {{HvacSteeringWheelHeatLevel}}', cooldown_min: 30, conditions: { op: 'AND', rules: [{ signal: 'HvacSteeringWheelHeatLevel', compare: '>', value: 0 }] } },
+  { name: 'Cabin Overheat (> 40C)', icon: Thermometer, category: 'Climate', severity: 'warn', message: 'Cabin temp: {{InsideTemp}}C', cooldown_min: 30, signal_name: 'InsideTemp', op: '>', value_num: 40 },
+  { name: 'Cabin Freezing (< 0C)', icon: Thermometer, category: 'Climate', severity: 'warn', message: 'Cabin temp: {{InsideTemp}}C - freezing!', cooldown_min: 60, signal_name: 'InsideTemp', op: '<', value_num: 0 },
+  { name: 'HVAC Left On While Parked', icon: Thermometer, category: 'Climate', severity: 'info', message: 'HVAC running while parked', cooldown_min: 30, signal_name: 'HvacPower', op: '=', value_bool: true },
+  { name: 'Climate Keeper Active', icon: Thermometer, category: 'Climate', severity: 'info', message: 'Climate keeper: {{ClimateKeeperMode}}', cooldown_min: 60, signal_name: 'ClimateKeeperMode', op: '!=', value_text: 'Off' },
+  { name: 'Steering Wheel Heater On', icon: Thermometer, category: 'Climate', severity: 'info', message: 'Steering wheel heater level {{HvacSteeringWheelHeatLevel}}', cooldown_min: 30, signal_name: 'HvacSteeringWheelHeatLevel', op: '>', value_num: 0 },
 
-  // ── Tire Pressure ──────────────────────────────────
-  { name: 'Tire Pressure Low', icon: Droplets, category: 'Tire Pressure', severity: 'warning', msg_template: 'Low tire pressure detected', cooldown_min: 60, conditions: { op: 'AND', rules: [{ signal: 'TpmsHardWarnings', compare: 'is_true' }] } },
-  { name: 'Tire Pressure Soft Warning', icon: Droplets, category: 'Tire Pressure', severity: 'info', msg_template: 'Tire pressure slightly low', cooldown_min: 120, conditions: { op: 'AND', rules: [{ signal: 'TpmsSoftWarnings', compare: 'is_true' }] } },
-  { name: 'Front Left Tire Low (< 2.2 bar)', icon: Droplets, category: 'Tire Pressure', severity: 'warning', msg_template: 'FL tire: {{TpmsPressureFl}} bar', cooldown_min: 60, conditions: { op: 'AND', rules: [{ signal: 'TpmsPressureFl', compare: '<', value: 2.2 }] } },
+  { name: 'Tire Pressure Low', icon: Droplets, category: 'Tire Pressure', severity: 'warn', message: 'Low tire pressure detected', cooldown_min: 60, signal_name: 'TpmsHardWarnings', op: '=', value_bool: true },
+  { name: 'Tire Pressure Soft Warning', icon: Droplets, category: 'Tire Pressure', severity: 'info', message: 'Tire pressure slightly low', cooldown_min: 120, signal_name: 'TpmsSoftWarnings', op: '=', value_bool: true },
+  { name: 'Front Left Tire Low (< 2.2 bar)', icon: Droplets, category: 'Tire Pressure', severity: 'warn', message: 'FL tire: {{TpmsPressureFl}} bar', cooldown_min: 60, signal_name: 'TpmsPressureFl', op: '<', value_num: 2.2 },
 
-  // ── Location ───────────────────────────────────────
-  { name: 'Arrived at Home', icon: Car, category: 'Location', severity: 'info', msg_template: 'Vehicle arrived at home', cooldown_min: 15, conditions: { op: 'AND', rules: [{ signal: 'LocatedAtHome', compare: 'changed_to', value: true }] } },
-  { name: 'Left Home', icon: Car, category: 'Location', severity: 'info', msg_template: 'Vehicle left home', cooldown_min: 15, conditions: { op: 'AND', rules: [{ signal: 'LocatedAtHome', compare: 'changed_from', value: true }] } },
-  { name: 'Arrived at Work', icon: Car, category: 'Location', severity: 'info', msg_template: 'Vehicle arrived at work', cooldown_min: 15, conditions: { op: 'AND', rules: [{ signal: 'LocatedAtWork', compare: 'changed_to', value: true }] } },
-  { name: 'Navigation Started', icon: Car, category: 'Location', severity: 'info', msg_template: 'Navigating to {{DestinationName}}', cooldown_min: 10, conditions: { op: 'AND', rules: [{ signal: 'DestinationName', compare: '!=', value: '' }] } },
+  { name: 'Arrived at Home', icon: Car, category: 'Location', severity: 'info', message: 'Vehicle arrived at home', cooldown_min: 15, signal_name: 'LocatedAtHome', op: '=', value_bool: true },
+  { name: 'Left Home', icon: Car, category: 'Location', severity: 'info', message: 'Vehicle left home', cooldown_min: 15, signal_name: 'LocatedAtHome', op: '=', value_bool: false },
+  { name: 'Arrived at Work', icon: Car, category: 'Location', severity: 'info', message: 'Vehicle arrived at work', cooldown_min: 15, signal_name: 'LocatedAtWork', op: '=', value_bool: true },
+  { name: 'Navigation Started', icon: Car, category: 'Location', severity: 'info', message: 'Navigating to {{DestinationName}}', cooldown_min: 10, signal_name: 'DestinationName', op: 'changed' },
 
-  // ── Safety ─────────────────────────────────────────
-  { name: 'Driver Seatbelt Unbuckled', icon: Shield, category: 'Safety', severity: 'warning', msg_template: 'Driver seatbelt unbuckled while driving!', cooldown_min: 5, conditions: { op: 'AND', rules: [{ signal: 'DriverSeatBelt', compare: 'is_false' }, { signal: 'Gear', compare: '==', value: 'D' }] } },
-  { name: 'Speed Limit Mode Active', icon: Shield, category: 'Safety', severity: 'info', msg_template: 'Speed limit mode active', cooldown_min: 60, conditions: { op: 'AND', rules: [{ signal: 'SpeedLimitMode', compare: 'is_true' }] } },
-  { name: 'PIN to Drive Disabled', icon: Shield, category: 'Safety', severity: 'warning', msg_template: 'PIN to Drive has been disabled', cooldown_min: 1440, conditions: { op: 'AND', rules: [{ signal: 'PinToDriveEnabled', compare: 'is_false' }] } },
+  { name: 'Driver Seatbelt Unbuckled', icon: Shield, category: 'Safety', severity: 'warn', message: 'Driver seatbelt unbuckled while driving!', cooldown_min: 5, signal_name: 'DriverSeatBelt', op: '=', value_bool: false },
+  { name: 'Speed Limit Mode Active', icon: Shield, category: 'Safety', severity: 'info', message: 'Speed limit mode active', cooldown_min: 60, signal_name: 'SpeedLimitMode', op: '=', value_bool: true },
+  { name: 'PIN to Drive Disabled', icon: Shield, category: 'Safety', severity: 'warn', message: 'PIN to Drive has been disabled', cooldown_min: 1440, signal_name: 'PinToDriveEnabled', op: '=', value_bool: false },
 
-  // ── Motor / Powertrain ─────────────────────────────
-  { name: 'High Motor Temperature (> 80°C)', icon: Thermometer, category: 'Motor', severity: 'warning', msg_template: 'Motor stator temp: {{DiStatorTempF}}°C', cooldown_min: 15, conditions: { op: 'AND', rules: [{ signal: 'DiStatorTempF', compare: '>', value: 80 }] } },
-  { name: 'HVIL Fault', icon: Shield, category: 'Motor', severity: 'critical', msg_template: 'HV interlock fault detected!', cooldown_min: 5, conditions: { op: 'AND', rules: [{ signal: 'Hvil', compare: '==', value: 'Fault' }] } },
-  { name: 'High Regenerative Braking', icon: Zap, category: 'Motor', severity: 'info', msg_template: 'Regen power: {{Power}} kW', cooldown_min: 15, conditions: { op: 'AND', rules: [{ signal: 'Power', compare: '<', value: -50 }] } },
+  { name: 'High Motor Temperature (> 80C)', icon: Thermometer, category: 'Motor', severity: 'warn', message: 'Motor stator temp: {{DiStatorTempF}}C', cooldown_min: 15, signal_name: 'DiStatorTempF', op: '>', value_num: 80 },
+  { name: 'HVIL Fault', icon: Shield, category: 'Motor', severity: 'critical', message: 'HV interlock fault detected!', cooldown_min: 5, signal_name: 'Hvil', op: '=', value_text: 'Fault' },
+  { name: 'High Regenerative Braking', icon: Zap, category: 'Motor', severity: 'info', message: 'Regen power: {{Power}} kW', cooldown_min: 15, signal_name: 'Power', op: '<', value_num: -50 },
 
-  // ── Software ───────────────────────────────────────
-  { name: 'Software Update Available', icon: Zap, category: 'Software', severity: 'info', msg_template: 'Update available: {{SoftwareUpdateVersion}}', cooldown_min: 1440, conditions: { op: 'AND', rules: [{ signal: 'SoftwareUpdateVersion', compare: '!=', value: '' }] } },
-  { name: 'Software Update Installing', icon: Zap, category: 'Software', severity: 'info', msg_template: 'Installing update: {{SoftwareUpdateInstallationPercentComplete}}%', cooldown_min: 30, conditions: { op: 'AND', rules: [{ signal: 'SoftwareUpdateInstallationPercentComplete', compare: '>', value: 0 }] } },
+  { name: 'Software Update Available', icon: Zap, category: 'Software', severity: 'info', message: 'Update available: {{SoftwareUpdateVersion}}', cooldown_min: 1440, signal_name: 'SoftwareUpdateVersion', op: 'changed' },
+  { name: 'Software Update Installing', icon: Zap, category: 'Software', severity: 'info', message: 'Installing update: {{SoftwareUpdateInstallationPercentComplete}}%', cooldown_min: 30, signal_name: 'SoftwareUpdateInstallationPercentComplete', op: '>', value_num: 0 },
 
-  // ── Media ──────────────────────────────────────────
-  { name: 'Music Playing', icon: Car, category: 'Media', severity: 'info', msg_template: 'Now playing: {{MediaNowPlayingTitle}} by {{MediaNowPlayingArtist}}', cooldown_min: 60, conditions: { op: 'AND', rules: [{ signal: 'MediaPlaybackStatus', compare: '==', value: 'Playing' }] } },
-  { name: 'Volume Too High', icon: Car, category: 'Media', severity: 'info', msg_template: 'Volume at {{MediaAudioVolume}}', cooldown_min: 30, conditions: { op: 'AND', rules: [{ signal: 'MediaAudioVolume', compare: '>', value: 8 }] } },
+  { name: 'Music Playing', icon: Car, category: 'Media', severity: 'info', message: 'Now playing: {{MediaNowPlayingTitle}} by {{MediaNowPlayingArtist}}', cooldown_min: 60, signal_name: 'MediaPlaybackStatus', op: '=', value_text: 'Playing' },
+  { name: 'Volume Too High', icon: Car, category: 'Media', severity: 'info', message: 'Volume at {{MediaAudioVolume}}', cooldown_min: 30, signal_name: 'MediaAudioVolume', op: '>', value_num: 8 },
 
-  // ── Powershare ─────────────────────────────────────
-  { name: 'Powershare Active', icon: Zap, category: 'Powershare', severity: 'info', msg_template: 'Powershare active: {{PowershareInstantaneousPowerKW}} kW', cooldown_min: 60, conditions: { op: 'AND', rules: [{ signal: 'PowershareStatus', compare: '!=', value: '' }] } },
+  { name: 'Powershare Active', icon: Zap, category: 'Powershare', severity: 'info', message: 'Powershare active: {{PowershareInstantaneousPowerKW}} kW', cooldown_min: 60, signal_name: 'PowershareStatus', op: 'changed' },
 ]
 
 const templateCategories = [...new Set(ruleTemplates.map(t => t.category))].sort()
 
-// ─── Empty editor state ──────────────────────────────────────────────────────
+const numericOperatorOptions: RuleOp[] = ['=', '!=', '<', '<=', '>', '>=', 'changed', 'between', 'outside']
+const scalarOperatorOptions: RuleOp[] = ['=', '!=', 'changed']
+const customSignalCategory = '__custom__'
 
 interface EditorState {
   id?: number
   name: string
-  type: string
+  enabled: boolean
+  vehicle_id: string
+  signal_name: string
+  op: RuleOp
+  value_kind: ValueKind
+  value_num: string
+  value_text: string
+  value_bool: boolean
+  value_min: string
+  value_max: string
   severity: Severity
   cooldown_min: number
-  msg_template: string
-  conditions: RuleConditionTree
-  notify_channels: number[]
-  enabled: boolean
+  message: string
 }
 
 function freshEditor(): EditorState {
   return {
     name: '',
-    type: 'custom',
-    severity: 'info',
-    cooldown_min: 15,
-    msg_template: '',
-    conditions: { op: 'AND', rules: [{ signal: '', compare: '==', value: '' }] },
-    notify_channels: [],
     enabled: true,
+    vehicle_id: '',
+    signal_name: '',
+    op: '=',
+    value_kind: 'number',
+    value_num: '',
+    value_text: '',
+    value_bool: true,
+    value_min: '',
+    value_max: '',
+    severity: 'warn',
+    cooldown_min: 15,
+    message: '',
   }
+}
+
+function isSeverity(value: string | null | undefined): value is Severity {
+  return value === 'info' || value === 'warn' || value === 'critical'
+}
+
+function normalizeSeverity(value: string | null | undefined): Severity {
+  if (isSeverity(value)) return value
+  return value === 'warning' ? 'warn' : 'info'
+}
+
+function templateKey(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '.')
+    .replace(/^\.+|\.+$/g, '')
+}
+
+function valueToInput(value: number | null | undefined): string {
+  return value == null ? '' : String(value)
+}
+
+function parseOptionalNumber(value: string): number | null {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  const parsed = Number(trimmed)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function parseOptionalVehicleID(value: string): number | null {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  const parsed = Number(trimmed)
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null
+}
+
+function hasValidVehicleID(value: string): boolean {
+  return value.trim() === '' || parseOptionalVehicleID(value) !== null
+}
+
+function isNumericOnlyOp(op: RuleOp): boolean {
+  return op === '<' || op === '<=' || op === '>' || op === '>='
+}
+
+function isRangeOp(op: RuleOp): boolean {
+  return op === 'between' || op === 'outside'
+}
+
+function inferTemplateSignalType(template: RuleTemplate): SignalValueType {
+  if (
+    template.value_num != null
+    || template.value_min != null
+    || template.value_max != null
+    || isNumericOnlyOp(template.op)
+    || isRangeOp(template.op)
+  ) {
+    return 'numeric'
+  }
+  if (template.value_bool != null) return 'bool'
+  return 'text'
+}
+
+function mergeSignalType(current: SignalValueType, next: SignalValueType): SignalValueType {
+  if (current === next) return current
+  if (current === 'numeric' || next === 'numeric') return 'numeric'
+  if (current === 'bool' || next === 'bool') return 'bool'
+  return 'text'
+}
+
+function buildSignalCatalog(templates: RuleTemplate[]): SignalDefinition[] {
+  const byName = new Map<string, SignalDefinition>()
+  templates.forEach(template => {
+    const valueType = inferTemplateSignalType(template)
+    const existing = byName.get(template.signal_name)
+    if (existing) {
+      existing.value_type = mergeSignalType(existing.value_type, valueType)
+      return
+    }
+    byName.set(template.signal_name, {
+      name: template.signal_name,
+      category: template.category,
+      value_type: valueType,
+    })
+  })
+  return [...byName.values()].sort((a, b) => (
+    a.category.localeCompare(b.category) || a.name.localeCompare(b.name)
+  ))
+}
+
+const signalCatalog = buildSignalCatalog(ruleTemplates)
+const signalCatalogByName = new Map(signalCatalog.map(signal => [signal.name, signal]))
+
+function signalTypeForValueKind(valueKind: ValueKind): SignalValueType {
+  if (valueKind === 'bool') return 'bool'
+  if (valueKind === 'text' || valueKind === 'none') return 'text'
+  return 'numeric'
+}
+
+function signalTypeForName(signalName: string, fallbackKind: ValueKind): SignalValueType {
+  return signalCatalogByName.get(signalName)?.value_type ?? signalTypeForValueKind(fallbackKind)
+}
+
+function allowedOpsForSignalType(valueType: SignalValueType): RuleOp[] {
+  return valueType === 'numeric' ? numericOperatorOptions : scalarOperatorOptions
+}
+
+function coerceOperatorForSignalType(op: RuleOp, valueType: SignalValueType): RuleOp {
+  return allowedOpsForSignalType(valueType).includes(op) ? op : '='
+}
+
+function valueKindForSignalOp(valueType: SignalValueType, op: RuleOp): ValueKind {
+  if (op === 'changed') return 'none'
+  if (valueType === 'numeric') return isRangeOp(op) ? 'range' : 'number'
+  if (valueType === 'bool') return 'bool'
+  return 'text'
+}
+
+function valueKindForState(state: Pick<EditorState, 'signal_name' | 'op' | 'value_kind'>): ValueKind {
+  return valueKindForSignalOp(signalTypeForName(state.signal_name, state.value_kind), state.op)
+}
+
+function isOperatorAllowedForState(state: Pick<EditorState, 'signal_name' | 'op' | 'value_kind'>): boolean {
+  return allowedOpsForSignalType(signalTypeForName(state.signal_name, state.value_kind)).includes(state.op)
+}
+
+function inferValueKind(rule: Pick<AlertRule, 'op' | 'value_num' | 'value_text' | 'value_bool' | 'value_min' | 'value_max'>): ValueKind {
+  if (isRangeOp(rule.op) || rule.value_min != null || rule.value_max != null) return 'range'
+  if (rule.value_bool != null) return 'bool'
+  if (rule.value_text != null) return 'text'
+  if (rule.value_num != null) return 'number'
+  return rule.op === 'changed' ? 'none' : 'number'
+}
+
+function inferTemplateValueKind(template: RuleTemplate): ValueKind {
+  return valueKindForSignalOp(inferTemplateSignalType(template), template.op)
 }
 
 function ruleToEditor(rule: AlertRule): EditorState {
   return {
     id: rule.id,
     name: rule.name,
-    type: rule.type,
-    severity: (rule.severity as Severity) ?? 'info',
-    cooldown_min: rule.cooldown_min ?? 15,
-    msg_template: rule.msg_template ?? '',
-    conditions: (rule.conditions as RuleConditionTree | null) ?? { op: 'AND', rules: [{ signal: '', compare: '==', value: '' }] },
-    notify_channels: rule.notify_channels ?? [],
     enabled: rule.enabled,
+    vehicle_id: rule.vehicle_id == null ? '' : String(rule.vehicle_id),
+    signal_name: rule.signal_name,
+    op: rule.op,
+    value_kind: inferValueKind(rule),
+    value_num: valueToInput(rule.value_num),
+    value_text: rule.value_text ?? '',
+    value_bool: rule.value_bool ?? true,
+    value_min: valueToInput(rule.value_min),
+    value_max: valueToInput(rule.value_max),
+    severity: normalizeSeverity(rule.severity),
+    cooldown_min: rule.cooldown_min,
+    message: rule.signal_name ? `${rule.name}: {{${rule.signal_name}}}` : '',
   }
 }
 
-// ─── Page ────────────────────────────────────────────────────────────────────
+function templateToEditor(template: RuleTemplate, name: string, message: string): EditorState {
+  return {
+    ...freshEditor(),
+    name,
+    signal_name: template.signal_name,
+    op: template.op,
+    value_kind: inferTemplateValueKind(template),
+    value_num: valueToInput(template.value_num),
+    value_text: template.value_text ?? '',
+    value_bool: template.value_bool ?? true,
+    value_min: valueToInput(template.value_min),
+    value_max: valueToInput(template.value_max),
+    severity: template.severity,
+    cooldown_min: template.cooldown_min,
+    message,
+  }
+}
+
+function buildSavePayload(state: EditorState): AlertRuleInput {
+  const valueKind = valueKindForState(state)
+  const payload: AlertRuleInput = {
+    name: state.name.trim(),
+    enabled: state.enabled,
+    vehicle_id: parseOptionalVehicleID(state.vehicle_id),
+    signal_name: state.signal_name.trim(),
+    op: state.op,
+    value_num: null,
+    value_text: null,
+    value_bool: null,
+    value_min: null,
+    value_max: null,
+    severity: state.severity,
+    cooldown_min: state.cooldown_min,
+  }
+
+  if (valueKind === 'number') {
+    payload.value_num = parseOptionalNumber(state.value_num)
+  } else if (valueKind === 'text') {
+    payload.value_text = state.value_text.trim()
+  } else if (valueKind === 'bool') {
+    payload.value_bool = state.value_bool
+  } else if (valueKind === 'range') {
+    payload.value_min = parseOptionalNumber(state.value_min)
+    payload.value_max = parseOptionalNumber(state.value_max)
+  }
+
+  return payload
+}
+
+function hasRequiredTypedValue(state: EditorState): boolean {
+  const valueKind = valueKindForState(state)
+  if (valueKind === 'none') return state.op === 'changed'
+  if (valueKind === 'bool') return true
+  if (valueKind === 'text') return state.value_text.trim().length > 0
+  if (valueKind === 'number') return parseOptionalNumber(state.value_num) !== null
+  const valueMin = parseOptionalNumber(state.value_min)
+  const valueMax = parseOptionalNumber(state.value_max)
+  return valueMin !== null && valueMax !== null && valueMin <= valueMax
+}
+
+function buildTestTarget(selectedIds: number[] | null, allIds: number[]): AlertTestTarget | null {
+  if (allIds.length === 0) return null
+  if (selectedIds === null) return { all_channels: true }
+  return { channel_ids: selectedIds }
+}
 
 export default function AlertStudio() {
-  usePageTitle('Alert Studio')
-  const queryClient = useQueryClient()
-  const toast = useToast()
+  const { t } = useTranslation()
+  const pageTitle = t('notifications.alertStudio.title', 'Alert Studio')
+  const pageSubtitle = t('notifications.alertStudio.subtitle', 'Create custom rules from Fleet Telemetry signals')
+  const untitledRuleLabel = t('notifications.alertStudio.rules.untitled', 'Untitled')
+  usePageTitle(pageTitle)
 
-  // Queries
-  const { data: rules, isLoading } = useQuery({ queryKey: ['alert-rules'], queryFn: () => request<AlertRule[]>('/alerts/rules') })
-  const { data: channels } = useQuery({ queryKey: ['notification-channels'], queryFn: () => request<NotificationChannel[]>('/notifications') })
+  const { data: rules, isLoading, error } = useAlertRules()
+  const { data: channels, isLoading: channelsLoading, error: channelsError } = useNotificationChannels()
+  const saveRuleMut = useSaveAlertRule()
+  const deleteRuleMut = useDeleteAlertRule()
+  const toggleRuleMut = useToggleAlertRule()
+  const testRuleMut = useTestAlertRule()
 
-  // Editor state
   const [editor, setEditor] = useState<EditorState>(freshEditor)
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [showTemplates, setShowTemplates] = useState(false)
   const [templateSearch, setTemplateSearch] = useState('')
   const [templateCategory, setTemplateCategory] = useState<string | null>(null)
   const [ruleSearch, setRuleSearch] = useState('')
+  const [testChannelIds, setTestChannelIds] = useState<number[] | null>(null)
+
+  const getTemplateName = useCallback((tpl: RuleTemplate) => (
+    t(`notifications.alertStudio.templates.${templateKey(tpl.name)}.name`, tpl.name)
+  ), [t])
+
+  const getTemplateMessage = useCallback((tpl: RuleTemplate) => (
+    t(`notifications.alertStudio.templates.${templateKey(tpl.name)}.message`, tpl.message)
+  ), [t])
+
+  const getTemplateCategory = useCallback((category: string) => (
+    t(`notifications.alertStudio.templateCategories.${templateKey(category)}`, category)
+  ), [t])
 
   const filteredTemplates = useMemo(() => {
     let list = ruleTemplates
     if (templateCategory) list = list.filter(t => t.category === templateCategory)
     if (templateSearch) {
       const q = templateSearch.toLowerCase()
-      list = list.filter(t => t.name.toLowerCase().includes(q) || t.msg_template.toLowerCase().includes(q) || t.category.toLowerCase().includes(q))
+      list = list.filter(tpl => (
+        getTemplateName(tpl).toLowerCase().includes(q)
+        || getTemplateMessage(tpl).toLowerCase().includes(q)
+        || getTemplateCategory(tpl.category).toLowerCase().includes(q)
+      ))
     }
     return list
-  }, [templateSearch, templateCategory])
+  }, [getTemplateCategory, getTemplateMessage, getTemplateName, templateSearch, templateCategory])
 
   const isEditing = selectedId !== null
+  const rulesList = rules ?? []
+  const channelsList = channels ?? []
+  const allChannelIds = useMemo(() => channelsList.map(ch => ch.id), [channelsList])
 
-  // Mutations
-  const saveMut = useMutation({
-    mutationFn: async (state: EditorState) => {
-      const payload = {
-        name: state.name,
-        type: state.type || 'custom',
-        enabled: state.enabled,
-        threshold: 0,
-        vehicle_id: null as number | null,
-        conditions: state.conditions,
-        severity: state.severity,
-        cooldown_min: state.cooldown_min,
-        msg_template: state.msg_template,
-        notify_channels: state.notify_channels,
-      }
-      if (state.id) {
-        return request<AlertRule>(`/alerts/rules/${state.id}`, { method: 'PUT', body: JSON.stringify(payload) })
-      }
-      return request<AlertRule>('/alerts/rules', { method: 'POST', body: JSON.stringify(payload) })
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['alert-rules'] })
-      toast.success(isEditing ? 'Rule updated' : 'Rule created')
-      setEditor(freshEditor())
-      setSelectedId(null)
-    },
-    onError: () => toast.error('Failed to save rule'),
-  })
+  const filteredRules = useMemo(() => {
+    if (!ruleSearch) return rulesList
+    const q = ruleSearch.toLowerCase()
+    return rulesList.filter(r => (r.name || '').toLowerCase().includes(q))
+  }, [rulesList, ruleSearch])
 
-  const deleteMut = useMutation({
-    mutationFn: (id: number) => request<void>(`/alerts/rules/${id}`, { method: 'DELETE' }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['alert-rules'] })
-      toast.success('Rule deleted')
-      setEditor(freshEditor())
-      setSelectedId(null)
-    },
-    onError: () => toast.error('Failed to delete rule'),
-  })
+  const rulesCountLabel = rulesList.length === 1
+    ? t('notifications.alertStudio.rules.countOne', '1 rule')
+    : t('notifications.alertStudio.rules.countMany', '{{count}} rules', { count: rulesList.length })
 
-  const toggleMut = useMutation({
-    mutationFn: ({ id, enabled }: { id: number; enabled: boolean }) => request<AlertRule>(`/alerts/rules/${id}`, { method: 'PUT', body: JSON.stringify({ enabled }) }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['alert-rules'] }),
-  })
+  const severityOptions = useMemo(() => [
+    { value: 'info', label: t('notifications.alertStudio.severity.info', 'Info') },
+    { value: 'warn', label: t('notifications.alertStudio.severity.warn', 'Warning') },
+    { value: 'critical', label: t('notifications.alertStudio.severity.critical', 'Critical') },
+  ], [t])
 
-  // Handlers
+  const enabledOptions = useMemo(() => [
+    { value: 'true', label: t('notifications.alertStudio.editor.enabled', 'Enabled') },
+    { value: 'false', label: t('notifications.alertStudio.editor.disabled', 'Disabled') },
+  ], [t])
+
+  const signalTypeLabels = useMemo<Record<SignalValueType, string>>(() => ({
+    numeric: t('notifications.alertStudio.signalTypes.numeric', 'Numeric'),
+    text: t('notifications.alertStudio.signalTypes.text', 'Text'),
+    bool: t('notifications.alertStudio.signalTypes.bool', 'Boolean'),
+  }), [t])
+
+  const getSignalCategoryLabel = useCallback((category: string) => (
+    category === customSignalCategory
+      ? t('notifications.alertStudio.signalCategories.custom', 'Custom')
+      : getTemplateCategory(category)
+  ), [getTemplateCategory, t])
+
+  const selectedSignal = useMemo<SignalDefinition | null>(() => {
+    const knownSignal = signalCatalogByName.get(editor.signal_name)
+    if (knownSignal) return knownSignal
+    const signalName = editor.signal_name.trim()
+    if (!signalName) return null
+    return {
+      name: signalName,
+      category: customSignalCategory,
+      value_type: signalTypeForValueKind(editor.value_kind),
+    }
+  }, [editor.signal_name, editor.value_kind])
+
+  const selectedSignalType = selectedSignal?.value_type ?? 'numeric'
+
+  const signalSelectOptions = useMemo(() => {
+    const options = signalCatalog.map(signal => ({
+      value: signal.name,
+      label: t('notifications.alertStudio.signals.optionLabel', '{{name}} - {{type}} - {{category}}', {
+        name: signal.name,
+        type: signalTypeLabels[signal.value_type],
+        category: getSignalCategoryLabel(signal.category),
+      }),
+    }))
+    if (!selectedSignal || signalCatalogByName.has(selectedSignal.name)) return options
+    return [
+      {
+        value: selectedSignal.name,
+        label: t('notifications.alertStudio.signals.customOptionLabel', '{{name}} - {{type}} - Custom', {
+          name: selectedSignal.name,
+          type: signalTypeLabels[selectedSignal.value_type],
+        }),
+      },
+      ...options,
+    ]
+  }, [getSignalCategoryLabel, selectedSignal, signalTypeLabels, t])
+
+  const operatorSelectOptions = useMemo(() => allowedOpsForSignalType(selectedSignalType).map(op => ({
+    value: op,
+    label: t(`notifications.alertStudio.operators.${op}`, op),
+  })), [selectedSignalType, t])
+
+  const boolOptions = useMemo(() => [
+    { value: 'true', label: t('notifications.alertStudio.boolean.true', 'True') },
+    { value: 'false', label: t('notifications.alertStudio.boolean.false', 'False') },
+  ], [t])
+
+  const canSave = useMemo(() => (
+    editor.name.trim().length > 0
+    && editor.signal_name.trim().length > 0
+    && editor.cooldown_min > 0
+    && hasValidVehicleID(editor.vehicle_id)
+    && isOperatorAllowedForState(editor)
+    && hasRequiredTypedValue(editor)
+  ), [editor])
+
   const handleSelectRule = useCallback((rule: AlertRule) => {
+    const nextEditor = ruleToEditor(rule)
+    const signalType = signalTypeForName(nextEditor.signal_name, nextEditor.value_kind)
+    const nextOp = coerceOperatorForSignalType(nextEditor.op, signalType)
     setSelectedId(rule.id)
-    setEditor(ruleToEditor(rule))
+    setEditor({
+      ...nextEditor,
+      op: nextOp,
+      value_kind: valueKindForSignalOp(signalType, nextOp),
+    })
   }, [])
-
-  const allChannelIds = useMemo(() => (channels ?? []).map(ch => ch.id), [channels])
 
   const handleNewRule = useCallback(() => {
     setSelectedId(null)
-    setEditor({ ...freshEditor(), notify_channels: allChannelIds })
-  }, [allChannelIds])
+    setEditor(freshEditor())
+  }, [])
 
   const handleCloneTemplate = useCallback((tpl: RuleTemplate) => {
     setSelectedId(null)
-    setEditor({
-      name: tpl.name,
-      type: 'custom',
-      severity: tpl.severity,
-      cooldown_min: tpl.cooldown_min,
-      msg_template: tpl.msg_template,
-      conditions: JSON.parse(JSON.stringify(tpl.conditions)),
-      notify_channels: allChannelIds,
-      enabled: true,
-    })
+    setEditor(templateToEditor(tpl, getTemplateName(tpl), getTemplateMessage(tpl)))
     setShowTemplates(false)
+  }, [getTemplateMessage, getTemplateName])
+
+  const handleSignalChange = useCallback((signalName: string) => {
+    setEditor(current => {
+      const signalType = signalName
+        ? signalTypeForName(signalName, current.value_kind)
+        : 'numeric'
+      const nextOp = coerceOperatorForSignalType(current.op, signalType)
+      return {
+        ...current,
+        signal_name: signalName,
+        op: nextOp,
+        value_kind: valueKindForSignalOp(signalType, nextOp),
+      }
+    })
+  }, [])
+
+  const handleOperatorChange = useCallback((nextOp: RuleOp) => {
+    setEditor(current => {
+      const signalType = signalTypeForName(current.signal_name, current.value_kind)
+      const coercedOp = coerceOperatorForSignalType(nextOp, signalType)
+      return {
+        ...current,
+        op: coercedOp,
+        value_kind: valueKindForSignalOp(signalType, coercedOp),
+      }
+    })
+  }, [])
+
+  const handleRuleRowKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>, rule: AlertRule) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      handleSelectRule(rule)
+    }
+  }, [handleSelectRule])
+
+  const handleSave = useCallback(() => {
+    if (!canSave) return
+    const payload = buildSavePayload(editor)
+    saveRuleMut.mutate(
+      editor.id ? { id: editor.id, ...payload } : payload,
+      {
+        onSuccess: () => {
+          setEditor(freshEditor())
+          setSelectedId(null)
+        },
+      },
+    )
+  }, [canSave, editor, saveRuleMut])
+
+  const handleDelete = useCallback((id: number) => {
+    deleteRuleMut.mutate(id, {
+      onSuccess: () => {
+        setEditor(freshEditor())
+        setSelectedId(null)
+      },
+    })
+  }, [deleteRuleMut])
+
+  const handleToggleTestChannel = useCallback((channelId: number) => {
+    setTestChannelIds(current => {
+      const selected = current ?? allChannelIds
+      const next = selected.includes(channelId)
+        ? selected.filter(id => id !== channelId)
+        : [...selected, channelId]
+      if (next.length === 0) return current
+      return next.length === allChannelIds.length ? null : next
+    })
   }, [allChannelIds])
 
-  // Filter CEP rules (have conditions)
-  const cepRules = useMemo(() => (rules ?? []).filter(r => r.conditions), [rules])
-  const filteredRules = useMemo(() => {
-    if (!ruleSearch) return cepRules
-    const q = ruleSearch.toLowerCase()
-    return cepRules.filter(r => (r.name || '').toLowerCase().includes(q))
-  }, [cepRules, ruleSearch])
+  const handleTest = useCallback(() => {
+    const message = editor.message.trim() || t('notifications.alertStudio.test.defaultMessage', 'Test notification from Alert Studio')
+    const target = buildTestTarget(testChannelIds, allChannelIds)
+    testRuleMut.mutate(target ? { message, target } : { message })
+  }, [allChannelIds, editor.message, t, testChannelIds, testRuleMut])
+
+  const renderValueEditor = () => {
+    if (!editor.signal_name.trim()) {
+      return (
+        <EmptyState
+          icon={<Info className="h-8 w-8 text-[var(--text-muted)]" />}
+          title={t('notifications.alertStudio.editor.noSignalTitle', 'Choose a signal')}
+          message={t('notifications.alertStudio.editor.noSignalDescription', 'Select a telemetry signal before entering a comparison value.')}
+        />
+      )
+    }
+
+    const valueKind = valueKindForState(editor)
+
+    if (valueKind === 'range') {
+      return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+              {t('notifications.alertStudio.editor.minValueLabel', 'Minimum Value')}
+            </label>
+            <UiInput
+              type="number"
+              className="w-full"
+              value={editor.value_min}
+              onChange={e => setEditor(s => ({ ...s, value_min: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+              {t('notifications.alertStudio.editor.maxValueLabel', 'Maximum Value')}
+            </label>
+            <UiInput
+              type="number"
+              className="w-full"
+              value={editor.value_max}
+              onChange={e => setEditor(s => ({ ...s, value_max: e.target.value }))}
+            />
+          </div>
+        </div>
+      )
+    }
+
+    if (valueKind === 'text') {
+      return (
+        <div>
+          <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+            {t('notifications.alertStudio.editor.textValueLabel', 'Text Value')}
+          </label>
+          <UiInput
+            className="w-full"
+            placeholder={t('notifications.alertStudio.editor.textValuePlaceholder', 'Value to compare')}
+            value={editor.value_text}
+            onChange={e => setEditor(s => ({ ...s, value_text: e.target.value }))}
+          />
+        </div>
+      )
+    }
+
+    if (valueKind === 'bool') {
+      return (
+        <div>
+          <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+            {t('notifications.alertStudio.editor.booleanValueLabel', 'Boolean Value')}
+          </label>
+          <UiSelect
+            className="w-full"
+            value={String(editor.value_bool)}
+            onChange={e => setEditor(s => ({ ...s, value_bool: e.target.value === 'true' }))}
+            options={boolOptions}
+          />
+        </div>
+      )
+    }
+
+    if (valueKind === 'none') {
+      return (
+        <GlassPanel className="p-3">
+          <p className="text-xs text-[var(--text-muted)]">
+            {t('notifications.alertStudio.editor.anyChangeDescription', 'This rule fires whenever the selected signal changes.')}
+          </p>
+        </GlassPanel>
+      )
+    }
+
+    return (
+      <div>
+        <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+          {t('notifications.alertStudio.editor.numericValueLabel', 'Numeric Value')}
+        </label>
+        <UiInput
+          type="number"
+          className="w-full"
+          value={editor.value_num}
+          onChange={e => setEditor(s => ({ ...s, value_num: e.target.value }))}
+        />
+      </div>
+    )
+  }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Alert Studio"
-        subtitle="Create custom rules from any Fleet Telemetry signal"
-        icon={<Zap className="h-6 w-6 text-neon-cyan" />}
-        actions={
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" icon={<Sparkles className="h-3.5 w-3.5 text-neon-amber" />} onClick={() => setShowTemplates(!showTemplates)}>
-              Templates
-            </Button>
-            <Button variant="primary" size="sm" icon={<Plus className="h-3.5 w-3.5" />} onClick={handleNewRule}>
-              New Rule
-            </Button>
-          </div>
-        }
-      />
-
-      {/* Template library */}
+    <PageContainer
+      title={pageTitle}
+      subtitle={pageSubtitle}
+      loading={isLoading}
+      error={error ?? null}
+      actions={
+        <>
+          <UiButton variant="ghost" size="sm" icon={<Sparkles className="h-3.5 w-3.5 text-neon-amber" />} onClick={() => setShowTemplates(!showTemplates)}>
+            {t('notifications.alertStudio.actions.templates', 'Templates')}
+          </UiButton>
+          <UiButton variant="primary" size="sm" icon={<Plus className="h-3.5 w-3.5" />} onClick={handleNewRule}>
+            {t('notifications.alertStudio.actions.newRule', 'New Rule')}
+          </UiButton>
+        </>
+      }
+    >
       {showTemplates && (
         <FadeIn>
           <GlassPanel className="p-5">
             <div className="flex items-center justify-between mb-4">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">Rule Templates — {ruleTemplates.length} pre-built rules</p>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">
+                {t('notifications.alertStudio.templates.header', 'Rule Templates - {{count}} pre-built rules', { count: ruleTemplates.length })}
+              </p>
               <div className="relative w-64">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
-                <Input
+                <UiInput
                   className="w-full pl-8 text-xs py-1.5"
-                  placeholder="Search templates…"
+                  placeholder={t('notifications.alertStudio.templates.searchPlaceholder', 'Search templates...')}
                   value={templateSearch}
                   onChange={e => setTemplateSearch(e.target.value)}
                 />
               </div>
             </div>
 
-            {/* Category tabs */}
             <div className="flex flex-wrap gap-1.5 mb-4">
-              <Button
+              <UiButton
                 variant="ghost"
                 size="sm"
                 onClick={() => setTemplateCategory(null)}
-                className={cn('!text-[11px] border',
-                  templateCategory === null ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan' : 'border-white/[0.08] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                className={cn(
+                  '!text-[11px] border',
+                  templateCategory === null
+                    ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan'
+                    : 'border-white/[0.08] text-[var(--text-muted)] hover:text-[var(--text-primary)]',
                 )}
-              >All ({ruleTemplates.length})</Button>
+              >
+                {t('notifications.alertStudio.templates.allCategory', 'All')} ({ruleTemplates.length})
+              </UiButton>
               {templateCategories.map(cat => {
                 const count = ruleTemplates.filter(t => t.category === cat).length
                 return (
-                  <Button
+                  <UiButton
                     key={cat}
                     variant="ghost"
                     size="sm"
                     onClick={() => setTemplateCategory(cat === templateCategory ? null : cat)}
-                    className={cn('!text-[11px] border',
-                      templateCategory === cat ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan' : 'border-white/[0.08] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                    className={cn(
+                      '!text-[11px] border',
+                      templateCategory === cat
+                        ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan'
+                        : 'border-white/[0.08] text-[var(--text-muted)] hover:text-[var(--text-primary)]',
                     )}
-                  >{cat} ({count})</Button>
+                  >
+                    {getTemplateCategory(cat)} ({count})
+                  </UiButton>
                 )
               })}
             </div>
 
-            {/* Template grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {filteredTemplates.map(tpl => {
                 const Icon = tpl.icon
@@ -352,21 +823,29 @@ export default function AlertStudio() {
                       <div className={cn('rounded-lg p-1.5', sev.bg)}>
                         <Icon className={cn('h-3.5 w-3.5', sev.color)} />
                       </div>
-                      <span className="text-xs font-medium text-[var(--text-primary)] group-hover:text-neon-cyan transition-colors">{tpl.name}</span>
+                      <span className="text-xs font-medium text-[var(--text-primary)] group-hover:text-neon-cyan transition-colors">{getTemplateName(tpl)}</span>
                     </div>
-                    <p className="text-[10px] text-[var(--text-muted)] font-mono truncate">{tpl.msg_template}</p>
+                    <p className="text-[10px] text-[var(--text-muted)] font-mono truncate">{getTemplateMessage(tpl)}</p>
                     <div className="flex items-center justify-between mt-1.5">
-                      <Badge color={tpl.severity === 'critical' ? 'red' : tpl.severity === 'warning' ? 'amber' : 'cyan'} size="sm">{tpl.severity}</Badge>
+                      <Badge color={severityBadgeColor[tpl.severity]} size="sm">
+                        {t(`notifications.alertStudio.severity.${tpl.severity}`, tpl.severity === 'warn' ? 'Warning' : tpl.severity)}
+                      </Badge>
                       <div className="flex items-center gap-1">
                         <Copy className="h-3 w-3 text-[var(--text-muted)]" />
-                        <span className="text-[10px] text-[var(--text-muted)]">Use</span>
+                        <span className="text-[10px] text-[var(--text-muted)]">{t('notifications.alertStudio.templates.use', 'Use')}</span>
                       </div>
                     </div>
                   </GlassPanel>
                 )
               })}
               {filteredTemplates.length === 0 && (
-                <p className="col-span-full text-sm text-[var(--text-muted)] py-8 text-center">No templates match your search</p>
+                <div className="col-span-full">
+                  <EmptyState
+                    icon={<Sparkles className="h-8 w-8 text-[var(--text-muted)]" />}
+                    title={t('notifications.alertStudio.templates.noMatchesTitle', 'No templates found')}
+                    message={t('notifications.alertStudio.templates.noMatches', 'No templates match your search')}
+                  />
+                </div>
               )}
             </div>
           </GlassPanel>
@@ -374,20 +853,19 @@ export default function AlertStudio() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* ── Rule list (sidebar) ────────────────────────────────────────── */}
         <div className="lg:col-span-4 space-y-3">
           <GlassPanel className="p-4">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-medium text-[var(--text-primary)]">Rules</p>
-              <span className="text-[10px] text-[var(--text-muted)]">{cepRules.length} rule{cepRules.length !== 1 ? 's' : ''}</span>
+              <p className="text-sm font-medium text-[var(--text-primary)]">{t('notifications.alertStudio.rules.title', 'Rules')}</p>
+              <span className="text-[10px] text-[var(--text-muted)]">{rulesCountLabel}</span>
             </div>
 
-            {cepRules.length > 3 && (
+            {rulesList.length > 3 && (
               <div className="relative mb-3">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
-                <input
+                <UiInput
                   type="text"
-                  placeholder="Search rules…"
+                  placeholder={t('notifications.alertStudio.rules.searchPlaceholder', 'Search rules...')}
                   value={ruleSearch}
                   onChange={e => setRuleSearch(e.target.value)}
                   className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg bg-white/[0.04] border border-white/[0.06] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-neon-cyan/30"
@@ -401,249 +879,356 @@ export default function AlertStudio() {
               </div>
             )}
 
-            {!isLoading && cepRules.length === 0 && (
+            {!isLoading && rulesList.length === 0 && (
               <EmptyState
                 icon={<Bell className="h-8 w-8 text-[var(--text-muted)]" />}
-                title="No CEP rules yet"
-                description="Create your first rule or pick a template above."
+                title={t('notifications.alertStudio.rules.emptyTitle', 'No alert rules yet')}
+                message={t('notifications.alertStudio.rules.emptyDescription', 'Create your first rule or pick a template above.')}
               />
             )}
 
-            {!isLoading && cepRules.length > 0 && filteredRules.length === 0 && (
-              <p className="text-xs text-center text-[var(--text-muted)] py-4">No rules match "{ruleSearch}"</p>
+            {!isLoading && rulesList.length > 0 && filteredRules.length === 0 && (
+              <EmptyState
+                icon={<Search className="h-8 w-8 text-[var(--text-muted)]" />}
+                title={t('notifications.alertStudio.rules.noMatchesTitle', 'No matching rules')}
+                message={t('notifications.alertStudio.rules.noMatches', 'No rules match "{{search}}"', { search: ruleSearch })}
+              />
             )}
 
             <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
               {filteredRules.map(rule => {
-                const sev = severityConfig[(rule.severity as Severity) ?? 'info'] ?? severityConfig.info
+                const sev = severityConfig[normalizeSeverity(rule.severity)]
                 const SevIcon = sev.icon
                 const active = selectedId === rule.id
                 return (
-                  <button
+                  <GlassPanel
                     key={rule.id}
                     className={cn(
-                      'group w-full text-left glass-panel p-3 transition-all',
+                      'group p-3 transition-all',
                       active ? 'border-neon-cyan/30 bg-neon-cyan/5' : 'hover:border-white/10',
                     )}
-                    onClick={() => handleSelectRule(rule)}
                   >
-                    <div className="flex items-center gap-2">
-                      <SevIcon className={cn('h-3.5 w-3.5 shrink-0', sev.color)} />
-                      <span className="text-xs font-medium text-[var(--text-primary)] truncate flex-1">{rule.name || 'Untitled'}</span>
-                      <button
-                        className="shrink-0"
-                        onClick={e => { e.stopPropagation(); toggleMut.mutate({ id: rule.id, enabled: !rule.enabled }) }}
-                        title={rule.enabled ? 'Disable' : 'Enable'}
+                    <div className="flex items-start gap-2">
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        className="min-w-0 flex-1 cursor-pointer"
+                        onClick={() => handleSelectRule(rule)}
+                        onKeyDown={event => handleRuleRowKeyDown(event, rule)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <SevIcon className={cn('h-3.5 w-3.5 shrink-0', sev.color)} />
+                          <span className="text-xs font-medium text-[var(--text-primary)] truncate flex-1">{rule.name || untitledRuleLabel}</span>
+                        </div>
+                        <div className="flex items-center gap-3 mt-1.5 text-[10px] text-[var(--text-muted)]">
+                          <span className="font-mono">{rule.signal_name} {rule.op}</span>
+                          {rule.updated_at && (
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" /> {formatDateTime(rule.updated_at)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <UiButton
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 shrink-0 p-0"
+                        onClick={e => { e.stopPropagation(); toggleRuleMut.mutate({ id: rule.id, enabled: !rule.enabled }) }}
+                        title={rule.enabled
+                          ? t('notifications.alertStudio.rules.disable', 'Disable')
+                          : t('notifications.alertStudio.rules.enable', 'Enable')}
+                        aria-label={rule.enabled
+                          ? t('notifications.alertStudio.rules.disableRule', 'Disable rule')
+                          : t('notifications.alertStudio.rules.enableRule', 'Enable rule')}
                       >
                         {rule.enabled
                           ? <Bell className="h-3.5 w-3.5 text-neon-green" />
                           : <BellOff className="h-3.5 w-3.5 text-[var(--text-muted)]" />}
-                      </button>
-                      <button
-                        className="shrink-0 opacity-0 group-hover:opacity-100 hover:text-neon-red transition-opacity"
-                        onClick={e => { e.stopPropagation(); if (confirm(`Delete "${rule.name || 'Untitled'}"?`)) deleteMut.mutate(rule.id) }}
-                        title="Delete rule"
+                      </UiButton>
+                      <UiButton
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 shrink-0 p-0 opacity-0 transition-opacity group-hover:opacity-100 hover:text-neon-red"
+                        onClick={e => {
+                          e.stopPropagation()
+                          if (window.confirm(t('notifications.alertStudio.rules.confirmDelete', 'Delete "{{name}}"?', { name: rule.name || untitledRuleLabel }))) {
+                            handleDelete(rule.id)
+                          }
+                        }}
+                        title={t('notifications.alertStudio.rules.deleteRule', 'Delete rule')}
+                        aria-label={t('notifications.alertStudio.rules.deleteRule', 'Delete rule')}
                       >
                         <Trash2 className="h-3.5 w-3.5 text-[var(--text-muted)] hover:text-neon-red" />
-                      </button>
+                      </UiButton>
                     </div>
-                    <div className="flex items-center gap-3 mt-1.5 text-[10px] text-[var(--text-muted)]">
-                      {rule.last_fired_at && (
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" /> {formatDateTime(rule.last_fired_at)}
-                        </span>
-                      )}
-                      {(rule.fire_count ?? 0) > 0 && (
-                        <span className="flex items-center gap-1">
-                          <Zap className="h-3 w-3" /> {rule.fire_count}×
-                        </span>
-                      )}
-                    </div>
-                  </button>
+                  </GlassPanel>
                 )
               })}
             </div>
           </GlassPanel>
         </div>
 
-        {/* ── Rule editor (main) ─────────────────────────────────────────── */}
         <div className="lg:col-span-8 space-y-4">
           <GlassPanel className="p-4">
             <div className="flex items-center gap-2 mb-4">
               <Pencil className="h-4 w-4 text-neon-cyan" />
               <p className="text-sm font-medium text-[var(--text-primary)]">
-                {isEditing ? 'Edit Rule' : 'New Rule'}
+                {isEditing
+                  ? t('notifications.alertStudio.editor.editTitle', 'Edit Rule')
+                  : t('notifications.alertStudio.editor.newTitle', 'New Rule')}
               </p>
             </div>
 
-            {/* Name */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">Name</label>
-                <Input
+                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+                  {t('notifications.alertStudio.editor.nameLabel', 'Name')}
+                </label>
+                <UiInput
                   className="w-full"
-                  placeholder="My alert rule"
+                  placeholder={t('notifications.alertStudio.editor.namePlaceholder', 'My alert rule')}
                   value={editor.name}
                   onChange={e => setEditor(s => ({ ...s, name: e.target.value }))}
                 />
               </div>
-
-              {/* Severity */}
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">Severity</label>
-                <Select
+                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+                  {t('notifications.alertStudio.editor.enabledLabel', 'Status')}
+                </label>
+                <UiSelect
                   className="w-full"
-                  value={editor.severity}
-                  onChange={e => setEditor(s => ({ ...s, severity: e.target.value as Severity }))}
-                  options={[{ value: 'info', label: 'Info' }, { value: 'warning', label: 'Warning' }, { value: 'critical', label: 'Critical' }]}
+                  value={String(editor.enabled)}
+                  onChange={e => setEditor(s => ({ ...s, enabled: e.target.value === 'true' }))}
+                  options={enabledOptions}
                 />
               </div>
             </div>
 
-            {/* Cooldown + Message template */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">Cooldown (minutes)</label>
-                <Input
+                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+                  {t('notifications.alertStudio.editor.vehicleIdLabel', 'Vehicle ID')}
+                  <span className="text-[var(--text-muted)] ml-1 normal-case tracking-normal">
+                    {t('notifications.alertStudio.editor.optionalLabel', 'Optional')}
+                  </span>
+                </label>
+                <UiInput
                   type="number"
-                  min={0}
+                  min={1}
                   className="w-full"
-                  value={editor.cooldown_min}
-                  onChange={e => setEditor(s => ({ ...s, cooldown_min: Number(e.target.value) || 0 }))}
+                  placeholder={t('notifications.alertStudio.editor.vehicleIdPlaceholder', 'All vehicles')}
+                  value={editor.vehicle_id}
+                  onChange={e => setEditor(s => ({ ...s, vehicle_id: e.target.value }))}
                 />
               </div>
               <div>
                 <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
-                  Message Template
-                  <span className="text-[var(--text-muted)] ml-1 normal-case tracking-normal">{'Use {{SignalName}}'}</span>
+                  {t('notifications.alertStudio.editor.signalNameLabel', 'Signal')}
                 </label>
-                <Input
+                <UiSelect
                   className="w-full"
-                  placeholder="Battery at {{BatteryLevel}}%"
-                  value={editor.msg_template}
-                  onChange={e => setEditor(s => ({ ...s, msg_template: e.target.value }))}
+                  value={editor.signal_name}
+                  onChange={e => handleSignalChange(e.target.value)}
+                  placeholder={t('notifications.alertStudio.editor.signalNamePlaceholder', 'Select a telemetry signal')}
+                  options={signalSelectOptions}
+                />
+                {selectedSignal && (
+                  <p className="mt-1 text-[10px] text-[var(--text-muted)]">
+                    {t('notifications.alertStudio.editor.signalTypeHint', '{{type}} signal from {{category}}', {
+                      type: signalTypeLabels[selectedSignal.value_type],
+                      category: getSignalCategoryLabel(selectedSignal.category),
+                    })}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+                  {t('notifications.alertStudio.editor.operatorLabel', 'Operator')}
+                </label>
+                <UiSelect
+                  className="w-full"
+                  value={editor.op}
+                  onChange={e => handleOperatorChange(e.target.value as RuleOp)}
+                  options={operatorSelectOptions}
+                  disabled={!editor.signal_name.trim()}
                 />
               </div>
             </div>
 
-            {/* Notification delivery */}
-            <div className="mb-4">
-              <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-2 font-medium">How You'll Be Notified</label>
-              <div className="space-y-2">
-                {/* Always-on: SSE + DB */}
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="w-2 h-2 rounded-full bg-neon-green" />
-                  <span className="text-white/90">Browser toast notification (real-time via SSE)</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="w-2 h-2 rounded-full bg-neon-green" />
-                  <span className="text-white/90">Alert history (saved to database)</span>
-                </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+                  {t('notifications.alertStudio.editor.severityLabel', 'Severity')}
+                </label>
+                <UiSelect
+                  className="w-full"
+                  value={editor.severity}
+                  onChange={e => setEditor(s => ({ ...s, severity: e.target.value as Severity }))}
+                  options={severityOptions}
+                />
+              </div>
+              <GlassPanel className="p-3">
+                <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+                  {t('notifications.alertStudio.editor.allowedOperatorsLabel', 'Allowed Operators')}
+                </p>
+                <p className="text-xs text-[var(--text-primary)]">
+                  {editor.signal_name.trim()
+                    ? operatorSelectOptions.map(option => option.label).join('  ')
+                    : t('notifications.alertStudio.editor.allowedOperatorsPlaceholder', 'Select a signal to see its operators')}
+                </p>
+              </GlassPanel>
+            </div>
 
-                {/* Channels */}
-                {channels && channels.length > 0 ? (
-                  <div>
-                    <p className="text-xs text-[var(--text-muted)] mb-1.5 mt-1">External channels (click to toggle):</p>
-                    <div className="flex flex-wrap gap-2">
-                      {channels.map(ch => {
-                        const isSelected = editor.notify_channels.includes(ch.id)
-                        return (
-                          <button
-                            key={ch.id}
-                            type="button"
-                            className={cn(
-                              'px-3 py-1.5 text-xs rounded-lg transition-colors border',
-                              isSelected
-                                ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan'
-                                : 'bg-white/5 border-white/10 text-[var(--text-muted)] hover:border-white/20',
-                            )}
-                            onClick={() => {
-                              setEditor(s => ({
-                                ...s,
-                                notify_channels: isSelected
-                                  ? s.notify_channels.filter(id => id !== ch.id)
-                                  : [...s.notify_channels, ch.id],
-                              }))
-                            }}
-                          >
-                            <Bell className="h-3 w-3 inline mr-1" />
-                            {ch.name} ({ch.type})
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 text-xs mt-1">
-                    <span className="w-2 h-2 rounded-full bg-white/20" />
-                    <span className="text-[var(--text-muted)]">
-                      No external channels configured — <a href="/notifications" className="text-neon-cyan hover:underline">set up Discord, Slack, ntfy, or webhooks</a>
-                    </span>
-                  </div>
-                )}
+            <div className="mb-4">
+              <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-2 font-medium">
+                {t('notifications.alertStudio.editor.typedValueLabel', 'Typed Value')}
+              </label>
+              {renderValueEditor()}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+                  {t('notifications.alertStudio.editor.cooldownLabel', 'Cooldown (minutes)')}
+                </label>
+                <UiInput
+                  type="number"
+                  min={1}
+                  className="w-full"
+                  value={editor.cooldown_min}
+                  onChange={e => setEditor(s => ({ ...s, cooldown_min: Number(e.target.value) }))}
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+                  {t('notifications.alertStudio.editor.testMessageLabel', 'Test Message')}
+                  <span className="text-[var(--text-muted)] ml-1 normal-case tracking-normal">
+                    {t('notifications.alertStudio.editor.signalHint', 'Use {{SignalName}}')}
+                  </span>
+                </label>
+                <UiInput
+                  className="w-full"
+                  placeholder={t('notifications.alertStudio.editor.testMessagePlaceholder', 'Battery at {{BatteryLevel}}%')}
+                  value={editor.message}
+                  onChange={e => setEditor(s => ({ ...s, message: e.target.value }))}
+                />
               </div>
             </div>
 
-            {/* Condition builder */}
             <div className="mb-4">
-              <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-2 font-medium">Conditions</label>
-              <RuleBuilder
-                value={editor.conditions}
-                onChange={conditions => setEditor(s => ({ ...s, conditions }))}
-              />
+              <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-2 font-medium">
+                {t('notifications.alertStudio.channels.testTargetLabel', 'Test Delivery Target')}
+              </label>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="w-2 h-2 rounded-full bg-neon-green" />
+                  <span className="text-white/90">
+                    {t('notifications.alertStudio.channels.browserToast', 'Browser toast notification (real-time via SSE)')}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="w-2 h-2 rounded-full bg-neon-green" />
+                  <span className="text-white/90">
+                    {t('notifications.alertStudio.channels.alertHistory', 'Alert history (saved to database)')}
+                  </span>
+                </div>
+
+                <GlassPanel className="p-3">
+                  {channelsLoading ? (
+                    <div className="space-y-2">
+                      <Skeleton className="h-5 w-48 rounded-lg" />
+                      <div className="flex flex-wrap gap-2">
+                        {[1, 2, 3].map(i => <Skeleton key={i} className="h-8 w-28 rounded-lg" />)}
+                      </div>
+                    </div>
+                  ) : channelsError ? (
+                    <ErrorDisplay error={channelsError} compact />
+                  ) : channelsList.length > 0 ? (
+                    <div>
+                      <p className="text-xs text-[var(--text-muted)] mb-1.5">
+                        {t('notifications.alertStudio.channels.externalChannels', 'External channels for test notifications:')}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {channelsList.map(ch => {
+                          const isSelected = testChannelIds === null || testChannelIds.includes(ch.id)
+                          return (
+                            <UiButton
+                              key={ch.id}
+                              variant="ghost"
+                              size="sm"
+                              className={cn(
+                                'h-auto rounded-lg border px-3 py-1.5 text-xs transition-colors',
+                                isSelected
+                                  ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan'
+                                  : 'bg-white/5 border-white/10 text-[var(--text-muted)] hover:border-white/20',
+                              )}
+                              onClick={() => handleToggleTestChannel(ch.id)}
+                            >
+                              <Bell className="h-3 w-3" />
+                              {ch.name} ({t(`notifications.alertStudio.channels.kind.${ch.kind}`, ch.kind)})
+                            </UiButton>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <EmptyState
+                      icon={<BellOff className="h-8 w-8 text-[var(--text-muted)]" />}
+                      title={t('notifications.alertStudio.channels.emptyTitle', 'No external channels configured')}
+                      message={t('notifications.alertStudio.channels.emptyDescription', 'Browser toasts and alert history are always enabled. Configure channels from Notifications to fan out alerts.')}
+                    />
+                  )}
+                </GlassPanel>
+              </div>
             </div>
 
-            {/* Action buttons */}
             <div className="flex items-center gap-2 pt-2 border-t border-white/5">
-              <Button
+              <UiButton
                 variant="primary"
                 size="sm"
                 icon={<Save className="h-3.5 w-3.5" />}
-                loading={saveMut.isPending}
-                onClick={() => saveMut.mutate(editor)}
-                disabled={!editor.name.trim()}
+                loading={saveRuleMut.isPending}
+                onClick={handleSave}
+                disabled={!canSave}
               >
-                {saveMut.isPending ? 'Saving…' : isEditing ? 'Update Rule' : 'Create Rule'}
-              </Button>
+                {saveRuleMut.isPending
+                  ? t('notifications.alertStudio.actions.saving', 'Saving...')
+                  : isEditing
+                    ? t('notifications.alertStudio.actions.updateRule', 'Update Rule')
+                    : t('notifications.alertStudio.actions.createRule', 'Create Rule')}
+              </UiButton>
 
-              {isEditing && (
-                <Button
+              {isEditing && editor.id && (
+                <UiButton
                   variant="danger"
                   size="sm"
                   icon={<Trash2 className="h-3.5 w-3.5" />}
-                  onClick={() => { if (editor.id) deleteMut.mutate(editor.id) }}
+                  onClick={() => {
+                    if (editor.id != null) handleDelete(editor.id)
+                  }}
                 >
-                  Delete
-                </Button>
+                  {t('notifications.alertStudio.actions.delete', 'Delete')}
+                </UiButton>
               )}
 
-              <Button
+              <UiButton
                 variant="secondary"
                 size="sm"
                 icon={<Bell className="h-3.5 w-3.5" />}
-                onClick={async () => {
-                  try {
-                    await request('/alerts/test', {
-                      method: 'POST',
-                      body: JSON.stringify({ name: editor.name || 'Test Rule', severity: editor.severity, msg_template: editor.msg_template || 'Test notification from Alert Studio', notify_channels: editor.notify_channels }),
-                    })
-                    toast.success('Test sent!', 'Check your browser toast and Discord/Slack')
-                  } catch { toast.error('Test failed', 'Could not send test notification') }
-                }}
+                loading={testRuleMut.isPending}
+                onClick={handleTest}
                 disabled={!editor.name.trim()}
               >
-                Test
-              </Button>
+                {t('notifications.alertStudio.actions.test', 'Test')}
+              </UiButton>
 
-              <Button variant="ghost" size="sm" onClick={handleNewRule} className="ml-auto">
-                Reset
-              </Button>
+              <UiButton variant="ghost" size="sm" onClick={handleNewRule} className="ml-auto">
+                {t('notifications.alertStudio.actions.reset', 'Reset')}
+              </UiButton>
             </div>
           </GlassPanel>
         </div>
       </div>
-    </div>
+    </PageContainer>
   )
 }
-
-

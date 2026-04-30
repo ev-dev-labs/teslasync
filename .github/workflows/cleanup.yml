@@ -13,7 +13,7 @@ permissions:
 jobs:
   maintenance:
     name: Cleanup & Stale
-    runs-on: ubuntu-latest
+    runs-on: arc-runner
     steps:
       - name: Cleanup backend images
         uses: actions/delete-package-versions@v5

@@ -105,3 +105,9 @@ func (s *Store) Close() {
 func (s *Store) IsRedis() bool {
 	return s.rdb != nil
 }
+
+// Underlying returns the raw *redis.Client, or nil if Redis is not connected.
+// Use this for advanced operations like HSET that go beyond the generic cache API.
+func (s *Store) Underlying() *redis.Client {
+	return s.rdb
+}

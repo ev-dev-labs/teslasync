@@ -2,10 +2,16 @@ package database
 
 import (
 	"context"
+	"fmt"
+	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
+// SecurityRepo persists security_events rows for the post-migration
+// typed schema (migrations/000142_baseline_typed.up.sql).
 type SecurityRepo struct {
 	db *DB
 }
@@ -14,57 +20,86 @@ func NewSecurityRepo(db *DB) *SecurityRepo {
 	return &SecurityRepo{db: db}
 }
 
-func (r *SecurityRepo) Insert(ctx context.Context, ev *models.SecurityEvent) error {
-	query := `INSERT INTO security_events (vehicle_id, locked, sentry_mode, door_state, fd_window, fp_window, rd_window, rp_window, homelink_nearby, guest_mode, homelink_device_count, guest_mode_mobile_access_state, driver_seat_occupied, center_display, speed_limit_mode, valet_mode_enabled, service_mode, current_limit_mph, paired_phone_key_count, lights_hazards_active, lights_high_beams, lights_turn_signal, tonneau_position, tonneau_open_percent, tonneau_tent_mode, driver_seat_belt, passenger_seat_belt)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27) RETURNING id`
-	return r.db.Pool.QueryRow(ctx, query,
-		ev.VehicleID, ev.Locked, ev.SentryMode, ev.DoorState,
-		ev.FdWindow, ev.FpWindow, ev.RdWindow, ev.RpWindow,
-		ev.HomelinkNearby, ev.GuestMode,
-		ev.HomelinkDeviceCount, ev.GuestModeMobileAccessState,
-		ev.DriverSeatOccupied, ev.CenterDisplay,
-		ev.SpeedLimitMode, ev.ValetModeEnabled, ev.ServiceMode,
-		ev.CurrentLimitMph, ev.PairedPhoneKeyCount,
-		ev.LightsHazardsActive, ev.LightsHighBeams, ev.LightsTurnSignal,
-		ev.TonneauPosition, ev.TonneauOpenPercent, ev.TonneauTentMode,
-		ev.DriverSeatBelt, ev.PassengerSeatBelt,
-	).Scan(&ev.ID)
+// BulkInsert streams a batch of SecurityEvent rows into the
+// security_events hypertable using pgx.CopyFrom for high-throughput
+// telemetry ingest. Returns nil for empty input.
+func (r *SecurityRepo) BulkInsert(ctx context.Context, es []models.SecurityEvent) error {
+	if len(es) == 0 {
+		return nil
+	}
+	rows := pgx.CopyFromSlice(len(es), func(i int) ([]any, error) {
+		e := es[i]
+		return []any{
+			e.VehicleID,
+			e.Ts,
+			e.EventType,
+			e.DoorsOpen,
+			e.WindowsOpen,
+			e.Locked,
+			e.SentryMode,
+			e.UserPresent,
+			e.Detail,
+			e.Source,
+		}, nil
+	})
+	_, err := r.db.Pool.CopyFrom(
+		ctx,
+		pgx.Identifier{"security_events"},
+		[]string{
+			"vehicle_id",
+			"ts",
+			"event_type",
+			"doors_open",
+			"windows_open",
+			"locked",
+			"sentry_mode",
+			"user_present",
+			"detail",
+			"source",
+		},
+		rows,
+	)
+	if err != nil {
+		return fmt.Errorf("security-repo-bulk-insert: %w", err)
+	}
+	return nil
 }
 
-func (r *SecurityRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit int) ([]*models.SecurityEvent, error) {
-	query := `SELECT id, vehicle_id, locked, sentry_mode, door_state, fd_window, fp_window, rd_window, rp_window, homelink_nearby, guest_mode, homelink_device_count, guest_mode_mobile_access_state, driver_seat_occupied, center_display, speed_limit_mode, valet_mode_enabled, service_mode, current_limit_mph, paired_phone_key_count, lights_hazards_active, lights_high_beams, lights_turn_signal, tonneau_position, tonneau_open_percent, tonneau_tent_mode, driver_seat_belt, passenger_seat_belt, created_at
-		FROM security_events WHERE vehicle_id=$1 ORDER BY created_at DESC LIMIT $2`
-	rows, err := r.db.Pool.Query(ctx, query, vehicleID, limit)
+// ListByVehicle returns security events for a vehicle within the
+// inclusive [from, to] time window, ordered by timestamp ascending.
+func (r *SecurityRepo) ListByVehicle(ctx context.Context, vehicleID int64, from, to time.Time) ([]models.SecurityEvent, error) {
+	rows, err := r.db.Pool.Query(ctx, `
+		SELECT vehicle_id, ts, event_type, doors_open, windows_open,
+		       locked, sentry_mode, user_present, detail, source
+		FROM security_events
+		WHERE vehicle_id = $1 AND ts BETWEEN $2 AND $3
+		ORDER BY ts`, vehicleID, from, to)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("security-repo-list-by-vehicle: %w", err)
 	}
 	defer rows.Close()
 
-	var evts []*models.SecurityEvent
+	var out []models.SecurityEvent
 	for rows.Next() {
-		e := &models.SecurityEvent{}
-		if err := rows.Scan(&e.ID, &e.VehicleID, &e.Locked, &e.SentryMode, &e.DoorState,
-			&e.FdWindow, &e.FpWindow, &e.RdWindow, &e.RpWindow,
-			&e.HomelinkNearby, &e.GuestMode,
-			&e.HomelinkDeviceCount, &e.GuestModeMobileAccessState,
-			&e.DriverSeatOccupied, &e.CenterDisplay,
-			&e.SpeedLimitMode, &e.ValetModeEnabled, &e.ServiceMode,
-			&e.CurrentLimitMph, &e.PairedPhoneKeyCount,
-			&e.LightsHazardsActive, &e.LightsHighBeams, &e.LightsTurnSignal,
-			&e.TonneauPosition, &e.TonneauOpenPercent, &e.TonneauTentMode,
-			&e.DriverSeatBelt, &e.PassengerSeatBelt,
-			&e.CreatedAt); err != nil {
-			return nil, err
+		var e models.SecurityEvent
+		if err := rows.Scan(
+			&e.VehicleID,
+			&e.Ts,
+			&e.EventType,
+			&e.DoorsOpen,
+			&e.WindowsOpen,
+			&e.Locked,
+			&e.SentryMode,
+			&e.UserPresent,
+			&e.Detail,
+			&e.Source,
+		); err != nil {
+			return nil, fmt.Errorf("security-repo-list-by-vehicle: %w", err)
 		}
-		evts = append(evts, e)
+		out = append(out, e)
 	}
-	return evts, rows.Err()
-}
-
-func (r *SecurityRepo) GetLatest(ctx context.Context, vehicleID int64) (*models.SecurityEvent, error) {
-	evts, err := r.GetByVehicle(ctx, vehicleID, 1)
-	if err != nil || len(evts) == 0 {
-		return nil, err
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("security-repo-list-by-vehicle: %w", err)
 	}
-	return evts[0], nil
+	return out, nil
 }

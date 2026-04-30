@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/config"
 )
 
 // googleResponse is the top-level JSON structure returned by the Google Geocoding API.
@@ -33,7 +34,7 @@ type GoogleClient struct {
 // NewGoogleClient creates a Google Maps geocoding client.
 func NewGoogleClient(apiKey string) *GoogleClient {
 	return &GoogleClient{
-		httpClient: &http.Client{Timeout: 10 * time.Second},
+		httpClient: &http.Client{Timeout: config.HTTPClientTimeout},
 		apiKey:     apiKey,
 	}
 }

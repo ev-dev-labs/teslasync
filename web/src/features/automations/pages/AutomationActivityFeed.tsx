@@ -4,6 +4,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
+import { formatDurationMs } from '@/lib/dateFormat';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/feedback/EmptyState';
@@ -27,12 +28,6 @@ const statusConfig: Record<string, { icon: typeof CheckCircle; color: string; la
   running: { icon: Activity, color: 'text-blue-400', label: 'Running' },
   cancelled: { icon: XCircle, color: 'text-white/40', label: 'Cancelled' },
 };
-
-function formatDuration(ms: number | null): string {
-  if (ms == null) return '—';
-  if (ms < 1000) return `${ms}ms`;
-  return `${(ms / 1000).toFixed(1)}s`;
-}
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -58,7 +53,7 @@ function HistoryRow({ item }: { item: AutomationHistory }) {
         )}
       </div>
       <span className="shrink-0 text-xs text-white/40">{timeAgo(item.triggered_at)}</span>
-      <span className="shrink-0 text-xs text-white/40">{formatDuration(item.duration_ms)}</span>
+      <span className="shrink-0 text-xs text-white/40">{formatDurationMs(item.duration_ms)}</span>
       {item.actions_total > 0 && (
         <span className="shrink-0 text-xs text-white/40">
           {item.actions_succeeded}/{item.actions_total}
@@ -108,7 +103,7 @@ interface AutomationActivityFeedProps {
   historyStats: AutomationHistoryStats | null;
   isLoading: boolean;
   liveEvents: AutomationActivityEvent[];
-  connectionState: 'connected' | 'reconnecting' | 'unavailable';
+  connectionState: 'connected' | 'reconnecting';
 }
 
 export function AutomationActivityFeed({
@@ -149,7 +144,7 @@ export function AutomationActivityFeed({
             <div className="flex items-center gap-3 text-xs text-white/50">
               <span>{historyStats.total_executions} {t('automations.totalRuns', 'total')}</span>
               <span className="text-green-400">{historyStats.success_rate.toFixed(0)}% {t('automations.successRate', 'success')}</span>
-              <span>{formatDuration(historyStats.avg_duration_ms)} {t('automations.avgDuration', 'avg')}</span>
+              <span>{formatDurationMs(historyStats.avg_duration_ms)} {t('automations.avgDuration', 'avg')}</span>
             </div>
           )}
         </div>

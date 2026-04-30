@@ -31,11 +31,11 @@ import {
 interface ChargingSession {
   id: number;
   vehicle_id: number;
-  start_date: string;
-  start_battery_level: number;
-  end_battery_level?: number;
-  charge_energy_added?: number;
-  charger_power?: number;
+  start_ts: string;
+  start_battery_pct: number;
+  end_battery_pct?: number;
+  energy_added_kwh?: number;
+  charger_power_kw_max?: number;
   duration_min?: number;
   cost?: number;
 }
@@ -74,10 +74,10 @@ function ChargingEditForm({ session, onClose, t }: { session: ChargingSession; o
   const qc = useQueryClient();
   const toast = useToast();
   const [form, setForm] = useState({
-    end_date: '',
-    charge_energy_added: String(session.charge_energy_added ?? ''),
-    end_battery_level: String(session.end_battery_level ?? ''),
-    charger_power: String(session.charger_power ?? ''),
+    end_ts: '',
+    energy_added_kwh: String(session.energy_added_kwh ?? ''),
+    end_battery_pct: String(session.end_battery_pct ?? ''),
+    charger_power_kw_max: String(session.charger_power_kw_max ?? ''),
     duration_min: String(session.duration_min ?? ''),
     cost: String(session.cost ?? ''),
   });
@@ -85,10 +85,10 @@ function ChargingEditForm({ session, onClose, t }: { session: ChargingSession; o
   const updateMut = useMutation({
     mutationFn: () => {
       const data: Record<string, unknown> = {};
-      if (form.end_date) data.end_date = form.end_date;
-      if (form.charge_energy_added) data.charge_energy_added = Number(form.charge_energy_added);
-      if (form.end_battery_level) data.end_battery_level = Number(form.end_battery_level);
-      if (form.charger_power) data.charger_power = Number(form.charger_power);
+      if (form.end_ts) data.end_ts = form.end_ts;
+      if (form.energy_added_kwh) data.energy_added_kwh = Number(form.energy_added_kwh);
+      if (form.end_battery_pct) data.end_battery_pct = Number(form.end_battery_pct);
+      if (form.charger_power_kw_max) data.charger_power_kw_max = Number(form.charger_power_kw_max);
       if (form.duration_min) data.duration_min = Number(form.duration_min);
       if (form.cost) data.cost = Number(form.cost);
       return request(`/data-repair/charging/${session.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
@@ -112,10 +112,10 @@ function ChargingEditForm({ session, onClose, t }: { session: ChargingSession; o
   return (
     <GlassPanel className="p-4 space-y-4 bg-neon-amber/[0.03] border-neon-amber/20">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        <Input label={t('End Date (ISO)')} value={form.end_date} placeholder="2026-03-30T04:00:00Z" onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} />
-        <Input label={t('Energy Added (kWh)')} type="number" value={form.charge_energy_added} onChange={e => setForm(f => ({ ...f, charge_energy_added: e.target.value }))} />
-        <Input label={t('End Battery %')} type="number" value={form.end_battery_level} onChange={e => setForm(f => ({ ...f, end_battery_level: e.target.value }))} />
-        <Input label={t('Charger Power (kW)')} type="number" value={form.charger_power} onChange={e => setForm(f => ({ ...f, charger_power: e.target.value }))} />
+        <Input label={t('End Date (ISO)')} value={form.end_ts} placeholder="2026-03-30T04:00:00Z" onChange={e => setForm(f => ({ ...f, end_ts: e.target.value }))} />
+        <Input label={t('Energy Added (kWh)')} type="number" value={form.energy_added_kwh} onChange={e => setForm(f => ({ ...f, energy_added_kwh: e.target.value }))} />
+        <Input label={t('End Battery %')} type="number" value={form.end_battery_pct} onChange={e => setForm(f => ({ ...f, end_battery_pct: e.target.value }))} />
+        <Input label={t('Charger Power (kW)')} type="number" value={form.charger_power_kw_max} onChange={e => setForm(f => ({ ...f, charger_power_kw_max: e.target.value }))} />
         <Input label={t('Duration (min)')} type="number" value={form.duration_min} onChange={e => setForm(f => ({ ...f, duration_min: e.target.value }))} />
         <Input label={t('Cost ($)')} type="number" value={form.cost} onChange={e => setForm(f => ({ ...f, cost: e.target.value }))} />
       </div>
@@ -273,10 +273,10 @@ export default function DataRepairPage() {
                   >
                     <div className="flex items-center gap-4 flex-wrap">
                       <span className="text-xs font-mono text-[var(--text-muted)] w-12 shrink-0">#{s.id}</span>
-                      <span className="text-xs text-[var(--text-secondary)] w-40 shrink-0">{formatDateTime(s.start_date)}</span>
-                      <span className="text-xs text-[var(--text-primary)] w-16 shrink-0">{s.start_battery_level}%</span>
+                      <span className="text-xs text-[var(--text-secondary)] w-40 shrink-0">{formatDateTime(s.start_ts)}</span>
+                      <span className="text-xs text-[var(--text-primary)] w-16 shrink-0">{s.start_battery_pct}%</span>
                       <span className="text-xs text-[var(--text-muted)] w-16 shrink-0">{t('Vehicle')} {s.vehicle_id}</span>
-                      <span className="text-xs text-neon-amber font-medium w-16 shrink-0">{hoursOpen(s.start_date)}</span>
+                      <span className="text-xs text-neon-amber font-medium w-16 shrink-0">{hoursOpen(s.start_ts)}</span>
                       <Badge variant="warning" size="sm"><AlertTriangle className="h-3 w-3 inline mr-0.5" />{t('Open')}</Badge>
                     </div>
                   </GlassPanel>

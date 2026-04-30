@@ -24,10 +24,9 @@ import (
 var backupTables = []string{
 	"vehicles", "drives", "charging_sessions", "positions", "addresses",
 	"geofences", "geofence_events", "alerts", "alert_rules", "settings",
-	"daily_mileage", "vehicle_states", "software_updates", "tire_pressure_snapshots",
+	"daily_mileage", "vehicle_states", "software_updates",
 	"vampire_drain_events", "visited_locations", "trips", "trip_drives",
-	"battery_snapshots", "motor_snapshots", "climate_snapshots", "media_snapshots",
-	"charging_telemetry", "notification_channels", "notification_logs",
+	"signal_log", "notification_channels", "notification_logs",
 	"efficiency_factors", "api_keys",
 }
 
@@ -85,10 +84,13 @@ func (p *Processor) RunBackup(ctx context.Context, cfg *models.BackupConfig, run
 	// Export data
 	data := make(map[string]json.RawMessage)
 	totalRecords := 0
+	totalTables := len(tables)
+	failedTables := 0
 	for _, table := range tables {
 		rows, err := p.exportTable(ctx, table)
 		if err != nil {
 			log.Warn().Err(err).Str("table", table).Msg("backup: skipping table")
+			failedTables++
 			continue
 		}
 		data[table] = rows
@@ -158,11 +160,22 @@ func (p *Processor) RunBackup(ctx context.Context, cfg *models.BackupConfig, run
 
 	duration := time.Since(start).Milliseconds()
 
-	// Mark completed
-	if err := p.runRepo.Complete(ctx, run.ID, fileName, filePath, int64(len(finalData)), totalRecords, len(tables), checksum, duration); err != nil {
+	// Determine final status based on table export results
+	var status string
+	switch {
+	case failedTables == 0:
+		status = "completed"
+	case failedTables == totalTables:
+		status = "failed"
+	default:
+		status = "partial"
+	}
+
+	// Mark completed with computed status
+	if err := p.runRepo.Complete(ctx, run.ID, status, fileName, filePath, int64(len(finalData)), totalRecords, len(tables), checksum, duration); err != nil {
 		log.Error().Err(err).Msg("backup: failed to mark completed")
 	}
-	backupRunsMetric.WithLabelValues("completed", cfg.Provider).Inc()
+	backupRunsMetric.WithLabelValues(status, cfg.Provider).Inc()
 	backupDurationMetric.Observe(float64(duration) / 1000.0)
 	backupSizeMetric.Observe(float64(len(finalData)))
 
@@ -185,10 +198,26 @@ func (p *Processor) RunBackup(ctx context.Context, cfg *models.BackupConfig, run
 		}
 	}
 
-	log.Info().Str("file", fileName).Int64("size", int64(len(finalData))).Int("records", totalRecords).Int64("duration_ms", duration).Msg("backup: completed")
+	log.Info().Str("file", fileName).Int64("size", int64(len(finalData))).Int("records", totalRecords).Int("total", totalTables).Int("failed", failedTables).Str("status", status).Int64("duration_ms", duration).Msg("backup run finished")
+}
+
+// IsAllowedTable returns true if the table name is in the processor's backup table list.
+// Used to prevent SQL injection — table names in queries MUST pass this check.
+func IsAllowedTable(table string) bool {
+	for _, t := range backupTables {
+		if t == table {
+			return true
+		}
+	}
+	return false
 }
 
 func (p *Processor) exportTable(ctx context.Context, table string) (json.RawMessage, error) {
+	if !IsAllowedTable(table) {
+		log.Error().Str("table", table).Msg("backup: table not in allowlist, skipping")
+		return nil, fmt.Errorf("backup: table %q not in allowlist", table)
+	}
+	// table name is safe — validated against backupTables allowlist above
 	query := fmt.Sprintf(`SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) FROM "%s" t`, table)
 	var result json.RawMessage
 	err := p.pool.QueryRow(ctx, query).Scan(&result)

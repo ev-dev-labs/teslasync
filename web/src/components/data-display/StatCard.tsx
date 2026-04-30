@@ -26,12 +26,12 @@ export function StatCard({ label, value, unit, icon, trend, sublabel, loading, c
   return (
     <Card className={cn('flex flex-col gap-1', className)}>
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-gray-500 dark:text-gray-400">{label}</span>
-        {icon && <span className="text-gray-400">{icon}</span>}
+        <span className="text-sm font-medium text-[var(--text-muted)]">{label}</span>
+        {icon && <span className="text-[var(--text-muted)]">{icon}</span>}
       </div>
       <div className="flex items-baseline gap-1">
         <span className="text-2xl font-bold">{value}</span>
-        {unit && <span className="text-sm text-gray-500">{unit}</span>}
+        {unit && <span className="text-sm text-[var(--text-muted)]">{unit}</span>}
       </div>
       {trend && (
         <div className={cn('flex items-center gap-1 text-xs',
@@ -42,7 +42,7 @@ export function StatCard({ label, value, unit, icon, trend, sublabel, loading, c
         </div>
       )}
       {sublabel && (
-        <span className="text-xs text-gray-500 dark:text-gray-400">{sublabel}</span>
+        <span className="text-xs text-[var(--text-muted)]">{sublabel}</span>
       )}
     </Card>
   );

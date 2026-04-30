@@ -130,7 +130,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, di_torque AS \"Torque (Nm)\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "rawSql": "SELECT created_at AS time,\n  value_num AS \"Torque (Nm)\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'DiTorqueActualF'\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -210,7 +210,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, lateral_accel AS \"Lateral G\", longitudinal_accel AS \"Longitudinal G\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "rawSql": "SELECT created_at AS time,\n  MAX(value_num) FILTER (WHERE signal = 'LateralAcceleration') AS \"Lateral G\",\n  MAX(value_num) FILTER (WHERE signal = 'LongitudinalAcceleration') AS \"Longitudinal G\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('LateralAcceleration', 'LongitudinalAcceleration')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -291,7 +291,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, convert_temp(di_stator_temp) AS \"Stator Temp\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "rawSql": "SELECT created_at AS time,\n  convert_temp(value_num) AS \"Stator Temp\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'DiStatorTempR'\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -371,7 +371,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, di_axle_speed AS \"Axle Speed (RPM)\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "rawSql": "SELECT created_at AS time,\n  value_num AS \"Axle Speed (RPM)\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'DiAxleSpeedF'\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -452,7 +452,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, pedal_position AS \"Throttle (%)\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "rawSql": "SELECT created_at AS time,\n  value_num AS \"Throttle (%)\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'PedalPosition'\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -533,7 +533,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, convert_speed(vehicle_speed) AS \"Speed\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "rawSql": "SELECT created_at AS time,\n  convert_speed(value_num) AS \"Speed\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'VehicleSpeed'\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -598,7 +598,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT gear AS \"Gear\", COUNT(*) AS \"📊 Count\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) AND gear IS NOT NULL GROUP BY gear ORDER BY 2 DESC",
+          "rawSql": "SELECT value_str AS \"Gear\", COUNT(*) AS \"📊 Count\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'Gear'\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\n  AND value_str IS NOT NULL\nGROUP BY value_str\nORDER BY 2 DESC",
           "refId": "A"
         }
       ],
@@ -657,7 +657,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT AVG(di_torque) AS \"Avg Torque (Nm)\", MAX(di_torque) AS \"Peak Torque (Nm)\", convert_temp(AVG(di_stator_temp)) AS \"Avg Stator Temp\", MAX(lateral_accel) AS \"Peak Lateral G\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)",
+          "rawSql": "SELECT\n  AVG(value_num) FILTER (WHERE signal = 'DiTorqueActualF') AS \"Avg Torque (Nm)\",\n  MAX(value_num) FILTER (WHERE signal = 'DiTorqueActualF') AS \"Peak Torque (Nm)\",\n  convert_temp(AVG(value_num) FILTER (WHERE signal = 'DiStatorTempR')) AS \"Avg Stator Temp\",\n  MAX(value_num) FILTER (WHERE signal = 'LateralAcceleration') AS \"Peak Lateral G\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('DiTorqueActualF', 'DiStatorTempR', 'LateralAcceleration')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()",
           "refId": "A"
         }
       ],

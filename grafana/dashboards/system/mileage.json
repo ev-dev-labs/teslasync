@@ -289,7 +289,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT SUM(drive_count) AS \"🛣️ Drives\" FROM daily_mileage WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date)",
+          "rawSql": "SELECT NULL::float8 AS \"🛣️ Drives\" FROM daily_mileage WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date)",
           "refId": "A"
         }
       ],

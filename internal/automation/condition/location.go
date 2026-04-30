@@ -31,8 +31,8 @@ type locationSnapshot struct {
 	Reason       string  `json:"reason"`
 }
 
-// ParseLocationConfig unmarshals and validates a location condition config.
-func ParseLocationConfig(raw json.RawMessage) (*LocationConfig, error) {
+// DecodeLocationSpec unmarshals and validates a location condition config.
+func DecodeLocationSpec(raw json.RawMessage) (*LocationConfig, error) {
 	if len(raw) == 0 {
 		return nil, fmt.Errorf("condition config is empty")
 	}
@@ -62,6 +62,8 @@ func ParseLocationConfig(raw json.RawMessage) (*LocationConfig, error) {
 	return &cfg, nil
 }
 
+var ParseLocationConfig = DecodeLocationSpec
+
 // EvaluateLocation checks whether the vehicle's last known position is inside
 // or outside the specified geofence. Uses the spherical law of cosines
 // (matching the SQL formula in GeofenceRepo.FindByCoordinates) for consistency.
@@ -76,14 +78,14 @@ func EvaluateLocation(cfg *LocationConfig, state *models.VehicleState, geofence 
 		return Result{}, nil, fmt.Errorf("geofence ID mismatch: config has %d, got %d", cfg.GeofenceID, geofence.ID)
 	}
 
-	dist := sphericalDistance(state.Latitude, state.Longitude, geofence.Latitude, geofence.Longitude)
+	dist := sphericalDistance(state.Latitude, state.Longitude, geofence.Latitude(), geofence.Longitude())
 
 	var met bool
 	switch cfg.Operator {
 	case "inside":
-		met = dist <= geofence.Radius
+		met = dist <= geofence.Radius()
 	case "outside":
-		met = dist > geofence.Radius
+		met = dist > geofence.Radius()
 	}
 
 	geoName := geofence.Name
@@ -94,15 +96,15 @@ func EvaluateLocation(cfg *LocationConfig, state *models.VehicleState, geofence 
 	var reason string
 	if met {
 		reason = fmt.Sprintf("vehicle is %s %s geofence (%.0fm from center, radius %.0fm)",
-			cfg.Operator, geoName, dist, geofence.Radius)
+			cfg.Operator, geoName, dist, geofence.Radius())
 	} else {
 		// Describe actual position relative to geofence.
 		pos := "inside"
-		if dist > geofence.Radius {
+		if dist > geofence.Radius() {
 			pos = "outside"
 		}
 		reason = fmt.Sprintf("vehicle is %s %s geofence, expected %s (%.0fm from center, radius %.0fm)",
-			pos, geoName, cfg.Operator, dist, geofence.Radius)
+			pos, geoName, cfg.Operator, dist, geofence.Radius())
 	}
 
 	snapshot, _ := json.Marshal(locationSnapshot{
@@ -112,7 +114,7 @@ func EvaluateLocation(cfg *LocationConfig, state *models.VehicleState, geofence 
 		VehicleLat:   state.Latitude,
 		VehicleLon:   state.Longitude,
 		DistanceM:    dist,
-		RadiusM:      geofence.Radius,
+		RadiusM:      geofence.Radius(),
 		Met:          met,
 		Reason:       reason,
 	})

@@ -16,17 +16,19 @@ type AnalyticsHandler struct {
 	vehicleRepo    *database.VehicleRepo
 	driveRepo      *database.DriveRepo
 	chargingRepo   *database.ChargingRepo
-	batteryRepo    *database.BatterySnapshotRepo
 	positionRepo   *database.PositionRepo
+	db             *database.DB
+	signalLogReader *database.SignalLogReader
 }
 
-func NewAnalyticsHandler(db *database.DB) *AnalyticsHandler {
+func NewAnalyticsHandler(db *database.DB, slr *database.SignalLogReader) *AnalyticsHandler {
 	return &AnalyticsHandler{
-		vehicleRepo:  database.NewVehicleRepo(db),
-		driveRepo:    database.NewDriveRepo(db),
-		chargingRepo: database.NewChargingRepo(db),
-		batteryRepo:  database.NewBatterySnapshotRepo(db),
-		positionRepo: database.NewPositionRepo(db),
+		vehicleRepo:     database.NewVehicleRepo(db),
+		driveRepo:       database.NewDriveRepo(db),
+		chargingRepo:    database.NewChargingRepo(db),
+		positionRepo:    database.NewPositionRepo(db),
+		db:              db,
+		signalLogReader: slr,
 	}
 }
 
@@ -81,8 +83,6 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 	dowCounts := make([]int, 7)          // drives per day of week
 	dowDistance := make([]float64, 7)    // distance per DOW
 	var allSpeedMax []float64
-	var allPowerMax []float64
-	var allPowerMin []float64
 	var allDriveDurations []float64
 	var allDriveDistances []float64
 	var allDriveEfficiencies []float64
@@ -90,11 +90,9 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 	var outsideTemps []float64
 	var tempVsEfficiency []map[string]interface{}      // for scatter: {temp, efficiency}
 	var dailyDriveAgg = make(map[string]map[string]interface{}) // date -> {drives, distance, energy}
-	var totalRangeUsed float64
 
 	// === Charging deep analytics accumulators ===
 	chargerTypeMap := make(map[string]int)    // charger type -> count
-	chargerBrandMap := make(map[string]int)   // brand -> count
 	var chargePowers []float64
 	var chargeDurations []float64
 	var chargeEnergies []float64
@@ -103,7 +101,6 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 	hourChargeCounts:= make([]int, 24)          // charges per hour
 	hourChargeEnergy := make([]float64, 24)
 	var monthlyChargeAgg = make(map[string]map[string]interface{}) // month -> {energy, cost, sessions, avg_power}
-	var chargeEfficiencies []float64 // energyAdded vs energyUsed
 
 	// === Battery health accumulators ===
 	type batteryPoint struct {
@@ -127,139 +124,143 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 			log.Error().Err(err).Int64("vehicleID", v.ID).Msg("analytics: failed to get charging sessions")
 			sessions = nil
 		}
-		batSnaps, err := h.batteryRepo.GetByVehicle(r.Context(), v.ID, 365)
-		if err != nil {
-			log.Error().Err(err).Int64("vehicleID", v.ID).Msg("analytics: failed to get battery snapshots")
-			batSnaps = nil
+		// Per-vehicle battery health from latest signal snapshot
+		if h.signalLogReader != nil {
+			snap, snapErr := h.signalLogReader.SnapshotAt(r.Context(), v.ID, time.Now())
+			if snapErr == nil && snap != nil {
+				if bl, ok := toFloatOk(snap["BatteryLevel"]); ok && bl > 0 {
+					const nomCap = 75.0
+					const nomRange = 531.0
+					batteryTrend = append(batteryTrend, batteryPoint{
+						Date:        time.Now().Format("2006-01-02"),
+						HealthScore: bl,
+						CapacityKWh: bl * nomCap / 100,
+						Degradation: 100 - bl,
+						RangeKm:     bl * nomRange / 100,
+					})
+				}
+			}
 		}
 
 		var dist float64
 		var driveCount int
 		for _, d := range drives {
-			if d.StartDate.Before(cutoff) {
+			if d.StartTs.Before(cutoff) {
 				continue
 			}
-			dist += d.Distance
+			dist += d.DistanceMi
 			driveCount++
 
 			// Hour & DOW
-			hour := d.StartDate.Hour()
+			hour := d.StartTs.Hour()
 			hourCounts[hour]++
-			hourDistance[hour] += d.Distance
-			dow := int(d.StartDate.Weekday())
+			hourDistance[hour] += d.DistanceMi
+			dow := int(d.StartTs.Weekday())
 			dowCounts[dow]++
-			dowDistance[dow] += d.Distance
+			dowDistance[dow] += d.DistanceMi
 
 			// Performance metrics
-			if d.SpeedMax != nil {
-				allSpeedMax = append(allSpeedMax, *d.SpeedMax)
-			}
-			if d.PowerMax != nil {
-				allPowerMax = append(allPowerMax, *d.PowerMax)
-			}
-			if d.PowerMin != nil {
-				allPowerMin = append(allPowerMin, *d.PowerMin)
+			if d.MaxSpeedMph != nil {
+				allSpeedMax = append(allSpeedMax, *d.MaxSpeedMph)
 			}
 			allDriveDurations = append(allDriveDurations, d.DurationMin)
-			allDriveDistances = append(allDriveDistances, d.Distance)
+			allDriveDistances = append(allDriveDistances, d.DistanceMi)
 
-			// Efficiency per drive
-			if d.StartBatteryLvl != nil && d.EndBatteryLvl != nil && d.Distance > 0 {
-				rangeUsed := float64(*d.StartBatteryLvl - *d.EndBatteryLvl)
-				totalRangeUsed += rangeUsed
-			}
-			if d.Distance > 0 && d.StartRangeKm != nil && d.EndRangeKm != nil {
-				eff := ((*d.StartRangeKm - *d.EndRangeKm) / d.Distance) * 100
-				if eff > 0 && eff < 500 {
+			// Efficiency per drive (Wh/mi from EnergyUsedKwh)
+			if d.EnergyUsedKwh != nil && d.DistanceMi > 0 {
+				eff := (*d.EnergyUsedKwh * 1000) / d.DistanceMi
+				if eff > 0 && eff < 1000 {
 					allDriveEfficiencies = append(allDriveEfficiencies, eff)
 				}
 			}
 
 			// Temperature
-			if d.OutsideTempAvg != nil {
-				outsideTemps = append(outsideTemps, *d.OutsideTempAvg)
+			if d.OutsideTempAvgC != nil {
+				outsideTemps = append(outsideTemps, *d.OutsideTempAvgC)
 			}
-			if d.InsideTempAvg != nil {
-				insideTemps = append(insideTemps, *d.InsideTempAvg)
+			if d.InsideTempAvgC != nil {
+				insideTemps = append(insideTemps, *d.InsideTempAvgC)
 			}
 			// Temp vs efficiency scatter
-			if d.OutsideTempAvg != nil && d.Distance > 1 && d.StartRangeKm != nil && d.EndRangeKm != nil {
-				eff := ((*d.StartRangeKm - *d.EndRangeKm) / d.Distance) * 100
-				if eff > 0 && eff < 500 {
+			if d.OutsideTempAvgC != nil && d.DistanceMi > 1 && d.EnergyUsedKwh != nil {
+				eff := (*d.EnergyUsedKwh * 1000) / d.DistanceMi
+				if eff > 0 && eff < 1000 {
 					tempVsEfficiency = append(tempVsEfficiency, map[string]interface{}{
-						"temp":       math.Round(*d.OutsideTempAvg*10) / 10,
+						"temp":       math.Round(*d.OutsideTempAvgC*10) / 10,
 						"efficiency": math.Round(eff*10) / 10,
-						"distance":   math.Round(d.Distance*10) / 10,
+						"distance":   math.Round(d.DistanceMi*10) / 10,
 					})
 				}
 			}
 
 			// Daily aggregation
-			dateKey := d.StartDate.Format("2006-01-02")
+			dateKey := d.StartTs.Format("2006-01-02")
 			if dailyDriveAgg[dateKey] == nil {
 				dailyDriveAgg[dateKey] = map[string]interface{}{"drives": 0, "distance": 0.0}
 			}
 			dailyDriveAgg[dateKey]["drives"] = dailyDriveAgg[dateKey]["drives"].(int) + 1
-			dailyDriveAgg[dateKey]["distance"] = dailyDriveAgg[dateKey]["distance"].(float64) + d.Distance
+			dailyDriveAgg[dateKey]["distance"] = dailyDriveAgg[dateKey]["distance"].(float64) + d.DistanceMi
 		}
 
 		var energy, cost float64
 		for _, s := range sessions {
-			if s.StartDate.Before(cutoff) {
+			if s.StartTs.Before(cutoff) {
 				continue
 			}
-			energy += s.ChargeEnergyAdded
+			if s.EnergyAddedKwh != nil {
+				energy += *s.EnergyAddedKwh
+			}
 			if s.Cost != nil {
 				cost += *s.Cost
 			}
 
 			// Charger type analytics
-			ct := derefS(s.FastChargerType)
+			ct := derefS(s.ChargerType)
 			if ct == "" {
 				ct = "Home/AC"
 			}
 			chargerTypeMap[ct]++
 
-			cb := derefS(s.FastChargerBrand)
-			if cb != "" {
-				chargerBrandMap[cb]++
-			}
-
 			// Charge power and duration
-			if s.ChargerPower != nil {
-				chargePowers = append(chargePowers, *s.ChargerPower)
+			if s.ChargerPowerKwMax != nil {
+				chargePowers = append(chargePowers, *s.ChargerPowerKwMax)
 			}
-			chargeDurations = append(chargeDurations, s.DurationMin)
-			chargeEnergies = append(chargeEnergies, s.ChargeEnergyAdded)
+			if s.DurationMin != nil {
+				chargeDurations = append(chargeDurations, *s.DurationMin)
+			}
+			if s.EnergyAddedKwh != nil {
+				chargeEnergies = append(chargeEnergies, *s.EnergyAddedKwh)
+			}
 			if s.Cost != nil {
 				chargeCosts = append(chargeCosts, *s.Cost)
 			}
-			chargeStartBat = append(chargeStartBat, s.StartBatteryLevel)
-
-			// Charge efficiency
-			if s.ChargeEnergyUsed != nil && *s.ChargeEnergyUsed > 0 {
-				chargeEfficiencies = append(chargeEfficiencies, (s.ChargeEnergyAdded / *s.ChargeEnergyUsed) * 100)
+			if s.StartBatteryPct != nil {
+				chargeStartBat = append(chargeStartBat, int(*s.StartBatteryPct))
 			}
 
 			// Hour of day
-			chHour := s.StartDate.Hour()
+			chHour := s.StartTs.Hour()
 			hourChargeCounts[chHour]++
-			hourChargeEnergy[chHour] += s.ChargeEnergyAdded
+			if s.EnergyAddedKwh != nil {
+				hourChargeEnergy[chHour] += *s.EnergyAddedKwh
+			}
 
 			// Monthly aggregation
-			monthKey := s.StartDate.Format("2006-01")
+			monthKey := s.StartTs.Format("2006-01")
 			if monthlyChargeAgg[monthKey] == nil {
 				monthlyChargeAgg[monthKey] = map[string]interface{}{
 					"energy": 0.0, "cost": 0.0, "sessions": 0, "power_sum": 0.0,
 				}
 			}
-			monthlyChargeAgg[monthKey]["energy"] = monthlyChargeAgg[monthKey]["energy"].(float64) + s.ChargeEnergyAdded
+			if s.EnergyAddedKwh != nil {
+				monthlyChargeAgg[monthKey]["energy"] = monthlyChargeAgg[monthKey]["energy"].(float64) + *s.EnergyAddedKwh
+			}
 			if s.Cost != nil {
 				monthlyChargeAgg[monthKey]["cost"] = monthlyChargeAgg[monthKey]["cost"].(float64) + *s.Cost
 			}
 			monthlyChargeAgg[monthKey]["sessions"] = monthlyChargeAgg[monthKey]["sessions"].(int) + 1
-			if s.ChargerPower != nil {
-				monthlyChargeAgg[monthKey]["power_sum"] = monthlyChargeAgg[monthKey]["power_sum"].(float64) + *s.ChargerPower
+			if s.ChargerPowerKwMax != nil {
+				monthlyChargeAgg[monthKey]["power_sum"] = monthlyChargeAgg[monthKey]["power_sum"].(float64) + *s.ChargerPowerKwMax
 			}
 		}
 
@@ -283,16 +284,37 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 		fleetDrives += driveCount
 		fleetSessions += len(sessions)
 
-		// Battery snapshots
-		for _, bs := range batSnaps {
-			batteryTrend = append(batteryTrend, batteryPoint{
-				Date:        bs.CreatedAt.Format("2006-01-02"),
-				HealthScore: bs.HealthScore,
-				CapacityKWh: bs.CapacityKWh,
-				Degradation: bs.DegradationPct,
-				RangeKm:     bs.EstRangeKm,
-				CycleCount:  bs.CycleCount,
-			})
+		// Battery trend from cagg_battery_daily
+		if h.db != nil {
+			const btCap = 75.0
+			const btRange = 531.0
+			btRows, btErr := h.db.Pool.Query(r.Context(),
+				`SELECT bucket, end_soc, min_soc, max_soc
+				 FROM cagg_battery_daily
+				 WHERE vehicle_id = $1 AND bucket >= $2
+				 ORDER BY bucket ASC`,
+				v.ID, cutoff)
+			if btErr == nil {
+				for btRows.Next() {
+					var bucket time.Time
+					var endSOC, minSOC, maxSOC *float64
+					if scanErr := btRows.Scan(&bucket, &endSOC, &minSOC, &maxSOC); scanErr != nil {
+						continue
+					}
+					soc := 0.0
+					if endSOC != nil {
+						soc = *endSOC
+					}
+					batteryTrend = append(batteryTrend, batteryPoint{
+						Date:        bucket.Format("2006-01-02"),
+						HealthScore: soc,
+						CapacityKWh: soc * btCap / 100,
+						Degradation: 100 - soc,
+						RangeKm:     soc * btRange / 100,
+					})
+				}
+				btRows.Close()
+			}
 		}
 	}
 
@@ -388,14 +410,7 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 		return chargerTypes[i]["count"].(int) > chargerTypes[j]["count"].(int)
 	})
 
-	// === Charger brand breakdown ===
-	chargerBrands := make([]map[string]interface{}, 0, len(chargerBrandMap))
-	for b, c := range chargerBrandMap {
-		chargerBrands = append(chargerBrands, map[string]interface{}{
-			"brand": b,
-			"count": c,
-		})
-	}
+	// === Charger brand breakdown (removed — field no longer in model) ===
 
 	// === Monthly charging trends ===
 	monthlyCharge := make([]map[string]interface{}, 0, len(monthlyChargeAgg))
@@ -536,8 +551,6 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 			"speed_distribution":   speedDistribution,
 			"distance_distribution": distDistribution,
 			"speed_stats":          computeStats(allSpeedMax),
-			"power_stats":          computeStats(allPowerMax),
-			"regen_stats":          computeStats(allPowerMin),
 			"duration_stats":       computeStats(allDriveDurations),
 			"distance_stats":       computeStats(allDriveDistances),
 			"efficiency_stats":     computeStats(allDriveEfficiencies),
@@ -550,14 +563,12 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 		"charging_analytics": map[string]interface{}{
 			"hourly_pattern":       hourlyCharging,
 			"charger_types":        chargerTypes,
-			"charger_brands":       chargerBrands,
 			"monthly_trend":        monthlyCharge,
 			"power_stats":          computeStats(chargePowers),
 			"duration_stats":       computeStats(chargeDurations),
 			"energy_stats":         computeStats(chargeEnergies),
 			"cost_stats":           computeStats(chargeCosts),
 			"start_battery_dist":   chargeBatDist,
-			"efficiency_stats":     computeStats(chargeEfficiencies),
 		},
 
 		// === NEW: Battery health ===

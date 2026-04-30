@@ -11,8 +11,8 @@ type ChargingSession struct {
 	ID                string    `json:"id" db:"id"`
 	VehicleID         string    `json:"vehicleId" db:"vehicle_id"`
 	ChargerType       string    `json:"chargerType" db:"charger_type"` // "ac", "dc", "supercharger"
-	StartBatteryLevel int       `json:"startBatteryLevel" db:"start_battery_level"`
-	EndBatteryLevel   int       `json:"endBatteryLevel" db:"end_battery_level"`
+	StartBatteryLevel int       `json:"startBatteryLevel" db:"start_battery_pct"`
+	EndBatteryLevel   int       `json:"endBatteryLevel" db:"end_battery_pct"`
 	EnergyAddedKWh    float64   `json:"energyAddedKwh" db:"energy_added_kwh"`
 	MaxPowerKW        float64   `json:"maxPowerKw" db:"max_power_kw"`
 	CostCents         int       `json:"costCents" db:"cost_cents"`

@@ -1,88 +1,41 @@
-# TeslaSync v0.25.0 Upgrade Notes
+# Upgrade Notes
 
-## What's New
+This page replaces the old v0.25-specific notes with current upgrade guidance. Treat older release notes as historical only; the active codebase has moved to the Go 1.25 + React 18 + Vite 5 + TimescaleDB/pgvector architecture.
 
-### Comprehensive Drive Session Tracking
+## Before upgrading
 
-- All telemetry data (speed, power, temperature, tire pressure, SOC, elevation) is now tracked continuously throughout drives
-- Drive distance computed from odometer readings (no longer shows 0)
-- Start/end addresses automatically resolved via OpenStreetMap Nominatim
-- Full drive statistics: speed mean/max/min, range stats, SOC stats, elevation gain/loss
+1. Back up the database and any mounted volumes.
+2. Read the migration list in `migrations/` and confirm your deployment can run every pending migration in order.
+3. If moving from a plain PostgreSQL image to `timescale/timescaledb-ha:pg17`, test in staging first. Existing Docker volumes from incompatible images may need a clean restore path.
+4. Check Helm values for renamed configuration keys, especially `config.apiEndpoint`, `config.browserApiBase`, and `config.forwardAuthHeader`.
+5. Confirm the Tesla OAuth redirect URI matches the public URL that users actually visit.
 
-### Enhanced Charging Sessions
+## Current deployment-sensitive changes
 
-- Continuous power, voltage, temperature, and SOC tracking during charges
-- Automatic cost calculation based on geofence electricity rates
-- Energy estimation from battery % diff when direct signals unavailable
-- Location tracking and reverse geocoding for charge locations
-
-### Telemetry Pipeline Improvements
-
-- Graceful shutdown: all background goroutines properly cancelled on SIGTERM
-- toFloat ok-pattern: correctly handles actual 0% battery level (no more false negatives)
-- Stale session cleanup: drives/charges left open due to disconnects are auto-closed
-- Fleet telemetry subscription persistence for audit trail
-
-### UI Enhancements
-
-- Redesigned tire pressure visualization (realistic Model Y SVG)
-- Enhanced analytics page (speed distribution, efficiency trends, charging costs)
-- Mileage over time graph
-- Charging curve with real telemetry data
-- Elevation profile with speed overlay
-- All unit strings now respect user preferences (no more hardcoded km/mi)
-
-### Security & Performance
-
-- Rate limits on all sensitive endpoints
-- N+1 queries consolidated
-- LIMIT guards on all GetAll queries
-- Geofence spatial index
-
-## Database Migration
-
-Migration 21 adds new columns and tables. The migration runs automatically on startup.
-
-No manual intervention required — existing data is preserved, new columns are nullable.
-
-### New Tables
-
-| Table | Purpose |
+| Area | What to verify |
 |---|---|
-| `drive_telemetry_readings` | Continuous drive telemetry (position, speed, power, battery, temps, tires) |
-| `charge_telemetry_readings` | Continuous charge telemetry (power, voltage, SOC, temps, location) |
-| `fleet_telemetry_subscriptions` | Subscription audit trail |
+| Database image | Docker Compose uses `timescale/timescaledb-ha:pg17`; Helm defaults to TimescaleDB/Postgres 17 compatible images. |
+| API proxying | Web/Nginx proxies `/api/` to `config.apiEndpoint`; browsers should use same-origin relative URLs unless split-origin deployment is intentional. |
+| Auth | ForwardAuth is supported through `FORWARD_AUTH_HEADER` / `config.forwardAuthHeader`. |
+| PWA | Service worker updates are prompt-based; clear stale localhost service workers if testing older dev builds. |
+| Telemetry | Fleet Telemetry can run through MQTT and optional MongoDB raw signal capture. |
 
-### New Indexes
+## Validation after upgrade
 
-| Index | Purpose |
-|---|---|
-| `idx_geofences_coords` | Spatial lookup optimization |
+```bash
+docker compose ps
+docker compose logs -f teslasync-api
+curl http://localhost:8080/healthz
+curl http://localhost:8080/readyz
+cd web && npx tsc --noEmit && npm run build
+cd docs && npm run docs:build
+```
 
-## New API Endpoints
+For Kubernetes:
 
-| Endpoint | Description |
-|---|---|
-| `GET /api/v1/drives/{driveID}/telemetry` | Continuous telemetry readings for a drive |
-| `GET /api/v1/charging/{sessionID}/telemetry` | Continuous telemetry readings for a charge session |
-
-See [API Reference](api-reference.md) for full details.
-
-## Breaking Changes
-
-None. All changes are additive.
-
-## Configuration
-
-No new environment variables or configuration changes required. All features are enabled by default.
-
-### Optional: Nominatim
-
-Address resolution uses the public OpenStreetMap Nominatim API by default. For high-volume deployments, consider self-hosting Nominatim to avoid rate limits. Set `NOMINATIM_URL` environment variable to point to your instance.
-
-## Upgrade Steps
-
-1. Pull the latest image or build from source
-2. Start the application — migration 21 runs automatically
-3. New drives and charges will immediately benefit from enhanced tracking
-4. Existing historical data is preserved; new fields will populate on future sessions
+```bash
+helm lint helm/teslasync
+helm template teslasync helm/teslasync -f values.yaml
+kubectl rollout status deployment/teslasync-dev-api
+kubectl rollout status deployment/teslasync-dev-web
+```

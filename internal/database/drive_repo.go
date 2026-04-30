@@ -15,40 +15,26 @@ type DriveRepo struct {
 	db *DB
 }
 
-// driveColumns is the full SELECT column list for drives including all enhanced fields.
-const driveColumns = `id, vehicle_id, start_date, end_date, start_position_id, end_position_id,
-	start_address_id, end_address_id, distance, duration_min, start_range_km, end_range_km,
-	speed_max, power_max, power_min, start_battery_level, end_battery_level,
-	inside_temp_avg, outside_temp_avg,
-	start_odometer, end_odometer, speed_avg, speed_min,
-	start_rated_range_km, end_rated_range_km, rated_range_avg, rated_range_max, rated_range_min,
-	start_ideal_range_km, end_ideal_range_km, ideal_range_avg, ideal_range_max, ideal_range_min,
-	start_est_range_km, end_est_range_km, est_range_avg, est_range_max, est_range_min,
-	soc_start, soc_end, soc_avg, soc_max, soc_min,
-	usable_soc_start, usable_soc_end, usable_soc_avg, usable_soc_max, usable_soc_min,
-	elevation_start, elevation_end, elevation_gain, elevation_loss,
-	driver_temp_avg, passenger_temp_avg, battery_heater_on,
-	start_address, end_address,
-	start_latitude, start_longitude, end_latitude, end_longitude`
+// driveColumns is the full SELECT column list for drives.
+const driveColumns = `id, vehicle_id, start_ts, end_ts, duration_min, distance_mi,
+	start_address, end_address, start_lat, start_lon, end_lat, end_lon,
+	start_battery_pct, end_battery_pct,
+	energy_used_kwh, regen_kwh, avg_speed_mph, max_speed_mph, avg_power_kw,
+	outside_temp_avg_c, inside_temp_avg_c,
+	score, ended_status,
+	created_at, updated_at`
 
 // scanDrive scans all drive columns into a Drive model.
 func scanDrive(row interface{ Scan(dest ...any) error }) (*models.Drive, error) {
 	d := &models.Drive{}
 	err := row.Scan(
-		&d.ID, &d.VehicleID, &d.StartDate, &d.EndDate, &d.StartPositionID, &d.EndPositionID,
-		&d.StartAddressID, &d.EndAddressID, &d.Distance, &d.DurationMin, &d.StartRangeKm,
-		&d.EndRangeKm, &d.SpeedMax, &d.PowerMax, &d.PowerMin, &d.StartBatteryLvl,
-		&d.EndBatteryLvl, &d.InsideTempAvg, &d.OutsideTempAvg,
-		&d.StartOdometer, &d.EndOdometer, &d.SpeedAvg, &d.SpeedMin,
-		&d.StartRatedRangeKm, &d.EndRatedRangeKm, &d.RatedRangeAvg, &d.RatedRangeMax, &d.RatedRangeMin,
-		&d.StartIdealRangeKm, &d.EndIdealRangeKm, &d.IdealRangeAvg, &d.IdealRangeMax, &d.IdealRangeMin,
-		&d.StartEstRangeKm, &d.EndEstRangeKm, &d.EstRangeAvg, &d.EstRangeMax, &d.EstRangeMin,
-		&d.SocStart, &d.SocEnd, &d.SocAvg, &d.SocMax, &d.SocMin,
-		&d.UsableSocStart, &d.UsableSocEnd, &d.UsableSocAvg, &d.UsableSocMax, &d.UsableSocMin,
-		&d.ElevationStart, &d.ElevationEnd, &d.ElevationGain, &d.ElevationLoss,
-		&d.DriverTempAvg, &d.PassengerTempAvg, &d.BatteryHeaterOn,
-		&d.StartAddress, &d.EndAddress,
-		&d.StartLatitude, &d.StartLongitude, &d.EndLatitude, &d.EndLongitude,
+		&d.ID, &d.VehicleID, &d.StartTs, &d.EndTs, &d.DurationMin, &d.DistanceMi,
+		&d.StartAddress, &d.EndAddress, &d.StartLat, &d.StartLon, &d.EndLat, &d.EndLon,
+		&d.StartBatteryPct, &d.EndBatteryPct,
+		&d.EnergyUsedKwh, &d.RegenKwh, &d.AvgSpeedMph, &d.MaxSpeedMph, &d.AvgPowerKw,
+		&d.OutsideTempAvgC, &d.InsideTempAvgC,
+		&d.Score, &d.EndedStatus,
+		&d.CreatedAt, &d.UpdatedAt,
 	)
 	return d, err
 }
@@ -61,25 +47,25 @@ func (r *DriveRepo) Create(ctx context.Context, d *models.Drive) error {
 	ctx, span := tracing.DBSpan(ctx, "insert", "drives", tracing.VehicleID(d.VehicleID))
 	defer span.End()
 	query := `
-		INSERT INTO drives (vehicle_id, start_date, start_position_id, start_address_id, start_range_km, start_battery_level)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO drives (vehicle_id, start_ts, start_battery_pct)
+		VALUES ($1, $2, $3)
 		RETURNING id`
 	err := r.db.Pool.QueryRow(ctx, query,
-		d.VehicleID, d.StartDate, d.StartPositionID, d.StartAddressID, d.StartRangeKm, d.StartBatteryLvl,
+		d.VehicleID, d.StartTs, d.StartBatteryPct,
 	).Scan(&d.ID)
 	tracing.EndSpan(span, err)
 	return err
 }
 
-func (r *DriveRepo) Complete(ctx context.Context, id int64, endDate time.Time, endPosID, endAddrID *int64,
-	distance, duration float64, endRange *float64, endBattery *int, speedMax, powerMax, powerMin, insideAvg, outsideAvg *float64) error {
+func (r *DriveRepo) Complete(ctx context.Context, id int64, endTs time.Time,
+	distanceMi, duration float64, endBatteryPct *int16, maxSpeedMph, avgPowerKw, insideTempAvgC, outsideTempAvgC *float64) error {
 	query := `
-		UPDATE drives SET end_date=$2, end_position_id=$3, end_address_id=$4,
-		distance=$5, duration_min=$6, end_range_km=$7, end_battery_level=$8,
-		speed_max=$9, power_max=$10, power_min=$11, inside_temp_avg=$12, outside_temp_avg=$13
+		UPDATE drives SET end_ts=$2,
+		distance_mi=$3, duration_min=$4, end_battery_pct=$5,
+		max_speed_mph=$6, avg_power_kw=$7, inside_temp_avg_c=$8, outside_temp_avg_c=$9
 		WHERE id=$1`
-	_, err := r.db.Pool.Exec(ctx, query, id, endDate, endPosID, endAddrID,
-		distance, duration, endRange, endBattery, speedMax, powerMax, powerMin, insideAvg, outsideAvg)
+	_, err := r.db.Pool.Exec(ctx, query, id, endTs,
+		distanceMi, duration, endBatteryPct, maxSpeedMph, avgPowerKw, insideTempAvgC, outsideTempAvgC)
 	return err
 }
 
@@ -90,16 +76,16 @@ func (r *DriveRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit, of
 	args := []interface{}{vehicleID}
 	argIdx := 2
 	if !startTime.IsZero() {
-		query += fmt.Sprintf(" AND start_date >= $%d", argIdx)
+		query += fmt.Sprintf(" AND start_ts >= $%d", argIdx)
 		args = append(args, startTime)
 		argIdx++
 	}
 	if !endTime.IsZero() {
-		query += fmt.Sprintf(" AND start_date <= $%d", argIdx)
+		query += fmt.Sprintf(" AND start_ts <= $%d", argIdx)
 		args = append(args, endTime)
 		argIdx++
 	}
-	query += fmt.Sprintf(" ORDER BY start_date DESC LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
+	query += fmt.Sprintf(" ORDER BY start_ts DESC LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
 	args = append(args, limit, offset)
 	rows, err := r.db.Pool.Query(ctx, query, args...)
 	if err != nil {
@@ -132,8 +118,8 @@ func (r *DriveRepo) GetByID(ctx context.Context, id int64) (*models.Drive, error
 
 // GetStale returns drives that have no end_date and started before the cutoff time.
 func (r *DriveRepo) GetStale(ctx context.Context, cutoff time.Time) ([]*models.Drive, error) {
-	query := `SELECT ` + driveColumns + ` FROM drives WHERE end_date IS NULL AND start_date < $1
-		ORDER BY start_date DESC`
+	query := `SELECT ` + driveColumns + ` FROM drives WHERE end_ts IS NULL AND start_ts < $1
+		ORDER BY start_ts DESC`
 	rows, err := r.db.Pool.Query(ctx, query, cutoff)
 	if err != nil {
 		return nil, err
@@ -153,60 +139,26 @@ func (r *DriveRepo) GetStale(ctx context.Context, cutoff time.Time) ([]*models.D
 
 // drivePartialAllowed maps JSON field names to database columns for drive partial updates.
 var drivePartialAllowed = map[string]string{
-	"end_date":           "end_date",
-	"distance":           "distance",
+	"end_ts":             "end_ts",
+	"distance_mi":        "distance_mi",
 	"duration_min":       "duration_min",
-	"end_range_km":       "end_range_km",
-	"start_range_km":     "start_range_km",
-	"end_battery_level":  "end_battery_level",
-	"speed_max":          "speed_max",
-	"power_max":          "power_max",
-	"power_min":          "power_min",
-	"inside_temp_avg":    "inside_temp_avg",
-	"outside_temp_avg":   "outside_temp_avg",
-	"start_battery_level":"start_battery_level",
-	"start_odometer":       "start_odometer",
-	"end_odometer":         "end_odometer",
-	"speed_avg":            "speed_avg",
-	"speed_min":            "speed_min",
-	"start_rated_range_km": "start_rated_range_km",
-	"end_rated_range_km":   "end_rated_range_km",
-	"rated_range_avg":      "rated_range_avg",
-	"rated_range_max":      "rated_range_max",
-	"rated_range_min":      "rated_range_min",
-	"start_ideal_range_km": "start_ideal_range_km",
-	"end_ideal_range_km":   "end_ideal_range_km",
-	"ideal_range_avg":      "ideal_range_avg",
-	"ideal_range_max":      "ideal_range_max",
-	"ideal_range_min":      "ideal_range_min",
-	"start_est_range_km":   "start_est_range_km",
-	"end_est_range_km":     "end_est_range_km",
-	"est_range_avg":        "est_range_avg",
-	"est_range_max":        "est_range_max",
-	"est_range_min":        "est_range_min",
-	"soc_start":            "soc_start",
-	"soc_end":              "soc_end",
-	"soc_avg":              "soc_avg",
-	"soc_max":              "soc_max",
-	"soc_min":              "soc_min",
-	"usable_soc_start":     "usable_soc_start",
-	"usable_soc_end":       "usable_soc_end",
-	"usable_soc_avg":       "usable_soc_avg",
-	"usable_soc_max":       "usable_soc_max",
-	"usable_soc_min":       "usable_soc_min",
-	"elevation_start":      "elevation_start",
-	"elevation_end":        "elevation_end",
-	"elevation_gain":       "elevation_gain",
-	"elevation_loss":       "elevation_loss",
-	"driver_temp_avg":      "driver_temp_avg",
-	"passenger_temp_avg":   "passenger_temp_avg",
-	"battery_heater_on":    "battery_heater_on",
-	"start_address":        "start_address",
-	"end_address":          "end_address",
-	"start_latitude":       "start_latitude",
-	"start_longitude":      "start_longitude",
-	"end_latitude":         "end_latitude",
-	"end_longitude":        "end_longitude",
+	"end_battery_pct":    "end_battery_pct",
+	"start_battery_pct":  "start_battery_pct",
+	"max_speed_mph":      "max_speed_mph",
+	"avg_speed_mph":      "avg_speed_mph",
+	"avg_power_kw":       "avg_power_kw",
+	"inside_temp_avg_c":  "inside_temp_avg_c",
+	"outside_temp_avg_c": "outside_temp_avg_c",
+	"energy_used_kwh":    "energy_used_kwh",
+	"regen_kwh":          "regen_kwh",
+	"start_address":      "start_address",
+	"end_address":        "end_address",
+	"start_lat":          "start_lat",
+	"start_lon":          "start_lon",
+	"end_lat":            "end_lat",
+	"end_lon":            "end_lon",
+	"score":              "score",
+	"ended_status":       "ended_status",
 }
 
 // PartialUpdate updates only the provided fields on a drive.
@@ -226,15 +178,15 @@ func (r *DriveRepo) Delete(ctx context.Context, id int64) error {
 }
 
 // CompleteWithTx is like Complete but uses the provided transaction.
-func (r *DriveRepo) CompleteWithTx(ctx context.Context, tx DBTX, id int64, endDate time.Time, endPosID, endAddrID *int64,
-	distance, duration float64, endRange *float64, endBattery *int, speedMax, powerMax, powerMin, insideAvg, outsideAvg *float64) error {
+func (r *DriveRepo) CompleteWithTx(ctx context.Context, tx DBTX, id int64, endTs time.Time,
+	distanceMi, duration float64, endBatteryPct *int16, maxSpeedMph, avgPowerKw, insideTempAvgC, outsideTempAvgC *float64) error {
 	query := `
-		UPDATE drives SET end_date=$2, end_position_id=$3, end_address_id=$4,
-		distance=$5, duration_min=$6, end_range_km=$7, end_battery_level=$8,
-		speed_max=$9, power_max=$10, power_min=$11, inside_temp_avg=$12, outside_temp_avg=$13
+		UPDATE drives SET end_ts=$2,
+		distance_mi=$3, duration_min=$4, end_battery_pct=$5,
+		max_speed_mph=$6, avg_power_kw=$7, inside_temp_avg_c=$8, outside_temp_avg_c=$9
 		WHERE id=$1`
-	_, err := tx.Exec(ctx, query, id, endDate, endPosID, endAddrID,
-		distance, duration, endRange, endBattery, speedMax, powerMax, powerMin, insideAvg, outsideAvg)
+	_, err := tx.Exec(ctx, query, id, endTs,
+		distanceMi, duration, endBatteryPct, maxSpeedMph, avgPowerKw, insideTempAvgC, outsideTempAvgC)
 	return err
 }
 
@@ -242,8 +194,8 @@ func (r *DriveRepo) CompleteWithTx(ctx context.Context, tx DBTX, id int64, endDa
 // Used for backfilling addresses on startup for drives created before geocoding was added.
 func (r *DriveRepo) FindMissingAddresses(ctx context.Context) ([]*models.Drive, error) {
 	query := `SELECT ` + driveColumns + ` FROM drives
-		WHERE (start_latitude IS NOT NULL AND start_longitude IS NOT NULL AND (start_address IS NULL OR start_address = ''))
-		   OR (end_latitude IS NOT NULL AND end_longitude IS NOT NULL AND (end_address IS NULL OR end_address = ''))
+		WHERE (start_lat IS NOT NULL AND start_lon IS NOT NULL AND (start_address IS NULL OR start_address = ''))
+		   OR (end_lat IS NOT NULL AND end_lon IS NOT NULL AND (end_address IS NULL OR end_address = ''))
 		ORDER BY id DESC`
 	rows, err := r.db.Pool.Query(ctx, query)
 	if err != nil {

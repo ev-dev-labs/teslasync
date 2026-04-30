@@ -18,12 +18,20 @@ type ActionExecutor interface {
 	Execute(ctx context.Context, vehicleID *int64, config json.RawMessage) (json.RawMessage, error)
 }
 
+// TypedActionExecutor can execute typed CTI child payloads without reparsing
+// legacy action JSON. Existing JSON executors remain supported as adapters for
+// routes that still produce ActionConfig.Raw.
+type TypedActionExecutor interface {
+	ExecuteTyped(ctx context.Context, vehicleID *int64, payload any) (json.RawMessage, error)
+}
+
 // ActionConfig represents a single action step in a chain.
 // Type is extracted from the raw JSON; Raw holds the full JSON object
 // for the executor to parse action-specific fields.
 type ActionConfig struct {
-	Type string          `json:"type"`
-	Raw  json.RawMessage `json:"-"`
+	Type    string          `json:"type"`
+	Raw     json.RawMessage `json:"-"`
+	Payload any             `json:"-"`
 }
 
 // ActionResult captures the outcome of a single action execution within a chain.
@@ -197,7 +205,13 @@ func (c *ChainExecutor) Execute(
 		}
 
 		start := time.Now()
-		output, err := executor.Execute(ctx, vehicleID, action.Raw)
+		var output json.RawMessage
+		var err error
+		if typedExecutor, ok := executor.(TypedActionExecutor); ok && action.Payload != nil {
+			output, err = typedExecutor.ExecuteTyped(ctx, vehicleID, action.Payload)
+		} else {
+			output, err = executor.Execute(ctx, vehicleID, action.Raw)
+		}
 		durationMs := time.Since(start).Milliseconds()
 
 		result := ActionResult{

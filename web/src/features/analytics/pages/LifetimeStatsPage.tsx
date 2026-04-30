@@ -1,0 +1,434 @@
+import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  Car, Zap, DollarSign, Leaf, Globe, Moon,
+  Clock, Award, Flame, TreePine, Home,
+  Trophy, Gauge, BatteryCharging,
+} from 'lucide-react';
+
+import { PageContainer, Grid } from '@/components/layout';
+import { GlassPanel, Select } from '@/components/ui';
+import { StatCard, AnimatedNumber, ProgressRing } from '@/components/data-display';
+import { EmptyState } from '@/components/feedback';
+import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
+
+import { useLifetimeStats } from '@/api/hooks/useAnalytics';
+import { useVehicles } from '@/api/hooks/useVehicles';
+import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSettings } from '@/hooks/useSettings';
+import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
+import { AchievementBadge } from '../components/AchievementBadge';
+
+/* ── Helpers ──────────────────────────────────────────────────────── */
+
+function fmtDate(d: string | null): string {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString(undefined, {
+    year: 'numeric', month: 'short', day: 'numeric',
+  });
+}
+
+/* ── Page ─────────────────────────────────────────────────────────── */
+
+export default function LifetimeStatsPage() {
+  const { t } = useTranslation();
+  usePageTitle(t('lifetime.title', 'Lifetime Stats'));
+  const { convertDistance, distanceUnit, convertSpeed, speedUnit } = useSettings();
+
+  const [vehicleId, setVehicleId] = useState('');
+  const { data: vehicles } = useVehicles();
+  const { data, isLoading, error } = useLifetimeStats(vehicleId || undefined);
+
+  const vehicleOptions = useMemo(() => {
+    const opts = [{ value: '', label: t('lifetime.allVehicles', 'All Vehicles') }];
+    for (const v of vehicles ?? []) {
+      opts.push({ value: String(v.id), label: v.display_name || `Vehicle ${v.id}` });
+    }
+    return opts;
+  }, [vehicles, t]);
+
+  const stats = data;
+  const achievements = stats?.achievements ?? [];
+  const unlockedCount = achievements.filter(a => a.unlocked).length;
+
+  return (
+    <PageContainer
+      title={t('lifetime.title', 'Lifetime Stats')}
+      subtitle={t('lifetime.subtitle', 'Your all-time driving achievements and milestones')}
+      loading={isLoading}
+      error={error instanceof Error ? error : error ? new Error(String(error)) : null}
+    >
+      {/* Vehicle filter */}
+      {(vehicles ?? []).length > 1 && (
+        <div className="mb-6 max-w-xs">
+          <Select
+            options={vehicleOptions}
+            value={vehicleId}
+            onChange={(e) => setVehicleId(e.target.value)}
+          />
+        </div>
+      )}
+
+      {/* ── Hero Section ─────────────────────────────────────────── */}
+      <FadeIn>
+        <GlassPanel className="p-8 text-center">
+          <div className="flex items-center justify-center gap-3 mb-2">
+            <Car className="h-8 w-8 text-neon-cyan" />
+            <span className="text-4xl md:text-5xl font-bold text-white">
+              <AnimatedNumber
+                value={stats ? convertDistance(stats.total_distance_km) : 0}
+                duration={1.5}
+                decimals={0}
+              />
+            </span>
+            <span className="text-lg text-white/60">{distanceUnit}</span>
+          </div>
+          <p className="text-white/50 text-lg">
+            {t('lifetime.heroSubtitle', 'driven across {{drives}} drives', {
+              drives: fmtInt(stats?.total_drives ?? 0),
+            })}
+          </p>
+          {stats && stats.earth_circumferences > 0 && (
+            <p className="mt-2 text-neon-cyan/80 text-sm">
+              🌎 {t('lifetime.earthCompare', "That's {{x}}x around the Earth!", {
+                x: fmtNumber(stats.earth_circumferences, 2),
+              })}
+            </p>
+          )}
+          {stats && stats.ownership_days > 0 && (
+            <p className="mt-1 text-white/40 text-xs">
+              {t('lifetime.since', 'Tracking since {{date}} ({{days}} days)', {
+                date: fmtDate(stats.first_drive_date),
+                days: fmtInt(stats.ownership_days),
+              })}
+            </p>
+          )}
+        </GlassPanel>
+      </FadeIn>
+
+      {/* ── Key Stats Grid ───────────────────────────────────────── */}
+      <FadeIn delay={0.05}>
+        <Grid cols={{ default: 2, md: 4 }} gap={4} className="mt-6">
+          <StatCard
+            label={t('lifetime.totalDrives', 'Total Drives')}
+            value={fmtInt(stats?.total_drives ?? 0)}
+            icon={<Car className="h-4 w-4" />}
+            sublabel={`${fmtNumber(stats?.total_driving_hours ?? 0, 1)} ${t('lifetime.hours', 'hrs')}`}
+          />
+          <StatCard
+            label={t('lifetime.totalDistance', 'Total Distance')}
+            value={fmtNumber(stats ? convertDistance(stats.total_distance_km) : 0, 0)}
+            unit={distanceUnit}
+            icon={<Gauge className="h-4 w-4" />}
+          />
+          <StatCard
+            label={t('lifetime.totalEnergy', 'Total Energy')}
+            value={fmtNumber(stats?.total_energy_kwh ?? 0, 1)}
+            unit="kWh"
+            icon={<Zap className="h-4 w-4" />}
+            sublabel={`${fmtInt(stats?.total_charge_sessions ?? 0)} ${t('lifetime.sessions', 'sessions')}`}
+          />
+          <StatCard
+            label={t('lifetime.totalSavings', 'Total Savings')}
+            value={`$${fmtNumber(stats?.total_savings ?? 0, 0)}`}
+            icon={<DollarSign className="h-4 w-4" />}
+            sublabel={t('lifetime.vsGas', 'vs gasoline')}
+          />
+        </Grid>
+      </FadeIn>
+
+      {/* ── Fun Facts ────────────────────────────────────────────── */}
+      <FadeIn delay={0.1}>
+        <GlassPanel className="mt-6 p-6">
+          <h2 className="text-lg font-semibold text-white/90 mb-4 flex items-center gap-2">
+            <Flame className="h-5 w-5 text-orange-400" />
+            {t('lifetime.funFacts', 'Fun Facts')}
+          </h2>
+          {stats ? (
+            <Grid cols={{ default: 2, md: 4 }} gap={4}>
+              <FunFactCard
+                icon={<Globe className="h-6 w-6 text-blue-400" />}
+                value={fmtNumber(stats.earth_circumferences * 100, 1)}
+                unit="%"
+                label={t('lifetime.earthProgress', 'around the Earth')}
+              />
+              <FunFactCard
+                icon={<Moon className="h-6 w-6 text-gray-300" />}
+                value={fmtNumber(stats.moon_trips * 100, 2)}
+                unit="%"
+                label={t('lifetime.moonProgress', 'to the Moon')}
+              />
+              <FunFactCard
+                icon={<TreePine className="h-6 w-6 text-green-400" />}
+                value={fmtInt(stats.trees_equivalent)}
+                unit=""
+                label={t('lifetime.treesPlanted', 'trees equivalent planted')}
+              />
+              <FunFactCard
+                icon={<Home className="h-6 w-6 text-amber-400" />}
+                value={fmtNumber(stats.homes_equivalent_days, 1)}
+                unit={t('lifetime.days', 'days')}
+                label={t('lifetime.homesPowered', 'of home energy used')}
+              />
+            </Grid>
+          ) : (
+            <EmptyState message={t('lifetime.noData', 'No driving data yet')} />
+          )}
+        </GlassPanel>
+      </FadeIn>
+
+      {/* ── Savings Comparison ───────────────────────────────────── */}
+      <FadeIn delay={0.15}>
+        <GlassPanel className="mt-6 p-6">
+          <h2 className="text-lg font-semibold text-white/90 mb-4 flex items-center gap-2">
+            <DollarSign className="h-5 w-5 text-green-400" />
+            {t('lifetime.savingsComparison', 'Savings vs Gasoline')}
+          </h2>
+          {stats && stats.gas_equivalent_cost > 0 ? (
+            <SavingsBar
+              evCost={stats.total_charging_cost}
+              gasCost={stats.gas_equivalent_cost}
+              savings={stats.total_savings}
+              co2Kg={stats.co2_offset_kg}
+            />
+          ) : (
+            <EmptyState message={t('lifetime.noSavingsData', 'Complete some drives to see savings')} />
+          )}
+        </GlassPanel>
+      </FadeIn>
+
+      {/* ── Environmental Impact ─────────────────────────────────── */}
+      <FadeIn delay={0.2}>
+        <GlassPanel className="mt-6 p-6">
+          <h2 className="text-lg font-semibold text-white/90 mb-4 flex items-center gap-2">
+            <Leaf className="h-5 w-5 text-green-400" />
+            {t('lifetime.environmentalImpact', 'Environmental Impact')}
+          </h2>
+          {stats ? (
+            <Grid cols={{ default: 1, md: 3 }} gap={4}>
+              <div className="flex items-center gap-4">
+                <ProgressRing
+                  value={Math.min((stats.co2_offset_kg / 1000) * 100, 100)}
+                  size={64}
+                  strokeWidth={5}
+                  color="#22c55e"
+                />
+                <div>
+                  <p className="text-2xl font-bold text-white">
+                    <AnimatedNumber value={stats.co2_offset_kg} decimals={0} suffix=" kg" />
+                  </p>
+                  <p className="text-sm text-white/50">{t('lifetime.co2Offset', 'CO₂ offset')}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-4xl">🌳</span>
+                <div>
+                  <p className="text-2xl font-bold text-white">{fmtInt(stats.trees_equivalent)}</p>
+                  <p className="text-sm text-white/50">{t('lifetime.treesEquiv', 'trees equivalent')}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-4xl">☕</span>
+                <div>
+                  <p className="text-2xl font-bold text-white">
+                    {fmtInt(Math.round(stats.total_savings / 5))}
+                  </p>
+                  <p className="text-sm text-white/50">{t('lifetime.coffeesEquiv', 'cups of coffee saved')}</p>
+                </div>
+              </div>
+            </Grid>
+          ) : (
+            <EmptyState message={t('lifetime.noData', 'No driving data yet')} />
+          )}
+        </GlassPanel>
+      </FadeIn>
+
+      {/* ── Personal Records ─────────────────────────────────────── */}
+      <FadeIn delay={0.25}>
+        <GlassPanel className="mt-6 p-6">
+          <h2 className="text-lg font-semibold text-white/90 mb-4 flex items-center gap-2">
+            <Award className="h-5 w-5 text-yellow-400" />
+            {t('lifetime.personalRecords', 'Personal Records')}
+          </h2>
+          {stats ? (
+            <Grid cols={{ default: 1, md: 3 }} gap={4}>
+              <RecordCard
+                title={t('lifetime.longestDrive', 'Longest Drive')}
+                value={`${fmtNumber(convertDistance(stats.longest_drive_record?.value ?? 0), 1)} ${distanceUnit}`}
+                date={stats.longest_drive_record?.date}
+                icon={<Car className="h-5 w-5 text-cyan-400" />}
+              />
+              <RecordCard
+                title={t('lifetime.highestSpeed', 'Highest Speed')}
+                value={`${fmtNumber(convertSpeed(stats.highest_speed_record?.value ?? 0), 0)} ${speedUnit}`}
+                date={stats.highest_speed_record?.date}
+                icon={<Gauge className="h-5 w-5 text-red-400" />}
+              />
+              <RecordCard
+                title={t('lifetime.biggestCharge', 'Biggest Charge')}
+                value={`${fmtNumber(stats.max_charge_record?.value ?? 0, 1)} kWh`}
+                date={stats.max_charge_record?.date}
+                icon={<BatteryCharging className="h-5 w-5 text-green-400" />}
+              />
+            </Grid>
+          ) : (
+            <EmptyState message={t('lifetime.noData', 'No driving data yet')} />
+          )}
+        </GlassPanel>
+      </FadeIn>
+
+      {/* ── Activity Summary ─────────────────────────────────────── */}
+      <FadeIn delay={0.3}>
+        <GlassPanel className="mt-6 p-6">
+          <h2 className="text-lg font-semibold text-white/90 mb-4 flex items-center gap-2">
+            <Clock className="h-5 w-5 text-sky-400" />
+            {t('lifetime.activitySummary', 'Activity Summary')}
+          </h2>
+          {stats ? (
+            <Grid cols={{ default: 2, md: 4 }} gap={4}>
+              <MiniStat
+                label={t('lifetime.mostActiveDay', 'Most Active Day')}
+                value={stats.most_active_day_of_week || '—'}
+              />
+              <MiniStat
+                label={t('lifetime.mostActiveHour', 'Peak Hour')}
+                value={stats.most_active_hour != null
+                  ? `${stats.most_active_hour}:00`
+                  : '—'}
+              />
+              <MiniStat
+                label={t('lifetime.daysOnRoad', 'Days on Road')}
+                value={fmtNumber(stats.days_on_road, 1)}
+              />
+              <MiniStat
+                label={t('lifetime.avgEfficiency', 'Avg Efficiency')}
+                value={stats.avg_efficiency_wh_km > 0
+                  ? `${fmtNumber(stats.avg_efficiency_wh_km, 0)} Wh/km`
+                  : '—'}
+              />
+            </Grid>
+          ) : (
+            <EmptyState message={t('lifetime.noData', 'No driving data yet')} />
+          )}
+        </GlassPanel>
+      </FadeIn>
+
+      {/* ── Achievement Gallery ──────────────────────────────────── */}
+      <FadeIn delay={0.35}>
+        <GlassPanel className="mt-6 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-white/90 flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-yellow-400" />
+              {t('lifetime.achievements', 'Achievements')}
+            </h2>
+            <span className="text-sm text-white/40">
+              {unlockedCount}/{achievements.length} {t('lifetime.unlocked', 'unlocked')}
+            </span>
+          </div>
+          {achievements.length > 0 ? (
+            <StaggerContainer className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {achievements.map(a => (
+                <StaggerItem key={a.id}>
+                  <AchievementBadge achievement={a} size="md" />
+                </StaggerItem>
+              ))}
+            </StaggerContainer>
+          ) : (
+            <EmptyState message={t('lifetime.noAchievements', 'Start driving to unlock achievements')} />
+          )}
+        </GlassPanel>
+      </FadeIn>
+    </PageContainer>
+  );
+}
+
+/* ── Sub-components ───────────────────────────────────────────────── */
+
+function FunFactCard({ icon, value, unit, label }: {
+  icon: React.ReactNode; value: string; unit: string; label: string;
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-lg bg-white/[0.03] p-3">
+      {icon}
+      <div>
+        <p className="text-xl font-bold text-white">
+          {value}<span className="text-sm text-white/50 ml-1">{unit}</span>
+        </p>
+        <p className="text-xs text-white/40">{label}</p>
+      </div>
+    </div>
+  );
+}
+
+function SavingsBar({ evCost, gasCost, savings, co2Kg }: {
+  evCost: number; gasCost: number; savings: number; co2Kg: number;
+}) {
+  const { t } = useTranslation();
+  const maxCost = Math.max(evCost, gasCost, 1);
+  const evPct = Math.round((evCost / maxCost) * 100);
+  const gasPct = Math.round((gasCost / maxCost) * 100);
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <div className="flex justify-between text-sm mb-1">
+          <span className="text-green-400">{t('lifetime.electricCost', 'Electric Cost')}</span>
+          <span className="text-white/70">${fmtNumber(evCost, 2)}</span>
+        </div>
+        <div className="h-6 rounded-full bg-white/[0.05] overflow-hidden">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-green-500 to-emerald-400 transition-all duration-1000"
+            style={{ width: `${evPct}%` }}
+          />
+        </div>
+      </div>
+      <div>
+        <div className="flex justify-between text-sm mb-1">
+          <span className="text-red-400">{t('lifetime.gasCost', 'Gasoline Equivalent')}</span>
+          <span className="text-white/70">${fmtNumber(gasCost, 2)}</span>
+        </div>
+        <div className="h-6 rounded-full bg-white/[0.05] overflow-hidden">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-red-500 to-orange-400 transition-all duration-1000"
+            style={{ width: `${gasPct}%` }}
+          />
+        </div>
+      </div>
+      <div className="flex items-center justify-between pt-2 border-t border-white/[0.06]">
+        <span className="text-green-400 font-semibold text-lg">
+          {t('lifetime.youSaved', 'You saved')} ${fmtNumber(savings, 2)}
+        </span>
+        <span className="text-sm text-white/40">
+          {fmtNumber(co2Kg, 0)} kg CO₂ {t('lifetime.avoided', 'avoided')}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function RecordCard({ title, value, date, icon }: {
+  title: string; value: string; date: string | null | undefined; icon: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-4 rounded-lg bg-white/[0.03] p-4">
+      {icon}
+      <div>
+        <p className="text-xs text-white/50">{title}</p>
+        <p className="text-lg font-bold text-white">{value}</p>
+        {date && (
+          <p className="text-xs text-white/30">{fmtDate(date)}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg bg-white/[0.03] p-3 text-center">
+      <p className="text-xs text-white/50 mb-1">{label}</p>
+      <p className="text-lg font-semibold text-white">{value}</p>
+    </div>
+  );
+}

@@ -34,9 +34,9 @@ func (m *mockVariableRepo) Set(_ context.Context, key, value string, _ *int64) e
 	return nil
 }
 
-// --- ParseSetVariableConfig Tests ---
+// --- DecodeSetVariableSpec Tests ---
 
-func TestParseSetVariableConfig(t *testing.T) {
+func TestDecodeSetVariableSpec(t *testing.T) {
 	tests := []struct {
 		name      string
 		input     json.RawMessage
@@ -101,7 +101,7 @@ func TestParseSetVariableConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg, err := ParseSetVariableConfig(tt.input)
+			cfg, err := DecodeSetVariableSpec(tt.input)
 			if tt.wantErr != "" {
 				if err == nil {
 					t.Fatalf("expected error containing %q, got nil", tt.wantErr)
@@ -199,8 +199,8 @@ func TestSetVariableExecutor_Execute(t *testing.T) {
 	t.Run("passes vehicleID through", func(t *testing.T) {
 		var capturedVehicleID *int64
 		repo := &trackingVariableRepo{
-			inner:       newMockVariableRepo(),
-			onSet:       func(_ string, _ string, vid *int64) { capturedVehicleID = vid },
+			inner: newMockVariableRepo(),
+			onSet: func(_ string, _ string, vid *int64) { capturedVehicleID = vid },
 		}
 		exec := NewSetVariableExecutor(repo)
 

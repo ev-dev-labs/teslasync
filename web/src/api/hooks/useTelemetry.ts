@@ -1,10 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
+import { INTERVALS, STALE_TIMES } from '@/lib/constants';
+import { useToast } from '@/components/feedback/Toast';
 import type { SignalHistoryResponse, SignalStats, TelemetryStatus, VehicleTelemetry } from '@/types/telemetry';
+import type { SignalCatalogEntry, SignalObservation } from '@/types/signals';
 
 export const telemetryKeys = {
   signals: (vehicleId: number) => ['signals', vehicleId] as const,
+  liveSignals: (vehicleId?: number) => ['live-signals', vehicleId] as const,
   signalStats: (vehicleId: number) => ['signal-stats', vehicleId] as const,
   signalHistory: (vehicleId: number, signal: string, hours: number) => ['signal-history', vehicleId, signal, hours] as const,
   signalLog: (vehicleId: number, signal: string, hours: number, page: number) => ['signal-log', vehicleId, signal, hours, page] as const,
@@ -12,6 +16,16 @@ export const telemetryKeys = {
   signalGaps: (vehicleId: number) => ['signal-gaps', vehicleId] as const,
   mqttStatus: ['mqtt-status'] as const,
 };
+
+export interface VehicleLiveSignal {
+  value: unknown;
+  timestamp?: string;
+}
+
+export interface VehicleLiveSignalsResponse {
+  vehicle_id?: number;
+  signals?: Record<string, VehicleLiveSignal | unknown>;
+}
 
 export function useSignals(vehicleId: number) {
   return useQuery({
@@ -23,8 +37,22 @@ export function useSignals(vehicleId: number) {
       return (resp as { signals?: string[] }).signals ?? [];
     },
     enabled: vehicleId > 0,
-    staleTime: 60_000,
+    staleTime: STALE_TIMES.STANDARD,
     select: safeArray,
+  });
+}
+
+export function getVehicleLiveSignals(vehicleId: number) {
+  return request<VehicleLiveSignalsResponse>(`/signals/${vehicleId}/live`);
+}
+
+export function useVehicleLiveSignals(vehicleId?: number) {
+  return useQuery({
+    queryKey: telemetryKeys.liveSignals(vehicleId),
+    queryFn: () => getVehicleLiveSignals(vehicleId ?? 0),
+    enabled: !!vehicleId,
+    staleTime: STALE_TIMES.REALTIME,
+    retry: 1,
   });
 }
 
@@ -41,7 +69,7 @@ export function useSignalHistory(vehicleId: number, signal: string, hours: numbe
     queryKey: telemetryKeys.signalHistory(vehicleId, signal, hours),
     queryFn: () => request<SignalHistoryResponse>(`/signals/${vehicleId}/${signal}/history?hours=${hours}`),
     enabled: vehicleId > 0 && !!signal,
-    refetchInterval: 30_000,
+    refetchInterval: INTERVALS.STANDARD,
   });
 }
 
@@ -73,7 +101,7 @@ export function useSignalGaps(vehicleId: number) {
       return res.signals ?? {};
     },
     enabled: vehicleId > 0,
-    refetchInterval: 5_000,
+    refetchInterval: INTERVALS.REALTIME,
   });
 }
 
@@ -104,7 +132,36 @@ export function useMQTTStatus() {
         vehicles: vehiclesArr,
       } as TelemetryStatus & { vehicles: VehicleTelemetry[] };
     },
-    refetchInterval: 5_000,
+    refetchInterval: INTERVALS.REALTIME,
+  });
+}
+
+// ─── Typed Signal Hooks (Phase 6 endpoints) ──────────────────────────────────
+
+export function useSignalCatalog() {
+  return useQuery({
+    queryKey: ['signal-catalog'],
+    queryFn: () => request<SignalCatalogEntry[]>('/signals/catalog'),
+    staleTime: STALE_TIMES.SLOW,
+  });
+}
+
+export function useSignalObservations(
+  vehicleId: number | string | undefined,
+  opts?: { signal_name?: string; since?: string; until?: string; limit?: number },
+) {
+  const params = new URLSearchParams();
+  if (vehicleId != null) params.set('vehicle_id', String(vehicleId));
+  if (opts?.signal_name) params.set('signal_name', opts.signal_name);
+  if (opts?.since) params.set('since', opts.since);
+  if (opts?.until) params.set('until', opts.until);
+  if (opts?.limit) params.set('limit', String(opts.limit));
+
+  return useQuery({
+    queryKey: ['signal-observations', vehicleId, opts],
+    queryFn: () => request<SignalObservation[]>(`/signals/observations?${params}`),
+    enabled: !!vehicleId,
+    staleTime: STALE_TIMES.REALTIME,
   });
 }
 
@@ -135,7 +192,7 @@ export function useFleetTelemetryErrorVINs() {
   return useQuery({
     queryKey: ['fleet-telemetry-error-vins'],
     queryFn: () => request<FleetTelemetryErrorVIN[]>('/tesla/fleet-telemetry/error-vins'),
-    staleTime: 60_000,
+    staleTime: STALE_TIMES.STANDARD,
   });
 }
 
@@ -146,22 +203,36 @@ export function useFleetTelemetryErrors(vin?: string) {
       request<FleetTelemetryError[]>(
         `/tesla/fleet-telemetry/errors${vin ? `?vin=${vin}` : ''}`
       ),
-    staleTime: 60_000,
+    staleTime: STALE_TIMES.STANDARD,
   });
 }
 
 export function useRefreshFleetTelemetryErrorVINs() {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: () => request('/tesla/fleet-telemetry/error-vins/refresh', { method: 'POST' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['fleet-telemetry-error-vins'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['fleet-telemetry-error-vins'] });
+      toast.success('Telemetry error VINs refreshed');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to refresh error VINs: ${err.message}`);
+    },
   });
 }
 
 export function useRefreshFleetTelemetryErrors() {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: () => request('/tesla/fleet-telemetry/errors/refresh', { method: 'POST' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['fleet-telemetry-errors'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['fleet-telemetry-errors'] });
+      toast.success('Telemetry errors refreshed');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to refresh telemetry errors: ${err.message}`);
+    },
   });
 }

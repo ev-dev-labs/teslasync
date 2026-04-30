@@ -34,17 +34,17 @@ import { request } from '@/api/client';
 
 interface MediaSnapshot {
   id: number;
-  vehicle_id: number;
-  playback_status: string;
-  playback_source: string;
-  now_playing_title: string;
-  now_playing_artist: string;
-  now_playing_album: string;
-  now_playing_station: string;
-  now_playing_elapsed: number;
-  now_playing_duration: number;
-  audio_volume: number;
-  audio_volume_max: number;
+  playback_status?: string;
+  playback_source?: string;
+  now_playing_title?: string;
+  now_playing_artist?: string;
+  now_playing_album?: string;
+  now_playing_station?: string;
+  now_playing_elapsed?: number;
+  now_playing_duration?: number;
+  audio_volume?: number;
+  audio_volume_max?: number;
+  audio_volume_increment?: number;
   created_at: string;
 }
 
@@ -72,9 +72,10 @@ const TIME_RANGES = [
 
 /* ── Helpers ───────────────────────────────────────────────────── */
 
-function fmtPlayTime(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
+function fmtPlayTime(ms: number): string {
+  const totalSec = Math.floor(ms / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
@@ -172,7 +173,7 @@ export default function MediaPlayerPage() {
       Object.entries(sources).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '--';
 
     const avgVol =
-      filtered.reduce((sum, s) => sum + s.audio_volume, 0) / filtered.length;
+      filtered.reduce((sum, s) => sum + (s.audio_volume ?? 0), 0) / filtered.length;
 
     return { uniqueTracks: titles.size, topSource, avgVolume: avgVol };
   }, [filtered]);
@@ -186,7 +187,7 @@ export default function MediaPlayerPage() {
     );
     return sorted.map((s) => ({
       time: formatDateTime(s.created_at),
-      volume: s.audio_volume,
+      volume: s.audio_volume ?? 0,
     }));
   }, [filtered]);
 
@@ -248,7 +249,7 @@ export default function MediaPlayerPage() {
         sortable: true,
         render: (row) => (
           <span className="flex items-center gap-1.5">
-            {sourceIcon(row.playback_source)}
+            {sourceIcon(row.playback_source ?? '')}
             <span className="text-gray-300">{row.playback_source || '--'}</span>
           </span>
         ),
@@ -259,7 +260,7 @@ export default function MediaPlayerPage() {
         sortable: true,
         render: (row) => (
           <span className="text-cyan-400">
-            {row.audio_volume}/{row.audio_volume_max}
+            {row.audio_volume ?? '—'}/{row.audio_volume_max ?? '—'}
           </span>
         ),
       },
@@ -268,8 +269,8 @@ export default function MediaPlayerPage() {
         header: t('Status'),
         sortable: true,
         render: (row) => (
-          <Badge variant={statusVariant(row.playback_status)} size="sm">
-            {statusLabel(row.playback_status, t)}
+          <Badge variant={statusVariant(row.playback_status ?? '')} size="sm">
+            {statusLabel(row.playback_status ?? '', t)}
           </Badge>
         ),
       },
@@ -309,7 +310,7 @@ export default function MediaPlayerPage() {
   const isPlaying = latest?.playback_status?.toLowerCase().includes('playing');
   const progressPct =
     latest?.now_playing_duration && latest.now_playing_duration > 0
-      ? (latest.now_playing_elapsed / latest.now_playing_duration) * 100
+      ? ((latest.now_playing_elapsed ?? 0) / latest.now_playing_duration) * 100
       : 0;
 
   /* ── Render ───────────────────────────────────────────────── */
@@ -408,7 +409,7 @@ export default function MediaPlayerPage() {
               {latest?.now_playing_duration ? (
                 <div className="flex items-center gap-2 text-xs text-gray-400 pt-1">
                   <span className="tabular-nums">
-                    {fmtPlayTime(latest.now_playing_elapsed)}
+                    {fmtPlayTime(latest.now_playing_elapsed ?? 0)}
                   </span>
                   <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
                     <div
@@ -428,7 +429,7 @@ export default function MediaPlayerPage() {
 
       {/* ── Volume + Stats row ───────────────────────────────── */}
       <FadeIn delay={0.05}>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <GlassPanel className="flex items-center justify-center p-4">
             <RadialGauge
               value={latest?.audio_volume ?? 0}
@@ -459,6 +460,17 @@ export default function MediaPlayerPage() {
             value={fmtInt(stats.avgVolume)}
             icon={<Volume2 className="h-5 w-5" />}
             color="cyan"
+          />
+
+          <MetricCard
+            label={t('Volume Step', 'Volume Step')}
+            value={
+              latest?.audio_volume_increment != null
+                ? latest.audio_volume_increment.toFixed(2)
+                : '—'
+            }
+            icon={<Volume2 className="h-5 w-5" />}
+            color="purple"
           />
         </div>
       </FadeIn>

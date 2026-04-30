@@ -63,8 +63,8 @@ func NewSetVariableExecutor(repo VariableRepo) *SetVariableExecutor {
 	}
 }
 
-// ParseSetVariableConfig unmarshals and validates a set_variable action config.
-func ParseSetVariableConfig(raw json.RawMessage) (*SetVariableConfig, error) {
+// DecodeSetVariableSpec unmarshals and validates a set_variable action config.
+func DecodeSetVariableSpec(raw json.RawMessage) (*SetVariableConfig, error) {
 	if len(raw) == 0 {
 		return nil, fmt.Errorf("action config is empty")
 	}
@@ -97,10 +97,12 @@ func ParseSetVariableConfig(raw json.RawMessage) (*SetVariableConfig, error) {
 	return &cfg, nil
 }
 
+var ParseSetVariableConfig = DecodeSetVariableSpec
+
 // Execute resolves template placeholders in the value, stores the variable,
 // and returns a JSON result with the resolved value and previous value.
 func (e *SetVariableExecutor) Execute(ctx context.Context, vehicleID *int64, raw json.RawMessage) (json.RawMessage, error) {
-	cfg, err := ParseSetVariableConfig(raw)
+	cfg, err := DecodeSetVariableSpec(raw)
 	if err != nil {
 		return nil, fmt.Errorf("invalid set_variable action config: %w", err)
 	}

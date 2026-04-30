@@ -38,15 +38,15 @@ func (h *PeriodStatsHandler) Get(w http.ResponseWriter, r *http.Request) {
 	// Build date filter
 	dateFilter := ""
 	if days > 0 {
-		dateFilter = " AND start_date > NOW() - interval '" + strconv.Itoa(days) + " days'"
+		dateFilter = " AND start_ts > NOW() - interval '" + strconv.Itoa(days) + " days'"
 	}
 
 	// Total distance & drives
 	var totalDist, totalDurMin *float64
 	var totalDrives int
 	err = h.db.Pool.QueryRow(ctx,
-		`SELECT COUNT(*), COALESCE(SUM(distance), 0), COALESCE(SUM(duration_min), 0)
-		 FROM drives WHERE vehicle_id = $1 AND end_date IS NOT NULL`+dateFilter, vehicleID,
+		`SELECT COUNT(*), COALESCE(SUM(distance_mi), 0), COALESCE(SUM(duration_min), 0)
+		 FROM drives WHERE vehicle_id = $1 AND end_ts IS NOT NULL`+dateFilter, vehicleID,
 	).Scan(&totalDrives, &totalDist, &totalDurMin)
 	if err != nil {
 		log.Error().Err(err).Msg("period-stats: drives query")
@@ -58,7 +58,7 @@ func (h *PeriodStatsHandler) Get(w http.ResponseWriter, r *http.Request) {
 	var energyUsed, totalCost *float64
 	chargeDateFilter := dateFilter
 	err = h.db.Pool.QueryRow(ctx,
-		`SELECT COALESCE(SUM(charge_energy_added), 0), COALESCE(SUM(cost), 0)
+		`SELECT COALESCE(SUM(energy_added_kwh), 0), COALESCE(SUM(cost), 0)
 		 FROM charging_sessions WHERE vehicle_id = $1`+chargeDateFilter, vehicleID,
 	).Scan(&energyUsed, &totalCost)
 	if err != nil {

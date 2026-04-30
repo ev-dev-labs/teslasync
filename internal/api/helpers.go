@@ -1,13 +1,17 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // globalErrorTracker is set during router initialization.
@@ -119,4 +123,52 @@ func parseDateRange(r *http.Request) (startTime, endTime time.Time) {
 		}
 	}
 	return
+}
+
+// EstimateBatteryCapacityKWh returns the best-effort battery capacity in kWh
+// and a source string indicating how the estimate was derived.
+// Uses VIN position 8 decode first, falls back to model name, then 75 kWh default.
+// This is an ESTIMATE — Tesla does not expose exact usable capacity via API.
+func EstimateBatteryCapacityKWh(vin string, model string) (float64, string) {
+	// VIN position 8 (0-indexed 7) for Tesla encodes drivetrain/battery:
+	//   E/F = Standard Range (~55-60 kWh usable)
+	//   K/L/M = Long Range (~75-82 kWh usable)
+	//   S/A = Model S/X Long Range / Plaid (~100 kWh usable)
+	//   P = Performance (~100 kWh usable)
+	if len(vin) >= 8 {
+		switch vin[7] {
+		case 'E', 'F':
+			return 60.0, "vin_estimate"
+		case 'K', 'L', 'M':
+			return 75.0, "vin_estimate"
+		case 'S', 'A':
+			return 100.0, "vin_estimate"
+		case 'P':
+			return 100.0, "vin_estimate"
+		}
+	}
+	// Fallback: model name heuristic
+	m := strings.ToLower(model)
+	if strings.Contains(m, "model s") || strings.Contains(m, "model x") {
+		return 100.0, "model_estimate"
+	}
+	return 75.0, "default"
+}
+
+// lookupVehicleCapacity fetches VIN and model for a vehicle ID and estimates
+// battery capacity. Falls back to 75 kWh / "default" on any lookup error.
+func lookupVehicleCapacity(ctx context.Context, db *database.DB, vehicleID int64) (float64, string) {
+	var vin string
+	var model *string
+	err := db.Pool.QueryRow(ctx,
+		`SELECT vin, model FROM vehicles WHERE id = $1`, vehicleID,
+	).Scan(&vin, &model)
+	if err != nil {
+		return 75.0, "default"
+	}
+	m := ""
+	if model != nil {
+		m = *model
+	}
+	return EstimateBatteryCapacityKWh(vin, m)
 }

@@ -120,6 +120,11 @@ const (
 	PrefixSpeedAssist             = "SpeedAssistLevel"
 	PrefixDriveInverterState      = "DriveInverterState"
 	PrefixTonneauPosition         = "TonneauPositionState"
+	PrefixTonneauTentMode         = "TonneauTentMode"
 	PrefixPowershareState         = "PowershareState"
+	PrefixPowershareStopReason    = "PowershareStopReason"
+	PrefixPowershareType          = "PowershareType"
 	PrefixTurnSignal              = "TurnSignalState"
+	PrefixScheduledChargingMode   = "ScheduledChargingMode"
+	PrefixHvacAutoMode            = "HvacAutoModeState"
 )

@@ -1,173 +1,50 @@
-# TeslaSync API Reference — Drive & Charging Enhancements
+# API Reference
 
-## Drive Endpoints
+This page is a compact reference for the public HTTP surface. The source of truth is `internal/api/router.go`; frontend hooks live under `web/src/api/hooks/` and call paths without the `/api/v1` prefix because the request client adds it.
 
-### GET /api/v1/drives/{driveID}/telemetry
+## Base paths
 
-Returns continuous telemetry readings recorded during a drive session.
-
-**Response**: Array of `DriveTelemetryReading` objects with fields:
-
-| Category | Fields |
-|---|---|
-| Position | `latitude`, `longitude`, `elevation`, `heading`, `odometer` |
-| Motion | `speed`, `power` |
-| Battery | `battery_level`, `soc`, `usable_soc` |
-| Range | `rated_range`, `ideal_range`, `est_range` |
-| Temperature | `inside_temp`, `outside_temp`, `driver_temp`, `passenger_temp` |
-| Climate | `fan_status`, `is_climate_on` |
-| Tires | `tire_pressure_fl`, `tire_pressure_fr`, `tire_pressure_rl`, `tire_pressure_rr` |
-| Battery Heater | `battery_heater_on` |
-| Timestamp | `created_at` |
-
-**Example Request:**
-
-```
-GET /api/v1/drives/42/telemetry
-```
-
-**Example Response:**
-
-```json
-[
-  {
-    "latitude": 37.7749,
-    "longitude": -122.4194,
-    "elevation": 16.0,
-    "heading": 45.2,
-    "odometer": 12345.6,
-    "speed": 35.5,
-    "power": 15.2,
-    "battery_level": 72.0,
-    "soc": 72.0,
-    "usable_soc": 71.5,
-    "rated_range": 210.5,
-    "ideal_range": 225.0,
-    "est_range": 198.3,
-    "inside_temp": 22.0,
-    "outside_temp": 18.5,
-    "driver_temp": 22.0,
-    "passenger_temp": 21.5,
-    "fan_status": 3,
-    "is_climate_on": true,
-    "tire_pressure_fl": 2.9,
-    "tire_pressure_fr": 2.9,
-    "tire_pressure_rl": 3.0,
-    "tire_pressure_rr": 3.0,
-    "battery_heater_on": false,
-    "created_at": "2025-07-18T10:30:00Z"
-  }
-]
-```
-
----
-
-### Enhanced Drive Object
-
-Drives now include these additional fields beyond the base drive record:
-
-| Category | Fields | Description |
+| Path | Purpose | Auth |
 |---|---|---|
-| Odometer | `start_odometer`, `end_odometer` | Odometer readings at drive start/end |
-| Speed Stats | `speed_avg`, `speed_min` | Average and minimum speed (`speed_max` was existing) |
-| Rated Range | `start_rated_range`, `end_rated_range`, `rated_range_avg`, `rated_range_max`, `rated_range_min` | Rated range statistics |
-| Ideal Range | `start_ideal_range`, `end_ideal_range`, `ideal_range_avg`, `ideal_range_max`, `ideal_range_min` | Ideal range statistics |
-| Est. Range | `start_est_range`, `end_est_range`, `est_range_avg`, `est_range_max`, `est_range_min` | Estimated range statistics |
-| SOC | `soc_start`, `soc_end`, `soc_avg`, `soc_max`, `soc_min` | State of charge statistics |
-| Usable SOC | `usable_soc_start`, `usable_soc_end`, `usable_soc_avg`, `usable_soc_max`, `usable_soc_min` | Usable SOC statistics |
-| Elevation | `elevation_start`, `elevation_end`, `elevation_gain`, `elevation_loss` | Elevation tracking |
-| Temperature | `driver_temp_avg`, `passenger_temp_avg` | Driver/passenger temp averages (`inside_temp_avg`, `outside_temp_avg` were existing) |
-| Battery Heater | `battery_heater_on` | Battery heater status during drive |
-| Address | `start_address`, `end_address` | Reverse geocoded via Nominatim |
-| Coordinates | `start_latitude`, `start_longitude`, `end_latitude`, `end_longitude` | Start/end coordinates |
+| `/healthz` | Liveness probe | Public |
+| `/readyz` | Dependency readiness probe | Public |
+| `/metrics` | Prometheus metrics | Usually internal only |
+| `/internal/flush` | Kubernetes PreStop flush hook | Internal only |
+| `/api/v1/*` | Main API | ForwardAuth/header protected when configured |
+| `/api/v1/share/{token}` | Public shared drive report | Token + rate limit |
+| `/api/v1/automations/webhook/{token}` | Public automation webhook trigger | Token + rate limit |
 
----
+## Main resource groups
 
-## Charging Endpoints
-
-### GET /api/v1/charging/{sessionID}/telemetry
-
-Returns continuous telemetry readings recorded during a charging session.
-
-**Response**: Array of `ChargeTelemetryReading` objects with fields:
-
-| Category | Fields |
+| Group | Examples |
 |---|---|
-| Battery | `battery_level`, `soc` |
-| Power | `power_kw`, `voltage`, `current_amps`, `phases` |
-| Energy | `energy_added` |
-| Range | `rated_range`, `ideal_range`, `est_range` |
-| Temperature | `inside_temp`, `outside_temp`, `battery_temp` |
-| Location | `latitude`, `longitude` |
-| Charge Rate | `charge_rate` |
-| Timestamp | `created_at` |
+| Auth | `/auth/login`, `/auth/url`, `/auth/callback`, `/auth/status`, `/auth/refresh`, `/auth/disconnect` |
+| Vehicles | `/vehicles`, `/vehicles/{vehicle_id}`, `/vehicles/{vehicle_id}/state`, `/wake`, `/command`, `/drivers`, `/invitations`, `/guard` |
+| Drives | `/drives`, `/drives/stats`, `/drives/score`, `/drives/dynamics`, `/drives/{drive_id}/positions`, `/drives/{drive_id}/telemetry` |
+| Charging | `/charging`, `/charging/{session_id}`, `/charging/{session_id}/telemetry`, `/tesla/charging/history`, `/tesla/charging/sessions` |
+| Battery and energy | `/vehicles/{vehicle_id}/battery`, `/battery/cells`, `/battery/projected-range`, `/energy/flow`, `/tesla/energy-sites` |
+| Analytics | `/analytics/fleet`, `/analytics/tco`, `/analytics/sleep`, `/analytics/regen`, `/analytics/battery-degradation`, `/analytics/route-efficiency` |
+| Maps and location | `/geofences`, `/locations`, `/trips`, drive positions, geofence events |
+| Alerts and notifications | `/alerts`, `/alerts/rules`, `/notifications`, `/notifications/logs`, `/notifications/stats` |
+| Automations | `/automations`, `/automations/events`, `/automations/webhook/{token}` |
+| Admin and ops | `/system/status`, `/system/health`, `/system/version`, `/api-logs`, `/exports`, `/backup` |
+| Telemetry diagnostics | `/signals/history`, `/signals/available`, `/signals/stats`, `/signals/{vehicle_id}/available`, `/signals/{vehicle_id}/live`, `/signals/{vehicle_id}/{signal_name}/history` |
 
-**Example Request:**
+## Request conventions
 
-```
-GET /api/v1/charging/15/telemetry
-```
+- Use snake_case query parameters: `vehicle_id`, `drive_id`, `start_date`, `end_date`.
+- Do not include `/api/v1` inside frontend hook URLs; `request()` prepends it.
+- List endpoints use `limit` and `offset` where pagination is supported.
+- Write endpoints are rate-limited, especially auth, refresh, vehicle commands, Tesla refreshes, and public webhooks.
+- Production deployments should expose `/api` through the web/Nginx route or an authenticated ingress route, never as an unauthenticated public API service.
 
-**Example Response:**
+## Example requests
 
-```json
-[
-  {
-    "battery_level": 45.0,
-    "soc": 45.0,
-    "power_kw": 48.5,
-    "voltage": 400,
-    "current_amps": 121.25,
-    "phases": 3,
-    "energy_added": 12.5,
-    "rated_range": 135.0,
-    "ideal_range": 142.0,
-    "est_range": 128.0,
-    "inside_temp": 20.0,
-    "outside_temp": 15.5,
-    "battery_temp": 28.0,
-    "latitude": 37.7749,
-    "longitude": -122.4194,
-    "charge_rate": 48.5,
-    "created_at": "2025-07-18T14:00:00Z"
-  }
-]
+```bash
+curl https://teslasync.example.com/api/v1/vehicles
+curl "https://teslasync.example.com/api/v1/drives?vehicle_id=1&limit=50"
+curl https://teslasync.example.com/api/v1/vehicles/1/state
+curl -X POST https://teslasync.example.com/api/v1/vehicles/1/wake
 ```
 
----
-
-### Enhanced ChargingSession Object
-
-Charging sessions now include these additional fields:
-
-| Field | Description |
-|---|---|
-| `latitude` | Charging location latitude |
-| `longitude` | Charging location longitude |
-| `location_name` | Reverse geocoded location name |
-| `inside_temp_avg` | Average inside temperature during charge |
-| `outside_temp_avg` | Average outside temperature during charge |
-
----
-
-## Database Migration 21
-
-Migration 21 adds the following schema changes:
-
-### New Tables
-
-| Table | Description |
-|---|---|
-| `drive_telemetry_readings` | Continuous telemetry data recorded during drives (position, speed, power, battery, temperature, tire pressure, etc.) |
-| `charge_telemetry_readings` | Continuous telemetry data recorded during charging sessions (power, voltage, SOC, temperature, location) |
-| `fleet_telemetry_subscriptions` | Audit trail for fleet telemetry subscription configurations |
-
-### New Indexes
-
-| Index | Table | Columns | Purpose |
-|---|---|---|---|
-| `idx_geofences_coords` | `geofences` | `latitude`, `longitude` | Spatial lookup optimization for `FindByCoordinates` |
-
-### New Columns on Existing Tables
-
-Drive and charging session tables have been extended with the additional fields documented above. All new columns are nullable to preserve backward compatibility with existing data.
+See [Detailed API Endpoints](/guide/api-endpoints) for the route tree and [Contributing API Reference](/contributing/api-reference) for hook patterns.

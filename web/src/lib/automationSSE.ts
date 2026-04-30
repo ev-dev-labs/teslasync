@@ -3,8 +3,8 @@
  * Separate from the global sseManager because this connects to
  * /api/v1/automations/events (a dedicated endpoint for automation lifecycle).
  *
- * Handles token-based auth (same pattern as sseManager), exponential
- * backoff reconnect, and typed event dispatch.
+ * Handles exponential backoff reconnect and typed event dispatch.
+ * Auth is handled via ForwardAuth cookie (same-domain, automatic).
  */
 
 import type {
@@ -31,17 +31,20 @@ interface AutomationSSEClient {
   unsubscribe: (listener: AutomationSSEListener) => void
   onConnect: (listener: ConnectionListener) => void
   offConnect: (listener: ConnectionListener) => void
-  getState: () => 'connected' | 'reconnecting' | 'unavailable'
+  getState: () => 'connected' | 'reconnecting'
 }
 
 const eventListeners = new Set<AutomationSSEListener>()
 const connectListeners = new Set<ConnectionListener>()
 let source: EventSource | null = null
-let state: 'connected' | 'reconnecting' | 'unavailable' = 'reconnecting'
-let backoff = 1000
+let state: 'connected' | 'reconnecting' = 'reconnecting'
 let failCount = 0
 let reconnectTimer: number | undefined
 let connecting = false
+
+// Capped exponential backoff: 1s → 2s → 4s → 8s → 16s → 32s → 60s (max)
+const BASE_BACKOFF_MS = 1000
+const MAX_BACKOFF_MS = 60000
 
 const EVENT_TYPES: AutomationSSEEventType[] = [
   'automation.triggered',
@@ -51,24 +54,13 @@ const EVENT_TYPES: AutomationSSEEventType[] = [
   'automation.state_changed',
 ]
 
-async function fetchSSEToken(): Promise<string | null> {
-  try {
-    const res = await fetch('/api/v1/sse-token')
-    if (!res.ok) return null
-    const data = await res.json()
-    return data.token || null
-  } catch {
-    return null
-  }
-}
-
 function emit(type: AutomationSSEEventType, data: AutomationEventData) {
   for (const fn of eventListeners) {
     try { fn(type, data) } catch (e) { console.error('AutomationSSE listener error:', e) }
   }
 }
 
-async function doConnect() {
+function doConnect() {
   if (connecting) return
   connecting = true
 
@@ -77,17 +69,11 @@ async function doConnect() {
     source = null
   }
 
-  const token = await fetchSSEToken()
-  const url = token
-    ? `/api/v1/automations/events?token=${encodeURIComponent(token)}`
-    : '/api/v1/automations/events'
-
-  const es = new EventSource(url)
+  const es = new EventSource('/api/v1/automations/events')
   source = es
 
   es.addEventListener('connected', () => {
     state = 'connected'
-    backoff = 1000
     failCount = 0
     connecting = false
     for (const fn of connectListeners) {
@@ -114,13 +100,8 @@ async function doConnect() {
     connecting = false
     failCount++
 
-    if (failCount >= 5) {
-      state = 'unavailable'
-      return
-    }
-
     state = 'reconnecting'
-    backoff = Math.min(backoff * 2, 30000)
+    const backoff = Math.min(BASE_BACKOFF_MS * Math.pow(2, failCount - 1), MAX_BACKOFF_MS)
     reconnectTimer = window.setTimeout(() => {
       doConnect()
     }, backoff)
@@ -130,7 +111,7 @@ async function doConnect() {
 export const automationSSE: AutomationSSEClient = {
   subscribe(listener) {
     eventListeners.add(listener)
-    if (!source && !connecting && state !== 'unavailable') {
+    if (!source && !connecting) {
       doConnect()
     }
   },

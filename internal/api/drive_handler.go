@@ -1,29 +1,67 @@
 package api
 
 import (
+	"context"
+	"fmt"
 	"math"
 	"net/http"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
 // DriveHandler handles drive-related HTTP requests.
 type DriveHandler struct {
-	db           *database.DB
-	driveRepo    *database.DriveRepo
-	posRepo      *database.PositionRepo
-	driveTelRepo *database.DriveTelemetryRepo
+	db              *database.DB
+	driveRepo       *database.DriveRepo
+	posRepo         *database.PositionRepo
+	signalLogReader *database.SignalLogReader
+	redisCache      *signal.RedisSignalCache
 }
 
 func NewDriveHandler(db *database.DB) *DriveHandler {
 	return &DriveHandler{
-		db:           db,
-		driveRepo:    database.NewDriveRepo(db),
-		posRepo:      database.NewPositionRepo(db),
-		driveTelRepo: database.NewDriveTelemetryRepo(db),
+		db:              db,
+		driveRepo:       database.NewDriveRepo(db),
+		posRepo:         database.NewPositionRepo(db),
+		signalLogReader: database.NewSignalLogReader(db),
 	}
+}
+
+// WithRedisCache sets the Redis signal cache for computing live in-progress drive values.
+func (h *DriveHandler) WithRedisCache(cache *signal.RedisSignalCache) *DriveHandler {
+	h.redisCache = cache
+	return h
+}
+
+// Drive telemetry signal → JSON field mappings (field names match the old
+// DriveTelemetryReading JSON tags so the frontend contract is unchanged).
+var driveTelemetryMappings = []database.PivotMapping{
+	{Signal: "VehicleSpeed", Field: "speed"},
+	{Signal: "PackCurrent", Field: "pack_current"},
+	{Signal: "PackVoltage", Field: "pack_voltage"},
+	{Signal: "BatteryLevel", Field: "battery_level"},
+	{Signal: "Elevation", Field: "elevation"},
+	{Signal: "InsideTemp", Field: "inside_temp"},
+	{Signal: "OutsideTemp", Field: "outside_temp"},
+	{Signal: "TpmsPressureFl", Field: "tire_pressure_fl"},
+	{Signal: "TpmsPressureFr", Field: "tire_pressure_fr"},
+	{Signal: "TpmsPressureRl", Field: "tire_pressure_rl"},
+	{Signal: "TpmsPressureRr", Field: "tire_pressure_rr"},
+	{Signal: "Latitude", Field: "latitude"},
+	{Signal: "Longitude", Field: "longitude"},
+}
+
+// Position signal → JSON field mappings (field names match Position model tags).
+var positionMappings = []database.PivotMapping{
+	{Signal: "Latitude", Field: "latitude"},
+	{Signal: "Longitude", Field: "longitude"},
+	{Signal: "GpsHeading", Field: "heading"},
+	{Signal: "VehicleSpeed", Field: "speed_mph"},
+	{Signal: "Elevation", Field: "elevation_m"},
 }
 
 func (h *DriveHandler) ListByVehicle(w http.ResponseWriter, r *http.Request) {
@@ -70,40 +108,158 @@ func (h *DriveHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fetch telemetry readings for this drive
-	telemetry, err := h.driveTelRepo.GetByDriveID(ctx, id)
-	if err != nil {
-		log.Warn().Err(err).Int64("driveID", id).Msg("failed to get drive telemetry")
-		telemetry = nil
-	}
-	if telemetry == nil {
-		telemetry = make([]*models.DriveTelemetryReading, 0)
+	live := false
+	endTs := time.Now().UTC()
+	if drive.EndTs != nil {
+		endTs = *drive.EndTs
+	} else {
+		// In-progress drive — compute live values from signal snapshots
+		live = true
+		h.enrichLiveDrive(ctx, drive, endTs)
 	}
 
-	// Fetch positions for this drive's time range
-	var positions []*models.Position
-	if drive.EndDate != nil {
-		positions, err = h.posRepo.GetByTimeRange(ctx, drive.VehicleID, drive.StartDate, drive.EndDate)
-		if err != nil {
-			log.Warn().Err(err).Int64("driveID", id).Msg("failed to get drive positions")
+	// Telemetry from signal_log via pivot
+	telemetry, err := h.signalLogReader.SignalTracePivotFlat(ctx,
+		drive.VehicleID, driveTelemetryMappings, drive.StartTs, endTs)
+	if err != nil {
+		log.Warn().Err(err).Int64("driveID", id).Msg("failed to get drive telemetry from signal_log")
+		telemetry = []map[string]interface{}{}
+	}
+	// Rename "ts" → "created_at" to match old DriveTelemetryReading JSON shape
+	for _, row := range telemetry {
+		if ts, ok := row["ts"]; ok {
+			row["created_at"] = ts
+			delete(row, "ts")
 		}
 	}
-	if positions == nil {
-		positions = make([]*models.Position, 0)
+
+	// Positions from signal_log via pivot
+	positions, err := h.signalLogReader.SignalTracePivotFlat(ctx,
+		drive.VehicleID, positionMappings, drive.StartTs, endTs)
+	if err != nil {
+		log.Warn().Err(err).Int64("driveID", id).Msg("failed to get drive positions from signal_log")
+		positions = []map[string]interface{}{}
 	}
 
-	// Build response with embedded telemetry and positions
-	type driveDetailResponse struct {
-		*models.Drive
-		Telemetry []*models.DriveTelemetryReading `json:"telemetry"`
-		Positions []*models.Position               `json:"positions"`
-	}
-
-	writeJSON(w, http.StatusOK, driveDetailResponse{
-		Drive:     drive,
-		Telemetry: telemetry,
-		Positions: positions,
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"id":                 drive.ID,
+		"vehicle_id":         drive.VehicleID,
+		"start_ts":           drive.StartTs,
+		"end_ts":             drive.EndTs,
+		"duration_min":       drive.DurationMin,
+		"distance_mi":        drive.DistanceMi,
+		"start_address":      drive.StartAddress,
+		"end_address":        drive.EndAddress,
+		"start_lat":          drive.StartLat,
+		"start_lon":          drive.StartLon,
+		"end_lat":            drive.EndLat,
+		"end_lon":            drive.EndLon,
+		"start_battery_pct":  drive.StartBatteryPct,
+		"end_battery_pct":    drive.EndBatteryPct,
+		"energy_used_kwh":    drive.EnergyUsedKwh,
+		"regen_kwh":          drive.RegenKwh,
+		"avg_speed_mph":      drive.AvgSpeedMph,
+		"max_speed_mph":      drive.MaxSpeedMph,
+		"avg_power_kw":       drive.AvgPowerKw,
+		"outside_temp_avg_c": drive.OutsideTempAvgC,
+		"inside_temp_avg_c":  drive.InsideTempAvgC,
+		"score":              drive.Score,
+		"ended_status":       drive.EndedStatus,
+		"created_at":         drive.CreatedAt,
+		"live":               live,
+		"telemetry":          telemetry,
+		"positions":          positions,
 	})
+}
+
+// enrichLiveDrive computes live values for an in-progress drive by reading
+// start-of-drive state from signal_log and current state from Redis (with
+// signal_log fallback). The drive struct is mutated in place.
+func (h *DriveHandler) enrichLiveDrive(ctx context.Context, drive *models.Drive, now time.Time) {
+	startSnap, err := h.signalLogReader.SnapshotAt(ctx, drive.VehicleID, drive.StartTs)
+	if err != nil {
+		log.Warn().Err(err).Int64("driveID", drive.ID).Msg("live drive: failed to get start snapshot")
+		startSnap = map[string]interface{}{}
+	}
+
+	currentSnap := h.currentSignals(ctx, drive.VehicleID)
+
+	// Duration — always computable from wall clock
+	durationMin := now.Sub(drive.StartTs).Minutes()
+	drive.DurationMin = safeFloat(durationMin)
+
+	// Distance from odometer delta
+	startOdo, startOdoOk := signalFloat(startSnap, "Odometer")
+	currentOdo, currentOdoOk := signalFloat(currentSnap, "Odometer")
+	if startOdoOk && currentOdoOk && currentOdo > startOdo {
+		drive.DistanceMi = safeFloat(currentOdo - startOdo)
+	}
+
+	// Battery levels
+	if startBat, ok := signalFloat(startSnap, "BatteryLevel"); ok {
+		v := int16(startBat)
+		drive.StartBatteryPct = &v
+	}
+	if currentBat, ok := signalFloat(currentSnap, "BatteryLevel"); ok {
+		v := int16(currentBat)
+		drive.EndBatteryPct = &v
+	}
+
+	// Average speed (distance / hours)
+	if drive.DistanceMi > 0 && durationMin > 0 {
+		avgSpeed := safeFloat(drive.DistanceMi / (durationMin / 60.0))
+		drive.AvgSpeedMph = &avgSpeed
+	}
+
+	// Current speed as max (best approximation during live drive)
+	if currentSpeed, ok := signalFloat(currentSnap, "VehicleSpeed"); ok {
+		if drive.MaxSpeedMph == nil || currentSpeed > *drive.MaxSpeedMph {
+			v := safeFloat(currentSpeed)
+			drive.MaxSpeedMph = &v
+		}
+	}
+
+	// Current position as end position
+	if lat, ok := signalFloat(currentSnap, "Latitude"); ok {
+		drive.EndLat = &lat
+	}
+	if lon, ok := signalFloat(currentSnap, "Longitude"); ok {
+		drive.EndLon = &lon
+	}
+
+	// Power
+	if voltage, vOk := signalFloat(currentSnap, "PackVoltage"); vOk {
+		if current, cOk := signalFloat(currentSnap, "PackCurrent"); cOk {
+			power := safeFloat(voltage * current / 1000.0)
+			drive.AvgPowerKw = &power
+		}
+	}
+
+	// Temps
+	if outside, ok := signalFloat(currentSnap, "OutsideTemp"); ok {
+		drive.OutsideTempAvgC = &outside
+	}
+	if inside, ok := signalFloat(currentSnap, "InsideTemp"); ok {
+		drive.InsideTempAvgC = &inside
+	}
+}
+
+// currentSignals returns the latest signal values for a vehicle, preferring
+// Redis (sub-ms) with signal_log SnapshotAt(now) as fallback.
+func (h *DriveHandler) currentSignals(ctx context.Context, vehicleID int64) map[string]interface{} {
+	if h.redisCache != nil {
+		snap, err := h.redisCache.GetAll(ctx, vehicleID)
+		if err == nil && snap != nil {
+			return snap
+		}
+		log.Debug().Err(err).Int64("vehicleID", vehicleID).Msg("live drive: Redis unavailable, falling back to signal_log")
+	}
+	snap, err := h.signalLogReader.SnapshotAt(ctx, vehicleID, time.Now().UTC())
+	if err != nil {
+		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("live drive: failed to get current snapshot from signal_log")
+		return map[string]interface{}{}
+	}
+	return snap
 }
 
 func (h *DriveHandler) Positions(w http.ResponseWriter, r *http.Request) {
@@ -124,16 +280,32 @@ func (h *DriveHandler) Positions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	positions, err := h.posRepo.GetByTimeRange(r.Context(), drive.VehicleID, drive.StartDate, drive.EndDate)
+	endTs := time.Now()
+	if drive.EndTs != nil {
+		endTs = *drive.EndTs
+	}
+
+	rows, err := h.signalLogReader.SignalTracePivotFlat(r.Context(),
+		drive.VehicleID, positionMappings, drive.StartTs, endTs)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to get drive positions")
+		log.Error().Err(err).Int64("driveID", driveID).Msg("failed to get drive positions from signal_log")
 		writeError(w, http.StatusInternalServerError, "failed to get positions")
 		return
 	}
-	if positions == nil {
-		positions = make([]*models.Position, 0)
+	if rows == nil {
+		rows = []map[string]interface{}{}
 	}
-	writeJSON(w, http.StatusOK, positions)
+	// Alias ts→created_at and speed_mph→speed for frontend PositionRecord
+	for _, row := range rows {
+		if ts, ok := row["ts"]; ok {
+			row["created_at"] = ts
+			row["id"] = fmt.Sprintf("%v", ts)
+		}
+		if v, ok := row["speed_mph"]; ok {
+			row["speed"] = v
+		}
+	}
+	writeJSON(w, http.StatusOK, rows)
 }
 
 func (h *DriveHandler) TelemetryReadings(w http.ResponseWriter, r *http.Request) {
@@ -143,16 +315,40 @@ func (h *DriveHandler) TelemetryReadings(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	readings, err := h.driveTelRepo.GetByDriveID(r.Context(), driveID)
+	drive, err := h.driveRepo.GetByID(r.Context(), driveID)
 	if err != nil {
-		log.Error().Err(err).Int64("id", driveID).Msg("failed to get drive telemetry")
-		writeError(w, http.StatusInternalServerError, "failed to get drive telemetry")
+		log.Error().Err(err).Int64("id", driveID).Msg("failed to get drive for telemetry")
+		writeError(w, http.StatusInternalServerError, "failed to get drive")
 		return
 	}
-	if readings == nil {
-		readings = make([]*models.DriveTelemetryReading, 0)
+	if drive == nil {
+		writeError(w, http.StatusNotFound, "drive not found")
+		return
 	}
-	writeJSON(w, http.StatusOK, readings)
+
+	endTs := time.Now()
+	if drive.EndTs != nil {
+		endTs = *drive.EndTs
+	}
+
+	rows, err := h.signalLogReader.SignalTracePivotFlat(r.Context(),
+		drive.VehicleID, driveTelemetryMappings, drive.StartTs, endTs)
+	if err != nil {
+		log.Error().Err(err).Int64("driveID", driveID).Msg("failed to get telemetry from signal_log")
+		writeError(w, http.StatusInternalServerError, "failed to get telemetry")
+		return
+	}
+	if rows == nil {
+		rows = []map[string]interface{}{}
+	}
+	// Rename "ts" → "created_at" to match old DriveTelemetryReading JSON shape
+	for _, row := range rows {
+		if ts, ok := row["ts"]; ok {
+			row["created_at"] = ts
+			delete(row, "ts")
+		}
+	}
+	writeJSON(w, http.StatusOK, rows)
 }
 
 // Stats returns aggregate driving statistics for a vehicle.
@@ -174,12 +370,12 @@ func (h *DriveHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	var totalDistKm, totalDurMin, avgSpeedKmh, topSpeedKmh *float64
 	err = h.db.Pool.QueryRow(ctx, `
 		SELECT COUNT(*),
-		       SUM(distance),
+		       SUM(distance_mi),
 		       SUM(duration_min),
-		       AVG(CASE WHEN duration_min > 0 THEN distance / (duration_min / 60) ELSE NULL END),
-		       MAX(speed_max)
+		       AVG(CASE WHEN duration_min > 0 THEN distance_mi / (duration_min / 60) ELSE NULL END),
+		       MAX(max_speed_mph)
 		FROM drives
-		WHERE vehicle_id = $1 AND end_date IS NOT NULL`, vehicleID,
+		WHERE vehicle_id = $1 AND end_ts IS NOT NULL`, vehicleID,
 	).Scan(&totalDrives, &totalDistKm, &totalDurMin, &avgSpeedKmh, &topSpeedKmh)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("drive stats: failed to query")
@@ -191,12 +387,12 @@ func (h *DriveHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	var avgEfficiency *float64
 	err = h.db.Pool.QueryRow(ctx, `
 		SELECT AVG(
-			CASE WHEN distance > 2 AND start_battery_level IS NOT NULL AND end_battery_level IS NOT NULL
-			THEN (start_battery_level - end_battery_level)::float / distance * 100 * 0.75
+			CASE WHEN distance_mi > 2 AND start_battery_pct IS NOT NULL AND end_battery_pct IS NOT NULL
+			THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 * 0.75
 			ELSE NULL END
 		)
 		FROM drives
-		WHERE vehicle_id = $1 AND end_date IS NOT NULL`, vehicleID,
+		WHERE vehicle_id = $1 AND end_ts IS NOT NULL`, vehicleID,
 	).Scan(&avgEfficiency)
 	if err != nil {
 		log.Debug().Err(err).Msg("drive stats: efficiency query")
@@ -205,10 +401,10 @@ func (h *DriveHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	// Regen: estimate from negative power readings
 	var totalRegenKwh *float64
 	err = h.db.Pool.QueryRow(ctx, `
-		SELECT SUM(CASE WHEN power_min IS NOT NULL AND power_min < 0
-		           THEN ABS(power_min) * duration_min / 60 ELSE 0 END)
+		SELECT SUM(CASE WHEN avg_power_kw IS NOT NULL AND avg_power_kw < 0
+		           THEN ABS(avg_power_kw) * duration_min / 60 ELSE 0 END)
 		FROM drives
-		WHERE vehicle_id = $1 AND end_date IS NOT NULL`, vehicleID,
+		WHERE vehicle_id = $1 AND end_ts IS NOT NULL`, vehicleID,
 	).Scan(&totalRegenKwh)
 	if err != nil {
 		log.Debug().Err(err).Msg("drive stats: regen query")
@@ -276,13 +472,13 @@ func (h *DriveHandler) Score(w http.ResponseWriter, r *http.Request) {
 	var avgWhKm, avgPowerMax, avgPowerMin *float64
 	err = h.db.Pool.QueryRow(ctx, `
 		SELECT COUNT(*),
-		       AVG(CASE WHEN distance > 2 AND start_battery_level IS NOT NULL AND end_battery_level IS NOT NULL
-		            THEN (start_battery_level - end_battery_level)::float / distance * 100 * 0.75
+		       AVG(CASE WHEN distance_mi > 2 AND start_battery_pct IS NOT NULL AND end_battery_pct IS NOT NULL
+		            THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 * 0.75
 		            ELSE NULL END),
-		       AVG(power_max),
-		       AVG(power_min)
+		       MAX(avg_power_kw),
+		       MIN(avg_power_kw)
 		FROM drives
-		WHERE vehicle_id = $1 AND end_date IS NOT NULL`, vehicleID,
+		WHERE vehicle_id = $1 AND end_ts IS NOT NULL`, vehicleID,
 	).Scan(&totalDrives, &avgWhKm, &avgPowerMax, &avgPowerMin)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("score: failed to query aggregates")
@@ -303,13 +499,13 @@ func (h *DriveHandler) Score(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Speed discipline: fraction of drives where speed_max < 130
+	// Speed discipline: fraction of drives where max_speed_mph < 130
 	var disciplinedCount int
 	err = h.db.Pool.QueryRow(ctx, `
 		SELECT COUNT(*)
 		FROM drives
-		WHERE vehicle_id = $1 AND end_date IS NOT NULL
-		  AND (speed_max IS NULL OR speed_max < 130)`, vehicleID,
+		WHERE vehicle_id = $1 AND end_ts IS NOT NULL
+		  AND (max_speed_mph IS NULL OR max_speed_mph < 130)`, vehicleID,
 	).Scan(&disciplinedCount)
 	if err != nil {
 		log.Error().Err(err).Msg("score: speed discipline query")
@@ -330,10 +526,15 @@ func (h *DriveHandler) Score(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Smoothness: lower power_max/abs(power_min) ratio = smoother
-	smoothness := 70.0 // default
-	if avgPowerMax != nil && avgPowerMin != nil && *avgPowerMin != 0 {
-		ratio := math.Abs(*avgPowerMax / *avgPowerMin)
+	// Smoothness: lower power spread ratio = smoother driving
+	smoothness := 70.0 // default when data unavailable
+	if avgPowerMax != nil && avgPowerMin != nil {
+		absMax := math.Abs(*avgPowerMax)
+		absMin := math.Abs(*avgPowerMin)
+		var ratio float64
+		if absMin > 0.01 { // epsilon guard — avoid divide-by-zero
+			ratio = absMax / absMin
+		}
 		// ratio near 1 is smooth; ratio > 5 is harsh
 		if ratio <= 1 {
 			smoothness = 100
@@ -388,19 +589,19 @@ func (h *DriveHandler) Score(w http.ResponseWriter, r *http.Request) {
 			var batchTotal, batchDisciplined int
 			_ = h.db.Pool.QueryRow(ctx, `
 				SELECT COUNT(*),
-				       AVG(CASE WHEN distance > 2 AND start_battery_level IS NOT NULL AND end_battery_level IS NOT NULL
-				            THEN (start_battery_level - end_battery_level)::float / distance * 100 * 0.75
+				       AVG(CASE WHEN distance_mi > 2 AND start_battery_pct IS NOT NULL AND end_battery_pct IS NOT NULL
+				            THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 * 0.75
 				            ELSE NULL END),
-				       AVG(power_max),
-				       AVG(power_min)
-				FROM (SELECT * FROM drives WHERE vehicle_id = $1 AND end_date IS NOT NULL
-				      ORDER BY end_date DESC LIMIT 10 OFFSET $2) sub`, vehicleID, offset,
+				       AVG(avg_power_kw),
+				       AVG(avg_power_kw)
+				FROM (SELECT * FROM drives WHERE vehicle_id = $1 AND end_ts IS NOT NULL
+				      ORDER BY end_ts DESC LIMIT 10 OFFSET $2) sub`, vehicleID, offset,
 			).Scan(&batchTotal, &batchWhKm, &batchPMax, &batchPMin)
 			_ = h.db.Pool.QueryRow(ctx, `
 				SELECT COUNT(*)
-				FROM (SELECT * FROM drives WHERE vehicle_id = $1 AND end_date IS NOT NULL
-				      ORDER BY end_date DESC LIMIT 10 OFFSET $2) sub
-				WHERE speed_max IS NULL OR speed_max < 130`, vehicleID, offset,
+				FROM (SELECT * FROM drives WHERE vehicle_id = $1 AND end_ts IS NOT NULL
+				      ORDER BY end_ts DESC LIMIT 10 OFFSET $2) sub
+				WHERE max_speed_mph IS NULL OR max_speed_mph < 130`, vehicleID, offset,
 			).Scan(&batchDisciplined)
 
 			eff := 50.0
@@ -473,13 +674,13 @@ func (h *DriveHandler) Dynamics(w http.ResponseWriter, r *http.Request) {
 	var maxSpeedMax, avgSpeed, maxPowerMax, avgPowerMax, avgPowerMin *float64
 	err = h.db.Pool.QueryRow(ctx, `
 		SELECT COUNT(*),
-		       MAX(speed_max),
-		       AVG(CASE WHEN duration_min > 0 THEN distance / (duration_min / 60) ELSE NULL END),
-		       MAX(power_max),
-		       AVG(power_max),
-		       AVG(power_min)
+		       MAX(max_speed_mph),
+		       AVG(CASE WHEN duration_min > 0 THEN distance_mi / (duration_min / 60) ELSE NULL END),
+		       MAX(avg_power_kw),
+		       AVG(avg_power_kw),
+		       AVG(avg_power_kw)
 		FROM drives
-		WHERE vehicle_id = $1 AND end_date IS NOT NULL`, vehicleID,
+		WHERE vehicle_id = $1 AND end_ts IS NOT NULL`, vehicleID,
 	).Scan(&totalDrives, &maxSpeedMax, &avgSpeed, &maxPowerMax, &avgPowerMax, &avgPowerMin)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("dynamics: failed to query")
@@ -523,7 +724,7 @@ func (h *DriveHandler) Dynamics(w http.ResponseWriter, r *http.Request) {
 		avgAccG = (pAvg / (vehicleMassKg * vAvgMs)) / gravity
 	}
 
-	// Braking G from regen power (negative power_min)
+	// Braking G from regen power (negative avg_power_kw)
 	maxBrakeG := 0.0
 	avgBrakeG := 0.0
 	if vAvgMs > 1 {
@@ -581,7 +782,8 @@ func (h *DriveHandler) Dynamics(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// AccelerationDistribution returns raw acceleration G readings for histogram analysis.
+// AccelerationDistribution computes acceleration G readings from consecutive
+// VehicleSpeed signals in signal_log for histogram analysis.
 func (h *DriveHandler) AccelerationDistribution(w http.ResponseWriter, r *http.Request) {
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {
@@ -595,19 +797,22 @@ func (h *DriveHandler) AccelerationDistribution(w http.ResponseWriter, r *http.R
 	}
 
 	startTime, endTime := parseDateRange(r)
+	if startTime.IsZero() {
+		startTime = time.Now().AddDate(0, 0, -30)
+	}
+	if endTime.IsZero() {
+		endTime = time.Now()
+	}
 
 	ctx := r.Context()
-	query := `SELECT acceleration_gs FROM fn_driving_acceleration_distribution($1, $2, $3)`
 
-	var pStart, pEnd interface{}
-	if !startTime.IsZero() {
-		pStart = startTime
-	}
-	if !endTime.IsZero() {
-		pEnd = endTime
-	}
-
-	rows, err := h.db.Pool.Query(ctx, query, vehicleID, pStart, pEnd)
+	rows, err := h.db.Pool.Query(ctx, `
+		SELECT created_at, value_num
+		FROM signal_log
+		WHERE vehicle_id = $1 AND signal = 'VehicleSpeed'
+		  AND value_num IS NOT NULL
+		  AND created_at >= $2 AND created_at <= $3
+		ORDER BY created_at ASC`, vehicleID, startTime, endTime)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("acceleration distribution: query failed")
 		writeError(w, http.StatusInternalServerError, "failed to get acceleration distribution")
@@ -615,19 +820,37 @@ func (h *DriveHandler) AccelerationDistribution(w http.ResponseWriter, r *http.R
 	}
 	defer rows.Close()
 
-	values := make([]float64, 0)
+	type speedPoint struct {
+		ts    time.Time
+		speed float64
+	}
+	var points []speedPoint
 	for rows.Next() {
-		var g float64
-		if err := rows.Scan(&g); err != nil {
+		var p speedPoint
+		if err := rows.Scan(&p.ts, &p.speed); err != nil {
 			log.Warn().Err(err).Msg("acceleration distribution: scan error")
 			continue
 		}
-		values = append(values, g)
+		points = append(points, p)
 	}
 	if err := rows.Err(); err != nil {
 		log.Error().Err(err).Msg("acceleration distribution: rows iteration error")
 		writeError(w, http.StatusInternalServerError, "failed to read acceleration data")
 		return
+	}
+
+	// Compute acceleration in G from consecutive speed pairs.
+	// For each pair: accel_g = (speed2 - speed1) / dt_seconds / 9.81
+	// Only use closely-spaced readings (gap < 10s) to avoid artifacts.
+	values := make([]float64, 0, len(points))
+	for i := 0; i < len(points)-1; i++ {
+		dt := points[i+1].ts.Sub(points[i].ts).Seconds()
+		if dt > 0 && dt < 10 {
+			dv := points[i+1].speed - points[i].speed
+			accelG := dv / dt / 9.81
+			accelG = math.Round(accelG*1000) / 1000
+			values = append(values, accelG)
+		}
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{

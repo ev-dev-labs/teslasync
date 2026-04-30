@@ -1,12 +1,16 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
+	"time"
 
-	"github.com/rs/zerolog/log"
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/service"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
+	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel/attribute"
 )
 
@@ -17,6 +21,7 @@ type VehicleHandler struct {
 	vehicleSvc       *service.VehicleService
 	teslaClient      *tesla.Client
 	telemetryHandler *TelemetryHandler
+	signalLogReader  *database.SignalLogReader
 }
 
 func NewVehicleHandler(vehicleSvc *service.VehicleService, tc *tesla.Client) *VehicleHandler {
@@ -29,6 +34,11 @@ func NewVehicleHandler(vehicleSvc *service.VehicleService, tc *tesla.Client) *Ve
 // SetTelemetryHandler wires the telemetry handler for streaming-aware state resolution.
 func (h *VehicleHandler) SetTelemetryHandler(th *TelemetryHandler) {
 	h.telemetryHandler = th
+}
+
+// SetSignalLogReader wires the signal log reader for position queries via signal_log.
+func (h *VehicleHandler) SetSignalLogReader(slr *database.SignalLogReader) {
+	h.signalLogReader = slr
 }
 
 func (h *VehicleHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -84,11 +94,6 @@ func (h *VehicleHandler) SyncFromTesla(w http.ResponseWriter, r *http.Request) {
 		writeAppError(w, r, ErrTeslaAPISuspended)
 		return
 	}
-	// Check if vehicle_discovery endpoint is enabled in polling config (on-demand)
-	if pc, err := h.vehicleSvc.SettingsRepo().GetPollingConfig(ctx); err == nil && !pc.OnDemandVehicleDiscovery {
-		writeAppError(w, r, ErrTeslaEndpointDisabled.WithMessage("vehicle discovery endpoint is disabled in polling config"))
-		return
-	}
 	if !h.teslaClient.HasValidToken() {
 		writeAppError(w, r, ErrTeslaNotConnected)
 		return
@@ -116,14 +121,44 @@ func (h *VehicleHandler) Positions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	limit, offset := pagination(r)
-	positions, err := h.vehicleSvc.PositionRepo().GetByVehicle(r.Context(), id, limit, offset)
+	limit, _ := pagination(r)
+	from := time.Now().AddDate(0, 0, -7) // default to last 7 days
+	to := time.Now()
+
+	if h.signalLogReader == nil {
+		writeAppError(w, r, ErrDBQuery.WithMessage("signal log reader not configured"))
+		return
+	}
+
+	rows, err := h.signalLogReader.SignalTracePivotFlat(r.Context(),
+		id, positionMappings, from, to)
 	if err != nil {
-		log.Error().Err(err).Int64("vehicleID", id).Msg("failed to get positions")
+		log.Error().Err(err).Int64("vehicleID", id).Msg("failed to get positions from signal_log")
 		writeAppError(w, r, ErrDBQuery.WithMessage("failed to get positions"))
 		return
 	}
-	writeJSON(w, http.StatusOK, positions)
+	if rows == nil {
+		rows = []map[string]interface{}{}
+	}
+	// Reverse to newest-first (query returns ascending by ts)
+	for i, j := 0, len(rows)-1; i < j; i, j = i+1, j-1 {
+		rows[i], rows[j] = rows[j], rows[i]
+	}
+	// Apply limit after reversal so we keep the most recent positions
+	if limit > 0 && len(rows) > limit {
+		rows = rows[:limit]
+	}
+	// Alias ts→created_at and speed_mph→speed for frontend PositionRecord
+	for _, row := range rows {
+		if ts, ok := row["ts"]; ok {
+			row["created_at"] = ts
+			row["id"] = fmt.Sprintf("%v", ts)
+		}
+		if v, ok := row["speed_mph"]; ok {
+			row["speed"] = v
+		}
+	}
+	writeJSON(w, http.StatusOK, rows)
 }
 
 func (h *VehicleHandler) CurrentState(w http.ResponseWriter, r *http.Request) {
@@ -144,17 +179,25 @@ func (h *VehicleHandler) CurrentState(w http.ResponseWriter, r *http.Request) {
 	}
 	span.SetAttributes(attribute.String("vehicle.vin", vehicle.VIN))
 
-	// PRIMARY: Build state from in-memory SignalStore + DB fallbacks (never nil, <5ms)
+	// PRIMARY: Build state from the live signal boundary + DB fallbacks.
 	if h.telemetryHandler != nil {
-		store := h.telemetryHandler.GetSignalStore()
+		store := signal.New()
+		var hasLiveSignals bool
+		if liveStore := h.telemetryHandler.GetLiveSignalStore(); liveStore != nil {
+			values, err := liveStore.GetAll(ctx, vehicle.ID, signal.LiveSignalReadDistributed)
+			if err != nil {
+				log.Warn().Err(err).Int64("vehicle_id", vehicle.ID).Msg("vehicle current state: live signal read failed")
+			} else if len(values) > 0 {
+				store.Hydrate(vehicle.ID, liveSignalValuesToRaw(values))
+				hasLiveSignals = true
+			}
+		}
 		state := h.vehicleSvc.BuildStateFromSignalStore(store, vehicle)
 		// Enrich with state-since timestamp from vehicle_states table
 		if _, since, err := h.vehicleSvc.StateRepo().GetCurrentStateSince(ctx, vehicle.ID); err == nil && since != nil {
 			state.Since = since
 		}
-		// Determine if we have live telemetry data vs pure DB fallback
-		hasLiveSignals := store != nil && len(store.GetAll(vehicle.ID)) > 0
-		dataSource := "signal_store"
+		dataSource := "live_signal_store"
 		if !hasLiveSignals {
 			dataSource = "db_fallback"
 		}
@@ -182,11 +225,6 @@ func (h *VehicleHandler) CurrentState(w http.ResponseWriter, r *http.Request) {
 func (h *VehicleHandler) Wake(w http.ResponseWriter, r *http.Request) {
 	if suspended, _ := h.vehicleSvc.SettingsRepo().IsAPISuspended(r.Context()); suspended {
 		writeAppError(w, r, ErrTeslaAPISuspended)
-		return
-	}
-	// Check if wake_up endpoint is enabled in polling config
-	if pc, err := h.vehicleSvc.SettingsRepo().GetPollingConfig(r.Context()); err == nil && !pc.WakeUp {
-		writeAppError(w, r, ErrTeslaEndpointDisabled.WithMessage("wake_up endpoint is disabled in polling config"))
 		return
 	}
 

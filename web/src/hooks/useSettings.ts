@@ -2,7 +2,13 @@ import { useQuery } from '@tanstack/react-query'
 import { getSettings } from '@/api/settings'
 import type { AppSettings } from '@/api/types'
 import { setGlobalPrecision, fmtNumber } from '../lib/numberFormat'
-import { UNITS, FUEL } from '../lib/constants'
+import { FUEL } from '../lib/constants'
+import {
+  milesToKm,
+  celsiusToFahrenheit,
+  barToPsi,
+  kmToMiles,
+} from '@/lib/unitConversion'
 
 const defaults: AppSettings = {
   unit_of_length: 'km',
@@ -56,23 +62,23 @@ export function useSettings() {
   const isFahrenheit = s.unit_of_temp === 'F'
   const isPSI = (s.unit_of_pressure ?? 'bar') === 'psi'
 
-  // DB stores raw Tesla values: miles, mph, °C, Bar.
-  // Convert to user's preferred display unit.
+  // Internal storage: miles, mph, °C, bar.
+  // Convert to user's preferred display unit using @/lib/unitConversion.
 
-  /** Convert miles (DB) to user's preferred distance unit */
-  const convertDistance = (mi: number): number => isMiles ? mi : mi * UNITS.MI_TO_KM
+  /** Convert miles (internal) to user's preferred distance unit */
+  const convertDistance = (mi: number): number => isMiles ? mi : milesToKm(mi)
 
-  /** Convert mph (DB) to user's preferred speed unit */
-  const convertSpeed = (mph: number): number => isMiles ? mph : mph * UNITS.MI_TO_KM
+  /** Convert mph (internal) to user's preferred speed unit */
+  const convertSpeed = (mph: number): number => isMiles ? mph : milesToKm(mph)
 
-  /** Convert Celsius (DB) to user's preferred temperature unit */
-  const convertTemp = (celsius: number): number => isFahrenheit ? celsius * 9 / 5 + 32 : celsius
+  /** Convert Celsius (internal) to user's preferred temperature unit */
+  const convertTemp = (celsius: number): number => isFahrenheit ? celsiusToFahrenheit(celsius) : celsius
 
-  /** Convert Wh/mi (DB) to user's preferred efficiency unit */
-  const convertEfficiency = (whPerMi: number): number => isMiles ? whPerMi : whPerMi * UNITS.KM_TO_MI
+  /** Convert Wh/mi (internal) to user's preferred efficiency unit */
+  const convertEfficiency = (whPerMi: number): number => isMiles ? whPerMi : kmToMiles(whPerMi)
 
-  /** Convert Bar (DB) to user's preferred pressure unit */
-  const convertPressure = (bar: number): number => isPSI ? bar * UNITS.BAR_TO_PSI : bar
+  /** Convert bar (internal) to user's preferred pressure unit */
+  const convertPressure = (bar: number): number => isPSI ? barToPsi(bar) : bar
 
   const distanceUnit = isMiles ? 'mi' : 'km'
   const speedUnit = isMiles ? 'mph' : 'km/h'
@@ -93,7 +99,7 @@ export function useSettings() {
   const fmtTemp = (celsius: number, d?: number): string =>
     `${fmtNumber(convertTemp(celsius), d)} ${tempUnit}`
 
-  /** Format a pressure value with unit (input: Bar from DB) */
+  /** Format a pressure value with unit (input: bar from internal storage) */
   const fmtPressure = (bar: number, d?: number): string =>
     `${fmtNumber(convertPressure(bar), d)} ${pressureUnit}`
 

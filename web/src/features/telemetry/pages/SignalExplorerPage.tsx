@@ -32,30 +32,15 @@ import { useRealtimeEvents } from '@/hooks/useRealtimeEvents';
 import { useSignals } from '@/api/hooks/useTelemetry';
 import { request } from '@/api/client';
 import { CHART_COLORS } from '@/lib/colors';
+import { toLocalDatetimeStr } from '@/lib/dateFormat';
+import { TIME_RANGE_PRESETS } from '@/lib/constants';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { Activity, BarChart3, Search, Clock, AlertCircle, Radio } from 'lucide-react';
+import type { SignalLogEntry } from '@/components/SignalQueryControls';
+import type { SignalHistoryResp } from '@/api/types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-
-interface SignalRow {
-  created_at: string;
-  signal: string;
-  value_num: number | null;
-  value_str: string | null;
-  value_bool: boolean | null;
-}
-
-interface SignalHistoryResp {
-  signal: string;
-  count: number;
-  data: Array<{
-    created_at: string;
-    value_num?: number | null;
-    value_str?: string | null;
-    value_bool?: boolean | null;
-  }>;
-}
 
 interface SignalStat {
   signal: string;
@@ -66,19 +51,6 @@ interface SignalStat {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function toLocalDatetime(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-const PRESETS = [
-  { label: '1h', hours: 1 },
-  { label: '6h', hours: 6 },
-  { label: '24h', hours: 24 },
-  { label: '7d', hours: 168 },
-  { label: '30d', hours: 720 },
-];
 
 const LIVE_WINDOW_MS = 5 * 60 * 1000; // 5 minute rolling window
 const LIVE_THROTTLE_MS = 500;          // 2 Hz chart updates
@@ -96,8 +68,8 @@ export default function SignalExplorerPage() {
   const [signalSearch, setSignalSearch] = useState('');
 
   // DateTime range
-  const [fromStr, setFromStr] = useState(() => toLocalDatetime(new Date(Date.now() - 3600_000)));
-  const [toStr, setToStr] = useState(() => toLocalDatetime(new Date()));
+  const [fromStr, setFromStr] = useState(() => toLocalDatetimeStr(new Date(Date.now() - 3600_000)));
+  const [toStr, setToStr] = useState(() => toLocalDatetimeStr(new Date()));
 
   // Explore trigger key
   const [exploreKey, setExploreKey] = useState<number | null>(null);
@@ -185,8 +157,8 @@ export default function SignalExplorerPage() {
 
   const applyPreset = useCallback((hours: number) => {
     const end = new Date();
-    setFromStr(toLocalDatetime(new Date(end.getTime() - hours * 3600_000)));
-    setToStr(toLocalDatetime(end));
+    setFromStr(toLocalDatetimeStr(new Date(end.getTime() - hours * 3600_000)));
+    setToStr(toLocalDatetimeStr(end));
   }, []);
 
   const canExplore = selectedSignals.length > 0 && fromStr && toStr;
@@ -207,7 +179,7 @@ export default function SignalExplorerPage() {
   const toIso = toStr ? new Date(toStr).toISOString() : '';
 
   // ── Combined signal data query (parallel per-signal fetches) ──
-  const { data: allSignalRows, isLoading: dataLoading, error: dataError } = useQuery<SignalRow[]>({
+  const { data: allSignalRows, isLoading: dataLoading, error: dataError } = useQuery<SignalLogEntry[]>({
     queryKey: ['explorer-data', exploreKey],
     queryFn: async () => {
       const results = await Promise.all(
@@ -293,7 +265,7 @@ export default function SignalExplorerPage() {
   }, [availableSignals, signalSearch]);
 
   // Table columns
-  const tableColumns: Column<SignalRow>[] = useMemo(() => [
+  const tableColumns: Column<SignalLogEntry>[] = useMemo(() => [
     { key: 'time', header: t('Time'), render: (r) => <span className="whitespace-nowrap text-xs text-[var(--text-muted)]">{new Date(r.created_at).toLocaleString()}</span> },
     { key: 'signal', header: t('Signal'), render: (r) => <span className="font-mono text-xs text-neon-cyan">{r.signal}</span> },
     { key: 'value', header: t('Value'), render: (r) => <span className="font-mono text-xs text-[var(--text-primary)]">{r.value_num ?? r.value_str ?? String(r.value_bool ?? '')}</span> },
@@ -368,7 +340,7 @@ export default function SignalExplorerPage() {
             <Clock className="inline h-3 w-3 mr-1" />{t('Time Range')}
           </span>
           <div className="flex flex-wrap gap-2 mb-2">
-            {PRESETS.map(p => (
+            {TIME_RANGE_PRESETS.map(p => (
               <Button key={p.label} size="sm" variant="ghost" onClick={() => applyPreset(p.hours)}>
                 {p.label}
               </Button>

@@ -2,7 +2,6 @@ import { request } from './client'
 import type {
   Vehicle,
   VehicleState,
-  VehicleStatus,
   Position,
   CommandResult,
   TirePressureSnapshot,
@@ -20,15 +19,7 @@ import type {
   StateSummary,
   DailyStateBreakdown,
 } from './types'
-
-/** Derives a display-friendly vehicle status from the vehicle record and optional live state. */
-export function getVehicleStatus(v: Vehicle, state?: VehicleState | null): VehicleStatus {
-  if (state?.is_charging) return 'charging'
-  if (state?.speed && state.speed > 0) return 'driving'
-  if (v.state === 'online') return 'online'
-  if (v.state === 'asleep') return 'asleep'
-  return 'offline'
-}
+export { deriveVehicleStatus as getVehicleStatus } from './types'
 
 // === Vehicles ===
 /** Fetches all tracked vehicles. */

@@ -3,100 +3,104 @@ package api
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
-	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
+// LocationSnapshotHandler serves location endpoints backed by signal_log.
 type LocationSnapshotHandler struct {
-	repo        *database.LocationSnapshotRepo
-	signalStore *signal.Store
+	signalLogReader *database.SignalLogReader
 }
 
-func NewLocationSnapshotHandler(db *database.DB) *LocationSnapshotHandler {
-	return &LocationSnapshotHandler{repo: database.NewLocationSnapshotRepo(db)}
+// Signal → JSON field mappings for location pivot queries.
+var locationMappings = []database.PivotMapping{
+	// Position & GPS
+	{Signal: "Latitude", Field: "latitude"},
+	{Signal: "Longitude", Field: "longitude"},
+	{Signal: "GpsHeading", Field: "heading"},
+	{Signal: "GpsState", Field: "gps_state"},
+	{Signal: "Elevation", Field: "elevation_m"},
+	{Signal: "VehicleSpeed", Field: "speed_mph"},
+	// Navigation & route
+	{Signal: "DestinationName", Field: "destination_name"},
+	{Signal: "MilesToArrival", Field: "miles_to_arrival"},
+	{Signal: "MinutesToArrival", Field: "minutes_to_arrival"},
+	{Signal: "RouteTrafficMinutesDelay", Field: "route_traffic_delay_min"},
+	{Signal: "RouteLastUpdated", Field: "route_last_updated"},
+	// Destination/origin coords (from unpacked Location compounds — Latest only)
+	{Signal: "DestinationLatitude", Field: "destination_lat"},
+	{Signal: "DestinationLongitude", Field: "destination_lon"},
+	{Signal: "OriginLatitude", Field: "origin_lat"},
+	{Signal: "OriginLongitude", Field: "origin_lon"},
+	// Presence
+	{Signal: "LocatedAtHome", Field: "located_at_home"},
+	{Signal: "LocatedAtWork", Field: "located_at_work"},
+	{Signal: "LocatedAtFavorite", Field: "located_at_favorite"},
+	{Signal: "HomelinkNearby", Field: "homelink_nearby"},
 }
 
-// SetSignalStore wires the signal store for read-time enrichment of NULL fields.
-func (h *LocationSnapshotHandler) SetSignalStore(store *signal.Store) {
-	h.signalStore = store
+func NewLocationSnapshotHandler(slr *database.SignalLogReader) *LocationSnapshotHandler {
+	return &LocationSnapshotHandler{signalLogReader: slr}
 }
 
+// List returns location history from signal_log via SignalTracePivotFlat.
 func (h *LocationSnapshotHandler) List(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
 	if err != nil || vehicleID == 0 {
 		writeError(w, http.StatusBadRequest, "vehicle_id required")
 		return
 	}
-	limit, _ := pagination(r)
-	snaps, err := h.repo.GetByVehicle(r.Context(), vehicleID, limit)
+
+	from := time.Now().AddDate(0, 0, -7)
+	to := time.Now()
+	if start, end := parseDateRange(r); !start.IsZero() {
+		from = start
+		if !end.IsZero() {
+			to = end
+		}
+	}
+
+	rows, err := h.signalLogReader.SignalTracePivotFlat(r.Context(),
+		vehicleID, locationMappings, from, to)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to get location snapshot data")
-		writeError(w, http.StatusInternalServerError, "failed to get location snapshot data")
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get location data from signal_log")
+		writeError(w, http.StatusInternalServerError, "failed to get location data")
 		return
 	}
-	if snaps == nil {
-		snaps = make([]*models.LocationSnapshot, 0)
+	if rows == nil {
+		rows = []map[string]interface{}{}
 	}
-	for _, snap := range snaps {
-		h.enrichFromSignalStore(vehicleID, snap)
+	for i, row := range rows {
+		if ts, ok := row["ts"]; ok {
+			row["created_at"] = ts
+		}
+		row["id"] = i + 1
 	}
-	writeJSON(w, http.StatusOK, snaps)
+	writeJSON(w, http.StatusOK, rows)
 }
 
+// Latest returns the most recent location values via SnapshotAt(now).
 func (h *LocationSnapshotHandler) Latest(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
 	if err != nil || vehicleID == 0 {
 		writeError(w, http.StatusBadRequest, "vehicle_id required")
 		return
 	}
-	snap, err := h.repo.GetLatest(r.Context(), vehicleID)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to get latest location snapshot")
-		writeError(w, http.StatusInternalServerError, "failed to get location snapshot")
-		return
-	}
-	if snap == nil {
-		writeJSON(w, http.StatusOK, nil)
-		return
-	}
-	h.enrichFromSignalStore(vehicleID, snap)
-	writeJSON(w, http.StatusOK, snap)
-}
 
-// enrichFromSignalStore fills NULL contextual fields on a snapshot from the
-// in-memory signalStore. This covers historical rows written before the
-// write-time carry-forward fix, and race conditions where the enrichment
-// signal arrived after the snapshot was persisted.
-func (h *LocationSnapshotHandler) enrichFromSignalStore(vehicleID int64, snap *models.LocationSnapshot) {
-	if h.signalStore == nil {
+	snap, err := h.signalLogReader.SnapshotAt(r.Context(), vehicleID, time.Now())
+	if err != nil {
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get latest location data")
+		writeError(w, http.StatusInternalServerError, "failed to get latest location data")
 		return
 	}
-	if snap.LocatedAtHome == nil {
-		if v, ok := h.signalStore.GetBool(vehicleID, "LocatedAtHome"); ok {
-			snap.LocatedAtHome = &v
+
+	result := make(map[string]interface{})
+	for _, m := range locationMappings {
+		if v, ok := snap[m.Signal]; ok && v != nil {
+			result[m.Field] = v
 		}
 	}
-	if snap.LocatedAtWork == nil {
-		if v, ok := h.signalStore.GetBool(vehicleID, "LocatedAtWork"); ok {
-			snap.LocatedAtWork = &v
-		}
-	}
-	if snap.LocatedAtFavorite == nil {
-		if v, ok := h.signalStore.GetBool(vehicleID, "LocatedAtFavorite"); ok {
-			snap.LocatedAtFavorite = &v
-		}
-	}
-	if snap.DestinationName == nil {
-		if v, ok := h.signalStore.GetString(vehicleID, "DestinationName"); ok && v != "" {
-			snap.DestinationName = &v
-		}
-	}
-	if snap.GpsState == nil {
-		if v, ok := h.signalStore.GetString(vehicleID, "GpsState"); ok && v != "" {
-			snap.GpsState = &v
-		}
-	}
+	writeJSON(w, http.StatusOK, result)
 }

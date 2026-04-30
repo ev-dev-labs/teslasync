@@ -162,7 +162,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  created_at AS time,\n  convert_temp(inside_temp) AS \"Cabin Temp\",\n  convert_temp(outside_temp) AS \"Outside Temp\"\nFROM climate_snapshots\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\nORDER BY created_at",
+          "rawSql": "SELECT created_at AS time,\n  convert_temp(MAX(value_num) FILTER (WHERE signal = 'InsideTemp')) AS \"Cabin Temp\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal = 'OutsideTemp')) AS \"Outside Temp\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('InsideTemp', 'OutsideTemp')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -243,7 +243,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  created_at AS time,\n  hvac_power AS \"HVAC Power (kW)\"\nFROM climate_snapshots\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\nORDER BY created_at",
+          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: HvacPower is enum, not numeric kW (ADR-002)",
           "refId": "A"
         }
       ],
@@ -324,7 +324,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  created_at AS time,\n  hvac_fan_speed AS \"Fan Speed\"\nFROM climate_snapshots\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\nORDER BY created_at",
+          "rawSql": "SELECT created_at AS time,\n  value_num AS \"Fan Speed\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'HvacFanSpeed'\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -405,7 +405,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  created_at AS time,\n  convert_temp(inside_temp) AS \"Actual Cabin\",\n  convert_temp(hvac_left_temp_request) AS \"Left Target\",\n  convert_temp(hvac_right_temp_request) AS \"Right Target\"\nFROM climate_snapshots\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\nORDER BY created_at",
+          "rawSql": "SELECT created_at AS time,\n  convert_temp(MAX(value_num) FILTER (WHERE signal = 'InsideTemp')) AS \"Actual Cabin\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal = 'HvacLeftTemperatureRequest')) AS \"Left Target\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal = 'HvacRightTemperatureRequest')) AS \"Right Target\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('InsideTemp', 'HvacLeftTemperatureRequest', 'HvacRightTemperatureRequest')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -464,7 +464,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  COUNT(*) FILTER (WHERE defrost_mode IS NOT NULL AND defrost_mode != '') AS \"Defrost Events\",\n  COUNT(*) FILTER (WHERE battery_heater_on = true) AS \"Battery Heater Events\",\n  COUNT(*) AS \"Total Snapshots\"\nFROM climate_snapshots\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)",
+          "rawSql": "SELECT\n  COUNT(*) FILTER (WHERE signal = 'DefrostMode' AND value_str IS NOT NULL AND value_str != '') AS \"Defrost Events\",\n  COUNT(*) FILTER (WHERE signal = 'BatteryHeaterOn' AND value_bool = true) AS \"Battery Heater Events\",\n  COUNT(*) FILTER (WHERE signal = 'InsideTemp') AS \"Total Readings\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('DefrostMode', 'BatteryHeaterOn', 'InsideTemp')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()",
           "refId": "A"
         }
       ],
@@ -534,7 +534,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  convert_temp(AVG(inside_temp)) AS \"Avg Cabin Temp\"\nFROM climate_snapshots\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)",
+          "rawSql": "SELECT convert_temp(AVG(value_num)) AS \"Avg Cabin Temp\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'InsideTemp'\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()",
           "refId": "A"
         }
       ],
@@ -593,7 +593,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  AVG(hvac_power) AS \"Avg HVAC Power (kW)\",\n  MAX(hvac_power) AS \"Peak HVAC (kW)\",\n  AVG(hvac_fan_speed) AS \"Avg Fan Speed\"\nFROM climate_snapshots\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)",
+          "rawSql": "SELECT\n  NULL AS \"Avg HVAC Power (kW)\",  -- Disabled: HvacPower is enum, not numeric kW (ADR-002)\n  NULL AS \"Peak HVAC (kW)\",        -- Disabled: HvacPower is enum, not numeric kW (ADR-002)\n  AVG(value_num) AS \"Avg Fan Speed\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'HvacFanSpeed'\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()",
           "refId": "A"
         }
       ],
@@ -652,7 +652,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  COUNT(*) FILTER (WHERE cabin_overheat_mode = 'On') AS \"Overheat Protection Active\",\n  COUNT(*) AS \"Total Readings\"\nFROM climate_snapshots\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)",
+          "rawSql": "SELECT\n  COUNT(*) FILTER (WHERE value_str = 'On') AS \"Overheat Protection Active\",\n  COUNT(*) AS \"Total Readings\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'CabinOverheatProtectionMode'\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()",
           "refId": "A"
         }
       ],
@@ -676,7 +676,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT created_at AS time,\n  seat_heater_left AS \"Driver\",\n  seat_heater_right AS \"Passenger\",\n  seat_heater_rear_left AS \"Rear Left\",\n  seat_heater_rear_center AS \"Rear Center\",\n  seat_heater_rear_right AS \"Rear Right\"\nFROM climate_snapshots\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\nORDER BY created_at",
+          "rawSql": "SELECT created_at AS time,\n  MAX(value_num) FILTER (WHERE signal = 'SeatHeaterLeft') AS \"Driver\",\n  MAX(value_num) FILTER (WHERE signal = 'SeatHeaterRight') AS \"Passenger\",\n  MAX(value_num) FILTER (WHERE signal = 'SeatHeaterRearLeft') AS \"Rear Left\",\n  MAX(value_num) FILTER (WHERE signal = 'SeatHeaterRearCenter') AS \"Rear Center\",\n  MAX(value_num) FILTER (WHERE signal = 'SeatHeaterRearRight') AS \"Rear Right\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('SeatHeaterLeft', 'SeatHeaterRight', 'SeatHeaterRearLeft', 'SeatHeaterRearCenter', 'SeatHeaterRearRight')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at",
           "format": "time_series",
           "refId": "A",
           "datasource": {
@@ -715,7 +715,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT created_at AS \"Time\",\n  hvac_steering_wheel_heat_level AS \"Steering Wheel Level\",\n  CASE WHEN defrost_mode IS NOT NULL AND defrost_mode != '' THEN 'ON' ELSE 'Off' END AS \"Defrost\",\n  CASE WHEN rear_defrost_enabled THEN 'ON' ELSE 'Off' END AS \"Rear Defrost\",\n  CASE WHEN wiper_heat_enabled THEN 'ON' ELSE 'Off' END AS \"Wiper Heat\",\n  COALESCE(climate_keeper_mode, 'Off') AS \"Climate Keeper\",\n  COALESCE(cabin_overheat_mode, 'Off') AS \"Overheat Protection\"\nFROM climate_snapshots\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\nORDER BY created_at DESC LIMIT 50",
+          "rawSql": "SELECT created_at AS \"Time\",\n  MAX(value_num) FILTER (WHERE signal = 'HvacSteeringWheelHeatLevel') AS \"Steering Wheel Level\",\n  CASE WHEN MAX(value_str) FILTER (WHERE signal = 'DefrostMode') IS NOT NULL AND MAX(value_str) FILTER (WHERE signal = 'DefrostMode') != '' THEN 'ON' ELSE 'Off' END AS \"Defrost\",\n  CASE WHEN bool_or(value_bool) FILTER (WHERE signal = 'RearDefrostEnabled') THEN 'ON' ELSE 'Off' END AS \"Rear Defrost\",\n  CASE WHEN bool_or(value_bool) FILTER (WHERE signal = 'WiperHeatEnabled') THEN 'ON' ELSE 'Off' END AS \"Wiper Heat\",\n  COALESCE(MAX(value_str) FILTER (WHERE signal = 'ClimateKeeperMode'), 'Off') AS \"Climate Keeper\",\n  COALESCE(MAX(value_str) FILTER (WHERE signal = 'CabinOverheatProtectionMode'), 'Off') AS \"Overheat Protection\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('HvacSteeringWheelHeatLevel', 'DefrostMode', 'RearDefrostEnabled', 'WiperHeatEnabled', 'ClimateKeeperMode', 'CabinOverheatProtectionMode')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at DESC\nLIMIT 50",
           "format": "table",
           "refId": "A",
           "datasource": {
@@ -746,7 +746,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT created_at AS \"Time\",\n  climate_seat_cooling_front_left AS \"Cool FL\",\n  climate_seat_cooling_front_right AS \"Cool FR\",\n  CASE WHEN auto_seat_climate_left THEN 'Auto' ELSE 'Manual' END AS \"Left Mode\",\n  CASE WHEN auto_seat_climate_right THEN 'Auto' ELSE 'Manual' END AS \"Right Mode\",\n  CASE WHEN seat_vent_enabled THEN 'ON' ELSE 'Off' END AS \"Ventilation\"\nFROM climate_snapshots\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\n  AND (climate_seat_cooling_front_left IS NOT NULL OR auto_seat_climate_left IS NOT NULL)\nORDER BY created_at DESC LIMIT 50",
+          "rawSql": "SELECT created_at AS \"Time\",\n  MAX(value_num) FILTER (WHERE signal = 'ClimateSeatCoolingFrontLeft') AS \"Cool FL\",\n  MAX(value_num) FILTER (WHERE signal = 'ClimateSeatCoolingFrontRight') AS \"Cool FR\",\n  CASE WHEN bool_or(value_bool) FILTER (WHERE signal = 'AutoSeatClimateLeft') THEN 'Auto' ELSE 'Manual' END AS \"Left Mode\",\n  CASE WHEN bool_or(value_bool) FILTER (WHERE signal = 'AutoSeatClimateRight') THEN 'Auto' ELSE 'Manual' END AS \"Right Mode\",\n  CASE WHEN bool_or(value_bool) FILTER (WHERE signal = 'SeatVentEnabled') THEN 'ON' ELSE 'Off' END AS \"Ventilation\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('ClimateSeatCoolingFrontLeft', 'ClimateSeatCoolingFrontRight', 'AutoSeatClimateLeft', 'AutoSeatClimateRight', 'SeatVentEnabled')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nHAVING MAX(value_num) FILTER (WHERE signal = 'ClimateSeatCoolingFrontLeft') IS NOT NULL\n   OR bool_or(value_bool) FILTER (WHERE signal = 'AutoSeatClimateLeft') IS NOT NULL\nORDER BY created_at DESC\nLIMIT 50",
           "format": "table",
           "refId": "A",
           "datasource": {

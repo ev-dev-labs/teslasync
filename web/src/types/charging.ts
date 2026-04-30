@@ -2,10 +2,10 @@ export interface ChargingSession {
   id: string;
   vehicleId: string;
   chargerType: string;
-  startBatteryLevel: number;
-  endBatteryLevel: number;
+  startBatteryPct: number;
+  endBatteryPct: number;
   energyAddedKwh: number;
-  maxPowerKw: number;
+  chargerPowerKwMax: number;
   costCents: number;
   fsmState: string;
   subFsmState?: string;
@@ -99,4 +99,84 @@ export interface OptimizerHeatmapEntry {
   hour: number;
   sessions: number;
   avg_cost_per_kwh: number;
+}
+
+/* ── Smart Charge Planner ─────────────────────────────────── */
+
+export interface OptimizeChargeRequest {
+  vehicle_id: number;
+  target_soc: number;
+  depart_by: string;
+  rate_plan_id: string;
+  max_amps?: number;
+  battery_capacity_kwh?: number;
+  charger_voltage?: number;
+  prefer_off_peak?: boolean;
+}
+
+export interface ChargeWindow {
+  start_time: string;
+  end_time: string;
+  rate_cents_kwh: number;
+  estimated_cost: number;
+  rate_tier: string;
+}
+
+export interface CostComparison {
+  charge_now_cost: number;
+  optimized_cost: number;
+  savings: number;
+  savings_percent: number;
+}
+
+export interface HourlyRate {
+  hour: number;
+  rate_cents: number;
+  tier: string;
+}
+
+export interface OptimizeChargeResponse {
+  plan_id: number;
+  current_soc: number;
+  target_soc: number;
+  kwh_needed: number;
+  estimated_duration_hours: number;
+  schedule: ChargeWindow;
+  comparison: CostComparison;
+  alternative_windows: ChargeWindow[];
+  hourly_rates: HourlyRate[];
+}
+
+export interface ApplyScheduleRequest {
+  plan_id: number;
+}
+
+export interface ApplyScheduleResponse {
+  status: string;
+  plan_id: number;
+  message: string;
+}
+
+export interface ChargePlan {
+  id: number;
+  vehicle_id: number;
+  target_soc: number;
+  depart_by: string | null;
+  scheduled_start: string;
+  scheduled_end: string;
+  rate_plan: string;
+  estimated_kwh: number | null;
+  estimated_cost: number | null;
+  charge_now_cost: number | null;
+  savings: number | null;
+  status: string;
+  applied_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+}
+
+export interface RatePlanInfo {
+  id: string;
+  name: string;
+  utility: string;
 }

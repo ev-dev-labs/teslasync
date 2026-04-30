@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
 )
@@ -70,13 +71,13 @@ func (p *Predictor) refresh(ctx context.Context) {
 	// Learn departure patterns from drives table
 	departureRows, err := p.pool.Query(ctx, `
 		SELECT v.vin,
-		       EXTRACT(HOUR FROM d.start_date) AS hour,
-		       EXTRACT(DOW FROM d.start_date) AS dow,
+		       EXTRACT(HOUR FROM d.start_ts) AS hour,
+		       EXTRACT(DOW FROM d.start_ts) AS dow,
 		       COUNT(*) AS freq
 		FROM drives d
 		JOIN vehicles v ON d.vehicle_id = v.id
-		WHERE d.start_date > NOW() - make_interval(days => $1)
-		  AND d.start_date IS NOT NULL
+		WHERE d.start_ts > NOW() - make_interval(days => $1)
+		  AND d.start_ts IS NOT NULL
 		GROUP BY v.vin, hour, dow
 		HAVING COUNT(*) >= 2
 		ORDER BY v.vin, freq DESC
@@ -113,13 +114,13 @@ func (p *Predictor) refresh(ctx context.Context) {
 	// Learn charging patterns from charging_sessions table
 	chargeRows, err := p.pool.Query(ctx, `
 		SELECT v.vin,
-		       EXTRACT(HOUR FROM cs.start_date) AS hour,
-		       EXTRACT(DOW FROM cs.start_date) AS dow,
+		       EXTRACT(HOUR FROM cs.start_ts) AS hour,
+		       EXTRACT(DOW FROM cs.start_ts) AS dow,
 		       COUNT(*) AS freq
 		FROM charging_sessions cs
 		JOIN vehicles v ON cs.vehicle_id = v.id
-		WHERE cs.start_date > NOW() - make_interval(days => $1)
-		  AND cs.start_date IS NOT NULL
+		WHERE cs.start_ts > NOW() - make_interval(days => $1)
+		  AND cs.start_ts IS NOT NULL
 		GROUP BY v.vin, hour, dow
 		HAVING COUNT(*) >= 2
 		ORDER BY v.vin, freq DESC
@@ -184,18 +185,18 @@ func (p *Predictor) Predict(vin string) *PredictionInfo {
 	// Return whichever is sooner (if any)
 	if bestDeparture != nil && bestCharge != nil {
 		if bestDeparture.EstimatedIn < bestCharge.EstimatedIn {
-			bestDeparture.NextState = "driving"
+			bestDeparture.NextState = enums.StateDriving
 			return bestDeparture
 		}
-		bestCharge.NextState = "charging"
+		bestCharge.NextState = enums.StateCharging
 		return bestCharge
 	}
 	if bestDeparture != nil {
-		bestDeparture.NextState = "driving"
+		bestDeparture.NextState = enums.StateDriving
 		return bestDeparture
 	}
 	if bestCharge != nil {
-		bestCharge.NextState = "charging"
+		bestCharge.NextState = enums.StateCharging
 		return bestCharge
 	}
 	return nil

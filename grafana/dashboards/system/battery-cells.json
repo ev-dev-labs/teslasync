@@ -162,11 +162,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT cell_id AS \"Cell\", voltage AS \"Voltage (V)\", v_deviation AS \"Deviation\" FROM fn_battery_cell_readings(${vehicle_id}::bigint)",
+          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: per-cell data not available from Fleet Telemetry (ADR-002)",
           "refId": "A"
         }
       ],
-      "title": "Cell Voltage Distribution",
+      "title": "Cell Voltage Distribution (Unavailable)",
       "type": "barchart",
       "transparent": false
     },
@@ -232,7 +232,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT voltage_delta AS \"Voltage Delta (V)\" FROM fn_battery_cell_balance(${vehicle_id}::bigint)",
+          "rawSql": "SELECT MAX(value_num) FILTER (WHERE signal = 'BrickVoltageMax') - MAX(value_num) FILTER (WHERE signal = 'BrickVoltageMin') AS \"Voltage Delta (V)\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal IN ('BrickVoltageMax', 'BrickVoltageMin') AND created_at BETWEEN $__timeFrom() AND $__timeTo()",
           "refId": "A"
         }
       ],
@@ -343,11 +343,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT cell_id AS \"Cell\", voltage AS \"Voltage (V)\", temp AS \"Temp (°C)\", v_deviation AS \"V Deviation\", t_deviation AS \"T Deviation\" FROM fn_battery_cell_readings(${vehicle_id}::bigint)",
+          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: per-cell data not available from Fleet Telemetry (ADR-002)",
           "refId": "A"
         }
       ],
-      "title": "Cell Readings",
+      "title": "Cell Readings (Unavailable)",
       "type": "table",
       "transparent": false
     },
@@ -421,11 +421,11 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT \"time\", cell_id AS metric, temp AS value FROM fn_battery_cell_temp_heatmap(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
+          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: per-cell temperature data not available from Fleet Telemetry (ADR-002)",
           "refId": "A"
         }
       ],
-      "title": "Cell Temperature Heatmap",
+      "title": "Cell Temperature Heatmap (Unavailable)",
       "type": "timeseries",
       "transparent": false
     }

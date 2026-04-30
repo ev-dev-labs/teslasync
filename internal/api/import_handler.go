@@ -27,7 +27,7 @@ func NewImportHandler(db *database.DB) *ImportHandler {
 }
 
 // ImportDrives imports drive records from a CSV file upload.
-// Expected CSV columns: vehicle_id, start_date, end_date, distance, duration_min, speed_max
+// Expected CSV columns: vehicle_id, start_ts, end_ts, distance_mi, duration_min, max_speed_mph
 func (h *ImportHandler) ImportDrives(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid multipart form")
@@ -88,16 +88,16 @@ func (h *ImportHandler) ImportDrives(w http.ResponseWriter, r *http.Request) {
 
 		d := &models.Drive{
 			VehicleID:   vehicleID,
-			StartDate:   startDate,
-			Distance:    distance,
+			StartTs:     startDate,
+			DistanceMi:  distance,
 			DurationMin: duration,
 		}
 		if speedMax > 0 {
-			d.SpeedMax = &speedMax
+			d.MaxSpeedMph = &speedMax
 		}
 		if record[2] != "" {
 			if endDate, err := time.Parse("2006-01-02T15:04:05Z", record[2]); err == nil {
-				d.EndDate = &endDate
+				d.EndTs = &endDate
 			}
 		}
 
@@ -113,7 +113,7 @@ func (h *ImportHandler) ImportDrives(w http.ResponseWriter, r *http.Request) {
 }
 
 // ImportCharging imports charging session records from a CSV file upload.
-// Expected CSV columns: vehicle_id, start_date, end_date, energy_added_kwh, start_battery, end_battery, charger_power, duration_min
+// Expected CSV columns: vehicle_id, start_ts, end_ts, energy_added_kwh, start_battery, end_battery, charger_power_kw_max, duration_min
 func (h *ImportHandler) ImportCharging(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid multipart form")
@@ -171,26 +171,28 @@ func (h *ImportHandler) ImportCharging(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
+		startBattPct := int16(startBattery)
 		c := &models.ChargingSession{
-			VehicleID:         vehicleID,
-			StartDate:         startDate,
-			ChargeEnergyAdded: energyAdded,
-			StartBatteryLevel: startBattery,
+			VehicleID:       vehicleID,
+			StartTs:         startDate,
+			EnergyAddedKwh:  &energyAdded,
+			StartBatteryPct: &startBattPct,
 		}
 
 		if record[2] != "" {
 			if endDate, err := time.Parse("2006-01-02T15:04:05Z", record[2]); err == nil {
-				c.EndDate = &endDate
+				c.EndTs = &endDate
 			}
 		}
 		if endBatt, err := strconv.Atoi(record[5]); err == nil {
-			c.EndBatteryLevel = &endBatt
+			endBattPct := int16(endBatt)
+			c.EndBatteryPct = &endBattPct
 		}
 		if power, err := strconv.ParseFloat(record[6], 64); err == nil {
-			c.ChargerPower = &power
+			c.ChargerPowerKwMax = &power
 		}
 		durationMin, _ := strconv.ParseFloat(record[7], 64)
-		c.DurationMin = durationMin
+		c.DurationMin = &durationMin
 
 		if err := h.chargingRepo.Create(r.Context(), c); err != nil {
 			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to import charging session")

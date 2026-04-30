@@ -176,7 +176,7 @@ func (h *FleetTelemetryErrorHandler) RefreshErrors(w http.ResponseWriter, r *htt
 
 	// Convert parsed errors to model structs
 	var modelErrors []*models.TeslaFleetTelemetryError
-	for i, e := range envelope.Response.Errors {
+	for _, e := range envelope.Response.Errors {
 		m := &models.TeslaFleetTelemetryError{
 			VIN:            e.VIN,
 			TeslaUpdatedAt: teslaUpdatedAt,
@@ -193,11 +193,6 @@ func (h *FleetTelemetryErrorHandler) RefreshErrors(w http.ResponseWriter, r *htt
 				utc := t.UTC()
 				m.ReportedAt = &utc
 			}
-		}
-
-		// Store raw JSON for each error entry
-		if rawBytes, err := json.Marshal(envelope.Response.Errors[i]); err == nil {
-			m.RawJSON = string(rawBytes)
 		}
 
 		modelErrors = append(modelErrors, m)

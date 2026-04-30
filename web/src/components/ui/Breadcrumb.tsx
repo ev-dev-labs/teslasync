@@ -37,13 +37,13 @@ export function Breadcrumb() {
   if (parts.length === 0) return null
 
   return (
-    <nav className="flex items-center gap-1 text-[11px] mb-4" style={{ color: 'var(--text-muted)' }}>
+    <nav className="flex items-center gap-1 text-[11px] mb-4 text-[var(--text-muted)]">
       <Link to="/" className="hover:text-[var(--theme-primary)]"><Home className="h-3 w-3" /></Link>
       {parts.map((part, i) => (
         <span key={i} className="flex items-center gap-1">
           <ChevronRight className="h-3 w-3" />
           {i === parts.length - 1 ? (
-            <span style={{ color: 'var(--text-primary)' }}>{routeNames[part] || part}</span>
+            <span className="text-[var(--text-primary)]">{routeNames[part] || part}</span>
           ) : (
             <Link to={'/' + parts.slice(0, i + 1).join('/')} className="hover:text-[var(--theme-primary)]">
               {routeNames[part] || part}

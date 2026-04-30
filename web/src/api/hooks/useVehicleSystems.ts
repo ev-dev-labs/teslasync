@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
+import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import type { ClimateState, TirePressureReading, MaintenanceItem, ServiceRecord, SoftwareUpdate, SafetySnapshot, MediaSnapshot } from '@/types/vehicle-systems';
 
 export const vehicleSystemsKeys = {
@@ -22,7 +23,7 @@ export function useClimate(vehicleId: string) {
     queryKey: vehicleSystemsKeys.climate(vehicleId),
     queryFn: () => request<ClimateState>(`/climate/latest?vehicle_id=${vehicleId}`),
     enabled: !!vehicleId,
-    refetchInterval: 30_000,
+    refetchInterval: INTERVALS.STANDARD,
   });
 }
 
@@ -40,7 +41,7 @@ export function useTirePressure(vehicleId: string) {
     queryKey: vehicleSystemsKeys.tirePressure(vehicleId),
     queryFn: () => request<TirePressureReading>(`/tire-pressure/latest?vehicle_id=${vehicleId}`),
     enabled: !!vehicleId,
-    refetchInterval: 30_000,
+    refetchInterval: INTERVALS.STANDARD,
   });
 }
 
@@ -58,7 +59,7 @@ export function useMaintenance() {
     queryKey: vehicleSystemsKeys.maintenance,
     queryFn: () => request<MaintenanceItem[]>('/maintenance'),
     retry: false,
-    staleTime: Infinity,
+    staleTime: STALE_TIMES.STATIC,
     select: safeArray,
   });
 }
@@ -68,7 +69,7 @@ export function useServiceRecords() {
     queryKey: vehicleSystemsKeys.serviceRecords,
     queryFn: () => request<ServiceRecord[]>('/maintenance/records'),
     retry: false,
-    staleTime: Infinity,
+    staleTime: STALE_TIMES.STATIC,
     select: safeArray,
   });
 }
@@ -87,7 +88,7 @@ export function useSafety(vehicleId: string) {
     queryKey: vehicleSystemsKeys.safety(vehicleId),
     queryFn: () => request<SafetySnapshot>(`/safety/latest?vehicle_id=${vehicleId}`),
     enabled: !!vehicleId,
-    refetchInterval: 30_000,
+    refetchInterval: INTERVALS.STANDARD,
   });
 }
 
@@ -105,7 +106,7 @@ export function useMedia(vehicleId: string) {
     queryKey: vehicleSystemsKeys.media(vehicleId),
     queryFn: () => request<MediaSnapshot>(`/media/latest?vehicle_id=${vehicleId}`),
     enabled: !!vehicleId,
-    refetchInterval: 30_000,
+    refetchInterval: INTERVALS.STANDARD,
   });
 }
 

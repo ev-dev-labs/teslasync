@@ -23,45 +23,16 @@ import { FadeIn } from '@/components/motion/FadeIn';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSignals } from '@/api/hooks/useTelemetry';
 import { request } from '@/api/client';
-import { fmtNumber } from '@/lib/numberFormat';
 import { CHART_COLORS } from '@/lib/colors';
+import { toLocalDatetimeStr } from '@/lib/dateFormat';
+import { formatValue, type SignalLogEntry } from '@/components/SignalQueryControls';
+import type { SignalHistoryResp } from '@/api/types';
+import { TIME_RANGE_PRESETS } from '@/lib/constants';
 import { Database, Search, Clock, Activity, Filter, AlertCircle } from 'lucide-react';
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-interface SignalRow {
-  created_at: string;
-  signal: string;
-  value_num: number | null;
-  value_str: string | null;
-  value_bool: boolean | null;
-}
-
-interface SignalHistoryResp {
-  signal: string;
-  count: number;
-  data: Array<{
-    created_at: string;
-    value_num?: number | null;
-    value_str?: string | null;
-    value_bool?: boolean | null;
-  }>;
-}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function toLocalDatetime(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-function formatValue(row: SignalRow): string {
-  if (row.value_num !== null && row.value_num !== undefined) return fmtNumber(row.value_num, 4);
-  if (row.value_bool !== null && row.value_bool !== undefined) return String(row.value_bool);
-  return row.value_str ?? '';
-}
-
-function valueType(row: SignalRow): string {
+function valueType(row: SignalLogEntry): string {
   if (row.value_num !== null && row.value_num !== undefined) return 'number';
   if (row.value_bool !== null && row.value_bool !== undefined) return 'boolean';
   return 'string';
@@ -70,14 +41,6 @@ function valueType(row: SignalRow): string {
 const typeVariant: Record<string, 'info' | 'success' | 'warning'> = {
   number: 'info', string: 'success', boolean: 'warning',
 };
-
-const PRESETS = [
-  { label: '1h', hours: 1 },
-  { label: '6h', hours: 6 },
-  { label: '24h', hours: 24 },
-  { label: '7d', hours: 168 },
-  { label: '30d', hours: 720 },
-];
 
 // ─── Page component ──────────────────────────────────────────────────────────
 
@@ -92,8 +55,8 @@ export default function SignalLogViewerPage() {
   const [signalSearch, setSignalSearch] = useState('');
 
   // DateTime range
-  const [fromStr, setFromStr] = useState(() => toLocalDatetime(new Date(Date.now() - 3600_000)));
-  const [toStr, setToStr] = useState(() => toLocalDatetime(new Date()));
+  const [fromStr, setFromStr] = useState(() => toLocalDatetimeStr(new Date(Date.now() - 3600_000)));
+  const [toStr, setToStr] = useState(() => toLocalDatetimeStr(new Date()));
 
   // Pagination
   const [perPage, setPerPage] = useState(50);
@@ -104,8 +67,8 @@ export default function SignalLogViewerPage() {
 
   const applyPreset = useCallback((hours: number) => {
     const end = new Date();
-    setFromStr(toLocalDatetime(new Date(end.getTime() - hours * 3600_000)));
-    setToStr(toLocalDatetime(end));
+    setFromStr(toLocalDatetimeStr(new Date(end.getTime() - hours * 3600_000)));
+    setToStr(toLocalDatetimeStr(end));
   }, []);
 
   const canQuery = selectedSignals.length > 0 && fromStr && toStr;
@@ -126,7 +89,7 @@ export default function SignalLogViewerPage() {
   const toIso = toStr ? new Date(toStr).toISOString() : '';
 
   // ── Data query (parallel per-signal fetches) ──
-  const { data: allRows, isLoading, isFetching, error: dataError } = useQuery<SignalRow[]>({
+  const { data: allRows, isLoading, isFetching, error: dataError } = useQuery<SignalLogEntry[]>({
     queryKey: ['signal-log', queryKey],
     queryFn: async () => {
       const results = await Promise.all(
@@ -167,7 +130,7 @@ export default function SignalLogViewerPage() {
   }, [availableSignals, signalSearch]);
 
   // Table columns
-  const logColumns: Column<SignalRow>[] = useMemo(() => [
+  const logColumns: Column<SignalLogEntry>[] = useMemo(() => [
     { key: 'row', header: '#', render: (r) => {
       const idx = rows.indexOf(r);
       return <span className="text-xs text-[var(--text-muted)] font-mono">{(page - 1) * perPage + idx + 1}</span>;
@@ -247,7 +210,7 @@ export default function SignalLogViewerPage() {
             <Clock className="inline h-3 w-3 mr-1" />{t('Time Range')}
           </span>
           <div className="flex flex-wrap gap-2 mb-2">
-            {PRESETS.map(p => (
+            {TIME_RANGE_PRESETS.map(p => (
               <Button key={p.label} size="sm" variant="ghost" onClick={() => applyPreset(p.hours)}>
                 {p.label}
               </Button>

@@ -57,12 +57,12 @@ func (h *SearchHandler) Search(w http.ResponseWriter, r *http.Request) {
 
 	// Search drives by start/end address
 	rows2, err := h.db.Pool.Query(ctx,
-		`SELECT d.id, d.start_date, d.distance,
+		`SELECT d.id, d.start_ts, d.distance_mi,
 		        COALESCE(a.display_name, '')
 		 FROM drives d
 		 LEFT JOIN addresses a ON d.start_address_id = a.id
 		 WHERE a.display_name ILIKE $1 OR a.city ILIKE $1
-		 ORDER BY d.start_date DESC
+		 ORDER BY d.start_ts DESC
 		 LIMIT 5`, pattern)
 	if err != nil {
 		log.Error().Err(err).Msg("search: drives query failed")

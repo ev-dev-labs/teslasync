@@ -136,7 +136,7 @@ def run_simulation():
                 # Location (parked at charger)
                 "Location": {"latitude": LAT + random.uniform(-0.0001, 0.0001),
                              "longitude": LON + random.uniform(-0.0001, 0.0001)},
-                "GpsState": "valid",
+                "GpsState": "Fix3D",
                 "Gear": "P",
                 "VehicleSpeed": 0,
 

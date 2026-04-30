@@ -4,6 +4,14 @@
 # Includes: API, Web (Nginx), Notification Worker, Export Worker,
 #           PostgreSQL, Redis, Mosquitto, Grafana, Jaeger (tracing).
 # All tracing and telemetry features are enabled by default.
+#
+# ⚠️  TimescaleDB-HA migration (ADR-007):
+#   This compose file was migrated to timescale/timescaledb-ha:pg17.
+#   If upgrading from a postgres:17-alpine deployment, you MUST wipe the volume:
+#       docker compose -f docker-compose.dev.yml down
+#       docker volume rm teslasync_dev_postgres_data
+#       docker compose -f docker-compose.dev.yml up -d
+#   Existing data is replaced; staging losses accepted per ADR-009.
 
 services:
   teslasync-api:
@@ -33,7 +41,7 @@ services:
       - TESLA_REDIRECT_URI=http://localhost:8080/api/v1/auth/callback
       - TESLA_API_BASE_URL=${TESLA_API_BASE_URL:-https://fleet-api.prd.na.vn.cloud.tesla.com}
       - WORKER_POLL_INTERVAL=30s
-      - LOG_LEVEL=debug
+      - LOG_LEVEL=error
       - FLEET_TELEMETRY_ENABLED=${FLEET_TELEMETRY_ENABLED:-false}
       - FLEET_TELEMETRY_HOST=${FLEET_TELEMETRY_HOST:-}
       - FLEET_TELEMETRY_PORT=4443
@@ -93,7 +101,7 @@ services:
       - DATABASE_SSL_MODE=disable
       - MQTT_HOST=mosquitto
       - MQTT_PORT=1883
-      - LOG_LEVEL=debug
+      - LOG_LEVEL=error
       - HEALTH_PORT=8081
       - OTEL_ENABLED=true
       - OTEL_ENDPOINT=jaeger:4317
@@ -128,7 +136,7 @@ services:
       - DATABASE_SSL_MODE=disable
       - MQTT_HOST=mosquitto
       - MQTT_PORT=1883
-      - LOG_LEVEL=debug
+      - LOG_LEVEL=error
       - HEALTH_PORT=8082
       - OTEL_ENABLED=true
       - OTEL_ENDPOINT=jaeger:4317
@@ -149,7 +157,14 @@ services:
   # ── Infrastructure ────────────────────────────────────────
 
   postgres:
-    image: postgres:17-alpine
+    # ⚠️  TimescaleDB-HA migration (ADR-007):
+    #   Migrated from postgres:17-alpine to timescale/timescaledb-ha:pg17.
+    #   If upgrading an existing deployment, you MUST wipe the volume:
+    #       docker compose -f docker-compose.dev.yml down
+    #       docker volume rm teslasync_dev_postgres_data
+    #       docker compose -f docker-compose.dev.yml up -d
+    #   Existing data is replaced; staging losses accepted per ADR-009.
+    image: timescale/timescaledb-ha:pg17
     container_name: teslasync-postgres-dev
     restart: unless-stopped
     ports:
@@ -158,8 +173,10 @@ services:
       - POSTGRES_USER=teslasync
       - POSTGRES_PASSWORD=teslasync
       - POSTGRES_DB=teslasync
+      - PGDATA=/home/postgres/pgdata/data
     volumes:
-      - dev_postgres_data:/var/lib/postgresql/data
+      - dev_postgres_data:/home/postgres/pgdata
+      - ./scripts/init-timescaledb.sql:/docker-entrypoint-initdb.d/00-init-timescaledb.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U teslasync"]
       interval: 5s

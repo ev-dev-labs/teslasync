@@ -1,8 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
+import { INTERVALS, STALE_TIMES } from '@/lib/constants';
+import { useToast } from '@/components/feedback/Toast';
 import type { Vehicle } from '@/types/vehicle';
-import type { VehicleState, VehicleStatus } from '../types';
+import type { VehicleState } from '../types';
+export { deriveVehicleStatus as getVehicleStatus } from '../types';
 
 export const vehicleKeys = {
   all: ['vehicles'] as const,
@@ -11,23 +14,18 @@ export const vehicleKeys = {
   positions: (id: number) => ['vehicle-positions', id] as const,
 };
 
-/** Derives a display-friendly vehicle status from the vehicle record and optional live state. */
-export function getVehicleStatus(v: Vehicle, state?: VehicleState | null): VehicleStatus {
-  if (state?.is_charging) return 'charging'
-  if (state?.speed && state.speed > 0) return 'driving'
-  if (v.state === 'online') return 'online'
-  if (v.state === 'asleep') return 'asleep'
-  return 'offline'
-}
-
 export function useVehicles() {
   return useQuery({
     queryKey: vehicleKeys.all,
     queryFn: () => request<Vehicle[]>('/vehicles'),
-    staleTime: 30_000,
+    staleTime: STALE_TIMES.FAST,
     select: safeArray,
   });
 }
+
+// useVehicleLiveState removed — vehicle_live_state table dropped (phase-14/13).
+// The /vehicles/{id}/live-state endpoint no longer exists.
+// Use useVehicleState (reads from SignalStore) or useVehicleLive (SSE) instead.
 
 export function useVehicle(id: string) {
   return useQuery({
@@ -74,7 +72,7 @@ export function useVehicleState(vehicleId: number, options?: { refetchInterval?:
       return { state, live: res.live ?? false }
     },
     enabled: vehicleId > 0,
-    refetchInterval: options?.refetchInterval ?? 30_000,
+    refetchInterval: options?.refetchInterval ?? INTERVALS.STANDARD,
   });
 }
 
@@ -89,38 +87,60 @@ export function useVehiclePositions(vehicleId: number, limit = 100) {
 
 export function useRefreshVehicle() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: (id: string) => request<Vehicle>(`/vehicles/${id}/wake`, { method: 'POST' }),
     onSuccess: (data, id) => {
       queryClient.setQueryData(vehicleKeys.detail(id), data);
       queryClient.invalidateQueries({ queryKey: vehicleKeys.all });
+      toast.success('Vehicle refreshed');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to refresh vehicle: ${err.message}`);
     },
   });
 }
 
 export function useDeleteVehicle() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: (id: number) => request<void>(`/vehicles/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: vehicleKeys.all });
+      toast.success('Vehicle deleted');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to delete vehicle: ${err.message}`);
     },
   });
 }
 
 export function useSyncVehicles() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: () => request<{ synced: number; vehicles: Vehicle[] }>('/vehicles/sync', { method: 'POST' }),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: vehicleKeys.all });
+      toast.success(`Vehicles synced (${data.synced} updated)`);
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to sync vehicles: ${err.message}`);
     },
   });
 }
 
 export function useWakeVehicle() {
+  const toast = useToast();
   return useMutation({
     mutationFn: (id: number) => request<{ status: string }>(`/vehicles/${id}/wake`, { method: 'POST' }),
+    onSuccess: () => {
+      toast.success('Wake command sent');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to wake vehicle: ${err.message}`);
+    },
   });
 }
 
@@ -266,16 +286,21 @@ export function useVehicleMobileEnabled(vehicleId?: string) {
     queryKey: ['vehicle-mobile-enabled', vehicleId],
     queryFn: () => request<VehicleInfoEnvelope<MobileEnabledData>>(`/vehicles/${vehicleId}/mobile-enabled`),
     enabled: !!vehicleId,
-    staleTime: 5 * 60_000,
+    staleTime: STALE_TIMES.SLOW,
   });
 }
 
 export function useRefreshVehicleMobileEnabled(vehicleId?: string) {
   const queryClient = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: () => request<VehicleInfoEnvelope<MobileEnabledData>>(`/vehicles/${vehicleId}/mobile-enabled/refresh`, { method: 'POST' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicle-mobile-enabled', vehicleId] });
+      toast.success('Mobile access status refreshed');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to refresh mobile access: ${err.message}`);
     },
   });
 }
@@ -285,16 +310,21 @@ export function useVehicleOptions(vehicleId?: string) {
     queryKey: ['vehicle-options', vehicleId],
     queryFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/options`),
     enabled: !!vehicleId,
-    staleTime: Infinity,
+    staleTime: STALE_TIMES.STATIC,
   });
 }
 
 export function useRefreshVehicleOptions(vehicleId?: string) {
   const queryClient = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/options/refresh`, { method: 'POST' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicle-options', vehicleId] });
+      toast.success('Vehicle options refreshed');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to refresh options: ${err.message}`);
     },
   });
 }
@@ -304,16 +334,21 @@ export function useVehicleSpecs(vehicleId?: string) {
     queryKey: ['vehicle-specs', vehicleId],
     queryFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/specs`),
     enabled: !!vehicleId,
-    staleTime: Infinity,
+    staleTime: STALE_TIMES.STATIC,
   });
 }
 
 export function useRefreshVehicleSpecs(vehicleId?: string) {
   const queryClient = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/specs/refresh`, { method: 'POST' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicle-specs', vehicleId] });
+      toast.success('Vehicle specs refreshed');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to refresh specs: ${err.message}`);
     },
   });
 }
@@ -325,16 +360,21 @@ export function useVehicleSubscriptions(vehicleId?: string) {
     queryKey: ['vehicle-subscriptions', vehicleId],
     queryFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/subscriptions`),
     enabled: !!vehicleId,
-    staleTime: 60 * 60_000, // 1 hour — rarely changes
+    staleTime: STALE_TIMES.RARE,
   });
 }
 
 export function useRefreshVehicleSubscriptions(vehicleId?: string) {
   const queryClient = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/subscriptions/refresh`, { method: 'POST' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicle-subscriptions', vehicleId] });
+      toast.success('Subscriptions refreshed');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to refresh subscriptions: ${err.message}`);
     },
   });
 }
@@ -346,16 +386,21 @@ export function useVehicleUpgrades(vehicleId?: string) {
     queryKey: ['vehicle-upgrades', vehicleId],
     queryFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/upgrades`),
     enabled: !!vehicleId,
-    staleTime: 60 * 60_000, // 1 hour — rarely changes
+    staleTime: STALE_TIMES.RARE,
   });
 }
 
 export function useRefreshVehicleUpgrades(vehicleId?: string) {
   const queryClient = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/upgrades/refresh`, { method: 'POST' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicle-upgrades', vehicleId] });
+      toast.success('Upgrades refreshed');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to refresh upgrades: ${err.message}`);
     },
   });
 }
@@ -366,16 +411,21 @@ export function useWarrantyDetails() {
   return useQuery({
     queryKey: ['warranty-details'],
     queryFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>('/tesla/warranty'),
-    staleTime: 24 * 60 * 60_000, // 1 day
+    staleTime: STALE_TIMES.DAILY,
   });
 }
 
 export function useRefreshWarrantyDetails() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>('/tesla/warranty/refresh', { method: 'POST' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['warranty-details'] });
+      toast.success('Warranty details refreshed');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to refresh warranty details: ${err.message}`);
     },
   });
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
@@ -19,6 +20,7 @@ type Worker struct {
 	repo       *database.ExportJobRepo
 	processor  *Processor
 	mqttClient pahomqtt.Client
+	wg         sync.WaitGroup
 }
 
 // NewWorker creates an export worker.
@@ -55,7 +57,11 @@ func (w *Worker) Start(ctx context.Context, mqttClient pahomqtt.Client) {
 				log.Error().Err(err).Msg("export worker: invalid message")
 				return
 			}
-			w.processJob(ctx, &req)
+			w.wg.Add(1)
+			go func() {
+				defer w.wg.Done()
+				w.processJob(ctx, &req)
+			}()
 		})
 
 		if token.WaitTimeout(10*time.Second) && token.Error() != nil {
@@ -127,6 +133,23 @@ func (w *Worker) processJob(ctx context.Context, req *models.ExportJobRequest) {
 		Msg("export worker: job completed")
 
 	w.publishStatusEvent(req.JobID, string(StatusReady), req.Type, "", result.RecordCount)
+}
+
+// Shutdown waits for all in-flight export jobs to complete,
+// with a bounded 30-second timeout to prevent hanging indefinitely.
+func (w *Worker) Shutdown() {
+	log.Info().Msg("shutting down: waiting for in-flight export jobs...")
+	done := make(chan struct{})
+	go func() {
+		w.wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+		log.Info().Msg("all export jobs completed, exiting cleanly")
+	case <-time.After(30 * time.Second):
+		log.Warn().Msg("shutdown timeout exceeded (30s), forcing exit with in-flight work abandoned")
+	}
 }
 
 // StatusEvent is published to MQTT when an export job changes status.

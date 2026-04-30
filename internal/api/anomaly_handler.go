@@ -204,14 +204,14 @@ func (h *AnomalyHandler) detectZScoreAnomalies(ctx interface {
 	rows, err := h.db.Pool.Query(ctx, `
 		WITH stats AS (
 			SELECT signal, AVG(value_num) AS mean, STDDEV(value_num) AS stddev, COUNT(*) AS cnt
-			FROM signal_history
+			FROM signal_log
 			WHERE vehicle_id = $1 AND created_at > $2 AND value_num IS NOT NULL
 			GROUP BY signal HAVING STDDEV(value_num) > 0 AND COUNT(*) >= 30
 		)
 		SELECT sh.signal, sh.value_num, sh.created_at,
 		       s.mean, s.stddev,
 		       ABS(sh.value_num - s.mean) / s.stddev AS z_score
-		FROM signal_history sh
+		FROM signal_log sh
 		JOIN stats s ON sh.signal = s.signal
 		WHERE sh.vehicle_id = $1
 		  AND sh.created_at > $2
@@ -252,7 +252,7 @@ func (h *AnomalyHandler) detectZScoreAnomalies(ctx interface {
 	// Count signals checked
 	var signalsChecked int
 	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT COUNT(DISTINCT signal) FROM signal_history
+		SELECT COUNT(DISTINCT signal) FROM signal_log
 		WHERE vehicle_id = $1 AND created_at > $2 AND value_num IS NOT NULL`,
 		vehicleID, since).Scan(&signalsChecked)
 
@@ -274,7 +274,7 @@ func (h *AnomalyHandler) detectRangeViolations(ctx interface {
 		var value float64
 		var ts time.Time
 		err := h.db.Pool.QueryRow(ctx, `
-			SELECT value_num, created_at FROM signal_history
+			SELECT value_num, created_at FROM signal_log
 			WHERE vehicle_id = $1 AND signal = $2 AND created_at > $3
 			  AND value_num IS NOT NULL
 			  AND (value_num < $4 OR value_num > $5)
@@ -335,9 +335,9 @@ func (h *AnomalyHandler) detectTrendAnomalies(ctx interface {
 		var avg7d, stddev7d, avg24h *float64
 		err := h.db.Pool.QueryRow(ctx, `
 			SELECT
-				(SELECT AVG(value_num) FROM signal_history WHERE vehicle_id = $1 AND signal = $2 AND created_at > NOW() - INTERVAL '7 days' AND value_num IS NOT NULL),
-				(SELECT STDDEV(value_num) FROM signal_history WHERE vehicle_id = $1 AND signal = $2 AND created_at > NOW() - INTERVAL '7 days' AND value_num IS NOT NULL),
-				(SELECT AVG(value_num) FROM signal_history WHERE vehicle_id = $1 AND signal = $2 AND created_at > NOW() - INTERVAL '24 hours' AND value_num IS NOT NULL)
+				(SELECT AVG(value_num) FROM signal_log WHERE vehicle_id = $1 AND signal = $2 AND created_at > NOW() - INTERVAL '7 days' AND value_num IS NOT NULL),
+				(SELECT STDDEV(value_num) FROM signal_log WHERE vehicle_id = $1 AND signal = $2 AND created_at > NOW() - INTERVAL '7 days' AND value_num IS NOT NULL),
+				(SELECT AVG(value_num) FROM signal_log WHERE vehicle_id = $1 AND signal = $2 AND created_at > NOW() - INTERVAL '24 hours' AND value_num IS NOT NULL)
 			`, vehicleID, signal).Scan(&avg7d, &stddev7d, &avg24h)
 		if err != nil || avg7d == nil || stddev7d == nil || avg24h == nil || *stddev7d == 0 {
 			continue

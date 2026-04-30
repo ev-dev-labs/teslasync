@@ -12,18 +12,11 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime, formatRelative } from '@/lib/dateFormat';
 import { fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
+import type { SignalRow } from '@/types/telemetry';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
-
-interface SignalRow {
-  name: string;
-  value: string;
-  timestamp: string | null;
-  staleness: number;
-  category: 'active' | 'stale' | 'never';
-}
 
 type SortMode = 'staleness' | 'alpha' | 'category';
 type FilterMode = 'all' | 'stale' | 'active';

@@ -1,25 +1,44 @@
 export interface ClimateState {
-  id: string;
-  vehicleId: string;
-  insideTemp: number;
-  outsideTemp: number;
-  hvacPower: number;
-  fanSpeed: number;
-  driverTempSetting: number;
-  passengerTempSetting: number;
-  isAcOn: boolean;
-  isAutoClimate: boolean;
-  climateKeeperMode: string;
-  defrostMode: boolean;
-  batteryHeater: boolean;
-  steeringWheelHeat: boolean;
-  seatHeaterLeft: number;
-  seatHeaterRight: number;
-  seatHeaterRearLeft: number;
-  seatHeaterRearRight: number;
-  seatHeaterRearCenter: number;
-  overheatProtection: string;
-  timestamp: string;
+  id?: number;
+  created_at?: string;
+  timestamp?: string;
+  // Temperatures (°C from Fleet Telemetry)
+  insideTemp?: number | null;
+  outsideTemp?: number | null;
+  driverTempSetting?: number | null;
+  passengerTempSetting?: number | null;
+  // HVAC system
+  hvacPower?: string | null;
+  isAcOn?: boolean | null;
+  hvacAutoMode?: string | null;
+  fanSpeed?: number | null;
+  hvacFanStatus?: number | null;
+  // Climate modes
+  climateKeeperMode?: string | null;
+  defrostMode?: string | null;
+  defrostForPreconditioning?: boolean | null;
+  rearDefrostEnabled?: boolean | null;
+  wiperHeatEnabled?: boolean | null;
+  rearDisplayHvacEnabled?: boolean | null;
+  // Battery & protection
+  batteryHeater?: boolean | null;
+  overheatProtection?: string | null;
+  cabinOverheatProtectionTempLimit?: string | null;
+  // Steering wheel
+  hvacSteeringWheelHeatAuto?: boolean | null;
+  hvacSteeringWheelHeatLevel?: number | null;
+  // Seat heaters
+  seatHeaterLeft?: number | null;
+  seatHeaterRight?: number | null;
+  seatHeaterRearLeft?: number | null;
+  seatHeaterRearRight?: number | null;
+  seatHeaterRearCenter?: number | null;
+  // Seat climate
+  autoSeatClimateLeft?: boolean | null;
+  autoSeatClimateRight?: boolean | null;
+  climateSeatCoolingFrontLeft?: number | null;
+  climateSeatCoolingFrontRight?: number | null;
+  seatVentEnabled?: boolean | null;
 }
 
 export interface TirePressureReading {
@@ -68,20 +87,20 @@ export interface SoftwareUpdate {
 }
 
 export interface SafetySnapshot {
-  id: string;
-  vehicleId: string;
-  automaticEmergencyBraking: boolean;
-  blindSpotCamera: boolean;
-  blindSpotWarning: boolean;
-  forwardCollisionWarning: string;
-  laneDepartureAvoidance: string;
-  emergencyLaneDeparture: boolean;
-  cruiseFollowDistance: number;
-  speedLimitWarning: string;
-  pinToDriveEnabled: boolean;
-  milesSinceReset: number;
-  selfDrivingMilesSinceReset: number;
-  timestamp: string;
+  id?: number;
+  vehicle_id?: number;
+  automatic_blind_spot_camera?: boolean | null;
+  automatic_emergency_braking_off?: boolean | null;
+  blind_spot_collision_warning?: boolean | null;
+  cruise_follow_distance?: string | null;
+  emergency_lane_departure_avoidance?: boolean | null;
+  forward_collision_warning?: string | null;
+  lane_departure_avoidance?: string | null;
+  speed_limit_warning?: string | null;
+  pin_to_drive_enabled?: boolean | null;
+  miles_since_reset?: number | null;
+  self_driving_miles_since_reset?: number | null;
+  created_at?: string;
 }
 
 export interface MediaSnapshot {

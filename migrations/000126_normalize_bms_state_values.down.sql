@@ -1,0 +1,2 @@
+-- No-op: we cannot reliably reconstruct the original prefixed values.
+-- The normalized values are the correct canonical form.

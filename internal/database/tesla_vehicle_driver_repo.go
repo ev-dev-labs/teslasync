@@ -20,7 +20,7 @@ func NewTeslaVehicleDriverRepo(db *DB) *TeslaVehicleDriverRepo {
 
 // GetDriversByVehicleID returns all drivers for a given vehicle.
 func (r *TeslaVehicleDriverRepo) GetDriversByVehicleID(ctx context.Context, vehicleID int64) ([]*models.TeslaVehicleDriver, error) {
-	query := `SELECT id, vehicle_id, vin, share_user_id, driver_email, driver_name, role, raw_json, fetched_at
+	query := `SELECT id, vehicle_id, vin, share_user_id, driver_email, driver_name, role, fetched_at
 		FROM tesla_vehicle_drivers WHERE vehicle_id = $1 ORDER BY id ASC`
 
 	rows, err := r.db.Pool.Query(ctx, query, vehicleID)
@@ -34,7 +34,7 @@ func (r *TeslaVehicleDriverRepo) GetDriversByVehicleID(ctx context.Context, vehi
 		d := &models.TeslaVehicleDriver{}
 		if err := rows.Scan(
 			&d.ID, &d.VehicleID, &d.VIN, &d.ShareUserID,
-			&d.DriverEmail, &d.DriverName, &d.Role, &d.RawJSON, &d.FetchedAt,
+			&d.DriverEmail, &d.DriverName, &d.Role, &d.FetchedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan vehicle driver: %w", err)
 		}
@@ -58,14 +58,10 @@ func (r *TeslaVehicleDriverRepo) ReplaceDriversForVehicle(ctx context.Context, v
 	}
 
 	for _, d := range drivers {
-		rawJSON := d.RawJSON
-		if rawJSON == "" {
-			rawJSON = "{}"
-		}
 		_, err := tx.Exec(ctx, `INSERT INTO tesla_vehicle_drivers
-			(vehicle_id, vin, share_user_id, driver_email, driver_name, role, raw_json, fetched_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-			d.VehicleID, d.VIN, d.ShareUserID, d.DriverEmail, d.DriverName, d.Role, rawJSON, now,
+			(vehicle_id, vin, share_user_id, driver_email, driver_name, role, fetched_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+			d.VehicleID, d.VIN, d.ShareUserID, d.DriverEmail, d.DriverName, d.Role, now,
 		)
 		if err != nil {
 			return fmt.Errorf("insert driver: %w", err)
@@ -77,7 +73,7 @@ func (r *TeslaVehicleDriverRepo) ReplaceDriversForVehicle(ctx context.Context, v
 
 // GetInvitationsByVehicleID returns all invitations for a given vehicle.
 func (r *TeslaVehicleDriverRepo) GetInvitationsByVehicleID(ctx context.Context, vehicleID int64) ([]*models.TeslaVehicleInvitation, error) {
-	query := `SELECT id, vehicle_id, vin, invitation_id, invite_url, status, expires_at, created_by, raw_json, fetched_at, created_at
+	query := `SELECT id, vehicle_id, vin, invitation_id, invite_url, status, expires_at, created_by, fetched_at, created_at
 		FROM tesla_vehicle_invitations WHERE vehicle_id = $1 ORDER BY created_at DESC`
 
 	rows, err := r.db.Pool.Query(ctx, query, vehicleID)
@@ -92,7 +88,7 @@ func (r *TeslaVehicleDriverRepo) GetInvitationsByVehicleID(ctx context.Context, 
 		if err := rows.Scan(
 			&inv.ID, &inv.VehicleID, &inv.VIN, &inv.InvitationID,
 			&inv.InviteURL, &inv.Status, &inv.ExpiresAt, &inv.CreatedBy,
-			&inv.RawJSON, &inv.FetchedAt, &inv.CreatedAt,
+			&inv.FetchedAt, &inv.CreatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan vehicle invitation: %w", err)
 		}
@@ -116,15 +112,11 @@ func (r *TeslaVehicleDriverRepo) ReplaceInvitationsForVehicle(ctx context.Contex
 	}
 
 	for _, inv := range invitations {
-		rawJSON := inv.RawJSON
-		if rawJSON == "" {
-			rawJSON = "{}"
-		}
 		_, err := tx.Exec(ctx, `INSERT INTO tesla_vehicle_invitations
-			(vehicle_id, vin, invitation_id, invite_url, status, expires_at, created_by, raw_json, fetched_at, created_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+			(vehicle_id, vin, invitation_id, invite_url, status, expires_at, created_by, fetched_at, created_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
 			inv.VehicleID, inv.VIN, inv.InvitationID, inv.InviteURL,
-			inv.Status, inv.ExpiresAt, inv.CreatedBy, rawJSON, now, now,
+			inv.Status, inv.ExpiresAt, inv.CreatedBy, now, now,
 		)
 		if err != nil {
 			return fmt.Errorf("insert invitation: %w", err)
@@ -137,22 +129,17 @@ func (r *TeslaVehicleDriverRepo) ReplaceInvitationsForVehicle(ctx context.Contex
 // InsertInvitation inserts a single invitation record.
 func (r *TeslaVehicleDriverRepo) InsertInvitation(ctx context.Context, inv *models.TeslaVehicleInvitation) error {
 	now := time.Now().UTC()
-	rawJSON := inv.RawJSON
-	if rawJSON == "" {
-		rawJSON = "{}"
-	}
 	err := r.db.Pool.QueryRow(ctx, `INSERT INTO tesla_vehicle_invitations
-		(vehicle_id, vin, invitation_id, invite_url, status, expires_at, created_by, raw_json, fetched_at, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		(vehicle_id, vin, invitation_id, invite_url, status, expires_at, created_by, fetched_at, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		ON CONFLICT (vehicle_id, invitation_id) DO UPDATE SET
 			invite_url = EXCLUDED.invite_url,
 			status = EXCLUDED.status,
 			expires_at = EXCLUDED.expires_at,
-			raw_json = EXCLUDED.raw_json,
 			fetched_at = EXCLUDED.fetched_at
 		RETURNING id`,
 		inv.VehicleID, inv.VIN, inv.InvitationID, inv.InviteURL,
-		inv.Status, inv.ExpiresAt, inv.CreatedBy, rawJSON, now, now,
+		inv.Status, inv.ExpiresAt, inv.CreatedBy, now, now,
 	).Scan(&inv.ID)
 	if err != nil {
 		return fmt.Errorf("insert invitation: %w", err)

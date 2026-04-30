@@ -16,6 +16,8 @@ import {
   BatteryCharging,
   Zap,
   Activity,
+  AlertTriangle,
+  Monitor,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -43,14 +45,17 @@ import {
   chartMarginLabeled,
   axisTick,
   chartAnimation,
+  AREA_DEFAULTS,
+  areaGradient,
 } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSettings } from '@/hooks/useSettings';
 import { formatDateTime, formatTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { CHART_COLORS } from '@/lib/colors';
 
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useVehicles, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { useClimate, useClimateHistory } from '@/api/hooks/useVehicleSystems';
 import type { ClimateState } from '@/types/vehicle-systems';
 
@@ -92,7 +97,6 @@ const SEATS: SeatDef[] = [
   { key: 'seatHeaterRearRight', label: 'Rear Right', row: 'rear' },
 ];
 
-const TEMP_GAUGE_MAX = 55;
 
 /* ─── Helpers ─── */
 
@@ -109,11 +113,11 @@ function heatBadgeVariant(level: number): 'neutral' | 'info' | 'warning' | 'dang
 
 function keeperVariant(mode: string): 'neutral' | 'info' | 'warning' | 'danger' {
   switch (mode) {
-    case 'keep':
+    case 'On':
       return 'info';
-    case 'dog':
+    case 'Dog Mode':
       return 'warning';
-    case 'camp':
+    case 'Camp Mode':
       return 'info';
     default:
       return 'neutral';
@@ -122,11 +126,11 @@ function keeperVariant(mode: string): 'neutral' | 'info' | 'warning' | 'danger' 
 
 function keeperLabel(mode: string): string {
   switch (mode) {
-    case 'keep':
-      return 'Keep';
-    case 'dog':
+    case 'On':
+      return 'On';
+    case 'Dog Mode':
       return 'Dog Mode';
-    case 'camp':
+    case 'Camp Mode':
       return 'Camp Mode';
     default:
       return 'Off';
@@ -168,20 +172,68 @@ function SeatHeaterCard({
   );
 }
 
+/* ─── Seat Cooling Card ─── */
+
+const COOL_LEVELS: HeatLevelStyle[] = [
+  { color: 'text-gray-500', bg: 'bg-gray-500/10', label: 'Off' },
+  { color: 'text-sky-400', bg: 'bg-sky-400/10', label: 'Low' },
+  { color: 'text-cyan-300', bg: 'bg-cyan-300/10', label: 'Medium' },
+  { color: 'text-blue-400', bg: 'bg-blue-400/10', label: 'High' },
+];
+
+function coolStyle(level: number): HeatLevelStyle {
+  return COOL_LEVELS[Math.min(Math.max(Math.round(level), 0), 3)];
+}
+
+function coolBadgeVariant(level: number): 'neutral' | 'info' | 'warning' | 'danger' {
+  if (level <= 0) return 'neutral';
+  if (level === 1) return 'info';
+  if (level === 2) return 'info';
+  return 'info';
+}
+
+function SeatCoolingCard({
+  label,
+  level,
+  t,
+}: {
+  label: string;
+  level: number | null | undefined;
+  t: (s: string) => string;
+}) {
+  const lvl = level ?? 0;
+  const style = coolStyle(lvl);
+  return (
+    <GlassPanel className={cn('flex flex-col items-center gap-2 p-4', style.bg)}>
+      <Snowflake className={cn('h-6 w-6', style.color)} />
+      <span className="text-xs font-medium text-[var(--text-secondary)]">
+        {t(label)}
+      </span>
+      {level != null ? (
+        <Badge variant={coolBadgeVariant(lvl)} size="sm">
+          {t(style.label)} ({Math.round(lvl)}/3)
+        </Badge>
+      ) : (
+        <span className="text-xs text-[var(--text-muted)]">—</span>
+      )}
+    </GlassPanel>
+  );
+}
+
 /* ─── Column accessor for sort ─── */
 
 function climateAccessor(row: ClimateState, key: string): number | string {
   switch (key) {
     case 'timestamp':
-      return new Date(row.timestamp).getTime();
+      return row.timestamp ? new Date(row.timestamp).getTime() : 0;
     case 'insideTemp':
-      return row.insideTemp;
+      return row.insideTemp ?? 0;
     case 'outsideTemp':
-      return row.outsideTemp;
+      return row.outsideTemp ?? 0;
     case 'driverTempSetting':
-      return row.driverTempSetting;
+      return row.driverTempSetting ?? 0;
     case 'fanSpeed':
-      return row.fanSpeed;
+      return row.fanSpeed ?? 0;
     default:
       return 0;
   }
@@ -194,6 +246,9 @@ function climateAccessor(row: ClimateState, key: string): number | string {
 export default function ClimateControlPage() {
   const { t } = useTranslation();
   usePageTitle(t('Climate Control'));
+  const { convertTemp, tempUnit } = useSettings();
+  const isFahrenheit = tempUnit === '°F';
+  const tempGaugeMax = isFahrenheit ? 131 : 55;
 
   /* ─── Vehicle selector ─── */
   const { data: vehicles } = useVehicles();
@@ -210,6 +265,10 @@ export default function ClimateControlPage() {
   } = useClimate(activeId);
 
   const { data: history, isLoading: historyLoading } = useClimateHistory(activeId);
+
+  /* ─── Charging telemetry (for NotEnoughPowerToHeat alert) ─── */
+  const activeIdNum = Number(activeId) || 0;
+  const { data: chargingLatest } = useChargingTelemetryLatest(activeIdNum);
 
   /* ─── Comfort indicator ─── */
   const comfort = useMemo(
@@ -237,32 +296,40 @@ export default function ClimateControlPage() {
         header: t('Time'),
         sortable: true,
         render: (row) => (
-          <span className="whitespace-nowrap">{formatDateTime(row.timestamp)}</span>
+          <span className="whitespace-nowrap">
+            {row.timestamp ? formatDateTime(row.timestamp) : '—'}
+          </span>
         ),
       },
       {
         key: 'insideTemp',
-        header: t('Inside °C'),
+        header: `${t('Inside')} ${tempUnit}`,
         sortable: true,
-        render: (row) => fmtNumber(row.insideTemp, 1),
+        render: (row) =>
+          row.insideTemp != null ? fmtNumber(convertTemp(row.insideTemp), 1) : '—',
       },
       {
         key: 'outsideTemp',
-        header: t('Outside °C'),
+        header: `${t('Outside')} ${tempUnit}`,
         sortable: true,
-        render: (row) => fmtNumber(row.outsideTemp, 1),
+        render: (row) =>
+          row.outsideTemp != null ? fmtNumber(convertTemp(row.outsideTemp), 1) : '—',
       },
       {
         key: 'driverTempSetting',
-        header: t('Set Temp °C'),
+        header: `${t('Set Temp')} ${tempUnit}`,
         sortable: true,
-        render: (row) => fmtNumber(row.driverTempSetting, 1),
+        render: (row) =>
+          row.driverTempSetting != null
+            ? fmtNumber(convertTemp(row.driverTempSetting), 1)
+            : '—',
       },
       {
         key: 'fanSpeed',
         header: t('Fan'),
         sortable: true,
-        render: (row) => String(row.fanSpeed),
+        render: (row) =>
+          row.fanSpeed != null ? String(row.fanSpeed) : '—',
       },
       {
         key: 'isAcOn',
@@ -277,8 +344,8 @@ export default function ClimateControlPage() {
         key: 'climateKeeperMode',
         header: t('Climate Keeper'),
         render: (row) => (
-          <Badge variant={keeperVariant(row.climateKeeperMode)} size="sm">
-            {t(keeperLabel(row.climateKeeperMode))}
+          <Badge variant={keeperVariant(row.climateKeeperMode ?? '')} size="sm">
+            {t(keeperLabel(row.climateKeeperMode ?? ''))}
           </Badge>
         ),
       },
@@ -294,9 +361,22 @@ export default function ClimateControlPage() {
   const chronoHistory = useMemo(() => {
     if (!history || history.length === 0) return [];
     return [...history].sort(
-      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+      (a, b) =>
+        new Date(a.timestamp ?? a.created_at ?? '').getTime() -
+        new Date(b.timestamp ?? b.created_at ?? '').getTime(),
     );
   }, [history]);
+
+  const convertedChartData = useMemo(() =>
+    chronoHistory.map(h => ({
+      ...h,
+      insideTemp: h.insideTemp != null ? convertTemp(h.insideTemp) : null,
+      outsideTemp: h.outsideTemp != null ? convertTemp(h.outsideTemp) : null,
+      driverTempSetting: h.driverTempSetting != null ? convertTemp(h.driverTempSetting) : null,
+      acActive: h.isAcOn ? 1 : 0,
+    })),
+    [chronoHistory, convertTemp],
+  );
 
   /* ─── Comfort score & temp delta ─── */
   const comfortScore = useMemo(() => {
@@ -310,19 +390,19 @@ export default function ClimateControlPage() {
     return +(fmtNumber(latest.insideTemp - latest.driverTempSetting, 1));
   }, [latest?.insideTemp, latest?.driverTempSetting]);
 
-  /* ─── Climate efficiency stats (from real power samples only) ─── */
+  /* ─── Climate efficiency stats ─── */
+  // HvacPower is an enum signal (not kW), so numeric power stats are unavailable.
+  // Fan speed stats are derived from the available HvacFanSpeed float signal.
   const efficiencyStats = useMemo(() => {
     if (chronoHistory.length === 0) return null;
-    const withPower = chronoHistory.filter((h) => h.hvacPower != null && h.hvacPower > 0);
-    if (withPower.length === 0) return null;
-    const powers = withPower.map((h) => h.hvacPower);
-    const avg = powers.reduce((s, v) => s + v, 0) / powers.length;
-    const peak = Math.max(...powers);
-    const firstTs = new Date(chronoHistory[0].timestamp).getTime();
-    const lastTs = new Date(chronoHistory[chronoHistory.length - 1].timestamp).getTime();
-    const hours = Math.max((lastTs - firstTs) / 3_600_000, 0.01);
-    const energy = avg * hours;
-    return { avg, peak, energy };
+    const withFan = chronoHistory.filter((h) => h.fanSpeed != null && h.fanSpeed > 0);
+    if (withFan.length === 0) return null;
+    const speeds = withFan.map((h) => h.fanSpeed ?? 0);
+    const avgFan = speeds.reduce((s, v) => s + v, 0) / speeds.length;
+    const peakFan = Math.max(...speeds);
+    const acOnCount = chronoHistory.filter((h) => h.isAcOn).length;
+    const acOnPct = (acOnCount / chronoHistory.length) * 100;
+    return { avgFan, peakFan, acOnPct };
   }, [chronoHistory]);
 
   /* ═══════════════════════════════════════════════════════
@@ -386,21 +466,27 @@ export default function ClimateControlPage() {
           </div>
           <div className="flex items-center gap-2">
             {latest?.climateKeeperMode &&
-              latest.climateKeeperMode !== 'off' && (
+              latest.climateKeeperMode !== 'Off' && (
                 <Badge variant={keeperVariant(latest.climateKeeperMode)} dot>
                   {t(keeperLabel(latest.climateKeeperMode))}
                 </Badge>
               )}
-            {latest?.defrostMode && (
+            {latest?.defrostMode && latest.defrostMode !== 'Off' && (
               <Badge variant="info" dot>
                 <Snowflake className="mr-1 inline h-3 w-3" />
-                {t('Defrost')}
+                {t('Defrost')}{latest.defrostMode !== 'Normal' ? ` (${latest.defrostMode})` : ''}
               </Badge>
             )}
             {latest?.batteryHeater && (
               <Badge variant="warning" dot>
                 <BatteryCharging className="mr-1 inline h-3 w-3" />
                 {t('Battery Heater')}
+              </Badge>
+            )}
+            {chargingLatest?.not_enough_power_to_heat && (
+              <Badge variant="danger" dot>
+                <AlertTriangle className="mr-1 inline h-3 w-3" />
+                {t('Insufficient Power to Heat')}
               </Badge>
             )}
           </div>
@@ -412,40 +498,40 @@ export default function ClimateControlPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <GlassPanel className="flex flex-col items-center gap-2 p-6">
             <RadialGauge
-              value={latest?.insideTemp ?? 0}
-              max={TEMP_GAUGE_MAX}
+              value={convertTemp(latest?.insideTemp ?? 0)}
+              max={tempGaugeMax}
               label={t('Inside Temp')}
-              unit="°C"
+              unit={tempUnit}
               color={CHART_COLORS[0]}
             />
             <span className="text-lg font-bold text-[var(--text-primary)]">
-              {fmtNumber(latest?.insideTemp ?? 0, 1)}°C
+              {fmtNumber(convertTemp(latest?.insideTemp ?? 0), 1)}{tempUnit}
             </span>
           </GlassPanel>
 
           <GlassPanel className="flex flex-col items-center gap-2 p-6">
             <RadialGauge
-              value={latest?.outsideTemp ?? 0}
-              max={TEMP_GAUGE_MAX}
+              value={convertTemp(latest?.outsideTemp ?? 0)}
+              max={tempGaugeMax}
               label={t('Outside Temp')}
-              unit="°C"
+              unit={tempUnit}
               color={CHART_COLORS[1]}
             />
             <span className="text-lg font-bold text-[var(--text-primary)]">
-              {fmtNumber(latest?.outsideTemp ?? 0, 1)}°C
+              {fmtNumber(convertTemp(latest?.outsideTemp ?? 0), 1)}{tempUnit}
             </span>
           </GlassPanel>
 
           <GlassPanel className="flex flex-col items-center gap-2 p-6">
             <RadialGauge
-              value={latest?.driverTempSetting ?? 0}
-              max={TEMP_GAUGE_MAX}
+              value={convertTemp(latest?.driverTempSetting ?? 0)}
+              max={tempGaugeMax}
               label={t('Driver Set Temp')}
-              unit="°C"
+              unit={tempUnit}
               color={CHART_COLORS[2]}
             />
             <span className="text-lg font-bold text-[var(--text-primary)]">
-              {fmtNumber(latest?.driverTempSetting ?? 0, 1)}°C
+              {fmtNumber(convertTemp(latest?.driverTempSetting ?? 0), 1)}{tempUnit}
             </span>
           </GlassPanel>
         </div>
@@ -467,14 +553,18 @@ export default function ClimateControlPage() {
             }
             subtitle={
               latest?.hvacPower != null
-                ? `${fmtNumber(latest.hvacPower, 1)} kW`
+                ? `${t('State')}: ${latest.hvacPower}`
                 : undefined
             }
           />
 
           <MetricCard
             label={t('Auto Conditioning')}
-            value={latest?.isAutoClimate ? t('On') : t('Off')}
+            value={
+              latest?.hvacAutoMode != null && latest.hvacAutoMode !== 'Off'
+                ? t('On')
+                : t('Off')
+            }
             icon={<Settings className="h-5 w-5 text-blue-400" />}
           />
 
@@ -484,7 +574,7 @@ export default function ClimateControlPage() {
             icon={<ThermometerSun className="h-5 w-5 text-amber-400" />}
             subtitle={
               latest?.climateKeeperMode &&
-              latest.climateKeeperMode !== 'off'
+              latest.climateKeeperMode !== 'Off'
                 ? t('Active')
                 : undefined
             }
@@ -498,13 +588,88 @@ export default function ClimateControlPage() {
           />
 
           <MetricCard
+            label={t('Fan Status')}
+            value={
+              latest?.hvacFanStatus != null
+                ? latest.hvacFanStatus > 0
+                  ? t('Running')
+                  : t('Idle')
+                : '—'
+            }
+            icon={
+              <Wind
+                className={cn(
+                  'h-5 w-5',
+                  latest?.hvacFanStatus != null && latest.hvacFanStatus > 0
+                    ? 'text-teal-400'
+                    : 'text-gray-500',
+                )}
+              />
+            }
+            subtitle={
+              latest?.hvacFanStatus != null
+                ? `${t('Code')} ${latest.hvacFanStatus}`
+                : undefined
+            }
+          />
+
+          <MetricCard
             label={t('Steering Wheel Heater')}
-            value={latest?.steeringWheelHeat ? t('On') : t('Off')}
+            value={
+              latest?.hvacSteeringWheelHeatLevel != null && latest.hvacSteeringWheelHeatLevel > 0
+                ? t('On')
+                : t('Off')
+            }
             icon={
               <CircleGauge
                 className={cn(
                   'h-5 w-5',
-                  latest?.steeringWheelHeat
+                  latest?.hvacSteeringWheelHeatLevel != null && latest.hvacSteeringWheelHeatLevel > 0
+                    ? 'text-amber-400'
+                    : 'text-gray-500',
+                )}
+              />
+            }
+          />
+
+          <MetricCard
+            label={t('Steering Wheel Heat Level')}
+            value={
+              latest?.hvacSteeringWheelHeatLevel == null
+                ? '—'
+                : t(heatStyle(latest.hvacSteeringWheelHeatLevel).label)
+            }
+            icon={
+              <Flame
+                className={cn(
+                  'h-5 w-5',
+                  latest?.hvacSteeringWheelHeatLevel != null
+                    ? heatStyle(latest.hvacSteeringWheelHeatLevel).color
+                    : 'text-gray-500',
+                )}
+              />
+            }
+            subtitle={
+              latest?.hvacSteeringWheelHeatLevel != null
+                ? `${t('Level')} ${fmtInt(latest.hvacSteeringWheelHeatLevel)}`
+                : undefined
+            }
+          />
+
+          <MetricCard
+            label={t('Steering Wheel Heat Auto')}
+            value={
+              latest?.hvacSteeringWheelHeatAuto == null
+                ? '—'
+                : latest.hvacSteeringWheelHeatAuto
+                  ? t('Auto')
+                  : t('Manual')
+            }
+            icon={
+              <Activity
+                className={cn(
+                  'h-5 w-5',
+                  latest?.hvacSteeringWheelHeatAuto
                     ? 'text-amber-400'
                     : 'text-gray-500',
                 )}
@@ -514,14 +679,110 @@ export default function ClimateControlPage() {
 
           <MetricCard
             label={t('Defrost Mode')}
-            value={latest?.defrostMode ? t('Active') : t('Inactive')}
+            value={latest?.defrostMode && latest.defrostMode !== 'Off' ? latest.defrostMode : t('Off')}
             icon={
               <Snowflake
                 className={cn(
                   'h-5 w-5',
-                  latest?.defrostMode ? 'text-blue-400' : 'text-gray-500',
+                  latest?.defrostMode && latest.defrostMode !== 'Off' ? 'text-blue-400' : 'text-gray-500',
                 )}
               />
+            }
+          />
+
+          <MetricCard
+            label={t('Defrost for Preconditioning')}
+            value={
+              latest?.defrostForPreconditioning == null
+                ? '—'
+                : latest.defrostForPreconditioning
+                  ? t('Active')
+                  : t('Inactive')
+            }
+            icon={
+              <Snowflake
+                className={cn(
+                  'h-5 w-5',
+                  latest?.defrostForPreconditioning ? 'text-cyan-400' : 'text-gray-500',
+                )}
+              />
+            }
+            subtitle={
+              latest?.defrostForPreconditioning
+                ? t('Clearing windshield before drive')
+                : undefined
+            }
+          />
+
+          <MetricCard
+            label={t('Rear Defrost')}
+            value={
+              latest?.rearDefrostEnabled == null
+                ? '—'
+                : latest.rearDefrostEnabled
+                  ? t('On')
+                  : t('Off')
+            }
+            icon={
+              <Snowflake
+                className={cn(
+                  'h-5 w-5',
+                  latest?.rearDefrostEnabled ? 'text-blue-400' : 'text-gray-500',
+                )}
+              />
+            }
+            subtitle={
+              latest?.rearDefrostEnabled
+                ? t('Clearing rear window')
+                : undefined
+            }
+          />
+
+          <MetricCard
+            label={t('Wiper Heater', 'Wiper Heater')}
+            value={
+              latest?.wiperHeatEnabled == null
+                ? '—'
+                : latest.wiperHeatEnabled
+                  ? t('On')
+                  : t('Off')
+            }
+            icon={
+              <Flame
+                className={cn(
+                  'h-5 w-5',
+                  latest?.wiperHeatEnabled ? 'text-orange-400' : 'text-gray-500',
+                )}
+              />
+            }
+            subtitle={
+              latest?.wiperHeatEnabled
+                ? t('Heating windshield wipers', 'Heating windshield wipers')
+                : undefined
+            }
+          />
+
+          <MetricCard
+            label={t('Rear Display HVAC', 'Rear Display HVAC')}
+            value={
+              latest?.rearDisplayHvacEnabled == null
+                ? '—'
+                : latest.rearDisplayHvacEnabled
+                  ? t('Enabled')
+                  : t('Disabled')
+            }
+            icon={
+              <Monitor
+                className={cn(
+                  'h-5 w-5',
+                  latest?.rearDisplayHvacEnabled ? 'text-cyan-400' : 'text-gray-500',
+                )}
+              />
+            }
+            subtitle={
+              latest?.rearDisplayHvacEnabled
+                ? t('Rear passengers can control HVAC', 'Rear passengers can control HVAC')
+                : undefined
             }
           />
         </div>
@@ -529,11 +790,16 @@ export default function ClimateControlPage() {
 
       {/* ─── Protection & Safety Row ─── */}
       <FadeIn delay={0.25}>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <MetricCard
             label={t('Overheat Protection')}
             value={latest?.overheatProtection ?? t('Unknown')}
             icon={<ShieldCheck className="h-5 w-5 text-green-400" />}
+          />
+          <MetricCard
+            label={t('Overheat Temp Limit', 'Overheat Temp Limit')}
+            value={latest?.cabinOverheatProtectionTempLimit ?? '—'}
+            icon={<ThermometerSun className="h-5 w-5 text-orange-400" />}
           />
           <MetricCard
             label={t('Battery Heater')}
@@ -549,7 +815,11 @@ export default function ClimateControlPage() {
           />
           <MetricCard
             label={t('Passenger Setting')}
-            value={`${fmtNumber(latest?.passengerTempSetting ?? 0, 1)}°C`}
+            value={
+              latest?.passengerTempSetting != null
+                ? `${fmtNumber(convertTemp(latest.passengerTempSetting), 1)}${tempUnit}`
+                : '—'
+            }
             icon={<Thermometer className="h-5 w-5 text-purple-400" />}
           />
         </div>
@@ -702,23 +972,23 @@ export default function ClimateControlPage() {
           </div>
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <MetricCard
-              label={t('Avg Power')}
-              value={efficiencyStats ? fmtNumber(efficiencyStats.avg, 1) : '—'}
-              subtitle="kW"
-              icon={<Zap className="h-4 w-4" />}
+              label={t('Avg Fan Speed')}
+              value={efficiencyStats ? fmtNumber(efficiencyStats.avgFan, 1) : '—'}
+              subtitle={t('Level 0–10')}
+              icon={<Wind className="h-4 w-4" />}
               color="cyan"
             />
             <MetricCard
-              label={t('Peak Power')}
-              value={efficiencyStats ? fmtNumber(efficiencyStats.peak, 1) : '—'}
-              subtitle="kW"
-              icon={<Zap className="h-4 w-4" />}
+              label={t('Peak Fan Speed')}
+              value={efficiencyStats ? fmtNumber(efficiencyStats.peakFan, 1) : '—'}
+              subtitle={t('Level 0–10')}
+              icon={<Wind className="h-4 w-4" />}
               color="purple"
             />
             <MetricCard
-              label={t('Est. Energy Used')}
-              value={efficiencyStats ? fmtNumber(efficiencyStats.energy, 2) : '—'}
-              subtitle="kWh"
+              label={t('AC On Time')}
+              value={efficiencyStats ? `${fmtInt(efficiencyStats.acOnPct)}%` : '—'}
+              subtitle={t('of samples')}
               icon={<Zap className="h-4 w-4" />}
               color="amber"
             />
@@ -754,6 +1024,40 @@ export default function ClimateControlPage() {
             ))}
           </div>
 
+          {/* Auto Seat Climate (front row) */}
+          <div className="mx-auto mb-3 grid max-w-xs grid-cols-2 gap-3">
+            <div className="flex items-center justify-between rounded-md border border-white/[0.06] bg-white/[0.03] px-3 py-2">
+              <span className="text-xs text-[var(--text-secondary)]">
+                {t('Auto Climate (Left)')}
+              </span>
+              {latest?.autoSeatClimateLeft != null ? (
+                <Badge
+                  variant={latest.autoSeatClimateLeft ? 'success' : 'neutral'}
+                  size="sm"
+                >
+                  {latest.autoSeatClimateLeft ? t('Auto') : t('Manual')}
+                </Badge>
+              ) : (
+                <span className="text-xs text-[var(--text-muted)]">—</span>
+              )}
+            </div>
+            <div className="flex items-center justify-between rounded-md border border-white/[0.06] bg-white/[0.03] px-3 py-2">
+              <span className="text-xs text-[var(--text-secondary)]">
+                {t('Auto Climate (Right)')}
+              </span>
+              {latest?.autoSeatClimateRight != null ? (
+                <Badge
+                  variant={latest.autoSeatClimateRight ? 'success' : 'neutral'}
+                  size="sm"
+                >
+                  {latest.autoSeatClimateRight ? t('Auto') : t('Manual')}
+                </Badge>
+              ) : (
+                <span className="text-xs text-[var(--text-muted)]">—</span>
+              )}
+            </div>
+          </div>
+
           {/* Rear row — 3 seats */}
           <div className="mx-auto grid max-w-md grid-cols-3 gap-3">
             {rearSeats.map((seat) => (
@@ -764,6 +1068,40 @@ export default function ClimateControlPage() {
                 t={t}
               />
             ))}
+          </div>
+
+          {/* Front row — seat cooling */}
+          <div className="mt-4 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Snowflake className="h-4 w-4 text-sky-400" />
+              <span className="text-sm font-semibold text-[var(--text-primary)]">
+                {t('Seat Cooling')}
+              </span>
+            </div>
+            {latest?.seatVentEnabled != null ? (
+              <Badge
+                variant={latest.seatVentEnabled ? 'success' : 'neutral'}
+                size="sm"
+              >
+                {t('Ventilation')}: {latest.seatVentEnabled ? t('On') : t('Off')}
+              </Badge>
+            ) : (
+              <Badge variant="neutral" size="sm">
+                {t('Ventilation')}: —
+              </Badge>
+            )}
+          </div>
+          <div className="mx-auto mt-3 grid max-w-xs grid-cols-2 gap-3">
+            <SeatCoolingCard
+              label="Front Left"
+              level={latest?.climateSeatCoolingFrontLeft}
+              t={t}
+            />
+            <SeatCoolingCard
+              label="Front Right"
+              level={latest?.climateSeatCoolingFrontRight}
+              t={t}
+            />
           </div>
 
           {/* Legend */}
@@ -799,7 +1137,7 @@ export default function ClimateControlPage() {
             />
           ) : (
             <ResponsiveContainer width="100%" height={320}>
-              <LineChart data={chronoHistory} margin={chartMarginLabeled}>
+              <LineChart data={convertedChartData} margin={chartMarginLabeled}>
                 <CartesianGrid
                   strokeDasharray="3 3"
                   stroke="var(--glass-border)"
@@ -814,30 +1152,24 @@ export default function ClimateControlPage() {
                 <Tooltip content={<ChartTooltip />} />
                 <Legend />
                 <Line
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="insideTemp"
                   name={t('Inside Temp')}
                   stroke={CHART_COLORS[0]}
-                  dot={false}
-                  strokeWidth={2}
                   {...chartAnimation}
                 />
                 <Line
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="outsideTemp"
                   name={t('Outside Temp')}
                   stroke={CHART_COLORS[1]}
-                  dot={false}
-                  strokeWidth={2}
                   {...chartAnimation}
                 />
                 <Line
-                  type="monotone"
+                  {...AREA_DEFAULTS}
                   dataKey="driverTempSetting"
                   name={t('Driver Set Temp')}
                   stroke={CHART_COLORS[2]}
-                  dot={false}
-                  strokeWidth={2}
                   strokeDasharray="5 5"
                   {...chartAnimation}
                 />
@@ -847,13 +1179,13 @@ export default function ClimateControlPage() {
         </GlassPanel>
       </FadeIn>
 
-      {/* ─── HVAC Power & Fan Speed History ─── */}
+      {/* ─── AC State & Fan Speed History ─── */}
       <FadeIn delay={0.45}>
         <GlassPanel className="p-6">
           <div className="mb-4 flex items-center gap-2">
             <Wind className="h-5 w-5 text-purple-400" />
             <span className="text-base font-semibold text-[var(--text-primary)]">
-              {t('HVAC Power & Fan Speed')}
+              {t('AC State & Fan Speed')}
             </span>
           </div>
 
@@ -866,7 +1198,7 @@ export default function ClimateControlPage() {
             />
           ) : (
             <ResponsiveContainer width="100%" height={320}>
-              <AreaChart data={chronoHistory} margin={chartMarginLabeled}>
+              <AreaChart data={convertedChartData} margin={chartMarginLabeled}>
                 <CartesianGrid
                   strokeDasharray="3 3"
                   stroke="var(--glass-border)"
@@ -878,10 +1210,11 @@ export default function ClimateControlPage() {
                   tickFormatter={(v: string) => formatTime(v)}
                 />
                 <YAxis
-                  yAxisId="power"
+                  yAxisId="ac"
+                  domain={[0, 1]}
                   tick={axisTick}
                   label={{
-                    value: 'kW',
+                    value: t('AC'),
                     angle: -90,
                     position: 'insideLeft',
                     style: { fontSize: 10, fill: 'var(--text-muted)' },
@@ -901,26 +1234,24 @@ export default function ClimateControlPage() {
                 />
                 <Tooltip content={<ChartTooltip />} />
                 <Legend />
+                {areaGradient('climateAcGrad', CHART_COLORS[0])}
                 <Area
-                  yAxisId="power"
-                  type="monotone"
-                  dataKey="hvacPower"
-                  name={t('HVAC Power (kW)')}
+                  {...AREA_DEFAULTS}
+                  yAxisId="ac"
+                  type="stepAfter"
+                  dataKey="acActive"
+                  name={t('AC On/Off')}
                   stroke={CHART_COLORS[0]}
-                  fill={CHART_COLORS[0]}
-                  fillOpacity={0.15}
-                  strokeWidth={2}
-                  dot={false}
+                  fill="url(#climateAcGrad)"
                   {...chartAnimation}
                 />
                 <Line
+                  {...AREA_DEFAULTS}
                   yAxisId="fan"
                   type="stepAfter"
                   dataKey="fanSpeed"
                   name={t('Fan Speed')}
                   stroke={CHART_COLORS[3]}
-                  strokeWidth={2}
-                  dot={false}
                   {...chartAnimation}
                 />
               </AreaChart>
@@ -947,7 +1278,7 @@ export default function ClimateControlPage() {
             <DataTable
               columns={columns}
               data={sortedHistory}
-              keyExtractor={(row) => row.id}
+              keyExtractor={(row) => String(row.id ?? 0)}
               sortKey={sortKey}
               sortDir={sortDir}
               onSort={onSort}

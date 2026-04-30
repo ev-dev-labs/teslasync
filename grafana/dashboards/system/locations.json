@@ -98,7 +98,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  COUNT(DISTINCT a.city) AS \"🏙️ Cities\",\n  COUNT(DISTINCT a.state) AS \"🗺️ States\",\n  COUNT(DISTINCT a.country) AS \"🌍 Countries\",\n  COUNT(*) AS \"📍 Locations\",\n  SUM(vl.visit_count) AS \"🔄 Total Visits\",\n  ROUND(SUM(vl.total_duration_min) / 60) AS \"⏱️ Total Hours\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}",
+          "rawSql": "SELECT \n  COUNT(DISTINCT '-') AS \"🏙️ Cities\",\n  COUNT(DISTINCT a.state) AS \"🗺️ States\",\n  COUNT(DISTINCT a.country) AS \"🌍 Countries\",\n  COUNT(*) AS \"📍 Locations\",\n  SUM(vl.visit_count) AS \"🔄 Total Visits\",\n  ROUND(SUM(vl.total_duration_min) / 60) AS \"⏱️ Total Hours\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}",
           "refId": "A"
         }
       ],
@@ -170,7 +170,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  a.latitude,\n  a.longitude,\n  COALESCE(a.display_name, a.city, 'Unknown') AS \"name\",\n  vl.visit_count AS \"visits\",\n  a.city AS \"city\",\n  a.state AS \"state\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\n  AND a.latitude IS NOT NULL\nORDER BY vl.visit_count DESC",
+          "rawSql": "SELECT \n  a.latitude,\n  a.longitude,\n  COALESCE(a.display_name, '-') AS \"name\",\n  vl.visit_count AS \"visits\",\n  '-' AS \"city\",\n  a.state AS \"state\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\n  AND a.latitude IS NOT NULL\nORDER BY vl.visit_count DESC",
           "refId": "A"
         }
       ],
@@ -222,7 +222,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  COALESCE(a.city, 'Unknown') AS \"🏙️ City\",\n  SUM(vl.visit_count) AS \"🔄 Visits\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nGROUP BY a.city\nORDER BY 2 DESC\nLIMIT 15",
+          "rawSql": "SELECT \n  COALESCE('-', 'Unknown') AS \"🏙️ City\",\n  SUM(vl.visit_count) AS \"🔄 Visits\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nGROUP BY 1\nORDER BY 2 DESC\nLIMIT 15",
           "refId": "A"
         }
       ],
@@ -278,7 +278,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  COALESCE(a.city, 'Unknown') AS \"🏙️ City\",\n  ROUND(SUM(vl.total_duration_min) / 60) AS \"⏱️ Hours\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nGROUP BY a.city\nORDER BY 2 DESC\nLIMIT 10",
+          "rawSql": "SELECT \n  COALESCE('-', 'Unknown') AS \"🏙️ City\",\n  ROUND(SUM(vl.total_duration_min) / 60) AS \"⏱️ Hours\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nGROUP BY 1\nORDER BY 2 DESC\nLIMIT 10",
           "refId": "A"
         }
       ],
@@ -330,7 +330,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  COALESCE(a.state, 'Unknown') AS \"📊 State\",\n  SUM(vl.visit_count) AS \"🔄 Visits\",\n  COUNT(DISTINCT a.city) AS \"🏙️ Cities\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nGROUP BY a.state\nORDER BY 2 DESC",
+          "rawSql": "SELECT \n  COALESCE(a.state, 'Unknown') AS \"📊 State\",\n  SUM(vl.visit_count) AS \"🔄 Visits\",\n  COUNT(DISTINCT '-') AS \"🏙️ Cities\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nGROUP BY a.state\nORDER BY 2 DESC",
           "refId": "A"
         }
       ],
@@ -380,7 +380,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  CASE\n    WHEN a.display_name LIKE '%Home%' THEN '🏠'\n    WHEN a.display_name LIKE '%Office%' THEN '🏢'\n    WHEN a.display_name LIKE '%Supercharger%' THEN '⚡'\n    WHEN a.display_name LIKE '%Hotel%' THEN '🏨'\n    WHEN a.display_name LIKE '%Resort%' THEN '🏖️'\n    WHEN a.display_name LIKE '%Costco%' OR a.display_name LIKE '%Walmart%' THEN '🛒'\n    WHEN a.display_name LIKE '%Service%' THEN '🔧'\n    ELSE '📍'\n  END || ' ' || COALESCE(a.display_name, 'Unknown') AS \"📍 Location\",\n  COALESCE(a.city, '') AS \"🏙️ City\",\n  COALESCE(a.state, '') AS \"🗺️ State\",\n  COALESCE(a.country, '') AS \"🌍 Country\",\n  vl.visit_count AS \"🔄 Visits\",\n  ROUND(vl.total_duration_min / 60) AS \"⏱️ Hours\",\n  TO_CHAR(vl.last_visited, 'YYYY-MM-DD') AS \"📅 Last Visit\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nORDER BY vl.visit_count DESC\nLIMIT 30",
+          "rawSql": "SELECT\n  CASE\n    WHEN a.display_name LIKE '%Home%' THEN '🏠'\n    WHEN a.display_name LIKE '%Office%' THEN '🏢'\n    WHEN a.display_name LIKE '%Supercharger%' THEN '⚡'\n    WHEN a.display_name LIKE '%Hotel%' THEN '🏨'\n    WHEN a.display_name LIKE '%Resort%' THEN '🏖️'\n    WHEN a.display_name LIKE '%Costco%' OR a.display_name LIKE '%Walmart%' THEN '🛒'\n    WHEN a.display_name LIKE '%Service%' THEN '🔧'\n    ELSE '📍'\n  END || ' ' || COALESCE(a.display_name, 'Unknown') AS \"📍 Location\",\n  COALESCE('-', '') AS \"🏙️ City\",\n  COALESCE(a.state, '') AS \"🗺️ State\",\n  COALESCE(a.country, '') AS \"🌍 Country\",\n  vl.visit_count AS \"🔄 Visits\",\n  ROUND(vl.total_duration_min / 60) AS \"⏱️ Hours\",\n  TO_CHAR(vl.last_visited, 'YYYY-MM-DD') AS \"📅 Last Visit\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nORDER BY vl.visit_count DESC\nLIMIT 30",
           "refId": "A"
         }
       ],
@@ -478,7 +478,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  COALESCE(a.country, 'Unknown') AS \"🌍 Country\",\n  SUM(vl.visit_count) AS \"🔄 Visits\",\n  COUNT(DISTINCT a.city) AS \"🏙️ Cities\",\n  ROUND(SUM(vl.total_duration_min) / 60) AS \"⏱️ Hours\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nGROUP BY a.country\nORDER BY \"🔄 Visits\" DESC",
+          "rawSql": "SELECT\n  COALESCE(a.country, 'Unknown') AS \"🌍 Country\",\n  SUM(vl.visit_count) AS \"🔄 Visits\",\n  COUNT(DISTINCT '-') AS \"🏙️ Cities\",\n  ROUND(SUM(vl.total_duration_min) / 60) AS \"⏱️ Hours\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nGROUP BY a.country\nORDER BY \"🔄 Visits\" DESC",
           "refId": "A"
         }
       ],

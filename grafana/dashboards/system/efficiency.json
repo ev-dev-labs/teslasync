@@ -109,7 +109,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(convert_efficiency((SUM(start_range_km - end_range_km) * 1000) / NULLIF(SUM(distance), 0))::numeric, 1) AS \"⚡ Efficiency\"\nFROM v_drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date) AND distance > 1",
+          "rawSql": "SELECT NULL::float8 AS \"⚡ Efficiency\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts) AND distance_mi > 1",
           "refId": "A"
         }
       ],
@@ -168,7 +168,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(MIN((convert_efficiency((start_range_km - end_range_km) * 1000 / NULLIF(distance, 0))))::numeric, 1) AS \"⚡ Efficiency\"\nFROM v_drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date) AND distance > 5",
+          "rawSql": "SELECT NULL::float8 AS \"⚡ Efficiency\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts) AND distance_mi > 5",
           "refId": "A"
         }
       ],
@@ -227,7 +227,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(MAX((convert_efficiency((start_range_km - end_range_km) * 1000 / NULLIF(distance, 0))))::numeric, 1) AS \"⚡ Efficiency\"\nFROM v_drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date) AND distance > 5",
+          "rawSql": "SELECT NULL::float8 AS \"⚡ Efficiency\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts) AND distance_mi > 5",
           "refId": "A"
         }
       ],
@@ -287,7 +287,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(convert_temp(AVG(outside_temp_avg))::numeric, 1) AS \"Temp\"\nFROM v_drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date) AND outside_temp_avg IS NOT NULL",
+          "rawSql": "SELECT ROUND(convert_temp(AVG(outside_temp_avg_c))::numeric, 1) AS \"Temp\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts) AND outside_temp_avg_c IS NOT NULL",
           "refId": "A"
         }
       ],
@@ -367,7 +367,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(start_date, '1d') AS time,\n  ROUND(convert_efficiency((SUM(start_range_km - end_range_km) * 1000) / NULLIF(SUM(distance), 0))::numeric, 1) AS \"⚡ Efficiency\"\nFROM v_drives\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date) AND distance > 1\nGROUP BY time ORDER BY time",
+          "rawSql": "SELECT\n  $__timeGroup(start_ts, '1d') AS time,\n  NULL::float8 AS \"⚡ Efficiency\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts) AND distance_mi > 1\nGROUP BY time ORDER BY time",
           "refId": "A"
         }
       ],
@@ -447,7 +447,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  start_date AS time,\n  ROUND(convert_speed(distance / NULLIF(duration_min, 0) * 60)::numeric, 1) AS \"🚗 Avg Speed\",\n  ROUND((convert_efficiency((start_range_km - end_range_km) * 1000 / NULLIF(distance, 0)))::numeric, 1) AS \"⚡ Efficiency\"\nFROM v_drives\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date) AND distance > 5\nORDER BY start_date",
+          "rawSql": "SELECT\n  start_ts AS time,\n  ROUND(convert_speed(distance_mi / NULLIF(duration_min, 0) * 60)::numeric, 1) AS \"🚗 Avg Speed\",\n  NULL::float8 AS \"⚡ Efficiency\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts) AND distance_mi > 5\nORDER BY start_ts",
           "refId": "A"
         }
       ],
@@ -527,7 +527,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  start_date AS time,\n  ROUND(convert_temp(outside_temp_avg)::numeric, 1) AS \"🌡️ Temp\",\n  ROUND((convert_efficiency((start_range_km - end_range_km) * 1000 / NULLIF(distance, 0)))::numeric, 1) AS \"⚡ Efficiency\"\nFROM v_drives\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date) AND distance > 5 AND outside_temp_avg IS NOT NULL\nORDER BY start_date",
+          "rawSql": "SELECT\n  start_ts AS time,\n  ROUND(convert_temp(outside_temp_avg_c)::numeric, 1) AS \"🌡️ Temp\",\n  NULL::float8 AS \"⚡ Efficiency\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts) AND distance_mi > 5 AND outside_temp_avg_c IS NOT NULL\nORDER BY start_ts",
           "refId": "A"
         }
       ],

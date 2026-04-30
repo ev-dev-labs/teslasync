@@ -131,7 +131,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  created_at AS time,\n  ROUND(convert_distance(rated_range)::numeric, 1) AS \"Rated Range\"\nFROM positions\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\n  AND rated_range IS NOT NULL\n  AND battery_level >= 95\nORDER BY created_at",
+          "rawSql": "SELECT created_at AS time,\n  ROUND(convert_distance(MAX(value_num) FILTER (WHERE signal = 'RatedRange'))::numeric, 1) AS \"Rated Range\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('RatedRange', 'BatteryLevel')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nHAVING MAX(value_num) FILTER (WHERE signal = 'RatedRange') IS NOT NULL\n  AND MAX(value_num) FILTER (WHERE signal = 'BatteryLevel') >= 95\nORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -211,7 +211,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  created_at AS time,\n  battery_level AS \"🔋 Battery %\",\n  convert_distance(rated_range) AS \"Rated Range\"\nFROM positions\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\n  AND rated_range IS NOT NULL\nORDER BY created_at",
+          "rawSql": "SELECT created_at AS time,\n  MAX(value_num) FILTER (WHERE signal = 'BatteryLevel') AS \"🔋 Battery %\",\n  convert_distance(MAX(value_num) FILTER (WHERE signal = 'RatedRange')) AS \"Rated Range\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('BatteryLevel', 'RatedRange')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nHAVING MAX(value_num) FILTER (WHERE signal = 'RatedRange') IS NOT NULL\nORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -292,7 +292,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(created_at, '1d') AS time,\n  ROUND(convert_distance(AVG(rated_range / NULLIF(battery_level, 0) * 100))::numeric, 1) AS \"Projected Range\"\nFROM positions\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\n  AND rated_range IS NOT NULL\n  AND battery_level > 10\nGROUP BY time\nORDER BY time",
+          "rawSql": "WITH pivoted AS (\n  SELECT created_at,\n    MAX(value_num) FILTER (WHERE signal = 'RatedRange') AS rated_range,\n    MAX(value_num) FILTER (WHERE signal = 'BatteryLevel') AS battery_level\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id}\n    AND signal IN ('RatedRange', 'BatteryLevel')\n    AND created_at BETWEEN $__timeFrom() AND $__timeTo()\n  GROUP BY created_at\n  HAVING MAX(value_num) FILTER (WHERE signal = 'RatedRange') IS NOT NULL\n    AND MAX(value_num) FILTER (WHERE signal = 'BatteryLevel') > 10\n)\nSELECT\n  time_bucket('1 day', created_at) AS time,\n  ROUND(convert_distance(AVG(rated_range / NULLIF(battery_level, 0) * 100))::numeric, 1) AS \"Projected Range\"\nFROM pivoted\nGROUP BY time\nORDER BY time",
           "refId": "A"
         }
       ],

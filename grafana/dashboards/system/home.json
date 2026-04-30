@@ -123,7 +123,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(COALESCE(SUM(distance), 0)::numeric, 0) FROM drives WHERE vehicle_id = ${vehicle_id}",
+          "rawSql": "SELECT ROUND(COALESCE(SUM(distance_mi), 0)::numeric, 0) FROM drives WHERE vehicle_id = ${vehicle_id}",
           "refId": "A"
         }
       ],
@@ -303,11 +303,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(COALESCE(health_score, 0)::numeric, 1) FROM battery_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: metric unavailable after signal_log migration (ADR-002)",
           "refId": "A"
         }
       ],
-      "title": "Battery Health",
+      "title": "Battery Health (Unavailable)",
       "type": "stat",
       "transparent": false
     },
@@ -376,7 +376,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(COALESCE(SUM(distance), 0)::numeric, 1) FROM drives WHERE vehicle_id = ${vehicle_id} AND start_date >= DATE_TRUNC('week', NOW())",
+          "rawSql": "SELECT ROUND(COALESCE(SUM(distance_mi), 0)::numeric, 1) FROM drives WHERE vehicle_id = ${vehicle_id} AND start_ts >= DATE_TRUNC('week', NOW())",
           "refId": "A"
         }
       ],
@@ -436,7 +436,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COUNT(*) FROM drives WHERE vehicle_id = ${vehicle_id} AND start_date >= DATE_TRUNC('week', NOW())",
+          "rawSql": "SELECT COUNT(*) FROM drives WHERE vehicle_id = ${vehicle_id} AND start_ts >= DATE_TRUNC('week', NOW())",
           "refId": "A"
         }
       ],
@@ -496,7 +496,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(COALESCE(SUM(charge_energy_added), 0)::numeric, 1) FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND start_date >= DATE_TRUNC('week', NOW())",
+          "rawSql": "SELECT ROUND(COALESCE(SUM(energy_added_kwh), 0)::numeric, 1) FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND start_ts >= DATE_TRUNC('week', NOW())",
           "refId": "A"
         }
       ],
@@ -556,7 +556,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(COALESCE(SUM(cost), 0)::numeric, 2) FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND start_date >= DATE_TRUNC('week', NOW())",
+          "rawSql": "SELECT ROUND(COALESCE(SUM(cost), 0)::numeric, 2) FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND start_ts >= DATE_TRUNC('week', NOW())",
           "refId": "A"
         }
       ],
@@ -623,7 +623,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT start_date AS \"Date\", COALESCE(start_address, '?') || ' → ' || COALESCE(end_address, '?') AS \"Route\", ROUND(distance::numeric, 1) AS \"Dist (km)\", ROUND(duration_min::numeric, 0) AS \"Min\" FROM drives WHERE vehicle_id = ${vehicle_id} ORDER BY start_date DESC LIMIT 10",
+          "rawSql": "SELECT start_ts AS \"Date\", COALESCE(start_address, '?') || ' → ' || COALESCE(end_address, '?') AS \"Route\", ROUND(distance_mi::numeric, 1) AS \"Dist (km)\", ROUND(duration_min::numeric, 0) AS \"Min\" FROM drives WHERE vehicle_id = ${vehicle_id} ORDER BY start_ts DESC LIMIT 10",
           "refId": "A"
         }
       ],
@@ -677,7 +677,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT start_date AS \"Date\", COALESCE(location_name, '?') AS \"Location\", ROUND(COALESCE(charge_energy_added, 0)::numeric, 1) AS \"kWh\", ROUND(COALESCE(cost, 0)::numeric, 2) AS \"Cost\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} ORDER BY start_date DESC LIMIT 10",
+          "rawSql": "SELECT start_ts AS \"Date\", COALESCE(charger_location, '?') AS \"Location\", ROUND(COALESCE(energy_added_kwh, 0)::numeric, 1) AS \"kWh\", ROUND(COALESCE(cost, 0)::numeric, 2) AS \"Cost\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} ORDER BY start_ts DESC LIMIT 10",
           "refId": "A"
         }
       ],
@@ -822,7 +822,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT start_date AS time, COALESCE(charge_energy_added, 0) AS \"Energy Added (kWh)\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date) ORDER BY start_date",
+          "rawSql": "SELECT start_ts AS time, COALESCE(energy_added_kwh, 0) AS \"Energy Added (kWh)\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts) ORDER BY start_ts",
           "refId": "A"
         }
       ],

@@ -1,5 +1,6 @@
 import { useEffect, useCallback, useState, useRef } from 'react'
 import { useRealtimeEvents } from './useRealtimeEvents'
+import { useVehicleLiveSignals } from '@/api/hooks/useTelemetry'
 import { parseEnumBool, parseBuckleStatus } from '../lib/parseEnums'
 
 /**
@@ -38,7 +39,7 @@ export interface VehicleLiveState {
   climateKeeperMode: string
   cabinOverheatMode: string
   cabinOverheatTempLimit: string
-  defrostMode: boolean
+  defrostMode: string
   defrostPreconditioning: boolean
   rearDefrost: boolean
   rearDisplayHvac: boolean
@@ -139,7 +140,7 @@ export interface VehicleLiveState {
   locatedAtHome: boolean
   locatedAtWork: boolean
   locatedAtFavorite: boolean
-  gpsState: boolean
+  gpsState: string
   originLatitude: number
   originLongitude: number
 
@@ -169,7 +170,7 @@ const EMPTY_STATE: VehicleLiveState = {
   insideTemp: 0, outsideTemp: 0, hvacPower: false, fanSpeed: 0,
   hvacACEnabled: false, hvacAutoMode: '', hvacFanStatus: 0,
   climateKeeperMode: '', cabinOverheatMode: '', cabinOverheatTempLimit: '',
-  defrostMode: false, defrostPreconditioning: false, rearDefrost: false,
+  defrostMode: '', defrostPreconditioning: false, rearDefrost: false,
   rearDisplayHvac: false, wiperHeat: false,
   steeringWheelHeatAuto: false, steeringWheelHeatLevel: 0,
   seatHeaterLeft: 0, seatHeaterRight: 0, seatHeaterRearLeft: 0,
@@ -196,7 +197,7 @@ const EMPTY_STATE: VehicleLiveState = {
   destinationName: '', destinationLatitude: 0, destinationLongitude: 0,
   distanceToArrival: 0, minutesToArrival: 0, routeLine: '',
   locatedAtHome: false, locatedAtWork: false, locatedAtFavorite: false,
-  gpsState: false, originLatitude: 0, originLongitude: 0,
+  gpsState: '', originLatitude: 0, originLongitude: 0,
   swUpdateVersion: '', swUpdateDownloadPct: 0, swUpdateInstallPct: 0,
   swUpdateExpectedMin: 0, swUpdateScheduledStart: '',
   setting24HourTime: false, settingChargeUnit: '', settingDistanceUnit: '',
@@ -257,7 +258,7 @@ function parseSignals(raw: Record<string, unknown>): Partial<VehicleLiveState> {
   if (raw['ClimateKeeperMode'] != null) s.climateKeeperMode = str('ClimateKeeperMode')
   if (raw['CabinOverheatProtectionMode'] != null) s.cabinOverheatMode = str('CabinOverheatProtectionMode')
   if (raw['CabinOverheatProtectionTemperatureLimit'] != null) s.cabinOverheatTempLimit = str('CabinOverheatProtectionTemperatureLimit')
-  if (raw['DefrostMode'] != null) s.defrostMode = bool('DefrostMode')
+  if (raw['DefrostMode'] != null) s.defrostMode = str('DefrostMode')
   if (raw['DefrostForPreconditioning'] != null) s.defrostPreconditioning = bool('DefrostForPreconditioning')
   if (raw['RearDefrostEnabled'] != null) s.rearDefrost = bool('RearDefrostEnabled')
   if (raw['RearDisplayHvacEnabled'] != null) s.rearDisplayHvac = bool('RearDisplayHvacEnabled')
@@ -294,7 +295,10 @@ function parseSignals(raw: Record<string, unknown>): Partial<VehicleLiveState> {
   // Security
   if (raw['Locked'] != null) s.locked = bool('Locked')
   if (raw['SentryMode'] != null) s.sentryMode = bool('SentryMode')
-  if (raw['DoorState'] != null) s.doorState = str('DoorState')
+  if (raw['DoorState'] != null) {
+    const dv = raw['DoorState']
+    s.doorState = typeof dv === 'string' ? dv : typeof dv === 'object' ? JSON.stringify(dv) : ''
+  }
   if (raw['CenterDisplay'] != null) s.centerDisplay = str('CenterDisplay')
   if (raw['FdWindow'] != null) s.fdWindow = str('FdWindow')
   if (raw['FpWindow'] != null) s.fpWindow = str('FpWindow')
@@ -366,7 +370,7 @@ function parseSignals(raw: Record<string, unknown>): Partial<VehicleLiveState> {
   if (raw['LocatedAtHome'] != null) s.locatedAtHome = bool('LocatedAtHome')
   if (raw['LocatedAtWork'] != null) s.locatedAtWork = bool('LocatedAtWork')
   if (raw['LocatedAtFavorite'] != null) s.locatedAtFavorite = bool('LocatedAtFavorite')
-  if (raw['GpsState'] != null) s.gpsState = bool('GpsState')
+  if (raw['GpsState'] != null) s.gpsState = str('GpsState')
   if (raw['OriginLocation'] != null && typeof raw['OriginLocation'] === 'object') {
     const orig = raw['OriginLocation'] as Record<string, unknown>
     if (orig['latitude'] != null) s.originLatitude = orig['latitude'] as number
@@ -404,6 +408,7 @@ export function useVehicleLive(vehicleId?: number) {
   const [state, setState] = useState<VehicleLiveState>({ ...EMPTY_STATE })
   const stateRef = useRef(state)
   stateRef.current = state
+  const { data: initialLiveSignals } = useVehicleLiveSignals(vehicleId)
 
   const handleUpdate = useCallback((data: unknown) => {
     const update = data as { vehicle_id?: number; state?: Record<string, unknown>; signals?: Record<string, unknown> }
@@ -427,34 +432,26 @@ export function useVehicleLive(vehicleId?: number) {
     enabled: true,
   })
 
-  // Initial fetch from the live API endpoint
   useEffect(() => {
-    if (!vehicleId) return
-    fetch(`/api/v1/signals/${vehicleId}/live`)
-      .then(r => r.json())
-      .then(data => {
-        if (data.signals) {
-          // The /live endpoint wraps each signal as {value, timestamp}.
-          // Unwrap to flat key→value format that parseSignals expects.
-          const flat: Record<string, unknown> = {}
-          for (const [k, v] of Object.entries(data.signals)) {
-            if (v && typeof v === 'object' && 'value' in (v as Record<string, unknown>)) {
-              flat[k] = (v as Record<string, unknown>).value
-            } else {
-              flat[k] = v
-            }
-          }
-          const parsed = parseSignals(flat)
-          setState(prev => ({
-            ...prev,
-            ...parsed,
-            lastUpdated: new Date(),
-            signalCount: Object.keys(flat).length,
-          }))
-        }
-      })
-      .catch(() => {}) // Silent fail — SSE will provide updates
-  }, [vehicleId])
+    if (!initialLiveSignals?.signals) return
+
+    const flat: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(initialLiveSignals.signals)) {
+      if (v && typeof v === 'object' && 'value' in (v as Record<string, unknown>)) {
+        flat[k] = (v as Record<string, unknown>).value
+      } else {
+        flat[k] = v
+      }
+    }
+
+    const parsed = parseSignals(flat)
+    setState(prev => ({
+      ...prev,
+      ...parsed,
+      lastUpdated: new Date(),
+      signalCount: Object.keys(flat).length,
+    }))
+  }, [initialLiveSignals])
 
   return { state, connected }
 }

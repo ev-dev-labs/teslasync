@@ -26,7 +26,7 @@ func (r *TeslaEnergySiteRepo) GetAll(ctx context.Context) ([]*models.TeslaEnergy
 		backup_capable, storm_mode_enabled,
 		has_solar, has_battery, has_grid, has_load_meter,
 		tou_capable, storm_mode_capable,
-		raw_json, site_info_fetched_at,
+		site_info_fetched_at,
 		fetched_at, created_at, updated_at
 		FROM tesla_energy_sites
 		ORDER BY site_name ASC`
@@ -46,7 +46,7 @@ func (r *TeslaEnergySiteRepo) GetAll(ctx context.Context) ([]*models.TeslaEnergy
 			&s.BackupCapable, &s.StormModeEnabled,
 			&s.HasSolar, &s.HasBattery, &s.HasGrid, &s.HasLoadMeter,
 			&s.TOUCapable, &s.StormModeCapable,
-			&s.RawJSON, &s.SiteInfoFetchedAt,
+			&s.SiteInfoFetchedAt,
 			&s.FetchedAt, &s.CreatedAt, &s.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan energy site: %w", err)
@@ -71,10 +71,6 @@ func (r *TeslaEnergySiteRepo) ReplaceAll(ctx context.Context, sites []*models.Te
 	incomingIDs := make([]int64, 0, len(sites))
 
 	for _, s := range sites {
-		rawJSON := s.RawJSON
-		if rawJSON == "" {
-			rawJSON = "{}"
-		}
 		incomingIDs = append(incomingIDs, s.EnergySiteID)
 
 		// Upsert: insert or update product fields, preserving site_info columns
@@ -84,8 +80,8 @@ func (r *TeslaEnergySiteRepo) ReplaceAll(ctx context.Context, sites []*models.Te
 			backup_capable, storm_mode_enabled,
 			has_solar, has_battery, has_grid, has_load_meter,
 			tou_capable, storm_mode_capable,
-			raw_json, fetched_at, created_at, updated_at
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+			fetched_at, created_at, updated_at
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
 		ON CONFLICT (energy_site_id) DO UPDATE SET
 			resource_type = EXCLUDED.resource_type,
 			site_name = EXCLUDED.site_name,
@@ -101,7 +97,6 @@ func (r *TeslaEnergySiteRepo) ReplaceAll(ctx context.Context, sites []*models.Te
 			has_load_meter = EXCLUDED.has_load_meter,
 			tou_capable = EXCLUDED.tou_capable,
 			storm_mode_capable = EXCLUDED.storm_mode_capable,
-			raw_json = EXCLUDED.raw_json,
 			fetched_at = EXCLUDED.fetched_at,
 			updated_at = EXCLUDED.updated_at`,
 			s.EnergySiteID, s.ResourceType, s.SiteName,
@@ -109,7 +104,7 @@ func (r *TeslaEnergySiteRepo) ReplaceAll(ctx context.Context, sites []*models.Te
 			s.BackupCapable, s.StormModeEnabled,
 			s.HasSolar, s.HasBattery, s.HasGrid, s.HasLoadMeter,
 			s.TOUCapable, s.StormModeCapable,
-			rawJSON, now, now, now,
+			now, now, now,
 		)
 		if err != nil {
 			return fmt.Errorf("upsert energy site %d: %w", s.EnergySiteID, err)

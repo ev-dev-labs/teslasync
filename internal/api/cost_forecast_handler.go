@@ -91,11 +91,11 @@ func (h *CostForecastHandler) GetForecast(w http.ResponseWriter, r *http.Request
 
 	// ── 1. Monthly cost aggregation ──────────────────────────
 	rows, err := h.db.Pool.Query(ctx, `
-		SELECT DATE_TRUNC('month', start_date) AS month,
+		SELECT DATE_TRUNC('month', start_ts) AS month,
 		       SUM(cost) AS total_cost,
-		       SUM(charge_energy_added) AS total_kwh,
+		       SUM(energy_added_kwh) AS total_kwh,
 		       COUNT(*) AS sessions,
-		       AVG(cost / NULLIF(charge_energy_added, 0)) AS avg_cost_per_kwh
+		       AVG(cost / NULLIF(energy_added_kwh, 0)) AS avg_cost_per_kwh
 		FROM charging_sessions
 		WHERE vehicle_id = $1 AND cost > 0
 		GROUP BY month ORDER BY month`, vehicleID)
@@ -269,12 +269,12 @@ func (h *CostForecastHandler) computeBreakdown(ctx interface{ Deadline() (time.T
 
 	_ = h.db.Pool.QueryRow(ctx, `
 		SELECT
-			COALESCE(SUM(cost) FILTER (WHERE charger_power <= 22 OR charger_power IS NULL), 0),
-			COALESCE(SUM(charge_energy_added) FILTER (WHERE charger_power <= 22 OR charger_power IS NULL), 0),
-			COUNT(*) FILTER (WHERE charger_power <= 22 OR charger_power IS NULL),
-			COALESCE(SUM(cost) FILTER (WHERE charger_power > 22), 0),
-			COALESCE(SUM(charge_energy_added) FILTER (WHERE charger_power > 22), 0),
-			COUNT(*) FILTER (WHERE charger_power > 22)
+			COALESCE(SUM(cost) FILTER (WHERE charger_power_kw_max <= 22 OR charger_power_kw_max IS NULL), 0),
+			COALESCE(SUM(energy_added_kwh) FILTER (WHERE charger_power_kw_max <= 22 OR charger_power_kw_max IS NULL), 0),
+			COUNT(*) FILTER (WHERE charger_power_kw_max <= 22 OR charger_power_kw_max IS NULL),
+			COALESCE(SUM(cost) FILTER (WHERE charger_power_kw_max > 22), 0),
+			COALESCE(SUM(energy_added_kwh) FILTER (WHERE charger_power_kw_max > 22), 0),
+			COUNT(*) FILTER (WHERE charger_power_kw_max > 22)
 		FROM charging_sessions
 		WHERE vehicle_id = $1 AND cost > 0`, vehicleID).Scan(
 		&homeCost, &homekWh, &homeCount,
@@ -327,8 +327,8 @@ func (h *CostForecastHandler) computeGasComparison(ctx interface{ Deadline() (ti
 	var totalKm float64
 	var firstDrive, lastDrive *time.Time
 	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT COALESCE(SUM(distance), 0), MIN(start_date), MAX(start_date)
-		FROM drives WHERE vehicle_id = $1 AND distance > 0`, vehicleID).Scan(
+		SELECT COALESCE(SUM(distance_mi), 0), MIN(start_ts), MAX(start_ts)
+		FROM drives WHERE vehicle_id = $1 AND distance_mi > 0`, vehicleID).Scan(
 		&totalKm, &firstDrive, &lastDrive,
 	)
 

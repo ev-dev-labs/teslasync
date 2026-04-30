@@ -8,10 +8,10 @@ import (
 
 // ─── Config Parsing Tests ───────────────────────────────
 
-func TestParseCooldownConfig_Valid(t *testing.T) {
+func TestDecodeCooldownSpec_Valid(t *testing.T) {
 	raw := json.RawMessage(`{"type": "cooldown", "minutes": 30}`)
 
-	cfg, err := ParseCooldownConfig(raw)
+	cfg, err := DecodeCooldownSpec(raw)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -23,9 +23,9 @@ func TestParseCooldownConfig_Valid(t *testing.T) {
 	}
 }
 
-func TestParseCooldownConfig_MinimalValid(t *testing.T) {
+func TestDecodeCooldownSpec_MinimalValid(t *testing.T) {
 	raw := json.RawMessage(`{"minutes": 10}`)
-	cfg, err := ParseCooldownConfig(raw)
+	cfg, err := DecodeCooldownSpec(raw)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -34,7 +34,7 @@ func TestParseCooldownConfig_MinimalValid(t *testing.T) {
 	}
 }
 
-func TestParseCooldownConfig_Errors(t *testing.T) {
+func TestDecodeCooldownSpec_Errors(t *testing.T) {
 	tests := []struct {
 		name string
 		json string
@@ -49,7 +49,7 @@ func TestParseCooldownConfig_Errors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := ParseCooldownConfig(json.RawMessage(tt.json))
+			_, err := DecodeCooldownSpec(json.RawMessage(tt.json))
 			if err == nil {
 				t.Fatalf("expected error for %q, got nil", tt.name)
 			}
@@ -134,10 +134,10 @@ func TestEvaluateCooldown_JustUnderCooldown(t *testing.T) {
 
 func TestEvaluateCooldown_VariousDurations(t *testing.T) {
 	tests := []struct {
-		name         string
-		minutes      int
-		elapsedMin   int
-		wantMet      bool
+		name       string
+		minutes    int
+		elapsedMin int
+		wantMet    bool
 	}{
 		{"1 min cooldown, 0 elapsed", 1, 0, false},
 		{"1 min cooldown, 1 elapsed", 1, 1, true},

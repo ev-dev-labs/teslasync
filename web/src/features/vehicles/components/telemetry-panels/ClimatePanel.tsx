@@ -1,0 +1,160 @@
+import { useTranslation } from 'react-i18next'
+import { Thermometer, Fan, Snowflake, Zap } from 'lucide-react'
+import { cn } from '@/lib/cn'
+import { GlassPanel } from '@/components/ui'
+import { MetricCard } from '@/components/data-display'
+import { EmptyState } from '@/components/feedback'
+import { useSettings } from '@/hooks/useSettings'
+import { fmtNumber } from '@/lib/numberFormat'
+import type { ClimateSnapshot } from '@/api/types'
+
+interface ClimatePanelProps {
+  climateData: ClimateSnapshot | null | undefined
+}
+
+export function ClimatePanel({ climateData }: ClimatePanelProps) {
+  const { t } = useTranslation()
+  const { convertTemp, tempUnit } = useSettings()
+
+  return (
+    <GlassPanel className="p-6 h-full">
+      <h3 className="section-title flex items-center gap-2 mb-5">
+        <Thermometer className="h-4 w-4 text-neon-cyan" /> {t('common.climate', 'Climate')}
+      </h3>
+      {climateData ? (
+        <div className="space-y-4">
+          {/* Cabin + Outside temps */}
+          <div className="grid grid-cols-2 gap-3">
+            <MetricCard
+              label={t('common.insideTemp', 'Cabin')}
+              value={
+                climateData.inside_temp_c != null
+                  ? fmtNumber(convertTemp(climateData.inside_temp_c))
+                  : '—'
+              }
+              subtitle={tempUnit}
+            />
+            <MetricCard
+              label={t('common.outsideTemp', 'Outside')}
+              value={
+                climateData.outside_temp_c != null
+                  ? fmtNumber(convertTemp(climateData.outside_temp_c))
+                  : '—'
+              }
+              subtitle={tempUnit}
+            />
+          </div>
+
+          {/* Target temps */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-[var(--text-muted)]">
+                {t('telemetry.driverSetpoint', 'Driver Setpoint')}
+              </span>
+              <span className="text-sm font-mono text-[var(--text-primary)]">
+                {climateData.driver_setpoint_c != null
+                  ? `${fmtNumber(convertTemp(climateData.driver_setpoint_c))} ${tempUnit}`
+                  : '—'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-[var(--text-muted)]">
+                {t('telemetry.passengerSetpoint', 'Passenger Setpoint')}
+              </span>
+              <span className="text-sm font-mono text-[var(--text-primary)]">
+                {climateData.passenger_setpoint_c != null
+                  ? `${fmtNumber(convertTemp(climateData.passenger_setpoint_c))} ${tempUnit}`
+                  : '—'}
+              </span>
+            </div>
+          </div>
+
+          {/* HVAC State */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-[var(--text-muted)]">
+              {t('telemetry.hvacState', 'HVAC State')}
+            </span>
+            <span className="text-sm font-mono text-[var(--text-primary)]">
+              {climateData.hvac_state ?? '—'}
+            </span>
+          </div>
+
+          {/* Fan Speed */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
+              <Fan className="h-3 w-3" /> {t('telemetry.fanSpeed', 'Fan Speed')}
+            </span>
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5, 6].map((level) => (
+                <div
+                  key={level}
+                  className={cn(
+                    'h-3 rounded-sm transition-colors',
+                    level === 1
+                      ? 'w-1.5'
+                      : level === 2
+                        ? 'w-2'
+                        : level === 3
+                          ? 'w-2.5'
+                          : level === 4
+                            ? 'w-3'
+                            : level === 5
+                              ? 'w-3.5'
+                              : 'w-4',
+                    (climateData.fan_status ?? 0) >= level
+                      ? 'bg-neon-cyan/70'
+                      : 'bg-white/[0.06]',
+                  )}
+                />
+              ))}
+              <span className="text-xs font-mono text-[var(--text-primary)] ml-1.5">
+                {climateData.fan_status ?? 0}
+              </span>
+            </div>
+          </div>
+
+          {/* System badges */}
+          <div className="flex flex-wrap gap-2 pt-1">
+            <span
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium border',
+                climateData.defrost_mode && climateData.defrost_mode !== 'Off'
+                  ? 'border-blue-400/30 bg-blue-400/10 text-blue-400'
+                  : 'border-white/[0.06] bg-white/[0.02] text-[var(--text-muted)]',
+              )}
+            >
+              <Snowflake className="h-3 w-3" /> {t('telemetry.defrost', 'Defrost')}{' '}
+              {climateData.defrost_mode && climateData.defrost_mode !== 'Off'
+                ? climateData.defrost_mode
+                : t('common.off', 'Off')}
+            </span>
+            <span
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium border',
+                climateData.is_climate_on
+                  ? 'border-green-400/30 bg-green-400/10 text-green-400'
+                  : 'border-white/[0.06] bg-white/[0.02] text-[var(--text-muted)]',
+              )}
+            >
+              <Zap className="h-3 w-3" /> {t('telemetry.climate', 'Climate')}{' '}
+              {climateData.is_climate_on ? t('common.on', 'On') : t('common.off', 'Off')}
+            </span>
+            <span
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium border',
+                climateData.is_preconditioning
+                  ? 'border-amber-400/30 bg-amber-400/10 text-amber-400'
+                  : 'border-white/[0.06] bg-white/[0.02] text-[var(--text-muted)]',
+              )}
+            >
+              {t('telemetry.precondition', 'Precondition')}{' '}
+              {climateData.is_preconditioning ? t('common.on', 'On') : t('common.off', 'Off')}
+            </span>
+          </div>
+        </div>
+      ) : (
+        <EmptyState message={t('telemetry.noClimateData', 'No climate data available')} />
+      )}
+    </GlassPanel>
+  )
+}

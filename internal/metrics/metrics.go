@@ -150,6 +150,12 @@ var (
 		Name:      "db_transactions_total",
 		Help:      "Total database transactions by result",
 	}, []string{"result"})
+
+	WriteBufferDroppedTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "signal_write_buffer_dropped_total",
+		Help:      "Total number of entries dropped from write buffer due to overflow",
+	}, []string{"buffer_name"})
 )
 
 // ── Alerts & Notifications ─────────────────────────────────
@@ -173,36 +179,36 @@ var (
 		Help:      "Total notifications sent by channel type and result",
 	}, []string{"channel_type", "result"})
 
-	// CEP Rule Engine metrics
-	CEPRulesEvaluated = promauto.NewCounter(prometheus.CounterOpts{
+	// Alert rule engine metrics. Prometheus names retain their legacy series.
+	AlertRulesEvaluated = promauto.NewCounter(prometheus.CounterOpts{
 		Namespace: "teslasync",
 		Name:      "cep_rules_evaluated_total",
-		Help:      "Total CEP rule evaluations (conditions checked)",
+		Help:      "Total alert rule evaluations",
 	})
 
-	CEPRulesFired = promauto.NewCounterVec(prometheus.CounterOpts{
+	AlertRulesFired = promauto.NewCounterVec(prometheus.CounterOpts{
 		Namespace: "teslasync",
 		Name:      "cep_rules_fired_total",
-		Help:      "CEP rules fired by rule name and severity",
+		Help:      "Alert rules fired by rule name and severity",
 	}, []string{"rule_name", "severity"})
 
-	CEPRulesCooldownSkipped = promauto.NewCounter(prometheus.CounterOpts{
+	AlertRulesCooldownSkipped = promauto.NewCounter(prometheus.CounterOpts{
 		Namespace: "teslasync",
 		Name:      "cep_rules_cooldown_skipped_total",
-		Help:      "CEP rule evaluations skipped due to cooldown",
+		Help:      "Alert rule evaluations skipped due to cooldown",
 	})
 
-	CEPEvalDuration = promauto.NewHistogram(prometheus.HistogramOpts{
+	AlertRuleEvalDuration = promauto.NewHistogram(prometheus.HistogramOpts{
 		Namespace: "teslasync",
 		Name:      "cep_eval_duration_seconds",
-		Help:      "Time to evaluate all CEP rules for a signal batch",
+		Help:      "Time to evaluate all alert rules for a signal batch",
 		Buckets:   []float64{.0001, .0005, .001, .005, .01, .05, .1},
 	})
 
-	CEPActiveRules = promauto.NewGauge(prometheus.GaugeOpts{
+	ActiveAlertRules = promauto.NewGauge(prometheus.GaugeOpts{
 		Namespace: "teslasync",
 		Name:      "cep_active_rules",
-		Help:      "Number of enabled CEP rules currently loaded",
+		Help:      "Number of enabled alert rules currently loaded",
 	})
 
 	NotificationsDispatched = promauto.NewCounterVec(prometheus.CounterOpts{
@@ -476,4 +482,36 @@ var (
 		Name:      "geofence_events_total",
 		Help:      "Total geofence events by type",
 	}, []string{"type"}) // enter, exit
+)
+
+// ── FSM Dispatch ───────────────────────────────────────────
+
+var (
+	// FSMDispatchTotal tracks every FSM dispatch attempt by outcome.
+	// Labels: "ok", "error", "timeout", "panic"
+	FSMDispatchTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "fsm_dispatch_total",
+		Help:      "Total FSM dispatch attempts by outcome",
+	}, []string{"outcome"})
+
+	// FSMReconcileTotal tracks periodic reconciliation attempts by result.
+	// Labels: "corrected", "already_correct", "skipped_confidence", "skipped_fresh", "error"
+	FSMReconcileTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "fsm_reconcile_total",
+		Help:      "FSM reconciliation attempts by result",
+	}, []string{"result"})
+)
+
+// ── Reliability ────────────────────────────────────────────
+
+var (
+	// PanicsRecovered counts panics caught by recovery wrappers (safeGo,
+	// MQTT batch flush timer, etc.). Any non-zero rate indicates a bug.
+	PanicsRecovered = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "panics_recovered_total",
+		Help:      "Total panics caught by recovery wrappers, labeled by location",
+	}, []string{"location"})
 )

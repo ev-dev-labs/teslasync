@@ -79,7 +79,6 @@ export function CommandInputDialog({
       setTouched({});
       setTimeout(() => firstInputRef.current?.focus(), 50);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const handleChange = (name: string, value: string) => {
@@ -156,7 +155,6 @@ export function CommandInputDialog({
       size="sm"
       className="bg-gray-900/95 dark:bg-gray-900/95 backdrop-blur-xl border border-white/10"
     >
-      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
       <div onKeyDown={handleKeyDown}>
         <div className="flex items-center gap-3 mb-5">
           <div className="rounded-xl p-2.5 bg-white/5 text-white/60">

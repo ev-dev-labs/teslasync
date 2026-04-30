@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { cn } from '@/lib/cn';
+import { createPortal } from 'react-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  RefreshCw, Bell, Radio, ArrowUpRight, Car, Activity,
-  Route, BatteryCharging, Shield, AlertCircle,
+  RefreshCw, Bell, Radio, ArrowUpRight, Activity,
+  Route, BatteryCharging, Shield, AlertCircle, Settings, Plus, RotateCcw,
+  LayoutGrid, Download, Upload, Undo2, Redo2, LayoutTemplate, Tv,
 } from 'lucide-react';
 import { request } from '@/api/client';
 import { useAuthStatus } from '@/api/hooks/useSettings';
@@ -15,34 +16,63 @@ import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Button } from '@/components/ui/Button';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { FadeIn } from '@/components/motion';
-import { AlertBanner, EmptyState } from '@/components/feedback';
-import { StatusBadge } from '@/components/data-display/StatusBadge';
-import { FreshnessIndicator } from '@/components/data-display';
+import { AlertBanner } from '@/components/feedback';
 import { Skeleton } from '@/components/feedback/Skeleton';
-import { useSettings } from '@/hooks/useSettings';
 import { useRealtimeEvents } from '@/hooks/useRealtimeEvents';
-import { useVehicleLive } from '@/hooks/useVehicleLive';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { fmtNumber } from '@/lib/numberFormat';
-import { VehicleHero } from '../components/VehicleHero';
-import { FleetStatsBar } from '../components/FleetStatsBar';
-import { RecentActivity } from '../components/RecentActivity';
-import { LiveTelemetry } from '../components/LiveTelemetry';
-import { QuickNav } from '../components/QuickNav';
-import type {
-  Vehicle, VehicleState, FleetAnalytics, Alert,
-  Drive, ChargingSession,
-  MotorData, ClimateData, SecurityData, TirePressureData, MediaData, LocationData,
-} from '../types';
+import { DashboardGrid } from '../components/DashboardGrid';
+import { WidgetPicker } from '../components/WidgetPicker';
+import { WidgetSettingsModal } from '../components/WidgetSettingsModal';
+import { LayoutManager } from '../components/LayoutManager';
+import { TemplateGallery } from '../components/TemplateGallery';
+import { ExportModal } from '../components/ExportModal';
+import { ImportPreviewModal } from '../components/ImportPreviewModal';
+import { DashboardSettingsModal } from '../components/DashboardSettingsModal';
+import { KioskOverlay } from '../components/KioskOverlay';
+import { KioskSettingsModal } from '../components/KioskSettingsModal';
+import { useDashboardLayout } from '../hooks/useDashboardLayout';
+import { useLayoutKeyboard } from '../hooks/useLayoutKeyboard';
+import { useKioskMode } from '../hooks/useKioskMode';
+import { fromUrlSafeBase64 } from '../hooks/validateImport';
+import { getWidgetDef } from '../widgets/registry';
+import type { Vehicle, Alert } from '../types';
+import type { WidgetConfig, SavedDashboard } from '../widgets/types';
 
 export default function DashboardPage() {
   usePageTitle('Dashboard');
   const { t } = useTranslation('dashboard');
   const queryClient = useQueryClient();
+
+  /* ——— Dashboard layout state ——— */
   const {
-    convertDistance, convertSpeed, convertTemp, convertEfficiency, convertPressure,
-    isFahrenheit, distanceUnit, speedUnit, tempUnit, efficiencyUnit, pressureUnit,
-  } = useSettings();
+    dashboards, activeDashboard, activeId,
+    editMode, setEditMode,
+    addWidgets, removeWidget, updateWidgetConfig,
+    updateLayouts, autoArrange, getWidgetSize,
+    switchDashboard, createDashboard, renameDashboard, deleteDashboard,
+    reorderDashboards, duplicateDashboard, updateDashboardSettings, updateDashboardIcon,
+    applyPreset, resetToDefault, exportDashboard, importDashboardFromData,
+    canUndo, canRedo, undoCount, undo, redo,
+  } = useDashboardLayout();
+  const [showPicker, setShowPicker] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importJson, setImportJson] = useState<string | null>(null);
+  const [showKioskSettings, setShowKioskSettings] = useState(false);
+  const [showDashSettings, setShowDashSettings] = useState<string | null>(null);
+  useLayoutKeyboard({
+    editMode, canUndo, canRedo, onUndo: undo, onRedo: redo,
+    dashboards, switchDashboard,
+  });
+  const [settingsWidgetId, setSettingsWidgetId] = useState<string | null>(null);
+
+  /* ——— Kiosk mode ——— */
+  const {
+    config: kioskConfig, updateConfig: updateKioskConfig,
+    isKiosk, enterKiosk, exitKiosk,
+    isDimmed, isCursorHidden, rotateIndex, validIds,
+  } = useKioskMode(dashboards, activeId, switchDashboard);
 
   /* ——— Auth status ——— */
   const { data: auth } = useAuthStatus();
@@ -59,79 +89,19 @@ export default function DashboardPage() {
     queryKey: ['vehicles'],
     queryFn: () => request<Vehicle[]>('/vehicles'),
   });
-  const { data: analytics, error: analyticsError } = useQuery({
-    queryKey: ['fleet-analytics', '30'],
-    queryFn: () => request<FleetAnalytics>('/analytics/fleet?days=30'),
-  });
   const { data: alerts, error: alertsError } = useQuery({
     queryKey: ['alerts'],
     queryFn: () => request<Alert[]>('/alerts?limit=10'),
   });
 
-  /* ——— Primary vehicle state ——— */
-  const primaryVehicle = vehicles?.[0];
-  const { data: primaryStateData, dataUpdatedAt, error: stateError } = useQuery({
-    queryKey: ['vehicle-state', primaryVehicle?.id],
-    queryFn: () => request<{ state: VehicleState }>(`/vehicles/${primaryVehicle!.id}/state`),
-    enabled: !!primaryVehicle,
-    refetchInterval: 30_000,
-  });
-  const primaryState = primaryStateData?.state ?? null;
-
-  /* SSE live signals for firmware etc. */
-  const { state: live } = useVehicleLive(primaryVehicle?.id);
-  const firmwareVersion = live.version || live.swUpdateVersion || primaryState?.software_version || '—';
-
-  /* ——— Recent drives & charges ——— */
-  const { data: recentDrives } = useQuery({
-    queryKey: ['drives', primaryVehicle?.id, 'recent-5'],
-    queryFn: () => request<Drive[]>(`/drives?vehicle_id=${primaryVehicle!.id}&limit=5`),
-    enabled: !!primaryVehicle,
-  });
-  const { data: recentCharges } = useQuery({
-    queryKey: ['charging', primaryVehicle?.id, 'recent-5'],
-    queryFn: () => request<ChargingSession[]>(`/charging?vehicle_id=${primaryVehicle!.id}&limit=5`),
-    enabled: !!primaryVehicle,
-  });
-
-  /* ——— Other vehicles ——— */
-  const otherVehicles = vehicles?.slice(1) ?? [];
-  const { data: otherStates } = useQuery({
-    queryKey: ['other-vehicle-states', otherVehicles.map((v) => v.id).sort()],
-    queryFn: async () => {
-      const entries = await Promise.all(
-        otherVehicles.map(async (v) => {
-          try { return [v.id, (await request<{ state: VehicleState }>(`/vehicles/${v.id}/state`)).state] as const; }
-          catch { return [v.id, null] as const; }
-        }),
-      );
-      return Object.fromEntries(entries) as Record<number, VehicleState | null>;
-    },
-    enabled: otherVehicles.length > 0,
-  });
-
-  /* ——— Live telemetry queries ——— */
-  const telemetryOpts = { enabled: !!primaryVehicle, refetchInterval: 5_000, staleTime: 30_000 };
-  const { data: motorData } = useQuery({ queryKey: ['motor-latest', primaryVehicle?.id], queryFn: () => request<MotorData>(`/motor/latest?vehicle_id=${primaryVehicle!.id}`), ...telemetryOpts });
-  const { data: climateData } = useQuery({ queryKey: ['climate-latest', primaryVehicle?.id], queryFn: () => request<ClimateData>(`/climate/latest?vehicle_id=${primaryVehicle!.id}`), ...telemetryOpts });
-  const { data: securityData } = useQuery({ queryKey: ['security-latest', primaryVehicle?.id], queryFn: () => request<SecurityData>(`/security/latest?vehicle_id=${primaryVehicle!.id}`), ...telemetryOpts });
-  const { data: tireData } = useQuery({ queryKey: ['tire-latest', primaryVehicle?.id], queryFn: () => request<TirePressureData>(`/tire-pressure/latest?vehicle_id=${primaryVehicle!.id}`), ...telemetryOpts });
-  const { data: mediaData } = useQuery({ queryKey: ['media-latest', primaryVehicle?.id], queryFn: () => request<MediaData>(`/media/latest?vehicle_id=${primaryVehicle!.id}`), ...telemetryOpts });
-  const { data: locationData } = useQuery({ queryKey: ['location-latest', primaryVehicle?.id], queryFn: () => request<LocationData>(`/location-snapshots/latest?vehicle_id=${primaryVehicle!.id}`), ...telemetryOpts });
-
   /* ——— Derived values ——— */
-  const onlineCount = vehicles?.filter((v) => v.state === 'online').length ?? 0;
   const unreadAlerts = alerts?.filter((a) => !a.is_read).length ?? 0;
-  const anyError = [vehiclesError, analyticsError, alertsError, stateError].find(Boolean) as Error | undefined;
+  const anyError = [vehiclesError, alertsError].find(Boolean) as Error | undefined;
 
   /* ——— Refresh logic ——— */
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [, setTick] = useState(0);
   useEffect(() => { const id = setInterval(() => setTick((t) => t + 1), 60_000); return () => clearInterval(id); }, []);
-
-  const lastUpdatedLabel = dataUpdatedAt
-    ? `Updated ${formatTimeAgo(new Date(dataUpdatedAt))}`
-    : undefined;
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -150,16 +120,124 @@ export default function DashboardPage() {
     setIsRefreshing(false);
   };
 
+  /* ——— Import handler ——— */
+  const handleImportConfirm = (dashboard: SavedDashboard) => {
+    importDashboardFromData(dashboard);
+  };
+
+  /* ——— URL import detection ——— */
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.startsWith('#import=')) {
+      try {
+        const encoded = hash.slice('#import='.length);
+        const json = fromUrlSafeBase64(encoded);
+        setImportJson(json);
+        setShowImportModal(true);
+        // Clean up URL
+        window.history.replaceState({}, '', window.location.pathname);
+      } catch {
+        // Invalid base64 — ignore
+      }
+    }
+  }, []);
+
+  /* ——— Template gallery handler ——— */
+  const handleApplyTemplate = (presetId: string) => {
+    if (presetId === '__blank__') {
+      createDashboard(t('dashboard.newDashboard', 'New Dashboard'));
+    } else {
+      applyPreset(presetId);
+    }
+    setShowTemplates(false);
+  };
+
+  /* ——— Widget settings ——— */
+  const settingsWidget = settingsWidgetId
+    ? activeDashboard.widgets.find((w) => w.id === settingsWidgetId)
+    : null;
+  const settingsDef = settingsWidget ? getWidgetDef(settingsWidget.widgetId) : null;
+
+  const handleSaveWidgetConfig = (config: WidgetConfig) => {
+    if (settingsWidgetId) {
+      updateWidgetConfig(settingsWidgetId, config);
+    }
+  };
+
   /* ——— Header actions ——— */
   const headerActions = (
-    <div className="flex items-center gap-3">
-      {lastUpdatedLabel && (
-        <span className="text-[10px] text-[var(--text-muted)] hidden sm:inline">{lastUpdatedLabel}</span>
+    <div className="flex items-center gap-2 flex-wrap">
+      {editMode ? (
+        <>
+          <div className="flex items-center gap-1 mr-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={undo}
+              disabled={!canUndo}
+              aria-label={t('dashboard.undo', 'Undo')}
+              className="text-white/60 hover:text-white disabled:opacity-30"
+            >
+              <Undo2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={redo}
+              disabled={!canRedo}
+              aria-label={t('dashboard.redo', 'Redo')}
+              className="text-white/60 hover:text-white disabled:opacity-30"
+            >
+              <Redo2 className="h-4 w-4" />
+            </Button>
+            {canUndo && (
+              <span className="text-[10px] text-white/30 tabular-nums">
+                {undoCount}
+              </span>
+            )}
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => setShowPicker(true)}>
+            <Plus className="h-3.5 w-3.5 sm:mr-1" />
+            <span className="hidden sm:inline">{t('dashboard.addWidget', 'Add Widget')}</span>
+          </Button>
+          <Button variant="ghost" size="sm" onClick={autoArrange}>
+            <LayoutGrid className="h-3.5 w-3.5 sm:mr-1" />
+            <span className="hidden sm:inline">{t('dashboard.autoArrange', 'Auto Arrange')}</span>
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setShowTemplates(true)} className="hidden sm:flex">
+            <LayoutTemplate className="h-3.5 w-3.5 mr-1" />
+            {t('dashboard.templates', 'Templates')}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={resetToDefault} className="hidden sm:flex">
+            <RotateCcw className="h-3.5 w-3.5 mr-1" />
+            {t('dashboard.reset', 'Reset')}
+          </Button>
+          <Button size="sm" onClick={() => setEditMode(false)}>
+            {t('dashboard.done', 'Done')}
+          </Button>
+        </>
+      ) : (
+        <>
+          <Button variant="ghost" size="sm" onClick={handleRefresh} loading={isRefreshing}>
+            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setShowExportModal(true)} className="hidden sm:flex">
+            <Download className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => { setImportJson(null); setShowImportModal(true); }} className="hidden sm:flex">
+            <Upload className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setShowKioskSettings(true)} className="hidden sm:flex">
+            <Tv className="h-3.5 w-3.5 mr-1" />
+            {t('dashboard.kiosk', 'Kiosk')}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setEditMode(true)} data-tour="edit-mode-btn">
+            <Settings className="h-3.5 w-3.5 sm:mr-1" />
+            <span className="hidden sm:inline">{t('dashboard.customize', 'Customize')}</span>
+          </Button>
+        </>
       )}
-      <Button variant="ghost" size="sm" onClick={handleRefresh} loading={isRefreshing}>
-        <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-      </Button>
-      {unreadAlerts > 0 && (
+      {!editMode && unreadAlerts > 0 && (
         <Link to="/alerts" className="relative">
           <Bell className="h-5 w-5 text-[var(--text-secondary)] hover:text-neon-cyan transition-colors" />
           <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-neon-red text-[9px] font-bold text-[var(--text-primary)]">
@@ -181,7 +259,7 @@ export default function DashboardPage() {
       loading={vehiclesLoading}
       actions={headerActions}
     >
-      <div className="space-y-6">
+      <div className="space-y-4">
         {/* Error banner */}
         {anyError && (
           <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
@@ -206,91 +284,52 @@ export default function DashboardPage() {
           </FadeIn>
         )}
 
+        {/* Layout Manager — always show when there are dashboards */}
+        {dashboards.length > 0 && (
+          <LayoutManager
+            dashboards={dashboards}
+            activeId={activeId}
+            onSwitch={switchDashboard}
+            onCreate={createDashboard}
+            onRename={renameDashboard}
+            onDelete={deleteDashboard}
+            onReorder={reorderDashboards}
+            onDuplicate={duplicateDashboard}
+            onOpenSettings={(id) => setShowDashSettings(id)}
+            onOpenTemplates={() => setShowTemplates(true)}
+          />
+        )}
+
         {vehiclesLoading ? (
           <LoadingSkeleton />
         ) : vehicles && vehicles.length > 0 ? (
           <>
-            {/* Primary Vehicle Hero */}
-            {primaryVehicle && (
+            {/* Edit mode hint */}
+            {editMode && (
               <FadeIn>
-                <VehicleHero
-                  vehicle={primaryVehicle}
-                  state={primaryState}
-                  firmwareVersion={firmwareVersion}
-                  convertDistance={convertDistance}
-                  convertSpeed={convertSpeed}
-                  convertTemp={convertTemp}
-                  isFahrenheit={isFahrenheit}
-                  distanceUnit={distanceUnit}
-                  speedUnit={speedUnit}
-                  tempUnit={tempUnit}
-                />
+                <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-3 text-center">
+                  <p className="text-sm text-[var(--text-secondary)]">
+                    {t('dashboard.editHint', 'Drag widgets to reorder, resize from edges. Click the gear icon for widget settings.')}
+                  </p>
+                </div>
               </FadeIn>
             )}
 
-            {/* Fleet Stats Bar */}
-            <FleetStatsBar
-              analytics={analytics}
-              vehicleCount={vehicles.length}
-              onlineCount={onlineCount}
-              unreadAlerts={unreadAlerts}
-              recentDrives={recentDrives}
-              recentCharges={recentCharges}
-              convertDistance={convertDistance}
-              convertEfficiency={convertEfficiency}
-              distanceUnit={distanceUnit}
-              efficiencyUnit={efficiencyUnit}
-            />
-
-            {/* Activity + Charts Grid */}
-            <FadeIn delay={0.1}>
-              <RecentActivity
-                recentDrives={recentDrives}
-                recentCharges={recentCharges}
-                analytics={analytics}
-                convertDistance={convertDistance}
-                convertEfficiency={convertEfficiency}
-                distanceUnit={distanceUnit}
-                efficiencyUnit={efficiencyUnit}
-              />
-            </FadeIn>
-
-            {/* Other Vehicles Strip */}
-            <FadeIn delay={0.15}>
-              {otherVehicles.length > 0 ? (
-                <OtherVehiclesStrip
-                  vehicles={otherVehicles}
-                  states={otherStates}
-                  convertDistance={convertDistance}
-                  convertTemp={convertTemp}
-                  distanceUnit={distanceUnit}
+            {/* Widget Grid */}
+            <FadeIn>
+              <div data-tour="dashboard-grid">
+                <DashboardGrid
+                  dashboard={activeDashboard}
+                  editMode={editMode}
+                  onLayoutChange={updateLayouts}
+                  onRemoveWidget={removeWidget}
+                  onOpenSettings={setSettingsWidgetId}
+                  getWidgetSize={getWidgetSize}
+                  dashboardVehicleId={activeDashboard.settings?.vehicleId}
+                  compactMode={activeDashboard.settings?.compactMode}
+                  showWidgetBorders={activeDashboard.settings?.showWidgetBorders}
                 />
-              ) : (
-                <EmptyState message={t('dashboard.noOtherVehicles', 'No other vehicles')} />
-              )}
-            </FadeIn>
-
-            {/* Quick Navigation */}
-            <FadeIn delay={0.2}>
-              <QuickNav />
-            </FadeIn>
-
-            {/* Live Telemetry */}
-            <FadeIn delay={0.25}>
-              <LiveTelemetry
-                motorData={motorData}
-                climateData={climateData}
-                securityData={securityData}
-                tireData={tireData}
-                mediaData={mediaData}
-                locationData={locationData}
-                convertTemp={convertTemp}
-                convertDistance={convertDistance}
-                convertPressure={convertPressure}
-                tempUnit={tempUnit}
-                distanceUnit={distanceUnit}
-                pressureUnit={pressureUnit}
-              />
+              </div>
             </FadeIn>
           </>
         ) : (
@@ -303,68 +342,105 @@ export default function DashboardPage() {
           </FadeIn>
         )}
       </div>
-    </PageContainer>
-  );
-}
 
-/* ——— Other Vehicles Strip ——— */
-function OtherVehiclesStrip({ vehicles, states, convertDistance, convertTemp, distanceUnit }: {
-  vehicles: Vehicle[];
-  states: Record<number, VehicleState | null> | undefined;
-  convertDistance: (km: number) => number;
-  convertTemp: (c: number) => number;
-  distanceUnit: string;
-}) {
-  const { t } = useTranslation('dashboard');
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="section-title flex items-center gap-2">
-          <Car className="h-4 w-4 text-[var(--text-secondary)]" /> {t('other.title', 'Other Vehicles')}
-        </h3>
-        <Link to="/vehicles" className="text-xs text-[var(--text-muted)] hover:text-neon-cyan transition-colors flex items-center gap-1">
-          {t('other.manage', 'Manage fleet')} <ArrowUpRight className="h-3 w-3" />
-        </Link>
-      </div>
-      <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin">
-        {vehicles.map((v) => {
-          const s = states?.[v.id];
-          return (
-            <Link key={v.id} to={`/vehicles/${v.id}`} className="block group">
-              <GlassPanel hover glow="cyan" className="p-3 sm:p-4 min-w-[180px] transition-all group-hover:scale-[1.02]">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{v.display_name || v.vin}</p>
-                    <div className="flex items-center gap-2">
-                      <StatusBadge status={v.state} size="sm" />
-                      <FreshnessIndicator timestamp={v.updated_at} size="sm" />
-                    </div>
-                  </div>
-                </div>
-                {s ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-center">
-                    <div>
-                      <p className="text-xs text-[var(--text-muted)]">{t('other.battery', 'Battery')}</p>
-                      <p className={cn("text-sm font-bold", s.battery_level > 50 ? "text-emerald-500" : "text-amber-500")}>{s.battery_level}%</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-[var(--text-muted)]">{t('other.range', 'Range')}</p>
-                      <p className="text-sm font-bold text-[var(--text-primary)]">{fmtNumber(convertDistance(s.rated_range), 0)} {distanceUnit}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-[var(--text-muted)]">{t('other.temp', 'Temp')}</p>
-                      <p className="text-sm font-bold text-[var(--text-primary)]">{s.inside_temp != null ? `${fmtNumber(convertTemp(s.inside_temp), 0)}°` : '—'}</p>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-xs text-gray-600 text-center">{t('other.asleep', 'Asleep')}</p>
-                )}
-              </GlassPanel>
-            </Link>
-          );
-        })}
-      </div>
-    </div>
+      {/* Widget Picker Drawer */}
+      <WidgetPicker
+        open={showPicker}
+        onClose={() => setShowPicker(false)}
+        onAddWidgets={addWidgets}
+        onApplyPreset={applyPreset}
+        activeWidgetIds={activeDashboard.widgets.map((w) => w.widgetId)}
+      />
+
+      {/* Template Gallery Modal */}
+      <TemplateGallery
+        open={showTemplates}
+        onClose={() => setShowTemplates(false)}
+        onApply={handleApplyTemplate}
+      />
+
+      {/* Widget Settings Modal */}
+      {settingsWidget && settingsDef && (
+        <WidgetSettingsModal
+          widget={settingsWidget}
+          def={settingsDef}
+          open={!!settingsWidgetId}
+          onClose={() => setSettingsWidgetId(null)}
+          onSave={handleSaveWidgetConfig}
+        />
+      )}
+
+      {/* Export Modal */}
+      <ExportModal
+        open={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        dashboard={activeDashboard}
+        onDownload={() => exportDashboard()}
+      />
+
+      {/* Import Preview Modal */}
+      <ImportPreviewModal
+        open={showImportModal}
+        onClose={() => { setShowImportModal(false); setImportJson(null); }}
+        onConfirm={handleImportConfirm}
+        initialJson={importJson}
+      />
+
+      {/* Kiosk Settings Modal */}
+      <KioskSettingsModal
+        open={showKioskSettings}
+        onClose={() => setShowKioskSettings(false)}
+        config={kioskConfig}
+        onUpdateConfig={updateKioskConfig}
+        onEnterKiosk={enterKiosk}
+        dashboards={dashboards}
+      />
+
+      {/* Dashboard Settings Modal */}
+      {showDashSettings && (
+        <DashboardSettingsModal
+          open={!!showDashSettings}
+          onClose={() => setShowDashSettings(null)}
+          dashboard={dashboards.find((d) => d.id === showDashSettings) ?? activeDashboard}
+          vehicles={(vehicles ?? []).map((v) => ({ id: v.id, display_name: v.display_name }))}
+          onUpdate={(settings) => updateDashboardSettings(showDashSettings, settings)}
+          onRename={(name) => renameDashboard(showDashSettings, name)}
+          onChangeIcon={(icon) => updateDashboardIcon(showDashSettings, icon)}
+        />
+      )}
+
+      {/* Kiosk Mode — portaled to document.body to escape all app chrome */}
+      {isKiosk && createPortal(
+        <div
+          className="kiosk-root fixed inset-0 z-[9990]"
+          style={{
+            backgroundColor: `rgba(10, 10, 20, ${kioskConfig.backgroundOpacity ?? 1})`,
+          }}
+        >
+          <DashboardGrid
+            dashboard={activeDashboard}
+            editMode={false}
+            onLayoutChange={() => {}}
+            onRemoveWidget={() => {}}
+            onOpenSettings={() => {}}
+            getWidgetSize={getWidgetSize}
+            dashboardVehicleId={activeDashboard.settings?.vehicleId}
+            compactMode={activeDashboard.settings?.compactMode}
+            showWidgetBorders={activeDashboard.settings?.showWidgetBorders}
+            kioskWidgetOpacity={kioskConfig.widgetOpacity ?? 1}
+          />
+          <KioskOverlay
+            config={kioskConfig}
+            isDimmed={isDimmed}
+            isCursorHidden={isCursorHidden}
+            dashboardCount={validIds.length}
+            currentIndex={rotateIndex}
+            onExit={exitKiosk}
+          />
+        </div>,
+        document.body,
+      )}
+    </PageContainer>
   );
 }
 
@@ -430,16 +506,4 @@ function LoadingSkeleton() {
       </div>
     </div>
   );
-}
-
-/* ——— Relative time helper ——— */
-function formatTimeAgo(date: Date): string {
-  const diff = Date.now() - date.getTime();
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
 }

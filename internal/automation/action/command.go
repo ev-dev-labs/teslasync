@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -19,6 +20,10 @@ import (
 type VehicleRepo interface {
 	GetByID(ctx context.Context, id int64) (*models.Vehicle, error)
 	GetAll(ctx context.Context) ([]*models.Vehicle, error)
+}
+
+type VehicleStateProvider interface {
+	GetLiveState(ctx context.Context, id int64) (string, error)
 }
 
 // CommandLogRepo is the subset of database.CommandLogRepo needed by CommandExecutor.
@@ -105,9 +110,9 @@ func NewCommandExecutor(
 	}
 }
 
-// ParseCommandConfig unmarshals and validates a command action config.
+// DecodeCommandSpec unmarshals and validates a command action config.
 // Rejects unknown commands at parse time to prevent recurring failures.
-func ParseCommandConfig(raw json.RawMessage) (*CommandConfig, error) {
+func DecodeCommandSpec(raw json.RawMessage) (*CommandConfig, error) {
 	if len(raw) == 0 {
 		return nil, fmt.Errorf("action config is empty")
 	}
@@ -132,16 +137,48 @@ func ParseCommandConfig(raw json.RawMessage) (*CommandConfig, error) {
 	return &cfg, nil
 }
 
+var ParseCommandConfig = DecodeCommandSpec
+
 // Execute runs the command action for the given automation context.
 // If vehicleID is non-nil, the command targets that single vehicle.
 // If vehicleID is nil (fleet-wide automation), the command is sent to all vehicles.
 // Returns a JSON array of CommandResult and a summary error (nil if all succeeded).
 func (e *CommandExecutor) Execute(ctx context.Context, vehicleID *int64, raw json.RawMessage) (json.RawMessage, error) {
-	cfg, err := ParseCommandConfig(raw)
+	cfg, err := DecodeCommandSpec(raw)
 	if err != nil {
 		return nil, fmt.Errorf("invalid command action config: %w", err)
 	}
+	return e.executeCommandConfig(ctx, vehicleID, cfg)
+}
 
+// ExecuteTyped runs an action_command CTI child without decoding legacy action
+// wrappers. CommandParams remains the sole schema-on-read JSON carve-out.
+func (e *CommandExecutor) ExecuteTyped(ctx context.Context, vehicleID *int64, payload any) (json.RawMessage, error) {
+	action, ok := payload.(*models.AutomationAction)
+	if !ok {
+		return nil, fmt.Errorf("command action payload type %T is not *models.AutomationAction", payload)
+	}
+	params := map[string]interface{}{}
+	if len(action.CommandParams) > 0 && string(action.CommandParams) != "null" {
+		if err := json.Unmarshal(action.CommandParams, &params); err != nil {
+			return nil, fmt.Errorf("decode command_params: %w", err)
+		}
+	}
+	cfg := &CommandConfig{
+		Type:    "command",
+		Command: action.CommandName,
+		Params:  params,
+	}
+	if cfg.Command == "" {
+		return nil, fmt.Errorf("command_name is required")
+	}
+	if !tesla.IsKnownCommand(cfg.Command) {
+		return nil, fmt.Errorf("unknown command %q", cfg.Command)
+	}
+	return e.executeCommandConfig(ctx, vehicleID, cfg)
+}
+
+func (e *CommandExecutor) executeCommandConfig(ctx context.Context, vehicleID *int64, cfg *CommandConfig) (json.RawMessage, error) {
 	// Safety gate: respect global API suspension.
 	if suspended, err := e.settingsRepo.IsAPISuspended(ctx); err != nil {
 		return nil, fmt.Errorf("check API suspension: %w", err)
@@ -149,13 +186,13 @@ func (e *CommandExecutor) Execute(ctx context.Context, vehicleID *int64, raw jso
 		return nil, fmt.Errorf("Tesla API calls are suspended")
 	}
 
-	// Safety gate: respect commands polling toggle.
-	if pc, err := e.settingsRepo.GetPollingConfig(ctx); err == nil && !pc.Commands {
-		return nil, fmt.Errorf("vehicle commands endpoint is disabled in polling config")
-	}
-
 	if !e.teslaClient.HasValidToken() {
 		return nil, fmt.Errorf("not authenticated with Tesla")
+	}
+
+	pollingCfg, err := e.settingsRepo.GetPollingConfig(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get polling config: %w", err)
 	}
 
 	var vehicles []*models.Vehicle
@@ -165,6 +202,9 @@ func (e *CommandExecutor) Execute(ctx context.Context, vehicleID *int64, raw jso
 			return nil, fmt.Errorf("look up vehicle %d: %w", *vehicleID, err)
 		}
 		if v == nil {
+			if pollingCfg != nil && !pollingCfg.Enabled {
+				return nil, fmt.Errorf("wake_up endpoint is disabled")
+			}
 			return nil, fmt.Errorf("vehicle %d not found", *vehicleID)
 		}
 		vehicles = []*models.Vehicle{v}
@@ -257,29 +297,38 @@ func (e *CommandExecutor) sendToVehicle(ctx context.Context, v *models.Vehicle, 
 	return result
 }
 
-// wakeIfNeeded checks whether the vehicle needs waking and attempts it.
-// Returns nil when no wake is needed, a WakeResult otherwise.
+// wakeIfNeeded sends an auto-wake command before dispatching a vehicle command.
 func (e *CommandExecutor) wakeIfNeeded(ctx context.Context, v *models.Vehicle) *WakeResult {
-	if v.State != "asleep" && v.State != "offline" {
-		return nil
-	}
-
-	// Respect the wake_up safety gate in polling config.
-	if pc, err := e.settingsRepo.GetPollingConfig(ctx); err == nil && !pc.WakeUp {
+	state, err := e.currentVehicleState(ctx, v)
+	if err != nil {
 		return &WakeResult{
 			Attempted: true,
-			Error:     "wake_up endpoint is disabled in polling config",
+			Error:     fmt.Sprintf("read vehicle live state: %v", err),
 		}
+	}
+	if state == "online" {
+		return nil
 	}
 
 	wr := &WakeResult{Attempted: true}
 	start := time.Now()
 
+	pollingCfg, err := e.settingsRepo.GetPollingConfig(ctx)
+	if err != nil {
+		wr.Error = fmt.Sprintf("get polling config: %v", err)
+		wr.DurationMs = time.Since(start).Milliseconds()
+		return wr
+	}
+	if pollingCfg != nil && !pollingCfg.Enabled {
+		wr.Error = "wake_up endpoint is disabled"
+		wr.DurationMs = time.Since(start).Milliseconds()
+		return wr
+	}
+
 	e.logger.Info().
 		Int64("vehicle_id", v.ID).
 		Str("vehicle_name", v.DisplayName).
-		Str("state", v.State).
-		Msg("vehicle not online, attempting auto-wake")
+		Msg("attempting auto-wake before command")
 
 	if err := e.teslaClient.WakeUp(ctx, v.VIN); err != nil {
 		wr.Error = fmt.Sprintf("wake command failed: %v", err)
@@ -287,44 +336,56 @@ func (e *CommandExecutor) wakeIfNeeded(ctx context.Context, v *models.Vehicle) *
 		return wr
 	}
 
-	// Poll vehicle state until it reports online or we hit the timeout.
-	deadline := time.NewTimer(e.wakeTimeout)
-	defer deadline.Stop()
+	timer := time.NewTimer(e.wakeTimeout)
+	defer timer.Stop()
 	ticker := time.NewTicker(e.wakePollInterval)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
-			wr.Error = fmt.Sprintf("context cancelled during wake: %v", ctx.Err())
+			wr.Error = ctx.Err().Error()
 			wr.DurationMs = time.Since(start).Milliseconds()
 			return wr
-		case <-deadline.C:
+		case <-timer.C:
 			wr.Error = "vehicle did not wake up within timeout"
 			wr.DurationMs = time.Since(start).Milliseconds()
 			return wr
 		case <-ticker.C:
 			wr.PollCount++
-			fresh, err := e.vehicleRepo.GetByID(ctx, v.ID)
+			state, err := e.currentVehicleState(ctx, v)
 			if err != nil {
-				e.logger.Warn().Err(err).
-					Int64("vehicle_id", v.ID).
-					Int("poll_count", wr.PollCount).
-					Msg("failed to poll vehicle state during wake")
 				continue
 			}
-			if fresh != nil && fresh.State == "online" {
+			if state == "online" {
 				wr.Success = true
 				wr.DurationMs = time.Since(start).Milliseconds()
+
 				e.logger.Info().
 					Int64("vehicle_id", v.ID).
-					Int("poll_count", wr.PollCount).
 					Int64("duration_ms", wr.DurationMs).
-					Msg("vehicle woke up successfully")
+					Int("poll_count", wr.PollCount).
+					Msg("auto-wake completed successfully")
+
 				return wr
 			}
 		}
 	}
+}
+
+func (e *CommandExecutor) currentVehicleState(ctx context.Context, v *models.Vehicle) (string, error) {
+	if v == nil {
+		return "", nil
+	}
+	provider, ok := e.vehicleRepo.(VehicleStateProvider)
+	if !ok {
+		return "", nil
+	}
+	state, err := provider.GetLiveState(ctx, v.ID)
+	if err != nil {
+		return "", err
+	}
+	return strings.ToLower(strings.TrimSpace(state)), nil
 }
 
 // logCommand writes a command_logs row for audit. Errors are logged but not propagated.

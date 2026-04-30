@@ -5,7 +5,7 @@ import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Select } from '@/components/ui/Select';
 import {
-  ChartContainer, ChartTooltip,
+  ChartContainer, ChartTooltip, AREA_DEFAULTS,
   ComposedChart, Line, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
@@ -36,9 +36,9 @@ function regenColor(ratio: number): string {
 }
 
 function getRegenRatio(drive: Drive): number | null {
-  if (!drive.powerMin || drive.powerMin >= 0) return null;
-  if (!drive.powerMax || drive.powerMax <= 0) return null;
-  return Math.abs(drive.powerMin) / drive.powerMax * 100;
+  if (!drive.avgPowerKw || drive.avgPowerKw <= 0) return null;
+  if (!drive.regenKwh || !drive.energyUsedKwh || drive.energyUsedKwh <= 0) return null;
+  return (drive.regenKwh / drive.energyUsedKwh) * 100;
 }
 
 /* ------------------------------------------------------------------ */
@@ -56,6 +56,8 @@ export default function RegenEfficiencyPage() {
 
   const { data, isLoading, error } = useRegenEfficiency(vehicleIdStr);
   const { data: drives } = useDrives(vehicleIdStr);
+  const lifetimeRegenKwh: number | null = null;
+  const lifetimeDriveKwh: number | null = null;
 
   const { convertDistance, distanceUnit } = useSettings();
 
@@ -64,13 +66,13 @@ export default function RegenEfficiencyPage() {
     if (!drives || drives.length === 0) return [];
     const byMonth = new Map<string, { totalRegen: number; count: number; totalDist: number }>();
     drives.forEach((d) => {
-      const month = d.startDate?.substring(0, 7);
+      const month = d.startTs?.substring(0, 7);
       if (!month) return;
-      const regen = d.powerMin && d.powerMin < 0 ? Math.abs(d.powerMin) * (d.durationMin / 60) : 0;
+      const regen = d.regenKwh ?? 0;
       const existing = byMonth.get(month) ?? { totalRegen: 0, count: 0, totalDist: 0 };
       existing.totalRegen += regen;
       existing.count++;
-      existing.totalDist += d.distance;
+      existing.totalDist += d.distanceMi;
       byMonth.set(month, existing);
     });
     return Array.from(byMonth.entries())
@@ -88,13 +90,13 @@ export default function RegenEfficiencyPage() {
   const regenDrives = useMemo(() => {
     if (!drives) return [];
     return drives
-      .filter((d) => d.powerMin && d.powerMin < 0)
+      .filter((d) => d.regenKwh && d.regenKwh > 0)
       .slice(0, 20)
       .map((d) => ({
         id: d.id,
-        date: d.startDate ? formatDateShort(d.startDate) : '—',
-        distance: fmtWithUnit(convertDistance(d.distance), distanceUnit),
-        maxRegen: d.powerMin ? fmtWithUnit(Math.abs(d.powerMin), 'kW') : '—',
+        date: d.startTs ? formatDateShort(d.startTs) : '—',
+        distance: fmtWithUnit(convertDistance(d.distanceMi), distanceUnit),
+        maxRegen: d.regenKwh ? fmtWithUnit(d.regenKwh, 'kWh') : '—',
         ratio: getRegenRatio(d),
       }));
   }, [drives, convertDistance, distanceUnit]);
@@ -137,7 +139,7 @@ export default function RegenEfficiencyPage() {
           </FadeIn>
 
           {/* Stat cards */}
-          <StaggerContainer className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <StaggerContainer className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <StaggerItem>
               <GlassPanel className="p-4 text-center">
                 <Zap className="h-4 w-4 mx-auto mb-1 text-green-400" />
@@ -155,7 +157,7 @@ export default function RegenEfficiencyPage() {
             <StaggerItem>
               <GlassPanel className="p-4 text-center">
                 <Calendar className="h-4 w-4 mx-auto mb-1 text-amber-400" />
-                <p className="text-lg font-bold text-[var(--text-primary)]"><AnimatedNumber value={data.monthlyAvgKw ?? 0} decimals={1} /></p>
+                <p className="text-lg font-bold text-[var(--text-primary)]"><AnimatedNumber value={data.monthlyAvgRegen ?? 0} decimals={1} /></p>
                 <p className="text-[10px] text-[var(--text-muted)]">{t('regen.monthlyAvg', 'Monthly Avg kW')}</p>
               </GlassPanel>
             </StaggerItem>
@@ -164,6 +166,36 @@ export default function RegenEfficiencyPage() {
                 <Zap className="h-4 w-4 mx-auto mb-1 text-purple-400" />
                 <p className="text-lg font-bold text-[var(--text-primary)]"><AnimatedNumber value={data.freeCharges ?? 0} decimals={1} /></p>
                 <p className="text-[10px] text-[var(--text-muted)]">{t('regen.freeCharges', 'Free Charges')}</p>
+              </GlassPanel>
+            </StaggerItem>
+            <StaggerItem>
+              <GlassPanel className="p-4 text-center">
+                <Zap className="h-4 w-4 mx-auto mb-1 text-emerald-400" />
+                <p className="text-lg font-bold text-[var(--text-primary)]">
+                  {lifetimeRegenKwh != null ? (
+                    <AnimatedNumber value={lifetimeRegenKwh} decimals={1} />
+                  ) : (
+                    '—'
+                  )}
+                </p>
+                <p className="text-[10px] text-[var(--text-muted)]">
+                  {t('regen.lifetimeRegen', 'Lifetime Regen kWh')}
+                </p>
+              </GlassPanel>
+            </StaggerItem>
+            <StaggerItem>
+              <GlassPanel className="p-4 text-center">
+                <Activity className="h-4 w-4 mx-auto mb-1 text-orange-400" />
+                <p className="text-lg font-bold text-[var(--text-primary)]">
+                  {lifetimeDriveKwh != null ? (
+                    <AnimatedNumber value={lifetimeDriveKwh} decimals={1} />
+                  ) : (
+                    '—'
+                  )}
+                </p>
+                <p className="text-[10px] text-[var(--text-muted)]">
+                  {t('regen.lifetimeDrive', 'Lifetime Drive kWh')}
+                </p>
               </GlassPanel>
             </StaggerItem>
           </StaggerContainer>
@@ -180,7 +212,7 @@ export default function RegenEfficiencyPage() {
                     <YAxis yAxisId="drives" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                     <Tooltip content={<ChartTooltip />} />
                     <Bar yAxisId="drives" dataKey="drives" name={t('regen.drives', 'Drives')} fill="#a855f7" fillOpacity={0.4} radius={[4, 4, 0, 0]} />
-                    <Line yAxisId="kwh" type="monotone" dataKey="regenKwh" name={t('regen.regenKwh', 'Regen kWh')} stroke="#10b981" strokeWidth={2} dot={false} />
+                    <Line {...AREA_DEFAULTS} yAxisId="kwh" dataKey="regenKwh" name={t('regen.regenKwh', 'Regen kWh')} stroke="#10b981" />
                   </ComposedChart>
                 </ResponsiveContainer>
               </ChartContainer>
@@ -203,8 +235,8 @@ export default function RegenEfficiencyPage() {
                   <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtPercent(data.regenRatio ?? 0)}</p>
                 </div>
                 <div>
-                  <MetricBar label={t('regen.monthlyAvgBar', 'Monthly Avg')} value={data.monthlyAvgKw ?? 0} max={Math.max(data.monthlyAvgKw ?? 0, 50)} color="#a855f7" />
-                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtNumber(data.monthlyAvgKw ?? 0)} kW</p>
+                  <MetricBar label={t('regen.monthlyAvgBar', 'Monthly Avg')} value={data.monthlyAvgRegen ?? 0} max={Math.max(data.monthlyAvgRegen ?? 0, 50)} color="#a855f7" />
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtNumber(data.monthlyAvgRegen ?? 0)} kW</p>
                 </div>
                 <div>
                   <MetricBar label={t('regen.freeChargesBar', 'Free Charges')} value={data.freeCharges ?? 0} max={Math.max(data.freeCharges ?? 0, 10)} color="#f59e0b" />

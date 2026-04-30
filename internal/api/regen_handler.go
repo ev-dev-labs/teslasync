@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
@@ -33,30 +34,33 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
+	// Look up vehicle-specific battery capacity
+	capacityKWh, capacitySource := lookupVehicleCapacity(ctx, h.db, vehicleID)
+
 	// Per-drive regen stats (last 90 days)
 	type driveRegen struct {
 		ID               int64      `json:"id"`
 		StartDate        time.Time  `json:"start_date"`
 		Distance         float64    `json:"distance"`
 		DurationMin      float64    `json:"duration_min"`
-		SpeedAvg         *float64   `json:"speed_avg"`
-		PowerMax         *float64   `json:"power_max"`
-		PowerMin         *float64   `json:"power_min"`
-		StartBatteryLvl  *int       `json:"start_battery_level"`
-		EndBatteryLvl    *int       `json:"end_battery_level"`
+		SpeedAvg         *float64   `json:"avg_speed_mph"`
+		PowerMax         *float64   `json:"avg_power_kw"`
+		PowerMin         *float64   `json:"min_power_kw"`
+		StartBatteryLvl  *int       `json:"start_battery_pct"`
+		EndBatteryLvl    *int       `json:"end_battery_pct"`
 		Efficiency       float64    `json:"efficiency"`
 		RegenScore       float64    `json:"regen_score"`
 	}
 
 	driveRows, err := h.db.Pool.Query(ctx, `
-		SELECT id, start_date, distance, duration_min, speed_avg,
-			power_max, power_min,
-			start_battery_level, end_battery_level,
-			CASE WHEN distance > 0 THEN (start_battery_level - end_battery_level)::float / distance * 100 ELSE 0 END as efficiency
+		SELECT id, start_ts, distance_mi, duration_min, avg_speed_mph,
+			avg_power_kw, NULL::float8,
+			start_battery_pct, end_battery_pct,
+			CASE WHEN distance_mi > 0 THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 ELSE 0 END as efficiency
 		FROM drives
-		WHERE vehicle_id = $1 AND distance > 2 AND power_min IS NOT NULL
-			AND start_date > NOW() - interval '90 days'
-		ORDER BY start_date DESC`, vehicleID)
+		WHERE vehicle_id = $1 AND distance_mi > 2
+			AND start_ts > NOW() - interval '90 days'
+		ORDER BY start_ts DESC`, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get regen drive data")
 		writeError(w, http.StatusInternalServerError, "failed to get regen data")
@@ -72,7 +76,7 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 			log.Error().Err(err).Msg("failed to scan regen drive row")
 			continue
 		}
-		// Regen score: magnitude of power_min relative to speed (higher regen at lower speed = better)
+		// Regen score: based on avg_power_kw relative to speed
 		if d.PowerMin != nil {
 			regenKW := math.Abs(*d.PowerMin)
 			speedFactor := 1.0
@@ -97,14 +101,14 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	monthRows, err := h.db.Pool.Query(ctx, `
-		SELECT DATE_TRUNC('month', start_date) as month,
+		SELECT DATE_TRUNC('month', start_ts) as month,
 			COUNT(*) as drive_count,
-			AVG(ABS(COALESCE(power_min, 0))) as avg_regen_power_kw,
-			AVG(speed_avg) as avg_speed,
-			AVG(CASE WHEN distance > 0 THEN (start_battery_level - end_battery_level)::float / distance * 100 ELSE 0 END) as avg_efficiency
+			AVG(ABS(COALESCE(avg_power_kw, 0))) as avg_regen_power_kw,
+			AVG(avg_speed_mph) as avg_speed,
+			AVG(CASE WHEN distance_mi > 0 THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 ELSE 0 END) as avg_efficiency
 		FROM drives
-		WHERE vehicle_id = $1 AND distance > 2
-			AND start_date > NOW() - interval '12 months'
+		WHERE vehicle_id = $1 AND distance_mi > 2
+			AND start_ts > NOW() - interval '12 months'
 		GROUP BY month ORDER BY month`, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get monthly regen data")
@@ -136,17 +140,16 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		monthly = []monthlySummary{}
 	}
 
-	// Lifetime energy stats from motor snapshots
+	// Lifetime regen/drive energy — not available in current schema, use
+	// aggregated cagg_fleet_stats regen totals when available.
 	var totalRegenKWh, totalDriveKWh float64
-	err = h.db.Pool.QueryRow(ctx, `
+	if err := h.db.Pool.QueryRow(ctx, `
 		SELECT
-			COALESCE(MAX(lifetime_energy_gained_regen) - MIN(lifetime_energy_gained_regen), 0),
-			COALESCE(MAX(lifetime_energy_used_drive) - MIN(lifetime_energy_used_drive), 0)
-		FROM motor_snapshots
-		WHERE vehicle_id = $1 AND lifetime_energy_gained_regen IS NOT NULL`, vehicleID).Scan(&totalRegenKWh, &totalDriveKWh)
-	if err != nil {
-		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get lifetime energy stats")
-		// Non-fatal; continue with zeros
+			COALESCE(SUM(total_regen_kwh), 0),
+			COALESCE(SUM(total_energy_kwh), 0)
+		FROM cagg_fleet_stats
+		WHERE vehicle_id = $1`, vehicleID).Scan(&totalRegenKWh, &totalDriveKWh); err != nil && err != pgx.ErrNoRows {
+		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("regen: cagg_fleet_stats query failed")
 	}
 
 	regenRatio := 0.0
@@ -164,10 +167,10 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		monthlyAvgRegen = math.Round(sum/float64(len(monthly))*10) / 10
 	}
 
-	// Free charges equivalent (assuming ~60 kWh per full charge)
+	// Free charges equivalent (based on vehicle-specific estimated capacity)
 	freeCharges := 0.0
-	if totalRegenKWh > 0 {
-		freeCharges = math.Round(totalRegenKWh/60*10) / 10
+	if totalRegenKWh > 0 && capacityKWh > 0 {
+		freeCharges = math.Round(totalRegenKWh/capacityKWh*10) / 10
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
@@ -179,5 +182,8 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		"free_charges":        freeCharges,
 		"monthly_summary":     monthly,
 		"drives":              drives,
+		// Capacity estimate metadata
+		"battery_capacity_kwh": capacityKWh,
+		"capacity_source":      capacitySource,
 	})
 }

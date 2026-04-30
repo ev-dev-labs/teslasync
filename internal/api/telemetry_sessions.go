@@ -3,40 +3,37 @@ package api
 import (
 	"context"
 	"math"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
-	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
+	"github.com/ev-dev-labs/teslasync/internal/units"
+	"github.com/jackc/pgx/v5"
+	"github.com/rs/zerolog/log"
 )
 
 // TelemetrySessionTracker detects drive starts/ends and charge starts/ends
 // from streaming Fleet Telemetry signals. Tracks comprehensive telemetry
 // data throughout sessions for analytics.
 type TelemetrySessionTracker struct {
-	db                *database.DB
-	driveRepo         *database.DriveRepo
-	chargeRepo        *database.ChargingRepo
-	driveTelRepo      *database.DriveTelemetryRepo
-	chargeTelRepo     *database.ChargeTelemetryReadingRepo
-	posRepo           *database.PositionRepo
-	geofenceRepo      *database.GeofenceRepo
-	placesCache       *database.PlacesCacheRepo
-	tripRepo          *database.TripRepo
-	eventBus          *events.Bus
-	geocoder          geocoding.Geocoder
-	signalStore       *signal.Store
-
-	// Write buffers for DB outage resilience
-	driveTelBuffer  *database.WriteBuffer[*models.DriveTelemetryReading]
-	chargeTelBuffer *database.WriteBuffer[*models.ChargeTelemetryReading]
+	db                  *database.DB
+	driveRepo           *database.DriveRepo
+	chargeRepo          *database.ChargingRepo
+	posRepo             *database.PositionRepo
+	geofenceRepo        *database.GeofenceRepo
+	placesCache         *database.PlacesCacheRepo
+	tripRepo            *database.TripRepo
+	eventBus            *events.Bus
+	geocoder            geocoding.Geocoder
+	localSignals        *signal.Store
+	signalHistoryWriter *database.SignalHistoryWriter
+	signalLogReader     *database.SignalLogReader
 
 	mu            sync.Mutex
 	activeDrives  map[int64]*streamingDrive  // vehicleID → active drive
@@ -45,14 +42,14 @@ type TelemetrySessionTracker struct {
 
 // streamingDrive tracks comprehensive data during an active drive session.
 type streamingDrive struct {
-	DriveID   int64
-	VehicleID int64
-	StartTime time.Time
-	LastSpeed float64
-	LastSeen  time.Time
+	DriveID           int64
+	VehicleID         int64
+	StartTime         time.Time
+	LastSpeed         float64
+	LastSeen          time.Time
 	LastSpeedZeroTime time.Time
-	GearBased  bool // true if drive was started by Gear signal (not speed)
-	Completing bool // true while being completed — prevents double-completion
+	GearBased         bool // true if drive was started by Gear signal (not speed)
+	Completing        bool // true while being completed — prevents double-completion
 
 	// Signal accumulator — merges signals across MQTT batches for rich telemetry writes.
 	// Fleet telemetry sends each field as a separate MQTT message, so individual batches
@@ -72,10 +69,10 @@ type streamingDrive struct {
 	StartUsableSoc  *float64
 
 	// Running statistics accumulators
-	MaxSpeed    float64
-	MinSpeed    float64
-	SpeedSum    float64
-	SpeedCount  int
+	MaxSpeed   float64
+	MinSpeed   float64
+	SpeedSum   float64
+	SpeedCount int
 
 	PowerMax float64
 	PowerMin float64
@@ -84,22 +81,22 @@ type streamingDrive struct {
 	RatedRangeSum, RatedRangeMax, RatedRangeMin float64
 	IdealRangeSum, IdealRangeMax, IdealRangeMin float64
 	EstRangeSum, EstRangeMax, EstRangeMin       float64
-	RangeCount int
+	RangeCount                                  int
 
 	// SOC accumulators
-	SocSum, SocMax, SocMin             float64
+	SocSum, SocMax, SocMin                   float64
 	UsableSocSum, UsableSocMax, UsableSocMin float64
-	SocCount int
+	SocCount                                 int
 
 	// Temperature accumulators
-	InsideTempSum, OutsideTempSum float64
+	InsideTempSum, OutsideTempSum   float64
 	DriverTempSum, PassengerTempSum float64
-	TempCount int
+	TempCount                       int
 
 	// Elevation tracking
-	LastElevation    *float64
-	ElevationGain    float64
-	ElevationLoss    float64
+	LastElevation *float64
+	ElevationGain float64
+	ElevationLoss float64
 
 	// Battery heater
 	BatteryHeaterSeen bool
@@ -128,16 +125,16 @@ type streamingCharge struct {
 
 	// Temperature accumulators
 	InsideTempSum, OutsideTempSum float64
-	TempCount int
+	TempCount                     int
 
 	// Charger details (captured during session)
-	Phases          *int
-	Voltage         *int
-	Current         *int
-	Power           *float64
-	FastChargerType *string
+	Phases           *int
+	Voltage          *int
+	Current          *int
+	Power            *float64
+	FastChargerType  *string
 	FastChargerBrand *string
-	ChargeCable     *string
+	ChargeCable      *string
 
 	// Battery at start
 	StartBatteryLevel int
@@ -151,58 +148,35 @@ func NewTelemetrySessionTracker(db *database.DB, eventBus *events.Bus, geocoder 
 		db:            db,
 		driveRepo:     database.NewDriveRepo(db),
 		chargeRepo:    database.NewChargingRepo(db),
-		driveTelRepo:  database.NewDriveTelemetryRepo(db),
-		chargeTelRepo: database.NewChargeTelemetryReadingRepo(db),
 		posRepo:       database.NewPositionRepo(db),
 		geofenceRepo:  database.NewGeofenceRepo(db),
 		placesCache:   database.NewPlacesCacheRepo(db),
 		tripRepo:      database.NewTripRepo(db),
 		eventBus:      eventBus,
 		geocoder:      geocoder,
-		signalStore:   store,
+		localSignals:  store,
 		activeDrives:  make(map[int64]*streamingDrive),
 		activeCharges: make(map[int64]*streamingCharge),
 	}
-	t.driveTelBuffer = database.NewWriteBuffer("drive_telemetry", 10000,
-		func(ctx context.Context, r *models.DriveTelemetryReading) error {
-			return t.driveTelRepo.Insert(ctx, r)
-		},
-	)
-	t.chargeTelBuffer = database.NewWriteBuffer("charge_telemetry", 10000,
-		func(ctx context.Context, r *models.ChargeTelemetryReading) error {
-			return t.chargeTelRepo.Insert(ctx, r)
-		},
-	)
 	return t
 }
 
-// StartBufferDrains starts background goroutines that periodically retry
-// buffered telemetry writes. Call after initialization, before processing signals.
-func (t *TelemetrySessionTracker) StartBufferDrains(ctx context.Context) {
-	go t.driveTelBuffer.DrainLoop(ctx, 5*time.Second)
-	go t.chargeTelBuffer.DrainLoop(ctx, 5*time.Second)
-	log.Info().Msg("telemetry write buffers started (drain every 5s)")
-}
+// StartBufferDrains is retained for caller compatibility (main.go). Telemetry
+// buffers were removed — drive/charge data now lands in signal_log.
+func (t *TelemetrySessionTracker) StartBufferDrains(ctx context.Context) {}
 
-// FlushBuffers synchronously drains any remaining buffered telemetry writes.
-// Call during shutdown to avoid losing data.
-func (t *TelemetrySessionTracker) FlushBuffers(ctx context.Context) {
-	t.driveTelBuffer.Flush(ctx)
-	t.chargeTelBuffer.Flush(ctx)
-	metrics.TelemetryBufferSize.WithLabelValues("drive").Set(float64(t.driveTelBuffer.Len()))
-	metrics.TelemetryBufferSize.WithLabelValues("charge").Set(float64(t.chargeTelBuffer.Len()))
-	log.Info().Int("drive_remaining", t.driveTelBuffer.Len()).Int("charge_remaining", t.chargeTelBuffer.Len()).
-		Msg("telemetry write buffers flushed")
-}
+// FlushBuffers is retained for caller compatibility (main.go).
+func (t *TelemetrySessionTracker) FlushBuffers(ctx context.Context) {}
 
-// DriveBufferLen returns the number of buffered drive telemetry readings.
-func (t *TelemetrySessionTracker) DriveBufferLen() int {
-	return t.driveTelBuffer.Len()
-}
+// DriveBufferLen is retained for caller compatibility (router.go).
+func (t *TelemetrySessionTracker) DriveBufferLen() int { return 0 }
 
-// ChargeBufferLen returns the number of buffered charge telemetry readings.
-func (t *TelemetrySessionTracker) ChargeBufferLen() int {
-	return t.chargeTelBuffer.Len()
+// ChargeBufferLen is retained for caller compatibility (router.go).
+func (t *TelemetrySessionTracker) ChargeBufferLen() int { return 0 }
+
+// SetSignalLogReader enables signal_log-based drive/charge completion enrichment.
+func (t *TelemetrySessionTracker) SetSignalLogReader(r *database.SignalLogReader) {
+	t.signalLogReader = r
 }
 
 // telemetryWriteInterval controls how often drive/charge telemetry readings are
@@ -211,7 +185,7 @@ func (t *TelemetrySessionTracker) ChargeBufferLen() int {
 const telemetryWriteInterval = 5 * time.Second
 
 // RecoverSessions restores active drive/charge sessions from Postgres on pod restart.
-// Queries for sessions with no end_date and rebuilds the in-memory tracking state.
+// Queries for sessions with no end_ts and rebuilds the in-memory tracking state.
 func (t *TelemetrySessionTracker) RecoverSessions(ctx context.Context) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -229,15 +203,12 @@ func (t *TelemetrySessionTracker) RecoverSessions(ctx context.Context) {
 		sd := &streamingDrive{
 			DriveID:            d.ID,
 			VehicleID:          d.VehicleID,
-			StartTime:          d.StartDate,
+			StartTime:          d.StartTs,
 			LastSeen:           time.Now().UTC(),
 			accumulatedSignals: make(map[string]interface{}),
 			lastTelemetryWrite: time.Now().UTC(),
 		}
-		if d.StartOdometer != nil {
-			sd.StartOdometer = d.StartOdometer
-			sd.LastOdometer = d.StartOdometer
-		}
+
 		t.activeDrives[d.VehicleID] = sd
 		log.Info().Int64("drive_id", d.ID).Int64("vehicle_id", d.VehicleID).Msg("session recovery: restored open drive")
 	}
@@ -255,14 +226,14 @@ func (t *TelemetrySessionTracker) RecoverSessions(ctx context.Context) {
 		sc := &streamingCharge{
 			SessionID:          c.ID,
 			VehicleID:          c.VehicleID,
-			StartTime:          c.StartDate,
-			StartBatteryLevel:  c.StartBatteryLevel,
+			StartTime:          c.StartTs,
+			StartBatteryLevel:  derefInt16AsInt(c.StartBatteryPct),
 			LastSeen:           time.Now().UTC(),
 			accumulatedSignals: make(map[string]interface{}),
 			lastTelemetryWrite: time.Now().UTC(),
 		}
-		if c.ChargerPower != nil {
-			sc.Power = c.ChargerPower
+		if c.ChargerPowerKwMax != nil {
+			sc.Power = c.ChargerPowerKwMax
 		}
 		t.activeCharges[c.VehicleID] = sc
 		log.Info().Int64("session_id", c.ID).Int64("vehicle_id", c.VehicleID).Msg("session recovery: restored open charge")
@@ -285,8 +256,8 @@ func (t *TelemetrySessionTracker) ValidateRecoveredSessions(ctx context.Context)
 			continue
 		}
 		// If SignalStore shows Gear=P and Speed=0, close the drive
-		if t.signalStore != nil {
-			if gear, ok := t.signalStore.GetString(vehicleID, "Gear"); ok && gear == enums.GearPark {
+		if t.localSignals != nil {
+			if gear, ok := t.localSignals.GetString(vehicleID, "Gear"); ok && gear == enums.GearPark {
 				log.Info().Int64("drive_id", drive.DriveID).Msg("session recovery: closing drive (Gear=P)")
 				t.completeDriveLocked(ctx, vehicleID, drive, nil)
 			}
@@ -301,8 +272,8 @@ func (t *TelemetrySessionTracker) ValidateRecoveredSessions(ctx context.Context)
 			continue
 		}
 		// If SignalStore shows charge complete, close
-		if t.signalStore != nil {
-			if state, ok := t.signalStore.GetString(vehicleID, "DetailedChargeState"); ok {
+		if t.localSignals != nil {
+			if state, ok := t.localSignals.GetString(vehicleID, "DetailedChargeState"); ok {
 				if enums.IsChargeComplete(state) {
 					log.Info().Int64("session_id", charge.SessionID).Msg("session recovery: closing charge (Complete)")
 					t.completeChargeLocked(ctx, vehicleID, charge, nil)
@@ -310,6 +281,412 @@ func (t *TelemetrySessionTracker) ValidateRecoveredSessions(ctx context.Context)
 			}
 		}
 	}
+}
+
+// staleSessionThreshold is the minimum duration since the last signal before
+// a session is considered stale and eligible for recovery completion.
+const staleSessionThreshold = 5 * time.Minute
+
+// RecoverIncompleteSessions finds drives and charges with end_ts IS NULL that
+// are not currently tracked in memory, and completes them using signal_log data.
+// Run once at startup after RecoverSessions / ValidateRecoveredSessions.
+// Sessions with recent signals (< 5 min) are left open — the vehicle is likely
+// still active and will be picked up by normal tracking.
+func (t *TelemetrySessionTracker) RecoverIncompleteSessions(ctx context.Context) {
+	if t.signalLogReader == nil {
+		log.Info().Msg("recovery: signal_log reader not available, skipping incomplete session recovery")
+		return
+	}
+
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	now := time.Now().UTC()
+
+	// 1. Find all open drives (end_ts IS NULL, start_ts < now)
+	openDrives, err := t.driveRepo.GetStale(ctx, now)
+	if err != nil {
+		log.Warn().Err(err).Msg("recovery: failed to query open drives")
+	}
+	var drivesRecovered, drivesSkipped int
+	for _, drive := range openDrives {
+		// Skip if already tracked in memory (recovered by RecoverSessions)
+		if _, exists := t.activeDrives[drive.VehicleID]; exists {
+			continue
+		}
+
+		lastSignalTs, tsErr := t.signalLogReader.LatestTimestamp(ctx, drive.VehicleID)
+		if tsErr != nil {
+			log.Warn().Err(tsErr).Int64("drive_id", drive.ID).Int64("vehicle_id", drive.VehicleID).
+				Msg("recovery: failed to get latest signal timestamp for drive")
+			continue
+		}
+		if lastSignalTs.IsZero() {
+			// No signals at all — complete with minimal data
+			log.Info().Int64("drive_id", drive.ID).Msg("recovery: completing drive with no signal_log data")
+			t.completeRecoveredDrive(ctx, drive, nil, nil, now)
+			drivesRecovered++
+			continue
+		}
+
+		staleDuration := now.Sub(lastSignalTs)
+		if staleDuration < staleSessionThreshold {
+			log.Info().Int64("drive_id", drive.ID).Msg("recovery: drive still active, skipping")
+			drivesSkipped++
+			continue
+		}
+
+		log.Info().Int64("drive_id", drive.ID).Time("last_signal", lastSignalTs).
+			Msg("recovery: completing stale drive from signal_log")
+
+		startSnap, startErr := t.signalLogReader.SnapshotAt(ctx, drive.VehicleID, drive.StartTs)
+		if startErr != nil {
+			log.Warn().Err(startErr).Int64("drive_id", drive.ID).Msg("recovery: start snapshot failed")
+			startSnap = map[string]interface{}{}
+		}
+		endSnap, endErr := t.signalLogReader.SnapshotAt(ctx, drive.VehicleID, lastSignalTs)
+		if endErr != nil {
+			log.Warn().Err(endErr).Int64("drive_id", drive.ID).Msg("recovery: end snapshot failed")
+			endSnap = map[string]interface{}{}
+		}
+
+		t.completeRecoveredDrive(ctx, drive, startSnap, endSnap, lastSignalTs)
+		drivesRecovered++
+	}
+
+	// 2. Find all open charges (end_ts IS NULL, start_ts < now)
+	openCharges, err := t.chargeRepo.GetStale(ctx, now)
+	if err != nil {
+		log.Warn().Err(err).Msg("recovery: failed to query open charges")
+	}
+	var chargesRecovered, chargesSkipped int
+	for _, charge := range openCharges {
+		// Skip if already tracked in memory (recovered by RecoverSessions)
+		if _, exists := t.activeCharges[charge.VehicleID]; exists {
+			continue
+		}
+
+		lastSignalTs, tsErr := t.signalLogReader.LatestTimestamp(ctx, charge.VehicleID)
+		if tsErr != nil {
+			log.Warn().Err(tsErr).Int64("charge_id", charge.ID).Int64("vehicle_id", charge.VehicleID).
+				Msg("recovery: failed to get latest signal timestamp for charge")
+			continue
+		}
+		if lastSignalTs.IsZero() {
+			log.Info().Int64("charge_id", charge.ID).Msg("recovery: completing charge with no signal_log data")
+			t.completeRecoveredCharge(ctx, charge, nil, nil, now)
+			chargesRecovered++
+			continue
+		}
+
+		staleDuration := now.Sub(lastSignalTs)
+		if staleDuration < staleSessionThreshold {
+			log.Info().Int64("charge_id", charge.ID).Msg("recovery: charge still active, skipping")
+			chargesSkipped++
+			continue
+		}
+
+		log.Info().Int64("charge_id", charge.ID).Time("last_signal", lastSignalTs).
+			Msg("recovery: completing stale charge from signal_log")
+
+		startSnap, startErr := t.signalLogReader.SnapshotAt(ctx, charge.VehicleID, charge.StartTs)
+		if startErr != nil {
+			log.Warn().Err(startErr).Int64("charge_id", charge.ID).Msg("recovery: charge start snapshot failed")
+			startSnap = map[string]interface{}{}
+		}
+		endSnap, endErr := t.signalLogReader.SnapshotAt(ctx, charge.VehicleID, lastSignalTs)
+		if endErr != nil {
+			log.Warn().Err(endErr).Int64("charge_id", charge.ID).Msg("recovery: charge end snapshot failed")
+			endSnap = map[string]interface{}{}
+		}
+
+		t.completeRecoveredCharge(ctx, charge, startSnap, endSnap, lastSignalTs)
+		chargesRecovered++
+	}
+
+	log.Info().
+		Int("drives_recovered", drivesRecovered).Int("drives_skipped", drivesSkipped).
+		Int("charges_recovered", chargesRecovered).Int("charges_skipped", chargesSkipped).
+		Msg("recovery: incomplete session recovery complete")
+}
+
+// completeRecoveredDrive closes a drive that was left open after a crash, using
+// signal_log snapshots to populate end values. Best-effort: if snapshots are
+// empty the session is still closed with whatever data is available.
+func (t *TelemetrySessionTracker) completeRecoveredDrive(ctx context.Context, drive *models.Drive, startSnap, endSnap map[string]interface{}, endTs time.Time) {
+	if startSnap == nil {
+		startSnap = map[string]interface{}{}
+	}
+	if endSnap == nil {
+		endSnap = map[string]interface{}{}
+	}
+
+	duration := endTs.Sub(drive.StartTs).Minutes()
+	enhancedFields := map[string]interface{}{
+		"ended_status": "recovered",
+	}
+
+	// Unit preferences from snapshots
+	startDistUnit := units.GetUnitFromSnapshot(startSnap, "SettingDistanceUnit")
+	endDistUnit := units.GetUnitFromSnapshot(endSnap, "SettingDistanceUnit")
+	endTempUnit := units.GetUnitFromSnapshot(endSnap, "SettingTemperatureUnit")
+
+	// Distance from odometer (unit-aware, normalized to miles)
+	var distance float64
+	if startOdoRaw, ok := snapFloat(startSnap, "Odometer"); ok {
+		if endOdoRaw, ok := snapFloat(endSnap, "Odometer"); ok {
+			startOdo := units.NormalizeDistance(startOdoRaw, startDistUnit)
+			endOdo := units.NormalizeDistance(endOdoRaw, endDistUnit)
+			d := endOdo - startOdo
+			if d > 0 {
+				distance = d
+				enhancedFields["distance_mi"] = distance
+			}
+		}
+	}
+
+	// Battery
+	var endBattery int
+	if bl, ok := snapFloat(startSnap, "BatteryLevel"); ok && bl > 0 {
+		enhancedFields["start_battery_pct"] = int16(bl)
+	}
+	if bl, ok := snapFloat(endSnap, "BatteryLevel"); ok && bl > 0 {
+		endBattery = int(bl)
+	}
+
+	// Position from snapshots
+	if lat, ok := snapFloat(startSnap, "Latitude"); ok {
+		enhancedFields["start_lat"] = lat
+	}
+	if lon, ok := snapFloat(startSnap, "Longitude"); ok {
+		enhancedFields["start_lon"] = lon
+	}
+	if lat, ok := snapFloat(endSnap, "Latitude"); ok {
+		enhancedFields["end_lat"] = lat
+	}
+	if lon, ok := snapFloat(endSnap, "Longitude"); ok {
+		enhancedFields["end_lon"] = lon
+	}
+
+	// Temperature (unit-aware, normalized to °C)
+	var insideAvg, outsideAvg *float64
+	if temp, ok := snapFloat(endSnap, "OutsideTemp"); ok {
+		normalized := units.NormalizeTemp(temp, endTempUnit)
+		enhancedFields["outside_temp_avg_c"] = normalized
+		outsideAvg = &normalized
+	}
+	if temp, ok := snapFloat(endSnap, "InsideTemp"); ok {
+		normalized := units.NormalizeTemp(temp, endTempUnit)
+		enhancedFields["inside_temp_avg_c"] = normalized
+		insideAvg = &normalized
+	}
+
+	// Energy: delta of cumulative counters
+	if startEnergy, ok := snapFloat(startSnap, "LifetimeEnergyUsed"); ok {
+		if endEnergy, ok := snapFloat(endSnap, "LifetimeEnergyUsed"); ok {
+			energyUsed := endEnergy - startEnergy
+			if energyUsed > 0 {
+				enhancedFields["energy_used_kwh"] = energyUsed
+			}
+		}
+	}
+
+	// Aggregates from signal_log during the drive window
+	var maxSpeed float64
+	var powerMax *float64
+	slAvgSpeed, slMaxSpeed, slAvgPower := t.signalLogReader.DriveAggregates(ctx, drive.VehicleID, drive.StartTs, endTs)
+	if slAvgSpeed > 0 {
+		normalizedAvg := units.NormalizeSpeed(slAvgSpeed, endDistUnit)
+		enhancedFields["avg_speed_mph"] = normalizedAvg
+	}
+	if slMaxSpeed > 0 {
+		normalizedMax := units.NormalizeSpeed(slMaxSpeed, endDistUnit)
+		enhancedFields["max_speed_mph"] = normalizedMax
+		maxSpeed = normalizedMax
+	}
+	if slAvgPower != 0 {
+		p := math.Abs(slAvgPower)
+		enhancedFields["avg_power_kw"] = p
+		powerMax = &p
+	}
+
+	// Regen energy
+	regenKwh := t.signalLogReader.RegenEnergy(ctx, drive.VehicleID, drive.StartTs, endTs)
+	if regenKwh > 0 {
+		enhancedFields["regen_kwh"] = regenKwh
+	}
+
+	// Commit to DB
+	if err := t.db.WithTx(ctx, func(tx pgx.Tx) error {
+		var endBatteryPct *int16
+		if b := int16(endBattery); b > 0 {
+			endBatteryPct = &b
+		}
+		if err := t.driveRepo.CompleteWithTx(ctx, tx, drive.ID, endTs,
+			distance, duration, endBatteryPct, &maxSpeed, powerMax, insideAvg, outsideAvg); err != nil {
+			return err
+		}
+		if len(enhancedFields) > 0 {
+			if err := t.driveRepo.PartialUpdateWithTx(ctx, tx, drive.ID, enhancedFields); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		log.Error().Err(err).Int64("drive_id", drive.ID).Msg("recovery: failed to complete drive")
+		return
+	}
+
+	log.Info().Int64("drive_id", drive.ID).Int64("vehicle_id", drive.VehicleID).
+		Time("original_start", drive.StartTs).Time("recovered_end", endTs).
+		Float64("duration_min", duration).Float64("distance_mi", distance).
+		Msg("recovery: drive completed")
+}
+
+// completeRecoveredCharge closes a charge that was left open after a crash, using
+// signal_log snapshots to populate end values. Best-effort: if snapshots are
+// empty the session is still closed with whatever data is available.
+func (t *TelemetrySessionTracker) completeRecoveredCharge(ctx context.Context, charge *models.ChargingSession, startSnap, endSnap map[string]interface{}, endTs time.Time) {
+	if startSnap == nil {
+		startSnap = map[string]interface{}{}
+	}
+	if endSnap == nil {
+		endSnap = map[string]interface{}{}
+	}
+
+	duration := endTs.Sub(charge.StartTs).Minutes()
+	enhancedFields := map[string]interface{}{
+		"ended_status": "recovered",
+	}
+
+	// Unit preferences from snapshots
+	startDistUnit := units.GetUnitFromSnapshot(startSnap, "SettingDistanceUnit")
+	endDistUnit := units.GetUnitFromSnapshot(endSnap, "SettingDistanceUnit")
+	endTempUnit := units.GetUnitFromSnapshot(endSnap, "SettingTemperatureUnit")
+
+	// Battery level from snapshots
+	var endBattery int
+	if bl, ok := snapFloat(startSnap, "BatteryLevel"); ok && bl > 0 {
+		enhancedFields["start_battery_pct"] = int16(bl)
+	}
+	if bl, ok := snapFloat(endSnap, "BatteryLevel"); ok && bl > 0 {
+		endBattery = int(bl)
+	}
+
+	// Energy added: difference in cumulative energy counter
+	var energyAdded float64
+	if startEnergy, ok := snapFloat(startSnap, "ACChargingEnergyIn"); ok {
+		if endEnergy, ok := snapFloat(endSnap, "ACChargingEnergyIn"); ok {
+			delta := endEnergy - startEnergy
+			if delta > 0 {
+				energyAdded = delta
+				enhancedFields["energy_added_kwh"] = delta
+			}
+		}
+	}
+
+	// Estimate energy from battery% diff if direct signal unavailable
+	startBattery := derefInt16AsInt(charge.StartBatteryPct)
+	if energyAdded == 0 && startBattery > 0 && endBattery > startBattery {
+		energyAdded = float64(endBattery-startBattery) * 0.75
+	}
+
+	// Range added (normalized to miles)
+	var milesAdded *float64
+	if startRangeRaw, ok := snapFloat(startSnap, "BatteryRange"); ok {
+		if endRangeRaw, ok := snapFloat(endSnap, "BatteryRange"); ok {
+			startRangeMi := units.NormalizeDistance(startRangeRaw, startDistUnit)
+			endRangeMi := units.NormalizeDistance(endRangeRaw, endDistUnit)
+			mi := endRangeMi - startRangeMi
+			if mi > 0 {
+				milesAdded = &mi
+				enhancedFields["miles_added"] = mi
+			}
+		}
+	}
+
+	// Location from snapshots
+	if lat, ok := snapFloat(endSnap, "Latitude"); ok {
+		enhancedFields["latitude"] = lat
+	}
+	if lon, ok := snapFloat(endSnap, "Longitude"); ok {
+		enhancedFields["longitude"] = lon
+	}
+
+	// Temperature (unit-aware, normalized to °C)
+	if temp, ok := snapFloat(endSnap, "InsideTemp"); ok {
+		normalized := units.NormalizeTemp(temp, endTempUnit)
+		enhancedFields["inside_temp_avg_c"] = normalized
+	}
+	if temp, ok := snapFloat(endSnap, "OutsideTemp"); ok {
+		normalized := units.NormalizeTemp(temp, endTempUnit)
+		enhancedFields["outside_temp_avg_c"] = normalized
+	}
+
+	// Charger type detection from snapshot
+	if dcPower, ok := snapFloat(endSnap, "DCChargingPower"); ok && dcPower > 0 {
+		enhancedFields["charger_type"] = "DC"
+	}
+
+	// Max/avg power from signal_log aggregate during charge window
+	slMaxPower, slAvgPower := t.signalLogReader.ChargeAggregates(ctx, charge.VehicleID, charge.StartTs, endTs)
+	if slMaxPower > 0 {
+		enhancedFields["charger_power_kw_max"] = slMaxPower
+	}
+	if slAvgPower > 0 {
+		enhancedFields["charger_power_kw_avg"] = slAvgPower
+	}
+
+	// Charger spec fields from signal_log snapshots
+	if v, ok := snapFloat(endSnap, "ChargerVoltage"); ok && v > 0 {
+		enhancedFields["max_charger_voltage"] = int16(v)
+	}
+	if v, ok := snapFloat(endSnap, "ChargerPhases"); ok && v > 0 {
+		enhancedFields["charger_phases"] = int16(v)
+	}
+	if v, ok := signalStr(endSnap, "ChargingCableType"); ok {
+		enhancedFields["cable_type"] = v
+	}
+
+	// Commit to DB
+	if err := t.db.WithTx(ctx, func(tx pgx.Tx) error {
+		var endBatteryPct *int16
+		if b := int16(endBattery); b > 0 {
+			endBatteryPct = &b
+		}
+		var energyAddedPtr *float64
+		if energyAdded > 0 {
+			energyAddedPtr = &energyAdded
+		}
+		var maxPower, avgPower *float64
+		if slMaxPower > 0 {
+			maxPower = &slMaxPower
+		}
+		if slAvgPower > 0 {
+			avgPower = &slAvgPower
+		}
+		endedStatus := "recovered"
+		if err := t.chargeRepo.CompleteWithTx(ctx, tx, charge.ID, endTs,
+			energyAddedPtr, endBatteryPct, milesAdded,
+			maxPower, avgPower,
+			nil, nil, &duration, &endedStatus); err != nil {
+			return err
+		}
+		if len(enhancedFields) > 0 {
+			if err := t.chargeRepo.PartialUpdateWithTx(ctx, tx, charge.ID, enhancedFields); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		log.Error().Err(err).Int64("charge_id", charge.ID).Msg("recovery: failed to complete charge")
+		return
+	}
+
+	log.Info().Int64("charge_id", charge.ID).Int64("vehicle_id", charge.VehicleID).
+		Time("original_start", charge.StartTs).Time("recovered_end", endTs).
+		Float64("duration_min", duration).Float64("energy_added_kwh", energyAdded).
+		Msg("recovery: charge completed")
 }
 
 // accumulateSignals merges incoming signals into the accumulator map.
@@ -331,9 +708,9 @@ func (t *TelemetrySessionTracker) resolveFloat(vehicleID int64, signals, accum m
 	if v, ok := signalFloat(accum, keys...); ok {
 		return v, true
 	}
-	if t.signalStore != nil {
+	if t.localSignals != nil {
 		for _, k := range keys {
-			if v, ok := t.signalStore.GetFloat(vehicleID, k); ok {
+			if v, ok := t.localSignals.GetFloat(vehicleID, k); ok {
 				return v, true
 			}
 		}
@@ -349,9 +726,9 @@ func (t *TelemetrySessionTracker) resolveInt(vehicleID int64, signals, accum map
 	if v, ok := signalInt(accum, keys...); ok {
 		return v, true
 	}
-	if t.signalStore != nil {
+	if t.localSignals != nil {
 		for _, k := range keys {
-			if fv, ok := t.signalStore.GetFloat(vehicleID, k); ok {
+			if fv, ok := t.localSignals.GetFloat(vehicleID, k); ok {
 				return int(fv), true
 			}
 		}
@@ -367,9 +744,9 @@ func (t *TelemetrySessionTracker) resolveLatLon(vehicleID int64, signals, accum 
 	if lat, lon, ok := signalLatLon(accum); ok {
 		return lat, lon, true
 	}
-	if t.signalStore != nil {
-		lat, latOk := t.signalStore.GetFloat(vehicleID, "Latitude")
-		lon, lonOk := t.signalStore.GetFloat(vehicleID, "Longitude")
+	if t.localSignals != nil {
+		lat, latOk := t.localSignals.GetFloat(vehicleID, "Latitude")
+		lon, lonOk := t.localSignals.GetFloat(vehicleID, "Longitude")
 		if latOk && lonOk && lat != 0 && lon != 0 {
 			return lat, lon, true
 		}
@@ -409,18 +786,21 @@ func (t *TelemetrySessionTracker) CleanupStaleSessions(ctx context.Context, stal
 		}
 	}
 
-	// Close orphaned DB sessions — drives/charges with NULL end_date that started
+	// Close orphaned DB sessions — drives/charges with NULL end_ts that started
 	// more than staleTimeout ago and have no in-memory tracker (e.g. from pre-restart)
 	cutoff := now.Add(-staleTimeout)
 	_, err := t.db.Pool.Exec(ctx,
-		`UPDATE drives SET end_date = $1, duration_min = EXTRACT(EPOCH FROM ($1 - start_date))/60
-		 WHERE end_date IS NULL AND start_date < $2`, now, cutoff)
+		`UPDATE drives SET end_ts = $1, duration_min = EXTRACT(EPOCH FROM ($1 - start_ts))/60,
+		 ended_status = 'interrupted'
+		 WHERE end_ts IS NULL AND start_ts < $2`, now, cutoff)
 	if err != nil {
 		log.Warn().Err(err).Msg("telemetry: failed to close orphaned drives")
 	}
 	_, err = t.db.Pool.Exec(ctx,
-		`UPDATE charging_sessions SET end_date = $1, duration_min = EXTRACT(EPOCH FROM ($1 - start_date))/60
-		 WHERE end_date IS NULL AND start_date < $2`, now, cutoff)
+		`UPDATE charging_sessions SET end_ts = $1,
+		 duration_min = EXTRACT(EPOCH FROM ($1 - start_ts))/60,
+		 ended_status = 'interrupted'
+		 WHERE end_ts IS NULL AND start_ts < $2`, now, cutoff)
 	if err != nil {
 		log.Warn().Err(err).Msg("telemetry: failed to close orphaned charges")
 	}
@@ -494,8 +874,67 @@ func signalStr(signals map[string]interface{}, keys ...string) (string, bool) {
 
 func floatPtr(v float64) *float64 { return &v }
 func intPtr(v int) *int           { return &v }
+func int16Ptr(v int) *int16       { i := int16(v); return &i }
 func boolPtr(v bool) *bool        { return &v }
 func strPtr(v string) *string     { return &v }
+func derefInt16AsInt(p *int16) int {
+	if p == nil {
+		return 0
+	}
+	return int(*p)
+}
+
+// snapFloat extracts a float64 from a signal snapshot map (returned by SnapshotAt).
+// Returns (0, false) if the key is missing or not a numeric type.
+func snapFloat(snap map[string]interface{}, key string) (float64, bool) {
+	if snap == nil {
+		return 0, false
+	}
+	return toFloatOk(snap[key])
+}
+
+// findNearestPositionFallback approximates FindNearestPosition using ListByVehicle
+// with a narrow time window. Returns the position closest to targetTime.
+type nearestPosition struct {
+	Latitude   float64
+	Longitude  float64
+	Odometer   float64
+	BatteryLvl int
+	RatedRange *float64
+	IdealRange *float64
+	Elevation  *float64
+}
+
+func findNearestPositionFallback(ctx context.Context, repo *database.PositionRepo, vehicleID int64, targetTime time.Time, window time.Duration) (*nearestPosition, error) {
+	from := targetTime.Add(-window)
+	to := targetTime.Add(window)
+	positions, err := repo.ListByVehicle(ctx, vehicleID, from, to)
+	if err != nil || len(positions) == 0 {
+		return nil, err
+	}
+	// Find closest to targetTime
+	best := &positions[0]
+	bestDiff := absDuration(positions[0].Ts.Sub(targetTime))
+	for i := 1; i < len(positions); i++ {
+		diff := absDuration(positions[i].Ts.Sub(targetTime))
+		if diff < bestDiff {
+			best = &positions[i]
+			bestDiff = diff
+		}
+	}
+	return &nearestPosition{
+		Latitude:  best.Latitude,
+		Longitude: best.Longitude,
+		Elevation: best.ElevationM,
+	}, nil
+}
+
+func absDuration(d time.Duration) time.Duration {
+	if d < 0 {
+		return -d
+	}
+	return d
+}
 
 func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}) {
 	speed, hasSpeed := signalFloat(signals, "VehicleSpeed")
@@ -587,8 +1026,8 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 		// Gear signals only fire on CHANGE — a Gear=D from 2 hours ago is still valid
 		// as long as no Gear=P was received since.
 		if !active.LastSpeedZeroTime.IsZero() && time.Since(active.LastSpeedZeroTime) > 2*time.Minute {
-			if t.signalStore != nil {
-				if gv := t.signalStore.Get(vehicleID, "Gear"); gv != nil {
+			if t.localSignals != nil {
+				if gv := t.localSignals.Get(vehicleID, "Gear"); gv != nil {
 					gearStr, _ := gv.Raw.(string)
 					if gearStr == enums.GearDrive || gearStr == enums.GearReverse {
 						// Last known Gear is D/R — car hasn't shifted to P.
@@ -619,25 +1058,14 @@ func (t *TelemetrySessionTracker) startDriveLocked(ctx context.Context, vehicleI
 
 	drive := &models.Drive{
 		VehicleID: vehicleID,
-		StartDate: time.Now().UTC(),
+		StartTs:   time.Now().UTC(),
 	}
 	if hasBat {
-		drive.StartBatteryLvl = &batteryLevel
-	}
-	if hasOdo {
-		drive.StartOdometer = floatPtr(odometer)
+		drive.StartBatteryPct = int16Ptr(batteryLevel)
 	}
 	if hasLoc {
-		drive.StartLatitude = floatPtr(lat)
-		drive.StartLongitude = floatPtr(lon)
-	}
-	// Populate start_range_km from best available range signal
-	if ratedRange > 0 {
-		drive.StartRangeKm = floatPtr(ratedRange)
-	} else if idealRange > 0 {
-		drive.StartRangeKm = floatPtr(idealRange)
-	} else if estRange > 0 {
-		drive.StartRangeKm = floatPtr(estRange)
+		drive.StartLat = floatPtr(lat)
+		drive.StartLon = floatPtr(lon)
 	}
 
 	if err := t.driveRepo.Create(ctx, drive); err != nil {
@@ -759,15 +1187,12 @@ func (t *TelemetrySessionTracker) updateActiveDriveLocked(ctx context.Context, a
 		if odo, ok := signalFloat(signals, "Odometer"); ok {
 			active.StartOdometer = floatPtr(odo)
 			active.LastOdometer = floatPtr(odo)
-			startBackfill["start_odometer"] = odo
 		}
 	}
 	if active.StartSoc == nil {
 		if soc, ok := signalFloat(signals, "Soc", "BatteryLevel"); ok {
 			active.StartSoc = floatPtr(soc)
-			bl := int(soc)
-			startBackfill["start_battery_level"] = bl
-			startBackfill["soc_start"] = soc
+			startBackfill["start_battery_pct"] = int16(soc)
 			active.SocMax = soc
 			active.SocMin = soc
 			active.SocSum = soc
@@ -778,27 +1203,24 @@ func (t *TelemetrySessionTracker) updateActiveDriveLocked(ctx context.Context, a
 		if la, lo, ok := signalLatLon(signals); ok {
 			active.StartLatitude = floatPtr(la)
 			active.StartLongitude = floatPtr(lo)
-			startBackfill["start_latitude"] = la
-			startBackfill["start_longitude"] = lo
+			startBackfill["start_lat"] = la
+			startBackfill["start_lon"] = lo
 			go t.resolveAndUpdateAddress(active.DriveID, la, lo, true)
 		}
 	}
 	if active.StartRatedRange == nil {
 		if rr, ok := signalFloat(signals, "RatedRange"); ok {
 			active.StartRatedRange = floatPtr(rr)
-			startBackfill["start_rated_range_km"] = rr
 		}
 	}
 	if active.StartIdealRange == nil {
 		if ir, ok := signalFloat(signals, "IdealBatteryRange"); ok {
 			active.StartIdealRange = floatPtr(ir)
-			startBackfill["start_ideal_range_km"] = ir
 		}
 	}
 	if active.StartEstRange == nil {
 		if er, ok := signalFloat(signals, "EstBatteryRange"); ok {
 			active.StartEstRange = floatPtr(er)
-			startBackfill["start_est_range_km"] = er
 		}
 	}
 	if len(startBackfill) > 0 {
@@ -856,18 +1278,30 @@ func (t *TelemetrySessionTracker) updateDriveRangeStats(active *streamingDrive, 
 	er, hasER := signalFloat(signals, "EstBatteryRange")
 
 	if hasRR {
-		if rr > active.RatedRangeMax { active.RatedRangeMax = rr }
-		if rr < active.RatedRangeMin { active.RatedRangeMin = rr }
+		if rr > active.RatedRangeMax {
+			active.RatedRangeMax = rr
+		}
+		if rr < active.RatedRangeMin {
+			active.RatedRangeMin = rr
+		}
 		active.RatedRangeSum += rr
 	}
 	if hasIR {
-		if ir > active.IdealRangeMax { active.IdealRangeMax = ir }
-		if ir < active.IdealRangeMin { active.IdealRangeMin = ir }
+		if ir > active.IdealRangeMax {
+			active.IdealRangeMax = ir
+		}
+		if ir < active.IdealRangeMin {
+			active.IdealRangeMin = ir
+		}
 		active.IdealRangeSum += ir
 	}
 	if hasER {
-		if er > active.EstRangeMax { active.EstRangeMax = er }
-		if er < active.EstRangeMin { active.EstRangeMin = er }
+		if er > active.EstRangeMax {
+			active.EstRangeMax = er
+		}
+		if er < active.EstRangeMin {
+			active.EstRangeMin = er
+		}
 		active.EstRangeSum += er
 	}
 	if hasRR || hasIR || hasER {
@@ -880,26 +1314,34 @@ func (t *TelemetrySessionTracker) updateDriveSocStats(active *streamingDrive, si
 	usoc, hasUSoc := signalFloat(signals, "UsableSoc")
 
 	if hasSoc {
-		if soc > active.SocMax { active.SocMax = soc }
-		if soc < active.SocMin { active.SocMin = soc }
+		if soc > active.SocMax {
+			active.SocMax = soc
+		}
+		if soc < active.SocMin {
+			active.SocMin = soc
+		}
 		active.SocSum += soc
 		active.SocCount++
 	}
 	if hasUSoc {
-		if usoc > active.UsableSocMax { active.UsableSocMax = usoc }
-		if usoc < active.UsableSocMin { active.UsableSocMin = usoc }
+		if usoc > active.UsableSocMax {
+			active.UsableSocMax = usoc
+		}
+		if usoc < active.UsableSocMin {
+			active.UsableSocMin = usoc
+		}
 		active.UsableSocSum += usoc
 	}
 }
 
 func (t *TelemetrySessionTracker) updateDriveTempStats(active *streamingDrive, signals map[string]interface{}) {
 	it, hasIT := signalFloat(signals, "InsideTemp")
-	if !hasIT && t.signalStore != nil {
-		it, hasIT = t.signalStore.GetFloat(active.VehicleID, "InsideTemp")
+	if !hasIT && t.localSignals != nil {
+		it, hasIT = t.localSignals.GetFloat(active.VehicleID, "InsideTemp")
 	}
 	ot, hasOT := signalFloat(signals, "OutsideTemp")
-	if !hasOT && t.signalStore != nil {
-		ot, hasOT = t.signalStore.GetFloat(active.VehicleID, "OutsideTemp")
+	if !hasOT && t.localSignals != nil {
+		ot, hasOT = t.localSignals.GetFloat(active.VehicleID, "OutsideTemp")
 	}
 	if hasIT {
 		active.InsideTempSum += it
@@ -961,42 +1403,82 @@ func (t *TelemetrySessionTracker) recordDriveTelemetry(ctx context.Context, driv
 		reading.Latitude = floatPtr(la)
 		reading.Longitude = floatPtr(lo)
 	}
-	if v, ok := signalFloat(signals, "Elevation"); ok { reading.Elevation = floatPtr(v) }
-	if v, ok := signalInt(signals, "GpsHeading", "Heading"); ok { reading.Heading = intPtr(v) }
-	if v, ok := signalFloat(signals, "Odometer"); ok { reading.Odometer = floatPtr(v) }
-	if v, ok := signalFloat(signals, "VehicleSpeed"); ok { reading.Speed = floatPtr(v) }
-	if v, ok := signalPowerKW(signals); ok { reading.Power = floatPtr(v) }
-	if v, ok := signalInt(signals, "BatteryLevel"); ok { reading.BatteryLevel = intPtr(v) }
-	if v, ok := signalFloat(signals, "Soc"); ok { reading.Soc = floatPtr(v) }
-	if v, ok := signalFloat(signals, "UsableSoc"); ok { reading.UsableSoc = floatPtr(v) }
-	if v, ok := signalFloat(signals, "RatedRange"); ok { reading.RatedRange = floatPtr(v) }
-	if v, ok := signalFloat(signals, "IdealBatteryRange"); ok { reading.IdealRange = floatPtr(v) }
-	if v, ok := signalFloat(signals, "EstBatteryRange"); ok { reading.EstRange = floatPtr(v) }
-	if v, ok := signalFloat(signals, "InsideTemp"); ok { reading.InsideTemp = floatPtr(v) }
-	if v, ok := signalFloat(signals, "OutsideTemp"); ok { reading.OutsideTemp = floatPtr(v) }
-	if v, ok := signalFloat(signals, "HvacLeftTemperatureRequest", "DriverSeatTemp", "DriverTemp"); ok { reading.DriverTemp = floatPtr(v) }
-	if v, ok := signalFloat(signals, "HvacRightTemperatureRequest", "PassengerSeatTemp", "PassengerTemp"); ok { reading.PassengerTemp = floatPtr(v) }
-	if v, ok := signalInt(signals, "HvacFanStatus", "FanStatus"); ok { reading.FanStatus = intPtr(v) }
+	if v, ok := signalFloat(signals, "Elevation"); ok {
+		reading.Elevation = floatPtr(v)
+	}
+	if v, ok := signalInt(signals, "GpsHeading", "Heading"); ok {
+		reading.Heading = intPtr(v)
+	}
+	if v, ok := signalFloat(signals, "Odometer"); ok {
+		reading.Odometer = floatPtr(v)
+	}
+	if v, ok := signalFloat(signals, "VehicleSpeed"); ok {
+		reading.Speed = floatPtr(v)
+	}
+	if v, ok := signalPowerKW(signals); ok {
+		reading.Power = floatPtr(v)
+	}
+	if v, ok := signalInt(signals, "BatteryLevel"); ok {
+		reading.BatteryLevel = intPtr(v)
+	}
+	if v, ok := signalFloat(signals, "Soc"); ok {
+		reading.Soc = floatPtr(v)
+	}
+	if v, ok := signalFloat(signals, "UsableSoc"); ok {
+		reading.UsableSoc = floatPtr(v)
+	}
+	if v, ok := signalFloat(signals, "RatedRange"); ok {
+		reading.RatedRange = floatPtr(v)
+	}
+	if v, ok := signalFloat(signals, "IdealBatteryRange"); ok {
+		reading.IdealRange = floatPtr(v)
+	}
+	if v, ok := signalFloat(signals, "EstBatteryRange"); ok {
+		reading.EstRange = floatPtr(v)
+	}
+	if v, ok := signalFloat(signals, "InsideTemp"); ok {
+		reading.InsideTemp = floatPtr(v)
+	}
+	if v, ok := signalFloat(signals, "OutsideTemp"); ok {
+		reading.OutsideTemp = floatPtr(v)
+	}
+	if v, ok := signalFloat(signals, "HvacLeftTemperatureRequest", "DriverSeatTemp", "DriverTemp"); ok {
+		reading.DriverTemp = floatPtr(v)
+	}
+	if v, ok := signalFloat(signals, "HvacRightTemperatureRequest", "PassengerSeatTemp", "PassengerTemp"); ok {
+		reading.PassengerTemp = floatPtr(v)
+	}
+	if v, ok := signalInt(signals, "HvacFanStatus", "FanStatus"); ok {
+		reading.FanStatus = intPtr(v)
+	}
 	if v, ok := signals["IsClimateOn"]; ok {
-		if b, ok2 := v.(bool); ok2 { reading.IsClimateOn = boolPtr(b) }
+		if b, ok2 := v.(bool); ok2 {
+			reading.IsClimateOn = boolPtr(b)
+		}
 	}
 	// Fleet Telemetry sends tire pressure in bar via TpmsPressure* signals.
 	// TPMS reports infrequently (~every 25 min) so we fall back to the SignalStore
 	// for last-known values — otherwise most drive telemetry rows have NULL tire data.
-	if v, ok := t.resolveFloat(drive.VehicleID, signals, nil, "TpmsFl", "TpmsPressureFl", "TirePressureFL", "TPMS_PressureFL"); ok { reading.TirePressureFL = floatPtr(v) }
-	if v, ok := t.resolveFloat(drive.VehicleID, signals, nil, "TpmsFr", "TpmsPressureFr", "TirePressureFR", "TPMS_PressureFR"); ok { reading.TirePressureFR = floatPtr(v) }
-	if v, ok := t.resolveFloat(drive.VehicleID, signals, nil, "TpmsRl", "TpmsPressureRl", "TirePressureRL", "TPMS_PressureRL"); ok { reading.TirePressureRL = floatPtr(v) }
-	if v, ok := t.resolveFloat(drive.VehicleID, signals, nil, "TpmsRr", "TpmsPressureRr", "TirePressureRR", "TPMS_PressureRR"); ok { reading.TirePressureRR = floatPtr(v) }
+	if v, ok := t.resolveFloat(drive.VehicleID, signals, nil, "TpmsFl", "TpmsPressureFl", "TirePressureFL", "TPMS_PressureFL"); ok {
+		reading.TirePressureFL = floatPtr(v)
+	}
+	if v, ok := t.resolveFloat(drive.VehicleID, signals, nil, "TpmsFr", "TpmsPressureFr", "TirePressureFR", "TPMS_PressureFR"); ok {
+		reading.TirePressureFR = floatPtr(v)
+	}
+	if v, ok := t.resolveFloat(drive.VehicleID, signals, nil, "TpmsRl", "TpmsPressureRl", "TirePressureRL", "TPMS_PressureRL"); ok {
+		reading.TirePressureRL = floatPtr(v)
+	}
+	if v, ok := t.resolveFloat(drive.VehicleID, signals, nil, "TpmsRr", "TpmsPressureRr", "TirePressureRR", "TPMS_PressureRR"); ok {
+		reading.TirePressureRR = floatPtr(v)
+	}
 	if v, ok := signals["BatteryHeaterOn"]; ok {
-		if b, ok2 := v.(bool); ok2 { reading.BatteryHeaterOn = boolPtr(b) }
+		if b, ok2 := v.(bool); ok2 {
+			reading.BatteryHeaterOn = boolPtr(b)
+		}
 	}
 
-	if err := t.driveTelRepo.Insert(ctx, reading); err != nil {
-		log.Warn().Err(err).Int64("drive_id", drive.DriveID).Int("buffered", t.driveTelBuffer.Len()).
-			Msg("telemetry: drive insert failed, buffering for retry")
-		t.driveTelBuffer.Enqueue(reading)
-		metrics.TelemetryBufferSize.WithLabelValues("drive").Set(float64(t.driveTelBuffer.Len()))
-	}
+	// Drive telemetry data now lands in signal_log; reading built for session stats only.
+	_ = reading
 }
 
 func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehicleID int64, active *streamingDrive, signals map[string]interface{}) {
@@ -1040,13 +1522,15 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	}
 
 	// Compute averages
-	var speedAvg, speedMin *float64
+	var speedAvg *float64
 	if active.SpeedCount > 0 {
 		avg := active.SpeedSum / float64(active.SpeedCount)
 		speedAvg = &avg
-		if active.MinSpeed < math.MaxFloat64 {
-			speedMin = &active.MinSpeed
-		}
+	}
+
+	// Fallback: estimate distance from avg speed × duration when odometer unavailable
+	if distance == 0 && speedAvg != nil && duration > 0 {
+		distance = (*speedAvg) * (duration / 60.0) // mph × hours = miles
 	}
 
 	var insideAvg, outsideAvg *float64
@@ -1066,93 +1550,245 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 		endLon = active.LastLongitude
 	}
 
-	// Get end ranges/SOC — fall back to accumulated signals → SignalStore
-	var endRatedRange, endIdealRange, endEstRange *float64
-	var endSoc, endUsableSoc *float64
-	if v, ok := t.resolveFloat(vehicleID, finalSignals, active.accumulatedSignals, "RatedRange"); ok { endRatedRange = floatPtr(v) }
-	if v, ok := t.resolveFloat(vehicleID, finalSignals, active.accumulatedSignals, "IdealBatteryRange"); ok { endIdealRange = floatPtr(v) }
-	if v, ok := t.resolveFloat(vehicleID, finalSignals, active.accumulatedSignals, "EstBatteryRange"); ok { endEstRange = floatPtr(v) }
-	if v, ok := t.resolveFloat(vehicleID, finalSignals, active.accumulatedSignals, "Soc", "BatteryLevel"); ok { endSoc = floatPtr(v) }
-	if v, ok := t.resolveFloat(vehicleID, finalSignals, active.accumulatedSignals, "UsableSoc"); ok { endUsableSoc = floatPtr(v) }
-
-	var powerMax, powerMin *float64
+	var powerMax *float64
 	if active.SpeedCount > 0 {
-		// Always store power stats if we had any speed readings (drive was active)
 		powerMax = &active.PowerMax
-		if active.PowerMin < math.MaxFloat64 {
-			powerMin = &active.PowerMin
+	}
+
+	// Build enhanced fields map (only columns in drivePartialAllowed)
+	enhancedFields := map[string]interface{}{}
+	if speedAvg != nil {
+		enhancedFields["avg_speed_mph"] = *speedAvg
+	}
+	if active.StartLatitude != nil {
+		enhancedFields["start_lat"] = *active.StartLatitude
+	}
+	if active.StartLongitude != nil {
+		enhancedFields["start_lon"] = *active.StartLongitude
+	}
+	if endLat != nil {
+		enhancedFields["end_lat"] = *endLat
+	}
+	if endLon != nil {
+		enhancedFields["end_lon"] = *endLon
+	}
+
+	// Enrich with signal_log for fields not captured during session.
+	// SignalLogReader reconstructs full signal state using last-known values,
+	// compensating for Tesla's delta encoding (signals not sent unless changed).
+	// Falls back to signalHistoryWriter if signalLogReader is unavailable.
+	if t.signalLogReader != nil {
+		endTs := time.Now().UTC()
+		startSnap, startErr := t.signalLogReader.SnapshotAt(ctx, vehicleID, active.StartTime)
+		if startErr != nil {
+			log.Warn().Err(startErr).Int64("vehicle_id", vehicleID).
+				Msg("telemetry: signal_log start snapshot failed")
+			startSnap = map[string]interface{}{}
+		}
+		endSnap, endErr := t.signalLogReader.SnapshotAt(ctx, vehicleID, endTs)
+		if endErr != nil {
+			log.Warn().Err(endErr).Int64("vehicle_id", vehicleID).
+				Msg("telemetry: signal_log end snapshot failed")
+			endSnap = map[string]interface{}{}
+		}
+
+		// Unit preferences at start and end (may differ if user changed mid-drive)
+		startDistUnit := units.GetUnitFromSnapshot(startSnap, "SettingDistanceUnit")
+		endDistUnit := units.GetUnitFromSnapshot(endSnap, "SettingDistanceUnit")
+		endTempUnit := units.GetUnitFromSnapshot(endSnap, "SettingTemperatureUnit")
+
+		// Distance from odometer (unit-aware, normalized to miles)
+		if startOdoRaw, ok := snapFloat(startSnap, "Odometer"); ok {
+			if endOdoRaw, ok := snapFloat(endSnap, "Odometer"); ok {
+				startOdo := units.NormalizeDistance(startOdoRaw, startDistUnit)
+				endOdo := units.NormalizeDistance(endOdoRaw, endDistUnit)
+				sDist := endOdo - startOdo
+				if sDist > 0 {
+					distance = sDist
+					enhancedFields["distance_mi"] = distance
+				}
+			}
+		}
+
+		// Battery from snapshots
+		if bl, ok := snapFloat(startSnap, "BatteryLevel"); ok && bl > 0 {
+			enhancedFields["start_battery_pct"] = int16(bl)
+		}
+		if bl, ok := snapFloat(endSnap, "BatteryLevel"); ok && bl > 0 {
+			endBattery = int(bl)
+		}
+
+		// Position from snapshots (fill if missing)
+		if _, exists := enhancedFields["start_lat"]; !exists {
+			if lat, ok := snapFloat(startSnap, "Latitude"); ok {
+				enhancedFields["start_lat"] = lat
+			}
+		}
+		if _, exists := enhancedFields["start_lon"]; !exists {
+			if lon, ok := snapFloat(startSnap, "Longitude"); ok {
+				enhancedFields["start_lon"] = lon
+			}
+		}
+		if _, exists := enhancedFields["end_lat"]; !exists {
+			if lat, ok := snapFloat(endSnap, "Latitude"); ok {
+				enhancedFields["end_lat"] = lat
+			}
+		}
+		if _, exists := enhancedFields["end_lon"]; !exists {
+			if lon, ok := snapFloat(endSnap, "Longitude"); ok {
+				enhancedFields["end_lon"] = lon
+			}
+		}
+
+		// Temperature (unit-aware, normalized to °C)
+		if temp, ok := snapFloat(endSnap, "OutsideTemp"); ok {
+			normalized := units.NormalizeTemp(temp, endTempUnit)
+			enhancedFields["outside_temp_avg_c"] = normalized
+			outsideAvg = &normalized
+		}
+		if temp, ok := snapFloat(endSnap, "InsideTemp"); ok {
+			normalized := units.NormalizeTemp(temp, endTempUnit)
+			enhancedFields["inside_temp_avg_c"] = normalized
+			insideAvg = &normalized
+		}
+
+		// Energy: delta of cumulative counters
+		if startEnergy, ok := snapFloat(startSnap, "LifetimeEnergyUsed"); ok {
+			if endEnergy, ok := snapFloat(endSnap, "LifetimeEnergyUsed"); ok {
+				energyUsed := endEnergy - startEnergy
+				if energyUsed > 0 {
+					enhancedFields["energy_used_kwh"] = energyUsed
+				}
+			}
+		}
+
+		// Aggregates from signal_log during the drive window
+		slAvgSpeed, slMaxSpeed, slAvgPower := t.signalLogReader.DriveAggregates(ctx, vehicleID, active.StartTime, endTs)
+		if slAvgSpeed > 0 {
+			// Normalize speed: signal_log stores raw values in car's unit
+			normalizedAvg := units.NormalizeSpeed(slAvgSpeed, endDistUnit)
+			enhancedFields["avg_speed_mph"] = normalizedAvg
+		}
+		if slMaxSpeed > 0 {
+			normalizedMax := units.NormalizeSpeed(slMaxSpeed, endDistUnit)
+			enhancedFields["max_speed_mph"] = normalizedMax
+			maxSpeed = normalizedMax
+		}
+		if slAvgPower != 0 {
+			enhancedFields["avg_power_kw"] = math.Abs(slAvgPower)
+			p := math.Abs(slAvgPower)
+			powerMax = &p
+		}
+
+		// Regen energy
+		regenKwh := t.signalLogReader.RegenEnergy(ctx, vehicleID, active.StartTime, endTs)
+		if regenKwh > 0 {
+			enhancedFields["regen_kwh"] = regenKwh
+		}
+	} else if t.signalHistoryWriter != nil {
+		// Legacy fallback: use signalHistoryWriter for enrichment
+		startSnapshot, startErr := t.signalHistoryWriter.SnapshotAt(ctx, vehicleID, active.StartTime)
+		if startErr != nil {
+			log.Warn().Err(startErr).Int64("vehicle_id", vehicleID).
+				Msg("telemetry: signal_history start snapshot failed")
+		}
+		endSnapshot, endErr := t.signalHistoryWriter.SnapshotAt(ctx, vehicleID, time.Now().UTC())
+		if endErr != nil {
+			log.Warn().Err(endErr).Int64("vehicle_id", vehicleID).
+				Msg("telemetry: signal_history end snapshot failed")
+		}
+
+		// Fill missing start position
+		if _, exists := enhancedFields["start_lat"]; !exists {
+			if v, ok := startSnapshot["Latitude"]; ok {
+				if lat, fOk := v.(float64); fOk {
+					enhancedFields["start_lat"] = lat
+				}
+			}
+		}
+		if _, exists := enhancedFields["start_lon"]; !exists {
+			if v, ok := startSnapshot["Longitude"]; ok {
+				if lon, fOk := v.(float64); fOk {
+					enhancedFields["start_lon"] = lon
+				}
+			}
+		}
+
+		// Fill missing end position
+		if _, exists := enhancedFields["end_lat"]; !exists {
+			if v, ok := endSnapshot["Latitude"]; ok {
+				if lat, fOk := v.(float64); fOk {
+					enhancedFields["end_lat"] = lat
+				}
+			}
+		}
+		if _, exists := enhancedFields["end_lon"]; !exists {
+			if v, ok := endSnapshot["Longitude"]; ok {
+				if lon, fOk := v.(float64); fOk {
+					enhancedFields["end_lon"] = lon
+				}
+			}
+		}
+
+		// Fill missing temperature (single-point fallback when no temp signals during drive)
+		if insideAvg == nil {
+			if v, ok := startSnapshot["InsideTemp"]; ok {
+				if temp, fOk := v.(float64); fOk {
+					enhancedFields["inside_temp_avg_c"] = temp
+				}
+			}
+		}
+		if outsideAvg == nil {
+			if v, ok := startSnapshot["OutsideTemp"]; ok {
+				if temp, fOk := v.(float64); fOk {
+					enhancedFields["outside_temp_avg_c"] = temp
+				}
+			}
 		}
 	}
 
-	// Build enhanced fields map
-	enhancedFields := map[string]interface{}{}
-	if active.StartOdometer != nil { enhancedFields["start_odometer"] = *active.StartOdometer }
-	if active.LastOdometer != nil { enhancedFields["end_odometer"] = *active.LastOdometer }
-	if speedAvg != nil { enhancedFields["speed_avg"] = *speedAvg }
-	if speedMin != nil { enhancedFields["speed_min"] = *speedMin }
-
-	// Range stats
-	if active.StartRatedRange != nil {
-		enhancedFields["start_rated_range_km"] = *active.StartRatedRange
-		enhancedFields["start_range_km"] = *active.StartRatedRange
-	}
-	if endRatedRange != nil { enhancedFields["end_rated_range_km"] = *endRatedRange }
-	if active.RangeCount > 0 {
-		enhancedFields["rated_range_avg"] = active.RatedRangeSum / float64(active.RangeCount)
-		if active.RatedRangeMax > 0 { enhancedFields["rated_range_max"] = active.RatedRangeMax }
-		if active.RatedRangeMin < math.MaxFloat64 { enhancedFields["rated_range_min"] = active.RatedRangeMin }
-		enhancedFields["ideal_range_avg"] = active.IdealRangeSum / float64(active.RangeCount)
-		if active.IdealRangeMax > 0 { enhancedFields["ideal_range_max"] = active.IdealRangeMax }
-		if active.IdealRangeMin < math.MaxFloat64 { enhancedFields["ideal_range_min"] = active.IdealRangeMin }
-		enhancedFields["est_range_avg"] = active.EstRangeSum / float64(active.RangeCount)
-		if active.EstRangeMax > 0 { enhancedFields["est_range_max"] = active.EstRangeMax }
-		if active.EstRangeMin < math.MaxFloat64 { enhancedFields["est_range_min"] = active.EstRangeMin }
-	}
-	if active.StartIdealRange != nil { enhancedFields["start_ideal_range_km"] = *active.StartIdealRange }
-	if endIdealRange != nil { enhancedFields["end_ideal_range_km"] = *endIdealRange }
-	if active.StartEstRange != nil { enhancedFields["start_est_range_km"] = *active.StartEstRange }
-	if endEstRange != nil { enhancedFields["end_est_range_km"] = *endEstRange }
-
-	// SOC stats
-	if active.StartSoc != nil { enhancedFields["soc_start"] = *active.StartSoc }
-	if endSoc != nil { enhancedFields["soc_end"] = *endSoc }
-	if active.SocCount > 0 {
-		enhancedFields["soc_avg"] = active.SocSum / float64(active.SocCount)
-		if active.SocMax > 0 { enhancedFields["soc_max"] = active.SocMax }
-		if active.SocMin < math.MaxFloat64 { enhancedFields["soc_min"] = active.SocMin }
-	}
-	if active.StartUsableSoc != nil { enhancedFields["usable_soc_start"] = *active.StartUsableSoc }
-	if endUsableSoc != nil { enhancedFields["usable_soc_end"] = *endUsableSoc }
-	if active.SocCount > 0 {
-		enhancedFields["usable_soc_avg"] = active.UsableSocSum / float64(active.SocCount)
-		if active.UsableSocMax > 0 { enhancedFields["usable_soc_max"] = active.UsableSocMax }
-		if active.UsableSocMin < math.MaxFloat64 { enhancedFields["usable_soc_min"] = active.UsableSocMin }
+	// Determine ended_status based on how the drive ended
+	switch {
+	case duration < 1.0 || distance < 0.1:
+		enhancedFields["ended_status"] = "aborted"
+	case signals != nil:
+		enhancedFields["ended_status"] = "completed"
+	default:
+		// signals == nil means stale-session cleanup closed the drive
+		enhancedFields["ended_status"] = "interrupted"
 	}
 
-	// Elevation
-	if active.StartElevation != nil { enhancedFields["elevation_start"] = *active.StartElevation }
-	if active.LastElevation != nil { enhancedFields["elevation_end"] = *active.LastElevation }
-	if active.ElevationGain > 0 { enhancedFields["elevation_gain"] = active.ElevationGain }
-	if active.ElevationLoss > 0 { enhancedFields["elevation_loss"] = active.ElevationLoss }
-
-	// Temperature
-	if active.TempCount > 0 {
-		enhancedFields["driver_temp_avg"] = active.DriverTempSum / float64(active.TempCount)
-		enhancedFields["passenger_temp_avg"] = active.PassengerTempSum / float64(active.TempCount)
+	// Compute drive score (0–100) from available driving data
+	driveScore := 100.0
+	if maxSpeed > 85 {
+		driveScore -= 10
 	}
-
-	// Battery heater
-	enhancedFields["battery_heater_on"] = active.BatteryHeaterSeen
-
-	// Coordinates
-	if active.StartLatitude != nil { enhancedFields["start_latitude"] = *active.StartLatitude }
-	if active.StartLongitude != nil { enhancedFields["start_longitude"] = *active.StartLongitude }
-	if endLat != nil { enhancedFields["end_latitude"] = *endLat }
-	if endLon != nil { enhancedFields["end_longitude"] = *endLon }
+	if regenKwh, ok := enhancedFields["regen_kwh"].(float64); ok && regenKwh > 0 {
+		if energyUsed, ok := enhancedFields["energy_used_kwh"].(float64); ok && energyUsed > 0 {
+			if regenKwh/energyUsed > 0.3 {
+				driveScore += 5 // good regen usage
+			}
+		}
+	}
+	// Penalize very high average speed (aggressive driving)
+	if speedAvg != nil && *speedAvg > 80 {
+		driveScore -= 5
+	}
+	if driveScore < 0 {
+		driveScore = 0
+	}
+	if driveScore > 100 {
+		driveScore = 100
+	}
+	enhancedFields["score"] = driveScore
 
 	if err := t.db.WithTx(ctx, func(tx pgx.Tx) error {
+		var endBatteryPct *int16
+		if endBattery := int16(endBattery); endBattery > 0 {
+			endBatteryPct = &endBattery
+		}
 		if err := t.driveRepo.CompleteWithTx(ctx, tx, active.DriveID, time.Now().UTC(),
-			nil, nil, distance, duration, endRatedRange, &endBattery, &maxSpeed, powerMax, powerMin, insideAvg, outsideAvg); err != nil {
+			distance, duration, endBatteryPct, &maxSpeed, powerMax, insideAvg, outsideAvg); err != nil {
 			return err
 		}
 		if len(enhancedFields) > 0 {
@@ -1216,75 +1852,44 @@ func (t *TelemetrySessionTracker) backfillDriveValues(active *streamingDrive, ve
 
 	// --- Backfill start values ---
 	startNeedsBackfill := active.StartSoc == nil || *active.StartSoc == 0 ||
-		active.StartOdometer == nil || *active.StartOdometer == 0 ||
-		active.StartRatedRange == nil || *active.StartRatedRange == 0
+		active.StartLatitude == nil
 
 	if startNeedsBackfill {
-		startPos, err := t.posRepo.FindNearestPosition(ctx, vehicleID, active.StartTime, lookupWindow)
+		startPos, err := findNearestPositionFallback(ctx, t.posRepo, vehicleID, active.StartTime, lookupWindow)
 		if err == nil && startPos != nil {
 			if (active.StartSoc == nil || *active.StartSoc == 0) && startPos.BatteryLvl > 0 {
-				bl := startPos.BatteryLvl
-				backfill["start_battery_level"] = bl
-				backfill["soc_start"] = float64(bl)
-			}
-			if (active.StartOdometer == nil || *active.StartOdometer == 0) && startPos.Odometer > 0 {
-				backfill["start_odometer"] = startPos.Odometer
-			}
-			if (active.StartRatedRange == nil || *active.StartRatedRange == 0) && startPos.RatedRange != nil && *startPos.RatedRange > 0 {
-				backfill["start_rated_range_km"] = *startPos.RatedRange
-				backfill["start_range_km"] = *startPos.RatedRange
-			}
-			if active.StartIdealRange == nil && startPos.IdealRange != nil && *startPos.IdealRange > 0 {
-				backfill["start_ideal_range_km"] = *startPos.IdealRange
-			}
-			if active.StartEstRange == nil && startPos.Elevation != nil {
-				backfill["elevation_start"] = *startPos.Elevation
+				backfill["start_battery_pct"] = int16(startPos.BatteryLvl)
 			}
 			if active.StartLatitude == nil && startPos.Latitude != 0 {
-				backfill["start_latitude"] = startPos.Latitude
-				backfill["start_longitude"] = startPos.Longitude
+				backfill["start_lat"] = startPos.Latitude
+				backfill["start_lon"] = startPos.Longitude
 			}
 		}
 	}
 
 	// --- Backfill end values ---
 	endTime := time.Now().UTC()
-	endPos, err := t.posRepo.FindNearestPosition(ctx, vehicleID, endTime, lookupWindow)
+	endPos, err := findNearestPositionFallback(ctx, t.posRepo, vehicleID, endTime, lookupWindow)
 	if err == nil && endPos != nil {
-		if _, ok := backfill["soc_end"]; !ok {
-			if endPos.BatteryLvl > 0 {
-				backfill["end_battery_level"] = endPos.BatteryLvl
-				backfill["soc_end"] = float64(endPos.BatteryLvl)
-			}
+		if endPos.BatteryLvl > 0 {
+			backfill["end_battery_pct"] = int16(endPos.BatteryLvl)
 		}
 		if active.LastOdometer == nil && endPos.Odometer > 0 {
-			backfill["end_odometer"] = endPos.Odometer
 			// Recompute distance if we now have both start and end odometer
 			startOdo := 0.0
 			if active.StartOdometer != nil {
 				startOdo = *active.StartOdometer
-			} else if v, ok := backfill["start_odometer"]; ok {
-				startOdo = v.(float64)
 			}
 			if startOdo > 0 {
 				dist := endPos.Odometer - startOdo
 				if dist > 0 {
-					backfill["distance"] = dist
+					backfill["distance_mi"] = dist
 				}
 			}
 		}
-		if endPos.RatedRange != nil && *endPos.RatedRange > 0 {
-			backfill["end_rated_range_km"] = *endPos.RatedRange
-		}
-		if endPos.IdealRange != nil && *endPos.IdealRange > 0 {
-			backfill["end_ideal_range_km"] = *endPos.IdealRange
-		}
-		if endPos.Elevation != nil {
-			backfill["elevation_end"] = *endPos.Elevation
-		}
 		if active.LastLatitude == nil && endPos.Latitude != 0 {
-			backfill["end_latitude"] = endPos.Latitude
-			backfill["end_longitude"] = endPos.Longitude
+			backfill["end_lat"] = endPos.Latitude
+			backfill["end_lon"] = endPos.Longitude
 		}
 	}
 
@@ -1372,11 +1977,11 @@ func (t *TelemetrySessionTracker) BackfillAddresses(ctx context.Context) {
 			break
 		}
 
-		needStart := (d.StartAddress == nil || *d.StartAddress == "") && d.StartLatitude != nil && d.StartLongitude != nil
-		needEnd := (d.EndAddress == nil || *d.EndAddress == "") && d.EndLatitude != nil && d.EndLongitude != nil
+		needStart := (d.StartAddress == nil || *d.StartAddress == "") && d.StartLat != nil && d.StartLon != nil
+		needEnd := (d.EndAddress == nil || *d.EndAddress == "") && d.EndLat != nil && d.EndLon != nil
 
 		if needStart {
-			t.resolveAndUpdateAddress(d.ID, *d.StartLatitude, *d.StartLongitude, true)
+			t.resolveAndUpdateAddress(d.ID, *d.StartLat, *d.StartLon, true)
 			filled++
 			AddressBackfillCompleted.Inc()
 			AddressBackfillRemaining.Dec()
@@ -1387,7 +1992,7 @@ func (t *TelemetrySessionTracker) BackfillAddresses(ctx context.Context) {
 			if ctx.Err() != nil {
 				break
 			}
-			t.resolveAndUpdateAddress(d.ID, *d.EndLatitude, *d.EndLongitude, false)
+			t.resolveAndUpdateAddress(d.ID, *d.EndLat, *d.EndLon, false)
 			filled++
 			AddressBackfillCompleted.Inc()
 			AddressBackfillRemaining.Dec()
@@ -1435,16 +2040,9 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 		startRange, _ := t.resolveFloat(vehicleID, signals, accumulatedSignals, "RatedRange")
 
 		session := &models.ChargingSession{
-			VehicleID:         vehicleID,
-			StartDate:         time.Now().UTC(),
-			StartBatteryLevel: batteryLevel,
-		}
-		if startRange > 0 {
-			session.StartRangeKm = floatPtr(startRange)
-		}
-		if hasLoc {
-			session.Latitude = floatPtr(lat)
-			session.Longitude = floatPtr(lon)
+			VehicleID:       vehicleID,
+			StartTs:         time.Now().UTC(),
+			StartBatteryPct: int16Ptr(batteryLevel),
 		}
 
 		if err := t.chargeRepo.Create(ctx, session); err != nil {
@@ -1465,7 +2063,9 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 			sc.Latitude = floatPtr(lat)
 			sc.Longitude = floatPtr(lon)
 		}
-		if startRange > 0 { sc.StartRangeKm = floatPtr(startRange) }
+		if startRange > 0 {
+			sc.StartRangeKm = floatPtr(startRange)
+		}
 
 		t.activeCharges[vehicleID] = sc
 		ChargeSessionsActive.Inc()
@@ -1492,22 +2092,36 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 		}
 
 		// Track charger details
-		if v, ok := signalInt(signals, "ChargerPhases"); ok { active.Phases = intPtr(v) }
-		if v, ok := signalInt(signals, "ChargerVoltage"); ok { active.Voltage = intPtr(v) }
-		if v, ok := signalInt(signals, "ChargerActualCurrent", "ChargeAmps"); ok { active.Current = intPtr(v) }
-		if v, ok := signalFloat(signals, "DCChargingPower", "ACChargingPower"); ok { active.Power = floatPtr(v) }
-		if v, ok := signalStr(signals, "FastChargerType"); ok { active.FastChargerType = strPtr(v) }
-		if v, ok := signalStr(signals, "FastChargerBrand"); ok { active.FastChargerBrand = strPtr(v) }
-		if v, ok := signalStr(signals, "ChargingCableType", "ConnChargeCable"); ok { active.ChargeCable = strPtr(v) }
+		if v, ok := signalInt(signals, "ChargerPhases"); ok {
+			active.Phases = intPtr(v)
+		}
+		if v, ok := signalInt(signals, "ChargerVoltage"); ok {
+			active.Voltage = intPtr(v)
+		}
+		if v, ok := signalInt(signals, "ChargerActualCurrent", "ChargeAmps"); ok {
+			active.Current = intPtr(v)
+		}
+		if v, ok := signalFloat(signals, "DCChargingPower", "ACChargingPower"); ok {
+			active.Power = floatPtr(v)
+		}
+		if v, ok := signalStr(signals, "FastChargerType"); ok {
+			active.FastChargerType = strPtr(v)
+		}
+		if v, ok := signalStr(signals, "FastChargerBrand"); ok {
+			active.FastChargerBrand = strPtr(v)
+		}
+		if v, ok := signalStr(signals, "ChargingCableType", "ConnChargeCable"); ok {
+			active.ChargeCable = strPtr(v)
+		}
 
 		// Temperature — fall back to SignalStore for sparse batches
 		it, hasIT := signalFloat(signals, "InsideTemp")
-		if !hasIT && t.signalStore != nil {
-			it, hasIT = t.signalStore.GetFloat(vehicleID, "InsideTemp")
+		if !hasIT && t.localSignals != nil {
+			it, hasIT = t.localSignals.GetFloat(vehicleID, "InsideTemp")
 		}
 		ot, hasOT := signalFloat(signals, "OutsideTemp")
-		if !hasOT && t.signalStore != nil {
-			ot, hasOT = t.signalStore.GetFloat(vehicleID, "OutsideTemp")
+		if !hasOT && t.localSignals != nil {
+			ot, hasOT = t.localSignals.GetFloat(vehicleID, "OutsideTemp")
 		}
 		if hasIT {
 			active.InsideTempSum += it
@@ -1551,31 +2165,55 @@ func (t *TelemetrySessionTracker) recordChargeTelemetry(ctx context.Context, cha
 		VehicleID: charge.VehicleID,
 	}
 
-	if v, ok := signalInt(signals, "BatteryLevel"); ok { reading.BatteryLevel = intPtr(v) }
-	if v, ok := signalFloat(signals, "Soc"); ok { reading.Soc = floatPtr(v) }
-	if v, ok := signalFloat(signals, "DCChargingPower", "ACChargingPower"); ok { reading.PowerKW = floatPtr(v) }
-	if v, ok := signalFloat(signals, "ChargerVoltage"); ok { reading.Voltage = floatPtr(v) }
-	if v, ok := signalFloat(signals, "ChargerActualCurrent", "ChargeAmps"); ok { reading.CurrentAmps = floatPtr(v) }
-	if v, ok := signalInt(signals, "ChargerPhases"); ok { reading.Phases = intPtr(v) }
-	if v, ok := signalFloat(signals, "DCChargingEnergyIn", "ACChargingEnergyIn"); ok { reading.EnergyAdded = floatPtr(v) }
-	if v, ok := signalFloat(signals, "RatedRange"); ok { reading.RatedRange = floatPtr(v) }
-	if v, ok := signalFloat(signals, "IdealBatteryRange"); ok { reading.IdealRange = floatPtr(v) }
-	if v, ok := signalFloat(signals, "EstBatteryRange"); ok { reading.EstRange = floatPtr(v) }
-	if v, ok := signalFloat(signals, "InsideTemp"); ok { reading.InsideTemp = floatPtr(v) }
-	if v, ok := signalFloat(signals, "OutsideTemp"); ok { reading.OutsideTemp = floatPtr(v) }
-	if v, ok := signalFloat(signals, "ModuleTempMax"); ok { reading.BatteryTemp = floatPtr(v) }
+	if v, ok := signalInt(signals, "BatteryLevel"); ok {
+		reading.BatteryLevel = intPtr(v)
+	}
+	if v, ok := signalFloat(signals, "Soc"); ok {
+		reading.Soc = floatPtr(v)
+	}
+	if v, ok := signalFloat(signals, "DCChargingPower", "ACChargingPower"); ok {
+		reading.PowerKW = floatPtr(v)
+	}
+	if v, ok := signalFloat(signals, "ChargerVoltage"); ok {
+		reading.Voltage = floatPtr(v)
+	}
+	if v, ok := signalFloat(signals, "ChargerActualCurrent", "ChargeAmps"); ok {
+		reading.CurrentAmps = floatPtr(v)
+	}
+	if v, ok := signalInt(signals, "ChargerPhases"); ok {
+		reading.Phases = intPtr(v)
+	}
+	if v, ok := signalFloat(signals, "DCChargingEnergyIn", "ACChargingEnergyIn"); ok {
+		reading.EnergyAdded = floatPtr(v)
+	}
+	if v, ok := signalFloat(signals, "RatedRange"); ok {
+		reading.RatedRange = floatPtr(v)
+	}
+	if v, ok := signalFloat(signals, "IdealBatteryRange"); ok {
+		reading.IdealRange = floatPtr(v)
+	}
+	if v, ok := signalFloat(signals, "EstBatteryRange"); ok {
+		reading.EstRange = floatPtr(v)
+	}
+	if v, ok := signalFloat(signals, "InsideTemp"); ok {
+		reading.InsideTemp = floatPtr(v)
+	}
+	if v, ok := signalFloat(signals, "OutsideTemp"); ok {
+		reading.OutsideTemp = floatPtr(v)
+	}
+	if v, ok := signalFloat(signals, "ModuleTempMax"); ok {
+		reading.BatteryTemp = floatPtr(v)
+	}
 	if la, lo, ok := signalLatLon(signals); ok {
 		reading.Latitude = floatPtr(la)
 		reading.Longitude = floatPtr(lo)
 	}
-	if v, ok := signalFloat(signals, "ChargeRateMilePerHour", "ChargeRateMph"); ok { reading.ChargeRate = floatPtr(v) }
-
-	if err := t.chargeTelRepo.Insert(ctx, reading); err != nil {
-		log.Warn().Err(err).Int64("session_id", charge.SessionID).Int("buffered", t.chargeTelBuffer.Len()).
-			Msg("telemetry: charge insert failed, buffering for retry")
-		t.chargeTelBuffer.Enqueue(reading)
-		metrics.TelemetryBufferSize.WithLabelValues("charge").Set(float64(t.chargeTelBuffer.Len()))
+	if v, ok := signalFloat(signals, "ChargeRateMilePerHour", "ChargeRateMph"); ok {
+		reading.ChargeRate = floatPtr(v)
 	}
+
+	// Charge telemetry data now lands in signal_log; reading built for session stats only.
+	_ = reading
 }
 
 func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehicleID int64, active *streamingCharge, signals map[string]interface{}) {
@@ -1611,12 +2249,26 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 			MAX(voltage), MAX(current_amps), MAX(phases)
 			FROM charge_telemetry_readings WHERE session_id = $1`,
 			active.SessionID).Scan(&maxBatt, &maxPower, &maxEnergy, &maxVoltage, &maxCurrent, &maxPhases)
-		if endBattery == 0 && maxBatt != nil { endBattery = int(*maxBatt) }
-		if active.EnergyAdded == 0 && maxEnergy != nil && *maxEnergy > 0 { active.EnergyAdded = *maxEnergy }
-		if active.Power == nil && maxPower != nil { active.Power = maxPower }
-		if active.Voltage == nil && maxVoltage != nil { v := int(*maxVoltage); active.Voltage = &v }
-		if active.Current == nil && maxCurrent != nil { v := int(*maxCurrent); active.Current = &v }
-		if active.Phases == nil && maxPhases != nil { active.Phases = maxPhases }
+		if endBattery == 0 && maxBatt != nil {
+			endBattery = int(*maxBatt)
+		}
+		if active.EnergyAdded == 0 && maxEnergy != nil && *maxEnergy > 0 {
+			active.EnergyAdded = *maxEnergy
+		}
+		if active.Power == nil && maxPower != nil {
+			active.Power = maxPower
+		}
+		if active.Voltage == nil && maxVoltage != nil {
+			v := int(*maxVoltage)
+			active.Voltage = &v
+		}
+		if active.Current == nil && maxCurrent != nil {
+			v := int(*maxCurrent)
+			active.Current = &v
+		}
+		if active.Phases == nil && maxPhases != nil {
+			active.Phases = maxPhases
+		}
 	}
 
 	// Estimate energy from battery% diff if direct energy signal unavailable
@@ -1627,41 +2279,176 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 
 	// Get end range — fall back to accumulated signals → SignalStore
 	var endRange *float64
-	if v, ok := t.resolveFloat(vehicleID, finalSignals, active.accumulatedSignals, "RatedRange"); ok { endRange = floatPtr(v) }
-
-	// Calculate charge_energy_used (grid energy = added / efficiency)
-	var chargeEnergyUsed *float64
-	if active.EnergyAdded > 0 {
-		efficiency := 0.90 // ~90% for L2
-		if active.FastChargerType != nil {
-			efficiency = 0.95 // ~95% for DC
-		}
-		used := active.EnergyAdded / efficiency
-		chargeEnergyUsed = &used
+	if v, ok := t.resolveFloat(vehicleID, finalSignals, active.accumulatedSignals, "RatedRange"); ok {
+		endRange = floatPtr(v)
 	}
 
-	// Temperature averages
-	var insideAvg, outsideAvg *float64
-	if active.TempCount > 0 {
-		ia := active.InsideTempSum / float64(active.TempCount)
-		oa := active.OutsideTempSum / float64(active.TempCount)
-		insideAvg = &ia
-		outsideAvg = &oa
-	}
-
-	// Build enhanced fields
+	// Build enhanced fields (only columns that exist in charging_sessions)
 	enhancedFields := map[string]interface{}{}
-	if active.Latitude != nil { enhancedFields["latitude"] = *active.Latitude }
-	if active.Longitude != nil { enhancedFields["longitude"] = *active.Longitude }
-	if insideAvg != nil { enhancedFields["inside_temp_avg"] = *insideAvg }
-	if outsideAvg != nil { enhancedFields["outside_temp_avg"] = *outsideAvg }
-	if chargeEnergyUsed != nil { enhancedFields["charge_energy_used"] = *chargeEnergyUsed }
+
+	// Enrich with signal_log for fields not captured during charge session.
+	// SignalLogReader reconstructs full signal state using last-known values,
+	// compensating for Tesla's delta encoding (signals not sent unless changed).
+	// Falls back to signalHistoryWriter if signalLogReader is unavailable.
+	if t.signalLogReader != nil {
+		endTs := time.Now().UTC()
+		startSnap, startErr := t.signalLogReader.SnapshotAt(ctx, vehicleID, active.StartTime)
+		if startErr != nil {
+			log.Warn().Err(startErr).Int64("vehicle_id", vehicleID).
+				Msg("telemetry: signal_log charge start snapshot failed")
+			startSnap = map[string]interface{}{}
+		}
+		endSnap, endErr := t.signalLogReader.SnapshotAt(ctx, vehicleID, endTs)
+		if endErr != nil {
+			log.Warn().Err(endErr).Int64("vehicle_id", vehicleID).
+				Msg("telemetry: signal_log charge end snapshot failed")
+			endSnap = map[string]interface{}{}
+		}
+
+		// Unit preferences at start and end (may differ if user changed mid-charge)
+		startDistUnit := units.GetUnitFromSnapshot(startSnap, "SettingDistanceUnit")
+		endDistUnit := units.GetUnitFromSnapshot(endSnap, "SettingDistanceUnit")
+
+		// Battery level from snapshots
+		if bl, ok := snapFloat(startSnap, "BatteryLevel"); ok && bl > 0 {
+			enhancedFields["start_battery_pct"] = int16(bl)
+		}
+		if bl, ok := snapFloat(endSnap, "BatteryLevel"); ok && bl > 0 {
+			endBattery = int(bl)
+		}
+
+		// Energy added: difference in cumulative energy counter
+		if startEnergy, ok := snapFloat(startSnap, "ACChargingEnergyIn"); ok {
+			if endEnergy, ok := snapFloat(endSnap, "ACChargingEnergyIn"); ok {
+				energyDelta := endEnergy - startEnergy
+				if energyDelta > 0 {
+					active.EnergyAdded = energyDelta
+					enhancedFields["energy_added_kwh"] = energyDelta
+				}
+			}
+		}
+
+		// Range added (normalized to miles)
+		if startRangeRaw, ok := snapFloat(startSnap, "BatteryRange"); ok {
+			if endRangeRaw, ok := snapFloat(endSnap, "BatteryRange"); ok {
+				startRangeMi := units.NormalizeDistance(startRangeRaw, startDistUnit)
+				endRangeMi := units.NormalizeDistance(endRangeRaw, endDistUnit)
+				milesAdded := endRangeMi - startRangeMi
+				if milesAdded > 0 {
+					endRange = floatPtr(milesAdded)
+					enhancedFields["miles_added"] = milesAdded
+				}
+			}
+		}
+
+		// Location from snapshots (for geocoding — not written to DB)
+		if active.Latitude == nil {
+			if lat, ok := snapFloat(endSnap, "Latitude"); ok {
+				active.Latitude = floatPtr(lat)
+			}
+		}
+		if active.Longitude == nil {
+			if lon, ok := snapFloat(endSnap, "Longitude"); ok {
+				active.Longitude = floatPtr(lon)
+			}
+		}
+
+		// Charger type detection from snapshot
+		if dcPower, ok := snapFloat(endSnap, "DCChargingPower"); ok && dcPower > 0 {
+			enhancedFields["charger_type"] = "DC"
+		}
+
+		// Max/avg power from signal_log aggregate during charge window
+		slMaxPower, slAvgPower := t.signalLogReader.ChargeAggregates(ctx, vehicleID, active.StartTime, endTs)
+		if slMaxPower > 0 {
+			enhancedFields["charger_power_kw_max"] = slMaxPower
+		}
+		if slAvgPower > 0 {
+			enhancedFields["charger_power_kw_avg"] = slAvgPower
+		}
+
+		// Charger spec fields from in-memory session data or signal_log snapshots
+		if active.Voltage != nil && *active.Voltage > 0 {
+			enhancedFields["max_charger_voltage"] = int16(*active.Voltage)
+		} else if v, ok := snapFloat(endSnap, "ChargerVoltage"); ok && v > 0 {
+			enhancedFields["max_charger_voltage"] = int16(v)
+		}
+		if active.Phases != nil && *active.Phases > 0 {
+			enhancedFields["charger_phases"] = int16(*active.Phases)
+		} else if v, ok := snapFloat(endSnap, "ChargerPhases"); ok && v > 0 {
+			enhancedFields["charger_phases"] = int16(v)
+		}
+		if active.ChargeCable != nil && *active.ChargeCable != "" {
+			enhancedFields["cable_type"] = *active.ChargeCable
+		} else if v, ok := signalStr(endSnap, "ChargingCableType"); ok {
+			enhancedFields["cable_type"] = v
+		}
+	} else if t.signalHistoryWriter != nil {
+		// Legacy fallback: use signalHistoryWriter for enrichment
+		_, startErr := t.signalHistoryWriter.SnapshotAt(ctx, vehicleID, active.StartTime)
+		if startErr != nil {
+			log.Warn().Err(startErr).Int64("vehicle_id", vehicleID).
+				Msg("telemetry: signal_history charge start snapshot failed")
+		}
+		endSnapshot, endErr := t.signalHistoryWriter.SnapshotAt(ctx, vehicleID, time.Now().UTC())
+		if endErr != nil {
+			log.Warn().Err(endErr).Int64("vehicle_id", vehicleID).
+				Msg("telemetry: signal_history charge end snapshot failed")
+		}
+
+		// Fill missing location (for geocoding — not written to DB)
+		if active.Latitude == nil {
+			if v, ok := endSnapshot["Latitude"]; ok {
+				if f, fOk := v.(float64); fOk {
+					active.Latitude = &f
+				}
+			}
+		}
+		if active.Longitude == nil {
+			if v, ok := endSnapshot["Longitude"]; ok {
+				if f, fOk := v.(float64); fOk {
+					active.Longitude = &f
+				}
+			}
+		}
+	}
+
+	// Determine ended_status based on how the charge ended
+	switch {
+	case signals == nil:
+		enhancedFields["ended_status"] = "interrupted"
+	case endBattery >= 95:
+		enhancedFields["ended_status"] = "full"
+	default:
+		// Check DetailedChargeState for user-stop vs normal completion
+		if cs, ok := signalStr(signals, "DetailedChargeState", "ChargeState"); ok {
+			if strings.Contains(cs, enums.ChargeStateStopped) || strings.Contains(cs, enums.ChargeStateDisconnected) {
+				enhancedFields["ended_status"] = "user_stopped"
+			} else {
+				enhancedFields["ended_status"] = "completed"
+			}
+		} else {
+			enhancedFields["ended_status"] = "completed"
+		}
+	}
+
+	// Default cost_currency — will be overridden when geofence electricity pricing is implemented
+	// TODO: Set from geofence.ElectricityCurrency when Geofence model gains that field
+	enhancedFields["cost_currency"] = "USD"
 
 	if err := t.db.WithTx(ctx, func(tx pgx.Tx) error {
+		var endBatteryPct *int16
+		if b := int16(endBattery); b > 0 {
+			endBatteryPct = &b
+		}
+		var energyAdded *float64
+		if active.EnergyAdded > 0 {
+			energyAdded = &active.EnergyAdded
+		}
 		if err := t.chargeRepo.CompleteWithTx(ctx, tx, active.SessionID, time.Now().UTC(),
-			active.EnergyAdded, nil, &endBattery, endRange,
-			active.Phases, active.Voltage, active.Current, active.Power,
-			active.FastChargerType, active.FastChargerBrand, active.ChargeCable, nil, duration); err != nil {
+			energyAdded, endBatteryPct, endRange,
+			active.Power, active.Power,
+			nil, nil, &duration, nil); err != nil {
 			return err
 		}
 
@@ -1675,16 +2462,9 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 			}
 		}
 
-		// Auto-calculate charge cost from geofence electricity rate
-		if active.Latitude != nil && active.Longitude != nil && active.EnergyAdded > 0 {
-			geofences, gErr := t.geofenceRepo.FindByCoordinates(ctx, *active.Latitude, *active.Longitude)
-			if gErr == nil && len(geofences) > 0 && geofences[0].CostPerKwh != nil {
-				cost := active.EnergyAdded * *geofences[0].CostPerKwh
-				if err := t.chargeRepo.PartialUpdateWithTx(ctx, tx, active.SessionID, map[string]interface{}{"cost": cost}); err != nil {
-					return err
-				}
-			}
-		}
+		// TODO: Auto-calculate charge cost from geofence electricity rate.
+		// Geofence model does not yet have ElectricityRate/ElectricityCurrency fields.
+		// When added, compute: cost = energyAdded * rate, cost_currency = geofence.ElectricityCurrency.
 
 		return nil
 	}); err != nil {
@@ -1703,7 +2483,7 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 
 			// 1. Check geofences first (user-defined name)
 			if geofences, err := t.geofenceRepo.FindByCoordinates(gctx, lat, lon); err == nil && len(geofences) > 0 {
-				fields["location_name"] = geofences[0].Name
+				fields["charger_location"] = geofences[0].Name
 				_ = t.chargeRepo.PartialUpdate(gctx, sessionID, fields)
 				return
 			}
@@ -1711,7 +2491,7 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 			// 2. Check places cache (previously resolved, within 50m)
 			if cached, err := t.placesCache.FindNearby(gctx, lat, lon, 50); err == nil && cached != nil {
 				_ = t.placesCache.IncrementHitCount(gctx, cached.ID)
-				fields["location_name"] = cached.DisplayName
+				fields["charger_location"] = cached.DisplayName
 				_ = t.chargeRepo.PartialUpdate(gctx, sessionID, fields)
 				return
 			}
@@ -1723,7 +2503,7 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 				return
 			}
 			name := result.ShortName()
-			fields["location_name"] = name
+			fields["charger_location"] = name
 			_ = t.chargeRepo.PartialUpdate(gctx, sessionID, fields)
 
 			// Save to cache
@@ -1767,28 +2547,18 @@ func (t *TelemetrySessionTracker) backfillChargeValues(active *streamingCharge, 
 
 	// Backfill start battery from nearest position
 	if active.StartBatteryLevel == 0 {
-		startPos, err := t.posRepo.FindNearestPosition(ctx, vehicleID, active.StartTime, lookupWindow)
+		startPos, err := findNearestPositionFallback(ctx, t.posRepo, vehicleID, active.StartTime, lookupWindow)
 		if err == nil && startPos != nil && startPos.BatteryLvl > 0 {
-			backfill["start_battery_level"] = startPos.BatteryLvl
-		}
-		if err == nil && startPos != nil && startPos.RatedRange != nil && *startPos.RatedRange > 0 {
-			backfill["start_range_km"] = *startPos.RatedRange
+			backfill["start_battery_pct"] = int16(startPos.BatteryLvl)
 		}
 	}
 
-	// Backfill end battery/range from nearest position to end time
+	// Backfill end battery from nearest position to end time
 	endTime := time.Now().UTC()
-	endPos, err := t.posRepo.FindNearestPosition(ctx, vehicleID, endTime, lookupWindow)
+	endPos, err := findNearestPositionFallback(ctx, t.posRepo, vehicleID, endTime, lookupWindow)
 	if err == nil && endPos != nil {
 		if endPos.BatteryLvl > 0 {
-			backfill["end_battery_level"] = endPos.BatteryLvl
-		}
-		if endPos.RatedRange != nil && *endPos.RatedRange > 0 {
-			backfill["end_range_km"] = *endPos.RatedRange
-		}
-		if active.Latitude == nil && endPos.Latitude != 0 {
-			backfill["latitude"] = endPos.Latitude
-			backfill["longitude"] = endPos.Longitude
+			backfill["end_battery_pct"] = int16(endPos.BatteryLvl)
 		}
 	}
 

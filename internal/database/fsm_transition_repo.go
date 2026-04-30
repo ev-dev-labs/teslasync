@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 )
 
@@ -18,31 +17,26 @@ func NewFSMTransitionRepo(db *DB) *FSMTransitionRepo {
 
 // FSMTransitionRecord represents a single FSM transition log entry.
 type FSMTransitionRecord struct {
-	ID               int64                  `json:"id"`
-	VehicleID        int64                  `json:"vehicle_id"`
-	FSMType          string                 `json:"fsm_type"`
-	FSMInstanceID    *int64                 `json:"fsm_instance_id,omitempty"`
-	FromState        string                 `json:"from_state"`
-	ToState          string                 `json:"to_state"`
-	Trigger          string                 `json:"trigger"`
-	Guard            string                 `json:"guard,omitempty"`
-	Mode             string                 `json:"mode"`
-	ContextSnapshot  map[string]interface{} `json:"context_snapshot,omitempty"`
-	DurationInStateMs int64                 `json:"duration_in_state_ms"`
-	CreatedAt        time.Time              `json:"created_at"`
+	ID        int64     `json:"id"`
+	VehicleID int64     `json:"vehicle_id"`
+	FSMType   string    `json:"fsm_type"`
+	FromState string    `json:"from_state"`
+	ToState   string    `json:"to_state"`
+	Trigger   string    `json:"trigger"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // Insert logs a single FSM transition.
 func (r *FSMTransitionRepo) Insert(ctx context.Context, vehicleID int64, fsmType string, instanceID *int64,
 	fromState, toState, trigger, guard, mode string, snapshot map[string]interface{}, durationMs int64) error {
 
-	snapshotJSON, _ := json.Marshal(snapshot)
-
+	if fsmType == "" {
+		fsmType = "vehicle"
+	}
 	_, err := r.db.Pool.Exec(ctx,
-		`INSERT INTO fsm_transitions (vehicle_id, fsm_type, fsm_instance_id, from_state, to_state,
-		 trigger, guard, mode, context_snapshot, duration_in_state_ms)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-		vehicleID, fsmType, instanceID, fromState, toState, trigger, guard, mode, snapshotJSON, durationMs)
+		`INSERT INTO fsm_transitions (vehicle_id, fsm_type, from_state, to_state, trigger)
+		 VALUES ($1, $2, $3, $4, $5)`,
+		vehicleID, fsmType, fromState, toState, trigger)
 	return err
 }
 
@@ -57,49 +51,30 @@ func (r *FSMTransitionRepo) Query(ctx context.Context, vehicleID int64, fsmType 
 		limit = 100
 	}
 
-	// Count
-	countQuery := `SELECT COUNT(*) FROM fsm_transitions WHERE vehicle_id = $1 AND created_at BETWEEN $2 AND $3`
+	// Build WHERE clause with optional fsm_type filter
+	whereType := ""
 	args := []interface{}{vehicleID, from, to}
-	argIdx := 4
-
-	if fsmType != "" {
-		countQuery += ` AND fsm_type = $` + itoa(argIdx)
+	if fsmType != "" && fsmType != "all" {
+		whereType = " AND fsm_type = $4"
 		args = append(args, fsmType)
-		argIdx++
-	}
-	if instanceID != nil {
-		countQuery += ` AND fsm_instance_id = $` + itoa(argIdx)
-		args = append(args, *instanceID)
-		argIdx++
 	}
 
+	// Count
 	var total int64
-	if err := r.db.Pool.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+	countSQL := `SELECT COUNT(*) FROM fsm_transitions WHERE vehicle_id = $1 AND ts BETWEEN $2 AND $3` + whereType
+	if err := r.db.Pool.QueryRow(ctx, countSQL, args...).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 
 	// Fetch
-	fetchQuery := `SELECT id, vehicle_id, fsm_type, fsm_instance_id, from_state, to_state,
-		trigger, COALESCE(guard, ''), mode, context_snapshot, COALESCE(duration_in_state_ms, 0), created_at
-		FROM fsm_transitions WHERE vehicle_id = $1 AND created_at BETWEEN $2 AND $3`
-	fetchArgs := []interface{}{vehicleID, from, to}
-	fetchIdx := 4
+	limitIdx := len(args) + 1
+	offsetIdx := len(args) + 2
+	fetchSQL := `SELECT id, vehicle_id, COALESCE(fsm_type, 'vehicle'), from_state, to_state, COALESCE(trigger, ''), ts
+		 FROM fsm_transitions WHERE vehicle_id = $1 AND ts BETWEEN $2 AND $3` + whereType +
+		` ORDER BY ts DESC LIMIT $` + itoa(limitIdx) + ` OFFSET $` + itoa(offsetIdx)
+	fetchArgs := append(args, limit, offset)
 
-	if fsmType != "" {
-		fetchQuery += ` AND fsm_type = $` + itoa(fetchIdx)
-		fetchArgs = append(fetchArgs, fsmType)
-		fetchIdx++
-	}
-	if instanceID != nil {
-		fetchQuery += ` AND fsm_instance_id = $` + itoa(fetchIdx)
-		fetchArgs = append(fetchArgs, *instanceID)
-		fetchIdx++
-	}
-
-	fetchQuery += ` ORDER BY created_at DESC LIMIT $` + itoa(fetchIdx) + ` OFFSET $` + itoa(fetchIdx+1)
-	fetchArgs = append(fetchArgs, limit, offset)
-
-	rows, err := r.db.Pool.Query(ctx, fetchQuery, fetchArgs...)
+	rows, err := r.db.Pool.Query(ctx, fetchSQL, fetchArgs...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -108,14 +83,9 @@ func (r *FSMTransitionRepo) Query(ctx context.Context, vehicleID int64, fsmType 
 	records := make([]FSMTransitionRecord, 0)
 	for rows.Next() {
 		var rec FSMTransitionRecord
-		var snapshotBytes []byte
-		if err := rows.Scan(&rec.ID, &rec.VehicleID, &rec.FSMType, &rec.FSMInstanceID,
-			&rec.FromState, &rec.ToState, &rec.Trigger, &rec.Guard, &rec.Mode,
-			&snapshotBytes, &rec.DurationInStateMs, &rec.CreatedAt); err != nil {
+		if err := rows.Scan(&rec.ID, &rec.VehicleID, &rec.FSMType, &rec.FromState, &rec.ToState,
+			&rec.Trigger, &rec.CreatedAt); err != nil {
 			return nil, 0, err
-		}
-		if snapshotBytes != nil {
-			_ = json.Unmarshal(snapshotBytes, &rec.ContextSnapshot)
 		}
 		records = append(records, rec)
 	}

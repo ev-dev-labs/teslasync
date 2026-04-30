@@ -9,13 +9,14 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
-// EnergyFlowHandler returns real-time energy flow data from charging telemetry.
+// EnergyFlowHandler returns real-time energy flow data from signal_log.
 type EnergyFlowHandler struct {
-	db *database.DB
+	db              *database.DB
+	signalLogReader *database.SignalLogReader
 }
 
-func NewEnergyFlowHandler(db *database.DB) *EnergyFlowHandler {
-	return &EnergyFlowHandler{db: db}
+func NewEnergyFlowHandler(db *database.DB, slr *database.SignalLogReader) *EnergyFlowHandler {
+	return &EnergyFlowHandler{db: db, signalLogReader: slr}
 }
 
 func (h *EnergyFlowHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -31,22 +32,33 @@ func (h *EnergyFlowHandler) Get(w http.ResponseWriter, r *http.Request) {
 	var dcPower, acPower, energyRemaining, packVoltage, packCurrent, soc *float64
 	var chargeState *string
 
-	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT
-			dc_charging_power,
-			ac_charging_power,
-			energy_remaining,
-			pack_voltage,
-			pack_current,
-			battery_level,
-			charge_state
-		FROM charging_telemetry
-		WHERE vehicle_id = $1
-		ORDER BY created_at DESC
-		LIMIT 1`, vehicleID).Scan(
-		&dcPower, &acPower, &energyRemaining,
-		&packVoltage, &packCurrent, &soc, &chargeState,
-	)
+	if h.signalLogReader != nil {
+		now := time.Now()
+		snap, err := h.signalLogReader.SnapshotAt(ctx, vehicleID, now)
+		if err == nil && snap != nil {
+			if v, ok := toFloatOk(snap["DCChargingPower"]); ok {
+				dcPower = &v
+			}
+			if v, ok := toFloatOk(snap["ACChargingPower"]); ok {
+				acPower = &v
+			}
+			if v, ok := toFloatOk(snap["EnergyRemaining"]); ok {
+				energyRemaining = &v
+			}
+			if v, ok := toFloatOk(snap["PackVoltage"]); ok {
+				packVoltage = &v
+			}
+			if v, ok := toFloatOk(snap["PackCurrent"]); ok {
+				packCurrent = &v
+			}
+			if v, ok := toFloatOk(snap["BatteryLevel"]); ok {
+				soc = &v
+			}
+			if s, ok := snap["ChargeState"].(string); ok {
+				chargeState = &s
+			}
+		}
+	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"dc_charging_power": dcPower,

@@ -5,14 +5,8 @@ import { GlassPanel } from '@/components/ui/GlassPanel';
 import { useSettings } from '@/hooks/useSettings';
 import { fetchVehicleState } from '@/api/hooks/useVehicles';
 import { fmtNumber } from '@/lib/numberFormat';
+import { batteryColor } from '@/lib/colors';
 import type { Vehicle, VehicleState } from '@/api/types';
-
-/** Traffic-light color for battery percentage */
-function batteryColor(level: number): string {
-  if (level > 60) return '#10b981';
-  if (level > 25) return '#f59e0b';
-  return '#ef4444';
-}
 
 interface BatteryComparisonProps {
   vehicles: Vehicle[];

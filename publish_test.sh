@@ -1,7 +1,7 @@
 #!/bin/sh
 MQTT_API="http://mqtt-emqx.mqtt.svc.cluster.local:18083/api/v5/publish"
 AUTH="Authorization: Basic YWRtaW46cHVibGlj"
-VIN="7SAYGDEF7PF924551"
+VIN="TESTVIN0000000001"
 
 pub() {
   wget -qO- --post-data="{\"topic\":\"telemetry/$VIN/v/$1\",\"payload\":\"$2\",\"qos\":1}" --header="Content-Type: application/json" --header="$AUTH" "$MQTT_API" 2>/dev/null && echo "OK: $1" || echo "FAIL: $1"

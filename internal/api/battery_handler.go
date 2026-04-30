@@ -3,19 +3,22 @@ package api
 import (
 	"net/http"
 	"strconv"
+	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // BatteryHandler handles battery health HTTP requests.
 type BatteryHandler struct {
-	batteryRepo *database.BatterySnapshotRepo
+	db              *database.DB
+	signalLogReader *database.SignalLogReader
 }
 
-func NewBatteryHandler(db *database.DB) *BatteryHandler {
-	return &BatteryHandler{batteryRepo: database.NewBatterySnapshotRepo(db)}
+func NewBatteryHandler(db *database.DB, slr *database.SignalLogReader) *BatteryHandler {
+	return &BatteryHandler{db: db, signalLogReader: slr}
 }
 
 func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
@@ -25,66 +28,53 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	days := 3650
-	if d := r.URL.Query().Get("days"); d != "" {
-		if parsed, err := strconv.Atoi(d); err == nil && parsed > 0 && parsed <= 3650 {
-			days = parsed
-		}
-	}
-
-	snapshots, err := h.batteryRepo.GetByVehicle(r.Context(), vehicleID, days)
-	if err != nil {
-		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get battery snapshots")
-		writeError(w, http.StatusInternalServerError, "failed to get battery report")
-		return
-	}
-
-	if snapshots == nil {
-		snapshots = make([]*models.BatterySnapshot, 0)
-	}
-
-	// Build response with latest data
-	var healthScore, capacityKWh, degradation, estRange, avgTemp float64
+	// Derive battery health from signal_log (no more battery_snapshots table)
+	var healthScore, capacityKWh, degradation, estRange float64
+	var avgTemp *float64
 	var cycleCount int
-	if len(snapshots) > 0 {
-		latest := snapshots[0]
-		healthScore = latest.HealthScore
-		capacityKWh = latest.CapacityKWh
-		degradation = latest.DegradationPct
-		estRange = latest.EstRangeKm
-		cycleCount = latest.CycleCount
-		avgTemp = latest.AvgCellTempC
-	}
 
-	// If no battery snapshots, derive basic health metrics from charging telemetry
-	if healthScore == 0 {
-		// Get latest energy_remaining and rated_range from charging_telemetry
-		var latestEnergy, latestRange *float64
-		_ = h.batteryRepo.DB().Pool.QueryRow(r.Context(),
-			`SELECT energy_remaining, est_battery_range FROM charging_telemetry 
-			 WHERE vehicle_id = $1 AND energy_remaining IS NOT NULL 
-			 ORDER BY created_at DESC LIMIT 1`, vehicleID).Scan(&latestEnergy, &latestRange)
-
-		// Model Y Long Range nominal capacity ~75 kWh, nominal range ~330 mi (531 km)
+	{
 		const nominalCapacity = 75.0
 		const nominalRangeKm = 531.0
 
-		if latestEnergy != nil && *latestEnergy > 0 {
-			capacityKWh = *latestEnergy
-			healthScore = (capacityKWh / nominalCapacity) * 100
-			if healthScore > 100 { healthScore = 100 }
-			degradation = 100 - healthScore
-		}
-		if latestRange != nil && *latestRange > 0 {
-			estRange = *latestRange
+		if h.signalLogReader != nil {
+			now := time.Now()
+			if val, err := h.signalLogReader.SignalAt(r.Context(), vehicleID, "EnergyRemaining", now); err == nil && val != nil {
+				if v, ok := toFloatOk(val); ok && v > 0 {
+					capacityKWh = v
+					healthScore = (capacityKWh / nominalCapacity) * 100
+					if healthScore > 100 {
+						healthScore = 100
+					}
+					degradation = 100 - healthScore
+				}
+			}
+			if val, err := h.signalLogReader.SignalAt(r.Context(), vehicleID, "EstBatteryRange", now); err == nil && val != nil {
+				if v, ok := toFloatOk(val); ok && v > 0 {
+					estRange = v
+				}
+			}
+			// Derive avgTemp from ModuleTempMax/ModuleTempMin — nil means "no data"
+			if valMax, err := h.signalLogReader.SignalAt(r.Context(), vehicleID, "ModuleTempMax", now); err == nil && valMax != nil {
+				if tempMax, ok := toFloatOk(valMax); ok {
+					if valMin, errMin := h.signalLogReader.SignalAt(r.Context(), vehicleID, "ModuleTempMin", now); errMin == nil && valMin != nil {
+						if tempMin, okMin := toFloatOk(valMin); okMin {
+							avg := (tempMax + tempMin) / 2
+							avgTemp = &avg
+						}
+					}
+				}
+			}
 		}
 
 		// Count charge cycles from charging sessions (sum of SOC deltas / 100)
 		var totalSOCDelta *float64
-		_ = h.batteryRepo.DB().Pool.QueryRow(r.Context(),
-			`SELECT SUM(GREATEST(end_battery_level - start_battery_level, 0)) 
-			 FROM charging_sessions WHERE vehicle_id = $1 AND end_battery_level > start_battery_level`,
-			vehicleID).Scan(&totalSOCDelta)
+		if err := h.db.Pool.QueryRow(r.Context(),
+			`SELECT SUM(GREATEST(end_battery_pct - start_battery_pct, 0)) 
+			 FROM charging_sessions WHERE vehicle_id = $1 AND end_battery_pct > start_battery_pct`,
+			vehicleID).Scan(&totalSOCDelta); err != nil && err != pgx.ErrNoRows {
+			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("battery: charge cycle SOC delta query failed")
+		}
 		if totalSOCDelta != nil {
 			cycleCount = int(*totalSOCDelta / 100)
 		}
@@ -100,15 +90,46 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 		EstRangeKm  float64 `json:"est_range_km"`
 	}
 	var trend []trendPoint
-	for _, s := range snapshots {
-		trend = append(trend, trendPoint{
-			Month:       s.CreatedAt.Format("2006-01"),
-			CapacityPct: s.HealthScore,
-			RangeKm:     s.EstRangeKm,
-			HealthScore: s.HealthScore,
-			CapacityKWh: s.CapacityKWh,
-			EstRangeKm:  s.EstRangeKm,
-		})
+
+	// Query cagg_battery_daily for battery trend
+	trendDays := 90
+	if d := r.URL.Query().Get("days"); d != "" {
+		if parsed, parseErr := strconv.Atoi(d); parseErr == nil && parsed > 0 && parsed <= 3650 {
+			trendDays = parsed
+		}
+	}
+	trendCutoff := time.Now().UTC().AddDate(0, 0, -trendDays)
+	const trendNominalCap = 75.0
+	const trendNominalRange = 531.0
+
+	trendRows, trendErr := h.db.Pool.Query(r.Context(),
+		`SELECT bucket, end_soc, min_soc, max_soc
+		 FROM cagg_battery_daily
+		 WHERE vehicle_id = $1 AND bucket >= $2
+		 ORDER BY bucket ASC`,
+		vehicleID, trendCutoff)
+	if trendErr == nil {
+		defer trendRows.Close()
+		for trendRows.Next() {
+			var bucket time.Time
+			var endSOC, minSOC, maxSOC *float64
+			if scanErr := trendRows.Scan(&bucket, &endSOC, &minSOC, &maxSOC); scanErr != nil {
+				log.Warn().Err(scanErr).Int64("vehicleID", vehicleID).Msg("battery: trend row scan failed")
+				continue
+			}
+			soc := 0.0
+			if endSOC != nil {
+				soc = *endSOC
+			}
+			trend = append(trend, trendPoint{
+				Month:       bucket.Format("2006-01-02"),
+				CapacityPct: soc,
+				HealthScore: soc,
+				CapacityKWh: soc * trendNominalCap / 100,
+				RangeKm:     soc * trendNominalRange / 100,
+				EstRangeKm:  soc * trendNominalRange / 100,
+			})
+		}
 	}
 
 	// Model Y Long Range nominal range ~531 km (330 mi)

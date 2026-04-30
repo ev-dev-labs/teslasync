@@ -1,33 +1,33 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
+import { INTERVALS, STALE_TIMES } from '@/lib/constants';
+import { useToast } from '@/components/feedback/Toast';
 import type {
   Automation,
+  AutomationFull,
+  AutomationActionInput,
+  AutomationConditionInput,
   AutomationHistoryListResponse,
   AutomationPresetsResponse,
   AutomationPreset,
+  AutomationTriggerInput,
 } from '@/api/types';
 
-/** Shape of the request body for creating/updating an automation. */
-export interface AutomationFormData {
+export type AutomationStepInput =
+  | AutomationTriggerInput
+  | AutomationConditionInput
+  | AutomationActionInput;
+
+export type AutomationFullInput = {
   name: string;
-  description: string;
-  vehicle_id: number | null;
+  description?: string;
+  vehicle_id?: number | null;
   enabled?: boolean;
-  trigger_type: string;
-  trigger_config: Record<string, unknown>;
-  conditions: Record<string, unknown>[];
-  actions: Record<string, unknown>[];
-  cooldown_minutes: number;
-  max_executions_hour: number;
-  stop_on_failure: boolean;
-  notify_on_run: boolean;
-  notify_on_failure: boolean;
-  notify_channels?: number[];
-  priority: number;
-  tags: string[];
-  preset_id?: string | null;
-}
+  triggers: AutomationTriggerInput[];
+  conditions: AutomationConditionInput[];
+  actions: AutomationActionInput[];
+};
 
 export const automationKeys = {
   all: ['automations'] as const,
@@ -39,7 +39,7 @@ export function useAutomations() {
   return useQuery({
     queryKey: automationKeys.all,
     queryFn: () => request<Automation[]>('/automations'),
-    refetchInterval: 30_000,
+    refetchInterval: INTERVALS.STANDARD,
     select: safeArray,
   });
 }
@@ -49,12 +49,13 @@ export function useAutomationHistory(limit = 20) {
     queryKey: automationKeys.history(limit),
     queryFn: () =>
       request<AutomationHistoryListResponse>(`/automations/history?limit=${limit}`),
-    refetchInterval: 30_000,
+    refetchInterval: INTERVALS.STANDARD,
   });
 }
 
 export function useToggleAutomation() {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: ({ id, enabled }: { id: number; enabled: boolean }) =>
       request<{ id: number; enabled: boolean }>(`/automations/${id}/toggle`, {
@@ -62,14 +63,19 @@ export function useToggleAutomation() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled }),
       }),
-    onSuccess: () => {
+    onSuccess: (_data, { enabled }) => {
       qc.invalidateQueries({ queryKey: automationKeys.all });
+      toast.success(`Automation ${enabled ? 'enabled' : 'disabled'}`);
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to toggle automation: ${err.message}`);
     },
   });
 }
 
 export function useReEnableAutomation() {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: (id: number) =>
       request<{ id: number; enabled: boolean; auto_disabled: boolean }>(
@@ -78,68 +84,93 @@ export function useReEnableAutomation() {
       ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: automationKeys.all });
+      toast.success('Automation re-enabled');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to re-enable automation: ${err.message}`);
     },
   });
 }
 
 export function useDeleteAutomation() {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: (id: number) =>
       request<void>(`/automations/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: automationKeys.all });
       qc.invalidateQueries({ queryKey: ['automation-history'] });
+      toast.success('Automation deleted');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to delete automation: ${err.message}`);
     },
   });
 }
 
 export function useTestRunAutomation() {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: (id: number) =>
       request<void>(`/automations/${id}/test-run`, { method: 'POST' }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['automation-history'] });
+      toast.success('Test run started');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to start test run: ${err.message}`);
     },
   });
 }
 
-export function useAutomation(id: number | undefined) {
+export function useAutomation(id: number | string | undefined) {
+  const numericId = typeof id === 'string' ? Number(id) : id;
   return useQuery({
-    queryKey: automationKeys.detail(id!),
-    queryFn: () => request<Automation>(`/automations/${id}`),
-    enabled: id != null && id > 0,
+    queryKey: automationKeys.detail(numericId!),
+    queryFn: () => request<AutomationFull>(`/automations/${id}`),
+    enabled: numericId != null && !Number.isNaN(numericId) && numericId > 0,
   });
 }
 
-export function useCreateAutomation() {
+export function useCreateAutomationFull() {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
-    mutationFn: (data: AutomationFormData) =>
-      request<Automation>(`/automations`, {
+    mutationFn: (input: AutomationFullInput) =>
+      request<AutomationFull>('/automations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(input),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: automationKeys.all });
+      toast.success('Automation created');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to create automation: ${err.message}`);
     },
   });
 }
 
-export function useUpdateAutomation() {
+export function useUpdateAutomationFull() {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: AutomationFormData }) =>
-      request<Automation>(`/automations/${id}`, {
+    mutationFn: ({ id, input }: { id: number; input: AutomationFullInput }) =>
+      request<AutomationFull>(`/automations/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(input),
       }),
-    onSuccess: (_, { id }) => {
+    onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: automationKeys.all });
-      qc.invalidateQueries({ queryKey: automationKeys.detail(id) });
+      qc.invalidateQueries({ queryKey: automationKeys.detail(vars.id) });
+      toast.success('Automation updated');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to update automation: ${err.message}`);
     },
   });
 }
@@ -158,7 +189,7 @@ export function useAutomationPresets(category?: string) {
     queryKey: category ? presetKeys.category(category) : presetKeys.all,
     queryFn: () =>
       request<AutomationPresetsResponse>(`/automations/presets${queryParam}`),
-    staleTime: Infinity,
+    staleTime: STALE_TIMES.STATIC,
   });
 }
 
@@ -167,6 +198,6 @@ export function useAutomationPreset(id: string | undefined) {
     queryKey: presetKeys.detail(id!),
     queryFn: () => request<AutomationPreset>(`/automations/presets/${id}`),
     enabled: !!id,
-    staleTime: Infinity,
+    staleTime: STALE_TIMES.STATIC,
   });
 }

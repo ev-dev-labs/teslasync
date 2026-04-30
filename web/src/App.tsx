@@ -16,6 +16,7 @@ const GlancePage = lazy(() => import('./features/dashboard/pages/GlancePage'))
 const Vehicles = lazy(() => import('./features/vehicles/pages/VehicleListPage'))
 const VehicleDetail = lazy(() => import('./features/vehicles/pages/VehicleDetailPage'))
 const VehicleAccess = lazy(() => import('./features/vehicles/pages/VehicleAccessPage'))
+const DigitalTwin = lazy(() => import('./features/vehicles/pages/DigitalTwinPage'))
 
 // Charging
 const Charging = lazy(() => import('./features/charging/pages/ChargingListPage'))
@@ -25,6 +26,8 @@ const ChargingHeatmap = lazy(() => import('./features/charging/pages/ChargingHea
 const CostAnalysis = lazy(() => import('./features/charging/pages/CostAnalysisPage'))
 const TeslaChargingHistory = lazy(() => import('./features/charging/pages/TeslaChargingHistoryPage'))
 const TeslaChargingSessions = lazy(() => import('./features/charging/pages/TeslaChargingSessionsPage'))
+const SmartCharge = lazy(() => import('./features/charging/pages/SmartChargePage'))
+const Powershare = lazy(() => import('./features/charging/pages/PowersharePage'))
 
 // Trips
 const Trips = lazy(() => import('./features/trips/pages/TripListPage'))
@@ -53,6 +56,7 @@ const Efficiency = lazy(() => import('./features/driving/pages/EfficiencyPage'))
 const SpeedProfile = lazy(() => import('./features/driving/pages/SpeedProfilePage'))
 const RegenEfficiency = lazy(() => import('./features/driving/pages/RegenEfficiencyPage'))
 const RouteEfficiency = lazy(() => import('./features/driving/pages/RouteEfficiencyPage'))
+const TripPlanner = lazy(() => import('./features/driving/pages/TripPlannerPage'))
 
 // Analytics & Statistics
 const Analytics = lazy(() => import('./features/analytics/pages/AnalyticsPage'))
@@ -63,6 +67,8 @@ const TrueCostOwnership = lazy(() => import('./features/analytics/pages/TrueCost
 const WeeklyDigest = lazy(() => import('./features/analytics/pages/WeeklyDigestPage'))
 const Timeline = lazy(() => import('./features/analytics/pages/TimelinePage'))
 const VehicleComparison = lazy(() => import('./features/analytics/pages/ComparisonPage'))
+const LifetimeStats = lazy(() => import('./features/analytics/pages/LifetimeStatsPage'))
+const YearReview = lazy(() => import('./features/analytics/pages/YearReviewPage'))
 
 // Maps & Location
 const LiveMap = lazy(() => import('./features/maps/pages/MapOverviewPage'))
@@ -77,6 +83,7 @@ const TirePressure = lazy(() => import('./features/vehicle-systems/pages/TirePre
 const Maintenance = lazy(() => import('./features/vehicle-systems/pages/MaintenancePage'))
 const SoftwareUpdates = lazy(() => import('./features/vehicle-systems/pages/SoftwareUpdatesPage'))
 const SafetySettings = lazy(() => import('./features/vehicle-systems/pages/SafetySettingsPage'))
+const GuardMode = lazy(() => import('./features/vehicle-systems/pages/GuardModePage'))
 const MediaPlayer = lazy(() => import('./features/vehicle-systems/pages/MediaPlayerPage'))
 
 // Automations
@@ -107,6 +114,8 @@ const ApiLogs = lazy(() => import('./features/admin/pages/ApiLogsPage'))
 const FleetAPI = lazy(() => import('./features/admin/pages/FleetAPIPage'))
 const SecurityAccess = lazy(() => import('./features/admin/pages/SecurityAccessPage'))
 const BackupRestore = lazy(() => import('./features/admin/pages/BackupRestorePage'))
+const ApiPlayground = lazy(() => import('./features/admin/pages/ApiPlaygroundPage'))
+const RedisSignalViewer = lazy(() => import('./features/admin/pages/RedisSignalViewerPage'))
 
 // System & Ops
 const SystemStatus = lazy(() => import('./features/system/pages/SystemStatusPage'))
@@ -123,6 +132,12 @@ const TeslaAccount = lazy(() => import('./features/system/pages/TeslaAccountPage
 
 // Settings
 const Settings = lazy(() => import('./features/settings/pages/SettingsPage'))
+
+// Sharing (public)
+const SharedDrive = lazy(() => import('./features/sharing/pages/SharedDrivePage'))
+
+// Watch (standalone — no Layout, API key auth)
+const WatchFace = lazy(() => import('./features/watch/pages/WatchFacePage'))
 
 /** Route wrapper: Suspense for lazy loading + ErrorBoundary for crash isolation */
 function SafeRoute({ children, name }: { children: React.ReactNode; name: string }) {
@@ -150,7 +165,6 @@ export default function App() {
         // Invalid URL stored — ignore
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (
@@ -159,12 +173,16 @@ export default function App() {
       <Routes>
       <Route path="quick-stats" element={<SafeRoute name="QuickStats"><QuickStats /></SafeRoute>} />
       <Route path="glance" element={<SafeRoute name="Glance"><GlancePage /></SafeRoute>} />
+      <Route path="year-review/:year" element={<SafeRoute name="YearReview"><YearReview /></SafeRoute>} />
+      <Route path="s/:token" element={<SafeRoute name="SharedDrive"><SharedDrive /></SafeRoute>} />
+      <Route path="watch" element={<SafeRoute name="WatchFace"><WatchFace /></SafeRoute>} />
       <Route path="/" element={<Layout />}>
         <Route index element={<SafeRoute name="Dashboard"><Dashboard /></SafeRoute>} />
         <Route path="live" element={<SafeRoute name="LiveMap"><LiveMap /></SafeRoute>} />
         <Route path="vehicles" element={<SafeRoute name="Vehicles"><Vehicles /></SafeRoute>} />
         <Route path="vehicles/:id" element={<SafeRoute name="VehicleDetail"><VehicleDetail /></SafeRoute>} />
         <Route path="vehicles/:id/access" element={<SafeRoute name="VehicleAccess"><VehicleAccess /></SafeRoute>} />
+        <Route path="digital-twin" element={<SafeRoute name="DigitalTwin"><DigitalTwin /></SafeRoute>} />
         <Route path="energy" element={<SafeRoute name="Energy"><Energy /></SafeRoute>} />
         <Route path="battery" element={<SafeRoute name="BatteryHealth"><BatteryHealth /></SafeRoute>} />
         <Route path="drives" element={<SafeRoute name="Drives"><Drives /></SafeRoute>} />
@@ -194,7 +212,9 @@ export default function App() {
         <Route path="efficiency" element={<SafeRoute name="Efficiency"><Efficiency /></SafeRoute>} />
         <Route path="trips" element={<SafeRoute name="Trips"><Trips /></SafeRoute>} />
         <Route path="trips/:id" element={<SafeRoute name="TripDetail"><TripDetail /></SafeRoute>} />
+        <Route path="trip-planner" element={<SafeRoute name="TripPlanner"><TripPlanner /></SafeRoute>} />
         <Route path="statistics" element={<SafeRoute name="Statistics"><Statistics /></SafeRoute>} />
+        <Route path="lifetime-stats" element={<SafeRoute name="LifetimeStats"><LifetimeStats /></SafeRoute>} />
         <Route path="system-status" element={<SafeRoute name="SystemStatus"><SystemStatus /></SafeRoute>} />
         <Route path="roadmap" element={<SafeRoute name="Roadmap"><Roadmap /></SafeRoute>} />
         <Route path="api-keys" element={<SafeRoute name="APIKeys"><APIKeysPage /></SafeRoute>} />
@@ -204,6 +224,8 @@ export default function App() {
         <Route path="api-logs" element={<SafeRoute name="ApiLogs"><ApiLogs /></SafeRoute>} />
         <Route path="fleet-api" element={<SafeRoute name="FleetAPI"><FleetAPI /></SafeRoute>} />
         <Route path="dev-tools" element={<SafeRoute name="DevTools"><DevTools /></SafeRoute>} />
+        <Route path="api-playground" element={<SafeRoute name="ApiPlayground"><ApiPlayground /></SafeRoute>} />
+        <Route path="redis-signals" element={<SafeRoute name="RedisSignalViewer"><RedisSignalViewer /></SafeRoute>} />
         <Route path="signal-explorer" element={<SafeRoute name="SignalExplorer"><SignalExplorer /></SafeRoute>} />
         <Route path="signal-log" element={<SafeRoute name="SignalLogViewer"><SignalLogViewer /></SafeRoute>} />
         <Route path="live-monitor" element={<SafeRoute name="LiveSignalMonitor"><LiveSignalMonitor /></SafeRoute>} />
@@ -220,6 +242,8 @@ export default function App() {
         <Route path="cost-analysis" element={<SafeRoute name="CostAnalysis"><CostAnalysis /></SafeRoute>} />
         <Route path="tesla-charging-history" element={<SafeRoute name="TeslaChargingHistory"><TeslaChargingHistory /></SafeRoute>} />
         <Route path="tesla-charging-sessions" element={<SafeRoute name="TeslaChargingSessions"><TeslaChargingSessions /></SafeRoute>} />
+        <Route path="smart-charge" element={<SafeRoute name="SmartCharge"><SmartCharge /></SafeRoute>} />
+        <Route path="powershare" element={<SafeRoute name="Powershare"><Powershare /></SafeRoute>} />
         <Route path="battery-cells" element={<SafeRoute name="BatteryCells"><BatteryCells /></SafeRoute>} />
         <Route path="drive-score" element={<SafeRoute name="DriveScore"><DriveScore /></SafeRoute>} />
         <Route path="weekly-digest" element={<SafeRoute name="WeeklyDigest"><WeeklyDigest /></SafeRoute>} />
@@ -231,6 +255,7 @@ export default function App() {
         <Route path="drivetrain-health" element={<SafeRoute name="DrivetrainHealth"><DrivetrainHealth /></SafeRoute>} />
         <Route path="media-player" element={<SafeRoute name="MediaPlayer"><MediaPlayer /></SafeRoute>} />
         <Route path="safety-settings" element={<SafeRoute name="SafetySettings"><SafetySettings /></SafeRoute>} />
+        <Route path="guard-mode" element={<SafeRoute name="GuardMode"><GuardMode /></SafeRoute>} />
         <Route path="navigation" element={<SafeRoute name="NavigationRoute"><NavigationRoute /></SafeRoute>} />
         <Route path="data-repair" element={<SafeRoute name="DataRepair"><DataRepair /></SafeRoute>} />
         <Route path="backup" element={<SafeRoute name="BackupRestore"><BackupRestore /></SafeRoute>} />

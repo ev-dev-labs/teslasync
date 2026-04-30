@@ -188,7 +188,7 @@ func pollEngineDemo(engine *polling.PollEngine) http.HandlerFunc {
 			ChargeState: tesla.ChargeState{
 				BatteryLevel:       82,
 				BatteryRange:       241.5,
-				ChargingState:      "Complete",
+				ChargingState:      enums.ChargeStateComplete,
 				ChargePortDoorOpen: true,
 				ChargePortLatch:    "Engaged",
 				ChargeLimitSoc:     90,

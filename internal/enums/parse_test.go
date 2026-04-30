@@ -88,6 +88,9 @@ func TestParseEnumBool(t *testing.T) {
 		{"bool false", false, false},
 		{"string On", "SentryModeStateArmed", true},
 		{"string Off", "HvacPowerStateOff", false},
+		{"normalized Armed", "Armed", true},
+		{"normalized Off", "Off", false},
+		{"normalized Idle", "Idle", true},
 		{"string false", "false", false},
 		{"string empty", "", false},
 		{"string 0", "0", false},
@@ -122,6 +125,29 @@ func TestParseHvacPower(t *testing.T) {
 			got := ParseHvacPower(tt.input)
 			if got != tt.expected {
 				t.Errorf("ParseHvacPower(%q) = %v, want %v", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseHvacAutoMode(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"HvacAutoModeStateOn", "On"},
+		{"HvacAutoModeStateOff", "Off"},
+		{"On", "On"},
+		{"Off", "Off"},
+		{"", ""},
+		{"HvacAutoModeState", "HvacAutoModeState"},
+		{"UnknownValue", "UnknownValue"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := ParseHvacAutoMode(tt.input)
+			if got != tt.expected {
+				t.Errorf("ParseHvacAutoMode(%q) = %q, want %q", tt.input, got, tt.expected)
 			}
 		})
 	}
@@ -194,6 +220,33 @@ func TestParseSpeedLimitWarning(t *testing.T) {
 	}
 }
 
+func TestParseBMSState(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"BMSStateStandby", "Standby"},
+		{"BMSStateDrive", "Drive"},
+		{"BMSStateSupport", "Support"},
+		{"BMSStateCharge", "Charge"},
+		{"BMSStateFault", "Fault"},
+		{"Standby", "Standby"},
+		{"Drive", "Drive"},
+		{"Charge", "Charge"},
+		{"Fault", "Fault"},
+		{"BMSStateNewValue", "NewValue"},
+		{"SomeUnknown", "SomeUnknown"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := ParseBMSState(tt.input)
+			if got != tt.expected {
+				t.Errorf("ParseBMSState(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
 func TestParseCruiseFollowDistance(t *testing.T) {
 	tests := []struct {
 		input    string
@@ -232,6 +285,259 @@ func TestParseWindowState(t *testing.T) {
 			got := ParseWindowState(tt.input)
 			if got != tt.expected {
 				t.Errorf("ParseWindowState(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseChargePort(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"ChargePortOpen", "Open"},
+		{"ChargePortClosed", "Closed"},
+		{"Open", "Open"},
+		{"Closed", "Closed"},
+		{"ChargePortNewValue", "NewValue"},
+		{"SomeUnknown", "SomeUnknown"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := ParseChargePort(tt.input)
+			if got != tt.expected {
+				t.Errorf("ParseChargePort(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseChargePortLatch(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"ChargePortLatchEngaged", "Engaged"},
+		{"ChargePortLatchDisengaged", "Disengaged"},
+		{"Engaged", "Engaged"},
+		{"Disengaged", "Disengaged"},
+		{"ChargePortLatchNewValue", "NewValue"},
+		{"SomeUnknown", "SomeUnknown"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := ParseChargePortLatch(tt.input)
+			if got != tt.expected {
+				t.Errorf("ParseChargePortLatch(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseChargeState(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"ChargeStateCharging", "Charging"},
+		{"ChargeStateComplete", "Complete"},
+		{"ChargeStateDisconnected", "Disconnected"},
+		{"ChargeStateNoPower", "NoPower"},
+		{"ChargeStateStarting", "Starting"},
+		{"ChargeStateStopped", "Stopped"},
+		{"ChargeStateEnable", "Charging"},
+		{"Charging", "Charging"},
+		{"Complete", "Complete"},
+		{"Disconnected", "Disconnected"},
+		{"NoPower", "NoPower"},
+		{"Starting", "Starting"},
+		{"Stopped", "Stopped"},
+		{"Enable", "Charging"},
+		{"ChargeStateNewValue", "NewValue"},
+		{"SomeUnknown", "SomeUnknown"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := ParseChargeState(tt.input)
+			if got != tt.expected {
+				t.Errorf("ParseChargeState(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseSentryMode(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"SentryModeStateOff", "Off"},
+		{"SentryModeStateIdle", "Idle"},
+		{"SentryModeStateArmed", "Armed"},
+		{"SentryModeStateAware", "Aware"},
+		{"SentryModeStatePanic", "Panic"},
+		{"SentryModeStateQuiet", "Quiet"},
+		{"Off", "Off"},
+		{"Armed", "Armed"},
+		{"SentryModeStateNewValue", "NewValue"},
+		{"SomeUnknown", "SomeUnknown"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := ParseSentryMode(tt.input)
+			if got != tt.expected {
+				t.Errorf("ParseSentryMode(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseDetailedChargeState(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"DetailedChargeStateCharging", "Charging"},
+		{"DetailedChargeStateComplete", "Complete"},
+		{"DetailedChargeStateDisconnected", "Disconnected"},
+		{"DetailedChargeStateNoPower", "NoPower"},
+		{"DetailedChargeStateStarting", "Starting"},
+		{"DetailedChargeStateStopped", "Stopped"},
+		{"DetailedChargeStateError", "Error"},
+		{"Charging", "Charging"},
+		{"Complete", "Complete"},
+		{"Disconnected", "Disconnected"},
+		{"Error", "Error"},
+		{"DetailedChargeStateNewValue", "NewValue"},
+		{"SomeUnknown", "SomeUnknown"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := ParseDetailedChargeState(tt.input)
+			if got != tt.expected {
+				t.Errorf("ParseDetailedChargeState(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseTonneauPosition(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"TonneauPositionStateClosed", "Closed"},
+		{"TonneauPositionStateOpen", "Open"},
+		{"TonneauPositionStatePartiallyOpen", "PartiallyOpen"},
+		{"TonneauPositionStateMoving", "Moving"},
+		{"TonneauPositionStateUnknown", "Unknown"},
+		{"Closed", "Closed"},
+		{"Open", "Open"},
+		{"TonneauPositionStateNewValue", "NewValue"},
+		{"SomeUnknown", "SomeUnknown"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := ParseTonneauPosition(tt.input)
+			if got != tt.expected {
+				t.Errorf("ParseTonneauPosition(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseTonneauTentMode(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"TonneauTentModeActive", "Active"},
+		{"TonneauTentModeOff", "Off"},
+		{"TonneauTentModeUnknown", "Unknown"},
+		{"Active", "Active"},
+		{"Off", "Off"},
+		{"TonneauTentModeNewValue", "NewValue"},
+		{"SomeUnknown", "SomeUnknown"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := ParseTonneauTentMode(tt.input)
+			if got != tt.expected {
+				t.Errorf("ParseTonneauTentMode(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseCabinOverheatMode(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"CabinOverheatProtectionModeStateOn", "On"},
+		{"CabinOverheatProtectionModeStateOff", "Off"},
+		{"CabinOverheatProtectionModeStateFanOnly", "Fan Only"},
+		{"CabinOverheatProtectionModeStateNoCooling", "No Cooling"},
+		{"On", "On"},
+		{"Off", "Off"},
+		{"FanOnly", "Fan Only"},
+		{"NoCooling", "No Cooling"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := ParseCabinOverheatMode(tt.input)
+			if got != tt.expected {
+				t.Errorf("ParseCabinOverheatMode(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseClimateKeeperMode(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"ClimateKeeperModeStateOff", "Off"},
+		{"ClimateKeeperModeStateOn", "On"},
+		{"ClimateKeeperModeStateDog", "Dog Mode"},
+		{"ClimateKeeperModeStateCamp", "Camp Mode"},
+		{"Off", "Off"},
+		{"On", "On"},
+		{"Dog", "Dog Mode"},
+		{"Camp", "Camp Mode"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := ParseClimateKeeperMode(tt.input)
+			if got != tt.expected {
+				t.Errorf("ParseClimateKeeperMode(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseDefrostMode(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"DefrostModeStateOff", "Off"},
+		{"DefrostModeStateNormal", "Normal"},
+		{"DefrostModeStateMax", "Max"},
+		{"DefrostModeStateAutoDefog", "AutoDefog"},
+		{"Off", "Off"},
+		{"Normal", "Normal"},
+		{"Max", "Max"},
+		{"AutoDefog", "AutoDefog"},
+		{"DefrostModeStateUnknown", "Unknown"},
+		{"", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := ParseDefrostMode(tt.input)
+			if got != tt.expected {
+				t.Errorf("ParseDefrostMode(%q) = %q, want %q", tt.input, got, tt.expected)
 			}
 		})
 	}

@@ -19,7 +19,7 @@ Components deployed:
   ✓ Export Worker      — {{ include "teslasync.exportWorker.image" . }}
 {{- end }}
 {{- if .Values.postgresql.enabled }}
-  ✓ PostgreSQL 17     — bundled ({{ .Values.postgresql.image }})
+  ✓ PostgreSQL 17     — bundled ({{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag }})
 {{- else }}
   • PostgreSQL         — external ({{ .Values.postgresql.external.host }}:{{ .Values.postgresql.external.port }})
 {{- end }}

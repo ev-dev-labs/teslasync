@@ -1,36 +1,30 @@
 export interface Drive {
   id: number;
   vehicleId: number;
-  startDate: string;
-  endDate: string | null;
-  distance: number;
+  startTs: string;
+  endTs: string | null;
   durationMin: number;
-  speedMax: number | null;
-  speedAvg: number | null;
-  speedMin: number | null;
-  startBatteryLevel: number | null;
-  endBatteryLevel: number | null;
+  distanceMi: number;
   startAddress: string | null;
   endAddress: string | null;
-  outsideTempAvg: number | null;
-  insideTempAvg: number | null;
-  driverTempAvg: number | null;
-  passengerTempAvg: number | null;
-  powerMax: number | null;
-  powerMin: number | null;
-  startOdometer: number | null;
-  endOdometer: number | null;
-  startRangeKm: number | null;
-  endRangeKm: number | null;
-  elevationGain: number | null;
-  elevationLoss: number | null;
-  socStart: number | null;
-  socEnd: number | null;
-  batteryHeaterOn: boolean | null;
-  startLatitude: number | null;
-  startLongitude: number | null;
-  endLatitude: number | null;
-  endLongitude: number | null;
+  startLat: number | null;
+  startLon: number | null;
+  endLat: number | null;
+  endLon: number | null;
+  startBatteryPct: number | null;
+  endBatteryPct: number | null;
+  energyUsedKwh: number | null;
+  regenKwh: number | null;
+  avgSpeedMph: number | null;
+  maxSpeedMph: number | null;
+  avgPowerKw: number | null;
+  outsideTempAvgC: number | null;
+  insideTempAvgC: number | null;
+  score: number | null;
+  endedStatus: string | null;
+  createdAt: string;
+  updatedAt: string;
+  live?: boolean;
 }
 
 export interface DriveDetail extends Drive {
@@ -151,7 +145,7 @@ export interface SpeedBucket {
 export interface RegenEfficiencyData {
   totalRegenKwh: number;
   regenRatio: number;
-  monthlyAvgKw: number;
+  monthlyAvgRegen: number;
   freeCharges: number;
 }
 
@@ -213,4 +207,89 @@ export interface CoachDriveScore {
   style: 'efficient' | 'moderate' | 'aggressive';
   efficiency: number;
   distance: number;
+}
+
+/* ── Trip Planner ─────────────────────────────────────────── */
+
+export interface TripLocation {
+  lat: number;
+  lng: number;
+  name: string;
+}
+
+export interface TripPlanPreferences {
+  max_charge_stops?: number;
+  speed_factor?: number;
+  include_weather?: boolean;
+  prefer_superchargers?: boolean;
+}
+
+export interface TripPlanRequest {
+  vehicle_id: number;
+  origin: TripLocation;
+  destination: TripLocation;
+  waypoints?: TripLocation[];
+  current_soc: number;
+  charge_limit_soc: number;
+  min_arrival_soc: number;
+  departure_time?: string;
+  preferences?: TripPlanPreferences;
+}
+
+export interface TripPlanRoute {
+  total_distance_km: number;
+  total_duration_min: number;
+  driving_duration_min: number;
+  charging_duration_min: number;
+  total_energy_kwh: number;
+  estimated_cost: number;
+  arrival_soc: number;
+  feasible: boolean;
+  is_estimate: boolean;
+}
+
+export interface TripLeg {
+  from: TripLocation;
+  to: TripLocation;
+  distance_km: number;
+  duration_min: number;
+  energy_kwh: number;
+  start_soc: number;
+  arrival_soc: number;
+}
+
+export interface TripChargeStop {
+  name: string;
+  location: TripLocation;
+  charge_from_soc: number;
+  charge_to_soc: number;
+  charge_duration_min: number;
+  energy_kwh: number;
+  cost: number;
+  is_recommended: boolean;
+}
+
+export interface TripWeatherImpact {
+  avg_temp_c: number | null;
+  efficiency_factor: number;
+  note: string;
+}
+
+export interface TripSOCPoint {
+  distance_km: number;
+  soc: number;
+}
+
+export interface TripPlan {
+  route: TripPlanRoute;
+  legs: TripLeg[];
+  charge_stops: TripChargeStop[];
+  weather_impact: TripWeatherImpact;
+  soc_curve: TripSOCPoint[];
+}
+
+export interface GeocodeResult {
+  display_name: string;
+  lat: number;
+  lng: number;
 }

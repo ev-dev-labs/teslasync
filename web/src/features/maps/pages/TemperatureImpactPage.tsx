@@ -12,14 +12,16 @@ import { AlertBanner } from '@/components/feedback';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { FadeIn } from '@/components/motion';
 import {
-  ChartTooltip, CHART_COLORS,
+  ChartTooltip, CHART_COLORS, AREA_DEFAULTS,
   ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, LineChart, Line, Legend, ReferenceLine,
 } from '@/components/charts';
 
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSettings } from '@/hooks/useSettings';
 import { fmtNumber } from '@/lib/numberFormat';
+import { UNITS } from '@/lib/constants';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 
@@ -52,18 +54,28 @@ interface BucketAvg {
 /*  Constants                                                          */
 /* ------------------------------------------------------------------ */
 
-const TEMP_BUCKETS: BucketDef[] = [
-  { label: '< 0°C', min: -50, max: 0, color: '#3b82f6' },
-  { label: '0–10°C', min: 0, max: 10, color: '#06b6d4' },
-  { label: '10–20°C', min: 10, max: 20, color: '#10b981' },
-  { label: '20–30°C', min: 20, max: 30, color: '#f59e0b' },
-  { label: '> 30°C', min: 30, max: 60, color: '#ef4444' },
-];
+const TEMP_BUCKETS_C = [
+  { min: -50, max: 0, color: '#3b82f6' },
+  { min: 0, max: 10, color: '#06b6d4' },
+  { min: 10, max: 20, color: '#10b981' },
+  { min: 20, max: 30, color: '#f59e0b' },
+  { min: 30, max: 60, color: '#ef4444' },
+] as const;
 
-const DEFAULT_BUCKET = TEMP_BUCKETS[2];
+function getTempBucketIndex(temp: number): number {
+  const idx = TEMP_BUCKETS_C.findIndex((b) => temp >= b.min && temp < b.max);
+  return idx >= 0 ? idx : 2;
+}
 
-function getTempBucket(temp: number): BucketDef {
-  return TEMP_BUCKETS.find((b) => temp >= b.min && temp < b.max) ?? DEFAULT_BUCKET;
+function bucketLabel(
+  b: (typeof TEMP_BUCKETS_C)[number],
+  convertTemp: (c: number) => number,
+  tempUnit: string,
+  idx: number,
+): string {
+  if (idx === 0) return `< ${Math.round(convertTemp(b.max))}${tempUnit}`;
+  if (idx === TEMP_BUCKETS_C.length - 1) return `> ${Math.round(convertTemp(b.min))}${tempUnit}`;
+  return `${Math.round(convertTemp(b.min))}–${Math.round(convertTemp(b.max))}${tempUnit}`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -73,6 +85,24 @@ function getTempBucket(temp: number): BucketDef {
 export default function TemperatureImpactPage() {
   const { t } = useTranslation();
   usePageTitle(t('temperature.title', 'Temperature Impact'));
+
+  /* ---- unit conversion ---- */
+  const { convertTemp, tempUnit, isMiles, efficiencyUnit } = useSettings();
+  const effLabel = efficiencyUnit;
+
+  /* Efficiency: API returns Wh/km — convert to Wh/mi if user prefers miles */
+  const toDispEff = (whKm: number): number => isMiles ? whKm * UNITS.MI_TO_KM : whKm;
+
+  /* Build display bucket labels */
+  const tempBuckets: BucketDef[] = useMemo(
+    () => TEMP_BUCKETS_C.map((b, i) => ({
+      label: bucketLabel(b, convertTemp, tempUnit, i),
+      min: b.min,
+      max: b.max,
+      color: b.color,
+    })),
+    [convertTemp, tempUnit],
+  );
 
   /* ---- vehicles ---- */
   const { data: vehicles } = useVehicles();
@@ -100,20 +130,20 @@ export default function TemperatureImpactPage() {
     const avgEff =
       points.reduce((s, p) => s + p.efficiency_wh_km, 0) / points.length;
 
-    const bucketMap = new Map<string, number[]>();
+    const bucketCounts = new Map<number, number[]>();
     for (const p of points) {
-      const b = getTempBucket(p.outside_temp);
-      const arr = bucketMap.get(b.label) ?? [];
+      const idx = getTempBucketIndex(p.outside_temp);
+      const arr = bucketCounts.get(idx) ?? [];
       arr.push(p.efficiency_wh_km);
-      bucketMap.set(b.label, arr);
+      bucketCounts.set(idx, arr);
     }
 
-    const bucketAvgs: BucketAvg[] = TEMP_BUCKETS.map((b) => {
-      const vals = bucketMap.get(b.label) ?? [];
+    const bucketAvgs: BucketAvg[] = tempBuckets.map((b, i) => {
+      const vals = bucketCounts.get(i) ?? [];
       const avg = vals.length
         ? vals.reduce((s, v) => s + v, 0) / vals.length
         : 0;
-      return { label: b.label, avg, count: vals.length, color: b.color };
+      return { label: b.label, avg: toDispEff(avg), count: vals.length, color: b.color };
     });
 
     const withData = bucketAvgs.filter((b) => b.count > 0);
@@ -126,17 +156,19 @@ export default function TemperatureImpactPage() {
       withData[0],
     );
 
-    return { avgEff, bucketAvgs, best, worst, total: points.length };
-  }, [points]);
+    return { avgEff: toDispEff(avgEff), bucketAvgs, best, worst, total: points.length };
+  }, [points, tempBuckets, toDispEff]);
 
   /* ---- scatter data with colour per point ---- */
   const scatterData = useMemo(
     () =>
       (points ?? []).map((p) => ({
         ...p,
-        fill: getTempBucket(p.outside_temp).color,
+        outside_temp: convertTemp(p.outside_temp),
+        efficiency_wh_km: toDispEff(p.efficiency_wh_km),
+        fill: TEMP_BUCKETS_C[getTempBucketIndex(p.outside_temp)].color,
       })),
-    [points],
+    [points, convertTemp, toDispEff],
   );
 
   /* ---- contextual tips ---- */
@@ -153,7 +185,7 @@ export default function TemperatureImpactPage() {
         variant: 'success',
       });
     }
-    const cold = stats.bucketAvgs.find((b) => b.label === '< 0°C');
+    const cold = stats.bucketAvgs[0];
     if (cold && cold.count > 0) {
       items.push({
         icon: Snowflake,
@@ -161,7 +193,7 @@ export default function TemperatureImpactPage() {
         variant: 'info',
       });
     }
-    const hot = stats.bucketAvgs.find((b) => b.label === '> 30°C');
+    const hot = stats.bucketAvgs[TEMP_BUCKETS_C.length - 1];
     if (hot && hot.count > 0) {
       items.push({
         icon: Sun,
@@ -211,7 +243,7 @@ export default function TemperatureImpactPage() {
           <FadeIn>
             <MetricCard
               label={t('tempImpact.avgEfficiency', 'Avg Efficiency')}
-              value={stats ? `${fmtNumber(stats.avgEff)} Wh/km` : '—'}
+              value={stats ? `${fmtNumber(stats.avgEff)} ${effLabel}` : '—'}
               icon={<Thermometer className="h-4 w-4" />}
               color="cyan"
             />
@@ -222,7 +254,7 @@ export default function TemperatureImpactPage() {
               value={stats?.best?.label ?? '—'}
               icon={<TrendingUp className="h-4 w-4" />}
               color="green"
-              subtitle={stats?.best ? `${fmtNumber(stats.best.avg)} Wh/km` : undefined}
+              subtitle={stats?.best ? `${fmtNumber(stats.best.avg)} ${effLabel}` : undefined}
             />
           </FadeIn>
           <FadeIn delay={0.1}>
@@ -231,7 +263,7 @@ export default function TemperatureImpactPage() {
               value={stats?.worst?.label ?? '—'}
               icon={<Sun className="h-4 w-4" />}
               color="purple"
-              subtitle={stats?.worst ? `${fmtNumber(stats.worst.avg)} Wh/km` : undefined}
+              subtitle={stats?.worst ? `${fmtNumber(stats.worst.avg)} ${effLabel}` : undefined}
             />
           </FadeIn>
           <FadeIn delay={0.15}>
@@ -257,10 +289,10 @@ export default function TemperatureImpactPage() {
                   <XAxis
                     dataKey="outside_temp"
                     type="number"
-                    name={t('tempImpact.axisTemp', 'Temperature (°C)')}
+                    name={`${t('tempImpact.temperature', 'Temperature')} (${tempUnit})`}
                     tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
                     label={{
-                      value: t('tempImpact.axisTemp', 'Temperature (°C)'),
+                      value: `${t('tempImpact.temperature', 'Temperature')} (${tempUnit})`,
                       position: 'insideBottom',
                       offset: -5,
                       style: { fill: 'var(--text-muted)', fontSize: 10 },
@@ -269,10 +301,10 @@ export default function TemperatureImpactPage() {
                   <YAxis
                     dataKey="efficiency_wh_km"
                     type="number"
-                    name={t('tempImpact.axisEff', 'Efficiency (Wh/km)')}
+                    name={`${t('tempImpact.efficiency', 'Efficiency')} (${effLabel})`}
                     tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
                     label={{
-                      value: 'Wh/km',
+                      value: effLabel,
                       angle: -90,
                       position: 'insideLeft',
                       style: { fill: 'var(--text-muted)', fontSize: 10 },
@@ -315,7 +347,7 @@ export default function TemperatureImpactPage() {
                   <YAxis
                     tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
                     label={{
-                      value: 'Wh/km',
+                      value: effLabel,
                       angle: -90,
                       position: 'insideLeft',
                       style: { fill: 'var(--text-muted)', fontSize: 10 },
@@ -324,11 +356,10 @@ export default function TemperatureImpactPage() {
                   <Tooltip content={<ChartTooltip />} />
                   <Legend />
                   <Line
-                    type="monotone"
+                    {...AREA_DEFAULTS}
                     dataKey="avg"
-                    name={t('tempImpact.avgEffLine', 'Avg Efficiency (Wh/km)')}
+                    name={`${t('tempImpact.avgEff', 'Avg Efficiency')} (${effLabel})`}
                     stroke={CHART_COLORS[0]}
-                    strokeWidth={2}
                     dot={{ r: 5, fill: CHART_COLORS[0] }}
                     activeDot={{ r: 7 }}
                   />
@@ -352,9 +383,10 @@ export default function TemperatureImpactPage() {
                     {t('tempImpact.optimalDesc', {
                       range: stats.best.label,
                       efficiency: fmtNumber(stats.best.avg),
+                      unit: effLabel,
                       count: stats.best.count,
                       defaultValue:
-                        'Your most efficient temperature range is {{range}} with an average of {{efficiency}} Wh/km across {{count}} drives.',
+                        'Your most efficient temperature range is {{range}} with an average of {{efficiency}} {{unit}} across {{count}} drives.',
                     })}
                   </p>
                   {stats.worst && stats.best.label !== stats.worst.label && (
@@ -362,8 +394,9 @@ export default function TemperatureImpactPage() {
                       {t('tempImpact.optimalDelta', {
                         worst: stats.worst.label,
                         delta: fmtNumber(stats.worst.avg - stats.best.avg),
+                        unit: effLabel,
                         defaultValue:
-                          'Compared to the worst range ({{worst}}), you save {{delta}} Wh/km on average.',
+                          'Compared to the worst range ({{worst}}), you save {{delta}} {{unit}} on average.',
                       })}
                     </p>
                   )}
@@ -376,7 +409,7 @@ export default function TemperatureImpactPage() {
                           variant={b.label === bestLabel ? 'success' : 'neutral'}
                           size="sm"
                         >
-                          {b.label}: {fmtNumber(b.avg)} Wh/km
+                          {b.label}: {fmtNumber(b.avg)} {effLabel}
                         </Badge>
                       ))}
                   </div>

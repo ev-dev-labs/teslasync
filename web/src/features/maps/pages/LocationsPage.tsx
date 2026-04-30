@@ -12,7 +12,7 @@ import { MapPin, Clock, Hash, Trophy, Navigation, Building2 } from 'lucide-react
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Select, Pagination } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
-import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
+import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
   ChartTooltip,
@@ -107,11 +107,6 @@ export default function LocationsPage() {
         ) : undefined
       }
     >
-      {/* ── GPS info banner ─────────────────────────────────────── */}
-      <AlertBanner variant="info" className="mb-4">
-        {t('locations.noGpsInfo', 'Location data requires Fleet Telemetry streaming. GPS coordinates are not available via MQTT signals alone.')}
-      </AlertBanner>
-
       {/* ── Summary stats ────────────────────────────────────────── */}
       <FadeIn>
         <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4">

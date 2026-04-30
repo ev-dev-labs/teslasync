@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/feedback';
 import {
   ChartTooltip,
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  AREA_DEFAULTS,
 } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
 import { useSignals, useSignalDiff } from '@/api/hooks/useTelemetry';
@@ -235,7 +236,7 @@ export default function SignalDiffPage() {
                       <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                       <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                       <Tooltip content={<ChartTooltip />} />
-                      <Line type="monotone" dataKey="value" stroke="#00f0ff" strokeWidth={1.5} dot={false} name={selectedSignal} />
+                      <Line {...AREA_DEFAULTS} dataKey="value" stroke="#00f0ff" strokeWidth={1.5} name={selectedSignal} />
                     </LineChart>
                   </ResponsiveContainer>
                 ) : (
@@ -256,7 +257,7 @@ export default function SignalDiffPage() {
                       <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                       <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                       <Tooltip content={<ChartTooltip />} />
-                      <Line type="monotone" dataKey="value" stroke="#f59e0b" strokeWidth={1.5} dot={false} name={selectedSignal} />
+                      <Line {...AREA_DEFAULTS} dataKey="value" stroke="#f59e0b" strokeWidth={1.5} name={selectedSignal} />
                     </LineChart>
                   </ResponsiveContainer>
                 ) : (

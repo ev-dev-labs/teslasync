@@ -13,10 +13,12 @@ import {
 } from '@/components/charts';
 import { CHART_COLORS } from '@/lib/colors';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSettings } from '@/hooks/useSettings';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSleepEfficiency } from '@/api/hooks/useEnergy';
 import { formatDateShort, formatTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { DAYS_OPTIONS } from '@/lib/constants';
 import type { SleepDrainEvent } from '@/types/energy';
 
 /* ── Constants ── */
@@ -30,18 +32,12 @@ const STATE_COLORS: Record<string, string> = {
   suspended: '#6366f1',
 };
 
-const DAYS_OPTIONS = [
-  { value: '7', label: '7 days' },
-  { value: '30', label: '30 days' },
-  { value: '90', label: '90 days' },
-  { value: '180', label: '180 days' },
-];
-
 /* ── Component ── */
 
 export default function SleepEfficiencyPage() {
   const { t } = useTranslation();
   usePageTitle(t('sleep.title', 'Sleep Efficiency'));
+  const { convertTemp, tempUnit } = useSettings();
 
   const { data: vehicles } = useVehicles();
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
@@ -129,7 +125,7 @@ export default function SleepEfficiencyPage() {
       render: (event) => event.outside_temp != null ? (
         <span className="flex items-center gap-1">
           <Thermometer className="h-3 w-3 text-white/40" />
-          {fmtNumber(event.outside_temp)}°C
+          {fmtNumber(convertTemp(event.outside_temp))}{tempUnit}
         </span>
       ) : (
         <span className="text-white/40">—</span>

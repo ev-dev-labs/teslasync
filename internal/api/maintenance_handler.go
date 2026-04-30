@@ -6,15 +6,23 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
 // MaintenanceHandler serves maintenance schedule and service record endpoints.
 type MaintenanceHandler struct {
-	db *database.DB
+	db         *database.DB
+	redisCache *signal.RedisSignalCache
 }
 
 func NewMaintenanceHandler(db *database.DB) *MaintenanceHandler {
 	return &MaintenanceHandler{db: db}
+}
+
+// WithRedisCache sets the Redis signal cache for reading live vehicle state.
+func (h *MaintenanceHandler) WithRedisCache(cache *signal.RedisSignalCache) *MaintenanceHandler {
+	h.redisCache = cache
+	return h
 }
 
 // defaultMaintenanceItems returns standard Tesla EV maintenance items.
@@ -85,19 +93,28 @@ func (h *MaintenanceHandler) defaultItems(vehicleID int64, currentOdometer float
 func (h *MaintenanceHandler) List(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	// Get first vehicle's odometer
+	// Get first vehicle ID
 	var vehicleID int64
-	var odometer float64
 	err := h.db.Pool.QueryRow(ctx,
-		`SELECT v.id, COALESCE(ls.odometer, 0)
-		 FROM vehicles v
-		 LEFT JOIN vehicle_live_state ls ON ls.vehicle_id = v.id
-		 ORDER BY v.id LIMIT 1`,
-	).Scan(&vehicleID, &odometer)
+		`SELECT id FROM vehicles ORDER BY id LIMIT 1`,
+	).Scan(&vehicleID)
 	if err != nil {
 		log.Debug().Err(err).Msg("maintenance: no vehicle found")
 		writeJSON(w, http.StatusOK, []interface{}{})
 		return
+	}
+
+	// Read odometer from Redis signal cache
+	var odometer float64
+	if h.redisCache != nil {
+		signals, rErr := h.redisCache.GetAll(ctx, vehicleID)
+		if rErr == nil && signals != nil {
+			if v, ok := signals["Odometer"]; ok {
+				if f, ok := v.(float64); ok {
+					odometer = f
+				}
+			}
+		}
 	}
 
 	writeJSON(w, http.StatusOK, h.defaultItems(vehicleID, odometer))

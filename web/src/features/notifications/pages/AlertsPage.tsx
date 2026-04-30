@@ -170,7 +170,7 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
 
   const channelMap = useMemo(() => {
     const m: Record<number, string> = {};
-    channels?.forEach(c => { m[c.id] = `${c.name} (${c.type})`; });
+    channels?.forEach(c => { m[c.id] = `${c.name} (${c.kind})`; });
     return m;
   }, [channels]);
 
@@ -380,7 +380,7 @@ function PreferencesSection({ t }: { t: (k: string) => string }) {
           <BarChart3 className="h-4 w-4 text-neon-green" /> {t('Rule Management')}
         </span>
         <span className="text-xs text-[var(--text-muted)] mb-3 block">
-          {t('Create, edit, and manage alert rules in the Alert Studio — build custom rules from any of 230+ Fleet Telemetry signals.')}
+          {t('Create, edit, and manage typed alert rules in Alert Studio using supported Fleet Telemetry signal contracts.')}
         </span>
         <a
           href="/alert-studio"
@@ -473,7 +473,7 @@ export default function AlertsPage() {
   return (
     <PageContainer
       title={t('Alerts & Notifications')}
-      subtitle={t('Monitor events, configure alert rules, and stay informed')}
+      subtitle={t('Monitor events, configure typed alert rules, and stay informed')}
       loading={isLoading}
       error={error as Error | null}
       actions={

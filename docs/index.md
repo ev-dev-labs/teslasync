@@ -4,57 +4,47 @@ layout: home
 hero:
   name: TeslaSync
   text: Tesla Fleet Intelligence Platform
-  tagline: Real-time monitoring, advanced analytics, and remote control for your Tesla fleet — built with Go & React.
+  tagline: Self-hosted Tesla telemetry, analytics, automation, and operations in one Go + React platform.
   actions:
     - theme: brand
       text: Get Started
       link: /guide/getting-started
     - theme: alt
-      text: View on GitHub
-      link: https://github.com/ev-dev-labs/TeslaSync
+      text: Deployment
+      link: /deployment/docker
 
 features:
   - icon: 🚗
-    title: Real-Time Vehicle Tracking
-    details: Live GPS tracking on an interactive Leaflet map with SSE streaming, heatmaps, and drive route replay.
-  - icon: ⚡
-    title: Charging & Energy Analytics
-    details: Detailed charging session history, cost tracking per kWh, energy consumption patterns, and efficiency metrics.
+    title: Fleet command center
+    details: Dashboard, vehicle detail, live map, digital twin, trip replay, and command history for one car or a fleet.
+  - icon: 📡
+    title: Real-time telemetry
+    details: Tesla Fleet Telemetry, MQTT ingestion, SSE streaming, Redis live state, and polling fallback when streaming is unavailable.
   - icon: 🔋
-    title: Battery Health Monitoring
-    details: Track battery degradation over time, charge cycles, projected range, and vampire drain analysis.
+    title: Battery and charging intelligence
+    details: Battery health, cell voltage, projected range, charging sessions, charging curve, heatmaps, and Tesla billing history.
   - icon: 📊
-    title: Fleet-Wide Analytics
-    details: Cross-vehicle comparisons, daily/monthly mileage reports, cost breakdowns, and Grafana dashboards.
+    title: Analytics and diagnostics
+    details: Cost of ownership, efficiency, speed profile, route efficiency, sleep/vampire drain, signal explorer, anomaly views, and Grafana.
   - icon: 🔔
-    title: Smart Alerts & Notifications
-    details: Configurable alert rules with multi-channel delivery — Discord, Slack, Telegram, Email, Webhooks, and more.
-  - icon: 🎮
-    title: Remote Vehicle Commands
-    details: Lock/unlock, climate control, charge management, sentry mode, frunk/trunk, horn, and flash — all from the web UI.
-  - icon: 💾
-    title: Backup & Restore
-    details: Scheduled automated backups with multi-provider storage (S3, Azure, GCS, Local). Download, verify, and restore from the UI.
-  - icon: 🗺️
-    title: Multi-Provider Maps
-    details: Azure Maps, Google Maps, or free CARTO/OSM tiles — auto-selects based on your API key. Layer switcher on all map pages.
-  - icon: 🔭
-    title: Distributed Tracing
-    details: Optional OpenTelemetry with per-repo DB spans, handler tracing, and Jaeger integration. Zero overhead when disabled.
-  - icon: 🧠
-    title: Cross-Table Intelligence
-    details: 8 advanced analytics — TCO calculator, charging heatmap, temperature impact, route efficiency, regen scoring, battery degradation predictor, sleep analysis, speed profiling.
+    title: Alerts and automation
+    details: Typed Alert Studio rules, notification channels, automation builder, webhooks, scheduled checks, guard mode, and command workflows.
+  - icon: 🧭
+    title: Location and trips
+    details: Live map, geofences, navigation routes, locations, trips, route replay, and map-tile caching for PWA installs.
+  - icon: 🛠️
+    title: Operations built in
+    details: Admin pages, API logs, API playground, Redis signal viewer, database health, data repair, backups, exports, and system status.
+  - icon: 🎨
+    title: Modern responsive UI
+    details: Vite-powered React SPA with glass panels, dynamic themes, command palette, mobile bottom tabs, PWA install, and offline shell caching.
 ---
 
-## Why TeslaSync?
+## What TeslaSync is
 
-TeslaSync is a next-generation Tesla fleet intelligence platform built from the ground up with a modern, lightweight architecture:
+TeslaSync is a self-hosted Tesla Fleet Intelligence Platform. It combines a Go 1.25 backend, a React 18 SPA, TimescaleDB/PostgreSQL storage, Redis, MQTT, Grafana, Prometheus, and optional Tesla Fleet Telemetry streaming.
 
-- **10x lower memory footprint** — Go backend with efficient connection pooling
-- **Modern glassmorphism UI** — React 18 with 5 dynamic themes and a command palette
-- **Real-time streaming** — Server-Sent Events for instant vehicle updates
-- **Enterprise observability** — Prometheus metrics, Grafana dashboards, structured logging
-- **One-command deploy** — Docker Compose with 6 pre-configured services
+The app is designed for owners and small fleets that want to keep Tesla data under their own control while still getting a polished dashboard, live state, long-term analytics, notifications, automation, and deployment-friendly operations.
 
 <div style="display: flex; justify-content: center; margin: 2rem 0;">
   <svg width="280" height="100" viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity: 0.6;">
@@ -79,26 +69,24 @@ TeslaSync is a next-generation Tesla fleet intelligence platform built from the 
   </svg>
 </div>
 
-## Tech Stack
+## Current architecture at a glance
 
-| Layer | Technology |
-|-------|-----------|
-| **Backend** | Go 1.22 · Chi router · pgx · zerolog |
-| **Frontend** | React 18 · TypeScript · Vite · Tailwind CSS |
-| **Database** | PostgreSQL 17 with native partitioning |
-| **Messaging** | MQTT (Mosquitto) |
-| **Cache** | Redis 7 |
-| **Monitoring** | Grafana 10.4 · Prometheus |
-| **Deployment** | Docker Compose · Kubernetes (Helm) |
+| Layer | Current implementation |
+|---|---|
+| Backend | Go 1.25, Chi v5, pgx v5, zerolog, Prometheus, OpenTelemetry, circuit breakers |
+| Frontend | React 18, TypeScript, Vite 5, TanStack Query 5, Tailwind, Framer Motion, i18next |
+| Data | TimescaleDB/PostgreSQL 17, pgvector, Redis 7, optional MongoDB raw signal capture |
+| Streaming | Tesla Fleet Telemetry, MQTT, Redis live state, SSE to browser, polling fallback |
+| Deployment | Docker Compose, Helm, Traefik IngressRoute, Authentik/ForwardAuth, PWA web container |
 
-## Quick Start
+## Quick start
 
 ```bash
-git clone https://github.com/ev-dev-labs/TeslaSync.git
-cd TeslaSync
+git clone https://github.com/ev-dev-labs/teslasync.git
+cd teslasync
 cp .env.example .env
-# Edit .env with your Tesla API credentials
-docker compose up -d
+# Edit .env with Tesla Developer credentials and deployment URLs
+docker compose up -d --build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) for the web UI, or [http://localhost:3001](http://localhost:3001) for Grafana dashboards.
+Open the web UI at `http://localhost:3000`. The API listens on `http://localhost:8080`, Grafana on `http://localhost:3001`, and Prometheus on `http://localhost:9099` unless you override ports.

@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -68,6 +69,14 @@ func (m *VehicleFSM) SetGearCapable(v bool) {
 	m.isGearCapable = v
 }
 
+// LastTransitionAt returns when the FSM last committed a transition (thread-safe).
+// Used by health endpoints to detect FSMs that are stale despite live signals.
+func (m *VehicleFSM) LastTransitionAt() time.Time {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.lastTransitionAt
+}
+
 // ProcessSignals is the single entry point for telemetry signal batches.
 // It detects triggers, evaluates the transition table, and commits valid transitions.
 func (m *VehicleFSM) ProcessSignals(ctx context.Context, vehicleID int64, signals map[string]interface{}) error {
@@ -80,7 +89,30 @@ func (m *VehicleFSM) ProcessSignals(ctx context.Context, vehicleID int64, signal
 	}
 
 	sctx := m.buildSignalContext(signals)
+
+	m.logger.Debug().
+		Int64("vehicle_id", vehicleID).
+		Str("current_state", string(m.current)).
+		Bool("has_gear", sctx.HasGearInBatch).
+		Str("gear", sctx.Gear).
+		Bool("charge_changed", sctx.ChargeStateChanged).
+		Bool("is_charging", sctx.IsCharging).
+		Float64("speed", sctx.Speed).
+		Bool("is_gear_capable", sctx.IsGearCapable).
+		Msg("fsm: signal context built")
+
 	triggers := DetectTriggers(sctx)
+
+	if len(triggers) > 0 {
+		triggerNames := make([]string, len(triggers))
+		for i, t := range triggers {
+			triggerNames[i] = t.String()
+		}
+		m.logger.Debug().
+			Int64("vehicle_id", vehicleID).
+			Strs("triggers", triggerNames).
+			Msg("fsm: triggers detected")
+	}
 
 	for _, trigger := range triggers {
 		if err := m.tryTransition(ctx, vehicleID, trigger, sctx); err != nil {
@@ -123,8 +155,22 @@ func (m *VehicleFSM) HandleSignalReceived(ctx context.Context, vehicleID int64) 
 func (m *VehicleFSM) tryTransition(ctx context.Context, vehicleID int64, trigger Trigger, sctx *SignalContext) error {
 	tr, found := LookupTransition(m.current, trigger, sctx)
 	if !found {
+		m.logger.Debug().
+			Int64("vehicle_id", vehicleID).
+			Str("current", string(m.current)).
+			Str("trigger", trigger.String()).
+			Msg("fsm: no valid transition (guard blocked or not in table)")
 		return nil // no valid transition — not an error
 	}
+
+	m.logger.Debug().
+		Int64("vehicle_id", vehicleID).
+		Str("from", string(tr.From)).
+		Str("to", string(tr.To)).
+		Str("trigger", trigger.String()).
+		Str("mode", tr.Mode.String()).
+		Str("guard", tr.GuardNameStr()).
+		Msg("fsm: transition found")
 
 	if tr.Mode == Debounced {
 		return m.handleDebounced(ctx, vehicleID, tr, sctx)
@@ -133,7 +179,7 @@ func (m *VehicleFSM) tryTransition(ctx context.Context, vehicleID int64, trigger
 	return m.commit(ctx, vehicleID, tr, sctx)
 }
 
-func (m *VehicleFSM) handleDebounced(_ context.Context, _ int64, tr Transition, sctx *SignalContext) error {
+func (m *VehicleFSM) handleDebounced(_ context.Context, vehicleID int64, tr Transition, sctx *SignalContext) error {
 	now := sctx.Now
 	if now.IsZero() {
 		now = time.Now().UTC()
@@ -142,6 +188,10 @@ func (m *VehicleFSM) handleDebounced(_ context.Context, _ int64, tr Transition, 
 	if m.pending == nil || m.pending.To != tr.To {
 		// New candidate — start the debounce timer
 		m.pending = &pendingTransition{To: tr.To, Since: now}
+		m.logger.Debug().
+			Int64("vehicle_id", vehicleID).
+			Str("to", string(tr.To)).
+			Msg("fsm: debounce started")
 		return nil
 	}
 
@@ -151,7 +201,12 @@ func (m *VehicleFSM) handleDebounced(_ context.Context, _ int64, tr Transition, 
 	}
 
 	// Confirmed — promote to a real transition and commit
-	// (we call commit via tryTransition path, but treat it as Immediate now)
+	m.logger.Debug().
+		Int64("vehicle_id", vehicleID).
+		Str("to", string(m.pending.To)).
+		Dur("elapsed", time.Since(m.pending.Since)).
+		Msg("fsm: debounce confirmed, will commit on next batch")
+
 	m.pending = nil
 	confirmedTr := tr
 	confirmedTr.Mode = Immediate
@@ -176,6 +231,10 @@ func (m *VehicleFSM) CheckPending(ctx context.Context, vehicleID int64, sctx *Si
 
 	// Confirmed — commit
 	to := m.pending.To
+	m.logger.Debug().
+		Int64("vehicle_id", vehicleID).
+		Str("to", string(to)).
+		Msg("fsm: committing confirmed debounced transition")
 	m.pending = nil
 
 	tr := Transition{
@@ -188,7 +247,13 @@ func (m *VehicleFSM) CheckPending(ctx context.Context, vehicleID int64, sctx *Si
 }
 
 // CancelPending resets any pending debounced transition (e.g., speed resumed).
-func (m *VehicleFSM) CancelPending() {
+func (m *VehicleFSM) CancelPending(vehicleID int64) {
+	if m.pending != nil {
+		m.logger.Debug().
+			Int64("vehicle_id", vehicleID).
+			Str("cancelled_to", string(m.pending.To)).
+			Msg("fsm: debounce cancelled")
+	}
 	m.pending = nil
 }
 
@@ -196,14 +261,27 @@ func (m *VehicleFSM) commit(ctx context.Context, vehicleID int64, tr Transition,
 	from := m.current
 	duration := time.Since(m.lastTransitionAt)
 
-	m.current = tr.To
-	m.pending = nil
-	m.lastTransitionAt = time.Now()
-
 	// Populate metadata for logging
 	sctx.MatchedTrigger = tr.Trigger.String()
 	sctx.MatchedGuard = tr.GuardNameStr()
 	sctx.TransitionMode = tr.Mode.String()
+
+	// Persist FIRST. If the action layer fails, leave in-memory state untouched
+	// so the next signal batch retries the transition. Without this, a transient
+	// DB error would leave us claiming we're in `tr.To` while the DB still says `from`.
+	if err := m.actions.Execute(ctx, vehicleID, from, tr.To, sctx); err != nil {
+		m.logger.Error().
+			Err(err).
+			Int64("vehicle_id", vehicleID).
+			Str("from", string(from)).
+			Str("to", string(tr.To)).
+			Msg("vehicle state transition aborted: action failed")
+		return err
+	}
+
+	m.current = tr.To
+	m.pending = nil
+	m.lastTransitionAt = time.Now()
 
 	m.logger.Info().
 		Int64("vehicle_id", vehicleID).
@@ -214,7 +292,7 @@ func (m *VehicleFSM) commit(ctx context.Context, vehicleID int64, tr Transition,
 		Dur("duration_in_state", duration).
 		Msg("vehicle state transition")
 
-	return m.actions.Execute(ctx, vehicleID, from, tr.To, sctx)
+	return nil
 }
 
 func (m *VehicleFSM) buildSignalContext(signals map[string]interface{}) *SignalContext {
@@ -284,9 +362,37 @@ func toFloat(v interface{}) (float64, bool) {
 // isChargingState returns true if the charge state string indicates active charging.
 func isChargingState(s string) bool {
 	switch s {
-	case "Charging", "Starting", "ChargeStateCharging", "ChargeStateStarting",
+	case enums.ChargeStateCharging, enums.ChargeStateStarting, "ChargeStateCharging", "ChargeStateStarting",
 		"DetailedChargeStateCharging", "DetailedChargeStateStarting", "Enable":
 		return true
 	}
 	return false
+}
+
+// FSMDebugInfo holds diagnostic information about a vehicle FSM.
+type FSMDebugInfo struct {
+	CurrentState     string     `json:"current_state"`
+	LastTransitionAt time.Time  `json:"last_transition_at"`
+	IsGearCapable    bool       `json:"is_gear_capable"`
+	HasPending       bool       `json:"has_pending"`
+	PendingTo        string     `json:"pending_to,omitempty"`
+	PendingSince     *time.Time `json:"pending_since,omitempty"`
+}
+
+// DebugInfo returns diagnostic information about the FSM. Thread-safe.
+func (m *VehicleFSM) DebugInfo() FSMDebugInfo {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	info := FSMDebugInfo{
+		CurrentState:     string(m.current),
+		LastTransitionAt: m.lastTransitionAt,
+		IsGearCapable:    m.isGearCapable,
+	}
+	if m.pending != nil {
+		info.HasPending = true
+		info.PendingTo = string(m.pending.To)
+		info.PendingSince = &m.pending.Since
+	}
+	return info
 }

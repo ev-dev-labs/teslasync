@@ -12,16 +12,18 @@ import { PlaybackControls } from '@/components/ui/PlaybackControls';
 import { StatCard, MetricCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
+import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 import {
   ChartContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, ReferenceLine, chartGrid, axisTick, fmt,
-  CHART_COLORS,
+  CHART_COLORS, AREA_DEFAULTS, areaGradient,
 } from '@/components/charts';
 import { ElevationProfile, type ElevationDataPoint } from '@/components/charts';
 import {
   MapContainer, Polyline, CircleMarker, useMap,
   MapTileLayer, MapInvalidator, MapLayerSwitcher,
-  AnimatedMarker,
+  AnimatedMarker, latLngBounds,
+  type LatLngExpression,
   type MapStyle,
 } from '@/components/maps';
 import { useDrive } from '@/api/hooks/useDriving';
@@ -31,8 +33,6 @@ import { useTripReplay } from '@/hooks/useTripReplay';
 import { haversineDistance } from '@/lib/geo';
 import { formatDate } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
-import type { LatLngExpression } from 'leaflet';
-import { latLngBounds } from 'leaflet';
 import type { DrivePosition } from '@/types/driving';
 
 /* ================================================================== */
@@ -91,7 +91,6 @@ function FitBounds({ trail }: { trail: LatLngExpression[] }) {
     } else if (trail.length === 1) {
       map.setView(trail[0] as [number, number], 15);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trail.length]);
   return null;
 }
@@ -108,6 +107,12 @@ export default function TripReplayPage() {
   const { data: drive, isLoading, error } = useDrive(id ?? '');
   const [mapStyle, setMapStyle] = useState<MapStyle>('dark');
 
+  const breadcrumbs = useBreadcrumbs({
+    '/drives/:id': drive
+      ? `${drive.startAddress ?? t('replay.drive', 'Drive')} → ${drive.endAddress ?? ''}`
+      : `Drive #${id}`,
+  });
+
   const {
     convertDistance, convertSpeed, convertTemp,
     distanceUnit, speedUnit, tempUnit,
@@ -118,22 +123,25 @@ export default function TripReplayPage() {
     if (!drive) return [];
     const pos = drive.positions ?? [];
     return pos
-      .map((p: any) => ({
-        latitude: p.latitude ?? 0,
-        longitude: p.longitude ?? 0,
-        speed: p.speed ?? null,
-        power: p.power ?? null,
-        batteryLevel: p.batteryLevel ?? p.battery_level ?? 0,
-        timestamp: p.timestamp ?? p.created_at ?? p.createdAt ?? '',
-        elevation: p.elevation ?? null,
-        insideTemp: p.insideTemp ?? p.inside_temp ?? null,
-        outsideTemp: p.outsideTemp ?? p.outside_temp ?? null,
-        idealRange: p.idealRange ?? p.ideal_range ?? null,
-        ratedRange: p.ratedRange ?? p.rated_range ?? null,
-        odometer: p.odometer ?? null,
-        fanStatus: p.fanStatus ?? p.fan_status ?? null,
+      .map((raw: unknown) => {
+        const p = raw as Record<string, unknown>;
+        return {
+        latitude: (p.latitude as number) ?? 0,
+        longitude: (p.longitude as number) ?? 0,
+        speed: (p.speed as number | null) ?? null,
+        power: (p.power as number | null) ?? null,
+        batteryLevel: (p.batteryLevel as number) ?? (p.battery_level as number) ?? 0,
+        timestamp: (p.timestamp as string) ?? (p.created_at as string) ?? (p.createdAt as string) ?? '',
+        elevation: (p.elevation as number | null) ?? null,
+        insideTemp: (p.insideTemp as number | null) ?? (p.inside_temp as number | null) ?? null,
+        outsideTemp: (p.outsideTemp as number | null) ?? (p.outside_temp as number | null) ?? null,
+        idealRange: (p.idealRange as number | null) ?? (p.ideal_range as number | null) ?? null,
+        ratedRange: (p.ratedRange as number | null) ?? (p.rated_range as number | null) ?? null,
+        odometer: (p.odometer as number | null) ?? null,
+        fanStatus: (p.fanStatus as number | null) ?? (p.fan_status as number | null) ?? null,
         isClimateOn: p.isClimateOn ?? p.is_climate_on ?? null,
-      } as DrivePosition))
+      } as DrivePosition;
+      })
       .filter((p) => p.latitude !== 0 || p.longitude !== 0);
   }, [drive]);
 
@@ -151,8 +159,8 @@ export default function TripReplayPage() {
     ? (trail[trail.length - 1] as [number, number])
     : undefined;
   const centerPos: [number, number] = startPos
-    ?? (drive?.startLatitude && drive?.startLongitude
-      ? [drive.startLatitude, drive.startLongitude]
+    ?? (drive?.startLat && drive?.startLon
+      ? [drive.startLat, drive.startLon]
       : [47.6, -122.3]);
 
   /* ---- Speed-colored segments ---- */
@@ -226,20 +234,21 @@ export default function TripReplayPage() {
   const cp = replay.currentPosition;
 
   /* ---- Drive summary stats ---- */
-  const distanceKm = drive?.distance ?? 0;
+  const distanceMi = drive?.distanceMi ?? 0;
   const durationMin = drive?.durationMin ?? 0;
-  const efficiency = distanceKm > 0 && drive?.socStart != null && drive?.socEnd != null
-    ? ((drive.socStart - drive.socEnd) / convertDistance(distanceKm)) * 1000
+  const efficiency = distanceMi > 0 && drive?.startBatteryPct != null && drive?.endBatteryPct != null
+    ? ((drive.startBatteryPct - drive.endBatteryPct) / convertDistance(distanceMi)) * 1000
     : null;
 
   return (
     <PageContainer
       title={t('replay.title', 'Trip Replay')}
       subtitle={drive
-        ? `${t('replay.drive', 'Drive')} #${drive.id} — ${formatDate(drive.startDate)}${drive.startAddress && drive.endAddress ? ` · ${drive.startAddress} → ${drive.endAddress}` : ''}`
+        ? `${t('replay.drive', 'Drive')} #${drive.id} — ${formatDate(drive.startTs)}${drive.startAddress && drive.endAddress ? ` · ${drive.startAddress} → ${drive.endAddress}` : ''}`
         : undefined}
       loading={isLoading}
       error={error instanceof Error ? error : error ? new Error(String(error)) : null}
+      breadcrumbs={breadcrumbs}
       actions={
         <Link to={`/drives/${id}`}>
           <Button variant="ghost" size="sm">
@@ -428,16 +437,8 @@ export default function TripReplayPage() {
                   }
                 }}
               >
-                <defs>
-                  <linearGradient id="speedGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={CHART_COLORS[0]} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={CHART_COLORS[0]} stopOpacity={0.02} />
-                  </linearGradient>
-                  <linearGradient id="powerGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={CHART_COLORS[1]} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={CHART_COLORS[1]} stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
+                {areaGradient('speedGrad', CHART_COLORS[0])}
+                {areaGradient('powerGrad', CHART_COLORS[1])}
                 <CartesianGrid {...chartGrid} />
                 <XAxis
                   dataKey="time"
@@ -462,25 +463,21 @@ export default function TripReplayPage() {
                   labelFormatter={(v: number) => `${fmt(v, 1)} min`}
                 />
                 <Area
+                  {...AREA_DEFAULTS}
                   yAxisId="speed"
-                  type="monotone"
                   dataKey="speed"
                   name={t('replay.timeline.speed', 'Speed')}
                   stroke={CHART_COLORS[0]}
                   fill="url(#speedGrad)"
-                  strokeWidth={2}
-                  dot={false}
                   isAnimationActive={false}
                 />
                 <Area
+                  {...AREA_DEFAULTS}
                   yAxisId="power"
-                  type="monotone"
                   dataKey="power"
                   name={t('replay.timeline.power', 'Power')}
                   stroke={CHART_COLORS[1]}
                   fill="url(#powerGrad)"
-                  strokeWidth={2}
-                  dot={false}
                   isAnimationActive={false}
                 />
                 {cursorTime != null && (
@@ -515,7 +512,7 @@ export default function TripReplayPage() {
             <StaggerItem>
               <StatCard
                 label={t('replay.summary.distance', 'Distance')}
-                value={fmtNumber(convertDistance(distanceKm))}
+                value={fmtNumber(convertDistance(distanceMi))}
                 unit={distanceUnit}
                 icon={<Route className="h-4 w-4" />}
               />
@@ -538,40 +535,38 @@ export default function TripReplayPage() {
             <StaggerItem>
               <StatCard
                 label={t('replay.summary.elevGain', 'Elevation Gain')}
-                value={drive?.elevationGain != null ? fmtInt(drive.elevationGain) : '—'}
-                unit={drive?.elevationGain != null ? 'm' : undefined}
+                value={'—'}
                 icon={<ArrowUpRight className="h-4 w-4" />}
               />
             </StaggerItem>
             <StaggerItem>
               <StatCard
                 label={t('replay.summary.elevLoss', 'Elevation Loss')}
-                value={drive?.elevationLoss != null ? fmtInt(drive.elevationLoss) : '—'}
-                unit={drive?.elevationLoss != null ? 'm' : undefined}
+                value={'—'}
                 icon={<ArrowDownRight className="h-4 w-4" />}
               />
             </StaggerItem>
             <StaggerItem>
               <StatCard
                 label={t('replay.summary.maxSpeed', 'Max Speed')}
-                value={drive?.speedMax != null ? fmtNumber(convertSpeed(drive.speedMax)) : '—'}
-                unit={drive?.speedMax != null ? speedUnit : undefined}
+                value={drive?.maxSpeedMph != null ? fmtNumber(convertSpeed(drive.maxSpeedMph)) : '—'}
+                unit={drive?.maxSpeedMph != null ? speedUnit : undefined}
                 icon={<Gauge className="h-4 w-4" />}
               />
             </StaggerItem>
             <StaggerItem>
               <StatCard
                 label={t('replay.summary.avgSpeed', 'Avg Speed')}
-                value={drive?.speedAvg != null ? fmtNumber(convertSpeed(drive.speedAvg)) : '—'}
-                unit={drive?.speedAvg != null ? speedUnit : undefined}
+                value={drive?.avgSpeedMph != null ? fmtNumber(convertSpeed(drive.avgSpeedMph)) : '—'}
+                unit={drive?.avgSpeedMph != null ? speedUnit : undefined}
                 icon={<Gauge className="h-4 w-4" />}
               />
             </StaggerItem>
             <StaggerItem>
               <StatCard
                 label={t('replay.summary.battery', 'Battery')}
-                value={drive?.socStart != null && drive?.socEnd != null
-                  ? `${fmtInt(drive.socStart)}% → ${fmtInt(drive.socEnd)}%`
+                value={drive?.startBatteryPct != null && drive?.endBatteryPct != null
+                  ? `${fmtInt(drive.startBatteryPct)}% → ${fmtInt(drive.endBatteryPct)}%`
                   : '—'}
                 icon={<Battery className="h-4 w-4" />}
               />

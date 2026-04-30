@@ -7,13 +7,14 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, Select } from '@/components/ui';
+import { GlassPanel, Badge, Input as ControlInput, Select as ControlSelect } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import {
   RadialGauge, ChartTooltip,
   chartMargin, axisTick, CHART_COLORS,
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend, ReferenceLine,
+  AREA_DEFAULTS, areaGradient,
 } from '@/components/charts';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
@@ -76,7 +77,7 @@ function effColor(whKm: number): string {
 }
 
 function scenarioIcon(scenario: RangeScenario) {
-  if (scenario.extras.includes('sentry')) return <Shield className="h-4 w-4" />;
+  if ((scenario.extras ?? []).includes('sentry')) return <Shield className="h-4 w-4" />;
   if (scenario.temp_c < 0) return <Snowflake className="h-4 w-4" />;
   if (scenario.speed_kmh > 90) return <Car className="h-4 w-4" />;
   return <Zap className="h-4 w-4" />;
@@ -158,7 +159,7 @@ export default function ProjectedRangePage() {
       error={error instanceof Error ? error : null}
       actions={
         vehicles && vehicles.length > 1 ? (
-          <Select
+          <ControlSelect
             options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
             value={activeId}
             onChange={(e) => setVehicleId(e.target.value)}
@@ -213,24 +214,16 @@ export default function ProjectedRangePage() {
             {data?.projection_curve && data.projection_curve.length > 0 ? (
               <ResponsiveContainer width="100%" height={260}>
                 <AreaChart data={data.projection_curve} margin={chartMargin}>
-                  <defs>
-                    <linearGradient id="ratedFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={CHART_COLORS[0]} stopOpacity={0.3} />
-                      <stop offset="95%" stopColor={CHART_COLORS[0]} stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="projectedFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={CHART_COLORS[1]} stopOpacity={0.3} />
-                      <stop offset="95%" stopColor={CHART_COLORS[1]} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
+                  {areaGradient('ratedFill', CHART_COLORS[0])}
+                  {areaGradient('projectedFill', CHART_COLORS[1])}
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" strokeOpacity={0.4} />
                   <XAxis dataKey="battery_pct" tick={axisTick} unit="%" />
                   <YAxis tick={axisTick} unit=" km" width={55} />
                   <Tooltip content={<ChartTooltip />} />
                   <Legend />
                   <ReferenceLine x={data.battery_level} stroke={CHART_COLORS[3]} strokeDasharray="4 4" label={t('range.current', 'Current')} />
-                  <Area type="monotone" dataKey="rated_range" name={t('range.rated', 'Rated Range')} stroke={CHART_COLORS[0]} fill="url(#ratedFill)" strokeWidth={2} />
-                  <Area type="monotone" dataKey="projected_range" name={t('range.projected', 'Projected Range')} stroke={CHART_COLORS[1]} fill="url(#projectedFill)" strokeWidth={2} />
+                  <Area {...AREA_DEFAULTS} dataKey="rated_range" name={t('range.rated', 'Rated Range')} stroke={CHART_COLORS[0]} fill="url(#ratedFill)" />
+                  <Area {...AREA_DEFAULTS} dataKey="projected_range" name={t('range.projected', 'Projected Range')} stroke={CHART_COLORS[1]} fill="url(#projectedFill)" />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
@@ -341,10 +334,15 @@ export default function ProjectedRangePage() {
                   <span>{t('range.speed', 'Speed')}</span>
                   <span className="font-bold text-white">{whatIfSpeed} km/h</span>
                 </div>
-                <input
-                  type="range" min={30} max={150} step={5} value={whatIfSpeed}
+                <ControlInput
+                  type="range"
+                  min={30}
+                  max={150}
+                  step={5}
+                  value={whatIfSpeed}
                   onChange={(e) => setWhatIfSpeed(Number(e.target.value))}
-                  className="w-full accent-neon-cyan h-1.5 rounded-full appearance-none bg-white/10 cursor-pointer"
+                  aria-label={t('range.speed', 'Speed')}
+                  className="h-1.5 w-full cursor-pointer appearance-none rounded-full border-0 bg-white/10 p-0 accent-neon-cyan dark:bg-white/10"
                 />
                 <div className="flex justify-between text-[9px] text-white/30 mt-0.5">
                   <span>30</span><span>90</span><span>150</span>
@@ -355,10 +353,15 @@ export default function ProjectedRangePage() {
                   <span>{t('range.temperature', 'Temperature')}</span>
                   <span className="font-bold text-white">{whatIfTemp}°C</span>
                 </div>
-                <input
-                  type="range" min={-20} max={40} step={1} value={whatIfTemp}
+                <ControlInput
+                  type="range"
+                  min={-20}
+                  max={40}
+                  step={1}
+                  value={whatIfTemp}
                   onChange={(e) => setWhatIfTemp(Number(e.target.value))}
-                  className="w-full accent-neon-amber h-1.5 rounded-full appearance-none bg-white/10 cursor-pointer"
+                  aria-label={t('range.temperature', 'Temperature')}
+                  className="h-1.5 w-full cursor-pointer appearance-none rounded-full border-0 bg-white/10 p-0 accent-neon-amber dark:bg-white/10"
                 />
                 <div className="flex justify-between text-[9px] text-white/30 mt-0.5">
                   <span>-20°C</span><span>10°C</span><span>40°C</span>

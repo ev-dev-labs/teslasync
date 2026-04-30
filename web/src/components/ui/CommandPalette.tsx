@@ -5,7 +5,7 @@ import { Search, Command, ArrowRight, Zap, ChevronLeft, Car } from 'lucide-react
 import { useTranslation } from 'react-i18next'
 import { Input } from '@/components/ui'
 import { cn } from '@/lib/cn'
-import { navSections } from '@/components/layout/Layout'
+import { navSearchKeywords, navSections } from '@/components/layout/Layout'
 import { useVehicles } from '@/api/hooks/useVehicles'
 import { useVehicleCommand } from '@/api/hooks/useVehicleCommand'
 import { COMMANDS, type CommandDef } from '@/features/system/commands'
@@ -107,7 +107,12 @@ function getIconForConfig(cfg: PaletteCommandConfig, def: CommandDef): React.Rea
 
 // ─── CommandPalette ─────────────────────────────────────────────────────────
 
-export function CommandPalette() {
+interface CommandPaletteProps {
+  /** Called when the palette opens — Layout uses this to close the mobile sidebar */
+  onOpen?: () => void
+}
+
+export function CommandPalette({ onOpen }: CommandPaletteProps) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -163,14 +168,22 @@ export function CommandPalette() {
 
   const navItems: PaletteItem[] = useMemo(() =>
     navSections.flatMap(section =>
-      section.items.map(item => ({
-        id: item.to,
-        label: item.label,
-        section: section.title,
-        icon: <item.icon className="h-4 w-4" />,
-        action: () => go(item.to),
-        type: 'navigate' as const,
-      }))
+      section.items.map(item => {
+        const keywords = navSearchKeywords[item.to] ?? []
+        const sublabel = keywords.length > 0
+          ? `${section.title} · ${keywords.slice(0, 3).join(', ')}`
+          : section.title
+        return {
+          id: item.to,
+          label: item.label,
+          section: section.title,
+          icon: <item.icon className="h-4 w-4" />,
+          action: () => go(item.to),
+          keywords,
+          sublabel,
+          type: 'navigate' as const,
+        }
+      })
     ),
   [go])
 
@@ -241,11 +254,15 @@ export function CommandPalette() {
   const filtered = useMemo(() => {
     if (!query.trim()) return allItems
     const q = query.toLowerCase()
-    return allItems.filter(cmd =>
-      cmd.label.toLowerCase().includes(q) ||
-      cmd.section.toLowerCase().includes(q) ||
-      (cmd.keywords ?? []).some(k => k.includes(q))
-    )
+    return allItems.filter(cmd => {
+      const haystack = [
+        cmd.label,
+        cmd.section,
+        cmd.sublabel ?? '',
+        ...(cmd.keywords ?? []),
+      ]
+      return haystack.some(value => value.toLowerCase().includes(q))
+    })
   }, [allItems, query])
 
   const displayItems = mode === 'vehicle-select' ? vehicleItems : filtered
@@ -273,16 +290,17 @@ export function CommandPalette() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [mode, goBack])
 
-  // Focus input when opened
+  // Focus input when opened; close sidebar on mobile
   useEffect(() => {
     if (open) {
       setQuery('')
       setSelectedIndex(0)
       setMode('search')
       setPendingCommand(null)
+      onOpen?.()
       setTimeout(() => inputRef.current?.focus(), 50)
     }
-  }, [open])
+  }, [open, onOpen])
 
   // Keyboard nav within palette
   function handleInputKey(e: React.KeyboardEvent) {
@@ -339,7 +357,7 @@ export function CommandPalette() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[200] bg-slate-950/35 backdrop-blur-sm dark:bg-black/60"
             onClick={close}
           />
           <motion.div
@@ -347,29 +365,29 @@ export function CommandPalette() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
             transition={{ type: 'spring', bounce: 0.15, duration: 0.3 }}
-            className="fixed left-1/2 top-[10%] sm:top-[15%] z-[201] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2"
+            className="fixed left-4 right-4 top-[10%] z-[201] max-w-lg sm:left-1/2 sm:right-auto sm:top-[15%] sm:-translate-x-1/2 sm:w-[calc(100%-2rem)]"
           >
-            <div className="overflow-hidden rounded-2xl shadow-2xl border border-white/[0.06] bg-white/[0.04] backdrop-blur-xl">
+            <div className="overflow-hidden rounded-2xl border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-2xl backdrop-blur-xl">
               {/* Search input / vehicle-select header */}
-              <div className="flex items-center gap-3 px-5 py-4 border-b border-white/[0.06]">
+              <div className="flex items-center gap-3 border-b border-[var(--glass-border)] px-5 py-4">
                 {mode === 'vehicle-select' ? (
                   <>
                     <button
                       onClick={goBack}
-                      className="flex-shrink-0 rounded-lg p-1 text-white/40 hover:text-white/70 hover:bg-white/[0.06] transition-colors"
+                      className="flex-shrink-0 rounded-lg p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
                     >
                       <ChevronLeft className="h-5 w-5" />
                     </button>
                     <div className="flex-1 flex items-center gap-2">
-                      <Zap className="h-4 w-4 text-[var(--accent)]" />
-                      <span className="text-sm text-white/70">
+                      <Zap className="h-4 w-4 text-[var(--theme-primary)]" />
+                      <span className="text-sm text-[var(--text-secondary)]">
                         {t('palette.selectVehicleFor', { command: pendingCommandLabel, defaultValue: `Send "${pendingCommandLabel}" to…` })}
                       </span>
                     </div>
                   </>
                 ) : (
                   <>
-                    <Search className="h-5 w-5 text-white/40 flex-shrink-0" />
+                    <Search className="h-5 w-5 flex-shrink-0 text-[var(--text-muted)]" />
                     <div className="flex-1">
                       <Input
                         ref={inputRef}
@@ -377,10 +395,10 @@ export function CommandPalette() {
                         onChange={e => setQuery(e.target.value)}
                         onKeyDown={handleInputKey}
                         placeholder={t('palette.placeholder', 'Search pages, commands…')}
-                        className="!bg-transparent !border-0 !ring-0 !shadow-none !p-0 !rounded-none text-sm text-white/90"
+                        className="!rounded-none !border-0 !bg-transparent !p-0 text-sm text-[var(--text-primary)] !shadow-none !ring-0 placeholder:text-[var(--text-muted)]"
                       />
                     </div>
-                    <kbd className="hidden sm:flex items-center gap-1 rounded-lg bg-white/[0.05] border border-white/[0.08] px-2 py-1 text-[10px] text-white/40 font-mono">
+                    <kbd className="hidden items-center gap-1 rounded-lg border border-[var(--glass-border)] bg-[var(--surface-2)] px-2 py-1 font-mono text-[10px] text-[var(--text-muted)] sm:flex">
                       ESC
                     </kbd>
                   </>
@@ -390,7 +408,7 @@ export function CommandPalette() {
               {/* Results */}
               <div ref={listRef} className="max-h-80 overflow-y-auto py-2 px-2" onKeyDown={mode === 'vehicle-select' ? handleInputKey : undefined}>
                 {displayItems.length === 0 ? (
-                  <div className="py-8 text-center text-sm text-white/40">
+                  <div className="py-8 text-center text-sm text-[var(--text-muted)]">
                     {mode === 'vehicle-select'
                       ? t('palette.noVehicles', 'No vehicles available')
                       : t('palette.noResults', { query, defaultValue: `No results for "${query}"` })
@@ -399,7 +417,7 @@ export function CommandPalette() {
                 ) : (
                   groupedItems.map(group => (
                     <div key={group.section}>
-                      <div className="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/30">
+                      <div className="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
                         {group.section}
                       </div>
                       {group.items.map(({ item, globalIndex }) => {
@@ -411,17 +429,17 @@ export function CommandPalette() {
                             onClick={item.action}
                             onMouseEnter={() => setSelectedIndex(globalIndex)}
                             className={cn(
-                              'flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm transition-colors',
+                              'flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm transition-colors min-h-[44px]',
                               isSelected
-                                ? 'bg-white/[0.06] text-white/90'
-                                : 'text-white/60 hover:bg-white/[0.03]'
+                                ? 'bg-[rgba(var(--theme-primary-rgb),0.10)] text-[var(--text-primary)] ring-1 ring-[rgba(var(--theme-primary-rgb),0.18)]'
+                                : 'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]'
                             )}
                           >
                             <span className={cn(
                               'flex-shrink-0',
                               isCommand
-                                ? isSelected ? 'text-[var(--accent)]' : 'text-[var(--accent)]/60'
-                                : isSelected ? 'text-[var(--accent)]' : 'text-white/40'
+                                ? isSelected ? 'text-[var(--theme-primary)]' : 'text-[var(--theme-primary)] opacity-70'
+                                : isSelected ? 'text-[var(--theme-primary)]' : 'text-[var(--text-muted)]'
                             )}>
                               {item.icon}
                             </span>
@@ -429,17 +447,17 @@ export function CommandPalette() {
                               <div className="flex items-center gap-2">
                                 <span className="font-medium truncate">{item.label}</span>
                                 {isCommand && (
-                                  <Zap className="h-3 w-3 flex-shrink-0 text-[var(--accent)]/70" />
+                                  <Zap className="h-3 w-3 flex-shrink-0 text-[var(--theme-primary)] opacity-70" />
                                 )}
                               </div>
                               {item.sublabel && (
-                                <span className="text-[11px] text-white/30 truncate block">
+                                <span className="block truncate text-[11px] text-[var(--text-muted)]">
                                   {item.sublabel}
                                 </span>
                               )}
                             </div>
                             {isSelected && (
-                              <ArrowRight className="h-3.5 w-3.5 flex-shrink-0 text-[var(--accent)]" />
+                              <ArrowRight className="h-3.5 w-3.5 flex-shrink-0 text-[var(--theme-primary)]" />
                             )}
                           </button>
                         )
@@ -450,18 +468,18 @@ export function CommandPalette() {
               </div>
 
               {/* Footer */}
-              <div className="flex items-center gap-4 px-5 py-3 border-t border-white/[0.06] text-[10px] text-white/30">
+              <div className="flex items-center gap-4 border-t border-[var(--glass-border)] px-5 py-3 text-[10px] text-[var(--text-muted)]">
                 <span className="flex items-center gap-1">
-                  <kbd className="rounded bg-white/[0.05] px-1.5 py-0.5 font-mono">↑↓</kbd> {t('palette.navigate', 'Navigate')}
+                  <kbd className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 font-mono">↑↓</kbd> {t('palette.navigate', 'Navigate')}
                 </span>
                 <span className="flex items-center gap-1">
-                  <kbd className="rounded bg-white/[0.05] px-1.5 py-0.5 font-mono">↵</kbd> {t('palette.select', 'Select')}
+                  <kbd className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 font-mono">↵</kbd> {t('palette.select', 'Select')}
                 </span>
                 <span className="flex items-center gap-1">
-                  <kbd className="rounded bg-white/[0.05] px-1.5 py-0.5 font-mono">ESC</kbd> {mode === 'vehicle-select' ? t('palette.back', 'Back') : t('palette.close', 'Close')}
+                  <kbd className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 font-mono">ESC</kbd> {mode === 'vehicle-select' ? t('palette.back', 'Back') : t('palette.close', 'Close')}
                 </span>
                 {mode === 'search' && vehicleList.length > 0 && (
-                  <span className="ml-auto flex items-center gap-1 text-[var(--accent)]/50">
+                  <span className="ml-auto flex items-center gap-1 text-[var(--theme-primary)]">
                     <Zap className="h-3 w-3" /> {vehicleList.length} {vehicleList.length === 1 ? t('palette.vehicle', 'vehicle') : t('palette.vehicles', 'vehicles')}
                   </span>
                 )}
@@ -480,11 +498,11 @@ export function CommandPaletteTrigger() {
   return (
     <button
       onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
-      className="flex w-full items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-2.5 text-sm text-white/40 hover:border-white/[0.12] hover:text-white/60 transition-all"
+      className="flex w-full items-center gap-3 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-1)] px-4 py-2.5 text-sm text-[var(--text-muted)] transition-all hover:border-[var(--theme-primary)] hover:text-[var(--text-secondary)]"
     >
       <Search className="h-4 w-4" />
       <span className="flex-1 text-left">Search...</span>
-      <kbd className="hidden sm:flex items-center gap-0.5 rounded-md bg-white/[0.05] border border-white/[0.08] px-1.5 py-0.5 text-[10px] font-mono text-white/40">
+      <kbd className="hidden items-center gap-0.5 rounded-md border border-[var(--glass-border)] bg-[var(--surface-2)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--text-muted)] sm:flex">
         <Command className="h-2.5 w-2.5" />K
       </kbd>
     </button>

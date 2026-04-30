@@ -2,21 +2,23 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ChartTooltip,
+  AREA_DEFAULTS, areaGradient,
 } from '@/components/charts'
 import { Navigation, Activity, Car, Settings } from 'lucide-react'
-import { MapContainer, Polyline, Marker } from '@/components/maps'
+import {
+  MapContainer, Polyline, Marker, vehicleIcon,
+  MapTileLayer, MapInvalidator, MapLayerSwitcher,
+  type LatLngExpression,
+  type MapStyle,
+} from '@/components/maps'
 import { GlassPanel } from '@/components/ui/GlassPanel'
 import { FadeIn } from '@/components/motion/FadeIn'
 import { MetricCard } from '@/components/data-display/MetricCard'
-import { MapTileLayer, MapInvalidator } from '@/components/maps/MapTileLayer'
-import { MapLayerSwitcher } from '@/components/maps/MapLayerSwitcher'
-import type { MapStyle } from '@/components/maps/MapTileLayer'
 import { useSettings } from '@/hooks/useSettings'
 import { cleanNil } from '@/lib/cleanNil'
 import { fmtNumber } from '@/lib/numberFormat'
 import { formatTime } from '@/lib/dateFormat'
 import { parseSettingEnum } from '@/lib/parseSettingEnum'
-import type { LatLngExpression } from 'leaflet'
 import type { VehicleState, Position, VehicleConfigSnapshot, UserPreferenceSnapshot } from '@/api/types'
 
 interface VehicleChartsProps {
@@ -44,9 +46,8 @@ export function VehicleCharts({
   const batteryData =
     positions
       ?.map((p) => ({
-        time: formatTime(p.created_at),
-        battery: p.battery_level,
-        speed: convertSpeed(p.speed ?? 0),
+        time: formatTime(p.ts),
+        speed: p.speed_mph != null ? convertSpeed(p.speed_mph) : null,
       }))
       .reverse() ?? []
 
@@ -72,7 +73,7 @@ export function VehicleCharts({
               >
                 <MapTileLayer style={mapStyle} />
                 <MapInvalidator />
-                <Marker position={[state.latitude, state.longitude]} />
+                <Marker position={[state.latitude, state.longitude]} icon={vehicleIcon()} />
                 {trail.length > 1 && (
                   <Polyline
                     positions={trail}
@@ -121,21 +122,21 @@ export function VehicleCharts({
                   value: cleanNil(vehicleConfigData.sunroof_installed) || 'Not Installed',
                 },
                 {
-                  label: 'Europe Vehicle',
+                  label: t('vehicles.detail.europeVehicle', 'Europe Vehicle'),
                   value:
                     vehicleConfigData.europe_vehicle != null
                       ? vehicleConfigData.europe_vehicle
-                        ? 'Yes'
-                        : 'No'
+                        ? t('common.yes', 'Yes')
+                        : t('common.no', 'No')
                       : '—',
                 },
                 {
-                  label: 'Right-Hand Drive',
+                  label: t('vehicles.detail.rhd', 'Right-Hand Drive'),
                   value:
                     vehicleConfigData.right_hand_drive != null
                       ? vehicleConfigData.right_hand_drive
-                        ? 'Yes'
-                        : 'No'
+                        ? t('common.yes', 'Yes')
+                        : t('common.no', 'No')
                       : '—',
                 },
                 {
@@ -240,12 +241,13 @@ export function VehicleCharts({
         <GlassPanel className="p-6 h-full">
           <h3 className="section-title mb-4 flex items-center gap-2">
             <Activity className="h-4 w-4 text-neon-cyan" />
-            {t('common.batterySpeedHistory', 'Battery & Speed History')}
+            {t('common.speedHistory', 'Speed History')}
           </h3>
           {batteryData.length > 0 ? (
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={batteryData}>
+                  {areaGradient('vehicleSpeedGrad', '#00f0ff', 0.1)}
                   <CartesianGrid
                     strokeDasharray="3 3"
                     stroke="var(--glass-border)"
@@ -255,33 +257,13 @@ export function VehicleCharts({
                     dataKey="time"
                     tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
                   />
-                  <YAxis
-                    yAxisId="left"
-                    domain={[0, 100]}
-                    tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
-                  />
-                  <YAxis
-                    yAxisId="right"
-                    orientation="right"
-                    tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
-                  />
+                  <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
                   <Tooltip content={<ChartTooltip />} />
                   <Area
-                    yAxisId="left"
-                    type="monotone"
-                    dataKey="battery"
-                    stroke="#10b981"
-                    fill="#10b981"
-                    fillOpacity={0.1}
-                    name="Battery %"
-                  />
-                  <Area
-                    yAxisId="right"
-                    type="monotone"
+                    {...AREA_DEFAULTS}
                     dataKey="speed"
                     stroke="#00f0ff"
-                    fill="#00f0ff"
-                    fillOpacity={0.1}
+                    fill="url(#vehicleSpeedGrad)"
                     name={`Speed ${speedUnit}`}
                   />
                 </AreaChart>
@@ -290,7 +272,7 @@ export function VehicleCharts({
           ) : (
             <div className="h-64 flex items-center justify-center">
               <p className="text-xs text-[var(--text-muted)]">
-                Position data will appear here
+                {t('common.positionDataWillAppear', 'Position data will appear here')}
               </p>
             </div>
           )}

@@ -51,13 +51,13 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                   <div className="flex-1 text-sm">
                     <p className="text-[var(--text-primary)] font-medium group-hover:text-neon-cyan transition-colors">
                       <AnimatedNumber
-                        value={convertDistance(d.distance)}
+                        value={convertDistance(d.distance_mi)}
                         decimals={1}
                         suffix={` ${distanceUnit}`}
                       />
                     </p>
                     <p className="text-xs text-[var(--text-muted)]">
-                      {formatDateTime(d.start_date)}
+                      {formatDateTime(d.start_ts)}
                     </p>
                   </div>
                   <div className="text-right">
@@ -65,9 +65,9 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                       icon={<Clock />}
                       value={`${Math.floor(d.duration_min / 60)}h ${fmtInt(d.duration_min % 60)}m`}
                     />
-                    {d.start_battery_level != null && d.end_battery_level != null && (
+                    {d.start_battery_pct != null && d.end_battery_pct != null && (
                       <span className="text-[10px] text-[var(--text-muted)]">
-                        {d.start_battery_level}% → {d.end_battery_level}%
+                        {d.start_battery_pct}% → {d.end_battery_pct}%
                       </span>
                     )}
                   </div>
@@ -111,13 +111,13 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                   <div className="flex-1 text-sm">
                     <p className="text-[var(--text-primary)] font-medium group-hover:text-neon-green transition-colors">
                       <AnimatedNumber
-                        value={s.charge_energy_added}
+                        value={s.energy_added_kwh}
                         decimals={1}
                         suffix=" kWh"
                       />
                     </p>
                     <p className="text-xs text-[var(--text-muted)]">
-                      {formatDateTime(s.start_date)}
+                      {formatDateTime(s.start_ts)}
                     </p>
                   </div>
                   <div className="text-right">
@@ -125,9 +125,9 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                       icon={<Clock />}
                       value={`${Math.floor(s.duration_min / 60)}h ${fmtInt(s.duration_min % 60)}m`}
                     />
-                    {s.end_battery_level != null && (
+                    {s.end_battery_pct != null && (
                       <span className="text-[10px] text-[var(--text-muted)]">
-                        {s.start_battery_level}% → {s.end_battery_level}%
+                        {s.start_battery_pct}% → {s.end_battery_pct}%
                       </span>
                     )}
                   </div>
