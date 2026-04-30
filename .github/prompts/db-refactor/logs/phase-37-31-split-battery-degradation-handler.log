@@ -1,0 +1,92 @@
+## PREFLIGHT
+start_utc=2026-04-30T05:57:20.8139960+00:00
+go_version=go version go1.26.1 windows/amd64
+engineer_email=iamatulmgupta@gmail.com
+powershell_version=7.6.1
+os_platform=Win32NT
+exports invariant ok: 1273 exported identifiers preserved
+import-graph invariant ok: 80 imports preserved
+## SURVEY
+source_lines_after=423
+new_file=internal/api/battery_degradation_handler_dtos.go lines=49
+new_file=internal/api/battery_degradation_handler_calculations.go lines=336
+## REASONING
+mechanical decomposition: split internal/api/battery_degradation_handler.go into internal/api/battery_degradation_handler_dtos.go, internal/api/battery_degradation_handler_calculations.go
+no behavior, API, SQL, JSON, route, config, or runtime ordering changes
+
+### Split map (per-prompt)
+source: internal/api/battery_degradation_handler.go (878 lines at HEAD)
+destinations:
+- internal/api/battery_degradation_handler.go (handlers stay; struct + ctor + Predict + Health)
+- internal/api/battery_degradation_handler_dtos.go (NEW; request/response DTOs)
+- internal/api/battery_degradation_handler_calculations.go (NEW; pure calc helpers)
+
+top-level identifiers being moved (all stay in package api):
+
+moves to internal/api/battery_degradation_handler_dtos.go (in source order):
+- type batterySnapshotData (verbatim, originally lines 25-34)
+- type degradationPrediction (verbatim, originally lines 236-245)
+- type predictiveProjection (verbatim, originally lines 247-252)
+- type riskFactor (verbatim, originally lines 254-259)
+- type regressionResult (verbatim, originally lines 261-265)
+- type monthlyTrend (verbatim, originally lines 812-821; doc comment preserved)
+
+moves to internal/api/battery_degradation_handler_calculations.go (in source order):
+- method (h *BatteryDegradationHandler) predictDegradation (verbatim, originally lines 267-391)
+- func computeRiskFactors (verbatim, originally lines 393-461; doc comment preserved)
+- func riskLabel (verbatim, originally lines 463-474)
+- func generateRecommendations (verbatim, originally lines 476-500; doc comment preserved)
+- func synthesizeBatterySnapshots (verbatim, originally lines 733-810; doc comment preserved)
+- func aggregateMonthlyTrends (verbatim, originally lines 823-878; doc comment preserved)
+
+stays in internal/api/battery_degradation_handler.go:
+- type BatteryDegradationHandler (handler struct with db + signalLogReader fields)
+- func NewBatteryDegradationHandler (constructor)
+- method (h *BatteryDegradationHandler) Predict (HTTP handler for /analytics/battery-degradation)
+- method (h *BatteryDegradationHandler) Health (HTTP handler for /analytics/battery-health)
+
+cross-file unexported references retained in same package (all resolved at package scope):
+- handlers (Predict, Health) reference unexported helpers now in calculations file:
+  predictDegradation (method on same type), computeRiskFactors, generateRecommendations,
+  synthesizeBatterySnapshots, aggregateMonthlyTrends
+- handlers reference unexported DTOs now in dtos file: batterySnapshotData
+- calculations file references unexported DTOs in dtos file: batterySnapshotData,
+  degradationPrediction, predictiveProjection, riskFactor, regressionResult, monthlyTrend
+- predictDegradation is a method on BatteryDegradationHandler defined in another file in
+  the same package; Go permits method definitions across files within one package
+- handlers continue to use package-scope helpers untouched in this prompt:
+  lookupVehicleCapacity, toFloatOk, writeJSON, writeError
+
+import handling per file:
+- battery_degradation_handler.go: removed "fmt" (only used by computeRiskFactors moved to calc)
+  and "sort" (only used by synthesizeBatterySnapshots/aggregateMonthlyTrends moved to calc);
+  retains "math", "net/http", "strconv", "time", "github.com/rs/zerolog/log",
+  "github.com/ev-dev-labs/teslasync/internal/database"
+- battery_degradation_handler_dtos.go (new): imports only "time"
+- battery_degradation_handler_calculations.go (new): imports "fmt", "math", "sort", "time",
+  "github.com/ev-dev-labs/teslasync/internal/database"
+- package-level import-graph union for internal/api: 80 imports preserved (other files
+  in the package already import "fmt" and "sort", so removing them from this file
+  does not change the package's union)
+
+exported-identifier invariant for package internal/api: 1273 exported identifiers
+preserved (no exported names moved or removed; BatteryDegradationHandler,
+NewBatteryDegradationHandler, Predict, Health all remain in handler file).
+
+per-prompt split map must be appended above this line by the engineer before edits
+## CHANGES
+internal/api/battery_degradation_handler.go sha256=2A675CAB959284DE8F9623BCB5D6BAF9D0C71C03677B4BABE15FC5D63EC823D7
+internal/api/battery_degradation_handler_dtos.go sha256=35ED12F1914E996FCC840CF5A708F82EEDB8EE3303D13A62A09442C51F9DF02C
+internal/api/battery_degradation_handler_calculations.go sha256=DE4086289FFED0DAF5CE7645C817B83595ACF11A8E89E6E559BEB8C882A4059D
+## GATE
+go build ./internal/api/... exit=0
+
+go build ./... exit=0
+
+go vet exit=0
+
+go test exit=0
+ok  	github.com/ev-dev-labs/teslasync/internal/api	0.180s
+
+EXIT=0
+STATUS=DONE
