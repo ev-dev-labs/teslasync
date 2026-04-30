@@ -2,8 +2,6 @@ package api
 
 import (
 	"context"
-	"net/http"
-	"strconv"
 	"sync"
 	"time"
 
@@ -14,7 +12,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/fsm/drive"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
-	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 )
 
@@ -320,111 +317,6 @@ func (h *FSMHandler) HandleSignalReceived(ctx context.Context, vehicleID int64) 
 	}
 }
 
-// CurrentState returns the FSM state for a vehicle.
-func (h *FSMHandler) CurrentState(vehicleID int64) string {
-	h.mu.Lock()
-	m, exists := h.machines[vehicleID]
-	h.mu.Unlock()
-	if !exists {
-		return ""
-	}
-	return string(m.Current())
-}
-
-// ActiveDrive returns the drive sub-FSM context for a vehicle, if active.
-func (h *FSMHandler) ActiveDrive(vehicleID int64) *drive.Context {
-	h.mu.Lock()
-	d, ok := h.drives[vehicleID]
-	h.mu.Unlock()
-	if !ok {
-		return nil
-	}
-	ctx := d.Context()
-	return &ctx
-}
-
-// ActiveDriveState returns the state and context of the active drive sub-FSM.
-func (h *FSMHandler) ActiveDriveState(vehicleID int64) (string, *drive.Context) {
-	h.mu.Lock()
-	d, ok := h.drives[vehicleID]
-	h.mu.Unlock()
-	if !ok {
-		return "", nil
-	}
-	ctx := d.Context()
-	return string(d.State()), &ctx
-}
-
-// ActiveCharge returns the charge sub-FSM context for a vehicle, if active.
-func (h *FSMHandler) ActiveCharge(vehicleID int64) *charge.Context {
-	h.mu.Lock()
-	c, ok := h.charges[vehicleID]
-	h.mu.Unlock()
-	if !ok {
-		return nil
-	}
-	ctx := c.Context()
-	return &ctx
-}
-
-// ActiveChargeState returns the state and context of the active charge sub-FSM.
-func (h *FSMHandler) ActiveChargeState(vehicleID int64) (string, *charge.Context) {
-	h.mu.Lock()
-	c, ok := h.charges[vehicleID]
-	h.mu.Unlock()
-	if !ok {
-		return "", nil
-	}
-	ctx := c.Context()
-	return string(c.State()), &ctx
-}
-
-// Stats returns the number of active FSM instances.
-func (h *FSMHandler) Stats() map[string]int {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	return map[string]int{
-		"vehicles": len(h.machines),
-		"drives":   len(h.drives),
-		"charges":  len(h.charges),
-	}
-}
-
-// VehicleFSMSnapshot is a point-in-time view of one vehicle's FSM state.
-// Exposed via /fsm/stats so the frontend can flag FSMs that are stale despite
-// the vehicle actively streaming telemetry.
-type VehicleFSMSnapshot struct {
-	VehicleID                  int64     `json:"vehicle_id"`
-	State                      string    `json:"state"`
-	LastTransitionAt           time.Time `json:"last_transition_at"`
-	SecondsSinceLastTransition float64   `json:"seconds_since_last_transition"`
-	IsGearCapable              bool      `json:"is_gear_capable"`
-}
-
-// VehicleSnapshots returns one snapshot per known vehicle FSM.
-func (h *FSMHandler) VehicleSnapshots() []VehicleFSMSnapshot {
-	h.mu.Lock()
-	machines := make(map[int64]*fsm.VehicleFSM, len(h.machines))
-	for id, m := range h.machines {
-		machines[id] = m
-	}
-	h.mu.Unlock()
-
-	now := time.Now()
-	out := make([]VehicleFSMSnapshot, 0, len(machines))
-	for id, m := range machines {
-		last := m.LastTransitionAt()
-		out = append(out, VehicleFSMSnapshot{
-			VehicleID:                  id,
-			State:                      string(m.Current()),
-			LastTransitionAt:           last,
-			SecondsSinceLastTransition: now.Sub(last).Seconds(),
-			IsGearCapable:              m.IsGearCapable(),
-		})
-	}
-	return out
-}
-
 // reconcileInterval is the period between reconciliation sweeps.
 const reconcileInterval = 15 * time.Second
 
@@ -531,72 +423,4 @@ func (h *FSMHandler) reconcileVehicle(vehicleID int64, now time.Time) {
 	h.ProcessSignals(ctx, vehicleID, signals)
 
 	metrics.FSMReconcileTotal.WithLabelValues("corrected").Inc()
-}
-
-// FSMDebugResponse is the JSON response for the FSM debug endpoint.
-type FSMDebugResponse struct {
-	VehicleID       int64            `json:"vehicle_id"`
-	FSM             fsm.FSMDebugInfo `json:"fsm"`
-	LastProcessedAt *time.Time       `json:"last_processed_at,omitempty"`
-	HasActiveDrive  bool             `json:"has_active_drive"`
-	HasActiveCharge bool             `json:"has_active_charge"`
-	Reconciliation  *ReconcileDebug  `json:"reconciliation,omitempty"`
-}
-
-// ReconcileDebug holds reconciliation diagnostics for the debug endpoint.
-type ReconcileDebug struct {
-	ExpectedState string `json:"expected_state"`
-	Confidence    string `json:"confidence"`
-	Reason        string `json:"reason"`
-	FreshestAt    string `json:"freshest_at,omitempty"`
-	Mismatch      bool   `json:"mismatch"`
-}
-
-// HandleDebug returns diagnostic FSM information for a vehicle.
-func (h *FSMHandler) HandleDebug(w http.ResponseWriter, r *http.Request) {
-	vehicleIDStr := chi.URLParam(r, "vehicleID")
-	vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
-		return
-	}
-
-	h.mu.Lock()
-	m := h.machines[vehicleID]
-	_, hasDrive := h.drives[vehicleID]
-	_, hasCharge := h.charges[vehicleID]
-	lastProc := h.lastProcessed[vehicleID]
-	store := h.localSignals
-	h.mu.Unlock()
-
-	if m == nil {
-		writeError(w, http.StatusNotFound, "no FSM for vehicle")
-		return
-	}
-
-	resp := FSMDebugResponse{
-		VehicleID:       vehicleID,
-		FSM:             m.DebugInfo(),
-		HasActiveDrive:  hasDrive,
-		HasActiveCharge: hasCharge,
-	}
-	if !lastProc.IsZero() {
-		resp.LastProcessedAt = &lastProc
-	}
-
-	if store != nil {
-		result := fsm.DeriveExpectedState(vehicleID, store, time.Now())
-		rd := &ReconcileDebug{
-			Confidence: result.Confidence.String(),
-			Reason:     result.Reason,
-		}
-		if result.Confidence > fsm.ConfidenceNone {
-			rd.ExpectedState = string(result.ExpectedState)
-			rd.FreshestAt = result.FreshestAt.Format(time.RFC3339)
-			rd.Mismatch = result.ExpectedState != fsm.State(resp.FSM.CurrentState)
-		}
-		resp.Reconciliation = rd
-	}
-
-	writeJSON(w, http.StatusOK, resp)
 }

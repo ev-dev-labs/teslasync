@@ -1,0 +1,68 @@
+## PREFLIGHT
+start_utc=2026-04-30T07:26:08.2149945+00:00
+go_version=go version go1.26.1 windows/amd64
+engineer_email=iamatulmgupta@gmail.com
+powershell_version=7.6.1
+os_platform=Win32NT
+exports invariant ok: 1273 exported identifiers preserved
+import-graph invariant ok: 80 imports preserved
+## SURVEY
+source_lines_after=371
+new_file=internal/api/fsm_handler_dtos.go lines=32
+new_file=internal/api/fsm_handler_query.go lines=139
+## REASONING
+mechanical decomposition: split internal/api/fsm_handler.go into internal/api/fsm_handler_dtos.go, internal/api/fsm_handler_query.go
+no behavior, API, SQL, JSON, route, config, or runtime ordering changes
+
+split map (source -> destination):
+  internal/api/fsm_handler.go -> internal/api/fsm_handler_dtos.go
+    type VehicleFSMSnapshot
+    type FSMDebugResponse
+    type ReconcileDebug
+  internal/api/fsm_handler.go -> internal/api/fsm_handler_query.go
+    method (*FSMHandler).CurrentState
+    method (*FSMHandler).ActiveDrive
+    method (*FSMHandler).ActiveDriveState
+    method (*FSMHandler).ActiveCharge
+    method (*FSMHandler).ActiveChargeState
+    method (*FSMHandler).Stats
+    method (*FSMHandler).VehicleSnapshots
+    method (*FSMHandler).HandleDebug
+
+cross-file unexported references (resolved within package api):
+  - FSMHandler struct fields (mu, machines, drives, charges, lastProcessed, localSignals)
+    accessed by query methods in fsm_handler_query.go
+  - writeError/writeJSON helpers (already in package api) used by HandleDebug
+
+stays in internal/api/fsm_handler.go:
+  type FSMHandler
+  type fsmAction
+  func NewFSMHandler
+  method (*FSMHandler).SetSignalStore
+  method (*fsmAction).Execute
+  method (*FSMHandler).manageSubFSMs
+  method (*FSMHandler).getOrCreate
+  method (*FSMHandler).ProcessSignals
+  method (*FSMHandler).HandleTimeout
+  method (*FSMHandler).HandleSignalReceived
+  const reconcileInterval
+  method (*FSMHandler).StartReconcileLoop
+  method (*FSMHandler).StopReconcileLoop
+  method (*FSMHandler).reconcileAll
+  method (*FSMHandler).reconcileVehicle
+## CHANGES
+internal/api/fsm_handler.go sha256=3048E7E7936D068AA47AD268285CB46006655CEE5A3A3242F46C6F9B1BCF4EA1
+internal/api/fsm_handler_dtos.go sha256=0A2843610D3A0C5F9A1506DB6265605351AD6EDAFB5FFAA878F604565E4C0B17
+internal/api/fsm_handler_query.go sha256=59C3EE5A73D76D4817E26E6DD4CB1109782A0E07F5B99B35AB9E4C8DFB0E1659
+## GATE
+go build ./internal/api/... exit=0
+
+go build ./... exit=0
+
+go vet exit=0
+
+go test exit=0
+ok  	github.com/ev-dev-labs/teslasync/internal/api	0.200s
+
+EXIT=0
+STATUS=DONE
