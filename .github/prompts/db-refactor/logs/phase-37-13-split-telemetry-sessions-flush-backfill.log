@@ -1,0 +1,80 @@
+## PREFLIGHT
+start_utc=2026-04-30T03:29:53.4681847+00:00
+go_version=go version go1.26.1 windows/amd64
+engineer_email=iamatulmgupta@gmail.com
+powershell_version=7.6.1
+os_platform=Win32NT
+exports invariant ok: 1273 exported identifiers preserved
+import-graph invariant ok: 80 imports preserved
+## SURVEY
+source_lines_after=74
+new_file=internal/api/telemetry_sessions_flush_backfill.go lines=96
+## REASONING
+mechanical decomposition: split internal/api/telemetry_sessions.go into internal/api/telemetry_sessions_flush_backfill.go
+no behavior, API, SQL, JSON, route, config, or runtime ordering changes
+
+split_map (engineer-authored, per Action Step 3):
+  source_file=internal/api/telemetry_sessions.go
+  destination_file=internal/api/telemetry_sessions_flush_backfill.go
+
+  identifiers moved to telemetry_sessions_flush_backfill.go (verbatim, in original statement order):
+    method (*TelemetrySessionTracker).StartBufferDrains      (HEAD lines  56- 58, flush shim — caller-compat for main.go)
+    method (*TelemetrySessionTracker).FlushBuffers           (HEAD lines  60- 61, flush shim — caller-compat for main.go)
+    method (*TelemetrySessionTracker).DriveBufferLen         (HEAD lines  63- 64, flush shim — caller-compat for router.go)
+    method (*TelemetrySessionTracker).ChargeBufferLen        (HEAD lines  66- 67, flush shim — caller-compat for router.go)
+    method (*TelemetrySessionTracker).CleanupStaleSessions   (HEAD lines  99-140, idle-session expiry + orphaned-DB cleanup)
+    type   nearestPosition                                   (HEAD lines 142-152, backfill helper struct — comment doc'ing the function intentionally remains above the type per HEAD ordering)
+    func   findNearestPositionFallback                       (HEAD lines 154-176, backfill helper — used by completeDriveLocked AND completeChargeLocked)
+    func   absDuration                                       (HEAD lines 178-183, backfill helper — only consumer is findNearestPositionFallback)
+
+  identifiers retained in telemetry_sessions.go (still package-visible, referenced cross-file by the moved code):
+    type TelemetrySessionTracker     (struct with mu, db, activeDrives, activeCharges, etc. — moved methods use the *t receiver in the same package)
+    func NewTelemetrySessionTracker  (constructor — initializes activeDrives/activeCharges maps that CleanupStaleSessions iterates)
+    method (*TelemetrySessionTracker).SetSignalLogReader (kept beside other state-mutator methods on the tracker type)
+    const  telemetryWriteInterval    (controls flush cadence for drive+charge telemetry; consumers maybeFlushDriveTelemetry — in drive_tracking.go — and maybeFlushChargeTelemetry — in charge_tracking.go — are unchanged by this split)
+    func   accumulateSignals         (utility used by trackDriving/trackCharging — both in their own split files)
+    method (*TelemetrySessionTracker).ProcessSignals (orchestrator — calls trackDriving + trackCharging in the other split files)
+
+  cross-file unexported references resolved within package api (split is mechanical only):
+    - findNearestPositionFallback (now in flush_backfill.go) is called from telemetry_sessions_drive_tracking.go (backfillDriveValues) and telemetry_sessions_charge_tracking.go (backfillChargeValues) — same-package symbol resolution, no exports added.
+    - CleanupStaleSessions (now in flush_backfill.go) calls completeDriveLocked (in drive_tracking.go) and completeChargeLocked (in charge_tracking.go) — same-package, all three are unexported methods on *TelemetrySessionTracker.
+    - CleanupStaleSessions reads t.activeDrives/t.activeCharges and uses t.mu (defined on the struct in the main file) and t.db.Pool (database.DB pointer in the struct) — all field access through receiver, no new exports needed.
+    - StartBufferDrains/FlushBuffers/DriveBufferLen/ChargeBufferLen are called from cmd/teslasync/main.go and internal/api/router.go — exported names unchanged, so external callers compile unchanged.
+
+  imports retained in main file telemetry_sessions.go:
+    context (ProcessSignals param), sync (TelemetrySessionTracker.mu sync.Mutex), time (telemetryWriteInterval const),
+    database (struct field types: DriveRepo, ChargingRepo, PositionRepo, GeofenceRepo, PlacesCacheRepo, TripRepo,
+              SignalHistoryWriter, SignalLogReader, plus database.NewXxxRepo ctors and SetSignalLogReader param),
+    events (EventBus field type), geocoding (Geocoder field type), signal (Store field type)
+  imports removed from main file (no longer used after CleanupStaleSessions moved out):
+    log (zerolog) — only consumer was CleanupStaleSessions' log.Warn calls
+  imports declared in new file telemetry_sessions_flush_backfill.go:
+    context (StartBufferDrains/FlushBuffers/CleanupStaleSessions/findNearestPositionFallback ctx params),
+    time (time.Duration, time.Now, time.Time in CleanupStaleSessions/findNearestPositionFallback/absDuration),
+    database (database.PositionRepo type in findNearestPositionFallback signature),
+    log (zerolog log.Warn calls in CleanupStaleSessions)
+  imports NOT carried into the new file (intentionally absent):
+    sync — TelemetrySessionTracker.mu accessed via *t receiver; type definition stays in main file, so the new file does not need the sync import
+    events / geocoding / signal — only referenced as TelemetrySessionTracker struct field types in the main file; the moved methods access them through receiver-field selectors (none in the moved code), so no imports needed in new file
+
+  layered live-state contract preservation (3-layer pipeline rules):
+    - SignalStore L1: not touched by any moved code. CleanupStaleSessions only reads in-memory session maps (activeDrives/activeCharges) and the pgx pool; findNearestPositionFallback queries the durable positions table via PositionRepo.ListByVehicle. No L1 hot-path code was relocated.
+    - Redis L2: not touched. No vehicle:{vehicleID}:signals HSET reads/writes were introduced or relocated.
+    - signal_log L3: not touched directly. CleanupStaleSessions delegates end-of-session enrichment to completeDriveLocked/completeChargeLocked which remain in their own files (drive_tracking.go / charge_tracking.go) — the L3-reading completion pipeline is NOT split across files; this file only initiates closure via the in-memory expiry trigger.
+    - FSM/commit logic: the orphaned-DB UPDATE statements inside CleanupStaleSessions (write-only "interrupted" status fix) stay together as a single best-effort recovery stage; they don't interleave with the L1→commit pipeline that lives in completeDriveLocked/completeChargeLocked.
+    - Backfill helpers (findNearestPositionFallback / absDuration / nearestPosition) are pure read-from-positions-table helpers consumed by both backfill pipelines (drive + charge). Co-locating them with the cleanup/backfill subset matches their cohesive role; consumers in drive_tracking.go and charge_tracking.go reference them via same-package unexported symbols, so the read pipeline (positions DB → nearest match → backfill) remains a single logical stage even though the call site lives in another file (this is fine — the helpers are pure and stateless).
+## CHANGES
+internal/api/telemetry_sessions.go sha256=B4D57558336E22CB3280A8DA933F4FD3A4A7724D2A17BC4F88458E191383E26A
+internal/api/telemetry_sessions_flush_backfill.go sha256=E5617AD24CA9376BFC6FDE9C3C63365DD182750C0EB62E2A210E04F44523AEF8
+## GATE
+go build ./internal/api/... exit=0
+
+go build ./... exit=0
+
+go vet exit=0
+
+go test exit=0
+ok  	github.com/ev-dev-labs/teslasync/internal/api	0.217s
+
+EXIT=0
+STATUS=DONE
