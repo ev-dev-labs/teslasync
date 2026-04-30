@@ -1,0 +1,134 @@
+=== PREFLIGHT ===
+Phase: 38
+Prompt: 00-live-state-bug-decision-record
+Type: gate / decision record
+Atomic: yes
+Delegation: FORBIDDEN (no sub-agents, no parallel, no background tasks used)
+Predecessor: none (phase entry gate)
+Allowed files to change: .github/prompts/db-refactor/logs/phase-38-00-live-state-bug-decision-record.log only
+Working dir: D:\repos\teslasync
+Repo head clean before run: yes (verified via git --no-pager status --short)
+
+=== SURVEY ===
+Cited code paths verified to exist and to match the bug description:
+
+1. internal/signal/live_store.go:215-218
+   `HybridLiveSignalStore.GetAll` returns `freshSignalValues(values, s.now())` when L2
+   returns a non-empty map. The L1 fallback at lines 215-216 (`if len(values) == 0`)
+   only triggers when the raw Redis hash is empty, NOT when the freshness filter
+   strips everything. This matches failure (1) and (2) in the prompt.
+
+2. internal/signal/live_store.go:256-280 (`hydrateMissingValues`)
+   Used by `Warm`. Skips entries with `value.Timestamp.IsZero()` (legacy scalar
+   Redis values). Confirms that legacy scalars never enter L1 even after Warm,
+   so they are silently dropped on every read path that goes through L2 first.
+
+3. internal/service/vehicle_service.go contains `BuildStateFromSignalStore`
+   (file confirmed via grep). Per the prompt, only `state.State` has a DB
+   fallback; numeric/string fields fall to zero when the live map is empty.
+
+4. internal/database/signal_log_reader_query.go:28-33
+   `SignalLogReader.SnapshotAt(ctx, vehicleID, at)` already exists and returns
+   the latest value of every signal for a vehicle at or before `at`. This is
+   the durable L3 read that ADR-001 promises and is the correct source for the
+   missing fallback in `BuildStateFromSignalStore`.
+
+5. .github/ARCHITECTURE.md:9 (ADR-001 Unified Signal Log) and
+   .github/ARCHITECTURE.md:37 (ADR-007 Live Signal State Layering) both exist
+   and define the L1/L2/L3 contract referenced in this decision record.
+
+No additional files were inspected. No source files were modified. No production
+systems were inspected.
+
+=== REASONING ===
+Phase 38 is bug-fix-only. It addresses a user-visible regression where the
+dashboard endpoint `GET /api/v1/vehicles/{id}/state` reports zeros for fields
+(odometer, inside_temp, outside_temp, software_version, ...) whose values are
+present in Redis (`vehicle:{id}:signals` HSET) and signal_log.
+
+Three independent failures, each verified above, combine into the symptom:
+
+  (a) `HybridLiveSignalStore.GetAll` strips legacy scalar entries
+      (Timestamp.IsZero()) and >2-minute-stale entries via `freshSignalValues`,
+      and only consults L1 when the *raw* Redis hash is empty. After the filter
+      empties the result, callers see "no live data" and zero out the response.
+
+  (b) `Warm` / `hydrateMissingValues` refuses to promote legacy scalars into
+      L1, so the L1 path can never compensate for (a) on existing fleets that
+      have legacy Redis values.
+
+  (c) `service.VehicleService.BuildStateFromSignalStore` has DB fallback only
+      for `state.State`. There is no signal_log "last known value" lookup for
+      numeric/string fields, even though `SignalLogReader.SnapshotAt` already
+      exposes that read. ADR-001 designates signal_log as the durable source
+      of truth; this fallback is the existing-but-unused L3 read it promises.
+
+Approved scope of Phase 38 (bug-fix-only):
+
+  Change 1: Stop dropping stale and legacy values from `GetAll` in a way that
+            silently zeroes the dashboard. Either return the unfiltered map and
+            let callers decide freshness, or fall through to L1 when the
+            filtered map is empty. No new Redis keys, no new schema.
+
+  Change 2: Add a signal_log fallback for missing fields in
+            `BuildStateFromSignalStore` using `SignalLogReader.SnapshotAt`.
+            This uses the L3 read ADR-001 already designates as durable
+            history; it does NOT introduce snapshot-table reads (positions,
+            security_events, climate_snapshots, etc.) that ADR-001/ADR-007
+            forbid.
+
+  Change 3: Restamp legacy `Timestamp.IsZero()` Redis entries during `Warm`
+            (or on first observation) so the L1/L2 contract converges to
+            ADR-007's "live values older than 2 minutes are stale; legacy
+            scalars are unknown freshness". Restamping uses the current write
+            time only when promoting into L1 from a legacy scalar and is
+            scoped so it does not falsify true freshness.
+
+ADR alignment:
+
+  ADR-001 (Unified Signal Log): Preserved. signal_log remains the single
+          source of truth for durable history. Change 2 USES SnapshotAt; it
+          does not add a new write path or new snapshot tables.
+
+  ADR-007 (Live Signal State Layering): Preserved. L1 SignalStore stays the
+          local hot-path store for telemetry/FSM/sessions. L2 RedisSignalCache
+          stays the cross-pod current-state cache and SSE fanout. L3 signal_log
+          stays the durable history. The keys
+          `vehicle:{vehicleID}:signals`, `vehicle_signals`, and
+          `signal_log:backlog` are unchanged. The 2-minute live-staleness rule
+          is unchanged.
+
+What Phase 38 will NOT do (explicit non-goals, to defend the contract):
+
+  - No new schema migrations.
+  - No new API surface or new endpoints.
+  - No reads from snapshot tables (positions, climate_snapshots,
+    security_events, motor_snapshots, tire_pressure_snapshots,
+    media_snapshots, safety_snapshots) for "current value" answers.
+  - No removal of the SignalStore L1 hot path.
+  - No making Redis a synchronous blocker for MQTT/telemetry ingestion.
+  - No claim of active-active FSM/reconciliation across pods without
+    vehicle-owner routing or leases.
+  - No widening of LIVE_SIGNAL_STORE_MODE semantics (`local` remains the
+    rollback switch).
+
+Decision: Approve all three changes as bug-fix scope. Subsequent prompts in
+Phase 38 will implement, test, and gate each change individually.
+
+=== CHANGES ===
+No source files changed.
+This prompt is a decision-record gate; the only file written is this log:
+  .github/prompts/db-refactor/logs/phase-38-00-live-state-bug-decision-record.log
+
+=== GATE ===
+OPERATOR_SUPPLIED_ENV_FLAGS
+BUG_CONFIRMED=1
+CHANGE_1_APPROVED=1
+CHANGE_2_APPROVED=1
+CHANGE_3_APPROVED=1
+BAD_FLAG_COUNT=0
+MISSING_LOG_PATTERN_COUNT=0
+UNEXPECTED_STATUS_COUNT=0
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
