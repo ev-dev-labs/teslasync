@@ -1,0 +1,74 @@
+## PREFLIGHT
+start_utc=2026-04-30T07:53:08.6733480+00:00
+go_version=go version go1.26.1 windows/amd64
+engineer_email=iamatulmgupta@gmail.com
+powershell_version=7.6.1
+os_platform=Win32NT
+exports invariant ok: 1273 exported identifiers preserved
+import-graph invariant ok: 80 imports preserved
+## SURVEY
+source_lines_after=73
+new_file=internal/api/trip_planner_handler_dtos.go lines=70
+new_file=internal/api/trip_planner_handler_compute.go lines=363
+## REASONING
+mechanical decomposition: split internal/api/trip_planner_handler.go into internal/api/trip_planner_handler_dtos.go, internal/api/trip_planner_handler_compute.go
+no behavior, API, SQL, JSON, route, config, or runtime ordering changes
+
+per-prompt split map:
+  source: internal/api/trip_planner_handler.go (HEAD: 575 lines, CRLF + non-canonical alignment; gofmt -w applied to all touched files)
+
+  destination -> internal/api/trip_planner_handler.go (RETAINED, package api):
+    const block: defaultBatteryCapacityKWh, defaultEfficiencyWhKm, drivingDistanceFactor, defaultElectricityCost, superchargerCostPerKWh, minStopSOCThreshold, chargerPowerKW
+    type   TripPlannerHandler
+    func   NewTripPlannerHandler
+    method (*TripPlannerHandler).Plan
+    imports retained: context, encoding/json, net/http, time, github.com/rs/zerolog/log, internal/cache, internal/database
+    imports removed (no longer referenced here): fmt, math
+
+  destination -> internal/api/trip_planner_handler_dtos.go (NEW, package api):
+    type tripPlanLocation
+    type tripPlanPreferences
+    type tripPlanRequest
+    type tripPlanRoute
+    type tripPlanLeg
+    type tripChargeStop
+    type tripWeatherImpact
+    type tripSOCPoint
+    type tripPlanResponse
+    imports: (none — only basic Go types and intra-package references)
+
+  destination -> internal/api/trip_planner_handler_compute.go (NEW, package api):
+    method (*TripPlannerHandler).computePlan
+    method (*TripPlannerHandler).buildStopsAlongRoute
+    func   estimateChargeTime
+    method (*TripPlannerHandler).vehicleEfficiency
+    method (*TripPlannerHandler).batteryCapacity
+    method (*TripPlannerHandler).estimateWeatherImpact
+    method (*TripPlannerHandler).buildSOCCurve
+    func   haversineKm
+    imports: context, fmt, math, time
+
+  cross-file unexported references that must remain visible in package api:
+    - constants: defaultBatteryCapacityKWh, defaultEfficiencyWhKm, drivingDistanceFactor, superchargerCostPerKWh, minStopSOCThreshold, chargerPowerKW (defined in handler, used in compute)
+    - struct TripPlannerHandler fields db, cache, signalLogReader (defined in handler, used by methods in compute)
+    - all tripPlan*/tripChargeStop/tripWeatherImpact/tripSOCPoint DTO types (defined in dtos, used by handler.Plan and compute.* methods)
+    - func haversineKm, estimateChargeTime (defined in compute, only consumed within compute)
+    - method computePlan (defined in compute, called from handler.Plan)
+    - top-level package helpers writeJSON, writeError (defined elsewhere in package, used in handler.Plan)
+    - defaultElectricityCost remains an unused-in-this-prompt package-private constant (preserved verbatim per mechanical-only rule)
+## CHANGES
+internal/api/trip_planner_handler.go sha256=6DFB2F9F1CE883A8FFB37CE9402193ACCB9604D7060892480D304E6CCDB88427
+internal/api/trip_planner_handler_dtos.go sha256=49A8971F51E7E8B99BC833261276C093B567E09A9BA66A3C2FA9ADB52C2A9C6E
+internal/api/trip_planner_handler_compute.go sha256=FAEE84C120CBA1AD7C1736F0E7FC00B1B52E5D12C67502BBC4AC546054FECBE9
+## GATE
+go build ./internal/api/... exit=0
+
+go build ./... exit=0
+
+go vet exit=0
+
+go test exit=0
+ok  	github.com/ev-dev-labs/teslasync/internal/api	0.163s
+
+EXIT=0
+STATUS=DONE
