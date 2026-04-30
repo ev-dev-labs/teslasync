@@ -1,0 +1,319 @@
+=== PREFLIGHT ===
+Phase: 38
+Prompt: 03-vehicle-state-fallback-tests
+Type: test specification (log only — no source or test files modified in this prompt)
+Atomic: yes
+Delegation: FORBIDDEN (no sub-agents, no parallel, no background tasks used)
+Predecessor: phase-38-02-live-store-merge.log (verified EXIT=0 STATUS=DONE)
+Allowed files to change:
+  - .github/prompts/db-refactor/logs/phase-38-03-vehicle-state-fallback-tests.log
+Working dir: D:\repos\teslasync
+Required reads completed:
+  - .github/ARCHITECTURE.md (ADR-001 Unified Signal Log lines 9-35; ADR-007 Live
+    Signal State Layering lines 37-99)
+  - .github/instructions/data-modeling.instructions.md (snake_case tag/column
+    alignment, no-fabricated-data discipline)
+  - phase-38-02-live-store-merge.log (predecessor — confirmed DONE)
+  - internal/service/vehicle_service.go (full)
+  - internal/database/signal_log_reader.go (full)
+  - internal/database/signal_log_reader_query.go (SnapshotAt definition lines
+    28-67 — confirms exact signature)
+  - internal/models/vehicle.go (VehicleState field shape lines 39-65)
+
+Working-tree drift cleanup: a stale post-commit annotation on
+phase-38-02-live-store-merge.log was reverted with
+`git checkout -- .github/prompts/db-refactor/logs/phase-38-02-live-store-merge.log`
+before this log was written. The committed predecessor log content is
+unchanged. No source files are modified by this prompt.
+
+=== SURVEY ===
+Current vehicle_service test coverage:
+  - `Get-ChildItem internal/service -Filter "*_test.go"` → no files. There is
+    NO existing test file for VehicleService. `BuildStateFromSignalStore` is
+    presently uncovered by unit tests.
+  - Repo-wide `grep "BuildStateFromSignalStore"` shows the function is called
+    only from `internal/api/vehicle_handler.go` GET handlers; behavior is
+    therefore exercised end-to-end but never asserted in isolation.
+
+SignalLogReader.SnapshotAt confirmed signature
+(internal/database/signal_log_reader_query.go:33):
+  func (r *SignalLogReader) SnapshotAt(
+      ctx context.Context,
+      vehicleID int64,
+      at time.Time,
+  ) (map[string]interface{}, error)
+
+  Returns `map[string]interface{}` keyed by Tesla signal name, with values
+  decoded by canonical priority value_num→value_bool→value_jsonb→value_str.
+  Numeric signals come back as float64, strings as string, etc. — the same
+  decoded shape Prompt 04 must stub.
+
+VehicleState fields touched by Phase 1 of BuildStateFromSignalStore that the
+fallback must be able to fill (internal/models/vehicle.go:39-65):
+  Speed, Odometer, BatteryLevel, IdealRange, RatedRange, InsideTemp,
+  OutsideTemp, Latitude, Longitude, Heading, Power, IsCharging,
+  ChargerPower, ChargeRate, TimeToFullChg, IsLocked, SentryMode,
+  SoftwareVersion, IsClimateOn.
+
+Existing legacy fallback path:
+  vehicle_service.go currently has only a single Phase-2 fallback —
+  `stateRepo.GetCurrentState(ctx, vehicle.ID)` to fill `state.State`. Numeric
+  and string telemetry fields have NO fallback at all today: when the live
+  store is empty after a pod restart, `state.Odometer`, `state.InsideTemp`,
+  `state.OutsideTemp`, `state.SoftwareVersion`, etc. all return as Go zero
+  values. This is the bug Prompt 04 must close.
+
+Snapshot-table reads in vehicle_service.go: NONE today (positionRepo and
+securityRepo are exposed via accessors but BuildStateFromSignalStore itself
+does not query them). The fallback added in Prompt 04 MUST preserve that —
+only signal_log via SignalLogReader.SnapshotAt. ADR-001 forbids reading from
+positions, state_snapshots, battery_snapshots, climate_snapshots, etc.
+
+=== REASONING ===
+Contract for the signal_log fallback (the behavior Prompt 04 implements and
+the tests below must lock down):
+
+  R1. Live values always win. The fallback only fills VehicleState fields
+      that the live store left at their Go zero value. If the live store
+      already supplied a value (even an explicit zero in the future, but
+      practically: any non-zero numeric or non-empty string), the fallback
+      must NOT overwrite it. "Live data is fresh and authoritative; the
+      signal_log read is purely a backstop." Live values are used in
+      preference to signal_log every time.
+
+  R2. Only `signal_log` is consulted. Per ADR-001, the fallback MUST call
+      `database.SignalLogReader.SnapshotAt(ctx, vehicleID, time.Now())` and
+      MUST NOT read from any dropped snapshot table (positions,
+      state_snapshots, battery_snapshots, climate_snapshots,
+      tire_pressure_snapshots, security_snapshots, location_snapshots, etc.)
+      and MUST NOT introduce a query against vehicle_live_state. ADR-001 is
+      respected: only signal_log, no snapshot table.
+
+  R3. Missing signal-log entries are tolerated. If `SnapshotAt` returns a
+      map that does not contain a given signal key, the corresponding
+      VehicleState field stays at its Go zero value with no panic, no error,
+      and no log spam. That is exactly the same observable result as
+      "signal_log returned an empty map".
+
+  R4. signal_log read failure is tolerated. If `SnapshotAt` returns a
+      non-nil error, the fallback must log the error (Warn level) but must
+      NOT propagate it. `BuildStateFromSignalStore` must continue to return
+      a fully populated VehicleState built from whatever live values were
+      available, so the calling HTTP handler can still return 200 to the
+      client. The contract: read failure is tolerated, error is logged but
+      not propagated, the handler can still return 200.
+
+  R5. SignalLogReader is optional. Existing/legacy callers that construct
+      `VehicleService` without wiring a SignalLogReader (i.e., `nil reader`,
+      "no SignalLogReader configured") must continue to work exactly as
+      today: no fallback, no panic, no nil-pointer dereference. This means
+      `BuildStateFromSignalStore` must guard the reader call with a nil
+      check before invoking SnapshotAt.
+
+  R6. Field-to-signal mapping is identical to the Phase-1 live-store
+      reads. The fallback must use the same Tesla signal names already used
+      in vehicle_service.go Phase 1 so the merged result is consistent
+      regardless of which layer supplied each field. The mapping the tests
+      enumerate is:
+          state.Odometer        ← snap["Odometer"]
+          state.InsideTemp      ← snap["InsideTemp"]
+          state.OutsideTemp     ← snap["OutsideTemp"]
+          state.SoftwareVersion ← snap["Version"], else snap["SoftwareUpdateVersion"]
+          state.IdealRange      ← snap["IdealBatteryRange"]
+          state.RatedRange      ← snap["RatedRange"], else snap["EstBatteryRange"]
+          state.Latitude        ← snap["Latitude"]
+          state.Longitude       ← snap["Longitude"]
+          state.BatteryLevel    ← snap["BatteryLevel"], else snap["Soc"]
+          state.Speed           ← snap["VehicleSpeed"]
+
+  R7. Test scope is BuildStateFromSignalStore only. The Phase-2
+      `stateRepo.GetCurrentState` fallback for `state.State` is unchanged by
+      this work and is out of scope; Prompt 04 must not regress it but the
+      new tests do not need to re-cover it.
+
+These rules together close the Phase-38 bug where pod-restart users see a
+zeroed `Odometer`, `InsideTemp`, `OutsideTemp`, and empty
+`SoftwareVersion` because the live store was cold. Layered live state per
+ADR-007: the same merge philosophy that Prompt 02 applied across L1+L2 is
+extended here across (L1∪L2)+L3-snapshot.
+
+=== CHANGES ===
+This prompt commits ONLY this log file. Source files and test files are
+NOT modified here. The following is the exact test matrix Prompt 04 must
+add to a new file `internal/service/vehicle_service_test.go` (package
+`service` — internal tests so unexported helpers stay reachable). Prompt 04
+must make these tests green — Prompt 04 must pass every case below.
+
+Test fixtures (shared across all cases):
+  - vehicle := &models.Vehicle{ID: 7}
+  - now := time.Now().UTC()
+  - A `*signal.Store` constructed with `signal.NewStore()`; tests call
+    `store.Update(7, "<signal>", <raw>, now)` to seed live values.
+  - A fake reader that satisfies a new exported interface
+    `service.SignalSnapshotReader` (Prompt 04 will introduce it on the
+    service package — Prompt 04 must keep the production
+    `*database.SignalLogReader` assignable to it). The fake records calls
+    and returns pre-canned `(map[string]interface{}, error)`. Prompt 04
+    must NOT make the production code reach for `*database.SignalLogReader`
+    directly — accept the interface, satisfy it with the concrete reader.
+
+Required test cases (each is a separate top-level Test* function unless
+noted):
+
+  T1: TestBuildStateFromSignalStore_LiveValuesAlwaysWin
+      Setup:
+        - Live store seeded with: Odometer=99999.9, InsideTemp=21.5,
+          OutsideTemp=15.0, Version="2026.4.1", BatteryLevel=80,
+          VehicleSpeed=42.
+        - Fake reader pre-canned to return Odometer=12345.6, InsideTemp=22.7,
+          OutsideTemp=18, Version="2026.8.6" (different from live values).
+      Assert:
+        - state.Odometer == 99999.9 (live wins, never override).
+        - state.InsideTemp == 21.5 (live wins, fresh precedence).
+        - state.OutsideTemp == 15.0 (live wins).
+        - state.SoftwareVersion == "2026.4.1" (live wins).
+        - state.BatteryLevel == 80; state.Speed == 42.
+        - fake.SnapshotAtCalls is one of {0, 1}: implementation may either
+          short-circuit (no call) OR call SnapshotAt once and ignore the
+          values for fields the live store already filled — both are
+          acceptable; what is NOT acceptable is overriding live data with
+          signal_log data.
+
+  T2: TestBuildStateFromSignalStore_FillsZeroFieldsFromSignalLog
+      Setup:
+        - Live store seeded with ONLY BatteryLevel=55 and VehicleSpeed=30.
+        - Fake reader returns: Odometer=12345.6, InsideTemp=22.7,
+          OutsideTemp=18.0, Version="2026.8.6", IdealBatteryRange=310.0,
+          RatedRange=305.0, Latitude=37.4419, Longitude=-122.1430.
+      Assert (this is the headline contract):
+        - state.Odometer == 12345.6
+        - state.InsideTemp == 22.7
+        - state.OutsideTemp == 18.0
+        - state.SoftwareVersion == "2026.8.6"
+        - state.IdealRange == 310.0
+        - state.RatedRange == 305.0
+        - state.Latitude == 37.4419
+        - state.Longitude == -122.1430
+        - state.BatteryLevel == 55 (live, unchanged)
+        - state.Speed == 30 (live, unchanged)
+        - fake.SnapshotAtCalls == 1 (signal_log was used; SnapshotAt called).
+        - fake.LastVehicleID == 7 (correct vehicle).
+        - fake.LastAt is within ±2s of time.Now() (point-in-time = now).
+
+  T3: TestBuildStateFromSignalStore_MissingSignalsStayAtGoZero
+      Setup:
+        - Live store empty.
+        - Fake reader returns map containing ONLY Odometer=42.0 (no entry
+          for InsideTemp, OutsideTemp, Version, etc.).
+      Assert:
+        - state.Odometer == 42.0
+        - state.InsideTemp == 0.0 (Go zero, no entry → stays at zero)
+        - state.OutsideTemp == 0.0 (Go zero)
+        - state.SoftwareVersion == "" (Go zero)
+        - state.IdealRange == 0.0; state.RatedRange == 0.0
+        - state.Latitude == 0.0; state.Longitude == 0.0
+        - No panic, no error, no missing.*zero handling fault.
+
+  T4: TestBuildStateFromSignalStore_SignalLogReadErrorIsTolerated
+      Setup:
+        - Live store seeded with Odometer=12345.0 only.
+        - Fake reader pre-canned to return (nil, errors.New("snapshot at:
+          read fail")). Use a sentinel error so the test can also assert it
+          is NOT returned to the caller.
+        - Wrap the test with a zerolog memory sink (`zerolog.New(&buf)`
+          installed via `log.Logger = ...`) restored in t.Cleanup so the
+          read.*fail message can be asserted to have been logged at Warn or
+          Error level WITHOUT propagating; error.*log.*not propagate.
+      Assert:
+        - BuildStateFromSignalStore returns a non-nil *VehicleState (the
+          handler must still be able to return 200 — return.*200).
+        - state.Odometer == 12345.0 (live data preserved).
+        - The returned value does NOT panic on access; no goroutine leak.
+        - Captured log buffer contains the sentinel error message and a
+          Warn/Error level — proves error is logged but not propagated.
+        - The caller receives no error (the function signature has no
+          error return — the contract is tolerate-and-log only).
+
+  T5: TestBuildStateFromSignalStore_NoSignalLogReaderConfigured
+      Setup:
+        - Service constructed via the legacy path (no SignalLogReader
+          wired — i.e., reader field is nil; "no SignalLogReader" / "nil
+          reader" / legacy callers).
+        - Live store seeded with BatteryLevel=42 only.
+      Assert:
+        - No panic, no nil-pointer dereference (nil reader handled).
+        - state.BatteryLevel == 42.
+        - state.Odometer == 0, state.InsideTemp == 0 (no fallback occurred,
+          legacy callers behave exactly as today).
+        - The behavior is observably identical to the pre-Prompt-04 code.
+
+  T6: TestBuildStateFromSignalStore_FieldToSignalNameMapping
+      Table-driven, one subtest per field. For each (field, signalName,
+      value) triple: empty live store, fake reader returns
+      `{signalName: value}`, assert the corresponding VehicleState field is
+      set. Cases (covering R6, including secondary fallbacks):
+        - {"Odometer",        "Odometer",              12345.6,  state.Odometer        == 12345.6}
+        - {"InsideTemp",      "InsideTemp",            22.7,     state.InsideTemp      == 22.7}
+        - {"OutsideTemp",     "OutsideTemp",           18.0,     state.OutsideTemp     == 18.0}
+        - {"SoftwareVersion", "Version",               "2026.8.6", state.SoftwareVersion == "2026.8.6"}
+        - {"SoftwareVersion(secondary)", "SoftwareUpdateVersion", "2026.9.0",
+              state.SoftwareVersion == "2026.9.0" — only when "Version" is absent;
+              proves Version → SoftwareUpdateVersion ordering matches Phase 1}
+        - {"IdealRange",      "IdealBatteryRange",     310.0,    state.IdealRange      == 310.0}
+        - {"RatedRange",      "RatedRange",            305.0,    state.RatedRange      == 305.0}
+        - {"Latitude",        "Latitude",              37.4419,  state.Latitude        == 37.4419}
+        - {"Longitude",       "Longitude",             -122.143, state.Longitude       == -122.143}
+        - {"BatteryLevel",    "BatteryLevel",          80.0,     state.BatteryLevel    == 80}
+        - {"Speed",           "VehicleSpeed",          42.0,     state.Speed           == 42.0}
+      The Odometer→InsideTemp ordering, the InsideTemp→OutsideTemp pairing,
+      and the Version → SoftwareUpdateVersion secondary fallback are all
+      explicitly asserted by this matrix.
+
+  T7: TestBuildStateFromSignalStore_DoesNotReadSnapshotTables
+      A guard test, verifies ADR-001 is respected (only signal_log, no
+      snapshot table). The fake reader is the ONLY data source plumbed in
+      besides the live store. The test asserts:
+        - The service's positionRepo, securityRepo, etc. are never queried
+          (use a *DB built from a pgxpool that fails any query; if the
+          fallback path tries to hit the DB the test panics. Equivalent
+          alternative: assert via build-tag/grep in CI that
+          BuildStateFromSignalStore references only `SnapshotAt` and no
+          other repo method beyond the existing stateRepo.GetCurrentState).
+        - This is the ADR-001 anchor: only signal_log, no snapshot table.
+
+Test file location and package:
+  internal/service/vehicle_service_test.go (package service — internal
+  tests, NOT package service_test). The fake `SignalSnapshotReader`
+  implementation lives in the same file as a private struct.
+
+Non-goals for Prompt 04 (do NOT add):
+  - Any read against positions, state_snapshots, battery_snapshots,
+    climate_snapshots, security_snapshots, tire_pressure_snapshots,
+    location_snapshots, vehicle_live_state, or any other dropped table.
+  - Any caching layer between SnapshotAt and the merge logic; the live
+    store + Redis already cover hot reads, signal_log is the durable
+    backstop.
+  - Any change to `state.State` derivation or to the
+    `stateRepo.GetCurrentState` Phase-2 fallback.
+
+Prompt 04 acceptance: Prompt 04 must make every test above pass green
+under `go test -count=1 ./internal/service/...`. Prompt 04 must add the
+`SignalSnapshotReader` interface (or equivalent), wire it through
+`NewVehicleService`, and implement Phase-2 numeric/string fallback per
+R1–R6. Prompt 04 must not commit until all these tests are green; Prompt
+04 must pass.
+
+=== GATE ===
+=== GATE ===
+FIELD_MAPPING_ENUMERATED=True
+MISSING_FIELD_ZERO_OK=True
+ADR_001_RESPECTED=True
+OPTIONAL_READER=True
+FALLBACK_DOES_NOT_OVERRIDE=True
+FALLBACK_USES_SIGNAL_LOG=True
+READ_ERROR_TOLERATED=True
+PROMPT_04_GREEN_REQUIRED=True
+UNEXPECTED_STATUS_COUNT=0
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
