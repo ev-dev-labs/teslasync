@@ -41,10 +41,19 @@ public APIs, SQL, JSON, route, config, and runtime ordering. **No `.go` file
 may be edited in this prompt.** If a regression is found, mark BLOCKED and
 defer the fix to a follow-up prompt.
 
+Some predecessor split prompts may have legitimately taken the **G3 deferral
+escape hatch** (`STATUS=DEFERRED`) - typically because an earlier split already
+absorbed their cohesive area, leaving nothing to extract. The SURVEY step below
+checks each predecessor's log: an expected file that is missing **only because
+its source split was DEFERRED** is treated as `SKIP-DEFERRED`, not as drift.
+A file missing while its source split is `STATUS=DONE` is real drift and BLOCKS.
+
 ## Action Steps
 
-1. Verify predecessor: `.github/prompts/db-refactor/logs/phase-37-51-split-metrics.log` exists with `EXIT=0` and `STATUS=DONE`.
-2. Confirm every expected file exists and declares `package api`:
+1. Verify predecessor: `.github/prompts/db-refactor/logs/phase-37-51-split-metrics.log` exists with `EXIT=0` and
+   `STATUS=DONE` or `STATUS=DEFERRED`.
+2. For every expected file, look up the split prompt that was supposed to
+   produce it and check that prompt's log STATUS:
   - `internal/api/router.go`
   - `internal/api/router_routes_telemetry.go`
   - `internal/api/router_routes_admin.go`
@@ -100,7 +109,10 @@ defer the fix to a follow-up prompt.
   - `internal/api/chatbot_handler_chat.go`
   - `internal/metrics/metrics_telemetry.go`
   - `internal/metrics/metrics_drive_charging.go`
-3. Re-run `gofmt -l` on every expected file (output must be empty).
+   - If file exists: confirm it declares `package api`.
+   - If file missing and source split STATUS=DEFERRED: record SKIP-DEFERRED.
+   - If file missing and source split STATUS=DONE: BLOCKED.
+3. Re-run `gofmt -l` on every expected file that exists (output must be empty).
 4. Re-run `go build ./...`, `go vet ./internal/api`, and
    `go test ./internal/api -race -count=1`.
 5. Inspect the diff range covered by the split commits and confirm:
@@ -131,12 +143,67 @@ elseif (-not (Select-String -Path $prev -Pattern '^EXIT=0$' -Quiet)) { "predeces
 elseif (-not (Select-String -Path $prev -Pattern '^STATUS=(DONE|DEFERRED)$' -Quiet)) { "predecessor STATUS not DONE or DEFERRED" | Add-Content $log; $exit = 1 }
 
 "## SURVEY" | Add-Content $log
-$expected = @('internal/api/router.go', 'internal/api/router_routes_telemetry.go', 'internal/api/router_routes_admin.go', 'internal/api/router_middleware.go', 'internal/api/devtools_handler_dtos.go', 'internal/api/devtools_handler_logs.go', 'internal/api/devtools_handler_database.go', 'internal/models/vehicle.go', 'internal/models/drive.go', 'internal/models/charging.go', 'internal/models/telemetry.go', 'internal/api/battery_degradation_handler_dtos.go', 'internal/api/battery_degradation_handler_calculations.go', 'internal/api/drive_handler_dtos.go', 'internal/api/drive_handler_listing.go', 'internal/api/drive_handler_detail.go', 'cmd/teslasync/setup.go', 'cmd/teslasync/lifecycle.go', 'internal/database/signal_history_writer_buffer.go', 'internal/database/signal_history_writer_flush.go', 'internal/database/automation_step_child_repo_persistence.go', 'internal/database/automation_step_child_repo_query.go', 'internal/automation/engine_evaluation.go', 'internal/automation/engine_execution.go', 'internal/worker/worker_jobs.go', 'internal/worker/worker_lifecycle.go', 'internal/api/range_projection_handler_dtos.go', 'internal/api/range_projection_handler_compute.go', 'internal/api/alert_handler_dtos.go', 'internal/api/alert_handler_rules.go', 'internal/api/charging_optimizer_handler_dtos.go', 'internal/api/charging_optimizer_handler_compute.go', 'internal/api/fsm_handler_dtos.go', 'internal/api/fsm_handler_query.go', 'internal/api/charge_planner_handler_dtos.go', 'internal/api/charge_planner_handler_compute.go', 'internal/api/analytics_handler_dtos.go', 'internal/api/analytics_handler_queries.go', 'internal/database/signal_log_reader_query.go', 'internal/database/signal_log_reader_aggregations.go', 'internal/api/trip_planner_handler_dtos.go', 'internal/api/trip_planner_handler_compute.go', 'internal/enums/parse_drive.go', 'internal/enums/parse_charging.go', 'internal/enums/parse_climate.go', 'internal/api/tesla_energy_history_handler_dtos.go', 'internal/api/tesla_energy_history_handler_query.go', 'internal/database/notification_repo_logs.go', 'internal/database/notification_repo_rules.go', 'internal/database/automation_repo_query.go', 'internal/database/automation_repo_mutation.go', 'internal/api/chatbot_handler_dtos.go', 'internal/api/chatbot_handler_chat.go', 'internal/metrics/metrics_telemetry.go', 'internal/metrics/metrics_drive_charging.go')
-foreach ($f in $expected) {
-  if (-not (Test-Path $f)) {
-    "missing expected file: $f" | Add-Content $log
-    $exit = 1
-  } else {
+$expected = @(
+  @{ Path = 'internal/api/router.go'; SrcNum = 0; SrcSlug = '' },
+  @{ Path = 'internal/api/router_routes_telemetry.go'; SrcNum = 28; SrcSlug = 'split-router' },
+  @{ Path = 'internal/api/router_routes_admin.go'; SrcNum = 28; SrcSlug = 'split-router' },
+  @{ Path = 'internal/api/router_middleware.go'; SrcNum = 28; SrcSlug = 'split-router' },
+  @{ Path = 'internal/api/devtools_handler_dtos.go'; SrcNum = 29; SrcSlug = 'split-devtools-handler' },
+  @{ Path = 'internal/api/devtools_handler_logs.go'; SrcNum = 29; SrcSlug = 'split-devtools-handler' },
+  @{ Path = 'internal/api/devtools_handler_database.go'; SrcNum = 29; SrcSlug = 'split-devtools-handler' },
+  @{ Path = 'internal/models/vehicle.go'; SrcNum = 30; SrcSlug = 'split-models' },
+  @{ Path = 'internal/models/drive.go'; SrcNum = 30; SrcSlug = 'split-models' },
+  @{ Path = 'internal/models/charging.go'; SrcNum = 30; SrcSlug = 'split-models' },
+  @{ Path = 'internal/models/telemetry.go'; SrcNum = 30; SrcSlug = 'split-models' },
+  @{ Path = 'internal/api/battery_degradation_handler_dtos.go'; SrcNum = 31; SrcSlug = 'split-battery-degradation-handler' },
+  @{ Path = 'internal/api/battery_degradation_handler_calculations.go'; SrcNum = 31; SrcSlug = 'split-battery-degradation-handler' },
+  @{ Path = 'internal/api/drive_handler_dtos.go'; SrcNum = 32; SrcSlug = 'split-drive-handler' },
+  @{ Path = 'internal/api/drive_handler_listing.go'; SrcNum = 32; SrcSlug = 'split-drive-handler' },
+  @{ Path = 'internal/api/drive_handler_detail.go'; SrcNum = 32; SrcSlug = 'split-drive-handler' },
+  @{ Path = 'cmd/teslasync/setup.go'; SrcNum = 33; SrcSlug = 'split-cmd-main' },
+  @{ Path = 'cmd/teslasync/lifecycle.go'; SrcNum = 33; SrcSlug = 'split-cmd-main' },
+  @{ Path = 'internal/database/signal_history_writer_buffer.go'; SrcNum = 34; SrcSlug = 'split-signal-history-writer' },
+  @{ Path = 'internal/database/signal_history_writer_flush.go'; SrcNum = 34; SrcSlug = 'split-signal-history-writer' },
+  @{ Path = 'internal/database/automation_step_child_repo_persistence.go'; SrcNum = 35; SrcSlug = 'split-automation-step-child-repo' },
+  @{ Path = 'internal/database/automation_step_child_repo_query.go'; SrcNum = 35; SrcSlug = 'split-automation-step-child-repo' },
+  @{ Path = 'internal/automation/engine_evaluation.go'; SrcNum = 36; SrcSlug = 'split-automation-engine' },
+  @{ Path = 'internal/automation/engine_execution.go'; SrcNum = 36; SrcSlug = 'split-automation-engine' },
+  @{ Path = 'internal/worker/worker_jobs.go'; SrcNum = 37; SrcSlug = 'split-worker' },
+  @{ Path = 'internal/worker/worker_lifecycle.go'; SrcNum = 37; SrcSlug = 'split-worker' },
+  @{ Path = 'internal/api/range_projection_handler_dtos.go'; SrcNum = 38; SrcSlug = 'split-range-projection-handler' },
+  @{ Path = 'internal/api/range_projection_handler_compute.go'; SrcNum = 38; SrcSlug = 'split-range-projection-handler' },
+  @{ Path = 'internal/api/alert_handler_dtos.go'; SrcNum = 39; SrcSlug = 'split-alert-handler' },
+  @{ Path = 'internal/api/alert_handler_rules.go'; SrcNum = 39; SrcSlug = 'split-alert-handler' },
+  @{ Path = 'internal/api/charging_optimizer_handler_dtos.go'; SrcNum = 40; SrcSlug = 'split-charging-optimizer-handler' },
+  @{ Path = 'internal/api/charging_optimizer_handler_compute.go'; SrcNum = 40; SrcSlug = 'split-charging-optimizer-handler' },
+  @{ Path = 'internal/api/fsm_handler_dtos.go'; SrcNum = 41; SrcSlug = 'split-fsm-handler' },
+  @{ Path = 'internal/api/fsm_handler_query.go'; SrcNum = 41; SrcSlug = 'split-fsm-handler' },
+  @{ Path = 'internal/api/charge_planner_handler_dtos.go'; SrcNum = 42; SrcSlug = 'split-charge-planner-handler' },
+  @{ Path = 'internal/api/charge_planner_handler_compute.go'; SrcNum = 42; SrcSlug = 'split-charge-planner-handler' },
+  @{ Path = 'internal/api/analytics_handler_dtos.go'; SrcNum = 43; SrcSlug = 'split-analytics-handler' },
+  @{ Path = 'internal/api/analytics_handler_queries.go'; SrcNum = 43; SrcSlug = 'split-analytics-handler' },
+  @{ Path = 'internal/database/signal_log_reader_query.go'; SrcNum = 44; SrcSlug = 'split-signal-log-reader' },
+  @{ Path = 'internal/database/signal_log_reader_aggregations.go'; SrcNum = 44; SrcSlug = 'split-signal-log-reader' },
+  @{ Path = 'internal/api/trip_planner_handler_dtos.go'; SrcNum = 45; SrcSlug = 'split-trip-planner-handler' },
+  @{ Path = 'internal/api/trip_planner_handler_compute.go'; SrcNum = 45; SrcSlug = 'split-trip-planner-handler' },
+  @{ Path = 'internal/enums/parse_drive.go'; SrcNum = 46; SrcSlug = 'split-enums-parse' },
+  @{ Path = 'internal/enums/parse_charging.go'; SrcNum = 46; SrcSlug = 'split-enums-parse' },
+  @{ Path = 'internal/enums/parse_climate.go'; SrcNum = 46; SrcSlug = 'split-enums-parse' },
+  @{ Path = 'internal/api/tesla_energy_history_handler_dtos.go'; SrcNum = 47; SrcSlug = 'split-tesla-energy-history-handler' },
+  @{ Path = 'internal/api/tesla_energy_history_handler_query.go'; SrcNum = 47; SrcSlug = 'split-tesla-energy-history-handler' },
+  @{ Path = 'internal/database/notification_repo_logs.go'; SrcNum = 48; SrcSlug = 'split-notification-repo' },
+  @{ Path = 'internal/database/notification_repo_rules.go'; SrcNum = 48; SrcSlug = 'split-notification-repo' },
+  @{ Path = 'internal/database/automation_repo_query.go'; SrcNum = 49; SrcSlug = 'split-automation-repo' },
+  @{ Path = 'internal/database/automation_repo_mutation.go'; SrcNum = 49; SrcSlug = 'split-automation-repo' },
+  @{ Path = 'internal/api/chatbot_handler_dtos.go'; SrcNum = 50; SrcSlug = 'split-chatbot-handler' },
+  @{ Path = 'internal/api/chatbot_handler_chat.go'; SrcNum = 50; SrcSlug = 'split-chatbot-handler' },
+  @{ Path = 'internal/metrics/metrics_telemetry.go'; SrcNum = 51; SrcSlug = 'split-metrics' },
+  @{ Path = 'internal/metrics/metrics_drive_charging.go'; SrcNum = 51; SrcSlug = 'split-metrics' }
+)
+$existing = New-Object System.Collections.Generic.List[string]
+foreach ($e in $expected) {
+  $f = $e.Path
+  if (Test-Path $f) {
     $head = (Get-Content -LiteralPath $f -TotalCount 80) -join "`n"
     if ($head -notmatch '(?m)^package\s+api\b') {
       "wrong package decl in $f (expected package api)" | Add-Content $log
@@ -144,21 +211,47 @@ foreach ($f in $expected) {
     }
     $lc = (Get-Content -LiteralPath $f | Measure-Object -Line).Lines
     "expected_file=$f lines=$lc" | Add-Content $log
+    $existing.Add($f) | Out-Null
+  } else {
+    if ($e.SrcNum -eq 0) {
+      "missing source file: $f (this is the original; must remain in tree)" | Add-Content $log
+      $exit = 1
+    } else {
+      $srcLog = ".github/prompts/db-refactor/logs/phase-37-$('{0:D2}' -f $e.SrcNum)-$($e.SrcSlug).log"
+      if (-not (Test-Path $srcLog)) {
+        "missing expected file: $f (source prompt $($e.SrcNum) $($e.SrcSlug) - log not found)" | Add-Content $log
+        $exit = 1
+      } elseif (Select-String -Path $srcLog -Pattern '^STATUS=DEFERRED$' -Quiet) {
+        "SKIP-DEFERRED: $f (source prompt $($e.SrcNum) $($e.SrcSlug) STATUS=DEFERRED - cohesive area absorbed by another split or otherwise non-extractable)" | Add-Content $log
+      } elseif (Select-String -Path $srcLog -Pattern '^STATUS=DONE$' -Quiet) {
+        "missing expected file: $f (source prompt $($e.SrcNum) $($e.SrcSlug) STATUS=DONE - real drift)" | Add-Content $log
+        $exit = 1
+      } else {
+        "missing expected file: $f (source prompt $($e.SrcNum) $($e.SrcSlug) STATUS not DONE/DEFERRED)" | Add-Content $log
+        $exit = 1
+      }
+    }
   }
 }
 
 "## REASONING" | Add-Content $log
 "validation only - confirm split preserved behavior, no source edits" | Add-Content $log
+"existing_files_count=$($existing.Count)" | Add-Content $log
 
 "## CHANGES" | Add-Content $log
 "none (validation only)" | Add-Content $log
 
 "## GATE" | Add-Content $log
 $env:CGO_ENABLED = '0'
-$gofmtOut = gofmt -l $expected 2>&1
-if ($LASTEXITCODE -ne 0 -or $gofmtOut) {
-  "gofmt issues:" | Add-Content $log
-  $gofmtOut | Out-String | Add-Content $log
+if ($existing.Count -gt 0) {
+  $gofmtOut = & gofmt -l @($existing) 2>&1
+  if ($LASTEXITCODE -ne 0 -or $gofmtOut) {
+    "gofmt issues:" | Add-Content $log
+    $gofmtOut | Out-String | Add-Content $log
+    $exit = 1
+  }
+} else {
+  "skipping gofmt - no expected files exist (all sources deferred?)" | Add-Content $log
   $exit = 1
 }
 

@@ -742,7 +742,7 @@ that owns this package (see CODEOWNERS) before deferring.
     return out
 
 
-def render_validation(p):
+def render_validation(p, file_to_prompt):
     num = p["num"]
     slug = p["slug"]
     title = p["title"]
@@ -755,8 +755,32 @@ def render_validation(p):
     pred_slug = p["predecessor"][1]
     prev_log = pred_log(pred_num, pred_slug)
 
-    expected = [src] + [nf.replace("\\", "/") for nf in p["expected_files"]]
-    expected_md = "\n".join(f"  - `{e}`" for e in expected)
+    # Build per-expected-file metadata: (path, source_prompt_num, source_prompt_slug).
+    # The original `src` file is unconditionally required (no source split prompt).
+    # Each new file is paired with the split prompt that produced it; if that prompt
+    # later DEFERRED via the G3 escape hatch, the gate skips the missing-file check.
+    expected_paths = [src] + [nf.replace("\\", "/") for nf in p["expected_files"]]
+    expected_md = "\n".join(f"  - `{e}`" for e in expected_paths)
+
+    expected_entries = []
+    for ef in expected_paths:
+        if ef == src:
+            expected_entries.append((ef, 0, ""))
+        else:
+            src_prompt = file_to_prompt.get(ef)
+            if src_prompt is None:
+                # Should not happen if PROMPTS is internally consistent; treat as
+                # unconditionally required so the gate still catches drift.
+                expected_entries.append((ef, 0, ""))
+            else:
+                expected_entries.append((ef, src_prompt[0], src_prompt[1]))
+
+    expected_ps = ",\n  ".join(
+        "@{{ Path = '{path}'; SrcNum = {num}; SrcSlug = '{slug}' }}".format(
+            path=e[0], num=e[1], slug=e[2]
+        )
+        for e in expected_entries
+    )
 
     allowed_md = f"`{log_path}` (validation log only - no source edits permitted)"
     depends_on_md = f"[`{prev_log}`](../logs/phase-37-{pred_num:02d}-{pred_slug}.log) STATUS=DONE"
@@ -769,12 +793,24 @@ public APIs, SQL, JSON, route, config, and runtime ordering. **No `.go` file
 may be edited in this prompt.** If a regression is found, mark BLOCKED and
 defer the fix to a follow-up prompt.
 
+Some predecessor split prompts may have legitimately taken the **G3 deferral
+escape hatch** (`STATUS=DEFERRED`) - typically because an earlier split already
+absorbed their cohesive area, leaving nothing to extract. The SURVEY step below
+checks each predecessor's log: an expected file that is missing **only because
+its source split was DEFERRED** is treated as `SKIP-DEFERRED`, not as drift.
+A file missing while its source split is `STATUS=DONE` is real drift and BLOCKS.
+
 ## Action Steps
 
-1. Verify predecessor: `{prev_log}` exists with `EXIT=0` and `STATUS=DONE`.
-2. Confirm every expected file exists and declares `package {pkg}`:
+1. Verify predecessor: `{prev_log}` exists with `EXIT=0` and
+   `STATUS=DONE` or `STATUS=DEFERRED`.
+2. For every expected file, look up the split prompt that was supposed to
+   produce it and check that prompt's log STATUS:
 {expected_md}
-3. Re-run `gofmt -l` on every expected file (output must be empty).
+   - If file exists: confirm it declares `package {pkg}`.
+   - If file missing and source split STATUS=DEFERRED: record SKIP-DEFERRED.
+   - If file missing and source split STATUS=DONE: BLOCKED.
+3. Re-run `gofmt -l` on every expected file that exists (output must be empty).
 4. Re-run `go build ./...`, `go vet {test_target}`, and
    `go test {test_target} -race -count=1`.
 5. Inspect the diff range covered by the split commits and confirm:
@@ -805,12 +841,13 @@ elseif (-not (Select-String -Path $prev -Pattern '^EXIT=0$' -Quiet)) {{ "predece
 elseif (-not (Select-String -Path $prev -Pattern '^STATUS=(DONE|DEFERRED)$' -Quiet)) {{ "predecessor STATUS not DONE or DEFERRED" | Add-Content $log; $exit = 1 }}
 
 "## SURVEY" | Add-Content $log
-$expected = @({", ".join(repr(e) for e in expected)})
-foreach ($f in $expected) {{
-  if (-not (Test-Path $f)) {{
-    "missing expected file: $f" | Add-Content $log
-    $exit = 1
-  }} else {{
+$expected = @(
+  {expected_ps}
+)
+$existing = New-Object System.Collections.Generic.List[string]
+foreach ($e in $expected) {{
+  $f = $e.Path
+  if (Test-Path $f) {{
     $head = (Get-Content -LiteralPath $f -TotalCount 80) -join "`n"
     if ($head -notmatch '(?m)^package\\s+{pkg}\\b') {{
       "wrong package decl in $f (expected package {pkg})" | Add-Content $log
@@ -818,21 +855,47 @@ foreach ($f in $expected) {{
     }}
     $lc = (Get-Content -LiteralPath $f | Measure-Object -Line).Lines
     "expected_file=$f lines=$lc" | Add-Content $log
+    $existing.Add($f) | Out-Null
+  }} else {{
+    if ($e.SrcNum -eq 0) {{
+      "missing source file: $f (this is the original; must remain in tree)" | Add-Content $log
+      $exit = 1
+    }} else {{
+      $srcLog = ".github/prompts/db-refactor/logs/phase-37-$('{{0:D2}}' -f $e.SrcNum)-$($e.SrcSlug).log"
+      if (-not (Test-Path $srcLog)) {{
+        "missing expected file: $f (source prompt $($e.SrcNum) $($e.SrcSlug) - log not found)" | Add-Content $log
+        $exit = 1
+      }} elseif (Select-String -Path $srcLog -Pattern '^STATUS=DEFERRED$' -Quiet) {{
+        "SKIP-DEFERRED: $f (source prompt $($e.SrcNum) $($e.SrcSlug) STATUS=DEFERRED - cohesive area absorbed by another split or otherwise non-extractable)" | Add-Content $log
+      }} elseif (Select-String -Path $srcLog -Pattern '^STATUS=DONE$' -Quiet) {{
+        "missing expected file: $f (source prompt $($e.SrcNum) $($e.SrcSlug) STATUS=DONE - real drift)" | Add-Content $log
+        $exit = 1
+      }} else {{
+        "missing expected file: $f (source prompt $($e.SrcNum) $($e.SrcSlug) STATUS not DONE/DEFERRED)" | Add-Content $log
+        $exit = 1
+      }}
+    }}
   }}
 }}
 
 "## REASONING" | Add-Content $log
 "validation only - confirm split preserved behavior, no source edits" | Add-Content $log
+"existing_files_count=$($existing.Count)" | Add-Content $log
 
 "## CHANGES" | Add-Content $log
 "none (validation only)" | Add-Content $log
 
 "## GATE" | Add-Content $log
 $env:CGO_ENABLED = '0'
-$gofmtOut = gofmt -l $expected 2>&1
-if ($LASTEXITCODE -ne 0 -or $gofmtOut) {{
-  "gofmt issues:" | Add-Content $log
-  $gofmtOut | Out-String | Add-Content $log
+if ($existing.Count -gt 0) {{
+  $gofmtOut = & gofmt -l @($existing) 2>&1
+  if ($LASTEXITCODE -ne 0 -or $gofmtOut) {{
+    "gofmt issues:" | Add-Content $log
+    $gofmtOut | Out-String | Add-Content $log
+    $exit = 1
+  }}
+}} else {{
+  "skipping gofmt - no expected files exist (all sources deferred?)" | Add-Content $log
   $exit = 1
 }}
 
@@ -2010,6 +2073,16 @@ def main():
             prev = PROMPTS[i - 1]
             p["predecessor"] = (prev["num"], prev["slug"])
 
+    # Defer-aware validation: build map from each new file produced by a SPLIT prompt
+    # to the (num, slug) of that prompt, so render_validation can teach the gate to
+    # skip a missing expected file when its source split was DEFERRED (G3 escape hatch).
+    file_to_prompt = {}
+    for p in PROMPTS:
+        if p["kind"] != "split":
+            continue
+        for nf in p.get("new_files", []):
+            file_to_prompt[nf.replace("\\", "/")] = (p["num"], p["slug"])
+
     written = []
 
     inv = render_inventory()
@@ -2026,7 +2099,7 @@ def main():
         if p["kind"] == "split":
             md = render_split(p)
         else:
-            md = render_validation(p)
+            md = render_validation(p, file_to_prompt)
         fp = PHASE_DIR / f"{p['num']:02d}-{p['slug']}.prompt.md"
         fp.write_text(md, encoding="utf-8")
         written.append(fp)

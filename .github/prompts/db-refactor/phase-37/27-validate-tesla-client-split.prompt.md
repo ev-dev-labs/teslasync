@@ -41,10 +41,19 @@ public APIs, SQL, JSON, route, config, and runtime ordering. **No `.go` file
 may be edited in this prompt.** If a regression is found, mark BLOCKED and
 defer the fix to a follow-up prompt.
 
+Some predecessor split prompts may have legitimately taken the **G3 deferral
+escape hatch** (`STATUS=DEFERRED`) - typically because an earlier split already
+absorbed their cohesive area, leaving nothing to extract. The SURVEY step below
+checks each predecessor's log: an expected file that is missing **only because
+its source split was DEFERRED** is treated as `SKIP-DEFERRED`, not as drift.
+A file missing while its source split is `STATUS=DONE` is real drift and BLOCKS.
+
 ## Action Steps
 
-1. Verify predecessor: `.github/prompts/db-refactor/logs/phase-37-26-split-tesla-client-energy-charging.log` exists with `EXIT=0` and `STATUS=DONE`.
-2. Confirm every expected file exists and declares `package tesla`:
+1. Verify predecessor: `.github/prompts/db-refactor/logs/phase-37-26-split-tesla-client-energy-charging.log` exists with `EXIT=0` and
+   `STATUS=DONE` or `STATUS=DEFERRED`.
+2. For every expected file, look up the split prompt that was supposed to
+   produce it and check that prompt's log STATUS:
   - `internal/tesla/client.go`
   - `internal/tesla/client_auth.go`
   - `internal/tesla/client_vehicle_data.go`
@@ -52,7 +61,10 @@ defer the fix to a follow-up prompt.
   - `internal/tesla/client_fleet_telemetry.go`
   - `internal/tesla/client_partner_devtools.go`
   - `internal/tesla/client_energy_charging.go`
-3. Re-run `gofmt -l` on every expected file (output must be empty).
+   - If file exists: confirm it declares `package tesla`.
+   - If file missing and source split STATUS=DEFERRED: record SKIP-DEFERRED.
+   - If file missing and source split STATUS=DONE: BLOCKED.
+3. Re-run `gofmt -l` on every expected file that exists (output must be empty).
 4. Re-run `go build ./...`, `go vet ./internal/tesla`, and
    `go test ./internal/tesla -race -count=1`.
 5. Inspect the diff range covered by the split commits and confirm:
@@ -83,12 +95,19 @@ elseif (-not (Select-String -Path $prev -Pattern '^EXIT=0$' -Quiet)) { "predeces
 elseif (-not (Select-String -Path $prev -Pattern '^STATUS=(DONE|DEFERRED)$' -Quiet)) { "predecessor STATUS not DONE or DEFERRED" | Add-Content $log; $exit = 1 }
 
 "## SURVEY" | Add-Content $log
-$expected = @('internal/tesla/client.go', 'internal/tesla/client_auth.go', 'internal/tesla/client_vehicle_data.go', 'internal/tesla/client_commands.go', 'internal/tesla/client_fleet_telemetry.go', 'internal/tesla/client_partner_devtools.go', 'internal/tesla/client_energy_charging.go')
-foreach ($f in $expected) {
-  if (-not (Test-Path $f)) {
-    "missing expected file: $f" | Add-Content $log
-    $exit = 1
-  } else {
+$expected = @(
+  @{ Path = 'internal/tesla/client.go'; SrcNum = 0; SrcSlug = '' },
+  @{ Path = 'internal/tesla/client_auth.go'; SrcNum = 21; SrcSlug = 'split-tesla-client-auth' },
+  @{ Path = 'internal/tesla/client_vehicle_data.go'; SrcNum = 22; SrcSlug = 'split-tesla-client-vehicle-data' },
+  @{ Path = 'internal/tesla/client_commands.go'; SrcNum = 23; SrcSlug = 'split-tesla-client-commands' },
+  @{ Path = 'internal/tesla/client_fleet_telemetry.go'; SrcNum = 24; SrcSlug = 'split-tesla-client-fleet-telemetry' },
+  @{ Path = 'internal/tesla/client_partner_devtools.go'; SrcNum = 25; SrcSlug = 'split-tesla-client-partner-devtools' },
+  @{ Path = 'internal/tesla/client_energy_charging.go'; SrcNum = 26; SrcSlug = 'split-tesla-client-energy-charging' }
+)
+$existing = New-Object System.Collections.Generic.List[string]
+foreach ($e in $expected) {
+  $f = $e.Path
+  if (Test-Path $f) {
     $head = (Get-Content -LiteralPath $f -TotalCount 80) -join "`n"
     if ($head -notmatch '(?m)^package\s+tesla\b') {
       "wrong package decl in $f (expected package tesla)" | Add-Content $log
@@ -96,21 +115,47 @@ foreach ($f in $expected) {
     }
     $lc = (Get-Content -LiteralPath $f | Measure-Object -Line).Lines
     "expected_file=$f lines=$lc" | Add-Content $log
+    $existing.Add($f) | Out-Null
+  } else {
+    if ($e.SrcNum -eq 0) {
+      "missing source file: $f (this is the original; must remain in tree)" | Add-Content $log
+      $exit = 1
+    } else {
+      $srcLog = ".github/prompts/db-refactor/logs/phase-37-$('{0:D2}' -f $e.SrcNum)-$($e.SrcSlug).log"
+      if (-not (Test-Path $srcLog)) {
+        "missing expected file: $f (source prompt $($e.SrcNum) $($e.SrcSlug) - log not found)" | Add-Content $log
+        $exit = 1
+      } elseif (Select-String -Path $srcLog -Pattern '^STATUS=DEFERRED$' -Quiet) {
+        "SKIP-DEFERRED: $f (source prompt $($e.SrcNum) $($e.SrcSlug) STATUS=DEFERRED - cohesive area absorbed by another split or otherwise non-extractable)" | Add-Content $log
+      } elseif (Select-String -Path $srcLog -Pattern '^STATUS=DONE$' -Quiet) {
+        "missing expected file: $f (source prompt $($e.SrcNum) $($e.SrcSlug) STATUS=DONE - real drift)" | Add-Content $log
+        $exit = 1
+      } else {
+        "missing expected file: $f (source prompt $($e.SrcNum) $($e.SrcSlug) STATUS not DONE/DEFERRED)" | Add-Content $log
+        $exit = 1
+      }
+    }
   }
 }
 
 "## REASONING" | Add-Content $log
 "validation only - confirm split preserved behavior, no source edits" | Add-Content $log
+"existing_files_count=$($existing.Count)" | Add-Content $log
 
 "## CHANGES" | Add-Content $log
 "none (validation only)" | Add-Content $log
 
 "## GATE" | Add-Content $log
 $env:CGO_ENABLED = '0'
-$gofmtOut = gofmt -l $expected 2>&1
-if ($LASTEXITCODE -ne 0 -or $gofmtOut) {
-  "gofmt issues:" | Add-Content $log
-  $gofmtOut | Out-String | Add-Content $log
+if ($existing.Count -gt 0) {
+  $gofmtOut = & gofmt -l @($existing) 2>&1
+  if ($LASTEXITCODE -ne 0 -or $gofmtOut) {
+    "gofmt issues:" | Add-Content $log
+    $gofmtOut | Out-String | Add-Content $log
+    $exit = 1
+  }
+} else {
+  "skipping gofmt - no expected files exist (all sources deferred?)" | Add-Content $log
   $exit = 1
 }
 
