@@ -1,0 +1,67 @@
+## PREFLIGHT
+start_utc=2026-04-30T07:12:39.7262676+00:00
+go_version=go version go1.26.1 windows/amd64
+engineer_email=iamatulmgupta@gmail.com
+powershell_version=7.6.1
+os_platform=Win32NT
+exports invariant ok: 1273 exported identifiers preserved
+import-graph invariant ok: 80 imports preserved
+## SURVEY
+source_lines_after=66
+new_file=internal/api/alert_handler_dtos.go lines=39
+new_file=internal/api/alert_handler_rules.go lines=477
+## REASONING
+mechanical decomposition: split internal/api/alert_handler.go into internal/api/alert_handler_dtos.go, internal/api/alert_handler_rules.go
+no behavior, API, SQL, JSON, route, config, or runtime ordering changes
+
+split map (source -> destination):
+  internal/api/alert_handler.go -> internal/api/alert_handler_dtos.go
+    type createAlertRuleRequest
+    type updateAlertRuleRequest
+    type alertTestRequest
+    type alertTestTargetRequest
+  internal/api/alert_handler.go -> internal/api/alert_handler_rules.go
+    const maxAlertRequestBodyBytes
+    var forbiddenAlertRuleFields
+    var forbiddenAlertTestFields
+    method (*AlertHandler).ListRules
+    method (*AlertHandler).UpdateRule
+    method (*AlertHandler).CreateRule
+    method (*AlertHandler).DeleteRule
+    method (*AlertHandler).TestRule
+    func decodeStrictAlertRequest
+    func fieldPresent
+    func validateCreateAlertSeverity
+    func validateUpdateAlertSeverity
+    func validateAlertSeverity
+    func validateAlertRule
+    func validateAlertRuleOperand
+    func countAlertValueOperands
+    func validateAlertTestTarget
+  internal/api/alert_handler.go (kept):
+    type AlertHandler
+    interface alertRuleRepository
+    interface notificationRepository
+    func NewAlertHandler
+    method (*AlertHandler).List
+    method (*AlertHandler).MarkRead
+  cross-file unexported refs preserved within package api:
+    AlertHandler struct fields (alertRuleRepo, notifRepo, eventHub, mqttClient, liveSignals)
+    package helpers writeJSON, writeError, urlParamInt64, pagination, renderTemplate, liveSignalValuesToRaw, EventHub
+## CHANGES
+internal/api/alert_handler.go sha256=46B4BF8DA6ECC3E340C7FAA313931CA252F642A1A141CC218BAB9A38956D0A8B
+internal/api/alert_handler_dtos.go sha256=7ECD8EDB9100E111E1F3FE37C34F147FD9EA7D13754C8AAD60E138ED81EAB893
+internal/api/alert_handler_rules.go sha256=EE0CBD748697CDB9577F402CEE4BA69779404DBAAD8F646A5B5E3416A49371BA
+## GATE
+go build ./internal/api/... exit=0
+
+go build ./... exit=0
+
+go vet exit=0
+
+go test exit=0
+ok  	github.com/ev-dev-labs/teslasync/internal/api	0.175s
+
+EXIT=0
+STATUS=DONE
+## COMMIT
