@@ -1,0 +1,30 @@
+## PREFLIGHT
+start_utc=2026-04-30T02:01:28.9731812+00:00
+go_version=go version go1.26.1 windows/amd64
+engineer_email=iamatulmgupta@gmail.com
+powershell_version=7.6.1
+os_platform=Win32NT
+## SURVEY
+expected_file=internal/api/automation_handler.go lines=1149
+expected_file=internal/api/automation_handler_dtos.go lines=243
+expected_file=internal/api/automation_handler_decode.go lines=545
+expected_file=internal/api/automation_handler_step_parsers.go lines=130
+expected_file=internal/api/automation_handler_crud.go lines=209
+expected_file=internal/api/automation_handler_history.go lines=147
+expected_file=internal/api/automation_handler_test_run.go lines=599
+## REASONING
+validation only - confirm split preserved behavior, no source edits
+## CHANGES
+none (validation only)
+## GATE
+go build ./internal/api/... exit=0
+
+go build ./... exit=0
+
+go vet exit=0
+
+go test exit=2
+go: -race requires cgo; enable cgo by setting CGO_ENABLED=1
+
+EXIT=1
+STATUS=BLOCKED
