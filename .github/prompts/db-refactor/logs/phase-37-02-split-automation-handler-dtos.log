@@ -1,0 +1,97 @@
+## PREFLIGHT
+start_utc=2026-04-30T01:12:12.0514706+00:00
+go_version=go version go1.26.1 windows/amd64
+engineer_email=iamatulmgupta@gmail.com
+powershell_version=7.6.1
+os_platform=Win32NT
+exports invariant ok: 1273 exported identifiers preserved
+import-graph invariant ok: 80 imports preserved
+## SURVEY
+source_lines_after=2735
+new_file=internal/api/automation_handler_dtos.go lines=243
+## REASONING
+mechanical decomposition: split internal/api/automation_handler.go into internal/api/automation_handler_dtos.go
+no behavior, API, SQL, JSON, route, config, or runtime ordering changes
+
+per-prompt split map:
+  source_file: internal/api/automation_handler.go
+  destination_files:
+    - internal/api/automation_handler_dtos.go
+  scope: package-level request/response struct types and embedded sub-structs that exist solely to shape JSON request or response bodies for automation HTTP handlers. No type-only MarshalJSON/UnmarshalJSON overrides exist in this file (verified: zero matches).
+  identifiers_moved (all unexported types):
+    automation_handler_dtos.go (30 types, all unexported, all with their leading doc comments where present):
+      - type automationResponse                       (response wrapper; embeds *models.Automation; condition.Conflict)
+      - type presetsResponse                          (envelope; presets.Category, presets.Preset)
+      - type automationInputWire                      (strict create/update JSON shape; json.RawMessage)
+      - type createAutomationRequest                  (normalized request body)
+      - type automationTypedStep                      (typed step container)
+      - type automationTriggerSignalDTO
+      - type automationTriggerGeofenceDTO
+      - type automationTriggerScheduleDTO
+      - type automationTriggerEventDTO
+      - type automationConditionSignalDTO
+      - type automationConditionTimeWindowDTO
+      - type automationConditionGeofenceDTO
+      - type automationConditionOtherAutomationDTO
+      - type automationActionCommandDTO               (json.RawMessage)
+      - type automationActionNotifyDTO
+      - type automationActionSetSettingDTO
+      - type automationActionCallAutomationDTO
+      - type historyListResponse                      (models.AutomationHistory, database.HistoryStats)
+      - type historyDetailResponse                    (models.AutomationHistory, database.FSMTransitionRecord)
+      - type testRunResponse                          (time.Time)
+      - type testConditionResult                      (json.RawMessage)
+      - type testActionResult                         (json.RawMessage)
+      - type testExecutionPlan
+      - type undoResponse                             (time.Time)
+      - type undoActionResult
+      - type automationExportEnvelope
+      - type automationPortable                       (json.RawMessage)
+      - type importedAutomation
+      - type importError
+      - type importResult
+  identifiers_kept (in original automation_handler.go):
+    - type AutomationHandler                          (handler struct; not a DTO)
+    - type automationRepository                       (interface; not a DTO)
+    - type AutomationMQTTPublisher                    (interface; not a DTO)
+    - type AutomationHandlerOption                    (functional option type; not a DTO)
+    - type testRunConditionConfig                     (internal helper; unexported fields, no JSON tags)
+    - type duplicateTokenError                        (error type, not a DTO)
+    - type automationExportPayloads                   (internal helper; no JSON tags)
+    - all funcs (constructors, helpers, handler methods, validators), consts (maxAutomationRequestBodyBytes, exportVersion, etc.), vars (legacyAutomationInputFieldNames, legacyAutomationInputFields, errWebhookTokenDuplicate, reverseCommands), and section header comments (// ── Presets ──, // ── History ──, // ── Test Run ──, // ── Undo Last ──, // ── Import / Export ──) remain in original.
+    - newAutomationResponse constructor remains in original (function, not a type — kept per strict scope of "DTO types").
+  cross_file_unexported_references (still package-internal, unchanged):
+    - automation_handler.go references all moved DTO types (e.g., createAutomationRequest, automationTypedStep, automationTriggerSignalDTO, ..., undoResponse, importResult); same package so no import needed.
+    - automation_handler_dtos.go references unexported automationTypedStep (defined in same file) and unexported testConditionResult/testActionResult/testExecutionPlan (defined in same file); references undoActionResult/automationPortable/importedAutomation/importError (defined in same file).
+  imports_added_to_new_file (all already in original package; import-graph union unchanged):
+    - encoding/json
+    - time
+    - github.com/ev-dev-labs/teslasync/internal/automation/condition
+    - github.com/ev-dev-labs/teslasync/internal/automation/presets
+    - github.com/ev-dev-labs/teslasync/internal/database
+    - github.com/ev-dev-labs/teslasync/internal/models
+  imports_removed_from_original: none (every existing import is still referenced by remaining code).
+  validation: gofmt -w, go build ./internal/api/..., go build ./..., go vet ./internal/api, go test ./internal/api -count=1, exports/import invariants, drift check.
+  risks_considered:
+    - Cross-file unexported references: all moved types are unexported but remain within the same `package api`, so accessibility is unchanged.
+    - Init order / package-level vars: only types are moved; no init() funcs and no var/const declarations are touched.
+    - Exports invariant: 1273 exported identifiers preserved (verified by gate).
+    - Import-graph invariant: 80 imports preserved across the package (verified by gate).
+    - JSON tags / wire format: every JSON tag preserved verbatim; no behavior change.
+    - Section header comments (// ── Presets ──, etc.) intentionally remain with their handler methods, not DTOs.
+per-prompt split map must be appended above this line by the engineer before edits
+## CHANGES
+internal/api/automation_handler.go sha256=E67B7282A8523E40953140A7CC0D3420E7CFDECB589914C0E7BCE373FB8459B0
+internal/api/automation_handler_dtos.go sha256=41D18A665199D76222B2C6636220E0E7D60F4740FB6C5F2192FCC467EDE57015
+## GATE
+go build ./internal/api/... exit=0
+
+go build ./... exit=0
+
+go vet exit=0
+
+go test exit=0
+ok  	github.com/ev-dev-labs/teslasync/internal/api	0.169s
+
+EXIT=0
+STATUS=DONE
