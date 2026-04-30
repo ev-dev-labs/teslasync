@@ -1,0 +1,131 @@
+## PREFLIGHT
+start_utc=2026-04-30T05:35:42.2931824+00:00
+go_version=go version go1.26.1 windows/amd64
+engineer_email=iamatulmgupta@gmail.com
+powershell_version=7.6.1
+os_platform=Win32NT
+exports invariant ok: 1273 exported identifiers preserved
+import-graph invariant ok: 80 imports preserved
+## SURVEY
+source_lines_after=972
+new_file=internal/api/devtools_handler_dtos.go lines=19
+new_file=internal/api/devtools_handler_logs.go lines=21
+new_file=internal/api/devtools_handler_database.go lines=85
+## REASONING
+mechanical decomposition: split internal/api/devtools_handler.go into internal/api/devtools_handler_dtos.go, internal/api/devtools_handler_logs.go, internal/api/devtools_handler_database.go
+no behavior, API, SQL, JSON, route, config, or runtime ordering changes
+
+### Split map (per-prompt)
+
+source: internal/api/devtools_handler.go (1179 lines at HEAD)
+
+destinations:
+- internal/api/devtools_handler_dtos.go
+- internal/api/devtools_handler_logs.go
+- internal/api/devtools_handler_database.go
+
+top-level identifiers in source at HEAD (all stay in package api):
+- var devToolsStartTime (unexported)
+- type DevToolsHandler (exported)
+- type DevToolsOption (exported)
+- func WithDB (exported)
+- func WithMQTTClient (exported)
+- func WithConfig (exported)
+- func WithRedisSignalCache (exported)
+- func NewDevToolsHandler (exported)
+- method (*DevToolsHandler).DetectRegion
+- method (*DevToolsHandler).RegisterPartner
+- method (*DevToolsHandler).PartnerPublicKey
+- method (*DevToolsHandler).FleetAPIInfo
+- method (*DevToolsHandler).TestAPIConnectivity
+- method (*DevToolsHandler).TokenInfo
+- method (*DevToolsHandler).DatabaseStats
+- method (*DevToolsHandler).MigrationStatus
+- method (*DevToolsHandler).MQTTTest
+- var requiredEnvVars (unexported)
+- method (*DevToolsHandler).EnvCheck
+- method (*DevToolsHandler).RuntimeInfo
+- method (*DevToolsHandler).GenerateKeypair
+- method (*DevToolsHandler).UploadPublicKey
+- method (*DevToolsHandler).PublicKeyStatus
+- method (*DevToolsHandler).DeletePublicKey
+- method (*DevToolsHandler).ServePublicKey
+- method (*DevToolsHandler).PairVehicleKey
+- func letsEncryptCA (unexported)
+- func isJSON (unexported)
+- method (*DevToolsHandler).FleetTelemetrySubscribe
+- method (*DevToolsHandler).FleetTelemetryGetConfig
+- method (*DevToolsHandler).FleetTelemetryDeleteConfig
+- method (*DevToolsHandler).FleetTelemetryErrors
+- method (*DevToolsHandler).FleetStatus
+- method (*DevToolsHandler).NearbyChargingSites
+- method (*DevToolsHandler).ReleaseNotes
+- method (*DevToolsHandler).RecentAlerts
+- method (*DevToolsHandler).ServiceData
+- func errStringOrDefault (unexported)
+- method (*DevToolsHandler).RedisSignals
+
+moves to internal/api/devtools_handler_database.go:
+- method (*DevToolsHandler).DatabaseStats (verbatim, with leading "Database endpoints" section divider)
+- method (*DevToolsHandler).MigrationStatus (verbatim)
+- imports moved/added to new file: context, fmt, net/http, time, github.com/rs/zerolog/log
+  (all five remain referenced in devtools_handler.go by other handlers, so no import was removed
+  from the original file)
+
+placeholder content in internal/api/devtools_handler_dtos.go:
+- package decl + reservation comment for top-level devtools request/response DTO types
+  (all current DTOs live as inline anonymous struct literals inside handler bodies; no
+  top-level DTO declaration exists to move at this time)
+
+placeholder content in internal/api/devtools_handler_logs.go:
+- package decl + reservation comment for devtools log-inspection / api-log endpoints
+  (no log-inspection endpoint exists in devtools_handler.go at this time; audit and
+  api-log query endpoints live in their own handlers)
+
+stays in internal/api/devtools_handler.go:
+- var devToolsStartTime; type DevToolsHandler; type DevToolsOption; funcs WithDB,
+  WithMQTTClient, WithConfig, WithRedisSignalCache, NewDevToolsHandler
+- methods DetectRegion, RegisterPartner, PartnerPublicKey, FleetAPIInfo,
+  TestAPIConnectivity, TokenInfo, MQTTTest, EnvCheck, RuntimeInfo, GenerateKeypair,
+  UploadPublicKey, PublicKeyStatus, DeletePublicKey, ServePublicKey, PairVehicleKey,
+  FleetTelemetrySubscribe, FleetTelemetryGetConfig, FleetTelemetryDeleteConfig,
+  FleetTelemetryErrors, FleetStatus, NearbyChargingSites, ReleaseNotes, RecentAlerts,
+  ServiceData, RedisSignals
+- var requiredEnvVars; func letsEncryptCA; func isJSON; func errStringOrDefault
+- imports trimmed: none removed (every import is still referenced by handlers that
+  remain in the original file; context/fmt/net/http/time/log are duplicated into the
+  new database file but the package import-graph union is unchanged)
+
+cross-file unexported references retained in same package:
+- writeError, writeJSON (defined in handler_helpers.go)
+- type DevToolsHandler (still defined in devtools_handler.go) is the receiver for the
+  database methods now living in devtools_handler_database.go
+
+mechanical-only contract notes:
+- The exports invariant uses PowerShell -match with [A-Z]\w*, which is case-insensitive
+  in PowerShell, so any newly introduced top-level identifier (exported or unexported)
+  would be flagged as exports drift. To satisfy the strict identifier-preservation
+  invariant (1273 identifiers, no add/remove), this attempt moves only EXISTING
+  top-level declarations into the new database file; the dtos and logs files contain
+  only a package declaration and a reservation comment, ready for a future refactor
+  that does not have the exports-invariant constraint (e.g., a phase that explicitly
+  promotes inline anonymous struct literals to named DTO types, or that introduces
+  new log-inspection endpoints).
+per-prompt split map must be appended above this line by the engineer before edits
+## CHANGES
+internal/api/devtools_handler.go sha256=5A7D9E0E59F2D13BD50F6698324083B7199842D421555E3C119A15933A17FE95
+internal/api/devtools_handler_dtos.go sha256=01E0FB9437FDEFC9CF58FE349D65F13FCD308AC53FA5280A93B014E0480B46D7
+internal/api/devtools_handler_logs.go sha256=D0C334D15DD0F340A0BA416954C53ED69D75FDF6C2CDC4758AAC4166CFF3F9DA
+internal/api/devtools_handler_database.go sha256=56362F1FAC6C7225C3D0F3902BF4BFC3BAA4C96D4C1CF97D1A14358C0A5067A4
+## GATE
+go build ./internal/api/... exit=0
+
+go build ./... exit=0
+
+go vet exit=0
+
+go test exit=0
+ok  	github.com/ev-dev-labs/teslasync/internal/api	0.167s
+
+EXIT=0
+STATUS=DONE
