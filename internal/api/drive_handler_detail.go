@@ -6,11 +6,109 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/rs/zerolog/log"
 )
 
-func (h *DriveHandler) Get(w http.ResponseWriter, r *http.Request) {
+// driveDetailHandler wraps the legacy *DriveHandler with a signal.StateReader
+// for the migrated Get / Positions / TelemetryReadings paths (ADR-002,
+// phase-39). Embedding preserves the listing / stats / score routes
+// (drive_handler_listing.go) and the WithRedisCache fluent setter
+// (drive_handler.go) via Go method promotion, so those files do not need to
+// change in this prompt. The state field is the cold-path StateReader used
+// by the three migrated handlers; the drives field is a narrow interface
+// over driveRepo.GetByID so handler tests can inject a fake without
+// reaching into the database layer.
+type driveDetailHandler struct {
+	*DriveHandler
+	state  signal.StateReader
+	drives driveByIDFetcher
+}
+
+// driveByIDFetcher is the narrow interface needed by the migrated handlers
+// to fetch a single drive header. It is satisfied by *database.DriveRepo and
+// declared at the call site so tests can substitute an in-memory fake.
+type driveByIDFetcher interface {
+	GetByID(ctx context.Context, id int64) (*models.Drive, error)
+}
+
+// NewDriveDetail constructs the migrated drive handler. It internally
+// composes the legacy *DriveHandler (so listing / stats / score routes still
+// resolve via promotion) and wires the cold-path StateReader. See ADR-002.
+func NewDriveDetail(db *database.DB, state signal.StateReader) *driveDetailHandler {
+	base := NewDriveHandler(db)
+	return &driveDetailHandler{
+		DriveHandler: base,
+		state:        state,
+		drives:       base.driveRepo,
+	}
+}
+
+// driveTelemetryFieldMappings projects the signal_log change feed into the
+// legacy DriveTelemetryReading JSON shape. Field names match the old
+// driveTelemetryMappings (drive_handler_dtos.go) so the wire contract is
+// unchanged.
+var driveTelemetryFieldMappings = []signal.FieldMapping{
+	{Signal: "VehicleSpeed", Field: "speed"},
+	{Signal: "PackCurrent", Field: "pack_current"},
+	{Signal: "PackVoltage", Field: "pack_voltage"},
+	{Signal: "BatteryLevel", Field: "battery_level"},
+	{Signal: "Elevation", Field: "elevation"},
+	{Signal: "InsideTemp", Field: "inside_temp"},
+	{Signal: "OutsideTemp", Field: "outside_temp"},
+	{Signal: "TpmsPressureFl", Field: "tire_pressure_fl"},
+	{Signal: "TpmsPressureFr", Field: "tire_pressure_fr"},
+	{Signal: "TpmsPressureRl", Field: "tire_pressure_rl"},
+	{Signal: "TpmsPressureRr", Field: "tire_pressure_rr"},
+	{Signal: "Latitude", Field: "latitude"},
+	{Signal: "Longitude", Field: "longitude"},
+}
+
+// drivePositionFieldMappings projects the signal_log change feed into the
+// legacy Position model JSON tags so the frontend contract is unchanged.
+var drivePositionFieldMappings = []signal.FieldMapping{
+	{Signal: "Latitude", Field: "latitude"},
+	{Signal: "Longitude", Field: "longitude"},
+	{Signal: "GpsHeading", Field: "heading"},
+	{Signal: "VehicleSpeed", Field: "speed_mph"},
+	{Signal: "Elevation", Field: "elevation_m"},
+}
+
+// timelineRowsToFlat converts ordered TimelineRows into the legacy
+// []map[string]interface{} flat-pivot shape ({"ts": ts, "<field>": value, ...})
+// that the drive endpoints emit. The output preserves StateReader's
+// chronological order; downstream callers that need newest-first or
+// alias-renaming (created_at, id, speed) layer that on top.
+func timelineRowsToFlat(rows []signal.TimelineRow) []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(rows))
+	for _, tr := range rows {
+		row := make(map[string]interface{}, len(tr.Fields)+1)
+		for k, v := range tr.Fields {
+			row[k] = v
+		}
+		row["ts"] = tr.Timestamp
+		out = append(out, row)
+	}
+	return out
+}
+
+// stateToSignalMap converts a signal.State (named map type) into the bare
+// map[string]interface{} expected by signalFloat and other helpers in this
+// package.
+func stateToSignalMap(s signal.State) map[string]interface{} {
+	if s == nil {
+		return map[string]interface{}{}
+	}
+	out := make(map[string]interface{}, len(s))
+	for k, v := range s {
+		out[k] = v
+	}
+	return out
+}
+
+func (h *driveDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
 	id, err := urlParamInt64(r, "driveID")
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid drive ID")
@@ -19,7 +117,7 @@ func (h *DriveHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	drive, err := h.driveRepo.GetByID(ctx, id)
+	drive, err := h.drives.GetByID(ctx, id)
 	if err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to get drive")
 		writeError(w, http.StatusInternalServerError, "failed to get drive")
@@ -35,19 +133,27 @@ func (h *DriveHandler) Get(w http.ResponseWriter, r *http.Request) {
 	if drive.EndTs != nil {
 		endTs = *drive.EndTs
 	} else {
-		// In-progress drive — compute live values from signal snapshots
+		// In-progress drive — compute live values from signal snapshots.
 		live = true
-		h.enrichLiveDrive(ctx, drive, endTs)
+		if err := h.enrichLiveDrive(ctx, drive, endTs); err != nil {
+			log.Error().Err(err).Int64("driveID", id).Msg("failed to enrich live drive")
+			writeError(w, http.StatusInternalServerError, "failed to load live drive state")
+			return
+		}
 	}
 
-	// Telemetry from signal_log via pivot
-	telemetry, err := h.signalLogReader.SignalTracePivotFlat(ctx,
-		drive.VehicleID, driveTelemetryMappings, drive.StartTs, endTs)
+	// Telemetry: chart mode (empty CollapseBy) so every change-feed emission
+	// becomes a row, preserving the legacy flat-pivot semantics consumed by
+	// frontend chart components.
+	telemetryRows, err := h.state.Timeline(ctx,
+		drive.VehicleID, driveTelemetryFieldMappings, drive.StartTs, endTs, signal.TimelineOptions{})
 	if err != nil {
-		log.Warn().Err(err).Int64("driveID", id).Msg("failed to get drive telemetry from signal_log")
-		telemetry = []map[string]interface{}{}
+		log.Error().Err(err).Int64("driveID", id).Msg("failed to get drive telemetry from signal_log")
+		writeError(w, http.StatusInternalServerError, "failed to load drive telemetry")
+		return
 	}
-	// Rename "ts" → "created_at" to match old DriveTelemetryReading JSON shape
+	telemetry := timelineRowsToFlat(telemetryRows)
+	// Rename "ts" → "created_at" to match the old DriveTelemetryReading JSON shape.
 	for _, row := range telemetry {
 		if ts, ok := row["ts"]; ok {
 			row["created_at"] = ts
@@ -55,13 +161,15 @@ func (h *DriveHandler) Get(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Positions from signal_log via pivot
-	positions, err := h.signalLogReader.SignalTracePivotFlat(ctx,
-		drive.VehicleID, positionMappings, drive.StartTs, endTs)
+	// Positions: chart mode (empty CollapseBy).
+	positionRows, err := h.state.Timeline(ctx,
+		drive.VehicleID, drivePositionFieldMappings, drive.StartTs, endTs, signal.TimelineOptions{})
 	if err != nil {
-		log.Warn().Err(err).Int64("driveID", id).Msg("failed to get drive positions from signal_log")
-		positions = []map[string]interface{}{}
+		log.Error().Err(err).Int64("driveID", id).Msg("failed to get drive positions from signal_log")
+		writeError(w, http.StatusInternalServerError, "failed to load drive positions")
+		return
 	}
+	positions := timelineRowsToFlat(positionRows)
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"id":                 drive.ID,
@@ -95,29 +203,32 @@ func (h *DriveHandler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 // enrichLiveDrive computes live values for an in-progress drive by reading
-// start-of-drive state from signal_log and current state from Redis (with
-// signal_log fallback). The drive struct is mutated in place.
-func (h *DriveHandler) enrichLiveDrive(ctx context.Context, drive *models.Drive, now time.Time) {
-	startSnap, err := h.signalLogReader.SnapshotAt(ctx, drive.VehicleID, drive.StartTs)
+// start-of-drive state from signal_log via StateReader.State(drive.StartTs)
+// and current state from Redis (with StateReader.State(now) as fallback).
+// The drive struct is mutated in place. Returns an error if the start
+// snapshot lookup fails — the caller should respond 500 because the live
+// derivation depends on it (distance/battery deltas need a baseline).
+func (h *driveDetailHandler) enrichLiveDrive(ctx context.Context, drive *models.Drive, now time.Time) error {
+	startState, err := h.state.State(ctx, drive.VehicleID, drive.StartTs)
 	if err != nil {
-		log.Warn().Err(err).Int64("driveID", drive.ID).Msg("live drive: failed to get start snapshot")
-		startSnap = map[string]interface{}{}
+		return fmt.Errorf("start snapshot at %s: %w", drive.StartTs.Format(time.RFC3339Nano), err)
 	}
+	startSnap := stateToSignalMap(startState)
 
 	currentSnap := h.currentSignals(ctx, drive.VehicleID)
 
-	// Duration — always computable from wall clock
+	// Duration — always computable from wall clock.
 	durationMin := now.Sub(drive.StartTs).Minutes()
 	drive.DurationMin = safeFloat(durationMin)
 
-	// Distance from odometer delta
+	// Distance from odometer delta.
 	startOdo, startOdoOk := signalFloat(startSnap, "Odometer")
 	currentOdo, currentOdoOk := signalFloat(currentSnap, "Odometer")
 	if startOdoOk && currentOdoOk && currentOdo > startOdo {
 		drive.DistanceMi = safeFloat(currentOdo - startOdo)
 	}
 
-	// Battery levels
+	// Battery levels.
 	if startBat, ok := signalFloat(startSnap, "BatteryLevel"); ok {
 		v := int16(startBat)
 		drive.StartBatteryPct = &v
@@ -127,13 +238,13 @@ func (h *DriveHandler) enrichLiveDrive(ctx context.Context, drive *models.Drive,
 		drive.EndBatteryPct = &v
 	}
 
-	// Average speed (distance / hours)
+	// Average speed (distance / hours).
 	if drive.DistanceMi > 0 && durationMin > 0 {
 		avgSpeed := safeFloat(drive.DistanceMi / (durationMin / 60.0))
 		drive.AvgSpeedMph = &avgSpeed
 	}
 
-	// Current speed as max (best approximation during live drive)
+	// Current speed as max (best approximation during live drive).
 	if currentSpeed, ok := signalFloat(currentSnap, "VehicleSpeed"); ok {
 		if drive.MaxSpeedMph == nil || currentSpeed > *drive.MaxSpeedMph {
 			v := safeFloat(currentSpeed)
@@ -141,7 +252,7 @@ func (h *DriveHandler) enrichLiveDrive(ctx context.Context, drive *models.Drive,
 		}
 	}
 
-	// Current position as end position
+	// Current position as end position.
 	if lat, ok := signalFloat(currentSnap, "Latitude"); ok {
 		drive.EndLat = &lat
 	}
@@ -149,7 +260,7 @@ func (h *DriveHandler) enrichLiveDrive(ctx context.Context, drive *models.Drive,
 		drive.EndLon = &lon
 	}
 
-	// Power
+	// Power.
 	if voltage, vOk := signalFloat(currentSnap, "PackVoltage"); vOk {
 		if current, cOk := signalFloat(currentSnap, "PackCurrent"); cOk {
 			power := safeFloat(voltage * current / 1000.0)
@@ -157,18 +268,21 @@ func (h *DriveHandler) enrichLiveDrive(ctx context.Context, drive *models.Drive,
 		}
 	}
 
-	// Temps
+	// Temps.
 	if outside, ok := signalFloat(currentSnap, "OutsideTemp"); ok {
 		drive.OutsideTempAvgC = &outside
 	}
 	if inside, ok := signalFloat(currentSnap, "InsideTemp"); ok {
 		drive.InsideTempAvgC = &inside
 	}
+	return nil
 }
 
 // currentSignals returns the latest signal values for a vehicle, preferring
-// Redis (sub-ms) with signal_log SnapshotAt(now) as fallback.
-func (h *DriveHandler) currentSignals(ctx context.Context, vehicleID int64) map[string]interface{} {
+// Redis (sub-ms) with StateReader.State(time.Now()) as fallback. A failed
+// fallback degrades to an empty map rather than blocking the live-drive
+// derivation; the caller treats missing signals as "no current sample".
+func (h *driveDetailHandler) currentSignals(ctx context.Context, vehicleID int64) map[string]interface{} {
 	if h.redisCache != nil {
 		snap, err := h.redisCache.GetAll(ctx, vehicleID)
 		if err == nil && snap != nil {
@@ -176,22 +290,22 @@ func (h *DriveHandler) currentSignals(ctx context.Context, vehicleID int64) map[
 		}
 		log.Debug().Err(err).Int64("vehicleID", vehicleID).Msg("live drive: Redis unavailable, falling back to signal_log")
 	}
-	snap, err := h.signalLogReader.SnapshotAt(ctx, vehicleID, time.Now().UTC())
+	state, err := h.state.State(ctx, vehicleID, time.Now().UTC())
 	if err != nil {
 		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("live drive: failed to get current snapshot from signal_log")
 		return map[string]interface{}{}
 	}
-	return snap
+	return stateToSignalMap(state)
 }
 
-func (h *DriveHandler) Positions(w http.ResponseWriter, r *http.Request) {
+func (h *driveDetailHandler) Positions(w http.ResponseWriter, r *http.Request) {
 	driveID, err := urlParamInt64(r, "driveID")
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid drive ID")
 		return
 	}
 
-	drive, err := h.driveRepo.GetByID(r.Context(), driveID)
+	drive, err := h.drives.GetByID(r.Context(), driveID)
 	if err != nil {
 		log.Error().Err(err).Int64("id", driveID).Msg("failed to get drive")
 		writeError(w, http.StatusInternalServerError, "failed to get drive")
@@ -207,17 +321,15 @@ func (h *DriveHandler) Positions(w http.ResponseWriter, r *http.Request) {
 		endTs = *drive.EndTs
 	}
 
-	rows, err := h.signalLogReader.SignalTracePivotFlat(r.Context(),
-		drive.VehicleID, positionMappings, drive.StartTs, endTs)
+	rowsTL, err := h.state.Timeline(r.Context(),
+		drive.VehicleID, drivePositionFieldMappings, drive.StartTs, endTs, signal.TimelineOptions{})
 	if err != nil {
 		log.Error().Err(err).Int64("driveID", driveID).Msg("failed to get drive positions from signal_log")
 		writeError(w, http.StatusInternalServerError, "failed to get positions")
 		return
 	}
-	if rows == nil {
-		rows = []map[string]interface{}{}
-	}
-	// Alias ts→created_at and speed_mph→speed for frontend PositionRecord
+	rows := timelineRowsToFlat(rowsTL)
+	// Alias ts → created_at and speed_mph → speed for frontend PositionRecord.
 	for _, row := range rows {
 		if ts, ok := row["ts"]; ok {
 			row["created_at"] = ts
@@ -230,14 +342,14 @@ func (h *DriveHandler) Positions(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, rows)
 }
 
-func (h *DriveHandler) TelemetryReadings(w http.ResponseWriter, r *http.Request) {
+func (h *driveDetailHandler) TelemetryReadings(w http.ResponseWriter, r *http.Request) {
 	driveID, err := urlParamInt64(r, "driveID")
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid drive ID")
 		return
 	}
 
-	drive, err := h.driveRepo.GetByID(r.Context(), driveID)
+	drive, err := h.drives.GetByID(r.Context(), driveID)
 	if err != nil {
 		log.Error().Err(err).Int64("id", driveID).Msg("failed to get drive for telemetry")
 		writeError(w, http.StatusInternalServerError, "failed to get drive")
@@ -253,17 +365,15 @@ func (h *DriveHandler) TelemetryReadings(w http.ResponseWriter, r *http.Request)
 		endTs = *drive.EndTs
 	}
 
-	rows, err := h.signalLogReader.SignalTracePivotFlat(r.Context(),
-		drive.VehicleID, driveTelemetryMappings, drive.StartTs, endTs)
+	rowsTL, err := h.state.Timeline(r.Context(),
+		drive.VehicleID, driveTelemetryFieldMappings, drive.StartTs, endTs, signal.TimelineOptions{})
 	if err != nil {
 		log.Error().Err(err).Int64("driveID", driveID).Msg("failed to get telemetry from signal_log")
 		writeError(w, http.StatusInternalServerError, "failed to get telemetry")
 		return
 	}
-	if rows == nil {
-		rows = []map[string]interface{}{}
-	}
-	// Rename "ts" → "created_at" to match old DriveTelemetryReading JSON shape
+	rows := timelineRowsToFlat(rowsTL)
+	// Rename "ts" → "created_at" to match the old DriveTelemetryReading JSON shape.
 	for _, row := range rows {
 		if ts, ok := row["ts"]; ok {
 			row["created_at"] = ts
