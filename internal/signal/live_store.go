@@ -166,7 +166,12 @@ func (s *HybridLiveSignalStore) UpdateNonBlocking(ctx context.Context, vehicleID
 	return nil
 }
 
-// GetSignal reads one live signal from L1 or L2 according to caller preference and runtime mode.
+// GetSignal reads one live signal from L1 and L2 and returns the merged value
+// per the per-signal merge rule (newer non-zero Timestamp wins; legacy
+// zero-Timestamp values lose to any non-zero Timestamp; ties prefer L2).
+// LiveSignalReadLocal preference and LiveSignalStoreModeLocal mode short-circuit
+// to L1 only and never call into Redis. Redis errors in distributed mode are
+// surfaced wrapped; an empty L2 result falls back to L1 only.
 func (s *HybridLiveSignalStore) GetSignal(ctx context.Context, vehicleID int64, name string, preference LiveSignalReadPreference) (*Value, error) {
 	if err := validateLiveSignalContext(ctx); err != nil {
 		return nil, err
@@ -182,20 +187,21 @@ func (s *HybridLiveSignalStore) GetSignal(ctx context.Context, vehicleID int64, 
 		return cloneSignalValue(s.l1.Get(vehicleID, name)), nil
 	}
 
-	value, err := l2.GetSignalValue(ctx, vehicleID, name)
+	l1Value := s.l1.Get(vehicleID, name)
+	l2Value, err := l2.GetSignalValue(ctx, vehicleID, name)
 	if err != nil {
 		return nil, fmt.Errorf("read Redis live signal %d/%s: %w", vehicleID, name, err)
 	}
-	if IsLiveSignalFresh(value, s.now()) {
-		return cloneSignalValue(value), nil
-	}
-	if value != nil {
-		return nil, nil
-	}
-	return cloneSignalValue(s.l1.Get(vehicleID, name)), nil
+	return cloneSignalValue(mergeSignalValues(l1Value, l2Value)), nil
 }
 
-// GetAll reads a vehicle's live signals from L1 or L2 according to caller preference and runtime mode.
+// GetAll reads a vehicle's live signals from L1 and L2 and returns the merged
+// per-signal map per the per-signal merge rule. L1-only and L2-only signals
+// are both retained. Stale and legacy zero-Timestamp L2 values are retained
+// (callers use IsLiveSignalFresh to inspect freshness; the read path does not
+// drop them). LiveSignalReadLocal preference and LiveSignalStoreModeLocal mode
+// short-circuit to L1 only and never call into Redis. Redis errors in
+// distributed mode are surfaced wrapped; an empty L2 result falls back to L1.
 func (s *HybridLiveSignalStore) GetAll(ctx context.Context, vehicleID int64, preference LiveSignalReadPreference) (map[string]*Value, error) {
 	if err := validateLiveSignalContext(ctx); err != nil {
 		return nil, err
@@ -208,14 +214,15 @@ func (s *HybridLiveSignalStore) GetAll(ctx context.Context, vehicleID int64, pre
 		return cloneSignalValues(s.l1.GetAll(vehicleID)), nil
 	}
 
-	values, err := l2.GetAllValues(ctx, vehicleID)
+	l2Values, err := l2.GetAllValues(ctx, vehicleID)
 	if err != nil {
 		return nil, fmt.Errorf("read Redis live signals for vehicle %d: %w", vehicleID, err)
 	}
-	if len(values) == 0 {
-		return cloneSignalValues(s.l1.GetAll(vehicleID)), nil
+	l1Values := s.l1.GetAll(vehicleID)
+	if len(l1Values) == 0 && len(l2Values) == 0 {
+		return cloneSignalValues(l1Values), nil
 	}
-	return freshSignalValues(values, s.now()), nil
+	return mergeSignalMaps(l1Values, l2Values), nil
 }
 
 // Warm hydrates missing L1 values from Redis when L2 is enabled and available.
@@ -330,15 +337,61 @@ func cloneSignalValue(value *Value) *Value {
 	return &cloned
 }
 
-func freshSignalValues(values map[string]*Value, now time.Time) map[string]*Value {
-	if len(values) == 0 {
+// mergeSignalValues returns the L1/L2 value that wins per the live-signal
+// merge rule:
+//   - nil-safe: if either side is nil, the other side wins.
+//   - both have non-zero Timestamp: the strictly newer one wins; ties on
+//     identical non-zero Timestamps prefer L2 (cross-pod authoritative).
+//   - exactly one side has zero Timestamp (legacy unknown freshness): the
+//     non-zero side wins regardless of which layer it came from.
+//   - both have zero Timestamp: L1 wins (local hot-path observation).
+//
+// The returned pointer is the chosen layer's value (not cloned); callers that
+// expose it across the boundary must clone before mutating.
+func mergeSignalValues(l1, l2 *Value) *Value {
+	if l1 == nil {
+		return l2
+	}
+	if l2 == nil {
+		return l1
+	}
+	l1Zero := l1.Timestamp.IsZero()
+	l2Zero := l2.Timestamp.IsZero()
+	switch {
+	case l1Zero && l2Zero:
+		return l1
+	case l1Zero:
+		return l2
+	case l2Zero:
+		return l1
+	}
+	if l1.Timestamp.After(l2.Timestamp) {
+		return l1
+	}
+	return l2
+}
+
+// mergeSignalMaps returns the union of L1 and L2 keys with mergeSignalValues
+// applied per signal. Values in the result are clones so the caller cannot
+// mutate either layer's storage. Returns nil when both inputs are empty so the
+// nil-map contract for unknown vehicles is preserved.
+func mergeSignalMaps(l1, l2 map[string]*Value) map[string]*Value {
+	if len(l1) == 0 && len(l2) == 0 {
 		return nil
 	}
-	fresh := make(map[string]*Value, len(values))
-	for name, value := range values {
-		if IsLiveSignalFresh(value, now) {
-			fresh[name] = cloneSignalValue(value)
+	merged := make(map[string]*Value, len(l1)+len(l2))
+	for name, v := range l1 {
+		merged[name] = cloneSignalValue(v)
+	}
+	for name, v := range l2 {
+		existing, ok := merged[name]
+		if !ok {
+			merged[name] = cloneSignalValue(v)
+			continue
+		}
+		if mergeSignalValues(existing, v) == v {
+			merged[name] = cloneSignalValue(v)
 		}
 	}
-	return fresh
+	return merged
 }

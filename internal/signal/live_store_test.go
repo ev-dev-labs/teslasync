@@ -155,6 +155,11 @@ func TestHybridLiveSignalStoreModeSwitchDisablesRedisBackedDistributedReads(t *t
 }
 
 func TestHybridLiveSignalStoreDistributedReadsPreferRedisWhenAvailable(t *testing.T) {
+	// Under the per-signal merge rule, the value with the newer non-zero
+	// Timestamp wins. The L1 update happens before the L2 update, so the L2
+	// envelope carries a strictly later timestamp and wins by the merge rule
+	// (not by unconditional Redis preference). See the dedicated merge tests
+	// below for the full contract.
 	ctx := context.Background()
 	local := New()
 	local.Update(11, map[string]interface{}{
@@ -381,4 +386,375 @@ func waitForRedisSignalValue(t *testing.T, redisCache *RedisSignalCache, vehicle
 	}
 	t.Fatalf("timed out waiting for Redis signal %d/%s", vehicleID, name)
 	return nil
+}
+
+// --- Merge contract tests (phase-38-02) -------------------------------------
+// These tests cover the per-signal merge rule introduced when GetAll/GetSignal
+// stopped silently dropping legacy and stale Redis values. See
+// .github/prompts/db-refactor/logs/phase-38-01-live-store-merge-tests.log
+// for the full contract (R1-R8).
+
+func TestHybridLiveSignalStoreGetAllReturnsL2OnlyAndL1OnlySignalsTogether(t *testing.T) {
+	ctx := context.Background()
+	vehicleID := int64(42)
+
+	local := New()
+	local.Update(vehicleID, map[string]interface{}{"L1Only": "from_l1"})
+
+	redisClient := newFakeRedisSignalClient()
+	redisCache := &RedisSignalCache{rdb: redisClient}
+	if err := redisCache.Update(ctx, vehicleID, map[string]interface{}{"L2Only": 12.5}); err != nil {
+		t.Fatalf("RedisSignalCache.Update() error = %v", err)
+	}
+
+	liveStore, err := NewHybridLiveSignalStore(local, redisCache, LiveSignalStoreModeHybrid)
+	if err != nil {
+		t.Fatalf("NewHybridLiveSignalStore() error = %v", err)
+	}
+
+	values, err := liveStore.GetAll(ctx, vehicleID, LiveSignalReadDistributed)
+	if err != nil {
+		t.Fatalf("GetAll() error = %v", err)
+	}
+	if values["L1Only"] == nil {
+		t.Fatal("L1-only signal dropped from distributed GetAll, want union of L1 and L2")
+	}
+	assertString(t, values["L1Only"].Raw, "from_l1")
+	if values["L2Only"] == nil {
+		t.Fatal("L2-only signal missing from distributed GetAll, want union of L1 and L2")
+	}
+	assertFloat64(t, values["L2Only"].Raw, 12.5)
+}
+
+func TestHybridLiveSignalStoreGetAllReturnsLegacyScalarL2Values(t *testing.T) {
+	ctx := context.Background()
+	vehicleID := int64(7)
+
+	local := New()
+	redisClient := newFakeRedisSignalClient()
+	redisClient.hashes[redisSignalKey(vehicleID)] = map[string]string{
+		"legacy_speed": "88.5",
+		"legacy_state": "asleep",
+	}
+	redisCache := &RedisSignalCache{rdb: redisClient}
+
+	liveStore, err := NewHybridLiveSignalStore(local, redisCache, LiveSignalStoreModeHybrid)
+	if err != nil {
+		t.Fatalf("NewHybridLiveSignalStore() error = %v", err)
+	}
+
+	values, err := liveStore.GetAll(ctx, vehicleID, LiveSignalReadDistributed)
+	if err != nil {
+		t.Fatalf("GetAll() error = %v", err)
+	}
+	if values["legacy_speed"] == nil {
+		t.Fatal("legacy scalar L2 value silently dropped, want returned with zero Timestamp")
+	}
+	assertFloat64(t, values["legacy_speed"].Raw, 88.5)
+	if !values["legacy_speed"].Timestamp.IsZero() {
+		t.Fatalf("legacy_speed Timestamp = %v, want zero (unknown freshness preserved)", values["legacy_speed"].Timestamp)
+	}
+	if values["legacy_state"] == nil {
+		t.Fatal("legacy scalar string L2 value silently dropped, want returned with zero Timestamp")
+	}
+	assertString(t, values["legacy_state"].Raw, "asleep")
+	if !values["legacy_state"].Timestamp.IsZero() {
+		t.Fatalf("legacy_state Timestamp = %v, want zero (unknown freshness preserved)", values["legacy_state"].Timestamp)
+	}
+
+	now := time.Now().UTC()
+	if IsLiveSignalFresh(values["legacy_speed"], now) {
+		t.Fatal("legacy scalar value reported fresh; freshness oracle must still mark zero-Timestamp as not fresh")
+	}
+	if IsLiveSignalFresh(values["legacy_state"], now) {
+		t.Fatal("legacy scalar string value reported fresh; freshness oracle must still mark zero-Timestamp as not fresh")
+	}
+}
+
+func TestHybridLiveSignalStoreGetAllReturnsStaleL2EnvelopesWithTimestampPreserved(t *testing.T) {
+	ctx := context.Background()
+	vehicleID := int64(11)
+	now := time.Date(2026, 4, 28, 12, 0, 0, 0, time.UTC)
+	staleTimestamp := now.Add(-LiveSignalFreshnessThreshold - 5*time.Minute)
+
+	encoded, err := encodeTimestampedSignalValue(125000.0, staleTimestamp)
+	if err != nil {
+		t.Fatalf("encodeTimestampedSignalValue() error = %v", err)
+	}
+
+	redisClient := newFakeRedisSignalClient()
+	redisClient.hashes[redisSignalKey(vehicleID)] = map[string]string{"Odometer": encoded}
+	redisCache := &RedisSignalCache{rdb: redisClient}
+
+	local := New()
+	liveStore, err := NewHybridLiveSignalStore(local, redisCache, LiveSignalStoreModeHybrid)
+	if err != nil {
+		t.Fatalf("NewHybridLiveSignalStore() error = %v", err)
+	}
+	liveStore.now = func() time.Time { return now }
+
+	values, err := liveStore.GetAll(ctx, vehicleID, LiveSignalReadDistributed)
+	if err != nil {
+		t.Fatalf("GetAll() error = %v", err)
+	}
+	if values["Odometer"] == nil {
+		t.Fatal("stale L2 envelope silently dropped, want returned with original Timestamp preserved")
+	}
+	assertFloat64(t, values["Odometer"].Raw, 125000)
+	if !values["Odometer"].Timestamp.Equal(staleTimestamp) {
+		t.Fatalf("stale Odometer Timestamp = %v, want %v (preserved verbatim, not zeroed and not restamped)", values["Odometer"].Timestamp, staleTimestamp)
+	}
+	if IsLiveSignalFresh(values["Odometer"], now) {
+		t.Fatal("stale L2 value reported fresh; freshness oracle must still flag age beyond LiveSignalFreshnessThreshold")
+	}
+}
+
+func TestHybridLiveSignalStoreGetAllMergesL1AndL2WithNewerTimestampWinning(t *testing.T) {
+	ctx := context.Background()
+	vehicleID := int64(13)
+	now := time.Date(2026, 4, 28, 12, 0, 0, 0, time.UTC)
+
+	encodedANewer, err := encodeTimestampedSignalValue("l2_a_newer", now.Add(-10*time.Second))
+	if err != nil {
+		t.Fatalf("encodeTimestampedSignalValue(A) error = %v", err)
+	}
+	encodedBOlder, err := encodeTimestampedSignalValue("l2_b_older", now.Add(-60*time.Second))
+	if err != nil {
+		t.Fatalf("encodeTimestampedSignalValue(B) error = %v", err)
+	}
+	encodedDTie, err := encodeTimestampedSignalValue("l2_d_tie", now.Add(-20*time.Second))
+	if err != nil {
+		t.Fatalf("encodeTimestampedSignalValue(D) error = %v", err)
+	}
+
+	redisClient := newFakeRedisSignalClient()
+	redisClient.hashes[redisSignalKey(vehicleID)] = map[string]string{
+		"signalA": encodedANewer,
+		"signalB": encodedBOlder,
+		"signalC": "12.0", // legacy scalar — zero Timestamp on decode
+		"signalD": encodedDTie,
+	}
+	redisCache := &RedisSignalCache{rdb: redisClient}
+
+	local := New()
+	// Inject L1 values with deterministic, controlled timestamps. Same package
+	// so we can write directly to the unexported map. No concurrent access here.
+	local.vehicles[vehicleID] = map[string]*Value{
+		"signalA": {Raw: "l1_a_older", Timestamp: now.Add(-30 * time.Second)},
+		"signalB": {Raw: "l1_b_newer", Timestamp: now.Add(-10 * time.Second)},
+		"signalC": {Raw: "l1_c", Timestamp: now.Add(-45 * time.Second)},
+		"signalD": {Raw: "l1_d_tie", Timestamp: now.Add(-20 * time.Second)},
+	}
+
+	liveStore, err := NewHybridLiveSignalStore(local, redisCache, LiveSignalStoreModeHybrid)
+	if err != nil {
+		t.Fatalf("NewHybridLiveSignalStore() error = %v", err)
+	}
+	liveStore.now = func() time.Time { return now }
+
+	values, err := liveStore.GetAll(ctx, vehicleID, LiveSignalReadDistributed)
+	if err != nil {
+		t.Fatalf("GetAll() error = %v", err)
+	}
+
+	// signalA: L2 has the newer non-zero Timestamp, so L2 wins.
+	assertString(t, values["signalA"].Raw, "l2_a_newer")
+	// signalB: L1 has the newer non-zero Timestamp, so L1 wins.
+	assertString(t, values["signalB"].Raw, "l1_b_newer")
+	// signalC: L2 is a legacy zero-Timestamp scalar; L1 has a non-zero
+	// Timestamp; legacy loses to any non-zero Timestamp regardless of layer.
+	assertString(t, values["signalC"].Raw, "l1_c")
+	// signalD: identical non-zero Timestamps; tie-break prefers L2 (cross-pod
+	// authoritative cache).
+	assertString(t, values["signalD"].Raw, "l2_d_tie")
+}
+
+func TestHybridLiveSignalStoreGetSignalAppliesSameMergeRuleAsGetAll(t *testing.T) {
+	ctx := context.Background()
+	vehicleID := int64(17)
+	now := time.Date(2026, 4, 28, 12, 0, 0, 0, time.UTC)
+	veryStaleTS := now.Add(-LiveSignalFreshnessThreshold - 5*time.Minute)
+
+	encodedNewer, err := encodeTimestampedSignalValue("l2_x_newer", now.Add(-5*time.Second))
+	if err != nil {
+		t.Fatalf("encodeTimestampedSignalValue(newer) error = %v", err)
+	}
+	encodedOlder, err := encodeTimestampedSignalValue("l2_x_older", now.Add(-30*time.Second))
+	if err != nil {
+		t.Fatalf("encodeTimestampedSignalValue(older) error = %v", err)
+	}
+	encodedStale, err := encodeTimestampedSignalValue("l2_x_stale", veryStaleTS)
+	if err != nil {
+		t.Fatalf("encodeTimestampedSignalValue(stale) error = %v", err)
+	}
+
+	type subTest struct {
+		name       string
+		l1         *Value
+		l2         string // raw value to inject into hash; "" means absent
+		wantRaw    interface{}
+		wantTS     time.Time
+		wantTSZero bool
+	}
+
+	cases := []subTest{
+		{
+			name:    "L2 newer wins",
+			l1:      &Value{Raw: "l1_x", Timestamp: now.Add(-30 * time.Second)},
+			l2:      encodedNewer,
+			wantRaw: "l2_x_newer",
+			wantTS:  now.Add(-5 * time.Second),
+		},
+		{
+			name:    "L1 newer wins",
+			l1:      &Value{Raw: "l1_x_newer", Timestamp: now.Add(-5 * time.Second)},
+			l2:      encodedOlder,
+			wantRaw: "l1_x_newer",
+			wantTS:  now.Add(-5 * time.Second),
+		},
+		{
+			name:    "L2 stale envelope returned not dropped",
+			l1:      nil,
+			l2:      encodedStale,
+			wantRaw: "l2_x_stale",
+			wantTS:  veryStaleTS,
+		},
+		{
+			name:       "L2 legacy scalar returned not dropped",
+			l1:         nil,
+			l2:         "42.5",
+			wantRaw:    42.5,
+			wantTSZero: true,
+		},
+		{
+			name:    "L1 only",
+			l1:      &Value{Raw: "l1_only", Timestamp: now.Add(-15 * time.Second)},
+			l2:      "",
+			wantRaw: "l1_only",
+			wantTS:  now.Add(-15 * time.Second),
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			redisClient := newFakeRedisSignalClient()
+			if tc.l2 != "" {
+				redisClient.hashes[redisSignalKey(vehicleID)] = map[string]string{"X": tc.l2}
+			}
+			redisCache := &RedisSignalCache{rdb: redisClient}
+
+			local := New()
+			if tc.l1 != nil {
+				local.vehicles[vehicleID] = map[string]*Value{"X": tc.l1}
+			}
+
+			liveStore, err := NewHybridLiveSignalStore(local, redisCache, LiveSignalStoreModeHybrid)
+			if err != nil {
+				t.Fatalf("NewHybridLiveSignalStore() error = %v", err)
+			}
+			liveStore.now = func() time.Time { return now }
+
+			value, err := liveStore.GetSignal(ctx, vehicleID, "X", LiveSignalReadDistributed)
+			if err != nil {
+				t.Fatalf("GetSignal() error = %v", err)
+			}
+			if value == nil {
+				t.Fatal("GetSignal() returned nil; merge contract requires non-nil when either layer has the signal")
+			}
+			switch want := tc.wantRaw.(type) {
+			case string:
+				assertString(t, value.Raw, want)
+			case float64:
+				assertFloat64(t, value.Raw, want)
+			default:
+				t.Fatalf("unsupported wantRaw type %T", tc.wantRaw)
+			}
+			if tc.wantTSZero {
+				if !value.Timestamp.IsZero() {
+					t.Fatalf("Timestamp = %v, want zero (legacy unknown freshness preserved)", value.Timestamp)
+				}
+				if IsLiveSignalFresh(value, now) {
+					t.Fatal("legacy scalar reported fresh by IsLiveSignalFresh")
+				}
+			} else if !value.Timestamp.Equal(tc.wantTS) {
+				t.Fatalf("Timestamp = %v, want %v (preserved verbatim from winning layer)", value.Timestamp, tc.wantTS)
+			}
+		})
+	}
+}
+
+func TestHybridLiveSignalStoreGetAllLocalModeUnchangedAndNeverReadsRedis(t *testing.T) {
+	ctx := context.Background()
+	vehicleID := int64(23)
+
+	local := New()
+	local.Update(vehicleID, map[string]interface{}{"BatteryLevel": 21.0})
+
+	// Failing client errors on every call; if any local-preference or
+	// local-mode read path touches Redis, the test fails immediately.
+	redisErr := errors.New("redis must not be called by local-preference reads")
+	redisCache := &RedisSignalCache{rdb: failingRedisSignalClient{err: redisErr}}
+	liveStore, err := NewHybridLiveSignalStore(local, redisCache, LiveSignalStoreModeHybrid)
+	if err != nil {
+		t.Fatalf("NewHybridLiveSignalStore() error = %v", err)
+	}
+
+	// Action 1: hybrid mode + LiveSignalReadLocal preference — must NOT read Redis.
+	values, err := liveStore.GetAll(ctx, vehicleID, LiveSignalReadLocal)
+	if err != nil {
+		t.Fatalf("GetAll(local pref, hybrid mode) error = %v", err)
+	}
+	if values["BatteryLevel"] == nil {
+		t.Fatal("local-preference GetAll returned nil for known L1 signal")
+	}
+	assertFloat64(t, values["BatteryLevel"].Raw, 21)
+
+	// Action 2: GetSignal with local preference — must NOT read Redis.
+	value, err := liveStore.GetSignal(ctx, vehicleID, "BatteryLevel", LiveSignalReadLocal)
+	if err != nil {
+		t.Fatalf("GetSignal(local pref, hybrid mode) error = %v", err)
+	}
+	assertFloat64(t, value.Raw, 21)
+
+	// Action 3: switch mode to local; even with distributed preference, reads
+	// must stay L1-only because mode overrides preference (ADR-007 rollback).
+	if err := liveStore.SetMode(LiveSignalStoreModeLocal); err != nil {
+		t.Fatalf("SetMode(local) error = %v", err)
+	}
+	values, err = liveStore.GetAll(ctx, vehicleID, LiveSignalReadDistributed)
+	if err != nil {
+		t.Fatalf("GetAll(distributed pref, local mode) error = %v", err)
+	}
+	if values["BatteryLevel"] == nil {
+		t.Fatal("local-mode GetAll returned nil for known L1 signal")
+	}
+	assertFloat64(t, values["BatteryLevel"].Raw, 21)
+
+	value, err = liveStore.GetSignal(ctx, vehicleID, "BatteryLevel", LiveSignalReadDistributed)
+	if err != nil {
+		t.Fatalf("GetSignal(distributed pref, local mode) error = %v", err)
+	}
+	assertFloat64(t, value.Raw, 21)
+}
+
+func TestHybridLiveSignalStoreDistributedReadsSurfaceRedisErrors(t *testing.T) {
+	ctx := context.Background()
+	vehicleID := int64(29)
+
+	local := New()
+	local.Update(vehicleID, map[string]interface{}{"BatteryLevel": 7.0})
+
+	sentinel := errors.New("redis-sentinel-failure")
+	redisCache := &RedisSignalCache{rdb: failingRedisSignalClient{err: sentinel}}
+	liveStore, err := NewHybridLiveSignalStore(local, redisCache, LiveSignalStoreModeHybrid)
+	if err != nil {
+		t.Fatalf("NewHybridLiveSignalStore() error = %v", err)
+	}
+
+	if _, err := liveStore.GetAll(ctx, vehicleID, LiveSignalReadDistributed); err == nil || !errors.Is(err, sentinel) {
+		t.Fatalf("GetAll() error = %v, want sentinel surfaced via errors.Is (no silent swallow)", err)
+	}
+	if _, err := liveStore.GetSignal(ctx, vehicleID, "BatteryLevel", LiveSignalReadDistributed); err == nil || !errors.Is(err, sentinel) {
+		t.Fatalf("GetSignal() error = %v, want sentinel surfaced via errors.Is (no silent swallow)", err)
+	}
 }

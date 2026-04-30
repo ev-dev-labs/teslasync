@@ -1,0 +1,135 @@
+=== PREFLIGHT ===
+Phase: 38
+Prompt: 02-live-store-merge
+Type: implementation + tests (single commit)
+Atomic: yes
+Delegation: FORBIDDEN (no sub-agents, no parallel, no background tasks used)
+Predecessor: phase-38-01-live-store-merge-tests.log (verified EXIT=0 STATUS=DONE)
+Allowed files to change:
+  - internal/signal/live_store.go
+  - internal/signal/live_store_test.go
+  - .github/prompts/db-refactor/logs/phase-38-02-live-store-merge.log
+Working dir: D:\repos\teslasync
+Required reads completed:
+  - .github/ARCHITECTURE.md (ADR-007 Live Signal State Layering, lines 37-99)
+  - .github/instructions/telemetry-pipeline.instructions.md (Live State Layering)
+  - phase-38-01-live-store-merge-tests.log (test matrix T1-T8)
+
+=== SURVEY ===
+Files inspected before edit:
+  - internal/signal/live_store.go (full, 345 lines)
+  - internal/signal/live_store_test.go (full, 384 lines)
+  - internal/signal/redis_cache.go (full, 392 lines) — IsLiveSignalFresh,
+    encodeTimestampedSignalValue, redisSignalKey helpers all in package scope
+  - internal/signal/redis_cache_test.go (full, 306 lines) — fakeRedisSignalClient,
+    failingRedisSignalClient (in live_store_test.go), assert helpers
+  - internal/signal/store.go (lines 1-230) — Store.Update sets non-zero
+    Timestamp via time.Now().UTC(); Hydrate also stamps non-zero. The
+    vehicles map is unexported but accessible from package tests.
+
+freshSignalValues callers (before): 1 (live_store.go:218 inside GetAll).
+After this prompt: 0 — helper deleted as the prompt requires when no callers
+remain.
+
+=== REASONING ===
+Why a merge contract instead of "L2 wins":
+  Per phase-38-00 bug-fix Change 1 and ADR-007, dropping legacy or stale L2
+  values silently zeroes user-facing dashboards. The intent is that
+  IsLiveSignalFresh is an INFORMATIONAL freshness signal, not a delete
+  filter on the read path. Both layers must contribute to the merged
+  result, and the value with the newer non-zero Timestamp wins per signal.
+  Legacy zero-Timestamp values are returned but lose to any non-zero
+  Timestamp. Ties on identical non-zero Timestamps prefer L2 (cross-pod
+  authoritative cache).
+
+Why GetSignal must merge too:
+  R5 of the contract: GetSignal must consult both L1 and L2 and apply the
+  same per-signal merge rule, not "L2-or-fall-back-to-L1". The previous
+  code returned (nil, nil) for stale L2 values without ever consulting L1.
+
+Why LiveSignalReadLocal stays L1-only:
+  Telemetry/FSM/session hot paths cannot tolerate Redis latency or failure
+  modes. The local-preference branch short-circuits before any redisCache()
+  invocation. Verified by T6 (failingRedisSignalClient + LiveSignalReadLocal
+  succeeds; mode=local + LiveSignalReadDistributed also succeeds).
+
+Why Redis errors still surface:
+  R7 of the contract: empty L2 result triggers L1 fallback, but L2 ERROR
+  surfaces wrapped via fmt.Errorf("...%w"). T7 asserts errors.Is preserves
+  the sentinel.
+
+Why freshSignalValues is deleted, not retained:
+  The prompt body: "Remove freshSignalValues if it has no remaining
+  callers; otherwise keep it but stop calling it from GetAll/GetSignal."
+  After the GetAll edit removes the only call site, the helper has zero
+  callers in repo (grep verified). Keeping dead code violates anti-laziness
+  guideline. IsLiveSignalFresh is the surviving freshness oracle and
+  remains in redis_cache.go untouched.
+
+Tie-break to L2 on equal timestamps:
+  signal.Store always stamps Timestamp = time.Now() so practical
+  collisions are rare; deterministic tie-break to L2 prevents flakiness in
+  test fixtures that build identical timestamps. L2 is also the cross-pod
+  authoritative cache per ADR-007.
+
+Existing test compatibility:
+  TestHybridLiveSignalStoreDistributedReadsPreferRedisWhenAvailable still
+  passes under the new merge rule because the test sequence (L1 update
+  followed by L2 update) gives L2 a strictly later timestamp, so L2 wins
+  by the merge rule, not by unconditional preference. A clarifying comment
+  is added, not a rename, to keep diff scope minimal.
+
+=== CHANGES ===
+Files modified:
+
+1) internal/signal/live_store.go
+   - GetSignal: distributed-mode branch now reads L1 (s.l1.Get) and L2
+     (l2.GetSignalValue) and returns mergeSignalValues(l1Value, l2Value)
+     cloned. Local-preference branch unchanged. Redis errors still wrapped.
+   - GetAll: distributed-mode branch now reads L1 (s.l1.GetAll) and L2
+     (l2.GetAllValues) and returns mergeSignalMaps(l1Values, l2Values).
+     Empty case returns cloneSignalValues(l1Values) preserving the nil-map
+     contract for unknown vehicles. Redis errors still wrapped.
+   - mergeSignalValues helper added: encapsulates R4 rule (newer non-zero
+     timestamp wins; legacy zero-timestamp loses to any non-zero; ties
+     prefer L2; both-zero prefers L1).
+   - mergeSignalMaps helper added: union of L1 and L2 keys, applies
+     mergeSignalValues per signal, clones results.
+   - freshSignalValues helper removed (no callers).
+   - IsLiveSignalFresh import in live_store.go is removed since the merge
+     path no longer calls it; the helper itself remains in redis_cache.go
+     for caller-side freshness checks.
+   - LiveSignalReadLocal short-circuit unchanged. Mode handling unchanged.
+
+2) internal/signal/live_store_test.go
+   Added tests T1-T7 from the Prompt 01 matrix (T8 covered by existing
+   redis_cache_test TestLiveSignalFreshnessThresholdDistinguishesStaleAndLegacyValues
+   per matrix note). Each new test is named verbatim per the matrix:
+     - TestHybridLiveSignalStoreGetAllReturnsL2OnlyAndL1OnlySignalsTogether
+     - TestHybridLiveSignalStoreGetAllReturnsLegacyScalarL2Values
+     - TestHybridLiveSignalStoreGetAllReturnsStaleL2EnvelopesWithTimestampPreserved
+     - TestHybridLiveSignalStoreGetAllMergesL1AndL2WithNewerTimestampWinning
+     - TestHybridLiveSignalStoreGetSignalAppliesSameMergeRuleAsGetAll
+       (table-driven 5a-5e subtests)
+     - TestHybridLiveSignalStoreGetAllLocalModeUnchangedAndNeverReadsRedis
+     - TestHybridLiveSignalStoreDistributedReadsSurfaceRedisErrors
+   A clarifying comment added to existing
+   TestHybridLiveSignalStoreDistributedReadsPreferRedisWhenAvailable noting
+   the assertion holds under the merge rule because L2 was written later.
+
+gofmt run on both modified .go files (verified clean).
+
+=== GATE ===
+TESTS_COVER_MERGE_PREF=True
+TESTS_COVER_STALE=True
+MERGE_HELPER_PRESENT=True
+FRESH_FILTER_REMOVED_FROM_GETALL=True
+TESTS_COVER_LEGACY=True
+LOCAL_MODE_UNCHANGED=True
+ISLIVE_FRESH_RETAINED=True
+ok  	github.com/ev-dev-labs/teslasync/internal/signal	0.126s
+GO_SIGNAL_TEST_EXIT=0
+UNEXPECTED_STATUS_COUNT=0
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
