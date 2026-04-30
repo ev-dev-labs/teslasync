@@ -1,0 +1,397 @@
+=== PREFLIGHT ===
+Phase: 38
+Prompt: 01-live-store-merge-tests
+Type: log-only test specification (contract). No source files changed.
+Atomic: yes
+Delegation: FORBIDDEN (no sub-agents, no parallel, no background tasks used)
+Predecessor: phase-38-00-live-state-bug-decision-record.log (verified EXIT=0 STATUS=DONE)
+Allowed files to change: .github/prompts/db-refactor/logs/phase-38-01-live-store-merge-tests.log only
+Working dir: D:\repos\teslasync
+Repo head clean before run: yes (verified via git --no-pager status --short, after restoring
+  predecessor log drift via `git checkout --` because uncommitted commit-output trailer
+  in phase-38-00 log was leftover from Prompt 00 and outside this prompt's scope)
+Required reads completed:
+  - .github/ARCHITECTURE.md (ADR-001 Unified Signal Log; ADR-007 Live Signal State Layering)
+  - .github/instructions/telemetry-pipeline.instructions.md (Live State Layering
+    Non-Regression Contract; Freshness and SSE Semantics)
+
+=== SURVEY ===
+Files inspected (read-only):
+  - internal/signal/live_store.go (full)
+  - internal/signal/live_store_test.go (full)
+  - internal/signal/redis_cache.go (lines 1-130)
+  - internal/signal/redis_cache_test.go (full)
+
+Current GetSignal/GetAll behavior in HybridLiveSignalStore (the bug being fixed):
+
+1. GetAll(LiveSignalReadDistributed) (live_store.go:199-219)
+   - Calls l2.GetAllValues; on err returns err.
+   - If raw map is empty, falls through to L1 GetAll.
+   - Otherwise returns freshSignalValues(values, s.now()) — which DROPS every
+     legacy scalar (Timestamp.IsZero()) and every entry older than
+     LiveSignalFreshnessThreshold (2 minutes).
+   - L1 is NEVER consulted when L2 returns ANY entry, even if every entry
+     gets stripped by the freshness filter. This is failure (a) in
+     phase-38-00 and matches the dashboard zero-values bug.
+
+2. GetSignal(LiveSignalReadDistributed) (live_store.go:170-196)
+   - Calls l2.GetSignalValue; on err returns err.
+   - If IsLiveSignalFresh -> returns the L2 value.
+   - If value != nil but stale -> returns (nil, nil) without trying L1.
+   - If value == nil -> falls through to L1.
+   This drops stale L2 values and never merges with L1 even when L1 has
+   a fresher local snapshot from the telemetry hot path.
+
+3. LiveSignalReadLocal (both methods)
+   - Always reads L1 via cloneSignalValue/cloneSignalValues. Never touches
+     Redis. This is the correct hot-path behavior and must be preserved.
+
+4. IsLiveSignalFresh (redis_cache.go:111-122)
+   - nil value -> false.
+   - Zero Timestamp -> false (legacy unknown freshness).
+   - age > LiveSignalFreshnessThreshold (2m) -> false.
+   - Otherwise true. This is contract-correct and must be preserved.
+
+Existing test coverage (live_store_test.go):
+  - L1-only operation when Redis is nil.
+  - Update writes both L1 and L2 with timestamped envelope.
+  - UpdateNonBlocking writes L1 sync, L2 async.
+  - Local mode does not read or write Redis.
+  - Mode switch hybrid->local stops distributed Redis reads.
+  - Distributed reads PREFER Redis (current behavior; will be REVISED below
+    to "merge L1 and L2 with newer Timestamp wins"; the test that asserts
+    "Redis wins unconditionally" needs to be reframed as "newer-timestamp
+    wins" in Prompt 02).
+  - Redis failure does not corrupt L1 (must remain true).
+  - UpdateNonBlocking Redis failure still updates L1.
+  - Input validation errors.
+  - Warm hydrates L1 from L2.
+  - Warm SKIPS timestamp-less Redis values (Prompt 03 may revisit; out of
+    scope for this prompt).
+
+Existing test coverage (redis_cache_test.go):
+  - Timestamped values round-trip with envelope encoding.
+  - Legacy scalar values decode with zero Timestamp (unknown freshness).
+  - Malformed JSON surfaces for timestamp-aware reads.
+  - LiveSignalFreshnessThreshold distinguishes fresh / stale / legacy / nil.
+  - GetAll remains raw-compatible with timestamped values.
+
+Coverage gap that Prompt 02 must close (the merged-read contract):
+  - No test asserts that legacy scalar L2 entries are RETURNED to callers
+    in distributed mode (today they are silently dropped).
+  - No test asserts that stale (>2m) L2 entries are RETURNED to callers
+    in distributed mode (today they are silently dropped).
+  - No test asserts the L1+L2 merge rule for GetAll when both layers have
+    different timestamps for the same signal (today only L2 is consulted
+    when L2 returns anything).
+  - No test asserts the same merge rule for GetSignal.
+  - The "distributed reads prefer Redis" test asserts unconditional L2
+    preference; under the new contract it must instead assert newer
+    non-zero Timestamp wins (and L1 is consulted even when L2 is
+    non-empty).
+
+=== REASONING ===
+Why this prompt is log-only and why the test contract drives Prompt 02:
+
+  1. Prompt 00 approved bug-fix Change 1: stop dropping stale and legacy
+     values from GetAll in a way that silently zeroes the dashboard.
+  2. Tests that codify the new contract MUST be authored before the
+     implementation so Prompt 02's red->green transition proves the bug
+     is fixed and stays fixed under regression.
+  3. Per the prompt body: "Do not commit failing tests in this prompt."
+     Therefore this prompt only SPECIFIES the matrix; Prompt 02 will add
+     the tests AND change live_store.go in the same commit so the suite
+     stays green at every commit boundary.
+
+Contract that Prompt 02 must implement (this is the spec, not the code):
+
+  R1. GetAll(LiveSignalReadDistributed) returns a UNION of L1 and L2 values
+      keyed by signal name. Neither layer's entries are silently dropped
+      based on freshness. L1-only signals appear in the result. L2-only
+      signals appear in the result. Per-signal merge applies to overlap.
+
+  R2. Legacy scalar L2 values (Timestamp.IsZero()) MUST be returned by
+      GetAll/GetSignal in distributed mode. They retain their zero
+      timestamp so callers and IsLiveSignalFresh can see they are unknown
+      freshness, but they are never silently omitted from the response.
+      This satisfies ADR-007 "Keep existing Redis scalar HSET values
+      readable indefinitely; they are replaced naturally on the next
+      telemetry write" and "timestamp-less legacy Redis values [have]
+      unknown freshness, not fresh data" (informational, not a drop).
+
+  R3. Stale L2 values (Timestamp older than LiveSignalFreshnessThreshold)
+      MUST be returned by GetAll/GetSignal in distributed mode. Their
+      timestamp is preserved so IsLiveSignalFresh reports them as not
+      fresh; callers decide what to do. This is a behavior change from
+      the current freshSignalValues filter and is the core of bug-fix
+      Change 1 from phase-38-00.
+
+  R4. Per-signal merge rule when the same signal name exists in both L1
+      and L2: the value with the NEWER non-zero Timestamp wins. Ties on
+      identical non-zero Timestamps prefer the L2 value (cross-pod
+      authoritative cache) and this tie-break must be asserted explicitly
+      in one test so it cannot drift later. A zero-timestamp legacy
+      value loses to ANY value with a non-zero Timestamp regardless of
+      which layer it came from (legacy is unknown-freshness, not zero
+      time). When neither side has a Timestamp, the L1 value wins
+      (L1 is the local hot path and is the more recent observation in
+      practice when L2 has only legacy scalars).
+
+  R5. GetSignal(LiveSignalReadDistributed) MUST follow R1-R4 for the
+      single requested signal name (i.e. it must consult both L1 and L2
+      and apply the merge rule, not "L2-or-fall-back-to-L1").
+
+  R6. GetAll(LiveSignalReadLocal) and GetSignal(LiveSignalReadLocal) MUST
+      remain L1-only and MUST NOT call into the L2 client at all
+      (LiveSignalReadLocal behavior unchanged; the L1-only path is
+      unchanged; the local read path never reads Redis).
+      Verified by injecting a Redis client that fails on any call and
+      asserting LiveSignalReadLocal still succeeds.
+
+  R7. Redis read errors in distributed mode MUST still surface to the
+      caller as wrapped errors (no silent swallow). The merge-with-L1
+      fallback applies only to the empty-result case, not to the
+      error case.
+
+  R8. IsLiveSignalFresh is unchanged. Stale, zero-timestamp, and nil
+      values remain "not fresh". This prompt does not modify or replace
+      that helper.
+
+ADR alignment:
+
+  - ADR-001 unaffected. signal_log remains durable history; tests do not
+    introduce snapshot-table reads.
+  - ADR-007 preserved and tightened. Legacy/stale L2 values become
+    informational (timestamp surfaced) rather than silently dropped.
+    LIVE_SIGNAL_STORE_MODE=local rollback path remains L1-only and is
+    explicitly tested.
+
+PROMPT 02 GREEN REQUIRED: Prompt 02 must add the tests below AND modify
+HybridLiveSignalStore.GetAll/GetSignal so Prompt 02's `go test ./internal/signal/...`
+gate run is green. A red gate in Prompt 02 means STATUS=BLOCKED in Prompt 02; this
+prompt does not commit failing tests.
+
+=== CHANGES ===
+No source files changed. No test files changed. The only file written is this
+log: .github/prompts/db-refactor/logs/phase-38-01-live-store-merge-tests.log
+
+Required test matrix that Prompt 02 MUST add to
+internal/signal/live_store_test.go (one Go *test* per matrix row unless noted).
+Each row lists: name, setup, action, assertion, and the contract rule (R#)
+above it satisfies. All names are stable; Prompt 02 must use them so the gate
+log can grep for the matrix.
+
+  ----------------------------------------------------------------------
+  T1. TestHybridLiveSignalStoreGetAllReturnsL2OnlyAndL1OnlySignalsTogether
+  ----------------------------------------------------------------------
+  Rule: R1 (UNION of L1 and L2 in distributed reads).
+  Setup:
+    - local := New()
+    - local.Update(vehicleID, {"L1Only": "from_l1"})  // L1-only signal
+    - redisCache.Update(ctx, vehicleID, {"L2Only": 12.5}) // L2-only signal,
+        timestamped envelope inside the freshness window
+    - liveStore mode = hybrid
+  Action: values, err := liveStore.GetAll(ctx, vehicleID, LiveSignalReadDistributed)
+  Assertions:
+    - err is nil
+    - values["L1Only"].Raw == "from_l1"
+    - values["L2Only"].Raw == 12.5
+    - len(values) >= 2 (no other signals required)
+  Why this fails today: GetAll returns only the L2 freshSignalValues map
+  when L2 returns any entries; "L1Only" is dropped.
+
+  ----------------------------------------------------------------------
+  T2. TestHybridLiveSignalStoreGetAllReturnsLegacyScalarL2Values
+  ----------------------------------------------------------------------
+  Rule: R2 (LEGACY_SCALAR_RETAINED — legacy scalar values returned, never
+  silently dropped, with zero Timestamp preserved so freshness is unknown).
+  Setup:
+    - local := New() (empty)
+    - redisClient.hashes[redisSignalKey(vehicleID)] = {
+        "legacy_speed": "88.5",
+        "legacy_state": "asleep",
+      }   // raw scalar bytes, no envelope -> Timestamp.IsZero() on decode
+    - liveStore mode = hybrid
+  Action: values, err := liveStore.GetAll(ctx, vehicleID, LiveSignalReadDistributed)
+  Assertions:
+    - err is nil
+    - values["legacy_speed"].Raw == 88.5
+    - values["legacy_state"].Raw == "asleep"
+    - values["legacy_speed"].Timestamp.IsZero() is true
+    - values["legacy_state"].Timestamp.IsZero() is true
+    - IsLiveSignalFresh(values["legacy_speed"], time.Now().UTC()) is false
+    - IsLiveSignalFresh(values["legacy_state"], time.Now().UTC()) is false
+  Why this fails today: freshSignalValues drops zero-Timestamp entries,
+  so values is empty (or only contains an L1 fallback if L2 was empty).
+
+  ----------------------------------------------------------------------
+  T3. TestHybridLiveSignalStoreGetAllReturnsStaleL2EnvelopesWithTimestampPreserved
+  ----------------------------------------------------------------------
+  Rule: R3 (STALE_ENVELOPE_RETAINED — stale envelope values returned,
+  never silently dropped, with their original Timestamp preserved so
+  IsLiveSignalFresh remains the freshness oracle).
+  Setup:
+    - local := New() (empty)
+    - Build a timestamped envelope manually (or via redisCache.Update with
+      an injected clock) so the envelope's Timestamp is
+      `now - LiveSignalFreshnessThreshold - 5*time.Minute` (well outside
+      the 2m freshness window).
+    - Insert it into redisClient.hashes[redisSignalKey(vehicleID)] under
+      field "Odometer".
+    - liveStore mode = hybrid; pin liveStore.now = func() time.Time { return now }
+  Action: values, err := liveStore.GetAll(ctx, vehicleID, LiveSignalReadDistributed)
+  Assertions:
+    - err is nil
+    - values["Odometer"] is not nil
+    - values["Odometer"].Raw equals the encoded numeric value
+    - values["Odometer"].Timestamp equals the original stale timestamp
+      (i.e. the timestamp is preserved verbatim, not zeroed and not
+      restamped)
+    - IsLiveSignalFresh(values["Odometer"], now) is false
+  Why this fails today: freshSignalValues drops any entry with age
+  greater than LiveSignalFreshnessThreshold; values would be empty
+  (or only contain an L1 fallback when L2 is otherwise empty).
+
+  ----------------------------------------------------------------------
+  T4. TestHybridLiveSignalStoreGetAllMergesL1AndL2WithNewerTimestampWinning
+  ----------------------------------------------------------------------
+  Rule: R4 (L1_L2_MERGE_RULE — newer non-zero Timestamp wins; legacy
+  loses to any timestamped value; L2 wins ties on identical non-zero
+  Timestamps).
+  Setup:
+    - local := New()
+    - Use the fixed clock pattern (override liveStore.now) so timestamps
+      are deterministic.
+    - signalA: L1 has older timestamp (now - 30s), L2 has newer timestamp
+      (now - 10s). Both well within the freshness window.
+    - signalB: L1 has newer timestamp (now - 10s), L2 has older timestamp
+      (now - 60s). Both within freshness window.
+    - signalC: L1 has Timestamp = (now - 45s); L2 has zero-timestamp
+      legacy scalar. (Tests legacy loses to any non-zero timestamp.)
+    - signalD: L1 and L2 both have IDENTICAL non-zero Timestamps but
+      different Raw values. (Tests tie-break: L2 wins.)
+    Insert L2 entries via redisCache.Update with clock injection or by
+    direct envelope construction.
+  Action: values, err := liveStore.GetAll(ctx, vehicleID, LiveSignalReadDistributed)
+  Assertions:
+    - signalA value comes from L2 (newer timestamp wins)
+    - signalB value comes from L1 (newer timestamp wins)
+    - signalC value comes from L1 (legacy zero-timestamp loses to any
+      non-zero timestamp), but legacy L2 value is NOT silently dropped
+      from any other signal in the same call (cross-check via the T2
+      legacy-scalar test which already covers retention).
+    - signalD value comes from L2 (tie-break to L2 on equal timestamps)
+
+  ----------------------------------------------------------------------
+  T5. TestHybridLiveSignalStoreGetSignalAppliesSameMergeRuleAsGetAll
+  ----------------------------------------------------------------------
+  Rule: R5 (GetSignal honors merge rule per single name).
+  Setup (table-driven, one sub-test per matrix row):
+    Subtest 5a "L2 newer wins":
+      - L1 signal "X" timestamp = now - 30s
+      - L2 signal "X" timestamp = now - 5s
+      - Expect GetSignal(distributed, "X").Raw == L2 value
+    Subtest 5b "L1 newer wins":
+      - L1 signal "X" timestamp = now - 5s
+      - L2 signal "X" timestamp = now - 30s
+      - Expect GetSignal(distributed, "X").Raw == L1 value
+    Subtest 5c "L2 stale envelope returned, not dropped":
+      - L1 has no signal "X"
+      - L2 signal "X" timestamp = now - (2m + 5m) (well past threshold)
+      - Expect GetSignal(distributed, "X") not nil; .Timestamp preserved;
+        IsLiveSignalFresh returns false on the result.
+    Subtest 5d "L2 legacy scalar returned, not dropped":
+      - L1 has no signal "X"
+      - L2 has legacy scalar at field "X" (zero Timestamp)
+      - Expect GetSignal(distributed, "X") not nil; .Timestamp.IsZero();
+        IsLiveSignalFresh returns false on the result.
+    Subtest 5e "L1 only":
+      - L1 has "X"; L2 has nothing for "X"
+      - Expect GetSignal(distributed, "X").Raw == L1 value
+  Why this fails today: GetSignal returns nil when the L2 value is stale
+  (subtest 5c) instead of returning the stale value; and returns the L2
+  value unconditionally when L2 is fresh, never even comparing with L1
+  (subtest 5b can fail because today GetSignal does not compare timestamps).
+
+  ----------------------------------------------------------------------
+  T6. TestHybridLiveSignalStoreGetAllLocalModeUnchangedAndNeverReadsRedis
+  ----------------------------------------------------------------------
+  Rule: R6 (LOCAL_MODE_UNCHANGED — LiveSignalReadLocal preference and
+  LiveSignalStoreModeLocal mode never read Redis, ever).
+  Setup:
+    - local := New(); local.Update(vehicleID, {"BatteryLevel": 21.0})
+    - redisCache backed by failingRedisSignalClient that errors on every
+      call (HSet/HGet/HGetAll/Expire/Publish).
+    - liveStore mode = hybrid (so we can prove preference, not just mode,
+      gates Redis reads).
+  Action 1: values, err := liveStore.GetAll(ctx, vehicleID, LiveSignalReadLocal)
+  Assertions: err is nil; values["BatteryLevel"].Raw == 21.0
+  Action 2: value, err := liveStore.GetSignal(ctx, vehicleID, "BatteryLevel", LiveSignalReadLocal)
+  Assertions: err is nil; value.Raw == 21.0
+  Action 3: switch liveStore mode to LiveSignalStoreModeLocal, repeat
+  GetAll/GetSignal with LiveSignalReadDistributed preference; assert err
+  nil and L1 values returned (mode override of preference).
+
+  ----------------------------------------------------------------------
+  T7. TestHybridLiveSignalStoreDistributedReadsSurfaceRedisErrors
+  ----------------------------------------------------------------------
+  Rule: R7 (REDIS_ERRORS_SURFACED — no silent swallow).
+  Setup:
+    - local := New(); local.Update(vehicleID, {"BatteryLevel": 7.0})
+    - redisCache backed by failingRedisSignalClient with a sentinel error.
+    - liveStore mode = hybrid.
+  Action 1: _, err := liveStore.GetAll(ctx, vehicleID, LiveSignalReadDistributed)
+  Assertions: errors.Is(err, sentinel) is true.
+  Action 2: _, err := liveStore.GetSignal(ctx, vehicleID, "BatteryLevel", LiveSignalReadDistributed)
+  Assertions: errors.Is(err, sentinel) is true.
+  Notes:
+    - The implementation MUST keep wrapping the L2 error with fmt.Errorf
+      and %w so errors.Is works.
+    - The merge-with-L1 fallback Prompt 02 introduces is for the EMPTY
+      L2 result case only, not for the ERROR case. This test guards
+      against a regression where Prompt 02 swallows the Redis error
+      and returns the L1 map silently.
+
+  ----------------------------------------------------------------------
+  T8. TestIsLiveSignalFreshUnchangedAfterMergeContract  (sanity / contract pin)
+  ----------------------------------------------------------------------
+  Rule: R8 (IsLiveSignalFresh remains the freshness oracle; stale,
+  zero-timestamp, and nil values are still "not fresh").
+  Notes:
+    - Prompt 02 may either add this small sanity test in
+      live_store_test.go OR rely on the existing
+      TestLiveSignalFreshnessThresholdDistinguishesStaleAndLegacyValues
+      in redis_cache_test.go, in which case Prompt 02 MUST cite that
+      existing test in its log under the same anchor.
+
+Adjustments to existing tests that Prompt 02 MUST make:
+
+  E1. Update TestHybridLiveSignalStoreDistributedReadsPreferRedisWhenAvailable
+      so that its assertion is "newer non-zero Timestamp wins" rather
+      than "L2 always wins". Concretely: when L1 and L2 both have the
+      signal but L1 was written after L2, the test must expect the L1
+      value. The current assertion (L2 wins because L2 was written last
+      in the test) remains true and need only be re-justified via the
+      merge rule, not via "Redis is always preferred".
+
+  E2. The freshSignalValues helper is no longer the appropriate filter for
+      GetAll's return value. Prompt 02 either removes it or restricts its
+      use to a non-customer-facing internal scope. Tests should not
+      assume freshSignalValues is called on the return path.
+
+Files Prompt 02 will edit (NOT this prompt):
+  - internal/signal/live_store.go (GetAll, GetSignal, helper as needed)
+  - internal/signal/live_store_test.go (add T1-T7, optionally T8, edit E1)
+
+=== GATE ===
+=== GATE ===
+PROMPT_02_GREEN_REQUIRED=True
+L1_L2_MERGE_RULE=True
+LOCAL_MODE_UNCHANGED=True
+REDIS_ERRORS_SURFACED=True
+STALE_ENVELOPE_RETAINED=True
+LEGACY_SCALAR_RETAINED=True
+UNEXPECTED_STATUS_COUNT=0
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
