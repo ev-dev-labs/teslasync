@@ -95,21 +95,25 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 			log.Error().Err(err).Int64("vehicleID", v.ID).Msg("analytics: failed to get charging sessions")
 			sessions = nil
 		}
-		// Per-vehicle battery health from latest signal snapshot
-		if h.signalLogReader != nil {
-			snap, snapErr := h.signalLogReader.SnapshotAt(r.Context(), v.ID, time.Now())
-			if snapErr == nil && snap != nil {
-				if bl, ok := toFloatOk(snap["BatteryLevel"]); ok && bl > 0 {
-					const nomCap = 75.0
-					const nomRange = 531.0
-					batteryTrend = append(batteryTrend, batteryPoint{
-						Date:        time.Now().Format("2006-01-02"),
-						HealthScore: bl,
-						CapacityKWh: bl * nomCap / 100,
-						Degradation: 100 - bl,
-						RangeKm:     bl * nomRange / 100,
-					})
-				}
+		// Per-vehicle battery health from latest signal snapshot via
+		// StateReader.State at time.Now(). State() returns the forward-folded
+		// current state, so the BatteryLevel signal is carried across
+		// emissions. Errors are logged and skipped so a single vehicle's
+		// failure does not 500 the entire fleet response.
+		snap, snapErr := h.state.State(r.Context(), v.ID, time.Now())
+		if snapErr != nil {
+			log.Error().Err(snapErr).Int64("vehicleID", v.ID).Msg("analytics: failed to get latest signal snapshot")
+		} else if snap != nil {
+			if bl, ok := toFloatOk(snap["BatteryLevel"]); ok && bl > 0 {
+				const nomCap = 75.0
+				const nomRange = 531.0
+				batteryTrend = append(batteryTrend, batteryPoint{
+					Date:        time.Now().Format("2006-01-02"),
+					HealthScore: bl,
+					CapacityKWh: bl * nomCap / 100,
+					Degradation: 100 - bl,
+					RangeKm:     bl * nomRange / 100,
+				})
 			}
 		}
 

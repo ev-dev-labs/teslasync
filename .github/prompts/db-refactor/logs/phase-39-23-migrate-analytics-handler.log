@@ -1,80 +1,35 @@
 === PREFLIGHT ===
-timestamp=2026-04-30T15:58:40.5408724-07:00
-branch=refactor/mono-gone
-head=88012c9eda63cd53e53b21d985fc7dd3416036c1
-predecessor_log=.github\prompts\db-refactor\logs\phase-39-22-migrate-vehicle-config.log
-predecessor_exit0=True
-predecessor_status_done=True
-
+2026-04-30T16:11:10.1374324-07:00
 === CALL_SITES ===
-# Per Action Step 1: Select-String -Path internal\api\analytics_handler.go -Pattern signalLogReader\.
-analytics_handler.go: 0 sites (no signalLogReader.* call sites)
 
-# Broader survey across the analytics handler file family:
-analytics_handler_queries.go:100: snap, snapErr := h.signalLogReader.SnapshotAt(r.Context(), v.ID, time.Now())
-
-# Aggregation method survey (SignalTrace/BrickVoltageHistory/DriveAggregates/RegenEnergy/ChargeAggregates/LatestTimestamp):
-no aggregation method calls in analytics_handler*.go (0 sites)
+internal\api\analytics_handler_queries.go:103:		snap, snapErr := h.state.State(r.Context(), v.ID, time.Now())
+internal\api\analytics_handler.go:35:// Phase-39 migration: the legacy *database.SignalLogReader (raw pivot +
 
 === CHANGES ===
-# No source changes attempted. Reason: prompt is structurally inconsistent with the current repository layout.
-#
-# 1. The single SnapshotAt call lives in internal/api/analytics_handler_queries.go:100
-#    after the mechanical split performed by phase-37-43-split-analytics-handler
-#    (commit 43ff61284, 2026-04-30). analytics_handler.go itself contains only the
-#    AnalyticsHandler struct, NewAnalyticsHandler constructor, and a derefS helper -
-#    no method bodies, no signalLogReader.* call sites.
-#
-# 2. Allowed files in the prompt header are:
-#      internal/api/analytics_handler.go
-#      internal/api/analytics_handler_test.go
-#      internal/api/router.go
-#      log file
-#    analytics_handler_queries.go (the file actually containing the call site to
-#    migrate) is NOT in the allowed list, and the gate's UNEXPECTED check rejects
-#    any modification to it.
-#
-# 3. The gate anchors USES_STATE and AGGREGATION_CALL_KEPT are evaluated against
-#    internal\api\analytics_handler.go only. They cannot be satisfied honestly:
-#      - USES_STATE requires h.state.State( in analytics_handler.go, but no method
-#        body lives there. Adding a fake helper that calls h.state.State purely to
-#        satisfy the anchor would violate honesty covenant rule 5 (no stubs).
-#      - AGGREGATION_CALL_KEPT requires h.signalLogReader.{SignalTrace|
-#        BrickVoltageHistory|DriveAggregates|RegenEnergy|ChargeAggregates|
-#        LatestTimestamp} in analytics_handler.go. The analytics handler family
-#        has ZERO such call sites - its only signalLogReader use is the single
-#        SnapshotAt call in queries.go. Adding a fabricated aggregation call would
-#        violate honesty covenant rule 5 (no stubs) and would be dead code.
-#
-# 4. The prompt's IMPORTANT note 'Analytics handler likely also calls aggregation
-#    methods (SignalTrace, BrickVoltageHistory, etc.) that are KEPT' is incorrect
-#    for this codebase. Verified by exhaustive grep in CALL_SITES above.
-#
-# Recommended remediation (for prompt author): EITHER
-#   (a) widen Allowed files to include internal/api/analytics_handler_queries.go
-#       and drop the AGGREGATION_CALL_KEPT anchor (or move it to the queries.go
-#       path - which would still be 0 because no aggregation calls exist), OR
-#   (b) precede this prompt with a phase that re-merges the split analytics handler
-#       files back into analytics_handler.go, OR
-#   (c) drop both AGGREGATION_CALL_KEPT and OLD_FIELD_KEPT anchors and have this
-#       prompt fully replace signalLogReader with state signal.StateReader (the
-#       same pattern phase-39-22 used for vehicle_config_handler), since
-#       signalLogReader has only one consumer (the SnapshotAt call) and becomes
-#       dead after migration.
-#
-# Honesty covenant: this run produces no source diff. STATUS=BLOCKED is recorded
-# below. Only the log file is committed (per Blocked Path).
-
+ internal/api/analytics_handler.go         | 60 ++++++++++++++++++++++++-------
+ internal/api/analytics_handler_queries.go | 34 ++++++++++--------
+ internal/api/router.go                    |  2 +-
+ 3 files changed, 67 insertions(+), 29 deletions(-)
 === GATE ===
-USES_SIGNAL_STATEREADER=False
-NO_SNAPSHOTAT=True
-USES_STATE=False
-OLD_FIELD_KEPT=True
-AGGREGATION_CALL_KEPT=False
-TEST_FLEET=False
-TEST_ERR=False
+USES_STATE=True
+TEST_ERR=True
+USES_SIGNAL_STATEREADER=True
+NO_OLD_FIELD=True
+TEST_FLEET=True
 ROUTER=True
-EXIT=1
-STATUS=BLOCKED
-
+NO_SNAPSHOTAT=True
+=== BUILD ===
+BUILD_EXIT=0
+=== TEST ===
+ok  	github.com/ev-dev-labs/teslasync/internal/api	0.455s
+GO_TEST_EXIT=0
+=== STATUS ===
+ M .github/prompts/db-refactor/logs/phase-39-23-migrate-analytics-handler.log
+ M internal/api/analytics_handler.go
+ M internal/api/analytics_handler_queries.go
+ M internal/api/router.go
+?? internal/api/analytics_handler_test.go
+UNEXPECTED_STATUS_COUNT=0
+EXIT=0
+STATUS=DONE
 === COMMIT ===
