@@ -1,0 +1,104 @@
+## PREFLIGHT
+start_utc=2026-04-30T01:22:00.5470872+00:00
+go_version=go version go1.26.1 windows/amd64
+engineer_email=iamatulmgupta@gmail.com
+powershell_version=7.6.1
+os_platform=Win32NT
+exports invariant ok: 1273 exported identifiers preserved
+import-graph invariant ok: 80 imports preserved
+## SURVEY
+source_lines_after=2199
+new_file=internal/api/automation_handler_decode.go lines=545
+## REASONING
+mechanical decomposition: split internal/api/automation_handler.go into internal/api/automation_handler_decode.go
+no behavior, API, SQL, JSON, route, config, or runtime ordering changes
+
+per-prompt split map:
+  source_file: internal/api/automation_handler.go
+  destination_files:
+    - internal/api/automation_handler_decode.go
+  scope: package-level strict-JSON decode helpers and field-level validation helpers that operate purely on the unexported automation DTO types defined in automation_handler_dtos.go (range checks, enum membership, required-field checks, step-order validation, scalar-value-count helper, and the legacy/retired-field rejection helpers used by both create and import flows). Response-writing helpers (writeJSON, writeError, writeJSONIndent) are NOT moved per the prompt's scope clause.
+  identifiers_moved (all unexported; preserved in source order — Block A then Block B):
+    automation_handler_decode.go (3 const/var + 28 funcs, all unexported):
+      Block A (extracted from original lines 204..714 — pre-Create handler helpers):
+        - const maxAutomationRequestBodyBytes               (request body size cap, 1 << 20)
+        - var   legacyAutomationInputFieldNames             (string list of retired top-level fields)
+        - var   legacyAutomationInputFields                 (set form of legacyAutomationInputFieldNames)
+        - func  automationField(parts ...string) string     (joins parts with "_")
+        - func  automationFieldSet(names []string) map[string]struct{}
+        - func  decodeAutomationInputDTO(io.Reader) (*createAutomationRequest, error)   (orchestrates strict decode + legacy field rejection + wire validation)
+        - func  readAutomationJSONBody(io.Reader) ([]byte, error)
+        - func  automationJSONFields([]byte) (map[string]json.RawMessage, error)
+        - func  decodeStrictAutomationJSON([]byte, interface{}) error                   (json.NewDecoder + DisallowUnknownFields + EOF check)
+        - func  validateAutomationInputWire(automationInputWire) (*createAutomationRequest, error)
+        - func  parseAutomationTriggerStep(json.RawMessage) (automationTypedStep, error)
+        - func  parseAutomationConditionStep(json.RawMessage) (automationTypedStep, error)
+        - func  parseAutomationActionStep(json.RawMessage) (automationTypedStep, error)
+        - func  automationStepKind(json.RawMessage) (string, error)
+        - func  validateAutomationTriggerSignal(automationTriggerSignalDTO) error
+        - func  validateAutomationTriggerGeofence(automationTriggerGeofenceDTO) error
+        - func  validateAutomationTriggerSchedule(*automationTriggerScheduleDTO) error
+        - func  validateAutomationTriggerEvent(automationTriggerEventDTO) error
+        - func  validateAutomationConditionSignal(automationConditionSignalDTO) error
+        - func  validateAutomationConditionTimeWindow(automationConditionTimeWindowDTO) error
+        - func  validateAutomationConditionGeofence(automationConditionGeofenceDTO) error
+        - func  validateAutomationConditionOtherAutomation(automationConditionOtherAutomationDTO) error
+        - func  parseAutomationClockTime(string) (time.Time, error)
+        - func  automationScalarValueCount(*string, *float64, *bool) int
+        - func  validateAutomationStepOrders(*createAutomationRequest) error
+        - func  automationTypedStepsInPersistenceOrder(*createAutomationRequest) []automationTypedStep
+        - func  automationStepOrderValues([]automationTypedStep) ([]int, error)
+      Block B (extracted from original lines 2906..3008 — import-envelope helpers):
+        - func  decodeAutomationExportEnvelope(io.Reader) (*automationExportEnvelope, error)
+        - func  rejectRetiredAutomationFieldsInEnvelope([]byte) error
+        - func  firstRetiredAutomationField(map[string]json.RawMessage) (string, bool)
+        - func  validateAutomationPortable(automationPortable) (*createAutomationRequest, error)
+  identifiers_kept (in original automation_handler.go):
+    - The "// ── Create ──" section header comment remains in original (introducing automationStepWrites, automationStepPayloadModel, firstTriggerKind, and the Create handler).
+    - func automationStepWrites (calls moved automationTypedStepsInPersistenceOrder + automationStepOrderValues; both unexported, same package — works cross-file).
+    - func automationStepPayloadModel, firstTriggerKind (Create-flow helpers, not decode/validate).
+    - All AutomationHandler methods (List, Get, Create, Update, Delete, Toggle, ReEnable, ListPresets, GetPreset, ListHistory, ListAutomationHistory, GetHistoryDetail, parseHistoryFilter, detectConflicts, notifyReload, checkWebhookTokenUniqueness, TestRun, evaluateTestConditions, evaluateSingleCondition, simulateActions, UndoLast, ExportOne, ExportBatch, Import, importSingle, automationToPortable (method form), hydrateAutomationExportPayloads, loadAutomationExportTriggers/Conditions/Actions).
+    - All testRun*/marshalTestRunCondition/mapSignalConditionOperator/signalConditionValue/withResult/withUnknown/parseTestRunActionRaw/testRun*ActionRaw/testRunSettingValue/testRunStopOnFailure/validateActionConfig helpers (test-run pipeline; validateActionConfig dispatches to action package parsers, not a DTO field validator).
+    - automationToPortable (function form) and automation*ExportPayloads/automationPayloadStepID/automationPayloadForStep/automationConditionTimeWindowPayload/automationStepRawMessage/automationDecodePayload/automationTimeWindowDTO/formatAutomationClockTime/automationMarshalStep/scrubWebhookSecrets/injectWebhookToken/buildExportEnvelope/writeJSONIndent (export hydration / response-writing helpers — explicitly out of scope).
+    - errWebhookTokenDuplicate var, duplicateTokenError type/method, reverseCommands var, exportVersion const, automationExportPayloads type and its constructor.
+    - Existing AutomationHandler/automationRepository/AutomationMQTTPublisher/AutomationHandlerOption/With* options and NewAutomationHandler constructor.
+  cross_file_unexported_references (still package-internal, unchanged):
+    - automation_handler.go references moved helpers via unexported names: decodeAutomationInputDTO (Create/Update), decodeAutomationExportEnvelope (Import), validateAutomationPortable (importSingle), automationTypedStepsInPersistenceOrder + automationStepOrderValues (automationStepWrites), parseAutomationClockTime (automationStepPayloadModel time-window branch). All resolve within `package api` cross-file.
+    - automation_handler_test.go (test file in same package) uses decodeAutomationInputDTO, validateAutomationPortable, parseAutomationClockTime. Unchanged by this split.
+    - automation_handler_decode.go references unexported DTO types defined in automation_handler_dtos.go (createAutomationRequest, automationInputWire, automationTypedStep, automationTriggerSignalDTO, automationTriggerGeofenceDTO, automationTriggerScheduleDTO, automationTriggerEventDTO, automationConditionSignalDTO, automationConditionTimeWindowDTO, automationConditionGeofenceDTO, automationConditionOtherAutomationDTO, automationActionCommandDTO, automationActionNotifyDTO, automationActionSetSettingDTO, automationActionCallAutomationDTO, automationExportEnvelope, automationPortable). Same package, no import needed.
+  imports_added_to_new_file (subset of original package's import set; import-graph union unchanged):
+    - bytes                                                  (decodeStrictAutomationJSON: bytes.NewReader)
+    - encoding/json                                          (json.NewDecoder, json.RawMessage, json.Unmarshal)
+    - errors                                                 (errors.New, errors.Is)
+    - fmt                                                    (fmt.Errorf)
+    - io                                                     (io.Reader, io.ReadAll, io.LimitReader, io.EOF)
+    - strings                                                (strings.Join, strings.TrimSpace)
+    - time                                                   (parseAutomationClockTime)
+    - github.com/ev-dev-labs/teslasync/internal/models       (models.AutomationStepKind* constants)
+  imports_removed_from_original (no longer referenced after extraction):
+    - bytes                                                  (only use was decodeStrictAutomationJSON)
+    - io                                                     (only uses were decodeAutomationInputDTO, readAutomationJSONBody, decodeStrictAutomationJSON, decodeAutomationExportEnvelope)
+  validation: gofmt -w, go build ./internal/api/..., go build ./..., go vet ./internal/api, go test ./internal/api -count=1, exports/import invariants, drift check.
+  risks_considered:
+    - Cross-file unexported references: all moved helpers remain unexported but visible to the rest of `package api` and to the test file in the same package; verified via grep that no other Go file in internal/api references them.
+    - Import graph: the import-graph invariant compares the UNION of all package files' imports; bytes and io migrate from automation_handler.go to automation_handler_decode.go but the union is preserved (gate confirms 80 imports preserved).
+    - Exports invariant: 1273 exported identifiers preserved (gate-verified). Only unexported decls were moved.
+    - Init order / package-level vars: legacyAutomationInputFields depends on automationFieldSet(legacyAutomationInputFieldNames). Both vars and the helper now live in the same file; Go initialises package-level vars within a file in source order with cross-file dependency resolution, so behaviour is unchanged.
+    - JSON wire format / error messages: every error string and JSON tag preserved verbatim.
+    - Section header comment "// ── Create ──" intentionally stays with the remaining Create-flow helpers (automationStepWrites, automationStepPayloadModel, firstTriggerKind) and the Create handler itself.
+per-prompt split map must be appended above this line by the engineer before edits
+## CHANGES
+internal/api/automation_handler.go sha256=BFE6568E151482887FE6FFBE425E35E49D98FD2DFCBD280DD6D6C32681E23F4D
+internal/api/automation_handler_decode.go sha256=2056B6C158EBAB8A2F3030C54E26B3E3E68E5E79059C2BADD1F0F49CC458A06E
+## GATE
+go build ./internal/api/... exit=0
+
+go build ./... exit=0
+
+go vet exit=0
+
+go test exit=0
+ok  	github.com/ev-dev-labs/teslasync/internal/api	0.192s
+
+EXIT=0
+STATUS=DONE
