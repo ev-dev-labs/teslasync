@@ -1,0 +1,42 @@
+=== PREFLIGHT ===
+predecessor=phase-39-04-pivot-fold-helper.log
+
+EXIT=0
+STATUS=DONE
+
+schema_check=signal_log has 4 typed value columns (value_num, value_str, value_bool, value_jsonb); SQL adapted accordingly while preserving DISTINCT ON (signal) anchor
+=== GATE ===
+ok  	github.com/ev-dev-labs/teslasync/internal/signal	(cached)
+GO_TEST_EXIT=0
+UNEXPECTED_STATUS_COUNT=0
+EXIT=0
+STATUS=DONE
+=== CHANGES ===
+NEW: internal\signal\state_reader_log.go
+NEW: internal\signal\state_reader_log_test.go
+=== ANCHORS_REPLAY ===
+FILE_EXISTS=True
+PKG_SIGNAL=True
+TYPE_LOGSTATEREADER=True
+FN_NEW=True
+STRUCT_HAS_LOGGER=True
+TRUSTED_CALLER_DOC=True
+INTERFACE_ASSERT=True
+FN_STATE=True
+FN_SIGNALAT_STUB=True
+FN_TIMELINE_STUB=True
+STUB_PANIC_06=True
+STUB_PANIC_07=True
+FN_UNPACK_LOCATION=True
+SQL_DISTINCT_ON=True
+TEST_UNPACK_FLAT=True
+TEST_UNPACK_NOOP=True
+TEST_UNPACK_BADTYPE=True
+TEST_INTERFACE_SATISFY=True
+TEST_STATE_CTX_CANCEL=True
+TEST_STATE_BUILDMAP=True
+TEST_STATE_FLATTENLOC=True
+TEST_STATE_ZERO_AT=True
+TEST_STATE_SLOW_LOG=True
+TEST_STATE_ERR_LOG=True
+INDEX_PRESENT_NOTE=Select-String -Recurse not supported in PS 7.6; pre-existing index idx_signal_log_vehicle_signal_time on (vehicle_id, signal, created_at DESC) inherited from migration 000040 + renamed in 000145
