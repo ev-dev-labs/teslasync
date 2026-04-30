@@ -1,0 +1,118 @@
+## PREFLIGHT
+start_utc=2026-04-30T01:58:00.7455605+00:00
+go_version=go version go1.26.1 windows/amd64
+engineer_email=iamatulmgupta@gmail.com
+powershell_version=7.6.1
+os_platform=Win32NT
+exports invariant ok: 1273 exported identifiers preserved
+import-graph invariant ok: 80 imports preserved
+## SURVEY
+source_lines_after=1149
+new_file=internal/api/automation_handler_test_run.go lines=599
+## REASONING
+mechanical decomposition: split internal/api/automation_handler.go into internal/api/automation_handler_test_run.go
+no behavior, API, SQL, JSON, route, config, or runtime ordering changes
+
+per-prompt split map:
+  source_file: internal/api/automation_handler.go
+  destination_files:
+    - internal/api/automation_handler_test_run.go
+  scope: HTTP test-run dry-run handler and all of its parsing/evaluation/simulation/validation helpers, plus webhook helpers (token uniqueness check, duplicate-token sentinel error, webhook-secret scrubber, webhook-token injector). The "// ── Test Run ──" section header moves with these handlers (it is directly attached to the TestRun handler block). The "// ── Helpers ──" header (line 252 of HEAD) and notifyReload remain in automation_handler.go because notifyReload has package-internal callers in automation_handler.go (Toggle, ReEnable) and automation_handler_crud.go (Create, Update, Delete). No "conflict-detection" code exists in automation_handler.go at HEAD (verified via grep -i "conflict|Conflict": 0 matches), so the prompt's conflict sub-area is vacuous for this file.
+  identifiers_moved (3 exported methods + 23 unexported funcs/methods + 1 unexported type + 1 unexported var; preserved in source order):
+    automation_handler_test_run.go (in source order):
+      - func (h *AutomationHandler) checkWebhookTokenUniqueness(r *http.Request, config json.RawMessage, excludeID int64) error
+          Webhook helper. Verifies that no other automation uses the same webhook_token. Currently has zero callers in the package (verified via grep: only the definition site matches), but is moved as a webhook-area helper for cohesion. References errWebhookTokenDuplicate (also moved, same file) and models.Automation.
+      - func (h *AutomationHandler) TestRun(w http.ResponseWriter, r *http.Request)
+          POST /automations/{id}/test-run. The dry-run handler. Calls h.getFullByID (cross-file, automation_handler.go), h.evaluateTestConditions and h.simulateActions (now in same file), testRunStopOnFailure (same file), h.historyRepo.Create, h.eventPublisher.Publish*, h.auditor.LogTestRun. Wraps results in testRunResponse + testExecutionPlan (defined in automation_handler_dtos.go, same package).
+      - type testRunConditionConfig struct { condType string; raw json.RawMessage; err error }
+          Internal helper struct used by all testRunCondition* helpers.
+      - func (h *AutomationHandler) evaluateTestConditions(af *models.AutomationFull, now time.Time) []testConditionResult
+          Iterates conditions, parses each via testRunConditionConfigs (same file), then dispatches to evaluateSingleCondition (same file). Returns testConditionResult slice (type defined in automation_handler_dtos.go).
+      - func testRunConditionConfigs(af *models.AutomationFull) []testRunConditionConfig
+      - func testRunConditionConfigFrom(item any) testRunConditionConfig
+      - func testRunConditionTimeWindow(c *models.AutomationStepConditionTimeWindow) testRunConditionConfig
+      - func testRunConditionSignal(c *models.AutomationStepConditionSignal) testRunConditionConfig
+      - func testRunConditionGeofence(c *models.AutomationStepConditionGeofence) testRunConditionConfig
+      - func marshalTestRunCondition(condType string, payload map[string]any) testRunConditionConfig
+      - func mapSignalConditionOperator(op string) string
+      - func signalConditionValue(c *models.AutomationStepConditionSignal) any
+      - func (h *AutomationHandler) evaluateSingleCondition(index int, condType string, raw json.RawMessage, a *models.Automation, now time.Time) testConditionResult
+          Switches on condition type, calls condition.Parse* + condition.Evaluate* (only condition-package call sites in the entire automation_handler.go file). Returns testConditionResult via withResult/withUnknown.
+      - func withResult(base testConditionResult, res condition.Result, snapshot json.RawMessage) testConditionResult
+      - func withUnknown(base testConditionResult, reason string) testConditionResult
+      - func (h *AutomationHandler) simulateActions(af *models.AutomationFull, conditionsMet bool) ([]testActionResult, int)
+          Parses actions via testRunActionConfigs (same file), validates via validateActionConfig (same file), simulates with stopOnFailure semantics via testRunStopOnFailure (same file). Returns testActionResult (defined in automation_handler_dtos.go) plus valid count.
+      - func testRunActionConfigs(af *models.AutomationFull) ([]action.ActionConfig, error)
+      - func testRunActionConfigFrom(item any) ([]action.ActionConfig, error)
+      - func parseTestRunActionRaw(raw json.RawMessage) ([]action.ActionConfig, error)
+      - func testRunCommandActionRaw(a *models.AutomationAction) json.RawMessage
+      - func testRunNotifyActionRaw(a *models.AutomationStepActionNotify) json.RawMessage
+      - func testRunSetSettingActionRaw(a *models.AutomationStepActionSetSetting) json.RawMessage
+      - func testRunCallAutomationActionRaw(a *models.AutomationStepActionCallAutomation) json.RawMessage
+      - func testRunSettingValue(a *models.AutomationStepActionSetSetting) string
+      - func testRunStopOnFailure(_ *models.AutomationFull) bool
+      - func validateActionConfig(cfg action.ActionConfig) error
+      - var errWebhookTokenDuplicate = &duplicateTokenError{}
+          Webhook helper. Sentinel returned by checkWebhookTokenUniqueness (same file).
+      - type duplicateTokenError struct{}
+      - func (e *duplicateTokenError) Error() string
+      - func scrubWebhookSecrets(raw json.RawMessage) json.RawMessage
+          Webhook helper. Removes webhook_token + secret keys from JSON used in shared exports. Used by the import/export pipeline (test coverage in automation_handler_test.go:797,818).
+      - func injectWebhookToken(raw json.RawMessage) (json.RawMessage, string, error)
+          Webhook helper. Generates new uuid token and injects it on import. Test coverage in automation_handler_test.go:826,848.
+  identifiers_kept (in original automation_handler.go after this prompt's extraction):
+    - AutomationHandler / automationRepository / AutomationMQTTPublisher types, AutomationHandlerOption type, all With* constructor options, NewAutomationHandler.
+    - Read helpers: getByID, getFullByID.
+    - Presets handlers: ListPresets, GetPreset.
+    - State-change handlers: Toggle, ReEnable.
+    - Cross-area helper: notifyReload (called by Toggle/ReEnable in same file + Create/Update/Delete in automation_handler_crud.go).
+    - Undo: reverseCommands var, UndoLast handler.
+    - Import/Export pipeline (everything except scrubWebhookSecrets/injectWebhookToken): exportVersion const, automationExportPayloads type + newAutomationExportPayloads, automationToPortable (free + method), automationExportPayloadsFromFull, automationPayloadStepID, automationPayloadForStep, hydrateAutomationExportPayloads, loadAutomationExportTriggers, loadAutomationExportConditions, loadAutomationExportActions, automationConditionTimeWindowPayload, automationStepRawMessage, automationDecodePayload, automationTimeWindowDTO, formatAutomationClockTime, automationMarshalStep, buildExportEnvelope, ExportOne, ExportBatch, Import, importSingle, writeJSONIndent.
+  cross_file_unexported_references (still package-internal, unchanged):
+    - automation_handler_test_run.go references h.repo, h.historyRepo, h.eventPublisher, h.auditor struct fields (defined on AutomationHandler in automation_handler.go).
+    - automation_handler_test_run.go references h.getFullByID method (defined in automation_handler.go).
+    - automation_handler_test_run.go references unexported types from automation_handler_dtos.go: testRunResponse, testExecutionPlan, testConditionResult, testActionResult.
+    - automation_handler_test_run.go references package-level helpers in helpers.go: urlParamInt64, writeJSON, writeError.
+    - automation_handler.go has zero remaining references to TestRun, evaluateTestConditions, simulateActions, validateActionConfig, scrubWebhookSecrets, injectWebhookToken, checkWebhookTokenUniqueness, errWebhookTokenDuplicate, duplicateTokenError, or any testRun*/withResult/withUnknown/marshalTestRunCondition/mapSignalConditionOperator/signalConditionValue helper. Route registration is in router.go (via the *AutomationHandler receiver pointer; resolves across files in the same package).
+    - automation_handler_test.go references the moved unexported helpers (evaluateTestConditions, simulateActions, validateActionConfig, scrubWebhookSecrets, injectWebhookToken) directly by identifier — these continue to resolve via the same-package method/function set after the move (verified via go test ./internal/api -count=1: ok).
+  imports_added_to_new_file (subset of original package's import set; import-graph union unchanged at 80):
+    - encoding/json                                              (json.RawMessage, json.Unmarshal, json.Marshal, json.NewDecoder; 35 call sites)
+    - fmt                                                         (fmt.Errorf, fmt.Sprint; 8 call sites)
+    - net/http                                                    (http.ResponseWriter, http.Request, http.Status*; 8 call sites)
+    - strings                                                     (strings.TrimSpace, strings.HasPrefix; 2 call sites)
+    - time                                                        (time.Time, time.Now, time.Since; 6 call sites)
+    - github.com/google/uuid                                     (uuid.New in injectWebhookToken; 1 call site)
+    - github.com/rs/zerolog/log                                  (log.Info/Error/Warn; 4 call sites)
+    - github.com/ev-dev-labs/teslasync/internal/automation/action     (action.ActionConfig, action.Parse*; 12 call sites)
+    - github.com/ev-dev-labs/teslasync/internal/automation/condition  (condition.Result, condition.Parse*, condition.Evaluate*; 13 call sites)
+    - github.com/ev-dev-labs/teslasync/internal/models                (models.Automation, models.AutomationFull, models.AutomationStepCondition*, models.AutomationStepAction*, models.AutomationHistory; 33 call sites)
+  imports_removed_from_original_automation_handler_go (these were used ONLY by the moved code):
+    - github.com/google/uuid                                     (verified via grep '\buuid\.': only line 1696 in HEAD, inside injectWebhookToken which moves)
+    - github.com/ev-dev-labs/teslasync/internal/automation/condition  (verified via grep '\bcondition\.': 13 hits all within evaluateSingleCondition body + withResult signature, all of which move)
+  imports_kept_in_original_automation_handler_go (still referenced after extraction):
+    - context, encoding/json, errors, fmt, net/http, strings, time, github.com/go-chi/chi/v5 (GetPreset chi.URLParam), github.com/rs/zerolog/log, github.com/ev-dev-labs/teslasync/internal/automation (WithAutomationAuditor *automation.Auditor), github.com/ev-dev-labs/teslasync/internal/automation/action (UndoLast uses action.ActionResult/ParseCommandConfig/CommandConfig and WithCommandExecutor takes *action.CommandExecutor), github.com/ev-dev-labs/teslasync/internal/automation/presets, github.com/ev-dev-labs/teslasync/internal/database, github.com/ev-dev-labs/teslasync/internal/models.
+  preflight_invariants (verified by gate script before commit):
+    - exports invariant: 1273 exported identifiers across internal/api preserved (HEAD vs working tree). Method moves keep AutomationHandler.TestRun/checkWebhookTokenUniqueness/evaluateTestConditions/evaluateSingleCondition/simulateActions visible because the parser indexes the identifier by receiver type, not by file.
+    - import-graph invariant: 80 imports across internal/api preserved (no third-party deps added or removed). uuid + condition imports moved from automation_handler.go to automation_handler_test_run.go but the package union is unchanged.
+    - drift check: only the three allowed paths (automation_handler.go, automation_handler_test_run.go, this log) appear in `git status --short`.
+  build_test_outcomes (from gate ## GATE section):
+    - gofmt -l: clean
+    - go build ./internal/api/...: exit 0
+    - go build ./...: exit 0
+    - go vet ./internal/api: exit 0
+    - go test ./internal/api -count=1: ok 0.180s
+## CHANGES
+internal/api/automation_handler.go sha256=622AFB33F0D899648DEC4136D993186306BEAE0C93610A706849E773953D09A4
+internal/api/automation_handler_test_run.go sha256=9AF5145B6A816269D0C858EA8397BABB1E7DC144456052D6FE91AE6F7238FEA8
+## GATE
+go build ./internal/api/... exit=0
+
+go build ./... exit=0
+
+go vet exit=0
+
+go test exit=0
+ok  	github.com/ev-dev-labs/teslasync/internal/api	0.180s
+
+EXIT=0
+STATUS=DONE
