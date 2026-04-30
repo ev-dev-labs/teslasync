@@ -1,0 +1,95 @@
+## PREFLIGHT
+start_utc=2026-04-30T03:15:05.4921613+00:00
+go_version=go version go1.26.1 windows/amd64
+engineer_email=iamatulmgupta@gmail.com
+powershell_version=7.6.1
+os_platform=Win32NT
+exports invariant ok: 1273 exported identifiers preserved
+import-graph invariant ok: 80 imports preserved
+## SURVEY
+source_lines_after=700
+new_file=internal/api/telemetry_sessions_drive_tracking.go lines=1038
+## REASONING
+mechanical decomposition: split internal/api/telemetry_sessions.go into internal/api/telemetry_sessions_drive_tracking.go
+no behavior, API, SQL, JSON, route, config, or runtime ordering changes
+
+split_map (engineer-authored, per Action Step 3):
+  source_file=internal/api/telemetry_sessions.go
+  destination_file=internal/api/telemetry_sessions_drive_tracking.go
+
+  identifiers moved to telemetry_sessions_drive_tracking.go (verbatim, in original statement order):
+    type streamingDrive                                          (HEAD lines  43-108)
+    method (*TelemetrySessionTracker).trackDriving               (HEAD lines 293-399)
+    method (*TelemetrySessionTracker).startDriveLocked           (HEAD lines 401-521)
+    method (*TelemetrySessionTracker).updateActiveDriveLocked    (HEAD lines 523-627)
+    method (*TelemetrySessionTracker).updateDriveRangeStats      (HEAD lines 629-664)
+    method (*TelemetrySessionTracker).updateDriveSocStats        (HEAD lines 666-689)
+    method (*TelemetrySessionTracker).updateDriveTempStats       (HEAD lines 691-713)
+    method (*TelemetrySessionTracker).updateDriveElevation       (HEAD lines 715-729)
+    method (*TelemetrySessionTracker).maybeFlushDriveTelemetry   (HEAD lines 731-737)
+    method (*TelemetrySessionTracker).flushDriveTelemetry        (HEAD lines 739-747)
+    method (*TelemetrySessionTracker).recordDriveTelemetry       (HEAD lines 749-836)
+    method (*TelemetrySessionTracker).completeDriveLocked        (HEAD lines 838-1195)
+    method (*TelemetrySessionTracker).backfillDriveValues        (HEAD lines 1197-1257)
+    method (*TelemetrySessionTracker).resolveAndUpdateAddress    (HEAD lines 1259-1311)
+    method (*TelemetrySessionTracker).BackfillAddresses          (HEAD lines 1313-1357)
+
+  identifiers retained in telemetry_sessions.go (still package-visible, referenced by drive code from the new file):
+    type TelemetrySessionTracker (struct fields: driveRepo, geofenceRepo, placesCache, tripRepo, eventBus, geocoder,
+                                  localSignals, signalHistoryWriter, signalLogReader, posRepo, db, mu, activeDrives — all
+                                  used by methods now in the new file via the *t receiver)
+    type streamingCharge          (charge-only state, kept beside the charge tracking code)
+    func accumulateSignals        (utility used by both drive and charge code; kept in main file beside its other caller trackCharging)
+    type nearestPosition + func findNearestPositionFallback + func absDuration
+                                  (position-fallback helpers used by both backfillDriveValues — moved — and
+                                   backfillChargeValues — retained — kept beside the latter)
+    const telemetryWriteInterval  (controls flush cadence, used by both maybeFlushDriveTelemetry — moved — and
+                                   maybeFlushChargeTelemetry — retained — kept in main file beside its constant declaration spot)
+    method completeChargeLocked   (called from trackDriving via t.completeChargeLocked when a drive starts while a charge
+                                   is active — cross-file unexported reference resolved in the same package)
+    Prometheus counters (DriveSessionsActive, DriveSessionsCompleted, TotalDrives, TotalDistanceKm,
+                         GeocodingTotal, GeocodingDuration, AddressBackfillRemaining, AddressBackfillCompleted)
+                                  defined in metrics.go in the same package
+
+  identifiers in telemetry_sessions_signal_helpers.go used by the new file:
+    method (*TelemetrySessionTracker).resolveFloat / resolveInt / resolveLatLon (SignalStore L1 reads)
+    func signalFloat, signalLatLon, signalPowerKW, signalInt, signalStr
+    func floatPtr, intPtr, int16Ptr, boolPtr, strPtr, snapFloat, ptrStrOrNil
+                                  (all in the same package, no cross-file imports needed)
+
+  imports retained in main file (math removed since all math.* uses moved with drive code):
+    context, strings, sync, time, database, enums, events, geocoding, models, signal, units, pgx, log
+  imports removed from main file: math (only used in startDriveLocked, updateDriveElevation, completeDriveLocked — all moved)
+  imports declared in new file:
+    context, math, time, database, enums, events, models, units, pgx, log
+    NOT imported in new file: strings (only used in trackCharging which stays), sync (only in TelemetrySessionTracker
+    struct field which stays), geocoding (only in TelemetrySessionTracker struct field type; method calls on t.geocoder
+    don't require the import), signal (only in TelemetrySessionTracker struct field type)
+
+  layered live-state contract preservation:
+    - SignalStore L1 reads (t.localSignals.Get/GetFloat) are used inside trackDriving (last-known Gear check to keep
+      drive alive during long stops) and updateDriveTempStats. These remain co-located with the drive FSM/session logic
+      that needs them — no L1 reads were split away from their session-tracking callers.
+    - signal_log L3 reads (t.signalLogReader.SnapshotAt, DriveAggregates, RegenEnergy) and the legacy signalHistoryWriter
+      fallback are used inside completeDriveLocked for end-of-drive enrichment. They remain together with the
+      completion logic that consumes them — the durable-history read pipeline is not split across files.
+    - Redis L2: not directly touched by the moved code. No L2 reads or writes were introduced or relocated.
+    - FSM/commit logic (t.db.WithTx + driveRepo.CompleteWithTx + PartialUpdateWithTx) stays inside completeDriveLocked
+      so the L1 read → enrichment → durable commit chain remains a single pipeline stage in one file.
+    - The entire drive lifecycle pipeline (start → update → complete → backfill → address-resolve) lives together
+      in the new file; no logical pipeline stage was split between files.
+## CHANGES
+internal/api/telemetry_sessions.go sha256=12C5973C08C96BC62BC4DCF8DFAAD85C77AED83CF5B848EDCC1BC4AF04CF6036
+internal/api/telemetry_sessions_drive_tracking.go sha256=B2CCD68BB89DDC842F3A2E22BB58F1E9E6DB3B06D7C4DAB3DF2C58AF395A1CC4
+## GATE
+go build ./internal/api/... exit=0
+
+go build ./... exit=0
+
+go vet exit=0
+
+go test exit=0
+ok  	github.com/ev-dev-labs/teslasync/internal/api	0.165s
+
+EXIT=0
+STATUS=DONE
