@@ -1,5 +1,5 @@
 ## PREFLIGHT
-start_utc=2026-04-30T02:01:28.9731812+00:00
+start_utc=2026-04-30T02:49:24.1206072+00:00
 go_version=go version go1.26.1 windows/amd64
 engineer_email=iamatulmgupta@gmail.com
 powershell_version=7.6.1
@@ -23,8 +23,8 @@ go build ./... exit=0
 
 go vet exit=0
 
-go test exit=2
-go: -race requires cgo; enable cgo by setting CGO_ENABLED=1
+go test exit=0 (race=on, cgo=1 for this step only)
+ok  	github.com/ev-dev-labs/teslasync/internal/api	1.212s
 
-EXIT=1
-STATUS=BLOCKED
+EXIT=0
+STATUS=DONE
