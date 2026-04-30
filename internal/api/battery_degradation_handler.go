@@ -7,17 +7,38 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/rs/zerolog/log"
 )
 
 // BatteryDegradationHandler handles battery degradation prediction HTTP requests.
+//
+// Phase-39 migration: the four per-signal "value as of now" lookups in
+// the Predict and Health fallback branches (EnergyRemaining and
+// EstBatteryRange in each) now resolve through the canonical
+// signal.StateReader (ADR-002 / phase-39) instead of the legacy
+// database.SignalLogReader's per-signal helper. The historical
+// signal_log trace aggregation in synthesizeBatterySnapshots
+// (database.SignalLogReader.SignalTrace) is a SignalLogReader-only
+// capability with no StateReader equivalent and is intentionally
+// retained side-by-side; only the per-signal at-or-before lookup path
+// is migrated here.
+//
+// As part of this migration, transport errors from state.SignalAt now
+// propagate to the caller as a 500 instead of being silently swallowed
+// into a partial / zero-valued payload. The legacy silent-swallow
+// behavior was indistinguishable on the frontend from "vehicle truly
+// idle / brand-new vehicle with no signal_log history" and rendered
+// the Battery Degradation panel as "battery looks dead" even when the
+// underlying read had genuinely failed.
 type BatteryDegradationHandler struct {
 	db              *database.DB
+	state           signal.StateReader
 	signalLogReader *database.SignalLogReader
 }
 
-func NewBatteryDegradationHandler(db *database.DB, slr *database.SignalLogReader) *BatteryDegradationHandler {
-	return &BatteryDegradationHandler{db: db, signalLogReader: slr}
+func NewBatteryDegradationHandler(db *database.DB, state signal.StateReader, slr *database.SignalLogReader) *BatteryDegradationHandler {
+	return &BatteryDegradationHandler{db: db, state: state, signalLogReader: slr}
 }
 
 func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Request) {
@@ -34,8 +55,13 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 
 	ctx := r.Context()
 
-	// Look up vehicle-specific battery capacity
-	capacityKWh, capacitySource := lookupVehicleCapacity(ctx, h.db, vehicleID)
+	// Look up vehicle-specific battery capacity (nil-safe; falls back to
+	// the same default that lookupVehicleCapacity uses on lookup error).
+	capacityKWh := 75.0
+	capacitySource := "default"
+	if h.db != nil {
+		capacityKWh, capacitySource = lookupVehicleCapacity(ctx, h.db, vehicleID)
+	}
 
 	// Battery health history — reconstruct from signal_log
 	var snapshots []batterySnapshotData
@@ -71,24 +97,26 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 	}
 
 	var habits chargingHabits
-	err = h.db.Pool.QueryRow(ctx, `
-		SELECT
-			COUNT(*) FILTER (WHERE charger_power_kw_max > 50),
-			COUNT(*) FILTER (WHERE charger_power_kw_max <= 50 OR charger_power_kw_max IS NULL),
-			COUNT(*) FILTER (WHERE start_battery_pct < 10),
-			COUNT(*) FILTER (WHERE end_battery_pct > 95),
-			COUNT(*) FILTER (WHERE end_battery_pct > 90),
-			COALESCE(AVG(energy_added_kwh), 0),
-			COUNT(*)
-		FROM charging_sessions
-		WHERE vehicle_id = $1`, vehicleID).Scan(
-		&habits.FastChargeCount, &habits.SlowChargeCount,
-		&habits.DeepDischargeCount, &habits.ChargeToFullCount,
-		&habits.HighSocCount, &habits.AvgEnergyPerSession,
-		&habits.TotalCount)
-	if err != nil {
-		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get charging habits")
-		// Non-fatal
+	if h.db != nil {
+		err = h.db.Pool.QueryRow(ctx, `
+			SELECT
+				COUNT(*) FILTER (WHERE charger_power_kw_max > 50),
+				COUNT(*) FILTER (WHERE charger_power_kw_max <= 50 OR charger_power_kw_max IS NULL),
+				COUNT(*) FILTER (WHERE start_battery_pct < 10),
+				COUNT(*) FILTER (WHERE end_battery_pct > 95),
+				COUNT(*) FILTER (WHERE end_battery_pct > 90),
+				COALESCE(AVG(energy_added_kwh), 0),
+				COUNT(*)
+			FROM charging_sessions
+			WHERE vehicle_id = $1`, vehicleID).Scan(
+			&habits.FastChargeCount, &habits.SlowChargeCount,
+			&habits.DeepDischargeCount, &habits.ChargeToFullCount,
+			&habits.HighSocCount, &habits.AvgEnergyPerSession,
+			&habits.TotalCount)
+		if err != nil {
+			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get charging habits")
+			// Non-fatal
+		}
 	}
 	habits.AvgEnergyPerSession = math.Round(habits.AvgEnergyPerSession*10) / 10
 
@@ -108,14 +136,26 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 	// Fallback: derive from signal_log when no snapshots exist
 	if currentHealth == 0 {
 		var energy, rng *float64
-		if h.signalLogReader != nil {
+		if h.state != nil {
 			now := time.Now()
-			if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "EnergyRemaining", now); err == nil && val != nil {
+			val, sigErr := h.state.SignalAt(ctx, vehicleID, "EnergyRemaining", now)
+			if sigErr != nil {
+				log.Error().Err(sigErr).Int64("vehicle_id", vehicleID).Str("signal", "EnergyRemaining").Msg("battery degradation: failed to read signal state")
+				writeError(w, http.StatusInternalServerError, "failed to read battery state")
+				return
+			}
+			if val != nil {
 				if v, ok := toFloatOk(val); ok && v > 0 {
 					energy = &v
 				}
 			}
-			if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "EstBatteryRange", now); err == nil && val != nil {
+			val, sigErr = h.state.SignalAt(ctx, vehicleID, "EstBatteryRange", now)
+			if sigErr != nil {
+				log.Error().Err(sigErr).Int64("vehicle_id", vehicleID).Str("signal", "EstBatteryRange").Msg("battery degradation: failed to read signal state")
+				writeError(w, http.StatusInternalServerError, "failed to read battery state")
+				return
+			}
+			if val != nil {
 				if v, ok := toFloatOk(val); ok && v > 0 {
 					rng = &v
 				}
@@ -133,13 +173,15 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 			currentRange = *rng
 		}
 		// Cycle count from charge sessions
-		var delta *float64
-		_ = h.db.Pool.QueryRow(ctx,
-			`SELECT SUM(GREATEST(end_battery_pct - start_battery_pct, 0)) 
-			 FROM charging_sessions WHERE vehicle_id = $1 AND end_battery_pct > start_battery_pct`,
-			vehicleID).Scan(&delta)
-		if delta != nil {
-			currentCycles = int(*delta / 100)
+		if h.db != nil {
+			var delta *float64
+			_ = h.db.Pool.QueryRow(ctx,
+				`SELECT SUM(GREATEST(end_battery_pct - start_battery_pct, 0)) 
+				 FROM charging_sessions WHERE vehicle_id = $1 AND end_battery_pct > start_battery_pct`,
+				vehicleID).Scan(&delta)
+			if delta != nil {
+				currentCycles = int(*delta / 100)
+			}
 		}
 
 		// Synthesize a snapshot so the page has something to show
@@ -242,8 +284,13 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 
 	ctx := r.Context()
 
-	// Look up vehicle-specific battery capacity
-	capacityKWh, capacitySource := lookupVehicleCapacity(ctx, h.db, vehicleID)
+	// Look up vehicle-specific battery capacity (nil-safe; falls back to
+	// the same default that lookupVehicleCapacity uses on lookup error).
+	capacityKWh := 75.0
+	capacitySource := "default"
+	if h.db != nil {
+		capacityKWh, capacitySource = lookupVehicleCapacity(ctx, h.db, vehicleID)
+	}
 
 	// Battery history — reconstruct from signal_log
 	type histEntry struct {
@@ -293,14 +340,26 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 	// Fallback from signal_log
 	if latestSOH == 0 {
 		var energy, rng *float64
-		if h.signalLogReader != nil {
+		if h.state != nil {
 			now := time.Now()
-			if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "EnergyRemaining", now); err == nil && val != nil {
+			val, sigErr := h.state.SignalAt(ctx, vehicleID, "EnergyRemaining", now)
+			if sigErr != nil {
+				log.Error().Err(sigErr).Int64("vehicle_id", vehicleID).Str("signal", "EnergyRemaining").Msg("battery-health: failed to read signal state")
+				writeError(w, http.StatusInternalServerError, "failed to read battery state")
+				return
+			}
+			if val != nil {
 				if v, ok := toFloatOk(val); ok && v > 0 {
 					energy = &v
 				}
 			}
-			if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "EstBatteryRange", now); err == nil && val != nil {
+			val, sigErr = h.state.SignalAt(ctx, vehicleID, "EstBatteryRange", now)
+			if sigErr != nil {
+				log.Error().Err(sigErr).Int64("vehicle_id", vehicleID).Str("signal", "EstBatteryRange").Msg("battery-health: failed to read signal state")
+				writeError(w, http.StatusInternalServerError, "failed to read battery state")
+				return
+			}
+			if val != nil {
 				if v, ok := toFloatOk(val); ok && v > 0 {
 					rng = &v
 				}
@@ -316,13 +375,15 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 		if rng != nil {
 			latestRange = *rng
 		}
-		var delta *float64
-		_ = h.db.Pool.QueryRow(ctx,
-			`SELECT SUM(GREATEST(end_battery_pct - start_battery_pct, 0))
-			 FROM charging_sessions WHERE vehicle_id = $1 AND end_battery_pct > start_battery_pct`,
-			vehicleID).Scan(&delta)
-		if delta != nil {
-			latestCycles = int(*delta / 100)
+		if h.db != nil {
+			var delta *float64
+			_ = h.db.Pool.QueryRow(ctx,
+				`SELECT SUM(GREATEST(end_battery_pct - start_battery_pct, 0))
+				 FROM charging_sessions WHERE vehicle_id = $1 AND end_battery_pct > start_battery_pct`,
+				vehicleID).Scan(&delta)
+			if delta != nil {
+				latestCycles = int(*delta / 100)
+			}
 		}
 		if latestSOH > 0 {
 			history = []histEntry{{
@@ -337,14 +398,16 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 
 	// Charging habit stats
 	var fastCount, slowCount, deepDischarge, fullCharge int
-	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT
-			COUNT(*) FILTER (WHERE charger_power_kw_max > 50),
-			COUNT(*) FILTER (WHERE charger_power_kw_max <= 50 OR charger_power_kw_max IS NULL),
-			COUNT(*) FILTER (WHERE start_battery_pct < 10),
-			COUNT(*) FILTER (WHERE end_battery_pct > 95)
-		FROM charging_sessions
-		WHERE vehicle_id = $1`, vehicleID).Scan(&fastCount, &slowCount, &deepDischarge, &fullCharge)
+	if h.db != nil {
+		_ = h.db.Pool.QueryRow(ctx, `
+			SELECT
+				COUNT(*) FILTER (WHERE charger_power_kw_max > 50),
+				COUNT(*) FILTER (WHERE charger_power_kw_max <= 50 OR charger_power_kw_max IS NULL),
+				COUNT(*) FILTER (WHERE start_battery_pct < 10),
+				COUNT(*) FILTER (WHERE end_battery_pct > 95)
+			FROM charging_sessions
+			WHERE vehicle_id = $1`, vehicleID).Scan(&fastCount, &slowCount, &deepDischarge, &fullCharge)
+	}
 
 	totalCharges := fastCount + slowCount
 	fastChargePct := 0.0
@@ -389,10 +452,12 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 
 	// Avg depth of discharge
 	var avgDoD *float64
-	_ = h.db.Pool.QueryRow(ctx,
-		`SELECT AVG(GREATEST(start_battery_pct - end_battery_pct, 0))
-		 FROM drives WHERE vehicle_id = $1 AND start_battery_pct > end_battery_pct`,
-		vehicleID).Scan(&avgDoD)
+	if h.db != nil {
+		_ = h.db.Pool.QueryRow(ctx,
+			`SELECT AVG(GREATEST(start_battery_pct - end_battery_pct, 0))
+			 FROM drives WHERE vehicle_id = $1 AND start_battery_pct > end_battery_pct`,
+			vehicleID).Scan(&avgDoD)
+	}
 	dod := 0.0
 	if avgDoD != nil {
 		dod = *avgDoD
@@ -405,7 +470,7 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 	// Compute temp exposure score from actual ModuleTempMax signal data
 	var tempExposureScore interface{}
 	var tempExposureReason interface{}
-	if h.signalLogReader != nil {
+	if h.signalLogReader != nil && h.db != nil {
 		var avgTemp *float64
 		var sampleCount int
 		_ = h.db.Pool.QueryRow(ctx, `
