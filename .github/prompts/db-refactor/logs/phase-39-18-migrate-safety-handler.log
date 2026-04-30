@@ -1,0 +1,46 @@
+=== PREFLIGHT ===
+Predecessor: phase-39-17 EXIT=0 STATUS=DONE
+=== CALL_SITES ===
+internal/api/safety_handler.go: 1x SignalTracePivotFlat (List), 1x SnapshotAt (Latest)
+internal/api/router.go: NewSafetyHandler(signalLogReader) -> NewSafetyHandler(stateReader)
+=== CHANGES ===
+ M .github/prompts/db-refactor/logs/phase-39-17-migrate-motor-handler.log
+ M internal/api/router.go
+ M internal/api/safety_handler.go
+?? internal/api/safety_handler_test.go
+=== GATE ===
+USES_STATE=True
+NO_PIVOT=True
+NO_OLD_PIVOTMAPPING=True
+NO_SNAPSHOTAT=True
+MAPPINGS_RETYPED=True
+TEST_LATEST=True
+ROUTER=True
+TEST_CARRY=True
+TEST_ERR=True
+USES_TIMELINE=True
+USES_SIGNAL_STATEREADER=True
+ok  	github.com/ev-dev-labs/teslasync/internal/api	0.422s
+GO_TEST_EXIT=0
+UNEXPECTED_STATUS_COUNT=1
+ M .github/prompts/db-refactor/logs/phase-39-17-migrate-motor-handler.log
+EXIT=1
+STATUS=BLOCKED
+=== GATE (rerun after restoring predecessor log) ===
+MAPPINGS_RETYPED=True
+TEST_CARRY=True
+USES_STATE=True
+TEST_LATEST=True
+NO_OLD_PIVOTMAPPING=True
+TEST_ERR=True
+USES_SIGNAL_STATEREADER=True
+USES_TIMELINE=True
+ROUTER=True
+NO_PIVOT=True
+NO_SNAPSHOTAT=True
+ok  	github.com/ev-dev-labs/teslasync/internal/api	(cached)
+GO_TEST_EXIT=0
+UNEXPECTED_STATUS_COUNT=0
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
