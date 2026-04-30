@@ -1,0 +1,52 @@
+## PREFLIGHT
+start_utc=2026-04-30T05:09:26.9192429+00:00
+go_version=go version go1.26.1 windows/amd64
+engineer_email=iamatulmgupta@gmail.com
+powershell_version=7.6.1
+os_platform=Win32NT
+exports invariant ok: 82 exported identifiers preserved
+import-graph invariant ok: 17 imports preserved
+## SURVEY
+source_lines_after=224
+new_file=internal/tesla/client_energy_charging.go lines=99
+## REASONING
+mechanical decomposition: split internal/tesla/client.go into internal/tesla/client_energy_charging.go
+no behavior, API, SQL, JSON, route, config, or runtime ordering changes
+split_map:
+  source: internal/tesla/client.go
+  destination: internal/tesla/client_energy_charging.go
+  moved_to_client_energy_charging.go:
+    - method Client.GetChargingHistory   (GET /api/1/dx/charging/history)
+    - method Client.GetChargingInvoice   (GET /api/1/dx/charging/invoice/{contentID})
+    - method Client.GetChargingSessions  (GET /api/1/dx/charging/sessions)
+    - method Client.GetProducts          (GET /api/1/products - vehicles + energy products list)
+    - method Client.GetEnergySiteCalendarHistory  (GET /api/1/energy_sites/{id}/calendar_history)
+    - method Client.GetEnergySiteTelemetryHistory (GET /api/1/energy_sites/{id}/telemetry_history)
+    - method Client.GetEnergySiteLiveStatus       (GET /api/1/energy_sites/{id}/live_status)
+    - method Client.GetEnergySiteInfo             (GET /api/1/energy_sites/{id}/site_info)
+    - method Client.SetEnergySiteTOUSettings      (POST /api/1/energy_sites/{id}/time_of_use_settings)
+  cross_file_unexported_refs_preserved_in_package_tesla:
+    - Client struct (declared in client.go) - method receiver
+    - Client.doRequest (declared in client.go) - used by all 9 moved methods
+  rationale: charging-history/invoice/sessions and energy-site (Powerwall/Solar) state+config endpoints are a cohesive sub-area unrelated to vehicle commands, vehicle-data, drivers/invitations, or auth.
+  imports_in_new_file: context, fmt, io, net/http, net/url, strconv (all already in package union)
+  imports_removed_from_client.go: net/url (remaining url token in doRequest is a local variable), strconv (only the moved methods used it)
+  no DTOs were defined for these methods - all return raw []byte; apiResponse stays in client.go (shared by doRequest)
+per-prompt split map must be appended above this line by the engineer before edits
+## CHANGES
+internal/tesla/client.go sha256=EF1A321166B628F0CB8FC399127972680C3DD61B512EB2CA13A357A075107B49
+internal/tesla/client_energy_charging.go sha256=780267D65FF5FD6BB6202F2067E8F06D68122F3A3DA81FC39FEDC8529DEBE189
+## GATE
+go build ./internal/tesla/... exit=0
+
+go build ./... exit=0
+
+go vet exit=0
+
+go test exit=0
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla	0.934s
+
+EXIT=0
+STATUS=DONE
+## COMMIT
+commit_sha=f54bcd6968284ff176a177a67a31fbbff9decc5c
