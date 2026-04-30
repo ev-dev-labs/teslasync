@@ -1,0 +1,65 @@
+## PREFLIGHT
+start_utc=2026-04-30T04:46:57.1403880+00:00
+go_version=go version go1.26.1 windows/amd64
+engineer_email=iamatulmgupta@gmail.com
+powershell_version=7.6.1
+os_platform=Win32NT
+exports invariant ok: 82 exported identifiers preserved
+import-graph invariant ok: 17 imports preserved
+## SURVEY
+source_lines_after=666
+new_file=internal/tesla/client_vehicle_data.go lines=134
+## REASONING
+split_map:
+  source_file: internal/tesla/client.go
+  destination_files:
+    - internal/tesla/client_vehicle_data.go
+  moved_to_internal/tesla/client_vehicle_data.go:
+    methods:
+      - (*Client).GetNearbyChargingSites   # GET /api/1/vehicles/{vin}/nearby_charging_sites
+      - (*Client).GetReleaseNotes          # GET /api/1/vehicles/{vin}/release_notes
+      - (*Client).GetRecentAlerts          # GET /api/1/vehicles/{vin}/recent_alerts
+      - (*Client).GetServiceData           # GET /api/1/vehicles/{vin}/service_data
+      - (*Client).GetFleetStatus           # POST /api/1/vehicles/fleet_status
+      - (*Client).GetMobileEnabled         # GET /api/1/vehicles/{vin}/mobile_enabled
+      - (*Client).GetVehicleOptions        # GET /api/1/dx/vehicles/options?vin={vin}
+      - (*Client).GetVehicleSpecs          # GET /api/1/vehicles/{vin}/specs (partner token)
+      - (*Client).GetSubscriptionEligibility  # GET /api/1/dx/vehicles/subscriptions/eligibility?vin={vin}
+      - (*Client).GetUpgradeEligibility    # GET /api/1/dx/vehicles/upgrades/eligibility?vin={vin}
+      - (*Client).GetWarrantyDetails       # GET /api/1/dx/warranty/details
+      - (*Client).ListVehicles             # vehicle list - GET /api/1/vehicles
+      - (*Client).GetVehicleData           # vehicle_data state snapshots (drive/charge/climate/state/config)
+      - (*Client).WakeUp                   # POST /api/1/vehicles/{vin}/wake_up
+    types: []
+    funcs: []
+    consts: []
+    vars: []
+  cross_file_unexported_refs (used by moved code, defined elsewhere in package tesla):
+    - Client struct (internal/tesla/client.go) - receiver type
+    - Client.doRequest (internal/tesla/client.go) - low-level request helper
+    - Client.doRequestWithToken (internal/tesla/client_auth.go) - partner-token request helper (used by GetVehicleSpecs)
+    - Client.GetPartnerToken (internal/tesla/client_auth.go) - partner-token issuer (used by GetVehicleSpecs)
+    - VehicleData (internal/tesla/types.go) - return type for ListVehicles
+    - VehicleDataResponse (internal/tesla/types.go) - return type for GetVehicleData
+    - ErrVehicleAsleep (internal/tesla/types.go) - sentinel returned by GetVehicleData on 408/504
+    - ErrRateLimited (internal/tesla/client.go) - sentinel returned by GetVehicleData on 429
+  removed_imports_from_client.go:
+    - strings  # only used by GetVehicleData, which moved
+mechanical decomposition: split internal/tesla/client.go into internal/tesla/client_vehicle_data.go
+no behavior, API, SQL, JSON, route, config, or runtime ordering changes
+per-prompt split map appended above this line
+## CHANGES
+internal/tesla/client.go sha256=38E113B8AA7024DA12E14BD553ACAB48813C062F6A67005DF2AF76C900CF14FB
+internal/tesla/client_vehicle_data.go sha256=BBE99C3DF1B0B29EA43FF03B8021728C437AB88F76403DF64F930E4FC3DAF354
+## GATE
+go build ./internal/tesla/... exit=0
+
+go build ./... exit=0
+
+go vet exit=0
+
+go test exit=0
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla	0.999s
+
+EXIT=0
+STATUS=DONE
