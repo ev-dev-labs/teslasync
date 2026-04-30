@@ -1,0 +1,160 @@
+=== PREFLIGHT ===
+Phase: 38
+Prompt: 06-redis-warm-restamp
+Atomic: yes
+Delegation: FORBIDDEN
+Predecessor: phase-38-05-redis-warm-restamp-tests.log (verified EXIT=0 / STATUS=DONE)
+Allowed files to change:
+  - internal/signal/redis_cache.go
+  - internal/signal/redis_cache_test.go
+  - internal/signal/live_store.go
+  - internal/signal/live_store_test.go
+  - .github/prompts/db-refactor/logs/phase-38-06-redis-warm-restamp.log
+Working dir: D:\repos\teslasync
+Required reads completed before authoring CHANGES:
+  - .github/ARCHITECTURE.md (ADR-007 lines 37-90)
+  - .github/instructions/telemetry-pipeline.instructions.md (live state contract)
+  - internal/signal/live_store.go (Warm + hydrateMissingValues)
+  - internal/signal/redis_cache.go (Update + envelope parser + encoder)
+  - internal/signal/redis_cache_test.go (fakeRedisSignalClient)
+  - internal/signal/live_store_test.go (existing W7 test + merge tests)
+  - internal/signal/store.go (Store, Value, Get, Hydrate)
+=== SURVEY ===
+Existing files inspected before edits:
+  - internal/signal/redis_cache.go (existing Update encodes via
+    encodeTimestampedSignalValue + Expire(signalKeyTTL); envelope
+    parser parseRedisSignalValueEnvelope returns (envelope, ok, err)
+    where ok=true && err=nil identifies a valid envelope; legacy
+    fallback decodeLegacySignalValue handles number/bool/string/JSON).
+  - internal/signal/live_store.go (Warm called GetAllValues + hydrate;
+    hydrateMissingValues skipped value.Timestamp.IsZero() entries).
+  - internal/signal/redis_cache_test.go (fakeRedisSignalClient already
+    has mu+hashes; extended in-place with hsetCalls/expireCalls
+    recorders and an hsetErr error-injection seam, all back-compat).
+  - internal/signal/live_store_test.go (existing W7 test
+    TestHybridLiveSignalStoreWarmSkipsTimestamplessRedisForHistoryHydrate
+    locked in OLD skip behavior; deleted in favour of W1 per Prompt
+    05's W7 transition rule).
+  - internal/signal/store.go (Store.Update / Store.Get / Store.Hydrate
+    / Store.VehicleIDs used in W5 assertions).
+  - .github/ARCHITECTURE.md ADR-007 (legacy scalars are replaced
+    naturally on next telemetry write; restamp during Warm is exactly
+    that "next write" path made explicit).
+  - .github/instructions/telemetry-pipeline.instructions.md (preserve
+    Redis key vehicle:{vehicleID}:signals; do not corrupt other fields).
+
+=== REASONING ===
+Implementation maps 1:1 to the contract clauses R1-R7 and tests W1-W7
+specified by Prompt 05:
+
+  R1 (value preserved bit-for-bit): RestampLegacy decodes via
+    decodeLegacySignalValue then re-encodes via
+    encodeTimestampedSignalValue. The encoder marshals the typed value
+    through json.Marshal so float64 stays float64, bool stays bool,
+    strings stay strings, JSON objects stay objects.
+
+  R2 (only legacy entries restamped): RestampLegacy attempts envelope
+    parse and skips when ok=true && err=nil. Fresh envelopes are
+    NEVER added to the restamp HSet payload, so their Timestamp is
+    preserved bit-for-bit (verified by W2 byte snapshot).
+
+  R3 (idempotent / safe to retry): A second Warm call observes that
+    every field is now a valid envelope, builds an empty restamp
+    payload, returns early before HSet/Expire are issued. W3 asserts
+    C2 == C1 == 1 (no additional HSet writes on the second call).
+
+  R4 (partial-failure safe): Warm calls RestampLegacy first; if HSet
+    fails, RestampLegacy returns the wrapped error WITHOUT having
+    issued any HDEL/DEL. Warm wraps via the existing 'warm live
+    signals from Redis for vehicle %d: %w' format and returns BEFORE
+    calling hydrateMissingValues, so L1 is not mutated. W4 verifies
+    all three fields are intact, fresh envelope bytes preserved,
+    legacy entries unchanged, L1 nil.
+
+  R5 (L1 hydrated after restamp): Warm re-reads via GetAllValues
+    after RestampLegacy succeeds. Restamped entries now carry
+    non-zero Timestamps and flow through hydrateMissingValues (the
+    Timestamp.IsZero() skip was removed). The skip-when-exists
+    branch preserves live-wins for pre-existing L1 entries. W5
+    verifies legacy Odometer hydrates into L1 while pre-existing
+    L1 BatteryLevel (80) wins over restamped Redis BatteryLevel (72).
+
+  R6 (TTL refreshed): RestampLegacy issues Expire(ctx, key,
+    signalKeyTTL) after the HSet (same call shape as Update). W6
+    instruments fakeRedisSignalClient.expireCalls and asserts at
+    least one call for the right key/duration.
+
+  R7 (no key/channel rename, no field deletion): RestampLegacy uses
+    the existing key fmt.Sprintf("vehicle:%d:signals", ...) and
+    issues only HSet (variadic) + Expire — no HDEL, no DEL. The
+    redisSignalClient interface itself does not declare HDel/Del,
+    so the production code is structurally incapable of issuing
+    them. W4 asserts post-failure hash still contains all original
+    fields.
+
+  W7 (existing test transition): The obsolete
+    TestHybridLiveSignalStoreWarmSkipsTimestamplessRedisForHistoryHydrate
+    test was DELETED. Prompt 05 explicitly allowed deletion in
+    favour of W1, which now covers the legacy-restamp + hydrate path.
+
+Fake-extension discipline:
+  - fakeRedisSignalClient was extended in-place. Existing
+    constructor newFakeRedisSignalClient() and existing test
+    callers continue to work unchanged. The new recorder slices
+    are zero-valued by default; the new hsetErr field is nil by
+    default. All existing tests in the package still pass.
+  - No new exported types, no new package-level types, no new
+    Redis key/channel name, no change to LiveSignalStore interface.
+
+=== CHANGES ===
+Files modified:
+  - internal/signal/redis_cache.go: Added RestampLegacy(ctx, vehicleID)
+    method to RedisSignalCache (HGETALL → skip valid envelopes →
+    decodeLegacy → encodeTimestamped(now) → single HSET → Expire
+    signalKeyTTL). Returns (count int, error).
+  - internal/signal/live_store.go: Updated Warm to call
+    l2.RestampLegacy(ctx, vehicleID) before re-reading via
+    GetAllValues; on RestampLegacy error, surfaces wrapped error
+    via the existing 'warm live signals from Redis for vehicle %d'
+    format WITHOUT mutating L1. Updated hydrateMissingValues to
+    drop the value.Timestamp.IsZero() skip; legacy entries now
+    carry timestamps after restamp and flow into L1.
+  - internal/signal/redis_cache_test.go: Extended fakeRedisSignalClient
+    in-place with hsetCalls []fakeRedisHSetCall, expireCalls
+    []fakeRedisExpireCall recorders and an hsetErr error-injection
+    field. Added snapshotHSetCalls() and snapshotExpireCalls()
+    helpers. All existing tests still pass without modification.
+  - internal/signal/live_store_test.go: DELETED the obsolete W7
+    test TestHybridLiveSignalStoreWarmSkipsTimestamplessRedisForHistoryHydrate.
+    Added W1-W6 tests (TestHybridLiveSignalStoreWarmRestampsLegacyScalarsToEnvelopes,
+    TestHybridLiveSignalStoreWarmDoesNotOverwriteFreshEnvelopes,
+    TestHybridLiveSignalStoreWarmIsIdempotentOnSecondCall,
+    TestHybridLiveSignalStoreWarmRestampPartialFailureDoesNotCorrupt,
+    TestHybridLiveSignalStoreWarmHydratesL1AfterRestamp,
+    TestHybridLiveSignalStoreWarmRestampRefreshesKeyTTL).
+    Added 'strings' import for byte-content assertions.
+  - gofmt applied to all four Go files.
+
+Pre-implementation test-failure verification (TDD):
+  Before implementing RestampLegacy and the Warm/hydrate changes,
+  ran 'go test ./internal/signal -run TestHybridLiveSignalStoreWarm'
+  and confirmed all six new tests FAIL (Odometer Timestamp is zero,
+  no HSet calls, no Expire calls, no error surfaced, L1 not hydrated).
+  After landing the implementation, the same tests PASS along with
+  every existing test in the package (no regressions).
+=== GATE ===
+RESTAMP_METHOD_PRESENT=True
+WARM_CALLS_RESTAMP=True
+TESTS_IDEMPOTENT=True
+RESTAMP_USES_ENCODER=True
+RESTAMP_REFRESHES_TTL=True
+TESTS_LEGACY_RESTAMP=True
+TESTS_FRESH_UNCHANGED=True
+ok  	github.com/ev-dev-labs/teslasync/internal/signal	(cached)
+GO_RESTAMP_TEST_EXIT=0
+UNEXPECTED_STATUS_COUNT=0
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
+6abc2ead phase-38/06-restamp: stamp legacy Redis entries during Warm
+COMMIT_EXIT=0

@@ -12,9 +12,28 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+type fakeRedisHSetCall struct {
+	Key    string
+	Fields []interface{}
+}
+
+type fakeRedisExpireCall struct {
+	Key      string
+	Duration time.Duration
+}
+
 type fakeRedisSignalClient struct {
 	mu     sync.RWMutex
 	hashes map[string]map[string]string
+
+	// Optional recorders. Always populated; tests that don't read them ignore them.
+	hsetCalls   []fakeRedisHSetCall
+	expireCalls []fakeRedisExpireCall
+
+	// Optional error injection. When non-nil, every subsequent HSet call
+	// returns this error and does NOT mutate the hash. Set after seeding to
+	// exercise partial-failure paths.
+	hsetErr error
 }
 
 func newFakeRedisSignalClient() *fakeRedisSignalClient {
@@ -31,6 +50,13 @@ func (f *fakeRedisSignalClient) HSet(ctx context.Context, key string, values ...
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
+	fieldsCopy := append([]interface{}(nil), values...)
+	f.hsetCalls = append(f.hsetCalls, fakeRedisHSetCall{Key: key, Fields: fieldsCopy})
+
+	if f.hsetErr != nil {
+		return redis.NewIntResult(0, f.hsetErr)
+	}
+
 	hash, ok := f.hashes[key]
 	if !ok {
 		hash = make(map[string]string, len(values)/2)
@@ -43,7 +69,26 @@ func (f *fakeRedisSignalClient) HSet(ctx context.Context, key string, values ...
 }
 
 func (f *fakeRedisSignalClient) Expire(ctx context.Context, key string, expiration time.Duration) *redis.BoolCmd {
+	f.mu.Lock()
+	f.expireCalls = append(f.expireCalls, fakeRedisExpireCall{Key: key, Duration: expiration})
+	f.mu.Unlock()
 	return redis.NewBoolResult(true, nil)
+}
+
+func (f *fakeRedisSignalClient) snapshotHSetCalls() []fakeRedisHSetCall {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+	out := make([]fakeRedisHSetCall, len(f.hsetCalls))
+	copy(out, f.hsetCalls)
+	return out
+}
+
+func (f *fakeRedisSignalClient) snapshotExpireCalls() []fakeRedisExpireCall {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+	out := make([]fakeRedisExpireCall, len(f.expireCalls))
+	copy(out, f.expireCalls)
+	return out
 }
 
 func (f *fakeRedisSignalClient) HGetAll(ctx context.Context, key string) *redis.MapStringStringCmd {

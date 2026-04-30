@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -300,27 +301,322 @@ func TestHybridLiveSignalStoreWarmHydratesL1FromRedis(t *testing.T) {
 	assertString(t, local.Get(15, "ShiftState").Raw, "N")
 }
 
-func TestHybridLiveSignalStoreWarmSkipsTimestamplessRedisForHistoryHydrate(t *testing.T) {
+func TestHybridLiveSignalStoreWarmRestampsLegacyScalarsToEnvelopes(t *testing.T) {
+	// W1 (R1, R6): Warm rewrites legacy scalar Redis values as envelope
+	// JSON with a synthetic time.Now() timestamp. Values round-trip
+	// through decodeLegacySignalValue → encodeTimestampedSignalValue
+	// without type coercion (number stays float64, bool stays bool).
+	// Pre-Prompt 06 behavior: hydrateMissingValues skipped zero-Timestamp
+	// entries and the cache had no restamp path; this test would fail.
 	ctx := context.Background()
 	local := New()
 	redisClient := newFakeRedisSignalClient()
-	redisClient.hashes[redisSignalKey(16)] = map[string]string{
-		"BatteryLevel": "12",
+	vehicleID := int64(41)
+	redisClient.hashes[redisSignalKey(vehicleID)] = map[string]string{
+		"Odometer":   "100",
+		"InsideTemp": "22.5",
+		"Locked":     "true",
 	}
 	redisCache := &RedisSignalCache{rdb: redisClient}
 	liveStore, err := NewHybridLiveSignalStore(local, redisCache, LiveSignalStoreModeHybrid)
 	if err != nil {
 		t.Fatalf("NewHybridLiveSignalStore() error = %v", err)
 	}
-	if err := liveStore.Warm(ctx, 16); err != nil {
+
+	before := time.Now().UTC()
+	if err := liveStore.Warm(ctx, vehicleID); err != nil {
+		t.Fatalf("Warm() error = %v", err)
+	}
+	after := time.Now().UTC()
+
+	values, err := redisCache.GetAllValues(ctx, vehicleID)
+	if err != nil {
+		t.Fatalf("GetAllValues() error = %v", err)
+	}
+	if len(values) != 3 {
+		t.Fatalf("GetAllValues() returned %d entries, want 3", len(values))
+	}
+	assertFloat64(t, values["Odometer"].Raw, 100)
+	assertFloat64(t, values["InsideTemp"].Raw, 22.5)
+	assertBool(t, values["Locked"].Raw, true)
+	for name, value := range values {
+		if value.Timestamp.IsZero() {
+			t.Fatalf("%s Timestamp is zero after restamp, want non-zero envelope timestamp", name)
+		}
+		if value.Timestamp.Before(before) || value.Timestamp.After(after) {
+			t.Fatalf("%s Timestamp = %v, want within [%v, %v]", name, value.Timestamp, before, after)
+		}
+	}
+
+	rawHash := redisClient.hashes[redisSignalKey(vehicleID)]
+	for _, field := range []string{"Odometer", "InsideTemp", "Locked"} {
+		raw := rawHash[field]
+		for _, want := range []string{
+			`"encoding":"teslasync.signal.v1"`,
+			`"timestamp"`,
+			`"source":"redis_signal_cache"`,
+		} {
+			if !strings.Contains(raw, want) {
+				t.Fatalf("restamped %s raw = %q does not contain %q", field, raw, want)
+			}
+		}
+	}
+}
+
+func TestHybridLiveSignalStoreWarmDoesNotOverwriteFreshEnvelopes(t *testing.T) {
+	// W2 (R2, R7): Fresh envelope entries are NOT re-encoded by the
+	// restamp path. Only legacy fields appear in the post-Warm HSET
+	// payload. Existing fresh envelope bytes remain unchanged across Warm.
+	ctx := context.Background()
+	local := New()
+	redisClient := newFakeRedisSignalClient()
+	redisCache := &RedisSignalCache{rdb: redisClient}
+	vehicleID := int64(42)
+	if err := redisCache.Update(ctx, vehicleID, map[string]interface{}{"BatteryLevel": 64.0}); err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+	hsetCallsAfterSeed := len(redisClient.snapshotHSetCalls())
+
+	redisClient.mu.Lock()
+	redisClient.hashes[redisSignalKey(vehicleID)]["Odometer"] = "100"
+	freshEnvelopeBefore := redisClient.hashes[redisSignalKey(vehicleID)]["BatteryLevel"]
+	redisClient.mu.Unlock()
+
+	liveStore, err := NewHybridLiveSignalStore(local, redisCache, LiveSignalStoreModeHybrid)
+	if err != nil {
+		t.Fatalf("NewHybridLiveSignalStore() error = %v", err)
+	}
+	if err := liveStore.Warm(ctx, vehicleID); err != nil {
 		t.Fatalf("Warm() error = %v", err)
 	}
 
-	if got := local.Get(16, "BatteryLevel"); got != nil {
-		t.Fatalf("timestamp-less Redis value warmed into L1 = %#v, want history fallback to fill it", got)
+	freshEnvelopeAfter := redisClient.hashes[redisSignalKey(vehicleID)]["BatteryLevel"]
+	if freshEnvelopeAfter != freshEnvelopeBefore {
+		t.Fatalf("fresh envelope bytes mutated by Warm:\n  before=%q\n  after =%q", freshEnvelopeBefore, freshEnvelopeAfter)
 	}
-	local.Hydrate(16, map[string]interface{}{"BatteryLevel": 88.0})
-	assertFloat64(t, local.Get(16, "BatteryLevel").Raw, 88)
+
+	odometer, err := redisCache.GetSignalValue(ctx, vehicleID, "Odometer")
+	if err != nil {
+		t.Fatalf("GetSignalValue(Odometer) error = %v", err)
+	}
+	assertFloat64(t, odometer.Raw, 100)
+	if odometer.Timestamp.IsZero() {
+		t.Fatal("Odometer Timestamp is zero after Warm, want envelope-stamped value")
+	}
+
+	hsetCalls := redisClient.snapshotHSetCalls()
+	if len(hsetCalls) != hsetCallsAfterSeed+1 {
+		t.Fatalf("Warm issued %d new HSet calls, want exactly 1 (restamp only)", len(hsetCalls)-hsetCallsAfterSeed)
+	}
+	restampCall := hsetCalls[len(hsetCalls)-1]
+	for i := 0; i < len(restampCall.Fields); i += 2 {
+		fieldName := fmt.Sprint(restampCall.Fields[i])
+		if fieldName == "BatteryLevel" {
+			t.Fatalf("restamp HSet payload contains fresh envelope field BatteryLevel; want only legacy fields")
+		}
+	}
+	if len(restampCall.Fields) != 2 || fmt.Sprint(restampCall.Fields[0]) != "Odometer" {
+		t.Fatalf("restamp HSet payload = %v, want only [Odometer, <envelope>]", restampCall.Fields)
+	}
+}
+
+func TestHybridLiveSignalStoreWarmIsIdempotentOnSecondCall(t *testing.T) {
+	// W3 (R3): Warm twice in a row produces the same hash bytes as
+	// Warm once. The second call detects zero legacy entries and issues
+	// no additional HSet writes.
+	ctx := context.Background()
+	local := New()
+	redisClient := newFakeRedisSignalClient()
+	vehicleID := int64(43)
+	redisClient.hashes[redisSignalKey(vehicleID)] = map[string]string{"Odometer": "100"}
+	redisCache := &RedisSignalCache{rdb: redisClient}
+	liveStore, err := NewHybridLiveSignalStore(local, redisCache, LiveSignalStoreModeHybrid)
+	if err != nil {
+		t.Fatalf("NewHybridLiveSignalStore() error = %v", err)
+	}
+
+	if err := liveStore.Warm(ctx, vehicleID); err != nil {
+		t.Fatalf("Warm() first error = %v", err)
+	}
+	c1 := len(redisClient.snapshotHSetCalls())
+	if c1 < 1 {
+		t.Fatalf("first Warm issued %d HSet calls, want >= 1 restamp write", c1)
+	}
+	odometerSnapshot1 := redisClient.hashes[redisSignalKey(vehicleID)]["Odometer"]
+
+	if err := liveStore.Warm(ctx, vehicleID); err != nil {
+		t.Fatalf("Warm() second error = %v", err)
+	}
+	c2 := len(redisClient.snapshotHSetCalls())
+	if c2 != c1 {
+		t.Fatalf("second Warm issued %d additional HSet calls; want zero (idempotent)", c2-c1)
+	}
+	odometerSnapshot2 := redisClient.hashes[redisSignalKey(vehicleID)]["Odometer"]
+	if odometerSnapshot1 != odometerSnapshot2 {
+		t.Fatalf("Odometer envelope bytes mutated on second Warm:\n  first =%q\n  second=%q", odometerSnapshot1, odometerSnapshot2)
+	}
+}
+
+func TestHybridLiveSignalStoreWarmRestampPartialFailureDoesNotCorrupt(t *testing.T) {
+	// W4 (R4, R7): When the restamp HSet fails mid-run, no field is
+	// deleted, fresh envelopes remain byte-identical, legacy entries
+	// remain readable as legacy scalars, and L1 is NOT mutated.
+	ctx := context.Background()
+	local := New()
+	redisClient := newFakeRedisSignalClient()
+	redisCache := &RedisSignalCache{rdb: redisClient}
+	vehicleID := int64(44)
+	if err := redisCache.Update(ctx, vehicleID, map[string]interface{}{"BatteryLevel": 64.0}); err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+
+	redisClient.mu.Lock()
+	redisClient.hashes[redisSignalKey(vehicleID)]["Odometer"] = "100"
+	redisClient.hashes[redisSignalKey(vehicleID)]["InsideTemp"] = "22.5"
+	freshEnvelopeBefore := redisClient.hashes[redisSignalKey(vehicleID)]["BatteryLevel"]
+	odometerBefore := redisClient.hashes[redisSignalKey(vehicleID)]["Odometer"]
+	insideTempBefore := redisClient.hashes[redisSignalKey(vehicleID)]["InsideTemp"]
+	redisClient.mu.Unlock()
+
+	sentinel := errors.New("restamp HSet sentinel failure")
+	redisClient.mu.Lock()
+	redisClient.hsetErr = sentinel
+	redisClient.mu.Unlock()
+
+	liveStore, err := NewHybridLiveSignalStore(local, redisCache, LiveSignalStoreModeHybrid)
+	if err != nil {
+		t.Fatalf("NewHybridLiveSignalStore() error = %v", err)
+	}
+	warmErr := liveStore.Warm(ctx, vehicleID)
+	if warmErr == nil {
+		t.Fatal("Warm() error = nil, want restamp HSet failure surfaced")
+	}
+	if !errors.Is(warmErr, sentinel) {
+		t.Fatalf("Warm() error = %v, want errors.Is(err, sentinel)", warmErr)
+	}
+	if !strings.Contains(warmErr.Error(), "warm live signals from Redis for vehicle 44") {
+		t.Fatalf("Warm() error = %q, want wrapped via existing 'warm live signals from Redis for vehicle %%d' format", warmErr.Error())
+	}
+
+	hash := redisClient.hashes[redisSignalKey(vehicleID)]
+	if _, ok := hash["Odometer"]; !ok {
+		t.Fatal("Odometer field deleted after partial-failure Warm; restamp must not DEL")
+	}
+	if _, ok := hash["InsideTemp"]; !ok {
+		t.Fatal("InsideTemp field deleted after partial-failure Warm; restamp must not DEL")
+	}
+	if _, ok := hash["BatteryLevel"]; !ok {
+		t.Fatal("BatteryLevel field deleted after partial-failure Warm; restamp must not DEL")
+	}
+	if hash["BatteryLevel"] != freshEnvelopeBefore {
+		t.Fatalf("fresh envelope bytes mutated on partial-failure path:\n  before=%q\n  after =%q", freshEnvelopeBefore, hash["BatteryLevel"])
+	}
+	if hash["Odometer"] != odometerBefore {
+		t.Fatalf("Odometer raw bytes mutated on partial-failure path:\n  before=%q\n  after =%q", odometerBefore, hash["Odometer"])
+	}
+	if hash["InsideTemp"] != insideTempBefore {
+		t.Fatalf("InsideTemp raw bytes mutated on partial-failure path:\n  before=%q\n  after =%q", insideTempBefore, hash["InsideTemp"])
+	}
+
+	if got := local.Get(vehicleID, "Odometer"); got != nil {
+		t.Fatalf("L1 Odometer = %#v after partial-failure Warm; want nil (no L1 mutation on failure)", got)
+	}
+	if got := local.Get(vehicleID, "InsideTemp"); got != nil {
+		t.Fatalf("L1 InsideTemp = %#v after partial-failure Warm; want nil (no L1 mutation on failure)", got)
+	}
+}
+
+func TestHybridLiveSignalStoreWarmHydratesL1AfterRestamp(t *testing.T) {
+	// W5 (R5): After restamp, previously-skipped legacy entries flow
+	// through hydrateMissingValues into L1. Pre-existing L1 entries
+	// win over restamped Redis entries (live-wins / skip-when-exists).
+	ctx := context.Background()
+	local := New()
+	vehicleID := int64(45)
+	redisClient := newFakeRedisSignalClient()
+	redisClient.hashes[redisSignalKey(vehicleID)] = map[string]string{
+		"Odometer":     "100",
+		"BatteryLevel": "72",
+	}
+	redisCache := &RedisSignalCache{rdb: redisClient}
+	local.Update(vehicleID, map[string]interface{}{"BatteryLevel": 80.0})
+
+	liveStore, err := NewHybridLiveSignalStore(local, redisCache, LiveSignalStoreModeHybrid)
+	if err != nil {
+		t.Fatalf("NewHybridLiveSignalStore() error = %v", err)
+	}
+	if err := liveStore.Warm(ctx, vehicleID); err != nil {
+		t.Fatalf("Warm() error = %v", err)
+	}
+
+	ids := liveStore.LocalVehicleIDs()
+	found := false
+	for _, id := range ids {
+		if id == vehicleID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("LocalVehicleIDs() = %v, want vehicle %d present", ids, vehicleID)
+	}
+
+	odometer := local.Get(vehicleID, "Odometer")
+	if odometer == nil {
+		t.Fatal("local.Get(Odometer) = nil after Warm; want hydrated from restamped legacy entry")
+	}
+	assertFloat64(t, odometer.Raw, 100)
+
+	battery := local.Get(vehicleID, "BatteryLevel")
+	if battery == nil {
+		t.Fatal("local.Get(BatteryLevel) = nil; want pre-existing L1 entry preserved")
+	}
+	assertFloat64(t, battery.Raw, 80)
+
+	values, err := redisCache.GetAllValues(ctx, vehicleID)
+	if err != nil {
+		t.Fatalf("GetAllValues() error = %v", err)
+	}
+	if values["Odometer"] == nil || values["Odometer"].Timestamp.IsZero() {
+		t.Fatalf("Odometer in Redis = %#v, want envelope-stamped after restamp", values["Odometer"])
+	}
+	if values["BatteryLevel"] == nil || values["BatteryLevel"].Timestamp.IsZero() {
+		t.Fatalf("BatteryLevel in Redis = %#v, want envelope-stamped after restamp", values["BatteryLevel"])
+	}
+}
+
+func TestHybridLiveSignalStoreWarmRestampRefreshesKeyTTL(t *testing.T) {
+	// W6 (R6): The restamp path goes through RedisSignalCache.Update
+	// (or its TTL-refreshing equivalent) so EXPIRE is issued for the
+	// vehicle key with signalKeyTTL == 7 * 24 * time.Hour.
+	ctx := context.Background()
+	local := New()
+	vehicleID := int64(46)
+	redisClient := newFakeRedisSignalClient()
+	redisClient.hashes[redisSignalKey(vehicleID)] = map[string]string{"Odometer": "100"}
+	redisCache := &RedisSignalCache{rdb: redisClient}
+
+	liveStore, err := NewHybridLiveSignalStore(local, redisCache, LiveSignalStoreModeHybrid)
+	if err != nil {
+		t.Fatalf("NewHybridLiveSignalStore() error = %v", err)
+	}
+	if err := liveStore.Warm(ctx, vehicleID); err != nil {
+		t.Fatalf("Warm() error = %v", err)
+	}
+
+	expireCalls := redisClient.snapshotExpireCalls()
+	want := signalKeyTTL
+	wantKey := redisSignalKey(vehicleID)
+	matched := false
+	for _, call := range expireCalls {
+		if call.Key == wantKey && call.Duration == want {
+			matched = true
+			break
+		}
+	}
+	if !matched {
+		t.Fatalf("Expire calls = %#v, want at least one with key=%q duration=%v (signalKeyTTL)", expireCalls, wantKey, want)
+	}
 }
 
 type failingRedisSignalClient struct {

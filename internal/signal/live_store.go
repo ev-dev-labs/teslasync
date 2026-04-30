@@ -226,6 +226,9 @@ func (s *HybridLiveSignalStore) GetAll(ctx context.Context, vehicleID int64, pre
 }
 
 // Warm hydrates missing L1 values from Redis when L2 is enabled and available.
+// Before hydration, Warm restamps any legacy scalar Redis entries as full
+// envelope values so previously-skipped zero-Timestamp entries can flow into
+// L1. If the restamp HSet fails, Warm surfaces the error WITHOUT mutating L1.
 func (s *HybridLiveSignalStore) Warm(ctx context.Context, vehicleID int64) error {
 	if err := validateLiveSignalContext(ctx); err != nil {
 		return err
@@ -236,6 +239,10 @@ func (s *HybridLiveSignalStore) Warm(ctx context.Context, vehicleID int64) error
 	l2 := s.redisCache()
 	if l2 == nil {
 		return nil
+	}
+
+	if _, err := l2.RestampLegacy(ctx, vehicleID); err != nil {
+		return fmt.Errorf("warm live signals from Redis for vehicle %d: %w", vehicleID, err)
 	}
 
 	values, err := l2.GetAllValues(ctx, vehicleID)
@@ -276,10 +283,10 @@ func (s *HybridLiveSignalStore) hydrateMissingValues(vehicleID int64, values map
 		if value == nil || value.Raw == nil {
 			continue
 		}
-		// Legacy Redis scalars have unknown freshness; let signal_log hydration fill them.
-		if value.Timestamp.IsZero() {
-			continue
-		}
+		// Live-wins: never overwrite an existing L1 entry with a hydrated
+		// Redis value. Legacy zero-Timestamp values are now restamped via
+		// RedisSignalCache.RestampLegacy before this call, so they carry a
+		// non-zero Timestamp and flow through this hydration path.
 		if _, exists := signals[name]; exists {
 			continue
 		}
