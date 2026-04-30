@@ -6,17 +6,37 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
 // DrivetrainHealthHandler serves drivetrain health analytics.
+//
+// Phase-39 migration: the legacy database.SignalLogReader's per-signal
+// helper has been replaced with the canonical signal.StateReader
+// (ADR-002 / phase-39). Both per-signal lookups (ModuleTempMax,
+// ModuleTempMin) resolve "value as of now" — a forward-folded read at
+// time.Now() — so they map 1:1 onto StateReader.SignalAt with identical
+// semantics. We retain the per-signal pattern (rather than a single
+// StateReader.State call) to preserve the existing behavior where each
+// individual signal's absence falls through independently to its zero
+// fallback in the derived rear-motor / front-motor / inverter / battery
+// temp projections.
+//
+// As part of this migration, transport errors from state.SignalAt now
+// propagate to the caller as a 500 instead of being silently swallowed.
+// The legacy silent-swallow returned a payload with zero-valued temps,
+// which is indistinguishable on the frontend from "vehicle truly idle /
+// brand-new vehicle with no signal_log history" — masking a real
+// signal-store / pgx outage behind a "drivetrain looks dead" panel.
 type DrivetrainHealthHandler struct {
-	db              *database.DB
-	signalLogReader *database.SignalLogReader
+	db    *database.DB
+	state signal.StateReader
 }
 
-func NewDrivetrainHealthHandler(db *database.DB, slr *database.SignalLogReader) *DrivetrainHealthHandler {
-	return &DrivetrainHealthHandler{db: db, signalLogReader: slr}
+func NewDrivetrainHealthHandler(db *database.DB, state signal.StateReader) *DrivetrainHealthHandler {
+	return &DrivetrainHealthHandler{db: db, state: state}
 }
 
 func (h *DrivetrainHealthHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -33,17 +53,31 @@ func (h *DrivetrainHealthHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// Get latest battery module temps and battery temp from signal_log
+	// Get latest battery module temps and battery temp from the canonical
+	// signal.StateReader. The two reads feed the rear-motor / front-motor /
+	// inverter / battery temp projections below.
 	var moduleTempMax, moduleTempMin *float64
 	var batteryTemp *float64
-	if h.signalLogReader != nil {
+	if h.state != nil {
 		now := time.Now()
-		if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "ModuleTempMax", now); err == nil && val != nil {
+		val, err := h.state.SignalAt(ctx, vehicleID, "ModuleTempMax", now)
+		if err != nil {
+			log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "ModuleTempMax").Msg("drivetrain: failed to read signal state")
+			writeError(w, http.StatusInternalServerError, "failed to read drivetrain state")
+			return
+		}
+		if val != nil {
 			if v, ok := toFloatOk(val); ok {
 				moduleTempMax = &v
 			}
 		}
-		if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "ModuleTempMin", now); err == nil && val != nil {
+		val, err = h.state.SignalAt(ctx, vehicleID, "ModuleTempMin", now)
+		if err != nil {
+			log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "ModuleTempMin").Msg("drivetrain: failed to read signal state")
+			writeError(w, http.StatusInternalServerError, "failed to read drivetrain state")
+			return
+		}
+		if val != nil {
 			if v, ok := toFloatOk(val); ok {
 				moduleTempMin = &v
 			}
@@ -66,14 +100,16 @@ func (h *DrivetrainHealthHandler) Get(w http.ResponseWriter, r *http.Request) {
 	// Get peak motor power from recent drives as a proxy for motor health
 	var powerMax *float64
 	var recentDrives int
-	err = h.db.Pool.QueryRow(ctx, `
+	if h.db != nil {
+		err = h.db.Pool.QueryRow(ctx, `
 		SELECT MAX(avg_power_kw), COUNT(*)
 		FROM drives
 		WHERE vehicle_id = $1 AND end_ts IS NOT NULL
 		  AND start_ts > NOW() - interval '30 days'`, vehicleID,
-	).Scan(&powerMax, &recentDrives)
-	if err != nil {
-		log.Debug().Err(err).Int64("vehicleID", vehicleID).Msg("drivetrain: no drive power data")
+		).Scan(&powerMax, &recentDrives)
+		if err != nil {
+			log.Debug().Err(err).Int64("vehicleID", vehicleID).Msg("drivetrain: no drive power data")
+		}
 	}
 
 	// Derive motor temperatures from module temps (Tesla reports battery module temps,

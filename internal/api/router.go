@@ -169,7 +169,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	routeEfficiencyHandler := NewRouteEfficiencyHandler(db)
 	batteryCellsHandler := NewBatteryCellsHandler(db, alertLiveSignalStore, stateReader, signalLogReader)
 	rangeProjectionHandler := NewRangeProjectionHandler(db, signalLogReader)
-	drivetrainHealthHandler := NewDrivetrainHealthHandler(db, signalLogReader)
+	drivetrainHealthHandler := NewDrivetrainHealthHandler(db, stateReader)
 	maintenanceHandler := NewMaintenanceHandler(db)
 	periodStatsHandler := NewPeriodStatsHandler(db)
 	drivingCoachHandler := NewDrivingCoachHandler(db)
