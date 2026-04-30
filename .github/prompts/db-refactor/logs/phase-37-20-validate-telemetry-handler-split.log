@@ -1,5 +1,5 @@
 ## PREFLIGHT
-start_utc=2026-04-30T04:12:25.8537236+00:00
+start_utc=2026-04-30T04:34:04.8324854+00:00
 go_version=go version go1.26.1 windows/amd64
 engineer_email=iamatulmgupta@gmail.com
 powershell_version=7.6.1
@@ -8,18 +8,23 @@ os_platform=Win32NT
 expected_file=internal/api/telemetry_handler.go lines=510
 expected_file=internal/api/telemetry_handler_wiring.go lines=251
 expected_file=internal/api/telemetry_handler_ingest.go lines=837
-missing expected file: internal/api/telemetry_handler_live_store.go
-missing expected file: internal/api/telemetry_handler_sse.go
+SKIP-DEFERRED: internal/api/telemetry_handler_live_store.go (source prompt 17 split-telemetry-handler-live-store STATUS=DEFERRED - cohesive area absorbed by another split or otherwise non-extractable)
+SKIP-DEFERRED: internal/api/telemetry_handler_sse.go (source prompt 18 split-telemetry-handler-sse STATUS=DEFERRED - cohesive area absorbed by another split or otherwise non-extractable)
 expected_file=internal/api/telemetry_handler_capture.go lines=101
 ## REASONING
 validation only - confirm split preserved behavior, no source edits
+existing_files_count=4
 ## CHANGES
 none (validation only)
 ## GATE
 go build ./internal/api/... exit=0
 
-skipping go build ./... because earlier step failed
-skipping go vet because earlier step failed
-skipping go test because earlier step failed
-EXIT=1
-STATUS=BLOCKED
+go build ./... exit=0
+
+go vet exit=0
+
+go test exit=0 (race=on, cgo=1 for this step only)
+ok  	github.com/ev-dev-labs/teslasync/internal/api	1.244s
+
+EXIT=0
+STATUS=DONE
