@@ -110,11 +110,23 @@ if ($LASTEXITCODE -ne 0 -or $gofmtOut) {
   $exit = 1
 }
 
-$buildOut = & go build ./... 2>&1
-$buildExit = $LASTEXITCODE
-"go build exit=$buildExit" | Add-Content $log
-$buildOut | Out-String | Add-Content $log
-if ($buildExit -ne 0) { $exit = 1 }
+# Fast-fail: build the affected package first, then the whole repo
+$pkgDir = 'internal/tesla'
+$pkgBuildOut = & go build "./$pkgDir/..." 2>&1
+$pkgBuildExit = $LASTEXITCODE
+"go build ./$pkgDir/... exit=$pkgBuildExit" | Add-Content $log
+$pkgBuildOut | Out-String | Add-Content $log
+if ($pkgBuildExit -ne 0) { $exit = 1 }
+
+if ($exit -eq 0) {
+  $buildOut = & go build ./... 2>&1
+  $buildExit = $LASTEXITCODE
+  "go build ./... exit=$buildExit" | Add-Content $log
+  $buildOut | Out-String | Add-Content $log
+  if ($buildExit -ne 0) { $exit = 1 }
+} else {
+  "skipping go build ./... because package build failed" | Add-Content $log
+}
 
 if ($exit -eq 0) {
   $vetOut = & go vet ./internal/tesla 2>&1

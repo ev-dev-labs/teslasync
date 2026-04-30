@@ -74,6 +74,9 @@ New-Item -ItemType Directory -Force -Path (Split-Path $log) | Out-Null
 $exit = 0
 
 "## SURVEY" | Add-Content $log
+$baselineSha = (git rev-parse HEAD).Trim()
+"phase_37_baseline_sha=$baselineSha" | Add-Content $log
+"phase_37_baseline_branch=$((git rev-parse --abbrev-ref HEAD).Trim())" | Add-Content $log
 $files = Get-ChildItem -Path . -Recurse -Filter *.go -File |
   Where-Object { $_.FullName -notmatch '\\(vendor|node_modules|web)\\' } |
   Where-Object { $_.FullName -notmatch '\\mocks?\\' } |

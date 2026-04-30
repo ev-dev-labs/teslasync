@@ -88,33 +88,54 @@ elseif (-not (Select-String -Path $prev -Pattern '^STATUS=DONE$' -Quiet)) { "pre
 
 # Exported-identifier invariant: package's top-level exports at HEAD must equal the working tree's exports
 # (mechanical splits move exports between files but never add or remove them).
+# Parser-style helper handles grouped const/var ( ... ) blocks, generics, and method receivers.
 $pkgDir = 'internal/tesla'
-$exportPattern = '^(func \([^)]+\) [A-Z]\w*|func [A-Z]\w*|type [A-Z]\w*|var [A-Z]\w*|const [A-Z]\w*)'
+function Get-GoExportedDecls {
+  param([string[]]$lines)
+  $set = @{}
+  $inBlock = $null
+  foreach ($line in $lines) {
+    if (-not $line) { continue }
+    if ($line -match '^(var|const)\s*\(\s*$') { $inBlock = $matches[1]; continue }
+    if ($inBlock -and $line -match '^\s*\)\s*$') { $inBlock = $null; continue }
+    if ($inBlock -and $line -match '^\s+([A-Z]\w*)') { $set["$inBlock $($matches[1])"] = $true; continue }
+    if ($line -match '^func\s+\(([^)]+)\)\s+([A-Z]\w*)') {
+      $recv = (($matches[1] -split '\s+') | Where-Object { $_ })[-1] -replace '\*',''
+      $set["method $recv.$($matches[2])"] = $true
+      continue
+    }
+    if ($line -match '^func\s+([A-Z]\w*)') { $set["func $($matches[1])"] = $true; continue }
+    if ($line -match '^type\s+([A-Z]\w*)') { $set["type $($matches[1])"] = $true; continue }
+    if ($line -match '^(var|const)\s+([A-Z]\w*)') { $set["$($matches[1]) $($matches[2])"] = $true; continue }
+  }
+  return ($set.Keys | Sort-Object)
+}
+
 $headFiles = git ls-tree -r --name-only HEAD -- $pkgDir 2>$null | Where-Object { $_ -like '*.go' -and $_ -notlike '*_test.go' }
-$beforeExports = @()
+$beforeDecls = @()
 foreach ($f in $headFiles) {
   $content = git show "HEAD:$f" 2>$null
-  if ($content) {
-    $beforeExports += ($content -split "`n") | Select-String -Pattern $exportPattern | ForEach-Object { $_.Line.Trim() }
-  }
+  if ($content) { $beforeDecls += Get-GoExportedDecls -lines ($content -split "`n") }
 }
-$beforeExports = $beforeExports | Sort-Object -Unique
+$beforeDecls = $beforeDecls | Sort-Object -Unique
+
 $afterFiles = Get-ChildItem -Path $pkgDir -Filter *.go -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -notlike '*_test.go' }
-$afterExports = @()
+$afterDecls = @()
 foreach ($f in $afterFiles) {
-  $afterExports += Get-Content -LiteralPath $f.FullName | Select-String -Pattern $exportPattern | ForEach-Object { $_.Line.Trim() }
+  $afterDecls += Get-GoExportedDecls -lines (Get-Content -LiteralPath $f.FullName)
 }
-$afterExports = $afterExports | Sort-Object -Unique
-if ($beforeExports -and $afterExports) {
-  $diff = Compare-Object $beforeExports $afterExports
+$afterDecls = $afterDecls | Sort-Object -Unique
+
+if ($beforeDecls -and $afterDecls) {
+  $diff = Compare-Object $beforeDecls $afterDecls
   if ($diff) {
     "exports drift in package $pkgDir (split must preserve exported identifiers):" | Add-Content $log
     $diff | ForEach-Object { "  $($_.SideIndicator) $($_.InputObject)" } | Add-Content $log
     $exit = 1
   } else {
-    "exports invariant ok: $($afterExports.Count) exported identifiers preserved" | Add-Content $log
+    "exports invariant ok: $($afterDecls.Count) exported identifiers preserved" | Add-Content $log
   }
-} elseif (-not $beforeExports) {
+} elseif (-not $beforeDecls) {
   "could not snapshot HEAD exports for $pkgDir (no files at HEAD?)" | Add-Content $log
   $exit = 1
 }
@@ -165,11 +186,22 @@ if ($LASTEXITCODE -ne 0 -or $gofmtOut) {
   $exit = 1
 }
 
-$buildOut = & go build ./... 2>&1
-$buildExit = $LASTEXITCODE
-"go build exit=$buildExit" | Add-Content $log
-$buildOut | Out-String | Add-Content $log
-if ($buildExit -ne 0) { $exit = 1 }
+# Fast-fail: build the affected package first, then the whole repo
+$pkgBuildOut = & go build "./$pkgDir/..." 2>&1
+$pkgBuildExit = $LASTEXITCODE
+"go build ./$pkgDir/... exit=$pkgBuildExit" | Add-Content $log
+$pkgBuildOut | Out-String | Add-Content $log
+if ($pkgBuildExit -ne 0) { $exit = 1 }
+
+if ($exit -eq 0) {
+  $buildOut = & go build ./... 2>&1
+  $buildExit = $LASTEXITCODE
+  "go build ./... exit=$buildExit" | Add-Content $log
+  $buildOut | Out-String | Add-Content $log
+  if ($buildExit -ne 0) { $exit = 1 }
+} else {
+  "skipping go build ./... because package build failed" | Add-Content $log
+}
 
 if ($exit -eq 0) {
   $vetOut = & go vet ./internal/tesla 2>&1
@@ -220,3 +252,18 @@ git commit -m "refactor(tesla): extract tesla client vehicle data methods" -m "P
 If `STATUS=BLOCKED`, do not proceed to the next prompt. Commit only the log
 file with a `chore(phase-37): prompt 22 blocked` message and resolve the
 failure (compile error, test failure, or drift) before re-running the gate.
+
+If the split was already committed before the BLOCKED outcome (e.g., gate
+detected exports drift after commit), recover with:
+
+```powershell
+# Inspect the bad commit
+git --no-pager log -1
+# If unpushed and standalone: drop the commit cleanly
+git reset --hard HEAD~1
+# If pushed or interleaved with the log commit: revert
+git revert --no-edit HEAD
+```
+
+After recovery, re-run this prompt's gate. Do not skip ahead to the next
+prompt.

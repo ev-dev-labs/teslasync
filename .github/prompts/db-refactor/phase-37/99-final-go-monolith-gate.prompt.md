@@ -383,6 +383,37 @@ $report = foreach ($entry in $baseline.GetEnumerator()) {
 }
 $report | Add-Content $log
 
+# Machine-readable TSV summary (fenced for downstream tooling: awk/cut/jq via tsv2json)
+"" | Add-Content $log
+'```tsv' | Add-Content $log
+"file`tbaseline`tnow`tshrink_pct`tprefix_siblings`tclassification" | Add-Content $log
+foreach ($entry in $baseline.GetEnumerator()) {
+  $rel = $entry.Key
+  $orig = $entry.Value
+  if (-not (Test-Path $rel)) {
+    "$rel`t$orig`t`t`t`texempt:file_removed" | Add-Content $log
+  } else {
+    $now = (Get-Content -LiteralPath $rel | Measure-Object -Line).Lines
+    $shrink = if ($orig -gt 0) { [math]::Round((($orig - $now) / [double]$orig) * 100, 1) } else { 0 }
+    $srcDir = Split-Path -Parent $rel
+    $srcBaseNoExt = [io.path]::GetFileNameWithoutExtension($rel)
+    $prefixCount = (Get-ChildItem -Path $srcDir -Filter "${srcBaseNoExt}_*.go" -File -ErrorAction SilentlyContinue | Measure-Object).Count
+    $cls = if ($shrink -ge 25) { 'split' }
+           elseif ($prefixCount -gt 0 -and $shrink -gt 0) { 'split' }
+           elseif ($shrink -gt 0) { 'split' }
+           else { 'deferred' }
+    "$rel`t$orig`t$now`t$shrink`t$prefixCount`t$cls" | Add-Content $log
+  }
+}
+'```' | Add-Content $log
+
+# Re-export baseline SHA captured by prompt 00 if available, for rollback reference
+$inventoryLog = '.github/prompts/db-refactor/logs/phase-37-00-go-monolith-inventory.log'
+if (Test-Path $inventoryLog) {
+  $baselineLine = Select-String -Path $inventoryLog -Pattern '^phase_37_baseline_sha=' | Select-Object -First 1
+  if ($baselineLine) { $baselineLine.Line | Add-Content $log }
+}
+
 "## REASONING" | Add-Content $log
 "Final classification of every Phase 37 production candidate." | Add-Content $log
 "Files marked deferred require a follow-up phase to split; do not split here." | Add-Content $log
