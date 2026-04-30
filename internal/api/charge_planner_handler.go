@@ -13,20 +13,35 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
 // ChargePlannerHandler provides smart charge scheduling optimization.
+//
+// Phase-39 migration: the current-SOC lookup that seeds the optimizer
+// (BatteryLevel as of now) now resolves through the canonical
+// signal.StateReader (ADR-002 / phase-39) instead of the legacy
+// database.SignalLogReader's per-signal helper. The lookup is a "value
+// as of now" forward-folded read, which maps 1:1 onto
+// StateReader.SignalAt with identical semantics.
+//
+// As part of this migration, transport errors from state.SignalAt now
+// propagate to the caller as a 500 instead of being silently swallowed.
+// The legacy silent-swallow defaulted currentSOC to 0, which made every
+// optimize request appear to need a full charge from empty — masking
+// real signal-store / pgx outages behind plausible-looking (but wrong)
+// charge windows and inflated cost estimates.
 type ChargePlannerHandler struct {
-	db              *database.DB
-	teslaClient     *tesla.Client
-	cfg             *config.Config
-	signalLogReader *database.SignalLogReader
+	db          *database.DB
+	teslaClient *tesla.Client
+	cfg         *config.Config
+	state       signal.StateReader
 }
 
 // NewChargePlannerHandler creates a new ChargePlannerHandler.
-func NewChargePlannerHandler(db *database.DB, teslaClient *tesla.Client, cfg *config.Config, slr *database.SignalLogReader) *ChargePlannerHandler {
-	return &ChargePlannerHandler{db: db, teslaClient: teslaClient, cfg: cfg, signalLogReader: slr}
+func NewChargePlannerHandler(db *database.DB, teslaClient *tesla.Client, cfg *config.Config, state signal.StateReader) *ChargePlannerHandler {
+	return &ChargePlannerHandler{db: db, teslaClient: teslaClient, cfg: cfg, state: state}
 }
 
 // ── Optimize Endpoint ────────────────────────────────────────
@@ -83,11 +98,17 @@ func (h *ChargePlannerHandler) Optimize(w http.ResponseWriter, r *http.Request) 
 		req.ChargerVoltage = 240
 	}
 
-	// Get current SOC from signal_log
+	// Get current SOC from the canonical state reader (signal_log-backed).
 	ctx := r.Context()
 	currentSOC := 0
-	if h.signalLogReader != nil {
-		if val, err := h.signalLogReader.SignalAt(ctx, req.VehicleID, "BatteryLevel", time.Now()); err == nil && val != nil {
+	if h.state != nil {
+		val, err := h.state.SignalAt(ctx, req.VehicleID, "BatteryLevel", time.Now())
+		if err != nil {
+			log.Error().Err(err).Int64("vehicle_id", req.VehicleID).Str("signal", "BatteryLevel").Msg("charge planner: failed to read current SOC")
+			writeError(w, http.StatusInternalServerError, "failed to read current battery state")
+			return
+		}
+		if val != nil {
 			if v, ok := toFloatOk(val); ok && v > 0 {
 				currentSOC = int(v)
 			}
