@@ -6,17 +6,32 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/rs/zerolog/log"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
-// EnergyFlowHandler returns real-time energy flow data from signal_log.
+// EnergyFlowHandler returns the real-time per-vehicle energy flow snapshot
+// (charging power, pack voltage / current, energy remaining, charge state)
+// derived from the signal-log change feed via signal.StateReader
+// (ADR-002 / phase-39).
+//
+// Phase-39 migration: the legacy *database.SignalLogReader.SnapshotAt
+// helper has been replaced with the canonical signal.StateReader. The
+// /vehicles/{vehicleID}/energy/flow endpoint is a "current values" view —
+// it always renders forward-folded state at time.Now() — so it maps
+// 1:1 onto StateReader.State. The legacy raw-snapshot path returned a
+// flat map[string]any; State returns the same forward-folded shape with
+// stronger semantics ("value as of `at`" per ADR-002), so the projection
+// loop below is unchanged apart from being typed against signal.State.
 type EnergyFlowHandler struct {
-	db              *database.DB
-	signalLogReader *database.SignalLogReader
+	db    *database.DB
+	state signal.StateReader
 }
 
-func NewEnergyFlowHandler(db *database.DB, slr *database.SignalLogReader) *EnergyFlowHandler {
-	return &EnergyFlowHandler{db: db, signalLogReader: slr}
+func NewEnergyFlowHandler(db *database.DB, state signal.StateReader) *EnergyFlowHandler {
+	return &EnergyFlowHandler{db: db, state: state}
 }
 
 func (h *EnergyFlowHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -32,32 +47,33 @@ func (h *EnergyFlowHandler) Get(w http.ResponseWriter, r *http.Request) {
 	var dcPower, acPower, energyRemaining, packVoltage, packCurrent, soc *float64
 	var chargeState *string
 
-	if h.signalLogReader != nil {
-		now := time.Now()
-		snap, err := h.signalLogReader.SnapshotAt(ctx, vehicleID, now)
-		if err == nil && snap != nil {
-			if v, ok := toFloatOk(snap["DCChargingPower"]); ok {
-				dcPower = &v
-			}
-			if v, ok := toFloatOk(snap["ACChargingPower"]); ok {
-				acPower = &v
-			}
-			if v, ok := toFloatOk(snap["EnergyRemaining"]); ok {
-				energyRemaining = &v
-			}
-			if v, ok := toFloatOk(snap["PackVoltage"]); ok {
-				packVoltage = &v
-			}
-			if v, ok := toFloatOk(snap["PackCurrent"]); ok {
-				packCurrent = &v
-			}
-			if v, ok := toFloatOk(snap["BatteryLevel"]); ok {
-				soc = &v
-			}
-			if s, ok := snap["ChargeState"].(string); ok {
-				chargeState = &s
-			}
-		}
+	snap, err := h.state.State(ctx, vehicleID, time.Now())
+	if err != nil {
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to read energy flow state")
+		writeError(w, http.StatusInternalServerError, "failed to read energy flow state")
+		return
+	}
+
+	if v, ok := toFloatOk(snap["DCChargingPower"]); ok {
+		dcPower = &v
+	}
+	if v, ok := toFloatOk(snap["ACChargingPower"]); ok {
+		acPower = &v
+	}
+	if v, ok := toFloatOk(snap["EnergyRemaining"]); ok {
+		energyRemaining = &v
+	}
+	if v, ok := toFloatOk(snap["PackVoltage"]); ok {
+		packVoltage = &v
+	}
+	if v, ok := toFloatOk(snap["PackCurrent"]); ok {
+		packCurrent = &v
+	}
+	if v, ok := toFloatOk(snap["BatteryLevel"]); ok {
+		soc = &v
+	}
+	if s, ok := snap["ChargeState"].(string); ok {
+		chargeState = &s
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
@@ -71,7 +87,9 @@ func (h *EnergyFlowHandler) Get(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// urlParamVehicleID extracts vehicleID from chi URL param.
+// urlParamVehicleID extracts vehicleID from chi URL param. Retained here
+// (rather than collocated with EnergyFlowHandler usage) because
+// battery_cells_handler.go also depends on this helper.
 func urlParamVehicleID(r *http.Request) string {
 	return chi.URLParam(r, "vehicleID")
 }
