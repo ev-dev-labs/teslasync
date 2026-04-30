@@ -1,0 +1,68 @@
+## PREFLIGHT
+start_utc=2026-04-30T03:05:25.4183114+00:00
+go_version=go version go1.26.1 windows/amd64
+engineer_email=iamatulmgupta@gmail.com
+powershell_version=7.6.1
+os_platform=Win32NT
+exports invariant ok: 1273 exported identifiers preserved
+import-graph invariant ok: 80 imports preserved
+## SURVEY
+source_lines_after=1726
+new_file=internal/api/telemetry_sessions_signal_helpers.go lines=138
+## REASONING
+mechanical decomposition: split internal/api/telemetry_sessions.go into internal/api/telemetry_sessions_signal_helpers.go
+no behavior, API, SQL, JSON, route, config, or runtime ordering changes
+
+split_map (engineer-authored, per Action Step 3):
+  source_file=internal/api/telemetry_sessions.go
+  destination_file=internal/api/telemetry_sessions_signal_helpers.go
+
+  identifiers moved to telemetry_sessions_signal_helpers.go (verbatim, in original statement order):
+    method (*TelemetrySessionTracker).resolveFloat   (HEAD lines 198-214)
+    method (*TelemetrySessionTracker).resolveInt     (HEAD lines 216-232)
+    method (*TelemetrySessionTracker).resolveLatLon  (HEAD lines 234-250)
+    func signalFloat                                 (HEAD lines 304-311)
+    func signalLatLon                                (HEAD lines 313-332)
+    func signalPowerKW                               (HEAD lines 334-346)
+    func signalInt                                   (HEAD lines 348-357)
+    func signalStr                                   (HEAD lines 359-368)
+    func floatPtr                                    (HEAD line  370)
+    func intPtr                                      (HEAD line  371)
+    func int16Ptr                                    (HEAD line  372)
+    func boolPtr                                     (HEAD line  373)
+    func strPtr                                      (HEAD line  374)
+    func derefInt16AsInt                             (HEAD lines 375-380)
+    func snapFloat                                   (HEAD lines 382-389)
+    func ptrStrOrNil                                 (HEAD lines 1500-1505)
+
+  identifiers retained in telemetry_sessions.go (still package-visible, referenced by helpers from the new file):
+    type TelemetrySessionTracker (struct fields: localSignals — referenced by resolveFloat/resolveInt/resolveLatLon receivers)
+    func accumulateSignals (signal-merge utility, kept beside its only callers in main file — not a pure extraction helper)
+    func toFloatOk lives in converters.go (same package, available to the new file without import changes)
+
+  identifiers NOT moved despite signal-flavored names (used outside helper scope):
+    type nearestPosition + func findNearestPositionFallback + func absDuration (operate on PositionRepo, not signals)
+    const telemetryWriteInterval (controls flush cadence, kept beside maybe/flush methods)
+
+  imports retained in main file (none added, none removed): context, math, strings, sync, time, database, enums, events, geocoding, models, signal, units, pgx, log
+  imports declared in new file: none required — all helpers use only built-in types and call toFloatOk in the same package
+
+  layered live-state contract preservation: helpers file holds only pure extraction utilities and SignalStore L1 read methods (resolveFloat/Int/LatLon).
+    No Redis L2 reads, no signal_log L3 queries, no FSM state mutations, no cache writes.
+    No logical pipeline stage was split across files; the L1 read helpers are leaf functions called from many sites
+    (tracking, completion, recovery) and remain self-contained with no cross-file orchestration required.
+## CHANGES
+internal/api/telemetry_sessions.go sha256=3DC70602378FA74808C520F1630D91267C093A80D28E56DE60EFC11E7960D7F1
+internal/api/telemetry_sessions_signal_helpers.go sha256=DD19FAC85A78A5DC650C92A6432A6E34B525ED9308839BD876E8E451ED093F1F
+## GATE
+go build ./internal/api/... exit=0
+
+go build ./... exit=0
+
+go vet exit=0
+
+go test exit=0
+ok  	github.com/ev-dev-labs/teslasync/internal/api	0.159s
+
+EXIT=0
+STATUS=DONE
