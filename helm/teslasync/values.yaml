@@ -534,6 +534,7 @@ config:
   # Free tier: 10,000 geocoding + 100,000 map tiles/month (covers 1-10 vehicles).
   # Get a key at https://console.cloud.google.com/google/maps-apis
   # When empty, TeslaSync uses CARTO tiles + Nominatim geocoding (free, no key).
+  # Requires a valid API key to enable Google Maps features.
   googleMaps:
     apiKey: ""
 
