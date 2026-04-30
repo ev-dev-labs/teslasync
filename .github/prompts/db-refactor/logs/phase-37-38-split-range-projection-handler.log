@@ -1,0 +1,61 @@
+## PREFLIGHT
+start_utc=2026-04-30T07:06:26.0038011+00:00
+go_version=go version go1.26.1 windows/amd64
+engineer_email=iamatulmgupta@gmail.com
+powershell_version=7.6.1
+os_platform=Win32NT
+exports invariant ok: 1273 exported identifiers preserved
+import-graph invariant ok: 80 imports preserved
+## SURVEY
+source_lines_after=442
+new_file=internal/api/range_projection_handler_dtos.go lines=28
+new_file=internal/api/range_projection_handler_compute.go lines=113
+## REASONING
+mechanical decomposition: split internal/api/range_projection_handler.go into internal/api/range_projection_handler_dtos.go, internal/api/range_projection_handler_compute.go
+no behavior, API, SQL, JSON, route, config, or runtime ordering changes
+split_map:
+  source_file: internal/api/range_projection_handler.go
+  destinations:
+    internal/api/range_projection_handler_dtos.go:
+      - type rangeFactor
+      - type curvePoint
+      - type efficiencyBucket
+      - type rangeScenario
+    internal/api/range_projection_handler_compute.go:
+      - func getEfficiency
+      - func tempBucketFor
+      - func defaultEfficiency
+      - func buildRangeFactors
+      - func ptrF64
+    internal/api/range_projection_handler.go (kept):
+      - type RangeProjectionHandler
+      - func NewRangeProjectionHandler
+      - method (*RangeProjectionHandler).WithRedisCache
+      - method (*RangeProjectionHandler).Get
+      - method (*RangeProjectionHandler).buildEfficiencyMatrix
+      - method (*RangeProjectionHandler).buildScenarios
+      - method (*RangeProjectionHandler).GetByVehicle
+  cross_file_unexported_refs:
+    - dtos types (rangeFactor, curvePoint, efficiencyBucket, rangeScenario) referenced by remaining handler methods (Get, buildEfficiencyMatrix, buildScenarios) and by compute helpers (getEfficiency, buildRangeFactors); same package keeps them visible.
+    - compute helpers (getEfficiency, tempBucketFor, defaultEfficiency, buildRangeFactors, ptrF64) called from Get, GetByVehicle, and buildScenarios; same package keeps them visible.
+per-prompt split map must be appended above this line by the engineer before edits
+## CHANGES
+internal/api/range_projection_handler.go sha256=D7159FDE8616112A3C9F8BBA4AE00046D61BDDC9C60505F99C77B6935D24C53E
+internal/api/range_projection_handler_dtos.go sha256=9B9BB676EECA89753AFFB456BA3F42B7C2DDD0011B0CFF6CFDD795C1B311BA19
+internal/api/range_projection_handler_compute.go sha256=A78536BA71B077C7750F7FD3E82C135D7A8AAF5783466B8D6D04268737579CE5
+## GATE
+go build ./internal/api/... exit=0
+
+go build ./... exit=0
+
+go vet exit=0
+
+go test exit=0
+ok  	github.com/ev-dev-labs/teslasync/internal/api	0.171s
+
+EXIT=0
+STATUS=DONE
+## COMMIT
+commit_sha=b6c28af7ed3bd2f66e39eca723691a983ac3d4d9
+commit_message=refactor(api): split range projection handler
+committed_files=internal/api/range_projection_handler.go,internal/api/range_projection_handler_dtos.go,internal/api/range_projection_handler_compute.go,.github/prompts/db-refactor/logs/phase-37-38-split-range-projection-handler.log
