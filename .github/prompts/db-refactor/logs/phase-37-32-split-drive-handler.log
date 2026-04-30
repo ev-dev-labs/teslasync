@@ -1,0 +1,58 @@
+## PREFLIGHT
+start_utc=2026-04-30T06:04:05.7753027+00:00
+go_version=go version go1.26.1 windows/amd64
+engineer_email=iamatulmgupta@gmail.com
+powershell_version=7.6.1
+os_platform=Win32NT
+exports invariant ok: 1273 exported identifiers preserved
+import-graph invariant ok: 80 imports preserved
+## SURVEY
+source_lines_after=26
+new_file=internal/api/drive_handler_dtos.go lines=29
+new_file=internal/api/drive_handler_listing.go lines=489
+new_file=internal/api/drive_handler_detail.go lines=246
+## REASONING
+mechanical decomposition: split internal/api/drive_handler.go into internal/api/drive_handler_dtos.go, internal/api/drive_handler_listing.go, internal/api/drive_handler_detail.go
+no behavior, API, SQL, JSON, route, config, or runtime ordering changes
+split map (source: internal/api/drive_handler.go):
+  drive_handler.go (kept):
+    type DriveHandler
+    func NewDriveHandler
+    method DriveHandler.WithRedisCache
+  drive_handler_dtos.go:
+    var driveTelemetryMappings
+    var positionMappings
+  drive_handler_listing.go:
+    method DriveHandler.ListByVehicle
+    method DriveHandler.Stats
+    method DriveHandler.Score
+    method DriveHandler.Dynamics
+    method DriveHandler.AccelerationDistribution
+  drive_handler_detail.go:
+    method DriveHandler.Get
+    method DriveHandler.enrichLiveDrive (unexported, package-local)
+    method DriveHandler.currentSignals (unexported, package-local)
+    method DriveHandler.Positions
+    method DriveHandler.TelemetryReadings
+cross-file unexported references (still package-visible):
+  driveTelemetryMappings, positionMappings -> consumed by detail (Get, Positions, TelemetryReadings)
+  enrichLiveDrive, currentSignals -> consumed by detail (Get)
+  helpers parseInt64, urlParamInt64, pagination, parseDateRange, writeJSON, writeError,
+    safeFloat, signalFloat -> defined in other files of package api (no change)
+## CHANGES
+internal/api/drive_handler.go sha256=FAD3F674AD964412FB93C9D662E87B7480E20830F17EDDE30063E3D5BE18029F
+internal/api/drive_handler_dtos.go sha256=5634398EA32B458FB69D93A4AAEEA5243EB7D3CDE360E95B252427526027CD2B
+internal/api/drive_handler_listing.go sha256=D1DAF04651E2C7CF137A34239717CEA74CC552DCD93F728992C6EC80EEC66CEE
+internal/api/drive_handler_detail.go sha256=3F9AB74321703BC541209C187F2E166F243C3AE5017BBB049EC2A591B447DCD9
+## GATE
+go build ./internal/api/... exit=0
+
+go build ./... exit=0
+
+go vet exit=0
+
+go test exit=0
+ok  	github.com/ev-dev-labs/teslasync/internal/api	0.169s
+
+EXIT=0
+STATUS=DONE
