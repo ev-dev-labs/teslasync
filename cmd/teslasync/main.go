@@ -157,6 +157,29 @@ func main() {
 
 	// Wire Tesla API call logging
 	apiLogRepo := database.NewAPICallLogRepo(db)
+
+	// Inbound api_call_logs middleware: async writer for HTTP requests
+	// served by /api/v1. Disabled mode (cfg.APILogs.Enabled=false) installs
+	// a no-op logger so a misconfigured writer can be turned off at runtime
+	// without a rebuild. Drained on graceful shutdown below.
+	var inboundAPILogger api.APICallLogger
+	if cfg.APILogs.Enabled {
+		inboundAPILogger = api.NewAsyncAPICallLogger(apiLogRepo, api.AsyncLoggerOptions{
+			QueueCapacity: cfg.APILogs.QueueCapacity,
+			BatchSize:     cfg.APILogs.BatchSize,
+			FlushInterval: cfg.APILogs.FlushInterval,
+		})
+		api.SetAPICallLogger(inboundAPILogger)
+		log.Info().
+			Bool("capture_bodies", cfg.APILogs.CaptureBodies).
+			Int("queue_capacity", cfg.APILogs.QueueCapacity).
+			Int("batch_size", cfg.APILogs.BatchSize).
+			Dur("flush_interval", cfg.APILogs.FlushInterval).
+			Msg("inbound api_call_logs middleware enabled")
+	} else {
+		log.Info().Msg("inbound api_call_logs middleware disabled (API_LOGS_INBOUND_ENABLED=false)")
+	}
+
 	teslaClient.SetLogCallback(func(method, url string, statusCode int, reqBody, respBody []byte, durationMs int, callErr error) {
 		logEntry := &models.APICallLog{
 			HTTPMethod: method,
@@ -649,6 +672,16 @@ func main() {
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.Error().Err(err).Msg("HTTP server shutdown error — forcing close")
 		server.Close()
+	}
+
+	// Phase 5: Drain inbound api_call_logs writer (after HTTP shutdown so no
+	// more requests can enqueue entries).
+	if inboundAPILogger != nil {
+		if err := inboundAPILogger.Shutdown(shutdownCtx); err != nil {
+			log.Warn().Err(err).Msg("inbound api_call_logs writer shutdown timed out — pending entries may have been dropped")
+		} else {
+			log.Info().Msg("inbound api_call_logs writer drained")
+		}
 	}
 
 	log.Info().Msg("TeslaSync stopped cleanly")

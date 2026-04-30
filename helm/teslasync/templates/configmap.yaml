@@ -111,3 +111,18 @@ data:
   AZURE_MAPS_API_KEY: {{ .Values.config.azureMaps.apiKey | quote }}
   {{- end }}
   {{- end }}
+  # Inbound api_call_logs middleware (Phase 38-10).
+  # Body capture defaults to OFF; enable only for diagnostic windows.
+  {{- if .Values.config.apiLogs }}
+  API_LOGS_INBOUND_ENABLED: {{ .Values.config.apiLogs.inboundEnabled | default true | quote }}
+  API_LOG_CAPTURE_BODIES: {{ .Values.config.apiLogs.captureBodies | default false | quote }}
+  API_LOG_QUEUE_CAPACITY: {{ .Values.config.apiLogs.queueCapacity | default 4096 | quote }}
+  API_LOG_BATCH_SIZE: {{ .Values.config.apiLogs.batchSize | default 100 | quote }}
+  API_LOG_FLUSH_INTERVAL: {{ .Values.config.apiLogs.flushInterval | default "1s" | quote }}
+  {{- else }}
+  API_LOGS_INBOUND_ENABLED: "true"
+  API_LOG_CAPTURE_BODIES: "false"
+  API_LOG_QUEUE_CAPACITY: "4096"
+  API_LOG_BATCH_SIZE: "100"
+  API_LOG_FLUSH_INTERVAL: "1s"
+  {{- end }}

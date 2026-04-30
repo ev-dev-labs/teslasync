@@ -288,6 +288,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
+		// APICallLog middleware: persist every inbound /api/v1 request to
+		// api_call_logs (service="teslasync-api"). Mounted BEFORE
+		// ForwardAuthMiddleware so 401 responses from the auth layer are
+		// also captured. Skip predicate excludes streaming/health/metrics
+		// and the api-logs admin UI itself (feedback loop).
+		r.Use(APICallLogMiddleware(GetAPICallLogger(), cfg.APILogs.CaptureBodies, DefaultAPILogSkip))
+
 		// ForwardAuth: protect all /api/v1/* routes via reverse-proxy header.
 		// No-op when ForwardAuthHeader is empty (dev mode / no auth configured).
 		r.Use(ForwardAuthMiddleware(cfg.Auth.ForwardAuthHeader))

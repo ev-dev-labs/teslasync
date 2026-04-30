@@ -1,0 +1,103 @@
+=== PREFLIGHT ===
+before marking phase 10 STATUS=DONE.
+
+env_var_contract_for_prompt_10:
+  API_LOG_CAPTURE_BODIES (bool, default false). When false, RequestBody and
+  ResponseBody columns are written as NULL even on the inbound middleware path.
+  When true, both bodies are captured up to 10 KB (10240 bytes) each, redacted,
+  and stored. Operator default at deployment is OFF (matches phase 38-08 ADR
+  decision BODY_CAPTURE_DEFAULT=off).
+
+backpressure_contract_for_prompt_10:
+  Channel size: 1024 entries (rationale: ~1024 in-flight requests is well above
+  any realistic single-pod inbound concurrency; smaller risks dropping in burst,
+  larger risks unbounded memory). On queue.full / writer.full / writer.queue.full
+  the middleware drops the entry, calls metrics.APICallLogDrops.Inc(), and emits
+  a rate-limited zerolog.Warn() (no panic, no error returned to caller).
+
+=== GATE ===
+TRUNCATE_10KB=True
+ASYNC_BACKPRESSURE_TOLERATED=True
+REDACTION_REQUIRED=True
+BODY_CAPTURE_OFF_DEFAULT=True
+SERVICE_TAG_TESLASYNC_API=True
+SHUTDOWN_DRAIN=True
+SKIPPED_PATHS_LISTED=True
+PROMPT_10_GREEN_REQUIRED=True
+PANIC_STILL_RECORDED=True
+UNEXPECTED_STATUS_COUNT=0
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
+=== SURVEY ===
+=== REASONING ===
+Plan: implement APICallLogMiddleware (defer-based, non-blocking, redacted, body-capture-off-default), async batched writer (pgx.CopyFrom), wire into /api/v1 group with skip list, env vars across docker-compose+helm.
+
+=== CHANGES ===
+warning: in the working copy of 'cmd/teslasync/main.go', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'internal/api/router.go', LF will be replaced by CRLF the next time Git touches it
+ cmd/teslasync/main.go                   | 33 ++++++++++++++++++++++++
+ docker-compose.yml                      |  7 +++++
+ helm/teslasync/templates/configmap.yaml | 15 +++++++++++
+ helm/teslasync/values.yaml              | 16 ++++++++++++
+ internal/api/router.go                  |  7 +++++
+ internal/config/config.go               | 27 ++++++++++++++++++++
+ internal/database/api_call_log_repo.go  | 45 +++++++++++++++++++++++++++++++++
+ 7 files changed, 150 insertions(+)
+NEW_FILES:
+?? internal/api/api_call_log_middleware.go
+?? internal/api/api_call_log_middleware_test.go
+internal\api\api_call_log_middleware.go
+internal\api\api_call_log_middleware_test.go
+internal\api\middleware.go
+internal\database\api_call_log_repo.go
+internal\config\config.go
+GOFMT_EXIT=0
+
+=== GATE ===
+CONFIG_BINDINGS_PRESENT=True
+REDACTION_HELPER=True
+HELM_CONFIGMAP_HAS_VARS=True
+MIDDLEWARE_FILE_PRESENT=True
+ASYNC_LOGGER_DEFINED=True
+SERVICE_TAG_TESLASYNC_API=True
+ROUTER_REGISTERS_MIDDLEWARE=True
+MAIN_SHUTDOWN_CALLED=True
+BODY_CAPTURE_DEFAULT_FALSE=True
+BATCH_INSERT_PRESENT=True
+HELM_VALUES_HAS_VARS=False
+DOCKER_COMPOSE_HAS_VARS=True
+MIDDLEWARE_TESTS_PRESENT=True
+MIDDLEWARE_FUNC_DEFINED=True
+NON_BLOCKING_ENQUEUE=False
+MAIN_WIRES_LOGGER=True
+EXIT=1
+STATUS=BLOCKED
+
+=== GATE (rerun) ===
+HELM_VALUES_HAS_VARS=True
+BODY_CAPTURE_DEFAULT_FALSE=True
+DOCKER_COMPOSE_HAS_VARS=True
+NON_BLOCKING_ENQUEUE=True
+HELM_CONFIGMAP_HAS_VARS=True
+BATCH_INSERT_PRESENT=True
+ASYNC_LOGGER_DEFINED=True
+MAIN_SHUTDOWN_CALLED=True
+CONFIG_BINDINGS_PRESENT=True
+MIDDLEWARE_TESTS_PRESENT=True
+SERVICE_TAG_TESLASYNC_API=True
+MIDDLEWARE_FILE_PRESENT=True
+ROUTER_REGISTERS_MIDDLEWARE=True
+REDACTION_HELPER=True
+MIDDLEWARE_FUNC_DEFINED=True
+MAIN_WIRES_LOGGER=True
+ok  	github.com/ev-dev-labs/teslasync/internal/api	0.418s
+ok  	github.com/ev-dev-labs/teslasync/internal/database	2.512s
+ok  	github.com/ev-dev-labs/teslasync/internal/config	0.362s
+GO_INBOUND_TEST_EXIT=0
+HELM_TEMPLATE_EXIT=0
+UNEXPECTED_STATUS_COUNT=0
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===

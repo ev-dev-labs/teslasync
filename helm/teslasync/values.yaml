@@ -545,6 +545,24 @@ config:
   azureMaps:
     apiKey: ""
 
+  # ── Inbound API call logs (Phase 38-10) ──────────────────────────────
+  # Persists every inbound /api/v1 request to api_call_logs.
+  # Body capture defaults to OFF; enable only during diagnostic windows.
+  # Misconfigured writers can be disabled via inboundEnabled=false at runtime.
+  # Maps to env vars: API_LOGS_INBOUND_ENABLED, API_LOG_CAPTURE_BODIES,
+  # API_LOG_QUEUE_CAPACITY, API_LOG_BATCH_SIZE, API_LOG_FLUSH_INTERVAL.
+  apiLogs:
+    # -- Enable persisting inbound HTTP requests (env: API_LOGS_INBOUND_ENABLED).
+    inboundEnabled: true
+    # -- Capture request/response bodies, 10 KB cap (env: API_LOG_CAPTURE_BODIES).
+    captureBodies: false
+    # -- Buffered channel size for the async writer (env: API_LOG_QUEUE_CAPACITY).
+    queueCapacity: 4096
+    # -- Max batch size before flushing via pgx.CopyFrom (env: API_LOG_BATCH_SIZE).
+    batchSize: 100
+    # -- Max age of a buffered entry before flushing (env: API_LOG_FLUSH_INTERVAL).
+    flushInterval: "1s"
+
   # ── Forward Auth ─────────────────────────────────────────────────────
   # Header set by your ForwardAuth provider. Examples:
   #   Authentik:     X-Authentik-Username

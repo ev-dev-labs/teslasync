@@ -54,6 +54,13 @@ services:
       - OTEL_INSECURE=${OTEL_INSECURE:-true}
       - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY:-}
       - AZURE_MAPS_API_KEY=${AZURE_MAPS_API_KEY:-}
+      # Inbound api_call_logs middleware (Phase 38-10).
+      # Body capture defaults to OFF; enable only for diagnostic windows.
+      - API_LOGS_INBOUND_ENABLED=${API_LOGS_INBOUND_ENABLED:-true}
+      - API_LOG_CAPTURE_BODIES=${API_LOG_CAPTURE_BODIES:-false}
+      - API_LOG_QUEUE_CAPACITY=${API_LOG_QUEUE_CAPACITY:-4096}
+      - API_LOG_BATCH_SIZE=${API_LOG_BATCH_SIZE:-100}
+      - API_LOG_FLUSH_INTERVAL=${API_LOG_FLUSH_INTERVAL:-1s}
     depends_on:
       postgres:
         condition: service_healthy

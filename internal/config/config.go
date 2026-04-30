@@ -25,6 +25,25 @@ type Config struct {
 	OpenTelemetry  OpenTelemetryConfig
 	GoogleMaps     GoogleMapsConfig
 	AzureMaps      AzureMapsConfig
+	APILogs        APILogsConfig
+}
+
+// APILogsConfig controls the inbound api_call_logs middleware (Phase 38-10).
+//
+// When Enabled is false the middleware uses a no-op logger, so a misconfigured
+// or under-provisioned writer can be disabled at runtime without a rebuild.
+//
+// CaptureBodies toggles request/response body persistence (default OFF, per
+// ADR phase-38-08); when enabled both bodies are truncated at 10 KB.
+//
+// QueueCapacity, BatchSize and FlushInterval tune the async writer's
+// channel/batcher.
+type APILogsConfig struct {
+	Enabled       bool
+	CaptureBodies bool
+	QueueCapacity int
+	BatchSize     int
+	FlushInterval time.Duration
 }
 
 // GoogleMapsConfig holds settings for the Google Maps geocoding API.
@@ -158,8 +177,8 @@ type AuthConfig struct {
 }
 
 type RetentionConfig struct {
-	DataRetentionDays        int
-	PositionRetentionDays    int
+	DataRetentionDays          int
+	PositionRetentionDays      int
 	SignalHistoryRetentionDays int
 }
 
@@ -278,6 +297,14 @@ func Load() (*Config, error) {
 
 		AzureMaps: AzureMapsConfig{
 			APIKey: envStr("AZURE_MAPS_API_KEY", ""),
+		},
+
+		APILogs: APILogsConfig{
+			Enabled:       envBool("API_LOGS_INBOUND_ENABLED", true),
+			CaptureBodies: envBool("API_LOG_CAPTURE_BODIES", false),
+			QueueCapacity: envInt("API_LOG_QUEUE_CAPACITY", 4096),
+			BatchSize:     envInt("API_LOG_BATCH_SIZE", 100),
+			FlushInterval: envDuration("API_LOG_FLUSH_INTERVAL", 1*time.Second),
 		},
 	}
 
