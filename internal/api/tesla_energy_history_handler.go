@@ -1,17 +1,16 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+	"github.com/go-chi/chi/v5"
+	"github.com/rs/zerolog/log"
 )
 
 // validEnergyPeriods is the whitelist of allowed period values.
@@ -385,125 +384,4 @@ func truncateBody(b []byte) string {
 		return string(b[:500])
 	}
 	return string(b)
-}
-
-// ---------------------------------------------------------------------------
-// Tesla response parsing
-// ---------------------------------------------------------------------------
-
-// Tesla calendar_history response envelope.
-type teslaCalendarHistoryResponse struct {
-	Response struct {
-		SerialNumber string            `json:"serial_number"`
-		Period       string            `json:"period"`
-		TimeSeriesData []json.RawMessage `json:"time_series"`
-	} `json:"response"`
-}
-
-// parseEnergyHistoryResponse parses Tesla calendar_history kind=energy response.
-func parseEnergyHistoryResponse(body []byte, siteID int64, period string) ([]*models.TeslaEnergyHistory, error) {
-	var resp teslaCalendarHistoryResponse
-	if err := json.Unmarshal(body, &resp); err != nil {
-		return nil, fmt.Errorf("unmarshal energy history: %w", err)
-	}
-
-	var entries []*models.TeslaEnergyHistory
-	for _, raw := range resp.Response.TimeSeriesData {
-		var point struct {
-			Timestamp        string   `json:"timestamp"`
-			SolarEnergy      *float64 `json:"solar_energy_exported"`
-			BatteryEnergyIn  *float64 `json:"battery_energy_imported_from_grid"`
-			BatteryEnergyOut *float64 `json:"battery_energy_exported_to_grid"`
-			GridEnergyIn     *float64 `json:"grid_energy_imported"`
-			GridEnergyOut    *float64 `json:"grid_energy_exported_from_solar"`
-			ConsumerEnergy   *float64 `json:"consumer_energy_imported_from_grid"`
-		}
-		if err := json.Unmarshal(raw, &point); err != nil {
-			continue
-		}
-		ts, err := time.Parse(time.RFC3339, point.Timestamp)
-		if err != nil {
-			continue
-		}
-		entries = append(entries, &models.TeslaEnergyHistory{
-			EnergySiteID:       siteID,
-			Period:             period,
-			Timestamp:          ts,
-			SolarEnergyWh:      point.SolarEnergy,
-			BatteryEnergyInWh:  point.BatteryEnergyIn,
-			BatteryEnergyOutWh: point.BatteryEnergyOut,
-			GridEnergyInWh:     point.GridEnergyIn,
-			GridEnergyOutWh:    point.GridEnergyOut,
-			ConsumerEnergyWh:   point.ConsumerEnergy,
-		})
-	}
-	return entries, nil
-}
-
-// parseBackupHistoryResponse parses Tesla calendar_history kind=backup response.
-func parseBackupHistoryResponse(body []byte, siteID int64, period string) ([]*models.TeslaEnergyBackupEvent, error) {
-	var resp teslaCalendarHistoryResponse
-	if err := json.Unmarshal(body, &resp); err != nil {
-		return nil, fmt.Errorf("unmarshal backup history: %w", err)
-	}
-
-	var entries []*models.TeslaEnergyBackupEvent
-	for _, raw := range resp.Response.TimeSeriesData {
-		var point struct {
-			Timestamp string `json:"timestamp"`
-			Duration  int    `json:"duration"`
-		}
-		if err := json.Unmarshal(raw, &point); err != nil {
-			continue
-		}
-		ts, err := time.Parse(time.RFC3339, point.Timestamp)
-		if err != nil {
-			continue
-		}
-		entries = append(entries, &models.TeslaEnergyBackupEvent{
-			EnergySiteID:    siteID,
-			Period:          period,
-			Timestamp:       ts,
-			DurationSeconds: point.Duration,
-		})
-	}
-	return entries, nil
-}
-
-// Tesla telemetry_history response envelope.
-type teslaTelemetryHistoryResponse struct {
-	Response struct {
-		Data []json.RawMessage `json:"data"`
-	} `json:"response"`
-}
-
-// parseWCChargingResponse parses Tesla telemetry_history kind=charge response.
-func parseWCChargingResponse(body []byte, siteID int64) ([]*models.TeslaEnergyWCCharging, error) {
-	var resp teslaTelemetryHistoryResponse
-	if err := json.Unmarshal(body, &resp); err != nil {
-		return nil, fmt.Errorf("unmarshal wc charging history: %w", err)
-	}
-
-	var entries []*models.TeslaEnergyWCCharging
-	for _, raw := range resp.Response.Data {
-		var point struct {
-			Timestamp string   `json:"timestamp"`
-			DIN       *string  `json:"din"`
-			EnergyWh  *float64 `json:"energy_wh"`
-		}
-		if err := json.Unmarshal(raw, &point); err != nil {
-			continue
-		}
-		ts, err := time.Parse(time.RFC3339, point.Timestamp)
-		if err != nil {
-			continue
-		}
-		entries = append(entries, &models.TeslaEnergyWCCharging{
-			EnergySiteID: siteID,
-			DIN:          point.DIN,
-			Timestamp:    ts,
-			EnergyWh:     point.EnergyWh,
-		})
-	}
-	return entries, nil
 }
