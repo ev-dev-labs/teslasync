@@ -1,0 +1,21 @@
+## PREFLIGHT
+start_utc=2026-04-30T01:02:33.0720112+00:00
+go_version=go version go1.26.1 windows/amd64
+engineer_email=iamatulmgupta@gmail.com
+powershell_version=7.6.1
+os_platform=Win32NT
+## SURVEY
+template recorded inline (see REASONING section)
+## REASONING
+Split-map template:
+  - Source file: <path>
+  - Existing responsibility: <one paragraph>
+  - New files: <basename>_<concern>.go (no helpers/utils/common/misc)
+  - Items to move: list types, funcs, methods, consts, vars per dest file
+  - Validation: gofmt -l, go build ./..., go test <package> -count=1
+  - Risks: cross-file unexported references, init order, comment anchors
+## CHANGES
+none (methodology only)
+## GATE
+EXIT=0
+STATUS=DONE
