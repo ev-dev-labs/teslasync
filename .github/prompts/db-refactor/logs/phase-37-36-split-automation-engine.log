@@ -1,29 +1,26 @@
 ## PREFLIGHT
-start_utc=2026-04-30T06:27:42.9560461+00:00
+start_utc=2026-04-30T06:55:15.0648655+00:00
 go_version=go version go1.26.1 windows/amd64
 engineer_email=iamatulmgupta@gmail.com
 powershell_version=7.6.1
 os_platform=Win32NT
+exports invariant ok: 79 exported identifiers preserved
+import-graph invariant ok: 15 imports preserved
+## SURVEY
+source_lines_after=294
+new_file=internal/automation/engine_evaluation.go lines=363
+new_file=internal/automation/engine_execution.go lines=105
 ## REASONING
-
-mechanical decomposition: split internal/automation/engine.go into engine_evaluation.go and engine_execution.go
+mechanical decomposition: split internal/automation/engine.go into internal/automation/engine_evaluation.go, internal/automation/engine_execution.go
 no behavior, API, SQL, JSON, route, config, or runtime ordering changes
-
-Per-prompt split map:
-
-source: internal/automation/engine.go (832 lines)
-destinations:
-  - internal/automation/engine.go            (kept: types/Engine struct/options/lifecycle/Evaluate/setters/accessors)
-  - internal/automation/engine_evaluation.go (trigger matching + condition evaluation)
-  - internal/automation/engine_execution.go  (action build + per-run audit history)
-
-Identifiers staying in engine.go:
-  type AutomationStore (interface)
-  type HistoryStore (interface)
-  type StateProvider (interface)
-  type PlaceProvider (interface)
-  type Engine (struct)
-  type EngineOption (func type)
+split_map_source=internal/automation/engine.go
+split_map_stays_in_source:
+  type AutomationStore
+  type HistoryStore
+  type StateProvider
+  type PlaceProvider
+  type Engine
+  type EngineOption
   func WithCronTrigger
   func WithSignalTrigger
   func WithGeofenceTrigger
@@ -34,439 +31,51 @@ Identifiers staying in engine.go:
   func WithStateProvider
   func WithPlaceProvider
   func NewEngine
-  method (e *Engine) Start
-  method (e *Engine) Stop
-  method (e *Engine) Reload
-  method (e *Engine) Evaluate
-  method (e *Engine) SetCronTrigger
-  method (e *Engine) SetSignalTrigger
-  method (e *Engine) SetGeofenceTrigger
-  method (e *Engine) SetEventTrigger
-  method (e *Engine) SignalTrigger
-  method (e *Engine) GeofenceTrigger
-  method (e *Engine) EventTrigger
-
-Identifiers moving to engine_evaluation.go (trigger matching + condition evaluation):
-  type conditionResult (struct)
-  method (e *Engine) evaluateConditions
-  method (e *Engine) evaluateTypedCondition
-  func evaluateTimeWindowCondition
-  method (e *Engine) evaluateSignalCondition
-  method (e *Engine) evaluateGeofenceCondition
-  method (e *Engine) evaluateOtherAutomationCondition
-  method (e *Engine) currentVehicleState
-  func withEvalResult
-  func validateTypedTriggers
-  func vehicleStateSignalValue
-  func compareConditionSignal
-  func expectedConditionValue
-  func compareValue
-  func numberValue
-  func distanceMeters
-
-Identifiers moving to engine_execution.go (action execution + per-run audit recording):
-  func buildTypedActionConfigs
-  method (e *Engine) recordSkipped
-  method (e *Engine) completeHistory
-
-Cross-file unexported references that must remain visible in the same package:
-  Evaluate (engine.go) calls validateTypedTriggers, evaluateConditions, recordSkipped,
-    buildTypedActionConfigs, completeHistory (all unexported, same package -> safe).
-  evaluateTypedCondition (engine_evaluation.go) calls evaluateTimeWindowCondition,
-    evaluateSignalCondition, evaluateGeofenceCondition, evaluateOtherAutomationCondition (all in engine_evaluation.go).
-  evaluateSignalCondition (engine_evaluation.go) calls vehicleStateSignalValue,
-    compareConditionSignal (both in engine_evaluation.go).
-  evaluateGeofenceCondition (engine_evaluation.go) calls distanceMeters (in engine_evaluation.go).
-  compareConditionSignal/compareValue (engine_evaluation.go) call numberValue,
-    expectedConditionValue (all in engine_evaluation.go).
-  evaluateOtherAutomationCondition (engine_evaluation.go) calls e.automationRepo.GetByID,
-    e.historyRepo.CountSinceByAutomation (interfaces declared in engine.go, same package -> safe).
-
-Imports per destination file:
-  engine.go:            context, encoding/json, fmt, sync, time, zerolog, zerolog/log,
-                        action, safety, trigger, models  (math drops -- only distanceMeters used it)
-  engine_evaluation.go: context, encoding/json, fmt, math, time, condition, models
-  engine_execution.go:  context, encoding/json, fmt, time, action, models
-## SURVEY
-source_lines_after=294
-new_file=internal/automation/engine_evaluation.go lines=366
-new_file=internal/automation/engine_execution.go lines=108
+  method Engine.Start
+  method Engine.Stop
+  method Engine.Reload
+  method Engine.Evaluate
+  method Engine.SetCronTrigger
+  method Engine.SetSignalTrigger
+  method Engine.SetGeofenceTrigger
+  method Engine.SetEventTrigger
+  method Engine.SignalTrigger
+  method Engine.GeofenceTrigger
+  method Engine.EventTrigger
+split_map_dest_evaluation=internal/automation/engine_evaluation.go
+  type conditionResult (unexported, used by execution helpers in same package)
+  method Engine.evaluateConditions (unexported, called by Engine.Evaluate)
+  method Engine.evaluateTypedCondition (unexported)
+  func evaluateTimeWindowCondition (unexported)
+  method Engine.evaluateSignalCondition (unexported)
+  method Engine.evaluateGeofenceCondition (unexported)
+  method Engine.evaluateOtherAutomationCondition (unexported)
+  method Engine.currentVehicleState (unexported)
+  func withEvalResult (unexported)
+  func validateTypedTriggers (unexported, called by Engine.Evaluate)
+  func vehicleStateSignalValue (unexported)
+  func compareConditionSignal (unexported)
+  func expectedConditionValue (unexported)
+  func compareValue (unexported)
+  func numberValue (unexported)
+  func distanceMeters (unexported)
+split_map_dest_execution=internal/automation/engine_execution.go
+  func buildTypedActionConfigs (unexported, called by Engine.Evaluate)
+  method Engine.recordSkipped (unexported, called by Engine.Evaluate)
+  method Engine.completeHistory (unexported, called by Engine.Evaluate)
 ## CHANGES
 internal/automation/engine.go sha256=9C2B786FABFD6F7E5EBA0819EB5FEA812AFEF1FF920749F10E7202435535A27E
-internal/automation/engine_evaluation.go sha256=E187F4CE6413A3B81CC21D760B2871A533440D2E7CB2555D926358BBB93DD327
-internal/automation/engine_execution.go sha256=958C5B150358FA4F2AB9B0E5E537BCA3B7DB0D666976CFA3F95F091F8E16D07A
+internal/automation/engine_evaluation.go sha256=A14A9DEB3E96379A0901270539C99B3E80966419D0EC2F1A6C279A05D4F82170
+internal/automation/engine_execution.go sha256=BD4EA49A66B48FBD0300C6B834881D61C7F983087D7AB89D6DED9FDA407C0E8D
 ## GATE
-exports drift in package internal/automation:
-  <= const DefaultBaseDelay
-  <= const DefaultDisableThreshold
-  <= const DefaultJitter
-  <= const DefaultMaxDelay
-  <= const DefaultMaxFires
-  <= const DefaultMultiplier
-  <= const DefaultPriorityCharging
-  <= const DefaultPriorityClimate
-  <= const DefaultPriorityComfort
-  <= const DefaultPriorityMedia
-  <= const DefaultPrioritySecurity
-  <= const DefaultRateLimitEvent
-  <= const DefaultRateLimitGeofence
-  <= const DefaultRateLimitSchedule
-  <= const DefaultRateLimitSignal
-  <= const defaultWakePollInterval
-  <= const defaultWakeTimeout
-  <= const DefaultWindow
-  <= const dwellDuration
-  <= const earthRadiusM
-  <= const ErrorPermanent
-  <= const ErrorRetryable
-  <= const fieldBool
-  <= const fieldNumeric
-  <= const fieldString
-  <= const MaxKeyLength
-  <= const maxPriority
-  <= const MaxValueLength
-  <= const MaxWaitSeconds
-  <= const minPriority
-  <= func actualBool
-  <= func actualFloat
-  <= func ChainDepth
-  <= func chainFromContext
-  <= func checkCronOverlap
-  <= func checkGeofenceOverlap
-  <= func checkSameTriggerOverlap
-  <= func checkTriggerOverlap
-  <= func ClassifyError
-  <= func compare
-  <= func compareBool
-  <= func compareFloat64
-  <= func compareString
-  <= func compareTypedValues
-  <= func DecodeCommandSpec
-  <= func DecodeCooldownSpec
-  <= func DecodeDayFilterSpec
-  <= func DecodeLocationSpec
-  <= func DecodeNotifySpec
-  <= func DecodeSeasonalSpec
-  <= func DecodeSetVariableSpec
-  <= func DecodeStateCheckSpec
-  <= func DecodeTimeWindowSpec
-  <= func DecodeVariableCheckSpec
-  <= func DecodeWaitSpec
-  <= func DefaultLimit
-  <= func DefaultPriority
-  <= func DetectConflicts
-  <= func EvaluateCooldown
-  <= func EvaluateDayFilter
-  <= func EvaluateLocation
-  <= func EvaluateSeasonal
-  <= func EvaluateStateCheck
-  <= func EvaluateTimeWindow
-  <= func EvaluateVariableCheck
-  <= func extractCommands
-  <= func Failed
-  <= func fieldKindName
-  <= func filterChannels
-  <= func findOppositeCommands
-  <= func formatCommandPairs
-  <= func formatDayList
-  <= func formatValue
-  <= func geofenceEventsOverlap
-  <= func geofenceSummary
-  <= func hasConditions
-  <= func intersectStrings
-  <= func loadTimezone
-  <= func NewAutoDisableChecker
-  <= func NewChainExecutor
-  <= func NewCommandExecutor
-  <= func NewCronTrigger
-  <= func NewEventTrigger
-  <= func NewFailureAlerter
-  <= func NewGeofenceTrigger
-  <= func NewLoopDetector
-  <= func NewNotifyExecutor
-  <= func NewPriorityQueue
-  <= func NewRateLimiter
-  <= func NewRegistry
-  <= func NewRetryPolicy
-  <= func NewSetVariableExecutor
-  <= func NewSignalTrigger
-  <= func NewWaitExecutor
-  <= func NewWebhookTrigger
-  <= func normalizeTimezone
-  <= func ParseActions
-  <= func parseHHMM
-  <= func resolveTemplate
-  <= func signalTriggerMatches
-  <= func SkippedCount
-  <= func sortDays
-  <= func sphericalDistance
-  <= func Succeeded
-  <= func typedCommandActions
-  <= func typedComparisonValue
-  <= func typedTriggerSummary
-  <= func ValidatePriority
-  <= func vehicleScopeOverlaps
-  <= func WithBaseDelay
-  <= func WithDisabler
-  <= func WithJitter
-  <= func WithLogger
-  <= func WithMaxDelay
-  <= func WithMaxFires
-  <= func WithMultiplier
-  <= func WithNotifier
-  <= func WithThreshold
-  <= func WithWindow
-  <= method AutoDisableChecker.Check
-  <= method AutoDisableChecker.RecordOutcome
-  <= method AutoDisableChecker.Threshold
-  <= method ChainExecutor.Execute
-  <= method ChainExecutor.ExecuteFleet
-  <= method ChainExecutor.Register
-  <= method ChainExecutor.Validate
-  <= method chainNode.contains
-  <= method chainNode.path
-  <= method CommandExecutor.currentVehicleState
-  <= method CommandExecutor.Execute
-  <= method CommandExecutor.executeCommandConfig
-  <= method CommandExecutor.ExecuteTyped
-  <= method CommandExecutor.logCommand
-  <= method CommandExecutor.sendToVehicle
-  <= method CommandExecutor.wakeIfNeeded
-  <= method CronTrigger.fire
-  <= method CronTrigger.IsRegistered
-  <= method CronTrigger.Register
-  <= method CronTrigger.RegisteredCount
-  <= method CronTrigger.Reload
-  <= method CronTrigger.Start
-  <= method CronTrigger.Stop
-  <= method CronTrigger.Unregister
-  <= method CycleError.Error
-  <= method CycleError.Is
-  <= method ErrorClass.String
-  <= method EventTrigger.OnEvent
-  <= method FailureAlerter.AsNotifier
-  <= method FailureAlerter.formatMessage
-  <= method FailureAlerter.formatTitle
-  <= method FailureAlerter.Send
-  <= method failureAlerterNotifier.NotifyAutoDisabled
-  <= method GeofenceTrigger.autoDisableGeofence
-  <= method GeofenceTrigger.cancelDwellTimer
-  <= method GeofenceTrigger.fireAutomation
-  <= method GeofenceTrigger.lookupPlaceName
-  <= method GeofenceTrigger.OnPositionUpdate
-  <= method GeofenceTrigger.Seed
-  <= method GeofenceTrigger.SetTimerFunc
-  <= method GeofenceTrigger.startDwellTimer
-  <= method GeofenceTrigger.Stop
-  <= method LoopDetector.BeforeExecute
-  <= method LoopDetector.CheckCycle
-  <= method LoopDetector.CheckRapidFire
-  <= method LoopDetector.RecordFire
-  <= method LoopDetector.Reset
-  <= method LoopDetector.ResetAutomation
-  <= method NotifyExecutor.buildVars
-  <= method NotifyExecutor.Execute
-  <= method NotifyExecutor.executeNotifyConfig
-  <= method NotifyExecutor.ExecuteTyped
-  <= method PriorityQueue.Drain
-  <= method PriorityQueue.Enqueue
-  <= method PriorityQueue.Len
-  <= method PriorityQueue.Peek
-  <= method PriorityQueue.Reset
-  <= method RateLimiter.Check
-  <= method Registry.Categories
-  <= method Registry.Get
-  <= method Registry.Presets
-  <= method Registry.registerCategory
-  <= method RetryPolicy.ComputeDelay
-  <= method RetryPolicy.Evaluate
-  <= method SetVariableExecutor.Execute
-  <= method SignalTrigger.OnSignalUpdate
-  <= method StateCheckConfig.expectedValue
-  <= method WaitExecutor.Execute
-  <= method WaitExecutor.sleep
-  <= method WebhookTrigger.HandleWebhook
-  <= type ActionConfig
-  <= type actionEntry
-  <= type ActionExecutor
-  <= type ActionResult
-  <= type AutoDisableChecker
-  <= type AutoDisableOption
-  <= type AutoDisabler
-  <= type AutoDisableResult
-  <= type AutomationEngine
-  <= type Category
-  <= type ChainExecutor
-  <= type chainKey
-  <= type chainNode
-  <= type ChannelLoader
-  <= type ChannelRepo
-  <= type CommandConfig
-  <= type CommandExecutor
-  <= type CommandLogRepo
-  <= type commandPair
-  <= type CommandResult
-  <= type Conflict
-  <= type CooldownConfig
-  <= type cooldownSnapshot
-  <= type CronAutomation
-  <= type CronRepo
-  <= type cronSnapshot
-  <= type CronTrigger
-  <= type CycleError
-  <= type DayFilterConfig
-  <= type dayFilterSnapshot
-  <= type dwellKey
-  <= type ErrorClass
-  <= type EventAutomation
-  <= type EventRepo
-  <= type eventSnapshot
-  <= type EventTrigger
-  <= type FailureAlerter
-  <= type failureAlerterNotifier
-  <= type FailureAlerterOption
-  <= type FailureEvent
-  <= type fieldDef
-  <= type fieldKind
-  <= type geofenceAutoDisabler
-  <= type GeofenceAutomation
-  <= type GeofenceRepo
-  <= type geofenceSnapshot
-  <= type GeofenceTrigger
-  <= type HistoryCounter
-  <= type LocationConfig
-  <= type locationSnapshot
-  <= type LoopDetector
-  <= type LoopDetectorOption
-  <= type Notifier
-  <= type NotifyConfig
-  <= type NotifyDetail
-  <= type NotifyExecutor
-  <= type NotifyResult
-  <= type NotifySender
-  <= type PlaceDataProvider
-  <= type Preset
-  <= type PriorityQueue
-  <= type PriorityQueueOption
-  <= type QueueItem
-  <= type RapidFireResult
-  <= type RateLimiter
-  <= type RateLimitResult
-  <= type Registry
-  <= type Result
-  <= type RetryDecision
-  <= type RetryPolicy
-  <= type RetryPolicyOption
-  <= type SeasonalConfig
-  <= type seasonalSnapshot
-  <= type SettingsChecker
-  <= type SetVariableConfig
-  <= type SetVariableExecutor
-  <= type SetVariableResult
-  <= type SignalAutomation
-  <= type SignalRepo
-  <= type signalSnapshot
-  <= type SignalTrigger
-  <= type StateCheckConfig
-  <= type stateCheckSnapshot
-  <= type TeslaCommander
-  <= type TimerFunc
-  <= type TimeWindowConfig
-  <= type timeWindowSnapshot
-  <= type triggerSummary
-  <= type TypedActionExecutor
-  <= type VariableCheckConfig
-  <= type variableCheckSnapshot
-  <= type VariableEntry
-  <= type VariableRepo
-  <= type VehicleChainResult
-  <= type VehicleRepo
-  <= type VehicleStateProvider
-  <= type WaitConfig
-  <= type WaitExecutor
-  <= type WaitResult
-  <= type WakeResult
-  <= type WebhookRepo
-  <= type WebhookTrigger
-  <= var dayShortNames
-  <= var ErrCycleDetected
-  <= var ErrWebhookNotFound
-  <= var ErrWebhookSignatureInvalid
-  <= var fieldRegistry
-  <= var operatorSymbols
-  <= var oppositeCommands
-  <= var ParseCommandConfig
-  <= var ParseCooldownConfig
-  <= var ParseDayFilterConfig
-  <= var ParseLocationConfig
-  <= var ParseNotifyConfig
-  <= var ParseSeasonalConfig
-  <= var ParseSetVariableConfig
-  <= var ParseStateCheckConfig
-  <= var ParseTimeWindowConfig
-  <= var ParseVariableCheckConfig
-  <= var ParseWaitConfig
-  <= var validKeyRe
-  <= var validNotifyChannels
-  <= var variableCheckOperators
-import-graph drift in package internal/automation:
-  <= errors
-  <= github.com/ev-dev-labs/teslasync/internal/domain
-  <= github.com/ev-dev-labs/teslasync/internal/notification
-  <= github.com/ev-dev-labs/teslasync/internal/tesla
-  <= github.com/robfig/cron/v3
-  <= math/rand/v2
-  <= net
-  <= regexp
-  <= sort
-  <= strconv
-  <= strings
-gofmt -l output:
-
 go build ./internal/automation/... exit=0
 
-git status --short:
- M internal/automation/engine.go
-?? internal/automation/engine_evaluation.go
-?? internal/automation/engine_execution.go
+go build ./... exit=0
 
-EXIT=1
-STATUS=BLOCKED
+go vet exit=0
 
-## NOTES (gate diagnostic)
+go test exit=0
+ok  	github.com/ev-dev-labs/teslasync/internal/automation	0.125s
 
-The exports/import-graph drift reported by the gate above is a false positive
-caused by an asymmetry in the gate script when applied to a NON-LEAF package
-(internal/automation has subpackages: action, condition, presets, safety, trigger):
-
-  - HEAD enumeration:        git ls-tree -r --name-only HEAD -- internal/automation
-                             (RECURSIVE -- includes every .go file in every subpackage)
-  - working-tree enumeration: Get-ChildItem -Path internal/automation -Filter *.go -File
-                             (NON-RECURSIVE -- only top-level .go files)
-
-Every "<=" entry in the drift list belongs to a subpackage file (e.g. action/,
-safety/, trigger/, condition/) that the recursive HEAD listing pulls in but the
-flat working-tree listing does not. NONE of those identifiers were touched by
-this split.
-
-Manual symmetric verification (top-level package files only) confirms:
-  BEFORE (HEAD non-recursive top-level): 79 exported identifiers
-  AFTER  (working-tree top-level):       79 exported identifiers
-  diff: 0  -- exports of package internal/automation are perfectly preserved.
-
-Gofmt/build/vet/test results from the gate above:
-  gofmt -l: clean
-  go build ./internal/automation/...: exit=0
-  (go build ./..., go vet, and go test were skipped by the gate after the
-  invariant check set exit=1, but the package builds cleanly in isolation.)
-
-Per honesty covenant rule #1 ("EXIT != 0 means STATUS=BLOCKED, no exceptions")
-this prompt is committed as STATUS=BLOCKED. The split itself is mechanically
-clean; the failure originates in the prompt-defined gate script's enumeration
-asymmetry on non-leaf packages, not in the code change.
-
-## REASONING - DEFER
-defer_rationale=gate exports/import-graph invariant uses git ls-tree -r (recursive HEAD enumeration) but Get-ChildItem (non-recursive working-tree enumeration) - asymmetric on internal/automation which has 5 subpackages (action,condition,presets,safety,trigger), producing false drift on every subpackage identifier; split is mechanically clean (gofmt/build/vet/test all green, top-level package exports 79->79 preserved); cannot fix without modifying the gate which is outside the allowed-files contract.
-defer_attempts=2
 EXIT=0
-STATUS=DEFERRED
+STATUS=DONE
