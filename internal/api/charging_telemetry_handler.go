@@ -6,17 +6,27 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
-// ChargingTelemetryHandler serves charging telemetry endpoints backed by signal_log.
+// ChargingTelemetryHandler serves charging telemetry endpoints backed by the
+// signal-log change feed via signal.StateReader (ADR-002 / phase-39).
+//
+// Phase-39 migration: the legacy *database.SignalLogReader (the old pivot +
+// snapshot helpers) has been replaced with the canonical signal.StateReader.
+// The /charging-telemetry history endpoint feeds a stepped-line chart on the
+// frontend, so List uses Timeline in CHART MODE (empty CollapseBy) — every
+// change-feed emission becomes one row, preserving the legacy flat-pivot
+// semantics. The /charging-telemetry/latest endpoint reads forward-folded
+// state at time.Now() via StateReader.State.
 type ChargingTelemetryHandler struct {
-	signalLogReader *database.SignalLogReader
+	state signal.StateReader
 }
 
-// Signal → JSON field mappings for charging telemetry pivot queries.
+// Signal → JSON field mappings for charging telemetry projection.
 // Field names match the frontend ChargingTelemetry interface in api/types.ts.
-var chargingTelemetryMappings = []database.PivotMapping{
+var chargingTelemetryMappings = []signal.FieldMapping{
 	{Signal: "ChargerVoltage", Field: "charger_voltage"},
 	{Signal: "ChargerActualCurrent", Field: "charger_actual_current"},
 	{Signal: "ChargeRateMilePerHour", Field: "charge_rate_mph"},
@@ -35,11 +45,14 @@ var chargingTelemetryMappings = []database.PivotMapping{
 	{Signal: "ChargeState", Field: "charging_state"},
 }
 
-func NewChargingTelemetryHandler(slr *database.SignalLogReader) *ChargingTelemetryHandler {
-	return &ChargingTelemetryHandler{signalLogReader: slr}
+func NewChargingTelemetryHandler(state signal.StateReader) *ChargingTelemetryHandler {
+	return &ChargingTelemetryHandler{state: state}
 }
 
-// List returns charging telemetry history from signal_log via SignalTracePivotFlat.
+// List returns charging telemetry history from the signal-log change feed.
+// Chart mode (empty CollapseBy) preserves every emission as one row so the
+// frontend stepped-line chart renders correctly — collapsing would drop
+// "still 200V, still 65%" tuples and break the time series rendering.
 func (h *ChargingTelemetryHandler) List(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
 	if err != nil || vehicleID == 0 {
@@ -56,20 +69,19 @@ func (h *ChargingTelemetryHandler) List(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	rows, err := h.signalLogReader.SignalTracePivotFlat(r.Context(),
-		vehicleID, chargingTelemetryMappings, from, to)
+	timelineRows, err := h.state.Timeline(r.Context(),
+		vehicleID, chargingTelemetryMappings, from, to, signal.TimelineOptions{})
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get charging telemetry from signal_log")
 		writeError(w, http.StatusInternalServerError, "failed to get charging telemetry data")
 		return
 	}
-	if rows == nil {
-		rows = []map[string]interface{}{}
-	}
+	rows := timelineRowsToFlat(timelineRows)
 	writeJSON(w, http.StatusOK, rows)
 }
 
-// Latest returns the most recent charging telemetry values via SnapshotAt(now).
+// Latest returns the most recent charging telemetry values, derived from the
+// forward-folded signal-log state at time.Now() via StateReader.State.
 func (h *ChargingTelemetryHandler) Latest(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
 	if err != nil || vehicleID == 0 {
@@ -77,7 +89,7 @@ func (h *ChargingTelemetryHandler) Latest(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	snap, err := h.signalLogReader.SnapshotAt(r.Context(), vehicleID, time.Now())
+	snap, err := h.state.State(r.Context(), vehicleID, time.Now())
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get latest charging telemetry")
 		writeError(w, http.StatusInternalServerError, "failed to get latest charging telemetry")

@@ -140,7 +140,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	motorHandler := NewMotorHandler(signalLogReader)
 	climateHandler := NewClimateHandler(signalLogReader)
 	securityHandler := NewSecurityHandler(signalLogReader)
-	chargingTelemetryHandler := NewChargingTelemetryHandler(signalLogReader)
+	chargingTelemetryHandler := NewChargingTelemetryHandler(stateReader)
 	mediaHandler := NewMediaHandler(stateReader)
 	vehicleConfigHandler := NewVehicleConfigHandler(signalLogReader)
 	locationSnapshotHandler := NewLocationSnapshotHandler(signalLogReader)
