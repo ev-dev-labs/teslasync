@@ -670,3 +670,15 @@ c.PublishVehicleData(vin, vehicleData)
 ```
 
 Topic format: `{prefix}/{vin}/{metric}` — default prefix is `teslasync`
+
+## ADR Cross-References
+
+- **ADR-002 (Change Feed vs State Separation):** Handlers that need point-in-time
+  signal state (e.g. battery, climate, security, motor, tire-pressure "current
+  value" panels) MUST take a `signal.StateReader` dependency, NOT
+  `*database.SignalLogReader`. `*database.SignalLogReader` is reserved for raw
+  change-feed event streams (`SignalTrace`) and aggregations
+  (`BrickVoltageHistory`, `DriveAggregates`, `RegenEnergy`, `ChargeAggregates`,
+  `LatestTimestamp`). See `.github/ARCHITECTURE.md` and
+  `.github/instructions/telemetry-pipeline.instructions.md` for the full layering
+  contract.

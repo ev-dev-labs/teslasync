@@ -97,6 +97,33 @@ Clients must recover missed current state through polling/live reads. Alert when
 `vehicle_update` drop rate is sustained above 0.1% over 5 minutes or Redis subscription
 failure lasts more than 60 seconds.
 
+## Change Feed vs State Reads (ADR-002)
+
+`signal_log` is a **change feed**, NOT a state table. Tesla Fleet Telemetry only emits
+a field when BOTH the signal's `interval_seconds` has elapsed AND the value has changed
+(see the [Tesla Fleet Telemetry System Behavior](https://developer.tesla.com/docs/fleet-api/fleet-telemetry#system-behavior)
+spec), so unchanged signals are never re-sent. A row at `(vehicle_id, signal, t)`
+reflects the moment a value CHANGED, not the prevailing value at `t`. Per ADR-002 in
+`.github/ARCHITECTURE.md`, all point-in-time state reads MUST go through the
+`signal.StateReader` port, which forward-folds the change feed under SQL.
+
+**Hot-path vs cold-path.** `signal.StateReader` is for **cold-path reads**: HTTP
+handlers, warmup, chatbot — anything that asks "what is the current value of X for
+vehicle V?". The **hot path** (telemetry ingest, FSM/reconciliation, session and
+drive/charge boundary detection) keeps reading from the in-process `signal.Store` (L1)
+and Redis (L2) per the Live State Layering contract above. Do NOT replace L1/L2
+hot-path reads with `signal.StateReader` — that would couple every signal write to a
+DB roundtrip and break the bounded-side-effects ingest model.
+
+```text
+❌ DO NOT call SnapshotAt, SignalAt, SignalTracePivot, SignalTracePivotFlat, SnapshotBetween — those will be removed.
+❌ DO NOT add new methods to database.SignalLogReader that return point-in-time state.
+❌ DO NOT wire signal.StateReader into telemetry ingest, FSM, or session-boundary detection — those are L1/L2 hot-path concerns.
+✅ DO depend on signal.StateReader for cold-path State, SignalAt, Timeline reads in handlers and warmup.
+✅ DO use database.SignalLogReader only for SignalTrace (raw events) and aggregations (BrickVoltageHistory, DriveAggregates, RegenEnergy, ChargeAggregates, LatestTimestamp).
+✅ DO keep signal.Store (L1) and Redis (L2) as the source of truth for live state on the telemetry hot path.
+```
+
 ## Signal Processing Rules
 
 ### Signal Names

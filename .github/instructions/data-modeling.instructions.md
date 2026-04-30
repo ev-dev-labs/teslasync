@@ -13,6 +13,15 @@ Migration SQL (schema) → models/*.go (struct + db tags) → *_repo.go (SQL + S
 ALL layers must stay in sync. A field rename in models that isn't propagated to
 repos and handlers causes cascading compile errors across 20+ files.
 
+### Layering rule (ADR-002)
+
+State reads (point-in-time "what was the value of X at time T?") belong in
+`internal/signal/` behind the `signal.StateReader` port — they are cold-path SQL
+forward-folds of the `signal_log` change feed. Change-feed reads (raw event streams
+and aggregations over `signal_log`) belong in `internal/database/`. New repos that
+return point-in-time signal state from `signal_log` MUST live in `internal/signal/`,
+NOT in `internal/database/`. See ADR-002 in `.github/ARCHITECTURE.md`.
+
 ## Model Struct Conventions
 
 ### Field Naming

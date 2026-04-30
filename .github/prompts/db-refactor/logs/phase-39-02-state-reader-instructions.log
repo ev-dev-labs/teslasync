@@ -1,0 +1,45 @@
+=== PREFLIGHT ===
+predecessor=phase-39-01-adr-002-architecture.log
+predecessor_exit=0
+predecessor_status=DONE
+files_to_change=telemetry-pipeline.instructions.md,data-modeling.instructions.md,go-backend.instructions.md
+=== CHANGES ===
+telemetry-pipeline: added '## Change Feed vs State Reads (ADR-002)' section after Freshness/SSE Semantics (~31 lines)
+data-modeling: added '### Layering rule (ADR-002)' subsection under '## Source of Truth Chain' (~9 lines)
+go-backend: appended '## ADR Cross-References' section at end with ADR-002 bullet (~10 lines)
+ .github/instructions/data-modeling.instructions.md |  9 ++++++++
+ .github/instructions/go-backend.instructions.md    | 12 ++++++++++
+ .../telemetry-pipeline.instructions.md             | 27 ++++++++++++++++++++++
+ 3 files changed, 48 insertions(+)
+=== GATE ===
+GB_STATE_READER=True
+TP_TESLA_SPEC_LINK=True
+TP_ADR002_HEADING=True
+TP_L1_L2_PRESERVED=True
+TP_DELETE_LIST=True
+DM_LAYERING_RULE=True
+GB_ADR002_REFERENCED=True
+TP_STATE_READER=True
+DM_ADR002_REFERENCED=True
+TP_HOT_VS_COLD=True
+UNEXPECTED_STATUS_COUNT=1
+ M .github/prompts/db-refactor/logs/phase-39-01-adr-002-architecture.log
+EXIT=1
+STATUS=BLOCKED
+=== GATE (retry) ===
+NOTE: prior session appended commit-trailer to predecessor log AFTER commit; restoring to HEAD
+predecessor_log_restored=0
+TP_ADR002_HEADING=True
+GB_ADR002_REFERENCED=True
+TP_HOT_VS_COLD=True
+TP_TESLA_SPEC_LINK=True
+TP_DELETE_LIST=True
+TP_STATE_READER=True
+DM_ADR002_REFERENCED=True
+GB_STATE_READER=True
+DM_LAYERING_RULE=True
+TP_L1_L2_PRESERVED=True
+UNEXPECTED_STATUS_COUNT=0
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
