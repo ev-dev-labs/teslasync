@@ -1,4 +1,0 @@
-=== PREFLIGHT ===
-STATUS=BLOCKED
-REASON=Prompt 21 not DONE (DONE-WITH-CASCADE is not sufficient here)
-EXIT=2

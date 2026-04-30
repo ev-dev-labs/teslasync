@@ -1,9 +1,0 @@
-=== PREFLIGHT ===
-PREDECESSOR_CHECK=phase-5b-07-alertrule-typed.log
-PREDECESSOR_STATUS=BLOCKED
-PREDECESSOR_REASON=consumer requires field; ADR re-vote needed (alert_repo.go uses &ar.Type/&ar.Threshold/&ar.Conditions as addressable fields for rows.Scan and json.Marshal — accessor methods cannot satisfy field-address syntax)
-TREE_STATE=dirty (internal/models/system.go modified — leftover from prior phase)
-HEAD=948263e1e790bcca6c8b79f55e592fd874c530a8
-STATUS=BLOCKED
-REASON=predecessor Prompt 07 (alertrule-typed) is BLOCKED — cannot rewire alert_repo until ADR-007 re-vote resolves typed accessor vs field-address mismatch
-EXIT=2

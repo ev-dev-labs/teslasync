@@ -1,4 +1,0 @@
-
-fix-inline-styles.prompt.md
-fix-old-api-imports.prompt.md
-fix-raw-html-table.prompt.md

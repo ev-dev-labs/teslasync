@@ -1,9 +1,0 @@
-Let me check the latest migration number and examine the models file further for patterns.
-
-Now add the models and create the three repo files:
-
-Now verify it compiles:
-
-Build succeeds. Let me run the verification checks from the spec:
-
-

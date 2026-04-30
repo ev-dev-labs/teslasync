@@ -1,9 +1,0 @@
-=== GATE ===
-BUILD_EXIT=0
-=== RUN   TestRepoColumnsMatchSchema
---- PASS: TestRepoColumnsMatchSchema (0.08s)
-PASS
-ok  	github.com/ev-dev-labs/teslasync/internal/database	0.286s
-TEST_EXIT=0
-EXIT=0
-STATUS=DONE
