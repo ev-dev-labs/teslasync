@@ -1,0 +1,152 @@
+## PREFLIGHT
+start_utc=2026-04-30T04:03:41.3353599+00:00
+go_version=go version go1.26.1 windows/amd64
+engineer_email=iamatulmgupta@gmail.com
+powershell_version=7.6.1
+os_platform=Win32NT
+predecessor_log=.github/prompts/db-refactor/logs/phase-37-17-split-telemetry-handler-live-store.log
+predecessor_exit_zero=True
+predecessor_status_done_or_deferred=True
+
+## SURVEY
+source_file=internal/api/telemetry_handler.go
+source_lines=604
+target_new_file=internal/api/telemetry_handler_sse.go
+target_new_file_exists=False
+
+top-level decls remaining in internal/api/telemetry_handler.go after prompts 1-17:
+  25: type TelemetryHandler struct {
+  89: type VehicleStreamState struct {
+  104: func (h *TelemetryHandler) GetStreamingState() map[string]*VehicleStreamState {
+  131: func (h *TelemetryHandler) IsVehicleStreaming(vin string) bool {
+  144: func (h *TelemetryHandler) StreamingVINs() map[string]bool {
+  159: func (h *TelemetryHandler) GetStaleVINs() []string {
+  172: func (h *TelemetryHandler) TelemetryStatus(w http.ResponseWriter, r *http.Request) {
+  251: func toFloat(v interface{}) float64 {
+  279: func toBool(v interface{}) bool {
+  324: func parseBuckleStatus(v interface{}) bool {
+  345: func toTimestamp(v interface{}) *time.Time {
+  374: func (h *TelemetryHandler) trackSecurity(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
+  499: func (h *TelemetryHandler) trackVehicleConfig(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
+  522: func (h *TelemetryHandler) trackUserPreferences(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
+  548: var _ = formatSignalName // kept for potential future use
+  549: func formatSignalName(name string) string {
+  557: func (h *TelemetryHandler) CaptureList(w http.ResponseWriter, r *http.Request) {
+  594: func (h *TelemetryHandler) CaptureStats(w http.ResponseWriter, r *http.Request) {
+  619: func (h *TelemetryHandler) CaptureDrop(w http.ResponseWriter, r *http.Request) {
+  633: func (h *TelemetryHandler) CaptureExport(w http.ResponseWriter, r *http.Request) {
+
+sse-related symbols in internal/api package (grep):
+  sse_handler.gosse_handler.go:16: type EventHub struct {
+  sse_handler.gosse_handler.go:116: func SSEHandler(hub *EventHub) http.HandlerFunc {
+  sse_handler.gosse_handler.go:124: w.Header().Set("Content-Type", "text/event-stream")
+  telemetry_handler_ingest.gotelemetry_handler_ingest.go:190: h.broadcastSSE(buildSSEPayload(vehicleID, ts, hotRows, coldObs))
+  telemetry_handler_ingest.gotelemetry_handler_ingest.go:667: h.broadcastSSE(buildSSEPayload(vehicleID, ts, hotRows, coldObs))
+  telemetry_handler_ingest.gotelemetry_handler_ingest.go:721: // buildSSEPayload assembles the Phase-6 typed-tables SSE payload from the
+  telemetry_handler_ingest.gotelemetry_handler_ingest.go:729: func buildSSEPayload(vehicleID int64, ts time.Time, hotRows map[string]map[string]any, coldObs []models.SignalObservation) map[string]any {
+  telemetry_handler_ingest.gotelemetry_handler_ingest.go:755: // broadcastSSE sends a vehicle_update SSE event. When Redis Pub/Sub is
+  telemetry_handler_ingest.gotelemetry_handler_ingest.go:759: func (h *TelemetryHandler) broadcastSSE(payload map[string]any) {
+
+## REASONING
+Mechanical-only contract requires moving cohesive existing code from telemetry_handler.go
+into telemetry_handler_sse.go. The intended scope per this prompt is:
+  - Server-Sent Events HTTP handler(s) for live signal streaming
+  - Per-connection fan-out, keep-alive, and cancellation logic
+  - Filtering helpers that decide which signals a given subscriber should receive
+
+split_map (engineer-provided):
+  source_file: internal/api/telemetry_handler.go
+  destination_file: internal/api/telemetry_handler_sse.go
+  identifiers_intended_for_destination_file: (NONE AVAILABLE)
+
+  rationale_for_empty_destination:
+    Two prior refactor passes have already extracted every SSE-related identifier
+    out of telemetry_handler.go. The current state of the codebase is:
+
+    1. SSE HTTP handler + per-connection fan-out + keep-alive + cancellation lives
+       in internal/api/sse_handler.go (a SEPARATE file, never part of
+       telemetry_handler.go in HEAD):
+         - type EventHub struct                              (sse_handler.go:16)
+         - func NewEventHub                                  (sse_handler.go:22)
+         - func (*EventHub) Subscribe                        (sse_handler.go:29)
+         - func (*EventHub) Broadcast                        (sse_handler.go:47)
+         - func (*EventHub) ClientCount                      (sse_handler.go:75)
+         - func (*EventHub) SubscribeRedis                   (sse_handler.go:88)
+         - func SSEHandler                                   (sse_handler.go:116)
+            (per-connection ResponseWriter+Flusher loop, 30s keep-alive ticker,
+             r.Context().Done() cancellation, client subscribe/unsubscribe)
+
+    2. SSE broadcast helpers were moved out of telemetry_handler.go by
+       predecessor prompt 16 into internal/api/telemetry_handler_ingest.go:
+         - func buildSSEPayload                              (telemetry_handler_ingest.go:729)
+         - func (*TelemetryHandler) broadcastSSE             (telemetry_handler_ingest.go:759)
+       See prompt-37-16 split map for the cohesive grouping decision (ProcessSignals
+       and ProcessBatch hot paths bundle live-store writes, signal_log writes, AND
+       SSE fan-out into a single per-message routing pipeline).
+
+  identifiers_currently_in_telemetry_handler.go (none qualify as SSE):
+    - type TelemetryHandler                              (struct definition; cannot be split)
+    - type VehicleStreamState                            (in-memory streaming-health DTO;
+                                                          tracks LastReceived/SignalCount/
+                                                          BatchCount per VIN, NOT an SSE
+                                                          per-connection state)
+    - func GetStreamingState / IsVehicleStreaming /
+      StreamingVINs / GetStaleVINs                       (read-only accessors over the
+                                                          streamingState map; not SSE)
+    - func TelemetryStatus                               (JSON HTTP handler that returns
+                                                          telemetry endpoint status; uses
+                                                          writeJSON not text/event-stream)
+    - func toFloat / toBool / parseBuckleStatus /
+      func toTimestamp                                   (pure value coercion utilities)
+    - func trackSecurity / trackVehicleConfig /
+      func trackUserPreferences                          (durable snapshot writers to
+                                                          security_events, software_updates,
+                                                          vehicle_units; NOT SSE)
+    - func formatSignalName                              (string utility)
+    - func CaptureList / CaptureStats /
+      func CaptureDrop / CaptureExport                   (raw telemetry capture HTTP API
+                                                          backed by MongoDB; NOT SSE)
+
+  why_this_cannot_be_made_green_mechanically:
+    1. telemetry_handler.go contains zero SSE-related declarations to move. A grep
+       for sse|EventSource|event-stream|broadcast|Flusher|keep-alive|Subscribe in
+       the source file finds only stale comment fragments ("Redis cache used for
+       SSE Pub/Sub" on line 84) and false positives ("total_batches_processed",
+       "SentryMode", "streaming_vehicles"). No identifier qualifies for the
+       intended SSE extraction.
+    2. The allowed-files list excludes internal/api/sse_handler.go and
+       internal/api/telemetry_handler_ingest.go, so the actual SSE code cannot
+       be relocated from those files into telemetry_handler_sse.go without
+       triggering the gate's drift check (would fail STATUS=BLOCKED).
+    3. Creating an empty internal/api/telemetry_handler_sse.go containing only
+       'package api' would technically pass the gate's existence/parse checks
+       but would violate the mechanical-only contract ("move cohesive code into
+       new files"). Per the layered-live-state architectural note in this
+       prompt: "When in doubt, keep the original cohesion - mechanical splits
+       never split logical pipeline stages."
+    4. None of the helpers remaining in telemetry_handler.go interact with
+       text/event-stream HTTP responses, http.Flusher, per-connection client
+       channels, heartbeat tickers, or vehicle_signals Pub/Sub. Moving any of
+       them into a file named telemetry_handler_sse.go would mislabel cohesion.
+
+no behavior, API, SQL, JSON, route, config, or runtime ordering changes are introduced
+
+## CHANGES
+(no source files modified; deferral only adds the log artifact)internal/api/telemetry_handler.go sha256=4F2FA6B59B6F9A27153F8C2E0D7AB9611B0DABC654160A23F9DCE9882F9543CC (unchanged from HEAD)
+
+## GATE
+gate execution skipped per defer protocol (target file deliberately not created)
+reason: telemetry_handler.go contains no SSE-related code to extract; SSE HTTP handler +
+        per-connection fan-out + keep-alive + cancellation already lives in
+        sse_handler.go (separate file at HEAD); SSE broadcast helpers (broadcastSSE,
+        buildSSEPayload) were moved to telemetry_handler_ingest.go by predecessor
+        prompt 16; allowed-files list forbids modifying either of those files
+
+## REASONING - DEFER
+defer_rationale=No SSE-related identifiers exist in telemetry_handler.go to mechanically extract; SSE HTTP handler with per-connection fan-out, keep-alive ticker, and r.Context cancellation already lives in sse_handler.go (separate file at HEAD, never part of telemetry_handler.go), and SSE broadcast helpers (broadcastSSE, buildSSEPayload) were extracted into telemetry_handler_ingest.go by predecessor prompt 16; allowed-files list forbids modifying sse_handler.go or telemetry_handler_ingest.go to relocate them
+defer_attempts=2
+defer_attempt_1=created empty telemetry_handler_sse.go with only 'package api' declaration; rejected because it violates the mechanical-only contract (no cohesive code being moved, fabricates a stub file in violation of "no stubs" honesty covenant rule 5)
+defer_attempt_2=considered relocating EventHub/SSEHandler from sse_handler.go (or broadcastSSE/buildSSEPayload from telemetry_handler_ingest.go) into telemetry_handler_sse.go; rejected because both source files are absent from the allowed-files list (would trigger gate drift check) and because splitting either one would split a logical pipeline stage that the layered-live-state architectural note explicitly warns against splitting (sse_handler.go is the single cohesive HTTP boundary for SSE; telemetry_handler_ingest.go bundles live-store + signal_log + SSE fan-out into one per-message routing pipeline)
+escalation_owner=see CODEOWNERS for internal/api/telemetry_handler.go (Phase 38+ planning should classify this as already-completed-by-prior-prompts: SSE HTTP handler boundary lives in sse_handler.go since baseline; SSE broadcast helpers were extracted by prompt 16)
+EXIT=0
+STATUS=DEFERRED
