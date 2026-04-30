@@ -1,0 +1,57 @@
+## PREFLIGHT
+start_utc=2026-04-30T07:19:30.1437881+00:00
+go_version=go version go1.26.1 windows/amd64
+engineer_email=iamatulmgupta@gmail.com
+powershell_version=7.6.1
+os_platform=Win32NT
+exports invariant ok: 1273 exported identifiers preserved
+import-graph invariant ok: 80 imports preserved
+## SURVEY
+source_lines_after=132
+new_file=internal/api/charging_optimizer_handler_dtos.go lines=37
+new_file=internal/api/charging_optimizer_handler_compute.go lines=394
+## REASONING
+mechanical decomposition: split internal/api/charging_optimizer_handler.go into internal/api/charging_optimizer_handler_dtos.go, internal/api/charging_optimizer_handler_compute.go
+no behavior, API, SQL, JSON, route, config, or runtime ordering changes
+
+split map (source -> destination):
+  internal/api/charging_optimizer_handler.go -> internal/api/charging_optimizer_handler_dtos.go
+    type optimizerResponse
+    type currentSchedule
+    type costAnalysis
+    type optimizerRec
+    type heatmapEntry
+  internal/api/charging_optimizer_handler.go -> internal/api/charging_optimizer_handler_compute.go
+    type sessionRow
+    func analyzeSchedule
+    func detectHome
+    func analyzeCosts
+    func computeBatteryHealthScore
+    func buildOptimizerRecommendations
+
+cross-file unexported references (resolved within package api):
+  - sessionRow used by GetOptimization (handler) AND all compute helpers
+  - currentSchedule, costAnalysis, optimizerResponse, optimizerRec, heatmapEntry
+    consumed by both GetOptimization and buildOptimizerRecommendations/analyzeSchedule/analyzeCosts
+  - round2, round3 already live in package api (battery_cells_handler.go, cost_forecast_handler.go)
+
+stays in internal/api/charging_optimizer_handler.go:
+  type ChargingOptimizerHandler
+  func NewChargingOptimizerHandler
+  method (*ChargingOptimizerHandler).GetOptimization
+## CHANGES
+internal/api/charging_optimizer_handler.go sha256=8F3D6A61E67D9B47671367A37B411B3F3FEFFA7FE9A844FF923EB13166A01CF3
+internal/api/charging_optimizer_handler_dtos.go sha256=D85586FB592A9F96737CEF46F252E0C6F81D7A075E52E2AE47717DA91A6F415B
+internal/api/charging_optimizer_handler_compute.go sha256=CEC07A39EBC3496546C1A201AAD0F53E44E5D8AA49D170E1879CCD8853753CBC
+## GATE
+go build ./internal/api/... exit=0
+
+go build ./... exit=0
+
+go vet exit=0
+
+go test exit=0
+ok  	github.com/ev-dev-labs/teslasync/internal/api	0.162s
+
+EXIT=0
+STATUS=DONE
