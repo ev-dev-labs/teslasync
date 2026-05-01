@@ -47,9 +47,8 @@ func NewDriveDetail(db *database.DB, state signal.StateReader) *driveDetailHandl
 }
 
 // driveTelemetryFieldMappings projects the signal_log change feed into the
-// legacy DriveTelemetryReading JSON shape. Field names match the old
-// driveTelemetryMappings (drive_handler_dtos.go) so the wire contract is
-// unchanged.
+// legacy DriveTelemetryReading JSON shape. Field names match the legacy
+// JSON tags so the wire contract is unchanged.
 var driveTelemetryFieldMappings = []signal.FieldMapping{
 	{Signal: "VehicleSpeed", Field: "speed"},
 	{Signal: "PackCurrent", Field: "pack_current"},

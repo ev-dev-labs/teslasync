@@ -31,11 +31,6 @@ type VehicleHandler struct {
 // vehiclePositionMappings projects the signal_log change feed into the
 // Position JSON shape consumed by the frontend. Field names match the
 // legacy Position model JSON tags so the wire contract is unchanged.
-//
-// NOTE: kept distinct from drive_handler_dtos.go's positionMappings
-// (which still uses the legacy pivot type for the not-yet-migrated
-// drive handler) — both will collapse onto a single signal.FieldMapping
-// definition once drive_handler_detail.go is migrated in a later prompt.
 var vehiclePositionMappings = []signal.FieldMapping{
 	{Signal: "Latitude", Field: "latitude"},
 	{Signal: "Longitude", Field: "longitude"},
