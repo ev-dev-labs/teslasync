@@ -3,11 +3,8 @@ package database
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
-
-	"github.com/jackc/pgx/v5"
 )
 
 // SignalTraceEntry represents a single signal value at a point in time,
@@ -23,34 +20,6 @@ type SignalTraceEntry struct {
 	ValueStr  *string
 	ValueBool *bool
 	ValueJson map[string]interface{}
-}
-
-// SignalAt returns a single signal's value at or before the given timestamp.
-// Returns (nil, nil) if the signal was never recorded before that time.
-func (r *SignalLogReader) SignalAt(ctx context.Context, vehicleID int64, signal string, at time.Time) (interface{}, error) {
-	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
-	defer cancel()
-
-	query := `SELECT value_num, value_str, value_bool, value_jsonb
-	          FROM signal_log
-	          WHERE vehicle_id = $1 AND signal = $2 AND created_at <= $3
-	          ORDER BY created_at DESC
-	          LIMIT 1`
-
-	var vNum *float64
-	var vStr *string
-	var vBool *bool
-	var vJsonb []byte
-
-	err := r.db.Pool.QueryRow(ctx, query, vehicleID, signal, at).Scan(&vNum, &vStr, &vBool, &vJsonb)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("signal %q at %v for vehicle %d: %w", signal, at, vehicleID, err)
-	}
-
-	return decodeValue(vNum, vStr, vBool, vJsonb), nil
 }
 
 // SignalTrace returns all values of specific signals within a time window,
