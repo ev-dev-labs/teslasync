@@ -60,7 +60,7 @@ export function RegexTesterTool() {
             {matches.map((m, i) => (
               <div key={i} className="flex items-center gap-2 rounded bg-black/20 px-3 py-1">
                 <Badge variant="info" size="sm">{i + 1}</Badge>
-                <code className="text-xs font-mono text-neon-red">{m.match}</code>
+                <code className="text-xs font-mono text-rose-300">{m.match}</code>
                 <span className="text-xs text-white/40">{t('At Index')} {m.index}</span>
               </div>
             ))}

@@ -23,7 +23,7 @@ export function ResultPanel({ title, data, error, idleMessage }: ResultPanelProp
         {hasData ? <CopyButton text={stringifiedData} /> : null}
       </div>
       {error ? (
-        <p className="text-sm text-neon-red">{error}</p>
+        <p className="text-sm text-rose-300">{error}</p>
       ) : hasData ? (
         <pre className="max-h-64 overflow-auto rounded bg-black/30 p-2 text-xs text-white/80">
           {stringifiedData}

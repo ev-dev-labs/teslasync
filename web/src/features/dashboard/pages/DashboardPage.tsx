@@ -276,7 +276,7 @@ export default function DashboardPage() {
               title={t('auth.notConnected', 'Tesla account not connected')}
             >
               {t('auth.connectPrompt', 'Connect your account in')}{' '}
-              <Link to="/settings" className="text-neon-cyan hover:underline">
+              <Link to="/settings" className="text-cyan-300 hover:underline">
                 {t('auth.settings', 'Settings')}
               </Link>{' '}
               {t('auth.toStart', 'to start tracking.')}

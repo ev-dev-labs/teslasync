@@ -202,7 +202,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
       >
         {detail ? (
           <div className="h-full flex flex-col items-center justify-center gap-1 min-h-[44px]">
-            <span className="text-2xl font-bold text-neon-green">
+            <span className="text-2xl font-bold text-emerald-300">
               {fmtNumber(detail.energy_added_kwh ?? 0, 1)}
             </span>
             <span className="text-[10px] text-white/40 uppercase tracking-wider">

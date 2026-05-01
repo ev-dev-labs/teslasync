@@ -108,11 +108,11 @@ function PartnerRegistrationTool() {
           <span className="text-xs font-medium text-white/70">{t('Openssl Commands')}</span>
           <div className="space-y-1">
             <div className="flex items-center gap-2 rounded bg-black/30 px-3 py-1.5">
-              <code className="flex-1 text-xs text-neon-cyan">{opensslGen}</code>
+              <code className="flex-1 text-xs text-cyan-300">{opensslGen}</code>
               <CopyButton text={opensslGen} />
             </div>
             <div className="flex items-center gap-2 rounded bg-black/30 px-3 py-1.5">
-              <code className="flex-1 text-xs text-neon-cyan">{opensslPub}</code>
+              <code className="flex-1 text-xs text-cyan-300">{opensslPub}</code>
               <CopyButton text={opensslPub} />
             </div>
           </div>
@@ -346,7 +346,7 @@ function VehicleKeyPairingTool() {
       <div className="space-y-3">
         <div className="flex items-center gap-2 rounded bg-black/30 px-3 py-2">
           <Link className="h-4 w-4 text-neon-green" />
-          <code className="flex-1 truncate text-sm text-neon-green">{pairingUrl}</code>
+          <code className="flex-1 truncate text-sm text-emerald-300">{pairingUrl}</code>
           <CopyButton text={pairingUrl} />
         </div>
         <div className="rounded-lg bg-neon-cyan/5 p-3">

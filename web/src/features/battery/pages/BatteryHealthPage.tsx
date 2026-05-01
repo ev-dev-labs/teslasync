@@ -48,9 +48,9 @@ const insightPanelClass = {
 } as const;
 
 const insightIconClass = {
-  good: 'text-neon-green',
-  warning: 'text-neon-amber',
-  critical: 'text-neon-red',
+  good: 'text-emerald-300',
+  warning: 'text-amber-300',
+  critical: 'text-rose-300',
 } as const;
 
 function gaugeColor(score: number): string {
@@ -713,15 +713,15 @@ export default function BatteryHealthPage() {
                     <p className="text-[10px] text-white/40">{t('battery.habit.avgStart', 'Avg Start Level')}</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-lg font-bold text-neon-green">{fmtPercent(chargingHabits.avgEnd)}</p>
+                    <p className="text-lg font-bold text-emerald-300">{fmtPercent(chargingHabits.avgEnd)}</p>
                     <p className="text-[10px] text-white/40">{t('battery.habit.avgEnd', 'Avg End Level')}</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-lg font-bold text-neon-amber">{chargingHabits.superchargerCount}</p>
+                    <p className="text-lg font-bold text-amber-300">{chargingHabits.superchargerCount}</p>
                     <p className="text-[10px] text-white/40">{t('battery.habit.supercharger', 'Supercharger Sessions')}</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-lg font-bold text-neon-cyan">
+                    <p className="text-lg font-bold text-cyan-300">
                       {chargingHabits.total - chargingHabits.superchargerCount - chargingHabits.dcFastCount}
                     </p>
                     <p className="text-[10px] text-white/40">{t('battery.habit.home', 'Home Charges')}</p>
@@ -760,11 +760,11 @@ export default function BatteryHealthPage() {
               <p className="text-[10px] uppercase tracking-wider text-white/40 mb-1">
                 {t('battery.newVsNow.capNow', 'Capacity Now')}
               </p>
-              <p className="text-2xl font-bold text-neon-cyan">
+              <p className="text-2xl font-bold text-cyan-300">
                 {fmtNumber(health.estimated_capacity, 1)}
                 <span className="text-sm text-white/40"> kWh</span>
               </p>
-              <p className="text-[10px] text-neon-red mt-1">
+              <p className="text-[10px] text-rose-300 mt-1">
                 -{fmtNumber(health.original_capacity - health.estimated_capacity, 1)} kWh
               </p>
             </GlassPanel>
@@ -783,14 +783,14 @@ export default function BatteryHealthPage() {
               <p className="text-[10px] uppercase tracking-wider text-white/40 mb-1">
                 {t('battery.newVsNow.rangeNow', 'Range Now')}
               </p>
-              <p className="text-2xl font-bold text-neon-green">
+              <p className="text-2xl font-bold text-emerald-300">
                 {health.history.length > 0
                   ? fmtInt(convertDistance(health.history[health.history.length - 1].range_km))
                   : '—'}
                 <span className="text-sm text-white/40"> {distanceUnit}</span>
               </p>
               {health.history.length >= 2 && (
-                <p className="text-[10px] text-neon-red mt-1">
+                <p className="text-[10px] text-rose-300 mt-1">
                   -{fmtInt(convertDistance(
                     health.history[0].range_km - health.history[health.history.length - 1].range_km,
                   ))} {distanceUnit} {t('battery.newVsNow.lost', 'lost')}

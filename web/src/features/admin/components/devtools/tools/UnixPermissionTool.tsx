@@ -35,15 +35,15 @@ export function UnixPermissionTool() {
           <div className="grid gap-2 sm:grid-cols-3">
             <div className="rounded bg-black/20 px-3 py-2 text-center">
               <span className="text-xs text-white/50">{t('Owner')}</span>
-              <p className="font-mono text-sm text-neon-green">{symbolic.slice(0, 3)}</p>
+              <p className="font-mono text-sm text-emerald-300">{symbolic.slice(0, 3)}</p>
             </div>
             <div className="rounded bg-black/20 px-3 py-2 text-center">
               <span className="text-xs text-white/50">{t('Group')}</span>
-              <p className="font-mono text-sm text-neon-cyan">{symbolic.slice(3, 6)}</p>
+              <p className="font-mono text-sm text-cyan-300">{symbolic.slice(3, 6)}</p>
             </div>
             <div className="rounded bg-black/20 px-3 py-2 text-center">
               <span className="text-xs text-white/50">{t('Other')}</span>
-              <p className="font-mono text-sm text-neon-amber">{symbolic.slice(6)}</p>
+              <p className="font-mono text-sm text-amber-300">{symbolic.slice(6)}</p>
             </div>
           </div>
         )}

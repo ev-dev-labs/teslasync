@@ -55,9 +55,9 @@ export function TimestampTool() {
             />
             {fromUnix && (
               <div className="mt-1 space-y-0.5">
-                <p className="text-xs text-white/60">{t('Iso')}: <span className="font-mono text-neon-cyan">{fromUnix.toISOString()}</span></p>
-                <p className="text-xs text-white/60">{t('Local')}: <span className="font-mono text-neon-cyan">{formatDateTime(fromUnix)}</span></p>
-                <p className="text-xs text-white/60">{t('Relative')}: <span className="font-mono text-neon-cyan">{getRelativeTime(fromUnix)}</span></p>
+                <p className="text-xs text-white/60">{t('Iso')}: <span className="font-mono text-cyan-300">{fromUnix.toISOString()}</span></p>
+                <p className="text-xs text-white/60">{t('Local')}: <span className="font-mono text-cyan-300">{formatDateTime(fromUnix)}</span></p>
+                <p className="text-xs text-white/60">{t('Relative')}: <span className="font-mono text-cyan-300">{getRelativeTime(fromUnix)}</span></p>
               </div>
             )}
           </div>
@@ -71,9 +71,9 @@ export function TimestampTool() {
             />
             {fromIso && (
               <div className="mt-1 space-y-0.5">
-                <p className="text-xs text-white/60">{t('Unix')}: <span className="font-mono text-neon-cyan">{Math.floor(fromIso.getTime() / 1000)}</span></p>
-                <p className="text-xs text-white/60">{t('Local')}: <span className="font-mono text-neon-cyan">{formatDateTime(fromIso)}</span></p>
-                <p className="text-xs text-white/60">{t('Relative')}: <span className="font-mono text-neon-cyan">{getRelativeTime(fromIso)}</span></p>
+                <p className="text-xs text-white/60">{t('Unix')}: <span className="font-mono text-cyan-300">{Math.floor(fromIso.getTime() / 1000)}</span></p>
+                <p className="text-xs text-white/60">{t('Local')}: <span className="font-mono text-cyan-300">{formatDateTime(fromIso)}</span></p>
+                <p className="text-xs text-white/60">{t('Relative')}: <span className="font-mono text-cyan-300">{getRelativeTime(fromIso)}</span></p>
               </div>
             )}
           </div>

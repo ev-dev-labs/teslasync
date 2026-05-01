@@ -22,7 +22,7 @@ export function HeroGauges({ stats }: HeroGaugesProps) {
           <RadialGauge value={parseFloat(fmtNumber(stats.totalCost ?? 0, 0))} max={Math.max(stats.totalCost ?? 0, 100)} label={t('charging.gauges.totalCost', 'Total Cost')} unit="$" color="#f59e0b" />
           <RadialGauge value={Math.round(stats.avgPower)} max={250} label={t('charging.gauges.avgPower', 'Avg Power')} unit="kW" color="#a855f7" />
           <div className="flex flex-col items-center text-center">
-            <p className="text-2xl font-bold text-neon-green">
+            <p className="text-2xl font-bold text-emerald-300">
               $<AnimatedNumber value={parseFloat(fmtNumber(stats.avgCostPerKwh ?? 0, 2))} decimals={3} />
             </p>
             <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">

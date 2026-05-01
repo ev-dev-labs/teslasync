@@ -29,7 +29,7 @@ export default function WeatherAtCarWidget({ vehicleId, size }: WidgetProps) {
   return (
     <WidgetShell
       title={isCompact ? undefined : t('widget.weatherAtCar', 'Weather at Car')}
-      icon={!isCompact ? <CloudSun className="h-3.5 w-3.5 text-neon-cyan" /> : undefined}
+      icon={!isCompact ? <CloudSun className="h-3.5 w-3.5 text-cyan-300" /> : undefined}
       loading={isLoading}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}

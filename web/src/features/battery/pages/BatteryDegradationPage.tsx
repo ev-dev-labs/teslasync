@@ -54,8 +54,8 @@ function scoreVariant(score: number): 'success' | 'warning' | 'danger' {
 }
 
 function riskScoreColor(score: number): string {
-  if (score <= 25) return 'text-neon-green';
-  if (score <= 50) return 'text-neon-amber';
+  if (score <= 25) return 'text-emerald-300';
+  if (score <= 50) return 'text-amber-300';
   return 'text-red-500';
 }
 
@@ -328,9 +328,9 @@ export default function BatteryDegradationPage() {
                 <div className="rounded-xl p-4 bg-neon-purple/[0.08] border border-neon-purple/15">
                   <p className="text-sm text-white/70">
                     {t('battery.degradation.predictionDesc', 'At current rate, battery reaches')}{' '}
-                    <span className="font-bold text-neon-amber">80%</span>{' '}
+                    <span className="font-bold text-amber-300">80%</span>{' '}
                     {t('battery.degradation.inApprox', 'in approximately')}{' '}
-                    <span className="font-bold text-neon-purple">
+                    <span className="font-bold text-purple-300">
                       ~{fmtNumber(degradation.prediction.years_to_80_pct ?? 0)} {t('battery.degradation.years', 'years')}
                     </span>
                     {degradation.prediction.predicted_date && (

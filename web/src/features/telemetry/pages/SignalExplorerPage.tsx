@@ -267,7 +267,7 @@ export default function SignalExplorerPage() {
   // Table columns
   const tableColumns: Column<SignalLogEntry>[] = useMemo(() => [
     { key: 'time', header: t('Time'), render: (r) => <span className="whitespace-nowrap text-xs text-[var(--text-muted)]">{new Date(r.created_at).toLocaleString()}</span> },
-    { key: 'signal', header: t('Signal'), render: (r) => <span className="font-mono text-xs text-neon-cyan">{r.signal}</span> },
+    { key: 'signal', header: t('Signal'), render: (r) => <span className="font-mono text-xs text-cyan-300">{r.signal}</span> },
     { key: 'value', header: t('Value'), render: (r) => <span className="font-mono text-xs text-[var(--text-primary)]">{r.value_num ?? r.value_str ?? String(r.value_bool ?? '')}</span> },
   ], [t]);
 

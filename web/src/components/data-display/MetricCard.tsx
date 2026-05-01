@@ -23,7 +23,7 @@ export function MetricCard({ label, value, icon, color = 'cyan', change, subtitl
           <p className="text-xl font-bold tracking-tight text-[var(--text-primary)]">{value}</p>
           {subtitle && <p className="mt-0.5 text-[10px] text-[var(--text-muted)] truncate">{subtitle}</p>}
           {change && (
-            <p className={cn('mt-1 text-[10px] font-medium', change.positive ? 'text-neon-green' : 'text-neon-red')}>
+            <p className={cn('mt-1 text-[10px] font-medium', change.positive ? 'text-emerald-300' : 'text-rose-300')}>
               {change.positive ? '↑' : '↓'} {change.value}
             </p>
           )}

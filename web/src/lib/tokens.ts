@@ -7,6 +7,9 @@
 
 export type NeonColor = 'cyan' | 'green' | 'red' | 'purple' | 'amber' | 'blue'
 
+// `text` uses Tailwind 300-level shades (toned-down) for readability — the saturated
+// neon hues are reserved for backgrounds, borders, rings, glows, and single-glyph dots.
+// `:root.light-mode` overrides in index.css invert these to dark variants on white.
 export const neonColorMap: Record<NeonColor, {
   text: string
   bg: string
@@ -15,12 +18,12 @@ export const neonColorMap: Record<NeonColor, {
   glow: string
   dot: string
 }> = {
-  cyan:   { text: 'text-neon-cyan',   bg: 'bg-neon-cyan/10',   ring: 'ring-neon-cyan/20',   border: 'border-neon-cyan/30',   glow: 'shadow-[0_0_15px_rgba(0,240,255,0.1)]',     dot: 'bg-neon-cyan' },
-  green:  { text: 'text-neon-green',  bg: 'bg-neon-green/10',  ring: 'ring-neon-green/20',  border: 'border-neon-green/30',  glow: 'shadow-[0_0_15px_rgba(16,185,129,0.1)]',    dot: 'bg-neon-green' },
-  red:    { text: 'text-neon-red',    bg: 'bg-neon-red/10',    ring: 'ring-neon-red/20',    border: 'border-neon-red/30',    glow: 'shadow-[0_0_15px_rgba(239,68,68,0.1)]',     dot: 'bg-neon-red' },
-  purple: { text: 'text-neon-purple', bg: 'bg-neon-purple/10', ring: 'ring-neon-purple/20', border: 'border-neon-purple/30', glow: 'shadow-[0_0_15px_rgba(168,85,247,0.1)]',    dot: 'bg-neon-purple' },
-  amber:  { text: 'text-neon-amber',  bg: 'bg-neon-amber/10',  ring: 'ring-neon-amber/20',  border: 'border-neon-amber/30',  glow: 'shadow-[0_0_15px_rgba(245,158,11,0.1)]',    dot: 'bg-neon-amber' },
-  blue:   { text: 'text-neon-blue',   bg: 'bg-neon-blue/10',   ring: 'ring-neon-blue/20',   border: 'border-neon-blue/30',   glow: 'shadow-[0_0_15px_rgba(79,70,229,0.1)]',     dot: 'bg-neon-blue' },
+  cyan:   { text: 'text-cyan-300',    bg: 'bg-neon-cyan/10',   ring: 'ring-neon-cyan/20',   border: 'border-neon-cyan/30',   glow: 'shadow-[0_0_15px_rgba(0,240,255,0.1)]',     dot: 'bg-neon-cyan' },
+  green:  { text: 'text-emerald-300', bg: 'bg-neon-green/10',  ring: 'ring-neon-green/20',  border: 'border-neon-green/30',  glow: 'shadow-[0_0_15px_rgba(16,185,129,0.1)]',    dot: 'bg-neon-green' },
+  red:    { text: 'text-rose-300',    bg: 'bg-neon-red/10',    ring: 'ring-neon-red/20',    border: 'border-neon-red/30',    glow: 'shadow-[0_0_15px_rgba(239,68,68,0.1)]',     dot: 'bg-neon-red' },
+  purple: { text: 'text-purple-300',  bg: 'bg-neon-purple/10', ring: 'ring-neon-purple/20', border: 'border-neon-purple/30', glow: 'shadow-[0_0_15px_rgba(168,85,247,0.1)]',    dot: 'bg-neon-purple' },
+  amber:  { text: 'text-amber-300',   bg: 'bg-neon-amber/10',  ring: 'ring-neon-amber/20',  border: 'border-neon-amber/30',  glow: 'shadow-[0_0_15px_rgba(245,158,11,0.1)]',    dot: 'bg-neon-amber' },
+  blue:   { text: 'text-indigo-300',  bg: 'bg-neon-blue/10',   ring: 'ring-neon-blue/20',   border: 'border-neon-blue/30',   glow: 'shadow-[0_0_15px_rgba(79,70,229,0.1)]',     dot: 'bg-neon-blue' },
 }
 
 // ── Semantic color aliases ──

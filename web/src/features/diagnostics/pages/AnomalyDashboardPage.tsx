@@ -40,8 +40,8 @@ function severityVariant(s: string): 'success' | 'warning' | 'danger' {
 
 function statusColor(s: string): string {
   if (s === 'critical') return 'text-red-400';
-  if (s === 'warning') return 'text-neon-amber';
-  return 'text-neon-green';
+  if (s === 'warning') return 'text-amber-300';
+  return 'text-emerald-300';
 }
 
 function statusBg(s: string): string {

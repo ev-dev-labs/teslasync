@@ -175,7 +175,7 @@ export default function ComparePage() {
         header: t('Change'),
         sortable: true,
         render: (r) => (
-          <span className={cn(r.positive ? 'text-neon-green' : 'text-neon-red')}>
+          <span className={cn(r.positive ? 'text-emerald-300' : 'text-rose-300')}>
             {r.positive ? '↑' : '↓'} {fmtNumber(Math.abs(r.change))}
           </span>
         ),

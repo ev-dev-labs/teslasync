@@ -78,7 +78,7 @@ export function ChargingSessionCard({ session, convertDistance, distanceUnit }: 
                 {chargerLabels[cat]}
               </Badge>
               {batteryGain > 0 && (
-                <span className="text-xs text-neon-green font-medium">+{batteryGain}%</span>
+                <span className="text-xs text-emerald-300 font-medium">+{batteryGain}%</span>
               )}
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
@@ -106,14 +106,14 @@ export function ChargingSessionCard({ session, convertDistance, distanceUnit }: 
                 <InlineMetric
                   icon={<DollarSign className="h-3 w-3" />}
                   value={`$${fmtNumber(session.cost)}`}
-                  className="text-neon-green"
+                  className="text-emerald-300"
                 />
               )}
               {typeof costPerKwh === 'number' && (
                 <span className="text-[var(--text-muted)]">(${fmtNumber(costPerKwh)}/kWh)</span>
               )}
               {typeof milesGained === 'number' && milesGained > 0 && (
-                <span className="flex items-center gap-1 text-neon-purple">
+                <span className="flex items-center gap-1 text-purple-300">
                   +{fmtInt(milesGained)} {distanceUnit}
                 </span>
               )}

@@ -261,7 +261,7 @@ export function VehicleCommandCenter({ vehicle, state }: VehicleCommandCenterPro
           <div className="flex items-center gap-4 text-xs">
             <span className="flex items-center gap-1">
               <Battery className="h-3.5 w-3.5 text-white/40" />
-              <span className={cn('font-semibold', (state.battery_level ?? 0) > 50 ? 'text-neon-green' : 'text-neon-amber')}>
+              <span className={cn('font-semibold', (state.battery_level ?? 0) > 50 ? 'text-emerald-300' : 'text-amber-300')}>
                 {state.battery_level}%
               </span>
             </span>
@@ -288,7 +288,7 @@ export function VehicleCommandCenter({ vehicle, state }: VehicleCommandCenterPro
             ? <CheckCircle className="h-4 w-4 text-neon-green" />
             : <AlertTriangle className="h-4 w-4 text-neon-red" />
           }
-          <span className={cn('text-xs', lastResult.success ? 'text-neon-green' : 'text-neon-red')}>
+          <span className={cn('text-xs', lastResult.success ? 'text-emerald-300' : 'text-rose-300')}>
             {lastResult.message}
           </span>
         </GlassPanel>
@@ -297,7 +297,7 @@ export function VehicleCommandCenter({ vehicle, state }: VehicleCommandCenterPro
       {isAsleep && (
         <GlassPanel className="p-3 mb-4 flex items-center gap-2 bg-neon-amber/5 border-neon-amber/20">
           <Power className="h-4 w-4 text-neon-amber" />
-          <span className="text-xs text-neon-amber">
+          <span className="text-xs text-amber-300">
             {t('Vehicle is')} {vehicle.state}. {t('Wake it up first to send commands.')}
           </span>
         </GlassPanel>

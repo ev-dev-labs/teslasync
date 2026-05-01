@@ -172,7 +172,7 @@ export default function FleetAPIPage() {
               <span className="text-xs text-[var(--text-muted)]">
                 {t('Toggle individual Tesla Fleet API endpoints on or off')}
                 {pollingConfig && (
-                  <span className="ml-1 text-neon-cyan">({enabledCount}/{totalCount} {t('enabled')})</span>
+                  <span className="ml-1 text-cyan-300">({enabledCount}/{totalCount} {t('enabled')})</span>
                 )}
               </span>
             </div>
@@ -262,7 +262,7 @@ export default function FleetAPIPage() {
                       </GlassPanel>
                       {captureStats.total_documents > 0 && (
                         <GlassPanel className="p-2.5 bg-neon-cyan/5 border-neon-cyan/10">
-                          <span className="text-[10px] text-neon-cyan">
+                          <span className="text-[10px] text-cyan-300">
                             {fmtInt(captureStats.total_documents)} {t('signals captured from')} {captureStats.distinct_vins.length} {t('vehicle')}{captureStats.distinct_vins.length !== 1 ? 's' : ''}
                           </span>
                         </GlassPanel>

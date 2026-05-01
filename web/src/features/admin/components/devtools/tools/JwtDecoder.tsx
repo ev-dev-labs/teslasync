@@ -39,7 +39,7 @@ export function JwtDecoderTool() {
             onChange={(e) => setJwt(e.target.value)}
           />
         </div>
-        {decoded.error && <p className="text-sm text-neon-red">{decoded.error}</p>}
+        {decoded.error && <p className="text-sm text-rose-300">{decoded.error}</p>}
         {decoded.header && (
           <ResultPanel title={t('Jwt Header')} data={decoded.header} />
         )}

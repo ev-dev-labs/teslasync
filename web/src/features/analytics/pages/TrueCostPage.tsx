@@ -60,7 +60,7 @@ export default function TrueCostPage() {
                     {t('tco.totalEvCost', 'Total EV Cost')}
                   </span>
                 </div>
-                <p className="text-2xl font-bold text-neon-cyan">{fmtCurrency(tco.total_charging_cost)}</p>
+                <p className="text-2xl font-bold text-cyan-300">{fmtCurrency(tco.total_charging_cost)}</p>
                 <p className="text-xs text-white/40 mt-1">
                   {fmtNumber(tco.total_kwh)} kWh · {tco.total_sessions} {t('tco.sessions', 'sessions')}
                 </p>
@@ -75,7 +75,7 @@ export default function TrueCostPage() {
                     {t('tco.equivGasCost', 'Equiv. Gas Cost')}
                   </span>
                 </div>
-                <p className="text-2xl font-bold text-neon-red">{fmtCurrency(tco.equivalent_gas_cost)}</p>
+                <p className="text-2xl font-bold text-rose-300">{fmtCurrency(tco.equivalent_gas_cost)}</p>
                 <p className="text-xs text-white/40 mt-1">
                   @ ${tco.gas_price}/{t('tco.gal', 'gal')} · {tco.gas_efficiency_mpg} MPG
                 </p>
@@ -90,7 +90,7 @@ export default function TrueCostPage() {
                     {t('tco.totalSavings', 'Total Savings')}
                   </span>
                 </div>
-                <p className="text-2xl font-bold text-neon-green">{fmtCurrency(tco.total_savings)}</p>
+                <p className="text-2xl font-bold text-emerald-300">{fmtCurrency(tco.total_savings)}</p>
                 <p className="text-xs text-white/40 mt-1">
                   {t('tco.overMonths', 'Over {{months}} months', { months: fmtNumber(tco.months_of_ownership) })}
                 </p>
@@ -105,7 +105,7 @@ export default function TrueCostPage() {
                     {t('tco.monthlySavings', 'Monthly Savings')}
                   </span>
                 </div>
-                <p className="text-2xl font-bold text-neon-green">{fmtCurrency(tco.monthly_savings)}</p>
+                <p className="text-2xl font-bold text-emerald-300">{fmtCurrency(tco.monthly_savings)}</p>
                 <p className="text-xs text-white/40 mt-1">
                   {t('tco.plusMaintenance', '+ ~$50/mo maintenance savings')}
                 </p>
@@ -165,11 +165,11 @@ export default function TrueCostPage() {
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-4 text-center">
                   <div className="rounded-xl bg-neon-cyan/10 p-3 border border-neon-cyan/20">
-                    <p className="text-lg font-bold text-neon-cyan">${fmtNumber(tco.cost_per_km_ev)}</p>
+                    <p className="text-lg font-bold text-cyan-300">${fmtNumber(tco.cost_per_km_ev)}</p>
                     <p className="text-xs text-white/40">{t('tco.perKmEv', 'per km (EV)')}</p>
                   </div>
                   <div className="rounded-xl bg-neon-red/10 p-3 border border-neon-red/20">
-                    <p className="text-lg font-bold text-neon-red">${fmtNumber(tco.cost_per_km_ice)}</p>
+                    <p className="text-lg font-bold text-rose-300">${fmtNumber(tco.cost_per_km_ice)}</p>
                     <p className="text-xs text-white/40">{t('tco.perKmGas', 'per km (Gas)')}</p>
                   </div>
                 </div>
@@ -211,21 +211,21 @@ export default function TrueCostPage() {
                   <p className="text-xs text-white/40 uppercase tracking-wider mb-2">
                     {t('tco.fuelSavings', 'Fuel Savings')}
                   </p>
-                  <p className="text-xl font-bold text-neon-green">{fmtCurrency(tco.total_savings)}</p>
+                  <p className="text-xl font-bold text-emerald-300">{fmtCurrency(tco.total_savings)}</p>
                   <p className="text-xs text-white/40 mt-1">{t('tco.electricityVsGas', 'Electricity vs gasoline')}</p>
                 </div>
                 <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4">
                   <p className="text-xs text-white/40 uppercase tracking-wider mb-2">
                     {t('tco.maintenanceSavings', 'Maintenance Savings (Est.)')}
                   </p>
-                  <p className="text-xl font-bold text-neon-green">{fmtCurrency(tco.maintenance_savings_estimate)}</p>
+                  <p className="text-xl font-bold text-emerald-300">{fmtCurrency(tco.maintenance_savings_estimate)}</p>
                   <p className="text-xs text-white/40 mt-1">{t('tco.noOilChanges', 'No oil changes, less brake wear')}</p>
                 </div>
                 <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4">
                   <p className="text-xs text-white/40 uppercase tracking-wider mb-2">
                     {t('tco.totalEstSavings', 'Total Estimated Savings')}
                   </p>
-                  <p className="text-xl font-bold text-neon-green">
+                  <p className="text-xl font-bold text-emerald-300">
                     {fmtCurrency(tco.total_savings + tco.maintenance_savings_estimate)}
                   </p>
                   <p className="text-xs text-white/40 mt-1">

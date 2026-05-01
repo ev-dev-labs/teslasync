@@ -29,14 +29,14 @@ export default function ChargeStatusWidget({ vehicleId }: WidgetProps) {
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <BatteryCharging className="h-4 w-4 text-neon-green animate-pulse" />
-              <span className="text-sm font-semibold text-neon-green">
+              <span className="text-sm font-semibold text-emerald-300">
                 {t('widget.charging', 'Charging')}
               </span>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <p className="text-[10px] text-white/40">{t('widget.power', 'Power')}</p>
-                <p className="text-sm font-bold text-neon-green">{fmtNumber(state.charger_power)} kW</p>
+                <p className="text-sm font-bold text-emerald-300">{fmtNumber(state.charger_power)} kW</p>
               </div>
               <div>
                 <p className="text-[10px] text-white/40">{t('widget.rate', 'Rate')}</p>

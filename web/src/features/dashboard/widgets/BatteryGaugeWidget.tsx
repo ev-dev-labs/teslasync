@@ -42,7 +42,7 @@ export default function BatteryGaugeWidget({ vehicleId, size }: WidgetProps) {
           compact={isCompact}
         >
           {state.is_charging && (
-            <p className="text-[10px] text-neon-green mt-2 animate-pulse">
+            <p className="text-[10px] text-emerald-300 mt-2 animate-pulse">
               ⚡ {t('widget.charging', 'Charging')}
             </p>
           )}

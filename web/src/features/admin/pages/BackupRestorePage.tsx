@@ -720,7 +720,7 @@ export default function BackupRestorePage() {
                     >
                       <AlertCircle className="h-4 w-4 text-neon-red shrink-0 mt-0.5" />
                       <div className="min-w-0">
-                        <p className="text-xs text-neon-red font-medium">
+                        <p className="text-xs text-rose-300 font-medium">
                           {run.file_name ?? `Run #${run.id}`}
                         </p>
                         <p className="text-[11px] text-neon-red/70 mt-0.5 break-words">
@@ -879,10 +879,10 @@ export default function BackupRestorePage() {
               <ShieldCheck
                 className={cn(
                   'h-4 w-4',
-                  previewData.checksum_verified ? 'text-neon-green' : 'text-neon-red',
+                  previewData.checksum_verified ? 'text-emerald-300' : 'text-rose-300',
                 )}
               />
-              <span className={previewData.checksum_verified ? 'text-neon-green' : 'text-neon-red'}>
+              <span className={previewData.checksum_verified ? 'text-emerald-300' : 'text-rose-300'}>
                 {previewData.checksum_verified
                   ? t('backup.checksumVerified', 'Checksum verified')
                   : t('backup.checksumFailed', 'Checksum verification failed')}

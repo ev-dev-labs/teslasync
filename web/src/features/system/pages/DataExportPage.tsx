@@ -746,7 +746,7 @@ function ExportHistoryTable({
             </Button>
           ) : row.status === 'failed' && row.error_message ? (
             <span
-              className="text-[11px] text-neon-red truncate max-w-[120px] inline-block"
+              className="text-[11px] text-rose-300 truncate max-w-[120px] inline-block"
               title={row.error_message}
             >
               {row.error_message}

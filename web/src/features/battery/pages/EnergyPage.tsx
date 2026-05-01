@@ -49,7 +49,7 @@ function CostComparisonCard({
           <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
             {t('energy.cost.evCost', 'EV Cost')}
           </p>
-          <p className="text-lg font-bold text-neon-cyan">${fmtNumber(evCost ?? 0)}</p>
+          <p className="text-lg font-bold text-cyan-300">${fmtNumber(evCost ?? 0)}</p>
         </div>
         <ArrowRight className="h-4 w-4 text-[var(--text-muted)]" />
         <div>
@@ -62,7 +62,7 @@ function CostComparisonCard({
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-sm font-bold text-neon-green">
+        <span className="text-sm font-bold text-emerald-300">
           {t('energy.cost.saving', 'Saving')} ${fmtNumber(savings ?? 0)}
         </span>
         <span className="text-[10px] px-2 py-0.5 rounded-full bg-neon-green/10 text-neon-green font-semibold">
@@ -169,7 +169,7 @@ export default function EnergyPage() {
       key: 'date',
       header: t('energy.table.date', 'Date'),
       render: (s) => (
-        <Link to={`/charging/${s.id}`} className="hover:text-neon-cyan transition-colors">
+        <Link to={`/charging/${s.id}`} className="hover:text-cyan-300 transition-colors">
           {formatDateShort(s.start_ts)}
         </Link>
       ),
@@ -178,7 +178,7 @@ export default function EnergyPage() {
       key: 'energy',
       header: t('energy.table.energy', 'Energy'),
       render: (s) => (
-        <span className="text-neon-cyan font-medium">
+        <span className="text-cyan-300 font-medium">
           {fmtNumber(s.energy_added_kwh ?? 0)} kWh
         </span>
       ),
@@ -190,7 +190,7 @@ export default function EnergyPage() {
         <>
           <span className="text-[var(--text-muted)]">{s.start_battery_pct}%</span>
           <span className="text-gray-700 mx-1">→</span>
-          <span className="text-neon-green">{s.end_battery_pct ?? '—'}%</span>
+          <span className="text-emerald-300">{s.end_battery_pct ?? '—'}%</span>
         </>
       ),
     },
@@ -333,7 +333,7 @@ export default function EnergyPage() {
               </p>
               {liveCharging?.lifetime_energy_used != null ? (
                 <>
-                  <p className="text-2xl font-bold text-neon-cyan">
+                  <p className="text-2xl font-bold text-cyan-300">
                     {fmtNumber(liveCharging.lifetime_energy_used)}
                     <span className="text-sm font-normal text-[var(--text-muted)] ml-1">kWh</span>
                   </p>
@@ -349,7 +349,7 @@ export default function EnergyPage() {
               <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
                 {t('energy.lifetime.periodEnergy', { days: periodDays, defaultValue: `Last ${periodDays} Days` })}
               </p>
-              <p className="text-2xl font-bold text-neon-green">
+              <p className="text-2xl font-bold text-emerald-300">
                 {fmtNumber(totalEnergy)}
                 <span className="text-sm font-normal text-[var(--text-muted)] ml-1">kWh</span>
               </p>
@@ -577,8 +577,8 @@ export default function EnergyPage() {
                             </span>
                           </div>
                           <div className="flex items-center justify-between text-[11px]">
-                            <span className="text-neon-cyan">{fmtNumber(b.energy ?? 0)} kWh</span>
-                            <span className="text-neon-green">${fmtNumber(b.cost ?? 0)}</span>
+                            <span className="text-cyan-300">{fmtNumber(b.energy ?? 0)} kWh</span>
+                            <span className="text-emerald-300">${fmtNumber(b.cost ?? 0)}</span>
                             <span className="text-[var(--text-muted)]">
                               ${b.energy > 0 ? fmtNumber(b.cost / b.energy) : '0'}/kWh
                             </span>

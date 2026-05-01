@@ -41,7 +41,7 @@ export default function RangeBarWidget({ vehicleId, size }: WidgetProps) {
       {hasData ? (
         isCompact ? (
           <div className="h-full flex flex-col items-center justify-center">
-            <p className="text-2xl font-bold text-neon-cyan">
+            <p className="text-2xl font-bold text-cyan-300">
               {fmtNumber(ratedConverted, 0)}
             </p>
             <p className="text-[10px] text-white/40">

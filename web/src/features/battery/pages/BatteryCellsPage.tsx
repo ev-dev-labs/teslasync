@@ -198,9 +198,9 @@ const insightPanelClass = {
 } as const;
 
 const insightIconClass = {
-  good: 'text-neon-green',
-  warning: 'text-neon-amber',
-  critical: 'text-neon-red',
+  good: 'text-emerald-300',
+  warning: 'text-amber-300',
+  critical: 'text-rose-300',
 } as const;
 
 /* ── Page Component ────────────────────────────────────────────── */
@@ -359,7 +359,7 @@ export default function BatteryCellsPage() {
       render: (r) => {
         const mv = r.delta_from_avg * 1000;
         return (
-          <span className={cn('font-mono', mv > 0 ? 'text-neon-green' : mv < 0 ? 'text-neon-red' : '')}>
+          <span className={cn('font-mono', mv > 0 ? 'text-emerald-300' : mv < 0 ? 'text-rose-300' : '')}>
             {mv >= 0 ? '+' : ''}{fmtNumber(mv, 1)}
           </span>
         );
@@ -827,13 +827,13 @@ export default function BatteryCellsPage() {
             <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">
               {t('battery.cells.stat.totalCells', 'Total Cells')}
             </p>
-            <p className="text-2xl font-bold text-neon-cyan">{data?.total_cells ?? 0}</p>
+            <p className="text-2xl font-bold text-cyan-300">{data?.total_cells ?? 0}</p>
           </GlassPanel>
           <GlassPanel className="p-4 text-center">
             <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">
               {t('battery.cells.stat.packVoltage', 'Pack Voltage')}
             </p>
-            <p className="text-2xl font-bold text-neon-green">
+            <p className="text-2xl font-bold text-emerald-300">
               {fmtNumber(data?.pack_voltage ?? 0, 1)}<span className="text-sm">V</span>
             </p>
           </GlassPanel>
@@ -850,8 +850,8 @@ export default function BatteryCellsPage() {
               {t('battery.cells.stat.voltageSpread', 'V Spread')}
             </p>
             <p className={cn('text-2xl font-bold',
-              (data?.imbalance_mv ?? 0) > 15 ? 'text-neon-red' :
-              (data?.imbalance_mv ?? 0) > 5 ? 'text-neon-amber' : 'text-neon-green'
+              (data?.imbalance_mv ?? 0) > 15 ? 'text-rose-300' :
+              (data?.imbalance_mv ?? 0) > 5 ? 'text-amber-300' : 'text-emerald-300'
             )}>
               {fmtNumber(data?.imbalance_mv ?? 0, 1)}<span className="text-sm">mV</span>
             </p>
@@ -861,8 +861,8 @@ export default function BatteryCellsPage() {
               {t('battery.cells.stat.tempSpread', 'Temp Spread')}
             </p>
             <p className={cn('text-2xl font-bold',
-              (data?.temp_spread ?? 0) > 5 ? 'text-neon-red' :
-              (data?.temp_spread ?? 0) > 3 ? 'text-neon-amber' : 'text-neon-green'
+              (data?.temp_spread ?? 0) > 5 ? 'text-rose-300' :
+              (data?.temp_spread ?? 0) > 3 ? 'text-amber-300' : 'text-emerald-300'
             )}>
               {fmtNumber(data?.temp_spread ?? 0, 1)}<span className="text-sm">°C</span>
             </p>
@@ -871,7 +871,7 @@ export default function BatteryCellsPage() {
             <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">
               {t('battery.cells.stat.normalCells', 'Normal Cells')}
             </p>
-            <p className="text-2xl font-bold text-neon-green">
+            <p className="text-2xl font-bold text-emerald-300">
               {data?.cells.filter((c) => c.status === 'normal').length ?? 0}
               <span className="text-sm">/{data?.total_cells ?? 0}</span>
             </p>

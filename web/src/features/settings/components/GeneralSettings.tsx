@@ -247,7 +247,7 @@ export function GeneralSettings() {
                 <p className="text-[10px] text-[var(--text-muted)] mt-1">
                   {t('app.googleMapsHint', 'Optional — enables satellite views, Places autocomplete, and enhanced geocoding.')}{' '}
                   {t('app.getKeyAt', 'Get a key at')}{' '}
-                  <a href="https://console.cloud.google.com" target="_blank" rel="noreferrer" className="text-neon-cyan hover:underline">console.cloud.google.com</a>
+                  <a href="https://console.cloud.google.com" target="_blank" rel="noreferrer" className="text-cyan-300 hover:underline">console.cloud.google.com</a>
                 </p>
               </SettingField>
             </div>
@@ -262,7 +262,7 @@ export function GeneralSettings() {
             {t('app.save', 'Save Settings')}
           </Button>
           {saved && (
-            <span className="text-sm text-neon-green flex items-center gap-1 animate-in fade-in">
+            <span className="text-sm text-emerald-300 flex items-center gap-1 animate-in fade-in">
               <CheckCircle className="h-4 w-4" /> {t('app.settingsSaved', 'Settings saved')}
             </span>
           )}

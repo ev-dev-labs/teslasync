@@ -37,7 +37,7 @@ export function LiveTelemetry({
       <div className="flex items-center gap-3 mb-4">
         <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[var(--glass-border)] to-transparent" />
         <h3 className="section-title flex items-center gap-2 text-sm uppercase tracking-widest text-[var(--text-secondary)]">
-          <Cog className="h-4 w-4 text-neon-cyan" /> {t('telemetry.title', 'Live Telemetry')}
+          <Cog className="h-4 w-4 text-cyan-300" /> {t('telemetry.title', 'Live Telemetry')}
         </h3>
         <div className="h-px flex-1 bg-gradient-to-r from-[var(--glass-border)] via-[var(--glass-border)] to-transparent" />
       </div>
@@ -73,7 +73,7 @@ function DrivetrainPanel({ data, convertTemp, tempUnit }: {
   return (
     <GlassPanel hover glow="purple" className="p-4">
       <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
-        <Cog className="h-3.5 w-3.5 text-neon-purple" /> {t('telemetry.drivetrain', 'Drivetrain')}
+        <Cog className="h-3.5 w-3.5 text-purple-300" /> {t('telemetry.drivetrain', 'Drivetrain')}
       </h4>
       {data ? (
         <div className="space-y-2.5">
@@ -107,7 +107,7 @@ function ClimatePanel({ data, convertTemp, tempUnit }: {
   return (
     <GlassPanel hover glow="cyan" className="p-4">
       <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
-        <Thermometer className="h-3.5 w-3.5 text-neon-cyan" /> {t('telemetry.climate', 'Climate')}
+        <Thermometer className="h-3.5 w-3.5 text-cyan-300" /> {t('telemetry.climate', 'Climate')}
       </h4>
       {data ? (
         <div className="space-y-2.5">
@@ -158,7 +158,7 @@ function SecurityPanel({ data }: { data: SecurityData | undefined }) {
     return (
       <GlassPanel hover glow="green" className="p-4">
         <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
-          <Shield className="h-3.5 w-3.5 text-neon-green" /> {t('telemetry.security', 'Security')}
+          <Shield className="h-3.5 w-3.5 text-emerald-300" /> {t('telemetry.security', 'Security')}
         </h4>
         <SkeletonRows />
       </GlassPanel>
@@ -178,18 +178,18 @@ function SecurityPanel({ data }: { data: SecurityData | undefined }) {
   return (
     <GlassPanel hover glow="green" className="p-4">
       <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
-        <Shield className="h-3.5 w-3.5 text-neon-green" /> {t('telemetry.security', 'Security')}
+        <Shield className="h-3.5 w-3.5 text-emerald-300" /> {t('telemetry.security', 'Security')}
       </h4>
       <div className="space-y-2.5">
         <div className="flex items-center justify-between">
           <span className="text-xs text-[var(--text-secondary)]">{t('telemetry.lock', 'Lock')}</span>
-          <span className={`text-sm font-bold flex items-center gap-1 ${data.locked ? 'text-neon-green' : 'text-neon-red'}`}>
+          <span className={`text-sm font-bold flex items-center gap-1 ${data.locked ? 'text-emerald-300' : 'text-rose-300'}`}>
             {data.locked ? '🔒' : '🔓'} {data.locked ? t('telemetry.locked', 'Locked') : t('telemetry.unlocked', 'Unlocked')}
           </span>
         </div>
         <div className="flex items-center justify-between">
           <span className="text-xs text-[var(--text-secondary)]">{t('telemetry.sentry', 'Sentry')}</span>
-          <span className={`text-sm font-bold flex items-center gap-1 ${data.sentry_mode ? 'text-neon-cyan' : 'text-[var(--text-muted)]'}`}>
+          <span className={`text-sm font-bold flex items-center gap-1 ${data.sentry_mode ? 'text-cyan-300' : 'text-[var(--text-muted)]'}`}>
             🛡️ {data.sentry_mode ? t('telemetry.active', 'Active') : t('telemetry.off', 'Off')}
           </span>
         </div>
@@ -220,7 +220,7 @@ function TirePressurePanel({ data, convertPressure, pressureUnit }: {
     return (
       <GlassPanel hover glow="cyan" className="p-4">
         <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
-          <CircleDot className="h-3.5 w-3.5 text-neon-cyan" /> {t('telemetry.tirePressure', 'Tire Pressure')}
+          <CircleDot className="h-3.5 w-3.5 text-cyan-300" /> {t('telemetry.tirePressure', 'Tire Pressure')}
         </h4>
         <SkeletonRows />
       </GlassPanel>
@@ -236,9 +236,9 @@ function TirePressurePanel({ data, convertPressure, pressureUnit }: {
 
   const getPressureColor = (bar: number | null) => {
     if (bar == null) return 'text-[var(--text-muted)]';
-    if (bar < 2.068 || bar > 3.103) return 'text-neon-red';
-    if (bar < 2.275 || bar > 2.896) return 'text-neon-amber';
-    return 'text-neon-green';
+    if (bar < 2.068 || bar > 3.103) return 'text-rose-300';
+    if (bar < 2.275 || bar > 2.896) return 'text-amber-300';
+    return 'text-emerald-300';
   };
 
   const allNormal = tires.every((tire) => {
@@ -249,7 +249,7 @@ function TirePressurePanel({ data, convertPressure, pressureUnit }: {
   return (
     <GlassPanel hover glow="cyan" className="p-4">
       <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
-        <CircleDot className="h-3.5 w-3.5 text-neon-cyan" /> {t('telemetry.tirePressure', 'Tire Pressure')}
+        <CircleDot className="h-3.5 w-3.5 text-cyan-300" /> {t('telemetry.tirePressure', 'Tire Pressure')}
       </h4>
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-2">
@@ -280,7 +280,7 @@ function MediaPanel({ data }: { data: MediaData | undefined }) {
   return (
     <GlassPanel hover glow="purple" className="p-4">
       <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
-        <Headphones className="h-3.5 w-3.5 text-neon-purple" /> {t('telemetry.media', 'Media')}
+        <Headphones className="h-3.5 w-3.5 text-purple-300" /> {t('telemetry.media', 'Media')}
       </h4>
       {data ? (
         <div className="space-y-2.5">
@@ -330,7 +330,7 @@ function NavigationPanel({ data, convertDistance, distanceUnit }: {
   return (
     <GlassPanel hover glow="cyan" className="p-4">
       <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
-        <Navigation2 className="h-3.5 w-3.5 text-neon-cyan" /> {t('telemetry.navigation', 'Navigation')}
+        <Navigation2 className="h-3.5 w-3.5 text-cyan-300" /> {t('telemetry.navigation', 'Navigation')}
       </h4>
       {data ? (
         <div className="space-y-2.5">

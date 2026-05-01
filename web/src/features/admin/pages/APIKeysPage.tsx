@@ -102,7 +102,7 @@ export default function APIKeysPage() {
               {t("Copy this key now — it won't be shown again.")}
             </span>
             <div className="flex items-center gap-2">
-              <GlassPanel className="flex-1 p-3 font-mono text-xs text-neon-cyan break-all">
+              <GlassPanel className="flex-1 p-3 font-mono text-xs text-cyan-300 break-all">
                 {generatedKey}
               </GlassPanel>
               <Button variant="secondary" onClick={handleCopy} className="p-2.5 shrink-0" title={t('Copy')}>

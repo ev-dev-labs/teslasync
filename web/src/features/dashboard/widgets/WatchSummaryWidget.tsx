@@ -97,7 +97,7 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
               </span>
             )}
             {complication?.charging && (
-              <span className="text-[10px] text-neon-green animate-pulse">
+              <span className="text-[10px] text-emerald-300 animate-pulse">
                 ⚡ {t('widget.charging', 'Charging')}
               </span>
             )}

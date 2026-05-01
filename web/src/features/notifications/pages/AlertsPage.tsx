@@ -209,7 +209,7 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
       {/* Delivery status pie */}
       <GlassPanel className="p-4 sm:p-6">
         <span className="section-title mb-4 flex items-center gap-2">
-          <PieChartIcon className="h-4 w-4 text-neon-purple" /> {t('Delivery Status')}
+          <PieChartIcon className="h-4 w-4 text-purple-300" /> {t('Delivery Status')}
         </span>
         {logTypeCounts.length > 0 ? (
           <div className="h-40 flex flex-col sm:flex-row items-center">
@@ -242,7 +242,7 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
       {/* Log table */}
       <GlassPanel className="p-4 sm:p-6">
         <span className="section-title mb-4 flex items-center gap-2">
-          <Send className="h-4 w-4 text-neon-cyan" /> {t('Notification Log')}
+          <Send className="h-4 w-4 text-cyan-300" /> {t('Notification Log')}
         </span>
         {logsLoading ? (
           <div className="space-y-2">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-10" />)}</div>
@@ -298,7 +298,7 @@ function PreferencesSection({ t }: { t: (k: string) => string }) {
       {quietActive && (
         <GlassPanel className="p-3 flex items-center gap-2 bg-neon-purple/10 border-neon-purple/20">
           <Moon className="h-4 w-4 text-neon-purple" />
-          <span className="text-xs font-medium text-neon-purple">
+          <span className="text-xs font-medium text-purple-300">
             {t('Quiet hours active')} ({quietHours.start} – {quietHours.end})
           </span>
           <span className="text-[10px] text-[var(--text-muted)] ml-2">{t('Only critical alerts send notifications')}</span>
@@ -309,7 +309,7 @@ function PreferencesSection({ t }: { t: (k: string) => string }) {
         {/* Quiet Hours */}
         <GlassPanel className="p-5">
           <span className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
-            <Moon className="h-4 w-4 text-neon-purple" /> {t('Quiet Hours')}
+            <Moon className="h-4 w-4 text-purple-300" /> {t('Quiet Hours')}
           </span>
           <span className="text-xs text-[var(--text-muted)] mb-3 block">
             {t('During quiet hours, only critical alerts send notifications.')}
@@ -346,7 +346,7 @@ function PreferencesSection({ t }: { t: (k: string) => string }) {
         {/* Alert Digest */}
         <GlassPanel className="p-5">
           <span className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
-            <Settings2 className="h-4 w-4 text-neon-amber" /> {t('Alert Digest')}
+            <Settings2 className="h-4 w-4 text-amber-300" /> {t('Alert Digest')}
           </span>
           <span className="text-xs text-[var(--text-muted)] mb-3 block">
             {t('Choose how non-critical alerts are delivered.')}
@@ -364,7 +364,7 @@ function PreferencesSection({ t }: { t: (k: string) => string }) {
                   toast.info(`${t('Alert digest set to')} ${opt.label}`);
                 }}
               >
-                <span className={cn('text-xs font-medium block', digestMode === opt.value ? 'text-neon-amber' : 'text-[var(--text-secondary)]')}>
+                <span className={cn('text-xs font-medium block', digestMode === opt.value ? 'text-amber-300' : 'text-[var(--text-secondary)]')}>
                   {opt.label}
                 </span>
                 <span className="text-[10px] text-[var(--text-muted)]">{opt.desc}</span>
@@ -377,7 +377,7 @@ function PreferencesSection({ t }: { t: (k: string) => string }) {
       {/* Alert Studio link */}
       <GlassPanel className="p-5">
         <span className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-2">
-          <BarChart3 className="h-4 w-4 text-neon-green" /> {t('Rule Management')}
+          <BarChart3 className="h-4 w-4 text-emerald-300" /> {t('Rule Management')}
         </span>
         <span className="text-xs text-[var(--text-muted)] mb-3 block">
           {t('Create, edit, and manage typed alert rules in Alert Studio using supported Fleet Telemetry signal contracts.')}
@@ -489,24 +489,24 @@ export default function AlertsPage() {
         <GlassPanel className="p-3 sm:p-4">
           <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 text-center">
             <div>
-              <span className="text-lg font-bold text-neon-cyan"><AnimatedNumber value={totalCount} /></span>
+              <span className="text-lg font-bold text-cyan-300"><AnimatedNumber value={totalCount} /></span>
               <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block">{t('Total')}</span>
             </div>
             <div className="h-8 w-px bg-white/[0.06] hidden sm:block" />
             <div>
-              <span className="text-lg font-bold text-neon-amber"><AnimatedNumber value={weekAlertCount} /></span>
+              <span className="text-lg font-bold text-amber-300"><AnimatedNumber value={weekAlertCount} /></span>
               <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block">{t('This Week')}</span>
             </div>
             <div className="h-8 w-px bg-white/[0.06] hidden sm:block" />
             <div>
-              <span className="text-lg font-bold text-neon-purple"><AnimatedNumber value={unreadCount} /></span>
+              <span className="text-lg font-bold text-purple-300"><AnimatedNumber value={unreadCount} /></span>
               <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block">{t('Unread')}</span>
             </div>
             <div className="h-8 w-px bg-white/[0.06] hidden sm:block" />
             <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1 text-xs"><Info className="h-3 w-3 text-neon-cyan" /><span className="font-mono text-neon-cyan">{infoCount}</span></span>
-              <span className="flex items-center gap-1 text-xs"><AlertTriangle className="h-3 w-3 text-neon-amber" /><span className="font-mono text-neon-amber">{warningCount}</span></span>
-              <span className="flex items-center gap-1 text-xs"><AlertCircle className="h-3 w-3 text-neon-red" /><span className="font-mono text-neon-red">{criticalCount}</span></span>
+              <span className="flex items-center gap-1 text-xs"><Info className="h-3 w-3 text-cyan-300" /><span className="font-mono text-cyan-300">{infoCount}</span></span>
+              <span className="flex items-center gap-1 text-xs"><AlertTriangle className="h-3 w-3 text-amber-300" /><span className="font-mono text-amber-300">{warningCount}</span></span>
+              <span className="flex items-center gap-1 text-xs"><AlertCircle className="h-3 w-3 text-rose-300" /><span className="font-mono text-rose-300">{criticalCount}</span></span>
             </div>
           </div>
         </GlassPanel>
@@ -522,21 +522,21 @@ export default function AlertsPage() {
             <div className="flex flex-col items-center text-center">
               <div className="flex items-center gap-2">
                 <Info className="h-4 w-4 text-neon-cyan" />
-                <span className="text-lg font-bold text-neon-cyan"><AnimatedNumber value={infoCount} /></span>
+                <span className="text-lg font-bold text-cyan-300"><AnimatedNumber value={infoCount} /></span>
               </div>
               <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">{t('Info')}</span>
             </div>
             <div className="flex flex-col items-center text-center">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-neon-amber" />
-                <span className="text-lg font-bold text-neon-amber"><AnimatedNumber value={warningCount} /></span>
+                <span className="text-lg font-bold text-amber-300"><AnimatedNumber value={warningCount} /></span>
               </div>
               <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">{t('Warnings')}</span>
             </div>
             <div className="flex flex-col items-center text-center">
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-neon-green" />
-                <span className="text-lg font-bold text-neon-green"><AnimatedNumber value={readCount} /></span>
+                <span className="text-lg font-bold text-emerald-300"><AnimatedNumber value={readCount} /></span>
               </div>
               <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">{t('Resolved')}</span>
             </div>
@@ -550,21 +550,21 @@ export default function AlertsPage() {
           <a href="/alert-studio">
             <GlassPanel className="p-3 text-center cursor-pointer hover:border-neon-cyan/30 transition-colors">
               <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1 block">{t('Active Rules')}</span>
-              <span className="text-sm font-bold text-neon-cyan">{enabledRules}/{rules?.length ?? 0}</span>
-              <span className="text-[9px] text-neon-cyan mt-1 block">→ {t('Alert Studio')}</span>
+              <span className="text-sm font-bold text-cyan-300">{enabledRules}/{rules?.length ?? 0}</span>
+              <span className="text-[9px] text-cyan-300 mt-1 block">→ {t('Alert Studio')}</span>
             </GlassPanel>
           </a>
           <GlassPanel className="p-3 text-center">
             <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1 block">{t('Read Rate')}</span>
-            <span className="text-sm font-bold text-neon-green">{totalCount > 0 ? `${fmtInt((readCount / totalCount) * 100)}%` : '—'}</span>
+            <span className="text-sm font-bold text-emerald-300">{totalCount > 0 ? `${fmtInt((readCount / totalCount) * 100)}%` : '—'}</span>
           </GlassPanel>
           <GlassPanel className="p-3 text-center">
             <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1 block">{t('Most Common')}</span>
-            <span className="text-sm font-bold text-neon-purple">{alertsByType[0]?.name ?? '—'}</span>
+            <span className="text-sm font-bold text-purple-300">{alertsByType[0]?.name ?? '—'}</span>
           </GlassPanel>
           <GlassPanel className="p-3 text-center">
             <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1 block">{t('Last 7 Days')}</span>
-            <span className="text-sm font-bold text-neon-amber">{weekAlertCount}</span>
+            <span className="text-sm font-bold text-amber-300">{weekAlertCount}</span>
           </GlassPanel>
         </div>
       </FadeIn>
@@ -575,7 +575,7 @@ export default function AlertsPage() {
           <FadeIn>
             <GlassPanel className="p-4 sm:p-6">
               <span className="section-title mb-4 flex items-center gap-2">
-                <Bell className="h-4 w-4 text-neon-cyan" /> {t('Alert Trend (7 Days)')}
+                <Bell className="h-4 w-4 text-cyan-300" /> {t('Alert Trend (7 Days)')}
               </span>
               <div className="h-40 sm:h-48">
                 <ResponsiveContainer width="100%" height="100%">
@@ -596,7 +596,7 @@ export default function AlertsPage() {
           <FadeIn>
             <GlassPanel className="p-4 sm:p-6">
               <span className="section-title mb-4 flex items-center gap-2">
-                <Filter className="h-4 w-4 text-neon-purple" /> {t('Alerts by Type')}
+                <Filter className="h-4 w-4 text-purple-300" /> {t('Alerts by Type')}
               </span>
               <div className="h-40 sm:h-48 flex flex-col sm:flex-row items-center">
                 <ResponsiveContainer width="60%" height="100%">

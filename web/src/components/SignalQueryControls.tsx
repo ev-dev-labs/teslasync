@@ -66,8 +66,10 @@ export const TYPE_BADGE_COLOR: Record<string, 'cyan' | 'green' | 'amber' | 'neut
   num: 'cyan', str: 'green', bool: 'amber', null: 'neutral',
 }
 
+// Body cells in a 100s-of-rows table — readability wins over saturation.
+// Use toned-down 300-shades; light-mode CSS overrides invert them on white.
 export const TYPE_VALUE_COLOR: Record<string, string> = {
-  num: 'text-neon-cyan', str: 'text-neon-green', bool: 'text-neon-amber', null: 'text-white/40',
+  num: 'text-cyan-300', str: 'text-emerald-300', bool: 'text-amber-300', null: 'text-white/40',
 }
 
 export const PAGE_SIZES = [25, 50, 100]

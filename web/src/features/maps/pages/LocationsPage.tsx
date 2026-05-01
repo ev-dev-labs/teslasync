@@ -185,7 +185,7 @@ export default function LocationsPage() {
                         {loc.last_visited && ` · ${t('Last')}: ${formatDate(loc.last_visited)}`}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1 text-neon-green text-xs font-medium shrink-0">
+                    <div className="flex items-center gap-1 text-emerald-300 text-xs font-medium shrink-0">
                       <Hash className="h-3 w-3" />{loc.visit_count}
                     </div>
                   </GlassPanel>

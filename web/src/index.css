@@ -329,6 +329,15 @@ select option:checked {
 :root.light-mode .text-neon-amber { color: #b45309 !important; }
 :root.light-mode .text-neon-blue { color: #1e40af !important; }
 
+/* Toned-down 300-level body-text shades — invert for light theme readability (WCAG AA on white) */
+:root.light-mode .text-cyan-300    { color: #0e7490 !important; }
+:root.light-mode .text-emerald-300 { color: #047857 !important; }
+:root.light-mode .text-amber-300   { color: #b45309 !important; }
+:root.light-mode .text-rose-300    { color: #be123c !important; }
+:root.light-mode .text-purple-300  { color: #6b21a8 !important; }
+:root.light-mode .text-indigo-300  { color: #3730a3 !important; }
+:root.light-mode .text-pink-300    { color: #9d174d !important; }
+
 :root.light-mode .bg-neon-cyan\/5,
 :root.light-mode .bg-neon-cyan\/10 { background-color: rgba(8, 145, 178, 0.1) !important; }
 :root.light-mode .bg-neon-green\/5,

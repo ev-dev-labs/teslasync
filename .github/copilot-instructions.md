@@ -178,6 +178,17 @@ Many bugs in this project stem from frontend TypeScript interfaces not matching 
    BAD:  import { X } from '@/components/SomeFile'
    GOOD: import { X } from '@/components/ui'
    GOOD: import { X } from '@/components/charts'
+
+❌ 11. NEON TEXT for body content
+   BAD:  <td className="text-neon-cyan">{value}</td>
+   BAD:  <p className="text-neon-green">Description text</p>
+   GOOD: <td className="text-cyan-300">{value}</td>
+   GOOD: <p className="text-emerald-300">Description text</p>
+   EXCEPTION: short labels (≤4 chars / 1 word) inside a chip that ALSO has
+   bg-neon-{same}/10+ and border-neon-{same}/20+ on the same element.
+   For pure body text with no semantic color, use text-white/90.
+   Toned-down map: cyan→cyan-300, green→emerald-300, amber→amber-300,
+   red→rose-300, purple→purple-300, blue→indigo-300, pink→pink-300.
 ```
 
 ## Frontend Architecture (Refactored)

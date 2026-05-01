@@ -371,7 +371,7 @@ export default function ProjectedRangePage() {
             <div className="lg:col-span-2 flex items-center justify-center">
               {whatIfResult ? (
                 <div className="text-center">
-                  <p className="text-4xl font-bold text-neon-cyan tabular-nums">{fmtNumber(whatIfResult.rangeKm, 0)} <span className="text-lg font-normal text-white/40">km</span></p>
+                  <p className="text-4xl font-bold text-cyan-300 tabular-nums">{fmtNumber(whatIfResult.rangeKm, 0)} <span className="text-lg font-normal text-white/40">km</span></p>
                   <p className="text-sm text-white/50 mt-1">{fmtNumber(whatIfResult.effWhKm)} Wh/km</p>
                   <p className="text-xs text-white/30 mt-1">
                     {t('range.whatIfConditions', 'at {{speed}} km/h, {{temp}}°C', { speed: whatIfSpeed, temp: whatIfTemp })}

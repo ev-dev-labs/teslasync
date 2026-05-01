@@ -99,13 +99,13 @@ export default function SleepEfficiencyPage() {
     {
       key: 'batteryLost',
       header: t('sleep.batteryLost', 'Battery Lost'),
-      render: (event) => <span className="text-neon-red">{fmtNumber(event.battery_lost)}%</span>,
+      render: (event) => <span className="text-rose-300">{fmtNumber(event.battery_lost)}%</span>,
     },
     {
       key: 'drainRate',
       header: t('sleep.drainRateCol', 'Drain Rate'),
       render: (event) => (
-        <span className={event.drain_rate > 1.5 ? 'text-neon-red' : 'text-neon-green'}>
+        <span className={event.drain_rate > 1.5 ? 'text-rose-300' : 'text-emerald-300'}>
           {fmtNumber(event.drain_rate)}%/hr
         </span>
       ),
@@ -273,7 +273,7 @@ export default function SleepEfficiencyPage() {
                       <p className="text-xs text-white/40">{t('sleep.extraMonthly', 'Extra monthly')}</p>
                     </div>
                     <div>
-                      <p className="text-lg font-bold text-neon-red">${fmtNumber(sleep.sentry_extra_monthly_cost)}</p>
+                      <p className="text-lg font-bold text-rose-300">${fmtNumber(sleep.sentry_extra_monthly_cost)}</p>
                       <p className="text-xs text-white/40">{t('sleep.extraCostMo', 'Extra cost/mo')}</p>
                     </div>
                   </div>

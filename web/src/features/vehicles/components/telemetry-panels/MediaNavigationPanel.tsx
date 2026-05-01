@@ -18,7 +18,7 @@ export function MediaNavigationPanel({ mediaData, locationData }: MediaNavigatio
   return (
     <GlassPanel className="p-6 h-full">
       <h3 className="section-title flex items-center gap-2 mb-5">
-        <Headphones className="h-4 w-4 text-neon-purple" /> {t('telemetry.mediaNav', 'Media & Navigation')}
+        <Headphones className="h-4 w-4 text-purple-300" /> {t('telemetry.mediaNav', 'Media & Navigation')}
       </h3>
       <div className="space-y-5">
         {/* Now Playing */}

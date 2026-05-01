@@ -37,7 +37,7 @@ export function TeslaApiRefTool() {
         header: t('Path'),
         render: (r) => (
           <div className="flex items-center gap-1">
-            <code className="text-xs font-mono text-neon-cyan">{r.path}</code>
+            <code className="text-xs font-mono text-cyan-300">{r.path}</code>
             <CopyButton text={r.path} />
           </div>
         ),

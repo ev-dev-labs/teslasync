@@ -747,7 +747,7 @@ export default function AlertStudio() {
       error={error ?? null}
       actions={
         <>
-          <UiButton variant="ghost" size="sm" icon={<Sparkles className="h-3.5 w-3.5 text-neon-amber" />} onClick={() => setShowTemplates(!showTemplates)}>
+          <UiButton variant="ghost" size="sm" icon={<Sparkles className="h-3.5 w-3.5 text-amber-300" />} onClick={() => setShowTemplates(!showTemplates)}>
             {t('notifications.alertStudio.actions.templates', 'Templates')}
           </UiButton>
           <UiButton variant="primary" size="sm" icon={<Plus className="h-3.5 w-3.5" />} onClick={handleNewRule}>
@@ -823,7 +823,7 @@ export default function AlertStudio() {
                       <div className={cn('rounded-lg p-1.5', sev.bg)}>
                         <Icon className={cn('h-3.5 w-3.5', sev.color)} />
                       </div>
-                      <span className="text-xs font-medium text-[var(--text-primary)] group-hover:text-neon-cyan transition-colors">{getTemplateName(tpl)}</span>
+                      <span className="text-xs font-medium text-[var(--text-primary)] group-hover:text-cyan-300 transition-colors">{getTemplateName(tpl)}</span>
                     </div>
                     <p className="text-[10px] text-[var(--text-muted)] font-mono truncate">{getTemplateMessage(tpl)}</p>
                     <div className="flex items-center justify-between mt-1.5">
@@ -948,7 +948,7 @@ export default function AlertStudio() {
                       <UiButton
                         variant="ghost"
                         size="sm"
-                        className="h-6 w-6 shrink-0 p-0 opacity-0 transition-opacity group-hover:opacity-100 hover:text-neon-red"
+                        className="h-6 w-6 shrink-0 p-0 opacity-0 transition-opacity group-hover:opacity-100 hover:text-rose-300"
                         onClick={e => {
                           e.stopPropagation()
                           if (window.confirm(t('notifications.alertStudio.rules.confirmDelete', 'Delete "{{name}}"?', { name: rule.name || untitledRuleLabel }))) {

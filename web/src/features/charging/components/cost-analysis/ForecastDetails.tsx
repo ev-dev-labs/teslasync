@@ -83,7 +83,7 @@ export function ForecastDetails({ forecastData }: ForecastDetailsProps) {
                 <p className="text-[10px] uppercase tracking-wider text-white/40 mb-1">
                   {t('costAnalysis.forecast.monthlySavings', 'Monthly Savings')}
                 </p>
-                <p className="text-3xl font-bold text-neon-green">
+                <p className="text-3xl font-bold text-emerald-300">
                   $<AnimatedNumber value={forecastData.gas_comparison.monthly_savings} decimals={0} />
                 </p>
               </div>

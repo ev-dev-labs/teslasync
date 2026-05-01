@@ -19,9 +19,9 @@ export function VehicleStatePanel({ live, sseConnected }: VehicleStatePanelProps
   return (
     <GlassPanel className="p-6 h-full">
       <h3 className="section-title flex items-center gap-2 mb-5">
-        <Activity className="h-4 w-4 text-neon-cyan" /> Vehicle State
+        <Activity className="h-4 w-4 text-cyan-300" /> Vehicle State
         {sseConnected && (
-          <span className="ml-auto flex items-center gap-1 text-[10px] text-neon-green">
+          <span className="ml-auto flex items-center gap-1 text-[10px] text-emerald-300">
             <span className="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse" />
             Live
           </span>
@@ -36,7 +36,7 @@ export function VehicleStatePanel({ live, sseConnected }: VehicleStatePanelProps
           <span
             className={cn(
               'text-xs font-medium',
-              live.lightsHighBeams ? 'text-neon-cyan' : 'text-[var(--text-muted)]',
+              live.lightsHighBeams ? 'text-cyan-300' : 'text-[var(--text-muted)]',
             )}
           >
             {live.lightsHighBeams ? 'On' : 'Off'}
@@ -50,7 +50,7 @@ export function VehicleStatePanel({ live, sseConnected }: VehicleStatePanelProps
             className={cn(
               'text-xs font-medium',
               live.lightsTurnSignal && live.lightsTurnSignal !== 'Off'
-                ? 'text-neon-amber'
+                ? 'text-amber-300'
                 : 'text-[var(--text-muted)]',
             )}
           >
@@ -64,7 +64,7 @@ export function VehicleStatePanel({ live, sseConnected }: VehicleStatePanelProps
           <span
             className={cn(
               'text-xs font-medium',
-              live.lightsHazards ? 'text-neon-red' : 'text-[var(--text-muted)]',
+              live.lightsHazards ? 'text-rose-300' : 'text-[var(--text-muted)]',
             )}
           >
             {live.lightsHazards ? 'Active' : 'Off'}
@@ -132,7 +132,7 @@ export function VehicleStatePanel({ live, sseConnected }: VehicleStatePanelProps
           <span
             className={cn(
               'text-xs font-medium',
-              live.speedLimitMode ? 'text-neon-cyan' : 'text-[var(--text-muted)]',
+              live.speedLimitMode ? 'text-cyan-300' : 'text-[var(--text-muted)]',
             )}
           >
             {live.speedLimitMode

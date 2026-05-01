@@ -166,7 +166,7 @@ function FullChargingView({ metrics, isTall, convertDistance, distanceUnit, form
           value={power}
           decimals={1}
           suffix=" kW"
-          className="text-2xl font-bold text-neon-green"
+          className="text-2xl font-bold text-emerald-300"
         />
       </div>
 

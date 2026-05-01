@@ -47,7 +47,7 @@ export function TeslaAccountSection() {
                 <CheckCircle className="h-4 w-4 text-neon-green" />
               </div>
               <div>
-                <p className="text-sm font-medium text-neon-green">{t('tesla.connected', 'Connected')}</p>
+                <p className="text-sm font-medium text-emerald-300">{t('tesla.connected', 'Connected')}</p>
                 {auth.expires_at && (
                   <p className="text-[11px] text-[var(--text-muted)]">
                     {t('tesla.tokenExpires', 'Token expires')} {formatDateTime(auth.expires_at)}
@@ -60,7 +60,7 @@ export function TeslaAccountSection() {
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neon-red/10">
                 <XCircle className="h-4 w-4 text-neon-red" />
               </div>
-              <p className="text-sm text-neon-red font-medium">{t('tesla.notConnected', 'Not connected')}</p>
+              <p className="text-sm text-rose-300 font-medium">{t('tesla.notConnected', 'Not connected')}</p>
             </>
           )}
         </div>
@@ -97,7 +97,7 @@ export function TeslaAccountSection() {
         </div>
 
         {syncMut.isSuccess && (
-          <p className="text-sm text-neon-green animate-in fade-in">
+          <p className="text-sm text-emerald-300 animate-in fade-in">
             {t('tesla.synced', 'Synced {{count}} vehicle(s).', { count: syncMut.data.synced })}
           </p>
         )}

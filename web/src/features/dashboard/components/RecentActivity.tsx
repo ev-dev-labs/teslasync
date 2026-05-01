@@ -69,9 +69,9 @@ export function RecentActivity({
       <GlassPanel className="p-5 lg:col-span-1 h-full">
         <div className="flex items-center justify-between mb-4">
           <h3 className="section-title flex items-center gap-2">
-            <Activity className="h-4 w-4 text-neon-cyan" /> {t('activity.title', 'Recent Activity')}
+            <Activity className="h-4 w-4 text-cyan-300" /> {t('activity.title', 'Recent Activity')}
           </h3>
-          <Link to="/drives" className="text-[10px] text-[var(--text-muted)] hover:text-neon-cyan transition-colors">
+          <Link to="/drives" className="text-[10px] text-[var(--text-muted)] hover:text-cyan-300 transition-colors">
             {t('activity.viewAll', 'View all')}
           </Link>
         </div>
@@ -102,7 +102,7 @@ export function RecentActivity({
         {/* Battery Trend Chart */}
         <GlassPanel className="p-5">
           <h3 className="section-title flex items-center gap-2 mb-4">
-            <BatteryCharging className="h-4 w-4 text-neon-green" /> {t('battery.title', 'Battery Trend')}
+            <BatteryCharging className="h-4 w-4 text-emerald-300" /> {t('battery.title', 'Battery Trend')}
           </h3>
           {batteryTrend.length > 1 ? (
             <div className="h-36 sm:h-48">
@@ -124,7 +124,7 @@ export function RecentActivity({
         {/* Fleet Performance */}
         <GlassPanel className="p-5">
           <h3 className="section-title flex items-center gap-2 mb-4">
-            <TrendingUp className="h-4 w-4 text-neon-purple" /> {t('perf.title', 'Fleet Performance')}
+            <TrendingUp className="h-4 w-4 text-purple-300" /> {t('perf.title', 'Fleet Performance')}
           </h3>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -137,16 +137,16 @@ export function RecentActivity({
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs text-[var(--text-secondary)]">{t('perf.cost', 'Total Cost')}</span>
-              <span className="text-sm font-bold text-neon-amber">${fmtNumber(analytics?.total_cost ?? 0, 2)}</span>
+              <span className="text-sm font-bold text-amber-300">${fmtNumber(analytics?.total_cost ?? 0, 2)}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs text-[var(--text-secondary)]">{t('perf.co2', 'CO₂ Saved')}</span>
-              <span className="text-sm font-bold text-neon-green">{fmtInt((analytics?.total_energy_kwh ?? 0) * 0.42)} kg</span>
+              <span className="text-sm font-bold text-emerald-300">{fmtInt((analytics?.total_energy_kwh ?? 0) * 0.42)} kg</span>
             </div>
             {analytics?.most_efficient_vehicle && (
               <div className="mt-3 p-3 rounded-xl bg-neon-green/5 border border-neon-green/10">
                 <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{t('perf.mostEfficient', 'Most Efficient')}</p>
-                <p className="text-sm font-semibold text-neon-green">{analytics.most_efficient_vehicle.name}</p>
+                <p className="text-sm font-semibold text-emerald-300">{analytics.most_efficient_vehicle.name}</p>
                 <p className="text-xs text-[var(--text-muted)]">
                   {fmtInt(convertEfficiency(analytics.most_efficient_vehicle.efficiency ?? 0))} {efficiencyUnit}
                 </p>

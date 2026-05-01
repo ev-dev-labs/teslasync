@@ -55,14 +55,14 @@ export default function AdminPage() {
   const auditColumns: Column<AuditLogEntry>[] = [
     { key: 'time', header: t('Time'), render: (log) => <span className="text-xs font-mono whitespace-nowrap text-[var(--text-muted)]">{formatDateTime(log.createdAt)}</span> },
     { key: 'action', header: t('Action'), render: (log) => <span className="text-[var(--text-primary)]">{log.action}</span> },
-    { key: 'resource', header: t('Resource'), render: (log) => <span className="font-mono text-neon-cyan">{log.resource}</span> },
+    { key: 'resource', header: t('Resource'), render: (log) => <span className="font-mono text-cyan-300">{log.resource}</span> },
     { key: 'details', header: t('Details'), render: (log) => <span className="text-xs truncate max-w-xs text-[var(--text-muted)]">{log.details}</span> },
   ];
 
   // API key columns
   const keyColumns: Column<APIKey>[] = [
     { key: 'name', header: t('Name'), render: (k) => <span className="text-[var(--text-primary)]">{k.name}</span> },
-    { key: 'prefix', header: t('Prefix'), render: (k) => <span className="font-mono text-neon-cyan">{k.keyPrefix}…</span> },
+    { key: 'prefix', header: t('Prefix'), render: (k) => <span className="font-mono text-cyan-300">{k.keyPrefix}…</span> },
     { key: 'permissions', header: t('Permissions'), render: (k) => <Badge variant="neutral" size="sm">{k.permissions}</Badge> },
     { key: 'last_used', header: t('Last Used'), render: (k) => <span className="text-xs text-[var(--text-muted)]">{k.lastUsedAt ? formatDate(k.lastUsedAt) : t('Never')}</span> },
     { key: 'expires', header: t('Expires'), render: (k) => <span className="text-xs text-[var(--text-muted)]">{k.expiresAt ? formatDate(k.expiresAt) : '—'}</span> },
@@ -96,7 +96,7 @@ export default function AdminPage() {
       {/* ── Error banner ─────────────────────────────────────────── */}
       {anyError && (
         <GlassPanel className="p-4">
-          <div className="flex items-center gap-2 text-neon-red text-sm">
+          <div className="flex items-center gap-2 text-rose-300 text-sm">
             <AlertTriangle className="h-4 w-4 shrink-0" />
             <span>
               {healthError && `${t('Health check failed')}: ${(healthError as Error).message}. `}
@@ -154,7 +154,7 @@ export default function AdminPage() {
                     <span className="text-sm text-[var(--text-primary)]">{label}</span>
                     <span className="ml-2 text-xs font-mono text-[var(--text-muted)]">{desc}</span>
                   </div>
-                  <span className="text-sm font-mono text-neon-cyan">{value}</span>
+                  <span className="text-sm font-mono text-cyan-300">{value}</span>
                 </div>
               ))}
             </div>
@@ -202,7 +202,7 @@ export default function AdminPage() {
           {auditLoading ? (
             <div className="space-y-2 mt-4">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-8" />)}</div>
           ) : auditError ? (
-            <span className="text-sm text-neon-red flex items-center gap-2 mt-4">
+            <span className="text-sm text-rose-300 flex items-center gap-2 mt-4">
               <AlertTriangle className="h-4 w-4" /> {t('Failed to load audit logs')}: {(auditError as Error).message}
             </span>
           ) : (auditLogs as AuditLogEntry[])?.length ? (
@@ -231,7 +231,7 @@ export default function AdminPage() {
           {keysLoading ? (
             <div className="space-y-2 mt-4">{[1, 2, 3].map(i => <Skeleton key={i} className="h-8" />)}</div>
           ) : keysError ? (
-            <span className="text-sm text-neon-red flex items-center gap-2 mt-4">
+            <span className="text-sm text-rose-300 flex items-center gap-2 mt-4">
               <AlertTriangle className="h-4 w-4" /> {t('Failed to load API keys')}: {(keysError as Error).message}
             </span>
           ) : (apiKeys as APIKey[])?.length ? (

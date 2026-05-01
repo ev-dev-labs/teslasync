@@ -149,7 +149,7 @@ export default function SoftwareUpdatesPage() {
                                   href={`https://www.notateslaapp.com/software-updates/version/${encodeURIComponent(u.version)}/release-notes`}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-[var(--text-muted)] hover:text-neon-cyan transition-colors"
+                                  className="text-[var(--text-muted)] hover:text-cyan-300 transition-colors"
                                   title={t('View release notes')}
                                 >
                                   <ExternalLink className="h-3.5 w-3.5" />
@@ -165,7 +165,7 @@ export default function SoftwareUpdatesPage() {
                                 </div>
                               )}
                               {u.scheduled_at && !u.installed_at && (
-                                <div className="flex items-center gap-1 text-xs text-neon-amber">
+                                <div className="flex items-center gap-1 text-xs text-amber-300">
                                   <Clock className="h-3 w-3" />
                                   <span>{t('Scheduled')}: {formatDate(u.scheduled_at)}</span>
                                 </div>

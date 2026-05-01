@@ -27,12 +27,12 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
         <GlassPanel className="p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="section-title flex items-center gap-2">
-              <Route className="h-4 w-4 text-neon-cyan" />{' '}
+              <Route className="h-4 w-4 text-cyan-300" />{' '}
               {t('common.recentDrives', 'Recent Drives')}
             </h3>
             <Link
               to="/drives"
-              className="text-xs text-[var(--text-muted)] hover:text-neon-cyan transition-colors flex items-center gap-1"
+              className="text-xs text-[var(--text-muted)] hover:text-cyan-300 transition-colors flex items-center gap-1"
             >
               {t('common.viewAll', 'View all')} <ChevronRight className="h-3 w-3" />
             </Link>
@@ -49,7 +49,7 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                     <Route className="h-3.5 w-3.5" />
                   </IconBox>
                   <div className="flex-1 text-sm">
-                    <p className="text-[var(--text-primary)] font-medium group-hover:text-neon-cyan transition-colors">
+                    <p className="text-[var(--text-primary)] font-medium group-hover:text-cyan-300 transition-colors">
                       <AnimatedNumber
                         value={convertDistance(d.distance_mi)}
                         decimals={1}
@@ -87,12 +87,12 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
         <GlassPanel className="p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="section-title flex items-center gap-2">
-              <BatteryCharging className="h-4 w-4 text-neon-green" />{' '}
+              <BatteryCharging className="h-4 w-4 text-emerald-300" />{' '}
               {t('common.recentCharges', 'Recent Charges')}
             </h3>
             <Link
               to="/charging"
-              className="text-xs text-[var(--text-muted)] hover:text-neon-green transition-colors flex items-center gap-1"
+              className="text-xs text-[var(--text-muted)] hover:text-emerald-300 transition-colors flex items-center gap-1"
             >
               {t('common.viewAll', 'View all')} <ChevronRight className="h-3 w-3" />
             </Link>
@@ -109,7 +109,7 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                     <Zap className="h-3.5 w-3.5" />
                   </IconBox>
                   <div className="flex-1 text-sm">
-                    <p className="text-[var(--text-primary)] font-medium group-hover:text-neon-green transition-colors">
+                    <p className="text-[var(--text-primary)] font-medium group-hover:text-emerald-300 transition-colors">
                       <AnimatedNumber
                         value={s.energy_added_kwh}
                         decimals={1}

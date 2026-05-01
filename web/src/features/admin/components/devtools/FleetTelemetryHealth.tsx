@@ -38,7 +38,7 @@ export function FleetTelemetryHealth() {
         <UiButton
           type="button"
           variant="ghost"
-          className="!h-auto !px-0 !py-0 font-mono text-xs text-neon-cyan hover:!bg-transparent hover:underline"
+          className="!h-auto !px-0 !py-0 font-mono text-xs text-cyan-300 hover:!bg-transparent hover:underline"
           onClick={() => setSelectedVin(r.vin === selectedVin ? '' : r.vin)}
         >
           {r.vin}
@@ -54,7 +54,7 @@ export function FleetTelemetryHealth() {
       key: 'last_seen_at',
       header: t('devtools.health.lastSeen', 'Last Seen'),
       render: (r) => (
-        <span className={cn('text-xs', isRecent(r.last_seen_at) ? 'text-neon-red' : 'text-neon-amber')}>
+        <span className={cn('text-xs', isRecent(r.last_seen_at) ? 'text-rose-300' : 'text-amber-300')}>
           {formatDateTime(r.last_seen_at)}
         </span>
       ),
@@ -81,7 +81,7 @@ export function FleetTelemetryHealth() {
       key: 'reported_at',
       header: t('devtools.health.reportedAt', 'Reported At'),
       render: (r) => (
-        <span className={cn('text-xs', r.reported_at && isRecent(r.reported_at) ? 'text-neon-red' : 'text-white/60')}>
+        <span className={cn('text-xs', r.reported_at && isRecent(r.reported_at) ? 'text-rose-300' : 'text-white/60')}>
           {r.reported_at ? formatDateTime(r.reported_at) : '—'}
         </span>
       ),

@@ -68,7 +68,7 @@ export default function CommandsPage() {
           </Link>
           {vehicles && vehicles.length > 0 && (
             <span className="text-xs text-white/40">
-              <span className="text-neon-green font-medium">{onlineCount}</span>/{vehicles.length} {t('online')}
+              <span className="text-emerald-300 font-medium">{onlineCount}</span>/{vehicles.length} {t('online')}
             </span>
           )}
         </div>
@@ -94,7 +94,7 @@ export default function CommandsPage() {
       {statesError && (
         <GlassPanel className="p-3 flex items-center gap-2 bg-neon-red/5 border-neon-red/20">
           <AlertTriangle className="h-4 w-4 text-neon-red" />
-          <span className="text-xs text-neon-red">
+          <span className="text-xs text-rose-300">
             {t('commands.statesError', 'Failed to load vehicle states')}: {(statesError as Error).message}
           </span>
         </GlassPanel>

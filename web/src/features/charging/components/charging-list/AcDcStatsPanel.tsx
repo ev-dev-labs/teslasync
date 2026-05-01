@@ -66,8 +66,8 @@ export function AcDcStatsPanel({ breakdown }: AcDcStatsPanelProps) {
       {/* Free charging total */}
       {breakdown.total.freeCount > 0 && (
         <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-center gap-4 text-xs text-[var(--text-secondary)]">
-          <span>{t('charging.table.freeCharged', 'Free charged')}: <strong className="text-neon-green">{breakdown.total.freeCount} sessions</strong></span>
-          <span>{t('charging.table.freeEnergy', 'Free energy')}: <strong className="text-neon-green">{fmtWithUnit(breakdown.total.freeEnergy, 'kWh')}</strong></span>
+          <span>{t('charging.table.freeCharged', 'Free charged')}: <strong className="text-emerald-300">{breakdown.total.freeCount} sessions</strong></span>
+          <span>{t('charging.table.freeEnergy', 'Free energy')}: <strong className="text-emerald-300">{fmtWithUnit(breakdown.total.freeEnergy, 'kWh')}</strong></span>
         </div>
       )}
     </GlassPanel>
@@ -85,11 +85,11 @@ function AcDcTable({ ac, dc }: { ac: AcDcBucket; dc: AcDcBucket }) {
     { key: 'type', header: t('charging.table.type', 'Type'), render: (r) => <span className={cn('font-medium', r.color === '#3b82f6' ? 'text-blue-500' : 'text-amber-500')}>{r.label}</span> },
     { key: 'sessions', header: t('charging.table.sessionCount', 'Sessions'), render: (r) => <span className="text-[var(--text-primary)]">{r.count}</span>, className: 'text-right' },
     { key: 'energy', header: t('charging.table.energy', 'Energy'), render: (r) => <span className="text-[var(--text-primary)]">{r.energy >= 1000 ? fmtWithUnit(r.energy / 1000, 'MWh') : fmtWithUnit(r.energy, 'kWh')}</span>, className: 'text-right' },
-    { key: 'cost', header: t('charging.table.cost', 'Cost'), render: (r) => <span className="text-neon-amber">${fmtNumber(r.cost)}</span>, className: 'text-right' },
+    { key: 'cost', header: t('charging.table.cost', 'Cost'), render: (r) => <span className="text-amber-300">${fmtNumber(r.cost)}</span>, className: 'text-right' },
     { key: 'perKwh', header: t('charging.table.costPerKwh', '$/kWh'), render: (r) => <span className="text-[var(--text-secondary)]">${r.energy > 0 ? fmtNumber(r.cost / r.energy) : '—'}</span>, className: 'text-right' },
     { key: 'avgEnergy', header: t('charging.table.avgEnergy', 'Avg Energy'), render: (r) => <span className="text-[var(--text-secondary)]">{fmtWithUnit(r.energy / r.count, 'kWh')}</span>, className: 'text-right' },
     { key: 'avgTime', header: t('charging.table.avgTime', 'Avg Time'), render: (r) => <span className="text-[var(--text-secondary)]">{formatDuration(r.totalDuration / r.count)}</span>, className: 'text-right' },
-    { key: 'free', header: t('charging.table.free', 'Free'), render: (r) => <span className="text-neon-green">{r.freeCount > 0 ? `${r.freeCount} (${fmtWithUnit(r.freeEnergy, 'kWh')})` : '—'}</span>, className: 'text-right' },
+    { key: 'free', header: t('charging.table.free', 'Free'), render: (r) => <span className="text-emerald-300">{r.freeCount > 0 ? `${r.freeCount} (${fmtWithUnit(r.freeEnergy, 'kWh')})` : '—'}</span>, className: 'text-right' },
   ];
 
   return (

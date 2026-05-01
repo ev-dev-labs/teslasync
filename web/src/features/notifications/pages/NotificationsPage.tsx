@@ -353,7 +353,7 @@ function ChannelFormModal({ channel, onClose, onSaved, t }: {
               </GlassPanel>
             )}
 
-            {formError && <span className="text-sm text-neon-red block">{formError}</span>}
+            {formError && <span className="text-sm text-rose-300 block">{formError}</span>}
 
             <div className="flex items-center gap-3 pt-2">
               {isEdit && (

@@ -55,7 +55,7 @@ function winnerCell(value: string, side: 'a' | 'b', row: ComparisonRow) {
   return (
     <span className={cn(
       'font-medium',
-      isWinner ? 'text-neon-green' : 'text-[var(--text-primary)]',
+      isWinner ? 'text-emerald-300' : 'text-[var(--text-primary)]',
     )}>
       {value}
       {isWinner && ' ✓'}
@@ -176,11 +176,11 @@ function VehicleStatusCard({
           <div className="flex items-center gap-2">
             {state ? (
               <>
-                <span className={cn('text-xs', state.is_locked ? 'text-neon-green' : 'text-neon-red')}>
+                <span className={cn('text-xs', state.is_locked ? 'text-emerald-300' : 'text-rose-300')}>
                   {state.is_locked ? t('comparison.locked', 'Locked') : t('comparison.unlocked', 'Unlocked')}
                 </span>
                 {state.sentry_mode && (
-                  <span className="text-xs text-neon-cyan">
+                  <span className="text-xs text-cyan-300">
                     <Shield className="inline h-3 w-3" /> {t('comparison.sentry', 'Sentry')}
                   </span>
                 )}

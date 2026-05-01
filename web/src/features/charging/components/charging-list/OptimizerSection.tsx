@@ -95,12 +95,12 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-white/50">{t('charging.optimizer.offpeakRate', 'Off-peak rate')}</span>
-                <span className="font-semibold text-neon-green">${fmtNumber(optimizer.cost_analysis.offpeak_cost_per_kwh, 3)}/kWh</span>
+                <span className="font-semibold text-emerald-300">${fmtNumber(optimizer.cost_analysis.offpeak_cost_per_kwh, 3)}/kWh</span>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-white/50">{t('charging.optimizer.peakSessions', 'Sessions during peak')}</span>
                 <span className={cn('font-semibold',
-                  optimizer.cost_analysis.sessions_during_peak_pct > 30 ? 'text-red-400' : 'text-neon-green',
+                  optimizer.cost_analysis.sessions_during_peak_pct > 30 ? 'text-red-400' : 'text-emerald-300',
                 )}>
                   {fmtNumber(optimizer.cost_analysis.sessions_during_peak_pct, 0)}%
                 </span>
@@ -151,7 +151,7 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
                 >
                   <Shield className={cn('h-5 w-5 mt-0.5 shrink-0',
                     rec.priority === 'high' ? 'text-red-400' :
-                    rec.priority === 'medium' ? 'text-neon-amber' : 'text-neon-green',
+                    rec.priority === 'medium' ? 'text-amber-300' : 'text-emerald-300',
                   )} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">

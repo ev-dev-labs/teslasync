@@ -19,7 +19,7 @@ export function ClimatePanel({ climateData }: ClimatePanelProps) {
   return (
     <GlassPanel className="p-6 h-full">
       <h3 className="section-title flex items-center gap-2 mb-5">
-        <Thermometer className="h-4 w-4 text-neon-cyan" /> {t('common.climate', 'Climate')}
+        <Thermometer className="h-4 w-4 text-cyan-300" /> {t('common.climate', 'Climate')}
       </h3>
       {climateData ? (
         <div className="space-y-4">

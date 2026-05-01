@@ -35,7 +35,7 @@ export function Base64Tool() {
               <span className="text-xs text-white/50">{t('Output Label')}</span>
               <CopyButton text={output} />
             </div>
-            <pre className="mt-1 whitespace-pre-wrap break-all text-sm font-mono text-neon-cyan">{output}</pre>
+            <pre className="mt-1 whitespace-pre-wrap break-all text-sm font-mono text-cyan-300">{output}</pre>
           </div>
         )}
       </div>

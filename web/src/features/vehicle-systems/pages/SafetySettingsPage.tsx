@@ -207,7 +207,7 @@ function SafetyCard({
       <span
         className={cn(
           'text-sm font-semibold block',
-          enabled ? 'text-neon-green' : 'text-[var(--text-muted)]',
+          enabled ? 'text-emerald-300' : 'text-[var(--text-muted)]',
         )}
       >
         {valueText}
