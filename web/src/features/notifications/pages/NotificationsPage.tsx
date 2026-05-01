@@ -20,6 +20,8 @@ import { MetricCard } from '@/components/data-display/MetricCard';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { FadeIn } from '@/components/motion/FadeIn';
+import { SearchInput, FilterBar } from '@/components/forms';
+import { useFilteredList } from '@/hooks/useFilteredList';
 import { useToast } from '@/components/feedback/Toast';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime } from '@/lib/dateFormat';
@@ -393,6 +395,7 @@ export default function NotificationsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingChannel, setEditingChannel] = useState<NotificationChannel | null>(null);
   const [showLogs, setShowLogs] = useState(false);
+  const [logSearch, setLogSearch] = useState('');
 
   // Queries
   const { data: channels = [], isLoading, error } = useNotificationChannels();
@@ -427,6 +430,22 @@ export default function NotificationsPage() {
       { key: 'error', header: t('Error'), render: (log) => <span className="text-xs text-neon-red/70 max-w-[200px] truncate block">{log.error}</span> },
     ];
   }, [channels, t]);
+
+  // Channel name lookup for the search field accessor.
+  const channelNames: Record<number, string> = useMemo(() => {
+    const m: Record<number, string> = {};
+    channels.forEach(c => { m[c.id] = c.name; });
+    return m;
+  }, [channels]);
+
+  const logSearchFields = useMemo(
+    () => [
+      'title' as keyof NotificationLog,
+      (log: NotificationLog) => channelNames[log.channel_id] ?? '',
+    ],
+    [channelNames],
+  );
+  const filteredLogs = useFilteredList(logs, logSearch, logSearchFields);
 
   return (
     <PageContainer
@@ -576,14 +595,28 @@ export default function NotificationsPage() {
       {/* ── Delivery Log table ───────────────────────────────────────── */}
       {showLogs && (
         <FadeIn>
-          <GlassPanel className="overflow-x-auto">
-            <DataTable
-              columns={logColumns}
-              data={logs}
-              keyExtractor={(log) => log.id}
-              pagination={{ defaultPageSize: 50 }}
-              emptyMessage={t('No delivery logs yet')}
-            />
+          <GlassPanel className="p-4 sm:p-6">
+            <FilterBar className="mb-3">
+              <SearchInput
+                value={logSearch}
+                onChange={setLogSearch}
+                placeholder={t('Search by title or channel…')}
+                className="w-full sm:w-72"
+              />
+            </FilterBar>
+            <div className="overflow-x-auto -mx-4 sm:mx-0">
+              <DataTable
+                columns={logColumns}
+                data={filteredLogs}
+                keyExtractor={(log) => log.id}
+                pagination={{ defaultPageSize: 50 }}
+                emptyMessage={
+                  logSearch
+                    ? t('No logs match your search')
+                    : t('No delivery logs yet')
+                }
+              />
+            </div>
           </GlassPanel>
         </FadeIn>
       )}

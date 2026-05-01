@@ -13,6 +13,8 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
+import { SearchInput, FilterBar } from '@/components/forms';
+import { useFilteredList } from '@/hooks/useFilteredList';
 import {
   useTeslaChargingHistory,
   useRefreshTeslaChargingHistory,
@@ -171,9 +173,16 @@ export default function TeslaChargingHistoryPage() {
 
   const [sortKey, setSortKey] = useState<string>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [search, setSearch] = useState('');
+
+  const entrySearchFields = useMemo(
+    () => ['site_location_name'] as const satisfies ReadonlyArray<keyof TeslaChargingHistoryEntry>,
+    [],
+  );
+  const filteredEntries = useFilteredList(entries, search, entrySearchFields);
 
   const sortedEntries = useMemo(() => {
-    const sorted = [...entries];
+    const sorted = [...filteredEntries];
     sorted.sort((a, b) => {
       let cmp = 0;
       switch (sortKey) {
@@ -192,7 +201,7 @@ export default function TeslaChargingHistoryPage() {
       return sortDir === 'desc' ? -cmp : cmp;
     });
     return sorted;
-  }, [entries, sortKey, sortDir]);
+  }, [filteredEntries, sortKey, sortDir]);
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
@@ -312,15 +321,32 @@ export default function TeslaChargingHistoryPage() {
             {t('tesla_charging.sessions', 'Charging Sessions')}
           </h3>
           {entries.length > 0 ? (
-            <DataTable
-              columns={columns}
-              data={sortedEntries}
-              keyExtractor={(row) => row.session_id}
-              sortKey={sortKey}
-              sortDir={sortDir}
-              onSort={handleSort}
-              pagination={{ defaultPageSize: 25, pageSizeOptions: [25, 50, 100] }}
-            />
+            <>
+              <FilterBar className="mb-3">
+                <SearchInput
+                  value={search}
+                  onChange={setSearch}
+                  placeholder={t('tesla_charging.searchPlaceholder', 'Search by location…')}
+                  className="w-full sm:w-72"
+                />
+              </FilterBar>
+              {sortedEntries.length > 0 ? (
+                <DataTable
+                  columns={columns}
+                  data={sortedEntries}
+                  keyExtractor={(row) => row.session_id}
+                  sortKey={sortKey}
+                  sortDir={sortDir}
+                  onSort={handleSort}
+                  pagination={{ defaultPageSize: 25, pageSizeOptions: [25, 50, 100] }}
+                />
+              ) : (
+                <EmptyState
+                  icon={<Zap className="h-10 w-10" />}
+                  message={t('tesla_charging.noMatches', 'No sessions match your search.')}
+                />
+              )}
+            </>
           ) : (
             <EmptyState
               icon={<Zap className="h-10 w-10" />}

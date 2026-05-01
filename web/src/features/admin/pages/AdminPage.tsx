@@ -3,6 +3,7 @@
  * database stats, audit log, and API key management.
  */
 
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -13,6 +14,8 @@ import { DataTable, type Column } from '@/components/ui/DataTable';
 import { MetricCard } from '@/components/data-display/MetricCard';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { FadeIn } from '@/components/motion/FadeIn';
+import { SearchInput, FilterBar } from '@/components/forms';
+import { useFilteredList } from '@/hooks/useFilteredList';
 import { useToast } from '@/components/feedback/Toast';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDate, formatDateTime } from '@/lib/dateFormat';
@@ -48,6 +51,18 @@ export default function AdminPage() {
   const componentCount = components ? Object.keys(components).length : 0;
   const dbSize = typedHealth?.databaseSize ?? '—';
   const tableCount = typedHealth?.tableCount ?? 0;
+
+  // Audit log search.
+  const [auditSearch, setAuditSearch] = useState('');
+  const auditSearchFields = useMemo(
+    () => ['action', 'resource', 'details'] as const satisfies ReadonlyArray<keyof AuditLogEntry>,
+    [],
+  );
+  const filteredAuditLogs = useFilteredList(
+    auditLogs as AuditLogEntry[] | undefined,
+    auditSearch,
+    auditSearchFields,
+  );
 
   const anyError = healthError || usageError;
 
@@ -207,13 +222,27 @@ export default function AdminPage() {
             </span>
           ) : (auditLogs as AuditLogEntry[])?.length ? (
             <div className="mt-4">
-              <DataTable
-                columns={auditColumns}
-                data={auditLogs as AuditLogEntry[]}
-                keyExtractor={(log) => String(log.id)}
-                compact
-                pagination={{ defaultPageSize: 50 }}
-              />
+              <FilterBar className="mb-3">
+                <SearchInput
+                  value={auditSearch}
+                  onChange={setAuditSearch}
+                  placeholder={t('admin.audit.searchPlaceholder', 'Search by action, resource, or details…')}
+                  className="w-full sm:w-72"
+                />
+              </FilterBar>
+              {filteredAuditLogs.length > 0 ? (
+                <DataTable
+                  columns={auditColumns}
+                  data={filteredAuditLogs}
+                  keyExtractor={(log) => String(log.id)}
+                  compact
+                  pagination={{ defaultPageSize: 50 }}
+                />
+              ) : (
+                <span className="text-sm text-[var(--text-muted)] block">
+                  {t('admin.audit.noMatches', 'No audit entries match your search.')}
+                </span>
+              )}
             </div>
           ) : (
             <span className="text-sm text-[var(--text-muted)] mt-4 block">{t('No audit entries found')}</span>

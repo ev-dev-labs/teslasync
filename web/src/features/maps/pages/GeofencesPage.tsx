@@ -19,6 +19,8 @@ import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, Spinner } from '@/components/feedback';
 import { useToast } from '@/components/feedback/Toast';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
+import { SearchInput, FilterBar } from '@/components/forms';
+import { useFilteredList } from '@/hooks/useFilteredList';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -118,6 +120,7 @@ export default function GeofencesPage() {
   const [locationSource, setLocationSource] = useState<LocationSource>('vehicle');
   const [selectedVehicleId, setSelectedVehicleId] = useState<number>(0);
   const [locationLoading, setLocationLoading] = useState(false);
+  const [search, setSearch] = useState('');
 
   // ─── Data fetching ───────────────────────────────────────────────────────
 
@@ -182,6 +185,12 @@ export default function GeofencesPage() {
       exitAlerts: list.filter((g) => g.alertOnExit).length,
     };
   }, [geofences]);
+
+  const geofenceSearchFields = useMemo(
+    () => ['name'] as const satisfies ReadonlyArray<keyof Geofence>,
+    [],
+  );
+  const filteredGeofences = useFilteredList(geofences, search, geofenceSearchFields);
 
   // ─── Handlers ────────────────────────────────────────────────────────────
 
@@ -372,9 +381,21 @@ export default function GeofencesPage() {
       {/* Geofence List */}
       {!isLoading && (
         <StaggerContainer className="space-y-3">
-          {geofences && geofences.length > 0 ? (
+          {geofences && geofences.length > 0 && (
+            <StaggerItem>
+              <FilterBar>
+                <SearchInput
+                  value={search}
+                  onChange={setSearch}
+                  placeholder={t('geofences.searchPlaceholder', 'Search by name…')}
+                  className="w-full sm:w-72"
+                />
+              </FilterBar>
+            </StaggerItem>
+          )}
+          {filteredGeofences.length > 0 ? (
             <>
-              {geofences.map((g) => (
+              {filteredGeofences.map((g) => (
                 <StaggerItem key={g.id}>
                   <GlassPanel
                     hover
@@ -439,6 +460,12 @@ export default function GeofencesPage() {
                 </StaggerItem>
               ))}
             </>
+          ) : geofences && geofences.length > 0 ? (
+            <EmptyState
+              icon={<Activity className="h-8 w-8 opacity-20" />}
+              message={t('geofences.noMatches', 'No geofences match your search.')}
+              className="py-8"
+            />
           ) : (
             <EmptyState
               icon={<Activity className="h-8 w-8 opacity-20" />}

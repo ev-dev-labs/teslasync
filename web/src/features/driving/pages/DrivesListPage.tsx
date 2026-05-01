@@ -24,6 +24,9 @@ import { MetricBar } from '@/components/data-display/MetricBar';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { DateRangeFilter } from '@/components/forms/DateRangeFilter';
+import { SearchInput } from '@/components/forms/SearchInput';
+import { FilterBar } from '@/components/forms/FilterBar';
+import { useFilteredList } from '@/hooks/useFilteredList';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
@@ -195,6 +198,7 @@ export default function DrivesListPage() {
   const [sortBy, setSortBy] = useState<'date' | 'distance' | 'efficiency'>('date');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
+  const [search, setSearch] = useState('');
   const [startDate, setStartDate] = useState(() => {
     const d = new Date(); d.setDate(d.getDate() - 365);
     return d.toISOString().split('T')[0];
@@ -202,7 +206,7 @@ export default function DrivesListPage() {
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
 
   /* ---- Client-side date filter ---- */
-  const filteredDrives = useMemo(() => {
+  const dateFilteredDrives = useMemo(() => {
     if (!drives) return [];
     return drives.filter((d) => {
       const driveDate = d.startTs?.split('T')[0];
@@ -212,6 +216,13 @@ export default function DrivesListPage() {
       return true;
     });
   }, [drives, startDate, endDate]);
+
+  /* ---- Search filter (start/end address) ---- */
+  const driveSearchFields = useMemo(
+    () => ['startAddress', 'endAddress'] as const satisfies ReadonlyArray<keyof Drive>,
+    [],
+  );
+  const filteredDrives = useFilteredList(dateFilteredDrives, search, driveSearchFields);
 
   /* ---- Sort ---- */
   const sortedDrives = useMemo(() => {
@@ -300,15 +311,23 @@ export default function DrivesListPage() {
         ) : undefined
       }
     >
-      {/* Date range filter */}
+      {/* Date range + search filter */}
       <FadeIn>
-        <DateRangeFilter
-          startDate={startDate}
-          endDate={endDate}
-          onStartDateChange={setStartDate}
-          onEndDateChange={setEndDate}
-          onApply={() => setPage(1)}
-        />
+        <FilterBar>
+          <SearchInput
+            value={search}
+            onChange={(v) => { setSearch(v); setPage(1); }}
+            placeholder={t('drives.searchPlaceholder', 'Search by start or end address…')}
+            className="w-full sm:w-72"
+          />
+          <DateRangeFilter
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+            onApply={() => setPage(1)}
+          />
+        </FilterBar>
       </FadeIn>
 
       {/* Hero gauges */}

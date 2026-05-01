@@ -273,10 +273,19 @@ export function filterAndSortSessions(
   chargerFilter: ChargerFilter,
   sortBy: SortKey,
   sortDesc: boolean,
+  searchQuery = '',
 ): ChargingSession[] {
   let filtered: ChargingSession[] = sessions;
   if (chargerFilter !== 'all') {
     filtered = filtered.filter((s) => getChargerCategory(s.charger_type) === chargerFilter);
+  }
+  const q = searchQuery.trim().toLowerCase();
+  if (q) {
+    filtered = filtered.filter((s) => {
+      const loc = (s.charger_location ?? '').toLowerCase();
+      const type = (s.charger_type ?? '').toLowerCase();
+      return loc.includes(q) || type.includes(q);
+    });
   }
   return [...filtered].sort((a, b) => {
     let cmp = 0;

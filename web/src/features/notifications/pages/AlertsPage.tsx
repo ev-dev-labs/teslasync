@@ -29,6 +29,8 @@ import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
 import { RadialGauge } from '@/components/charts/RadialGauge';
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
+import { SearchInput, FilterBar } from '@/components/forms';
+import { useFilteredList } from '@/hooks/useFilteredList';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell,
@@ -175,6 +177,7 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
   const { data: logs, isLoading: logsLoading } = useNotificationLogs();
   const { data: stats } = useNotificationStats();
   const { data: channels } = useNotificationChannels();
+  const [logSearch, setLogSearch] = useState('');
 
   const channelMap = useMemo(() => {
     const m: Record<number, string> = {};
@@ -196,6 +199,15 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
       name: status, value, fill: colors[status] || '#00f0ff',
     }));
   }, [logs]);
+
+  const logSearchFields = useMemo(
+    () => [
+      'title' as keyof NotificationLog,
+      (log: NotificationLog) => channelMap[log.channel_id] ?? '',
+    ],
+    [channelMap],
+  );
+  const filteredLogs = useFilteredList(logs, logSearch, logSearchFields);
 
   const logColumns: Column<NotificationLog>[] = useMemo(() => [
     { key: 'time', header: t('Time'), render: (log) => <span className="text-[var(--text-muted)] whitespace-nowrap">{formatDateTime(log.created_at)}</span> },
@@ -253,13 +265,21 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
         <span className="section-title mb-4 flex items-center gap-2">
           <Send className="h-4 w-4 text-cyan-300" /> {t('Notification Log')}
         </span>
+        <FilterBar className="mb-3">
+          <SearchInput
+            value={logSearch}
+            onChange={setLogSearch}
+            placeholder={t('Search by title or channel…')}
+            className="w-full sm:w-72"
+          />
+        </FilterBar>
         {logsLoading ? (
           <div className="space-y-2">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-10" />)}</div>
-        ) : (logs ?? []).length > 0 ? (
+        ) : filteredLogs.length > 0 ? (
             <div className="overflow-x-auto -mx-4 sm:mx-0">
               <DataTable
                 columns={logColumns}
-                data={logs ?? []}
+                data={filteredLogs}
                 keyExtractor={(log) => log.id}
                 compact
                 pagination={{ defaultPageSize: 50 }}
@@ -269,7 +289,11 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
           <EmptyState
             icon={<Send className="h-8 w-8" />}
             title={t('No notification logs')}
-            message={t('Notification logs will appear here once alerts are sent.')}
+            message={
+              logSearch
+                ? t('No logs match your search.')
+                : t('Notification logs will appear here once alerts are sent.')
+            }
           />
         )}
       </GlassPanel>
@@ -411,6 +435,7 @@ export default function AlertsPage() {
 
   const [tab, setTab] = useState<'alerts' | 'history' | 'preferences'>('alerts');
   const [filter, setFilter] = useState<'all' | 'unread' | 'critical'>('all');
+  const [alertSearch, setAlertSearch] = useState('');
   const [alertPage, setAlertPage] = useState(1);
   const alertsPerPage = 20;
 
@@ -420,11 +445,17 @@ export default function AlertsPage() {
   const markReadMut = useMarkAlertRead();
 
   // Computed
-  const filteredAlerts = useMemo(() => alerts?.filter(a => {
+  const tabFilteredAlerts = useMemo(() => alerts?.filter(a => {
     if (filter === 'unread') return !a.is_read;
     if (filter === 'critical') return a.severity === 'critical';
     return true;
   }) ?? [], [alerts, filter]);
+
+  const alertSearchFields = useMemo(
+    () => ['title', 'message'] as const satisfies ReadonlyArray<keyof Alert>,
+    [],
+  );
+  const filteredAlerts = useFilteredList(tabFilteredAlerts, alertSearch, alertSearchFields);
 
   // Reset page when filter changes
   const totalPages = Math.max(1, Math.ceil(filteredAlerts.length / alertsPerPage));
@@ -658,18 +689,26 @@ export default function AlertsPage() {
       {tab === 'alerts' && (
         <>
           <FadeIn>
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-[var(--text-muted)]" />
-              <TabNav
-                tabs={[
-                  { key: 'all', label: `${t('All')} (${totalCount})` },
-                  { key: 'unread', label: `${t('Unread')} (${unreadCount})` },
-                  { key: 'critical', label: `${t('Critical')} (${criticalCount})` },
-                ]}
-                active={filter}
-                onChange={k => { setFilter(k as 'all' | 'unread' | 'critical'); setAlertPage(1); }}
+            <FilterBar>
+              <SearchInput
+                value={alertSearch}
+                onChange={(v) => { setAlertSearch(v); setAlertPage(1); }}
+                placeholder={t('alerts.searchPlaceholder', 'Search by title or message…')}
+                className="w-full sm:w-72"
               />
-            </div>
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-[var(--text-muted)]" />
+                <TabNav
+                  tabs={[
+                    { key: 'all', label: `${t('All')} (${totalCount})` },
+                    { key: 'unread', label: `${t('Unread')} (${unreadCount})` },
+                    { key: 'critical', label: `${t('Critical')} (${criticalCount})` },
+                  ]}
+                  active={filter}
+                  onChange={k => { setFilter(k as 'all' | 'unread' | 'critical'); setAlertPage(1); }}
+                />
+              </div>
+            </FilterBar>
           </FadeIn>
 
           {isLoading ? (
@@ -706,7 +745,13 @@ export default function AlertsPage() {
             <EmptyState
               icon={<BellOff className="h-8 w-8" />}
               title={t('No alerts')}
-              message={filter === 'all' ? t('Your fleet is running smoothly. Alerts will appear here.') : t(`No ${filter} alerts right now.`)}
+              message={
+                alertSearch
+                  ? t('No alerts match your search.')
+                  : filter === 'all'
+                    ? t('Your fleet is running smoothly. Alerts will appear here.')
+                    : t(`No ${filter} alerts right now.`)
+              }
             />
           )}
         </>

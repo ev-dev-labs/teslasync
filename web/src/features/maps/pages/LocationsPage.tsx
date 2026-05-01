@@ -14,6 +14,8 @@ import { GlassPanel, Select, Pagination } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
+import { SearchInput, FilterBar } from '@/components/forms';
+import { useFilteredList } from '@/hooks/useFilteredList';
 import {
   ChartTooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -51,12 +53,19 @@ export default function LocationsPage() {
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
   const [page, setPage] = useState(1);
   const pageSize = 50;
+  const [search, setSearch] = useState('');
 
   const { data: locations, isLoading, error } = useQuery({
     queryKey: ['visited-locations', vehicleId, page, pageSize],
     queryFn: () => request<VisitedLocation[]>(`/locations?vehicle_id=${vehicleId}&limit=${pageSize}&offset=${(page - 1) * pageSize}`),
     enabled: vehicleId !== null,
   });
+
+  const locationSearchFields = useMemo(
+    () => ['address_name'] as const satisfies ReadonlyArray<keyof VisitedLocation>,
+    [],
+  );
+  const filteredLocations = useFilteredList(locations, search, locationSearchFields);
 
   const totalVisits = locations?.reduce((s, l) => s + l.visit_count, 0) ?? 0;
   const totalTime = locations?.reduce((s, l) => s + l.total_duration_min, 0) ?? 0;
@@ -163,14 +172,24 @@ export default function LocationsPage() {
       <FadeIn>
         <GlassPanel className="p-4 sm:p-6">
           <span className="text-sm font-semibold mb-4 block text-[var(--text-primary)]">{t('All Locations')}</span>
+          <FilterBar className="mb-3">
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder={t('Search by address…')}
+              className="w-full sm:w-72"
+            />
+          </FilterBar>
           {isLoading ? (
             <div className="space-y-3">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-16 rounded-xl" />)}</div>
           ) : !locations?.length ? (
             <EmptyState icon={<MapPin className="h-12 w-12" />} title={t('No locations')} message={t('No visited locations recorded yet')} />
+          ) : !filteredLocations.length ? (
+            <EmptyState icon={<MapPin className="h-12 w-12" />} title={t('No locations')} message={t('No locations match your search')} />
           ) : (
             <>
               <div className="space-y-2">
-                {locations.map((loc, i) => (
+                {filteredLocations.map((loc, i) => (
                   <GlassPanel key={loc.id} className="p-4 flex items-center gap-4 hover:border-white/10 transition-colors">
                     <div className={cn(
                       'h-8 w-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0',

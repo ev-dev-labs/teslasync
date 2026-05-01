@@ -45,6 +45,7 @@ export default function ChargingListPage() {
   const [sortBy, setSortBy] = useState<SortKey>('date');
   const [sortDesc, setSortDesc] = useState(true);
   const [chargerFilter, setChargerFilter] = useState<ChargerFilter>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [startDate, setStartDate] = useState(() => {
@@ -87,8 +88,8 @@ export default function ChargingListPage() {
   const chargerSpecs = useMemo(() => (sessions ? computeChargerSpecs(sessions) : null), [sessions]);
   const enhancedStats = useMemo(() => (sessions && stats ? computeEnhancedStats(sessions, stats) : null), [sessions, stats]);
   const filteredSessions = useMemo(
-    () => (sessions ? filterAndSortSessions(sessions, chargerFilter, sortBy, sortDesc) : []),
-    [sessions, chargerFilter, sortBy, sortDesc],
+    () => (sessions ? filterAndSortSessions(sessions, chargerFilter, sortBy, sortDesc, searchQuery) : []),
+    [sessions, chargerFilter, sortBy, sortDesc, searchQuery],
   );
 
   // ── Render ───────────────────────────────────────────────────────────
@@ -158,6 +159,8 @@ export default function ChargingListPage() {
         sortBy={sortBy}
         sortDesc={sortDesc}
         chargerFilter={chargerFilter}
+        searchQuery={searchQuery}
+        onSearchQueryChange={(v) => { setSearchQuery(v); setPage(1); }}
         onSortChange={(key) => { setSortBy(key); setSortDesc(true); }}
         onSortToggle={() => setSortDesc(!sortDesc)}
         onChargerFilterChange={setChargerFilter}

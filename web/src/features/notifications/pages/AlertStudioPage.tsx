@@ -26,6 +26,7 @@ import { SeverityBadge, SeverityIcon } from '@/components/data-display'
 import { PageContainer } from '@/components/layout'
 import { FadeIn } from '@/components/motion'
 import { EmptyState, ErrorDisplay, Skeleton } from '@/components/feedback'
+import { SearchInput } from '@/components/forms'
 import {
   Zap, Plus, Save, Trash2, Copy, Bell, BellOff,
   Info, Battery, Gauge, Lock,
@@ -791,15 +792,12 @@ export default function AlertStudio() {
               <p className="text-sm font-semibold text-[var(--text-primary)]">
                 {t('notifications.alertStudio.templates.header', 'Rule Templates - {{count}} pre-built rules', { count: ruleTemplates.length })}
               </p>
-              <div className="relative w-64">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
-                <UiInput
-                  className="w-full pl-8 text-xs py-1.5"
-                  placeholder={t('notifications.alertStudio.templates.searchPlaceholder', 'Search templates...')}
-                  value={templateSearch}
-                  onChange={e => setTemplateSearch(e.target.value)}
-                />
-              </div>
+              <SearchInput
+                value={templateSearch}
+                onChange={setTemplateSearch}
+                placeholder={t('notifications.alertStudio.templates.searchPlaceholder', 'Search templates...')}
+                className="w-64"
+              />
             </div>
 
             <div className="flex flex-wrap gap-1.5 mb-4">
@@ -889,14 +887,12 @@ export default function AlertStudio() {
             </div>
 
             {rulesList.length > 3 && (
-              <div className="relative mb-3">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
-                <UiInput
-                  type="text"
-                  placeholder={t('notifications.alertStudio.rules.searchPlaceholder', 'Search rules...')}
+              <div className="mb-3">
+                <SearchInput
                   value={ruleSearch}
-                  onChange={e => setRuleSearch(e.target.value)}
-                  className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg bg-white/[0.04] border border-white/[0.06] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-neon-cyan/30"
+                  onChange={setRuleSearch}
+                  placeholder={t('notifications.alertStudio.rules.searchPlaceholder', 'Search rules...')}
+                  className="w-full"
                 />
               </div>
             )}

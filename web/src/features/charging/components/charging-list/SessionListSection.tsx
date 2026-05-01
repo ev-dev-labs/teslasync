@@ -3,6 +3,7 @@ import { BatteryCharging, Filter, ArrowUpDown, Download } from 'lucide-react';
 import { Button, Pagination } from '@/components/ui';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { Skeleton, EmptyState } from '@/components/feedback';
+import { SearchInput, FilterBar } from '@/components/forms';
 import { cn } from '@/lib/cn';
 import type { ChargingSession } from '@/api/types';
 import { ChargingSessionCard } from '../ChargingSessionCard';
@@ -17,6 +18,8 @@ interface SessionListSectionProps {
   sortBy: SortKey;
   sortDesc: boolean;
   chargerFilter: ChargerFilter;
+  searchQuery: string;
+  onSearchQueryChange: (q: string) => void;
   onSortChange: (key: SortKey) => void;
   onSortToggle: () => void;
   onChargerFilterChange: (filter: ChargerFilter) => void;
@@ -38,6 +41,8 @@ export function SessionListSection({
   sortBy,
   sortDesc,
   chargerFilter,
+  searchQuery,
+  onSearchQueryChange,
   onSortChange,
   onSortToggle,
   onChargerFilterChange,
@@ -78,6 +83,18 @@ export function SessionListSection({
 
   return (
     <>
+      {/* Search bar */}
+      <FadeIn delay={0.2}>
+        <FilterBar className="mb-0">
+          <SearchInput
+            value={searchQuery}
+            onChange={onSearchQueryChange}
+            placeholder={t('charging.sessions.searchPlaceholder', 'Search by location or charger type…')}
+            className="w-full sm:w-72"
+          />
+        </FilterBar>
+      </FadeIn>
+
       {/* Sort & Filter controls */}
       <FadeIn delay={0.22}>
         <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2 sm:gap-3">
@@ -161,13 +178,21 @@ export function SessionListSection({
       </FadeIn>
 
       {/* Session cards */}
-      <StaggerContainer className="space-y-3">
-        {filteredSessions.map((s) => (
-          <StaggerItem key={s.id}>
-            <ChargingSessionCard session={s} convertDistance={convertDistance} distanceUnit={distanceUnit} />
-          </StaggerItem>
-        ))}
-      </StaggerContainer>
+      {filteredSessions.length === 0 ? (
+        <EmptyState
+          icon={<BatteryCharging className="h-8 w-8" />}
+          title={t('charging.list.noMatches', 'No sessions match your filters')}
+          message={t('charging.list.noMatchesDescription', 'Try clearing the search or charger filter to see more sessions.')}
+        />
+      ) : (
+        <StaggerContainer className="space-y-3">
+          {filteredSessions.map((s) => (
+            <StaggerItem key={s.id}>
+              <ChargingSessionCard session={s} convertDistance={convertDistance} distanceUnit={distanceUnit} />
+            </StaggerItem>
+          ))}
+        </StaggerContainer>
+      )}
 
       {/* Pagination */}
       <Pagination
