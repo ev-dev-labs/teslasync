@@ -433,5 +433,67 @@
       "or": " or the ",
       "docs": "documentation"
     }
+  },
+  "palette": {
+    "placeholder": "Search pages, commands…",
+    "navigate": "Navigate",
+    "select": "Select",
+    "back": "Back",
+    "close": "Close",
+    "vehicle": "vehicle",
+    "vehicles": "vehicles",
+    "noResults": "No results for \"{{query}}\"",
+    "noVehicles": "No vehicles available",
+    "selectVehicleFor": "Send \"{{command}}\" to…",
+    "shortcut": "Shortcut: {{keys}}",
+    "section": {
+      "recent": "Recent",
+      "pages": "Pages",
+      "vehicles": "Vehicles",
+      "preferences": "Preferences",
+      "actions": "Actions",
+      "commands": "Vehicle Commands",
+      "selectVehicle": "Select Vehicle"
+    },
+    "cmd": {
+      "selectVehicle": "Select vehicle…",
+      "switchVehicle": "Switch to {{name}}",
+      "themeDark": "Theme: Dark",
+      "themeLight": "Theme: Light",
+      "themeOled": "Theme: OLED Black",
+      "themeMidnight": "Theme: Midnight Blue",
+      "themeAuto": "Theme: Auto (system)",
+      "themePicker": "Open theme picker…",
+      "refresh": "Refresh data",
+      "newAlert": "Create new alert rule",
+      "testAlert": "Send a test alert",
+      "notificationsHistory": "Open notification history",
+      "commandHistory": "Open command history",
+      "securitySettings": "Open security & access",
+      "systemStatus": "View system status",
+      "apiPlayground": "Open API playground",
+      "export": "Open data export",
+      "settings": "Open settings",
+      "shortcuts": "Show keyboard shortcuts",
+      "help": "Open documentation"
+    },
+    "toast": {
+      "refreshed": "Data refreshed"
+    }
+  },
+  "shortcuts": {
+    "title": "Keyboard Shortcuts",
+    "hint": "Press",
+    "hintSuffix": "for shortcuts",
+    "openPalette": "Open command palette",
+    "openPaletteAlt": "Open command palette",
+    "openShortcuts": "Show keyboard shortcuts",
+    "close": "Close modal / cancel",
+    "goto": "Go to {{label}}",
+    "group": {
+      "global": "Global",
+      "navigation": "Navigation (press g then…)",
+      "commands": "Commands"
+    }
   }
 }

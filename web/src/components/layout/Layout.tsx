@@ -91,7 +91,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { useTour, isTourCompleted } from '@/hooks/useTour'
 import { GotoIndicator } from '../feedback/GotoIndicator'
-import { KeyboardCheatSheet } from '../feedback/KeyboardCheatSheet'
+import { KeyboardShortcutsModal } from '../feedback/KeyboardShortcutsModal'
 import { TourOverlay } from '../feedback/TourOverlay'
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -584,6 +584,15 @@ export default function Layout() {
   useNotificationListener()
   const { convertDistance, distanceUnit } = useSettings()
   const { mode: shortcutMode, showCheatSheet, toggleCheatSheet } = useKeyboardShortcuts()
+
+  // The CommandPalette's "Show keyboard shortcuts" command (and any other
+  // caller) toggles the cheat sheet by dispatching this custom event so the
+  // shortcut layer stays decoupled from the React tree.
+  useEffect(() => {
+    const handler = () => toggleCheatSheet()
+    window.addEventListener('toggle-keyboard-shortcuts', handler)
+    return () => window.removeEventListener('toggle-keyboard-shortcuts', handler)
+  }, [toggleCheatSheet])
 
   // Onboarding tour
   const tour = useTour(MAIN_TOUR_STEPS)
@@ -1195,7 +1204,7 @@ export default function Layout() {
 
       {/* Keyboard shortcut overlays */}
       <GotoIndicator visible={shortcutMode === 'goto'} />
-      <KeyboardCheatSheet open={showCheatSheet} onClose={toggleCheatSheet} />
+      <KeyboardShortcutsModal open={showCheatSheet} onClose={toggleCheatSheet} />
 
       {/* Onboarding tour */}
       {tour.isActive && tour.step && (
