@@ -120,7 +120,7 @@ export default function ChargingListPage() {
         />
       </FadeIn>
 
-      {error && <QueryError error={error as Error} onRetry={refetch} />}
+      <QueryError error={error as Error} onRetry={refetch} />
 
       <FadeIn><HeroGauges stats={stats} /></FadeIn>
       <FadeIn delay={0.05}><QuickMetrics stats={stats} /></FadeIn>

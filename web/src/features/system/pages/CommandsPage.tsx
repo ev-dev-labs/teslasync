@@ -84,10 +84,11 @@ export default function CommandsPage() {
             <MetricCard label={t('Refresh')} value="15s" icon={<Loader2 className="h-4 w-4" />} color="purple" />
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center gap-2 py-8 text-white/40">
-            <Activity className="h-8 w-8 opacity-20" />
-            <p className="text-xs">{t('common.noData', 'No data available')}</p>
-          </div>
+          <EmptyState
+            icon={<Activity className="h-8 w-8 opacity-20" />}
+            message={t('common.noData', 'No data available')}
+            className="py-8"
+          />
         )}
       </FadeIn>
 

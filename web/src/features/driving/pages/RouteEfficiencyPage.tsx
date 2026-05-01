@@ -12,6 +12,7 @@ import {
 } from '@/components/charts';
 import { AnimatedNumber } from '@/components/data-display/AnimatedNumber';
 import { MetricBar } from '@/components/data-display/MetricBar';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
@@ -232,10 +233,11 @@ export default function RouteEfficiencyPage() {
               </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
-              <Activity className="h-8 w-8 opacity-20" />
-              <p className="text-xs">{t('common.noData', 'No data available')}</p>
-            </div>
+            <EmptyState
+              icon={<Activity className="h-8 w-8 opacity-20" />}
+              message={t('common.noData', 'No data available')}
+              className="py-8"
+            />
           )}
         </GlassPanel>
       </FadeIn>

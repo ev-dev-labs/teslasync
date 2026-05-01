@@ -12,7 +12,7 @@ import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge } from '@/components/ui';
 import { MetricBar, InlineMetric, AnimatedNumber, StatCard, KVList } from '@/components/data-display';
 import { RadialGauge } from '@/components/charts';
-import { Skeleton } from '@/components/feedback';
+import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 import {
@@ -502,10 +502,11 @@ export default function ChargingDetailPage() {
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
-              <Activity className="h-8 w-8 opacity-20" />
-              <p className="text-xs">{t('common.noData', 'No data available')}</p>
-            </div>
+            <EmptyState
+              icon={<Activity className="h-8 w-8 opacity-20" />}
+              message={t('common.noData', 'No data available')}
+              className="py-8"
+            />
           )}
         </GlassPanel>
 
@@ -551,10 +552,11 @@ export default function ChargingDetailPage() {
               </ComposedChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
-              <Activity className="h-8 w-8 opacity-20" />
-              <p className="text-xs">{t('common.noData', 'No data available')}</p>
-            </div>
+            <EmptyState
+              icon={<Activity className="h-8 w-8 opacity-20" />}
+              message={t('common.noData', 'No data available')}
+              className="py-8"
+            />
           )}
         </GlassPanel>
 
@@ -594,10 +596,11 @@ export default function ChargingDetailPage() {
               </ComposedChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
-              <Activity className="h-8 w-8 opacity-20" />
-              <p className="text-xs">{t('common.noData', 'No data available')}</p>
-            </div>
+            <EmptyState
+              icon={<Activity className="h-8 w-8 opacity-20" />}
+              message={t('common.noData', 'No data available')}
+              className="py-8"
+            />
           )}
         </GlassPanel>
 
@@ -633,10 +636,11 @@ export default function ChargingDetailPage() {
               </ComposedChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
-              <Activity className="h-8 w-8 opacity-20" />
-              <p className="text-xs">{t('common.noData', 'No data available')}</p>
-            </div>
+            <EmptyState
+              icon={<Activity className="h-8 w-8 opacity-20" />}
+              message={t('common.noData', 'No data available')}
+              className="py-8"
+            />
           )}
         </GlassPanel>
 

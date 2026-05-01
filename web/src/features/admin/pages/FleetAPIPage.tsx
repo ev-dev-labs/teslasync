@@ -14,6 +14,7 @@ import { Toggle } from '@/components/ui/Toggle';
 import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
 import { FadeIn } from '@/components/motion/FadeIn';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import { useToast } from '@/components/feedback/Toast';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { fmtInt } from '@/lib/numberFormat';
@@ -316,10 +317,11 @@ export default function FleetAPIPage() {
               </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
-              <Activity className="h-8 w-8 opacity-20" />
-              <p className="text-xs">{t('common.noData', 'No data available')}</p>
-            </div>
+            <EmptyState
+              icon={<Activity className="h-8 w-8 opacity-20" />}
+              message={t('common.noData', 'No data available')}
+              className="py-8"
+            />
           )}
         </GlassPanel>
       </FadeIn>

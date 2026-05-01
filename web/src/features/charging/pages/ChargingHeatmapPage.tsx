@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Select } from '@/components/ui';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
-import { Skeleton } from '@/components/feedback';
+import { Skeleton, EmptyState } from '@/components/feedback';
 import { Activity } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -247,10 +247,11 @@ export default function ChargingHeatmapPage() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
-              <Activity className="h-8 w-8 opacity-20" />
-              <p className="text-xs">{t('common.noData', 'No data available')}</p>
-            </div>
+            <EmptyState
+              icon={<Activity className="h-8 w-8 opacity-20" />}
+              message={t('common.noData', 'No data available')}
+              className="py-8"
+            />
           )}
         </GlassPanel>
       </FadeIn>

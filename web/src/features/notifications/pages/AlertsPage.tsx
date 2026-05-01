@@ -232,10 +232,11 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
-            <Activity className="h-8 w-8 opacity-20" />
-            <p className="text-xs">{t('common.noData')}</p>
-          </div>
+          <EmptyState
+            icon={<Activity className="h-8 w-8 opacity-20" />}
+            message={t('common.noData')}
+            className="py-8"
+          />
         )}
       </GlassPanel>
 
