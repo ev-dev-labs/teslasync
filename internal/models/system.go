@@ -348,6 +348,17 @@ type Settings struct {
 	// home zone). Empty string = use browser TZ. Validated server-side
 	// against Go's tzdata so invalid IANA names are rejected.
 	TimezoneUser string `json:"timezone_user"`
+	// TabBadgeEnabled toggles the browser-tab signalling that prefixes
+	// `document.title` with `(N)` and paints a coloured dot on the
+	// favicon when there are unread notifications. Defaults to true so
+	// existing users get the feature without an opt-in. (Phase 40 / 32.)
+	TabBadgeEnabled bool `json:"tab_badge_enabled"`
+	// CriticalFlashEnabled toggles the brief title-flash that fires
+	// when a critical alert arrives while the tab is in the
+	// background. Defaults to true; honoured alongside the
+	// browser-level `prefers-reduced-motion` preference, which
+	// suppresses the flash regardless of this setting. (Phase 40 / 32.)
+	CriticalFlashEnabled bool `json:"critical_flash_enabled"`
 }
 
 // Embedding mirrors the post-migration `embeddings` schema (pgvector-backed).

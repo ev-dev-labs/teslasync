@@ -34,6 +34,8 @@ const defaults: AppSettings = {
   locale: 'en-US',
   tz_display_default: 'vehicle',
   timezone_user: '',
+  tab_badge_enabled: true,
+  critical_flash_enabled: true,
 }
 
 /**

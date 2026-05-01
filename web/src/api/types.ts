@@ -207,6 +207,20 @@ export interface AppSettings {
    * Server-side validated against Go's tzdata.
    */
   timezone_user?: string
+  /**
+   * When true (default), the app prefixes `document.title` with the
+   * unread-notification count `(N)` and paints a coloured dot on the
+   * favicon. Disable to keep the tab title/icon static. (Phase 40 / 32.)
+   */
+  tab_badge_enabled?: boolean
+  /**
+   * When true (default), the app briefly flashes
+   * `"(!) ALERT — "` in front of `document.title` when a critical
+   * alert fires while the tab is in the background. Disabled
+   * automatically for users with `prefers-reduced-motion: reduce`.
+   * (Phase 40 / 32.)
+   */
+  critical_flash_enabled?: boolean
 }
 
 /** Per-endpoint toggle config for Tesla Fleet API calls. */

@@ -112,6 +112,9 @@ import { getVehicleState } from '@/api/vehicles'
 import type { Alert, Vehicle, VersionInfo, UpdateCheckResult, StaleSessionsResponse } from '@/api/types'
 import { useRealtimeEvents } from '../../hooks/useRealtimeEvents'
 import { useNotificationListener } from '../../hooks/useNotificationListener'
+import { useTitleBadge } from '../../hooks/useTitleBadge'
+import { useFaviconBadge } from '../../hooks/useFaviconBadge'
+import { useCriticalAlertFlash } from '../../hooks/useCriticalAlertFlash'
 import { useToast } from '../feedback/Toast'
 import { useSettings } from '../../hooks/useSettings'
 import { useUnreadCount } from '@/api/hooks/useNotifications'
@@ -614,6 +617,12 @@ export default function Layout() {
     },
   })
   useNotificationListener()
+  // Browser tab badging — Phase 40 / Prompt 32. These three hooks
+  // share the SSE singleton with `useNotificationListener` above; no
+  // additional EventSource connection is opened.
+  useTitleBadge()
+  useFaviconBadge()
+  useCriticalAlertFlash()
   const { convertDistance, distanceUnit } = useSettings()
   const { mode: shortcutMode, showCheatSheet, toggleCheatSheet } = useKeyboardShortcuts()
 

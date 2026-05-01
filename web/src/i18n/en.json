@@ -1100,6 +1100,7 @@
     },
     "viewContext": "View context",
     "searchPlaceholder": "Search by title or message…",
+    "tabFlash": "(!) ALERT — ",
     "delete": {
       "title": "Delete rule?",
       "message": "This cannot be undone."
@@ -4989,6 +4990,14 @@
     "alerts": "Alerts",
     "exportStatus": "Export completions",
     "hint": "Notifications only fire when the app tab is in the background."
+  },
+  "settings": {
+    "tab": {
+      "heading": "Browser tab signals",
+      "badge": "Show unread count in browser tab",
+      "flash": "Flash tab title on critical alerts",
+      "hint": "Adds a \"(N)\" prefix and favicon dot when there are unread notifications. Critical alerts briefly flash \"(!) ALERT\" when the tab is in the background."
+    }
   },
   "region": {
     "title": "Region & API",

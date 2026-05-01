@@ -44,6 +44,8 @@ export function GeneralSettings() {
     locale: 'en-US',
     tz_display_default: 'vehicle',
     timezone_user: '',
+    tab_badge_enabled: true,
+    critical_flash_enabled: true,
   })
   const [saved, setSaved] = useState(false)
 
