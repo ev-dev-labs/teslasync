@@ -1,0 +1,81 @@
+=== PREFLIGHT ===
+branch=refactor/mono-gone
+head=3ca02433
+
+signal_log_reader.go content (current):
+package database
+
+import (
+	"time"
+)
+
+// SignalLogReader provides point-in-time signal reconstruction queries against
+// the signal_log hypertable. All queries use context.WithTimeout to prevent
+// runaway scans on the hypertable.
+type SignalLogReader struct {
+	db *DB
+}
+
+// NewSignalLogReader creates a reader backed by the given Postgres pool.
+func NewSignalLogReader(db *DB) *SignalLogReader {
+	return &SignalLogReader{db: db}
+}
+
+const queryTimeout = 10 * time.Second
+
+Files containing pivot symbols:
+  signal_log_reader_aggregations.go (6267 bytes): 0 hit(s)
+  signal_log_reader_query.go (11919 bytes): 18 hit(s)
+  signal_log_reader.go (471 bytes): 0 hit(s)
+
+Callers still referencing PivotMapping/PivotRow outside database/:
+  D:\repos\teslasync\internal\api\drive_handler_dtos.go:9: var driveTelemetryMappings = []database.PivotMapping{
+  D:\repos\teslasync\internal\api\drive_handler_dtos.go:26: var positionMappings = []database.PivotMapping{
+
+=== DELETED ===
+NO CHANGES MADE - see ANALYSIS section below
+
+=== ANALYSIS ===
+Prompt was authored against an older codebase layout where SignalLogReader
+methods all lived in signal_log_reader.go. Commit 7530c1c7c (refactor:
+split signal log reader) split that file into:
+  - signal_log_reader.go (struct + constructor + queryTimeout const, 20 lines)
+  - signal_log_reader_query.go (SnapshotAt/SignalAt/SignalTrace/LatestTimestamp
+    + the pivot methods to delete + decode helpers)
+  - signal_log_reader_aggregations.go (DriveAggregates/RegenEnergy/etc.)
+
+Consequences for this gate:
+  - NO_SIGNALTRACEPIVOT/NO_PIVOTMAPPING anchors trivially pass on signal_log_reader.go
+    (the symbols are NOT there - they live in signal_log_reader_query.go)
+  - AGGS_KEPT_TRACE/AGGS_KEPT_LATESTTS anchors FAIL on signal_log_reader.go
+    (SignalTrace and LatestTimestamp are in signal_log_reader_query.go)
+
+To actually delete the pivot methods we would need to modify:
+  - internal/database/signal_log_reader_query.go (delete pivot funcs+types)
+  - internal/api/drive_handler_dtos.go (dead vars driveTelemetryMappings &
+    positionMappings still reference database.PivotMapping; never used in code
+    paths - migration prompts 10-36 missed cleaning these up)
+Both files are OUTSIDE allowed_files = [internal/database/signal_log_reader.go, log]
+Per Honesty Covenant rule 9 (No silent drift), making those edits would
+trip the git status anchor and BLOCK the gate anyway.
+
+Required follow-up to unblock this prompt:
+  1. Reissue prompt 37 with allowed_files = [signal_log_reader.go,
+     signal_log_reader_query.go, drive_handler_dtos.go]
+  2. Update gate anchors to look at signal_log_reader_query.go for the NO_*/AGGS_KEPT_*
+     checks, OR consolidate the split files back into signal_log_reader.go.
+
+=== GATE ===
+PREDECESSOR_OK=True
+FILE_EXISTS=True
+NO_SIGNALTRACEPIVOT=True
+NO_SIGNALTRACEPIVOTFLAT=True
+NO_PIVOTMAPPING_TYPE=True
+NO_PIVOTROW_TYPE=True
+AGGS_KEPT_TRACE=False
+AGGS_KEPT_LATESTTS=False
+
+Gate anchors failed (see ANALYSIS section above).
+EXIT=1
+STATUS=BLOCKED
+=== COMMIT ===
