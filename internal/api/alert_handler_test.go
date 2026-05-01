@@ -273,6 +273,222 @@ func TestAlertTestContract(t *testing.T) {
 	}
 }
 
+// ─── Phase 40 / Prompt 06: trigger_mode + snooze contract tests ────────────
+
+func TestCreateRule_DefaultTriggerMode(t *testing.T) {
+	repo := &fakeAlertRuleRepo{existing: validAlertRuleForTest()}
+	handler := newAlertHandlerForTestWithRepo(repo)
+	rec := httptest.NewRecorder()
+
+	handler.CreateRule(rec, httptest.NewRequest(http.MethodPost, "/alerts/rules",
+		strings.NewReader(typedAlertRuleBody(""))))
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want %d, body=%s", rec.Code, http.StatusCreated, rec.Body.String())
+	}
+	if len(repo.created) != 1 {
+		t.Fatalf("created rules = %d, want 1", len(repo.created))
+	}
+	if got, want := repo.created[0].TriggerMode, "repeat"; got != want {
+		t.Fatalf("trigger_mode = %q, want %q (omitted should default)", got, want)
+	}
+}
+
+func TestCreateRule_AcceptsOnceTriggerMode(t *testing.T) {
+	repo := &fakeAlertRuleRepo{existing: validAlertRuleForTest()}
+	handler := newAlertHandlerForTestWithRepo(repo)
+	rec := httptest.NewRecorder()
+
+	handler.CreateRule(rec, httptest.NewRequest(http.MethodPost, "/alerts/rules",
+		strings.NewReader(typedAlertRuleBody(`"trigger_mode":"once"`))))
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want %d, body=%s", rec.Code, http.StatusCreated, rec.Body.String())
+	}
+	if len(repo.created) != 1 {
+		t.Fatalf("created rules = %d, want 1", len(repo.created))
+	}
+	if got, want := repo.created[0].TriggerMode, "once"; got != want {
+		t.Fatalf("trigger_mode = %q, want %q", got, want)
+	}
+}
+
+func TestCreateRule_InvalidTriggerMode_400(t *testing.T) {
+	handler := newAlertHandlerForTest()
+	rec := httptest.NewRecorder()
+
+	handler.CreateRule(rec, httptest.NewRequest(http.MethodPost, "/alerts/rules",
+		strings.NewReader(typedAlertRuleBody(`"trigger_mode":"sometimes"`))))
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d, body=%s", rec.Code, http.StatusBadRequest, rec.Body.String())
+	}
+}
+
+func TestUpdateRule_TriggerModeRoundTrip(t *testing.T) {
+	repo := &fakeAlertRuleRepo{existing: validAlertRuleForTest()}
+	handler := newAlertHandlerForTestWithRepo(repo)
+	rec := httptest.NewRecorder()
+
+	handler.UpdateRule(rec, newAlertRuleRequest(http.MethodPut, "/alerts/rules/42",
+		`{"trigger_mode":"once"}`))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body=%s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	if len(repo.updated) != 1 {
+		t.Fatalf("updated rules = %d, want 1", len(repo.updated))
+	}
+	if got, want := repo.updated[0].TriggerMode, "once"; got != want {
+		t.Fatalf("trigger_mode = %q, want %q", got, want)
+	}
+}
+
+func TestSnoozeRule_Minutes_OK(t *testing.T) {
+	repo := &fakeAlertRuleRepo{existing: validAlertRuleForTest()}
+	handler := newAlertHandlerForTestWithRepo(repo)
+	rec := httptest.NewRecorder()
+
+	before := time.Now().UTC()
+	handler.SnoozeRule(rec, newAlertRuleRequest(http.MethodPost,
+		"/alerts/rules/42/snooze", `{"minutes":60}`))
+	after := time.Now().UTC()
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body=%s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	if len(repo.snoozed) != 1 {
+		t.Fatalf("snoozed records = %d, want 1", len(repo.snoozed))
+	}
+	rec0 := repo.snoozed[0]
+	if rec0.id != 42 {
+		t.Fatalf("snoozed rule id = %d, want 42", rec0.id)
+	}
+	if rec0.until == nil {
+		t.Fatal("snoozed.until = nil, want non-nil for positive minutes")
+	}
+	expectedMin := before.Add(60 * time.Minute)
+	expectedMax := after.Add(60 * time.Minute)
+	if rec0.until.Before(expectedMin.Add(-time.Second)) || rec0.until.After(expectedMax.Add(time.Second)) {
+		t.Fatalf("snoozed.until = %v, want roughly [%v, %v]", *rec0.until, expectedMin, expectedMax)
+	}
+}
+
+func TestSnoozeRule_Until_OK(t *testing.T) {
+	repo := &fakeAlertRuleRepo{existing: validAlertRuleForTest()}
+	handler := newAlertHandlerForTestWithRepo(repo)
+	rec := httptest.NewRecorder()
+
+	until := time.Now().UTC().Add(2 * time.Hour).Truncate(time.Second)
+	body := `{"until":"` + until.Format(time.RFC3339) + `"}`
+
+	handler.SnoozeRule(rec, newAlertRuleRequest(http.MethodPost,
+		"/alerts/rules/42/snooze", body))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body=%s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	if len(repo.snoozed) != 1 || repo.snoozed[0].until == nil {
+		t.Fatalf("expected one snooze record with non-nil until, got %+v", repo.snoozed)
+	}
+	if !repo.snoozed[0].until.Equal(until) {
+		t.Fatalf("snoozed.until = %v, want %v", *repo.snoozed[0].until, until)
+	}
+}
+
+func TestSnoozeRule_NegativeMinutes_Clears(t *testing.T) {
+	until := time.Now().UTC().Add(time.Hour)
+	rule := validAlertRuleForTest()
+	rule.SnoozedUntil = &until
+	repo := &fakeAlertRuleRepo{existing: rule}
+	handler := newAlertHandlerForTestWithRepo(repo)
+	rec := httptest.NewRecorder()
+
+	handler.SnoozeRule(rec, newAlertRuleRequest(http.MethodPost,
+		"/alerts/rules/42/snooze", `{"minutes":0}`))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body=%s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	if len(repo.snoozed) != 1 {
+		t.Fatalf("snoozed records = %d, want 1", len(repo.snoozed))
+	}
+	if repo.snoozed[0].until != nil {
+		t.Fatalf("snoozed.until = %v, want nil (cleared)", *repo.snoozed[0].until)
+	}
+}
+
+func TestSnoozeRule_PastUntil_Clears(t *testing.T) {
+	repo := &fakeAlertRuleRepo{existing: validAlertRuleForTest()}
+	handler := newAlertHandlerForTestWithRepo(repo)
+	rec := httptest.NewRecorder()
+
+	past := time.Now().UTC().Add(-time.Hour).Format(time.RFC3339)
+	handler.SnoozeRule(rec, newAlertRuleRequest(http.MethodPost,
+		"/alerts/rules/42/snooze", `{"until":"`+past+`"}`))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body=%s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	if len(repo.snoozed) != 1 || repo.snoozed[0].until != nil {
+		t.Fatalf("expected past timestamp to clear snooze, got %+v", repo.snoozed)
+	}
+}
+
+func TestSnoozeRule_BothMinutesAndUntil_400(t *testing.T) {
+	handler := newAlertHandlerForTest()
+	rec := httptest.NewRecorder()
+
+	until := time.Now().UTC().Add(time.Hour).Format(time.RFC3339)
+	body := `{"minutes":60,"until":"` + until + `"}`
+	handler.SnoozeRule(rec, newAlertRuleRequest(http.MethodPost,
+		"/alerts/rules/42/snooze", body))
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d, body=%s", rec.Code, http.StatusBadRequest, rec.Body.String())
+	}
+}
+
+func TestSnoozeRule_EmptyBody_400(t *testing.T) {
+	handler := newAlertHandlerForTest()
+	rec := httptest.NewRecorder()
+
+	handler.SnoozeRule(rec, newAlertRuleRequest(http.MethodPost,
+		"/alerts/rules/42/snooze", `{}`))
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d, body=%s", rec.Code, http.StatusBadRequest, rec.Body.String())
+	}
+}
+
+func TestSnoozeRule_Over30Days_400(t *testing.T) {
+	handler := newAlertHandlerForTest()
+	rec := httptest.NewRecorder()
+
+	handler.SnoozeRule(rec, newAlertRuleRequest(http.MethodPost,
+		"/alerts/rules/42/snooze", `{"minutes":43201}`))
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d, body=%s", rec.Code, http.StatusBadRequest, rec.Body.String())
+	}
+}
+
+func TestSnoozeRule_InvalidRuleID_400(t *testing.T) {
+	handler := newAlertHandlerForTest()
+	rec := httptest.NewRecorder()
+
+	req := httptest.NewRequest(http.MethodPost, "/alerts/rules/abc/snooze",
+		strings.NewReader(`{"minutes":60}`))
+	routeCtx := chi.NewRouteContext()
+	routeCtx.URLParams.Add("ruleID", "abc")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx))
+	handler.SnoozeRule(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d, body=%s", rec.Code, http.StatusBadRequest, rec.Body.String())
+	}
+}
+
 func typedAlertRuleBody(extra string) string {
 	body := `{"name":"Speed warning","enabled":true,"signal_name":"VehicleSpeed","op":">","value_num":70`
 	if extra != "" {
@@ -318,16 +534,25 @@ func validAlertRuleForTest() *models.AlertRule {
 		ValueNum:    &valueNum,
 		Severity:    "warn",
 		CooldownMin: 15,
+		TriggerMode: "repeat",
 		CreatedAt:   time.Now().UTC(),
 		UpdatedAt:   time.Now().UTC(),
 	}
 }
 
 type fakeAlertRuleRepo struct {
-	existing *models.AlertRule
-	byID     map[int64]*models.AlertRule
-	created  []*models.AlertRule
-	updated  []*models.AlertRule
+	existing  *models.AlertRule
+	byID      map[int64]*models.AlertRule
+	created   []*models.AlertRule
+	updated   []*models.AlertRule
+	snoozed   []snoozeRecord
+	snoozeErr error
+	notFound  bool
+}
+
+type snoozeRecord struct {
+	id    int64
+	until *time.Time
 }
 
 func (f *fakeAlertRuleRepo) GetAll(context.Context) ([]*models.AlertRule, error) {
@@ -343,6 +568,9 @@ func (f *fakeAlertRuleRepo) Update(_ context.Context, _ int64, rule *models.Aler
 }
 
 func (f *fakeAlertRuleRepo) GetByID(_ context.Context, id int64) (*models.AlertRule, error) {
+	if f.notFound {
+		return nil, nil
+	}
 	if f.byID != nil {
 		if r, ok := f.byID[id]; ok {
 			return cloneAlertRuleForTest(r), nil
@@ -364,6 +592,22 @@ func (f *fakeAlertRuleRepo) Create(_ context.Context, rule *models.AlertRule) er
 }
 
 func (f *fakeAlertRuleRepo) Delete(context.Context, int64) error {
+	return nil
+}
+
+func (f *fakeAlertRuleRepo) SetSnooze(_ context.Context, id int64, until *time.Time) error {
+	if f.snoozeErr != nil {
+		return f.snoozeErr
+	}
+	f.snoozed = append(f.snoozed, snoozeRecord{id: id, until: until})
+	if f.existing != nil && f.existing.ID == id {
+		f.existing.SnoozedUntil = until
+	}
+	if f.byID != nil {
+		if r, ok := f.byID[id]; ok {
+			r.SnoozedUntil = until
+		}
+	}
 	return nil
 }
 

@@ -7,6 +7,8 @@ import type {
   Alert,
   AlertRule,
   AlertRuleInput,
+  AlertRuleSnoozeRequest,
+  AlertRuleTriggerMode,
   AlertRuleUpdate,
   AlertTestRequest,
   AlertTestTarget,
@@ -19,6 +21,8 @@ export type {
   Alert,
   AlertRule,
   AlertRuleInput,
+  AlertRuleSnoozeRequest,
+  AlertRuleTriggerMode,
   AlertRuleUpdate,
   AlertTestRequest,
   AlertTestTarget,
@@ -168,6 +172,32 @@ export function useTestAlertRule() {
     },
     onError: (err: Error) => {
       toast.error(`Failed to send test alert: ${err.message}`);
+    },
+  });
+}
+
+/**
+ * useSnoozeAlertRule mutes a single rule for a fixed duration.
+ * Pass minutes=0 (or a past `until`) to clear an existing snooze.
+ * Snooze is layered on top of cooldown / trigger_mode and auto-expires.
+ */
+export function useSnoozeAlertRule() {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: number } & AlertRuleSnoozeRequest) =>
+      request<AlertRule>(`/alerts/rules/${id}/snooze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: notificationKeys.alertRules });
+      const cleared = vars.minutes != null && vars.minutes <= 0;
+      toast.success(cleared ? 'Snooze cleared' : 'Rule snoozed');
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to snooze rule: ${err.message}`);
     },
   });
 }

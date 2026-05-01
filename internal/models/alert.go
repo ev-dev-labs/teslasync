@@ -29,7 +29,14 @@ type AlertRule struct {
 	Severity string `db:"severity" json:"severity"`
 	// CooldownMin is the minimum minutes between consecutive alerts from this
 	// rule, regardless of signal value.
-	CooldownMin int       `db:"cooldown_min" json:"cooldown_min"`
-	CreatedAt   time.Time `db:"created_at"   json:"created_at"`
-	UpdatedAt   time.Time `db:"updated_at"   json:"updated_at"`
+	CooldownMin int `db:"cooldown_min" json:"cooldown_min"`
+	// TriggerMode controls whether the rule fires every cooldown while the
+	// condition holds ("repeat", default) or only once on the rising edge
+	// until the condition becomes false again ("once").
+	TriggerMode string `db:"trigger_mode" json:"trigger_mode"`
+	// SnoozedUntil is a manual mute. When set in the future, the rule is
+	// suppressed regardless of condition. Auto-expires by timestamp.
+	SnoozedUntil *time.Time `db:"snoozed_until" json:"snoozed_until,omitempty"`
+	CreatedAt    time.Time  `db:"created_at"    json:"created_at"`
+	UpdatedAt    time.Time  `db:"updated_at"    json:"updated_at"`
 }

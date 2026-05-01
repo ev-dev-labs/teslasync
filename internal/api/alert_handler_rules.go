@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog/log"
 
@@ -16,7 +17,12 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
-const maxAlertRequestBodyBytes = 1 << 20
+const (
+	maxAlertRequestBodyBytes = 1 << 20
+	// maxSnoozeMinutes caps a single snooze at 30 days so a stuck client
+	// can't accidentally mute a rule indefinitely.
+	maxSnoozeMinutes = 60 * 24 * 30
+)
 
 var forbiddenAlertRuleFields = map[string]struct{}{
 	"conditions":      {},
@@ -136,6 +142,17 @@ func (h *AlertHandler) UpdateRule(w http.ResponseWriter, r *http.Request) {
 		}
 		existing.CooldownMin = *body.CooldownMin
 	}
+	if fieldPresent(fields, "trigger_mode") {
+		mode, err := validateTriggerMode(body.TriggerMode)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		existing.TriggerMode = mode
+	}
+	if fieldPresent(fields, "snoozed_until") {
+		existing.SnoozedUntil = body.SnoozedUntil
+	}
 	if err := validateAlertRule(existing); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
@@ -201,21 +218,28 @@ func (h *AlertHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 	if body.CooldownMin != nil {
 		cooldownMin = *body.CooldownMin
 	}
+	triggerMode, err := validateTriggerMode(body.TriggerMode)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 
 	rule := &models.AlertRule{
-		Name:        name,
-		Description: body.Description,
-		Enabled:     enabled,
-		VehicleID:   body.VehicleID,
-		SignalName:  signalName,
-		Op:          op,
-		ValueNum:    body.ValueNum,
-		ValueText:   body.ValueText,
-		ValueBool:   body.ValueBool,
-		ValueMin:    body.ValueMin,
-		ValueMax:    body.ValueMax,
-		Severity:    severity,
-		CooldownMin: cooldownMin,
+		Name:         name,
+		Description:  body.Description,
+		Enabled:      enabled,
+		VehicleID:    body.VehicleID,
+		SignalName:   signalName,
+		Op:           op,
+		ValueNum:     body.ValueNum,
+		ValueText:    body.ValueText,
+		ValueBool:    body.ValueBool,
+		ValueMin:     body.ValueMin,
+		ValueMax:     body.ValueMax,
+		Severity:     severity,
+		CooldownMin:  cooldownMin,
+		TriggerMode:  triggerMode,
+		SnoozedUntil: body.SnoozedUntil,
 	}
 	if err := validateAlertRule(rule); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
@@ -245,6 +269,71 @@ func (h *AlertHandler) DeleteRule(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+}
+
+// SnoozeRule sets snoozed_until on a rule. Body accepts exactly one of:
+//   {"minutes": <int>}  - snooze for N minutes from now (<= 0 clears).
+//   {"until":   <ISO>}  - snooze until the given timestamp (past = clear).
+//
+// Snooze is layered on top of cooldown / trigger_mode: while a rule is
+// snoozed, the engine suppresses all evaluations regardless of condition.
+func (h *AlertHandler) SnoozeRule(w http.ResponseWriter, r *http.Request) {
+	id, err := urlParamInt64(r, "ruleID")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid rule ID")
+		return
+	}
+
+	var body snoozeAlertRuleRequest
+	if _, err := decodeStrictAlertRequest(r, &body, nil); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body: "+err.Error())
+		return
+	}
+
+	until, err := resolveSnoozeUntil(body)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	if err := h.alertRuleRepo.SetSnooze(r.Context(), id, until); err != nil {
+		log.Error().Err(err).Int64("id", id).Msg("failed to set snooze")
+		writeError(w, http.StatusInternalServerError, "failed to set snooze")
+		return
+	}
+
+	updated, err := h.alertRuleRepo.GetByID(r.Context(), id)
+	if err != nil || updated == nil {
+		writeError(w, http.StatusNotFound, "rule not found after snooze")
+		return
+	}
+	writeJSON(w, http.StatusOK, updated)
+}
+
+// resolveSnoozeUntil normalizes the snooze body into an effective timestamp.
+// Returns nil when the snooze should be cleared (negative minutes or past
+// timestamp), and an error when the input is ambiguous or out of range.
+func resolveSnoozeUntil(body snoozeAlertRuleRequest) (*time.Time, error) {
+	switch {
+	case body.Minutes != nil && body.Until != nil:
+		return nil, errors.New("specify minutes OR until, not both")
+	case body.Minutes != nil:
+		if *body.Minutes <= 0 {
+			return nil, nil
+		}
+		if *body.Minutes > maxSnoozeMinutes {
+			return nil, fmt.Errorf("minutes must be <= %d (30 days)", maxSnoozeMinutes)
+		}
+		t := time.Now().UTC().Add(time.Duration(*body.Minutes) * time.Minute)
+		return &t, nil
+	case body.Until != nil:
+		if body.Until.Before(time.Now().UTC()) {
+			return nil, nil
+		}
+		return body.Until, nil
+	default:
+		return nil, errors.New("specify minutes or until")
+	}
 }
 
 // TestRule fires a test notification for a rule — creates a notification log
@@ -438,7 +527,24 @@ func validateAlertRule(rule *models.AlertRule) error {
 	if rule.CooldownMin <= 0 {
 		return errors.New("cooldown_min must be greater than 0")
 	}
+	if rule.TriggerMode != "once" && rule.TriggerMode != "repeat" {
+		return errors.New(`trigger_mode must be "once" or "repeat"`)
+	}
 	return validateAlertRuleOperand(rule)
+}
+
+// validateTriggerMode resolves an optional input to a canonical trigger mode.
+// nil/empty defaults to "repeat" (today's behavior).
+func validateTriggerMode(mode *string) (string, error) {
+	if mode == nil || *mode == "" {
+		return "repeat", nil
+	}
+	switch *mode {
+	case "once", "repeat":
+		return *mode, nil
+	default:
+		return "", errors.New(`trigger_mode must be "once" or "repeat"`)
+	}
 }
 
 func validateAlertRuleOperand(rule *models.AlertRule) error {

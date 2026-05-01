@@ -368,3 +368,189 @@ func TestIsTransitionRule(t *testing.T) {
 		})
 	}
 }
+
+// ─── Phase 40 / Prompt 06: trigger_mode + snooze engine tests ──────────────
+
+func TestRuleEngine_TriggerMode_Repeat_FiresEveryCooldown(t *testing.T) {
+	engine := NewRuleEngine()
+	rule := &models.AlertRule{
+		ID:          400,
+		Name:        "Battery Full",
+		CooldownMin: 60,
+		SignalName:  "BatteryLevel",
+		Op:          ">=",
+		ValueNum:    floatPtr(90),
+		Severity:    "info",
+		TriggerMode: "repeat",
+	}
+	vehicleID := int64(100)
+
+	// First match fires.
+	if got := engine.Evaluate(rule, vehicleID, map[string]interface{}{"BatteryLevel": 90.0}); !got.Triggered {
+		t.Fatal("expected first matching value to fire")
+	}
+
+	// Subsequent matches within cooldown are suppressed.
+	if got := engine.Evaluate(rule, vehicleID, map[string]interface{}{"BatteryLevel": 91.0}); got.Triggered {
+		t.Fatal("expected match within cooldown to be suppressed")
+	}
+
+	// Advance "time" by rewriting LastFiredAt, condition still true: should fire again.
+	engine.mu.Lock()
+	st := engine.state[ruleKey{RuleID: rule.ID, VehicleID: vehicleID}]
+	past := time.Now().UTC().Add(-2 * time.Hour)
+	st.LastFiredAt = &past
+	engine.mu.Unlock()
+
+	if got := engine.Evaluate(rule, vehicleID, map[string]interface{}{"BatteryLevel": 92.0}); !got.Triggered {
+		t.Fatal("expected repeat-mode rule to fire again after cooldown expires while condition holds")
+	}
+}
+
+func TestRuleEngine_TriggerMode_Once_FiresOnceThenSuppresses(t *testing.T) {
+	engine := NewRuleEngine()
+	rule := &models.AlertRule{
+		ID:          401,
+		Name:        "Battery Full Once",
+		CooldownMin: 60,
+		SignalName:  "BatteryLevel",
+		Op:          ">=",
+		ValueNum:    floatPtr(90),
+		Severity:    "info",
+		TriggerMode: "once",
+	}
+	vehicleID := int64(100)
+
+	// 89 → no match.
+	if got := engine.Evaluate(rule, vehicleID, map[string]interface{}{"BatteryLevel": 89.0}); got.Triggered {
+		t.Fatal("expected 89 (below threshold) not to fire")
+	}
+	// 90 → first rising edge: fire and latch.
+	if got := engine.Evaluate(rule, vehicleID, map[string]interface{}{"BatteryLevel": 90.0}); !got.Triggered {
+		t.Fatal("expected once-mode rising edge to fire")
+	}
+	// 91, 92 → still matching but latched: suppressed.
+	if got := engine.Evaluate(rule, vehicleID, map[string]interface{}{"BatteryLevel": 91.0}); got.Triggered {
+		t.Fatal("expected once-mode latched rule to suppress further matches")
+	}
+	if got := engine.Evaluate(rule, vehicleID, map[string]interface{}{"BatteryLevel": 92.0}); got.Triggered {
+		t.Fatal("expected once-mode latched rule to keep suppressing")
+	}
+	// 89 → falling edge clears the latch.
+	if got := engine.Evaluate(rule, vehicleID, map[string]interface{}{"BatteryLevel": 89.0}); got.Triggered {
+		t.Fatal("expected falling edge not to fire")
+	}
+	// 92 → next rising edge fires again.
+	if got := engine.Evaluate(rule, vehicleID, map[string]interface{}{"BatteryLevel": 92.0}); !got.Triggered {
+		t.Fatal("expected post-reset rising edge to fire")
+	}
+}
+
+func TestRuleEngine_TriggerMode_Once_TransitionTimeline(t *testing.T) {
+	engine := NewRuleEngine()
+	rule := &models.AlertRule{
+		ID:          402,
+		Name:        "Battery Full Toggle",
+		CooldownMin: 60,
+		SignalName:  "BatteryLevel",
+		Op:          ">=",
+		ValueNum:    floatPtr(90),
+		Severity:    "info",
+		TriggerMode: "once",
+	}
+	vehicleID := int64(100)
+
+	// Sequence true → false → true → false → true → expect 3 fires.
+	values := []float64{91, 80, 91, 80, 91}
+	wantFire := []bool{true, false, true, false, true}
+	for i, v := range values {
+		got := engine.Evaluate(rule, vehicleID, map[string]interface{}{"BatteryLevel": v}).Triggered
+		if got != wantFire[i] {
+			t.Fatalf("step %d (value=%v): triggered = %v, want %v", i, v, got, wantFire[i])
+		}
+	}
+}
+
+func TestRuleEngine_Snooze_Suppresses(t *testing.T) {
+	engine := NewRuleEngine()
+	until := time.Now().UTC().Add(time.Hour)
+	rule := &models.AlertRule{
+		ID:           500,
+		Name:         "Battery Full",
+		CooldownMin:  60,
+		SignalName:   "BatteryLevel",
+		Op:           ">=",
+		ValueNum:     floatPtr(90),
+		Severity:     "info",
+		TriggerMode:  "repeat",
+		SnoozedUntil: &until,
+	}
+	vehicleID := int64(100)
+
+	// Snooze active → matching value does not fire.
+	if got := engine.Evaluate(rule, vehicleID, map[string]interface{}{"BatteryLevel": 95.0}); got.Triggered {
+		t.Fatal("expected snoozed rule to be suppressed")
+	}
+
+	// Expire the snooze (timestamp in the past).
+	past := time.Now().UTC().Add(-time.Millisecond)
+	rule.SnoozedUntil = &past
+
+	if got := engine.Evaluate(rule, vehicleID, map[string]interface{}{"BatteryLevel": 95.0}); !got.Triggered {
+		t.Fatal("expected expired snooze to allow firing")
+	}
+}
+
+func TestRuleEngine_Snooze_BeatsTriggerMode(t *testing.T) {
+	engine := NewRuleEngine()
+	until := time.Now().UTC().Add(time.Hour)
+	rule := &models.AlertRule{
+		ID:           501,
+		Name:         "Battery Full Once Snoozed",
+		CooldownMin:  60,
+		SignalName:   "BatteryLevel",
+		Op:           ">=",
+		ValueNum:     floatPtr(90),
+		Severity:     "info",
+		TriggerMode:  "once",
+		SnoozedUntil: &until,
+	}
+	vehicleID := int64(100)
+
+	// Snooze suppresses regardless of trigger_mode and latch state.
+	if got := engine.Evaluate(rule, vehicleID, map[string]interface{}{"BatteryLevel": 95.0}); got.Triggered {
+		t.Fatal("expected snoozed once-mode rule to be suppressed")
+	}
+	// Snooze "no state change" guarantee: latch must NOT have been set.
+	engine.mu.RLock()
+	st, ok := engine.state[ruleKey{RuleID: rule.ID, VehicleID: vehicleID}]
+	engine.mu.RUnlock()
+	if ok && st.OnceLatched {
+		t.Fatal("expected snoozed rule to leave OnceLatched untouched")
+	}
+}
+
+func TestRuleEngine_Snooze_ExpiredAllowsOnceFire(t *testing.T) {
+	engine := NewRuleEngine()
+	past := time.Now().UTC().Add(-time.Hour)
+	rule := &models.AlertRule{
+		ID:           502,
+		Name:         "Battery Full Once Expired Snooze",
+		CooldownMin:  60,
+		SignalName:   "BatteryLevel",
+		Op:           ">=",
+		ValueNum:     floatPtr(90),
+		Severity:     "info",
+		TriggerMode:  "once",
+		SnoozedUntil: &past,
+	}
+	vehicleID := int64(100)
+
+	if got := engine.Evaluate(rule, vehicleID, map[string]interface{}{"BatteryLevel": 95.0}); !got.Triggered {
+		t.Fatal("expected expired snooze to allow once-mode rule to fire")
+	}
+	// Subsequent match should be latched.
+	if got := engine.Evaluate(rule, vehicleID, map[string]interface{}{"BatteryLevel": 96.0}); got.Triggered {
+		t.Fatal("expected once-mode rule to latch after fire")
+	}
+}

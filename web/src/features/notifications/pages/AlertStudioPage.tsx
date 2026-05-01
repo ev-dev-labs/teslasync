@@ -10,16 +10,18 @@ import { useTranslation } from 'react-i18next'
 import {
   type AlertRule,
   type AlertRuleInput,
+  type AlertRuleTriggerMode,
   type AlertTestTarget,
   useAlertRules,
   useDeleteAlertRule,
   useNotificationChannels,
   useSaveAlertRule,
+  useSnoozeAlertRule,
   useTestAlertRule,
   useToggleAlertRule,
 } from '@/api/hooks/useNotifications'
 import type { SignalValueType } from '@/types/signals'
-import { GlassPanel, Badge, Button as UiButton, Input as UiInput, Select as UiSelect } from '@/components/ui'
+import { GlassPanel, Badge, Button as UiButton, Input as UiInput, Select as UiSelect, Modal } from '@/components/ui'
 import { PageContainer } from '@/components/layout'
 import { FadeIn } from '@/components/motion'
 import { EmptyState, ErrorDisplay, Skeleton } from '@/components/feedback'
@@ -27,6 +29,7 @@ import {
   Zap, Plus, Save, Trash2, Copy, Bell, BellOff,
   AlertTriangle, AlertCircle, Info, Battery, Gauge, Lock,
   Car, Droplets, Clock, Pencil, Sparkles, Thermometer, Shield, Search,
+  MoonStar,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { formatDateTime } from '@/lib/dateFormat'
@@ -159,6 +162,7 @@ interface EditorState {
   value_max: string
   severity: Severity
   cooldown_min: number
+  trigger_mode: AlertRuleTriggerMode
   message: string
 }
 
@@ -177,8 +181,23 @@ function freshEditor(): EditorState {
     value_max: '',
     severity: 'warn',
     cooldown_min: 15,
+    trigger_mode: 'repeat',
     message: '',
   }
+}
+
+function isTriggerMode(value: string | null | undefined): value is AlertRuleTriggerMode {
+  return value === 'once' || value === 'repeat'
+}
+
+function normalizeTriggerMode(value: string | null | undefined): AlertRuleTriggerMode {
+  return isTriggerMode(value) ? value : 'repeat'
+}
+
+function isSnoozeActive(snoozedUntil: string | null | undefined): boolean {
+  if (!snoozedUntil) return false
+  const ms = Date.parse(snoozedUntil)
+  return Number.isFinite(ms) && ms > Date.now()
 }
 
 function isSeverity(value: string | null | undefined): value is Severity {
@@ -332,6 +351,7 @@ function ruleToEditor(rule: AlertRule): EditorState {
     value_max: valueToInput(rule.value_max),
     severity: normalizeSeverity(rule.severity),
     cooldown_min: rule.cooldown_min,
+    trigger_mode: normalizeTriggerMode(rule.trigger_mode),
     message: rule.signal_name ? `${rule.name}: {{${rule.signal_name}}}` : '',
   }
 }
@@ -369,6 +389,7 @@ function buildSavePayload(state: EditorState): AlertRuleInput {
     value_max: null,
     severity: state.severity,
     cooldown_min: state.cooldown_min,
+    trigger_mode: state.trigger_mode,
   }
 
   if (valueKind === 'number') {
@@ -415,6 +436,8 @@ export default function AlertStudio() {
   const deleteRuleMut = useDeleteAlertRule()
   const toggleRuleMut = useToggleAlertRule()
   const testRuleMut = useTestAlertRule()
+  const snoozeRuleMut = useSnoozeAlertRule()
+  const [snoozeTargetId, setSnoozeTargetId] = useState<number | null>(null)
 
   const [editor, setEditor] = useState<EditorState>(freshEditor)
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -454,6 +477,21 @@ export default function AlertStudio() {
   const rulesList = rules ?? []
   const channelsList = channels ?? []
   const allChannelIds = useMemo(() => channelsList.map(ch => ch.id), [channelsList])
+  const snoozeTargetRule = useMemo(
+    () => (snoozeTargetId == null ? null : rulesList.find(r => r.id === snoozeTargetId) ?? null),
+    [snoozeTargetId, rulesList],
+  )
+  const snoozeTargetActive = isSnoozeActive(snoozeTargetRule?.snoozed_until)
+
+  const handleSnooze = useCallback(
+    (id: number, minutes: number) => {
+      snoozeRuleMut.mutate(
+        { id, minutes },
+        { onSuccess: () => setSnoozeTargetId(null) },
+      )
+    },
+    [snoozeRuleMut],
+  )
 
   const filteredRules = useMemo(() => {
     if (!ruleSearch) return rulesList
@@ -474,6 +512,11 @@ export default function AlertStudio() {
   const enabledOptions = useMemo(() => [
     { value: 'true', label: t('notifications.alertStudio.editor.enabled', 'Enabled') },
     { value: 'false', label: t('notifications.alertStudio.editor.disabled', 'Disabled') },
+  ], [t])
+
+  const triggerModeOptions = useMemo(() => [
+    { value: 'repeat', label: t('notifications.alertStudio.editor.triggerMode.repeat', 'Every cooldown while true (default)') },
+    { value: 'once', label: t('notifications.alertStudio.editor.triggerMode.once', 'Once, until condition resets') },
   ], [t])
 
   const signalTypeLabels = useMemo<Record<SignalValueType, string>>(() => ({
@@ -900,6 +943,8 @@ export default function AlertStudio() {
                 const sev = severityConfig[normalizeSeverity(rule.severity)]
                 const SevIcon = sev.icon
                 const active = selectedId === rule.id
+                const snoozed = isSnoozeActive(rule.snoozed_until)
+                const triggerMode = normalizeTriggerMode(rule.trigger_mode)
                 return (
                   <GlassPanel
                     key={rule.id}
@@ -919,6 +964,17 @@ export default function AlertStudio() {
                         <div className="flex items-center gap-2">
                           <SevIcon className={cn('h-3.5 w-3.5 shrink-0', sev.color)} />
                           <span className="text-xs font-medium text-[var(--text-primary)] truncate flex-1">{rule.name || untitledRuleLabel}</span>
+                          {triggerMode === 'once' && (
+                            <Badge variant="info" size="sm" title={t('notifications.alertStudio.rules.onceModeHint', 'Fires once until condition resets')}>
+                              {t('notifications.alertStudio.rules.onceMode', 'Once')}
+                            </Badge>
+                          )}
+                          {snoozed && rule.snoozed_until && (
+                            <Badge variant="warning" size="sm">
+                              <MoonStar className="h-3 w-3" />
+                              {t('notifications.alertStudio.snooze.badge', 'Snoozed until {{time}}', { time: formatDateTime(rule.snoozed_until) })}
+                            </Badge>
+                          )}
                         </div>
                         <div className="flex items-center gap-3 mt-1.5 text-[10px] text-[var(--text-muted)]">
                           <span className="font-mono">{rule.signal_name} {rule.op}</span>
@@ -929,6 +985,20 @@ export default function AlertStudio() {
                           )}
                         </div>
                       </div>
+                      <UiButton
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 shrink-0 p-0"
+                        onClick={e => { e.stopPropagation(); setSnoozeTargetId(rule.id) }}
+                        title={snoozed
+                          ? t('notifications.alertStudio.snooze.manage', 'Manage snooze')
+                          : t('notifications.alertStudio.snooze.button', 'Snooze')}
+                        aria-label={snoozed
+                          ? t('notifications.alertStudio.snooze.manage', 'Manage snooze')
+                          : t('notifications.alertStudio.snooze.button', 'Snooze')}
+                      >
+                        <MoonStar className={cn('h-3.5 w-3.5', snoozed ? 'text-amber-300' : 'text-[var(--text-muted)]')} />
+                      </UiButton>
                       <UiButton
                         variant="ghost"
                         size="sm"
@@ -1101,6 +1171,29 @@ export default function AlertStudio() {
               </div>
               <div>
                 <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+                  {t('notifications.alertStudio.editor.triggerModeLabel', 'Trigger Mode')}
+                </label>
+                <UiSelect
+                  className="w-full"
+                  value={editor.trigger_mode}
+                  onChange={e => setEditor(s => ({ ...s, trigger_mode: normalizeTriggerMode(e.target.value) }))}
+                  options={triggerModeOptions}
+                />
+                <p className="mt-1 text-[10px] text-[var(--text-muted)]">
+                  {editor.trigger_mode === 'once'
+                    ? t(
+                        'notifications.alertStudio.editor.triggerMode.onceHint',
+                        'Fires once on the rising edge, then waits until the condition becomes false again before re-arming.',
+                      )
+                    : t(
+                        'notifications.alertStudio.editor.triggerMode.repeatHint',
+                        'Fires every {{cooldown}} minutes while the condition holds.',
+                        { cooldown: editor.cooldown_min },
+                      )}
+                </p>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
                   {t('notifications.alertStudio.editor.testMessageLabel', 'Test Message')}
                   <span className="text-[var(--text-muted)] ml-1 normal-case tracking-normal">
                     {t('notifications.alertStudio.editor.signalHint', 'Use {{SignalName}}')}
@@ -1229,6 +1322,65 @@ export default function AlertStudio() {
           </GlassPanel>
         </div>
       </div>
+
+      <Modal
+        open={snoozeTargetRule != null}
+        onClose={() => setSnoozeTargetId(null)}
+        title={snoozeTargetRule
+          ? t('notifications.alertStudio.snooze.title', 'Snooze "{{name}}"', { name: snoozeTargetRule.name || untitledRuleLabel })
+          : t('notifications.alertStudio.snooze.button', 'Snooze')}
+        size="sm"
+      >
+        {snoozeTargetRule && (
+          <div className="space-y-3 text-sm text-[var(--text-primary)]">
+            <p className="text-[var(--text-secondary)]">
+              {t(
+                'notifications.alertStudio.snooze.description',
+                'Suppress this rule temporarily. Snooze auto-expires; the rule will fire again afterwards if its condition is true.',
+              )}
+            </p>
+            {snoozeTargetActive && snoozeTargetRule.snoozed_until && (
+              <div className="rounded border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+                {t('notifications.alertStudio.snooze.currentlySnoozed', 'Currently snoozed until {{time}}', {
+                  time: formatDateTime(snoozeTargetRule.snoozed_until),
+                })}
+              </div>
+            )}
+            <div className="grid grid-cols-1 gap-2">
+              <UiButton
+                variant="secondary"
+                onClick={() => handleSnooze(snoozeTargetRule.id, 60)}
+                disabled={snoozeRuleMut.isPending}
+              >
+                {t('notifications.alertStudio.snooze.1h', 'Snooze 1 hour')}
+              </UiButton>
+              <UiButton
+                variant="secondary"
+                onClick={() => handleSnooze(snoozeTargetRule.id, 240)}
+                disabled={snoozeRuleMut.isPending}
+              >
+                {t('notifications.alertStudio.snooze.4h', 'Snooze 4 hours')}
+              </UiButton>
+              <UiButton
+                variant="secondary"
+                onClick={() => handleSnooze(snoozeTargetRule.id, 1440)}
+                disabled={snoozeRuleMut.isPending}
+              >
+                {t('notifications.alertStudio.snooze.24h', 'Snooze 24 hours')}
+              </UiButton>
+              {snoozeTargetActive && (
+                <UiButton
+                  variant="ghost"
+                  onClick={() => handleSnooze(snoozeTargetRule.id, 0)}
+                  disabled={snoozeRuleMut.isPending}
+                >
+                  {t('notifications.alertStudio.snooze.cancel', 'Cancel snooze')}
+                </UiButton>
+              )}
+            </div>
+          </div>
+        )}
+      </Modal>
     </PageContainer>
   )
 }

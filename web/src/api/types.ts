@@ -291,6 +291,7 @@ export interface Alert {
 
 export type AlertRuleSeverity = 'info' | 'warn' | 'critical'
 export type AlertRuleOp = '=' | '!=' | '<' | '<=' | '>' | '>=' | 'changed' | 'between' | 'outside'
+export type AlertRuleTriggerMode = 'once' | 'repeat'
 
 export interface AlertRule {
   id: number
@@ -307,6 +308,8 @@ export interface AlertRule {
   value_max?: number | null
   severity: AlertRuleSeverity
   cooldown_min: number
+  trigger_mode: AlertRuleTriggerMode
+  snoozed_until?: string | null
   created_at: string
   updated_at: string
 }
@@ -325,9 +328,18 @@ export interface AlertRuleInput {
   value_max?: number | null
   severity?: AlertRuleSeverity
   cooldown_min?: number
+  trigger_mode?: AlertRuleTriggerMode
+  snoozed_until?: string | null
 }
 
 export type AlertRuleUpdate = Partial<AlertRuleInput>
+
+export interface AlertRuleSnoozeRequest {
+  /** Snooze for N minutes from now. Use <= 0 to clear an existing snooze. */
+  minutes?: number
+  /** ISO timestamp; past timestamps clear an existing snooze. */
+  until?: string
+}
 
 export interface AlertTestTarget {
   all_channels?: boolean

@@ -129,6 +129,12 @@ var (
 		Help:      "Alert rule evaluations skipped due to cooldown",
 	})
 
+	AlertRulesSnoozeSkipped = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "cep_rules_snooze_skipped_total",
+		Help:      "Alert rule evaluations skipped because the rule is snoozed",
+	})
+
 	AlertRuleEvalDuration = promauto.NewHistogram(prometheus.HistogramOpts{
 		Namespace: "teslasync",
 		Name:      "cep_eval_duration_seconds",

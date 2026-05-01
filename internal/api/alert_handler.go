@@ -30,6 +30,7 @@ type alertRuleRepository interface {
 	GetByID(context.Context, int64) (*models.AlertRule, error)
 	Create(context.Context, *models.AlertRule) error
 	Delete(context.Context, int64) error
+	SetSnooze(context.Context, int64, *time.Time) error
 }
 
 type notificationRepository interface {
