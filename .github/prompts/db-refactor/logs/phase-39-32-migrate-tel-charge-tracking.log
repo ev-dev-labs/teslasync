@@ -1,0 +1,47 @@
+=== PREFLIGHT ===
+Predecessor exists
+
+.github\prompts\db-refactor\logs\phase-39-31-migrate-trip-planner.log:34:EXIT=0
+.github\prompts\db-refactor\logs\phase-39-31-migrate-trip-planner.log:35:STATUS=DONE
+
+=== CALL_SITES ===
+
+internal\api\telemetry_sessions_charge_tracking.go:335:		startSnap, startErr := t.signalLogReader.SnapshotAt(ctx, vehicleID, active.StartTime)
+internal\api\telemetry_sessions_charge_tracking.go:341:		endSnap, endErr := t.signalLogReader.SnapshotAt(ctx, vehicleID, endTs)
+internal\api\telemetry_sessions_charge_tracking.go:428:		_, startErr := t.signalHistoryWriter.SnapshotAt(ctx, vehicleID, active.StartTime)
+internal\api\telemetry_sessions_charge_tracking.go:433:		endSnapshot, endErr := t.signalHistoryWriter.SnapshotAt(ctx, vehicleID, time.Now().UTC())
+
+=== CHANGES ===
+ M .github/prompts/db-refactor/logs/phase-39-31-migrate-trip-planner.log
+
+--- post-edit git status ---
+ M .github/prompts/db-refactor/logs/phase-39-31-migrate-trip-planner.log
+ M internal/api/router.go
+ M internal/api/telemetry_sessions_charge_tracking.go
+?? internal/api/telemetry_sessions_charge_tracking_test.go
+
+--- handler.go SnapshotAt sites (must be 0 with paren) ---
+0
+--- handler.go .state.State( count ---
+4
+--- router.go SetChargeStateReader ---
+
+internal\api\router.go:256:		st.SetChargeStateReader(stateReader)
+
+=== GATE ===
+TEST_START=True
+TEST_END=True
+USES_STATE=True
+TEST_ERR=True
+TEST_NO_LEGACY=True
+AGGREGATION_CALL_KEPT=True
+OLD_FIELD_KEPT=True
+STATE_COUNT_4=True
+NO_SNAPSHOTAT=True
+USES_SIGNAL_STATEREADER=True
+ok  	github.com/ev-dev-labs/teslasync/internal/api	1.485s
+GO_TEST_EXIT=0
+UNEXPECTED_STATUS_COUNT=0
+EXIT=0
+STATUS=DONE
+=== COMMIT ===

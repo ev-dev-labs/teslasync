@@ -247,6 +247,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Reusing handler from main ╬ô├ç├╢ wire the eventHub created by the router
 		telemetryHandler.SetEventHub(eventHub)
 	}
+	// Phase-39 / ADR-002: install the cold-path signal.StateReader on the
+	// session tracker so charge-completion enrichment uses the canonical
+	// state-read API instead of the legacy *database.SignalLogReader.SnapshotAt
+	// / *database.SignalHistoryWriter.SnapshotAt code paths that this prompt
+	// removed from telemetry_sessions_charge_tracking.go.
+	if st := telemetryHandler.SessionTracker(); st != nil {
+		st.SetChargeStateReader(stateReader)
+	}
 	devToolsHandler := NewDevToolsHandler(teslaClient, WithDB(db), WithMQTTClient(mqttClient), WithConfig(cfg))
 	if opt.CacheStore != nil {
 		if rdb := opt.CacheStore.Underlying(); rdb != nil {

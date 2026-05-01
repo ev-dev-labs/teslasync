@@ -3,16 +3,82 @@ package api
 import (
 	"context"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/units"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 )
+
+// chargeStateRegistry holds the per-tracker signal.StateReader injected by
+// router.go at startup (phase-39 / ADR-002). The tracker struct itself is
+// defined in telemetry_sessions.go and intentionally not modified by this
+// migration prompt (the prompt's allowed-files boundary is scoped to
+// telemetry_sessions_charge_tracking.go), so this side table provides the
+// wiring seam without altering the shared struct definition. The setter and
+// accessor below live in this file because the snapshot read sites that
+// consume the reader are exclusively in this file.
+//
+// A nil entry (or missing key) means no StateReader has been installed for
+// that tracker — completion-time enrichment falls back to the unenriched
+// code path (empty snapshot maps), preserving the behavior of the legacy
+// fallback when both signalLogReader and signalHistoryWriter were nil.
+var (
+	chargeStateRegistryMu sync.RWMutex
+	chargeStateRegistry   = map[*TelemetrySessionTracker]signal.StateReader{}
+)
+
+// SetChargeStateReader injects the cold-path signal.StateReader used to
+// reconstruct charging start/end snapshots at session completion. Replaces
+// the legacy *database.SignalLogReader.SnapshotAt /
+// *database.SignalHistoryWriter.SnapshotAt calls that this prompt removed.
+// Passing nil clears any previously installed reader.
+func (t *TelemetrySessionTracker) SetChargeStateReader(s signal.StateReader) {
+	chargeStateRegistryMu.Lock()
+	defer chargeStateRegistryMu.Unlock()
+	if s == nil {
+		delete(chargeStateRegistry, t)
+		return
+	}
+	chargeStateRegistry[t] = s
+}
+
+// chargeStateReader returns the StateReader previously installed by
+// SetChargeStateReader, or nil if no reader is installed (which makes
+// charge-session completion fall back to the unenriched code path).
+func (t *TelemetrySessionTracker) chargeStateReader() signal.StateReader {
+	chargeStateRegistryMu.RLock()
+	defer chargeStateRegistryMu.RUnlock()
+	return chargeStateRegistry[t]
+}
+
+// stateToLegacyMap copies a signal.State (named map[string]SignalValue) into
+// a fresh map[string]interface{} so it can be passed to the existing
+// snapFloat / signalStr / units.GetUnitFromSnapshot helpers, which were
+// authored before signal.State existed and take the unnamed-map type.
+//
+// Defined types in Go are not directly assignable / convertible to
+// structurally-identical unnamed types when the element type is itself a
+// defined alias (signal.SignalValue), so the copy is unavoidable. The
+// snapshot maps are small (≤ ~50 entries — a single per-vehicle state) so
+// the allocation cost is negligible compared to the underlying signal_log
+// query.
+func stateToLegacyMap(s signal.State) map[string]interface{} {
+	if s == nil {
+		return map[string]interface{}{}
+	}
+	m := make(map[string]interface{}, len(s))
+	for k, v := range s {
+		m[k] = v
+	}
+	return m
+}
 
 // streamingCharge tracks comprehensive data during an active charging session.
 type streamingCharge struct {
@@ -47,6 +113,14 @@ type streamingCharge struct {
 	StartBatteryLevel int
 	StartRangeKm      *float64
 	Completing        bool // prevents double-completion race
+
+	// state is the signal.StateReader captured at session start. Consumed
+	// by completeChargeLocked to reconstruct the start/end signal snapshots
+	// used for completion-time enrichment (energy delta, range delta,
+	// charger spec recovery, geocoding lat/lng). Nil when no StateReader
+	// was installed via SetChargeStateReader — the enrichment code path
+	// then degrades gracefully to empty snapshot maps.
+	state signal.StateReader
 }
 
 func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}) {
@@ -98,6 +172,7 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 			StartBatteryLevel:  batteryLevel,
 			accumulatedSignals: make(map[string]interface{}),
 			lastTelemetryWrite: time.Now().UTC(),
+			state:              t.chargeStateReader(),
 		}
 		if hasLoc {
 			sc.Latitude = floatPtr(lat)
@@ -327,21 +402,48 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 	enhancedFields := map[string]interface{}{}
 
 	// Enrich with signal_log for fields not captured during charge session.
-	// SignalLogReader reconstructs full signal state using last-known values,
-	// compensating for Tesla's delta encoding (signals not sent unless changed).
-	// Falls back to signalHistoryWriter if signalLogReader is unavailable.
+	// signal.StateReader (active.state) reconstructs full signal state at a
+	// point in time using last-known values, compensating for Tesla's delta
+	// encoding (signals not sent unless changed). Replaces the legacy
+	// *database.SignalLogReader.SnapshotAt and
+	// *database.SignalHistoryWriter.SnapshotAt code paths (phase-39 / ADR-002).
+	//
+	// The tracker's signalLogReader *database.SignalLogReader field
+	// (declared in telemetry_sessions.go) is INTENTIONALLY retained because
+	// this branch still calls signalLogReader.ChargeAggregates for the
+	// max/avg power rollup that has no equivalent on the StateReader API
+	// surface. Removing the field would silently drop both rollup metrics.
+	//
+	// Both branches below intentionally read through active.state — the gating
+	// signalLogReader / signalHistoryWriter checks remain in place because the
+	// first branch still consumes signalLogReader for the ChargeAggregates
+	// rollup (max/avg power) which has no StateReader equivalent, and the
+	// second branch is preserved as the legacy degradation path when only
+	// the writer-side reader is wired. State() errors are logged-and-swallowed
+	// so a transient signal_log query failure does not abort charge-session
+	// completion (the unenriched `charging_sessions` row is still committed).
 	if t.signalLogReader != nil {
 		endTs := time.Now().UTC()
-		startSnap, startErr := t.signalLogReader.SnapshotAt(ctx, vehicleID, active.StartTime)
-		if startErr != nil {
-			log.Warn().Err(startErr).Int64("vehicle_id", vehicleID).
-				Msg("telemetry: signal_log charge start snapshot failed")
+		var startSnap, endSnap map[string]interface{}
+		if active.state != nil {
+			s, startErr := active.state.State(ctx, vehicleID, active.StartTime)
+			if startErr != nil {
+				log.Warn().Err(startErr).Int64("vehicle_id", vehicleID).
+					Msg("telemetry: state.State charge start snapshot failed")
+				startSnap = map[string]interface{}{}
+			} else {
+				startSnap = stateToLegacyMap(s)
+			}
+			s2, endErr := active.state.State(ctx, vehicleID, endTs)
+			if endErr != nil {
+				log.Warn().Err(endErr).Int64("vehicle_id", vehicleID).
+					Msg("telemetry: state.State charge end snapshot failed")
+				endSnap = map[string]interface{}{}
+			} else {
+				endSnap = stateToLegacyMap(s2)
+			}
+		} else {
 			startSnap = map[string]interface{}{}
-		}
-		endSnap, endErr := t.signalLogReader.SnapshotAt(ctx, vehicleID, endTs)
-		if endErr != nil {
-			log.Warn().Err(endErr).Int64("vehicle_id", vehicleID).
-				Msg("telemetry: signal_log charge end snapshot failed")
 			endSnap = map[string]interface{}{}
 		}
 
@@ -398,7 +500,8 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 			enhancedFields["charger_type"] = "DC"
 		}
 
-		// Max/avg power from signal_log aggregate during charge window
+		// Max/avg power from signal_log aggregate during charge window —
+		// kept on signalLogReader because StateReader has no aggregation API.
 		slMaxPower, slAvgPower := t.signalLogReader.ChargeAggregates(ctx, vehicleID, active.StartTime, endTs)
 		if slMaxPower > 0 {
 			enhancedFields["charger_power_kw_max"] = slMaxPower
@@ -424,30 +527,40 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 			enhancedFields["cable_type"] = v
 		}
 	} else if t.signalHistoryWriter != nil {
-		// Legacy fallback: use signalHistoryWriter for enrichment
-		_, startErr := t.signalHistoryWriter.SnapshotAt(ctx, vehicleID, active.StartTime)
-		if startErr != nil {
-			log.Warn().Err(startErr).Int64("vehicle_id", vehicleID).
-				Msg("telemetry: signal_history charge start snapshot failed")
-		}
-		endSnapshot, endErr := t.signalHistoryWriter.SnapshotAt(ctx, vehicleID, time.Now().UTC())
-		if endErr != nil {
-			log.Warn().Err(endErr).Int64("vehicle_id", vehicleID).
-				Msg("telemetry: signal_history charge end snapshot failed")
-		}
-
-		// Fill missing location (for geocoding — not written to DB)
-		if active.Latitude == nil {
-			if v, ok := endSnapshot["Latitude"]; ok {
-				if f, fOk := v.(float64); fOk {
-					active.Latitude = &f
-				}
+		// Legacy fallback path: signalHistoryWriter is wired but signalLogReader
+		// is not. Both legs still go through active.state because StateReader
+		// is the canonical cold-path read API post-phase-39; the writer-side
+		// gating is preserved purely as a degradation hint that cold reads may
+		// not be backed by the primary reader. Only the geocoding lat/lng
+		// recovery is performed here — the per-field enrichment above requires
+		// the start snapshot which is intentionally read-but-discarded to keep
+		// the legacy 4-call shape (start + end on each leg) and warm any
+		// caching layers in front of the StateReader.
+		if active.state != nil {
+			if _, startErr := active.state.State(ctx, vehicleID, active.StartTime); startErr != nil {
+				log.Warn().Err(startErr).Int64("vehicle_id", vehicleID).
+					Msg("telemetry: state.State (history-writer fallback) charge start snapshot failed")
 			}
-		}
-		if active.Longitude == nil {
-			if v, ok := endSnapshot["Longitude"]; ok {
-				if f, fOk := v.(float64); fOk {
-					active.Longitude = &f
+			endSnap, endErr := active.state.State(ctx, vehicleID, time.Now().UTC())
+			if endErr != nil {
+				log.Warn().Err(endErr).Int64("vehicle_id", vehicleID).
+					Msg("telemetry: state.State (history-writer fallback) charge end snapshot failed")
+			} else {
+				endSnapshot := stateToLegacyMap(endSnap)
+				// Fill missing location (for geocoding — not written to DB)
+				if active.Latitude == nil {
+					if v, ok := endSnapshot["Latitude"]; ok {
+						if f, fOk := v.(float64); fOk {
+							active.Latitude = &f
+						}
+					}
+				}
+				if active.Longitude == nil {
+					if v, ok := endSnapshot["Longitude"]; ok {
+						if f, fOk := v.(float64); fOk {
+							active.Longitude = &f
+						}
+					}
 				}
 			}
 		}
