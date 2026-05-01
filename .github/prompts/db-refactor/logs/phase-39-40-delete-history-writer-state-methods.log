@@ -1,0 +1,90 @@
+=== PREFLIGHT ===
+predecessor: phase-39-39 STATUS=DONE EXIT=0
+=== DELETED ===
+GetLatestPerSignal, SnapshotAt, SignalAt, SnapshotBetween (also pruned errors + pgx imports — only used by deleted methods)
+=== GATE ===
+NO_GETLATESTPERSIGNAL=True
+FILE_EXISTS=True
+NO_HISTORY_SIGNALAT=True
+NO_HISTORY_SNAPSHOTBETWEEN=True
+NO_HISTORY_SNAPSHOTAT=True
+?   	github.com/ev-dev-labs/teslasync/cmd/automation-worker	[no test files]
+?   	github.com/ev-dev-labs/teslasync/cmd/export-worker	[no test files]
+?   	github.com/ev-dev-labs/teslasync/cmd/notification-worker	[no test files]
+?   	github.com/ev-dev-labs/teslasync/cmd/teslasync	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/adapter/gasprices	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/geocoding	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/mqtt	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/postgres	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/postgres/queries	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/redis	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/storage	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/tesla	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/api	0.521s
+ok  	github.com/ev-dev-labs/teslasync/internal/app/chargingsvc	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/app/dashboardsvc	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/app/exportsvc	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/app/notificationsvc	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/app/tripsvc	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/app/vehiclesvc	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/automation	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/automation/action	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/automation/condition	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/automation/presets	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/automation/safety	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/automation/trigger	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/backup	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/cache	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/config	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/crypto	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/database	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/domain	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/charging	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/export	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/fsm	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/notification	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/trip	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/user	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/vehicle	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/enums	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/events	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/export	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/automation	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/charge	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/command	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/drive	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/notification	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/telemetry	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/geocoding	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/handler/dto	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/handler/middleware	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/handler/v1	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/metrics	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/models	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/mqtt	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/notification	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/platform/buildinfo	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/platform/cache	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/platform/config	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/platform/database	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/platform/httputil	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/platform/telemetry	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/polling	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/port/external	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/port/messaging	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/port/repository	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/resilience	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/service	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/signal	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/telemetry	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/tracing	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/units	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/worker	(cached)
+?   	github.com/ev-dev-labs/teslasync/web/node_modules/flatted/golang/pkg/flatted	[no test files]
+GO_TEST_EXIT=0
+UNEXPECTED_STATUS_COUNT=0
+EXIT=0
+STATUS=DONE
+=== COMMIT ===

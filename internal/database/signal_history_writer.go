@@ -2,12 +2,10 @@ package database
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog/log"
 
@@ -174,150 +172,6 @@ func (w *SignalHistoryWriter) AvailableSignals(ctx context.Context, vehicleID in
 		signals = append(signals, s)
 	}
 	return signals, rows.Err()
-}
-
-// GetLatestPerSignal returns the most recent value for every signal for a given vehicle.
-// Used on startup to warm the in-memory SignalStore after a pod restart.
-// Uses DISTINCT ON for an efficient single-pass scan.
-func (w *SignalHistoryWriter) GetLatestPerSignal(ctx context.Context, vehicleID int64) (map[string]interface{}, error) {
-	query := `SELECT DISTINCT ON (signal) signal, value_num, value_str, value_bool
-	          FROM signal_log
-	          WHERE vehicle_id = $1
-	          ORDER BY signal, created_at DESC`
-	rows, err := w.db.Pool.Query(ctx, query, vehicleID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	result := make(map[string]interface{})
-	for rows.Next() {
-		var signal string
-		var vNum *float64
-		var vStr *string
-		var vBool *bool
-		if err := rows.Scan(&signal, &vNum, &vStr, &vBool); err != nil {
-			return nil, err
-		}
-		switch {
-		case vStr != nil:
-			result[signal] = *vStr
-		case vNum != nil:
-			result[signal] = *vNum
-		case vBool != nil:
-			result[signal] = *vBool
-		}
-	}
-	return result, rows.Err()
-}
-
-// SnapshotAt returns the latest value of every signal for a vehicle at or before
-// the given timestamp. This reconstructs the full signal context at any point in time.
-// Uses DISTINCT ON with the (vehicle_id, signal, created_at DESC) index.
-func (w *SignalHistoryWriter) SnapshotAt(ctx context.Context, vehicleID int64, at time.Time) (map[string]interface{}, error) {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-
-	query := `SELECT DISTINCT ON (signal) signal, value_num, value_str, value_bool, created_at
-	          FROM signal_log
-	          WHERE vehicle_id = $1 AND created_at <= $2
-	          ORDER BY signal, created_at DESC`
-	rows, err := w.db.Pool.Query(ctx, query, vehicleID, at)
-	if err != nil {
-		return nil, fmt.Errorf("snapshot at %v for vehicle %d: %w", at, vehicleID, err)
-	}
-	defer rows.Close()
-
-	result := make(map[string]interface{})
-	for rows.Next() {
-		var signal string
-		var vNum *float64
-		var vStr *string
-		var vBool *bool
-		var createdAt time.Time
-		if err := rows.Scan(&signal, &vNum, &vStr, &vBool, &createdAt); err != nil {
-			return nil, fmt.Errorf("snapshot at scan: %w", err)
-		}
-		switch {
-		case vNum != nil:
-			result[signal] = *vNum
-		case vStr != nil:
-			result[signal] = *vStr
-		case vBool != nil:
-			result[signal] = *vBool
-		}
-	}
-	return result, rows.Err()
-}
-
-// SignalAt returns the value of a specific signal at or before the given timestamp.
-// Returns nil if the signal was never recorded before that time.
-func (w *SignalHistoryWriter) SignalAt(ctx context.Context, vehicleID int64, signal string, at time.Time) (interface{}, error) {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-
-	query := `SELECT value_num, value_str, value_bool
-	          FROM signal_log
-	          WHERE vehicle_id = $1 AND signal = $2 AND created_at <= $3
-	          ORDER BY created_at DESC
-	          LIMIT 1`
-	var vNum *float64
-	var vStr *string
-	var vBool *bool
-	err := w.db.Pool.QueryRow(ctx, query, vehicleID, signal, at).Scan(&vNum, &vStr, &vBool)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("signal %q at %v for vehicle %d: %w", signal, at, vehicleID, err)
-	}
-	switch {
-	case vNum != nil:
-		return *vNum, nil
-	case vStr != nil:
-		return *vStr, nil
-	case vBool != nil:
-		return *vBool, nil
-	}
-	return nil, nil
-}
-
-// SnapshotBetween returns the latest value of every signal received between two timestamps.
-// Useful for getting "what signals changed during this drive/charge session".
-func (w *SignalHistoryWriter) SnapshotBetween(ctx context.Context, vehicleID int64, from, to time.Time) (map[string]interface{}, error) {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-
-	query := `SELECT DISTINCT ON (signal) signal, value_num, value_str, value_bool, created_at
-	          FROM signal_log
-	          WHERE vehicle_id = $1 AND created_at >= $2 AND created_at <= $3
-	          ORDER BY signal, created_at DESC`
-	rows, err := w.db.Pool.Query(ctx, query, vehicleID, from, to)
-	if err != nil {
-		return nil, fmt.Errorf("snapshot between %v-%v for vehicle %d: %w", from, to, vehicleID, err)
-	}
-	defer rows.Close()
-
-	result := make(map[string]interface{})
-	for rows.Next() {
-		var signal string
-		var vNum *float64
-		var vStr *string
-		var vBool *bool
-		var createdAt time.Time
-		if err := rows.Scan(&signal, &vNum, &vStr, &vBool, &createdAt); err != nil {
-			return nil, fmt.Errorf("snapshot between scan: %w", err)
-		}
-		switch {
-		case vNum != nil:
-			result[signal] = *vNum
-		case vStr != nil:
-			result[signal] = *vStr
-		case vBool != nil:
-			result[signal] = *vBool
-		}
-	}
-	return result, rows.Err()
 }
 
 // SignalStats holds min/max/avg/count for a signal.
