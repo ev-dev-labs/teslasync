@@ -1,27 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  Download,
-  FileSpreadsheet,
-  FileJson,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  Loader2,
-  BarChart3,
-  Car,
-  Database,
-  FileDown,
-  Package,
-  RefreshCw,
-  Zap,
-  AlertCircle,
-  Battery,
-  Wrench,
-  HardDrive,
-  Calendar,
-} from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { formatBytes } from '@/lib/numberFormat';
 
@@ -42,7 +21,8 @@ import { formatDateTime, formatDurationMsLong, formatRelative } from '@/lib/date
 import { request } from '@/api/client';
 import { useCreateAccountExport } from '@/api/hooks/useExports';
 import { JobProgressDrawer } from '@/components/feedback/JobProgressDrawer';
-import type { Vehicle } from '@/api/types';
+import type { Vehicle } from '@/api/types';
+import { Icons } from '@/lib/icons';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -88,22 +68,22 @@ const EXPORT_TYPES: {
   value: ExportType;
   labelKey: string;
   label: string;
-  icon: typeof Car;
+  icon: typeof Icons.vehicle;
   descKey: string;
   desc: string;
   color: string;
 }[] = [
-  { value: 'drives', labelKey: 'dataExport.types.drives', label: 'Drives', icon: Car, descKey: 'dataExport.types.drivesDesc', desc: 'Export drive sessions, routes, and efficiency data', color: 'cyan' },
-  { value: 'charging', labelKey: 'dataExport.types.charging', label: 'Charging', icon: Zap, descKey: 'dataExport.types.chargingDesc', desc: 'Export charging sessions and energy data', color: 'green' },
-  { value: 'analytics', labelKey: 'dataExport.types.analytics', label: 'Analytics', icon: BarChart3, descKey: 'dataExport.types.analyticsDesc', desc: 'Export analytics and aggregated statistics', color: 'purple' },
-  { value: 'full_backup', labelKey: 'dataExport.types.fullBackup', label: 'Full Backup', icon: Database, descKey: 'dataExport.types.fullBackupDesc', desc: 'Complete database backup of all vehicle data', color: 'amber' },
-  { value: 'maintenance', labelKey: 'dataExport.types.maintenance', label: 'Maintenance', icon: Wrench, descKey: 'dataExport.types.maintenanceDesc', desc: 'Export maintenance and service records', color: 'red' },
-  { value: 'energy', labelKey: 'dataExport.types.energy', label: 'Energy', icon: Battery, descKey: 'dataExport.types.energyDesc', desc: 'Export energy consumption and efficiency data', color: 'green' },
+  { value: 'drives', labelKey: 'dataExport.types.drives', label: 'Drives', icon: Icons.vehicle, descKey: 'dataExport.types.drivesDesc', desc: 'Export drive sessions, routes, and efficiency data', color: 'cyan' },
+  { value: 'charging', labelKey: 'dataExport.types.charging', label: 'Charging', icon: Icons.charging, descKey: 'dataExport.types.chargingDesc', desc: 'Export charging sessions and energy data', color: 'green' },
+  { value: 'analytics', labelKey: 'dataExport.types.analytics', label: 'Analytics', icon: Icons.analytics, descKey: 'dataExport.types.analyticsDesc', desc: 'Export analytics and aggregated statistics', color: 'purple' },
+  { value: 'full_backup', labelKey: 'dataExport.types.fullBackup', label: 'Full Backup', icon: Icons.database, descKey: 'dataExport.types.fullBackupDesc', desc: 'Complete database backup of all vehicle data', color: 'amber' },
+  { value: 'maintenance', labelKey: 'dataExport.types.maintenance', label: 'Maintenance', icon: Icons.maintenance, descKey: 'dataExport.types.maintenanceDesc', desc: 'Export maintenance and service records', color: 'red' },
+  { value: 'energy', labelKey: 'dataExport.types.energy', label: 'Energy', icon: Icons.battery, descKey: 'dataExport.types.energyDesc', desc: 'Export energy consumption and efficiency data', color: 'green' },
 ];
 
-const EXPORT_FORMATS: { value: ExportFormat; labelKey: string; label: string; icon: typeof FileSpreadsheet; descKey: string; desc: string }[] = [
-  { value: 'csv', labelKey: 'dataExport.formats.csv', label: 'CSV', icon: FileSpreadsheet, descKey: 'dataExport.formats.csvDesc', desc: 'Comma-separated values, compatible with Excel and Google Sheets' },
-  { value: 'json', labelKey: 'dataExport.formats.json', label: 'JSON', icon: FileJson, descKey: 'dataExport.formats.jsonDesc', desc: 'Structured JSON format for programmatic access' },
+const EXPORT_FORMATS: { value: ExportFormat; labelKey: string; label: string; icon: typeof Icons.fileSpreadsheet; descKey: string; desc: string }[] = [
+  { value: 'csv', labelKey: 'dataExport.formats.csv', label: 'CSV', icon: Icons.fileSpreadsheet, descKey: 'dataExport.formats.csvDesc', desc: 'Comma-separated values, compatible with Excel and Google Sheets' },
+  { value: 'json', labelKey: 'dataExport.formats.json', label: 'JSON', icon: Icons.fileJson, descKey: 'dataExport.formats.jsonDesc', desc: 'Structured JSON format for programmatic access' },
 ];
 
 const DATE_PRESETS: { labelKey: string; label: string; days: number }[] = [
@@ -115,17 +95,17 @@ const DATE_PRESETS: { labelKey: string; label: string; days: number }[] = [
 ];
 
 const STATUS_CONFIG: Record<ExportStatus, {
-  icon: typeof Clock;
+  icon: typeof Icons.clock;
   badgeVariant: 'neutral' | 'info' | 'success' | 'danger' | 'warning';
   labelKey: string;
   label: string;
   spinning?: boolean;
 }> = {
-  queued: { icon: Clock, badgeVariant: 'neutral', labelKey: 'dataExport.status.queued', label: 'Queued' },
-  processing: { icon: Loader2, badgeVariant: 'info', labelKey: 'dataExport.status.processing', label: 'Processing', spinning: true },
-  ready: { icon: CheckCircle2, badgeVariant: 'success', labelKey: 'dataExport.status.ready', label: 'Ready' },
-  failed: { icon: XCircle, badgeVariant: 'danger', labelKey: 'dataExport.status.failed', label: 'Failed' },
-  expired: { icon: AlertCircle, badgeVariant: 'warning', labelKey: 'dataExport.status.expired', label: 'Expired' },
+  queued: { icon: Icons.clock, badgeVariant: 'neutral', labelKey: 'dataExport.status.queued', label: 'Queued' },
+  processing: { icon: Icons.loading, badgeVariant: 'info', labelKey: 'dataExport.status.processing', label: 'Processing', spinning: true },
+  ready: { icon: Icons.successFilled, badgeVariant: 'success', labelKey: 'dataExport.status.ready', label: 'Ready' },
+  failed: { icon: Icons.error, badgeVariant: 'danger', labelKey: 'dataExport.status.failed', label: 'Failed' },
+  expired: { icon: Icons.alertCircle, badgeVariant: 'warning', labelKey: 'dataExport.status.expired', label: 'Expired' },
 };
 
 const TYPE_BADGE_VARIANT: Record<ExportType, 'info' | 'success' | 'warning' | 'danger' | 'neutral'> = {
@@ -296,8 +276,8 @@ function TypeBadge({ type }: { type: ExportType }) {
 function FormatBadge({ format }: { format: ExportFormat }) {
   return (
     <Badge variant={format === 'csv' ? 'info' : 'warning'} size="sm">
-      {format === 'csv' && <FileSpreadsheet className="h-3 w-3" />}
-      {format === 'json' && <FileJson className="h-3 w-3" />}
+      {format === 'csv' && <Icons.fileSpreadsheet className="h-3 w-3" />}
+      {format === 'json' && <Icons.fileJson className="h-3 w-3" />}
       {format.toUpperCase()}
     </Badge>
   );
@@ -309,7 +289,7 @@ function FormatInfoCards() {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <GlassPanel className="p-4" hover glow="cyan">
         <div className="flex items-center gap-2 mb-3">
-          <FileSpreadsheet className="h-5 w-5 text-neon-cyan" />
+          <Icons.fileSpreadsheet className="h-5 w-5 text-neon-cyan" />
           <span className="text-sm font-semibold text-[var(--text-primary)]">
             {t('dataExport.csvPreview', 'CSV Preview')}
           </span>
@@ -326,7 +306,7 @@ function FormatInfoCards() {
 
       <GlassPanel className="p-4" hover glow="purple">
         <div className="flex items-center gap-2 mb-3">
-          <FileJson className="h-5 w-5 text-neon-purple" />
+          <Icons.fileJson className="h-5 w-5 text-neon-purple" />
           <span className="text-sm font-semibold text-[var(--text-primary)]">
             {t('dataExport.jsonPreview', 'JSON Preview')}
           </span>
@@ -355,7 +335,7 @@ function DataOverviewCard({
   return (
     <GlassPanel className="p-4">
       <div className="flex items-center gap-2 mb-3">
-        <Database className="h-4 w-4 text-neon-cyan" />
+        <Icons.database className="h-4 w-4 text-neon-cyan" />
         <span className="text-sm font-semibold text-[var(--text-primary)]">
           {t('dataExport.dataOverview', 'Data Overview')}
         </span>
@@ -368,11 +348,11 @@ function DataOverviewCard({
       ) : overview ? (
         <div className="grid grid-cols-2 gap-3">
           <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-            <Car className="h-3.5 w-3.5 text-neon-cyan" />
+            <Icons.vehicle className="h-3.5 w-3.5 text-neon-cyan" />
             <span>{fmtInt(overview.drives)} {t('dataExport.drives', 'Drives')}</span>
           </div>
           <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-            <Zap className="h-3.5 w-3.5 text-neon-green" />
+            <Icons.charging className="h-3.5 w-3.5 text-neon-green" />
             <span>{fmtInt(overview.charging_sessions)} {t('dataExport.chargingSessions', 'Charging Sessions')}</span>
           </div>
         </div>
@@ -469,26 +449,26 @@ function StatsRow({
       <MetricCard
         label={t('Total Exports')}
         value={totalExports}
-        icon={<Package className="h-4 w-4" />}
+        icon={<Icons.package className="h-4 w-4" />}
         color="cyan"
       />
       <MetricCard
         label={t('Total Size')}
         value={formatBytes(totalSize, { zeroAsEmpty: true, gbDecimals: 2 })}
-        icon={<HardDrive className="h-4 w-4" />}
+        icon={<Icons.hardDrive className="h-4 w-4" />}
         color="blue"
       />
       <MetricCard
         label={t('Most Exported')}
         value={mostExportedType}
-        icon={<BarChart3 className="h-4 w-4" />}
+        icon={<Icons.analytics className="h-4 w-4" />}
         color="purple"
         subtitle={t('By Count')}
       />
       <MetricCard
         label={t('Last Export')}
         value={lastExport}
-        icon={<Clock className="h-4 w-4" />}
+        icon={<Icons.clock className="h-4 w-4" />}
         color="green"
       />
     </div>
@@ -553,7 +533,7 @@ function ExportWizard({
   return (
     <GlassPanel className="p-6" glow="cyan">
       <div className="flex items-center gap-2 mb-5">
-        <FileDown className="h-5 w-5 text-neon-cyan" />
+        <Icons.fileDown className="h-5 w-5 text-neon-cyan" />
         <h2 className="text-base font-semibold text-[var(--text-primary)]">
           {t('dataExport.wizardTitle', 'New Export')}
         </h2>
@@ -600,7 +580,7 @@ function ExportWizard({
           <Button
             variant={useCustomRange ? 'primary' : 'ghost'}
             size="sm"
-            icon={<Calendar className="h-3.5 w-3.5" />}
+            icon={<Icons.calendar className="h-3.5 w-3.5" />}
             onClick={() => setUseCustomRange(!useCustomRange)}
           >
             {t('dataExport.customRange', 'Custom Range')}
@@ -623,7 +603,7 @@ function ExportWizard({
         variant="primary"
         size="lg"
         loading={isPending}
-        icon={<Download className="h-4 w-4" />}
+        icon={<Icons.download className="h-4 w-4" />}
         onClick={handleSubmit}
       >
         {t('Start Export')}
@@ -741,7 +721,7 @@ function ExportHistoryTable({
             <Button
               variant="ghost"
               size="sm"
-              icon={<Download className="h-3.5 w-3.5" />}
+              icon={<Icons.download className="h-3.5 w-3.5" />}
               onClick={() => onDownload(row)}
             >
               {t('Download')}
@@ -784,14 +764,14 @@ function ExportHistoryTable({
             </Badge>
           )}
         </div>
-        <Button variant="ghost" size="sm" icon={<RefreshCw className="h-3.5 w-3.5" />} onClick={onRefresh}>
+        <Button variant="ghost" size="sm" icon={<Icons.refresh className="h-3.5 w-3.5" />} onClick={onRefresh}>
           {t('dataExport.refresh', 'Refresh')}
         </Button>
       </div>
 
       {!jobs || jobs.length === 0 ? (
         <EmptyState
-          icon={<FileDown className="h-10 w-10" />}
+          icon={<Icons.fileDown className="h-10 w-10" />}
           title={t('dataExport.noExports', 'No Exports Yet')}
           message={t('dataExport.noExportsMessage', 'Create your first export above to get started.')}
         />
@@ -851,7 +831,7 @@ function AccountExportPanel({ vehicles }: AccountExportPanelProps) {
     <GlassPanel className="p-6" glow="cyan">
       <div className="flex items-start gap-3 mb-4">
         <div className="rounded-lg bg-cyan-400/10 p-2">
-          <Package className="h-5 w-5 text-cyan-300" aria-hidden="true" />
+          <Icons.package className="h-5 w-5 text-cyan-300" aria-hidden="true" />
         </div>
         <div className="flex-1 min-w-0">
           <h2 className="text-base font-semibold text-[var(--text-primary)]">
@@ -913,7 +893,7 @@ function AccountExportPanel({ vehicles }: AccountExportPanelProps) {
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-3 border-t border-white/[0.06]">
         <div className="flex items-start gap-2 text-xs text-[var(--text-muted)]">
-          <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" aria-hidden="true" />
+          <Icons.alertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" aria-hidden="true" />
           <span>
             {t(
               'dataExport.account.warning',
@@ -926,7 +906,7 @@ function AccountExportPanel({ vehicles }: AccountExportPanelProps) {
           size="md"
           onClick={handleStart}
           loading={createAccount.isPending}
-          icon={<Download className="h-4 w-4" />}
+          icon={<Icons.download className="h-4 w-4" />}
         >
           {t('dataExport.account.start', 'Start full export')}
         </Button>
@@ -1020,7 +1000,7 @@ export default function DataExportPage() {
         <Button
           variant="ghost"
           size="sm"
-          icon={<RefreshCw className="h-4 w-4" />}
+          icon={<Icons.refresh className="h-4 w-4" />}
           onClick={handleRefresh}
         >
           {t('dataExport.refresh', 'Refresh')}

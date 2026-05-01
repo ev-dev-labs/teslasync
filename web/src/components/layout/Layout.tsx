@@ -1,92 +1,5 @@
 import { Outlet, NavLink, useLocation } from 'react-router-dom'
 import InstallPrompt from '../feedback/InstallPrompt'
-import {
-  LayoutDashboard,
-  Car,
-  Route,
-  BatteryCharging,
-  MapPin,
-  Settings,
-  Zap,
-  Menu,
-  X,
-  User,
-  Radar,
-  Bolt,
-  HeartPulse,
-  Gamepad2,
-  Bell,
-  BarChart3,
-  Wifi,
-  WifiOff,
-  BellRing,
-  Bot,
-  Gauge,
-  Download,
-  Moon,
-  Clock,
-  Milestone,
-  Target,
-  Activity,
-  GitCompare,
-  ArrowLeftRight,
-  Wallet,
-  BedDouble,
-  ShieldAlert,
-  FileText,
-  Wrench,
-  Thermometer,
-  Lock,
-  TrendingUp,
-  TrendingDown,
-  DollarSign,
-  Battery,
-  Trophy,
-  CalendarCheck,
-  CalendarClock,
-  HardDriveDownload,
-  Headphones,
-  DatabaseBackup,
-  Recycle,
-  Database,
-  History,
-  Monitor,
-  Terminal,
-  // Unique icon replacements (no more duplicates)
-  ArrowRightLeft,
-  Leaf,
-  Workflow,
-  BellPlus,
-  Cloud,
-  PieChart,
-  ShieldCheck,
-  CircleDot,
-  Fence,
-  ThermometerSun,
-  Navigation2,
-  Stethoscope,
-  MapPinned,
-  Cpu,
-  KeyRound,
-  ScanSearch,
-  RadioTower,
-  SlidersHorizontal,
-  Award,
-  Bug,
-  HardDrive,
-  Split,
-  Radio,
-  Signpost,
-  Hammer,
-  Receipt,
-  Key,
-  Home,
-  Server,
-  ChevronDown,
-  ChevronsDown,
-  ChevronsUp,
-  Star,
-} from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { useTour, isTourCompleted } from '@/hooks/useTour'
@@ -119,7 +32,8 @@ import { useToast } from '../feedback/Toast'
 import { useSettings } from '../../hooks/useSettings'
 import { useUnreadCount } from '@/api/hooks/useNotifications'
 import { GlassPanel } from '../ui/GlassPanel'
-import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough'
+import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough'
+import { Icons } from '@/lib/icons';
 
 const navI18nKeys: Record<string, string> = {
   'Dashboard': 'nav.dashboard',
@@ -286,199 +200,199 @@ export const navSections = [
   {
     title: 'Overview',
     items: [
-      { to: '/', icon: LayoutDashboard, label: 'Dashboard', color: 'text-blue-400' },
-      { to: '/live', icon: Radar, label: 'Live Map', color: 'text-emerald-400' },
-      { to: '/weekly-digest', icon: CalendarCheck, label: 'Weekly Digest', color: 'text-purple-400' },
-      { to: '/timeline', icon: Clock, label: 'Timeline', color: 'text-sky-400' },
+      { to: '/', icon: Icons.layoutDashboard, label: 'Dashboard', color: 'text-blue-400' },
+      { to: '/live', icon: Icons.radar, label: 'Live Map', color: 'text-emerald-400' },
+      { to: '/weekly-digest', icon: Icons.calendarCheck, label: 'Weekly Digest', color: 'text-purple-400' },
+      { to: '/timeline', icon: Icons.clock, label: 'Timeline', color: 'text-sky-400' },
     ],
   },
   {
     title: 'Fleet',
     items: [
-      { to: '/vehicles', icon: Car, label: 'Fleet', color: 'text-sky-400', dataTour: 'vehicle-section' },
-      { to: '/compare', icon: GitCompare, label: 'Compare', color: 'text-orange-400' },
-      { to: '/vehicle-comparison', icon: ArrowLeftRight, label: 'Vehicle Comparison', color: 'text-orange-400', minVehicles: 2 },
-      { to: '/locations', icon: MapPin, label: 'Locations', color: 'text-emerald-400' },
-      { to: '/navigation', icon: Signpost, label: 'Navigation', color: 'text-teal-400' },
+      { to: '/vehicles', icon: Icons.vehicle, label: 'Fleet', color: 'text-sky-400', dataTour: 'vehicle-section' },
+      { to: '/compare', icon: Icons.gitCompare, label: 'Compare', color: 'text-orange-400' },
+      { to: '/vehicle-comparison', icon: Icons.arrowLeftRight, label: 'Vehicle Comparison', color: 'text-orange-400', minVehicles: 2 },
+      { to: '/locations', icon: Icons.location, label: 'Locations', color: 'text-emerald-400' },
+      { to: '/navigation', icon: Icons.signpost, label: 'Navigation', color: 'text-teal-400' },
     ],
   },
   {
     title: 'Driving',
     items: [
-      { to: '/drives', icon: Route, label: 'Drives', color: 'text-violet-400' },
-      { to: '/trips', icon: Milestone, label: 'Trips', color: 'text-teal-400' },
-      { to: '/trip-planner', icon: MapPinned, label: 'Trip Planner', color: 'text-emerald-400' },
-      { to: '/mileage', icon: Milestone, label: 'Mileage', color: 'text-teal-400' },
-      { to: '/lifetime-stats', icon: Award, label: 'Lifetime Stats', color: 'text-yellow-400' },
+      { to: '/drives', icon: Icons.drive, label: 'Drives', color: 'text-violet-400' },
+      { to: '/trips', icon: Icons.trip, label: 'Trips', color: 'text-teal-400' },
+      { to: '/trip-planner', icon: Icons.mapPinned, label: 'Trip Planner', color: 'text-emerald-400' },
+      { to: '/mileage', icon: Icons.trip, label: 'Mileage', color: 'text-teal-400' },
+      { to: '/lifetime-stats', icon: Icons.award, label: 'Lifetime Stats', color: 'text-yellow-400' },
     ],
   },
   {
     title: 'Driving Insights',
     items: [
-      { to: '/drive-score', icon: Trophy, label: 'Drive Score', color: 'text-yellow-400' },
-      { to: '/speed-profile', icon: Gauge, label: 'Speed Profile', color: 'text-rose-400' },
-      { to: '/driving-dynamics', icon: Activity, label: 'Driving Dynamics', color: 'text-red-400' },
-      { to: '/regen-efficiency', icon: Recycle, label: 'Regen Braking', color: 'text-green-400' },
+      { to: '/drive-score', icon: Icons.trophy, label: 'Drive Score', color: 'text-yellow-400' },
+      { to: '/speed-profile', icon: Icons.speed, label: 'Speed Profile', color: 'text-rose-400' },
+      { to: '/driving-dynamics', icon: Icons.efficiency, label: 'Driving Dynamics', color: 'text-red-400' },
+      { to: '/regen-efficiency', icon: Icons.recycle, label: 'Regen Braking', color: 'text-green-400' },
     ],
   },
   {
     title: 'Charging',
     items: [
-      { to: '/charging', icon: BatteryCharging, label: 'Charging', color: 'text-green-400' },
-      { to: '/tesla-charging-history', icon: Receipt, label: 'Tesla Charge History', color: 'text-emerald-400' },
-      { to: '/charging-heatmap', icon: CalendarClock, label: 'Charging Patterns', color: 'text-cyan-400' },
-      { to: '/charging-curve', icon: TrendingUp, label: 'Charging Curve', color: 'text-lime-400' },
-      { to: '/smart-charge', icon: CalendarClock, label: 'Smart Charge', color: 'text-cyan-400' },
-      { to: '/powershare', icon: Zap, label: 'Powershare', color: 'text-amber-400' },
+      { to: '/charging', icon: Icons.batteryCharging, label: 'Charging', color: 'text-green-400' },
+      { to: '/tesla-charging-history', icon: Icons.receipt, label: 'Tesla Charge History', color: 'text-emerald-400' },
+      { to: '/charging-heatmap', icon: Icons.calendarClock, label: 'Charging Patterns', color: 'text-cyan-400' },
+      { to: '/charging-curve', icon: Icons.trendUp, label: 'Charging Curve', color: 'text-lime-400' },
+      { to: '/smart-charge', icon: Icons.calendarClock, label: 'Smart Charge', color: 'text-cyan-400' },
+      { to: '/powershare', icon: Icons.charging, label: 'Powershare', color: 'text-amber-400' },
     ],
   },
   {
     title: 'Battery',
     items: [
-      { to: '/battery', icon: HeartPulse, label: 'Battery Health', color: 'text-rose-400' },
-      { to: '/battery-cells', icon: Battery, label: 'Battery Cells', color: 'text-purple-400' },
-      { to: '/battery-degradation', icon: TrendingDown, label: 'Degradation', color: 'text-orange-400' },
+      { to: '/battery', icon: Icons.heartPulse, label: 'Battery Health', color: 'text-rose-400' },
+      { to: '/battery-cells', icon: Icons.battery, label: 'Battery Cells', color: 'text-purple-400' },
+      { to: '/battery-degradation', icon: Icons.trendDown, label: 'Degradation', color: 'text-orange-400' },
     ],
   },
   {
     title: 'Energy',
     items: [
-      { to: '/energy', icon: Bolt, label: 'Energy', color: 'text-yellow-400' },
-      { to: '/energy-flow', icon: ArrowRightLeft, label: 'Energy Flow', color: 'text-yellow-400' },
-      { to: '/power-flow', icon: Zap, label: 'Power Flow', color: 'text-orange-400' },
-      { to: '/energy-products', icon: Home, label: 'Energy Products', color: 'text-lime-400' },
-      { to: '/projected-range', icon: Target, label: 'Projected Range', color: 'text-pink-400' },
+      { to: '/energy', icon: Icons.bolt, label: 'Energy', color: 'text-yellow-400' },
+      { to: '/energy-flow', icon: Icons.arrowRightLeft, label: 'Energy Flow', color: 'text-yellow-400' },
+      { to: '/power-flow', icon: Icons.charging, label: 'Power Flow', color: 'text-orange-400' },
+      { to: '/energy-products', icon: Icons.home, label: 'Energy Products', color: 'text-lime-400' },
+      { to: '/projected-range', icon: Icons.target, label: 'Projected Range', color: 'text-pink-400' },
     ],
   },
   {
     title: 'Efficiency',
     items: [
-      { to: '/efficiency', icon: Leaf, label: 'Efficiency', color: 'text-amber-400' },
-      { to: '/route-efficiency', icon: Navigation2, label: 'Route Efficiency', color: 'text-emerald-400' },
-      { to: '/temperature-impact', icon: ThermometerSun, label: 'Temperature Impact', color: 'text-blue-400' },
-      { to: '/vampire-drain', icon: Moon, label: 'Vampire Drain', color: 'text-indigo-400' },
-      { to: '/sleep-efficiency', icon: BedDouble, label: 'Sleep Efficiency', color: 'text-purple-400' },
+      { to: '/efficiency', icon: Icons.leaf, label: 'Efficiency', color: 'text-amber-400' },
+      { to: '/route-efficiency', icon: Icons.navigationAlt, label: 'Route Efficiency', color: 'text-emerald-400' },
+      { to: '/temperature-impact', icon: Icons.climateHot, label: 'Temperature Impact', color: 'text-blue-400' },
+      { to: '/vampire-drain', icon: Icons.moon, label: 'Vampire Drain', color: 'text-indigo-400' },
+      { to: '/sleep-efficiency', icon: Icons.bedDouble, label: 'Sleep Efficiency', color: 'text-purple-400' },
     ],
   },
   {
     title: 'Costs',
     items: [
-      { to: '/cost-analysis', icon: DollarSign, label: 'Cost Analysis', color: 'text-emerald-400' },
-      { to: '/tco', icon: Wallet, label: 'Cost of Ownership', color: 'text-green-400' },
+      { to: '/cost-analysis', icon: Icons.dollarSign, label: 'Cost Analysis', color: 'text-emerald-400' },
+      { to: '/tco', icon: Icons.wallet, label: 'Cost of Ownership', color: 'text-green-400' },
     ],
   },
   {
     title: 'Vehicle State',
     items: [
-      { to: '/digital-twin', icon: Monitor, label: 'Digital Twin', color: 'text-cyan-400' },
-      { to: '/tire-pressure', icon: CircleDot, label: 'Tire Pressure', color: 'text-orange-400' },
-      { to: '/climate-control', icon: Thermometer, label: 'Climate Control', color: 'text-sky-400' },
+      { to: '/digital-twin', icon: Icons.monitor, label: 'Digital Twin', color: 'text-cyan-400' },
+      { to: '/tire-pressure', icon: Icons.tirePressure, label: 'Tire Pressure', color: 'text-orange-400' },
+      { to: '/climate-control', icon: Icons.climate, label: 'Climate Control', color: 'text-sky-400' },
     ],
   },
   {
     title: 'Health & Service',
     items: [
-      { to: '/drivetrain-health', icon: Cpu, label: 'Drivetrain Health', color: 'text-red-400' },
-      { to: '/software-updates', icon: Download, label: 'Software Updates', color: 'text-teal-400' },
-      { to: '/maintenance', icon: Wrench, label: 'Maintenance', color: 'text-amber-400' },
+      { to: '/drivetrain-health', icon: Icons.cpu, label: 'Drivetrain Health', color: 'text-red-400' },
+      { to: '/software-updates', icon: Icons.download, label: 'Software Updates', color: 'text-teal-400' },
+      { to: '/maintenance', icon: Icons.maintenance, label: 'Maintenance', color: 'text-amber-400' },
     ],
   },
   {
     title: 'Analytics',
     items: [
-      { to: '/analytics', icon: BarChart3, label: 'Analytics', color: 'text-indigo-400' },
-      { to: '/statistics', icon: PieChart, label: 'Statistics', color: 'text-cyan-400' },
+      { to: '/analytics', icon: Icons.analytics, label: 'Analytics', color: 'text-indigo-400' },
+      { to: '/statistics', icon: Icons.pieChart, label: 'Statistics', color: 'text-cyan-400' },
     ],
   },
   {
     title: 'Controls',
     items: [
-      { to: '/commands', icon: Gamepad2, label: 'Commands', color: 'text-fuchsia-400', dataTour: 'commands-section' },
-      { to: '/command-history', icon: History, label: 'Command History', color: 'text-violet-400' },
+      { to: '/commands', icon: Icons.gamepad, label: 'Commands', color: 'text-fuchsia-400', dataTour: 'commands-section' },
+      { to: '/command-history', icon: Icons.history, label: 'Command History', color: 'text-violet-400' },
     ],
   },
   {
     title: 'Automations & Alerts',
     items: [
-      { to: '/automations', icon: Workflow, label: 'Automations', color: 'text-neon-cyan' },
-      { to: '/alerts', icon: Bell, label: 'Alerts', color: 'text-red-400' },
-      { to: '/alert-studio', icon: BellPlus, label: 'Alert Studio', color: 'text-neon-cyan' },
-      { to: '/geofences', icon: Fence, label: 'Geofences', color: 'text-lime-400' },
-      { to: '/notifications', icon: BellRing, label: 'Notifications', color: 'text-purple-400' },
+      { to: '/automations', icon: Icons.workflow, label: 'Automations', color: 'text-neon-cyan' },
+      { to: '/alerts', icon: Icons.notifications, label: 'Alerts', color: 'text-red-400' },
+      { to: '/alert-studio', icon: Icons.notificationsAdd, label: 'Alert Studio', color: 'text-neon-cyan' },
+      { to: '/geofences', icon: Icons.fence, label: 'Geofences', color: 'text-lime-400' },
+      { to: '/notifications', icon: Icons.notificationsActive, label: 'Notifications', color: 'text-purple-400' },
     ],
   },
   {
     title: 'Security & Safety',
     items: [
-      { to: '/security-access', icon: Lock, label: 'Security & Access', color: 'text-emerald-400' },
-      { to: '/safety-settings', icon: ShieldCheck, label: 'Safety Settings', color: 'text-amber-400' },
-      { to: '/guard-mode', icon: ShieldAlert, label: 'Guard Mode', color: 'text-red-400' },
+      { to: '/security-access', icon: Icons.locked, label: 'Security & Access', color: 'text-emerald-400' },
+      { to: '/safety-settings', icon: Icons.securityCheck, label: 'Safety Settings', color: 'text-amber-400' },
+      { to: '/guard-mode', icon: Icons.securityAlert, label: 'Guard Mode', color: 'text-red-400' },
     ],
   },
   {
     title: 'Assistant & Media',
     items: [
-      { to: '/chatbot', icon: Bot, label: 'Chatbot', color: 'text-cyan-400' },
-      { to: '/media-player', icon: Headphones, label: 'Media Player', color: 'text-pink-400' },
+      { to: '/chatbot', icon: Icons.bot, label: 'Chatbot', color: 'text-cyan-400' },
+      { to: '/media-player', icon: Icons.headphones, label: 'Media Player', color: 'text-pink-400' },
     ],
   },
   {
     title: 'Account & Integration',
     items: [
-      { to: '/tesla-account', icon: User, label: 'Tesla Account', color: 'text-blue-400' },
-      { to: '/fleet-api', icon: Cloud, label: 'Fleet API', color: 'text-sky-400' },
-      { to: '/api-logs', icon: FileText, label: 'API Logs', color: 'text-amber-400' },
+      { to: '/tesla-account', icon: Icons.user, label: 'Tesla Account', color: 'text-blue-400' },
+      { to: '/fleet-api', icon: Icons.cloud, label: 'Fleet API', color: 'text-sky-400' },
+      { to: '/api-logs', icon: Icons.fileText, label: 'API Logs', color: 'text-amber-400' },
     ],
   },
   {
     title: 'Settings & Admin',
     items: [
-      { to: '/settings', icon: Settings, label: 'Settings', color: 'text-[var(--text-muted)]' },
-      { to: '/admin', icon: KeyRound, label: 'Admin', color: 'text-red-400' },
-      { to: '/api-keys', icon: Key, label: 'API Keys', color: 'text-amber-400' },
+      { to: '/settings', icon: Icons.settings, label: 'Settings', color: 'text-[var(--text-muted)]' },
+      { to: '/admin', icon: Icons.keyRound, label: 'Admin', color: 'text-red-400' },
+      { to: '/api-keys', icon: Icons.key, label: 'API Keys', color: 'text-amber-400' },
     ],
   },
   {
     title: 'Data Management',
     items: [
-      { to: '/data-export', icon: HardDriveDownload, label: 'Data Export', color: 'text-lime-400' },
-      { to: '/backup', icon: DatabaseBackup, label: 'Backup & Restore', color: 'text-teal-400' },
-      { to: '/data-repair', icon: Stethoscope, label: 'Data Repair', color: 'text-amber-400' },
+      { to: '/data-export', icon: Icons.hardDriveDownload, label: 'Data Export', color: 'text-lime-400' },
+      { to: '/backup', icon: Icons.databaseBackup, label: 'Backup & Restore', color: 'text-teal-400' },
+      { to: '/data-repair', icon: Icons.stethoscope, label: 'Data Repair', color: 'text-amber-400' },
     ],
   },
   {
     title: 'Signal Diagnostics',
     items: [
-      { to: '/live-monitor', icon: RadioTower, label: 'Live Monitor', color: 'text-neon-green', dataTour: 'live-signals-section' },
-      { to: '/signal-log', icon: Database, label: 'Signal Log', color: 'text-cyan-400' },
-      { to: '/signal-explorer', icon: SlidersHorizontal, label: 'Signal Explorer', color: 'text-neon-cyan' },
-      { to: '/signal-diff', icon: Split, label: 'Signal Diff', color: 'text-violet-400' },
-      { to: '/signal-gaps', icon: Wifi, label: 'Gap Detector', color: 'text-amber-400' },
-      { to: '/state-debugger', icon: Bug, label: 'State Machine', color: 'text-purple-400' },
-      { to: '/mqtt-inspector', icon: Radio, label: 'MQTT Inspector', color: 'text-blue-400' },
-      { to: '/redis-signals', icon: Server, label: 'Redis Signals', color: 'text-orange-400' },
+      { to: '/live-monitor', icon: Icons.radioTower, label: 'Live Monitor', color: 'text-neon-green', dataTour: 'live-signals-section' },
+      { to: '/signal-log', icon: Icons.database, label: 'Signal Log', color: 'text-cyan-400' },
+      { to: '/signal-explorer', icon: Icons.preferences, label: 'Signal Explorer', color: 'text-neon-cyan' },
+      { to: '/signal-diff', icon: Icons.split, label: 'Signal Diff', color: 'text-violet-400' },
+      { to: '/signal-gaps', icon: Icons.wifi, label: 'Gap Detector', color: 'text-amber-400' },
+      { to: '/state-debugger', icon: Icons.bug, label: 'State Machine', color: 'text-purple-400' },
+      { to: '/mqtt-inspector', icon: Icons.radio, label: 'MQTT Inspector', color: 'text-blue-400' },
+      { to: '/redis-signals', icon: Icons.server, label: 'Redis Signals', color: 'text-orange-400' },
     ],
   },
   {
     title: 'Infrastructure',
     items: [
-      { to: '/system-status', icon: Activity, label: 'Status', color: 'text-emerald-400' },
-      { to: '/db-health', icon: HardDrive, label: 'DB Health', color: 'text-emerald-400' },
-      { to: '/anomaly-detection', icon: ScanSearch, label: 'Anomaly Detection', color: 'text-red-400' },
+      { to: '/system-status', icon: Icons.efficiency, label: 'Status', color: 'text-emerald-400' },
+      { to: '/db-health', icon: Icons.hardDrive, label: 'DB Health', color: 'text-emerald-400' },
+      { to: '/anomaly-detection', icon: Icons.scanSearch, label: 'Anomaly Detection', color: 'text-red-400' },
     ],
   },
   {
     title: 'Developer',
     items: [
-      { to: '/dev-tools', icon: Hammer, label: 'Dev Tools', color: 'text-cyan-400' },
-      { to: '/api-playground', icon: Terminal, label: 'API Playground', color: 'text-emerald-400' },
+      { to: '/dev-tools', icon: Icons.hammer, label: 'Dev Tools', color: 'text-cyan-400' },
+      { to: '/api-playground', icon: Icons.terminal, label: 'API Playground', color: 'text-emerald-400' },
     ],
   },
   {
     title: 'Project Info',
     items: [
-      { to: '/roadmap', icon: Signpost, label: 'Roadmap', color: 'text-violet-400' },
-      { to: '/changelog', icon: FileText, label: 'Changelog', color: 'text-white/50' },
+      { to: '/roadmap', icon: Icons.signpost, label: 'Roadmap', color: 'text-violet-400' },
+      { to: '/changelog', icon: Icons.fileText, label: 'Changelog', color: 'text-white/50' },
     ],
   },
 ]
@@ -530,7 +444,7 @@ function NotificationBell({ className }: { className?: string }) {
       aria-label={label}
       className={`relative inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${className ?? ''}`}
     >
-      <Bell className="h-5 w-5" aria-hidden="true" />
+      <Icons.notifications className="h-5 w-5" aria-hidden="true" />
       {count > 0 && (
         <span
           aria-hidden="true"
@@ -936,7 +850,7 @@ export default function Layout() {
             onClick={() => setSidebarOpen(false)}
             className="h-10 w-10 shrink-0 rounded-xl p-0 text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)] active:scale-95 [-webkit-tap-highlight-color:transparent] [touch-action:manipulation]"
           >
-            <X className="h-5 w-5" />
+            <Icons.close className="h-5 w-5" />
           </Button>
         </div>
 
@@ -1001,7 +915,7 @@ export default function Layout() {
                       activeIsPinned ? 'text-amber-300' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                     )}
                   >
-                    <Star className={cn('h-3.5 w-3.5', activeIsPinned && 'fill-current')} />
+                    <Icons.star className={cn('h-3.5 w-3.5', activeIsPinned && 'fill-current')} />
                     <span>{activeIsPinned ? t('nav.pinnedAction', 'Pinned') : t('nav.pinAction', 'Pin')}</span>
                   </Button>
                 )}
@@ -1028,7 +942,7 @@ export default function Layout() {
                       onClick={() => unpinNavPath(item.to)}
                       className="h-7 w-7 shrink-0 rounded-lg p-0 text-[var(--text-muted)] opacity-80 hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
                     >
-                      <X className="h-3.5 w-3.5" />
+                      <Icons.close className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 ))}
@@ -1063,7 +977,7 @@ export default function Layout() {
                   onClick={expandAllSections}
                   className="h-7 w-7 shrink-0 rounded-lg p-0 text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] disabled:opacity-40"
                 >
-                  <ChevronsDown className="h-4 w-4" aria-hidden="true" />
+                  <Icons.expandAll className="h-4 w-4" aria-hidden="true" />
                 </Button>
                 <Button
                   type="button"
@@ -1075,7 +989,7 @@ export default function Layout() {
                   onClick={collapseAllSections}
                   className="h-7 w-7 shrink-0 rounded-lg p-0 text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] disabled:opacity-40"
                 >
-                  <ChevronsUp className="h-4 w-4" aria-hidden="true" />
+                  <Icons.collapseAll className="h-4 w-4" aria-hidden="true" />
                 </Button>
               </div>
             </div>
@@ -1120,7 +1034,7 @@ export default function Layout() {
                       >
                         {section.items.length}
                       </span>
-                      <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', isExpanded && 'rotate-180')} />
+                      <Icons.expand className={cn('h-3.5 w-3.5 transition-transform', isExpanded && 'rotate-180')} />
                     </span>
                   </Button>
                   <AnimatePresence initial={false}>
@@ -1150,7 +1064,7 @@ export default function Layout() {
           {/* Update available banner */}
           {updateCheck?.update_available && (
             <GlassPanel className="!p-2.5 flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-              <Download className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+              <Icons.download className="h-3.5 w-3.5 text-amber-400 shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-[11px] font-medium text-amber-300">Update available</p>
                 <p className="text-[10px] text-amber-400/70">v{updateCheck.latest}</p>
@@ -1166,14 +1080,14 @@ export default function Layout() {
                 <p className="text-[11px] font-medium text-[var(--text-secondary)] truncate">{primaryVehicle.display_name || 'Vehicle'}</p>
                 <p className="text-[10px] text-[var(--text-muted)]">{primaryState.state.battery_level}% · {Math.round(convertDistance(primaryState.state.rated_range))} {distanceUnit}</p>
               </div>
-              <Zap className="h-3 w-3 text-neon-cyan/50" />
+              <Icons.charging className="h-3 w-3 text-neon-cyan/50" />
             </GlassPanel>
           )}
           <GlassPanel className="flex items-center gap-3 !p-2.5">
             {isConnected ? (
-              <Wifi className="h-3.5 w-3.5 text-neon-green" />
+              <Icons.wifi className="h-3.5 w-3.5 text-neon-green" />
             ) : (
-              <WifiOff className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+              <Icons.wifiOff className="h-3.5 w-3.5 text-[var(--text-muted)]" />
             )}
             <div className="flex-1">
               <p className="text-[11px] font-medium text-[var(--text-secondary)]">{isConnected ? 'Connected' : 'Standby'}</p>
@@ -1200,7 +1114,7 @@ export default function Layout() {
             aria-expanded={false}
             className="relative z-10 h-11 w-11 -ml-1 rounded-xl p-0 text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)] active:scale-95 [-webkit-tap-highlight-color:transparent] [touch-action:manipulation]"
           >
-            <Menu className="h-6 w-6" />
+            <Icons.menu className="h-6 w-6" />
           </Button>
           <div className="flex-1 flex justify-center -ml-10">
             <Logo size={26} showWordmark />

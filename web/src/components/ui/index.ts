@@ -11,6 +11,7 @@ export { Toggle, type ToggleProps } from './Toggle';
 export { Tooltip, type TooltipProps } from './Tooltip';
 export { ConfirmDialog, type ConfirmDialogProps } from './ConfirmDialog';
 export { IconBox } from './IconBox';
+export { Icon, type IconProps, type IconSize } from './Icon';
 export { TabNav } from './TabNav';
 export { Accordion } from './Accordion';
 export { Pagination } from './Pagination';

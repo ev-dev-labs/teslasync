@@ -27,12 +27,6 @@ import { PageContainer } from '@/components/layout'
 import { FadeIn } from '@/components/motion'
 import { AlertBanner, EmptyState, ErrorDisplay, Skeleton } from '@/components/feedback'
 import { SearchInput } from '@/components/forms'
-import {
-  Zap, Plus, Save, Trash2, Copy, Bell, BellOff,
-  Info, Battery, Gauge, Lock,
-  Car, Droplets, Clock, Pencil, Sparkles, Thermometer, Shield, Search,
-  MoonStar,
-} from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { severityTokens } from '@/lib/tokens'
 import { formatDateTime } from '@/lib/dateFormat'
@@ -41,7 +35,8 @@ import { useConfirm } from '@/hooks/useConfirm'
 import { useDirtyForm } from '@/hooks/useDirtyForm'
 import { useAutosave, loadAutosave, clearAutosave } from '@/hooks/useAutosave'
 import { useUrlString } from '@/hooks/useUrlState'
-import { alertRuleSchema } from '../schemas/alertRule'
+import { alertRuleSchema } from '../schemas/alertRule'
+import { Icons } from '@/lib/icons';
 
 type Severity = NonNullable<AlertRuleInput['severity']>
 type RuleOp = AlertRuleInput['op']
@@ -70,64 +65,64 @@ interface SignalDefinition {
 }
 
 const ruleTemplates: RuleTemplate[] = [
-  { name: 'Battery Low (< 20%)', icon: Battery, category: 'Battery', severity: 'warn', message: 'Battery at {{BatteryLevel}}%', cooldown_min: 30, signal_name: 'BatteryLevel', op: '<', value_num: 20 },
-  { name: 'Battery Critical (< 10%)', icon: Battery, category: 'Battery', severity: 'critical', message: 'Battery critically low at {{BatteryLevel}}%!', cooldown_min: 15, signal_name: 'BatteryLevel', op: '<', value_num: 10 },
-  { name: 'Battery Full (>= 90%)', icon: Battery, category: 'Battery', severity: 'info', message: 'Battery reached {{BatteryLevel}}%', cooldown_min: 60, signal_name: 'BatteryLevel', op: '>=', value_num: 90 },
-  { name: 'Charge Limit Reached', icon: Battery, category: 'Battery', severity: 'info', message: 'Battery at charge limit {{ChargeLimitSoc}}%', cooldown_min: 60, signal_name: 'BatteryLevel', op: '>=', value_num: 80 },
-  { name: 'Range Below 50 km', icon: Battery, category: 'Battery', severity: 'warn', message: 'Range low: {{RatedRange}} km remaining', cooldown_min: 30, signal_name: 'RatedRange', op: '<', value_num: 50 },
+  { name: 'Battery Low (< 20%)', icon: Icons.battery, category: 'Battery', severity: 'warn', message: 'Battery at {{BatteryLevel}}%', cooldown_min: 30, signal_name: 'BatteryLevel', op: '<', value_num: 20 },
+  { name: 'Battery Critical (< 10%)', icon: Icons.battery, category: 'Battery', severity: 'critical', message: 'Battery critically low at {{BatteryLevel}}%!', cooldown_min: 15, signal_name: 'BatteryLevel', op: '<', value_num: 10 },
+  { name: 'Battery Full (>= 90%)', icon: Icons.battery, category: 'Battery', severity: 'info', message: 'Battery reached {{BatteryLevel}}%', cooldown_min: 60, signal_name: 'BatteryLevel', op: '>=', value_num: 90 },
+  { name: 'Charge Limit Reached', icon: Icons.battery, category: 'Battery', severity: 'info', message: 'Battery at charge limit {{ChargeLimitSoc}}%', cooldown_min: 60, signal_name: 'BatteryLevel', op: '>=', value_num: 80 },
+  { name: 'Range Below 50 km', icon: Icons.battery, category: 'Battery', severity: 'warn', message: 'Range low: {{RatedRange}} km remaining', cooldown_min: 30, signal_name: 'RatedRange', op: '<', value_num: 50 },
 
-  { name: 'Charge Complete', icon: Zap, category: 'Charging', severity: 'info', message: 'Charging complete at {{BatteryLevel}}%', cooldown_min: 60, signal_name: 'ChargeState', op: '=', value_text: 'Complete' },
-  { name: 'Charging Started', icon: Zap, category: 'Charging', severity: 'info', message: 'Charging started - {{DetailedChargeState}}', cooldown_min: 15, signal_name: 'DetailedChargeState', op: '=', value_text: 'Charging' },
-  { name: 'Charging Stopped Unexpectedly', icon: Zap, category: 'Charging', severity: 'warn', message: 'Charging stopped - {{DetailedChargeState}}', cooldown_min: 30, signal_name: 'DetailedChargeState', op: '=', value_text: 'Stopped' },
-  { name: 'Supercharging (DC Fast)', icon: Zap, category: 'Charging', severity: 'info', message: 'Supercharging at {{DCChargingPower}} kW', cooldown_min: 30, signal_name: 'DCChargingPower', op: '>', value_num: 50 },
-  { name: 'Slow Charge Rate', icon: Zap, category: 'Charging', severity: 'warn', message: 'Charging slow: {{ChargeAmps}}A', cooldown_min: 60, signal_name: 'ChargeAmps', op: 'between', value_min: 0.01, value_max: 5 },
+  { name: 'Charge Complete', icon: Icons.charging, category: 'Charging', severity: 'info', message: 'Charging complete at {{BatteryLevel}}%', cooldown_min: 60, signal_name: 'ChargeState', op: '=', value_text: 'Complete' },
+  { name: 'Charging Started', icon: Icons.charging, category: 'Charging', severity: 'info', message: 'Charging started - {{DetailedChargeState}}', cooldown_min: 15, signal_name: 'DetailedChargeState', op: '=', value_text: 'Charging' },
+  { name: 'Charging Stopped Unexpectedly', icon: Icons.charging, category: 'Charging', severity: 'warn', message: 'Charging stopped - {{DetailedChargeState}}', cooldown_min: 30, signal_name: 'DetailedChargeState', op: '=', value_text: 'Stopped' },
+  { name: 'Supercharging (DC Fast)', icon: Icons.charging, category: 'Charging', severity: 'info', message: 'Supercharging at {{DCChargingPower}} kW', cooldown_min: 30, signal_name: 'DCChargingPower', op: '>', value_num: 50 },
+  { name: 'Slow Charge Rate', icon: Icons.charging, category: 'Charging', severity: 'warn', message: 'Charging slow: {{ChargeAmps}}A', cooldown_min: 60, signal_name: 'ChargeAmps', op: 'between', value_min: 0.01, value_max: 5 },
 
-  { name: 'Drive Started', icon: Car, category: 'Driving', severity: 'info', message: 'Drive started - gear is {{Gear}}', cooldown_min: 5, signal_name: 'Gear', op: '=', value_text: 'D' },
-  { name: 'Drive Ended', icon: Car, category: 'Driving', severity: 'info', message: 'Drive ended - gear is {{Gear}}', cooldown_min: 5, signal_name: 'Gear', op: '=', value_text: 'P' },
-  { name: 'Speed Limit Exceeded', icon: Gauge, category: 'Driving', severity: 'warn', message: 'Speed {{VehicleSpeed}} km/h exceeded limit', cooldown_min: 15, signal_name: 'VehicleSpeed', op: '>', value_num: 120 },
-  { name: 'High Speed Alert (> 160 km/h)', icon: Gauge, category: 'Driving', severity: 'critical', message: 'Very high speed: {{VehicleSpeed}} km/h!', cooldown_min: 5, signal_name: 'VehicleSpeed', op: '>', value_num: 160 },
-  { name: 'Reverse Gear Engaged', icon: Car, category: 'Driving', severity: 'info', message: 'Vehicle in reverse', cooldown_min: 5, signal_name: 'Gear', op: '=', value_text: 'R' },
-  { name: 'Odometer Milestone (100k km)', icon: Car, category: 'Driving', severity: 'info', message: 'Odometer: {{Odometer}} km', cooldown_min: 1440, signal_name: 'Odometer', op: '>', value_num: 100000 },
+  { name: 'Drive Started', icon: Icons.vehicle, category: 'Driving', severity: 'info', message: 'Drive started - gear is {{Gear}}', cooldown_min: 5, signal_name: 'Gear', op: '=', value_text: 'D' },
+  { name: 'Drive Ended', icon: Icons.vehicle, category: 'Driving', severity: 'info', message: 'Drive ended - gear is {{Gear}}', cooldown_min: 5, signal_name: 'Gear', op: '=', value_text: 'P' },
+  { name: 'Speed Limit Exceeded', icon: Icons.speed, category: 'Driving', severity: 'warn', message: 'Speed {{VehicleSpeed}} km/h exceeded limit', cooldown_min: 15, signal_name: 'VehicleSpeed', op: '>', value_num: 120 },
+  { name: 'High Speed Alert (> 160 km/h)', icon: Icons.speed, category: 'Driving', severity: 'critical', message: 'Very high speed: {{VehicleSpeed}} km/h!', cooldown_min: 5, signal_name: 'VehicleSpeed', op: '>', value_num: 160 },
+  { name: 'Reverse Gear Engaged', icon: Icons.vehicle, category: 'Driving', severity: 'info', message: 'Vehicle in reverse', cooldown_min: 5, signal_name: 'Gear', op: '=', value_text: 'R' },
+  { name: 'Odometer Milestone (100k km)', icon: Icons.vehicle, category: 'Driving', severity: 'info', message: 'Odometer: {{Odometer}} km', cooldown_min: 1440, signal_name: 'Odometer', op: '>', value_num: 100000 },
 
-  { name: 'Car Unlocked While Parked', icon: Lock, category: 'Security', severity: 'critical', message: 'Vehicle is unlocked and parked!', cooldown_min: 30, signal_name: 'Locked', op: '=', value_bool: false },
-  { name: 'Vehicle Locked', icon: Lock, category: 'Security', severity: 'info', message: 'Vehicle locked', cooldown_min: 5, signal_name: 'Locked', op: '=', value_bool: true },
-  { name: 'Vehicle Unlocked', icon: Lock, category: 'Security', severity: 'info', message: 'Vehicle unlocked', cooldown_min: 5, signal_name: 'Locked', op: '=', value_bool: false },
-  { name: 'Sentry Mode Activated', icon: Shield, category: 'Security', severity: 'info', message: 'Sentry mode activated', cooldown_min: 30, signal_name: 'SentryMode', op: '=', value_bool: true },
-  { name: 'Door Opened While Parked', icon: Lock, category: 'Security', severity: 'warn', message: 'Door opened - {{DoorState}}', cooldown_min: 15, signal_name: 'DoorState', op: '!=', value_text: 'Closed' },
-  { name: 'Window Left Open', icon: Car, category: 'Security', severity: 'warn', message: 'Front driver window is {{FdWindow}}', cooldown_min: 60, signal_name: 'FdWindow', op: '!=', value_text: 'Closed' },
-  { name: 'Valet Mode Enabled', icon: Shield, category: 'Security', severity: 'info', message: 'Valet mode enabled', cooldown_min: 60, signal_name: 'ValetModeEnabled', op: '=', value_bool: true },
-  { name: 'Guest Mode Enabled', icon: Shield, category: 'Security', severity: 'warn', message: 'Guest mode enabled', cooldown_min: 60, signal_name: 'GuestModeEnabled', op: '=', value_bool: true },
+  { name: 'Car Unlocked While Parked', icon: Icons.locked, category: 'Security', severity: 'critical', message: 'Vehicle is unlocked and parked!', cooldown_min: 30, signal_name: 'Locked', op: '=', value_bool: false },
+  { name: 'Vehicle Locked', icon: Icons.locked, category: 'Security', severity: 'info', message: 'Vehicle locked', cooldown_min: 5, signal_name: 'Locked', op: '=', value_bool: true },
+  { name: 'Vehicle Unlocked', icon: Icons.locked, category: 'Security', severity: 'info', message: 'Vehicle unlocked', cooldown_min: 5, signal_name: 'Locked', op: '=', value_bool: false },
+  { name: 'Sentry Mode Activated', icon: Icons.security, category: 'Security', severity: 'info', message: 'Sentry mode activated', cooldown_min: 30, signal_name: 'SentryMode', op: '=', value_bool: true },
+  { name: 'Door Opened While Parked', icon: Icons.locked, category: 'Security', severity: 'warn', message: 'Door opened - {{DoorState}}', cooldown_min: 15, signal_name: 'DoorState', op: '!=', value_text: 'Closed' },
+  { name: 'Window Left Open', icon: Icons.vehicle, category: 'Security', severity: 'warn', message: 'Front driver window is {{FdWindow}}', cooldown_min: 60, signal_name: 'FdWindow', op: '!=', value_text: 'Closed' },
+  { name: 'Valet Mode Enabled', icon: Icons.security, category: 'Security', severity: 'info', message: 'Valet mode enabled', cooldown_min: 60, signal_name: 'ValetModeEnabled', op: '=', value_bool: true },
+  { name: 'Guest Mode Enabled', icon: Icons.security, category: 'Security', severity: 'warn', message: 'Guest mode enabled', cooldown_min: 60, signal_name: 'GuestModeEnabled', op: '=', value_bool: true },
 
-  { name: 'Cabin Overheat (> 40C)', icon: Thermometer, category: 'Climate', severity: 'warn', message: 'Cabin temp: {{InsideTemp}}C', cooldown_min: 30, signal_name: 'InsideTemp', op: '>', value_num: 40 },
-  { name: 'Cabin Freezing (< 0C)', icon: Thermometer, category: 'Climate', severity: 'warn', message: 'Cabin temp: {{InsideTemp}}C - freezing!', cooldown_min: 60, signal_name: 'InsideTemp', op: '<', value_num: 0 },
-  { name: 'HVAC Left On While Parked', icon: Thermometer, category: 'Climate', severity: 'info', message: 'HVAC running while parked', cooldown_min: 30, signal_name: 'HvacPower', op: '=', value_bool: true },
-  { name: 'Climate Keeper Active', icon: Thermometer, category: 'Climate', severity: 'info', message: 'Climate keeper: {{ClimateKeeperMode}}', cooldown_min: 60, signal_name: 'ClimateKeeperMode', op: '!=', value_text: 'Off' },
-  { name: 'Steering Wheel Heater On', icon: Thermometer, category: 'Climate', severity: 'info', message: 'Steering wheel heater level {{HvacSteeringWheelHeatLevel}}', cooldown_min: 30, signal_name: 'HvacSteeringWheelHeatLevel', op: '>', value_num: 0 },
+  { name: 'Cabin Overheat (> 40C)', icon: Icons.climate, category: 'Climate', severity: 'warn', message: 'Cabin temp: {{InsideTemp}}C', cooldown_min: 30, signal_name: 'InsideTemp', op: '>', value_num: 40 },
+  { name: 'Cabin Freezing (< 0C)', icon: Icons.climate, category: 'Climate', severity: 'warn', message: 'Cabin temp: {{InsideTemp}}C - freezing!', cooldown_min: 60, signal_name: 'InsideTemp', op: '<', value_num: 0 },
+  { name: 'HVAC Left On While Parked', icon: Icons.climate, category: 'Climate', severity: 'info', message: 'HVAC running while parked', cooldown_min: 30, signal_name: 'HvacPower', op: '=', value_bool: true },
+  { name: 'Climate Keeper Active', icon: Icons.climate, category: 'Climate', severity: 'info', message: 'Climate keeper: {{ClimateKeeperMode}}', cooldown_min: 60, signal_name: 'ClimateKeeperMode', op: '!=', value_text: 'Off' },
+  { name: 'Steering Wheel Heater On', icon: Icons.climate, category: 'Climate', severity: 'info', message: 'Steering wheel heater level {{HvacSteeringWheelHeatLevel}}', cooldown_min: 30, signal_name: 'HvacSteeringWheelHeatLevel', op: '>', value_num: 0 },
 
-  { name: 'Tire Pressure Low', icon: Droplets, category: 'Tire Pressure', severity: 'warn', message: 'Low tire pressure detected', cooldown_min: 60, signal_name: 'TpmsHardWarnings', op: '=', value_bool: true },
-  { name: 'Tire Pressure Soft Warning', icon: Droplets, category: 'Tire Pressure', severity: 'info', message: 'Tire pressure slightly low', cooldown_min: 120, signal_name: 'TpmsSoftWarnings', op: '=', value_bool: true },
-  { name: 'Front Left Tire Low (< 2.2 bar)', icon: Droplets, category: 'Tire Pressure', severity: 'warn', message: 'FL tire: {{TpmsPressureFl}} bar', cooldown_min: 60, signal_name: 'TpmsPressureFl', op: '<', value_num: 2.2 },
+  { name: 'Tire Pressure Low', icon: Icons.droplets, category: 'Tire Pressure', severity: 'warn', message: 'Low tire pressure detected', cooldown_min: 60, signal_name: 'TpmsHardWarnings', op: '=', value_bool: true },
+  { name: 'Tire Pressure Soft Warning', icon: Icons.droplets, category: 'Tire Pressure', severity: 'info', message: 'Tire pressure slightly low', cooldown_min: 120, signal_name: 'TpmsSoftWarnings', op: '=', value_bool: true },
+  { name: 'Front Left Tire Low (< 2.2 bar)', icon: Icons.droplets, category: 'Tire Pressure', severity: 'warn', message: 'FL tire: {{TpmsPressureFl}} bar', cooldown_min: 60, signal_name: 'TpmsPressureFl', op: '<', value_num: 2.2 },
 
-  { name: 'Arrived at Home', icon: Car, category: 'Location', severity: 'info', message: 'Vehicle arrived at home', cooldown_min: 15, signal_name: 'LocatedAtHome', op: '=', value_bool: true },
-  { name: 'Left Home', icon: Car, category: 'Location', severity: 'info', message: 'Vehicle left home', cooldown_min: 15, signal_name: 'LocatedAtHome', op: '=', value_bool: false },
-  { name: 'Arrived at Work', icon: Car, category: 'Location', severity: 'info', message: 'Vehicle arrived at work', cooldown_min: 15, signal_name: 'LocatedAtWork', op: '=', value_bool: true },
-  { name: 'Navigation Started', icon: Car, category: 'Location', severity: 'info', message: 'Navigating to {{DestinationName}}', cooldown_min: 10, signal_name: 'DestinationName', op: 'changed' },
+  { name: 'Arrived at Home', icon: Icons.vehicle, category: 'Location', severity: 'info', message: 'Vehicle arrived at home', cooldown_min: 15, signal_name: 'LocatedAtHome', op: '=', value_bool: true },
+  { name: 'Left Home', icon: Icons.vehicle, category: 'Location', severity: 'info', message: 'Vehicle left home', cooldown_min: 15, signal_name: 'LocatedAtHome', op: '=', value_bool: false },
+  { name: 'Arrived at Work', icon: Icons.vehicle, category: 'Location', severity: 'info', message: 'Vehicle arrived at work', cooldown_min: 15, signal_name: 'LocatedAtWork', op: '=', value_bool: true },
+  { name: 'Navigation Started', icon: Icons.vehicle, category: 'Location', severity: 'info', message: 'Navigating to {{DestinationName}}', cooldown_min: 10, signal_name: 'DestinationName', op: 'changed' },
 
-  { name: 'Driver Seatbelt Unbuckled', icon: Shield, category: 'Safety', severity: 'warn', message: 'Driver seatbelt unbuckled while driving!', cooldown_min: 5, signal_name: 'DriverSeatBelt', op: '=', value_bool: false },
-  { name: 'Speed Limit Mode Active', icon: Shield, category: 'Safety', severity: 'info', message: 'Speed limit mode active', cooldown_min: 60, signal_name: 'SpeedLimitMode', op: '=', value_bool: true },
-  { name: 'PIN to Drive Disabled', icon: Shield, category: 'Safety', severity: 'warn', message: 'PIN to Drive has been disabled', cooldown_min: 1440, signal_name: 'PinToDriveEnabled', op: '=', value_bool: false },
+  { name: 'Driver Seatbelt Unbuckled', icon: Icons.security, category: 'Safety', severity: 'warn', message: 'Driver seatbelt unbuckled while driving!', cooldown_min: 5, signal_name: 'DriverSeatBelt', op: '=', value_bool: false },
+  { name: 'Speed Limit Mode Active', icon: Icons.security, category: 'Safety', severity: 'info', message: 'Speed limit mode active', cooldown_min: 60, signal_name: 'SpeedLimitMode', op: '=', value_bool: true },
+  { name: 'PIN to Drive Disabled', icon: Icons.security, category: 'Safety', severity: 'warn', message: 'PIN to Drive has been disabled', cooldown_min: 1440, signal_name: 'PinToDriveEnabled', op: '=', value_bool: false },
 
-  { name: 'High Motor Temperature (> 80C)', icon: Thermometer, category: 'Motor', severity: 'warn', message: 'Motor stator temp: {{DiStatorTempF}}C', cooldown_min: 15, signal_name: 'DiStatorTempF', op: '>', value_num: 80 },
-  { name: 'HVIL Fault', icon: Shield, category: 'Motor', severity: 'critical', message: 'HV interlock fault detected!', cooldown_min: 5, signal_name: 'Hvil', op: '=', value_text: 'Fault' },
-  { name: 'High Regenerative Braking', icon: Zap, category: 'Motor', severity: 'info', message: 'Regen power: {{Power}} kW', cooldown_min: 15, signal_name: 'Power', op: '<', value_num: -50 },
+  { name: 'High Motor Temperature (> 80C)', icon: Icons.climate, category: 'Motor', severity: 'warn', message: 'Motor stator temp: {{DiStatorTempF}}C', cooldown_min: 15, signal_name: 'DiStatorTempF', op: '>', value_num: 80 },
+  { name: 'HVIL Fault', icon: Icons.security, category: 'Motor', severity: 'critical', message: 'HV interlock fault detected!', cooldown_min: 5, signal_name: 'Hvil', op: '=', value_text: 'Fault' },
+  { name: 'High Regenerative Braking', icon: Icons.charging, category: 'Motor', severity: 'info', message: 'Regen power: {{Power}} kW', cooldown_min: 15, signal_name: 'Power', op: '<', value_num: -50 },
 
-  { name: 'Software Update Available', icon: Zap, category: 'Software', severity: 'info', message: 'Update available: {{SoftwareUpdateVersion}}', cooldown_min: 1440, signal_name: 'SoftwareUpdateVersion', op: 'changed' },
-  { name: 'Software Update Installing', icon: Zap, category: 'Software', severity: 'info', message: 'Installing update: {{SoftwareUpdateInstallationPercentComplete}}%', cooldown_min: 30, signal_name: 'SoftwareUpdateInstallationPercentComplete', op: '>', value_num: 0 },
+  { name: 'Software Update Available', icon: Icons.charging, category: 'Software', severity: 'info', message: 'Update available: {{SoftwareUpdateVersion}}', cooldown_min: 1440, signal_name: 'SoftwareUpdateVersion', op: 'changed' },
+  { name: 'Software Update Installing', icon: Icons.charging, category: 'Software', severity: 'info', message: 'Installing update: {{SoftwareUpdateInstallationPercentComplete}}%', cooldown_min: 30, signal_name: 'SoftwareUpdateInstallationPercentComplete', op: '>', value_num: 0 },
 
-  { name: 'Music Playing', icon: Car, category: 'Media', severity: 'info', message: 'Now playing: {{MediaNowPlayingTitle}} by {{MediaNowPlayingArtist}}', cooldown_min: 60, signal_name: 'MediaPlaybackStatus', op: '=', value_text: 'Playing' },
-  { name: 'Volume Too High', icon: Car, category: 'Media', severity: 'info', message: 'Volume at {{MediaAudioVolume}}', cooldown_min: 30, signal_name: 'MediaAudioVolume', op: '>', value_num: 8 },
+  { name: 'Music Playing', icon: Icons.vehicle, category: 'Media', severity: 'info', message: 'Now playing: {{MediaNowPlayingTitle}} by {{MediaNowPlayingArtist}}', cooldown_min: 60, signal_name: 'MediaPlaybackStatus', op: '=', value_text: 'Playing' },
+  { name: 'Volume Too High', icon: Icons.vehicle, category: 'Media', severity: 'info', message: 'Volume at {{MediaAudioVolume}}', cooldown_min: 30, signal_name: 'MediaAudioVolume', op: '>', value_num: 8 },
 
-  { name: 'Powershare Active', icon: Zap, category: 'Powershare', severity: 'info', message: 'Powershare active: {{PowershareInstantaneousPowerKW}} kW', cooldown_min: 60, signal_name: 'PowershareStatus', op: 'changed' },
+  { name: 'Powershare Active', icon: Icons.charging, category: 'Powershare', severity: 'info', message: 'Powershare active: {{PowershareInstantaneousPowerKW}} kW', cooldown_min: 60, signal_name: 'PowershareStatus', op: 'changed' },
 ]
 
 const templateCategories = [...new Set(ruleTemplates.map(t => t.category))].sort()
@@ -760,7 +755,7 @@ export default function AlertStudio() {
     if (!editor.signal_name.trim()) {
       return (
         <EmptyState
-          icon={<Info className="h-8 w-8 text-[var(--text-muted)]" />}
+          icon={<Icons.info className="h-8 w-8 text-[var(--text-muted)]" />}
           title={t('notifications.alertStudio.editor.noSignalTitle', 'Choose a signal')}
           message={t('notifications.alertStudio.editor.noSignalDescription', 'Select a telemetry signal before entering a comparison value.')}
         />
@@ -863,10 +858,10 @@ export default function AlertStudio() {
       error={error ?? null}
       actions={
         <>
-          <UiButton variant="ghost" size="sm" icon={<Sparkles className="h-3.5 w-3.5 text-amber-300" />} onClick={() => setShowTemplates(!showTemplates)}>
+          <UiButton variant="ghost" size="sm" icon={<Icons.sparkles className="h-3.5 w-3.5 text-amber-300" />} onClick={() => setShowTemplates(!showTemplates)}>
             {t('notifications.alertStudio.actions.templates', 'Templates')}
           </UiButton>
-          <UiButton variant="primary" size="sm" icon={<Plus className="h-3.5 w-3.5" />} onClick={handleNewRule}>
+          <UiButton variant="primary" size="sm" icon={<Icons.add className="h-3.5 w-3.5" />} onClick={handleNewRule}>
             {t('notifications.alertStudio.actions.newRule', 'New Rule')}
           </UiButton>
         </>
@@ -944,7 +939,7 @@ export default function AlertStudio() {
                         {t(`notifications.alertStudio.severity.${tpl.severity}`, tpl.severity === 'warn' ? 'Warning' : tpl.severity)}
                       </SeverityBadge>
                       <div className="flex items-center gap-1">
-                        <Copy className="h-3 w-3 text-[var(--text-muted)]" />
+                        <Icons.copy className="h-3 w-3 text-[var(--text-muted)]" />
                         <span className="text-[10px] text-[var(--text-muted)]">{t('notifications.alertStudio.templates.use', 'Use')}</span>
                       </div>
                     </div>
@@ -954,7 +949,7 @@ export default function AlertStudio() {
               {filteredTemplates.length === 0 && (
                 <div className="col-span-full">
                   <EmptyState
-                    icon={<Sparkles className="h-8 w-8 text-[var(--text-muted)]" />}
+                    icon={<Icons.sparkles className="h-8 w-8 text-[var(--text-muted)]" />}
                     title={t('notifications.alertStudio.templates.noMatchesTitle', 'No templates found')}
                     message={t('notifications.alertStudio.templates.noMatches', 'No templates match your search')}
                   />
@@ -992,7 +987,7 @@ export default function AlertStudio() {
 
             {!isLoading && rulesList.length === 0 && (
               <EmptyState
-                icon={<Bell className="h-8 w-8 text-[var(--text-muted)]" />}
+                icon={<Icons.notifications className="h-8 w-8 text-[var(--text-muted)]" />}
                 title={t('notifications.alertStudio.rules.emptyTitle', 'No alert rules yet')}
                 message={t('notifications.alertStudio.rules.emptyDescription', 'Create your first rule or pick a template above.')}
               />
@@ -1000,7 +995,7 @@ export default function AlertStudio() {
 
             {!isLoading && rulesList.length > 0 && filteredRules.length === 0 && (
               <EmptyState
-                icon={<Search className="h-8 w-8 text-[var(--text-muted)]" />}
+                icon={<Icons.search className="h-8 w-8 text-[var(--text-muted)]" />}
                 title={t('notifications.alertStudio.rules.noMatchesTitle', 'No matching rules')}
                 message={t('notifications.alertStudio.rules.noMatches', 'No rules match "{{search}}"', { search: ruleSearch })}
               />
@@ -1038,7 +1033,7 @@ export default function AlertStudio() {
                           )}
                           {snoozed && rule.snoozed_until && (
                             <Badge variant="warning" size="sm">
-                              <MoonStar className="h-3 w-3" />
+                              <Icons.moonStar className="h-3 w-3" />
                               {t('notifications.alertStudio.snooze.badge', 'Snoozed until {{time}}', { time: formatDateTime(rule.snoozed_until) })}
                             </Badge>
                           )}
@@ -1047,7 +1042,7 @@ export default function AlertStudio() {
                           <span className="font-mono">{rule.signal_name} {rule.op}</span>
                           {rule.updated_at && (
                             <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" /> {formatDateTime(rule.updated_at)}
+                              <Icons.clock className="h-3 w-3" /> {formatDateTime(rule.updated_at)}
                             </span>
                           )}
                         </div>
@@ -1064,7 +1059,7 @@ export default function AlertStudio() {
                           ? t('notifications.alertStudio.snooze.manage', 'Manage snooze')
                           : t('notifications.alertStudio.snooze.button', 'Snooze')}
                       >
-                        <MoonStar className={cn('h-3.5 w-3.5', snoozed ? 'text-amber-300' : 'text-[var(--text-muted)]')} />
+                        <Icons.moonStar className={cn('h-3.5 w-3.5', snoozed ? 'text-amber-300' : 'text-[var(--text-muted)]')} />
                       </UiButton>
                       <UiButton
                         variant="ghost"
@@ -1079,8 +1074,8 @@ export default function AlertStudio() {
                           : t('notifications.alertStudio.rules.enableRule', 'Enable rule')}
                       >
                         {rule.enabled
-                          ? <Bell className="h-3.5 w-3.5 text-neon-green" />
-                          : <BellOff className="h-3.5 w-3.5 text-[var(--text-muted)]" />}
+                          ? <Icons.notifications className="h-3.5 w-3.5 text-neon-green" />
+                          : <Icons.notificationsMuted className="h-3.5 w-3.5 text-[var(--text-muted)]" />}
                       </UiButton>
                       <UiButton
                         variant="ghost"
@@ -1101,7 +1096,7 @@ export default function AlertStudio() {
                         title={t('notifications.alertStudio.rules.deleteRule', 'Delete rule')}
                         aria-label={t('notifications.alertStudio.rules.deleteRule', 'Delete rule')}
                       >
-                        <Trash2 className="h-3.5 w-3.5 text-[var(--text-muted)] hover:text-neon-red" />
+                        <Icons.delete className="h-3.5 w-3.5 text-[var(--text-muted)] hover:text-neon-red" />
                       </UiButton>
                     </div>
                   </GlassPanel>
@@ -1114,7 +1109,7 @@ export default function AlertStudio() {
         <div className="lg:col-span-8 space-y-4">
           <GlassPanel className="p-4">
             <div className="flex items-center gap-2 mb-4">
-              <Pencil className="h-4 w-4 text-neon-cyan" />
+              <Icons.pencil className="h-4 w-4 text-neon-cyan" />
               <p className="text-sm font-medium text-[var(--text-primary)]">
                 {isEditing
                   ? t('notifications.alertStudio.editor.editTitle', 'Edit Rule')
@@ -1341,7 +1336,7 @@ export default function AlertStudio() {
                               )}
                               onClick={() => handleToggleTestChannel(ch.id)}
                             >
-                              <Bell className="h-3 w-3" />
+                              <Icons.notifications className="h-3 w-3" />
                               {ch.name} ({t(`notifications.alertStudio.channels.kind.${ch.kind}`, ch.kind)})
                             </UiButton>
                           )
@@ -1350,7 +1345,7 @@ export default function AlertStudio() {
                     </div>
                   ) : (
                     <EmptyState
-                      icon={<BellOff className="h-8 w-8 text-[var(--text-muted)]" />}
+                      icon={<Icons.notificationsMuted className="h-8 w-8 text-[var(--text-muted)]" />}
                       title={t('notifications.alertStudio.channels.emptyTitle', 'No external channels configured')}
                       message={t('notifications.alertStudio.channels.emptyDescription', 'Browser toasts and alert history are always enabled. Configure channels from Notifications to fan out alerts.')}
                     />
@@ -1363,7 +1358,7 @@ export default function AlertStudio() {
               <UiButton
                 variant="primary"
                 size="sm"
-                icon={<Save className="h-3.5 w-3.5" />}
+                icon={<Icons.save className="h-3.5 w-3.5" />}
                 loading={saveRuleMut.isPending}
                 onClick={handleSave}
                 disabled={!canSave}
@@ -1379,7 +1374,7 @@ export default function AlertStudio() {
                 <UiButton
                   variant="danger"
                   size="sm"
-                  icon={<Trash2 className="h-3.5 w-3.5" />}
+                  icon={<Icons.delete className="h-3.5 w-3.5" />}
                   onClick={() => {
                     if (editor.id != null) handleDelete(editor.id)
                   }}
@@ -1391,7 +1386,7 @@ export default function AlertStudio() {
               <UiButton
                 variant="secondary"
                 size="sm"
-                icon={<Bell className="h-3.5 w-3.5" />}
+                icon={<Icons.notifications className="h-3.5 w-3.5" />}
                 loading={testRuleMut.isPending}
                 onClick={handleTest}
                 disabled={!editor.name.trim()}

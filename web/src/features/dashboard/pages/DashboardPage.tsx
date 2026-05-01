@@ -3,11 +3,6 @@ import { createPortal } from 'react-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import {
-  RefreshCw, Bell, ArrowUpRight, Activity,
-  Route, BatteryCharging, Shield, AlertCircle, Settings, Plus, RotateCcw,
-  LayoutGrid, Download, Upload, Undo2, Redo2, LayoutTemplate, Tv,
-} from 'lucide-react';
 import { request } from '@/api/client';
 import { useAuthStatus } from '@/api/hooks/useSettings';
 import { useSyncVehicles } from '@/api/hooks/useVehicles';
@@ -37,7 +32,8 @@ import { useKioskMode } from '../hooks/useKioskMode';
 import { fromUrlSafeBase64 } from '../hooks/validateImport';
 import { getWidgetDef } from '../widgets/registry';
 import type { Vehicle, Alert } from '../types';
-import type { WidgetConfig, SavedDashboard } from '../widgets/types';
+import type { WidgetConfig, SavedDashboard } from '../widgets/types';
+import { Icons } from '@/lib/icons';
 
 export default function DashboardPage() {
   usePageTitle('Dashboard');
@@ -209,7 +205,7 @@ export default function DashboardPage() {
               aria-label={t('dashboard.undo', 'Undo')}
               className="text-white/60 hover:text-white disabled:opacity-30"
             >
-              <Undo2 className="h-4 w-4" />
+              <Icons.undoAlt className="h-4 w-4" />
             </Button>
             <Button
               variant="ghost"
@@ -219,7 +215,7 @@ export default function DashboardPage() {
               aria-label={t('dashboard.redo', 'Redo')}
               className="text-white/60 hover:text-white disabled:opacity-30"
             >
-              <Redo2 className="h-4 w-4" />
+              <Icons.redo className="h-4 w-4" />
             </Button>
             {canUndo && (
               <span className="text-[10px] text-white/30 tabular-nums">
@@ -228,19 +224,19 @@ export default function DashboardPage() {
             )}
           </div>
           <Button variant="ghost" size="sm" onClick={() => setShowPicker(true)}>
-            <Plus className="h-3.5 w-3.5 sm:mr-1" />
+            <Icons.add className="h-3.5 w-3.5 sm:mr-1" />
             <span className="hidden sm:inline">{t('dashboard.addWidget', 'Add Widget')}</span>
           </Button>
           <Button variant="ghost" size="sm" onClick={autoArrange}>
-            <LayoutGrid className="h-3.5 w-3.5 sm:mr-1" />
+            <Icons.layoutGrid className="h-3.5 w-3.5 sm:mr-1" />
             <span className="hidden sm:inline">{t('dashboard.autoArrange', 'Auto Arrange')}</span>
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setShowTemplates(true)} className="hidden sm:flex">
-            <LayoutTemplate className="h-3.5 w-3.5 mr-1" />
+            <Icons.layoutTemplate className="h-3.5 w-3.5 mr-1" />
             {t('dashboard.templates', 'Templates')}
           </Button>
           <Button variant="ghost" size="sm" onClick={resetToDefault} className="hidden sm:flex">
-            <RotateCcw className="h-3.5 w-3.5 mr-1" />
+            <Icons.undo className="h-3.5 w-3.5 mr-1" />
             {t('dashboard.reset', 'Reset')}
           </Button>
           <Button size="sm" onClick={() => setEditMode(false)}>
@@ -250,27 +246,27 @@ export default function DashboardPage() {
       ) : (
         <>
           <Button variant="ghost" size="sm" onClick={handleRefresh} loading={isRefreshing}>
-            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <Icons.refresh className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setShowExportModal(true)} className="hidden sm:flex">
-            <Download className="h-3.5 w-3.5" />
+            <Icons.download className="h-3.5 w-3.5" />
           </Button>
           <Button variant="ghost" size="sm" onClick={() => { setImportJson(null); setShowImportModal(true); }} className="hidden sm:flex">
-            <Upload className="h-3.5 w-3.5" />
+            <Icons.upload className="h-3.5 w-3.5" />
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setShowKioskSettings(true)} className="hidden sm:flex">
-            <Tv className="h-3.5 w-3.5 mr-1" />
+            <Icons.tv className="h-3.5 w-3.5 mr-1" />
             {t('dashboard.kiosk', 'Kiosk')}
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setEditMode(true)} data-tour="edit-mode-btn">
-            <Settings className="h-3.5 w-3.5 sm:mr-1" />
+            <Icons.settings className="h-3.5 w-3.5 sm:mr-1" />
             <span className="hidden sm:inline">{t('dashboard.customize', 'Customize')}</span>
           </Button>
         </>
       )}
       {!editMode && unreadAlerts > 0 && (
         <Link to="/alerts" className="relative">
-          <Bell className="h-5 w-5 text-[var(--text-secondary)] hover:text-neon-cyan transition-colors" />
+          <Icons.notifications className="h-5 w-5 text-[var(--text-secondary)] hover:text-neon-cyan transition-colors" />
           <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-neon-red text-[9px] font-bold text-[var(--text-primary)]">
             {unreadAlerts}
           </span>
@@ -293,7 +289,7 @@ export default function DashboardPage() {
 
         {/* Error banner */}
         {anyError && (
-          <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
+          <AlertBanner variant="danger" icon={<Icons.alertCircle className="h-5 w-5" />}>
             {t('error.loadFailed', 'Failed to load data')}: {anyError.message}
           </AlertBanner>
         )}
@@ -303,7 +299,7 @@ export default function DashboardPage() {
           <FadeIn>
             <AlertBanner
               variant="warning"
-              icon={<AlertCircle className="h-5 w-5" />}
+              icon={<Icons.alertCircle className="h-5 w-5" />}
               title={t('auth.notConnected', 'Tesla account not connected')}
             >
               {t('auth.connectPrompt', 'Connect your account in')}{' '}
@@ -512,23 +508,23 @@ function EmptyOnboarding({ authenticated, onSync, isSyncing }: {
         </p>
         <div className="flex items-center justify-center gap-4">
           {authenticated ? (
-            <Button onClick={onSync} loading={isSyncing} icon={<RefreshCw className="h-4 w-4" />}>
+            <Button onClick={onSync} loading={isSyncing} icon={<Icons.refresh className="h-4 w-4" />}>
               {t('onboarding.sync', 'Sync Vehicles')}
             </Button>
           ) : (
             <Link to="/settings">
               <Button variant="primary">
-                {t('onboarding.connect', 'Connect Tesla Account')} <ArrowUpRight className="h-4 w-4 ml-1 inline-block" />
+                {t('onboarding.connect', 'Connect Tesla Account')} <Icons.drillThrough className="h-4 w-4 ml-1 inline-block" />
               </Button>
             </Link>
           )}
         </div>
         <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-2xl mx-auto">
           {[
-            { icon: Activity, label: t('onboarding.tracking', 'Real-time Tracking'), color: '#00f0ff' },
-            { icon: Route, label: t('onboarding.drives', 'Drive History'), color: '#a855f7' },
-            { icon: BatteryCharging, label: t('onboarding.charging', 'Charge Analytics'), color: '#10b981' },
-            { icon: Shield, label: t('onboarding.control', 'Vehicle Control'), color: '#ef4444' },
+            { icon: Icons.efficiency, label: t('onboarding.tracking', 'Real-time Tracking'), color: '#00f0ff' },
+            { icon: Icons.drive, label: t('onboarding.drives', 'Drive History'), color: '#a855f7' },
+            { icon: Icons.batteryCharging, label: t('onboarding.charging', 'Charge Analytics'), color: '#10b981' },
+            { icon: Icons.security, label: t('onboarding.control', 'Vehicle Control'), color: '#ef4444' },
           ].map((f) => (
             <GlassPanel key={f.label} className="p-3 text-center">
               <f.icon className="h-6 w-6 mx-auto mb-2" style={{ color: f.color }} />

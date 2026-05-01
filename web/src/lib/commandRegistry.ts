@@ -1,29 +1,9 @@
-import type { ComponentType } from 'react'
 import type { NavigateFunction } from 'react-router-dom'
 import type { TFunction } from 'i18next'
 import type { ModeId, ThemeId } from '@/components/ui/ThemeProvider'
-import type { LucideProps } from 'lucide-react'
-import {
-  Bell,
-  BellRing,
-  Download,
-  Edit3,
-  Gauge,
-  HelpCircle,
-  Keyboard,
-  LayoutDashboard,
-  Lock,
-  Moon,
-  Palette,
-  Plus,
-  RefreshCw,
-  RotateCcw,
-  Settings,
-  Sun,
-  SunMoon,
-  Terminal,
-  Workflow,
-} from 'lucide-react'
+import { Icons, type LucideIcon } from '@/lib/icons'
+
+export type { LucideIcon }
 
 /**
  * Command registry — Phase 40 / Prompt 19.
@@ -43,8 +23,6 @@ import {
  */
 
 export type CommandSection = 'actions' | 'preferences' | 'pages' | 'vehicles'
-
-export type LucideIcon = ComponentType<LucideProps>
 
 export interface CommandContext {
   navigate: NavigateFunction
@@ -91,7 +69,7 @@ export const commandRegistry: CommandDefinition[] = [
     id: 'pref.theme.dark',
     labelKey: 'palette.cmd.themeDark',
     labelFallback: 'Theme: Dark',
-    icon: Moon,
+    icon: Icons.moon,
     section: 'preferences',
     keywords: ['theme', 'dark', 'mode', 'night'],
     perform: (ctx) => ctx.setMode('dark'),
@@ -100,7 +78,7 @@ export const commandRegistry: CommandDefinition[] = [
     id: 'pref.theme.light',
     labelKey: 'palette.cmd.themeLight',
     labelFallback: 'Theme: Light',
-    icon: Sun,
+    icon: Icons.sun,
     section: 'preferences',
     keywords: ['theme', 'light', 'mode', 'day', 'bright'],
     perform: (ctx) => ctx.setMode('light'),
@@ -109,7 +87,7 @@ export const commandRegistry: CommandDefinition[] = [
     id: 'pref.theme.oled',
     labelKey: 'palette.cmd.themeOled',
     labelFallback: 'Theme: OLED Black',
-    icon: Moon,
+    icon: Icons.moon,
     section: 'preferences',
     keywords: ['theme', 'oled', 'black', 'mode', 'amoled'],
     perform: (ctx) => ctx.setMode('oled'),
@@ -118,7 +96,7 @@ export const commandRegistry: CommandDefinition[] = [
     id: 'pref.theme.midnight',
     labelKey: 'palette.cmd.themeMidnight',
     labelFallback: 'Theme: Midnight Blue',
-    icon: Moon,
+    icon: Icons.moon,
     section: 'preferences',
     keywords: ['theme', 'midnight', 'blue', 'mode'],
     perform: (ctx) => ctx.setMode('midnight'),
@@ -127,7 +105,7 @@ export const commandRegistry: CommandDefinition[] = [
     id: 'pref.theme.auto',
     labelKey: 'palette.cmd.themeAuto',
     labelFallback: 'Theme: Auto (system)',
-    icon: SunMoon,
+    icon: Icons.sunMoon,
     section: 'preferences',
     keywords: ['theme', 'auto', 'system', 'mode'],
     perform: (ctx) => ctx.setMode('auto'),
@@ -136,7 +114,7 @@ export const commandRegistry: CommandDefinition[] = [
     id: 'pref.themePicker',
     labelKey: 'palette.cmd.themePicker',
     labelFallback: 'Open theme picker…',
-    icon: Palette,
+    icon: Icons.palette,
     section: 'preferences',
     keywords: ['theme', 'color', 'picker', 'preferences', 'appearance'],
     perform: (ctx) => ctx.navigate('/settings#appearance'),
@@ -147,7 +125,7 @@ export const commandRegistry: CommandDefinition[] = [
     id: 'action.refresh',
     labelKey: 'palette.cmd.refresh',
     labelFallback: 'Refresh data',
-    icon: RefreshCw,
+    icon: Icons.refresh,
     section: 'actions',
     keywords: ['refresh', 'reload', 'update', 'invalidate', 'sync'],
     perform: async (ctx) => {
@@ -159,7 +137,7 @@ export const commandRegistry: CommandDefinition[] = [
     id: 'action.alerts.new',
     labelKey: 'palette.cmd.newAlert',
     labelFallback: 'Create new alert rule',
-    icon: Bell,
+    icon: Icons.notifications,
     section: 'actions',
     keywords: ['alert', 'rule', 'new', 'create', 'notification', 'notify'],
     perform: (ctx) => ctx.navigate('/alert-studio'),
@@ -168,7 +146,7 @@ export const commandRegistry: CommandDefinition[] = [
     id: 'action.alerts.test',
     labelKey: 'palette.cmd.testAlert',
     labelFallback: 'Send a test alert',
-    icon: BellRing,
+    icon: Icons.notificationsActive,
     section: 'actions',
     keywords: ['alert', 'test', 'notification', 'check', 'verify'],
     perform: (ctx) => ctx.navigate('/alert-studio?test=1'),
@@ -177,7 +155,7 @@ export const commandRegistry: CommandDefinition[] = [
     id: 'action.notifications.history',
     labelKey: 'palette.cmd.notificationsHistory',
     labelFallback: 'Open notification history',
-    icon: BellRing,
+    icon: Icons.notificationsActive,
     section: 'actions',
     keywords: ['notifications', 'history', 'log', 'past'],
     perform: (ctx) => ctx.navigate('/notifications'),
@@ -186,7 +164,7 @@ export const commandRegistry: CommandDefinition[] = [
     id: 'action.commands.history',
     labelKey: 'palette.cmd.commandHistory',
     labelFallback: 'Open command history',
-    icon: Workflow,
+    icon: Icons.workflow,
     section: 'actions',
     keywords: ['command', 'history', 'log', 'past', 'audit'],
     perform: (ctx) => ctx.navigate('/command-history'),
@@ -195,7 +173,7 @@ export const commandRegistry: CommandDefinition[] = [
     id: 'action.security',
     labelKey: 'palette.cmd.securitySettings',
     labelFallback: 'Open security & access',
-    icon: Lock,
+    icon: Icons.locked,
     section: 'actions',
     keywords: ['security', 'access', 'lock', 'safety', 'guard'],
     perform: (ctx) => ctx.navigate('/security-access'),
@@ -204,7 +182,7 @@ export const commandRegistry: CommandDefinition[] = [
     id: 'action.system.status',
     labelKey: 'palette.cmd.systemStatus',
     labelFallback: 'View system status',
-    icon: Gauge,
+    icon: Icons.speed,
     section: 'actions',
     keywords: ['system', 'status', 'health', 'uptime', 'service'],
     perform: (ctx) => ctx.navigate('/system-status'),
@@ -213,7 +191,7 @@ export const commandRegistry: CommandDefinition[] = [
     id: 'action.api.playground',
     labelKey: 'palette.cmd.apiPlayground',
     labelFallback: 'Open API playground',
-    icon: Terminal,
+    icon: Icons.terminal,
     section: 'actions',
     keywords: ['api', 'playground', 'rest', 'developer', 'test'],
     perform: (ctx) => ctx.navigate('/api-playground'),
@@ -222,7 +200,7 @@ export const commandRegistry: CommandDefinition[] = [
     id: 'action.export',
     labelKey: 'palette.cmd.export',
     labelFallback: 'Open data export',
-    icon: Download,
+    icon: Icons.download,
     section: 'actions',
     keywords: ['export', 'csv', 'download', 'data', 'backup'],
     perform: (ctx) => ctx.navigate('/data-export'),
@@ -231,7 +209,7 @@ export const commandRegistry: CommandDefinition[] = [
     id: 'action.settings',
     labelKey: 'palette.cmd.settings',
     labelFallback: 'Open settings',
-    icon: Settings,
+    icon: Icons.settings,
     section: 'actions',
     keywords: ['settings', 'preferences', 'options', 'config'],
     perform: (ctx) => ctx.navigate('/settings'),
@@ -240,7 +218,7 @@ export const commandRegistry: CommandDefinition[] = [
     id: 'action.shortcuts',
     labelKey: 'palette.cmd.shortcuts',
     labelFallback: 'Show keyboard shortcuts',
-    icon: Keyboard,
+    icon: Icons.keyboard,
     section: 'actions',
     keywords: ['keyboard', 'shortcuts', 'keys', 'help', 'cheatsheet'],
     shortcut: '?',
@@ -252,7 +230,7 @@ export const commandRegistry: CommandDefinition[] = [
     id: 'action.help',
     labelKey: 'palette.cmd.help',
     labelFallback: 'Open documentation',
-    icon: HelpCircle,
+    icon: Icons.helpCircle,
     section: 'actions',
     keywords: ['help', 'docs', 'documentation', 'manual', 'guide'],
     perform: (ctx) => ctx.navigate('/changelog'),
@@ -266,7 +244,7 @@ export const commandRegistry: CommandDefinition[] = [
     id: 'action.dashboard.edit',
     labelKey: 'palette.cmd.dashboardEdit',
     labelFallback: 'Edit dashboard layout',
-    icon: Edit3,
+    icon: Icons.edit,
     section: 'actions',
     keywords: ['dashboard', 'edit', 'customize', 'rearrange', 'layout', 'widgets'],
     shortcut: 'E',
@@ -281,7 +259,7 @@ export const commandRegistry: CommandDefinition[] = [
     id: 'action.dashboard.switch',
     labelKey: 'palette.cmd.dashboardSwitch',
     labelFallback: 'Switch dashboard layout…',
-    icon: LayoutDashboard,
+    icon: Icons.layoutDashboard,
     section: 'actions',
     keywords: ['dashboard', 'switch', 'layout', 'preset', 'change'],
     perform: (ctx) => {
@@ -295,7 +273,7 @@ export const commandRegistry: CommandDefinition[] = [
     id: 'action.dashboard.addWidget',
     labelKey: 'palette.cmd.dashboardAddWidget',
     labelFallback: 'Add widget to dashboard',
-    icon: Plus,
+    icon: Icons.add,
     section: 'actions',
     keywords: ['dashboard', 'widget', 'add', 'panel', 'insert'],
     perform: (ctx) => {
@@ -309,7 +287,7 @@ export const commandRegistry: CommandDefinition[] = [
     id: 'action.dashboard.reset',
     labelKey: 'palette.cmd.dashboardReset',
     labelFallback: 'Reset dashboard to default',
-    icon: RotateCcw,
+    icon: Icons.undo,
     section: 'actions',
     keywords: ['dashboard', 'reset', 'default', 'clear', 'restore'],
     perform: (ctx) => {

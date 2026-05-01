@@ -1,25 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Lightbulb,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  Trophy,
-  Award,
-  Zap,
-  Gauge,
-  ShieldCheck,
-  Star,
-  Target,
-  Route,
-  Activity,
-  ChevronUp,
-  ChevronDown,
-  AlertTriangle,
-  ArrowUpRight,
-  ArrowDownRight,
-} from 'lucide-react';
 
 import { PageContainer, Grid } from '@/components/layout';
 import { GlassPanel, Badge, Button, Card, CardHeader, Pagination } from '@/components/ui';
@@ -57,7 +37,8 @@ import { formatDateShort, formatDurationMinutes } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt, fmtWithUnit } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { chartTokens } from '@/lib/tokens';
-import { COLOR } from '@/lib/colors';
+import { COLOR } from '@/lib/colors';
+import { Icons } from '@/lib/icons';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -224,7 +205,7 @@ function buildTips(
         'Pre-condition your cabin while plugged in to reduce HVAC battery drain.',
       ),
       category: 'efficiency',
-      icon: <Zap className="h-4 w-4 text-green-400" />,
+      icon: <Icons.charging className="h-4 w-4 text-green-400" />,
     },
     {
       key: t(
@@ -232,7 +213,7 @@ function buildTips(
         'Coast more by lifting your foot earlier before stops.',
       ),
       category: 'efficiency',
-      icon: <Zap className="h-4 w-4 text-green-400" />,
+      icon: <Icons.charging className="h-4 w-4 text-green-400" />,
     },
     {
       key: t(
@@ -240,7 +221,7 @@ function buildTips(
         'Keep tire pressure at recommended levels for better efficiency.',
       ),
       category: 'efficiency',
-      icon: <Zap className="h-4 w-4 text-green-400" />,
+      icon: <Icons.charging className="h-4 w-4 text-green-400" />,
     },
     {
       key: t(
@@ -248,7 +229,7 @@ function buildTips(
         'Accelerate gradually — aim for steady pedal pressure.',
       ),
       category: 'smoothness',
-      icon: <Activity className="h-4 w-4 text-cyan-400" />,
+      icon: <Icons.efficiency className="h-4 w-4 text-cyan-400" />,
     },
     {
       key: t(
@@ -256,7 +237,7 @@ function buildTips(
         'Use regenerative braking instead of the brake pedal when possible.',
       ),
       category: 'smoothness',
-      icon: <Activity className="h-4 w-4 text-cyan-400" />,
+      icon: <Icons.efficiency className="h-4 w-4 text-cyan-400" />,
     },
     {
       key: t(
@@ -264,7 +245,7 @@ function buildTips(
         'Maintain a larger following distance to avoid sudden braking.',
       ),
       category: 'smoothness',
-      icon: <Activity className="h-4 w-4 text-cyan-400" />,
+      icon: <Icons.efficiency className="h-4 w-4 text-cyan-400" />,
     },
     {
       key: t(
@@ -272,7 +253,7 @@ function buildTips(
         'Stay within the speed limit — aerodynamic drag rises exponentially above 90 km/h.',
       ),
       category: 'speed',
-      icon: <Gauge className="h-4 w-4 text-violet-400" />,
+      icon: <Icons.speed className="h-4 w-4 text-violet-400" />,
     },
     {
       key: t(
@@ -280,7 +261,7 @@ function buildTips(
         'Use Autopilot or cruise control on highways for consistent speed.',
       ),
       category: 'speed',
-      icon: <Gauge className="h-4 w-4 text-violet-400" />,
+      icon: <Icons.speed className="h-4 w-4 text-violet-400" />,
     },
     {
       key: t(
@@ -288,7 +269,7 @@ function buildTips(
         'Plan routes to avoid high-speed stretches when possible.',
       ),
       category: 'speed',
-      icon: <Gauge className="h-4 w-4 text-violet-400" />,
+      icon: <Icons.speed className="h-4 w-4 text-violet-400" />,
     },
   ];
 }
@@ -316,7 +297,7 @@ function buildAchievements(
         'driveScore.achievements.firstDriveDesc',
         'Complete your first scored drive.',
       ),
-      icon: <Route className="h-5 w-5" />,
+      icon: <Icons.drive className="h-5 w-5" />,
       check: (_scores, drives) => drives.length >= 1,
     },
     {
@@ -326,7 +307,7 @@ function buildAchievements(
         'driveScore.achievements.tenDrivesDesc',
         'Complete 10 scored drives.',
       ),
-      icon: <Star className="h-5 w-5" />,
+      icon: <Icons.star className="h-5 w-5" />,
       check: (_scores, drives) => drives.length >= 10,
     },
     {
@@ -336,7 +317,7 @@ function buildAchievements(
         'driveScore.achievements.fiftyDrivesDesc',
         'Complete 50 scored drives.',
       ),
-      icon: <Trophy className="h-5 w-5 text-yellow-400" />,
+      icon: <Icons.trophy className="h-5 w-5 text-yellow-400" />,
       check: (_scores, drives) => drives.length >= 50,
     },
     {
@@ -346,7 +327,7 @@ function buildAchievements(
         'driveScore.achievements.perfectScoreDesc',
         'Achieve a 100/100 on any drive.',
       ),
-      icon: <Award className="h-5 w-5 text-amber-400" />,
+      icon: <Icons.award className="h-5 w-5 text-amber-400" />,
       check: (scores) => scores.some((s) => s.total >= 100),
     },
     {
@@ -356,7 +337,7 @@ function buildAchievements(
         'driveScore.achievements.aPlusStreakDesc',
         'Get A+ grade on 5 consecutive drives.',
       ),
-      icon: <Trophy className="h-5 w-5 text-green-400" />,
+      icon: <Icons.trophy className="h-5 w-5 text-green-400" />,
       check: (scores) => {
         let streak = 0;
         for (const s of scores) {
@@ -377,7 +358,7 @@ function buildAchievements(
         'driveScore.achievements.efficiencyMasterDesc',
         'Score 38+ in efficiency on 3 drives.',
       ),
-      icon: <Zap className="h-5 w-5 text-green-400" />,
+      icon: <Icons.charging className="h-5 w-5 text-green-400" />,
       check: (scores) =>
         scores.filter((s) => s.efficiency >= 38).length >= 3,
     },
@@ -388,7 +369,7 @@ function buildAchievements(
         'driveScore.achievements.smoothOperatorDesc',
         'Score 28+ in smoothness on 3 drives.',
       ),
-      icon: <ShieldCheck className="h-5 w-5 text-cyan-400" />,
+      icon: <Icons.securityCheck className="h-5 w-5 text-cyan-400" />,
       check: (scores) =>
         scores.filter((s) => s.smoothness >= 28).length >= 3,
     },
@@ -399,7 +380,7 @@ function buildAchievements(
         'driveScore.achievements.speedSaintDesc',
         'Score 28+ in speed discipline on 5 drives.',
       ),
-      icon: <Target className="h-5 w-5 text-violet-400" />,
+      icon: <Icons.target className="h-5 w-5 text-violet-400" />,
       check: (scores) =>
         scores.filter((s) => s.speed >= 28).length >= 5,
     },
@@ -741,10 +722,10 @@ export default function DriveScorePage() {
 
   /* ---- trend icon helper ---- */
   const TrendIcon = overallTrend === 'up'
-    ? TrendingUp
+    ? Icons.trendUp
     : overallTrend === 'down'
-      ? TrendingDown
-      : Minus;
+      ? Icons.trendDown
+      : Icons.remove;
 
   const trendLabel =
     overallTrend === 'up'
@@ -777,9 +758,9 @@ export default function DriveScorePage() {
       {label}
       {sortField === field &&
         (sortDir === 'asc' ? (
-          <ChevronUp className="h-3 w-3" />
+          <Icons.collapse className="h-3 w-3" />
         ) : (
-          <ChevronDown className="h-3 w-3" />
+          <Icons.expand className="h-3 w-3" />
         ))}
     </Button>
   );
@@ -811,7 +792,7 @@ export default function DriveScorePage() {
       {/* -------- Empty guard -------- */}
       {!isLoading && scoredDrives.length === 0 && (
         <EmptyState
-          icon={<Gauge className="h-12 w-12 text-[var(--text-muted)]" />}
+          icon={<Icons.speed className="h-12 w-12 text-[var(--text-muted)]" />}
           title={t('driveScore.emptyTitle', 'No Scored Drives')}
           message={t(
             'driveScore.empty',
@@ -912,7 +893,7 @@ export default function DriveScorePage() {
                   color={CATEGORY_COLORS.efficiency}
                 />
                 <InlineMetric
-                  icon={<Zap className="h-4 w-4 text-green-400" />}
+                  icon={<Icons.charging className="h-4 w-4 text-green-400" />}
                   label={t('driveScore.avgConsumption', 'Avg consumption')}
                   value={fmtWithUnit(
                     convertEfficiency(
@@ -951,7 +932,7 @@ export default function DriveScorePage() {
                   color={CATEGORY_COLORS.smoothness}
                 />
                 <InlineMetric
-                  icon={<Activity className="h-4 w-4 text-cyan-400" />}
+                  icon={<Icons.efficiency className="h-4 w-4 text-cyan-400" />}
                   label={t('driveScore.powerRange', 'Power range')}
                   value={fmtWithUnit(
                     scoredDrives.length > 0
@@ -992,7 +973,7 @@ export default function DriveScorePage() {
                   color={CATEGORY_COLORS.speed}
                 />
                 <InlineMetric
-                  icon={<Gauge className="h-4 w-4 text-violet-400" />}
+                  icon={<Icons.speed className="h-4 w-4 text-violet-400" />}
                   label={t('driveScore.avgMaxSpeed', 'Avg max speed')}
                   value={fmtWithUnit(
                     scoredDrives.length > 0
@@ -1163,7 +1144,7 @@ export default function DriveScorePage() {
                       key={idx}
                       className="flex items-start gap-3 rounded-lg bg-white/5 p-3"
                     >
-                      <Lightbulb className="mt-0.5 h-5 w-5 shrink-0 text-yellow-400" />
+                      <Icons.lightbulb className="mt-0.5 h-5 w-5 shrink-0 text-yellow-400" />
                       <span className="text-sm text-[var(--text-primary)]">{tip.key}</span>
                     </div>
                   ))}
@@ -1177,7 +1158,7 @@ export default function DriveScorePage() {
             <Grid cols={{ default: 1, sm: 2 }} gap={4}>
               <GlassPanel className="p-5 sm:p-6">
                 <div className="flex items-center gap-2 mb-4">
-                  <Star className="h-5 w-5 text-green-400" />
+                  <Icons.star className="h-5 w-5 text-green-400" />
                   <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t('driveScore.bestDrive', 'Best Drive')}</h3>
                 </div>
                 {bestDrive ? (
@@ -1205,7 +1186,7 @@ export default function DriveScorePage() {
                     </div>
                     <div className="rounded-lg bg-green-500/5 border border-green-500/20 p-3">
                       <p className="text-xs text-green-400">
-                        <Star className="inline h-3 w-3 mr-1" />
+                        <Icons.star className="inline h-3 w-3 mr-1" />
                         {bestDrive.score.efficiency >= 35
                           ? t('driveScore.tipBestEff', 'Outstanding energy efficiency — minimal energy wasted!')
                           : bestDrive.score.smoothness >= 25
@@ -1221,7 +1202,7 @@ export default function DriveScorePage() {
 
               <GlassPanel className="p-5 sm:p-6">
                 <div className="flex items-center gap-2 mb-4">
-                  <AlertTriangle className="h-5 w-5 text-red-400" />
+                  <Icons.severityWarn className="h-5 w-5 text-red-400" />
                   <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t('driveScore.worstDrive', 'Worst Drive')}</h3>
                 </div>
                 {worstDrive ? (
@@ -1249,7 +1230,7 @@ export default function DriveScorePage() {
                     </div>
                     <div className="rounded-lg bg-red-500/5 border border-red-500/20 p-3">
                       <p className="text-xs text-red-400">
-                        <AlertTriangle className="inline h-3 w-3 mr-1" />
+                        <Icons.severityWarn className="inline h-3 w-3 mr-1" />
                         {worstDrive.score.efficiency < 15
                           ? t('driveScore.tipWorstEff', 'High energy consumption — possibly high speeds or cold weather.')
                           : worstDrive.score.smoothness < 10
@@ -1394,7 +1375,7 @@ export default function DriveScorePage() {
                 label={t('driveScore.avgScore', 'Avg Score')}
                 value={avgScores.total}
                 unit="/100"
-                icon={<Target className="h-5 w-5 text-[var(--text-muted)]" />}
+                icon={<Icons.target className="h-5 w-5 text-[var(--text-muted)]" />}
                 trend={{
                   direction: overallTrend,
                   value: trendLabel,
@@ -1409,12 +1390,12 @@ export default function DriveScorePage() {
                     : 0
                 }
                 unit="/100"
-                icon={<Trophy className="h-5 w-5 text-yellow-400" />}
+                icon={<Icons.trophy className="h-5 w-5 text-yellow-400" />}
               />
               <StatCard
                 label={t('driveScore.totalDrivesLabel', 'Total Drives')}
                 value={scoredDrives.length}
-                icon={<Route className="h-5 w-5 text-[var(--text-muted)]" />}
+                icon={<Icons.drive className="h-5 w-5 text-[var(--text-muted)]" />}
               />
               <StatCard
                 label={t('driveScore.avgEffLabel', 'Avg Efficiency')}
@@ -1429,7 +1410,7 @@ export default function DriveScorePage() {
                     : 0,
                 )}
                 unit={efficiencyUnit}
-                icon={<Zap className="h-5 w-5 text-green-400" />}
+                icon={<Icons.charging className="h-5 w-5 text-green-400" />}
               />
             </Grid>
           </StaggerItem>
@@ -1448,7 +1429,7 @@ export default function DriveScorePage() {
                     </span>
                     {periodStats.thisWeekAvg != null && periodStats.lastWeekAvg != null && (
                       <span className={cn('text-xs flex items-center', periodStats.thisWeekAvg >= periodStats.lastWeekAvg ? 'text-green-400' : 'text-red-400')}>
-                        {periodStats.thisWeekAvg >= periodStats.lastWeekAvg ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                        {periodStats.thisWeekAvg >= periodStats.lastWeekAvg ? <Icons.drillThrough className="h-3 w-3" /> : <Icons.drillDown className="h-3 w-3" />}
                         {Math.abs(periodStats.thisWeekAvg - periodStats.lastWeekAvg)}
                       </span>
                     )}
@@ -1468,7 +1449,7 @@ export default function DriveScorePage() {
                     </span>
                     {periodStats.thisMonthAvg != null && periodStats.lastMonthAvg != null && (
                       <span className={cn('text-xs flex items-center', periodStats.thisMonthAvg >= periodStats.lastMonthAvg ? 'text-green-400' : 'text-red-400')}>
-                        {periodStats.thisMonthAvg >= periodStats.lastMonthAvg ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                        {periodStats.thisMonthAvg >= periodStats.lastMonthAvg ? <Icons.drillThrough className="h-3 w-3" /> : <Icons.drillDown className="h-3 w-3" />}
                         {Math.abs(periodStats.thisMonthAvg - periodStats.lastMonthAvg)}
                       </span>
                     )}
@@ -1697,7 +1678,7 @@ export default function DriveScorePage() {
           </>
         ) : (
           <EmptyState
-            icon={<Activity className="h-8 w-8 opacity-20" />}
+            icon={<Icons.efficiency className="h-8 w-8 opacity-20" />}
             message={t('common.noData', 'No data available')}
             className="py-8"
           />

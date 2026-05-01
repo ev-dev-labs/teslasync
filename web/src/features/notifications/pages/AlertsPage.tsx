@@ -47,14 +47,8 @@ import {
   useAlerts, useMarkAlertRead, useAlertRules,
   useNotificationChannels, useNotificationLogs, useNotificationStats,
 } from '@/api/hooks/useNotifications';
-import type { Alert, NotificationLog } from '@/api/types';
-import {
-  Bell, BellOff, AlertTriangle, Info, AlertCircle, MapPin, Battery,
-  Zap, Shield, Gauge, Thermometer, Eye, Filter, Settings2, CheckCircle,
-  Clock, Moon, Send, TrendingDown, Lock, Droplets, BarChart3,
-  PieChart as PieChartIcon, Database, Radio, Wifi, HardDrive, Activity,
-  ChevronRight,
-} from 'lucide-react';
+import type { Alert, NotificationLog } from '@/api/types';
+import { Icons } from '@/lib/icons';
 
 // ─── Severity helpers ────────────────────────────────────────────────────────
 //
@@ -69,14 +63,14 @@ type AlertSeverity = 'info' | 'warning' | 'critical';
 // ─── Alert type → icon mapping ───────────────────────────────────────────────
 
 const typeIcons: Record<string, React.ElementType> = {
-  geofence_exit: MapPin, geofence_enter: MapPin,
-  low_battery: Battery, battery_low: Battery, battery_high: Battery,
-  charging_complete: Zap, charging_cost: Zap,
-  sentry_event: Shield, speed_limit: Gauge, temperature: Thermometer,
-  software_update: Settings2, vampire_drain: TrendingDown,
-  tire_pressure_low: Droplets, idle_unlocked: Lock, efficiency_drop: BarChart3,
-  system_database: Database, system_mqtt: Wifi, system_redis: HardDrive,
-  system_tesla_api: Radio, system_worker: Activity,
+  geofence_exit: Icons.location, geofence_enter: Icons.location,
+  low_battery: Icons.battery, battery_low: Icons.battery, battery_high: Icons.battery,
+  charging_complete: Icons.charging, charging_cost: Icons.charging,
+  sentry_event: Icons.security, speed_limit: Icons.speed, temperature: Icons.climate,
+  software_update: Icons.settingsAlt, vampire_drain: Icons.trendDown,
+  tire_pressure_low: Icons.droplets, idle_unlocked: Icons.locked, efficiency_drop: Icons.analytics,
+  system_database: Icons.database, system_mqtt: Icons.wifi, system_redis: Icons.hardDrive,
+  system_tesla_api: Icons.radio, system_worker: Icons.efficiency,
 };
 
 // ─── Time helpers ────────────────────────────────────────────────────────────
@@ -125,7 +119,7 @@ function loadDigestMode(): DigestMode {
 function AlertCard({ alert, onMarkRead, t }: { alert: Alert; onMarkRead: () => void; t: TFunction }) {
   const sev = normalizeSeverity(alert.severity);
   const tokens = severityTokens[sev];
-  const Icon = typeIcons[alert.type] || Bell;
+  const Icon = typeIcons[alert.type] || Icons.notifications;
   const timeAgo = getTimeAgo(alert.created_at);
   const drillHref = getAlertDrillthroughHref(alert);
 
@@ -163,7 +157,7 @@ function AlertCard({ alert, onMarkRead, t }: { alert: Alert; onMarkRead: () => v
         </div>
         <div className="flex items-center gap-3 mt-2">
           <span className="text-[10px] text-[var(--text-muted)] flex items-center gap-1">
-            <Clock className="h-2.5 w-2.5" />{timeAgo}
+            <Icons.clock className="h-2.5 w-2.5" />{timeAgo}
           </span>
           <SeverityBadge severity={alert.severity} size="sm" showIcon={false}>
             {alert.severity}
@@ -174,10 +168,10 @@ function AlertCard({ alert, onMarkRead, t }: { alert: Alert; onMarkRead: () => v
             className="ml-auto inline-flex items-center gap-1 text-[11px] font-medium text-cyan-300 hover:text-cyan-200 underline-offset-2 hover:underline opacity-0 group-hover:opacity-100 transition-opacity"
           >
             {t('alerts.viewContext', 'View context')}
-            <ChevronRight className="h-3 w-3" />
+            <Icons.next className="h-3 w-3" />
           </Link>
           {!alert.is_read && (
-            <Button variant="ghost" size="sm" icon={<Eye className="h-3 w-3" />} onClick={onMarkRead}>
+            <Button variant="ghost" size="sm" icon={<Icons.show className="h-3 w-3" />} onClick={onMarkRead}>
               {t('Mark read')}
             </Button>
           )}
@@ -237,16 +231,16 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
     <div className="space-y-6">
       {/* Analytics cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <MetricCard label={t('Total Sent')} value={totalSent} icon={<Send className="h-4 w-4" />} color="cyan" />
-        <MetricCard label={t('Failed')} value={totalFailed} icon={<AlertCircle className="h-4 w-4" />} color="red" />
-        <MetricCard label={t('Success Rate')} value={`${fmtInt(successRate)}%`} icon={<CheckCircle className="h-4 w-4" />} color="green" />
-        <MetricCard label={t('Channels')} value={`${stats?.enabled_channels ?? 0} / ${stats?.total_channels ?? 0}`} icon={<Bell className="h-4 w-4" />} color="purple" />
+        <MetricCard label={t('Total Sent')} value={totalSent} icon={<Icons.send className="h-4 w-4" />} color="cyan" />
+        <MetricCard label={t('Failed')} value={totalFailed} icon={<Icons.alertCircle className="h-4 w-4" />} color="red" />
+        <MetricCard label={t('Success Rate')} value={`${fmtInt(successRate)}%`} icon={<Icons.success className="h-4 w-4" />} color="green" />
+        <MetricCard label={t('Channels')} value={`${stats?.enabled_channels ?? 0} / ${stats?.total_channels ?? 0}`} icon={<Icons.notifications className="h-4 w-4" />} color="purple" />
       </div>
 
       {/* Delivery status pie */}
       <GlassPanel className="p-4 sm:p-6">
         <span className="section-title mb-4 flex items-center gap-2">
-          <PieChartIcon className="h-4 w-4 text-purple-300" /> {t('Delivery Status')}
+          <Icons.pieChart className="h-4 w-4 text-purple-300" /> {t('Delivery Status')}
         </span>
         {logTypeCounts.length > 0 ? (
           <div className="h-40 flex flex-col sm:flex-row items-center">
@@ -270,7 +264,7 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
           </div>
         ) : (
           <EmptyState
-            icon={<Activity className="h-8 w-8 opacity-20" />}
+            icon={<Icons.efficiency className="h-8 w-8 opacity-20" />}
             message={t('common.noData')}
             className="py-8"
           />
@@ -280,7 +274,7 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
       {/* Log table */}
       <GlassPanel className="p-4 sm:p-6">
         <span className="section-title mb-4 flex items-center gap-2">
-          <Send className="h-4 w-4 text-cyan-300" /> {t('Notification Log')}
+          <Icons.send className="h-4 w-4 text-cyan-300" /> {t('Notification Log')}
         </span>
         <FilterBar className="mb-3">
           <SearchInput
@@ -308,7 +302,7 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
             </div>
         ) : (
           <EmptyState
-            icon={<Send className="h-8 w-8" />}
+            icon={<Icons.send className="h-8 w-8" />}
             title={t('No notification logs')}
             message={
               logSearch
@@ -351,7 +345,7 @@ function PreferencesSection({ t }: { t: (k: string) => string }) {
     <div className="space-y-6">
       {quietActive && (
         <GlassPanel className="p-3 flex items-center gap-2 bg-neon-purple/10 border-neon-purple/20">
-          <Moon className="h-4 w-4 text-neon-purple" />
+          <Icons.moon className="h-4 w-4 text-neon-purple" />
           <span className="text-xs font-medium text-purple-300">
             {t('Quiet hours active')} ({quietHours.start} – {quietHours.end})
           </span>
@@ -363,7 +357,7 @@ function PreferencesSection({ t }: { t: (k: string) => string }) {
         {/* Quiet Hours */}
         <GlassPanel className="p-5">
           <span className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
-            <Moon className="h-4 w-4 text-purple-300" /> {t('Quiet Hours')}
+            <Icons.moon className="h-4 w-4 text-purple-300" /> {t('Quiet Hours')}
           </span>
           <span className="text-xs text-[var(--text-muted)] mb-3 block">
             {t('During quiet hours, only critical alerts send notifications.')}
@@ -400,7 +394,7 @@ function PreferencesSection({ t }: { t: (k: string) => string }) {
         {/* Alert Digest */}
         <GlassPanel className="p-5">
           <span className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
-            <Settings2 className="h-4 w-4 text-amber-300" /> {t('Alert Digest')}
+            <Icons.settingsAlt className="h-4 w-4 text-amber-300" /> {t('Alert Digest')}
           </span>
           <span className="text-xs text-[var(--text-muted)] mb-3 block">
             {t('Choose how non-critical alerts are delivered.')}
@@ -431,7 +425,7 @@ function PreferencesSection({ t }: { t: (k: string) => string }) {
       {/* Alert Studio link */}
       <GlassPanel className="p-5">
         <span className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-2">
-          <BarChart3 className="h-4 w-4 text-emerald-300" /> {t('Rule Management')}
+          <Icons.analytics className="h-4 w-4 text-emerald-300" /> {t('Rule Management')}
         </span>
         <span className="text-xs text-[var(--text-muted)] mb-3 block">
           {t('Create, edit, and manage typed alert rules in Alert Studio using supported Fleet Telemetry signal contracts.')}
@@ -586,9 +580,9 @@ export default function AlertsPage() {
             </div>
             <div className="h-8 w-px bg-white/[0.06] hidden sm:block" />
             <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1 text-xs"><Info className="h-3 w-3 text-cyan-300" /><span className="font-mono text-cyan-300">{infoCount}</span></span>
-              <span className="flex items-center gap-1 text-xs"><AlertTriangle className="h-3 w-3 text-amber-300" /><span className="font-mono text-amber-300">{warningCount}</span></span>
-              <span className="flex items-center gap-1 text-xs"><AlertCircle className="h-3 w-3 text-rose-300" /><span className="font-mono text-rose-300">{criticalCount}</span></span>
+              <span className="flex items-center gap-1 text-xs"><Icons.info className="h-3 w-3 text-cyan-300" /><span className="font-mono text-cyan-300">{infoCount}</span></span>
+              <span className="flex items-center gap-1 text-xs"><Icons.severityWarn className="h-3 w-3 text-amber-300" /><span className="font-mono text-amber-300">{warningCount}</span></span>
+              <span className="flex items-center gap-1 text-xs"><Icons.alertCircle className="h-3 w-3 text-rose-300" /><span className="font-mono text-rose-300">{criticalCount}</span></span>
             </div>
           </div>
         </GlassPanel>
@@ -603,21 +597,21 @@ export default function AlertsPage() {
             <RadialGauge value={criticalCount} max={Math.max(totalCount, 1)} label={t('Critical')} unit="" color="#ef4444" />
             <div className="flex flex-col items-center text-center">
               <div className="flex items-center gap-2">
-                <Info className="h-4 w-4 text-neon-cyan" />
+                <Icons.info className="h-4 w-4 text-neon-cyan" />
                 <span className="text-lg font-bold text-cyan-300"><AnimatedNumber value={infoCount} /></span>
               </div>
               <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">{t('Info')}</span>
             </div>
             <div className="flex flex-col items-center text-center">
               <div className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-neon-amber" />
+                <Icons.severityWarn className="h-4 w-4 text-neon-amber" />
                 <span className="text-lg font-bold text-amber-300"><AnimatedNumber value={warningCount} /></span>
               </div>
               <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">{t('Warnings')}</span>
             </div>
             <div className="flex flex-col items-center text-center">
               <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-neon-green" />
+                <Icons.success className="h-4 w-4 text-neon-green" />
                 <span className="text-lg font-bold text-emerald-300"><AnimatedNumber value={readCount} /></span>
               </div>
               <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">{t('Resolved')}</span>
@@ -657,7 +651,7 @@ export default function AlertsPage() {
           <FadeIn>
             <GlassPanel className="p-4 sm:p-6">
               <span className="section-title mb-4 flex items-center gap-2">
-                <Bell className="h-4 w-4 text-cyan-300" /> {t('Alert Trend (7 Days)')}
+                <Icons.notifications className="h-4 w-4 text-cyan-300" /> {t('Alert Trend (7 Days)')}
               </span>
               <div className="h-40 sm:h-48">
                 <ResponsiveContainer width="100%" height="100%">
@@ -678,7 +672,7 @@ export default function AlertsPage() {
           <FadeIn>
             <GlassPanel className="p-4 sm:p-6">
               <span className="section-title mb-4 flex items-center gap-2">
-                <Filter className="h-4 w-4 text-purple-300" /> {t('Alerts by Type')}
+                <Icons.filter className="h-4 w-4 text-purple-300" /> {t('Alerts by Type')}
               </span>
               <div className="h-40 sm:h-48 flex flex-col sm:flex-row items-center">
                 <ResponsiveContainer width="60%" height="100%">
@@ -708,9 +702,9 @@ export default function AlertsPage() {
       <FadeIn>
         <TabNav
           tabs={[
-            { key: 'alerts', label: t('Alerts'), icon: <Bell className="h-4 w-4" /> },
-            { key: 'history', label: t('History'), icon: <Send className="h-4 w-4" /> },
-            { key: 'preferences', label: t('Preferences'), icon: <Settings2 className="h-4 w-4" /> },
+            { key: 'alerts', label: t('Alerts'), icon: <Icons.notifications className="h-4 w-4" /> },
+            { key: 'history', label: t('History'), icon: <Icons.send className="h-4 w-4" /> },
+            { key: 'preferences', label: t('Preferences'), icon: <Icons.settingsAlt className="h-4 w-4" /> },
           ]}
           active={tab}
           onChange={k => setTab(k as typeof tab, { push: true })}
@@ -729,7 +723,7 @@ export default function AlertsPage() {
                 className="w-full sm:w-72"
               />
               <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-[var(--text-muted)]" />
+                <Icons.filter className="h-4 w-4 text-[var(--text-muted)]" />
                 <TabNav
                   tabs={[
                     { key: 'all', label: `${t('All')} (${totalCount})` },
@@ -775,7 +769,7 @@ export default function AlertsPage() {
             </>
           ) : (
             <EmptyState
-              icon={<BellOff className="h-8 w-8" />}
+              icon={<Icons.notificationsMuted className="h-8 w-8" />}
               title={t('No alerts')}
               message={
                 alertSearch

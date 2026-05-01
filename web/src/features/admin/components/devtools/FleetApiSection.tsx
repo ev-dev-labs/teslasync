@@ -1,12 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import {
-  Globe, Shield, Key, Car, Radio, Settings, Satellite, Zap,
-  AlertTriangle, Fingerprint, Link, Network, Server,
-  Play, Upload, Trash2, Eye, Download, ChevronRight,
-  CheckCircle, ArrowRight, ArrowLeft, MapPin, FileText, Wrench, AlertCircle,
-} from 'lucide-react'
 import { GlassPanel, Badge, Button, Input, Select, DataTable, Textarea, type Column } from '@/components/ui'
 import { Skeleton, AlertBanner } from '@/components/feedback'
 import { cn } from '@/lib/cn'
@@ -19,7 +13,8 @@ import { ToolCard } from './ToolCard'
 import { CopyButton } from './CopyButton'
 import { ResultPanel } from './ResultPanel'
 import { apiFetch, useVehicleOptions } from './helpers'
-import { ICON_COLOR_MAP, ONBOARDING_STEPS, TELEMETRY_FIELDS } from './constants'
+import { ICON_COLOR_MAP, ONBOARDING_STEPS, TELEMETRY_FIELDS } from './constants'
+import { Icons } from '@/lib/icons';
 
 /* ─── Fleet API Config Tool ───────────────────────────────────────────── */
 
@@ -31,7 +26,7 @@ function FleetApiConfigTool() {
   })
 
   if (isLoading) return <GlassPanel className="p-5"><Skeleton lines={4} /></GlassPanel>
-  if (configError) return <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>{t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(configError)}</AlertBanner>
+  if (configError) return <AlertBanner variant="danger" icon={<Icons.alertCircle className="h-5 w-5" />}>{t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(configError)}</AlertBanner>
 
   const info = data ?? {}
   const baseUrl = (info.baseUrl as string) ?? ''
@@ -40,7 +35,7 @@ function FleetApiConfigTool() {
   const regions = (info.regions as string[]) ?? []
 
   return (
-    <ToolCard icon={Settings} color="cyan" title={t('Config')} description={t('Config Desc')}>
+    <ToolCard icon={Icons.settings} color="cyan" title={t('Config')} description={t('Config Desc')}>
       <div className="grid gap-3 sm:grid-cols-2">
         <GlassPanel className="p-3">
           <span className="text-xs text-white/50">{t('Base Url')}</span>
@@ -92,11 +87,11 @@ function PartnerRegistrationTool() {
   const opensslPub = 'openssl ec -in private.pem -pubout -out public.pem'
 
   return (
-    <ToolCard icon={Globe} color="green" title={t('Partner Reg')} description={t('Partner Reg Desc')}>
+    <ToolCard icon={Icons.globe} color="green" title={t('Partner Reg')} description={t('Partner Reg Desc')}>
       <div className="space-y-3">
         <GlassPanel className="border-neon-amber/20 bg-neon-amber/5 p-3">
           <div className="flex items-start gap-2">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-neon-amber" />
+            <Icons.severityWarn className="mt-0.5 h-4 w-4 shrink-0 text-neon-amber" />
             <div className="text-xs text-neon-amber/80">
               <p className="font-semibold">{t('Prerequisites')}</p>
               <p className="mt-1">{t('Prerequisites Desc')}</p>
@@ -123,14 +118,14 @@ function PartnerRegistrationTool() {
           placeholder="yourapp.example.com"
           value={domain}
           onChange={(e) => setDomain(e.target.value)}
-          icon={<Globe className="h-4 w-4" />}
+          icon={<Icons.globe className="h-4 w-4" />}
         />
         <Button
           variant="primary"
           size="sm"
           loading={mutation.isPending}
           onClick={() => mutation.mutate()}
-          icon={<Play className="h-3.5 w-3.5" />}
+          icon={<Icons.play className="h-3.5 w-3.5" />}
         >
           {t('Register')}
         </Button>
@@ -164,14 +159,14 @@ function PartnerPublicKeyTool() {
   const publicKey = ((response.response as Record<string, unknown>)?.public_key as string) ?? ''
 
   return (
-    <ToolCard icon={Shield} color="cyan" title={t('devtools.partnerKey.title', 'Public Key Verification')} description={t('devtools.partnerKey.desc', 'Verify your registered public key with Tesla')}>
+    <ToolCard icon={Icons.security} color="cyan" title={t('devtools.partnerKey.title', 'Public Key Verification')} description={t('devtools.partnerKey.desc', 'Verify your registered public key with Tesla')}>
       <div className="space-y-3">
         <Input
           label={t('Domain')}
           placeholder="yourapp.example.com"
           value={domain}
           onChange={(e) => setDomain(e.target.value)}
-          icon={<Globe className="h-4 w-4" />}
+          icon={<Icons.globe className="h-4 w-4" />}
         />
         <Button
           variant="primary"
@@ -179,7 +174,7 @@ function PartnerPublicKeyTool() {
           loading={mutation.isPending}
           disabled={!domain.trim()}
           onClick={() => mutation.mutate()}
-          icon={<Play className="h-3.5 w-3.5" />}
+          icon={<Icons.play className="h-3.5 w-3.5" />}
         >
           {t('devtools.partnerKey.verify', 'Verify')}
         </Button>
@@ -259,14 +254,14 @@ function PublicKeySetupTool() {
   })
 
   if (isLoading) return <GlassPanel className="p-5"><Skeleton lines={3} /></GlassPanel>
-  if (keyError) return <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>{t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(keyError)}</AlertBanner>
+  if (keyError) return <AlertBanner variant="danger" icon={<Icons.alertCircle className="h-5 w-5" />}>{t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(keyError)}</AlertBanner>
 
   const configured = status?.configured === true
   const fingerprint = (status?.fingerprint as string) ?? ''
   const wellKnownUrl = (status?.wellKnownUrl as string) ?? ''
 
   return (
-    <ToolCard icon={Key} color="purple" title={t('Public Key')} description={t('Public Key Desc')}>
+    <ToolCard icon={Icons.key} color="purple" title={t('Public Key')} description={t('Public Key Desc')}>
       <div className="space-y-3">
         <div className="flex items-center gap-2">
           <span className="text-xs text-white/50">{t('Status')}:</span>
@@ -279,7 +274,7 @@ function PublicKeySetupTool() {
 
         {fingerprint && (
           <div className="flex items-center gap-2 rounded bg-black/30 px-3 py-1.5">
-            <Fingerprint className="h-4 w-4 text-neon-purple" />
+            <Icons.fingerprint className="h-4 w-4 text-neon-purple" />
             <code className="text-xs text-white/80">{fingerprint}</code>
             <CopyButton text={fingerprint} />
           </div>
@@ -287,7 +282,7 @@ function PublicKeySetupTool() {
 
         {wellKnownUrl && (
           <div className="flex items-center gap-2 rounded bg-black/30 px-3 py-1.5">
-            <Link className="h-4 w-4 text-neon-cyan" />
+            <Icons.link className="h-4 w-4 text-neon-cyan" />
             <code className="flex-1 truncate text-xs text-white/80">{wellKnownUrl}</code>
             <CopyButton text={wellKnownUrl} />
           </div>
@@ -295,16 +290,16 @@ function PublicKeySetupTool() {
 
         <GlassPanel className="border-neon-amber/20 bg-neon-amber/5 p-3">
           <div className="flex items-start gap-2">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-neon-amber" />
+            <Icons.severityWarn className="mt-0.5 h-4 w-4 shrink-0 text-neon-amber" />
             <span className="text-xs text-neon-amber/80">{t('Private Key Warning')}</span>
           </div>
         </GlassPanel>
 
         <div className="flex flex-wrap gap-2">
-          <Button variant="primary" size="sm" loading={generateMut.isPending} onClick={() => generateMut.mutate()} icon={<Key className="h-3.5 w-3.5" />}>
+          <Button variant="primary" size="sm" loading={generateMut.isPending} onClick={() => generateMut.mutate()} icon={<Icons.key className="h-3.5 w-3.5" />}>
             {t('Generate Keypair')}
           </Button>
-          <Button variant="danger" size="sm" loading={deleteMut.isPending} onClick={() => deleteMut.mutate()} icon={<Trash2 className="h-3.5 w-3.5" />}>
+          <Button variant="danger" size="sm" loading={deleteMut.isPending} onClick={() => deleteMut.mutate()} icon={<Icons.delete className="h-3.5 w-3.5" />}>
             {t('Delete Keypair')}
           </Button>
         </div>
@@ -320,7 +315,7 @@ function PublicKeySetupTool() {
             value={pemInput}
             onChange={(e) => setPemInput(e.target.value)}
           />
-          <Button variant="secondary" size="sm" loading={uploadMut.isPending} onClick={() => uploadMut.mutate()} icon={<Upload className="h-3.5 w-3.5" />}>
+          <Button variant="secondary" size="sm" loading={uploadMut.isPending} onClick={() => uploadMut.mutate()} icon={<Icons.upload className="h-3.5 w-3.5" />}>
             {t('Upload Key')}
           </Button>
           <ResultPanel title={t('Upload Key')} data={uploadMut.data?.error ? undefined : uploadMut.data} error={typeof uploadMut.data?.error === 'string' ? uploadMut.data.error : undefined} idle={!uploadMut.data} idleMessage={t('devtools.uploadIdle', 'Upload a public key to see results')} />
@@ -342,10 +337,10 @@ function VehicleKeyPairingTool() {
   const pairingUrl = `https://tesla.com/_ak/${hostname}`
 
   return (
-    <ToolCard icon={Car} color="green" title={t('Key Pairing')} description={t('Key Pairing Desc')}>
+    <ToolCard icon={Icons.vehicle} color="green" title={t('Key Pairing')} description={t('Key Pairing Desc')}>
       <div className="space-y-3">
         <div className="flex items-center gap-2 rounded bg-black/30 px-3 py-2">
-          <Link className="h-4 w-4 text-neon-green" />
+          <Icons.link className="h-4 w-4 text-neon-green" />
           <code className="flex-1 truncate text-sm text-emerald-300">{pairingUrl}</code>
           <CopyButton text={pairingUrl} />
         </div>
@@ -353,15 +348,15 @@ function VehicleKeyPairingTool() {
           <p className="text-xs text-white/60">{t('Pairing Instructions')}</p>
           <ul className="mt-2 space-y-1 text-xs text-white/50">
             <li className="flex items-start gap-2">
-              <ChevronRight className="mt-0.5 h-3 w-3 shrink-0 text-neon-cyan" />
+              <Icons.next className="mt-0.5 h-3 w-3 shrink-0 text-neon-cyan" />
               <span>{t('devtools.fleet.pairingStep1', 'Pairing Step1')}</span>
             </li>
             <li className="flex items-start gap-2">
-              <ChevronRight className="mt-0.5 h-3 w-3 shrink-0 text-neon-cyan" />
+              <Icons.next className="mt-0.5 h-3 w-3 shrink-0 text-neon-cyan" />
               <span>{t('devtools.fleet.pairingStep2', 'Pairing Step2')}</span>
             </li>
             <li className="flex items-start gap-2">
-              <ChevronRight className="mt-0.5 h-3 w-3 shrink-0 text-neon-cyan" />
+              <Icons.next className="mt-0.5 h-3 w-3 shrink-0 text-neon-cyan" />
               <span>{t('devtools.fleet.pairingStep3', 'Pairing Step3')}</span>
             </li>
           </ul>
@@ -403,7 +398,7 @@ function FleetTelemetrySubscribeTool() {
   })
 
   return (
-    <ToolCard icon={Radio} color="cyan" title={t('Telemetry Sub')} description={t('Telemetry Sub Desc')}>
+    <ToolCard icon={Icons.radio} color="cyan" title={t('Telemetry Sub')} description={t('Telemetry Sub Desc')}>
       <div className="space-y-3">
         <Select
           label={t('Vehicle')}
@@ -418,14 +413,14 @@ function FleetTelemetrySubscribeTool() {
             placeholder="telemetry.example.com"
             value={hostname}
             onChange={(e) => setHostname(e.target.value)}
-            icon={<Server className="h-4 w-4" />}
+            icon={<Icons.server className="h-4 w-4" />}
           />
           <Input
             label={t('Port')}
             placeholder="443"
             value={port}
             onChange={(e) => setPort(e.target.value)}
-            icon={<Network className="h-4 w-4" />}
+            icon={<Icons.network className="h-4 w-4" />}
           />
         </div>
         <div>
@@ -442,7 +437,7 @@ function FleetTelemetrySubscribeTool() {
             variant="secondary"
             size="sm"
             onClick={() => setSignalModalOpen(true)}
-            icon={<Settings className="h-3.5 w-3.5" />}
+            icon={<Icons.settings className="h-3.5 w-3.5" />}
           >
             {t('Configure Signals')} ({selectedSignals.length})
           </Button>
@@ -455,7 +450,7 @@ function FleetTelemetrySubscribeTool() {
           size="sm"
           loading={subscribeMut.isPending}
           onClick={() => subscribeMut.mutate()}
-          icon={<Play className="h-3.5 w-3.5" />}
+          icon={<Icons.play className="h-3.5 w-3.5" />}
         >
           {t('Subscribe')}
         </Button>
@@ -511,7 +506,7 @@ function FleetTelemetryConfigTool() {
   ], [t])
 
   return (
-    <ToolCard icon={Satellite} color="purple" title={t('Telemetry Config')} description={t('Telemetry Config Desc')}>
+    <ToolCard icon={Icons.satellite} color="purple" title={t('Telemetry Config')} description={t('Telemetry Config Desc')}>
       <div className="space-y-3">
         <Select
           label={t('Vehicle')}
@@ -521,13 +516,13 @@ function FleetTelemetryConfigTool() {
           onChange={(e) => setVin(e.target.value)}
         />
         <div className="flex flex-wrap gap-2">
-          <Button variant="primary" size="sm" loading={configQuery.isPending} onClick={() => configQuery.mutate()} icon={<Eye className="h-3.5 w-3.5" />}>
+          <Button variant="primary" size="sm" loading={configQuery.isPending} onClick={() => configQuery.mutate()} icon={<Icons.show className="h-3.5 w-3.5" />}>
             {t('Get Config')}
           </Button>
-          <Button variant="secondary" size="sm" loading={errorsQuery.isPending} onClick={() => errorsQuery.mutate()} icon={<AlertTriangle className="h-3.5 w-3.5" />}>
+          <Button variant="secondary" size="sm" loading={errorsQuery.isPending} onClick={() => errorsQuery.mutate()} icon={<Icons.severityWarn className="h-3.5 w-3.5" />}>
             {t('View Errors')}
           </Button>
-          <Button variant="danger" size="sm" loading={deleteMut.isPending} onClick={() => deleteMut.mutate()} icon={<Trash2 className="h-3.5 w-3.5" />}>
+          <Button variant="danger" size="sm" loading={deleteMut.isPending} onClick={() => deleteMut.mutate()} icon={<Icons.delete className="h-3.5 w-3.5" />}>
             {t('Delete Config')}
           </Button>
         </div>
@@ -548,7 +543,7 @@ function FleetTelemetryConfigTool() {
                 a.click()
                 URL.revokeObjectURL(url)
               }}
-              icon={<Download className="h-3.5 w-3.5" />}
+              icon={<Icons.download className="h-3.5 w-3.5" />}
             >
               {t('Download Errors')}
             </Button>
@@ -569,7 +564,7 @@ function FleetStatusTool() {
   })
 
   return (
-    <ToolCard icon={Zap} color="green" title={t('Fleet Status')} description={t('Check fleet status for all vehicles')}>
+    <ToolCard icon={Icons.charging} color="green" title={t('Fleet Status')} description={t('Check fleet status for all vehicles')}>
       <div className="mt-3 flex items-center gap-2">
         <Button
           variant="primary"
@@ -577,7 +572,7 @@ function FleetStatusTool() {
           loading={fleetStatusMut.isPending}
           onClick={() => fleetStatusMut.mutate()}
           disabled={vehicles.length === 0}
-          icon={<Play className="h-3.5 w-3.5" />}
+          icon={<Icons.play className="h-3.5 w-3.5" />}
         >
           {t('Check Fleet Status')}
         </Button>
@@ -608,7 +603,7 @@ function VehicleDataTools() {
   const lastResult = chargingMut.data ?? releaseNotesMut.data ?? alertsMut.data ?? serviceMut.data
 
   return (
-    <ToolCard icon={Car} color="cyan" title={t('Vehicle Data')} description={t('Vehicle Data Desc')}>
+    <ToolCard icon={Icons.vehicle} color="cyan" title={t('Vehicle Data')} description={t('Vehicle Data Desc')}>
       <div className="space-y-3">
         <Select
           label={t('Vehicle')}
@@ -618,16 +613,16 @@ function VehicleDataTools() {
           onChange={(e) => setVin(e.target.value)}
         />
         <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" size="sm" loading={chargingMut.isPending} onClick={() => chargingMut.mutate()} icon={<MapPin className="h-3.5 w-3.5" />}>
+          <Button variant="secondary" size="sm" loading={chargingMut.isPending} onClick={() => chargingMut.mutate()} icon={<Icons.location className="h-3.5 w-3.5" />}>
             {t('Nearby Charging')}
           </Button>
-          <Button variant="secondary" size="sm" loading={releaseNotesMut.isPending} onClick={() => releaseNotesMut.mutate()} icon={<FileText className="h-3.5 w-3.5" />}>
+          <Button variant="secondary" size="sm" loading={releaseNotesMut.isPending} onClick={() => releaseNotesMut.mutate()} icon={<Icons.fileText className="h-3.5 w-3.5" />}>
             {t('Release Notes')}
           </Button>
-          <Button variant="secondary" size="sm" loading={alertsMut.isPending} onClick={() => alertsMut.mutate()} icon={<AlertTriangle className="h-3.5 w-3.5" />}>
+          <Button variant="secondary" size="sm" loading={alertsMut.isPending} onClick={() => alertsMut.mutate()} icon={<Icons.severityWarn className="h-3.5 w-3.5" />}>
             {t('Recent Alerts')}
           </Button>
-          <Button variant="secondary" size="sm" loading={serviceMut.isPending} onClick={() => serviceMut.mutate()} icon={<Wrench className="h-3.5 w-3.5" />}>
+          <Button variant="secondary" size="sm" loading={serviceMut.isPending} onClick={() => serviceMut.mutate()} icon={<Icons.maintenance className="h-3.5 w-3.5" />}>
             {t('Service Data')}
           </Button>
         </div>
@@ -697,7 +692,7 @@ function OnboardingWorkflow() {
   return (
     <div className="space-y-4">
       {onboardingError && (
-        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
+        <AlertBanner variant="danger" icon={<Icons.alertCircle className="h-5 w-5" />}>
           {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(onboardingError)}
         </AlertBanner>
       )}
@@ -736,7 +731,7 @@ function OnboardingWorkflow() {
       <GlassPanel className="p-5">
         <div className="mb-4 flex items-start gap-3">
           <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg', completed[step.id] ? ICON_COLOR_MAP.green : ICON_COLOR_MAP.cyan)}>
-            {completed[step.id] ? <CheckCircle className="h-5 w-5" /> : <StepIcon className="h-5 w-5" />}
+            {completed[step.id] ? <Icons.success className="h-5 w-5" /> : <StepIcon className="h-5 w-5" />}
           </div>
           <div>
             <h3 className="text-sm font-semibold text-white">
@@ -752,7 +747,7 @@ function OnboardingWorkflow() {
             size="sm"
             disabled={currentStep === 0}
             onClick={() => setCurrentStep(currentStep - 1)}
-            icon={<ArrowLeft className="h-3.5 w-3.5" />}
+            icon={<Icons.back className="h-3.5 w-3.5" />}
           >
             {t('Previous')}
           </Button>
@@ -760,7 +755,7 @@ function OnboardingWorkflow() {
             variant={completed[step.id] ? 'secondary' : 'primary'}
             size="sm"
             onClick={markComplete}
-            icon={<CheckCircle className="h-3.5 w-3.5" />}
+            icon={<Icons.success className="h-3.5 w-3.5" />}
           >
             {completed[step.id] ? t('Completed') : t('Mark Complete')}
           </Button>
@@ -769,7 +764,7 @@ function OnboardingWorkflow() {
             size="sm"
             disabled={currentStep === ONBOARDING_STEPS.length - 1}
             onClick={() => setCurrentStep(currentStep + 1)}
-            icon={<ArrowRight className="h-3.5 w-3.5" />}
+            icon={<Icons.forward className="h-3.5 w-3.5" />}
           >
             {t('Next')}
           </Button>
