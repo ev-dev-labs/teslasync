@@ -97,9 +97,9 @@ describe('useConfirm', () => {
     const { container } = render(<Harness onResult={(ok) => { resolved = ok }} />)
     openDialog()
 
-    // The Modal renders its backdrop as a sibling of the dialog with the
-    // .bg-black/50 class. Click it to simulate click-outside.
-    const backdrop = container.querySelector('.bg-black\\/50') as HTMLElement | null
+    // The Modal renders its backdrop as a sibling of the dialog, marked
+    // `aria-hidden="true"`. Click it to simulate click-outside.
+    const backdrop = container.querySelector('[aria-hidden="true"]') as HTMLElement | null
     expect(backdrop).not.toBeNull()
     await act(async () => {
       fireEvent.click(backdrop!)

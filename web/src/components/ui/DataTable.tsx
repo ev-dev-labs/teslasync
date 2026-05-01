@@ -1,4 +1,4 @@
-import { type ReactNode, useState, useCallback, useEffect } from 'react'
+import { type ReactNode, useState, useCallback, useEffect, useMemo } from 'react'
 import { cn } from '../../lib/cn'
 import { tableTokens } from '../../lib/tokens'
 import { ChevronUp, ChevronDown } from 'lucide-react'
@@ -28,11 +28,23 @@ interface DataTableProps<T> {
   className?: string
   compact?: boolean
   pagination?: boolean | PaginationConfig
+  /**
+   * Column keys to keep visible on viewports below `md` (768px). Columns NOT
+   * listed here become `hidden md:table-cell`. When omitted, every column is
+   * shown at every viewport width and the table relies on the wrapper's
+   * `overflow-x-auto` to scroll horizontally on phones.
+   *
+   * MOBILE_GUIDELINES.md asks every multi-column DataTable to specify this so
+   * mobile users see the essential columns without horizontal scroll.
+   *
+   * @example mobileColumns={['name', 'status']}
+   */
+  mobileColumns?: string[]
 }
 
 /** Sortable glass-styled data table with consistent styling and optional pagination. */
 export function DataTable<T>({
-  columns, data, keyExtractor, sortKey, sortDir, onSort, emptyMessage = 'No data', className, compact, pagination,
+  columns, data, keyExtractor, sortKey, sortDir, onSort, emptyMessage = 'No data', className, compact, pagination, mobileColumns,
 }: DataTableProps<T>) {
   const paginationEnabled = !!pagination
   const paginationConfig: PaginationConfig = typeof pagination === 'object' ? pagination : {}
@@ -49,6 +61,16 @@ export function DataTable<T>({
     ? data.slice((page - 1) * pageSize, page * pageSize)
     : data
 
+  const mobileSet = useMemo(
+    () => (mobileColumns ? new Set(mobileColumns) : null),
+    [mobileColumns],
+  )
+
+  // CSS-driven hide: when a column is NOT in the mobile allowlist we add
+  // `hidden md:table-cell` so it disappears below md but reappears on tablet.
+  const colHiddenClass = (key: string) =>
+    mobileSet && !mobileSet.has(key) ? 'hidden md:table-cell' : ''
+
   return (
     <div className={cn('overflow-x-auto rounded-xl', className)}>
       <table className={tableTokens.wrapper}>
@@ -61,6 +83,7 @@ export function DataTable<T>({
                 className={cn(
                   compact ? 'px-3 py-2' : tableTokens.headCell,
                   col.sortable && 'cursor-pointer select-none hover:text-[var(--text-secondary)]',
+                  colHiddenClass(col.key),
                   col.className,
                 )}
                 onClick={() => col.sortable && onSort?.(col.key)}
@@ -89,7 +112,14 @@ export function DataTable<T>({
             paginatedData.map(row => (
               <tr key={keyExtractor(row)} className={tableTokens.row}>
                 {columns.map(col => (
-                  <td key={col.key} className={cn(compact ? 'px-3 py-2' : tableTokens.cell, col.className)}>
+                  <td
+                    key={col.key}
+                    className={cn(
+                      compact ? 'px-3 py-2' : tableTokens.cell,
+                      colHiddenClass(col.key),
+                      col.className,
+                    )}
+                  >
                     {col.render(row)}
                   </td>
                 ))}

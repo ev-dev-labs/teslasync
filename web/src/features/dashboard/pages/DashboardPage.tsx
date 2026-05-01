@@ -480,7 +480,7 @@ function EmptyOnboarding({ authenticated, onSync, isSyncing }: {
             </Link>
           )}
         </div>
-        <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl mx-auto">
+        <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-2xl mx-auto">
           {[
             { icon: Activity, label: t('onboarding.tracking', 'Real-time Tracking'), color: '#00f0ff' },
             { icon: Route, label: t('onboarding.drives', 'Drive History'), color: '#a855f7' },
@@ -503,7 +503,7 @@ function LoadingSkeleton() {
   return (
     <div className="space-y-6">
       <Skeleton className="h-72" />
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-28" />)}
       </div>
     </div>

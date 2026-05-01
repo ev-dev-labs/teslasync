@@ -153,7 +153,7 @@ export default function GlancePage() {
             </div>
 
             {/* Key metrics grid */}
-            <div className="grid grid-cols-2 gap-3 w-full max-w-xs mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-xs mx-auto">
               <MetricCard
                 label={t('glance.range', 'Range')}
                 value={

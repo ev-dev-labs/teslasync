@@ -118,7 +118,7 @@ export default function LocationsPage() {
     >
       {/* ── Summary stats ────────────────────────────────────────── */}
       <FadeIn>
-        <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4">
           <MetricCard label={t('Unique Places')} value={uniquePlaces} icon={<Navigation className="h-4 w-4" />} color="green" />
           <MetricCard label={t('Unique Cities')} value={uniqueCities} icon={<Building2 className="h-4 w-4" />} color="blue" />
           <MetricCard label={t('Total Visits')} value={totalVisits} icon={<Hash className="h-4 w-4" />} color="cyan" />

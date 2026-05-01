@@ -77,7 +77,7 @@ export default function CommandsPage() {
       {/* Stats */}
       <FadeIn>
         {vehicles && vehicles.length > 0 ? (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <MetricCard label={t('Vehicles')} value={vehicles.length} icon={<Car className="h-4 w-4" />} color="cyan" />
             <MetricCard label={t('Online')} value={onlineCount} icon={<Wifi className="h-4 w-4" />} color="green" />
             <MetricCard label={t('Asleep')} value={(vehicles?.length ?? 0) - onlineCount} icon={<Power className="h-4 w-4" />} color="amber" />

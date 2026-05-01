@@ -112,7 +112,7 @@ export default function VehicleListPage() {
     return (
       <PageContainer title={t('nav.vehicles', 'Fleet')}>
         <div className="space-y-6">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} height={96} />
             ))}
@@ -191,7 +191,7 @@ export default function VehicleListPage() {
         <div className="space-y-8">
           {/* ── Fleet Summary ──────────────────────────── */}
           <FadeIn delay={0.05}>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <MetricCard
                 label={t('vehicles.totalVehicles', 'Total Vehicles')}
                 value={vehicleList.length}

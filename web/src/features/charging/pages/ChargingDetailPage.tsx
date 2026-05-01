@@ -66,13 +66,13 @@ function LoadingSkeleton() {
         <Skeleton className="h-6 w-48" />
         <Skeleton className="h-5 w-16 rounded-full" />
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-6">
         {Array.from({ length: 5 }).map((_, i) => (
           <Skeleton key={i} className="h-36 rounded-xl" />
         ))}
       </div>
       <Skeleton className="h-24 rounded-xl" />
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {Array.from({ length: 8 }).map((_, i) => (
           <Skeleton key={i} className="h-24 rounded-xl" />
         ))}
@@ -238,7 +238,7 @@ export default function ChargingDetailPage() {
         </div>
 
         {/* ── 2. Hero gauges ─────────────────────────────────── */}
-        <StaggerContainer className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6 mb-8">
+        <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-8">
           <StaggerItem>
             <GlassPanel className="flex flex-col items-center py-4" glow="cyan">
               <RadialGauge
@@ -345,7 +345,7 @@ export default function ChargingDetailPage() {
         </GlassPanel>
 
         {/* ── 4. Eight stat cards ────────────────────────────── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <StatCard
             icon={<Zap className="h-4 w-4" />}
             label={t('charging.detail.energy', 'Energy')}
@@ -417,7 +417,7 @@ export default function ChargingDetailPage() {
           <h2 className="text-lg font-semibold mb-4">
             {t('charging.detail.moreDetails', 'More Details')}
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
             <InlineMetric
               icon={<Gauge className="h-4 w-4 text-purple-400" />}
               label={t('charging.detail.avgPower', 'Avg Power')}
@@ -744,7 +744,7 @@ export default function ChargingDetailPage() {
         </GlassPanel>
         {/* ── 12. Timestamps footer ──────────────────────────── */}
         <GlassPanel className="p-6">
-          <div className="grid grid-cols-2 gap-6 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
             <div>
               <p className="text-muted mb-1">{t('charging.detail.started', 'Started')}</p>
               <p className="font-medium">{formatDateTime(session.start_ts)}</p>

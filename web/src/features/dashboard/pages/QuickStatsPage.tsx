@@ -58,7 +58,7 @@ export default function QuickStatsPage() {
 
         {/* Key metrics */}
         <FadeIn delay={0.05}>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <MetricCard
               label={t('quickStats.distance', '{{unit}} Driven', { unit: distanceUnit })}
               value={fmtInt(convertDistance(analytics?.totalDistanceKm ?? 0))}
