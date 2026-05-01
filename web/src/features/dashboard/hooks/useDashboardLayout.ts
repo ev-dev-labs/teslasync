@@ -395,15 +395,19 @@ export function useDashboardLayout() {
 
   /* ─── Debounced backend write ─── */
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [dirty, setDirty] = useState(false);
   const syncToBackend = useCallback(
     (dbs: SavedDashboard[], active: string) => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      setDirty(true);
       debounceTimerRef.current = setTimeout(() => {
         const payload: DashboardLayoutsPayload = {
           dashboards: dbs,
           active_id: active,
         };
-        saveMutation.mutate(payload);
+        saveMutation.mutate(payload, {
+          onSuccess: () => setDirty(false),
+        });
       }, 2000);
     },
     [saveMutation],
@@ -806,11 +810,42 @@ export function useDashboardLayout() {
     }
   }, [updateActive, redoSnapshot]);
 
+  const pinToVehicle = useCallback(
+    (id: string, vehicleId: number | null | undefined) => {
+      persist(
+        dashboards.map((d) =>
+          d.id === id
+            ? { ...d, vehicleId: vehicleId ?? null, updatedAt: new Date().toISOString() }
+            : d,
+        ),
+      );
+    },
+    [dashboards, persist],
+  );
+
+  /**
+   * Filter dashboards visible for a given vehicle id. A dashboard is visible
+   * when it has no vehicle scope (user-global) OR is pinned to the active
+   * vehicle. Pass `null`/`undefined` to see only user-global dashboards.
+   */
+  const visibleFor = useCallback(
+    (vehicleId: number | null | undefined): SavedDashboard[] => {
+      return dashboards.filter((d) => {
+        const scope = d.vehicleId;
+        if (scope == null) return true;
+        return vehicleId != null && scope === vehicleId;
+      });
+    },
+    [dashboards],
+  );
+
   return {
     // Multi-dashboard
     dashboards,
     activeDashboard,
     activeId,
+    visibleFor,
+    pinToVehicle,
     switchDashboard,
     createDashboard,
     renameDashboard,
@@ -824,6 +859,8 @@ export function useDashboardLayout() {
     // Edit mode
     editMode,
     setEditMode,
+    // Unsaved-changes badge — true while a backend write is debounced/in flight.
+    dirty,
     // Widget CRUD
     addWidget,
     addWidgets,

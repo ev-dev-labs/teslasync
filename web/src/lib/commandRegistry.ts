@@ -7,13 +7,17 @@ import {
   Bell,
   BellRing,
   Download,
+  Edit3,
   Gauge,
   HelpCircle,
   Keyboard,
+  LayoutDashboard,
   Lock,
   Moon,
   Palette,
+  Plus,
   RefreshCw,
+  RotateCcw,
   Settings,
   Sun,
   SunMoon,
@@ -252,6 +256,68 @@ export const commandRegistry: CommandDefinition[] = [
     section: 'actions',
     keywords: ['help', 'docs', 'documentation', 'manual', 'guide'],
     perform: (ctx) => ctx.navigate('/changelog'),
+  },
+
+  // ── Dashboard customization (Phase 40 / Prompt 30) ────────────────────────
+  // The DashboardPage listens for these CustomEvents (`dashboard:*`) and
+  // routes them through useDashboardLayout. The palette navigates to /dashboard
+  // first so the listener is mounted, then dispatches on the next tick.
+  {
+    id: 'action.dashboard.edit',
+    labelKey: 'palette.cmd.dashboardEdit',
+    labelFallback: 'Edit dashboard layout',
+    icon: Edit3,
+    section: 'actions',
+    keywords: ['dashboard', 'edit', 'customize', 'rearrange', 'layout', 'widgets'],
+    shortcut: 'E',
+    perform: (ctx) => {
+      ctx.navigate('/dashboard')
+      window.setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('dashboard:toggle-edit'))
+      }, 50)
+    },
+  },
+  {
+    id: 'action.dashboard.switch',
+    labelKey: 'palette.cmd.dashboardSwitch',
+    labelFallback: 'Switch dashboard layout…',
+    icon: LayoutDashboard,
+    section: 'actions',
+    keywords: ['dashboard', 'switch', 'layout', 'preset', 'change'],
+    perform: (ctx) => {
+      ctx.navigate('/dashboard')
+      window.setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('dashboard:open-switcher'))
+      }, 50)
+    },
+  },
+  {
+    id: 'action.dashboard.addWidget',
+    labelKey: 'palette.cmd.dashboardAddWidget',
+    labelFallback: 'Add widget to dashboard',
+    icon: Plus,
+    section: 'actions',
+    keywords: ['dashboard', 'widget', 'add', 'panel', 'insert'],
+    perform: (ctx) => {
+      ctx.navigate('/dashboard')
+      window.setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('dashboard:add-widget'))
+      }, 50)
+    },
+  },
+  {
+    id: 'action.dashboard.reset',
+    labelKey: 'palette.cmd.dashboardReset',
+    labelFallback: 'Reset dashboard to default',
+    icon: RotateCcw,
+    section: 'actions',
+    keywords: ['dashboard', 'reset', 'default', 'clear', 'restore'],
+    perform: (ctx) => {
+      ctx.navigate('/dashboard')
+      window.setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('dashboard:reset'))
+      }, 50)
+    },
   },
 ]
 

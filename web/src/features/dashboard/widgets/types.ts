@@ -100,6 +100,13 @@ export interface SavedDashboard {
   id: string;
   name: string;
   icon?: string;
+  /**
+   * Optional per-vehicle scope (Phase 40 / Prompt 30).
+   *   undefined / null → applies to ALL vehicles ("user-global").
+   *   number           → pinned to that vehicle id; switcher hides this
+   *                      layout when a different vehicle is selected.
+   */
+  vehicleId?: number | null;
   widgets: WidgetInstance[];
   layouts: RGLLayouts;
   createdAt: string;

@@ -264,7 +264,31 @@
     "reset": "Reset",
     "kiosk": "Kiosk",
     "customize": "Customize",
-    "editHint": "Drag widgets to reorder, resize from edges. Click the gear icon for widget settings."
+    "editHint": "Drag widgets to reorder, resize from edges. Click the gear icon for widget settings.",
+    "layout": {
+      "label": "Layout",
+      "switcherLabel": "Switch dashboard layout",
+      "menuLabel": "Saved layouts",
+      "menuFooter": "Manage layouts in the tab strip below",
+      "modified": "modified",
+      "untitled": "Untitled",
+      "defaultBadge": "default",
+      "newFromCurrent": "New layout from current",
+      "newLayoutDefault": "New Layout",
+      "saveAs": "Save as new layout",
+      "saveAsShort": "Save as",
+      "saveAsPrompt": "Name for the new layout:",
+      "reset": "Reset to default",
+      "resetTitle": "Reset dashboard to default?",
+      "resetMessage": "This removes all customizations and restores the shipped default dashboard. Your other saved layouts are not affected.",
+      "resetConfirm": "Reset",
+      "pin": "Pin to current vehicle",
+      "unpin": "Unpin from vehicle",
+      "noneVisible": "No layouts available for this vehicle.",
+      "editTitle": "Edit dashboard (E)",
+      "editEnter": "Edit",
+      "editExit": "Done"
+    }
   },
   "charging": {
     "list": {
@@ -690,6 +714,24 @@
         "error": "Failed to save polling config"
       }
     },
+    "dashboard": {
+      "layoutSaved": {
+        "success": "Layout saved to library",
+        "error": "Failed to save layout"
+      },
+      "layoutUpdated": {
+        "success": "Layout updated",
+        "error": "Failed to update layout"
+      },
+      "layoutDeleted": {
+        "success": "Layout deleted",
+        "error": "Failed to delete layout"
+      },
+      "layoutApplied": {
+        "success": "Layout applied",
+        "error": "Failed to apply layout"
+      }
+    },
     "admin": {
       "apiKey": {
         "create": {
@@ -871,7 +913,11 @@
       "export": "Open data export",
       "settings": "Open settings",
       "shortcuts": "Show keyboard shortcuts",
-      "help": "Open documentation"
+      "help": "Open documentation",
+      "dashboardEdit": "Edit dashboard layout",
+      "dashboardSwitch": "Switch dashboard layout…",
+      "dashboardAddWidget": "Add widget to dashboard",
+      "dashboardReset": "Reset dashboard to default"
     },
     "toast": {
       "refreshed": "Data refreshed"
@@ -2787,7 +2833,10 @@
     "available": "widgets available",
     "searchResults": "{{count}} results for \"{{query}}\"",
     "addAllCount": "+ Add all {{count}}",
-    "noResults": "No widgets match \"{{query}}\""
+    "noResults": "No widgets match \"{{query}}\"",
+    "categoryFilter": "Filter by category",
+    "allCategories": "All",
+    "recentlyAdded": "Recently Added"
   },
   "title": "Command Center",
   "subtitle": "Real-time fleet intelligence and control",

@@ -3,6 +3,7 @@ import type { SavedDashboard } from '../widgets/types';
 
 interface KeyboardOptions {
   editMode: boolean;
+  setEditMode: (next: boolean) => void;
   canUndo: boolean;
   canRedo: boolean;
   onUndo: () => void;
@@ -13,12 +14,17 @@ interface KeyboardOptions {
 
 /**
  * Keyboard shortcuts for the dashboard:
- * - Ctrl+Z / Ctrl+Y (undo/redo) in edit mode
- * - Alt+1..9 to switch between dashboards (any mode)
- * Skips events when focus is inside form inputs.
+ * - `E`                — toggle edit mode
+ * - `Esc`              — exit edit mode
+ * - `?`                — open the keyboard-shortcuts help overlay
+ * - `Ctrl+Z / Ctrl+Y`  — undo/redo in edit mode
+ * - `Alt+1..9`         — switch between dashboards (any mode)
+ *
+ * Skips events when focus is inside form inputs (INPUT/TEXTAREA/SELECT
+ * or any contenteditable element).
  */
 export function useLayoutKeyboard({
-  editMode, canUndo, canRedo, onUndo, onRedo,
+  editMode, setEditMode, canUndo, canRedo, onUndo, onRedo,
   dashboards, switchDashboard,
 }: KeyboardOptions) {
   useEffect(() => {
@@ -39,6 +45,26 @@ export function useLayoutKeyboard({
         }
       }
 
+      // Bare keys (no modifiers) — toggle edit / help / exit
+      if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (e.key === 'e' || e.key === 'E') {
+          if (e.shiftKey) return;
+          e.preventDefault();
+          setEditMode(!editMode);
+          return;
+        }
+        if (e.key === 'Escape' && editMode) {
+          e.preventDefault();
+          setEditMode(false);
+          return;
+        }
+        if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+          e.preventDefault();
+          window.dispatchEvent(new CustomEvent('toggle-keyboard-shortcuts'));
+          return;
+        }
+      }
+
       // Undo/Redo (edit mode only)
       if (!editMode) return;
       const isCtrlOrMeta = e.ctrlKey || e.metaKey;
@@ -55,5 +81,6 @@ export function useLayoutKeyboard({
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [editMode, canUndo, canRedo, onUndo, onRedo, dashboards, switchDashboard]);
+  }, [editMode, setEditMode, canUndo, canRedo, onUndo, onRedo, dashboards, switchDashboard]);
 }
+

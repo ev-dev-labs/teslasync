@@ -24,6 +24,7 @@ import { DashboardGrid } from '../components/DashboardGrid';
 import { WidgetPicker } from '../components/WidgetPicker';
 import { WidgetSettingsModal } from '../components/WidgetSettingsModal';
 import { LayoutManager } from '../components/LayoutManager';
+import { LayoutSwitcher } from '../components/LayoutSwitcher';
 import { TemplateGallery } from '../components/TemplateGallery';
 import { ExportModal } from '../components/ExportModal';
 import { ImportPreviewModal } from '../components/ImportPreviewModal';
@@ -53,6 +54,7 @@ export default function DashboardPage() {
     reorderDashboards, duplicateDashboard, updateDashboardSettings, updateDashboardIcon,
     applyPreset, resetToDefault, exportDashboard, importDashboardFromData,
     canUndo, canRedo, undoCount, undo, redo,
+    dirty, pinToVehicle,
   } = useDashboardLayout();
   const [showPicker, setShowPicker] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
@@ -62,7 +64,7 @@ export default function DashboardPage() {
   const [showKioskSettings, setShowKioskSettings] = useState(false);
   const [showDashSettings, setShowDashSettings] = useState<string | null>(null);
   useLayoutKeyboard({
-    editMode, canUndo, canRedo, onUndo: undo, onRedo: redo,
+    editMode, setEditMode, canUndo, canRedo, onUndo: undo, onRedo: redo,
     dashboards, switchDashboard,
   });
   const [settingsWidgetId, setSettingsWidgetId] = useState<string | null>(null);
@@ -143,6 +145,33 @@ export default function DashboardPage() {
       }
     }
   }, []);
+
+  /* ——— Command-palette bridge (Phase 40 / Prompt 30) ——— */
+  // The command palette dispatches `dashboard:*` CustomEvents because it lives
+  // outside the dashboard's React tree and can't call hooks directly.
+  useEffect(() => {
+    const onToggleEdit = () => setEditMode(!editMode);
+    const onAddWidget = () => setShowPicker(true);
+    const onReset = () => {
+      // Defer to LayoutSwitcher's confirm flow next time the user opens it.
+      // For palette invocation, run the destructive op behind window.confirm
+      // so power users still get a one-click path.
+      if (window.confirm(t('layout.resetMessage', 'This removes all customizations and restores the shipped default dashboard. Your other saved layouts are not affected.'))) {
+        resetToDefault();
+      }
+    };
+    window.addEventListener('dashboard:toggle-edit', onToggleEdit);
+    window.addEventListener('dashboard:add-widget', onAddWidget);
+    window.addEventListener('dashboard:reset', onReset);
+    // dashboard:open-switcher is handled by LayoutSwitcher itself if it
+    // mounts a listener — for now we navigate to /dashboard so the switcher
+    // is on screen and let the user click it.
+    return () => {
+      window.removeEventListener('dashboard:toggle-edit', onToggleEdit);
+      window.removeEventListener('dashboard:add-widget', onAddWidget);
+      window.removeEventListener('dashboard:reset', onReset);
+    };
+  }, [editMode, setEditMode, resetToDefault, t]);
 
   /* ——— Template gallery handler ——— */
   const handleApplyTemplate = (presetId: string) => {
@@ -288,18 +317,32 @@ export default function DashboardPage() {
 
         {/* Layout Manager — always show when there are dashboards */}
         {dashboards.length > 0 && (
-          <LayoutManager
-            dashboards={dashboards}
-            activeId={activeId}
-            onSwitch={switchDashboard}
-            onCreate={createDashboard}
-            onRename={renameDashboard}
-            onDelete={deleteDashboard}
-            onReorder={reorderDashboards}
-            onDuplicate={duplicateDashboard}
-            onOpenSettings={(id) => setShowDashSettings(id)}
-            onOpenTemplates={() => setShowTemplates(true)}
-          />
+          <div className="space-y-2">
+            <LayoutSwitcher
+              dashboards={dashboards}
+              activeId={activeId}
+              dirty={dirty}
+              editMode={editMode}
+              onSwitch={switchDashboard}
+              onCreate={(name) => createDashboard(name)}
+              onDuplicate={duplicateDashboard}
+              onReset={resetToDefault}
+              onToggleEdit={() => setEditMode(!editMode)}
+              onPinToVehicle={pinToVehicle}
+            />
+            <LayoutManager
+              dashboards={dashboards}
+              activeId={activeId}
+              onSwitch={switchDashboard}
+              onCreate={createDashboard}
+              onRename={renameDashboard}
+              onDelete={deleteDashboard}
+              onReorder={reorderDashboards}
+              onDuplicate={duplicateDashboard}
+              onOpenSettings={(id) => setShowDashSettings(id)}
+              onOpenTemplates={() => setShowTemplates(true)}
+            />
+          </div>
         )}
 
         {vehiclesLoading ? (

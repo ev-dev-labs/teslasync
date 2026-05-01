@@ -118,6 +118,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	geofenceHandler := NewGeofenceHandler(db)
 	authHandler := NewAuthHandler(db, teslaClient, opt.Encryptor)
 	settingsHandler := NewSettingsHandler(db)
+	dashboardLayoutHandler := NewDashboardLayoutHandler(db)
 	var pahoForAlerts pahomqtt.Client
 	if mqttClient != nil {
 		pahoForAlerts = mqttClient.Underlying()
@@ -530,6 +531,19 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Put("/settings/polling-config", settingsHandler.UpdatePollingConfig)
 			r.Get("/settings/dashboard-layouts", settingsHandler.GetDashboardLayouts)
 			r.Put("/settings/dashboard-layouts", settingsHandler.UpdateDashboardLayouts)
+		})
+
+		// Named dashboard layout library (Phase 40 / Prompt 30).
+		// Coexists with /settings/dashboard-layouts above — that endpoint
+		// holds the active in-app blob, this is the per-row "save as
+		// preset" library scoped per-vehicle.
+		r.Route("/dashboard/layouts", func(r chi.Router) {
+			r.Use(httprate.LimitByIP(20, 1*time.Minute))
+			r.Get("/", dashboardLayoutHandler.List)
+			r.Post("/", dashboardLayoutHandler.Create)
+			r.Put("/{id}", dashboardLayoutHandler.Update)
+			r.Delete("/{id}", dashboardLayoutHandler.Delete)
+			r.Post("/{id}/apply", dashboardLayoutHandler.Apply)
 		})
 
 		// Gas Price Auto-Poll

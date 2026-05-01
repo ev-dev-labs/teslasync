@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Check, Search } from 'lucide-react';
+import { Check, Clock, Search } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Drawer, Badge, Button as UiButton, Input as UiInput } from '@/components/ui';
 import { WIDGET_REGISTRY } from '../widgets/registry';
@@ -35,6 +35,31 @@ const CATEGORY_LABELS: Record<WidgetCategory, string> = {
 };
 
 const WIDGET_BY_ID = new Map(WIDGET_REGISTRY.map((widget) => [widget.id, widget]));
+
+const RECENTLY_ADDED_KEY = 'teslasync-widgets-recent';
+const RECENTLY_ADDED_MAX = 8;
+
+function loadRecentlyAdded(): string[] {
+  if (typeof localStorage === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(RECENTLY_ADDED_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((id): id is string => typeof id === 'string' && WIDGET_BY_ID.has(id));
+  } catch {
+    return [];
+  }
+}
+
+function saveRecentlyAdded(ids: string[]): void {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(RECENTLY_ADDED_KEY, JSON.stringify(ids));
+  } catch {
+    /* quota or private mode — ignore */
+  }
+}
 
 function highlightMatch(text: string, query: string): ReactNode {
   if (!query) return text;
@@ -68,7 +93,9 @@ export function WidgetPicker({
 }: WidgetPickerProps) {
   const { t } = useTranslation('dashboard');
   const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<WidgetCategory | 'all'>('all');
   const [addedThisSessionIds, setAddedThisSessionIds] = useState<string[]>([]);
+  const [recentlyAddedIds, setRecentlyAddedIds] = useState<string[]>(loadRecentlyAdded);
   const [announcement, setAnnouncement] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const widgetButtonRefs = useRef(new Map<string, HTMLButtonElement>());
@@ -77,8 +104,10 @@ export function WidgetPicker({
   useEffect(() => {
     if (open) {
       setSearch('');
+      setCategoryFilter('all');
       setAddedThisSessionIds([]);
       setAnnouncement('');
+      setRecentlyAddedIds(loadRecentlyAdded());
       // Small delay to let the drawer animate in before focusing
       const timer = setTimeout(() => inputRef.current?.focus(), 100);
       return () => clearTimeout(timer);
@@ -91,19 +120,26 @@ export function WidgetPicker({
 
   const activeWidgetIdSet = useMemo(() => new Set(activeWidgetIds), [activeWidgetIds]);
 
+  const inCategory = useCallback(
+    (w: WidgetDef) => categoryFilter === 'all' || w.category === categoryFilter,
+    [categoryFilter],
+  );
+
   const filteredWidgets = useMemo(() => {
-    if (!query) return WIDGET_REGISTRY;
-    return WIDGET_REGISTRY.filter(
+    let pool = WIDGET_REGISTRY;
+    if (categoryFilter !== 'all') pool = pool.filter(inCategory);
+    if (!query) return pool;
+    return pool.filter(
       (w) =>
         w.name.toLowerCase().includes(query) ||
         w.description.toLowerCase().includes(query) ||
         w.category.toLowerCase().includes(query),
     );
-  }, [query]);
+  }, [categoryFilter, inCategory, query]);
 
   const grouped = useMemo(
     () =>
-      WIDGET_REGISTRY.reduce(
+      WIDGET_REGISTRY.filter(inCategory).reduce(
         (acc, w) => {
           if (!acc[w.category]) acc[w.category] = [];
           acc[w.category].push(w);
@@ -111,7 +147,7 @@ export function WidgetPicker({
         },
         {} as Record<string, WidgetDef[]>,
       ),
-    [],
+    [inCategory],
   );
 
   const groupedEntries = useMemo(
@@ -128,6 +164,22 @@ export function WidgetPicker({
     () => filteredWidgets.filter((widget) => !activeWidgetIdSet.has(widget.id)),
     [activeWidgetIdSet, filteredWidgets],
   );
+
+  /** Recently added widgets that aren't already on the active dashboard. */
+  const recentlyAddedVisible = useMemo(() => {
+    if (query || categoryFilter !== 'all') return [];
+    return recentlyAddedIds
+      .map((id) => WIDGET_BY_ID.get(id))
+      .filter((w): w is WidgetDef => Boolean(w) && !activeWidgetIdSet.has(w!.id))
+      .slice(0, RECENTLY_ADDED_MAX);
+  }, [activeWidgetIdSet, categoryFilter, query, recentlyAddedIds]);
+
+  /** Categories that actually have widgets — used to render the filter pills. */
+  const availableCategories = useMemo(() => {
+    const set = new Set<WidgetCategory>();
+    for (const w of WIDGET_REGISTRY) set.add(w.category);
+    return Array.from(set);
+  }, []);
 
   const focusNextAddableWidget = useCallback(
     (addedIds: string[], anchorId: string) => {
@@ -169,6 +221,13 @@ export function WidgetPicker({
         const next = new Set(prev);
         for (const id of addableIds) next.add(id);
         return Array.from(next);
+      });
+      // Persist recently-added across sessions (most-recent first, deduped, capped).
+      setRecentlyAddedIds((prev) => {
+        const next = [...addableIds, ...prev.filter((id) => !addableIds.includes(id))]
+          .slice(0, RECENTLY_ADDED_MAX);
+        saveRecentlyAdded(next);
+        return next;
       });
 
       if (addableIds.length === 1) {
@@ -323,8 +382,61 @@ export function WidgetPicker({
           </span>
         </div>
 
-        {/* Layout Presets — hide when searching */}
-        {!query && (
+        {/* Category filter pills */}
+        <div
+          className="flex flex-wrap gap-1.5"
+          role="tablist"
+          aria-label={t('widgets.categoryFilter', 'Filter by category')}
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={categoryFilter === 'all'}
+            onClick={() => setCategoryFilter('all')}
+            className={cn(
+              'h-7 rounded-full border px-3 text-[11px] font-medium transition-colors',
+              categoryFilter === 'all'
+                ? 'border-[var(--theme-primary)]/40 bg-[var(--theme-primary)]/15 text-[var(--theme-primary)]'
+                : 'border-white/10 bg-white/[0.03] text-white/60 hover:bg-white/[0.06] hover:text-white',
+            )}
+          >
+            {t('widgets.allCategories', 'All')}
+          </button>
+          {availableCategories.map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              role="tab"
+              aria-selected={categoryFilter === cat}
+              onClick={() => setCategoryFilter(cat)}
+              className={cn(
+                'h-7 rounded-full border px-3 text-[11px] font-medium transition-colors',
+                categoryFilter === cat
+                  ? 'border-[var(--theme-primary)]/40 bg-[var(--theme-primary)]/15 text-[var(--theme-primary)]'
+                  : 'border-white/10 bg-white/[0.03] text-white/60 hover:bg-white/[0.06] hover:text-white',
+              )}
+            >
+              {CATEGORY_LABELS[cat]}
+            </button>
+          ))}
+        </div>
+
+        {/* Recently Added — only on the unfiltered, unsearched view */}
+        {recentlyAddedVisible.length > 0 && (
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-white/40 mb-3 flex items-center gap-2">
+              <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+              {t('widgets.recentlyAdded', 'Recently Added')}
+            </h3>
+            <div className="grid grid-cols-1 gap-2">
+              {recentlyAddedVisible.map(renderWidgetCard)}
+            </div>
+            <div className="h-px bg-white/[0.06] mt-4" />
+          </div>
+        )}
+
+        {/* Layout Presets — hide when searching or filtering by category */}
+        {!query && categoryFilter === 'all' && (
           <>
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-white/40 mb-3">
