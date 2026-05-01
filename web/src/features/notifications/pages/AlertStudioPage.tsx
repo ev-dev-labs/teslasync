@@ -21,7 +21,7 @@ import {
   useToggleAlertRule,
 } from '@/api/hooks/useNotifications'
 import type { SignalValueType } from '@/types/signals'
-import { GlassPanel, Badge, Button as UiButton, Input as UiInput, Select as UiSelect, Modal } from '@/components/ui'
+import { GlassPanel, Badge, Button as UiButton, ConfirmDialog, Input as UiInput, Select as UiSelect, Modal } from '@/components/ui'
 import { SeverityBadge, SeverityIcon } from '@/components/data-display'
 import { PageContainer } from '@/components/layout'
 import { FadeIn } from '@/components/motion'
@@ -36,6 +36,7 @@ import { cn } from '@/lib/cn'
 import { severityTokens } from '@/lib/tokens'
 import { formatDateTime } from '@/lib/dateFormat'
 import { usePageTitle } from '@/hooks/usePageTitle'
+import { useConfirm } from '@/hooks/useConfirm'
 
 type Severity = NonNullable<AlertRuleInput['severity']>
 type RuleOp = AlertRuleInput['op']
@@ -421,6 +422,7 @@ export default function AlertStudio() {
   const testRuleMut = useTestAlertRule()
   const snoozeRuleMut = useSnoozeAlertRule()
   const [snoozeTargetId, setSnoozeTargetId] = useState<number | null>(null)
+  const { confirm: confirmDelete, dialogProps: deleteDialogProps } = useConfirm()
 
   const [editor, setEditor] = useState<EditorState>(freshEditor)
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -1001,11 +1003,17 @@ export default function AlertStudio() {
                         variant="ghost"
                         size="sm"
                         className="h-6 w-6 shrink-0 p-0 opacity-0 transition-opacity group-hover:opacity-100 hover:text-rose-300"
-                        onClick={e => {
+                        onClick={async e => {
                           e.stopPropagation()
-                          if (window.confirm(t('notifications.alertStudio.rules.confirmDelete', 'Delete "{{name}}"?', { name: rule.name || untitledRuleLabel }))) {
-                            handleDelete(rule.id)
-                          }
+                          const ruleName = rule.name || untitledRuleLabel
+                          const ok = await confirmDelete({
+                            title: t('notifications.alertStudio.rules.confirmDeleteTitle', 'Delete rule?'),
+                            message: t('notifications.alertStudio.rules.confirmDelete', 'Delete "{{name}}"?', { name: ruleName }),
+                            variant: 'danger',
+                            confirmLabel: t('common.delete', 'Delete'),
+                            cancelLabel: t('common.cancel', 'Cancel'),
+                          })
+                          if (ok) handleDelete(rule.id)
                         }}
                         title={t('notifications.alertStudio.rules.deleteRule', 'Delete rule')}
                         aria-label={t('notifications.alertStudio.rules.deleteRule', 'Delete rule')}
@@ -1363,6 +1371,7 @@ export default function AlertStudio() {
           </div>
         )}
       </Modal>
+      {deleteDialogProps && <ConfirmDialog {...deleteDialogProps} loading={deleteRuleMut.isPending} />}
     </PageContainer>
   )
 }

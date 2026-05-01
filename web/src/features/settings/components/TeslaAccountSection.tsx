@@ -3,9 +3,10 @@ import {
   useAuthStatus, useAuthURL, useRefreshAuth,
   useDisconnectAuth, useSyncVehicles,
 } from '@/api/hooks/useSettings'
-import { GlassPanel, Button, IconBox } from '@/components/ui'
+import { GlassPanel, Button, ConfirmDialog, IconBox } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
 import { useToast } from '@/components/feedback/Toast'
+import { useConfirm } from '@/hooks/useConfirm'
 import { cn } from '@/lib/cn'
 import { formatDateTime } from '@/lib/dateFormat'
 import {
@@ -20,10 +21,26 @@ export function TeslaAccountSection() {
   const refreshMut = useRefreshAuth()
   const disconnectMut = useDisconnectAuth()
   const syncMut = useSyncVehicles()
+  const { confirm: confirmDisconnect, dialogProps: disconnectDialogProps } = useConfirm()
 
   function handleLogin() {
     authUrlMut.mutate(undefined, {
       onSuccess: (data) => { window.location.href = data.auth_url },
+    })
+  }
+
+  async function handleDisconnect() {
+    const ok = await confirmDisconnect({
+      title: t('tesla.disconnectTitle', 'Disconnect Tesla Account?'),
+      message: t('tesla.disconnectConfirm', 'Disconnect your Tesla account? You will need to re-authorize to use TeslaSync.'),
+      variant: 'danger',
+      confirmLabel: t('tesla.disconnect', 'Disconnect'),
+      cancelLabel: t('common.cancel', 'Cancel'),
+    })
+    if (!ok) return
+    disconnectMut.mutate(undefined, {
+      onSuccess: () => toast.success(t('toast.disconnected', 'Tesla account disconnected')),
+      onError: (err: Error) => toast.error(t('toast.disconnectFailed', 'Disconnect failed'), err.message),
     })
   }
 
@@ -86,10 +103,7 @@ export function TeslaAccountSection() {
               <Button variant="secondary" icon={<ExternalLink className="h-4 w-4" />} onClick={handleLogin} disabled={authUrlMut.isPending} className="!border-neon-cyan/30 !text-neon-cyan hover:!bg-neon-cyan/5">
                 {t('tesla.reauthorize', 'Re-authorize')}
               </Button>
-              <Button variant="danger" icon={<XCircle className="h-4 w-4" />} onClick={() => { if (confirm(t('tesla.disconnectConfirm', 'Disconnect your Tesla account? You will need to re-authorize to use TeslaSync.'))) disconnectMut.mutate(undefined, {
-                onSuccess: () => toast.success(t('toast.disconnected', 'Tesla account disconnected')),
-                onError: (err: Error) => toast.error(t('toast.disconnectFailed', 'Disconnect failed'), err.message),
-              }) }} disabled={disconnectMut.isPending}>
+              <Button variant="danger" icon={<XCircle className="h-4 w-4" />} onClick={handleDisconnect} disabled={disconnectMut.isPending}>
                 {t('tesla.disconnect', 'Disconnect')}
               </Button>
             </>
@@ -102,6 +116,9 @@ export function TeslaAccountSection() {
           </p>
         )}
       </GlassPanel>
+      {disconnectDialogProps && (
+        <ConfirmDialog {...disconnectDialogProps} loading={disconnectMut.isPending} />
+      )}
     </FadeIn>
   )
 }
