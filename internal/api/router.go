@@ -192,7 +192,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	teslaUserProfileHandler := NewTeslaUserProfileHandler(teslaClient, db)
 	vehicleAccessHandler := NewVehicleAccessHandler(teslaClient, db)
 	vehicleInfoHandler := NewVehicleInfoHandler(teslaClient, db)
-	tripPlannerHandler := NewTripPlannerHandler(db, opt.CacheStore, signalLogReader)
+	tripPlannerHandler := NewTripPlannerHandler(db, opt.CacheStore, stateReader, signalLogReader)
 	geocodeHandler := NewGeocodeHandler(geocoding.NewSearcher("TeslaSync/1.0"), geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
 	shareHandler := NewShareHandler(db)
 	watchHandler := NewWatchHandler(db, teslaClient)
