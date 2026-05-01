@@ -33,6 +33,10 @@
     "headingValue": "{{cardinal}} ({{degrees}}°)",
     "unknown": "Unknown"
   },
+  "vehiclePicker": {
+    "aria": "Select vehicle",
+    "label": "Vehicle"
+  },
   "common": {
     "loading": "Loading...",
     "noData": "No data available",

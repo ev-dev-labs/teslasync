@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Lightbulb,
@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer, Grid } from '@/components/layout';
-import { GlassPanel, Badge, Button, Select, Card, CardHeader, Pagination } from '@/components/ui';
+import { GlassPanel, Badge, Button, Card, CardHeader, Pagination } from '@/components/ui';
 import {
   ChartContainer,
   ChartTooltip,
@@ -49,10 +49,10 @@ import { DateRangeFilter } from '@/components/forms';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 
 import { useDriveScore, useDrives } from '@/api/hooks/useDriving';
-import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useAnnotations } from '@/hooks/useAnnotations';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { formatDateShort, formatDurationMinutes } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt, fmtWithUnit } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -414,10 +414,8 @@ export default function DriveScorePage() {
   const { t } = useTranslation();
   usePageTitle(t('driveScore.title', 'Drive Score'));
 
-  /* ---- vehicle selector ---- */
-  const { data: vehicles } = useVehicles();
-  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
-  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
+  /* ---- vehicle selector — Phase 40 / Prompt 16: header VehiclePicker is the source of truth ---- */
+  const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
 
   /* ---- queries ---- */
@@ -647,14 +645,6 @@ export default function DriveScorePage() {
   );
 
   /* ---- handlers ---- */
-  const handleVehicleChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
-      setSelectedVehicle(Number(e.target.value));
-      setCurrentPage(1);
-    },
-    [],
-  );
-
   const handleSort = useCallback(
     (field: SortField) => {
       if (sortField === field) {
@@ -743,24 +733,11 @@ export default function DriveScorePage() {
   /* ---- loading state ---- */
   const isLoading = drivesLoading;
 
-  /* ---- vehicle selector actions ---- */
-  const vehicleOptions = useMemo(
-    () =>
-      (vehicles ?? []).map((v) => ({
-        value: String(v.id),
-        label: v.display_name || v.vin,
-      })),
-    [vehicles],
-  );
-
-  const vehicleSelector = vehicles && vehicles.length > 1 ? (
-    <Select
-      options={vehicleOptions}
-      value={vehicleId != null ? String(vehicleId) : ''}
-      onChange={handleVehicleChange}
-      placeholder={t('driveScore.selectVehicle', 'Select vehicle')}
-    />
-  ) : null;
+  /* When the global vehicle changes, reset pagination so the user
+     immediately sees the first page of the newly-scoped fleet view. */
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [vehicleId]);
 
   /* ---- trend icon helper ---- */
   const TrendIcon = overallTrend === 'up'
@@ -816,7 +793,6 @@ export default function DriveScorePage() {
       title={t('driveScore.title', 'Drive Score')}
       subtitle={t('driveScore.subtitle', 'Your driving rating and breakdown')}
       loading={isLoading}
-      actions={vehicleSelector}
     >
       {/* -------- Section 9: Date range filter -------- */}
       <FadeIn>

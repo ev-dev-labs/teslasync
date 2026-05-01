@@ -104,6 +104,7 @@ import { LiveIndicator } from '../data-display/LiveIndicator'
 import Logo from '../ui/Logo'
 import { Button } from '@/components/ui'
 import { Breadcrumbs } from './Breadcrumbs'
+import { VehiclePicker } from './VehiclePicker'
 
 import { MAIN_TOUR_STEPS } from '@/features/onboarding/tourSteps'
 import { request } from '@/api/client'
@@ -901,6 +902,11 @@ export default function Layout() {
         <div className="px-3 py-2 lg:px-4 lg:py-3 border-b border-[var(--glass-border)] shrink-0">
           <CommandPaletteTrigger />
         </div>
+
+        {/* Persistent vehicle scope picker — Phase 40 / Prompt 16.
+            Renders its own bordered wrapper; returns null for single-vehicle
+            owners so no empty padding is visible. */}
+        <VehiclePicker />
 
         {/* Navigation */}
         <nav

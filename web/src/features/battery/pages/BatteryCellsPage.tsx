@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Battery, Cpu, Activity, TrendingDown, BarChart3, Grid3x3,
@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer, Grid } from '@/components/layout';
-import { GlassPanel, Badge, Button, Select, DataTable, type Column, useSortToggle } from '@/components/ui';
+import { GlassPanel, Badge, Button, DataTable, type Column, useSortToggle } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import {
   ChartContainer, ChartTooltip, ChartGradient,
@@ -19,7 +19,7 @@ import {
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
@@ -209,14 +209,13 @@ export default function BatteryCellsPage() {
   const { t } = useTranslation();
   usePageTitle(t('battery.cells.title', 'Battery Cells'));
 
-  const [vehicleId, setVehicleId] = useState<string>('');
   const [showHeatmap, setShowHeatmap] = useState(true);
 
   /* ── Queries ─── */
 
-  const { data: vehicles } = useVehicles();
-
-  const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
+  // Phase 40 / Prompt 16: header picker is the source of truth for vehicle scope.
+  const { vehicleId } = useSelectedVehicle();
+  const activeId = vehicleId != null ? String(vehicleId) : '';
 
   const { data, isLoading, error } = useQuery<BatteryCellData>({
     queryKey: ['battery-cells', activeId],
@@ -386,15 +385,6 @@ export default function BatteryCellsPage() {
       subtitle={t('Individual cell voltage monitoring and analysis')}
       loading={isLoading}
       error={error instanceof Error ? error : null}
-      actions={
-        vehicles && vehicles.length > 1 ? (
-          <Select
-            options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
-            value={activeId}
-            onChange={(e) => setVehicleId(e.target.value)}
-          />
-        ) : undefined
-      }
     >
       {/* ── Summary Metrics ─── */}
       <FadeIn>

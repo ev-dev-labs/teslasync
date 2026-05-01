@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, Button, Select, type SelectOption, DataTable, type Column } from '@/components/ui';
+import { GlassPanel, Badge, Button, DataTable, type Column } from '@/components/ui';
 import { MetricCard, LiveIndicator } from '@/components/data-display';
 import { Skeleton, EmptyState, AlertBanner, LiveStaleDataBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -20,6 +20,7 @@ import {
 
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -69,8 +70,8 @@ export default function MapOverviewPage() {
   const { t } = useTranslation('maps');
   usePageTitle(t('mapOverview.pageTitle', 'Map Overview'));
 
-  /* ---- vehicle selector state ---- */
-  const [vehicleId, setVehicleId] = useState('');
+  /* ---- vehicle selector — Phase 40 / Prompt 16: header VehiclePicker is the source of truth ---- */
+  const { vehicleId } = useSelectedVehicle();
   const [mapStyle, setMapStyle] = useState<MapStyle>('dark');
 
   /* ---- queries ---- */
@@ -80,16 +81,7 @@ export default function MapOverviewPage() {
     error: vehiclesError,
   } = useVehicles();
 
-  const selectedId = vehicleId || String(vehicles?.[0]?.id ?? '');
-
-  const vehicleOptions: SelectOption[] = useMemo(
-    () =>
-      (vehicles ?? []).map((v) => ({
-        value: String(v.id),
-        label: v.display_name || v.vin,
-      })),
-    [vehicles],
-  );
+  const selectedId = vehicleId != null ? String(vehicleId) : '';
 
   const {
     data: latest,
@@ -132,7 +124,6 @@ export default function MapOverviewPage() {
   /* ---- derived ---- */
   const anyError = [vehiclesError, latestError, historyError].find(Boolean);
   const isLoading = vehiclesLoading || latestLoading;
-  const hasVehicles = (vehicles?.length ?? 0) > 0;
   const hasValidLocation = latest != null
     && typeof latest.latitude === 'number'
     && typeof latest.longitude === 'number'
@@ -209,22 +200,7 @@ export default function MapOverviewPage() {
       )}
       loading={vehiclesLoading}
       error={vehiclesError as Error | null}
-      actions={
-        hasVehicles ? (
-          <span className="flex items-center gap-3">
-            <LiveIndicator variant="compact" />
-            <Select
-              label={t('mapOverview.vehicleLabel', 'Vehicle')}
-              options={vehicleOptions}
-              value={selectedId}
-              onChange={(e) => setVehicleId(e.target.value)}
-              placeholder={t('mapOverview.vehiclePlaceholder', 'Select vehicle')}
-            />
-          </span>
-        ) : (
-          <LiveIndicator variant="compact" />
-        )
-      }
+      actions={<LiveIndicator variant="compact" />}
     >
       <LiveStaleDataBanner />
       {anyError && (

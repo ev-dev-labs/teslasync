@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, Input as ControlInput, Select as ControlSelect } from '@/components/ui';
+import { GlassPanel, Badge, Input as ControlInput } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import {
   RadialGauge, ChartTooltip,
@@ -19,8 +19,8 @@ import {
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 
-import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
@@ -108,9 +108,9 @@ export default function ProjectedRangePage() {
   const { t } = useTranslation();
   usePageTitle(t('range.title', 'Projected Range'));
 
-  const [vehicleId, setVehicleId] = useState<string>('');
-  const { data: vehicles } = useVehicles();
-  const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
+  // Phase 40 / Prompt 16: header VehiclePicker is the source of truth.
+  const { vehicleId: globalVehicleId } = useSelectedVehicle();
+  const activeId = globalVehicleId != null ? String(globalVehicleId) : '';
 
   const { data, isLoading, error } = useQuery<RangeProjection>({
     queryKey: ['range-projection', activeId],
@@ -157,15 +157,6 @@ export default function ProjectedRangePage() {
       subtitle={t('range.subtitle', 'Personalized range estimates based on your driving patterns, weather, and conditions')}
       loading={isLoading}
       error={error instanceof Error ? error : null}
-      actions={
-        vehicles && vehicles.length > 1 ? (
-          <ControlSelect
-            options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
-            value={activeId}
-            onChange={(e) => setVehicleId(e.target.value)}
-          />
-        ) : undefined
-      }
     >
       {/* ── Hero: Current range vs Tesla estimate ───── */}
       <FadeIn>

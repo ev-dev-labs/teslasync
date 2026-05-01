@@ -2,14 +2,13 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DollarSign } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
-import { Select } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { EmptyState } from '@/components/feedback';
 import { DateRangeFilter } from '@/components/forms';
 import { useChargingSessionsPaginated, useCostForecast } from '@/api/hooks/useCharging';
-import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { DEFAULT_GAS_PRICE, DEFAULT_MPG, DEFAULT_ELECTRICITY_RATE } from '../components/cost-analysis/constants';
 import { useCostAnalysisData } from '../components/cost-analysis/useCostAnalysisData';
 import {
@@ -31,10 +30,10 @@ export default function CostAnalysisPage() {
   usePageTitle(t('costAnalysis.title', 'Cost Analysis'));
 
   const { isMiles, convertDistance, distanceUnit } = useSettings();
-  const { data: vehicles } = useVehicles();
+  // Phase 40 / Prompt 16: header VehiclePicker is the source of truth.
+  const { vehicleId } = useSelectedVehicle();
 
   // ── Filters ──────────────────────────────────────────────────────────
-  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
     d.setFullYear(d.getFullYear() - 1);
@@ -49,7 +48,6 @@ export default function CostAnalysisPage() {
   const [mpg, setMpg] = useState(DEFAULT_MPG);
   const [electricityRate, setElectricityRate] = useState(DEFAULT_ELECTRICITY_RATE);
 
-  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
   const { data: sessions, isLoading } = useChargingSessionsPaginated(vehicleId, {
     limit: 5000,
     start: startDate,
@@ -90,17 +88,6 @@ export default function CostAnalysisPage() {
       subtitle={t('costAnalysis.subtitle', 'Electricity cost trends, gas savings, and charging economics')}
       actions={
         <div className="flex flex-wrap items-center gap-3">
-          {vehicles && vehicles.length > 0 && (
-            <Select
-              value={String(vehicleId ?? '')}
-              onChange={(e) => setSelectedVehicle(Number(e.target.value))}
-              options={vehicles.map((v) => ({
-                value: String(v.id),
-                label: v.display_name,
-              }))}
-              className="w-48"
-            />
-          )}
           <DateRangeFilter
             startDate={startDate}
             endDate={endDate}

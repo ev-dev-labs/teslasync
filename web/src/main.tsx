@@ -6,6 +6,7 @@ import { ToastProvider } from './components/feedback/Toast'
 import { ErrorBoundary } from './components/feedback/ErrorBoundary'
 import { ThemeProvider } from './components/ui/ThemeProvider'
 import ReloadPrompt from './components/feedback/ReloadPrompt'
+import { SelectedVehicleProvider } from './store/selectedVehicle'
 import App from './App'
 import './i18n'
 import './index.css'
@@ -45,10 +46,12 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <ThemeProvider>
-            <ToastProvider>
-              <App />
-              <ReloadPrompt />
-            </ToastProvider>
+            <SelectedVehicleProvider>
+              <ToastProvider>
+                <App />
+                <ReloadPrompt />
+              </ToastProvider>
+            </SelectedVehicleProvider>
           </ThemeProvider>
         </BrowserRouter>
       </QueryClientProvider>

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer, Grid } from '@/components/layout';
-import { GlassPanel, Badge, Button, Select } from '@/components/ui';
+import { GlassPanel, Badge, Button } from '@/components/ui';
 import {
   RadialGauge, ChartContainer, ChartTooltip, ChartGradient,
   chartGrid, axisTickSm, CHART_COLORS,
@@ -23,10 +23,11 @@ import { FadeIn } from '@/components/motion';
 
 import { useBatteryHealthAnalytics, useBatteryDegradation } from '@/api/hooks/useEnergy';
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
-import { useVehicles, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
+import { useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useAlertContext } from '@/hooks/useAlertContext';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { cn } from '@/lib/cn';
 import { COLOR, STATUS_COLORS } from '@/lib/colors';
 import { fmtNumber, fmtPercent, fmtInt } from '@/lib/numberFormat';
@@ -195,13 +196,12 @@ export default function BatteryHealthPage() {
   usePageTitle(t('battery.title', 'Battery Health'));
   const { convertDistance, distanceUnit, convertTemp, tempUnit } = useSettings();
 
-  /* ── Vehicle selector ──────────────────────────────────────────── */
-  const { data: vehicles } = useVehicles();
+  /* ── Vehicle selector (Phase 40 / Prompt 16: header picker is the source of truth) ─ */
+  // Alert drillthrough URLs (?vehicle_id=…&t=…) flow into the global store
+  // via useSelectedVehicle; useAlertContext is still consulted for the
+  // timestamp & signal name used by the chart marker below.
   const alertCtx = useAlertContext();
-  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
-  // When the user lands here from an alert (`?vehicle_id=…`), preselect that
-  // vehicle so the charts immediately scope to it (Phase 40 / Prompt 14).
-  const vehicleId = selectedVehicle ?? alertCtx.vehicleId ?? vehicles?.[0]?.id ?? null;
+  const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : null;
 
   // The alert timestamp used for the chart marker, formatted to match the
@@ -360,16 +360,6 @@ export default function BatteryHealthPage() {
       actions={
         <span className="flex items-center gap-3">
           <LiveIndicator variant="compact" />
-          {vehicles && vehicles.length > 1 ? (
-            <Select
-              options={(vehicles ?? []).map((v) => ({
-                value: String(v.id),
-                label: v.display_name || v.vin,
-              }))}
-              value={vehicleIdStr ?? ''}
-              onChange={(e) => setSelectedVehicle(Number(e.target.value))}
-            />
-          ) : null}
         </span>
       }
     >

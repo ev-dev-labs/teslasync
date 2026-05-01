@@ -26,7 +26,6 @@ import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/Select';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { MetricCard } from '@/components/data-display/MetricCard';
 import { LiveIndicator } from '@/components/data-display/LiveIndicator';
@@ -53,6 +52,7 @@ import {
   AREA_DEFAULTS,
 } from '@/components/charts';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useSettings } from '@/hooks/useSettings';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
@@ -203,35 +203,16 @@ export default function NavigationRoutePage() {
   usePageTitle(t('nav.pageTitle', 'Navigation & Route'));
   const { convertDistance, distanceUnit } = useSettings();
 
-  /* ---- vehicle selector state ---- */
-  const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
+  /* ---- vehicle selector — Phase 40 / Prompt 16: header VehiclePicker is the source of truth ---- */
+  const { vehicleId } = useSelectedVehicle();
 
   const {
-    data: vehicles,
     isLoading: vehiclesLoading,
     error: vehiclesError,
   } = useQuery<Vehicle[]>({
     queryKey: ['vehicles'],
     queryFn: () => request<Vehicle[]>('/vehicles'),
   });
-
-  const vehicleId = selectedVehicleId ?? vehicles?.[0]?.id ?? null;
-
-  const vehicleOptions = useMemo(
-    () =>
-      (vehicles ?? []).map((v) => ({
-        value: String(v.id),
-        label: v.display_name || v.vin,
-      })),
-    [vehicles],
-  );
-
-  const handleVehicleChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
-      setSelectedVehicleId(Number(e.target.value));
-    },
-    [],
-  );
 
   /* ---- latest snapshot ---- */
   const {
@@ -532,12 +513,6 @@ export default function NavigationRoutePage() {
       actions={
         <span className="flex items-center gap-3">
           <LiveIndicator variant="compact" />
-          <Select
-            value={String(vehicleId ?? '')}
-            onChange={handleVehicleChange}
-            options={vehicleOptions}
-            placeholder={t('nav.selectVehicle', 'Select vehicle')}
-          />
           <Button
             variant="ghost"
             size="sm"

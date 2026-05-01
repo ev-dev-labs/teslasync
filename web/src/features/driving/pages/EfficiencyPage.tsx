@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { Zap, TrendingUp, Thermometer, Fuel, Gauge } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Select } from '@/components/ui/Select';
 import { DataTable } from '@/components/ui/DataTable';
 import { MetricBar } from '@/components/data-display/MetricBar';
 import {
@@ -20,10 +19,10 @@ import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { useDrivingStats, useDrives } from '@/api/hooks/useDriving';
-import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useAnnotations } from '@/hooks/useAnnotations';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import type { Drive } from '@/types/driving';
@@ -54,9 +53,8 @@ export default function EfficiencyPage() {
   const { t } = useTranslation();
   usePageTitle(t('efficiency.title', 'Efficiency'));
 
-  const { data: vehicles } = useVehicles();
-  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
-  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
+  // Phase 40 / Prompt 16: header VehiclePicker is the source of truth.
+  const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
 
   const { data: stats } = useDrivingStats(vehicleIdStr);
@@ -221,18 +219,11 @@ export default function EfficiencyPage() {
     ? fmtNumber(1000 / stats.avgEfficiencyWhKm, 1)
     : '—';
 
-  const vehicleOptions = (vehicles ?? []).map((v) => ({
-    value: String(v.id), label: v.display_name || v.vin,
-  }));
-
   return (
     <PageContainer
       title={t('efficiency.title', 'Efficiency')}
       subtitle={t('efficiency.subtitle', 'Energy consumption and driving efficiency analysis')}
       error={null}
-      actions={vehicleOptions.length > 0 ? (
-        <Select value={String(vehicleId ?? '')} onChange={(e) => setSelectedVehicle(Number(e.target.value))} options={vehicleOptions} />
-      ) : undefined}
     >
       {/* Date filter */}
       <FadeIn>

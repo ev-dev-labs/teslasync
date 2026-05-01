@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Select } from '@/components/ui';
+import { GlassPanel } from '@/components/ui';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { Activity } from 'lucide-react';
@@ -10,9 +10,9 @@ import {
   ChartTooltip, chartGrid, axisTickSm,
 } from '@/components/charts';
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
-import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSettings } from '@/hooks/useSettings';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { DAYS } from '@/lib/constants';
 import type { ChargingSession } from '@/api/types';
@@ -60,9 +60,8 @@ export default function ChargingHeatmapPage() {
   usePageTitle(t('charging.heatmap.title', 'Charging Patterns'));
   useSettings();
 
-  const { data: vehicles } = useVehicles();
-  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
-  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
+  // Phase 40 / Prompt 16: header VehiclePicker is the source of truth.
+  const { vehicleId } = useSelectedVehicle();
 
   const { data: sessions, isLoading, error } = useChargingSessionsPaginated(vehicleId, {
     limit: 2000,
@@ -102,11 +101,6 @@ export default function ChargingHeatmapPage() {
 
   const [hovered, setHovered] = useState<{ day: number; hour: number } | null>(null);
 
-  const vehicleOptions = (vehicles ?? []).map((v) => ({
-    value: String(v.id),
-    label: v.display_name || v.vin,
-  }));
-
   if (isLoading) {
     return (
       <PageContainer title={t('charging.heatmap.title', 'Charging Patterns')} subtitle={t('charging.heatmap.subtitle', 'When and where you charge')}>
@@ -125,15 +119,6 @@ export default function ChargingHeatmapPage() {
       title={t('charging.heatmap.title', 'Charging Patterns')}
       subtitle={t('charging.heatmap.subtitle', 'When and where you charge')}
       error={error as Error | null}
-      actions={
-        vehicleOptions.length > 1 ? (
-          <Select
-            options={vehicleOptions}
-            value={String(vehicleId ?? '')}
-            onChange={(e) => setSelectedVehicle(Number(e.target.value))}
-          />
-        ) : undefined
-      }
     >
       {/* ── Stat cards ── */}
       <StaggerContainer className="grid grid-cols-2 gap-4 lg:grid-cols-4">

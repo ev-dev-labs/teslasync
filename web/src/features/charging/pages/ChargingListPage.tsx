@@ -1,15 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout';
-import { Select } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { QueryError } from '@/components/feedback';
 import { DateRangeFilter } from '@/components/forms';
 import { useChargingSessionsPaginated, useChargingOptimizer } from '@/api/hooks/useCharging';
-import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useAlertContext } from '@/hooks/useAlertContext';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import {
   HeroGauges,
   QuickMetrics,
@@ -40,10 +38,11 @@ export default function ChargingListPage() {
   usePageTitle(t('charging.list.title', 'Charging Sessions'));
 
   const { convertDistance, distanceUnit } = useSettings();
-  const { data: vehicles } = useVehicles();
-  const alertCtx = useAlertContext();
+  // Phase 40 / Prompt 16: header VehiclePicker is the source of truth.
+  // Alert drillthrough URLs (?vehicle_id=...) flow into the same store via
+  // useSelectedVehicle, so prior alert-context handling is no longer needed.
+  const { vehicleId } = useSelectedVehicle();
 
-  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState<SortKey>('date');
   const [sortDesc, setSortDesc] = useState(true);
   const [chargerFilter, setChargerFilter] = useState<ChargerFilter>('all');
@@ -57,10 +56,6 @@ export default function ChargingListPage() {
   });
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
 
-  // When the user lands here from a charging-related alert (`?vehicle_id=…`),
-  // preselect that vehicle so the session list immediately scopes to it
-  // (Phase 40 / Prompt 14). Manual selection still wins over alert context.
-  const vehicleId = selectedVehicle ?? alertCtx.vehicleId ?? vehicles?.[0]?.id ?? null;
   const {
     data: sessions,
     isLoading,
@@ -102,19 +97,6 @@ export default function ChargingListPage() {
     <PageContainer
       title={t('charging.list.title', 'Charging Sessions')}
       subtitle={t('charging.list.subtitle', 'Cost analysis, charger breakdown, energy patterns, and performance tracking')}
-      actions={
-        vehicles && vehicles.length > 0 ? (
-          <Select
-            value={String(vehicleId ?? '')}
-            onChange={(e) => setSelectedVehicle(Number(e.target.value))}
-            className="text-sm px-3 py-2"
-            options={vehicles.map((v) => ({
-              value: String(v.id),
-              label: v.display_name || v.vin,
-            }))}
-          />
-        ) : undefined
-      }
     >
       <FadeIn>
         <DateRangeFilter

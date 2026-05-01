@@ -1,0 +1,99 @@
+import { describe, expect, it, beforeEach, afterEach } from 'vitest';
+import { act, render, renderHook } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import {
+  SelectedVehicleProvider,
+  useSelectedVehicleStore,
+  __SELECTED_VEHICLE_STORAGE_KEY__,
+} from '../selectedVehicle';
+
+const STORAGE_KEY = __SELECTED_VEHICLE_STORAGE_KEY__;
+
+function wrapper({ children }: { children: ReactNode }) {
+  return <SelectedVehicleProvider>{children}</SelectedVehicleProvider>;
+}
+
+describe('SelectedVehicleProvider', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  afterEach(() => {
+    window.localStorage.clear();
+  });
+
+  it('starts with null when localStorage is empty', () => {
+    const { result } = renderHook(() => useSelectedVehicleStore(), { wrapper });
+    expect(result.current.vehicleId).toBeNull();
+  });
+
+  it('hydrates from localStorage on mount', () => {
+    window.localStorage.setItem(STORAGE_KEY, '42');
+    const { result } = renderHook(() => useSelectedVehicleStore(), { wrapper });
+    expect(result.current.vehicleId).toBe(42);
+  });
+
+  it('ignores garbage values in localStorage', () => {
+    window.localStorage.setItem(STORAGE_KEY, 'not-a-number');
+    const { result } = renderHook(() => useSelectedVehicleStore(), { wrapper });
+    expect(result.current.vehicleId).toBeNull();
+  });
+
+  it('ignores non-positive ids in localStorage', () => {
+    window.localStorage.setItem(STORAGE_KEY, '0');
+    const { result } = renderHook(() => useSelectedVehicleStore(), { wrapper });
+    expect(result.current.vehicleId).toBeNull();
+  });
+
+  it('setVehicleId updates state and persists to localStorage', () => {
+    const { result } = renderHook(() => useSelectedVehicleStore(), { wrapper });
+    act(() => {
+      result.current.setVehicleId(7);
+    });
+    expect(result.current.vehicleId).toBe(7);
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('7');
+  });
+
+  it('setVehicleId(null) clears the persisted value', () => {
+    window.localStorage.setItem(STORAGE_KEY, '7');
+    const { result } = renderHook(() => useSelectedVehicleStore(), { wrapper });
+    act(() => {
+      result.current.setVehicleId(null);
+    });
+    expect(result.current.vehicleId).toBeNull();
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it('responds to cross-tab storage events', () => {
+    const { result } = renderHook(() => useSelectedVehicleStore(), { wrapper });
+    expect(result.current.vehicleId).toBeNull();
+    act(() => {
+      window.dispatchEvent(
+        new StorageEvent('storage', { key: STORAGE_KEY, newValue: '99' }),
+      );
+    });
+    expect(result.current.vehicleId).toBe(99);
+    act(() => {
+      window.dispatchEvent(
+        new StorageEvent('storage', { key: STORAGE_KEY, newValue: null }),
+      );
+    });
+    expect(result.current.vehicleId).toBeNull();
+  });
+
+  it('throws a clear error when used outside the provider', () => {
+    // renderHook will surface the error inside `result.current` is unavailable;
+    // catch it via render to keep the assertion explicit.
+    const Probe = () => {
+      useSelectedVehicleStore();
+      return null;
+    };
+    const consoleError = console.error;
+    console.error = () => {}; // silence React's expected boundary error
+    try {
+      expect(() => render(<Probe />)).toThrow(/SelectedVehicleProvider/);
+    } finally {
+      console.error = consoleError;
+    }
+  });
+});

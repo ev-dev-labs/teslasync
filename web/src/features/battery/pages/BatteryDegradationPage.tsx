@@ -7,7 +7,7 @@ import {
 
 import { PageContainer, Grid } from '@/components/layout';
 import {
-  GlassPanel, Badge, Button as ControlButton, Select as ControlSelect, DataTable, type Column,
+  GlassPanel, Badge, Button as ControlButton, DataTable, type Column,
 } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import {
@@ -21,9 +21,9 @@ import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { useBatteryHealthAnalytics, useBatteryDegradation } from '@/api/hooks/useEnergy';
-import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useAnnotations } from '@/hooks/useAnnotations';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { formatDate } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -100,10 +100,8 @@ export default function BatteryDegradationPage() {
   const { t } = useTranslation();
   usePageTitle(t('battery.degradation.title', 'Battery Degradation'));
 
-  /* Vehicle selector */
-  const { data: vehicles } = useVehicles();
-  const [vehicleId, setVehicleId] = useState<number | null>(null);
-  const activeId = vehicleId ?? vehicles?.[0]?.id ?? null;
+  /* Vehicle selector — Phase 40 / Prompt 16: header picker is the source of truth */
+  const { vehicleId: activeId } = useSelectedVehicle();
   const activeIdStr = activeId != null ? String(activeId) : null;
 
   /* Battery health analytics (for overview stats, history table) */
@@ -243,18 +241,6 @@ export default function BatteryDegradationPage() {
       subtitle={t('Health trends, degradation predictions, and charging habit impact')}
       loading={isLoading}
       error={error as Error | null}
-      actions={
-        vehicles && vehicles.length > 1 ? (
-          <ControlSelect
-            options={vehicles.map((v) => ({
-              value: String(v.id),
-              label: v.display_name || v.vin,
-            }))}
-            value={String(activeId ?? '')}
-            onChange={(e) => setVehicleId(Number(e.target.value))}
-          />
-        ) : undefined
-      }
     >
       {/* ── Summary Metrics ───────────────────────────── */}
       <FadeIn>

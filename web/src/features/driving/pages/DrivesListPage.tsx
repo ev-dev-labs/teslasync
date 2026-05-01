@@ -9,7 +9,6 @@ import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/Select';
 import { Pagination } from '@/components/ui/Pagination';
 import {
   ChartContainer, ChartTooltip,
@@ -31,9 +30,9 @@ import { FadeIn } from '@/components/motion/FadeIn';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
 import { useDrives, useDrivingStats } from '@/api/hooks/useDriving';
-import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { formatDateTime, formatDateShort, formatDurationMinutes } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -179,10 +178,8 @@ export default function DrivesListPage() {
   const { t } = useTranslation();
   usePageTitle(t('drives.title', 'Drive History'));
 
-  /* Data hooks */
-  const { data: vehicles } = useVehicles();
-  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
-  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
+  /* Data hooks — Phase 40 / Prompt 16: header VehiclePicker is the source of truth */
+  const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const { data: drives, isLoading: isDrivesLoading, error: drivesError } = useDrives(vehicleIdStr);
   const { data: stats } = useDrivingStats(vehicleIdStr);
@@ -291,25 +288,11 @@ export default function DrivesListPage() {
     }));
   }, [filteredDrives]);
 
-  const vehicleOptions = (vehicles ?? []).map((v) => ({
-    value: String(v.id),
-    label: v.display_name || v.vin,
-  }));
-
   return (
     <PageContainer
       title={t('drives.title', 'Drive History')}
       subtitle={t('drives.subtitle', 'Trip scoring, efficiency analysis, distance patterns, and performance data')}
       error={drivesError as Error | null}
-      actions={
-        vehicleOptions.length > 0 ? (
-          <Select
-            value={String(vehicleId ?? '')}
-            onChange={(e) => setSelectedVehicle(Number(e.target.value))}
-            options={vehicleOptions}
-          />
-        ) : undefined
-      }
     >
       {/* Date range + search filter */}
       <FadeIn>

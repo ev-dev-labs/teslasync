@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, Button, Select, DataTable, type Column } from '@/components/ui';
+import { GlassPanel, Badge, Button, DataTable, type Column } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import {
   RadialGauge, ChartTooltip, CHART_COLORS, AREA_DEFAULTS,
@@ -17,8 +17,8 @@ import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { FadeIn } from '@/components/motion';
 
-import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useSettings } from '@/hooks/useSettings';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
@@ -158,14 +158,11 @@ export default function TirePressurePage() {
 
   const gaugeMax = convertPressure(GAUGE_MAX_BAR);
 
-  const [vehicleId, setVehicleId] = useState<number | null>(null);
+  // Phase 40 / Prompt 16: header VehiclePicker is the source of truth.
+  const { vehicleId: activeVehicleId } = useSelectedVehicle();
   const [timeRange, setTimeRange] = useState(30);
 
   /* ---- API queries ---- */
-
-  const { data: vehicles } = useVehicles();
-
-  const activeVehicleId = vehicleId ?? vehicles?.[0]?.id ?? null;
 
   const {
     data: latest,
@@ -288,18 +285,6 @@ export default function TirePressurePage() {
       subtitle={t('tirePressure.subtitle', 'Monitor tire pressure readings and history')}
       loading={isLoading}
       error={latestError as Error | null}
-      actions={
-        vehicles && vehicles.length > 1 ? (
-          <Select
-            options={vehicles.map((v) => ({
-              value: String(v.id),
-              label: v.display_name || v.vin,
-            }))}
-            value={String(activeVehicleId ?? '')}
-            onChange={(e) => setVehicleId(Number(e.target.value))}
-          />
-        ) : undefined
-      }
     >
       {anyError && (
         <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>

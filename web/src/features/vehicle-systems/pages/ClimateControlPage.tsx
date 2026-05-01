@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import {
@@ -24,7 +24,6 @@ import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/Select';
 import { DataTable, useSortToggle, type Column } from '@/components/ui/DataTable';
 import { MetricCard } from '@/components/data-display/MetricCard';
 import { RadialGauge } from '@/components/charts/RadialGauge';
@@ -50,12 +49,13 @@ import {
 } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useSettings } from '@/hooks/useSettings';
 import { formatDateTime, formatTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { CHART_COLORS } from '@/lib/colors';
 
-import { useVehicles, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
+import { useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { useClimate, useClimateHistory } from '@/api/hooks/useVehicleSystems';
 import type { ClimateState } from '@/types/vehicle-systems';
 
@@ -250,11 +250,9 @@ export default function ClimateControlPage() {
   const isFahrenheit = tempUnit === '°F';
   const tempGaugeMax = isFahrenheit ? 131 : 55;
 
-  /* ─── Vehicle selector ─── */
-  const { data: vehicles } = useVehicles();
-  const [vehicleId, setVehicleId] = useState<string | null>(null);
-  const activeId =
-    vehicleId ?? (vehicles?.[0]?.id != null ? String(vehicles[0].id) : '');
+  /* ─── Vehicle selector — Phase 40 / Prompt 16: header VehiclePicker is the source of truth ─── */
+  const { vehicleId } = useSelectedVehicle();
+  const activeId = vehicleId != null ? String(vehicleId) : '';
 
   /* ─── Climate data ─── */
   const {
@@ -417,16 +415,6 @@ export default function ClimateControlPage() {
       error={error as Error | null}
       actions={
         <div className="flex items-center gap-3">
-          {vehicles && vehicles.length > 1 && (
-            <Select
-              options={vehicles.map((v) => ({
-                value: String(v.id),
-                label: v.display_name || v.vin,
-              }))}
-              value={activeId}
-              onChange={(e) => setVehicleId(e.target.value)}
-            />
-          )}
           <Button
             variant="ghost"
             size="sm"
