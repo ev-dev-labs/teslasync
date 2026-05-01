@@ -131,6 +131,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
         manualChunks: {
@@ -140,6 +141,7 @@ export default defineConfig({
           'vendor-map': ['leaflet', 'react-leaflet'],
           'vendor-motion': ['framer-motion'],
           'vendor-icons': ['lucide-react'],
+          'vendor-i18n': ['i18next', 'react-i18next'],
         },
       },
     },

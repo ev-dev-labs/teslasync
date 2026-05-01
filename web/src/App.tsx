@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
 import Layout from './components/layout/Layout'
 import { ScrollRestoration } from './components/layout/ScrollRestoration'
-import { PageLoader } from './components/feedback/PageLoader'
+import { PageLoadSkeleton } from './components/feedback/PageLoadSkeleton'
 import { ErrorBoundary } from './components/feedback/ErrorBoundary'
 import { AuthExpiredOverlay } from '@/components/feedback'
 import { OnboardingGate } from '@/features/onboarding/components/OnboardingGate'
@@ -144,11 +144,14 @@ const SharedDrive = lazy(() => import('./features/sharing/pages/SharedDrivePage'
 // Watch (standalone — no Layout, API key auth)
 const WatchFace = lazy(() => import('./features/watch/pages/WatchFacePage'))
 
-/** Route wrapper: Suspense for lazy loading + ErrorBoundary for crash isolation */
+/** Route wrapper: Suspense for lazy loading + ErrorBoundary for crash isolation.
+ *  Uses PageLoadSkeleton (layout-shaped) instead of a plain spinner so the page
+ *  doesn't reflow when the lazy chunk arrives — important for our CLS budget.
+ *  See web/lighthouserc.json for the active assertions (Phase 40 / Prompt 35). */
 function SafeRoute({ children, name }: { children: React.ReactNode; name: string }) {
   return (
     <ErrorBoundary name={name}>
-      <Suspense fallback={<PageLoader />}>{children}</Suspense>
+      <Suspense fallback={<PageLoadSkeleton />}>{children}</Suspense>
     </ErrorBoundary>
   )
 }

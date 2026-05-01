@@ -1,0 +1,177 @@
+#!/usr/bin/env node
+/**
+ * Phase 40 / Prompt 35 — Performance baseline measurement.
+ *
+ * Builds the app, serves it with `vite preview`, then drives Lighthouse
+ * (via npx) against each route in ROUTES. Writes the resulting metrics
+ * to web/perf-baseline.json so future PRs can diff against it.
+ *
+ * Usage:
+ *   cd web
+ *   npm run perf:baseline
+ *
+ * Requires Chrome / Chromium to be installed on the host. Lighthouse
+ * itself is fetched via `npx -y lighthouse@latest`, so no permanent
+ * dev-dependency is added — keep the install lean.
+ */
+import { spawn, spawnSync } from 'node:child_process'
+import { mkdirSync, readFileSync, writeFileSync, existsSync, statSync, readdirSync } from 'node:fs'
+import { join, dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { gzipSync } from 'node:zlib'
+import { setTimeout as sleep } from 'node:timers/promises'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const WEB_ROOT = resolve(__dirname, '..')
+const BASELINE_PATH = join(WEB_ROOT, 'perf-baseline.json')
+const DIST_DIR = join(WEB_ROOT, 'dist')
+const PREVIEW_PORT = 4173
+
+const ROUTES = [
+  '/',
+  '/vehicles',
+  '/drives',
+  '/analytics',
+  '/charging',
+]
+
+function log(...args) {
+  console.log('[perf:baseline]', ...args)
+}
+
+function buildIfNeeded() {
+  if (existsSync(DIST_DIR) && existsSync(join(DIST_DIR, 'index.html'))) {
+    log('reusing existing dist/ — delete to force a fresh build')
+    return
+  }
+  log('running `npm run build`')
+  const r = spawnSync('npm', ['run', 'build'], { cwd: WEB_ROOT, stdio: 'inherit', shell: true })
+  if (r.status !== 0) {
+    throw new Error(`npm run build failed (exit ${r.status})`)
+  }
+}
+
+function startPreview() {
+  log(`starting vite preview on :${PREVIEW_PORT}`)
+  const proc = spawn('npx', ['vite', 'preview', '--port', String(PREVIEW_PORT), '--strictPort'], {
+    cwd: WEB_ROOT,
+    stdio: ['ignore', 'pipe', 'pipe'],
+    shell: true,
+  })
+  proc.stdout.on('data', (d) => process.stdout.write(`[preview] ${d}`))
+  proc.stderr.on('data', (d) => process.stderr.write(`[preview] ${d}`))
+  return proc
+}
+
+async function waitForServer(url, attempts = 60) {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const res = await fetch(url)
+      if (res.ok) return true
+    } catch {
+      /* not yet */
+    }
+    await sleep(500)
+  }
+  throw new Error(`server at ${url} did not become ready in ${attempts * 500}ms`)
+}
+
+function runLighthouse(url) {
+  log(`lighthouse ${url}`)
+  const args = [
+    '-y', 'lighthouse@latest',
+    url,
+    '--quiet',
+    '--output=json',
+    '--only-categories=performance',
+    '--chrome-flags=--headless=new --no-sandbox --disable-gpu',
+    '--max-wait-for-load=45000',
+  ]
+  const r = spawnSync('npx', args, { cwd: WEB_ROOT, encoding: 'utf8', shell: true, maxBuffer: 32 * 1024 * 1024 })
+  if (r.status !== 0) {
+    console.error(r.stderr)
+    throw new Error(`lighthouse failed for ${url} (exit ${r.status})`)
+  }
+  const json = JSON.parse(r.stdout)
+  const audits = json.audits ?? {}
+  const num = (k) => (audits[k]?.numericValue ?? null)
+  return {
+    fcp: num('first-contentful-paint'),
+    lcp: num('largest-contentful-paint'),
+    tbt: num('total-blocking-time'),
+    cls: num('cumulative-layout-shift'),
+    tti: num('interactive'),
+    speedIndex: num('speed-index'),
+    transferKB: Math.round(((audits['total-byte-weight']?.numericValue ?? 0) / 1024) * 100) / 100,
+  }
+}
+
+function summariseBundle() {
+  const assetsDir = join(DIST_DIR, 'assets')
+  if (!existsSync(assetsDir)) {
+    return { totalGzippedJsKB: null, entryGzippedKB: null, chunkCount: null }
+  }
+  const files = readdirSync(assetsDir).filter((f) => f.endsWith('.js'))
+  let totalGz = 0
+  let entryGz = null
+  for (const f of files) {
+    const buf = readFileSync(join(assetsDir, f))
+    const gz = gzipSync(buf).length
+    totalGz += gz
+    if (f.startsWith('index-')) entryGz = gz
+  }
+  const kb = (n) => Math.round((n / 1024) * 100) / 100
+  return {
+    totalGzippedJsKB: kb(totalGz),
+    entryGzippedKB: entryGz != null ? kb(entryGz) : null,
+    chunkCount: files.length,
+  }
+}
+
+async function main() {
+  buildIfNeeded()
+  if (!existsSync(DIST_DIR)) {
+    throw new Error('dist/ not found — build must succeed first')
+  }
+  if (!statSync(DIST_DIR).isDirectory()) {
+    throw new Error('dist/ exists but is not a directory')
+  }
+
+  mkdirSync(dirname(BASELINE_PATH), { recursive: true })
+
+  const preview = startPreview()
+  let exitCode = 0
+  try {
+    await waitForServer(`http://localhost:${PREVIEW_PORT}/`)
+    const routeResults = {}
+    for (const route of ROUTES) {
+      try {
+        routeResults[route] = runLighthouse(`http://localhost:${PREVIEW_PORT}${route}`)
+      } catch (err) {
+        log(`route ${route} failed:`, err.message)
+        routeResults[route] = { error: err.message }
+        exitCode = 1
+      }
+    }
+
+    const baseline = {
+      $schema: './perf-baseline.schema.json',
+      comment: 'Performance baseline — regenerated by `npm run perf:baseline`. Phase 40 / Prompt 35.',
+      generatedAt: new Date().toISOString(),
+      lighthouseVersion: 'latest (via npx)',
+      build: summariseBundle(),
+      routes: routeResults,
+    }
+    writeFileSync(BASELINE_PATH, JSON.stringify(baseline, null, 2) + '\n')
+    log(`wrote ${BASELINE_PATH}`)
+  } finally {
+    log('stopping preview server')
+    preview.kill()
+  }
+  process.exit(exitCode)
+}
+
+main().catch((err) => {
+  console.error('[perf:baseline] fatal:', err)
+  process.exit(1)
+})

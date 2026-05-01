@@ -58,3 +58,25 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </ErrorBoundary>
   </React.StrictMode>,
 )
+
+// ── Web Vitals reporting (Phase 40 / Prompt 35) ───────────────────────────────
+// Lazy-loaded so it never blocks first paint. In dev we log to the console;
+// production currently no-ops (a future prompt will POST to a backend endpoint).
+// Captures the Core Web Vitals plus FCP/TTFB so we can correlate with the
+// performance budget in copilot-instructions.md (FCP < 1.5s on 4G).
+void import('web-vitals').then(({ onCLS, onINP, onLCP, onFCP, onTTFB }) => {
+  const report = (m: { name: string; value: number; id: string; rating?: string }) => {
+    if (import.meta.env.DEV) {
+      console.debug('[web-vitals]', m.name, Math.round(m.value), m.rating ?? '', m.id)
+    }
+  }
+  onCLS(report)
+  onINP(report)
+  onLCP(report)
+  onFCP(report)
+  onTTFB(report)
+}).catch((err) => {
+  if (import.meta.env.DEV) {
+    console.warn('[web-vitals] failed to load:', err)
+  }
+})

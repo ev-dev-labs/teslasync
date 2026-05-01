@@ -8,6 +8,7 @@ export { Skeleton } from './Skeleton';
 export { ChartSkeleton } from './ChartSkeleton';
 export { StatSkeleton } from './StatSkeleton';
 export { PageLoader } from './PageLoader';
+export { PageLoadSkeleton } from './PageLoadSkeleton';
 export { QueryError } from './QueryError';
 export { AlertBanner } from './AlertBanner';
 export { LiveStaleDataBanner } from './LiveStaleDataBanner';

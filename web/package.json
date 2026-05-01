@@ -7,11 +7,14 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "postbuild": "node scripts/check-bundle-size.mjs",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "perf:baseline": "node scripts/measure-perf.mjs",
+    "perf:check": "node scripts/check-bundle-size.mjs --strict",
     "audit:a11y": "pwsh ../scripts/a11y-audit.ps1",
     "audit:i18n": "pwsh ../scripts/i18n-coverage.ps1",
     "i18n:validate": "node ../scripts/i18n-validate-keys.mjs",
@@ -43,6 +46,7 @@
     "react-router-dom": "^6.22.3",
     "recharts": "^2.12.3",
     "tailwind-merge": "^3.5.0",
+    "web-vitals": "^4.2.4",
     "zod": "^3.25.76"
   },
   "devDependencies": {
