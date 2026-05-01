@@ -27,41 +27,33 @@ const (
 // TripPlannerHandler provides trip planning with range estimation and
 // charging stop optimization.
 //
-// Phase-39 migration (ADR-002 / phase-39): the two "value as of now"
-// lookups that seed the trip plan when the request omits them — current
-// SOC (BatteryLevel) and current Location — now resolve through the
-// canonical signal.StateReader instead of the legacy
-// *database.SignalLogReader. The lookups map 1:1 onto StateReader.SignalAt
+// Phase-39 migration (ADR-002 / phase-39): all signal_log reads — current
+// SOC (BatteryLevel) and current Location at the request boundary, plus
+// EnergyRemaining and BatteryLevel inside batteryCapacity — now resolve
+// through the canonical signal.StateReader instead of the legacy
+// *database.SignalLogReader. Each lookup maps 1:1 onto StateReader.SignalAt
 // with identical semantics (forward-folded read at time.Now()).
 //
-// As part of this migration, transport errors from state.SignalAt now
-// propagate to the caller as a 500 instead of being silently swallowed
-// behind hardcoded defaults (CurrentSOC = 80, "origin is required" 400).
-// The legacy silent-default behavior was indistinguishable on the
-// frontend from "client really wants the default 80% / really forgot to
-// pass an origin" and would route every plan from the wrong starting
+// As part of this migration, transport errors from state.SignalAt at the
+// request boundary now propagate to the caller as a 500 instead of being
+// silently swallowed behind hardcoded defaults (CurrentSOC = 80, "origin
+// is required" 400). The legacy silent-default behavior was indistinguishable
+// on the frontend from "client really wants the default 80% / really forgot
+// to pass an origin" and would route every plan from the wrong starting
 // SOC / wrong origin during a signal-store outage.
 //
 // The "signal value never emitted" case (StateReader returns (nil, nil))
 // is still handled by falling through to the existing default / 400
 // fallbacks, matching the legacy "missing data" UX.
-//
-// The legacy *database.SignalLogReader is intentionally retained on the
-// struct because the per-leg battery-capacity heuristic in
-// trip_planner_handler_compute.go (batteryCapacity → SignalAt for
-// EnergyRemaining and BatteryLevel) still uses it. That capacity-
-// estimation path is a separate concern outside the scope of this
-// migration prompt.
 type TripPlannerHandler struct {
-	db              *database.DB
-	cache           *cache.Store
-	state           signal.StateReader
-	signalLogReader *database.SignalLogReader
+	db    *database.DB
+	cache *cache.Store
+	state signal.StateReader
 }
 
 // NewTripPlannerHandler creates a new TripPlannerHandler.
-func NewTripPlannerHandler(db *database.DB, cache *cache.Store, state signal.StateReader, slr *database.SignalLogReader) *TripPlannerHandler {
-	return &TripPlannerHandler{db: db, cache: cache, state: state, signalLogReader: slr}
+func NewTripPlannerHandler(db *database.DB, cache *cache.Store, state signal.StateReader) *TripPlannerHandler {
+	return &TripPlannerHandler{db: db, cache: cache, state: state}
 }
 
 // ── Handlers ────────────────────────────────────────────────────────────

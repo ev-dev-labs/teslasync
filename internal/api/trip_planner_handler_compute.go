@@ -293,9 +293,14 @@ func (h *TripPlannerHandler) vehicleEfficiency(ctx context.Context, vehicleID in
 
 // batteryCapacity returns the usable battery capacity for the vehicle.
 func (h *TripPlannerHandler) batteryCapacity(ctx context.Context, vehicleID int64) float64 {
-	// Try capacity from signal_log (EnergyRemaining = current usable kWh)
-	if h.signalLogReader != nil {
-		val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "EnergyRemaining", time.Now())
+	// Try capacity from signal_log (EnergyRemaining = current usable kWh).
+	// Phase-39 / ADR-002: this lookup now goes through the canonical
+	// signal.StateReader.SignalAt instead of the legacy
+	// *database.SignalLogReader.SignalAt that this prompt deletes from
+	// internal/database/signal_log_reader_query.go. Identical forward-
+	// folded semantics anchored at time.Now().
+	if h.state != nil {
+		val, err := h.state.SignalAt(ctx, vehicleID, "EnergyRemaining", time.Now())
 		if err == nil && val != nil {
 			if capacityKWh, ok := val.(float64); ok && capacityKWh > 20 {
 				return capacityKWh
@@ -304,8 +309,8 @@ func (h *TripPlannerHandler) batteryCapacity(ctx context.Context, vehicleID int6
 	}
 
 	// Fall back to nominal × health derived from BatteryLevel signal history
-	if h.signalLogReader != nil {
-		val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "BatteryLevel", time.Now())
+	if h.state != nil {
+		val, err := h.state.SignalAt(ctx, vehicleID, "BatteryLevel", time.Now())
 		if err == nil && val != nil {
 			if soc, ok := val.(float64); ok && soc > 0 && soc <= 100 {
 				// BatteryLevel is SOC%; use it as a rough health proxy

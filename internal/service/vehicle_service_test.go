@@ -16,19 +16,19 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
-// fakeSnapshotReader is an in-memory SignalSnapshotReader used to drive the
+// fakeStateReader is an in-memory SignalStateReader used to drive the
 // BuildStateFromSignalStore fallback paths under test. It records every call
 // for assertion and returns a pre-canned snapshot map / error.
-type fakeSnapshotReader struct {
+type fakeStateReader struct {
 	mu            sync.Mutex
-	snapshot      map[string]interface{}
+	snapshot      signal.State
 	err           error
 	calls         int
 	lastVehicleID int64
 	lastAt        time.Time
 }
 
-func (f *fakeSnapshotReader) SnapshotAt(_ context.Context, vehicleID int64, at time.Time) (map[string]interface{}, error) {
+func (f *fakeStateReader) State(_ context.Context, vehicleID int64, at time.Time) (signal.State, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.calls++
@@ -37,7 +37,7 @@ func (f *fakeSnapshotReader) SnapshotAt(_ context.Context, vehicleID int64, at t
 	if f.err != nil {
 		return nil, f.err
 	}
-	out := make(map[string]interface{}, len(f.snapshot))
+	out := make(signal.State, len(f.snapshot))
 	for k, v := range f.snapshot {
 		out[k] = v
 	}
@@ -45,15 +45,15 @@ func (f *fakeSnapshotReader) SnapshotAt(_ context.Context, vehicleID int64, at t
 }
 
 // newSvc builds a VehicleService wired only with the bits the fallback path
-// touches: the SignalSnapshotReader. stateRepo is intentionally nil so the
+// touches: the SignalStateReader. stateRepo is intentionally nil so the
 // test never reaches a real database; BuildStateFromSignalStore must guard
 // the call. This also doubles as a guard for ADR-001 — if the implementation
 // secretly tried to read a snapshot table through positionRepo/securityRepo
 // it would nil-pointer-panic here.
-func newSvc(reader SignalSnapshotReader) *VehicleService {
+func newSvc(reader SignalStateReader) *VehicleService {
 	svc := &VehicleService{}
 	if reader != nil {
-		svc.WithSignalLogReader(reader)
+		svc.WithStateReader(reader)
 	}
 	return svc
 }
@@ -79,7 +79,7 @@ func TestBuildStateFromSignalStore_LiveValuesAlwaysWin(t *testing.T) {
 		"BatteryLevel": float64(80),
 		"VehicleSpeed": 42.0,
 	})
-	fake := &fakeSnapshotReader{snapshot: map[string]interface{}{
+	fake := &fakeStateReader{snapshot: signal.State{
 		"Odometer":    12345.6,
 		"InsideTemp":  22.7,
 		"OutsideTemp": 18.0,
@@ -108,7 +108,7 @@ func TestBuildStateFromSignalStore_LiveValuesAlwaysWin(t *testing.T) {
 		t.Errorf("Speed: live should win, got %v", state.Speed)
 	}
 	if fake.calls > 1 {
-		t.Errorf("SnapshotAt calls: expected 0 or 1, got %d", fake.calls)
+		t.Errorf("State calls: expected 0 or 1, got %d", fake.calls)
 	}
 }
 
@@ -121,7 +121,7 @@ func TestBuildStateFromSignalStore_FillsZeroFieldsFromSignalLog(t *testing.T) {
 		"BatteryLevel": float64(55),
 		"VehicleSpeed": 30.0,
 	})
-	fake := &fakeSnapshotReader{snapshot: map[string]interface{}{
+	fake := &fakeStateReader{snapshot: signal.State{
 		"Odometer":          12345.6,
 		"InsideTemp":        22.7,
 		"OutsideTemp":       18.0,
@@ -169,13 +169,13 @@ func TestBuildStateFromSignalStore_FillsZeroFieldsFromSignalLog(t *testing.T) {
 	}
 
 	if fake.calls != 1 {
-		t.Errorf("SnapshotAt calls: want 1, got %d", fake.calls)
+		t.Errorf("State calls: want 1, got %d", fake.calls)
 	}
 	if fake.lastVehicleID != vehicleID {
-		t.Errorf("SnapshotAt vehicleID: want %d, got %d", vehicleID, fake.lastVehicleID)
+		t.Errorf("State vehicleID: want %d, got %d", vehicleID, fake.lastVehicleID)
 	}
 	if fake.lastAt.Before(before.Add(-2*time.Second)) || fake.lastAt.After(after.Add(2*time.Second)) {
-		t.Errorf("SnapshotAt at: want within ±2s of now, got %v (now ≈ %v)", fake.lastAt, before)
+		t.Errorf("State at: want within ±2s of now, got %v (now ≈ %v)", fake.lastAt, before)
 	}
 }
 
@@ -184,7 +184,7 @@ func TestBuildStateFromSignalStore_FillsZeroFieldsFromSignalLog(t *testing.T) {
 func TestBuildStateFromSignalStore_MissingSignalsStayAtGoZero(t *testing.T) {
 	const vehicleID int64 = 7
 	store := newStore(t, vehicleID, nil)
-	fake := &fakeSnapshotReader{snapshot: map[string]interface{}{
+	fake := &fakeStateReader{snapshot: signal.State{
 		"Odometer": 42.0,
 	}}
 	svc := newSvc(fake)
@@ -226,7 +226,7 @@ func TestBuildStateFromSignalStore_SignalLogReadErrorIsTolerated(t *testing.T) {
 		"Odometer": 12345.0,
 	})
 	sentinel := errors.New("snapshot at: read fail — sentinel")
-	fake := &fakeSnapshotReader{err: sentinel}
+	fake := &fakeStateReader{err: sentinel}
 	svc := newSvc(fake)
 
 	// Capture zerolog output to assert the warning was emitted.
@@ -281,85 +281,85 @@ func TestBuildStateFromSignalStore_FieldToSignalNameMapping(t *testing.T) {
 
 	type tc struct {
 		name    string
-		signals map[string]interface{}
+		signals signal.State
 		check   func(*testing.T, *models.VehicleState)
 	}
 	cases := []tc{
-		{"Odometer", map[string]interface{}{"Odometer": 12345.6},
+		{"Odometer", signal.State{"Odometer": 12345.6},
 			func(t *testing.T, s *models.VehicleState) {
 				if s.Odometer != 12345.6 {
 					t.Errorf("Odometer: got %v", s.Odometer)
 				}
 			}},
-		{"InsideTemp", map[string]interface{}{"InsideTemp": 22.7},
+		{"InsideTemp", signal.State{"InsideTemp": 22.7},
 			func(t *testing.T, s *models.VehicleState) {
 				if s.InsideTemp != 22.7 {
 					t.Errorf("InsideTemp: got %v", s.InsideTemp)
 				}
 			}},
-		{"OutsideTemp", map[string]interface{}{"OutsideTemp": 18.0},
+		{"OutsideTemp", signal.State{"OutsideTemp": 18.0},
 			func(t *testing.T, s *models.VehicleState) {
 				if s.OutsideTemp != 18.0 {
 					t.Errorf("OutsideTemp: got %v", s.OutsideTemp)
 				}
 			}},
-		{"SoftwareVersion (Version)", map[string]interface{}{"Version": "2026.8.6"},
+		{"SoftwareVersion (Version)", signal.State{"Version": "2026.8.6"},
 			func(t *testing.T, s *models.VehicleState) {
 				if s.SoftwareVersion != "2026.8.6" {
 					t.Errorf("SoftwareVersion: got %q", s.SoftwareVersion)
 				}
 			}},
 		{"SoftwareVersion (SoftwareUpdateVersion fallback)",
-			map[string]interface{}{"SoftwareUpdateVersion": "2026.9.0"},
+			signal.State{"SoftwareUpdateVersion": "2026.9.0"},
 			func(t *testing.T, s *models.VehicleState) {
 				if s.SoftwareVersion != "2026.9.0" {
 					t.Errorf("SoftwareVersion: secondary fallback failed, got %q", s.SoftwareVersion)
 				}
 			}},
-		{"IdealRange", map[string]interface{}{"IdealBatteryRange": 310.0},
+		{"IdealRange", signal.State{"IdealBatteryRange": 310.0},
 			func(t *testing.T, s *models.VehicleState) {
 				if s.IdealRange != 310.0 {
 					t.Errorf("IdealRange: got %v", s.IdealRange)
 				}
 			}},
-		{"RatedRange (RatedRange)", map[string]interface{}{"RatedRange": 305.0},
+		{"RatedRange (RatedRange)", signal.State{"RatedRange": 305.0},
 			func(t *testing.T, s *models.VehicleState) {
 				if s.RatedRange != 305.0 {
 					t.Errorf("RatedRange: got %v", s.RatedRange)
 				}
 			}},
 		{"RatedRange (EstBatteryRange fallback)",
-			map[string]interface{}{"EstBatteryRange": 290.0},
+			signal.State{"EstBatteryRange": 290.0},
 			func(t *testing.T, s *models.VehicleState) {
 				if s.RatedRange != 290.0 {
 					t.Errorf("RatedRange: secondary fallback failed, got %v", s.RatedRange)
 				}
 			}},
-		{"Latitude", map[string]interface{}{"Latitude": 37.4419},
+		{"Latitude", signal.State{"Latitude": 37.4419},
 			func(t *testing.T, s *models.VehicleState) {
 				if s.Latitude != 37.4419 {
 					t.Errorf("Latitude: got %v", s.Latitude)
 				}
 			}},
-		{"Longitude", map[string]interface{}{"Longitude": -122.143},
+		{"Longitude", signal.State{"Longitude": -122.143},
 			func(t *testing.T, s *models.VehicleState) {
 				if s.Longitude != -122.143 {
 					t.Errorf("Longitude: got %v", s.Longitude)
 				}
 			}},
-		{"BatteryLevel (BatteryLevel)", map[string]interface{}{"BatteryLevel": 80.0},
+		{"BatteryLevel (BatteryLevel)", signal.State{"BatteryLevel": 80.0},
 			func(t *testing.T, s *models.VehicleState) {
 				if s.BatteryLevel != 80 {
 					t.Errorf("BatteryLevel: got %v", s.BatteryLevel)
 				}
 			}},
-		{"BatteryLevel (Soc fallback)", map[string]interface{}{"Soc": 65.0},
+		{"BatteryLevel (Soc fallback)", signal.State{"Soc": 65.0},
 			func(t *testing.T, s *models.VehicleState) {
 				if s.BatteryLevel != 65 {
 					t.Errorf("BatteryLevel: Soc fallback failed, got %v", s.BatteryLevel)
 				}
 			}},
-		{"Speed", map[string]interface{}{"VehicleSpeed": 42.0},
+		{"Speed", signal.State{"VehicleSpeed": 42.0},
 			func(t *testing.T, s *models.VehicleState) {
 				if s.Speed != 42.0 {
 					t.Errorf("Speed: got %v", s.Speed)
@@ -371,7 +371,7 @@ func TestBuildStateFromSignalStore_FieldToSignalNameMapping(t *testing.T) {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			store := newStore(t, vehicleID, nil)
-			fake := &fakeSnapshotReader{snapshot: c.signals}
+			fake := &fakeStateReader{snapshot: c.signals}
 			svc := newSvc(fake)
 			state := svc.BuildStateFromSignalStore(store, &models.Vehicle{ID: vehicleID})
 			c.check(t, state)
@@ -381,7 +381,7 @@ func TestBuildStateFromSignalStore_FieldToSignalNameMapping(t *testing.T) {
 
 // TestBuildStateFromSignalStore_DoesNotReadSnapshotTables verifies that
 // BuildStateFromSignalStore reaches for *no* repository besides the optional
-// stateRepo + the SignalSnapshotReader. It does so by constructing a service
+// stateRepo + the SignalStateReader. It does so by constructing a service
 // with every repo nil — any attempt to query positionRepo, securityRepo,
 // vehicleRepo, settingsRepo, etc. would nil-pointer-panic. ADR-001 anchor:
 // only signal_log, no snapshot table reads.
@@ -391,7 +391,7 @@ func TestBuildStateFromSignalStore_DoesNotReadSnapshotTables(t *testing.T) {
 		"BatteryLevel": float64(55),
 		"VehicleSpeed": 30.0,
 	})
-	fake := &fakeSnapshotReader{snapshot: map[string]interface{}{
+	fake := &fakeStateReader{snapshot: signal.State{
 		"Odometer":   12345.6,
 		"InsideTemp": 22.7,
 	}}
@@ -412,6 +412,6 @@ func TestBuildStateFromSignalStore_DoesNotReadSnapshotTables(t *testing.T) {
 		t.Errorf("BatteryLevel: live preserved, got %v", state.BatteryLevel)
 	}
 	if fake.calls != 1 {
-		t.Errorf("SnapshotAt: want exactly 1 call, got %d", fake.calls)
+		t.Errorf("State: want exactly 1 call, got %d", fake.calls)
 	}
 }

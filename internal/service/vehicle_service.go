@@ -12,26 +12,33 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// SignalSnapshotReader is the minimal interface { ... SnapshotAt(...) } that
+// SignalStateReader is the minimal interface { State(...) } that
 // VehicleService consults to backfill state fields the live signal store left
 // at their Go zero value after a pod restart. The concrete production type is
-// *database.SignalLogReader; tests inject an in-memory fake. Per ADR-001,
-// SnapshotAt is the only durable read path — no snapshot tables.
-type SignalSnapshotReader interface {
-	SnapshotAt(ctx context.Context, vehicleID int64, at time.Time) (map[string]interface{}, error)
+// signal.LogStateReader (any signal.StateReader satisfies this); tests inject
+// an in-memory fake. Per ADR-002, signal_log read via the canonical
+// StateReader contract is the only durable read path — no snapshot tables.
+//
+// Phase-39 migration: this interface replaced the legacy SignalSnapshotReader
+// (which exposed *database.SignalLogReader.SnapshotAt). The two methods are
+// semantically identical — both forward-fold via DISTINCT ON (signal) at-or-
+// before `at` and apply unpackLocationCompounds — but State carries the
+// canonical signal.State return type and at != zero validation.
+type SignalStateReader interface {
+	State(ctx context.Context, vehicleID int64, at time.Time) (signal.State, error)
 }
 
 // VehicleService encapsulates business logic for vehicle state assembly
 // and Tesla API synchronisation. Handlers delegate here instead of
 // interacting with repositories directly for complex operations.
 type VehicleService struct {
-	db              *database.DB
-	vehicleRepo     *database.VehicleRepo
-	positionRepo    *database.PositionRepo
-	securityRepo    *database.SecurityRepo
-	stateRepo       *database.VehicleStateRepo
-	settingsRepo    *database.SettingsRepo
-	signalLogReader SignalSnapshotReader
+	db           *database.DB
+	vehicleRepo  *database.VehicleRepo
+	positionRepo *database.PositionRepo
+	securityRepo *database.SecurityRepo
+	stateRepo    *database.VehicleStateRepo
+	settingsRepo *database.SettingsRepo
+	state        SignalStateReader
 }
 
 // NewVehicleService creates a VehicleService with all required repos.
@@ -46,13 +53,13 @@ func NewVehicleService(db *database.DB) *VehicleService {
 	}
 }
 
-// WithSignalLogReader wires a SignalSnapshotReader (typically
-// *database.SignalLogReader) used by BuildStateFromSignalStore as a durable
-// backstop for fields the live store left at zero (e.g., after a pod
-// restart). When unset the fallback is skipped and behavior matches the
+// WithStateReader wires a SignalStateReader (typically signal.LogStateReader
+// or any signal.StateReader implementation) used by BuildStateFromSignalStore
+// as a durable backstop for fields the live store left at zero (e.g., after
+// a pod restart). When unset the fallback is skipped and behavior matches the
 // pre-Phase-38 baseline.
-func (s *VehicleService) WithSignalLogReader(reader SignalSnapshotReader) *VehicleService {
-	s.signalLogReader = reader
+func (s *VehicleService) WithStateReader(reader SignalStateReader) *VehicleService {
+	s.state = reader
 	return s
 }
 
@@ -267,8 +274,8 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 	// state_snapshots, battery_snapshots, climate_snapshots, etc.) is
 	// forbidden. Live values always win — the fallback only fills holes.
 	ctx := context.Background()
-	if s.signalLogReader != nil {
-		snap, err := s.signalLogReader.SnapshotAt(ctx, vehicle.ID, time.Now().UTC())
+	if s.state != nil {
+		snap, err := s.state.State(ctx, vehicle.ID, time.Now().UTC())
 		if err != nil {
 			log.Warn().Err(err).Int64("vehicle_id", vehicle.ID).Msg("vehicle service: signal_log fallback read failed")
 		} else if len(snap) > 0 {
@@ -296,7 +303,7 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 // always preferred — boolean fields are only filled when the live store had
 // no entry for the corresponding signal name (avoiding false-vs-unset
 // ambiguity).
-func fillStateFromSnapshot(state *models.VehicleState, live map[string]*signal.Value, snap map[string]interface{}) {
+func fillStateFromSnapshot(state *models.VehicleState, live map[string]*signal.Value, snap signal.State) {
 	if state.Odometer == 0 {
 		if f, ok := snapFloat(snap, "Odometer"); ok {
 			state.Odometer = f
@@ -383,10 +390,10 @@ func fillStateFromSnapshot(state *models.VehicleState, live map[string]*signal.V
 }
 
 // snapFloat extracts a numeric value from a signal_log snapshot map.
-// SnapshotAt returns numbers as float64 (per signal_log_reader_query.go), but
-// we accept int / int64 defensively in case the test fake or future readers
-// produce them.
-func snapFloat(snap map[string]interface{}, key string) (float64, bool) {
+// signal.LogStateReader.State returns numbers as float64 (per
+// state_reader_log.go assembleState), but we accept int / int64 defensively
+// in case the test fake or future readers produce them.
+func snapFloat(snap signal.State, key string) (float64, bool) {
 	v, ok := snap[key]
 	if !ok || v == nil {
 		return 0, false
@@ -405,7 +412,7 @@ func snapFloat(snap map[string]interface{}, key string) (float64, bool) {
 }
 
 // snapString extracts a string value from a signal_log snapshot map.
-func snapString(snap map[string]interface{}, key string) (string, bool) {
+func snapString(snap signal.State, key string) (string, bool) {
 	v, ok := snap[key]
 	if !ok || v == nil {
 		return "", false
@@ -418,7 +425,7 @@ func snapString(snap map[string]interface{}, key string) (string, bool) {
 
 // snapBool extracts a boolean value from a signal_log snapshot map. Strings
 // "true"/"1" are accepted to mirror Phase 1 of BuildStateFromSignalStore.
-func snapBool(snap map[string]interface{}, key string) (bool, bool) {
+func snapBool(snap signal.State, key string) (bool, bool) {
 	v, ok := snap[key]
 	if !ok || v == nil {
 		return false, false

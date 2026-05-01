@@ -192,7 +192,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	teslaUserProfileHandler := NewTeslaUserProfileHandler(teslaClient, db)
 	vehicleAccessHandler := NewVehicleAccessHandler(teslaClient, db)
 	vehicleInfoHandler := NewVehicleInfoHandler(teslaClient, db)
-	tripPlannerHandler := NewTripPlannerHandler(db, opt.CacheStore, stateReader, signalLogReader)
+	tripPlannerHandler := NewTripPlannerHandler(db, opt.CacheStore, stateReader)
 	geocodeHandler := NewGeocodeHandler(geocoding.NewSearcher("TeslaSync/1.0"), geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
 	shareHandler := NewShareHandler(db)
 	watchHandler := NewWatchHandler(db, teslaClient)
@@ -268,9 +268,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// Wire telemetry handler into vehicle handler for streaming-aware state
 	vehicleHandler.SetTelemetryHandler(telemetryHandler)
 
-	// Wire signal_log reader into vehicle service for the durable
-	// last-value backstop used by BuildStateFromSignalStore (ADR-001).
-	vehicleSvc.WithSignalLogReader(signalLogReader)
+	// Wire signal.StateReader into vehicle service for the durable
+	// last-value backstop used by BuildStateFromSignalStore (ADR-002).
+	vehicleSvc.WithStateReader(stateReader)
 
 	// Wire telemetry handler into settings handler for capture toggle sync
 	settingsHandler.SetTelemetryHandler(telemetryHandler)
