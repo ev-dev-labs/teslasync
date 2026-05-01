@@ -92,9 +92,10 @@ export function AppearanceSettings() {
                   'group relative rounded-xl border p-4 text-left h-auto transition-all duration-200 justify-start items-start flex-col',
                   themeId === thm.id
                     ? 'bg-[var(--surface-3)]'
-                    : 'bg-[var(--surface-2)] hover:bg-[var(--surface-3)]'
+                    : 'bg-[var(--surface-2)] hover:bg-[var(--surface-3)]',
+                  themeId !== thm.id && 'border-[var(--glass-border)]'
                 )}
-                style={{ borderColor: themeId === thm.id ? thm.primary : 'var(--glass-border)' }}
+                style={themeId === thm.id ? { borderColor: thm.primary } : undefined}
               >
                 <div
                   className="h-6 w-6 rounded-full mb-3"
@@ -120,9 +121,10 @@ export function AppearanceSettings() {
                 'group relative rounded-xl border p-4 text-left h-auto transition-all duration-200 justify-start items-start flex-col',
                 themeId === 'custom'
                   ? 'bg-[var(--surface-3)]'
-                  : 'bg-[var(--surface-2)] hover:bg-[var(--surface-3)]'
+                  : 'bg-[var(--surface-2)] hover:bg-[var(--surface-3)]',
+                themeId !== 'custom' && 'border-[var(--glass-border)]'
               )}
-              style={{ borderColor: themeId === 'custom' ? customPrimary : 'var(--glass-border)' }}
+              style={themeId === 'custom' ? { borderColor: customPrimary } : undefined}
             >
               <div
                 className="h-6 w-6 rounded-full mb-3"

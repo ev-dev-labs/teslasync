@@ -305,8 +305,8 @@ function ChannelFormModal({ channel, onClose, onSaved, t }: {
                         )}
                         onClick={() => { setKind(ct.value); setConfig({}); setTestResult(null); }}
                       >
-                        <TIcon className="h-5 w-5" style={{ color: kind === ct.value ? ct.color : 'var(--text-secondary)' }} />
-                        <span style={{ color: kind === ct.value ? ct.color : 'var(--text-secondary)' }}>{ct.label}</span>
+                        <TIcon className={cn('h-5 w-5', kind !== ct.value && 'text-[var(--text-secondary)]')} style={kind === ct.value ? { color: ct.color } : undefined} />
+                        <span className={cn(kind !== ct.value && 'text-[var(--text-secondary)]')} style={kind === ct.value ? { color: ct.color } : undefined}>{ct.label}</span>
                       </GlassPanel>
                     );
                   })}

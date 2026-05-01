@@ -28,6 +28,7 @@ import { toLocalDatetimeStr } from '@/lib/dateFormat';
 import { formatValue, type SignalLogEntry } from '@/components/SignalQueryControls';
 import type { SignalHistoryResp } from '@/api/types';
 import { TIME_RANGE_PRESETS } from '@/lib/constants';
+import { cn } from '@/lib/cn';
 import { Database, Search, Clock, Activity, Filter, AlertCircle } from 'lucide-react';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -138,7 +139,7 @@ export default function SignalLogViewerPage() {
     { key: 'time', header: t('Timestamp'), render: (r) => <span className="whitespace-nowrap text-xs text-[var(--text-muted)]">{new Date(r.created_at).toLocaleString()}</span> },
     { key: 'signal', header: t('Signal'), render: (r) => {
       const idx = selectedSignals.indexOf(r.signal);
-      return <span className="font-mono text-xs" style={{ color: idx >= 0 ? CHART_COLORS[idx % CHART_COLORS.length] : 'var(--text-primary)' }}>{r.signal}</span>;
+      return <span className={cn('font-mono text-xs', idx < 0 && 'text-[var(--text-primary)]')} style={idx >= 0 ? { color: CHART_COLORS[idx % CHART_COLORS.length] } : undefined}>{r.signal}</span>;
     }},
     { key: 'value', header: t('Value'), render: (r) => <span className="font-mono text-xs text-[var(--text-primary)]">{formatValue(r)}</span> },
     { key: 'type', header: t('Type'), render: (r) => {
