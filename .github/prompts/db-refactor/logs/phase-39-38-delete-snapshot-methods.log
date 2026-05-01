@@ -1,0 +1,26 @@
+=== PREFLIGHT ===
+predecessor=phase-39-37-delete-pivot-methods.log
+EXIT=0
+STATUS=DONE
+
+=== DELETED ===
+SnapshotAt (was lines 28-67)
+SnapshotBetween (was lines 97-126)
+scanSignalValue (was lines 171-185, helper became unused)
+unpackLocationCompounds (was lines 229-257, helper became unused)
+gofmt OK
+=== GATE ===
+FILE_EXISTS=True
+NO_SNAPSHOTAT=True
+NO_SNAPSHOTBETWEEN=True
+# github.com/ev-dev-labs/teslasync/internal/api
+internal\api\router.go:273:33: cannot use signalLogReader (variable of type *"github.com/ev-dev-labs/teslasync/internal/database".SignalLogReader) as "github.com/ev-dev-labs/teslasync/internal/service".SignalSnapshotReader value in argument to vehicleSvc.WithSignalLogReader: *"github.com/ev-dev-labs/teslasync/internal/database".SignalLogReader does not implement "github.com/ev-dev-labs/teslasync/internal/service".SignalSnapshotReader (missing method SnapshotAt)
+BUILD FAILED - a caller still references SnapshotAt/SnapshotBetween. Fix the caller.
+EXIT=1
+STATUS=BLOCKED
+
+=== COMMIT ===
+Source file reverted (BLOCKED protocol: commit only the log)
+Reason: internal/service/vehicle_service.go still wires *database.SignalLogReader
+as service.SignalSnapshotReader (which requires SnapshotAt). Phase 38/04 added
+this caller; no Phase 39 prompt migrated it. Outside allowed-files scope to fix.
