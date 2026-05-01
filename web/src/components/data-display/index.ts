@@ -11,3 +11,20 @@ export { TimelineItem } from './TimelineItem';
 export { FSMBadge } from './FSMBadge';
 export { TransitionArrow } from './TransitionArrow';
 export { FreshnessIndicator, useIsStale } from './FreshnessIndicator';
+
+// Centralized format components — see ./format for details
+export {
+  DateTime,
+  Distance,
+  Speed,
+  Temperature,
+  Pressure,
+  Energy,
+  Power,
+  Voltage,
+  Current,
+  Percentage,
+  FormattedNumber,
+  Duration,
+} from './format';
+export type { DateTimeVariant, DurationVariant } from './format';
