@@ -5,6 +5,7 @@ import {
   AREA_DEFAULTS, areaGradient,
   AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  useSyncedCursor,
 } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
 import type { ChartDataPoint } from './types';
@@ -15,13 +16,14 @@ interface SocChartProps {
 
 export function SocChart({ chartData }: SocChartProps) {
   const { t } = useTranslation();
+  const syncProps = useSyncedCursor();
 
   return (
     <FadeIn>
       <ChartContainer title={t('driveDetail.socOverTime', 'SOC % Over Time')} height={220}>
         {chartData.length > 1 ? (
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData}>
+            <AreaChart data={chartData} {...syncProps}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
               <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} interval="preserveStartEnd" />
               <YAxis domain={[0, 100]} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />

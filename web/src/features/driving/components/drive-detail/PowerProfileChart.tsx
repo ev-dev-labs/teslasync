@@ -5,6 +5,7 @@ import {
   AREA_DEFAULTS, areaGradient,
   AreaChart, Area, ReferenceLine,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  useSyncedCursor,
 } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
@@ -17,13 +18,14 @@ interface PowerProfileChartProps {
 
 export function PowerProfileChart({ chartData, stats }: PowerProfileChartProps) {
   const { t } = useTranslation();
+  const syncProps = useSyncedCursor();
 
   return (
     <FadeIn>
       <ChartContainer title={t('driveDetail.powerProfile', 'Power Profile')} height={220}>
         {chartData.length > 1 ? (
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData}>
+            <AreaChart data={chartData} {...syncProps}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
               <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} interval="preserveStartEnd" />
               <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />

@@ -5,6 +5,7 @@ import {
   ComposedChart, Area, Line, ReferenceLine,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AREA_DEFAULTS, areaGradient,
+  ChartBrush, useSyncedCursor,
 } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
 import { useSettings } from '@/hooks/useSettings';
@@ -20,13 +21,14 @@ interface DriveOverviewChartProps {
 export function DriveOverviewChart({ chartData }: DriveOverviewChartProps) {
   const { t } = useTranslation();
   const { speedUnit, distanceUnit } = useSettings();
+  const syncProps = useSyncedCursor();
 
   return (
     <FadeIn>
-      <ChartContainer title={t('driveDetail.driveChart', 'Drive Overview')} height={320}>
+      <ChartContainer title={t('driveDetail.driveChart', 'Drive Overview')} height={360}>
         {chartData.length > 1 ? (
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={chartData}>
+            <ComposedChart data={chartData} {...syncProps}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
               <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} interval="preserveStartEnd" />
               <YAxis yAxisId="power" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} unit=" kW" />
@@ -46,6 +48,13 @@ export function DriveOverviewChart({ chartData }: DriveOverviewChartProps) {
                 <Line {...AREA_DEFAULTS} yAxisId="speed" dataKey="usableSoc" stroke="#22d3ee" strokeWidth={1} name={`${t('driveDetail.usableSoc', 'Usable SOC')} %`} />
               )}
               <Line {...AREA_DEFAULTS} yAxisId="power" dataKey="power" stroke="#f59e0b" name={`${t('driveDetail.power', 'Power')} kW`} />
+              {/*
+                Brush at the bottom of the overview chart. When this chart is
+                inside a `<ChartTimeRangeProvider>` (DriveDetailPage wraps it),
+                recharts' native syncId mechanism propagates the visible window
+                to every other chart sharing the same dataset.
+              */}
+              <ChartBrush dataKey="time" />
             </ComposedChart>
           </ResponsiveContainer>
         ) : (

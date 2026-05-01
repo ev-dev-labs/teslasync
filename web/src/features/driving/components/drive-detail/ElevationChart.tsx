@@ -4,6 +4,7 @@ import {
   ChartContainer, ChartTooltip,
   ComposedChart, Area, Line, Legend,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  useSyncedCursor,
 } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
 import { useSettings } from '@/hooks/useSettings';
@@ -19,6 +20,7 @@ interface ElevationChartProps {
 export function ElevationChart({ chartData, stats }: ElevationChartProps) {
   const { t } = useTranslation();
   const { speedUnit } = useSettings();
+  const syncProps = useSyncedCursor();
 
   return (
     <FadeIn>
@@ -31,7 +33,7 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
               <span className="text-[var(--text-muted)]">{t('driveDetail.net', 'Net')}: {fmtNumber(stats.elevGain - stats.elevLoss)} m</span>
             </div>
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={chartData}>
+              <ComposedChart data={chartData} {...syncProps}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                 <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} interval="preserveStartEnd" />
                 <YAxis yAxisId="elev" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />

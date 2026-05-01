@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout';
 import { SectionErrorBoundary } from '@/components/feedback';
+import { ChartTimeRangeProvider } from '@/components/charts';
 import { ShareDriveDialog } from '../components/ShareDriveDialog';
 import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -96,28 +97,38 @@ export default function DriveDetailPage() {
           <SectionErrorBoundary name="drive-detail:journey-details" fallbackTitle={t('driveDetail.section.journeyDetailsFailed', 'Journey details failed to load')}>
             <JourneyDetailsPanel drive={drive} />
           </SectionErrorBoundary>
-          <SectionErrorBoundary name="drive-detail:overview-chart" fallbackTitle={t('driveDetail.section.overviewChartFailed', 'Drive overview chart failed to load')}>
-            <DriveOverviewChart drive={drive} chartData={chartData} />
-          </SectionErrorBoundary>
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <SectionErrorBoundary name="drive-detail:soc-chart" fallbackTitle={t('driveDetail.section.socChartFailed', 'SOC chart failed to load')}>
-              <SocChart chartData={chartData} />
+          {/*
+            Phase 40 / Prompt 26: every chart in this block reads `chartData`
+            from the same `useDriveDetailData()` source, so they share row
+            indices. Wrapping in `<ChartTimeRangeProvider>` lets recharts'
+            native syncId mechanism mirror the hover cursor across all charts;
+            the `<ChartBrush>` rendered inside `<DriveOverviewChart>` then
+            zooms every synced chart simultaneously.
+          */}
+          <ChartTimeRangeProvider syncId="drive-detail">
+            <SectionErrorBoundary name="drive-detail:overview-chart" fallbackTitle={t('driveDetail.section.overviewChartFailed', 'Drive overview chart failed to load')}>
+              <DriveOverviewChart drive={drive} chartData={chartData} />
             </SectionErrorBoundary>
-            <SectionErrorBoundary name="drive-detail:elevation-chart" fallbackTitle={t('driveDetail.section.elevationChartFailed', 'Elevation chart failed to load')}>
-              <ElevationChart chartData={chartData} stats={stats} />
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <SectionErrorBoundary name="drive-detail:soc-chart" fallbackTitle={t('driveDetail.section.socChartFailed', 'SOC chart failed to load')}>
+                <SocChart chartData={chartData} />
+              </SectionErrorBoundary>
+              <SectionErrorBoundary name="drive-detail:elevation-chart" fallbackTitle={t('driveDetail.section.elevationChartFailed', 'Elevation chart failed to load')}>
+                <ElevationChart chartData={chartData} stats={stats} />
+              </SectionErrorBoundary>
+            </div>
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <SectionErrorBoundary name="drive-detail:temperature" fallbackTitle={t('driveDetail.section.temperatureFailed', 'Temperature section failed to load')}>
+                <TemperatureSection chartData={chartData} stats={stats} />
+              </SectionErrorBoundary>
+              <SectionErrorBoundary name="drive-detail:speed-histogram" fallbackTitle={t('driveDetail.section.speedHistogramFailed', 'Speed histogram failed to load')}>
+                <SpeedHistogramChart speedHistData={speedHistData} />
+              </SectionErrorBoundary>
+            </div>
+            <SectionErrorBoundary name="drive-detail:power-profile" fallbackTitle={t('driveDetail.section.powerProfileFailed', 'Power profile chart failed to load')}>
+              <PowerProfileChart chartData={chartData} stats={stats} />
             </SectionErrorBoundary>
-          </div>
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <SectionErrorBoundary name="drive-detail:temperature" fallbackTitle={t('driveDetail.section.temperatureFailed', 'Temperature section failed to load')}>
-              <TemperatureSection chartData={chartData} stats={stats} />
-            </SectionErrorBoundary>
-            <SectionErrorBoundary name="drive-detail:speed-histogram" fallbackTitle={t('driveDetail.section.speedHistogramFailed', 'Speed histogram failed to load')}>
-              <SpeedHistogramChart speedHistData={speedHistData} />
-            </SectionErrorBoundary>
-          </div>
-          <SectionErrorBoundary name="drive-detail:power-profile" fallbackTitle={t('driveDetail.section.powerProfileFailed', 'Power profile chart failed to load')}>
-            <PowerProfileChart chartData={chartData} stats={stats} />
-          </SectionErrorBoundary>
+          </ChartTimeRangeProvider>
           <SectionErrorBoundary name="drive-detail:tire-pressure" fallbackTitle={t('driveDetail.section.tirePressureFailed', 'Tire pressure section failed to load')}>
             <TirePressureSection chartData={chartData} stats={stats} />
           </SectionErrorBoundary>

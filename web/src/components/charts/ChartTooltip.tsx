@@ -1,18 +1,86 @@
-import { memo } from 'react'
+import { memo, type ReactNode } from 'react'
 import { fmtNumber } from '../../lib/numberFormat'
+import { formatDateTime } from '../../lib/dateFormat'
 
-interface TooltipPayload { name: string; value: unknown; color?: string; fill?: string; unit?: string }
+interface TooltipPayload {
+  name: string
+  value: unknown
+  color?: string
+  fill?: string
+  unit?: string
+  /** Recharts attaches the dataKey here for line/area/bar series. */
+  dataKey?: string | number
+}
+
+export interface ChartTooltipProps {
+  active?: boolean
+  payload?: TooltipPayload[]
+  label?: string | number
+  /**
+   * Optional value formatter. Receives the raw value plus the series name and
+   * unit; returns the rendered string. Falls back to {@link fmtNumber} for
+   * numbers and `String(...)` for everything else.
+   */
+  valueFormatter?: (value: unknown, name: string, unit?: string) => ReactNode
+  /**
+   * Optional label formatter. Defaults to ISO-detection: if `label` parses
+   * as a date AND looks like an ISO timestamp, it's rendered via
+   * {@link formatDateTime} (locale + browser-tz aware). Otherwise the label is
+   * passed through as-is — preserving the existing "HH:MM" string labels in
+   * Drive Detail and other pages.
+   */
+  labelFormatter?: (label: string | number | undefined) => ReactNode
+}
+
+/**
+ * Heuristic: does the string look like an ISO 8601 timestamp? We require at
+ * least `YYYY-MM-DDTHH:MM` so plain date strings like "Apr 4" don't trigger
+ * the formatter (those live in formatted-string XAxis labels).
+ */
+const ISO_TS_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/
+
+function isIsoTimestamp(value: unknown): value is string {
+  return typeof value === 'string' && ISO_TS_RE.test(value)
+}
+
+function defaultLabelFormatter(label: string | number | undefined): ReactNode {
+  if (label == null) return ''
+  if (isIsoTimestamp(label)) return formatDateTime(label)
+  return String(label)
+}
+
+function defaultValueFormatter(
+  value: unknown,
+  _name: string,
+  unit: string | undefined,
+): ReactNode {
+  const formatted =
+    typeof value === 'number' ? fmtNumber(value) : String(value ?? '')
+  return (
+    <>
+      {formatted}
+      {unit && <span className="ml-0.5 opacity-60">{unit}</span>}
+    </>
+  )
+}
 
 /**
  * Recharts custom tooltip body. Marked with `role="tooltip"` so screen readers
- * recognise the floating panel as an information popup; Recharts itself
+ * recognise the floating panel as an information popup; recharts itself
  * positions and toggles visibility based on cursor / focus events.
+ *
+ * Phase 40 / Prompt 26: now locale-aware (numbers via `fmtNumber`) and
+ * TZ-aware (ISO labels via `formatDateTime`). Accepts `valueFormatter` and
+ * `labelFormatter` props for chart-specific overrides while staying the single
+ * source of truth for tooltip styling app-wide.
  */
-export function ChartTooltipBase({ active, payload, label }: {
-  active?: boolean
-  payload?: TooltipPayload[]
-  label?: string
-}) {
+export function ChartTooltipBase({
+  active,
+  payload,
+  label,
+  valueFormatter = defaultValueFormatter,
+  labelFormatter = defaultLabelFormatter,
+}: ChartTooltipProps) {
   if (!active || !payload?.length) return null
   return (
     <div
@@ -21,7 +89,9 @@ export function ChartTooltipBase({ active, payload, label }: {
       className="rounded-xl border px-4 py-3 text-xs shadow-xl backdrop-blur-xl bg-[var(--surface-elevated)] border-[var(--border-subtle)]"
       style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}
     >
-      <p className="mb-1.5 font-medium text-[var(--text-secondary)]">{label}</p>
+      <p className="mb-1.5 font-medium text-[var(--text-secondary)]">
+        {labelFormatter(label)}
+      </p>
       {payload.map((p, i) => (
         <div key={`${p.name}-${i}`} className="flex items-center gap-2 py-0.5">
           <span
@@ -31,8 +101,7 @@ export function ChartTooltipBase({ active, payload, label }: {
           />
           <span className="text-[var(--text-secondary)]">{p.name}:</span>
           <span className="font-mono font-semibold text-[var(--text-primary)]">
-            {typeof p.value === 'number' ? fmtNumber(p.value) : String(p.value ?? '')}
-            {p.unit && <span className="ml-0.5 opacity-60">{p.unit}</span>}
+            {valueFormatter(p.value, p.name, p.unit)}
           </span>
         </div>
       ))}
@@ -41,3 +110,4 @@ export function ChartTooltipBase({ active, payload, label }: {
 }
 
 export const ChartTooltip = memo(ChartTooltipBase)
+

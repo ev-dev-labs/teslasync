@@ -275,4 +275,43 @@ export const chartTokens = {
    * either light or dark backgrounds.
    */
   series: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'] as const,
+  /**
+   * Brush widget styling — used by `<ChartBrush>` to keep zoom-selection bars
+   * consistent across pages. The fill is intentionally near-transparent so the
+   * underlying overview line stays visible.
+   */
+  brush: {
+    stroke: '#22d3ee',
+    fill: 'rgba(255, 255, 255, 0.03)',
+    travellerWidth: 8,
+    height: 28,
+  },
+  /**
+   * Synced-cursor reference line — drawn by recharts when two charts share
+   * the same `syncId`. We expose the styling here so any custom cursor lines
+   * (added via `<ReferenceLine>`) render identically.
+   */
+  cursor: {
+    stroke: 'rgba(255, 255, 255, 0.3)',
+    strokeWidth: 1,
+    strokeDasharray: '4 2',
+  },
+  /** Stable namespaced chart IDs used by `useChartLegendState` for localStorage keys.
+   *  Add new entries here so the legend-toggle keys stay grep-able and collision-free. */
+  ids: {
+    driveOverview: 'drive-detail.overview',
+    driveSoc: 'drive-detail.soc',
+    driveElevation: 'drive-detail.elevation',
+    drivePower: 'drive-detail.power',
+    driveTemperature: 'drive-detail.temperature',
+    driveSpeedHistogram: 'drive-detail.speed-histogram',
+    chargingCurve: 'charging-detail.curve',
+    chargingTimeSeries: 'charging-detail.soc-energy-range',
+    chargingTemp: 'charging-detail.temperature',
+    chargingVoltCurrent: 'charging-detail.voltage-current',
+    batteryProjection: 'battery-degradation.projection',
+    batteryRange: 'battery-degradation.range',
+    sleepStateDistribution: 'sleep.state-distribution',
+    sleepSentryComparison: 'sleep.sentry-comparison',
+  },
 } as const

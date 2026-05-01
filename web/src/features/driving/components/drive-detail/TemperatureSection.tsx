@@ -6,6 +6,7 @@ import {
   AREA_DEFAULTS,
   LineChart, Line, Legend,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  useSyncedCursor,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -22,6 +23,7 @@ interface TemperatureSectionProps {
 export function TemperatureSection({ chartData, stats }: TemperatureSectionProps) {
   const { t } = useTranslation();
   const { tempUnit } = useSettings();
+  const syncProps = useSyncedCursor();
 
   return (
     <FadeIn>
@@ -78,7 +80,7 @@ export function TemperatureSection({ chartData, stats }: TemperatureSectionProps
         <div className="h-56">
           {chartData.length > 1 && stats.hasAnyTemp ? (
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
+              <LineChart data={chartData} {...syncProps}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                 <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} interval="preserveStartEnd" />
                 <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />

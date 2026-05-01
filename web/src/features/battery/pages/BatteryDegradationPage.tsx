@@ -16,6 +16,7 @@ import {
   AreaChart, Area, ComposedChart, Line,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, ReferenceLine,
   AREA_DEFAULTS, areaGradient,
+  ChartBrush,
 } from '@/components/charts';
 import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -448,6 +449,13 @@ export default function BatteryDegradationPage() {
                     strokeDasharray="8 4"
                     connectNulls={false}
                   />
+                  {/*
+                    Phase 40 / Prompt 26: brush enables zooming into specific
+                    months of the projection. Standalone chart — no
+                    ChartTimeRangeProvider needed since the range chart below
+                    uses a different X-axis dataKey ("date" vs "label").
+                  */}
+                  <ChartBrush dataKey="label" />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>

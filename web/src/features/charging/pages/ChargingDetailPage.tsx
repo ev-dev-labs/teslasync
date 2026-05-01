@@ -20,6 +20,7 @@ import {
   ComposedChart, Line, ChartTooltip,
   chartGrid, axisTickSm, chartMargin,
   AREA_DEFAULTS, areaGradient,
+  ChartBrush,
 } from '@/components/charts';
 
 import {
@@ -522,7 +523,7 @@ export default function ChargingDetailPage() {
             {t('charging.detail.socOverTime', 'SoC, Energy & Range over Time')}
           </h2>
           {timeSeriesData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={320}>
               <ComposedChart data={timeSeriesData} margin={chartMargin}>
                 {areaGradient('socGrad', '#10b981')}
                 {chartGrid}
@@ -555,6 +556,14 @@ export default function ChargingDetailPage() {
                   name={t('charging.detail.range', 'Range')}
                   unit={` ${distanceUnit}`}
                 />
+                {/*
+                  Phase 40 / Prompt 26: brush lets users zoom into a portion
+                  of the charge timeline. This chart is standalone (not in a
+                  ChartTimeRangeProvider) because the sibling charts on this
+                  page have mismatched X-axes (charge curve uses SoC, voltage
+                  chart filters rows), so only this chart's range is affected.
+                */}
+                <ChartBrush dataKey="time" />
               </ComposedChart>
             </ResponsiveContainer>
           ) : (
