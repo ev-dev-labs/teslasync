@@ -3,16 +3,66 @@ package api
 import (
 	"context"
 	"math"
+	"sync"
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/units"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 )
+
+// driveStateRegistry holds the per-tracker signal.StateReader injected by
+// router.go at startup (phase-39 / ADR-002). The tracker struct itself is
+// defined in telemetry_sessions.go and intentionally not modified by this
+// migration prompt (the prompt's allowed-files boundary is scoped to
+// telemetry_sessions_drive_tracking.go), so this side table provides the
+// wiring seam without altering the shared struct definition. The setter and
+// accessor below live in this file because the snapshot read sites that
+// consume the reader are exclusively in this file.
+//
+// A nil entry (or missing key) means no StateReader has been installed for
+// that tracker — completion-time enrichment falls back to the unenriched
+// code path (empty snapshot maps), preserving the behavior of the legacy
+// fallback when both signalLogReader and signalHistoryWriter were nil. The
+// gear/location-carry-forward bug this prompt fixes manifests when a drive
+// boundary lands between Tesla's delta-encoded re-emissions: the previous
+// SignalLogReader.SnapshotAt path queried only the snapshot tables and so
+// missed signals that had not changed across the boundary. The StateReader
+// installed here forward-folds signal_log so every signal emitted at-or-
+// before the anchor is included.
+var (
+	driveStateRegistryMu sync.RWMutex
+	driveStateRegistry   = map[*TelemetrySessionTracker]signal.StateReader{}
+)
+
+// SetDriveStateReader injects the cold-path signal.StateReader used to
+// reconstruct drive start/end snapshots at session completion. Replaces
+// the legacy *database.SignalLogReader.SnapshotAt /
+// *database.SignalHistoryWriter.SnapshotAt calls that this prompt removed.
+// Passing nil clears any previously installed reader.
+func (t *TelemetrySessionTracker) SetDriveStateReader(s signal.StateReader) {
+	driveStateRegistryMu.Lock()
+	defer driveStateRegistryMu.Unlock()
+	if s == nil {
+		delete(driveStateRegistry, t)
+		return
+	}
+	driveStateRegistry[t] = s
+}
+
+// driveStateReader returns the StateReader previously installed by
+// SetDriveStateReader, or nil if no reader is installed (which makes
+// drive-session completion fall back to the unenriched code path).
+func (t *TelemetrySessionTracker) driveStateReader() signal.StateReader {
+	driveStateRegistryMu.RLock()
+	defer driveStateRegistryMu.RUnlock()
+	return driveStateRegistry[t]
+}
 
 // streamingDrive tracks comprehensive data during an active drive session.
 type streamingDrive struct {
@@ -79,6 +129,14 @@ type streamingDrive struct {
 	LastLatitude  *float64
 	LastLongitude *float64
 	LastOdometer  *float64
+
+	// state is the signal.StateReader captured at session start. Consumed
+	// by completeDriveLocked to reconstruct the start/end signal snapshots
+	// used for completion-time enrichment (odometer delta, energy delta,
+	// gear / location carry-forward, geocoding lat/lng). Nil when no
+	// StateReader was installed via SetDriveStateReader — the enrichment
+	// code path then degrades gracefully to empty snapshot maps.
+	state signal.StateReader
 }
 
 func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}) {
@@ -233,6 +291,7 @@ func (t *TelemetrySessionTracker) startDriveLocked(ctx context.Context, vehicleI
 		UsableSocMin:       math.MaxFloat64,
 		accumulatedSignals: make(map[string]interface{}),
 		lastTelemetryWrite: time.Now().UTC(),
+		state:              t.driveStateReader(),
 	}
 	if speed > 0 {
 		sd.MaxSpeed = speed
@@ -719,21 +778,51 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	}
 
 	// Enrich with signal_log for fields not captured during session.
-	// SignalLogReader reconstructs full signal state using last-known values,
-	// compensating for Tesla's delta encoding (signals not sent unless changed).
-	// Falls back to signalHistoryWriter if signalLogReader is unavailable.
+	// signal.StateReader (active.state) reconstructs full signal state at a
+	// point in time using last-known values, compensating for Tesla's delta
+	// encoding (signals not sent unless changed). Replaces the legacy
+	// *database.SignalLogReader.SnapshotAt and
+	// *database.SignalHistoryWriter.SnapshotAt code paths (phase-39 / ADR-002).
+	//
+	// The tracker's signalLogReader *database.SignalLogReader field
+	// (declared in telemetry_sessions.go) is INTENTIONALLY retained because
+	// this branch still calls signalLogReader.DriveAggregates and
+	// signalLogReader.RegenEnergy for the avg/max speed-and-power rollup
+	// plus regenerative-braking kWh totals, neither of which has an
+	// equivalent on the StateReader API surface. Removing the field would
+	// silently zero out avg_speed_mph, max_speed_mph, avg_power_kw, and
+	// regen_kwh on every completed drive.
+	//
+	// Both branches below intentionally read through active.state — the gating
+	// signalLogReader / signalHistoryWriter checks remain in place because the
+	// first branch still consumes signalLogReader for the DriveAggregates +
+	// RegenEnergy rollups (which have no StateReader equivalent), and the
+	// second branch is preserved as the legacy degradation path when only
+	// the writer-side reader is wired. State() errors are logged-and-swallowed
+	// so a transient signal_log query failure does not abort drive-session
+	// completion (the unenriched `drives` row is still committed).
 	if t.signalLogReader != nil {
 		endTs := time.Now().UTC()
-		startSnap, startErr := t.signalLogReader.SnapshotAt(ctx, vehicleID, active.StartTime)
-		if startErr != nil {
-			log.Warn().Err(startErr).Int64("vehicle_id", vehicleID).
-				Msg("telemetry: signal_log start snapshot failed")
+		var startSnap, endSnap map[string]interface{}
+		if active.state != nil {
+			s, startErr := active.state.State(ctx, vehicleID, active.StartTime)
+			if startErr != nil {
+				log.Warn().Err(startErr).Int64("vehicle_id", vehicleID).
+					Msg("telemetry: state.State drive start snapshot failed")
+				startSnap = map[string]interface{}{}
+			} else {
+				startSnap = stateToLegacyMap(s)
+			}
+			s2, endErr := active.state.State(ctx, vehicleID, endTs)
+			if endErr != nil {
+				log.Warn().Err(endErr).Int64("vehicle_id", vehicleID).
+					Msg("telemetry: state.State drive end snapshot failed")
+				endSnap = map[string]interface{}{}
+			} else {
+				endSnap = stateToLegacyMap(s2)
+			}
+		} else {
 			startSnap = map[string]interface{}{}
-		}
-		endSnap, endErr := t.signalLogReader.SnapshotAt(ctx, vehicleID, endTs)
-		if endErr != nil {
-			log.Warn().Err(endErr).Int64("vehicle_id", vehicleID).
-				Msg("telemetry: signal_log end snapshot failed")
 			endSnap = map[string]interface{}{}
 		}
 
@@ -831,16 +920,33 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 			enhancedFields["regen_kwh"] = regenKwh
 		}
 	} else if t.signalHistoryWriter != nil {
-		// Legacy fallback: use signalHistoryWriter for enrichment
-		startSnapshot, startErr := t.signalHistoryWriter.SnapshotAt(ctx, vehicleID, active.StartTime)
-		if startErr != nil {
-			log.Warn().Err(startErr).Int64("vehicle_id", vehicleID).
-				Msg("telemetry: signal_history start snapshot failed")
-		}
-		endSnapshot, endErr := t.signalHistoryWriter.SnapshotAt(ctx, vehicleID, time.Now().UTC())
-		if endErr != nil {
-			log.Warn().Err(endErr).Int64("vehicle_id", vehicleID).
-				Msg("telemetry: signal_history end snapshot failed")
+		// Legacy fallback path: signalHistoryWriter is wired but signalLogReader
+		// is not. Both legs still go through active.state because StateReader
+		// is the canonical cold-path read API post-phase-39; the writer-side
+		// gating is preserved purely as a degradation hint that cold reads may
+		// not be backed by the primary reader. The lat/lng + temp recovery
+		// below is the residual enrichment performed in this degraded mode.
+		var startSnapshot, endSnapshot map[string]interface{}
+		if active.state != nil {
+			s, startErr := active.state.State(ctx, vehicleID, active.StartTime)
+			if startErr != nil {
+				log.Warn().Err(startErr).Int64("vehicle_id", vehicleID).
+					Msg("telemetry: state.State (history-writer fallback) drive start snapshot failed")
+				startSnapshot = map[string]interface{}{}
+			} else {
+				startSnapshot = stateToLegacyMap(s)
+			}
+			s2, endErr := active.state.State(ctx, vehicleID, time.Now().UTC())
+			if endErr != nil {
+				log.Warn().Err(endErr).Int64("vehicle_id", vehicleID).
+					Msg("telemetry: state.State (history-writer fallback) drive end snapshot failed")
+				endSnapshot = map[string]interface{}{}
+			} else {
+				endSnapshot = stateToLegacyMap(s2)
+			}
+		} else {
+			startSnapshot = map[string]interface{}{}
+			endSnapshot = map[string]interface{}{}
 		}
 
 		// Fill missing start position
