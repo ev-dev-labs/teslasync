@@ -21,6 +21,7 @@ import {
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -189,6 +190,11 @@ export default function MapOverviewPage() {
     ],
     [t],
   );
+
+  // Defensive guard: no vehicle selected (Phase 40 / Prompt 18).
+  if (vehicleId == null) {
+    return <NoVehicleSelected pageTitle={t('mapOverview.title', 'Map Overview')} />;
+  }
 
   /* ---- render ---- */
   return (

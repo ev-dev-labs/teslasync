@@ -33,6 +33,7 @@ import { useDrives, useDrivingStats } from '@/api/hooks/useDriving';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { formatDateTime, formatDateShort, formatDurationMinutes } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -287,6 +288,14 @@ export default function DrivesListPage() {
       distance: parseFloat(fmtNumber(d.distanceMi ?? 0, 1)),
     }));
   }, [filteredDrives]);
+
+  // Defensive guard: when no vehicle is selected (fresh install or
+  // revoked Tesla token), bail out before rendering the data
+  // scaffolding. The global <OnboardingGate> normally redirects, but
+  // this catches the brief window before the redirect takes effect.
+  if (vehicleId == null) {
+    return <NoVehicleSelected pageTitle={t('drives.title', 'Drive History')} />;
+  }
 
   return (
     <PageContainer

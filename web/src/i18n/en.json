@@ -53,7 +53,12 @@
     "online": "Online",
     "offline": "Offline",
     "connected": "Connected",
-    "disconnected": "Disconnected"
+    "disconnected": "Disconnected",
+    "noVehicleSelected": {
+      "title": "No vehicle selected",
+      "desc": "Add a vehicle to your fleet to see data on this page.",
+      "action": "Set up TeslaSync"
+    }
   },
   "units": {
     "km": "km",
@@ -392,6 +397,41 @@
           "error": "Failed to refresh warranty details"
         }
       }
+    }
+  },
+  "onboarding": {
+    "pageTitle": "Welcome to TeslaSync",
+    "welcome": "Welcome to TeslaSync",
+    "subtitle": "Three quick steps before your dashboard is ready.",
+    "intro": {
+      "title": "Setup checklist",
+      "desc": "TeslaSync runs entirely on your hardware. No data leaves your install, and you can revisit this page from Settings any time."
+    },
+    "tesla": {
+      "title": "Connect your Tesla account",
+      "desc": "TeslaSync needs Fleet API access to read vehicle data. Sign in with your Tesla account to authorize the connection.",
+      "cta": "Connect Tesla account"
+    },
+    "vehicle": {
+      "title": "Wait for vehicles to appear",
+      "desc": "Vehicles linked to your Tesla account will sync automatically. This usually takes less than a minute after connecting.",
+      "cta": "Refresh",
+      "checking": "Checking…"
+    },
+    "telemetry": {
+      "title": "Wait for telemetry data",
+      "desc": "Once your vehicle uploads its first signal batch (usually within 5 minutes of driving), live data will appear across the app. See the Fleet Telemetry setup guide if it does not arrive.",
+      "docs": "Setup guide"
+    },
+    "ready": "You are all set — your dashboard is ready.",
+    "polling": "This page refreshes automatically every 30 seconds.",
+    "checkAgain": "Check again",
+    "continue": "Continue to dashboard",
+    "footer": {
+      "help": "Need help? See the",
+      "account": "Tesla account page",
+      "or": " or the ",
+      "docs": "documentation"
     }
   }
 }

@@ -196,6 +196,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	geocodeHandler := NewGeocodeHandler(geocoding.NewSearcher("TeslaSync/1.0"), geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
 	shareHandler := NewShareHandler(db)
 	watchHandler := NewWatchHandler(db, teslaClient)
+	onboardingHandler := NewOnboardingHandler(db, opt.Encryptor)
 
 	// Wire Redis signal cache to handlers that read live vehicle state
 	if opt.CacheStore != nil {
@@ -330,6 +331,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/status", authHandler.Status)
 			r.Post("/disconnect", authHandler.Disconnect)
 		})
+
+		// Onboarding (Phase 40 / Prompt 18): first-run gate status.
+		// Reports whether the install has connected a Tesla account,
+		// has any vehicles, and has received recent telemetry. The
+		// frontend polls this endpoint and routes the user to
+		// <OnboardingPage> until is_complete flips to true.
+		r.Get("/onboarding/status", onboardingHandler.Status)
 
 		// Vehicles
 		r.Route("/vehicles", func(r chi.Router) {

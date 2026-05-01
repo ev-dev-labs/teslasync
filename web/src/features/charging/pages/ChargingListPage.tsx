@@ -8,6 +8,7 @@ import { useChargingSessionsPaginated, useChargingOptimizer } from '@/api/hooks/
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import {
   HeroGauges,
   QuickMetrics,
@@ -91,6 +92,11 @@ export default function ChargingListPage() {
     () => (sessions ? filterAndSortSessions(sessions, chargerFilter, sortBy, sortDesc, searchQuery) : []),
     [sessions, chargerFilter, sortBy, sortDesc, searchQuery],
   );
+
+  // Defensive guard: no vehicle selected (Phase 40 / Prompt 18).
+  if (vehicleId == null) {
+    return <NoVehicleSelected pageTitle={t('charging.list.title', 'Charging Sessions')} />;
+  }
 
   // ── Render ───────────────────────────────────────────────────────────
   return (

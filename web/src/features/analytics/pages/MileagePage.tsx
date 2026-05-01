@@ -18,6 +18,7 @@ import {
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { useSettings } from '@/hooks/useSettings';
 import { formatDate } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
@@ -115,6 +116,11 @@ export default function MileagePage() {
     { key: 'drives', header: t('Drives'), render: (r) => fmtInt(r.drives), sortable: true },
     { key: 'dailyAvg', header: `${t('Daily Avg')} (${distanceUnit})`, render: (r) => fmtNumber(r.dailyAvg), sortable: true },
   ], [t, distanceUnit]);
+
+  // Defensive guard: no vehicle selected (Phase 40 / Prompt 18).
+  if (vehicleId == null) {
+    return <NoVehicleSelected pageTitle={t('mileage.title', 'Mileage')} />;
+  }
 
   return (
     <PageContainer

@@ -28,6 +28,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useAlertContext } from '@/hooks/useAlertContext';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { cn } from '@/lib/cn';
 import { COLOR, STATUS_COLORS } from '@/lib/colors';
 import { fmtNumber, fmtPercent, fmtInt } from '@/lib/numberFormat';
@@ -319,6 +320,11 @@ export default function BatteryHealthPage() {
   const yearsTo80 = degradation?.prediction?.has_enough_data
     ? fmtNumber(degradation.prediction.years_to_80_pct, 1)
     : '—';
+
+  /* ── No vehicle: defensive guard (Phase 40 / Prompt 18) ───────── */
+  if (vehicleId == null) {
+    return <NoVehicleSelected pageTitle={t('battery.title', 'Battery Health')} />;
+  }
 
   /* ── Loading ───────────────────────────────────────────────────── */
   if (healthLoading) {

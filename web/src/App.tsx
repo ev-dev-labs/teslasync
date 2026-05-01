@@ -4,6 +4,7 @@ import Layout from './components/layout/Layout'
 import { PageLoader } from './components/feedback/PageLoader'
 import { ErrorBoundary } from './components/feedback/ErrorBoundary'
 import { AuthExpiredOverlay } from '@/components/feedback'
+import { OnboardingGate } from '@/features/onboarding/components/OnboardingGate'
 
 // ── ALL pages live in features/ — zero imports from pages/ ──────────────
 
@@ -133,6 +134,9 @@ const TeslaAccount = lazy(() => import('./features/system/pages/TeslaAccountPage
 // Settings
 const Settings = lazy(() => import('./features/settings/pages/SettingsPage'))
 
+// Onboarding (Phase 40 / Prompt 18 — first-run experience)
+const Onboarding = lazy(() => import('./features/onboarding/pages/OnboardingPage'))
+
 // Sharing (public)
 const SharedDrive = lazy(() => import('./features/sharing/pages/SharedDrivePage'))
 
@@ -170,12 +174,14 @@ export default function App() {
   return (
     <>
       <AuthExpiredOverlay />
+      <OnboardingGate />
       <Routes>
       <Route path="quick-stats" element={<SafeRoute name="QuickStats"><QuickStats /></SafeRoute>} />
       <Route path="glance" element={<SafeRoute name="Glance"><GlancePage /></SafeRoute>} />
       <Route path="year-review/:year" element={<SafeRoute name="YearReview"><YearReview /></SafeRoute>} />
       <Route path="s/:token" element={<SafeRoute name="SharedDrive"><SharedDrive /></SafeRoute>} />
       <Route path="watch" element={<SafeRoute name="WatchFace"><WatchFace /></SafeRoute>} />
+      <Route path="onboarding" element={<SafeRoute name="Onboarding"><Onboarding /></SafeRoute>} />
       <Route path="/" element={<Layout />}>
         <Route index element={<SafeRoute name="Dashboard"><Dashboard /></SafeRoute>} />
         <Route path="live" element={<SafeRoute name="LiveMap"><LiveMap /></SafeRoute>} />
