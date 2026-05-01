@@ -22,7 +22,16 @@
     "commands": "Commands",
     "geofences": "Geofences",
     "notifications": "Notifications",
-    "settings": "Settings"
+    "settings": "Settings",
+    "gpsFixQuality": "GPS Fix Quality",
+    "gpsState": {
+      "locked": "Locked",
+      "unlocked": "No fix",
+      "unknown": "Unknown"
+    },
+    "heading": "Heading",
+    "headingValue": "{{cardinal}} ({{degrees}}°)",
+    "unknown": "Unknown"
   },
   "common": {
     "loading": "Loading...",

@@ -58,6 +58,7 @@ import { CHART_COLORS } from '@/lib/colors';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { request } from '@/api/client';
 import { useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
+import { normalizeGpsState } from '@/lib/signalCatalog';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -655,18 +656,30 @@ export default function NavigationRoutePage() {
                 }
                 active={hasValidLocation}
               />
+              {(() => {
+                const fix = normalizeGpsState(latest?.gps_state);
+                return (
+                  <LocationStatusCard
+                    icon={<Satellite className="h-5 w-5" />}
+                    label={t('nav.gpsFixQuality', 'GPS Fix Quality')}
+                    value={t(`nav.gpsState.${fix}`, { defaultValue: fix })}
+                    active={fix === 'locked'}
+                  />
+                );
+              })()}
               <LocationStatusCard
-                icon={<Satellite className="h-5 w-5" />}
-                label={t('nav.gpsFixQuality', 'GPS Fix Quality')}
+                icon={<Compass className="h-5 w-5" />}
+                label={t('nav.heading', 'Heading')}
                 value={
-                  latest?.gps_state
-                    ? `${t(`nav.gpsState.${latest.gps_state}`, latest.gps_state)} ${headingToCardinal(latest?.heading)}`
+                  latest?.heading != null
+                    ? t('nav.headingValue', {
+                        defaultValue: '{{cardinal}} ({{degrees}}°)',
+                        cardinal: headingToCardinal(latest.heading),
+                        degrees: Math.round(latest.heading),
+                      })
                     : t('nav.unknown', 'Unknown')
                 }
-                active={
-                  !!latest?.gps_state &&
-                  /^(normal|good|strong|ok|valid)$/i.test(latest.gps_state)
-                }
+                active={latest?.heading != null}
               />
               <LocationStatusCard
                 icon={<Home className="h-5 w-5" />}
