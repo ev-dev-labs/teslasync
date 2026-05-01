@@ -22,6 +22,7 @@
     "commands": "Commands",
     "geofences": "Geofences",
     "notifications": "Notifications",
+    "notificationsUnread": "{{count}} unread notifications",
     "settings": "Settings",
     "gpsFixQuality": "GPS Fix Quality",
     "gpsState": {
@@ -609,6 +610,28 @@
       "test": {
         "success": "Test notification sent",
         "error": "Failed to send test"
+      }
+    },
+    "notifications": {
+      "markRead": {
+        "success": "Marked as read",
+        "error": "Failed to mark as read"
+      },
+      "markUnread": {
+        "success": "Marked as unread",
+        "error": "Failed to mark as unread"
+      },
+      "archive": {
+        "success": "Archived",
+        "error": "Failed to archive"
+      },
+      "unarchive": {
+        "success": "Restored from archive",
+        "error": "Failed to unarchive"
+      },
+      "delete": {
+        "success": "Deleted",
+        "error": "Failed to delete notifications"
       }
     },
     "settings": {
@@ -4536,6 +4559,86 @@
     "tipsTitle": "Recommendations"
   },
   "notifications": {
+    "title": "Notifications",
+    "subtitle": "Inbox of fired alerts plus delivery channels.",
+    "tab": {
+      "inbox": "Inbox",
+      "archived": "Archived",
+      "channels": "Channels"
+    },
+    "inbox": {
+      "selectAll": "Select all visible",
+      "countLabel": "{{count}} notifications",
+      "filter": {
+        "severity": "Severity",
+        "vehicle": "Vehicle",
+        "rule": "Rule",
+        "allVehicles": "All vehicles",
+        "allRules": "All rules",
+        "searchPlaceholder": "Search messages…",
+        "severity.info": "Info",
+        "severity.warn": "Warn",
+        "severity.critical": "Critical"
+      },
+      "row": {
+        "select": "Select notification",
+        "markRead": "Mark as read",
+        "markUnread": "Mark as unread",
+        "archive": "Archive",
+        "unarchive": "Restore"
+      },
+      "bulk": {
+        "markRead": "Mark read",
+        "archive": "Archive",
+        "restore": "Restore",
+        "delete": "Delete",
+        "deleteConfirmTitle": "Delete notifications?",
+        "deleteConfirmBody": "These notifications will be permanently removed. Archive is usually the safer choice."
+      },
+      "empty": {
+        "title": "No notifications",
+        "message": "When alert rules fire, the resulting notifications appear here.",
+        "archivedTitle": "No archived notifications",
+        "archivedMessage": "Archived notifications will appear here."
+      },
+      "error": {
+        "title": "Could not load notifications"
+      }
+    },
+    "stats": {
+      "sent": "Total Sent",
+      "failed": "Failed",
+      "pending": "Pending",
+      "activeChannels": "Active Channels"
+    },
+    "channels": {
+      "add": "Add Channel",
+      "addTitle": "Add Channel",
+      "editTitle": "Edit Channel",
+      "active": "Active",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "configLabel": "Configuration",
+      "typeLabel": "Channel Type",
+      "nameLabel": "Channel Name",
+      "namePlaceholderPrefix": "My",
+      "nameRequired": "Name is required",
+      "test": "Test Connection",
+      "testShort": "Test",
+      "testing": "Testing…",
+      "testSuccess": "Test notification sent successfully!",
+      "testSuccessShort": "Test sent!",
+      "testFailed": "Test failed",
+      "toggledOn": "Channel enabled",
+      "toggledOff": "Channel disabled",
+      "toggleFailed": "Failed to toggle channel",
+      "deleted": "Channel deleted",
+      "deleteFailed": "Failed to delete channel",
+      "empty": {
+        "title": "No channels configured",
+        "message": "Add a notification channel to start receiving alerts via Discord, Slack, Telegram, Email, and more."
+      }
+    },
     "alertStudio": {
       "title": "Alert Studio",
       "subtitle": "Create custom rules from Fleet Telemetry signals",

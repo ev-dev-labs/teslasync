@@ -55,8 +55,46 @@ export const notificationKeys = {
   alertRules: ['alert-rules'] as const,
   channels: ['notification-channels'] as const,
   logs: ['notification-logs'] as const,
+  logsFiltered: (filters?: NotificationFilters) =>
+    ['notification-logs', 'filtered', filters ?? {}] as const,
+  unreadCount: ['notification-logs', 'unread-count'] as const,
   stats: ['notification-stats'] as const,
 };
+
+/**
+ * Filter shape for the notifications inbox. All fields are optional and map
+ * to backend snake_case query params. Multi-value fields are CSV-encoded.
+ */
+export interface NotificationFilters {
+  severity?: ('info' | 'warn' | 'critical')[];
+  vehicle_id?: number[];
+  rule_id?: number[];
+  from?: string;
+  to?: string;
+  read?: boolean;
+  archived?: boolean;
+  q?: string;
+  limit?: number;
+  offset?: number;
+}
+
+function serializeNotificationFilters(filters: NotificationFilters): string {
+  const params = new URLSearchParams();
+  if (filters.severity?.length) params.set('severity', filters.severity.join(','));
+  if (filters.vehicle_id?.length) params.set('vehicle_id', filters.vehicle_id.join(','));
+  if (filters.rule_id?.length) params.set('rule_id', filters.rule_id.join(','));
+  if (filters.from) params.set('from', filters.from);
+  if (filters.to) params.set('to', filters.to);
+  if (typeof filters.read === 'boolean') params.set('read', String(filters.read));
+  if (typeof filters.archived === 'boolean') params.set('archived', String(filters.archived));
+  if (filters.q) params.set('q', filters.q);
+  if (typeof filters.limit === 'number') params.set('limit', String(filters.limit));
+  if (typeof filters.offset === 'number') params.set('offset', String(filters.offset));
+  return params.toString();
+}
+
+// Exported only for unit tests; callers should not depend on the URL shape.
+export const __serializeNotificationFiltersForTest = serializeNotificationFilters;
 
 export function useAlerts() {
   return useQuery({
@@ -204,11 +242,119 @@ export function useNotificationChannels() {
   });
 }
 
-export function useNotificationLogs() {
+export function useNotificationLogs(filters: NotificationFilters = {}) {
+  const qs = serializeNotificationFilters(filters);
+  // GET /notifications/logs returns the same shape — backend `GetLogs` parses
+  // the same query params for both `/notifications` and `/notifications/logs`
+  // (the latter is the historical alias used by older widgets).
   return useQuery({
-    queryKey: notificationKeys.logs,
-    queryFn: () => request<NotificationLog[]>('/notifications/logs'),
+    queryKey: notificationKeys.logsFiltered(filters),
+    queryFn: () => request<NotificationLog[]>(`/notifications/logs${qs ? `?${qs}` : ''}`),
     select: safeArray,
+  });
+}
+
+export function useUnreadCount() {
+  return useQuery({
+    queryKey: notificationKeys.unreadCount,
+    queryFn: () => request<{ count: number }>('/notifications/unread-count'),
+    refetchInterval: INTERVALS.STANDARD,
+    select: (data) => data?.count ?? 0,
+  });
+}
+
+function invalidateLogsAndUnread(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: notificationKeys.logs });
+  qc.invalidateQueries({ queryKey: notificationKeys.unreadCount });
+}
+
+export function useMarkNotificationsRead() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: (ids: number[]) =>
+      request<{ updated: number }>('/notifications/mark-read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      }),
+    onSuccess: () => {
+      invalidateLogsAndUnread(qc);
+      success('toast.notifications.markRead.success', 'Marked as read');
+    },
+    onError: (e) => error(e, 'toast.notifications.markRead.error', 'Failed to mark as read'),
+  });
+}
+
+export function useMarkNotificationsUnread() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: (ids: number[]) =>
+      request<{ updated: number }>('/notifications/mark-unread', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      }),
+    onSuccess: () => {
+      invalidateLogsAndUnread(qc);
+      success('toast.notifications.markUnread.success', 'Marked as unread');
+    },
+    onError: (e) => error(e, 'toast.notifications.markUnread.error', 'Failed to mark as unread'),
+  });
+}
+
+export function useArchiveNotifications() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: (ids: number[]) =>
+      request<{ updated: number }>('/notifications/archive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      }),
+    onSuccess: () => {
+      invalidateLogsAndUnread(qc);
+      success('toast.notifications.archive.success', 'Archived');
+    },
+    onError: (e) => error(e, 'toast.notifications.archive.error', 'Failed to archive'),
+  });
+}
+
+export function useUnarchiveNotifications() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: (ids: number[]) =>
+      request<{ updated: number }>('/notifications/unarchive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      }),
+    onSuccess: () => {
+      invalidateLogsAndUnread(qc);
+      success('toast.notifications.unarchive.success', 'Restored from archive');
+    },
+    onError: (e) => error(e, 'toast.notifications.unarchive.error', 'Failed to unarchive'),
+  });
+}
+
+export function useDeleteNotifications() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: (ids: number[]) =>
+      request<{ deleted: number }>('/notifications/logs', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      }),
+    onSuccess: () => {
+      invalidateLogsAndUnread(qc);
+      success('toast.notifications.delete.success', 'Deleted');
+    },
+    onError: (e) => error(e, 'toast.notifications.delete.error', 'Failed to delete notifications'),
   });
 }
 

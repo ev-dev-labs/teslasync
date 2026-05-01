@@ -114,6 +114,7 @@ import { useRealtimeEvents } from '../../hooks/useRealtimeEvents'
 import { useNotificationListener } from '../../hooks/useNotificationListener'
 import { useToast } from '../feedback/Toast'
 import { useSettings } from '../../hooks/useSettings'
+import { useUnreadCount } from '@/api/hooks/useNotifications'
 import { GlassPanel } from '../ui/GlassPanel'
 import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough'
 
@@ -508,6 +509,37 @@ function findNavItemByExactPath(to: string) {
   return null
 }
 
+/**
+ * Tiny header link that renders the bell icon and an unread-count badge.
+ * Polls `/notifications/unread-count` via TanStack Query every 30s. Used in
+ * both the desktop sidebar header and the mobile top bar.
+ */
+function NotificationBell({ className }: { className?: string }) {
+  const { t } = useTranslation()
+  const { data: count = 0 } = useUnreadCount()
+  const display = count > 99 ? '99+' : String(count)
+  const label = count > 0
+    ? t('nav.notificationsUnread', '{{count}} unread notifications', { count })
+    : t('nav.notifications', 'Notifications')
+  return (
+    <NavLink
+      to="/notifications"
+      aria-label={label}
+      className={`relative inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${className ?? ''}`}
+    >
+      <Bell className="h-5 w-5" aria-hidden="true" />
+      {count > 0 && (
+        <span
+          aria-hidden="true"
+          className="absolute -top-0.5 -right-0.5 inline-flex min-w-[1rem] h-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white shadow ring-1 ring-rose-300/60"
+        >
+          {display}
+        </span>
+      )}
+    </NavLink>
+  )
+}
+
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [expandedSections, setExpandedSections] = useState<Set<string>>(() => {
@@ -900,14 +932,17 @@ export default function Layout() {
         </div>
 
         {/* Logo — desktop sidebar header */}
-        <NavLink to="/" className="hidden lg:flex items-center gap-3 px-5 py-5 border-b border-[var(--glass-border)] shrink-0 hover:bg-[var(--surface-2)] transition-colors" onClick={() => setSidebarOpen(false)}>
-          <Logo size={32} showWordmark />
-          {versionLabel && (
-            <span className="ml-auto rounded-md bg-neon-cyan/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-neon-cyan">
-              {versionLabel}
-            </span>
-          )}
-        </NavLink>
+        <div className="hidden lg:flex items-center gap-2 px-5 py-5 border-b border-[var(--glass-border)] shrink-0">
+          <NavLink to="/" className="flex flex-1 items-center gap-3 hover:bg-[var(--surface-2)] -mx-2 px-2 py-1 rounded-md transition-colors" onClick={() => setSidebarOpen(false)}>
+            <Logo size={32} showWordmark />
+            {versionLabel && (
+              <span className="ml-auto rounded-md bg-neon-cyan/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-neon-cyan">
+                {versionLabel}
+              </span>
+            )}
+          </NavLink>
+          <NotificationBell />
+        </div>
 
         {/* Sticky search trigger */}
         <div className="px-3 py-2 lg:px-4 lg:py-3 border-b border-[var(--glass-border)] shrink-0">
@@ -1161,6 +1196,7 @@ export default function Layout() {
           <div className="flex-1 flex justify-center -ml-10">
             <Logo size={26} showWordmark />
           </div>
+          <NotificationBell className="ml-auto" />
         </header>
       )}
 

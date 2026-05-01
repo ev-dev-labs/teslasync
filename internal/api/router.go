@@ -640,6 +640,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Post("/", notificationHandler.CreateChannel)
 			r.Get("/logs", notificationHandler.GetLogs)
 			r.Get("/stats", notificationHandler.GetStats)
+			r.Get("/unread-count", notificationHandler.UnreadCount)
+			r.Post("/mark-read", notificationHandler.MarkRead)
+			r.Post("/mark-unread", notificationHandler.MarkUnread)
+			r.Post("/archive", notificationHandler.Archive)
+			r.Post("/unarchive", notificationHandler.Unarchive)
+			r.Delete("/logs", notificationHandler.DeleteBulk)
 			r.Get("/analytics", notifScheduleHandler.GetAnalytics)
 			r.Route("/schedules", func(r chi.Router) {
 				r.Get("/", notifScheduleHandler.ListSchedules)

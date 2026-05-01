@@ -458,6 +458,8 @@ export interface NotificationLog {
   sent_at: string | null
   scheduled_at?: string
   latency_ms?: number
+  read_at?: string | null
+  archived_at?: string | null
 }
 
 export interface NotificationStats {

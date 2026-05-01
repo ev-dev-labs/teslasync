@@ -259,6 +259,10 @@ type NotificationChannel struct {
 }
 
 // NotificationLog records a notification delivery attempt.
+//
+// ReadAt / ArchivedAt (Phase 40 / Prompt 29) drive the inbox UX on
+// /notifications: NULL means "unread" / "still in the inbox", a non-nil
+// timestamp records when the user (or an auto-mark policy) flipped the bit.
 type NotificationLog struct {
 	ID          int64      `json:"id" db:"id"`
 	ChannelID   int64      `json:"channel_id" db:"channel_id"`
@@ -271,6 +275,8 @@ type NotificationLog struct {
 	LatencyMs   *int       `json:"latency_ms,omitempty" db:"latency_ms"`
 	CreatedAt   time.Time  `json:"created_at" db:"created_at"`
 	SentAt      *time.Time `json:"sent_at,omitempty" db:"sent_at"`
+	ReadAt      *time.Time `json:"read_at,omitempty" db:"read_at"`
+	ArchivedAt  *time.Time `json:"archived_at,omitempty" db:"archived_at"`
 }
 
 // NotificationSchedule represents a scheduled or recurring notification.

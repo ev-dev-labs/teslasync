@@ -1,0 +1,151 @@
+/**
+ * NotificationFilterBar — controls for the notifications inbox.
+ *
+ * Wired controls:
+ *   - Severity chips (info/warn/critical) — multi-select
+ *   - Vehicle <Select> (single, "All vehicles" option)
+ *   - Rule <Select>    (single, "All rules" option)
+ *   - DateRangeFilter  (from/to ISO date strings)
+ *   - SearchInput      (debounced, message text search)
+ *
+ * The parent owns the `NotificationFilters` state; this component is fully
+ * controlled and emits `onChange` patches that the parent merges in.
+ */
+
+import { useTranslation } from 'react-i18next';
+import { AlertOctagon, AlertTriangle, Info } from 'lucide-react';
+import { cn } from '@/lib/cn';
+import { Select } from '@/components/ui';
+import { FilterBar, SearchInput, DateRangeFilter } from '@/components/forms';
+import type { NotificationFilters } from '@/api/hooks/useNotifications';
+import type { Vehicle, AlertRule } from '@/api/types';
+
+const SEVERITY_OPTIONS = [
+  { value: 'info', label: 'Info', Icon: Info, ring: 'ring-blue-400/40', bg: 'bg-blue-500/15', text: 'text-blue-200' },
+  { value: 'warn', label: 'Warn', Icon: AlertTriangle, ring: 'ring-amber-400/40', bg: 'bg-amber-500/15', text: 'text-amber-200' },
+  { value: 'critical', label: 'Critical', Icon: AlertOctagon, ring: 'ring-rose-400/40', bg: 'bg-rose-500/15', text: 'text-rose-200' },
+] as const;
+
+type Severity = (typeof SEVERITY_OPTIONS)[number]['value'];
+
+export interface NotificationFilterBarProps {
+  filters: NotificationFilters;
+  onChange: (next: NotificationFilters) => void;
+  vehicles: Vehicle[];
+  rules: AlertRule[];
+}
+
+export function NotificationFilterBar({
+  filters,
+  onChange,
+  vehicles,
+  rules,
+}: NotificationFilterBarProps) {
+  const { t } = useTranslation();
+
+  const toggleSeverity = (sev: Severity) => {
+    const current = filters.severity ?? [];
+    const next = current.includes(sev)
+      ? current.filter(s => s !== sev)
+      : [...current, sev];
+    onChange({ ...filters, severity: next.length ? next : undefined });
+  };
+
+  const setVehicle = (value: string) => {
+    const id = value ? Number(value) : undefined;
+    onChange({ ...filters, vehicle_id: id ? [id] : undefined });
+  };
+
+  const setRule = (value: string) => {
+    const id = value ? Number(value) : undefined;
+    onChange({ ...filters, rule_id: id ? [id] : undefined });
+  };
+
+  const setQuery = (q: string) => {
+    onChange({ ...filters, q: q.trim() ? q : undefined });
+  };
+
+  const setFrom = (date: string) => {
+    onChange({ ...filters, from: date || undefined });
+  };
+  const setTo = (date: string) => {
+    onChange({ ...filters, to: date || undefined });
+  };
+
+  const selectedSeverities = new Set<Severity>(filters.severity ?? []);
+
+  const vehicleOptions = [
+    { value: '', label: t('notifications.inbox.filter.allVehicles', 'All vehicles') },
+    ...vehicles.map(v => ({ value: String(v.id), label: v.display_name || `#${v.id}` })),
+  ];
+
+  const ruleOptions = [
+    { value: '', label: t('notifications.inbox.filter.allRules', 'All rules') },
+    ...rules.map(r => ({ value: String(r.id), label: r.name })),
+  ];
+
+  return (
+    <div className="space-y-3">
+      <FilterBar>
+        <div
+          role="group"
+          aria-label={t('notifications.inbox.filter.severity', 'Severity')}
+          className="flex flex-wrap items-center gap-1"
+        >
+          {SEVERITY_OPTIONS.map(opt => {
+            const active = selectedSeverities.has(opt.value);
+            const Icon = opt.Icon;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => toggleSeverity(opt.value)}
+                aria-pressed={active}
+                className={cn(
+                  'inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
+                  active
+                    ? cn(opt.bg, opt.text, 'border-transparent ring-1', opt.ring)
+                    : 'border-white/10 text-[var(--text-secondary)] hover:bg-white/[0.06]',
+                )}
+              >
+                <Icon className="h-3 w-3" aria-hidden="true" />
+                <span>{t(`notifications.inbox.filter.severity.${opt.value}`, opt.label)}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <Select
+          options={vehicleOptions}
+          value={filters.vehicle_id?.[0] ? String(filters.vehicle_id[0]) : ''}
+          onChange={e => setVehicle(e.target.value)}
+          aria-label={t('notifications.inbox.filter.vehicle', 'Vehicle')}
+          className="min-w-[10rem]"
+        />
+
+        <Select
+          options={ruleOptions}
+          value={filters.rule_id?.[0] ? String(filters.rule_id[0]) : ''}
+          onChange={e => setRule(e.target.value)}
+          aria-label={t('notifications.inbox.filter.rule', 'Rule')}
+          className="min-w-[10rem]"
+        />
+
+        <SearchInput
+          value={filters.q ?? ''}
+          onChange={setQuery}
+          placeholder={t('notifications.inbox.filter.searchPlaceholder', 'Search messages…')}
+          className="w-full sm:w-72"
+        />
+      </FilterBar>
+
+      <DateRangeFilter
+        startDate={filters.from?.slice(0, 10) ?? ''}
+        endDate={filters.to?.slice(0, 10) ?? ''}
+        onStartDateChange={setFrom}
+        onEndDateChange={setTo}
+      />
+    </div>
+  );
+}
