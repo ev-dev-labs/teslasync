@@ -32,6 +32,8 @@ const defaults: AppSettings = {
   alert_digest_mode: 'instant',
   currency_symbol: '$',
   locale: 'en-US',
+  tz_display_default: 'vehicle',
+  timezone_user: '',
 }
 
 /**

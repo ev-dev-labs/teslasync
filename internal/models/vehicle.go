@@ -16,6 +16,12 @@ type Vehicle struct {
 	OptionCodes *string    `db:"option_codes" json:"option_codes,omitempty"`
 	Color       *string    `db:"color"        json:"color,omitempty"`
 	TrimLevel   *string    `db:"trim_level"   json:"trim_level,omitempty"`
+	// Timezone is the IANA tz database name reported by Tesla
+	// (vehicle_state.timezone, e.g. "America/Los_Angeles"). Updated on
+	// every successful vehicle_data poll. Defaults to "UTC"; the frontend
+	// treats "UTC" as "fall back to user TZ" so streaming-only vehicles
+	// that never reach the polling path render gracefully (Phase 40 / 22).
+	Timezone    string     `db:"timezone"     json:"timezone"`
 	EnrolledAt  time.Time  `db:"enrolled_at"  json:"enrolled_at"`
 	ArchivedAt  *time.Time `db:"archived_at"  json:"archived_at,omitempty"`
 	CreatedAt   time.Time  `db:"created_at"   json:"created_at"`

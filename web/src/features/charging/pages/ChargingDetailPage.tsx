@@ -6,11 +6,11 @@ import { useChargingSessionDetail, useChargeTelemetry } from '@/api/hooks/useCha
 import { useVehicle, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { formatDateTime, formatDate, formatTime } from '@/lib/dateFormat';
+import { formatDate, formatTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtWithUnit, fmtPercent } from '@/lib/numberFormat';
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge } from '@/components/ui';
-import { MetricBar, InlineMetric, AnimatedNumber, StatCard, KVList, LiveIndicator } from '@/components/data-display';
+import { MetricBar, InlineMetric, AnimatedNumber, StatCard, KVList, LiveIndicator, DateTime } from '@/components/data-display';
 import { RadialGauge } from '@/components/charts';
 import { Skeleton, EmptyState, LiveStaleDataBanner } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
@@ -747,12 +747,12 @@ export default function ChargingDetailPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
             <div>
               <p className="text-muted mb-1">{t('charging.detail.started', 'Started')}</p>
-              <p className="font-medium">{formatDateTime(session.start_ts)}</p>
+              <p className="font-medium"><DateTime value={session.start_ts} in="vehicle" showTz /></p>
             </div>
             <div>
               <p className="text-muted mb-1">{t('charging.detail.ended', 'Ended')}</p>
               <p className="font-medium">
-                {session.end_ts ? formatDateTime(session.end_ts) : '—'}
+                {session.end_ts ? <DateTime value={session.end_ts} in="vehicle" showTz /> : '—'}
               </p>
             </div>
           </div>

@@ -25,7 +25,7 @@ import { SearchInput, FilterBar } from '@/components/forms';
 import { useFilteredList } from '@/hooks/useFilteredList';
 import { useToast } from '@/components/feedback/Toast';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { formatDateTime } from '@/lib/dateFormat';
+import { DateTime } from '@/components/data-display';
 import {
   useNotificationChannels, useNotificationLogs, useNotificationStats,
   useSaveChannel, useDeleteChannel, useToggleChannel, useTestChannel,
@@ -426,7 +426,7 @@ export default function NotificationsPage() {
     const channelMap: Record<number, NotificationChannel> = {};
     channels.forEach(c => { channelMap[c.id] = c; });
     return [
-      { key: 'time', header: t('Time'), render: (log) => <span className="whitespace-nowrap text-xs text-[var(--text-muted)]">{formatDateTime(log.created_at)}</span> },
+      { key: 'time', header: t('Time'), render: (log) => <DateTime value={log.created_at} in="user" className="whitespace-nowrap text-xs text-[var(--text-muted)]" /> },
       { key: 'channel', header: t('Channel'), render: (log) => {
         const ch = channelMap[log.channel_id];
         if (!ch) return <span className="text-[var(--text-primary)]">{`#${log.channel_id}`}</span>;

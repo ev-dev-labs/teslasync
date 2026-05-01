@@ -195,7 +195,7 @@ export default function CommandHistoryPage() {
           ),
         title: formatCommandName(cmd.command),
         subtitle: buildSubtitle(cmd),
-        time: formatRelative(cmd.created_at),
+        time: formatRelative(cmd.created_at, { tz: 'UTC' }),
         color: cmd.status === 'success' ? '#22c55e' : '#ef4444',
       })),
     [paginatedCommands],
@@ -245,7 +245,7 @@ export default function CommandHistoryPage() {
             label={t('commandHistory.lastSent', 'Last Sent')}
             value={
               stats.lastCommand
-                ? formatRelative(stats.lastCommand.created_at)
+                ? formatRelative(stats.lastCommand.created_at, { tz: 'UTC' })
                 : '—'
             }
             icon={<Clock className="h-4 w-4" />}
@@ -365,7 +365,7 @@ function buildSubtitle(cmd: CommandLogEntry): string {
   }
 
   if (parts.length === 0) {
-    parts.push(formatDateTime(cmd.created_at));
+    parts.push(formatDateTime(cmd.created_at, { tz: 'UTC' }));
   }
 
   return parts.join(' · ');

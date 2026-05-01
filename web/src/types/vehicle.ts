@@ -9,6 +9,8 @@ export interface Vehicle {
   wheel_type: string;
   state: string;
   healthy: boolean;
+  /** IANA tz database name (e.g. "America/Los_Angeles"). 'UTC' = unknown / not yet learned. */
+  timezone?: string;
   created_at: string;
   updated_at: string;
   // Extended fields (from vehicle detail/state endpoints)

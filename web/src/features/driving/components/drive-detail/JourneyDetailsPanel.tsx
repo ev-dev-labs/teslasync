@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Navigation, MapPin, Flag } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
-import { formatDateTime } from '@/lib/dateFormat';
+import { DateTime } from '@/components/data-display';
 import { fmtNumber } from '@/lib/numberFormat';
 import type { DriveDetail } from '@/types/driving';
 
@@ -31,7 +31,9 @@ export function JourneyDetailsPanel({ drive }: JourneyDetailsPanelProps) {
                   ? <span className="font-mono">{fmtNumber(drive.startLat)}°{drive.startLat >= 0 ? 'N' : 'S'}, {fmtNumber(Math.abs(drive.startLon))}°{drive.startLon >= 0 ? 'E' : 'W'}</span>
                   : t('driveDetail.noAddress', 'No address data')}
             </p>
-            <p className="text-xs text-[var(--text-muted)]">{formatDateTime(drive.startTs)}</p>
+            <p className="text-xs text-[var(--text-muted)]">
+              <DateTime value={drive.startTs} in="vehicle" />
+            </p>
             <p className="text-xs text-[var(--text-secondary)]">
               {t('driveDetail.battery', 'Battery')}: {drive.startBatteryPct ?? '?'}%
             </p>
@@ -47,7 +49,11 @@ export function JourneyDetailsPanel({ drive }: JourneyDetailsPanelProps) {
                   ? <span className="font-mono">{fmtNumber(drive.endLat)}°{drive.endLat >= 0 ? 'N' : 'S'}, {fmtNumber(Math.abs(drive.endLon))}°{drive.endLon >= 0 ? 'E' : 'W'}</span>
                   : drive.endTs ? t('driveDetail.noAddress', 'No address data') : t('driveDetail.inProgress', 'In progress')}
             </p>
-            <p className="text-xs text-[var(--text-muted)]">{drive.endTs ? formatDateTime(drive.endTs) : t('driveDetail.inProgress', 'In progress')}</p>
+            <p className="text-xs text-[var(--text-muted)]">
+              {drive.endTs
+                ? <DateTime value={drive.endTs} in="vehicle" />
+                : t('driveDetail.inProgress', 'In progress')}
+            </p>
             <p className="text-xs text-[var(--text-secondary)]">
               {t('driveDetail.battery', 'Battery')}: {drive.endBatteryPct ?? '?'}%
             </p>

@@ -337,6 +337,17 @@ type Settings struct {
 	// `Intl.NumberFormat` for thousands/decimal separators on the
 	// frontend. Defaults to "en-US".
 	Locale string `json:"locale"`
+	// TzDisplayDefault selects which IANA timezone the frontend uses
+	// when rendering timestamps without an explicit `in` override
+	// on a `<DateTime>`. One of "vehicle" (car local time, falling
+	// back to user when the car has no known TZ), "user" (browser
+	// local), or "utc". Defaults to "vehicle" (Phase 40 / 22).
+	TzDisplayDefault string `json:"tz_display_default"`
+	// TimezoneUser overrides the browser's detected timezone when set
+	// (useful when the user is travelling but wants timestamps in their
+	// home zone). Empty string = use browser TZ. Validated server-side
+	// against Go's tzdata so invalid IANA names are rejected.
+	TimezoneUser string `json:"timezone_user"`
 }
 
 // Embedding mirrors the post-migration `embeddings` schema (pgvector-backed).

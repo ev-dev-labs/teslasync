@@ -24,6 +24,8 @@ export interface Vehicle {
   wheel_type: string
   state: string
   healthy: boolean
+  /** IANA tz database name reported by Tesla (e.g. "America/Los_Angeles"). 'UTC' = unknown — frontend falls back to user TZ. */
+  timezone?: string
   created_at: string
   updated_at: string
 }
@@ -192,6 +194,19 @@ export interface AppSettings {
   currency_symbol?: string
   /** BCP-47 locale tag for `Intl.NumberFormat` (e.g. "en-US", "de-DE"). */
   locale?: string
+  /**
+   * Default timezone-display mode used by `<DateTime>` when no explicit
+   * `in` prop is set. 'vehicle' = car local time (falls back to user TZ
+   * when the vehicle has no learned tz); 'user' = browser local; 'utc'
+   * = literal UTC. Defaults to 'vehicle'. (Phase 40 / 22.)
+   */
+  tz_display_default?: 'vehicle' | 'user' | 'utc'
+  /**
+   * Optional override of the user's browser-detected timezone (IANA
+   * name, e.g. "America/Los_Angeles"). Empty string = use browser TZ.
+   * Server-side validated against Go's tzdata.
+   */
+  timezone_user?: string
 }
 
 /** Per-endpoint toggle config for Tesla Fleet API calls. */

@@ -8,12 +8,11 @@ import {
 
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel, Button as UiButton, Select as UiSelect, Input as UiInput, Badge } from '@/components/ui';
-import { StatCard } from '@/components/data-display';
+import { StatCard, DateTime } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { Spinner, AlertBanner } from '@/components/feedback';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { getAPICallLogs, getAPICallLogStats } from '@/api/devtools';
 import type { APICallLog, APICallLogStats } from '@/api/types';
@@ -334,7 +333,7 @@ export default function ApiLogsPage() {
                         className="flex items-center gap-2 px-4 py-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
                       >
                         <span className="text-xs font-mono text-[var(--text-muted)] whitespace-nowrap w-36 shrink-0 hidden sm:block">
-                          {formatDateTime(log.ts)}
+                          <DateTime value={log.ts} in="utc" />
                         </span>
                         <Badge variant={serviceConfig.variant} size="sm">{serviceConfig.label}</Badge>
                         <Badge variant={METHOD_VARIANTS[log.http_method] ?? 'neutral'} size="sm">
@@ -360,7 +359,7 @@ export default function ApiLogsPage() {
                       {/* Mobile date + error (visible on small screens) */}
                       {expandedId !== log.id && (
                         <div className="px-4 pb-2 sm:hidden">
-                          <p className="text-[10px] text-[var(--text-muted)]">{formatDateTime(log.ts)}</p>
+                          <DateTime value={log.ts} in="utc" className="text-[10px] text-[var(--text-muted)]" />
                           {log.error_message && <p className="text-[10px] text-red-400 truncate mt-0.5">{log.error_message}</p>}
                         </div>
                       )}
@@ -369,7 +368,7 @@ export default function ApiLogsPage() {
                       {expandedId === log.id && (
                         <div className="p-4 space-y-3 bg-[var(--surface-2)]">
                           <div className="sm:hidden mb-2">
-                            <p className="text-[10px] text-[var(--text-muted)]">{formatDateTime(log.ts)}</p>
+                            <DateTime value={log.ts} in="utc" className="text-[10px] text-[var(--text-muted)]" />
                             {log.error_message && <p className="text-xs text-red-400 mt-1">{log.error_message}</p>}
                           </div>
                           <div>

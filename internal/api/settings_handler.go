@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -80,6 +81,14 @@ func (h *SettingsHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	if s.Locale != "" && !isValidBCP47(s.Locale) {
 		writeError(w, http.StatusBadRequest, "locale must be a BCP-47 tag (e.g. 'en-US', 'de-DE')")
+		return
+	}
+	if s.TzDisplayDefault != "" && !isValidTzDisplayMode(s.TzDisplayDefault) {
+		writeError(w, http.StatusBadRequest, "tz_display_default must be 'vehicle', 'user', or 'utc'")
+		return
+	}
+	if s.TimezoneUser != "" && !isValidIANATimezone(s.TimezoneUser) {
+		writeError(w, http.StatusBadRequest, "timezone_user must be a valid IANA timezone (e.g. 'America/Los_Angeles')")
 		return
 	}
 
@@ -254,4 +263,27 @@ func isValidBCP47(s string) bool {
 		return false
 	}
 	return bcp47Pattern.MatchString(s)
+}
+
+// isValidTzDisplayMode reports whether s is a supported tz display mode
+// for `Settings.TzDisplayDefault`. Mirrors the union type in
+// `web/src/lib/timezone.ts`.
+func isValidTzDisplayMode(s string) bool {
+	switch s {
+	case "vehicle", "user", "utc":
+		return true
+	}
+	return false
+}
+
+// isValidIANATimezone reports whether s parses as an IANA tz database
+// name. Uses Go's tzdata so the validator accepts the same set of zones
+// the runtime can resolve. Empty string is treated as invalid here;
+// callers should short-circuit before calling.
+func isValidIANATimezone(s string) bool {
+	if len(s) == 0 || len(s) > 64 {
+		return false
+	}
+	_, err := time.LoadLocation(s)
+	return err == nil
 }

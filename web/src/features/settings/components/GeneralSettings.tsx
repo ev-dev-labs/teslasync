@@ -42,6 +42,8 @@ export function GeneralSettings() {
     alert_digest_mode: 'instant',
     currency_symbol: '$',
     locale: 'en-US',
+    tz_display_default: 'vehicle',
+    timezone_user: '',
   })
   const [saved, setSaved] = useState(false)
 
@@ -225,6 +227,30 @@ export function GeneralSettings() {
                   { value: 'zh-CN', label: '简体中文 (CN) — 1,234.56' },
                 ]}
               />
+
+              <Select
+                label={t('app.tzDisplayDefault', 'Time Zone Display')}
+                value={form.tz_display_default ?? 'vehicle'}
+                onChange={e => setForm({ ...form, tz_display_default: e.target.value as 'vehicle' | 'user' | 'utc' })}
+                options={[
+                  { value: 'vehicle', label: t('app.tzVehicle', "Vehicle's local time (recommended)") },
+                  { value: 'user', label: t('app.tzUser', 'My local time') },
+                  { value: 'utc', label: t('app.tzUtc', 'UTC') },
+                ]}
+              />
+
+              <SettingField label={t('app.timezoneUser', 'My Time Zone Override')}>
+                <Input
+                  type="text"
+                  value={form.timezone_user ?? ''}
+                  onChange={e => setForm({ ...form, timezone_user: e.target.value })}
+                  placeholder={t('app.timezoneUserPlaceholder', 'e.g. America/Los_Angeles (leave blank for browser default)')}
+                  className="w-full px-3 py-2.5 text-sm"
+                />
+                <p className="mt-1 text-[10px] text-[var(--text-muted)]">
+                  {t('app.timezoneUserHint', "IANA tz name. Useful when travelling but you'd rather see times in your home zone.")}
+                </p>
+              </SettingField>
 
               <SettingField label={t('app.electricityCost', 'Electricity Cost (per kWh)')}>
                 <div className="relative">

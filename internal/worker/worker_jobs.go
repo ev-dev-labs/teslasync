@@ -83,6 +83,12 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *models.Vehicle) {
 		logger.Error().Err(err).Msg("failed to insert position")
 	}
 
+	// Persist Tesla-reported timezone (Phase 40 / 22) so vehicle-anchored
+	// timestamps render in the car's local time. Only writes when the value
+	// changed to avoid an UPDATE on every poll. Bounded with a short context
+	// so a slow DB write never extends the poll path beyond its budget.
+	w.maybeUpdateVehicleTimezone(ctx, vehicle, data)
+
 	// Track driving sessions
 	w.trackDriving(ctx, vehicle, data)
 
@@ -135,6 +141,32 @@ func (w *Worker) trackDriving(ctx context.Context, vehicle *models.Vehicle, data
 
 func (w *Worker) trackCharging(ctx context.Context, vehicle *models.Vehicle, data *tesla.VehicleDataResponse) {
 	w.sessionSvc.TrackChargeFromAPI(ctx, vehicle, data)
+}
+
+// maybeUpdateVehicleTimezone persists the IANA tz reported in
+// vehicle_state.timezone when it differs from the cached value on the
+// vehicles row. Skipped when the API didn't include a timezone (empty
+// string) so we never overwrite a known-good value with an unknown.
+// Bounded with a 5s context so a slow DB write can't extend the poll
+// path beyond its budget; failures are logged but never propagated
+// (timezone is metadata, not in the critical path).
+func (w *Worker) maybeUpdateVehicleTimezone(ctx context.Context, vehicle *models.Vehicle, data *tesla.VehicleDataResponse) {
+	tz := data.VehicleState.Timezone
+	if tz == "" || tz == vehicle.Timezone {
+		return
+	}
+	updateCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	if err := w.vehicleRepo.UpdateTimezone(updateCtx, vehicle.ID, tz); err != nil {
+		log.Warn().
+			Err(err).
+			Int64("vehicle_id", vehicle.ID).
+			Str("vin", vehicle.VIN).
+			Str("timezone", tz).
+			Msg("failed to persist vehicle timezone")
+		return
+	}
+	vehicle.Timezone = tz
 }
 
 func (w *Worker) evaluateAlerts(ctx context.Context, vehicle *models.Vehicle, data *tesla.VehicleDataResponse) {

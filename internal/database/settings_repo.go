@@ -60,6 +60,8 @@ func settingsDefaults() *models.Settings {
 		AlertDigestMode:   "instant",
 		CurrencySymbol:    "$",
 		Locale:            "en-US",
+		TzDisplayDefault:  "vehicle",
+		TimezoneUser:      "",
 	}
 }
 
@@ -184,6 +186,14 @@ func applySettingsRow(s *models.Settings, key, _ string, vText *string, vNum *fl
 		if vText != nil {
 			s.Locale = *vText
 		}
+	case "tz_display_default":
+		if vText != nil {
+			s.TzDisplayDefault = *vText
+		}
+	case "timezone_user":
+		if vText != nil {
+			s.TimezoneUser = *vText
+		}
 	}
 }
 
@@ -254,6 +264,8 @@ func (r *SettingsRepo) Upsert(ctx context.Context, s *models.Settings) error {
 		{"alert_digest_mode", s.AlertDigestMode},
 		{"currency_symbol", s.CurrencySymbol},
 		{"locale", s.Locale},
+		{"tz_display_default", s.TzDisplayDefault},
+		{"timezone_user", s.TimezoneUser},
 	}
 	numRows := []rowNum{
 		{"base_cost_per_kwh", s.BaseCostPerKWh},
