@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Activity, Route, Zap, Clock, BatteryCharging, TrendingUp } from 'lucide-react';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Timeline } from '@/components/data-display/Timeline';
+import { Currency } from '@/components/data-display';
 import { AreaChartWrapper } from '@/components/charts/AreaChartWrapper';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { formatDateShort } from '@/lib/dateFormat';
@@ -137,7 +138,7 @@ export function RecentActivity({
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs text-[var(--text-secondary)]">{t('perf.cost', 'Total Cost')}</span>
-              <span className="text-sm font-bold text-amber-300">${fmtNumber(analytics?.total_cost ?? 0, 2)}</span>
+              <Currency value={analytics?.total_cost ?? 0} className="text-sm font-bold text-amber-300" />
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs text-[var(--text-secondary)]">{t('perf.co2', 'CO₂ Saved')}</span>

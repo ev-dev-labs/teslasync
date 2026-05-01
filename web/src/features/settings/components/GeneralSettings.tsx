@@ -40,6 +40,8 @@ export function GeneralSettings() {
     quiet_hours_start: '22:00',
     quiet_hours_end: '07:00',
     alert_digest_mode: 'instant',
+    currency_symbol: '$',
+    locale: 'en-US',
   })
   const [saved, setSaved] = useState(false)
 
@@ -191,9 +193,44 @@ export function GeneralSettings() {
                 ]}
               />
 
+              <Select
+                label={t('app.currency', 'Currency')}
+                value={form.currency_symbol ?? '$'}
+                onChange={e => setForm({ ...form, currency_symbol: e.target.value })}
+                options={[
+                  { value: '$', label: 'USD ($)' },
+                  { value: '€', label: 'EUR (€)' },
+                  { value: '£', label: 'GBP (£)' },
+                  { value: 'C$', label: 'CAD (C$)' },
+                  { value: 'A$', label: 'AUD (A$)' },
+                  { value: '¥', label: 'JPY (¥)' },
+                  { value: '元', label: 'CNY (元)' },
+                  { value: 'CHF', label: 'CHF (CHF)' },
+                  { value: 'kr', label: 'SEK / NOK / DKK (kr)' },
+                  { value: '₹', label: 'INR (₹)' },
+                ]}
+              />
+
+              <Select
+                label={t('app.locale', 'Number & Date Locale')}
+                value={form.locale ?? 'en-US'}
+                onChange={e => setForm({ ...form, locale: e.target.value })}
+                options={[
+                  { value: 'en-US', label: 'English (US) — 1,234.56' },
+                  { value: 'en-GB', label: 'English (UK) — 1,234.56' },
+                  { value: 'de-DE', label: 'Deutsch (DE) — 1.234,56' },
+                  { value: 'fr-FR', label: 'Français (FR) — 1 234,56' },
+                  { value: 'es-ES', label: 'Español (ES) — 1.234,56' },
+                  { value: 'ja-JP', label: '日本語 (JP) — 1,234.56' },
+                  { value: 'zh-CN', label: '简体中文 (CN) — 1,234.56' },
+                ]}
+              />
+
               <SettingField label={t('app.electricityCost', 'Electricity Cost (per kWh)')}>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-sm">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-sm">
+                    {form.currency_symbol ?? '$'}
+                  </span>
                   <Input
                     type="number"
                     step="0.01"
@@ -207,7 +244,9 @@ export function GeneralSettings() {
               <SettingField label={t('app.gasPrice', 'Gas Price (for EV vs ICE comparison)')}>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-sm">$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-sm">
+                      {form.currency_symbol ?? '$'}
+                    </span>
                     <Input
                       type="number"
                       step="0.01"

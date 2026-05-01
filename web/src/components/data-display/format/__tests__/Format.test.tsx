@@ -10,12 +10,13 @@ import {
   Power,
   Voltage,
   Current,
+  Currency,
   Percentage,
   FormattedNumber,
   Duration,
 } from '../';
 import { useSettings } from '@/hooks/useSettings';
-import { setGlobalPrecision } from '@/lib/numberFormat';
+import { setGlobalPrecision, setGlobalLocale, fmtNumber } from '@/lib/numberFormat';
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
@@ -28,6 +29,7 @@ const mockSettings = (overrides: Partial<ReturnType<typeof useSettings>> = {}) =
     isFahrenheit: false,
     isPSI: false,
     decimals: 1,
+    locale: 'en-US',
     convertDistance: (mi: number) => mi * 1.60934,
     convertSpeed: (mph: number) => mph * 1.60934,
     convertTemp: (c: number) => c,
@@ -58,6 +60,8 @@ beforeEach(() => {
   vi.mocked(useSettings).mockReset();
   // Pin global precision so unit-aware tests are deterministic across files.
   setGlobalPrecision(1);
+  // Pin global locale to en-US so number-separator assertions are deterministic.
+  setGlobalLocale('en-US');
 });
 
 describe('DateTime', () => {
@@ -394,5 +398,78 @@ describe('Duration', () => {
   it('exposes raw ms via title', () => {
     const { container } = render(<Duration ms={1500} />);
     expect(container.querySelector('span')?.title).toBe('1500 ms');
+  });
+});
+
+describe('Currency', () => {
+  it('renders the user currency symbol with the value', () => {
+    mockSettings({ currencySymbol: '$' });
+    const { container } = render(<Currency value={12.34} />);
+    expect(container.textContent).toBe('$12.34');
+  });
+
+  it('honors a custom symbol override', () => {
+    mockSettings({ currencySymbol: '$' });
+    const { container } = render(<Currency value={42} symbolOverride="€" />);
+    expect(container.textContent).toBe('€42.00');
+  });
+
+  it('respects the precision prop', () => {
+    mockSettings({ currencySymbol: '$' });
+    const { container } = render(<Currency value={3.14159} precision={3} />);
+    expect(container.textContent).toBe('$3.142');
+  });
+
+  it('renders fallback for null', () => {
+    mockSettings({ currencySymbol: '$' });
+    const { container } = render(<Currency value={null} />);
+    expect(container.textContent).toBe('—');
+  });
+
+  it('renders fallback for non-finite values', () => {
+    mockSettings({ currencySymbol: '$' });
+    const { container } = render(<Currency value={Infinity} />);
+    expect(container.textContent).toBe('—');
+  });
+
+  it('uses a non-dollar symbol from settings', () => {
+    mockSettings({ currencySymbol: '€' });
+    const { container } = render(<Currency value={1234.5} precision={2} />);
+    // Dot decimal because global locale is pinned to en-US in beforeEach.
+    expect(container.textContent).toBe('€1,234.50');
+  });
+
+  it('exposes the canonical numeric value via title', () => {
+    mockSettings({ currencySymbol: '$' });
+    const { container } = render(<Currency value={9.876} precision={2} />);
+    expect(container.querySelector('span')?.title).toBe('$9.88');
+  });
+});
+
+describe('fmtNumber locale support', () => {
+  it('uses en-US separators by default after setGlobalLocale("en-US")', () => {
+    setGlobalLocale('en-US');
+    expect(fmtNumber(1234567.89, 2)).toBe('1,234,567.89');
+  });
+
+  it('uses de-DE separators when global locale is switched', () => {
+    setGlobalLocale('de-DE');
+    // de-DE: dot for thousands, comma for decimals. Allow non-breaking
+    // thousands separator on some Node versions.
+    const result = fmtNumber(1234567.89, 2);
+    expect(result.replace(/[\u00A0\u202F]/g, '.')).toBe('1.234.567,89');
+    setGlobalLocale('en-US');
+  });
+
+  it('accepts an explicit locale override per-call', () => {
+    setGlobalLocale('en-US');
+    const result = fmtNumber(1234.5, 1, 'fr-FR');
+    // fr-FR uses a (non-breaking) space for thousands and comma for decimals.
+    expect(result.replace(/[\u00A0\u202F\s]/g, '_')).toBe('1_234,5');
+  });
+
+  it('falls back to en-US for malformed locale tags', () => {
+    setGlobalLocale('en-US');
+    expect(fmtNumber(1234.5, 1, '!!!not-a-locale!!!')).toBe('1,234.5');
   });
 });

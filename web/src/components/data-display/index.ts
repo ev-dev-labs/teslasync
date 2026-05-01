@@ -31,6 +31,7 @@ export {
   Power,
   Voltage,
   Current,
+  Currency,
   Percentage,
   FormattedNumber,
   Duration,

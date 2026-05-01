@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { Home, Bolt, Zap } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
-import { AnimatedNumber } from '@/components/data-display';
+import { AnimatedNumber, Currency } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
-import { fmtInt, fmtWithUnit } from '@/lib/numberFormat';
+import { fmtWithUnit } from '@/lib/numberFormat';
 import { formatDuration } from '../ChargingSessionCard';
 import type { ChargingStats } from './helpers';
 
@@ -41,7 +41,7 @@ export function QuickMetrics({ stats }: QuickMetricsProps) {
             <p className="text-[10px] text-[var(--text-muted)]">{t('charging.metrics.totalTime', 'Total Time')}</p>
           </div>
           <div>
-            <p className="text-lg font-bold text-[var(--text-primary)]">${fmtInt(stats.totalCost / 12)}</p>
+            <p className="text-lg font-bold text-[var(--text-primary)]"><Currency value={stats.totalCost / 12} precision={0} /></p>
             <p className="text-[10px] text-[var(--text-muted)]">{t('charging.metrics.monthlyAvg', 'Monthly Avg')}</p>
           </div>
           <div>

@@ -2,13 +2,14 @@ import { useTranslation } from 'react-i18next';
 import { Fuel, Lightbulb, Zap } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
-import { AnimatedNumber } from '@/components/data-display';
+import { AnimatedNumber, Currency } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import {
   ChartTooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Tooltip,
 } from '@/components/charts';
 import { fmtNumber } from '@/lib/numberFormat';
+import { useSettings } from '@/hooks/useSettings';
 import type { CostForecastData } from '@/types/charging';
 
 interface ForecastDetailsProps {
@@ -17,6 +18,7 @@ interface ForecastDetailsProps {
 
 export function ForecastDetails({ forecastData }: ForecastDetailsProps) {
   const { t } = useTranslation();
+  const { currencySymbol } = useSettings();
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -53,14 +55,14 @@ export function ForecastDetails({ forecastData }: ForecastDetailsProps) {
                     <span className="inline-block h-2 w-2 rounded-full bg-green-500" />
                     <span className="text-white/70">{t('Home')}</span>
                   </div>
-                  <span className="font-medium text-white">${fmtNumber(forecastData.breakdown.home.avg_cost_per_kwh, 3)}/kWh</span>
+                  <span className="font-medium text-white"><Currency value={forecastData.breakdown.home.avg_cost_per_kwh} precision={3} />/kWh</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />
                     <span className="text-white/70">{t('Supercharger')}</span>
                   </div>
-                  <span className="font-medium text-white">${fmtNumber(forecastData.breakdown.supercharger.avg_cost_per_kwh, 3)}/kWh</span>
+                  <span className="font-medium text-white"><Currency value={forecastData.breakdown.supercharger.avg_cost_per_kwh} precision={3} />/kWh</span>
                 </div>
               </div>
             </div>
@@ -84,27 +86,27 @@ export function ForecastDetails({ forecastData }: ForecastDetailsProps) {
                   {t('costAnalysis.forecast.monthlySavings', 'Monthly Savings')}
                 </p>
                 <p className="text-3xl font-bold text-emerald-300">
-                  $<AnimatedNumber value={forecastData.gas_comparison.monthly_savings} decimals={0} />
+                  {currencySymbol}<AnimatedNumber value={forecastData.gas_comparison.monthly_savings} decimals={0} />
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-3 text-center">
                 <div className="rounded-lg bg-white/[0.04] p-3">
                   <p className="text-[10px] text-white/40">{t('costAnalysis.forecast.annual', 'Annual')}</p>
-                  <p className="text-lg font-semibold text-white">${fmtNumber(forecastData.gas_comparison.annual_savings, 0)}</p>
+                  <p className="text-lg font-semibold text-white"><Currency value={forecastData.gas_comparison.annual_savings} precision={0} /></p>
                 </div>
                 <div className="rounded-lg bg-white/[0.04] p-3">
                   <p className="text-[10px] text-white/40">{t('costAnalysis.forecast.lifetime', 'Lifetime')}</p>
-                  <p className="text-lg font-semibold text-white">${fmtNumber(forecastData.gas_comparison.lifetime_savings, 0)}</p>
+                  <p className="text-lg font-semibold text-white"><Currency value={forecastData.gas_comparison.lifetime_savings} precision={0} /></p>
                 </div>
               </div>
               <div className="text-xs text-white/40 space-y-1">
                 <div className="flex justify-between">
                   <span>{t('costAnalysis.forecast.gasCost', 'Gas cost/mo')}</span>
-                  <span className="text-red-400">${fmtNumber(forecastData.gas_comparison.gas_cost_per_month, 2)}</span>
+                  <Currency value={forecastData.gas_comparison.gas_cost_per_month} className="text-red-400" />
                 </div>
                 <div className="flex justify-between">
                   <span>{t('costAnalysis.forecast.evCost', 'EV cost/mo')}</span>
-                  <span className="text-green-400">${fmtNumber(forecastData.gas_comparison.ev_cost_per_month, 2)}</span>
+                  <Currency value={forecastData.gas_comparison.ev_cost_per_month} className="text-green-400" />
                 </div>
                 <div className="flex justify-between">
                   <span>{t('costAnalysis.forecast.avgKm', 'Avg km/mo')}</span>

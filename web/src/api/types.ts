@@ -188,6 +188,10 @@ export interface AppSettings {
   alert_digest_mode: string
   google_maps_api_key?: string
   polling_config?: PollingConfig
+  /** Unicode currency glyph (e.g. "$", "€"). Stored verbatim — no ISO 4217 lookup. */
+  currency_symbol?: string
+  /** BCP-47 locale tag for `Intl.NumberFormat` (e.g. "en-US", "de-DE"). */
+  locale?: string
 }
 
 /** Per-endpoint toggle config for Tesla Fleet API calls. */

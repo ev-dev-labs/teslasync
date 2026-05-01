@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"regexp"
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -71,6 +72,14 @@ func (h *SettingsHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(s.Language) > 10 {
 		writeError(w, http.StatusBadRequest, "language must be 10 characters or less")
+		return
+	}
+	if len(s.CurrencySymbol) > 8 {
+		writeError(w, http.StatusBadRequest, "currency_symbol must be 8 characters or less")
+		return
+	}
+	if s.Locale != "" && !isValidBCP47(s.Locale) {
+		writeError(w, http.StatusBadRequest, "locale must be a BCP-47 tag (e.g. 'en-US', 'de-DE')")
 		return
 	}
 
@@ -231,4 +240,18 @@ func (h *SettingsHandler) UpdateDashboardLayouts(w http.ResponseWriter, r *http.
 	}
 
 	writeJSON(w, http.StatusOK, payload)
+}
+
+// bcp47Pattern is a deliberately conservative subset of BCP-47 — it covers
+// the locales we ship i18n bundles for (en-US, en-GB, de-DE, fr-FR, es-ES,
+// ja-JP, zh-CN, …). Either a 2-3 letter language tag, or a language tag
+// followed by a 2-letter region (or 3-digit UN M.49 code) is accepted.
+var bcp47Pattern = regexp.MustCompile(`^[a-z]{2,3}(-(?:[A-Z]{2}|[0-9]{3}))?$`)
+
+// isValidBCP47 reports whether s is a supported BCP-47 locale tag.
+func isValidBCP47(s string) bool {
+	if len(s) > 16 {
+		return false
+	}
+	return bcp47Pattern.MatchString(s)
 }

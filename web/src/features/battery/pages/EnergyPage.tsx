@@ -14,6 +14,7 @@ import {
 } from '@/components/charts';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { Skeleton, QueryError, EmptyState } from '@/components/feedback';
+import { Currency } from '@/components/data-display';
 import { DateRangeFilter } from '@/components/forms';
 
 import { useEnergyStats } from '@/api/hooks/useEnergy';
@@ -49,7 +50,7 @@ function CostComparisonCard({
           <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
             {t('energy.cost.evCost', 'EV Cost')}
           </p>
-          <p className="text-lg font-bold text-cyan-300">${fmtNumber(evCost ?? 0)}</p>
+          <p className="text-lg font-bold text-cyan-300"><Currency value={evCost ?? 0} /></p>
         </div>
         <ArrowRight className="h-4 w-4 text-[var(--text-muted)]" />
         <div>
@@ -57,13 +58,13 @@ function CostComparisonCard({
             {t('energy.cost.gasEquivalent', 'Gas Equivalent')}
           </p>
           <p className="text-lg font-bold text-[var(--text-secondary)]">
-            ${fmtNumber(gasCost ?? 0)}
+            <Currency value={gasCost ?? 0} />
           </p>
         </div>
       </div>
       <div className="flex items-center gap-2">
         <span className="text-sm font-bold text-emerald-300">
-          {t('energy.cost.saving', 'Saving')} ${fmtNumber(savings ?? 0)}
+          {t('energy.cost.saving', 'Saving')} <Currency value={savings ?? 0} />
         </span>
         <span className="text-[10px] px-2 py-0.5 rounded-full bg-neon-green/10 text-neon-green font-semibold">
           {fmtPercent(savingsPct ?? 0)} {t('energy.cost.less', 'less')}
@@ -578,9 +579,9 @@ export default function EnergyPage() {
                           </div>
                           <div className="flex items-center justify-between text-[11px]">
                             <span className="text-cyan-300">{fmtNumber(b.energy ?? 0)} kWh</span>
-                            <span className="text-emerald-300">${fmtNumber(b.cost ?? 0)}</span>
+                            <span className="text-emerald-300"><Currency value={b.cost ?? 0} /></span>
                             <span className="text-[var(--text-muted)]">
-                              ${b.energy > 0 ? fmtNumber(b.cost / b.energy) : '0'}/kWh
+                              <Currency value={b.energy > 0 ? b.cost / b.energy : 0} precision={3} />/kWh
                             </span>
                           </div>
                         </div>

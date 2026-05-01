@@ -8,6 +8,7 @@ export { Energy } from './Energy';
 export { Power } from './Power';
 export { Voltage } from './Voltage';
 export { Current } from './Current';
+export { Currency } from './Currency';
 export { Percentage } from './Percentage';
 export { FormattedNumber } from './Number';
 export { Duration } from './Duration';

@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BarChart3 } from 'lucide-react';
 import { GlassPanel, DataTable, type Column } from '@/components/ui';
-import { fmtNumber, fmtInt, fmtWithUnit } from '@/lib/numberFormat';
+import { Currency } from '@/components/data-display';
+import { fmtInt, fmtWithUnit } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import type { MonthlyBucket } from './types';
 
@@ -42,21 +43,21 @@ export function MonthlyCostTable({ data }: MonthlyCostTableProps) {
         header: t('costAnalysis.table.cost', 'Cost'),
         sortable: true,
         render: (row) => (
-          <span className="text-cyan-400">${fmtNumber(row.cost, 2)}</span>
+          <Currency value={row.cost} className="text-cyan-400" />
         ),
       },
       {
         key: 'avgCostPerKwh',
         header: t('costAnalysis.table.avgRate', 'Avg $/kWh'),
         sortable: true,
-        render: (row) => `$${fmtNumber(row.avgCostPerKwh, 3)}`,
+        render: (row) => <Currency value={row.avgCostPerKwh} precision={3} />,
       },
       {
         key: 'gasEquiv',
         header: t('costAnalysis.table.gasEquiv', 'Gas Equiv'),
         sortable: true,
         render: (row) => (
-          <span className="text-red-400">${fmtNumber(row.gasEquiv, 2)}</span>
+          <Currency value={row.gasEquiv} className="text-red-400" />
         ),
       },
       {
@@ -70,7 +71,7 @@ export function MonthlyCostTable({ data }: MonthlyCostTableProps) {
               row.savings >= 0 ? 'text-green-400' : 'text-red-400',
             )}
           >
-            {row.savings >= 0 ? '+' : ''}${fmtNumber(row.savings, 2)}
+            {row.savings >= 0 ? '+' : ''}<Currency value={row.savings} />
           </span>
         ),
       },

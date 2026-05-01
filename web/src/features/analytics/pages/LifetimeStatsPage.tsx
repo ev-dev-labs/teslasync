@@ -8,7 +8,7 @@ import {
 
 import { PageContainer, Grid } from '@/components/layout';
 import { GlassPanel, Select } from '@/components/ui';
-import { StatCard, AnimatedNumber, ProgressRing } from '@/components/data-display';
+import { StatCard, AnimatedNumber, ProgressRing, Currency } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 
@@ -374,7 +374,7 @@ function SavingsBar({ evCost, gasCost, savings, co2Kg }: {
       <div>
         <div className="flex justify-between text-sm mb-1">
           <span className="text-green-400">{t('lifetime.electricCost', 'Electric Cost')}</span>
-          <span className="text-[var(--text-secondary)]">${fmtNumber(evCost, 2)}</span>
+          <Currency value={evCost} className="text-[var(--text-secondary)]" />
         </div>
         <div className="h-6 rounded-full bg-white/[0.05] overflow-hidden">
           <div
@@ -386,7 +386,7 @@ function SavingsBar({ evCost, gasCost, savings, co2Kg }: {
       <div>
         <div className="flex justify-between text-sm mb-1">
           <span className="text-red-400">{t('lifetime.gasCost', 'Gasoline Equivalent')}</span>
-          <span className="text-[var(--text-secondary)]">${fmtNumber(gasCost, 2)}</span>
+          <Currency value={gasCost} className="text-[var(--text-secondary)]" />
         </div>
         <div className="h-6 rounded-full bg-white/[0.05] overflow-hidden">
           <div
@@ -397,7 +397,7 @@ function SavingsBar({ evCost, gasCost, savings, co2Kg }: {
       </div>
       <div className="flex items-center justify-between pt-2 border-t border-white/[0.06]">
         <span className="text-green-400 font-semibold text-lg">
-          {t('lifetime.youSaved', 'You saved')} ${fmtNumber(savings, 2)}
+          {t('lifetime.youSaved', 'You saved')} <Currency value={savings} />
         </span>
         <span className="text-sm text-[var(--text-muted)]">
           {fmtNumber(co2Kg, 0)} kg CO₂ {t('lifetime.avoided', 'avoided')}

@@ -58,6 +58,8 @@ func settingsDefaults() *models.Settings {
 		QuietHoursStart:   "22:00",
 		QuietHoursEnd:     "07:00",
 		AlertDigestMode:   "instant",
+		CurrencySymbol:    "$",
+		Locale:            "en-US",
 	}
 }
 
@@ -174,6 +176,14 @@ func applySettingsRow(s *models.Settings, key, _ string, vText *string, vNum *fl
 		if vText != nil {
 			s.AlertDigestMode = *vText
 		}
+	case "currency_symbol":
+		if vText != nil {
+			s.CurrencySymbol = *vText
+		}
+	case "locale":
+		if vText != nil {
+			s.Locale = *vText
+		}
 	}
 }
 
@@ -242,6 +252,8 @@ func (r *SettingsRepo) Upsert(ctx context.Context, s *models.Settings) error {
 		{"quiet_hours_start", s.QuietHoursStart},
 		{"quiet_hours_end", s.QuietHoursEnd},
 		{"alert_digest_mode", s.AlertDigestMode},
+		{"currency_symbol", s.CurrencySymbol},
+		{"locale", s.Locale},
 	}
 	numRows := []rowNum{
 		{"base_cost_per_kwh", s.BaseCostPerKWh},

@@ -329,6 +329,14 @@ type Settings struct {
 	QuietHoursStart   string  `json:"quiet_hours_start"`
 	QuietHoursEnd     string  `json:"quiet_hours_end"`
 	AlertDigestMode   string  `json:"alert_digest_mode"`
+	// CurrencySymbol is the Unicode glyph rendered alongside currency
+	// values (e.g. "$", "€", "£"). The frontend uses this verbatim;
+	// no ISO 4217 lookup is performed on the wire. Defaults to "$".
+	CurrencySymbol string `json:"currency_symbol"`
+	// Locale is a BCP-47 tag (e.g. "en-US", "de-DE", "fr-FR") used by
+	// `Intl.NumberFormat` for thousands/decimal separators on the
+	// frontend. Defaults to "en-US".
+	Locale string `json:"locale"`
 }
 
 // Embedding mirrors the post-migration `embeddings` schema (pgvector-backed).

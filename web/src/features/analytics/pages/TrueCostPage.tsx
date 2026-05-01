@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { DollarSign, Fuel, Zap, TrendingUp, Leaf } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Select } from '@/components/ui';
+import { Currency } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import {
@@ -165,11 +166,11 @@ export default function TrueCostPage() {
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-4 text-center">
                   <div className="rounded-xl bg-neon-cyan/10 p-3 border border-neon-cyan/20">
-                    <p className="text-lg font-bold text-cyan-300">${fmtNumber(tco.cost_per_km_ev)}</p>
+                    <p className="text-lg font-bold text-cyan-300"><Currency value={tco.cost_per_km_ev} precision={3} /></p>
                     <p className="text-xs text-[var(--text-muted)]">{t('tco.perKmEv', 'per km (EV)')}</p>
                   </div>
                   <div className="rounded-xl bg-neon-red/10 p-3 border border-neon-red/20">
-                    <p className="text-lg font-bold text-rose-300">${fmtNumber(tco.cost_per_km_ice)}</p>
+                    <p className="text-lg font-bold text-rose-300"><Currency value={tco.cost_per_km_ice} precision={3} /></p>
                     <p className="text-xs text-[var(--text-muted)]">{t('tco.perKmGas', 'per km (Gas)')}</p>
                   </div>
                 </div>

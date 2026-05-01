@@ -4,6 +4,7 @@ import { PageContainer } from '@/components/layout';
 import { GlassPanel } from '@/components/ui';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { Skeleton, EmptyState } from '@/components/feedback';
+import { Currency } from '@/components/data-display';
 import { Activity } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -137,7 +138,7 @@ export default function ChargingHeatmapPage() {
         <StaggerItem>
           <GlassPanel glow="purple" hover className="p-4">
             <p className="text-xs text-[var(--text-secondary)]">{t('charging.heatmap.totalCost', 'Total Cost')}</p>
-            <p className="text-xl font-semibold text-[var(--text-primary)]">${fmtNumber(stats?.totalCost ?? 0, 2)}</p>
+            <p className="text-xl font-semibold text-[var(--text-primary)]"><Currency value={stats?.totalCost ?? 0} /></p>
           </GlassPanel>
         </StaggerItem>
         <StaggerItem>
