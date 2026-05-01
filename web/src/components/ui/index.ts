@@ -22,3 +22,21 @@ export { Textarea } from './Textarea';
 export type { TextareaProps } from './Textarea';
 export { default as Logo } from './Logo';
 export { PlaybackControls } from './PlaybackControls';
+export {
+  Heading,
+  Text,
+  PageTitle,
+  SectionTitle,
+  PanelTitle,
+  Subhead,
+  Caption,
+  HelperText,
+  ErrorText,
+  Label,
+  MetricValue,
+  MetricLabel,
+  Code,
+  type HeadingProps,
+  type HeadingLevel,
+  type TextProps,
+} from './Typography';

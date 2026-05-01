@@ -189,6 +189,24 @@ Many bugs in this project stem from frontend TypeScript interfaces not matching 
    For pure body text with no semantic color, use text-white/90.
    Toned-down map: cyan→cyan-300, green→emerald-300, amber→amber-300,
    red→rose-300, purple→purple-300, blue→indigo-300, pink→pink-300.
+
+❌ 12. AD-HOC TYPOGRAPHY classes
+   BAD:  <h2 className="text-lg font-semibold tracking-tight text-white">…</h2>
+   BAD:  <span className="text-[10px] text-white/40">label</span>
+   GOOD: <SectionTitle>…</SectionTitle>
+   GOOD: <Caption>label</Caption>
+   GOOD: <Text variant="bodySm">…</Text>
+
+   For new pages: import from @/components/ui — Heading, Text, PageTitle,
+   SectionTitle, PanelTitle, Subhead, Caption, HelperText, ErrorText,
+   Label, MetricValue, MetricLabel, Code.
+
+   For one-offs that genuinely don't fit a role: use typography tokens from
+   @/lib/tokens — typography.size, typography.weight, typography.color.
+
+   Never use raw text-white/N or text-gray-N — use typography.color or the
+   --text-primary / --text-secondary / --text-muted CSS vars so light theme
+   keeps working.
 ```
 
 ## Frontend Architecture (Refactored)

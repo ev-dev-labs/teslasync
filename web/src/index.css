@@ -171,7 +171,8 @@ select option:checked {
   }
 
   .metric-label {
-    @apply text-xs font-medium uppercase tracking-wider;
+    /* Aligned with typography.role.metricLabel — micro uppercase eyebrow above big metric values. */
+    @apply text-2xs font-medium uppercase tracking-wider;
     color: var(--text-muted);
   }
 }

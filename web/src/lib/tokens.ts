@@ -83,3 +83,71 @@ export const transitions = {
   ease: { duration: animationDuration.normal, ease: 'easeOut' as const },
   slow: { duration: animationDuration.slow, ease: 'easeOut' as const },
 } as const
+
+// ── Typography tokens ──
+//
+// One source of truth for every text size / weight / color / role used in the app.
+// Prefer the composed `role` strings via the <Heading>/<Text> components in
+// @/components/ui — fall back to size/weight/color granular tokens only for
+// one-offs that don't fit a role.
+
+export const typography = {
+  /** Type scale — mirrors Tailwind. Pick by intent, not by px. */
+  size: {
+    '2xs': 'text-2xs',     // 10px — micro labels, table footers
+    xs: 'text-xs',         // 12px — chip text, dense table cells
+    sm: 'text-sm',         // 14px — default body in dense UIs
+    base: 'text-base',     // 16px — comfortable body
+    lg: 'text-lg',         // 18px — small headings, prominent body
+    xl: 'text-xl',         // 20px — panel titles
+    '2xl': 'text-2xl',     // 24px — section titles
+    '3xl': 'text-3xl',     // 30px — page titles, big metrics
+  },
+
+  weight: {
+    regular: 'font-normal',
+    medium: 'font-medium',
+    semibold: 'font-semibold',
+    bold: 'font-bold',
+  },
+
+  /** Theme-aware text colors. Always prefer these over text-white/N or text-gray-N. */
+  color: {
+    primary: 'text-[var(--text-primary)]',
+    secondary: 'text-[var(--text-secondary)]',
+    muted: 'text-[var(--text-muted)]',
+    subtle: 'text-white/60 dark:text-white/60',
+    disabled: 'text-white/40',
+    inverse: 'text-black/90 dark:text-white/90',
+  },
+
+  family: {
+    sans: 'font-sans',
+    mono: 'font-mono',
+  },
+
+  /**
+   * Composed roles — the canonical class string for each text "kind" the app renders.
+   * Use these via <Heading level="..."> / <Text variant="..."> in components/ui.
+   */
+  role: {
+    pageTitle: 'text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-[var(--text-primary)]',
+    sectionTitle: 'text-lg font-semibold tracking-tight text-[var(--text-primary)]',
+    panelTitle: 'text-base font-semibold text-[var(--text-primary)]',
+    subhead: 'text-sm font-medium text-[var(--text-secondary)]',
+    body: 'text-sm text-[var(--text-primary)]',
+    bodySm: 'text-xs text-[var(--text-secondary)]',
+    caption: 'text-xs text-[var(--text-muted)]',
+    label: 'text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]',
+    metricValue: 'text-2xl sm:text-3xl font-bold tracking-tight text-[var(--text-primary)] tabular-nums',
+    metricLabel: 'text-2xs font-medium uppercase tracking-wider text-[var(--text-muted)]',
+    code: 'text-xs font-mono text-[var(--text-primary)]',
+    helper: 'text-xs text-[var(--text-muted)]',
+    error: 'text-xs text-rose-300',
+  },
+} as const
+
+export type TypographyRole = keyof typeof typography.role
+export type TypographySize = keyof typeof typography.size
+export type TypographyWeight = keyof typeof typography.weight
+export type TypographyColor = keyof typeof typography.color
