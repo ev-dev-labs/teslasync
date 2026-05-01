@@ -426,7 +426,7 @@ export default function NotificationsPage() {
     const channelMap: Record<number, NotificationChannel> = {};
     channels.forEach(c => { channelMap[c.id] = c; });
     return [
-      { key: 'time', header: t('Time'), render: (log) => <DateTime value={log.created_at} in="user" className="whitespace-nowrap text-xs text-[var(--text-muted)]" /> },
+      { key: 'time', header: t('Time'), render: (log) => <DateTime value={log.created_at} in="user" className="whitespace-nowrap text-xs text-[var(--text-muted)]" />, visibleOnMobile: true },
       { key: 'channel', header: t('Channel'), render: (log) => {
         const ch = channelMap[log.channel_id];
         if (!ch) return <span className="text-[var(--text-primary)]">{`#${log.channel_id}`}</span>;
@@ -438,10 +438,10 @@ export default function NotificationsPage() {
             <span className="text-sm">{ch.name}</span>
           </div>
         );
-      }},
-      { key: 'title', header: t('Title'), render: (log) => <span className="text-sm text-[var(--text-primary)]">{log.title}</span> },
-      { key: 'status', header: t('Status'), render: (log) => <Badge variant={log.status === 'sent' ? 'success' : log.status === 'failed' ? 'danger' : 'warning'} size="sm">{log.status}</Badge> },
-      { key: 'error', header: t('Error'), render: (log) => <span className="text-xs text-neon-red/70 max-w-[200px] truncate block">{log.error}</span> },
+      }, visibleOnMobile: true },
+      { key: 'title', header: t('Title'), render: (log) => <span className="text-sm text-[var(--text-primary)]">{log.title}</span>, visibleOnMobile: true },
+      { key: 'status', header: t('Status'), render: (log) => <Badge variant={log.status === 'sent' ? 'success' : log.status === 'failed' ? 'danger' : 'warning'} size="sm">{log.status}</Badge>, visibleOnMobile: true },
+      { key: 'error', header: t('Error'), render: (log) => <span className="text-xs text-neon-red/70 max-w-[200px] truncate block">{log.error}</span>, defaultVisible: false },
       {
         key: 'context',
         header: '',
@@ -657,6 +657,10 @@ export default function NotificationsPage() {
                 data={filteredLogs}
                 keyExtractor={(log) => log.id}
                 pagination={{ defaultPageSize: 50 }}
+                tableId="notification-logs"
+                showColumnsMenu
+                stickyHeader
+                maxHeight={600}
                 emptyMessage={
                   logSearch
                     ? t('No logs match your search')

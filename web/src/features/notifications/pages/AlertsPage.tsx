@@ -226,10 +226,10 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
   const filteredLogs = useFilteredList(logs, logSearch, logSearchFields);
 
   const logColumns: Column<NotificationLog>[] = useMemo(() => [
-    { key: 'time', header: t('Time'), render: (log) => <span className="text-[var(--text-muted)] whitespace-nowrap">{formatDateTime(log.created_at)}</span> },
-    { key: 'title', header: t('Title'), render: (log) => <span className="text-[var(--text-primary)] max-w-[200px] truncate block">{log.title}</span> },
+    { key: 'time', header: t('Time'), render: (log) => <span className="text-[var(--text-muted)] whitespace-nowrap">{formatDateTime(log.created_at)}</span>, visibleOnMobile: true },
+    { key: 'title', header: t('Title'), render: (log) => <span className="text-[var(--text-primary)] max-w-[200px] truncate block">{log.title}</span>, visibleOnMobile: true },
     { key: 'channel', header: t('Channel'), render: (log) => <span className="text-[var(--text-secondary)]">{channelMap[log.channel_id] || `#${log.channel_id}`}</span> },
-    { key: 'status', header: t('Status'), render: (log) => <Badge variant={log.status === 'sent' ? 'success' : log.status === 'failed' ? 'danger' : 'warning'} size="sm">{log.status}</Badge> },
+    { key: 'status', header: t('Status'), render: (log) => <Badge variant={log.status === 'sent' ? 'success' : log.status === 'failed' ? 'danger' : 'warning'} size="sm">{log.status}</Badge>, visibleOnMobile: true },
   ], [channelMap, t]);
 
   return (
@@ -299,6 +299,10 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
                 keyExtractor={(log) => log.id}
                 compact
                 pagination={{ defaultPageSize: 50 }}
+                tableId="alerts-logs"
+                showColumnsMenu
+                stickyHeader
+                maxHeight={520}
               />
             </div>
         ) : (

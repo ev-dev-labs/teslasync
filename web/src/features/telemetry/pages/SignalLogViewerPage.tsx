@@ -135,18 +135,26 @@ export default function SignalLogViewerPage() {
     { key: 'row', header: '#', render: (r) => {
       const idx = rows.indexOf(r);
       return <span className="text-xs text-[var(--text-muted)] font-mono">{(page - 1) * perPage + idx + 1}</span>;
-    }},
-    { key: 'time', header: t('Timestamp'), render: (r) => <span className="whitespace-nowrap text-xs text-[var(--text-muted)]">{new Date(r.created_at).toLocaleString()}</span> },
+    }, defaultVisible: false },
+    { key: 'time', header: t('Timestamp'), render: (r) => <span className="whitespace-nowrap text-xs text-[var(--text-muted)]">{new Date(r.created_at).toLocaleString()}</span>, visibleOnMobile: true },
     { key: 'signal', header: t('Signal'), render: (r) => {
       const idx = selectedSignals.indexOf(r.signal);
       return <span className={cn('font-mono text-xs', idx < 0 && 'text-[var(--text-primary)]')} style={idx >= 0 ? { color: CHART_COLORS[idx % CHART_COLORS.length] } : undefined}>{r.signal}</span>;
-    }},
-    { key: 'value', header: t('Value'), render: (r) => <span className="font-mono text-xs text-[var(--text-primary)]">{formatValue(r)}</span> },
+    }, visibleOnMobile: true },
+    { key: 'value', header: t('Value'), render: (r) => <span className="font-mono text-xs text-[var(--text-primary)]">{formatValue(r)}</span>, visibleOnMobile: true },
     { key: 'type', header: t('Type'), render: (r) => {
       const vt = valueType(r);
       return <Badge variant={typeVariant[vt] ?? 'neutral'} size="sm">{vt}</Badge>;
     }},
   ], [rows, page, perPage, selectedSignals, t]);
+
+  // Row expansion: surface the raw payload for the focused signal entry.
+  const [expandedKeys, setExpandedKeys] = useState<(string | number)[]>([]);
+  const renderExpanded = useCallback((r: SignalLogEntry) => (
+    <pre className="whitespace-pre-wrap break-all text-[11px] font-mono text-[var(--text-secondary)]">
+{JSON.stringify(r, null, 2)}
+    </pre>
+  ), []);
 
   return (
     <PageContainer
@@ -282,6 +290,14 @@ export default function SignalLogViewerPage() {
                   keyExtractor={(r) => `${r.created_at}-${r.signal}`}
                   compact
                   pagination={{ defaultPageSize: 50 }}
+                  tableId="signal-log"
+                  showColumnsMenu
+                  stickyHeader
+                  maxHeight={520}
+                  expandable
+                  expandedKeys={expandedKeys}
+                  onExpandedChange={setExpandedKeys}
+                  renderExpanded={renderExpanded}
                 />
                 <Pagination
                   page={page}

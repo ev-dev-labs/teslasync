@@ -850,6 +850,33 @@
     "dismissNotification": "Dismiss notification",
     "loading": "Loading"
   },
+  "table": {
+    "selection": {
+      "selectAll": "Select all rows",
+      "deselectAll": "Deselect all rows",
+      "selectRow": "Select row",
+      "deselectRow": "Deselect row"
+    },
+    "columns": {
+      "button": "Columns",
+      "menu": "Show or hide columns",
+      "heading": "Visible columns",
+      "showAll": "Show all",
+      "resizeLabel": "Resize column {{col}}"
+    },
+    "expand": {
+      "expand": "Expand row",
+      "collapse": "Collapse row",
+      "column": "Expand row"
+    },
+    "bulkActions": {
+      "region": "Bulk actions",
+      "selected": "{{count}} selected",
+      "clear": "Clear selection",
+      "exportCsv": "Export CSV",
+      "more": "More…"
+    }
+  },
   "shortcuts": {
     "title": "Keyboard Shortcuts",
     "hint": "Press",

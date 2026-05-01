@@ -59,6 +59,9 @@ export const glassCardClasses = {
 } as const
 
 // ── Table styling tokens ──
+//
+// Extended in Phase-40 / Prompt 25 with sticky-header, selection-row, bulk-bar,
+// resizer-handle, and expanded-row tokens used by DataTable's optional features.
 
 export const tableTokens = {
   wrapper: 'w-full text-sm',
@@ -67,6 +70,29 @@ export const tableTokens = {
   body: 'divide-y divide-white/[0.03]',
   row: 'hover:bg-white/[0.02] transition-colors',
   cell: 'px-4 py-3',
+  // Phase-40 / Prompt 25 additions:
+  /** Wrapper applied when stickyHeader / maxHeight is in use — needs scroll + relative for sticky thead. */
+  scrollContainer: 'relative overflow-auto rounded-xl',
+  /** Applied to <thead> rows when stickyHeader is true. The bg matches GlassPanel
+   *  surface so rows scrolling underneath don't bleed through. z-20 keeps the
+   *  sticky thead above selected-row z-10 hover states. */
+  stickyHead: 'sticky top-0 z-20 bg-[var(--surface-elevated)] backdrop-blur-sm',
+  /** Visual treatment for selected rows. */
+  rowSelected: 'bg-cyan-500/10 hover:bg-cyan-500/15',
+  /** Container for the bulk-action toolbar that appears above the table. */
+  bulkBar:
+    'flex flex-wrap items-center gap-2 px-3 py-2 mb-2 rounded-lg ' +
+    'border border-cyan-500/20 bg-cyan-500/[0.06] text-sm text-[var(--text-primary)]',
+  /** Width of the leading checkbox/chevron columns. */
+  leadingColWidth: 'w-10',
+  /** The drag handle on the right edge of resizable column headers. */
+  resizer:
+    'absolute top-0 right-0 h-full w-1.5 cursor-col-resize select-none ' +
+    'opacity-0 hover:opacity-100 hover:bg-cyan-400/40 transition-opacity ' +
+    'focus-visible:opacity-100 focus-visible:bg-cyan-400/60 outline-none',
+  /** Cell holding `renderExpanded` content under an expanded row. */
+  expandedCell:
+    'px-4 py-3 bg-white/[0.02] border-l-2 border-cyan-500/40',
 } as const
 
 // ── Animation ──

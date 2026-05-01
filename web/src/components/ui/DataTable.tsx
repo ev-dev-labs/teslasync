@@ -1,10 +1,15 @@
-import { type ReactNode, useState, useCallback, useEffect, useMemo } from 'react'
+import { type ReactNode, useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import { tableTokens } from '../../lib/tokens'
-import { ChevronUp, ChevronDown, AlertTriangle } from 'lucide-react'
+import { ChevronUp, ChevronDown, ChevronRight, AlertTriangle } from 'lucide-react'
 import { Pagination } from './Pagination'
 import { SectionErrorBoundary } from '../feedback/SectionErrorBoundary'
+import { DataTableColumnsMenu } from './DataTableColumnsMenu'
+import { DataTableBulkBar } from './DataTableBulkBar'
+import { DataTableResizer } from './DataTableResizer'
+
+type RowKey = string | number
 
 export interface Column<T> {
   key: string
@@ -12,6 +17,22 @@ export interface Column<T> {
   render: (row: T) => ReactNode
   sortable?: boolean
   className?: string
+  // Phase-40 / Prompt 25 additions:
+  /** Default visible column? Defaults to true. Hidden columns appear in the
+   *  column-visibility menu so users can re-show them. */
+  defaultVisible?: boolean
+  /** When set, this column is shown at <md viewports. Used to derive the
+   *  effective `mobileColumns` allow-list when the prop isn't supplied. */
+  visibleOnMobile?: boolean
+  /** Initial width in pixels (or 'auto'). When `resizable` is true the user's
+   *  drag overrides this and is persisted by `tableId`. */
+  defaultWidth?: number | 'auto'
+  /** Min width allowed when resizing. Defaults to 60. */
+  minWidth?: number
+  /** Max width allowed when resizing. Defaults to 800. */
+  maxWidth?: number
+  /** Right-align numeric columns; default 'left'. */
+  align?: 'left' | 'center' | 'right'
 }
 
 export interface PaginationConfig {
@@ -22,7 +43,7 @@ export interface PaginationConfig {
 interface DataTableProps<T> {
   columns: Column<T>[]
   data: T[]
-  keyExtractor: (row: T) => string | number
+  keyExtractor: (row: T) => RowKey
   sortKey?: string
   sortDir?: 'asc' | 'desc'
   onSort?: (key: string) => void
@@ -38,9 +59,10 @@ interface DataTableProps<T> {
   name?: string
   /**
    * Column keys to keep visible on viewports below `md` (768px). Columns NOT
-   * listed here become `hidden md:table-cell`. When omitted, every column is
-   * shown at every viewport width and the table relies on the wrapper's
-   * `overflow-x-auto` to scroll horizontally on phones.
+   * listed here become `hidden md:table-cell`. When omitted, the effective
+   * allow-list is derived from `Column.visibleOnMobile`. If neither is set,
+   * every column is shown at every viewport width and the table relies on the
+   * wrapper's `overflow-x-auto` to scroll horizontally on phones.
    *
    * MOBILE_GUIDELINES.md asks every multi-column DataTable to specify this so
    * mobile users see the essential columns without horizontal scroll.
@@ -48,11 +70,115 @@ interface DataTableProps<T> {
    * @example mobileColumns={['name', 'status']}
    */
   mobileColumns?: string[]
+
+  // ── Phase-40 / Prompt 25 additions ────────────────────────────────────
+  /** Stable identifier used to persist column visibility & widths in
+   *  localStorage. Required when using `selectable`, `resizable`, or
+   *  the column-visibility menu. */
+  tableId?: string
+
+  // SELECTION
+  /** 'multi' = checkbox column + select-all + shift-click range. 'single' =
+   *  radio-style (one row at a time). 'none' or undefined = no selection. */
+  selectable?: 'single' | 'multi' | 'none'
+  /** Controlled list of selected row keys. */
+  selectedKeys?: RowKey[]
+  /** Called whenever the selection changes. */
+  onSelectionChange?: (keys: RowKey[]) => void
+  /** Renders above the header when `selectedKeys.length > 0`. The selected
+   *  rows are passed in for convenient lookup of the actual data. */
+  bulkActions?: (selected: T[]) => ReactNode
+
+  // STICKY / SCROLL
+  /** Make the `<thead>` stick to the top of the wrapper while the body scrolls. */
+  stickyHeader?: boolean
+  /** Cap the wrapper height; combined with `stickyHeader` lets long tables
+   *  scroll vertically inside their panel. */
+  maxHeight?: number | string
+
+  // EXPANSION
+  /** Render a leading chevron column that toggles row expansion. */
+  expandable?: boolean
+  /** Controlled list of expanded row keys. */
+  expandedKeys?: RowKey[]
+  /** Called whenever expansion changes. */
+  onExpandedChange?: (keys: RowKey[]) => void
+  /** Required when `expandable` is true: render the row drawer body. */
+  renderExpanded?: (row: T) => ReactNode
+
+  // RESIZE
+  /** Allow users to drag column right edges to resize. Persists per-column
+   *  widths in localStorage[`teslasync.table.${tableId}.widths`]. Requires
+   *  `tableId`. */
+  resizable?: boolean
+
+  // COLUMN VISIBILITY
+  /** Render the "Columns" picker button above the table. Persists user choice
+   *  in localStorage[`teslasync.table.${tableId}.visible`]. Requires
+   *  `tableId`. */
+  showColumnsMenu?: boolean
 }
 
-/** Sortable glass-styled data table with consistent styling and optional pagination. */
+const STORAGE_PREFIX = 'teslasync.table'
+
+function readStored<T>(key: string): T | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(key)
+    if (!raw) return null
+    return JSON.parse(raw) as T
+  } catch {
+    return null
+  }
+}
+
+function writeStored<T>(key: string, value: T): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value))
+  } catch {
+    /* quota / disabled — ignore */
+  }
+}
+
+function alignClass(align?: 'left' | 'center' | 'right'): string {
+  if (align === 'right') return 'text-right'
+  if (align === 'center') return 'text-center'
+  return ''
+}
+
+/** Sortable glass-styled data table with consistent styling and optional
+ *  pagination, selection, expansion, sticky header, column visibility &
+ *  per-column resize.
+ *
+ *  All advanced props are optional — passing only `columns` + `data` gives the
+ *  same lightweight behavior callers had before Phase-40 / Prompt 25. */
 export function DataTable<T>({
-  columns, data, keyExtractor, sortKey, sortDir, onSort, emptyMessage = 'No data', className, compact, pagination, mobileColumns, name,
+  columns,
+  data,
+  keyExtractor,
+  sortKey,
+  sortDir,
+  onSort,
+  emptyMessage = 'No data',
+  className,
+  compact,
+  pagination,
+  mobileColumns,
+  name,
+  tableId,
+  selectable = 'none',
+  selectedKeys,
+  onSelectionChange,
+  bulkActions,
+  stickyHeader = false,
+  maxHeight,
+  expandable = false,
+  expandedKeys,
+  onExpandedChange,
+  renderExpanded,
+  resizable = false,
+  showColumnsMenu = false,
 }: DataTableProps<T>) {
   const { t } = useTranslation()
   const paginationEnabled = !!pagination
@@ -63,29 +189,182 @@ export function DataTable<T>({
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(defaultPageSize)
 
-  // Reset to page 1 when data changes (e.g. filters applied)
+  // Reset to page 1 when data length changes (e.g. filters applied).
   useEffect(() => { setPage(1) }, [data.length])
 
+  // ── Column visibility (persisted by tableId) ────────────────────────────
+  const visibilityStorageKey = tableId ? `${STORAGE_PREFIX}.${tableId}.visible` : null
+  const defaultVisibleKeys = useMemo(
+    () => columns.filter(c => c.defaultVisible !== false).map(c => c.key),
+    [columns],
+  )
+  const [visibleKeys, setVisibleKeys] = useState<string[]>(() => {
+    if (!visibilityStorageKey) return defaultVisibleKeys
+    const stored = readStored<string[]>(visibilityStorageKey)
+    if (!stored || stored.length === 0) return defaultVisibleKeys
+    // Drop keys that no longer exist in the current columns.
+    const colKeys = new Set(columns.map(c => c.key))
+    const filtered = stored.filter(k => colKeys.has(k))
+    return filtered.length > 0 ? filtered : defaultVisibleKeys
+  })
+  // When the columns prop changes at runtime (e.g. a new column was added),
+  // drop any stale persisted keys but DO NOT auto-resurrect columns the user
+  // explicitly hid — leave that to the column-visibility menu.
+  useEffect(() => {
+    setVisibleKeys(prev => {
+      const knownKeys = new Set(columns.map(c => c.key))
+      const filtered = prev.filter(k => knownKeys.has(k))
+      return filtered.length === prev.length ? prev : filtered
+    })
+  }, [columns])
+
+  const updateVisibleKeys = useCallback(
+    (next: string[]) => {
+      setVisibleKeys(next)
+      if (visibilityStorageKey) writeStored(visibilityStorageKey, next)
+    },
+    [visibilityStorageKey],
+  )
+
+  const visibleSet = useMemo(() => new Set(visibleKeys), [visibleKeys])
+  const visibleColumns = useMemo(
+    () => columns.filter(c => visibleSet.has(c.key)),
+    [columns, visibleSet],
+  )
+
+  // ── Mobile allow-list ───────────────────────────────────────────────────
+  const effectiveMobileColumns = useMemo(() => {
+    if (mobileColumns) return mobileColumns
+    const derived = columns.filter(c => c.visibleOnMobile).map(c => c.key)
+    return derived.length > 0 ? derived : null
+  }, [mobileColumns, columns])
+  const mobileSet = useMemo(
+    () => (effectiveMobileColumns ? new Set(effectiveMobileColumns) : null),
+    [effectiveMobileColumns],
+  )
+  const colHiddenClass = (key: string) =>
+    mobileSet && !mobileSet.has(key) ? 'hidden md:table-cell' : ''
+
+  // ── Column widths (persisted by tableId) ───────────────────────────────
+  const widthsStorageKey = tableId ? `${STORAGE_PREFIX}.${tableId}.widths` : null
+  const [widths, setWidths] = useState<Record<string, number>>(() => {
+    if (!widthsStorageKey) return {}
+    return readStored<Record<string, number>>(widthsStorageKey) ?? {}
+  })
+  const setColumnWidth = useCallback((key: string, width: number) => {
+    setWidths(prev => ({ ...prev, [key]: width }))
+  }, [])
+  const persistColumnWidth = useCallback(
+    (key: string, width: number) => {
+      if (!widthsStorageKey) return
+      setWidths(prev => {
+        const next = { ...prev, [key]: width }
+        writeStored(widthsStorageKey, next)
+        return next
+      })
+    },
+    [widthsStorageKey],
+  )
+  const widthFor = (col: Column<T>): number | undefined => {
+    const stored = widths[col.key]
+    if (typeof stored === 'number') return stored
+    if (typeof col.defaultWidth === 'number') return col.defaultWidth
+    return undefined
+  }
+
+  // ── Selection ───────────────────────────────────────────────────────────
+  const isSelectable = selectable !== 'none'
+  const selection = selectedKeys ?? []
+  const selectionSet = useMemo(() => new Set(selection), [selection])
+  const lastClickedKey = useRef<RowKey | null>(null)
+
+  const allRowKeys = useMemo(() => data.map(keyExtractor), [data, keyExtractor])
+  const allSelected = isSelectable && allRowKeys.length > 0 && allRowKeys.every(k => selectionSet.has(k))
+  const someSelected = isSelectable && allRowKeys.some(k => selectionSet.has(k)) && !allSelected
+  const headerCheckboxRef = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (headerCheckboxRef.current) headerCheckboxRef.current.indeterminate = someSelected
+  }, [someSelected])
+
+  const setSelection = useCallback(
+    (next: RowKey[]) => onSelectionChange?.(next),
+    [onSelectionChange],
+  )
+
+  const toggleRow = useCallback(
+    (rowKey: RowKey, e: React.MouseEvent | React.ChangeEvent | React.KeyboardEvent) => {
+      const shift = 'shiftKey' in e ? (e as React.MouseEvent).shiftKey : false
+      if (selectable === 'single') {
+        setSelection(selectionSet.has(rowKey) ? [] : [rowKey])
+        lastClickedKey.current = rowKey
+        return
+      }
+      // multi
+      if (shift && lastClickedKey.current != null) {
+        const fromIdx = allRowKeys.indexOf(lastClickedKey.current)
+        const toIdx = allRowKeys.indexOf(rowKey)
+        if (fromIdx >= 0 && toIdx >= 0) {
+          const [a, b] = fromIdx < toIdx ? [fromIdx, toIdx] : [toIdx, fromIdx]
+          const range = allRowKeys.slice(a, b + 1)
+          // Behavior: range is added to selection (additive), not replacing.
+          const next = new Set(selection)
+          for (const k of range) next.add(k)
+          setSelection(Array.from(next))
+          lastClickedKey.current = rowKey
+          return
+        }
+      }
+      const next = new Set(selection)
+      if (next.has(rowKey)) next.delete(rowKey)
+      else next.add(rowKey)
+      setSelection(Array.from(next))
+      lastClickedKey.current = rowKey
+    },
+    [selectable, selection, selectionSet, allRowKeys, setSelection],
+  )
+
+  const toggleAll = useCallback(() => {
+    if (allSelected) setSelection([])
+    else setSelection(allRowKeys)
+  }, [allSelected, allRowKeys, setSelection])
+
+  const clearSelection = useCallback(() => setSelection([]), [setSelection])
+
+  // ── Expansion ───────────────────────────────────────────────────────────
+  const expansion = expandedKeys ?? []
+  const expansionSet = useMemo(() => new Set(expansion), [expansion])
+  const toggleExpand = useCallback(
+    (rowKey: RowKey) => {
+      if (!onExpandedChange) return
+      const next = new Set(expansion)
+      if (next.has(rowKey)) next.delete(rowKey)
+      else next.add(rowKey)
+      onExpandedChange(Array.from(next))
+    },
+    [expansion, onExpandedChange],
+  )
+
+  // ── Pagination slice ───────────────────────────────────────────────────
   const paginatedData = paginationEnabled
     ? data.slice((page - 1) * pageSize, page * pageSize)
     : data
 
-  const mobileSet = useMemo(
-    () => (mobileColumns ? new Set(mobileColumns) : null),
-    [mobileColumns],
+  // ── Selected rows for bulk actions slot ────────────────────────────────
+  const selectedRows = useMemo(
+    () => (isSelectable ? data.filter(row => selectionSet.has(keyExtractor(row))) : []),
+    [data, isSelectable, selectionSet, keyExtractor],
   )
 
-  // CSS-driven hide: when a column is NOT in the mobile allowlist we add
-  // `hidden md:table-cell` so it disappears below md but reappears on tablet.
-  const colHiddenClass = (key: string) =>
-    mobileSet && !mobileSet.has(key) ? 'hidden md:table-cell' : ''
+  // Total visible column count for colSpan calcs (incl. selection / expand).
+  const leadingColCount = (isSelectable ? 1 : 0) + (expandable ? 1 : 0)
+  const totalCols = leadingColCount + visibleColumns.length
 
   // tbody can only hold <tr>, so the boundary fallback must also be a <tr>
   // to keep markup valid when a row renderer throws.
   const bodyFallback = (
     <tr>
       <td
-        colSpan={columns.length}
+        colSpan={totalCols}
         className="px-4 py-8 text-center text-sm text-[var(--text-muted)]"
       >
         <span className="inline-flex items-center gap-2">
@@ -96,77 +375,251 @@ export function DataTable<T>({
     </tr>
   )
 
+  // ── Render ──────────────────────────────────────────────────────────────
+  const wrapperStyle = maxHeight != null
+    ? { maxHeight: typeof maxHeight === 'number' ? `${maxHeight}px` : maxHeight }
+    : undefined
+
+  const wrapperClass = cn(
+    stickyHeader || maxHeight != null ? tableTokens.scrollContainer : 'overflow-x-auto rounded-xl',
+    className,
+  )
+
+  const headRowClass = cn(
+    tableTokens.head,
+    stickyHeader && tableTokens.stickyHead,
+  )
+
+  const showToolbar = (showColumnsMenu && tableId) || (isSelectable && selectedRows.length > 0)
+
   return (
-    <div className={cn('overflow-x-auto rounded-xl', className)}>
-      <table className={tableTokens.wrapper}>
-        <thead>
-          <tr className={tableTokens.head}>
-            {columns.map(col => (
-              <th
-                key={col.key}
-                scope="col"
-                className={cn(
-                  compact ? 'px-3 py-2' : tableTokens.headCell,
-                  colHiddenClass(col.key),
-                  col.className,
-                )}
-                aria-sort={col.sortable && sortKey === col.key ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}
-              >
-                {col.sortable ? (
-                  <button
-                    type="button"
-                    onClick={() => onSort?.(col.key)}
-                    className={cn(
-                      'inline-flex items-center gap-1 cursor-pointer select-none rounded',
-                      'hover:text-[var(--text-secondary)]',
-                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent',
-                    )}
-                  >
-                    <span>{col.header}</span>
-                    {sortKey === col.key && (
-                      sortDir === 'asc'
-                        ? <ChevronUp className="h-3 w-3" aria-hidden="true" />
-                        : <ChevronDown className="h-3 w-3" aria-hidden="true" />
-                    )}
-                  </button>
-                ) : (
-                  <span className="inline-flex items-center gap-1">
-                    {col.header}
-                  </span>
-                )}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className={tableTokens.body}>
-          <SectionErrorBoundary name={`table:${name ?? 'DataTable'}`} fallback={bodyFallback}>
-            {data.length === 0 ? (
-              <tr>
-                <td colSpan={columns.length} className="px-4 py-12 text-center text-sm text-[var(--text-muted)]">
-                  {emptyMessage}
-                </td>
-              </tr>
-            ) : (
-              paginatedData.map(row => (
-                <tr key={keyExtractor(row)} className={tableTokens.row}>
-                  {columns.map(col => (
-                    <td
-                      key={col.key}
-                      className={cn(
-                        compact ? 'px-3 py-2' : tableTokens.cell,
-                        colHiddenClass(col.key),
-                        col.className,
-                      )}
-                    >
-                      {col.render(row)}
-                    </td>
-                  ))}
-                </tr>
-              ))
+    <div className="space-y-2">
+      {/* Toolbar row (selection bulk-bar + columns picker) */}
+      {showToolbar && (
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex-1 min-w-0">
+            {isSelectable && selectedRows.length > 0 && (
+              <DataTableBulkBar count={selectedRows.length} onClear={clearSelection}>
+                {bulkActions?.(selectedRows)}
+              </DataTableBulkBar>
             )}
-          </SectionErrorBoundary>
-        </tbody>
-      </table>
+          </div>
+          {showColumnsMenu && tableId && (
+            <DataTableColumnsMenu
+              columns={columns.map(c => ({ key: c.key, header: c.header }))}
+              visibleKeys={visibleKeys}
+              onChange={updateVisibleKeys}
+            />
+          )}
+        </div>
+      )}
+
+      <div className={wrapperClass} style={wrapperStyle}>
+        <table className={tableTokens.wrapper}>
+          <thead>
+            <tr className={headRowClass}>
+              {/* Selection header */}
+              {isSelectable && (
+                <th
+                  scope="col"
+                  className={cn(compact ? 'px-2 py-2' : 'px-3 py-3', tableTokens.leadingColWidth)}
+                >
+                  {selectable === 'multi' ? (
+                    <input
+                      ref={headerCheckboxRef}
+                      type="checkbox"
+                      checked={allSelected}
+                      onChange={toggleAll}
+                      aria-label={
+                        allSelected
+                          ? t('table.selection.deselectAll', 'Deselect all rows')
+                          : t('table.selection.selectAll', 'Select all rows')
+                      }
+                      className="rounded border-white/20 bg-white/5 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0"
+                    />
+                  ) : null}
+                </th>
+              )}
+              {/* Expand header */}
+              {expandable && (
+                <th
+                  scope="col"
+                  aria-label={t('table.expand.column', 'Expand row')}
+                  className={cn(compact ? 'px-2 py-2' : 'px-3 py-3', tableTokens.leadingColWidth)}
+                />
+              )}
+              {visibleColumns.map(col => {
+                const w = widthFor(col)
+                return (
+                  <th
+                    key={col.key}
+                    scope="col"
+                    className={cn(
+                      compact ? 'px-3 py-2' : tableTokens.headCell,
+                      colHiddenClass(col.key),
+                      alignClass(col.align),
+                      resizable && 'relative group/th',
+                      col.className,
+                    )}
+                    style={w != null ? { width: w, minWidth: w } : undefined}
+                    aria-sort={col.sortable && sortKey === col.key ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}
+                  >
+                    {col.sortable ? (
+                      <button
+                        type="button"
+                        onClick={() => onSort?.(col.key)}
+                        className={cn(
+                          'inline-flex items-center gap-1 cursor-pointer select-none rounded',
+                          'hover:text-[var(--text-secondary)]',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent',
+                        )}
+                      >
+                        <span>{col.header}</span>
+                        {sortKey === col.key && (
+                          sortDir === 'asc'
+                            ? <ChevronUp className="h-3 w-3" aria-hidden="true" />
+                            : <ChevronDown className="h-3 w-3" aria-hidden="true" />
+                        )}
+                      </button>
+                    ) : (
+                      <span className="inline-flex items-center gap-1">
+                        {col.header}
+                      </span>
+                    )}
+                    {resizable && tableId && (
+                      <DataTableResizer
+                        columnKey={col.key}
+                        width={w ?? 120}
+                        minWidth={col.minWidth}
+                        maxWidth={col.maxWidth}
+                        onResize={(next) => setColumnWidth(col.key, next)}
+                        onResizeEnd={(final) => persistColumnWidth(col.key, final)}
+                        label={t('table.columns.resizeLabel', 'Resize column {{col}}', { col: col.header })}
+                      />
+                    )}
+                  </th>
+                )
+              })}
+            </tr>
+          </thead>
+          <tbody className={tableTokens.body}>
+            <SectionErrorBoundary name={`table:${name ?? tableId ?? 'DataTable'}`} fallback={bodyFallback}>
+              {data.length === 0 ? (
+                <tr>
+                  <td colSpan={totalCols} className="px-4 py-12 text-center text-sm text-[var(--text-muted)]">
+                    {emptyMessage}
+                  </td>
+                </tr>
+              ) : (
+                paginatedData.flatMap(row => {
+                  const rowKey = keyExtractor(row)
+                  const selected = isSelectable && selectionSet.has(rowKey)
+                  const expanded = expandable && expansionSet.has(rowKey)
+                  const trClass = cn(
+                    tableTokens.row,
+                    selected && tableTokens.rowSelected,
+                  )
+                  const rows: ReactNode[] = [
+                    <tr
+                      key={rowKey}
+                      className={trClass}
+                      data-selected={selected ? 'true' : undefined}
+                      data-expanded={expanded ? 'true' : undefined}
+                      aria-selected={isSelectable ? selected : undefined}
+                      onKeyDown={(e) => {
+                        if (e.key === ' ' && isSelectable) {
+                          e.preventDefault()
+                          toggleRow(rowKey, e)
+                        } else if (e.key === 'Enter' && expandable) {
+                          e.preventDefault()
+                          toggleExpand(rowKey)
+                        }
+                      }}
+                      tabIndex={isSelectable || expandable ? 0 : undefined}
+                    >
+                      {isSelectable && (
+                        <td className={cn(compact ? 'px-2 py-2' : 'px-3 py-3', tableTokens.leadingColWidth)}>
+                          <input
+                            type={selectable === 'single' ? 'radio' : 'checkbox'}
+                            checked={selected}
+                            // Stop the click bubbling so a click on the checkbox
+                            // doesn't also fire the row's onClick (when consumers
+                            // attach one via `tr` wrappers around content).
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleRow(rowKey, e)
+                            }}
+                            // Read-only because we drive state via onClick to
+                            // capture shiftKey for range selection.
+                            onChange={() => { /* handled in onClick */ }}
+                            aria-label={
+                              selected
+                                ? t('table.selection.deselectRow', 'Deselect row')
+                                : t('table.selection.selectRow', 'Select row')
+                            }
+                            className={cn(
+                              'border-white/20 bg-white/5 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0',
+                              selectable === 'single' ? '' : 'rounded',
+                            )}
+                          />
+                        </td>
+                      )}
+                      {expandable && (
+                        <td className={cn(compact ? 'px-2 py-2' : 'px-3 py-3', tableTokens.leadingColWidth)}>
+                          <button
+                            type="button"
+                            onClick={() => toggleExpand(rowKey)}
+                            aria-expanded={expanded}
+                            aria-label={
+                              expanded
+                                ? t('table.expand.collapse', 'Collapse row')
+                                : t('table.expand.expand', 'Expand row')
+                            }
+                            className={cn(
+                              'inline-flex h-5 w-5 items-center justify-center rounded',
+                              'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06]',
+                              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
+                              'transition-colors',
+                            )}
+                          >
+                            <ChevronRight
+                              className={cn('h-3.5 w-3.5 transition-transform', expanded && 'rotate-90')}
+                              aria-hidden="true"
+                            />
+                          </button>
+                        </td>
+                      )}
+                      {visibleColumns.map(col => (
+                        <td
+                          key={col.key}
+                          className={cn(
+                            compact ? 'px-3 py-2' : tableTokens.cell,
+                            colHiddenClass(col.key),
+                            alignClass(col.align),
+                            col.className,
+                          )}
+                        >
+                          {col.render(row)}
+                        </td>
+                      ))}
+                    </tr>,
+                  ]
+                  if (expanded && renderExpanded) {
+                    rows.push(
+                      <tr key={`${rowKey}-expanded`} data-expanded-content="true">
+                        <td colSpan={totalCols} className={tableTokens.expandedCell}>
+                          {renderExpanded(row)}
+                        </td>
+                      </tr>,
+                    )
+                  }
+                  return rows
+                })
+              )}
+            </SectionErrorBoundary>
+          </tbody>
+        </table>
+      </div>
       {paginationEnabled && data.length > 0 && (
         <Pagination
           page={page}
@@ -205,4 +658,25 @@ export function useSortToggle(defaultKey?: string, defaultDir: 'asc' | 'desc' = 
   }, [sortKey, sortDir])
 
   return { sortKey, sortDir, onSort, sortFn }
+}
+
+/**
+ * Convenience hook for selection state. Maintains a list of selected row
+ * keys and exposes setters that are stable across renders. Pair with
+ * `<DataTable selectable="multi" selectedKeys={selectedKeys} onSelectionChange={setSelectedKeys} />`.
+ */
+export function useTableSelection<K extends RowKey = RowKey>(initial: K[] = []) {
+  const [selectedKeys, setSelectedKeys] = useState<K[]>(initial)
+  const clear = useCallback(() => setSelectedKeys([]), [])
+  return { selectedKeys, setSelectedKeys, clear }
+}
+
+/**
+ * Convenience hook for expansion state. Maintains a list of expanded row
+ * keys. Pair with `<DataTable expandable expandedKeys={...} onExpandedChange={...} />`.
+ */
+export function useTableExpansion<K extends RowKey = RowKey>(initial: K[] = []) {
+  const [expandedKeys, setExpandedKeys] = useState<K[]>(initial)
+  const clear = useCallback(() => setExpandedKeys([]), [])
+  return { expandedKeys, setExpandedKeys, clear }
 }
