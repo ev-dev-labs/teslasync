@@ -2515,7 +2515,10 @@
     "map": "Session Locations",
     "noMapData": "No location data available yet.",
     "table": "Charging Sessions",
-    "noData": "No fleet charging sessions yet. Click \"Refresh from Tesla\" to import data."
+    "noData": "No fleet charging sessions yet. Click \"Refresh from Tesla\" to import data.",
+    "unknown": "Unknown",
+    "markerLabel": "{{name}} charging session",
+    "mapLabel": "Charging sessions map"
   },
   "dashSettings": {
     "allVehicles": "All Vehicles",
@@ -4451,7 +4454,10 @@
     "browser": "Browser",
     "chooseVehicle": "— Choose vehicle —",
     "gettingLocation": "Getting location…",
-    "getLocation": "Get Location"
+    "getLocation": "Get Location",
+    "drawOnMap": "Draw on map",
+    "drawHint": "Click the circle tool, then click and drag on the map to draw a fence.",
+    "drawerLabel": "Geofence drawing map"
   },
   "mapOverview": {
     "pageTitle": "Map Overview",
@@ -4483,7 +4489,15 @@
     "navRoute": "Navigation Route",
     "geofences": "Geofences",
     "locations": "Locations",
-    "recentHistory": "Recent Location History"
+    "recentHistory": "Recent Location History",
+    "recentPlayback": "Recent Route Playback",
+    "playbackLabel": "Recent route playback map"
+  },
+  "maps": {
+    "routePlayback": {
+      "empty": "No GPS points to replay for this route.",
+      "mapLabel": "Route playback map"
+    }
   },
   "navigation": {
     "noRoute": "No active route selected"

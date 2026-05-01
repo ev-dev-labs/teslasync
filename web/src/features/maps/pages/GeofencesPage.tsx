@@ -21,6 +21,14 @@ import { useToast } from '@/components/feedback/Toast';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { SearchInput, FilterBar } from '@/components/forms';
 import { useFilteredList } from '@/hooks/useFilteredList';
+import {
+  MapContainer,
+  MapTileLayer,
+  MapInvalidator,
+  GeofenceDrawer,
+  type DrawableGeofence,
+  type NewGeofence,
+} from '@/components/maps';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -33,7 +41,7 @@ import type { Position } from '@/api/types';
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type AlertType = 'entry' | 'exit' | 'both' | 'none';
-type LocationSource = 'vehicle' | 'browser';
+type LocationSource = 'vehicle' | 'browser' | 'map';
 
 interface ReverseGeocodeResult {
   display_name: string;
@@ -191,6 +199,57 @@ export default function GeofencesPage() {
     [],
   );
   const filteredGeofences = useFilteredList(geofences, search, geofenceSearchFields);
+
+  // ─── Drawer integration ──────────────────────────────────────────────────
+
+  /* Center the picker map on the form's current coords or fall back to
+     the first existing geofence so users have spatial context. */
+  const mapPickerCenter = useMemo<[number, number]>(() => {
+    const lat = parseFloat(form.latitude);
+    const lng = parseFloat(form.longitude);
+    if (!Number.isNaN(lat) && !Number.isNaN(lng) && (lat !== 0 || lng !== 0)) {
+      return [lat, lng];
+    }
+    const first = (geofences ?? [])[0];
+    if (first && first.latitude != null && first.longitude != null) {
+      return [first.latitude, first.longitude];
+    }
+    return [37.7749, -122.4194];
+  }, [form.latitude, form.longitude, geofences]);
+
+  const mapPickerZoom = useMemo(() => {
+    const lat = parseFloat(form.latitude);
+    const lng = parseFloat(form.longitude);
+    return !Number.isNaN(lat) && !Number.isNaN(lng) && (lat !== 0 || lng !== 0) ? 15 : 11;
+  }, [form.latitude, form.longitude]);
+
+  /* Render the in-progress drawing as a draftable fence so editing works. */
+  const drawerFences = useMemo<DrawableGeofence[]>(() => {
+    const lat = parseFloat(form.latitude);
+    const lng = parseFloat(form.longitude);
+    const radius = parseFloat(form.radius);
+    if (
+      Number.isNaN(lat) ||
+      Number.isNaN(lng) ||
+      Number.isNaN(radius) ||
+      (lat === 0 && lng === 0)
+    ) {
+      return [];
+    }
+    return [{ id: 'draft', lat, lng, radius, name: form.name || undefined }];
+  }, [form.latitude, form.longitude, form.radius, form.name]);
+
+  const handleDrawerCreate = useCallback((g: NewGeofence) => {
+    if (g.shape !== 'circle' || g.lat == null || g.lng == null || g.radius == null) {
+      return;
+    }
+    setForm((prev) => ({
+      ...prev,
+      latitude: String(g.lat),
+      longitude: String(g.lng),
+      radius: String(Math.round(g.radius ?? 0)),
+    }));
+  }, []);
 
   // ─── Handlers ────────────────────────────────────────────────────────────
 
@@ -506,6 +565,7 @@ export default function GeofencesPage() {
                 tabs={[
                   { key: 'vehicle', label: `🚗 ${t('geofences.vehicle', 'Vehicle')}` },
                   { key: 'browser', label: `📱 ${t('geofences.browser', 'Browser')}` },
+                  { key: 'map', label: `🗺️ ${t('geofences.drawOnMap', 'Draw on map')}` },
                 ]}
                 activeTab={locationSource}
                 onChange={(key) => setLocationSource(key as LocationSource)}
@@ -526,17 +586,48 @@ export default function GeofencesPage() {
                 />
               )}
 
-              <Button
-                variant="secondary"
-                size="sm"
-                icon={locationLoading ? <Spinner size="sm" /> : <Navigation className="h-4 w-4" />}
-                onClick={handleGetLocation}
-                disabled={locationLoading || (locationSource === 'vehicle' && selectedVehicleId <= 0)}
-              >
-                {locationLoading
-                  ? t('geofences.gettingLocation', 'Getting location…')
-                  : t('geofences.getLocation', 'Get Location')}
-              </Button>
+              {locationSource === 'map' ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-[var(--text-muted)]">
+                    {t(
+                      'geofences.drawHint',
+                      'Click the circle tool, then click and drag on the map to draw a fence.',
+                    )}
+                  </p>
+                  <div
+                    className="h-64 w-full overflow-hidden rounded-lg border border-white/[0.08]"
+                    role="application"
+                    aria-label={t('geofences.drawerLabel', 'Geofence drawing map')}
+                  >
+                    <MapContainer
+                      center={mapPickerCenter}
+                      zoom={mapPickerZoom}
+                      scrollWheelZoom
+                      className="h-full w-full"
+                    >
+                      <MapTileLayer style="dark" />
+                      <MapInvalidator />
+                      <GeofenceDrawer
+                        fences={drawerFences}
+                        onCreate={handleDrawerCreate}
+                        modes={['circle']}
+                      />
+                    </MapContainer>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={locationLoading ? <Spinner size="sm" /> : <Navigation className="h-4 w-4" />}
+                  onClick={handleGetLocation}
+                  disabled={locationLoading || (locationSource === 'vehicle' && selectedVehicleId <= 0)}
+                >
+                  {locationLoading
+                    ? t('geofences.gettingLocation', 'Getting location…')
+                    : t('geofences.getLocation', 'Get Location')}
+                </Button>
+              )}
             </GlassPanel>
           )}
           <Input

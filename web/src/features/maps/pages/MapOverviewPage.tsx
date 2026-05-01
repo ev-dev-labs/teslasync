@@ -14,8 +14,10 @@ import { FadeIn } from '@/components/motion';
 import {
   MapContainer, Marker, Popup, Polyline,
   MapTileLayer, MapInvalidator, MapLayerSwitcher,
+  RoutePlayback,
   vehicleIcon,
   type MapStyle,
+  type PlaybackPoint,
 } from '@/components/maps';
 
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -137,6 +139,30 @@ export default function MapOverviewPage() {
     [history],
   );
 
+  /* Time-ordered points for the optional `<RoutePlayback>` widget. The
+     /positions endpoint returns most-recent-first, so we reverse here. */
+  const playbackPoints = useMemo<PlaybackPoint[]>(() => {
+    const list = (history ?? [])
+      .filter(
+        (s) =>
+          typeof s.latitude === 'number' &&
+          typeof s.longitude === 'number' &&
+          (s.latitude !== 0 || s.longitude !== 0) &&
+          !!s.created_at,
+      )
+      .map((s) => ({
+        lat: s.latitude,
+        lng: s.longitude,
+        timestamp: s.created_at,
+        speed: s.speed ?? undefined,
+        soc: s.battery_level ?? undefined,
+        power: s.power ?? undefined,
+      }));
+    /* Sort ascending by timestamp so playback runs forward in time. */
+    list.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    return list;
+  }, [history]);
+
   const vehicle = vehicles?.find((v) => String(v.id) === selectedId);
 
   /* ---- history table columns ---- */
@@ -255,6 +281,22 @@ export default function MapOverviewPage() {
           )}
         </GlassPanel>
       </FadeIn>
+
+      {/* ---- Recent route playback ---- */}
+      {playbackPoints.length > 1 && (
+        <FadeIn delay={0.04}>
+          <GlassPanel className="p-4">
+            <span className="mb-3 block text-sm font-semibold text-[var(--text-primary)]">
+              {t('mapOverview.recentPlayback', 'Recent Route Playback')}
+            </span>
+            <RoutePlayback
+              points={playbackPoints}
+              height={360}
+              ariaLabel={t('mapOverview.playbackLabel', 'Recent route playback map')}
+            />
+          </GlassPanel>
+        </FadeIn>
+      )}
 
       {/* ---- Vehicle status metric cards ---- */}
       {isLoading ? (
