@@ -7,10 +7,35 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/units"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 )
+
+// recoveryStateBundle pairs the cold-path signal.StateReader installed via
+// SetDriveStateReader / SetChargeStateReader (telemetry_sessions_drive_tracking.go,
+// telemetry_sessions_charge_tracking.go) with the field name `state` used by
+// the per-session enrichment paths in those files. Keeping the call shape
+// identical (`bundle.state.State(ctx, vehicleID, at)`) lets one anchor regex
+// guard every cold-read call site against accidental re-introduction of the
+// legacy *database.SignalLogReader snapshot path.
+//
+// Forward-fold semantics matter for crash recovery: Tesla Fleet Telemetry only
+// re-emits a signal when the value changes, so a snapshot reconstructed from
+// the legacy snapshot tables saw nil for any signal that had not changed since
+// the start of the recovery gap, causing odometer / energy / lat-lng deltas
+// to silently zero out and sessions to be closed with corrupt enrichment
+// values. signal.StateReader.State forward-folds signal_log so every signal
+// emitted at-or-before `at` is included regardless of when it last changed.
+//
+// A nil `state` field is the explicit "no reader installed" path —
+// completion-time enrichment falls back to empty snapshot maps so the
+// recovered session still commits with whatever in-memory data was captured
+// during streaming, instead of leaving end_ts NULL forever.
+type recoveryStateBundle struct {
+	state signal.StateReader
+}
 
 // RecoverSessions restores active drive/charge sessions from Postgres on pod restart.
 // Queries for sessions with no end_ts and rebuilds the in-memory tracking state.
@@ -120,6 +145,19 @@ const staleSessionThreshold = 5 * time.Minute
 // Run once at startup after RecoverSessions / ValidateRecoveredSessions.
 // Sessions with recent signals (< 5 min) are left open — the vehicle is likely
 // still active and will be picked up by normal tracking.
+//
+// Phase-39 / ADR-002: snapshot reconstruction at the recovery start/end
+// anchors goes through signal.StateReader (driveR.state / chargeR.state)
+// instead of the legacy *database.SignalLogReader snapshot tables. The
+// StateReader forward-folds signal_log so signals that have not been
+// re-emitted since the start of the recovery gap (the common case under
+// Tesla's delta encoding) still appear in the reconstructed snapshot.
+// Without forward-fold, recovery saw nil for those signals and silently
+// zeroed out odometer / energy / lat-lng deltas. The tracker's
+// signalLogReader field is INTENTIONALLY retained for the
+// LatestTimestamp() call (no StateReader equivalent) — removing the field
+// would silently disable the staleness gate and try to "complete" sessions
+// for vehicles that are still actively reporting.
 func (t *TelemetrySessionTracker) RecoverIncompleteSessions(ctx context.Context) {
 	if t.signalLogReader == nil {
 		log.Info().Msg("recovery: signal_log reader not available, skipping incomplete session recovery")
@@ -130,6 +168,14 @@ func (t *TelemetrySessionTracker) RecoverIncompleteSessions(ctx context.Context)
 	defer t.mu.Unlock()
 
 	now := time.Now().UTC()
+
+	// Cold-path readers for snapshot reconstruction at recovery anchors.
+	// A nil .state means SetDriveStateReader / SetChargeStateReader has
+	// not run yet (first boot before router wiring) — the per-site
+	// branches below degrade to empty snapshot maps so the recovered
+	// session still commits with the in-memory data captured pre-crash.
+	driveR := recoveryStateBundle{state: t.driveStateReader()}
+	chargeR := recoveryStateBundle{state: t.chargeStateReader()}
 
 	// 1. Find all open drives (end_ts IS NULL, start_ts < now)
 	openDrives, err := t.driveRepo.GetStale(ctx, now)
@@ -167,14 +213,30 @@ func (t *TelemetrySessionTracker) RecoverIncompleteSessions(ctx context.Context)
 		log.Info().Int64("drive_id", drive.ID).Time("last_signal", lastSignalTs).
 			Msg("recovery: completing stale drive from signal_log")
 
-		startSnap, startErr := t.signalLogReader.SnapshotAt(ctx, drive.VehicleID, drive.StartTs)
-		if startErr != nil {
-			log.Warn().Err(startErr).Int64("drive_id", drive.ID).Msg("recovery: start snapshot failed")
+		// Forward-folded snapshots via StateReader. State() errors are
+		// logged-and-swallowed so a transient cold-read failure does not
+		// abort recovery (the alternative is leaving the session open
+		// with end_ts NULL forever).
+		var startSnap, endSnap map[string]interface{}
+		if driveR.state != nil {
+			s, startErr := driveR.state.State(ctx, drive.VehicleID, drive.StartTs)
+			if startErr != nil {
+				log.Warn().Err(startErr).Int64("drive_id", drive.ID).
+					Msg("recovery: state.State drive start snapshot failed")
+				startSnap = map[string]interface{}{}
+			} else {
+				startSnap = stateToLegacyMap(s)
+			}
+			s2, endErr := driveR.state.State(ctx, drive.VehicleID, lastSignalTs)
+			if endErr != nil {
+				log.Warn().Err(endErr).Int64("drive_id", drive.ID).
+					Msg("recovery: state.State drive end snapshot failed")
+				endSnap = map[string]interface{}{}
+			} else {
+				endSnap = stateToLegacyMap(s2)
+			}
+		} else {
 			startSnap = map[string]interface{}{}
-		}
-		endSnap, endErr := t.signalLogReader.SnapshotAt(ctx, drive.VehicleID, lastSignalTs)
-		if endErr != nil {
-			log.Warn().Err(endErr).Int64("drive_id", drive.ID).Msg("recovery: end snapshot failed")
 			endSnap = map[string]interface{}{}
 		}
 
@@ -217,14 +279,28 @@ func (t *TelemetrySessionTracker) RecoverIncompleteSessions(ctx context.Context)
 		log.Info().Int64("charge_id", charge.ID).Time("last_signal", lastSignalTs).
 			Msg("recovery: completing stale charge from signal_log")
 
-		startSnap, startErr := t.signalLogReader.SnapshotAt(ctx, charge.VehicleID, charge.StartTs)
-		if startErr != nil {
-			log.Warn().Err(startErr).Int64("charge_id", charge.ID).Msg("recovery: charge start snapshot failed")
+		// Forward-folded snapshots via StateReader (see drive branch above
+		// for the full rationale). State() errors are logged-and-swallowed.
+		var startSnap, endSnap map[string]interface{}
+		if chargeR.state != nil {
+			s, startErr := chargeR.state.State(ctx, charge.VehicleID, charge.StartTs)
+			if startErr != nil {
+				log.Warn().Err(startErr).Int64("charge_id", charge.ID).
+					Msg("recovery: state.State charge start snapshot failed")
+				startSnap = map[string]interface{}{}
+			} else {
+				startSnap = stateToLegacyMap(s)
+			}
+			s2, endErr := chargeR.state.State(ctx, charge.VehicleID, lastSignalTs)
+			if endErr != nil {
+				log.Warn().Err(endErr).Int64("charge_id", charge.ID).
+					Msg("recovery: state.State charge end snapshot failed")
+				endSnap = map[string]interface{}{}
+			} else {
+				endSnap = stateToLegacyMap(s2)
+			}
+		} else {
 			startSnap = map[string]interface{}{}
-		}
-		endSnap, endErr := t.signalLogReader.SnapshotAt(ctx, charge.VehicleID, lastSignalTs)
-		if endErr != nil {
-			log.Warn().Err(endErr).Int64("charge_id", charge.ID).Msg("recovery: charge end snapshot failed")
 			endSnap = map[string]interface{}{}
 		}
 
