@@ -1149,6 +1149,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		exportJobHandler := NewExportJobHandler(db, pahoClient)
 		r.Route("/export/jobs", func(r chi.Router) {
 			r.Post("/", exportJobHandler.SubmitJob)
+			r.Post("/account", exportJobHandler.SubmitAccountJob)
 			r.Post("/import", exportJobHandler.SubmitImportJob)
 			r.Get("/", exportJobHandler.ListJobs)
 			r.Get("/{jobID}", exportJobHandler.GetJob)

@@ -2,12 +2,19 @@ import { type ReactNode, useState, useCallback, useEffect, useMemo, useRef } fro
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import { tableTokens } from '../../lib/tokens'
-import { ChevronUp, ChevronDown, ChevronRight, AlertTriangle } from 'lucide-react'
+import { ChevronUp, ChevronDown, ChevronRight, AlertTriangle, Download, Loader2 } from 'lucide-react'
 import { Pagination } from './Pagination'
 import { SectionErrorBoundary } from '../feedback/SectionErrorBoundary'
 import { DataTableColumnsMenu } from './DataTableColumnsMenu'
 import { DataTableBulkBar } from './DataTableBulkBar'
 import { DataTableResizer } from './DataTableResizer'
+import {
+  toCSV,
+  downloadCSV,
+  defaultExportFilename,
+  type CsvColumn,
+  type CsvCellValue,
+} from '../../lib/csvExport'
 
 type RowKey = string | number
 
@@ -117,6 +124,22 @@ interface DataTableProps<T> {
    *  in localStorage[`teslasync.table.${tableId}.visible`]. Requires
    *  `tableId`. */
   showColumnsMenu?: boolean
+
+  // ── Phase-40 / Prompt 31 — per-table CSV export ───────────────────────
+  /** Show a "Download CSV" button in the table toolbar. The CSV is generated
+   *  from the currently visible columns and the currently sorted/filtered
+   *  data the table has been given. */
+  exportable?: boolean
+  /** Filename for the exported CSV (without extension). Defaults to a
+   *  date-stamped fallback like `table-2026-05-01`. */
+  exportFilename?: string
+  /** Override how a row is serialized. Defaults to extracting each visible
+   *  column key from the row. */
+  exportRow?: (row: T) => Record<string, CsvCellValue>
+  /** Optional async hook for paginated/server-side data: when provided the
+   *  export awaits this fetcher to obtain the full row set instead of using
+   *  whatever's currently visible. */
+  exportAll?: () => Promise<T[]>
 }
 
 const STORAGE_PREFIX = 'teslasync.table'
@@ -179,6 +202,10 @@ export function DataTable<T>({
   renderExpanded,
   resizable = false,
   showColumnsMenu = false,
+  exportable = false,
+  exportFilename,
+  exportRow,
+  exportAll,
 }: DataTableProps<T>) {
   const { t } = useTranslation()
   const paginationEnabled = !!pagination
@@ -355,6 +382,47 @@ export function DataTable<T>({
     [data, isSelectable, selectionSet, keyExtractor],
   )
 
+  // ── CSV export ─────────────────────────────────────────────────────────
+  const [exporting, setExporting] = useState(false)
+  const handleExportCsv = useCallback(async () => {
+    if (exporting) return
+    setExporting(true)
+    try {
+      const sourceRows: T[] = exportAll ? await exportAll() : data
+      const filenameBase = exportFilename ?? defaultExportFilename(tableId ?? name ?? 'table')
+      const csvCols: CsvColumn<T>[] = visibleColumns.map((col) => ({
+        key: col.key,
+        header: col.header || col.key,
+        accessor: exportRow
+          ? (row) => {
+              const obj = exportRow(row)
+              const v = obj[col.key]
+              return v === undefined ? null : v
+            }
+          : (row) => {
+              // Default: shallow lookup. Renders that produce React nodes are
+              // not exportable — callers should pass `exportRow` to flatten
+              // formatted values to plain CSV cells.
+              const v = (row as unknown as Record<string, unknown>)[col.key]
+              if (v == null) return null
+              if (
+                typeof v === 'string' ||
+                typeof v === 'number' ||
+                typeof v === 'boolean'
+              ) {
+                return v
+              }
+              // Fall back to JSON for nested structures so the row still exports.
+              return v as object
+            },
+      }))
+      const csv = toCSV(sourceRows, csvCols)
+      downloadCSV(filenameBase, csv)
+    } finally {
+      setExporting(false)
+    }
+  }, [exporting, exportAll, data, exportFilename, tableId, name, visibleColumns, exportRow])
+
   // Total visible column count for colSpan calcs (incl. selection / expand).
   const leadingColCount = (isSelectable ? 1 : 0) + (expandable ? 1 : 0)
   const totalCols = leadingColCount + visibleColumns.length
@@ -390,11 +458,14 @@ export function DataTable<T>({
     stickyHeader && tableTokens.stickyHead,
   )
 
-  const showToolbar = (showColumnsMenu && tableId) || (isSelectable && selectedRows.length > 0)
+  const showToolbar =
+    (showColumnsMenu && tableId) ||
+    (isSelectable && selectedRows.length > 0) ||
+    exportable
 
   return (
     <div className="space-y-2">
-      {/* Toolbar row (selection bulk-bar + columns picker) */}
+      {/* Toolbar row (selection bulk-bar + columns picker + export) */}
       {showToolbar && (
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex-1 min-w-0">
@@ -404,13 +475,38 @@ export function DataTable<T>({
               </DataTableBulkBar>
             )}
           </div>
-          {showColumnsMenu && tableId && (
-            <DataTableColumnsMenu
-              columns={columns.map(c => ({ key: c.key, header: c.header }))}
-              visibleKeys={visibleKeys}
-              onChange={updateVisibleKeys}
-            />
-          )}
+          <div className="flex items-center gap-2">
+            {exportable && (
+              <button
+                type="button"
+                onClick={handleExportCsv}
+                disabled={exporting || data.length === 0}
+                aria-label={t('table.export.csv', 'Download table as CSV')}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs',
+                  'border border-white/[0.08] bg-white/[0.03]',
+                  'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/[0.06]',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
+                  'transition-colors',
+                  'disabled:opacity-50 disabled:cursor-not-allowed',
+                )}
+              >
+                {exporting ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                )}
+                <span>{t('table.export.csvButton', 'Download CSV')}</span>
+              </button>
+            )}
+            {showColumnsMenu && tableId && (
+              <DataTableColumnsMenu
+                columns={columns.map(c => ({ key: c.key, header: c.header }))}
+                visibleKeys={visibleKeys}
+                onChange={updateVisibleKeys}
+              />
+            )}
+          </div>
         </div>
       )}
 

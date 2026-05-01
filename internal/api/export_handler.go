@@ -58,9 +58,10 @@ func (h *ExportHandler) SubmitJob(w http.ResponseWriter, r *http.Request) {
 	validTypes := map[string]bool{
 		"drives": true, "charging": true, "backup": true, "analytics": true,
 		"import_drives": true, "import_charging": true,
+		"account": true,
 	}
 	if !validTypes[req.Type] {
-		writeError(w, http.StatusBadRequest, "invalid type: must be one of drives, charging, backup, analytics")
+		writeError(w, http.StatusBadRequest, "invalid type: must be one of drives, charging, backup, analytics, account")
 		return
 	}
 
@@ -69,6 +70,9 @@ func (h *ExportHandler) SubmitJob(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.Type == "backup" || req.Type == "analytics" {
 		req.Format = "json"
+	}
+	if req.Type == "account" {
+		req.Format = "zip"
 	}
 
 	// Parse optional date range
@@ -192,6 +196,8 @@ func (h *ExportHandler) DownloadJob(w http.ResponseWriter, r *http.Request) {
 			contentType = "text/csv"
 		case "json":
 			contentType = "application/json"
+		case ".zip":
+			contentType = "application/zip"
 		}
 	}
 
@@ -267,6 +273,86 @@ func (h *ExportHandler) SubmitImportJob(w http.ResponseWriter, r *http.Request) 
 		"type":    importType,
 		"status":  "queued",
 		"message": "Import job submitted. Check status at /api/v1/export/jobs/" + jobID,
+	})
+}
+
+// SubmitAccountJob queues a GDPR-style "Download my data" full account export.
+// Produces a ZIP containing one CSV per allowed table plus manifest.json.
+// Convenience wrapper around SubmitJob with type=account so the frontend can
+// hit a single dedicated endpoint instead of crafting the generic payload.
+func (h *ExportHandler) SubmitAccountJob(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		VehicleID *int64 `json:"vehicle_id,omitempty"`
+		Start     string `json:"start,omitempty"`
+		End       string `json:"end,omitempty"`
+	}
+	// Empty body is allowed — defaults to "all data, all vehicles, all time".
+	if r.ContentLength > 0 {
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid request body")
+			return
+		}
+	}
+
+	var startDate, endDate *time.Time
+	if req.Start != "" {
+		t, err := time.Parse("2006-01-02", req.Start)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid start date format (expected YYYY-MM-DD)")
+			return
+		}
+		startDate = &t
+	}
+	if req.End != "" {
+		t, err := time.Parse("2006-01-02", req.End)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid end date format (expected YYYY-MM-DD)")
+			return
+		}
+		endDate = &t
+	}
+
+	jobID := fmt.Sprintf("acc-%d", time.Now().UnixNano())
+	now := time.Now().UTC()
+	job := &models.ExportJob{
+		ID:        jobID,
+		Type:      string(export.TypeAccount),
+		Format:    "zip",
+		Status:    string(export.StatusQueued),
+		VehicleID: req.VehicleID,
+		StartDate: startDate,
+		EndDate:   endDate,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	if err := h.jobRepo.Create(r.Context(), job); err != nil {
+		log.Error().Err(err).Msg("export account: failed to create job")
+		writeError(w, http.StatusInternalServerError, "failed to create export job")
+		return
+	}
+
+	mqttReq := &models.ExportJobRequest{
+		JobID:     jobID,
+		Type:      string(export.TypeAccount),
+		Format:    "zip",
+		VehicleID: req.VehicleID,
+		StartDate: startDate,
+		EndDate:   endDate,
+	}
+	if err := export.Publish(h.mqttClient, mqttReq); err != nil {
+		log.Error().Err(err).Str("job_id", jobID).Msg("export account: failed to publish to MQTT")
+		_ = h.jobRepo.Fail(r.Context(), jobID, "failed to queue: "+err.Error())
+		writeError(w, http.StatusServiceUnavailable, "export service unavailable, MQTT not connected")
+		return
+	}
+
+	log.Info().Str("job_id", jobID).Msg("export account job submitted")
+	writeJSON(w, http.StatusAccepted, map[string]interface{}{
+		"id":      jobID,
+		"type":    string(export.TypeAccount),
+		"format":  "zip",
+		"status":  "queued",
+		"message": "Account export queued. Check status at /api/v1/export/jobs/" + jobID,
 	})
 }
 

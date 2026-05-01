@@ -40,6 +40,8 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useToast } from '@/components/feedback/Toast';
 import { formatDateTime, formatDurationMsLong, formatRelative } from '@/lib/dateFormat';
 import { request } from '@/api/client';
+import { useCreateAccountExport } from '@/api/hooks/useExports';
+import { JobProgressDrawer } from '@/components/feedback/JobProgressDrawer';
 import type { Vehicle } from '@/api/types';
 
 /* ------------------------------------------------------------------ */
@@ -808,6 +810,132 @@ function ExportHistoryTable({
 }
 
 /* ------------------------------------------------------------------ */
+/*  Account Export Panel — Phase 40 / Prompt 31                        */
+/* ------------------------------------------------------------------ */
+
+interface AccountExportPanelProps {
+  vehicles: Vehicle[] | undefined;
+}
+
+function AccountExportPanel({ vehicles }: AccountExportPanelProps) {
+  const { t } = useTranslation();
+  const [vehicleId, setVehicleId] = useState<string>('all');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+
+  const createAccount = useCreateAccountExport();
+
+  const handleStart = useCallback(() => {
+    const payload: { vehicle_id?: number; start?: string; end?: string } = {};
+    if (vehicleId !== 'all') {
+      const id = Number(vehicleId);
+      if (!Number.isNaN(id)) payload.vehicle_id = id;
+    }
+    if (startDate) payload.start = new Date(startDate).toISOString();
+    if (endDate) payload.end = new Date(endDate).toISOString();
+    createAccount.mutate(payload);
+  }, [vehicleId, startDate, endDate, createAccount]);
+
+  const vehicleOptions = useMemo(
+    () => [
+      { value: 'all', label: t('dataExport.account.allVehicles', 'All vehicles') },
+      ...(vehicles ?? []).map((v) => ({
+        value: String(v.id),
+        label: v.display_name || v.vin || `Vehicle ${v.id}`,
+      })),
+    ],
+    [vehicles, t],
+  );
+
+  return (
+    <GlassPanel className="p-6" glow="cyan">
+      <div className="flex items-start gap-3 mb-4">
+        <div className="rounded-lg bg-cyan-400/10 p-2">
+          <Package className="h-5 w-5 text-cyan-300" aria-hidden="true" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h2 className="text-base font-semibold text-[var(--text-primary)]">
+            {t('dataExport.account.title', 'Download my data')}
+          </h2>
+          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+            {t(
+              'dataExport.account.subtitle',
+              'Get a single ZIP containing every table we store for you — drives, charging, signal history, alerts, settings, and a manifest. Use this for backup, migration, or your personal records.',
+            )}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+        <div>
+          <label
+            htmlFor="account-export-vehicle"
+            className="block text-xs font-medium text-[var(--text-muted)] mb-1"
+          >
+            {t('dataExport.account.vehicle', 'Vehicle')}
+          </label>
+          <Select
+            id="account-export-vehicle"
+            value={vehicleId}
+            onChange={(e) => setVehicleId(e.target.value)}
+            options={vehicleOptions}
+          />
+        </div>
+        <div>
+          <label
+            htmlFor="account-export-start"
+            className="block text-xs font-medium text-[var(--text-muted)] mb-1"
+          >
+            {t('dataExport.account.startDate', 'Start date (optional)')}
+          </label>
+          <Input
+            id="account-export-start"
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+          />
+        </div>
+        <div>
+          <label
+            htmlFor="account-export-end"
+            className="block text-xs font-medium text-[var(--text-muted)] mb-1"
+          >
+            {t('dataExport.account.endDate', 'End date (optional)')}
+          </label>
+          <Input
+            id="account-export-end"
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-3 border-t border-white/[0.06]">
+        <div className="flex items-start gap-2 text-xs text-[var(--text-muted)]">
+          <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" aria-hidden="true" />
+          <span>
+            {t(
+              'dataExport.account.warning',
+              'Large signal histories are capped per table to keep the ZIP under control. Track progress in the floating widget that appears once your export starts.',
+            )}
+          </span>
+        </div>
+        <Button
+          variant="primary"
+          size="md"
+          onClick={handleStart}
+          loading={createAccount.isPending}
+          icon={<Download className="h-4 w-4" />}
+        >
+          {t('dataExport.account.start', 'Start full export')}
+        </Button>
+      </div>
+    </GlassPanel>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main Page                                                          */
 /* ------------------------------------------------------------------ */
 
@@ -904,6 +1032,11 @@ export default function DataExportPage() {
         <StatsRow jobs={jobs} isLoading={jobsLoading} />
       </FadeIn>
 
+      {/* GDPR-style "Download my data" — Phase 40 / Prompt 31 */}
+      <FadeIn delay={0.025}>
+        <AccountExportPanel vehicles={vehicles} />
+      </FadeIn>
+
       {/* Export Wizard */}
       <FadeIn delay={0.05}>
         <ExportWizard
@@ -931,6 +1064,9 @@ export default function DataExportPage() {
           onRefresh={handleRefresh}
         />
       </FadeIn>
+
+      {/* Floating job progress drawer — visible across the page */}
+      <JobProgressDrawer />
     </PageContainer>
   );
 }

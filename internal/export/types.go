@@ -22,10 +22,23 @@ const (
 type JobType string
 
 const (
-	TypeDrives   JobType = "drives"
-	TypeCharging JobType = "charging"
-	TypeBackup   JobType = "backup"
-	TypeAnalytics JobType = "analytics"
+	TypeDrives         JobType = "drives"
+	TypeCharging       JobType = "charging"
+	TypeBackup         JobType = "backup"
+	TypeAnalytics      JobType = "analytics"
 	TypeImportDrives   JobType = "import_drives"
 	TypeImportCharging JobType = "import_charging"
+	// TypeAccount is a GDPR-style "Download my data" export — produces a ZIP
+	// containing one CSV per table in database.AllowedAccountTables plus a
+	// manifest.json. Phase 40 / Prompt 31.
+	TypeAccount JobType = "account"
 )
+
+// MaxAccountRowsPerTable caps the number of rows fetched per table during a
+// full account export. Prevents unbounded memory growth when tables like
+// signal_log contain hundreds of millions of rows.
+const MaxAccountRowsPerTable = 250_000
+
+// AccountSchemaVersion is the version of the account-export ZIP layout. Bump
+// this when columns are added or removed so consumers can detect changes.
+const AccountSchemaVersion = "1.0.0"

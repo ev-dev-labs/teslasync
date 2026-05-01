@@ -15,3 +15,4 @@ export { AuthExpiredOverlay } from './AuthExpiredOverlay';
 export { GotoIndicator } from './GotoIndicator';
 export { KeyboardCheatSheet } from './KeyboardCheatSheet';
 export { TourOverlay } from './TourOverlay';
+export { JobProgressDrawer } from './JobProgressDrawer';

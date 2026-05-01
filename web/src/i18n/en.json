@@ -589,6 +589,16 @@
     "common": {
       "error": "Something went wrong"
     },
+    "export": {
+      "create": {
+        "success": "Export started",
+        "error": "Failed to start export"
+      },
+      "account": {
+        "success": "Account export queued — track progress in the floating widget",
+        "error": "Failed to queue account export"
+      }
+    },
     "alerts": {
       "markRead": {
         "success": "Alert marked as read",
@@ -956,6 +966,11 @@
       "clear": "Clear selection",
       "exportCsv": "Export CSV",
       "more": "More…"
+    },
+    "export": {
+      "csv": "Download CSV",
+      "csvAria": "Download visible rows as CSV",
+      "loading": "Preparing CSV…"
     }
   },
   "shortcuts": {
@@ -988,7 +1003,14 @@
     "enable": "Enable annotations"
   },
   "chart": {
-    "export": "Export as PNG"
+    "export": "Export as PNG",
+    "exportCsv": "Download data as CSV",
+    "menu": {
+      "label": "Chart actions",
+      "open": "Open chart actions menu",
+      "downloadCsv": "Download data as CSV",
+      "downloadPng": "Download as PNG"
+    }
   },
   "replay": {
     "elevation": {
@@ -2635,7 +2657,42 @@
     "copyClipboard": "Copy to Clipboard",
     "urlCopied": "URL Copied!",
     "copyShareUrl": "Copy Shareable URL",
-    "subtitle": "Export drives, charging, analytics, or full backup as CSV/JSON"
+    "subtitle": "Export drives, charging, analytics, or full backup as CSV/JSON",
+    "jobDrawer": {
+      "label": "Export job progress",
+      "title": "Export jobs",
+      "minimize": "Minimize",
+      "close": "Dismiss",
+      "expand": "Show export jobs ({{count}} active)",
+      "activeCount": "{{count}} export running",
+      "activeCount_other": "{{count}} exports running",
+      "activePill": "{{count}} active",
+      "recentLabel": "Exports",
+      "loading": "Loading export jobs…",
+      "activeHeading": "In progress",
+      "activeEmpty": "No active exports",
+      "recentHeading": "Recent",
+      "recentEmpty": "No recent exports",
+      "statusLine": "{{status}} · started {{relative}}",
+      "completedLine": "{{size}} · {{relative}}",
+      "download": "Download"
+    },
+    "types": {
+      "account": "Account export",
+      "drives": "Drives",
+      "charging": "Charging",
+      "analytics": "Analytics",
+      "backup": "Backup",
+      "importDrives": "Import drives",
+      "importCharging": "Import charging"
+    },
+    "status": {
+      "queued": "Queued",
+      "processing": "Processing",
+      "ready": "Ready",
+      "failed": "Failed",
+      "expired": "Expired"
+    }
   },
   "fleet": {
     "size": "Fleet Size",
@@ -5106,7 +5163,17 @@
     "noExportsMessage": "Create your first export above to get started.",
     "noJobs": "No export jobs",
     "title": "Data Export",
-    "subtitle": "Export vehicle data in CSV or JSON format"
+    "subtitle": "Export vehicle data in CSV or JSON format",
+    "account": {
+      "title": "Download my data",
+      "subtitle": "Get a single ZIP containing every table we store for you — drives, charging, signal history, alerts, settings, and a manifest. Use this for backup, migration, or your personal records.",
+      "vehicle": "Vehicle",
+      "allVehicles": "All vehicles",
+      "startDate": "Start date (optional)",
+      "endDate": "End date (optional)",
+      "warning": "Large signal histories are capped per table to keep the ZIP under control. Track progress in the floating widget that appears once your export starts.",
+      "start": "Start full export"
+    }
   },
   "dbHealth": {
     "title": "DB Health",
