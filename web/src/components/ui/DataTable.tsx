@@ -1,8 +1,10 @@
 import { type ReactNode, useState, useCallback, useEffect, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import { tableTokens } from '../../lib/tokens'
-import { ChevronUp, ChevronDown } from 'lucide-react'
+import { ChevronUp, ChevronDown, AlertTriangle } from 'lucide-react'
 import { Pagination } from './Pagination'
+import { SectionErrorBoundary } from '../feedback/SectionErrorBoundary'
 
 export interface Column<T> {
   key: string
@@ -29,6 +31,12 @@ interface DataTableProps<T> {
   compact?: boolean
   pagination?: boolean | PaginationConfig
   /**
+   * Optional name for the SectionErrorBoundary that wraps row rendering.
+   * Surfaces in console logs as `[ErrorBoundary:table:<name>]` when a row
+   * renderer throws. Defaults to "DataTable".
+   */
+  name?: string
+  /**
    * Column keys to keep visible on viewports below `md` (768px). Columns NOT
    * listed here become `hidden md:table-cell`. When omitted, every column is
    * shown at every viewport width and the table relies on the wrapper's
@@ -44,8 +52,9 @@ interface DataTableProps<T> {
 
 /** Sortable glass-styled data table with consistent styling and optional pagination. */
 export function DataTable<T>({
-  columns, data, keyExtractor, sortKey, sortDir, onSort, emptyMessage = 'No data', className, compact, pagination, mobileColumns,
+  columns, data, keyExtractor, sortKey, sortDir, onSort, emptyMessage = 'No data', className, compact, pagination, mobileColumns, name,
 }: DataTableProps<T>) {
+  const { t } = useTranslation()
   const paginationEnabled = !!pagination
   const paginationConfig: PaginationConfig = typeof pagination === 'object' ? pagination : {}
   const defaultPageSize = paginationConfig.defaultPageSize ?? 25
@@ -70,6 +79,22 @@ export function DataTable<T>({
   // `hidden md:table-cell` so it disappears below md but reappears on tablet.
   const colHiddenClass = (key: string) =>
     mobileSet && !mobileSet.has(key) ? 'hidden md:table-cell' : ''
+
+  // tbody can only hold <tr>, so the boundary fallback must also be a <tr>
+  // to keep markup valid when a row renderer throws.
+  const bodyFallback = (
+    <tr>
+      <td
+        colSpan={columns.length}
+        className="px-4 py-8 text-center text-sm text-[var(--text-muted)]"
+      >
+        <span className="inline-flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4 text-tesla-red" aria-hidden="true" />
+          {t('errors.section.tableTitle', 'This table failed to render')}
+        </span>
+      </td>
+    </tr>
+  )
 
   return (
     <div className={cn('overflow-x-auto rounded-xl', className)}>
@@ -114,30 +139,32 @@ export function DataTable<T>({
           </tr>
         </thead>
         <tbody className={tableTokens.body}>
-          {data.length === 0 ? (
-            <tr>
-              <td colSpan={columns.length} className="px-4 py-12 text-center text-sm text-[var(--text-muted)]">
-                {emptyMessage}
-              </td>
-            </tr>
-          ) : (
-            paginatedData.map(row => (
-              <tr key={keyExtractor(row)} className={tableTokens.row}>
-                {columns.map(col => (
-                  <td
-                    key={col.key}
-                    className={cn(
-                      compact ? 'px-3 py-2' : tableTokens.cell,
-                      colHiddenClass(col.key),
-                      col.className,
-                    )}
-                  >
-                    {col.render(row)}
-                  </td>
-                ))}
+          <SectionErrorBoundary name={`table:${name ?? 'DataTable'}`} fallback={bodyFallback}>
+            {data.length === 0 ? (
+              <tr>
+                <td colSpan={columns.length} className="px-4 py-12 text-center text-sm text-[var(--text-muted)]">
+                  {emptyMessage}
+                </td>
               </tr>
-            ))
-          )}
+            ) : (
+              paginatedData.map(row => (
+                <tr key={keyExtractor(row)} className={tableTokens.row}>
+                  {columns.map(col => (
+                    <td
+                      key={col.key}
+                      className={cn(
+                        compact ? 'px-3 py-2' : tableTokens.cell,
+                        colHiddenClass(col.key),
+                        col.className,
+                      )}
+                    >
+                      {col.render(row)}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
+          </SectionErrorBoundary>
         </tbody>
       </table>
       {paginationEnabled && data.length > 0 && (

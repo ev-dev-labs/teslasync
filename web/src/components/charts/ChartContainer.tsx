@@ -4,6 +4,7 @@ import { Download, Tag } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Spinner } from '@/components/feedback/Spinner';
 import { EmptyState } from '@/components/feedback/EmptyState';
+import { SectionErrorBoundary } from '@/components/feedback/SectionErrorBoundary';
 import { Button } from '@/components/ui/Button';
 import { useChartExport } from '@/hooks/useChartExport';
 import { AnnotationList } from './AnnotationList';
@@ -114,7 +115,12 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
           ) : empty ? (
             <EmptyState message="No data available" />
           ) : (
-            children
+            <SectionErrorBoundary
+              name={`chart:${title}`}
+              fallbackTitle={t('errors.section.chartTitle', 'This chart failed to load')}
+            >
+              {children}
+            </SectionErrorBoundary>
           )}
         </div>
 

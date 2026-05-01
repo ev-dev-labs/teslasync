@@ -18,7 +18,7 @@ import {
   AREA_DEFAULTS, TimeMarker,
 } from '@/components/charts';
 import { MetricCard, MetricBar, LiveIndicator } from '@/components/data-display';
-import { Skeleton, EmptyState, LiveStaleDataBanner } from '@/components/feedback';
+import { Skeleton, EmptyState, LiveStaleDataBanner, SectionErrorBoundary } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { useBatteryHealthAnalytics, useBatteryDegradation } from '@/api/hooks/useEnergy';
@@ -371,8 +371,9 @@ export default function BatteryHealthPage() {
     >
       <LiveStaleDataBanner />
       {/* ── 1. Health Score Hero ──────────────────────────────────── */}
-      <FadeIn>
-        <GlassPanel className="p-4 sm:p-6 lg:p-8">
+      <SectionErrorBoundary name="battery:health-hero" fallbackTitle={t('battery.section.heroFailed', 'Health score panel failed to load')}>
+        <FadeIn>
+          <GlassPanel className="p-4 sm:p-6 lg:p-8">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 sm:gap-6 items-center">
             <div className="col-span-2 sm:col-span-1 flex flex-col items-center">
               <RadialGauge
@@ -420,10 +421,12 @@ export default function BatteryHealthPage() {
           </div>
         </GlassPanel>
       </FadeIn>
+      </SectionErrorBoundary>
 
       {/* ── 2. Metric Bars ───────────────────────────────────────── */}
-      <FadeIn delay={0.05}>
-        <GlassPanel className="p-6">
+      <SectionErrorBoundary name="battery:metric-bars" fallbackTitle={t('battery.section.metricBarsFailed', 'Metric bars failed to load')}>
+        <FadeIn delay={0.05}>
+          <GlassPanel className="p-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <div>
               <MetricBar
@@ -461,10 +464,12 @@ export default function BatteryHealthPage() {
           </div>
         </GlassPanel>
       </FadeIn>
+      </SectionErrorBoundary>
 
       {/* ── 3. Summary Metric Cards ──────────────────────────────── */}
-      <FadeIn delay={0.1}>
-        <Grid cols={{ default: 2, lg: 3 }} gap={4}>
+      <SectionErrorBoundary name="battery:summary-cards" fallbackTitle={t('battery.section.summaryCardsFailed', 'Summary metrics failed to load')}>
+        <FadeIn delay={0.1}>
+          <Grid cols={{ default: 2, lg: 3 }} gap={4}>
           <MetricCard
             label={t('battery.metric.soh', 'State of Health')}
             value={fmtPercent(health.current_soh)}
@@ -515,10 +520,12 @@ export default function BatteryHealthPage() {
           />
         </Grid>
       </FadeIn>
+      </SectionErrorBoundary>
 
       {/* ── 3b. Thermal Monitoring ───────────────────────────────── */}
-      <FadeIn delay={0.12}>
-        <GlassPanel className="p-6">
+      <SectionErrorBoundary name="battery:thermal" fallbackTitle={t('battery.section.thermalFailed', 'Thermal monitoring failed to load')}>
+        <FadeIn delay={0.12}>
+          <GlassPanel className="p-6">
           <div className="flex items-center gap-2 mb-4">
             <Thermometer className="h-4 w-4 text-neon-amber" />
             <h3 className="text-sm font-semibold text-[var(--text-primary)]">
@@ -589,10 +596,12 @@ export default function BatteryHealthPage() {
           </Grid>
         </GlassPanel>
       </FadeIn>
+      </SectionErrorBoundary>
 
       {/* ── 4. Smart Insights ────────────────────────────────────── */}
-      <FadeIn delay={0.15}>
-        <div className="space-y-2">
+      <SectionErrorBoundary name="battery:insights" fallbackTitle={t('battery.section.insightsFailed', 'Smart insights failed to load')}>
+        <FadeIn delay={0.15}>
+          <div className="space-y-2">
           <h3 className="section-title flex items-center gap-2">
             <Heart className="h-4 w-4 text-neon-red" />
             {t('battery.insights.title', 'Smart Insights')}
@@ -623,6 +632,7 @@ export default function BatteryHealthPage() {
           )}
         </div>
       </FadeIn>
+      </SectionErrorBoundary>
 
       {/* ── 5. Capacity Trend & Prediction ───────────────────────── */}
       <FadeIn delay={0.2}>
@@ -698,8 +708,9 @@ export default function BatteryHealthPage() {
       </FadeIn>
 
       {/* ── 7. Charge Level Distribution ─────────────────────────── */}
-      <FadeIn delay={0.3}>
-        <GlassPanel className="p-6">
+      <SectionErrorBoundary name="battery:charge-level-dist" fallbackTitle={t('battery.section.chargeDistFailed', 'Charge level distribution failed to load')}>
+        <FadeIn delay={0.3}>
+          <GlassPanel className="p-6">
           <h3 className="section-title mb-4 flex items-center gap-2">
             <Zap className="h-4 w-4 text-neon-amber" />
             {t('battery.chart.chargeDist', 'Charge Level Distribution')}
@@ -753,10 +764,12 @@ export default function BatteryHealthPage() {
           )}
         </GlassPanel>
       </FadeIn>
+      </SectionErrorBoundary>
 
       {/* ── 8. Capacity & Range: New vs Now ──────────────────────── */}
-      <FadeIn delay={0.35}>
-        <GlassPanel className="p-6">
+      <SectionErrorBoundary name="battery:capacity-range" fallbackTitle={t('battery.section.capacityRangeFailed', 'Capacity & range comparison failed to load')}>
+        <FadeIn delay={0.35}>
+          <GlassPanel className="p-6">
           <h3 className="section-title mb-6 flex items-center gap-2">
             <Activity className="h-4 w-4 text-neon-cyan" />
             {t('battery.newVsNow.title', 'Capacity & Range: New vs Now')}
@@ -815,10 +828,12 @@ export default function BatteryHealthPage() {
           </Grid>
         </GlassPanel>
       </FadeIn>
+      </SectionErrorBoundary>
 
       {/* ── 9. AC/DC Energy Breakdown ────────────────────────────── */}
-      <FadeIn delay={0.4}>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <SectionErrorBoundary name="battery:acdc-breakdown" fallbackTitle={t('battery.section.acdcFailed', 'AC/DC energy breakdown failed to load')}>
+        <FadeIn delay={0.4}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <ChartContainer title={t('battery.chart.acdc', 'AC / DC Energy Breakdown')} exportable exportFilename="energy-breakdown">
             {energyBreakdown ? (
               <div className="h-52">
@@ -883,43 +898,48 @@ export default function BatteryHealthPage() {
           </GlassPanel>
         </div>
       </FadeIn>
+      </SectionErrorBoundary>
 
       {/* ── 10. Quick Links ──────────────────────────────────────── */}
-      <FadeIn delay={0.45}>
-        <GlassPanel>
-          <Grid cols={{ default: 2, md: 3 }} gap={3}>
-            {QUICK_LINKS.map((link) => (
-              <Link key={link.to} to={link.to}>
-                <Button
-                  variant="outline"
-                  className="w-full justify-between"
-                  icon={<ArrowRight className="h-4 w-4" />}
-                >
-                  {t(link.labelKey, link.fallback)}
-                </Button>
-              </Link>
-            ))}
-          </Grid>
-        </GlassPanel>
-      </FadeIn>
+      <SectionErrorBoundary name="battery:quick-links" fallbackTitle={t('battery.section.quickLinksFailed', 'Quick links failed to load')}>
+        <FadeIn delay={0.45}>
+          <GlassPanel>
+            <Grid cols={{ default: 2, md: 3 }} gap={3}>
+              {QUICK_LINKS.map((link) => (
+                <Link key={link.to} to={link.to}>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between"
+                    icon={<ArrowRight className="h-4 w-4" />}
+                  >
+                    {t(link.labelKey, link.fallback)}
+                  </Button>
+                </Link>
+              ))}
+            </Grid>
+          </GlassPanel>
+        </FadeIn>
+      </SectionErrorBoundary>
 
       {/* ── 11. Recommendations ──────────────────────────────────── */}
-      <FadeIn delay={0.5}>
-        <GlassPanel glow="green">
-          <Badge variant="success" className="mb-3">
-            <Lightbulb className="mr-1 inline h-4 w-4" />
-            {t('battery.recommendations.title', 'Recommendations')}
-          </Badge>
-          <ul className="space-y-2 text-sm text-[var(--text-secondary)]">
-            {recommendations.map((tip, idx) => (
-              <li key={idx} className="flex items-start gap-2">
-                <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-green-400" />
-                {tip}
-              </li>
-            ))}
-          </ul>
-        </GlassPanel>
-      </FadeIn>
+      <SectionErrorBoundary name="battery:recommendations" fallbackTitle={t('battery.section.recommendationsFailed', 'Recommendations failed to load')}>
+        <FadeIn delay={0.5}>
+          <GlassPanel glow="green">
+            <Badge variant="success" className="mb-3">
+              <Lightbulb className="mr-1 inline h-4 w-4" />
+              {t('battery.recommendations.title', 'Recommendations')}
+            </Badge>
+            <ul className="space-y-2 text-sm text-[var(--text-secondary)]">
+              {recommendations.map((tip, idx) => (
+                <li key={idx} className="flex items-start gap-2">
+                  <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-green-400" />
+                  {tip}
+                </li>
+              ))}
+            </ul>
+          </GlassPanel>
+        </FadeIn>
+      </SectionErrorBoundary>
     </PageContainer>
   );
 }

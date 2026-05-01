@@ -1,6 +1,9 @@
 export { Spinner } from './Spinner';
 export { EmptyState } from './EmptyState';
 export { ErrorDisplay } from './ErrorDisplay';
+export { ErrorBoundary } from './ErrorBoundary';
+export { SectionErrorBoundary } from './SectionErrorBoundary';
+export { PageErrorBoundary } from './PageErrorBoundary';
 export { Skeleton } from './Skeleton';
 export { ChartSkeleton } from './ChartSkeleton';
 export { StatSkeleton } from './StatSkeleton';

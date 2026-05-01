@@ -2,6 +2,7 @@ import { type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import { Breadcrumbs, type BreadcrumbItem } from './Breadcrumbs';
 import { Spinner } from '@/components/feedback/Spinner';
+import { PageErrorBoundary } from '@/components/feedback/PageErrorBoundary';
 
 interface PageContainerProps {
   title: string;
@@ -45,7 +46,7 @@ export function PageContainer({
           <p className="text-sm text-gray-500">{emptyMessage ?? `No ${title.toLowerCase()} found.`}</p>
         </div>
       ) : (
-        children
+        <PageErrorBoundary pageName={title}>{children}</PageErrorBoundary>
       )}
     </div>
   );

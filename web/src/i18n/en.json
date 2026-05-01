@@ -215,6 +215,15 @@
       "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored."
     }
   },
+  "errors": {
+    "section": {
+      "title": "This section failed to load",
+      "subtitle": "Other parts of the page should still work.",
+      "chartTitle": "This chart failed to load",
+      "tableTitle": "This table failed to render",
+      "widgetTitle": "Widget failed to load"
+    }
+  },
   "toast": {
     "common": {
       "error": "Something went wrong"
