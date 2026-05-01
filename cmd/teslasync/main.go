@@ -260,6 +260,14 @@ func main() {
 	geocoding.SetSink(outboundAPILogSink)
 	tesla.SetAuthSink(outboundAPILogSink, cfg.Tesla.Timeout)
 
+	// stateReader is the signal-log-backed cold-path reader introduced in
+	// phase-39 (ADR-002). Construct it once here (above any conditional
+	// blocks that need it) so both the signal_log warmup loop below AND
+	// the router constructor further down receive the same instance.
+	// LogStateReader is stateless beyond the pool reference, so creating
+	// it before the FleetTelemetry conditional is safe and cheap.
+	stateReader := sigsvc.NewLogStateReader(db.Pool, log.With().Str("component", "state_reader").Logger())
+
 	// Fleet Telemetry handler — created early so the worker can check streaming state
 	var telemetryHandler *api.TelemetryHandler
 	var signalStore *sigsvc.Store
@@ -319,24 +327,50 @@ func main() {
 		signalHistoryWriter = database.NewSignalHistoryWriter(db, 2*time.Second, cacheStore.Underlying())
 		telemetryHandler.SetSignalHistoryWriter(signalHistoryWriter)
 
-		// Hydrate remaining signals from signal_history (covers missing or legacy
-		// timestamp-less Redis values). Must run before session/alert recovery so
-		// they see the full local L1 signal set on this pod.
-		historyWarmCtx, historyWarmCancel := context.WithTimeout(ctx, 30*time.Second)
+		// Hydrate remaining signals from signal_log via stateReader.State.
+		// This replaces the legacy signal_history per-signal warmup
+		// (Phase-39 / Prompt 35): the old DISTINCT-ON path returned holes for
+		// any signal that hadn't re-emitted recently, so the in-process L1
+		// SignalStore was seeded with gaps on every restart. stateReader.State
+		// performs a full forward-fold and returns the entire current state.
+		//
+		// Concurrency: the loop is intentionally sequential. The pgx pool is
+		// sized for steady-state concurrency (MaxConns≈25); fanning out a
+		// goroutine per vehicle would exhaust the pool and starve the rest of
+		// the server during the critical startup window. Sequential warmup
+		// stays well inside the pod readiness budget. Parallelism is a
+		// separate optimization that belongs in its own benchmarked prompt.
+		//
+		// Per-vehicle timeout: 10s is a hard upper bound. With the required
+		// composite index the unbounded-`at` query should complete in <1s
+		// even on months-old vehicles; the cap exists so a single misbehaving
+		// vehicle cannot stall startup indefinitely.
 		for _, v := range vehicles {
-			if historyWarmCtx.Err() != nil {
-				log.Warn().Err(historyWarmCtx.Err()).Msg("signal store: bounded signal_history hydration stopped early")
-				break
+			warmupCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			latest, err := stateReader.State(warmupCtx, v.ID, time.Now())
+			cancel()
+			if err != nil {
+				// Partial-failure policy: the old per-signal warmup path was
+				// tolerant by accident (returned partial maps); stateReader.State
+				// is all-or-nothing (correct), so we explicitly degrade per
+				// vehicle here. A failed warmup just means this vehicle's
+				// SignalStore L1 starts empty and hydrates from the next live
+				// telemetry batch — the same recovery path that already exists
+				// for net-new vehicles. Do NOT abort warmup for the rest.
+				log.Warn().Err(err).Int64("vehicle_id", v.ID).Msg("warmup state read failed; vehicle will hydrate from live telemetry")
+				continue
 			}
-			if extra, err := signalHistoryWriter.GetLatestPerSignal(historyWarmCtx, v.ID); err == nil {
-				signalStore.Hydrate(v.ID, extra)
-			} else {
-				log.Warn().Err(err).Int64("vehicle_id", v.ID).Msg("signal store: hydration from signal_history failed")
+			// signal.State (map[string]signal.SignalValue) and Hydrate's
+			// map[string]interface{} share an underlying shape but are
+			// distinct named types, so copy explicitly.
+			extra := make(map[string]interface{}, len(latest))
+			for k, val := range latest {
+				extra[k] = val
 			}
+			signalStore.Hydrate(v.ID, extra)
 		}
-		historyWarmCancel()
 		if len(vehicles) > 0 {
-			log.Info().Int("vehicles", len(vehicles)).Msg("signal store hydrated from signal_history")
+			log.Info().Int("vehicles", len(vehicles)).Msg("signal store hydrated from signal_log via stateReader")
 		}
 
 		log.Info().Msg("signal store initialized")
@@ -648,13 +682,10 @@ func main() {
 		}
 	}
 
-	// HTTP API
-	// stateReader is the signal-log-backed cold-path reader introduced in
-	// phase-39 (ADR-002). It is constructed once here and passed to NewRouter
-	// so that handler-migration prompts (phases 10–36) can adopt it
-	// incrementally. The pre-existing database.SignalLogReader continues to
-	// live alongside it until the deletion prompts (phases 37–40).
-	stateReader := sigsvc.NewLogStateReader(db.Pool, log.With().Str("component", "state_reader").Logger())
+	// HTTP API. stateReader was constructed earlier (above the FleetTelemetry
+	// conditional, see Prompt 35) so the warmup loop and the router share
+	// the same instance. The pre-existing database.SignalLogReader continues
+	// to live alongside it until the deletion prompts (phases 37–40).
 	router := api.NewRouter(db, teslaClient, mqttClient, cfg, health, stateReader, api.RouterOptions{
 		AppVersion:       Version,
 		Encryptor:        encryptor,
