@@ -30,6 +30,11 @@ const alertVariantMap: Record<string, { border: string; bg: string; text: string
  * `useMutationToast()` from `@/api/hooks/_toastHelpers` and the
  * `<ToastProvider>` mounted in `main.tsx`. Toasts auto-dismiss after 4s and
  * stack at the bottom-right; AlertBanners stay rendered in-flow.
+ *
+ * For "the live data pipe has been down for >2 minutes", do not roll your
+ * own AlertBanner — drop in `<LiveStaleDataBanner />` from the same module
+ * (`@/components/feedback`). It wraps AlertBanner with the right copy,
+ * threshold, and `useLiveConnection` wiring.
  */
 export function AlertBanner({ variant, title, children, onClose, icon, className, ...props }: AlertBannerProps) {
   const v = alertVariantMap[variant]

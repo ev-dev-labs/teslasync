@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  RefreshCw, Bell, Radio, ArrowUpRight, Activity,
+  RefreshCw, Bell, ArrowUpRight, Activity,
   Route, BatteryCharging, Shield, AlertCircle, Settings, Plus, RotateCcw,
   LayoutGrid, Download, Upload, Undo2, Redo2, LayoutTemplate, Tv,
 } from 'lucide-react';
@@ -14,9 +14,9 @@ import { useSyncVehicles } from '@/api/hooks/useVehicles';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Button } from '@/components/ui/Button';
-import { StatusPill } from '@/components/ui/StatusPill';
 import { FadeIn } from '@/components/motion';
-import { AlertBanner } from '@/components/feedback';
+import { AlertBanner, LiveStaleDataBanner } from '@/components/feedback';
+import { LiveIndicator } from '@/components/data-display';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { useRealtimeEvents } from '@/hooks/useRealtimeEvents';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -79,7 +79,9 @@ export default function DashboardPage() {
   const syncVehicles = useSyncVehicles();
 
   /* ——— SSE real-time connection ——— */
-  const { connected } = useRealtimeEvents({
+  // Keep the SSE pipe wired up for cross-tab cache invalidation; live-pipe
+  // health is rendered via `<LiveIndicator>` (uses `useLiveConnection`).
+  useRealtimeEvents({
     onVehicleUpdate: () => queryClient.invalidateQueries({ queryKey: ['vehicles'] }),
     onFallbackToPolling: () => queryClient.invalidateQueries(),
   });
@@ -245,10 +247,7 @@ export default function DashboardPage() {
           </span>
         </Link>
       )}
-      <StatusPill color={connected ? '#10b981' : '#6b7280'} pulse={connected}>
-        <Radio className="h-3 w-3" />
-        {connected ? 'LIVE' : 'OFFLINE'}
-      </StatusPill>
+      <LiveIndicator variant="compact" />
     </div>
   );
 
@@ -260,6 +259,9 @@ export default function DashboardPage() {
       actions={headerActions}
     >
       <div className="space-y-4">
+        {/* Live-pipe stale-data warning (only shows after >2 min disconnected) */}
+        <LiveStaleDataBanner />
+
         {/* Error banner */}
         {anyError && (
           <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>

@@ -29,9 +29,11 @@ import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { MetricCard } from '@/components/data-display/MetricCard';
+import { LiveIndicator } from '@/components/data-display/LiveIndicator';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { AlertBanner } from '@/components/feedback/AlertBanner';
+import { LiveStaleDataBanner } from '@/components/feedback/LiveStaleDataBanner';
 import { FadeIn } from '@/components/motion/FadeIn';
 import {
   AreaChart,
@@ -529,6 +531,7 @@ export default function NavigationRoutePage() {
       error={vehiclesError as Error | null}
       actions={
         <span className="flex items-center gap-3">
+          <LiveIndicator variant="compact" />
           <Select
             value={String(vehicleId ?? '')}
             onChange={handleVehicleChange}
@@ -546,6 +549,7 @@ export default function NavigationRoutePage() {
         </span>
       }
     >
+      <LiveStaleDataBanner />
       {anyError && (
         <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
           {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}

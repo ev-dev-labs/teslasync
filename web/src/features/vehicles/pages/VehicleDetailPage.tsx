@@ -4,7 +4,8 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 
 import { PageContainer } from '@/components/layout'
 import { GlassPanel } from '@/components/ui'
-import { Skeleton } from '@/components/feedback'
+import { LiveIndicator } from '@/components/data-display'
+import { Skeleton, LiveStaleDataBanner } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 
 import { usePageTitle } from '@/hooks/usePageTitle'
@@ -146,7 +147,9 @@ export default function VehicleDetailPage() {
       loading={vehicleLoading}
       error={vehicleError as Error | null}
       breadcrumbs={breadcrumbs}
+      actions={<LiveIndicator variant="compact" />}
     >
+      <LiveStaleDataBanner />
       <FadeIn>
         <VehicleHeader
           vehicle={vehicle}

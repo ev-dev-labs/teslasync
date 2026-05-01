@@ -100,6 +100,7 @@ import { cn } from '@/lib/cn'
 import { BottomTabBar, BOTTOM_TAB_PATHS } from './BottomTabBar'
 import { CommandPalette, CommandPaletteTrigger } from '../ui/CommandPalette'
 import { ServiceStatusBanner, SystemHealthDot } from '../data-display/ServiceStatus'
+import { LiveIndicator } from '../data-display/LiveIndicator'
 import Logo from '../ui/Logo'
 import { Button } from '@/components/ui'
 import { Breadcrumbs } from './Breadcrumbs'
@@ -270,21 +271,11 @@ const SECTION_ICON_STYLES: Record<string, { accent: string; surface: string; rin
   'Project Info': { accent: 'text-white/60', surface: 'bg-white/5', ring: 'ring-white/10', dot: 'bg-white/40' },
 }
 
-type SSEState = 'connected' | 'reconnecting'
-
-function SSEStatusDot({ state }: { state: SSEState }) {
-  const isConnected = state === 'connected'
-  return (
-    <span
-      title={isConnected ? 'Live updates active' : 'Reconnecting live updates…'}
-      className={cn(
-        'inline-block h-2 w-2 rounded-full shrink-0',
-        isConnected ? 'bg-neon-green' : 'bg-amber-400 animate-pulse',
-      )}
-      style={{ boxShadow: `0 0 6px ${isConnected ? 'rgba(16,185,129,0.5)' : 'rgba(251,191,36,0.5)'}` }}
-    />
-  )
-}
+// NOTE: The legacy `SSEStatusDot` component lived here and rendered a bare
+// colored dot tied to the SSE wire state. It was replaced by the shared
+// `<LiveIndicator variant="dot">` (see import above) so the sidebar status
+// dot, page-level badges, and stale-data banner all derive from a single
+// `useLiveConnection` source of truth.
 
 export const navSections = [
   {
@@ -548,9 +539,10 @@ export default function Layout() {
   const location = useLocation()
   const { t } = useTranslation()
 
-  // SSE connection status + global alert toast
+  // SSE alert toasts. Live-pipe health is rendered by `<LiveIndicator>`
+  // via `useLiveConnection`; here we only need the alert callback.
   const toast = useToast()
-  const { state: sseState } = useRealtimeEvents({
+  useRealtimeEvents({
     onAlert: (data) => {
       const alert = data as Partial<Alert>
       const severity = alert.severity ?? 'info'
@@ -1127,7 +1119,7 @@ export default function Layout() {
               <p className="text-[10px] text-[var(--text-muted)]">{onlineVehicles}/{vehicles?.length ?? 0} vehicles · {uptimeStr}</p>
             </div>
             <SystemHealthDot />
-            <SSEStatusDot state={sseState} />
+            <LiveIndicator variant="dot" />
           </GlassPanel>
           <p data-tour="keyboard-hint" className="text-center text-[10px] text-[var(--text-muted)] mt-1">
             {t('shortcuts.hint', 'Press')} <kbd className="px-1 rounded bg-[var(--surface-2)] text-[var(--text-secondary)]">?</kbd> {t('shortcuts.hintSuffix', 'for shortcuts')}

@@ -8,8 +8,8 @@ import {
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Button, Select, type SelectOption, DataTable, type Column } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
-import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
+import { MetricCard, LiveIndicator } from '@/components/data-display';
+import { Skeleton, EmptyState, AlertBanner, LiveStaleDataBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
   MapContainer, Marker, Popup, Polyline,
@@ -211,16 +211,22 @@ export default function MapOverviewPage() {
       error={vehiclesError as Error | null}
       actions={
         hasVehicles ? (
-          <Select
-            label={t('mapOverview.vehicleLabel', 'Vehicle')}
-            options={vehicleOptions}
-            value={selectedId}
-            onChange={(e) => setVehicleId(e.target.value)}
-            placeholder={t('mapOverview.vehiclePlaceholder', 'Select vehicle')}
-          />
-        ) : undefined
+          <span className="flex items-center gap-3">
+            <LiveIndicator variant="compact" />
+            <Select
+              label={t('mapOverview.vehicleLabel', 'Vehicle')}
+              options={vehicleOptions}
+              value={selectedId}
+              onChange={(e) => setVehicleId(e.target.value)}
+              placeholder={t('mapOverview.vehiclePlaceholder', 'Select vehicle')}
+            />
+          </span>
+        ) : (
+          <LiveIndicator variant="compact" />
+        )
       }
     >
+      <LiveStaleDataBanner />
       {anyError && (
         <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
           {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}

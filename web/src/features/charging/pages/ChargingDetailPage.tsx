@@ -10,9 +10,9 @@ import { formatDateTime, formatDate, formatTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtWithUnit, fmtPercent } from '@/lib/numberFormat';
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge } from '@/components/ui';
-import { MetricBar, InlineMetric, AnimatedNumber, StatCard, KVList } from '@/components/data-display';
+import { MetricBar, InlineMetric, AnimatedNumber, StatCard, KVList, LiveIndicator } from '@/components/data-display';
 import { RadialGauge } from '@/components/charts';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { Skeleton, EmptyState, LiveStaleDataBanner } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 import {
@@ -196,7 +196,13 @@ export default function ChargingDetailPage() {
       : null;
 
   return (
-    <PageContainer title={t('charging.detail.title', 'Charge Session')} className="space-y-8" breadcrumbs={breadcrumbs}>
+    <PageContainer
+      title={t('charging.detail.title', 'Charge Session')}
+      className="space-y-8"
+      breadcrumbs={breadcrumbs}
+      actions={<LiveIndicator variant="compact" />}
+    >
+      <LiveStaleDataBanner />
       <FadeIn>
         {/* ── 1. Header ──────────────────────────────────────── */}
         <div className="flex flex-wrap items-center gap-3 mb-6">

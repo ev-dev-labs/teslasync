@@ -11,6 +11,7 @@ export { TimelineItem } from './TimelineItem';
 export { FSMBadge } from './FSMBadge';
 export { TransitionArrow } from './TransitionArrow';
 export { FreshnessIndicator, useIsStale } from './FreshnessIndicator';
+export { LiveIndicator, type LiveIndicatorVariant } from './LiveIndicator';
 export {
   SeverityBadge,
   SeverityIcon,

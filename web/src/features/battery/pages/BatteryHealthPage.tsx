@@ -17,8 +17,8 @@ import {
   PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
   AREA_DEFAULTS, TimeMarker,
 } from '@/components/charts';
-import { MetricCard, MetricBar } from '@/components/data-display';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { MetricCard, MetricBar, LiveIndicator } from '@/components/data-display';
+import { Skeleton, EmptyState, LiveStaleDataBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { useBatteryHealthAnalytics, useBatteryDegradation } from '@/api/hooks/useEnergy';
@@ -358,18 +358,22 @@ export default function BatteryHealthPage() {
       title={t('battery.title', 'Battery Health')}
       subtitle={t('battery.subtitle', 'Degradation tracking, prediction, charging habits & longevity insights')}
       actions={
-        vehicles && vehicles.length > 1 ? (
-          <Select
-            options={(vehicles ?? []).map((v) => ({
-              value: String(v.id),
-              label: v.display_name || v.vin,
-            }))}
-            value={vehicleIdStr ?? ''}
-            onChange={(e) => setSelectedVehicle(Number(e.target.value))}
-          />
-        ) : undefined
+        <span className="flex items-center gap-3">
+          <LiveIndicator variant="compact" />
+          {vehicles && vehicles.length > 1 ? (
+            <Select
+              options={(vehicles ?? []).map((v) => ({
+                value: String(v.id),
+                label: v.display_name || v.vin,
+              }))}
+              value={vehicleIdStr ?? ''}
+              onChange={(e) => setSelectedVehicle(Number(e.target.value))}
+            />
+          ) : null}
+        </span>
       }
     >
+      <LiveStaleDataBanner />
       {/* ── 1. Health Score Hero ──────────────────────────────────── */}
       <FadeIn>
         <GlassPanel className="p-4 sm:p-6 lg:p-8">
