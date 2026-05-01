@@ -15,6 +15,7 @@ import {
 import { EmptyState } from '@/components/feedback';
 import { SearchInput, FilterBar } from '@/components/forms';
 import { useFilteredList } from '@/hooks/useFilteredList';
+import { useUrlEnum, useUrlString } from '@/hooks/useUrlState';
 import {
   useTeslaChargingHistory,
   useRefreshTeslaChargingHistory,
@@ -63,7 +64,8 @@ export default function TeslaChargingHistoryPage() {
   usePageTitle(t('tesla_charging.title', 'Tesla Charging History'));
 
   const { data: vehicles } = useVehicles();
-  const [selectedVin, setSelectedVin] = useState<string>('');
+  // Phase 40 / Prompt 33 — VIN filter, sort, and search persist in the URL.
+  const [selectedVin, setSelectedVin] = useUrlString('vin', '');
   const { data: response, isLoading, error } = useTeslaChargingHistory(selectedVin || undefined);
   const refreshMutation = useRefreshTeslaChargingHistory();
 
@@ -176,9 +178,13 @@ export default function TeslaChargingHistoryPage() {
     },
   ], [t]);
 
-  const [sortKey, setSortKey] = useState<string>('date');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
-  const [search, setSearch] = useState('');
+  const [sortKey, setSortKey] = useUrlEnum<'date' | 'energy' | 'cost'>(
+    'sort',
+    ['date', 'energy', 'cost'] as const,
+    'date',
+  );
+  const [sortDir, setSortDir] = useUrlEnum<'asc' | 'desc'>('dir', ['asc', 'desc'] as const, 'desc');
+  const [search, setSearch] = useUrlString('q', '');
   const [selectedKeys, setSelectedKeys] = useState<(string | number)[]>([]);
 
   const entrySearchFields = useMemo(
@@ -213,7 +219,8 @@ export default function TeslaChargingHistoryPage() {
     if (sortKey === key) {
       setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     } else {
-      setSortKey(key);
+      // Cast safely — DataTable column keys map 1:1 to our allowed sort keys.
+      setSortKey(key as 'date' | 'energy' | 'cost');
       setSortDir('desc');
     }
   };
@@ -260,6 +267,7 @@ export default function TeslaChargingHistoryPage() {
       subtitle={t('tesla_charging.subtitle', 'Supercharger & DC fast charging billing records from Tesla')}
       loading={isLoading}
       error={error as Error | null}
+      copyLink
     >
       {/* Controls bar */}
       <FadeIn>

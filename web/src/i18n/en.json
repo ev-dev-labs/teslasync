@@ -136,6 +136,13 @@
     "clear": "Clear",
     "export": "Export",
     "refresh": "Refresh",
+    "copyLink": {
+      "action": "Copy link",
+      "label": "Copy link to this view",
+      "copied": "Copied",
+      "success": "Link copied to clipboard",
+      "error": "Could not copy link"
+    },
     "online": "Online",
     "offline": "Offline",
     "connected": "Connected",

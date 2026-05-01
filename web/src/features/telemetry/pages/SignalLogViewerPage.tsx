@@ -21,6 +21,7 @@ import { getErrorMessage } from '@/lib/errorMessage';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useUrlArray, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { useSignals } from '@/api/hooks/useTelemetry';
 import { request } from '@/api/client';
 import { CHART_COLORS } from '@/lib/colors';
@@ -50,17 +51,21 @@ export default function SignalLogViewerPage() {
   usePageTitle(t('Signal Log'));
   const vehicleId = 1;
 
-  // Signal selection
+  // Phase 40 / Prompt 33 — selected signals and time range live in the URL
+  // so a query view can be shared with another developer.
   const { data: availableSignals } = useSignals(vehicleId);
-  const [selectedSignals, setSelectedSignals] = useState<string[]>([]);
+  const [selectedSignals, setSelectedSignals] = useUrlArray('signals');
   const [signalSearch, setSignalSearch] = useState('');
 
-  // DateTime range
-  const [fromStr, setFromStr] = useState(() => toLocalDatetimeStr(new Date(Date.now() - 3600_000)));
-  const [toStr, setToStr] = useState(() => toLocalDatetimeStr(new Date()));
+  // DateTime range — defaults are recomputed relative to "now" if the URL
+  // doesn't pin them, so a fresh page load gets the last hour.
+  const defaultFrom = useMemo(() => toLocalDatetimeStr(new Date(Date.now() - 3600_000)), []);
+  const defaultTo = useMemo(() => toLocalDatetimeStr(new Date()), []);
+  const [fromStr, setFromStr] = useUrlString('from', defaultFrom);
+  const [toStr, setToStr] = useUrlString('to', defaultTo);
 
   // Pagination
-  const [perPage, setPerPage] = useState(50);
+  const [perPage, setPerPage] = useUrlNumber('size', 50);
   const [page, setPage] = useState(1);
 
   // Query trigger — only fetch when user clicks "Query"
@@ -161,6 +166,7 @@ export default function SignalLogViewerPage() {
       title={t('Signal Log Viewer')}
       subtitle={t('Query signal history from Postgres')}
       loading={false}
+      copyLink
     >
       {anyError && (
         <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>

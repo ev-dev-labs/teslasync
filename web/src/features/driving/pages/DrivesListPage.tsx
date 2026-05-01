@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
@@ -26,6 +26,7 @@ import { DateRangeFilter } from '@/components/forms/DateRangeFilter';
 import { SearchInput } from '@/components/forms/SearchInput';
 import { FilterBar } from '@/components/forms/FilterBar';
 import { useFilteredList } from '@/hooks/useFilteredList';
+import { useUrlEnum, useUrlString, useUrlNumber } from '@/hooks/useUrlState';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
@@ -192,16 +193,23 @@ export default function DrivesListPage() {
     formatEnergyCost,
   } = useSettings();
 
-  /* Local UI state */
-  const [sortBy, setSortBy] = useState<'date' | 'distance' | 'efficiency'>('date');
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
-  const [search, setSearch] = useState('');
-  const [startDate, setStartDate] = useState(() => {
+  /* Local UI state — Phase 40 / Prompt 33: filters/sort live in the URL so
+     a date-range + sort view can be shared, bookmarked, or restored on reload. */
+  const [sortBy, setSortBy] = useUrlEnum<'date' | 'distance' | 'efficiency'>(
+    'sort',
+    ['date', 'distance', 'efficiency'] as const,
+    'date',
+  );
+  const [page, setPage] = useUrlNumber('page', 1);
+  const [pageSize, setPageSize] = useUrlNumber('size', 50);
+  const [search, setSearch] = useUrlString('q', '');
+  const defaultStart = useMemo(() => {
     const d = new Date(); d.setDate(d.getDate() - 365);
     return d.toISOString().split('T')[0];
-  });
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+  }, []);
+  const defaultEnd = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const [startDate, setStartDate] = useUrlString('from', defaultStart);
+  const [endDate, setEndDate] = useUrlString('to', defaultEnd);
 
   /* ---- Client-side date filter ---- */
   const dateFilteredDrives = useMemo(() => {
@@ -302,6 +310,7 @@ export default function DrivesListPage() {
       title={t('drives.title', 'Drive History')}
       subtitle={t('drives.subtitle', 'Trip scoring, efficiency analysis, distance patterns, and performance data')}
       error={drivesError as Error | null}
+      copyLink
     >
       {/* Date range + search filter */}
       <FadeIn>

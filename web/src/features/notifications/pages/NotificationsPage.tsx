@@ -17,7 +17,7 @@
  * them as toggles without changing this file's contract.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Archive, ArchiveRestore, Bell, MailOpen, Trash2 } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
@@ -27,6 +27,7 @@ import { Skeleton } from '@/components/feedback/Skeleton';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useConfirm } from '@/hooks/useConfirm';
+import { useUrlEnum, useUrlString, useUrlArray } from '@/hooks/useUrlState';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import {
   useAlertRules,
@@ -44,6 +45,14 @@ import { NotificationRow } from '../components/NotificationRow';
 import { NotificationChannelsView } from '../components/NotificationChannelsView';
 
 type InboxTab = 'inbox' | 'archived' | 'channels';
+
+const INBOX_TABS = ['inbox', 'archived', 'channels'] as const satisfies readonly InboxTab[];
+
+const SEVERITY_VALUES = ['info', 'warn', 'critical'] as const;
+type SeverityValue = (typeof SEVERITY_VALUES)[number];
+
+const READ_VALUES = ['all', 'read', 'unread'] as const;
+type ReadValue = (typeof READ_VALUES)[number];
 
 const PREF_MARK_ON_OPEN = 'teslasync.notifications.markOnOpen';
 const PREF_MARK_ON_CLICK = 'teslasync.notifications.markOnClick';
@@ -108,12 +117,58 @@ interface InboxBodyProps {
 
 function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   const { t } = useTranslation();
-  const [filters, setFilters] = useState<NotificationFilters>(() => ({ archived }));
 
-  // Sync the archived flag when the parent flips tabs.
-  useEffect(() => {
-    setFilters(f => ({ ...f, archived }));
-  }, [archived]);
+  // ── URL-backed filter state (Phase 40 / Prompt 33) ─────────────────────
+  // Severity, vehicle, search, and read-state live in the URL so a filtered
+  // view can be shared / reloaded / linked from outside.
+  const [severityRaw, setSeverityRaw] = useUrlArray('severity');
+  const [vehicleIdsRaw, setVehicleIdsRaw] = useUrlArray('vehicle_id');
+  const [ruleIdsRaw, setRuleIdsRaw] = useUrlArray('rule_id');
+  const [search, setSearch] = useUrlString('q', '');
+  const [readState, setReadState] = useUrlEnum<ReadValue>('read', READ_VALUES, 'all');
+  const [from, setFrom] = useUrlString('from', '');
+  const [to, setTo] = useUrlString('to', '');
+
+  // Sanitize unknown severity values so a hand-edited URL can't corrupt the
+  // request payload.
+  const severity = useMemo<SeverityValue[]>(
+    () => severityRaw.filter((s): s is SeverityValue => SEVERITY_VALUES.includes(s as SeverityValue)),
+    [severityRaw],
+  );
+  const vehicleIds = useMemo<number[]>(() => {
+    return vehicleIdsRaw
+      .map(v => Number(v))
+      .filter(n => Number.isFinite(n) && n > 0);
+  }, [vehicleIdsRaw]);
+  const ruleIds = useMemo<number[]>(() => {
+    return ruleIdsRaw
+      .map(v => Number(v))
+      .filter(n => Number.isFinite(n) && n > 0);
+  }, [ruleIdsRaw]);
+
+  const filters = useMemo<NotificationFilters>(() => ({
+    archived,
+    severity: severity.length ? severity : undefined,
+    vehicle_id: vehicleIds.length ? vehicleIds : undefined,
+    rule_id: ruleIds.length ? ruleIds : undefined,
+    q: search || undefined,
+    from: from || undefined,
+    to: to || undefined,
+    read: readState === 'all' ? undefined : readState === 'read',
+  }), [archived, severity, vehicleIds, ruleIds, search, from, to, readState]);
+
+  const handleFiltersChange = useCallback((next: NotificationFilters) => {
+    // Bridge the existing controlled-component contract back into the
+    // discrete URL params so the FilterBar UI stays untouched.
+    setSeverityRaw(next.severity ?? []);
+    setVehicleIdsRaw((next.vehicle_id ?? []).map(String));
+    setRuleIdsRaw((next.rule_id ?? []).map(String));
+    setSearch(next.q ?? '');
+    setFrom(next.from ?? '');
+    setTo(next.to ?? '');
+    if (next.read === undefined) setReadState('all');
+    else setReadState(next.read ? 'read' : 'unread');
+  }, [setSeverityRaw, setVehicleIdsRaw, setRuleIdsRaw, setSearch, setFrom, setTo, setReadState]);
 
   const { data: rawRows, isLoading, error } = useNotificationLogs(filters);
   const rows = useMemo<NotificationLog[]>(() => rawRows ?? [], [rawRows]);
@@ -199,7 +254,7 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
       <FadeIn>
         <NotificationFilterBar
           filters={filters}
-          onChange={setFilters}
+          onChange={handleFiltersChange}
           vehicles={vehicles}
           rules={rules}
         />
@@ -332,7 +387,9 @@ export default function NotificationsPage() {
   const { t } = useTranslation();
   usePageTitle(t('notifications.title', 'Notifications'));
 
-  const [tab, setTab] = useState<InboxTab>('inbox');
+  // Tab is in the URL so a deep link like /notifications?tab=channels works.
+  // push: true on tab changes — primary navigation should add a history entry.
+  const [tab, setTab] = useUrlEnum<InboxTab>('tab', INBOX_TABS, 'inbox');
   const { data: vehicles = [] } = useVehicles();
   const { data: rules = [] } = useAlertRules();
 
@@ -340,10 +397,11 @@ export default function NotificationsPage() {
     <PageContainer
       title={t('notifications.title', 'Notifications')}
       subtitle={t('notifications.subtitle', 'Inbox of fired alerts plus delivery channels.')}
+      copyLink
     >
       <TabNav
         active={tab}
-        onChange={(k) => setTab(k as InboxTab)}
+        onChange={(k) => setTab(k as InboxTab, { push: true })}
         tabs={[
           { key: 'inbox', label: t('notifications.tab.inbox', 'Inbox'), icon: <Bell className="h-4 w-4" /> },
           { key: 'archived', label: t('notifications.tab.archived', 'Archived'), icon: <Archive className="h-4 w-4" /> },

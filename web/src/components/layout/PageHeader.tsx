@@ -1,9 +1,28 @@
 import { type ReactNode } from 'react'
 import { FadeIn } from '../motion/FadeIn'
 import { Heading } from '../ui/Typography'
+import { CopyLinkButton } from './CopyLinkButton'
 
 /** Standard page header with gradient title, decorative underline, optional subtitle and action buttons. */
-export function PageHeader({ title, subtitle, actions, icon }: { title: string; subtitle?: string; actions?: ReactNode; icon?: ReactNode }) {
+export function PageHeader({
+  title,
+  subtitle,
+  actions,
+  icon,
+  copyLink,
+}: {
+  title: string
+  subtitle?: string
+  actions?: ReactNode
+  icon?: ReactNode
+  /**
+   * Show a "Copy link" button that copies the current URL (with all query
+   * params baked in). Use on pages where users would reasonably share a
+   * filtered view — Notifications with severity=critical, a specific
+   * Drives date range, etc. Phase 40 / Prompt 33.
+   */
+  copyLink?: boolean
+}) {
   return (
     <FadeIn>
       <div className="mb-6 sm:mb-8 flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -17,7 +36,12 @@ export function PageHeader({ title, subtitle, actions, icon }: { title: string; 
             {subtitle && <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm text-white/60">{subtitle}</p>}
           </div>
         </div>
-        {actions && <div className="flex items-center gap-2 sm:gap-3">{actions}</div>}
+        {(actions || copyLink) && (
+          <div className="flex items-center gap-2 sm:gap-3">
+            {copyLink && <CopyLinkButton />}
+            {actions}
+          </div>
+        )}
       </div>
     </FadeIn>
   )

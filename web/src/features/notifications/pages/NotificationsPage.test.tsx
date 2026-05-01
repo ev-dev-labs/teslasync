@@ -8,6 +8,7 @@ import NotificationsPage from './NotificationsPage';
 import type { NotificationLog, AlertRule } from '@/api/types';
 import type { Vehicle } from '@/types/vehicle';
 import { SelectedVehicleProvider } from '@/store/selectedVehicle';
+import { ToastProvider } from '@/components/feedback/Toast';
 
 // Stub framer-motion so FadeIn renders eagerly.
 vi.mock('framer-motion', () => ({
@@ -117,7 +118,9 @@ function renderPage() {
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={['/notifications']}>
         <SelectedVehicleProvider>
-          <NotificationsPage />
+          <ToastProvider>
+            <NotificationsPage />
+          </ToastProvider>
         </SelectedVehicleProvider>
       </MemoryRouter>
     </QueryClientProvider>,

@@ -40,6 +40,7 @@ import { usePageTitle } from '@/hooks/usePageTitle'
 import { useConfirm } from '@/hooks/useConfirm'
 import { useDirtyForm } from '@/hooks/useDirtyForm'
 import { useAutosave, loadAutosave, clearAutosave } from '@/hooks/useAutosave'
+import { useUrlString } from '@/hooks/useUrlState'
 import { alertRuleSchema } from '../schemas/alertRule'
 
 type Severity = NonNullable<AlertRuleInput['severity']>
@@ -434,7 +435,8 @@ export default function AlertStudio() {
   const [showTemplates, setShowTemplates] = useState(false)
   const [templateSearch, setTemplateSearch] = useState('')
   const [templateCategory, setTemplateCategory] = useState<string | null>(null)
-  const [ruleSearch, setRuleSearch] = useState('')
+  // Phase 40 / Prompt 33 — rule list search lives in the URL.
+  const [ruleSearch, setRuleSearch] = useUrlString('q', '')
   const [testChannelIds, setTestChannelIds] = useState<number[] | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const initialEditorRef = useRef<string>(JSON.stringify(freshEditor()))

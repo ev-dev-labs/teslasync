@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
 import Layout from './components/layout/Layout'
+import { ScrollRestoration } from './components/layout/ScrollRestoration'
 import { PageLoader } from './components/feedback/PageLoader'
 import { ErrorBoundary } from './components/feedback/ErrorBoundary'
 import { AuthExpiredOverlay } from '@/components/feedback'
@@ -175,6 +176,7 @@ export default function App() {
     <>
       <AuthExpiredOverlay />
       <OnboardingGate />
+      <ScrollRestoration />
       <Routes>
       <Route path="quick-stats" element={<SafeRoute name="QuickStats"><QuickStats /></SafeRoute>} />
       <Route path="glance" element={<SafeRoute name="Glance"><GlancePage /></SafeRoute>} />

@@ -1,6 +1,7 @@
 import { type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import { Breadcrumbs, type BreadcrumbItem } from './Breadcrumbs';
+import { CopyLinkButton } from './CopyLinkButton';
 import { Spinner } from '@/components/feedback/Spinner';
 import { PageErrorBoundary } from '@/components/feedback/PageErrorBoundary';
 
@@ -15,10 +16,16 @@ interface PageContainerProps {
   breadcrumbs?: BreadcrumbItem[];
   children: ReactNode;
   className?: string;
+  /**
+   * Show a "Copy link" button next to actions that copies the current URL
+   * (with all query params) to the clipboard. Use on pages where users would
+   * reasonably share a filtered view. Phase 40 / Prompt 33.
+   */
+  copyLink?: boolean;
 }
 
 export function PageContainer({
-  title, subtitle, actions, loading, error, empty, emptyMessage, breadcrumbs, children, className,
+  title, subtitle, actions, loading, error, empty, emptyMessage, breadcrumbs, children, className, copyLink,
 }: PageContainerProps) {
   return (
     <div className={cn('space-y-6', className)}>
@@ -30,7 +37,12 @@ export function PageContainer({
           <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
           {subtitle && <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>}
         </div>
-        {actions && <div className="flex items-center gap-2 flex-wrap shrink-0">{actions}</div>}
+        {(actions || copyLink) && (
+          <div className="flex items-center gap-2 flex-wrap shrink-0">
+            {copyLink && <CopyLinkButton />}
+            {actions}
+          </div>
+        )}
       </div>
 
       {loading ? (

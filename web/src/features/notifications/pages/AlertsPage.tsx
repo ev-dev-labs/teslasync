@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/Input';
 import { TabNav } from '@/components/ui/TabNav';
 import { Toggle } from '@/components/ui/Toggle';
 import { DataTable, type Column } from '@/components/ui/DataTable';
+import { useUrlEnum, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 
 import { MetricCard } from '@/components/data-display/MetricCard';
 import { AnimatedNumber } from '@/components/data-display/AnimatedNumber';
@@ -453,10 +454,20 @@ export default function AlertsPage() {
   usePageTitle(t('Alerts'));
   const toast = useToast();
 
-  const [tab, setTab] = useState<'alerts' | 'history' | 'preferences'>('alerts');
-  const [filter, setFilter] = useState<'all' | 'unread' | 'critical'>('all');
-  const [alertSearch, setAlertSearch] = useState('');
-  const [alertPage, setAlertPage] = useState(1);
+  // Phase 40 / Prompt 33 — tab + filter live in the URL so a "?tab=history&filter=critical"
+  // deep link works and can be shared.
+  const [tab, setTab] = useUrlEnum<'alerts' | 'history' | 'preferences'>(
+    'tab',
+    ['alerts', 'history', 'preferences'] as const,
+    'alerts',
+  );
+  const [filter, setFilter] = useUrlEnum<'all' | 'unread' | 'critical'>(
+    'filter',
+    ['all', 'unread', 'critical'] as const,
+    'all',
+  );
+  const [alertSearch, setAlertSearch] = useUrlString('q', '');
+  const [alertPage, setAlertPage] = useUrlNumber('page', 1);
   const alertsPerPage = 20;
 
   // Queries
@@ -546,6 +557,7 @@ export default function AlertsPage() {
       subtitle={t('Monitor events, configure typed alert rules, and stay informed')}
       loading={isLoading}
       error={error as Error | null}
+      copyLink
       actions={
         <div className="flex items-center gap-3">
           {quietActive && <Badge variant="info" size="sm">{t('Quiet hours')}</Badge>}
@@ -701,7 +713,7 @@ export default function AlertsPage() {
             { key: 'preferences', label: t('Preferences'), icon: <Settings2 className="h-4 w-4" /> },
           ]}
           active={tab}
-          onChange={k => setTab(k as typeof tab)}
+          onChange={k => setTab(k as typeof tab, { push: true })}
         />
       </FadeIn>
 

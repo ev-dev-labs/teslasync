@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -23,6 +23,7 @@ import {
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useUrlEnum } from '@/hooks/useUrlState';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
@@ -75,7 +76,12 @@ export default function MapOverviewPage() {
 
   /* ---- vehicle selector — Phase 40 / Prompt 16: header VehiclePicker is the source of truth ---- */
   const { vehicleId } = useSelectedVehicle();
-  const [mapStyle, setMapStyle] = useState<MapStyle>('dark');
+  // Map style lives in the URL so a satellite view can be shared.
+  const [mapStyle, setMapStyle] = useUrlEnum<MapStyle>(
+    'layer',
+    ['dark', 'satellite', 'streets', 'terrain'] as const,
+    'dark',
+  );
 
   /* ---- queries ---- */
   const {
