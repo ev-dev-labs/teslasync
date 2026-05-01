@@ -11,6 +11,13 @@ export { TimelineItem } from './TimelineItem';
 export { FSMBadge } from './FSMBadge';
 export { TransitionArrow } from './TransitionArrow';
 export { FreshnessIndicator, useIsStale } from './FreshnessIndicator';
+export {
+  SeverityBadge,
+  SeverityIcon,
+  type SeverityBadgeProps,
+  type SeverityIconProps,
+} from './SeverityBadge';
+export { StatusDot, type StatusDotProps } from './StatusDot';
 
 // Centralized format components — see ./format for details
 export {

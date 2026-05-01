@@ -7,6 +7,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
+import { severityTokens, normalizeSeverity } from '@/lib/tokens';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
@@ -18,6 +19,8 @@ import { DataTable, type Column } from '@/components/ui/DataTable';
 
 import { MetricCard } from '@/components/data-display/MetricCard';
 import { AnimatedNumber } from '@/components/data-display/AnimatedNumber';
+import { SeverityBadge } from '@/components/data-display/SeverityBadge';
+import { StatusDot } from '@/components/data-display/StatusDot';
 import { fmtInt } from '@/lib/numberFormat';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Skeleton } from '@/components/feedback/Skeleton';
@@ -46,15 +49,15 @@ import {
   PieChart as PieChartIcon, Database, Radio, Wifi, HardDrive, Activity,
 } from 'lucide-react';
 
-// ─── Severity config ─────────────────────────────────────────────────────────
+// ─── Severity helpers ────────────────────────────────────────────────────────
+//
+// Severity styling lives in @/lib/tokens (severityTokens) and is rendered via
+// the shared <SeverityBadge> / <StatusDot> components from @/components/data-display.
+// `Alert.severity` is the wire-level type: 'info' | 'warning' | 'critical'. Use
+// `normalizeSeverity` to map onto the canonical 'info' | 'warn' | 'critical'
+// keys before reading from severityTokens.
 
-const severityConfig = {
-  info: { icon: Info, color: 'text-neon-cyan', bg: 'bg-neon-cyan/10', border: 'border-neon-cyan/20', dot: 'bg-neon-cyan' },
-  warning: { icon: AlertTriangle, color: 'text-neon-amber', bg: 'bg-neon-amber/10', border: 'border-neon-amber/20', dot: 'bg-neon-amber' },
-  critical: { icon: AlertCircle, color: 'text-neon-red', bg: 'bg-neon-red/10', border: 'border-neon-red/20', dot: 'bg-neon-red' },
-} as const;
-
-type Severity = keyof typeof severityConfig;
+type AlertSeverity = 'info' | 'warning' | 'critical';
 
 // ─── Alert type → icon mapping ───────────────────────────────────────────────
 
@@ -113,7 +116,8 @@ function loadDigestMode(): DigestMode {
 // ─── AlertCard sub-component ─────────────────────────────────────────────────
 
 function AlertCard({ alert, onMarkRead, t }: { alert: Alert; onMarkRead: () => void; t: (k: string) => string }) {
-  const sev = severityConfig[alert.severity as Severity] ?? severityConfig.info;
+  const sev = normalizeSeverity(alert.severity);
+  const tokens = severityTokens[sev];
   const Icon = typeIcons[alert.type] || Bell;
   const timeAgo = getTimeAgo(alert.created_at);
 
@@ -121,12 +125,12 @@ function AlertCard({ alert, onMarkRead, t }: { alert: Alert; onMarkRead: () => v
     <GlassPanel
       className={cn(
         'p-4 flex items-start gap-4 transition-all duration-200 group',
-        !alert.is_read && `${sev.border} ${sev.bg.replace('/10', '/5')}`,
+        !alert.is_read && cn(tokens.border, tokens.bg.replace('/10', '/5')),
       )}
     >
       <div className="flex flex-col items-center gap-1 shrink-0">
-        <div className={cn('rounded-xl p-2.5 ring-1', sev.bg, sev.border)}>
-          <Icon className={cn('h-4 w-4', sev.color)} />
+        <div className={cn('rounded-xl p-2.5 ring-1', tokens.bg, tokens.border)}>
+          <Icon className={cn('h-4 w-4', tokens.fg)} />
         </div>
       </div>
       <div className="flex-1 min-w-0">
@@ -138,16 +142,20 @@ function AlertCard({ alert, onMarkRead, t }: { alert: Alert; onMarkRead: () => v
             <span className="text-xs text-[var(--text-muted)] mt-0.5 line-clamp-2 block">{alert.message}</span>
           </div>
           {!alert.is_read && (
-            <span className={cn('h-2 w-2 rounded-full shrink-0 mt-1.5 animate-pulse', sev.dot)} />
+            <StatusDot
+              severity={alert.severity}
+              className="mt-1.5 shrink-0 animate-pulse"
+              label={t('Unread')}
+            />
           )}
         </div>
         <div className="flex items-center gap-3 mt-2">
           <span className="text-[10px] text-[var(--text-muted)] flex items-center gap-1">
             <Clock className="h-2.5 w-2.5" />{timeAgo}
           </span>
-          <Badge variant={alert.severity === 'critical' ? 'danger' : alert.severity === 'warning' ? 'warning' : 'info'} size="sm">
+          <SeverityBadge severity={alert.severity} size="sm" showIcon={false}>
             {alert.severity}
-          </Badge>
+          </SeverityBadge>
           <span className="text-[10px] text-[var(--text-muted)]">{(alert.type ?? 'notification').replace(/_/g, ' ')}</span>
           {!alert.is_read && (
             <Button variant="ghost" size="sm" icon={<Eye className="h-3 w-3" />} onClick={onMarkRead} className="ml-auto opacity-0 group-hover:opacity-100">
@@ -460,7 +468,7 @@ export default function AlertsPage() {
       const d = new Date(a.created_at);
       if (now - d.getTime() > 7 * 86400000) return;
       const key = d.toLocaleDateString(undefined, { weekday: 'short' });
-      const sev = a.severity as Severity;
+      const sev = a.severity as AlertSeverity;
       if (days[key] && (sev === 'info' || sev === 'warning' || sev === 'critical')) {
         days[key][sev]++;
       }

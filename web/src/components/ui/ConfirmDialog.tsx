@@ -1,5 +1,8 @@
+import { AlertOctagon, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { severityTokens, type Severity } from '@/lib/tokens';
 import { Modal } from './Modal';
+import { Button } from './Button';
 
 export interface ConfirmDialogProps {
   open: boolean;
@@ -12,18 +15,19 @@ export interface ConfirmDialogProps {
   onCancel: () => void;
 }
 
-const variantStyles = {
-  danger: {
-    icon: '⚠',
-    confirmBtn:
-      'bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800',
-  },
-  warning: {
-    icon: '⚠',
-    confirmBtn:
-      'bg-yellow-500 text-white hover:bg-yellow-600 dark:bg-yellow-600 dark:hover:bg-yellow-700',
-  },
-} as const;
+const variantToSeverity: Record<NonNullable<ConfirmDialogProps['variant']>, Severity> = {
+  danger: 'critical',
+  warning: 'warn',
+};
+
+const iconComponents = { AlertOctagon, AlertTriangle } as const;
+
+const confirmButtonClasses: Record<NonNullable<ConfirmDialogProps['variant']>, string | undefined> = {
+  // Button's built-in 'danger' variant covers the critical case.
+  danger: undefined,
+  // Button has no 'warning' variant — override with solid amber via className.
+  warning: 'bg-amber-500 text-white hover:bg-amber-600 focus-visible:ring-amber-500',
+};
 
 export function ConfirmDialog({
   open,
@@ -35,36 +39,32 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
-  const v = variantStyles[variant];
+  const sev = variantToSeverity[variant];
+  const tokens = severityTokens[sev];
+  const Icon = iconComponents[tokens.icon as keyof typeof iconComponents];
 
   return (
     <Modal open={open} onClose={onCancel} title={title} size="sm">
       <div className="space-y-4">
-        <p className="text-sm text-gray-600 dark:text-gray-300">{message}</p>
+        <div className={cn('flex items-start gap-3 rounded-lg border p-3', tokens.bg, tokens.border)}>
+          {Icon && <Icon className={cn('h-5 w-5 mt-0.5 shrink-0', tokens.fg)} aria-hidden="true" />}
+          <p className="text-sm text-[var(--text-primary)]">{message}</p>
+        </div>
         <div className="flex items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={onCancel}
-            className={cn(
-              'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
-              'bg-gray-100 text-gray-700 hover:bg-gray-200',
-              'dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600',
-            )}
-          >
+          <Button type="button" variant="secondary" onClick={onCancel}>
             {cancelLabel}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant={variant === 'danger' ? 'danger' : 'primary'}
+            className={confirmButtonClasses[variant]}
             onClick={onConfirm}
-            className={cn(
-              'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
-              v.confirmBtn,
-            )}
           >
             {confirmLabel}
-          </button>
+          </Button>
         </div>
       </div>
     </Modal>
   );
 }
+

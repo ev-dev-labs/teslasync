@@ -151,3 +151,70 @@ export type TypographyRole = keyof typeof typography.role
 export type TypographySize = keyof typeof typography.size
 export type TypographyWeight = keyof typeof typography.weight
 export type TypographyColor = keyof typeof typography.color
+
+// ── Severity tokens — single source of truth for alert/notification styling ──
+//
+// Used by <SeverityBadge>, <SeverityIcon>, <StatusDot>, and <ConfirmDialog>. The
+// canonical wire-level severities are 'info' | 'warn' | 'critical'; 'success' is
+// a UI-only success affordance. Use `normalizeSeverity()` to map any incoming
+// string (including the legacy 'warning', 'error', 'fatal', 'ok' aliases) onto
+// the canonical Severity union before reading from this map.
+
+export type Severity = 'info' | 'warn' | 'critical' | 'success'
+
+export type SeverityIconName = 'Info' | 'AlertTriangle' | 'AlertOctagon' | 'CheckCircle'
+
+export interface SeverityTokens {
+  /** Background tint — soft, theme-aware */
+  bg: string
+  /** Border color */
+  border: string
+  /** Foreground icon/text color (NOT body text — used for icons and small labels only) */
+  fg: string
+  /** Lucide icon name */
+  icon: SeverityIconName
+  /** Subtle dot for inline status — for `<StatusDot>` */
+  dot: string
+}
+
+export const severityTokens: Record<Severity, SeverityTokens> = {
+  info: {
+    bg: 'bg-sky-500/10',
+    border: 'border-sky-500/30',
+    fg: 'text-sky-300',
+    icon: 'Info',
+    dot: 'bg-sky-400',
+  },
+  warn: {
+    bg: 'bg-amber-500/10',
+    border: 'border-amber-500/30',
+    fg: 'text-amber-300',
+    icon: 'AlertTriangle',
+    dot: 'bg-amber-400',
+  },
+  critical: {
+    bg: 'bg-red-500/10',
+    border: 'border-red-500/30',
+    fg: 'text-red-300',
+    icon: 'AlertOctagon',
+    dot: 'bg-red-400',
+  },
+  success: {
+    bg: 'bg-emerald-500/10',
+    border: 'border-emerald-500/30',
+    fg: 'text-emerald-300',
+    icon: 'CheckCircle',
+    dot: 'bg-emerald-400',
+  },
+}
+
+/** Normalize the wire-level severity values that may sneak into the frontend. */
+export function normalizeSeverity(s: string | null | undefined): Severity {
+  if (!s) return 'info'
+  const v = s.toLowerCase()
+  if (v === 'warning') return 'warn'
+  if (v === 'error' || v === 'fatal') return 'critical'
+  if (v === 'ok' || v === 'success') return 'success'
+  if (v === 'info' || v === 'warn' || v === 'critical') return v as Severity
+  return 'info'
+}

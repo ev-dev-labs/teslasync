@@ -338,6 +338,8 @@ select option:checked {
 :root.light-mode .text-purple-300  { color: #6b21a8 !important; }
 :root.light-mode .text-indigo-300  { color: #3730a3 !important; }
 :root.light-mode .text-pink-300    { color: #9d174d !important; }
+:root.light-mode .text-sky-300     { color: #0369a1 !important; }
+:root.light-mode .text-red-300     { color: #b91c1c !important; }
 
 :root.light-mode .bg-neon-cyan\/5,
 :root.light-mode .bg-neon-cyan\/10 { background-color: rgba(8, 145, 178, 0.1) !important; }

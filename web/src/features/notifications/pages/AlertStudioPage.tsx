@@ -22,41 +22,24 @@ import {
 } from '@/api/hooks/useNotifications'
 import type { SignalValueType } from '@/types/signals'
 import { GlassPanel, Badge, Button as UiButton, Input as UiInput, Select as UiSelect, Modal } from '@/components/ui'
+import { SeverityBadge, SeverityIcon } from '@/components/data-display'
 import { PageContainer } from '@/components/layout'
 import { FadeIn } from '@/components/motion'
 import { EmptyState, ErrorDisplay, Skeleton } from '@/components/feedback'
 import {
   Zap, Plus, Save, Trash2, Copy, Bell, BellOff,
-  AlertTriangle, AlertCircle, Info, Battery, Gauge, Lock,
+  Info, Battery, Gauge, Lock,
   Car, Droplets, Clock, Pencil, Sparkles, Thermometer, Shield, Search,
   MoonStar,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { severityTokens } from '@/lib/tokens'
 import { formatDateTime } from '@/lib/dateFormat'
 import { usePageTitle } from '@/hooks/usePageTitle'
 
 type Severity = NonNullable<AlertRuleInput['severity']>
 type RuleOp = AlertRuleInput['op']
 type ValueKind = 'none' | 'number' | 'text' | 'bool' | 'range'
-
-interface SeverityConfig {
-  icon: ElementType
-  color: string
-  bg: string
-  border: string
-}
-
-const severityConfig: Record<Severity, SeverityConfig> = {
-  info: { icon: Info, color: 'text-neon-cyan', bg: 'bg-neon-cyan/10', border: 'border-neon-cyan/20' },
-  warn: { icon: AlertTriangle, color: 'text-neon-amber', bg: 'bg-neon-amber/10', border: 'border-neon-amber/20' },
-  critical: { icon: AlertCircle, color: 'text-neon-red', bg: 'bg-neon-red/10', border: 'border-neon-red/20' },
-}
-
-const severityBadgeColor: Record<Severity, 'cyan' | 'amber' | 'red'> = {
-  info: 'cyan',
-  warn: 'amber',
-  critical: 'red',
-}
 
 interface RuleTemplate {
   name: string
@@ -855,7 +838,7 @@ export default function AlertStudio() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {filteredTemplates.map(tpl => {
                 const Icon = tpl.icon
-                const sev = severityConfig[tpl.severity]
+                const tokens = severityTokens[tpl.severity]
                 return (
                   <GlassPanel
                     key={tpl.name}
@@ -863,16 +846,16 @@ export default function AlertStudio() {
                     onClick={() => handleCloneTemplate(tpl)}
                   >
                     <div className="flex items-center gap-2 mb-1.5">
-                      <div className={cn('rounded-lg p-1.5', sev.bg)}>
-                        <Icon className={cn('h-3.5 w-3.5', sev.color)} />
+                      <div className={cn('rounded-lg p-1.5', tokens.bg)}>
+                        <Icon className={cn('h-3.5 w-3.5', tokens.fg)} />
                       </div>
                       <span className="text-xs font-medium text-[var(--text-primary)] group-hover:text-cyan-300 transition-colors">{getTemplateName(tpl)}</span>
                     </div>
                     <p className="text-[10px] text-[var(--text-muted)] font-mono truncate">{getTemplateMessage(tpl)}</p>
                     <div className="flex items-center justify-between mt-1.5">
-                      <Badge color={severityBadgeColor[tpl.severity]} size="sm">
+                      <SeverityBadge severity={tpl.severity} size="sm" showIcon={false}>
                         {t(`notifications.alertStudio.severity.${tpl.severity}`, tpl.severity === 'warn' ? 'Warning' : tpl.severity)}
-                      </Badge>
+                      </SeverityBadge>
                       <div className="flex items-center gap-1">
                         <Copy className="h-3 w-3 text-[var(--text-muted)]" />
                         <span className="text-[10px] text-[var(--text-muted)]">{t('notifications.alertStudio.templates.use', 'Use')}</span>
@@ -940,8 +923,7 @@ export default function AlertStudio() {
 
             <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
               {filteredRules.map(rule => {
-                const sev = severityConfig[normalizeSeverity(rule.severity)]
-                const SevIcon = sev.icon
+                const sev = normalizeSeverity(rule.severity)
                 const active = selectedId === rule.id
                 const snoozed = isSnoozeActive(rule.snoozed_until)
                 const triggerMode = normalizeTriggerMode(rule.trigger_mode)
@@ -962,7 +944,7 @@ export default function AlertStudio() {
                         onKeyDown={event => handleRuleRowKeyDown(event, rule)}
                       >
                         <div className="flex items-center gap-2">
-                          <SevIcon className={cn('h-3.5 w-3.5 shrink-0', sev.color)} />
+                          <SeverityIcon severity={sev} className="h-3.5 w-3.5 shrink-0" />
                           <span className="text-xs font-medium text-[var(--text-primary)] truncate flex-1">{rule.name || untitledRuleLabel}</span>
                           {triggerMode === 'once' && (
                             <Badge variant="info" size="sm" title={t('notifications.alertStudio.rules.onceModeHint', 'Fires once until condition resets')}>
