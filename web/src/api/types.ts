@@ -278,8 +278,11 @@ export interface BatteryReport {
 export interface Alert {
   id: number
   vehicle_id: number
-  type: 'geofence_exit' | 'geofence_enter' | 'low_battery' | 'charging_complete' | 'sentry_event' | 'speed_limit' | 'temperature' | 'software_update'
-  severity: 'info' | 'warning' | 'critical'
+  /** Free-form alert type. The backend slugifies the alert rule name; legacy
+   *  values include 'geofence_exit', 'low_battery', 'charging_complete', etc.
+   *  Always treat as `string` and tolerate unknown values at the UI layer. */
+  type: string
+  severity: 'info' | 'warning' | 'critical' | string
   title: string
   message: string
   is_read: boolean

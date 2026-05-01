@@ -148,7 +148,7 @@ function AlertCard({ alert, onMarkRead, t }: { alert: Alert; onMarkRead: () => v
           <Badge variant={alert.severity === 'critical' ? 'danger' : alert.severity === 'warning' ? 'warning' : 'info'} size="sm">
             {alert.severity}
           </Badge>
-          <span className="text-[10px] text-[var(--text-muted)]">{alert.type.replace(/_/g, ' ')}</span>
+          <span className="text-[10px] text-[var(--text-muted)]">{(alert.type ?? 'notification').replace(/_/g, ' ')}</span>
           {!alert.is_read && (
             <Button variant="ghost" size="sm" icon={<Eye className="h-3 w-3" />} onClick={onMarkRead} className="ml-auto opacity-0 group-hover:opacity-100">
               {t('Mark read')}
@@ -425,18 +425,25 @@ export default function AlertsPage() {
   const totalCount = alerts?.length ?? 0;
   const unreadCount = useMemo(() => alerts?.filter(a => !a.is_read).length ?? 0, [alerts]);
   const criticalCount = useMemo(() => alerts?.filter(a => a.severity === 'critical' && !a.is_read).length ?? 0, [alerts]);
-  const infoCount = useMemo(() => alerts?.filter(a => a.severity === 'info').length ?? 0, [alerts]);
+  const infoCount = useMemo(() => alerts?.filter(a => (a.severity ?? 'info') === 'info').length ?? 0, [alerts]);
   const warningCount = useMemo(() => alerts?.filter(a => a.severity === 'warning').length ?? 0, [alerts]);
-  const readCount = useMemo(() => alerts?.filter(a => a.is_read).length ?? 0, [alerts]);
+  const readCount = useMemo(() => alerts?.filter(a => a.is_read === true).length ?? 0, [alerts]);
   const enabledRules = rules?.filter(r => r.enabled).length ?? 0;
 
   const alertsByType = useMemo(() => {
     if (!alerts?.length) return [];
     const counts: Record<string, number> = {};
-    alerts.forEach(a => { counts[a.type] = (counts[a.type] || 0) + 1; });
+    alerts.forEach(a => {
+      const key = a.type ?? 'notification';
+      counts[key] = (counts[key] ?? 0) + 1;
+    });
     return Object.entries(counts)
       .sort((a, b) => b[1] - a[1])
-      .map(([type, count], i) => ({ name: type.replace(/_/g, ' '), value: count, fill: CHART_COLORS[i % CHART_COLORS.length] }));
+      .map(([type, count], i) => ({
+        name: (type ?? 'notification').replace(/_/g, ' '),
+        value: count,
+        fill: CHART_COLORS[i % CHART_COLORS.length],
+      }));
   }, [alerts]);
 
   const alertsByDay = useMemo(() => {
@@ -452,7 +459,10 @@ export default function AlertsPage() {
       const d = new Date(a.created_at);
       if (now - d.getTime() > 7 * 86400000) return;
       const key = d.toLocaleDateString(undefined, { weekday: 'short' });
-      if (days[key]) days[key][a.severity as Severity]++;
+      const sev = a.severity as Severity;
+      if (days[key] && (sev === 'info' || sev === 'warning' || sev === 'critical')) {
+        days[key][sev]++;
+      }
     });
     return Object.entries(days).map(([day, v]) => ({ day, ...v }));
   }, [alerts]);
