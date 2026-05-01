@@ -21,6 +21,14 @@
   --text-primary: #ffffff;
   --text-secondary: #9ca3af;
   --text-muted: #8a95a6;
+  /*
+   * Chart / surface tokens consumed by chartTokens in lib/tokens.ts.
+   * Defaults below are dark-mode values; :root.light-mode (further down in
+   * this file) overrides them for light themes.
+   */
+  --surface-elevated: rgba(255, 255, 255, 0.04);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.12);
   /* Dynamic color theme vars — overridden by ThemeProvider */
   --theme-primary: #00f0ff;
   --theme-primary-rgb: 0, 240, 255;
@@ -296,6 +304,10 @@ select option:checked {
 :root.light-mode {
   /* Ensure Tailwind text-white becomes dark text */
   --tw-text-opacity: 1;
+  /* Chart / surface token overrides for light theme (paired with :root defaults). */
+  --surface-elevated: rgba(255, 255, 255, 0.95);
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-default: rgba(0, 0, 0, 0.12);
 }
 
 /* Override white text → dark in light mode */

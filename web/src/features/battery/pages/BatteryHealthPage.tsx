@@ -27,6 +27,7 @@ import { useVehicles, useChargingTelemetryLatest } from '@/api/hooks/useVehicles
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { cn } from '@/lib/cn';
+import { COLOR, STATUS_COLORS } from '@/lib/colors';
 import { fmtNumber, fmtPercent, fmtInt } from '@/lib/numberFormat';
 import { formatDateShort } from '@/lib/dateFormat';
 import type { BatteryHealthAnalytics } from '@/types/energy';
@@ -396,11 +397,11 @@ export default function BatteryHealthPage() {
               color="#a855f7"
             />
             <div className="flex flex-col items-center text-center">
-              <p className="text-3xl font-bold text-white/90">{yearsTo80}</p>
-              <p className="text-[10px] text-white/50 uppercase tracking-wider mt-1">
+              <p className="text-3xl font-bold text-[var(--text-primary)]">{yearsTo80}</p>
+              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">
                 {t('battery.yearsTo80', 'Years to 80%')}
               </p>
-              <p className="text-[10px] text-white/40">
+              <p className="text-[10px] text-[var(--text-muted)]">
                 {t('battery.warrantyNote', 'warranty threshold')}
               </p>
             </div>
@@ -419,7 +420,7 @@ export default function BatteryHealthPage() {
                 max={100}
                 color="#00f0ff"
               />
-              <p className="text-[10px] text-white/40 mt-1">
+              <p className="text-[10px] text-[var(--text-muted)] mt-1">
                 {fmtNumber(health.estimated_capacity, 1)} / {fmtNumber(health.original_capacity, 1)} kWh
               </p>
             </div>
@@ -430,7 +431,7 @@ export default function BatteryHealthPage() {
                 max={10}
                 color={degradationColor(health.degradation_rate_yr)}
               />
-              <p className="text-[10px] text-white/40 mt-1">
+              <p className="text-[10px] text-[var(--text-muted)] mt-1">
                 {fmtNumber(health.degradation_rate_yr, 2)}% {t('battery.perYear', 'per year')}
               </p>
             </div>
@@ -441,7 +442,7 @@ export default function BatteryHealthPage() {
                 max={1500}
                 color="#a855f7"
               />
-              <p className="text-[10px] text-white/40 mt-1">
+              <p className="text-[10px] text-[var(--text-muted)] mt-1">
                 {t('battery.warrantyLimit', 'Tesla warranty: 1,500 cycles / 70%')}
               </p>
             </div>
@@ -508,7 +509,7 @@ export default function BatteryHealthPage() {
         <GlassPanel className="p-6">
           <div className="flex items-center gap-2 mb-4">
             <Thermometer className="h-4 w-4 text-neon-amber" />
-            <h3 className="text-sm font-semibold text-white/90">
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">
               {t('battery.thermal.title', 'Thermal Monitoring')}
             </h3>
           </div>
@@ -594,8 +595,8 @@ export default function BatteryHealthPage() {
                   <div className="flex items-start gap-3">
                     <div className={cn('mt-0.5', insightIconClass[ins.status])}>{ins.icon}</div>
                     <div>
-                      <p className="text-sm font-medium text-white/90">{ins.title}</p>
-                      <p className="mt-0.5 text-xs text-white/60">{ins.description}</p>
+                      <p className="text-sm font-medium text-[var(--text-primary)]">{ins.title}</p>
+                      <p className="mt-0.5 text-xs text-[var(--text-secondary)]">{ins.description}</p>
                     </div>
                   </div>
                 </GlassPanel>
@@ -624,17 +625,17 @@ export default function BatteryHealthPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={predictionChartData}>
                   <defs>
-                    <ChartGradient id="healthGrad" color="#00f0ff" opacity={0.15} />
+                    <ChartGradient id="healthGrad" color={COLOR.CYAN} opacity={0.15} />
                   </defs>
                   {chartGrid}
                   <XAxis dataKey="label" tick={axisTickSm} tickLine={false} axisLine={false} />
                   <YAxis domain={[60, 100]} tick={axisTickSm} tickLine={false} axisLine={false} unit="%" />
                   <Tooltip content={<ChartTooltip />} />
-                  <ReferenceLine y={70} stroke="#ef4444" strokeDasharray="8 4" />
-                  <ReferenceLine y={80} stroke="#f59e0b" strokeDasharray="4 4" />
+                  <ReferenceLine y={70} stroke={STATUS_COLORS.critical} strokeDasharray="8 4" />
+                  <ReferenceLine y={80} stroke={STATUS_COLORS.warning} strokeDasharray="4 4" />
                   <Area {...AREA_DEFAULTS} dataKey="actual" name={t('battery.chart.actual', 'Actual %')} stroke="transparent" fill="url(#healthGrad)" />
-                  <Line {...AREA_DEFAULTS} dataKey="actual" name={t('battery.chart.actual', 'Actual %')} stroke="#00f0ff" dot={{ fill: '#00f0ff', r: 2 }} connectNulls={false} />
-                  <Line {...AREA_DEFAULTS} dataKey="predicted" name={t('battery.chart.predicted', 'Predicted %')} stroke="#00f0ff" strokeDasharray="6 4" opacity={0.5} />
+                  <Line {...AREA_DEFAULTS} dataKey="actual" name={t('battery.chart.actual', 'Actual %')} stroke={COLOR.CYAN} dot={{ fill: COLOR.CYAN, r: 2 }} connectNulls={false} />
+                  <Line {...AREA_DEFAULTS} dataKey="predicted" name={t('battery.chart.predicted', 'Predicted %')} stroke={COLOR.CYAN} strokeDasharray="6 4" opacity={0.5} />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
@@ -656,7 +657,7 @@ export default function BatteryHealthPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={rangeTrend}>
                   <defs>
-                    <ChartGradient id="rangeGrad" color="#10b981" opacity={0.3} />
+                    <ChartGradient id="rangeGrad" color={COLOR.GOOD} opacity={0.3} />
                   </defs>
                   {chartGrid}
                   <XAxis dataKey="label" tick={axisTickSm} tickLine={false} axisLine={false} />
@@ -666,7 +667,7 @@ export default function BatteryHealthPage() {
                     {...AREA_DEFAULTS}
                     dataKey="range"
                     name={`${t('battery.chart.range', 'Range')} (${distanceUnit})`}
-                    stroke="#10b981"
+                    stroke={COLOR.GOOD}
                     fill="url(#rangeGrad)"
                   />
                 </AreaChart>
@@ -688,7 +689,7 @@ export default function BatteryHealthPage() {
           <h3 className="section-title mb-4 flex items-center gap-2">
             <Zap className="h-4 w-4 text-neon-amber" />
             {t('battery.chart.chargeDist', 'Charge Level Distribution')}
-            <span className="text-xs text-white/40 font-normal ml-2">
+            <span className="text-xs text-[var(--text-muted)] font-normal ml-2">
               {t('battery.chart.chargeDistSub', 'Recent 100 sessions')}
             </span>
           </h3>
@@ -709,22 +710,22 @@ export default function BatteryHealthPage() {
               {chargingHabits && (
                 <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div className="text-center">
-                    <p className="text-lg font-bold text-white/90">{fmtPercent(chargingHabits.avgStart)}</p>
-                    <p className="text-[10px] text-white/40">{t('battery.habit.avgStart', 'Avg Start Level')}</p>
+                    <p className="text-lg font-bold text-[var(--text-primary)]">{fmtPercent(chargingHabits.avgStart)}</p>
+                    <p className="text-[10px] text-[var(--text-muted)]">{t('battery.habit.avgStart', 'Avg Start Level')}</p>
                   </div>
                   <div className="text-center">
                     <p className="text-lg font-bold text-emerald-300">{fmtPercent(chargingHabits.avgEnd)}</p>
-                    <p className="text-[10px] text-white/40">{t('battery.habit.avgEnd', 'Avg End Level')}</p>
+                    <p className="text-[10px] text-[var(--text-muted)]">{t('battery.habit.avgEnd', 'Avg End Level')}</p>
                   </div>
                   <div className="text-center">
                     <p className="text-lg font-bold text-amber-300">{chargingHabits.superchargerCount}</p>
-                    <p className="text-[10px] text-white/40">{t('battery.habit.supercharger', 'Supercharger Sessions')}</p>
+                    <p className="text-[10px] text-[var(--text-muted)]">{t('battery.habit.supercharger', 'Supercharger Sessions')}</p>
                   </div>
                   <div className="text-center">
                     <p className="text-lg font-bold text-cyan-300">
                       {chargingHabits.total - chargingHabits.superchargerCount - chargingHabits.dcFastCount}
                     </p>
-                    <p className="text-[10px] text-white/40">{t('battery.habit.home', 'Home Charges')}</p>
+                    <p className="text-[10px] text-[var(--text-muted)]">{t('battery.habit.home', 'Home Charges')}</p>
                   </div>
                 </div>
               )}
@@ -748,46 +749,46 @@ export default function BatteryHealthPage() {
           </h3>
           <Grid cols={{ default: 2, md: 4 }} gap={4}>
             <GlassPanel className="p-4 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-1">
+              <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">
                 {t('battery.newVsNow.capNew', 'Capacity When New')}
               </p>
-              <p className="text-2xl font-bold text-white/90">
+              <p className="text-2xl font-bold text-[var(--text-primary)]">
                 {fmtNumber(health.original_capacity, 1)}
-                <span className="text-sm text-white/40"> kWh</span>
+                <span className="text-sm text-[var(--text-muted)]"> kWh</span>
               </p>
             </GlassPanel>
             <GlassPanel className="p-4 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-1">
+              <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">
                 {t('battery.newVsNow.capNow', 'Capacity Now')}
               </p>
               <p className="text-2xl font-bold text-cyan-300">
                 {fmtNumber(health.estimated_capacity, 1)}
-                <span className="text-sm text-white/40"> kWh</span>
+                <span className="text-sm text-[var(--text-muted)]"> kWh</span>
               </p>
               <p className="text-[10px] text-rose-300 mt-1">
                 -{fmtNumber(health.original_capacity - health.estimated_capacity, 1)} kWh
               </p>
             </GlassPanel>
             <GlassPanel className="p-4 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-1">
+              <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">
                 {t('battery.newVsNow.rangeNew', 'Range When New')}
               </p>
-              <p className="text-2xl font-bold text-white/90">
+              <p className="text-2xl font-bold text-[var(--text-primary)]">
                 {health.history.length > 0
                   ? fmtInt(convertDistance(health.history[0].range_km))
                   : '—'}
-                <span className="text-sm text-white/40"> {distanceUnit}</span>
+                <span className="text-sm text-[var(--text-muted)]"> {distanceUnit}</span>
               </p>
             </GlassPanel>
             <GlassPanel className="p-4 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-1">
+              <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">
                 {t('battery.newVsNow.rangeNow', 'Range Now')}
               </p>
               <p className="text-2xl font-bold text-emerald-300">
                 {health.history.length > 0
                   ? fmtInt(convertDistance(health.history[health.history.length - 1].range_km))
                   : '—'}
-                <span className="text-sm text-white/40"> {distanceUnit}</span>
+                <span className="text-sm text-[var(--text-muted)]"> {distanceUnit}</span>
               </p>
               {health.history.length >= 2 && (
                 <p className="text-[10px] text-rose-300 mt-1">
@@ -853,8 +854,8 @@ export default function BatteryHealthPage() {
                   { label: t('battery.stats.cycles', 'Charge Cycles'), value: String(health.total_cycles) },
                 ].map((row) => (
                   <div key={row.label} className="flex justify-between items-center py-2 border-b border-white/5">
-                    <span className="text-xs text-white/60">{row.label}</span>
-                    <span className="text-sm font-semibold text-white/90">{row.value}</span>
+                    <span className="text-xs text-[var(--text-secondary)]">{row.label}</span>
+                    <span className="text-sm font-semibold text-[var(--text-primary)]">{row.value}</span>
                   </div>
                 ))}
               </div>
@@ -895,7 +896,7 @@ export default function BatteryHealthPage() {
             <Lightbulb className="mr-1 inline h-4 w-4" />
             {t('battery.recommendations.title', 'Recommendations')}
           </Badge>
-          <ul className="space-y-2 text-sm text-gray-300">
+          <ul className="space-y-2 text-sm text-[var(--text-secondary)]">
             {recommendations.map((tip, idx) => (
               <li key={idx} className="flex items-start gap-2">
                 <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-green-400" />

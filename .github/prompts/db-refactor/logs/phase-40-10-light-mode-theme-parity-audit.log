@@ -1,0 +1,253 @@
+=== GATE ===
+=== PREFLIGHT ===
+PROMPT=phase-40/10-light-mode-theme-parity-audit
+BRANCH=refactor/mono-gone
+HEAD=e1d54b4e
+=== FILES_EXIST ===
+FILE[web\scripts\theme-audit.ps1]=True
+FILE[web\src\lib\tokens.ts]=True
+FILE[web\src\index.css]=True
+FILE[web\src\components\charts\ChartTooltip.tsx]=True
+FILE[web\src\components\charts\chartUtils.tsx]=True
+FILE[web\src\features\system\pages\StateMachineDebuggerPage.tsx]=True
+FILE[web\src\features\driving\pages\DriveScorePage.tsx]=True
+FILE[web\src\features\battery\pages\BatteryHealthPage.tsx]=True
+FILE[web\src\features\analytics\pages\LifetimeStatsPage.tsx]=True
+FILE[web\src\features\vehicle-systems\pages\GuardModePage.tsx]=True
+FILE[web\src\features\battery\pages\ProjectedRangePage.tsx]=True
+FILE[web\src\features\charging\pages\SmartChargePage.tsx]=True
+FILE[web\src\features\system\pages\DBHealthPage.tsx]=True
+FILE[web\src\features\analytics\pages\TrueCostPage.tsx]=True
+FILE[web\src\features\vehicle-systems\pages\MediaPlayerPage.tsx]=True
+FILE[web\src\features\charging\pages\ChargingHeatmapPage.tsx]=True
+FILE[web\src\features\vehicle-systems\pages\ClimateControlPage.tsx]=True
+FILE[web\src\features\admin\pages\BackupRestorePage.tsx]=True
+FILE[web\src\features\vehicles\pages\VehicleListPage.tsx]=True
+FILE[web\src\features\battery\pages\PowerFlowDashboardPage.tsx]=True
+FILE[web\src\features\battery\pages\EnergyProductsPage.tsx]=True
+FILE[web\src\features\driving\pages\TripPlannerPage.tsx]=True
+FILE[web\src\features\battery\pages\SleepEfficiencyPage.tsx]=True
+FILE[web\src\features\battery\pages\BatteryCellsPage.tsx]=True
+FILE[web\src\features\diagnostics\pages\AnomalyDashboardPage.tsx]=True
+FILES_EXPECTED=25
+FILES_MISSING=0
+=== TYPESCRIPT ===
+TSC_EXIT=0
+=== LINT ===
+
+> teslasync-web@2.0.0 lint
+> eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0
+
+LINT_EXIT=0
+=== FRONTEND_TEST ===
+
+> teslasync-web@2.0.0 test
+> vitest run --run
+
+8:30:25 AM [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
+8:30:25 AM [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+Both esbuild and oxc options were set. oxc options will be used and esbuild options will be ignored. The following esbuild options were set: `{ jsx: 'automatic', jsxImportSource: undefined }`
+
+[1m[46m RUN [49m[22m [36mv4.1.2 [39m[90mD:/repos/teslasync/web[39m
+
+ [32mΓ£ô[39m src/lib/certificate.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 50[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/gpx.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 65[2mms[22m[39m
+ [32mΓ£ô[39m src/types/fsm/__tests__/edge-derivation.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32mΓ£ô[39m src/types/fsm/__tests__/disallowed.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+ [32mΓ£ô[39m src/types/fsm/__tests__/scenario-walkability.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32mΓ£ô[39m src/types/fsm/__tests__/transition-integrity.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 45[2mms[22m[39m
+ [32mΓ£ô[39m src/types/fsm/__tests__/coverage-matrix.test.ts [2m([22m[2m30 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+stderr | src/components/ui/Breadcrumb.test.tsx > Breadcrumb > renders nothing on the root path
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mΓ£ô[39m src/components/ui/Logo.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[32m 126[2mms[22m[39m
+ [32mΓ£ô[39m src/components/ui/Breadcrumb.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 153[2mms[22m[39m
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: useToast must be used within ToastProvider
+    at Module.useToast (D:/repos/teslasync/web/src/components/feedback/Toast.tsx:29:19)
+    at Orphan (D:/repos/teslasync/web/src/components/feedback/Toast.test.tsx:115:7)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+Error: useToast must be used within ToastProvider
+    at Module.useToast (D:/repos/teslasync/web/src/components/feedback/Toast.tsx:29:19)
+    at Orphan (D:/repos/teslasync/web/src/components/feedback/Toast.test.tsx:115:7)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+ [32mΓ£ô[39m src/components/feedback/Toast.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[32m 261[2mms[22m[39m
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+ [32mΓ£ô[39m src/components/charts/Charts.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 52[2mms[22m[39m
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+ [32mΓ£ô[39m src/components/feedback/ErrorBoundary.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[33m 317[2mms[22m[39m
+ [32mΓ£ô[39m src/components/data-display/format/__tests__/Format.test.tsx [2m([22m[2m49 tests[22m[2m)[22m[33m 350[2mms[22m[39m
+ [32mΓ£ô[39m src/components/data-display/SeverityBadge.test.tsx [2m([22m[2m14 tests[22m[2m)[22m[33m 434[2mms[22m[39m
+ [32mΓ£ô[39m src/components/data-display/InsightsEngine.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 194[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/export.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/parseEnums.test.ts [2m([22m[2m33 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32mΓ£ô[39m src/types/fsm/__tests__/cross-fsm-wiring.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/cleanNil.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/vehicleState.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32mΓ£ô[39m src/types/fsm/__tests__/truth-table.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/gear.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/resilience.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/enums.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m24 passed[39m[22m[90m (24)[39m
+[2m      Tests [22m [1m[32m394 passed[39m[22m[90m (394)[39m
+[2m   Start at [22m 08:30:25
+[2m   Duration [22m 6.34s[2m (transform 3.66s, setup 4.24s, import 9.59s, tests 2.25s, environment 54.36s)[22m
+
+FRONTEND_TEST_EXIT=0
+=== AUDIT_VIOLATIONS ===
+VIOLATION_INLINE_VAR=0
+VIOLATION_RECHARTS_DIRECT=0
+VIOLATION_LEAFLET_DIRECT=0
+VIOLATION_LEGACY_API_IMPORT=0
+VIOLATION_DOUBLE_API_PREFIX=0
+AUDIT_TOTAL_VIOLATIONS=0
+=== GIT_STATUS ===
+UNEXPECTED_STATUS_COUNT=0
+=== STATUS ===
+EXIT=0
+STATUS=DONE

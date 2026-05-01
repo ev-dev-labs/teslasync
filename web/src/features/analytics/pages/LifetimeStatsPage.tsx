@@ -75,16 +75,16 @@ export default function LifetimeStatsPage() {
         <GlassPanel className="p-8 text-center">
           <div className="flex items-center justify-center gap-3 mb-2">
             <Car className="h-8 w-8 text-neon-cyan" />
-            <span className="text-4xl md:text-5xl font-bold text-white">
+            <span className="text-4xl md:text-5xl font-bold text-[var(--text-primary)]">
               <AnimatedNumber
                 value={stats ? convertDistance(stats.total_distance_km) : 0}
                 duration={1.5}
                 decimals={0}
               />
             </span>
-            <span className="text-lg text-white/60">{distanceUnit}</span>
+            <span className="text-lg text-[var(--text-secondary)]">{distanceUnit}</span>
           </div>
-          <p className="text-white/50 text-lg">
+          <p className="text-[var(--text-muted)] text-lg">
             {t('lifetime.heroSubtitle', 'driven across {{drives}} drives', {
               drives: fmtInt(stats?.total_drives ?? 0),
             })}
@@ -97,7 +97,7 @@ export default function LifetimeStatsPage() {
             </p>
           )}
           {stats && stats.ownership_days > 0 && (
-            <p className="mt-1 text-white/40 text-xs">
+            <p className="mt-1 text-[var(--text-muted)] text-xs">
               {t('lifetime.since', 'Tracking since {{date}} ({{days}} days)', {
                 date: fmtDate(stats.first_drive_date),
                 days: fmtInt(stats.ownership_days),
@@ -141,7 +141,7 @@ export default function LifetimeStatsPage() {
       {/* ── Fun Facts ────────────────────────────────────────────── */}
       <FadeIn delay={0.1}>
         <GlassPanel className="mt-6 p-6">
-          <h2 className="text-lg font-semibold text-white/90 mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
             <Flame className="h-5 w-5 text-orange-400" />
             {t('lifetime.funFacts', 'Fun Facts')}
           </h2>
@@ -154,7 +154,7 @@ export default function LifetimeStatsPage() {
                 label={t('lifetime.earthProgress', 'around the Earth')}
               />
               <FunFactCard
-                icon={<Moon className="h-6 w-6 text-gray-300" />}
+                icon={<Moon className="h-6 w-6 text-[var(--text-secondary)]" />}
                 value={fmtNumber(stats.moon_trips * 100, 2)}
                 unit="%"
                 label={t('lifetime.moonProgress', 'to the Moon')}
@@ -181,7 +181,7 @@ export default function LifetimeStatsPage() {
       {/* ── Savings Comparison ───────────────────────────────────── */}
       <FadeIn delay={0.15}>
         <GlassPanel className="mt-6 p-6">
-          <h2 className="text-lg font-semibold text-white/90 mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
             <DollarSign className="h-5 w-5 text-green-400" />
             {t('lifetime.savingsComparison', 'Savings vs Gasoline')}
           </h2>
@@ -201,7 +201,7 @@ export default function LifetimeStatsPage() {
       {/* ── Environmental Impact ─────────────────────────────────── */}
       <FadeIn delay={0.2}>
         <GlassPanel className="mt-6 p-6">
-          <h2 className="text-lg font-semibold text-white/90 mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
             <Leaf className="h-5 w-5 text-green-400" />
             {t('lifetime.environmentalImpact', 'Environmental Impact')}
           </h2>
@@ -215,26 +215,26 @@ export default function LifetimeStatsPage() {
                   color="#22c55e"
                 />
                 <div>
-                  <p className="text-2xl font-bold text-white">
+                  <p className="text-2xl font-bold text-[var(--text-primary)]">
                     <AnimatedNumber value={stats.co2_offset_kg} decimals={0} suffix=" kg" />
                   </p>
-                  <p className="text-sm text-white/50">{t('lifetime.co2Offset', 'CO₂ offset')}</p>
+                  <p className="text-sm text-[var(--text-muted)]">{t('lifetime.co2Offset', 'CO₂ offset')}</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
                 <span className="text-4xl">🌳</span>
                 <div>
-                  <p className="text-2xl font-bold text-white">{fmtInt(stats.trees_equivalent)}</p>
-                  <p className="text-sm text-white/50">{t('lifetime.treesEquiv', 'trees equivalent')}</p>
+                  <p className="text-2xl font-bold text-[var(--text-primary)]">{fmtInt(stats.trees_equivalent)}</p>
+                  <p className="text-sm text-[var(--text-muted)]">{t('lifetime.treesEquiv', 'trees equivalent')}</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
                 <span className="text-4xl">☕</span>
                 <div>
-                  <p className="text-2xl font-bold text-white">
+                  <p className="text-2xl font-bold text-[var(--text-primary)]">
                     {fmtInt(Math.round(stats.total_savings / 5))}
                   </p>
-                  <p className="text-sm text-white/50">{t('lifetime.coffeesEquiv', 'cups of coffee saved')}</p>
+                  <p className="text-sm text-[var(--text-muted)]">{t('lifetime.coffeesEquiv', 'cups of coffee saved')}</p>
                 </div>
               </div>
             </Grid>
@@ -247,7 +247,7 @@ export default function LifetimeStatsPage() {
       {/* ── Personal Records ─────────────────────────────────────── */}
       <FadeIn delay={0.25}>
         <GlassPanel className="mt-6 p-6">
-          <h2 className="text-lg font-semibold text-white/90 mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
             <Award className="h-5 w-5 text-yellow-400" />
             {t('lifetime.personalRecords', 'Personal Records')}
           </h2>
@@ -281,7 +281,7 @@ export default function LifetimeStatsPage() {
       {/* ── Activity Summary ─────────────────────────────────────── */}
       <FadeIn delay={0.3}>
         <GlassPanel className="mt-6 p-6">
-          <h2 className="text-lg font-semibold text-white/90 mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
             <Clock className="h-5 w-5 text-sky-400" />
             {t('lifetime.activitySummary', 'Activity Summary')}
           </h2>
@@ -318,11 +318,11 @@ export default function LifetimeStatsPage() {
       <FadeIn delay={0.35}>
         <GlassPanel className="mt-6 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-white/90 flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-[var(--text-primary)] flex items-center gap-2">
               <Trophy className="h-5 w-5 text-yellow-400" />
               {t('lifetime.achievements', 'Achievements')}
             </h2>
-            <span className="text-sm text-white/40">
+            <span className="text-sm text-[var(--text-muted)]">
               {unlockedCount}/{achievements.length} {t('lifetime.unlocked', 'unlocked')}
             </span>
           </div>
@@ -352,10 +352,10 @@ function FunFactCard({ icon, value, unit, label }: {
     <div className="flex items-center gap-3 rounded-lg bg-white/[0.03] p-3">
       {icon}
       <div>
-        <p className="text-xl font-bold text-white">
-          {value}<span className="text-sm text-white/50 ml-1">{unit}</span>
+        <p className="text-xl font-bold text-[var(--text-primary)]">
+          {value}<span className="text-sm text-[var(--text-muted)] ml-1">{unit}</span>
         </p>
-        <p className="text-xs text-white/40">{label}</p>
+        <p className="text-xs text-[var(--text-muted)]">{label}</p>
       </div>
     </div>
   );
@@ -374,7 +374,7 @@ function SavingsBar({ evCost, gasCost, savings, co2Kg }: {
       <div>
         <div className="flex justify-between text-sm mb-1">
           <span className="text-green-400">{t('lifetime.electricCost', 'Electric Cost')}</span>
-          <span className="text-white/70">${fmtNumber(evCost, 2)}</span>
+          <span className="text-[var(--text-secondary)]">${fmtNumber(evCost, 2)}</span>
         </div>
         <div className="h-6 rounded-full bg-white/[0.05] overflow-hidden">
           <div
@@ -386,7 +386,7 @@ function SavingsBar({ evCost, gasCost, savings, co2Kg }: {
       <div>
         <div className="flex justify-between text-sm mb-1">
           <span className="text-red-400">{t('lifetime.gasCost', 'Gasoline Equivalent')}</span>
-          <span className="text-white/70">${fmtNumber(gasCost, 2)}</span>
+          <span className="text-[var(--text-secondary)]">${fmtNumber(gasCost, 2)}</span>
         </div>
         <div className="h-6 rounded-full bg-white/[0.05] overflow-hidden">
           <div
@@ -399,7 +399,7 @@ function SavingsBar({ evCost, gasCost, savings, co2Kg }: {
         <span className="text-green-400 font-semibold text-lg">
           {t('lifetime.youSaved', 'You saved')} ${fmtNumber(savings, 2)}
         </span>
-        <span className="text-sm text-white/40">
+        <span className="text-sm text-[var(--text-muted)]">
           {fmtNumber(co2Kg, 0)} kg CO₂ {t('lifetime.avoided', 'avoided')}
         </span>
       </div>
@@ -414,10 +414,10 @@ function RecordCard({ title, value, date, icon }: {
     <div className="flex items-center gap-4 rounded-lg bg-white/[0.03] p-4">
       {icon}
       <div>
-        <p className="text-xs text-white/50">{title}</p>
-        <p className="text-lg font-bold text-white">{value}</p>
+        <p className="text-xs text-[var(--text-muted)]">{title}</p>
+        <p className="text-lg font-bold text-[var(--text-primary)]">{value}</p>
         {date && (
-          <p className="text-xs text-white/30">{fmtDate(date)}</p>
+          <p className="text-xs text-[var(--text-muted)]">{fmtDate(date)}</p>
         )}
       </div>
     </div>
@@ -427,8 +427,8 @@ function RecordCard({ title, value, date, icon }: {
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg bg-white/[0.03] p-3 text-center">
-      <p className="text-xs text-white/50 mb-1">{label}</p>
-      <p className="text-lg font-semibold text-white">{value}</p>
+      <p className="text-xs text-[var(--text-muted)] mb-1">{label}</p>
+      <p className="text-lg font-semibold text-[var(--text-primary)]">{value}</p>
     </div>
   );
 }

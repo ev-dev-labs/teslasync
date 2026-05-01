@@ -225,11 +225,11 @@ export default function VehicleListPage() {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <Activity className="h-4 w-4 text-cyan-400" />
-                  <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                  <span className="text-sm font-semibold text-[var(--text-primary)]">
                     {t('vehicles.batteryStatus', 'Fleet Battery Status')}
                   </span>
                 </div>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
+                <span className="text-xs text-[var(--text-secondary)]">
                   <AnimatedNumber value={Math.round(fleet.avgBattery)} suffix="%" />
                   {' '}{t('vehicles.avgLabel', 'avg')}
                 </span>
@@ -242,7 +242,7 @@ export default function VehicleListPage() {
                     const color = batteryColor(level);
                     return (
                       <div key={vehicle.id} className="flex items-center gap-3">
-                        <span className="text-xs text-gray-600 dark:text-gray-300 w-24 truncate">
+                        <span className="text-xs text-[var(--text-secondary)] w-24 truncate">
                           {vehicle.display_name || vehicle.vin}
                         </span>
                         <div className="flex-1 h-3 rounded-full bg-white/[0.04] overflow-hidden">
@@ -255,10 +255,10 @@ export default function VehicleListPage() {
                             }}
                           />
                         </div>
-                        <span className="text-xs font-medium text-gray-900 dark:text-white w-10 text-right">
+                        <span className="text-xs font-medium text-[var(--text-primary)] w-10 text-right">
                           {level}%
                         </span>
-                        <span className="text-[10px] text-gray-500 dark:text-gray-400 w-16 text-right">
+                        <span className="text-[10px] text-[var(--text-secondary)] w-16 text-right">
                           {fmtNumber(convertDistance(state.rated_range ?? 0))} {distanceUnit}
                         </span>
                       </div>
@@ -279,7 +279,7 @@ export default function VehicleListPage() {
           <FadeIn delay={0.15}>
             <div className="flex items-center gap-2 mb-4">
               <Car className="h-4 w-4 text-purple-400" />
-              <span className="text-sm font-semibold text-gray-900 dark:text-white">
+              <span className="text-sm font-semibold text-[var(--text-primary)]">
                 {t('vehicles.allVehicles', 'All Vehicles')}
               </span>
             </div>
@@ -305,7 +305,7 @@ export default function VehicleListPage() {
                           <div className="flex items-center gap-3 mb-1.5">
                             <Link
                               to={`/vehicles/${vehicle.id}`}
-                              className="text-base font-semibold text-gray-900 dark:text-white hover:text-cyan-400 transition-colors truncate"
+                              className="text-base font-semibold text-[var(--text-primary)] hover:text-cyan-400 transition-colors truncate"
                             >
                               {vehicle.display_name || vehicle.vin}
                             </Link>
@@ -314,7 +314,7 @@ export default function VehicleListPage() {
                             </Badge>
                           </div>
 
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                          <p className="text-xs text-[var(--text-secondary)] mb-3">
                             {vehicle.model} {vehicle.trim_badging} ·{' '}
                             <span className="font-mono">{vehicle.vin}</span>
                           </p>
@@ -331,17 +331,17 @@ export default function VehicleListPage() {
                                   }}
                                 />
                               </div>
-                              <span className="text-sm font-bold text-gray-900 dark:text-white">
+                              <span className="text-sm font-bold text-[var(--text-primary)]">
                                 <AnimatedNumber value={level} suffix="%" />
                               </span>
                             </div>
 
                             {state && (
                               <>
-                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                <span className="text-xs text-[var(--text-secondary)]">
                                   {fmtNumber(convertDistance(state.rated_range ?? 0))} {distanceUnit}
                                 </span>
-                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                <span className="text-xs text-[var(--text-secondary)]">
                                   {fmtNumber(convertDistance(state.odometer ?? 0))} {distanceUnit}
                                 </span>
                                 {state.is_charging && (
@@ -363,7 +363,7 @@ export default function VehicleListPage() {
                         <div className="flex flex-col items-center gap-1 shrink-0">
                           <Link
                             to={`/vehicles/${vehicle.id}`}
-                            className="rounded-lg p-2 text-gray-400 hover:bg-cyan-400/10 hover:text-cyan-400 transition-all"
+                            className="rounded-lg p-2 text-[var(--text-secondary)] hover:bg-cyan-400/10 hover:text-cyan-400 transition-all"
                           >
                             <ExternalLink className="h-4 w-4" />
                           </Link>
@@ -371,7 +371,7 @@ export default function VehicleListPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => setDeleteTarget(vehicle)}
-                            className="rounded-lg p-2 text-gray-400 hover:bg-red-500/10 hover:text-red-500"
+                            className="rounded-lg p-2 text-[var(--text-secondary)] hover:bg-red-500/10 hover:text-red-500"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

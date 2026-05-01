@@ -139,26 +139,26 @@ export default function ChargingHeatmapPage() {
       <StaggerContainer className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StaggerItem>
           <GlassPanel glow="cyan" hover className="p-4">
-            <p className="text-xs text-gray-400">{t('charging.heatmap.totalSessions', 'Total Sessions')}</p>
-            <p className="text-xl font-semibold text-white">{fmtInt(stats?.count ?? 0)}</p>
+            <p className="text-xs text-[var(--text-secondary)]">{t('charging.heatmap.totalSessions', 'Total Sessions')}</p>
+            <p className="text-xl font-semibold text-[var(--text-primary)]">{fmtInt(stats?.count ?? 0)}</p>
           </GlassPanel>
         </StaggerItem>
         <StaggerItem>
           <GlassPanel glow="green" hover className="p-4">
-            <p className="text-xs text-gray-400">{t('charging.heatmap.totalEnergy', 'Total Energy')}</p>
-            <p className="text-xl font-semibold text-white">{fmtNumber(stats?.totalEnergy ?? 0, 1)} kWh</p>
+            <p className="text-xs text-[var(--text-secondary)]">{t('charging.heatmap.totalEnergy', 'Total Energy')}</p>
+            <p className="text-xl font-semibold text-[var(--text-primary)]">{fmtNumber(stats?.totalEnergy ?? 0, 1)} kWh</p>
           </GlassPanel>
         </StaggerItem>
         <StaggerItem>
           <GlassPanel glow="purple" hover className="p-4">
-            <p className="text-xs text-gray-400">{t('charging.heatmap.totalCost', 'Total Cost')}</p>
-            <p className="text-xl font-semibold text-white">${fmtNumber(stats?.totalCost ?? 0, 2)}</p>
+            <p className="text-xs text-[var(--text-secondary)]">{t('charging.heatmap.totalCost', 'Total Cost')}</p>
+            <p className="text-xl font-semibold text-[var(--text-primary)]">${fmtNumber(stats?.totalCost ?? 0, 2)}</p>
           </GlassPanel>
         </StaggerItem>
         <StaggerItem>
           <GlassPanel hover className="p-4">
-            <p className="text-xs text-gray-400">{t('charging.heatmap.avgDuration', 'Avg Duration')}</p>
-            <p className="text-xl font-semibold text-white">{fmtInt(stats?.avgDuration ?? 0)} min</p>
+            <p className="text-xs text-[var(--text-secondary)]">{t('charging.heatmap.avgDuration', 'Avg Duration')}</p>
+            <p className="text-xl font-semibold text-[var(--text-primary)]">{fmtInt(stats?.avgDuration ?? 0)} min</p>
           </GlassPanel>
         </StaggerItem>
       </StaggerContainer>
@@ -167,10 +167,10 @@ export default function ChargingHeatmapPage() {
       {maxCount > 0 && (
         <FadeIn delay={0.1}>
           <GlassPanel glow="cyan" className="mt-6 border border-cyan-500/30 p-4">
-            <p className="text-sm text-gray-400">{t('charging.heatmap.favorite', 'Favorite Charging Time')}</p>
-            <p className="text-lg font-semibold text-white">
+            <p className="text-sm text-[var(--text-secondary)]">{t('charging.heatmap.favorite', 'Favorite Charging Time')}</p>
+            <p className="text-lg font-semibold text-[var(--text-primary)]">
               {DAYS[favDay]}s at {favHour.toString().padStart(2, '0')}:00
-              <span className="ml-2 text-sm text-gray-400">({maxCount} sessions)</span>
+              <span className="ml-2 text-sm text-[var(--text-secondary)]">({maxCount} sessions)</span>
             </p>
           </GlassPanel>
         </FadeIn>
@@ -179,20 +179,20 @@ export default function ChargingHeatmapPage() {
       {/* ── Heatmap grid ── */}
       <FadeIn delay={0.2}>
         <GlassPanel className="mt-6 overflow-x-auto p-4">
-          <h3 className="mb-3 text-base font-semibold text-white">
+          <h3 className="mb-3 text-base font-semibold text-[var(--text-primary)]">
             {t('charging.heatmap.gridTitle', 'Weekly Charging Heatmap')}
           </h3>
           <div className="grid gap-[2px] grid-cols-[56px_repeat(24,1fr)]">
             {/* Hour header row */}
-            <div className="text-[10px] text-gray-500" />
+            <div className="text-[10px] text-[var(--text-muted)]" />
             {Array.from({ length: 24 }).map((_, h) => (
-              <div key={h} className="text-center text-[10px] text-gray-500">{h}</div>
+              <div key={h} className="text-center text-[10px] text-[var(--text-muted)]">{h}</div>
             ))}
 
             {/* Day rows */}
             {DAYS.map((dayLabel, day) => (
               <>
-                <div key={`label-${day}`} className="flex items-center text-xs text-gray-400">
+                <div key={`label-${day}`} className="flex items-center text-xs text-[var(--text-secondary)]">
                   {dayLabel}
                 </div>
                 {Array.from({ length: 24 }).map((_, hour) => {
@@ -207,7 +207,7 @@ export default function ChargingHeatmapPage() {
                       onMouseLeave={() => setHovered(null)}
                     >
                       {isHovered && cell.count > 0 && (
-                        <div className="absolute -top-14 left-1/2 z-20 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-[10px] text-white shadow-lg whitespace-nowrap">
+                        <div className="absolute -top-14 left-1/2 z-20 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-[10px] text-[var(--text-primary)] shadow-lg whitespace-nowrap">
                           <div>{DAYS[day]} {hour}:00</div>
                           <div>{cell.count} sessions · {fmtNumber(cell.totalEnergy, 1)} kWh avg</div>
                         </div>
@@ -220,7 +220,7 @@ export default function ChargingHeatmapPage() {
           </div>
 
           {/* Legend */}
-          <div className="mt-3 flex items-center gap-2 text-[10px] text-gray-400">
+          <div className="mt-3 flex items-center gap-2 text-[10px] text-[var(--text-secondary)]">
             <span>{t('charging.heatmap.less', 'Less')}</span>
             {['rgba(0,240,255,0.04)', 'rgba(0,240,255,0.15)', 'rgba(16,185,129,0.4)', 'rgba(245,158,11,0.55)', 'rgba(239,68,68,0.75)'].map((c) => (
               <div key={c} className="h-3 w-6 rounded-sm" style={{ backgroundColor: c }} />
@@ -233,7 +233,7 @@ export default function ChargingHeatmapPage() {
       {/* ── Top charging locations ── */}
       <FadeIn delay={0.3}>
         <GlassPanel className="mt-6 p-4">
-          <h3 className="mb-3 text-base font-semibold text-white">
+          <h3 className="mb-3 text-base font-semibold text-[var(--text-primary)]">
             {t('charging.heatmap.topLocations', 'Top Charging Locations')}
           </h3>
           {locationData.length > 0 ? (

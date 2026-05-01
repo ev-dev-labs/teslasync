@@ -33,8 +33,8 @@ const vehicleStateStyle: Record<string, { bg: string; text: string; dot: string 
   charging: { bg: 'bg-cyan-500/10', text: 'text-cyan-400', dot: 'bg-cyan-400' },
   parked: { bg: 'bg-purple-500/10', text: 'text-purple-400', dot: 'bg-purple-400' },
   online: { bg: 'bg-blue-500/10', text: 'text-blue-400', dot: 'bg-blue-400' },
-  offline: { bg: 'bg-gray-500/10', text: 'text-gray-400', dot: 'bg-gray-400' },
-  asleep: { bg: 'bg-gray-600/10', text: 'text-gray-500', dot: 'bg-gray-500' },
+  offline: { bg: 'bg-gray-500/10', text: 'text-[var(--text-secondary)]', dot: 'bg-gray-400' },
+  asleep: { bg: 'bg-gray-600/10', text: 'text-[var(--text-muted)]', dot: 'bg-gray-500' },
 };
 
 function getVehicleStyle(state?: string | null) {
@@ -167,7 +167,7 @@ export default function StateMachineDebuggerPage() {
         header: t('fsm.count', 'Transitions'),
         className: 'text-right',
         render: (row: StatSummaryRow) => (
-          <span className="text-white/90 font-mono">{fmtInt(row.count)}</span>
+          <span className="text-[var(--text-primary)] font-mono">{fmtInt(row.count)}</span>
         ),
       },
       {
@@ -175,7 +175,7 @@ export default function StateMachineDebuggerPage() {
         header: t('fsm.avgInterval', 'Avg Interval'),
         className: 'text-right',
         render: (row: StatSummaryRow) => (
-          <span className="text-white/70 font-mono">
+          <span className="text-[var(--text-secondary)] font-mono">
             {row.avg_interval_sec > 0 ? formatDuration(row.avg_interval_sec) : '—'}
           </span>
         ),
@@ -194,14 +194,14 @@ export default function StateMachineDebuggerPage() {
         render: (_row: FSMTransition, _idx?: number) => {
           const rowIdx = transitions.indexOf(_row);
           const globalIdx = (serverPage - 1) * perPage + rowIdx + 1;
-          return <span className="text-white/40 font-mono text-xs">{globalIdx}</span>;
+          return <span className="text-[var(--text-muted)] font-mono text-xs">{globalIdx}</span>;
         },
       },
       {
         key: 'time',
         header: t('fsm.time', 'Time'),
         render: (row: FSMTransition) => (
-          <span className="text-white/70 font-mono text-xs whitespace-nowrap">
+          <span className="text-[var(--text-secondary)] font-mono text-xs whitespace-nowrap">
             {formatDateTime(row.created_at)}
           </span>
         ),
@@ -210,7 +210,7 @@ export default function StateMachineDebuggerPage() {
         key: 'fsm_type',
         header: t('fsm.type', 'FSM Type'),
         render: (row: FSMTransition) => (
-          <span className="text-white/60 text-xs font-mono capitalize">{row.fsm_type?.replace('_', ' ') ?? 'vehicle'}</span>
+          <span className="text-[var(--text-secondary)] text-xs font-mono capitalize">{row.fsm_type?.replace('_', ' ') ?? 'vehicle'}</span>
         ),
       },
       {
@@ -231,7 +231,7 @@ export default function StateMachineDebuggerPage() {
         key: 'trigger',
         header: t('fsm.trigger', 'Trigger'),
         render: (row: FSMTransition) => (
-          <span className="text-white/60 text-xs font-mono">{row.trigger}</span>
+          <span className="text-[var(--text-secondary)] text-xs font-mono">{row.trigger}</span>
         ),
       },
       {
@@ -296,7 +296,7 @@ export default function StateMachineDebuggerPage() {
       subtitle={t('fsm.subtitle', 'Multi-FSM transition analysis — vehicle, drive, charge, command, notification')}
       loading={stateLoading && transLoading && statsLoading}
       actions={
-        <span className="flex items-center gap-1 text-xs text-white/40">
+        <span className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
           <RefreshCw className={cn('h-3 w-3', stateFetching && 'animate-spin')} />
           {t('fsm.autoRefresh', 'Live 10s')}
         </span>
@@ -358,7 +358,7 @@ export default function StateMachineDebuggerPage() {
       {/* ──── Section 3: Current Vehicle State ──── */}
       <FadeIn delay={0.1}>
         <GlassPanel className="p-6">
-          <h2 className="text-xs font-medium text-white/50 uppercase tracking-wider mb-3">
+          <h2 className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-3">
             {t('fsm.vehicleLiveState', 'Vehicle Live State')}
           </h2>
           {stateLoading ? (
@@ -380,24 +380,24 @@ export default function StateMachineDebuggerPage() {
                 />
                 {currentState.state ?? '—'}
               </div>
-              <div className="text-sm text-white/70 space-y-1">
+              <div className="text-sm text-[var(--text-secondary)] space-y-1">
                 <p>
-                  <span className="text-white/40">{t('fsm.type', 'FSM Type')}:</span>{' '}
-                  <span className="text-white/90 font-medium">Vehicle</span>
+                  <span className="text-[var(--text-muted)]">{t('fsm.type', 'FSM Type')}:</span>{' '}
+                  <span className="text-[var(--text-primary)] font-medium">Vehicle</span>
                 </p>
                 <p>
-                  <span className="text-white/40">{t('fsm.mode', 'Mode')}:</span>{' '}
-                  <span className="text-white/90 font-medium">
+                  <span className="text-[var(--text-muted)]">{t('fsm.mode', 'Mode')}:</span>{' '}
+                  <span className="text-[var(--text-primary)] font-medium">
                     {currentState.is_charging ? 'Charging' : currentState.speed && currentState.speed > 0 ? 'Drive' : currentState.state === 'asleep' ? 'Sleep' : 'Idle'}
                   </span>
                 </p>
                 <p>
-                  <span className="text-white/40">{t('fsm.since', 'Since')}:</span>{' '}
-                  <span className="text-white/90 font-medium">
+                  <span className="text-[var(--text-muted)]">{t('fsm.since', 'Since')}:</span>{' '}
+                  <span className="text-[var(--text-primary)] font-medium">
                     {formatDateTime(currentState.since)}
                   </span>
                 </p>
-                <p className="text-white/50">{formatRelative(currentState.since)}</p>
+                <p className="text-[var(--text-muted)]">{formatRelative(currentState.since)}</p>
               </div>
             </div>
           ) : (
@@ -454,8 +454,8 @@ export default function StateMachineDebuggerPage() {
                         className="h-2.5 w-2.5 rounded-full"
                         style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
                       />
-                      <span className="text-white/70">{entry.name}</span>
-                      <span className="text-white/50">{fmtInt(entry.value)}</span>
+                      <span className="text-[var(--text-secondary)]">{entry.name}</span>
+                      <span className="text-[var(--text-muted)]">{fmtInt(entry.value)}</span>
                     </div>
                   ))}
                 </div>
@@ -468,7 +468,7 @@ export default function StateMachineDebuggerPage() {
 
         <FadeIn delay={0.3}>
           <GlassPanel className="p-5">
-            <h2 className="text-sm font-semibold text-white/90 mb-4">
+            <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
               {t('fsm.transitionCounts', 'Transition Counts')}
             </h2>
             {transLoading ? (
@@ -520,10 +520,10 @@ export default function StateMachineDebuggerPage() {
       {/* ──── Section 9: Transition Table ──── */}
       <FadeIn delay={0.25}>
         <GlassPanel className="p-5">
-          <h2 className="text-sm font-semibold text-white/90 mb-4">
+          <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
             {t('fsm.timelineTitle', 'Transition Log')}
             {totalRows > 0 && (
-              <span className="ml-2 text-white/50 font-normal">
+              <span className="ml-2 text-[var(--text-muted)] font-normal">
                 {fmtInt(totalRows)} {t('fsm.total', 'total')}
               </span>
             )}
@@ -566,7 +566,7 @@ export default function StateMachineDebuggerPage() {
         return selected ? (
           <FadeIn key={selectedId}>
             <GlassPanel className="p-5">
-              <h2 className="text-sm font-semibold text-white/90 mb-4">
+              <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
                 {t('fsm.detailTitle', 'Transition Detail')}
               </h2>
               <TransitionDetail transition={selected} />
@@ -584,54 +584,54 @@ function TransitionDetail({ transition }: { transition: FSMTransition }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
       <div>
-        <span className="text-white/40 block mb-1">{t('fsm.detail.id', 'Transition ID')}</span>
-        <span className="text-white/80 font-mono break-all">{transition.id}</span>
+        <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.id', 'Transition ID')}</span>
+        <span className="text-[var(--text-primary)] font-mono break-all">{transition.id}</span>
       </div>
       <div>
-        <span className="text-white/40 block mb-1">{t('fsm.detail.vehicleId', 'Vehicle ID')}</span>
-        <span className="text-white/80 font-mono">{transition.vehicle_id}</span>
+        <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.vehicleId', 'Vehicle ID')}</span>
+        <span className="text-[var(--text-primary)] font-mono">{transition.vehicle_id}</span>
       </div>
       {transition.fsm_instance_id != null && (
         <div>
-          <span className="text-white/40 block mb-1">{t('fsm.detail.instanceId', 'Instance ID')}</span>
-          <span className="text-white/80 font-mono">{transition.fsm_instance_id}</span>
+          <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.instanceId', 'Instance ID')}</span>
+          <span className="text-[var(--text-primary)] font-mono">{transition.fsm_instance_id}</span>
         </div>
       )}
       <div>
-        <span className="text-white/40 block mb-1">{t('fsm.detail.from', 'From State')}</span>
+        <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.from', 'From State')}</span>
         <StateBadge state={transition.from_state} fsmType={transition.fsm_type || 'vehicle'} />
       </div>
       <div>
-        <span className="text-white/40 block mb-1">{t('fsm.detail.to', 'To State')}</span>
+        <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.to', 'To State')}</span>
         <StateBadge state={transition.to_state} fsmType={transition.fsm_type || 'vehicle'} />
       </div>
       <div>
-        <span className="text-white/40 block mb-1">{t('fsm.detail.trigger', 'Trigger')}</span>
-        <span className="text-white/80 font-mono">{transition.trigger}</span>
+        <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.trigger', 'Trigger')}</span>
+        <span className="text-[var(--text-primary)] font-mono">{transition.trigger}</span>
       </div>
       {transition.guard && (
         <div>
-          <span className="text-white/40 block mb-1">{t('fsm.detail.guard', 'Guard')}</span>
-          <span className="text-white/80 font-mono">{transition.guard}</span>
+          <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.guard', 'Guard')}</span>
+          <span className="text-[var(--text-primary)] font-mono">{transition.guard}</span>
         </div>
       )}
       {transition.duration_in_state_ms > 0 && (
         <div>
-          <span className="text-white/40 block mb-1">{t('fsm.detail.duration', 'Duration in State')}</span>
-          <span className="text-white/80 font-mono">{formatDuration(transition.duration_in_state_ms / 1000)}</span>
+          <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.duration', 'Duration in State')}</span>
+          <span className="text-[var(--text-primary)] font-mono">{formatDuration(transition.duration_in_state_ms / 1000)}</span>
         </div>
       )}
       <div className="sm:col-span-2 lg:col-span-4">
-        <span className="text-white/40 block mb-1">{t('fsm.detail.timestamp', 'Timestamp')}</span>
-        <span className="text-white/80 font-mono">{formatDateTime(transition.created_at)}</span>
-        <span className="text-white/50 ml-2">{formatRelative(transition.created_at)}</span>
+        <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.timestamp', 'Timestamp')}</span>
+        <span className="text-[var(--text-primary)] font-mono">{formatDateTime(transition.created_at)}</span>
+        <span className="text-[var(--text-muted)] ml-2">{formatRelative(transition.created_at)}</span>
       </div>
       {transition.context_snapshot && Object.keys(transition.context_snapshot).length > 0 && (
         <div className="sm:col-span-2 lg:col-span-4">
-          <span className="text-white/40 block mb-1">{t('fsm.detail.context', 'Context Snapshot')}</span>
+          <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.context', 'Context Snapshot')}</span>
           <div className="flex flex-wrap gap-2 mt-1">
             {Object.entries(transition.context_snapshot).map(([key, val]) => (
-              <span key={key} className="px-2 py-0.5 rounded bg-white/[0.04] text-white/60 font-mono text-[10px]">
+              <span key={key} className="px-2 py-0.5 rounded bg-white/[0.04] text-[var(--text-secondary)] font-mono text-[10px]">
                 {key}: {String(val)}
               </span>
             ))}

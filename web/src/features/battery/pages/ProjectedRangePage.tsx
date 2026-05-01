@@ -205,12 +205,12 @@ export default function ProjectedRangePage() {
               <Skeleton width="160px" height={160} rounded />
             )}
             {data?.accuracy_note && (
-              <p className="mt-2 text-[10px] text-white/40 text-center">{data.accuracy_note}</p>
+              <p className="mt-2 text-[10px] text-[var(--text-muted)] text-center">{data.accuracy_note}</p>
             )}
           </GlassPanel>
 
           <GlassPanel className="col-span-1 md:col-span-2 p-4">
-            <span className="mb-2 block text-sm font-medium text-white/70">{t('range.projectionCurve', 'Range Projection Curve')}</span>
+            <span className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">{t('range.projectionCurve', 'Range Projection Curve')}</span>
             {data?.projection_curve && data.projection_curve.length > 0 ? (
               <ResponsiveContainer width="100%" height={260}>
                 <AreaChart data={data.projection_curve} margin={chartMargin}>
@@ -250,13 +250,13 @@ export default function ProjectedRangePage() {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       {scenarioIcon(s)}
-                      <span className="text-xs font-semibold text-white/80">{s.name}</span>
+                      <span className="text-xs font-semibold text-[var(--text-primary)]">{s.name}</span>
                     </div>
                     {s.is_current && <Badge variant="success" size="sm">{t('range.current', 'Current')}</Badge>}
                   </div>
-                  <p className="text-2xl font-bold text-white tabular-nums">{fmtNumber(s.range_km, 0)} <span className="text-sm font-normal text-white/40">km</span></p>
-                  <p className="text-xs text-white/40">{fmtNumber(s.range_mi, 0)} mi</p>
-                  <div className="mt-2 flex flex-wrap gap-2 text-[10px] text-white/40">
+                  <p className="text-2xl font-bold text-[var(--text-primary)] tabular-nums">{fmtNumber(s.range_km, 0)} <span className="text-sm font-normal text-[var(--text-muted)]">km</span></p>
+                  <p className="text-xs text-[var(--text-muted)]">{fmtNumber(s.range_mi, 0)} mi</p>
+                  <div className="mt-2 flex flex-wrap gap-2 text-[10px] text-[var(--text-muted)]">
                     <span>{s.speed_kmh} km/h</span>
                     <span>{s.temp_c}°C</span>
                     <span>{fmtNumber(s.efficiency_wh_km)} Wh/km</span>
@@ -289,21 +289,21 @@ export default function ProjectedRangePage() {
                 <div className="grid grid-cols-4 gap-1 mb-1">
                   <div className="p-2" />
                   {SPEED_BUCKETS.map((s) => (
-                    <div key={s} className="p-2 text-center text-xs text-white/50 capitalize">{s}</div>
+                    <div key={s} className="p-2 text-center text-xs text-[var(--text-muted)] capitalize">{s}</div>
                   ))}
                 </div>
                 {/* Data rows */}
                 {TEMP_BUCKETS.map((temp) => (
                   <div key={temp} className="grid grid-cols-4 gap-1 mb-1">
-                    <div className="p-2 text-xs text-white/50 capitalize font-medium">{temp}</div>
+                    <div className="p-2 text-xs text-[var(--text-muted)] capitalize font-medium">{temp}</div>
                     {SPEED_BUCKETS.map((speed) => {
                       const bucket = matrixLookup[`${temp}|${speed}`];
                       return (
                         <div key={speed} className="p-1 text-center">
                           {bucket ? (
                             <div className={cn('rounded-lg px-3 py-2', effColor(bucket.wh_km), 'bg-opacity-20')}>
-                              <span className="font-bold text-white text-xs">{fmtNumber(bucket.wh_km, 0)}</span>
-                              <span className="block text-[9px] text-white/40">({bucket.samples})</span>
+                              <span className="font-bold text-[var(--text-primary)] text-xs">{fmtNumber(bucket.wh_km, 0)}</span>
+                              <span className="block text-[9px] text-[var(--text-muted)]">({bucket.samples})</span>
                             </div>
                           ) : (
                             <div className="rounded-lg px-3 py-2 bg-white/[0.03]">
@@ -330,9 +330,9 @@ export default function ProjectedRangePage() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <div className="space-y-4">
               <div>
-                <div className="flex justify-between text-xs text-white/50 mb-1">
+                <div className="flex justify-between text-xs text-[var(--text-muted)] mb-1">
                   <span>{t('range.speed', 'Speed')}</span>
-                  <span className="font-bold text-white">{whatIfSpeed} km/h</span>
+                  <span className="font-bold text-[var(--text-primary)]">{whatIfSpeed} km/h</span>
                 </div>
                 <ControlInput
                   type="range"
@@ -344,14 +344,14 @@ export default function ProjectedRangePage() {
                   aria-label={t('range.speed', 'Speed')}
                   className="h-1.5 w-full cursor-pointer appearance-none rounded-full border-0 bg-white/10 p-0 accent-neon-cyan dark:bg-white/10"
                 />
-                <div className="flex justify-between text-[9px] text-white/30 mt-0.5">
+                <div className="flex justify-between text-[9px] text-[var(--text-muted)] mt-0.5">
                   <span>30</span><span>90</span><span>150</span>
                 </div>
               </div>
               <div>
-                <div className="flex justify-between text-xs text-white/50 mb-1">
+                <div className="flex justify-between text-xs text-[var(--text-muted)] mb-1">
                   <span>{t('range.temperature', 'Temperature')}</span>
-                  <span className="font-bold text-white">{whatIfTemp}°C</span>
+                  <span className="font-bold text-[var(--text-primary)]">{whatIfTemp}°C</span>
                 </div>
                 <ControlInput
                   type="range"
@@ -363,7 +363,7 @@ export default function ProjectedRangePage() {
                   aria-label={t('range.temperature', 'Temperature')}
                   className="h-1.5 w-full cursor-pointer appearance-none rounded-full border-0 bg-white/10 p-0 accent-neon-amber dark:bg-white/10"
                 />
-                <div className="flex justify-between text-[9px] text-white/30 mt-0.5">
+                <div className="flex justify-between text-[9px] text-[var(--text-muted)] mt-0.5">
                   <span>-20°C</span><span>10°C</span><span>40°C</span>
                 </div>
               </div>
@@ -371,9 +371,9 @@ export default function ProjectedRangePage() {
             <div className="lg:col-span-2 flex items-center justify-center">
               {whatIfResult ? (
                 <div className="text-center">
-                  <p className="text-4xl font-bold text-cyan-300 tabular-nums">{fmtNumber(whatIfResult.rangeKm, 0)} <span className="text-lg font-normal text-white/40">km</span></p>
-                  <p className="text-sm text-white/50 mt-1">{fmtNumber(whatIfResult.effWhKm)} Wh/km</p>
-                  <p className="text-xs text-white/30 mt-1">
+                  <p className="text-4xl font-bold text-cyan-300 tabular-nums">{fmtNumber(whatIfResult.rangeKm, 0)} <span className="text-lg font-normal text-[var(--text-muted)]">km</span></p>
+                  <p className="text-sm text-[var(--text-muted)] mt-1">{fmtNumber(whatIfResult.effWhKm)} Wh/km</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">
                     {t('range.whatIfConditions', 'at {{speed}} km/h, {{temp}}°C', { speed: whatIfSpeed, temp: whatIfTemp })}
                   </p>
                 </div>
@@ -392,17 +392,17 @@ export default function ProjectedRangePage() {
           <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {(data?.factors ?? []).map((f) => (
               <GlassPanel key={f.name} className="flex items-start gap-3 p-4">
-                <span className="mt-0.5 shrink-0 text-white/40">
+                <span className="mt-0.5 shrink-0 text-[var(--text-muted)]">
                   {FACTOR_ICONS[(f.name ?? '').toLowerCase().replace(/\s+/g, '_')] ?? <Gauge className="h-4 w-4" />}
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-white/80">{t(`range.factor.${f.name}`, f.name)}</span>
+                    <span className="text-sm font-medium text-[var(--text-primary)]">{t(`range.factor.${f.name}`, f.name)}</span>
                     <Badge variant={f.impact_pct >= 0 ? 'success' : 'danger'} size="sm">
                       {f.impact_pct >= 0 ? '+' : ''}{fmtNumber(f.impact_pct, 1)}%
                     </Badge>
                   </div>
-                  <span className="mt-1 block text-xs text-white/50">{t(`range.factorDesc.${f.name}`, f.description)}</span>
+                  <span className="mt-1 block text-xs text-[var(--text-muted)]">{t(`range.factorDesc.${f.name}`, f.description)}</span>
                 </div>
               </GlassPanel>
             ))}
@@ -419,8 +419,8 @@ export default function ProjectedRangePage() {
           </div>
           <ul className="space-y-2">
             {tips.map((tip, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-white/60">
-                <span className="mt-0.5 shrink-0 text-white/30">{tip.icon}</span>
+              <li key={i} className="flex items-start gap-2 text-sm text-[var(--text-secondary)]">
+                <span className="mt-0.5 shrink-0 text-[var(--text-muted)]">{tip.icon}</span>
                 <span>{tip.text}</span>
               </li>
             ))}

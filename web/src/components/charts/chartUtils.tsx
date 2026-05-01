@@ -1,12 +1,13 @@
 import { CartesianGrid } from 'recharts'
 import { fmtNumber } from '../../lib/numberFormat'
+import { chartTokens } from '../../lib/tokens'
 
 export { CHART_COLORS, CHART_COLORS as NEON_COLORS } from '../../lib/colors'
 
-export const axisTick = { fill: 'var(--text-muted)', fontSize: 11 }
-export const axisTickSm = { fill: 'var(--text-muted)', fontSize: 10 }
+export const axisTick = { fill: chartTokens.axisStroke, fontSize: 11 }
+export const axisTickSm = { fill: chartTokens.axisStroke, fontSize: 10 }
 
-export const chartGrid = <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+export const chartGrid = <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
 
 export const safe = (v: unknown): number => (typeof v === 'number' && isFinite(v) ? v : 0)
 export const fmt = (v: unknown, decimals = 1): string => fmtNumber(v, decimals)

@@ -218,3 +218,35 @@ export function normalizeSeverity(s: string | null | undefined): Severity {
   if (v === 'info' || v === 'warn' || v === 'critical') return v as Severity
   return 'info'
 }
+
+// ── Chart tokens — single source of truth for theme-aware chart styling ──
+//
+// Recharts components historically hardcode hex colors that look correct in
+// dark mode but fail in light mode. `chartTokens` reads from CSS variables that
+// invert via `:root.light-mode` overrides in `index.css`, so axis ticks, grid
+// lines, and tooltip surfaces stay readable across themes.
+//
+// `series` is the deliberate, color-blind-safe palette used for multi-line
+// charts; series colors stay constant across themes (the chart background and
+// axes do the theming work).
+
+export const chartTokens = {
+  /** Stroke color for axis lines and ticks — theme-aware muted text. */
+  axisStroke: 'var(--text-muted)',
+  /** Stroke color for cartesian grid lines — theme-aware subtle border. */
+  gridStroke: 'var(--border-subtle)',
+  /** Background of Recharts tooltip card. */
+  tooltipBg: 'var(--surface-elevated)',
+  /** Border color of Recharts tooltip card. */
+  tooltipBorder: 'var(--border-default)',
+  /** Foreground / label text inside Recharts tooltip card. */
+  tooltipText: 'var(--text-primary)',
+  /** Secondary text color inside Recharts tooltip (label key, units). */
+  tooltipMutedText: 'var(--text-secondary)',
+  /**
+   * Series palette for multi-line/area charts. Color-blind safe (Okabe-Ito-
+   * inspired) and identical across themes — chart series should "pop" against
+   * either light or dark backgrounds.
+   */
+  series: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'] as const,
+} as const

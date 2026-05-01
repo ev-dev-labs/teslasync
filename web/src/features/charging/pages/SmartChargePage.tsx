@@ -140,7 +140,7 @@ export default function SmartChargePage() {
       {/* ── Settings Section ── */}
       <FadeIn>
         <GlassPanel className="p-6">
-          <h2 className="text-lg font-semibold text-white/90 mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
             <Zap className="h-5 w-5 text-cyan-400" />
             {t('chargePlanner.settings', 'Charge Settings')}
           </h2>
@@ -230,12 +230,12 @@ export default function SmartChargePage() {
       {result && (
         <FadeIn delay={0.05}>
           <GlassPanel className="p-6">
-            <h2 className="text-lg font-semibold text-white/90 mb-4 flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
               <Clock className="h-5 w-5 text-cyan-400" />
               {t('chargePlanner.rateTimeline', '24-Hour Rate Timeline')}
             </h2>
             <RateTimeline rates={result.hourly_rates} chargeWindow={chargeWindow} />
-            <p className="mt-3 text-sm text-white/50">
+            <p className="mt-3 text-sm text-[var(--text-muted)]">
               {t('chargePlanner.windowInfo', 'Optimal window: {{start}} — {{end}}', {
                 start: formatTime(result.schedule.start_time),
                 end: formatTime(result.schedule.end_time),
@@ -281,7 +281,7 @@ export default function SmartChargePage() {
         <FadeIn delay={0.15}>
           <GlassPanel className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-white/90 flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-[var(--text-primary)] flex items-center gap-2">
                 <CalendarClock className="h-5 w-5 text-cyan-400" />
                 {t('chargePlanner.schedule', 'Recommended Schedule')}
               </h2>
@@ -314,37 +314,37 @@ export default function SmartChargePage() {
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
-                <span className="text-white/50">{t('chargePlanner.currentSoc', 'Current SOC')}</span>
-                <p className="text-white/90 font-medium">{result.current_soc}%</p>
+                <span className="text-[var(--text-muted)]">{t('chargePlanner.currentSoc', 'Current SOC')}</span>
+                <p className="text-[var(--text-primary)] font-medium">{result.current_soc}%</p>
               </div>
               <div>
-                <span className="text-white/50">{t('chargePlanner.targetSocLabel', 'Target SOC')}</span>
-                <p className="text-white/90 font-medium">{result.target_soc}%</p>
+                <span className="text-[var(--text-muted)]">{t('chargePlanner.targetSocLabel', 'Target SOC')}</span>
+                <p className="text-[var(--text-primary)] font-medium">{result.target_soc}%</p>
               </div>
               <div>
-                <span className="text-white/50">{t('chargePlanner.startTime', 'Start Time')}</span>
-                <p className="text-white/90 font-medium">{formatTime(result.schedule.start_time)}</p>
+                <span className="text-[var(--text-muted)]">{t('chargePlanner.startTime', 'Start Time')}</span>
+                <p className="text-[var(--text-primary)] font-medium">{formatTime(result.schedule.start_time)}</p>
               </div>
               <div>
-                <span className="text-white/50">{t('chargePlanner.endTime', 'End Time')}</span>
-                <p className="text-white/90 font-medium">{formatTime(result.schedule.end_time)}</p>
+                <span className="text-[var(--text-muted)]">{t('chargePlanner.endTime', 'End Time')}</span>
+                <p className="text-[var(--text-primary)] font-medium">{formatTime(result.schedule.end_time)}</p>
               </div>
             </div>
 
             {/* Alternative windows */}
             {(result.alternative_windows ?? []).length > 0 && (
               <div className="mt-4 pt-4 border-t border-white/10">
-                <h3 className="text-sm font-medium text-white/60 mb-2">
+                <h3 className="text-sm font-medium text-[var(--text-secondary)] mb-2">
                   {t('chargePlanner.alternatives', 'Alternative Windows')}
                 </h3>
                 <div className="space-y-2">
                   {result.alternative_windows.map((alt, i) => (
                     <div key={i} className="flex items-center justify-between text-sm bg-white/[0.03] rounded-lg px-3 py-2">
-                      <span className="text-white/70">
+                      <span className="text-[var(--text-secondary)]">
                         {formatTime(alt.start_time)} — {formatTime(alt.end_time)}
                       </span>
-                      <span className="text-white/50">{alt.rate_tier}</span>
-                      <span className="text-white/90 font-medium">${alt.estimated_cost.toFixed(2)}</span>
+                      <span className="text-[var(--text-muted)]">{alt.rate_tier}</span>
+                      <span className="text-[var(--text-primary)] font-medium">${alt.estimated_cost.toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
@@ -357,7 +357,7 @@ export default function SmartChargePage() {
       {/* ── History ── */}
       <FadeIn delay={result ? 0.2 : 0.05}>
         <GlassPanel className="p-6">
-          <h2 className="text-lg font-semibold text-white/90 mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
             <History className="h-5 w-5 text-cyan-400" />
             {t('chargePlanner.history', 'Plan History')}
           </h2>
@@ -365,7 +365,7 @@ export default function SmartChargePage() {
           {historyItems.length > 0 ? (
             <div className="overflow-x-auto">
               <div className="grid grid-cols-[1fr_1fr_1fr_auto_auto_auto] gap-x-4 text-sm">
-                <div className="contents text-white/50 border-b border-white/10">
+                <div className="contents text-[var(--text-muted)] border-b border-white/10">
                   <div className="py-2">{t('chargePlanner.date', 'Date')}</div>
                   <div className="py-2">{t('chargePlanner.window', 'Window')}</div>
                   <div className="py-2">{t('chargePlanner.plan', 'Plan')}</div>
@@ -374,7 +374,7 @@ export default function SmartChargePage() {
                   <div className="py-2">{t('chargePlanner.status', 'Status')}</div>
                 </div>
                 {historyItems.map(p => (
-                  <div key={p.id} className="contents text-white/70">
+                  <div key={p.id} className="contents text-[var(--text-secondary)]">
                     <div className="py-2 border-b border-white/5">{formatDate(p.created_at)}</div>
                     <div className="py-2 border-b border-white/5">
                       {formatTime(p.scheduled_start)} — {formatTime(p.scheduled_end)}
@@ -391,7 +391,7 @@ export default function SmartChargePage() {
                         p.status === 'scheduled' ? 'text-cyan-400' :
                         p.status === 'completed' ? 'text-emerald-400' :
                         p.status === 'cancelled' ? 'text-red-400' :
-                        'text-white/50'
+                        'text-[var(--text-muted)]'
                       }>
                         {p.status}
                       </span>

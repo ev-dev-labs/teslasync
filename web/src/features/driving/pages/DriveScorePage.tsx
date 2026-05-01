@@ -56,6 +56,8 @@ import { useAnnotations } from '@/hooks/useAnnotations';
 import { formatDateShort, formatDurationMinutes } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt, fmtWithUnit } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
+import { chartTokens } from '@/lib/tokens';
+import { COLOR } from '@/lib/colors';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -182,7 +184,7 @@ const GRADE_TEXT_CLASS: Record<string, string> = {
 };
 
 function gradeTextClass(grade: string): string {
-  return GRADE_TEXT_CLASS[grade] ?? 'text-gray-400';
+  return GRADE_TEXT_CLASS[grade] ?? 'text-[var(--text-secondary)]';
 }
 
 function scoreTextClass(score: number | null): string {
@@ -779,7 +781,7 @@ export default function DriveScorePage() {
       ? 'text-green-400'
       : overallTrend === 'down'
         ? 'text-red-400'
-        : 'text-gray-400';
+        : 'text-[var(--text-secondary)]';
 
   /* ---- sort header helper ---- */
   const SortHeader = ({
@@ -833,7 +835,7 @@ export default function DriveScorePage() {
       {/* -------- Empty guard -------- */}
       {!isLoading && scoredDrives.length === 0 && (
         <EmptyState
-          icon={<Gauge className="h-12 w-12 text-gray-500" />}
+          icon={<Gauge className="h-12 w-12 text-[var(--text-muted)]" />}
           title={t('driveScore.emptyTitle', 'No Scored Drives')}
           message={t(
             'driveScore.empty',
@@ -859,14 +861,14 @@ export default function DriveScorePage() {
                 <span className="text-4xl font-bold">
                   <AnimatedNumber value={overallScore} />
                 </span>
-                <span className="text-lg text-white/60 ml-1">/100</span>
+                <span className="text-lg text-[var(--text-secondary)] ml-1">/100</span>
               </div>
               <div className={cn('mt-2 flex items-center gap-2', trendColor)}>
                 <TrendIcon className="h-4 w-4" />
                 <span className="text-sm font-medium">{trendLabel}</span>
               </div>
               {apiScore && (
-                <span className="mt-1 text-xs text-white/40">
+                <span className="mt-1 text-xs text-[var(--text-muted)]">
                   {t('driveScore.basedOn', 'Based on {{count}} drives', {
                     count: apiScore.totalDrives,
                   })}
@@ -886,7 +888,7 @@ export default function DriveScorePage() {
                   {overallGrade}
                 </Badge>
                 <div>
-                  <span className="text-lg font-semibold text-white">
+                  <span className="text-lg font-semibold text-[var(--text-primary)]">
                     {t('driveScore.gradeLabel', 'Grade: {{grade}}', {
                       grade: overallGrade,
                     })}
@@ -897,7 +899,7 @@ export default function DriveScorePage() {
                   </div>
                 </div>
               </div>
-              <div className="text-right text-sm text-white/60">
+              <div className="text-right text-sm text-[var(--text-secondary)]">
                 <span>
                   {t('driveScore.drivesInPeriod', '{{count}} drives in period', {
                     count: scoredDrives.length,
@@ -920,12 +922,12 @@ export default function DriveScorePage() {
                   size={120}
                 />
                 <div className="mt-3 text-center">
-                  <span className="text-2xl font-bold text-white">
+                  <span className="text-2xl font-bold text-[var(--text-primary)]">
                     <AnimatedNumber
                       value={apiScore?.efficiency ?? avgScores.efficiency}
                     />
                   </span>
-                  <span className="text-sm text-white/50 ml-1">/40</span>
+                  <span className="text-sm text-[var(--text-muted)] ml-1">/40</span>
                 </div>
                 <MetricBar
                   label={t('driveScore.efficiency', 'Efficiency')}
@@ -959,12 +961,12 @@ export default function DriveScorePage() {
                   size={120}
                 />
                 <div className="mt-3 text-center">
-                  <span className="text-2xl font-bold text-white">
+                  <span className="text-2xl font-bold text-[var(--text-primary)]">
                     <AnimatedNumber
                       value={apiScore?.smoothness ?? avgScores.smoothness}
                     />
                   </span>
-                  <span className="text-sm text-white/50 ml-1">/30</span>
+                  <span className="text-sm text-[var(--text-muted)] ml-1">/30</span>
                 </div>
                 <MetricBar
                   label={t('driveScore.smoothness', 'Smoothness')}
@@ -1000,12 +1002,12 @@ export default function DriveScorePage() {
                   size={120}
                 />
                 <div className="mt-3 text-center">
-                  <span className="text-2xl font-bold text-white">
+                  <span className="text-2xl font-bold text-[var(--text-primary)]">
                     <AnimatedNumber
                       value={apiScore?.speedDiscipline ?? avgScores.speed}
                     />
                   </span>
-                  <span className="text-sm text-white/50 ml-1">/30</span>
+                  <span className="text-sm text-[var(--text-muted)] ml-1">/30</span>
                 </div>
                 <MetricBar
                   label={t('driveScore.speedDiscipline', 'Speed Discipline')}
@@ -1047,18 +1049,18 @@ export default function DriveScorePage() {
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={trendChartData} onClick={handleAnnotateChartClick}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis dataKey="date" stroke="#94a3b8" fontSize={12} />
-                    <YAxis domain={[0, 100]} stroke="#94a3b8" fontSize={12} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} />
+                    <XAxis dataKey="date" stroke={chartTokens.axisStroke} fontSize={12} />
+                    <YAxis domain={[0, 100]} stroke={chartTokens.axisStroke} fontSize={12} />
                     <Tooltip content={<ChartTooltip />} />
                     <Legend />
                     <ReferenceLine
                       y={80}
-                      stroke="#4ade80"
+                      stroke={COLOR.GOOD}
                       strokeDasharray="4 4"
                       label={{
                         value: t('driveScore.gradeALine', 'A'),
-                        fill: '#4ade80',
+                        fill: COLOR.GOOD,
                         fontSize: 11,
                       }}
                     />
@@ -1113,13 +1115,13 @@ export default function DriveScorePage() {
               <ChartContainer title={t('driveScore.categoryBreakdown', 'Category Breakdown')} height={260}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={categoryBarData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis type="number" domain={[0, 40]} stroke="#94a3b8" fontSize={12} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} />
+                    <XAxis type="number" domain={[0, 40]} stroke={chartTokens.axisStroke} fontSize={12} />
                     <YAxis
                       type="category"
                       dataKey="name"
                       width={130}
-                      stroke="#94a3b8"
+                      stroke={chartTokens.axisStroke}
                       fontSize={12}
                     />
                     <Tooltip content={<ChartTooltip />} />
@@ -1169,7 +1171,7 @@ export default function DriveScorePage() {
                 title={t('driveScore.tipsTitle', 'Improvement Tips')}
               />
               <div className="px-4 pb-4">
-                <span className="text-sm text-white/60 mb-3 block">
+                <span className="text-sm text-[var(--text-secondary)] mb-3 block">
                   {t('driveScore.tipsSubtitle', 'Based on your weakest category: {{category}}', {
                     category:
                       weakestCategory === 'efficiency'
@@ -1186,7 +1188,7 @@ export default function DriveScorePage() {
                       className="flex items-start gap-3 rounded-lg bg-white/5 p-3"
                     >
                       <Lightbulb className="mt-0.5 h-5 w-5 shrink-0 text-yellow-400" />
-                      <span className="text-sm text-white/80">{tip.key}</span>
+                      <span className="text-sm text-[var(--text-primary)]">{tip.key}</span>
                     </div>
                   ))}
                 </div>
@@ -1301,24 +1303,24 @@ export default function DriveScorePage() {
                       field="date"
                       label={t('driveScore.colDate', 'Date')}
                     />
-                    <span className="text-xs font-medium text-white/50 flex items-center">
+                    <span className="text-xs font-medium text-[var(--text-muted)] flex items-center">
                       {t('driveScore.colRoute', 'Route')}
                     </span>
                     <SortHeader
                       field="distance"
                       label={t('driveScore.colDistance', 'Distance')}
                     />
-                    <span className="text-xs font-medium text-white/50 flex items-center">
+                    <span className="text-xs font-medium text-[var(--text-muted)] flex items-center">
                       {t('driveScore.colDuration', 'Duration')}
                     </span>
-                    <span className="text-xs font-medium text-white/50 flex items-center">
+                    <span className="text-xs font-medium text-[var(--text-muted)] flex items-center">
                       {t('driveScore.colConsumption', 'Consumption')}
                     </span>
                     <SortHeader
                       field="score"
                       label={t('driveScore.colScore', 'Score')}
                     />
-                    <span className="text-xs font-medium text-white/50 flex items-center">
+                    <span className="text-xs font-medium text-[var(--text-muted)] flex items-center">
                       {t('driveScore.colGrade', 'Grade')}
                     </span>
                     <SortHeader
@@ -1329,7 +1331,7 @@ export default function DriveScorePage() {
 
                   {/* Table body */}
                   {paginatedDrives.length === 0 && (
-                    <div className="py-8 text-center text-sm text-white/40">
+                    <div className="py-8 text-center text-sm text-[var(--text-muted)]">
                       {t('driveScore.noDrives', 'No drives found for the selected period.')}
                     </div>
                   )}
@@ -1340,19 +1342,19 @@ export default function DriveScorePage() {
                       className="grid grid-cols-8 gap-2 border-b border-white/5 px-4 py-3 hover:bg-white/5 transition-colors"
                     >
                       {/* Date */}
-                      <span className="text-sm text-white/80 truncate">
+                      <span className="text-sm text-[var(--text-primary)] truncate">
                         {formatDateShort(drive.startTs)}
                       </span>
 
                       {/* Route */}
-                      <span className="text-sm text-white/60 truncate">
+                      <span className="text-sm text-[var(--text-secondary)] truncate">
                         {drive.startAddress
                           ? `${drive.startAddress}${drive.endAddress ? ` → ${drive.endAddress}` : ''}`
                           : t('driveScore.unknownRoute', 'Unknown')}
                       </span>
 
                       {/* Distance */}
-                      <span className="text-sm text-white/80">
+                      <span className="text-sm text-[var(--text-primary)]">
                         {fmtWithUnit(
                           convertDistance(drive.distanceMi),
                           distanceUnit,
@@ -1360,12 +1362,12 @@ export default function DriveScorePage() {
                       </span>
 
                       {/* Duration */}
-                      <span className="text-sm text-white/80">
+                      <span className="text-sm text-[var(--text-primary)]">
                         {formatDurationMinutes(drive.durationMin)}
                       </span>
 
                       {/* Consumption */}
-                      <span className="text-sm text-white/80">
+                      <span className="text-sm text-[var(--text-primary)]">
                         {fmtWithUnit(
                           convertEfficiency(ds.whPerKm),
                           efficiencyUnit,
@@ -1387,7 +1389,7 @@ export default function DriveScorePage() {
                       </span>
 
                       {/* Efficiency breakdown */}
-                      <span className="text-xs text-white/50">
+                      <span className="text-xs text-[var(--text-muted)]">
                         {ds.efficiency}/{ds.smoothness}/{ds.speed}
                       </span>
                     </div>
@@ -1416,7 +1418,7 @@ export default function DriveScorePage() {
                 label={t('driveScore.avgScore', 'Avg Score')}
                 value={avgScores.total}
                 unit="/100"
-                icon={<Target className="h-5 w-5 text-white/40" />}
+                icon={<Target className="h-5 w-5 text-[var(--text-muted)]" />}
                 trend={{
                   direction: overallTrend,
                   value: trendLabel,
@@ -1436,7 +1438,7 @@ export default function DriveScorePage() {
               <StatCard
                 label={t('driveScore.totalDrivesLabel', 'Total Drives')}
                 value={scoredDrives.length}
-                icon={<Route className="h-5 w-5 text-white/40" />}
+                icon={<Route className="h-5 w-5 text-[var(--text-muted)]" />}
               />
               <StatCard
                 label={t('driveScore.avgEffLabel', 'Avg Efficiency')}
@@ -1573,7 +1575,7 @@ export default function DriveScorePage() {
                         'mb-2 flex h-10 w-10 items-center justify-center rounded-full',
                         ach.unlocked
                           ? 'bg-yellow-500/20 text-yellow-400'
-                          : 'bg-white/5 text-white/30',
+                          : 'bg-white/5 text-[var(--text-muted)]',
                       )}
                     >
                       {ach.icon}
@@ -1581,12 +1583,12 @@ export default function DriveScorePage() {
                     <span
                       className={cn(
                         'text-sm font-semibold',
-                        ach.unlocked ? 'text-white' : 'text-white/40',
+                        ach.unlocked ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)]',
                       )}
                     >
                       {ach.label}
                     </span>
-                    <span className="mt-1 text-xs text-white/40">
+                    <span className="mt-1 text-xs text-[var(--text-muted)]">
                       {ach.description}
                     </span>
                     {ach.unlocked && (

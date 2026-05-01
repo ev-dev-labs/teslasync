@@ -803,8 +803,8 @@ export default function BatteryCellsPage() {
                   <div className="flex items-start gap-3">
                     <div className={cn('mt-0.5', insightIconClass[ins.status])}>{ins.icon}</div>
                     <div>
-                      <p className="text-sm font-medium text-white/90">{ins.title}</p>
-                      <p className="mt-0.5 text-xs text-white/60">{ins.description}</p>
+                      <p className="text-sm font-medium text-[var(--text-primary)]">{ins.title}</p>
+                      <p className="mt-0.5 text-xs text-[var(--text-secondary)]">{ins.description}</p>
                     </div>
                   </div>
                 </GlassPanel>
@@ -824,13 +824,13 @@ export default function BatteryCellsPage() {
       <FadeIn delay={0.45}>
         <Grid cols={{ default: 2, sm: 3, lg: 6 }} gap={3}>
           <GlassPanel className="p-4 text-center">
-            <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
               {t('battery.cells.stat.totalCells', 'Total Cells')}
             </p>
             <p className="text-2xl font-bold text-cyan-300">{data?.total_cells ?? 0}</p>
           </GlassPanel>
           <GlassPanel className="p-4 text-center">
-            <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
               {t('battery.cells.stat.packVoltage', 'Pack Voltage')}
             </p>
             <p className="text-2xl font-bold text-emerald-300">
@@ -838,15 +838,15 @@ export default function BatteryCellsPage() {
             </p>
           </GlassPanel>
           <GlassPanel className="p-4 text-center">
-            <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
               {t('battery.cells.stat.avgVoltage', 'Avg Cell V')}
             </p>
-            <p className="text-2xl font-bold text-white/90">
+            <p className="text-2xl font-bold text-[var(--text-primary)]">
               {fmtNumber(data?.avg_voltage ?? 0, 4)}<span className="text-sm">V</span>
             </p>
           </GlassPanel>
           <GlassPanel className="p-4 text-center">
-            <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
               {t('battery.cells.stat.voltageSpread', 'V Spread')}
             </p>
             <p className={cn('text-2xl font-bold',
@@ -857,7 +857,7 @@ export default function BatteryCellsPage() {
             </p>
           </GlassPanel>
           <GlassPanel className="p-4 text-center">
-            <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
               {t('battery.cells.stat.tempSpread', 'Temp Spread')}
             </p>
             <p className={cn('text-2xl font-bold',
@@ -868,7 +868,7 @@ export default function BatteryCellsPage() {
             </p>
           </GlassPanel>
           <GlassPanel className="p-4 text-center">
-            <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
               {t('battery.cells.stat.normalCells', 'Normal Cells')}
             </p>
             <p className="text-2xl font-bold text-emerald-300">

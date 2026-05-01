@@ -131,7 +131,7 @@ export default function TripPlannerPage() {
       {/* Route Input Form */}
       <FadeIn>
         <GlassPanel className="p-6">
-          <h3 className="text-lg font-semibold text-white/90 mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
             <Navigation className="h-5 w-5 text-emerald-400" />
             {t('tripPlanner.form.title', 'Plan Your Trip')}
           </h3>
@@ -156,7 +156,7 @@ export default function TripPlannerPage() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
             {vehicleOptions.length > 0 && (
               <div>
-                <label className="block text-xs font-medium text-white/60 mb-1">
+                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
                   {t('tripPlanner.form.vehicle', 'Vehicle')}
                 </label>
                 <ControlSelect
@@ -167,7 +167,7 @@ export default function TripPlannerPage() {
               </div>
             )}
             <div>
-              <label className="block text-xs font-medium text-white/60 mb-1">
+              <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
                 {t('tripPlanner.form.currentSOC', 'Current SOC')}
               </label>
               <div className="flex items-center gap-2">
@@ -182,11 +182,11 @@ export default function TripPlannerPage() {
                     className="h-2 w-full cursor-pointer appearance-none border-0 bg-transparent p-0 accent-emerald-400 dark:bg-transparent"
                   />
                 </div>
-                <span className="text-sm text-white/80 w-10 text-right">{currentSOC}%</span>
+                <span className="text-sm text-[var(--text-primary)] w-10 text-right">{currentSOC}%</span>
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-white/60 mb-1">
+              <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
                 {t('tripPlanner.form.minArrival', 'Min Arrival SOC')}
               </label>
               <div className="flex items-center gap-2">
@@ -201,11 +201,11 @@ export default function TripPlannerPage() {
                     className="h-2 w-full cursor-pointer appearance-none border-0 bg-transparent p-0 accent-amber-400 dark:bg-transparent"
                   />
                 </div>
-                <span className="text-sm text-white/80 w-10 text-right">{minArrivalSOC}%</span>
+                <span className="text-sm text-[var(--text-primary)] w-10 text-right">{minArrivalSOC}%</span>
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-white/60 mb-1">
+              <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
                 {t('tripPlanner.form.drivingSpeed', 'Driving Speed')}
               </label>
               <ControlSelect
@@ -238,7 +238,7 @@ export default function TripPlannerPage() {
               </ControlButton>
             )}
             {currentVehicle?.battery_level != null && (
-              <span className="text-sm text-white/50 flex items-center gap-1">
+              <span className="text-sm text-[var(--text-muted)] flex items-center gap-1">
                 <Battery className="h-3.5 w-3.5" />
                 {t('tripPlanner.form.vehicleBattery', 'Vehicle at {{level}}%', {
                   level: currentVehicle.battery_level,
@@ -337,12 +337,12 @@ export default function TripPlannerPage() {
             <div className="flex items-start gap-3">
               <Thermometer className="h-5 w-5 shrink-0 text-amber-400" />
               <div>
-                <h4 className="text-sm font-semibold text-white/90">
+                <h4 className="text-sm font-semibold text-[var(--text-primary)]">
                   {t('tripPlanner.weather.title', 'Weather Impact')}
                 </h4>
-                <p className="text-sm text-white/60 mt-1">{weather.note}</p>
+                <p className="text-sm text-[var(--text-secondary)] mt-1">{weather.note}</p>
                 {weather.avg_temp_c != null && (
-                  <p className="text-xs text-white/40 mt-1">
+                  <p className="text-xs text-[var(--text-muted)] mt-1">
                     {t('tripPlanner.weather.factor', 'Efficiency factor: {{factor}}×', {
                       factor: weather.efficiency_factor.toFixed(2),
                     })}

@@ -118,7 +118,7 @@ const STATUS_CONFIG: Record<
   completed: { color: 'text-neon-green', bg: 'bg-neon-green/15', icon: CheckCircle2, variant: 'success' },
   failed: { color: 'text-neon-red', bg: 'bg-neon-red/15', icon: XCircle, variant: 'danger' },
   running: { color: 'text-neon-cyan', bg: 'bg-neon-cyan/15', icon: Loader2, variant: 'info' },
-  queued: { color: 'text-white/40', bg: 'bg-gray-500/15', icon: Timer, variant: 'neutral' },
+  queued: { color: 'text-[var(--text-muted)]', bg: 'bg-gray-500/15', icon: Timer, variant: 'neutral' },
 };
 
 const EMPTY_FORM: ConfigFormData = {
@@ -390,7 +390,7 @@ export default function BackupRestorePage() {
       key: 'frequency',
       header: t('backup.frequency', 'Frequency'),
       render: (row) => (
-        <span className="text-sm text-white/60">
+        <span className="text-sm text-[var(--text-secondary)]">
           {row.frequency_days === 1 ? t('backup.daily', 'Daily') : t('backup.everyNDays', `Every ${row.frequency_days}d`, { count: row.frequency_days })}
         </span>
       ),
@@ -399,9 +399,9 @@ export default function BackupRestorePage() {
       key: 'schedule',
       header: t('backup.schedule', 'Schedule'),
       render: (row) => (
-        <div className="space-y-0.5 text-xs text-white/40">
-          <p>{t('backup.lastRun', 'Last')}: <span className="text-white/60">{row.last_run_at ? formatRelative(row.last_run_at) : '—'}</span></p>
-          <p>{t('backup.nextRun', 'Next')}: <span className="text-white/60">{row.next_run_at ? formatRelative(row.next_run_at) : '—'}</span></p>
+        <div className="space-y-0.5 text-xs text-[var(--text-muted)]">
+          <p>{t('backup.lastRun', 'Last')}: <span className="text-[var(--text-secondary)]">{row.last_run_at ? formatRelative(row.last_run_at) : '—'}</span></p>
+          <p>{t('backup.nextRun', 'Next')}: <span className="text-[var(--text-secondary)]">{row.next_run_at ? formatRelative(row.next_run_at) : '—'}</span></p>
         </div>
       ),
     },
@@ -455,7 +455,7 @@ export default function BackupRestorePage() {
       header: t('backup.time', 'Time'),
       sortable: true,
       render: (row) => (
-        <span className="text-sm text-white/60">
+        <span className="text-sm text-[var(--text-secondary)]">
           {formatDateTime(row.created_at)}
         </span>
       ),
@@ -503,7 +503,7 @@ export default function BackupRestorePage() {
       key: 'file_name',
       header: t('backup.file', 'File'),
       render: (row) => (
-        <span className="text-xs text-white/60 max-w-[200px] truncate block font-mono">
+        <span className="text-xs text-[var(--text-secondary)] max-w-[200px] truncate block font-mono">
           {row.file_name ?? '—'}
         </span>
       ),
@@ -520,7 +520,7 @@ export default function BackupRestorePage() {
       key: 'record_count',
       header: t('backup.records', 'Records'),
       render: (row) => (
-        <span className="text-sm tabular-nums text-white/60 font-mono">
+        <span className="text-sm tabular-nums text-[var(--text-secondary)] font-mono">
           {row.record_count > 0 ? fmtInt(row.record_count) : '—'}
         </span>
       ),
@@ -529,7 +529,7 @@ export default function BackupRestorePage() {
       key: 'duration',
       header: t('backup.duration', 'Duration'),
       render: (row) => (
-        <span className="text-sm tabular-nums text-white/40">
+        <span className="text-sm tabular-nums text-[var(--text-muted)]">
           {row.duration_ms > 0 ? formatDurationMsCompact(row.duration_ms) : '—'}
         </span>
       ),
@@ -658,7 +658,7 @@ export default function BackupRestorePage() {
           <h2 className="mb-4 text-lg font-semibold">{t('backup.configurations', 'Backup Configurations')}</h2>
           {configs.length === 0 && !loadingConfigs ? (
             <EmptyState
-              icon={<Database className="h-10 w-10 text-white/30" />}
+              icon={<Database className="h-10 w-10 text-[var(--text-muted)]" />}
               title={t('backup.noConfigs', 'No backup configurations')}
               message={t('backup.noConfigsMessage', 'Create a backup configuration to start protecting your data.')}
               action={{ label: t('backup.newConfig', 'New Config'), onClick: openCreate }}
@@ -692,7 +692,7 @@ export default function BackupRestorePage() {
           </div>
           {runs.length === 0 && !loadingRuns ? (
             <EmptyState
-              icon={<Clock className="h-10 w-10 text-white/30" />}
+              icon={<Clock className="h-10 w-10 text-[var(--text-muted)]" />}
               title={t('backup.noRuns', 'No backup runs yet')}
               message={t('backup.noRunsMessage', 'Trigger a backup or wait for the scheduled run.')}
             />
@@ -792,7 +792,7 @@ export default function BackupRestorePage() {
 
           {/* dynamic provider fields */}
           <div className="rounded-lg border border-white/5 bg-white/[0.02] p-4">
-            <p className="mb-3 text-sm font-medium text-white/60">
+            <p className="mb-3 text-sm font-medium text-[var(--text-secondary)]">
               {t('backup.providerSettings', 'Provider Settings')}
             </p>
             <div className="grid gap-3">
@@ -892,14 +892,14 @@ export default function BackupRestorePage() {
             {/* Metadata */}
             {previewData.metadata && Object.keys(previewData.metadata).length > 0 && (
               <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
-                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-white/40">
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                   {t('backup.metadata', 'Backup Metadata')}
                 </p>
                 <div className="space-y-1 text-xs">
                   {Object.entries(previewData.metadata).map(([k, v]) => (
                     <div key={k} className="flex justify-between">
-                      <span className="text-white/40">{k}</span>
-                      <span className="text-white/60 font-mono">{String(v)}</span>
+                      <span className="text-[var(--text-muted)]">{k}</span>
+                      <span className="text-[var(--text-secondary)] font-mono">{String(v)}</span>
                     </div>
                   ))}
                 </div>
@@ -909,7 +909,7 @@ export default function BackupRestorePage() {
             {/* Tables */}
             {previewData.tables.length > 0 ? (
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">
                   {t('backup.tables', 'Tables')} ({previewData.tables.length})
                 </p>
                 <DataTable<{ name: string; rows: number }>
@@ -939,7 +939,7 @@ export default function BackupRestorePage() {
         ) : (
           <div className="py-12 text-center">
             <Loader2 className="h-6 w-6 animate-spin text-neon-purple mx-auto mb-2" />
-            <p className="text-sm text-white/40">{t('backup.loadingPreview', 'Loading preview…')}</p>
+            <p className="text-sm text-[var(--text-muted)]">{t('backup.loadingPreview', 'Loading preview…')}</p>
           </div>
         )}
       </Modal>

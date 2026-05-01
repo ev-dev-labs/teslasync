@@ -83,7 +83,7 @@ interface SeatDef {
 /* ─── Constants ─── */
 
 const HEAT_LEVELS: HeatLevelStyle[] = [
-  { color: 'text-gray-500', bg: 'bg-gray-500/10', label: 'Off' },
+  { color: 'text-[var(--text-muted)]', bg: 'bg-gray-500/10', label: 'Off' },
   { color: 'text-cyan-400', bg: 'bg-cyan-400/10', label: 'Low' },
   { color: 'text-amber-400', bg: 'bg-amber-400/10', label: 'Medium' },
   { color: 'text-red-400', bg: 'bg-red-400/10', label: 'High' },
@@ -175,7 +175,7 @@ function SeatHeaterCard({
 /* ─── Seat Cooling Card ─── */
 
 const COOL_LEVELS: HeatLevelStyle[] = [
-  { color: 'text-gray-500', bg: 'bg-gray-500/10', label: 'Off' },
+  { color: 'text-[var(--text-muted)]', bg: 'bg-gray-500/10', label: 'Off' },
   { color: 'text-sky-400', bg: 'bg-sky-400/10', label: 'Low' },
   { color: 'text-cyan-300', bg: 'bg-cyan-300/10', label: 'Medium' },
   { color: 'text-blue-400', bg: 'bg-blue-400/10', label: 'High' },
@@ -451,7 +451,7 @@ export default function ClimateControlPage() {
             <Power
               className={cn(
                 'h-6 w-6',
-                latest?.isAcOn ? 'text-cyan-400' : 'text-gray-500',
+                latest?.isAcOn ? 'text-cyan-400' : 'text-[var(--text-muted)]',
               )}
             />
             <span className="text-sm font-medium text-[var(--text-primary)]">
@@ -547,7 +547,7 @@ export default function ClimateControlPage() {
               <Power
                 className={cn(
                   'h-5 w-5',
-                  latest?.isAcOn ? 'text-cyan-400' : 'text-gray-500',
+                  latest?.isAcOn ? 'text-cyan-400' : 'text-[var(--text-muted)]',
                 )}
               />
             }
@@ -602,7 +602,7 @@ export default function ClimateControlPage() {
                   'h-5 w-5',
                   latest?.hvacFanStatus != null && latest.hvacFanStatus > 0
                     ? 'text-teal-400'
-                    : 'text-gray-500',
+                    : 'text-[var(--text-muted)]',
                 )}
               />
             }
@@ -626,7 +626,7 @@ export default function ClimateControlPage() {
                   'h-5 w-5',
                   latest?.hvacSteeringWheelHeatLevel != null && latest.hvacSteeringWheelHeatLevel > 0
                     ? 'text-amber-400'
-                    : 'text-gray-500',
+                    : 'text-[var(--text-muted)]',
                 )}
               />
             }
@@ -645,7 +645,7 @@ export default function ClimateControlPage() {
                   'h-5 w-5',
                   latest?.hvacSteeringWheelHeatLevel != null
                     ? heatStyle(latest.hvacSteeringWheelHeatLevel).color
-                    : 'text-gray-500',
+                    : 'text-[var(--text-muted)]',
                 )}
               />
             }
@@ -671,7 +671,7 @@ export default function ClimateControlPage() {
                   'h-5 w-5',
                   latest?.hvacSteeringWheelHeatAuto
                     ? 'text-amber-400'
-                    : 'text-gray-500',
+                    : 'text-[var(--text-muted)]',
                 )}
               />
             }
@@ -684,7 +684,7 @@ export default function ClimateControlPage() {
               <Snowflake
                 className={cn(
                   'h-5 w-5',
-                  latest?.defrostMode && latest.defrostMode !== 'Off' ? 'text-blue-400' : 'text-gray-500',
+                  latest?.defrostMode && latest.defrostMode !== 'Off' ? 'text-blue-400' : 'text-[var(--text-muted)]',
                 )}
               />
             }
@@ -703,7 +703,7 @@ export default function ClimateControlPage() {
               <Snowflake
                 className={cn(
                   'h-5 w-5',
-                  latest?.defrostForPreconditioning ? 'text-cyan-400' : 'text-gray-500',
+                  latest?.defrostForPreconditioning ? 'text-cyan-400' : 'text-[var(--text-muted)]',
                 )}
               />
             }
@@ -727,7 +727,7 @@ export default function ClimateControlPage() {
               <Snowflake
                 className={cn(
                   'h-5 w-5',
-                  latest?.rearDefrostEnabled ? 'text-blue-400' : 'text-gray-500',
+                  latest?.rearDefrostEnabled ? 'text-blue-400' : 'text-[var(--text-muted)]',
                 )}
               />
             }
@@ -751,7 +751,7 @@ export default function ClimateControlPage() {
               <Flame
                 className={cn(
                   'h-5 w-5',
-                  latest?.wiperHeatEnabled ? 'text-orange-400' : 'text-gray-500',
+                  latest?.wiperHeatEnabled ? 'text-orange-400' : 'text-[var(--text-muted)]',
                 )}
               />
             }
@@ -775,7 +775,7 @@ export default function ClimateControlPage() {
               <Monitor
                 className={cn(
                   'h-5 w-5',
-                  latest?.rearDisplayHvacEnabled ? 'text-cyan-400' : 'text-gray-500',
+                  latest?.rearDisplayHvacEnabled ? 'text-cyan-400' : 'text-[var(--text-muted)]',
                 )}
               />
             }
@@ -808,7 +808,7 @@ export default function ClimateControlPage() {
               <BatteryCharging
                 className={cn(
                   'h-5 w-5',
-                  latest?.batteryHeater ? 'text-amber-400' : 'text-gray-500',
+                  latest?.batteryHeater ? 'text-amber-400' : 'text-[var(--text-muted)]',
                 )}
               />
             }
@@ -837,7 +837,7 @@ export default function ClimateControlPage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {/* Comfort Score */}
             <GlassPanel className="flex flex-col items-center gap-2 p-4">
-              <span className="text-xs font-medium uppercase tracking-wider text-white/50">
+              <span className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
                 {t('Comfort Score')}
               </span>
               <div
@@ -883,7 +883,7 @@ export default function ClimateControlPage() {
 
             {/* Temp Delta */}
             <GlassPanel className="flex flex-col items-center gap-2 p-4">
-              <span className="text-xs font-medium uppercase tracking-wider text-white/50">
+              <span className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
                 {t('Temp Delta')}
               </span>
               <div
@@ -902,7 +902,7 @@ export default function ClimateControlPage() {
                   className={cn(
                     'text-2xl font-bold',
                     tempDelta == null
-                      ? 'text-white/30'
+                      ? 'text-[var(--text-muted)]'
                       : Math.abs(tempDelta) <= 1
                         ? 'text-green-400'
                         : Math.abs(tempDelta) <= 3
@@ -915,7 +915,7 @@ export default function ClimateControlPage() {
                     : '—'}
                 </span>
               </div>
-              <span className="text-[10px] rounded-full bg-white/5 px-3 py-1 font-medium text-white/50">
+              <span className="text-[10px] rounded-full bg-white/5 px-3 py-1 font-medium text-[var(--text-muted)]">
                 {tempDelta != null
                   ? Math.abs(tempDelta) <= 1
                     ? t('Near Target')
@@ -928,7 +928,7 @@ export default function ClimateControlPage() {
 
             {/* Comfort Status */}
             <GlassPanel className="flex flex-col items-center gap-2 p-4">
-              <span className="text-xs font-medium uppercase tracking-wider text-white/50">
+              <span className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
                 {t('Status')}
               </span>
               <div

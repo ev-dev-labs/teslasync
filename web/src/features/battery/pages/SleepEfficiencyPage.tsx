@@ -87,7 +87,7 @@ export default function SleepEfficiencyPage() {
       render: (event) => (
         <span className="text-xs">
           {formatDateShort(event.start_date)}
-          <span className="text-white/40 ml-1">{formatTime(event.start_date)}</span>
+          <span className="text-[var(--text-muted)] ml-1">{formatTime(event.start_date)}</span>
         </span>
       ),
     },
@@ -124,11 +124,11 @@ export default function SleepEfficiencyPage() {
       header: t('sleep.temp', 'Temp'),
       render: (event) => event.outside_temp != null ? (
         <span className="flex items-center gap-1">
-          <Thermometer className="h-3 w-3 text-white/40" />
+          <Thermometer className="h-3 w-3 text-[var(--text-muted)]" />
           {fmtNumber(convertTemp(event.outside_temp))}{tempUnit}
         </span>
       ) : (
-        <span className="text-white/40">—</span>
+        <span className="text-[var(--text-muted)]">—</span>
       ),
     },
   ], [t]);
@@ -223,8 +223,8 @@ export default function SleepEfficiencyPage() {
                       {pieData.map((entry) => (
                         <div key={entry.name} className="flex items-center gap-1.5 text-xs">
                           <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
-                          <span className="text-white/60">{entry.name}</span>
-                          <span className="text-white/40">{entry.hours}h</span>
+                          <span className="text-[var(--text-secondary)]">{entry.name}</span>
+                          <span className="text-[var(--text-muted)]">{entry.hours}h</span>
                         </div>
                       ))}
                     </div>
@@ -266,15 +266,15 @@ export default function SleepEfficiencyPage() {
                   <div className="grid grid-cols-3 gap-3 text-center">
                     <div>
                       <p className="text-lg font-bold text-amber-400">{fmtNumber(sleep.sentry_extra_drain_rate)}%</p>
-                      <p className="text-xs text-white/40">{t('sleep.extraDrainHr', 'Extra drain/hr')}</p>
+                      <p className="text-xs text-[var(--text-muted)]">{t('sleep.extraDrainHr', 'Extra drain/hr')}</p>
                     </div>
                     <div>
                       <p className="text-lg font-bold text-amber-400">{fmtNumber(sleep.sentry_extra_monthly_kwh)} kWh</p>
-                      <p className="text-xs text-white/40">{t('sleep.extraMonthly', 'Extra monthly')}</p>
+                      <p className="text-xs text-[var(--text-muted)]">{t('sleep.extraMonthly', 'Extra monthly')}</p>
                     </div>
                     <div>
                       <p className="text-lg font-bold text-rose-300">${fmtNumber(sleep.sentry_extra_monthly_cost)}</p>
-                      <p className="text-xs text-white/40">{t('sleep.extraCostMo', 'Extra cost/mo')}</p>
+                      <p className="text-xs text-[var(--text-muted)]">{t('sleep.extraCostMo', 'Extra cost/mo')}</p>
                     </div>
                   </div>
                 </div>
@@ -285,7 +285,7 @@ export default function SleepEfficiencyPage() {
           {/* Recent drain events table */}
           <FadeIn delay={0.2}>
             <GlassPanel className="p-6">
-              <h3 className="text-base font-semibold text-white/90 mb-4 flex items-center gap-2">
+              <h3 className="text-base font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
                 <Zap className="h-4 w-4 text-neon-cyan" />
                 {t('sleep.recentDrainEvents', 'Recent Drain Events')}
               </h3>
@@ -307,7 +307,7 @@ export default function SleepEfficiencyPage() {
       ) : !isLoading ? (
         <GlassPanel className="p-8">
           <EmptyState
-            icon={<Moon className="h-10 w-10 text-white/30" />}
+            icon={<Moon className="h-10 w-10 text-[var(--text-muted)]" />}
             message={t('sleep.noData', 'No sleep data available. Data will appear after your vehicle records sleep/wake events.')}
           />
         </GlassPanel>
