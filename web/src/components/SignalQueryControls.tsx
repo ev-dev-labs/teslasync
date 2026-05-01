@@ -4,6 +4,7 @@
  */
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { request } from '@/api/client'
 import { GlassPanel, Badge, Button, Input, DataTable, type Column } from './ui'
 import { fmtInt } from '../lib/numberFormat'
@@ -182,20 +183,21 @@ interface DateTimeRangeProps {
 }
 
 export function DateTimeRangeControls({ fromStr, toStr, onFromChange, onToChange, onPreset }: DateTimeRangeProps) {
+  const { t } = useTranslation()
   const inputClass = "w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs font-mono text-[var(--text-primary)] outline-none focus:border-neon-cyan/40"
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
       <div className="space-y-1.5">
-        <label className="metric-label">From</label>
+        <label className="metric-label">{t('signalQuery.from', 'From')}</label>
         <input type="datetime-local" step="1" value={fromStr} onChange={e => onFromChange(e.target.value)} className={inputClass} />
       </div>
       <div className="space-y-1.5">
-        <label className="metric-label">To</label>
+        <label className="metric-label">{t('signalQuery.to', 'To')}</label>
         <input type="datetime-local" step="1" value={toStr} onChange={e => onToChange(e.target.value)} className={inputClass} />
       </div>
       <div className="space-y-1.5">
-        <label className="metric-label">Quick Range</label>
+        <label className="metric-label">{t('signalQuery.quickRange', 'Quick Range')}</label>
         <div className="flex items-center gap-1">
           {TIME_RANGE_PRESETS.map(tp => (
             <button
@@ -223,11 +225,13 @@ interface QueryControlsProps {
   label?: string
 }
 
-export function QueryControls({ perPage, onPerPageChange, onQuery, disabled, loading, label = 'Query' }: QueryControlsProps) {
+export function QueryControls({ perPage, onPerPageChange, onQuery, disabled, loading, label }: QueryControlsProps) {
+  const { t } = useTranslation()
+  const buttonLabel = label ?? t('signalQuery.query', 'Query')
   return (
     <div className="flex items-end gap-2">
       <div className="space-y-1.5">
-        <label className="metric-label">Rows</label>
+        <label className="metric-label">{t('signalQuery.rows', 'Rows')}</label>
         <select
           value={perPage}
           onChange={e => onPerPageChange(Number(e.target.value))}
@@ -238,7 +242,7 @@ export function QueryControls({ perPage, onPerPageChange, onQuery, disabled, loa
       </div>
       <Button variant="primary" size="sm" onClick={onQuery} disabled={disabled} loading={loading}
         icon={loading ? undefined : <Play className="h-3.5 w-3.5" />} className="h-[34px]">
-        {label}
+        {buttonLabel}
       </Button>
     </div>
   )

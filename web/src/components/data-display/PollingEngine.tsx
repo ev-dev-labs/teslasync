@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { getPollingStatus, getPollingSavings, type PollEngineStatus, type CostSnapshot, type VehiclePollingStatus } from '@/api/polling'
 import {
   Gauge, Zap, BatteryCharging, Moon, TrendingDown,
@@ -106,6 +107,7 @@ function VehicleActivity({ vin, status }: { vin: string; status: VehiclePollingS
 }
 
 function SavingsCard({ savings }: { savings: CostSnapshot }) {
+  const { t } = useTranslation()
   const breakdown = savings.savings_breakdown || {}
   const total = Object.values(breakdown).reduce((a, b) => a + b, 0)
 
@@ -115,25 +117,25 @@ function SavingsCard({ savings }: { savings: CostSnapshot }) {
         <div className="text-2xl font-bold text-emerald-400">
           <AnimatedNumber value={savings.savings_percent} decimals={1} />%
         </div>
-        <div className="text-xs text-white/50">Polls Saved</div>
+        <div className="text-xs text-white/50">{t('polling.pollsSaved', 'Polls Saved')}</div>
       </div>
       <div className="text-center">
         <div className="text-2xl font-bold text-emerald-400">
           $<AnimatedNumber value={savings.estimated_savings} decimals={2} />
         </div>
-        <div className="text-xs text-white/50">$ Saved</div>
+        <div className="text-xs text-white/50">{t('polling.savedAmount', '$ Saved')}</div>
       </div>
       <div className="text-center">
         <div className="text-2xl font-bold text-white/80">
           <AnimatedNumber value={savings.polls_made} decimals={0} />
         </div>
-        <div className="text-xs text-white/50">Polls Made</div>
+        <div className="text-xs text-white/50">{t('polling.pollsMade', 'Polls Made')}</div>
       </div>
       <div className="text-center">
         <div className="text-2xl font-bold text-white/80">
           $<AnimatedNumber value={savings.remaining_credit} decimals={2} />
         </div>
-        <div className="text-xs text-white/50">Credit Left</div>
+        <div className="text-xs text-white/50">{t('polling.creditLeft', 'Credit Left')}</div>
       </div>
 
       {total > 0 && (
@@ -142,38 +144,38 @@ function SavingsCard({ savings }: { savings: CostSnapshot }) {
             <div
               className="bg-blue-500 rounded-full"
               style={{ width: `${((breakdown.fleet_telemetry || 0) / total) * 100}%` }}
-              title={`Fleet Telemetry: ${breakdown.fleet_telemetry}`}
+              title={`${t('polling.fleetTelemetry', 'Fleet Telemetry')}: ${breakdown.fleet_telemetry}`}
             />
           )}
           {(breakdown.idle_detection || 0) > 0 && (
             <div
               className="bg-amber-500 rounded-full"
               style={{ width: `${((breakdown.idle_detection || 0) / total) * 100}%` }}
-              title={`Idle Detection: ${breakdown.idle_detection}`}
+              title={`${t('polling.idleDetection', 'Idle Detection')}: ${breakdown.idle_detection}`}
             />
           )}
           {(breakdown.prediction || 0) > 0 && (
             <div
               className="bg-purple-500 rounded-full"
               style={{ width: `${((breakdown.prediction || 0) / total) * 100}%` }}
-              title={`Prediction: ${breakdown.prediction}`}
+              title={`${t('polling.prediction', 'Prediction')}: ${breakdown.prediction}`}
             />
           )}
           {(breakdown.sleep_detection || 0) > 0 && (
             <div
               className="bg-gray-500 rounded-full"
               style={{ width: `${((breakdown.sleep_detection || 0) / total) * 100}%` }}
-              title={`Sleep: ${breakdown.sleep_detection}`}
+              title={`${t('polling.sleep', 'Sleep')}: ${breakdown.sleep_detection}`}
             />
           )}
         </div>
       )}
       {total > 0 && (
         <div className="col-span-full flex gap-4 justify-center text-[10px] text-white/40">
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500" />Fleet Telemetry</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" />Idle Detection</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-500" />Prediction</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gray-500" />Sleep</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500" />{t('polling.fleetTelemetry', 'Fleet Telemetry')}</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" />{t('polling.idleDetection', 'Idle Detection')}</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-500" />{t('polling.prediction', 'Prediction')}</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gray-500" />{t('polling.sleep', 'Sleep')}</span>
         </div>
       )}
     </div>

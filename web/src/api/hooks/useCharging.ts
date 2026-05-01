@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import { STALE_TIMES, INTERVALS } from '@/lib/constants';
-import { useToast } from '@/components/feedback/Toast';
+import { useMutationToast } from './_toastHelpers';
 import type {
   ChargingSession,
   CostForecastData,
@@ -167,7 +167,7 @@ export function useTeslaChargingHistory(vin?: string) {
 /** Mutation to refresh Tesla charging historyfrom the Tesla API. */
 export function useRefreshTeslaChargingHistory() {
   const qc = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (params?: { vin?: string; start_time?: string; end_time?: string }) => {
       const searchParams = new URLSearchParams();
@@ -182,11 +182,9 @@ export function useRefreshTeslaChargingHistory() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: teslaChargingHistoryKeys.all });
-      toast.success('Charging history refreshed');
+      success('toast.charging.history.success', 'Charging history refreshed');
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to refresh charging history: ${err.message}`);
-    },
+    onError: (err) => error(err, 'toast.charging.history.error', 'Failed to refresh charging history'),
   });
 }
 
@@ -257,7 +255,7 @@ export function useTeslaChargingSessions(vin?: string) {
 /** Mutation to refresh Tesla fleet charging sessionsfrom the Tesla API. */
 export function useRefreshTeslaChargingSessions() {
   const qc = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (params?: { vin?: string; date_from?: string; date_to?: string }) => {
       const searchParams = new URLSearchParams();
@@ -272,11 +270,9 @@ export function useRefreshTeslaChargingSessions() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: teslaChargingSessionKeys.all });
-      toast.success('Charging sessions refreshed');
+      success('toast.charging.sessions.success', 'Charging sessions refreshed');
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to refresh charging sessions: ${err.message}`);
-    },
+    onError: (err) => error(err, 'toast.charging.sessions.error', 'Failed to refresh charging sessions'),
   });
 }
 
@@ -290,7 +286,7 @@ export const chargePlannerKeys = {
 
 /** Mutation to optimize a charge schedule using TOU rates. */
 export function useOptimizeCharge() {
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (params: OptimizeChargeRequest) =>
       request<OptimizeChargeResponse>('/charge-planner/optimize', {
@@ -298,18 +294,16 @@ export function useOptimizeCharge() {
         body: JSON.stringify(params),
       }),
     onSuccess: () => {
-      toast.success('Charge schedule optimized');
+      success('toast.charging.optimize.success', 'Charge schedule optimized');
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to optimize charge: ${err.message}`);
-    },
+    onError: (err) => error(err, 'toast.charging.optimize.error', 'Failed to optimize charge'),
   });
 }
 
 /** Mutation to apply an optimized charge plan to the vehicle. */
 export function useApplySchedule() {
   const qc = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (params: ApplyScheduleRequest) =>
       request<ApplyScheduleResponse>('/charge-planner/apply', {
@@ -318,11 +312,9 @@ export function useApplySchedule() {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: chargePlannerKeys.all });
-      toast.success('Charge schedule applied');
+      success('toast.charging.apply.success', 'Charge schedule applied');
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to apply schedule: ${err.message}`);
-    },
+    onError: (err) => error(err, 'toast.charging.apply.error', 'Failed to apply schedule'),
   });
 }
 

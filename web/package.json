@@ -12,7 +12,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "audit:a11y": "pwsh ../scripts/a11y-audit.ps1"
+    "audit:a11y": "pwsh ../scripts/a11y-audit.ps1",
+    "audit:i18n": "pwsh ../scripts/i18n-coverage.ps1",
+    "i18n:validate": "node ../scripts/i18n-validate-keys.mjs",
+    "i18n:validate:strict": "node ../scripts/i18n-validate-keys.mjs --strict",
+    "i18n:extract": "node ../scripts/i18n-validate-keys.mjs --extract"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -52,6 +56,7 @@
     "@vitest/coverage-v8": "^4.1.2",
     "autoprefixer": "^10.4.18",
     "eslint": "^8.57.0",
+    "eslint-plugin-i18next": "^6.1.4",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
     "jsdom": "^29.0.1",

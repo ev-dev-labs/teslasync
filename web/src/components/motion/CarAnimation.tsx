@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import { COLOR } from '@/lib/colors'
 import { useMotionPreference } from '@/hooks/useMotionPreference'
 
@@ -12,9 +13,10 @@ export function CarAnimation({ size = 120, className = '' }: { size?: number; cl
   const w = size
   const h = size * 0.4
   const { reduce } = useMotionPreference()
+  const { t } = useTranslation()
 
   return (
-    <div className={`inline-flex items-center justify-center ${className}`} role="img" aria-label="Tesla vehicle illustration">
+    <div className={`inline-flex items-center justify-center ${className}`} role="img" aria-label={t('carAnimation.tesla', 'Tesla vehicle illustration')}>
       <svg width={w} height={h} viewBox="0 0 240 96" fill="none" xmlns="http://www.w3.org/2000/svg">
         {/* Car body */}
         <motion.path
@@ -92,12 +94,13 @@ export function CarAnimation({ size = 120, className = '' }: { size?: number; cl
  */
 export function ChargingBolt({ size = 32, className = '' }: { size?: number; className?: string }) {
   const { reduce } = useMotionPreference()
+  const { t } = useTranslation()
   return (
     <motion.svg
       width={size} height={size} viewBox="0 0 24 24" fill="none"
       className={className}
       role="img"
-      aria-label="Charging"
+      aria-label={t('carAnimation.charging', 'Charging')}
       initial={reduce ? false : { opacity: 0, y: -4 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: reduce ? 0 : 0.5 }}
@@ -150,8 +153,9 @@ export function BatteryFillAnimation({ level = 80, size = 48, className = '' }: 
  */
 export function WheelSpin({ size = 24, className = '' }: { size?: number; className?: string }) {
   const { reduce } = useMotionPreference()
+  const { t } = useTranslation()
   return (
-    <motion.svg width={size} height={size} viewBox="0 0 24 24" className={className} role="img" aria-label="Loading">
+    <motion.svg width={size} height={size} viewBox="0 0 24 24" className={className} role="img" aria-label={t('carAnimation.loading', 'Loading')}>
       <circle cx="12" cy="12" r="10" fill="var(--surface-3)" stroke="var(--text-muted)" strokeWidth="1.5" />
       <circle cx="12" cy="12" r="4" fill="var(--surface-1)" stroke="var(--text-muted)" strokeWidth="1" />
       <motion.g

@@ -1,5 +1,6 @@
 import { forwardRef, type HTMLAttributes } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { fmtNumber } from '@/lib/numberFormat';
 import { GlassPanel } from '@/components/ui/GlassPanel';
@@ -41,6 +42,7 @@ function toStatus(state: string): VehicleStatus {
 
 export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
   ({ vehicle, vehicleState, className, ...props }, ref) => {
+    const { t } = useTranslation();
     const vs = vehicleState;
 
     return (
@@ -75,7 +77,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
             <RadialGauge
               value={vs.battery_level}
               max={100}
-              label="Battery"
+              label={t('vehicleHero.gauge.battery', 'Battery')}
               unit="%"
               color={vs.battery_level > 20 ? '#22d3ee' : '#ef4444'}
               size={100}
@@ -83,7 +85,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
             <RadialGauge
               value={Math.round(vs.rated_range)}
               max={400}
-              label="Range"
+              label={t('vehicleHero.gauge.range', 'Range')}
               unit="mi"
               color="#4ade80"
               size={100}
@@ -91,7 +93,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
             <RadialGauge
               value={Math.round(vs.inside_temp)}
               max={150}
-              label="Inside"
+              label={t('vehicleHero.gauge.inside', 'Inside')}
               unit="°F"
               color="#f59e0b"
               size={100}
@@ -99,7 +101,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
             <RadialGauge
               value={Math.round(vs.outside_temp)}
               max={150}
-              label="Outside"
+              label={t('vehicleHero.gauge.outside', 'Outside')}
               unit="°F"
               color="#a78bfa"
               size={100}
@@ -110,28 +112,28 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
         {/* Detail cards */}
         {vs && (
           <Grid cols={{ default: 2, md: 4 }} gap={3}>
-            <StatCard label="Inside Temp" value={Math.round(vs.inside_temp)} unit="°F" />
-            <StatCard label="Outside Temp" value={Math.round(vs.outside_temp)} unit="°F" />
+            <StatCard label={t('vehicleHero.stat.insideTemp', 'Inside Temp')} value={Math.round(vs.inside_temp)} unit="°F" />
+            <StatCard label={t('vehicleHero.stat.outsideTemp', 'Outside Temp')} value={Math.round(vs.outside_temp)} unit="°F" />
             <StatCard
-              label="Odometer"
+              label={t('vehicleHero.stat.odometer', 'Odometer')}
               value={vs.odometer.toLocaleString()}
               unit="mi"
             />
             <StatCard
-              label="Range"
+              label={t('vehicleHero.stat.range', 'Range')}
               value={Math.round(vs.rated_range)}
               unit="mi"
             />
             <StatCard
-              label="Status"
-              value={vs.is_locked ? 'Locked' : 'Unlocked'}
+              label={t('vehicleHero.stat.status', 'Status')}
+              value={vs.is_locked ? t('vehicleHero.locked', 'Locked') : t('vehicleHero.unlocked', 'Unlocked')}
             />
             <StatCard
-              label="Sentry"
-              value={vs.sentry_mode ? 'On' : 'Off'}
+              label={t('vehicleHero.stat.sentry', 'Sentry')}
+              value={vs.sentry_mode ? t('common.on', 'On') : t('common.off', 'Off')}
             />
-            <StatCard label="Firmware" value={vs.software_version} />
-            <StatCard label="Power" value={fmtNumber(vs.power)} unit="kW" />
+            <StatCard label={t('vehicleHero.stat.firmware', 'Firmware')} value={vs.software_version} />
+            <StatCard label={t('vehicleHero.stat.power', 'Power')} value={fmtNumber(vs.power)} unit="kW" />
           </Grid>
         )}
 
@@ -144,7 +146,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
               'bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20',
             )}
           >
-            Details
+            {t('vehicleHero.action.details', 'Details')}
           </Link>
           <Link
             to={`/vehicles/${vehicle.id}/commands`}
@@ -153,7 +155,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
               'bg-white/5 text-gray-300 hover:bg-white/10',
             )}
           >
-            Commands
+            {t('vehicleHero.action.commands', 'Commands')}
           </Link>
           <Link
             to={`/vehicles/${vehicle.id}/map`}
@@ -162,7 +164,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
               'bg-white/5 text-gray-300 hover:bg-white/10',
             )}
           >
-            Live Map
+            {t('vehicleHero.action.liveMap', 'Live Map')}
           </Link>
         </div>
       </GlassPanel>

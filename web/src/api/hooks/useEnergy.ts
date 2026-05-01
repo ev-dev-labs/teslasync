@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
-import { useToast } from '@/components/feedback/Toast';
+import { useMutationToast } from './_toastHelpers';
 import type {
   EnergyStats,
   BatteryHealth,
@@ -126,17 +126,15 @@ export function useTeslaEnergySites() {
 
 export function useRefreshTeslaEnergySites() {
   const queryClient = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: () =>
       request<TeslaEnergySite[]>('/tesla/energy-sites/refresh', { method: 'POST' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tesla-energy-sites'] });
-      toast.success('Energy sites refreshed');
+      success('toast.energy.sites.success', 'Energy sites refreshed');
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to refresh energy sites: ${err.message}`);
-    },
+    onError: (err) => error(err, 'toast.energy.sites.error', 'Failed to refresh energy sites'),
   });
 }
 
@@ -152,7 +150,7 @@ export function useTeslaEnergySiteInfo(siteId?: number) {
 
 export function useRefreshTeslaEnergySiteInfo() {
   const queryClient = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (siteId: number) =>
       request<TeslaEnergySiteInfoResponse>(
@@ -161,17 +159,15 @@ export function useRefreshTeslaEnergySiteInfo() {
       ),
     onSuccess: (_data, siteId) => {
       queryClient.invalidateQueries({ queryKey: ['tesla-site-info', siteId] });
-      toast.success('Site info refreshed');
+      success('toast.energy.siteInfo.success', 'Site info refreshed');
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to refresh site info: ${err.message}`);
-    },
+    onError: (err) => error(err, 'toast.energy.siteInfo.error', 'Failed to refresh site info'),
   });
 }
 
 export function useUpdateTOUSettings() {
   const queryClient = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: ({ siteId, settings }: { siteId: number; settings: TOUSettingsPayload }) =>
       request(`/tesla/energy-sites/${siteId}/tou-settings`, {
@@ -181,11 +177,9 @@ export function useUpdateTOUSettings() {
       }),
     onSuccess: (_data, { siteId }) => {
       queryClient.invalidateQueries({ queryKey: ['tesla-site-info', siteId] });
-      toast.success('TOU settings saved');
+      success('toast.energy.tou.success', 'TOU settings saved');
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to save TOU settings: ${err.message}`);
-    },
+    onError: (err) => error(err, 'toast.energy.tou.error', 'Failed to save TOU settings'),
   });
 }
 
@@ -267,7 +261,7 @@ interface RefreshParams{
 
 export function useRefreshTeslaEnergyHistory() {
   const queryClient = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: ({ siteId, period = 'day', start_date, end_date, time_zone }: RefreshParams) => {
       const params = new URLSearchParams({ period });
@@ -281,17 +275,15 @@ export function useRefreshTeslaEnergyHistory() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tesla-energy-history'] });
-      toast.success('Energy history refreshed');
+      success('toast.energy.history.success', 'Energy history refreshed');
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to refresh energy history: ${err.message}`);
-    },
+    onError: (err) => error(err, 'toast.energy.history.error', 'Failed to refresh energy history'),
   });
 }
 
 export function useRefreshTeslaBackupHistory() {
   const queryClient = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: ({ siteId, period = 'day', start_date, end_date, time_zone }: RefreshParams) => {
       const params = new URLSearchParams({ period });
@@ -305,17 +297,15 @@ export function useRefreshTeslaBackupHistory() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tesla-backup-history'] });
-      toast.success('Backup history refreshed');
+      success('toast.energy.backup.success', 'Backup history refreshed');
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to refresh backup history: ${err.message}`);
-    },
+    onError: (err) => error(err, 'toast.energy.backup.error', 'Failed to refresh backup history'),
   });
 }
 
 export function useRefreshTeslaWCChargingHistory() {
   const queryClient = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: ({ siteId, start_date, end_date, time_zone }: RefreshParams) => {
       const params = new URLSearchParams();
@@ -329,11 +319,9 @@ export function useRefreshTeslaWCChargingHistory() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tesla-wc-charging-history'] });
-      toast.success('Wall Connector charging history refreshed');
+      success('toast.energy.wcCharging.success', 'Wall Connector charging history refreshed');
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to refresh WC charging history: ${err.message}`);
-    },
+    onError: (err) => error(err, 'toast.energy.wcCharging.error', 'Failed to refresh WC charging history'),
   });
 }
 
@@ -376,7 +364,7 @@ export function useTeslaEnergyLiveStatusHistory(
 
 export function useRefreshTeslaEnergyLiveStatus() {
   const queryClient = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (siteId: number) =>
       request<TeslaEnergyLiveStatus>(
@@ -386,10 +374,8 @@ export function useRefreshTeslaEnergyLiveStatus() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tesla-live-status'] });
       queryClient.invalidateQueries({ queryKey: ['tesla-live-status-history'] });
-      toast.success('Live status refreshed');
+      success('toast.energy.liveStatus.success', 'Live status refreshed');
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to refresh live status: ${err.message}`);
-    },
+    onError: (err) => error(err, 'toast.energy.liveStatus.error', 'Failed to refresh live status'),
   });
 }
