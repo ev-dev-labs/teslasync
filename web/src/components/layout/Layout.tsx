@@ -833,13 +833,15 @@ export default function Layout() {
 
   return (
     <div className="flex h-dvh bg-[var(--bg)] text-[var(--text-primary)]">
-      {/* Skip to content */}
+      {/* Skip to content (WCAG 2.4.1). Hidden until focused; sends focus
+          straight to <main id="main-content"> so keyboard users don't have
+          to tab through the entire sidebar to reach the page body. */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[300] focus:rounded-lg focus:bg-neon-cyan focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-black focus:outline-none"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[300] focus:rounded-lg focus:bg-neon-cyan focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-black focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--bg)] focus:ring-neon-cyan"
         onClick={(e) => { e.preventDefault(); mainRef.current?.focus() }}
       >
-        Skip to content
+        {t('a11y.skipToMain', 'Skip to main content')}
       </a>
 
       {/* Ambient background effects */}
@@ -865,7 +867,7 @@ export default function Layout() {
       {/* Sidebar */}
       <aside
         role="navigation"
-        aria-label="Main navigation"
+        aria-label={t('a11y.primaryNav', 'Primary')}
         data-tour="sidebar"
         data-sidebar-open={sidebarOpen}
         className={cn(

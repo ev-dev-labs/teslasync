@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react'
 import clsx from 'clsx'
+import { useMotionPreference } from '@/hooks/useMotionPreference'
 
 /**
  * Toast — transient mutation feedback (auto-dismisses after 4s).
@@ -20,6 +21,15 @@ import clsx from 'clsx'
  * (Phase-40 Prompt 09) — toned-down 300-level shades on white instead of neon
  * accents — except the `error` variant which keeps the brand `tesla-red`
  * border.
+ *
+ * Accessibility (Phase-40 / Prompt 20):
+ *   - Each toast renders with `role="alert"` for the `error` variant (assertive
+ *     announcement) and `role="status"` for `success`/`info`/`warning` (polite
+ *     announcement). Both implicitly set the appropriate `aria-live` value, so
+ *     screen readers announce new toasts as they appear without us having to
+ *     manage a separate live-region.
+ *   - The entrance/exit animation collapses to an instant transition when the
+ *     user has set `prefers-reduced-motion: reduce` (via `useMotionPreference`).
  */
 type ToastType = 'success' | 'error' | 'info' | 'warning'
 
@@ -79,10 +89,20 @@ const styles: Record<ToastType, { border: string; icon: string; glow: string }> 
   warning: { border: 'border-amber-500/30',   icon: 'text-amber-300',   glow: 'shadow-[0_0_20px_rgba(245,158,11,0.15)]' },
 }
 
+// Errors get an assertive live-region (role="alert"); informational toasts get
+// a polite one (role="status"). Both are equivalent to setting aria-live.
+const ariaRole: Record<ToastType, 'alert' | 'status'> = {
+  success: 'status',
+  error:   'alert',
+  info:    'status',
+  warning: 'status',
+}
+
 let toastCounter = 0
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([])
+  const { reduce } = useMotionPreference()
 
   const dismiss = useCallback((id: string) => {
     setToasts(prev => prev.filter(t => t.id !== id))
@@ -116,18 +136,21 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             return (
               <motion.div
                 key={t.id}
+                role={ariaRole[t.type]}
+                aria-live={ariaRole[t.type] === 'alert' ? 'assertive' : 'polite'}
+                aria-atomic="true"
                 layout
-                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                initial={reduce ? false : { opacity: 0, y: 20, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, x: 80, scale: 0.95 }}
-                transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }}
+                exit={reduce ? { opacity: 0 } : { opacity: 0, x: 80, scale: 0.95 }}
+                transition={reduce ? { duration: 0 } : { type: 'spring', bounce: 0.2, duration: 0.4 }}
                 className={clsx(
                   'pointer-events-auto rounded-xl border backdrop-blur-xl p-4 bg-white/[0.03]',
                   s.border, s.glow
                 )}
               >
                 <div className="flex items-start gap-3">
-                  <div className={clsx('mt-0.5 flex-shrink-0', s.icon)}>
+                  <div className={clsx('mt-0.5 flex-shrink-0', s.icon)} aria-hidden="true">
                     {icons[t.type]}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -138,7 +161,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                         to={t.action.to}
                         onClick={() => dismiss(t.id)}
                         className={clsx(
-                          'mt-2 inline-flex items-center gap-1 text-xs font-medium underline-offset-2 hover:underline',
+                          'mt-2 inline-flex items-center gap-1 text-xs font-medium underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent rounded',
                           s.icon,
                         )}
                       >
@@ -148,9 +171,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   </div>
                   <button
                     onClick={() => dismiss(t.id)}
-                    className="flex-shrink-0 rounded-lg p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.05] transition-colors"
+                    aria-label="Dismiss notification"
+                    className="flex-shrink-0 rounded-lg p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.05] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent"
                   >
-                    <X className="h-3.5 w-3.5" />
+                    <X className="h-3.5 w-3.5" aria-hidden="true" />
                   </button>
                 </div>
               </motion.div>

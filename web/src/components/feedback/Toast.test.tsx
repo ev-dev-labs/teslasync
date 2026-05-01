@@ -7,6 +7,10 @@ vi.mock('framer-motion', () => ({
     div: ({ children, ...props }: any) => <div {...filterDomProps(props)}>{children}</div>,
   },
   AnimatePresence: ({ children }: any) => <>{children}</>,
+  // Toast.tsx now consumes `useReducedMotion` indirectly via `useMotionPreference`.
+  // Default to motion enabled in tests; reduced-motion behaviour is covered by
+  // the dedicated useMotionPreference test.
+  useReducedMotion: () => false,
 }))
 
 // Filter out non-DOM props from framer-motion

@@ -10,7 +10,15 @@ interface PaginationProps {
   pageSizeOptions?: number[]
 }
 
-/** Table pagination controls with first/prev/next/last buttons and optional page-size selector. */
+/**
+ * Table pagination controls with first/prev/next/last buttons and optional
+ * page-size selector.
+ *
+ * Accessibility (Phase-40 / Prompt 20): the control set is wrapped in a
+ * landmark `<nav>` so screen readers announce it as a pagination region. The
+ * "showing X–Y of Z" copy lives inside `aria-live="polite"` so the count
+ * update is announced as the user pages without stealing focus.
+ */
 export function Pagination({ page, pageSize, total, onPageChange, onPageSizeChange, pageSizeOptions = [25, 50, 100] }: PaginationProps) {
   const { t } = useTranslation()
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
@@ -18,9 +26,12 @@ export function Pagination({ page, pageSize, total, onPageChange, onPageSizeChan
   const end = Math.min(page * pageSize, total)
 
   return (
-    <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center justify-between gap-2 sm:gap-3 pt-4">
+    <nav
+      aria-label={t('a11y.pagination', 'Pagination')}
+      className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center justify-between gap-2 sm:gap-3 pt-4"
+    >
       <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
-        <span className="whitespace-nowrap">
+        <span className="whitespace-nowrap" aria-live="polite" aria-atomic="true">
           {t('pagination.showing', 'Showing {{start}}–{{end}} of {{total}}', { start: total > 0 ? start : 0, end, total })}
         </span>
         {onPageSizeChange && (
@@ -42,27 +53,31 @@ export function Pagination({ page, pageSize, total, onPageChange, onPageSizeChan
         <button onClick={() => onPageChange(1)} disabled={page <= 1}
           aria-label={t('pagination.first', 'First page')}
           className="rounded-md p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none transition-colors">
-          <ChevronsLeft className="h-4 w-4" />
+          <ChevronsLeft className="h-4 w-4" aria-hidden="true" />
         </button>
         <button onClick={() => onPageChange(page - 1)} disabled={page <= 1}
           aria-label={t('pagination.previous', 'Previous page')}
           className="rounded-md p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none transition-colors">
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
         </button>
-        <span className="px-3 text-xs font-medium text-gray-300">
+        <span
+          className="px-3 text-xs font-medium text-gray-300"
+          aria-current="page"
+          aria-label={t('pagination.currentPage', 'Page {{page}} of {{total}}', { page, total: totalPages })}
+        >
           {page} / {totalPages}
         </span>
         <button onClick={() => onPageChange(page + 1)} disabled={page >= totalPages}
           aria-label={t('pagination.next', 'Next page')}
           className="rounded-md p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none transition-colors">
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-4 w-4" aria-hidden="true" />
         </button>
         <button onClick={() => onPageChange(totalPages)} disabled={page >= totalPages}
           aria-label={t('pagination.last', 'Last page')}
           className="rounded-md p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none transition-colors">
-          <ChevronsRight className="h-4 w-4" />
+          <ChevronsRight className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
-    </div>
+    </nav>
   )
 }

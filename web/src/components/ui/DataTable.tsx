@@ -82,21 +82,33 @@ export function DataTable<T>({
                 scope="col"
                 className={cn(
                   compact ? 'px-3 py-2' : tableTokens.headCell,
-                  col.sortable && 'cursor-pointer select-none hover:text-[var(--text-secondary)]',
                   colHiddenClass(col.key),
                   col.className,
                 )}
-                onClick={() => col.sortable && onSort?.(col.key)}
-                onKeyDown={col.sortable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSort?.(col.key) } } : undefined}
                 aria-sort={col.sortable && sortKey === col.key ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}
-                {...(col.sortable ? { tabIndex: 0, role: 'button' as const } : {})}
               >
-                <span className="inline-flex items-center gap-1">
-                  {col.header}
-                  {col.sortable && sortKey === col.key && (
-                    sortDir === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
-                  )}
-                </span>
+                {col.sortable ? (
+                  <button
+                    type="button"
+                    onClick={() => onSort?.(col.key)}
+                    className={cn(
+                      'inline-flex items-center gap-1 cursor-pointer select-none rounded',
+                      'hover:text-[var(--text-secondary)]',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent',
+                    )}
+                  >
+                    <span>{col.header}</span>
+                    {sortKey === col.key && (
+                      sortDir === 'asc'
+                        ? <ChevronUp className="h-3 w-3" aria-hidden="true" />
+                        : <ChevronDown className="h-3 w-3" aria-hidden="true" />
+                    )}
+                  </button>
+                ) : (
+                  <span className="inline-flex items-center gap-1">
+                    {col.header}
+                  </span>
+                )}
               </th>
             ))}
           </tr>

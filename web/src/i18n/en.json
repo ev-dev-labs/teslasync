@@ -481,6 +481,14 @@
       "refreshed": "Data refreshed"
     }
   },
+  "a11y": {
+    "skipToMain": "Skip to main content",
+    "primaryNav": "Primary",
+    "pagination": "Pagination",
+    "closeDialog": "Close dialog",
+    "dismissNotification": "Dismiss notification",
+    "loading": "Loading"
+  },
   "shortcuts": {
     "title": "Keyboard Shortcuts",
     "hint": "Press",

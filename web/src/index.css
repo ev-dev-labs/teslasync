@@ -823,8 +823,23 @@ select option:checked {
   animation: none;
 }
 
-/* Respect prefers-reduced-motion */
+/* ─── Reduced motion (WCAG 2.3.3) ────────────────────────────────────────────
+ * When the user enables OS-level "reduce motion", neutralize CSS animations
+ * and transitions globally as a safety net. Components that drive their own
+ * framer-motion animations should additionally consult `useMotionPreference()`
+ * (web/src/hooks/useMotionPreference.ts) so they can short-circuit JS-driven
+ * loops, springs, and infinite animations that this CSS rule cannot stop.
+ * Policy: docs/A11Y_GUIDELINES.md.
+ */
 @media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
   .edit-mode .react-grid-item > .widget-container {
     animation: none !important;
   }
