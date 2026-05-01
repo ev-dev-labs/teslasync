@@ -6,6 +6,7 @@ import { WidgetShell } from './WidgetShell';
 import { WidgetEventFeed, type EventFeedItem } from './shared';
 import type { WidgetProps } from './types';
 import { normalizeSeverity, type Severity } from '@/lib/tokens';
+import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough';
 
 const SEVERITY_LABELS: Record<Severity, string> = {
   info: 'Info',
@@ -45,6 +46,7 @@ export default function AlertFeedWidget({ size }: WidgetProps) {
         subtitle: isWide ? a.message : SEVERITY_LABELS[sev],
         timestamp: a.created_at,
         color: SEVERITY_HEX[sev],
+        href: getAlertDrillthroughHref(a),
       };
     }),
     [alerts, isWide],

@@ -11,6 +11,7 @@ export { renderAnnotationLines } from './ChartAnnotationLayer';
 export { AddAnnotationPopover } from './AddAnnotationPopover';
 export { AnnotationList } from './AnnotationList';
 export { AREA_DEFAULTS, areaGradient } from './chartDefaults';
+export { TimeMarker, type TimeMarkerProps } from './TimeMarker';
 
 // Re-export recharts through shared charts module
 export { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, Brush, ComposedChart, ScatterChart, Scatter, ReferenceLine, ReferenceArea, Legend, RadarChart, Radar, PolarGrid, PolarAngleAxis, ZAxis, Label } from 'recharts';

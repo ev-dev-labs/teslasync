@@ -77,6 +77,13 @@ func (h *AlertHandler) List(w http.ResponseWriter, r *http.Request) {
 // AlertResponse is the wire shape returned by GET /alerts. Mirrors the
 // frontend `Alert` interface in web/src/api/types.ts. Built from
 // notification_logs joined to alert_rules per ADR-010 Option B.
+//
+// RuleID, RuleSignal, and RuleSeverity (Phase 40 / Prompt 14) carry the
+// owning alert rule's identity through to the frontend so it can build a
+// "drill-through" URL — e.g. an alert on `BatteryLevel` deep-links to
+// `/battery?vehicle_id=N&t=...&signal=BatteryLevel`. They are nil when the
+// notification log has no `alert_id` (e.g. a one-off test notification) or
+// when the originating rule has been deleted.
 type AlertResponse struct {
 	ID        int64     `json:"id"`
 	VehicleID int64     `json:"vehicle_id"`
@@ -86,6 +93,12 @@ type AlertResponse struct {
 	Message   string    `json:"message"`
 	IsRead    bool      `json:"is_read"`
 	CreatedAt time.Time `json:"created_at"`
+
+	// Drill-through metadata (Phase 40 / Prompt 14). Populated when the
+	// notification log links to a still-existing alert rule.
+	RuleID       *int64  `json:"rule_id,omitempty"`
+	RuleSignal   *string `json:"rule_signal,omitempty"`   // e.g., "BatteryLevel"
+	RuleSeverity *string `json:"rule_severity,omitempty"` // raw rule severity: "info" | "warn" | "critical"
 }
 
 // alertRuleSeverityToWire maps the backend severity literal ("warn") to the
@@ -176,6 +189,20 @@ func (h *AlertHandler) adaptNotificationLogsToAlerts(ctx context.Context, logs [
 				resp.Severity = alertRuleSeverityToWire(rule.Severity)
 				if rule.VehicleID != nil {
 					resp.VehicleID = *rule.VehicleID
+				}
+				// Drill-through metadata (Phase 40 / Prompt 14). Carry the
+				// owning rule's identity so the frontend can deep-link from
+				// the alert to the relevant context page (e.g. /battery,
+				// /charging) with the alert's signal + timestamp preselected.
+				ruleID := rule.ID
+				resp.RuleID = &ruleID
+				if rule.SignalName != "" {
+					sig := rule.SignalName
+					resp.RuleSignal = &sig
+				}
+				if rule.Severity != "" {
+					sev := rule.Severity
+					resp.RuleSeverity = &sev
 				}
 			}
 		}

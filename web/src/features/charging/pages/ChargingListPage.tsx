@@ -9,6 +9,7 @@ import { useChargingSessionsPaginated, useChargingOptimizer } from '@/api/hooks/
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useAlertContext } from '@/hooks/useAlertContext';
 import {
   HeroGauges,
   QuickMetrics,
@@ -40,6 +41,7 @@ export default function ChargingListPage() {
 
   const { convertDistance, distanceUnit } = useSettings();
   const { data: vehicles } = useVehicles();
+  const alertCtx = useAlertContext();
 
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState<SortKey>('date');
@@ -55,7 +57,10 @@ export default function ChargingListPage() {
   });
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
 
-  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
+  // When the user lands here from a charging-related alert (`?vehicle_id=…`),
+  // preselect that vehicle so the session list immediately scopes to it
+  // (Phase 40 / Prompt 14). Manual selection still wins over alert context.
+  const vehicleId = selectedVehicle ?? alertCtx.vehicleId ?? vehicles?.[0]?.id ?? null;
   const {
     data: sessions,
     isLoading,

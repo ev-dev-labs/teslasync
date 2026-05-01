@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Link } from 'react-router-dom'
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -22,12 +23,26 @@ import clsx from 'clsx'
  */
 type ToastType = 'success' | 'error' | 'info' | 'warning'
 
+/**
+ * Optional action link rendered in the toast body. Currently used by alert
+ * toasts (Phase 40 / Prompt 14) to add a "View" link that drills through to
+ * the relevant context page (e.g. /battery?vehicle_id=12&t=...&signal=...).
+ */
+export interface ToastAction {
+  /** Visible link label, e.g. "View". */
+  label: string
+  /** React Router target. Use a string (path + query) — same shape as
+   *  `<Link to=>`. Avoid external URLs here. */
+  to: string
+}
+
 interface Toast {
   id: string
   type: ToastType
   title: string
   message?: string
   duration?: number
+  action?: ToastAction
 }
 
 interface ToastContextValue {
@@ -118,6 +133,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-[var(--text-primary)]">{t.title}</p>
                     {t.message && <p className="mt-0.5 text-xs text-[var(--text-secondary)] line-clamp-2">{t.message}</p>}
+                    {t.action && (
+                      <Link
+                        to={t.action.to}
+                        onClick={() => dismiss(t.id)}
+                        className={clsx(
+                          'mt-2 inline-flex items-center gap-1 text-xs font-medium underline-offset-2 hover:underline',
+                          s.icon,
+                        )}
+                      >
+                        {t.action.label} →
+                      </Link>
+                    )}
                   </div>
                   <button
                     onClick={() => dismiss(t.id)}

@@ -287,6 +287,13 @@ export interface Alert {
   message: string
   is_read: boolean
   created_at: string
+  /** Drill-through metadata (Phase 40 / Prompt 14). Populated when the
+   *  notification log links to a still-existing alert rule. Used by
+   *  `getAlertDrillthroughHref()` (web/src/lib/alertDrillthrough.ts) to
+   *  deep-link from the alert into the relevant context page. */
+  rule_id?: number | null
+  rule_signal?: string | null
+  rule_severity?: AlertRuleSeverity | string | null
 }
 
 export type AlertRuleSeverity = 'info' | 'warn' | 'critical'

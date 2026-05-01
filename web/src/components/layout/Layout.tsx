@@ -113,6 +113,7 @@ import { useNotificationListener } from '../../hooks/useNotificationListener'
 import { useToast } from '../feedback/Toast'
 import { useSettings } from '../../hooks/useSettings'
 import { GlassPanel } from '../ui/GlassPanel'
+import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough'
 
 const navI18nKeys: Record<string, string> = {
   'Dashboard': 'nav.dashboard',
@@ -551,10 +552,40 @@ export default function Layout() {
   const toast = useToast()
   const { state: sseState } = useRealtimeEvents({
     onAlert: (data) => {
-      const alert = data as { title?: string; message?: string; severity?: string }
+      const alert = data as Partial<Alert>
       const severity = alert.severity ?? 'info'
-      const method = severity === 'critical' ? toast.error : severity === 'warning' ? toast.warning : toast.info
-      method(alert.title ?? 'Alert', alert.message ?? '')
+      // Build a drill-through link if we have enough metadata to deep-link.
+      // Falls back to /signal-explorer when only a timestamp is known.
+      const href = (alert.created_at || alert.rule_signal || alert.vehicle_id)
+        ? getAlertDrillthroughHref({
+            id: alert.id ?? 0,
+            vehicle_id: alert.vehicle_id ?? 0,
+            type: alert.type ?? 'notification',
+            severity: alert.severity ?? 'info',
+            title: alert.title ?? '',
+            message: alert.message ?? '',
+            is_read: false,
+            created_at: alert.created_at ?? new Date().toISOString(),
+            rule_id: alert.rule_id ?? null,
+            rule_signal: alert.rule_signal ?? null,
+            rule_severity: alert.rule_severity ?? null,
+          })
+        : null
+      const title = alert.title ?? t('alerts.toast.title', 'Alert')
+      const message = alert.message ?? ''
+      const toastType: 'error' | 'warning' | 'info' =
+        severity === 'critical' ? 'error' : severity === 'warning' ? 'warning' : 'info'
+      if (href) {
+        toast.toast({
+          type: toastType,
+          title,
+          message,
+          action: { label: t('alerts.toast.view', 'View'), to: href },
+        })
+      } else {
+        const method = toastType === 'error' ? toast.error : toastType === 'warning' ? toast.warning : toast.info
+        method(title, message)
+      }
     },
   })
   useNotificationListener()

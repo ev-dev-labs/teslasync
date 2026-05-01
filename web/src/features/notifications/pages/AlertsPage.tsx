@@ -5,9 +5,12 @@
  */
 
 import { useState, useMemo, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { cn } from '@/lib/cn';
 import { severityTokens, normalizeSeverity } from '@/lib/tokens';
+import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
@@ -49,6 +52,7 @@ import {
   Zap, Shield, Gauge, Thermometer, Eye, Filter, Settings2, CheckCircle,
   Clock, Moon, Send, TrendingDown, Lock, Droplets, BarChart3,
   PieChart as PieChartIcon, Database, Radio, Wifi, HardDrive, Activity,
+  ChevronRight,
 } from 'lucide-react';
 
 // ─── Severity helpers ────────────────────────────────────────────────────────
@@ -117,11 +121,12 @@ function loadDigestMode(): DigestMode {
 
 // ─── AlertCard sub-component ─────────────────────────────────────────────────
 
-function AlertCard({ alert, onMarkRead, t }: { alert: Alert; onMarkRead: () => void; t: (k: string) => string }) {
+function AlertCard({ alert, onMarkRead, t }: { alert: Alert; onMarkRead: () => void; t: TFunction }) {
   const sev = normalizeSeverity(alert.severity);
   const tokens = severityTokens[sev];
   const Icon = typeIcons[alert.type] || Bell;
   const timeAgo = getTimeAgo(alert.created_at);
+  const drillHref = getAlertDrillthroughHref(alert);
 
   return (
     <GlassPanel
@@ -137,12 +142,16 @@ function AlertCard({ alert, onMarkRead, t }: { alert: Alert; onMarkRead: () => v
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
-          <div>
+          <Link
+            to={drillHref}
+            className="block min-w-0 flex-1 -m-1 p-1 rounded-md hover:bg-white/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400/60"
+            aria-label={t('alerts.viewContext', 'View context')}
+          >
             <span className={cn('text-sm font-medium block', alert.is_read ? 'text-[var(--text-secondary)]' : 'text-[var(--text-primary)]')}>
               {alert.title}
             </span>
             <span className="text-xs text-[var(--text-muted)] mt-0.5 line-clamp-2 block">{alert.message}</span>
-          </div>
+          </Link>
           {!alert.is_read && (
             <StatusDot
               severity={alert.severity}
@@ -159,8 +168,15 @@ function AlertCard({ alert, onMarkRead, t }: { alert: Alert; onMarkRead: () => v
             {alert.severity}
           </SeverityBadge>
           <span className="text-[10px] text-[var(--text-muted)]">{(alert.type ?? 'notification').replace(/_/g, ' ')}</span>
+          <Link
+            to={drillHref}
+            className="ml-auto inline-flex items-center gap-1 text-[11px] font-medium text-cyan-300 hover:text-cyan-200 underline-offset-2 hover:underline opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            {t('alerts.viewContext', 'View context')}
+            <ChevronRight className="h-3 w-3" />
+          </Link>
           {!alert.is_read && (
-            <Button variant="ghost" size="sm" icon={<Eye className="h-3 w-3" />} onClick={onMarkRead} className="ml-auto opacity-0 group-hover:opacity-100">
+            <Button variant="ghost" size="sm" icon={<Eye className="h-3 w-3" />} onClick={onMarkRead}>
               {t('Mark read')}
             </Button>
           )}

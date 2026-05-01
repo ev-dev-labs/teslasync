@@ -662,15 +662,17 @@ func TestAlertHandler_List_AdaptsNotificationLogsToAlertShape(t *testing.T) {
 	vehicleID := int64(7)
 
 	criticalRule := &models.AlertRule{
-		ID:        ruleCritID,
-		Name:      "Battery low (Model Y)",
-		Severity:  "critical",
-		VehicleID: &vehicleID,
+		ID:         ruleCritID,
+		Name:       "Battery low (Model Y)",
+		Severity:   "critical",
+		SignalName: "BatteryLevel",
+		VehicleID:  &vehicleID,
 	}
 	infoRule := &models.AlertRule{
-		ID:       ruleInfoID,
-		Name:     "Door unlocked",
-		Severity: "info",
+		ID:         ruleInfoID,
+		Name:       "Door unlocked",
+		Severity:   "info",
+		SignalName: "Locked",
 	}
 
 	now := time.Now().UTC()
@@ -719,6 +721,16 @@ func TestAlertHandler_List_AdaptsNotificationLogsToAlertShape(t *testing.T) {
 	if resp[0].IsRead {
 		t.Errorf("resp[0].IsRead = true, want false")
 	}
+	// Drill-through metadata (Phase 40 / Prompt 14).
+	if resp[0].RuleID == nil || *resp[0].RuleID != ruleCritID {
+		t.Errorf("resp[0].RuleID = %v, want pointer to %d", resp[0].RuleID, ruleCritID)
+	}
+	if resp[0].RuleSignal == nil || *resp[0].RuleSignal != "BatteryLevel" {
+		t.Errorf("resp[0].RuleSignal = %v, want pointer to %q", resp[0].RuleSignal, "BatteryLevel")
+	}
+	if resp[0].RuleSeverity == nil || *resp[0].RuleSeverity != "critical" {
+		t.Errorf("resp[0].RuleSeverity = %v, want pointer to %q", resp[0].RuleSeverity, "critical")
+	}
 
 	// Row 1: info rule but delivery failed → upgraded to "warning".
 	if got, want := resp[1].Severity, "warning"; got != want {
@@ -730,6 +742,16 @@ func TestAlertHandler_List_AdaptsNotificationLogsToAlertShape(t *testing.T) {
 	if resp[1].VehicleID != 0 {
 		t.Errorf("resp[1].VehicleID = %d, want 0 (rule had no vehicle)", resp[1].VehicleID)
 	}
+	// Drill-through metadata still propagates even when vehicle is nil.
+	if resp[1].RuleID == nil || *resp[1].RuleID != ruleInfoID {
+		t.Errorf("resp[1].RuleID = %v, want pointer to %d", resp[1].RuleID, ruleInfoID)
+	}
+	if resp[1].RuleSignal == nil || *resp[1].RuleSignal != "Locked" {
+		t.Errorf("resp[1].RuleSignal = %v, want pointer to %q", resp[1].RuleSignal, "Locked")
+	}
+	if resp[1].RuleSeverity == nil || *resp[1].RuleSeverity != "info" {
+		t.Errorf("resp[1].RuleSeverity = %v, want pointer to %q", resp[1].RuleSeverity, "info")
+	}
 
 	// Row 2: alert_id = nil → defaults.
 	if got, want := resp[2].Severity, "info"; got != want {
@@ -740,6 +762,16 @@ func TestAlertHandler_List_AdaptsNotificationLogsToAlertShape(t *testing.T) {
 	}
 	if resp[2].VehicleID != 0 {
 		t.Errorf("resp[2].VehicleID = %d, want 0", resp[2].VehicleID)
+	}
+	// alert_id was nil, so no rule was joined → drill-through metadata is omitted.
+	if resp[2].RuleID != nil {
+		t.Errorf("resp[2].RuleID = %v, want nil (no joined rule)", resp[2].RuleID)
+	}
+	if resp[2].RuleSignal != nil {
+		t.Errorf("resp[2].RuleSignal = %v, want nil", resp[2].RuleSignal)
+	}
+	if resp[2].RuleSeverity != nil {
+		t.Errorf("resp[2].RuleSeverity = %v, want nil", resp[2].RuleSeverity)
 	}
 }
 

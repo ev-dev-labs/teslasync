@@ -6,6 +6,7 @@
  */
 
 import { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -28,14 +29,16 @@ import { formatDateTime } from '@/lib/dateFormat';
 import {
   useNotificationChannels, useNotificationLogs, useNotificationStats,
   useSaveChannel, useDeleteChannel, useToggleChannel, useTestChannel,
+  useAlertRules,
   type NotificationChannelInput,
 } from '@/api/hooks/useNotifications';
-import type { NotificationChannel, NotificationChannelKind, NotificationLog } from '@/api/types';
+import type { NotificationChannel, NotificationChannelKind, NotificationLog, AlertRule, Alert } from '@/api/types';
 import {
   Bell, Plus, Trash2, Send, MessageSquare, Mail, Webhook, Hash,
   Megaphone, Smartphone, CheckCircle, XCircle, Clock, BarChart3,
-  Pencil, ChevronDown, ChevronUp, TestTube,
+  Pencil, ChevronDown, ChevronUp, ChevronRight, TestTube,
 } from 'lucide-react';
+import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough';
 
 // ─── Channel type definitions ────────────────────────────────────────────────
 
@@ -401,11 +404,22 @@ export default function NotificationsPage() {
   const { data: channels = [], isLoading, error } = useNotificationChannels();
   const { data: stats } = useNotificationStats();
   const { data: logs = [] } = useNotificationLogs();
+  const { data: rules = [] } = useAlertRules();
 
   // Mutations
   const deleteMut = useDeleteChannel();
   const toggleMut = useToggleChannel();
   const testMut = useTestChannel();
+
+  // Lookup table: alert_rule.id → rule, used to build a drill-through link for
+  // each notification log row. Notification logs only carry `alert_id` (the
+  // rule's PK) — we hydrate them with rule.signal_name / vehicle_id /
+  // severity here so the row can deep-link to the relevant context page.
+  const ruleMap = useMemo(() => {
+    const m: Record<number, AlertRule> = {};
+    rules.forEach(r => { m[r.id] = r; });
+    return m;
+  }, [rules]);
 
   // Log table columns
   const logColumns: Column<NotificationLog>[] = useMemo(() => {
@@ -428,8 +442,41 @@ export default function NotificationsPage() {
       { key: 'title', header: t('Title'), render: (log) => <span className="text-sm text-[var(--text-primary)]">{log.title}</span> },
       { key: 'status', header: t('Status'), render: (log) => <Badge variant={log.status === 'sent' ? 'success' : log.status === 'failed' ? 'danger' : 'warning'} size="sm">{log.status}</Badge> },
       { key: 'error', header: t('Error'), render: (log) => <span className="text-xs text-neon-red/70 max-w-[200px] truncate block">{log.error}</span> },
+      {
+        key: 'context',
+        header: '',
+        render: (log) => {
+          if (log.alert_id == null) return null;
+          const rule = ruleMap[log.alert_id];
+          if (!rule) return null;
+          // Hydrate enough of the Alert shape for the drill-through helper.
+          const synthetic: Alert = {
+            id: log.id,
+            vehicle_id: rule.vehicle_id ?? 0,
+            type: rule.name,
+            severity: rule.severity,
+            title: log.title,
+            message: log.message,
+            is_read: false,
+            created_at: log.created_at,
+            rule_id: rule.id,
+            rule_signal: rule.signal_name,
+            rule_severity: rule.severity,
+          };
+          return (
+            <Link
+              to={getAlertDrillthroughHref(synthetic)}
+              className="inline-flex items-center gap-1 text-xs font-medium text-cyan-300 hover:text-cyan-200 underline-offset-2 hover:underline"
+              aria-label={t('alerts.viewContext', 'View context')}
+            >
+              {t('alerts.viewContext', 'View context')}
+              <ChevronRight className="h-3 w-3" />
+            </Link>
+          );
+        },
+      },
     ];
-  }, [channels, t]);
+  }, [channels, ruleMap, t]);
 
   // Channel name lookup for the search field accessor.
   const channelNames: Record<number, string> = useMemo(() => {

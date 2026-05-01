@@ -15,7 +15,7 @@ import {
   chartGrid, axisTickSm, CHART_COLORS,
   AreaChart, Area, BarChart, Bar, ComposedChart, Line, ReferenceLine,
   PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
-  AREA_DEFAULTS,
+  AREA_DEFAULTS, TimeMarker,
 } from '@/components/charts';
 import { MetricCard, MetricBar } from '@/components/data-display';
 import { Skeleton, EmptyState } from '@/components/feedback';
@@ -26,6 +26,7 @@ import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
 import { useVehicles, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useAlertContext } from '@/hooks/useAlertContext';
 import { cn } from '@/lib/cn';
 import { COLOR, STATUS_COLORS } from '@/lib/colors';
 import { fmtNumber, fmtPercent, fmtInt } from '@/lib/numberFormat';
@@ -196,9 +197,20 @@ export default function BatteryHealthPage() {
 
   /* ── Vehicle selector ──────────────────────────────────────────── */
   const { data: vehicles } = useVehicles();
+  const alertCtx = useAlertContext();
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
-  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
+  // When the user lands here from an alert (`?vehicle_id=…`), preselect that
+  // vehicle so the charts immediately scope to it (Phase 40 / Prompt 14).
+  const vehicleId = selectedVehicle ?? alertCtx.vehicleId ?? vehicles?.[0]?.id ?? null;
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : null;
+
+  // The alert timestamp used for the chart marker, formatted to match the
+  // chart's `dataKey="label"` (formatDateShort). Recharts ReferenceLine matches
+  // string x-values exactly, so we format the alert moment the same way.
+  const alertMarkerLabel = useMemo(
+    () => (alertCtx.timestamp ? formatDateShort(alertCtx.timestamp) : null),
+    [alertCtx.timestamp],
+  );
 
   /* ── Data fetching ─────────────────────────────────────────────── */
   const { data: health, isLoading: healthLoading, error: healthError } =
@@ -633,6 +645,7 @@ export default function BatteryHealthPage() {
                   <Tooltip content={<ChartTooltip />} />
                   <ReferenceLine y={70} stroke={STATUS_COLORS.critical} strokeDasharray="8 4" />
                   <ReferenceLine y={80} stroke={STATUS_COLORS.warning} strokeDasharray="4 4" />
+                  <TimeMarker x={alertMarkerLabel} severity={alertCtx.signal ? 'critical' : undefined} />
                   <Area {...AREA_DEFAULTS} dataKey="actual" name={t('battery.chart.actual', 'Actual %')} stroke="transparent" fill="url(#healthGrad)" />
                   <Line {...AREA_DEFAULTS} dataKey="actual" name={t('battery.chart.actual', 'Actual %')} stroke={COLOR.CYAN} dot={{ fill: COLOR.CYAN, r: 2 }} connectNulls={false} />
                   <Line {...AREA_DEFAULTS} dataKey="predicted" name={t('battery.chart.predicted', 'Predicted %')} stroke={COLOR.CYAN} strokeDasharray="6 4" opacity={0.5} />
@@ -663,6 +676,7 @@ export default function BatteryHealthPage() {
                   <XAxis dataKey="label" tick={axisTickSm} tickLine={false} axisLine={false} />
                   <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
                   <Tooltip content={<ChartTooltip />} />
+                  <TimeMarker x={alertMarkerLabel} severity={alertCtx.signal ? 'critical' : undefined} />
                   <Area
                     {...AREA_DEFAULTS}
                     dataKey="range"

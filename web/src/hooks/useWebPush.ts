@@ -20,16 +20,21 @@ export function useWebPush() {
   }, [])
 
   const sendNotification = useCallback(
-    (title: string, options?: NotificationOptions) => {
+    (title: string, options?: NotificationOptions, onClick?: () => void) => {
       if (!isSupported || permission !== 'granted') return null
       const n = new Notification(title, {
         icon: '/icons/icon-192x192.png',
         badge: '/icons/icon-192x192.png',
         ...options,
       })
-      // Focus the app tab when the notification is clicked
+      // Focus the app tab when the notification is clicked, then run the
+      // optional drill-through callback (used by alert notifications to
+      // navigate to the relevant context page — Phase 40 / Prompt 14).
       n.onclick = () => {
         window.focus()
+        if (onClick) {
+          try { onClick() } catch { /* swallow — best-effort navigation */ }
+        }
         n.close()
       }
       return n
