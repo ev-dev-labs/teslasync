@@ -1,6 +1,6 @@
 === GATE ===
-NO_SIGNALAT=True
 FILE_EXISTS=True
+NO_SIGNALAT=True
 ?   	github.com/ev-dev-labs/teslasync/cmd/automation-worker	[no test files]
 ?   	github.com/ev-dev-labs/teslasync/cmd/export-worker	[no test files]
 ?   	github.com/ev-dev-labs/teslasync/cmd/notification-worker	[no test files]
@@ -13,7 +13,7 @@ ok  	github.com/ev-dev-labs/teslasync/internal/adapter/gasprices	(cached)
 ?   	github.com/ev-dev-labs/teslasync/internal/adapter/redis	[no test files]
 ?   	github.com/ev-dev-labs/teslasync/internal/adapter/storage	[no test files]
 ?   	github.com/ev-dev-labs/teslasync/internal/adapter/tesla	[no test files]
-ok  	github.com/ev-dev-labs/teslasync/internal/api	0.426s
+ok  	github.com/ev-dev-labs/teslasync/internal/api	(cached)
 ok  	github.com/ev-dev-labs/teslasync/internal/app/chargingsvc	(cached)
 ok  	github.com/ev-dev-labs/teslasync/internal/app/dashboardsvc	(cached)
 ok  	github.com/ev-dev-labs/teslasync/internal/app/exportsvc	(cached)
@@ -80,3 +80,4 @@ GO_TEST_EXIT=0
 UNEXPECTED_STATUS_COUNT=0
 EXIT=0
 STATUS=DONE
+=== COMMIT ===
