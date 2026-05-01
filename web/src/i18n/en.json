@@ -194,5 +194,189 @@
     "declined": "declined",
     "higher": "higher",
     "lower": "lower"
+  },
+  "toast": {
+    "common": {
+      "error": "Something went wrong"
+    },
+    "alerts": {
+      "markRead": {
+        "success": "Alert marked as read",
+        "error": "Failed to mark alert as read"
+      },
+      "saveRule": {
+        "success": "Alert rule saved",
+        "error": "Failed to save alert rule"
+      },
+      "deleteRule": {
+        "success": "Alert rule deleted",
+        "error": "Failed to delete alert rule"
+      },
+      "toggleRule": {
+        "enabled": "Alert rule enabled",
+        "disabled": "Alert rule disabled",
+        "error": "Failed to toggle alert rule"
+      },
+      "test": {
+        "success": "Test alert sent",
+        "error": "Failed to send test alert"
+      },
+      "snooze": {
+        "success": "Rule snoozed",
+        "cleared": "Snooze cleared",
+        "error": "Failed to snooze rule"
+      }
+    },
+    "channels": {
+      "save": {
+        "created": "Channel created",
+        "updated": "Channel updated",
+        "error": "Failed to save channel"
+      },
+      "delete": {
+        "success": "Channel deleted",
+        "error": "Failed to delete channel"
+      },
+      "toggle": {
+        "success": "Channel toggled",
+        "error": "Failed to toggle channel"
+      },
+      "test": {
+        "success": "Test notification sent",
+        "error": "Failed to send test"
+      }
+    },
+    "settings": {
+      "save": {
+        "success": "Settings saved",
+        "error": "Failed to save settings"
+      },
+      "auth": {
+        "url": {
+          "success": "Auth URL generated",
+          "error": "Failed to get auth URL"
+        },
+        "refresh": {
+          "success": "Auth refreshed",
+          "error": "Failed to refresh auth"
+        },
+        "disconnect": {
+          "success": "Tesla account disconnected",
+          "error": "Failed to disconnect"
+        }
+      },
+      "vehicles": {
+        "sync": {
+          "success": "Vehicles synced",
+          "error": "Failed to sync vehicles"
+        }
+      },
+      "gasPrice": {
+        "poll": {
+          "success": "Gas prices updated",
+          "error": "Failed to poll gas prices"
+        },
+        "toggle": {
+          "enabled": "Gas price tracking enabled",
+          "disabled": "Gas price tracking disabled",
+          "error": "Failed to toggle gas price tracking"
+        },
+        "config": {
+          "success": "Gas price config updated",
+          "error": "Failed to update gas price config"
+        }
+      },
+      "dashboardLayouts": {
+        "success": "Dashboard layout saved",
+        "error": "Failed to save dashboard layout"
+      },
+      "api": {
+        "toggle": {
+          "suspended": "API suspended",
+          "resumed": "API resumed",
+          "error": "Failed to toggle API suspension"
+        }
+      },
+      "polling": {
+        "success": "Polling config saved",
+        "error": "Failed to save polling config"
+      }
+    },
+    "admin": {
+      "apiKey": {
+        "create": {
+          "success": "API key created",
+          "error": "Failed to create API key"
+        },
+        "delete": {
+          "success": "API key deleted",
+          "error": "Failed to delete API key"
+        },
+        "revoke": {
+          "success": "API key revoked",
+          "error": "Failed to revoke API key"
+        }
+      },
+      "export": {
+        "create": {
+          "success": "Export job created",
+          "error": "Failed to create export"
+        }
+      }
+    },
+    "vehicles": {
+      "refresh": {
+        "success": "Vehicle refreshed",
+        "error": "Failed to refresh vehicle"
+      },
+      "delete": {
+        "success": "Vehicle deleted",
+        "error": "Failed to delete vehicle"
+      },
+      "sync": {
+        "success": "Vehicles synced ({{count}} updated)",
+        "error": "Failed to sync vehicles"
+      },
+      "wake": {
+        "success": "Wake command sent",
+        "error": "Failed to wake vehicle"
+      },
+      "mobileEnabled": {
+        "refresh": {
+          "success": "Mobile access status refreshed",
+          "error": "Failed to refresh mobile access"
+        }
+      },
+      "options": {
+        "refresh": {
+          "success": "Vehicle options refreshed",
+          "error": "Failed to refresh options"
+        }
+      },
+      "specs": {
+        "refresh": {
+          "success": "Vehicle specs refreshed",
+          "error": "Failed to refresh specs"
+        }
+      },
+      "subscriptions": {
+        "refresh": {
+          "success": "Subscriptions refreshed",
+          "error": "Failed to refresh subscriptions"
+        }
+      },
+      "upgrades": {
+        "refresh": {
+          "success": "Upgrades refreshed",
+          "error": "Failed to refresh upgrades"
+        }
+      },
+      "warranty": {
+        "refresh": {
+          "success": "Warranty details refreshed",
+          "error": "Failed to refresh warranty details"
+        }
+      }
+    }
   }
 }

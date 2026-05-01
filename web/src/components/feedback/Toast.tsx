@@ -3,6 +3,23 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react'
 import clsx from 'clsx'
 
+/**
+ * Toast — transient mutation feedback (auto-dismisses after 4s).
+ *
+ * Use Toast for short-lived confirmation that a user-initiated action succeeded
+ * or failed (saved settings, deleted rule, sent test alert, …). Use the
+ * `useMutationToast()` helper from `@/api/hooks/_toastHelpers` to wire toasts
+ * into TanStack Query mutations with i18n-aware messages.
+ *
+ * For persistent page-level messages (e.g. "Tesla connection expired —
+ * reconnect"), use `<AlertBanner>` from `@/components/feedback/AlertBanner`
+ * instead — toasts are not durable and disappear on their own.
+ *
+ * Icon and border colors are aligned with `severityTokens` in `@/lib/tokens`
+ * (Phase-40 Prompt 09) — toned-down 300-level shades on white instead of neon
+ * accents — except the `error` variant which keeps the brand `tesla-red`
+ * border.
+ */
 type ToastType = 'success' | 'error' | 'info' | 'warning'
 
 interface Toast {
@@ -37,11 +54,14 @@ const icons: Record<ToastType, ReactNode> = {
   warning: <AlertTriangle className="h-5 w-5" />,
 }
 
+// Colors mirror severityTokens from @/lib/tokens — body text/icons use the
+// toned-down 300-level shade rather than neon. The `error` variant intentionally
+// keeps `border-tesla-red/30` because Tesla red is a brand color, not neon.
 const styles: Record<ToastType, { border: string; icon: string; glow: string }> = {
-  success: { border: 'border-neon-green/30', icon: 'text-neon-green', glow: 'shadow-[0_0_20px_rgba(16,185,129,0.15)]' },
-  error: { border: 'border-tesla-red/30', icon: 'text-tesla-red', glow: 'shadow-[0_0_20px_rgba(227,25,55,0.15)]' },
-  info: { border: 'border-neon-cyan/30', icon: 'text-neon-cyan', glow: 'shadow-[0_0_20px_rgba(0,240,255,0.15)]' },
-  warning: { border: 'border-neon-amber/30', icon: 'text-neon-amber', glow: 'shadow-[0_0_20px_rgba(245,158,11,0.15)]' },
+  success: { border: 'border-emerald-500/30', icon: 'text-emerald-300', glow: 'shadow-[0_0_20px_rgba(16,185,129,0.15)]' },
+  error:   { border: 'border-tesla-red/30',   icon: 'text-red-300',     glow: 'shadow-[0_0_20px_rgba(227,25,55,0.15)]' },
+  info:    { border: 'border-sky-500/30',     icon: 'text-sky-300',     glow: 'shadow-[0_0_20px_rgba(56,189,248,0.15)]' },
+  warning: { border: 'border-amber-500/30',   icon: 'text-amber-300',   glow: 'shadow-[0_0_20px_rgba(245,158,11,0.15)]' },
 }
 
 let toastCounter = 0

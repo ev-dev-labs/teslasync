@@ -17,7 +17,20 @@ const alertVariantMap: Record<string, { border: string; bg: string; text: string
   danger:  { border: 'border-neon-red/20',    bg: 'bg-neon-red/5',    text: 'text-neon-red/80',    titleText: 'text-neon-red' },
 }
 
-/** Inline notification banner for info, success, warning, or error messages. */
+/**
+ * AlertBanner — persistent, page-level inline notification (info / success /
+ * warning / danger).
+ *
+ * Use AlertBanner for messages that should remain on screen until either the
+ * underlying condition resolves or the user dismisses them — e.g. "Tesla
+ * connection expired — reconnect", "Vehicle is offline", "Beta feature".
+ *
+ * For transient feedback after a user-initiated mutation (saved settings,
+ * deleted rule, sent test alert, …), use the toast system instead — see
+ * `useMutationToast()` from `@/api/hooks/_toastHelpers` and the
+ * `<ToastProvider>` mounted in `main.tsx`. Toasts auto-dismiss after 4s and
+ * stack at the bottom-right; AlertBanners stay rendered in-flow.
+ */
 export function AlertBanner({ variant, title, children, onClose, icon, className, ...props }: AlertBannerProps) {
   const v = alertVariantMap[variant]
   return (
