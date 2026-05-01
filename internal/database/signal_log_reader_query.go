@@ -25,47 +25,6 @@ type SignalTraceEntry struct {
 	ValueJson map[string]interface{}
 }
 
-// SnapshotAt returns the latest value of every signal for a vehicle at or before
-// the given timestamp. Reconstructs full signal context at any point in time.
-//
-// Uses DISTINCT ON with the (vehicle_id, signal, created_at DESC) index for
-// efficient last-value-per-signal lookups on the hypertable.
-func (r *SignalLogReader) SnapshotAt(ctx context.Context, vehicleID int64, at time.Time) (map[string]interface{}, error) {
-	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
-	defer cancel()
-
-	query := `SELECT DISTINCT ON (signal) signal, value_num, value_str, value_bool, value_jsonb
-	          FROM signal_log
-	          WHERE vehicle_id = $1 AND created_at <= $2
-	          ORDER BY signal, created_at DESC`
-
-	rows, err := r.db.Pool.Query(ctx, query, vehicleID, at)
-	if err != nil {
-		return nil, fmt.Errorf("snapshot at %v for vehicle %d: %w", at, vehicleID, err)
-	}
-	defer rows.Close()
-
-	result := make(map[string]interface{})
-	for rows.Next() {
-		signal, val, err := scanSignalValue(rows)
-		if err != nil {
-			return nil, fmt.Errorf("snapshot at scan: %w", err)
-		}
-		if val != nil {
-			result[signal] = val
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	// Unpack historical Location compounds stored as value_jsonb.
-	// Newer flattened rows (Latitude/Longitude) take precedence.
-	unpackLocationCompounds(result)
-
-	return result, nil
-}
-
 // SignalAt returns a single signal's value at or before the given timestamp.
 // Returns (nil, nil) if the signal was never recorded before that time.
 func (r *SignalLogReader) SignalAt(ctx context.Context, vehicleID int64, signal string, at time.Time) (interface{}, error) {
@@ -92,37 +51,6 @@ func (r *SignalLogReader) SignalAt(ctx context.Context, vehicleID int64, signal 
 	}
 
 	return decodeValue(vNum, vStr, vBool, vJsonb), nil
-}
-
-// SnapshotBetween returns the latest value of every signal received within a
-// time window. Useful for answering "what signals changed during this
-// drive/charge session".
-func (r *SignalLogReader) SnapshotBetween(ctx context.Context, vehicleID int64, from, to time.Time) (map[string]interface{}, error) {
-	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
-	defer cancel()
-
-	query := `SELECT DISTINCT ON (signal) signal, value_num, value_str, value_bool, value_jsonb
-	          FROM signal_log
-	          WHERE vehicle_id = $1 AND created_at >= $2 AND created_at <= $3
-	          ORDER BY signal, created_at DESC`
-
-	rows, err := r.db.Pool.Query(ctx, query, vehicleID, from, to)
-	if err != nil {
-		return nil, fmt.Errorf("snapshot between %v–%v for vehicle %d: %w", from, to, vehicleID, err)
-	}
-	defer rows.Close()
-
-	result := make(map[string]interface{})
-	for rows.Next() {
-		signal, val, err := scanSignalValue(rows)
-		if err != nil {
-			return nil, fmt.Errorf("snapshot between scan: %w", err)
-		}
-		if val != nil {
-			result[signal] = val
-		}
-	}
-	return result, rows.Err()
 }
 
 // SignalTrace returns all values of specific signals within a time window,
@@ -168,22 +96,6 @@ func (r *SignalLogReader) SignalTrace(ctx context.Context, vehicleID int64, sign
 	return entries, nil
 }
 
-// scanSignalValue scans a row with columns (signal, value_num, value_str,
-// value_bool, value_jsonb) and returns the decoded value using the priority:
-// value_num → value_bool → value_jsonb → value_str.
-func scanSignalValue(rows pgx.Rows) (string, interface{}, error) {
-	var signal string
-	var vNum *float64
-	var vStr *string
-	var vBool *bool
-	var vJsonb []byte
-
-	if err := rows.Scan(&signal, &vNum, &vStr, &vBool, &vJsonb); err != nil {
-		return "", nil, err
-	}
-	return signal, decodeValue(vNum, vStr, vBool, vJsonb), nil
-}
-
 // LatestTimestamp returns the most recent signal timestamp for a vehicle.
 // Returns (zero time, nil) if no signals exist for the vehicle.
 func (r *SignalLogReader) LatestTimestamp(ctx context.Context, vehicleID int64) (time.Time, error) {
@@ -224,34 +136,4 @@ func decodeValue(vNum *float64, vStr *string, vBool *bool, vJsonb []byte) interf
 		return *vStr
 	}
 	return nil
-}
-
-// unpackLocationCompounds expands historical Location compound blobs (stored
-// as value_jsonb) into flat Latitude/Longitude keys. Only sets the flat key
-// if it doesn't already exist — newer flattened rows take precedence.
-func unpackLocationCompounds(result map[string]interface{}) {
-	for _, loc := range []struct{ compound, lat, lon string }{
-		{"Location", "Latitude", "Longitude"},
-		{"OriginLocation", "OriginLatitude", "OriginLongitude"},
-		{"DestinationLocation", "DestinationLatitude", "DestinationLongitude"},
-	} {
-		locRaw, ok := result[loc.compound]
-		if !ok {
-			continue
-		}
-		locMap, mapOk := locRaw.(map[string]interface{})
-		if !mapOk {
-			continue
-		}
-		if lat, latOk := locMap["latitude"]; latOk {
-			if _, exists := result[loc.lat]; !exists {
-				result[loc.lat] = lat
-			}
-		}
-		if lon, lonOk := locMap["longitude"]; lonOk {
-			if _, exists := result[loc.lon]; !exists {
-				result[loc.lon] = lon
-			}
-		}
-	}
 }
