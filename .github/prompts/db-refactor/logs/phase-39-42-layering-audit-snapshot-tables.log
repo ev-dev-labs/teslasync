@@ -1,0 +1,14 @@
+=== PREFLIGHT ===
+predecessor=phase-39-41-layering-audit-signal-log.log
+=== CREATED ===
+internal\signal\snapshot_tables_test.go
+=== GATE ===
+WALKS_CMD_DIR=True
+FILE_EXISTS=True
+TEST_NO_SNAPSHOT_SQL=True
+ok  	github.com/ev-dev-labs/teslasync/internal/signal	(cached)
+GO_TEST_EXIT=0
+UNEXPECTED_STATUS_COUNT=0
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
