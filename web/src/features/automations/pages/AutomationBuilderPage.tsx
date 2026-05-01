@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   AlertTriangle,
@@ -23,6 +23,10 @@ import { FadeIn } from '@/components/motion';
 import { FormSection } from '@/components/forms';
 import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDirtyForm } from '@/hooks/useDirtyForm';
+import { useAutosave, loadAutosave, clearAutosave } from '@/hooks/useAutosave';
+import { useConfirm } from '@/hooks/useConfirm';
+import { ConfirmDialog } from '@/components/ui';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useNotificationChannels } from '@/api/hooks/useNotifications';
 import {
@@ -274,6 +278,14 @@ export default function AutomationBuilderPage() {
   const updateMutation = useUpdateAutomationFull();
   const testRunMutation = useTestRunAutomation();
 
+  // Autosave draft key — scoped per-automation (or "new"/"preset:X") so two
+  // tabs editing different automations can keep separate drafts.
+  const draftKey = isEdit
+    ? `automation-${automationId ?? 'unknown'}`
+    : presetId
+      ? `automation-preset-${presetId}`
+      : 'automation-new';
+
   const [form, setForm] = useState<FormState>(getInitialForm);
   const [hydrated, setHydrated] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -310,18 +322,40 @@ export default function AutomationBuilderPage() {
     }
   }, [hydrated, isEdit, preset]);
 
+  // For brand-new automations (no `id`, no `preset`), restore any previously
+  // saved draft on first mount so the user doesn't lose work after a reload.
+  // For edits and preset installs we never restore — the canonical source is
+  // the server payload / preset definition.
+  useEffect(() => {
+    if (isEdit || presetId || hydrated) return;
+    const draft = loadAutosave<FormState>(draftKey);
+    if (draft) {
+      setForm(draft);
+      setDirty(true);
+    }
+    setHydrated(true);
+  }, [draftKey, hydrated, isEdit, presetId]);
+
   useEffect(() => {
     setHydrated(false);
   }, [automationId, presetId]);
 
-  useEffect(() => {
-    if (!dirty) return;
-    const handler = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-    };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, [dirty]);
+  // Browser-level unsaved-changes guard. Replaces the inline beforeunload
+  // wiring; also exposes localized strings reused by the in-app discard
+  // confirm dialog below.
+  const dirtyForm = useDirtyForm(dirty);
+  const { confirm: confirmDiscard, dialogProps: discardDialogProps } = useConfirm();
+
+  const isSaving = createMutation.isPending || updateMutation.isPending;
+
+  // Persist a draft to localStorage on a debounce while the form is dirty.
+  // Pause during in-flight saves so a successful submit isn't immediately
+  // re-saved as a stale draft (clearAutosave runs in onSuccess below).
+  useAutosave({
+    key: draftKey,
+    data: form,
+    paused: isSaving || !dirty || !hydrated,
+  });
 
   const vehicleOptions = useMemo(() => {
     const options = (vehicles ?? []).map((vehicle) => ({
@@ -387,8 +421,6 @@ export default function AutomationBuilderPage() {
     return null;
   }, [form, t]);
 
-  const isSaving = createMutation.isPending || updateMutation.isPending;
-
   const handleSave = useCallback(async () => {
     const error = validate();
     if (error) {
@@ -405,11 +437,41 @@ export default function AutomationBuilderPage() {
       setDirty(false);
       setSavedId(result.id);
       setConflicts([]);
+      // Successful save → drop the autosaved draft so a future visit
+      // doesn't restore stale work.
+      clearAutosave(draftKey);
       navigate('/automations');
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : String(error));
     }
-  }, [automationId, createMutation, form, isEdit, navigate, updateMutation, validate]);
+  }, [automationId, createMutation, draftKey, form, isEdit, navigate, updateMutation, validate]);
+
+  /**
+   * Cancel handler — if the form is dirty, prompt before navigating away.
+   * Otherwise leave immediately. The browser-level beforeunload guard
+   * (refresh/close-tab) is wired by useDirtyForm above.
+   */
+  const handleBackToList = useCallback(async () => {
+    if (dirty) {
+      const ok = await confirmDiscard({
+        title: dirtyForm.title,
+        message: dirtyForm.message,
+        variant: 'warning',
+        confirmLabel: dirtyForm.discardLabel,
+        cancelLabel: dirtyForm.keepEditingLabel,
+      });
+      if (!ok) return;
+    }
+    navigate('/automations');
+  }, [
+    dirty,
+    confirmDiscard,
+    dirtyForm.title,
+    dirtyForm.message,
+    dirtyForm.discardLabel,
+    dirtyForm.keepEditingLabel,
+    navigate,
+  ]);
 
   const handleTestRun = useCallback(() => {
     const targetId = savedId ?? automationId;
@@ -474,13 +536,16 @@ export default function AutomationBuilderPage() {
         }}
         className="max-w-4xl space-y-6"
       >
-        <Link
-          to="/automations"
-          className="inline-flex items-center gap-1 text-sm text-white/50 transition-colors hover:text-white/80"
+        <UiButton
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={handleBackToList}
+          className="self-start text-white/50 hover:text-white/80"
+          icon={<ArrowLeft className="h-4 w-4" />}
         >
-          <ArrowLeft className="h-4 w-4" />
           {t('automations.builder.backToList', 'Back to Automations')}
-        </Link>
+        </UiButton>
 
         <FadeIn>
           <FormSection title={t('automations.builder.general', 'General')}>
@@ -622,7 +687,7 @@ export default function AutomationBuilderPage() {
             <UiButton
               type="button"
               variant="ghost"
-              onClick={() => navigate('/automations')}
+              onClick={handleBackToList}
             >
               <X className="mr-2 h-4 w-4" />
               {t('automations.builder.cancel', 'Cancel')}
@@ -650,6 +715,7 @@ export default function AutomationBuilderPage() {
           </FadeIn>
         )}
       </form>
+      {discardDialogProps && <ConfirmDialog {...discardDialogProps} />}
     </PageContainer>
   );
 }

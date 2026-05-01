@@ -16,11 +16,13 @@ import {
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Button, Input, Select, Modal, Toggle, ConfirmDialog, Tabs } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
-import { Skeleton, EmptyState, Spinner } from '@/components/feedback';
+import { Skeleton, EmptyState, Spinner, AlertBanner } from '@/components/feedback';
 import { useToast } from '@/components/feedback/Toast';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { SearchInput, FilterBar } from '@/components/forms';
 import { useFilteredList } from '@/hooks/useFilteredList';
+import { useDirtyForm } from '@/hooks/useDirtyForm';
+import { useConfirm } from '@/hooks/useConfirm';
 import {
   MapContainer,
   MapTileLayer,
@@ -37,10 +39,16 @@ import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 import type { Geofence } from '@/types/location';
 import type { Position } from '@/api/types';
+import {
+  geofenceFormSchema,
+  toGeofencePayload,
+  type GeofenceFormData,
+  type GeofenceAlertType,
+} from '../schemas/geofence';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type AlertType = 'entry' | 'exit' | 'both' | 'none';
+type AlertType = GeofenceAlertType;
 type LocationSource = 'vehicle' | 'browser' | 'map';
 
 interface ReverseGeocodeResult {
@@ -50,15 +58,6 @@ interface ReverseGeocodeResult {
   state: string;
   country: string;
   postcode: string;
-}
-
-interface GeofenceFormData {
-  name: string;
-  latitude: string;
-  longitude: string;
-  radius: string;
-  alertType: AlertType;
-  enabled: boolean;
 }
 
 const EMPTY_FORM: GeofenceFormData = {
@@ -84,13 +83,6 @@ function getAlertType(g: Geofence): AlertType {
   if (g.alertOnEntry) return 'entry';
   if (g.alertOnExit) return 'exit';
   return 'none';
-}
-
-function alertFlags(type: AlertType) {
-  return {
-    alertOnEntry: type === 'entry' || type === 'both',
-    alertOnExit: type === 'exit' || type === 'both',
-  };
 }
 
 function alertBadgeVariant(type: AlertType): 'success' | 'warning' | 'info' | 'neutral' {
@@ -124,11 +116,32 @@ export default function GeofencesPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<GeofenceFormData>(EMPTY_FORM);
+  const [initialForm, setInitialForm] = useState<GeofenceFormData>(EMPTY_FORM);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof GeofenceFormData, string>>>({});
+  const [formError, setFormError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Geofence | null>(null);
   const [locationSource, setLocationSource] = useState<LocationSource>('vehicle');
   const [selectedVehicleId, setSelectedVehicleId] = useState<number>(0);
   const [locationLoading, setLocationLoading] = useState(false);
   const [search, setSearch] = useState('');
+
+  // Dirty when the modal is open AND the form diverges from the initial
+  // snapshot taken on open. Closed modal => not dirty so we don't pester the
+  // user about list-page navigation.
+  const isFormDirty = useMemo(() => {
+    if (!modalOpen) return false;
+    return (
+      form.name !== initialForm.name ||
+      form.latitude !== initialForm.latitude ||
+      form.longitude !== initialForm.longitude ||
+      form.radius !== initialForm.radius ||
+      form.alertType !== initialForm.alertType ||
+      form.enabled !== initialForm.enabled
+    );
+  }, [modalOpen, form, initialForm]);
+
+  const dirtyForm = useDirtyForm(isFormDirty);
+  const { confirm: confirmDiscard, dialogProps: discardDialogProps } = useConfirm();
 
   // ─── Data fetching ───────────────────────────────────────────────────────
 
@@ -257,25 +270,61 @@ export default function GeofencesPage() {
     setModalOpen(false);
     setEditingId(null);
     setForm(EMPTY_FORM);
+    setInitialForm(EMPTY_FORM);
+    setFieldErrors({});
+    setFormError(null);
   }, []);
+
+  /**
+   * Cancel handler — if the user has made unsaved edits, prompt before
+   * dismissing the modal. Otherwise close immediately.
+   */
+  const handleRequestClose = useCallback(async () => {
+    if (isFormDirty) {
+      const ok = await confirmDiscard({
+        title: dirtyForm.title,
+        message: dirtyForm.message,
+        variant: 'warning',
+        confirmLabel: dirtyForm.discardLabel,
+        cancelLabel: dirtyForm.keepEditingLabel,
+      });
+      if (!ok) return;
+    }
+    closeModal();
+  }, [
+    isFormDirty,
+    confirmDiscard,
+    dirtyForm.title,
+    dirtyForm.message,
+    dirtyForm.discardLabel,
+    dirtyForm.keepEditingLabel,
+    closeModal,
+  ]);
 
   const openCreate = useCallback(() => {
     setEditingId(null);
     setForm(EMPTY_FORM);
+    setInitialForm(EMPTY_FORM);
+    setFieldErrors({});
+    setFormError(null);
     setLocationLoading(false);
     setModalOpen(true);
   }, []);
 
   const openEdit = useCallback((g: Geofence) => {
     setEditingId(g.id);
-    setForm({
+    const next: GeofenceFormData = {
       name: g.name,
       latitude: String(g.latitude),
       longitude: String(g.longitude),
       radius: String(g.radius),
       alertType: getAlertType(g),
       enabled: g.enabled,
-    });
+    };
+    setForm(next);
+    setInitialForm(next);
+    setFieldErrors({});
+    setFormError(null);
     setModalOpen(true);
   }, []);
 
@@ -342,32 +391,35 @@ export default function GeofencesPage() {
   }, [locationSource, selectedVehicleId, reverseGeocode, toast, t]);
 
   const handleSubmit = useCallback(() => {
-    const flags = alertFlags(form.alertType);
-    const payload = {
-      name: form.name,
-      latitude: parseFloat(form.latitude),
-      longitude: parseFloat(form.longitude),
-      radius: parseFloat(form.radius),
-      alertOnEntry: flags.alertOnEntry,
-      alertOnExit: flags.alertOnExit,
-      enabled: form.enabled,
-      costPerKwh: null,
-    };
+    setFormError(null);
+    const parsed = geofenceFormSchema.safeParse(form);
+    if (!parsed.success) {
+      const next: Partial<Record<keyof GeofenceFormData, string>> = {};
+      for (const issue of parsed.error.issues) {
+        const key = issue.path[0] as keyof GeofenceFormData | undefined;
+        if (key && !next[key]) next[key] = issue.message;
+      }
+      setFieldErrors(next);
+      setFormError(t('forms.validationFailed', 'Please fix the highlighted fields before saving.'));
+      return;
+    }
+    setFieldErrors({});
+    const payload = { ...toGeofencePayload(parsed.data), costPerKwh: null };
     if (editingId) {
       updateMut.mutate({ id: editingId, body: payload });
     } else {
       createMut.mutate(payload);
     }
-  }, [form, editingId, createMut, updateMut]);
+  }, [form, editingId, createMut, updateMut, t]);
 
-  const isFormValid =
+  // Submit-disable heuristic: avoid disabling the button on type errors
+  // alone — let the zod parse drive the actual error display. Just block
+  // when any required string is empty so the button feels responsive.
+  const hasMinimalInput =
     form.name.trim().length > 0 &&
     form.latitude.trim().length > 0 &&
     form.longitude.trim().length > 0 &&
-    form.radius.trim().length > 0 &&
-    !isNaN(parseFloat(form.latitude)) &&
-    !isNaN(parseFloat(form.longitude)) &&
-    !isNaN(parseFloat(form.radius));
+    form.radius.trim().length > 0;
 
   const isSaving = createMut.isPending || updateMut.isPending;
 
@@ -548,11 +600,14 @@ export default function GeofencesPage() {
       {/* Create / Edit Modal */}
       <Modal
         open={modalOpen}
-        onClose={closeModal}
+        onClose={handleRequestClose}
         title={editingId ? t('Edit Geofence') : t('Create Geofence')}
         size="md"
       >
         <div className="space-y-4">
+          {formError && (
+            <AlertBanner variant="danger">{formError}</AlertBanner>
+          )}
           {/* Use Current Location */}
           {!editingId && (
             <GlassPanel className="space-y-3 p-4">
@@ -635,6 +690,7 @@ export default function GeofencesPage() {
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             placeholder={t('Home')}
+            error={fieldErrors.name}
           />
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -646,6 +702,7 @@ export default function GeofencesPage() {
               onChange={(e) => setForm({ ...form, latitude: e.target.value })}
               placeholder="37.7749"
               icon={<Globe className="h-4 w-4" />}
+              error={fieldErrors.latitude}
             />
             <Input
               label={t('Longitude')}
@@ -655,6 +712,7 @@ export default function GeofencesPage() {
               onChange={(e) => setForm({ ...form, longitude: e.target.value })}
               placeholder="-122.4194"
               icon={<Globe className="h-4 w-4" />}
+              error={fieldErrors.longitude}
             />
           </div>
 
@@ -666,6 +724,7 @@ export default function GeofencesPage() {
             placeholder="100"
             icon={<Ruler className="h-4 w-4" />}
             hint={t('Minimum 10m, maximum 50000m')}
+            error={fieldErrors.radius}
           />
 
           <Select
@@ -675,6 +734,7 @@ export default function GeofencesPage() {
             onChange={(e) =>
               setForm({ ...form, alertType: e.target.value as AlertType })
             }
+            error={fieldErrors.alertType}
           />
 
           <Toggle
@@ -684,13 +744,13 @@ export default function GeofencesPage() {
           />
 
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="secondary" onClick={closeModal} icon={<X className="h-4 w-4" />}>
+            <Button variant="secondary" onClick={handleRequestClose} icon={<X className="h-4 w-4" />}>
               {t('Cancel')}
             </Button>
             <Button
               variant="primary"
               onClick={handleSubmit}
-              disabled={!isFormValid || isSaving}
+              disabled={!hasMinimalInput || isSaving}
               loading={isSaving}
               icon={<Check className="h-4 w-4" />}
             >
@@ -699,6 +759,9 @@ export default function GeofencesPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Discard-changes confirm dialog (mounted alongside the modal). */}
+      {discardDialogProps && <ConfirmDialog {...discardDialogProps} />}
 
       {/* Delete Confirm Dialog */}
       <ConfirmDialog

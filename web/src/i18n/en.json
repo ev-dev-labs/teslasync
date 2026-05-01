@@ -110,6 +110,18 @@
     "aria": "Select vehicle",
     "label": "Vehicle"
   },
+  "forms": {
+    "unsavedTitle": "Unsaved changes",
+    "unsavedWarning": "You have unsaved changes. Discard them?",
+    "discard": "Discard changes",
+    "keepEditing": "Keep editing",
+    "restoreDraftTitle": "Restore draft?",
+    "restoreDraftMessage": "We saved a draft of your changes from {{when}}. Restore it or start over?",
+    "restoreDraft": "Restore draft",
+    "discardDraft": "Start over",
+    "validationFailed": "Please fix the highlighted fields before saving.",
+    "saveError": "Failed to save changes"
+  },
   "common": {
     "loading": "Loading...",
     "noData": "No data available",

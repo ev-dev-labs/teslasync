@@ -5,7 +5,7 @@
  * /api/v1/alerts/rules endpoint using the current alert-rule contract.
  */
 
-import { useState, useMemo, useCallback, type ElementType, type KeyboardEvent } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef, type ElementType, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   type AlertRule,
@@ -25,7 +25,7 @@ import { GlassPanel, Badge, Button as UiButton, ConfirmDialog, Input as UiInput,
 import { SeverityBadge, SeverityIcon } from '@/components/data-display'
 import { PageContainer } from '@/components/layout'
 import { FadeIn } from '@/components/motion'
-import { EmptyState, ErrorDisplay, Skeleton } from '@/components/feedback'
+import { AlertBanner, EmptyState, ErrorDisplay, Skeleton } from '@/components/feedback'
 import { SearchInput } from '@/components/forms'
 import {
   Zap, Plus, Save, Trash2, Copy, Bell, BellOff,
@@ -38,6 +38,9 @@ import { severityTokens } from '@/lib/tokens'
 import { formatDateTime } from '@/lib/dateFormat'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useConfirm } from '@/hooks/useConfirm'
+import { useDirtyForm } from '@/hooks/useDirtyForm'
+import { useAutosave, loadAutosave, clearAutosave } from '@/hooks/useAutosave'
+import { alertRuleSchema } from '../schemas/alertRule'
 
 type Severity = NonNullable<AlertRuleInput['severity']>
 type RuleOp = AlertRuleInput['op']
@@ -424,6 +427,7 @@ export default function AlertStudio() {
   const snoozeRuleMut = useSnoozeAlertRule()
   const [snoozeTargetId, setSnoozeTargetId] = useState<number | null>(null)
   const { confirm: confirmDelete, dialogProps: deleteDialogProps } = useConfirm()
+  const { confirm: confirmDiscard, dialogProps: discardDialogProps } = useConfirm()
 
   const [editor, setEditor] = useState<EditorState>(freshEditor)
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -432,6 +436,57 @@ export default function AlertStudio() {
   const [templateCategory, setTemplateCategory] = useState<string | null>(null)
   const [ruleSearch, setRuleSearch] = useState('')
   const [testChannelIds, setTestChannelIds] = useState<number[] | null>(null)
+  const [formError, setFormError] = useState<string | null>(null)
+  const initialEditorRef = useRef<string>(JSON.stringify(freshEditor()))
+
+  const draftKey = `alert-rule-${selectedId ?? 'new'}`
+  const draftRestoredRef = useRef(false)
+  const isDirty = useMemo(
+    () => JSON.stringify(editor) !== initialEditorRef.current,
+    [editor],
+  )
+
+  useDirtyForm(isDirty)
+  useAutosave({
+    key: draftKey,
+    data: editor,
+    paused: saveRuleMut.isPending || deleteRuleMut.isPending,
+  })
+
+  // Restore autosaved draft for a brand-new rule on first mount only.
+  useEffect(() => {
+    if (draftRestoredRef.current) return
+    draftRestoredRef.current = true
+    if (selectedId !== null) return
+    const saved = loadAutosave<EditorState>('alert-rule-new')
+    if (!saved || !saved.name?.trim()) return
+    setEditor(saved)
+  }, [selectedId])
+
+  const dirtyStrings = useMemo(() => ({
+    title: t('forms.unsavedTitle', 'Unsaved changes'),
+    message: t('forms.unsavedWarning', 'You have unsaved changes. Discard them?'),
+    discardLabel: t('forms.discard', 'Discard'),
+    keepEditingLabel: t('forms.keepEditing', 'Keep editing'),
+  }), [t])
+
+  const guardSwitch = useCallback(
+    async (action: () => void) => {
+      if (!isDirty) {
+        action()
+        return
+      }
+      const ok = await confirmDiscard({
+        title: dirtyStrings.title,
+        message: dirtyStrings.message,
+        confirmLabel: dirtyStrings.discardLabel,
+        cancelLabel: dirtyStrings.keepEditingLabel,
+        variant: 'danger',
+      })
+      if (ok) action()
+    },
+    [confirmDiscard, dirtyStrings, isDirty],
+  )
 
   const getTemplateName = useCallback((tpl: RuleTemplate) => (
     t(`notifications.alertStudio.templates.${templateKey(tpl.name)}.name`, tpl.name)
@@ -573,27 +628,42 @@ export default function AlertStudio() {
   ), [editor])
 
   const handleSelectRule = useCallback((rule: AlertRule) => {
-    const nextEditor = ruleToEditor(rule)
-    const signalType = signalTypeForName(nextEditor.signal_name, nextEditor.value_kind)
-    const nextOp = coerceOperatorForSignalType(nextEditor.op, signalType)
-    setSelectedId(rule.id)
-    setEditor({
-      ...nextEditor,
-      op: nextOp,
-      value_kind: valueKindForSignalOp(signalType, nextOp),
+    guardSwitch(() => {
+      const nextEditor = ruleToEditor(rule)
+      const signalType = signalTypeForName(nextEditor.signal_name, nextEditor.value_kind)
+      const nextOp = coerceOperatorForSignalType(nextEditor.op, signalType)
+      const finalEditor: EditorState = {
+        ...nextEditor,
+        op: nextOp,
+        value_kind: valueKindForSignalOp(signalType, nextOp),
+      }
+      setSelectedId(rule.id)
+      setEditor(finalEditor)
+      initialEditorRef.current = JSON.stringify(finalEditor)
+      setFormError(null)
     })
-  }, [])
+  }, [guardSwitch])
 
   const handleNewRule = useCallback(() => {
-    setSelectedId(null)
-    setEditor(freshEditor())
-  }, [])
+    guardSwitch(() => {
+      const blank = freshEditor()
+      setSelectedId(null)
+      setEditor(blank)
+      initialEditorRef.current = JSON.stringify(blank)
+      setFormError(null)
+    })
+  }, [guardSwitch])
 
   const handleCloneTemplate = useCallback((tpl: RuleTemplate) => {
-    setSelectedId(null)
-    setEditor(templateToEditor(tpl, getTemplateName(tpl), getTemplateMessage(tpl)))
-    setShowTemplates(false)
-  }, [getTemplateMessage, getTemplateName])
+    guardSwitch(() => {
+      const next = templateToEditor(tpl, getTemplateName(tpl), getTemplateMessage(tpl))
+      setSelectedId(null)
+      setEditor(next)
+      initialEditorRef.current = JSON.stringify(next)
+      setShowTemplates(false)
+      setFormError(null)
+    })
+  }, [getTemplateMessage, getTemplateName, guardSwitch])
 
   const handleSignalChange = useCallback((signalName: string) => {
     setEditor(current => {
@@ -632,22 +702,37 @@ export default function AlertStudio() {
   const handleSave = useCallback(() => {
     if (!canSave) return
     const payload = buildSavePayload(editor)
+    const parsed = alertRuleSchema.safeParse(payload)
+    if (!parsed.success) {
+      const firstIssue = parsed.error.issues[0]
+      setFormError(firstIssue?.message ?? t('forms.validationFailed', 'Please fix the highlighted fields and try again.'))
+      return
+    }
+    setFormError(null)
     saveRuleMut.mutate(
       editor.id ? { id: editor.id, ...payload } : payload,
       {
         onSuccess: () => {
-          setEditor(freshEditor())
+          clearAutosave(draftKey)
+          clearAutosave('alert-rule-new')
+          const blank = freshEditor()
+          setEditor(blank)
           setSelectedId(null)
+          initialEditorRef.current = JSON.stringify(blank)
         },
       },
     )
-  }, [canSave, editor, saveRuleMut])
+  }, [canSave, draftKey, editor, saveRuleMut, t])
 
   const handleDelete = useCallback((id: number) => {
     deleteRuleMut.mutate(id, {
       onSuccess: () => {
-        setEditor(freshEditor())
+        clearAutosave(`alert-rule-${id}`)
+        const blank = freshEditor()
+        setEditor(blank)
         setSelectedId(null)
+        initialEditorRef.current = JSON.stringify(blank)
+        setFormError(null)
       },
     })
   }, [deleteRuleMut])
@@ -1035,6 +1120,17 @@ export default function AlertStudio() {
               </p>
             </div>
 
+            {formError && (
+              <div className="mb-4">
+                <AlertBanner
+                  variant="danger"
+                  title={t('forms.validationFailed', 'Please fix the highlighted fields and try again.')}
+                >
+                  {formError}
+                </AlertBanner>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
@@ -1368,6 +1464,7 @@ export default function AlertStudio() {
         )}
       </Modal>
       {deleteDialogProps && <ConfirmDialog {...deleteDialogProps} loading={deleteRuleMut.isPending} />}
+      {discardDialogProps && <ConfirmDialog {...discardDialogProps} />}
     </PageContainer>
   )
 }
