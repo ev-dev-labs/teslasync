@@ -1,4 +1,4 @@
-.PHONY: all build build-worker build-export-worker run test lint clean docker docker-up docker-down migrate web check coverage quality pre-commit
+.PHONY: all build build-worker build-export-worker run test lint clean docker docker-up docker-down migrate web check coverage quality pre-commit gen-tesla gen-tesla-check
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
@@ -105,6 +105,18 @@ helm-install:
 ## helm-uninstall: Uninstall Helm chart
 helm-uninstall:
 	helm uninstall teslasync
+
+## gen-tesla: Regenerate Tesla protomodel sources from the vendored proto
+gen-tesla:
+	go generate ./internal/tesla/protomodel/...
+
+## gen-tesla-check: Fail if generated Tesla protomodel sources drift from the proto
+gen-tesla-check: gen-tesla
+	@if ! git diff --quiet -- internal/tesla/protomodel/; then \
+		echo "ERROR: generated files are out of sync with proto"; \
+		git --no-pager diff -- internal/tesla/protomodel/; \
+		exit 1; \
+	fi
 
 ## help: Show this help message
 help:
