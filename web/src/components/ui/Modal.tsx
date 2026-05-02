@@ -114,48 +114,58 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
     // use `backdrop-blur-xl`). Without this, an inline modal rendered from a
     // status-bar segment is anchored to the bar's bbox, not the viewport, and
     // overflows the screen.
+    //
+    // z-[60] is chosen to sit ABOVE the footer StatusBar (z-[55]) and the
+    // mobile top bar so neither chrome ever clips the modal's edges.
     if (typeof document === 'undefined') return null;
 
     const overlay = (
-      <div className="fixed inset-0 z-50 flex items-stretch justify-stretch sm:items-center sm:justify-center sm:p-4">
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
+      <div className="fixed inset-0 z-[60] overflow-y-auto">
         <div
-          ref={dialogRef}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby={title ? titleId : undefined}
-          aria-label={!title ? (ariaLabel ?? undefined) : undefined}
-          tabIndex={-1}
-          className={cn(
-            'relative z-10 flex w-full flex-col bg-[var(--surface-1)] text-[var(--text-primary)] shadow-xl outline-none',
-            'border border-[var(--glass-border)]',
-            // Below sm: full-screen. From sm and up: rounded card with cap height.
-            'h-full max-h-screen rounded-none sm:h-auto sm:max-h-[90vh] sm:rounded-lg',
-            sizes[size],
-            className,
-          )}
-          {...props}
-        >
-          {title && (
-            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--glass-border)] px-4 pt-4 pb-3 sm:px-6 sm:pt-6 sm:pb-4">
-              <h2 id={titleId} className="min-w-0 truncate text-lg font-semibold text-[var(--text-primary)]">{title}</h2>
-              <button
-                type="button"
-                onClick={onClose}
-                aria-label="Close"
-                className={cn(
-                  'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg',
-                  'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent',
-                  'active:scale-95 [-webkit-tap-highlight-color:transparent] [touch-action:manipulation]',
-                )}
-              >
-                <X className="h-5 w-5" aria-hidden="true" />
-              </button>
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+        <div className="relative flex min-h-full items-end justify-center sm:items-center sm:p-4">
+          <div
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={title ? titleId : undefined}
+            aria-label={!title ? (ariaLabel ?? undefined) : undefined}
+            tabIndex={-1}
+            className={cn(
+              'relative z-10 flex w-full flex-col bg-[var(--surface-1)] text-[var(--text-primary)] shadow-xl outline-none',
+              'border border-[var(--glass-border)]',
+              // Below sm: bottom sheet that fills width, capped to viewport height.
+              // From sm and up: rounded card, auto height up to 90vh, centered.
+              'max-h-[100dvh] rounded-none sm:h-auto sm:max-h-[90vh] sm:rounded-lg',
+              sizes[size],
+              className,
+            )}
+            {...props}
+          >
+            {title && (
+              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--glass-border)] px-4 pt-4 pb-3 sm:px-6 sm:pt-6 sm:pb-4">
+                <h2 id={titleId} className="min-w-0 truncate text-lg font-semibold text-[var(--text-primary)]">{title}</h2>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="Close"
+                  className={cn(
+                    'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg',
+                    'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent',
+                    'active:scale-95 [-webkit-tap-highlight-color:transparent] [touch-action:manipulation]',
+                  )}
+                >
+                  <X className="h-5 w-5" aria-hidden="true" />
+                </button>
+              </div>
+            )}
+            <div className="flex-1 overflow-y-auto px-4 pb-4 pt-3 sm:px-6 sm:pb-6 safe-bottom">
+              {children}
             </div>
-          )}
-          <div className="flex-1 overflow-y-auto px-4 pb-4 pt-3 sm:px-6 sm:pb-6 safe-bottom">
-            {children}
           </div>
         </div>
       </div>

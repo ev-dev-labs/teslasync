@@ -735,7 +735,7 @@ function OnboardingWorkflow() {
           </div>
           <div>
             <h3 className="text-sm font-semibold text-white">
-              {t('devtools.onboarding.stepLabel', `Step ${currentStep + 1}`)}: {step.label}
+              {t('devtools.onboarding.stepLabel', 'Step {{step}}', { step: currentStep + 1 })}: {step.label}
             </h3>
             <p className="text-xs text-white/50">{step.desc}</p>
           </div>

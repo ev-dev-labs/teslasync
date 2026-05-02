@@ -169,6 +169,7 @@ func (h *driveDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	positions := timelineRowsToFlat(positionRows)
+	aliasPositionFields(positions)
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"id":                 drive.ID,
@@ -297,6 +298,29 @@ func (h *driveDetailHandler) currentSignals(ctx context.Context, vehicleID int64
 	return stateToSignalMap(state)
 }
 
+// aliasPositionFields rewrites the raw signal_log column names produced by
+// drivePositionFieldMappings into the legacy frontend Position contract:
+//
+//	ts        → created_at   (frontend reads p.created_at as the timestamp)
+//	speed_mph → speed         (frontend speed chart reads p.speed)
+//
+// Used by both the embedded `positions` array in Get() and the standalone
+// /drives/{id}/positions endpoint so the two stay in lock-step. Without this
+// alias, TripReplay's duration formatter blows up to "NaN:NaN" because the
+// frontend can't find a parseable timestamp on each position row.
+func aliasPositionFields(rows []map[string]interface{}) {
+	for _, row := range rows {
+		if ts, ok := row["ts"]; ok {
+			row["created_at"] = ts
+			delete(row, "ts")
+		}
+		if v, ok := row["speed_mph"]; ok {
+			row["speed"] = v
+			delete(row, "speed_mph")
+		}
+	}
+}
+
 func (h *driveDetailHandler) Positions(w http.ResponseWriter, r *http.Request) {
 	driveID, err := urlParamInt64(r, "driveID")
 	if err != nil {
@@ -328,14 +352,13 @@ func (h *driveDetailHandler) Positions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rows := timelineRowsToFlat(rowsTL)
-	// Alias ts → created_at and speed_mph → speed for frontend PositionRecord.
+	aliasPositionFields(rows)
+	// Standalone Positions endpoint also exposes a stable per-row id used by
+	// some legacy frontend list helpers. Keep that here so the embedded array
+	// in Get() stays narrowly typed (chart consumers don't need an id).
 	for _, row := range rows {
-		if ts, ok := row["ts"]; ok {
-			row["created_at"] = ts
+		if ts, ok := row["created_at"]; ok {
 			row["id"] = fmt.Sprintf("%v", ts)
-		}
-		if v, ok := row["speed_mph"]; ok {
-			row["speed"] = v
 		}
 	}
 	writeJSON(w, http.StatusOK, rows)

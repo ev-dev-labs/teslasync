@@ -49,8 +49,11 @@ import type { DrivePosition } from '@/types/driving';
 /*  Helpers                                                            */
 /* ================================================================== */
 
-/** Format ms duration as "HH:MM:SS" or "MM:SS" */
+/** Format ms duration as "HH:MM:SS" or "MM:SS". Non-finite/negative input
+ *  collapses to "00:00" so an upstream data bug surfaces as a sane
+ *  placeholder instead of "NaN:NaN" leaking into the UI. */
 function fmtDuration(ms: number): string {
+  if (!Number.isFinite(ms) || ms <= 0) return '00:00';
   const totalSec = Math.floor(ms / 1000);
   const h = Math.floor(totalSec / 3600);
   const m = Math.floor((totalSec % 3600) / 60);

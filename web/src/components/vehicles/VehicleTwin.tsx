@@ -1,8 +1,14 @@
+import { createContext, useContext, useId, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, Unlock, Shield } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Tooltip } from '@/components/ui';
 import type { VehicleTwinState, WindowState, TurnSignalState } from '@/lib/vehicleState';
+import {
+  FALLBACK_PAINT,
+  type PaintPalette,
+} from '@/lib/vehicleColors';
+import { useVehiclePaint } from '@/hooks/useVehiclePaint';
 
 const SIZE_MAP = { sm: 300, md: 440, lg: 560 } as const;
 const VIEWBOX_WIDTH = 560;
@@ -18,15 +24,107 @@ export interface VehicleTwinProps extends VehicleTwinState {
   interactive?: boolean;
   driveIn?: boolean;
   className?: string;
+  /**
+   * Optional vehicle id — when provided, enables per-vehicle paint
+   * persistence (the user can override the auto-detected color and the
+   * choice is remembered across reloads / tabs).
+   */
+  vehicleId?: number | null;
+  /**
+   * Tesla `exterior_color` code used to auto-detect the paint when no
+   * override is set. Falls back to the embedded `vehicleColor` from the
+   * twin state (SSE path), then to {@link FALLBACK_PAINT}.
+   */
+  exteriorColor?: string | null;
+  /**
+   * Direct paint override — bypasses both the override hook and inference.
+   * Use this only when the caller already resolved the paint (e.g. a
+   * snapshot replay). Most callers should pass `vehicleId` instead.
+   */
+  paint?: PaintPalette;
 }
 
+/**
+ * Per-instance gradient / filter ids. Each rendered `<VehicleTwin>` builds
+ * its own set with `useId()` so that two twins on the same page (e.g. two
+ * Digital Twin widgets bound to different vehicles, each with a different
+ * paint) do not collide on shared `<defs>` ids.
+ */
+interface TwinIds {
+  shadowBlur: string;
+  glow: string;
+  bodyGrad: string;
+  lowerShadow: string;
+  hoodSurface: string;
+  frontDoorSurface: string;
+  rearDoorSurface: string;
+  quarterSurface: string;
+  rockerDepth: string;
+  mirrorGrad: string;
+  shoulderHighlight: string;
+  softReflection: string;
+  glassReflection: string;
+  glassGrad: string;
+  headlightLens: string;
+  rimGrad: string;
+  rimDepth: string;
+  tireOuter: string;
+}
+
+function buildTwinIds(uid: string): TwinIds {
+  const p = (suffix: string) => `${uid}-${suffix}`;
+  return {
+    shadowBlur: p('shadow-blur'),
+    glow: p('glow'),
+    bodyGrad: p('body-grad'),
+    lowerShadow: p('lower-shadow'),
+    hoodSurface: p('hood-surface'),
+    frontDoorSurface: p('front-door-surface'),
+    rearDoorSurface: p('rear-door-surface'),
+    quarterSurface: p('quarter-surface'),
+    rockerDepth: p('rocker-depth'),
+    mirrorGrad: p('mirror-grad'),
+    shoulderHighlight: p('shoulder-highlight'),
+    softReflection: p('soft-reflection'),
+    glassReflection: p('glass-reflection'),
+    glassGrad: p('glass-grad'),
+    headlightLens: p('headlight-lens'),
+    rimGrad: p('rim-grad'),
+    rimDepth: p('rim-depth'),
+    tireOuter: p('tire-outer'),
+  };
+}
+
+interface TwinContextValue {
+  ids: TwinIds;
+  paint: PaintPalette;
+  /** Paint-derived accent colors used by `BodyShell` etc. */
+  bodyAccent: {
+    stroke: string;
+    highlight: string;
+    chrome: string;
+    shadow: string;
+  };
+}
+
+const TwinContext = createContext<TwinContextValue | null>(null);
+
+function useTwinCtx(): TwinContextValue {
+  const ctx = useContext(TwinContext);
+  if (!ctx) {
+    throw new Error('VehicleTwin sub-components must be rendered inside <VehicleTwin>');
+  }
+  return ctx;
+}
+
+/**
+ * Static (paint-agnostic) accent colors — semantic state indicators that
+ * MUST stay consistent across paints. The paint-derived colors live in
+ * the twin context (`bodyAccent`) and the dynamic gradient stops live in
+ * `<SvgDefs>` below.
+ */
 const C = {
-  bodyStroke: 'rgba(255,255,255,0.16)',
-  bodyHighlight: 'rgba(255,255,255,0.2)',
-  bodyChrome: 'rgba(226,232,240,0.82)',
-  bodyShadow: 'rgba(15,23,42,0.42)',
   cladding: 'rgba(2,6,23,0.7)',
-  glassClosed: 'url(#twin-glass-grad)',
   glassStroke: 'rgba(125,211,252,0.32)',
   glassOpen: 'rgba(3,7,18,0.72)',
   glassPartial: 'rgba(100,200,255,0.05)',
@@ -57,9 +155,9 @@ const C = {
   wheelStroke: 'rgba(255,255,255,0.12)',
 } as const;
 
-function windowFill(state: WindowState): string {
+function windowFill(state: WindowState, glassClosedRef: string): string {
   switch (state) {
-    case 'closed': return C.glassClosed;
+    case 'closed': return glassClosedRef;
     case 'open': return C.glassOpen;
     case 'partial': return C.glassPartial;
     default: return C.glassUnknown;
@@ -123,6 +221,7 @@ function InteractiveHotspot({
 }
 
 function GroundShadow() {
+  const { ids } = useTwinCtx();
   return (
     <g>
       <ellipse
@@ -131,7 +230,7 @@ function GroundShadow() {
         rx={230}
         ry={21}
         fill={C.shadow}
-        filter="url(#twin-shadow-blur)"
+        filter={`url(#${ids.shadowBlur})`}
       />
       <ellipse
         cx={285}
@@ -145,6 +244,7 @@ function GroundShadow() {
 }
 
 function ChargingUnderglow() {
+  const { ids } = useTwinCtx();
   return (
     <g pointerEvents="none">
       <motion.ellipse
@@ -153,7 +253,7 @@ function ChargingUnderglow() {
         rx={190}
         ry={18}
         fill="rgba(34,197,94,0.18)"
-        filter="url(#twin-glow)"
+        filter={`url(#${ids.glow})`}
         animate={{ opacity: [0.2, 0.55, 0.2], rx: [160, 205, 160] }}
         transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
       />
@@ -181,6 +281,7 @@ function WheelSVG({
   driveIn?: boolean;
   driving?: boolean;
 }) {
+  const { ids } = useTwinCtx();
   const blades = [0, 36, 72, 108, 144, 180, 216, 252, 288, 324];
   const lugs = [0, 72, 144, 216, 288];
   const shouldSpin = driveIn || driving;
@@ -188,7 +289,7 @@ function WheelSVG({
   return (
     <g>
       <ellipse cx={cx + 8} cy={cy + 2} rx={44} ry={40} fill="rgba(0,0,0,0.46)" />
-      <circle cx={cx} cy={cy} r={43} fill="url(#twin-tire-outer)" />
+      <circle cx={cx} cy={cy} r={43} fill={`url(#${ids.tireOuter})`} />
       <circle cx={cx} cy={cy} r={39} fill={C.wheelDark} stroke={C.wheelStroke} strokeWidth={2} />
       <circle cx={cx} cy={cy} r={34} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={2} />
       <circle cx={cx} cy={cy} r={30} fill={C.wheelSidewall} stroke="rgba(255,255,255,0.08)" strokeWidth={1.5} />
@@ -219,11 +320,11 @@ function WheelSVG({
             }
             : undefined
         }
-        transformOrigin={`${cx}px ${cy}px`}
+        style={{ transformOrigin: `${cx}px ${cy}px` }}
       >
         <circle cx={cx} cy={cy} r={36} fill="none" stroke="rgba(255,255,255,0.045)" strokeWidth={0.8} strokeDasharray="2,5" />
-        <circle cx={cx} cy={cy} r={28} fill="url(#twin-rim-depth)" stroke="rgba(255,255,255,0.1)" strokeWidth={1} />
-        <circle cx={cx} cy={cy} r={25} fill="url(#twin-rim-grad)" stroke="rgba(255,255,255,0.18)" strokeWidth={1.2} />
+        <circle cx={cx} cy={cy} r={28} fill={`url(#${ids.rimDepth})`} stroke="rgba(255,255,255,0.1)" strokeWidth={1} />
+        <circle cx={cx} cy={cy} r={25} fill={`url(#${ids.rimGrad})`} stroke="rgba(255,255,255,0.18)" strokeWidth={1.2} />
         {blades.map((angle) => (
           <g key={angle} transform={`rotate(${angle} ${cx} ${cy})`}>
             <path
@@ -279,26 +380,27 @@ function WheelSVG({
 }
 
 function Body3DDetails() {
+  const { ids } = useTwinCtx();
   return (
     <g id="body-3d-details" pointerEvents="none">
       <path
         d="M 64 176 C 96 158 138 149 190 145 L 205 157 C 147 157 100 165 58 188 Z"
-        fill="url(#twin-hood-surface)"
+        fill={`url(#${ids.hoodSurface})`}
         opacity={0.72}
       />
       <path
         d="M 205 158 L 316 155 L 307 221 L 201 218 C 199 197 200 176 205 158 Z"
-        fill="url(#twin-front-door-surface)"
+        fill={`url(#${ids.frontDoorSurface})`}
         opacity={0.72}
       />
       <path
         d="M 320 155 L 458 154 L 450 220 L 311 221 Z"
-        fill="url(#twin-rear-door-surface)"
+        fill={`url(#${ids.rearDoorSurface})`}
         opacity={0.68}
       />
       <path
         d="M 456 154 C 486 150 523 159 558 190 C 550 207 518 216 483 219 C 480 193 470 171 456 154 Z"
-        fill="url(#twin-quarter-surface)"
+        fill={`url(#${ids.quarterSurface})`}
         opacity={0.72}
       />
       <path
@@ -317,7 +419,7 @@ function Body3DDetails() {
       />
       <path
         d="M 53 215 C 120 226 214 230 332 229 C 432 228 513 221 552 211 L 542 224 C 476 238 361 243 219 239 C 131 236 75 229 44 219 Z"
-        fill="url(#twin-rocker-depth)"
+        fill={`url(#${ids.rockerDepth})`}
         opacity={0.82}
       />
       <path
@@ -397,18 +499,19 @@ function BodyShell({
   trunkOpen: boolean | null;
   interactive?: boolean;
 }) {
+  const { ids, bodyAccent } = useTwinCtx();
   return (
     <g>
       <path
         d="M 42 208 C 40 196 50 184 72 171 C 100 157 140 149 190 145 C 225 118 282 104 335 106 C 392 108 443 129 493 153 C 526 157 550 173 558 191 C 563 207 552 218 532 224 C 505 232 480 231 456 228 C 452 198 429 178 430 178 C 399 178 375 201 372 229 L 190 229 C 187 201 163 179 132 179 C 101 179 80 201 77 228 L 63 226 C 49 224 42 217 42 208 Z"
-        fill="url(#twin-body-grad)"
-        stroke={C.bodyStroke}
+        fill={`url(#${ids.bodyGrad})`}
+        stroke={bodyAccent.stroke}
         strokeWidth={1.4}
       />
       <path
         d="M 64 174 C 100 157 139 149 190 145 C 228 120 284 108 335 109 C 391 111 438 129 492 153"
         fill="none"
-        stroke={C.bodyChrome}
+        stroke={bodyAccent.chrome}
         strokeWidth={3.4}
         strokeLinecap="round"
         opacity={0.36}
@@ -416,7 +519,7 @@ function BodyShell({
       <path
         d="M 61 190 C 138 178 247 177 353 180 C 448 183 521 192 556 201"
         fill="none"
-        stroke={C.bodyHighlight}
+        stroke={bodyAccent.highlight}
         strokeWidth={1}
         strokeLinecap="round"
         opacity={0.55}
@@ -444,7 +547,7 @@ function BodyShell({
       />
       <path
         d="M 70 211 C 164 216 291 216 387 213 C 468 210 523 205 556 198 L 548 214 C 488 227 391 231 278 230 C 187 229 107 224 48 214 Z"
-        fill="url(#twin-lower-shadow)"
+        fill={`url(#${ids.lowerShadow})`}
         opacity={0.72}
       />
       <path
@@ -465,7 +568,7 @@ function BodyShell({
       />
       <path
         d="M 177 153 C 191 145 208 147 221 156 C 205 161 190 160 177 155 Z"
-        fill="url(#twin-mirror-grad)"
+        fill={`url(#${ids.mirrorGrad})`}
         stroke="rgba(255,255,255,0.26)"
         strokeWidth={0.8}
       />
@@ -625,12 +728,13 @@ function BodyShell({
 }
 
 function BodyReflections() {
+  const { ids } = useTwinCtx();
   return (
     <g id="body-reflections" pointerEvents="none">
       <motion.path
         d="M 65 185 C 140 169 246 166 356 170 C 452 174 525 184 557 198"
         fill="none"
-        stroke="url(#twin-shoulder-highlight)"
+        stroke={`url(#${ids.shoulderHighlight})`}
         strokeWidth={1.4}
         strokeLinecap="round"
         animate={{ opacity: [0.55, 0.86, 0.55] }}
@@ -645,7 +749,7 @@ function BodyReflections() {
       />
       <motion.path
         d="M 208 156 C 276 152 374 153 461 160 L 453 168 C 366 162 277 161 214 164 Z"
-        fill="url(#twin-soft-reflection)"
+        fill={`url(#${ids.softReflection})`}
         animate={{ opacity: [0.38, 0.78, 0.38] }}
         transition={{ duration: 6.5, repeat: Infinity, ease: 'easeInOut' }}
       />
@@ -697,6 +801,8 @@ function SideWindows({
   windowRP: WindowState;
   interactive?: boolean;
 }) {
+  const { ids } = useTwinCtx();
+  const glassClosedRef = `url(#${ids.glassGrad})`;
   const passengerAlert = wFP === 'open' || wFP === 'partial' || wRP === 'open' || wRP === 'partial';
 
   return (
@@ -710,13 +816,13 @@ function SideWindows({
       />
       <path
         d="M 202 147 C 232 124 274 113 316 113 L 307 152 L 212 153 Z"
-        fill={windowFill(wFD)}
+        fill={windowFill(wFD, glassClosedRef)}
         stroke={windowStroke(wFD)}
         strokeWidth={1.1}
       />
       <path
         d="M 327 113 C 382 114 424 128 469 149 L 441 153 L 318 152 Z"
-        fill={windowFill(wRD)}
+        fill={windowFill(wRD, glassClosedRef)}
         stroke={windowStroke(wRD)}
         strokeWidth={1.1}
       />
@@ -735,7 +841,7 @@ function SideWindows({
       <path
         d="M 222 139 C 286 126 381 128 448 143"
         fill="none"
-        stroke="url(#twin-glass-reflection)"
+        stroke={`url(#${ids.glassReflection})`}
         strokeWidth={1.4}
         strokeLinecap="round"
       />
@@ -928,6 +1034,7 @@ function HeadlightGlows({
   turnSignal: TurnSignalState;
   driveIn?: boolean;
 }) {
+  const { ids } = useTwinCtx();
   const flashing = hazards === true || turnSignal === 'left' || turnSignal === 'both';
   const headlightsActive = on === true || driveIn;
 
@@ -935,7 +1042,7 @@ function HeadlightGlows({
     <g>
       <path
         d="M 52 188 C 67 181 85 179 101 183"
-        fill="url(#twin-headlight-lens)"
+        fill={`url(#${ids.headlightLens})`}
         stroke={headlightsActive ? C.headlightOn : C.headlightOff}
         strokeWidth={2.5}
         strokeLinecap="round"
@@ -955,7 +1062,7 @@ function HeadlightGlows({
             rx={17}
             ry={7}
             fill={C.headlightGlow}
-            filter="url(#twin-glow)"
+            filter={`url(#${ids.glow})`}
             animate={{ opacity: driveIn ? [0.1, 0.95, 0.22, 0.85, 0.28] : [0.35, 0.85, 0.35] }}
             transition={driveIn ? { duration: 1.35, ease: 'easeInOut' } : { duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
           />
@@ -991,6 +1098,7 @@ function TaillightGlows({
   turnSignal: TurnSignalState;
   driveIn?: boolean;
 }) {
+  const { ids } = useTwinCtx();
   const flashing = hazards === true || turnSignal === 'right' || turnSignal === 'both';
 
   return (
@@ -1036,7 +1144,7 @@ function TaillightGlows({
             rx={24}
             ry={10}
             fill={C.taillightActive}
-            filter="url(#twin-glow)"
+            filter={`url(#${ids.glow})`}
             animate={{ opacity: [0, 0.95, 0.18, 0.9, 0.22] }}
             transition={{ delay: 1.2, duration: 0.75, ease: 'easeOut' }}
           />
@@ -1064,10 +1172,11 @@ function ChargePortIndicator({
   charging: boolean;
   interactive?: boolean;
 }) {
+  const { bodyAccent } = useTwinCtx();
   const cx = 498;
   const cy = 160;
   const fill = charging || open ? C.chargeGreenFill : C.neutral;
-  const stroke = charging || open ? C.chargeGreen : C.bodyStroke;
+  const stroke = charging || open ? C.chargeGreen : bodyAccent.stroke;
   const label = charging ? 'Charging' : stateLabel(open, 'Open', 'Closed');
 
   return (
@@ -1190,98 +1299,101 @@ function DriverSeatIndicator({ occupied }: { occupied: boolean | null }) {
   );
 }
 
-function SvgDefs() {
+function SvgDefs({ paint, ids }: { paint: PaintPalette; ids: TwinIds }) {
   return (
     <defs>
-      <filter id="twin-shadow-blur" x="-50%" y="-50%" width="200%" height="200%">
+      <filter id={ids.shadowBlur} x="-50%" y="-50%" width="200%" height="200%">
         <feGaussianBlur stdDeviation={8} />
       </filter>
-      <filter id="twin-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <filter id={ids.glow} x="-50%" y="-50%" width="200%" height="200%">
         <feGaussianBlur stdDeviation={4} result="blur" />
         <feMerge>
           <feMergeNode in="blur" />
           <feMergeNode in="SourceGraphic" />
         </feMerge>
       </filter>
-      <linearGradient id="twin-body-grad" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor="rgba(226,232,240,0.9)" />
-        <stop offset="28%" stopColor="rgba(148,163,184,0.78)" />
-        <stop offset="58%" stopColor="rgba(71,85,105,0.7)" />
-        <stop offset="100%" stopColor="rgba(15,23,42,0.78)" />
+      {/* Paint-derived: body + lower shadow + 4 surface variants share the
+          paint's body / lower / surface stops. Mirror uses paint.mirror. */}
+      <linearGradient id={ids.bodyGrad} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor={paint.body[0]} />
+        <stop offset="28%" stopColor={paint.body[1]} />
+        <stop offset="58%" stopColor={paint.body[2]} />
+        <stop offset="100%" stopColor={paint.body[3]} />
       </linearGradient>
-      <linearGradient id="twin-lower-shadow" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor="rgba(51,65,85,0.1)" />
-        <stop offset="48%" stopColor="rgba(15,23,42,0.46)" />
-        <stop offset="100%" stopColor="rgba(0,0,0,0.78)" />
+      <linearGradient id={ids.lowerShadow} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor={paint.lower[0]} />
+        <stop offset="48%" stopColor={paint.lower[1]} />
+        <stop offset="100%" stopColor={paint.lower[2]} />
       </linearGradient>
-      <linearGradient id="twin-hood-surface" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stopColor="rgba(248,250,252,0.34)" />
-        <stop offset="48%" stopColor="rgba(148,163,184,0.16)" />
-        <stop offset="100%" stopColor="rgba(15,23,42,0.18)" />
+      <linearGradient id={ids.hoodSurface} x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stopColor={paint.surface[0]} />
+        <stop offset="48%" stopColor={paint.surface[1]} />
+        <stop offset="100%" stopColor={paint.surface[2]} />
       </linearGradient>
-      <linearGradient id="twin-front-door-surface" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stopColor="rgba(241,245,249,0.24)" />
-        <stop offset="48%" stopColor="rgba(100,116,139,0.14)" />
-        <stop offset="100%" stopColor="rgba(15,23,42,0.38)" />
+      <linearGradient id={ids.frontDoorSurface} x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stopColor={paint.surface[0]} />
+        <stop offset="48%" stopColor={paint.surface[1]} />
+        <stop offset="100%" stopColor={paint.surface[2]} />
       </linearGradient>
-      <linearGradient id="twin-rear-door-surface" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stopColor="rgba(226,232,240,0.18)" />
-        <stop offset="48%" stopColor="rgba(71,85,105,0.18)" />
-        <stop offset="100%" stopColor="rgba(2,6,23,0.42)" />
+      <linearGradient id={ids.rearDoorSurface} x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stopColor={paint.surface[0]} />
+        <stop offset="48%" stopColor={paint.surface[1]} />
+        <stop offset="100%" stopColor={paint.surface[2]} />
       </linearGradient>
-      <linearGradient id="twin-quarter-surface" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stopColor="rgba(226,232,240,0.2)" />
-        <stop offset="52%" stopColor="rgba(71,85,105,0.18)" />
-        <stop offset="100%" stopColor="rgba(0,0,0,0.5)" />
+      <linearGradient id={ids.quarterSurface} x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stopColor={paint.surface[0]} />
+        <stop offset="52%" stopColor={paint.surface[1]} />
+        <stop offset="100%" stopColor={paint.surface[2]} />
       </linearGradient>
-      <linearGradient id="twin-rocker-depth" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor="rgba(30,41,59,0.5)" />
-        <stop offset="52%" stopColor="rgba(2,6,23,0.78)" />
-        <stop offset="100%" stopColor="rgba(0,0,0,0.96)" />
+      <linearGradient id={ids.rockerDepth} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor={paint.lower[0]} />
+        <stop offset="52%" stopColor={paint.lower[1]} />
+        <stop offset="100%" stopColor={paint.lower[2]} />
       </linearGradient>
-      <linearGradient id="twin-mirror-grad" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stopColor="rgba(248,250,252,0.74)" />
-        <stop offset="45%" stopColor="rgba(100,116,139,0.64)" />
-        <stop offset="100%" stopColor="rgba(15,23,42,0.76)" />
+      <linearGradient id={ids.mirrorGrad} x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stopColor={paint.mirror[0]} />
+        <stop offset="45%" stopColor={paint.mirror[1]} />
+        <stop offset="100%" stopColor={paint.mirror[2]} />
       </linearGradient>
-      <linearGradient id="twin-shoulder-highlight" x1="0" y1="0" x2="1" y2="0">
+      {/* Paint-agnostic: pure white reflections work on every paint. */}
+      <linearGradient id={ids.shoulderHighlight} x1="0" y1="0" x2="1" y2="0">
         <stop offset="0%" stopColor="rgba(255,255,255,0.04)" />
         <stop offset="18%" stopColor="rgba(255,255,255,0.34)" />
         <stop offset="64%" stopColor="rgba(255,255,255,0.18)" />
         <stop offset="100%" stopColor="rgba(255,255,255,0.03)" />
       </linearGradient>
-      <linearGradient id="twin-soft-reflection" x1="0" y1="0" x2="1" y2="0">
+      <linearGradient id={ids.softReflection} x1="0" y1="0" x2="1" y2="0">
         <stop offset="0%" stopColor="rgba(255,255,255,0)" />
         <stop offset="22%" stopColor="rgba(255,255,255,0.18)" />
         <stop offset="75%" stopColor="rgba(255,255,255,0.08)" />
         <stop offset="100%" stopColor="rgba(255,255,255,0)" />
       </linearGradient>
-      <linearGradient id="twin-glass-reflection" x1="0" y1="0" x2="1" y2="0">
+      <linearGradient id={ids.glassReflection} x1="0" y1="0" x2="1" y2="0">
         <stop offset="0%" stopColor="rgba(255,255,255,0.08)" />
         <stop offset="36%" stopColor="rgba(255,255,255,0.34)" />
         <stop offset="100%" stopColor="rgba(255,255,255,0.02)" />
       </linearGradient>
-      <linearGradient id="twin-glass-grad" x1="0" y1="0" x2="0.8" y2="1">
+      <linearGradient id={ids.glassGrad} x1="0" y1="0" x2="0.8" y2="1">
         <stop offset="0%" stopColor="rgba(148,163,184,0.34)" />
         <stop offset="42%" stopColor="rgba(15,23,42,0.42)" />
         <stop offset="100%" stopColor="rgba(2,6,23,0.72)" />
       </linearGradient>
-      <linearGradient id="twin-headlight-lens" x1="0" y1="0" x2="1" y2="1">
+      <linearGradient id={ids.headlightLens} x1="0" y1="0" x2="1" y2="1">
         <stop offset="0%" stopColor="rgba(255,255,255,0.3)" />
         <stop offset="55%" stopColor="rgba(147,197,253,0.18)" />
         <stop offset="100%" stopColor="rgba(255,255,255,0.05)" />
       </linearGradient>
-      <radialGradient id="twin-rim-grad" cx="45%" cy="40%" r="65%">
+      <radialGradient id={ids.rimGrad} cx="45%" cy="40%" r="65%">
         <stop offset="0%" stopColor="rgba(71,85,105,0.62)" />
         <stop offset="50%" stopColor="rgba(15,23,42,0.9)" />
         <stop offset="100%" stopColor="rgba(0,0,0,0.96)" />
       </radialGradient>
-      <radialGradient id="twin-rim-depth" cx="42%" cy="38%" r="68%">
+      <radialGradient id={ids.rimDepth} cx="42%" cy="38%" r="68%">
         <stop offset="0%" stopColor="rgba(226,232,240,0.22)" />
         <stop offset="48%" stopColor="rgba(51,65,85,0.42)" />
         <stop offset="100%" stopColor="rgba(0,0,0,0.92)" />
       </radialGradient>
-      <radialGradient id="twin-tire-outer" cx="42%" cy="35%" r="70%">
+      <radialGradient id={ids.tireOuter} cx="42%" cy="35%" r="70%">
         <stop offset="0%" stopColor="rgba(51,65,85,0.72)" />
         <stop offset="46%" stopColor="rgba(2,6,23,0.96)" />
         <stop offset="100%" stopColor="rgba(0,0,0,1)" />
@@ -1307,83 +1419,115 @@ export function VehicleTwin({
   hazards,
   turnSignal,
   driverSeatOccupied,
+  vehicleColor,
   size = 'md',
   interactive = false,
   driveIn = false,
   className,
+  vehicleId,
+  exteriorColor,
+  paint: paintOverride,
 }: VehicleTwinProps) {
   const width = SIZE_MAP[size];
   const height = Math.round(width * ASPECT_RATIO);
 
+  // Resolve paint: explicit `paint` prop wins, else fall back to the
+  // per-vehicle override + Tesla-inferred paint via the hook. The hook is
+  // safe to call with `null`/missing vehicleId — it just no-ops storage.
+  const colorSource = exteriorColor ?? (vehicleColor && vehicleColor.length > 0 ? vehicleColor : null);
+  const { paint: resolvedPaint } = useVehiclePaint(vehicleId ?? null, colorSource);
+  const paint = paintOverride ?? resolvedPaint ?? FALLBACK_PAINT;
+
+  // Per-instance gradient ids — prevents <defs> id collisions when two
+  // twins render on the same page with different paints.
+  const reactId = useId();
+  const ids = useMemo<TwinIds>(() => buildTwinIds(`twin-${reactId.replace(/:/g, '')}`), [reactId]);
+
+  const ctxValue = useMemo<TwinContextValue>(
+    () => ({
+      ids,
+      paint,
+      bodyAccent: {
+        stroke: paint.bodyStroke,
+        highlight: paint.bodyHighlight,
+        chrome: paint.bodyChrome,
+        shadow: paint.bodyShadow,
+      },
+    }),
+    [ids, paint],
+  );
+
   return (
-    <motion.div
-      className={cn('inline-flex items-center justify-center', className)}
-      role="img"
-      aria-label="Vehicle digital twin showing current physical state"
-      initial={driveIn ? { x: '115%', opacity: 0.18, scale: 0.96 } : false}
-      animate={driveIn ? { x: 0, opacity: 1, scale: 1 } : undefined}
-      transition={driveIn ? { duration: DRIVE_IN_DURATION, ease: 'easeOut' } : undefined}
-    >
-      <svg
-        viewBox={`0 ${VIEWBOX_MIN_Y} ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}
-        width={width}
-        height={height}
-        xmlns="http://www.w3.org/2000/svg"
-        className="select-none"
+    <TwinContext.Provider value={ctxValue}>
+      <motion.div
+        className={cn('inline-flex items-center justify-center', className)}
+        role="img"
+        aria-label="Vehicle digital twin showing current physical state"
+        initial={driveIn ? { x: '115%', opacity: 0.18, scale: 0.96 } : false}
+        animate={driveIn ? { x: 0, opacity: 1, scale: 1 } : undefined}
+        transition={driveIn ? { duration: DRIVE_IN_DURATION, ease: 'easeOut' } : undefined}
       >
-        <SvgDefs />
-        <title>Tesla-inspired performance crossover side view digital twin</title>
-        <desc>Original scalable layered SVG vehicle illustration with dynamic telemetry overlays for doors, windows, lights, lock, sentry mode, and charging status.</desc>
-        <GroundShadow />
-        {isCharging && <ChargingUnderglow />}
-        <g id="body">
-          <BodyShell frunkOpen={frunkOpen} trunkOpen={trunkOpen} interactive={interactive} />
-          <Body3DDetails />
-          <BodyReflections />
-        </g>
-        <g id="windows">
-          <SideWindows
-            windowFD={windowFD}
-            windowFP={windowFP}
-            windowRD={windowRD}
-            windowRP={windowRP}
-            interactive={interactive}
-          />
-        </g>
-        <g id="doors">
-          <PassengerDoorAlerts
-            passengerFront={doors.passengerFront}
-            passengerRear={doors.passengerRear}
-          />
-          <DoorOverlay
-            kind="rear"
-            open={doors.driverRear}
-            label="Driver Rear"
-            interactive={interactive}
-          />
-          <DoorOverlay
-            kind="front"
-            open={doors.driverFront}
-            label="Driver Front"
-            interactive={interactive}
-          />
-        </g>
-        <DriverSeatIndicator occupied={driverSeatOccupied} />
-        <g id="lighting">
-          <ChargePortIndicator
-            open={chargePortOpen}
-            charging={isCharging}
-            interactive={interactive}
-          />
-          <HeadlightGlows on={headlights} hazards={hazards} turnSignal={turnSignal} driveIn={driveIn} />
-          <TaillightGlows hazards={hazards} turnSignal={turnSignal} driveIn={driveIn} />
-        </g>
-        <g id="wheels">
-          <WheelSVG cx={132} cy={226} driveIn={driveIn} driving={isDriving} />
-          <WheelSVG cx={430} cy={226} driveIn={driveIn} driving={isDriving} />
-        </g>
-        <SecurityOverlay locked={locked} sentryMode={sentryMode} interactive={interactive} />
-      </svg>
-    </motion.div>
+        <svg
+          viewBox={`0 ${VIEWBOX_MIN_Y} ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}
+          width={width}
+          height={height}
+          xmlns="http://www.w3.org/2000/svg"
+          className="select-none"
+        >
+          <SvgDefs paint={paint} ids={ids} />
+          <title>Tesla-inspired performance crossover side view digital twin</title>
+          <desc>Original scalable layered SVG vehicle illustration with dynamic telemetry overlays for doors, windows, lights, lock, sentry mode, and charging status.</desc>
+          <GroundShadow />
+          {isCharging && <ChargingUnderglow />}
+          <g id="body">
+            <BodyShell frunkOpen={frunkOpen} trunkOpen={trunkOpen} interactive={interactive} />
+            <Body3DDetails />
+            <BodyReflections />
+          </g>
+          <g id="windows">
+            <SideWindows
+              windowFD={windowFD}
+              windowFP={windowFP}
+              windowRD={windowRD}
+              windowRP={windowRP}
+              interactive={interactive}
+            />
+          </g>
+          <g id="doors">
+            <PassengerDoorAlerts
+              passengerFront={doors.passengerFront}
+              passengerRear={doors.passengerRear}
+            />
+            <DoorOverlay
+              kind="rear"
+              open={doors.driverRear}
+              label="Driver Rear"
+              interactive={interactive}
+            />
+            <DoorOverlay
+              kind="front"
+              open={doors.driverFront}
+              label="Driver Front"
+              interactive={interactive}
+            />
+          </g>
+          <DriverSeatIndicator occupied={driverSeatOccupied} />
+          <g id="lighting">
+            <ChargePortIndicator
+              open={chargePortOpen}
+              charging={isCharging}
+              interactive={interactive}
+            />
+            <HeadlightGlows on={headlights} hazards={hazards} turnSignal={turnSignal} driveIn={driveIn} />
+            <TaillightGlows hazards={hazards} turnSignal={turnSignal} driveIn={driveIn} />
+          </g>
+          <g id="wheels">
+            <WheelSVG cx={132} cy={226} driveIn={driveIn} driving={isDriving} />
+            <WheelSVG cx={430} cy={226} driveIn={driveIn} driving={isDriving} />
+          </g>
+          <SecurityOverlay locked={locked} sentryMode={sentryMode} interactive={interactive} />
+        </svg>
+      </motion.div>
+    </TwinContext.Provider>
   );
 }

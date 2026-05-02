@@ -304,3 +304,61 @@ func TestDriveDetail_StartSnapshot_PropagatesError(t *testing.T) {
 		t.Fatalf("status = %d, want 500; body=%s", rec.Code, rec.Body.String())
 	}
 }
+
+// TestDriveDetail_Get_EmbeddedPositions_AliasFields locks in that the
+// `positions` array embedded in the Get() response uses the legacy frontend
+// contract (created_at + speed) rather than the raw signal_log column names
+// (ts + speed_mph). Without the alias, the TripReplay duration formatter
+// can't parse a timestamp on each row and renders "NaN:NaN" — see
+// aliasPositionFields() and the Phase-40 post-merge bug fix.
+func TestDriveDetail_Get_EmbeddedPositions_AliasFields(t *testing.T) {
+	t0 := time.Date(2026, 4, 30, 10, 0, 0, 0, time.UTC)
+	t1 := t0.Add(15 * time.Minute)
+	posTs := t0.Add(1 * time.Minute)
+	fake := &fakeStateReader{
+		timelineFn: func(_ context.Context, _ int64, mappings []signal.FieldMapping, _, _ time.Time, _ signal.TimelineOptions) ([]signal.TimelineRow, error) {
+			// Telemetry mappings include "speed" so use length to disambiguate
+			// telemetry vs positions calls (positions has 5 mappings).
+			if len(mappings) == len(drivePositionFieldMappings) {
+				return []signal.TimelineRow{{
+					Timestamp: posTs,
+					Fields:    map[string]signal.SignalValue{"latitude": 47.6, "longitude": -122.2, "speed_mph": 42.0},
+				}}, nil
+			}
+			return nil, nil
+		},
+	}
+	drives := &fakeDriveByIDFetcher{drive: completedDrive(7, 42, t0, t1)}
+	h := &driveDetailHandler{state: fake, drives: drives}
+
+	rec := httptest.NewRecorder()
+	h.Get(rec, newDriveDetailRequest(t, "7", ""))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	var body map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode: %v; body=%s", err, rec.Body.String())
+	}
+	posAny, ok := body["positions"].([]any)
+	if !ok || len(posAny) != 1 {
+		t.Fatalf("positions = %#v, want [1 row]", body["positions"])
+	}
+	row, ok := posAny[0].(map[string]any)
+	if !ok {
+		t.Fatalf("positions[0] = %#v, want map", posAny[0])
+	}
+	if _, has := row["ts"]; has {
+		t.Errorf("positions[0] still has raw `ts` key — alias didn't run; row=%v", row)
+	}
+	if _, has := row["created_at"]; !has {
+		t.Errorf("positions[0] missing `created_at` (frontend reads this as timestamp); row=%v", row)
+	}
+	if _, has := row["speed_mph"]; has {
+		t.Errorf("positions[0] still has raw `speed_mph` key — alias missing; row=%v", row)
+	}
+	if _, has := row["speed"]; !has {
+		t.Errorf("positions[0] missing `speed` (aliased from speed_mph); row=%v", row)
+	}
+}

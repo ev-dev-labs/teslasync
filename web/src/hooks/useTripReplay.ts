@@ -40,11 +40,24 @@ export interface ReplayControls {
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
-/** Parse position timestamps into ms-since-drive-start offsets. */
+/** Parse position timestamps into ms-since-drive-start offsets. Positions
+ *  whose timestamps don't parse are skipped so a single bad row can't
+ *  poison `totalTime` (NaN propagates and produces "NaN:NaN" in the UI). */
 function buildTimeline(positions: DrivePosition[]): number[] {
   if (positions.length === 0) return [];
-  const t0 = new Date(positions[0].timestamp).getTime();
-  return positions.map((p) => new Date(p.timestamp).getTime() - t0);
+  let t0 = NaN;
+  for (const p of positions) {
+    const t = new Date(p.timestamp).getTime();
+    if (Number.isFinite(t)) {
+      t0 = t;
+      break;
+    }
+  }
+  if (!Number.isFinite(t0)) return [];
+  return positions.map((p) => {
+    const t = new Date(p.timestamp).getTime();
+    return Number.isFinite(t) ? t - t0 : 0;
+  });
 }
 
 /** Binary-search for the index whose offset is closest to `target`. */

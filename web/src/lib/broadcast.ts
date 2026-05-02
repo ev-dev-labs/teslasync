@@ -59,6 +59,8 @@ export type BroadcastMessage =
   | { type: 'onboarded' }
   | { type: 'onboarding.skip.changed'; skipped: boolean }
   | { type: 'install.dismissed' }
+  // ── Per-vehicle visual prefs ─────────────────────────────────────────────
+  | { type: 'vehicle.paint.changed'; vehicleId: number; paintId: string | null }
   // ── Layout / saved-state ─────────────────────────────────────────────────
   | { type: 'dashboard.layout' }
   | { type: 'savedView.changed'; pageId: string }

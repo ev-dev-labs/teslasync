@@ -1244,6 +1244,17 @@
     "charging": "Charge Analytics",
     "control": "Vehicle Control"
   },
+  "paint": {
+    "label": "Paint",
+    "pickerLabel": "Vehicle paint color",
+    "reset": "Reset to auto-detected",
+    "detected": "Auto-detected",
+    "pearlWhite": "Pearl White Multi-Coat",
+    "midnightSilver": "Midnight Silver Metallic",
+    "deepBlue": "Deep Blue Metallic",
+    "solidBlack": "Solid Black",
+    "redMulticoat": "Red Multi-Coat"
+  },
   "palette": {
     "placeholder": "Search pages, commands…",
     "navigate": "Navigate",
@@ -1683,7 +1694,7 @@
     },
     "configIdle": "Fetch config to see results",
     "onboarding": {
-      "stepLabel": "Step ${currentStep + 1}"
+      "stepLabel": "Step {{step}}"
     },
     "health": {
       "vin": "VIN",

@@ -57,7 +57,12 @@ export default function DigitalTwinMiniWidget({ vehicleId, size }: WidgetProps) 
       {vehicle ? (
         <div className="h-full flex flex-col items-center justify-center gap-2 px-2 pb-2">
           <div className="flex-1 min-h-0 flex items-center justify-center w-full">
-            <VehicleTwin {...twinState} size="sm" />
+            <VehicleTwin
+              {...twinState}
+              size="sm"
+              vehicleId={vehicle?.id}
+              exteriorColor={vehicle?.exterior_color}
+            />
           </div>
 
           {/* Status badges — shown unless very cramped */}
