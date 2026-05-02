@@ -4,6 +4,7 @@ import { Breadcrumbs, type BreadcrumbItem } from './Breadcrumbs';
 import { CopyLinkButton } from './CopyLinkButton';
 import { Spinner } from '@/components/feedback/Spinner';
 import { PageErrorBoundary } from '@/components/feedback/PageErrorBoundary';
+import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 
 interface PageContainerProps {
   title: string;
@@ -13,7 +14,25 @@ interface PageContainerProps {
   error?: Error | null;
   empty?: boolean;
   emptyMessage?: string;
+  /**
+   * Explicit breadcrumb items. When provided they win over auto-detection
+   * via `useBreadcrumbs` (kept as an escape hatch for pages that compose
+   * a non-standard chain). Most pages should rely on auto-detection plus
+   * `breadcrumbLabels` for friendly per-render labels.
+   */
   breadcrumbs?: BreadcrumbItem[];
+  /**
+   * Per-render label overrides keyed by route pattern (e.g.
+   * `{ '/drives/:id': 'Trip to office' }`). Forwarded to `useBreadcrumbs`
+   * when `breadcrumbs` is not explicitly provided. Phase-40 / Prompt 61.
+   */
+  breadcrumbLabels?: Partial<Record<string, string>>;
+  /**
+   * Opt out of breadcrumb rendering entirely. Use for chrome-less surfaces
+   * (kiosk, share, watch) where the surrounding `<PageContainer>` should
+   * stay quiet. Phase-40 / Prompt 61.
+   */
+  noBreadcrumbs?: boolean;
   children: ReactNode;
   className?: string;
   /**
@@ -25,12 +44,22 @@ interface PageContainerProps {
 }
 
 export function PageContainer({
-  title, subtitle, actions, loading, error, empty, emptyMessage, breadcrumbs, children, className, copyLink,
+  title, subtitle, actions, loading, error, empty, emptyMessage,
+  breadcrumbs, breadcrumbLabels, noBreadcrumbs,
+  children, className, copyLink,
 }: PageContainerProps) {
+  // Auto-detect breadcrumbs from the route registry when the page hasn't
+  // supplied an explicit list. The hook returns `[]` for unknown routes and
+  // `<Breadcrumbs>` self-suppresses when items.length <= 1, so top-level
+  // pages render nothing without per-page wiring.
+  const autoBreadcrumbs = useBreadcrumbs(breadcrumbLabels);
+  const resolvedBreadcrumbs = breadcrumbs ?? autoBreadcrumbs;
+  const showBreadcrumbs = !noBreadcrumbs && resolvedBreadcrumbs.length > 1;
+
   return (
     <div className={cn('space-y-6', className)}>
-      {breadcrumbs && breadcrumbs.length > 1 && (
-        <Breadcrumbs items={breadcrumbs} className="mb-2" />
+      {showBreadcrumbs && (
+        <Breadcrumbs items={resolvedBreadcrumbs} className="mb-2" />
       )}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="min-w-0">

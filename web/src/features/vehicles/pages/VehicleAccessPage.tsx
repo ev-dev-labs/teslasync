@@ -9,7 +9,6 @@ import { EmptyState } from '@/components/feedback';
 import { StatusBadge } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 
 import {
   useVehicleDrivers,
@@ -29,9 +28,6 @@ export default function VehicleAccessPage() {
   usePageTitle(t('vehicleAccess.title', 'Vehicle Access'));
 
   const { data: vehicle } = useVehicle(vehicleId ?? '');
-  const breadcrumbs = useBreadcrumbs({
-    '/vehicles/:id': vehicle?.display_name ?? `Vehicle #${vehicleId}`,
-  });
 
   const { data: drivers, isLoading: driversLoading } = useVehicleDrivers(vehicleId);
   const { data: invitations, isLoading: invitationsLoading } = useVehicleInvitations(vehicleId);
@@ -181,7 +177,9 @@ export default function VehicleAccessPage() {
       title={t('vehicleAccess.title', 'Vehicle Access')}
       subtitle={t('vehicleAccess.subtitle', 'Manage drivers and share invitations')}
       loading={isLoading}
-      breadcrumbs={breadcrumbs}
+      breadcrumbLabels={{
+        '/vehicles/:id': vehicle?.display_name ?? `Vehicle #${vehicleId}`,
+      }}
     >
       {/* ── Drivers Section ───────────────────────────────────── */}
       <FadeIn>

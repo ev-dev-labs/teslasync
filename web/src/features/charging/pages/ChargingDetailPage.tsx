@@ -14,7 +14,6 @@ import { MetricBar, InlineMetric, AnimatedNumber, StatCard, KVList, LiveIndicato
 import { RadialGauge } from '@/components/charts';
 import { Skeleton, EmptyState, LiveStaleDataBanner } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
-import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
   ComposedChart, Line, ChartTooltip,
@@ -107,11 +106,11 @@ export default function ChargingDetailPage() {
       : t('charging.detail.title', 'Charge Session'),
   );
 
-  const breadcrumbs = useBreadcrumbs({
+  const breadcrumbLabels = {
     '/charging/:id': session
       ? `${formatDate(session.start_ts)} — ${fmtNumber(session.energy_added_kwh)} kWh`
       : `Session #${id}`,
-  });
+  };
 
   const hasTelemetry = !!telemetry && telemetry.length > 0;
   const dc = session ? isDC(session) : false;
@@ -184,7 +183,7 @@ export default function ChargingDetailPage() {
 
   if (isLoading || !session) {
     return (
-      <PageContainer title={t('charging.detail.title', 'Charge Session')} breadcrumbs={breadcrumbs}>
+      <PageContainer title={t('charging.detail.title', 'Charge Session')} breadcrumbLabels={breadcrumbLabels}>
         <LoadingSkeleton />
       </PageContainer>
     );
@@ -200,7 +199,7 @@ export default function ChargingDetailPage() {
     <PageContainer
       title={t('charging.detail.title', 'Charge Session')}
       className="space-y-8"
-      breadcrumbs={breadcrumbs}
+      breadcrumbLabels={breadcrumbLabels}
       actions={
         <div data-print-hide className="flex items-center gap-2">
           <LiveIndicator variant="compact" />

@@ -11,9 +11,24 @@ export interface BreadcrumbItem {
 interface BreadcrumbsProps {
   items: BreadcrumbItem[];
   className?: string;
+  /**
+   * Destination of the leading Home icon link. Defaults to '/'. Override for
+   * brandable / role-based homes (e.g. embedded surfaces that should anchor at
+   * a sub-route). Phase-40 / Prompt 61.
+   */
+  homeHref?: string;
+  /**
+   * Aria label for the leading Home link. Defaults to 'Dashboard'.
+   */
+  homeAriaLabel?: string;
 }
 
-export function Breadcrumbs({ items, className }: BreadcrumbsProps) {
+export function Breadcrumbs({
+  items,
+  className,
+  homeHref = '/',
+  homeAriaLabel = 'Dashboard',
+}: BreadcrumbsProps) {
   if (items.length <= 1) return null;
 
   return (
@@ -22,9 +37,9 @@ export function Breadcrumbs({ items, className }: BreadcrumbsProps) {
       className={cn('flex items-center gap-1 text-sm overflow-x-auto scrollbar-none', className)}
     >
       <Link
-        to="/"
+        to={homeHref}
         className="text-white/30 hover:text-white/60 transition-colors shrink-0"
-        aria-label="Dashboard"
+        aria-label={homeAriaLabel}
       >
         <Home className="h-3.5 w-3.5" />
       </Link>

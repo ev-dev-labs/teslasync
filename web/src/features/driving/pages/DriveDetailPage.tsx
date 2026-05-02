@@ -6,7 +6,6 @@ import { PrintButton } from '@/components/ui';
 import { SectionErrorBoundary } from '@/components/feedback';
 import { ChartTimeRangeProvider } from '@/components/charts';
 import { ShareDriveDialog } from '../components/ShareDriveDialog';
-import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import {
   useDriveDetailData,
@@ -41,19 +40,17 @@ export default function DriveDetailPage() {
 
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
-  const breadcrumbs = useBreadcrumbs({
-    '/drives/:id': drive
-      ? `${drive.startAddress ?? t('driveDetail.title', 'Drive')} → ${drive.endAddress ?? ''}`
-      : `Drive #${id}`,
-  });
-
   if (isLoading) return <DriveDetailSkeleton />;
 
   return (
     <PageContainer
       title={t('driveDetail.title', 'Drive Detail')}
       error={error as Error | null}
-      breadcrumbs={breadcrumbs}
+      breadcrumbLabels={{
+        '/drives/:id': drive
+          ? `${drive.startAddress ?? t('driveDetail.title', 'Drive')} → ${drive.endAddress ?? ''}`
+          : `Drive #${id}`,
+      }}
       actions={
         <div data-print-hide className="flex items-center gap-2">
           <PrintButton />

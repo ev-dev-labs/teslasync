@@ -9,7 +9,6 @@ import { Skeleton, LiveStaleDataBanner, SectionErrorBoundary } from '@/component
 import { FadeIn } from '@/components/motion'
 
 import { usePageTitle } from '@/hooks/usePageTitle'
-import { useBreadcrumbs } from '@/hooks/useBreadcrumbs'
 import { useToast } from '@/components/feedback/Toast'
 import { request } from '@/api/client'
 import type {
@@ -55,10 +54,6 @@ export default function VehicleDetailPage() {
     queryKey: ['vehicles', String(vehicleId)],
     queryFn: () => request<Vehicle>(`/vehicles/${vehicleId}`),
     enabled: vehicleId > 0,
-  })
-
-  const breadcrumbs = useBreadcrumbs({
-    '/vehicles/:id': vehicle?.display_name ?? `Vehicle #${id}`,
   })
 
   const { data: stateData, refetch: refetchState } = useQuery({
@@ -146,7 +141,9 @@ export default function VehicleDetailPage() {
       title={vehicle?.display_name ?? t('vehicles.detail.title', 'Vehicle Detail')}
       loading={vehicleLoading}
       error={vehicleError as Error | null}
-      breadcrumbs={breadcrumbs}
+      breadcrumbLabels={{
+        '/vehicles/:id': vehicle?.display_name ?? `Vehicle #${id}`,
+      }}
       actions={<LiveIndicator variant="compact" />}
     >
       <LiveStaleDataBanner />

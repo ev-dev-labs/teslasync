@@ -16,7 +16,6 @@ import {
 import { StatCard, MetricCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
-import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 import {
   ChartContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, ReferenceLine, chartGrid, axisTick, fmt,
@@ -117,12 +116,6 @@ export default function TripReplayPage() {
 
   const { data: drive, isLoading, error } = useDrive(id ?? '');
   const [mapStyle, setMapStyle] = useState<MapStyle>('dark');
-
-  const breadcrumbs = useBreadcrumbs({
-    '/drives/:id': drive
-      ? `${drive.startAddress ?? t('replay.drive', 'Drive')} → ${drive.endAddress ?? ''}`
-      : `Drive #${id}`,
-  });
 
   const {
     convertDistance, convertSpeed, convertTemp,
@@ -386,7 +379,11 @@ export default function TripReplayPage() {
         : undefined}
       loading={isLoading}
       error={error instanceof Error ? error : error ? new Error(String(error)) : null}
-      breadcrumbs={breadcrumbs}
+      breadcrumbLabels={{
+        '/drives/:id': drive
+          ? `${drive.startAddress ?? t('replay.drive', 'Drive')} → ${drive.endAddress ?? ''}`
+          : `Drive #${id}`,
+      }}
       actions={
         <Link to={`/drives/${id}`}>
           <Button variant="ghost" size="sm">
