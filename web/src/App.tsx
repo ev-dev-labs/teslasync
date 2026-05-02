@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react'
-import { Routes, Route, useNavigate } from 'react-router-dom'
+import { Navigate, Routes, Route, useNavigate } from 'react-router-dom'
 import Layout from './components/layout/Layout'
 import { ScrollRestoration } from './components/layout/ScrollRestoration'
 import { PageLoadSkeleton } from './components/feedback/PageLoadSkeleton'
@@ -63,12 +63,12 @@ const TripPlanner = lazy(() => import('./features/driving/pages/TripPlannerPage'
 // Analytics & Statistics
 const Analytics = lazy(() => import('./features/analytics/pages/AnalyticsPage'))
 const Statistics = lazy(() => import('./features/analytics/pages/StatisticsPage'))
-const Compare = lazy(() => import('./features/analytics/pages/ComparePage'))
+const PeriodCompare = lazy(() => import('./features/analytics/pages/PeriodComparePage'))
 const Mileage = lazy(() => import('./features/analytics/pages/MileagePage'))
 const TrueCostOwnership = lazy(() => import('./features/analytics/pages/TrueCostPage'))
 const WeeklyDigest = lazy(() => import('./features/analytics/pages/WeeklyDigestPage'))
 const Timeline = lazy(() => import('./features/analytics/pages/TimelinePage'))
-const VehicleComparison = lazy(() => import('./features/analytics/pages/ComparisonPage'))
+const FleetCompare = lazy(() => import('./features/analytics/pages/FleetComparePage'))
 const LifetimeStats = lazy(() => import('./features/analytics/pages/LifetimeStatsPage'))
 const YearReview = lazy(() => import('./features/analytics/pages/YearReviewPage'))
 
@@ -233,7 +233,8 @@ export default function App() {
         <Route path="roadmap" element={<SafeRoute name="Roadmap"><Roadmap /></SafeRoute>} />
         <Route path="api-keys" element={<SafeRoute name="APIKeys"><APIKeysPage /></SafeRoute>} />
         <Route path="changelog" element={<SafeRoute name="Changelog"><Changelog /></SafeRoute>} />
-        <Route path="compare" element={<SafeRoute name="Compare"><Compare /></SafeRoute>} />
+        <Route path="compare" element={<Navigate to="/period-compare" replace />} />
+        <Route path="period-compare" element={<SafeRoute name="PeriodCompare"><PeriodCompare /></SafeRoute>} />
         <Route path="admin" element={<SafeRoute name="Admin"><Admin /></SafeRoute>} />
         <Route path="api-logs" element={<SafeRoute name="ApiLogs"><ApiLogs /></SafeRoute>} />
         <Route path="fleet-api" element={<SafeRoute name="FleetAPI"><FleetAPI /></SafeRoute>} />
@@ -278,7 +279,7 @@ export default function App() {
         <Route path="regen-efficiency" element={<SafeRoute name="RegenEfficiency"><RegenEfficiency /></SafeRoute>} />
         <Route path="battery-degradation" element={<SafeRoute name="BatteryDegradation"><BatteryDegradation /></SafeRoute>} />
         <Route path="tco" element={<SafeRoute name="TrueCostOwnership"><TrueCostOwnership /></SafeRoute>} />
-        <Route path="vehicle-comparison" element={<SafeRoute name="VehicleComparison"><VehicleComparison /></SafeRoute>} />
+        <Route path="vehicle-comparison" element={<SafeRoute name="FleetCompare"><FleetCompare /></SafeRoute>} />
         <Route path="sleep-efficiency" element={<SafeRoute name="SleepEfficiency"><SleepEfficiency /></SafeRoute>} />
         <Route path="charging-heatmap" element={<SafeRoute name="ChargingHeatmap"><ChargingHeatmap /></SafeRoute>} />
         <Route path="speed-profile" element={<SafeRoute name="SpeedProfile"><SpeedProfile /></SafeRoute>} />

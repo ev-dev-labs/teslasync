@@ -1,15 +1,16 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Battery, Thermometer, Lock, Shield, Wifi, Car,
   Gauge, Zap, TrendingUp, DollarSign, Leaf, Route,
-  ArrowLeftRight, Info,
+  ArrowLeftRight, Info, Calendar,
 } from 'lucide-react';
 
 import { PageContainer, Grid } from '@/components/layout';
 import { GlassPanel, Select, type SelectOption, DataTable, type Column } from '@/components/ui';
 import { StatCard } from '@/components/data-display';
-import { EmptyState, Skeleton } from '@/components/feedback';
+import { EmptyState, Skeleton, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
   ChartContainer, ChartTooltip, CHART_COLORS, AREA_DEFAULTS,
@@ -62,6 +63,11 @@ function winnerCell(value: string, side: 'a' | 'b', row: ComparisonRow) {
     </span>
   );
 }
+
+// Phase 40 / Prompt 39 — disambiguation banner dismissal is persisted so users
+// who already understand the difference between the two compare pages don't
+// have to dismiss it on every visit.
+const BANNER_DISMISSED_KEY = 'phase40.compareBanner.dismissed.fleet';
 
 /* ── Status Card Sub-component ─────────────────────────── */
 
@@ -211,9 +217,10 @@ function VehicleStatusCard({
 
 /* ── Main Component ────────────────────────────────────── */
 
-export default function ComparisonPage() {
+export default function FleetComparePage() {
   const { t } = useTranslation();
-  usePageTitle(t('comparison.title', 'Vehicle Comparison'));
+  const navigate = useNavigate();
+  usePageTitle(t('comparison.title', 'Fleet Comparison'));
 
   const {
     fmtDistance, fmtTemp, convertDistance, convertSpeed,
@@ -221,14 +228,38 @@ export default function ComparisonPage() {
     efficiencyUnit, currencySymbol,
   } = useSettings();
 
-  const [vehicleIdA, setVehicleIdA] = useState<string>('');
-  const [vehicleIdB, setVehicleIdB] = useState<string>('');
+  // Phase 40 / Prompt 39 — accept ?leftId= and ?rightId= query params so other
+  // pages (e.g. VehicleListPage's "Compare vehicles" button) can deep-link
+  // straight into a pre-populated comparison.
+  const [searchParams] = useSearchParams();
+  const initialLeftId = searchParams.get('leftId') ?? '';
+  const initialRightId = searchParams.get('rightId') ?? '';
+
+  const [vehicleIdA, setVehicleIdA] = useState<string>(initialLeftId);
+  const [vehicleIdB, setVehicleIdB] = useState<string>(initialRightId);
+
+  // Disambiguation banner — defaults to visible, persists dismissal.
+  const [bannerVisible, setBannerVisible] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem(BANNER_DISMISSED_KEY) !== '1';
+    } catch {
+      return true;
+    }
+  });
+  const dismissBanner = () => {
+    setBannerVisible(false);
+    try {
+      window.localStorage.setItem(BANNER_DISMISSED_KEY, '1');
+    } catch {
+      // Storage failures are non-fatal — banner just reappears next mount.
+    }
+  };
 
   /* ── Vehicle list ── */
   const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
   const vehicleList = vehicles ?? [];
 
-  // Auto-select first two vehicles
+  // Auto-select first two vehicles if not provided via query params.
   useEffect(() => {
     if (vehicleList.length >= 2) {
       if (!vehicleIdA) setVehicleIdA(String(vehicleList[0].id));
@@ -449,18 +480,28 @@ export default function ComparisonPage() {
 
   /* ── Render ── */
 
-  // Gate: fleet needs 2+ vehicles
+  // Phase 40 / Prompt 39 — single-vehicle accounts can't usefully use Fleet
+  // Comparison. Show a focused EmptyState that explains *why* and offers a
+  // path forward (manage vehicles), instead of empty selectors with no data.
   if (!vehiclesLoading && vehicleList.length < 2) {
     return (
       <PageContainer
-        title={t('comparison.title', 'Vehicle Comparison')}
-        subtitle={t('comparison.subtitle', 'Compare your fleet side by side')}
+        title={t('comparison.title', 'Fleet Comparison')}
+        subtitle={t('comparison.subtitle', 'Compare two vehicles side by side')}
       >
         <FadeIn>
           <GlassPanel className="p-8">
             <EmptyState
-              icon={<ArrowLeftRight className="h-10 w-10" />}
-              message={t('comparison.needTwoVehicles', 'You need at least 2 vehicles in your fleet to use the comparison dashboard.')}
+              icon={<Car className="h-10 w-10" />}
+              title={t('fleetCompare.singleVehicle.title', 'Add a second vehicle to compare')}
+              message={t(
+                'fleetCompare.singleVehicle.body',
+                'Fleet comparison shows two vehicles side-by-side. You currently have one vehicle in TeslaSync.',
+              )}
+              action={{
+                label: t('fleetCompare.singleVehicle.cta', 'Manage vehicles'),
+                onClick: () => navigate('/vehicles'),
+              }}
             />
           </GlassPanel>
         </FadeIn>
@@ -470,10 +511,34 @@ export default function ComparisonPage() {
 
   return (
     <PageContainer
-      title={t('comparison.title', 'Vehicle Comparison')}
-      subtitle={t('comparison.subtitle', 'Compare your fleet side by side')}
+      title={t('comparison.title', 'Fleet Comparison')}
+      subtitle={t('comparison.subtitle', 'Compare two vehicles side by side')}
       loading={isLoading}
     >
+      {/* Disambiguation banner — points users who wanted the period view to
+          the right page. Persists dismissal in localStorage. */}
+      {bannerVisible && (
+        <FadeIn>
+          <AlertBanner
+            variant="info"
+            icon={<Calendar className="h-4 w-4" />}
+            onClose={dismissBanner}
+            className="mb-4"
+          >
+            {t(
+              'comparison.banner.toPeriodPrefix',
+              'Looking to compare time periods instead?',
+            )}{' '}
+            <Link
+              to="/period-compare"
+              className="font-medium text-neon-cyan underline-offset-2 hover:underline"
+            >
+              {t('comparison.banner.toPeriodCta', 'Open Period comparison →')}
+            </Link>
+          </AlertBanner>
+        </FadeIn>
+      )}
+
       {/* ── Vehicle Selectors ── */}
       <FadeIn>
         <GlassPanel className="mb-6 flex flex-wrap items-end gap-4 p-4">

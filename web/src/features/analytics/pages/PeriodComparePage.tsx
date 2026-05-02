@@ -1,14 +1,15 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Car, Calendar, TrendingUp, Zap, Gauge, DollarSign, Leaf, Lightbulb,
+  Car, Calendar, TrendingUp, Zap, Gauge, DollarSign, Leaf, Lightbulb, ArrowLeftRight,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Select, type SelectOption, DataTable, type Column } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
   ChartTooltip, CHART_COLORS,
@@ -54,15 +55,38 @@ const PERIOD_DAYS: Record<string, number> = {
   '7': 7, '30': 30, '90': 90, '365': 365, '0': 0,
 };
 
+// Phase 40 / Prompt 39 — disambiguation banner dismissal is persisted so users
+// who already understand the difference between the two compare pages don't
+// have to dismiss it on every visit. Two separate keys (period|fleet) so each
+// page tracks its own banner.
+const BANNER_DISMISSED_KEY = 'phase40.compareBanner.dismissed.period';
+
 /* ── Component ─────────────────────────────────────────── */
 
-export default function ComparePage() {
+export default function PeriodComparePage() {
   const { t } = useTranslation();
-  usePageTitle(t('compare.title', 'Compare Periods'));
+  usePageTitle(t('compare.title', 'Period Comparison'));
 
   const [vehicleId, setVehicleId] = useState('');
   const [periodA, setPeriodA] = useState('30');
   const [periodB, setPeriodB] = useState('90');
+
+  // Disambiguation banner — defaults to visible, persists dismissal.
+  const [bannerVisible, setBannerVisible] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem(BANNER_DISMISSED_KEY) !== '1';
+    } catch {
+      return true;
+    }
+  });
+  const dismissBanner = () => {
+    setBannerVisible(false);
+    try {
+      window.localStorage.setItem(BANNER_DISMISSED_KEY, '1');
+    } catch {
+      // Storage failures are non-fatal — banner just reappears next mount.
+    }
+  };
 
   /* ── Queries ── */
 
@@ -95,15 +119,24 @@ export default function ComparePage() {
   const a = statsA.data;
   const b = statsB.data;
 
+  // Hide the disambiguation banner for accounts with only one vehicle —
+  // they can't usefully cross-navigate to fleet comparison anyway.
+  const vehicleCount = (vehicles ?? []).length;
+  useEffect(() => {
+    if (vehicleCount < 2 && bannerVisible) {
+      setBannerVisible(false);
+    }
+  }, [vehicleCount, bannerVisible]);
+
   /* ── Derived data ── */
 
   const periodOptions: SelectOption[] = useMemo(
     () => [
-      { value: '7', label: t('compare.last7', 'Last7') },
-      { value: '30', label: t('compare.last30', 'Last30') },
-      { value: '90', label: t('compare.last90', 'Last90') },
-      { value: '365', label: t('Last Year') },
-      { value: '0', label: t('All Time') },
+      { value: '7', label: t('compare.last7', 'Last 7 days') },
+      { value: '30', label: t('compare.last30', 'Last 30 days') },
+      { value: '90', label: t('compare.last90', 'Last 90 days') },
+      { value: '365', label: t('compare.lastYear', 'Last year') },
+      { value: '0', label: t('compare.allTime', 'All time') },
     ],
     [t],
   );
@@ -120,12 +153,12 @@ export default function ComparePage() {
   const metrics = useMemo(() => {
     if (!a || !b) return [];
     return [
-      { key: 'distance', label: t('Total Distance'), icon: <Car className="h-4 w-4" />, a: a.total_distance, b: b.total_distance, unit: 'km', color: 'cyan' as const },
-      { key: 'drives', label: t('Total Drives'), icon: <TrendingUp className="h-4 w-4" />, a: a.total_drives, b: b.total_drives, unit: '', color: 'green' as const },
-      { key: 'energy', label: t('Energy Used'), icon: <Zap className="h-4 w-4" />, a: a.energy_used, b: b.energy_used, unit: 'kWh', color: 'purple' as const },
-      { key: 'efficiency', label: t('Avg Efficiency'), icon: <Gauge className="h-4 w-4" />, a: a.avg_efficiency, b: b.avg_efficiency, unit: 'Wh/km', color: 'cyan' as const },
-      { key: 'cost', label: t('Total Cost'), icon: <DollarSign className="h-4 w-4" />, a: a.total_cost, b: b.total_cost, unit: '$', color: 'green' as const },
-      { key: 'co2', label: t('compare.co2Saved', 'Co2Saved'), icon: <Leaf className="h-4 w-4" />, a: a.co2_saved, b: b.co2_saved, unit: 'kg', color: 'purple' as const },
+      { key: 'distance', label: t('compare.totalDistance', 'Total Distance'), icon: <Car className="h-4 w-4" />, a: a.total_distance, b: b.total_distance, unit: 'km', color: 'cyan' as const },
+      { key: 'drives', label: t('compare.totalDrives', 'Total Drives'), icon: <TrendingUp className="h-4 w-4" />, a: a.total_drives, b: b.total_drives, unit: '', color: 'green' as const },
+      { key: 'energy', label: t('compare.energyUsed', 'Energy Used'), icon: <Zap className="h-4 w-4" />, a: a.energy_used, b: b.energy_used, unit: 'kWh', color: 'purple' as const },
+      { key: 'efficiency', label: t('compare.avgEfficiency', 'Avg Efficiency'), icon: <Gauge className="h-4 w-4" />, a: a.avg_efficiency, b: b.avg_efficiency, unit: 'Wh/km', color: 'cyan' as const },
+      { key: 'cost', label: t('compare.totalCost', 'Total Cost'), icon: <DollarSign className="h-4 w-4" />, a: a.total_cost, b: b.total_cost, unit: '$', color: 'green' as const },
+      { key: 'co2', label: t('compare.co2Saved', 'CO₂ Saved'), icon: <Leaf className="h-4 w-4" />, a: a.co2_saved, b: b.co2_saved, unit: 'kg', color: 'purple' as const },
     ];
   }, [a, b, t]);
 
@@ -155,24 +188,24 @@ export default function ComparePage() {
     () => [
       {
         key: 'metric',
-        header: t('Metric'),
+        header: t('compare.metric', 'Metric'),
         render: (r) => <span className="font-medium">{r.metric}</span>,
       },
       {
         key: 'periodA',
-        header: t('Period A'),
+        header: t('compare.periodA', 'Period A'),
         sortable: true,
         render: (r) => fmtNumber(r.periodA),
       },
       {
         key: 'periodB',
-        header: t('Period B'),
+        header: t('compare.periodB', 'Period B'),
         sortable: true,
         render: (r) => fmtNumber(r.periodB),
       },
       {
         key: 'change',
-        header: t('Change'),
+        header: t('compare.change', 'Change'),
         sortable: true,
         render: (r) => (
           <span className={cn(r.positive ? 'text-emerald-300' : 'text-rose-300')}>
@@ -182,7 +215,7 @@ export default function ComparePage() {
       },
       {
         key: 'pctChange',
-        header: t('Pct Change'),
+        header: t('compare.pctChange', '% Change'),
         render: (r) => (
           <Badge variant={r.positive ? 'success' : 'danger'} size="sm">
             {r.pctChange}
@@ -199,17 +232,17 @@ export default function ComparePage() {
     const effPct = pctChange(a.avg_efficiency, b.avg_efficiency);
     const costPct = pctChange(a.total_cost, b.total_cost);
     return [
-      t('compare.insightDistance', {
+      t('compare.insightDistance', 'Distance traveled was {{pct}} {{dir}} in Period A vs Period B.', {
         pct: distPct.value,
-        dir: distPct.positive ? t('More') : t('Less'),
+        dir: distPct.positive ? t('compare.more', 'more') : t('compare.less', 'less'),
       }),
-      t('compare.insightEfficiency', {
+      t('compare.insightEfficiency', 'Efficiency {{dir}} by {{pct}} compared to Period B.', {
         pct: effPct.value,
-        dir: effPct.positive ? t('Improved') : t('Declined'),
+        dir: effPct.positive ? t('compare.improved', 'improved') : t('compare.declined', 'declined'),
       }),
-      t('compare.insightCost', {
+      t('compare.insightCost', 'Costs were {{pct}} {{dir}} in Period A.', {
         pct: costPct.value,
-        dir: costPct.positive ? t('Higher') : t('Lower'),
+        dir: costPct.positive ? t('compare.higher', 'higher') : t('compare.lower', 'lower'),
       }),
     ];
   }, [a, b, t]);
@@ -218,30 +251,54 @@ export default function ComparePage() {
 
   return (
     <PageContainer
-      title={t('compare.title', 'Compare Periods')}
-      subtitle={t('compare.subtitle', 'Compare driving stats across time periods')}
+      title={t('compare.title', 'Period Comparison')}
+      subtitle={t('compare.subtitle', 'Compare key metrics across two time periods')}
       loading={isLoading}
       error={error as Error | null}
     >
+      {/* Disambiguation banner — points users who wanted the fleet view to the
+          right page. Hidden for single-vehicle accounts and once dismissed. */}
+      {bannerVisible && (
+        <FadeIn>
+          <AlertBanner
+            variant="info"
+            icon={<ArrowLeftRight className="h-4 w-4" />}
+            onClose={dismissBanner}
+            className="mb-4"
+          >
+            {t(
+              'compare.banner.toFleetPrefix',
+              'Looking to compare two vehicles instead?',
+            )}{' '}
+            <Link
+              to="/vehicle-comparison"
+              className="font-medium text-neon-cyan underline-offset-2 hover:underline"
+            >
+              {t('compare.banner.toFleetCta', 'Open Fleet comparison →')}
+            </Link>
+          </AlertBanner>
+        </FadeIn>
+      )}
+
       {/* Selectors */}
       <FadeIn>
         <GlassPanel className="mb-6 flex flex-wrap items-end gap-4 p-4">
           <Select
-            label={t('Vehicle')}
+            label={t('compare.vehicle', 'Vehicle')}
             options={vehicleOptions}
             value={activeVehicle}
             onChange={(e) => setVehicleId(e.target.value)}
             className="w-48"
           />
           <Select
-            label={t('Period A')}
+            label={t('compare.periodA', 'Period A')}
             options={periodOptions}
             value={periodA}
             onChange={(e) => setPeriodA(e.target.value)}
             className="w-44"
           />
           <Select
-            label={t('Period B')}
+            label={t('compare.periodB', 'Period B')}
             options={periodOptions}
             value={periodB}
             onChange={(e) => setPeriodB(e.target.value)}
@@ -256,7 +313,7 @@ export default function ComparePage() {
         ) : (
           <EmptyState
             icon={<Calendar className="h-10 w-10" />}
-            message={t('Empty')}
+            message={t('compare.empty', 'Select a vehicle and two periods to compare.')}
           />
         )
       ) : (
@@ -273,7 +330,7 @@ export default function ComparePage() {
                     value={`${fmtNumber(m.a)} ${m.unit}`}
                     icon={m.icon}
                     color={m.color}
-                    subtitle={`${t('Period B')}: ${fmtNumber(m.b)} ${m.unit}`}
+                    subtitle={`${t('compare.periodB', 'Period B')}: ${fmtNumber(m.b)} ${m.unit}`}
                     change={pct}
                   />
                 );
@@ -285,7 +342,7 @@ export default function ComparePage() {
           <FadeIn delay={0.1}>
             <GlassPanel className="mb-6 p-4">
               <p className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
-                {t('Chart Title')}
+                {t('compare.chartTitle', 'Side-by-Side Comparison')}
               </p>
               <ResponsiveContainer width="100%" height={320}>
                 <BarChart data={chartData} margin={chartMarginLabeled}>
@@ -300,14 +357,14 @@ export default function ComparePage() {
                   <Legend />
                   <Bar
                     dataKey="A"
-                    name={t('Period A')}
+                    name={t('compare.periodA', 'Period A')}
                     fill={CHART_COLORS[0]}
                     radius={[4, 4, 0, 0]}
                     {...chartAnimation}
                   />
                   <Bar
                     dataKey="B"
-                    name={t('Period B')}
+                    name={t('compare.periodB', 'Period B')}
                     fill={CHART_COLORS[1]}
                     radius={[4, 4, 0, 0]}
                     {...chartAnimation}
@@ -321,7 +378,7 @@ export default function ComparePage() {
           <FadeIn delay={0.15}>
             <GlassPanel className="mb-6 p-4">
               <p className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
-                {t('Table Title')}
+                {t('compare.tableTitle', 'Comparison Details')}
               </p>
               <DataTable
                 columns={columns}
@@ -339,7 +396,7 @@ export default function ComparePage() {
               <div className="mb-2 flex items-center gap-2">
                 <Lightbulb className="h-4 w-4 text-neon-amber" />
                 <p className="text-sm font-semibold text-[var(--text-primary)]">
-                  {t('Insights')}
+                  {t('compare.insights', 'Insights')}
                 </p>
               </div>
               <ul className="space-y-1.5">

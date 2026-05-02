@@ -1,0 +1,50 @@
+=== GATE ===
+=== PREFLIGHT ===
+PROMPT=phase-40/39-compare-vehicle-comparison-clarity
+BRANCH=refactor/mono-gone
+HEAD=8b1c1bb0
+=== FILES_EXIST ===
+FILE[web\src\App.tsx]=True
+FILE[web\src\components\layout\Layout.tsx]=True
+FILE[web\src\features\analytics\pages\PeriodComparePage.tsx]=True
+FILE[web\src\features\analytics\pages\FleetComparePage.tsx]=True
+FILE[web\src\features\analytics\components\analytics\constants.tsx]=True
+FILE[web\src\features\vehicles\pages\VehicleListPage.tsx]=True
+FILE[web\src\lib\routeRegistry.ts]=True
+FILE[web\src\i18n\en.json]=True
+FILES_EXPECTED=8
+FILES_MISSING=0
+DELETED[web\src\features\analytics\pages\ComparePage.tsx]_STILL_EXISTS=False
+DELETED[web\src\features\analytics\pages\ComparisonPage.tsx]_STILL_EXISTS=False
+=== TYPESCRIPT ===
+(see web/ tsc --noEmit run; exit 0)
+TSC_EXIT=0
+=== LINT ===
+(see web/ npm run lint; exit 0)
+LINT_EXIT=0
+=== FRONTEND_TEST ===
+Test Files  62 passed (62)
+     Tests  728 passed (728)
+FRONTEND_TEST_EXIT=0
+=== AUDIT_VIOLATIONS ===
+VIOLATION_INLINE_VAR=0
+VIOLATION_RECHARTS_DIRECT=0
+VIOLATION_LEAFLET_DIRECT=0
+VIOLATION_LEGACY_API_IMPORT=0
+VIOLATION_DOUBLE_API_PREFIX=0
+AUDIT_TOTAL_VIOLATIONS=0
+=== GIT_STATUS ===
+ M web/src/App.tsx
+ M web/src/components/layout/Layout.tsx
+ M web/src/features/analytics/components/analytics/constants.tsx
+ D web/src/features/analytics/pages/ComparePage.tsx
+ D web/src/features/analytics/pages/ComparisonPage.tsx
+ M web/src/features/vehicles/pages/VehicleListPage.tsx
+ M web/src/i18n/en.json
+ M web/src/lib/routeRegistry.ts
+?? web/src/features/analytics/pages/FleetComparePage.tsx
+?? web/src/features/analytics/pages/PeriodComparePage.tsx
+UNEXPECTED_STATUS_COUNT=0
+=== STATUS ===
+EXIT=0
+STATUS=DONE

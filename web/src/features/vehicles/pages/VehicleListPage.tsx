@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Car, RefreshCw, Activity, Battery, Gauge, Zap,
-  ExternalLink, Trash2, Lock, Shield,
+  ExternalLink, Trash2, Lock, Shield, ArrowLeftRight,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
@@ -32,6 +32,7 @@ export default function VehicleListPage() {
   const { t } = useTranslation();
   usePageTitle(t('nav.vehicles', 'Fleet'));
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { convertDistance, distanceUnit } = useSettings();
 
   /* ── Data ── */
@@ -148,13 +149,30 @@ export default function VehicleListPage() {
       title={t('nav.vehicles', 'Fleet')}
       subtitle={t('vehicles.subtitle', 'View, manage, and sync your Tesla vehicles')}
       actions={
-        <Button
-          onClick={() => syncMut.mutate()}
-          loading={syncMut.isPending}
-          icon={<RefreshCw className="h-4 w-4" />}
-        >
-          {t('vehicles.syncButton', 'Sync from Tesla')}
-        </Button>
+        <div className="flex items-center gap-2">
+          {vehicleList.length >= 2 && (
+            <Button
+              variant="outline"
+              icon={<ArrowLeftRight className="h-4 w-4" />}
+              onClick={() => {
+                // Pre-fill the first two vehicles via query params so users
+                // land on a populated comparison instead of empty selectors.
+                const leftId = vehicleList[0]?.id ?? '';
+                const rightId = vehicleList[1]?.id ?? '';
+                navigate(`/vehicle-comparison?leftId=${leftId}&rightId=${rightId}`);
+              }}
+            >
+              {t('vehicles.compareButton', 'Compare vehicles')}
+            </Button>
+          )}
+          <Button
+            onClick={() => syncMut.mutate()}
+            loading={syncMut.isPending}
+            icon={<RefreshCw className="h-4 w-4" />}
+          >
+            {t('vehicles.syncButton', 'Sync from Tesla')}
+          </Button>
+        </div>
       }
     >
       {/* Sync feedback banners */}
