@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 import { ToastProvider } from './components/feedback/Toast'
 import { ErrorBoundary } from './components/feedback/ErrorBoundary'
+import { AchievementUnlockListener } from './components/feedback/AchievementUnlockListener'
 import { ThemeProvider } from './components/ui/ThemeProvider'
 import ReloadPrompt from './components/feedback/ReloadPrompt'
 import { SelectedVehicleProvider } from './store/selectedVehicle'
@@ -78,6 +79,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               <ToastProvider>
                 <App />
                 <ReloadPrompt />
+                {/* Phase-40 / Prompt 63: celebrate locked → unlocked transitions
+                    with a transient toast + confetti. Mounted alongside the
+                    standard toast stack so the SSE subscription is global. */}
+                <AchievementUnlockListener />
               </ToastProvider>
             </SelectedVehicleProvider>
           </ThemeProvider>

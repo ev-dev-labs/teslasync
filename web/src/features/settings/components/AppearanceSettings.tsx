@@ -4,8 +4,12 @@ import { FadeIn } from '@/components/motion'
 import { useToast } from '@/components/feedback/Toast'
 import { useSettings, useSaveSettings } from '@/api/hooks/useSettings'
 import { useStatusBarPrefs, setStatusBarPrefs } from '@/components/layout'
+import {
+  useAchievementCelebrationPrefs,
+  setAchievementCelebrationPrefs,
+} from '@/hooks/useAchievementCelebrationPrefs'
 import { cn } from '@/lib/cn'
-import { Palette, CheckCircle, Rows3, PanelBottom } from 'lucide-react'
+import { Palette, CheckCircle, Rows3, PanelBottom, Trophy } from 'lucide-react'
 
 type DensityId = 'compact' | 'comfortable' | 'spacious'
 
@@ -26,6 +30,11 @@ export function AppearanceSettings() {
   // localStorage rather than the server so toggling is instant and works
   // offline; cross-tab sync is handled inside useStatusBarPrefs.
   const statusBarPrefs = useStatusBarPrefs()
+
+  // Celebration prefs (Phase-40 / Prompt 63). Same localStorage pattern as
+  // the status-bar prefs above so toggling the celebration toast / sound is
+  // instant and survives offline + cross-tab.
+  const celebrationPrefs = useAchievementCelebrationPrefs()
 
   function setDensity(next: DensityId) {
     if (!settings || next === density) return
@@ -189,6 +198,74 @@ export function AppearanceSettings() {
                 checked={statusBarPrefs.iconOnly}
                 onChange={(next) => setStatusBarPrefs({ iconOnly: next })}
                 aria-disabled={!statusBarPrefs.enabled}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Achievement celebrations (Phase-40 / Prompt 63) */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <Trophy className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+            <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+              {t('achievements.celebrationSettings', 'Celebration')}
+            </p>
+          </div>
+          <div className="space-y-3 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-2)] p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-[var(--text-primary)]">
+                  {t('achievements.showToasts', 'Show celebration toasts')}
+                </p>
+                <p className="text-xs text-[var(--text-muted)]">
+                  {t('achievements.showToastsHelp', 'Pop a celebratory toast with confetti when you unlock an achievement.')}
+                </p>
+              </div>
+              <Toggle
+                checked={celebrationPrefs.showToasts}
+                onChange={(next) => setAchievementCelebrationPrefs({ showToasts: next })}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-4 border-t border-[var(--glass-border)] pt-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-[var(--text-primary)]">
+                  {t('achievements.playSound', 'Play sound on unlock')}
+                </p>
+                <p className="text-xs text-[var(--text-muted)]">
+                  {t('achievements.playSoundHelp', 'Play a short chime alongside the celebration toast. Off by default.')}
+                </p>
+              </div>
+              <Toggle
+                checked={celebrationPrefs.playSound}
+                onChange={(next) => setAchievementCelebrationPrefs({ playSound: next })}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-4 border-t border-[var(--glass-border)] pt-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-[var(--text-primary)]">
+                  {t('achievements.showOnDashboard', 'Show recently unlocked on dashboard')}
+                </p>
+                <p className="text-xs text-[var(--text-muted)]">
+                  {t('achievements.showOnDashboardHelp', "Surface your latest unlocks in the dashboard's recently-unlocked widget.")}
+                </p>
+              </div>
+              <Toggle
+                checked={celebrationPrefs.showOnDashboard}
+                onChange={(next) => setAchievementCelebrationPrefs({ showOnDashboard: next })}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-4 border-t border-[var(--glass-border)] pt-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-[var(--text-primary)]">
+                  {t('achievements.pushOnUnlock', 'Send push notifications for achievements')}
+                </p>
+                <p className="text-xs text-[var(--text-muted)]">
+                  {t('achievements.pushOnUnlockHelp', 'Deliver a web push notification when an achievement unlocks while the tab is closed.')}
+                </p>
+              </div>
+              <Toggle
+                checked={celebrationPrefs.pushOnUnlock}
+                onChange={(next) => setAchievementCelebrationPrefs({ pushOnUnlock: next })}
               />
             </div>
           </div>

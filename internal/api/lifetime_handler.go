@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"math"
 	"net/http"
 	"strconv"
@@ -12,13 +13,59 @@ import (
 )
 
 // LifetimeHandler serves all-time aggregated statistics with achievements.
+//
+// Phase-40 / Prompt 63: in addition to computing achievements, the handler
+// detects locked → unlocked transitions and broadcasts them on the SSE event
+// hub so the frontend can fire a celebration toast in real time. Persisted
+// unlock timestamps are stored in the `achievement_unlocks` table; the SSE
+// event is fire-and-forget — failure to broadcast does not roll back the
+// stats response.
 type LifetimeHandler struct {
-	db *database.DB
+	db       *database.DB
+	unlocks  achievementUnlockStore
+	eventHub achievementEventBroadcaster
+	now      func() time.Time
+}
+
+// achievementUnlockStore is the slice of *database.AchievementUnlockRepo
+// consumed by the lifetime handler. Extracted as an interface so unit tests
+// can drive the transition-detection logic without a real pgx pool.
+type achievementUnlockStore interface {
+	ListByVehicle(ctx context.Context, vehicleID int64) ([]database.AchievementUnlock, error)
+	RecordUnlock(ctx context.Context, achievementID string, vehicleID int64, when time.Time) (bool, time.Time, error)
+}
+
+// achievementEventBroadcaster is the slice of *EventHub used to publish
+// `achievement_unlocked` events. Extracted so tests can record the
+// broadcasts without spinning up an SSE hub goroutine.
+type achievementEventBroadcaster interface {
+	Broadcast(eventType string, data interface{})
 }
 
 // NewLifetimeHandler creates a new LifetimeHandler.
-func NewLifetimeHandler(db *database.DB) *LifetimeHandler {
-	return &LifetimeHandler{db: db}
+//
+// `eventHub` is optional — when nil (e.g. in unit tests that do not exercise
+// the celebration path) transitions are still persisted, but no SSE event is
+// broadcast.
+func NewLifetimeHandler(db *database.DB, eventHub *EventHub) *LifetimeHandler {
+	h := &LifetimeHandler{
+		db:      db,
+		unlocks: database.NewAchievementUnlockRepo(db),
+		now:     func() time.Time { return time.Now().UTC() },
+	}
+	if eventHub != nil {
+		h.eventHub = eventHub
+	}
+	return h
+}
+
+// achievementUnlockedEvent is the SSE payload published when an achievement
+// crosses its target threshold for the first time. Mirrors the JSON shape the
+// frontend's `useAchievementUnlocks` hook consumes.
+type achievementUnlockedEvent struct {
+	VehicleID   int64       `json:"vehicle_id"` // 0 = fleet-wide
+	UnlockedAt  string      `json:"unlocked_at"`
+	Achievement Achievement `json:"achievement"`
 }
 
 // Achievement represents a gamified milestone badge.
@@ -322,28 +369,7 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 		"trees":           float64(treesEquivalent),
 	}
 
-	achievements := make([]Achievement, 0, len(achievementDefs))
-	for _, def := range achievementDefs {
-		current := fieldValues[def.Field]
-		progress := 0.0
-		if def.Target > 0 {
-			progress = current / def.Target
-			if progress > 1.0 {
-				progress = 1.0
-			}
-		}
-		a := Achievement{
-			ID:          def.ID,
-			Name:        def.Name,
-			Description: def.Desc,
-			Icon:        def.Icon,
-			Unlocked:    current >= def.Target,
-			Progress:    safeFloat(math.Round(progress*1000) / 1000),
-			Target:      def.Target,
-			Current:     safeFloat(math.Round(current*100) / 100),
-		}
-		achievements = append(achievements, a)
-	}
+	achievements := h.evaluateAchievements(ctx, vehicleID, fieldValues)
 
 	totalDrivingHours := totalDrivingMin / 60.0
 	totalChargingHours := totalChargingMin / 60.0
@@ -393,3 +419,92 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 	writeJSON(w, http.StatusOK, result)
 }
 
+// evaluateAchievements computes the achievement list for the given field
+// values, persists any newly-crossed unlocks, and broadcasts an
+// `achievement_unlocked` SSE event for each transition. Persistence and
+// broadcast failures are logged but do not surface as errors so the lifetime
+// stats response is never blocked by celebration plumbing.
+func (h *LifetimeHandler) evaluateAchievements(ctx context.Context, vehicleID int64, fieldValues map[string]float64) []Achievement {
+	// Phase-40 / Prompt 63: load already-persisted unlocks for this vehicle
+	// scope so we can (a) populate `unlocked_at` from the canonical store and
+	// (b) detect locked → unlocked transitions to broadcast as SSE events.
+	// vehicle_id = 0 represents the fleet-wide bucket (no vehicle filter).
+	persistedUnlocks := map[string]time.Time{}
+	if h.unlocks != nil {
+		if existing, err := h.unlocks.ListByVehicle(ctx, vehicleID); err != nil {
+			// Fall back to the legacy (non-persisting) behaviour rather
+			// than failing the whole stats request — celebration is a
+			// nicety, stats are the user's primary need.
+			log.Warn().Err(err).Msg("lifetime: failed to load persisted unlocks; skipping transition detection")
+		} else {
+			for _, u := range existing {
+				persistedUnlocks[u.AchievementID] = u.UnlockedAt
+			}
+		}
+	}
+
+	now := h.now()
+	achievements := make([]Achievement, 0, len(achievementDefs))
+	freshUnlocks := make([]Achievement, 0)
+	for _, def := range achievementDefs {
+		current := fieldValues[def.Field]
+		progress := 0.0
+		if def.Target > 0 {
+			progress = current / def.Target
+			if progress > 1.0 {
+				progress = 1.0
+			}
+		}
+		unlocked := current >= def.Target
+		a := Achievement{
+			ID:          def.ID,
+			Name:        def.Name,
+			Description: def.Desc,
+			Icon:        def.Icon,
+			Unlocked:    unlocked,
+			Progress:    safeFloat(math.Round(progress*1000) / 1000),
+			Target:      def.Target,
+			Current:     safeFloat(math.Round(current*100) / 100),
+		}
+
+		if unlocked && h.unlocks != nil {
+			if existing, ok := persistedUnlocks[def.ID]; ok {
+				s := existing.UTC().Format(time.RFC3339)
+				a.UnlockedAt = &s
+			} else {
+				inserted, when, err := h.unlocks.RecordUnlock(ctx, def.ID, vehicleID, now)
+				if err != nil {
+					log.Warn().Err(err).Str("achievement", def.ID).Msg("lifetime: failed to persist unlock")
+				} else {
+					s := when.UTC().Format(time.RFC3339)
+					a.UnlockedAt = &s
+					if inserted {
+						freshUnlocks = append(freshUnlocks, a)
+					}
+				}
+			}
+		}
+
+		achievements = append(achievements, a)
+	}
+
+	// Broadcast each freshly-unlocked achievement on the SSE bus. Fire-and-
+	// forget — broadcasts are buffered, never block the response, and a
+	// failure to deliver to a single SSE client does not surface as an
+	// error here.
+	if h.eventHub != nil {
+		for _, a := range freshUnlocks {
+			unlockedAt := ""
+			if a.UnlockedAt != nil {
+				unlockedAt = *a.UnlockedAt
+			}
+			h.eventHub.Broadcast("achievement_unlocked", achievementUnlockedEvent{
+				VehicleID:   vehicleID,
+				UnlockedAt:  unlockedAt,
+				Achievement: a,
+			})
+		}
+	}
+
+	return achievements
+}

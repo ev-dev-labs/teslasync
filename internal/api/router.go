@@ -182,7 +182,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	costForecastHandler := NewCostForecastHandler(db)
 	chargingOptimizerHandler := NewChargingOptimizerHandler(db)
 	anomalyHandler := NewAnomalyHandler(db)
-	lifetimeHandler := NewLifetimeHandler(db)
+	lifetimeHandler := NewLifetimeHandler(db, eventHub)
 	yearReviewHandler := NewYearReviewHandler(db)
 	chargePlannerHandler := NewChargePlannerHandler(db, teslaClient, cfg, stateReader)
 	energyFlowHandler := NewEnergyFlowHandler(db, stateReader)

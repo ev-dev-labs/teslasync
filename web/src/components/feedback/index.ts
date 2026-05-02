@@ -19,3 +19,5 @@ export { GotoIndicator } from './GotoIndicator';
 export { KeyboardCheatSheet } from './KeyboardCheatSheet';
 export { TourOverlay } from './TourOverlay';
 export { JobProgressDrawer } from './JobProgressDrawer';
+export { AchievementUnlockedToast, AchievementUnlockedToastStack, type AchievementUnlockedToastProps } from './AchievementUnlockedToast';
+export { AchievementUnlockListener } from './AchievementUnlockListener';

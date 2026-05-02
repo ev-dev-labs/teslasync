@@ -1,4 +1,21 @@
 {
+  "achievements": {
+    "unlocked": "Achievement unlocked: {{name}}",
+    "noneYet": "Drive, charge, and explore — achievements will appear here as you unlock them",
+    "view": "View",
+    "viewNamed": "View achievement: {{name}}",
+    "dismiss": "Dismiss achievement notification",
+    "toastEyebrow": "Achievement Unlocked",
+    "celebrationSettings": "Celebration",
+    "showToasts": "Show celebration toasts",
+    "showToastsHelp": "Pop a celebratory toast with confetti when you unlock an achievement.",
+    "playSound": "Play sound on unlock",
+    "playSoundHelp": "Play a short chime alongside the celebration toast. Off by default.",
+    "showOnDashboard": "Show recently unlocked on dashboard",
+    "showOnDashboardHelp": "Surface your latest unlocks in the dashboard's recently-unlocked widget.",
+    "pushOnUnlock": "Send push notifications for achievements",
+    "pushOnUnlockHelp": "Deliver a web push notification when an achievement unlocks while the tab is closed."
+  },
   "help": {
     "tooltip": {
       "iconLabel": "More info"
@@ -3881,6 +3898,10 @@
       "lifetime": "lifetime",
       "noData": "No lifetime data",
       "title": "Lifetime Stats"
+    },
+    "recentlyUnlocked": {
+      "title": "Recently Unlocked",
+      "disabled": "Recently unlocked achievements are hidden in your settings."
     },
     "livePowerFlow": {
       "solar": "Solar",

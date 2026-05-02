@@ -16,6 +16,7 @@ interface SSEOptions {
   onVehicleUpdate?: (data: unknown) => void
   onAlert?: (data: unknown) => void
   onExportStatus?: (data: unknown) => void
+  onAchievementUnlocked?: (data: unknown) => void
   onConnected?: (clientId: string) => void
   onDisconnected?: () => void
   onFallbackToPolling?: () => void
@@ -40,6 +41,7 @@ export function useRealtimeEvents(options: SSEOptions = {}) {
     const onVehicleUpdate = (data: unknown) => callbacksRef.current.onVehicleUpdate?.(data)
     const onAlert = (data: unknown) => callbacksRef.current.onAlert?.(data)
     const onExportStatus = (data: unknown) => callbacksRef.current.onExportStatus?.(data)
+    const onAchievementUnlocked = (data: unknown) => callbacksRef.current.onAchievementUnlocked?.(data)
     const onConnected = (data: unknown) => {
       setState('connected')
       setLastConnected(new Date())
@@ -56,6 +58,7 @@ export function useRealtimeEvents(options: SSEOptions = {}) {
     sseManager.subscribe('vehicle_update', onVehicleUpdate)
     sseManager.subscribe('alert', onAlert)
     sseManager.subscribe('export_status', onExportStatus)
+    sseManager.subscribe('achievement_unlocked', onAchievementUnlocked)
     sseManager.subscribe('connected', onConnected)
     sseManager.subscribe('disconnected', onDisconnected)
 
@@ -63,6 +66,7 @@ export function useRealtimeEvents(options: SSEOptions = {}) {
       sseManager.unsubscribe('vehicle_update', onVehicleUpdate)
       sseManager.unsubscribe('alert', onAlert)
       sseManager.unsubscribe('export_status', onExportStatus)
+      sseManager.unsubscribe('achievement_unlocked', onAchievementUnlocked)
       sseManager.unsubscribe('connected', onConnected)
       sseManager.unsubscribe('disconnected', onDisconnected)
     }

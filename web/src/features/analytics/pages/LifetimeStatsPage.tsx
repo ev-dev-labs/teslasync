@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import {
   Car, Zap, DollarSign, Leaf, Globe, Moon,
   Clock, Award, Flame, TreePine, Home,
@@ -19,6 +20,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 
 import { AchievementBadge } from '../components/AchievementBadge';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 
 /* ── Helpers ──────────────────────────────────────────────────────── */
 
@@ -51,6 +53,51 @@ export default function LifetimeStatsPage() {
   const stats = data;
   const achievements = stats?.achievements ?? [];
   const unlockedCount = achievements.filter(a => a.unlocked).length;
+
+  // ── Phase-40 / Prompt 63: deep-link `?achievement={id}` ──────────────────
+  // When the lifetime page mounts (or the query param changes) with a target
+  // achievement id, scroll the matching badge into view and apply a 3-second
+  // pulse highlight. After the pulse, strip the query param via `replace`
+  // navigation so refreshes don't re-pulse and so the address bar matches the
+  // user's mental model ("I'm just looking at the page now").
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const targetAchievementId = searchParams.get('achievement');
+  const { reduce: reduceMotion } = useMotionPreference();
+  const [pulsedId, setPulsedId] = useState<string | null>(null);
+  const badgeRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  useEffect(() => {
+    if (!targetAchievementId) return;
+    if (achievements.length === 0) return; // wait for data
+
+    // Defer one frame so the achievement section is in the DOM before we
+    // try to scroll to it (achievements live inside `<FadeIn>` which mounts
+    // children after a brief animation tick).
+    const raf = requestAnimationFrame(() => {
+      const node = badgeRefs.current.get(targetAchievementId);
+      if (node) {
+        node.scrollIntoView({
+          behavior: reduceMotion ? 'auto' : 'smooth',
+          block: 'center',
+        });
+      }
+      setPulsedId(targetAchievementId);
+    });
+
+    // Strip the query param + clear the pulse after 3 seconds. We do BOTH in
+    // the same timeout so the URL bar and the visual cue stay in sync.
+    const timeout = window.setTimeout(() => {
+      setPulsedId(null);
+      navigate(location.pathname, { replace: true });
+    }, 3000);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      window.clearTimeout(timeout);
+    };
+  }, [targetAchievementId, achievements.length, navigate, location.pathname, reduceMotion]);
 
   return (
     <PageContainer
@@ -328,11 +375,29 @@ export default function LifetimeStatsPage() {
           </div>
           {achievements.length > 0 ? (
             <StaggerContainer className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-              {achievements.map(a => (
-                <StaggerItem key={a.id}>
-                  <AchievementBadge achievement={a} size="md" />
-                </StaggerItem>
-              ))}
+              {achievements.map(a => {
+                const isPulsing = pulsedId === a.id;
+                return (
+                  <StaggerItem key={a.id}>
+                    <div
+                      ref={node => {
+                        if (node) badgeRefs.current.set(a.id, node);
+                        else badgeRefs.current.delete(a.id);
+                      }}
+                      className={
+                        isPulsing
+                          ? (reduceMotion
+                              ? 'rounded-xl ring-2 ring-yellow-400/80'
+                              : 'rounded-xl ring-2 ring-yellow-400/80 animate-pulse')
+                          : 'rounded-xl'
+                      }
+                      data-achievement-id={a.id}
+                    >
+                      <AchievementBadge achievement={a} size="md" />
+                    </div>
+                  </StaggerItem>
+                );
+              })}
             </StaggerContainer>
           ) : (
             <EmptyState message={t('lifetime.noAchievements', 'Start driving to unlock achievements')} />

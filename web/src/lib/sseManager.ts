@@ -21,6 +21,7 @@ type SSEEventType =
   | 'vehicle_update'
   | 'alert'
   | 'export_status'
+  | 'achievement_unlocked'
   | 'connected'
   | 'disconnected'
   | 'heartbeat'
@@ -99,6 +100,14 @@ function doConnect() {
   es.addEventListener('export_status', (e) => {
     markServerMessage()
     emit('export_status', JSON.parse(e.data))
+  })
+
+  // Phase-40 / Prompt 63: real-time achievement unlocks. The lifetime handler
+  // broadcasts one event per locked → unlocked transition; consumers fire a
+  // celebration toast + confetti animation in response.
+  es.addEventListener('achievement_unlocked', (e) => {
+    markServerMessage()
+    emit('achievement_unlocked', JSON.parse(e.data))
   })
 
   es.addEventListener('heartbeat', (e) => {
