@@ -5,8 +5,9 @@ import {
   ComposedChart, Area, Line, ReferenceLine,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AREA_DEFAULTS, areaGradient,
-  ChartBrush, useSyncedCursor,
+  ChartBrush, useSyncedCursor, useSyncedReferenceLineX,
 } from '@/components/charts';
+import { chartTokens } from '@/lib/tokens';
 import { FadeIn } from '@/components/motion';
 import { useSettings } from '@/hooks/useSettings';
 import { fmtNumber, fmtInt, fmtPercent, fmtWithUnit } from '@/lib/numberFormat';
@@ -22,13 +23,19 @@ export function DriveOverviewChart({ chartData }: DriveOverviewChartProps) {
   const { t } = useTranslation();
   const { speedUnit, distanceUnit } = useSettings();
   const syncProps = useSyncedCursor();
+  const syncedX = useSyncedReferenceLineX();
 
   return (
     <FadeIn>
       <ChartContainer title={t('driveDetail.driveChart', 'Drive Overview')} height={360}>
         {chartData.length > 1 ? (
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={chartData} {...syncProps}>
+            <ComposedChart
+              data={chartData}
+              syncId={syncProps.syncId}
+              syncMethod={syncProps.syncMethod}
+              onMouseMove={syncProps.onMouseMove}
+            >
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
               <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} interval="preserveStartEnd" />
               <YAxis yAxisId="power" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} unit=" kW" />
@@ -48,6 +55,17 @@ export function DriveOverviewChart({ chartData }: DriveOverviewChartProps) {
                 <Line {...AREA_DEFAULTS} yAxisId="speed" dataKey="usableSoc" stroke="#22d3ee" strokeWidth={1} name={`${t('driveDetail.usableSoc', 'Usable SOC')} %`} />
               )}
               <Line {...AREA_DEFAULTS} yAxisId="power" dataKey="power" stroke="#f59e0b" name={`${t('driveDetail.power', 'Power')} kW`} />
+              {syncedX != null && (
+                <ReferenceLine
+                  yAxisId="power"
+                  x={syncedX}
+                  stroke={chartTokens.cursor.stroke}
+                  strokeWidth={chartTokens.cursor.strokeWidth}
+                  strokeDasharray={chartTokens.cursor.strokeDasharray}
+                  ifOverflow="hidden"
+                  isFront
+                />
+              )}
               {/*
                 Brush at the bottom of the overview chart. When this chart is
                 inside a `<ChartTimeRangeProvider>` (DriveDetailPage wraps it),

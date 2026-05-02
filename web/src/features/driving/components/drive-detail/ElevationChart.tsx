@@ -2,10 +2,11 @@ import { useTranslation } from 'react-i18next';
 import { Activity, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import {
   ChartContainer, ChartTooltip,
-  ComposedChart, Area, Line, Legend,
+  ComposedChart, Area, Line, Legend, ReferenceLine,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  useSyncedCursor,
+  useSyncedCursor, useSyncedReferenceLineX,
 } from '@/components/charts';
+import { chartTokens } from '@/lib/tokens';
 import { FadeIn } from '@/components/motion';
 import { useSettings } from '@/hooks/useSettings';
 import { fmtNumber } from '@/lib/numberFormat';
@@ -21,6 +22,7 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
   const { t } = useTranslation();
   const { speedUnit } = useSettings();
   const syncProps = useSyncedCursor();
+  const syncedX = useSyncedReferenceLineX();
 
   return (
     <FadeIn>
@@ -33,7 +35,12 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
               <span className="text-[var(--text-muted)]">{t('driveDetail.net', 'Net')}: {fmtNumber(stats.elevGain - stats.elevLoss)} m</span>
             </div>
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={chartData} {...syncProps}>
+              <ComposedChart
+                data={chartData}
+                syncId={syncProps.syncId}
+                syncMethod={syncProps.syncMethod}
+                onMouseMove={syncProps.onMouseMove}
+              >
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                 <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} interval="preserveStartEnd" />
                 <YAxis yAxisId="elev" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
@@ -42,6 +49,17 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
                 <Legend wrapperStyle={LEGEND_STYLE} />
                 <Area yAxisId="elev" type="monotone" dataKey="elevation" stroke="#10b981" fill="#10b981" fillOpacity={0.2} strokeWidth={2} name={`${t('driveDetail.elevation', 'Elevation')} (m)`} />
                 <Line yAxisId="speed" type="monotone" dataKey="speed" stroke="#a855f7" strokeWidth={1.5} dot={false} name={`${t('driveDetail.speed', 'Speed')} (${speedUnit})`} strokeOpacity={0.6} />
+                {syncedX != null && (
+                  <ReferenceLine
+                    yAxisId="elev"
+                    x={syncedX}
+                    stroke={chartTokens.cursor.stroke}
+                    strokeWidth={chartTokens.cursor.strokeWidth}
+                    strokeDasharray={chartTokens.cursor.strokeDasharray}
+                    ifOverflow="hidden"
+                    isFront
+                  />
+                )}
               </ComposedChart>
             </ResponsiveContainer>
           </>

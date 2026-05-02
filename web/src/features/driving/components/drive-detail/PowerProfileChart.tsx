@@ -5,8 +5,9 @@ import {
   AREA_DEFAULTS, areaGradient,
   AreaChart, Area, ReferenceLine,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  useSyncedCursor,
+  useSyncedCursor, useSyncedReferenceLineX,
 } from '@/components/charts';
+import { chartTokens } from '@/lib/tokens';
 import { FadeIn } from '@/components/motion';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import type { ChartDataPoint, DriveStats } from './types';
@@ -19,13 +20,19 @@ interface PowerProfileChartProps {
 export function PowerProfileChart({ chartData, stats }: PowerProfileChartProps) {
   const { t } = useTranslation();
   const syncProps = useSyncedCursor();
+  const syncedX = useSyncedReferenceLineX();
 
   return (
     <FadeIn>
       <ChartContainer title={t('driveDetail.powerProfile', 'Power Profile')} height={220}>
         {chartData.length > 1 ? (
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} {...syncProps}>
+            <AreaChart
+              data={chartData}
+              syncId={syncProps.syncId}
+              syncMethod={syncProps.syncMethod}
+              onMouseMove={syncProps.onMouseMove}
+            >
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
               <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} interval="preserveStartEnd" />
               <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
@@ -33,6 +40,16 @@ export function PowerProfileChart({ chartData, stats }: PowerProfileChartProps) 
               <ReferenceLine y={0} stroke="rgba(255,255,255,0.15)" />
               {areaGradient('powerGrad', '#f59e0b')}
               <Area {...AREA_DEFAULTS} dataKey="power" stroke="#f59e0b" fill="url(#powerGrad)" name={`${t('driveDetail.power', 'Power')} kW`} />
+              {syncedX != null && (
+                <ReferenceLine
+                  x={syncedX}
+                  stroke={chartTokens.cursor.stroke}
+                  strokeWidth={chartTokens.cursor.strokeWidth}
+                  strokeDasharray={chartTokens.cursor.strokeDasharray}
+                  ifOverflow="hidden"
+                  isFront
+                />
+              )}
             </AreaChart>
           </ResponsiveContainer>
         ) : (

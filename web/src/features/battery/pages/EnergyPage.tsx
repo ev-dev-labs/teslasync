@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Zap, Leaf, Fuel, Sun, Moon, ArrowRight, Activity } from 'lucide-react';
@@ -8,9 +8,10 @@ import { GlassPanel, Select, DataTable, type Column } from '@/components/ui';
 import {
   RadialGauge, ChartContainer, ChartTooltip, ChartGradient,
   chartGrid, axisTickSm, renderAnnotationLines,
-  AreaChart, Area, BarChart, Bar, ComposedChart, Line,
+  AreaChart, Area, BarChart, Bar, ComposedChart, Line, ReferenceLine,
   PieChart, Pie, Cell, Brush, XAxis, YAxis, Tooltip, ResponsiveContainer,
   AREA_DEFAULTS,
+  ChartTimeRangeProvider, useSyncedCursor, useSyncedReferenceLineX,
 } from '@/components/charts';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { Skeleton, QueryError, EmptyState } from '@/components/feedback';
@@ -26,6 +27,7 @@ import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt, fmtPercent } from '@/lib/numberFormat';
 import { CHARGER_COLORS } from '@/lib/colors';
+import { chartTokens } from '@/lib/tokens';
 import type { ChargingSession } from '@/api/types';
 
 /* ── Local: Cost Comparison Card ────────────────────────────────── */
@@ -76,6 +78,25 @@ function CostComparisonCard({
 }
 
 /* ── Page ────────────────────────────────────────────────────────── */
+
+/**
+ * Phase-40 / Prompt 62 — render-prop helper that subscribes the inner recharts
+ * chart to the surrounding `<ChartTimeRangeProvider>`. The two daily-energy
+ * panels share the same `daily_breakdown` dataset (matching `date` axis), so
+ * they sync hover cursors and a persistent reference line through this helper.
+ */
+function EnergyChartSync({
+  children,
+}: {
+  children: (state: {
+    sync: ReturnType<typeof useSyncedCursor>;
+    syncedX: ReturnType<typeof useSyncedReferenceLineX>;
+  }) => ReactNode;
+}) {
+  const sync = useSyncedCursor();
+  const syncedX = useSyncedReferenceLineX();
+  return <>{children({ sync, syncedX })}</>;
+}
 
 export default function EnergyPage() {
   const { t } = useTranslation();
@@ -396,7 +417,12 @@ export default function EnergyPage() {
             </FadeIn>
           </div>
 
-          {/* ── Charts Row 1: Energy & Cost Daily + Efficiency ──── */}
+          {/* ── Charts Row 1: Energy & Cost Daily + Efficiency ────
+              Phase 40 / Prompt 62: both panels share the same `daily_breakdown`
+              dataset (matching `date` axis), so they're wrapped in a single
+              `<ChartTimeRangeProvider>` to mirror hover cursors and draw a
+              persistent reference line on both at the last hovered date. */}
+          <ChartTimeRangeProvider syncId="energy.daily">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <FadeIn delay={0.1}>
               <ChartContainer
@@ -408,45 +434,65 @@ export default function EnergyPage() {
                 {({ annotations: chartAnnotations }) => (
                   <div className="h-48 sm:h-64">
                     {dailyEnergy.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <ComposedChart data={dailyEnergy}>
-                          <defs>
-                            <ChartGradient id="energyBarGrad" color="#00f0ff" opacity={0.8} />
-                          </defs>
-                          {chartGrid}
-                          <XAxis dataKey="date" tick={axisTickSm} tickLine={false} axisLine={false} />
-                          <YAxis yAxisId="left" tick={axisTickSm} tickLine={false} axisLine={false} />
-                          <YAxis yAxisId="right" orientation="right" tick={axisTickSm} tickLine={false} axisLine={false} />
-                          <Tooltip content={<ChartTooltip />} />
-                          {renderAnnotationLines(chartAnnotations, (ts) => ts)}
-                          <Bar
-                            yAxisId="left"
-                            dataKey="energy_kwh"
-                            name={t('energy.chart.energyKwh', 'Energy (kWh)')}
-                            fill="url(#energyBarGrad)"
-                            fillOpacity={0.6}
-                            radius={[3, 3, 0, 0]}
-                            animationDuration={800}
-                          />
-                          <Line
-                            {...AREA_DEFAULTS}
-                            yAxisId="right"
-                            dataKey="efficiency_wh_per_mi"
-                            name={efficiencyUnit}
-                            stroke="#10b981"
-                            animationDuration={800}
-                          />
-                          {dailyEnergy.length > 14 && (
-                            <Brush
-                              dataKey="date"
-                              height={20}
-                              stroke="#6b7280"
-                              fill="rgba(255,255,255,0.02)"
-                              travellerWidth={8}
-                            />
-                          )}
-                        </ComposedChart>
-                      </ResponsiveContainer>
+                      <EnergyChartSync>
+                        {({ sync, syncedX }) => (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <ComposedChart
+                              data={dailyEnergy}
+                              syncId={sync.syncId}
+                              syncMethod={sync.syncMethod}
+                              onMouseMove={sync.onMouseMove}
+                            >
+                              <defs>
+                                <ChartGradient id="energyBarGrad" color="#00f0ff" opacity={0.8} />
+                              </defs>
+                              {chartGrid}
+                              <XAxis dataKey="date" tick={axisTickSm} tickLine={false} axisLine={false} />
+                              <YAxis yAxisId="left" tick={axisTickSm} tickLine={false} axisLine={false} />
+                              <YAxis yAxisId="right" orientation="right" tick={axisTickSm} tickLine={false} axisLine={false} />
+                              <Tooltip content={<ChartTooltip />} />
+                              {renderAnnotationLines(chartAnnotations, (ts) => ts)}
+                              <Bar
+                                yAxisId="left"
+                                dataKey="energy_kwh"
+                                name={t('energy.chart.energyKwh', 'Energy (kWh)')}
+                                fill="url(#energyBarGrad)"
+                                fillOpacity={0.6}
+                                radius={[3, 3, 0, 0]}
+                                animationDuration={800}
+                              />
+                              <Line
+                                {...AREA_DEFAULTS}
+                                yAxisId="right"
+                                dataKey="efficiency_wh_per_mi"
+                                name={efficiencyUnit}
+                                stroke="#10b981"
+                                animationDuration={800}
+                              />
+                              {syncedX != null && (
+                                <ReferenceLine
+                                  yAxisId="left"
+                                  x={syncedX}
+                                  stroke={chartTokens.cursor.stroke}
+                                  strokeWidth={chartTokens.cursor.strokeWidth}
+                                  strokeDasharray={chartTokens.cursor.strokeDasharray}
+                                  ifOverflow="hidden"
+                                  isFront
+                                />
+                              )}
+                              {dailyEnergy.length > 14 && (
+                                <Brush
+                                  dataKey="date"
+                                  height={20}
+                                  stroke="#6b7280"
+                                  fill="rgba(255,255,255,0.02)"
+                                  travellerWidth={8}
+                                />
+                              )}
+                            </ComposedChart>
+                          </ResponsiveContainer>
+                        )}
+                      </EnergyChartSync>
                     ) : (
                       <EmptyState
                         icon={<Zap className="h-8 w-8" />}
@@ -463,36 +509,55 @@ export default function EnergyPage() {
               <ChartContainer title={t('energy.chart.efficiencyTrend', 'Efficiency Trend')} exportable exportFilename="efficiency-trend">
                 <div className="h-48 sm:h-64">
                   {dailyEnergy.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={dailyEnergy}>
-                        <defs>
-                          <ChartGradient id="effGrad" color="#10b981" opacity={0.3} />
-                          <ChartGradient id="distGrad2" color="#00f0ff" opacity={0.15} />
-                        </defs>
-                        {chartGrid}
-                        <XAxis dataKey="date" tick={axisTickSm} tickLine={false} axisLine={false} />
-                        <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
-                        <Tooltip content={<ChartTooltip />} />
-                        <Area
-                          {...AREA_DEFAULTS}
-                          dataKey="efficiency_wh_per_mi"
-                          name={efficiencyUnit}
-                          stroke="#10b981"
-                          fill="url(#effGrad)"
-                          animationDuration={800}
-                        />
-                        <Area
-                          {...AREA_DEFAULTS}
-                          dataKey="distance_mi"
-                          name={t('energy.chart.distance', { unit: distanceUnit, defaultValue: `Distance (${distanceUnit})` })}
-                          stroke="#00f0ff"
-                          fill="url(#distGrad2)"
-                          strokeWidth={1}
-                          strokeDasharray="4 4"
-                          animationDuration={800}
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
+                    <EnergyChartSync>
+                      {({ sync, syncedX }) => (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart
+                            data={dailyEnergy}
+                            syncId={sync.syncId}
+                            syncMethod={sync.syncMethod}
+                            onMouseMove={sync.onMouseMove}
+                          >
+                            <defs>
+                              <ChartGradient id="effGrad" color="#10b981" opacity={0.3} />
+                              <ChartGradient id="distGrad2" color="#00f0ff" opacity={0.15} />
+                            </defs>
+                            {chartGrid}
+                            <XAxis dataKey="date" tick={axisTickSm} tickLine={false} axisLine={false} />
+                            <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
+                            <Tooltip content={<ChartTooltip />} />
+                            <Area
+                              {...AREA_DEFAULTS}
+                              dataKey="efficiency_wh_per_mi"
+                              name={efficiencyUnit}
+                              stroke="#10b981"
+                              fill="url(#effGrad)"
+                              animationDuration={800}
+                            />
+                            <Area
+                              {...AREA_DEFAULTS}
+                              dataKey="distance_mi"
+                              name={t('energy.chart.distance', { unit: distanceUnit, defaultValue: `Distance (${distanceUnit})` })}
+                              stroke="#00f0ff"
+                              fill="url(#distGrad2)"
+                              strokeWidth={1}
+                              strokeDasharray="4 4"
+                              animationDuration={800}
+                            />
+                            {syncedX != null && (
+                              <ReferenceLine
+                                x={syncedX}
+                                stroke={chartTokens.cursor.stroke}
+                                strokeWidth={chartTokens.cursor.strokeWidth}
+                                strokeDasharray={chartTokens.cursor.strokeDasharray}
+                                ifOverflow="hidden"
+                                isFront
+                              />
+                            )}
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      )}
+                    </EnergyChartSync>
                   ) : (
                     <EmptyState
                       icon={<Activity className="h-8 w-8" />}
@@ -504,6 +569,7 @@ export default function EnergyPage() {
               </ChartContainer>
             </FadeIn>
           </div>
+          </ChartTimeRangeProvider>
 
           {/* ── Charts Row 2: Time of Day + Charger Breakdown ──── */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

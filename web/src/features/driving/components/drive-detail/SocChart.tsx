@@ -3,10 +3,11 @@ import { Activity } from 'lucide-react';
 import {
   ChartContainer, ChartTooltip,
   AREA_DEFAULTS, areaGradient,
-  AreaChart, Area,
+  AreaChart, Area, ReferenceLine,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  useSyncedCursor,
+  useSyncedCursor, useSyncedReferenceLineX,
 } from '@/components/charts';
+import { chartTokens } from '@/lib/tokens';
 import { FadeIn } from '@/components/motion';
 import type { ChartDataPoint } from './types';
 
@@ -17,19 +18,35 @@ interface SocChartProps {
 export function SocChart({ chartData }: SocChartProps) {
   const { t } = useTranslation();
   const syncProps = useSyncedCursor();
+  const syncedX = useSyncedReferenceLineX();
 
   return (
     <FadeIn>
       <ChartContainer title={t('driveDetail.socOverTime', 'SOC % Over Time')} height={220}>
         {chartData.length > 1 ? (
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} {...syncProps}>
+            <AreaChart
+              data={chartData}
+              syncId={syncProps.syncId}
+              syncMethod={syncProps.syncMethod}
+              onMouseMove={syncProps.onMouseMove}
+            >
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
               <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} interval="preserveStartEnd" />
               <YAxis domain={[0, 100]} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
               <Tooltip content={<ChartTooltip />} />
               {areaGradient('socGrad', '#10b981')}
               <Area {...AREA_DEFAULTS} dataKey="battery" stroke="#10b981" fill="url(#socGrad)" name={`${t('driveDetail.soc', 'SOC')} %`} />
+              {syncedX != null && (
+                <ReferenceLine
+                  x={syncedX}
+                  stroke={chartTokens.cursor.stroke}
+                  strokeWidth={chartTokens.cursor.strokeWidth}
+                  strokeDasharray={chartTokens.cursor.strokeDasharray}
+                  ifOverflow="hidden"
+                  isFront
+                />
+              )}
             </AreaChart>
           </ResponsiveContainer>
         ) : (
