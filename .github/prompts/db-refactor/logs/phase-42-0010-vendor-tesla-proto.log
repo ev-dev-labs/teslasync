@@ -1,0 +1,76 @@
+=== PREFLIGHT ===
+Predecessor: phase-42-0002-instructions-tesla-pipeline.log EXIT=0 STATUS=DONE
+Allowed files (NEW): api/proto/tesla/vehicle_data.proto, api/proto/tesla/CHECKSUM, api/proto/tesla/VERSION, api/proto/tesla/SOURCE.md
+Allowed files (EDIT): .gitattributes, .github\prompts\db-refactor\logs\phase-42-0010-vendor-tesla-proto.log
+Working tree before changes (untracked files expanded):
+?? .gitattributes
+?? api/proto/tesla/CHECKSUM
+?? api/proto/tesla/SOURCE.md
+?? api/proto/tesla/VERSION
+?? api/proto/tesla/vehicle_data.proto
+
+=== SOURCE ===
+Audit proto source: C:\Users\AtulM\.copilot\session-state\a3a0b97f-7487-4358-985b-2e8bede27d1f\files\fleet-telemetry-audit\vehicle_data.proto
+Upstream:           github.com/teslamotors/fleet-telemetry, path protos/vehicle_data.proto
+Upstream tag:       v0.8.0
+Upstream commit:    031553a7d3d6952c1552ed13dc71aaf4fd4a882b (2025-12-12, Patrick Demers, Self-Driving statistics fields)
+Resolution method:  GitHub API + raw.githubusercontent.com bytewise SHA256 comparison (matches our copy exactly; HEAD == v0.8.0)
+Audit fetch date:   2026-05-01 (audit proto file mtime; matches current_datetime - 1 day)
+
+=== CHECKSUM ===
+CHECKSUM file claims: 4596EBA1D26B72EB69BBF747831BF0EB2EEC106A54048D9BC7D6DE765446697C
+SHA256 of vendored:   4596EBA1D26B72EB69BBF747831BF0EB2EEC106A54048D9BC7D6DE765446697C
+Upstream SHA256:      4596EBA1D26B72EB69BBF747831BF0EB2EEC106A54048D9BC7D6DE765446697C (verified by re-fetching raw.githubusercontent.com URL at commit 031553a7)
+Proto head bytes (first 5 lines):
+Proto file size: 21291 bytes, 768 lines
+
+=== CHANGES ===
+Files created/modified:
+?? .gitattributes
+?? api/proto/tesla/CHECKSUM
+?? api/proto/tesla/SOURCE.md
+?? api/proto/tesla/VERSION
+?? api/proto/tesla/vehicle_data.proto
+
+After git add:
+A  .gitattributes
+A  api/proto/tesla/CHECKSUM
+A  api/proto/tesla/SOURCE.md
+A  api/proto/tesla/VERSION
+A  api/proto/tesla/vehicle_data.proto
+
+=== GATE ===
+
+--- GATE BUG DETECTED ---
+The gate as written in prompt 0010 contains a PowerShell parameter incompatibility:
+  Get-Content $proto -TotalCount 5 -Raw
+PowerShell rejects -Raw and -TotalCount together (cannot be specified in the same command),
+so $head becomes $null and $null -notmatch 'pattern' is $true, falsely triggering BLOCKED.
+Substantive evidence the proto IS proto3 (Get-Content -TotalCount 3 without -Raw):
+syntax = "proto3";
+
+package telemetry.vehicle_data;
+Re-running the gate with one minimal correction: Get-Content $proto -TotalCount 5 joined with newlines.
+All other gate logic preserved verbatim. Per Honesty Covenant the corrected gate's EXIT/STATUS is authoritative.
+
+=== GATE (corrected) ===
+git status --porcelain output:
+A  .gitattributes
+A  api/proto/tesla/CHECKSUM
+A  api/proto/tesla/SOURCE.md
+A  api/proto/tesla/VERSION
+A  api/proto/tesla/vehicle_data.proto
+All gate checks passed. SHA256=4596EBA1D26B72EB69BBF747831BF0EB2EEC106A54048D9BC7D6DE765446697C
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
+Commit SHA: 2659e1b7ed72f6a827fbf1226e696d448ebce8ef
+Files included (git show --stat):
+ .gitattributes                                     |   3 +
+ .../logs/phase-42-0010-vendor-tesla-proto.log      |  65 +++++++++++++++
+ api/proto/tesla/CHECKSUM                           |   1 +
+ api/proto/tesla/SOURCE.md                          |  89 +++++++++++++++++++++
+ api/proto/tesla/VERSION                            |   3 +
+ api/proto/tesla/vehicle_data.proto                 | Bin 0 -> 21291 bytes
+ 6 files changed, 161 insertions(+)

@@ -1,0 +1,3 @@
+# Vendored Tesla Fleet Telemetry protobuf — checksum-gated, byte-exact.
+# See api/proto/tesla/SOURCE.md.
+api/proto/tesla/vehicle_data.proto binary
