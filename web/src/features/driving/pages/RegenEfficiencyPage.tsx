@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Zap, Activity, Calendar } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
+import { HelpTooltip } from '@/components/ui/HelpTooltip';
 import { Select } from '@/components/ui/Select';
 import {
   ChartContainer, ChartTooltip, AREA_DEFAULTS, renderAnnotationLines,
@@ -231,6 +232,12 @@ export default function RegenEfficiencyPage() {
             <GlassPanel className="p-4 sm:p-5">
               <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
                 <Activity className="h-4 w-4 text-cyan-400" /> {t('regen.metrics', 'Regen Metrics')}
+                <HelpTooltip
+                  size="sm"
+                  i18nKey="help.regenEfficiency.body"
+                  defaultValue="Energy recovered through regenerative braking divided by total energy used during driving. Higher is better — Tesla cars typically reach 15–30% recovery in mixed driving."
+                  ariaLabel={t('help.regenEfficiency.iconLabel', { defaultValue: 'More info about regen metrics' })}
+                />
               </h3>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
                 <div>

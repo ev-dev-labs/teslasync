@@ -1,7 +1,9 @@
 import { type ReactNode, useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/cn';
 import { Skeleton, QueryError } from '@/components/feedback';
+import { HelpTooltip } from '@/components/ui';
 import { DataFreshness } from '../components/DataFreshness';
+import type { WidgetHelp } from './types';
 
 interface WidgetShellProps {
   title?: string;
@@ -21,11 +23,17 @@ interface WidgetShellProps {
   isError?: boolean;
   /** Callback to manually refetch the widget data */
   onRefresh?: () => void;
+  /**
+   * Optional help metadata. When provided AND the widget has a visible
+   * `title`, a small "?" tooltip is rendered next to the title with the
+   * provided text/i18nKey. Phase-40 / Prompt 47.
+   */
+  help?: WidgetHelp;
 }
 
 export function WidgetShell({
   title, icon, loading, error, children, noPadding, actions,
-  updatedAt, isFetching, isStale, isError, onRefresh,
+  updatedAt, isFetching, isStale, isError, onRefresh, help,
 }: WidgetShellProps) {
   // Pulse animation on data change
   const [justUpdated, setJustUpdated] = useState(false);
@@ -80,6 +88,17 @@ export function WidgetShell({
           <div className="flex items-center gap-1.5">
             {icon}
             <h3 className="text-[11px] font-medium text-white/40 uppercase tracking-wider">{title}</h3>
+            {help && (
+              <HelpTooltip
+                size="xs"
+                placement="top"
+                text={help.text}
+                i18nKey={help.i18nKey}
+                defaultValue={help.defaultValue}
+                learnMore={help.learnMore}
+                ariaLabel={`More info about ${title}`}
+              />
+            )}
           </div>
           <div className="flex items-center gap-2">
             {freshnessEl}

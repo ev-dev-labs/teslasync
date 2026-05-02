@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { PageContainer, Grid } from '@/components/layout';
-import { GlassPanel, Badge, Button, Card, CardHeader, Pagination } from '@/components/ui';
+import { GlassPanel, Badge, Button, Card, CardHeader, Pagination, HelpTooltip } from '@/components/ui';
 import {
   ChartContainer,
   ChartTooltip,
@@ -792,6 +792,13 @@ export default function DriveScorePage() {
                   <AnimatedNumber value={overallScore} />
                 </span>
                 <span className="text-lg text-[var(--text-secondary)] ml-1">/100</span>
+                <HelpTooltip
+                  className="ml-1.5"
+                  size="sm"
+                  i18nKey="help.driveScore.body"
+                  defaultValue="0–100 score derived from smoothness of acceleration, braking, and cornering combined with energy efficiency. Tunable in Settings → Driving."
+                  ariaLabel={t('help.driveScore.iconLabel', { defaultValue: 'More info about Drive Score' })}
+                />
               </div>
               <div className={cn('mt-2 flex items-center gap-2', trendColor)}>
                 <TrendIcon className="h-4 w-4" />

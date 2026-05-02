@@ -69,6 +69,11 @@ export default function SleepEfficiencyWidget({ vehicleId, size }: WidgetProps) 
     <WidgetShell
       title={isCompact ? undefined : t('widget.sleepEfficiency.title', 'Sleep Efficiency')}
       icon={isCompact ? undefined : <Moon className="h-3.5 w-3.5 text-indigo-400" />}
+      help={isCompact ? undefined : {
+        i18nKey: 'help.sleepEfficiency.body',
+        defaultValue:
+          'Share of parked time the car spent in true low-power sleep (vs. idle/online). Higher is better — more sleep means less vampire drain and lower battery wear.',
+      }}
       loading={isLoading}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}

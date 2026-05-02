@@ -26,6 +26,11 @@ export const ENERGY_WIDGETS: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('../VampireDrainWidget')),
+    help: {
+      i18nKey: 'help.vampireDrain.body',
+      defaultValue:
+        'Idle energy lost while the car is parked and not charging. We compute it as the % of battery used per hour while the vehicle reports gear=Park and is not in motion.',
+    },
   },
   {
     id: 'sleep-efficiency',
@@ -37,6 +42,11 @@ export const ENERGY_WIDGETS: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 3, rows: 40 },
     component: lazy(() => import('../SleepEfficiencyWidget')),
+    help: {
+      i18nKey: 'help.sleepEfficiency.body',
+      defaultValue:
+        'Share of parked time the car spent in true low-power sleep (vs. idle/online). Higher is better — more sleep means less vampire drain and lower battery wear.',
+    },
   },
   {
     id: 'solar-production',

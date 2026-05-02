@@ -1,6 +1,22 @@
 import type { LucideIcon } from 'lucide-react';
 import type { LazyExoticComponent, ComponentType } from 'react';
 
+/**
+ * Metadata describing a widget's contextual help.
+ *
+ * Use `i18nKey` (with `defaultValue`) for new widgets so help text is
+ * translated; `text` is supported for legacy/static strings. `learnMore`
+ * adds a "Learn more" link in the tooltip body that opens in a new tab.
+ *
+ * Phase-40 / Prompt 47.
+ */
+export interface WidgetHelp {
+  text?: string;
+  i18nKey?: string;
+  defaultValue?: string;
+  learnMore?: { url: string; label?: string };
+}
+
 export interface WidgetSize {
   cols: number; // 1-4
   rows: number; // 1-8
@@ -49,6 +65,12 @@ export interface WidgetDef {
   minSize: WidgetSize;
   maxSize: WidgetSize;
   component: LazyExoticComponent<ComponentType<WidgetProps>>;
+  /**
+   * Optional help metadata. When set, the registry's recommendation is to
+   * forward this to `WidgetShell`'s `help` prop so a "?" tooltip appears
+   * next to the widget title. Phase-40 / Prompt 47.
+   */
+  help?: WidgetHelp;
 }
 
 export interface WidgetInstance {

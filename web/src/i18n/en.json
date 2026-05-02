@@ -1,4 +1,36 @@
 {
+  "help": {
+    "tooltip": {
+      "iconLabel": "More info"
+    },
+    "vampireDrain": {
+      "body": "Idle energy lost while the car is parked and not charging. We compute it as the % of battery used per hour while the vehicle reports gear=Park and is not in motion.",
+      "avgRate": "Mean battery loss per hour while parked and not charging across the selected period.",
+      "totalLoss": "Estimated kWh lost to vampire drain across all parked sessions in the selected period.",
+      "worstSession": "Single parked session with the largest % battery drop.",
+      "score": "0–100 health score derived from your drain rate vs. fleet expectations. Higher is better."
+    },
+    "sleepEfficiency": {
+      "body": "Share of parked time the car spent in true low-power sleep (vs. idle/online). Higher is better — more sleep means less vampire drain and lower battery wear.",
+      "timeToSleep": "Average minutes from when the car parks to when it enters low-power sleep.",
+      "sentryDrain": "Battery loss per hour while Sentry Mode is active. Sentry keeps cameras and computers on, which adds noticeable drain.",
+      "sentryCost": "Estimated monthly electricity cost of Sentry-related drain, using your configured per-kWh rate."
+    },
+    "driveScore": {
+      "body": "0–100 score derived from smoothness of acceleration, braking, and cornering combined with energy efficiency. Tunable in Settings → Driving.",
+      "iconLabel": "More info about Drive Score"
+    },
+    "regenEfficiency": {
+      "body": "Energy recovered through regenerative braking divided by total energy used during driving. Higher is better — Tesla cars typically reach 15–30% recovery in mixed driving.",
+      "iconLabel": "More info about regen metrics"
+    },
+    "fleetTelemetryHealthy": {
+      "body": "Last MQTT message received within the last 5 minutes. Stale means no recent message; check the fleet-telemetry deployment."
+    },
+    "cooldownMin": {
+      "body": "Minimum minutes between consecutive alerts from this rule, regardless of how often the underlying signal crosses the threshold."
+    }
+  },
   "date": {
     "preset": {
       "label": "Quick date range",
@@ -212,6 +244,7 @@
     "free": "Free",
     "confirm": "Confirm",
     "send": "Send",
+    "learnMore": "Learn more",
     "recentDrives": "Recent Drives",
     "viewAll": "View all",
     "noDrives": "No drives recorded yet",

@@ -166,6 +166,11 @@ export default function SleepEfficiencyPage() {
                 label={t('sleep.efficiency', 'Sleep Efficiency')}
                 value={`${fmtNumber(sleep.sleep_efficiency_pct)}%`}
                 color="purple"
+                help={{
+                  i18nKey: 'help.sleepEfficiency.body',
+                  defaultValue:
+                    'Share of parked time the car spent in true low-power sleep (vs. idle/online). Higher is better — more sleep means less vampire drain and lower battery wear.',
+                }}
               />
             </StaggerItem>
             <StaggerItem>
@@ -174,6 +179,10 @@ export default function SleepEfficiencyPage() {
                 label={t('sleep.avgTimeToSleep', 'Avg Time to Sleep')}
                 value={`${fmtInt(sleep.time_to_sleep_avg_min)} min`}
                 color="cyan"
+                help={{
+                  i18nKey: 'help.sleepEfficiency.timeToSleep',
+                  defaultValue: 'Average minutes from when the car parks to when it enters low-power sleep.',
+                }}
               />
             </StaggerItem>
             <StaggerItem>
@@ -181,6 +190,11 @@ export default function SleepEfficiencyPage() {
                 icon={<Eye className="h-4 w-4" />}
                 label={t('sleep.sentryDrainRate', 'Sentry Drain Rate')}
                 value={`${fmtNumber(sleep.sentry_on_drain_rate)}%/hr`}
+                help={{
+                  i18nKey: 'help.sleepEfficiency.sentryDrain',
+                  defaultValue:
+                    'Battery loss per hour while Sentry Mode is active. Sentry keeps cameras and computers on, which adds noticeable drain.',
+                }}
               />
             </StaggerItem>
             <StaggerItem>
@@ -189,6 +203,11 @@ export default function SleepEfficiencyPage() {
                 label={t('sleep.sentryMonthlyCost', 'Sentry Monthly Cost')}
                 value={`$${fmtNumber(sleep.sentry_monthly_cost)}`}
                 color="red"
+                help={{
+                  i18nKey: 'help.sleepEfficiency.sentryCost',
+                  defaultValue:
+                    'Estimated monthly electricity cost of Sentry-related drain, using your configured per-kWh rate.',
+                }}
               />
             </StaggerItem>
           </StaggerContainer>

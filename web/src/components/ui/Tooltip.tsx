@@ -2,8 +2,18 @@ import { Children, cloneElement, isValidElement, useId, type ReactElement, type 
 import { cn } from '@/lib/cn';
 
 export interface TooltipProps {
-  content: string;
+  /**
+   * Tooltip content. Strings render in a single line by default; pass JSX (or
+   * set `multiline`) when the content needs to wrap.
+   */
+  content: ReactNode;
   side?: 'top' | 'bottom' | 'left' | 'right';
+  /**
+   * When true (or when `content` is non-string JSX with its own width
+   * constraints), the tooltip body wraps onto multiple lines instead of
+   * forcing `whitespace-nowrap`. Used by `HelpTooltip` for long help bodies.
+   */
+  multiline?: boolean;
   children: ReactNode;
 }
 
@@ -25,8 +35,17 @@ const sideClasses = {
  * - The visibility CSS handles both `:hover` AND `:focus-within` so keyboard
  *   users (Tab into a button wrapped in a tooltip) get the same affordance as
  *   mouse users.
+ *
+ * Touch devices (Phase-40 / Prompt 47):
+ * - Wrap a focusable trigger (e.g. <button>) and tapping it grants focus,
+ *   triggering `:focus-within` on the wrapper — so the tooltip appears on
+ *   tap. Tapping outside blurs the trigger and dismisses the tooltip.
+ *
+ * Reduced motion (Phase-40 / Prompt 47):
+ * - The reveal transition is disabled globally via the `motion-reduce`
+ *   variant when the user has `prefers-reduced-motion: reduce`.
  */
-export function Tooltip({ content, side = 'top', children }: TooltipProps) {
+export function Tooltip({ content, side = 'top', multiline, children }: TooltipProps) {
   const tooltipId = useId();
 
   // We try to attach `aria-describedby` directly to the trigger element so
@@ -54,9 +73,10 @@ export function Tooltip({ content, side = 'top', children }: TooltipProps) {
         id={tooltipId}
         role="tooltip"
         className={cn(
-          'pointer-events-none absolute z-50 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-medium',
+          'pointer-events-none absolute z-50 rounded-lg px-2.5 py-1.5 text-xs font-medium',
+          multiline ? 'whitespace-normal max-w-[260px]' : 'whitespace-nowrap',
           'bg-gray-900 text-gray-100 shadow-lg dark:bg-gray-100 dark:text-gray-900',
-          'opacity-0 scale-95 transition-all duration-150',
+          'opacity-0 scale-95 transition-all duration-150 motion-reduce:transition-none',
           'group-hover/tip:opacity-100 group-hover/tip:scale-100',
           'group-focus-within/tip:opacity-100 group-focus-within/tip:scale-100',
           sideClasses[side],
