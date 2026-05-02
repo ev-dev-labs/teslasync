@@ -39,7 +39,7 @@ jobs:
       version: ${{ steps.bump.outputs.version }}
       is_prerelease: ${{ steps.bump.outputs.is_prerelease }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -126,7 +126,7 @@ jobs:
             build-args: |
               VERSION=${{ needs.version-tag.outputs.new_tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: docker/setup-buildx-action@v3
 
       - name: Log in to GHCR
@@ -179,7 +179,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Helm
         uses: azure/setup-helm@v4
@@ -202,7 +202,7 @@ jobs:
     if: ${{ !cancelled() && needs.docker.result == 'success' && needs.helm.result == 'success' }}
     runs-on: ${{ inputs.runner || 'arc-runner' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
