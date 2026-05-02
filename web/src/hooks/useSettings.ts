@@ -36,6 +36,7 @@ const defaults: AppSettings = {
   timezone_user: '',
   tab_badge_enabled: true,
   critical_flash_enabled: true,
+  ui_density: 'comfortable',
 }
 
 /**
@@ -61,6 +62,8 @@ export function useSettings() {
   const s = settings ?? defaults
   const decimals = s.decimal_precision ?? 2
   const locale = s.locale ?? 'en-US'
+  const density: 'compact' | 'comfortable' | 'spacious' =
+    s.ui_density === 'compact' || s.ui_density === 'spacious' ? s.ui_density : 'comfortable'
 
   // Sync global precision/locale so fmtNumber/fmtPercent/etc. use them automatically
   setGlobalPrecision(decimals)
@@ -152,6 +155,7 @@ export function useSettings() {
     isPSI,
     decimals,
     locale,
+    density,
     convertDistance,
     convertSpeed,
     convertTemp,

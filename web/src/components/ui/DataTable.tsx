@@ -57,7 +57,28 @@ interface DataTableProps<T> {
   onSort?: (key: string) => void
   emptyMessage?: string
   className?: string
+  /**
+   * Legacy boolean density toggle. Equivalent to `density='compact'`.
+   * Preserved for back-compat with pre-Phase-40-44 callers; new code
+   * should pass `density` directly.
+   */
   compact?: boolean
+  /**
+   * Information density for row heights / cell padding.
+   *
+   *   - `'compact'`     — forces tight rows regardless of user setting
+   *   - `'comfortable'` — forces default rows regardless of user setting
+   *   - `'spacious'`    — forces loose rows regardless of user setting
+   *   - `'auto'`        — follows the user's `ui_density` setting via
+   *                      density Tailwind utilities (`px-d-pad-x ...`)
+   *
+   * When omitted, DataTable defaults to `'auto'` (so the global
+   * preference flows through every default-styled table). Pass an
+   * explicit value when a specific table should look identical to all
+   * users regardless of preference (e.g. data-dense log viewers).
+   * (Phase 40 / Prompt 44.)
+   */
+  density?: 'compact' | 'comfortable' | 'spacious' | 'auto'
   pagination?: boolean | PaginationConfig
   /**
    * Optional name for the SectionErrorBoundary that wraps row rendering.
@@ -212,6 +233,7 @@ export function DataTable<T>({
   emptyMessage = 'No data',
   className,
   compact,
+  density,
   pagination,
   mobileColumns,
   name,
@@ -237,6 +259,39 @@ export function DataTable<T>({
   overscan,
 }: DataTableProps<T>) {
   const { t } = useTranslation()
+  // Resolve effective density. Explicit `density` wins; otherwise the
+  // legacy `compact` boolean maps to 'compact'; otherwise default to
+  // 'auto' so the global setting flows through. Phase 40 / Prompt 44.
+  const effectiveDensity: 'compact' | 'comfortable' | 'spacious' | 'auto' =
+    density ?? (compact ? 'compact' : 'auto')
+  // Static density modes use the historical fixed paddings (32 / 44 /
+  // 56 px row heights). 'auto' uses density Tailwind utilities that
+  // read CSS vars set by `body[data-density="..."]` so the table
+  // reflows live when the user changes the setting.
+  const cellPaddingClass: string =
+    effectiveDensity === 'compact'
+      ? 'px-3 py-2'
+      : effectiveDensity === 'spacious'
+        ? 'px-5 py-4'
+        : effectiveDensity === 'comfortable'
+          ? tableTokens.cell
+          : 'px-d-pad-x py-d-pad-y text-d-base'
+  const leadingPaddingClass: string =
+    effectiveDensity === 'compact'
+      ? 'px-2 py-2'
+      : effectiveDensity === 'spacious'
+        ? 'px-4 py-4'
+        : effectiveDensity === 'comfortable'
+          ? 'px-3 py-3'
+          : 'px-d-pad-x py-d-pad-y'
+  const headCellPaddingClass: string =
+    effectiveDensity === 'compact'
+      ? 'px-3 py-2'
+      : effectiveDensity === 'spacious'
+        ? 'px-5 py-4'
+        : effectiveDensity === 'comfortable'
+          ? tableTokens.headCell
+          : 'px-d-pad-x py-d-pad-y text-d-base'
   const paginationEnabled = !!pagination
   const paginationConfig: PaginationConfig = typeof pagination === 'object' ? pagination : {}
   const defaultPageSize = paginationConfig.defaultPageSize ?? 25
@@ -461,7 +516,22 @@ export function DataTable<T>({
   // (variable row heights are out of scope). When the user passes both, we
   // gracefully fall back to non-virtualized rendering with a dev warning.
   const virtualizationActive = virtualized && !expandable && data.length > 0
-  const effectiveRowHeight = rowHeight ?? (compact ? 36 : 44)
+  // Density-aware default row-height estimate. When `density='auto'`,
+  // read the live body data attr at mount; otherwise pick the matching
+  // fixed height. The virtualizer adapts to actual rendered sizes so
+  // an estimate within a few pixels is fine.
+  const densityRowHeight = (() => {
+    if (effectiveDensity === 'compact') return 32
+    if (effectiveDensity === 'spacious') return 56
+    if (effectiveDensity === 'comfortable') return 44
+    if (typeof document !== 'undefined') {
+      const d = document.body.dataset.density
+      if (d === 'compact') return 32
+      if (d === 'spacious') return 56
+    }
+    return 44
+  })()
+  const effectiveRowHeight = rowHeight ?? densityRowHeight
   const effectiveOverscan = overscan ?? 8
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const virtualizer = useVirtualizer({
@@ -538,7 +608,7 @@ export function DataTable<T>({
         tabIndex={isSelectable || expandable ? 0 : undefined}
       >
         {isSelectable && (
-          <td className={cn(compact ? 'px-2 py-2' : 'px-3 py-3', tableTokens.leadingColWidth)}>
+          <td className={cn(leadingPaddingClass, tableTokens.leadingColWidth)}>
             <input
               type={selectable === 'single' ? 'radio' : 'checkbox'}
               checked={selected}
@@ -565,7 +635,7 @@ export function DataTable<T>({
           </td>
         )}
         {expandable && (
-          <td className={cn(compact ? 'px-2 py-2' : 'px-3 py-3', tableTokens.leadingColWidth)}>
+          <td className={cn(leadingPaddingClass, tableTokens.leadingColWidth)}>
             <button
               type="button"
               onClick={() => toggleExpand(rowKey)}
@@ -593,7 +663,7 @@ export function DataTable<T>({
           <td
             key={col.key}
             className={cn(
-              compact ? 'px-3 py-2' : tableTokens.cell,
+              cellPaddingClass,
               colHiddenClass(col.key),
               alignClass(col.align),
               col.className,
@@ -701,7 +771,7 @@ export function DataTable<T>({
               {isSelectable && (
                 <th
                   scope="col"
-                  className={cn(compact ? 'px-2 py-2' : 'px-3 py-3', tableTokens.leadingColWidth)}
+                  className={cn(leadingPaddingClass, tableTokens.leadingColWidth)}
                 >
                   {selectable === 'multi' ? (
                     <input
@@ -724,7 +794,7 @@ export function DataTable<T>({
                 <th
                   scope="col"
                   aria-label={t('table.expand.column', 'Expand row')}
-                  className={cn(compact ? 'px-2 py-2' : 'px-3 py-3', tableTokens.leadingColWidth)}
+                  className={cn(leadingPaddingClass, tableTokens.leadingColWidth)}
                 />
               )}
               {visibleColumns.map(col => {
@@ -734,7 +804,7 @@ export function DataTable<T>({
                     key={col.key}
                     scope="col"
                     className={cn(
-                      compact ? 'px-3 py-2' : tableTokens.headCell,
+                      headCellPaddingClass,
                       colHiddenClass(col.key),
                       alignClass(col.align),
                       resizable && 'relative group/th',

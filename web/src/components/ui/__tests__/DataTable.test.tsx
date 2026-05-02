@@ -475,3 +475,66 @@ describe('DataTable — virtualization (Phase-40 / Prompt 37)', () => {
     expect(container.querySelector('tr[data-virtual-spacer="bottom"]')).toBeNull()
   })
 })
+
+// ─── Density (Phase-40 / Prompt 44) ──────────────────────────────────────────
+
+describe('DataTable — density', () => {
+  it('density="compact" applies the tight padding class to body cells', () => {
+    const { container } = render(
+      <DataTable
+        columns={COLS.slice(0, 3)}
+        data={ROWS}
+        keyExtractor={r => r.id}
+        density="compact"
+      />,
+    )
+    const firstBodyCell = container.querySelector('tbody td')
+    expect(firstBodyCell).not.toBeNull()
+    expect(firstBodyCell?.className).toContain('px-3')
+    expect(firstBodyCell?.className).toContain('py-2')
+    // Compact must NOT use the density-token utilities — those are only
+    // wired in for the implicit 'auto' mode.
+    expect(firstBodyCell?.className).not.toContain('px-d-pad-x')
+  })
+
+  it('density="spacious" applies the loose padding class to body cells', () => {
+    const { container } = render(
+      <DataTable
+        columns={COLS.slice(0, 3)}
+        data={ROWS}
+        keyExtractor={r => r.id}
+        density="spacious"
+      />,
+    )
+    const firstBodyCell = container.querySelector('tbody td')
+    expect(firstBodyCell?.className).toContain('px-5')
+    expect(firstBodyCell?.className).toContain('py-4')
+  })
+
+  it('density defaults to "auto" (uses density-token utilities) when neither density nor compact is passed', () => {
+    const { container } = render(
+      <DataTable
+        columns={COLS.slice(0, 3)}
+        data={ROWS}
+        keyExtractor={r => r.id}
+      />,
+    )
+    const firstBodyCell = container.querySelector('tbody td')
+    expect(firstBodyCell?.className).toContain('px-d-pad-x')
+    expect(firstBodyCell?.className).toContain('py-d-pad-y')
+  })
+
+  it('legacy compact={true} prop is respected (back-compat)', () => {
+    const { container } = render(
+      <DataTable
+        columns={COLS.slice(0, 3)}
+        data={ROWS}
+        keyExtractor={r => r.id}
+        compact
+      />,
+    )
+    const firstBodyCell = container.querySelector('tbody td')
+    expect(firstBodyCell?.className).toContain('px-3')
+    expect(firstBodyCell?.className).toContain('py-2')
+  })
+})

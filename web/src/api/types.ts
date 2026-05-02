@@ -221,6 +221,20 @@ export interface AppSettings {
    * (Phase 40 / 32.)
    */
   critical_flash_enabled?: boolean
+  /**
+   * Global UI information-density preference. Flows from this single
+   * setting to:
+   *   - CSS variables (`--density-row-h`, `--density-pad-x`, ...) on
+   *     `body[data-density="..."]`, consumed by Tailwind utilities
+   *     `min-h-d-row`, `px-d-pad-x`, `py-d-pad-y`, `gap-d-gap`,
+   *     `text-d-base`.
+   *   - Shared components when called with `density="auto"` /
+   *     `padding="auto"` / `size="auto"`.
+   *
+   * Defaults to `'comfortable'` so existing users see no visual
+   * change. (Phase 40 / 44.)
+   */
+  ui_density?: 'compact' | 'comfortable' | 'spacious'
 }
 
 /** Per-endpoint toggle config for Tesla Fleet API calls. */

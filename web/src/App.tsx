@@ -6,6 +6,7 @@ import { PageLoadSkeleton } from './components/feedback/PageLoadSkeleton'
 import { ErrorBoundary } from './components/feedback/ErrorBoundary'
 import { AuthExpiredOverlay } from '@/components/feedback'
 import { OnboardingGate } from '@/features/onboarding/components/OnboardingGate'
+import { DensityApplier } from '@/components/ui/DensityApplier'
 
 // ── ALL pages live in features/ — zero imports from pages/ ──────────────
 
@@ -186,6 +187,7 @@ export default function App() {
       <AuthExpiredOverlay />
       <OnboardingGate />
       <ScrollRestoration />
+      <DensityApplier />
       <Routes>
       <Route path="quick-stats" element={<SafeRoute name="QuickStats"><QuickStats /></SafeRoute>} />
       <Route path="glance" element={<SafeRoute name="Glance"><GlancePage /></SafeRoute>} />

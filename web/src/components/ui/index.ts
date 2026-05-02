@@ -19,6 +19,7 @@ export { DataTable, useSortToggle, useTableSelection, useTableExpansion, type Co
 export { DataTableColumnsMenu } from './DataTableColumnsMenu';
 export { DataTableBulkBar } from './DataTableBulkBar';
 export { DataTableResizer } from './DataTableResizer';
+export { DensityApplier } from './DensityApplier';
 export { Drawer } from './Drawer';
 export { Breadcrumb } from './Breadcrumb';
 export { CommandPalette } from './CommandPalette';

@@ -46,6 +46,7 @@ export function GeneralSettings() {
     timezone_user: '',
     tab_badge_enabled: true,
     critical_flash_enabled: true,
+    ui_density: 'comfortable',
   })
   const [saved, setSaved] = useState(false)
 

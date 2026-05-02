@@ -117,6 +117,31 @@ export default {
       },
       fontSize: {
         '2xs': ['0.625rem', { lineHeight: '0.875rem' }],
+        // Density-aware body text size (Phase 40 / Prompt 44).
+        // Tracks `--density-text` set by `body[data-density="..."]`.
+        'd-base': ['var(--density-text)', { lineHeight: '1.5' }],
+      },
+      spacing: {
+        // Density-aware padding/gap tokens (Phase 40 / Prompt 44).
+        // Tracks `--density-pad-x` / `--density-pad-y` / `--density-gap`
+        // set by `body[data-density="..."]` in index.css. Use as
+        // `px-d-pad-x`, `py-d-pad-y`, `gap-d-gap` so the value flows
+        // through className strings (no inline styles required, keeps
+        // the audit-violations sweep clean).
+        'd-pad-x': 'var(--density-pad-x)',
+        'd-pad-y': 'var(--density-pad-y)',
+        'd-gap': 'var(--density-gap)',
+        'd-row': 'var(--density-row-h)',
+      },
+      minHeight: {
+        // Density-aware row height (Phase 40 / Prompt 44).
+        // Use `min-h-d-row` on table rows / list items so the height
+        // adapts to the user's density preference.
+        'd-row': 'var(--density-row-h)',
+      },
+      height: {
+        // Same density-aware row height as a fixed-height utility.
+        'd-row': 'var(--density-row-h)',
       },
     },
   },

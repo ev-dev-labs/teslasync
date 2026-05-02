@@ -64,6 +64,7 @@ func settingsDefaults() *models.Settings {
 		TimezoneUser:         "",
 		TabBadgeEnabled:      true,
 		CriticalFlashEnabled: true,
+		UIDensity:            "comfortable",
 	}
 }
 
@@ -204,6 +205,10 @@ func applySettingsRow(s *models.Settings, key, _ string, vText *string, vNum *fl
 		if vBool != nil {
 			s.CriticalFlashEnabled = *vBool
 		}
+	case "ui_density":
+		if vText != nil {
+			s.UIDensity = *vText
+		}
 	}
 }
 
@@ -276,6 +281,7 @@ func (r *SettingsRepo) Upsert(ctx context.Context, s *models.Settings) error {
 		{"locale", s.Locale},
 		{"tz_display_default", s.TzDisplayDefault},
 		{"timezone_user", s.TimezoneUser},
+		{"ui_density", s.UIDensity},
 	}
 	numRows := []rowNum{
 		{"base_cost_per_kwh", s.BaseCostPerKWh},

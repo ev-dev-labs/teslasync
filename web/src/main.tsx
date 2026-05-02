@@ -11,6 +11,25 @@ import App from './App'
 import './i18n'
 import './index.css'
 
+// ── Density bootstrap (Phase 40 / Prompt 44) ──────────────────────────────────
+// Apply the cached UI density to <body> BEFORE React mounts so the first
+// paint uses the correct row heights / padding instead of flashing the
+// default `comfortable` and reflowing once the settings query resolves.
+// `<DensityApplier />` (mounted under <App />) keeps this in sync with the
+// server-side setting once useSettings() returns.
+const DENSITY_LS_KEY = 'teslasync-density'
+const ALLOWED_DENSITIES = ['compact', 'comfortable', 'spacious'] as const
+try {
+  const cached = localStorage.getItem(DENSITY_LS_KEY)
+  const initial =
+    cached && (ALLOWED_DENSITIES as readonly string[]).includes(cached)
+      ? cached
+      : 'comfortable'
+  document.body.dataset.density = initial
+} catch {
+  document.body.dataset.density = 'comfortable'
+}
+
 if (import.meta.env.DEV && import.meta.env.VITE_PWA_DEV !== 'true' && 'serviceWorker' in navigator) {
   navigator.serviceWorker
     .getRegistrations()

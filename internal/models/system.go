@@ -359,6 +359,14 @@ type Settings struct {
 	// browser-level `prefers-reduced-motion` preference, which
 	// suppresses the flash regardless of this setting. (Phase 40 / 32.)
 	CriticalFlashEnabled bool `json:"critical_flash_enabled"`
+	// UIDensity controls the global information-density preference
+	// applied across the React frontend (table row heights, card
+	// padding, button sizing). One of "compact" (32px rows / tight
+	// padding), "comfortable" (44px rows / default padding), or
+	// "spacious" (56px rows / loose padding). Defaults to
+	// "comfortable" so existing users see no visual change.
+	// (Phase 40 / 44.)
+	UIDensity string `json:"ui_density"`
 }
 
 // Embedding mirrors the post-migration `embeddings` schema (pgvector-backed).

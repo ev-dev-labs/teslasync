@@ -91,6 +91,11 @@ func (h *SettingsHandler) Update(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "timezone_user must be a valid IANA timezone (e.g. 'America/Los_Angeles')")
 		return
 	}
+	validUIDensity := map[string]bool{"compact": true, "comfortable": true, "spacious": true}
+	if s.UIDensity != "" && !validUIDensity[s.UIDensity] {
+		writeError(w, http.StatusBadRequest, "ui_density must be 'compact', 'comfortable', or 'spacious'")
+		return
+	}
 
 	// Record gas price change in history if price or unit changed
 	if s.GasPricePerUnit > 0 {

@@ -5047,7 +5047,21 @@
     "theme": "Theme",
     "custom": "Custom",
     "primary": "Primary",
-    "accent": "Accent"
+    "accent": "Accent",
+    "density": {
+      "label": "Information density",
+      "compact": "Compact",
+      "compactHelp": "Tight rows — fits more on screen",
+      "comfortable": "Comfortable",
+      "comfortableHelp": "Default sizing",
+      "spacious": "Spacious",
+      "spaciousHelp": "Roomy — easier to read at distance",
+      "help": "Affects table rows, cards, and dashboard widgets across the app.",
+      "previewTitle": "Preview",
+      "previewRow1": "Sample row — Tesla Model 3",
+      "previewRow2": "Sample row — Tesla Model Y",
+      "previewRow3": "Sample row — Tesla Model S"
+    }
   },
   "featureConfig": {
     "title": "Feature Flags",

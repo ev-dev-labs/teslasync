@@ -4,8 +4,11 @@ import { GlassPanel, Button, IconBox, Input } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
 import { useTheme, type ThemeId, type ModeId } from '@/components/ui/ThemeProvider'
 import { useToast } from '@/components/feedback/Toast'
+import { useSettings, useSaveSettings } from '@/api/hooks/useSettings'
 import { cn } from '@/lib/cn'
-import { Palette, Sun, Moon, Monitor, Sparkles, CheckCircle } from 'lucide-react'
+import { Palette, Sun, Moon, Monitor, Sparkles, CheckCircle, Rows3 } from 'lucide-react'
+
+type DensityId = 'compact' | 'comfortable' | 'spacious'
 
 const modeIcons: Record<string, ReactNode> = {
   dark: <Moon className="h-4 w-4" />,
@@ -23,6 +26,26 @@ export function AppearanceSettings() {
   const { themeId, modeId, setTheme, setMode, setCustomColors, themes: allThemes, modes: allModes } = useTheme()
   const [customPrimary, setCustomPrimary] = useState(() => localStorage.getItem('teslasync-custom-primary') || '#00b4d8')
   const [customAccent, setCustomAccent] = useState(() => localStorage.getItem('teslasync-custom-accent') || '#e63946')
+
+  // Density picker. Reads/writes the same `ui_density` server-side setting
+  // that `useDensitySync` applies to `body[data-density]`. We use the
+  // partial-merge pattern (`{ ...settings, ui_density }`) because the
+  // PUT /settings endpoint is full-replace, not patch. (Phase 40 / Prompt 44.)
+  const { data: settings } = useSettings()
+  const saveSettings = useSaveSettings()
+  const density: DensityId =
+    (settings?.ui_density as DensityId | undefined) ?? 'comfortable'
+
+  function setDensity(next: DensityId) {
+    if (!settings || next === density) return
+    saveSettings.mutate({ ...settings, ui_density: next })
+  }
+
+  const densityChoices: { id: DensityId; label: string; help: string }[] = [
+    { id: 'compact', label: t('theme.density.compact', 'Compact'), help: t('theme.density.compactHelp', 'Tight rows — fits more on screen') },
+    { id: 'comfortable', label: t('theme.density.comfortable', 'Comfortable'), help: t('theme.density.comfortableHelp', 'Default sizing') },
+    { id: 'spacious', label: t('theme.density.spacious', 'Spacious'), help: t('theme.density.spaciousHelp', 'Roomy — easier to read at distance') },
+  ]
 
   return (
     <FadeIn delay={0.15}>
@@ -167,6 +190,96 @@ export function AppearanceSettings() {
               </div>
             </div>
           )}
+        </div>
+
+        {/* Density (information density) */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <Rows3 className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+            <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+              {t('theme.density.label', 'Information density')}
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {densityChoices.map(choice => {
+              const active = density === choice.id
+              return (
+                <Button
+                  key={choice.id}
+                  variant="ghost"
+                  onClick={() => setDensity(choice.id)}
+                  disabled={!settings || saveSettings.isPending}
+                  className={cn(
+                    'flex items-start gap-3 rounded-xl border p-3.5 h-auto transition-all duration-200 justify-start text-left',
+                    active
+                      ? 'border-[var(--theme-primary)] bg-[var(--surface-3)]'
+                      : 'border-[var(--glass-border)] bg-[var(--surface-2)] hover:border-[var(--theme-primary)]/30',
+                  )}
+                >
+                  <div
+                    className="flex h-8 w-8 shrink-0 flex-col items-center justify-center gap-[2px] rounded-lg border border-[var(--glass-border)] bg-[var(--surface-1)]"
+                    aria-hidden="true"
+                  >
+                    {choice.id === 'compact' && (
+                      <>
+                        <div className="h-[2px] w-4 rounded bg-[var(--text-muted)]" />
+                        <div className="h-[2px] w-4 rounded bg-[var(--text-muted)]" />
+                        <div className="h-[2px] w-4 rounded bg-[var(--text-muted)]" />
+                        <div className="h-[2px] w-4 rounded bg-[var(--text-muted)]" />
+                      </>
+                    )}
+                    {choice.id === 'comfortable' && (
+                      <>
+                        <div className="h-[3px] w-4 rounded bg-[var(--text-muted)]" />
+                        <div className="h-[3px] w-4 rounded bg-[var(--text-muted)]" />
+                        <div className="h-[3px] w-4 rounded bg-[var(--text-muted)]" />
+                      </>
+                    )}
+                    {choice.id === 'spacious' && (
+                      <>
+                        <div className="h-[5px] w-4 rounded bg-[var(--text-muted)]" />
+                        <div className="h-[5px] w-4 rounded bg-[var(--text-muted)]" />
+                      </>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-[var(--text-primary)]">{choice.label}</p>
+                    <p className="text-[11px] text-[var(--text-muted)]">{choice.help}</p>
+                  </div>
+                  {active && (
+                    <CheckCircle className="h-4 w-4 ml-auto shrink-0 text-[var(--theme-primary)]" />
+                  )}
+                </Button>
+              )
+            })}
+          </div>
+          <p className="mt-2 text-xs text-[var(--text-muted)]">
+            {t('theme.density.help', 'Affects table rows, cards, and dashboard widgets across the app.')}
+          </p>
+
+          {/* Live preview — uses density Tailwind utilities so it reflows
+              instantly when the body[data-density] attribute changes. */}
+          <div className="mt-4 rounded-lg border border-[var(--glass-border)] bg-[var(--surface-2)] overflow-hidden">
+            <div className="border-b border-[var(--glass-border)] bg-[var(--surface-3)] px-d-pad-x py-d-pad-y">
+              <p className="text-d-base font-medium text-[var(--text-secondary)]">
+                {t('theme.density.previewTitle', 'Preview')}
+              </p>
+            </div>
+            <div className="divide-y divide-[var(--glass-border)]">
+              {[
+                t('theme.density.previewRow1', 'Sample row — Tesla Model 3'),
+                t('theme.density.previewRow2', 'Sample row — Tesla Model Y'),
+                t('theme.density.previewRow3', 'Sample row — Tesla Model S'),
+              ].map((row, i) => (
+                <div
+                  key={i}
+                  className="flex min-h-d-row items-center px-d-pad-x py-d-pad-y text-d-base text-[var(--text-primary)]"
+                >
+                  {row}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </GlassPanel>
     </FadeIn>
