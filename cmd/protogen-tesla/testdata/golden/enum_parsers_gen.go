@@ -28,16 +28,19 @@ func (e ShiftState) String() string {
 }
 
 // ParseShiftState parses a symbolic enum value name and returns the
-// corresponding ShiftState constant. Returns an error if the name is not
-// a known ShiftState value.
+// corresponding ShiftState constant. Both the full proto-cased token
+// (e.g. "ShiftState<Suffix>") and the bare suffix (e.g. "<Suffix>") are
+// accepted so callers can pass either the wire-format name or a
+// human-friendly short form. Returns an error if the name is not a
+// known ShiftState value.
 func ParseShiftState(s string) (ShiftState, error) {
 	switch s {
-	case "ShiftStateUnknown":
+	case "ShiftStateUnknown", "Unknown":
 		return ShiftState_ShiftStateUnknown, nil
-	case "ShiftStateP":
+	case "ShiftStateP", "P":
 		return ShiftState_ShiftStateP, nil
-	case "ShiftStateD":
+	case "ShiftStateD", "D":
 		return ShiftState_ShiftStateD, nil
 	}
-	return ShiftState(0), fmt.Errorf("protomodel: unknown ShiftState name %q", s)
+	return ShiftState(0), fmt.Errorf("unknown ShiftState %q", s)
 }

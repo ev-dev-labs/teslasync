@@ -937,10 +937,28 @@ func renderSignalMetadata(pf *ProtoFile, packageName string) (string, error) {
 
 // ---- enum_parsers_gen.go --------------------------------------------------
 
+// enumParserValueTpl is the per-value template input. Suffix is the bare
+// token after stripping the enum's longest common prefix, e.g. "P" for
+// ShiftStateP under the LCP "ShiftState". Suffix is empty when it would
+// equal Name (no useful prefix to strip) or the empty string (one of the
+// values equals the LCP itself); the template emits a single-arm case
+// for the full token in that case so the switch never contains an empty
+// string literal.
+type enumParserValueTpl struct {
+	Name   string
+	Number int32
+	Suffix string
+}
+
+type enumParserEnumTpl struct {
+	Name   string
+	Values []enumParserValueTpl
+}
+
 type enumParsersTplData struct {
 	Package string
 	Header  string
-	Enums   []EnumDef
+	Enums   []enumParserEnumTpl
 }
 
 const enumParsersTemplate = `{{.Header}}package {{.Package}}
@@ -965,37 +983,88 @@ func (e {{.Name}}) String() string {
 }
 
 // Parse{{.Name}} parses a symbolic enum value name and returns the
-// corresponding {{.Name}} constant. Returns an error if the name is not
-// a known {{.Name}} value.
+// corresponding {{.Name}} constant. Both the full proto-cased token
+// (e.g. "{{$enum}}<Suffix>") and the bare suffix (e.g. "<Suffix>") are
+// accepted so callers can pass either the wire-format name or a
+// human-friendly short form. Returns an error if the name is not a
+// known {{.Name}} value.
 func Parse{{.Name}}(s string) ({{.Name}}, error) {
 	switch s {
-{{range .Values}}	case "{{.Name}}":
-		return {{$enum}}_{{.Name}}, nil
+{{range .Values}}{{if .Suffix}}	case "{{.Name}}", "{{.Suffix}}":
+{{else}}	case "{{.Name}}":
+{{end}}		return {{$enum}}_{{.Name}}, nil
 {{end}}	}
-	return {{.Name}}(0), fmt.Errorf("protomodel: unknown {{$enum}} name %q", s)
+	return {{.Name}}(0), fmt.Errorf("unknown {{$enum}} %q", s)
 }
 
 {{end}}`
 
+// longestCommonPrefix returns the longest string that is a prefix of every
+// element of strs. Returns the empty string when strs is empty or any pair
+// of elements share no leading character.
+func longestCommonPrefix(strs []string) string {
+	if len(strs) == 0 {
+		return ""
+	}
+	prefix := strs[0]
+	for i := 1; i < len(strs); i++ {
+		s := strs[i]
+		// Truncate prefix until it is a prefix of s.
+		max := len(prefix)
+		if len(s) < max {
+			max = len(s)
+		}
+		j := 0
+		for j < max && prefix[j] == s[j] {
+			j++
+		}
+		prefix = prefix[:j]
+		if prefix == "" {
+			return ""
+		}
+	}
+	return prefix
+}
+
 func renderEnumParsers(pf *ProtoFile, packageName string) (string, error) {
 	// Drop the Field enum (it lives in signal_metadata_gen.go).
-	enums := make([]EnumDef, 0, len(pf.Enums))
+	enums := make([]enumParserEnumTpl, 0, len(pf.Enums))
 	for _, e := range pf.Enums {
 		if e.Name == "Field" {
 			continue
 		}
-		enums = append(enums, e)
+		names := make([]string, len(e.Values))
+		for i, v := range e.Values {
+			names[i] = v.Name
+		}
+		lcp := longestCommonPrefix(names)
+		values := make([]enumParserValueTpl, len(e.Values))
+		for i, v := range e.Values {
+			suffix := ""
+			if lcp != "" && len(v.Name) > len(lcp) {
+				candidate := v.Name[len(lcp):]
+				if candidate != "" && candidate != v.Name {
+					suffix = candidate
+				}
+			}
+			values[i] = enumParserValueTpl{
+				Name:   v.Name,
+				Number: v.Number,
+				Suffix: suffix,
+			}
+		}
+		enums = append(enums, enumParserEnumTpl{Name: e.Name, Values: values})
 	}
 	tpl, err := template.New("enum_parsers").Parse(enumParsersTemplate)
 	if err != nil {
 		return "", err
 	}
 	var buf bytes.Buffer
-	if err := tpl.Execute(&buf, struct {
-		Package string
-		Header  string
-		Enums   []EnumDef
-	}{Package: packageName, Header: generatedHeader, Enums: enums}); err != nil {
+	if err := tpl.Execute(&buf, enumParsersTplData{
+		Package: packageName,
+		Header:  generatedHeader,
+		Enums:   enums,
+	}); err != nil {
 		return "", err
 	}
 	return buf.String(), nil
