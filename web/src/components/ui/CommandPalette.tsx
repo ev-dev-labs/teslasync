@@ -18,6 +18,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle'
 import { scoreCommand } from '@/lib/commandRegistry'
 import { useGlobalSearch } from '@/api/hooks/useSearch'
 import type { SearchHitType } from '@/api/types'
+import { markCommandPaletteDiscovered } from '@/features/onboarding/checklist'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -582,6 +583,11 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
   // Focus input when opened; close sidebar on mobile
   useEffect(() => {
     if (open) {
+      // Phase-40 / Prompt 68 — first-open instrumentation: marks the
+      // "try-command-palette" onboarding-checklist task as complete the moment
+      // the user discovers the palette. Idempotent — only writes the flag the
+      // first time, so subsequent opens are a no-op.
+      markCommandPaletteDiscovered()
       setQuery('')
       setSelectedIndex(0)
       setMode('search')

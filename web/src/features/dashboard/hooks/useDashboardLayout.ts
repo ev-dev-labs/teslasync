@@ -182,6 +182,12 @@ const DEFAULT_DASHBOARD = makePreset(
   'default',
   'Default',
   [
+    // Phase-40 / Prompt 68 — onboarding checklist is included by default for
+    // new users so they have a clear path through first-run setup. The widget
+    // self-hides once dismissed or the celebration window after 100 % expires.
+    // Existing users with persisted layouts are unaffected (their layouts
+    // hydrate from backend / localStorage and bypass this default seed).
+    { widgetId: 'onboarding-checklist' },
     { widgetId: 'vehicle-hero' },
     { widgetId: 'battery-gauge' },
     { widgetId: 'climate-status' },

@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useSettings } from '@/api/hooks/useSettings'
 import { PageContainer } from '@/components/layout'
@@ -5,8 +7,10 @@ import { GlassPanel, Button, IconBox } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { dispatchTourLauncherOpen } from '@/lib/tourRegistry'
+import { restartChecklist } from '@/features/onboarding/checklist'
+import { useToast } from '@/components/feedback/Toast'
 import { cn } from '@/lib/cn'
-import { Zap, ExternalLink, Download, PlayCircle } from 'lucide-react'
+import { Zap, ExternalLink, Download, PlayCircle, Rocket } from 'lucide-react'
 
 import {
   TeslaAccountSection,
@@ -23,6 +27,23 @@ export default function SettingsPage() {
   const { t } = useTranslation('settings')
   usePageTitle(t('title', 'Settings'))
   const { data: settings, isLoading } = useSettings()
+  const toast = useToast()
+  const location = useLocation()
+
+  // Hash-anchor scroll: when /settings#appearance (or any other anchor)
+  // loads, scroll the corresponding <section id="..."> into view. Triggered
+  // by the onboarding-checklist CTAs (Phase-40 / Prompt 68).
+  useEffect(() => {
+    if (!location.hash) return
+    const id = location.hash.slice(1)
+    if (!id) return
+    // Small delay so lazy-loaded sections + i18n have a chance to mount.
+    const timer = window.setTimeout(() => {
+      const el = document.getElementById(id)
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 250)
+    return () => window.clearTimeout(timer)
+  }, [location.hash])
 
   return (
     <PageContainer
@@ -30,7 +51,9 @@ export default function SettingsPage() {
       subtitle={t('subtitle', 'Configure TeslaSync preferences and Tesla account connection')}
       loading={isLoading}
     >
-      <TeslaAccountSection />
+      <section id="tesla-account">
+        <TeslaAccountSection />
+      </section>
       <FeatureToggles />
       <RegionSettings />
       <ActiveOrdersSection />
@@ -62,8 +85,12 @@ export default function SettingsPage() {
 
       <GeneralSettings />
       <GasPriceSettings />
-      <NotificationSettings />
-      <AppearanceSettings />
+      <section id="notifications">
+        <NotificationSettings />
+      </section>
+      <section id="appearance">
+        <AppearanceSettings />
+      </section>
 
       {/* Data Export — link */}
       <FadeIn delay={0.18}>
@@ -97,6 +124,41 @@ export default function SettingsPage() {
           >
             <PlayCircle className="h-4 w-4 mr-2" />
             {t('tour.restart', 'Open Tour Launcher')}
+          </Button>
+        </GlassPanel>
+      </FadeIn>
+
+      {/* Setup Checklist — restart affordance (Phase-40 / Prompt 68) */}
+      <FadeIn delay={0.22}>
+        <GlassPanel className="p-5 flex items-center gap-4">
+          <IconBox color="cyan">
+            <Rocket className="h-5 w-5" />
+          </IconBox>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-base font-semibold text-[var(--text-primary)]">
+              {t('checklist.settings.title', 'Setup Checklist')}
+            </h2>
+            <p className="text-xs text-[var(--text-muted)]">
+              {t(
+                'checklist.settings.description',
+                'Restart the first-run checklist widget on your dashboard. If you removed it, re-add the “Setup Checklist” widget from the dashboard customizer.',
+              )}
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              restartChecklist()
+              toast.success(
+                t(
+                  'checklist.settings.restarted',
+                  'Setup checklist restarted — re-add the widget from the dashboard customizer if needed.',
+                ),
+              )
+            }}
+          >
+            <Rocket className="h-4 w-4 mr-2" />
+            {t('checklist.settings.restart', 'Restart Checklist')}
           </Button>
         </GlassPanel>
       </FadeIn>
