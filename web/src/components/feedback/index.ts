@@ -16,7 +16,7 @@ export { OfflineBanner } from './OfflineBanner';
 export { LiveStaleDataBanner } from './LiveStaleDataBanner';
 export { AuthExpiredOverlay } from './AuthExpiredOverlay';
 export { GotoIndicator } from './GotoIndicator';
-export { KeyboardCheatSheet } from './KeyboardCheatSheet';
+export { KeyboardShortcutsModal } from './KeyboardShortcutsModal';
 export { TourOverlay } from './TourOverlay';
 export { JobProgressDrawer } from './JobProgressDrawer';
 export { AchievementUnlockedToast, AchievementUnlockedToastStack, type AchievementUnlockedToastProps } from './AchievementUnlockedToast';

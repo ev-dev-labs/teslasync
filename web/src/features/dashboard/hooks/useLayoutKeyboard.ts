@@ -1,5 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { SavedDashboard } from '../widgets/types';
+import { useShortcut, type ShortcutDefinition } from '@/hooks/useShortcutRegistry';
 
 interface KeyboardOptions {
   editMode: boolean;
@@ -22,11 +24,49 @@ interface KeyboardOptions {
  *
  * Skips events when focus is inside form inputs (INPUT/TEXTAREA/SELECT
  * or any contenteditable element).
+ *
+ * Phase-40 / Prompt 64 — also publishes the page-scoped entries to the
+ * cheatsheet registry so `?` lists them under "Dashboard".
  */
 export function useLayoutKeyboard({
   editMode, setEditMode, canUndo, canRedo, onUndo, onRedo,
   dashboards, switchDashboard,
 }: KeyboardOptions) {
+  const { t } = useTranslation();
+
+  const dashboardShortcuts = useMemo<ShortcutDefinition[]>(() => {
+    const group = t('shortcuts.groups.dashboard', 'Dashboard');
+    const make = (
+      id: string,
+      keys: string[],
+      description: string,
+    ): ShortcutDefinition => ({
+      id: `dashboard.${id}`,
+      keys,
+      description,
+      group,
+      scope: 'route',
+      routeMatch: /^\/$/,
+    });
+    const base: ShortcutDefinition[] = [
+      make('toggleEdit', ['E'], t('dashboard.shortcuts.toggleEdit', 'Toggle edit mode')),
+    ];
+    if (editMode) {
+      base.push(
+        make('exitEdit', ['Esc'], t('dashboard.shortcuts.exitEdit', 'Exit edit mode')),
+        make('undo', ['Ctrl', 'Z'], t('dashboard.shortcuts.undo', 'Undo layout change')),
+        make('redo', ['Ctrl', 'Y'], t('dashboard.shortcuts.redo', 'Redo layout change')),
+      );
+    }
+    if (dashboards.length > 1) {
+      base.push(
+        make('switch', ['Alt', '1–9'], t('dashboard.shortcuts.switch', 'Switch between dashboards')),
+      );
+    }
+    return base;
+  }, [editMode, dashboards.length, t]);
+  useShortcut(dashboardShortcuts);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;

@@ -11,6 +11,7 @@ import {
   type TimelineMarker,
   type TimelinePreviewPoint,
 } from './TimelineScrubber';
+import { useShortcut, type ShortcutDefinition } from '@/hooks/useShortcutRegistry';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -294,6 +295,35 @@ export function PlaybackControls({
     ),
     [t],
   );
+
+  /* ── Cheatsheet registry — Phase-40 / Prompt 64 ──────────────── */
+  const replayShortcutDefs = useMemo<ShortcutDefinition[]>(() => {
+    if (!enableKeyboardShortcuts) return [];
+    const group = t('shortcuts.groups.replay', 'Trip replay');
+    const replayRoute = /\/drives\/[^/]+\/replay/;
+    const make = (
+      id: string,
+      keys: string[],
+      description: string,
+    ): ShortcutDefinition => ({
+      id: `replay.scrubber.${id}`,
+      keys,
+      description,
+      group,
+      scope: 'route',
+      routeMatch: replayRoute,
+    });
+    return [
+      make('playPause', ['Space'], t('replay.shortcuts.playPause', 'Play / Pause')),
+      make('skip5', ['←', '→'], t('replay.shortcuts.skip5', 'Skip ±5s (Shift = ±30s)')),
+      make('skip10', ['J', 'L'], t('replay.shortcuts.skip10', 'Skip ±10s')),
+      make('frame', [',', '.'], t('replay.shortcuts.frame', 'Previous / next frame')),
+      make('startEnd', ['Home', 'End'], t('replay.shortcuts.startEnd', 'Jump to start / end')),
+      make('percent', ['0', '–', '9'], t('replay.shortcuts.percent', 'Jump to N×10%')),
+      make('speed', ['+', '−'], t('replay.shortcuts.speed', 'Speed up / slow down')),
+    ];
+  }, [enableKeyboardShortcuts, t]);
+  useShortcut(replayShortcutDefs);
 
   return (
     <div

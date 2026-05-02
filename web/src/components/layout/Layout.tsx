@@ -3,6 +3,7 @@ import InstallPrompt from '../feedback/InstallPrompt'
 import { OfflineBanner } from '../feedback/OfflineBanner'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
+import { GlobalShortcuts } from '@/lib/globalShortcuts'
 import { useTour, isTourCompleted } from '@/hooks/useTour'
 import { GotoIndicator } from '../feedback/GotoIndicator'
 import { KeyboardShortcutsModal } from '../feedback/KeyboardShortcutsModal'
@@ -1273,6 +1274,7 @@ export default function Layout() {
       <OfflineBanner />
 
       {/* Keyboard shortcut overlays */}
+      <GlobalShortcuts />
       <GotoIndicator visible={shortcutMode === 'goto'} />
       <KeyboardShortcutsModal open={showCheatSheet} onClose={toggleCheatSheet} />
 

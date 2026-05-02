@@ -498,6 +498,13 @@
     "kiosk": "Kiosk",
     "customize": "Customize",
     "editHint": "Drag widgets to reorder, resize from edges. Click the gear icon for widget settings.",
+    "shortcuts": {
+      "toggleEdit": "Toggle edit mode",
+      "exitEdit": "Exit edit mode",
+      "undo": "Undo layout change",
+      "redo": "Redo layout change",
+      "switch": "Switch between dashboards"
+    },
     "layout": {
       "label": "Layout",
       "switcherLabel": "Switch dashboard layout",
@@ -1335,10 +1342,28 @@
     "openShortcuts": "Show keyboard shortcuts",
     "close": "Close modal / cancel",
     "goto": "Go to {{label}}",
+    "search": "Search shortcuts…",
+    "empty": "No shortcuts match your search.",
+    "filter": {
+      "all": "All",
+      "global": "Global",
+      "page": "This page"
+    },
     "group": {
       "global": "Global",
       "navigation": "Navigation (press g then…)",
       "commands": "Commands"
+    },
+    "groups": {
+      "navigation": "Navigation (press g then…)",
+      "actions": "Actions",
+      "commands": "Commands",
+      "table": "Table",
+      "replay": "Trip replay",
+      "bulk": "Bulk actions",
+      "form": "Form editor",
+      "chart": "Charts",
+      "dashboard": "Dashboard"
     }
   },
   "annotation": {
