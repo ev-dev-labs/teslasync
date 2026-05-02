@@ -29,6 +29,9 @@ COPY web/package.json web/package-lock.json* ./
 RUN if [ -f package-lock.json ]; then npm ci --legacy-peer-deps; else npm install --legacy-peer-deps; fi
 
 COPY web/ .
+# buildChangelog.mjs (prebuild) reads <repo-root>/CHANGELOG.md; place it where
+# the script's REPO_ROOT (resolve(__dirname, '..', '..')) → '/' resolves it.
+COPY CHANGELOG.md /CHANGELOG.md
 RUN npm run build
 
 # Runtime stage — distroless (no shell, no package manager, minimal attack surface)

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
-import { Sparkles, RefreshCw, ArrowRight, BookOpen, ExternalLink } from 'lucide-react';
+import { Sparkles, RefreshCw, ArrowRight, BookOpen, ExternalLink, SkipForward } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Button } from '@/components/ui';
@@ -10,6 +10,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useOnboardingStatus } from '@/api/hooks/useOnboarding';
 
 import { Stepper, type OnboardingStep } from '../components/Stepper';
+import { useOnboardingSkip } from '../hooks/useOnboardingSkip';
 
 /**
  * OnboardingPage — Phase 40 / Prompt 18.
@@ -30,6 +31,7 @@ export default function OnboardingPage() {
   usePageTitle(t('onboarding.pageTitle', 'Welcome to TeslaSync'));
   const navigate = useNavigate();
   const { data, isLoading, refetch, isFetching } = useOnboardingStatus();
+  const { skip } = useOnboardingSkip();
 
   const teslaConnected = data?.tesla_connected ?? false;
   const vehicleCount = data?.vehicle_count ?? 0;
@@ -181,7 +183,7 @@ export default function OnboardingPage() {
                     'This page refreshes automatically every 30 seconds.',
                   )}
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant="ghost"
                 size="sm"
@@ -197,6 +199,23 @@ export default function OnboardingPage() {
               >
                 {t('onboarding.checkAgain', 'Check again')}
               </Button>
+              {!isComplete && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    skip();
+                    navigate('/');
+                  }}
+                  title={t(
+                    'onboarding.skipHint',
+                    'Explore the app — you can finish setup later from this page.',
+                  )}
+                  icon={<SkipForward className="h-4 w-4" />}
+                >
+                  {t('onboarding.skip', 'Skip for now')}
+                </Button>
+              )}
               {isComplete && (
                 <Button
                   variant="primary"

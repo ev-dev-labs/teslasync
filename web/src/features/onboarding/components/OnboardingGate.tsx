@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useOnboardingStatus } from '@/api/hooks/useOnboarding';
+import { useOnboardingSkip } from '../hooks/useOnboardingSkip';
 
 /**
  * OnboardingGate — Phase 40 / Prompt 18.
@@ -14,6 +15,10 @@ import { useOnboardingStatus } from '@/api/hooks/useOnboarding';
  * Allow-listed paths bypass the gate so the user can reach the
  * Tesla account setup page, public share links, the watch face,
  * and onboarding itself.
+ *
+ * The user can also click "Skip for now" on the onboarding page,
+ * which sets a localStorage flag (see useOnboardingSkip) that the
+ * gate honours across reloads and tabs.
  *
  * The gate is intentionally non-blocking: it renders nothing
  * (`return null`) and only triggers redirects via effects, so the
@@ -42,6 +47,7 @@ export function OnboardingGate() {
   const location = useLocation();
   const navigate = useNavigate();
   const { data, isLoading, isError } = useOnboardingStatus();
+  const { isSkipped } = useOnboardingSkip();
 
   useEffect(() => {
     // While the status request is in flight or has errored, don't
@@ -50,10 +56,13 @@ export function OnboardingGate() {
     // backend is briefly unreachable.
     if (isLoading || isError || !data) return;
     if (data.is_complete) return;
+    // The user explicitly chose "Skip for now" on the onboarding
+    // page. Honour that across reloads and tabs.
+    if (isSkipped) return;
     if (isAllowed(location.pathname)) return;
 
     navigate('/onboarding', { replace: true });
-  }, [data, isLoading, isError, location.pathname, navigate]);
+  }, [data, isLoading, isError, isSkipped, location.pathname, navigate]);
 
   return null;
 }

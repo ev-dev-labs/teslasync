@@ -1226,6 +1226,8 @@
     "polling": "This page refreshes automatically every 30 seconds.",
     "checkAgain": "Check again",
     "continue": "Continue to dashboard",
+    "skip": "Skip for now",
+    "skipHint": "Explore the app — you can finish setup later from this page.",
     "footer": {
       "help": "Need help? See the",
       "account": "Tesla account page",

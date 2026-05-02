@@ -57,6 +57,7 @@ export type BroadcastMessage =
   | { type: 'tour.reset'; tourId?: string }
   | { type: 'checklist.dismissed' }
   | { type: 'onboarded' }
+  | { type: 'onboarding.skip.changed'; skipped: boolean }
   | { type: 'install.dismissed' }
   // ── Layout / saved-state ─────────────────────────────────────────────────
   | { type: 'dashboard.layout' }

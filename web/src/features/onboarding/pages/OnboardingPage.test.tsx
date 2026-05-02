@@ -95,6 +95,11 @@ describe('OnboardingPage', () => {
       data_flowing: false,
       is_complete: false,
     };
+    try {
+      window.localStorage.removeItem('teslasync:onboarding:skipped:v1');
+    } catch {
+      /* ignore */
+    }
   });
 
   it('renders the welcome heading and three setup steps', () => {
@@ -139,6 +144,28 @@ describe('OnboardingPage', () => {
     const button = screen.getByRole('button', { name: /Check again/i });
     fireEvent.click(button);
     await waitFor(() => expect(refetchSpy).toHaveBeenCalled());
+  });
+
+  it('shows the Skip for now button when not complete and skips on click', async () => {
+    renderPage();
+    const skipBtn = await screen.findByRole('button', { name: /Skip for now/i });
+    expect(skipBtn).toBeInTheDocument();
+
+    fireEvent.click(skipBtn);
+    expect(navigateMock).toHaveBeenCalledWith('/');
+    // The skip flag is persisted in localStorage so the gate honours it.
+    expect(window.localStorage.getItem('teslasync:onboarding:skipped:v1')).toBe('1');
+  });
+
+  it('hides the Skip for now button once onboarding is complete', () => {
+    mockStatus = {
+      tesla_connected: true,
+      vehicle_count: 1,
+      data_flowing: true,
+      is_complete: true,
+    };
+    renderPage();
+    expect(screen.queryByRole('button', { name: /Skip for now/i })).toBeNull();
   });
 
   it('advances the in-progress indicator when the first anchor is satisfied', () => {
