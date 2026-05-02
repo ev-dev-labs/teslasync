@@ -566,6 +566,148 @@ func classifyExplicit(name string) fieldClass {
 	return fieldClass{}
 }
 
+// enumTypeOf returns the Go type name of the enum that decodes the
+// Datum.Value oneof variant for a given Field name. The mapping is derived
+// by inspecting the vendored vehicle_data.proto Value oneof and matching
+// each enum-classified Field to its semantically-paired enum type. Used
+// to populate SignalMeta.EnumTypeName for ValueKind == ValueKindEnum
+// entries; returns "" for Field names that are not enum-classified.
+//
+// Adding a new enum-classified Field to classify() also requires adding
+// it here, otherwise SignalMeta.EnumTypeName will be the empty string and
+// the codec dispatcher will not be able to pick a Parse<EnumName>.
+func enumTypeOf(name string) string {
+	switch name {
+	case "ChargeState":
+		return "ChargingState"
+	case "Gear":
+		return "ShiftState"
+	case "DiStateR", "DiStateF", "DiStateREL", "DiStateRER":
+		return "DriveInverterState"
+	case "Hvil":
+		return "HvilStatus"
+	case "ScheduledChargingMode":
+		return "ScheduledChargingModeValue"
+	case "FdWindow", "FpWindow", "RdWindow", "RpWindow":
+		return "WindowState"
+	case "SentryMode":
+		return "SentryModeState"
+	case "DriverSeatBelt", "PassengerSeatBelt":
+		return "BuckleStatus"
+	case "CarType":
+		return "CarTypeValue"
+	case "ChargePort":
+		return "ChargePortValue"
+	case "ChargePortLatch":
+		return "ChargePortLatchValue"
+	case "CruiseFollowDistance":
+		return "FollowDistance"
+	case "SpeedLimitWarning":
+		return "SpeedAssistLevel"
+	case "ForwardCollisionWarning":
+		return "ForwardCollisionSensitivity"
+	case "LaneDepartureAvoidance":
+		return "LaneAssistLevel"
+	case "BMSState":
+		return "BMSStateValue"
+	case "GuestModeMobileAccessState":
+		return "GuestModeMobileAccess"
+	case "DetailedChargeState":
+		return "DetailedChargeStateValue"
+	case "CabinOverheatProtectionMode":
+		return "CabinOverheatProtectionModeState"
+	case "CabinOverheatProtectionTemperatureLimit":
+		return "ClimateOverheatProtectionTempLimit"
+	case "CenterDisplay":
+		return "DisplayState"
+	case "ChargingCableType":
+		return "CableType"
+	case "ClimateKeeperMode":
+		return "ClimateKeeperModeState"
+	case "DefrostMode":
+		return "DefrostModeState"
+	case "FastChargerType":
+		return "FastCharger"
+	case "HvacAutoMode":
+		return "HvacAutoModeState"
+	case "HvacPower":
+		return "HvacPowerState"
+	case "PowershareStatus":
+		return "PowershareState"
+	case "PowershareStopReason":
+		return "PowershareStopReasonStatus"
+	case "PowershareType":
+		return "PowershareTypeStatus"
+	case "TonneauPosition":
+		return "TonneauPositionState"
+	case "TonneauTentMode":
+		return "TonneauTentModeState"
+	case "SettingDistanceUnit":
+		return "DistanceUnit"
+	case "SettingTemperatureUnit":
+		return "TemperatureUnit"
+	case "SettingTirePressureUnit":
+		return "PressureUnit"
+	case "SettingChargeUnit":
+		return "ChargeUnitPreference"
+	case "LightsTurnSignal":
+		return "TurnSignalState"
+	case "MediaPlaybackStatus":
+		return "MediaStatus"
+	case "SunroofInstalled":
+		return "SunroofInstalledState"
+	}
+	return ""
+}
+
+// valueKindConstName maps a classifier kind string to the Go constant name
+// from internal/tesla/protomodel/types.go. Compound kinds carry their
+// nested message type after a colon (e.g. "compound:LocationValue") which
+// is stripped here; the message type itself is encoded via IsCompound +
+// the typed Value oneof variant in datum_decoder_gen.go, not via SignalMeta.
+func valueKindConstName(kind string) string {
+	if strings.HasPrefix(kind, "compound:") {
+		return "ValueKindCompound"
+	}
+	switch kind {
+	case "string":
+		return "ValueKindString"
+	case "bool":
+		return "ValueKindBool"
+	case "int":
+		return "ValueKindInt32"
+	case "long":
+		return "ValueKindInt64"
+	case "float":
+		return "ValueKindFloat"
+	case "double":
+		return "ValueKindDouble"
+	case "enum":
+		return "ValueKindEnum"
+	case "time":
+		return "ValueKindTime"
+	case "invalid":
+		return "ValueKindInvalid"
+	}
+	return "ValueKindUnknown"
+}
+
+// unitKindConstName maps a classifier unit string to the Go constant name
+// from internal/tesla/protomodel/types.go.
+func unitKindConstName(unit string) string {
+	switch unit {
+	case "distance":
+		return "UnitKindDistance"
+	case "temperature":
+		return "UnitKindTemperature"
+	case "pressure":
+		return "UnitKindPressure"
+	case "charge":
+		return "UnitKindCharge"
+	}
+	return "UnitKindNone"
+}
+
 // generatedHeader is the comment header every emitted file starts with. It is
 // detected by editor agents (per .github/instructions/tesla-pipeline.instructions.md)
 // to refuse manual edits to *_gen.go files.
@@ -593,17 +735,52 @@ var compoundNames = map[string]bool{
 // Emit writes the three generated Go source files into outDir. Existing files
 // are overwritten. The output directory must already exist.
 func Emit(pf *ProtoFile, packageName, outDir string) error {
+	return EmitFiltered(pf, packageName, outDir, "")
+}
+
+// EmitFiltered is like Emit but optionally restricts the set of generated
+// files. When only is the empty string all three files are emitted; when
+// only is one of "signal_metadata", "enum_parsers", or "datum_decoder"
+// just the matching file is emitted. Any other value is rejected so that
+// typos do not silently skip generation.
+//
+// The filter exists so that intermediate phase-42 prompts can land their
+// dedicated _gen.go file in isolation without dragging the still-unclaimed
+// sibling files along; once all three claims are committed, callers should
+// drop the --only flag and rely on the full Emit().
+func EmitFiltered(pf *ProtoFile, packageName, outDir, only string) error {
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		return fmt.Errorf("create out dir %s: %w", outDir, err)
 	}
-	if err := emitFile(pf, packageName, outDir, fileSignalMetadata, renderSignalMetadata); err != nil {
-		return err
+	type emitTarget struct {
+		flag   string
+		name   string
+		render func(*ProtoFile, string) (string, error)
 	}
-	if err := emitFile(pf, packageName, outDir, fileEnumParsers, renderEnumParsers); err != nil {
-		return err
+	targets := []emitTarget{
+		{flag: "signal_metadata", name: fileSignalMetadata, render: renderSignalMetadata},
+		{flag: "enum_parsers", name: fileEnumParsers, render: renderEnumParsers},
+		{flag: "datum_decoder", name: fileDatumDecoder, render: renderDatumDecoder},
 	}
-	if err := emitFile(pf, packageName, outDir, fileDatumDecoder, renderDatumDecoder); err != nil {
-		return err
+	if only != "" {
+		matched := false
+		for _, t := range targets {
+			if t.flag == only {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			return fmt.Errorf("unknown --only value %q (want one of: signal_metadata, enum_parsers, datum_decoder)", only)
+		}
+	}
+	for _, t := range targets {
+		if only != "" && t.flag != only {
+			continue
+		}
+		if err := emitFile(pf, packageName, outDir, t.name, t.render); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -638,9 +815,10 @@ type signalMetaRow struct {
 	Name          string
 	Number        int32
 	Category      string
-	ValueKind     string
+	ValueKindExpr string
+	EnumTypeName  string
 	IsCompound    bool
-	UnitKind      string
+	UnitKindExpr  string
 	IsSettingUnit bool
 }
 
@@ -687,25 +865,33 @@ func ParseField(s string) (Field, error) {
 	return Field(0), fmt.Errorf("protomodel: unknown Field name %q", s)
 }
 
-// SignalMeta describes the routing classification of a telemetry signal.
-// Category and UnitKind drive routing.yaml lookups and unit-history queries
-// respectively; ValueKind tells the codec which Value oneof variant to expect.
-type SignalMeta struct {
-	Field         Field
-	Name          string
-	Category      string
-	ValueKind     string
-	IsCompound    bool
-	UnitKind      string
-	IsSettingUnit bool
-}
-
-// SignalMetaByField is the canonical metadata table keyed by Field. Every
-// Field value declared in the proto is present, including the Unknown,
-// Deprecated_*, Experimental_*, and Semitruck* sentinel values.
-var SignalMetaByField = map[Field]SignalMeta{
-{{range .SignalMeta}}	{{$.FieldEnum.Name}}_{{.Name}}: {Field: {{$.FieldEnum.Name}}_{{.Name}}, Name: "{{.Name}}", Category: "{{.Category}}", ValueKind: "{{.ValueKind}}", IsCompound: {{.IsCompound}}, UnitKind: "{{.UnitKind}}", IsSettingUnit: {{.IsSettingUnit}}},
+// Signals is the canonical list of every Tesla Fleet Telemetry signal,
+// in proto3 enum-number order. Every Field value declared in the vendored
+// vehicle_data.proto is present, including the Unknown, Deprecated_*,
+// Experimental_*, and Semitruck* sentinel values, so that downstream code
+// can iterate Signals to build per-Field state without having to reflect
+// on the proto.
+var Signals = []SignalMeta{
+{{range .SignalMeta}}	{Field: "{{.Name}}", ProtoEnumNum: {{.Number}}, Category: "{{.Category}}", ValueKind: {{.ValueKindExpr}}, EnumTypeName: "{{.EnumTypeName}}", IsCompound: {{.IsCompound}}, UnitKind: {{.UnitKindExpr}}, IsSettingUnit: {{.IsSettingUnit}}},
 {{end}}}
+
+// SignalsByName indexes Signals by canonical proto field name. The pointer
+// values are stable for the lifetime of the process; callers MUST NOT
+// mutate the SignalMeta they reference.
+var SignalsByName = map[string]*SignalMeta{}
+
+// SignalsByEnum indexes Signals by proto3 enum number. Use this when
+// decoding a Datum whose key arrived as a numeric Field value rather than
+// a symbolic name.
+var SignalsByEnum = map[int32]*SignalMeta{}
+
+func init() {
+	for i := range Signals {
+		s := &Signals[i]
+		SignalsByName[s.Field] = s
+		SignalsByEnum[s.ProtoEnumNum] = s
+	}
+}
 `
 
 func renderSignalMetadata(pf *ProtoFile, packageName string) (string, error) {
@@ -716,14 +902,20 @@ func renderSignalMetadata(pf *ProtoFile, packageName string) (string, error) {
 	rows := make([]signalMetaRow, 0, len(fieldEnum.Values))
 	for _, v := range fieldEnum.Values {
 		c, _ := classify(v.Name)
+		isCompound := strings.HasPrefix(c.kind, "compound:")
+		var enumName string
+		if c.kind == "enum" {
+			enumName = enumTypeOf(v.Name)
+		}
 		rows = append(rows, signalMetaRow{
 			ConstName:     fieldEnum.Name + "_" + v.Name,
 			Name:          v.Name,
 			Number:        v.Number,
 			Category:      c.cat,
-			ValueKind:     c.kind,
-			IsCompound:    strings.HasPrefix(c.kind, "compound:"),
-			UnitKind:      c.unit,
+			ValueKindExpr: valueKindConstName(c.kind),
+			EnumTypeName:  enumName,
+			IsCompound:    isCompound,
+			UnitKindExpr:  unitKindConstName(c.unit),
 			IsSettingUnit: c.isSettingUnit,
 		})
 	}
@@ -845,7 +1037,7 @@ type compoundField struct {
 // Either ScalarType (for primitive variants) or RefType (for enum/message
 // variants) is set. Invalid is true for the special `bool invalid = 10` case.
 type valueVariantTpl struct {
-	ProtoName string // e.g. "string_value"
+	ProtoName   string // e.g. "string_value"
 	GoFieldName string // e.g. "StringValue"
 	ProtoType   string // e.g. "string", "LocationValue", "ChargingState"
 	GoType      string // pointer-stripped Go type, e.g. "string", "*LocationValue", "*ChargingState"

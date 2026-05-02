@@ -141,3 +141,34 @@ func TestClassifierCoversAllFields(t *testing.T) {
 		}
 	}
 }
+
+// TestEnumTypeOfCoversAllEnumFields enforces that every Field whose
+// classifier kind is "enum" also has an explicit enumTypeOf() entry, and
+// that the resolved enum type name actually exists in the vendored proto.
+// Without this, a future enum-classified Field would silently emit
+// SignalMeta.EnumTypeName="" and the codec dispatcher would have nothing
+// to look up — a bug that compiles cleanly and only surfaces at runtime.
+func TestEnumTypeOfCoversAllEnumFields(t *testing.T) {
+	pf, err := ParseProtoFile(filepath.Join("..", "..", "api", "proto", "tesla", "vehicle_data.proto"))
+	if err != nil {
+		t.Fatalf("parse vendored proto: %v", err)
+	}
+	field := pf.FindEnum("Field")
+	if field == nil {
+		t.Fatal("Field enum not parsed from vendored proto")
+	}
+	for _, v := range field.Values {
+		c, _ := classify(v.Name)
+		if c.kind != "enum" {
+			continue
+		}
+		enumName := enumTypeOf(v.Name)
+		if enumName == "" {
+			t.Errorf("Field %q is classified as enum but enumTypeOf() returned empty; add a switch case", v.Name)
+			continue
+		}
+		if pf.FindEnum(enumName) == nil {
+			t.Errorf("Field %q maps to enum type %q which does not exist in the vendored proto", v.Name, enumName)
+		}
+	}
+}

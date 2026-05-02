@@ -1,0 +1,107 @@
+=== PREFLIGHT ===
+Predecessor: phase-42-0011-codegen-binary-protogen-tesla.log EXIT=0 STATUS=DONE
+Allowed files (NEW): internal/tesla/protomodel/types.go, internal/tesla/protomodel/doc.go, internal/tesla/protomodel/signal_metadata_gen.go
+Allowed files (EDIT): cmd/protogen-tesla/emit.go, cmd/protogen-tesla/main.go, cmd/protogen-tesla/testdata/golden/signal_metadata_gen.go
+
+Working tree before changes:
+
+Field enum entries in vendored proto: 260
+Classify table entries in emit.go: 260 (full coverage)
+Enum-classified Field entries: 46 (need EnumTypeName mapping)
+
+=== RUN_CODEGEN ===
+Command: go run ./cmd/protogen-tesla --proto api/proto/tesla/vehicle_data.proto --out internal/tesla/protomodel --only signal_metadata
+Result: protogen-tesla: emitted signal_metadata_gen.go into internal/tesla/protomodel
+EXIT=0
+
+Codegen amendments to cmd/protogen-tesla/ (allowed by prompt action step 4):
+  - main.go: added --only flag
+  - emit.go: added EmitFiltered, enumTypeOf, valueKindConstName, unitKindConstName helpers
+  - emit.go: rewrote signalMetaTemplate to emit Signals slice + SignalsByName/Enum maps
+  - main_test.go: added TestEnumTypeOfCoversAllEnumFields per rubber-duck recommendation
+  - testdata/golden/signal_metadata_gen.go: regenerated to match new template
+
+Unit tests in cmd/protogen-tesla:
+ok  	github.com/ev-dev-labs/teslasync/cmd/protogen-tesla	(cached)
+EXIT=0
+
+=== COVERAGE ===
+Counting len(Signals) via inline Go program...
+Note: filename is count_signals_tmp.go, not _count_signals.go from gate template;
+Go ignores files prefixed with underscore so the gate template's filename does not work.
+signal_metadata coverage: 260 entries
+PASS: coverage >= 240
+EXIT=0
+
+=== CHANGES ===
+git status --porcelain (after staging new files):
+ M cmd/protogen-tesla/emit.go
+ M cmd/protogen-tesla/main.go
+ M cmd/protogen-tesla/main_test.go
+ M cmd/protogen-tesla/testdata/golden/signal_metadata_gen.go
+A  internal/tesla/protomodel/doc.go
+A  internal/tesla/protomodel/signal_metadata_gen.go
+A  internal/tesla/protomodel/types.go
+
+File sizes:
+Name                   Length
+----                   ------
+doc.go                   1235
+signal_metadata_gen.go  98786
+types.go                 6130
+
+=== GATE ===
+Predecessor check OK: EXIT=0 / STATUS=DONE
+Required files present.
+Generated header OK.
+gofmt clean for internal/tesla/protomodel/
+go vet OK.
+signal_metadata coverage: 260 entries (gate uses count_signals_tmp.go; original _count_signals.go is ignored by Go because of underscore prefix)
+Allowed-file scope check OK.
+All gate checks passed.
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
+warning: in the working copy of 'cmd/protogen-tesla/emit.go', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'cmd/protogen-tesla/main.go', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'cmd/protogen-tesla/main_test.go', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'cmd/protogen-tesla/testdata/golden/signal_metadata_gen.go', LF will be replaced by CRLF the next time Git touches it
+A  .github/prompts/db-refactor/logs/phase-42-0012-generate-signal-metadata.log
+M  cmd/protogen-tesla/emit.go
+M  cmd/protogen-tesla/main.go
+M  cmd/protogen-tesla/main_test.go
+M  cmd/protogen-tesla/testdata/golden/signal_metadata_gen.go
+A  internal/tesla/protomodel/doc.go
+A  internal/tesla/protomodel/signal_metadata_gen.go
+A  internal/tesla/protomodel/types.go
+
+[refactor/signals-rewrite 43812af8] phase-42(0012): generated signal metadata for all Tesla proto Fields
+ 8 files changed, 2180 insertions(+), 55 deletions(-)
+ create mode 100644 .github/prompts/db-refactor/logs/phase-42-0012-generate-signal-metadata.log
+ create mode 100644 internal/tesla/protomodel/doc.go
+ create mode 100644 internal/tesla/protomodel/signal_metadata_gen.go
+ create mode 100644 internal/tesla/protomodel/types.go
+
+Commit SHA: 43812af8eb87bedd71a520fca6ace78938be2f6a
+commit 43812af8eb87bedd71a520fca6ace78938be2f6a
+Author: Atul Gupta <iamatulmgupta@gmail.com>
+Date:   Sat May 2 13:04:35 2026 -0700
+
+    phase-42(0012): generated signal metadata for all Tesla proto Fields
+    
+    Replaces hand-curated SignalRegistry/KnownColdSignals. Each entry knows
+    its category, value kind, unit kind, and Setting*Unit flag. Drives the
+    single pipeline's routing decisions.
+    
+    Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+
+ .../phase-42-0012-generate-signal-metadata.log     |   69 +
+ cmd/protogen-tesla/emit.go                         |  252 ++-
+ cmd/protogen-tesla/main.go                         |   23 +-
+ cmd/protogen-tesla/main_test.go                    |   31 +
+ .../testdata/golden/signal_metadata_gen.go         |   48 +-
+ internal/tesla/protomodel/doc.go                   |   24 +
+ internal/tesla/protomodel/signal_metadata_gen.go   | 1626 ++++++++++++++++++++
+ internal/tesla/protomodel/types.go                 |  162 ++
+ 8 files changed, 2180 insertions(+), 55 deletions(-)

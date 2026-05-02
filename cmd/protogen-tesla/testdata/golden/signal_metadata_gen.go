@@ -63,26 +63,34 @@ func ParseField(s string) (Field, error) {
 	return Field(0), fmt.Errorf("protomodel: unknown Field name %q", s)
 }
 
-// SignalMeta describes the routing classification of a telemetry signal.
-// Category and UnitKind drive routing.yaml lookups and unit-history queries
-// respectively; ValueKind tells the codec which Value oneof variant to expect.
-type SignalMeta struct {
-	Field         Field
-	Name          string
-	Category      string
-	ValueKind     string
-	IsCompound    bool
-	UnitKind      string
-	IsSettingUnit bool
+// Signals is the canonical list of every Tesla Fleet Telemetry signal,
+// in proto3 enum-number order. Every Field value declared in the vendored
+// vehicle_data.proto is present, including the Unknown, Deprecated_*,
+// Experimental_*, and Semitruck* sentinel values, so that downstream code
+// can iterate Signals to build per-Field state without having to reflect
+// on the proto.
+var Signals = []SignalMeta{
+	{Field: "Unknown", ProtoEnumNum: 0, Category: "metadata", ValueKind: ValueKindString, EnumTypeName: "", IsCompound: false, UnitKind: UnitKindNone, IsSettingUnit: false},
+	{Field: "VehicleSpeed", ProtoEnumNum: 4, Category: "driving", ValueKind: ValueKindFloat, EnumTypeName: "", IsCompound: false, UnitKind: UnitKindNone, IsSettingUnit: false},
+	{Field: "Gear", ProtoEnumNum: 10, Category: "driving", ValueKind: ValueKindEnum, EnumTypeName: "ShiftState", IsCompound: false, UnitKind: UnitKindNone, IsSettingUnit: false},
+	{Field: "Location", ProtoEnumNum: 21, Category: "location", ValueKind: ValueKindCompound, EnumTypeName: "", IsCompound: true, UnitKind: UnitKindNone, IsSettingUnit: false},
+	{Field: "VehicleName", ProtoEnumNum: 64, Category: "config", ValueKind: ValueKindString, EnumTypeName: "", IsCompound: false, UnitKind: UnitKindNone, IsSettingUnit: false},
 }
 
-// SignalMetaByField is the canonical metadata table keyed by Field. Every
-// Field value declared in the proto is present, including the Unknown,
-// Deprecated_*, Experimental_*, and Semitruck* sentinel values.
-var SignalMetaByField = map[Field]SignalMeta{
-	Field_Unknown:      {Field: Field_Unknown, Name: "Unknown", Category: "metadata", ValueKind: "string", IsCompound: false, UnitKind: "none", IsSettingUnit: false},
-	Field_VehicleSpeed: {Field: Field_VehicleSpeed, Name: "VehicleSpeed", Category: "driving", ValueKind: "float", IsCompound: false, UnitKind: "none", IsSettingUnit: false},
-	Field_Gear:         {Field: Field_Gear, Name: "Gear", Category: "driving", ValueKind: "enum", IsCompound: false, UnitKind: "none", IsSettingUnit: false},
-	Field_Location:     {Field: Field_Location, Name: "Location", Category: "location", ValueKind: "compound:LocationValue", IsCompound: true, UnitKind: "none", IsSettingUnit: false},
-	Field_VehicleName:  {Field: Field_VehicleName, Name: "VehicleName", Category: "config", ValueKind: "string", IsCompound: false, UnitKind: "none", IsSettingUnit: false},
+// SignalsByName indexes Signals by canonical proto field name. The pointer
+// values are stable for the lifetime of the process; callers MUST NOT
+// mutate the SignalMeta they reference.
+var SignalsByName = map[string]*SignalMeta{}
+
+// SignalsByEnum indexes Signals by proto3 enum number. Use this when
+// decoding a Datum whose key arrived as a numeric Field value rather than
+// a symbolic name.
+var SignalsByEnum = map[int32]*SignalMeta{}
+
+func init() {
+	for i := range Signals {
+		s := &Signals[i]
+		SignalsByName[s.Field] = s
+		SignalsByEnum[s.ProtoEnumNum] = s
+	}
 }

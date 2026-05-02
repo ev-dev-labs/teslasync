@@ -14,10 +14,13 @@
 //
 // Usage:
 //
-//	protogen-tesla [--proto api/proto/tesla/vehicle_data.proto] [--out internal/tesla/protomodel] [--package protomodel]
+//	protogen-tesla [--proto api/proto/tesla/vehicle_data.proto] [--out internal/tesla/protomodel] [--package protomodel] [--only signal_metadata|enum_parsers|datum_decoder]
 //
 // All flags have sane defaults; the binary is intended to be invoked from a
-// `go generate` directive at internal/tesla/protomodel/doc.go.
+// `go generate` directive at internal/tesla/protomodel/doc.go. The --only
+// flag is a transitional helper used by the phase-42 prompts that land
+// each generated file in isolation; once every file has been claimed,
+// callers should drop --only and let Emit produce all three.
 package main
 
 import (
@@ -38,6 +41,7 @@ func run(args []string) error {
 	protoPath := fs.String("proto", "api/proto/tesla/vehicle_data.proto", "Path to the input vendored proto file.")
 	outDir := fs.String("out", "internal/tesla/protomodel", "Directory to write the generated *_gen.go files.")
 	pkgName := fs.String("package", "protomodel", "Go package name for the emitted files.")
+	only := fs.String("only", "", "If set, emit only the named file. One of: signal_metadata, enum_parsers, datum_decoder. Default emits all three.")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -54,10 +58,19 @@ func run(args []string) error {
 	if err != nil {
 		return err
 	}
-	if err := Emit(pf, *pkgName, *outDir); err != nil {
+	if err := EmitFiltered(pf, *pkgName, *outDir, *only); err != nil {
 		return err
 	}
-	fmt.Fprintf(os.Stderr, "protogen-tesla: emitted %s, %s, %s into %s\n",
-		fileSignalMetadata, fileEnumParsers, fileDatumDecoder, *outDir)
+	switch *only {
+	case "":
+		fmt.Fprintf(os.Stderr, "protogen-tesla: emitted %s, %s, %s into %s\n",
+			fileSignalMetadata, fileEnumParsers, fileDatumDecoder, *outDir)
+	case "signal_metadata":
+		fmt.Fprintf(os.Stderr, "protogen-tesla: emitted %s into %s\n", fileSignalMetadata, *outDir)
+	case "enum_parsers":
+		fmt.Fprintf(os.Stderr, "protogen-tesla: emitted %s into %s\n", fileEnumParsers, *outDir)
+	case "datum_decoder":
+		fmt.Fprintf(os.Stderr, "protogen-tesla: emitted %s into %s\n", fileDatumDecoder, *outDir)
+	}
 	return nil
 }
