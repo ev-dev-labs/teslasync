@@ -163,3 +163,79 @@ the directive from doc.go.
 === COMMIT ===
 Per Honesty Covenant rule 8 (No commit on red), committing only the log file.
 Other changes (generate.go, Makefile, proto-gen-check.yml) remain uncommitted in the working tree.
+
+=== DIAGNOSIS ===
+The drift gate ran correctly and detected REAL drift between the committed
+internal/tesla/protomodel/datum_decoder_gen.go (hand-written in phase-42(0014),
+commit aa46d37f8) and what cmd/protogen-tesla/emit.go renderDatumDecoder
+currently emits.
+
+Root cause (unchanged since prior attempt at commit 9767697b2):
+
+  1. phase-42(0014) intentionally HAND-WROTE datum_decoder_gen.go because
+     emit.go's renderDatumDecoder was out of allowed scope for that prompt.
+     The hand-written file uses:
+       - import ftproto "github.com/teslamotors/fleet-telemetry/protos"
+       - typed compound returns from compounds.go (Location, Doors, TireLocation,
+         Time, DoorState, ScheduledChargingStartTime, ScheduledDepartureTime)
+       - sentinels ErrInvalid + ErrUnsetValue
+       - DecodeValue(*ftproto.Value) AND DecodeDatum(*ftproto.Datum) entry points
+     (See phase-42-0014 log Step 3 + datum_decoder_gen.go in HEAD.)
+
+  2. cmd/protogen-tesla/emit.go renderDatumDecoder still emits the older
+     scaffold which:
+       - does NOT import ftproto (uses local Datum/Value/Payload types)
+       - INLINE-redeclares Doors / Time / TireLocation / LocationValue
+         (these names already exist in compounds.go, so the regenerated file
+         would not even compile alongside compounds.go)
+       - exports ErrInvalidDatum (different name) and lacks ErrUnsetValue
+       - exposes only DecodeValue, no DecodeDatum
+     Diff: 293 insertions / 243 deletions against the HEAD copy.
+
+  3. Fixing this requires editing cmd/protogen-tesla/emit.go to make
+     renderDatumDecoder reproduce the hand-written file byte-for-byte
+     (or near enough that go/format.Source canonicalises both to the same
+     bytes). emit.go is NOT in this prompt's allowed scope, so per the
+     Honesty Covenant (Rule 1: No red-as-green; Rule 9: No silent drift)
+     this prompt MUST be recorded BLOCKED.
+
+Suggested remediation (a future prompt with cmd/protogen-tesla/emit.go in
+scope must do this BEFORE re-running prompt 0015):
+
+  - Rewrite renderDatumDecoder in cmd/protogen-tesla/emit.go to:
+      * use ftproto.Value/ftproto.Datum as the input parameter types
+      * dispatch on v.GetValue() oneof, returning compounds from compounds.go
+        for LocationValue / DoorsValue / TireLocation / TimeValue and the
+        three JSON-shaped *State variants (DoorState,
+        ScheduledChargingStartTime, ScheduledDepartureTime)
+      * honor v.GetInvalid() FIRST and return (nil, ErrInvalid)
+      * return (nil, ErrUnsetValue) on nil/unset oneof
+      * also emit DecodeDatum(d *ftproto.Datum) (string, any, error) that
+        looks up the field name via signal_metadata_gen.go and delegates to
+        DecodeValue
+  - Rerun go generate ./internal/tesla/protomodel/... and confirm the
+    diff against HEAD becomes empty.
+  - Re-run this prompt; the gate will then go green and the wiring files
+    (generate.go, Makefile gen-tesla targets, proto-gen-check.yml) become
+    committable.
+
+Working-tree wiring files left UNCOMMITTED for the next attempt (same
+disposition as commit 9767697b2):
+  - internal/tesla/protomodel/generate.go     (NEW, correct content)
+  - Makefile                                  (gen-tesla + gen-tesla-check
+                                              targets added; otherwise
+                                              identical to HEAD)
+  - .github/workflows/proto-gen-check.yml     (NEW, correct content)
+
+Per Honesty Covenant Rule 8 ("No commit on red - commit only the log when
+BLOCKED"), only this log file is committed.
+
+=== COMMIT ===
+Working tree after restore (only allowed files + log should remain):
+ M .github/prompts/db-refactor/logs/phase-42-0015-go-generate-wiring.log
+?? .github/workflows/proto-gen-check.yml
+?? internal/tesla/protomodel/generate.go
+
+Per Rule 8, committing ONLY the log file.
+git add -f .github\prompts\db-refactor\logs\phase-42-0015-go-generate-wiring.log
+git commit -m 'phase-42(0015): drift gate run BLOCKED by upstream emit.go defect (log only)'
