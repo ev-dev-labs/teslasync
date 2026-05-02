@@ -64,6 +64,7 @@ const navI18nKeys: Record<string, string> = {
   'Geofences': 'nav.geofences',
   'Notifications': 'nav.notifications',
   'Settings': 'nav.settings',
+  'My Activity': 'nav.myActivity',
   'Driving Dynamics': 'nav.drivingDynamics',
   'Climate Control': 'nav.climateControl',
   'Security & Access': 'nav.securityAccess',
@@ -351,6 +352,7 @@ export const navSections = [
     title: 'Settings & Admin',
     items: [
       { to: '/settings', icon: Icons.settings, label: 'Settings', color: 'text-[var(--text-muted)]' },
+      { to: '/me/activity', icon: Icons.history, label: 'My Activity', color: 'text-cyan-400' },
       { to: '/admin', icon: Icons.keyRound, label: 'Admin', color: 'text-red-400' },
       { to: '/api-keys', icon: Icons.key, label: 'API Keys', color: 'text-amber-400' },
     ],

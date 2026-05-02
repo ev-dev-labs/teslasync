@@ -2,10 +2,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { useMutationToast } from './_toastHelpers';
 import { STALE_TIMES } from '@/lib/constants';
+import { safeArray } from '@/lib/safeArray';
 import type { User } from '@/types/user';
+import type { UserActivityEntry } from '@/types/admin';
 
 export const userKeys = {
   me: ['users', 'me'] as const,
+  myActivity: (params: MyActivityParams) =>
+    ['users', 'me', 'activity', params] as const,
   teslaFeatureConfig: ['tesla-feature-config'] as const,
   teslaRegion: ['tesla-user-region'] as const,
   teslaOrders: ['tesla-user-orders'] as const,
@@ -30,6 +34,46 @@ export function useUpdateUser() {
       success('toast.user.update.success', 'Profile updated');
     },
     onError: (err) => error(err, 'toast.user.update.error', 'Failed to update profile'),
+  });
+}
+
+// ─── My Recent Activity (Phase-40 / Prompt 49) ───────────────────────────────
+
+export interface MyActivityParams {
+  /** ISO date string (YYYY-MM-DD). Optional — backend defaults to last 30 days. */
+  start?: string;
+  /** ISO date string (YYYY-MM-DD). Optional — backend defaults to today. */
+  end?: string;
+  /** Max rows to return. Backend caps at 200. */
+  limit?: number;
+  /** Pagination offset. */
+  offset?: number;
+}
+
+function buildActivityQuery(params: MyActivityParams): string {
+  const search = new URLSearchParams();
+  if (params.start) search.set('start', params.start);
+  if (params.end) search.set('end', params.end);
+  if (params.limit != null) search.set('limit', String(params.limit));
+  if (params.offset != null) search.set('offset', String(params.offset));
+  const qs = search.toString();
+  return qs ? `?${qs}` : '';
+}
+
+/**
+ * Fetches the current user's own audit-log activity.
+ *
+ * Resolves to an empty array on 404 / empty list. Surfaces 503 (ForwardAuth
+ * not configured on the server) and 401 (no identity header on the request)
+ * as ApiError so the consuming page can render an explanatory state.
+ */
+export function useMyRecentActivity(params: MyActivityParams = {}) {
+  return useQuery({
+    queryKey: userKeys.myActivity(params),
+    queryFn: () =>
+      request<UserActivityEntry[]>(`/users/me/activity${buildActivityQuery(params)}`),
+    select: safeArray,
+    staleTime: STALE_TIMES.STANDARD,
   });
 }
 

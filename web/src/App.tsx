@@ -133,6 +133,9 @@ const Changelog = lazy(() => import('./features/system/pages/ChangelogPage'))
 const Roadmap = lazy(() => import('./features/system/pages/RoadmapPage'))
 const TeslaAccount = lazy(() => import('./features/system/pages/TeslaAccountPage'))
 
+// Per-user activity feed (Phase-40 / Prompt 49 — Recent Activity Discoverability)
+const MyActivity = lazy(() => import('./features/system/pages/MyActivityPage'))
+
 // Settings
 const Settings = lazy(() => import('./features/settings/pages/SettingsPage'))
 
@@ -289,6 +292,8 @@ export default function App() {
         <Route path="charging-heatmap" element={<SafeRoute name="ChargingHeatmap"><ChargingHeatmap /></SafeRoute>} />
         <Route path="speed-profile" element={<SafeRoute name="SpeedProfile"><SpeedProfile /></SafeRoute>} />
         <Route path="tesla-account" element={<SafeRoute name="TeslaAccount"><TeslaAccount /></SafeRoute>} />
+        {/* Phase 40 / Prompt 49 — per-user activity feed */}
+        <Route path="me/activity" element={<SafeRoute name="MyActivity"><MyActivity /></SafeRoute>} />
         {/* Phase 40 / Prompt 41 — global app-wide entity search */}
         <Route path="search" element={<SafeRoute name="Search"><Search /></SafeRoute>} />
         {/* Phase 40 / Prompt 38 — catch-all inside Layout so unknown URLs still

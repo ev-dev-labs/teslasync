@@ -61,6 +61,12 @@ services:
       - API_LOG_QUEUE_CAPACITY=${API_LOG_QUEUE_CAPACITY:-4096}
       - API_LOG_BATCH_SIZE=${API_LOG_BATCH_SIZE:-100}
       - API_LOG_FLUSH_INTERVAL=${API_LOG_FLUSH_INTERVAL:-1s}
+      # Audit log retention (Phase-40 / Prompt 49 — Recent Activity Discoverability).
+      # AUDIT_RETENTION_DAYS: hard delete entries older than N days (0 = never).
+      # AUDIT_IP_RETENTION_DAYS: redact ip + user_agent on entries older than N days
+      # so per-user activity stays usable without retaining network PII forever.
+      - AUDIT_RETENTION_DAYS=${AUDIT_RETENTION_DAYS:-365}
+      - AUDIT_IP_RETENTION_DAYS=${AUDIT_IP_RETENTION_DAYS:-30}
     depends_on:
       postgres:
         condition: service_healthy

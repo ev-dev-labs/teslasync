@@ -76,6 +76,25 @@ export interface AuditLogEntry {
   createdAt: string;
 }
 
+/**
+ * Per-user activity entry returned by `GET /users/me/activity`
+ * (Phase-40 / Prompt 49 — Recent Activity Discoverability).
+ *
+ * Mirrors `userActivityEntry` in `internal/api/audit.go` after camelCaseKeys
+ * — both `entity_type` / `entityType` etc. are present at runtime, but the
+ * canonical shape uses the snake_case names that match the Go JSON tags.
+ */
+export interface UserActivityEntry {
+  id: number;
+  ts: string;
+  action: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  detail: string | null;
+  ip: string | null;
+  user_agent: string | null;
+}
+
 export interface SecurityEvent {
   id: string;
   locked: boolean | null;

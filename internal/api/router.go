@@ -161,9 +161,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	backupRestoreHandler := NewBackupRestoreHandler(db)
 	regenHandler := NewRegenHandler(db)
 	batteryDegradationHandler := NewBatteryDegradationHandler(db, stateReader, signalLogReader)
-	auditHandler := NewAuditHandler(db)
+	auditHandler := NewAuditHandler(db, cfg.Auth.ForwardAuthHeader)
 	apiCallLogHandler := NewAPICallLogHandler(db)
-	apiKeyHandler := NewAPIKeyHandler(db)
+	apiKeyHandler := NewAPIKeyHandler(db, cfg.Auth.ForwardAuthHeader)
 	signalCatalogHandler := NewSignalCatalogHandler(db)
 	chargingHeatmapHandler := NewChargingHeatmapHandler(db)
 	speedProfileHandler := NewSpeedProfileHandler(db)
@@ -932,6 +932,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/metrics-catalog", MetricsCatalogHandler())
 			r.Get("/openapi", OpenAPIHandler())
 		})
+
+		// Per-user activity feed (Phase-40 / Prompt 49 — Recent Activity Discoverability).
+		// Returns the requesting caller's audit_logs entries scoped by the
+		// configured ForwardAuth header value. Sibling to /system/audit, which
+		// remains the admin-wide view.
+		r.Get("/users/me/activity", auditHandler.UserActivity)
 
 		// API Call Logs
 		r.Route("/api-logs", func(r chi.Router) {

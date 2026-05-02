@@ -180,6 +180,14 @@ type RetentionConfig struct {
 	DataRetentionDays          int
 	PositionRetentionDays      int
 	SignalHistoryRetentionDays int
+	// AuditRetentionDays is the maximum age (in days) of rows kept in
+	// audit_logs. Default 365. Set to 0 to disable automatic cleanup.
+	AuditRetentionDays int
+	// AuditIPRetentionDays is the age (in days) after which audit_logs.ip
+	// and audit_logs.user_agent are redacted to NULL. Default 30. Always
+	// less than or equal to AuditRetentionDays in practice; set to 0 to
+	// disable IP/UA redaction (rows are still pruned per AuditRetentionDays).
+	AuditIPRetentionDays int
 }
 
 // Load reads configuration from environment variables with sensible defaults.
@@ -255,6 +263,8 @@ func Load() (*Config, error) {
 			DataRetentionDays:          envInt("DATA_RETENTION_DAYS", 0),
 			PositionRetentionDays:      envInt("POSITION_RETENTION_DAYS", 0),
 			SignalHistoryRetentionDays: envInt("SIGNAL_HISTORY_RETENTION_DAYS", 0),
+			AuditRetentionDays:         envInt("AUDIT_RETENTION_DAYS", 365),
+			AuditIPRetentionDays:       envInt("AUDIT_IP_RETENTION_DAYS", 30),
 		},
 
 		FleetTelemetry: FleetTelemetryConfig{

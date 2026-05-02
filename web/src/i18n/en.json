@@ -82,6 +82,7 @@
     "notifications": "Notifications",
     "notificationsUnread": "{{count}} unread notifications",
     "settings": "Settings",
+    "myActivity": "My Activity",
     "gpsFixQuality": "GPS Fix Quality",
     "gpsState": {
       "locked": "Locked",
@@ -3065,7 +3066,53 @@
     "charged": "charged",
     "title": "Recent Activity",
     "viewAll": "View all",
-    "empty": "No activity yet. Start driving!"
+    "empty": "No activity yet. Start driving!",
+    "myActivity": {
+      "title": "My Activity",
+      "subtitle": "Recent actions you have taken in TeslaSync.",
+      "empty": "No recent activity in this window.",
+      "disabled": {
+        "title": "Activity feed disabled"
+      },
+      "unauthorized": {
+        "title": "Identity required"
+      },
+      "error": {
+        "title": "Could not load activity"
+      }
+    },
+    "action": {
+      "unknown": "Activity",
+      "vehicleCommand": "Vehicle command",
+      "vehicleCommandWake": "Wake vehicle",
+      "vehicleCommandHonk": "Honk horn",
+      "vehicleCommandFlash": "Flash lights",
+      "vehicleCommandLock": "Lock vehicle",
+      "vehicleCommandUnlock": "Unlock vehicle",
+      "vehicleCommandClimate": "Climate command",
+      "vehicleCommandCharge": "Charging command",
+      "settings": "Settings change",
+      "settingsUpdate": "Settings updated",
+      "alert": "Alert change",
+      "alertRuleCreate": "Alert rule created",
+      "alertRuleUpdate": "Alert rule updated",
+      "alertRuleDelete": "Alert rule deleted",
+      "automation": "Automation change",
+      "automationCreate": "Automation created",
+      "automationUpdate": "Automation updated",
+      "automationDelete": "Automation deleted",
+      "dashboard": "Dashboard change",
+      "dashboardLayoutSave": "Dashboard layout saved",
+      "dataExport": "Data export",
+      "dataExportCreate": "Data export requested",
+      "apiKey": "API key change",
+      "apiKeyCreate": "API key created",
+      "apiKeyUpdate": "API key updated",
+      "apiKeyDelete": "API key revoked",
+      "auth": "Authentication",
+      "authLogin": "Signed in",
+      "authLogout": "Signed out"
+    }
   },
   "perf": {
     "title": "Fleet Performance",

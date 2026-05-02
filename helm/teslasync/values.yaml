@@ -790,6 +790,14 @@ retention:
   # positionDays: 90
   # Days to keep per-signal telemetry history (Postgres signal_history table)
   # signalHistoryDays: 7
+  # Days to keep audit_logs entries (Phase-40 / Prompt 49). Hard delete after.
+  # Set to 0 to disable cleanup. Default in the API server is 365.
+  auditDays: 365
+  # Days to keep audit_logs.ip and audit_logs.user_agent populated. After this
+  # window the maintenance worker NULLs both columns so the per-user activity
+  # feed keeps working without holding onto network PII indefinitely.
+  # Set to 0 to never redact. Default in the API server is 30.
+  auditIpDays: 30
 
 # ─────────────────────────────────────────────────────────────────────────────
 # MongoDB (raw telemetry signal capture)
