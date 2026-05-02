@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package telemetry.sample;
+
+option go_package = "github.com/ev-dev-labs/teslasync/cmd/protogen-tesla/testdata/protomodel";
+
+// Field is a tiny stand-in for the real Tesla Field enum used to exercise
+// the emitter's classifier table on five representative entries: a string
+// (VehicleName), an int (default fall-through), a float (VehicleSpeed via
+// the wider classifier), an enum-typed signal (Gear), and a compound-typed
+// signal (Location). The emitter MUST classify these through its
+// canonicalized table so the golden output matches byte-for-byte.
+enum Field {
+  Unknown = 0;
+  VehicleSpeed = 4;
+  Gear = 10;
+  Location = 21;
+  VehicleName = 64;
+}
+
+// ShiftState exercises the named-enum branch of the emitter (declares a
+// type, a const block, a String() method, and a Parse function).
+enum ShiftState {
+  ShiftStateUnknown = 0;
+  ShiftStateP = 2;
+  ShiftStateD = 5;
+}
+
+// LocationValue is a Datum value compound type. Mirrors the structure of
+// the production proto's LocationValue so the emitter exercises its
+// scalar-field-to-Go-type mapping.
+message LocationValue {
+  double latitude = 1;
+  double longitude = 2;
+}
+
+// Value is a trimmed-down Datum value with only four oneof variants:
+// a scalar string, a scalar int, an enum, a compound, and the special
+// `invalid` flag. The emitter MUST emit exactly four variant guards in
+// DecodeValue plus the ErrInvalidDatum early-return for `invalid`.
+message Value {
+  oneof value {
+    string string_value = 1;
+    int32 int_value = 2;
+    LocationValue location_value = 7;
+    ShiftState shift_state_value = 9;
+    bool invalid = 10;
+  }
+}
+
+// Datum is the (Field, Value) pair carried inside a Payload.
+message Datum {
+  Field key = 1;
+  Value value = 2;
+}
