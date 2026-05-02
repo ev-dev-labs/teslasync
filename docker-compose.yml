@@ -67,6 +67,13 @@ services:
       # so per-user activity stays usable without retaining network PII forever.
       - AUDIT_RETENTION_DAYS=${AUDIT_RETENTION_DAYS:-365}
       - AUDIT_IP_RETENTION_DAYS=${AUDIT_IP_RETENTION_DAYS:-30}
+      # Web Push (VAPID) — Phase 40 / Prompt 52.
+      # Generate keys once with: go run ./cmd/teslasync vapid-keygen
+      # When unset, the API logs a Warn at startup and the push channel
+      # is disabled (no behaviour change for existing installs).
+      - TESLASYNC_VAPID_PUBLIC_KEY=${TESLASYNC_VAPID_PUBLIC_KEY:-}
+      - TESLASYNC_VAPID_PRIVATE_KEY=${TESLASYNC_VAPID_PRIVATE_KEY:-}
+      - TESLASYNC_VAPID_SUBJECT=${TESLASYNC_VAPID_SUBJECT:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -128,6 +135,12 @@ services:
       - OTEL_ENDPOINT=${OTEL_ENDPOINT:-jaeger:4317}
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-teslasync-notification-worker}
       - OTEL_INSECURE=${OTEL_INSECURE:-true}
+      # Web Push (VAPID) — same env vars as the API server. Required so
+      # the notification worker can deliver "webpush" Requests pulled
+      # from the MQTT internal topic.
+      - TESLASYNC_VAPID_PUBLIC_KEY=${TESLASYNC_VAPID_PUBLIC_KEY:-}
+      - TESLASYNC_VAPID_PRIVATE_KEY=${TESLASYNC_VAPID_PRIVATE_KEY:-}
+      - TESLASYNC_VAPID_SUBJECT=${TESLASYNC_VAPID_SUBJECT:-}
     depends_on:
       postgres:
         condition: service_healthy

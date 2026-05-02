@@ -11,6 +11,18 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'prompt',
+      // Phase 40 / Prompt 52 — switched from the default `generateSW`
+      // strategy to `injectManifest` so we can register a custom `push`
+      // event handler in the service worker. Workbox runtime caching
+      // (Google Fonts, map tiles) is re-implemented inside `src/sw/sw.ts`
+      // so caching behaviour does not regress.
+      strategies: 'injectManifest',
+      srcDir: 'src/sw',
+      filename: 'sw.ts',
+      injectManifest: {
+        // Same precache scope as the previous generateSW config.
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff,woff2,json}'],
+      },
       includeAssets: ['favicon.svg', 'offline.html', 'icons/*.svg', 'icons/*.png'],
       manifest: {
         name: 'TeslaSync',
@@ -57,52 +69,11 @@ export default defineConfig({
           },
         ],
       },
-      workbox: {
-        cleanupOutdatedCaches: true,
-        // Precache the SPA shell, fonts, icons, and the offline.html backstop.
-        // The default workbox glob already covers the build-output (js/css/html);
-        // the explicit globPatterns here keeps that behaviour explicit and adds
-        // common font / image extensions used by the precached icons.
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff,woff2,json}'],
-        // Never precache API / SSE / WebSocket traffic — see runtimeCaching
-        // below; none of those entries match /api, /ws, or /sse routes, so
-        // authenticated JSON is never written to the service-worker cache.
-        navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api/, /^\/ws/, /^\/sse/, /^\/healthz/, /^\/readyz/, /^\/metrics/],
-        runtimeCaching: [
-          {
-            // Google Fonts stylesheets
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-stylesheets',
-              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
-            },
-          },
-          {
-            // Google Fonts webfont files
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-webfonts',
-              expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-          {
-            // Leaflet map tiles
-            urlPattern: /^https:\/\/.*tile.*\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'map-tiles',
-              expiration: { maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 30 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-        ],
-      },
       devOptions: {
         enabled: enablePwaInDev,
+        // Custom SW source is TypeScript — esbuild handles compilation
+        // when `type: 'module'` is set on the registered worker.
+        type: 'module',
       },
     }),
   ],

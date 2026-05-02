@@ -865,6 +865,16 @@
         "error": "Failed to delete notifications"
       }
     },
+    "webpush": {
+      "subscribe": {
+        "success": "Browser push enabled on this device",
+        "error": "Failed to enable browser push"
+      },
+      "unsubscribe": {
+        "success": "Browser push removed for this device",
+        "error": "Failed to remove browser push"
+      }
+    },
     "settings": {
       "save": {
         "success": "Settings saved",
@@ -6360,5 +6370,31 @@
     "pin": "Pin to current vehicle",
     "menuFooter": "Manage layouts in the tab strip below",
     "resetMessage": "This removes all customizations and restores the shipped default dashboard. Your other saved layouts are not affected."
+  },
+  "webpush": {
+    "title": "Browser push",
+    "subtitle": "Get OS-level notifications even when TeslaSync is closed.",
+    "enable": "Enable on this device",
+    "disable": "Disable on this device",
+    "iosNote": "iOS Safari requires version 16.4 or later, and you must add TeslaSync to your Home Screen.",
+    "status": {
+      "subscribed": "Active on this device",
+      "notSubscribed": "Not subscribed",
+      "unsupported": "Unavailable"
+    },
+    "unsupported": {
+      "notification": "This browser doesn't support notifications.",
+      "pushApi": "This browser doesn't support the Push API.",
+      "permissionDenied": "Notifications are blocked for this site. Re-enable them in your browser settings to use browser push.",
+      "serverDisabled": "Browser push is not configured on this server. Ask your administrator to set the VAPID keys."
+    },
+    "devices": {
+      "title": "Registered devices",
+      "lastUsed": "Last used {{when}}",
+      "neverUsed": "Not yet used",
+      "remove": "Remove this device",
+      "thisDevice": "(this device)",
+      "unknownAgent": "Unknown browser"
+    }
   }
 }

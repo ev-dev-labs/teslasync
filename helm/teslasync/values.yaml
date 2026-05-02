@@ -601,6 +601,32 @@ auth:
   jwtSecret: ""
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Web Push (VAPID) — Phase 40 / Prompt 52
+#
+# Generate a one-time keypair (offline) with:
+#   go run ./cmd/teslasync vapid-keygen
+# and copy PUBLIC into webPush.publicKey, PRIVATE into webPush.privateKey,
+# and a contact URL or mailto: into webPush.subject.
+#
+# When all three are unset (the default), the API logs a single Warn at
+# startup, hides the "Enable on this device" affordance in the frontend,
+# and skips the webpush channel during alert fan-out.
+#
+# Rotating these keys invalidates EVERY existing browser subscription —
+# never auto-generate them; pin them once and back them up with the rest
+# of the deployment's secrets.
+webPush:
+  # -- VAPID public key (base64url, ~88 chars). Non-secret — exposed via
+  # GET /api/v1/push/public-key for browsers to call PushManager.subscribe().
+  publicKey: ""
+  # -- VAPID private key (base64url, ~44 chars). SECRET — kept in the
+  # Helm-rendered Secret, never in ConfigMap or the frontend bundle.
+  privateKey: ""
+  # -- VAPID `sub` field. Operator contact the push service can use.
+  # Must be a `mailto:` URL or an https:// URL.
+  subject: ""
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Tesla API credentials
 # ─────────────────────────────────────────────────────────────────────────────
 tesla:

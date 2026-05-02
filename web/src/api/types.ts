@@ -2008,3 +2008,37 @@ export interface SavedViewUpdateInput {
   is_pinned?: boolean
   sort_order?: number
 }
+
+// ── Web Push (Phase 40 / Prompt 52) ────────────────────────────────────────
+
+/**
+ * One row of `push_subscriptions`. Mirrors `internal/models.PushSubscription`.
+ * The `keys` shape is intentionally NOT a nested object because the server
+ * stores `p256dh` / `auth` flat alongside `endpoint` (the wire shape is
+ * snake_case to match Go JSON tags; `camelCaseKeys()` also exposes
+ * camelCase aliases on every response).
+ */
+export interface PushSubscriptionRow {
+  id: number
+  user_id: number | null
+  endpoint: string
+  p256dh: string
+  auth: string
+  user_agent: string | null
+  created_at: string
+  last_used_at: string | null
+}
+
+/**
+ * Browser-side PushSubscription.toJSON() shape — POST body for
+ * `/push/subscribe`. The server validates `endpoint` is a well-formed
+ * https:// URL and that both keys are non-empty.
+ */
+export interface PushSubscribeBody {
+  endpoint: string
+  keys: {
+    p256dh: string
+    auth: string
+  }
+}
+

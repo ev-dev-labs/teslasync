@@ -18,6 +18,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
+	"github.com/ev-dev-labs/teslasync/internal/webpush"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 )
@@ -83,6 +84,31 @@ func main() {
 		log.Info().Msg("notification-worker outbound api_call_logs sink disabled (API_LOGS_INBOUND_ENABLED=false)")
 	}
 	notification.SetSink(api.APICallSinkAdapter(inboundAPILogger, cfg.APILogs.CaptureBodies))
+
+	// Web Push (VAPID) — same dispatcher hook the API server registers.
+	// The notification worker is the actual MQTT consumer in production
+	// (the API server only publishes), so any "webpush" Request that
+	// reaches Send() resolves through this dispatcher.
+	pushSubsRepo := database.NewPushSubscriptionsRepo(db)
+	webpushSvc := webpush.NewService(pushSubsRepo, cfg.WebPush.PublicKey, cfg.WebPush.PrivateKey, cfg.WebPush.Subject)
+	webpush.SetDefault(webpushSvc)
+	if !webpushSvc.IsEnabled() {
+		log.Warn().Msg("Web Push disabled — set TESLASYNC_VAPID_PUBLIC_KEY / TESLASYNC_VAPID_PRIVATE_KEY / TESLASYNC_VAPID_SUBJECT to enable")
+	} else {
+		log.Info().Msg("Web Push enabled (VAPID configured)")
+	}
+	notification.SetWebPushDispatcher(func(req *notification.Request) error {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		_, err := webpushSvc.Send(ctx, webpush.Payload{
+			Title:    req.Title,
+			Body:     req.Message,
+			URL:      req.Config["url"],
+			Tag:      req.Config["alert_tag"],
+			Severity: req.Config["severity"],
+		})
+		return err
+	})
 
 	// MQTT connection
 	opts := pahomqtt.NewClientOptions().

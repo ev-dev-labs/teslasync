@@ -27,6 +27,7 @@ import type {
   NotificationChannel,
   NotificationChannelKind,
 } from '@/api/types';
+import { BrowserPushChannelCard } from './BrowserPushChannelCard';
 
 const CHANNEL_TYPES = [
   { value: 'discord', label: 'Discord', icon: Hash, color: '#5865F2', fields: [
@@ -350,6 +351,10 @@ export function NotificationChannelsView() {
             {t('notifications.channels.add', 'Add Channel')}
           </Button>
         </div>
+      </FadeIn>
+
+      <FadeIn>
+        <BrowserPushChannelCard />
       </FadeIn>
 
       <FadeIn>

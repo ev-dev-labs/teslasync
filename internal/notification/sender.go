@@ -55,9 +55,56 @@ func Send(req *Request) error {
 	case "email":
 		log.Info().Str("to", req.Config["to"]).Str("title", req.Title).Msg("email notification (SMTP not configured)")
 		return nil
+	case ChannelTypeWebPush:
+		return dispatchWebPush(req)
 	default:
 		return fmt.Errorf("unsupported channel type: %s", req.ChannelType)
 	}
+}
+
+// ChannelTypeWebPush is the synthetic channel name used by the alert
+// fan-out path to deliver a single notification to every subscribed
+// browser-device-pairing. There is no user-configurable "WebPush channel"
+// row in notification_channels — the fan-out builds one Request per alert
+// with this ChannelType and an empty Config, and the dispatcher resolves
+// the registered webpush.Service to do the actual delivery.
+const ChannelTypeWebPush = "webpush"
+
+// webpushDispatcher is the dispatcher hook for the synthetic "webpush"
+// channel (Phase 40 / Prompt 52). Each binary that wires Web Push registers
+// it via SetWebPushDispatcher in main(); the package keeps the function
+// behind an indirection because internal/webpush imports
+// internal/database which transitively depends on this package, so a
+// direct import would create a cycle.
+//
+// When unset (no VAPID config, e.g. local dev without push), Send() for
+// "webpush" requests is a no-op that returns nil so the alert fan-out
+// stays green.
+var (
+	webpushDispatcher   func(req *Request) error
+	webpushDispatcherMu sync.RWMutex
+)
+
+// SetWebPushDispatcher registers the dispatcher hook called for every
+// Request whose ChannelType is ChannelTypeWebPush. Pass nil to clear it
+// (used by tests).
+func SetWebPushDispatcher(d func(req *Request) error) {
+	webpushDispatcherMu.Lock()
+	webpushDispatcher = d
+	webpushDispatcherMu.Unlock()
+}
+
+func dispatchWebPush(req *Request) error {
+	webpushDispatcherMu.RLock()
+	d := webpushDispatcher
+	webpushDispatcherMu.RUnlock()
+	if d == nil {
+		// No-op when push is disabled or the binary did not register a
+		// dispatcher (e.g. test harnesses).
+		log.Debug().Str("title", req.Title).Msg("webpush dispatcher not registered — skipping")
+		return nil
+	}
+	return d(req)
 }
 
 var httpClient *http.Client

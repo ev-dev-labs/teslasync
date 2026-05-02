@@ -132,3 +132,6 @@ data:
   API_LOG_BATCH_SIZE: "100"
   API_LOG_FLUSH_INTERVAL: "1s"
   {{- end }}
+  {{- if and .Values.webPush .Values.webPush.publicKey }}
+  TESLASYNC_VAPID_PUBLIC_KEY: {{ .Values.webPush.publicKey | quote }}
+  {{- end }}

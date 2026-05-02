@@ -19,6 +19,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/service"
 	signal "github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+	"github.com/ev-dev-labs/teslasync/internal/webpush"
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -122,6 +123,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	chartAnnotationHandler := NewChartAnnotationHandler(db)
 	pinnedHandler := NewPinnedHandler(db)
 	savedViewsHandler := NewSavedViewsHandler(db, cfg.Auth.ForwardAuthHeader)
+	pushHandler := NewPushHandler(db, webpush.Default(), cfg.Auth.ForwardAuthHeader)
 	var pahoForAlerts pahomqtt.Client
 	if mqttClient != nil {
 		pahoForAlerts = mqttClient.Underlying()
@@ -594,6 +596,19 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Post("/", savedViewsHandler.Create)
 			r.Put("/{id}", savedViewsHandler.Update)
 			r.Delete("/{id}", savedViewsHandler.Delete)
+		})
+
+		// Web Push (VAPID) — Phase 40 / Prompt 52. Browser subscription
+		// registration + listing + removal. The VAPID public key is also
+		// served unauthenticated (it is, by spec, public) — but rate
+		// limiting still applies via the parent router. Push delivery
+		// itself runs out-of-band in the notification worker.
+		r.Route("/push", func(r chi.Router) {
+			r.Use(httprate.LimitByIP(60, 1*time.Minute))
+			r.Get("/public-key", pushHandler.PublicKey)
+			r.Get("/subscribe", pushHandler.List)
+			r.Post("/subscribe", pushHandler.Subscribe)
+			r.Delete("/subscribe", pushHandler.Unsubscribe)
 		})
 
 		// Gas Price Auto-Poll

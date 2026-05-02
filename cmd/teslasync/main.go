@@ -27,6 +27,7 @@ import (
 	sigsvc "github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
+	"github.com/ev-dev-labs/teslasync/internal/webpush"
 	"github.com/ev-dev-labs/teslasync/internal/worker"
 	"github.com/rs/zerolog/log"
 
@@ -45,6 +46,12 @@ func main() {
 			os.Exit(1)
 		}
 		os.Exit(0)
+	}
+
+	// One-shot subcommand: generate a VAPID keypair and exit. Runs before
+	// config.Load() so it works on a fresh install without env wiring.
+	if len(os.Args) > 1 && os.Args[1] == "vapid-keygen" {
+		runVAPIDKeygen()
 	}
 
 	cfg, err := config.Load()
@@ -259,6 +266,32 @@ func main() {
 	notification.SetSink(outboundAPILogSink)
 	geocoding.SetSink(outboundAPILogSink)
 	tesla.SetAuthSink(outboundAPILogSink, cfg.Tesla.Timeout)
+
+	// Web Push (VAPID) — register the dispatcher hook so that any alert
+	// fan-out that publishes a `webpush` Request lands here. When VAPID
+	// is unconfigured we still register a Service (it will report
+	// IsEnabled()==false and Send is a no-op), so the hook never returns
+	// an error and the rest of the channel fan-out proceeds normally.
+	pushSubsRepo := database.NewPushSubscriptionsRepo(db)
+	webpushSvc := webpush.NewService(pushSubsRepo, cfg.WebPush.PublicKey, cfg.WebPush.PrivateKey, cfg.WebPush.Subject)
+	webpush.SetDefault(webpushSvc)
+	if !webpushSvc.IsEnabled() {
+		log.Warn().Msg("Web Push disabled — set TESLASYNC_VAPID_PUBLIC_KEY / TESLASYNC_VAPID_PRIVATE_KEY / TESLASYNC_VAPID_SUBJECT to enable")
+	} else {
+		log.Info().Msg("Web Push enabled (VAPID configured)")
+	}
+	notification.SetWebPushDispatcher(func(req *notification.Request) error {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		_, err := webpushSvc.Send(ctx, webpush.Payload{
+			Title:    req.Title,
+			Body:     req.Message,
+			URL:      req.Config["url"],
+			Tag:      req.Config["alert_tag"],
+			Severity: req.Config["severity"],
+		})
+		return err
+	})
 
 	// stateReader is the signal-log-backed cold-path reader introduced in
 	// phase-39 (ADR-002). Construct it once here (above any conditional

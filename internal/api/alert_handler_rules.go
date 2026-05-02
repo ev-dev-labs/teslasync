@@ -480,6 +480,25 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
+
+		// Web Push fan-out — only the all-channels test path triggers it.
+		// Targeted channel-id tests intentionally skip web push because the
+		// operator picked a specific channel; sending it to every device too
+		// would be surprising. The dispatcher is a no-op when VAPID is not
+		// configured, so this stays safe in dev installs.
+		pushReq := &notification.Request{
+			ChannelType: notification.ChannelTypeWebPush,
+			Config: map[string]string{
+				"severity":  severity,
+				"url":       "/notifications",
+				"alert_tag": "alert-test",
+			},
+			Title:   title,
+			Message: message,
+		}
+		if pubErr := notification.Publish(h.mqttClient, pushReq); pubErr == nil {
+			dispatched++
+		}
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
