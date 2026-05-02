@@ -775,7 +775,7 @@ export default function AlertsPage() {
                 placeholder={t('alerts.searchPlaceholder', 'Search by title or message…')}
                 className="w-full sm:w-72"
               />
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2" data-tour="alerts-filters">
                 <Icons.filter className="h-4 w-4 text-[var(--text-muted)]" />
                 <TabNav
                   tabs={[
@@ -796,6 +796,7 @@ export default function AlertsPage() {
             </div>
           ) : filteredAlerts.length > 0 ? (
             <>
+            <div data-tour="alerts-list">
             <StaggerContainer className="space-y-2">
               {pagedAlerts.map(a => (
                 <StaggerItem key={a.id}>
@@ -819,6 +820,7 @@ export default function AlertsPage() {
                 </div>
               </div>
             )}
+            </div>
             </>
           ) : (
             <EmptyState

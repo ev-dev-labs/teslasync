@@ -149,12 +149,14 @@ export default function VehicleDetailPage() {
       <LiveStaleDataBanner />
       <SectionErrorBoundary name="vehicle-detail:header" fallbackTitle={t('vehicles.detail.section.headerFailed', 'Vehicle header failed to load')}>
         <FadeIn>
+          <div data-tour="vehicle-detail-tabs">
           <VehicleHeader
             vehicle={vehicle}
             status={status}
             onWake={() => wakeMutation.mutate()}
             waking={wakeMutation.isPending}
           />
+          </div>
         </FadeIn>
       </SectionErrorBoundary>
 

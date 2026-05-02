@@ -320,6 +320,7 @@ export default function VehicleListPage() {
             </div>
           </FadeIn>
 
+          <div data-tour="vehicles-list">
           <StaggerContainer className="space-y-4">
             {sortedVehicleList.map((vehicle) => {
               const entry = fleet.entries.find(e => e.vehicle.id === vehicle.id);
@@ -330,7 +331,7 @@ export default function VehicleListPage() {
 
               return (
                 <StaggerItem key={vehicle.id}>
-                  <GlassPanel hover glow="cyan" className="p-0 overflow-hidden group">
+                  <GlassPanel hover glow="cyan" className="p-0 overflow-hidden group" data-tour="vehicles-card">
                     <div className="h-1 bg-gradient-to-r from-cyan-400 via-purple-400 to-green-400 opacity-40 group-hover:opacity-80 transition-opacity" />
 
                     <div className="p-5">
@@ -419,6 +420,7 @@ export default function VehicleListPage() {
               );
             })}
           </StaggerContainer>
+          </div>
         </div>
       )}
 

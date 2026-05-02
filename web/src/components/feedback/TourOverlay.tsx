@@ -3,6 +3,7 @@ import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui';
 import { X, ArrowLeft, ArrowRight } from 'lucide-react';
 import type { TourStep } from '@/hooks/useTour';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 
 interface TourOverlayProps {
   step: TourStep;
@@ -19,6 +20,7 @@ export function TourOverlay({
   onNext, onPrev, onSkip,
 }: TourOverlayProps) {
   const { t } = useTranslation();
+  const { reduce } = useMotionPreference();
 
   if (!targetRect) return null;
 
@@ -37,7 +39,10 @@ export function TourOverlay({
     <div className="fixed inset-0 z-[10000]">
       {/* Dark overlay with spotlight cutout */}
       <div
-        className="absolute inset-0 bg-black/60 transition-all duration-300"
+        className={cn(
+          'absolute inset-0 bg-black/60',
+          reduce ? '' : 'transition-all duration-300',
+        )}
         style={{
           clipPath: `polygon(
             0% 0%, 0% 100%,
@@ -55,9 +60,11 @@ export function TourOverlay({
 
       {/* Spotlight border glow */}
       <div
-        className="absolute rounded-lg border-2 border-[var(--theme-primary)]/40
-          shadow-[0_0_20px_rgba(var(--theme-primary-rgb),0.2)] pointer-events-none
-          transition-all duration-300"
+        className={cn(
+          'absolute rounded-lg border-2 border-[var(--theme-primary)]/40',
+          'shadow-[0_0_20px_rgba(var(--theme-primary-rgb),0.2)] pointer-events-none',
+          reduce ? '' : 'transition-all duration-300',
+        )}
         style={{
           top: spotlight.top,
           left: spotlight.left,
@@ -68,10 +75,18 @@ export function TourOverlay({
 
       {/* Tooltip */}
       <div
-        className="absolute max-w-sm p-4 rounded-xl bg-[var(--bg-secondary)]
-          border border-white/10 shadow-2xl backdrop-blur-xl
-          animate-in fade-in slide-in-from-bottom-2 duration-200"
+        className={cn(
+          'absolute max-w-sm p-4 rounded-xl bg-[var(--bg-secondary)]',
+          'border border-white/10 shadow-2xl backdrop-blur-xl',
+          reduce ? '' : 'animate-in fade-in slide-in-from-bottom-2 duration-200',
+        )}
         style={tooltipStyle}
+        role="dialog"
+        aria-modal="false"
+        aria-label={t('tour.dialogLabel', 'Tour step {{current}} of {{total}}', {
+          current: currentStep + 1,
+          total: totalSteps,
+        })}
       >
         {/* Close button — 44px touch target for mobile */}
         <button

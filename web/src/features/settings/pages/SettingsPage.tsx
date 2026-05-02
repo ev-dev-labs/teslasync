@@ -4,7 +4,7 @@ import { PageContainer } from '@/components/layout'
 import { GlassPanel, Button, IconBox } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
 import { usePageTitle } from '@/hooks/usePageTitle'
-import { resetTour } from '@/hooks/useTour'
+import { dispatchTourLauncherOpen } from '@/lib/tourRegistry'
 import { cn } from '@/lib/cn'
 import { Zap, ExternalLink, Download, PlayCircle } from 'lucide-react'
 
@@ -83,7 +83,7 @@ export default function SettingsPage() {
 
       {/* Onboarding Tour */}
       <FadeIn delay={0.2}>
-        <GlassPanel className="p-5 flex items-center gap-4">
+        <GlassPanel className="p-5 flex items-center gap-4" data-tour="settings-tour">
           <IconBox color="cyan">
             <PlayCircle className="h-5 w-5" />
           </IconBox>
@@ -93,13 +93,10 @@ export default function SettingsPage() {
           </div>
           <Button
             variant="ghost"
-            onClick={() => {
-              resetTour()
-              window.location.href = '/'
-            }}
+            onClick={() => dispatchTourLauncherOpen()}
           >
             <PlayCircle className="h-4 w-4 mr-2" />
-            {t('tour.restart', 'Restart Tour')}
+            {t('tour.restart', 'Open Tour Launcher')}
           </Button>
         </GlassPanel>
       </FadeIn>

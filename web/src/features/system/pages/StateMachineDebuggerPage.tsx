@@ -402,7 +402,7 @@ export default function StateMachineDebuggerPage() {
       subtitle={t('fsm.subtitle', 'Multi-FSM transition analysis — vehicle, drive, charge, command, notification')}
       loading={stateLoading && transLoading && statsLoading}
       actions={
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" data-tour="debugger-share">
           <span className="hidden items-center gap-1 text-xs text-[var(--text-muted)] sm:flex">
             <RefreshCw className={cn('h-3 w-3', stateFetching && 'animate-spin')} />
             {t('fsm.autoRefresh', 'Live 10s')}
@@ -528,7 +528,8 @@ export default function StateMachineDebuggerPage() {
 
       {/* ──── Phase 40 / Prompt 58 — Live controls + state timeline + inspector ──── */}
       <FadeIn delay={0.18}>
-        <GlassPanel className="p-4 sm:p-5 space-y-4">
+        <GlassPanel className="p-4 sm:p-5 space-y-4" data-tour="debugger-timeline">
+          <div data-tour="debugger-controls">
           <LiveControls
             isLive={isLive}
             onToggleLive={(live) => {
@@ -544,6 +545,7 @@ export default function StateMachineDebuggerPage() {
             onClearBuffer={handleClearBuffer}
             bufferCount={visibleTransitions.length}
           />
+          </div>
           <StateTimeline
             transitions={visibleTransitions}
             fsmType={fsmType === 'all' ? 'vehicle' : fsmType}
@@ -554,6 +556,7 @@ export default function StateMachineDebuggerPage() {
             }}
             windowMinutes={windowMinutes}
           />
+          <div data-tour="debugger-source-badges">
           <SnapshotInspector
             fsmType={selectedTransition?.fsm_type || (fsmType === 'all' ? 'vehicle' : fsmType)}
             transition={selectedTransition}
@@ -561,6 +564,7 @@ export default function StateMachineDebuggerPage() {
             previousSnapshot={previousSnapshot ?? null}
             loading={snapshotFetching}
           />
+          </div>
         </GlassPanel>
       </FadeIn>
 

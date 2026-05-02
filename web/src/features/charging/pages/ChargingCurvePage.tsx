@@ -191,14 +191,14 @@ export default function ChargingCurvePage() {
         {/* Single Session Curve + Detail Sidebar */}
         <FadeIn delay={0.1}>
           {selectedSession ? (
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3" data-tour="charging-curve">
               <div className="lg:col-span-2">
                 <SessionCurveChart curveData={curveData} />
               </div>
               <SessionDetailPanel session={selectedSession} currencySymbol={currencySymbol} />
             </div>
           ) : (
-            <GlassPanel className="flex h-48 items-center justify-center">
+            <GlassPanel className="flex h-48 items-center justify-center" data-tour="charging-curve">
               <p className="text-sm text-white/40">
                 {t(
                   'charging.curve.selectSessionHint',

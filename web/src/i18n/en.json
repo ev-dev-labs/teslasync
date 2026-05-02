@@ -1242,6 +1242,7 @@
       "settings": "Open settings",
       "shortcuts": "Show keyboard shortcuts",
       "help": "Open documentation",
+      "tour": "Show tours",
       "dashboardEdit": "Edit dashboard layout",
       "dashboardSwitch": "Switch dashboard layout…",
       "dashboardAddWidget": "Add widget to dashboard",
@@ -1525,7 +1526,56 @@
     "next": "Next",
     "title": "Onboarding Tour",
     "description": "Re-run the guided walkthrough of TeslaSync features",
-    "restart": "Restart Tour"
+    "restart": "Restart Tour",
+    "openLauncher": "Show tours",
+    "takeATour": "Take a tour",
+    "dialogLabel": "Onboarding tour",
+    "launcher": {
+      "title": "Take a tour",
+      "subtitle": "Guided walkthroughs for every major feature.",
+      "recommendedHere": "Recommended for this page",
+      "completed": "Completed",
+      "start": "Start",
+      "replay": "Replay",
+      "resetAll": "Reset all tours",
+      "close": "Close",
+      "startAria": "Start {{tour}} tour",
+      "replayAria": "Replay {{tour}} tour"
+    },
+    "tours": {
+      "main": {
+        "title": "TeslaSync overview",
+        "description": "The 60-second tour: sidebar, dashboard layout, edit mode, and keyboard shortcuts."
+      },
+      "alerts": {
+        "title": "Alerts & Alert Studio",
+        "description": "Filter, snooze, and design alert rules with conditions, channels, and test runs."
+      },
+      "charging": {
+        "title": "Charging insights",
+        "description": "Sessions, cost analysis, and the charging-curve viewer for any session."
+      },
+      "drives": {
+        "title": "Drives & replay",
+        "description": "Drive history, Saved Views, and the trip replay scrubber with markers."
+      },
+      "vehicles": {
+        "title": "Vehicles & access",
+        "description": "Fleet overview, per-vehicle detail tabs, and managing drivers/access."
+      },
+      "automations": {
+        "title": "Automation builder",
+        "description": "Triggers, conditions, actions, and conflict detection for rules."
+      },
+      "settings": {
+        "title": "Settings & preferences",
+        "description": "Theme, units, notification channels, and Saved Views — all in one place."
+      },
+      "debugger": {
+        "title": "FSM Debugger",
+        "description": "Timeline, source-layer badges, freeze/step controls, and shareable permalinks."
+      }
+    }
   },
   "alerts": {
     "toast": {

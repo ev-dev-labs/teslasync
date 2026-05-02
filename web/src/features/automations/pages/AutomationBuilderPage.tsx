@@ -617,6 +617,7 @@ export default function AutomationBuilderPage() {
         </FadeIn>
 
         <FadeIn delay={0.05}>
+          <div data-tour="automation-builder">
           <FormSection
             title={t('automations.builder.when', 'When (Trigger)')}
             description={t(
@@ -648,9 +649,11 @@ export default function AutomationBuilderPage() {
               </GlassPanel>
             )}
           </FormSection>
+          </div>
         </FadeIn>
 
         <FadeIn delay={0.1}>
+          <div data-tour="automation-conditions">
           <FormSection
             title={t('automations.builder.onlyIf', 'Only If (Conditions)')}
             description={t(
@@ -663,9 +666,11 @@ export default function AutomationBuilderPage() {
               onChange={(conditions) => update('conditions', conditions)}
             />
           </FormSection>
+          </div>
         </FadeIn>
 
         <FadeIn delay={0.15}>
+          <div data-tour="automation-actions">
           <FormSection
             title={t('automations.builder.then', 'Then (Actions)')}
             description={t(
@@ -679,11 +684,14 @@ export default function AutomationBuilderPage() {
               onChange={(actions) => update('actions', actions)}
             />
           </FormSection>
+          </div>
         </FadeIn>
 
         {conflicts.length > 0 && (
           <FadeIn delay={0.2}>
+            <div data-tour="automation-conflicts">
             <ConflictWarnings conflicts={conflicts} />
+            </div>
           </FadeIn>
         )}
 

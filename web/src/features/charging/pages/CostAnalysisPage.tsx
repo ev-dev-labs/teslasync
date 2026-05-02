@@ -111,12 +111,14 @@ export default function CostAnalysisPage() {
       }
     >
       <div className="space-y-6">
+        <div data-tour="cost-analysis">
         <CostSummaryCards
           coreStats={coreStats}
           gasPrice={gasPrice}
           distanceUnit={distanceUnit}
           isMiles={isMiles}
         />
+        </div>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <MonthlyCostChart data={monthlyData} vehicleId={vehicleId} />

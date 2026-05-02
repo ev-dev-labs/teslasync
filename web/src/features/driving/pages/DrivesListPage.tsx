@@ -379,11 +379,13 @@ export default function DrivesListPage() {
       error={drivesError as Error | null}
       copyLink
       actions={
-        <SavedViewMenu
-          route="/drives"
-          currentQuery={savedView.currentQuery}
-          onApply={savedView.apply}
-        />
+        <div data-tour="drives-saved-views">
+          <SavedViewMenu
+            route="/drives"
+            currentQuery={savedView.currentQuery}
+            onApply={savedView.apply}
+          />
+        </div>
       }
     >
       {/* Date range + search filter */}
@@ -578,7 +580,7 @@ export default function DrivesListPage() {
       {/* Sort controls + export */}
       <FadeIn>
         {sortedDrives.length > 0 ? (
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3" data-tour="drives-list">
             <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2">
               <Route className="h-4 w-4 text-cyan-400" />
               {t('drives.allDrives', 'All Drives')}

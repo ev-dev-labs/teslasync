@@ -385,12 +385,14 @@ export default function TripReplayPage() {
           : `Drive #${id}`,
       }}
       actions={
-        <Link to={`/drives/${id}`}>
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="mr-1 h-4 w-4" />
-            {t('replay.backToDrive', 'Back to Drive')}
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2" data-tour="drive-replay-share">
+          <Link to={`/drives/${id}`}>
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="mr-1 h-4 w-4" />
+              {t('replay.backToDrive', 'Back to Drive')}
+            </Button>
+          </Link>
+        </div>
       }
     >
       {positions.length === 0 && !isLoading ? (
@@ -470,6 +472,7 @@ export default function TripReplayPage() {
       {/*  Section 2 — Playback Controls                                   */}
       {/* ================================================================ */}
       <FadeIn delay={0.05}>
+        <div data-tour="drive-replay-scrubber">
         <PlaybackControls
           isPlaying={replay.isPlaying}
           speed={replay.speed}
@@ -494,6 +497,7 @@ export default function TripReplayPage() {
             ) : undefined
           }
         />
+        </div>
       </FadeIn>
 
       {/* ================================================================ */}

@@ -183,7 +183,7 @@ export default function VehicleAccessPage() {
     >
       {/* ── Drivers Section ───────────────────────────────────── */}
       <FadeIn>
-        <GlassPanel className="p-6">
+        <GlassPanel className="p-6" data-tour="vehicle-access">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Users className="h-5 w-5 text-cyan-400" />

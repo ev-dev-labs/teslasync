@@ -2,6 +2,7 @@ import type { NavigateFunction } from 'react-router-dom'
 import type { TFunction } from 'i18next'
 import type { ModeId, ThemeId } from '@/components/ui/ThemeProvider'
 import { Icons, type LucideIcon } from '@/lib/icons'
+import { TOUR_OPEN_LAUNCHER_EVENT } from '@/lib/tourRegistry'
 
 export type { LucideIcon }
 
@@ -320,6 +321,17 @@ export const commandRegistry: CommandDefinition[] = [
     section: 'actions',
     keywords: ['help', 'docs', 'documentation', 'manual', 'guide'],
     perform: (ctx) => ctx.navigate('/changelog'),
+  },
+  {
+    id: 'action.tour',
+    labelKey: 'palette.cmd.tour',
+    labelFallback: 'Show tours',
+    icon: Icons.helpCircle,
+    section: 'actions',
+    keywords: ['tour', 'tours', 'walkthrough', 'onboarding', 'guide', 'help', 'tutorial'],
+    perform: () => {
+      window.dispatchEvent(new CustomEvent(TOUR_OPEN_LAUNCHER_EVENT))
+    },
   },
 
   // ── Dashboard customization (Phase 40 / Prompt 30) ────────────────────────

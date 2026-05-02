@@ -28,7 +28,7 @@ export function NotificationSettings() {
 
   return (
     <FadeIn delay={0.13}>
-      <GlassPanel className="p-6 space-y-5">
+      <GlassPanel className="p-6 space-y-5" data-tour="settings-notifications">
         <div className="flex items-center gap-3">
           <IconBox color="cyan">
             <Bell className="h-5 w-5" />

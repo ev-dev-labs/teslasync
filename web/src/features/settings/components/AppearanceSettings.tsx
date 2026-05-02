@@ -49,7 +49,7 @@ export function AppearanceSettings() {
 
   return (
     <FadeIn delay={0.15}>
-      <GlassPanel className="p-6 space-y-6">
+      <GlassPanel className="p-6 space-y-6" data-tour="settings-appearance">
         <div className="flex items-center gap-3">
           <IconBox color="purple">
             <Palette className="h-5 w-5" />

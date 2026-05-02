@@ -140,13 +140,15 @@ export default function ChargingListPage() {
       }
     >
       <FadeIn>
-        <DateRangeFilter
-          startDate={startDate}
-          endDate={endDate}
-          onStartDateChange={setStartDate}
-          onEndDateChange={setEndDate}
-          onApply={() => setPage(1)}
-        />
+        <div data-tour="charging-filters">
+          <DateRangeFilter
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+            onApply={() => setPage(1)}
+          />
+        </div>
       </FadeIn>
 
       <QueryError error={error as Error} onRetry={refetch} />
@@ -178,6 +180,7 @@ export default function ChargingListPage() {
 
       {optimizer && <OptimizerSection optimizer={optimizer} />}
 
+      <div data-tour="charging-list">
       <SessionListSection
         sessions={sessions}
         filteredSessions={filteredSessions}
@@ -204,6 +207,7 @@ export default function ChargingListPage() {
         onClearSelection={clearSessionSelection}
         onBulkDelete={handleBulkDeleteCharging}
       />
+      </div>
     </PageContainer>
   );
 }

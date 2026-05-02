@@ -1253,7 +1253,7 @@ export default function AlertStudio() {
         </div>
 
         <div className="lg:col-span-8 space-y-4">
-          <GlassPanel className="p-4">
+          <GlassPanel className="p-4" data-tour="alert-studio-builder">
             <div className="flex items-center gap-2 mb-4">
               <Icons.pencil className="h-4 w-4 text-neon-cyan" />
               <p className="text-sm font-medium text-[var(--text-primary)]">
@@ -1536,7 +1536,7 @@ export default function AlertStudio() {
                   </span>
                 </div>
 
-                <GlassPanel className="p-3">
+                <GlassPanel className="p-3" data-tour="alert-studio-channels">
                   {channelsLoading ? (
                     <div className="space-y-2">
                       <Skeleton className="h-5 w-48 rounded-lg" />

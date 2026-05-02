@@ -4,10 +4,18 @@ import { OfflineBanner } from '../feedback/OfflineBanner'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { GlobalShortcuts } from '@/lib/globalShortcuts'
-import { useTour, isTourCompleted } from '@/hooks/useTour'
+import { useTour } from '@/hooks/useTour'
 import { GotoIndicator } from '../feedback/GotoIndicator'
 import { KeyboardShortcutsModal } from '../feedback/KeyboardShortcutsModal'
 import { TourOverlay } from '../feedback/TourOverlay'
+import { TourLauncher } from '@/features/onboarding/TourLauncher'
+import {
+  TOUR_START_EVENT,
+  TOURS,
+  dispatchTourLauncherOpen,
+  isTourCompleted as isTourCompletedById,
+  type TourStartEventDetail,
+} from '@/lib/tourRegistry'
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
@@ -22,7 +30,6 @@ import Logo from '../ui/Logo'
 import { Button, ThemePicker } from '@/components/ui'
 import { Breadcrumbs } from './Breadcrumbs'
 import { VehiclePicker } from './VehiclePicker'
-import { MAIN_TOUR_STEPS } from '@/features/onboarding/tourSteps'
 import { request } from '@/api/client'
 import { getVehicleState } from '@/api/vehicles'
 import type { Alert, Vehicle, VersionInfo, UpdateCheckResult, StaleSessionsResponse } from '@/api/types'
@@ -641,16 +648,49 @@ export default function Layout() {
     return () => window.removeEventListener('toggle-keyboard-shortcuts', handler)
   }, [toggleCheatSheet])
 
-  // Onboarding tour
-  const tour = useTour(MAIN_TOUR_STEPS)
+  // Onboarding tour — Phase-40 / Prompt 65.
+  // Only one tour can be active at a time. The launcher (or a CustomEvent
+  // dispatched from anywhere) sets `activeTourId`; we wire the matching
+  // definition into useTour so completion is persisted under the per-tour
+  // storage key. Auto-start is intentionally limited to the dashboard tour.
+  const [activeTourId, setActiveTourId] = useState<string | null>(null)
+  const activeTourDef = activeTourId ? TOURS[activeTourId] ?? null : null
+  const tour = useTour(
+    activeTourDef?.steps ?? [],
+    activeTourDef ? { id: activeTourDef.id, version: activeTourDef.version } : undefined,
+  )
+
+  // Listen for "start tour" events from the launcher / palette / settings.
   useEffect(() => {
-    if (!isTourCompleted()) {
-      const timer = setTimeout(() => tour.start(), 1500)
-      return () => clearTimeout(timer)
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<TourStartEventDetail>).detail
+      if (!detail?.id || !TOURS[detail.id]) return
+      setActiveTourId(detail.id)
     }
+    window.addEventListener(TOUR_START_EVENT, handler)
+    return () => window.removeEventListener(TOUR_START_EVENT, handler)
   }, [])
 
-  // Auto-skip tour steps whose target element is missing (e.g. sidebar items on mobile)
+  // When activeTourId changes (event-triggered) start the tour.
+  const tourStartRef = useRef(tour.start)
+  tourStartRef.current = tour.start
+  useEffect(() => {
+    if (!activeTourId) return
+    const timer = window.setTimeout(() => tourStartRef.current(), 50)
+    return () => window.clearTimeout(timer)
+  }, [activeTourId])
+
+  // When the tour finishes / is skipped, clear activeTourId so a future
+  // launch can re-trigger the same tour.
+  const wasTourActiveRef = useRef(false)
+  useEffect(() => {
+    if (wasTourActiveRef.current && !tour.isActive) {
+      setActiveTourId(null)
+    }
+    wasTourActiveRef.current = tour.isActive
+  }, [tour.isActive])
+
+  // Auto-skip steps whose target element is missing (e.g. mobile hides them).
   useEffect(() => {
     if (tour.isActive && tour.step && !tour.targetRect) {
       const timer = setTimeout(() => tour.next(), 400)
@@ -676,6 +716,23 @@ export default function Layout() {
   const vehicleCount = vehicles?.length ?? 0
   const onlineVehicles = vehicles?.filter(v => v.state === 'online').length ?? 0
   const isConnected = !!primaryState?.live
+
+  // Auto-start the dashboard tour the first time a user lands on `/` with at
+  // least one vehicle linked. Per-feature tours stay launcher-only — see
+  // `tourRegistry.TOURS[*].autoStart` for the predicate. Re-evaluates when
+  // the route or fleet size changes; the per-tour completion key (versioned)
+  // prevents duplicate prompts.
+  useEffect(() => {
+    if (activeTourId) return
+    for (const def of Object.values(TOURS)) {
+      if (!def.autoStart) continue
+      if (isTourCompletedById(def.id, def.version)) continue
+      if (def.autoStart({ pathname: location.pathname, vehicleCount })) {
+        const timer = window.setTimeout(() => setActiveTourId(def.id), 1500)
+        return () => window.clearTimeout(timer)
+      }
+    }
+  }, [location.pathname, vehicleCount, activeTourId])
 
   // Stale sessions count for Data Repair badge
   const { data: staleSessions } = useQuery({ queryKey: ['stale-sessions-sidebar'], queryFn: () => request<StaleSessionsResponse>('/data-repair/stale-sessions'), refetchInterval: 60_000, retry: 1 })
@@ -1192,6 +1249,17 @@ export default function Layout() {
           </GlassPanel>
           <p data-tour="keyboard-hint" className="text-center text-[10px] text-[var(--text-muted)] mt-1">
             {t('shortcuts.hint', 'Press')} <kbd className="px-1 rounded bg-[var(--surface-2)] text-[var(--text-secondary)]">?</kbd> {t('shortcuts.hintSuffix', 'for shortcuts')}
+            <span className="mx-1.5 text-[var(--text-muted)]/60">·</span>
+            <button
+              type="button"
+              onClick={() => dispatchTourLauncherOpen()}
+              className="inline-flex items-center gap-1 rounded text-[10px] text-[var(--text-muted)] underline-offset-2 hover:text-[var(--text-secondary)] hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--theme-primary)]"
+              aria-label={t('tour.launcher.openAria', 'Open tour launcher')}
+              data-tour-launcher-trigger
+            >
+              <Icons.helpCircle className="h-3 w-3" aria-hidden />
+              {t('tour.launcher.openShort', 'Take a tour')}
+            </button>
           </p>
         </div>
       </aside>
@@ -1290,6 +1358,9 @@ export default function Layout() {
           onSkip={tour.skip}
         />
       )}
+
+      {/* Tour launcher (Phase-40 / Prompt 65) — opens via TOUR_OPEN_LAUNCHER_EVENT */}
+      <TourLauncher />
     </div>
   )
 }

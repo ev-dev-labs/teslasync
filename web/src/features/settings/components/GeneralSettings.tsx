@@ -121,7 +121,7 @@ export function GeneralSettings() {
 
   return (
     <FadeIn delay={0.1}>
-      <GlassPanel className="p-6 space-y-6">
+      <GlassPanel className="p-6 space-y-6" data-tour="settings-units">
         <div className="flex items-center gap-3">
           <IconBox color="cyan">
             <SettingsIcon className="h-5 w-5" />
