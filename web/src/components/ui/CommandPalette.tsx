@@ -533,32 +533,16 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
 
   useEffect(() => { setSelectedIndex(0) }, [displayItems])
 
-  // Keyboard shortcut to open. Skip when focus is in an editable element so
-  // typing Ctrl+K inside a form field doesn't stomp on browser/native search.
-  // Esc still fires from anywhere — closing modals from inside an input is
-  // expected (and the palette's own input is the most common Esc target).
+  // Esc closes the palette (or pops vehicle-select mode). Esc fires from
+  // anywhere — closing modals from inside an input is expected, and the
+  // palette's own input is the most common Esc target.
   useEffect(() => {
-    function isEditableTarget(target: EventTarget | null): boolean {
-      const el = target as HTMLElement | null
-      if (!el) return false
-      const tag = el.tagName
-      return (
-        tag === 'INPUT' ||
-        tag === 'TEXTAREA' ||
-        tag === 'SELECT' ||
-        el.isContentEditable === true
-      )
-    }
-
     function handleKeyDown(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        // Allow Ctrl+K toggle from within the palette's own input (so users
-        // can dismiss the palette without taking their hand off the keyboard).
-        const inPaletteInput = e.target === inputRef.current
-        if (isEditableTarget(e.target) && !inPaletteInput) return
-        e.preventDefault()
-        setOpen(prev => !prev)
-      }
+      // Ctrl+K is owned by useKeyboardShortcuts (mounted in Layout) which
+      // dispatches the `toggle-command-palette` custom event. Listening for
+      // Ctrl+K here as well caused the palette to toggle twice on a single
+      // keypress (open → immediately close), so this branch was removed.
+      // See the `toggle-command-palette` listener below for the real wiring.
       if (e.key === 'Escape') {
         if (mode === 'vehicle-select') {
           goBack()
@@ -816,7 +800,8 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
 export function CommandPaletteTrigger() {
   return (
     <button
-      onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
+      type="button"
+      onClick={() => window.dispatchEvent(new CustomEvent('toggle-command-palette'))}
       className="flex w-full items-center gap-3 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-1)] px-4 py-2.5 text-sm text-[var(--text-muted)] transition-all hover:border-[var(--theme-primary)] hover:text-[var(--text-secondary)]"
     >
       <Search className="h-4 w-4" />

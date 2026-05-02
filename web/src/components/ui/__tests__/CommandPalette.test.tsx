@@ -7,6 +7,7 @@ import { ThemeProvider } from '@/components/ui/ThemeProvider'
 import { SelectedVehicleProvider } from '@/store/selectedVehicle'
 import { CommandPalette, addRecentCommand, getRecentCommands } from '../CommandPalette'
 import { vehicleKeys } from '@/api/hooks/useVehicles'
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import type { Vehicle } from '@/types/vehicle'
 import type { ReactNode } from 'react'
 
@@ -50,6 +51,22 @@ function makeWrapper(vehicles: Vehicle[]) {
       </QueryClientProvider>
     )
   }
+}
+
+// Mounts the global keyboard-shortcut hook the same way Layout does in
+// production. CommandPalette no longer owns its Ctrl+K binding directly;
+// the shortcut hook translates Ctrl+K into the `toggle-command-palette`
+// custom event that the palette listens for.
+function KeyboardShortcutsHost() {
+  useKeyboardShortcuts()
+  return null
+}
+
+// Open the palette the same way `useKeyboardShortcuts` does in production —
+// by dispatching the custom event the palette subscribes to. Avoids needing
+// to mount the shortcut hook in every test that just wants the modal open.
+function openPaletteViaEvent() {
+  act(() => { window.dispatchEvent(new CustomEvent('toggle-command-palette')) })
 }
 
 beforeEach(() => {
@@ -99,7 +116,13 @@ describe('CommandPalette recent storage', () => {
 describe('CommandPalette keyboard shortcut', () => {
   it('opens on Ctrl+K when focus is on the body', async () => {
     const Wrapper = makeWrapper(makeVehicles())
-    render(<CommandPalette />, { wrapper: Wrapper })
+    render(
+      <>
+        <KeyboardShortcutsHost />
+        <CommandPalette />
+      </>,
+      { wrapper: Wrapper },
+    )
     expect(screen.queryByPlaceholderText(/Search pages/i)).toBeNull()
 
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
@@ -112,6 +135,7 @@ describe('CommandPalette keyboard shortcut', () => {
     const Wrapper = makeWrapper(makeVehicles())
     render(
       <>
+        <KeyboardShortcutsHost />
         <input data-testid="external-input" />
         <CommandPalette />
       </>,
@@ -145,7 +169,7 @@ describe('CommandPalette search', () => {
     const Wrapper = makeWrapper(makeVehicles())
     render(<CommandPalette />, { wrapper: Wrapper })
 
-    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+    openPaletteViaEvent()
     const input = await screen.findByPlaceholderText(/Search pages/i) as HTMLInputElement
     fireEvent.change(input, { target: { value: 'btr' } })
 
@@ -156,7 +180,7 @@ describe('CommandPalette search', () => {
     const Wrapper = makeWrapper(makeVehicles())
     render(<CommandPalette />, { wrapper: Wrapper })
 
-    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+    openPaletteViaEvent()
     const input = await screen.findByPlaceholderText(/Search pages/i) as HTMLInputElement
     fireEvent.change(input, { target: { value: 'switch' } })
 
@@ -172,7 +196,7 @@ describe('CommandPalette search', () => {
     const Wrapper = makeWrapper(makeVehicles())
     render(<CommandPalette />, { wrapper: Wrapper })
 
-    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+    openPaletteViaEvent()
     const input = await screen.findByPlaceholderText(/Search pages/i) as HTMLInputElement
     fireEvent.change(input, { target: { value: 'theme' } })
 
@@ -184,7 +208,7 @@ describe('CommandPalette search', () => {
     const Wrapper = makeWrapper(makeVehicles())
     render(<CommandPalette />, { wrapper: Wrapper })
 
-    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+    openPaletteViaEvent()
     const input = await screen.findByPlaceholderText(/Search pages/i) as HTMLInputElement
     fireEvent.change(input, { target: { value: 'refresh' } })
 
@@ -200,7 +224,7 @@ describe('CommandPalette recent ordering', () => {
     const Wrapper = makeWrapper(makeVehicles())
     render(<CommandPalette />, { wrapper: Wrapper })
 
-    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+    openPaletteViaEvent()
 
     // The "Recent" section should appear and contain the recent registry entry
     await waitFor(() => {

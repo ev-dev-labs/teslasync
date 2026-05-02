@@ -1,4 +1,5 @@
 import { forwardRef, useEffect, useId, useImperativeHandle, useRef, type HTMLAttributes, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
@@ -107,7 +108,15 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
       full: 'sm:max-w-[min(96vw,1100px)]',
     };
 
-    return (
+    // Portal to <body> so the modal escapes any ancestor that creates a
+    // containing block for `position: fixed` (e.g. `backdrop-filter`,
+    // `transform`, `filter`, `perspective` — the StatusBar and sidebar both
+    // use `backdrop-blur-xl`). Without this, an inline modal rendered from a
+    // status-bar segment is anchored to the bar's bbox, not the viewport, and
+    // overflows the screen.
+    if (typeof document === 'undefined') return null;
+
+    const overlay = (
       <div className="fixed inset-0 z-50 flex items-stretch justify-stretch sm:items-center sm:justify-center sm:p-4">
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
         <div
@@ -151,6 +160,8 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
         </div>
       </div>
     );
+
+    return createPortal(overlay, document.body);
   },
 );
 Modal.displayName = 'Modal';

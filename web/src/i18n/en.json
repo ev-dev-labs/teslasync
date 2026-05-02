@@ -77,12 +77,11 @@
     "charging": "Charging",
     "energy": "Energy",
     "battery": "Battery Health",
-    "analytics": {
-      "periodCompare": "Period Comparison",
-      "periodCompareSub": "This week vs last week",
-      "fleetCompare": "Fleet Comparison",
-      "fleetCompareSub": "Vehicle vs vehicle"
-    },
+    "analytics": "Analytics",
+    "analyticsPeriodCompare": "Period Comparison",
+    "analyticsPeriodCompareSub": "This week vs last week",
+    "analyticsFleetCompare": "Fleet Comparison",
+    "analyticsFleetCompareSub": "Vehicle vs vehicle",
     "efficiency": "Efficiency",
     "mileage": "Mileage",
     "timeline": "Timeline",

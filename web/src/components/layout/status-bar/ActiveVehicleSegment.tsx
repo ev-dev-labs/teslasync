@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Car, Check, ChevronUp } from 'lucide-react';
 import { Tooltip } from '@/components/ui';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useVehicleState } from '@/api/hooks/useVehicles';
+import { useSettings } from '@/hooks/useSettings';
 import { cn } from '@/lib/cn';
 
 /**
@@ -26,6 +28,16 @@ export function ActiveVehicleSegment({ iconOnly = false }: ActiveVehicleSegmentP
   const { vehicle, vehicles, vehicleId, setVehicleId } = useSelectedVehicle();
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Footer-tier polling: 60s is plenty for an always-mounted micro-segment.
+  // The full-vehicle state hook is shared via TanStack Query dedup with any
+  // page-tier consumer, so this just lengthens the safety-net interval.
+  const { data: stateData } = useVehicleState(vehicleId ?? 0, { refetchInterval: 60_000 });
+  const { convertDistance, distanceUnit } = useSettings();
+  const liveState = stateData?.state;
+  const metricsLabel = liveState
+    ? `${liveState.battery_level ?? 0}% · ${Math.round(convertDistance(liveState.rated_range ?? 0))}${distanceUnit}`
+    : null;
 
   // Close popover on outside click / Escape so it behaves like a real menu.
   useEffect(() => {
@@ -67,6 +79,7 @@ export function ActiveVehicleSegment({ iconOnly = false }: ActiveVehicleSegmentP
     <span>
       {t('statusBar.vehicle.tooltip', 'Active vehicle')} · {label}
       {subLabel ? ` · ${subLabel}` : ''}
+      {metricsLabel ? ` · ${metricsLabel}` : ''}
     </span>
   );
 
@@ -83,7 +96,14 @@ export function ActiveVehicleSegment({ iconOnly = false }: ActiveVehicleSegmentP
           )}
         >
           <Car className="h-3 w-3 shrink-0" aria-hidden />
-          {!iconOnly && <span className="font-medium truncate max-w-[160px]">{label}</span>}
+          {!iconOnly && (
+            <>
+              <span className="font-medium truncate max-w-[160px]">{label}</span>
+              {metricsLabel && (
+                <span className="text-[var(--text-muted)] shrink-0">· {metricsLabel}</span>
+              )}
+            </>
+          )}
         </span>
       </Tooltip>
     );
@@ -107,6 +127,9 @@ export function ActiveVehicleSegment({ iconOnly = false }: ActiveVehicleSegmentP
           {!iconOnly && (
             <>
               <span className="font-medium truncate max-w-[140px]">{label}</span>
+              {metricsLabel && (
+                <span className="text-[var(--text-muted)] shrink-0">· {metricsLabel}</span>
+              )}
               <ChevronUp className={cn('h-3 w-3 shrink-0 transition-transform', open ? '' : 'rotate-180')} aria-hidden />
             </>
           )}

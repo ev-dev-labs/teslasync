@@ -94,12 +94,13 @@ describe('useConfirm', () => {
 
   it('resolves false when the Modal backdrop (click-outside) is clicked', async () => {
     let resolved: boolean | undefined
-    const { container } = render(<Harness onResult={(ok) => { resolved = ok }} />)
+    render(<Harness onResult={(ok) => { resolved = ok }} />)
     openDialog()
 
     // The Modal renders its backdrop as a sibling of the dialog, marked
-    // `aria-hidden="true"`. Click it to simulate click-outside.
-    const backdrop = container.querySelector('[aria-hidden="true"]') as HTMLElement | null
+    // `aria-hidden="true"`. Modal portals to `document.body` so query the
+    // whole document (not the test's render container).
+    const backdrop = document.body.querySelector('[aria-hidden="true"]') as HTMLElement | null
     expect(backdrop).not.toBeNull()
     await act(async () => {
       fireEvent.click(backdrop!)

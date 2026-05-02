@@ -2,6 +2,7 @@ import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import InstallPrompt from '../feedback/InstallPrompt'
 import { OfflineBanner } from '../feedback/OfflineBanner'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { GlobalShortcuts } from '@/lib/globalShortcuts'
 import { useTour } from '@/hooks/useTour'
@@ -25,24 +26,20 @@ import { RouteTransition } from '@/components/motion'
 import { BottomTabBar, BOTTOM_TAB_PATHS } from './BottomTabBar'
 import { StatusBar, useStatusBarPrefs } from './StatusBar'
 import { CommandPalette, CommandPaletteTrigger } from '../ui/CommandPalette'
-import { ServiceStatusBanner, SystemHealthDot } from '../data-display/ServiceStatus'
-import { LiveIndicator } from '../data-display/LiveIndicator'
+import { ServiceStatusBanner } from '../data-display/ServiceStatus'
 import Logo from '../ui/Logo'
 import { Button, ThemePicker } from '@/components/ui'
 import { Breadcrumbs } from './Breadcrumbs'
 import { VehiclePicker } from './VehiclePicker'
 import { request } from '@/api/client'
-import { getVehicleState } from '@/api/vehicles'
-import type { Alert, Vehicle, VersionInfo, UpdateCheckResult, StaleSessionsResponse } from '@/api/types'
+import type { Alert, Vehicle, VersionInfo, StaleSessionsResponse } from '@/api/types'
 import { useRealtimeEvents } from '../../hooks/useRealtimeEvents'
 import { useNotificationListener } from '../../hooks/useNotificationListener'
 import { useTitleBadge } from '../../hooks/useTitleBadge'
 import { useFaviconBadge } from '../../hooks/useFaviconBadge'
 import { useCriticalAlertFlash } from '../../hooks/useCriticalAlertFlash'
 import { useToast } from '../feedback/Toast'
-import { useSettings } from '../../hooks/useSettings'
 import { useUnreadCount } from '@/api/hooks/useNotifications'
-import { GlassPanel } from '../ui/GlassPanel'
 import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough'
 import { Icons } from '@/lib/icons';
 
@@ -56,8 +53,8 @@ const navI18nKeys: Record<string, string> = {
   'Battery Health': 'nav.battery',
   'Analytics': 'nav.analytics',
   'Vehicle Comparison': 'nav.vehicleComparison',
-  'Fleet Comparison': 'nav.analytics.fleetCompare',
-  'Period Comparison': 'nav.analytics.periodCompare',
+  'Fleet Comparison': 'nav.analyticsFleetCompare',
+  'Period Comparison': 'nav.analyticsPeriodCompare',
   'Efficiency': 'nav.efficiency',
   'Mileage': 'nav.mileage',
   'Timeline': 'nav.timeline',
@@ -192,13 +189,13 @@ const SECTION_ICON_STYLES: Record<string, { accent: string; surface: string; rin
   'Health & Service': { accent: 'text-red-300', surface: 'bg-red-400/10', ring: 'ring-red-400/20', dot: 'bg-red-400' },
   Analytics: { accent: 'text-indigo-300', surface: 'bg-indigo-400/10', ring: 'ring-indigo-400/20', dot: 'bg-indigo-400' },
   Controls: { accent: 'text-fuchsia-300', surface: 'bg-fuchsia-400/10', ring: 'ring-fuchsia-400/20', dot: 'bg-fuchsia-400' },
-  'Automations & Alerts': { accent: 'text-orange-300', surface: 'bg-orange-400/10', ring: 'ring-orange-400/20', dot: 'bg-orange-400' },
-  'Security & Safety': { accent: 'text-yellow-300', surface: 'bg-yellow-400/10', ring: 'ring-yellow-400/20', dot: 'bg-yellow-400' },
-  'Assistant & Media': { accent: 'text-pink-300', surface: 'bg-pink-400/10', ring: 'ring-pink-400/20', dot: 'bg-pink-400' },
-  'Account & Integration': { accent: 'text-blue-300', surface: 'bg-blue-400/10', ring: 'ring-blue-400/20', dot: 'bg-blue-400' },
+  Alerts: { accent: 'text-orange-300', surface: 'bg-orange-400/10', ring: 'ring-orange-400/20', dot: 'bg-orange-400' },
+  Security: { accent: 'text-yellow-300', surface: 'bg-yellow-400/10', ring: 'ring-yellow-400/20', dot: 'bg-yellow-400' },
+  Assistant: { accent: 'text-pink-300', surface: 'bg-pink-400/10', ring: 'ring-pink-400/20', dot: 'bg-pink-400' },
+  Integrations: { accent: 'text-blue-300', surface: 'bg-blue-400/10', ring: 'ring-blue-400/20', dot: 'bg-blue-400' },
   'Settings & Admin': { accent: 'text-slate-300', surface: 'bg-slate-400/10', ring: 'ring-slate-400/20', dot: 'bg-slate-400' },
-  'Data Management': { accent: 'text-teal-300', surface: 'bg-teal-400/10', ring: 'ring-teal-400/20', dot: 'bg-teal-400' },
-  'Signal Diagnostics': { accent: 'text-neon-cyan', surface: 'bg-cyan-400/10', ring: 'ring-cyan-400/20', dot: 'bg-neon-cyan' },
+  Data: { accent: 'text-teal-300', surface: 'bg-teal-400/10', ring: 'ring-teal-400/20', dot: 'bg-teal-400' },
+  Diagnostics: { accent: 'text-neon-cyan', surface: 'bg-cyan-400/10', ring: 'ring-cyan-400/20', dot: 'bg-neon-cyan' },
   Infrastructure: { accent: 'text-emerald-300', surface: 'bg-emerald-400/10', ring: 'ring-emerald-400/20', dot: 'bg-emerald-400' },
   Developer: { accent: 'text-orange-300', surface: 'bg-orange-400/10', ring: 'ring-orange-400/20', dot: 'bg-orange-400' },
   'Project Info': { accent: 'text-white/60', surface: 'bg-white/5', ring: 'ring-white/10', dot: 'bg-white/40' },
@@ -326,7 +323,7 @@ export const navSections = [
     ],
   },
   {
-    title: 'Automations & Alerts',
+    title: 'Alerts',
     items: [
       { to: '/automations', icon: Icons.workflow, label: 'Automations', color: 'text-neon-cyan' },
       { to: '/alerts', icon: Icons.notifications, label: 'Alerts', color: 'text-red-400' },
@@ -336,7 +333,7 @@ export const navSections = [
     ],
   },
   {
-    title: 'Security & Safety',
+    title: 'Security',
     items: [
       { to: '/security-access', icon: Icons.locked, label: 'Security & Access', color: 'text-emerald-400' },
       { to: '/safety-settings', icon: Icons.securityCheck, label: 'Safety Settings', color: 'text-amber-400' },
@@ -344,14 +341,14 @@ export const navSections = [
     ],
   },
   {
-    title: 'Assistant & Media',
+    title: 'Assistant',
     items: [
       { to: '/chatbot', icon: Icons.bot, label: 'Chatbot', color: 'text-cyan-400' },
       { to: '/media-player', icon: Icons.headphones, label: 'Media Player', color: 'text-pink-400' },
     ],
   },
   {
-    title: 'Account & Integration',
+    title: 'Integrations',
     items: [
       { to: '/tesla-account', icon: Icons.user, label: 'Tesla Account', color: 'text-blue-400' },
       { to: '/fleet-api', icon: Icons.cloud, label: 'Fleet API', color: 'text-sky-400' },
@@ -368,7 +365,7 @@ export const navSections = [
     ],
   },
   {
-    title: 'Data Management',
+    title: 'Data',
     items: [
       { to: '/data-export', icon: Icons.hardDriveDownload, label: 'Data Export', color: 'text-lime-400' },
       { to: '/backup', icon: Icons.databaseBackup, label: 'Backup & Restore', color: 'text-teal-400' },
@@ -376,7 +373,7 @@ export const navSections = [
     ],
   },
   {
-    title: 'Signal Diagnostics',
+    title: 'Diagnostics',
     items: [
       { to: '/live-monitor', icon: Icons.radioTower, label: 'Live Monitor', color: 'text-neon-green', dataTour: 'live-signals-section' },
       { to: '/signal-log', icon: Icons.database, label: 'Signal Log', color: 'text-cyan-400' },
@@ -484,17 +481,41 @@ function NotificationBell({ className }: { className?: string }) {
  * command palette, the dashboard first-run banner) can open the popover
  * without prop drilling.
  */
-function ThemeQuickSwitcher({ className }: { className?: string }) {
+function ThemeQuickSwitcher({
+  className,
+  placement = 'right',
+}: {
+  className?: string
+  /**
+   * Which side of the trigger to anchor the popover to. The popover
+   * grows AWAY from the anchored side, so use 'left' when the trigger
+   * sits near the left edge of the viewport (sidebar header) and
+   * 'right' when it sits near the right edge (mobile header).
+   */
+  placement?: 'left' | 'right'
+}) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const popoverRef = useRef<HTMLDivElement>(null)
+  // Position is computed from the trigger's bbox so the popover can be
+  // portaled into <body>. Portaling is required because the sidebar
+  // (which contains the trigger) creates a stacking context via
+  // backdrop-filter, and the main content area (`relative z-10`) sits
+  // above it — without a portal the popover renders BEHIND dashboard
+  // content that overflows into its area.
+  const [coords, setCoords] = useState<{ top: number; left?: number; right?: number } | null>(null)
 
   // Outside-click + Escape dismissal — same pattern as SavedViewMenu.
   useEffect(() => {
     if (!open) return
     const onClickOutside = (e: MouseEvent) => {
-      if (!containerRef.current?.contains(e.target as Node)) setOpen(false)
+      const target = e.target as Node
+      if (containerRef.current?.contains(target)) return
+      if (popoverRef.current?.contains(target)) return
+      setOpen(false)
     }
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false)
@@ -514,9 +535,38 @@ function ThemeQuickSwitcher({ className }: { className?: string }) {
     return () => window.removeEventListener('open-theme-popover', handler)
   }, [])
 
+  // Recompute popover coordinates whenever it opens or the viewport
+  // changes (resize, scroll). Uses capture-phase scroll so nested
+  // scroll containers also reposition the popover.
+  useEffect(() => {
+    if (!open) {
+      setCoords(null)
+      return
+    }
+    const update = () => {
+      const el = triggerRef.current
+      if (!el) return
+      const rect = el.getBoundingClientRect()
+      const top = rect.bottom + 8 // matches the previous mt-2 spacing
+      if (placement === 'left') {
+        setCoords({ top, left: rect.left })
+      } else {
+        setCoords({ top, right: window.innerWidth - rect.right })
+      }
+    }
+    update()
+    window.addEventListener('resize', update)
+    window.addEventListener('scroll', update, true)
+    return () => {
+      window.removeEventListener('resize', update)
+      window.removeEventListener('scroll', update, true)
+    }
+  }, [open, placement])
+
   return (
     <div ref={containerRef} className={`relative inline-block ${className ?? ''}`} data-role="theme-popover">
       <Button
+        ref={triggerRef}
         type="button"
         variant="ghost"
         aria-haspopup="dialog"
@@ -527,11 +577,18 @@ function ThemeQuickSwitcher({ className }: { className?: string }) {
       >
         <Icons.palette className="h-5 w-5" aria-hidden="true" />
       </Button>
-      {open && (
+      {open && coords && createPortal(
         <div
+          ref={popoverRef}
           role="dialog"
           aria-label={t('theme.openPicker', 'Open theme picker')}
-          className="absolute right-0 z-30 mt-2 w-[22rem] max-w-[calc(100vw-1rem)] rounded-xl border border-[var(--glass-border)] bg-[var(--surface-1)] p-4 shadow-2xl"
+          style={{
+            position: 'fixed',
+            top: coords.top,
+            ...(coords.left !== undefined ? { left: coords.left } : {}),
+            ...(coords.right !== undefined ? { right: coords.right } : {}),
+          }}
+          className="z-[80] w-[22rem] max-w-[calc(100vw-1rem)] rounded-xl border border-[var(--glass-border)] bg-[var(--surface-1)] p-4 shadow-2xl"
         >
           <ThemePicker compact showMode showCustom={false} onChange={() => setOpen(false)} onModeChange={() => setOpen(false)} />
           <div className="mt-3 flex justify-end border-t border-[var(--glass-border)] pt-3">
@@ -547,7 +604,8 @@ function ThemeQuickSwitcher({ className }: { className?: string }) {
               {t('theme.customize', 'Customize…')}
             </Button>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )
@@ -633,7 +691,6 @@ export default function Layout() {
   useTitleBadge()
   useFaviconBadge()
   useCriticalAlertFlash()
-  const { convertDistance, distanceUnit } = useSettings()
   const { mode: shortcutMode, showCheatSheet, toggleCheatSheet } = useKeyboardShortcuts()
   // Footer status bar (Phase-40 / Prompt 59). When the user has hidden the
   // bar the main content reclaims the space — track the prefs reactively
@@ -699,24 +756,16 @@ export default function Layout() {
     }
   }, [tour.isActive, tour.currentStep, tour.targetRect])
 
-  // Version info
+  // Version info — shown as the small chip in the sidebar/mobile header.
+  // (Footer status bar has its own VersionSegment that hits the same query
+  // key so this fetch is deduped.)
   const { data: versionInfo } = useQuery({ queryKey: ['version-info'], queryFn: () => request<VersionInfo>('/system/version'), staleTime: 60_000, refetchInterval: 60_000 })
-  const { data: updateCheck } = useQuery({ queryKey: ['update-check'], queryFn: () => request<UpdateCheckResult>('/system/update-check'), staleTime: 3600_000, refetchInterval: 3600_000 })
 
   // Live data for sidebar
   const { data: alerts } = useQuery({ queryKey: ['alerts-sidebar'], queryFn: () => request<Alert[]>('/alerts?limit=50&offset=0'), refetchInterval: 30_000, retry: 1 })
   const { data: vehicles } = useQuery({ queryKey: ['vehicles-sidebar'], queryFn: () => request<Vehicle[]>('/vehicles'), refetchInterval: 60_000, retry: 1 })
-  const primaryVehicle = vehicles?.[0]
-  const { data: primaryState } = useQuery({
-    queryKey: ['primary-state-sidebar', primaryVehicle?.id],
-    queryFn: () => getVehicleState(primaryVehicle!.id),
-    enabled: !!primaryVehicle,
-    refetchInterval: 60_000,
-  })
   const unreadAlerts = alerts?.filter(a => !a.is_read).length ?? 0
   const vehicleCount = vehicles?.length ?? 0
-  const onlineVehicles = vehicles?.filter(v => v.state === 'online').length ?? 0
-  const isConnected = !!primaryState?.live
 
   // Auto-start the dashboard tour the first time a user lands on `/` with at
   // least one vehicle linked. Per-feature tours stay launcher-only — see
@@ -855,16 +904,6 @@ export default function Layout() {
       ]
     : []
 
-  const uptimeStr= (() => {
-    const secs = versionInfo?.uptime_seconds
-    if (!secs || secs <= 0) return 'Online'
-    const d = Math.floor(secs / 86400)
-    const h = Math.floor((secs % 86400) / 3600)
-    const m = Math.floor((secs % 3600) / 60)
-    if (d > 0) return `${d}d ${h}h uptime`
-    if (h > 0) return `${h}h ${m}m uptime`
-    return `${m}m uptime`
-  })()
   const versionLabel = versionInfo?.chart_version && versionInfo.chart_version !== 'unknown'
     ? `v${versionInfo.chart_version}`
     : versionInfo?.app_version && versionInfo.app_version !== 'unknown'
@@ -1015,7 +1054,7 @@ export default function Layout() {
               </span>
             )}
           </NavLink>
-          <ThemeQuickSwitcher />
+          <ThemeQuickSwitcher placement="left" />
           <NotificationBell />
         </div>
 
@@ -1159,7 +1198,7 @@ export default function Layout() {
                     aria-controls={`nav-section-${section.title.replace(/\W+/g, '-').toLowerCase()}`}
                     onClick={() => toggleSection(section.title)}
                     className={cn(
-                      'mb-1 h-8 w-full justify-between rounded-xl px-3 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
+                      'mb-1 h-8 w-full justify-between gap-2 rounded-xl px-3 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
                       isActiveSection && [
                         'text-[var(--text-primary)] ring-1',
                         sectionStyle?.surface ?? 'bg-[rgba(var(--theme-primary-rgb),0.07)]',
@@ -1167,11 +1206,11 @@ export default function Layout() {
                       ]
                     )}
                   >
-                    <span className="flex items-center gap-2">
-                      <span className={cn('h-1.5 w-1.5 rounded-full opacity-80', sectionStyle?.dot ?? 'bg-neon-cyan')} />
-                      <span>{section.title}</span>
+                    <span className="flex min-w-0 flex-1 items-center gap-2">
+                      <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full opacity-80', sectionStyle?.dot ?? 'bg-neon-cyan')} />
+                      <span className="truncate" title={section.title}>{section.title}</span>
                     </span>
-                    <span className="flex items-center gap-2">
+                    <span className="flex shrink-0 items-center gap-2">
                       <span
                         className={cn(
                           'flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[9px] font-bold ring-1',
@@ -1211,43 +1250,14 @@ export default function Layout() {
           </div>
         </nav>
 
-        {/* Bottom status */}
+        {/* Bottom status — keyboard hint + tour launcher.
+            The previous "Update available" banner, "Live vehicle mini-status",
+            and "Connection / vehicles / uptime" panels were removed because
+            their info is now surfaced in the footer StatusBar
+            (VersionSegment shows the update dot + uptime, ConnectionSegment
+            shows API status, and ActiveVehicleSegment shows the active
+            vehicle with its battery + range). */}
         <div className="border-t border-[var(--glass-border)] px-4 py-3 space-y-2 shrink-0 safe-bottom">
-          {/* Update available banner */}
-          {updateCheck?.update_available && (
-            <GlassPanel className="!p-2.5 flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-              <Icons.download className="h-3.5 w-3.5 text-amber-400 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-medium text-amber-300">Update available</p>
-                <p className="text-[10px] text-amber-400/70">v{updateCheck.latest}</p>
-              </div>
-            </GlassPanel>
-          )}
-          {/* Live vehicle mini-status */}
-          {primaryVehicle && primaryState?.state && (
-            <GlassPanel className="!p-2.5 flex items-center gap-2.5">
-              <div className={cn('h-2 w-2 rounded-full', primaryState.state.battery_level > 20 ? 'bg-neon-green' : 'bg-neon-red')}
-                style={{ boxShadow: `0 0 6px ${primaryState.state.battery_level > 20 ? 'rgba(16,185,129,0.5)' : 'rgba(239,68,68,0.5)'}` }} />
-              <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-medium text-[var(--text-secondary)] truncate">{primaryVehicle.display_name || 'Vehicle'}</p>
-                <p className="text-[10px] text-[var(--text-muted)]">{primaryState.state.battery_level}% · {Math.round(convertDistance(primaryState.state.rated_range))} {distanceUnit}</p>
-              </div>
-              <Icons.charging className="h-3 w-3 text-neon-cyan/50" />
-            </GlassPanel>
-          )}
-          <GlassPanel className="flex items-center gap-3 !p-2.5">
-            {isConnected ? (
-              <Icons.wifi className="h-3.5 w-3.5 text-neon-green" />
-            ) : (
-              <Icons.wifiOff className="h-3.5 w-3.5 text-[var(--text-muted)]" />
-            )}
-            <div className="flex-1">
-              <p className="text-[11px] font-medium text-[var(--text-secondary)]">{isConnected ? 'Connected' : 'Standby'}</p>
-              <p className="text-[10px] text-[var(--text-muted)]">{onlineVehicles}/{vehicles?.length ?? 0} vehicles · {uptimeStr}</p>
-            </div>
-            <SystemHealthDot />
-            <LiveIndicator variant="dot" />
-          </GlassPanel>
           <p data-tour="keyboard-hint" className="text-center text-[10px] text-[var(--text-muted)] mt-1">
             {t('shortcuts.hint', 'Press')} <kbd className="px-1 rounded bg-[var(--surface-2)] text-[var(--text-secondary)]">?</kbd> {t('shortcuts.hintSuffix', 'for shortcuts')}
             <span className="mx-1.5 text-[var(--text-muted)]/60">·</span>
