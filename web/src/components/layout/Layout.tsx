@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useLocation } from 'react-router-dom'
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import InstallPrompt from '../feedback/InstallPrompt'
 import { OfflineBanner } from '../feedback/OfflineBanner'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -18,7 +18,7 @@ import { CommandPalette, CommandPaletteTrigger } from '../ui/CommandPalette'
 import { ServiceStatusBanner, SystemHealthDot } from '../data-display/ServiceStatus'
 import { LiveIndicator } from '../data-display/LiveIndicator'
 import Logo from '../ui/Logo'
-import { Button } from '@/components/ui'
+import { Button, ThemePicker } from '@/components/ui'
 import { Breadcrumbs } from './Breadcrumbs'
 import { VehiclePicker } from './VehiclePicker'
 import { MAIN_TOUR_STEPS } from '@/features/onboarding/tourSteps'
@@ -463,6 +463,87 @@ function NotificationBell({ className }: { className?: string }) {
   )
 }
 
+/**
+ * Phase-40 / Prompt 60 — top-bar quick theme switcher.
+ *
+ * A small palette icon button that opens a popover containing a compact
+ * `<ThemePicker>`. The popover hides the custom-color builder to keep it
+ * small; users who want to build a custom theme follow the "Customize…"
+ * link to /settings/appearance.
+ *
+ * Listens for `open-theme-popover` window events so other surfaces (the
+ * command palette, the dashboard first-run banner) can open the popover
+ * without prop drilling.
+ */
+function ThemeQuickSwitcher({ className }: { className?: string }) {
+  const { t } = useTranslation()
+  const navigate = useNavigate()
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Outside-click + Escape dismissal — same pattern as SavedViewMenu.
+  useEffect(() => {
+    if (!open) return
+    const onClickOutside = (e: MouseEvent) => {
+      if (!containerRef.current?.contains(e.target as Node)) setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onClickOutside)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  // Cross-component opener — wired by the command palette + first-run banner.
+  useEffect(() => {
+    const handler = () => setOpen(true)
+    window.addEventListener('open-theme-popover', handler)
+    return () => window.removeEventListener('open-theme-popover', handler)
+  }, [])
+
+  return (
+    <div ref={containerRef} className={`relative inline-block ${className ?? ''}`} data-role="theme-popover">
+      <Button
+        type="button"
+        variant="ghost"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label={t('theme.openPicker', 'Open theme picker')}
+        onClick={() => setOpen(v => !v)}
+        className="h-9 w-9 rounded-lg p-0 text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)]"
+      >
+        <Icons.palette className="h-5 w-5" aria-hidden="true" />
+      </Button>
+      {open && (
+        <div
+          role="dialog"
+          aria-label={t('theme.openPicker', 'Open theme picker')}
+          className="absolute right-0 z-30 mt-2 w-[22rem] max-w-[calc(100vw-1rem)] rounded-xl border border-[var(--glass-border)] bg-[var(--surface-1)] p-4 shadow-2xl"
+        >
+          <ThemePicker compact showMode showCustom={false} onChange={() => setOpen(false)} onModeChange={() => setOpen(false)} />
+          <div className="mt-3 flex justify-end border-t border-[var(--glass-border)] pt-3">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setOpen(false)
+                navigate('/settings#appearance')
+              }}
+              className="h-auto px-2 py-1 text-xs font-medium text-cyan-300 hover:bg-transparent hover:text-cyan-200"
+            >
+              {t('theme.customize', 'Customize…')}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [expandedSections, setExpandedSections] = useState<Set<string>>(() => {
@@ -875,6 +956,7 @@ export default function Layout() {
               </span>
             )}
           </NavLink>
+          <ThemeQuickSwitcher />
           <NotificationBell />
         </div>
 
@@ -1131,6 +1213,7 @@ export default function Layout() {
             <Logo size={26} showWordmark />
           </div>
           <NotificationBell className="ml-auto" />
+          <ThemeQuickSwitcher />
         </header>
       )}
 

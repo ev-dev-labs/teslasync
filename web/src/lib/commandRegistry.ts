@@ -113,11 +113,97 @@ export const commandRegistry: CommandDefinition[] = [
   {
     id: 'pref.themePicker',
     labelKey: 'palette.cmd.themePicker',
-    labelFallback: 'Open theme picker…',
+    labelFallback: 'Open theme picker',
     icon: Icons.palette,
     section: 'preferences',
-    keywords: ['theme', 'color', 'picker', 'preferences', 'appearance'],
-    perform: (ctx) => ctx.navigate('/settings#appearance'),
+    keywords: ['theme', 'color', 'picker', 'preferences', 'appearance', 'customize'],
+    shortcut: 'T',
+    perform: () => {
+      // Phase-40 / Prompt 60 — Layout listens for this event to open the
+      // top-bar theme popover (no navigation away from the current page).
+      window.dispatchEvent(new CustomEvent('open-theme-popover'))
+    },
+  },
+
+  // ── Per-theme switch commands (Phase-40 / Prompt 60) ──────────────────────
+  // Surfacing every named theme so power users can `Cmd+K → tesla red → ↵`.
+  {
+    id: 'pref.theme.neonCyan',
+    labelKey: 'palette.cmd.themeNeonCyan',
+    labelFallback: 'Switch to Neon Cyan',
+    icon: Icons.palette,
+    section: 'preferences',
+    keywords: ['theme', 'switch', 'neon', 'cyan', 'color'],
+    perform: (ctx) => {
+      ctx.setTheme('neon-cyan')
+      ctx.toast.info(ctx.t('theme.switchedTo', { name: 'Neon Cyan', defaultValue: 'Switched to Neon Cyan' }))
+    },
+  },
+  {
+    id: 'pref.theme.teslaRed',
+    labelKey: 'palette.cmd.themeTeslaRed',
+    labelFallback: 'Switch to Tesla Red',
+    icon: Icons.palette,
+    section: 'preferences',
+    keywords: ['theme', 'switch', 'tesla', 'red', 'color'],
+    perform: (ctx) => {
+      ctx.setTheme('tesla-red')
+      ctx.toast.info(ctx.t('theme.switchedTo', { name: 'Tesla Red', defaultValue: 'Switched to Tesla Red' }))
+    },
+  },
+  {
+    id: 'pref.theme.matrixGreen',
+    labelKey: 'palette.cmd.themeMatrixGreen',
+    labelFallback: 'Switch to Matrix Green',
+    icon: Icons.palette,
+    section: 'preferences',
+    keywords: ['theme', 'switch', 'matrix', 'green', 'color'],
+    perform: (ctx) => {
+      ctx.setTheme('matrix-green')
+      ctx.toast.info(ctx.t('theme.switchedTo', { name: 'Matrix Green', defaultValue: 'Switched to Matrix Green' }))
+    },
+  },
+  {
+    id: 'pref.theme.royalPurple',
+    labelKey: 'palette.cmd.themeRoyalPurple',
+    labelFallback: 'Switch to Royal Purple',
+    icon: Icons.palette,
+    section: 'preferences',
+    keywords: ['theme', 'switch', 'royal', 'purple', 'color'],
+    perform: (ctx) => {
+      ctx.setTheme('royal-purple')
+      ctx.toast.info(ctx.t('theme.switchedTo', { name: 'Royal Purple', defaultValue: 'Switched to Royal Purple' }))
+    },
+  },
+  {
+    id: 'pref.theme.solarAmber',
+    labelKey: 'palette.cmd.themeSolarAmber',
+    labelFallback: 'Switch to Solar Amber',
+    icon: Icons.palette,
+    section: 'preferences',
+    keywords: ['theme', 'switch', 'solar', 'amber', 'color'],
+    perform: (ctx) => {
+      ctx.setTheme('solar-amber')
+      ctx.toast.info(ctx.t('theme.switchedTo', { name: 'Solar Amber', defaultValue: 'Switched to Solar Amber' }))
+    },
+  },
+  {
+    id: 'pref.theme.toggleMode',
+    labelKey: 'palette.cmd.themeToggleMode',
+    labelFallback: 'Toggle dark mode',
+    icon: Icons.sunMoon,
+    section: 'preferences',
+    keywords: ['theme', 'toggle', 'dark', 'light', 'mode', 'switch'],
+    perform: (ctx) => {
+      // Read the current mode from the html class set by ThemeProvider's
+      // applyThemeCSS(). This avoids needing to thread the current mode through
+      // CommandContext for every command.
+      const isDark = document.documentElement.classList.contains('dark')
+      ctx.setMode(isDark ? 'light' : 'dark')
+      ctx.toast.info(
+        ctx.t(isDark ? 'theme.switchedToLight' : 'theme.switchedToDark', isDark ? 'Switched to light mode' : 'Switched to dark mode'),
+      )
+    },
   },
 
   // ── Actions ───────────────────────────────────────────────────────────────

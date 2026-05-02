@@ -5,7 +5,7 @@ import { request } from '@/api/client'
 export type ThemeId = 'neon-cyan' | 'tesla-red' | 'matrix-green' | 'royal-purple' | 'solar-amber' | 'custom'
 export type ModeId = 'dark' | 'light' | 'oled' | 'midnight' | 'auto' | 'sunset' | 'nord'
 
-interface ColorTheme {
+export interface ColorTheme {
   id: ThemeId
   name: string
   primary: string
@@ -14,7 +14,7 @@ interface ColorTheme {
   accentRGB: string
 }
 
-interface ModeTheme {
+export interface ModeTheme {
   id: ModeId
   name: string
   bg: string

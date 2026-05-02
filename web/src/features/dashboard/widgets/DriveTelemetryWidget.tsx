@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 import {
   ComposedChart, Line, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  chartGrid, axisTick, axisTickSm, chartAnimation, fmt, CHART_COLORS,
+  chartGrid, axisTick, axisTickSm, chartAnimation, fmt, useChartPalette,
   areaGradient,
 } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
@@ -61,6 +61,9 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
   const isLoading = drivesLoading || telemetryLoading;
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
+
+  // Phase-40 / Prompt 60 — chart series colors derive from the active theme.
+  const palette = useChartPalette();
 
   const chartData = useMemo((): ChartDatum[] => {
     const points = telemetry ?? [];
@@ -167,7 +170,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
           <Area
             yAxisId="power"
             dataKey="power"
-            stroke={CHART_COLORS[1]}
+            stroke={palette.series[1]}
             fill="url(#power-pos)"
             fillOpacity={0.3}
             strokeWidth={1.5}
@@ -179,7 +182,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
           <Line
             yAxisId="speed"
             dataKey="speed"
-            stroke={CHART_COLORS[0]}
+            stroke={palette.series[0]}
             strokeWidth={2}
             dot={false}
             name={`${t('widget.driveTelemetry.speed', 'Speed')} (${speedUnit})`}
@@ -200,7 +203,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
         </ComposedChart>
       </ResponsiveContainer>
     );
-  }, [chartData, isCompact, isWide, tick, speedUnit, t]);
+  }, [chartData, isCompact, isWide, tick, speedUnit, t, palette]);
 
   // Compact layout
   if (isCompact) {
@@ -280,13 +283,13 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
           {/* Legend */}
           <div className="flex flex-wrap items-center justify-center gap-3 pt-1 flex-shrink-0">
             <div className="flex items-center gap-1">
-              <span className="inline-block h-2 w-2 rounded-full" style={{ background: CHART_COLORS[0] }} />
+              <span className="inline-block h-2 w-2 rounded-full" style={{ background: palette.series[0] }} />
               <span className="text-[10px] text-white/50">
                 {t('widget.driveTelemetry.speed', 'Speed')}
               </span>
             </div>
             <div className="flex items-center gap-1">
-              <span className="inline-block h-2 w-2 rounded-full" style={{ background: CHART_COLORS[1] }} />
+              <span className="inline-block h-2 w-2 rounded-full" style={{ background: palette.series[1] }} />
               <span className="text-[10px] text-white/50">
                 {t('widget.driveTelemetry.power', 'Power (kW)')}
               </span>

@@ -16,6 +16,8 @@ import { LiveIndicator } from '@/components/data-display';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { useRealtimeEvents } from '@/hooks/useRealtimeEvents';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useTheme } from '@/components/ui/ThemeProvider';
+import { Palette } from 'lucide-react';
 import { DashboardGrid } from '../components/DashboardGrid';
 import { WidgetPicker } from '../components/WidgetPicker';
 import { WidgetSettingsModal } from '../components/WidgetSettingsModal';
@@ -35,6 +37,71 @@ import { getWidgetDef } from '../widgets/registry';
 import type { Vehicle, Alert } from '../types';
 import type { WidgetConfig, SavedDashboard } from '../widgets/types';
 import { Icons } from '@/lib/icons';
+
+const THEME_FIRST_RUN_KEY = 'teslasync:themeFirstRunDismissed:v1';
+
+/**
+ * Phase-40 / Prompt 60 — first-run theme prompt.
+ *
+ * Renders once at the top of the dashboard for users who haven't picked a
+ * theme yet (still on the `neon-cyan` default) AND haven't dismissed the
+ * banner before. Both the "Open theme picker" and "Maybe later" actions
+ * mark the prompt as dismissed; the close button does the same.
+ *
+ * Storage key is versioned (`:v1`) so a future redesign can re-trigger the
+ * prompt by bumping the suffix.
+ */
+function ThemeFirstRunBanner() {
+  const { t } = useTranslation();
+  const { themeId } = useTheme();
+  const [dismissed, setDismissed] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem(THEME_FIRST_RUN_KEY) === '1';
+    } catch {
+      return true;
+    }
+  });
+
+  if (dismissed) return null;
+  // Only nag users who are still on the default theme. Anyone who's already
+  // customized has implicitly self-served, so the banner is skipped.
+  if (themeId !== 'neon-cyan') return null;
+
+  const persistDismiss = () => {
+    try {
+      window.localStorage.setItem(THEME_FIRST_RUN_KEY, '1');
+    } catch {
+      /* quota or disabled storage */
+    }
+    setDismissed(true);
+  };
+
+  const openPicker = () => {
+    window.dispatchEvent(new CustomEvent('open-theme-popover'));
+    persistDismiss();
+  };
+
+  return (
+    <AlertBanner
+      variant="info"
+      icon={<Palette className="h-4 w-4" />}
+      title={t('theme.firstRunTitle', 'Personalize TeslaSync')}
+      onClose={persistDismiss}
+    >
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="flex-1 min-w-0">{t('theme.firstRunBody', 'Pick a color theme that fits your style.')}</span>
+        <div className="flex gap-2 shrink-0">
+          <Button variant="primary" size="sm" onClick={openPicker}>
+            {t('theme.firstRunOpen', 'Open theme picker')}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={persistDismiss}>
+            {t('theme.firstRunLater', 'Maybe later')}
+          </Button>
+        </div>
+      </div>
+    </AlertBanner>
+  );
+}
 
 export default function DashboardPage() {
   usePageTitle('Dashboard');
@@ -288,6 +355,9 @@ export default function DashboardPage() {
       actions={headerActions}
     >
       <div className="space-y-4">
+        {/* Phase-40 / Prompt 60 — first-run prompt to surface the theme picker. */}
+        <ThemeFirstRunBanner />
+
         {/* Live-pipe stale-data warning (only shows after >2 min disconnected) */}
         <LiveStaleDataBanner />
 

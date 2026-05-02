@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PieChart as PieIcon, DollarSign, TrendingDown, Fuel } from 'lucide-react';
 import {
-  PieChart, Pie, Cell, Tooltip, ResponsiveContainer, CHART_COLORS,
+  PieChart, Pie, Cell, Tooltip, ResponsiveContainer, useChartPalette,
 } from '@/components/charts';
 import { StatCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
@@ -74,6 +74,9 @@ export default function CostBreakdownWidget({ vehicleId, size }: WidgetProps) {
 
   const isCompact = size.cols <= 1;
 
+  // Phase-40 / Prompt 60 — series colours from active theme.
+  const palette = useChartPalette();
+
   const monthlyEntries = useMemo(() => data?.monthly_breakdown ?? [], [data]);
 
   // Cost per distance unit in user's preference
@@ -95,9 +98,9 @@ export default function CostBreakdownWidget({ vehicleId, size }: WidgetProps) {
     return recent.map((entry, i) => ({
       name: entry.month ?? '—',
       value: entry.ev_cost ?? 0,
-      color: CHART_COLORS[i % CHART_COLORS.length],
+      color: palette.series[i % palette.series.length],
     }));
-  }, [monthlyEntries]);
+  }, [monthlyEntries, palette]);
 
   // Ranked list items from monthly breakdown
   const rankedItems = useMemo((): RankedItem[] => {
@@ -106,9 +109,9 @@ export default function CostBreakdownWidget({ vehicleId, size }: WidgetProps) {
       label: entry.month ?? '—',
       value: entry.ev_cost ?? 0,
       formattedValue: formatCurrency(entry.ev_cost ?? 0),
-      barColor: CHART_COLORS[i % CHART_COLORS.length],
+      barColor: palette.series[i % palette.series.length],
     }));
-  }, [monthlyEntries, formatCurrency]);
+  }, [monthlyEntries, formatCurrency, palette]);
 
   const hasData = monthlyEntries.length > 0;
   const totalSavings = data?.total_savings ?? 0;

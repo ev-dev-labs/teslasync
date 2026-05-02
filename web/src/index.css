@@ -925,6 +925,7 @@ select option:checked {
   nav[data-role="topbar"],
   header[data-role="appbar"],
   [data-role="command-palette"],
+  [data-role="theme-popover"],
   [data-role="floating-actions"],
   [data-role="status-bar"],
   .toast-container {
