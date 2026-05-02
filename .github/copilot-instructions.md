@@ -80,6 +80,42 @@ TeslaSync is a **self-hosted Tesla Fleet Intelligence Platform** — Go 1.25 bac
 Collects, analyzes, and visualizes Tesla vehicle data via Fleet API + Fleet Telemetry streaming.
 **Repository:** `github.com/ev-dev-labs/teslasync`
 
+## ⚠️ ACTIVE MIGRATION: Phase-42 — Tesla Fleet Telemetry Pipeline Rewrite
+
+> **Status:** prompts authored under `.github/prompts/db-refactor/phase-42/`,
+> reviewed by Staff + Principal Engineer + Principal Architect, awaiting
+> execution. **Forward-only — no legacy retention.** When phase-42 lands,
+> ADR-004 (`.github/ARCHITECTURE.md`) and `.github/instructions/tesla-pipeline.instructions.md`
+> become the canonical sources. Until then, the rules below apply to any
+> concurrent agent work.
+
+```
+❌ DO NOT add new code under `internal/telemetry/*`
+   — the directory is being deleted by phase-42 prompt 0080.
+❌ DO NOT add new hand-written enum parsers under `internal/enums/parse_*`
+   — being replaced by generated code from the vendored Tesla proto.
+❌ DO NOT add new tables that mirror Fleet Telemetry fields directly
+   — phase-42 routes everything through `internal/tesla/normalize.Pipeline`.
+❌ DO NOT bypass `signal.Store` (L1) by writing to Redis or signal_log directly
+   — the layered live-state contract still applies (see "Signal Data" below).
+❌ DO NOT add per-vehicle or value-conditional routing to `routing.yaml`
+   — routing is field-static and vehicle-agnostic by ADR-004 #8.
+✅ DO put new Tesla-vendor-specific code under `internal/tesla/*`
+   (codec, units, unit_history, bootstrap, config, router, normalize).
+✅ DO put new vendor-agnostic signal/state primitives under `internal/signal/*`.
+✅ DO prefix new Tesla-vendor-specific tables with `tesla_*`
+   (e.g., `tesla_vehicle_unit_history`). Existing unprefixed tables are
+   grandfathered until a future rename migration.
+✅ DO route ALL new ingest paths through `(*normalize.Pipeline).Process`
+   — it is THE one entry; reflective coverage test enforces this.
+✅ DO treat `router.Writer` failures as logged + counted (via
+   `tesla_router_writer_failures_total`), NEVER propagated to MQTT
+   redelivery. Only codec failures (malformed bytes) trigger redelivery.
+```
+
+If you find yourself wanting to bend any of these rules, STOP and consult
+the user — phase-42 may need to be revisited rather than worked around.
+
 ## Architecture
 
 ```

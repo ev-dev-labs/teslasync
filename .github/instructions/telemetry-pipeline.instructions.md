@@ -4,6 +4,34 @@ applyTo: "internal/api/telemetry*,internal/database/*_repo.go,internal/models/**
 
 # Telemetry Data Pipeline Instructions
 
+> **⚠️ PHASE-42 IN FLIGHT — Forward-only Tesla pipeline rewrite.**
+>
+> The rules below describe the CURRENT (pre-phase-42) architecture and
+> remain authoritative for any work that touches the existing telemetry
+> code paths. However:
+>
+> - **DO NOT add new code under `internal/telemetry/*`.** That directory
+>   is tombstoned by phase-42 prompt 0080. Any new ingest logic goes
+>   under `internal/tesla/normalize` and routes through
+>   `(*normalize.Pipeline).Process` (the single entry point).
+> - **DO NOT add new hand-written enum parsers** under
+>   `internal/enums/parse_*`. They are replaced by generated code from
+>   the vendored Tesla proto (`internal/tesla/protomodel/`).
+> - **DO NOT add new tables that mirror Fleet Telemetry fields.**
+>   Phase-42 introduces an SI-canonical schema; legacy snapshot tables
+>   (`positions`, `*_snapshots`, `charging_telemetry`, `vehicle_units`,
+>   etc.) are dropped via `DROP CASCADE` in prompt 0050.
+> - **The layered live-state contract (SignalStore L1 + Redis L2 +
+>   signal_log durable) is preserved** by phase-42. SignalStore stays
+>   the hot path; Redis stays the cross-pod cache; signal_log stays the
+>   change feed. The rules in this file about that layering remain
+>   correct after phase-42 lands.
+> - When phase-42 prompts 0001 (ADR-004) and 0002
+>   (`tesla-pipeline.instructions.md`) execute, those become the
+>   canonical sources for the new pipeline. THIS file is preserved as
+>   the contract for the surviving telemetry handlers, repos, and
+>   workers.
+
 These rules protect the current Redis + SignalStore + signal_log architecture. They
 are non-regression requirements for any telemetry, repository, model, or worker change.
 
