@@ -918,13 +918,15 @@ select option:checked {
   }
 
   /* Hide the SPA chrome — sidebar, mobile top bar, command palette,
-     toast container, floating actions, and anything explicitly opted out. */
+     toast container, floating actions, status bar, and anything explicitly
+     opted out. */
   [data-print-hide],
   aside[data-role="sidebar"],
   nav[data-role="topbar"],
   header[data-role="appbar"],
   [data-role="command-palette"],
   [data-role="floating-actions"],
+  [data-role="status-bar"],
   .toast-container {
     display: none !important;
   }

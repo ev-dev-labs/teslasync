@@ -1,12 +1,13 @@
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { GlassPanel, Button, IconBox, Input } from '@/components/ui'
+import { GlassPanel, Button, IconBox, Input, Toggle } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
 import { useTheme, type ThemeId, type ModeId } from '@/components/ui/ThemeProvider'
 import { useToast } from '@/components/feedback/Toast'
 import { useSettings, useSaveSettings } from '@/api/hooks/useSettings'
+import { useStatusBarPrefs, setStatusBarPrefs } from '@/components/layout'
 import { cn } from '@/lib/cn'
-import { Palette, Sun, Moon, Monitor, Sparkles, CheckCircle, Rows3 } from 'lucide-react'
+import { Palette, Sun, Moon, Monitor, Sparkles, CheckCircle, Rows3, PanelBottom } from 'lucide-react'
 
 type DensityId = 'compact' | 'comfortable' | 'spacious'
 
@@ -35,6 +36,11 @@ export function AppearanceSettings() {
   const saveSettings = useSaveSettings()
   const density: DensityId =
     (settings?.ui_density as DensityId | undefined) ?? 'comfortable'
+
+  // Footer status bar prefs (Phase-40 / Prompt 59). Persisted to
+  // localStorage rather than the server so toggling is instant and works
+  // offline; cross-tab sync is handled inside useStatusBarPrefs.
+  const statusBarPrefs = useStatusBarPrefs()
 
   function setDensity(next: DensityId) {
     if (!settings || next === density) return
@@ -278,6 +284,54 @@ export function AppearanceSettings() {
                   {row}
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer status bar (Phase-40 / Prompt 59) */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <PanelBottom className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+            <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+              {t('theme.statusBar.label', 'Status bar')}
+            </p>
+          </div>
+          <div className="space-y-3 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-2)] p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-[var(--text-primary)]">
+                  {t('theme.statusBar.show', 'Show status bar')}
+                </p>
+                <p className="text-xs text-[var(--text-muted)]">
+                  {t('theme.statusBar.showHelp', 'Always-on footer with API health, live telemetry, vehicle, and version.')}
+                </p>
+              </div>
+              <Toggle
+                checked={statusBarPrefs.enabled}
+                onChange={(next) => {
+                  setStatusBarPrefs({ enabled: next })
+                  toast.info(
+                    next
+                      ? t('theme.statusBar.shownToast', 'Status bar shown')
+                      : t('theme.statusBar.hiddenToast', 'Status bar hidden'),
+                  )
+                }}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-4 border-t border-[var(--glass-border)] pt-3">
+              <div className="min-w-0">
+                <p className={cn('text-sm font-medium text-[var(--text-primary)]', !statusBarPrefs.enabled && 'opacity-50')}>
+                  {t('theme.statusBar.iconOnly', 'Always icon-only')}
+                </p>
+                <p className={cn('text-xs text-[var(--text-muted)]', !statusBarPrefs.enabled && 'opacity-50')}>
+                  {t('theme.statusBar.iconOnlyHelp', 'Hide labels at all widths. Otherwise the bar auto-collapses on narrow screens.')}
+                </p>
+              </div>
+              <Toggle
+                checked={statusBarPrefs.iconOnly}
+                onChange={(next) => setStatusBarPrefs({ iconOnly: next })}
+                aria-disabled={!statusBarPrefs.enabled}
+              />
             </div>
           </div>
         </div>

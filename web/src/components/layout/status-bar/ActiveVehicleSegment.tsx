@@ -1,0 +1,155 @@
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Car, Check, ChevronUp } from 'lucide-react';
+import { Tooltip } from '@/components/ui';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { cn } from '@/lib/cn';
+
+/**
+ * ActiveVehicleSegment — Phase-40 / Prompt 59.
+ *
+ * Footer status-bar segment showing the currently selected vehicle. Click
+ * opens a small popover with a list of all vehicles — picking one routes
+ * the rest of the app via the shared selectedVehicle store.
+ *
+ * Hidden when only one vehicle is on the account (nothing to switch
+ * between) and during the initial fleet-load to avoid flashing a
+ * placeholder.
+ */
+
+interface ActiveVehicleSegmentProps {
+  iconOnly?: boolean;
+}
+
+export function ActiveVehicleSegment({ iconOnly = false }: ActiveVehicleSegmentProps) {
+  const { t } = useTranslation();
+  const { vehicle, vehicles, vehicleId, setVehicleId } = useSelectedVehicle();
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Close popover on outside click / Escape so it behaves like a real menu.
+  useEffect(() => {
+    if (!open) return;
+    const onClick = (e: MouseEvent) => {
+      if (!containerRef.current) return;
+      if (!containerRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onClick);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  const pick = useCallback(
+    (id: number) => {
+      setVehicleId(id);
+      setOpen(false);
+    },
+    [setVehicleId],
+  );
+
+  if (vehicles.length === 0) {
+    return null;
+  }
+
+  const label =
+    vehicle?.display_name ||
+    vehicle?.vin ||
+    (vehicleId != null ? `${t('statusBar.vehicle.fallback', 'Vehicle')} ${vehicleId}` : t('statusBar.vehicle.none', 'No vehicle'));
+  const subLabel = vehicle?.model || '';
+
+  const tooltip = (
+    <span>
+      {t('statusBar.vehicle.tooltip', 'Active vehicle')} · {label}
+      {subLabel ? ` · ${subLabel}` : ''}
+    </span>
+  );
+
+  // Single-vehicle owners get a static, non-interactive chip — no need
+  // for a switcher when there's nothing to switch to.
+  if (vehicles.length === 1) {
+    return (
+      <Tooltip content={tooltip} side="top">
+        <span
+          aria-label={`${t('statusBar.vehicle.aria', 'Active vehicle')}: ${label}`}
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-[11px] leading-none',
+            'text-[var(--text-secondary)]',
+          )}
+        >
+          <Car className="h-3 w-3 shrink-0" aria-hidden />
+          {!iconOnly && <span className="font-medium truncate max-w-[160px]">{label}</span>}
+        </span>
+      </Tooltip>
+    );
+  }
+
+  return (
+    <div ref={containerRef} className="relative inline-flex">
+      <Tooltip content={tooltip} side="top">
+        <button
+          type="button"
+          aria-label={`${t('statusBar.vehicle.switch', 'Switch vehicle')} (${label})`}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          onClick={() => setOpen((o) => !o)}
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-[11px] leading-none',
+            'text-[var(--text-secondary)] hover:bg-white/[0.04] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--theme-primary)]',
+          )}
+        >
+          <Car className="h-3 w-3 shrink-0" aria-hidden />
+          {!iconOnly && (
+            <>
+              <span className="font-medium truncate max-w-[140px]">{label}</span>
+              <ChevronUp className={cn('h-3 w-3 shrink-0 transition-transform', open ? '' : 'rotate-180')} aria-hidden />
+            </>
+          )}
+        </button>
+      </Tooltip>
+
+      {open && (
+        <div
+          role="listbox"
+          aria-label={t('statusBar.vehicle.aria', 'Active vehicle')}
+          className={cn(
+            'absolute bottom-full right-0 mb-1 z-[120] min-w-[220px] max-h-[280px] overflow-y-auto',
+            'rounded-lg border border-[var(--glass-border)] bg-[var(--surface-1)] shadow-2xl backdrop-blur-xl',
+            'p-1',
+          )}
+        >
+          {vehicles.map((v) => {
+            const selected = v.id === vehicleId;
+            const name = v.display_name || v.vin || `${t('statusBar.vehicle.fallback', 'Vehicle')} ${v.id}`;
+            return (
+              <button
+                key={v.id}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                onClick={() => pick(v.id)}
+                className={cn(
+                  'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs',
+                  'hover:bg-white/[0.06] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--theme-primary)]',
+                  selected ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]',
+                )}
+              >
+                <Car className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" aria-hidden />
+                <span className="flex-1 min-w-0 truncate">
+                  <span className="font-medium">{name}</span>
+                  {v.model && <span className="ml-1.5 text-[var(--text-muted)]">{v.model}</span>}
+                </span>
+                {selected && <Check className="h-3.5 w-3.5 shrink-0 text-emerald-300" aria-hidden />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}

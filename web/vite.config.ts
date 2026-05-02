@@ -2,11 +2,33 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { execSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import path from 'path'
 
 const enablePwaInDev = process.env.VITE_PWA_DEV === 'true'
 
+// Build-time provenance for the footer status bar (Phase-40 / Prompt 59).
+//   - VITE_APP_VERSION: package.json `version`, overridable via env.
+//   - VITE_GIT_SHA:     short HEAD sha; "dev" when not in a git checkout.
+const pkg = JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf8')) as { version?: string }
+const appVersion = process.env.VITE_APP_VERSION || pkg.version || 'dev'
+let gitSha = process.env.VITE_GIT_SHA || ''
+if (!gitSha) {
+  try {
+    gitSha = execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString()
+      .trim()
+  } catch {
+    gitSha = 'dev'
+  }
+}
+
 export default defineConfig({
+  define: {
+    'import.meta.env.VITE_APP_VERSION': JSON.stringify(appVersion),
+    'import.meta.env.VITE_GIT_SHA': JSON.stringify(gitSha),
+  },
   plugins: [
     react(),
     VitePWA({

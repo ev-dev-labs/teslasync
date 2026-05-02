@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
 import { RouteTransition } from '@/components/motion'
 import { BottomTabBar, BOTTOM_TAB_PATHS } from './BottomTabBar'
+import { StatusBar, useStatusBarPrefs } from './StatusBar'
 import { CommandPalette, CommandPaletteTrigger } from '../ui/CommandPalette'
 import { ServiceStatusBanner, SystemHealthDot } from '../data-display/ServiceStatus'
 import { LiveIndicator } from '../data-display/LiveIndicator'
@@ -544,6 +545,10 @@ export default function Layout() {
   useCriticalAlertFlash()
   const { convertDistance, distanceUnit } = useSettings()
   const { mode: shortcutMode, showCheatSheet, toggleCheatSheet } = useKeyboardShortcuts()
+  // Footer status bar (Phase-40 / Prompt 59). When the user has hidden the
+  // bar the main content reclaims the space — track the prefs reactively
+  // so the layout reflows on toggle.
+  const statusBarPrefs = useStatusBarPrefs()
 
   // The CommandPalette's "Show keyboard shortcuts" command (and any other
   // caller) toggles the cheat sheet by dispatching this custom event so the
@@ -1135,7 +1140,22 @@ export default function Layout() {
         <div className="h-14 shrink-0 lg:hidden" />
 
         <ServiceStatusBanner />
-        <main id="main-content" data-role="main-content" ref={mainRef} role="main" tabIndex={-1} className="flex-1 overflow-y-auto outline-none pb-16 lg:pb-0">
+        <main
+          id="main-content"
+          data-role="main-content"
+          ref={mainRef}
+          role="main"
+          tabIndex={-1}
+          className={cn(
+            'flex-1 overflow-y-auto outline-none pb-16 lg:pb-0',
+            // Reserve space for the footer status bar (Phase-40 / Prompt 59)
+            // so it never overlaps page content. On mobile it stacks ABOVE
+            // the BottomTabBar (which already adds 56px via pb-16), so we
+            // bump pb-16 → pb-20 (24px footer + tab bar). On desktop a
+            // single 28px reservation is enough.
+            statusBarPrefs.enabled && 'lg:pb-7 pb-20',
+          )}
+        >
           <div className="mx-auto max-w-[1600px] px-3 py-4 pb-safe sm:px-5 sm:py-5 lg:px-8 lg:py-8">
             {activeNavEntry && (
               <div className="mb-3 flex min-h-8 items-center justify-between gap-3 border-b border-white/[0.06] pb-2">
@@ -1154,6 +1174,11 @@ export default function Layout() {
 
       {/* Mobile bottom tab bar */}
       <BottomTabBar />
+
+      {/* Footer status bar (Phase-40 / Prompt 59) — always-on health/version
+          surface pinned to the bottom of the viewport. Hides itself when the
+          user toggles it off in Settings → Appearance. */}
+      <StatusBar />
 
       {/* Command Palette */}
       <CommandPalette onOpen={() => setSidebarOpen(false)} />

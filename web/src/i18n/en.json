@@ -171,6 +171,57 @@
     "aria": "Select vehicle",
     "label": "Vehicle"
   },
+  "statusBar": {
+    "aria": "Application status",
+    "connection": {
+      "short": "API",
+      "ok": "Online",
+      "degraded": "Degraded",
+      "offline": "Offline",
+      "unknown": "Connecting…",
+      "tooltip": "API connection",
+      "aria": "API connection status"
+    },
+    "live": {
+      "short": "Live",
+      "reconnecting": "Reconnecting",
+      "offline": "Offline",
+      "unknown": "Idle",
+      "tooltip": "Live telemetry stream",
+      "lastMessage": "Last message {{age}} ago",
+      "aria": "Live telemetry status"
+    },
+    "vehicle": {
+      "tooltip": "Active vehicle",
+      "aria": "Active vehicle",
+      "switch": "Switch vehicle",
+      "fallback": "Vehicle",
+      "none": "No vehicle"
+    },
+    "background": {
+      "one": "1 task",
+      "many": "{{count}} tasks",
+      "tooltip": "Background work in progress",
+      "aria": "Background tasks",
+      "heading": "Running"
+    },
+    "version": {
+      "tooltip": "TeslaSync version",
+      "aria": "TeslaSync version",
+      "uptime": "up {{uptime}}",
+      "uptimeLabel": "Server uptime",
+      "modalTitle": "About this build",
+      "appVersion": "App version",
+      "commit": "Commit",
+      "chart": "Helm chart",
+      "go": "Go runtime",
+      "platform": "Platform",
+      "updateAvailable": "Update available",
+      "updateBanner": "A newer release is available",
+      "changelog": "Release notes",
+      "close": "Close"
+    }
+  },
   "pin": {
     "pin": "Pin",
     "unpin": "Unpin",
@@ -5317,6 +5368,15 @@
       "previewRow1": "Sample row — Tesla Model 3",
       "previewRow2": "Sample row — Tesla Model Y",
       "previewRow3": "Sample row — Tesla Model S"
+    },
+    "statusBar": {
+      "label": "Status bar",
+      "show": "Show status bar",
+      "showHelp": "Always-on footer with API health, live telemetry, vehicle, and version.",
+      "iconOnly": "Always icon-only",
+      "iconOnlyHelp": "Hide labels at all widths. Otherwise the bar auto-collapses on narrow screens.",
+      "shownToast": "Status bar shown",
+      "hiddenToast": "Status bar hidden"
     }
   },
   "featureConfig": {
