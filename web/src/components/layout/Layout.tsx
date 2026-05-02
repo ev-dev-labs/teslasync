@@ -829,6 +829,7 @@ export default function Layout() {
         role="navigation"
         aria-label={t('a11y.primaryNav', 'Primary')}
         data-tour="sidebar"
+        data-role="sidebar"
         data-sidebar-open={sidebarOpen}
         className={cn(
           'fixed left-0 bottom-0 z-[66] w-[clamp(240px,70vw,256px)] transform transition-transform duration-300 ease-out lg:top-0 lg:static lg:z-auto lg:w-64 lg:translate-x-0',
@@ -1109,7 +1110,7 @@ export default function Layout() {
 
       {/* Mobile top bar */}
       {!sidebarOpen && (
-        <header className="fixed top-0 left-0 right-0 z-[60] flex items-center border-b border-[var(--glass-border)] bg-[var(--surface-1)] backdrop-blur-xl px-4 py-3 lg:hidden [touch-action:manipulation]">
+        <header data-role="appbar" className="fixed top-0 left-0 right-0 z-[60] flex items-center border-b border-[var(--glass-border)] bg-[var(--surface-1)] backdrop-blur-xl px-4 py-3 lg:hidden [touch-action:manipulation]">
           <Button
             onClick={() => setSidebarOpen(true)}
             type="button"
@@ -1134,7 +1135,7 @@ export default function Layout() {
         <div className="h-14 shrink-0 lg:hidden" />
 
         <ServiceStatusBanner />
-        <main id="main-content" ref={mainRef} role="main" tabIndex={-1} className="flex-1 overflow-y-auto outline-none pb-16 lg:pb-0">
+        <main id="main-content" data-role="main-content" ref={mainRef} role="main" tabIndex={-1} className="flex-1 overflow-y-auto outline-none pb-16 lg:pb-0">
           <div className="mx-auto max-w-[1600px] px-3 py-4 pb-safe sm:px-5 sm:py-5 lg:px-8 lg:py-8">
             {activeNavEntry && (
               <div className="mb-3 flex min-h-8 items-center justify-between gap-3 border-b border-white/[0.06] pb-2">

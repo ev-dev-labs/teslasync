@@ -884,3 +884,120 @@ select option:checked {
     animation: none !important;
   }
 }
+
+
+/* === @media print (Phase-40 / Prompt 54) =====================================
+ * Live SPA printing: hide app chrome, swap dark glass surfaces for white paper,
+ * keep recharts SVGs readable, and avoid mid-element page breaks.
+ *
+ * Element opt-out: any element with `[data-print-hide]` is hidden in print.
+ * Pair with `<PrintButton>` (components/ui/PrintButton.tsx) to give pages a
+ * one-click trigger; native browser Ctrl+P also produces a sane page.
+ * ============================================================================ */
+@media print {
+  :root {
+    --bg: #ffffff;
+    --surface-1: #ffffff;
+    --surface-2: #ffffff;
+    --surface-3: #ffffff;
+    --surface-elevated: #ffffff;
+    --glass-bg: #ffffff;
+    --glass-border: #cccccc;
+    --border-subtle: #dddddd;
+    --border-default: #cccccc;
+    --text-primary: #000000;
+    --text-secondary: #222222;
+    --text-muted: #555555;
+    color-scheme: light;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    overflow: visible !important;
+  }
+
+  /* Hide the SPA chrome — sidebar, mobile top bar, command palette,
+     toast container, floating actions, and anything explicitly opted out. */
+  [data-print-hide],
+  aside[data-role="sidebar"],
+  nav[data-role="topbar"],
+  header[data-role="appbar"],
+  [data-role="command-palette"],
+  [data-role="floating-actions"],
+  .toast-container {
+    display: none !important;
+  }
+
+  /* Force readable text colors. The `color: inherit` rule lets the body
+     `color: #000` cascade through neon/Tailwind text-white classes. */
+  *,
+  *::before,
+  *::after {
+    text-shadow: none !important;
+    box-shadow: none !important;
+    color: inherit !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* Strip glass / glow from surfaces so cards have visible borders on white.
+     `[data-print-card]` is the GlassPanel root marker (opt-in for any other
+     surface that should print as a bordered card). */
+  .glass-panel,
+  .glass-card,
+  [data-print-card] {
+    background: #ffffff !important;
+    border: 1px solid #cccccc !important;
+    color: #000000 !important;
+  }
+
+  /* Recharts: dark grid/axes don't print well on white paper. */
+  .recharts-cartesian-grid line {
+    stroke: #dddddd !important;
+  }
+  .recharts-text,
+  .recharts-cartesian-axis-tick-value,
+  .recharts-label,
+  .recharts-legend-item-text {
+    fill: #333333 !important;
+  }
+  .recharts-default-tooltip {
+    background: #ffffff !important;
+    border: 1px solid #cccccc !important;
+    color: #000000 !important;
+  }
+
+  /* Avoid mid-element page breaks on cards / tables / chart frames. */
+  .glass-panel,
+  [data-print-card],
+  table,
+  figure {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  thead { display: table-header-group; }
+  tr, img { break-inside: avoid; page-break-inside: avoid; }
+
+  /* Expand main content full width — the sidebar's gone, reclaim the space. */
+  main,
+  [data-role="main-content"] {
+    margin-left: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    overflow: visible !important;
+  }
+
+  /* Spell out external link targets after the link text. */
+  a[href]:not([href^="#"]):not([href^="javascript:"])::after {
+    content: " (" attr(href) ")";
+    font-size: 80%;
+    color: #555555;
+  }
+
+  /* Page margins. */
+  @page {
+    margin: 12mm;
+  }
+}

@@ -231,8 +231,10 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
     return (
       <div
         ref={mergedRef}
+        data-print-card
         className={cn(
           'group rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900',
+          'print:break-inside-avoid print:border-gray-300 print:bg-white',
           className,
         )}
       >

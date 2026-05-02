@@ -646,6 +646,7 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            data-role="command-palette"
             className="fixed inset-0 z-[200] bg-slate-950/35 backdrop-blur-sm dark:bg-black/60"
             onClick={close}
           />
@@ -654,6 +655,7 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
             transition={{ type: 'spring', bounce: 0.15, duration: 0.3 }}
+            data-role="command-palette"
             className="fixed left-4 right-4 top-[10%] z-[201] max-w-lg sm:left-1/2 sm:right-auto sm:top-[15%] sm:-translate-x-1/2 sm:w-[calc(100%-2rem)]"
           >
             <div className="overflow-hidden rounded-2xl border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-2xl backdrop-blur-xl">

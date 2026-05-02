@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout';
+import { PrintButton } from '@/components/ui';
 import { SectionErrorBoundary } from '@/components/feedback';
 import { ChartTimeRangeProvider } from '@/components/charts';
 import { ShareDriveDialog } from '../components/ShareDriveDialog';
@@ -53,6 +54,11 @@ export default function DriveDetailPage() {
       title={t('driveDetail.title', 'Drive Detail')}
       error={error as Error | null}
       breadcrumbs={breadcrumbs}
+      actions={
+        <div data-print-hide className="flex items-center gap-2">
+          <PrintButton />
+        </div>
+      }
     >
       {drive && stats && (
         <>

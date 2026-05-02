@@ -9,7 +9,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDate, formatTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtWithUnit, fmtPercent } from '@/lib/numberFormat';
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge } from '@/components/ui';
+import { GlassPanel, Badge, PrintButton } from '@/components/ui';
 import { MetricBar, InlineMetric, AnimatedNumber, StatCard, KVList, LiveIndicator, DateTime } from '@/components/data-display';
 import { RadialGauge } from '@/components/charts';
 import { Skeleton, EmptyState, LiveStaleDataBanner } from '@/components/feedback';
@@ -201,7 +201,12 @@ export default function ChargingDetailPage() {
       title={t('charging.detail.title', 'Charge Session')}
       className="space-y-8"
       breadcrumbs={breadcrumbs}
-      actions={<LiveIndicator variant="compact" />}
+      actions={
+        <div data-print-hide className="flex items-center gap-2">
+          <LiveIndicator variant="compact" />
+          <PrintButton />
+        </div>
+      }
     >
       <LiveStaleDataBanner />
       <FadeIn>

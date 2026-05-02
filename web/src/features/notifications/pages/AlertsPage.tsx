@@ -20,6 +20,7 @@ import { TabNav } from '@/components/ui/TabNav';
 import { Toggle } from '@/components/ui/Toggle';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { PinButton } from '@/components/ui/PinButton';
+import { PrintButton } from '@/components/ui/PrintButton';
 import { useUrlEnum, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 
 import { MetricCard } from '@/components/data-display/MetricCard';
@@ -573,11 +574,14 @@ export default function AlertsPage() {
           {quietActive && <Badge variant="info" size="sm">{t('Quiet hours')}</Badge>}
           {unreadCount > 0 && <Badge variant="info" size="sm">{unreadCount} {t('unread')}</Badge>}
           {criticalCount > 0 && <Badge variant="danger" size="sm">{criticalCount} {t('critical')}</Badge>}
-          <SavedViewMenu
-            route="/alerts"
-            currentQuery={savedView.currentQuery}
-            onApply={savedView.apply}
-          />
+          <div data-print-hide className="flex items-center gap-2">
+            <SavedViewMenu
+              route="/alerts"
+              currentQuery={savedView.currentQuery}
+              onApply={savedView.apply}
+            />
+            <PrintButton />
+          </div>
         </div>
       }
     >

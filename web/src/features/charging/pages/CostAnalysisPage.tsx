@@ -6,6 +6,7 @@ import { FadeIn } from '@/components/motion';
 import { EmptyState } from '@/components/feedback';
 import { DateRangeFilter } from '@/components/forms';
 import { SavedViewMenu } from '@/components/data-display';
+import { PrintButton } from '@/components/ui';
 import { useChargingSessionsPaginated, useCostForecast } from '@/api/hooks/useCharging';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -91,18 +92,21 @@ export default function CostAnalysisPage() {
       subtitle={t('costAnalysis.subtitle', 'Electricity cost trends, gas savings, and charging economics')}
       actions={
         <div className="flex flex-wrap items-center gap-3">
-          <DateRangeFilter
-            startDate={startDate}
-            endDate={endDate}
-            onStartDateChange={setStartDate}
-            onEndDateChange={setEndDate}
-            presets
-          />
-          <SavedViewMenu
-            route="/cost-analysis"
-            currentQuery={savedView.currentQuery}
-            onApply={savedView.apply}
-          />
+          <div data-print-hide className="flex flex-wrap items-center gap-3">
+            <DateRangeFilter
+              startDate={startDate}
+              endDate={endDate}
+              onStartDateChange={setStartDate}
+              onEndDateChange={setEndDate}
+              presets
+            />
+            <SavedViewMenu
+              route="/cost-analysis"
+              currentQuery={savedView.currentQuery}
+              onApply={savedView.apply}
+            />
+            <PrintButton />
+          </div>
         </div>
       }
     >

@@ -35,6 +35,7 @@ export const GlassPanel = forwardRef<HTMLDivElement, GlassPanelProps>(
   ({ glow = 'none', hover = false, padding, className, children, ...props }, ref) => (
     <div
       ref={ref}
+      data-print-card
       className={cn(
         'bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl',
         padding ? paddingClasses[padding] : null,

@@ -9,6 +9,7 @@ import { useSyncVehicles } from '@/api/hooks/useVehicles';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Button } from '@/components/ui/Button';
+import { PrintButton } from '@/components/ui/PrintButton';
 import { FadeIn } from '@/components/motion';
 import { AlertBanner, LiveStaleDataBanner } from '@/components/feedback';
 import { LiveIndicator } from '@/components/data-display';
@@ -193,7 +194,7 @@ export default function DashboardPage() {
 
   /* ——— Header actions ——— */
   const headerActions = (
-    <div className="flex items-center gap-2 flex-wrap">
+    <div data-print-hide className="flex items-center gap-2 flex-wrap">
       {editMode ? (
         <>
           <div className="flex items-center gap-1 mr-1">
@@ -273,6 +274,9 @@ export default function DashboardPage() {
         </Link>
       )}
       <LiveIndicator variant="compact" />
+      {!editMode && (
+        <PrintButton label={t('dashboard.printSnapshot', 'Print snapshot')} />
+      )}
     </div>
   );
 
