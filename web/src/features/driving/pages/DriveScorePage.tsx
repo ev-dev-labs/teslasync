@@ -21,7 +21,6 @@ import {
   ReferenceLine,
   Legend,
   renderAnnotationLines,
-  AddAnnotationPopover,
 } from '@/components/charts';
 import { AnimatedNumber, StatCard, MetricBar, InlineMetric, KVList } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
@@ -31,7 +30,6 @@ import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { useDriveScore, useDrives } from '@/api/hooks/useDriving';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useAnnotations } from '@/hooks/useAnnotations';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { formatDateShort, formatDurationMinutes } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt, fmtWithUnit } from '@/lib/numberFormat';
@@ -417,31 +415,6 @@ export default function DriveScorePage() {
     speedUnit,
     efficiencyUnit,
   } = useSettings();
-
-  /* ---- annotations ---- */
-  const { annotations, addAnnotation, removeAnnotation } = useAnnotations('drive-score', vehicleId);
-  const [isAnnotating, setIsAnnotating] = useState(false);
-  const [pendingTimestamp, setPendingTimestamp] = useState<string | null>(null);
-
-  const handleAnnotateChartClick = useCallback(
-    (state: { activeLabel?: string }) => {
-      if (isAnnotating && state?.activeLabel) {
-        setPendingTimestamp(String(state.activeLabel));
-      }
-    },
-    [isAnnotating],
-  );
-
-  const handleAddAnnotation = useCallback(
-    (label: string, category: Parameters<typeof addAnnotation>[2], description?: string) => {
-      if (pendingTimestamp) {
-        addAnnotation(pendingTimestamp, label, category, description);
-        setPendingTimestamp(null);
-        setIsAnnotating(false);
-      }
-    },
-    [pendingTimestamp, addAnnotation],
-  );
 
   /* ---- date filter ---- */
   const [startDate, setStartDate] = useState<string>(getDefaultStartDate);
@@ -999,70 +972,63 @@ export default function DriveScorePage() {
               <ChartContainer
                 title={t('driveScore.scoreTrend', 'Score Trend')}
                 height={300}
-                annotations={annotations}
-                isAnnotating={isAnnotating}
-                onAnnotateToggle={() => setIsAnnotating((v) => !v)}
-                onRemoveAnnotation={removeAnnotation}
+                annotations={{ vehicleId, scope: 'efficiency', chartId: 'drive-score-trend' }}
               >
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={trendChartData} onClick={handleAnnotateChartClick}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} />
-                    <XAxis dataKey="date" stroke={chartTokens.axisStroke} fontSize={12} />
-                    <YAxis domain={[0, 100]} stroke={chartTokens.axisStroke} fontSize={12} />
-                    <Tooltip content={<ChartTooltip />} />
-                    <Legend />
-                    <ReferenceLine
-                      y={80}
-                      stroke={COLOR.GOOD}
-                      strokeDasharray="4 4"
-                      label={{
-                        value: t('driveScore.gradeALine', 'A'),
-                        fill: COLOR.GOOD,
-                        fontSize: 11,
-                      }}
-                    />
-                    {renderAnnotationLines(annotations, (ts) => ts)}
-                    <Line
-                      {...AREA_DEFAULTS}
-                      dataKey="score"
-                      name={t('driveScore.totalScore', 'Total Score')}
-                      stroke={gradeColor(overallGrade)}
-                      dot={{ r: 3, fill: gradeColor(overallGrade) }}
-                      activeDot={{ r: 5 }}
-                    />
-                    <Line
-                      {...AREA_DEFAULTS}
-                      dataKey="efficiency"
-                      name={t('driveScore.efficiency', 'Efficiency')}
-                      stroke={CATEGORY_COLORS.efficiency}
-                      strokeWidth={1}
-                      strokeDasharray="4 2"
-                    />
-                    <Line
-                      {...AREA_DEFAULTS}
-                      dataKey="smoothness"
-                      name={t('driveScore.smoothness', 'Smoothness')}
-                      stroke={CATEGORY_COLORS.smoothness}
-                      strokeWidth={1}
-                      strokeDasharray="4 2"
-                    />
-                    <Line
-                      {...AREA_DEFAULTS}
-                      dataKey="speed"
-                      name={t('driveScore.speedDiscipline', 'Speed Discipline')}
-                      stroke={CATEGORY_COLORS.speed}
-                      strokeWidth={1}
-                      strokeDasharray="4 2"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                {({ annotations: chartAnnotations }) => (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={trendChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} />
+                      <XAxis dataKey="date" stroke={chartTokens.axisStroke} fontSize={12} />
+                      <YAxis domain={[0, 100]} stroke={chartTokens.axisStroke} fontSize={12} />
+                      <Tooltip content={<ChartTooltip />} />
+                      <Legend />
+                      <ReferenceLine
+                        y={80}
+                        stroke={COLOR.GOOD}
+                        strokeDasharray="4 4"
+                        label={{
+                          value: t('driveScore.gradeALine', 'A'),
+                          fill: COLOR.GOOD,
+                          fontSize: 11,
+                        }}
+                      />
+                      {renderAnnotationLines(chartAnnotations, (ts) => ts)}
+                      <Line
+                        {...AREA_DEFAULTS}
+                        dataKey="score"
+                        name={t('driveScore.totalScore', 'Total Score')}
+                        stroke={gradeColor(overallGrade)}
+                        dot={{ r: 3, fill: gradeColor(overallGrade) }}
+                        activeDot={{ r: 5 }}
+                      />
+                      <Line
+                        {...AREA_DEFAULTS}
+                        dataKey="efficiency"
+                        name={t('driveScore.efficiency', 'Efficiency')}
+                        stroke={CATEGORY_COLORS.efficiency}
+                        strokeWidth={1}
+                        strokeDasharray="4 2"
+                      />
+                      <Line
+                        {...AREA_DEFAULTS}
+                        dataKey="smoothness"
+                        name={t('driveScore.smoothness', 'Smoothness')}
+                        stroke={CATEGORY_COLORS.smoothness}
+                        strokeWidth={1}
+                        strokeDasharray="4 2"
+                      />
+                      <Line
+                        {...AREA_DEFAULTS}
+                        dataKey="speed"
+                        name={t('driveScore.speedDiscipline', 'Speed Discipline')}
+                        stroke={CATEGORY_COLORS.speed}
+                        strokeWidth={1}
+                        strokeDasharray="4 2"
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
               </ChartContainer>
-              <AddAnnotationPopover
-                open={pendingTimestamp != null}
-                timestamp={pendingTimestamp ?? ''}
-                onAdd={handleAddAnnotation}
-                onCancel={() => setPendingTimestamp(null)}
-              />
             </GlassPanel>
           </StaggerItem>
 

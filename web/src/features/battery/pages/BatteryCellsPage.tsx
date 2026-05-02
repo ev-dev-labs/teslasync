@@ -12,6 +12,7 @@ import { MetricCard } from '@/components/data-display';
 import {
   ChartContainer, ChartTooltip, ChartGradient,
   chartGrid, axisTick, axisTickSm, chartMargin, chartMarginLabeled, CHART_COLORS,
+  renderAnnotationLines,
   BarChart, Bar, LineChart, Line, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine,
   AREA_DEFAULTS,
@@ -698,37 +699,43 @@ export default function BatteryCellsPage() {
 
       {/* ── Voltage Spread Trend ─── */}
       <FadeIn delay={0.3}>
-        <ChartContainer title={t('battery.cells.chart.spreadTrend', 'Voltage Spread Trend')}>
-          {voltageSpreadTrend.length > 0 ? (
-            <div className="h-48 sm:h-60">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={voltageSpreadTrend}>
-                  <defs>
-                    <ChartGradient id="spreadGrad" color="#a855f7" opacity={0.3} />
-                  </defs>
-                  {chartGrid}
-                  <XAxis dataKey="time" tick={axisTickSm} tickLine={false} axisLine={false} />
-                  <YAxis tick={axisTickSm} tickLine={false} axisLine={false} unit=" mV" />
-                  <Tooltip content={<ChartTooltip />} />
-                  <ReferenceLine y={5} stroke={CHART_COLORS[1]} strokeDasharray="4 4" />
-                  <ReferenceLine y={15} stroke={CHART_COLORS[5]} strokeDasharray="4 4" />
-                  <Area
-                    {...AREA_DEFAULTS}
-                    dataKey="spreadRaw"
-                    name={t('battery.cells.chart.voltageSpread', 'Voltage Spread (mV)')}
-                    stroke="#a855f7"
-                    fill="url(#spreadGrad)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <EmptyState
-              icon={<Activity className="h-8 w-8" />}
-              message={t('battery.cells.chart.noSpreadTrend', 'Not enough history for spread trend')}
-              className="py-8"
-            />
-          )}
+        <ChartContainer
+          title={t('battery.cells.chart.spreadTrend', 'Voltage Spread Trend')}
+          annotations={{ vehicleId, scope: 'battery', chartId: 'battery-cells-spread-trend' }}
+        >
+          {({ annotations: chartAnnotations }) =>
+            voltageSpreadTrend.length > 0 ? (
+              <div className="h-48 sm:h-60">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={voltageSpreadTrend}>
+                    <defs>
+                      <ChartGradient id="spreadGrad" color="#a855f7" opacity={0.3} />
+                    </defs>
+                    {chartGrid}
+                    <XAxis dataKey="time" tick={axisTickSm} tickLine={false} axisLine={false} />
+                    <YAxis tick={axisTickSm} tickLine={false} axisLine={false} unit=" mV" />
+                    <Tooltip content={<ChartTooltip />} />
+                    <ReferenceLine y={5} stroke={CHART_COLORS[1]} strokeDasharray="4 4" />
+                    <ReferenceLine y={15} stroke={CHART_COLORS[5]} strokeDasharray="4 4" />
+                    {renderAnnotationLines(chartAnnotations, (ts) => ts)}
+                    <Area
+                      {...AREA_DEFAULTS}
+                      dataKey="spreadRaw"
+                      name={t('battery.cells.chart.voltageSpread', 'Voltage Spread (mV)')}
+                      stroke="#a855f7"
+                      fill="url(#spreadGrad)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <EmptyState
+                icon={<Activity className="h-8 w-8" />}
+                message={t('battery.cells.chart.noSpreadTrend', 'Not enough history for spread trend')}
+                className="py-8"
+              />
+            )
+          }
         </ChartContainer>
       </FadeIn>
 

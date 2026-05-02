@@ -24,6 +24,71 @@ export type AnnotationCategory =
   | 'upgrade'
   | 'custom';
 
+/**
+ * Phase 40 / Prompt 43 — annotations are now scoped to chart "buckets" so the
+ * same row can appear on every chart that opts into a bucket. Keep this union
+ * in sync with `validScopeBuckets` in
+ * `internal/api/chart_annotation_handler.go`.
+ */
+export type AnnotationScope =
+  | 'battery'
+  | 'efficiency'
+  | 'cost'
+  | 'tire'
+  | 'energy'
+  | 'drivetrain'
+  | 'mileage'
+  | 'charging';
+
+export const ANNOTATION_SCOPES: readonly AnnotationScope[] = [
+  'battery',
+  'efficiency',
+  'cost',
+  'tire',
+  'energy',
+  'drivetrain',
+  'mileage',
+  'charging',
+] as const;
+
+/**
+ * Wire shape from `GET /api/v1/annotations`. Mirrors `models.ChartAnnotation`
+ * — snake_case JSON tags. The frontend uses `toDataAnnotation` to project
+ * this onto the existing chart-render shape so the legacy components keep
+ * working unchanged.
+ */
+export interface ChartAnnotationRow {
+  id: number;
+  user_id?: number | null;
+  vehicle_id?: number | null;
+  occurred_at: string;
+  category: AnnotationCategory;
+  title: string;
+  description?: string | null;
+  scope: string[];
+  color?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Project a backend row onto the chart-render shape. The numeric `id` is
+ * stringified so it can flow through the existing `<AnnotationList>` and
+ * `<ReferenceLine>` consumers without change.
+ */
+export function toDataAnnotation(row: ChartAnnotationRow): DataAnnotation {
+  return {
+    id: String(row.id),
+    timestamp: row.occurred_at,
+    label: row.title,
+    description: row.description ?? undefined,
+    category: row.category,
+    context: row.scope[0] ?? '',
+    vehicleId: row.vehicle_id ?? undefined,
+    createdAt: row.created_at,
+  };
+}
+
 export const ANNOTATION_COLORS: Record<AnnotationCategory, string> = {
   milestone: '#3b82f6',
   maintenance: '#f59e0b',

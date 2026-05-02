@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Zap, TrendingUp, Thermometer, Fuel, Gauge } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -6,7 +6,7 @@ import { GlassPanel } from '@/components/ui/GlassPanel';
 import { DataTable } from '@/components/ui/DataTable';
 import { MetricBar } from '@/components/data-display/MetricBar';
 import {
-  ChartContainer, ChartTooltip, renderAnnotationLines, AddAnnotationPopover,
+  ChartContainer, ChartTooltip, renderAnnotationLines,
   AREA_DEFAULTS, areaGradient,
   AreaChart, Area, BarChart, Bar, ScatterChart, Scatter,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
@@ -21,7 +21,6 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { useDrivingStats, useDrives } from '@/api/hooks/useDriving';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useAnnotations } from '@/hooks/useAnnotations';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
@@ -59,31 +58,6 @@ export default function EfficiencyPage() {
 
   const { data: stats } = useDrivingStats(vehicleIdStr);
   const { data: drives } = useDrives(vehicleIdStr);
-
-  /* Annotations */
-  const { annotations, addAnnotation, removeAnnotation } = useAnnotations('efficiency', vehicleId);
-  const [isAnnotating, setIsAnnotating] = useState(false);
-  const [pendingTimestamp, setPendingTimestamp] = useState<string | null>(null);
-
-  const handleChartClick = useCallback(
-    (state: { activeLabel?: string }) => {
-      if (isAnnotating && state?.activeLabel) {
-        setPendingTimestamp(String(state.activeLabel));
-      }
-    },
-    [isAnnotating],
-  );
-
-  const handleAddAnnotation = useCallback(
-    (label: string, category: Parameters<typeof addAnnotation>[2], description?: string) => {
-      if (pendingTimestamp) {
-        addAnnotation(pendingTimestamp, label, category, description);
-        setPendingTimestamp(null);
-        setIsAnnotating(false);
-      }
-    },
-    [pendingTimestamp, addAnnotation],
-  );
 
   const {
     convertDistance, convertSpeed, convertTemp, convertEfficiency,
@@ -320,29 +294,22 @@ export default function EfficiencyPage() {
             <ChartContainer
               title={t('efficiency.dailyTrend', `Daily Efficiency (${efficiencyUnit})`)}
               height={240}
-              annotations={annotations}
-              isAnnotating={isAnnotating}
-              onAnnotateToggle={() => setIsAnnotating((v) => !v)}
-              onRemoveAnnotation={removeAnnotation}
+              annotations={{ vehicleId, scope: 'efficiency', chartId: 'efficiency-daily-trend' }}
             >
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={dailyTrend} onClick={handleChartClick}>
-                  {areaGradient('effGrad', '#00f0ff')}
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                  <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} />
-                  <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-                  <Tooltip content={<ChartTooltip />} />
-                  {renderAnnotationLines(annotations, (ts) => ts)}
-                  <Area {...AREA_DEFAULTS} dataKey="efficiency" stroke="#00f0ff" fill="url(#effGrad)" name={efficiencyUnit} />
-                </AreaChart>
-              </ResponsiveContainer>
+              {({ annotations: chartAnnotations }) => (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={dailyTrend}>
+                    {areaGradient('effGrad', '#00f0ff')}
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                    <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} />
+                    <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                    <Tooltip content={<ChartTooltip />} />
+                    {renderAnnotationLines(chartAnnotations, (ts) => ts)}
+                    <Area {...AREA_DEFAULTS} dataKey="efficiency" stroke="#00f0ff" fill="url(#effGrad)" name={efficiencyUnit} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
             </ChartContainer>
-            <AddAnnotationPopover
-              open={pendingTimestamp != null}
-              timestamp={pendingTimestamp ?? ''}
-              onAdd={handleAddAnnotation}
-              onCancel={() => setPendingTimestamp(null)}
-            />
           </FadeIn>
 
           <FadeIn>

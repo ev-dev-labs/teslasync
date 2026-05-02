@@ -7,7 +7,7 @@ import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel, Select, DataTable, type Column } from '@/components/ui';
 import {
   RadialGauge, ChartContainer, ChartTooltip, ChartGradient,
-  chartGrid, axisTickSm,
+  chartGrid, axisTickSm, renderAnnotationLines,
   AreaChart, Area, BarChart, Bar, ComposedChart, Line,
   PieChart, Pie, Cell, Brush, XAxis, YAxis, Tooltip, ResponsiveContainer,
   AREA_DEFAULTS,
@@ -392,55 +392,63 @@ export default function EnergyPage() {
           {/* ── Charts Row 1: Energy & Cost Daily + Efficiency ──── */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <FadeIn delay={0.1}>
-              <ChartContainer title={t('energy.chart.energyCostDaily', 'Energy & Cost Daily')} exportable exportFilename="energy-cost-daily">
-                <div className="h-48 sm:h-64">
-                  {dailyEnergy.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart data={dailyEnergy}>
-                        <defs>
-                          <ChartGradient id="energyBarGrad" color="#00f0ff" opacity={0.8} />
-                        </defs>
-                        {chartGrid}
-                        <XAxis dataKey="date" tick={axisTickSm} tickLine={false} axisLine={false} />
-                        <YAxis yAxisId="left" tick={axisTickSm} tickLine={false} axisLine={false} />
-                        <YAxis yAxisId="right" orientation="right" tick={axisTickSm} tickLine={false} axisLine={false} />
-                        <Tooltip content={<ChartTooltip />} />
-                        <Bar
-                          yAxisId="left"
-                          dataKey="energy_kwh"
-                          name={t('energy.chart.energyKwh', 'Energy (kWh)')}
-                          fill="url(#energyBarGrad)"
-                          fillOpacity={0.6}
-                          radius={[3, 3, 0, 0]}
-                          animationDuration={800}
-                        />
-                        <Line
-                          {...AREA_DEFAULTS}
-                          yAxisId="right"
-                          dataKey="efficiency_wh_per_mi"
-                          name={efficiencyUnit}
-                          stroke="#10b981"
-                          animationDuration={800}
-                        />
-                        {dailyEnergy.length > 14 && (
-                          <Brush
-                            dataKey="date"
-                            height={20}
-                            stroke="#6b7280"
-                            fill="rgba(255,255,255,0.02)"
-                            travellerWidth={8}
+              <ChartContainer
+                title={t('energy.chart.energyCostDaily', 'Energy & Cost Daily')}
+                exportable
+                exportFilename="energy-cost-daily"
+                annotations={{ vehicleId, scope: 'energy', chartId: 'energy-cost-daily' }}
+              >
+                {({ annotations: chartAnnotations }) => (
+                  <div className="h-48 sm:h-64">
+                    {dailyEnergy.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <ComposedChart data={dailyEnergy}>
+                          <defs>
+                            <ChartGradient id="energyBarGrad" color="#00f0ff" opacity={0.8} />
+                          </defs>
+                          {chartGrid}
+                          <XAxis dataKey="date" tick={axisTickSm} tickLine={false} axisLine={false} />
+                          <YAxis yAxisId="left" tick={axisTickSm} tickLine={false} axisLine={false} />
+                          <YAxis yAxisId="right" orientation="right" tick={axisTickSm} tickLine={false} axisLine={false} />
+                          <Tooltip content={<ChartTooltip />} />
+                          {renderAnnotationLines(chartAnnotations, (ts) => ts)}
+                          <Bar
+                            yAxisId="left"
+                            dataKey="energy_kwh"
+                            name={t('energy.chart.energyKwh', 'Energy (kWh)')}
+                            fill="url(#energyBarGrad)"
+                            fillOpacity={0.6}
+                            radius={[3, 3, 0, 0]}
+                            animationDuration={800}
                           />
-                        )}
-                      </ComposedChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <EmptyState
-                      icon={<Zap className="h-8 w-8" />}
-                      message={t('energy.chart.noEnergyData', 'Connect vehicle to see energy data')}
-                      className="py-8"
-                    />
-                  )}
-                </div>
+                          <Line
+                            {...AREA_DEFAULTS}
+                            yAxisId="right"
+                            dataKey="efficiency_wh_per_mi"
+                            name={efficiencyUnit}
+                            stroke="#10b981"
+                            animationDuration={800}
+                          />
+                          {dailyEnergy.length > 14 && (
+                            <Brush
+                              dataKey="date"
+                              height={20}
+                              stroke="#6b7280"
+                              fill="rgba(255,255,255,0.02)"
+                              travellerWidth={8}
+                            />
+                          )}
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <EmptyState
+                        icon={<Zap className="h-8 w-8" />}
+                        message={t('energy.chart.noEnergyData', 'Connect vehicle to see energy data')}
+                        className="py-8"
+                      />
+                    )}
+                  </div>
+                )}
               </ChartContainer>
             </FadeIn>
 

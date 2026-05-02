@@ -631,6 +631,20 @@
     "common": {
       "error": "Something went wrong"
     },
+    "annotation": {
+      "created": {
+        "success": "Annotation added",
+        "error": "Failed to add annotation"
+      },
+      "updated": {
+        "success": "Annotation updated",
+        "error": "Failed to update annotation"
+      },
+      "deleted": {
+        "success": "Annotation removed",
+        "error": "Failed to remove annotation"
+      }
+    },
     "export": {
       "create": {
         "success": "Export started",
@@ -1076,6 +1090,7 @@
     "addTitle": "Add Annotation",
     "labelPlaceholder": "e.g., Battery replaced",
     "label": "Label",
+    "date": "Date",
     "category": "Category",
     "descPlaceholder": "Optional description...",
     "description": "Description",
@@ -1084,7 +1099,21 @@
     "remove": "Remove annotation",
     "toggle": "Toggle annotations",
     "clickChart": "Click on chart to annotate",
-    "enable": "Enable annotations"
+    "enable": "Enable annotations",
+    "cat": {
+      "milestone": "Milestone",
+      "maintenance": "Maintenance",
+      "trip": "Trip",
+      "issue": "Issue",
+      "upgrade": "Upgrade",
+      "custom": "Custom"
+    }
+  },
+  "annotations": {
+    "add": "Add annotation",
+    "hide": "Hide annotations",
+    "show": "Show annotations",
+    "markerRow": "Annotations on this chart"
   },
   "chart": {
     "export": "Export as PNG",

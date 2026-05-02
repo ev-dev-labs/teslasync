@@ -119,6 +119,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	authHandler := NewAuthHandler(db, teslaClient, opt.Encryptor)
 	settingsHandler := NewSettingsHandler(db)
 	dashboardLayoutHandler := NewDashboardLayoutHandler(db)
+	chartAnnotationHandler := NewChartAnnotationHandler(db)
 	var pahoForAlerts pahomqtt.Client
 	if mqttClient != nil {
 		pahoForAlerts = mqttClient.Underlying()
@@ -545,6 +546,18 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Put("/{id}", dashboardLayoutHandler.Update)
 			r.Delete("/{id}", dashboardLayoutHandler.Delete)
 			r.Post("/{id}/apply", dashboardLayoutHandler.Apply)
+		})
+
+		// Chart annotations (Phase 40 / Prompt 43) — durable storage for the
+		// user-authored event markers rendered on time-series charts. Replaces
+		// the previous localStorage-only store so annotations survive a device
+		// swap or fresh browser profile.
+		r.Route("/annotations", func(r chi.Router) {
+			r.Use(httprate.LimitByIP(60, 1*time.Minute))
+			r.Get("/", chartAnnotationHandler.List)
+			r.Post("/", chartAnnotationHandler.Create)
+			r.Patch("/{id}", chartAnnotationHandler.Update)
+			r.Delete("/{id}", chartAnnotationHandler.Delete)
 		})
 
 		// Gas Price Auto-Poll

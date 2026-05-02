@@ -12,7 +12,7 @@ import { PageContainer, Grid } from '@/components/layout';
 import { GlassPanel, Badge, Button } from '@/components/ui';
 import {
   RadialGauge, ChartContainer, ChartTooltip, ChartGradient,
-  chartGrid, axisTickSm, CHART_COLORS,
+  chartGrid, axisTickSm, CHART_COLORS, renderAnnotationLines,
   AreaChart, Area, BarChart, Bar, ComposedChart, Line, ReferenceLine,
   PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
   AREA_DEFAULTS, TimeMarker,
@@ -674,36 +674,44 @@ export default function BatteryHealthPage() {
 
       {/* ── 6. Range Trend ───────────────────────────────────────── */}
       <FadeIn delay={0.25}>
-        <ChartContainer title={t('battery.chart.rangeTrend', 'Estimated Range Over Time')} exportable exportFilename="range-trend">
-          {rangeTrend.length > 0 ? (
-            <div className="h-44 sm:h-60">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={rangeTrend}>
-                  <defs>
-                    <ChartGradient id="rangeGrad" color={COLOR.GOOD} opacity={0.3} />
-                  </defs>
-                  {chartGrid}
-                  <XAxis dataKey="label" tick={axisTickSm} tickLine={false} axisLine={false} />
-                  <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
-                  <Tooltip content={<ChartTooltip />} />
-                  <TimeMarker x={alertMarkerLabel} severity={alertCtx.signal ? 'critical' : undefined} />
-                  <Area
-                    {...AREA_DEFAULTS}
-                    dataKey="range"
-                    name={`${t('battery.chart.range', 'Range')} (${distanceUnit})`}
-                    stroke={COLOR.GOOD}
-                    fill="url(#rangeGrad)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <EmptyState
-              icon={<Activity className="h-8 w-8" />}
-              message={t('battery.chart.noRange', 'No range data yet')}
-              className="py-8"
-            />
-          )}
+        <ChartContainer
+          title={t('battery.chart.rangeTrend', 'Estimated Range Over Time')}
+          exportable
+          exportFilename="range-trend"
+          annotations={{ vehicleId, scope: 'battery', chartId: 'battery-health-range-trend' }}
+        >
+          {({ annotations: chartAnnotations }) =>
+            rangeTrend.length > 0 ? (
+              <div className="h-44 sm:h-60">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={rangeTrend}>
+                    <defs>
+                      <ChartGradient id="rangeGrad" color={COLOR.GOOD} opacity={0.3} />
+                    </defs>
+                    {chartGrid}
+                    <XAxis dataKey="label" tick={axisTickSm} tickLine={false} axisLine={false} />
+                    <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
+                    <Tooltip content={<ChartTooltip />} />
+                    <TimeMarker x={alertMarkerLabel} severity={alertCtx.signal ? 'critical' : undefined} />
+                    {renderAnnotationLines(chartAnnotations, (ts) => ts)}
+                    <Area
+                      {...AREA_DEFAULTS}
+                      dataKey="range"
+                      name={`${t('battery.chart.range', 'Range')} (${distanceUnit})`}
+                      stroke={COLOR.GOOD}
+                      fill="url(#rangeGrad)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <EmptyState
+                icon={<Activity className="h-8 w-8" />}
+                message={t('battery.chart.noRange', 'No range data yet')}
+                className="py-8"
+              />
+            )
+          }
         </ChartContainer>
       </FadeIn>
 

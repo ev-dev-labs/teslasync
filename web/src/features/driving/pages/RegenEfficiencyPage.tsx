@@ -5,7 +5,7 @@ import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Select } from '@/components/ui/Select';
 import {
-  ChartContainer, ChartTooltip, AREA_DEFAULTS,
+  ChartContainer, ChartTooltip, AREA_DEFAULTS, renderAnnotationLines,
   ComposedChart, Line, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
@@ -203,18 +203,25 @@ export default function RegenEfficiencyPage() {
           {/* Monthly regen trend chart */}
           {monthlyTrend.length > 1 && (
             <FadeIn>
-              <ChartContainer title={t('regen.monthlyTrend', 'Monthly Regen Trend')} height={260}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={monthlyTrend}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                    <XAxis dataKey="month" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} />
-                    <YAxis yAxisId="kwh" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-                    <YAxis yAxisId="drives" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-                    <Tooltip content={<ChartTooltip />} />
-                    <Bar yAxisId="drives" dataKey="drives" name={t('regen.drives', 'Drives')} fill="#a855f7" fillOpacity={0.4} radius={[4, 4, 0, 0]} />
-                    <Line {...AREA_DEFAULTS} yAxisId="kwh" dataKey="regenKwh" name={t('regen.regenKwh', 'Regen kWh')} stroke="#10b981" />
-                  </ComposedChart>
-                </ResponsiveContainer>
+              <ChartContainer
+                title={t('regen.monthlyTrend', 'Monthly Regen Trend')}
+                height={260}
+                annotations={{ vehicleId, scope: 'efficiency', chartId: 'regen-monthly-trend' }}
+              >
+                {({ annotations: chartAnnotations }) => (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={monthlyTrend}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                      <XAxis dataKey="month" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} />
+                      <YAxis yAxisId="kwh" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                      <YAxis yAxisId="drives" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                      <Tooltip content={<ChartTooltip />} />
+                      {renderAnnotationLines(chartAnnotations, (ts) => ts)}
+                      <Bar yAxisId="drives" dataKey="drives" name={t('regen.drives', 'Drives')} fill="#a855f7" fillOpacity={0.4} radius={[4, 4, 0, 0]} />
+                      <Line {...AREA_DEFAULTS} yAxisId="kwh" dataKey="regenKwh" name={t('regen.regenKwh', 'Regen kWh')} stroke="#10b981" />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                )}
               </ChartContainer>
             </FadeIn>
           )}
