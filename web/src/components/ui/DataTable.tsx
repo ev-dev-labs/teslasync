@@ -1,5 +1,6 @@
 import { type ReactNode, useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { cn } from '../../lib/cn'
 import { tableTokens } from '../../lib/tokens'
 import { ChevronUp, ChevronDown, ChevronRight, AlertTriangle, Download, Loader2 } from 'lucide-react'
@@ -140,6 +141,31 @@ interface DataTableProps<T> {
    *  export awaits this fetcher to obtain the full row set instead of using
    *  whatever's currently visible. */
   exportAll?: () => Promise<T[]>
+
+  // ── Phase-40 / Prompt 37 — row virtualization ─────────────────────────
+  /** Opt-in row virtualization for high-volume tables (1000+ rows).
+   *  Mounts only the rows currently in the viewport (plus `overscan`),
+   *  which keeps the DOM small and scrolling at 60fps regardless of how
+   *  many rows the table has been given.
+   *
+   *  Constraints:
+   *    - Requires fixed-height rows. `expandable` is NOT supported (variable
+   *      heights are out of scope) — when both are passed the table falls
+   *      back to non-virtualized rendering.
+   *    - Auto-enables `stickyHeader` and `maxHeight` (defaults to 600px when
+   *      neither is provided) so the scroll container has a bounded height.
+   *
+   *  Selection, sort, column visibility, resize, and CSV export all remain
+   *  fully functional under virtualization. */
+  virtualized?: boolean
+  /** Estimated row height in pixels when `virtualized` is true. Defaults to
+   *  44 (default density) or 36 (compact density). The virtualizer adapts
+   *  to actual rendered sizes, so an estimate within a few pixels is fine. */
+  rowHeight?: number
+  /** Number of off-screen rows to render above/below the viewport when
+   *  virtualized. Defaults to 8 — higher values smooth fast scrolling at
+   *  the cost of slightly more DOM. */
+  overscan?: number
 }
 
 const STORAGE_PREFIX = 'teslasync.table'
@@ -206,6 +232,9 @@ export function DataTable<T>({
   exportFilename,
   exportRow,
   exportAll,
+  virtualized = false,
+  rowHeight,
+  overscan,
 }: DataTableProps<T>) {
   const { t } = useTranslation()
   const paginationEnabled = !!pagination
@@ -427,6 +456,42 @@ export function DataTable<T>({
   const leadingColCount = (isSelectable ? 1 : 0) + (expandable ? 1 : 0)
   const totalCols = leadingColCount + visibleColumns.length
 
+  // ── Virtualization (Phase-40 / Prompt 37) ─────────────────────────────
+  // Only enabled when explicitly opted in AND there's no `expandable` slot
+  // (variable row heights are out of scope). When the user passes both, we
+  // gracefully fall back to non-virtualized rendering with a dev warning.
+  const virtualizationActive = virtualized && !expandable && data.length > 0
+  const effectiveRowHeight = rowHeight ?? (compact ? 36 : 44)
+  const effectiveOverscan = overscan ?? 8
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const virtualizer = useVirtualizer({
+    count: virtualizationActive ? paginatedData.length : 0,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => effectiveRowHeight,
+    overscan: effectiveOverscan,
+  })
+  const virtualItems = virtualizationActive ? virtualizer.getVirtualItems() : []
+  const virtualTotalSize = virtualizationActive ? virtualizer.getTotalSize() : 0
+  const virtualPadTop = virtualItems[0]?.start ?? 0
+  // When the virtualizer hasn't measured the viewport yet (or there are no
+  // visible items because the container has zero height — e.g. jsdom in
+  // unit tests), fall back to rendering the full estimated height as bottom
+  // padding so the scroll container reports its true scrollHeight. Once the
+  // virtualizer measures and produces virtual items, this collapses back to
+  // the precise tail padding.
+  const virtualPadBottom = virtualItems.length
+    ? virtualTotalSize - (virtualItems[virtualItems.length - 1]?.end ?? 0)
+    : virtualTotalSize
+  useEffect(() => {
+    if (virtualized && expandable && import.meta.env.DEV) {
+      console.warn(
+        '[DataTable] `virtualized` and `expandable` cannot be combined ' +
+        '(variable row heights are out of scope). Falling back to ' +
+        'non-virtualized rendering.',
+      )
+    }
+  }, [virtualized, expandable])
+
   // tbody can only hold <tr>, so the boundary fallback must also be a <tr>
   // to keep markup valid when a row renderer throws.
   const bodyFallback = (
@@ -443,19 +508,137 @@ export function DataTable<T>({
     </tr>
   )
 
+  // Render a single data row (plus its optional expanded drawer row when
+  // expandable). Used by both the standard render path and the virtualized
+  // render path so selection / expansion / styling stay perfectly in sync.
+  const renderDataRow = (row: T): ReactNode[] => {
+    const rowKey = keyExtractor(row)
+    const selected = isSelectable && selectionSet.has(rowKey)
+    const expanded = expandable && expansionSet.has(rowKey)
+    const trClass = cn(
+      tableTokens.row,
+      selected && tableTokens.rowSelected,
+    )
+    const rows: ReactNode[] = [
+      <tr
+        key={rowKey}
+        className={trClass}
+        data-selected={selected ? 'true' : undefined}
+        data-expanded={expanded ? 'true' : undefined}
+        aria-selected={isSelectable ? selected : undefined}
+        onKeyDown={(e) => {
+          if (e.key === ' ' && isSelectable) {
+            e.preventDefault()
+            toggleRow(rowKey, e)
+          } else if (e.key === 'Enter' && expandable) {
+            e.preventDefault()
+            toggleExpand(rowKey)
+          }
+        }}
+        tabIndex={isSelectable || expandable ? 0 : undefined}
+      >
+        {isSelectable && (
+          <td className={cn(compact ? 'px-2 py-2' : 'px-3 py-3', tableTokens.leadingColWidth)}>
+            <input
+              type={selectable === 'single' ? 'radio' : 'checkbox'}
+              checked={selected}
+              // Stop the click bubbling so a click on the checkbox
+              // doesn't also fire the row's onClick (when consumers
+              // attach one via `tr` wrappers around content).
+              onClick={(e) => {
+                e.stopPropagation()
+                toggleRow(rowKey, e)
+              }}
+              // Read-only because we drive state via onClick to
+              // capture shiftKey for range selection.
+              onChange={() => { /* handled in onClick */ }}
+              aria-label={
+                selected
+                  ? t('table.selection.deselectRow', 'Deselect row')
+                  : t('table.selection.selectRow', 'Select row')
+              }
+              className={cn(
+                'border-white/20 bg-white/5 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0',
+                selectable === 'single' ? '' : 'rounded',
+              )}
+            />
+          </td>
+        )}
+        {expandable && (
+          <td className={cn(compact ? 'px-2 py-2' : 'px-3 py-3', tableTokens.leadingColWidth)}>
+            <button
+              type="button"
+              onClick={() => toggleExpand(rowKey)}
+              aria-expanded={expanded}
+              aria-label={
+                expanded
+                  ? t('table.expand.collapse', 'Collapse row')
+                  : t('table.expand.expand', 'Expand row')
+              }
+              className={cn(
+                'inline-flex h-5 w-5 items-center justify-center rounded',
+                'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06]',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
+                'transition-colors',
+              )}
+            >
+              <ChevronRight
+                className={cn('h-3.5 w-3.5 transition-transform', expanded && 'rotate-90')}
+                aria-hidden="true"
+              />
+            </button>
+          </td>
+        )}
+        {visibleColumns.map(col => (
+          <td
+            key={col.key}
+            className={cn(
+              compact ? 'px-3 py-2' : tableTokens.cell,
+              colHiddenClass(col.key),
+              alignClass(col.align),
+              col.className,
+            )}
+          >
+            {col.render(row)}
+          </td>
+        ))}
+      </tr>,
+    ]
+    if (expanded && renderExpanded) {
+      rows.push(
+        <tr key={`${rowKey}-expanded`} data-expanded-content="true">
+          <td colSpan={totalCols} className={tableTokens.expandedCell}>
+            {renderExpanded(row)}
+          </td>
+        </tr>,
+      )
+    }
+    return rows
+  }
+
   // ── Render ──────────────────────────────────────────────────────────────
-  const wrapperStyle = maxHeight != null
-    ? { maxHeight: typeof maxHeight === 'number' ? `${maxHeight}px` : maxHeight }
+  // When virtualized, the wrapper MUST be the scrollable element with a
+  // bounded height (otherwise the virtualizer can't compute the viewport).
+  // We default to maxHeight=600 and auto-enable a sticky header so the
+  // column titles stay visible while the user scrolls through thousands of
+  // rows.
+  const effectiveMaxHeight = maxHeight ?? (virtualizationActive ? 600 : undefined)
+  const effectiveStickyHeader = stickyHeader || virtualizationActive
+
+  const wrapperStyle = effectiveMaxHeight != null
+    ? { maxHeight: typeof effectiveMaxHeight === 'number' ? `${effectiveMaxHeight}px` : effectiveMaxHeight }
     : undefined
 
   const wrapperClass = cn(
-    stickyHeader || maxHeight != null ? tableTokens.scrollContainer : 'overflow-x-auto rounded-xl',
+    effectiveStickyHeader || effectiveMaxHeight != null
+      ? tableTokens.scrollContainer
+      : 'overflow-x-auto rounded-xl',
     className,
   )
 
   const headRowClass = cn(
     tableTokens.head,
-    stickyHeader && tableTokens.stickyHead,
+    effectiveStickyHeader && tableTokens.stickyHead,
   )
 
   const showToolbar =
@@ -510,7 +693,7 @@ export function DataTable<T>({
         </div>
       )}
 
-      <div className={wrapperClass} style={wrapperStyle}>
+      <div ref={scrollContainerRef} className={wrapperClass} style={wrapperStyle}>
         <table className={tableTokens.wrapper}>
           <thead>
             <tr className={headRowClass}>
@@ -606,111 +789,26 @@ export function DataTable<T>({
                     {emptyMessage}
                   </td>
                 </tr>
+              ) : virtualizationActive ? (
+                <>
+                  {virtualPadTop > 0 && (
+                    <tr aria-hidden="true" data-virtual-spacer="top">
+                      <td colSpan={totalCols} className="p-0 border-0" style={{ height: virtualPadTop }} />
+                    </tr>
+                  )}
+                  {virtualItems.flatMap((vi) => {
+                    const row = paginatedData[vi.index]
+                    if (row === undefined) return []
+                    return renderDataRow(row)
+                  })}
+                  {virtualPadBottom > 0 && (
+                    <tr aria-hidden="true" data-virtual-spacer="bottom">
+                      <td colSpan={totalCols} className="p-0 border-0" style={{ height: virtualPadBottom }} />
+                    </tr>
+                  )}
+                </>
               ) : (
-                paginatedData.flatMap(row => {
-                  const rowKey = keyExtractor(row)
-                  const selected = isSelectable && selectionSet.has(rowKey)
-                  const expanded = expandable && expansionSet.has(rowKey)
-                  const trClass = cn(
-                    tableTokens.row,
-                    selected && tableTokens.rowSelected,
-                  )
-                  const rows: ReactNode[] = [
-                    <tr
-                      key={rowKey}
-                      className={trClass}
-                      data-selected={selected ? 'true' : undefined}
-                      data-expanded={expanded ? 'true' : undefined}
-                      aria-selected={isSelectable ? selected : undefined}
-                      onKeyDown={(e) => {
-                        if (e.key === ' ' && isSelectable) {
-                          e.preventDefault()
-                          toggleRow(rowKey, e)
-                        } else if (e.key === 'Enter' && expandable) {
-                          e.preventDefault()
-                          toggleExpand(rowKey)
-                        }
-                      }}
-                      tabIndex={isSelectable || expandable ? 0 : undefined}
-                    >
-                      {isSelectable && (
-                        <td className={cn(compact ? 'px-2 py-2' : 'px-3 py-3', tableTokens.leadingColWidth)}>
-                          <input
-                            type={selectable === 'single' ? 'radio' : 'checkbox'}
-                            checked={selected}
-                            // Stop the click bubbling so a click on the checkbox
-                            // doesn't also fire the row's onClick (when consumers
-                            // attach one via `tr` wrappers around content).
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              toggleRow(rowKey, e)
-                            }}
-                            // Read-only because we drive state via onClick to
-                            // capture shiftKey for range selection.
-                            onChange={() => { /* handled in onClick */ }}
-                            aria-label={
-                              selected
-                                ? t('table.selection.deselectRow', 'Deselect row')
-                                : t('table.selection.selectRow', 'Select row')
-                            }
-                            className={cn(
-                              'border-white/20 bg-white/5 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0',
-                              selectable === 'single' ? '' : 'rounded',
-                            )}
-                          />
-                        </td>
-                      )}
-                      {expandable && (
-                        <td className={cn(compact ? 'px-2 py-2' : 'px-3 py-3', tableTokens.leadingColWidth)}>
-                          <button
-                            type="button"
-                            onClick={() => toggleExpand(rowKey)}
-                            aria-expanded={expanded}
-                            aria-label={
-                              expanded
-                                ? t('table.expand.collapse', 'Collapse row')
-                                : t('table.expand.expand', 'Expand row')
-                            }
-                            className={cn(
-                              'inline-flex h-5 w-5 items-center justify-center rounded',
-                              'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06]',
-                              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
-                              'transition-colors',
-                            )}
-                          >
-                            <ChevronRight
-                              className={cn('h-3.5 w-3.5 transition-transform', expanded && 'rotate-90')}
-                              aria-hidden="true"
-                            />
-                          </button>
-                        </td>
-                      )}
-                      {visibleColumns.map(col => (
-                        <td
-                          key={col.key}
-                          className={cn(
-                            compact ? 'px-3 py-2' : tableTokens.cell,
-                            colHiddenClass(col.key),
-                            alignClass(col.align),
-                            col.className,
-                          )}
-                        >
-                          {col.render(row)}
-                        </td>
-                      ))}
-                    </tr>,
-                  ]
-                  if (expanded && renderExpanded) {
-                    rows.push(
-                      <tr key={`${rowKey}-expanded`} data-expanded-content="true">
-                        <td colSpan={totalCols} className={tableTokens.expandedCell}>
-                          {renderExpanded(row)}
-                        </td>
-                      </tr>,
-                    )
-                  }
-                  return rows
-                })
+                paginatedData.flatMap(renderDataRow)
               )}
             </SectionErrorBoundary>
           </tbody>

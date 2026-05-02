@@ -1,0 +1,96 @@
+=== GATE ===
+=== PREFLIGHT ===
+PROMPT=phase-40/37-table-virtualization-adoption
+BRANCH=refactor/mono-gone
+HEAD=1ea55095
+NOTE=Pages that don't currently use <DataTable> (ApiLogsPage, DrivesListPage, ChargingListPage, NotificationsPage, CommandHistoryPage) are out of scope: they would require migration to DataTable first. SignalLogViewerPage uses expandable rows (variable heights, out of scope). LiveSignalMonitorPage relies on direct ref-based auto-scroll which is incompatible with internal scroll container; deferred.
+=== FILES_EXIST ===
+FILE[web\package.json]=True
+FILE[web\package-lock.json]=True
+FILE[web\src\components\ui\DataTable.tsx]=True
+FILE[web\src\components\ui\__tests__\DataTable.test.tsx]=True
+FILE[web\src\features\telemetry\pages\MQTTInspectorPage.tsx]=True
+FILE[web\src\features\notifications\pages\AlertsPage.tsx]=True
+FILES_EXPECTED=6
+FILES_MISSING=0
+FILE_DELETED[web\src\hooks\useVirtualList.ts]=True
+PREFLIGHT_OK
+=== TYPESCRIPT ===
+TSC_EXIT=0
+=== LINT ===
+
+> teslasync-web@2.0.0 lint
+> eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0
+
+LINT_EXIT=0
+=== FRONTEND_TEST ===
+ [32mΓ£ô[39m src/lib/certificate.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 89[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/gpx.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 79[2mms[22m[39m
+stderr | src/hooks/__tests__/useUrlState.test.tsx > useUrlState > returns the default when the param is absent
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mΓ£ô[39m src/hooks/__tests__/useUrlState.test.tsx [2m([22m[2m17 tests[22m[2m)[22m[32m 149[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/dateFormat.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 65[2mms[22m[39m
+ [32mΓ£ô[39m src/hooks/__tests__/useFilteredList.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 75[2mms[22m[39m
+ [32mΓ£ô[39m src/components/charts/useChartLegendState.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[32m 94[2mms[22m[39m
+ [32mΓ£ô[39m src/hooks/__tests__/useAutosave.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 83[2mms[22m[39m
+ [32mΓ£ô[39m src/hooks/__tests__/useLiveConnection.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 78[2mms[22m[39m
+[90mstdout[2m | src/hooks/__tests__/useDirtyForm.test.ts
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+ [32mΓ£ô[39m src/components/maps/__tests__/GeofenceDrawer.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 50[2mms[22m[39m
+ [32mΓ£ô[39m src/hooks/__tests__/useDirtyForm.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 94[2mms[22m[39m
+ [32mΓ£ô[39m src/hooks/__tests__/useMotionPreference.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 69[2mms[22m[39m
+ [32mΓ£ô[39m src/components/maps/__tests__/MarkerCluster.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 98[2mms[22m[39m
+ [32mΓ£ô[39m src/types/fsm/__tests__/coverage-matrix.test.ts [2m([22m[2m30 tests[22m[2m)[22m[32m 48[2mms[22m[39m
+stderr | src/hooks/__tests__/useAlertContext.test.tsx > useAlertContext > returns nulls and hasContext=false when no params present
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mΓ£ô[39m src/hooks/__tests__/useAlertContext.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 90[2mms[22m[39m
+ [32mΓ£ô[39m src/types/fsm/__tests__/transition-integrity.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 80[2mms[22m[39m
+ [32mΓ£ô[39m src/components/charts/Charts.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 88[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/titleStore.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+ [32mΓ£ô[39m src/types/fsm/__tests__/scenario-walkability.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/export.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+ [32mΓ£ô[39m src/types/fsm/__tests__/edge-derivation.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/timezone.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 68[2mms[22m[39m
+ [32mΓ£ô[39m src/types/fsm/__tests__/disallowed.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/vehicleState.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/parseEnums.test.ts [2m([22m[2m33 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32mΓ£ô[39m src/types/fsm/__tests__/truth-table.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/commandRegistry.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32mΓ£ô[39m src/types/fsm/__tests__/cross-fsm-wiring.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/alertDrillthrough.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/csvExport.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/enums.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/gear.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/resilience.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/cleanNil.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m61 passed[39m[22m[90m (61)[39m
+[2m      Tests [22m [1m[32m719 passed[39m[22m[90m (719)[39m
+[2m   Start at [22m 17:15:59
+[2m   Duration [22m 20.97s[2m (transform 9.38s, setup 15.84s, import 43.90s, tests 18.92s, environment 176.34s)[22m
+
+FRONTEND_TEST_EXIT=0
+=== AUDIT_VIOLATIONS ===
+VIOLATION_INLINE_VAR=0
+VIOLATION_RECHARTS_DIRECT=0
+VIOLATION_LEAFLET_DIRECT=0
+VIOLATION_LEGACY_API_IMPORT=0
+VIOLATION_DOUBLE_API_PREFIX=0
+AUDIT_TOTAL_VIOLATIONS=0
+=== GIT_STATUS ===
+ M web/package-lock.json
+ M web/package.json
+ M web/src/components/ui/DataTable.tsx
+ M web/src/components/ui/__tests__/DataTable.test.tsx
+ M web/src/features/notifications/pages/AlertsPage.tsx
+ M web/src/features/telemetry/pages/MQTTInspectorPage.tsx
+ D web/src/hooks/useVirtualList.ts
+UNEXPECTED_STATUS_COUNT=0
+=== STATUS ===
+EXIT=0
+STATUS=DONE

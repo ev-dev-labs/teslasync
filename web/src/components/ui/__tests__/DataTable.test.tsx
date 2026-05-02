@@ -312,3 +312,166 @@ describe('DataTable — column resize persistence', () => {
     expect(handles.length).toBe(3)
   })
 })
+
+// ─── Phase-40 / Prompt 37 — Virtualization ──────────────────────────────────
+//
+// jsdom doesn't lay anything out (every element has 0×0 dimensions), so the
+// virtualizer can't measure the viewport and decide which rows are visible.
+// The tests below verify the integration plumbing (props are wired, spacer
+// rows appear, content rows still render, sticky header auto-enables, the
+// expandable + virtualized combination is rejected gracefully) rather than
+// the per-pixel cull behavior, which only meaningfully runs in a real
+// browser.
+
+describe('DataTable — virtualization (Phase-40 / Prompt 37)', () => {
+  function buildRows(count: number): Row[] {
+    return Array.from({ length: count }, (_, i) => ({
+      id: i + 1,
+      name: `Row ${i + 1}`,
+      status: i % 2 === 0 ? 'ok' : 'fail',
+      detail: `detail ${i + 1}`,
+    }))
+  }
+
+  it('non-virtualized (default) renders every row in the DOM', () => {
+    const data = buildRows(50)
+    const { container } = render(
+      <DataTable columns={COLS.slice(0, 3)} data={data} keyExtractor={r => r.id} />,
+    )
+    const tbody = container.querySelector('tbody')
+    expect(tbody).not.toBeNull()
+    const rows = tbody!.querySelectorAll('tr')
+    expect(rows.length).toBe(50)
+  })
+
+  it('virtualized renders the spacer rows + the visible window', () => {
+    const data = buildRows(2000)
+    const { container } = render(
+      <DataTable
+        columns={COLS.slice(0, 3)}
+        data={data}
+        keyExtractor={r => r.id}
+        virtualized
+        rowHeight={36}
+        maxHeight={400}
+      />,
+    )
+    const tbody = container.querySelector('tbody')
+    expect(tbody).not.toBeNull()
+    // We do not render all 2000 rows.
+    const rows = tbody!.querySelectorAll('tr')
+    expect(rows.length).toBeLessThan(2000)
+    // The first row should be the top spacer when scrollTop=0 and the
+    // dataset is large enough that not every row fits in the viewport.
+    // (jsdom always has bottom padding because the viewport is 0 high.)
+    const bottomSpacer = tbody!.querySelector('tr[data-virtual-spacer="bottom"]')
+    expect(bottomSpacer).not.toBeNull()
+  })
+
+  it('virtualized auto-enables sticky header even when stickyHeader is omitted', () => {
+    const data = buildRows(100)
+    const { container } = render(
+      <DataTable
+        columns={COLS.slice(0, 3)}
+        data={data}
+        keyExtractor={r => r.id}
+        virtualized
+        rowHeight={36}
+      />,
+    )
+    const thead = container.querySelector('thead')
+    const tr = thead?.querySelector('tr')
+    expect(tr?.className).toMatch(/sticky/)
+  })
+
+  it('virtualized defaults maxHeight to 600 when not provided', () => {
+    const data = buildRows(100)
+    const { container } = render(
+      <DataTable
+        columns={COLS.slice(0, 3)}
+        data={data}
+        keyExtractor={r => r.id}
+        virtualized
+        rowHeight={36}
+      />,
+    )
+    const wrapper = container.querySelector('div[style*="max-height"]') as HTMLElement | null
+    expect(wrapper).not.toBeNull()
+    expect(wrapper?.style.maxHeight).toBe('600px')
+  })
+
+  it('virtualized + expandable falls back to non-virtualized rendering', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const data = buildRows(20)
+    const { container } = render(
+      <DataTable
+        columns={COLS.slice(0, 3)}
+        data={data}
+        keyExtractor={r => r.id}
+        virtualized
+        expandable
+        expandedKeys={[]}
+        onExpandedChange={() => {}}
+        renderExpanded={r => <span>{r.detail}</span>}
+      />,
+    )
+    // No virtual spacers should be in the DOM when virtualization is disabled.
+    expect(container.querySelector('tr[data-virtual-spacer="top"]')).toBeNull()
+    expect(container.querySelector('tr[data-virtual-spacer="bottom"]')).toBeNull()
+    // Every data row is rendered (expand chevron column + 3 data cols = 4).
+    const tbody = container.querySelector('tbody')
+    expect(tbody!.querySelectorAll('tr').length).toBe(20)
+    warnSpy.mockRestore()
+  })
+
+  it('virtualized still supports sort + select-all (header-level controls)', () => {
+    const onSort = vi.fn()
+    const onSelectionChange = vi.fn()
+    const sortableCols: Column<Row>[] = [
+      { key: 'id', header: 'ID', render: r => <span>{r.id}</span>, sortable: true },
+      { key: 'name', header: 'Name', render: r => <span>{r.name}</span>, sortable: true },
+    ]
+    const data = buildRows(500)
+    render(
+      <DataTable
+        columns={sortableCols}
+        data={data}
+        keyExtractor={r => r.id}
+        virtualized
+        rowHeight={36}
+        maxHeight={400}
+        selectable="multi"
+        selectedKeys={[]}
+        onSelectionChange={onSelectionChange}
+        onSort={onSort}
+      />,
+    )
+    // Sort handler still fires on virtualized tables.
+    fireEvent.click(screen.getByRole('button', { name: /name/i }))
+    expect(onSort).toHaveBeenCalledWith('name')
+    // Select-all still emits the full underlying dataset (selection state
+    // is keyed on the entire `data` array, not just the rendered window).
+    const headerCheckbox = screen.getByRole('checkbox', { name: /select all rows/i })
+    fireEvent.click(headerCheckbox)
+    const lastCall = onSelectionChange.mock.calls[onSelectionChange.mock.calls.length - 1][0] as number[]
+    expect(lastCall.length).toBe(500)
+    expect(lastCall).toContain(1)
+    expect(lastCall).toContain(500)
+  })
+
+  it('virtualized renders empty state instead of spacers when data is empty', () => {
+    const { container } = render(
+      <DataTable
+        columns={COLS.slice(0, 3)}
+        data={[]}
+        keyExtractor={r => r.id}
+        virtualized
+        rowHeight={36}
+        emptyMessage="No rows"
+      />,
+    )
+    expect(screen.getByText('No rows')).toBeInTheDocument()
+    expect(container.querySelector('tr[data-virtual-spacer="top"]')).toBeNull()
+    expect(container.querySelector('tr[data-virtual-spacer="bottom"]')).toBeNull()
+  })
+})

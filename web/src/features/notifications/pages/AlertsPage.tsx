@@ -293,7 +293,9 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
                 data={filteredLogs}
                 keyExtractor={(log) => log.id}
                 compact
-                pagination={{ defaultPageSize: 50 }}
+                virtualized
+                rowHeight={36}
+                pagination={{ defaultPageSize: 500 }}
                 tableId="alerts-logs"
                 showColumnsMenu
                 stickyHeader
