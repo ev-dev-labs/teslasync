@@ -7,7 +7,12 @@
     "charging": "Charging",
     "energy": "Energy",
     "battery": "Battery Health",
-    "analytics": "Analytics",
+    "analytics": {
+      "periodCompare": "Period Comparison",
+      "periodCompareSub": "This week vs last week",
+      "fleetCompare": "Fleet Comparison",
+      "fleetCompareSub": "Vehicle vs vehicle"
+    },
     "efficiency": "Efficiency",
     "mileage": "Mileage",
     "timeline": "Timeline",
@@ -106,13 +111,7 @@
     "locationHistory": "Location History",
     "climate": "Climate",
     "unpinPage": "Unpin ${navLabel(item.label)}",
-    "vehicleComparison": "Fleet Comparison",
-    "analytics": {
-      "periodCompare": "Period Comparison",
-      "periodCompareSub": "This week vs last week",
-      "fleetCompare": "Fleet Comparison",
-      "fleetCompareSub": "Vehicle vs vehicle"
-    }
+    "vehicleComparison": "Fleet Comparison"
   },
   "vehiclePicker": {
     "aria": "Select vehicle",
@@ -231,7 +230,11 @@
     "chargeRate": "Charge Rate",
     "vehicle": "Vehicle",
     "open": "Open",
-    "minShort": "min"
+    "minShort": "min",
+    "saving": "Saving…",
+    "update": "Update",
+    "today": "Today",
+    "yesterday": "Yesterday"
   },
   "units": {
     "km": "km",
@@ -988,7 +991,8 @@
     "export": {
       "csv": "Download CSV",
       "csvAria": "Download visible rows as CSV",
-      "loading": "Preparing CSV…"
+      "loading": "Preparing CSV…",
+      "csvButton": "Download CSV"
     }
   },
   "shortcuts": {
@@ -1134,7 +1138,8 @@
     "delete": {
       "title": "Delete rule?",
       "message": "This cannot be undone."
-    }
+    },
+    "signal": "Signal"
   },
   "pagination": {
     "showing": "Showing {{start}}–{{end}} of {{total}}",
@@ -4852,7 +4857,8 @@
         "triggerModeLabel": "Trigger Mode",
         "testMessageLabel": "Test Message",
         "signalHint": "Use {{SignalName}}",
-        "testMessagePlaceholder": "Battery at {{BatteryLevel}}%"
+        "testMessagePlaceholder": "Battery at {{BatteryLevel}}%",
+        "kindLabel": "Rule type"
       },
       "signalTypes": {
         "numeric": "Numeric",
@@ -4909,6 +4915,23 @@
         "externalChannels": "External channels for test notifications:",
         "emptyTitle": "No external channels configured",
         "emptyDescription": "Browser toasts and alert history are always enabled. Configure channels from Notifications to fan out alerts."
+      },
+      "computedMetric": {
+        "metric": "Metric",
+        "loading": "Loading metrics…",
+        "metricPlaceholder": "Choose a metric",
+        "window": "Window",
+        "windowPlaceholder": "Choose a window",
+        "op": "Operator",
+        "threshold": "Threshold",
+        "thresholdPlaceholder": "e.g. 200",
+        "preview": "Live preview",
+        "previewLoading": "Computing…",
+        "wouldNot": "NOT"
+      },
+      "kind": {
+        "signal": "Signal threshold",
+        "computedMetric": "Computed metric"
       }
     }
   },
@@ -6002,5 +6025,28 @@
     "goBack": "Go back",
     "goHome": "Go to dashboard",
     "openSearch": "Open command palette"
+  },
+  "layout": {
+    "newLayoutDefault": "New Layout",
+    "saveAsPrompt": "Name for the new layout:",
+    "resetTitle": "Reset dashboard to default?",
+    "resetConfirm": "Reset",
+    "untitled": "Untitled",
+    "switcherLabel": "Switch dashboard layout",
+    "label": "Layout",
+    "modified": "modified",
+    "editExit": "Done",
+    "editEnter": "Edit",
+    "saveAs": "Save as new layout",
+    "saveAsShort": "Save as",
+    "reset": "Reset to default",
+    "menuLabel": "Saved layouts",
+    "noneVisible": "No layouts available for this vehicle.",
+    "defaultBadge": "default",
+    "newFromCurrent": "New layout from current",
+    "unpin": "Unpin from vehicle",
+    "pin": "Pin to current vehicle",
+    "menuFooter": "Manage layouts in the tab strip below",
+    "resetMessage": "This removes all customizations and restores the shipped default dashboard. Your other saved layouts are not affected."
   }
 }

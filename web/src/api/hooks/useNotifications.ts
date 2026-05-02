@@ -12,6 +12,8 @@ import type {
   AlertRuleUpdate,
   AlertTestRequest,
   AlertTestTarget,
+  ComputedMetricPreview,
+  ComputedMetricSummary,
   NotificationChannel,
   NotificationLog,
   NotificationStats,
@@ -26,6 +28,8 @@ export type {
   AlertRuleUpdate,
   AlertTestRequest,
   AlertTestTarget,
+  ComputedMetricPreview,
+  ComputedMetricSummary,
   NotificationChannel,
   NotificationLog,
   NotificationStats,
@@ -53,6 +57,7 @@ export type NotificationChannelInput =
 export const notificationKeys = {
   alerts: ['alerts'] as const,
   alertRules: ['alert-rules'] as const,
+  alertMetrics: ['alert-metrics'] as const,
   channels: ['notification-channels'] as const,
   logs: ['notification-logs'] as const,
   logsFiltered: (filters?: NotificationFilters) =>
@@ -124,6 +129,45 @@ export function useAlertRules() {
     queryKey: notificationKeys.alertRules,
     queryFn: () => request<AlertRule[]>('/alerts/rules'),
     select: safeArray,
+  });
+}
+
+/**
+ * useAlertMetrics returns the registry of computed-metric definitions used by
+ * the rule builder when kind='computed_metric'. Stable across the session, so
+ * it's cached for the whole TanStack Query default lifetime.
+ */
+export function useAlertMetrics() {
+  return useQuery({
+    queryKey: notificationKeys.alertMetrics,
+    queryFn: () => request<ComputedMetricSummary[]>('/alerts/metrics'),
+    select: safeArray,
+    staleTime: INTERVALS.STATIC,
+  });
+}
+
+/**
+ * usePreviewComputedMetric calls /alerts/test with kind='computed_metric' to
+ * get the live value of the metric for a given rule. Returns the would-trigger
+ * verdict so the rule builder can show "this metric is currently $X — would
+ * (NOT) fire". Does not actually dispatch any notification.
+ */
+export function usePreviewComputedMetric() {
+  const { error } = useMutationToast();
+  return useMutation({
+    mutationFn: (data: {
+      metric_id: string;
+      metric_window: string;
+      metric_op: string;
+      metric_threshold: number;
+      vehicle_id?: number | null;
+    }) =>
+      request<ComputedMetricPreview>('/alerts/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'computed_metric', ...data }),
+      }),
+    onError: (e) => error(e, 'toast.alerts.preview.error', 'Failed to preview metric'),
   });
 }
 

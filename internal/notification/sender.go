@@ -27,6 +27,11 @@ type Request struct {
 	Title       string            `json:"title"`
 	Message     string            `json:"message"`
 	ChannelID   int64             `json:"channel_id,omitempty"` // for logging
+	// AlertID, when > 0, links the resulting notification_logs row to its
+	// originating alert_rules row. Required for the frontend's drill-through
+	// from alert toast to context page (Phase 40 / Prompt 14) and for
+	// computed-metric alerts to surface as alert-backed notifications.
+	AlertID int64 `json:"alert_id,omitempty"`
 }
 
 // InternalTopic is the MQTT topic used for internal notification dispatch.

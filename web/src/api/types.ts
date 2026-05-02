@@ -332,6 +332,8 @@ export interface Alert {
 export type AlertRuleSeverity = 'info' | 'warn' | 'critical'
 export type AlertRuleOp = '=' | '!=' | '<' | '<=' | '>' | '>=' | 'changed' | 'between' | 'outside'
 export type AlertRuleTriggerMode = 'once' | 'repeat'
+export type AlertRuleKind = 'signal' | 'computed_metric'
+export type ComputedMetricOp = '>' | '>=' | '<' | '<=' | '=' | '!=' | '%_change_>' | '%_change_<'
 
 export interface AlertRule {
   id: number
@@ -350,6 +352,11 @@ export interface AlertRule {
   cooldown_min: number
   trigger_mode: AlertRuleTriggerMode
   snoozed_until?: string | null
+  kind?: AlertRuleKind
+  metric_id?: string | null
+  metric_window?: string | null
+  metric_threshold?: number | null
+  metric_op?: ComputedMetricOp | null
   created_at: string
   updated_at: string
 }
@@ -359,8 +366,8 @@ export interface AlertRuleInput {
   description?: string | null
   enabled?: boolean
   vehicle_id?: number | null
-  signal_name: string
-  op: AlertRuleOp
+  signal_name?: string
+  op?: AlertRuleOp
   value_num?: number | null
   value_text?: string | null
   value_bool?: boolean | null
@@ -370,6 +377,31 @@ export interface AlertRuleInput {
   cooldown_min?: number
   trigger_mode?: AlertRuleTriggerMode
   snoozed_until?: string | null
+  kind?: AlertRuleKind
+  metric_id?: string | null
+  metric_window?: string | null
+  metric_threshold?: number | null
+  metric_op?: ComputedMetricOp | null
+}
+
+export interface ComputedMetricSummary {
+  id: string
+  label: string
+  unit: string
+  windows: string[]
+  ops: ComputedMetricOp[]
+}
+
+export interface ComputedMetricPreview {
+  kind: 'computed_metric'
+  metric_id: string
+  metric_window: string
+  metric_op: ComputedMetricOp
+  threshold: number
+  value: number
+  would_trigger: boolean
+  previous_value?: number
+  percent_change?: number
 }
 
 export type AlertRuleUpdate = Partial<AlertRuleInput>

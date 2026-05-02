@@ -18,6 +18,13 @@ type createAlertRuleRequest struct {
 	CooldownMin  *int       `json:"cooldown_min"`
 	TriggerMode  *string    `json:"trigger_mode"`
 	SnoozedUntil *time.Time `json:"snoozed_until"`
+
+	// Computed-metric fields (kind='computed_metric'). NULL when kind='signal'.
+	Kind            *string  `json:"kind"`
+	MetricID        *string  `json:"metric_id"`
+	MetricWindow    *string  `json:"metric_window"`
+	MetricThreshold *float64 `json:"metric_threshold"`
+	MetricOp        *string  `json:"metric_op"`
 }
 
 type updateAlertRuleRequest struct {
@@ -36,6 +43,15 @@ type updateAlertRuleRequest struct {
 	CooldownMin  *int       `json:"cooldown_min"`
 	TriggerMode  *string    `json:"trigger_mode"`
 	SnoozedUntil *time.Time `json:"snoozed_until"`
+
+	// Computed-metric fields. Kind switches the rule type; metric_* are the
+	// new operands; legacy signal_* fields are cleared when Kind transitions
+	// to 'computed_metric' (and vice versa) — see normalizeAlertRuleByKind.
+	Kind            *string  `json:"kind"`
+	MetricID        *string  `json:"metric_id"`
+	MetricWindow    *string  `json:"metric_window"`
+	MetricThreshold *float64 `json:"metric_threshold"`
+	MetricOp        *string  `json:"metric_op"`
 }
 
 // snoozeAlertRuleRequest is the body for POST /alerts/rules/{ruleID}/snooze.
@@ -49,9 +65,20 @@ type snoozeAlertRuleRequest struct {
 type alertTestRequest struct {
 	Message string                  `json:"message"`
 	Target  *alertTestTargetRequest `json:"target"`
+
+	// When Kind == 'computed_metric' and the metric_* fields are set, the
+	// handler computes the metric value and returns a preview instead of
+	// dispatching a notification. Used by the rule builder UI.
+	Kind            *string  `json:"kind"`
+	MetricID        *string  `json:"metric_id"`
+	MetricWindow    *string  `json:"metric_window"`
+	MetricThreshold *float64 `json:"metric_threshold"`
+	MetricOp        *string  `json:"metric_op"`
+	VehicleID       *int64   `json:"vehicle_id"`
 }
 
 type alertTestTargetRequest struct {
 	AllChannels bool    `json:"all_channels"`
 	ChannelIDs  []int64 `json:"channel_ids"`
 }
+

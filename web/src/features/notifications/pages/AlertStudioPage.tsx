@@ -12,6 +12,8 @@ import {
   type AlertRuleInput,
   type AlertRuleTriggerMode,
   type AlertTestTarget,
+  type ComputedMetricSummary,
+  useAlertMetrics,
   useAlertRules,
   useDeleteAlertRule,
   useNotificationChannels,
@@ -20,6 +22,7 @@ import {
   useTestAlertRule,
   useToggleAlertRule,
 } from '@/api/hooks/useNotifications'
+import type { AlertRuleKind, ComputedMetricOp } from '@/api/types'
 import type { SignalValueType } from '@/types/signals'
 import { GlassPanel, Badge, Button as UiButton, ConfirmDialog, Input as UiInput, Select as UiSelect, Modal } from '@/components/ui'
 import { SeverityBadge, SeverityIcon } from '@/components/data-display'
@@ -35,11 +38,12 @@ import { useConfirm } from '@/hooks/useConfirm'
 import { useDirtyForm } from '@/hooks/useDirtyForm'
 import { useAutosave, loadAutosave, clearAutosave } from '@/hooks/useAutosave'
 import { useUrlString } from '@/hooks/useUrlState'
-import { alertRuleSchema } from '../schemas/alertRule'
+import { alertRuleSchema } from '../schemas/alertRule'
+import { ComputedMetricEditor } from '../components/ComputedMetricEditor'
 import { Icons } from '@/lib/icons';
 
 type Severity = NonNullable<AlertRuleInput['severity']>
-type RuleOp = AlertRuleInput['op']
+type RuleOp = NonNullable<AlertRuleInput['op']>
 type ValueKind = 'none' | 'number' | 'text' | 'bool' | 'range'
 
 interface RuleTemplate {
@@ -148,6 +152,15 @@ interface EditorState {
   cooldown_min: number
   trigger_mode: AlertRuleTriggerMode
   message: string
+  // kind: 'signal' (default — uses signal_name/op/value_*) or
+  // 'computed_metric' (uses metric_id/metric_window/metric_op/metric_threshold).
+  // The two modes are mutually exclusive at submit-time; the editor renders a
+  // different operand panel for each.
+  kind: AlertRuleKind
+  metric_id: string
+  metric_window: string
+  metric_op: ComputedMetricOp
+  metric_threshold: string
 }
 
 function freshEditor(): EditorState {
@@ -167,6 +180,11 @@ function freshEditor(): EditorState {
     cooldown_min: 15,
     trigger_mode: 'repeat',
     message: '',
+    kind: 'signal',
+    metric_id: '',
+    metric_window: '',
+    metric_op: '>',
+    metric_threshold: '',
   }
 }
 
@@ -320,6 +338,7 @@ function inferTemplateValueKind(template: RuleTemplate): ValueKind {
 }
 
 function ruleToEditor(rule: AlertRule): EditorState {
+  const kind: AlertRuleKind = rule.kind ?? 'signal'
   return {
     id: rule.id,
     name: rule.name,
@@ -337,6 +356,11 @@ function ruleToEditor(rule: AlertRule): EditorState {
     cooldown_min: rule.cooldown_min,
     trigger_mode: normalizeTriggerMode(rule.trigger_mode),
     message: rule.signal_name ? `${rule.name}: {{${rule.signal_name}}}` : '',
+    kind,
+    metric_id: rule.metric_id ?? '',
+    metric_window: rule.metric_window ?? '',
+    metric_op: (rule.metric_op ?? '>') as ComputedMetricOp,
+    metric_threshold: valueToInput(rule.metric_threshold),
   }
 }
 
@@ -359,6 +383,23 @@ function templateToEditor(template: RuleTemplate, name: string, message: string)
 }
 
 function buildSavePayload(state: EditorState): AlertRuleInput {
+  if (state.kind === 'computed_metric') {
+    const threshold = parseOptionalNumber(state.metric_threshold)
+    return {
+      name: state.name.trim(),
+      enabled: state.enabled,
+      vehicle_id: parseOptionalVehicleID(state.vehicle_id),
+      severity: state.severity,
+      cooldown_min: state.cooldown_min,
+      trigger_mode: state.trigger_mode,
+      kind: 'computed_metric',
+      metric_id: state.metric_id || null,
+      metric_window: state.metric_window || null,
+      metric_op: state.metric_op,
+      metric_threshold: threshold,
+    }
+  }
+
   const valueKind = valueKindForState(state)
   const payload: AlertRuleInput = {
     name: state.name.trim(),
@@ -374,6 +415,7 @@ function buildSavePayload(state: EditorState): AlertRuleInput {
     severity: state.severity,
     cooldown_min: state.cooldown_min,
     trigger_mode: state.trigger_mode,
+    kind: 'signal',
   }
 
   if (valueKind === 'number') {
@@ -388,6 +430,16 @@ function buildSavePayload(state: EditorState): AlertRuleInput {
   }
 
   return payload
+}
+
+function hasComputedMetricInputs(state: EditorState, metrics: ComputedMetricSummary[]): boolean {
+  if (!state.metric_id || !state.metric_window || !state.metric_op) return false
+  if (parseOptionalNumber(state.metric_threshold) == null) return false
+  const def = metrics.find(m => m.id === state.metric_id)
+  if (!def) return false
+  if (!def.windows.includes(state.metric_window)) return false
+  if (!def.ops.includes(state.metric_op)) return false
+  return true
 }
 
 function hasRequiredTypedValue(state: EditorState): boolean {
@@ -615,14 +667,31 @@ export default function AlertStudio() {
     { value: 'false', label: t('notifications.alertStudio.boolean.false', 'False') },
   ], [t])
 
-  const canSave = useMemo(() => (
-    editor.name.trim().length > 0
-    && editor.signal_name.trim().length > 0
-    && editor.cooldown_min > 0
-    && hasValidVehicleID(editor.vehicle_id)
-    && isOperatorAllowedForState(editor)
-    && hasRequiredTypedValue(editor)
-  ), [editor])
+  const computedMetricsQuery = useAlertMetrics()
+  const computedMetrics = useMemo<ComputedMetricSummary[]>(
+    () => computedMetricsQuery.data ?? [],
+    [computedMetricsQuery.data],
+  )
+
+  const canSave = useMemo(() => {
+    if (editor.name.trim().length === 0) return false
+    if (editor.cooldown_min <= 0) return false
+    if (!hasValidVehicleID(editor.vehicle_id)) return false
+    if (editor.kind === 'computed_metric') {
+      // Only enforce metric-shape requirements; if registry is loading we
+      // optimistically allow the save and the server-side validator catches
+      // any mismatch.
+      if (!editor.metric_id || !editor.metric_window || !editor.metric_op) return false
+      if (parseOptionalNumber(editor.metric_threshold) == null) return false
+      if (computedMetrics.length > 0 && !hasComputedMetricInputs(editor, computedMetrics)) return false
+      return true
+    }
+    return (
+      editor.signal_name.trim().length > 0
+      && isOperatorAllowedForState(editor)
+      && hasRequiredTypedValue(editor)
+    )
+  }, [computedMetrics, editor])
 
   const handleSelectRule = useCallback((rule: AlertRule) => {
     guardSwitch(() => {
@@ -1170,39 +1239,109 @@ export default function AlertStudio() {
                   onChange={e => setEditor(s => ({ ...s, vehicle_id: e.target.value }))}
                 />
               </div>
-              <div>
+              <div className="sm:col-span-2">
                 <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
-                  {t('notifications.alertStudio.editor.signalNameLabel', 'Signal')}
+                  {t('notifications.alertStudio.editor.kindLabel', 'Rule type')}
                 </label>
-                <UiSelect
-                  className="w-full"
-                  value={editor.signal_name}
-                  onChange={e => handleSignalChange(e.target.value)}
-                  placeholder={t('notifications.alertStudio.editor.signalNamePlaceholder', 'Select a telemetry signal')}
-                  options={signalSelectOptions}
-                />
-                {selectedSignal && (
-                  <p className="mt-1 text-[10px] text-[var(--text-muted)]">
-                    {t('notifications.alertStudio.editor.signalTypeHint', '{{type}} signal from {{category}}', {
-                      type: signalTypeLabels[selectedSignal.value_type],
-                      category: getSignalCategoryLabel(selectedSignal.category),
-                    })}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
-                  {t('notifications.alertStudio.editor.operatorLabel', 'Operator')}
-                </label>
-                <UiSelect
-                  className="w-full"
-                  value={editor.op}
-                  onChange={e => handleOperatorChange(e.target.value as RuleOp)}
-                  options={operatorSelectOptions}
-                  disabled={!editor.signal_name.trim()}
-                />
+                <div className="inline-flex rounded-lg border border-white/10 overflow-hidden">
+                  <button
+                    type="button"
+                    className={cn(
+                      'px-3 py-1.5 text-xs font-medium transition-colors',
+                      editor.kind === 'signal'
+                        ? 'bg-white/10 text-[var(--text-primary)]'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]',
+                    )}
+                    onClick={() => setEditor(s => ({ ...s, kind: 'signal' }))}
+                  >
+                    {t('notifications.alertStudio.kind.signal', 'Signal threshold')}
+                  </button>
+                  <button
+                    type="button"
+                    className={cn(
+                      'px-3 py-1.5 text-xs font-medium transition-colors border-l border-white/10',
+                      editor.kind === 'computed_metric'
+                        ? 'bg-white/10 text-[var(--text-primary)]'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]',
+                    )}
+                    onClick={() => setEditor(s => ({ ...s, kind: 'computed_metric' }))}
+                  >
+                    {t('notifications.alertStudio.kind.computedMetric', 'Computed metric')}
+                  </button>
+                </div>
+                <p className="mt-1 text-[10px] text-[var(--text-muted)]">
+                  {editor.kind === 'computed_metric'
+                    ? t(
+                        'notifications.alertStudio.kind.computedMetricHint',
+                        'Aggregate metric (cost, kWh, distance) over a time window.',
+                      )
+                    : t(
+                        'notifications.alertStudio.kind.signalHint',
+                        'Fires when a raw telemetry signal crosses a threshold.',
+                      )}
+                </p>
               </div>
             </div>
+
+            {editor.kind === 'computed_metric' ? (
+              <ComputedMetricEditor
+                value={{
+                  metric_id: editor.metric_id,
+                  metric_window: editor.metric_window,
+                  metric_op: editor.metric_op,
+                  metric_threshold: editor.metric_threshold,
+                  vehicle_id: parseOptionalVehicleID(editor.vehicle_id),
+                }}
+                onChange={next =>
+                  setEditor(s => ({
+                    ...s,
+                    metric_id: next.metric_id,
+                    metric_window: next.metric_window,
+                    metric_op: next.metric_op,
+                    metric_threshold: next.metric_threshold,
+                  }))
+                }
+                metrics={computedMetrics}
+                loading={computedMetricsQuery.isLoading}
+              />
+            ) : (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+                      {t('notifications.alertStudio.editor.signalNameLabel', 'Signal')}
+                    </label>
+                    <UiSelect
+                      className="w-full"
+                      value={editor.signal_name}
+                      onChange={e => handleSignalChange(e.target.value)}
+                      placeholder={t('notifications.alertStudio.editor.signalNamePlaceholder', 'Select a telemetry signal')}
+                      options={signalSelectOptions}
+                    />
+                    {selectedSignal && (
+                      <p className="mt-1 text-[10px] text-[var(--text-muted)]">
+                        {t('notifications.alertStudio.editor.signalTypeHint', '{{type}} signal from {{category}}', {
+                          type: signalTypeLabels[selectedSignal.value_type],
+                          category: getSignalCategoryLabel(selectedSignal.category),
+                        })}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+                      {t('notifications.alertStudio.editor.operatorLabel', 'Operator')}
+                    </label>
+                    <UiSelect
+                      className="w-full"
+                      value={editor.op}
+                      onChange={e => handleOperatorChange(e.target.value as RuleOp)}
+                      options={operatorSelectOptions}
+                      disabled={!editor.signal_name.trim()}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div>
@@ -1216,24 +1355,28 @@ export default function AlertStudio() {
                   options={severityOptions}
                 />
               </div>
-              <GlassPanel className="p-3">
-                <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
-                  {t('notifications.alertStudio.editor.allowedOperatorsLabel', 'Allowed Operators')}
-                </p>
-                <p className="text-xs text-[var(--text-primary)]">
-                  {editor.signal_name.trim()
-                    ? operatorSelectOptions.map(option => option.label).join('  ')
-                    : t('notifications.alertStudio.editor.allowedOperatorsPlaceholder', 'Select a signal to see its operators')}
-                </p>
-              </GlassPanel>
+              {editor.kind !== 'computed_metric' && (
+                <GlassPanel className="p-3">
+                  <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+                    {t('notifications.alertStudio.editor.allowedOperatorsLabel', 'Allowed Operators')}
+                  </p>
+                  <p className="text-xs text-[var(--text-primary)]">
+                    {editor.signal_name.trim()
+                      ? operatorSelectOptions.map(option => option.label).join('  ')
+                      : t('notifications.alertStudio.editor.allowedOperatorsPlaceholder', 'Select a signal to see its operators')}
+                  </p>
+                </GlassPanel>
+              )}
             </div>
 
-            <div className="mb-4">
-              <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-2 font-medium">
-                {t('notifications.alertStudio.editor.typedValueLabel', 'Typed Value')}
-              </label>
-              {renderValueEditor()}
-            </div>
+            {editor.kind !== 'computed_metric' && (
+              <div className="mb-4">
+                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-2 font-medium">
+                  {t('notifications.alertStudio.editor.typedValueLabel', 'Typed Value')}
+                </label>
+                {renderValueEditor()}
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div>

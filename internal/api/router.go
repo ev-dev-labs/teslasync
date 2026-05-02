@@ -562,6 +562,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/alerts", func(r chi.Router) {
 			r.Get("/", alertHandler.List)
 			r.Post("/{alertID}/read", alertHandler.MarkRead)
+			r.Get("/metrics", alertHandler.ListMetrics)
 			r.Get("/rules", alertHandler.ListRules)
 			r.Post("/rules", alertHandler.CreateRule)
 			r.Put("/rules/{ruleID}", alertHandler.UpdateRule)

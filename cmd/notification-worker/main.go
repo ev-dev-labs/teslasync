@@ -15,6 +15,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 
@@ -153,7 +154,30 @@ func main() {
 		}
 	}()
 
-	log.Info().Msg("notification worker running (MQTT consumer + schedule processor)")
+	// Start computed-metric evaluator (every 5 minutes, evaluates all
+	// enabled kind='computed_metric' rules and dispatches notifications via
+	// the same MQTT pipeline as schedule entries). Sequential per tick is
+	// fine — the registry SQL is cheap (uses cagg/per-table indexes) and
+	// the rule count is small.
+	alertRuleRepo := database.NewAlertRuleRepo(db)
+	notifRepoForCM := database.NewNotificationRepo(db)
+	vehicleRepo := database.NewVehicleRepo(db)
+	computedEval := api.NewComputedMetricEvaluator(db)
+	const computedMetricInterval = 5 * time.Minute
+	go func() {
+		ticker := time.NewTicker(computedMetricInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				runComputedMetricTick(ctx, alertRuleRepo, vehicleRepo, notifRepoForCM, computedEval, mqttClient)
+			}
+		}
+	}()
+
+	log.Info().Msg("notification worker running (MQTT consumer + schedule processor + computed-metric evaluator)")
 
 	// Health endpoint for k8s probes
 	healthPort := os.Getenv("HEALTH_PORT")
@@ -210,4 +234,111 @@ func setupLogger(level string) {
 	if os.Getenv("TESLASYNC_DEV") == "true" {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	}
+}
+
+// runComputedMetricTick walks every enabled computed_metric rule, evaluates
+// it against each target vehicle, and dispatches a notification through MQTT
+// for every triggered (rule, vehicle) pair. Vehicle resolution mirrors the
+// signal-rule behavior in TelemetryAlertEvaluator: VehicleID == nil means
+// "fan out across all vehicles in the fleet".
+func runComputedMetricTick(
+ctx context.Context,
+alertRuleRepo *database.AlertRuleRepo,
+vehicleRepo *database.VehicleRepo,
+notifRepo *database.NotificationRepo,
+evaluator *api.ComputedMetricEvaluator,
+mqttClient pahomqtt.Client,
+) {
+rules, err := alertRuleRepo.GetEnabledByKind(ctx, "computed_metric")
+if err != nil {
+log.Error().Err(err).Msg("computed-metric: failed to load rules")
+return
+}
+if len(rules) == 0 {
+return
+}
+
+// Resolve the target vehicle list once per tick — almost every fleet
+// reuses it across rules, so a single batched query is cheaper than one
+// per rule.
+allVehicles, err := vehicleRepo.GetAll(ctx)
+if err != nil {
+log.Error().Err(err).Msg("computed-metric: failed to load vehicles")
+return
+}
+
+channels, err := notifRepo.GetAllChannels(ctx)
+if err != nil {
+log.Error().Err(err).Msg("computed-metric: failed to load channels")
+return
+}
+
+for _, rule := range rules {
+targets := vehiclesForRule(rule, allVehicles)
+for _, vid := range targets {
+result, evalErr := evaluator.Evaluate(ctx, rule, vid)
+if evalErr != nil {
+log.Warn().
+Err(evalErr).
+Int64("rule_id", rule.ID).
+Int64("vehicle_id", vid).
+Msg("computed-metric: evaluator failed")
+continue
+}
+if !result.Triggered {
+continue
+}
+dispatchComputedMetricNotification(rule, vid, result, channels, mqttClient)
+}
+}
+}
+
+func vehiclesForRule(rule *models.AlertRule, all []*models.Vehicle) []int64 {
+if rule.VehicleID != nil {
+return []int64{*rule.VehicleID}
+}
+out := make([]int64, 0, len(all))
+for _, v := range all {
+out = append(out, v.ID)
+}
+return out
+}
+
+func dispatchComputedMetricNotification(
+rule *models.AlertRule,
+vehicleID int64,
+result api.ComputedMetricResult,
+channels []*models.NotificationChannel,
+mqttClient pahomqtt.Client,
+) {
+dispatched := 0
+for _, ch := range channels {
+if ch == nil || !ch.Enabled {
+continue
+}
+req := &notification.Request{
+ChannelType: ch.Type,
+Config:      ch.Config,
+Title:       rule.Name,
+Message:     result.Message,
+ChannelID:   ch.ID,
+AlertID:     rule.ID,
+}
+if pubErr := notification.Publish(mqttClient, req); pubErr != nil {
+log.Error().
+Err(pubErr).
+Int64("rule_id", rule.ID).
+Int64("vehicle_id", vehicleID).
+Int64("channel_id", ch.ID).
+Msg("computed-metric: publish failed")
+continue
+}
+dispatched++
+}
+log.Info().
+Int64("rule_id", rule.ID).
+Int64("vehicle_id", vehicleID).
+Float64("value", result.Value).
+Int("dispatched", dispatched).
+Msg("computed-metric: alert fired")
 }

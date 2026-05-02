@@ -1,0 +1,2035 @@
+=== GATE ===
+=== PREFLIGHT ===
+PROMPT=phase-40/40-computed-metric-alerts
+BRANCH=refactor/mono-gone
+HEAD=392393a1
+=== FILES_EXIST ===
+FILE[migrations\000158_alert_rule_kinds.up.sql]=True
+FILE[migrations\000158_alert_rule_kinds.down.sql]=True
+FILE[internal\models\alert.go]=True
+FILE[internal\database\alert_repo.go]=True
+FILE[internal\api\computed_metrics.go]=True
+FILE[internal\api\computed_metric_evaluator.go]=True
+FILE[internal\api\computed_metric_evaluator_test.go]=True
+FILE[internal\api\alert_handler_rules.go]=True
+FILE[internal\api\alert_handler_dtos.go]=True
+FILE[internal\api\alert_handler.go]=True
+FILE[internal\api\router.go]=True
+FILE[cmd\notification-worker\main.go]=True
+FILE[internal\notification\sender.go]=True
+FILE[internal\notification\worker.go]=True
+FILE[web\src\api\types.ts]=True
+FILE[web\src\api\hooks\useNotifications.ts]=True
+FILE[web\src\features\notifications\components\ComputedMetricEditor.tsx]=True
+FILE[web\src\features\notifications\pages\AlertStudioPage.tsx]=True
+FILE[web\src\features\notifications\schemas\alertRule.ts]=True
+FILE[web\src\i18n\en.json]=True
+FILES_EXPECTED=20
+FILES_MISSING=0
+=== TYPESCRIPT ===
+TSC_EXIT=0
+=== LINT ===
+LINT_EXIT=0
+=== FRONTEND_TEST ===
+FRONTEND_TEST_EXIT=0
+=== LINT ===
+
+> teslasync-web@2.0.0 lint
+> eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0
+
+LINT_EXIT=0
+=== FRONTEND_TEST ===
+
+> teslasync-web@2.0.0 test
+> vitest run --run
+
+6:11:30 PM [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
+6:11:30 PM [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+Both esbuild and oxc options were set. oxc options will be used and esbuild options will be ignored. The following esbuild options were set: `{ jsx: 'automatic', jsxImportSource: undefined }`
+
+[1m[46m RUN [49m[22m [36mv4.1.2 [39m[90mD:/repos/teslasync/web[39m
+
+Error: Page explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/PageErrorBoundary.test.tsx:5:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Page explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/PageErrorBoundary.test.tsx:5:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+[90mstdout[2m | src/components/forms/SearchInput.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+[90mstdout[2m | src/components/feedback/SectionErrorBoundary.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+[90mstdout[2m | src/components/ui/__tests__/DataTable.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+[90mstdout[2m | src/features/notifications/pages/NotificationsPage.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+[90mstdout[2m | src/features/onboarding/pages/OnboardingPage.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+ [32mΓ£ô[39m src/components/forms/FormField.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[33m 527[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders the label and child input [33m 405[2mms[22m[39m
+ [32mΓ£ô[39m src/components/data-display/__tests__/LiveIndicator.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[33m 500[2mms[22m[39m
+Error: Page explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/PageErrorBoundary.test.tsx:5:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Page explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/PageErrorBoundary.test.tsx:5:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+ [32mΓ£ô[39m src/components/feedback/PageErrorBoundary.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 584[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m shows the full-page fallback UI on error [33m 467[2mms[22m[39m
+Error: useToast must be used within ToastProvider
+    at Module.useToast (D:/repos/teslasync/web/src/components/feedback/Toast.tsx:71:19)
+    at Orphan (D:/repos/teslasync/web/src/components/feedback/Toast.test.tsx:119:7)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+Error: useToast must be used within ToastProvider
+    at Module.useToast (D:/repos/teslasync/web/src/components/feedback/Toast.tsx:71:19)
+    at Orphan (D:/repos/teslasync/web/src/components/feedback/Toast.test.tsx:119:7)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+ [32mΓ£ô[39m src/components/feedback/Toast.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[33m 343[2mms[22m[39m
+ [32mΓ£ô[39m src/components/data-display/SeverityBadge.test.tsx [2m([22m[2m14 tests[22m[2m)[22m[33m 526[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m exposes an accessible label when provided [33m 317[2mms[22m[39m
+ [32mΓ£ô[39m src/components/maps/__tests__/RoutePlayback.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[33m 666[2mms[22m[39m
+Error: Section explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/SectionErrorBoundary.test.tsx:7:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Section explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/SectionErrorBoundary.test.tsx:7:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+ [32mΓ£ô[39m src/api/hooks/__tests__/useNotifications.test.tsx [2m([22m[2m14 tests[22m[2m)[22m[33m 444[2mms[22m[39m
+ [32mΓ£ô[39m src/components/charts/ChartBrush.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 687[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders inside a recharts chart container without crashing [33m 585[2mms[22m[39m
+Error: Section explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/SectionErrorBoundary.test.tsx:7:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Section explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/SectionErrorBoundary.test.tsx:7:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Section explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/SectionErrorBoundary.test.tsx:7:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Section explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/SectionErrorBoundary.test.tsx:7:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Section explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/SectionErrorBoundary.test.tsx:7:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Section explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/SectionErrorBoundary.test.tsx:7:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+ [32mΓ£ô[39m src/components/feedback/SectionErrorBoundary.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 608[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m falls back to inline UI by default and shows Retry [33m 423[2mms[22m[39m
+ [32mΓ£ô[39m src/hooks/__tests__/useConfirm.test.tsx [2m([22m[2m10 tests[22m[2m)[22m[33m 1107[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m opens a dialog with the supplied title and message [33m 378[2mms[22m[39m
+stderr | src/features/onboarding/pages/OnboardingPage.test.tsx > OnboardingPage > renders the welcome heading and three setup steps
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mΓ£ô[39m src/components/forms/SearchInput.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[33m 711[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m shows the clear button only when there is text [33m 382[2mms[22m[39m
+ [32mΓ£ô[39m src/components/ui/__tests__/DataTable.test.tsx [2m([22m[2m24 tests[22m[2m)[22m[33m 2007[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m calls onSort when a sortable header is clicked [33m 345[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders the Columns picker when showColumnsMenu + tableId set, and toggles visibility [33m 384[2mms[22m[39m
+stderr | src/components/ui/__tests__/CommandPalette.test.tsx > CommandPalette keyboard shortcut > opens on Ctrl+K when focus is on the body
+react-i18next:: useTranslation: You will need to pass in an i18next instance by using initReactI18next { code: 'NO_I18NEXT_INSTANCE' }
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mΓ£ô[39m src/features/onboarding/pages/OnboardingPage.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[33m 1254[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m shows the Continue button only when onboarding is complete [33m 543[2mms[22m[39m
+stderr | src/features/notifications/pages/NotificationsPage.test.tsx > NotificationsPage > renders the three tabs (Inbox, Archived, Channels)
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+ [32mΓ£ô[39m src/features/notifications/pages/NotificationsPage.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[33m 1819[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders the three tabs (Inbox, Archived, Channels) [33m 1069[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m switches to the Archived tab and shows the empty state [33m 349[2mms[22m[39m
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+ [32mΓ£ô[39m src/components/ui/__tests__/CommandPalette.test.tsx [2m([22m[2m12 tests[22m[2m)[22m[33m 2925[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m opens on Ctrl+K when focus is on the body [33m 938[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m opens via the toggle-command-palette custom event (used by useKeyboardShortcuts) [33m 373[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m matches "btr" ΓåÆ "Battery Health" via fuzzy subsequence [33m 324[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m displays the most-recent command first when the palette opens with no query [33m 425[2mms[22m[39m
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+stderr | src/hooks/__tests__/useSelectedVehicle.test.tsx > useSelectedVehicle > defaults to the first vehicle when nothing is selected
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mΓ£ô[39m src/components/feedback/ErrorBoundary.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 266[2mms[22m[39m
+ [32mΓ£ô[39m src/hooks/__tests__/useTitleBadge.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 217[2mms[22m[39m
+ [32mΓ£ô[39m src/hooks/__tests__/useSelectedVehicle.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 225[2mms[22m[39m
+ [32mΓ£ô[39m src/components/charts/ChartTooltip.test.tsx [2m([22m[2m10 tests[22m[2m)[22m[32m 291[2mms[22m[39m
+ [32mΓ£ô[39m src/components/feedback/PageLoadSkeleton.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 122[2mms[22m[39m
+ [32mΓ£ô[39m src/components/ui/Logo.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[32m 177[2mms[22m[39m
+stderr | src/components/ui/Breadcrumb.test.tsx > Breadcrumb > renders nothing on the root path
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mΓ£ô[39m src/components/ui/Breadcrumb.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 197[2mms[22m[39m
+ [32mΓ£ô[39m src/hooks/__tests__/useFaviconBadge.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 155[2mms[22m[39m
+ [32mΓ£ô[39m src/components/data-display/InsightsEngine.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 239[2mms[22m[39m
+ [32mΓ£ô[39m src/components/data-display/format/__tests__/Format.test.tsx [2m([22m[2m60 tests[22m[2m)[22m[33m 348[2mms[22m[39m
+stderr | src/hooks/__tests__/useUrlState.test.tsx > useUrlState > returns the default when the param is absent
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mΓ£ô[39m src/hooks/__tests__/useCriticalAlertFlash.test.tsx [2m([22m[2m11 tests[22m[2m)[22m[32m 157[2mms[22m[39m
+ [32mΓ£ô[39m src/hooks/__tests__/useUrlState.test.tsx [2m([22m[2m17 tests[22m[2m)[22m[32m 163[2mms[22m[39m
+ [32mΓ£ô[39m src/components/charts/ChartTimeRangeContext.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 126[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/certificate.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 95[2mms[22m[39m
+ [32mΓ£ô[39m src/components/maps/__tests__/MarkerCluster.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 69[2mms[22m[39m
+Error: useSelectedVehicleStore must be used within <SelectedVehicleProvider>
+    at useSelectedVehicleStore (D:/repos/teslasync/web/src/store/selectedVehicle.tsx:97:11)
+    at Probe (D:/repos/teslasync/web/src/store/__tests__/selectedVehicle.test.tsx:88:7)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+Error: useSelectedVehicleStore must be used within <SelectedVehicleProvider>
+    at useSelectedVehicleStore (D:/repos/teslasync/web/src/store/selectedVehicle.tsx:97:11)
+    at Probe (D:/repos/teslasync/web/src/store/__tests__/selectedVehicle.test.tsx:88:7)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+ [32mΓ£ô[39m src/store/__tests__/selectedVehicle.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[32m 100[2mms[22m[39m
+[90mstdout[2m | src/hooks/__tests__/useDirtyForm.test.ts
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+ [32mΓ£ô[39m src/components/charts/Charts.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 54[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/gpx.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 77[2mms[22m[39m
+ [32mΓ£ô[39m src/hooks/__tests__/useDirtyForm.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 94[2mms[22m[39m
+ [32mΓ£ô[39m src/hooks/__tests__/useLiveConnection.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 87[2mms[22m[39m
+ [32mΓ£ô[39m src/components/charts/useChartLegendState.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[32m 84[2mms[22m[39m
+ [32mΓ£ô[39m src/hooks/__tests__/useAutosave.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 76[2mms[22m[39m
+ [32mΓ£ô[39m src/types/fsm/__tests__/transition-integrity.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 48[2mms[22m[39m
+ [32mΓ£ô[39m src/hooks/__tests__/useFilteredList.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 109[2mms[22m[39m
+stderr | src/hooks/__tests__/useAlertContext.test.tsx > useAlertContext > returns nulls and hasContext=false when no params present
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mΓ£ô[39m src/hooks/__tests__/useAlertContext.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 118[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/closestRoute.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 73[2mms[22m[39m
+ [32mΓ£ô[39m src/hooks/__tests__/useMotionPreference.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 66[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/dateFormat.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 85[2mms[22m[39m
+ [32mΓ£ô[39m src/types/fsm/__tests__/coverage-matrix.test.ts [2m([22m[2m30 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/titleStore.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+ [32mΓ£ô[39m src/types/fsm/__tests__/edge-derivation.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+ [32mΓ£ô[39m src/types/fsm/__tests__/scenario-walkability.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/export.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/timezone.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 59[2mms[22m[39m
+ [32mΓ£ô[39m src/types/fsm/__tests__/disallowed.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+ [32mΓ£ô[39m src/components/maps/__tests__/GeofenceDrawer.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 58[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/vehicleState.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/commandRegistry.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/parseEnums.test.ts [2m([22m[2m33 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32mΓ£ô[39m src/types/fsm/__tests__/truth-table.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/alertDrillthrough.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32mΓ£ô[39m src/types/fsm/__tests__/cross-fsm-wiring.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/csvExport.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/gear.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/enums.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/cleanNil.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/resilience.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m62 passed[39m[22m[90m (62)[39m
+[2m      Tests [22m [1m[32m728 passed[39m[22m[90m (728)[39m
+[2m   Start at [22m 18:11:30
+[2m   Duration [22m 21.16s[2m (transform 10.34s, setup 16.08s, import 45.66s, tests 19.08s, environment 178.42s)[22m
+
+FRONTEND_TEST_EXIT=0
+=== GO_BUILD ===
+GO_BUILD_EXIT=0
+=== GO_VET ===
+GO_VET_EXIT=0
+=== GO_TEST ===
+?   	github.com/ev-dev-labs/teslasync/cmd/automation-worker	[no test files]
+?   	github.com/ev-dev-labs/teslasync/cmd/export-worker	[no test files]
+?   	github.com/ev-dev-labs/teslasync/cmd/notification-worker	[no test files]
+?   	github.com/ev-dev-labs/teslasync/cmd/teslasync	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/adapter/gasprices	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/geocoding	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/mqtt	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/postgres	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/postgres/queries	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/redis	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/storage	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/tesla	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/api	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/app/chargingsvc	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/app/dashboardsvc	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/app/exportsvc	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/app/notificationsvc	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/app/tripsvc	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/app/vehiclesvc	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/automation	1.268s
+ok  	github.com/ev-dev-labs/teslasync/internal/automation/action	2.484s
+ok  	github.com/ev-dev-labs/teslasync/internal/automation/condition	1.517s
+?   	github.com/ev-dev-labs/teslasync/internal/automation/presets	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/automation/safety	3.171s
+?   	github.com/ev-dev-labs/teslasync/internal/automation/trigger	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/backup	1.296s
+ok  	github.com/ev-dev-labs/teslasync/internal/cache	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/config	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/crypto	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/database	3.720s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/charging	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/export	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/fsm	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/notification	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/trip	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/user	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/vehicle	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/enums	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/events	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/export	1.262s
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/automation	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/charge	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/command	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/drive	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/notification	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/telemetry	1.819s
+ok  	github.com/ev-dev-labs/teslasync/internal/geocoding	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/handler/dto	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/handler/middleware	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/handler/v1	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/metrics	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/models	1.433s
+ok  	github.com/ev-dev-labs/teslasync/internal/mqtt	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/notification	1.232s
+ok  	github.com/ev-dev-labs/teslasync/internal/platform/buildinfo	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/platform/cache	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/platform/config	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/platform/database	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/platform/httputil	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/platform/telemetry	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/polling	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/port/external	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/port/messaging	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/port/repository	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/resilience	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/service	1.240s
+ok  	github.com/ev-dev-labs/teslasync/internal/signal	6.279s
+ok  	github.com/ev-dev-labs/teslasync/internal/telemetry	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/tracing	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/units	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/worker	1.216s
+?   	github.com/ev-dev-labs/teslasync/web/node_modules/flatted/golang/pkg/flatted	[no test files]
+GO_TEST_EXIT=0
+=== MIGRATION_UP ===
+MIGRATION_SKIPPED=true (set MIGRATE_DB_URL to run reversibility check)
+UNPAIRED_MIGRATION_COUNT=0
+=== HELM_TEMPLATE ===
+---
+# Source: teslasync/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: test-teslasync
+  labels:
+    helm.sh/chart: teslasync-0.6.0
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/managed-by: Helm
+---
+# Source: teslasync/templates/secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: test-teslasync
+  labels:
+    helm.sh/chart: teslasync-0.6.0
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    helm.sh/resource-policy: keep
+type: Opaque
+stringData:
+  TESLA_CLIENT_ID: ""
+  TESLA_CLIENT_SECRET: ""
+  DATABASE_PASS: "teslasync"
+  GRAFANA_ADMIN_PASSWORD: "teslasync"
+---
+# Source: teslasync/templates/configmap-nginx.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-teslasync-nginx
+  labels:
+    helm.sh/chart: teslasync-0.6.0
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: web
+data:
+  default.conf: |
+    server {
+        listen 80;
+        server_name _;
+        root /usr/share/nginx/html;
+        index index.html;
+
+        # Kubernetes DNS resolver ΓÇö re-resolves every 10s instead of once at startup.
+        # This prevents Nginx from crashing if the API service isn't registered yet.
+        resolver kube-dns.kube-system.svc.cluster.local valid=10s ipv6=off;
+        resolver_timeout 5s;
+
+        # Inject API base URL into frontend at runtime.
+        # This MUST be empty or a public URL reachable by the browser.
+        # The internal K8s address is only used by Nginx's proxy_pass.
+        sub_filter '</head>' '<script>window.__TESLASYNC_API_BASE__="";</script></head>';
+        sub_filter_once on;
+
+        location / {
+            try_files $uri $uri/ /index.html;
+            # index.html must not be cached so new JS bundle references are picked up
+            add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+            add_header Pragma "no-cache" always;
+        }
+
+        location /api/ {
+            set $backend "http://test-teslasync-api:8080";
+            proxy_pass $backend;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_read_timeout 3600s;
+            proxy_buffering off;
+            proxy_cache off;
+        }
+
+        location /healthz {
+            set $backend "http://test-teslasync-api:8080";
+            proxy_pass $backend;
+        }
+
+        location /readyz {
+            set $backend "http://test-teslasync-api:8080";
+            proxy_pass $backend;
+        }
+
+        location /.well-known/ {
+            set $backend "http://test-teslasync-api:8080";
+            proxy_pass $backend;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        location /metrics {
+            set $backend "http://test-teslasync-api:8080";
+            proxy_pass $backend;
+        }
+
+        # Service worker must never be cached ΓÇö browser needs to detect updates
+        location = /sw.js {
+            add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+            add_header Pragma "no-cache" always;
+            expires 0;
+        }
+
+        # Hashed static assets (Vite bundles) can be cached long-term
+        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+            expires 1y;
+            add_header Cache-Control "public, immutable";
+        }
+
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    }
+---
+# Source: teslasync/templates/configmap-postgres-init.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-teslasync-postgres-init
+  labels:
+    helm.sh/chart: teslasync-0.6.0
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: postgresql
+data:
+  00-init-timescaledb.sql: |
+    -- Runs once on fresh PGDATA via /docker-entrypoint-initdb.d/
+    -- Idempotent ΓÇö IF NOT EXISTS guards everything.
+    CREATE EXTENSION IF NOT EXISTS timescaledb;
+    CREATE EXTENSION IF NOT EXISTS vector;
+    CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+
+    -- Disable TimescaleDB telemetry (ADR-007)
+    ALTER DATABASE teslasync SET timescaledb.telemetry_level = 'off';
+---
+# Source: teslasync/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-teslasync
+  labels:
+    helm.sh/chart: teslasync-0.6.0
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/managed-by: Helm
+data:
+  DATABASE_HOST: "test-teslasync-postgresql"
+  DATABASE_PORT: "5432"
+  DATABASE_USER: "teslasync"
+  DATABASE_NAME: "teslasync"
+  DATABASE_SSLMODE: "disable"
+  DATABASE_MAX_CONNS: "25"
+  DATABASE_MIN_CONNS: "5"
+  DATABASE_CONNECT_TIMEOUT: "5"
+  DATABASE_STATEMENT_TIMEOUT: "30000"
+  DATABASE_HEALTH_CHECK_PERIOD: "5s"
+  MQTT_HOST: "test-teslasync-mosquitto"
+  MQTT_PORT: "1883"
+  MQTT_CLIENT_ID: "teslasync"
+  MQTT_PREFIX: "teslasync"
+  REDIS_ENABLED: "true"
+  REDIS_HOST: "test-teslasync-redis"
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+  LIVE_SIGNAL_STORE_MODE: "hybrid"
+  GRAFANA_HOST: "test-teslasync-grafana"
+  GRAFANA_PORT: "3000"
+  API_ENDPOINT: "http://test-teslasync-api:8080"
+  TESLA_REDIRECT_URI: "http://localhost:8080/api/v1/auth/callback"
+  TESLA_API_BASE_URL: "https://fleet-api.prd.na.vn.cloud.tesla.com"
+  TESLA_AUTH_URL: "https://auth.tesla.com"
+  TESLA_TIMEOUT: "30s"
+  WORKER_POLL_INTERVAL: "30s"
+  WORKER_SLEEP_POLL_MULT: "4"
+  TESLASYNC_LOG_LEVEL: "info"
+  FORWARD_AUTH_HEADER: ""
+  TESLASYNC_PORT: "8080"
+  HELM_CHART_VERSION: "0.6.0"
+  # Data retention (0 or unset = no automatic cleanup)
+  NOTIFICATION_WORKER_HOST: "test-teslasync-notification-worker"
+  NOTIFICATION_WORKER_PORT: "8081"
+  EXPORT_WORKER_HOST: "test-teslasync-export-worker"
+  EXPORT_WORKER_PORT: "8082"
+  AUTOMATION_WORKER_HOST: "test-teslasync-automation-worker"
+  AUTOMATION_WORKER_PORT: "8083"
+  GAS_PRICE_ENABLED: "false"
+  GAS_PRICE_POLL_INTERVAL: "7d"
+  # Inbound api_call_logs middleware (Phase 38-10).
+  # Body capture defaults to OFF; enable only for diagnostic windows.
+  API_LOGS_INBOUND_ENABLED: "true"
+  API_LOG_CAPTURE_BODIES: "false"
+  API_LOG_QUEUE_CAPACITY: "4096"
+  API_LOG_BATCH_SIZE: "100"
+  API_LOG_FLUSH_INTERVAL: "1s"
+---
+# Source: teslasync/templates/pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: test-teslasync-postgresql-data
+  labels:
+    helm.sh/chart: teslasync-0.6.0
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: postgresql
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: "50Gi"
+---
+# Source: teslasync/templates/pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: test-teslasync-redis-data
+  labels:
+    helm.sh/chart: teslasync-0.6.0
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: redis
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: "1Gi"
+---
+# Source: teslasync/templates/pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: test-teslasync-mosquitto-data
+  labels:
+    helm.sh/chart: teslasync-0.6.0
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: mosquitto
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: "1Gi"
+---
+# Source: teslasync/templates/pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: test-teslasync-grafana-data
+  labels:
+    helm.sh/chart: teslasync-0.6.0
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: grafana
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: "2Gi"
+---
+# Source: teslasync/templates/service-automation-worker.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-teslasync-automation-worker
+  labels:
+    helm.sh/chart: teslasync-0.6.0
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: automation-worker
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8083
+      targetPort: health
+      protocol: TCP
+      name: health
+  selector:
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/component: automation-worker
+---
+# Source: teslasync/templates/service-export-worker.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-teslasync-export-worker
+  labels:
+    helm.sh/chart: teslasync-0.6.0
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: export-worker
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/component: export-worker
+  ports:
+    - name: health
+      port: 8082
+      targetPort: health
+      protocol: TCP
+---
+# Source: teslasync/templates/service-grafana.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-teslasync-grafana
+  labels:
+    helm.sh/chart: teslasync-0.6.0
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: grafana
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/component: grafana
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
+      protocol: TCP
+---
+# Source: teslasync/templates/service-mosquitto.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-teslasync-mosquitto
+  labels:
+    helm.sh/chart: teslasync-0.6.0
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: mosquitto
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/component: mosquitto
+  ports:
+    - name: mqtt
+      port: 1883
+      targetPort: mqtt
+      protocol: TCP
+    - name: websocket
+      port: 9001
+      targetPort: websocket
+      protocol: TCP
+---
+# Source: teslasync/templates/service-notification-worker.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-teslasync-notification-worker
+  labels:
+    helm.sh/chart: teslasync-0.6.0
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: notification-worker
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/component: notification-worker
+  ports:
+    - name: health
+      port: 8081
+      targetPort: health
+      protocol: TCP
+---
+# Source: teslasync/templates/service-postgresql.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-teslasync-postgresql
+  labels:
+    helm.sh/chart: teslasync-0.6.0
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: postgresql
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/component: postgresql
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+      protocol: TCP
+---
+# Source: teslasync/templates/service-redis.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-teslasync-redis
+  labels:
+    helm.sh/chart: teslasync-0.6.0
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: redis
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/component: redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: redis
+      protocol: TCP
+---
+# Source: teslasync/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-teslasync-api
+  labels:
+    helm.sh/chart: teslasync-0.6.0
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: api
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8080"
+    prometheus.io/path: "/metrics"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/component: api
+---
+# Source: teslasync/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-teslasync-web
+  labels:
+    helm.sh/chart: teslasync-0.6.0
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: web
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/component: web
+---
+# Source: teslasync/templates/deployment-automation-worker.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-teslasync-automation-worker
+  labels:
+    helm.sh/chart: teslasync-0.6.0
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: automation-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: teslasync
+      app.kubernetes.io/instance: test
+      app.kubernetes.io/component: automation-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: teslasync
+        app.kubernetes.io/instance: test
+        app.kubernetes.io/component: automation-worker
+    spec:
+      
+      serviceAccountName: test-teslasync
+      securityContext:
+        fsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+      initContainers:
+        - name: wait-for-db
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z test-teslasync-postgresql 5432; do echo "waiting for database..."; sleep 2; done']
+      containers:
+        - name: automation-worker
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+          image: "ghcr.io/ev-dev-labs/teslasync-automation-worker:1.1.0"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: health
+              containerPort: 8083
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          env:
+            - name: HEALTH_PORT
+              value: "8083"
+            - name: DATABASE_MAX_CONNS
+              value: "5"
+            - name: DATABASE_MIN_CONNS
+              value: "2"
+          envFrom:
+            - configMapRef:
+                name: test-teslasync
+            - secretRef:
+                name: test-teslasync
+          resources:
+            limits:
+              cpu: 500m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 64Mi
+---
+# Source: teslasync/templates/deployment-export-worker.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-teslasync-export-worker
+  labels:
+    helm.sh/chart: teslasync-0.6.0
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: export-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: teslasync
+      app.kubernetes.io/instance: test
+      app.kubernetes.io/component: export-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: teslasync
+        app.kubernetes.io/instance: test
+        app.kubernetes.io/component: export-worker
+    spec:
+      
+      serviceAccountName: test-teslasync
+      securityContext:
+        fsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+      initContainers:
+        - name: wait-for-db
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z test-teslasync-postgresql 5432; do echo "waiting for database..."; sleep 2; done']
+      containers:
+        - name: export-worker
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+          image: "ghcr.io/ev-dev-labs/teslasync-export-worker:1.1.0"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: health
+              containerPort: 8082
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          env:
+            - name: HEALTH_PORT
+              value: "8082"
+            - name: DATABASE_MAX_CONNS
+              value: "5"
+            - name: DATABASE_MIN_CONNS
+              value: "2"
+          envFrom:
+            - configMapRef:
+                name: test-teslasync
+            - secretRef:
+                name: test-teslasync
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 64Mi
+---
+# Source: teslasync/templates/deployment-grafana.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-teslasync-grafana
+  labels:
+    helm.sh/chart: teslasync-0.6.0
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: teslasync
+      app.kubernetes.io/instance: test
+      app.kubernetes.io/component: grafana
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: teslasync
+        app.kubernetes.io/instance: test
+        app.kubernetes.io/component: grafana
+    spec:
+      
+      serviceAccountName: test-teslasync
+      containers:
+        - name: grafana
+          image: "grafana/grafana:10.4.0"
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          env:
+            - name: GF_SECURITY_ADMIN_USER
+              value: "admin"
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: test-teslasync
+                  key: GRAFANA_ADMIN_PASSWORD
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 5
+          resources:
+            limits:
+              cpu: 500m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 64Mi
+          volumeMounts:
+            - name: grafana-data
+              mountPath: /var/lib/grafana
+      volumes:
+        - name: grafana-data
+          persistentVolumeClaim:
+            claimName: test-teslasync-grafana-data
+---
+# Source: teslasync/templates/deployment-mosquitto.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-teslasync-mosquitto
+  labels:
+    helm.sh/chart: teslasync-0.6.0
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: mosquitto
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: teslasync
+      app.kubernetes.io/instance: test
+      app.kubernetes.io/component: mosquitto
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: teslasync
+        app.kubernetes.io/instance: test
+        app.kubernetes.io/component: mosquitto
+    spec:
+      
+      serviceAccountName: test-teslasync
+      containers:
+        - name: mosquitto
+          image: "eclipse-mosquitto:2"
+          ports:
+            - name: mqtt
+              containerPort: 1883
+              protocol: TCP
+            - name: websocket
+              containerPort: 9001
+              protocol: TCP
+          livenessProbe:
+            tcpSocket:
+              port: mqtt
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            tcpSocket:
+              port: mqtt
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 5
+          resources:
+            limits:
+              cpu: 100m
+              memory: 64Mi
+            requests:
+              cpu: 25m
+              memory: 16Mi
+          volumeMounts:
+            - name: mosquitto-data
+              mountPath: /mosquitto/data
+      volumes:
+        - name: mosquitto-data
+          persistentVolumeClaim:
+            claimName: test-teslasync-mosquitto-data
+---
+# Source: teslasync/templates/deployment-notification.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-teslasync-notification-worker
+  labels:
+    helm.sh/chart: teslasync-0.6.0
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: notification-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: teslasync
+      app.kubernetes.io/instance: test
+      app.kubernetes.io/component: notification-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: teslasync
+        app.kubernetes.io/instance: test
+        app.kubernetes.io/component: notification-worker
+    spec:
+      
+      serviceAccountName: test-teslasync
+      securityContext:
+        fsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+      initContainers:
+        - name: wait-for-db
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z test-teslasync-postgresql 5432; do echo "waiting for database..."; sleep 2; done']
+      containers:
+        - name: notification-worker
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+          image: "ghcr.io/ev-dev-labs/teslasync-notification-worker:1.1.0"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: health
+              containerPort: 8081
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          env:
+            - name: HEALTH_PORT
+              value: "8081"
+            - name: DATABASE_MAX_CONNS
+              value: "5"
+            - name: DATABASE_MIN_CONNS
+              value: "2"
+          envFrom:
+            - configMapRef:
+                name: test-teslasync
+            - secretRef:
+                name: test-teslasync
+          resources:
+            limits:
+              cpu: 200m
+              memory: 128Mi
+            requests:
+              cpu: 50m
+              memory: 32Mi
+---
+# Source: teslasync/templates/deployment-postgresql.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-teslasync-postgresql
+  labels:
+    helm.sh/chart: teslasync-0.6.0
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: postgresql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: teslasync
+      app.kubernetes.io/instance: test
+      app.kubernetes.io/component: postgresql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: teslasync
+        app.kubernetes.io/instance: test
+        app.kubernetes.io/component: postgresql
+    spec:
+      
+      serviceAccountName: test-teslasync
+      containers:
+        - name: postgresql
+          image: "timescale/timescaledb-ha:pg17"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: postgres
+              containerPort: 5432
+              protocol: TCP
+          env:
+            - name: POSTGRES_DB
+              value: "teslasync"
+            - name: POSTGRES_USER
+              value: "teslasync"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: test-teslasync
+                  key: DATABASE_PASS
+            - name: PGDATA
+              value: "/home/postgres/pgdata/data"
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - "teslasync"
+                - -d
+                - "teslasync"
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - "teslasync"
+                - -d
+                - "teslasync"
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 5
+          resources:
+            limits:
+              cpu: 2000m
+              memory: 4Gi
+            requests:
+              cpu: 500m
+              memory: 1Gi
+          volumeMounts:
+            - name: postgresql-data
+              mountPath: "/home/postgres/pgdata"
+            - name: init-scripts
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
+      volumes:
+        - name: postgresql-data
+          persistentVolumeClaim:
+            claimName: test-teslasync-postgresql-data
+        - name: init-scripts
+          configMap:
+            name: test-teslasync-postgres-init
+---
+# Source: teslasync/templates/deployment-redis.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-teslasync-redis
+  labels:
+    helm.sh/chart: teslasync-0.6.0
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: teslasync
+      app.kubernetes.io/instance: test
+      app.kubernetes.io/component: redis
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: teslasync
+        app.kubernetes.io/instance: test
+        app.kubernetes.io/component: redis
+    spec:
+      
+      serviceAccountName: test-teslasync
+      containers:
+        - name: redis
+          image: "redis:7-alpine"
+          command:
+            - redis-server
+            - --appendonly
+            - "yes"
+            - --maxmemory-policy
+            - noeviction
+          ports:
+            - name: redis
+              containerPort: 6379
+              protocol: TCP
+          livenessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 5
+          resources:
+            limits:
+              cpu: 200m
+              memory: 192Mi
+            requests:
+              cpu: 50m
+              memory: 32Mi
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+      volumes:
+        - name: redis-data
+          persistentVolumeClaim:
+            claimName: test-teslasync-redis-data
+---
+# Source: teslasync/templates/deployment-web.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-teslasync-web
+  labels:
+    helm.sh/chart: teslasync-0.6.0
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: teslasync
+      app.kubernetes.io/instance: test
+      app.kubernetes.io/component: web
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: teslasync
+        app.kubernetes.io/instance: test
+        app.kubernetes.io/component: web
+    spec:
+      
+      serviceAccountName: test-teslasync
+      securityContext:
+        fsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: web
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: false
+          image: "ghcr.io/ev-dev-labs/teslasync-web:1.1.0"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          resources:
+            limits:
+              cpu: 200m
+              memory: 128Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
+          volumeMounts:
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
+            - name: nginx-run
+              mountPath: /var/run
+            - name: nginx-tmp
+              mountPath: /tmp
+            - name: nginx-conf
+              mountPath: /etc/nginx/conf.d
+      volumes:
+        - name: nginx-cache
+          emptyDir: {}
+        - name: nginx-run
+          emptyDir: {}
+        - name: nginx-tmp
+          emptyDir: {}
+        - name: nginx-conf
+          configMap:
+            name: test-teslasync-nginx
+---
+# Source: teslasync/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-teslasync-api
+  labels:
+    helm.sh/chart: teslasync-0.6.0
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: teslasync
+      app.kubernetes.io/instance: test
+      app.kubernetes.io/component: api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: teslasync
+        app.kubernetes.io/instance: test
+        app.kubernetes.io/component: api
+    spec:
+      
+      serviceAccountName: test-teslasync
+      securityContext:
+        fsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+      initContainers:
+        - name: wait-for-db
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z test-teslasync-postgresql 5432; do echo "waiting for database..."; sleep 2; done']
+      containers:
+        - name: teslasync
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+          image: "ghcr.io/ev-dev-labs/teslasync-api:1.1.0"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: test-teslasync
+            - secretRef:
+                name: test-teslasync
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          lifecycle:
+            preStop:
+              httpGet:
+                path: /internal/flush
+                port: http
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+---
+# Source: teslasync/templates/tests/test-connection.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "test-teslasync-test-connection"
+  labels:
+    helm.sh/chart: teslasync-0.6.0
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  containers:
+    - name: test-backend-health
+      image: busybox:1.36
+      command: ['sh', '-c']
+      args:
+        - |
+          echo "=== Testing backend /healthz ==="
+          wget -qO- --timeout=10 http://test-teslasync-api:8080/healthz
+          echo ""
+          echo "Backend health: OK"
+    - name: test-backend-ready
+      image: busybox:1.36
+      command: ['sh', '-c']
+      args:
+        - |
+          echo "=== Testing backend /readyz ==="
+          wget -qO- --timeout=10 http://test-teslasync-api:8080/readyz
+          echo ""
+          echo "Backend readiness: OK"
+    - name: test-backend-metrics
+      image: busybox:1.36
+      command: ['sh', '-c']
+      args:
+        - |
+          echo "=== Testing Prometheus /metrics ==="
+          OUTPUT=$(wget -qO- --timeout=10 http://test-teslasync-api:8080/metrics)
+          echo "$OUTPUT" | head -5
+          echo "$OUTPUT" | grep -q "teslasync_http_requests_total" && echo "Custom metrics: OK" || (echo "Custom metrics: MISSING" && exit 1)
+    - name: test-backend-api
+      image: busybox:1.36
+      command: ['sh', '-c']
+      args:
+        - |
+          echo "=== Testing API /api/v1/vehicles ==="
+          CODE=$(wget --server-response -qO/dev/null --timeout=10 http://test-teslasync-api:8080/api/v1/vehicles 2>&1 | awk '/HTTP/{print $2}')
+          echo "Status: $CODE"
+          [ "$CODE" = "200" ] && echo "API response: OK" || (echo "API response: FAIL ($CODE)" && exit 1)
+    - name: test-web
+      image: busybox:1.36
+      command: ['sh', '-c']
+      args:
+        - |
+          echo "=== Testing web frontend ==="
+          wget --spider --timeout=10 http://test-teslasync-web:80/
+          echo "Web frontend: OK"
+    - name: test-notification-worker
+      image: busybox:1.36
+      command: ['sh', '-c']
+      args:
+        - |
+          echo "=== Testing notification worker /healthz ==="
+          wget -qO- --timeout=10 http://test-teslasync-notification-worker:8081/healthz
+          echo ""
+          echo "Notification worker: OK"
+    - name: test-export-worker
+      image: busybox:1.36
+      command: ['sh', '-c']
+      args:
+        - |
+          echo "=== Testing export worker /healthz ==="
+          wget -qO- --timeout=10 http://test-teslasync-export-worker:8082/healthz
+          echo ""
+          echo "Export worker: OK"
+---
+# Source: teslasync/templates/tests/test-database.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "test-teslasync-test-database"
+  labels:
+    helm.sh/chart: teslasync-0.6.0
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    helm.sh/hook-weight: "-5"
+spec:
+  restartPolicy: Never
+  containers:
+    - name: test-postgres
+      image: postgres:17-alpine
+      env:
+        - name: PGPASSWORD
+          value: "teslasync"
+      command: ['sh', '-c']
+      args:
+        - |
+          echo "=== Testing PostgreSQL connectivity ==="
+          pg_isready -h test-teslasync-postgresql -p 5432 -U teslasync
+          echo "PostgreSQL: READY"
+
+          echo "=== Checking database exists ==="
+          psql -h test-teslasync-postgresql -p 5432 -U teslasync -d teslasync -c "SELECT 1;" > /dev/null
+          echo "Database: OK"
+
+          echo "=== Checking migrations applied ==="
+          TABLE_COUNT=$(psql -h test-teslasync-postgresql -p 5432 -U teslasync -d teslasync -t -c "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE';")
+          echo "Tables found: $TABLE_COUNT"
+          [ "$TABLE_COUNT" -gt 30 ] && echo "Migrations: OK ($TABLE_COUNT tables)" || (echo "Migrations: FAIL (expected >30, got $TABLE_COUNT)" && exit 1)
+
+          echo "=== Checking vehicles table ==="
+          psql -h test-teslasync-postgresql -p 5432 -U teslasync -d teslasync -c "\d vehicles" > /dev/null
+          echo "Vehicles table: OK"
+---
+# Source: teslasync/templates/job-migrate.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: test-teslasync-migrate-1
+  labels:
+    helm.sh/chart: teslasync-0.6.0
+    app.kubernetes.io/name: teslasync
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: migrate
+  annotations:
+    "helm.sh/hook": pre-upgrade,pre-install
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: teslasync
+        app.kubernetes.io/instance: test
+        app.kubernetes.io/component: migrate
+    spec:
+      
+      serviceAccountName: test-teslasync
+      restartPolicy: Never
+      initContainers:
+        - name: wait-for-db
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z test-teslasync-postgresql 5432; do echo "waiting for database..."; sleep 2; done']
+      containers:
+        - name: migrate
+          image: "ghcr.io/ev-dev-labs/teslasync-api:1.1.0"
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: MIGRATE_ONLY
+              value: "true"
+            - name: DATABASE_MAX_CONNS
+              value: "2"
+            - name: DATABASE_MIN_CONNS
+              value: "1"
+          envFrom:
+            - configMapRef:
+                name: test-teslasync
+            - secretRef:
+                name: test-teslasync
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+HELM_TEMPLATE_EXIT=0
+=== AUDIT_VIOLATIONS ===
+VIOLATION_INLINE_VAR=0
+VIOLATION_RECHARTS_DIRECT=0
+VIOLATION_LEAFLET_DIRECT=0
+VIOLATION_LEGACY_API_IMPORT=0
+VIOLATION_DOUBLE_API_PREFIX=0
+AUDIT_TOTAL_VIOLATIONS=0
+=== GIT_STATUS ===
+ M cmd/notification-worker/main.go
+ M internal/api/alert_handler.go
+ M internal/api/alert_handler_dtos.go
+ M internal/api/alert_handler_rules.go
+ M internal/api/router.go
+ M internal/database/alert_repo.go
+ M internal/models/alert.go
+ M internal/notification/sender.go
+ M internal/notification/worker.go
+ M web/src/api/hooks/useNotifications.ts
+ M web/src/api/types.ts
+ M web/src/features/notifications/pages/AlertStudioPage.tsx
+ M web/src/features/notifications/schemas/alertRule.ts
+ M web/src/i18n/en.json
+?? internal/api/computed_metric_evaluator.go
+?? internal/api/computed_metric_evaluator_test.go
+?? internal/api/computed_metrics.go
+?? migrations/000158_alert_rule_kinds.down.sql
+?? migrations/000158_alert_rule_kinds.up.sql
+?? web/src/features/notifications/components/ComputedMetricEditor.tsx
+UNEXPECTED_STATUS_COUNT=0
+=== STATUS ===
+EXIT=0
+STATUS=DONE

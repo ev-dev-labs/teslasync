@@ -153,6 +153,29 @@ func (h *AlertHandler) UpdateRule(w http.ResponseWriter, r *http.Request) {
 	if fieldPresent(fields, "snoozed_until") {
 		existing.SnoozedUntil = body.SnoozedUntil
 	}
+
+	// Computed-metric fields (kind switching is handled below).
+	if fieldPresent(fields, "metric_id") {
+		existing.MetricID = body.MetricID
+	}
+	if fieldPresent(fields, "metric_window") {
+		existing.MetricWindow = body.MetricWindow
+	}
+	if fieldPresent(fields, "metric_threshold") {
+		existing.MetricThreshold = body.MetricThreshold
+	}
+	if fieldPresent(fields, "metric_op") {
+		existing.MetricOp = body.MetricOp
+	}
+	if fieldPresent(fields, "kind") {
+		kind, err := validateAlertRuleKind(body.Kind)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		existing.Kind = kind
+	}
+	normalizeAlertRuleByKind(existing)
 	if err := validateAlertRule(existing); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
@@ -225,22 +248,33 @@ func (h *AlertHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rule := &models.AlertRule{
-		Name:         name,
-		Description:  body.Description,
-		Enabled:      enabled,
-		VehicleID:    body.VehicleID,
-		SignalName:   signalName,
-		Op:           op,
-		ValueNum:     body.ValueNum,
-		ValueText:    body.ValueText,
-		ValueBool:    body.ValueBool,
-		ValueMin:     body.ValueMin,
-		ValueMax:     body.ValueMax,
-		Severity:     severity,
-		CooldownMin:  cooldownMin,
-		TriggerMode:  triggerMode,
-		SnoozedUntil: body.SnoozedUntil,
+		Name:            name,
+		Description:     body.Description,
+		Enabled:         enabled,
+		VehicleID:       body.VehicleID,
+		SignalName:      signalName,
+		Op:              op,
+		ValueNum:        body.ValueNum,
+		ValueText:       body.ValueText,
+		ValueBool:       body.ValueBool,
+		ValueMin:        body.ValueMin,
+		ValueMax:        body.ValueMax,
+		Severity:        severity,
+		CooldownMin:     cooldownMin,
+		TriggerMode:     triggerMode,
+		SnoozedUntil:    body.SnoozedUntil,
+		MetricID:        body.MetricID,
+		MetricWindow:    body.MetricWindow,
+		MetricThreshold: body.MetricThreshold,
+		MetricOp:        body.MetricOp,
 	}
+	kind, err := validateAlertRuleKind(body.Kind)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	rule.Kind = kind
+	normalizeAlertRuleByKind(rule)
 	if err := validateAlertRule(rule); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
@@ -337,13 +371,23 @@ func resolveSnoozeUntil(body snoozeAlertRuleRequest) (*time.Time, error) {
 }
 
 // TestRule fires a test notification for a rule — creates a notification log
-// entry and broadcasts via SSE.
+// entry and broadcasts via SSE. When the request body contains
+// `kind:'computed_metric'` plus the metric_* fields, the handler instead
+// previews the computed metric and returns the current value without sending
+// any notifications (used by the rule builder UI's live preview).
 func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 	var body alertTestRequest
 	if _, err := decodeStrictAlertRequest(r, &body, forbiddenAlertTestFields); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
+
+	// Computed-metric preview path: skips notification dispatch entirely.
+	if body.Kind != nil && *body.Kind == models.AlertRuleKindComputedMetric {
+		h.previewComputedMetric(w, r, body)
+		return
+	}
+
 	message := body.Message
 	if message == "" {
 		message = "This is a test notification from Alert Studio"
@@ -518,9 +562,6 @@ func validateAlertRule(rule *models.AlertRule) error {
 	if len(rule.Name) > 200 {
 		return errors.New("name must be 200 characters or less")
 	}
-	if strings.TrimSpace(rule.SignalName) == "" {
-		return errors.New("signal_name is required")
-	}
 	if _, err := validateAlertSeverity(rule.Severity); err != nil {
 		return err
 	}
@@ -530,7 +571,82 @@ func validateAlertRule(rule *models.AlertRule) error {
 	if rule.TriggerMode != "once" && rule.TriggerMode != "repeat" {
 		return errors.New(`trigger_mode must be "once" or "repeat"`)
 	}
-	return validateAlertRuleOperand(rule)
+	switch rule.Kind {
+	case "", models.AlertRuleKindSignal:
+		if strings.TrimSpace(rule.SignalName) == "" {
+			return errors.New("signal_name is required")
+		}
+		return validateAlertRuleOperand(rule)
+	case models.AlertRuleKindComputedMetric:
+		return validateComputedMetricRule(rule)
+	default:
+		return fmt.Errorf("kind must be %q or %q", models.AlertRuleKindSignal, models.AlertRuleKindComputedMetric)
+	}
+}
+
+// validateComputedMetricRule enforces that all four metric_* fields are set
+// and reference a known metric / window / operator combination.
+func validateComputedMetricRule(rule *models.AlertRule) error {
+	if rule.MetricID == nil || strings.TrimSpace(*rule.MetricID) == "" {
+		return errors.New("metric_id is required for computed_metric rules")
+	}
+	if rule.MetricWindow == nil || strings.TrimSpace(*rule.MetricWindow) == "" {
+		return errors.New("metric_window is required for computed_metric rules")
+	}
+	if rule.MetricOp == nil || strings.TrimSpace(*rule.MetricOp) == "" {
+		return errors.New("metric_op is required for computed_metric rules")
+	}
+	if rule.MetricThreshold == nil {
+		return errors.New("metric_threshold is required for computed_metric rules")
+	}
+	metric, ok := ComputedMetrics[*rule.MetricID]
+	if !ok {
+		return fmt.Errorf("unknown metric_id %q", *rule.MetricID)
+	}
+	if !metric.IsValidWindow(*rule.MetricWindow) {
+		return fmt.Errorf("metric_window %q is not allowed for metric %q", *rule.MetricWindow, metric.ID)
+	}
+	if !IsValidComputedMetricOp(*rule.MetricOp) {
+		return fmt.Errorf("metric_op %q is not supported", *rule.MetricOp)
+	}
+	return nil
+}
+
+// normalizeAlertRuleByKind clears the unused operand fields after a save so
+// switching kinds doesn't leave stale data behind. For kind='signal' it nulls
+// the metric_* fields; for kind='computed_metric' it clears signal_name, op,
+// and the value_* operands.
+func normalizeAlertRuleByKind(rule *models.AlertRule) {
+	switch rule.Kind {
+	case models.AlertRuleKindComputedMetric:
+		rule.SignalName = ""
+		rule.Op = ""
+		rule.ValueNum = nil
+		rule.ValueText = nil
+		rule.ValueBool = nil
+		rule.ValueMin = nil
+		rule.ValueMax = nil
+	default:
+		rule.Kind = models.AlertRuleKindSignal
+		rule.MetricID = nil
+		rule.MetricWindow = nil
+		rule.MetricThreshold = nil
+		rule.MetricOp = nil
+	}
+}
+
+// validateAlertRuleKind resolves an optional kind input to its canonical value.
+// nil/empty defaults to "signal" (legacy behavior).
+func validateAlertRuleKind(kind *string) (string, error) {
+	if kind == nil || *kind == "" {
+		return models.AlertRuleKindSignal, nil
+	}
+	switch *kind {
+	case models.AlertRuleKindSignal, models.AlertRuleKindComputedMetric:
+		return *kind, nil
+	default:
+		return "", fmt.Errorf("kind must be %q or %q", models.AlertRuleKindSignal, models.AlertRuleKindComputedMetric)
+	}
 }
 
 // validateTriggerMode resolves an optional input to a canonical trigger mode.
@@ -619,4 +735,60 @@ func validateAlertTestTarget(target *alertTestTargetRequest) ([]int64, bool, err
 		}
 	}
 	return target.ChannelIDs, false, nil
+}
+
+// ListMetrics returns the registry of computed-metric definitions for the
+// rule builder UI. Stable, sorted by metric ID.
+func (h *AlertHandler) ListMetrics(w http.ResponseWriter, r *http.Request) {
+writeJSON(w, http.StatusOK, ListMetricSummaries())
+}
+
+// previewComputedMetric handles the "kind=computed_metric" branch of TestRule.
+// It builds a synthetic AlertRule from the request fields, calls the evaluator
+// in preview mode (bypasses cooldown/snooze), and returns the computed value
+// plus whether the configured operator+threshold would have matched.
+func (h *AlertHandler) previewComputedMetric(w http.ResponseWriter, r *http.Request, body alertTestRequest) {
+if h.computedEval == nil {
+writeError(w, http.StatusServiceUnavailable, "computed-metric evaluator unavailable")
+return
+}
+rule := &models.AlertRule{
+Kind:            models.AlertRuleKindComputedMetric,
+MetricID:        body.MetricID,
+MetricWindow:    body.MetricWindow,
+MetricOp:        body.MetricOp,
+MetricThreshold: body.MetricThreshold,
+CooldownMin:     1,
+Severity:        "info",
+TriggerMode:     "repeat",
+Name:            "preview",
+}
+if err := validateComputedMetricRule(rule); err != nil {
+writeError(w, http.StatusBadRequest, err.Error())
+return
+}
+var vehicleID int64
+if body.VehicleID != nil {
+vehicleID = *body.VehicleID
+}
+res, matched, err := h.computedEval.Preview(r.Context(), rule, vehicleID)
+if err != nil {
+log.Error().Err(err).Str("metric_id", *rule.MetricID).Msg("preview computed metric failed")
+writeError(w, http.StatusInternalServerError, "failed to compute metric")
+return
+}
+resp := map[string]interface{}{
+"kind":          models.AlertRuleKindComputedMetric,
+"metric_id":     *rule.MetricID,
+"metric_window": *rule.MetricWindow,
+"metric_op":     *rule.MetricOp,
+"threshold":     *rule.MetricThreshold,
+"value":         res.Value,
+"would_trigger": matched,
+}
+if IsPercentChangeOp(*rule.MetricOp) {
+resp["previous_value"] = res.PreviousValue
+resp["percent_change"] = res.PercentChange
+}
+writeJSON(w, http.StatusOK, resp)
 }

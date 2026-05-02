@@ -22,6 +22,7 @@ type AlertHandler struct {
 	eventHub      *EventHub
 	mqttClient    pahomqtt.Client
 	liveSignals   signal.LiveSignalStore
+	computedEval  *ComputedMetricEvaluator
 }
 
 type alertRuleRepository interface {
@@ -47,6 +48,7 @@ func NewAlertHandler(db *database.DB, hub *EventHub, mc pahomqtt.Client, store s
 		eventHub:      hub,
 		mqttClient:    mc,
 		liveSignals:   store,
+		computedEval:  NewComputedMetricEvaluator(db),
 	}
 }
 
