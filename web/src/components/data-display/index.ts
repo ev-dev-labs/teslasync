@@ -26,6 +26,11 @@ export {
   type SeverityIconProps,
 } from './SeverityBadge';
 export { StatusDot, type StatusDotProps } from './StatusDot';
+export {
+  SourceLayerBadge,
+  type SourceLayerBadgeProps,
+  type SignalSource,
+} from './SourceLayerBadge';
 export { SavedViewMenu, type SavedViewMenuProps } from './SavedViewMenu';
 export { PlaybackControls, type PlaybackControlsProps } from './PlaybackControls';
 export {

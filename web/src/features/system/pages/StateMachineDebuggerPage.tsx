@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw, ChevronDown, ChevronRight, Activity, Zap, AlertTriangle } from 'lucide-react';
 import { PageContainer, Grid } from '@/components/layout';
-import { GlassPanel, Button, DataTable, Select, Pagination } from '@/components/ui';
+import { GlassPanel, Button, DataTable, Select, Pagination, CopyButton } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { StatCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
@@ -14,6 +15,7 @@ import {
 import { useVehicleStateMachine } from '@/api/hooks/useAdmin';
 import { useFSMStats, useFSMTransitions } from '@/api/hooks/useFSM';
 import { useVehicles } from '@/api/hooks/useVehicles';
+import { useSignalSnapshot } from '@/api/hooks/useTelemetry';
 import type { VehicleState } from '@/api/types';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime, formatRelative } from '@/lib/dateFormat';
@@ -26,6 +28,9 @@ import { FSMStateDiagram } from '../components/FSMStateDiagram';
 import { FSMHealthPanel, computeFlapIds } from '../components/FSMHealthPanel';
 import { FSMTimelineChart } from '../components/FSMTimelineChart';
 import { FSMSubFSMPanel } from '../components/FSMSubFSMPanel';
+import { StateTimeline } from '../components/state-machine/StateTimeline';
+import { LiveControls } from '../components/state-machine/LiveControls';
+import { SnapshotInspector } from '../components/state-machine/SnapshotInspector';
 
 /* ─── Vehicle state styling (for live state hero) ─── */
 const vehicleStateStyle: Record<string, { bg: string; text: string; dot: string }> = {
@@ -70,17 +75,28 @@ export default function StateMachineDebuggerPage() {
 
   /* ─── Vehicle selector ─── */
   const { data: vehicles } = useVehicles();
-  const [vehicleId, setVehicleId] = useState<string>('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [vehicleId, setVehicleId] = useState<string>(() => searchParams.get('vehicle') ?? '');
   const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
 
   /* ─── FSM filters ─── */
-  const [fsmType, setFsmType] = useState<FSMType>('all');
+  const initialFsm = (searchParams.get('fsm') ?? 'all') as FSMType;
+  const [fsmType, setFsmType] = useState<FSMType>(initialFsm);
   const [hours, setHours] = useState('24');
   const [serverPage, setServerPage] = useState(1);
   const [perPage, setPerPage] = useState(50);
 
   /* ─── Detail panel ─── */
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(() => {
+    const id = searchParams.get('selected');
+    return id ? Number(id) : null;
+  });
+
+  /* ─── Phase 40 / Prompt 58 — live/freeze + timeline window ─── */
+  const initialAt = searchParams.get('at');
+  const [isLive, setIsLive] = useState<boolean>(!initialAt);
+  const [windowMinutes, setWindowMinutes] = useState(10);
+  const [bufferClearedAt, setBufferClearedAt] = useState<Date | null>(null);
 
   /* ─── Data hooks ─── */
   const {
@@ -290,16 +306,115 @@ export default function StateMachineDebuggerPage() {
     [transitions],
   );
 
+  /* ─── Phase 40 / Prompt 58 — derived selection + step navigation ─── */
+  const sortedByTime = useMemo(
+    () => [...transitions].sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    ),
+    [transitions],
+  );
+
+  const selectedTransition = useMemo(
+    () => (selectedId != null ? transitions.find((tr) => tr.id === selectedId) ?? null : null),
+    [transitions, selectedId],
+  );
+  const selectedIndex = useMemo(
+    () => (selectedTransition ? sortedByTime.findIndex((tr) => tr.id === selectedTransition.id) : -1),
+    [sortedByTime, selectedTransition],
+  );
+
+  const previousTransition = useMemo(() => {
+    if (selectedIndex <= 0) return null;
+    return sortedByTime[selectedIndex - 1] ?? null;
+  }, [sortedByTime, selectedIndex]);
+
+  const visibleTransitions = useMemo(() => {
+    if (!bufferClearedAt) return sortedByTime;
+    return sortedByTime.filter((tr) => new Date(tr.created_at) >= bufferClearedAt);
+  }, [sortedByTime, bufferClearedAt]);
+
+  const handleStepPrev = useCallback(() => {
+    if (sortedByTime.length === 0) return;
+    setIsLive(false);
+    if (selectedIndex <= 0) {
+      setSelectedId(sortedByTime[0].id);
+    } else {
+      setSelectedId(sortedByTime[selectedIndex - 1].id);
+    }
+  }, [sortedByTime, selectedIndex]);
+
+  const handleStepNext = useCallback(() => {
+    if (sortedByTime.length === 0) return;
+    setIsLive(false);
+    if (selectedIndex < 0) {
+      setSelectedId(sortedByTime[sortedByTime.length - 1].id);
+    } else if (selectedIndex < sortedByTime.length - 1) {
+      setSelectedId(sortedByTime[selectedIndex + 1].id);
+    }
+  }, [sortedByTime, selectedIndex]);
+
+  const handleClearBuffer = useCallback(() => {
+    setBufferClearedAt(new Date());
+    setSelectedId(null);
+  }, []);
+
+  /* ─── Snapshot hooks: live (when no `at`) + selected/previous (when frozen) ─── */
+  const selectedAtIso = selectedTransition?.created_at ?? '';
+  const previousAtIso = previousTransition?.created_at ?? '';
+  const numericVehicleId = Number(activeId) || 0;
+
+  const { data: selectedSnapshot, isFetching: snapshotFetching } = useSignalSnapshot(
+    numericVehicleId,
+    selectedAtIso,
+    '',
+    { enabled: numericVehicleId > 0 && Boolean(selectedAtIso) },
+  );
+
+  const { data: previousSnapshot } = useSignalSnapshot(
+    numericVehicleId,
+    previousAtIso,
+    '',
+    { enabled: numericVehicleId > 0 && Boolean(previousAtIso) },
+  );
+
+  /* ─── Permalink: keep ?vehicle / ?fsm / ?selected / ?at in sync ─── */
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    if (activeId) next.set('vehicle', activeId);
+    else next.delete('vehicle');
+    if (fsmType && fsmType !== 'all') next.set('fsm', fsmType);
+    else next.delete('fsm');
+    if (selectedId != null) next.set('selected', String(selectedId));
+    else next.delete('selected');
+    if (!isLive && selectedAtIso) next.set('at', selectedAtIso);
+    else next.delete('at');
+    setSearchParams(next, { replace: true });
+  }, [activeId, fsmType, selectedId, isLive, selectedAtIso, searchParams, setSearchParams]);
+
+  const permalinkUrl = useMemo(() => {
+    if (typeof window === 'undefined') return '';
+    return `${window.location.origin}${window.location.pathname}?${searchParams.toString()}`;
+  }, [searchParams]);
+
   return (
     <PageContainer
       title={t('fsm.title', 'FSM Debugger')}
       subtitle={t('fsm.subtitle', 'Multi-FSM transition analysis — vehicle, drive, charge, command, notification')}
       loading={stateLoading && transLoading && statsLoading}
       actions={
-        <span className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
-          <RefreshCw className={cn('h-3 w-3', stateFetching && 'animate-spin')} />
-          {t('fsm.autoRefresh', 'Live 10s')}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="hidden items-center gap-1 text-xs text-[var(--text-muted)] sm:flex">
+            <RefreshCw className={cn('h-3 w-3', stateFetching && 'animate-spin')} />
+            {t('fsm.autoRefresh', 'Live 10s')}
+          </span>
+          {permalinkUrl ? (
+            <CopyButton
+              text={permalinkUrl}
+              label={t('debugger.share', 'Share permalink')}
+              size="sm"
+            />
+          ) : null}
+        </div>
       }
     >
       {/* ──── Section 1: Filters ──── */}
@@ -409,6 +524,44 @@ export default function StateMachineDebuggerPage() {
       {/* ──── Section 4: Sub-FSM Panel (active drive/charge context) ──── */}
       <FadeIn delay={0.15}>
         <FSMSubFSMPanel activeSubs={statsData?.active_subs} fsmType={fsmType === 'all' ? 'vehicle' : fsmType} />
+      </FadeIn>
+
+      {/* ──── Phase 40 / Prompt 58 — Live controls + state timeline + inspector ──── */}
+      <FadeIn delay={0.18}>
+        <GlassPanel className="p-4 sm:p-5 space-y-4">
+          <LiveControls
+            isLive={isLive}
+            onToggleLive={(live) => {
+              setIsLive(live);
+              if (live) setSelectedId(null);
+            }}
+            onStepPrev={handleStepPrev}
+            onStepNext={handleStepNext}
+            canStepPrev={!isLive && sortedByTime.length > 0 && selectedIndex > 0}
+            canStepNext={!isLive && sortedByTime.length > 0 && selectedIndex < sortedByTime.length - 1}
+            windowMinutes={windowMinutes}
+            onWindowChange={setWindowMinutes}
+            onClearBuffer={handleClearBuffer}
+            bufferCount={visibleTransitions.length}
+          />
+          <StateTimeline
+            transitions={visibleTransitions}
+            fsmType={fsmType === 'all' ? 'vehicle' : fsmType}
+            selectedId={selectedId}
+            onSelect={(tr) => {
+              setSelectedId(tr.id);
+              setIsLive(false);
+            }}
+            windowMinutes={windowMinutes}
+          />
+          <SnapshotInspector
+            fsmType={selectedTransition?.fsm_type || (fsmType === 'all' ? 'vehicle' : fsmType)}
+            transition={selectedTransition}
+            snapshot={selectedSnapshot ?? null}
+            previousSnapshot={previousSnapshot ?? null}
+            loading={snapshotFetching}
+          />
+        </GlassPanel>
       </FadeIn>
 
       {/* ──── Section 5: State Diagram ──── */}

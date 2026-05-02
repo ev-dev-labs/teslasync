@@ -5773,7 +5773,7 @@
     "max": "Max",
     "average": "Average",
     "dataPoints": "Data Points",
-    "subtitle": "Compare signal values across two time ranges",
+    "subtitle": "Compare signal values between two snapshots in time",
     "signal": "Signal",
     "selectSignal": "Select a signal…",
     "todayVsYesterday": "Today vs Yesterday",
@@ -5786,7 +5786,101 @@
     "noDataB": "No data in Range B",
     "comparisonSummary": "Comparison Summary",
     "selectPrompt": "Select a signal to compare",
-    "selectHint": "Choose a signal and configure two time ranges to compare"
+    "selectHint": "Choose a signal and configure two time ranges to compare",
+    "vehicle": "Vehicle",
+    "windowA": "Window A",
+    "windowB": "Window B",
+    "valueA": "Window A",
+    "valueB": "Window B",
+    "delta": "Δ",
+    "deltaChanged": "changed",
+    "sourceA": "Src A",
+    "sourceB": "Src B",
+    "presetsLabel": "Quick presets:",
+    "filterPlaceholder": "Filter signals…",
+    "clearCategory": "Clear",
+    "totalChanged": "Changed signals",
+    "visible": "Visible after filter",
+    "pinnedCount": "Pinned",
+    "windowSpan": "Window span",
+    "share": "Share",
+    "noChanges": "No signals changed between the two snapshots",
+    "tableEmpty": "No differences between the two snapshots",
+    "tableNoMatches": "No signals match the current filter",
+    "tableLoading": "Loading…",
+    "error": "Failed to load diff",
+    "pinnedLabel": "Pinned:",
+    "preset": {
+      "nowVs1h": "Now vs 1h ago",
+      "nowVs1d": "Now vs 1 day ago",
+      "beforeAfterCharge": "Before vs after last charge",
+      "lastDrive": "Last drive start vs end",
+      "todayVsYesterday": "Today vs yesterday (same time)"
+    },
+    "cat": {
+      "battery": "Battery",
+      "drive": "Drive",
+      "climate": "Climate",
+      "security": "Security",
+      "motor": "Motor",
+      "tire": "Tire",
+      "media": "Media",
+      "safety": "Safety"
+    },
+    "bulk": {
+      "pin": "Pin selected",
+      "unpin": "Unpin selected",
+      "csv": "Copy CSV",
+      "addAlert": "Add as alert rule"
+    }
+  },
+  "debugger": {
+    "share": "Share permalink",
+    "timeline": {
+      "empty": "No transitions in window",
+      "windowLabel": "Window: {{minutes}} min",
+      "tickAria": "{{from}} to {{to}}"
+    },
+    "controls": {
+      "live": "Live",
+      "freeze": "Freeze",
+      "stepPrev": "Step to previous transition",
+      "stepNext": "Step to next transition",
+      "window": "Window",
+      "clear": "Clear buffer",
+      "buffered": "{{n}} buffered"
+    },
+    "inspector": {
+      "title": "Transition snapshot",
+      "from": "From",
+      "to": "To",
+      "trigger": "Trigger",
+      "duration": "Duration",
+      "signalsTitle": "Signals at transition",
+      "diffMode": "Diff vs previous",
+      "noSignals": "No signals captured for this transition",
+      "empty": "Select a transition to inspect its snapshot",
+      "loading": "Loading…",
+      "copy": "Copy snapshot"
+    }
+  },
+  "sourceLayer": {
+    "age": "age",
+    "l1": {
+      "desc": "Read from the in-process SignalStore (hot path, freshest)."
+    },
+    "l2": {
+      "desc": "Read from Redis cross-pod cache (legacy entry; freshness unknown)."
+    },
+    "log": {
+      "desc": "Replayed from signal_log (durable history)."
+    },
+    "stale": {
+      "desc": "Redis-backed value older than the 2-minute freshness window."
+    },
+    "unknown": {
+      "desc": "Source layer unknown."
+    }
   },
   "signalGap": {
     "status": "Status",

@@ -1166,6 +1166,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 					signalHandler.WithLiveSignalStore(store)
 				}
 				r.Get("/live", signalHandler.LiveState)
+				r.Get("/snapshot", signalHandler.Snapshot)
+				r.Get("/diff", signalHandler.Diff)
 				r.Get("/available", signalHandler.AvailableSignals)
 				r.Get("/stats", signalHandler.Stats)
 				r.Get("/{signalName}/history", signalHandler.History)
@@ -1181,6 +1183,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 					}
 				}
 				r.Get("/live", signalHandler.LiveState)
+				r.Get("/snapshot", signalHandler.Snapshot)
+				r.Get("/diff", signalHandler.Diff)
 				r.Get("/available", signalHandler.AvailableSignals)
 				r.Get("/stats", signalHandler.Stats)
 				r.Get("/{signalName}/history", signalHandler.History)
