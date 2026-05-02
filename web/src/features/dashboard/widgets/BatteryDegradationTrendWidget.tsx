@@ -4,7 +4,7 @@ import { TrendingDown } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, ResponsiveContainer,
   Tooltip, CartesianGrid, ReferenceLine,
-  chartGrid, axisTickSm, CHART_COLORS,
+  chartGrid, axisTickSm, useChartPalette,
   AREA_DEFAULTS, areaGradient,
 } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
@@ -41,6 +41,9 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
   const degradationRate = data?.degradation_rate_pct_per_month ?? null;
   const totalCycles = data?.current_cycles ?? null;
 
+  // Phase-40 / Prompt 60 — series colour from active theme.
+  const palette = useChartPalette();
+
   const stats = useMemo<ChartSummaryStat[]>(() => {
     const items: ChartSummaryStat[] = [];
     items.push({
@@ -64,7 +67,7 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
   const chart = chartData.length > 1 ? (
     <ResponsiveContainer width="100%" height="100%">
       <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
-        {areaGradient('degradation-grad', CHART_COLORS[1])}
+        {areaGradient('degradation-grad', palette.series[1])}
         <CartesianGrid {...chartGrid} />
         <XAxis dataKey="month" {...axisTickSm} />
         <YAxis
@@ -77,7 +80,7 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
         <Area
           {...AREA_DEFAULTS}
           dataKey="health"
-          stroke={CHART_COLORS[1]}
+          stroke={palette.series[1]}
           fill="url(#degradation-grad)"
           name={t('widget.healthPct', 'Health %')}
         />

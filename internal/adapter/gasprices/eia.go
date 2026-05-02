@@ -13,6 +13,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 	"github.com/ev-dev-labs/teslasync/internal/port/external"
 )
 
@@ -71,10 +72,20 @@ func WithBaseURL(url string) Option {
 }
 
 // NewEIAAdapter creates a new EIA adapter with the given API key.
+//
+// The default outbound *http.Client is built via httputil.NewClient with
+// service tag "eia" and EnableLogging=true, so every call lands in
+// api_call_logs once the WithHTTPClient option is not used. Tests inject
+// their own fakes via WithHTTPClient and bypass logging — that path is
+// documented to be sink-less by design.
 func NewEIAAdapter(apiKey string, opts ...Option) *EIAAdapter {
 	a := &EIAAdapter{
-		apiKey:      apiKey,
-		httpClient:  &http.Client{Timeout: config.HTTPClientTimeout},
+		apiKey: apiKey,
+		httpClient: httputil.NewClient(httputil.ClientConfig{
+			Name:          "eia",
+			Timeout:       config.HTTPClientTimeout,
+			EnableLogging: true,
+		}),
 		baseURL:     defaultEIABaseURL,
 		gallonToKWh: defaultGallonToKWhFactor,
 		cacheTTL:    time.Hour,

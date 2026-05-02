@@ -14,14 +14,32 @@ import (
 
 // BatteryCellsHandler serves battery cell analytics derived from signal store
 // (real-time) and signal_log hypertable (historical).
+//
+// Phase-39 migration: the per-signal "value as of now" lookups in
+// getLatestSignal now resolve through the canonical signal.StateReader
+// (ADR-002 / phase-39) instead of the legacy
+// database.SignalLogReader's per-signal helper. Both readers are
+// intentionally retained side-by-side because the historical
+// hourly-bucket aggregation in getHistory
+// (database.SignalLogReader.BrickVoltageHistory) is a SignalLogReader-only
+// capability that has no StateReader equivalent; only the per-signal
+// at-or-before lookup path is migrated here.
+//
+// As part of this migration, transport errors from state.SignalAt now
+// propagate to the caller as a 500 instead of being silently swallowed
+// into a "no_data" payload. The legacy silent-swallow behavior was
+// indistinguishable on the frontend from "vehicle truly idle / no brick
+// voltage history" and rendered the Battery Cells panel empty even when
+// the underlying read had genuinely failed.
 type BatteryCellsHandler struct {
 	db              *database.DB
 	liveSignals     signal.LiveSignalStore
+	state           signal.StateReader
 	signalLogReader *database.SignalLogReader
 }
 
-func NewBatteryCellsHandler(db *database.DB, liveStore signal.LiveSignalStore, slr *database.SignalLogReader) *BatteryCellsHandler {
-	return &BatteryCellsHandler{db: db, liveSignals: liveStore, signalLogReader: slr}
+func NewBatteryCellsHandler(db *database.DB, liveStore signal.LiveSignalStore, state signal.StateReader, slr *database.SignalLogReader) *BatteryCellsHandler {
+	return &BatteryCellsHandler{db: db, liveSignals: liveStore, state: state, signalLogReader: slr}
 }
 
 type cellReading struct {
@@ -54,14 +72,47 @@ func (h *BatteryCellsHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// Read latest signal values (signal store → signal_log fallback)
-	brickMax, hasBrickMax := h.getLatestSignal(ctx, vehicleID, "BrickVoltageMax")
-	brickMin, hasBrickMin := h.getLatestSignal(ctx, vehicleID, "BrickVoltageMin")
-	numMax, hasNumMax := h.getLatestSignal(ctx, vehicleID, "NumBrickVoltageMax")
-	numMin, hasNumMin := h.getLatestSignal(ctx, vehicleID, "NumBrickVoltageMin")
-	packVoltage, _ := h.getLatestSignal(ctx, vehicleID, "PackVoltage")
-	tempMax, _ := h.getLatestSignal(ctx, vehicleID, "ModuleTempMax")
-	tempMin, _ := h.getLatestSignal(ctx, vehicleID, "ModuleTempMin")
+	// Read latest signal values (signal store → StateReader fallback).
+	// Any StateReader transport error short-circuits the request as a 500
+	// rather than degrading silently into a "no_data" payload.
+	readSignal := func(name string) (float64, bool, bool) {
+		v, ok, err := h.getLatestSignal(ctx, vehicleID, name)
+		if err != nil {
+			log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", name).Msg("battery cells: failed to read signal state")
+			writeError(w, http.StatusInternalServerError, "failed to read battery cell state")
+			return 0, false, false
+		}
+		return v, ok, true
+	}
+
+	brickMax, hasBrickMax, ok := readSignal("BrickVoltageMax")
+	if !ok {
+		return
+	}
+	brickMin, hasBrickMin, ok := readSignal("BrickVoltageMin")
+	if !ok {
+		return
+	}
+	numMax, hasNumMax, ok := readSignal("NumBrickVoltageMax")
+	if !ok {
+		return
+	}
+	numMin, hasNumMin, ok := readSignal("NumBrickVoltageMin")
+	if !ok {
+		return
+	}
+	packVoltage, _, ok := readSignal("PackVoltage")
+	if !ok {
+		return
+	}
+	tempMax, _, ok := readSignal("ModuleTempMax")
+	if !ok {
+		return
+	}
+	tempMin, _, ok := readSignal("ModuleTempMin")
+	if !ok {
+		return
+	}
 
 	// No brick voltage data — return empty response with status indicator
 	if !hasBrickMax && !hasBrickMin {
@@ -174,27 +225,35 @@ func round4(v float64) float64 {
 	return math.Round(v*10000) / 10000
 }
 
-// getLatestSignal reads a fresh live signal first, falling back to signal_log.
-func (h *BatteryCellsHandler) getLatestSignal(ctx context.Context, vehicleID int64, signalName string) (float64, bool) {
+// getLatestSignal reads a fresh live signal first, falling back to the
+// canonical signal.StateReader (ADR-002 / phase-39). The boolean return
+// distinguishes "signal never emitted" (false) from "signal emitted with
+// value 0" (true, 0). A non-nil error indicates a StateReader transport
+// failure (e.g. pgx connection drop) that callers MUST propagate as a 500
+// rather than silently fold into a no-data payload.
+func (h *BatteryCellsHandler) getLatestSignal(ctx context.Context, vehicleID int64, signalName string) (float64, bool, error) {
 	if h.liveSignals != nil {
 		value, err := h.liveSignals.GetSignal(ctx, vehicleID, signalName, signal.LiveSignalReadDistributed)
 		if err == nil && value != nil {
 			if v, ok := toFloatOk(value.Raw); ok {
-				return v, true
+				return v, true, nil
 			}
 		} else if err != nil {
 			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Str("signal", signalName).Msg("battery cells: live signal read failed")
 		}
 	}
-	if h.signalLogReader != nil {
-		val, err := h.signalLogReader.SignalAt(ctx, vehicleID, signalName, time.Now())
-		if err == nil && val != nil {
+	if h.state != nil {
+		val, err := h.state.SignalAt(ctx, vehicleID, signalName, time.Now())
+		if err != nil {
+			return 0, false, err
+		}
+		if val != nil {
 			if v, ok := toFloatOk(val); ok {
-				return v, true
+				return v, true, nil
 			}
 		}
 	}
-	return 0, false
+	return 0, false, nil
 }
 
 // getHistory queries signal_log for hourly brick voltage buckets over the past 7 days.

@@ -49,7 +49,7 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
       actions={
         <Link
           to="/drives"
-          className="text-[10px] text-white/30 hover:text-neon-cyan transition-colors flex items-center gap-0.5"
+          className="text-[10px] text-white/30 hover:text-cyan-300 transition-colors flex items-center gap-0.5"
         >
           {t('widget.viewAll', 'View all')} <ArrowUpRight className="h-3 w-3" />
         </Link>

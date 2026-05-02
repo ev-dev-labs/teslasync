@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Zap, DollarSign, RefreshCw,
@@ -13,6 +13,9 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
+import { SearchInput, FilterBar } from '@/components/forms';
+import { useFilteredList } from '@/hooks/useFilteredList';
+import { useUrlEnum, useUrlString } from '@/hooks/useUrlState';
 import {
   useTeslaChargingHistory,
   useRefreshTeslaChargingHistory,
@@ -61,7 +64,8 @@ export default function TeslaChargingHistoryPage() {
   usePageTitle(t('tesla_charging.title', 'Tesla Charging History'));
 
   const { data: vehicles } = useVehicles();
-  const [selectedVin, setSelectedVin] = useState<string>('');
+  // Phase 40 / Prompt 33 — VIN filter, sort, and search persist in the URL.
+  const [selectedVin, setSelectedVin] = useUrlString('vin', '');
   const { data: response, isLoading, error } = useTeslaChargingHistory(selectedVin || undefined);
   const refreshMutation = useRefreshTeslaChargingHistory();
 
@@ -90,6 +94,7 @@ export default function TeslaChargingHistoryPage() {
         <span className="text-sm text-white/90">{formatDateTime(row.charge_start_datetime)}</span>
       ),
       sortable: true,
+      visibleOnMobile: true,
     },
     {
       key: 'location',
@@ -102,6 +107,7 @@ export default function TeslaChargingHistoryPage() {
           </span>
         </div>
       ),
+      visibleOnMobile: true,
     },
     {
       key: 'duration',
@@ -121,6 +127,7 @@ export default function TeslaChargingHistoryPage() {
         </span>
       ),
       sortable: true,
+      visibleOnMobile: true,
     },
     {
       key: 'cost',
@@ -133,6 +140,7 @@ export default function TeslaChargingHistoryPage() {
         </span>
       ),
       sortable: true,
+      visibleOnMobile: true,
     },
     {
       key: 'rate',
@@ -144,6 +152,7 @@ export default function TeslaChargingHistoryPage() {
             : '—'}
         </span>
       ),
+      defaultVisible: false,
     },
     {
       key: 'invoice',
@@ -169,11 +178,23 @@ export default function TeslaChargingHistoryPage() {
     },
   ], [t]);
 
-  const [sortKey, setSortKey] = useState<string>('date');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [sortKey, setSortKey] = useUrlEnum<'date' | 'energy' | 'cost'>(
+    'sort',
+    ['date', 'energy', 'cost'] as const,
+    'date',
+  );
+  const [sortDir, setSortDir] = useUrlEnum<'asc' | 'desc'>('dir', ['asc', 'desc'] as const, 'desc');
+  const [search, setSearch] = useUrlString('q', '');
+  const [selectedKeys, setSelectedKeys] = useState<(string | number)[]>([]);
+
+  const entrySearchFields = useMemo(
+    () => ['site_location_name'] as const satisfies ReadonlyArray<keyof TeslaChargingHistoryEntry>,
+    [],
+  );
+  const filteredEntries = useFilteredList(entries, search, entrySearchFields);
 
   const sortedEntries = useMemo(() => {
-    const sorted = [...entries];
+    const sorted = [...filteredEntries];
     sorted.sort((a, b) => {
       let cmp = 0;
       switch (sortKey) {
@@ -192,16 +213,53 @@ export default function TeslaChargingHistoryPage() {
       return sortDir === 'desc' ? -cmp : cmp;
     });
     return sorted;
-  }, [entries, sortKey, sortDir]);
+  }, [filteredEntries, sortKey, sortDir]);
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
       setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     } else {
-      setSortKey(key);
+      // Cast safely — DataTable column keys map 1:1 to our allowed sort keys.
+      setSortKey(key as 'date' | 'energy' | 'cost');
       setSortDir('desc');
     }
   };
+
+  // CSV export of selected charging sessions. We pick the same fields the
+  // DataTable shows so users get a self-explanatory file.
+  const exportSelectedCsv = useCallback(
+    (rows: TeslaChargingHistoryEntry[]) => {
+      if (rows.length === 0) return;
+      const header = [
+        'date', 'location', 'duration_minutes', 'energy_kwh',
+        'cost', 'currency', 'rate_base', 'pricing_type', 'invoice_id',
+      ];
+      const csvLines = [header.join(',')];
+      for (const r of rows) {
+        const dur = durationMinutes(r.charge_start_datetime, r.charge_stop_datetime);
+        const fields = [
+          r.charge_start_datetime,
+          (r.site_location_name ?? '').replace(/[",\n]/g, ' '),
+          dur != null ? String(dur) : '',
+          r.usage_kwh != null ? String(r.usage_kwh) : '',
+          r.total_due != null ? String(r.total_due) : '',
+          r.currency_code ?? '',
+          r.rate_base != null ? String(r.rate_base) : '',
+          r.pricing_type ?? '',
+          r.invoice_content_id ?? '',
+        ];
+        csvLines.push(fields.map(f => `"${String(f).replace(/"/g, '""')}"`).join(','));
+      }
+      const blob = new Blob([csvLines.join('\n')], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `tesla-charging-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    },
+    [],
+  );
 
   return (
     <PageContainer
@@ -209,6 +267,7 @@ export default function TeslaChargingHistoryPage() {
       subtitle={t('tesla_charging.subtitle', 'Supercharger & DC fast charging billing records from Tesla')}
       loading={isLoading}
       error={error as Error | null}
+      copyLink
     >
       {/* Controls bar */}
       <FadeIn>
@@ -312,15 +371,49 @@ export default function TeslaChargingHistoryPage() {
             {t('tesla_charging.sessions', 'Charging Sessions')}
           </h3>
           {entries.length > 0 ? (
-            <DataTable
-              columns={columns}
-              data={sortedEntries}
-              keyExtractor={(row) => row.session_id}
-              sortKey={sortKey}
-              sortDir={sortDir}
-              onSort={handleSort}
-              pagination={{ defaultPageSize: 25, pageSizeOptions: [25, 50, 100] }}
-            />
+            <>
+              <FilterBar className="mb-3">
+                <SearchInput
+                  value={search}
+                  onChange={setSearch}
+                  placeholder={t('tesla_charging.searchPlaceholder', 'Search by location…')}
+                  className="w-full sm:w-72"
+                />
+              </FilterBar>
+              {sortedEntries.length > 0 ? (
+                <DataTable
+                  columns={columns}
+                  data={sortedEntries}
+                  keyExtractor={(row) => row.session_id}
+                  sortKey={sortKey}
+                  sortDir={sortDir}
+                  onSort={handleSort}
+                  pagination={{ defaultPageSize: 25, pageSizeOptions: [25, 50, 100] }}
+                  tableId="tesla-charging-history"
+                  showColumnsMenu
+                  stickyHeader
+                  maxHeight={600}
+                  selectable="multi"
+                  selectedKeys={selectedKeys}
+                  onSelectionChange={setSelectedKeys}
+                  bulkActions={(rows) => (
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      icon={<Download className="h-3.5 w-3.5" />}
+                      onClick={() => exportSelectedCsv(rows)}
+                    >
+                      {t('table.bulkActions.exportCsv', 'Export CSV')}
+                    </Button>
+                  )}
+                />
+              ) : (
+                <EmptyState
+                  icon={<Zap className="h-10 w-10" />}
+                  message={t('tesla_charging.noMatches', 'No sessions match your search.')}
+                />
+              )}
+            </>
           ) : (
             <EmptyState
               icon={<Zap className="h-10 w-10" />}

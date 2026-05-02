@@ -34,3 +34,27 @@ type ChargingSession struct {
 // IsActive reports whether the charging session is still in progress
 // (i.e. EndTs has not been set yet).
 func (c *ChargingSession) IsActive() bool { return c.EndTs == nil }
+
+// ChargeTelemetryReading represents a single telemetry snapshot during a charging session.
+type ChargeTelemetryReading struct {
+	ID           int64     `json:"id" db:"id"`
+	SessionID    int64     `json:"session_id" db:"session_id"`
+	VehicleID    int64     `json:"vehicle_id" db:"vehicle_id"`
+	BatteryLevel *int      `json:"battery_level,omitempty" db:"battery_level"`
+	Soc          *float64  `json:"soc,omitempty" db:"soc"`
+	PowerKW      *float64  `json:"power_kw,omitempty" db:"power_kw"`
+	Voltage      *float64  `json:"voltage,omitempty" db:"voltage"`
+	CurrentAmps  *float64  `json:"current_amps,omitempty" db:"current_amps"`
+	Phases       *int      `json:"phases,omitempty" db:"phases"`
+	EnergyAdded  *float64  `json:"energy_added,omitempty" db:"energy_added"`
+	RatedRange   *float64  `json:"rated_range,omitempty" db:"rated_range"`
+	IdealRange   *float64  `json:"ideal_range,omitempty" db:"ideal_range"`
+	EstRange     *float64  `json:"est_range,omitempty" db:"est_range"`
+	InsideTemp   *float64  `json:"inside_temp,omitempty" db:"inside_temp"`
+	OutsideTemp  *float64  `json:"outside_temp,omitempty" db:"outside_temp"`
+	BatteryTemp  *float64  `json:"battery_temp,omitempty" db:"battery_temp"`
+	Latitude     *float64  `json:"latitude,omitempty" db:"latitude"`
+	Longitude    *float64  `json:"longitude,omitempty" db:"longitude"`
+	ChargeRate   *float64  `json:"charge_rate,omitempty" db:"charge_rate"`
+	CreatedAt    time.Time `json:"created_at" db:"created_at"`
+}

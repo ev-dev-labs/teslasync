@@ -15,6 +15,7 @@ import {
   useSaveDashboardLayouts,
 } from '@/api/hooks/useSettings';
 import type { DashboardLayoutsPayload } from '@/api/hooks/useSettings';
+import { broadcast, subscribe } from '@/lib/broadcast';
 
 const DASHBOARDS_KEY = 'teslasync-dashboards';
 const ACTIVE_KEY = 'teslasync-active-dashboard';
@@ -182,6 +183,12 @@ const DEFAULT_DASHBOARD = makePreset(
   'default',
   'Default',
   [
+    // Phase-40 / Prompt 68 — onboarding checklist is included by default for
+    // new users so they have a clear path through first-run setup. The widget
+    // self-hides once dismissed or the celebration window after 100 % expires.
+    // Existing users with persisted layouts are unaffected (their layouts
+    // hydrate from backend / localStorage and bypass this default seed).
+    { widgetId: 'onboarding-checklist' },
     { widgetId: 'vehicle-hero' },
     { widgetId: 'battery-gauge' },
     { widgetId: 'climate-status' },
@@ -395,15 +402,19 @@ export function useDashboardLayout() {
 
   /* ─── Debounced backend write ─── */
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [dirty, setDirty] = useState(false);
   const syncToBackend = useCallback(
     (dbs: SavedDashboard[], active: string) => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      setDirty(true);
       debounceTimerRef.current = setTimeout(() => {
         const payload: DashboardLayoutsPayload = {
           dashboards: dbs,
           active_id: active,
         };
-        saveMutation.mutate(payload);
+        saveMutation.mutate(payload, {
+          onSuccess: () => setDirty(false),
+        });
       }, 2000);
     },
     [saveMutation],
@@ -450,6 +461,24 @@ export function useDashboardLayout() {
     localStorage.setItem(ACTIVE_KEY, finalActiveId);
   }, [backendLayouts, hydratedFromBackend]);
 
+  /* ─── Cross-tab sync (Phase-40 / Prompt 69) ─── */
+  // When another tab mutates the dashboard layout, re-read from
+  // localStorage so this tab's React state reflects the change. The
+  // sibling tab already wrote the new snapshot via persist/updateActive.
+  useEffect(() => {
+    return subscribe((m) => {
+      if (m.type !== 'dashboard.layout') return;
+      try {
+        const raw = localStorage.getItem(DASHBOARDS_KEY);
+        if (raw) setDashboards(JSON.parse(raw) as SavedDashboard[]);
+        const active = localStorage.getItem(ACTIVE_KEY);
+        if (active) setActiveId(active);
+      } catch {
+        /* ignore malformed peer write */
+      }
+    });
+  }, []);
+
   const activeDashboard = useMemo(() => {
     return dashboards.find((d) => d.id === activeId) ?? dashboards[0] ?? DEFAULT_DASHBOARD;
   }, [dashboards, activeId]);
@@ -481,6 +510,9 @@ export function useDashboardLayout() {
       localStorage.setItem(ACTIVE_KEY, active);
     }
     syncToBackend(dbs, resolvedActive);
+    // Phase-40 / Prompt 69 — let other tabs reload their layout state
+    // from the freshly-written localStorage snapshot.
+    broadcast({ type: 'dashboard.layout' });
   }, [activeId, syncToBackend]);
 
   const updateActive = useCallback(
@@ -491,6 +523,7 @@ export function useDashboardLayout() {
         );
         localStorage.setItem(DASHBOARDS_KEY, JSON.stringify(updated));
         syncToBackend(updated, activeId);
+        broadcast({ type: 'dashboard.layout' });
         return updated;
       });
     },
@@ -806,11 +839,42 @@ export function useDashboardLayout() {
     }
   }, [updateActive, redoSnapshot]);
 
+  const pinToVehicle = useCallback(
+    (id: string, vehicleId: number | null | undefined) => {
+      persist(
+        dashboards.map((d) =>
+          d.id === id
+            ? { ...d, vehicleId: vehicleId ?? null, updatedAt: new Date().toISOString() }
+            : d,
+        ),
+      );
+    },
+    [dashboards, persist],
+  );
+
+  /**
+   * Filter dashboards visible for a given vehicle id. A dashboard is visible
+   * when it has no vehicle scope (user-global) OR is pinned to the active
+   * vehicle. Pass `null`/`undefined` to see only user-global dashboards.
+   */
+  const visibleFor = useCallback(
+    (vehicleId: number | null | undefined): SavedDashboard[] => {
+      return dashboards.filter((d) => {
+        const scope = d.vehicleId;
+        if (scope == null) return true;
+        return vehicleId != null && scope === vehicleId;
+      });
+    },
+    [dashboards],
+  );
+
   return {
     // Multi-dashboard
     dashboards,
     activeDashboard,
     activeId,
+    visibleFor,
+    pinToVehicle,
     switchDashboard,
     createDashboard,
     renameDashboard,
@@ -824,6 +888,8 @@ export function useDashboardLayout() {
     // Edit mode
     editMode,
     setEditMode,
+    // Unsaved-changes badge — true while a backend write is debounced/in flight.
+    dirty,
     // Widget CRUD
     addWidget,
     addWidgets,

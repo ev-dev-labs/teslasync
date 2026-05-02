@@ -216,7 +216,7 @@ export default function GuardModePage() {
               'w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300',
               isArmed && !isTriggered && 'bg-emerald-500/20 text-emerald-400',
               isTriggered && 'bg-red-500/20 text-red-400',
-              !isArmed && 'bg-white/5 text-white/30',
+              !isArmed && 'bg-white/5 text-[var(--text-muted)]',
             )}>
               {isTriggered ? (
                 <ShieldAlert className="h-10 w-10" />
@@ -226,7 +226,7 @@ export default function GuardModePage() {
                 <ShieldOff className="h-10 w-10" />
               )}
             </div>
-            <h3 className="text-lg font-bold text-white/90">
+            <h3 className="text-lg font-bold text-[var(--text-primary)]">
               {isTriggered
                 ? t('guard.triggered', 'TRIGGERED')
                 : isArmed
@@ -239,43 +239,43 @@ export default function GuardModePage() {
               onChange={handleToggleGuard}
             />
             {setConfig.isPending && (
-              <span className="text-xs text-white/40">{t('guard.updating', 'Updating...')}</span>
+              <span className="text-xs text-[var(--text-muted)]">{t('guard.updating', 'Updating...')}</span>
             )}
           </GlassPanel>
 
           {/* Status Card */}
           <GlassPanel className="p-6 space-y-3">
-            <h3 className="text-sm font-semibold text-white/60 uppercase tracking-wider">
+            <h3 className="text-sm font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
               {t('guard.status', 'Status')}
             </h3>
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm">
-                <Clock className="h-4 w-4 text-white/40" />
-                <span className="text-white/70">
+                <Clock className="h-4 w-4 text-[var(--text-muted)]" />
+                <span className="text-[var(--text-secondary)]">
                   {isArmed && guardConfig?.updated_at
                     ? t('guard.armedSince', 'Armed since {{time}}', { time: formatDateTime(guardConfig.updated_at) })
                     : t('guard.notArmed', 'Not armed')}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <Lock className="h-4 w-4 text-white/40" />
-                <span className="text-white/70">
+                <Lock className="h-4 w-4 text-[var(--text-muted)]" />
+                <span className="text-[var(--text-secondary)]">
                   {(state as Record<string, unknown>)?.is_locked
                     ? t('guard.locked', 'Vehicle locked')
                     : t('guard.unlocked', 'Vehicle unlocked')}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <Eye className="h-4 w-4 text-white/40" />
-                <span className="text-white/70">
+                <Eye className="h-4 w-4 text-[var(--text-muted)]" />
+                <span className="text-[var(--text-secondary)]">
                   {(state as Record<string, unknown>)?.sentry_mode
                     ? t('guard.sentryOn', 'Sentry mode active')
                     : t('guard.sentryOff', 'Sentry mode off')}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <AlertTriangle className="h-4 w-4 text-white/40" />
-                <span className="text-white/70">
+                <AlertTriangle className="h-4 w-4 text-[var(--text-muted)]" />
+                <span className="text-[var(--text-secondary)]">
                   {unacknowledgedCount > 0
                     ? t('guard.unackEvents', '{{count}} unacknowledged event(s)', { count: unacknowledgedCount })
                     : t('guard.noEvents', 'No active alerts')}
@@ -287,7 +287,7 @@ export default function GuardModePage() {
           {/* PANIC Button */}
           <GlassPanel className="p-6 flex flex-col items-center justify-center gap-4">
             <Siren className="h-10 w-10 text-red-400" />
-            <h3 className="text-sm font-semibold text-white/60 uppercase tracking-wider">
+            <h3 className="text-sm font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
               {t('guard.emergency', 'Emergency')}
             </h3>
             <Button
@@ -299,7 +299,7 @@ export default function GuardModePage() {
                 ? t('guard.panicking', 'Sending...')
                 : t('guard.panicButton', '🚨 PANIC')}
             </Button>
-            <p className="text-xs text-white/40 text-center">
+            <p className="text-xs text-[var(--text-muted)] text-center">
               {t('guard.panicDesc', 'Flash lights, honk horn, lock doors, enable sentry, and notify all channels')}
             </p>
           </GlassPanel>
@@ -309,23 +309,23 @@ export default function GuardModePage() {
       {/* Row 2: Settings */}
       <FadeIn delay={0.05}>
         <GlassPanel className="p-6 space-y-4">
-          <h3 className="text-sm font-semibold text-white/60 uppercase tracking-wider">
+          <h3 className="text-sm font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
             {t('guard.settings', 'Guard Settings')}
           </h3>
           <Grid cols={{ default: 1, md: 3 }} gap={4}>
             <div>
-              <label className="block text-sm text-white/70 mb-1">{t('guard.homeGeofence', 'Home Geofence')}</label>
+              <label className="block text-sm text-[var(--text-secondary)] mb-1">{t('guard.homeGeofence', 'Home Geofence')}</label>
               <Select
                 options={geofenceOptions}
                 value={effectiveHomeGeofenceId}
                 onChange={(e) => setHomeGeofenceId(e.target.value)}
               />
-              <p className="text-xs text-white/40 mt-1">
+              <p className="text-xs text-[var(--text-muted)] mt-1">
                 {t('guard.homeGeofenceHelp', 'Vehicle will trigger alert if it leaves this area')}
               </p>
             </div>
             <div>
-              <label className="block text-sm text-white/70 mb-1">{t('guard.sensitivity', 'Sensitivity')}</label>
+              <label className="block text-sm text-[var(--text-secondary)] mb-1">{t('guard.sensitivity', 'Sensitivity')}</label>
               <Select
                 options={SENSITIVITY_OPTIONS}
                 value={effectiveSensitivity}
@@ -339,7 +339,7 @@ export default function GuardModePage() {
                   checked={autoPanic || guardConfig?.auto_panic || false}
                   onChange={setAutoPanic}
                 />
-                <p className="text-xs text-white/40 mt-1">
+                <p className="text-xs text-[var(--text-muted)] mt-1">
                   {t('guard.autoPanicHelp', 'Automatically execute panic actions when guard is triggered')}
                 </p>
               </div>
@@ -359,7 +359,7 @@ export default function GuardModePage() {
       <FadeIn delay={0.1}>
         <GlassPanel className="p-0 overflow-hidden">
           <div className="p-4 pb-0">
-            <h3 className="text-sm font-semibold text-white/60 uppercase tracking-wider">
+            <h3 className="text-sm font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
               {t('guard.liveMap', 'Live Vehicle Location')}
             </h3>
           </div>
@@ -385,7 +385,7 @@ export default function GuardModePage() {
       <FadeIn delay={0.15}>
         <GlassPanel className="p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-white/60 uppercase tracking-wider">
+            <h3 className="text-sm font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
               {t('guard.eventTimeline', 'Event Timeline')}
             </h3>
             {unacknowledgedCount > 0 && (
@@ -494,7 +494,7 @@ function MapPopup({ vehicleName, lat, lng }: { vehicleName: string; lat: number;
       <div className="text-sm">
         <strong>{vehicleName || 'Vehicle'}</strong>
         <br />
-        <span className="text-xs text-gray-500">
+        <span className="text-xs text-[var(--text-muted)]">
           {lat.toFixed(6)}, {lng.toFixed(6)}
         </span>
       </div>
@@ -533,7 +533,7 @@ function EventRow({
     >
       <div className="shrink-0 mt-0.5">
         {event.acknowledged ? (
-          <CheckCircle2 className="h-5 w-5 text-white/30" />
+          <CheckCircle2 className="h-5 w-5 text-[var(--text-muted)]" />
         ) : event.event_type === 'manual_panic' ? (
           <Siren className="h-5 w-5 text-red-400" />
         ) : (event.event_type ?? '').includes('unlock') ? (
@@ -553,7 +553,7 @@ function EventRow({
           >
             {EVENT_LABELS[event.event_type] ?? event.event_type}
           </Badge>
-          <span className="text-xs text-white/40">{formatDateTime(event.created_at)}</span>
+          <span className="text-xs text-[var(--text-muted)]">{formatDateTime(event.created_at)}</span>
         </div>
 
         {event.latitude != null && event.longitude != null && (
@@ -569,7 +569,7 @@ function EventRow({
         )}
 
         {event.notified_channels && event.notified_channels.length > 0 && (
-          <p className="text-xs text-white/40 mt-1">
+          <p className="text-xs text-[var(--text-muted)] mt-1">
             {t('guard.notified', 'Notified')}: {event.notified_channels.join(', ')}
           </p>
         )}

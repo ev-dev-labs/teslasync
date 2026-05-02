@@ -1,4 +1,9 @@
+import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Calendar } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
+import { DatePresetChips, type DatePresetSelection } from './DatePresetChips'
+import { DEFAULT_PRESET_IDS, matchPresetId } from '@/lib/datePresets'
 
 interface DateRangeFilterProps {
   startDate: string
@@ -6,22 +11,38 @@ interface DateRangeFilterProps {
   onStartDateChange: (date: string) => void
   onEndDateChange: (date: string) => void
   onApply?: () => void
+  /** When false, hides the preset chip row. Defaults to true. */
   presets?: boolean
+  /** Subset of preset ids to render in the chip row. Defaults to DEFAULT_PRESET_IDS. */
+  presetIds?: readonly string[]
 }
 
-/** Date range picker with quick-select presets (7d, 30d, 90d, 1y, All). */
-export function DateRangeFilter({ startDate, endDate, onStartDateChange, onEndDateChange, onApply, presets = true }: DateRangeFilterProps) {
-  const applyPreset = (days: number | null) => {
-    const end = new Date()
-    const endStr = end.toISOString().split('T')[0]
-    onEndDateChange(endStr)
-    if (days === null) {
-      onStartDateChange('2015-01-01')
-    } else {
-      const start = new Date()
-      start.setDate(start.getDate() - days)
-      onStartDateChange(start.toISOString().split('T')[0])
-    }
+/**
+ * Date range picker with quick-select preset chips.
+ *
+ * Default chip set comes from DEFAULT_PRESET_IDS in @/lib/datePresets
+ * (Today / 7d / 30d / MTD / YTD / All). Override via `presetIds` to surface
+ * a different selection (e.g. ['7d','30d','90d','1y']).
+ */
+export function DateRangeFilter({
+  startDate,
+  endDate,
+  onStartDateChange,
+  onEndDateChange,
+  onApply,
+  presets = true,
+  presetIds = DEFAULT_PRESET_IDS,
+}: DateRangeFilterProps) {
+  const { t } = useTranslation()
+
+  const activeId = useMemo(
+    () => matchPresetId(startDate, endDate),
+    [startDate, endDate],
+  )
+
+  const handlePreset = (selection: DatePresetSelection) => {
+    onStartDateChange(selection.start)
+    onEndDateChange(selection.end)
     onApply?.()
   }
 
@@ -31,6 +52,7 @@ export function DateRangeFilter({ startDate, endDate, onStartDateChange, onEndDa
         <Calendar className="h-3.5 w-3.5 text-[var(--text-muted)] shrink-0 hidden sm:block" />
         <input
           type="date"
+          aria-label={t('date.range.start', 'Start date')}
           value={startDate}
           onChange={e => onStartDateChange(e.target.value)}
           className="bg-transparent text-xs text-[var(--text-primary)] outline-none [color-scheme:dark] min-w-0 flex-1 sm:flex-none"
@@ -38,32 +60,23 @@ export function DateRangeFilter({ startDate, endDate, onStartDateChange, onEndDa
         <span className="text-gray-600 text-xs">→</span>
         <input
           type="date"
+          aria-label={t('date.range.end', 'End date')}
           value={endDate}
           onChange={e => onEndDateChange(e.target.value)}
           className="bg-transparent text-xs text-[var(--text-primary)] outline-none [color-scheme:dark] min-w-0 flex-1 sm:flex-none"
         />
       </div>
       {onApply && (
-        <button onClick={onApply} className="neon-button px-3 py-1.5 text-xs font-medium">Apply</button>
+        <Button type="button" size="sm" variant="primary" onClick={onApply}>
+          {t('date.range.apply', 'Apply')}
+        </Button>
       )}
       {presets && (
-        <div className="flex items-center gap-1">
-          {[
-            { label: '7d', days: 7 },
-            { label: '30d', days: 30 },
-            { label: '90d', days: 90 },
-            { label: '1y', days: 365 },
-            { label: 'All', days: null },
-          ].map(p => (
-            <button
-              key={p.label}
-              onClick={() => applyPreset(p.days)}
-              className="rounded-md px-2 py-1 text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/[0.06] transition-colors"
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
+        <DatePresetChips
+          presetIds={presetIds}
+          activeId={activeId}
+          onSelect={handlePreset}
+        />
       )}
     </div>
   )

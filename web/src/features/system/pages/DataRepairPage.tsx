@@ -276,7 +276,7 @@ export default function DataRepairPage() {
                       <span className="text-xs text-[var(--text-secondary)] w-40 shrink-0">{formatDateTime(s.start_ts)}</span>
                       <span className="text-xs text-[var(--text-primary)] w-16 shrink-0">{s.start_battery_pct}%</span>
                       <span className="text-xs text-[var(--text-muted)] w-16 shrink-0">{t('Vehicle')} {s.vehicle_id}</span>
-                      <span className="text-xs text-neon-amber font-medium w-16 shrink-0">{hoursOpen(s.start_ts)}</span>
+                      <span className="text-xs text-amber-300 font-medium w-16 shrink-0">{hoursOpen(s.start_ts)}</span>
                       <Badge variant="warning" size="sm"><AlertTriangle className="h-3 w-3 inline mr-0.5" />{t('Open')}</Badge>
                     </div>
                   </GlassPanel>
@@ -295,7 +295,7 @@ export default function DataRepairPage() {
                       <span className="text-xs text-[var(--text-secondary)] w-40 shrink-0">{formatDateTime(d.start_date)}</span>
                       <span className="text-xs text-[var(--text-primary)] w-16 shrink-0">{d.start_battery_level != null ? `${d.start_battery_level}%` : '—'}</span>
                       <span className="text-xs text-[var(--text-muted)] w-16 shrink-0">{t('Vehicle')} {d.vehicle_id}</span>
-                      <span className="text-xs text-neon-amber font-medium w-16 shrink-0">{hoursOpen(d.start_date)}</span>
+                      <span className="text-xs text-amber-300 font-medium w-16 shrink-0">{hoursOpen(d.start_date)}</span>
                       <Badge variant="warning" size="sm"><AlertTriangle className="h-3 w-3 inline mr-0.5" />{t('Open')}</Badge>
                     </div>
                   </GlassPanel>

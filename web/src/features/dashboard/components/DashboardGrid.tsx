@@ -1,4 +1,4 @@
-import { Suspense, useState, useCallback, useMemo, useRef, useEffect, Component as ReactComponent, type ErrorInfo, type ReactNode } from 'react';
+import { Suspense, useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   ResponsiveGridLayout, useContainerWidth, verticalCompactor,
   type Layout as RGLLayoutArray, type ResponsiveLayouts,
@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { GlassPanel, Button as UiButton } from '@/components/ui';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { Skeleton, SectionErrorBoundary } from '@/components/feedback';
 import { getWidgetDef } from '../widgets/registry';
 import {
   GRID_BREAKPOINTS, GRID_COLS, ROW_HEIGHT, GRID_MARGIN,
@@ -33,30 +33,6 @@ interface DashboardGridProps {
   showWidgetBorders?: boolean;
   /** Kiosk mode widget opacity boost (0.3–1.0). Increases GlassPanel background. */
   kioskWidgetOpacity?: number;
-}
-
-/* ─── Error Boundary ─── */
-interface WEBProps { name: string; children: ReactNode }
-interface WEBState { hasError: boolean }
-
-class WidgetErrorBoundary extends ReactComponent<WEBProps, WEBState> {
-  state: WEBState = { hasError: false };
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-  componentDidCatch(_error: Error, _info: ErrorInfo) {
-    // Errors logged by React
-  }
-  render() {
-    if (this.state.hasError) {
-      return (
-        <GlassPanel className="h-full flex items-center justify-center">
-          <EmptyState message={`${this.props.name} failed to load`} />
-        </GlassPanel>
-      );
-    }
-    return this.props.children;
-  }
 }
 
 /* ─── Widget Chrome (edit mode overlay) ─── */
@@ -356,7 +332,10 @@ export function DashboardGrid({
                 )}
                 style={kioskPanelStyle}
               >
-                <WidgetErrorBoundary name={def.name}>
+                <SectionErrorBoundary
+                  name={`widget:${def.id}:${widget.id}`}
+                  fallbackTitle={`${def.name} failed to load`}
+                >
                   <Suspense
                     fallback={
                       <div className="h-full flex items-center justify-center">
@@ -370,7 +349,7 @@ export function DashboardGrid({
                       size={size}
                     />
                   </Suspense>
-                </WidgetErrorBoundary>
+                </SectionErrorBoundary>
               </GlassPanel>
             </div>
           );

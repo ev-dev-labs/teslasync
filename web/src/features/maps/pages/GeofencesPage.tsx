@@ -14,24 +14,43 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, Button, Input, Select, Modal, Toggle, ConfirmDialog, Tabs } from '@/components/ui';
+import { GlassPanel, Badge, Button, Input, Select, Modal, Toggle, ConfirmDialog, Tabs, PinButton } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
-import { Skeleton, EmptyState, Spinner } from '@/components/feedback';
+import { Skeleton, EmptyState, Spinner, AlertBanner } from '@/components/feedback';
 import { useToast } from '@/components/feedback/Toast';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
+import { SearchInput, FilterBar } from '@/components/forms';
+import { useFilteredList } from '@/hooks/useFilteredList';
+import { useDirtyForm } from '@/hooks/useDirtyForm';
+import { useConfirm } from '@/hooks/useConfirm';
+import {
+  MapContainer,
+  MapTileLayer,
+  MapInvalidator,
+  GeofenceDrawer,
+  type DrawableGeofence,
+  type NewGeofence,
+} from '@/components/maps';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useVehicles } from '@/api/hooks/useVehicles';
+import { usePinned } from '@/api/hooks/usePinned';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 import type { Geofence } from '@/types/location';
 import type { Position } from '@/api/types';
+import {
+  geofenceFormSchema,
+  toGeofencePayload,
+  type GeofenceFormData,
+  type GeofenceAlertType,
+} from '../schemas/geofence';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type AlertType = 'entry' | 'exit' | 'both' | 'none';
-type LocationSource = 'vehicle' | 'browser';
+type AlertType = GeofenceAlertType;
+type LocationSource = 'vehicle' | 'browser' | 'map';
 
 interface ReverseGeocodeResult {
   display_name: string;
@@ -40,15 +59,6 @@ interface ReverseGeocodeResult {
   state: string;
   country: string;
   postcode: string;
-}
-
-interface GeofenceFormData {
-  name: string;
-  latitude: string;
-  longitude: string;
-  radius: string;
-  alertType: AlertType;
-  enabled: boolean;
 }
 
 const EMPTY_FORM: GeofenceFormData = {
@@ -74,13 +84,6 @@ function getAlertType(g: Geofence): AlertType {
   if (g.alertOnEntry) return 'entry';
   if (g.alertOnExit) return 'exit';
   return 'none';
-}
-
-function alertFlags(type: AlertType) {
-  return {
-    alertOnEntry: type === 'entry' || type === 'both',
-    alertOnExit: type === 'exit' || type === 'both',
-  };
 }
 
 function alertBadgeVariant(type: AlertType): 'success' | 'warning' | 'info' | 'neutral' {
@@ -114,10 +117,32 @@ export default function GeofencesPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<GeofenceFormData>(EMPTY_FORM);
+  const [initialForm, setInitialForm] = useState<GeofenceFormData>(EMPTY_FORM);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof GeofenceFormData, string>>>({});
+  const [formError, setFormError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Geofence | null>(null);
   const [locationSource, setLocationSource] = useState<LocationSource>('vehicle');
   const [selectedVehicleId, setSelectedVehicleId] = useState<number>(0);
   const [locationLoading, setLocationLoading] = useState(false);
+  const [search, setSearch] = useState('');
+
+  // Dirty when the modal is open AND the form diverges from the initial
+  // snapshot taken on open. Closed modal => not dirty so we don't pester the
+  // user about list-page navigation.
+  const isFormDirty = useMemo(() => {
+    if (!modalOpen) return false;
+    return (
+      form.name !== initialForm.name ||
+      form.latitude !== initialForm.latitude ||
+      form.longitude !== initialForm.longitude ||
+      form.radius !== initialForm.radius ||
+      form.alertType !== initialForm.alertType ||
+      form.enabled !== initialForm.enabled
+    );
+  }, [modalOpen, form, initialForm]);
+
+  const dirtyForm = useDirtyForm(isFormDirty);
+  const { confirm: confirmDiscard, dialogProps: discardDialogProps } = useConfirm();
 
   // ─── Data fetching ───────────────────────────────────────────────────────
 
@@ -183,31 +208,138 @@ export default function GeofencesPage() {
     };
   }, [geofences]);
 
+  const geofenceSearchFields = useMemo(
+    () => ['name'] as const satisfies ReadonlyArray<keyof Geofence>,
+    [],
+  );
+  const filteredGeofences = useFilteredList(geofences, search, geofenceSearchFields);
+  const { data: geofencePins = [] } = usePinned('geofence');
+  const sortedGeofences = useMemo(() => {
+    if (geofencePins.length === 0) return filteredGeofences;
+    const order = new Map<string, number>();
+    geofencePins.forEach((p) => order.set(String(p.item_id), p.position));
+    return [...filteredGeofences].sort((a, b) => {
+      const ap = order.get(String(a.id));
+      const bp = order.get(String(b.id));
+      if (ap != null && bp != null) return ap - bp;
+      if (ap != null) return -1;
+      if (bp != null) return 1;
+      return 0;
+    });
+  }, [filteredGeofences, geofencePins]);
+
+  // ─── Drawer integration ──────────────────────────────────────────────────
+
+  /* Center the picker map on the form's current coords or fall back to
+     the first existing geofence so users have spatial context. */
+  const mapPickerCenter = useMemo<[number, number]>(() => {
+    const lat = parseFloat(form.latitude);
+    const lng = parseFloat(form.longitude);
+    if (!Number.isNaN(lat) && !Number.isNaN(lng) && (lat !== 0 || lng !== 0)) {
+      return [lat, lng];
+    }
+    const first = (geofences ?? [])[0];
+    if (first && first.latitude != null && first.longitude != null) {
+      return [first.latitude, first.longitude];
+    }
+    return [37.7749, -122.4194];
+  }, [form.latitude, form.longitude, geofences]);
+
+  const mapPickerZoom = useMemo(() => {
+    const lat = parseFloat(form.latitude);
+    const lng = parseFloat(form.longitude);
+    return !Number.isNaN(lat) && !Number.isNaN(lng) && (lat !== 0 || lng !== 0) ? 15 : 11;
+  }, [form.latitude, form.longitude]);
+
+  /* Render the in-progress drawing as a draftable fence so editing works. */
+  const drawerFences = useMemo<DrawableGeofence[]>(() => {
+    const lat = parseFloat(form.latitude);
+    const lng = parseFloat(form.longitude);
+    const radius = parseFloat(form.radius);
+    if (
+      Number.isNaN(lat) ||
+      Number.isNaN(lng) ||
+      Number.isNaN(radius) ||
+      (lat === 0 && lng === 0)
+    ) {
+      return [];
+    }
+    return [{ id: 'draft', lat, lng, radius, name: form.name || undefined }];
+  }, [form.latitude, form.longitude, form.radius, form.name]);
+
+  const handleDrawerCreate = useCallback((g: NewGeofence) => {
+    if (g.shape !== 'circle' || g.lat == null || g.lng == null || g.radius == null) {
+      return;
+    }
+    setForm((prev) => ({
+      ...prev,
+      latitude: String(g.lat),
+      longitude: String(g.lng),
+      radius: String(Math.round(g.radius ?? 0)),
+    }));
+  }, []);
+
   // ─── Handlers ────────────────────────────────────────────────────────────
 
   const closeModal = useCallback(() => {
     setModalOpen(false);
     setEditingId(null);
     setForm(EMPTY_FORM);
+    setInitialForm(EMPTY_FORM);
+    setFieldErrors({});
+    setFormError(null);
   }, []);
+
+  /**
+   * Cancel handler — if the user has made unsaved edits, prompt before
+   * dismissing the modal. Otherwise close immediately.
+   */
+  const handleRequestClose = useCallback(async () => {
+    if (isFormDirty) {
+      const ok = await confirmDiscard({
+        title: dirtyForm.title,
+        message: dirtyForm.message,
+        variant: 'warning',
+        confirmLabel: dirtyForm.discardLabel,
+        cancelLabel: dirtyForm.keepEditingLabel,
+      });
+      if (!ok) return;
+    }
+    closeModal();
+  }, [
+    isFormDirty,
+    confirmDiscard,
+    dirtyForm.title,
+    dirtyForm.message,
+    dirtyForm.discardLabel,
+    dirtyForm.keepEditingLabel,
+    closeModal,
+  ]);
 
   const openCreate = useCallback(() => {
     setEditingId(null);
     setForm(EMPTY_FORM);
+    setInitialForm(EMPTY_FORM);
+    setFieldErrors({});
+    setFormError(null);
     setLocationLoading(false);
     setModalOpen(true);
   }, []);
 
   const openEdit = useCallback((g: Geofence) => {
     setEditingId(g.id);
-    setForm({
+    const next: GeofenceFormData = {
       name: g.name,
       latitude: String(g.latitude),
       longitude: String(g.longitude),
       radius: String(g.radius),
       alertType: getAlertType(g),
       enabled: g.enabled,
-    });
+    };
+    setForm(next);
+    setInitialForm(next);
+    setFieldErrors({});
+    setFormError(null);
     setModalOpen(true);
   }, []);
 
@@ -274,32 +406,35 @@ export default function GeofencesPage() {
   }, [locationSource, selectedVehicleId, reverseGeocode, toast, t]);
 
   const handleSubmit = useCallback(() => {
-    const flags = alertFlags(form.alertType);
-    const payload = {
-      name: form.name,
-      latitude: parseFloat(form.latitude),
-      longitude: parseFloat(form.longitude),
-      radius: parseFloat(form.radius),
-      alertOnEntry: flags.alertOnEntry,
-      alertOnExit: flags.alertOnExit,
-      enabled: form.enabled,
-      costPerKwh: null,
-    };
+    setFormError(null);
+    const parsed = geofenceFormSchema.safeParse(form);
+    if (!parsed.success) {
+      const next: Partial<Record<keyof GeofenceFormData, string>> = {};
+      for (const issue of parsed.error.issues) {
+        const key = issue.path[0] as keyof GeofenceFormData | undefined;
+        if (key && !next[key]) next[key] = issue.message;
+      }
+      setFieldErrors(next);
+      setFormError(t('forms.validationFailed', 'Please fix the highlighted fields before saving.'));
+      return;
+    }
+    setFieldErrors({});
+    const payload = { ...toGeofencePayload(parsed.data), costPerKwh: null };
     if (editingId) {
       updateMut.mutate({ id: editingId, body: payload });
     } else {
       createMut.mutate(payload);
     }
-  }, [form, editingId, createMut, updateMut]);
+  }, [form, editingId, createMut, updateMut, t]);
 
-  const isFormValid =
+  // Submit-disable heuristic: avoid disabling the button on type errors
+  // alone — let the zod parse drive the actual error display. Just block
+  // when any required string is empty so the button feels responsive.
+  const hasMinimalInput =
     form.name.trim().length > 0 &&
     form.latitude.trim().length > 0 &&
     form.longitude.trim().length > 0 &&
-    form.radius.trim().length > 0 &&
-    !isNaN(parseFloat(form.latitude)) &&
-    !isNaN(parseFloat(form.longitude)) &&
-    !isNaN(parseFloat(form.radius));
+    form.radius.trim().length > 0;
 
   const isSaving = createMut.isPending || updateMut.isPending;
 
@@ -349,10 +484,11 @@ export default function GeofencesPage() {
                 />
               </>
             ) : (
-              <div className="col-span-full flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
-                <Activity className="h-8 w-8 opacity-20" />
-                <p className="text-xs">{t('common.noData', 'No data available')}</p>
-              </div>
+              <EmptyState
+                icon={<Activity className="h-8 w-8 opacity-20" />}
+                message={t('common.noData', 'No data available')}
+                className="col-span-full py-8"
+              />
             )}
           </GlassPanel>
         </FadeIn>
@@ -371,9 +507,21 @@ export default function GeofencesPage() {
       {/* Geofence List */}
       {!isLoading && (
         <StaggerContainer className="space-y-3">
-          {geofences && geofences.length > 0 ? (
+          {geofences && geofences.length > 0 && (
+            <StaggerItem>
+              <FilterBar>
+                <SearchInput
+                  value={search}
+                  onChange={setSearch}
+                  placeholder={t('geofences.searchPlaceholder', 'Search by name…')}
+                  className="w-full sm:w-72"
+                />
+              </FilterBar>
+            </StaggerItem>
+          )}
+          {filteredGeofences.length > 0 ? (
             <>
-              {geofences.map((g) => (
+              {sortedGeofences.map((g) => (
                 <StaggerItem key={g.id}>
                   <GlassPanel
                     hover
@@ -416,6 +564,7 @@ export default function GeofencesPage() {
 
                     {/* Right: actions */}
                     <div className="flex shrink-0 items-center gap-2">
+                      <PinButton itemType="geofence" itemId={g.id} size="sm" />
                       <Toggle
                         checked={g.enabled}
                         onChange={(checked) => toggleMut.mutate({ id: g.id, enabled: checked })}
@@ -438,11 +587,18 @@ export default function GeofencesPage() {
                 </StaggerItem>
               ))}
             </>
+          ) : geofences && geofences.length > 0 ? (
+            <EmptyState
+              icon={<Activity className="h-8 w-8 opacity-20" />}
+              message={t('geofences.noMatches', 'No geofences match your search.')}
+              className="py-8"
+            />
           ) : (
-            <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
-              <Activity className="h-8 w-8 opacity-20" />
-              <p className="text-xs">{t('common.noData', 'No data available')}</p>
-            </div>
+            <EmptyState
+              icon={<Activity className="h-8 w-8 opacity-20" />}
+              message={t('common.noData', 'No data available')}
+              className="py-8"
+            />
           )}
         </StaggerContainer>
       )}
@@ -460,11 +616,14 @@ export default function GeofencesPage() {
       {/* Create / Edit Modal */}
       <Modal
         open={modalOpen}
-        onClose={closeModal}
+        onClose={handleRequestClose}
         title={editingId ? t('Edit Geofence') : t('Create Geofence')}
         size="md"
       >
         <div className="space-y-4">
+          {formError && (
+            <AlertBanner variant="danger">{formError}</AlertBanner>
+          )}
           {/* Use Current Location */}
           {!editingId && (
             <GlassPanel className="space-y-3 p-4">
@@ -477,6 +636,7 @@ export default function GeofencesPage() {
                 tabs={[
                   { key: 'vehicle', label: `🚗 ${t('geofences.vehicle', 'Vehicle')}` },
                   { key: 'browser', label: `📱 ${t('geofences.browser', 'Browser')}` },
+                  { key: 'map', label: `🗺️ ${t('geofences.drawOnMap', 'Draw on map')}` },
                 ]}
                 activeTab={locationSource}
                 onChange={(key) => setLocationSource(key as LocationSource)}
@@ -497,17 +657,48 @@ export default function GeofencesPage() {
                 />
               )}
 
-              <Button
-                variant="secondary"
-                size="sm"
-                icon={locationLoading ? <Spinner size="sm" /> : <Navigation className="h-4 w-4" />}
-                onClick={handleGetLocation}
-                disabled={locationLoading || (locationSource === 'vehicle' && selectedVehicleId <= 0)}
-              >
-                {locationLoading
-                  ? t('geofences.gettingLocation', 'Getting location…')
-                  : t('geofences.getLocation', 'Get Location')}
-              </Button>
+              {locationSource === 'map' ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-[var(--text-muted)]">
+                    {t(
+                      'geofences.drawHint',
+                      'Click the circle tool, then click and drag on the map to draw a fence.',
+                    )}
+                  </p>
+                  <div
+                    className="h-64 w-full overflow-hidden rounded-lg border border-white/[0.08]"
+                    role="application"
+                    aria-label={t('geofences.drawerLabel', 'Geofence drawing map')}
+                  >
+                    <MapContainer
+                      center={mapPickerCenter}
+                      zoom={mapPickerZoom}
+                      scrollWheelZoom
+                      className="h-full w-full"
+                    >
+                      <MapTileLayer style="dark" />
+                      <MapInvalidator />
+                      <GeofenceDrawer
+                        fences={drawerFences}
+                        onCreate={handleDrawerCreate}
+                        modes={['circle']}
+                      />
+                    </MapContainer>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={locationLoading ? <Spinner size="sm" /> : <Navigation className="h-4 w-4" />}
+                  onClick={handleGetLocation}
+                  disabled={locationLoading || (locationSource === 'vehicle' && selectedVehicleId <= 0)}
+                >
+                  {locationLoading
+                    ? t('geofences.gettingLocation', 'Getting location…')
+                    : t('geofences.getLocation', 'Get Location')}
+                </Button>
+              )}
             </GlassPanel>
           )}
           <Input
@@ -515,6 +706,7 @@ export default function GeofencesPage() {
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             placeholder={t('Home')}
+            error={fieldErrors.name}
           />
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -526,6 +718,7 @@ export default function GeofencesPage() {
               onChange={(e) => setForm({ ...form, latitude: e.target.value })}
               placeholder="37.7749"
               icon={<Globe className="h-4 w-4" />}
+              error={fieldErrors.latitude}
             />
             <Input
               label={t('Longitude')}
@@ -535,6 +728,7 @@ export default function GeofencesPage() {
               onChange={(e) => setForm({ ...form, longitude: e.target.value })}
               placeholder="-122.4194"
               icon={<Globe className="h-4 w-4" />}
+              error={fieldErrors.longitude}
             />
           </div>
 
@@ -546,6 +740,7 @@ export default function GeofencesPage() {
             placeholder="100"
             icon={<Ruler className="h-4 w-4" />}
             hint={t('Minimum 10m, maximum 50000m')}
+            error={fieldErrors.radius}
           />
 
           <Select
@@ -555,6 +750,7 @@ export default function GeofencesPage() {
             onChange={(e) =>
               setForm({ ...form, alertType: e.target.value as AlertType })
             }
+            error={fieldErrors.alertType}
           />
 
           <Toggle
@@ -564,13 +760,13 @@ export default function GeofencesPage() {
           />
 
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="secondary" onClick={closeModal} icon={<X className="h-4 w-4" />}>
+            <Button variant="secondary" onClick={handleRequestClose} icon={<X className="h-4 w-4" />}>
               {t('Cancel')}
             </Button>
             <Button
               variant="primary"
               onClick={handleSubmit}
-              disabled={!isFormValid || isSaving}
+              disabled={!hasMinimalInput || isSaving}
               loading={isSaving}
               icon={<Check className="h-4 w-4" />}
             >
@@ -579,6 +775,9 @@ export default function GeofencesPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Discard-changes confirm dialog (mounted alongside the modal). */}
+      {discardDialogProps && <ConfirmDialog {...discardDialogProps} />}
 
       {/* Delete Confirm Dialog */}
       <ConfirmDialog

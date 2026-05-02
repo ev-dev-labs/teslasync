@@ -201,8 +201,8 @@ function FullView({
       {/* Charging banner — shown when actively charging */}
       {isCharging && (
         <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-neon-green/5 border border-neon-green/10">
-          <span className="text-neon-green animate-pulse text-xs">⚡</span>
-          <span className="text-xs font-medium text-neon-green">
+          <span className="text-emerald-300 animate-pulse text-xs">⚡</span>
+          <span className="text-xs font-medium text-emerald-300">
             {t('widget.charging', 'Charging')}
           </span>
           {chargerPower != null && chargerPower > 0 && (

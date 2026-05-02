@@ -32,9 +32,11 @@ interface ChargingSessionCardProps {
   session: ChargingSession;
   convertDistance: (km: number) => number;
   distanceUnit: string;
+  selected?: boolean;
+  onToggleSelect?: (id: number, on: boolean) => void;
 }
 
-export function ChargingSessionCard({ session, convertDistance, distanceUnit }: ChargingSessionCardProps) {
+export function ChargingSessionCard({ session, convertDistance, distanceUnit, selected, onToggleSelect }: ChargingSessionCardProps) {
   const { t } = useTranslation('charging');
   const chargerLabels: Record<ChargerCategory, string> = {
     supercharger: t('chargerTypes.supercharger', 'Supercharger'),
@@ -55,8 +57,22 @@ export function ChargingSessionCard({ session, convertDistance, distanceUnit }: 
       : null;
   const milesGained = session.miles_added != null ? convertDistance(session.miles_added) : null;
 
+  const showCheckbox = typeof onToggleSelect === 'function';
+
   return (
-    <Link to={`/charging/${session.id}`}>
+    <div className="flex items-stretch gap-2">
+      {showCheckbox && (
+        <label className="flex items-center pl-2">
+          <input
+            type="checkbox"
+            className="h-4 w-4 cursor-pointer rounded border-white/20 bg-white/[0.04] text-emerald-500 focus:ring-2 focus:ring-emerald-500"
+            checked={!!selected}
+            onChange={e => onToggleSelect?.(session.id, e.target.checked)}
+            aria-label={t('selectSession', 'Select charging session')}
+          />
+        </label>
+      )}
+      <Link to={`/charging/${session.id}`} className="flex-1 min-w-0">
       <GlassPanel hover glow="green" className="p-4 transition-all duration-200 group cursor-pointer">
         <div className="flex items-center gap-4">
           <ProgressRing
@@ -78,7 +94,7 @@ export function ChargingSessionCard({ session, convertDistance, distanceUnit }: 
                 {chargerLabels[cat]}
               </Badge>
               {batteryGain > 0 && (
-                <span className="text-xs text-neon-green font-medium">+{batteryGain}%</span>
+                <span className="text-xs text-emerald-300 font-medium">+{batteryGain}%</span>
               )}
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
@@ -106,14 +122,14 @@ export function ChargingSessionCard({ session, convertDistance, distanceUnit }: 
                 <InlineMetric
                   icon={<DollarSign className="h-3 w-3" />}
                   value={`$${fmtNumber(session.cost)}`}
-                  className="text-neon-green"
+                  className="text-emerald-300"
                 />
               )}
               {typeof costPerKwh === 'number' && (
                 <span className="text-[var(--text-muted)]">(${fmtNumber(costPerKwh)}/kWh)</span>
               )}
               {typeof milesGained === 'number' && milesGained > 0 && (
-                <span className="flex items-center gap-1 text-neon-purple">
+                <span className="flex items-center gap-1 text-purple-300">
                   +{fmtInt(milesGained)} {distanceUnit}
                 </span>
               )}
@@ -129,5 +145,6 @@ export function ChargingSessionCard({ session, convertDistance, distanceUnit }: 
         </div>
       </GlassPanel>
     </Link>
+    </div>
   );
 }

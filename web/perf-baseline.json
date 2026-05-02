@@ -1,0 +1,58 @@
+{
+  "$schema": "./perf-baseline.schema.json",
+  "comment": "Performance baseline — populated by `npm run perf:baseline`. Each route entry contains the Lighthouse metrics captured against a `vite preview` build. Diff against this file in PR review to spot regressions. Phase 40 / Prompt 35.",
+  "generatedAt": null,
+  "lighthouseVersion": null,
+  "build": {
+    "totalGzippedJsKB": null,
+    "entryGzippedKB": null,
+    "chunkCount": null
+  },
+  "routes": {
+    "/": {
+      "fcp": null,
+      "lcp": null,
+      "tbt": null,
+      "cls": null,
+      "tti": null,
+      "speedIndex": null,
+      "transferKB": null
+    },
+    "/vehicles": {
+      "fcp": null,
+      "lcp": null,
+      "tbt": null,
+      "cls": null,
+      "tti": null,
+      "speedIndex": null,
+      "transferKB": null
+    },
+    "/drives": {
+      "fcp": null,
+      "lcp": null,
+      "tbt": null,
+      "cls": null,
+      "tti": null,
+      "speedIndex": null,
+      "transferKB": null
+    },
+    "/analytics": {
+      "fcp": null,
+      "lcp": null,
+      "tbt": null,
+      "cls": null,
+      "tti": null,
+      "speedIndex": null,
+      "transferKB": null
+    },
+    "/charging": {
+      "fcp": null,
+      "lcp": null,
+      "tbt": null,
+      "cls": null,
+      "tti": null,
+      "speedIndex": null,
+      "transferKB": null
+    }
+  }
+}

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/jackc/pgx/v5"
 )
 
 // APICallLogRepo provides API call log data access operations.
@@ -25,6 +26,50 @@ func (r *APICallLogRepo) Create(ctx context.Context, l *models.APICallLog) error
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`
 	now := time.Now().UTC()
 	return r.db.Pool.QueryRow(ctx, query, now, l.VehicleID, l.Service, l.HTTPMethod, l.Endpoint, l.StatusCode, l.DurationMs, l.ErrorMessage, l.RateLimited, l.RequestBody, l.ResponseBody).Scan(&l.ID)
+}
+
+// CreateBatch inserts a slice of api_call_logs in a single pgx.CopyFrom call.
+// This is the high-throughput write path used by the inbound APICallLog
+// middleware's async writer; it MUST be safe for concurrent callers, which
+// pgxpool.Pool already guarantees. Empty batches are no-ops. Each entry's
+// Ts field is honored (the middleware sets it to the request start time);
+// entries with a zero Ts fall back to the current UTC instant.
+func (r *APICallLogRepo) CreateBatch(ctx context.Context, batch []*models.APICallLog) error {
+	if len(batch) == 0 {
+		return nil
+	}
+	now := time.Now().UTC()
+	rows := pgx.CopyFromSlice(len(batch), func(i int) ([]any, error) {
+		l := batch[i]
+		ts := l.Ts
+		if ts.IsZero() {
+			ts = now
+		}
+		svc := l.Service
+		if svc == "" {
+			svc = "tesla-api"
+		}
+		return []any{
+			ts,
+			l.VehicleID,
+			svc,
+			l.HTTPMethod,
+			l.Endpoint,
+			l.StatusCode,
+			l.DurationMs,
+			l.ErrorMessage,
+			l.RateLimited,
+			l.RequestBody,
+			l.ResponseBody,
+		}, nil
+	})
+	_, err := r.db.Pool.CopyFrom(
+		ctx,
+		pgx.Identifier{"api_call_logs"},
+		[]string{"ts", "vehicle_id", "service", "http_method", "endpoint", "status_code", "duration_ms", "error_message", "rate_limited", "request_body", "response_body"},
+		rows,
+	)
+	return err
 }
 
 func (r *APICallLogRepo) GetAll(ctx context.Context, limit, offset int, method, statusFilter, endpoint, service, startDate, endDate string) ([]*models.APICallLog, int, error) {

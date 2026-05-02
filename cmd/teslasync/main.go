@@ -21,13 +21,14 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 	"github.com/ev-dev-labs/teslasync/internal/polling"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	sigsvc "github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
+	"github.com/ev-dev-labs/teslasync/internal/webpush"
 	"github.com/ev-dev-labs/teslasync/internal/worker"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/adapter/gasprices"
@@ -45,6 +46,12 @@ func main() {
 			os.Exit(1)
 		}
 		os.Exit(0)
+	}
+
+	// One-shot subcommand: generate a VAPID keypair and exit. Runs before
+	// config.Load() so it works on a fresh install without env wiring.
+	if len(os.Args) > 1 && os.Args[1] == "vapid-keygen" {
+		runVAPIDKeygen()
 	}
 
 	cfg, err := config.Load()
@@ -158,6 +165,29 @@ func main() {
 
 	// Wire Tesla API call logging
 	apiLogRepo := database.NewAPICallLogRepo(db)
+
+	// Inbound api_call_logs middleware: async writer for HTTP requests
+	// served by /api/v1. Disabled mode (cfg.APILogs.Enabled=false) installs
+	// a no-op logger so a misconfigured writer can be turned off at runtime
+	// without a rebuild. Drained on graceful shutdown below.
+	var inboundAPILogger api.APICallLogger
+	if cfg.APILogs.Enabled {
+		inboundAPILogger = api.NewAsyncAPICallLogger(apiLogRepo, api.AsyncLoggerOptions{
+			QueueCapacity: cfg.APILogs.QueueCapacity,
+			BatchSize:     cfg.APILogs.BatchSize,
+			FlushInterval: cfg.APILogs.FlushInterval,
+		})
+		api.SetAPICallLogger(inboundAPILogger)
+		log.Info().
+			Bool("capture_bodies", cfg.APILogs.CaptureBodies).
+			Int("queue_capacity", cfg.APILogs.QueueCapacity).
+			Int("batch_size", cfg.APILogs.BatchSize).
+			Dur("flush_interval", cfg.APILogs.FlushInterval).
+			Msg("inbound api_call_logs middleware enabled")
+	} else {
+		log.Info().Msg("inbound api_call_logs middleware disabled (API_LOGS_INBOUND_ENABLED=false)")
+	}
+
 	teslaClient.SetLogCallback(func(method, url string, statusCode int, reqBody, respBody []byte, durationMs int, callErr error) {
 		logEntry := &models.APICallLog{
 			HTTPMethod: method,
@@ -194,6 +224,82 @@ func main() {
 		}
 		logCancel()
 	})
+
+	// Outbound api_call_logs sink (Phase 38 / Prompt 12). The adapter wraps
+	// the same async writer used by the inbound middleware, so outbound
+	// rows land in the same hypertable with the same drop-on-full and
+	// shutdown-drain semantics.
+	//
+	// IMPORTANT — single source of truth for service="tesla-api":
+	//   The Tesla Fleet API client in internal/tesla/client.go does NOT
+	//   call httputil.NewClient (verified by grep + the layering test in
+	//   internal/platform/httputil/sink_test.go). It owns its own *http.Client
+	//   and persists outbound calls through the SetLogCallback path above —
+	//   that path has access to decoded request/response bodies and the
+	//   401-then-refresh retry context that the generic LoggedTransport
+	//   sink does not. Wiring this sink into the Tesla client would
+	//   double-record every call, so the Tesla path is intentionally left
+	//   unchanged.
+	//
+	// Future non-Tesla outbound adapters (EIA, Geocoder, gas prices, ...)
+	// will receive this sink as ClientConfig.Sink in Prompt 13.
+	outboundAPILogSink := api.APICallSinkAdapter(inboundAPILogger, cfg.APILogs.CaptureBodies)
+	log.Info().
+		Bool("capture_bodies", cfg.APILogs.CaptureBodies).
+		Bool("logger_enabled", inboundAPILogger != nil).
+		Msg("outbound api_call_logs sink ready")
+	// Compile-time assertion that the adapter satisfies httputil.APICallSink.
+	var _ httputil.APICallSink = outboundAPILogSink
+
+	// Phase 38 / Prompt 13: route every non-Tesla outbound HTTP adapter
+	// through the shared sink. Each SetSink/SetOutboundSink/SetAuthSink
+	// call MUST happen BEFORE the corresponding adapter is constructed
+	// (geocoding.NewGeocoder, gasprices.NewEIAAdapter, tesla auth flows,
+	// notification.Send) so the very first request already lands in
+	// api_call_logs.
+	//
+	// Tesla Fleet API client (internal/tesla/client.go) is intentionally
+	// excluded — it persists outbound rows via tesla.Client.SetLogCallback
+	// (configured below) so wiring it through this sink would
+	// double-record every call.
+	api.SetOutboundSink(outboundAPILogSink)
+	notification.SetSink(outboundAPILogSink)
+	geocoding.SetSink(outboundAPILogSink)
+	tesla.SetAuthSink(outboundAPILogSink, cfg.Tesla.Timeout)
+
+	// Web Push (VAPID) — register the dispatcher hook so that any alert
+	// fan-out that publishes a `webpush` Request lands here. When VAPID
+	// is unconfigured we still register a Service (it will report
+	// IsEnabled()==false and Send is a no-op), so the hook never returns
+	// an error and the rest of the channel fan-out proceeds normally.
+	pushSubsRepo := database.NewPushSubscriptionsRepo(db)
+	webpushSvc := webpush.NewService(pushSubsRepo, cfg.WebPush.PublicKey, cfg.WebPush.PrivateKey, cfg.WebPush.Subject)
+	webpush.SetDefault(webpushSvc)
+	if !webpushSvc.IsEnabled() {
+		log.Warn().Msg("Web Push disabled — set TESLASYNC_VAPID_PUBLIC_KEY / TESLASYNC_VAPID_PRIVATE_KEY / TESLASYNC_VAPID_SUBJECT to enable")
+	} else {
+		log.Info().Msg("Web Push enabled (VAPID configured)")
+	}
+	notification.SetWebPushDispatcher(func(req *notification.Request) error {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		_, err := webpushSvc.Send(ctx, webpush.Payload{
+			Title:    req.Title,
+			Body:     req.Message,
+			URL:      req.Config["url"],
+			Tag:      req.Config["alert_tag"],
+			Severity: req.Config["severity"],
+		})
+		return err
+	})
+
+	// stateReader is the signal-log-backed cold-path reader introduced in
+	// phase-39 (ADR-002). Construct it once here (above any conditional
+	// blocks that need it) so both the signal_log warmup loop below AND
+	// the router constructor further down receive the same instance.
+	// LogStateReader is stateless beyond the pool reference, so creating
+	// it before the FleetTelemetry conditional is safe and cheap.
+	stateReader := sigsvc.NewLogStateReader(db.Pool, log.With().Str("component", "state_reader").Logger())
 
 	// Fleet Telemetry handler — created early so the worker can check streaming state
 	var telemetryHandler *api.TelemetryHandler
@@ -254,24 +360,50 @@ func main() {
 		signalHistoryWriter = database.NewSignalHistoryWriter(db, 2*time.Second, cacheStore.Underlying())
 		telemetryHandler.SetSignalHistoryWriter(signalHistoryWriter)
 
-		// Hydrate remaining signals from signal_history (covers missing or legacy
-		// timestamp-less Redis values). Must run before session/alert recovery so
-		// they see the full local L1 signal set on this pod.
-		historyWarmCtx, historyWarmCancel := context.WithTimeout(ctx, 30*time.Second)
+		// Hydrate remaining signals from signal_log via stateReader.State.
+		// This replaces the legacy signal_history per-signal warmup
+		// (Phase-39 / Prompt 35): the old DISTINCT-ON path returned holes for
+		// any signal that hadn't re-emitted recently, so the in-process L1
+		// SignalStore was seeded with gaps on every restart. stateReader.State
+		// performs a full forward-fold and returns the entire current state.
+		//
+		// Concurrency: the loop is intentionally sequential. The pgx pool is
+		// sized for steady-state concurrency (MaxConns≈25); fanning out a
+		// goroutine per vehicle would exhaust the pool and starve the rest of
+		// the server during the critical startup window. Sequential warmup
+		// stays well inside the pod readiness budget. Parallelism is a
+		// separate optimization that belongs in its own benchmarked prompt.
+		//
+		// Per-vehicle timeout: 10s is a hard upper bound. With the required
+		// composite index the unbounded-`at` query should complete in <1s
+		// even on months-old vehicles; the cap exists so a single misbehaving
+		// vehicle cannot stall startup indefinitely.
 		for _, v := range vehicles {
-			if historyWarmCtx.Err() != nil {
-				log.Warn().Err(historyWarmCtx.Err()).Msg("signal store: bounded signal_history hydration stopped early")
-				break
+			warmupCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			latest, err := stateReader.State(warmupCtx, v.ID, time.Now())
+			cancel()
+			if err != nil {
+				// Partial-failure policy: the old per-signal warmup path was
+				// tolerant by accident (returned partial maps); stateReader.State
+				// is all-or-nothing (correct), so we explicitly degrade per
+				// vehicle here. A failed warmup just means this vehicle's
+				// SignalStore L1 starts empty and hydrates from the next live
+				// telemetry batch — the same recovery path that already exists
+				// for net-new vehicles. Do NOT abort warmup for the rest.
+				log.Warn().Err(err).Int64("vehicle_id", v.ID).Msg("warmup state read failed; vehicle will hydrate from live telemetry")
+				continue
 			}
-			if extra, err := signalHistoryWriter.GetLatestPerSignal(historyWarmCtx, v.ID); err == nil {
-				signalStore.Hydrate(v.ID, extra)
-			} else {
-				log.Warn().Err(err).Int64("vehicle_id", v.ID).Msg("signal store: hydration from signal_history failed")
+			// signal.State (map[string]signal.SignalValue) and Hydrate's
+			// map[string]interface{} share an underlying shape but are
+			// distinct named types, so copy explicitly.
+			extra := make(map[string]interface{}, len(latest))
+			for k, val := range latest {
+				extra[k] = val
 			}
+			signalStore.Hydrate(v.ID, extra)
 		}
-		historyWarmCancel()
 		if len(vehicles) > 0 {
-			log.Info().Int("vehicles", len(vehicles)).Msg("signal store hydrated from signal_history")
+			log.Info().Int("vehicles", len(vehicles)).Msg("signal store hydrated from signal_log via stateReader")
 		}
 
 		log.Info().Msg("signal store initialized")
@@ -470,7 +602,15 @@ func main() {
 	// Gas price worker — polls EIA API for US average gasoline price
 	var gasPriceWorker *worker.GasPriceWorker
 	if cfg.GasPrice.APIKey != "" {
-		eiaAdapter := gasprices.NewEIAAdapter(cfg.GasPrice.APIKey)
+		eiaAdapter := gasprices.NewEIAAdapter(
+			cfg.GasPrice.APIKey,
+			gasprices.WithHTTPClient(httputil.NewClient(httputil.ClientConfig{
+				Name:          "eia",
+				Timeout:       config.HTTPClientTimeout,
+				Sink:          outboundAPILogSink,
+				EnableLogging: true,
+			})),
+		)
 		gasPriceWorker = worker.NewGasPriceWorker(db, cfg.GasPrice, eiaAdapter)
 		resilience.SafeGoLoop(ctx, "gas-price-worker", func(loopCtx context.Context) {
 			gasPriceWorker.Start(loopCtx)
@@ -575,8 +715,11 @@ func main() {
 		}
 	}
 
-	// HTTP API
-	router := api.NewRouter(db, teslaClient, mqttClient, cfg, health, api.RouterOptions{
+	// HTTP API. stateReader was constructed earlier (above the FleetTelemetry
+	// conditional, see Prompt 35) so the warmup loop and the router share
+	// the same instance. The pre-existing database.SignalLogReader continues
+	// to live alongside it until the deletion prompts (phases 37–40).
+	router := api.NewRouter(db, teslaClient, mqttClient, cfg, health, stateReader, api.RouterOptions{
 		AppVersion:       Version,
 		Encryptor:        encryptor,
 		TelemetryHandler: telemetryHandler,
@@ -652,61 +795,15 @@ func main() {
 		server.Close()
 	}
 
+	// Phase 5: Drain inbound api_call_logs writer (after HTTP shutdown so no
+	// more requests can enqueue entries).
+	if inboundAPILogger != nil {
+		if err := inboundAPILogger.Shutdown(shutdownCtx); err != nil {
+			log.Warn().Err(err).Msg("inbound api_call_logs writer shutdown timed out — pending entries may have been dropped")
+		} else {
+			log.Info().Msg("inbound api_call_logs writer drained")
+		}
+	}
+
 	log.Info().Msg("TeslaSync stopped cleanly")
-}
-
-func setupLogger(level string) {
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-
-	lvl, err := zerolog.ParseLevel(level)
-	if err != nil {
-		lvl = zerolog.InfoLevel
-	}
-	zerolog.SetGlobalLevel(lvl)
-
-	if os.Getenv("TESLASYNC_DEV") == "true" {
-		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-	}
-}
-
-func componentDisplayName(name string) string {
-	switch name {
-	case "database":
-		return "PostgreSQL"
-	case "mqtt":
-		return "MQTT Broker"
-	case "tesla_api":
-		return "Tesla Fleet API"
-	case "worker":
-		return "Vehicle Poller"
-	case "redis":
-		return "Redis Cache"
-	default:
-		return name
-	}
-}
-
-func sendSystemNotification(ctx context.Context, notifRepo *database.NotificationRepo, mqttClient *mqtt.Client, title, message string) {
-	if mqttClient == nil {
-		return
-	}
-	channels, err := notifRepo.GetAllChannels(ctx)
-	if err != nil {
-		return
-	}
-	for _, ch := range channels {
-		if !ch.Enabled {
-			continue
-		}
-		req := &notification.Request{
-			ChannelType: ch.Type,
-			Config:      ch.Config,
-			Title:       title,
-			Message:     message,
-			ChannelID:   ch.ID,
-		}
-		if err := notification.Publish(mqttClient.Underlying(), req); err != nil {
-			log.Warn().Err(err).Int64("channel_id", ch.ID).Msg("failed to send system notification")
-		}
-	}
 }

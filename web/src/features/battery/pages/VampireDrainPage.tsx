@@ -5,7 +5,7 @@ import { BatteryWarning, Clock, Zap, Activity, Lightbulb, ShieldAlert } from 'lu
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Select, DataTable, type Column, useSortToggle } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { MetricCard, DataFreshnessAuto } from '@/components/data-display';
 import {
   RadialGauge, ChartTooltip, AREA_DEFAULTS,
   chartMargin, axisTick, CHART_COLORS,
@@ -58,11 +58,12 @@ export default function VampireDrainPage() {
 
   const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
 
-  const { data, isLoading, error } = useQuery<VampireDrainStats>({
+  const vampireQuery = useQuery<VampireDrainStats>({
     queryKey: ['vampire-drain-stats', activeId],
     queryFn: () => request<VampireDrainStats>(`/vampire-drain/stats?vehicle_id=${activeId}`),
     enabled: activeId !== '',
   });
+  const { data, isLoading, error } = vampireQuery;
 
   const { sortKey, sortDir, onSort, sortFn } = useSortToggle('date');
 
@@ -109,22 +110,61 @@ export default function VampireDrainPage() {
       loading={isLoading}
       error={error instanceof Error ? error : null}
       actions={
-        vehicles && vehicles.length > 1 ? (
-          <Select
-            options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
-            value={activeId}
-            onChange={(e) => setVehicleId(e.target.value)}
-          />
-        ) : undefined
+        <div className="flex items-center gap-3">
+          {vehicles && vehicles.length > 1 && (
+            <Select
+              options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
+              value={activeId}
+              onChange={(e) => setVehicleId(e.target.value)}
+            />
+          )}
+          <DataFreshnessAuto query={vampireQuery} />
+        </div>
       }
     >
       {/* Summary Metrics */}
       <FadeIn>
         <div className={cn('grid gap-4 grid-cols-2 lg:grid-cols-4')}>
-          <MetricCard label={t('Avg Drain Rate')} value={`${fmtNumber(data?.avg_drain_rate, 2)}%/hr`} icon={<Zap className="h-4 w-4" />} color="purple" />
-          <MetricCard label={t('Total Phantom Loss')} value={`${fmtNumber(data?.total_energy_lost, 1)} kWh`} icon={<BatteryWarning className="h-4 w-4" />} color="red" />
-          <MetricCard label={t('Worst Session')} value={`${fmtNumber(data?.worst_drain_pct, 1)}%`} icon={<Activity className="h-4 w-4" />} color="amber" />
-          <MetricCard label={t('Drain Score')} value={`${fmtNumber(data?.drain_score, 0)}/100`} icon={<ShieldAlert className="h-4 w-4" />} color="green" />
+          <MetricCard
+            label={t('Avg Drain Rate')}
+            value={`${fmtNumber(data?.avg_drain_rate, 2)}%/hr`}
+            icon={<Zap className="h-4 w-4" />}
+            color="purple"
+            help={{
+              i18nKey: 'help.vampireDrain.avgRate',
+              defaultValue: 'Mean battery loss per hour while parked and not charging across the selected period.',
+            }}
+          />
+          <MetricCard
+            label={t('Total Phantom Loss')}
+            value={`${fmtNumber(data?.total_energy_lost, 1)} kWh`}
+            icon={<BatteryWarning className="h-4 w-4" />}
+            color="red"
+            help={{
+              i18nKey: 'help.vampireDrain.totalLoss',
+              defaultValue: 'Estimated kWh lost to vampire drain across all parked sessions in the selected period.',
+            }}
+          />
+          <MetricCard
+            label={t('Worst Session')}
+            value={`${fmtNumber(data?.worst_drain_pct, 1)}%`}
+            icon={<Activity className="h-4 w-4" />}
+            color="amber"
+            help={{
+              i18nKey: 'help.vampireDrain.worstSession',
+              defaultValue: 'Single parked session with the largest % battery drop.',
+            }}
+          />
+          <MetricCard
+            label={t('Drain Score')}
+            value={`${fmtNumber(data?.drain_score, 0)}/100`}
+            icon={<ShieldAlert className="h-4 w-4" />}
+            color="green"
+            help={{
+              i18nKey: 'help.vampireDrain.score',
+              defaultValue: '0–100 health score derived from your drain rate vs. fleet expectations. Higher is better.',
+            }}
+          />
         </div>
       </FadeIn>
 

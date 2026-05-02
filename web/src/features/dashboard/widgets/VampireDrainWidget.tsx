@@ -95,6 +95,11 @@ export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
     <WidgetShell
       title={isCompact ? undefined : t('widget.vampireDrain.title', 'Vampire Drain')}
       icon={isCompact ? undefined : <BatteryWarning className="h-3.5 w-3.5 text-neon-amber" />}
+      help={isCompact ? undefined : {
+        i18nKey: 'help.vampireDrain.body',
+        defaultValue:
+          'Idle energy lost while the car is parked and not charging. We compute it as the % of battery used per hour while the vehicle reports gear=Park and is not in motion.',
+      }}
       loading={isLoading}
       updatedAt={updatedAt}
       isFetching={statsFetching || eventsFetching}

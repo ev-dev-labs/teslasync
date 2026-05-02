@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
+import { Button } from '@/components/ui';
 import { ANNOTATION_COLORS } from '@/types/annotations';
 import type { DataAnnotation } from '@/types/annotations';
 
@@ -38,13 +39,14 @@ export function AnnotationList({ annotations, onRemove }: AnnotationListProps) {
           <span className="ml-auto shrink-0 text-gray-400 dark:text-white/30">
             {ann.timestamp}
           </span>
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => onRemove(ann.id)}
-            className="shrink-0 text-gray-300 opacity-0 transition-all hover:text-red-400 group-hover:opacity-100 dark:text-white/20 dark:hover:text-red-400"
+            className="shrink-0 !h-5 !w-5 !p-0 text-gray-300 opacity-0 transition-all hover:!text-red-400 group-hover:opacity-100 dark:text-white/20"
+            icon={<X className="h-3 w-3" />}
             aria-label={t('annotation.remove', 'Remove annotation')}
-          >
-            <X className="h-3 w-3" />
-          </button>
+          />
         </div>
       ))}
     </div>

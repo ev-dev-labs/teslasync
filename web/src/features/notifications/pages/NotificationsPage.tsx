@@ -1,602 +1,426 @@
 /**
- * NotificationsPage — manage notification channels, view delivery logs, and monitor stats.
+ * NotificationsPage — three-tab notifications hub.
  *
- * Full CRUD for channels (Discord, Slack, Telegram, Email, Webhook, ntfy, Pushover),
- * delivery log DataTable, and stats overview.
+ *   Inbox     — non-archived notification log entries with filter, search,
+ *               bulk select/archive/mark-read, and day grouping.
+ *   Archived  — same shape but scoped to archived rows; bulk Restore.
+ *   Channels  — extracted CRUD for delivery destinations (Discord, Slack…).
+ *
+ * The inbox tab also implements two opt-in auto-mark-read policies, controlled
+ * by client-side localStorage preferences (defaults on):
+ *   - mark all visible rows as read when the inbox is opened
+ *   - mark a row as read when it is clicked
+ *
+ * These defaults can be overridden by writing the keys
+ * `teslasync.notifications.markOnOpen` / `teslasync.notifications.markOnClick`
+ * to localStorage with the value 'false'. A future Settings page can surface
+ * them as toggles without changing this file's contract.
  */
 
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cn } from '@/lib/cn';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Modal } from '@/components/ui/Modal';
-import { Toggle } from '@/components/ui/Toggle';
-import { DataTable, type Column } from '@/components/ui/DataTable';
-import { MetricCard } from '@/components/data-display/MetricCard';
+import { Archive, ArchiveRestore, Bell, MailOpen, Trash2 } from 'lucide-react';
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, TabNav } from '@/components/ui';
+import { BulkActionsToolbar, type BulkAction } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { FadeIn } from '@/components/motion/FadeIn';
-import { useToast } from '@/components/feedback/Toast';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useUrlEnum, useUrlString, useUrlArray } from '@/hooks/useUrlState';
+import { useVehicles } from '@/api/hooks/useVehicles';
 import {
-  useNotificationChannels, useNotificationLogs, useNotificationStats,
-  useSaveChannel, useDeleteChannel, useToggleChannel, useTestChannel,
-  type NotificationChannelInput,
+  useAlertRules,
+  useNotificationLogs,
+  useArchiveNotifications,
+  useUnarchiveNotifications,
+  useMarkNotificationsRead,
+  useMarkNotificationsUnread,
+  useDeleteNotifications,
+  type NotificationFilters,
 } from '@/api/hooks/useNotifications';
-import type { NotificationChannel, NotificationChannelKind, NotificationLog } from '@/api/types';
-import {
-  Bell, Plus, Trash2, Send, MessageSquare, Mail, Webhook, Hash,
-  Megaphone, Smartphone, CheckCircle, XCircle, Clock, BarChart3,
-  Pencil, ChevronDown, ChevronUp, TestTube,
-} from 'lucide-react';
+import type { NotificationLog, AlertRule, Vehicle } from '@/api/types';
+import { NotificationFilterBar } from '../components/NotificationFilterBar';
+import { NotificationRow } from '../components/NotificationRow';
+import { NotificationChannelsView } from '../components/NotificationChannelsView';
 
-// ─── Channel type definitions ────────────────────────────────────────────────
+type InboxTab = 'inbox' | 'archived' | 'channels';
 
-const CHANNEL_TYPES = [
-  { value: 'discord', label: 'Discord', icon: Hash, color: '#5865F2', fields: [
-    { key: 'webhook_url', label: 'Webhook URL', placeholder: 'https://discord.com/api/webhooks/...', type: 'url' },
-  ] },
-  { value: 'slack', label: 'Slack', icon: MessageSquare, color: '#4A154B', fields: [
-    { key: 'webhook_url', label: 'Webhook URL', placeholder: 'https://hooks.slack.com/services/...', type: 'url' },
-  ] },
-  { value: 'telegram', label: 'Telegram', icon: Send, color: '#0088cc', fields: [
-    { key: 'bot_token', label: 'Bot Token', placeholder: '123456:ABC-...', type: 'password' },
-    { key: 'chat_id', label: 'Chat ID', placeholder: '-1001234567890', type: 'text' },
-  ] },
-  { value: 'email', label: 'Email', icon: Mail, color: '#EA4335', fields: [
-    { key: 'smtp_host', label: 'SMTP Host', placeholder: 'smtp.gmail.com', type: 'text' },
-    { key: 'smtp_port', label: 'SMTP Port', placeholder: '587', type: 'text' },
-    { key: 'smtp_username', label: 'SMTP Username', placeholder: 'alerts@example.com', type: 'text' },
-    { key: 'smtp_password', label: 'SMTP Password', placeholder: '••••••••', type: 'password' },
-    { key: 'from_address', label: 'From Address', placeholder: 'alerts@example.com', type: 'email' },
-    { key: 'to_addresses', label: 'Recipients (comma-separated)', placeholder: 'you@example.com,ops@example.com', type: 'text' },
-  ] },
-  { value: 'webhook', label: 'Webhook', icon: Webhook, color: '#FF6B35', fields: [
-    { key: 'url', label: 'URL', placeholder: 'https://example.com/webhook', type: 'url' },
-    { key: 'method', label: 'HTTP Method', placeholder: 'POST', type: 'text' },
-    { key: 'headers', label: 'Headers (JSON)', placeholder: '{"Authorization": "Bearer ..."}', type: 'text' },
-    { key: 'body_template', label: 'Body Template', placeholder: '{"text": "{{message}}"}', type: 'text' },
-  ] },
-  { value: 'ntfy', label: 'ntfy', icon: Megaphone, color: '#57A773', fields: [
-    { key: 'server_url', label: 'Server URL', placeholder: 'https://ntfy.sh', type: 'url' },
-    { key: 'topic', label: 'Topic', placeholder: 'teslasync', type: 'text' },
-  ] },
-  { value: 'pushover', label: 'Pushover', icon: Smartphone, color: '#249DF1', fields: [
-    { key: 'user_key', label: 'User Key', placeholder: 'u1v2w3...', type: 'password' },
-    { key: 'app_token', label: 'App Token', placeholder: 'a1b2c3...', type: 'password' },
-  ] },
-] as const;
+const INBOX_TABS = ['inbox', 'archived', 'channels'] as const satisfies readonly InboxTab[];
 
-type ChannelType = NotificationChannelKind;
+const SEVERITY_VALUES = ['info', 'warn', 'critical'] as const;
+type SeverityValue = (typeof SEVERITY_VALUES)[number];
 
-function getChannelMeta(kind: string) {
-  return CHANNEL_TYPES.find(t => t.value === kind) ?? CHANNEL_TYPES[4];
-}
+const READ_VALUES = ['all', 'read', 'unread'] as const;
+type ReadValue = (typeof READ_VALUES)[number];
 
-/**
- * Extract the editable, flat string-keyed view of a typed channel for use in
- * the generic form state. The inverse of `buildChannelPayload`.
- */
-function channelToFormConfig(ch: NotificationChannel): Record<string, string> {
-  switch (ch.kind) {
-    case 'discord':
-      return { webhook_url: ch.webhook_url };
-    case 'slack':
-      return { webhook_url: ch.webhook_url };
-    case 'telegram':
-      return { bot_token: ch.bot_token, chat_id: ch.chat_id };
-    case 'email':
-      return {
-        smtp_host: ch.smtp_host,
-        smtp_port: String(ch.smtp_port),
-        smtp_username: ch.smtp_username,
-        smtp_password: ch.smtp_password,
-        from_address: ch.from_address,
-        to_addresses: (ch.to_addresses ?? []).join(', '),
-      };
-    case 'webhook':
-      return {
-        url: ch.url,
-        method: ch.method,
-        headers: JSON.stringify(ch.headers ?? {}),
-        body_template: ch.body_template,
-      };
-    case 'ntfy':
-      return { server_url: ch.server_url, topic: ch.topic };
-    case 'pushover':
-      return { user_key: ch.user_key, app_token: ch.app_token };
+const PREF_MARK_ON_OPEN = 'teslasync.notifications.markOnOpen';
+const PREF_MARK_ON_CLICK = 'teslasync.notifications.markOnClick';
+
+function readPref(key: string): boolean {
+  if (typeof window === 'undefined') return true;
+  try {
+    const v = window.localStorage.getItem(key);
+    if (v == null) return true;
+    return v !== 'false';
+  } catch {
+    return true;
   }
 }
 
 /**
- * Build a typed, discriminated-union payload from the flat form state.
- * Mirrors the server-side NotificationChannelInput shape for each kind.
+ * Group ISO timestamps into "Today" / "Yesterday" / dated buckets keyed by
+ * the user's local day. Rows are returned in the order they came in (newest
+ * first); the day grouping just adds headers.
  */
-function buildChannelPayload(
-  kind: ChannelType,
-  name: string,
-  enabled: boolean,
-  config: Record<string, string>,
-  id?: number,
-): NotificationChannelInput {
-  const idPart = id !== undefined ? { id } : {};
-  switch (kind) {
-    case 'discord':
-      return {
-        ...idPart,
-        kind: 'discord',
-        name,
-        enabled,
-        webhook_url: config.webhook_url ?? '',
-        username: null,
-        avatar_url: null,
-      } as NotificationChannelInput;
-    case 'slack':
-      return {
-        ...idPart,
-        kind: 'slack',
-        name,
-        enabled,
-        webhook_url: config.webhook_url ?? '',
-        channel: null,
-        username: null,
-      } as NotificationChannelInput;
-    case 'telegram':
-      return {
-        ...idPart,
-        kind: 'telegram',
-        name,
-        enabled,
-        bot_token: config.bot_token ?? '',
-        chat_id: config.chat_id ?? '',
-      } as NotificationChannelInput;
-    case 'email': {
-      const port = Number(config.smtp_port);
-      return {
-        ...idPart,
-        kind: 'email',
-        name,
-        enabled,
-        smtp_host: config.smtp_host ?? '',
-        smtp_port: Number.isFinite(port) ? port : 587,
-        smtp_username: config.smtp_username ?? '',
-        smtp_password: config.smtp_password ?? '',
-        from_address: config.from_address ?? '',
-        to_addresses: (config.to_addresses ?? '')
-          .split(',')
-          .map(s => s.trim())
-          .filter(Boolean),
-        use_tls: true,
-      } as NotificationChannelInput;
-    }
-    case 'webhook': {
-      let headers: Record<string, string> = {};
-      try {
-        const parsed = JSON.parse(config.headers || '{}');
-        if (parsed && typeof parsed === 'object') headers = parsed as Record<string, string>;
-      } catch {
-        headers = {};
-      }
-      const method = (config.method ?? 'POST').toUpperCase();
-      const safeMethod: 'GET' | 'POST' | 'PUT' =
-        method === 'GET' || method === 'PUT' ? method : 'POST';
-      return {
-        ...idPart,
-        kind: 'webhook',
-        name,
-        enabled,
-        url: config.url ?? '',
-        method: safeMethod,
-        headers,
-        body_template: config.body_template ?? '',
-      } as NotificationChannelInput;
-    }
-    case 'ntfy':
-      return {
-        ...idPart,
-        kind: 'ntfy',
-        name,
-        enabled,
-        server_url: config.server_url ?? 'https://ntfy.sh',
-        topic: config.topic ?? '',
-        priority: 3,
-        username: null,
-        password: null,
-      } as NotificationChannelInput;
-    case 'pushover':
-      return {
-        ...idPart,
-        kind: 'pushover',
-        name,
-        enabled,
-        user_key: config.user_key ?? '',
-        app_token: config.app_token ?? '',
-        device: null,
-        priority: 0,
-      } as NotificationChannelInput;
-  }
-}
+function groupByDay<T extends { created_at: string }>(rows: T[]): { day: string; rows: T[] }[] {
+  if (rows.length === 0) return [];
+  const fmt = new Intl.DateTimeFormat(undefined, {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
 
-// ─── Channel Form Modal ──────────────────────────────────────────────────────
-
-function ChannelFormModal({ channel, onClose, onSaved, t }: {
-  channel: NotificationChannel | null;
-  onClose: () => void;
-  onSaved: () => void;
-  t: (k: string) => string;
-}) {
-  const toast = useToast();
-  const isEdit = !!channel;
-  const [kind, setKind] = useState<ChannelType>(channel?.kind ?? 'discord');
-  const [name, setName] = useState(channel?.name ?? '');
-  const [enabled, setEnabled] = useState(channel?.enabled ?? true);
-  const [config, setConfig] = useState<Record<string, string>>(
-    channel ? channelToFormConfig(channel) : {},
-  );
-  const [formError, setFormError] = useState('');
-  const [testResult, setTestResult] = useState<{ success: boolean; message?: string } | null>(null);
-
-  const meta = getChannelMeta(kind);
-  const saveMut = useSaveChannel();
-  const testMut = useTestChannel();
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError('');
-    setTestResult(null);
-    if (!name.trim()) { setFormError(t('Name is required')); return; }
-    const payload = buildChannelPayload(
-      kind,
-      name,
-      enabled,
-      config,
-      isEdit && channel ? channel.id : undefined,
-    );
-    saveMut.mutate(payload, {
-      onSuccess: () => { toast.success(isEdit ? t('Channel updated') : t('Channel created')); onSaved(); },
-      onError: (e) => setFormError(String(e)),
-    });
+  const labelFor = (d: Date): string => {
+    const day = new Date(d);
+    day.setHours(0, 0, 0, 0);
+    if (day.getTime() === today.getTime()) return 'Today';
+    if (day.getTime() === yesterday.getTime()) return 'Yesterday';
+    return fmt.format(d);
   };
 
-  const handleTest = () => {
-    if (!isEdit || !channel) return;
-    testMut.mutate(channel.id, {
-      onSuccess: (data) => {
-        if (data?.success) {
-          setTestResult({ success: true, message: t('Test notification sent successfully!') });
-          toast.success(t('Test sent!'));
-        } else {
-          setTestResult({ success: false, message: data?.error || t('Test failed') });
-          toast.error(t('Test failed'), data?.error);
-        }
-      },
-      onError: () => {
-        setTestResult({ success: false, message: t('Test failed') });
-        toast.error(t('Test failed'));
-      },
+  const out: { day: string; rows: T[] }[] = [];
+  let current: { day: string; rows: T[] } | null = null;
+  for (const row of rows) {
+    const d = new Date(row.created_at);
+    if (Number.isNaN(d.getTime())) continue;
+    const label = labelFor(d);
+    if (!current || current.day !== label) {
+      current = { day: label, rows: [] };
+      out.push(current);
+    }
+    current.rows.push(row);
+  }
+  return out;
+}
+
+interface InboxBodyProps {
+  archived: boolean;
+  vehicles: Vehicle[];
+  rules: AlertRule[];
+}
+
+function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
+  const { t } = useTranslation();
+
+  // ── URL-backed filter state (Phase 40 / Prompt 33) ─────────────────────
+  // Severity, vehicle, search, and read-state live in the URL so a filtered
+  // view can be shared / reloaded / linked from outside.
+  const [severityRaw, setSeverityRaw] = useUrlArray('severity');
+  const [vehicleIdsRaw, setVehicleIdsRaw] = useUrlArray('vehicle_id');
+  const [ruleIdsRaw, setRuleIdsRaw] = useUrlArray('rule_id');
+  const [search, setSearch] = useUrlString('q', '');
+  const [readState, setReadState] = useUrlEnum<ReadValue>('read', READ_VALUES, 'all');
+  const [from, setFrom] = useUrlString('from', '');
+  const [to, setTo] = useUrlString('to', '');
+
+  // Sanitize unknown severity values so a hand-edited URL can't corrupt the
+  // request payload.
+  const severity = useMemo<SeverityValue[]>(
+    () => severityRaw.filter((s): s is SeverityValue => SEVERITY_VALUES.includes(s as SeverityValue)),
+    [severityRaw],
+  );
+  const vehicleIds = useMemo<number[]>(() => {
+    return vehicleIdsRaw
+      .map(v => Number(v))
+      .filter(n => Number.isFinite(n) && n > 0);
+  }, [vehicleIdsRaw]);
+  const ruleIds = useMemo<number[]>(() => {
+    return ruleIdsRaw
+      .map(v => Number(v))
+      .filter(n => Number.isFinite(n) && n > 0);
+  }, [ruleIdsRaw]);
+
+  const filters = useMemo<NotificationFilters>(() => ({
+    archived,
+    severity: severity.length ? severity : undefined,
+    vehicle_id: vehicleIds.length ? vehicleIds : undefined,
+    rule_id: ruleIds.length ? ruleIds : undefined,
+    q: search || undefined,
+    from: from || undefined,
+    to: to || undefined,
+    read: readState === 'all' ? undefined : readState === 'read',
+  }), [archived, severity, vehicleIds, ruleIds, search, from, to, readState]);
+
+  const handleFiltersChange = useCallback((next: NotificationFilters) => {
+    // Bridge the existing controlled-component contract back into the
+    // discrete URL params so the FilterBar UI stays untouched.
+    setSeverityRaw(next.severity ?? []);
+    setVehicleIdsRaw((next.vehicle_id ?? []).map(String));
+    setRuleIdsRaw((next.rule_id ?? []).map(String));
+    setSearch(next.q ?? '');
+    setFrom(next.from ?? '');
+    setTo(next.to ?? '');
+    if (next.read === undefined) setReadState('all');
+    else setReadState(next.read ? 'read' : 'unread');
+  }, [setSeverityRaw, setVehicleIdsRaw, setRuleIdsRaw, setSearch, setFrom, setTo, setReadState]);
+
+  const { data: rawRows, isLoading, error } = useNotificationLogs(filters);
+  const rows = useMemo<NotificationLog[]>(() => rawRows ?? [], [rawRows]);
+
+  const ruleMap = useMemo<Record<number, AlertRule>>(() => {
+    const m: Record<number, AlertRule> = {};
+    rules.forEach(r => { m[r.id] = r; });
+    return m;
+  }, [rules]);
+  const vehicleMap = useMemo<Record<number, Vehicle>>(() => {
+    const m: Record<number, Vehicle> = {};
+    vehicles.forEach(v => { m[v.id] = v; });
+    return m;
+  }, [vehicles]);
+
+  const markReadMut = useMarkNotificationsRead();
+  const markUnreadMut = useMarkNotificationsUnread();
+  const archiveMut = useArchiveNotifications();
+  const unarchiveMut = useUnarchiveNotifications();
+  const deleteMut = useDeleteNotifications();
+
+  // Auto-mark-read on inbox open (only on the Inbox tab, not Archived).
+  const autoMarkedRef = useRef(false);
+  useEffect(() => {
+    if (archived) return;
+    if (autoMarkedRef.current) return;
+    if (isLoading) return;
+    if (!readPref(PREF_MARK_ON_OPEN)) return;
+    const unread = rows.filter(r => !r.read_at).map(r => r.id);
+    if (unread.length === 0) return;
+    autoMarkedRef.current = true;
+    markReadMut.mutate(unread);
+  }, [archived, isLoading, rows, markReadMut]);
+
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  // Drop selections when filter changes — selection should never carry over
+  // across a different result set.
+  useEffect(() => { setSelected(new Set()); }, [filters]);
+
+  const toggleSelected = (id: number, on: boolean) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (on) next.add(id); else next.delete(id);
+      return next;
     });
+  };
+  const clearSelection = () => setSelected(new Set());
+  const selectAllVisible = () => setSelected(new Set(rows.map(r => r.id)));
+  const allVisibleSelected = rows.length > 0 && rows.every(r => selected.has(r.id));
+
+  const grouped = useMemo(() => groupByDay(rows), [rows]);
+
+  const handleBulkArchive = useCallback(async (ids: Array<string | number>) => {
+    await archiveMut.mutateAsync(ids.map(Number));
+    clearSelection();
+  }, [archiveMut]);
+  const handleBulkUnarchive = useCallback(async (ids: Array<string | number>) => {
+    await unarchiveMut.mutateAsync(ids.map(Number));
+    clearSelection();
+  }, [unarchiveMut]);
+  const handleBulkMarkRead = useCallback(async (ids: Array<string | number>) => {
+    await markReadMut.mutateAsync(ids.map(Number));
+    clearSelection();
+  }, [markReadMut]);
+  const handleBulkDelete = useCallback(async (ids: Array<string | number>) => {
+    await deleteMut.mutateAsync(ids.map(Number));
+    clearSelection();
+  }, [deleteMut]);
+
+  const bulkActions = useMemo<BulkAction[]>(() => {
+    const list: BulkAction[] = [];
+    if (!archived) {
+      list.push({
+        id: 'mark-read',
+        label: t('notifications.inbox.bulk.markRead', 'Mark read'),
+        icon: <MailOpen className="h-3.5 w-3.5" />,
+        onClick: handleBulkMarkRead,
+      });
+      list.push({
+        id: 'archive',
+        label: t('notifications.inbox.bulk.archive', 'Archive'),
+        icon: <Archive className="h-3.5 w-3.5" />,
+        onClick: handleBulkArchive,
+      });
+    }
+    if (archived) {
+      list.push({
+        id: 'restore',
+        label: t('notifications.inbox.bulk.restore', 'Restore'),
+        icon: <ArchiveRestore className="h-3.5 w-3.5" />,
+        onClick: handleBulkUnarchive,
+      });
+    }
+    list.push({
+      id: 'delete',
+      label: t('bulk.actions.delete', 'Delete'),
+      icon: <Trash2 className="h-3.5 w-3.5" />,
+      variant: 'danger',
+      confirm: {
+        title: t('notifications.inbox.bulk.deleteConfirmTitle', 'Delete notifications?'),
+        description: t(
+          'notifications.inbox.bulk.deleteConfirmBody',
+          'These notifications will be permanently removed. Archive is usually the safer choice.',
+        ),
+        confirmLabel: t('common.delete', 'Delete'),
+      },
+      onClick: handleBulkDelete,
+    });
+    return list;
+  }, [archived, t, handleBulkArchive, handleBulkUnarchive, handleBulkMarkRead, handleBulkDelete]);
+
+  const handleRowActivate = (log: NotificationLog) => {
+    if (log.read_at) return;
+    if (!readPref(PREF_MARK_ON_CLICK)) return;
+    markReadMut.mutate([log.id]);
   };
 
   return (
-    <Modal open onClose={onClose} title={isEdit ? t('Edit Channel') : t('Add Channel')}>
-      <div className="space-y-5">
-        <FadeIn>
+    <div className="space-y-4">
+      <FadeIn>
+        <NotificationFilterBar
+          filters={filters}
+          onChange={handleFiltersChange}
+          vehicles={vehicles}
+          rules={rules}
+        />
+      </FadeIn>
+
+      <BulkActionsToolbar
+        selectedIds={Array.from(selected)}
+        total={rows.length}
+        onClear={clearSelection}
+        actions={bulkActions}
+        itemNoun={{
+          one: t('bulk.noun.notification_one', 'notification'),
+          other: t('bulk.noun.notification_other', 'notifications'),
+        }}
+      />
+
+      <GlassPanel className="p-3 sm:p-4">
+        {/* Select-all row */}
+        <div className="mb-2 flex items-center gap-3 px-1 pb-2 border-b border-white/[0.04]">
+          <input
+            type="checkbox"
+            checked={allVisibleSelected}
+            onChange={e => (e.target.checked ? selectAllVisible() : clearSelection())}
+            aria-label={t('notifications.inbox.selectAll', 'Select all visible')}
+            className="h-4 w-4 cursor-pointer rounded border-white/20 bg-white/[0.04] text-cyan-500 focus:ring-2 focus:ring-cyan-500"
+          />
+          <span className="text-xs text-[var(--text-muted)]">
+            {t('notifications.inbox.countLabel', '{{count}} notifications', { count: rows.length })}
+          </span>
+        </div>
+
+        {isLoading && (
+          <div className="space-y-2">
+            {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-14" />)}
+          </div>
+        )}
+
+        {!isLoading && error && (
+          <EmptyState
+            icon={<Bell className="h-8 w-8" />}
+            title={t('notifications.inbox.error.title', 'Could not load notifications')}
+            message={String(error)}
+          />
+        )}
+
+        {!isLoading && !error && grouped.length === 0 && (
+          <EmptyState
+            icon={<Bell className="h-8 w-8" />}
+            title={archived
+              ? t('notifications.inbox.empty.archivedTitle', 'No archived notifications')
+              : t('notifications.inbox.empty.title', 'No notifications')}
+            message={archived
+              ? t('notifications.inbox.empty.archivedMessage', 'Archived notifications will appear here.')
+              : t('notifications.inbox.empty.message', 'When alert rules fire, the resulting notifications appear here.')}
+          />
+        )}
+
+        {!isLoading && !error && grouped.length > 0 && (
           <div className="space-y-4">
-            {/* Type selector */}
-            {!isEdit && (
-              <div>
-                <span className="block text-xs font-medium mb-2 text-[var(--text-secondary)]">
-                  {t('Channel Type')}
-                </span>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-                  {CHANNEL_TYPES.map(ct => {
-                    const TIcon = ct.icon;
-                    return (
-                      <GlassPanel
-                        key={ct.value}
-                        className={cn(
-                          'flex flex-col items-center gap-1.5 p-3 text-xs font-medium cursor-pointer transition-all',
-                          kind === ct.value ? 'border-neon-cyan/40 bg-neon-cyan/10' : 'hover:bg-white/10',
-                        )}
-                        onClick={() => { setKind(ct.value); setConfig({}); setTestResult(null); }}
-                      >
-                        <TIcon className="h-5 w-5" style={{ color: kind === ct.value ? ct.color : 'var(--text-secondary)' }} />
-                        <span style={{ color: kind === ct.value ? ct.color : 'var(--text-secondary)' }}>{ct.label}</span>
-                      </GlassPanel>
-                    );
-                  })}
+            {grouped.map(group => (
+              <div key={group.day}>
+                <div className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                  {group.day === 'Today'
+                    ? t('common.today', 'Today')
+                    : group.day === 'Yesterday'
+                      ? t('common.yesterday', 'Yesterday')
+                      : group.day}
+                </div>
+                <div className="space-y-1">
+                  {group.rows.map(log => (
+                    <NotificationRow
+                      key={log.id}
+                      log={log}
+                      rule={log.alert_id != null ? ruleMap[log.alert_id] : undefined}
+                      vehicle={log.alert_id != null && ruleMap[log.alert_id]?.vehicle_id != null
+                        ? vehicleMap[ruleMap[log.alert_id]!.vehicle_id!]
+                        : undefined}
+                      selected={selected.has(log.id)}
+                      onSelectionChange={toggleSelected}
+                      onActivate={handleRowActivate}
+                      onArchive={!archived ? (id) => archiveMut.mutate([id]) : undefined}
+                      onUnarchive={archived ? (id) => unarchiveMut.mutate([id]) : undefined}
+                      onMarkRead={!log.read_at ? (id) => markReadMut.mutate([id]) : undefined}
+                      onMarkUnread={log.read_at ? (id) => markUnreadMut.mutate([id]) : undefined}
+                    />
+                  ))}
                 </div>
               </div>
-            )}
-
-            {/* Name */}
-            <Input
-              label={t('Channel Name')}
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder={`${t('My')} ${meta.label} ${t('Channel')}`}
-            />
-
-            {/* Dynamic config fields */}
-            <div className="space-y-3">
-              <span className="block text-xs font-medium text-[var(--text-secondary)]">
-                {meta.label} {t('Configuration')}
-              </span>
-              {meta.fields.map(f => (
-                <Input
-                  key={f.key}
-                  label={f.label}
-                  type={f.type === 'password' ? 'password' : 'text'}
-                  value={config[f.key] ?? ''}
-                  onChange={e => setConfig({ ...config, [f.key]: e.target.value })}
-                  placeholder={f.placeholder}
-                />
-              ))}
-            </div>
-
-            {/* Enabled toggle */}
-            <Toggle checked={enabled} onChange={setEnabled} label={enabled ? t('Enabled') : t('Disabled')} />
-
-            {/* Test result */}
-            {testResult && (
-              <GlassPanel className={cn(
-                'flex items-center gap-2 p-3 text-sm',
-                testResult.success ? 'bg-neon-green/10 text-neon-green border-neon-green/20' : 'bg-neon-red/10 text-neon-red border-neon-red/20',
-              )}>
-                {testResult.success ? <CheckCircle className="h-4 w-4 shrink-0" /> : <XCircle className="h-4 w-4 shrink-0" />}
-                <span>{testResult.message}</span>
-              </GlassPanel>
-            )}
-
-            {formError && <span className="text-sm text-neon-red block">{formError}</span>}
-
-            <div className="flex items-center gap-3 pt-2">
-              {isEdit && (
-                <Button
-                  variant="secondary"
-                  icon={<TestTube className="h-4 w-4" />}
-                  loading={testMut.isPending}
-                  onClick={handleTest}
-                >
-                  {testMut.isPending ? t('Testing…') : t('Test Connection')}
-                </Button>
-              )}
-              <div className="flex-1" />
-              <Button variant="ghost" onClick={onClose}>{t('Cancel')}</Button>
-              <Button
-                variant="primary"
-                loading={saveMut.isPending}
-                onClick={handleSubmit}
-              >
-                {saveMut.isPending ? t('Saving…') : isEdit ? t('Update') : t('Create')}
-              </Button>
-            </div>
+            ))}
           </div>
-        </FadeIn>
-      </div>
-    </Modal>
+        )}
+      </GlassPanel>
+    </div>
   );
 }
-
-// ─── Main page component ─────────────────────────────────────────────────────
 
 export default function NotificationsPage() {
   const { t } = useTranslation();
-  usePageTitle(t('Notifications'));
-  const toast = useToast();
+  usePageTitle(t('notifications.title', 'Notifications'));
 
-  const [showForm, setShowForm] = useState(false);
-  const [editingChannel, setEditingChannel] = useState<NotificationChannel | null>(null);
-  const [showLogs, setShowLogs] = useState(false);
-
-  // Queries
-  const { data: channels = [], isLoading, error } = useNotificationChannels();
-  const { data: stats } = useNotificationStats();
-  const { data: logs = [] } = useNotificationLogs();
-
-  // Mutations
-  const deleteMut = useDeleteChannel();
-  const toggleMut = useToggleChannel();
-  const testMut = useTestChannel();
-
-  // Log table columns
-  const logColumns: Column<NotificationLog>[] = useMemo(() => {
-    const channelMap: Record<number, NotificationChannel> = {};
-    channels.forEach(c => { channelMap[c.id] = c; });
-    return [
-      { key: 'time', header: t('Time'), render: (log) => <span className="whitespace-nowrap text-xs text-[var(--text-muted)]">{formatDateTime(log.created_at)}</span> },
-      { key: 'channel', header: t('Channel'), render: (log) => {
-        const ch = channelMap[log.channel_id];
-        if (!ch) return <span className="text-[var(--text-primary)]">{`#${log.channel_id}`}</span>;
-        const m = getChannelMeta(ch.kind);
-        const CIcon = m.icon;
-        return (
-          <div className="flex items-center gap-2 text-[var(--text-primary)]">
-            <CIcon className="h-3.5 w-3.5" style={{ color: m.color }} />
-            <span className="text-sm">{ch.name}</span>
-          </div>
-        );
-      }},
-      { key: 'title', header: t('Title'), render: (log) => <span className="text-sm text-[var(--text-primary)]">{log.title}</span> },
-      { key: 'status', header: t('Status'), render: (log) => <Badge variant={log.status === 'sent' ? 'success' : log.status === 'failed' ? 'danger' : 'warning'} size="sm">{log.status}</Badge> },
-      { key: 'error', header: t('Error'), render: (log) => <span className="text-xs text-neon-red/70 max-w-[200px] truncate block">{log.error}</span> },
-    ];
-  }, [channels, t]);
+  // Tab is in the URL so a deep link like /notifications?tab=channels works.
+  // push: true on tab changes — primary navigation should add a history entry.
+  const [tab, setTab] = useUrlEnum<InboxTab>('tab', INBOX_TABS, 'inbox');
+  const { data: vehicles = [] } = useVehicles();
+  const { data: rules = [] } = useAlertRules();
 
   return (
     <PageContainer
-      title={t('Notification Center')}
-      subtitle={t('Manage notification channels, view delivery logs, and monitor delivery stats')}
-      loading={isLoading}
-      error={error as Error | null}
-      actions={
-        <Button variant="primary" icon={<Plus className="h-4 w-4" />} onClick={() => { setEditingChannel(null); setShowForm(true); }}>
-          {t('Add Channel')}
-        </Button>
-      }
+      title={t('notifications.title', 'Notifications')}
+      subtitle={t('notifications.subtitle', 'Inbox of fired alerts plus delivery channels.')}
+      copyLink
     >
-      {/* ── Stats cards ──────────────────────────────────────────────── */}
-      <FadeIn>
-        {stats ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <MetricCard label={t('Total Sent')} value={stats.sent} icon={<CheckCircle className="h-4 w-4" />} color="green" />
-            <MetricCard label={t('Failed')} value={stats.failed} icon={<XCircle className="h-4 w-4" />} color="red" />
-            <MetricCard label={t('Pending')} value={stats.pending} icon={<Clock className="h-4 w-4" />} color="amber" />
-            <MetricCard label={t('Active Channels')} value={`${stats.enabled_channels}/${stats.total_channels}`} icon={<Bell className="h-4 w-4" />} color="cyan" />
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-20" />)}
-          </div>
-        )}
-      </FadeIn>
+      <TabNav
+        active={tab}
+        onChange={(k) => setTab(k as InboxTab, { push: true })}
+        tabs={[
+          { key: 'inbox', label: t('notifications.tab.inbox', 'Inbox'), icon: <Bell className="h-4 w-4" /> },
+          { key: 'archived', label: t('notifications.tab.archived', 'Archived'), icon: <Archive className="h-4 w-4" /> },
+          { key: 'channels', label: t('notifications.tab.channels', 'Channels'), icon: <Bell className="h-4 w-4" /> },
+        ]}
+      />
 
-      {/* ── Channel cards ────────────────────────────────────────────── */}
-      <FadeIn>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {isLoading && [1, 2, 3].map(i => <Skeleton key={i} className="h-48" />)}
-
-          {channels.map(ch => {
-            const meta = getChannelMeta(ch.kind);
-            const Icon = meta.icon;
-            const isTestingThis = testMut.isPending && testMut.variables === ch.id;
-            const configPreview = channelToFormConfig(ch);
-            return (
-              <GlassPanel
-                key={ch.id}
-                className={cn(
-                  'p-5 space-y-4 transition-all duration-300',
-                  ch.enabled ? 'ring-1 ring-white/[0.08]' : 'opacity-60',
-                )}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-xl p-2.5 ring-1" style={{ background: `${meta.color}15`, borderColor: `${meta.color}30` }}>
-                      <Icon className="h-5 w-5" style={{ color: meta.color }} />
-                    </div>
-                    <div>
-                      <span className="font-semibold text-[var(--text-primary)] block">{ch.name}</span>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-xs capitalize" style={{ color: meta.color }}>{ch.kind}</span>
-                        <Badge variant={ch.enabled ? 'success' : 'neutral'} size="sm">
-                          {ch.enabled ? t('Active') : t('Disabled')}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                  <Toggle
-                    checked={ch.enabled}
-                    onChange={() => toggleMut.mutate(ch.id, {
-                      onSuccess: () => toast.success(t(ch.enabled ? 'Channel disabled' : 'Channel enabled')),
-                      onError: () => toast.error(t('Failed to toggle channel')),
-                    })}
-                  />
-                </div>
-
-                {/* Config preview */}
-                <div className="space-y-1 rounded-lg bg-white/[0.02] p-2.5">
-                  {Object.entries(configPreview).slice(0, 3).map(([k, v]) => (
-                    <span key={k} className="text-xs truncate block text-[var(--text-muted)]">
-                      <span className="font-medium text-[var(--text-secondary)]">{k}:</span>{' '}
-                      {k.includes('token') || k.includes('key') || k.includes('password') ? '••••••••' : v}
-                    </span>
-                  ))}
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center gap-2 pt-2 border-t border-white/5">
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    icon={<TestTube className="h-3.5 w-3.5" />}
-                    loading={isTestingThis}
-                    onClick={() => testMut.mutate(ch.id, {
-                      onSuccess: (data) => {
-                        if (data?.success) toast.success(`${ch.name}: ${t('test sent successfully!')}`);
-                        else toast.error(`${ch.name}: ${t('test failed')}`, data?.error);
-                      },
-                      onError: () => toast.error(`${ch.name}: ${t('test failed')}`),
-                    })}
-                  >
-                    {isTestingThis ? t('Testing…') : t('Test')}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon={<Pencil className="h-3.5 w-3.5" />}
-                    onClick={() => { setEditingChannel(ch); setShowForm(true); }}
-                  >
-                    {t('Edit')}
-                  </Button>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    icon={<Trash2 className="h-3.5 w-3.5" />}
-                    className="ml-auto"
-                    onClick={() => deleteMut.mutate(ch.id, {
-                      onSuccess: () => toast.success(t('Channel deleted')),
-                      onError: () => toast.error(t('Failed to delete channel')),
-                    })}
-                  />
-                </div>
-              </GlassPanel>
-            );
-          })}
-
-          {!isLoading && channels.length === 0 && (
-            <div className="col-span-full">
-              <EmptyState
-                icon={<Bell className="h-8 w-8" />}
-                title={t('No channels configured')}
-                message={t('Add a notification channel to start receiving alerts via Discord, Slack, Telegram, Email, and more.')}
-              />
-            </div>
-          )}
-        </div>
-      </FadeIn>
-
-      {/* ── Delivery Log toggle ──────────────────────────────────────── */}
-      <FadeIn>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setShowLogs(!showLogs)}
-          icon={<BarChart3 className="h-4 w-4" />}
-        >
-          {t('Delivery Log')}
-          {showLogs ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </Button>
-      </FadeIn>
-
-      {/* ── Delivery Log table ───────────────────────────────────────── */}
-      {showLogs && (
-        <FadeIn>
-          <GlassPanel className="overflow-x-auto">
-            <DataTable
-              columns={logColumns}
-              data={logs}
-              keyExtractor={(log) => log.id}
-              pagination={{ defaultPageSize: 50 }}
-              emptyMessage={t('No delivery logs yet')}
-            />
-          </GlassPanel>
-        </FadeIn>
+      {tab === 'inbox' && (
+        <InboxBody key="inbox" archived={false} vehicles={vehicles} rules={rules} />
       )}
-
-      {/* ── Add/Edit Channel Modal ───────────────────────────────────── */}
-      {showForm && (
-        <ChannelFormModal
-          channel={editingChannel}
-          onClose={() => { setShowForm(false); setEditingChannel(null); }}
-          onSaved={() => { setShowForm(false); setEditingChannel(null); }}
-          t={t}
-        />
+      {tab === 'archived' && (
+        <InboxBody key="archived" archived={true} vehicles={vehicles} rules={rules} />
       )}
+      {tab === 'channels' && <NotificationChannelsView />}
     </PageContainer>
   );
 }

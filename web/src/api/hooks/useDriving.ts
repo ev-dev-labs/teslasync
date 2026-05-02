@@ -1,8 +1,9 @@
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import { STALE_TIMES, INTERVALS } from '@/lib/constants';
 import { useToast } from '@/components/feedback/Toast';
+import { useMutationToast } from './_toastHelpers';
 import type { Drive as ApiDrive } from '../types';
 import type {
   Drive,
@@ -221,3 +222,37 @@ export function useGeocodeSearch(query: string, enabled = true) {
     select: safeArray,
   });
 }
+
+/**
+ * Result envelope for the standardized bulk endpoints (Phase-40 / Prompt 51).
+ * Exactly one of `deleted` / `updated` is populated to match the verb of the
+ * underlying endpoint; `failed` enumerates per-id failures with a stable
+ * machine-readable reason ("not_found", "forbidden").
+ */
+export interface BulkOperationResult {
+  deleted?: number;
+  updated?: number;
+  failed?: Array<{ id: number; reason: string }>;
+}
+
+/** Bulk delete drives. POST {ids:number[]} → BulkOperationResult. */
+export function useBulkDeleteDrives() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: (ids: number[]) =>
+      request<BulkOperationResult>('/drives/bulk', {
+        method: 'DELETE',
+        body: JSON.stringify({ ids }),
+      }),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ['drives'] });
+      success('toast.bulk.delete.success', '{{count}} deleted', {
+        count: res.deleted ?? 0,
+      });
+    },
+    onError: (err) =>
+      error(err, 'toast.bulk.delete.error', 'Failed to delete selection'),
+  });
+}
+

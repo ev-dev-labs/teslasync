@@ -149,4 +149,15 @@ export const ANALYTICS_WIDGETS: WidgetDef[] = [
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('../AnalyticsSummaryWidget')),
   },
+  {
+    id: 'recently-unlocked-achievements',
+    name: 'Recently Unlocked',
+    description: 'Most recently unlocked achievements — click to view in Lifetime Stats',
+    icon: Trophy,
+    category: 'analytics',
+    defaultSize: { cols: 2, rows: 2 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 4 },
+    component: lazy(() => import('../RecentlyUnlockedAchievements')),
+  },
 ];

@@ -13,6 +13,11 @@ const badgeSizes = {
   sm: 'px-1.5 py-0.5 text-xs',
   md: 'px-2 py-0.5 text-xs',
   lg: 'px-2.5 py-1 text-sm',
+  // Density-aware sizing follows the user's `ui_density` setting.
+  // (Phase 40 / Prompt 44.) Uses tighter padding multipliers than
+  // Button — a Badge sits inline with text, so the body size token is
+  // scaled down via text-xs for legibility.
+  auto: 'px-d-pad-x py-d-pad-y text-xs',
 } as const;
 
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {

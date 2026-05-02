@@ -1,11 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Gauge, TrendingUp, Calendar, BarChart3, AlertCircle } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Select, DataTable, type Column } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { GlassPanel, DataTable, type Column } from '@/components/ui';
+import { MetricCard, DataFreshnessAuto } from '@/components/data-display';
 import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { FadeIn } from '@/components/motion';
@@ -16,8 +16,9 @@ import {
   AREA_DEFAULTS, areaGradient,
 } from '@/components/charts';
 
-import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { useSettings } from '@/hooks/useSettings';
 import { formatDate } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
@@ -60,17 +61,16 @@ export default function MileagePage() {
 
   const { convertDistance, distanceUnit } = useSettings();
 
-  const [vehicleId, setVehicleId] = useState('');
+  // Phase 40 / Prompt 16: header VehiclePicker is the source of truth.
+  const { vehicleId } = useSelectedVehicle();
+  const activeId = vehicleId != null ? String(vehicleId) : '';
 
-  const { data: vehicles } = useVehicles();
-
-  const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
-
-  const { data: stats, isLoading, error: statsError } = useQuery<MileageStats>({
+  const statsQuery = useQuery<MileageStats>({
     queryKey: ['mileage-stats', activeId],
     queryFn: () => request<MileageStats>(`/mileage/stats?vehicle_id=${activeId}`),
     enabled: activeId !== '',
   });
+  const { data: stats, isLoading, error: statsError } = statsQuery;
 
   const { data: entries, error: entriesError } = useQuery<MileageEntry[]>({
     queryKey: ['mileage-entries', activeId],
@@ -118,27 +118,18 @@ export default function MileagePage() {
     { key: 'dailyAvg', header: `${t('Daily Avg')} (${distanceUnit})`, render: (r) => fmtNumber(r.dailyAvg), sortable: true },
   ], [t, distanceUnit]);
 
-  const vehicleOptions = (vehicles ?? []).map((v) => ({
-    value: String(v.id),
-    label: v.display_name || v.vin,
-  }));
-
-  const selector = vehicles && vehicles.length > 1 ? (
-    <Select
-      options={vehicleOptions}
-      value={activeId}
-      onChange={(e) => setVehicleId(e.target.value)}
-      placeholder={t('Select Vehicle')}
-    />
-  ) : undefined;
+  // Defensive guard: no vehicle selected (Phase 40 / Prompt 18).
+  if (vehicleId == null) {
+    return <NoVehicleSelected pageTitle={t('mileage.title', 'Mileage')} />;
+  }
 
   return (
     <PageContainer
       title={t('mileage.title', 'Mileage')}
       subtitle={t('mileage.subtitle', 'Daily and monthly distance tracking')}
-      actions={selector}
       loading={isLoading}
       error={null}
+      actions={<DataFreshnessAuto query={statsQuery} />}
     >
       {anyError && (
         <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
@@ -148,7 +139,7 @@ export default function MileagePage() {
 
       {/* Summary metric cards */}
       <FadeIn>
-        <div className={cn('grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6')}>
+        <div className={cn('grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6')}>
           {isLoading
             ? Array.from({ length: 4 }).map((_, i) => (
                 <Skeleton key={i} height={96} className="rounded-xl" />

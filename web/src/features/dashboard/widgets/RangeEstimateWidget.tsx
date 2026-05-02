@@ -24,7 +24,7 @@ export default function RangeEstimateWidget({ vehicleId }: WidgetProps) {
               <p className="text-[10px] text-white/40 uppercase tracking-wider">
                 {t('widget.ratedRange', 'Rated Range')}
               </p>
-              <p className="text-xl font-bold text-neon-cyan">
+              <p className="text-xl font-bold text-cyan-300">
                 {fmtNumber(convertDistance(state.rated_range), 0)} {distanceUnit}
               </p>
             </div>

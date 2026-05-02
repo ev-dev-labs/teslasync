@@ -18,6 +18,7 @@ import { Select } from '@/components/ui/Select';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 
 import { MetricCard } from '@/components/data-display/MetricCard';
+import { Currency } from '@/components/data-display';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { AlertBanner } from '@/components/feedback/AlertBanner';
@@ -26,6 +27,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime, formatDate } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { getErrorMessage } from '@/lib/errorMessage';
+import { useSettings } from '@/hooks/useSettings';
 import { request } from '@/api/client';
 import {
   Wrench, AlertTriangle, CheckCircle, Clock, ListChecks,
@@ -278,7 +280,7 @@ function buildServiceColumns(t: (key: string) => string): Column<ServiceRecord>[
       header: t('Cost'),
       sortable: true,
       render: (r) => (
-        <span className="text-sm tabular-nums">${fmtNumber(r.cost, 2)}</span>
+        <Currency value={r.cost} className="text-sm tabular-nums" />
       ),
     },
     {
@@ -342,6 +344,7 @@ function ItemsSkeleton() {
 export default function MaintenancePage() {
   const { t } = useTranslation();
   usePageTitle(t('Maintenance'));
+  const { currencySymbol } = useSettings();
 
   // ── Vehicle selection ──────────────────────────────────────────────────
   const { data: vehicles, error: vehiclesError } = useQuery({
@@ -587,17 +590,17 @@ export default function MaintenancePage() {
                 <div className="grid grid-cols-3 gap-3">
                   <MetricCard
                     label={t('Total Spent')}
-                    value={`$${fmtNumber(costStats.totalCost, 0)}`}
+                    value={`${currencySymbol}${fmtNumber(costStats.totalCost, 0)}`}
                     color="green"
                   />
                   <MetricCard
                     label={t('Annual Est.')}
-                    value={`$${fmtNumber(costStats.annualCost, 0)}/yr`}
+                    value={`${currencySymbol}${fmtNumber(costStats.annualCost, 0)}/yr`}
                     color="cyan"
                   />
                   <MetricCard
                     label={t('Avg / Service')}
-                    value={`$${fmtNumber(costStats.avgPerService, 0)}`}
+                    value={`${currencySymbol}${fmtNumber(costStats.avgPerService, 0)}`}
                     color="purple"
                   />
                 </div>

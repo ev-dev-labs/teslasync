@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Fingerprint, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { ToolCard } from '../ToolCard'
-import { CopyButton } from '../CopyButton'
+import { CopyButton } from '@/components/ui'
 
 export function UuidGeneratorTool() {
   const { t } = useTranslation()
@@ -24,7 +24,7 @@ export function UuidGeneratorTool() {
           <div className="space-y-1">
             {uuids.map((u, i) => (
               <div key={`${u}-${i}`} className="flex items-center gap-2 rounded bg-black/20 px-3 py-1.5">
-                <code className="flex-1 text-xs font-mono text-neon-purple">{u}</code>
+                <code className="flex-1 text-xs font-mono text-purple-300">{u}</code>
                 <CopyButton text={u} />
               </div>
             ))}

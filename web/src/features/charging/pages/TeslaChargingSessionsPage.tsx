@@ -1,8 +1,8 @@
-import { useState, useMemo, lazy, Suspense } from 'react';
+import { useState, useMemo, useCallback, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Zap, DollarSign, RefreshCw, MapPin, TrendingUp, Gauge, Clock,
-  Building2, Info,
+  Building2, Info, Download,
 } from 'lucide-react';
 import { PageContainer, Grid } from '@/components/layout';
 import { GlassPanel, Button, Select, DataTable, type Column } from '@/components/ui';
@@ -96,6 +96,7 @@ export default function TeslaChargingSessionsPage() {
         <span className="text-sm text-white/90">{formatDateTime(row.charge_start_datetime)}</span>
       ),
       sortable: true,
+      visibleOnMobile: true,
     },
     {
       key: 'location',
@@ -108,6 +109,7 @@ export default function TeslaChargingSessionsPage() {
           </span>
         </div>
       ),
+      visibleOnMobile: true,
     },
     {
       key: 'vin',
@@ -117,6 +119,7 @@ export default function TeslaChargingSessionsPage() {
           {row.vin ? `…${row.vin.slice(-6)}` : '—'}
         </span>
       ),
+      defaultVisible: false,
     },
     {
       key: 'energy',
@@ -127,6 +130,7 @@ export default function TeslaChargingSessionsPage() {
         </span>
       ),
       sortable: true,
+      visibleOnMobile: true,
     },
     {
       key: 'peakPower',
@@ -158,6 +162,7 @@ export default function TeslaChargingSessionsPage() {
         </span>
       ),
       sortable: true,
+      visibleOnMobile: true,
     },
     {
       key: 'rate',
@@ -167,6 +172,7 @@ export default function TeslaChargingSessionsPage() {
           {row.per_kwh_rate != null ? `$${fmtNumber(row.per_kwh_rate, 3)}` : '—'}
         </span>
       ),
+      defaultVisible: false,
     },
     {
       key: 'type',
@@ -181,6 +187,7 @@ export default function TeslaChargingSessionsPage() {
 
   const [sortKey, setSortKey] = useState<string>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [selectedKeys, setSelectedKeys] = useState<(string | number)[]>([]);
 
   const sortedSessions = useMemo(() => {
     const sorted = [...sessions];
@@ -215,6 +222,41 @@ export default function TeslaChargingSessionsPage() {
       setSortDir('desc');
     }
   };
+
+  // CSV export of selected sessions for client-side analysis / Tesla audit.
+  const exportSelectedCsv = useCallback(
+    (rows: TeslaChargingSession[]) => {
+      if (rows.length === 0) return;
+      const header = [
+        'date', 'location', 'vin', 'energy_kwh', 'peak_power_kw',
+        'duration_seconds', 'cost', 'currency', 'per_kwh_rate', 'charger_type',
+      ];
+      const lines = [header.join(',')];
+      for (const r of rows) {
+        const fields = [
+          r.charge_start_datetime,
+          (r.site_location_name ?? '').replace(/[",\n]/g, ' '),
+          r.vin ?? '',
+          r.energy_added_kwh != null ? String(r.energy_added_kwh) : '',
+          r.peak_power_kw != null ? String(r.peak_power_kw) : '',
+          r.charge_duration_s != null ? String(r.charge_duration_s) : '',
+          r.total_cost != null ? String(r.total_cost) : '',
+          r.currency_code ?? '',
+          r.per_kwh_rate != null ? String(r.per_kwh_rate) : '',
+          r.charger_type ?? '',
+        ];
+        lines.push(fields.map(f => `"${String(f).replace(/"/g, '""')}"`).join(','));
+      }
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `tesla-fleet-sessions-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    },
+    [],
+  );
 
   return (
     <PageContainer
@@ -381,6 +423,23 @@ export default function TeslaChargingSessionsPage() {
               sortDir={sortDir}
               onSort={handleSort}
               pagination={{ defaultPageSize: 25, pageSizeOptions: [25, 50, 100] }}
+              tableId="tesla-charging-sessions"
+              showColumnsMenu
+              stickyHeader
+              maxHeight={600}
+              selectable="multi"
+              selectedKeys={selectedKeys}
+              onSelectionChange={setSelectedKeys}
+              bulkActions={(rows) => (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  icon={<Download className="h-3.5 w-3.5" />}
+                  onClick={() => exportSelectedCsv(rows)}
+                >
+                  {t('table.bulkActions.exportCsv', 'Export CSV')}
+                </Button>
+              )}
             />
           ) : (
             <EmptyState

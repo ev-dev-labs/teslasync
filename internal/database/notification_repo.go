@@ -3,9 +3,11 @@ package database
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
@@ -351,9 +353,22 @@ func (r *NotificationRepo) CreateLog(ctx context.Context, l *models.Notification
 	).Scan(&l.ID)
 }
 
+// notificationLogColumns is the canonical SELECT list for notification_logs
+// rows, matching the field order used by scanNotificationLog. Centralized so
+// every read path returns the same shape (incl. read_at / archived_at added in
+// Phase 40 / Prompt 29).
+const notificationLogColumns = `id, channel_id, alert_id, title, message, status, error, created_at, sent_at, read_at, archived_at`
+
+func scanNotificationLog(rows pgx.Row, l *models.NotificationLog) error {
+	return rows.Scan(
+		&l.ID, &l.ChannelID, &l.AlertID, &l.Title, &l.Message, &l.Status, &l.Error,
+		&l.CreatedAt, &l.SentAt, &l.ReadAt, &l.ArchivedAt,
+	)
+}
+
 func (r *NotificationRepo) GetLogs(ctx context.Context, limit, offset int) ([]*models.NotificationLog, error) {
 	rows, err := r.db.Pool.Query(ctx,
-		`SELECT id, channel_id, alert_id, title, message, status, error, created_at, sent_at
+		`SELECT `+notificationLogColumns+`
 		 FROM notification_logs ORDER BY created_at DESC LIMIT $1 OFFSET $2`, limit, offset,
 	)
 	if err != nil {
@@ -364,7 +379,7 @@ func (r *NotificationRepo) GetLogs(ctx context.Context, limit, offset int) ([]*m
 	var logs []*models.NotificationLog
 	for rows.Next() {
 		l := &models.NotificationLog{}
-		if err := rows.Scan(&l.ID, &l.ChannelID, &l.AlertID, &l.Title, &l.Message, &l.Status, &l.Error, &l.CreatedAt, &l.SentAt); err != nil {
+		if err := scanNotificationLog(rows, l); err != nil {
 			return nil, err
 		}
 		logs = append(logs, l)
@@ -374,7 +389,7 @@ func (r *NotificationRepo) GetLogs(ctx context.Context, limit, offset int) ([]*m
 
 func (r *NotificationRepo) GetLogsByChannel(ctx context.Context, channelID int64, limit int) ([]*models.NotificationLog, error) {
 	rows, err := r.db.Pool.Query(ctx,
-		`SELECT id, channel_id, alert_id, title, message, status, error, created_at, sent_at
+		`SELECT `+notificationLogColumns+`
 		 FROM notification_logs WHERE channel_id=$1 ORDER BY created_at DESC LIMIT $2`, channelID, limit,
 	)
 	if err != nil {
@@ -385,12 +400,210 @@ func (r *NotificationRepo) GetLogsByChannel(ctx context.Context, channelID int64
 	var logs []*models.NotificationLog
 	for rows.Next() {
 		l := &models.NotificationLog{}
-		if err := rows.Scan(&l.ID, &l.ChannelID, &l.AlertID, &l.Title, &l.Message, &l.Status, &l.Error, &l.CreatedAt, &l.SentAt); err != nil {
+		if err := scanNotificationLog(rows, l); err != nil {
 			return nil, err
 		}
 		logs = append(logs, l)
 	}
 	return logs, rows.Err()
+}
+
+// NotificationLogFilters describes the inbox query the frontend can express
+// via GET /notifications query params. All fields are optional; zero values
+// mean "no constraint". The Archived field is a tri-state (nil = both, false
+// = inbox only, true = archived only) because the inbox view defaults to the
+// non-archived list.
+type NotificationLogFilters struct {
+	Severities []string  // wire severities as stored on alert_rules: info, warn, critical
+	VehicleIDs []int64   // join via alert_rules.vehicle_id
+	RuleIDs    []int64   // notification_logs.alert_id (== alert_rules.id)
+	From       time.Time // inclusive lower bound on created_at
+	To         time.Time // inclusive upper bound on created_at
+	Read       *bool     // nil = both, false = unread only, true = read only
+	Archived   *bool     // nil = both, false = inbox only, true = archived only
+	Query      string    // ILIKE %query% across title and message
+	Limit      int
+	Offset     int
+}
+
+// GetLogsFiltered returns notification_logs matching the supplied filters.
+// Severity / vehicle filters are applied via a LEFT JOIN on alert_rules so
+// rows with NULL alert_id are still returned when no severity or vehicle
+// constraint is set, and are excluded when one is.
+func (r *NotificationRepo) GetLogsFiltered(ctx context.Context, f NotificationLogFilters) ([]*models.NotificationLog, error) {
+	if f.Limit <= 0 || f.Limit > 1000 {
+		f.Limit = 50
+	}
+	if f.Offset < 0 {
+		f.Offset = 0
+	}
+
+	needsRuleJoin := len(f.Severities) > 0 || len(f.VehicleIDs) > 0
+	var (
+		clauses []string
+		args    []any
+	)
+	addClause := func(clause string, vals ...any) {
+		clauses = append(clauses, clause)
+		args = append(args, vals...)
+	}
+	ph := func(offset int) string { return fmt.Sprintf("$%d", len(args)+offset) }
+
+	if len(f.RuleIDs) > 0 {
+		addClause("nl.alert_id = ANY("+ph(1)+")", f.RuleIDs)
+	}
+	if !f.From.IsZero() {
+		addClause("nl.created_at >= "+ph(1), f.From.UTC())
+	}
+	if !f.To.IsZero() {
+		addClause("nl.created_at <= "+ph(1), f.To.UTC())
+	}
+	if f.Read != nil {
+		if *f.Read {
+			clauses = append(clauses, "nl.read_at IS NOT NULL")
+		} else {
+			clauses = append(clauses, "nl.read_at IS NULL")
+		}
+	}
+	if f.Archived != nil {
+		if *f.Archived {
+			clauses = append(clauses, "nl.archived_at IS NOT NULL")
+		} else {
+			clauses = append(clauses, "nl.archived_at IS NULL")
+		}
+	}
+	if q := strings.TrimSpace(f.Query); q != "" {
+		pattern := "%" + q + "%"
+		// Reuse a single placeholder across both columns to avoid duplicating
+		// the bind value.
+		clauses = append(clauses, "(nl.title ILIKE "+ph(1)+" OR nl.message ILIKE "+ph(1)+")")
+		args = append(args, pattern)
+	}
+	if needsRuleJoin {
+		if len(f.Severities) > 0 {
+			addClause("ar.severity = ANY("+ph(1)+")", f.Severities)
+		}
+		if len(f.VehicleIDs) > 0 {
+			addClause("ar.vehicle_id = ANY("+ph(1)+")", f.VehicleIDs)
+		}
+	}
+
+	const aliasedCols = `nl.id, nl.channel_id, nl.alert_id, nl.title, nl.message, nl.status, nl.error,
+		nl.created_at, nl.sent_at, nl.read_at, nl.archived_at`
+
+	query := "SELECT " + aliasedCols + " FROM notification_logs nl"
+	if needsRuleJoin {
+		query += " LEFT JOIN alert_rules ar ON ar.id = nl.alert_id"
+	}
+	if len(clauses) > 0 {
+		query += " WHERE " + strings.Join(clauses, " AND ")
+	}
+	query += " ORDER BY nl.created_at DESC LIMIT " + ph(1)
+	args = append(args, f.Limit)
+	query += " OFFSET " + ph(1)
+	args = append(args, f.Offset)
+
+	rows, err := r.db.Pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("query notification logs: %w", err)
+	}
+	defer rows.Close()
+
+	var logs []*models.NotificationLog
+	for rows.Next() {
+		l := &models.NotificationLog{}
+		if err := scanNotificationLog(rows, l); err != nil {
+			return nil, fmt.Errorf("scan notification log: %w", err)
+		}
+		logs = append(logs, l)
+	}
+	return logs, rows.Err()
+}
+
+// GetUnreadCount returns the number of non-archived, non-read notification
+// log entries — used by the header bell badge.
+func (r *NotificationRepo) GetUnreadCount(ctx context.Context) (int64, error) {
+	var n int64
+	err := r.db.Pool.QueryRow(ctx,
+		`SELECT COUNT(*) FROM notification_logs WHERE read_at IS NULL AND archived_at IS NULL`,
+	).Scan(&n)
+	if err != nil {
+		return 0, err
+	}
+	return n, nil
+}
+
+// BulkSetRead flips read_at for a list of ids. read=true sets read_at=now()
+// (idempotent — preserves the original timestamp via COALESCE), read=false
+// clears it. Returns the number of rows affected.
+func (r *NotificationRepo) BulkSetRead(ctx context.Context, ids []int64, read bool) (int64, error) {
+	if len(ids) == 0 {
+		return 0, nil
+	}
+	var (
+		ct  pgconn.CommandTag
+		err error
+	)
+	if read {
+		ct, err = r.db.Pool.Exec(ctx,
+			`UPDATE notification_logs SET read_at = COALESCE(read_at, $1) WHERE id = ANY($2)`,
+			time.Now().UTC(), ids,
+		)
+	} else {
+		ct, err = r.db.Pool.Exec(ctx,
+			`UPDATE notification_logs SET read_at = NULL WHERE id = ANY($1)`, ids,
+		)
+	}
+	if err != nil {
+		return 0, fmt.Errorf("bulk set read: %w", err)
+	}
+	return ct.RowsAffected(), nil
+}
+
+// BulkSetArchived flips archived_at for a list of ids. Same semantics as
+// BulkSetRead. Archiving an unread row also marks it read so it stops
+// counting toward the header badge.
+func (r *NotificationRepo) BulkSetArchived(ctx context.Context, ids []int64, archived bool) (int64, error) {
+	if len(ids) == 0 {
+		return 0, nil
+	}
+	var (
+		ct  pgconn.CommandTag
+		err error
+	)
+	if archived {
+		now := time.Now().UTC()
+		ct, err = r.db.Pool.Exec(ctx,
+			`UPDATE notification_logs
+			    SET archived_at = COALESCE(archived_at, $1),
+			        read_at     = COALESCE(read_at, $1)
+			  WHERE id = ANY($2)`,
+			now, ids,
+		)
+	} else {
+		ct, err = r.db.Pool.Exec(ctx,
+			`UPDATE notification_logs SET archived_at = NULL WHERE id = ANY($1)`, ids,
+		)
+	}
+	if err != nil {
+		return 0, fmt.Errorf("bulk set archived: %w", err)
+	}
+	return ct.RowsAffected(), nil
+}
+
+// BulkDelete hard-deletes notification log rows. Intended for admin use only;
+// the inbox UX prefers archive over delete.
+func (r *NotificationRepo) BulkDelete(ctx context.Context, ids []int64) (int64, error) {
+	if len(ids) == 0 {
+		return 0, nil
+	}
+	ct, err := r.db.Pool.Exec(ctx,
+		`DELETE FROM notification_logs WHERE id = ANY($1)`, ids,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("bulk delete logs: %w", err)
+	}
+	return ct.RowsAffected(), nil
 }
 
 func (r *NotificationRepo) GetStats(ctx context.Context) (map[string]interface{}, error) {
@@ -477,4 +690,105 @@ func (r *ChatRepo) GetSessions(ctx context.Context, limit int) ([]string, error)
 		sessions = append(sessions, s)
 	}
 	return sessions, rows.Err()
+}
+
+// ListSessions returns rich per-session metadata (title, message count,
+// timestamps, first user message preview) used to render the chatbot
+// sidebar. Sessions are ordered by last activity (newest first).
+//
+// The query joins chatbot_messages aggregates against the optional
+// chatbot_sessions metadata row (LEFT JOIN — sessions only appear in
+// chatbot_sessions when the user has explicitly renamed them).
+//
+// first_message is the earliest *user* message in the session, used as a
+// fallback display title when no explicit title has been set. Limited to
+// the first 120 chars to keep the wire payload small.
+func (r *ChatRepo) ListSessions(ctx context.Context, limit int) ([]*models.ChatSessionInfo, error) {
+	rows, err := r.db.Pool.Query(ctx, `
+WITH msg_stats AS (
+    SELECT
+        session_id,
+        COUNT(*)::int        AS message_count,
+        MAX(created_at)      AS last_message_at,
+        MIN(created_at)      AS created_at
+    FROM chatbot_messages
+    GROUP BY session_id
+), first_user AS (
+    SELECT DISTINCT ON (session_id) session_id, content
+    FROM chatbot_messages
+    WHERE role = 'user'
+    ORDER BY session_id, created_at ASC
+)
+SELECT
+    s.session_id,
+    cs.title,
+    LEFT(fu.content, 120) AS first_message,
+    s.message_count,
+    s.last_message_at,
+    s.created_at
+FROM msg_stats s
+LEFT JOIN chatbot_sessions cs ON cs.session_id = s.session_id
+LEFT JOIN first_user fu ON fu.session_id = s.session_id
+ORDER BY s.last_message_at DESC
+LIMIT $1`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var sessions []*models.ChatSessionInfo
+	for rows.Next() {
+		s := &models.ChatSessionInfo{}
+		if err := rows.Scan(&s.ID, &s.Title, &s.FirstMessage, &s.MessageCount, &s.LastMessageAt, &s.CreatedAt); err != nil {
+			return nil, err
+		}
+		sessions = append(sessions, s)
+	}
+	return sessions, rows.Err()
+}
+
+// RenameSession upserts the title for a session. Passing an empty string
+// clears the title (the row stays so other metadata is preserved); the
+// frontend falls back to the first user message in that case. Returns
+// pgx.ErrNoRows-equivalent semantics — i.e. nil error even when the
+// session has no messages — because the metadata row is independent of
+// the message history.
+func (r *ChatRepo) RenameSession(ctx context.Context, sessionID, title string) error {
+	trimmed := strings.TrimSpace(title)
+	if trimmed == "" {
+		// Clear the title; keep the metadata row so created_at survives.
+		_, err := r.db.Pool.Exec(ctx, `
+INSERT INTO chatbot_sessions (session_id, title, updated_at)
+VALUES ($1, NULL, now())
+ON CONFLICT (session_id) DO UPDATE SET title = NULL, updated_at = now()`,
+			sessionID)
+		return err
+	}
+	if len([]rune(trimmed)) > 120 {
+		trimmed = string([]rune(trimmed)[:120])
+	}
+	_, err := r.db.Pool.Exec(ctx, `
+INSERT INTO chatbot_sessions (session_id, title, updated_at)
+VALUES ($1, $2, now())
+ON CONFLICT (session_id) DO UPDATE SET title = EXCLUDED.title, updated_at = now()`,
+		sessionID, trimmed)
+	return err
+}
+
+// DeleteSession removes both the message history and any sidecar metadata
+// for a session. The two tables are not FK-linked (see migration 000166)
+// so we issue separate DELETEs inside a transaction to keep them in sync.
+func (r *ChatRepo) DeleteSession(ctx context.Context, sessionID string) error {
+	tx, err := r.db.Pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck // ignored on commit
+	if _, err := tx.Exec(ctx, `DELETE FROM chatbot_messages WHERE session_id = $1`, sessionID); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM chatbot_sessions WHERE session_id = $1`, sessionID); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
 }

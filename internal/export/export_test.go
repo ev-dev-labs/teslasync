@@ -33,11 +33,21 @@ func TestJobTypeConstants(t *testing.T) {
 		{TypeAnalytics, "analytics"},
 		{TypeImportDrives, "import_drives"},
 		{TypeImportCharging, "import_charging"},
+		{TypeAccount, "account"},
 	}
 	for _, tt := range tests {
 		if string(tt.jobType) != tt.want {
 			t.Errorf("JobType %v = %q, want %q", tt.jobType, string(tt.jobType), tt.want)
 		}
+	}
+}
+
+func TestAccountSchemaVersion(t *testing.T) {
+	if AccountSchemaVersion == "" {
+		t.Error("AccountSchemaVersion must not be empty")
+	}
+	if MaxAccountRowsPerTable <= 0 {
+		t.Errorf("MaxAccountRowsPerTable must be positive, got %d", MaxAccountRowsPerTable)
 	}
 }
 

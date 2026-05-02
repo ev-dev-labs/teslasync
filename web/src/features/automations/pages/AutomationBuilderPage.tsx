@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   AlertTriangle,
@@ -18,11 +18,14 @@ import {
   Toggle,
   Textarea as UiTextarea,
 } from '@/components/ui';
-import { AlertBanner, EmptyState } from '@/components/feedback';
+import { AlertBanner, DraftRecoveryBanner, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { FormSection } from '@/components/forms';
-import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDirtyForm } from '@/hooks/useDirtyForm';
+import { useFormDraft } from '@/hooks/useFormDraft';
+import { useConfirm } from '@/hooks/useConfirm';
+import { ConfirmDialog } from '@/components/ui';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useNotificationChannels } from '@/api/hooks/useNotifications';
 import {
@@ -262,36 +265,78 @@ export default function AutomationBuilderPage() {
   const { data: channels } = useNotificationChannels();
   const { data: preset } = useAutomationPreset(presetId);
 
-  const breadcrumbs = useBreadcrumbs({
+  const breadcrumbLabels = {
     '/automations/:id/edit': existingAutomation?.name
       ? t('automations.builder.editBreadcrumb', 'Edit: {{name}}', {
         name: existingAutomation.name,
       })
       : undefined,
-  });
+  };
 
   const createMutation = useCreateAutomationFull();
   const updateMutation = useUpdateAutomationFull();
   const testRunMutation = useTestRunAutomation();
 
-  const [form, setForm] = useState<FormState>(getInitialForm);
+  // Phase-40 / Prompt 55 — `useFormDraft` autosaves the in-progress
+  // automation to localStorage so a tab close, SW reload, or auth redirect
+  // doesn't destroy the user's work. Scoped per-automation (or
+  // "new"/"preset:X") so two tabs editing different automations keep
+  // separate drafts. Persistence is gated on `dirty && hydrated && !isSaving`
+  // so we don't echo server data back to storage as a "draft".
+  const draftKey = isEdit
+    ? `automation:edit:${automationId ?? 'unknown'}`
+    : presetId
+      ? `automation:preset:${presetId}`
+      : 'automation:new';
+
   const [hydrated, setHydrated] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [conflicts, setConflicts] = useState<AutomationConflict[]>([]);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedId, setSavedId] = useState<number | null>(null);
 
+  const createMutation_isPendingRef = useRef(createMutation.isPending);
+  createMutation_isPendingRef.current = createMutation.isPending;
+  const updateMutation_isPendingRef = useRef(updateMutation.isPending);
+  updateMutation_isPendingRef.current = updateMutation.isPending;
+  const dirtyRef = useRef(dirty);
+  dirtyRef.current = dirty;
+  const hydratedRef = useRef(hydrated);
+  hydratedRef.current = hydrated;
+
+  const {
+    value: form,
+    setValue: setFormValue,
+    hasDraft,
+    draftSavedAt,
+    discardDraft,
+  } = useFormDraft<FormState>(draftKey, getInitialForm(), {
+    version: 1,
+    debounceMs: 1500,
+    skipPersist: () =>
+      createMutation_isPendingRef.current
+      || updateMutation_isPendingRef.current
+      || !hydratedRef.current
+      || !dirtyRef.current,
+  });
+
+  // For edits and preset installs, the canonical source of truth is the
+  // server payload / preset definition — drop any restored draft as soon as
+  // we know the real source data, so the user isn't editing a stale draft.
+  // (For brand-new automations with no preset, drafts are the whole point.)
   useEffect(() => {
     if (isEdit && existingAutomation && !hydrated) {
-      setForm(automationToForm(existingAutomation));
+      discardDraft();
+      setFormValue(automationToForm(existingAutomation));
       setConflicts([]);
       setHydrated(true);
     }
-  }, [existingAutomation, hydrated, isEdit]);
+  }, [discardDraft, existingAutomation, hydrated, isEdit, setFormValue]);
 
   useEffect(() => {
     if (!isEdit && preset && !hydrated) {
-      setForm({
+      discardDraft();
+      setFormValue({
         name: preset.name,
         description: preset.description,
         vehicle_id: null,
@@ -308,20 +353,30 @@ export default function AutomationBuilderPage() {
       });
       setHydrated(true);
     }
-  }, [hydrated, isEdit, preset]);
+  }, [discardDraft, hydrated, isEdit, preset, setFormValue]);
+
+  // For brand-new automations (no `id`, no `preset`), `useFormDraft` already
+  // hydrated the form value from any stored draft on mount. Mark hydrated
+  // immediately so further user edits start being autosaved. If a draft was
+  // restored, surface the dirty flag so the user can see their work and the
+  // unsaved-changes guard kicks in.
+  useEffect(() => {
+    if (isEdit || presetId || hydrated) return;
+    if (hasDraft) setDirty(true);
+    setHydrated(true);
+  }, [hasDraft, hydrated, isEdit, presetId]);
 
   useEffect(() => {
     setHydrated(false);
   }, [automationId, presetId]);
 
-  useEffect(() => {
-    if (!dirty) return;
-    const handler = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-    };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, [dirty]);
+  // Browser-level unsaved-changes guard. Replaces the inline beforeunload
+  // wiring; also exposes localized strings reused by the in-app discard
+  // confirm dialog below.
+  const dirtyForm = useDirtyForm(dirty);
+  const { confirm: confirmDiscard, dialogProps: discardDialogProps } = useConfirm();
+
+  const isSaving = createMutation.isPending || updateMutation.isPending;
 
   const vehicleOptions = useMemo(() => {
     const options = (vehicles ?? []).map((vehicle) => ({
@@ -351,9 +406,9 @@ export default function AutomationBuilderPage() {
   const notificationChannels = channels ?? [];
 
   const update = useCallback(<K extends keyof FormState>(key: K, value: FormState[K]) => {
-    setForm((previous) => ({ ...previous, [key]: value }));
+    setFormValue((previous) => ({ ...previous, [key]: value }));
     setDirty(true);
-  }, []);
+  }, [setFormValue]);
 
   const handleTriggerKindChange = useCallback(
     (nextKind: string) => {
@@ -387,8 +442,6 @@ export default function AutomationBuilderPage() {
     return null;
   }, [form, t]);
 
-  const isSaving = createMutation.isPending || updateMutation.isPending;
-
   const handleSave = useCallback(async () => {
     const error = validate();
     if (error) {
@@ -405,11 +458,41 @@ export default function AutomationBuilderPage() {
       setDirty(false);
       setSavedId(result.id);
       setConflicts([]);
+      // Successful save → drop the autosaved draft so a future visit
+      // doesn't restore stale work.
+      discardDraft();
       navigate('/automations');
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : String(error));
     }
-  }, [automationId, createMutation, form, isEdit, navigate, updateMutation, validate]);
+  }, [automationId, createMutation, discardDraft, form, isEdit, navigate, updateMutation, validate]);
+
+  /**
+   * Cancel handler — if the form is dirty, prompt before navigating away.
+   * Otherwise leave immediately. The browser-level beforeunload guard
+   * (refresh/close-tab) is wired by useDirtyForm above.
+   */
+  const handleBackToList = useCallback(async () => {
+    if (dirty) {
+      const ok = await confirmDiscard({
+        title: dirtyForm.title,
+        message: dirtyForm.message,
+        variant: 'warning',
+        confirmLabel: dirtyForm.discardLabel,
+        cancelLabel: dirtyForm.keepEditingLabel,
+      });
+      if (!ok) return;
+    }
+    navigate('/automations');
+  }, [
+    dirty,
+    confirmDiscard,
+    dirtyForm.title,
+    dirtyForm.message,
+    dirtyForm.discardLabel,
+    dirtyForm.keepEditingLabel,
+    navigate,
+  ]);
 
   const handleTestRun = useCallback(() => {
     const targetId = savedId ?? automationId;
@@ -423,7 +506,7 @@ export default function AutomationBuilderPage() {
       <PageContainer
         title={t('automations.builder.editTitle', 'Edit Automation')}
         loading
-        breadcrumbs={breadcrumbs}
+        breadcrumbLabels={breadcrumbLabels}
       >
         <div />
       </PageContainer>
@@ -435,7 +518,7 @@ export default function AutomationBuilderPage() {
       <PageContainer
         title={t('automations.builder.editTitle', 'Edit Automation')}
         error={loadError instanceof Error ? loadError : new Error(String(loadError))}
-        breadcrumbs={breadcrumbs}
+        breadcrumbLabels={breadcrumbLabels}
       >
         <div />
       </PageContainer>
@@ -446,7 +529,7 @@ export default function AutomationBuilderPage() {
     return (
       <PageContainer
         title={t('automations.builder.editTitle', 'Edit Automation')}
-        breadcrumbs={breadcrumbs}
+        breadcrumbLabels={breadcrumbLabels}
       >
         <EmptyState
           icon={<AlertTriangle className="h-8 w-8" />}
@@ -465,7 +548,7 @@ export default function AutomationBuilderPage() {
         'automations.builder.subtitle',
         'Configure supported typed triggers, conditions, and actions for your automation.',
       )}
-      breadcrumbs={breadcrumbs}
+      breadcrumbLabels={breadcrumbLabels}
     >
       <form
         onSubmit={(event) => {
@@ -474,13 +557,28 @@ export default function AutomationBuilderPage() {
         }}
         className="max-w-4xl space-y-6"
       >
-        <Link
-          to="/automations"
-          className="inline-flex items-center gap-1 text-sm text-white/50 transition-colors hover:text-white/80"
+        <UiButton
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={handleBackToList}
+          className="self-start text-white/50 hover:text-white/80"
+          icon={<ArrowLeft className="h-4 w-4" />}
         >
-          <ArrowLeft className="h-4 w-4" />
           {t('automations.builder.backToList', 'Back to Automations')}
-        </Link>
+        </UiButton>
+
+        {hasDraft && !isEdit && !presetId && (
+          <DraftRecoveryBanner
+            hasDraft={hasDraft}
+            draftSavedAt={draftSavedAt}
+            onDiscard={() => {
+              discardDraft();
+              setDirty(false);
+            }}
+            itemNoun={t('draft.noun.automation', 'Automation')}
+          />
+        )}
 
         <FadeIn>
           <FormSection title={t('automations.builder.general', 'General')}>
@@ -519,6 +617,7 @@ export default function AutomationBuilderPage() {
         </FadeIn>
 
         <FadeIn delay={0.05}>
+          <div data-tour="automation-builder">
           <FormSection
             title={t('automations.builder.when', 'When (Trigger)')}
             description={t(
@@ -550,9 +649,11 @@ export default function AutomationBuilderPage() {
               </GlassPanel>
             )}
           </FormSection>
+          </div>
         </FadeIn>
 
         <FadeIn delay={0.1}>
+          <div data-tour="automation-conditions">
           <FormSection
             title={t('automations.builder.onlyIf', 'Only If (Conditions)')}
             description={t(
@@ -565,9 +666,11 @@ export default function AutomationBuilderPage() {
               onChange={(conditions) => update('conditions', conditions)}
             />
           </FormSection>
+          </div>
         </FadeIn>
 
         <FadeIn delay={0.15}>
+          <div data-tour="automation-actions">
           <FormSection
             title={t('automations.builder.then', 'Then (Actions)')}
             description={t(
@@ -581,11 +684,14 @@ export default function AutomationBuilderPage() {
               onChange={(actions) => update('actions', actions)}
             />
           </FormSection>
+          </div>
         </FadeIn>
 
         {conflicts.length > 0 && (
           <FadeIn delay={0.2}>
+            <div data-tour="automation-conflicts">
             <ConflictWarnings conflicts={conflicts} />
+            </div>
           </FadeIn>
         )}
 
@@ -622,7 +728,7 @@ export default function AutomationBuilderPage() {
             <UiButton
               type="button"
               variant="ghost"
-              onClick={() => navigate('/automations')}
+              onClick={handleBackToList}
             >
               <X className="mr-2 h-4 w-4" />
               {t('automations.builder.cancel', 'Cancel')}
@@ -650,6 +756,7 @@ export default function AutomationBuilderPage() {
           </FadeIn>
         )}
       </form>
+      {discardDialogProps && <ConfirmDialog {...discardDialogProps} />}
     </PageContainer>
   );
 }

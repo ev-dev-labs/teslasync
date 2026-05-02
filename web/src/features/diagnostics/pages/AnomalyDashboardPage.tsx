@@ -40,8 +40,8 @@ function severityVariant(s: string): 'success' | 'warning' | 'danger' {
 
 function statusColor(s: string): string {
   if (s === 'critical') return 'text-red-400';
-  if (s === 'warning') return 'text-neon-amber';
-  return 'text-neon-green';
+  if (s === 'warning') return 'text-amber-300';
+  return 'text-emerald-300';
 }
 
 function statusBg(s: string): string {
@@ -158,7 +158,7 @@ export default function AnomalyDashboardPage() {
                     )}
                   >
                     <Icon className={cn('h-6 w-6', statusColor(status))} />
-                    <span className="text-xs font-medium capitalize text-white/80">{category}</span>
+                    <span className="text-xs font-medium capitalize text-[var(--text-primary)]">{category}</span>
                     <Badge variant={severityVariant(status)} size="sm">
                       {status}
                     </Badge>
@@ -198,18 +198,18 @@ export default function AnomalyDashboardPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-semibold text-white">{a.signal}</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/[0.08] text-white/50">
+                      <span className="text-sm font-semibold text-[var(--text-primary)]">{a.signal}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/[0.08] text-[var(--text-muted)]">
                         {typeLabel(a.type)}
                       </span>
                       {a.z_score > 0 && (
-                        <span className="text-[10px] text-white/40">
+                        <span className="text-[10px] text-[var(--text-muted)]">
                           {fmtNumber(a.z_score, 1)}σ
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-white/60 mt-1">{a.message}</p>
-                    <div className="flex items-center gap-4 mt-2 text-[10px] text-white/30">
+                    <p className="text-xs text-[var(--text-secondary)] mt-1">{a.message}</p>
+                    <div className="flex items-center gap-4 mt-2 text-[10px] text-[var(--text-muted)]">
                       <span>{t('anomaly.value', 'Value')}: {fmtNumber(a.value, 2)}</span>
                       <span>{t('anomaly.baseline', 'Baseline')}: {fmtNumber(a.baseline, 2)}</span>
                       <span>{new Date(a.detected_at).toLocaleString()}</span>

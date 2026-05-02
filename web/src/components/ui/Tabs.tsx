@@ -1,3 +1,4 @@
+import { useId, useRef, type KeyboardEvent } from 'react';
 import { cn } from '@/lib/cn';
 
 export interface TabItem {
@@ -11,30 +12,92 @@ export interface TabsProps {
   activeTab: string;
   onChange: (key: string) => void;
   className?: string;
+  /** Optional accessible label for the tablist (overrides `aria-labelledby`). */
+  ariaLabel?: string;
 }
 
-export function Tabs({ tabs, activeTab, onChange, className }: TabsProps) {
+/**
+ * Accessible tabs (WAI-ARIA Tabs pattern):
+ * - `role="tablist"` on the container.
+ * - Each tab is `role="tab"` with `aria-selected` and roving `tabindex` so
+ *   the tab strip is one stop in the document tab order.
+ * - Left/Right arrows move focus and activation between tabs (automatic
+ *   activation — `onChange` fires immediately). Home/End jump to first/last.
+ * - Disabled tabs are skipped during arrow navigation.
+ *
+ * The component does not own the tab panels; consumers render them with
+ * `role="tabpanel"` and `aria-labelledby` pointing back to the matching tab's
+ * generated id (`{tablistId}-tab-{tab.key}`).
+ */
+export function Tabs({ tabs, activeTab, onChange, className, ariaLabel }: TabsProps) {
+  const tablistId = useId();
+  const refs = useRef<Map<string, HTMLButtonElement>>(new Map());
+
+  const enabledKeys = tabs.filter(t => !t.disabled).map(t => t.key);
+
+  const moveFocus = (nextKey: string) => {
+    onChange(nextKey);
+    // Defer focus to next tick so React commits aria-selected change first.
+    requestAnimationFrame(() => {
+      refs.current.get(nextKey)?.focus();
+    });
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLButtonElement>, currentKey: string) => {
+    if (enabledKeys.length === 0) return;
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      const idx = enabledKeys.indexOf(currentKey);
+      if (idx === -1) return;
+      const delta = e.key === 'ArrowRight' ? 1 : -1;
+      const nextIdx = (idx + delta + enabledKeys.length) % enabledKeys.length;
+      moveFocus(enabledKeys[nextIdx]);
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      moveFocus(enabledKeys[0]);
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      moveFocus(enabledKeys[enabledKeys.length - 1]);
+    }
+  };
+
   return (
-    <div className={cn('flex gap-1 border-b border-gray-200 dark:border-gray-700', className)} role="tablist">
-      {tabs.map((tab) => (
-        <button
-          key={tab.key}
-          role="tab"
-          aria-selected={activeTab === tab.key}
-          disabled={tab.disabled}
-          onClick={() => onChange(tab.key)}
-          className={cn(
-            'px-4 py-2 text-sm font-medium transition-colors',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
-            activeTab === tab.key
-              ? 'border-b-2 border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
-              : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200',
-            tab.disabled && 'cursor-not-allowed opacity-50',
-          )}
-        >
-          {tab.label}
-        </button>
-      ))}
+    <div
+      className={cn('flex gap-1 border-b border-gray-200 dark:border-gray-700', className)}
+      role="tablist"
+      aria-label={ariaLabel}
+    >
+      {tabs.map((tab) => {
+        const selected = activeTab === tab.key;
+        return (
+          <button
+            key={tab.key}
+            id={`${tablistId}-tab-${tab.key}`}
+            ref={(el) => {
+              if (el) refs.current.set(tab.key, el);
+              else refs.current.delete(tab.key);
+            }}
+            type="button"
+            role="tab"
+            aria-selected={selected}
+            aria-controls={`${tablistId}-panel-${tab.key}`}
+            tabIndex={selected ? 0 : -1}
+            disabled={tab.disabled}
+            onClick={() => onChange(tab.key)}
+            onKeyDown={(e) => handleKeyDown(e, tab.key)}
+            className={cn(
+              'px-4 py-2 text-sm font-medium transition-colors',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
+              selected
+                ? 'border-b-2 border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200',
+              tab.disabled && 'cursor-not-allowed opacity-50',
+            )}
+          >
+            {tab.label}
+          </button>
+        );
+      })}
     </div>
   );
 }

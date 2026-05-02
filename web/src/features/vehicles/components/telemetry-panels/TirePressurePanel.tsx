@@ -17,7 +17,7 @@ export function TirePressurePanel({ tireData }: TirePressurePanelProps) {
   return (
     <GlassPanel className="p-6 h-full">
       <h3 className="section-title flex items-center gap-2 mb-5">
-        <Gauge className="h-4 w-4 text-neon-cyan" />{' '}
+        <Gauge className="h-4 w-4 text-cyan-300" />{' '}
         {t('common.tirePressure', 'Tire Pressure')}
       </h3>
       {tireData ? (

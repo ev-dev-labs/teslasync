@@ -5,34 +5,6 @@ package enums
 
 import "strings"
 
-// ParseGear normalizes Tesla ShiftState enum to single letter.
-func ParseGear(raw string) string {
-	g := strings.TrimPrefix(raw, PrefixShiftState)
-	switch {
-	case g == GearDrive || strings.Contains(g, "Drive"):
-		return GearDrive
-	case g == GearReverse || strings.Contains(g, "Reverse"):
-		return GearReverse
-	case g == GearPark || strings.Contains(g, "Park"):
-		return GearPark
-	case g == GearNeutral || strings.Contains(g, "Neutral"):
-		return GearNeutral
-	}
-	return ""
-}
-
-// IsCharging checks if a DetailedChargeState/ChargeState indicates active charging.
-func IsCharging(raw string) bool {
-	return strings.Contains(raw, ChargeStateCharging) ||
-		strings.Contains(raw, ChargeStateStarting) ||
-		raw == "Enable"
-}
-
-// IsChargeComplete checks if charging has finished.
-func IsChargeComplete(raw string) bool {
-	return strings.Contains(raw, ChargeStateComplete)
-}
-
 // ParseEnumBool converts a Tesla enum string/bool/number to boolean.
 func ParseEnumBool(raw interface{}) bool {
 	switch v := raw.(type) {
@@ -65,21 +37,6 @@ func ParseBuckleStatus(raw interface{}) bool {
 	return false
 }
 
-// ParseHvacPower returns true if HVAC is on or preconditioning.
-func ParseHvacPower(raw string) bool {
-	return strings.Contains(raw, "On") || strings.Contains(raw, "Precondition")
-}
-
-// ParseHvacAutoMode strips the "HvacAutoModeState" prefix.
-// Tesla sends: "HvacAutoModeStateOn" → "On", "HvacAutoModeStateOff" → "Off".
-func ParseHvacAutoMode(raw string) string {
-	g := strings.TrimPrefix(raw, PrefixHvacAutoMode)
-	if g == "" || g == raw {
-		return raw
-	}
-	return g
-}
-
 // ParseWindowState normalizes window state for display.
 func ParseWindowState(raw string) string {
 	g := strings.TrimPrefix(raw, "WindowState")
@@ -90,135 +47,6 @@ func ParseWindowState(raw string) string {
 		return "Partial"
 	case strings.Contains(g, "Open"):
 		return "Open"
-	}
-	if g != "" {
-		return g
-	}
-	return raw
-}
-
-// ParseChargeState normalizes ChargeState enum.
-// Tesla sends: "ChargeStateCharging", "ChargeStateComplete", etc.
-// Also normalizes the special "Enable" value to "Charging".
-func ParseChargeState(raw string) string {
-	g := strings.TrimPrefix(raw, "ChargeState")
-	switch g {
-	case "Charging":
-		return ChargeStateCharging
-	case "Complete":
-		return ChargeStateComplete
-	case "Disconnected":
-		return ChargeStateDisconnected
-	case "NoPower":
-		return ChargeStateNoPower
-	case "Starting":
-		return ChargeStateStarting
-	case "Stopped":
-		return ChargeStateStopped
-	case "Enable":
-		return ChargeStateCharging
-	}
-	// "Enable" without prefix
-	if raw == "Enable" {
-		return ChargeStateCharging
-	}
-	if g != "" && g != raw {
-		return g
-	}
-	return raw
-}
-
-// ParseDetailedChargeState normalizes DetailedChargeState enum.
-// Tesla sends: "DetailedChargeStateCharging", "DetailedChargeStateComplete", etc.
-func ParseDetailedChargeState(raw string) string {
-	g := strings.TrimPrefix(raw, PrefixDetailedCharge)
-	switch g {
-	case "Charging":
-		return ChargeStateCharging
-	case "Complete":
-		return ChargeStateComplete
-	case "Disconnected":
-		return ChargeStateDisconnected
-	case "NoPower":
-		return ChargeStateNoPower
-	case "Starting":
-		return ChargeStateStarting
-	case "Stopped":
-		return ChargeStateStopped
-	case "Error":
-		return "Error"
-	}
-	if g != "" && g != raw {
-		return g
-	}
-	return raw
-}
-
-// ParseChargePort normalizes charge port state.
-// Tesla sends: "ChargePortOpen", "ChargePortClosed".
-func ParseChargePort(raw string) string {
-	g := strings.TrimPrefix(raw, PrefixChargePort)
-	switch {
-	case strings.Contains(g, "Open"):
-		return "Open"
-	case strings.Contains(g, "Closed"):
-		return "Closed"
-	}
-	if g != "" && g != raw {
-		return g
-	}
-	return raw
-}
-
-// ParseChargePortLatch normalizes charge port latch state.
-// Tesla sends: "ChargePortLatchEngaged", "ChargePortLatchDisengaged".
-func ParseChargePortLatch(raw string) string {
-	g := strings.TrimPrefix(raw, PrefixChargePortLatch)
-	switch {
-	case strings.Contains(g, "Engaged"):
-		return "Engaged"
-	case strings.Contains(g, "Disengaged"):
-		return "Disengaged"
-	}
-	if g != "" && g != raw {
-		return g
-	}
-	return raw
-}
-
-// ParseCabinOverheatMode normalizes cabin overheat protection mode.
-// Check multi-word variants (FanOnly, NoCooling) before single-word (On)
-// because "FanOnly" contains the substring "On".
-func ParseCabinOverheatMode(raw string) string {
-	g := strings.TrimPrefix(raw, "CabinOverheatProtectionModeState")
-	switch {
-	case strings.Contains(g, "FanOnly"):
-		return "Fan Only"
-	case strings.Contains(g, "NoCooling"):
-		return "No Cooling"
-	case strings.Contains(g, "On"):
-		return "On"
-	case strings.Contains(g, "Off"):
-		return "Off"
-	}
-	if g != "" {
-		return g
-	}
-	return raw
-}
-
-// ParseClimateKeeperMode normalizes climate keeper mode.
-func ParseClimateKeeperMode(raw string) string {
-	g := strings.TrimPrefix(raw, "ClimateKeeperModeState")
-	switch {
-	case strings.Contains(g, "Off"):
-		return "Off"
-	case strings.Contains(g, "Dog"):
-		return "Dog Mode"
-	case strings.Contains(g, "Camp"):
-		return "Camp Mode"
-	case strings.Contains(g, "On"):
-		return "On"
 	}
 	if g != "" {
 		return g
@@ -332,27 +160,6 @@ func ParseBMSState(raw string) string {
 	return raw
 }
 
-// ParseScheduledChargingMode normalizes the scheduled charging mode enum.
-// Tesla sends: "ScheduledChargingModeOff", "ScheduledChargingModeStartAt",
-// "ScheduledChargingModeDepartBy", "ScheduledChargingModeUnknown".
-func ParseScheduledChargingMode(raw string) string {
-	g := strings.TrimPrefix(raw, PrefixScheduledChargingMode)
-	switch g {
-	case "Off":
-		return "Off"
-	case "StartAt":
-		return "StartAt"
-	case "DepartBy":
-		return "DepartBy"
-	case "Unknown":
-		return "Unknown"
-	}
-	if g != "" && g != raw {
-		return g
-	}
-	return raw
-}
-
 // ParseCenterDisplay normalizes the center display state enum.
 // Tesla sends: "DisplayStateOff", "DisplayStateDim", "DisplayStateAccessory",
 // "DisplayStateOn", "DisplayStateDriving", "DisplayStateCharging",
@@ -438,69 +245,6 @@ func ParseTonneauPosition(raw string) string {
 // Tesla sends: "TonneauTentModeActive", "TonneauTentModeOff", etc.
 func ParseTonneauTentMode(raw string) string {
 	g := strings.TrimPrefix(raw, PrefixTonneauTentMode)
-	if g != "" && g != raw {
-		return g
-	}
-	return raw
-}
-
-// ParsePowershareStatus normalizes the Powershare status enum.
-// Tesla sends: "PowershareStateActive", "PowershareStateInactive", "PowershareStateUnknown".
-func ParsePowershareStatus(raw string) string {
-	g := strings.TrimPrefix(raw, PrefixPowershareState)
-	switch g {
-	case "Active", "Inactive", "Unknown":
-		return g
-	}
-	if g != "" && g != raw {
-		return g
-	}
-	return raw
-}
-
-// ParsePowershareStopReason normalizes the Powershare stop reason enum.
-// Tesla sends: "PowershareStopReasonUserRequest", "PowershareStopReasonLowBattery", etc.
-func ParsePowershareStopReason(raw string) string {
-	g := strings.TrimPrefix(raw, PrefixPowershareStopReason)
-	switch g {
-	case "UserRequest", "LowBattery", "Error", "None":
-		return g
-	}
-	if g != "" && g != raw {
-		return g
-	}
-	return raw
-}
-
-// ParsePowershareType normalizes the Powershare type enum.
-// Tesla sends: "PowershareTypeHome", "PowershareTypeVehicle", "PowershareTypeNone".
-func ParsePowershareType(raw string) string {
-	g := strings.TrimPrefix(raw, PrefixPowershareType)
-	switch g {
-	case "Home", "Vehicle", "None":
-		return g
-	}
-	if g != "" && g != raw {
-		return g
-	}
-	return raw
-}
-
-// ParseDefrostMode normalizes the DefrostMode enum.
-// Tesla sends: "DefrostModeStateOff", "DefrostModeStateNormal",
-// "DefrostModeStateMax", "DefrostModeStateAutoDefog".
-func ParseDefrostMode(raw string) string {
-	g := strings.TrimPrefix(raw, PrefixDefrostMode)
-	switch g {
-	case DefrostOff:
-		return DefrostOff
-	case DefrostNormal:
-		return DefrostNormal
-	case DefrostMax:
-		return DefrostMax
-	case DefrostAutoDefog:
-		return DefrostAutoDefog
-	}
 	if g != "" && g != raw {
 		return g
 	}

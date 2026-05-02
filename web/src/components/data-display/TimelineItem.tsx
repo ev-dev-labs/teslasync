@@ -1,11 +1,13 @@
 import { type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 
-/** Timeline item for activity feeds */
-export function TimelineItem({ icon, title, subtitle, time, color, isLast }: {
-  icon: ReactNode; title: string; subtitle?: string; time: string; color: string; isLast?: boolean
+/** Timeline item for activity feeds. When `href` is provided, the entire row
+ *  becomes a navigable link (used by alert drill-through — Phase 40 / Prompt 14). */
+export function TimelineItem({ icon, title, subtitle, time, color, isLast, href }: {
+  icon: ReactNode; title: string; subtitle?: string; time: string; color: string; isLast?: boolean; href?: string
 }) {
-  return (
-    <div className="flex gap-3">
+  const body = (
+    <>
       <div className="flex flex-col items-center">
         <div
           className="flex h-8 w-8 items-center justify-center rounded-lg shrink-0"
@@ -20,6 +22,17 @@ export function TimelineItem({ icon, title, subtitle, time, color, isLast }: {
         {subtitle && <p className="text-xs text-[var(--text-muted)] mt-0.5">{subtitle}</p>}
         <p className="text-[10px] text-gray-600 mt-1">{time}</p>
       </div>
-    </div>
+    </>
   )
+  if (href) {
+    return (
+      <Link
+        to={href}
+        className="flex gap-3 -mx-1 px-1 rounded-md hover:bg-white/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400/60 transition-colors"
+      >
+        {body}
+      </Link>
+    )
+  }
+  return <div className="flex gap-3">{body}</div>
 }

@@ -82,7 +82,7 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
         value: fmtNumber(power, 1),
         unit: 'kW',
         icon: <BatteryCharging className="h-3.5 w-3.5" />,
-        valueColor: 'text-neon-green',
+        valueColor: 'text-emerald-300',
       },
       {
         label: t('widget.chargingTelemetry.phases', 'Phases'),
@@ -127,7 +127,7 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
         {isCharging ? (
           <div className="h-full flex flex-col items-center justify-center gap-1 min-h-[44px]">
             <BatteryCharging className="h-5 w-5 text-neon-green animate-pulse" />
-            <span className="text-lg font-bold text-neon-green">
+            <span className="text-lg font-bold text-emerald-300">
               {fmtNumber(power, 1)} kW
             </span>
             <span className="text-[10px] text-white/40">

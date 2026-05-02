@@ -1,9 +1,12 @@
 import { lazy, Suspense, useEffect } from 'react'
-import { Routes, Route, useNavigate } from 'react-router-dom'
+import { Navigate, Routes, Route, useNavigate } from 'react-router-dom'
 import Layout from './components/layout/Layout'
-import { PageLoader } from './components/feedback/PageLoader'
+import { ScrollRestoration } from './components/layout/ScrollRestoration'
+import { PageLoadSkeleton } from './components/feedback/PageLoadSkeleton'
 import { ErrorBoundary } from './components/feedback/ErrorBoundary'
 import { AuthExpiredOverlay } from '@/components/feedback'
+import { OnboardingGate } from '@/features/onboarding/components/OnboardingGate'
+import { DensityApplier } from '@/components/ui/DensityApplier'
 
 // ── ALL pages live in features/ — zero imports from pages/ ──────────────
 
@@ -61,12 +64,12 @@ const TripPlanner = lazy(() => import('./features/driving/pages/TripPlannerPage'
 // Analytics & Statistics
 const Analytics = lazy(() => import('./features/analytics/pages/AnalyticsPage'))
 const Statistics = lazy(() => import('./features/analytics/pages/StatisticsPage'))
-const Compare = lazy(() => import('./features/analytics/pages/ComparePage'))
+const PeriodCompare = lazy(() => import('./features/analytics/pages/PeriodComparePage'))
 const Mileage = lazy(() => import('./features/analytics/pages/MileagePage'))
 const TrueCostOwnership = lazy(() => import('./features/analytics/pages/TrueCostPage'))
 const WeeklyDigest = lazy(() => import('./features/analytics/pages/WeeklyDigestPage'))
 const Timeline = lazy(() => import('./features/analytics/pages/TimelinePage'))
-const VehicleComparison = lazy(() => import('./features/analytics/pages/ComparisonPage'))
+const FleetCompare = lazy(() => import('./features/analytics/pages/FleetComparePage'))
 const LifetimeStats = lazy(() => import('./features/analytics/pages/LifetimeStatsPage'))
 const YearReview = lazy(() => import('./features/analytics/pages/YearReviewPage'))
 
@@ -130,8 +133,20 @@ const Changelog = lazy(() => import('./features/system/pages/ChangelogPage'))
 const Roadmap = lazy(() => import('./features/system/pages/RoadmapPage'))
 const TeslaAccount = lazy(() => import('./features/system/pages/TeslaAccountPage'))
 
+// Per-user activity feed (Phase-40 / Prompt 49 — Recent Activity Discoverability)
+const MyActivity = lazy(() => import('./features/system/pages/MyActivityPage'))
+
 // Settings
 const Settings = lazy(() => import('./features/settings/pages/SettingsPage'))
+
+// Onboarding (Phase 40 / Prompt 18 — first-run experience)
+const Onboarding = lazy(() => import('./features/onboarding/pages/OnboardingPage'))
+
+// 404 (Phase 40 / Prompt 38 — catch-all route)
+const NotFound = lazy(() => import('./features/system/pages/NotFoundPage'))
+
+// Global app-wide search (Phase 40 / Prompt 41)
+const Search = lazy(() => import('./features/system/pages/SearchPage'))
 
 // Sharing (public)
 const SharedDrive = lazy(() => import('./features/sharing/pages/SharedDrivePage'))
@@ -139,11 +154,14 @@ const SharedDrive = lazy(() => import('./features/sharing/pages/SharedDrivePage'
 // Watch (standalone — no Layout, API key auth)
 const WatchFace = lazy(() => import('./features/watch/pages/WatchFacePage'))
 
-/** Route wrapper: Suspense for lazy loading + ErrorBoundary for crash isolation */
+/** Route wrapper: Suspense for lazy loading + ErrorBoundary for crash isolation.
+ *  Uses PageLoadSkeleton (layout-shaped) instead of a plain spinner so the page
+ *  doesn't reflow when the lazy chunk arrives — important for our CLS budget.
+ *  See web/lighthouserc.json for the active assertions (Phase 40 / Prompt 35). */
 function SafeRoute({ children, name }: { children: React.ReactNode; name: string }) {
   return (
     <ErrorBoundary name={name}>
-      <Suspense fallback={<PageLoader />}>{children}</Suspense>
+      <Suspense fallback={<PageLoadSkeleton />}>{children}</Suspense>
     </ErrorBoundary>
   )
 }
@@ -170,12 +188,16 @@ export default function App() {
   return (
     <>
       <AuthExpiredOverlay />
+      <OnboardingGate />
+      <ScrollRestoration />
+      <DensityApplier />
       <Routes>
       <Route path="quick-stats" element={<SafeRoute name="QuickStats"><QuickStats /></SafeRoute>} />
       <Route path="glance" element={<SafeRoute name="Glance"><GlancePage /></SafeRoute>} />
       <Route path="year-review/:year" element={<SafeRoute name="YearReview"><YearReview /></SafeRoute>} />
       <Route path="s/:token" element={<SafeRoute name="SharedDrive"><SharedDrive /></SafeRoute>} />
       <Route path="watch" element={<SafeRoute name="WatchFace"><WatchFace /></SafeRoute>} />
+      <Route path="onboarding" element={<SafeRoute name="Onboarding"><Onboarding /></SafeRoute>} />
       <Route path="/" element={<Layout />}>
         <Route index element={<SafeRoute name="Dashboard"><Dashboard /></SafeRoute>} />
         <Route path="live" element={<SafeRoute name="LiveMap"><LiveMap /></SafeRoute>} />
@@ -219,7 +241,8 @@ export default function App() {
         <Route path="roadmap" element={<SafeRoute name="Roadmap"><Roadmap /></SafeRoute>} />
         <Route path="api-keys" element={<SafeRoute name="APIKeys"><APIKeysPage /></SafeRoute>} />
         <Route path="changelog" element={<SafeRoute name="Changelog"><Changelog /></SafeRoute>} />
-        <Route path="compare" element={<SafeRoute name="Compare"><Compare /></SafeRoute>} />
+        <Route path="compare" element={<Navigate to="/period-compare" replace />} />
+        <Route path="period-compare" element={<SafeRoute name="PeriodCompare"><PeriodCompare /></SafeRoute>} />
         <Route path="admin" element={<SafeRoute name="Admin"><Admin /></SafeRoute>} />
         <Route path="api-logs" element={<SafeRoute name="ApiLogs"><ApiLogs /></SafeRoute>} />
         <Route path="fleet-api" element={<SafeRoute name="FleetAPI"><FleetAPI /></SafeRoute>} />
@@ -264,12 +287,22 @@ export default function App() {
         <Route path="regen-efficiency" element={<SafeRoute name="RegenEfficiency"><RegenEfficiency /></SafeRoute>} />
         <Route path="battery-degradation" element={<SafeRoute name="BatteryDegradation"><BatteryDegradation /></SafeRoute>} />
         <Route path="tco" element={<SafeRoute name="TrueCostOwnership"><TrueCostOwnership /></SafeRoute>} />
-        <Route path="vehicle-comparison" element={<SafeRoute name="VehicleComparison"><VehicleComparison /></SafeRoute>} />
+        <Route path="vehicle-comparison" element={<SafeRoute name="FleetCompare"><FleetCompare /></SafeRoute>} />
         <Route path="sleep-efficiency" element={<SafeRoute name="SleepEfficiency"><SleepEfficiency /></SafeRoute>} />
         <Route path="charging-heatmap" element={<SafeRoute name="ChargingHeatmap"><ChargingHeatmap /></SafeRoute>} />
         <Route path="speed-profile" element={<SafeRoute name="SpeedProfile"><SpeedProfile /></SafeRoute>} />
         <Route path="tesla-account" element={<SafeRoute name="TeslaAccount"><TeslaAccount /></SafeRoute>} />
+        {/* Phase 40 / Prompt 49 — per-user activity feed */}
+        <Route path="me/activity" element={<SafeRoute name="MyActivity"><MyActivity /></SafeRoute>} />
+        {/* Phase 40 / Prompt 41 — global app-wide entity search */}
+        <Route path="search" element={<SafeRoute name="Search"><Search /></SafeRoute>} />
+        {/* Phase 40 / Prompt 38 — catch-all inside Layout so unknown URLs still
+            render with the sidebar/header chrome instead of a blank Outlet. */}
+        <Route path="*" element={<SafeRoute name="NotFound"><NotFound /></SafeRoute>} />
       </Route>
+      {/* Outer catch-all defends against any future top-level routes that
+          forget to nest under '/'. In normal operation the inner one wins. */}
+      <Route path="*" element={<SafeRoute name="NotFound"><NotFound /></SafeRoute>} />
       </Routes>
     </>
   )

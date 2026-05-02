@@ -103,12 +103,17 @@ func (w *Worker) processNotification(ctx context.Context, req *Request) {
 
 		// Success — log it
 		if req.ChannelID > 0 {
-			if err := w.repo.CreateLog(ctx, &models.NotificationLog{
+			logEntry := &models.NotificationLog{
 				ChannelID: req.ChannelID,
 				Title:     req.Title,
 				Message:   req.Message,
 				Status:    "sent",
-			}); err != nil {
+			}
+			if req.AlertID > 0 {
+				alertID := req.AlertID
+				logEntry.AlertID = &alertID
+			}
+			if err := w.repo.CreateLog(ctx, logEntry); err != nil {
 				log.Warn().Err(err).Msg("notification: failed to create success log")
 			}
 			// Record delivery metric
@@ -128,13 +133,18 @@ func (w *Worker) processNotification(ctx context.Context, req *Request) {
 		if lastErr != nil {
 			errStr = lastErr.Error()
 		}
-		if err := w.repo.CreateLog(ctx, &models.NotificationLog{
+		logEntry := &models.NotificationLog{
 			ChannelID: req.ChannelID,
 			Title:     req.Title,
 			Message:   req.Message,
 			Status:    "failed",
 			Error:     errStr,
-		}); err != nil {
+		}
+		if req.AlertID > 0 {
+			alertID := req.AlertID
+			logEntry.AlertID = &alertID
+		}
+		if err := w.repo.CreateLog(ctx, logEntry); err != nil {
 			log.Warn().Err(err).Msg("notification: failed to create failure log")
 		}
 		// Record failure metric

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
@@ -9,24 +9,28 @@ import {
 } from 'lucide-react';
 
 import { PageContainer, Grid } from '@/components/layout';
-import { GlassPanel, Badge, Button, Select } from '@/components/ui';
+import { GlassPanel, Badge, Button } from '@/components/ui';
 import {
   RadialGauge, ChartContainer, ChartTooltip, ChartGradient,
-  chartGrid, axisTickSm, CHART_COLORS,
+  chartGrid, axisTickSm, CHART_COLORS, renderAnnotationLines,
   AreaChart, Area, BarChart, Bar, ComposedChart, Line, ReferenceLine,
   PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
-  AREA_DEFAULTS,
+  AREA_DEFAULTS, TimeMarker,
 } from '@/components/charts';
-import { MetricCard, MetricBar } from '@/components/data-display';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { MetricCard, MetricBar, LiveIndicator } from '@/components/data-display';
+import { Skeleton, EmptyState, LiveStaleDataBanner, SectionErrorBoundary } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { useBatteryHealthAnalytics, useBatteryDegradation } from '@/api/hooks/useEnergy';
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
-import { useVehicles, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
+import { useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useAlertContext } from '@/hooks/useAlertContext';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { cn } from '@/lib/cn';
+import { COLOR, STATUS_COLORS } from '@/lib/colors';
 import { fmtNumber, fmtPercent, fmtInt } from '@/lib/numberFormat';
 import { formatDateShort } from '@/lib/dateFormat';
 import type { BatteryHealthAnalytics } from '@/types/energy';
@@ -48,9 +52,9 @@ const insightPanelClass = {
 } as const;
 
 const insightIconClass = {
-  good: 'text-neon-green',
-  warning: 'text-neon-amber',
-  critical: 'text-neon-red',
+  good: 'text-emerald-300',
+  warning: 'text-amber-300',
+  critical: 'text-rose-300',
 } as const;
 
 function gaugeColor(score: number): string {
@@ -193,11 +197,21 @@ export default function BatteryHealthPage() {
   usePageTitle(t('battery.title', 'Battery Health'));
   const { convertDistance, distanceUnit, convertTemp, tempUnit } = useSettings();
 
-  /* ── Vehicle selector ──────────────────────────────────────────── */
-  const { data: vehicles } = useVehicles();
-  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
-  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
+  /* ── Vehicle selector (Phase 40 / Prompt 16: header picker is the source of truth) ─ */
+  // Alert drillthrough URLs (?vehicle_id=…&t=…) flow into the global store
+  // via useSelectedVehicle; useAlertContext is still consulted for the
+  // timestamp & signal name used by the chart marker below.
+  const alertCtx = useAlertContext();
+  const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : null;
+
+  // The alert timestamp used for the chart marker, formatted to match the
+  // chart's `dataKey="label"` (formatDateShort). Recharts ReferenceLine matches
+  // string x-values exactly, so we format the alert moment the same way.
+  const alertMarkerLabel = useMemo(
+    () => (alertCtx.timestamp ? formatDateShort(alertCtx.timestamp) : null),
+    [alertCtx.timestamp],
+  );
 
   /* ── Data fetching ─────────────────────────────────────────────── */
   const { data: health, isLoading: healthLoading, error: healthError } =
@@ -307,6 +321,11 @@ export default function BatteryHealthPage() {
     ? fmtNumber(degradation.prediction.years_to_80_pct, 1)
     : '—';
 
+  /* ── No vehicle: defensive guard (Phase 40 / Prompt 18) ───────── */
+  if (vehicleId == null) {
+    return <NoVehicleSelected pageTitle={t('battery.title', 'Battery Health')} />;
+  }
+
   /* ── Loading ───────────────────────────────────────────────────── */
   if (healthLoading) {
     return (
@@ -345,21 +364,16 @@ export default function BatteryHealthPage() {
       title={t('battery.title', 'Battery Health')}
       subtitle={t('battery.subtitle', 'Degradation tracking, prediction, charging habits & longevity insights')}
       actions={
-        vehicles && vehicles.length > 1 ? (
-          <Select
-            options={(vehicles ?? []).map((v) => ({
-              value: String(v.id),
-              label: v.display_name || v.vin,
-            }))}
-            value={vehicleIdStr ?? ''}
-            onChange={(e) => setSelectedVehicle(Number(e.target.value))}
-          />
-        ) : undefined
+        <span className="flex items-center gap-3">
+          <LiveIndicator variant="compact" />
+        </span>
       }
     >
+      <LiveStaleDataBanner />
       {/* ── 1. Health Score Hero ──────────────────────────────────── */}
-      <FadeIn>
-        <GlassPanel className="p-4 sm:p-6 lg:p-8">
+      <SectionErrorBoundary name="battery:health-hero" fallbackTitle={t('battery.section.heroFailed', 'Health score panel failed to load')}>
+        <FadeIn>
+          <GlassPanel className="p-4 sm:p-6 lg:p-8">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 sm:gap-6 items-center">
             <div className="col-span-2 sm:col-span-1 flex flex-col items-center">
               <RadialGauge
@@ -396,21 +410,23 @@ export default function BatteryHealthPage() {
               color="#a855f7"
             />
             <div className="flex flex-col items-center text-center">
-              <p className="text-3xl font-bold text-white/90">{yearsTo80}</p>
-              <p className="text-[10px] text-white/50 uppercase tracking-wider mt-1">
+              <p className="text-3xl font-bold text-[var(--text-primary)]">{yearsTo80}</p>
+              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">
                 {t('battery.yearsTo80', 'Years to 80%')}
               </p>
-              <p className="text-[10px] text-white/40">
+              <p className="text-[10px] text-[var(--text-muted)]">
                 {t('battery.warrantyNote', 'warranty threshold')}
               </p>
             </div>
           </div>
         </GlassPanel>
       </FadeIn>
+      </SectionErrorBoundary>
 
       {/* ── 2. Metric Bars ───────────────────────────────────────── */}
-      <FadeIn delay={0.05}>
-        <GlassPanel className="p-6">
+      <SectionErrorBoundary name="battery:metric-bars" fallbackTitle={t('battery.section.metricBarsFailed', 'Metric bars failed to load')}>
+        <FadeIn delay={0.05}>
+          <GlassPanel className="p-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <div>
               <MetricBar
@@ -419,7 +435,7 @@ export default function BatteryHealthPage() {
                 max={100}
                 color="#00f0ff"
               />
-              <p className="text-[10px] text-white/40 mt-1">
+              <p className="text-[10px] text-[var(--text-muted)] mt-1">
                 {fmtNumber(health.estimated_capacity, 1)} / {fmtNumber(health.original_capacity, 1)} kWh
               </p>
             </div>
@@ -430,7 +446,7 @@ export default function BatteryHealthPage() {
                 max={10}
                 color={degradationColor(health.degradation_rate_yr)}
               />
-              <p className="text-[10px] text-white/40 mt-1">
+              <p className="text-[10px] text-[var(--text-muted)] mt-1">
                 {fmtNumber(health.degradation_rate_yr, 2)}% {t('battery.perYear', 'per year')}
               </p>
             </div>
@@ -441,17 +457,19 @@ export default function BatteryHealthPage() {
                 max={1500}
                 color="#a855f7"
               />
-              <p className="text-[10px] text-white/40 mt-1">
+              <p className="text-[10px] text-[var(--text-muted)] mt-1">
                 {t('battery.warrantyLimit', 'Tesla warranty: 1,500 cycles / 70%')}
               </p>
             </div>
           </div>
         </GlassPanel>
       </FadeIn>
+      </SectionErrorBoundary>
 
       {/* ── 3. Summary Metric Cards ──────────────────────────────── */}
-      <FadeIn delay={0.1}>
-        <Grid cols={{ default: 2, lg: 3 }} gap={4}>
+      <SectionErrorBoundary name="battery:summary-cards" fallbackTitle={t('battery.section.summaryCardsFailed', 'Summary metrics failed to load')}>
+        <FadeIn delay={0.1}>
+          <Grid cols={{ default: 2, lg: 3 }} gap={4}>
           <MetricCard
             label={t('battery.metric.soh', 'State of Health')}
             value={fmtPercent(health.current_soh)}
@@ -502,13 +520,15 @@ export default function BatteryHealthPage() {
           />
         </Grid>
       </FadeIn>
+      </SectionErrorBoundary>
 
       {/* ── 3b. Thermal Monitoring ───────────────────────────────── */}
-      <FadeIn delay={0.12}>
-        <GlassPanel className="p-6">
+      <SectionErrorBoundary name="battery:thermal" fallbackTitle={t('battery.section.thermalFailed', 'Thermal monitoring failed to load')}>
+        <FadeIn delay={0.12}>
+          <GlassPanel className="p-6">
           <div className="flex items-center gap-2 mb-4">
             <Thermometer className="h-4 w-4 text-neon-amber" />
-            <h3 className="text-sm font-semibold text-white/90">
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">
               {t('battery.thermal.title', 'Thermal Monitoring')}
             </h3>
           </div>
@@ -576,10 +596,12 @@ export default function BatteryHealthPage() {
           </Grid>
         </GlassPanel>
       </FadeIn>
+      </SectionErrorBoundary>
 
       {/* ── 4. Smart Insights ────────────────────────────────────── */}
-      <FadeIn delay={0.15}>
-        <div className="space-y-2">
+      <SectionErrorBoundary name="battery:insights" fallbackTitle={t('battery.section.insightsFailed', 'Smart insights failed to load')}>
+        <FadeIn delay={0.15}>
+          <div className="space-y-2">
           <h3 className="section-title flex items-center gap-2">
             <Heart className="h-4 w-4 text-neon-red" />
             {t('battery.insights.title', 'Smart Insights')}
@@ -594,8 +616,8 @@ export default function BatteryHealthPage() {
                   <div className="flex items-start gap-3">
                     <div className={cn('mt-0.5', insightIconClass[ins.status])}>{ins.icon}</div>
                     <div>
-                      <p className="text-sm font-medium text-white/90">{ins.title}</p>
-                      <p className="mt-0.5 text-xs text-white/60">{ins.description}</p>
+                      <p className="text-sm font-medium text-[var(--text-primary)]">{ins.title}</p>
+                      <p className="mt-0.5 text-xs text-[var(--text-secondary)]">{ins.description}</p>
                     </div>
                   </div>
                 </GlassPanel>
@@ -610,6 +632,7 @@ export default function BatteryHealthPage() {
           )}
         </div>
       </FadeIn>
+      </SectionErrorBoundary>
 
       {/* ── 5. Capacity Trend & Prediction ───────────────────────── */}
       <FadeIn delay={0.2}>
@@ -624,17 +647,18 @@ export default function BatteryHealthPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={predictionChartData}>
                   <defs>
-                    <ChartGradient id="healthGrad" color="#00f0ff" opacity={0.15} />
+                    <ChartGradient id="healthGrad" color={COLOR.CYAN} opacity={0.15} />
                   </defs>
                   {chartGrid}
                   <XAxis dataKey="label" tick={axisTickSm} tickLine={false} axisLine={false} />
                   <YAxis domain={[60, 100]} tick={axisTickSm} tickLine={false} axisLine={false} unit="%" />
                   <Tooltip content={<ChartTooltip />} />
-                  <ReferenceLine y={70} stroke="#ef4444" strokeDasharray="8 4" />
-                  <ReferenceLine y={80} stroke="#f59e0b" strokeDasharray="4 4" />
+                  <ReferenceLine y={70} stroke={STATUS_COLORS.critical} strokeDasharray="8 4" />
+                  <ReferenceLine y={80} stroke={STATUS_COLORS.warning} strokeDasharray="4 4" />
+                  <TimeMarker x={alertMarkerLabel} severity={alertCtx.signal ? 'critical' : undefined} />
                   <Area {...AREA_DEFAULTS} dataKey="actual" name={t('battery.chart.actual', 'Actual %')} stroke="transparent" fill="url(#healthGrad)" />
-                  <Line {...AREA_DEFAULTS} dataKey="actual" name={t('battery.chart.actual', 'Actual %')} stroke="#00f0ff" dot={{ fill: '#00f0ff', r: 2 }} connectNulls={false} />
-                  <Line {...AREA_DEFAULTS} dataKey="predicted" name={t('battery.chart.predicted', 'Predicted %')} stroke="#00f0ff" strokeDasharray="6 4" opacity={0.5} />
+                  <Line {...AREA_DEFAULTS} dataKey="actual" name={t('battery.chart.actual', 'Actual %')} stroke={COLOR.CYAN} dot={{ fill: COLOR.CYAN, r: 2 }} connectNulls={false} />
+                  <Line {...AREA_DEFAULTS} dataKey="predicted" name={t('battery.chart.predicted', 'Predicted %')} stroke={COLOR.CYAN} strokeDasharray="6 4" opacity={0.5} />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
@@ -650,45 +674,55 @@ export default function BatteryHealthPage() {
 
       {/* ── 6. Range Trend ───────────────────────────────────────── */}
       <FadeIn delay={0.25}>
-        <ChartContainer title={t('battery.chart.rangeTrend', 'Estimated Range Over Time')} exportable exportFilename="range-trend">
-          {rangeTrend.length > 0 ? (
-            <div className="h-44 sm:h-60">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={rangeTrend}>
-                  <defs>
-                    <ChartGradient id="rangeGrad" color="#10b981" opacity={0.3} />
-                  </defs>
-                  {chartGrid}
-                  <XAxis dataKey="label" tick={axisTickSm} tickLine={false} axisLine={false} />
-                  <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
-                  <Tooltip content={<ChartTooltip />} />
-                  <Area
-                    {...AREA_DEFAULTS}
-                    dataKey="range"
-                    name={`${t('battery.chart.range', 'Range')} (${distanceUnit})`}
-                    stroke="#10b981"
-                    fill="url(#rangeGrad)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <EmptyState
-              icon={<Activity className="h-8 w-8" />}
-              message={t('battery.chart.noRange', 'No range data yet')}
-              className="py-8"
-            />
-          )}
+        <ChartContainer
+          title={t('battery.chart.rangeTrend', 'Estimated Range Over Time')}
+          exportable
+          exportFilename="range-trend"
+          annotations={{ vehicleId, scope: 'battery', chartId: 'battery-health-range-trend' }}
+        >
+          {({ annotations: chartAnnotations }) =>
+            rangeTrend.length > 0 ? (
+              <div className="h-44 sm:h-60">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={rangeTrend}>
+                    <defs>
+                      <ChartGradient id="rangeGrad" color={COLOR.GOOD} opacity={0.3} />
+                    </defs>
+                    {chartGrid}
+                    <XAxis dataKey="label" tick={axisTickSm} tickLine={false} axisLine={false} />
+                    <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
+                    <Tooltip content={<ChartTooltip />} />
+                    <TimeMarker x={alertMarkerLabel} severity={alertCtx.signal ? 'critical' : undefined} />
+                    {renderAnnotationLines(chartAnnotations, (ts) => ts)}
+                    <Area
+                      {...AREA_DEFAULTS}
+                      dataKey="range"
+                      name={`${t('battery.chart.range', 'Range')} (${distanceUnit})`}
+                      stroke={COLOR.GOOD}
+                      fill="url(#rangeGrad)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <EmptyState
+                icon={<Activity className="h-8 w-8" />}
+                message={t('battery.chart.noRange', 'No range data yet')}
+                className="py-8"
+              />
+            )
+          }
         </ChartContainer>
       </FadeIn>
 
       {/* ── 7. Charge Level Distribution ─────────────────────────── */}
-      <FadeIn delay={0.3}>
-        <GlassPanel className="p-6">
+      <SectionErrorBoundary name="battery:charge-level-dist" fallbackTitle={t('battery.section.chargeDistFailed', 'Charge level distribution failed to load')}>
+        <FadeIn delay={0.3}>
+          <GlassPanel className="p-6">
           <h3 className="section-title mb-4 flex items-center gap-2">
             <Zap className="h-4 w-4 text-neon-amber" />
             {t('battery.chart.chargeDist', 'Charge Level Distribution')}
-            <span className="text-xs text-white/40 font-normal ml-2">
+            <span className="text-xs text-[var(--text-muted)] font-normal ml-2">
               {t('battery.chart.chargeDistSub', 'Recent 100 sessions')}
             </span>
           </h3>
@@ -709,22 +743,22 @@ export default function BatteryHealthPage() {
               {chargingHabits && (
                 <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div className="text-center">
-                    <p className="text-lg font-bold text-white/90">{fmtPercent(chargingHabits.avgStart)}</p>
-                    <p className="text-[10px] text-white/40">{t('battery.habit.avgStart', 'Avg Start Level')}</p>
+                    <p className="text-lg font-bold text-[var(--text-primary)]">{fmtPercent(chargingHabits.avgStart)}</p>
+                    <p className="text-[10px] text-[var(--text-muted)]">{t('battery.habit.avgStart', 'Avg Start Level')}</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-lg font-bold text-neon-green">{fmtPercent(chargingHabits.avgEnd)}</p>
-                    <p className="text-[10px] text-white/40">{t('battery.habit.avgEnd', 'Avg End Level')}</p>
+                    <p className="text-lg font-bold text-emerald-300">{fmtPercent(chargingHabits.avgEnd)}</p>
+                    <p className="text-[10px] text-[var(--text-muted)]">{t('battery.habit.avgEnd', 'Avg End Level')}</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-lg font-bold text-neon-amber">{chargingHabits.superchargerCount}</p>
-                    <p className="text-[10px] text-white/40">{t('battery.habit.supercharger', 'Supercharger Sessions')}</p>
+                    <p className="text-lg font-bold text-amber-300">{chargingHabits.superchargerCount}</p>
+                    <p className="text-[10px] text-[var(--text-muted)]">{t('battery.habit.supercharger', 'Supercharger Sessions')}</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-lg font-bold text-neon-cyan">
+                    <p className="text-lg font-bold text-cyan-300">
                       {chargingHabits.total - chargingHabits.superchargerCount - chargingHabits.dcFastCount}
                     </p>
-                    <p className="text-[10px] text-white/40">{t('battery.habit.home', 'Home Charges')}</p>
+                    <p className="text-[10px] text-[var(--text-muted)]">{t('battery.habit.home', 'Home Charges')}</p>
                   </div>
                 </div>
               )}
@@ -738,59 +772,61 @@ export default function BatteryHealthPage() {
           )}
         </GlassPanel>
       </FadeIn>
+      </SectionErrorBoundary>
 
       {/* ── 8. Capacity & Range: New vs Now ──────────────────────── */}
-      <FadeIn delay={0.35}>
-        <GlassPanel className="p-6">
+      <SectionErrorBoundary name="battery:capacity-range" fallbackTitle={t('battery.section.capacityRangeFailed', 'Capacity & range comparison failed to load')}>
+        <FadeIn delay={0.35}>
+          <GlassPanel className="p-6">
           <h3 className="section-title mb-6 flex items-center gap-2">
             <Activity className="h-4 w-4 text-neon-cyan" />
             {t('battery.newVsNow.title', 'Capacity & Range: New vs Now')}
           </h3>
           <Grid cols={{ default: 2, md: 4 }} gap={4}>
             <GlassPanel className="p-4 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-1">
+              <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">
                 {t('battery.newVsNow.capNew', 'Capacity When New')}
               </p>
-              <p className="text-2xl font-bold text-white/90">
+              <p className="text-2xl font-bold text-[var(--text-primary)]">
                 {fmtNumber(health.original_capacity, 1)}
-                <span className="text-sm text-white/40"> kWh</span>
+                <span className="text-sm text-[var(--text-muted)]"> kWh</span>
               </p>
             </GlassPanel>
             <GlassPanel className="p-4 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-1">
+              <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">
                 {t('battery.newVsNow.capNow', 'Capacity Now')}
               </p>
-              <p className="text-2xl font-bold text-neon-cyan">
+              <p className="text-2xl font-bold text-cyan-300">
                 {fmtNumber(health.estimated_capacity, 1)}
-                <span className="text-sm text-white/40"> kWh</span>
+                <span className="text-sm text-[var(--text-muted)]"> kWh</span>
               </p>
-              <p className="text-[10px] text-neon-red mt-1">
+              <p className="text-[10px] text-rose-300 mt-1">
                 -{fmtNumber(health.original_capacity - health.estimated_capacity, 1)} kWh
               </p>
             </GlassPanel>
             <GlassPanel className="p-4 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-1">
+              <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">
                 {t('battery.newVsNow.rangeNew', 'Range When New')}
               </p>
-              <p className="text-2xl font-bold text-white/90">
+              <p className="text-2xl font-bold text-[var(--text-primary)]">
                 {health.history.length > 0
                   ? fmtInt(convertDistance(health.history[0].range_km))
                   : '—'}
-                <span className="text-sm text-white/40"> {distanceUnit}</span>
+                <span className="text-sm text-[var(--text-muted)]"> {distanceUnit}</span>
               </p>
             </GlassPanel>
             <GlassPanel className="p-4 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-1">
+              <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">
                 {t('battery.newVsNow.rangeNow', 'Range Now')}
               </p>
-              <p className="text-2xl font-bold text-neon-green">
+              <p className="text-2xl font-bold text-emerald-300">
                 {health.history.length > 0
                   ? fmtInt(convertDistance(health.history[health.history.length - 1].range_km))
                   : '—'}
-                <span className="text-sm text-white/40"> {distanceUnit}</span>
+                <span className="text-sm text-[var(--text-muted)]"> {distanceUnit}</span>
               </p>
               {health.history.length >= 2 && (
-                <p className="text-[10px] text-neon-red mt-1">
+                <p className="text-[10px] text-rose-300 mt-1">
                   -{fmtInt(convertDistance(
                     health.history[0].range_km - health.history[health.history.length - 1].range_km,
                   ))} {distanceUnit} {t('battery.newVsNow.lost', 'lost')}
@@ -800,10 +836,12 @@ export default function BatteryHealthPage() {
           </Grid>
         </GlassPanel>
       </FadeIn>
+      </SectionErrorBoundary>
 
       {/* ── 9. AC/DC Energy Breakdown ────────────────────────────── */}
-      <FadeIn delay={0.4}>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <SectionErrorBoundary name="battery:acdc-breakdown" fallbackTitle={t('battery.section.acdcFailed', 'AC/DC energy breakdown failed to load')}>
+        <FadeIn delay={0.4}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <ChartContainer title={t('battery.chart.acdc', 'AC / DC Energy Breakdown')} exportable exportFilename="energy-breakdown">
             {energyBreakdown ? (
               <div className="h-52">
@@ -853,8 +891,8 @@ export default function BatteryHealthPage() {
                   { label: t('battery.stats.cycles', 'Charge Cycles'), value: String(health.total_cycles) },
                 ].map((row) => (
                   <div key={row.label} className="flex justify-between items-center py-2 border-b border-white/5">
-                    <span className="text-xs text-white/60">{row.label}</span>
-                    <span className="text-sm font-semibold text-white/90">{row.value}</span>
+                    <span className="text-xs text-[var(--text-secondary)]">{row.label}</span>
+                    <span className="text-sm font-semibold text-[var(--text-primary)]">{row.value}</span>
                   </div>
                 ))}
               </div>
@@ -868,43 +906,48 @@ export default function BatteryHealthPage() {
           </GlassPanel>
         </div>
       </FadeIn>
+      </SectionErrorBoundary>
 
       {/* ── 10. Quick Links ──────────────────────────────────────── */}
-      <FadeIn delay={0.45}>
-        <GlassPanel>
-          <Grid cols={{ default: 2, md: 3 }} gap={3}>
-            {QUICK_LINKS.map((link) => (
-              <Link key={link.to} to={link.to}>
-                <Button
-                  variant="outline"
-                  className="w-full justify-between"
-                  icon={<ArrowRight className="h-4 w-4" />}
-                >
-                  {t(link.labelKey, link.fallback)}
-                </Button>
-              </Link>
-            ))}
-          </Grid>
-        </GlassPanel>
-      </FadeIn>
+      <SectionErrorBoundary name="battery:quick-links" fallbackTitle={t('battery.section.quickLinksFailed', 'Quick links failed to load')}>
+        <FadeIn delay={0.45}>
+          <GlassPanel>
+            <Grid cols={{ default: 2, md: 3 }} gap={3}>
+              {QUICK_LINKS.map((link) => (
+                <Link key={link.to} to={link.to}>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between"
+                    icon={<ArrowRight className="h-4 w-4" />}
+                  >
+                    {t(link.labelKey, link.fallback)}
+                  </Button>
+                </Link>
+              ))}
+            </Grid>
+          </GlassPanel>
+        </FadeIn>
+      </SectionErrorBoundary>
 
       {/* ── 11. Recommendations ──────────────────────────────────── */}
-      <FadeIn delay={0.5}>
-        <GlassPanel glow="green">
-          <Badge variant="success" className="mb-3">
-            <Lightbulb className="mr-1 inline h-4 w-4" />
-            {t('battery.recommendations.title', 'Recommendations')}
-          </Badge>
-          <ul className="space-y-2 text-sm text-gray-300">
-            {recommendations.map((tip, idx) => (
-              <li key={idx} className="flex items-start gap-2">
-                <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-green-400" />
-                {tip}
-              </li>
-            ))}
-          </ul>
-        </GlassPanel>
-      </FadeIn>
+      <SectionErrorBoundary name="battery:recommendations" fallbackTitle={t('battery.section.recommendationsFailed', 'Recommendations failed to load')}>
+        <FadeIn delay={0.5}>
+          <GlassPanel glow="green">
+            <Badge variant="success" className="mb-3">
+              <Lightbulb className="mr-1 inline h-4 w-4" />
+              {t('battery.recommendations.title', 'Recommendations')}
+            </Badge>
+            <ul className="space-y-2 text-sm text-[var(--text-secondary)]">
+              {recommendations.map((tip, idx) => (
+                <li key={idx} className="flex items-start gap-2">
+                  <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-green-400" />
+                  {tip}
+                </li>
+              ))}
+            </ul>
+          </GlassPanel>
+        </FadeIn>
+      </SectionErrorBoundary>
     </PageContainer>
   );
 }

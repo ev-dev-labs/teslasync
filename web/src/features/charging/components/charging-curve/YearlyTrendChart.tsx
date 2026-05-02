@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
+import { EmptyState } from '@/components/feedback';
 import {
   ChartContainer,
   ChartTooltip,
@@ -111,10 +112,11 @@ export default function YearlyTrendChart({ yearlyTrend }: YearlyTrendChartProps)
           </div>
         </>
       ) : (
-        <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
-          <Activity className="h-8 w-8 opacity-20" />
-          <p className="text-xs">{t('common.noData', 'No data available')}</p>
-        </div>
+        <EmptyState
+          icon={<Activity className="h-8 w-8 opacity-20" />}
+          message={t('common.noData', 'No data available')}
+          className="py-8"
+        />
       )}
     </ChartContainer>
   );

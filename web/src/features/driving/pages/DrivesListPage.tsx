@@ -1,16 +1,18 @@
-import { useState, useMemo } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
   Route, Clock, Gauge, Battery, ChevronRight, TrendingUp,
-  Zap, ArrowUpDown, MapPin, Download, Activity, DollarSign,
+  Zap, ArrowUpDown, MapPin, Download, Activity, DollarSign, Trash2,
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/Select';
 import { Pagination } from '@/components/ui/Pagination';
+import { SavedViewMenu } from '@/components/data-display/SavedViewMenu';
+import { BulkActionsToolbar, type BulkAction } from '@/components/data-display';
+import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import {
   ChartContainer, ChartTooltip,
   AreaChart, Area, BarChart, Bar, ScatterChart, Scatter,
@@ -24,13 +26,18 @@ import { MetricBar } from '@/components/data-display/MetricBar';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { DateRangeFilter } from '@/components/forms/DateRangeFilter';
+import { SearchInput } from '@/components/forms/SearchInput';
+import { FilterBar } from '@/components/forms/FilterBar';
+import { useFilteredList } from '@/hooks/useFilteredList';
+import { useUrlEnum, useUrlString, useUrlNumber } from '@/hooks/useUrlState';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
-import { useDrives, useDrivingStats } from '@/api/hooks/useDriving';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useDrives, useDrivingStats, useBulkDeleteDrives } from '@/api/hooks/useDriving';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { formatDateTime, formatDateShort, formatDurationMinutes } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -68,11 +75,14 @@ interface DriveCardProps {
   speedUnit: string;
   efficiencyUnit: string;
   formatEnergyCost?: (kwh: number) => string;
+  selected?: boolean;
+  onToggleSelect?: (id: number, on: boolean) => void;
 }
 
 function DriveCard({
   drive, convertDistance, convertSpeed, convertEfficiency,
   distanceUnit, speedUnit, efficiencyUnit, formatEnergyCost,
+  selected, onToggleSelect,
 }: DriveCardProps) {
   const { t } = useTranslation();
   const actualDistance = drive.distanceMi;
@@ -92,8 +102,22 @@ function DriveCard({
     drive.endBatteryPct !== null &&
     !(drive.startBatteryPct === 0 && drive.endBatteryPct === 0 && isCompleted);
 
+  const showCheckbox = typeof onToggleSelect === 'function';
+
   return (
-    <Link to={`/drives/${drive.id}`}>
+    <div className="flex items-stretch gap-2">
+      {showCheckbox && (
+        <label className="flex items-center pl-2">
+          <input
+            type="checkbox"
+            className="h-4 w-4 cursor-pointer rounded border-white/20 bg-white/[0.04] text-cyan-500 focus:ring-2 focus:ring-cyan-500"
+            checked={!!selected}
+            onChange={e => onToggleSelect?.(drive.id, e.target.checked)}
+            aria-label={t('drives.selectDrive', 'Select drive on {{date}}', { date: formatDateTime(drive.startTs) })}
+          />
+        </label>
+      )}
+      <Link to={`/drives/${drive.id}`} className="flex-1 min-w-0">
       <GlassPanel hover glow="cyan" className="p-4 transition-all duration-200 group cursor-pointer">
         <div className="flex items-center gap-4">
           {/* Efficiency score badge */}
@@ -165,6 +189,7 @@ function DriveCard({
         </div>
       </GlassPanel>
     </Link>
+    </div>
   );
 }
 
@@ -175,11 +200,10 @@ function DriveCard({
 export default function DrivesListPage() {
   const { t } = useTranslation();
   usePageTitle(t('drives.title', 'Drive History'));
+  const savedView = useSavedViewUrl();
 
-  /* Data hooks */
-  const { data: vehicles } = useVehicles();
-  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
-  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
+  /* Data hooks — Phase 40 / Prompt 16: header VehiclePicker is the source of truth */
+  const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const { data: drives, isLoading: isDrivesLoading, error: drivesError } = useDrives(vehicleIdStr);
   const { data: stats } = useDrivingStats(vehicleIdStr);
@@ -191,18 +215,26 @@ export default function DrivesListPage() {
     formatEnergyCost,
   } = useSettings();
 
-  /* Local UI state */
-  const [sortBy, setSortBy] = useState<'date' | 'distance' | 'efficiency'>('date');
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
-  const [startDate, setStartDate] = useState(() => {
+  /* Local UI state — Phase 40 / Prompt 33: filters/sort live in the URL so
+     a date-range + sort view can be shared, bookmarked, or restored on reload. */
+  const [sortBy, setSortBy] = useUrlEnum<'date' | 'distance' | 'efficiency'>(
+    'sort',
+    ['date', 'distance', 'efficiency'] as const,
+    'date',
+  );
+  const [page, setPage] = useUrlNumber('page', 1);
+  const [pageSize, setPageSize] = useUrlNumber('size', 50);
+  const [search, setSearch] = useUrlString('q', '');
+  const defaultStart = useMemo(() => {
     const d = new Date(); d.setDate(d.getDate() - 365);
     return d.toISOString().split('T')[0];
-  });
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+  }, []);
+  const defaultEnd = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const [startDate, setStartDate] = useUrlString('from', defaultStart);
+  const [endDate, setEndDate] = useUrlString('to', defaultEnd);
 
   /* ---- Client-side date filter ---- */
-  const filteredDrives = useMemo(() => {
+  const dateFilteredDrives = useMemo(() => {
     if (!drives) return [];
     return drives.filter((d) => {
       const driveDate = d.startTs?.split('T')[0];
@@ -212,6 +244,13 @@ export default function DrivesListPage() {
       return true;
     });
   }, [drives, startDate, endDate]);
+
+  /* ---- Search filter (start/end address) ---- */
+  const driveSearchFields = useMemo(
+    () => ['startAddress', 'endAddress'] as const satisfies ReadonlyArray<keyof Drive>,
+    [],
+  );
+  const filteredDrives = useFilteredList(dateFilteredDrives, search, driveSearchFields);
 
   /* ---- Sort ---- */
   const sortedDrives = useMemo(() => {
@@ -228,6 +267,51 @@ export default function DrivesListPage() {
     const start = (page - 1) * pageSize;
     return sortedDrives.slice(start, start + pageSize);
   }, [sortedDrives, page, pageSize]);
+
+  /* ---- Bulk selection (Phase-40 / Prompt 51) ---- */
+  const [bulkSelected, setBulkSelected] = useState<Set<number>>(new Set());
+  // Reset selection whenever the visible result set changes — we never want
+  // to retain a "ghost" id from a previous filter combination.
+  useEffect(() => {
+    setBulkSelected(prev => {
+      if (prev.size === 0) return prev;
+      const visible = new Set(filteredDrives.map(d => d.id));
+      const next = new Set<number>();
+      prev.forEach(id => { if (visible.has(id)) next.add(id); });
+      return next.size === prev.size ? prev : next;
+    });
+  }, [filteredDrives]);
+  const toggleDriveSelected = useCallback((id: number, on: boolean) => {
+    setBulkSelected(prev => {
+      const next = new Set(prev);
+      if (on) next.add(id); else next.delete(id);
+      return next;
+    });
+  }, []);
+  const clearBulk = useCallback(() => setBulkSelected(new Set()), []);
+  const bulkDeleteDrivesMut = useBulkDeleteDrives();
+  const bulkDriveActions = useMemo<BulkAction[]>(() => [
+    {
+      id: 'delete',
+      label: t('bulk.actions.delete', 'Delete'),
+      icon: <Trash2 className="h-3.5 w-3.5" />,
+      variant: 'danger',
+      confirm: {
+        title: t('bulk.deleteConfirmTitle', 'Delete {{count}} {{noun}}?', {
+          count: bulkSelected.size,
+          noun: bulkSelected.size === 1
+            ? t('bulk.noun.drive_one', 'drive')
+            : t('bulk.noun.drive_other', 'drives'),
+        }),
+        description: t('bulk.deleteConfirmDescription', 'This cannot be undone.'),
+        confirmLabel: t('common.delete', 'Delete'),
+      },
+      onClick: async (ids) => {
+        await bulkDeleteDrivesMut.mutateAsync(ids.map(Number));
+        clearBulk();
+      },
+    },
+  ], [t, bulkSelected.size, bulkDeleteDrivesMut, clearBulk]);
 
   /* ---- Computed metrics from filtered drives ---- */
   const computedStats = useMemo(() => {
@@ -280,35 +364,47 @@ export default function DrivesListPage() {
     }));
   }, [filteredDrives]);
 
-  const vehicleOptions = (vehicles ?? []).map((v) => ({
-    value: String(v.id),
-    label: v.display_name || v.vin,
-  }));
+  // Defensive guard: when no vehicle is selected (fresh install or
+  // revoked Tesla token), bail out before rendering the data
+  // scaffolding. The global <OnboardingGate> normally redirects, but
+  // this catches the brief window before the redirect takes effect.
+  if (vehicleId == null) {
+    return <NoVehicleSelected pageTitle={t('drives.title', 'Drive History')} />;
+  }
 
   return (
     <PageContainer
       title={t('drives.title', 'Drive History')}
       subtitle={t('drives.subtitle', 'Trip scoring, efficiency analysis, distance patterns, and performance data')}
       error={drivesError as Error | null}
+      copyLink
       actions={
-        vehicleOptions.length > 0 ? (
-          <Select
-            value={String(vehicleId ?? '')}
-            onChange={(e) => setSelectedVehicle(Number(e.target.value))}
-            options={vehicleOptions}
+        <div data-tour="drives-saved-views">
+          <SavedViewMenu
+            route="/drives"
+            currentQuery={savedView.currentQuery}
+            onApply={savedView.apply}
           />
-        ) : undefined
+        </div>
       }
     >
-      {/* Date range filter */}
+      {/* Date range + search filter */}
       <FadeIn>
-        <DateRangeFilter
-          startDate={startDate}
-          endDate={endDate}
-          onStartDateChange={setStartDate}
-          onEndDateChange={setEndDate}
-          onApply={() => setPage(1)}
-        />
+        <FilterBar>
+          <SearchInput
+            value={search}
+            onChange={(v) => { setSearch(v); setPage(1); }}
+            placeholder={t('drives.searchPlaceholder', 'Search by start or end address…')}
+            className="w-full sm:w-72"
+          />
+          <DateRangeFilter
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+            onApply={() => setPage(1)}
+          />
+        </FilterBar>
       </FadeIn>
 
       {/* Hero gauges */}
@@ -484,7 +580,7 @@ export default function DrivesListPage() {
       {/* Sort controls + export */}
       <FadeIn>
         {sortedDrives.length > 0 ? (
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3" data-tour="drives-list">
             <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2">
               <Route className="h-4 w-4 text-cyan-400" />
               {t('drives.allDrives', 'All Drives')}
@@ -526,10 +622,11 @@ export default function DrivesListPage() {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
-            <Activity className="h-8 w-8 opacity-20" />
-            <p className="text-xs">{t('common.noData', 'No data available')}</p>
-          </div>
+          <EmptyState
+            icon={<Activity className="h-8 w-8 opacity-20" />}
+            message={t('common.noData', 'No data available')}
+            className="py-8"
+          />
         )}
       </FadeIn>
 
@@ -540,6 +637,16 @@ export default function DrivesListPage() {
         </div>
       ) : paginatedDrives.length > 0 ? (
         <>
+          <BulkActionsToolbar
+            selectedIds={Array.from(bulkSelected)}
+            total={filteredDrives.length}
+            onClear={clearBulk}
+            actions={bulkDriveActions}
+            itemNoun={{
+              one: t('bulk.noun.drive_one', 'drive'),
+              other: t('bulk.noun.drive_other', 'drives'),
+            }}
+          />
           <StaggerContainer className="space-y-3">
             {paginatedDrives.map((d) => (
               <StaggerItem key={d.id}>
@@ -552,6 +659,8 @@ export default function DrivesListPage() {
                   speedUnit={speedUnit}
                   efficiencyUnit={efficiencyUnit}
                   formatEnergyCost={formatEnergyCost}
+                  selected={bulkSelected.has(d.id)}
+                  onToggleSelect={toggleDriveSelected}
                 />
               </StaggerItem>
             ))}

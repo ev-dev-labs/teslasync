@@ -66,7 +66,7 @@ export function ToggleCommandTile({ def, state, onExecute, onRequestDialog, load
         onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
         className={cn(
           'absolute left-1.5 top-1.5 h-auto rounded p-0.5 transition-opacity hover:bg-transparent',
-          isFavorite ? 'opacity-100 text-neon-amber' : 'opacity-0 group-hover:opacity-50 text-white/30',
+          isFavorite ? 'opacity-100 text-amber-300' : 'opacity-0 group-hover:opacity-50 text-white/30',
         )}
         aria-label={t('commands.toggleFavorite', 'Toggle favorite')}
       >

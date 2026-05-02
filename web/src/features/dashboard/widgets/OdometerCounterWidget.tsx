@@ -76,7 +76,7 @@ export default function OdometerCounterWidget({ vehicleId, size }: WidgetProps) 
 function CompactView({ odometer, unit }: { odometer: number; unit: string }) {
   return (
     <div className="h-full flex flex-col items-center justify-center gap-1">
-      <p className="text-2xl font-bold text-neon-cyan tabular-nums">
+      <p className="text-2xl font-bold text-cyan-300 tabular-nums">
         <AnimatedNumber value={odometer} decimals={0} />
       </p>
       <p className="text-[10px] text-white/40 uppercase tracking-wider">{unit}</p>
@@ -104,7 +104,7 @@ function ExpandedView({
         <p className="text-[10px] text-white/40 uppercase tracking-wider mb-1">
           {t('widget.odometer.total', 'Total Odometer')}
         </p>
-        <p className="text-3xl font-bold text-neon-cyan tabular-nums">
+        <p className="text-3xl font-bold text-cyan-300 tabular-nums">
           <AnimatedNumber value={odometer} decimals={0} suffix={` ${unit}`} />
         </p>
       </div>

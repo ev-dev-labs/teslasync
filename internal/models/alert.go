@@ -29,7 +29,37 @@ type AlertRule struct {
 	Severity string `db:"severity" json:"severity"`
 	// CooldownMin is the minimum minutes between consecutive alerts from this
 	// rule, regardless of signal value.
-	CooldownMin int       `db:"cooldown_min" json:"cooldown_min"`
-	CreatedAt   time.Time `db:"created_at"   json:"created_at"`
-	UpdatedAt   time.Time `db:"updated_at"   json:"updated_at"`
+	CooldownMin int `db:"cooldown_min" json:"cooldown_min"`
+	// TriggerMode controls whether the rule fires every cooldown while the
+	// condition holds ("repeat", default) or only once on the rising edge
+	// until the condition becomes false again ("once").
+	TriggerMode string `db:"trigger_mode" json:"trigger_mode"`
+	// SnoozedUntil is a manual mute. When set in the future, the rule is
+	// suppressed regardless of condition. Auto-expires by timestamp.
+	SnoozedUntil *time.Time `db:"snoozed_until" json:"snoozed_until,omitempty"`
+
+	// Kind discriminates between the legacy signal-threshold rules
+	// (kind="signal") and aggregated computed-metric rules
+	// (kind="computed_metric"). Defaults to "signal" for backward compat;
+	// added in migration 000158_alert_rule_kinds.
+	Kind string `db:"kind" json:"kind"`
+	// MetricID names a registered computed metric (e.g. "charging_cost").
+	// Required when Kind=="computed_metric"; nil otherwise.
+	MetricID *string `db:"metric_id" json:"metric_id,omitempty"`
+	// MetricWindow is one of: day, week, month, rolling_7d, rolling_30d.
+	MetricWindow *string `db:"metric_window" json:"metric_window,omitempty"`
+	// MetricThreshold is the numeric value the computed metric is compared against.
+	MetricThreshold *float64 `db:"metric_threshold" json:"metric_threshold,omitempty"`
+	// MetricOp is one of: '>','>=','<','<=','=','!=','%_change_>','%_change_<'.
+	// The %_change_ operators compare the current window to the previous window.
+	MetricOp *string `db:"metric_op" json:"metric_op,omitempty"`
+
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }
+
+// Kind constants. See migration 000158_alert_rule_kinds.up.sql.
+const (
+	AlertRuleKindSignal         = "signal"
+	AlertRuleKindComputedMetric = "computed_metric"
+)

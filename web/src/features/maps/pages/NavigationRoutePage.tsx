@@ -26,12 +26,13 @@ import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/Select';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { MetricCard } from '@/components/data-display/MetricCard';
+import { LiveIndicator } from '@/components/data-display/LiveIndicator';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { AlertBanner } from '@/components/feedback/AlertBanner';
+import { LiveStaleDataBanner } from '@/components/feedback/LiveStaleDataBanner';
 import { FadeIn } from '@/components/motion/FadeIn';
 import {
   AreaChart,
@@ -51,6 +52,7 @@ import {
   AREA_DEFAULTS,
 } from '@/components/charts';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useSettings } from '@/hooks/useSettings';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
@@ -58,6 +60,7 @@ import { CHART_COLORS } from '@/lib/colors';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { request } from '@/api/client';
 import { useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
+import { normalizeGpsState } from '@/lib/signalCatalog';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -200,35 +203,16 @@ export default function NavigationRoutePage() {
   usePageTitle(t('nav.pageTitle', 'Navigation & Route'));
   const { convertDistance, distanceUnit } = useSettings();
 
-  /* ---- vehicle selector state ---- */
-  const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
+  /* ---- vehicle selector — Phase 40 / Prompt 16: header VehiclePicker is the source of truth ---- */
+  const { vehicleId } = useSelectedVehicle();
 
   const {
-    data: vehicles,
     isLoading: vehiclesLoading,
     error: vehiclesError,
   } = useQuery<Vehicle[]>({
     queryKey: ['vehicles'],
     queryFn: () => request<Vehicle[]>('/vehicles'),
   });
-
-  const vehicleId = selectedVehicleId ?? vehicles?.[0]?.id ?? null;
-
-  const vehicleOptions = useMemo(
-    () =>
-      (vehicles ?? []).map((v) => ({
-        value: String(v.id),
-        label: v.display_name || v.vin,
-      })),
-    [vehicles],
-  );
-
-  const handleVehicleChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
-      setSelectedVehicleId(Number(e.target.value));
-    },
-    [],
-  );
 
   /* ---- latest snapshot ---- */
   const {
@@ -528,12 +512,7 @@ export default function NavigationRoutePage() {
       error={vehiclesError as Error | null}
       actions={
         <span className="flex items-center gap-3">
-          <Select
-            value={String(vehicleId ?? '')}
-            onChange={handleVehicleChange}
-            options={vehicleOptions}
-            placeholder={t('nav.selectVehicle', 'Select vehicle')}
-          />
+          <LiveIndicator variant="compact" />
           <Button
             variant="ghost"
             size="sm"
@@ -545,6 +524,7 @@ export default function NavigationRoutePage() {
         </span>
       }
     >
+      <LiveStaleDataBanner />
       {anyError && (
         <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
           {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
@@ -655,18 +635,30 @@ export default function NavigationRoutePage() {
                 }
                 active={hasValidLocation}
               />
+              {(() => {
+                const fix = normalizeGpsState(latest?.gps_state);
+                return (
+                  <LocationStatusCard
+                    icon={<Satellite className="h-5 w-5" />}
+                    label={t('nav.gpsFixQuality', 'GPS Fix Quality')}
+                    value={t(`nav.gpsState.${fix}`, { defaultValue: fix })}
+                    active={fix === 'locked'}
+                  />
+                );
+              })()}
               <LocationStatusCard
-                icon={<Satellite className="h-5 w-5" />}
-                label={t('nav.gpsFixQuality', 'GPS Fix Quality')}
+                icon={<Compass className="h-5 w-5" />}
+                label={t('nav.heading', 'Heading')}
                 value={
-                  latest?.gps_state
-                    ? `${t(`nav.gpsState.${latest.gps_state}`, latest.gps_state)} ${headingToCardinal(latest?.heading)}`
+                  latest?.heading != null
+                    ? t('nav.headingValue', {
+                        defaultValue: '{{cardinal}} ({{degrees}}°)',
+                        cardinal: headingToCardinal(latest.heading),
+                        degrees: Math.round(latest.heading),
+                      })
                     : t('nav.unknown', 'Unknown')
                 }
-                active={
-                  !!latest?.gps_state &&
-                  /^(normal|good|strong|ok|valid)$/i.test(latest.gps_state)
-                }
+                active={latest?.heading != null}
               />
               <LocationStatusCard
                 icon={<Home className="h-5 w-5" />}
@@ -856,10 +848,11 @@ export default function NavigationRoutePage() {
                     pagination
                   />
                 ) : (
-                  <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
-                    <Activity className="h-8 w-8 opacity-20" />
-                    <p className="text-xs">{t('common.noData', 'No data available')}</p>
-                  </div>
+                  <EmptyState
+                    icon={<Activity className="h-8 w-8 opacity-20" />}
+                    message={t('common.noData', 'No data available')}
+                    className="py-8"
+                  />
                 )}
               </GlassPanel>
             ) : (

@@ -1,8 +1,11 @@
 import { useTranslation } from 'react-i18next';
-import { BatteryCharging, Filter, ArrowUpDown, Download } from 'lucide-react';
+import { useMemo } from 'react';
+import { BatteryCharging, Filter, ArrowUpDown, Download, Trash2 } from 'lucide-react';
 import { Button, Pagination } from '@/components/ui';
+import { BulkActionsToolbar, type BulkAction } from '@/components/data-display';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { Skeleton, EmptyState } from '@/components/feedback';
+import { SearchInput, FilterBar } from '@/components/forms';
 import { cn } from '@/lib/cn';
 import type { ChargingSession } from '@/api/types';
 import { ChargingSessionCard } from '../ChargingSessionCard';
@@ -17,6 +20,8 @@ interface SessionListSectionProps {
   sortBy: SortKey;
   sortDesc: boolean;
   chargerFilter: ChargerFilter;
+  searchQuery: string;
+  onSearchQueryChange: (q: string) => void;
   onSortChange: (key: SortKey) => void;
   onSortToggle: () => void;
   onChargerFilterChange: (filter: ChargerFilter) => void;
@@ -27,6 +32,11 @@ interface SessionListSectionProps {
   startDate: string;
   endDate: string;
   vehicleId: number | null;
+  // Phase-40 / Prompt 51 — bulk-action plumbing
+  selectedIds?: Set<number>;
+  onToggleSelected?: (id: number, on: boolean) => void;
+  onClearSelection?: () => void;
+  onBulkDelete?: (ids: number[]) => Promise<void>;
 }
 
 export function SessionListSection({
@@ -38,6 +48,8 @@ export function SessionListSection({
   sortBy,
   sortDesc,
   chargerFilter,
+  searchQuery,
+  onSearchQueryChange,
   onSortChange,
   onSortToggle,
   onChargerFilterChange,
@@ -48,8 +60,38 @@ export function SessionListSection({
   startDate,
   endDate,
   vehicleId,
+  selectedIds,
+  onToggleSelected,
+  onClearSelection,
+  onBulkDelete,
 }: SessionListSectionProps) {
   const { t } = useTranslation();
+
+  const bulkActions = useMemo<BulkAction[]>(() => {
+    if (!onBulkDelete) return [];
+    const count = selectedIds?.size ?? 0;
+    return [
+      {
+        id: 'delete',
+        label: t('bulk.actions.delete', 'Delete'),
+        icon: <Trash2 className="h-3.5 w-3.5" />,
+        variant: 'danger',
+        confirm: {
+          title: t('bulk.deleteConfirmTitle', 'Delete {{count}} {{noun}}?', {
+            count,
+            noun: count === 1
+              ? t('bulk.noun.session_one', 'charging session')
+              : t('bulk.noun.session_other', 'charging sessions'),
+          }),
+          description: t('bulk.deleteConfirmDescription', 'This cannot be undone.'),
+          confirmLabel: t('common.delete', 'Delete'),
+        },
+        onClick: async (ids) => {
+          await onBulkDelete(ids.map(Number));
+        },
+      },
+    ];
+  }, [t, selectedIds?.size, onBulkDelete]);
 
   if (isLoading) {
     return (
@@ -78,6 +120,18 @@ export function SessionListSection({
 
   return (
     <>
+      {/* Search bar */}
+      <FadeIn delay={0.2}>
+        <FilterBar className="mb-0">
+          <SearchInput
+            value={searchQuery}
+            onChange={onSearchQueryChange}
+            placeholder={t('charging.sessions.searchPlaceholder', 'Search by location or charger type…')}
+            className="w-full sm:w-72"
+          />
+        </FilterBar>
+      </FadeIn>
+
       {/* Sort & Filter controls */}
       <FadeIn delay={0.22}>
         <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2 sm:gap-3">
@@ -161,13 +215,41 @@ export function SessionListSection({
       </FadeIn>
 
       {/* Session cards */}
-      <StaggerContainer className="space-y-3">
-        {filteredSessions.map((s) => (
-          <StaggerItem key={s.id}>
-            <ChargingSessionCard session={s} convertDistance={convertDistance} distanceUnit={distanceUnit} />
-          </StaggerItem>
-        ))}
-      </StaggerContainer>
+      {filteredSessions.length === 0 ? (
+        <EmptyState
+          icon={<BatteryCharging className="h-8 w-8" />}
+          title={t('charging.list.noMatches', 'No sessions match your filters')}
+          message={t('charging.list.noMatchesDescription', 'Try clearing the search or charger filter to see more sessions.')}
+        />
+      ) : (
+        <>
+          {onBulkDelete && onClearSelection && onToggleSelected && (
+            <BulkActionsToolbar
+              selectedIds={Array.from(selectedIds ?? [])}
+              total={filteredSessions.length}
+              onClear={onClearSelection}
+              actions={bulkActions}
+              itemNoun={{
+                one: t('bulk.noun.session_one', 'charging session'),
+                other: t('bulk.noun.session_other', 'charging sessions'),
+              }}
+            />
+          )}
+          <StaggerContainer className="space-y-3">
+            {filteredSessions.map((s) => (
+              <StaggerItem key={s.id}>
+                <ChargingSessionCard
+                  session={s}
+                  convertDistance={convertDistance}
+                  distanceUnit={distanceUnit}
+                  selected={selectedIds?.has(s.id) ?? false}
+                  onToggleSelect={onToggleSelected}
+                />
+              </StaggerItem>
+            ))}
+          </StaggerContainer>
+        </>
+      )}
 
       {/* Pagination */}
       <Pagination

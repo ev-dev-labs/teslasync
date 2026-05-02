@@ -1,14 +1,24 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Command, ArrowRight, Zap, ChevronLeft, Car } from 'lucide-react'
+import {
+  Search, Command, ArrowRight, Zap, ChevronLeft, Car, ArrowRightLeft,
+  Route, BatteryCharging, Bell, BellRing, MapPin, Workflow, Compass, MapPinned,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { Input } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { navSearchKeywords, navSections } from '@/components/layout/Layout'
 import { useVehicles } from '@/api/hooks/useVehicles'
 import { useVehicleCommand } from '@/api/hooks/useVehicleCommand'
 import { COMMANDS, type CommandDef } from '@/features/system/commands'
+import { useCommandRegistry, type ResolvedCommand } from '@/hooks/useCommandRegistry'
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle'
+import { scoreCommand } from '@/lib/commandRegistry'
+import { useGlobalSearch } from '@/api/hooks/useSearch'
+import type { SearchHitType } from '@/api/types'
+import { markCommandPaletteDiscovered } from '@/features/onboarding/checklist'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -19,8 +29,10 @@ interface PaletteItem {
   icon: React.ReactNode
   action: () => void
   keywords?: string[]
-  type?: 'navigate' | 'command'
+  type?: 'navigate' | 'command' | 'registry' | 'vehicle-switch' | 'search-hit'
   sublabel?: string
+  /** Display-only shortcut hint shown next to the item (e.g. "?" or "g d") */
+  shortcut?: string
 }
 
 // ─── Palette-eligible commands ──────────────────────────────────────────────
@@ -68,34 +80,69 @@ const PALETTE_COMMAND_CONFIGS: PaletteCommandConfig[] = [
   { defId: 'media_prev_track', command: 'media_prev_track', labelKey: 'palette.cmd.prevTrack', labelFallback: 'Previous Track', keywords: ['previous', 'track', 'back', 'music'] },
 ]
 
-// ─── Recent commands (sessionStorage) ───────────────────────────────────────
+// ─── Recent commands (localStorage) ─────────────────────────────────────────
+//
+// Phase 40 / Prompt 19: persisted across reloads via localStorage so power users
+// see their workflow patterns surface to the top of the palette. Tracks every
+// command type (vehicle, registry/action, navigation), not only vehicle
+// commands. Stored capped at 10; UI surfaces top 5.
 
-const RECENT_KEY = 'teslasync-palette-recent'
-const MAX_RECENT = 5
+const RECENT_KEY = 'teslasync.recentCommands'
+const RECENT_MAX_STORED = 10
+const RECENT_MAX_DISPLAY = 5
 
-interface RecentCommand {
-  command: string
-  vehicleId: number
+export interface RecentCommandEntry {
+  /** Discriminator — `vehicle` runs a vehicle command, `registry` invokes a static
+   * commandRegistry entry by id, `nav` navigates to a path. */
+  kind: 'vehicle' | 'registry' | 'nav'
+  /** For `vehicle` — the Tesla command name (e.g. "lock", "honk_horn") */
+  command?: string
+  /** For `vehicle` — the target vehicle */
+  vehicleId?: number
+  /** For `registry` — the CommandDefinition.id */
+  registryId?: string
+  /** For `nav` — the route path */
+  path?: string
 }
 
-function getRecentCommands(): RecentCommand[] {
+function recentKey(entry: RecentCommandEntry): string {
+  switch (entry.kind) {
+    case 'vehicle':
+      return `vehicle:${entry.command}:${entry.vehicleId}`
+    case 'registry':
+      return `registry:${entry.registryId}`
+    case 'nav':
+      return `nav:${entry.path}`
+  }
+}
+
+export function getRecentCommands(): RecentCommandEntry[] {
   try {
-    const stored = sessionStorage.getItem(RECENT_KEY)
-    return stored ? (JSON.parse(stored) as RecentCommand[]) : []
+    const stored = localStorage.getItem(RECENT_KEY)
+    if (!stored) return []
+    const parsed = JSON.parse(stored)
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter(
+      (r): r is RecentCommandEntry =>
+        r != null &&
+        typeof r === 'object' &&
+        (r.kind === 'vehicle' || r.kind === 'registry' || r.kind === 'nav'),
+    )
   } catch {
     return []
   }
 }
 
-function addRecentCommand(entry: RecentCommand) {
-  const recent = getRecentCommands().filter(
-    r => !(r.command === entry.command && r.vehicleId === entry.vehicleId)
-  )
+export function addRecentCommand(entry: RecentCommandEntry) {
+  const target = recentKey(entry)
+  const recent = getRecentCommands().filter((r) => recentKey(r) !== target)
   recent.unshift(entry)
-  if (recent.length > MAX_RECENT) recent.length = MAX_RECENT
+  if (recent.length > RECENT_MAX_STORED) recent.length = RECENT_MAX_STORED
   try {
-    sessionStorage.setItem(RECENT_KEY, JSON.stringify(recent))
-  } catch { /* noop */ }
+    localStorage.setItem(RECENT_KEY, JSON.stringify(recent))
+  } catch {
+    /* noop — quota or disabled storage */
+  }
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -103,6 +150,41 @@ function addRecentCommand(entry: RecentCommand) {
 function getIconForConfig(cfg: PaletteCommandConfig, def: CommandDef): React.ReactNode {
   const IconComp = cfg.useOffIcon && def.iconOff ? def.iconOff : def.icon
   return <IconComp className="h-4 w-4" />
+}
+
+// ─── Search hit helpers ─────────────────────────────────────────────────────
+//
+// Phase-40 / Prompt 41: shared between the live palette results and the
+// dedicated /search page so type icons stay consistent across surfaces.
+
+function searchHitIcon(type: SearchHitType): React.ReactNode {
+  switch (type) {
+    case 'vehicle': return <Car className="h-4 w-4" />
+    case 'drive': return <Route className="h-4 w-4" />
+    case 'charging': return <BatteryCharging className="h-4 w-4" />
+    case 'alert': return <BellRing className="h-4 w-4" />
+    case 'notification': return <Bell className="h-4 w-4" />
+    case 'geofence': return <MapPinned className="h-4 w-4" />
+    case 'automation': return <Workflow className="h-4 w-4" />
+    case 'location': return <MapPin className="h-4 w-4" />
+    case 'trip': return <Compass className="h-4 w-4" />
+    default: return <Search className="h-4 w-4" />
+  }
+}
+
+function searchSectionLabel(type: SearchHitType, t: TFunction): string {
+  switch (type) {
+    case 'vehicle': return t('search.section.vehicle', 'Vehicles')
+    case 'drive': return t('search.section.drive', 'Drives')
+    case 'charging': return t('search.section.charging', 'Charging')
+    case 'alert': return t('search.section.alert', 'Alerts')
+    case 'notification': return t('search.section.notification', 'Notifications')
+    case 'geofence': return t('search.section.geofence', 'Geofences')
+    case 'automation': return t('search.section.automation', 'Automations')
+    case 'location': return t('search.section.location', 'Locations')
+    case 'trip': return t('search.section.trip', 'Trips')
+    default: return t('search.section.results', 'Results')
+  }
 }
 
 // ─── CommandPalette ─────────────────────────────────────────────────────────
@@ -119,6 +201,7 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [mode, setMode] = useState<'search' | 'vehicle-select'>('search')
   const [pendingCommand, setPendingCommand] = useState<string | null>(null)
+  const [recentVersion, setRecentVersion] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
@@ -126,6 +209,8 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
   const { data: vehicles } = useVehicles()
   const vehicleList = vehicles ?? []
   const commandMutation = useVehicleCommand()
+  const { commands: registryCommands, getById: getRegistryById } = useCommandRegistry()
+  const { vehicleId: activeVehicleId, setVehicleId } = useSelectedVehicle()
 
   // Command def lookup (stable — COMMANDS is a module-level constant)
   const commandDefMap = useMemo(() => new Map(COMMANDS.map(c => [c.id, c])), [])
@@ -145,13 +230,21 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
     setQuery('')
   }, [])
 
-  const go = useCallback((path: string) => { navigate(path); close() }, [navigate, close])
+  const bumpRecent = useCallback(() => setRecentVersion(v => v + 1), [])
+
+  const go = useCallback((path: string) => {
+    addRecentCommand({ kind: 'nav', path })
+    bumpRecent()
+    navigate(path)
+    close()
+  }, [navigate, close, bumpRecent])
 
   const executeCommand = useCallback((command: string, vehicleId: number) => {
     commandMutation.mutate({ vehicleId, command })
-    addRecentCommand({ command, vehicleId })
+    addRecentCommand({ kind: 'vehicle', command, vehicleId })
+    bumpRecent()
     close()
-  }, [commandMutation, close])
+  }, [commandMutation, close, bumpRecent])
 
   const selectCommand = useCallback((command: string) => {
     if (vehicleList.length === 1) {
@@ -163,6 +256,20 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
       setQuery('')
     }
   }, [vehicleList, executeCommand])
+
+  const switchActiveVehicle = useCallback((id: number) => {
+    setVehicleId(id)
+    addRecentCommand({ kind: 'registry', registryId: `switch-vehicle-${id}` })
+    bumpRecent()
+    close()
+  }, [setVehicleId, close, bumpRecent])
+
+  const runRegistryCommand = useCallback((cmd: ResolvedCommand) => {
+    addRecentCommand({ kind: 'registry', registryId: cmd.id })
+    bumpRecent()
+    void cmd.invoke()
+    close()
+  }, [close, bumpRecent])
 
   // ── Build palette items ───────────────────────────────────────────────────
 
@@ -176,7 +283,7 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
         return {
           id: item.to,
           label: item.label,
-          section: section.title,
+          section: t('palette.section.pages', 'Pages'),
           icon: <item.icon className="h-4 w-4" />,
           action: () => go(item.to),
           keywords,
@@ -185,7 +292,7 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
         }
       })
     ),
-  [go])
+  [go, t])
 
   const commandItems: PaletteItem[] = useMemo(() => {
     if (vehicleList.length === 0) return []
@@ -207,28 +314,125 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
     })
   }, [commandDefMap, vehicleList, t, selectCommand])
 
+  // Vehicle SWITCHING — different from vehicle COMMANDS. Renders one entry per
+  // vehicle that calls setVehicleId() and stays on the current page. Hidden when
+  // the fleet has only one vehicle (nothing to switch to). The currently active
+  // vehicle is also hidden so the list never includes a no-op.
+  const vehicleSwitchItems: PaletteItem[] = useMemo(() => {
+    if (vehicleList.length < 2) return []
+    return vehicleList
+      .filter(v => v.id !== activeVehicleId)
+      .map(v => ({
+        id: `switch-vehicle-${v.id}`,
+        label: t('palette.cmd.switchVehicle', { name: v.display_name || v.vin, defaultValue: `Switch to ${v.display_name || v.vin}` }),
+        section: t('palette.section.vehicles', 'Vehicles'),
+        icon: <ArrowRightLeft className="h-4 w-4" />,
+        type: 'vehicle-switch' as const,
+        sublabel: `${v.model ?? ''} · ${v.state ?? 'unknown'}`.trim(),
+        keywords: ['switch', 'vehicle', 'select', v.display_name ?? '', v.vin ?? ''].filter(Boolean) as string[],
+        action: () => switchActiveVehicle(v.id),
+      }))
+  }, [vehicleList, activeVehicleId, t, switchActiveVehicle])
+
+  // Static registry: theme, refresh, navigate-to-feature, etc. Keep them in
+  // their own section so power users can scan for "preferences" and "actions".
+  const registryItems: PaletteItem[] = useMemo(() =>
+    registryCommands.map(c => {
+      const sectionLabel = c.section === 'preferences'
+        ? t('palette.section.preferences', 'Preferences')
+        : c.section === 'actions'
+          ? t('palette.section.actions', 'Actions')
+          : c.section === 'pages'
+            ? t('palette.section.pages', 'Pages')
+            : t('palette.section.vehicles', 'Vehicles')
+      const Icon = c.icon
+      return {
+        id: c.id,
+        label: c.label,
+        section: sectionLabel,
+        icon: <Icon className="h-4 w-4" />,
+        keywords: c.keywords,
+        shortcut: c.shortcut,
+        type: 'registry' as const,
+        action: () => runRegistryCommand(c),
+      }
+    }),
+  [registryCommands, t, runRegistryCommand])
+
   const recentItems: PaletteItem[] = useMemo(() => {
     if (query.trim()) return []
-    const recent = getRecentCommands()
-    return recent.flatMap(r => {
-      const cfg = PALETTE_COMMAND_CONFIGS.find(c => c.command === r.command)
-      if (!cfg) return []
-      const def = commandDefMap.get(cfg.defId)
-      if (!def) return []
-      const vehicle = vehicleList.find(v => v.id === r.vehicleId)
-      if (!vehicle) return []
-      const item: PaletteItem = {
-        id: `recent-${r.command}-${r.vehicleId}`,
-        label: t(cfg.labelKey, cfg.labelFallback),
-        section: t('palette.section.recent', 'Recent'),
-        icon: getIconForConfig(cfg, def),
-        type: 'command',
-        sublabel: `→ ${vehicle.display_name || vehicle.vin}`,
-        action: () => executeCommand(r.command, r.vehicleId),
+    // Read recents — recentVersion exists solely to invalidate this memo after
+    // addRecentCommand mutates localStorage so the "Recent" section refreshes
+    // without us needing a storage event listener.
+    void recentVersion
+    const recent = getRecentCommands().slice(0, RECENT_MAX_DISPLAY)
+    return recent.flatMap<PaletteItem>(r => {
+      if (r.kind === 'vehicle' && r.command && r.vehicleId != null) {
+        const cfg = PALETTE_COMMAND_CONFIGS.find(c => c.command === r.command)
+        if (!cfg) return []
+        const def = commandDefMap.get(cfg.defId)
+        if (!def) return []
+        const vehicle = vehicleList.find(v => v.id === r.vehicleId)
+        if (!vehicle) return []
+        return [{
+          id: `recent-vehicle-${r.command}-${r.vehicleId}`,
+          label: t(cfg.labelKey, cfg.labelFallback),
+          section: t('palette.section.recent', 'Recent'),
+          icon: getIconForConfig(cfg, def),
+          type: 'command',
+          sublabel: `→ ${vehicle.display_name || vehicle.vin}`,
+          action: () => executeCommand(r.command!, r.vehicleId!),
+        }]
       }
-      return [item]
+      if (r.kind === 'registry' && r.registryId) {
+        // Vehicle-switch entries are dynamic — not in the registry — so handle
+        // them explicitly before falling back to the registry lookup.
+        if (r.registryId.startsWith('switch-vehicle-')) {
+          const vid = Number(r.registryId.slice('switch-vehicle-'.length))
+          const vehicle = vehicleList.find(v => v.id === vid)
+          if (!vehicle) return []
+          return [{
+            id: `recent-${r.registryId}`,
+            label: t('palette.cmd.switchVehicle', { name: vehicle.display_name || vehicle.vin, defaultValue: `Switch to ${vehicle.display_name || vehicle.vin}` }),
+            section: t('palette.section.recent', 'Recent'),
+            icon: <ArrowRightLeft className="h-4 w-4" />,
+            type: 'vehicle-switch',
+            sublabel: `${vehicle.model ?? ''} · ${vehicle.state ?? 'unknown'}`.trim(),
+            action: () => switchActiveVehicle(vid),
+          }]
+        }
+        const reg = getRegistryById(r.registryId)
+        if (!reg) return []
+        const Icon = reg.icon
+        return [{
+          id: `recent-${r.registryId}`,
+          label: reg.label,
+          section: t('palette.section.recent', 'Recent'),
+          icon: <Icon className="h-4 w-4" />,
+          type: 'registry',
+          shortcut: reg.shortcut,
+          action: () => runRegistryCommand(reg),
+        }]
+      }
+      if (r.kind === 'nav' && r.path) {
+        // Find the nav entry to recover its label and icon
+        for (const section of navSections) {
+          const item = section.items.find(i => i.to === r.path)
+          if (!item) continue
+          return [{
+            id: `recent-nav-${r.path}`,
+            label: item.label,
+            section: t('palette.section.recent', 'Recent'),
+            icon: <item.icon className="h-4 w-4" />,
+            type: 'navigate',
+            sublabel: section.title,
+            action: () => go(r.path!),
+          }]
+        }
+      }
+      return []
     })
-  }, [query, commandDefMap, vehicleList, t, executeCommand])
+  }, [query, recentVersion, commandDefMap, vehicleList, t, executeCommand, getRegistryById, runRegistryCommand, switchActiveVehicle, go])
 
   // ── Vehicle selector items ────────────────────────────────────────────────
 
@@ -244,25 +448,83 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
     })),
   [vehicleList, pendingCommand, executeCommand, t])
 
+  // ── Live entity search (Phase-40 / Prompt 41) ─────────────────────────────
+  //
+  // Debounce by 200 ms so each keystroke does not fan out to the backend's
+  // ~9 ILIKE sub-queries. The hook itself enforces the >= 2 char floor.
+
+  const [debouncedQuery, setDebouncedQuery] = useState('')
+  useEffect(() => {
+    const trimmed = query.trim()
+    if (trimmed.length === 0) {
+      setDebouncedQuery('')
+      return
+    }
+    const handle = window.setTimeout(() => setDebouncedQuery(trimmed), 200)
+    return () => window.clearTimeout(handle)
+  }, [query])
+
+  const { data: searchData } = useGlobalSearch(debouncedQuery, {
+    disabled: mode !== 'search',
+    limit: 5,
+  })
+
+  const searchResultItems: PaletteItem[] = useMemo(() => {
+    const hits = searchData?.hits ?? []
+    if (hits.length === 0) return []
+    return hits.map((hit): PaletteItem => ({
+      id: `search-${hit.type}-${hit.id}`,
+      label: hit.title,
+      sublabel: hit.subtitle,
+      section: searchSectionLabel(hit.type, t),
+      icon: searchHitIcon(hit.type),
+      type: 'search-hit',
+      action: () => go(hit.url),
+    }))
+  }, [searchData, t, go])
+
+  const showViewAllResults = (searchData?.hits?.length ?? 0) > 0 && debouncedQuery.length >= 2
+
   // ── Filtered items ────────────────────────────────────────────────────────
+  //
+  // Order matters — recents render first when no query, registry/vehicles
+  // surface above the long nav list when the query matches them, and the
+  // PALETTE_COMMAND_CONFIGS items stay at the bottom (long list).
 
   const allItems = useMemo(
-    () => [...recentItems, ...navItems, ...commandItems],
-    [recentItems, navItems, commandItems],
+    () => [...searchResultItems, ...recentItems, ...registryItems, ...vehicleSwitchItems, ...navItems, ...commandItems],
+    [searchResultItems, recentItems, registryItems, vehicleSwitchItems, navItems, commandItems],
   )
 
   const filtered = useMemo(() => {
     if (!query.trim()) return allItems
-    const q = query.toLowerCase()
-    return allItems.filter(cmd => {
-      const haystack = [
-        cmd.label,
-        cmd.section,
-        cmd.sublabel ?? '',
-        ...(cmd.keywords ?? []),
-      ]
-      return haystack.some(value => value.toLowerCase().includes(q))
-    })
+    // Score every item with the same fuzzy matcher used for registry commands
+    // so "btr" matches "Battery Health" via subsequence, not just substring.
+    const scored = allItems
+      .map(cmd => {
+        // Server-ranked entity hits skip local filtering — the backend
+        // already matched on the user's query and computed scores per
+        // entity. Pinning them at a high pseudo-score keeps Results above
+        // the static items inside groupedItems while remaining in their
+        // own per-type sections.
+        if (cmd.type === 'search-hit') return { cmd, score: 9999 }
+        const haystack = [cmd.label, ...(cmd.keywords ?? [])]
+        let best = 0
+        for (let i = 0; i < haystack.length; i++) {
+          const s = scoreCommand(query, haystack[i], i === 0 ? cmd.keywords : undefined)
+          if (s > best) best = s
+        }
+        // Sublabel/section as a lighter substring fallback
+        if (best === 0) {
+          const q = query.toLowerCase()
+          if ((cmd.sublabel ?? '').toLowerCase().includes(q)) best = 10
+          else if (cmd.section.toLowerCase().includes(q)) best = 5
+        }
+        return { cmd, score: best }
+      })
+      .filter(s => s.score > 0)
+      .sort((a, b) => b.score - a.score)
+    return scored.map(s => s.cmd)
   }, [allItems, query])
 
   const displayItems = mode === 'vehicle-select' ? vehicleItems : filtered
@@ -271,13 +533,16 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
 
   useEffect(() => { setSelectedIndex(0) }, [displayItems])
 
-  // Keyboard shortcut to open
+  // Esc closes the palette (or pops vehicle-select mode). Esc fires from
+  // anywhere — closing modals from inside an input is expected, and the
+  // palette's own input is the most common Esc target.
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        setOpen(prev => !prev)
-      }
+      // Ctrl+K is owned by useKeyboardShortcuts (mounted in Layout) which
+      // dispatches the `toggle-command-palette` custom event. Listening for
+      // Ctrl+K here as well caused the palette to toggle twice on a single
+      // keypress (open → immediately close), so this branch was removed.
+      // See the `toggle-command-palette` listener below for the real wiring.
       if (e.key === 'Escape') {
         if (mode === 'vehicle-select') {
           goBack()
@@ -290,9 +555,23 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [mode, goBack])
 
+  // useKeyboardShortcuts dispatches this custom event when the user presses
+  // Ctrl+K outside a form field. Listening here keeps the palette in sync
+  // with the global shortcut layer without duplicating focus rules.
+  useEffect(() => {
+    function handleToggle() { setOpen(prev => !prev) }
+    window.addEventListener('toggle-command-palette', handleToggle as EventListener)
+    return () => window.removeEventListener('toggle-command-palette', handleToggle as EventListener)
+  }, [])
+
   // Focus input when opened; close sidebar on mobile
   useEffect(() => {
     if (open) {
+      // Phase-40 / Prompt 68 — first-open instrumentation: marks the
+      // "try-command-palette" onboarding-checklist task as complete the moment
+      // the user discovers the palette. Idempotent — only writes the flag the
+      // first time, so subsequent opens are a no-op.
+      markCommandPaletteDiscovered()
       setQuery('')
       setSelectedIndex(0)
       setMode('search')
@@ -357,6 +636,7 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            data-role="command-palette"
             className="fixed inset-0 z-[200] bg-slate-950/35 backdrop-blur-sm dark:bg-black/60"
             onClick={close}
           />
@@ -365,6 +645,7 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
             transition={{ type: 'spring', bounce: 0.15, duration: 0.3 }}
+            data-role="command-palette"
             className="fixed left-4 right-4 top-[10%] z-[201] max-w-lg sm:left-1/2 sm:right-auto sm:top-[15%] sm:-translate-x-1/2 sm:w-[calc(100%-2rem)]"
           >
             <div className="overflow-hidden rounded-2xl border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-2xl backdrop-blur-xl">
@@ -456,6 +737,14 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
                                 </span>
                               )}
                             </div>
+                            {item.shortcut && (
+                              <kbd
+                                aria-label={t('palette.shortcut', { keys: item.shortcut, defaultValue: `Shortcut: ${item.shortcut}` })}
+                                className="hidden flex-shrink-0 rounded-md border border-[var(--glass-border)] bg-[var(--surface-2)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--text-muted)] sm:inline-flex"
+                              >
+                                {item.shortcut}
+                              </kbd>
+                            )}
                             {isSelected && (
                               <ArrowRight className="h-3.5 w-3.5 flex-shrink-0 text-[var(--theme-primary)]" />
                             )}
@@ -464,6 +753,20 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
                       })}
                     </div>
                   ))
+                )}
+                {showViewAllResults && mode === 'search' && (
+                  <div className="border-t border-[var(--glass-border)] mt-1 pt-2">
+                    <button
+                      onClick={() => go(`/search?q=${encodeURIComponent(debouncedQuery)}`)}
+                      className="flex w-full items-center justify-between gap-3 rounded-xl px-4 py-2 text-left text-xs text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Search className="h-3.5 w-3.5" />
+                        {t('search.palette.viewAll', { query: debouncedQuery, defaultValue: `View all results for "${debouncedQuery}"` })}
+                      </span>
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 )}
               </div>
 
@@ -497,7 +800,8 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
 export function CommandPaletteTrigger() {
   return (
     <button
-      onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
+      type="button"
+      onClick={() => window.dispatchEvent(new CustomEvent('toggle-command-palette'))}
       className="flex w-full items-center gap-3 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-1)] px-4 py-2.5 text-sm text-[var(--text-muted)] transition-all hover:border-[var(--theme-primary)] hover:text-[var(--text-secondary)]"
     >
       <Search className="h-4 w-4" />

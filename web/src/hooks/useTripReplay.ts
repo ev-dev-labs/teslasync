@@ -7,6 +7,10 @@ import type { DrivePosition } from '@/types/driving';
 
 export type ReplaySpeed = 1 | 10 | 25 | 50 | 100;
 
+/** Ordered list of allowed replay speeds. Exposed so consumers can render
+ *  speed cycle controls without re-deriving the order. */
+export const REPLAY_SPEEDS: readonly ReplaySpeed[] = [1, 10, 25, 50, 100] as const;
+
 export interface ReplayState {
   isPlaying: boolean;
   speed: ReplaySpeed;
@@ -22,19 +26,38 @@ export interface ReplayControls {
   pause: () => void;
   stop: () => void;
   setSpeed: (speed: ReplaySpeed) => void;
+  /** Step the speed slot by `delta` (signed). +1 = next-fastest, -1 = next-slowest. Clamped. */
+  setSpeedRelative: (delta: number) => void;
   seekTo: (index: number) => void;
   seekToProgress: (progress: number) => void;
+  /** Seek by `deltaSeconds` (signed). Clamped to [0, totalTime]. */
+  seekBy: (deltaSeconds: number) => void;
+  /** Step the playhead by `delta` positions (frames). Signed; clamped. */
+  stepFrame: (delta: number) => void;
 }
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
-/** Parse position timestamps into ms-since-drive-start offsets. */
+/** Parse position timestamps into ms-since-drive-start offsets. Positions
+ *  whose timestamps don't parse are skipped so a single bad row can't
+ *  poison `totalTime` (NaN propagates and produces "NaN:NaN" in the UI). */
 function buildTimeline(positions: DrivePosition[]): number[] {
   if (positions.length === 0) return [];
-  const t0 = new Date(positions[0].timestamp).getTime();
-  return positions.map((p) => new Date(p.timestamp).getTime() - t0);
+  let t0 = NaN;
+  for (const p of positions) {
+    const t = new Date(p.timestamp).getTime();
+    if (Number.isFinite(t)) {
+      t0 = t;
+      break;
+    }
+  }
+  if (!Number.isFinite(t0)) return [];
+  return positions.map((p) => {
+    const t = new Date(p.timestamp).getTime();
+    return Number.isFinite(t) ? t - t0 : 0;
+  });
 }
 
 /** Binary-search for the index whose offset is closest to `target`. */
@@ -156,6 +179,15 @@ export function useTripReplay(
     setSpeedState(s);
   }, []);
 
+  const setSpeedRelative = useCallback((delta: number) => {
+    setSpeedState((prev) => {
+      const idx = REPLAY_SPEEDS.indexOf(prev);
+      const safeIdx = idx === -1 ? 0 : idx;
+      const nextIdx = Math.max(0, Math.min(REPLAY_SPEEDS.length - 1, safeIdx + delta));
+      return REPLAY_SPEEDS[nextIdx];
+    });
+  }, []);
+
   const seekTo = useCallback((index: number) => {
     const offsets = offsetsRef.current;
     const clamped = Math.max(0, Math.min(index, offsets.length - 1));
@@ -169,6 +201,25 @@ export function useTripReplay(
     const targetMs = Math.max(0, Math.min(1, progress)) * total;
     elapsedRef.current = targetMs;
     setCurrentIndex(indexAtTime(offsets, targetMs));
+  }, []);
+
+  const seekBy = useCallback((deltaSeconds: number) => {
+    const total = totalTimeRef.current;
+    const offsets = offsetsRef.current;
+    if (total <= 0 || offsets.length === 0) return;
+    const targetMs = Math.max(0, Math.min(total, elapsedRef.current + deltaSeconds * 1000));
+    elapsedRef.current = targetMs;
+    setCurrentIndex(indexAtTime(offsets, targetMs));
+  }, []);
+
+  const stepFrame = useCallback((delta: number) => {
+    const offsets = offsetsRef.current;
+    if (offsets.length === 0) return;
+    setCurrentIndex((prev) => {
+      const next = Math.max(0, Math.min(offsets.length - 1, prev + delta));
+      elapsedRef.current = offsets[next] ?? 0;
+      return next;
+    });
   }, []);
 
   /* ---- Derived state ---- */
@@ -187,6 +238,6 @@ export function useTripReplay(
       elapsedTime: elapsedRef.current,
       totalTime,
     },
-    { play, pause, stop, setSpeed, seekTo, seekToProgress },
+    { play, pause, stop, setSpeed, setSpeedRelative, seekTo, seekToProgress, seekBy, stepFrame },
   ];
 }

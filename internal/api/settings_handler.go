@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"regexp"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -71,6 +73,27 @@ func (h *SettingsHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(s.Language) > 10 {
 		writeError(w, http.StatusBadRequest, "language must be 10 characters or less")
+		return
+	}
+	if len(s.CurrencySymbol) > 8 {
+		writeError(w, http.StatusBadRequest, "currency_symbol must be 8 characters or less")
+		return
+	}
+	if s.Locale != "" && !isValidBCP47(s.Locale) {
+		writeError(w, http.StatusBadRequest, "locale must be a BCP-47 tag (e.g. 'en-US', 'de-DE')")
+		return
+	}
+	if s.TzDisplayDefault != "" && !isValidTzDisplayMode(s.TzDisplayDefault) {
+		writeError(w, http.StatusBadRequest, "tz_display_default must be 'vehicle', 'user', or 'utc'")
+		return
+	}
+	if s.TimezoneUser != "" && !isValidIANATimezone(s.TimezoneUser) {
+		writeError(w, http.StatusBadRequest, "timezone_user must be a valid IANA timezone (e.g. 'America/Los_Angeles')")
+		return
+	}
+	validUIDensity := map[string]bool{"compact": true, "comfortable": true, "spacious": true}
+	if s.UIDensity != "" && !validUIDensity[s.UIDensity] {
+		writeError(w, http.StatusBadRequest, "ui_density must be 'compact', 'comfortable', or 'spacious'")
 		return
 	}
 
@@ -231,4 +254,41 @@ func (h *SettingsHandler) UpdateDashboardLayouts(w http.ResponseWriter, r *http.
 	}
 
 	writeJSON(w, http.StatusOK, payload)
+}
+
+// bcp47Pattern is a deliberately conservative subset of BCP-47 — it covers
+// the locales we ship i18n bundles for (en-US, en-GB, de-DE, fr-FR, es-ES,
+// ja-JP, zh-CN, …). Either a 2-3 letter language tag, or a language tag
+// followed by a 2-letter region (or 3-digit UN M.49 code) is accepted.
+var bcp47Pattern = regexp.MustCompile(`^[a-z]{2,3}(-(?:[A-Z]{2}|[0-9]{3}))?$`)
+
+// isValidBCP47 reports whether s is a supported BCP-47 locale tag.
+func isValidBCP47(s string) bool {
+	if len(s) > 16 {
+		return false
+	}
+	return bcp47Pattern.MatchString(s)
+}
+
+// isValidTzDisplayMode reports whether s is a supported tz display mode
+// for `Settings.TzDisplayDefault`. Mirrors the union type in
+// `web/src/lib/timezone.ts`.
+func isValidTzDisplayMode(s string) bool {
+	switch s {
+	case "vehicle", "user", "utc":
+		return true
+	}
+	return false
+}
+
+// isValidIANATimezone reports whether s parses as an IANA tz database
+// name. Uses Go's tzdata so the validator accepts the same set of zones
+// the runtime can resolve. Empty string is treated as invalid here;
+// callers should short-circuit before calling.
+func isValidIANATimezone(s string) bool {
+	if len(s) == 0 || len(s) > 64 {
+		return false
+	}
+	_, err := time.LoadLocation(s)
+	return err == nil
 }

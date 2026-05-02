@@ -80,6 +80,42 @@ TeslaSync is a **self-hosted Tesla Fleet Intelligence Platform** — Go 1.25 bac
 Collects, analyzes, and visualizes Tesla vehicle data via Fleet API + Fleet Telemetry streaming.
 **Repository:** `github.com/ev-dev-labs/teslasync`
 
+## ⚠️ ACTIVE MIGRATION: Phase-42 — Tesla Fleet Telemetry Pipeline Rewrite
+
+> **Status:** prompts authored under `.github/prompts/db-refactor/phase-42/`,
+> reviewed by Staff + Principal Engineer + Principal Architect, awaiting
+> execution. **Forward-only — no legacy retention.** When phase-42 lands,
+> ADR-004 (`.github/ARCHITECTURE.md`) and `.github/instructions/tesla-pipeline.instructions.md`
+> become the canonical sources. Until then, the rules below apply to any
+> concurrent agent work.
+
+```
+❌ DO NOT add new code under `internal/telemetry/*`
+   — the directory is being deleted by phase-42 prompt 0080.
+❌ DO NOT add new hand-written enum parsers under `internal/enums/parse_*`
+   — being replaced by generated code from the vendored Tesla proto.
+❌ DO NOT add new tables that mirror Fleet Telemetry fields directly
+   — phase-42 routes everything through `internal/tesla/normalize.Pipeline`.
+❌ DO NOT bypass `signal.Store` (L1) by writing to Redis or signal_log directly
+   — the layered live-state contract still applies (see "Signal Data" below).
+❌ DO NOT add per-vehicle or value-conditional routing to `routing.yaml`
+   — routing is field-static and vehicle-agnostic by ADR-004 #8.
+✅ DO put new Tesla-vendor-specific code under `internal/tesla/*`
+   (codec, units, unit_history, bootstrap, config, router, normalize).
+✅ DO put new vendor-agnostic signal/state primitives under `internal/signal/*`.
+✅ DO prefix new Tesla-vendor-specific tables with `tesla_*`
+   (e.g., `tesla_vehicle_unit_history`). Existing unprefixed tables are
+   grandfathered until a future rename migration.
+✅ DO route ALL new ingest paths through `(*normalize.Pipeline).Process`
+   — it is THE one entry; reflective coverage test enforces this.
+✅ DO treat `router.Writer` failures as logged + counted (via
+   `tesla_router_writer_failures_total`), NEVER propagated to MQTT
+   redelivery. Only codec failures (malformed bytes) trigger redelivery.
+```
+
+If you find yourself wanting to bend any of these rules, STOP and consult
+the user — phase-42 may need to be revisited rather than worked around.
+
 ## Architecture
 
 ```
@@ -178,6 +214,35 @@ Many bugs in this project stem from frontend TypeScript interfaces not matching 
    BAD:  import { X } from '@/components/SomeFile'
    GOOD: import { X } from '@/components/ui'
    GOOD: import { X } from '@/components/charts'
+
+❌ 11. NEON TEXT for body content
+   BAD:  <td className="text-neon-cyan">{value}</td>
+   BAD:  <p className="text-neon-green">Description text</p>
+   GOOD: <td className="text-cyan-300">{value}</td>
+   GOOD: <p className="text-emerald-300">Description text</p>
+   EXCEPTION: short labels (≤4 chars / 1 word) inside a chip that ALSO has
+   bg-neon-{same}/10+ and border-neon-{same}/20+ on the same element.
+   For pure body text with no semantic color, use text-white/90.
+   Toned-down map: cyan→cyan-300, green→emerald-300, amber→amber-300,
+   red→rose-300, purple→purple-300, blue→indigo-300, pink→pink-300.
+
+❌ 12. AD-HOC TYPOGRAPHY classes
+   BAD:  <h2 className="text-lg font-semibold tracking-tight text-white">…</h2>
+   BAD:  <span className="text-[10px] text-white/40">label</span>
+   GOOD: <SectionTitle>…</SectionTitle>
+   GOOD: <Caption>label</Caption>
+   GOOD: <Text variant="bodySm">…</Text>
+
+   For new pages: import from @/components/ui — Heading, Text, PageTitle,
+   SectionTitle, PanelTitle, Subhead, Caption, HelperText, ErrorText,
+   Label, MetricValue, MetricLabel, Code.
+
+   For one-offs that genuinely don't fit a role: use typography tokens from
+   @/lib/tokens — typography.size, typography.weight, typography.color.
+
+   Never use raw text-white/N or text-gray-N — use typography.color or the
+   --text-primary / --text-secondary / --text-muted CSS vars so light theme
+   keeps working.
 ```
 
 ## Frontend Architecture (Refactored)

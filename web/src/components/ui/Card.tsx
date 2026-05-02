@@ -2,13 +2,25 @@ import { forwardRef, type HTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 
 export interface CardProps extends HTMLAttributes<HTMLDivElement> {
-  padding?: 'sm' | 'md' | 'lg';
+  /**
+   * Padding scale. Defaults to `'md'`. Pass `'auto'` to follow the user's
+   * `ui_density` setting via the density-aware Tailwind utilities
+   * (`px-d-pad-x py-d-pad-y`); see `useDensitySync` and `index.css`.
+   * (Phase 40 / Prompt 44.)
+   */
+  padding?: 'none' | 'sm' | 'md' | 'lg' | 'auto';
   hover?: boolean;
 }
 
 export const Card = forwardRef<HTMLDivElement, CardProps>(
   ({ padding = 'md', hover, className, children, ...props }, ref) => {
-    const paddings = { sm: 'p-3', md: 'p-4', lg: 'p-6' };
+    const paddings: Record<NonNullable<CardProps['padding']>, string> = {
+      none: '',
+      sm: 'p-3',
+      md: 'p-4',
+      lg: 'p-6',
+      auto: 'px-d-pad-x py-d-pad-y',
+    };
     return (
       <div
         ref={ref}

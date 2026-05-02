@@ -1,11 +1,12 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
 import { getApiBase } from '@/lib/resilience'
 import { request } from '@/api/client'
+import { broadcast, subscribe } from '@/lib/broadcast'
 
 export type ThemeId = 'neon-cyan' | 'tesla-red' | 'matrix-green' | 'royal-purple' | 'solar-amber' | 'custom'
 export type ModeId = 'dark' | 'light' | 'oled' | 'midnight' | 'auto' | 'sunset' | 'nord'
 
-interface ColorTheme {
+export interface ColorTheme {
   id: ThemeId
   name: string
   primary: string
@@ -14,7 +15,7 @@ interface ColorTheme {
   accentRGB: string
 }
 
-interface ModeTheme {
+export interface ModeTheme {
   id: ModeId
   name: string
   bg: string
@@ -319,10 +320,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const setTheme = (id: ThemeId) => {
     setThemeId(id)
     saveThemeToBackend(id, modeId, customColors.primary, customColors.accent)
+    broadcast({ type: 'theme.changed', themeId: id, modeId })
   }
   const setMode = (id: ModeId) => {
     setModeId(id)
     saveThemeToBackend(themeId, id, customColors.primary, customColors.accent)
+    broadcast({ type: 'theme.changed', themeId, modeId: id })
   }
 
   const setCustomColors = (primary: string, accent: string) => {
@@ -331,7 +334,28 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setCustomColorsState({ primary, accent })
     setThemeId('custom')
     saveThemeToBackend('custom', modeId, primary, accent)
+    broadcast({ type: 'theme.customColors', primary, accent })
+    broadcast({ type: 'theme.changed', themeId: 'custom', modeId })
   }
+
+  // Phase-40 / Prompt 69 — cross-tab theme sync. When another tab switches
+  // theme/mode/custom-colors, mirror the change here without re-broadcasting
+  // (which would loop) and without re-persisting to the backend (the
+  // originating tab already did that).
+  const themesRef = useRef(themes)
+  const modesRef = useRef(modes)
+  themesRef.current = themes
+  modesRef.current = modes
+  useEffect(() => {
+    return subscribe((m) => {
+      if (m.type === 'theme.changed') {
+        if (m.themeId in themesRef.current) setThemeId(m.themeId as ThemeId)
+        if (m.modeId in modesRef.current) setModeId(m.modeId as ModeId)
+      } else if (m.type === 'theme.customColors') {
+        setCustomColorsState({ primary: m.primary, accent: m.accent })
+      }
+    })
+  }, [])
 
   return (
     <ThemeContext.Provider value={{ themeId, modeId, theme, mode, setTheme, setMode, setCustomColors, themes: currentThemes, modes }}>

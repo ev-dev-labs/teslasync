@@ -15,7 +15,6 @@ interface FreshnessIndicatorProps {
   /** Size variant (default: 'sm') */
   size?: 'sm' | 'md';
 }
-
 const DOT_COLOR: Record<FreshnessStatus, string> = {
   fresh: 'bg-neon-green',
   stale: 'bg-neon-amber',
@@ -54,6 +53,20 @@ function formatAge(age: number | null): string {
   return `${Math.floor(age / 3600)}h ago`;
 }
 
+/**
+ * `<FreshnessIndicator>` — age of a SPECIFIC DATA POINT.
+ *
+ * Renders a small colored dot + relative time label ("12s ago", "5m ago",
+ * "offline") next to a value to indicate how recently it was sampled. Use
+ * this when the caller already has a `timestamp` for the underlying datum
+ * (e.g. last battery_level reading, last GPS fix).
+ *
+ * NOT to be confused with `<LiveIndicator>`. That component reflects the
+ * health of the LIVE PIPE (the SSE/MQTT/polling transport), regardless of
+ * whether any specific data point is fresh. A page can have a healthy
+ * `<LiveIndicator>` and a stale `<FreshnessIndicator>` simultaneously when
+ * the wire is up but the vehicle has stopped emitting that signal.
+ */
 export function FreshnessIndicator({
   timestamp,
   staleThreshold = 120,

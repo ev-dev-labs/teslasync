@@ -23,7 +23,7 @@ export const PIE_COLORS = [
 
 export const QUICK_LINKS = [
   { labelKey: 'analytics.links.statistics', href: '/statistics', icon: <BarChart3 className="h-4 w-4" /> },
-  { labelKey: 'analytics.links.compare', href: '/compare', icon: <Activity className="h-4 w-4" /> },
+  { labelKey: 'analytics.links.compare', href: '/period-compare', icon: <Activity className="h-4 w-4" /> },
   { labelKey: 'analytics.links.weeklyDigest', href: '/weekly-digest', icon: <Calendar className="h-4 w-4" /> },
   { labelKey: 'analytics.links.mileage', href: '/mileage', icon: <MapPin className="h-4 w-4" /> },
   { labelKey: 'analytics.links.timeline', href: '/timeline', icon: <Clock className="h-4 w-4" /> },

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Route, Play, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
-import { formatDate, formatTime } from '@/lib/dateFormat';
+import { DateTime } from '@/components/data-display';
 import type { DriveDetail } from '@/types/driving';
 
 interface DriveDetailHeaderProps {
@@ -30,8 +30,15 @@ export function DriveDetailHeader({ drive, driveId, vehicleName, onShare }: Driv
               : t('driveDetail.title', 'Drive Details')}
           </h1>
           <p className="text-sm text-[var(--text-muted)] mt-0.5">
-            {vehicleName} · {formatDate(drive.startTs)} · {formatTime(drive.startTs)}
-            {drive.endTs && ` → ${formatTime(drive.endTs)}`}
+            {vehicleName} · <DateTime value={drive.startTs} variant="date" in="vehicle" />
+            {' · '}
+            <DateTime value={drive.startTs} variant="time" in="vehicle" showTz />
+            {drive.endTs && (
+              <>
+                {' → '}
+                <DateTime value={drive.endTs} variant="time" in="vehicle" />
+              </>
+            )}
           </p>
         </div>
         <Link to={`/drives/${driveId}/replay`}>

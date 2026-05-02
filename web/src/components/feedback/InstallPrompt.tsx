@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Download, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui'
+import { broadcast, subscribe } from '@/lib/broadcast'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>
@@ -78,6 +79,18 @@ export default function InstallPrompt() {
     } catch {
       // Ignore storage failures; dismissing still hides the prompt for this render.
     }
+    broadcast({ type: 'install.dismissed' })
+  }, [])
+
+  // Phase-40 / Prompt 69 — when another tab dismisses the install prompt,
+  // hide it here too so the user doesn't have to dismiss it on every tab.
+  useEffect(() => {
+    return subscribe((m) => {
+      if (m.type === 'install.dismissed') {
+        setVisible(false)
+        setDeferredPrompt(null)
+      }
+    })
   }, [])
 
   return (

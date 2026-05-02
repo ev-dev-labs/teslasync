@@ -218,7 +218,7 @@ export default function MediaPlayerPage() {
         header: t('Time'),
         sortable: true,
         render: (row) => (
-          <span className="text-gray-400 text-xs whitespace-nowrap">
+          <span className="text-[var(--text-secondary)] text-xs whitespace-nowrap">
             {formatDateTime(row.created_at)}
           </span>
         ),
@@ -228,7 +228,7 @@ export default function MediaPlayerPage() {
         header: t('Track'),
         sortable: true,
         render: (row) => (
-          <span className="truncate max-w-[200px] block font-medium text-white">
+          <span className="truncate max-w-[200px] block font-medium text-[var(--text-primary)]">
             {row.now_playing_title || '--'}
           </span>
         ),
@@ -238,7 +238,7 @@ export default function MediaPlayerPage() {
         header: t('Artist'),
         sortable: true,
         render: (row) => (
-          <span className="truncate max-w-[160px] block text-gray-300">
+          <span className="truncate max-w-[160px] block text-[var(--text-secondary)]">
             {row.now_playing_artist || '--'}
           </span>
         ),
@@ -250,7 +250,7 @@ export default function MediaPlayerPage() {
         render: (row) => (
           <span className="flex items-center gap-1.5">
             {sourceIcon(row.playback_source ?? '')}
-            <span className="text-gray-300">{row.playback_source || '--'}</span>
+            <span className="text-[var(--text-secondary)]">{row.playback_source || '--'}</span>
           </span>
         ),
       },
@@ -371,7 +371,7 @@ export default function MediaPlayerPage() {
             {/* Track info */}
             <div className="flex-1 min-w-0 space-y-2">
               <div className="flex items-center gap-3">
-                <h2 className="text-xl font-bold text-white truncate">
+                <h2 className="text-xl font-bold text-[var(--text-primary)] truncate">
                   {latest?.now_playing_title || t('No track')}
                 </h2>
                 {latest?.playback_status && (
@@ -384,7 +384,7 @@ export default function MediaPlayerPage() {
                 )}
               </div>
 
-              <p className="text-sm text-gray-400 truncate">
+              <p className="text-sm text-[var(--text-secondary)] truncate">
                 {latest?.now_playing_artist || t('Unknown artist')}
                 {latest?.now_playing_album
                   ? ` — ${latest.now_playing_album}`
@@ -392,14 +392,14 @@ export default function MediaPlayerPage() {
               </p>
 
               {latest?.now_playing_station && (
-                <p className="text-xs text-gray-500 truncate">
+                <p className="text-xs text-[var(--text-muted)] truncate">
                   {latest.now_playing_station}
                 </p>
               )}
 
               {/* Source */}
               {latest?.playback_source && (
-                <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                <div className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
                   {sourceIcon(latest.playback_source)}
                   <span>{latest.playback_source}</span>
                 </div>
@@ -407,7 +407,7 @@ export default function MediaPlayerPage() {
 
               {/* Progress bar */}
               {latest?.now_playing_duration ? (
-                <div className="flex items-center gap-2 text-xs text-gray-400 pt-1">
+                <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)] pt-1">
                   <span className="tabular-nums">
                     {fmtPlayTime(latest.now_playing_elapsed ?? 0)}
                   </span>
@@ -480,7 +480,7 @@ export default function MediaPlayerPage() {
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           {/* Volume over Time */}
           <GlassPanel className="p-4 lg:col-span-2">
-            <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
+            <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
               <Volume2 className="h-4 w-4 text-cyan-400" />
               {t('Volume over Time')}
             </h3>
@@ -509,7 +509,7 @@ export default function MediaPlayerPage() {
               </ResponsiveContainer>
             ) : (
               <EmptyState
-                icon={<BarChart3 className="h-8 w-8 text-gray-600" />}
+                icon={<BarChart3 className="h-8 w-8 text-[var(--text-muted)]" />}
                 message={t('No volume data for this period')}
               />
             )}
@@ -517,7 +517,7 @@ export default function MediaPlayerPage() {
 
           {/* Source Distribution */}
           <GlassPanel className="p-4">
-            <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
+            <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
               <Disc3 className="h-4 w-4 text-purple-400" />
               {t('Source Distribution')}
             </h3>
@@ -551,15 +551,15 @@ export default function MediaPlayerPage() {
                         className="inline-block h-2.5 w-2.5 rounded-full"
                         style={{ backgroundColor: s.color }}
                       />
-                      <span className="text-gray-300">{s.name}</span>
-                      <span className="text-gray-500">({s.value})</span>
+                      <span className="text-[var(--text-secondary)]">{s.name}</span>
+                      <span className="text-[var(--text-muted)]">({s.value})</span>
                     </span>
                   ))}
                 </div>
               </>
             ) : (
               <EmptyState
-                icon={<Disc3 className="h-8 w-8 text-gray-600" />}
+                icon={<Disc3 className="h-8 w-8 text-[var(--text-muted)]" />}
                 message={t('No source data available')}
               />
             )}
@@ -570,7 +570,7 @@ export default function MediaPlayerPage() {
       {/* ── Playback History table ───────────────────────────── */}
       <FadeIn delay={0.15}>
         <GlassPanel className="p-4">
-          <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
+          <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
             <ListMusic className="h-4 w-4 text-cyan-400" />
             {t('Playback History')}
             <Badge variant="neutral" size="sm" className="ml-auto">
@@ -591,7 +591,7 @@ export default function MediaPlayerPage() {
             />
           ) : (
             <EmptyState
-              icon={<Music className="h-8 w-8 text-gray-600" />}
+              icon={<Music className="h-8 w-8 text-[var(--text-muted)]" />}
               message={t('No playback history for this period')}
             />
           )}

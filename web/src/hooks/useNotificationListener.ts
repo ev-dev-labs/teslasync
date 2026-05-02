@@ -1,6 +1,9 @@
 import { useEffect, useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { sseManager } from '../lib/sseManager'
 import { useWebPush } from './useWebPush'
+import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough'
+import type { Alert } from '@/api/types'
 
 const PREFS_KEY = 'teslasync-web-push-prefs'
 
@@ -34,6 +37,12 @@ interface AlertEventData {
   message?: string
   severity?: string
   vehicle_name?: string
+  vehicle_id?: number
+  rule_id?: number | null
+  rule_signal?: string | null
+  rule_severity?: string | null
+  type?: string
+  created_at?: string
   quiet_suppressed?: boolean
   is_test?: boolean
 }
@@ -62,6 +71,7 @@ interface ExportStatusData {
 export function useNotificationListener() {
   const { permission, sendNotification } = useWebPush()
   const [prefs, setPrefsState] = useState<WebPushPreferences>(loadPrefs)
+  const navigate = useNavigate()
 
   const setPrefs = useCallback((next: WebPushPreferences | ((prev: WebPushPreferences) => WebPushPreferences)) => {
     setPrefsState((prev) => {
@@ -85,10 +95,34 @@ export function useNotificationListener() {
       const title = data.title ?? 'TeslaSync Alert'
       const body = [data.vehicle_name, data.message].filter(Boolean).join(' — ')
 
+      // Build a drill-through URL so clicking the OS notification deep-links
+      // into the relevant context page (Phase 40 / Prompt 14). When we don't
+      // have enough metadata we fall back to focusing the tab without
+      // navigating.
+      const hasContext = !!(data.created_at || data.rule_signal || data.vehicle_id)
+      const onClick = hasContext
+        ? () => {
+            const alert: Alert = {
+              id: data.id ?? 0,
+              vehicle_id: data.vehicle_id ?? 0,
+              type: data.type ?? 'notification',
+              severity: data.severity ?? 'info',
+              title: data.title ?? '',
+              message: data.message ?? '',
+              is_read: false,
+              created_at: data.created_at ?? new Date().toISOString(),
+              rule_id: data.rule_id ?? null,
+              rule_signal: data.rule_signal ?? null,
+              rule_severity: data.rule_severity ?? null,
+            }
+            navigate(getAlertDrillthroughHref(alert))
+          }
+        : undefined
+
       sendNotification(title, {
         body: body || undefined,
         tag: `alert-${data.id ?? Date.now()}`,
-      })
+      }, onClick)
     }
 
     const onExportStatus = (raw: unknown) => {
@@ -118,7 +152,7 @@ export function useNotificationListener() {
       sseManager.unsubscribe('alert', onAlert)
       sseManager.unsubscribe('export_status', onExportStatus)
     }
-  }, [permission, prefs, sendNotification])
+  }, [permission, prefs, sendNotification, navigate])
 
   return { prefs, setPrefs }
 }

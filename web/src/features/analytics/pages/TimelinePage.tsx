@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -18,6 +18,7 @@ import {
 
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useUrlString } from '@/hooks/useUrlState';
 import { formatDateTime, formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
 import { fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -123,7 +124,8 @@ function pivotDaily(rows: DailyRow[]): DailyPivoted[] {
 export default function TimelinePage() {
   const { t } = useTranslation();
   usePageTitle(t('timeline.title', 'Timeline'));
-  const [vehicleId, setVehicleId] = useState('');
+  // Phase 40 / Prompt 33 — vehicle id is in the URL so deep links work.
+  const [vehicleId, setVehicleId] = useUrlString('vehicle_id', '');
 
   const { data: vehicles, error: vehiclesError } = useVehicles();
 
@@ -281,7 +283,7 @@ export default function TimelinePage() {
 
       {/* Summary metric cards */}
       <FadeIn>
-        <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <MetricCard
             label={t('timeline.totalTransitions', 'Total Transitions')}
             value={totalTransitions}

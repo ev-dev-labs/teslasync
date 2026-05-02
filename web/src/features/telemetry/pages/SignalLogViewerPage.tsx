@@ -21,6 +21,7 @@ import { getErrorMessage } from '@/lib/errorMessage';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useUrlArray, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { useSignals } from '@/api/hooks/useTelemetry';
 import { request } from '@/api/client';
 import { CHART_COLORS } from '@/lib/colors';
@@ -28,6 +29,7 @@ import { toLocalDatetimeStr } from '@/lib/dateFormat';
 import { formatValue, type SignalLogEntry } from '@/components/SignalQueryControls';
 import type { SignalHistoryResp } from '@/api/types';
 import { TIME_RANGE_PRESETS } from '@/lib/constants';
+import { cn } from '@/lib/cn';
 import { Database, Search, Clock, Activity, Filter, AlertCircle } from 'lucide-react';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -49,17 +51,21 @@ export default function SignalLogViewerPage() {
   usePageTitle(t('Signal Log'));
   const vehicleId = 1;
 
-  // Signal selection
+  // Phase 40 / Prompt 33 — selected signals and time range live in the URL
+  // so a query view can be shared with another developer.
   const { data: availableSignals } = useSignals(vehicleId);
-  const [selectedSignals, setSelectedSignals] = useState<string[]>([]);
+  const [selectedSignals, setSelectedSignals] = useUrlArray('signals');
   const [signalSearch, setSignalSearch] = useState('');
 
-  // DateTime range
-  const [fromStr, setFromStr] = useState(() => toLocalDatetimeStr(new Date(Date.now() - 3600_000)));
-  const [toStr, setToStr] = useState(() => toLocalDatetimeStr(new Date()));
+  // DateTime range — defaults are recomputed relative to "now" if the URL
+  // doesn't pin them, so a fresh page load gets the last hour.
+  const defaultFrom = useMemo(() => toLocalDatetimeStr(new Date(Date.now() - 3600_000)), []);
+  const defaultTo = useMemo(() => toLocalDatetimeStr(new Date()), []);
+  const [fromStr, setFromStr] = useUrlString('from', defaultFrom);
+  const [toStr, setToStr] = useUrlString('to', defaultTo);
 
   // Pagination
-  const [perPage, setPerPage] = useState(50);
+  const [perPage, setPerPage] = useUrlNumber('size', 50);
   const [page, setPage] = useState(1);
 
   // Query trigger — only fetch when user clicks "Query"
@@ -134,24 +140,33 @@ export default function SignalLogViewerPage() {
     { key: 'row', header: '#', render: (r) => {
       const idx = rows.indexOf(r);
       return <span className="text-xs text-[var(--text-muted)] font-mono">{(page - 1) * perPage + idx + 1}</span>;
-    }},
-    { key: 'time', header: t('Timestamp'), render: (r) => <span className="whitespace-nowrap text-xs text-[var(--text-muted)]">{new Date(r.created_at).toLocaleString()}</span> },
+    }, defaultVisible: false },
+    { key: 'time', header: t('Timestamp'), render: (r) => <span className="whitespace-nowrap text-xs text-[var(--text-muted)]">{new Date(r.created_at).toLocaleString()}</span>, visibleOnMobile: true },
     { key: 'signal', header: t('Signal'), render: (r) => {
       const idx = selectedSignals.indexOf(r.signal);
-      return <span className="font-mono text-xs" style={{ color: idx >= 0 ? CHART_COLORS[idx % CHART_COLORS.length] : 'var(--text-primary)' }}>{r.signal}</span>;
-    }},
-    { key: 'value', header: t('Value'), render: (r) => <span className="font-mono text-xs text-[var(--text-primary)]">{formatValue(r)}</span> },
+      return <span className={cn('font-mono text-xs', idx < 0 && 'text-[var(--text-primary)]')} style={idx >= 0 ? { color: CHART_COLORS[idx % CHART_COLORS.length] } : undefined}>{r.signal}</span>;
+    }, visibleOnMobile: true },
+    { key: 'value', header: t('Value'), render: (r) => <span className="font-mono text-xs text-[var(--text-primary)]">{formatValue(r)}</span>, visibleOnMobile: true },
     { key: 'type', header: t('Type'), render: (r) => {
       const vt = valueType(r);
       return <Badge variant={typeVariant[vt] ?? 'neutral'} size="sm">{vt}</Badge>;
     }},
   ], [rows, page, perPage, selectedSignals, t]);
 
+  // Row expansion: surface the raw payload for the focused signal entry.
+  const [expandedKeys, setExpandedKeys] = useState<(string | number)[]>([]);
+  const renderExpanded = useCallback((r: SignalLogEntry) => (
+    <pre className="whitespace-pre-wrap break-all text-[11px] font-mono text-[var(--text-secondary)]">
+{JSON.stringify(r, null, 2)}
+    </pre>
+  ), []);
+
   return (
     <PageContainer
       title={t('Signal Log Viewer')}
       subtitle={t('Query signal history from Postgres')}
       loading={false}
+      copyLink
     >
       {anyError && (
         <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
@@ -281,6 +296,14 @@ export default function SignalLogViewerPage() {
                   keyExtractor={(r) => `${r.created_at}-${r.signal}`}
                   compact
                   pagination={{ defaultPageSize: 50 }}
+                  tableId="signal-log"
+                  showColumnsMenu
+                  stickyHeader
+                  maxHeight={520}
+                  expandable
+                  expandedKeys={expandedKeys}
+                  onExpandedChange={setExpandedKeys}
+                  renderExpanded={renderExpanded}
                 />
                 <Pagination
                   page={page}

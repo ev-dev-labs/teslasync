@@ -45,7 +45,7 @@ export function FleetStatsBar({
       <StaggerItem>
         <GlassPanel className="p-3 sm:p-4 text-center flex flex-col justify-center h-full">
           <p className="metric-label mb-1 text-[10px] sm:text-xs">{t('fleet.distance', 'Distance (30d)')}</p>
-          <p className="text-xl sm:text-2xl font-bold text-neon-cyan">
+          <p className="text-xl sm:text-2xl font-bold text-cyan-300">
             <AnimatedNumber value={convertDistance(totalDistance)} suffix={` ${distanceUnit}`} />
           </p>
           <MiniChart data={recentDrives?.map((d) => d.distance_mi).reverse() ?? [0]} color="#00f0ff" height={24} width={60} />
@@ -55,7 +55,7 @@ export function FleetStatsBar({
       <StaggerItem>
         <GlassPanel className="p-3 sm:p-4 text-center flex flex-col justify-center h-full">
           <p className="metric-label mb-1 text-[10px] sm:text-xs">{t('fleet.energy', 'Energy (30d)')}</p>
-          <p className="text-xl sm:text-2xl font-bold text-neon-green">
+          <p className="text-xl sm:text-2xl font-bold text-emerald-300">
             <AnimatedNumber value={totalEnergy} decimals={1} suffix=" kWh" />
           </p>
           <MiniChart data={recentCharges?.map((s) => s.energy_added_kwh).reverse() ?? [0]} color="#10b981" height={24} width={60} />
@@ -65,7 +65,7 @@ export function FleetStatsBar({
       <StaggerItem>
         <GlassPanel className="p-3 sm:p-4 text-center flex flex-col justify-center h-full">
           <p className="metric-label mb-1 text-[10px] sm:text-xs">{t('fleet.efficiency', 'Efficiency')}</p>
-          <p className="text-xl sm:text-2xl font-bold text-neon-amber">
+          <p className="text-xl sm:text-2xl font-bold text-amber-300">
             <AnimatedNumber value={convertEfficiency(analytics?.avg_efficiency_wh_km ?? 0)} suffix={` ${efficiencyUnit}`} />
           </p>
           <p className="text-[10px] text-gray-600 mt-1">{t('fleet.average', 'fleet average')}</p>

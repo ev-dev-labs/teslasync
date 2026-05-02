@@ -1,4 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import {
+  markTourCompleted as markCompletedInRegistry,
+  markTourSkipped as markSkippedInRegistry,
+  resetAllTours as resetAllInRegistry,
+} from '@/lib/tourRegistry';
+import { broadcast } from '@/lib/broadcast';
 
 export interface TourStep {
   /** CSS selector for the element to highlight */
@@ -28,9 +34,26 @@ interface TourState {
   finish: () => void;
 }
 
-const TOUR_COMPLETED_KEY = 'teslasync-tour-completed';
+/**
+ * Optional context used by {@link useTour} to write per-tour completion
+ * status into the storage layer owned by `@/lib/tourRegistry`. When omitted,
+ * the hook still works for ad-hoc tours but does not persist any state.
+ *
+ * The legacy single global `teslasync-tour-completed` flag is no longer
+ * written by this hook — call `resetAllTours()` once to clear it for
+ * existing users.
+ */
+export interface TourPersistenceContext {
+  /** Stable tour id matching {@link TourDefinition.id} */
+  id: string;
+  /** Tour version — bumping invalidates the previously stored flag */
+  version: number;
+}
 
-export function useTour(steps: TourStep[]): TourState {
+export function useTour(
+  steps: TourStep[],
+  persistence?: TourPersistenceContext,
+): TourState {
   const [isActive, setIsActive] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
@@ -84,12 +107,19 @@ export function useTour(steps: TourStep[]): TourState {
     setIsActive(true);
   }, []);
 
+  const persistRef = useRef(persistence);
+  persistRef.current = persistence;
+
   const next = useCallback(() => {
     if (currentStep < stepsRef.current.length - 1) {
       setCurrentStep(prev => prev + 1);
     } else {
       setIsActive(false);
-      localStorage.setItem(TOUR_COMPLETED_KEY, 'true');
+      const ctx = persistRef.current;
+      if (ctx) {
+        markCompletedInRegistry(ctx.id, ctx.version);
+        broadcast({ type: 'tour.completed', tourId: ctx.id, version: ctx.version });
+      }
     }
   }, [currentStep]);
 
@@ -101,12 +131,20 @@ export function useTour(steps: TourStep[]): TourState {
 
   const skip = useCallback(() => {
     setIsActive(false);
-    localStorage.setItem(TOUR_COMPLETED_KEY, 'true');
+    const ctx = persistRef.current;
+    if (ctx) {
+      markSkippedInRegistry(ctx.id, ctx.version);
+      broadcast({ type: 'tour.completed', tourId: ctx.id, version: ctx.version });
+    }
   }, []);
 
   const finish = useCallback(() => {
     setIsActive(false);
-    localStorage.setItem(TOUR_COMPLETED_KEY, 'true');
+    const ctx = persistRef.current;
+    if (ctx) {
+      markCompletedInRegistry(ctx.id, ctx.version);
+      broadcast({ type: 'tour.completed', tourId: ctx.id, version: ctx.version });
+    }
   }, []);
 
   return {
@@ -123,10 +161,25 @@ export function useTour(steps: TourStep[]): TourState {
   };
 }
 
+/**
+ * @deprecated Use `isTourCompleted(id, version)` from `@/lib/tourRegistry`.
+ * Kept for one release to avoid breaking external callers; always returns
+ * false now that the legacy global flag is no longer written.
+ */
 export function isTourCompleted(): boolean {
-  return localStorage.getItem(TOUR_COMPLETED_KEY) === 'true';
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem('teslasync-tour-completed') === 'true';
+  } catch {
+    return false;
+  }
 }
 
+/**
+ * @deprecated Use `resetAllTours()` from `@/lib/tourRegistry` (clears every
+ * per-tour key) or `resetTour(id)` for a single tour.
+ */
 export function resetTour(): void {
-  localStorage.removeItem(TOUR_COMPLETED_KEY);
+  resetAllInRegistry();
+  broadcast({ type: 'tour.reset' });
 }

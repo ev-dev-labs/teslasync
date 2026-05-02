@@ -1,0 +1,52 @@
+import type { TourDefinition } from '@/lib/tourRegistry'
+import type { TourStep } from '@/hooks/useTour'
+
+function navigate(href: string) {
+  if (typeof window === 'undefined') return
+  if (window.location.pathname === href) return
+  window.history.pushState({}, '', href)
+  window.dispatchEvent(new PopStateEvent('popstate'))
+}
+
+const STEPS: TourStep[] = [
+  {
+    target: '[data-tour="settings-appearance"]',
+    title: 'Appearance & theme',
+    description:
+      'Pick a colour theme, density, and motion preference (Prompt 60). Changes preview live before you save.',
+    placement: 'bottom',
+    onShow: () => navigate('/settings'),
+  },
+  {
+    target: '[data-tour="settings-units"]',
+    title: 'Units (Prompt 21)',
+    description:
+      'Distance, temperature, energy, and date format follow your preference everywhere — no per-page toggles. Pick imperial or metric once and forget about it.',
+    placement: 'top',
+  },
+  {
+    target: '[data-tour="settings-notifications"]',
+    title: 'Notification channels',
+    description:
+      'Configure email, web push (Prompt 52), ntfy, or webhook channels. Test each channel before relying on it for alerts.',
+    placement: 'top',
+  },
+  {
+    target: '[data-tour="settings-tour"]',
+    title: 'Replay any tour later',
+    description:
+      'This block opens the Tour Launcher so you can re-run any walkthrough. The launcher also lives in the help shortcut at the top of the sidebar.',
+    placement: 'top',
+  },
+]
+
+export const SETTINGS_TOUR: TourDefinition = {
+  id: 'settings',
+  routeMatch: /^\/settings/,
+  titleKey: 'tour.tours.settings.title',
+  titleFallback: 'Settings',
+  descriptionKey: 'tour.tours.settings.description',
+  descriptionFallback: 'Theme, units, notifications, and tours.',
+  version: 1,
+  steps: STEPS,
+}

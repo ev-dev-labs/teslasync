@@ -1,13 +1,13 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Zap, TrendingUp, Thermometer, Fuel, Gauge } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Select } from '@/components/ui/Select';
 import { DataTable } from '@/components/ui/DataTable';
 import { MetricBar } from '@/components/data-display/MetricBar';
+import { SavedViewMenu } from '@/components/data-display/SavedViewMenu';
 import {
-  ChartContainer, ChartTooltip, renderAnnotationLines, AddAnnotationPopover,
+  ChartContainer, ChartTooltip, renderAnnotationLines,
   AREA_DEFAULTS, areaGradient,
   AreaChart, Area, BarChart, Bar, ScatterChart, Scatter,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
@@ -20,10 +20,10 @@ import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { useDrivingStats, useDrives } from '@/api/hooks/useDriving';
-import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useAnnotations } from '@/hooks/useAnnotations';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import type { Drive } from '@/types/driving';
@@ -53,39 +53,14 @@ function getEfficiency(drive: Drive): number | null {
 export default function EfficiencyPage() {
   const { t } = useTranslation();
   usePageTitle(t('efficiency.title', 'Efficiency'));
+  const savedView = useSavedViewUrl();
 
-  const { data: vehicles } = useVehicles();
-  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
-  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
+  // Phase 40 / Prompt 16: header VehiclePicker is the source of truth.
+  const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
 
   const { data: stats } = useDrivingStats(vehicleIdStr);
   const { data: drives } = useDrives(vehicleIdStr);
-
-  /* Annotations */
-  const { annotations, addAnnotation, removeAnnotation } = useAnnotations('efficiency', vehicleId);
-  const [isAnnotating, setIsAnnotating] = useState(false);
-  const [pendingTimestamp, setPendingTimestamp] = useState<string | null>(null);
-
-  const handleChartClick = useCallback(
-    (state: { activeLabel?: string }) => {
-      if (isAnnotating && state?.activeLabel) {
-        setPendingTimestamp(String(state.activeLabel));
-      }
-    },
-    [isAnnotating],
-  );
-
-  const handleAddAnnotation = useCallback(
-    (label: string, category: Parameters<typeof addAnnotation>[2], description?: string) => {
-      if (pendingTimestamp) {
-        addAnnotation(pendingTimestamp, label, category, description);
-        setPendingTimestamp(null);
-        setIsAnnotating(false);
-      }
-    },
-    [pendingTimestamp, addAnnotation],
-  );
 
   const {
     convertDistance, convertSpeed, convertTemp, convertEfficiency,
@@ -221,18 +196,18 @@ export default function EfficiencyPage() {
     ? fmtNumber(1000 / stats.avgEfficiencyWhKm, 1)
     : '—';
 
-  const vehicleOptions = (vehicles ?? []).map((v) => ({
-    value: String(v.id), label: v.display_name || v.vin,
-  }));
-
   return (
     <PageContainer
       title={t('efficiency.title', 'Efficiency')}
       subtitle={t('efficiency.subtitle', 'Energy consumption and driving efficiency analysis')}
       error={null}
-      actions={vehicleOptions.length > 0 ? (
-        <Select value={String(vehicleId ?? '')} onChange={(e) => setSelectedVehicle(Number(e.target.value))} options={vehicleOptions} />
-      ) : undefined}
+      actions={
+        <SavedViewMenu
+          route="/efficiency"
+          currentQuery={savedView.currentQuery}
+          onApply={savedView.apply}
+        />
+      }
     >
       {/* Date filter */}
       <FadeIn>
@@ -329,29 +304,22 @@ export default function EfficiencyPage() {
             <ChartContainer
               title={t('efficiency.dailyTrend', `Daily Efficiency (${efficiencyUnit})`)}
               height={240}
-              annotations={annotations}
-              isAnnotating={isAnnotating}
-              onAnnotateToggle={() => setIsAnnotating((v) => !v)}
-              onRemoveAnnotation={removeAnnotation}
+              annotations={{ vehicleId, scope: 'efficiency', chartId: 'efficiency-daily-trend' }}
             >
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={dailyTrend} onClick={handleChartClick}>
-                  {areaGradient('effGrad', '#00f0ff')}
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                  <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} />
-                  <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-                  <Tooltip content={<ChartTooltip />} />
-                  {renderAnnotationLines(annotations, (ts) => ts)}
-                  <Area {...AREA_DEFAULTS} dataKey="efficiency" stroke="#00f0ff" fill="url(#effGrad)" name={efficiencyUnit} />
-                </AreaChart>
-              </ResponsiveContainer>
+              {({ annotations: chartAnnotations }) => (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={dailyTrend}>
+                    {areaGradient('effGrad', '#00f0ff')}
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                    <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} />
+                    <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                    <Tooltip content={<ChartTooltip />} />
+                    {renderAnnotationLines(chartAnnotations, (ts) => ts)}
+                    <Area {...AREA_DEFAULTS} dataKey="efficiency" stroke="#00f0ff" fill="url(#effGrad)" name={efficiencyUnit} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
             </ChartContainer>
-            <AddAnnotationPopover
-              open={pendingTimestamp != null}
-              timestamp={pendingTimestamp ?? ''}
-              onAdd={handleAddAnnotation}
-              onCancel={() => setPendingTimestamp(null)}
-            />
           </FadeIn>
 
           <FadeIn>

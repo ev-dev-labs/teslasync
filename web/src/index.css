@@ -21,11 +21,59 @@
   --text-primary: #ffffff;
   --text-secondary: #9ca3af;
   --text-muted: #8a95a6;
+  /*
+   * Chart / surface tokens consumed by chartTokens in lib/tokens.ts.
+   * Defaults below are dark-mode values; :root.light-mode (further down in
+   * this file) overrides them for light themes.
+   */
+  --surface-elevated: rgba(255, 255, 255, 0.04);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.12);
   /* Dynamic color theme vars — overridden by ThemeProvider */
   --theme-primary: #00f0ff;
   --theme-primary-rgb: 0, 240, 255;
   --theme-accent: #4f46e5;
   --theme-accent-rgb: 79, 70, 229;
+  /*
+   * Density tokens (Phase 40 / Prompt 44).
+   *
+   * The `:root` defaults match the `comfortable` mode so any element
+   * using density-aware utilities (`min-h-d-row`, `px-d-pad-x`,
+   * `py-d-pad-y`, `gap-d-gap`, `text-d-base`) renders identically to
+   * pre-density values when no body[data-density] attribute is set.
+   * Applied via `body[data-density="..."]` blocks below — the body
+   * data attribute is bootstrapped in `main.tsx` from
+   * localStorage['teslasync-density'] before React mounts to avoid a
+   * first-paint flash.
+   */
+  --density-row-h: 44px;
+  --density-pad-x: 1rem;
+  --density-pad-y: 0.75rem;
+  --density-gap: 0.75rem;
+  --density-text: 0.875rem;
+}
+
+/* === DENSITY MODES (Phase 40 / Prompt 44) ============================ */
+body[data-density='comfortable'] {
+  --density-row-h: 44px;
+  --density-pad-x: 1rem;
+  --density-pad-y: 0.75rem;
+  --density-gap: 0.75rem;
+  --density-text: 0.875rem;
+}
+body[data-density='compact'] {
+  --density-row-h: 32px;
+  --density-pad-x: 0.625rem;
+  --density-pad-y: 0.375rem;
+  --density-gap: 0.5rem;
+  --density-text: 0.8125rem;
+}
+body[data-density='spacious'] {
+  --density-row-h: 56px;
+  --density-pad-x: 1.5rem;
+  --density-pad-y: 1.25rem;
+  --density-gap: 1rem;
+  --density-text: 1rem;
 }
 
 body {
@@ -171,7 +219,8 @@ select option:checked {
   }
 
   .metric-label {
-    @apply text-xs font-medium uppercase tracking-wider;
+    /* Aligned with typography.role.metricLabel — micro uppercase eyebrow above big metric values. */
+    @apply text-2xs font-medium uppercase tracking-wider;
     color: var(--text-muted);
   }
 }
@@ -295,6 +344,10 @@ select option:checked {
 :root.light-mode {
   /* Ensure Tailwind text-white becomes dark text */
   --tw-text-opacity: 1;
+  /* Chart / surface token overrides for light theme (paired with :root defaults). */
+  --surface-elevated: rgba(255, 255, 255, 0.95);
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-default: rgba(0, 0, 0, 0.12);
 }
 
 /* Override white text → dark in light mode */
@@ -328,6 +381,17 @@ select option:checked {
 :root.light-mode .text-tesla-red { color: #dc2626 !important; }
 :root.light-mode .text-neon-amber { color: #b45309 !important; }
 :root.light-mode .text-neon-blue { color: #1e40af !important; }
+
+/* Toned-down 300-level body-text shades — invert for light theme readability (WCAG AA on white) */
+:root.light-mode .text-cyan-300    { color: #0e7490 !important; }
+:root.light-mode .text-emerald-300 { color: #047857 !important; }
+:root.light-mode .text-amber-300   { color: #b45309 !important; }
+:root.light-mode .text-rose-300    { color: #be123c !important; }
+:root.light-mode .text-purple-300  { color: #6b21a8 !important; }
+:root.light-mode .text-indigo-300  { color: #3730a3 !important; }
+:root.light-mode .text-pink-300    { color: #9d174d !important; }
+:root.light-mode .text-sky-300     { color: #0369a1 !important; }
+:root.light-mode .text-red-300     { color: #b91c1c !important; }
 
 :root.light-mode .bg-neon-cyan\/5,
 :root.light-mode .bg-neon-cyan\/10 { background-color: rgba(8, 145, 178, 0.1) !important; }
@@ -799,9 +863,144 @@ select option:checked {
   animation: none;
 }
 
-/* Respect prefers-reduced-motion */
+/* ─── Reduced motion (WCAG 2.3.3) ────────────────────────────────────────────
+ * When the user enables OS-level "reduce motion", neutralize CSS animations
+ * and transitions globally as a safety net. Components that drive their own
+ * framer-motion animations should additionally consult `useMotionPreference()`
+ * (web/src/hooks/useMotionPreference.ts) so they can short-circuit JS-driven
+ * loops, springs, and infinite animations that this CSS rule cannot stop.
+ * Policy: docs/A11Y_GUIDELINES.md.
+ */
 @media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
   .edit-mode .react-grid-item > .widget-container {
     animation: none !important;
+  }
+}
+
+
+/* === @media print (Phase-40 / Prompt 54) =====================================
+ * Live SPA printing: hide app chrome, swap dark glass surfaces for white paper,
+ * keep recharts SVGs readable, and avoid mid-element page breaks.
+ *
+ * Element opt-out: any element with `[data-print-hide]` is hidden in print.
+ * Pair with `<PrintButton>` (components/ui/PrintButton.tsx) to give pages a
+ * one-click trigger; native browser Ctrl+P also produces a sane page.
+ * ============================================================================ */
+@media print {
+  :root {
+    --bg: #ffffff;
+    --surface-1: #ffffff;
+    --surface-2: #ffffff;
+    --surface-3: #ffffff;
+    --surface-elevated: #ffffff;
+    --glass-bg: #ffffff;
+    --glass-border: #cccccc;
+    --border-subtle: #dddddd;
+    --border-default: #cccccc;
+    --text-primary: #000000;
+    --text-secondary: #222222;
+    --text-muted: #555555;
+    color-scheme: light;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    overflow: visible !important;
+  }
+
+  /* Hide the SPA chrome — sidebar, mobile top bar, command palette,
+     toast container, floating actions, status bar, and anything explicitly
+     opted out. */
+  [data-print-hide],
+  aside[data-role="sidebar"],
+  nav[data-role="topbar"],
+  header[data-role="appbar"],
+  [data-role="command-palette"],
+  [data-role="theme-popover"],
+  [data-role="floating-actions"],
+  [data-role="status-bar"],
+  .toast-container {
+    display: none !important;
+  }
+
+  /* Force readable text colors. The `color: inherit` rule lets the body
+     `color: #000` cascade through neon/Tailwind text-white classes. */
+  *,
+  *::before,
+  *::after {
+    text-shadow: none !important;
+    box-shadow: none !important;
+    color: inherit !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* Strip glass / glow from surfaces so cards have visible borders on white.
+     `[data-print-card]` is the GlassPanel root marker (opt-in for any other
+     surface that should print as a bordered card). */
+  .glass-panel,
+  .glass-card,
+  [data-print-card] {
+    background: #ffffff !important;
+    border: 1px solid #cccccc !important;
+    color: #000000 !important;
+  }
+
+  /* Recharts: dark grid/axes don't print well on white paper. */
+  .recharts-cartesian-grid line {
+    stroke: #dddddd !important;
+  }
+  .recharts-text,
+  .recharts-cartesian-axis-tick-value,
+  .recharts-label,
+  .recharts-legend-item-text {
+    fill: #333333 !important;
+  }
+  .recharts-default-tooltip {
+    background: #ffffff !important;
+    border: 1px solid #cccccc !important;
+    color: #000000 !important;
+  }
+
+  /* Avoid mid-element page breaks on cards / tables / chart frames. */
+  .glass-panel,
+  [data-print-card],
+  table,
+  figure {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  thead { display: table-header-group; }
+  tr, img { break-inside: avoid; page-break-inside: avoid; }
+
+  /* Expand main content full width — the sidebar's gone, reclaim the space. */
+  main,
+  [data-role="main-content"] {
+    margin-left: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    overflow: visible !important;
+  }
+
+  /* Spell out external link targets after the link text. */
+  a[href]:not([href^="#"]):not([href^="javascript:"])::after {
+    content: " (" attr(href) ")";
+    font-size: 80%;
+    color: #555555;
+  }
+
+  /* Page margins. */
+  @page {
+    margin: 12mm;
   }
 }

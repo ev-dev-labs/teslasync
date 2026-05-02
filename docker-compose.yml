@@ -54,6 +54,26 @@ services:
       - OTEL_INSECURE=${OTEL_INSECURE:-true}
       - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY:-}
       - AZURE_MAPS_API_KEY=${AZURE_MAPS_API_KEY:-}
+      # Inbound api_call_logs middleware (Phase 38-10).
+      # Body capture defaults to OFF; enable only for diagnostic windows.
+      - API_LOGS_INBOUND_ENABLED=${API_LOGS_INBOUND_ENABLED:-true}
+      - API_LOG_CAPTURE_BODIES=${API_LOG_CAPTURE_BODIES:-false}
+      - API_LOG_QUEUE_CAPACITY=${API_LOG_QUEUE_CAPACITY:-4096}
+      - API_LOG_BATCH_SIZE=${API_LOG_BATCH_SIZE:-100}
+      - API_LOG_FLUSH_INTERVAL=${API_LOG_FLUSH_INTERVAL:-1s}
+      # Audit log retention (Phase-40 / Prompt 49 — Recent Activity Discoverability).
+      # AUDIT_RETENTION_DAYS: hard delete entries older than N days (0 = never).
+      # AUDIT_IP_RETENTION_DAYS: redact ip + user_agent on entries older than N days
+      # so per-user activity stays usable without retaining network PII forever.
+      - AUDIT_RETENTION_DAYS=${AUDIT_RETENTION_DAYS:-365}
+      - AUDIT_IP_RETENTION_DAYS=${AUDIT_IP_RETENTION_DAYS:-30}
+      # Web Push (VAPID) — Phase 40 / Prompt 52.
+      # Generate keys once with: go run ./cmd/teslasync vapid-keygen
+      # When unset, the API logs a Warn at startup and the push channel
+      # is disabled (no behaviour change for existing installs).
+      - TESLASYNC_VAPID_PUBLIC_KEY=${TESLASYNC_VAPID_PUBLIC_KEY:-}
+      - TESLASYNC_VAPID_PRIVATE_KEY=${TESLASYNC_VAPID_PRIVATE_KEY:-}
+      - TESLASYNC_VAPID_SUBJECT=${TESLASYNC_VAPID_SUBJECT:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -115,6 +135,12 @@ services:
       - OTEL_ENDPOINT=${OTEL_ENDPOINT:-jaeger:4317}
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-teslasync-notification-worker}
       - OTEL_INSECURE=${OTEL_INSECURE:-true}
+      # Web Push (VAPID) — same env vars as the API server. Required so
+      # the notification worker can deliver "webpush" Requests pulled
+      # from the MQTT internal topic.
+      - TESLASYNC_VAPID_PUBLIC_KEY=${TESLASYNC_VAPID_PUBLIC_KEY:-}
+      - TESLASYNC_VAPID_PRIVATE_KEY=${TESLASYNC_VAPID_PRIVATE_KEY:-}
+      - TESLASYNC_VAPID_SUBJECT=${TESLASYNC_VAPID_SUBJECT:-}
     depends_on:
       postgres:
         condition: service_healthy

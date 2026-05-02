@@ -23,24 +23,24 @@ export function EfficiencyPanel({ stats }: EfficiencyPanelProps) {
       </h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <GlassPanel className="p-5 text-center">
-          <p className="text-2xl font-bold text-neon-cyan">{fmtPercent(stats.avgEfficiency)}</p>
+          <p className="text-2xl font-bold text-cyan-300">{fmtPercent(stats.avgEfficiency)}</p>
           <p className="text-[10px] text-[var(--text-muted)] mt-1">{t('charging.efficiency.average', 'Average Efficiency')}</p>
           <div className="mt-2 h-1.5 rounded-full bg-white/[0.05] overflow-hidden">
             <div className="h-full rounded-full bg-neon-cyan" style={{ width: `${Math.min(stats.avgEfficiency, 100)}%` }} />
           </div>
         </GlassPanel>
         <GlassPanel className="p-5 text-center">
-          <p className="text-2xl font-bold text-neon-green">{fmtPercent(stats.best.efficiency)}</p>
+          <p className="text-2xl font-bold text-emerald-300">{fmtPercent(stats.best.efficiency)}</p>
           <p className="text-[10px] text-[var(--text-muted)] mt-1">{t('charging.efficiency.best', 'Best Session')}</p>
           <p className="text-[9px] text-[var(--text-muted)]">{formatDateTime(stats.best.date)}</p>
         </GlassPanel>
         <GlassPanel className="p-5 text-center">
-          <p className="text-2xl font-bold text-neon-red">{fmtPercent(stats.worst.efficiency)}</p>
+          <p className="text-2xl font-bold text-rose-300">{fmtPercent(stats.worst.efficiency)}</p>
           <p className="text-[10px] text-[var(--text-muted)] mt-1">{t('charging.efficiency.worst', 'Worst Session')}</p>
           <p className="text-[9px] text-[var(--text-muted)]">{formatDateTime(stats.worst.date)}</p>
         </GlassPanel>
         <GlassPanel className="p-5 text-center">
-          <p className="text-2xl font-bold text-neon-amber">{fmtWithUnit(stats.wallLoss, 'kWh')}</p>
+          <p className="text-2xl font-bold text-amber-300">{fmtWithUnit(stats.wallLoss, 'kWh')}</p>
           <p className="text-[10px] text-[var(--text-muted)] mt-1">{t('charging.efficiency.wallLoss', 'Wall-to-Battery Loss')}</p>
           <p className="text-[9px] text-[var(--text-muted)]">{fmtNumber(stats.totalUsed)} kWh → {fmtNumber(stats.totalAdded)} kWh</p>
         </GlassPanel>

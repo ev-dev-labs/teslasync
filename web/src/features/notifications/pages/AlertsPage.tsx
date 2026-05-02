@@ -5,8 +5,12 @@
  */
 
 import { useState, useMemo, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { cn } from '@/lib/cn';
+import { severityTokens, normalizeSeverity } from '@/lib/tokens';
+import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
@@ -15,9 +19,16 @@ import { Input } from '@/components/ui/Input';
 import { TabNav } from '@/components/ui/TabNav';
 import { Toggle } from '@/components/ui/Toggle';
 import { DataTable, type Column } from '@/components/ui/DataTable';
+import { PinButton } from '@/components/ui/PinButton';
+import { PrintButton } from '@/components/ui/PrintButton';
+import { useUrlEnum, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 
 import { MetricCard } from '@/components/data-display/MetricCard';
 import { AnimatedNumber } from '@/components/data-display/AnimatedNumber';
+import { SeverityBadge } from '@/components/data-display/SeverityBadge';
+import { StatusDot } from '@/components/data-display/StatusDot';
+import { SavedViewMenu } from '@/components/data-display/SavedViewMenu';
+import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { fmtInt } from '@/lib/numberFormat';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Skeleton } from '@/components/feedback/Skeleton';
@@ -26,6 +37,8 @@ import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
 import { RadialGauge } from '@/components/charts/RadialGauge';
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
+import { SearchInput, FilterBar } from '@/components/forms';
+import { useFilteredList } from '@/hooks/useFilteredList';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell,
@@ -38,35 +51,31 @@ import {
   useAlerts, useMarkAlertRead, useAlertRules,
   useNotificationChannels, useNotificationLogs, useNotificationStats,
 } from '@/api/hooks/useNotifications';
-import type { Alert, NotificationLog } from '@/api/types';
-import {
-  Bell, BellOff, AlertTriangle, Info, AlertCircle, MapPin, Battery,
-  Zap, Shield, Gauge, Thermometer, Eye, Filter, Settings2, CheckCircle,
-  Clock, Moon, Send, TrendingDown, Lock, Droplets, BarChart3,
-  PieChart as PieChartIcon, Database, Radio, Wifi, HardDrive, Activity,
-} from 'lucide-react';
+import { usePinned } from '@/api/hooks/usePinned';
+import type { Alert, NotificationLog } from '@/api/types';
+import { Icons } from '@/lib/icons';
 
-// ─── Severity config ─────────────────────────────────────────────────────────
+// ─── Severity helpers ────────────────────────────────────────────────────────
+//
+// Severity styling lives in @/lib/tokens (severityTokens) and is rendered via
+// the shared <SeverityBadge> / <StatusDot> components from @/components/data-display.
+// `Alert.severity` is the wire-level type: 'info' | 'warning' | 'critical'. Use
+// `normalizeSeverity` to map onto the canonical 'info' | 'warn' | 'critical'
+// keys before reading from severityTokens.
 
-const severityConfig = {
-  info: { icon: Info, color: 'text-neon-cyan', bg: 'bg-neon-cyan/10', border: 'border-neon-cyan/20', dot: 'bg-neon-cyan' },
-  warning: { icon: AlertTriangle, color: 'text-neon-amber', bg: 'bg-neon-amber/10', border: 'border-neon-amber/20', dot: 'bg-neon-amber' },
-  critical: { icon: AlertCircle, color: 'text-neon-red', bg: 'bg-neon-red/10', border: 'border-neon-red/20', dot: 'bg-neon-red' },
-} as const;
-
-type Severity = keyof typeof severityConfig;
+type AlertSeverity = 'info' | 'warning' | 'critical';
 
 // ─── Alert type → icon mapping ───────────────────────────────────────────────
 
 const typeIcons: Record<string, React.ElementType> = {
-  geofence_exit: MapPin, geofence_enter: MapPin,
-  low_battery: Battery, battery_low: Battery, battery_high: Battery,
-  charging_complete: Zap, charging_cost: Zap,
-  sentry_event: Shield, speed_limit: Gauge, temperature: Thermometer,
-  software_update: Settings2, vampire_drain: TrendingDown,
-  tire_pressure_low: Droplets, idle_unlocked: Lock, efficiency_drop: BarChart3,
-  system_database: Database, system_mqtt: Wifi, system_redis: HardDrive,
-  system_tesla_api: Radio, system_worker: Activity,
+  geofence_exit: Icons.location, geofence_enter: Icons.location,
+  low_battery: Icons.battery, battery_low: Icons.battery, battery_high: Icons.battery,
+  charging_complete: Icons.charging, charging_cost: Icons.charging,
+  sentry_event: Icons.security, speed_limit: Icons.speed, temperature: Icons.climate,
+  software_update: Icons.settingsAlt, vampire_drain: Icons.trendDown,
+  tire_pressure_low: Icons.droplets, idle_unlocked: Icons.locked, efficiency_drop: Icons.analytics,
+  system_database: Icons.database, system_mqtt: Icons.wifi, system_redis: Icons.hardDrive,
+  system_tesla_api: Icons.radio, system_worker: Icons.efficiency,
 };
 
 // ─── Time helpers ────────────────────────────────────────────────────────────
@@ -112,45 +121,62 @@ function loadDigestMode(): DigestMode {
 
 // ─── AlertCard sub-component ─────────────────────────────────────────────────
 
-function AlertCard({ alert, onMarkRead, t }: { alert: Alert; onMarkRead: () => void; t: (k: string) => string }) {
-  const sev = severityConfig[alert.severity as Severity] ?? severityConfig.info;
-  const Icon = typeIcons[alert.type] || Bell;
+function AlertCard({ alert, onMarkRead, t }: { alert: Alert; onMarkRead: () => void; t: TFunction }) {
+  const sev = normalizeSeverity(alert.severity);
+  const tokens = severityTokens[sev];
+  const Icon = typeIcons[alert.type] || Icons.notifications;
   const timeAgo = getTimeAgo(alert.created_at);
+  const drillHref = getAlertDrillthroughHref(alert);
 
   return (
     <GlassPanel
       className={cn(
         'p-4 flex items-start gap-4 transition-all duration-200 group',
-        !alert.is_read && `${sev.border} ${sev.bg.replace('/10', '/5')}`,
+        !alert.is_read && cn(tokens.border, tokens.bg.replace('/10', '/5')),
       )}
     >
       <div className="flex flex-col items-center gap-1 shrink-0">
-        <div className={cn('rounded-xl p-2.5 ring-1', sev.bg, sev.border)}>
-          <Icon className={cn('h-4 w-4', sev.color)} />
+        <div className={cn('rounded-xl p-2.5 ring-1', tokens.bg, tokens.border)}>
+          <Icon className={cn('h-4 w-4', tokens.fg)} />
         </div>
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
-          <div>
+          <Link
+            to={drillHref}
+            className="block min-w-0 flex-1 -m-1 p-1 rounded-md hover:bg-white/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400/60"
+            aria-label={t('alerts.viewContext', 'View context')}
+          >
             <span className={cn('text-sm font-medium block', alert.is_read ? 'text-[var(--text-secondary)]' : 'text-[var(--text-primary)]')}>
               {alert.title}
             </span>
             <span className="text-xs text-[var(--text-muted)] mt-0.5 line-clamp-2 block">{alert.message}</span>
-          </div>
+          </Link>
           {!alert.is_read && (
-            <span className={cn('h-2 w-2 rounded-full shrink-0 mt-1.5 animate-pulse', sev.dot)} />
+            <StatusDot
+              severity={alert.severity}
+              className="mt-1.5 shrink-0 animate-pulse"
+              label={t('Unread')}
+            />
           )}
         </div>
         <div className="flex items-center gap-3 mt-2">
           <span className="text-[10px] text-[var(--text-muted)] flex items-center gap-1">
-            <Clock className="h-2.5 w-2.5" />{timeAgo}
+            <Icons.clock className="h-2.5 w-2.5" />{timeAgo}
           </span>
-          <Badge variant={alert.severity === 'critical' ? 'danger' : alert.severity === 'warning' ? 'warning' : 'info'} size="sm">
+          <SeverityBadge severity={alert.severity} size="sm" showIcon={false}>
             {alert.severity}
-          </Badge>
-          <span className="text-[10px] text-[var(--text-muted)]">{alert.type.replace(/_/g, ' ')}</span>
+          </SeverityBadge>
+          <span className="text-[10px] text-[var(--text-muted)]">{(alert.type ?? 'notification').replace(/_/g, ' ')}</span>
+          <Link
+            to={drillHref}
+            className="ml-auto inline-flex items-center gap-1 text-[11px] font-medium text-cyan-300 hover:text-cyan-200 underline-offset-2 hover:underline opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            {t('alerts.viewContext', 'View context')}
+            <Icons.next className="h-3 w-3" />
+          </Link>
           {!alert.is_read && (
-            <Button variant="ghost" size="sm" icon={<Eye className="h-3 w-3" />} onClick={onMarkRead} className="ml-auto opacity-0 group-hover:opacity-100">
+            <Button variant="ghost" size="sm" icon={<Icons.show className="h-3 w-3" />} onClick={onMarkRead}>
               {t('Mark read')}
             </Button>
           )}
@@ -167,6 +193,7 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
   const { data: logs, isLoading: logsLoading } = useNotificationLogs();
   const { data: stats } = useNotificationStats();
   const { data: channels } = useNotificationChannels();
+  const [logSearch, setLogSearch] = useState('');
 
   const channelMap = useMemo(() => {
     const m: Record<number, string> = {};
@@ -189,27 +216,36 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
     }));
   }, [logs]);
 
+  const logSearchFields = useMemo(
+    () => [
+      'title' as keyof NotificationLog,
+      (log: NotificationLog) => channelMap[log.channel_id] ?? '',
+    ],
+    [channelMap],
+  );
+  const filteredLogs = useFilteredList(logs, logSearch, logSearchFields);
+
   const logColumns: Column<NotificationLog>[] = useMemo(() => [
-    { key: 'time', header: t('Time'), render: (log) => <span className="text-[var(--text-muted)] whitespace-nowrap">{formatDateTime(log.created_at)}</span> },
-    { key: 'title', header: t('Title'), render: (log) => <span className="text-[var(--text-primary)] max-w-[200px] truncate block">{log.title}</span> },
+    { key: 'time', header: t('Time'), render: (log) => <span className="text-[var(--text-muted)] whitespace-nowrap">{formatDateTime(log.created_at)}</span>, visibleOnMobile: true },
+    { key: 'title', header: t('Title'), render: (log) => <span className="text-[var(--text-primary)] max-w-[200px] truncate block">{log.title}</span>, visibleOnMobile: true },
     { key: 'channel', header: t('Channel'), render: (log) => <span className="text-[var(--text-secondary)]">{channelMap[log.channel_id] || `#${log.channel_id}`}</span> },
-    { key: 'status', header: t('Status'), render: (log) => <Badge variant={log.status === 'sent' ? 'success' : log.status === 'failed' ? 'danger' : 'warning'} size="sm">{log.status}</Badge> },
+    { key: 'status', header: t('Status'), render: (log) => <Badge variant={log.status === 'sent' ? 'success' : log.status === 'failed' ? 'danger' : 'warning'} size="sm">{log.status}</Badge>, visibleOnMobile: true },
   ], [channelMap, t]);
 
   return (
     <div className="space-y-6">
       {/* Analytics cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <MetricCard label={t('Total Sent')} value={totalSent} icon={<Send className="h-4 w-4" />} color="cyan" />
-        <MetricCard label={t('Failed')} value={totalFailed} icon={<AlertCircle className="h-4 w-4" />} color="red" />
-        <MetricCard label={t('Success Rate')} value={`${fmtInt(successRate)}%`} icon={<CheckCircle className="h-4 w-4" />} color="green" />
-        <MetricCard label={t('Channels')} value={`${stats?.enabled_channels ?? 0} / ${stats?.total_channels ?? 0}`} icon={<Bell className="h-4 w-4" />} color="purple" />
+        <MetricCard label={t('Total Sent')} value={totalSent} icon={<Icons.send className="h-4 w-4" />} color="cyan" />
+        <MetricCard label={t('Failed')} value={totalFailed} icon={<Icons.alertCircle className="h-4 w-4" />} color="red" />
+        <MetricCard label={t('Success Rate')} value={`${fmtInt(successRate)}%`} icon={<Icons.success className="h-4 w-4" />} color="green" />
+        <MetricCard label={t('Channels')} value={`${stats?.enabled_channels ?? 0} / ${stats?.total_channels ?? 0}`} icon={<Icons.notifications className="h-4 w-4" />} color="purple" />
       </div>
 
       {/* Delivery status pie */}
       <GlassPanel className="p-4 sm:p-6">
         <span className="section-title mb-4 flex items-center gap-2">
-          <PieChartIcon className="h-4 w-4 text-neon-purple" /> {t('Delivery Status')}
+          <Icons.pieChart className="h-4 w-4 text-purple-300" /> {t('Delivery Status')}
         </span>
         {logTypeCounts.length > 0 ? (
           <div className="h-40 flex flex-col sm:flex-row items-center">
@@ -232,35 +268,54 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
-            <Activity className="h-8 w-8 opacity-20" />
-            <p className="text-xs">{t('common.noData')}</p>
-          </div>
+          <EmptyState
+            icon={<Icons.efficiency className="h-8 w-8 opacity-20" />}
+            message={t('common.noData')}
+            className="py-8"
+          />
         )}
       </GlassPanel>
 
       {/* Log table */}
       <GlassPanel className="p-4 sm:p-6">
         <span className="section-title mb-4 flex items-center gap-2">
-          <Send className="h-4 w-4 text-neon-cyan" /> {t('Notification Log')}
+          <Icons.send className="h-4 w-4 text-cyan-300" /> {t('Notification Log')}
         </span>
+        <FilterBar className="mb-3">
+          <SearchInput
+            value={logSearch}
+            onChange={setLogSearch}
+            placeholder={t('Search by title or channel…')}
+            className="w-full sm:w-72"
+          />
+        </FilterBar>
         {logsLoading ? (
           <div className="space-y-2">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-10" />)}</div>
-        ) : (logs ?? []).length > 0 ? (
+        ) : filteredLogs.length > 0 ? (
             <div className="overflow-x-auto -mx-4 sm:mx-0">
               <DataTable
                 columns={logColumns}
-                data={logs ?? []}
+                data={filteredLogs}
                 keyExtractor={(log) => log.id}
                 compact
-                pagination={{ defaultPageSize: 50 }}
+                virtualized
+                rowHeight={36}
+                pagination={{ defaultPageSize: 500 }}
+                tableId="alerts-logs"
+                showColumnsMenu
+                stickyHeader
+                maxHeight={520}
               />
             </div>
         ) : (
           <EmptyState
-            icon={<Send className="h-8 w-8" />}
+            icon={<Icons.send className="h-8 w-8" />}
             title={t('No notification logs')}
-            message={t('Notification logs will appear here once alerts are sent.')}
+            message={
+              logSearch
+                ? t('No logs match your search.')
+                : t('Notification logs will appear here once alerts are sent.')
+            }
           />
         )}
       </GlassPanel>
@@ -297,8 +352,8 @@ function PreferencesSection({ t }: { t: (k: string) => string }) {
     <div className="space-y-6">
       {quietActive && (
         <GlassPanel className="p-3 flex items-center gap-2 bg-neon-purple/10 border-neon-purple/20">
-          <Moon className="h-4 w-4 text-neon-purple" />
-          <span className="text-xs font-medium text-neon-purple">
+          <Icons.moon className="h-4 w-4 text-neon-purple" />
+          <span className="text-xs font-medium text-purple-300">
             {t('Quiet hours active')} ({quietHours.start} – {quietHours.end})
           </span>
           <span className="text-[10px] text-[var(--text-muted)] ml-2">{t('Only critical alerts send notifications')}</span>
@@ -309,7 +364,7 @@ function PreferencesSection({ t }: { t: (k: string) => string }) {
         {/* Quiet Hours */}
         <GlassPanel className="p-5">
           <span className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
-            <Moon className="h-4 w-4 text-neon-purple" /> {t('Quiet Hours')}
+            <Icons.moon className="h-4 w-4 text-purple-300" /> {t('Quiet Hours')}
           </span>
           <span className="text-xs text-[var(--text-muted)] mb-3 block">
             {t('During quiet hours, only critical alerts send notifications.')}
@@ -346,7 +401,7 @@ function PreferencesSection({ t }: { t: (k: string) => string }) {
         {/* Alert Digest */}
         <GlassPanel className="p-5">
           <span className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
-            <Settings2 className="h-4 w-4 text-neon-amber" /> {t('Alert Digest')}
+            <Icons.settingsAlt className="h-4 w-4 text-amber-300" /> {t('Alert Digest')}
           </span>
           <span className="text-xs text-[var(--text-muted)] mb-3 block">
             {t('Choose how non-critical alerts are delivered.')}
@@ -364,7 +419,7 @@ function PreferencesSection({ t }: { t: (k: string) => string }) {
                   toast.info(`${t('Alert digest set to')} ${opt.label}`);
                 }}
               >
-                <span className={cn('text-xs font-medium block', digestMode === opt.value ? 'text-neon-amber' : 'text-[var(--text-secondary)]')}>
+                <span className={cn('text-xs font-medium block', digestMode === opt.value ? 'text-amber-300' : 'text-[var(--text-secondary)]')}>
                   {opt.label}
                 </span>
                 <span className="text-[10px] text-[var(--text-muted)]">{opt.desc}</span>
@@ -377,7 +432,7 @@ function PreferencesSection({ t }: { t: (k: string) => string }) {
       {/* Alert Studio link */}
       <GlassPanel className="p-5">
         <span className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-2">
-          <BarChart3 className="h-4 w-4 text-neon-green" /> {t('Rule Management')}
+          <Icons.analytics className="h-4 w-4 text-emerald-300" /> {t('Rule Management')}
         </span>
         <span className="text-xs text-[var(--text-muted)] mb-3 block">
           {t('Create, edit, and manage typed alert rules in Alert Studio using supported Fleet Telemetry signal contracts.')}
@@ -399,23 +454,50 @@ export default function AlertsPage() {
   const { t } = useTranslation();
   usePageTitle(t('Alerts'));
   const toast = useToast();
+  const savedView = useSavedViewUrl();
 
-  const [tab, setTab] = useState<'alerts' | 'history' | 'preferences'>('alerts');
-  const [filter, setFilter] = useState<'all' | 'unread' | 'critical'>('all');
-  const [alertPage, setAlertPage] = useState(1);
+  // Phase 40 / Prompt 33 — tab + filter live in the URL so a "?tab=history&filter=critical"
+  // deep link works and can be shared.
+  const [tab, setTab] = useUrlEnum<'alerts' | 'history' | 'preferences'>(
+    'tab',
+    ['alerts', 'history', 'preferences'] as const,
+    'alerts',
+  );
+  const [filter, setFilter] = useUrlEnum<'all' | 'unread' | 'critical'>(
+    'filter',
+    ['all', 'unread', 'critical'] as const,
+    'all',
+  );
+  const [alertSearch, setAlertSearch] = useUrlString('q', '');
+  const [alertPage, setAlertPage] = useUrlNumber('page', 1);
   const alertsPerPage = 20;
 
   // Queries
   const { data: alerts, isLoading, error } = useAlerts();
   const { data: rules } = useAlertRules();
   const markReadMut = useMarkAlertRead();
+  const { data: rulePins = [] } = usePinned('alert_rule');
+  const pinnedRules = useMemo(() => {
+    if (!rules || rulePins.length === 0) return [];
+    const order = new Map<string, number>();
+    rulePins.forEach(p => order.set(String(p.item_id), p.position));
+    return rules
+      .filter(r => order.has(String(r.id)))
+      .sort((a, b) => (order.get(String(a.id)) ?? 0) - (order.get(String(b.id)) ?? 0));
+  }, [rules, rulePins]);
 
   // Computed
-  const filteredAlerts = useMemo(() => alerts?.filter(a => {
+  const tabFilteredAlerts = useMemo(() => alerts?.filter(a => {
     if (filter === 'unread') return !a.is_read;
     if (filter === 'critical') return a.severity === 'critical';
     return true;
   }) ?? [], [alerts, filter]);
+
+  const alertSearchFields = useMemo(
+    () => ['title', 'message'] as const satisfies ReadonlyArray<keyof Alert>,
+    [],
+  );
+  const filteredAlerts = useFilteredList(tabFilteredAlerts, alertSearch, alertSearchFields);
 
   // Reset page when filter changes
   const totalPages = Math.max(1, Math.ceil(filteredAlerts.length / alertsPerPage));
@@ -425,18 +507,25 @@ export default function AlertsPage() {
   const totalCount = alerts?.length ?? 0;
   const unreadCount = useMemo(() => alerts?.filter(a => !a.is_read).length ?? 0, [alerts]);
   const criticalCount = useMemo(() => alerts?.filter(a => a.severity === 'critical' && !a.is_read).length ?? 0, [alerts]);
-  const infoCount = useMemo(() => alerts?.filter(a => a.severity === 'info').length ?? 0, [alerts]);
+  const infoCount = useMemo(() => alerts?.filter(a => (a.severity ?? 'info') === 'info').length ?? 0, [alerts]);
   const warningCount = useMemo(() => alerts?.filter(a => a.severity === 'warning').length ?? 0, [alerts]);
-  const readCount = useMemo(() => alerts?.filter(a => a.is_read).length ?? 0, [alerts]);
+  const readCount = useMemo(() => alerts?.filter(a => a.is_read === true).length ?? 0, [alerts]);
   const enabledRules = rules?.filter(r => r.enabled).length ?? 0;
 
   const alertsByType = useMemo(() => {
     if (!alerts?.length) return [];
     const counts: Record<string, number> = {};
-    alerts.forEach(a => { counts[a.type] = (counts[a.type] || 0) + 1; });
+    alerts.forEach(a => {
+      const key = a.type ?? 'notification';
+      counts[key] = (counts[key] ?? 0) + 1;
+    });
     return Object.entries(counts)
       .sort((a, b) => b[1] - a[1])
-      .map(([type, count], i) => ({ name: type.replace(/_/g, ' '), value: count, fill: CHART_COLORS[i % CHART_COLORS.length] }));
+      .map(([type, count], i) => ({
+        name: (type ?? 'notification').replace(/_/g, ' '),
+        value: count,
+        fill: CHART_COLORS[i % CHART_COLORS.length],
+      }));
   }, [alerts]);
 
   const alertsByDay = useMemo(() => {
@@ -452,7 +541,10 @@ export default function AlertsPage() {
       const d = new Date(a.created_at);
       if (now - d.getTime() > 7 * 86400000) return;
       const key = d.toLocaleDateString(undefined, { weekday: 'short' });
-      if (days[key]) days[key][a.severity as Severity]++;
+      const sev = a.severity as AlertSeverity;
+      if (days[key] && (sev === 'info' || sev === 'warning' || sev === 'critical')) {
+        days[key][sev]++;
+      }
     });
     return Object.entries(days).map(([day, v]) => ({ day, ...v }));
   }, [alerts]);
@@ -476,11 +568,20 @@ export default function AlertsPage() {
       subtitle={t('Monitor events, configure typed alert rules, and stay informed')}
       loading={isLoading}
       error={error as Error | null}
+      copyLink
       actions={
         <div className="flex items-center gap-3">
           {quietActive && <Badge variant="info" size="sm">{t('Quiet hours')}</Badge>}
           {unreadCount > 0 && <Badge variant="info" size="sm">{unreadCount} {t('unread')}</Badge>}
           {criticalCount > 0 && <Badge variant="danger" size="sm">{criticalCount} {t('critical')}</Badge>}
+          <div data-print-hide className="flex items-center gap-2">
+            <SavedViewMenu
+              route="/alerts"
+              currentQuery={savedView.currentQuery}
+              onApply={savedView.apply}
+            />
+            <PrintButton />
+          </div>
         </div>
       }
     >
@@ -489,24 +590,24 @@ export default function AlertsPage() {
         <GlassPanel className="p-3 sm:p-4">
           <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 text-center">
             <div>
-              <span className="text-lg font-bold text-neon-cyan"><AnimatedNumber value={totalCount} /></span>
+              <span className="text-lg font-bold text-cyan-300"><AnimatedNumber value={totalCount} /></span>
               <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block">{t('Total')}</span>
             </div>
             <div className="h-8 w-px bg-white/[0.06] hidden sm:block" />
             <div>
-              <span className="text-lg font-bold text-neon-amber"><AnimatedNumber value={weekAlertCount} /></span>
+              <span className="text-lg font-bold text-amber-300"><AnimatedNumber value={weekAlertCount} /></span>
               <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block">{t('This Week')}</span>
             </div>
             <div className="h-8 w-px bg-white/[0.06] hidden sm:block" />
             <div>
-              <span className="text-lg font-bold text-neon-purple"><AnimatedNumber value={unreadCount} /></span>
+              <span className="text-lg font-bold text-purple-300"><AnimatedNumber value={unreadCount} /></span>
               <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block">{t('Unread')}</span>
             </div>
             <div className="h-8 w-px bg-white/[0.06] hidden sm:block" />
             <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1 text-xs"><Info className="h-3 w-3 text-neon-cyan" /><span className="font-mono text-neon-cyan">{infoCount}</span></span>
-              <span className="flex items-center gap-1 text-xs"><AlertTriangle className="h-3 w-3 text-neon-amber" /><span className="font-mono text-neon-amber">{warningCount}</span></span>
-              <span className="flex items-center gap-1 text-xs"><AlertCircle className="h-3 w-3 text-neon-red" /><span className="font-mono text-neon-red">{criticalCount}</span></span>
+              <span className="flex items-center gap-1 text-xs"><Icons.info className="h-3 w-3 text-cyan-300" /><span className="font-mono text-cyan-300">{infoCount}</span></span>
+              <span className="flex items-center gap-1 text-xs"><Icons.severityWarn className="h-3 w-3 text-amber-300" /><span className="font-mono text-amber-300">{warningCount}</span></span>
+              <span className="flex items-center gap-1 text-xs"><Icons.alertCircle className="h-3 w-3 text-rose-300" /><span className="font-mono text-rose-300">{criticalCount}</span></span>
             </div>
           </div>
         </GlassPanel>
@@ -521,22 +622,22 @@ export default function AlertsPage() {
             <RadialGauge value={criticalCount} max={Math.max(totalCount, 1)} label={t('Critical')} unit="" color="#ef4444" />
             <div className="flex flex-col items-center text-center">
               <div className="flex items-center gap-2">
-                <Info className="h-4 w-4 text-neon-cyan" />
-                <span className="text-lg font-bold text-neon-cyan"><AnimatedNumber value={infoCount} /></span>
+                <Icons.info className="h-4 w-4 text-neon-cyan" />
+                <span className="text-lg font-bold text-cyan-300"><AnimatedNumber value={infoCount} /></span>
               </div>
               <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">{t('Info')}</span>
             </div>
             <div className="flex flex-col items-center text-center">
               <div className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-neon-amber" />
-                <span className="text-lg font-bold text-neon-amber"><AnimatedNumber value={warningCount} /></span>
+                <Icons.severityWarn className="h-4 w-4 text-neon-amber" />
+                <span className="text-lg font-bold text-amber-300"><AnimatedNumber value={warningCount} /></span>
               </div>
               <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">{t('Warnings')}</span>
             </div>
             <div className="flex flex-col items-center text-center">
               <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-neon-green" />
-                <span className="text-lg font-bold text-neon-green"><AnimatedNumber value={readCount} /></span>
+                <Icons.success className="h-4 w-4 text-neon-green" />
+                <span className="text-lg font-bold text-emerald-300"><AnimatedNumber value={readCount} /></span>
               </div>
               <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">{t('Resolved')}</span>
             </div>
@@ -550,21 +651,21 @@ export default function AlertsPage() {
           <a href="/alert-studio">
             <GlassPanel className="p-3 text-center cursor-pointer hover:border-neon-cyan/30 transition-colors">
               <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1 block">{t('Active Rules')}</span>
-              <span className="text-sm font-bold text-neon-cyan">{enabledRules}/{rules?.length ?? 0}</span>
-              <span className="text-[9px] text-neon-cyan mt-1 block">→ {t('Alert Studio')}</span>
+              <span className="text-sm font-bold text-cyan-300">{enabledRules}/{rules?.length ?? 0}</span>
+              <span className="text-[9px] text-cyan-300 mt-1 block">→ {t('Alert Studio')}</span>
             </GlassPanel>
           </a>
           <GlassPanel className="p-3 text-center">
             <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1 block">{t('Read Rate')}</span>
-            <span className="text-sm font-bold text-neon-green">{totalCount > 0 ? `${fmtInt((readCount / totalCount) * 100)}%` : '—'}</span>
+            <span className="text-sm font-bold text-emerald-300">{totalCount > 0 ? `${fmtInt((readCount / totalCount) * 100)}%` : '—'}</span>
           </GlassPanel>
           <GlassPanel className="p-3 text-center">
             <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1 block">{t('Most Common')}</span>
-            <span className="text-sm font-bold text-neon-purple">{alertsByType[0]?.name ?? '—'}</span>
+            <span className="text-sm font-bold text-purple-300">{alertsByType[0]?.name ?? '—'}</span>
           </GlassPanel>
           <GlassPanel className="p-3 text-center">
             <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1 block">{t('Last 7 Days')}</span>
-            <span className="text-sm font-bold text-neon-amber">{weekAlertCount}</span>
+            <span className="text-sm font-bold text-amber-300">{weekAlertCount}</span>
           </GlassPanel>
         </div>
       </FadeIn>
@@ -575,7 +676,7 @@ export default function AlertsPage() {
           <FadeIn>
             <GlassPanel className="p-4 sm:p-6">
               <span className="section-title mb-4 flex items-center gap-2">
-                <Bell className="h-4 w-4 text-neon-cyan" /> {t('Alert Trend (7 Days)')}
+                <Icons.notifications className="h-4 w-4 text-cyan-300" /> {t('Alert Trend (7 Days)')}
               </span>
               <div className="h-40 sm:h-48">
                 <ResponsiveContainer width="100%" height="100%">
@@ -596,7 +697,7 @@ export default function AlertsPage() {
           <FadeIn>
             <GlassPanel className="p-4 sm:p-6">
               <span className="section-title mb-4 flex items-center gap-2">
-                <Filter className="h-4 w-4 text-neon-purple" /> {t('Alerts by Type')}
+                <Icons.filter className="h-4 w-4 text-purple-300" /> {t('Alerts by Type')}
               </span>
               <div className="h-40 sm:h-48 flex flex-col sm:flex-row items-center">
                 <ResponsiveContainer width="60%" height="100%">
@@ -626,31 +727,67 @@ export default function AlertsPage() {
       <FadeIn>
         <TabNav
           tabs={[
-            { key: 'alerts', label: t('Alerts'), icon: <Bell className="h-4 w-4" /> },
-            { key: 'history', label: t('History'), icon: <Send className="h-4 w-4" /> },
-            { key: 'preferences', label: t('Preferences'), icon: <Settings2 className="h-4 w-4" /> },
+            { key: 'alerts', label: t('Alerts'), icon: <Icons.notifications className="h-4 w-4" /> },
+            { key: 'history', label: t('History'), icon: <Icons.send className="h-4 w-4" /> },
+            { key: 'preferences', label: t('Preferences'), icon: <Icons.settingsAlt className="h-4 w-4" /> },
           ]}
           active={tab}
-          onChange={k => setTab(k as typeof tab)}
+          onChange={k => setTab(k as typeof tab, { push: true })}
         />
       </FadeIn>
 
       {/* ── Alerts Tab ───────────────────────────────────────────────── */}
       {tab === 'alerts' && (
         <>
+          {pinnedRules.length > 0 && (
+            <FadeIn>
+              <GlassPanel className="p-4 space-y-3">
+                <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-amber-300">
+                  <Icons.notifications className="h-4 w-4" />
+                  <span className="font-medium">{t('pinned.section.watching', 'Watching')}</span>
+                  <span className="text-[var(--text-muted)] normal-case tracking-normal">({pinnedRules.length})</span>
+                </div>
+                <ul className="divide-y divide-white/5">
+                  {pinnedRules.map(rule => (
+                    <li key={rule.id} className="flex items-center justify-between gap-3 py-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-[var(--text-primary)] truncate">{rule.name || `${t('alerts.rule', 'Rule')} #${rule.id}`}</span>
+                          {rule.enabled ? (
+                            <Badge variant="success" size="sm">{t('common.enabled', 'Enabled')}</Badge>
+                          ) : (
+                            <Badge variant="neutral" size="sm">{t('common.disabled', 'Disabled')}</Badge>
+                          )}
+                        </div>
+                      </div>
+                      <PinButton itemType="alert_rule" itemId={rule.id} size="sm" />
+                    </li>
+                  ))}
+                </ul>
+              </GlassPanel>
+            </FadeIn>
+          )}
           <FadeIn>
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-[var(--text-muted)]" />
-              <TabNav
-                tabs={[
-                  { key: 'all', label: `${t('All')} (${totalCount})` },
-                  { key: 'unread', label: `${t('Unread')} (${unreadCount})` },
-                  { key: 'critical', label: `${t('Critical')} (${criticalCount})` },
-                ]}
-                active={filter}
-                onChange={k => { setFilter(k as 'all' | 'unread' | 'critical'); setAlertPage(1); }}
+            <FilterBar>
+              <SearchInput
+                value={alertSearch}
+                onChange={(v) => { setAlertSearch(v); setAlertPage(1); }}
+                placeholder={t('alerts.searchPlaceholder', 'Search by title or message…')}
+                className="w-full sm:w-72"
               />
-            </div>
+              <div className="flex items-center gap-2" data-tour="alerts-filters">
+                <Icons.filter className="h-4 w-4 text-[var(--text-muted)]" />
+                <TabNav
+                  tabs={[
+                    { key: 'all', label: `${t('All')} (${totalCount})` },
+                    { key: 'unread', label: `${t('Unread')} (${unreadCount})` },
+                    { key: 'critical', label: `${t('Critical')} (${criticalCount})` },
+                  ]}
+                  active={filter}
+                  onChange={k => { setFilter(k as 'all' | 'unread' | 'critical'); setAlertPage(1); }}
+                />
+              </div>
+            </FilterBar>
           </FadeIn>
 
           {isLoading ? (
@@ -659,6 +796,7 @@ export default function AlertsPage() {
             </div>
           ) : filteredAlerts.length > 0 ? (
             <>
+            <div data-tour="alerts-list">
             <StaggerContainer className="space-y-2">
               {pagedAlerts.map(a => (
                 <StaggerItem key={a.id}>
@@ -682,12 +820,19 @@ export default function AlertsPage() {
                 </div>
               </div>
             )}
+            </div>
             </>
           ) : (
             <EmptyState
-              icon={<BellOff className="h-8 w-8" />}
+              icon={<Icons.notificationsMuted className="h-8 w-8" />}
               title={t('No alerts')}
-              message={filter === 'all' ? t('Your fleet is running smoothly. Alerts will appear here.') : t(`No ${filter} alerts right now.`)}
+              message={
+                alertSearch
+                  ? t('No alerts match your search.')
+                  : filter === 'all'
+                    ? t('Your fleet is running smoothly. Alerts will appear here.')
+                    : t(`No ${filter} alerts right now.`)
+              }
             />
           )}
         </>

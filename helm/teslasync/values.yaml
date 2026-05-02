@@ -545,6 +545,24 @@ config:
   azureMaps:
     apiKey: ""
 
+  # ── Inbound API call logs (Phase 38-10) ──────────────────────────────
+  # Persists every inbound /api/v1 request to api_call_logs.
+  # Body capture defaults to OFF; enable only during diagnostic windows.
+  # Misconfigured writers can be disabled via inboundEnabled=false at runtime.
+  # Maps to env vars: API_LOGS_INBOUND_ENABLED, API_LOG_CAPTURE_BODIES,
+  # API_LOG_QUEUE_CAPACITY, API_LOG_BATCH_SIZE, API_LOG_FLUSH_INTERVAL.
+  apiLogs:
+    # -- Enable persisting inbound HTTP requests (env: API_LOGS_INBOUND_ENABLED).
+    inboundEnabled: true
+    # -- Capture request/response bodies, 10 KB cap (env: API_LOG_CAPTURE_BODIES).
+    captureBodies: false
+    # -- Buffered channel size for the async writer (env: API_LOG_QUEUE_CAPACITY).
+    queueCapacity: 4096
+    # -- Max batch size before flushing via pgx.CopyFrom (env: API_LOG_BATCH_SIZE).
+    batchSize: 100
+    # -- Max age of a buffered entry before flushing (env: API_LOG_FLUSH_INTERVAL).
+    flushInterval: "1s"
+
   # ── Forward Auth ─────────────────────────────────────────────────────
   # Header set by your ForwardAuth provider. Examples:
   #   Authentik:     X-Authentik-Username
@@ -581,6 +599,32 @@ gasPrice:
 # ─────────────────────────────────────────────────────────────────────────────
 auth:
   jwtSecret: ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Web Push (VAPID) — Phase 40 / Prompt 52
+#
+# Generate a one-time keypair (offline) with:
+#   go run ./cmd/teslasync vapid-keygen
+# and copy PUBLIC into webPush.publicKey, PRIVATE into webPush.privateKey,
+# and a contact URL or mailto: into webPush.subject.
+#
+# When all three are unset (the default), the API logs a single Warn at
+# startup, hides the "Enable on this device" affordance in the frontend,
+# and skips the webpush channel during alert fan-out.
+#
+# Rotating these keys invalidates EVERY existing browser subscription —
+# never auto-generate them; pin them once and back them up with the rest
+# of the deployment's secrets.
+webPush:
+  # -- VAPID public key (base64url, ~88 chars). Non-secret — exposed via
+  # GET /api/v1/push/public-key for browsers to call PushManager.subscribe().
+  publicKey: ""
+  # -- VAPID private key (base64url, ~44 chars). SECRET — kept in the
+  # Helm-rendered Secret, never in ConfigMap or the frontend bundle.
+  privateKey: ""
+  # -- VAPID `sub` field. Operator contact the push service can use.
+  # Must be a `mailto:` URL or an https:// URL.
+  subject: ""
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Tesla API credentials
@@ -772,6 +816,14 @@ retention:
   # positionDays: 90
   # Days to keep per-signal telemetry history (Postgres signal_history table)
   # signalHistoryDays: 7
+  # Days to keep audit_logs entries (Phase-40 / Prompt 49). Hard delete after.
+  # Set to 0 to disable cleanup. Default in the API server is 365.
+  auditDays: 365
+  # Days to keep audit_logs.ip and audit_logs.user_agent populated. After this
+  # window the maintenance worker NULLs both columns so the per-user activity
+  # feed keeps working without holding onto network PII indefinitely.
+  # Set to 0 to never redact. Default in the API server is 30.
+  auditIpDays: 30
 
 # ─────────────────────────────────────────────────────────────────────────────
 # MongoDB (raw telemetry signal capture)

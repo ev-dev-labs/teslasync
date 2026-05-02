@@ -30,6 +30,9 @@ type ruleKey struct {
 type ruleState struct {
 	PrevSignals map[string]interface{} // previous signal values for transition baselines
 	LastFiredAt *time.Time             // cooldown tracking
+	// OnceLatched is set after a "once" trigger_mode rule fires; it is cleared
+	// when the rule's condition becomes false (the rising-edge reset).
+	OnceLatched bool
 }
 
 // NewRuleEngine creates a new alert rule engine.
@@ -48,6 +51,14 @@ type EvalResult struct {
 // Evaluate checks a single rule against the current signal batch.
 // Returns whether the rule triggered and the rendered message.
 func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals map[string]interface{}) EvalResult {
+	// Snooze takes precedence over cooldown, condition, and trigger mode.
+	// While snoozed, no state is changed (no prev-signal updates) so the
+	// rule resumes its previous behavior cleanly when the snooze expires.
+	if rule.SnoozedUntil != nil && time.Now().UTC().Before(*rule.SnoozedUntil) {
+		metrics.AlertRulesSnoozeSkipped.Inc()
+		return EvalResult{}
+	}
+
 	// Cooldown check.
 	key := ruleKey{RuleID: rule.ID, VehicleID: vehicleID}
 	e.mu.RLock()
@@ -56,8 +67,10 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 	// Copy state under lock to avoid concurrent map access.
 	var prevSignals map[string]interface{}
 	var lastFiredAt *time.Time
+	var onceLatched bool
 	if hasState {
 		lastFiredAt = st.LastFiredAt
+		onceLatched = st.OnceLatched
 		prevSignals = cloneSignals(st.PrevSignals)
 	}
 	if len(prevSignals) < 1 {
@@ -67,6 +80,10 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 	}
 	e.mu.RUnlock()
 
+	// Once-mode rules need to keep evaluating to detect the falling edge that
+	// resets the latch — same as transition rules.
+	needsFalseEdgeDetection := isTransitionRule(rule) || rule.TriggerMode == "once"
+
 	inCooldown := false
 	if hasState && lastFiredAt != nil {
 		cooldown := time.Duration(rule.CooldownMin) * time.Minute
@@ -74,11 +91,11 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 			cooldown = 15 * time.Minute
 		}
 		if time.Since(*lastFiredAt) < cooldown {
-			if !isTransitionRule(rule) {
+			if !needsFalseEdgeDetection {
 				metrics.AlertRulesCooldownSkipped.Inc()
-				return EvalResult{} // still in cooldown — non-transition rules skip evaluation
+				return EvalResult{} // still in cooldown — non-edge rules skip evaluation
 			}
-			inCooldown = true // transition rules continue to evaluate for reset detection
+			inCooldown = true // edge-aware rules continue to evaluate for reset detection
 		}
 	}
 
@@ -86,24 +103,33 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 	matched := evalRule(rule, signals, prevSignals)
 
 	if !matched {
-		// Condition is false — reset cooldown for transition rules.
+		// Falling edge: clear the once-mode latch and reset cooldown for
+		// edge-aware rules so the next rising edge can fire immediately.
 		e.mu.Lock()
 		if st != nil {
-			if st.LastFiredAt != nil && isTransitionRule(rule) {
+			st.OnceLatched = false
+			if st.LastFiredAt != nil && needsFalseEdgeDetection {
 				st.LastFiredAt = nil
 			}
 		}
 		e.mu.Unlock()
+		e.updatePrevSignals(key, signals)
+		return EvalResult{}
+	}
+
+	// Matched. Once-mode rules that already fired since the last falling
+	// edge stay quiet until the condition resets.
+	if rule.TriggerMode == "once" && onceLatched {
+		metrics.AlertRulesCooldownSkipped.Inc()
+		e.updatePrevSignals(key, signals)
+		return EvalResult{}
 	}
 
 	// Update state.
 	e.updatePrevSignals(key, signals)
 
-	if !matched {
-		return EvalResult{}
-	}
-
-	// Transition rules that matched but are still in cooldown get suppressed
+	// Transition / once-mode rules that matched but are still in cooldown
+	// get suppressed.
 	if inCooldown {
 		metrics.AlertRulesCooldownSkipped.Inc()
 		return EvalResult{}
@@ -114,10 +140,15 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 	e.mu.Lock()
 	if st != nil {
 		st.LastFiredAt = &now
+		if rule.TriggerMode == "once" {
+			st.OnceLatched = true
+		}
 	} else {
-		st = &ruleState{}
+		st = &ruleState{LastFiredAt: &now}
+		if rule.TriggerMode == "once" {
+			st.OnceLatched = true
+		}
 		e.state[key] = st
-		st.LastFiredAt = &now
 	}
 	e.mu.Unlock()
 

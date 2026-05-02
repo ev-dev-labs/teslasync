@@ -203,7 +203,7 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.Al
 	// 4. Dispatch to notification channels (skip during quiet hours for non-critical)
 	if !quietSuppressed {
 		safeGo("notification-dispatch", func() {
-			e.dispatchNotifications(title, message)
+			e.dispatchNotifications(title, message, severity, rule.ID)
 		})
 	}
 
@@ -214,7 +214,7 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.Al
 // dispatchNotifications publishes alert to the notification worker via MQTT.
 // The worker handles delivery, retry, rate limiting, and metrics — fully decoupled.
 // Falls back to direct send if MQTT is unavailable.
-func (e *TelemetryAlertEvaluator) dispatchNotifications(title, message string) {
+func (e *TelemetryAlertEvaluator) dispatchNotifications(title, message, severity string, ruleID int64) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -233,6 +233,7 @@ func (e *TelemetryAlertEvaluator) dispatchNotifications(title, message string) {
 			Title:       title,
 			Message:     message,
 			ChannelID:   ch.ID,
+			AlertID:     ruleID,
 		}
 		if err := notification.Publish(e.mqttClient, req); err != nil {
 			log.Warn().Int64("channel_id", ch.ID).Str("type", ch.Type).Err(err).Msg("alert_rules: notification dispatch failed")
@@ -240,5 +241,26 @@ func (e *TelemetryAlertEvaluator) dispatchNotifications(title, message string) {
 			metrics.NotificationsDispatched.WithLabelValues(ch.Type).Inc()
 			log.Info().Int64("channel_id", ch.ID).Str("type", ch.Type).Msg("alert_rules: notification dispatched to worker")
 		}
+	}
+
+	// Web Push fan-out — one synthetic Request per alert, dispatched
+	// alongside the user-configured channels. The webpush dispatcher
+	// (registered via notification.SetWebPushDispatcher in main()) iterates
+	// over every push_subscriptions row and delivers to each browser. When
+	// VAPID is not configured the dispatcher is a no-op, so this stays
+	// safe in dev installs without push.
+	pushReq := &notification.Request{
+		ChannelType: notification.ChannelTypeWebPush,
+		Config: map[string]string{
+			"severity":  severity,
+			"url":       fmt.Sprintf("/alerts?rule=%d", ruleID),
+			"alert_tag": fmt.Sprintf("alert-rule-%d", ruleID),
+		},
+		Title:   title,
+		Message: message,
+		AlertID: ruleID,
+	}
+	if err := notification.Publish(e.mqttClient, pushReq); err != nil {
+		log.Warn().Err(err).Msg("alert_rules: webpush fan-out dispatch failed")
 	}
 }

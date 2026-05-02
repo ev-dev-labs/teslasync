@@ -65,7 +65,7 @@ function FlowArrow({ from, to, power, active }: FlowArrowProps) {
   return (
     <div className={cn(
       'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
-      active ? 'bg-cyan-500/10 text-cyan-400' : 'bg-white/[0.02] text-white/30',
+      active ? 'bg-cyan-500/10 text-cyan-400' : 'bg-white/[0.02] text-[var(--text-muted)]',
     )}>
       <span>{from}</span>
       {(power ?? 0) >= 0 ? (
@@ -223,14 +223,14 @@ export default function PowerFlowDashboardPage() {
       <FadeIn delay={0.1}>
         <Grid cols={{ default: 1, md: 2 }} gap={4} className="mt-4">
           <GlassPanel className="p-6">
-            <h3 className="text-sm font-medium text-white/60 mb-3">
+            <h3 className="text-sm font-medium text-[var(--text-secondary)] mb-3">
               {t('powerFlow.batteryState', 'Battery State')}
             </h3>
             {live ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-white/80">{t('powerFlow.stateOfCharge', 'State of Charge')}</span>
-                  <span className="text-lg font-semibold text-white">
+                  <span className="text-[var(--text-primary)]">{t('powerFlow.stateOfCharge', 'State of Charge')}</span>
+                  <span className="text-lg font-semibold text-[var(--text-primary)]">
                     {soc != null ? `${fmtNumber(soc, 1)}%` : '—'}
                   </span>
                 </div>
@@ -243,12 +243,12 @@ export default function PowerFlowDashboardPage() {
                   </div>
                 )}
                 <div className="flex items-center justify-between">
-                  <span className="text-white/80">{t('powerFlow.energyLeft', 'Energy Remaining')}</span>
-                  <span className="text-white">{fmtWh(live.energy_left)}</span>
+                  <span className="text-[var(--text-primary)]">{t('powerFlow.energyLeft', 'Energy Remaining')}</span>
+                  <span className="text-[var(--text-primary)]">{fmtWh(live.energy_left)}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-white/80">{t('powerFlow.totalCapacity', 'Total Capacity')}</span>
-                  <span className="text-white">{fmtWh(live.total_pack_energy)}</span>
+                  <span className="text-[var(--text-primary)]">{t('powerFlow.totalCapacity', 'Total Capacity')}</span>
+                  <span className="text-[var(--text-primary)]">{fmtWh(live.total_pack_energy)}</span>
                 </div>
               </div>
             ) : (
@@ -261,7 +261,7 @@ export default function PowerFlowDashboardPage() {
 
           {/* Power Flow Diagram */}
           <GlassPanel className="p-6">
-            <h3 className="text-sm font-medium text-white/60 mb-3">
+            <h3 className="text-sm font-medium text-[var(--text-secondary)] mb-3">
               {t('powerFlow.flowDiagram', 'Power Flow')}
             </h3>
             {live ? (
@@ -307,7 +307,7 @@ export default function PowerFlowDashboardPage() {
       <FadeIn delay={0.15}>
         <div className="mt-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-white/90">
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">
               {t('powerFlow.history', 'Power History')}
             </h2>
             <Select

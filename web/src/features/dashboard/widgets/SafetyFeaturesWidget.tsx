@@ -136,7 +136,7 @@ export default function SafetyFeaturesWidget({ vehicleId, size }: WidgetProps) {
       {data ? (
         isCompact ? (
           <div className="flex flex-col items-center justify-center h-full gap-1">
-            <span className="text-3xl font-bold text-neon-green">
+            <span className="text-3xl font-bold text-emerald-300">
               {fmtInt(activeCount)}
             </span>
             <span className="text-xs text-white/50">

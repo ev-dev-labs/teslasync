@@ -9,16 +9,29 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
 // BatteryHandler handles battery health HTTP requests.
+//
+// Phase-39 migration: the legacy database.SignalLogReader's per-signal
+// helper has been replaced with the canonical signal.StateReader
+// (ADR-002 / phase-39). The four per-signal lookups (EnergyRemaining,
+// EstBatteryRange, ModuleTempMax, ModuleTempMin) all resolve "value as
+// of now" — a forward-folded read at time.Now() — so they map 1:1 onto
+// StateReader.SignalAt with identical semantics. We intentionally
+// retain the per-signal pattern (rather than a single
+// StateReader.State call) to preserve the existing behavior where each
+// individual signal's absence falls through independently to its zero
+// fallback in the response, without coupling that fallback to a single
+// snapshot read failure.
 type BatteryHandler struct {
-	db              *database.DB
-	signalLogReader *database.SignalLogReader
+	db    *database.DB
+	state signal.StateReader
 }
 
-func NewBatteryHandler(db *database.DB, slr *database.SignalLogReader) *BatteryHandler {
-	return &BatteryHandler{db: db, signalLogReader: slr}
+func NewBatteryHandler(db *database.DB, state signal.StateReader) *BatteryHandler {
+	return &BatteryHandler{db: db, state: state}
 }
 
 func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
@@ -37,9 +50,15 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 		const nominalCapacity = 75.0
 		const nominalRangeKm = 531.0
 
-		if h.signalLogReader != nil {
+		if h.state != nil {
 			now := time.Now()
-			if val, err := h.signalLogReader.SignalAt(r.Context(), vehicleID, "EnergyRemaining", now); err == nil && val != nil {
+			val, err := h.state.SignalAt(r.Context(), vehicleID, "EnergyRemaining", now)
+			if err != nil {
+				log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "EnergyRemaining").Msg("battery: failed to read signal state")
+				writeError(w, http.StatusInternalServerError, "failed to read battery state")
+				return
+			}
+			if val != nil {
 				if v, ok := toFloatOk(val); ok && v > 0 {
 					capacityKWh = v
 					healthScore = (capacityKWh / nominalCapacity) * 100
@@ -49,15 +68,33 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 					degradation = 100 - healthScore
 				}
 			}
-			if val, err := h.signalLogReader.SignalAt(r.Context(), vehicleID, "EstBatteryRange", now); err == nil && val != nil {
+			val, err = h.state.SignalAt(r.Context(), vehicleID, "EstBatteryRange", now)
+			if err != nil {
+				log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "EstBatteryRange").Msg("battery: failed to read signal state")
+				writeError(w, http.StatusInternalServerError, "failed to read battery state")
+				return
+			}
+			if val != nil {
 				if v, ok := toFloatOk(val); ok && v > 0 {
 					estRange = v
 				}
 			}
 			// Derive avgTemp from ModuleTempMax/ModuleTempMin — nil means "no data"
-			if valMax, err := h.signalLogReader.SignalAt(r.Context(), vehicleID, "ModuleTempMax", now); err == nil && valMax != nil {
+			valMax, err := h.state.SignalAt(r.Context(), vehicleID, "ModuleTempMax", now)
+			if err != nil {
+				log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "ModuleTempMax").Msg("battery: failed to read signal state")
+				writeError(w, http.StatusInternalServerError, "failed to read battery state")
+				return
+			}
+			if valMax != nil {
 				if tempMax, ok := toFloatOk(valMax); ok {
-					if valMin, errMin := h.signalLogReader.SignalAt(r.Context(), vehicleID, "ModuleTempMin", now); errMin == nil && valMin != nil {
+					valMin, err := h.state.SignalAt(r.Context(), vehicleID, "ModuleTempMin", now)
+					if err != nil {
+						log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "ModuleTempMin").Msg("battery: failed to read signal state")
+						writeError(w, http.StatusInternalServerError, "failed to read battery state")
+						return
+					}
+					if valMin != nil {
 						if tempMin, okMin := toFloatOk(valMin); okMin {
 							avg := (tempMax + tempMin) / 2
 							avgTemp = &avg
@@ -68,15 +105,17 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Count charge cycles from charging sessions (sum of SOC deltas / 100)
-		var totalSOCDelta *float64
-		if err := h.db.Pool.QueryRow(r.Context(),
-			`SELECT SUM(GREATEST(end_battery_pct - start_battery_pct, 0)) 
-			 FROM charging_sessions WHERE vehicle_id = $1 AND end_battery_pct > start_battery_pct`,
-			vehicleID).Scan(&totalSOCDelta); err != nil && err != pgx.ErrNoRows {
-			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("battery: charge cycle SOC delta query failed")
-		}
-		if totalSOCDelta != nil {
-			cycleCount = int(*totalSOCDelta / 100)
+		if h.db != nil {
+			var totalSOCDelta *float64
+			if err := h.db.Pool.QueryRow(r.Context(),
+				`SELECT SUM(GREATEST(end_battery_pct - start_battery_pct, 0)) 
+				 FROM charging_sessions WHERE vehicle_id = $1 AND end_battery_pct > start_battery_pct`,
+				vehicleID).Scan(&totalSOCDelta); err != nil && err != pgx.ErrNoRows {
+				log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("battery: charge cycle SOC delta query failed")
+			}
+			if totalSOCDelta != nil {
+				cycleCount = int(*totalSOCDelta / 100)
+			}
 		}
 	}
 
@@ -102,33 +141,35 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 	const trendNominalCap = 75.0
 	const trendNominalRange = 531.0
 
-	trendRows, trendErr := h.db.Pool.Query(r.Context(),
-		`SELECT bucket, end_soc, min_soc, max_soc
-		 FROM cagg_battery_daily
-		 WHERE vehicle_id = $1 AND bucket >= $2
-		 ORDER BY bucket ASC`,
-		vehicleID, trendCutoff)
-	if trendErr == nil {
-		defer trendRows.Close()
-		for trendRows.Next() {
-			var bucket time.Time
-			var endSOC, minSOC, maxSOC *float64
-			if scanErr := trendRows.Scan(&bucket, &endSOC, &minSOC, &maxSOC); scanErr != nil {
-				log.Warn().Err(scanErr).Int64("vehicleID", vehicleID).Msg("battery: trend row scan failed")
-				continue
+	if h.db != nil {
+		trendRows, trendErr := h.db.Pool.Query(r.Context(),
+			`SELECT bucket, end_soc, min_soc, max_soc
+			 FROM cagg_battery_daily
+			 WHERE vehicle_id = $1 AND bucket >= $2
+			 ORDER BY bucket ASC`,
+			vehicleID, trendCutoff)
+		if trendErr == nil {
+			defer trendRows.Close()
+			for trendRows.Next() {
+				var bucket time.Time
+				var endSOC, minSOC, maxSOC *float64
+				if scanErr := trendRows.Scan(&bucket, &endSOC, &minSOC, &maxSOC); scanErr != nil {
+					log.Warn().Err(scanErr).Int64("vehicleID", vehicleID).Msg("battery: trend row scan failed")
+					continue
+				}
+				soc := 0.0
+				if endSOC != nil {
+					soc = *endSOC
+				}
+				trend = append(trend, trendPoint{
+					Month:       bucket.Format("2006-01-02"),
+					CapacityPct: soc,
+					HealthScore: soc,
+					CapacityKWh: soc * trendNominalCap / 100,
+					RangeKm:     soc * trendNominalRange / 100,
+					EstRangeKm:  soc * trendNominalRange / 100,
+				})
 			}
-			soc := 0.0
-			if endSOC != nil {
-				soc = *endSOC
-			}
-			trend = append(trend, trendPoint{
-				Month:       bucket.Format("2006-01-02"),
-				CapacityPct: soc,
-				HealthScore: soc,
-				CapacityKWh: soc * trendNominalCap / 100,
-				RangeKm:     soc * trendNominalRange / 100,
-				EstRangeKm:  soc * trendNominalRange / 100,
-			})
 		}
 	}
 
@@ -136,17 +177,17 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 	const nominalRangeKm = 531.0
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"vehicle_id":                  vehicleID,
-		"health_score":                healthScore,
-		"capacity_kwh":                capacityKWh,
-		"current_capacity_pct":        healthScore,
-		"degradation_pct":             degradation,
-		"est_range_km":                estRange,
-		"estimated_range_current_km":  estRange,
-		"estimated_range_new_km":      nominalRangeKm,
-		"total_cycles":                cycleCount,
-		"cycle_count":                 cycleCount,
-		"avg_cell_temp_c":             avgTemp,
-		"monthly_trend":               trend,
+		"vehicle_id":                 vehicleID,
+		"health_score":               healthScore,
+		"capacity_kwh":               capacityKWh,
+		"current_capacity_pct":       healthScore,
+		"degradation_pct":            degradation,
+		"est_range_km":               estRange,
+		"estimated_range_current_km": estRange,
+		"estimated_range_new_km":     nominalRangeKm,
+		"total_cycles":               cycleCount,
+		"cycle_count":                cycleCount,
+		"avg_cell_temp_c":            avgTemp,
+		"monthly_trend":              trend,
 	})
 }

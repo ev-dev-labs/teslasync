@@ -1,0 +1,70 @@
+/**
+ * Zod schemas for the Geofence create/edit form.
+ *
+ * Validates the user-entered string form (lat/lng/radius come in as
+ * `<input type="number">` strings) and produces a typed payload ready for
+ * `POST /api/v1/geofences`.
+ */
+
+import { z } from 'zod'
+
+export const GEOFENCE_ALERT_TYPES = ['entry', 'exit', 'both', 'none'] as const
+
+export type GeofenceAlertType = (typeof GEOFENCE_ALERT_TYPES)[number]
+
+const numericString = (label: string, opts: { min: number; max: number }) =>
+  z
+    .string()
+    .trim()
+    .min(1, `${label} is required`)
+    .refine((value) => !Number.isNaN(Number(value)), `${label} must be a number`)
+    .refine((value) => {
+      const n = Number(value)
+      return n >= opts.min && n <= opts.max
+    }, `${label} must be between ${opts.min} and ${opts.max}`)
+
+/**
+ * Form schema — operates on the literal `string` values held in the modal's
+ * controlled inputs. Convert to numeric payload via {@link toGeofencePayload}
+ * after a successful parse.
+ */
+export const geofenceFormSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, 'Name is required')
+    .max(120, 'Name must be 120 characters or fewer'),
+  latitude: numericString('Latitude', { min: -90, max: 90 }),
+  longitude: numericString('Longitude', { min: -180, max: 180 }),
+  radius: numericString('Radius', { min: 10, max: 50000 }),
+  alertType: z.enum(GEOFENCE_ALERT_TYPES),
+  enabled: z.boolean(),
+})
+
+export type GeofenceFormData = z.infer<typeof geofenceFormSchema>
+
+/** Payload shape posted to the backend (numeric coords + boolean flags). */
+export interface GeofencePayload {
+  name: string
+  latitude: number
+  longitude: number
+  radius: number
+  alertOnEntry: boolean
+  alertOnExit: boolean
+  enabled: boolean
+}
+
+/** Converts a validated {@link GeofenceFormData} into the wire payload. */
+export function toGeofencePayload(form: GeofenceFormData): GeofencePayload {
+  const alertOnEntry = form.alertType === 'entry' || form.alertType === 'both'
+  const alertOnExit = form.alertType === 'exit' || form.alertType === 'both'
+  return {
+    name: form.name,
+    latitude: Number(form.latitude),
+    longitude: Number(form.longitude),
+    radius: Number(form.radius),
+    alertOnEntry,
+    alertOnExit,
+    enabled: form.enabled,
+  }
+}

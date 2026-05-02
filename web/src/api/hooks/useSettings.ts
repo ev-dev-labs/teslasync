@@ -1,8 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
-import { useToast } from '@/components/feedback/Toast';
+import { useMutationToast } from './_toastHelpers';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
+import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import type { AppSettings, GasPriceStatus } from '@/api/types';
 
 export const settingsKeys = {
@@ -25,7 +26,7 @@ export function useSettings() {
 
 export function useSaveSettings() {
   const qc = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (data: AppSettings) =>
       request<AppSettings>('/settings', {
@@ -34,12 +35,10 @@ export function useSaveSettings() {
         body: JSON.stringify(data),
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: settingsKeys.settings });
-      toast.success('Settings saved');
+      invalidateAndBroadcast(qc, { queryKey: settingsKeys.settings });
+      success('toast.settings.save.success', 'Settings saved');
     },
-    onError: (err: Error) => {
-      toast.error(err.message || 'Failed to save settings');
-    },
+    onError: (e) => error(e, 'toast.settings.save.error', 'Failed to save settings'),
   });
 }
 
@@ -58,45 +57,39 @@ export function useAuthStatus() {
 }
 
 export function useAuthURL() {
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: () => request<{ auth_url: string }>('/auth/url', { method: 'POST' }),
     onSuccess: () => {
-      toast.success('Auth URL generated');
+      success('toast.settings.auth.url.success', 'Auth URL generated');
     },
-    onError: (err: Error) => {
-      toast.error(err.message || 'Failed to get auth URL');
-    },
+    onError: (e) => error(e, 'toast.settings.auth.url.error', 'Failed to get auth URL'),
   });
 }
 
 export function useRefreshAuth() {
   const qc = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: () => request<void>('/auth/refresh', { method: 'POST' }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: settingsKeys.authStatus });
-      toast.success('Auth refreshed');
+      invalidateAndBroadcast(qc, { queryKey: settingsKeys.authStatus });
+      success('toast.settings.auth.refresh.success', 'Auth refreshed');
     },
-    onError: (err: Error) => {
-      toast.error(err.message || 'Failed to refresh auth');
-    },
+    onError: (e) => error(e, 'toast.settings.auth.refresh.error', 'Failed to refresh auth'),
   });
 }
 
 export function useDisconnectAuth() {
   const qc = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: () => request<void>('/auth/disconnect', { method: 'POST' }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: settingsKeys.authStatus });
-      toast.success('Tesla account disconnected');
+      invalidateAndBroadcast(qc, { queryKey: settingsKeys.authStatus });
+      success('toast.settings.auth.disconnect.success', 'Tesla account disconnected');
     },
-    onError: (err: Error) => {
-      toast.error(err.message || 'Failed to disconnect');
-    },
+    onError: (e) => error(e, 'toast.settings.auth.disconnect.error', 'Failed to disconnect'),
   });
 }
 
@@ -117,16 +110,14 @@ export function useVehicles() {
 }
 export function useSyncVehicles() {
   const qc = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: () => request<{ synced: number }>('/vehicles/sync', { method: 'POST' }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: settingsKeys.vehicles });
-      toast.success('Vehicles synced');
+      invalidateAndBroadcast(qc, { queryKey: settingsKeys.vehicles });
+      success('toast.settings.vehicles.sync.success', 'Vehicles synced');
     },
-    onError: (err: Error) => {
-      toast.error(err.message || 'Failed to sync vehicles');
-    },
+    onError: (e) => error(e, 'toast.settings.vehicles.sync.error', 'Failed to sync vehicles'),
   });
 }
 
@@ -158,21 +149,19 @@ export function useGasPriceStatus(enabled = true) {
 }
 
 export function usePollGasPrice() {
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: () => request<{ status: string }>('/gas-price/poll', { method: 'POST' }),
     onSuccess: () => {
-      toast.success('Gas prices updated');
+      success('toast.settings.gasPrice.poll.success', 'Gas prices updated');
     },
-    onError: (err: Error) => {
-      toast.error(err.message || 'Failed to poll gas prices');
-    },
+    onError: (e) => error(e, 'toast.settings.gasPrice.poll.error', 'Failed to poll gas prices'),
   });
 }
 
 export function useToggleGasPrice() {
   const qc = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (enabled: boolean) =>
       request<{ enabled: boolean }>('/gas-price/toggle', {
@@ -182,17 +171,18 @@ export function useToggleGasPrice() {
       }),
     onSuccess: (_data, enabled) => {
       qc.invalidateQueries({ queryKey: settingsKeys.gasPriceStatus });
-      toast.success(enabled ? 'Gas price tracking enabled' : 'Gas price tracking disabled');
+      success(
+        enabled ? 'toast.settings.gasPrice.toggle.enabled' : 'toast.settings.gasPrice.toggle.disabled',
+        enabled ? 'Gas price tracking enabled' : 'Gas price tracking disabled',
+      );
     },
-    onError: (err: Error) => {
-      toast.error(err.message || 'Failed to toggle gas price tracking');
-    },
+    onError: (e) => error(e, 'toast.settings.gasPrice.toggle.error', 'Failed to toggle gas price tracking'),
   });
 }
 
 export function useUpdateGasPriceConfig() {
   const qc = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (pollInterval: string) =>
       request<{ poll_interval: string }>('/gas-price/config', {
@@ -202,11 +192,9 @@ export function useUpdateGasPriceConfig() {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: settingsKeys.gasPriceStatus });
-      toast.success('Gas price config updated');
+      success('toast.settings.gasPrice.config.success', 'Gas price config updated');
     },
-    onError: (err: Error) => {
-      toast.error(err.message || 'Failed to update gas price config');
-    },
+    onError: (e) => error(e, 'toast.settings.gasPrice.config.error', 'Failed to update gas price config'),
   });
 }
 
@@ -227,7 +215,7 @@ export function useDashboardLayouts() {
 }
 
 export function useSaveDashboardLayouts() {
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (data: DashboardLayoutsPayload) =>
       request<DashboardLayoutsPayload>('/settings/dashboard-layouts', {
@@ -236,11 +224,9 @@ export function useSaveDashboardLayouts() {
         body: JSON.stringify(data),
       }),
     onSuccess: () => {
-      toast.success('Dashboard layout saved');
+      success('toast.settings.dashboardLayouts.success', 'Dashboard layout saved');
     },
-    onError: (err: Error) => {
-      toast.error(err.message || 'Failed to save dashboard layout');
-    },
+    onError: (e) => error(e, 'toast.settings.dashboardLayouts.error', 'Failed to save dashboard layout'),
   });
 }
 
@@ -248,7 +234,7 @@ export function useSaveDashboardLayouts() {
 
 export function useToggleAPISuspend() {
   const qc = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (suspended: boolean) =>
       request<{ api_suspended: boolean }>('/settings/suspend-api', {
@@ -257,12 +243,13 @@ export function useToggleAPISuspend() {
         body: JSON.stringify({ suspended }),
       }),
     onSuccess: (_data, suspended) => {
-      qc.invalidateQueries({ queryKey: settingsKeys.settings });
-      toast.success(suspended ? 'API suspended' : 'API resumed');
+      invalidateAndBroadcast(qc, { queryKey: settingsKeys.settings });
+      success(
+        suspended ? 'toast.settings.api.toggle.suspended' : 'toast.settings.api.toggle.resumed',
+        suspended ? 'API suspended' : 'API resumed',
+      );
     },
-    onError: (err: Error) => {
-      toast.error(err.message || 'Failed to toggle API suspension');
-    },
+    onError: (e) => error(e, 'toast.settings.api.toggle.error', 'Failed to toggle API suspension'),
   });
 }
 
@@ -302,7 +289,7 @@ export function usePollingConfig() {
 
 export function useUpdatePollingConfig() {
   const qc = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (pc: PollingConfig) =>
       request<PollingConfig>('/settings/polling-config', {
@@ -313,11 +300,9 @@ export function useUpdatePollingConfig() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['polling-config'] });
       qc.invalidateQueries({ queryKey: ['capture-stats'] });
-      toast.success('Polling config saved');
+      success('toast.settings.polling.success', 'Polling config saved');
     },
-    onError: (err: Error) => {
-      toast.error(err.message || 'Failed to save polling config');
-    },
+    onError: (e) => error(e, 'toast.settings.polling.error', 'Failed to save polling config'),
   });
 }
 

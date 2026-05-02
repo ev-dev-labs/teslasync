@@ -3,6 +3,7 @@ import { Lock, Eye, DoorOpen, Car, Home, UserCheck, Activity } from 'lucide-reac
 import { fmtInt } from '@/lib/numberFormat';
 import { MetricCard } from '@/components/data-display/MetricCard';
 import { Skeleton } from '@/components/feedback/Skeleton';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { FadeIn } from '@/components/motion/FadeIn';
 import type { SecurityStats } from './helpers';
@@ -74,10 +75,11 @@ export function SecurityStatistics({ securityStats, sentryUptime, isLoading }: S
             />
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
-            <Activity className="h-8 w-8 opacity-20" />
-            <p className="text-xs">{t('common.noData', 'No data available')}</p>
-          </div>
+          <EmptyState
+            icon={<Activity className="h-8 w-8 opacity-20" />}
+            message={t('common.noData', 'No data available')}
+            className="py-8"
+          />
         )}
       </GlassPanel>
     </FadeIn>

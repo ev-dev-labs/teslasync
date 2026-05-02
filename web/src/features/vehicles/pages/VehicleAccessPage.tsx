@@ -1,15 +1,14 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { RefreshCw, UserPlus, UserMinus, XCircle, Users, Mail, Copy, Check, Shield } from 'lucide-react';
+import { RefreshCw, UserPlus, UserMinus, XCircle, Users, Mail, Shield } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Button, Badge, DataTable, ConfirmDialog, type Column } from '@/components/ui';
+import { GlassPanel, Button, Badge, CopyButton, DataTable, ConfirmDialog, type Column } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { StatusBadge } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 
 import {
   useVehicleDrivers,
@@ -29,9 +28,6 @@ export default function VehicleAccessPage() {
   usePageTitle(t('vehicleAccess.title', 'Vehicle Access'));
 
   const { data: vehicle } = useVehicle(vehicleId ?? '');
-  const breadcrumbs = useBreadcrumbs({
-    '/vehicles/:id': vehicle?.display_name ?? `Vehicle #${vehicleId}`,
-  });
 
   const { data: drivers, isLoading: driversLoading } = useVehicleDrivers(vehicleId);
   const { data: invitations, isLoading: invitationsLoading } = useVehicleInvitations(vehicleId);
@@ -44,15 +40,8 @@ export default function VehicleAccessPage() {
 
   const [removeTarget, setRemoveTarget] = useState<VehicleDriver | null>(null);
   const [revokeTarget, setRevokeTarget] = useState<VehicleInvitation | null>(null);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const isLoading = driversLoading || invitationsLoading;
-
-  const handleCopyLink = useCallback((url: string, invitationId: string) => {
-    navigator.clipboard.writeText(url);
-    setCopiedId(invitationId);
-    setTimeout(() => setCopiedId(null), 2000);
-  }, []);
 
   const handleRemoveDriver = useCallback(() => {
     if (!removeTarget?.share_user_id || !vehicleId) return;
@@ -151,19 +140,15 @@ export default function VehicleAccessPage() {
       key: 'link',
       header: t('vehicleAccess.invitations.link', 'Link'),
       render: (row) => row.invite_url ? (
-        <Button
+        <CopyButton
+          text={row.invite_url}
           size="sm"
           variant="ghost"
-          onClick={() => handleCopyLink(row.invite_url!, row.invitation_id)}
-          aria-label={t('vehicleAccess.invitations.copyLink', 'Copy invite link')}
+          iconOnly
+          withToast
+          ariaLabel={t('vehicleAccess.invitations.copyLink', 'Copy invite link')}
           className="text-cyan-400 hover:text-cyan-300"
-        >
-          {copiedId === row.invitation_id ? (
-            <Check className="h-4 w-4" />
-          ) : (
-            <Copy className="h-4 w-4" />
-          )}
-        </Button>
+        />
       ) : (
         <span className="text-white/40">—</span>
       ),
@@ -185,18 +170,20 @@ export default function VehicleAccessPage() {
       ) : null,
       className: 'w-12',
     },
-  ], [t, copiedId, handleCopyLink]);
+  ], [t]);
 
   return (
     <PageContainer
       title={t('vehicleAccess.title', 'Vehicle Access')}
       subtitle={t('vehicleAccess.subtitle', 'Manage drivers and share invitations')}
       loading={isLoading}
-      breadcrumbs={breadcrumbs}
+      breadcrumbLabels={{
+        '/vehicles/:id': vehicle?.display_name ?? `Vehicle #${vehicleId}`,
+      }}
     >
       {/* ── Drivers Section ───────────────────────────────────── */}
       <FadeIn>
-        <GlassPanel className="p-6">
+        <GlassPanel className="p-6" data-tour="vehicle-access">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Users className="h-5 w-5 text-cyan-400" />

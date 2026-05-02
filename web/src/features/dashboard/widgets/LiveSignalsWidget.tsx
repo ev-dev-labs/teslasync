@@ -61,7 +61,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
           {/* Drivetrain */}
           <div className="space-y-1.5">
             <h4 className="text-[10px] font-semibold uppercase text-white/40 flex items-center gap-1">
-              <Cog className="h-3 w-3 text-neon-purple" /> {t('widget.motor', 'Motor')}
+              <Cog className="h-3 w-3 text-purple-300" /> {t('widget.motor', 'Motor')}
             </h4>
             {motor ? (
               <>
@@ -87,7 +87,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
           {/* Climate */}
           <div className="space-y-1.5">
             <h4 className="text-[10px] font-semibold uppercase text-white/40 flex items-center gap-1">
-              <Thermometer className="h-3 w-3 text-neon-cyan" /> {t('widget.climate', 'Climate')}
+              <Thermometer className="h-3 w-3 text-cyan-300" /> {t('widget.climate', 'Climate')}
             </h4>
             {climate ? (
               <>
@@ -120,7 +120,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
           {/* Tires */}
           <div className="space-y-1.5">
             <h4 className="text-[10px] font-semibold uppercase text-white/40 flex items-center gap-1">
-              <CircleDot className="h-3 w-3 text-neon-cyan" /> {t('widget.tires', 'Tires')}
+              <CircleDot className="h-3 w-3 text-cyan-300" /> {t('widget.tires', 'Tires')}
             </h4>
             {tires ? (
               <>

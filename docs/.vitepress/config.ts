@@ -44,6 +44,7 @@ export default withMermaid(defineConfig({
             { text: 'Technology Stack', link: '/guide/technology' },
             { text: 'Fleet Telemetry', link: '/guide/fleet-telemetry' },
             { text: 'Troubleshooting', link: '/guide/troubleshooting' },
+            { text: 'Printing pages', link: '/guide/printing' },
             { text: 'FAQ', link: '/guide/faq' },
             { text: 'Roadmap', link: '/guide/roadmap' },
           ],

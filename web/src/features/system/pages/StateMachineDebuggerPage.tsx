@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw, ChevronDown, ChevronRight, Activity, Zap, AlertTriangle } from 'lucide-react';
 import { PageContainer, Grid } from '@/components/layout';
-import { GlassPanel, Button, DataTable, Select, Pagination } from '@/components/ui';
+import { GlassPanel, Button, DataTable, Select, Pagination, CopyButton } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { StatCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
@@ -14,6 +15,7 @@ import {
 import { useVehicleStateMachine } from '@/api/hooks/useAdmin';
 import { useFSMStats, useFSMTransitions } from '@/api/hooks/useFSM';
 import { useVehicles } from '@/api/hooks/useVehicles';
+import { useSignalSnapshot } from '@/api/hooks/useTelemetry';
 import type { VehicleState } from '@/api/types';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime, formatRelative } from '@/lib/dateFormat';
@@ -26,6 +28,9 @@ import { FSMStateDiagram } from '../components/FSMStateDiagram';
 import { FSMHealthPanel, computeFlapIds } from '../components/FSMHealthPanel';
 import { FSMTimelineChart } from '../components/FSMTimelineChart';
 import { FSMSubFSMPanel } from '../components/FSMSubFSMPanel';
+import { StateTimeline } from '../components/state-machine/StateTimeline';
+import { LiveControls } from '../components/state-machine/LiveControls';
+import { SnapshotInspector } from '../components/state-machine/SnapshotInspector';
 
 /* ─── Vehicle state styling (for live state hero) ─── */
 const vehicleStateStyle: Record<string, { bg: string; text: string; dot: string }> = {
@@ -33,8 +38,8 @@ const vehicleStateStyle: Record<string, { bg: string; text: string; dot: string 
   charging: { bg: 'bg-cyan-500/10', text: 'text-cyan-400', dot: 'bg-cyan-400' },
   parked: { bg: 'bg-purple-500/10', text: 'text-purple-400', dot: 'bg-purple-400' },
   online: { bg: 'bg-blue-500/10', text: 'text-blue-400', dot: 'bg-blue-400' },
-  offline: { bg: 'bg-gray-500/10', text: 'text-gray-400', dot: 'bg-gray-400' },
-  asleep: { bg: 'bg-gray-600/10', text: 'text-gray-500', dot: 'bg-gray-500' },
+  offline: { bg: 'bg-gray-500/10', text: 'text-[var(--text-secondary)]', dot: 'bg-gray-400' },
+  asleep: { bg: 'bg-gray-600/10', text: 'text-[var(--text-muted)]', dot: 'bg-gray-500' },
 };
 
 function getVehicleStyle(state?: string | null) {
@@ -70,17 +75,28 @@ export default function StateMachineDebuggerPage() {
 
   /* ─── Vehicle selector ─── */
   const { data: vehicles } = useVehicles();
-  const [vehicleId, setVehicleId] = useState<string>('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [vehicleId, setVehicleId] = useState<string>(() => searchParams.get('vehicle') ?? '');
   const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
 
   /* ─── FSM filters ─── */
-  const [fsmType, setFsmType] = useState<FSMType>('all');
+  const initialFsm = (searchParams.get('fsm') ?? 'all') as FSMType;
+  const [fsmType, setFsmType] = useState<FSMType>(initialFsm);
   const [hours, setHours] = useState('24');
   const [serverPage, setServerPage] = useState(1);
   const [perPage, setPerPage] = useState(50);
 
   /* ─── Detail panel ─── */
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(() => {
+    const id = searchParams.get('selected');
+    return id ? Number(id) : null;
+  });
+
+  /* ─── Phase 40 / Prompt 58 — live/freeze + timeline window ─── */
+  const initialAt = searchParams.get('at');
+  const [isLive, setIsLive] = useState<boolean>(!initialAt);
+  const [windowMinutes, setWindowMinutes] = useState(10);
+  const [bufferClearedAt, setBufferClearedAt] = useState<Date | null>(null);
 
   /* ─── Data hooks ─── */
   const {
@@ -167,7 +183,7 @@ export default function StateMachineDebuggerPage() {
         header: t('fsm.count', 'Transitions'),
         className: 'text-right',
         render: (row: StatSummaryRow) => (
-          <span className="text-white/90 font-mono">{fmtInt(row.count)}</span>
+          <span className="text-[var(--text-primary)] font-mono">{fmtInt(row.count)}</span>
         ),
       },
       {
@@ -175,7 +191,7 @@ export default function StateMachineDebuggerPage() {
         header: t('fsm.avgInterval', 'Avg Interval'),
         className: 'text-right',
         render: (row: StatSummaryRow) => (
-          <span className="text-white/70 font-mono">
+          <span className="text-[var(--text-secondary)] font-mono">
             {row.avg_interval_sec > 0 ? formatDuration(row.avg_interval_sec) : '—'}
           </span>
         ),
@@ -194,14 +210,14 @@ export default function StateMachineDebuggerPage() {
         render: (_row: FSMTransition, _idx?: number) => {
           const rowIdx = transitions.indexOf(_row);
           const globalIdx = (serverPage - 1) * perPage + rowIdx + 1;
-          return <span className="text-white/40 font-mono text-xs">{globalIdx}</span>;
+          return <span className="text-[var(--text-muted)] font-mono text-xs">{globalIdx}</span>;
         },
       },
       {
         key: 'time',
         header: t('fsm.time', 'Time'),
         render: (row: FSMTransition) => (
-          <span className="text-white/70 font-mono text-xs whitespace-nowrap">
+          <span className="text-[var(--text-secondary)] font-mono text-xs whitespace-nowrap">
             {formatDateTime(row.created_at)}
           </span>
         ),
@@ -210,7 +226,7 @@ export default function StateMachineDebuggerPage() {
         key: 'fsm_type',
         header: t('fsm.type', 'FSM Type'),
         render: (row: FSMTransition) => (
-          <span className="text-white/60 text-xs font-mono capitalize">{row.fsm_type?.replace('_', ' ') ?? 'vehicle'}</span>
+          <span className="text-[var(--text-secondary)] text-xs font-mono capitalize">{row.fsm_type?.replace('_', ' ') ?? 'vehicle'}</span>
         ),
       },
       {
@@ -231,7 +247,7 @@ export default function StateMachineDebuggerPage() {
         key: 'trigger',
         header: t('fsm.trigger', 'Trigger'),
         render: (row: FSMTransition) => (
-          <span className="text-white/60 text-xs font-mono">{row.trigger}</span>
+          <span className="text-[var(--text-secondary)] text-xs font-mono">{row.trigger}</span>
         ),
       },
       {
@@ -290,16 +306,115 @@ export default function StateMachineDebuggerPage() {
     [transitions],
   );
 
+  /* ─── Phase 40 / Prompt 58 — derived selection + step navigation ─── */
+  const sortedByTime = useMemo(
+    () => [...transitions].sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    ),
+    [transitions],
+  );
+
+  const selectedTransition = useMemo(
+    () => (selectedId != null ? transitions.find((tr) => tr.id === selectedId) ?? null : null),
+    [transitions, selectedId],
+  );
+  const selectedIndex = useMemo(
+    () => (selectedTransition ? sortedByTime.findIndex((tr) => tr.id === selectedTransition.id) : -1),
+    [sortedByTime, selectedTransition],
+  );
+
+  const previousTransition = useMemo(() => {
+    if (selectedIndex <= 0) return null;
+    return sortedByTime[selectedIndex - 1] ?? null;
+  }, [sortedByTime, selectedIndex]);
+
+  const visibleTransitions = useMemo(() => {
+    if (!bufferClearedAt) return sortedByTime;
+    return sortedByTime.filter((tr) => new Date(tr.created_at) >= bufferClearedAt);
+  }, [sortedByTime, bufferClearedAt]);
+
+  const handleStepPrev = useCallback(() => {
+    if (sortedByTime.length === 0) return;
+    setIsLive(false);
+    if (selectedIndex <= 0) {
+      setSelectedId(sortedByTime[0].id);
+    } else {
+      setSelectedId(sortedByTime[selectedIndex - 1].id);
+    }
+  }, [sortedByTime, selectedIndex]);
+
+  const handleStepNext = useCallback(() => {
+    if (sortedByTime.length === 0) return;
+    setIsLive(false);
+    if (selectedIndex < 0) {
+      setSelectedId(sortedByTime[sortedByTime.length - 1].id);
+    } else if (selectedIndex < sortedByTime.length - 1) {
+      setSelectedId(sortedByTime[selectedIndex + 1].id);
+    }
+  }, [sortedByTime, selectedIndex]);
+
+  const handleClearBuffer = useCallback(() => {
+    setBufferClearedAt(new Date());
+    setSelectedId(null);
+  }, []);
+
+  /* ─── Snapshot hooks: live (when no `at`) + selected/previous (when frozen) ─── */
+  const selectedAtIso = selectedTransition?.created_at ?? '';
+  const previousAtIso = previousTransition?.created_at ?? '';
+  const numericVehicleId = Number(activeId) || 0;
+
+  const { data: selectedSnapshot, isFetching: snapshotFetching } = useSignalSnapshot(
+    numericVehicleId,
+    selectedAtIso,
+    '',
+    { enabled: numericVehicleId > 0 && Boolean(selectedAtIso) },
+  );
+
+  const { data: previousSnapshot } = useSignalSnapshot(
+    numericVehicleId,
+    previousAtIso,
+    '',
+    { enabled: numericVehicleId > 0 && Boolean(previousAtIso) },
+  );
+
+  /* ─── Permalink: keep ?vehicle / ?fsm / ?selected / ?at in sync ─── */
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    if (activeId) next.set('vehicle', activeId);
+    else next.delete('vehicle');
+    if (fsmType && fsmType !== 'all') next.set('fsm', fsmType);
+    else next.delete('fsm');
+    if (selectedId != null) next.set('selected', String(selectedId));
+    else next.delete('selected');
+    if (!isLive && selectedAtIso) next.set('at', selectedAtIso);
+    else next.delete('at');
+    setSearchParams(next, { replace: true });
+  }, [activeId, fsmType, selectedId, isLive, selectedAtIso, searchParams, setSearchParams]);
+
+  const permalinkUrl = useMemo(() => {
+    if (typeof window === 'undefined') return '';
+    return `${window.location.origin}${window.location.pathname}?${searchParams.toString()}`;
+  }, [searchParams]);
+
   return (
     <PageContainer
       title={t('fsm.title', 'FSM Debugger')}
       subtitle={t('fsm.subtitle', 'Multi-FSM transition analysis — vehicle, drive, charge, command, notification')}
       loading={stateLoading && transLoading && statsLoading}
       actions={
-        <span className="flex items-center gap-1 text-xs text-white/40">
-          <RefreshCw className={cn('h-3 w-3', stateFetching && 'animate-spin')} />
-          {t('fsm.autoRefresh', 'Live 10s')}
-        </span>
+        <div className="flex items-center gap-2" data-tour="debugger-share">
+          <span className="hidden items-center gap-1 text-xs text-[var(--text-muted)] sm:flex">
+            <RefreshCw className={cn('h-3 w-3', stateFetching && 'animate-spin')} />
+            {t('fsm.autoRefresh', 'Live 10s')}
+          </span>
+          {permalinkUrl ? (
+            <CopyButton
+              text={permalinkUrl}
+              label={t('debugger.share', 'Share permalink')}
+              size="sm"
+            />
+          ) : null}
+        </div>
       }
     >
       {/* ──── Section 1: Filters ──── */}
@@ -358,7 +473,7 @@ export default function StateMachineDebuggerPage() {
       {/* ──── Section 3: Current Vehicle State ──── */}
       <FadeIn delay={0.1}>
         <GlassPanel className="p-6">
-          <h2 className="text-xs font-medium text-white/50 uppercase tracking-wider mb-3">
+          <h2 className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-3">
             {t('fsm.vehicleLiveState', 'Vehicle Live State')}
           </h2>
           {stateLoading ? (
@@ -380,24 +495,24 @@ export default function StateMachineDebuggerPage() {
                 />
                 {currentState.state ?? '—'}
               </div>
-              <div className="text-sm text-white/70 space-y-1">
+              <div className="text-sm text-[var(--text-secondary)] space-y-1">
                 <p>
-                  <span className="text-white/40">{t('fsm.type', 'FSM Type')}:</span>{' '}
-                  <span className="text-white/90 font-medium">Vehicle</span>
+                  <span className="text-[var(--text-muted)]">{t('fsm.type', 'FSM Type')}:</span>{' '}
+                  <span className="text-[var(--text-primary)] font-medium">Vehicle</span>
                 </p>
                 <p>
-                  <span className="text-white/40">{t('fsm.mode', 'Mode')}:</span>{' '}
-                  <span className="text-white/90 font-medium">
+                  <span className="text-[var(--text-muted)]">{t('fsm.mode', 'Mode')}:</span>{' '}
+                  <span className="text-[var(--text-primary)] font-medium">
                     {currentState.is_charging ? 'Charging' : currentState.speed && currentState.speed > 0 ? 'Drive' : currentState.state === 'asleep' ? 'Sleep' : 'Idle'}
                   </span>
                 </p>
                 <p>
-                  <span className="text-white/40">{t('fsm.since', 'Since')}:</span>{' '}
-                  <span className="text-white/90 font-medium">
+                  <span className="text-[var(--text-muted)]">{t('fsm.since', 'Since')}:</span>{' '}
+                  <span className="text-[var(--text-primary)] font-medium">
                     {formatDateTime(currentState.since)}
                   </span>
                 </p>
-                <p className="text-white/50">{formatRelative(currentState.since)}</p>
+                <p className="text-[var(--text-muted)]">{formatRelative(currentState.since)}</p>
               </div>
             </div>
           ) : (
@@ -409,6 +524,48 @@ export default function StateMachineDebuggerPage() {
       {/* ──── Section 4: Sub-FSM Panel (active drive/charge context) ──── */}
       <FadeIn delay={0.15}>
         <FSMSubFSMPanel activeSubs={statsData?.active_subs} fsmType={fsmType === 'all' ? 'vehicle' : fsmType} />
+      </FadeIn>
+
+      {/* ──── Phase 40 / Prompt 58 — Live controls + state timeline + inspector ──── */}
+      <FadeIn delay={0.18}>
+        <GlassPanel className="p-4 sm:p-5 space-y-4" data-tour="debugger-timeline">
+          <div data-tour="debugger-controls">
+          <LiveControls
+            isLive={isLive}
+            onToggleLive={(live) => {
+              setIsLive(live);
+              if (live) setSelectedId(null);
+            }}
+            onStepPrev={handleStepPrev}
+            onStepNext={handleStepNext}
+            canStepPrev={!isLive && sortedByTime.length > 0 && selectedIndex > 0}
+            canStepNext={!isLive && sortedByTime.length > 0 && selectedIndex < sortedByTime.length - 1}
+            windowMinutes={windowMinutes}
+            onWindowChange={setWindowMinutes}
+            onClearBuffer={handleClearBuffer}
+            bufferCount={visibleTransitions.length}
+          />
+          </div>
+          <StateTimeline
+            transitions={visibleTransitions}
+            fsmType={fsmType === 'all' ? 'vehicle' : fsmType}
+            selectedId={selectedId}
+            onSelect={(tr) => {
+              setSelectedId(tr.id);
+              setIsLive(false);
+            }}
+            windowMinutes={windowMinutes}
+          />
+          <div data-tour="debugger-source-badges">
+          <SnapshotInspector
+            fsmType={selectedTransition?.fsm_type || (fsmType === 'all' ? 'vehicle' : fsmType)}
+            transition={selectedTransition}
+            snapshot={selectedSnapshot ?? null}
+            previousSnapshot={previousSnapshot ?? null}
+            loading={snapshotFetching}
+          />
+          </div>
+        </GlassPanel>
       </FadeIn>
 
       {/* ──── Section 5: State Diagram ──── */}
@@ -454,8 +611,8 @@ export default function StateMachineDebuggerPage() {
                         className="h-2.5 w-2.5 rounded-full"
                         style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
                       />
-                      <span className="text-white/70">{entry.name}</span>
-                      <span className="text-white/50">{fmtInt(entry.value)}</span>
+                      <span className="text-[var(--text-secondary)]">{entry.name}</span>
+                      <span className="text-[var(--text-muted)]">{fmtInt(entry.value)}</span>
                     </div>
                   ))}
                 </div>
@@ -468,7 +625,7 @@ export default function StateMachineDebuggerPage() {
 
         <FadeIn delay={0.3}>
           <GlassPanel className="p-5">
-            <h2 className="text-sm font-semibold text-white/90 mb-4">
+            <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
               {t('fsm.transitionCounts', 'Transition Counts')}
             </h2>
             {transLoading ? (
@@ -520,10 +677,10 @@ export default function StateMachineDebuggerPage() {
       {/* ──── Section 9: Transition Table ──── */}
       <FadeIn delay={0.25}>
         <GlassPanel className="p-5">
-          <h2 className="text-sm font-semibold text-white/90 mb-4">
+          <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
             {t('fsm.timelineTitle', 'Transition Log')}
             {totalRows > 0 && (
-              <span className="ml-2 text-white/50 font-normal">
+              <span className="ml-2 text-[var(--text-muted)] font-normal">
                 {fmtInt(totalRows)} {t('fsm.total', 'total')}
               </span>
             )}
@@ -566,7 +723,7 @@ export default function StateMachineDebuggerPage() {
         return selected ? (
           <FadeIn key={selectedId}>
             <GlassPanel className="p-5">
-              <h2 className="text-sm font-semibold text-white/90 mb-4">
+              <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
                 {t('fsm.detailTitle', 'Transition Detail')}
               </h2>
               <TransitionDetail transition={selected} />
@@ -584,54 +741,54 @@ function TransitionDetail({ transition }: { transition: FSMTransition }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
       <div>
-        <span className="text-white/40 block mb-1">{t('fsm.detail.id', 'Transition ID')}</span>
-        <span className="text-white/80 font-mono break-all">{transition.id}</span>
+        <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.id', 'Transition ID')}</span>
+        <span className="text-[var(--text-primary)] font-mono break-all">{transition.id}</span>
       </div>
       <div>
-        <span className="text-white/40 block mb-1">{t('fsm.detail.vehicleId', 'Vehicle ID')}</span>
-        <span className="text-white/80 font-mono">{transition.vehicle_id}</span>
+        <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.vehicleId', 'Vehicle ID')}</span>
+        <span className="text-[var(--text-primary)] font-mono">{transition.vehicle_id}</span>
       </div>
       {transition.fsm_instance_id != null && (
         <div>
-          <span className="text-white/40 block mb-1">{t('fsm.detail.instanceId', 'Instance ID')}</span>
-          <span className="text-white/80 font-mono">{transition.fsm_instance_id}</span>
+          <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.instanceId', 'Instance ID')}</span>
+          <span className="text-[var(--text-primary)] font-mono">{transition.fsm_instance_id}</span>
         </div>
       )}
       <div>
-        <span className="text-white/40 block mb-1">{t('fsm.detail.from', 'From State')}</span>
+        <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.from', 'From State')}</span>
         <StateBadge state={transition.from_state} fsmType={transition.fsm_type || 'vehicle'} />
       </div>
       <div>
-        <span className="text-white/40 block mb-1">{t('fsm.detail.to', 'To State')}</span>
+        <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.to', 'To State')}</span>
         <StateBadge state={transition.to_state} fsmType={transition.fsm_type || 'vehicle'} />
       </div>
       <div>
-        <span className="text-white/40 block mb-1">{t('fsm.detail.trigger', 'Trigger')}</span>
-        <span className="text-white/80 font-mono">{transition.trigger}</span>
+        <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.trigger', 'Trigger')}</span>
+        <span className="text-[var(--text-primary)] font-mono">{transition.trigger}</span>
       </div>
       {transition.guard && (
         <div>
-          <span className="text-white/40 block mb-1">{t('fsm.detail.guard', 'Guard')}</span>
-          <span className="text-white/80 font-mono">{transition.guard}</span>
+          <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.guard', 'Guard')}</span>
+          <span className="text-[var(--text-primary)] font-mono">{transition.guard}</span>
         </div>
       )}
       {transition.duration_in_state_ms > 0 && (
         <div>
-          <span className="text-white/40 block mb-1">{t('fsm.detail.duration', 'Duration in State')}</span>
-          <span className="text-white/80 font-mono">{formatDuration(transition.duration_in_state_ms / 1000)}</span>
+          <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.duration', 'Duration in State')}</span>
+          <span className="text-[var(--text-primary)] font-mono">{formatDuration(transition.duration_in_state_ms / 1000)}</span>
         </div>
       )}
       <div className="sm:col-span-2 lg:col-span-4">
-        <span className="text-white/40 block mb-1">{t('fsm.detail.timestamp', 'Timestamp')}</span>
-        <span className="text-white/80 font-mono">{formatDateTime(transition.created_at)}</span>
-        <span className="text-white/50 ml-2">{formatRelative(transition.created_at)}</span>
+        <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.timestamp', 'Timestamp')}</span>
+        <span className="text-[var(--text-primary)] font-mono">{formatDateTime(transition.created_at)}</span>
+        <span className="text-[var(--text-muted)] ml-2">{formatRelative(transition.created_at)}</span>
       </div>
       {transition.context_snapshot && Object.keys(transition.context_snapshot).length > 0 && (
         <div className="sm:col-span-2 lg:col-span-4">
-          <span className="text-white/40 block mb-1">{t('fsm.detail.context', 'Context Snapshot')}</span>
+          <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.context', 'Context Snapshot')}</span>
           <div className="flex flex-wrap gap-2 mt-1">
             {Object.entries(transition.context_snapshot).map(([key, val]) => (
-              <span key={key} className="px-2 py-0.5 rounded bg-white/[0.04] text-white/60 font-mono text-[10px]">
+              <span key={key} className="px-2 py-0.5 rounded bg-white/[0.04] text-[var(--text-secondary)] font-mono text-[10px]">
                 {key}: {String(val)}
               </span>
             ))}

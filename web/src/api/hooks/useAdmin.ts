@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
-import { useToast } from '@/components/feedback/Toast';
+import { useMutationToast } from './_toastHelpers';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS } from '@/lib/constants';
 import type {
@@ -36,7 +36,7 @@ export function useApiKeys() {
 
 export function useCreateApiKey() {
   const qc = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (data: { name: string; permissions: string }) =>
       request<APIKey & { key: string }>('/api-keys', {
@@ -46,41 +46,35 @@ export function useCreateApiKey() {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: adminKeys.apiKeys });
-      toast.success('API key created');
+      success('toast.admin.apiKey.create.success', 'API key created');
     },
-    onError: (err: Error) => {
-      toast.error(err.message || 'Failed to create API key');
-    },
+    onError: (e) => error(e, 'toast.admin.apiKey.create.error', 'Failed to create API key'),
   });
 }
 
 export function useDeleteApiKey() {
   const qc = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (id: string) => request<void>(`/api-keys/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: adminKeys.apiKeys });
-      toast.success('API key deleted');
+      success('toast.admin.apiKey.delete.success', 'API key deleted');
     },
-    onError: (err: Error) => {
-      toast.error(err.message || 'Failed to delete API key');
-    },
+    onError: (e) => error(e, 'toast.admin.apiKey.delete.error', 'Failed to delete API key'),
   });
 }
 
 export function useRevokeApiKey() {
   const qc = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (id: string) => request<void>(`/api-keys/${id}/revoke`, { method: 'POST' }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: adminKeys.apiKeys });
-      toast.success('API key revoked');
+      success('toast.admin.apiKey.revoke.success', 'API key revoked');
     },
-    onError: (err: Error) => {
-      toast.error(err.message || 'Failed to revoke API key');
-    },
+    onError: (e) => error(e, 'toast.admin.apiKey.revoke.error', 'Failed to revoke API key'),
   });
 }
 
@@ -176,7 +170,7 @@ export function useExportJobs() {
 
 export function useCreateExport() {
   const qc = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (data: { type: string; format: string; vehicleId?: string }) =>
       request<ExportJob>('/exports', {
@@ -186,11 +180,9 @@ export function useCreateExport() {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: adminKeys.exportJobs });
-      toast.success('Export job created');
+      success('toast.admin.export.create.success', 'Export job created');
     },
-    onError: (err: Error) => {
-      toast.error(err.message || 'Failed to create export');
-    },
+    onError: (e) => error(e, 'toast.admin.export.create.error', 'Failed to create export'),
   });
 }
 

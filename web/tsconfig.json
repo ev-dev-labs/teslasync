@@ -22,6 +22,6 @@
     "types": ["vite-plugin-pwa/react"]
   },
   "include": ["src"],
-  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/test-setup.ts"],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/test-setup.ts", "src/sw/**/*"],
+  "references": [{ "path": "./tsconfig.node.json" }, { "path": "./tsconfig.sw.json" }]
 }

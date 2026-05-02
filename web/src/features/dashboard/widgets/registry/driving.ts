@@ -104,6 +104,11 @@ export const DRIVING_WIDGETS: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 3, rows: 40 },
     component: lazy(() => import('../RegenEfficiencyWidget')),
+    help: {
+      i18nKey: 'help.regenEfficiency.body',
+      defaultValue:
+        'Energy recovered through regenerative braking divided by total energy used during driving. Higher is better — Tesla cars typically reach 15–30% recovery in mixed driving.',
+    },
   },
   {
     id: 'route-efficiency',

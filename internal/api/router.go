@@ -11,19 +11,15 @@ import (
 	"time"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/ev-dev-labs/teslasync/internal/cache"
 	"github.com/ev-dev-labs/teslasync/internal/config"
-	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
-	"github.com/ev-dev-labs/teslasync/internal/polling"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/service"
 	signal "github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
-	"github.com/ev-dev-labs/teslasync/internal/worker"
+	"github.com/ev-dev-labs/teslasync/internal/webpush"
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -41,40 +37,24 @@ import (
 	v1handlers "github.com/ev-dev-labs/teslasync/internal/handler/v1"
 )
 
-// RouterOptions holds optional parameters for NewRouter.
-type RouterOptions struct {
-	AppVersion       string
-	Encryptor        *crypto.Encryptor
-	TelemetryHandler *TelemetryHandler      // If set, reuses existing handler (for hybrid mode wiring)
-	GasPriceWorker   *worker.GasPriceWorker // If set, enables gas price management endpoints
-	PollEngine       *polling.PollEngine    // If set, enables polling engine dashboard endpoints
-	SignalStore      *signal.Store          // If set, enables /internal/flush endpoint
-	WebhookTrigger   WebhookProcessor       // If set, enables public webhook receiver endpoint
-	CacheStore       *cache.Store           // If set, enables cached endpoints (trip planner, etc.)
-}
-
-// settingsCheckerAdapter wraps *database.SettingsRepo to satisfy action.SettingsChecker.
-// GetPollingConfig returns a default PollingConfig since per-vehicle polling tuning
-// now lives in the `polling_config` table (ADR-011), not on the global settings repo.
-type settingsCheckerAdapter struct {
-	*database.SettingsRepo
-}
-
-func (a *settingsCheckerAdapter) GetPollingConfig(_ context.Context) (*models.PollingConfig, error) {
-	return &models.PollingConfig{
-		AwakeIntervalSec:   60,
-		AsleepIntervalSec:  600,
-		DrivingIntervalSec: 10,
-		Enabled:            true,
-	}, nil
-}
-
 // NewRouter creates and configures the main HTTP router with all API routes,
 // middleware (logging, recovery, CORS, rate limiting, security headers), and
 // a static file server for the SPA frontend. It wires up handler dependencies
 // and returns the ready-to-serve http.Handler.
-func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Client, cfg *config.Config, health *resilience.HealthMonitor, opts ...RouterOptions) http.Handler {
+//
+// stateReader is the new signal-log-backed cold-path reader (ADR-002 / phase-39).
+// It is threaded through here so that handler migrations in phases 10–36 can
+// take it as a constructor dependency one file at a time. The legacy
+// *database.SignalLogReader (signalLogReader below) is intentionally preserved
+// alongside it during the migration window so the build stays green between
+// prompts; both readers will coexist until the deletion prompts (phases 37–40).
+func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Client, cfg *config.Config, health *resilience.HealthMonitor, stateReader signal.StateReader, opts ...RouterOptions) http.Handler {
 	r := chi.NewRouter()
+	// stateReader is intentionally not wired into individual handlers in this
+	// prompt — handler-migration prompts (phases 10–36) consume it one file at
+	// a time. The reference below keeps it visible to readers and lets static
+	// analyzers see it as a live dependency rather than a dead parameter.
+	_ = stateReader
 
 	var opt RouterOptions
 	if len(opts) > 0 {
@@ -133,12 +113,17 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	energySvc := service.NewEnergyService(db)
 
 	// Handlers
-	vehicleHandler := NewVehicleHandler(vehicleSvc, teslaClient)
-	driveHandler := NewDriveHandler(db)
-	chargingHandler := NewChargingHandler(db)
+	vehicleHandler := NewVehicleHandler(vehicleSvc, teslaClient, stateReader)
+	driveHandler := NewDriveDetail(db, stateReader)
+	chargingHandler := NewChargingHandler(db, stateReader)
 	geofenceHandler := NewGeofenceHandler(db)
 	authHandler := NewAuthHandler(db, teslaClient, opt.Encryptor)
 	settingsHandler := NewSettingsHandler(db)
+	dashboardLayoutHandler := NewDashboardLayoutHandler(db)
+	chartAnnotationHandler := NewChartAnnotationHandler(db)
+	pinnedHandler := NewPinnedHandler(db)
+	savedViewsHandler := NewSavedViewsHandler(db, cfg.Auth.ForwardAuthHeader)
+	pushHandler := NewPushHandler(db, webpush.Default(), cfg.Auth.ForwardAuthHeader)
 	var pahoForAlerts pahomqtt.Client
 	if mqttClient != nil {
 		pahoForAlerts = mqttClient.Underlying()
@@ -152,21 +137,21 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	guardHandler := NewGuardHandler(db, teslaClient)
 	energyHandler := NewEnergyHandler(energySvc)
 	signalLogReader := database.NewSignalLogReader(db)
-	batteryHandler := NewBatteryHandler(db, signalLogReader)
-	analyticsHandler := NewAnalyticsHandler(db, signalLogReader)
+	batteryHandler := NewBatteryHandler(db, stateReader)
+	analyticsHandler := NewAnalyticsHandler(db, stateReader)
 	notificationHandler := NewNotificationHandler(db)
 	notifScheduleHandler := NewNotificationScheduleHandler(db)
-	chatbotHandler := NewChatbotHandler(db)
-	tirePressureHandler := NewTirePressureHandler(signalLogReader)
-	motorHandler := NewMotorHandler(signalLogReader)
-	climateHandler := NewClimateHandler(signalLogReader)
-	securityHandler := NewSecurityHandler(signalLogReader)
-	chargingTelemetryHandler := NewChargingTelemetryHandler(signalLogReader)
-	mediaHandler := NewMediaHandler(signalLogReader)
-	vehicleConfigHandler := NewVehicleConfigHandler(signalLogReader)
-	locationSnapshotHandler := NewLocationSnapshotHandler(signalLogReader)
-	safetyHandler := NewSafetyHandler(signalLogReader)
-	userPreferenceHandler := NewUserPreferenceHandler(signalLogReader)
+	chatbotHandler := NewChatbotHandler(db, vehicleSvc, stateReader)
+	tirePressureHandler := NewTirePressureHandler(stateReader)
+	motorHandler := NewMotorHandler(stateReader)
+	climateHandler := NewClimateHandler(stateReader)
+	securityHandler := NewSecurityHandler(stateReader)
+	chargingTelemetryHandler := NewChargingTelemetryHandler(stateReader)
+	mediaHandler := NewMediaHandler(stateReader)
+	vehicleConfigHandler := NewVehicleConfigHandler(stateReader)
+	locationSnapshotHandler := NewLocationSnapshotHandler(stateReader)
+	safetyHandler := NewSafetyHandler(stateReader)
+	userPreferenceHandler := NewUserPreferenceHandler(stateReader)
 	softwareUpdateHandler := NewSoftwareUpdateHandler(db)
 	tcoHandler := NewTCOHandler(db)
 	sleepHandler := NewSleepHandler(db)
@@ -178,28 +163,29 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	backupHandler := NewBackupHandler(db)
 	backupRestoreHandler := NewBackupRestoreHandler(db)
 	regenHandler := NewRegenHandler(db)
-	batteryDegradationHandler := NewBatteryDegradationHandler(db, signalLogReader)
-	auditHandler := NewAuditHandler(db)
+	batteryDegradationHandler := NewBatteryDegradationHandler(db, stateReader, signalLogReader)
+	auditHandler := NewAuditHandler(db, cfg.Auth.ForwardAuthHeader)
 	apiCallLogHandler := NewAPICallLogHandler(db)
-	apiKeyHandler := NewAPIKeyHandler(db)
+	apiKeyHandler := NewAPIKeyHandler(db, cfg.Auth.ForwardAuthHeader)
+	signalCatalogHandler := NewSignalCatalogHandler(db)
 	chargingHeatmapHandler := NewChargingHeatmapHandler(db)
 	speedProfileHandler := NewSpeedProfileHandler(db)
 	dataRepairHandler := NewDataRepairHandler(db)
 	tempImpactHandler := NewTempImpactHandler(db)
 	routeEfficiencyHandler := NewRouteEfficiencyHandler(db)
-	batteryCellsHandler := NewBatteryCellsHandler(db, alertLiveSignalStore, signalLogReader)
-	rangeProjectionHandler := NewRangeProjectionHandler(db, signalLogReader)
-	drivetrainHealthHandler := NewDrivetrainHealthHandler(db, signalLogReader)
+	batteryCellsHandler := NewBatteryCellsHandler(db, alertLiveSignalStore, stateReader, signalLogReader)
+	rangeProjectionHandler := NewRangeProjectionHandler(db, stateReader)
+	drivetrainHealthHandler := NewDrivetrainHealthHandler(db, stateReader)
 	maintenanceHandler := NewMaintenanceHandler(db)
 	periodStatsHandler := NewPeriodStatsHandler(db)
 	drivingCoachHandler := NewDrivingCoachHandler(db)
 	costForecastHandler := NewCostForecastHandler(db)
 	chargingOptimizerHandler := NewChargingOptimizerHandler(db)
 	anomalyHandler := NewAnomalyHandler(db)
-	lifetimeHandler := NewLifetimeHandler(db)
+	lifetimeHandler := NewLifetimeHandler(db, eventHub)
 	yearReviewHandler := NewYearReviewHandler(db)
-	chargePlannerHandler := NewChargePlannerHandler(db, teslaClient, cfg, signalLogReader)
-	energyFlowHandler := NewEnergyFlowHandler(db, signalLogReader)
+	chargePlannerHandler := NewChargePlannerHandler(db, teslaClient, cfg, stateReader)
+	energyFlowHandler := NewEnergyFlowHandler(db, stateReader)
 	weeklyDigestHandler := NewWeeklyDigestHandler(db)
 	teslaChargingHistoryHandler := NewTeslaChargingHistoryHandler(teslaClient, db)
 	teslaChargingSessionHandler := NewTeslaChargingSessionHandler(teslaClient, db)
@@ -212,10 +198,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	teslaUserProfileHandler := NewTeslaUserProfileHandler(teslaClient, db)
 	vehicleAccessHandler := NewVehicleAccessHandler(teslaClient, db)
 	vehicleInfoHandler := NewVehicleInfoHandler(teslaClient, db)
-	tripPlannerHandler := NewTripPlannerHandler(db, opt.CacheStore, signalLogReader)
+	tripPlannerHandler := NewTripPlannerHandler(db, opt.CacheStore, stateReader)
 	geocodeHandler := NewGeocodeHandler(geocoding.NewSearcher("TeslaSync/1.0"), geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
 	shareHandler := NewShareHandler(db)
 	watchHandler := NewWatchHandler(db, teslaClient)
+	onboardingHandler := NewOnboardingHandler(db, opt.Encryptor)
+	searchHandler := NewSearchHandler(db)
 
 	// Wire Redis signal cache to handlers that read live vehicle state
 	if opt.CacheStore != nil {
@@ -229,6 +217,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			rangeProjectionHandler.WithRedisCache(redisSignalCache)
 		}
 	}
+
+	// Wire ForwardAuth header into handlers that audit-log mutations
+	// (Phase-40 / Prompt 51 — bulk action endpoints).
+	driveHandler.WithForwardAuthHeader(cfg.Auth.ForwardAuthHeader)
+	chargingHandler.WithForwardAuthHeader(cfg.Auth.ForwardAuthHeader)
+	alertHandler.WithForwardAuthHeader(cfg.Auth.ForwardAuthHeader)
 
 	// Start Redis Pub/Sub subscription for cross-pod SSE delivery.
 	// When Redis is available, vehicle_update events published by any pod's
@@ -267,6 +261,17 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Reusing handler from main ╬ô├ç├╢ wire the eventHub created by the router
 		telemetryHandler.SetEventHub(eventHub)
 	}
+	// Phase-39 / ADR-002: install the cold-path signal.StateReader on the
+	// session tracker so charge-completion and drive-completion enrichment
+	// use the canonical state-read API instead of the legacy
+	// *database.SignalLogReader.SnapshotAt /
+	// *database.SignalHistoryWriter.SnapshotAt code paths that this prompt
+	// removed from telemetry_sessions_charge_tracking.go and
+	// telemetry_sessions_drive_tracking.go.
+	if st := telemetryHandler.SessionTracker(); st != nil {
+		st.SetChargeStateReader(stateReader)
+		st.SetDriveStateReader(stateReader)
+	}
 	devToolsHandler := NewDevToolsHandler(teslaClient, WithDB(db), WithMQTTClient(mqttClient), WithConfig(cfg))
 	if opt.CacheStore != nil {
 		if rdb := opt.CacheStore.Underlying(); rdb != nil {
@@ -277,8 +282,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// Wire telemetry handler into vehicle handler for streaming-aware state
 	vehicleHandler.SetTelemetryHandler(telemetryHandler)
 
-	// Wire signal log reader into vehicle handler for position queries via signal_log
-	vehicleHandler.SetSignalLogReader(signalLogReader)
+	// Wire signal.StateReader into vehicle service for the durable
+	// last-value backstop used by BuildStateFromSignalStore (ADR-002).
+	vehicleSvc.WithStateReader(stateReader)
 
 	// Wire telemetry handler into settings handler for capture toggle sync
 	settingsHandler.SetTelemetryHandler(telemetryHandler)
@@ -317,6 +323,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
+		// APICallLog middleware: persist every inbound /api/v1 request to
+		// api_call_logs (service="teslasync-api"). Mounted BEFORE
+		// ForwardAuthMiddleware so 401 responses from the auth layer are
+		// also captured. Skip predicate excludes streaming/health/metrics
+		// and the api-logs admin UI itself (feedback loop).
+		r.Use(APICallLogMiddleware(GetAPICallLogger(), cfg.APILogs.CaptureBodies, DefaultAPILogSkip))
+
 		// ForwardAuth: protect all /api/v1/* routes via reverse-proxy header.
 		// No-op when ForwardAuthHeader is empty (dev mode / no auth configured).
 		r.Use(ForwardAuthMiddleware(cfg.Auth.ForwardAuthHeader))
@@ -331,6 +344,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/status", authHandler.Status)
 			r.Post("/disconnect", authHandler.Disconnect)
 		})
+
+		// Onboarding (Phase 40 / Prompt 18): first-run gate status.
+		// Reports whether the install has connected a Tesla account,
+		// has any vehicles, and has received recent telemetry. The
+		// frontend polls this endpoint and routes the user to
+		// <OnboardingPage> until is_complete flips to true.
+		r.Get("/onboarding/status", onboardingHandler.Status)
 
 		// Vehicles
 		r.Route("/vehicles", func(r chi.Router) {
@@ -407,6 +427,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/score", driveHandler.Score)
 			r.Get("/dynamics", driveHandler.Dynamics)
 			r.Get("/acceleration-distribution", driveHandler.AccelerationDistribution)
+			// Bulk delete (Phase-40 / Prompt 51)
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/bulk", driveHandler.BulkDelete)
 			r.Route("/{driveID}", func(r chi.Router) {
 				r.Get("/", driveHandler.Get)
 				r.Get("/positions", driveHandler.Positions)
@@ -432,6 +454,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Charging
 		r.Route("/charging", func(r chi.Router) {
 			r.Get("/", chargingHandler.ListByVehicle)
+			// Bulk delete (Phase-40 / Prompt 51)
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/bulk", chargingHandler.BulkDelete)
 			r.Route("/{sessionID}", func(r chi.Router) {
 				r.Get("/", chargingHandler.Get)
 				r.Get("/telemetry", chargingHandler.TelemetryReadings)
@@ -525,6 +549,68 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Put("/settings/dashboard-layouts", settingsHandler.UpdateDashboardLayouts)
 		})
 
+		// Named dashboard layout library (Phase 40 / Prompt 30).
+		// Coexists with /settings/dashboard-layouts above — that endpoint
+		// holds the active in-app blob, this is the per-row "save as
+		// preset" library scoped per-vehicle.
+		r.Route("/dashboard/layouts", func(r chi.Router) {
+			r.Use(httprate.LimitByIP(20, 1*time.Minute))
+			r.Get("/", dashboardLayoutHandler.List)
+			r.Post("/", dashboardLayoutHandler.Create)
+			r.Put("/{id}", dashboardLayoutHandler.Update)
+			r.Delete("/{id}", dashboardLayoutHandler.Delete)
+			r.Post("/{id}/apply", dashboardLayoutHandler.Apply)
+		})
+
+		// Chart annotations (Phase 40 / Prompt 43) — durable storage for the
+		// user-authored event markers rendered on time-series charts. Replaces
+		// the previous localStorage-only store so annotations survive a device
+		// swap or fresh browser profile.
+		r.Route("/annotations", func(r chi.Router) {
+			r.Use(httprate.LimitByIP(60, 1*time.Minute))
+			r.Get("/", chartAnnotationHandler.List)
+			r.Post("/", chartAnnotationHandler.Create)
+			r.Patch("/{id}", chartAnnotationHandler.Update)
+			r.Delete("/{id}", chartAnnotationHandler.Delete)
+		})
+
+		// Pinned items (Phase 40 / Prompt 48) — unified per-user "pin" storage
+		// powering pinned-first ordering across vehicles, dashboard widgets,
+		// alert rules, geofences, automations, and commands.
+		r.Route("/pinned", func(r chi.Router) {
+			r.Use(httprate.LimitByIP(60, 1*time.Minute))
+			r.Get("/", pinnedHandler.List)
+			r.Post("/", pinnedHandler.Create)
+			r.Patch("/{id}", pinnedHandler.Update)
+			r.Delete("/{id}", pinnedHandler.Delete)
+		})
+
+		// Saved views (Phase 40 / Prompt 50) — durable named URL querystrings
+		// for list pages (filters, sort, pagination). Each row is a snapshot
+		// the user can recall later from the SavedViewMenu component; one
+		// view per (user, route) may be marked default and auto-applies on
+		// mount when the URL has no querystring.
+		r.Route("/saved-views", func(r chi.Router) {
+			r.Use(httprate.LimitByIP(60, 1*time.Minute))
+			r.Get("/", savedViewsHandler.List)
+			r.Post("/", savedViewsHandler.Create)
+			r.Put("/{id}", savedViewsHandler.Update)
+			r.Delete("/{id}", savedViewsHandler.Delete)
+		})
+
+		// Web Push (VAPID) — Phase 40 / Prompt 52. Browser subscription
+		// registration + listing + removal. The VAPID public key is also
+		// served unauthenticated (it is, by spec, public) — but rate
+		// limiting still applies via the parent router. Push delivery
+		// itself runs out-of-band in the notification worker.
+		r.Route("/push", func(r chi.Router) {
+			r.Use(httprate.LimitByIP(60, 1*time.Minute))
+			r.Get("/public-key", pushHandler.PublicKey)
+			r.Get("/subscribe", pushHandler.List)
+			r.Post("/subscribe", pushHandler.Subscribe)
+			r.Delete("/subscribe", pushHandler.Unsubscribe)
+		})
+
 		// Gas Price Auto-Poll
 		if opt.GasPriceWorker != nil {
 			gasPriceHandler := NewGasPriceHandler(db, opt.GasPriceWorker)
@@ -541,10 +627,15 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/alerts", func(r chi.Router) {
 			r.Get("/", alertHandler.List)
 			r.Post("/{alertID}/read", alertHandler.MarkRead)
+			r.Get("/metrics", alertHandler.ListMetrics)
 			r.Get("/rules", alertHandler.ListRules)
 			r.Post("/rules", alertHandler.CreateRule)
 			r.Put("/rules/{ruleID}", alertHandler.UpdateRule)
 			r.Delete("/rules/{ruleID}", alertHandler.DeleteRule)
+			r.Post("/rules/{ruleID}/snooze", alertHandler.SnoozeRule)
+			// Bulk enable/disable (Phase-40 / Prompt 51)
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/rules/bulk/enable", alertHandler.BulkEnableRules)
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/rules/bulk/disable", alertHandler.BulkDisableRules)
 			r.Post("/test", alertHandler.TestRule)
 		})
 
@@ -626,12 +717,22 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.With(httprate.LimitByIP(30, 1*time.Minute)).Get("/geocode/search", geocodeHandler.Search)
 		r.With(httprate.LimitByIP(30, 1*time.Minute)).Get("/geocode/reverse", geocodeHandler.Reverse)
 
+		// Global app-wide entity search (vehicles/drives/charging/alerts/...).
+		// Rate-limited because each call fans out into ~9 ILIKE sub-queries.
+		r.With(httprate.LimitByIP(30, 1*time.Minute)).Get("/search", searchHandler.Search)
+
 		// Notifications
 		r.Route("/notifications", func(r chi.Router) {
 			r.Get("/", notificationHandler.ListChannels)
 			r.Post("/", notificationHandler.CreateChannel)
 			r.Get("/logs", notificationHandler.GetLogs)
 			r.Get("/stats", notificationHandler.GetStats)
+			r.Get("/unread-count", notificationHandler.UnreadCount)
+			r.Post("/mark-read", notificationHandler.MarkRead)
+			r.Post("/mark-unread", notificationHandler.MarkUnread)
+			r.Post("/archive", notificationHandler.Archive)
+			r.Post("/unarchive", notificationHandler.Unarchive)
+			r.Delete("/logs", notificationHandler.DeleteBulk)
 			r.Get("/analytics", notifScheduleHandler.GetAnalytics)
 			r.Route("/schedules", func(r chi.Router) {
 				r.Get("/", notifScheduleHandler.ListSchedules)
@@ -655,6 +756,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Post("/", chatbotHandler.Chat)
 			r.Get("/history", chatbotHandler.History)
 			r.Get("/sessions", chatbotHandler.Sessions)
+			r.Patch("/sessions/{id}", chatbotHandler.RenameSession)
+			r.Delete("/sessions/{id}", chatbotHandler.DeleteSession)
 		})
 
 		// Tire Pressure
@@ -874,6 +977,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/openapi", OpenAPIHandler())
 		})
 
+		// Per-user activity feed (Phase-40 / Prompt 49 — Recent Activity Discoverability).
+		// Returns the requesting caller's audit_logs entries scoped by the
+		// configured ForwardAuth header value. Sibling to /system/audit, which
+		// remains the admin-wide view.
+		r.Get("/users/me/activity", auditHandler.UserActivity)
+
 		// API Call Logs
 		r.Route("/api-logs", func(r chi.Router) {
 			r.Get("/", apiCallLogHandler.List)
@@ -1027,6 +1136,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			})
 		}
 
+		// Signal Catalog & Observations (cold-path, ADR-002 + ADR-009).
+		// Registered before /signals/{vehicleID} so chi's trie prefers the
+		// literal segment over the {vehicleID} param.
+		r.Get("/signals/catalog", signalCatalogHandler.ListCatalog)
+		r.Get("/signals/observations", signalCatalogHandler.ListObservations)
+
 		// Signal routes
 		r.Route("/signals/{vehicleID}", func(r chi.Router) {
 			// Signal History (Postgres primary, MongoDB optional fallback)
@@ -1051,6 +1166,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 					signalHandler.WithLiveSignalStore(store)
 				}
 				r.Get("/live", signalHandler.LiveState)
+				r.Get("/snapshot", signalHandler.Snapshot)
+				r.Get("/diff", signalHandler.Diff)
 				r.Get("/available", signalHandler.AvailableSignals)
 				r.Get("/stats", signalHandler.Stats)
 				r.Get("/{signalName}/history", signalHandler.History)
@@ -1066,6 +1183,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 					}
 				}
 				r.Get("/live", signalHandler.LiveState)
+				r.Get("/snapshot", signalHandler.Snapshot)
+				r.Get("/diff", signalHandler.Diff)
 				r.Get("/available", signalHandler.AvailableSignals)
 				r.Get("/stats", signalHandler.Stats)
 				r.Get("/{signalName}/history", signalHandler.History)
@@ -1115,6 +1234,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		exportJobHandler := NewExportJobHandler(db, pahoClient)
 		r.Route("/export/jobs", func(r chi.Router) {
 			r.Post("/", exportJobHandler.SubmitJob)
+			r.Post("/account", exportJobHandler.SubmitAccountJob)
 			r.Post("/import", exportJobHandler.SubmitImportJob)
 			r.Get("/", exportJobHandler.ListJobs)
 			r.Get("/{jobID}", exportJobHandler.GetJob)

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Gauge } from 'lucide-react';
-import { RadialGauge, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, axisTick, axisTickSm, chartGrid, CHART_COLORS } from '@/components/charts';
+import { RadialGauge, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, axisTick, axisTickSm, chartGrid, useChartPalette } from '@/components/charts';
 import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useDrivingDynamics, useAccelerationDistribution } from '@/api/hooks/useDriving';
@@ -70,6 +70,9 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
 
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
+
+  // Phase-40 / Prompt 60 — chart colors derive from active theme.
+  const palette = useChartPalette();
 
   const maxG = Math.max(
     dynamics?.maxAccelerationG ?? 0,
@@ -215,7 +218,7 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
                     contentStyle={{ background: 'rgba(15,23,42,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11 }}
                     labelFormatter={(v) => `${v}g`}
                   />
-                  <Bar dataKey="count" fill={CHART_COLORS[0]} radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="count" fill={palette.series[0]} radius={[2, 2, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

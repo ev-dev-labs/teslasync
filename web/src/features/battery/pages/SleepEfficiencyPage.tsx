@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Moon, Eye, Clock, Zap, DollarSign, Thermometer } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Select, DataTable, Badge, type Column } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { MetricCard, DataFreshnessAuto } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import {
@@ -46,7 +46,8 @@ export default function SleepEfficiencyPage() {
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : null;
 
-  const { data: sleep, isLoading, error } = useSleepEfficiency(vehicleIdStr, days);
+  const sleepQuery = useSleepEfficiency(vehicleIdStr, days);
+  const { data: sleep, isLoading, error } = sleepQuery;
 
   /* ── Derived data ── */
 
@@ -87,7 +88,7 @@ export default function SleepEfficiencyPage() {
       render: (event) => (
         <span className="text-xs">
           {formatDateShort(event.start_date)}
-          <span className="text-white/40 ml-1">{formatTime(event.start_date)}</span>
+          <span className="text-[var(--text-muted)] ml-1">{formatTime(event.start_date)}</span>
         </span>
       ),
     },
@@ -99,13 +100,13 @@ export default function SleepEfficiencyPage() {
     {
       key: 'batteryLost',
       header: t('sleep.batteryLost', 'Battery Lost'),
-      render: (event) => <span className="text-neon-red">{fmtNumber(event.battery_lost)}%</span>,
+      render: (event) => <span className="text-rose-300">{fmtNumber(event.battery_lost)}%</span>,
     },
     {
       key: 'drainRate',
       header: t('sleep.drainRateCol', 'Drain Rate'),
       render: (event) => (
-        <span className={event.drain_rate > 1.5 ? 'text-neon-red' : 'text-neon-green'}>
+        <span className={event.drain_rate > 1.5 ? 'text-rose-300' : 'text-emerald-300'}>
           {fmtNumber(event.drain_rate)}%/hr
         </span>
       ),
@@ -124,11 +125,11 @@ export default function SleepEfficiencyPage() {
       header: t('sleep.temp', 'Temp'),
       render: (event) => event.outside_temp != null ? (
         <span className="flex items-center gap-1">
-          <Thermometer className="h-3 w-3 text-white/40" />
+          <Thermometer className="h-3 w-3 text-[var(--text-muted)]" />
           {fmtNumber(convertTemp(event.outside_temp))}{tempUnit}
         </span>
       ) : (
-        <span className="text-white/40">—</span>
+        <span className="text-[var(--text-muted)]">—</span>
       ),
     },
   ], [t]);
@@ -153,6 +154,7 @@ export default function SleepEfficiencyPage() {
               options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
             />
           )}
+          <DataFreshnessAuto query={sleepQuery} />
         </div>
       }
     >
@@ -166,6 +168,11 @@ export default function SleepEfficiencyPage() {
                 label={t('sleep.efficiency', 'Sleep Efficiency')}
                 value={`${fmtNumber(sleep.sleep_efficiency_pct)}%`}
                 color="purple"
+                help={{
+                  i18nKey: 'help.sleepEfficiency.body',
+                  defaultValue:
+                    'Share of parked time the car spent in true low-power sleep (vs. idle/online). Higher is better — more sleep means less vampire drain and lower battery wear.',
+                }}
               />
             </StaggerItem>
             <StaggerItem>
@@ -174,6 +181,10 @@ export default function SleepEfficiencyPage() {
                 label={t('sleep.avgTimeToSleep', 'Avg Time to Sleep')}
                 value={`${fmtInt(sleep.time_to_sleep_avg_min)} min`}
                 color="cyan"
+                help={{
+                  i18nKey: 'help.sleepEfficiency.timeToSleep',
+                  defaultValue: 'Average minutes from when the car parks to when it enters low-power sleep.',
+                }}
               />
             </StaggerItem>
             <StaggerItem>
@@ -181,6 +192,11 @@ export default function SleepEfficiencyPage() {
                 icon={<Eye className="h-4 w-4" />}
                 label={t('sleep.sentryDrainRate', 'Sentry Drain Rate')}
                 value={`${fmtNumber(sleep.sentry_on_drain_rate)}%/hr`}
+                help={{
+                  i18nKey: 'help.sleepEfficiency.sentryDrain',
+                  defaultValue:
+                    'Battery loss per hour while Sentry Mode is active. Sentry keeps cameras and computers on, which adds noticeable drain.',
+                }}
               />
             </StaggerItem>
             <StaggerItem>
@@ -189,6 +205,11 @@ export default function SleepEfficiencyPage() {
                 label={t('sleep.sentryMonthlyCost', 'Sentry Monthly Cost')}
                 value={`$${fmtNumber(sleep.sentry_monthly_cost)}`}
                 color="red"
+                help={{
+                  i18nKey: 'help.sleepEfficiency.sentryCost',
+                  defaultValue:
+                    'Estimated monthly electricity cost of Sentry-related drain, using your configured per-kWh rate.',
+                }}
               />
             </StaggerItem>
           </StaggerContainer>
@@ -223,8 +244,8 @@ export default function SleepEfficiencyPage() {
                       {pieData.map((entry) => (
                         <div key={entry.name} className="flex items-center gap-1.5 text-xs">
                           <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
-                          <span className="text-white/60">{entry.name}</span>
-                          <span className="text-white/40">{entry.hours}h</span>
+                          <span className="text-[var(--text-secondary)]">{entry.name}</span>
+                          <span className="text-[var(--text-muted)]">{entry.hours}h</span>
                         </div>
                       ))}
                     </div>
@@ -266,15 +287,15 @@ export default function SleepEfficiencyPage() {
                   <div className="grid grid-cols-3 gap-3 text-center">
                     <div>
                       <p className="text-lg font-bold text-amber-400">{fmtNumber(sleep.sentry_extra_drain_rate)}%</p>
-                      <p className="text-xs text-white/40">{t('sleep.extraDrainHr', 'Extra drain/hr')}</p>
+                      <p className="text-xs text-[var(--text-muted)]">{t('sleep.extraDrainHr', 'Extra drain/hr')}</p>
                     </div>
                     <div>
                       <p className="text-lg font-bold text-amber-400">{fmtNumber(sleep.sentry_extra_monthly_kwh)} kWh</p>
-                      <p className="text-xs text-white/40">{t('sleep.extraMonthly', 'Extra monthly')}</p>
+                      <p className="text-xs text-[var(--text-muted)]">{t('sleep.extraMonthly', 'Extra monthly')}</p>
                     </div>
                     <div>
-                      <p className="text-lg font-bold text-neon-red">${fmtNumber(sleep.sentry_extra_monthly_cost)}</p>
-                      <p className="text-xs text-white/40">{t('sleep.extraCostMo', 'Extra cost/mo')}</p>
+                      <p className="text-lg font-bold text-rose-300">${fmtNumber(sleep.sentry_extra_monthly_cost)}</p>
+                      <p className="text-xs text-[var(--text-muted)]">{t('sleep.extraCostMo', 'Extra cost/mo')}</p>
                     </div>
                   </div>
                 </div>
@@ -285,7 +306,7 @@ export default function SleepEfficiencyPage() {
           {/* Recent drain events table */}
           <FadeIn delay={0.2}>
             <GlassPanel className="p-6">
-              <h3 className="text-base font-semibold text-white/90 mb-4 flex items-center gap-2">
+              <h3 className="text-base font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
                 <Zap className="h-4 w-4 text-neon-cyan" />
                 {t('sleep.recentDrainEvents', 'Recent Drain Events')}
               </h3>
@@ -307,7 +328,7 @@ export default function SleepEfficiencyPage() {
       ) : !isLoading ? (
         <GlassPanel className="p-8">
           <EmptyState
-            icon={<Moon className="h-10 w-10 text-white/30" />}
+            icon={<Moon className="h-10 w-10 text-[var(--text-muted)]" />}
             message={t('sleep.noData', 'No sleep data available. Data will appear after your vehicle records sleep/wake events.')}
           />
         </GlassPanel>

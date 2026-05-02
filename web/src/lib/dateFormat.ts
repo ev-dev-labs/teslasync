@@ -4,49 +4,77 @@
  * All timestamps from the backend are ISO 8601 UTC (ending in "Z").
  * These helpers convert to the user's local timezone for display,
  * keeping the source-of-truth as UTC.
+ *
+ * Phase 40 / Prompt 22: every helper accepts an optional second
+ * `FormatOptions` argument carrying an IANA timezone name and a BCP-47
+ * locale. When omitted the helper preserves its prior behavior (browser
+ * locale + browser timezone) so existing callers stay byte-for-byte
+ * identical. When `tz` is supplied the timestamp is rendered in that
+ * zone via `Intl.DateTimeFormat`, which is what `<DateTime in="vehicle">`
+ * relies on to render drive/charge times in the car's local time.
  */
 
+/** Optional locale + timezone overrides for the shared formatters. */
+export interface FormatOptions {
+  /** IANA timezone name, e.g. 'America/Los_Angeles'. Defaults to browser. */
+  tz?: string
+  /** BCP-47 locale, e.g. 'en-US'. Defaults to browser locale. */
+  locale?: string
+}
+
+function intlOpts(base: Intl.DateTimeFormatOptions, opts?: FormatOptions): Intl.DateTimeFormatOptions {
+  if (opts?.tz) {
+    return { ...base, timeZone: opts.tz }
+  }
+  return base
+}
+
+function intlLocale(opts?: FormatOptions): string | undefined {
+  return opts?.locale
+}
+
 /** Full date + time: "Apr 4, 2026, 2:30 AM" */
-export function formatDateTime(iso: string | Date | null | undefined): string {
+export function formatDateTime(iso: string | Date | null | undefined, opts?: FormatOptions): string {
   if (!iso) return '—'
   const d = new Date(iso)
   if (isNaN(d.getTime())) return '—'
-  return d.toLocaleString(undefined, {
+  return d.toLocaleString(intlLocale(opts), intlOpts({
     year: 'numeric', month: 'short', day: 'numeric',
     hour: '2-digit', minute: '2-digit',
-  })
+  }, opts))
 }
 
 /** Date only: "Apr 4, 2026" */
-export function formatDate(iso: string | Date | null | undefined): string {
+export function formatDate(iso: string | Date | null | undefined, opts?: FormatOptions): string {
   if (!iso) return '—'
   const d = new Date(iso)
   if (isNaN(d.getTime())) return '—'
-  return d.toLocaleDateString(undefined, {
+  return d.toLocaleDateString(intlLocale(opts), intlOpts({
     year: 'numeric', month: 'short', day: 'numeric',
-  })
+  }, opts))
 }
 
 /** Short date: "Apr 4" */
-export function formatDateShort(iso: string | Date | null | undefined): string {
+export function formatDateShort(iso: string | Date | null | undefined, opts?: FormatOptions): string {
   if (!iso) return '—'
   const d = new Date(iso)
   if (isNaN(d.getTime())) return '—'
-  return d.toLocaleDateString(undefined, {
+  return d.toLocaleDateString(intlLocale(opts), intlOpts({
     month: 'short', day: 'numeric',
-  })
+  }, opts))
 }
 
 /** Time only: "02:30" (24h) or "2:30 AM" (based on locale) */
-export function formatTime(iso: string | Date | null | undefined): string {
+export function formatTime(iso: string | Date | null | undefined, opts?: FormatOptions): string {
   if (!iso) return '—'
   const d = new Date(iso)
   if (isNaN(d.getTime())) return '—'
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const localeArg = intlLocale(opts)
+  return d.toLocaleTimeString(localeArg ? localeArg : [], intlOpts({ hour: '2-digit', minute: '2-digit' }, opts))
 }
 
 /** Relative time: "3 min ago", "2 hours ago", "yesterday" */
-export function formatRelative(iso: string | Date | null | undefined): string {
+export function formatRelative(iso: string | Date | null | undefined, opts?: FormatOptions): string {
   if (!iso) return '—'
   const d = new Date(iso)
   if (isNaN(d.getTime())) return '—'
@@ -60,11 +88,11 @@ export function formatRelative(iso: string | Date | null | undefined): string {
   if (hours < 24) return `${hours}h ago`
   const days = Math.floor(hours / 24)
   if (days < 7) return `${days}d ago`
-  return formatDate(iso)
+  return formatDate(iso, opts)
 }
 
 /** Relative time matching dashboard activity feeds: "Just now", "5m ago", or "Apr 4, 02:30 AM" */
-export function formatRelativeTime(iso: string | Date | null | undefined): string {
+export function formatRelativeTime(iso: string | Date | null | undefined, opts?: FormatOptions): string {
   if (!iso) return '—'
   const d = new Date(iso)
   const diffMs = Date.now() - d.getTime()
@@ -73,7 +101,7 @@ export function formatRelativeTime(iso: string | Date | null | undefined): strin
   if (diffMin < 60) return `${diffMin}m ago`
   const diffHrs = Math.floor(diffMin / 60)
   if (diffHrs < 24) return `${diffHrs}h ago`
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleDateString(intlLocale(opts), intlOpts({ month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }, opts))
 }
 
 /** Millisecond duration for short activity entries: "250ms", "1.5s", or "—" for nullish values. */
@@ -139,13 +167,30 @@ export function toLocalDatetimeStr(d: Date): string {
 }
 
 /** Weekday + short date: "Fri, Apr 4" */
-export function formatDateWithDay(iso: string | Date | null | undefined): string {
+export function formatDateWithDay(iso: string | Date | null | undefined, opts?: FormatOptions): string {
   if (!iso) return '—'
   const d = new Date(iso)
   if (isNaN(d.getTime())) return '—'
-  return d.toLocaleDateString(undefined, {
+  return d.toLocaleDateString(intlLocale(opts), intlOpts({
     weekday: 'short', month: 'short', day: 'numeric',
-  })
+  }, opts))
+}
+
+/**
+ * Returns the short timezone abbreviation (e.g. "PST", "EDT") for the
+ * given timestamp in the given IANA zone. Date-aware so DST transitions
+ * are honored — `tzAbbreviation(jan, 'America/Los_Angeles')` yields
+ * "PST" while the same call in July yields "PDT".
+ */
+export function tzAbbreviation(value: string | Date, tz: string): string {
+  const date = value instanceof Date ? value : new Date(value)
+  if (isNaN(date.getTime())) return ''
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'short' }).formatToParts(date)
+    return parts.find(p => p.type === 'timeZoneName')?.value ?? ''
+  } catch {
+    return ''
+  }
 }
 
 function formatRoundedInt(value: number): string {

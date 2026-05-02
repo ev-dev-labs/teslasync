@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { DollarSign, Fuel, Zap, TrendingUp, Leaf } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Select } from '@/components/ui';
+import { Currency, DataFreshnessAuto } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import {
@@ -26,7 +27,8 @@ export default function TrueCostPage() {
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : '';
 
-  const { data: tco, isLoading, error } = useCostBreakdown(vehicleIdStr);
+  const tcoQuery = useCostBreakdown(vehicleIdStr);
+  const { data: tco, isLoading, error } = tcoQuery;
 
   const fmtCurrency = (v: number) => `$${fmtNumber(v)}`;
 
@@ -39,13 +41,17 @@ export default function TrueCostPage() {
       loading={isLoading}
       error={error instanceof Error ? error : null}
       actions={
-        vehicles && vehicles.length > 1 ? (
-          <Select
-            value={String(vehicleId ?? '')}
-            onChange={(e) => setSelectedVehicle(Number(e.target.value))}
-            options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
-          />
-        ) : undefined
+        <div className="flex items-center gap-3">
+          {vehicles && vehicles.length > 1 && (
+            <Select
+              value={String(vehicleId ?? '')}
+              onChange={(e) => setSelectedVehicle(Number(e.target.value))}
+              options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
+            />
+          )}
+          {/* Cagg-driven; force amber after 6h to surface stale aggregates. */}
+          <DataFreshnessAuto query={tcoQuery} forceStaleAfterMs={6 * 60 * 60 * 1000} />
+        </div>
       }
     >
       {tco ? (
@@ -56,12 +62,12 @@ export default function TrueCostPage() {
               <GlassPanel className="p-5" glow="cyan" hover>
                 <div className="flex items-center gap-2 mb-3">
                   <Zap className="h-4 w-4 text-neon-cyan" />
-                  <span className="text-xs font-medium text-white/40 uppercase tracking-wider">
+                  <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                     {t('tco.totalEvCost', 'Total EV Cost')}
                   </span>
                 </div>
-                <p className="text-2xl font-bold text-neon-cyan">{fmtCurrency(tco.total_charging_cost)}</p>
-                <p className="text-xs text-white/40 mt-1">
+                <p className="text-2xl font-bold text-cyan-300">{fmtCurrency(tco.total_charging_cost)}</p>
+                <p className="text-xs text-[var(--text-muted)] mt-1">
                   {fmtNumber(tco.total_kwh)} kWh · {tco.total_sessions} {t('tco.sessions', 'sessions')}
                 </p>
               </GlassPanel>
@@ -71,12 +77,12 @@ export default function TrueCostPage() {
               <GlassPanel className="p-5" hover>
                 <div className="flex items-center gap-2 mb-3">
                   <Fuel className="h-4 w-4 text-neon-red" />
-                  <span className="text-xs font-medium text-white/40 uppercase tracking-wider">
+                  <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                     {t('tco.equivGasCost', 'Equiv. Gas Cost')}
                   </span>
                 </div>
-                <p className="text-2xl font-bold text-neon-red">{fmtCurrency(tco.equivalent_gas_cost)}</p>
-                <p className="text-xs text-white/40 mt-1">
+                <p className="text-2xl font-bold text-rose-300">{fmtCurrency(tco.equivalent_gas_cost)}</p>
+                <p className="text-xs text-[var(--text-muted)] mt-1">
                   @ ${tco.gas_price}/{t('tco.gal', 'gal')} · {tco.gas_efficiency_mpg} MPG
                 </p>
               </GlassPanel>
@@ -86,12 +92,12 @@ export default function TrueCostPage() {
               <GlassPanel className="p-5" glow="green" hover>
                 <div className="flex items-center gap-2 mb-3">
                   <Leaf className="h-4 w-4 text-neon-green" />
-                  <span className="text-xs font-medium text-white/40 uppercase tracking-wider">
+                  <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                     {t('tco.totalSavings', 'Total Savings')}
                   </span>
                 </div>
-                <p className="text-2xl font-bold text-neon-green">{fmtCurrency(tco.total_savings)}</p>
-                <p className="text-xs text-white/40 mt-1">
+                <p className="text-2xl font-bold text-emerald-300">{fmtCurrency(tco.total_savings)}</p>
+                <p className="text-xs text-[var(--text-muted)] mt-1">
                   {t('tco.overMonths', 'Over {{months}} months', { months: fmtNumber(tco.months_of_ownership) })}
                 </p>
               </GlassPanel>
@@ -101,12 +107,12 @@ export default function TrueCostPage() {
               <GlassPanel className="p-5" glow="green" hover>
                 <div className="flex items-center gap-2 mb-3">
                   <TrendingUp className="h-4 w-4 text-neon-green" />
-                  <span className="text-xs font-medium text-white/40 uppercase tracking-wider">
+                  <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                     {t('tco.monthlySavings', 'Monthly Savings')}
                   </span>
                 </div>
-                <p className="text-2xl font-bold text-neon-green">{fmtCurrency(tco.monthly_savings)}</p>
-                <p className="text-xs text-white/40 mt-1">
+                <p className="text-2xl font-bold text-emerald-300">{fmtCurrency(tco.monthly_savings)}</p>
+                <p className="text-xs text-[var(--text-muted)] mt-1">
                   {t('tco.plusMaintenance', '+ ~$50/mo maintenance savings')}
                 </p>
               </GlassPanel>
@@ -165,12 +171,12 @@ export default function TrueCostPage() {
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-4 text-center">
                   <div className="rounded-xl bg-neon-cyan/10 p-3 border border-neon-cyan/20">
-                    <p className="text-lg font-bold text-neon-cyan">${fmtNumber(tco.cost_per_km_ev)}</p>
-                    <p className="text-xs text-white/40">{t('tco.perKmEv', 'per km (EV)')}</p>
+                    <p className="text-lg font-bold text-cyan-300"><Currency value={tco.cost_per_km_ev} precision={3} /></p>
+                    <p className="text-xs text-[var(--text-muted)]">{t('tco.perKmEv', 'per km (EV)')}</p>
                   </div>
                   <div className="rounded-xl bg-neon-red/10 p-3 border border-neon-red/20">
-                    <p className="text-lg font-bold text-neon-red">${fmtNumber(tco.cost_per_km_ice)}</p>
-                    <p className="text-xs text-white/40">{t('tco.perKmGas', 'per km (Gas)')}</p>
+                    <p className="text-lg font-bold text-rose-300"><Currency value={tco.cost_per_km_ice} precision={3} /></p>
+                    <p className="text-xs text-[var(--text-muted)]">{t('tco.perKmGas', 'per km (Gas)')}</p>
                   </div>
                 </div>
               </ChartContainer>
@@ -202,33 +208,33 @@ export default function TrueCostPage() {
           {/* Breakdown summary */}
           <FadeIn delay={0.3}>
             <GlassPanel className="p-6">
-              <h3 className="text-base font-semibold text-white/90 mb-6 flex items-center gap-2">
+              <h3 className="text-base font-semibold text-[var(--text-primary)] mb-6 flex items-center gap-2">
                 <DollarSign className="h-4 w-4 text-neon-green" />
                 {t('tco.savingsBreakdown', 'Savings Breakdown')}
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4">
-                  <p className="text-xs text-white/40 uppercase tracking-wider mb-2">
+                  <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2">
                     {t('tco.fuelSavings', 'Fuel Savings')}
                   </p>
-                  <p className="text-xl font-bold text-neon-green">{fmtCurrency(tco.total_savings)}</p>
-                  <p className="text-xs text-white/40 mt-1">{t('tco.electricityVsGas', 'Electricity vs gasoline')}</p>
+                  <p className="text-xl font-bold text-emerald-300">{fmtCurrency(tco.total_savings)}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">{t('tco.electricityVsGas', 'Electricity vs gasoline')}</p>
                 </div>
                 <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4">
-                  <p className="text-xs text-white/40 uppercase tracking-wider mb-2">
+                  <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2">
                     {t('tco.maintenanceSavings', 'Maintenance Savings (Est.)')}
                   </p>
-                  <p className="text-xl font-bold text-neon-green">{fmtCurrency(tco.maintenance_savings_estimate)}</p>
-                  <p className="text-xs text-white/40 mt-1">{t('tco.noOilChanges', 'No oil changes, less brake wear')}</p>
+                  <p className="text-xl font-bold text-emerald-300">{fmtCurrency(tco.maintenance_savings_estimate)}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">{t('tco.noOilChanges', 'No oil changes, less brake wear')}</p>
                 </div>
                 <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4">
-                  <p className="text-xs text-white/40 uppercase tracking-wider mb-2">
+                  <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2">
                     {t('tco.totalEstSavings', 'Total Estimated Savings')}
                   </p>
-                  <p className="text-xl font-bold text-neon-green">
+                  <p className="text-xl font-bold text-emerald-300">
                     {fmtCurrency(tco.total_savings + tco.maintenance_savings_estimate)}
                   </p>
-                  <p className="text-xs text-white/40 mt-1">
+                  <p className="text-xs text-[var(--text-muted)] mt-1">
                     {fmtInt(tco.total_km)} km · {tco.first_date} → {tco.last_date}
                   </p>
                 </div>
@@ -239,7 +245,7 @@ export default function TrueCostPage() {
       ) : !isLoading ? (
         <GlassPanel className="p-8">
           <EmptyState
-            icon={<DollarSign className="h-10 w-10 text-white/30" />}
+            icon={<DollarSign className="h-10 w-10 text-[var(--text-muted)]" />}
             message={t('tco.noData', 'No data available. Start charging to see your cost analysis.')}
           />
         </GlassPanel>

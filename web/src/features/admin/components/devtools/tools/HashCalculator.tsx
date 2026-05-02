@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Hash } from 'lucide-react'
 import { Button, Textarea } from '@/components/ui'
 import { ToolCard } from '../ToolCard'
-import { CopyButton } from '../CopyButton'
+import { CopyButton } from '@/components/ui'
 
 export function HashCalculatorTool() {
   const { t } = useTranslation()
@@ -39,7 +39,7 @@ export function HashCalculatorTool() {
         </Button>
         {hashResult && (
           <div className="flex items-center gap-2 rounded bg-black/20 px-3 py-2">
-            <code className="flex-1 break-all text-xs font-mono text-neon-red">{hashResult}</code>
+            <code className="flex-1 break-all text-xs font-mono text-rose-300">{hashResult}</code>
             <CopyButton text={hashResult} />
           </div>
         )}

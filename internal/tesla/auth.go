@@ -7,8 +7,70 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
+
+// teslaAuthClientTimeout is the default timeout for OAuth token exchanges.
+// Token requests must complete quickly; SetAuthSink can override at startup
+// (callers pass cfg.Tesla.Timeout from main.go).
+const teslaAuthClientTimeout = 30 * time.Second
+
+var (
+	// authHTTPClientMu guards swaps of authHTTPClient. The pointer is read
+	// on every OAuth token exchange so the swap MUST be race-safe.
+	authHTTPClientMu sync.RWMutex
+	// authHTTPClient is the package-level outbound *http.Client used by
+	// ExchangeCode/RefreshTokens (auth.go::tokenRequest). It is SEPARATE
+	// from Client.httpClient — Client.httpClient is the Fleet API client
+	// whose every call already lands in api_call_logs via SetLogCallback
+	// (service="tesla-api"). Splitting auth out lets OAuth requests carry
+	// the distinct service="tesla-auth" tag without double-recording Fleet
+	// API rows.
+	authHTTPClient = httputil.NewClient(httputil.ClientConfig{
+		Name:          "tesla-auth",
+		Timeout:       teslaAuthClientTimeout,
+		EnableLogging: true,
+	})
+)
+
+// SetAuthSink rebuilds the package-level Tesla OAuth HTTP client (used by
+// ExchangeCode / RefreshTokens) to route every token exchange through the
+// supplied APICallSink. Production wiring (cmd/teslasync/main.go and
+// cmd/automation-worker/main.go) calls this once at startup. timeout==0
+// keeps the historical 30s budget; pass cfg.Tesla.Timeout to mirror the
+// Fleet API client's timeout.
+//
+// SCOPE: This setter only covers OAuth code-grant + refresh exchanges in
+// internal/tesla/auth.go. internal/tesla/client_auth.go::GetPartnerToken
+// and internal/tesla/client.go::doRequest still use Client.httpClient and
+// remain unchanged in this phase (Fleet API rows already flow through
+// SetLogCallback; partner-token migration is out of scope for Prompt 13).
+func SetAuthSink(sink httputil.APICallSink, timeout time.Duration) {
+	if timeout <= 0 {
+		timeout = teslaAuthClientTimeout
+	}
+	c := httputil.NewClient(httputil.ClientConfig{
+		Name:          "tesla-auth",
+		Timeout:       timeout,
+		Sink:          sink,
+		EnableLogging: true,
+	})
+	authHTTPClientMu.Lock()
+	authHTTPClient = c
+	authHTTPClientMu.Unlock()
+}
+
+// authClient returns the current package-level OAuth client under the
+// authHTTPClientMu read lock so the pointer is observed coherently with
+// the last SetAuthSink swap.
+func authClient() *http.Client {
+	authHTTPClientMu.RLock()
+	defer authHTTPClientMu.RUnlock()
+	return authHTTPClient
+}
 
 // TokenResponse represents an OAuth token response from Tesla.
 type TokenResponse struct {
@@ -58,7 +120,7 @@ func (c *Client) tokenRequest(ctx context.Context, form url.Values) (*TokenRespo
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := authClient().Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("token request: %w", err)
 	}

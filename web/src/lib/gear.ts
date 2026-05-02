@@ -15,10 +15,10 @@ export function parseGear(raw?: string | null): 'D' | 'R' | 'P' | 'N' | null {
 }
 
 export const GEAR_COLORS: Record<string, string> = {
-  D: 'text-neon-green',
-  R: 'text-neon-red',
-  P: 'text-neon-cyan',
-  N: 'text-neon-amber',
+  D: 'text-emerald-300',
+  R: 'text-rose-300',
+  P: 'text-cyan-300',
+  N: 'text-amber-300',
 }
 
 export const GEAR_BG_COLORS: Record<string, string> = {

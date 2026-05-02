@@ -4,6 +4,14 @@ import { cn } from '@/lib/cn';
 export interface GlassPanelProps extends HTMLAttributes<HTMLDivElement> {
   glow?: 'cyan' | 'green' | 'purple' | 'none';
   hover?: boolean;
+  /**
+   * Optional padding scale. Omitted by default (callers usually pass a
+   * `className="p-4"` etc. inline). Pass `'auto'` to follow the user's
+   * `ui_density` setting via the density-aware Tailwind utilities
+   * (`px-d-pad-x py-d-pad-y`); see `useDensitySync` and `index.css`.
+   * (Phase 40 / Prompt 44.)
+   */
+  padding?: 'none' | 'sm' | 'md' | 'lg' | 'auto';
   children: ReactNode;
   className?: string;
 }
@@ -15,12 +23,22 @@ const glowClasses = {
   none: '',
 } as const;
 
+const paddingClasses: Record<NonNullable<GlassPanelProps['padding']>, string> = {
+  none: '',
+  sm: 'p-3',
+  md: 'p-4',
+  lg: 'p-6',
+  auto: 'px-d-pad-x py-d-pad-y',
+};
+
 export const GlassPanel = forwardRef<HTMLDivElement, GlassPanelProps>(
-  ({ glow = 'none', hover = false, className, children, ...props }, ref) => (
+  ({ glow = 'none', hover = false, padding, className, children, ...props }, ref) => (
     <div
       ref={ref}
+      data-print-card
       className={cn(
         'bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl',
+        padding ? paddingClasses[padding] : null,
         hover && 'transition-all duration-300',
         hover && glowClasses[glow],
         className,

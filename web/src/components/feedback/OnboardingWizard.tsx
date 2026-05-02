@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { X, ChevronRight, Zap, Settings, Car, CheckCircle } from 'lucide-react'
 import { COLOR } from '@/lib/colors'
+import { broadcast, subscribe } from '@/lib/broadcast'
 
 const ONBOARDED_KEY = 'teslasync-onboarded'
 
@@ -55,9 +56,18 @@ export default function OnboardingWizard() {
     }
   }, [])
 
+  // Phase-40 / Prompt 69 — when another tab finishes onboarding, dismiss
+  // the wizard here too instead of letting two tabs race the same intro.
+  useEffect(() => {
+    return subscribe((m) => {
+      if (m.type === 'onboarded') setVisible(false)
+    })
+  }, [])
+
   const handleClose = () => {
     localStorage.setItem(ONBOARDED_KEY, 'true')
     setVisible(false)
+    broadcast({ type: 'onboarded' })
   }
 
   const handleNext = () => {

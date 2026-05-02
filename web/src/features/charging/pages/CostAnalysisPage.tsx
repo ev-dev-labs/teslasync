@@ -2,14 +2,16 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DollarSign } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
-import { Select } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { EmptyState } from '@/components/feedback';
 import { DateRangeFilter } from '@/components/forms';
+import { SavedViewMenu } from '@/components/data-display';
+import { PrintButton } from '@/components/ui';
 import { useChargingSessionsPaginated, useCostForecast } from '@/api/hooks/useCharging';
-import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { DEFAULT_GAS_PRICE, DEFAULT_MPG, DEFAULT_ELECTRICITY_RATE } from '../components/cost-analysis/constants';
 import { useCostAnalysisData } from '../components/cost-analysis/useCostAnalysisData';
 import {
@@ -29,12 +31,13 @@ import {
 export default function CostAnalysisPage() {
   const { t } = useTranslation();
   usePageTitle(t('costAnalysis.title', 'Cost Analysis'));
+  const savedView = useSavedViewUrl();
 
   const { isMiles, convertDistance, distanceUnit } = useSettings();
-  const { data: vehicles } = useVehicles();
+  // Phase 40 / Prompt 16: header VehiclePicker is the source of truth.
+  const { vehicleId } = useSelectedVehicle();
 
   // ── Filters ──────────────────────────────────────────────────────────
-  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
     d.setFullYear(d.getFullYear() - 1);
@@ -49,7 +52,6 @@ export default function CostAnalysisPage() {
   const [mpg, setMpg] = useState(DEFAULT_MPG);
   const [electricityRate, setElectricityRate] = useState(DEFAULT_ELECTRICITY_RATE);
 
-  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
   const { data: sessions, isLoading } = useChargingSessionsPaginated(vehicleId, {
     limit: 5000,
     start: startDate,
@@ -90,34 +92,33 @@ export default function CostAnalysisPage() {
       subtitle={t('costAnalysis.subtitle', 'Electricity cost trends, gas savings, and charging economics')}
       actions={
         <div className="flex flex-wrap items-center gap-3">
-          {vehicles && vehicles.length > 0 && (
-            <Select
-              value={String(vehicleId ?? '')}
-              onChange={(e) => setSelectedVehicle(Number(e.target.value))}
-              options={vehicles.map((v) => ({
-                value: String(v.id),
-                label: v.display_name,
-              }))}
-              className="w-48"
+          <div data-print-hide className="flex flex-wrap items-center gap-3">
+            <DateRangeFilter
+              startDate={startDate}
+              endDate={endDate}
+              onStartDateChange={setStartDate}
+              onEndDateChange={setEndDate}
+              presets
             />
-          )}
-          <DateRangeFilter
-            startDate={startDate}
-            endDate={endDate}
-            onStartDateChange={setStartDate}
-            onEndDateChange={setEndDate}
-            presets
-          />
+            <SavedViewMenu
+              route="/cost-analysis"
+              currentQuery={savedView.currentQuery}
+              onApply={savedView.apply}
+            />
+            <PrintButton />
+          </div>
         </div>
       }
     >
       <div className="space-y-6">
+        <div data-tour="cost-analysis">
         <CostSummaryCards
           coreStats={coreStats}
           gasPrice={gasPrice}
           distanceUnit={distanceUnit}
           isMiles={isMiles}
         />
+        </div>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <MonthlyCostChart data={monthlyData} vehicleId={vehicleId} />

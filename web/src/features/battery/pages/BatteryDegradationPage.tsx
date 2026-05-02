@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Battery, TrendingDown, Zap, Thermometer,
@@ -7,23 +7,23 @@ import {
 
 import { PageContainer, Grid } from '@/components/layout';
 import {
-  GlassPanel, Badge, Button as ControlButton, Select as ControlSelect, DataTable, type Column,
+  GlassPanel, Badge, DataTable, type Column,
 } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { MetricCard, DataFreshnessAuto } from '@/components/data-display';
 import {
-  RadialGauge, ChartTooltip, renderAnnotationLines, AddAnnotationPopover, AnnotationList,
+  RadialGauge, ChartContainer, ChartTooltip, renderAnnotationLines,
   chartGrid, axisTickSm, CHART_COLORS,
   AreaChart, Area, ComposedChart, Line,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, ReferenceLine,
   AREA_DEFAULTS, areaGradient,
+  ChartBrush,
 } from '@/components/charts';
 import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { useBatteryHealthAnalytics, useBatteryDegradation } from '@/api/hooks/useEnergy';
-import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useAnnotations } from '@/hooks/useAnnotations';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { formatDate } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -54,8 +54,8 @@ function scoreVariant(score: number): 'success' | 'warning' | 'danger' {
 }
 
 function riskScoreColor(score: number): string {
-  if (score <= 25) return 'text-neon-green';
-  if (score <= 50) return 'text-neon-amber';
+  if (score <= 25) return 'text-emerald-300';
+  if (score <= 50) return 'text-amber-300';
   return 'text-red-500';
 }
 
@@ -100,45 +100,16 @@ export default function BatteryDegradationPage() {
   const { t } = useTranslation();
   usePageTitle(t('battery.degradation.title', 'Battery Degradation'));
 
-  /* Vehicle selector */
-  const { data: vehicles } = useVehicles();
-  const [vehicleId, setVehicleId] = useState<number | null>(null);
-  const activeId = vehicleId ?? vehicles?.[0]?.id ?? null;
+  /* Vehicle selector — Phase 40 / Prompt 16: header picker is the source of truth */
+  const { vehicleId: activeId } = useSelectedVehicle();
   const activeIdStr = activeId != null ? String(activeId) : null;
 
   /* Battery health analytics (for overview stats, history table) */
-  const { data, isLoading, error } = useBatteryHealthAnalytics(activeIdStr);
+  const healthQuery = useBatteryHealthAnalytics(activeIdStr);
+  const { data, isLoading, error } = healthQuery;
 
   /* Degradation data (for prediction, risk factors, trend) */
   const { data: degradation } = useBatteryDegradation(activeIdStr);
-
-  /* Annotations */
-  const { annotations, addAnnotation, removeAnnotation } = useAnnotations(
-    'battery-degradation',
-    activeId,
-  );
-  const [isAnnotating, setIsAnnotating] = useState(false);
-  const [pendingTimestamp, setPendingTimestamp] = useState<string | null>(null);
-
-  const handleChartClick = useCallback(
-    (state: { activeLabel?: string }) => {
-      if (isAnnotating && state?.activeLabel) {
-        setPendingTimestamp(String(state.activeLabel));
-      }
-    },
-    [isAnnotating],
-  );
-
-  const handleAddAnnotation = useCallback(
-    (label: string, category: Parameters<typeof addAnnotation>[2], description?: string) => {
-      if (pendingTimestamp) {
-        addAnnotation(pendingTimestamp, label, category, description);
-        setPendingTimestamp(null);
-        setIsAnnotating(false);
-      }
-    },
-    [pendingTimestamp, addAnnotation],
-  );
 
   /* Chart data */
   const rangeData = useMemo(() => {
@@ -244,16 +215,8 @@ export default function BatteryDegradationPage() {
       loading={isLoading}
       error={error as Error | null}
       actions={
-        vehicles && vehicles.length > 1 ? (
-          <ControlSelect
-            options={vehicles.map((v) => ({
-              value: String(v.id),
-              label: v.display_name || v.vin,
-            }))}
-            value={String(activeId ?? '')}
-            onChange={(e) => setVehicleId(Number(e.target.value))}
-          />
-        ) : undefined
+        // Battery health analytics derive from a daily cagg; force amber after 24h.
+        <DataFreshnessAuto query={healthQuery} forceStaleAfterMs={24 * 60 * 60 * 1000} />
       }
     >
       {/* ── Summary Metrics ───────────────────────────── */}
@@ -328,9 +291,9 @@ export default function BatteryDegradationPage() {
                 <div className="rounded-xl p-4 bg-neon-purple/[0.08] border border-neon-purple/15">
                   <p className="text-sm text-white/70">
                     {t('battery.degradation.predictionDesc', 'At current rate, battery reaches')}{' '}
-                    <span className="font-bold text-neon-amber">80%</span>{' '}
+                    <span className="font-bold text-amber-300">80%</span>{' '}
                     {t('battery.degradation.inApprox', 'in approximately')}{' '}
-                    <span className="font-bold text-neon-purple">
+                    <span className="font-bold text-purple-300">
                       ~{fmtNumber(degradation.prediction.years_to_80_pct ?? 0)} {t('battery.degradation.years', 'years')}
                     </span>
                     {degradation.prediction.predicted_date && (
@@ -381,31 +344,14 @@ export default function BatteryDegradationPage() {
       {/* ── Health Trend & Projection ─────────────────── */}
       {projectionChartData.length > 0 ? (
         <FadeIn delay={0.15}>
-          <GlassPanel className={cn('p-6', isAnnotating && 'ring-1 ring-blue-400/30')}>
-            <div className="mb-4 flex items-center justify-between">
-              <span className="text-sm font-semibold">
-                {t('battery.degradation.trendTitle', 'Health Trend & Projection')}
-              </span>
-              <ControlButton
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsAnnotating((v) => !v)}
-                className={cn(
-                  'h-auto rounded p-1 text-xs',
-                  isAnnotating
-                    ? 'text-blue-400'
-                    : 'text-white/30 hover:text-white/50',
-                )}
-                aria-label={t('annotation.toggle', 'Toggle annotations')}
-                title={isAnnotating ? t('annotation.clickChart', 'Click on chart to annotate') : t('annotation.enable', 'Enable annotations')}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/></svg>
-              </ControlButton>
-            </div>
-            <div className={isAnnotating ? 'cursor-crosshair' : undefined}>
-              <ResponsiveContainer width="100%" height={300}>
-                <ComposedChart data={projectionChartData} onClick={handleChartClick}>
+          <ChartContainer
+            title={t('battery.degradation.trendTitle', 'Health Trend & Projection')}
+            height={300}
+            annotations={{ vehicleId: activeId, scope: 'battery', chartId: 'battery-degradation-trend' }}
+          >
+            {({ annotations: chartAnnotations }) => (
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={projectionChartData}>
                   {chartGrid}
                   <defs>
                     <linearGradient id="ciBand" x1="0" y1="0" x2="0" y2="1">
@@ -424,7 +370,7 @@ export default function BatteryDegradationPage() {
                     label={{ value: t('battery.degradation.warranty', '80% Warranty'), fill: '#f59e0b', fontSize: 11, position: 'insideTopRight' }}
                   />
                   <ReferenceLine y={70} stroke="#ef4444" strokeDasharray="6 4" />
-                  {renderAnnotationLines(annotations, (ts) => ts)}
+                  {renderAnnotationLines(chartAnnotations, (ts) => ts)}
                   {/* Confidence band (stacked areas: transparent base + visible band) */}
                   <Area
                     {...AREA_DEFAULTS}
@@ -462,17 +408,17 @@ export default function BatteryDegradationPage() {
                     strokeDasharray="8 4"
                     connectNulls={false}
                   />
+                  {/*
+                    Phase 40 / Prompt 26: brush enables zooming into specific
+                    months of the projection. Standalone chart — no
+                    ChartTimeRangeProvider needed since the range chart below
+                    uses a different X-axis dataKey ("date" vs "label").
+                  */}
+                  <ChartBrush dataKey="label" />
                 </ComposedChart>
               </ResponsiveContainer>
-            </div>
-            <AnnotationList annotations={annotations} onRemove={removeAnnotation} />
-          </GlassPanel>
-          <AddAnnotationPopover
-            open={pendingTimestamp != null}
-            timestamp={pendingTimestamp ?? ''}
-            onAdd={handleAddAnnotation}
-            onCancel={() => setPendingTimestamp(null)}
-          />
+            )}
+          </ChartContainer>
         </FadeIn>
       ) : (
         <Skeleton height={280} />

@@ -100,7 +100,7 @@ function SiteInfoSection({ siteId, touCapable }: { siteId: number; touCapable: b
   return (
     <div className="mt-4 space-y-4">
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-medium text-white/70 flex items-center gap-1.5">
+        <h4 className="text-sm font-medium text-[var(--text-secondary)] flex items-center gap-1.5">
           <Settings className="h-3.5 w-3.5" />
           {t('energy.siteInfo.title', 'Site Configuration')}
         </h4>
@@ -121,15 +121,15 @@ function SiteInfoSection({ siteId, touCapable }: { siteId: number; touCapable: b
           {/* Operation mode + backup reserve */}
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3">
-              <p className="text-xs text-white/50 mb-1">
+              <p className="text-xs text-[var(--text-muted)] mb-1">
                 {t('energy.siteInfo.operationMode', 'Operation Mode')}
               </p>
-              <p className="text-sm font-medium text-white/90">
+              <p className="text-sm font-medium text-[var(--text-primary)]">
                 {operationModeLabel(info.default_real_mode)}
               </p>
             </div>
             <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3">
-              <p className="text-xs text-white/50 mb-1">
+              <p className="text-xs text-[var(--text-muted)] mb-1">
                 {t('energy.siteInfo.backupReserve', 'Backup Reserve')}
               </p>
               {info.backup_reserve_percent != null ? (
@@ -140,12 +140,12 @@ function SiteInfoSection({ siteId, touCapable }: { siteId: number; touCapable: b
                     size={32}
                     label=""
                   />
-                  <span className="text-sm font-medium text-white/90">
+                  <span className="text-sm font-medium text-[var(--text-primary)]">
                     {fmtNumber(info.backup_reserve_percent, 0)}%
                   </span>
                 </div>
               ) : (
-                <p className="text-sm text-white/50">—</p>
+                <p className="text-sm text-[var(--text-muted)]">—</p>
               )}
             </div>
           </div>
@@ -176,7 +176,7 @@ function SiteInfoSection({ siteId, touCapable }: { siteId: number; touCapable: b
           </Grid>
 
           {/* Firmware + timezone */}
-          <div className="flex flex-wrap gap-2 text-xs text-white/40">
+          <div className="flex flex-wrap gap-2 text-xs text-[var(--text-muted)]">
             {info.version && (
               <span className="flex items-center gap-1">
                 <Cpu className="h-3 w-3" /> {t('energy.siteInfo.firmware', 'Firmware')}: {info.version}
@@ -205,11 +205,11 @@ function SiteInfoSection({ siteId, touCapable }: { siteId: number; touCapable: b
             <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-white/50 mb-0.5 flex items-center gap-1">
+                  <p className="text-xs text-[var(--text-muted)] mb-0.5 flex items-center gap-1">
                     <Clock className="h-3 w-3" />
                     {t('energy.tou.sectionTitle', 'Rate Plan')}
                   </p>
-                  <p className="text-sm font-medium text-white/90">
+                  <p className="text-sm font-medium text-[var(--text-primary)]">
                     {tariffName ?? t('energy.tou.noPlan', 'No rate plan configured')}
                   </p>
                 </div>
@@ -227,7 +227,7 @@ function SiteInfoSection({ siteId, touCapable }: { siteId: number; touCapable: b
 
           {/* Fetched timestamp */}
           {response?.fetched_at && (
-            <p className="text-xs text-white/30">
+            <p className="text-xs text-[var(--text-muted)]">
               {t('energy.siteInfo.lastFetched', 'Site info fetched')}: {formatDateTime(response.fetched_at)}
             </p>
           )}
@@ -268,10 +268,10 @@ function EnergySiteCard({ site }: { site: TeslaEnergySite }) {
             <Icon className="h-5 w-5 text-cyan-400" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-white/90">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)]">
               {site.site_name || t('energy.products.unnamed', 'Unnamed Site')}
             </h3>
-            <p className="text-sm text-white/50">
+            <p className="text-sm text-[var(--text-muted)]">
               {resourceLabel(site.resource_type)} · ID {site.energy_site_id}
             </p>
           </div>
@@ -319,7 +319,7 @@ function EnergySiteCard({ site }: { site: TeslaEnergySite }) {
       <SiteInfoSection siteId={site.energy_site_id} touCapable={site.tou_capable} />
 
       {/* Footer */}
-      <p className="text-xs text-white/30">
+      <p className="text-xs text-[var(--text-muted)]">
         {t('energy.products.lastFetched', 'Last fetched')}: {formatDateTime(site.fetched_at)}
       </p>
     </GlassPanel>

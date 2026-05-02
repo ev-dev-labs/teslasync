@@ -4,9 +4,11 @@ import { GlassPanel } from '@/components/ui';
 import {
   ChartTooltip,
   AREA_DEFAULTS,
-  LineChart, Line, Legend,
+  LineChart, Line, Legend, ReferenceLine,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  useSyncedCursor, useSyncedReferenceLineX,
 } from '@/components/charts';
+import { chartTokens } from '@/lib/tokens';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useSettings } from '@/hooks/useSettings';
@@ -22,6 +24,8 @@ interface TemperatureSectionProps {
 export function TemperatureSection({ chartData, stats }: TemperatureSectionProps) {
   const { t } = useTranslation();
   const { tempUnit } = useSettings();
+  const syncProps = useSyncedCursor();
+  const syncedX = useSyncedReferenceLineX();
 
   return (
     <FadeIn>
@@ -78,7 +82,12 @@ export function TemperatureSection({ chartData, stats }: TemperatureSectionProps
         <div className="h-56">
           {chartData.length > 1 && stats.hasAnyTemp ? (
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
+              <LineChart
+                data={chartData}
+                syncId={syncProps.syncId}
+                syncMethod={syncProps.syncMethod}
+                onMouseMove={syncProps.onMouseMove}
+              >
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                 <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} interval="preserveStartEnd" />
                 <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
@@ -96,6 +105,16 @@ export function TemperatureSection({ chartData, stats }: TemperatureSectionProps
                 {stats.passengerTemps.length > 0 ? (
                   <Line {...AREA_DEFAULTS} dataKey="passengerTemp" stroke="#a855f7" name={`${t('driveDetail.passenger', 'Passenger')} ${tempUnit}`} />
                 ) : null}
+                {syncedX != null && (
+                  <ReferenceLine
+                    x={syncedX}
+                    stroke={chartTokens.cursor.stroke}
+                    strokeWidth={chartTokens.cursor.strokeWidth}
+                    strokeDasharray={chartTokens.cursor.strokeDasharray}
+                    ifOverflow="hidden"
+                    isFront
+                  />
+                )}
               </LineChart>
             </ResponsiveContainer>
           ) : (

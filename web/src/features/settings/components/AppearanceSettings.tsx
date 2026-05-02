@@ -1,32 +1,55 @@
-import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { GlassPanel, Button, IconBox, Input } from '@/components/ui'
+import { GlassPanel, IconBox, ThemePicker, Toggle, Button } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
-import { useTheme, type ThemeId, type ModeId } from '@/components/ui/ThemeProvider'
 import { useToast } from '@/components/feedback/Toast'
+import { useSettings, useSaveSettings } from '@/api/hooks/useSettings'
+import { useStatusBarPrefs, setStatusBarPrefs } from '@/components/layout'
+import {
+  useAchievementCelebrationPrefs,
+  setAchievementCelebrationPrefs,
+} from '@/hooks/useAchievementCelebrationPrefs'
 import { cn } from '@/lib/cn'
-import { Palette, Sun, Moon, Monitor, Sparkles, CheckCircle } from 'lucide-react'
+import { Palette, CheckCircle, Rows3, PanelBottom, Trophy } from 'lucide-react'
 
-const modeIcons: Record<string, ReactNode> = {
-  dark: <Moon className="h-4 w-4" />,
-  light: <Sun className="h-4 w-4" />,
-  oled: <Monitor className="h-4 w-4" />,
-  midnight: <Sparkles className="h-4 w-4" />,
-  auto: <Monitor className="h-4 w-4" />,
-  sunset: <Sun className="h-4 w-4" />,
-  nord: <Sparkles className="h-4 w-4" />,
-}
+type DensityId = 'compact' | 'comfortable' | 'spacious'
 
 export function AppearanceSettings() {
   const { t } = useTranslation('settings')
   const toast = useToast()
-  const { themeId, modeId, setTheme, setMode, setCustomColors, themes: allThemes, modes: allModes } = useTheme()
-  const [customPrimary, setCustomPrimary] = useState(() => localStorage.getItem('teslasync-custom-primary') || '#00b4d8')
-  const [customAccent, setCustomAccent] = useState(() => localStorage.getItem('teslasync-custom-accent') || '#e63946')
+
+  // Density picker. Reads/writes the same `ui_density` server-side setting
+  // that `useDensitySync` applies to `body[data-density]`. We use the
+  // partial-merge pattern (`{ ...settings, ui_density }`) because the
+  // PUT /settings endpoint is full-replace, not patch. (Phase 40 / Prompt 44.)
+  const { data: settings } = useSettings()
+  const saveSettings = useSaveSettings()
+  const density: DensityId =
+    (settings?.ui_density as DensityId | undefined) ?? 'comfortable'
+
+  // Footer status bar prefs (Phase-40 / Prompt 59). Persisted to
+  // localStorage rather than the server so toggling is instant and works
+  // offline; cross-tab sync is handled inside useStatusBarPrefs.
+  const statusBarPrefs = useStatusBarPrefs()
+
+  // Celebration prefs (Phase-40 / Prompt 63). Same localStorage pattern as
+  // the status-bar prefs above so toggling the celebration toast / sound is
+  // instant and survives offline + cross-tab.
+  const celebrationPrefs = useAchievementCelebrationPrefs()
+
+  function setDensity(next: DensityId) {
+    if (!settings || next === density) return
+    saveSettings.mutate({ ...settings, ui_density: next })
+  }
+
+  const densityChoices: { id: DensityId; label: string; help: string }[] = [
+    { id: 'compact', label: t('theme.density.compact', 'Compact'), help: t('theme.density.compactHelp', 'Tight rows — fits more on screen') },
+    { id: 'comfortable', label: t('theme.density.comfortable', 'Comfortable'), help: t('theme.density.comfortableHelp', 'Default sizing') },
+    { id: 'spacious', label: t('theme.density.spacious', 'Spacious'), help: t('theme.density.spaciousHelp', 'Roomy — easier to read at distance') },
+  ]
 
   return (
     <FadeIn delay={0.15}>
-      <GlassPanel className="p-6 space-y-6">
+      <GlassPanel className="p-6 space-y-6" data-tour="settings-appearance">
         <div className="flex items-center gap-3">
           <IconBox color="purple">
             <Palette className="h-5 w-5" />
@@ -37,134 +60,215 @@ export function AppearanceSettings() {
           </div>
         </div>
 
-        {/* Mode Selector */}
+        {/* Phase-40 / Prompt 60 — extracted shared <ThemePicker>. The settings
+            page renders the full UI (mode + accent + custom-color builder); the
+            top-bar quick-switcher renders a compact variant of the same. */}
+        <ThemePicker showMode showCustom />
+
+        {/* Density (information density) */}
         <div>
-          <p className="text-xs font-medium uppercase tracking-wider mb-3 text-[var(--text-muted)]">{t('theme.displayMode', 'Display Mode')}</p>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {Object.values(allModes).map(m => (
-              <Button
-                key={m.id}
-                variant="ghost"
-                onClick={() => { setMode(m.id as ModeId); toast.info(`${t('theme.mode', 'Mode')}: ${m.name}`) }}
-                className={cn(
-                  'flex items-center gap-3 rounded-xl border p-3.5 h-auto transition-all duration-200 justify-start',
-                  modeId === m.id
-                    ? 'border-[var(--theme-primary)] bg-[var(--surface-3)]'
-                    : 'border-[var(--glass-border)] bg-[var(--surface-2)] hover:border-[var(--theme-primary)]/30'
-                )}
-                style={modeId === m.id ? { boxShadow: 'inset 0 0 12px rgba(var(--theme-primary-rgb), 0.15)' } : undefined}
-              >
-                <div
-                  className="flex h-8 w-8 items-center justify-center rounded-lg"
-                  style={{
-                    background: m.surface3,
-                    border: `1px solid ${m.glassBorder}`,
-                  }}
+          <div className="flex items-center gap-2 mb-3">
+            <Rows3 className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+            <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+              {t('theme.density.label', 'Information density')}
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {densityChoices.map(choice => {
+              const active = density === choice.id
+              return (
+                <Button
+                  key={choice.id}
+                  variant="ghost"
+                  onClick={() => setDensity(choice.id)}
+                  disabled={!settings || saveSettings.isPending}
+                  className={cn(
+                    'flex items-start gap-3 rounded-xl border p-3.5 h-auto transition-all duration-200 justify-start text-left',
+                    active
+                      ? 'border-[var(--theme-primary)] bg-[var(--surface-3)]'
+                      : 'border-[var(--glass-border)] bg-[var(--surface-2)] hover:border-[var(--theme-primary)]/30',
+                  )}
                 >
-                  <span style={{ color: m.textPrimary }}>{modeIcons[m.id]}</span>
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-medium text-[var(--text-primary)]">{m.name}</p>
-                  <div className="flex gap-1 mt-1">
-                    {[m.bg, m.surface1, m.surface2, m.surface3].map((c, i) => (
-                      <div key={i} className="h-2 w-4 rounded-sm border border-[var(--glass-border)]" style={{ background: c }} />
-                    ))}
+                  <div
+                    className="flex h-8 w-8 shrink-0 flex-col items-center justify-center gap-[2px] rounded-lg border border-[var(--glass-border)] bg-[var(--surface-1)]"
+                    aria-hidden="true"
+                  >
+                    {choice.id === 'compact' && (
+                      <>
+                        <div className="h-[2px] w-4 rounded bg-[var(--text-muted)]" />
+                        <div className="h-[2px] w-4 rounded bg-[var(--text-muted)]" />
+                        <div className="h-[2px] w-4 rounded bg-[var(--text-muted)]" />
+                        <div className="h-[2px] w-4 rounded bg-[var(--text-muted)]" />
+                      </>
+                    )}
+                    {choice.id === 'comfortable' && (
+                      <>
+                        <div className="h-[3px] w-4 rounded bg-[var(--text-muted)]" />
+                        <div className="h-[3px] w-4 rounded bg-[var(--text-muted)]" />
+                        <div className="h-[3px] w-4 rounded bg-[var(--text-muted)]" />
+                      </>
+                    )}
+                    {choice.id === 'spacious' && (
+                      <>
+                        <div className="h-[5px] w-4 rounded bg-[var(--text-muted)]" />
+                        <div className="h-[5px] w-4 rounded bg-[var(--text-muted)]" />
+                      </>
+                    )}
                   </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-[var(--text-primary)]">{choice.label}</p>
+                    <p className="text-[11px] text-[var(--text-muted)]">{choice.help}</p>
+                  </div>
+                  {active && (
+                    <CheckCircle className="h-4 w-4 ml-auto shrink-0 text-[var(--theme-primary)]" />
+                  )}
+                </Button>
+              )
+            })}
+          </div>
+          <p className="mt-2 text-xs text-[var(--text-muted)]">
+            {t('theme.density.help', 'Affects table rows, cards, and dashboard widgets across the app.')}
+          </p>
+
+          {/* Live preview — uses density Tailwind utilities so it reflows
+              instantly when the body[data-density] attribute changes. */}
+          <div className="mt-4 rounded-lg border border-[var(--glass-border)] bg-[var(--surface-2)] overflow-hidden">
+            <div className="border-b border-[var(--glass-border)] bg-[var(--surface-3)] px-d-pad-x py-d-pad-y">
+              <p className="text-d-base font-medium text-[var(--text-secondary)]">
+                {t('theme.density.previewTitle', 'Preview')}
+              </p>
+            </div>
+            <div className="divide-y divide-[var(--glass-border)]">
+              {[
+                t('theme.density.previewRow1', 'Sample row — Tesla Model 3'),
+                t('theme.density.previewRow2', 'Sample row — Tesla Model Y'),
+                t('theme.density.previewRow3', 'Sample row — Tesla Model S'),
+              ].map((row, i) => (
+                <div
+                  key={i}
+                  className="flex min-h-d-row items-center px-d-pad-x py-d-pad-y text-d-base text-[var(--text-primary)]"
+                >
+                  {row}
                 </div>
-                {modeId === m.id && (
-                  <CheckCircle className="h-4 w-4 ml-auto text-[var(--theme-primary)]" />
-                )}
-              </Button>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Accent Color */}
+        {/* Footer status bar (Phase-40 / Prompt 59) */}
         <div>
-          <p className="text-xs font-medium uppercase tracking-wider mb-3 text-[var(--text-muted)]">{t('theme.accentColor', 'Accent Color')}</p>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            {Object.values(allThemes).filter(thm => thm.id !== 'custom').map(thm => (
-              <Button
-                key={thm.id}
-                variant="ghost"
-                onClick={() => { setTheme(thm.id as ThemeId); toast.info(`${t('theme.theme', 'Theme')}: ${thm.name}`) }}
-                className={cn(
-                  'group relative rounded-xl border p-4 text-left h-auto transition-all duration-200 justify-start items-start flex-col',
-                  themeId === thm.id
-                    ? 'bg-[var(--surface-3)]'
-                    : 'bg-[var(--surface-2)] hover:bg-[var(--surface-3)]'
-                )}
-                style={{ borderColor: themeId === thm.id ? thm.primary : 'var(--glass-border)' }}
-              >
-                <div
-                  className="h-6 w-6 rounded-full mb-3"
-                  style={{
-                    background: `linear-gradient(135deg, ${thm.primary}, ${thm.accent})`,
-                    boxShadow: themeId === thm.id ? `0 0 12px ${thm.primary}` : 'none',
-                  }}
-                />
-                <p className="text-xs font-medium text-[var(--text-primary)]">{thm.name}</p>
-                {themeId === thm.id && (
-                  <div className="absolute top-2.5 right-2.5">
-                    <CheckCircle className="h-4 w-4" style={{ color: thm.primary }} />
-                  </div>
-                )}
-              </Button>
-            ))}
-
-            {/* Custom color picker card */}
-            <Button
-              variant="ghost"
-              onClick={() => { setCustomColors(customPrimary, customAccent); toast.info(`${t('theme.theme', 'Theme')}: ${t('theme.custom', 'Custom')}`) }}
-              className={cn(
-                'group relative rounded-xl border p-4 text-left h-auto transition-all duration-200 justify-start items-start flex-col',
-                themeId === 'custom'
-                  ? 'bg-[var(--surface-3)]'
-                  : 'bg-[var(--surface-2)] hover:bg-[var(--surface-3)]'
-              )}
-              style={{ borderColor: themeId === 'custom' ? customPrimary : 'var(--glass-border)' }}
-            >
-              <div
-                className="h-6 w-6 rounded-full mb-3"
-                style={{
-                  background: `linear-gradient(135deg, ${customPrimary}, ${customAccent})`,
-                  boxShadow: themeId === 'custom' ? `0 0 12px ${customPrimary}` : 'none',
+          <div className="flex items-center gap-2 mb-3">
+            <PanelBottom className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+            <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+              {t('theme.statusBar.label', 'Status bar')}
+            </p>
+          </div>
+          <div className="space-y-3 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-2)] p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-[var(--text-primary)]">
+                  {t('theme.statusBar.show', 'Show status bar')}
+                </p>
+                <p className="text-xs text-[var(--text-muted)]">
+                  {t('theme.statusBar.showHelp', 'Always-on footer with API health, live telemetry, vehicle, and version.')}
+                </p>
+              </div>
+              <Toggle
+                checked={statusBarPrefs.enabled}
+                onChange={(next) => {
+                  setStatusBarPrefs({ enabled: next })
+                  toast.info(
+                    next
+                      ? t('theme.statusBar.shownToast', 'Status bar shown')
+                      : t('theme.statusBar.hiddenToast', 'Status bar hidden'),
+                  )
                 }}
               />
-              <p className="text-xs font-medium text-[var(--text-primary)]">{t('theme.custom', 'Custom')}</p>
-              {themeId === 'custom' && (
-                <div className="absolute top-2.5 right-2.5">
-                  <CheckCircle className="h-4 w-4" style={{ color: customPrimary }} />
-                </div>
-              )}
-            </Button>
-          </div>
-
-          {/* Custom color pickers — shown when custom theme is active */}
-          {themeId === 'custom' && (
-            <div className="flex flex-wrap gap-6 mt-4 p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--glass-border)] animate-in fade-in">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-medium text-[var(--text-secondary)]">{t('theme.primary', 'Primary')}</span>
-                <Input
-                  type="color"
-                  value={customPrimary}
-                  onChange={e => { setCustomPrimary(e.target.value); setCustomColors(e.target.value, customAccent) }}
-                  className="h-8 w-10 rounded-lg border border-[var(--glass-border)] bg-transparent cursor-pointer p-0"
-                />
-                <span className="text-[10px] font-mono text-[var(--text-muted)]">{customPrimary}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-medium text-[var(--text-secondary)]">{t('theme.accent', 'Accent')}</span>
-                <Input
-                  type="color"
-                  value={customAccent}
-                  onChange={e => { setCustomAccent(e.target.value); setCustomColors(customPrimary, e.target.value) }}
-                  className="h-8 w-10 rounded-lg border border-[var(--glass-border)] bg-transparent cursor-pointer p-0"
-                />
-                <span className="text-[10px] font-mono text-[var(--text-muted)]">{customAccent}</span>
-              </div>
             </div>
-          )}
+            <div className="flex items-center justify-between gap-4 border-t border-[var(--glass-border)] pt-3">
+              <div className="min-w-0">
+                <p className={cn('text-sm font-medium text-[var(--text-primary)]', !statusBarPrefs.enabled && 'opacity-50')}>
+                  {t('theme.statusBar.iconOnly', 'Always icon-only')}
+                </p>
+                <p className={cn('text-xs text-[var(--text-muted)]', !statusBarPrefs.enabled && 'opacity-50')}>
+                  {t('theme.statusBar.iconOnlyHelp', 'Hide labels at all widths. Otherwise the bar auto-collapses on narrow screens.')}
+                </p>
+              </div>
+              <Toggle
+                checked={statusBarPrefs.iconOnly}
+                onChange={(next) => setStatusBarPrefs({ iconOnly: next })}
+                aria-disabled={!statusBarPrefs.enabled}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Achievement celebrations (Phase-40 / Prompt 63) */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <Trophy className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+            <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+              {t('achievements.celebrationSettings', 'Celebration')}
+            </p>
+          </div>
+          <div className="space-y-3 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-2)] p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-[var(--text-primary)]">
+                  {t('achievements.showToasts', 'Show celebration toasts')}
+                </p>
+                <p className="text-xs text-[var(--text-muted)]">
+                  {t('achievements.showToastsHelp', 'Pop a celebratory toast with confetti when you unlock an achievement.')}
+                </p>
+              </div>
+              <Toggle
+                checked={celebrationPrefs.showToasts}
+                onChange={(next) => setAchievementCelebrationPrefs({ showToasts: next })}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-4 border-t border-[var(--glass-border)] pt-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-[var(--text-primary)]">
+                  {t('achievements.playSound', 'Play sound on unlock')}
+                </p>
+                <p className="text-xs text-[var(--text-muted)]">
+                  {t('achievements.playSoundHelp', 'Play a short chime alongside the celebration toast. Off by default.')}
+                </p>
+              </div>
+              <Toggle
+                checked={celebrationPrefs.playSound}
+                onChange={(next) => setAchievementCelebrationPrefs({ playSound: next })}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-4 border-t border-[var(--glass-border)] pt-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-[var(--text-primary)]">
+                  {t('achievements.showOnDashboard', 'Show recently unlocked on dashboard')}
+                </p>
+                <p className="text-xs text-[var(--text-muted)]">
+                  {t('achievements.showOnDashboardHelp', "Surface your latest unlocks in the dashboard's recently-unlocked widget.")}
+                </p>
+              </div>
+              <Toggle
+                checked={celebrationPrefs.showOnDashboard}
+                onChange={(next) => setAchievementCelebrationPrefs({ showOnDashboard: next })}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-4 border-t border-[var(--glass-border)] pt-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-[var(--text-primary)]">
+                  {t('achievements.pushOnUnlock', 'Send push notifications for achievements')}
+                </p>
+                <p className="text-xs text-[var(--text-muted)]">
+                  {t('achievements.pushOnUnlockHelp', 'Deliver a web push notification when an achievement unlocks while the tab is closed.')}
+                </p>
+              </div>
+              <Toggle
+                checked={celebrationPrefs.pushOnUnlock}
+                onChange={(next) => setAchievementCelebrationPrefs({ pushOnUnlock: next })}
+              />
+            </div>
+          </div>
         </div>
       </GlassPanel>
     </FadeIn>

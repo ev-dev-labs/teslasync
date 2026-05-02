@@ -1,14 +1,14 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Car, RefreshCw, Activity, Battery, Gauge, Zap,
-  ExternalLink, Trash2, Lock, Shield,
+  ExternalLink, Trash2, Lock, Shield, ArrowLeftRight,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, Button, ConfirmDialog } from '@/components/ui';
+import { GlassPanel, Badge, Button, ConfirmDialog, PinButton } from '@/components/ui';
 import { MetricCard, AnimatedNumber } from '@/components/data-display';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
@@ -22,6 +22,7 @@ import { fmtNumber } from '@/lib/numberFormat';
 import { batteryColor } from '@/lib/colors';
 import { request } from '@/api/client';
 import { fetchVehicleState } from '@/api/hooks/useVehicles';
+import { usePinned } from '@/api/hooks/usePinned';
 import { deriveVehicleStatus, statusVariant } from '@/api/types';
 import type { Vehicle } from '@/types/vehicle';
 import type { VehicleState } from '@/api/types';
@@ -32,6 +33,7 @@ export default function VehicleListPage() {
   const { t } = useTranslation();
   usePageTitle(t('nav.vehicles', 'Fleet'));
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { convertDistance, distanceUnit } = useSettings();
 
   /* ── Data ── */
@@ -44,6 +46,22 @@ export default function VehicleListPage() {
   const vehicleList = vehicles ?? [];
   const primaryId = vehicleList[0]?.id;
   useVehicleLive(primaryId);
+
+  /* Phase 40 / Prompt 48 — pinned vehicles float to the top of the list. */
+  const { data: vehiclePins = [] } = usePinned('vehicle');
+  const sortedVehicleList = useMemo(() => {
+    if (vehiclePins.length === 0) return vehicleList;
+    const order = new Map<string, number>();
+    vehiclePins.forEach((p) => order.set(String(p.item_id), p.position));
+    return [...vehicleList].sort((a, b) => {
+      const ap = order.get(String(a.id));
+      const bp = order.get(String(b.id));
+      if (ap != null && bp != null) return ap - bp;
+      if (ap != null) return -1;
+      if (bp != null) return 1;
+      return 0;
+    });
+  }, [vehicleList, vehiclePins]);
 
   /* Batch-fetch vehicle states for summary + battery chart */
   const { data: fleetStates } = useQuery({
@@ -112,7 +130,7 @@ export default function VehicleListPage() {
     return (
       <PageContainer title={t('nav.vehicles', 'Fleet')}>
         <div className="space-y-6">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} height={96} />
             ))}
@@ -148,13 +166,30 @@ export default function VehicleListPage() {
       title={t('nav.vehicles', 'Fleet')}
       subtitle={t('vehicles.subtitle', 'View, manage, and sync your Tesla vehicles')}
       actions={
-        <Button
-          onClick={() => syncMut.mutate()}
-          loading={syncMut.isPending}
-          icon={<RefreshCw className="h-4 w-4" />}
-        >
-          {t('vehicles.syncButton', 'Sync from Tesla')}
-        </Button>
+        <div className="flex items-center gap-2">
+          {vehicleList.length >= 2 && (
+            <Button
+              variant="outline"
+              icon={<ArrowLeftRight className="h-4 w-4" />}
+              onClick={() => {
+                // Pre-fill the first two vehicles via query params so users
+                // land on a populated comparison instead of empty selectors.
+                const leftId = vehicleList[0]?.id ?? '';
+                const rightId = vehicleList[1]?.id ?? '';
+                navigate(`/vehicle-comparison?leftId=${leftId}&rightId=${rightId}`);
+              }}
+            >
+              {t('vehicles.compareButton', 'Compare vehicles')}
+            </Button>
+          )}
+          <Button
+            onClick={() => syncMut.mutate()}
+            loading={syncMut.isPending}
+            icon={<RefreshCw className="h-4 w-4" />}
+          >
+            {t('vehicles.syncButton', 'Sync from Tesla')}
+          </Button>
+        </div>
       }
     >
       {/* Sync feedback banners */}
@@ -191,7 +226,7 @@ export default function VehicleListPage() {
         <div className="space-y-8">
           {/* ── Fleet Summary ──────────────────────────── */}
           <FadeIn delay={0.05}>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <MetricCard
                 label={t('vehicles.totalVehicles', 'Total Vehicles')}
                 value={vehicleList.length}
@@ -225,11 +260,11 @@ export default function VehicleListPage() {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <Activity className="h-4 w-4 text-cyan-400" />
-                  <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                  <span className="text-sm font-semibold text-[var(--text-primary)]">
                     {t('vehicles.batteryStatus', 'Fleet Battery Status')}
                   </span>
                 </div>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
+                <span className="text-xs text-[var(--text-secondary)]">
                   <AnimatedNumber value={Math.round(fleet.avgBattery)} suffix="%" />
                   {' '}{t('vehicles.avgLabel', 'avg')}
                 </span>
@@ -242,7 +277,7 @@ export default function VehicleListPage() {
                     const color = batteryColor(level);
                     return (
                       <div key={vehicle.id} className="flex items-center gap-3">
-                        <span className="text-xs text-gray-600 dark:text-gray-300 w-24 truncate">
+                        <span className="text-xs text-[var(--text-secondary)] w-24 truncate">
                           {vehicle.display_name || vehicle.vin}
                         </span>
                         <div className="flex-1 h-3 rounded-full bg-white/[0.04] overflow-hidden">
@@ -255,10 +290,10 @@ export default function VehicleListPage() {
                             }}
                           />
                         </div>
-                        <span className="text-xs font-medium text-gray-900 dark:text-white w-10 text-right">
+                        <span className="text-xs font-medium text-[var(--text-primary)] w-10 text-right">
                           {level}%
                         </span>
-                        <span className="text-[10px] text-gray-500 dark:text-gray-400 w-16 text-right">
+                        <span className="text-[10px] text-[var(--text-secondary)] w-16 text-right">
                           {fmtNumber(convertDistance(state.rated_range ?? 0))} {distanceUnit}
                         </span>
                       </div>
@@ -266,10 +301,11 @@ export default function VehicleListPage() {
                   })}
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
-                  <Activity className="h-8 w-8 opacity-20" />
-                  <p className="text-xs">{t('common.noData', 'No data available')}</p>
-                </div>
+                <EmptyState
+                  icon={<Activity className="h-8 w-8 opacity-20" />}
+                  message={t('common.noData', 'No data available')}
+                  className="py-8"
+                />
               )}
             </GlassPanel>
           </FadeIn>
@@ -278,14 +314,15 @@ export default function VehicleListPage() {
           <FadeIn delay={0.15}>
             <div className="flex items-center gap-2 mb-4">
               <Car className="h-4 w-4 text-purple-400" />
-              <span className="text-sm font-semibold text-gray-900 dark:text-white">
+              <span className="text-sm font-semibold text-[var(--text-primary)]">
                 {t('vehicles.allVehicles', 'All Vehicles')}
               </span>
             </div>
           </FadeIn>
 
+          <div data-tour="vehicles-list">
           <StaggerContainer className="space-y-4">
-            {vehicleList.map((vehicle) => {
+            {sortedVehicleList.map((vehicle) => {
               const entry = fleet.entries.find(e => e.vehicle.id === vehicle.id);
               const state = entry?.state ?? null;
               const status = deriveVehicleStatus(state);
@@ -294,7 +331,7 @@ export default function VehicleListPage() {
 
               return (
                 <StaggerItem key={vehicle.id}>
-                  <GlassPanel hover glow="cyan" className="p-0 overflow-hidden group">
+                  <GlassPanel hover glow="cyan" className="p-0 overflow-hidden group" data-tour="vehicles-card">
                     <div className="h-1 bg-gradient-to-r from-cyan-400 via-purple-400 to-green-400 opacity-40 group-hover:opacity-80 transition-opacity" />
 
                     <div className="p-5">
@@ -304,7 +341,7 @@ export default function VehicleListPage() {
                           <div className="flex items-center gap-3 mb-1.5">
                             <Link
                               to={`/vehicles/${vehicle.id}`}
-                              className="text-base font-semibold text-gray-900 dark:text-white hover:text-cyan-400 transition-colors truncate"
+                              className="text-base font-semibold text-[var(--text-primary)] hover:text-cyan-400 transition-colors truncate"
                             >
                               {vehicle.display_name || vehicle.vin}
                             </Link>
@@ -313,7 +350,7 @@ export default function VehicleListPage() {
                             </Badge>
                           </div>
 
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                          <p className="text-xs text-[var(--text-secondary)] mb-3">
                             {vehicle.model} {vehicle.trim_badging} ·{' '}
                             <span className="font-mono">{vehicle.vin}</span>
                           </p>
@@ -330,17 +367,17 @@ export default function VehicleListPage() {
                                   }}
                                 />
                               </div>
-                              <span className="text-sm font-bold text-gray-900 dark:text-white">
+                              <span className="text-sm font-bold text-[var(--text-primary)]">
                                 <AnimatedNumber value={level} suffix="%" />
                               </span>
                             </div>
 
                             {state && (
                               <>
-                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                <span className="text-xs text-[var(--text-secondary)]">
                                   {fmtNumber(convertDistance(state.rated_range ?? 0))} {distanceUnit}
                                 </span>
-                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                <span className="text-xs text-[var(--text-secondary)]">
                                   {fmtNumber(convertDistance(state.odometer ?? 0))} {distanceUnit}
                                 </span>
                                 {state.is_charging && (
@@ -360,9 +397,10 @@ export default function VehicleListPage() {
 
                         {/* Actions */}
                         <div className="flex flex-col items-center gap-1 shrink-0">
+                          <PinButton itemType="vehicle" itemId={vehicle.id} size="sm" />
                           <Link
                             to={`/vehicles/${vehicle.id}`}
-                            className="rounded-lg p-2 text-gray-400 hover:bg-cyan-400/10 hover:text-cyan-400 transition-all"
+                            className="rounded-lg p-2 text-[var(--text-secondary)] hover:bg-cyan-400/10 hover:text-cyan-400 transition-all"
                           >
                             <ExternalLink className="h-4 w-4" />
                           </Link>
@@ -370,7 +408,7 @@ export default function VehicleListPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => setDeleteTarget(vehicle)}
-                            className="rounded-lg p-2 text-gray-400 hover:bg-red-500/10 hover:text-red-500"
+                            className="rounded-lg p-2 text-[var(--text-secondary)] hover:bg-red-500/10 hover:text-red-500"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -382,6 +420,7 @@ export default function VehicleListPage() {
               );
             })}
           </StaggerContainer>
+          </div>
         </div>
       )}
 

@@ -3,6 +3,15 @@ name: Auto Label
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: 'Runner to use (manual runs only)'
+        type: choice
+        options:
+          - arc-runner
+          - ubuntu-latest
+        default: arc-runner
 
 permissions:
   contents: read
@@ -11,7 +20,7 @@ permissions:
 jobs:
   label:
     name: Label PR
-    runs-on: arc-runner
+    runs-on: ${{ inputs.runner || 'arc-runner' }}
     steps:
       - uses: actions/labeler@v5
         with:

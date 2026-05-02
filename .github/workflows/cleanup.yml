@@ -4,6 +4,14 @@ on:
   schedule:
     - cron: "0 3 * * 0"
   workflow_dispatch:
+    inputs:
+      runner:
+        description: 'Runner to use (manual runs only)'
+        type: choice
+        options:
+          - arc-runner
+          - ubuntu-latest
+        default: arc-runner
 
 permissions:
   packages: write
@@ -13,7 +21,7 @@ permissions:
 jobs:
   maintenance:
     name: Cleanup & Stale
-    runs-on: arc-runner
+    runs-on: ${{ inputs.runner || 'arc-runner' }}
     steps:
       - name: Cleanup backend images
         uses: actions/delete-package-versions@v5

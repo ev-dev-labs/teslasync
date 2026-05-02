@@ -93,6 +93,11 @@ export default function RegenEfficiencyWidget({ vehicleId, size }: WidgetProps) 
     <WidgetShell
       title={t('widget.regenEfficiency.title', 'Regen Braking')}
       icon={<RotateCcw className="h-3.5 w-3.5 text-emerald-400" />}
+      help={{
+        i18nKey: 'help.regenEfficiency.body',
+        defaultValue:
+          'Energy recovered through regenerative braking divided by total energy used during driving. Higher is better — Tesla cars typically reach 15–30% recovery in mixed driving.',
+      }}
       {...shellProps}
     >
       {data ? (

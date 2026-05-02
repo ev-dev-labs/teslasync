@@ -55,6 +55,8 @@ func (p *Processor) Process(ctx context.Context, req *models.ExportJobRequest) (
 		return p.processImportDrives(ctx, req)
 	case string(TypeImportCharging):
 		return p.processImportCharging(ctx, req)
+	case string(TypeAccount):
+		return p.processAccount(ctx, req)
 	default:
 		return nil, fmt.Errorf("unsupported export type: %s", req.Type)
 	}

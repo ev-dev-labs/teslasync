@@ -2,7 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
-import { useToast } from '@/components/feedback/Toast';
+import { useMutationToast } from './_toastHelpers';
+import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import type {
   Automation,
   AutomationFull,
@@ -55,7 +56,7 @@ export function useAutomationHistory(limit = 20) {
 
 export function useToggleAutomation() {
   const qc = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: ({ id, enabled }: { id: number; enabled: boolean }) =>
       request<{ id: number; enabled: boolean }>(`/automations/${id}/toggle`, {
@@ -64,18 +65,20 @@ export function useToggleAutomation() {
         body: JSON.stringify({ enabled }),
       }),
     onSuccess: (_data, { enabled }) => {
-      qc.invalidateQueries({ queryKey: automationKeys.all });
-      toast.success(`Automation ${enabled ? 'enabled' : 'disabled'}`);
+      invalidateAndBroadcast(qc, { queryKey: automationKeys.all });
+      if (enabled) {
+        success('toast.automation.enabled', 'Automation enabled');
+      } else {
+        success('toast.automation.disabled', 'Automation disabled');
+      }
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to toggle automation: ${err.message}`);
-    },
+    onError: (err) => error(err, 'toast.automation.toggle.error', 'Failed to toggle automation'),
   });
 }
 
 export function useReEnableAutomation() {
   const qc = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (id: number) =>
       request<{ id: number; enabled: boolean; auto_disabled: boolean }>(
@@ -83,45 +86,39 @@ export function useReEnableAutomation() {
         { method: 'PATCH' },
       ),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: automationKeys.all });
-      toast.success('Automation re-enabled');
+      invalidateAndBroadcast(qc, { queryKey: automationKeys.all });
+      success('toast.automation.reEnable.success', 'Automation re-enabled');
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to re-enable automation: ${err.message}`);
-    },
+    onError: (err) => error(err, 'toast.automation.reEnable.error', 'Failed to re-enable automation'),
   });
 }
 
 export function useDeleteAutomation() {
   const qc = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (id: number) =>
       request<void>(`/automations/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: automationKeys.all });
-      qc.invalidateQueries({ queryKey: ['automation-history'] });
-      toast.success('Automation deleted');
+      invalidateAndBroadcast(qc, { queryKey: automationKeys.all });
+      invalidateAndBroadcast(qc, { queryKey: ['automation-history'] });
+      success('toast.automation.delete.success', 'Automation deleted');
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to delete automation: ${err.message}`);
-    },
+    onError: (err) => error(err, 'toast.automation.delete.error', 'Failed to delete automation'),
   });
 }
 
 export function useTestRunAutomation() {
   const qc = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (id: number) =>
       request<void>(`/automations/${id}/test-run`, { method: 'POST' }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['automation-history'] });
-      toast.success('Test run started');
+      success('toast.automation.testRun.success', 'Test run started');
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to start test run: ${err.message}`);
-    },
+    onError: (err) => error(err, 'toast.automation.testRun.error', 'Failed to start test run'),
   });
 }
 
@@ -136,7 +133,7 @@ export function useAutomation(id: number | string | undefined) {
 
 export function useCreateAutomationFull() {
   const qc = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (input: AutomationFullInput) =>
       request<AutomationFull>('/automations', {
@@ -145,18 +142,16 @@ export function useCreateAutomationFull() {
         body: JSON.stringify(input),
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: automationKeys.all });
-      toast.success('Automation created');
+      invalidateAndBroadcast(qc, { queryKey: automationKeys.all });
+      success('toast.automation.create.success', 'Automation created');
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to create automation: ${err.message}`);
-    },
+    onError: (err) => error(err, 'toast.automation.create.error', 'Failed to create automation'),
   });
 }
 
 export function useUpdateAutomationFull() {
   const qc = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: ({ id, input }: { id: number; input: AutomationFullInput }) =>
       request<AutomationFull>(`/automations/${id}`, {
@@ -165,13 +160,11 @@ export function useUpdateAutomationFull() {
         body: JSON.stringify(input),
       }),
     onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: automationKeys.all });
-      qc.invalidateQueries({ queryKey: automationKeys.detail(vars.id) });
-      toast.success('Automation updated');
+      invalidateAndBroadcast(qc, { queryKey: automationKeys.all });
+      invalidateAndBroadcast(qc, { queryKey: automationKeys.detail(vars.id) });
+      success('toast.automation.update.success', 'Automation updated');
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to update automation: ${err.message}`);
-    },
+    onError: (err) => error(err, 'toast.automation.update.error', 'Failed to update automation'),
   });
 }
 

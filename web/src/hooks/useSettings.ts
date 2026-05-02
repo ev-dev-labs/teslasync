@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { getSettings } from '@/api/settings'
 import type { AppSettings } from '@/api/types'
-import { setGlobalPrecision, fmtNumber } from '../lib/numberFormat'
+import { setGlobalPrecision, setGlobalLocale, fmtNumber } from '../lib/numberFormat'
 import { FUEL } from '../lib/constants'
 import {
   milesToKm,
@@ -30,6 +30,13 @@ const defaults: AppSettings = {
   quiet_hours_start: '22:00',
   quiet_hours_end: '07:00',
   alert_digest_mode: 'instant',
+  currency_symbol: '$',
+  locale: 'en-US',
+  tz_display_default: 'vehicle',
+  timezone_user: '',
+  tab_badge_enabled: true,
+  critical_flash_enabled: true,
+  ui_density: 'comfortable',
 }
 
 /**
@@ -54,9 +61,13 @@ export function useSettings() {
 
   const s = settings ?? defaults
   const decimals = s.decimal_precision ?? 2
+  const locale = s.locale ?? 'en-US'
+  const density: 'compact' | 'comfortable' | 'spacious' =
+    s.ui_density === 'compact' || s.ui_density === 'spacious' ? s.ui_density : 'comfortable'
 
-  // Sync global precision so fmtNumber/fmtPercent/etc. use it automatically
+  // Sync global precision/locale so fmtNumber/fmtPercent/etc. use them automatically
   setGlobalPrecision(decimals)
+  setGlobalLocale(locale)
 
   const isMiles = s.unit_of_length === 'mi'
   const isFahrenheit = s.unit_of_temp === 'F'
@@ -105,7 +116,7 @@ export function useSettings() {
 
   // ---- Cost helpers ----
   const costPerKwh = s.base_cost_per_kwh ?? 0.12
-  const currencySymbol = '$'
+  const currencySymbol = s.currency_symbol && s.currency_symbol.trim() ? s.currency_symbol : '$'
 
   /** Format energy consumption (kWh) as a currency string */
   const formatEnergyCost = (kwh: number): string => {
@@ -143,6 +154,8 @@ export function useSettings() {
     isFahrenheit,
     isPSI,
     decimals,
+    locale,
+    density,
     convertDistance,
     convertSpeed,
     convertTemp,

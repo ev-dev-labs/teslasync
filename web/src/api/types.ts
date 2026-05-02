@@ -24,6 +24,8 @@ export interface Vehicle {
   wheel_type: string
   state: string
   healthy: boolean
+  /** IANA tz database name reported by Tesla (e.g. "America/Los_Angeles"). 'UTC' = unknown — frontend falls back to user TZ. */
+  timezone?: string
   created_at: string
   updated_at: string
 }
@@ -188,6 +190,51 @@ export interface AppSettings {
   alert_digest_mode: string
   google_maps_api_key?: string
   polling_config?: PollingConfig
+  /** Unicode currency glyph (e.g. "$", "€"). Stored verbatim — no ISO 4217 lookup. */
+  currency_symbol?: string
+  /** BCP-47 locale tag for `Intl.NumberFormat` (e.g. "en-US", "de-DE"). */
+  locale?: string
+  /**
+   * Default timezone-display mode used by `<DateTime>` when no explicit
+   * `in` prop is set. 'vehicle' = car local time (falls back to user TZ
+   * when the vehicle has no learned tz); 'user' = browser local; 'utc'
+   * = literal UTC. Defaults to 'vehicle'. (Phase 40 / 22.)
+   */
+  tz_display_default?: 'vehicle' | 'user' | 'utc'
+  /**
+   * Optional override of the user's browser-detected timezone (IANA
+   * name, e.g. "America/Los_Angeles"). Empty string = use browser TZ.
+   * Server-side validated against Go's tzdata.
+   */
+  timezone_user?: string
+  /**
+   * When true (default), the app prefixes `document.title` with the
+   * unread-notification count `(N)` and paints a coloured dot on the
+   * favicon. Disable to keep the tab title/icon static. (Phase 40 / 32.)
+   */
+  tab_badge_enabled?: boolean
+  /**
+   * When true (default), the app briefly flashes
+   * `"(!) ALERT — "` in front of `document.title` when a critical
+   * alert fires while the tab is in the background. Disabled
+   * automatically for users with `prefers-reduced-motion: reduce`.
+   * (Phase 40 / 32.)
+   */
+  critical_flash_enabled?: boolean
+  /**
+   * Global UI information-density preference. Flows from this single
+   * setting to:
+   *   - CSS variables (`--density-row-h`, `--density-pad-x`, ...) on
+   *     `body[data-density="..."]`, consumed by Tailwind utilities
+   *     `min-h-d-row`, `px-d-pad-x`, `py-d-pad-y`, `gap-d-gap`,
+   *     `text-d-base`.
+   *   - Shared components when called with `density="auto"` /
+   *     `padding="auto"` / `size="auto"`.
+   *
+   * Defaults to `'comfortable'` so existing users see no visual
+   * change. (Phase 40 / 44.)
+   */
+  ui_density?: 'compact' | 'comfortable' | 'spacious'
 }
 
 /** Per-endpoint toggle config for Tesla Fleet API calls. */
@@ -278,16 +325,29 @@ export interface BatteryReport {
 export interface Alert {
   id: number
   vehicle_id: number
-  type: 'geofence_exit' | 'geofence_enter' | 'low_battery' | 'charging_complete' | 'sentry_event' | 'speed_limit' | 'temperature' | 'software_update'
-  severity: 'info' | 'warning' | 'critical'
+  /** Free-form alert type. The backend slugifies the alert rule name; legacy
+   *  values include 'geofence_exit', 'low_battery', 'charging_complete', etc.
+   *  Always treat as `string` and tolerate unknown values at the UI layer. */
+  type: string
+  severity: 'info' | 'warning' | 'critical' | string
   title: string
   message: string
   is_read: boolean
   created_at: string
+  /** Drill-through metadata (Phase 40 / Prompt 14). Populated when the
+   *  notification log links to a still-existing alert rule. Used by
+   *  `getAlertDrillthroughHref()` (web/src/lib/alertDrillthrough.ts) to
+   *  deep-link from the alert into the relevant context page. */
+  rule_id?: number | null
+  rule_signal?: string | null
+  rule_severity?: AlertRuleSeverity | string | null
 }
 
 export type AlertRuleSeverity = 'info' | 'warn' | 'critical'
 export type AlertRuleOp = '=' | '!=' | '<' | '<=' | '>' | '>=' | 'changed' | 'between' | 'outside'
+export type AlertRuleTriggerMode = 'once' | 'repeat'
+export type AlertRuleKind = 'signal' | 'computed_metric'
+export type ComputedMetricOp = '>' | '>=' | '<' | '<=' | '=' | '!=' | '%_change_>' | '%_change_<'
 
 export interface AlertRule {
   id: number
@@ -304,6 +364,13 @@ export interface AlertRule {
   value_max?: number | null
   severity: AlertRuleSeverity
   cooldown_min: number
+  trigger_mode: AlertRuleTriggerMode
+  snoozed_until?: string | null
+  kind?: AlertRuleKind
+  metric_id?: string | null
+  metric_window?: string | null
+  metric_threshold?: number | null
+  metric_op?: ComputedMetricOp | null
   created_at: string
   updated_at: string
 }
@@ -313,8 +380,8 @@ export interface AlertRuleInput {
   description?: string | null
   enabled?: boolean
   vehicle_id?: number | null
-  signal_name: string
-  op: AlertRuleOp
+  signal_name?: string
+  op?: AlertRuleOp
   value_num?: number | null
   value_text?: string | null
   value_bool?: boolean | null
@@ -322,9 +389,43 @@ export interface AlertRuleInput {
   value_max?: number | null
   severity?: AlertRuleSeverity
   cooldown_min?: number
+  trigger_mode?: AlertRuleTriggerMode
+  snoozed_until?: string | null
+  kind?: AlertRuleKind
+  metric_id?: string | null
+  metric_window?: string | null
+  metric_threshold?: number | null
+  metric_op?: ComputedMetricOp | null
+}
+
+export interface ComputedMetricSummary {
+  id: string
+  label: string
+  unit: string
+  windows: string[]
+  ops: ComputedMetricOp[]
+}
+
+export interface ComputedMetricPreview {
+  kind: 'computed_metric'
+  metric_id: string
+  metric_window: string
+  metric_op: ComputedMetricOp
+  threshold: number
+  value: number
+  would_trigger: boolean
+  previous_value?: number
+  percent_change?: number
 }
 
 export type AlertRuleUpdate = Partial<AlertRuleInput>
+
+export interface AlertRuleSnoozeRequest {
+  /** Snooze for N minutes from now. Use <= 0 to clear an existing snooze. */
+  minutes?: number
+  /** ISO timestamp; past timestamps clear an existing snooze. */
+  until?: string
+}
 
 export interface AlertTestTarget {
   all_channels?: boolean
@@ -417,6 +518,8 @@ export interface NotificationLog {
   sent_at: string | null
   scheduled_at?: string
   latency_ms?: number
+  read_at?: string | null
+  archived_at?: string | null
 }
 
 export interface NotificationStats {
@@ -457,6 +560,20 @@ export interface ChatMessage {
 export interface ChatResponse {
   response: string
   session_id: string
+}
+
+/**
+ * Per-session metadata used to render the chatbot sidebar (Phase 40 / Prompt 56).
+ * `title` is null when the user hasn't renamed the session — the UI then
+ * falls back to `first_message`.
+ */
+export interface ChatSessionInfo {
+  id: string
+  title: string | null
+  first_message: string | null
+  message_count: number
+  last_message_at: string | null
+  created_at: string | null
 }
 
 import { resolveStyle, VEHICLE_STATE_ENTRIES, VEHICLE_STATES } from '@/types/fsm'
@@ -1810,6 +1927,33 @@ export type {
   SignalValueType,
 } from '@/types/signals';
 
+/** One result from the global /search endpoint. */
+export type SearchHitType =
+  | 'vehicle'
+  | 'drive'
+  | 'charging'
+  | 'alert'
+  | 'notification'
+  | 'geofence'
+  | 'automation'
+  | 'location'
+  | 'trip';
+
+export interface SearchHit {
+  type: SearchHitType
+  id: number
+  title: string
+  subtitle?: string
+  url: string
+  score: number
+  when?: string
+}
+
+export interface SearchResponse {
+  hits: SearchHit[]
+  query: string
+}
+
 export type {
   AutomationActionInput,
   AutomationActionStep,
@@ -1824,3 +1968,91 @@ export type {
   AutomationTriggerInput,
   AutomationTriggerStep,
 } from '@/types/automations';
+
+// === Pinned items (Phase 40 / Prompt 48) ===
+
+export type PinnedItemType =
+  | 'vehicle'
+  | 'widget'
+  | 'alert_rule'
+  | 'location'
+  | 'geofence'
+  | 'automation'
+  | 'dashboard'
+  | 'command'
+
+export interface PinnedItem {
+  id: number
+  user_id?: number | null
+  item_type: PinnedItemType
+  item_id: string
+  position: number
+  pinned_at: string
+  context?: string | null
+}
+
+// === Saved views (Phase 40 / Prompt 50) ===
+
+export interface SavedView {
+  id: number
+  user_id?: number | null
+  name: string
+  route: string
+  query: string
+  is_default: boolean
+  is_pinned: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface SavedViewCreateInput {
+  name: string
+  route: string
+  query: string
+  is_default?: boolean
+  is_pinned?: boolean
+  sort_order?: number
+}
+
+export interface SavedViewUpdateInput {
+  name?: string
+  query?: string
+  is_default?: boolean
+  is_pinned?: boolean
+  sort_order?: number
+}
+
+// ── Web Push (Phase 40 / Prompt 52) ────────────────────────────────────────
+
+/**
+ * One row of `push_subscriptions`. Mirrors `internal/models.PushSubscription`.
+ * The `keys` shape is intentionally NOT a nested object because the server
+ * stores `p256dh` / `auth` flat alongside `endpoint` (the wire shape is
+ * snake_case to match Go JSON tags; `camelCaseKeys()` also exposes
+ * camelCase aliases on every response).
+ */
+export interface PushSubscriptionRow {
+  id: number
+  user_id: number | null
+  endpoint: string
+  p256dh: string
+  auth: string
+  user_agent: string | null
+  created_at: string
+  last_used_at: string | null
+}
+
+/**
+ * Browser-side PushSubscription.toJSON() shape — POST body for
+ * `/push/subscribe`. The server validates `endpoint` is a well-formed
+ * https:// URL and that both keys are non-empty.
+ */
+export interface PushSubscribeBody {
+  endpoint: string
+  keys: {
+    p256dh: string
+    auth: string
+  }
+}
+

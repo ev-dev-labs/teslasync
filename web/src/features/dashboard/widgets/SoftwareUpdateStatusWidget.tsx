@@ -144,7 +144,7 @@ function FullView({
             <span className="text-[10px] text-white/40">
               {t('widget.updateAvailable', 'Update')}:
             </span>
-            <span className="text-xs font-semibold text-neon-cyan truncate">
+            <span className="text-xs font-semibold text-cyan-300 truncate">
               {updateVersion}
             </span>
           </div>
@@ -171,7 +171,7 @@ function FullView({
           )}
 
           {updateStatus === 'ready' && (
-            <div className="flex items-center gap-1.5 text-xs text-neon-green">
+            <div className="flex items-center gap-1.5 text-xs text-emerald-300">
               <CheckCircle2 className="h-3 w-3" />
               <span>{t('widget.readyToInstall', 'Ready to install')}</span>
             </div>

@@ -67,7 +67,7 @@ export default function DigitalTwinWidget({ vehicleId, size }: WidgetProps) {
       actions={
         <Link
           to="/digital-twin"
-          className="text-[10px] text-white/30 hover:text-neon-cyan transition-colors flex items-center gap-0.5"
+          className="text-[10px] text-white/30 hover:text-cyan-300 transition-colors flex items-center gap-0.5"
         >
           {t('widget.open', 'Open')} <ArrowUpRight className="h-3 w-3" />
         </Link>
@@ -80,6 +80,8 @@ export default function DigitalTwinWidget({ vehicleId, size }: WidgetProps) {
             <VehicleTwin
               {...twinState}
               size={twinSize}
+              vehicleId={vehicle?.id}
+              exteriorColor={vehicle?.exterior_color}
               driveIn
               className="relative z-10 drop-shadow-2xl"
             />

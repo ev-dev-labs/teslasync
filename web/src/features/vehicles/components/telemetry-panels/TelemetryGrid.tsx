@@ -26,10 +26,10 @@ export function TelemetryGrid({ state }: TelemetryGridProps) {
           value={`${fmtInt(state.battery_level)}%`}
           color={
             state.battery_level > 50
-              ? 'text-neon-green'
+              ? 'text-emerald-300'
               : state.battery_level > 20
-                ? 'text-neon-amber'
-                : 'text-neon-red'
+                ? 'text-amber-300'
+                : 'text-rose-300'
           }
           sub={`${fmtNumber(convertDistance(state.rated_range))} ${distanceUnit} range`}
         />
@@ -62,7 +62,7 @@ export function TelemetryGrid({ state }: TelemetryGridProps) {
           icon={BatteryCharging}
           label={t('common.charger', 'Charger')}
           value={state.is_charging ? `${fmtInt(state.charger_power)} kW` : 'Not charging'}
-          color={state.is_charging ? 'text-neon-green' : 'text-[var(--text-muted)]'}
+          color={state.is_charging ? 'text-emerald-300' : 'text-[var(--text-muted)]'}
           sub={
             state.is_charging && state.time_to_full_charge != null
               ? `Full in ${fmtNumber(state.time_to_full_charge)}h`
@@ -75,7 +75,7 @@ export function TelemetryGrid({ state }: TelemetryGridProps) {
           icon={Eye}
           label={t('common.sentry', 'Sentry')}
           value={state.sentry_mode ? 'Active' : 'Off'}
-          color={state.sentry_mode ? 'text-neon-red' : 'text-[var(--text-muted)]'}
+          color={state.sentry_mode ? 'text-rose-300' : 'text-[var(--text-muted)]'}
         />
       </StaggerItem>
     </StaggerContainer>

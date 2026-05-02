@@ -5,14 +5,44 @@ import {
   useSettings, useSaveSettings, useVehicles, useCarPreferences,
 } from '@/api/hooks/useSettings'
 import { GlassPanel, Button, IconBox, Input, Select } from '@/components/ui'
-import { Skeleton } from '@/components/feedback'
+import { Skeleton, DraftRecoveryBanner } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { useToast } from '@/components/feedback/Toast'
+import { useFormDraft } from '@/hooks/useFormDraft'
 import { parseSettingEnum, isSettingMiles, isSettingFahrenheit, isSettingPSI, isSettingBar } from '@/lib/parseSettingEnum'
 import { SettingField } from './SettingField'
 import {
   Settings as SettingsIcon, Save, Download, Car, CheckCircle, Clock,
 } from 'lucide-react'
+
+const DEFAULT_FORM: AppSettings = {
+  unit_of_length: 'km',
+  unit_of_temp: 'C',
+  unit_of_pressure: 'bar',
+  preferred_range: 'rated',
+  language: 'en',
+  base_cost_per_kwh: 0.12,
+  api_suspended: false,
+  theme: 'neon-cyan',
+  mode: 'dark',
+  custom_primary: '#00b4d8',
+  custom_accent: '#e63946',
+  gas_price_per_unit: 3.50,
+  gas_unit: 'gallon',
+  gas_efficiency_mpg: 25,
+  decimal_precision: 2,
+  quiet_hours_enabled: false,
+  quiet_hours_start: '22:00',
+  quiet_hours_end: '07:00',
+  alert_digest_mode: 'instant',
+  currency_symbol: '$',
+  locale: 'en-US',
+  tz_display_default: 'vehicle',
+  timezone_user: '',
+  tab_badge_enabled: true,
+  critical_flash_enabled: true,
+  ui_density: 'comfortable',
+}
 
 export function GeneralSettings() {
   const { t } = useTranslation('settings')
@@ -20,32 +50,41 @@ export function GeneralSettings() {
   const { data: settings, isLoading } = useSettings()
   const settingsMut = useSaveSettings()
 
-  const [form, setForm] = useState<AppSettings>({
-    unit_of_length: 'km',
-    unit_of_temp: 'C',
-    unit_of_pressure: 'bar',
-    preferred_range: 'rated',
-    language: 'en',
-    base_cost_per_kwh: 0.12,
-    api_suspended: false,
-    theme: 'neon-cyan',
-    mode: 'dark',
-    custom_primary: '#00b4d8',
-    custom_accent: '#e63946',
-    gas_price_per_unit: 3.50,
-    gas_unit: 'gallon',
-    gas_efficiency_mpg: 25,
-    decimal_precision: 2,
-    quiet_hours_enabled: false,
-    quiet_hours_start: '22:00',
-    quiet_hours_end: '07:00',
-    alert_digest_mode: 'instant',
+  // Persist form drafts to localStorage so a long edit session survives a tab
+  // close, an SW reload, or an auth redirect. The optional google_maps_api_key
+  // field is a client-side public-tier integration key (comparable to the theme
+  // setting) — not a server credential. If a true secret is ever added to this
+  // form, switch that field to a separate non-persisted useState.
+  const {
+    value: form,
+    setValue: setForm,
+    hasDraft,
+    draftSavedAt,
+    discardDraft,
+  } = useFormDraft<AppSettings>('settings:general', DEFAULT_FORM, {
+    version: 1,
+    debounceMs: 800,
+    maxAgeMs: 24 * 60 * 60 * 1000,
+    skipPersist: (value) => {
+      if (settingsMut.isPending) return true
+      if (!settings) return true
+      // Never persist the unmodified server snapshot as a "draft".
+      try {
+        return JSON.stringify(value) === JSON.stringify(settings)
+      } catch {
+        return false
+      }
+    },
   })
   const [saved, setSaved] = useState(false)
 
   const [formInited, setFormInited] = useState(false)
   if (settings && !formInited) {
-    setForm(settings)
+    // Only hydrate from the server snapshot if no draft was restored — otherwise
+    // we'd clobber the user's in-progress edits.
+    if (!hasDraft) {
+      setForm(settings)
+    }
     setFormInited(true)
   }
 
@@ -82,7 +121,7 @@ export function GeneralSettings() {
 
   return (
     <FadeIn delay={0.1}>
-      <GlassPanel className="p-6 space-y-6">
+      <GlassPanel className="p-6 space-y-6" data-tour="settings-units">
         <div className="flex items-center gap-3">
           <IconBox color="cyan">
             <SettingsIcon className="h-5 w-5" />
@@ -92,6 +131,16 @@ export function GeneralSettings() {
             <p className="text-xs text-[var(--text-muted)]">{t('app.subtitle', 'Units, language, and cost preferences')}</p>
           </div>
         </div>
+
+        <DraftRecoveryBanner
+          hasDraft={hasDraft}
+          draftSavedAt={draftSavedAt}
+          onDiscard={() => {
+            discardDraft()
+            if (settings) setForm(settings)
+          }}
+          itemNoun={t('draft.noun.settings', 'Settings')}
+        />
 
         {isLoading ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -191,9 +240,68 @@ export function GeneralSettings() {
                 ]}
               />
 
+              <Select
+                label={t('app.currency', 'Currency')}
+                value={form.currency_symbol ?? '$'}
+                onChange={e => setForm({ ...form, currency_symbol: e.target.value })}
+                options={[
+                  { value: '$', label: 'USD ($)' },
+                  { value: '€', label: 'EUR (€)' },
+                  { value: '£', label: 'GBP (£)' },
+                  { value: 'C$', label: 'CAD (C$)' },
+                  { value: 'A$', label: 'AUD (A$)' },
+                  { value: '¥', label: 'JPY (¥)' },
+                  { value: '元', label: 'CNY (元)' },
+                  { value: 'CHF', label: 'CHF (CHF)' },
+                  { value: 'kr', label: 'SEK / NOK / DKK (kr)' },
+                  { value: '₹', label: 'INR (₹)' },
+                ]}
+              />
+
+              <Select
+                label={t('app.locale', 'Number & Date Locale')}
+                value={form.locale ?? 'en-US'}
+                onChange={e => setForm({ ...form, locale: e.target.value })}
+                options={[
+                  { value: 'en-US', label: 'English (US) — 1,234.56' },
+                  { value: 'en-GB', label: 'English (UK) — 1,234.56' },
+                  { value: 'de-DE', label: 'Deutsch (DE) — 1.234,56' },
+                  { value: 'fr-FR', label: 'Français (FR) — 1 234,56' },
+                  { value: 'es-ES', label: 'Español (ES) — 1.234,56' },
+                  { value: 'ja-JP', label: '日本語 (JP) — 1,234.56' },
+                  { value: 'zh-CN', label: '简体中文 (CN) — 1,234.56' },
+                ]}
+              />
+
+              <Select
+                label={t('app.tzDisplayDefault', 'Time Zone Display')}
+                value={form.tz_display_default ?? 'vehicle'}
+                onChange={e => setForm({ ...form, tz_display_default: e.target.value as 'vehicle' | 'user' | 'utc' })}
+                options={[
+                  { value: 'vehicle', label: t('app.tzVehicle', "Vehicle's local time (recommended)") },
+                  { value: 'user', label: t('app.tzUser', 'My local time') },
+                  { value: 'utc', label: t('app.tzUtc', 'UTC') },
+                ]}
+              />
+
+              <SettingField label={t('app.timezoneUser', 'My Time Zone Override')}>
+                <Input
+                  type="text"
+                  value={form.timezone_user ?? ''}
+                  onChange={e => setForm({ ...form, timezone_user: e.target.value })}
+                  placeholder={t('app.timezoneUserPlaceholder', 'e.g. America/Los_Angeles (leave blank for browser default)')}
+                  className="w-full px-3 py-2.5 text-sm"
+                />
+                <p className="mt-1 text-[10px] text-[var(--text-muted)]">
+                  {t('app.timezoneUserHint', "IANA tz name. Useful when travelling but you'd rather see times in your home zone.")}
+                </p>
+              </SettingField>
+
               <SettingField label={t('app.electricityCost', 'Electricity Cost (per kWh)')}>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-sm">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-sm">
+                    {form.currency_symbol ?? '$'}
+                  </span>
                   <Input
                     type="number"
                     step="0.01"
@@ -207,7 +315,9 @@ export function GeneralSettings() {
               <SettingField label={t('app.gasPrice', 'Gas Price (for EV vs ICE comparison)')}>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-sm">$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-sm">
+                      {form.currency_symbol ?? '$'}
+                    </span>
                     <Input
                       type="number"
                       step="0.01"
@@ -247,7 +357,7 @@ export function GeneralSettings() {
                 <p className="text-[10px] text-[var(--text-muted)] mt-1">
                   {t('app.googleMapsHint', 'Optional — enables satellite views, Places autocomplete, and enhanced geocoding.')}{' '}
                   {t('app.getKeyAt', 'Get a key at')}{' '}
-                  <a href="https://console.cloud.google.com" target="_blank" rel="noreferrer" className="text-neon-cyan hover:underline">console.cloud.google.com</a>
+                  <a href="https://console.cloud.google.com" target="_blank" rel="noreferrer" className="text-cyan-300 hover:underline">console.cloud.google.com</a>
                 </p>
               </SettingField>
             </div>
@@ -262,7 +372,7 @@ export function GeneralSettings() {
             {t('app.save', 'Save Settings')}
           </Button>
           {saved && (
-            <span className="text-sm text-neon-green flex items-center gap-1 animate-in fade-in">
+            <span className="text-sm text-emerald-300 flex items-center gap-1 animate-in fade-in">
               <CheckCircle className="h-4 w-4" /> {t('app.settingsSaved', 'Settings saved')}
             </span>
           )}

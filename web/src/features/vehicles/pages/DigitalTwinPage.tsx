@@ -7,7 +7,7 @@ import { GlassPanel } from '@/components/ui';
 import { KVList, StatusBadge } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { EmptyState } from '@/components/feedback';
-import { VehicleTwin } from '@/components/vehicles';
+import { VehicleTwin, VehiclePaintPicker } from '@/components/vehicles';
 import { Select } from '@/components/ui';
 import { buildTwinState, parseWindowState } from '@/lib/vehicleState';
 import { Info, Car } from 'lucide-react';
@@ -105,8 +105,23 @@ export default function DigitalTwinPage() {
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Main visualization */}
           <FadeIn className="flex-1 flex items-center justify-center">
-            <GlassPanel className="p-6 md:p-8">
-              <VehicleTwin {...twinState} size="lg" interactive driveIn />
+            <GlassPanel className="p-6 md:p-8 w-full">
+              <VehicleTwin
+                {...twinState}
+                size="lg"
+                interactive
+                driveIn
+                vehicleId={vehicle?.id}
+                exteriorColor={vehicle?.exterior_color}
+              />
+              {vehicle?.id ? (
+                <div className="mt-5 flex justify-center">
+                  <VehiclePaintPicker
+                    vehicleId={vehicle.id}
+                    exteriorColor={vehicle.exterior_color}
+                  />
+                </div>
+              ) : null}
               {twinState.lastUpdated && (
                 <p className="text-center text-xs text-white/40 mt-4">
                   {t('digitalTwin.lastUpdated', 'Last updated')}: {new Date(twinState.lastUpdated).toLocaleTimeString()}

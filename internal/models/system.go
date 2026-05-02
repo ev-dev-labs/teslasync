@@ -329,6 +329,44 @@ type Settings struct {
 	QuietHoursStart   string  `json:"quiet_hours_start"`
 	QuietHoursEnd     string  `json:"quiet_hours_end"`
 	AlertDigestMode   string  `json:"alert_digest_mode"`
+	// CurrencySymbol is the Unicode glyph rendered alongside currency
+	// values (e.g. "$", "€", "£"). The frontend uses this verbatim;
+	// no ISO 4217 lookup is performed on the wire. Defaults to "$".
+	CurrencySymbol string `json:"currency_symbol"`
+	// Locale is a BCP-47 tag (e.g. "en-US", "de-DE", "fr-FR") used by
+	// `Intl.NumberFormat` for thousands/decimal separators on the
+	// frontend. Defaults to "en-US".
+	Locale string `json:"locale"`
+	// TzDisplayDefault selects which IANA timezone the frontend uses
+	// when rendering timestamps without an explicit `in` override
+	// on a `<DateTime>`. One of "vehicle" (car local time, falling
+	// back to user when the car has no known TZ), "user" (browser
+	// local), or "utc". Defaults to "vehicle" (Phase 40 / 22).
+	TzDisplayDefault string `json:"tz_display_default"`
+	// TimezoneUser overrides the browser's detected timezone when set
+	// (useful when the user is travelling but wants timestamps in their
+	// home zone). Empty string = use browser TZ. Validated server-side
+	// against Go's tzdata so invalid IANA names are rejected.
+	TimezoneUser string `json:"timezone_user"`
+	// TabBadgeEnabled toggles the browser-tab signalling that prefixes
+	// `document.title` with `(N)` and paints a coloured dot on the
+	// favicon when there are unread notifications. Defaults to true so
+	// existing users get the feature without an opt-in. (Phase 40 / 32.)
+	TabBadgeEnabled bool `json:"tab_badge_enabled"`
+	// CriticalFlashEnabled toggles the brief title-flash that fires
+	// when a critical alert arrives while the tab is in the
+	// background. Defaults to true; honoured alongside the
+	// browser-level `prefers-reduced-motion` preference, which
+	// suppresses the flash regardless of this setting. (Phase 40 / 32.)
+	CriticalFlashEnabled bool `json:"critical_flash_enabled"`
+	// UIDensity controls the global information-density preference
+	// applied across the React frontend (table row heights, card
+	// padding, button sizing). One of "compact" (32px rows / tight
+	// padding), "comfortable" (44px rows / default padding), or
+	// "spacious" (56px rows / loose padding). Defaults to
+	// "comfortable" so existing users see no visual change.
+	// (Phase 40 / 44.)
+	UIDensity string `json:"ui_density"`
 }
 
 // Embedding mirrors the post-migration `embeddings` schema (pgvector-backed).

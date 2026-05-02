@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, Copy, Check, Trash2, Eye, ExternalLink } from 'lucide-react';
-import { Modal, Button, Toggle, Select, Input } from '@/components/ui';
+import { Link, Trash2, Eye, ExternalLink } from 'lucide-react';
+import { Modal, Button, CopyButton, Toggle, Select, Input } from '@/components/ui';
 import { GlassPanel } from '@/components/ui';
 import { Spinner } from '@/components/feedback';
 import { useCreateShareLink, useShareLinks, useRevokeShareLink } from '@/api/hooks/useSharing';
@@ -20,7 +20,6 @@ export function ShareDriveDialog({ driveId, open, onClose }: ShareDriveDialogPro
   const revokeShare = useRevokeShareLink(driveId);
 
   const [shareUrl, setShareUrl] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const [includeSpeed, setIncludeSpeed] = useState(true);
   const [includeTelemetry, setIncludeTelemetry] = useState(false);
   const [expiryDays, setExpiryDays] = useState('30');
@@ -36,21 +35,12 @@ export function ShareDriveDialog({ driveId, open, onClose }: ShareDriveDialogPro
     setShareUrl(`${window.location.origin}/s/${result.token}`);
   };
 
-  const handleCopy = async () => {
-    if (shareUrl) {
-      await navigator.clipboard.writeText(shareUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
   const handleRevoke = async (token: string) => {
     await revokeShare.mutateAsync(token);
   };
 
   const handleClose = () => {
     setShareUrl(null);
-    setCopied(false);
     setTitle('');
     onClose();
   };
@@ -109,13 +99,14 @@ export function ShareDriveDialog({ driveId, open, onClose }: ShareDriveDialogPro
             </p>
             <Input value={shareUrl} readOnly />
             <div className="flex gap-2">
-              <Button onClick={handleCopy} className="flex-1">
-                {copied ? (
-                  <><Check className="h-4 w-4 mr-2" />{t('share.copied', 'Copied!')}</>
-                ) : (
-                  <><Copy className="h-4 w-4 mr-2" />{t('share.copy', 'Copy Link')}</>
-                )}
-              </Button>
+              <CopyButton
+                text={shareUrl}
+                variant="primary"
+                size="md"
+                withToast
+                label={t('share.copy', 'Copy Link')}
+                className="flex-1"
+              />
               <Button
                 variant="outline"
                 onClick={() => window.open(shareUrl, '_blank')}
@@ -160,16 +151,14 @@ export function ShareDriveDialog({ driveId, open, onClose }: ShareDriveDialogPro
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Button
+                    <CopyButton
+                      text={`${window.location.origin}/s/${share.token}`}
                       variant="ghost"
                       size="sm"
-                      onClick={() => {
-                        navigator.clipboard.writeText(`${window.location.origin}/s/${share.token}`);
-                      }}
-                      aria-label={t('share.copyLink', 'Copy link')}
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                    </Button>
+                      iconOnly
+                      withToast
+                      ariaLabel={t('share.copyLink', 'Copy link')}
+                    />
                     <Button
                       variant="ghost"
                       size="sm"

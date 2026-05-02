@@ -39,25 +39,32 @@ func NewSettingsRepo(db *DB) *SettingsRepo {
 // values without an extra round-trip.
 func settingsDefaults() *models.Settings {
 	return &models.Settings{
-		UnitOfLength:      "km",
-		UnitOfTemp:        "C",
-		UnitOfPressure:    "bar",
-		PreferredRange:    "rated",
-		Language:          "en",
-		BaseCostPerKWh:    0,
-		APISuspended:      false,
-		Theme:             "neon-cyan",
-		Mode:              "dark",
-		CustomPrimary:     "#00b4d8",
-		CustomAccent:      "#e63946",
-		GasPricePerUnit:   3.50,
-		GasUnit:           "gallon",
-		GasEfficiencyMPG:  25,
-		DecimalPrecision:  1,
-		QuietHoursEnabled: false,
-		QuietHoursStart:   "22:00",
-		QuietHoursEnd:     "07:00",
-		AlertDigestMode:   "instant",
+		UnitOfLength:         "km",
+		UnitOfTemp:           "C",
+		UnitOfPressure:       "bar",
+		PreferredRange:       "rated",
+		Language:             "en",
+		BaseCostPerKWh:       0,
+		APISuspended:         false,
+		Theme:                "neon-cyan",
+		Mode:                 "dark",
+		CustomPrimary:        "#00b4d8",
+		CustomAccent:         "#e63946",
+		GasPricePerUnit:      3.50,
+		GasUnit:              "gallon",
+		GasEfficiencyMPG:     25,
+		DecimalPrecision:     1,
+		QuietHoursEnabled:    false,
+		QuietHoursStart:      "22:00",
+		QuietHoursEnd:        "07:00",
+		AlertDigestMode:      "instant",
+		CurrencySymbol:       "$",
+		Locale:               "en-US",
+		TzDisplayDefault:     "vehicle",
+		TimezoneUser:         "",
+		TabBadgeEnabled:      true,
+		CriticalFlashEnabled: true,
+		UIDensity:            "comfortable",
 	}
 }
 
@@ -174,6 +181,34 @@ func applySettingsRow(s *models.Settings, key, _ string, vText *string, vNum *fl
 		if vText != nil {
 			s.AlertDigestMode = *vText
 		}
+	case "currency_symbol":
+		if vText != nil {
+			s.CurrencySymbol = *vText
+		}
+	case "locale":
+		if vText != nil {
+			s.Locale = *vText
+		}
+	case "tz_display_default":
+		if vText != nil {
+			s.TzDisplayDefault = *vText
+		}
+	case "timezone_user":
+		if vText != nil {
+			s.TimezoneUser = *vText
+		}
+	case "tab_badge_enabled":
+		if vBool != nil {
+			s.TabBadgeEnabled = *vBool
+		}
+	case "critical_flash_enabled":
+		if vBool != nil {
+			s.CriticalFlashEnabled = *vBool
+		}
+	case "ui_density":
+		if vText != nil {
+			s.UIDensity = *vText
+		}
 	}
 }
 
@@ -242,6 +277,11 @@ func (r *SettingsRepo) Upsert(ctx context.Context, s *models.Settings) error {
 		{"quiet_hours_start", s.QuietHoursStart},
 		{"quiet_hours_end", s.QuietHoursEnd},
 		{"alert_digest_mode", s.AlertDigestMode},
+		{"currency_symbol", s.CurrencySymbol},
+		{"locale", s.Locale},
+		{"tz_display_default", s.TzDisplayDefault},
+		{"timezone_user", s.TimezoneUser},
+		{"ui_density", s.UIDensity},
 	}
 	numRows := []rowNum{
 		{"base_cost_per_kwh", s.BaseCostPerKWh},
@@ -252,6 +292,8 @@ func (r *SettingsRepo) Upsert(ctx context.Context, s *models.Settings) error {
 	boolRows := []rowBool{
 		{"api_suspended", s.APISuspended},
 		{"quiet_hours_enabled", s.QuietHoursEnabled},
+		{"tab_badge_enabled", s.TabBadgeEnabled},
+		{"critical_flash_enabled", s.CriticalFlashEnabled},
 	}
 
 	for _, rw := range textRows {

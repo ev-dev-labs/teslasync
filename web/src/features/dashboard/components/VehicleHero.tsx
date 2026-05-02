@@ -94,12 +94,12 @@ export function VehicleHero({
               <div className="mb-4 p-3 rounded-xl bg-neon-green/5 border border-neon-green/10">
                 <div className="flex items-center gap-2 mb-2">
                   <BatteryCharging className="h-4 w-4 text-neon-green animate-pulse" />
-                  <span className="text-sm font-medium text-neon-green">{t('hero.charging', 'Charging')}</span>
+                  <span className="text-sm font-medium text-emerald-300">{t('hero.charging', 'Charging')}</span>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-center text-xs">
                   <div>
                     <p className="text-white/50">{t('hero.chargePower', 'Power')}</p>
-                    <p className="text-sm font-bold text-neon-green">{fmtNumber(state.charger_power)} kW</p>
+                    <p className="text-sm font-bold text-emerald-300">{fmtNumber(state.charger_power)} kW</p>
                   </div>
                   <div>
                     <p className="text-white/50">{t('hero.chargeRate', 'Rate')}</p>

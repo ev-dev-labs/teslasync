@@ -108,6 +108,82 @@ func (c *RedisSignalCache) Update(ctx context.Context, vehicleID int64, signals 
 	return nil
 }
 
+// RestampLegacy rewrites legacy scalar HSET fields under
+// vehicle:{vehicleID}:signals as full timestamp-aware envelopes using
+// time.Now() as the synthetic restamp timestamp. It returns the count of
+// fields that were restamped.
+//
+// Legacy entries are identified by attempting envelope parsing: any field
+// that does NOT decode as a valid {encoding,value,timestamp,source}
+// envelope is treated as a legacy scalar and re-encoded via
+// decodeLegacySignalValue → encodeTimestampedSignalValue. Valid envelopes
+// are skipped so their original timestamps are preserved bit-for-bit.
+//
+// All restamped fields are written in a single HSET round-trip and the
+// key TTL is refreshed via the same Expire path that Update uses.
+// {invalid: true} marker values are skipped to match Update's contract.
+//
+// On HSET failure the function returns the wrapped error WITHOUT having
+// issued any HDEL or DEL — the caller can safely retry on the next Warm.
+func (c *RedisSignalCache) RestampLegacy(ctx context.Context, vehicleID int64) (int, error) {
+	key := fmt.Sprintf("vehicle:%d:signals", vehicleID)
+
+	vals, err := c.rdb.HGetAll(ctx, key).Result()
+	if err != nil {
+		return 0, fmt.Errorf("redis HGETALL %s: %w", key, err)
+	}
+	if len(vals) == 0 {
+		return 0, nil
+	}
+
+	now := time.Now().UTC()
+	fields := make([]interface{}, 0, len(vals)*2)
+
+	for field, raw := range vals {
+		// Skip valid envelopes — their original Timestamp must be preserved
+		// bit-for-bit so freshness windows are not falsely refreshed.
+		if _, ok, parseErr := parseRedisSignalValueEnvelope(raw, false); ok && parseErr == nil {
+			continue
+		}
+
+		decoded := decodeLegacySignalValue(raw)
+		if decoded == nil {
+			continue
+		}
+		// Skip {invalid: true} markers from Tesla, matching Update's contract.
+		if im, isMap := decoded.(map[string]interface{}); isMap {
+			if inv, has := im["invalid"]; has {
+				if b, isBool := inv.(bool); isBool && b {
+					continue
+				}
+			}
+		}
+
+		encoded, encErr := encodeTimestampedSignalValue(decoded, now)
+		if encErr != nil {
+			return 0, fmt.Errorf("encode restamped redis signal %s: %w", field, encErr)
+		}
+		fields = append(fields, field, encoded)
+	}
+
+	if len(fields) == 0 {
+		return 0, nil
+	}
+
+	if err := c.rdb.HSet(ctx, key, fields...).Err(); err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("redis signal cache: restamp HSET failed")
+		return 0, fmt.Errorf("redis HSET restamp %s: %w", key, err)
+	}
+
+	// Refresh TTL via the same Expire call Update uses so actively-warmed
+	// vehicles keep the canonical 7-day TTL.
+	if err := c.rdb.Expire(ctx, key, signalKeyTTL).Err(); err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("redis signal cache: restamp EXPIRE failed")
+	}
+
+	return len(fields) / 2, nil
+}
+
 // IsLiveSignalFresh reports whether a timestamp-aware signal value is fresh
 // enough for cross-pod live-state reads. Zero timestamps have unknown freshness.
 func IsLiveSignalFresh(value *Value, now time.Time) bool {

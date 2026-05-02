@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Palette } from 'lucide-react'
 import { Input } from '@/components/ui'
 import { ToolCard } from '../ToolCard'
-import { CopyButton } from '../CopyButton'
+import { CopyButton } from '@/components/ui'
 import { rgbToHsl } from '../helpers'
 
 export function ColorConverterTool() {

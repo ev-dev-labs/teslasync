@@ -18,7 +18,7 @@ export function SecurityPanel({ securityData, remoteStartEnabled }: SecurityPane
   return (
     <GlassPanel className="p-6 h-full">
       <h3 className="section-title flex items-center gap-2 mb-5">
-        <Shield className="h-4 w-4 text-neon-cyan" /> {t('common.security', 'Security')}
+        <Shield className="h-4 w-4 text-cyan-300" /> {t('common.security', 'Security')}
       </h3>
       {hasData ? (
         <div className="space-y-4">

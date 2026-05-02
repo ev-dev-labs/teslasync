@@ -13,6 +13,10 @@ export const telemetryKeys = {
   signalHistory: (vehicleId: number, signal: string, hours: number) => ['signal-history', vehicleId, signal, hours] as const,
   signalLog: (vehicleId: number, signal: string, hours: number, page: number) => ['signal-log', vehicleId, signal, hours, page] as const,
   signalDiff: (vehicleId: number, signal: string, from: string, to: string) => ['signal-diff', vehicleId, signal, from, to] as const,
+  signalDiffServer: (vehicleId: number, atA: string, atB: string, signalsCsv: string) =>
+    ['signal-diff-server', vehicleId, atA, atB, signalsCsv] as const,
+  signalSnapshot: (vehicleId: number, at: string, signalsCsv: string) =>
+    ['signal-snapshot', vehicleId, at, signalsCsv] as const,
   signalGaps: (vehicleId: number) => ['signal-gaps', vehicleId] as const,
   mqttStatus: ['mqtt-status'] as const,
 };
@@ -90,6 +94,98 @@ export function useSignalDiff(vehicleId: number, signal: string, from: string, t
     queryFn: () =>
       request<SignalHistoryResponse>(`/signals/${vehicleId}/${signal}/history?from=${from}&to=${to}`),
     enabled: vehicleId > 0 && !!signal && !!from && !!to,
+  });
+}
+
+// ─── Phase-40 / Prompt 58 — server-side diff & point-in-time snapshot ─────
+
+export type SignalSourceLayer = 'l1' | 'l2' | 'log' | 'stale' | 'unknown';
+
+export interface SignalSnapshotEntry {
+  value: unknown;
+  timestamp?: string;
+  source?: SignalSourceLayer;
+  age_ms?: number;
+}
+
+export interface SignalSnapshotResponse {
+  vehicle_id: number;
+  at?: string;
+  count: number;
+  signals: Record<string, SignalSnapshotEntry>;
+}
+
+export interface SignalDiffRow {
+  name: string;
+  value_a: unknown;
+  value_b: unknown;
+  source_a?: SignalSourceLayer;
+  source_b?: SignalSourceLayer;
+  age_ms_a?: number;
+  age_ms_b?: number;
+  changed: boolean;
+}
+
+export interface SignalDiffServerResponse {
+  vehicle_id: number;
+  at_a: string;
+  at_b: string;
+  count: number;
+  data: SignalDiffRow[];
+}
+
+/**
+ * Phase-40 / Prompt 58 — fetch a point-in-time signal snapshot. Pass
+ * `at=''` to read live state. Supplying a CSV of signal names narrows the
+ * server-side response so dense vehicles don't ship 200+ values per call.
+ */
+export function useSignalSnapshot(
+  vehicleId: number,
+  at: string,
+  signalsCsv: string = '',
+  options?: { enabled?: boolean; refetchInterval?: number },
+) {
+  return useQuery({
+    queryKey: telemetryKeys.signalSnapshot(vehicleId, at, signalsCsv),
+    queryFn: () => {
+      const usp = new URLSearchParams();
+      if (at) usp.set('at', at);
+      if (signalsCsv) usp.set('signals', signalsCsv);
+      const qs = usp.toString();
+      return request<SignalSnapshotResponse>(
+        `/signals/${vehicleId}/snapshot${qs ? `?${qs}` : ''}`,
+      );
+    },
+    enabled: (options?.enabled ?? true) && vehicleId > 0,
+    refetchInterval: options?.refetchInterval,
+  });
+}
+
+/**
+ * Phase-40 / Prompt 58 — fetch the server-side diff between two snapshots.
+ * Unchanged signals are filtered out by the backend so the response stays
+ * compact.
+ */
+export function useSignalDiffServer(
+  vehicleId: number,
+  atA: string,
+  atB: string,
+  signalsCsv: string = '',
+  options?: { enabled?: boolean },
+) {
+  return useQuery({
+    queryKey: telemetryKeys.signalDiffServer(vehicleId, atA, atB, signalsCsv),
+    queryFn: () => {
+      const usp = new URLSearchParams();
+      if (atA) usp.set('at_a', atA);
+      if (atB) usp.set('at_b', atB);
+      if (signalsCsv) usp.set('signals', signalsCsv);
+      return request<SignalDiffServerResponse>(
+        `/signals/${vehicleId}/diff?${usp.toString()}`,
+      );
+    },
+    enabled: (options?.enabled ?? true) && vehicleId > 0 && !!atA && !!atB,
+    staleTime: STALE_TIMES.STANDARD,
   });
 }
 

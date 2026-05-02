@@ -72,11 +72,16 @@ type DriveState struct {
 }
 
 type VehicleState struct {
-	Odometer        float64 `json:"odometer"`
-	Locked          bool    `json:"locked"`
-	SentryMode      bool    `json:"sentry_mode"`
-	SoftwareUpdate  SoftwareUpdateState `json:"software_update"`
-	Timestamp       int64   `json:"timestamp"`
+	Odometer       float64             `json:"odometer"`
+	Locked         bool                `json:"locked"`
+	SentryMode     bool                `json:"sentry_mode"`
+	SoftwareUpdate SoftwareUpdateState `json:"software_update"`
+	// Timezone is the IANA tz database name reported by the car
+	// (e.g. "America/Los_Angeles"). The worker persists this on every
+	// successful poll so vehicle-anchored timestamps render in the car's
+	// local time (Phase 40 / 22).
+	Timezone  string `json:"timezone"`
+	Timestamp int64  `json:"timestamp"`
 }
 
 type SoftwareUpdateState struct {

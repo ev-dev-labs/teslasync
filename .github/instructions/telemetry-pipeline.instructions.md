@@ -4,6 +4,34 @@ applyTo: "internal/api/telemetry*,internal/database/*_repo.go,internal/models/**
 
 # Telemetry Data Pipeline Instructions
 
+> **⚠️ PHASE-42 IN FLIGHT — Forward-only Tesla pipeline rewrite.**
+>
+> The rules below describe the CURRENT (pre-phase-42) architecture and
+> remain authoritative for any work that touches the existing telemetry
+> code paths. However:
+>
+> - **DO NOT add new code under `internal/telemetry/*`.** That directory
+>   is tombstoned by phase-42 prompt 0080. Any new ingest logic goes
+>   under `internal/tesla/normalize` and routes through
+>   `(*normalize.Pipeline).Process` (the single entry point).
+> - **DO NOT add new hand-written enum parsers** under
+>   `internal/enums/parse_*`. They are replaced by generated code from
+>   the vendored Tesla proto (`internal/tesla/protomodel/`).
+> - **DO NOT add new tables that mirror Fleet Telemetry fields.**
+>   Phase-42 introduces an SI-canonical schema; legacy snapshot tables
+>   (`positions`, `*_snapshots`, `charging_telemetry`, `vehicle_units`,
+>   etc.) are dropped via `DROP CASCADE` in prompt 0050.
+> - **The layered live-state contract (SignalStore L1 + Redis L2 +
+>   signal_log durable) is preserved** by phase-42. SignalStore stays
+>   the hot path; Redis stays the cross-pod cache; signal_log stays the
+>   change feed. The rules in this file about that layering remain
+>   correct after phase-42 lands.
+> - When phase-42 prompts 0001 (ADR-004) and 0002
+>   (`tesla-pipeline.instructions.md`) execute, those become the
+>   canonical sources for the new pipeline. THIS file is preserved as
+>   the contract for the surviving telemetry handlers, repos, and
+>   workers.
+
 These rules protect the current Redis + SignalStore + signal_log architecture. They
 are non-regression requirements for any telemetry, repository, model, or worker change.
 
@@ -37,6 +65,13 @@ DO NOT remove SignalStore because Redis exists.
 DO NOT route FSM/reconciliation/session hot-path reads through Redis by default.
 DO NOT make Redis a synchronous blocker for telemetry ingestion.
 DO NOT use Redis as historical truth.
+DO NOT silently drop legacy zero-Timestamp or stale Redis values at the live-store
+  boundary. Freshness is informational metadata exposed via
+  `signal.IsLiveSignalFresh`, not a filter that erases values from
+  `LiveSignalStore.GetSignal` / `GetAll`. Callers receive the full per-signal
+  union of L1 and L2 and decide how to use it.
+DO NOT add HDEL / DEL / field deletion to the Warm restamp path; restamp
+  must only re-encode in place under `vehicle:{vehicleID}:signals`.
 DO NOT claim FSM/reconciliation is active-active across pods without vehicle ownership.
 
 DO update SignalStore first on every telemetry batch.
@@ -44,6 +79,20 @@ DO mirror to Redis HSET `vehicle:{vehicleID}:signals` for cross-pod live state.
 DO publish `vehicle_update` through Redis channel `vehicle_signals` for multi-pod SSE.
 DO use Redis list `signal_log:backlog` only as bounded overflow/crash recovery.
 DO use signal_log for history, charts, replay, and point-in-time snapshots.
+DO use `signal_log` `SnapshotAt(ctx, vehicleID, now)` as a current-state
+  fallback in current-state assemblers (e.g. `BuildStateFromSignalStore`)
+  for fields the live store left at their Go zero/empty value. This is a
+  signal_log read (ADR-001 compliant) and is explicitly distinct from the
+  forbidden snapshot-table reads above; live (L1+L2) values always win and
+  the fallback only fills holes after a pod restart, a Warm miss, or before
+  fresh telemetry arrives.
+DO use the per-signal merge rule when combining L1 and L2: newer non-zero
+  Timestamp wins; ties on identical non-zero Timestamps prefer L2; legacy
+  zero-Timestamp loses to any non-zero Timestamp; both-zero L1 wins.
+DO let `HybridLiveSignalStore.Warm` self-heal legacy scalar Redis entries by
+  calling `RedisSignalCache.RestampLegacy` before hydrating L1. Restamp is
+  idempotent, value-preserving, refreshes the key TTL, and never deletes
+  fields; partial-failure must surface a wrapped error WITHOUT mutating L1.
 DO use `LIVE_SIGNAL_STORE_MODE=local` as the rollback switch for Redis-backed live reads.
 ```
 
@@ -63,14 +112,45 @@ telemetry/FSM owner plus API-only reader pods, or remain single-pod for telemetr
 
 ## Freshness and SSE Semantics
 
-Cross-pod live reads use a 2-minute freshness threshold. Values older than that are
-stale. Legacy scalar Redis values that lack timestamps have unknown freshness and must
-not be presented as fresh live data.
+Cross-pod live reads classify any value older than 2 minutes as stale, and any
+legacy scalar Redis value without a timestamp as unknown freshness. This
+classification is exposed to callers via `signal.IsLiveSignalFresh(value, now)`
+as informational metadata; the live-store boundary itself does not silently
+drop stale or zero-Timestamp values from `GetSignal`/`GetAll`. Callers receive
+the full per-signal union of L1 and L2 and decide whether to render, route, or
+suppress stale data.
 
 Redis Pub/Sub `vehicle_update` SSE fanout is best-effort. It is not durable replay.
 Clients must recover missed current state through polling/live reads. Alert when the
 `vehicle_update` drop rate is sustained above 0.1% over 5 minutes or Redis subscription
 failure lasts more than 60 seconds.
+
+## Change Feed vs State Reads (ADR-002)
+
+`signal_log` is a **change feed**, NOT a state table. Tesla Fleet Telemetry only emits
+a field when BOTH the signal's `interval_seconds` has elapsed AND the value has changed
+(see the [Tesla Fleet Telemetry System Behavior](https://developer.tesla.com/docs/fleet-api/fleet-telemetry#system-behavior)
+spec), so unchanged signals are never re-sent. A row at `(vehicle_id, signal, t)`
+reflects the moment a value CHANGED, not the prevailing value at `t`. Per ADR-002 in
+`.github/ARCHITECTURE.md`, all point-in-time state reads MUST go through the
+`signal.StateReader` port, which forward-folds the change feed under SQL.
+
+**Hot-path vs cold-path.** `signal.StateReader` is for **cold-path reads**: HTTP
+handlers, warmup, chatbot — anything that asks "what is the current value of X for
+vehicle V?". The **hot path** (telemetry ingest, FSM/reconciliation, session and
+drive/charge boundary detection) keeps reading from the in-process `signal.Store` (L1)
+and Redis (L2) per the Live State Layering contract above. Do NOT replace L1/L2
+hot-path reads with `signal.StateReader` — that would couple every signal write to a
+DB roundtrip and break the bounded-side-effects ingest model.
+
+```text
+❌ DO NOT call SnapshotAt, SignalAt, SignalTracePivot, SignalTracePivotFlat, SnapshotBetween — those will be removed.
+❌ DO NOT add new methods to database.SignalLogReader that return point-in-time state.
+❌ DO NOT wire signal.StateReader into telemetry ingest, FSM, or session-boundary detection — those are L1/L2 hot-path concerns.
+✅ DO depend on signal.StateReader for cold-path State, SignalAt, Timeline reads in handlers and warmup.
+✅ DO use database.SignalLogReader only for SignalTrace (raw events) and aggregations (BrickVoltageHistory, DriveAggregates, RegenEnergy, ChargeAggregates, LatestTimestamp).
+✅ DO keep signal.Store (L1) and Redis (L2) as the source of truth for live state on the telemetry hot path.
+```
 
 ## Signal Processing Rules
 
@@ -143,10 +223,14 @@ Redis live signals use these stable compatibility anchors:
 | signal_log overflow backlog | `signal_log:backlog` |
 
 Do not rename these without a compatibility shim, migration note, and tests. Timestamp-less
-legacy Redis values must be treated as unknown freshness, not fresh data. Existing scalar
-HSET values are supported indefinitely and naturally replaced by timestamped values on
-the next telemetry write; no manual Redis migration is required unless scalar compatibility
-is explicitly removed by a future ADR.
+legacy Redis values must be classified as unknown freshness via `IsLiveSignalFresh`, but
+must NOT be silently dropped at the live-store boundary. Existing scalar HSET values are
+supported indefinitely. They are self-healed on pod start by
+`HybridLiveSignalStore.Warm`, which calls `RedisSignalCache.RestampLegacy` to re-encode
+each legacy scalar as a full timestamped envelope (under the same key, refreshing the
+TTL, never deleting fields, idempotent on retry). They are also replaced naturally by
+timestamped envelopes on the next telemetry write. No manual Redis migration is required
+unless scalar compatibility is explicitly removed by a future ADR.
 
 ## signal_log Conventions
 

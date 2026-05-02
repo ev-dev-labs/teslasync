@@ -40,6 +40,7 @@ export type {
   WorkersHealth,
   ChatMessage,
   ChatResponse,
+  ChatSessionInfo,
   VehicleStatus,
   VEHICLE_STATUSES,
   deriveVehicleStatus,
@@ -271,4 +272,6 @@ export {
   sendChatMessage,
   getChatHistory,
   getChatSessions,
+  renameChatSession,
+  deleteChatSession,
 } from './devtools'

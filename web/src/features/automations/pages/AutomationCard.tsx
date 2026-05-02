@@ -4,7 +4,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-import { GlassPanel, Badge, Button as UiButton, Toggle, ConfirmDialog } from '@/components/ui';
+import { GlassPanel, Badge, Button as UiButton, Toggle, ConfirmDialog, PinButton } from '@/components/ui';
 import {
   Zap, AlertTriangle, MoreVertical, Play, Copy, Download,
   Trash2, RotateCcw, Car, CheckCircle, XCircle, SkipForward,
@@ -97,7 +97,7 @@ export function AutomationCard({
               <h3 className="truncate text-base font-semibold text-white/90">{a.name}</h3>
               <Badge variant={status.variant}>{t(`automations.status.${uiStatus}`, status.label)}</Badge>
               {isFiring && (
-                <span className="flex items-center gap-1 text-xs text-neon-cyan animate-pulse">
+                <span className="flex items-center gap-1 text-xs text-cyan-300 animate-pulse">
                   <Zap className="h-3 w-3" />
                   {t('automations.firing', 'Firing')}
                 </span>
@@ -109,6 +109,7 @@ export function AutomationCard({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            <PinButton itemType="automation" itemId={a.id} size="sm" />
             <Toggle
               checked={a.auto_disabled ? false : a.enabled}
               onChange={handleToggle}
@@ -144,7 +145,7 @@ export function AutomationCard({
                       <UiButton
                         type="button"
                         variant="ghost"
-                        className="!h-auto !w-full !justify-start !rounded-none !px-3 !py-2 text-sm text-neon-cyan hover:!bg-white/5"
+                        className="!h-auto !w-full !justify-start !rounded-none !px-3 !py-2 text-sm text-cyan-300 hover:!bg-white/5"
                         onClick={() => { onReEnable(a.id); setMenuOpen(false); }}
                       >
                         <RotateCcw className="h-3.5 w-3.5" />

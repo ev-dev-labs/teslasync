@@ -1,13 +1,22 @@
 import { motion } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import { COLOR } from '@/lib/colors'
+import { useMotionPreference } from '@/hooks/useMotionPreference'
 
-/** Animated Tesla silhouette SVG for loading states and hero sections. */
+/**
+ * Animated Tesla silhouette SVG for loading states and hero sections.
+ * Honors `prefers-reduced-motion`: when reduced motion is requested, the SVG
+ * renders in its final state with no entry animation, draw-in, or pulsing
+ * head/tail-light loop.
+ */
 export function CarAnimation({ size = 120, className = '' }: { size?: number; className?: string }) {
   const w = size
   const h = size * 0.4
+  const { reduce } = useMotionPreference()
+  const { t } = useTranslation()
 
   return (
-    <div className={`inline-flex items-center justify-center ${className}`}>
+    <div className={`inline-flex items-center justify-center ${className}`} role="img" aria-label={t('carAnimation.tesla', 'Tesla vehicle illustration')}>
       <svg width={w} height={h} viewBox="0 0 240 96" fill="none" xmlns="http://www.w3.org/2000/svg">
         {/* Car body */}
         <motion.path
@@ -15,9 +24,9 @@ export function CarAnimation({ size = 120, className = '' }: { size?: number; cl
           fill="var(--surface-2)"
           stroke="var(--theme-primary)"
           strokeWidth="1.5"
-          initial={{ pathLength: 0 }}
+          initial={reduce ? false : { pathLength: 0 }}
           animate={{ pathLength: 1 }}
-          transition={{ duration: 1.5, ease: 'easeInOut' }}
+          transition={{ duration: reduce ? 0 : 1.5, ease: 'easeInOut' }}
         />
         {/* Windshield */}
         <motion.path
@@ -27,9 +36,9 @@ export function CarAnimation({ size = 120, className = '' }: { size?: number; cl
           stroke="var(--theme-primary)"
           strokeWidth="0.8"
           strokeOpacity={0.5}
-          initial={{ opacity: 0 }}
+          initial={reduce ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.8, duration: 0.6 }}
+          transition={{ delay: reduce ? 0 : 0.8, duration: reduce ? 0 : 0.6 }}
         />
         {/* Rear window */}
         <motion.path
@@ -39,55 +48,62 @@ export function CarAnimation({ size = 120, className = '' }: { size?: number; cl
           stroke="var(--theme-primary)"
           strokeWidth="0.6"
           strokeOpacity={0.3}
-          initial={{ opacity: 0 }}
+          initial={reduce ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 1, duration: 0.5 }}
+          transition={{ delay: reduce ? 0 : 1, duration: reduce ? 0 : 0.5 }}
         />
         {/* Front wheel */}
         <motion.circle cx="70" cy="70" r="14" fill="var(--surface-3)" stroke="var(--text-muted)" strokeWidth="2"
-          initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.3, type: 'spring' }} />
+          initial={reduce ? false : { scale: 0 }} animate={{ scale: 1 }} transition={reduce ? { duration: 0 } : { delay: 0.3, type: 'spring' }} />
         <motion.circle cx="70" cy="70" r="6" fill="var(--surface-1)" stroke="var(--text-muted)" strokeWidth="1"
-          initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.5, type: 'spring' }} />
+          initial={reduce ? false : { scale: 0 }} animate={{ scale: 1 }} transition={reduce ? { duration: 0 } : { delay: 0.5, type: 'spring' }} />
         {/* Rear wheel */}
         <motion.circle cx="190" cy="70" r="14" fill="var(--surface-3)" stroke="var(--text-muted)" strokeWidth="2"
-          initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.4, type: 'spring' }} />
+          initial={reduce ? false : { scale: 0 }} animate={{ scale: 1 }} transition={reduce ? { duration: 0 } : { delay: 0.4, type: 'spring' }} />
         <motion.circle cx="190" cy="70" r="6" fill="var(--surface-1)" stroke="var(--text-muted)" strokeWidth="1"
-          initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.6, type: 'spring' }} />
+          initial={reduce ? false : { scale: 0 }} animate={{ scale: 1 }} transition={reduce ? { duration: 0 } : { delay: 0.6, type: 'spring' }} />
         {/* Headlight glow */}
         <motion.ellipse cx="228" cy="55" rx="4" ry="6"
           fill="var(--theme-primary)" fillOpacity={0.8}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: [0, 0.8, 0.4, 0.8] }}
-          transition={{ delay: 1.2, duration: 2, repeat: Infinity }}
+          initial={reduce ? false : { opacity: 0 }}
+          animate={reduce ? { opacity: 0.8 } : { opacity: [0, 0.8, 0.4, 0.8] }}
+          transition={reduce ? { duration: 0 } : { delay: 1.2, duration: 2, repeat: Infinity }}
         />
         {/* Taillight */}
         <motion.rect x="28" y="50" width="4" height="12" rx="2"
           fill="#ef4444" fillOpacity={0.7}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: [0, 0.7, 0.3, 0.7] }}
-          transition={{ delay: 1.4, duration: 2, repeat: Infinity }}
+          initial={reduce ? false : { opacity: 0 }}
+          animate={reduce ? { opacity: 0.7 } : { opacity: [0, 0.7, 0.3, 0.7] }}
+          transition={reduce ? { duration: 0 } : { delay: 1.4, duration: 2, repeat: Infinity }}
         />
         {/* Ground shadow */}
         <motion.ellipse cx="130" cy="86" rx="90" ry="4"
           fill="var(--text-muted)" fillOpacity={0.15}
-          initial={{ scaleX: 0 }}
+          initial={reduce ? false : { scaleX: 0 }}
           animate={{ scaleX: 1 }}
-          transition={{ delay: 0.5, duration: 0.8 }}
+          transition={reduce ? { duration: 0 } : { delay: 0.5, duration: 0.8 }}
         />
       </svg>
     </div>
   )
 }
 
-/** Animated charging bolt icon for charging-related pages. */
+/**
+ * Animated charging bolt icon for charging-related pages. Pulse animation is
+ * disabled when the user has requested reduced motion.
+ */
 export function ChargingBolt({ size = 32, className = '' }: { size?: number; className?: string }) {
+  const { reduce } = useMotionPreference()
+  const { t } = useTranslation()
   return (
     <motion.svg
       width={size} height={size} viewBox="0 0 24 24" fill="none"
       className={className}
-      initial={{ opacity: 0, y: -4 }}
+      role="img"
+      aria-label={t('carAnimation.charging', 'Charging')}
+      initial={reduce ? false : { opacity: 0, y: -4 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
+      transition={{ duration: reduce ? 0 : 0.5 }}
     >
       <motion.path
         d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"
@@ -97,43 +113,55 @@ export function ChargingBolt({ size = 32, className = '' }: { size?: number; cla
         strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
-        animate={{ fillOpacity: [0.1, 0.3, 0.1] }}
-        transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+        animate={reduce ? { fillOpacity: 0.2 } : { fillOpacity: [0.1, 0.3, 0.1] }}
+        transition={reduce ? { duration: 0 } : { duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
       />
     </motion.svg>
   )
 }
 
-/** Animated battery fill gauge. */
+/**
+ * Animated battery fill gauge. The fill animation respects reduced-motion
+ * by jumping straight to the target width.
+ */
 export function BatteryFillAnimation({ level = 80, size = 48, className = '' }: { level?: number; size?: number; className?: string }) {
   const barWidth = size * 0.6
   const fillWidth = (barWidth - 4) * Math.min(level, 100) / 100
   const color = level >= 60 ? COLOR.GOOD : level >= 30 ? COLOR.WARN : COLOR.BAD
+  const { reduce } = useMotionPreference()
 
   return (
     <motion.svg width={size} height={size * 0.5} viewBox="0 0 48 24" className={className}
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
+      initial={reduce ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: reduce ? 0 : 0.4 }}>
       {/* Battery outline */}
       <rect x="2" y="4" width="38" height="16" rx="3" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" />
       <rect x="40" y="8" width="4" height="8" rx="1" fill="var(--text-muted)" fillOpacity={0.4} />
       {/* Battery fill */}
       <motion.rect x="4" y="6" width={fillWidth * (38 / (48 * 0.6 - 4))} height="12" rx="1.5"
         fill={color}
-        initial={{ width: 0 }}
+        initial={reduce ? false : { width: 0 }}
         animate={{ width: fillWidth * (38 / (48 * 0.6 - 4)) }}
-        transition={{ duration: 1.2, ease: 'easeOut', delay: 0.3 }}
+        transition={reduce ? { duration: 0 } : { duration: 1.2, ease: 'easeOut', delay: 0.3 }}
       />
     </motion.svg>
   )
 }
 
-/** Spinning wheel animation for drive-related loading states. */
+/**
+ * Spinning wheel animation for drive-related loading states. The continuous
+ * spin is replaced with a static wheel when reduced motion is requested.
+ */
 export function WheelSpin({ size = 24, className = '' }: { size?: number; className?: string }) {
+  const { reduce } = useMotionPreference()
+  const { t } = useTranslation()
   return (
-    <motion.svg width={size} height={size} viewBox="0 0 24 24" className={className}>
+    <motion.svg width={size} height={size} viewBox="0 0 24 24" className={className} role="img" aria-label={t('carAnimation.loading', 'Loading')}>
       <circle cx="12" cy="12" r="10" fill="var(--surface-3)" stroke="var(--text-muted)" strokeWidth="1.5" />
       <circle cx="12" cy="12" r="4" fill="var(--surface-1)" stroke="var(--text-muted)" strokeWidth="1" />
-      <motion.g animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}>
+      <motion.g
+        animate={reduce ? { rotate: 0 } : { rotate: 360 }}
+        transition={reduce ? { duration: 0 } : { duration: 2, repeat: Infinity, ease: 'linear' }}
+      >
         {[0, 72, 144, 216, 288].map(angle => (
           <line
             key={angle}
@@ -146,4 +174,3 @@ export function WheelSpin({ size = 24, className = '' }: { size?: number; classN
     </motion.svg>
   )
 }
-

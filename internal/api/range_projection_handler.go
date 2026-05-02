@@ -16,51 +16,37 @@ import (
 )
 
 // RangeProjectionHandler serves projected range analytics.
+//
+// Phase-39 migration: the legacy *database.SignalLogReader has been replaced
+// with the canonical signal.StateReader (ADR-002 / phase-39). All 9 per-signal
+// reads across Get and GetByVehicle resolve "value as of now" — a forward-
+// folded read at time.Now() — so they map 1:1 onto StateReader.SignalAt with
+// identical semantics.
+//
+// As part of this migration, transport errors from state.SignalAt now
+// propagate to the caller as a 500 instead of being silently swallowed. The
+// legacy silent-swallow returned a payload with zero-valued range and
+// degradation, which is indistinguishable on the frontend from "vehicle
+// truly idle / brand-new vehicle with no signal_log history" — masking a
+// real signal-store / pgx outage behind a "range looks dead" panel.
+//
+// The "signal value never emitted" case (StateReader returns (nil, nil)) is
+// still handled by falling through to the existing zero/default fallbacks,
+// matching the legacy "missing data" UX.
 type RangeProjectionHandler struct {
-	db              *database.DB
-	signalLogReader *database.SignalLogReader
-	redisCache      *signal.RedisSignalCache
+	db         *database.DB
+	state      signal.StateReader
+	redisCache *signal.RedisSignalCache
 }
 
-func NewRangeProjectionHandler(db *database.DB, slr *database.SignalLogReader) *RangeProjectionHandler {
-	return &RangeProjectionHandler{db: db, signalLogReader: slr}
+func NewRangeProjectionHandler(db *database.DB, state signal.StateReader) *RangeProjectionHandler {
+	return &RangeProjectionHandler{db: db, state: state}
 }
 
 // WithRedisCache sets the Redis signal cache for reading live vehicle state.
 func (h *RangeProjectionHandler) WithRedisCache(cache *signal.RedisSignalCache) *RangeProjectionHandler {
 	h.redisCache = cache
 	return h
-}
-
-type rangeFactor struct {
-	Name        string  `json:"name"`
-	ImpactPct   float64 `json:"impact_pct"`
-	Description string  `json:"description"`
-}
-
-type curvePoint struct {
-	BatteryPct     int     `json:"battery_pct"`
-	RatedRange     float64 `json:"rated_range"`
-	ProjectedRange float64 `json:"projected_range"`
-}
-
-type efficiencyBucket struct {
-	TempBucket  string  `json:"temp_bucket"`
-	SpeedBucket string  `json:"speed_bucket"`
-	WhKm        float64 `json:"wh_km"`
-	Samples     int     `json:"samples"`
-}
-
-type rangeScenario struct {
-	Name        string   `json:"name"`
-	SpeedKmh    int      `json:"speed_kmh"`
-	TempC       int      `json:"temp_c"`
-	EffWhKm     float64  `json:"efficiency_wh_km"`
-	RangeKm     float64  `json:"range_km"`
-	RangeMi     float64  `json:"range_mi"`
-	SampleCount int      `json:"sample_count"`
-	Extras      []string `json:"extras"`
-	IsCurrent   bool     `json:"is_current,omitempty"`
 }
 
 // Get handles GET /analytics/range-projection?vehicle_id=X
@@ -80,28 +66,59 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	// Look up vehicle-specific battery capacity
-	capacityKWh, _ := lookupVehicleCapacity(ctx, h.db, vehicleID)
+	var capacityKWh float64
+	if h.db != nil {
+		capacityKWh, _ = lookupVehicleCapacity(ctx, h.db, vehicleID)
+	} else {
+		capacityKWh = 75.0 // default Model 3/Y capacity
+	}
 
-	// Current battery state from signal_log
+	// Current battery state from canonical StateReader (forward-folded
+	// signal_log). Each per-signal read maps 1:1 onto SignalAt with
+	// identical semantics; transport errors propagate as 500.
 	var batteryLevel, estRange, ratedRange, idealRange *float64
-	if h.signalLogReader != nil {
+	if h.state != nil {
 		now := time.Now()
-		if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "BatteryLevel", now); err == nil && val != nil {
+		val, err := h.state.SignalAt(ctx, vehicleID, "BatteryLevel", now)
+		if err != nil {
+			log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "BatteryLevel").Msg("range-projection: failed to read signal state")
+			writeError(w, http.StatusInternalServerError, "failed to read range projection state")
+			return
+		}
+		if val != nil {
 			if v, ok := toFloatOk(val); ok {
 				batteryLevel = &v
 			}
 		}
-		if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "EstBatteryRange", now); err == nil && val != nil {
+		val, err = h.state.SignalAt(ctx, vehicleID, "EstBatteryRange", now)
+		if err != nil {
+			log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "EstBatteryRange").Msg("range-projection: failed to read signal state")
+			writeError(w, http.StatusInternalServerError, "failed to read range projection state")
+			return
+		}
+		if val != nil {
 			if v, ok := toFloatOk(val); ok {
 				estRange = &v
 			}
 		}
-		if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "RatedRange", now); err == nil && val != nil {
+		val, err = h.state.SignalAt(ctx, vehicleID, "RatedRange", now)
+		if err != nil {
+			log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "RatedRange").Msg("range-projection: failed to read signal state")
+			writeError(w, http.StatusInternalServerError, "failed to read range projection state")
+			return
+		}
+		if val != nil {
 			if v, ok := toFloatOk(val); ok {
 				ratedRange = &v
 			}
 		}
-		if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "IdealBatteryRange", now); err == nil && val != nil {
+		val, err = h.state.SignalAt(ctx, vehicleID, "IdealBatteryRange", now)
+		if err != nil {
+			log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "IdealBatteryRange").Msg("range-projection: failed to read signal state")
+			writeError(w, http.StatusInternalServerError, "failed to read range projection state")
+			return
+		}
+		if val != nil {
 			if v, ok := toFloatOk(val); ok {
 				idealRange = &v
 			}
@@ -120,7 +137,10 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	// Recent driving efficiency
 	var avgEffWhKm *float64
-	if err := h.db.Pool.QueryRow(ctx, `
+	var avgTempC *float64
+	var avgSpeedKmh *float64
+	if h.db != nil {
+		if err := h.db.Pool.QueryRow(ctx, `
 		SELECT AVG(
 			CASE WHEN distance_mi > 0 THEN
 				COALESCE(energy_used_kwh, 0) * 1000
@@ -130,35 +150,44 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 		FROM drives
 		WHERE vehicle_id = $1 AND distance_mi > 1
 		ORDER BY start_ts DESC LIMIT 30`, vehicleID).Scan(&avgEffWhKm); err != nil {
-		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: avg efficiency query failed")
-	}
+			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: avg efficiency query failed")
+		}
 
-	var avgTempC *float64
-	if err := h.db.Pool.QueryRow(ctx, `
+		if err := h.db.Pool.QueryRow(ctx, `
 		SELECT AVG(outside_temp_avg_c)
 		FROM drives
 		WHERE vehicle_id = $1 AND outside_temp_avg_c IS NOT NULL
 		  AND start_ts > NOW() - INTERVAL '30 days'`, vehicleID).Scan(&avgTempC); err != nil {
-		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: avg temp query failed")
-	}
+			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: avg temp query failed")
+		}
 
-	var avgSpeedKmh *float64
-	if err := h.db.Pool.QueryRow(ctx, `
+		if err := h.db.Pool.QueryRow(ctx, `
 		SELECT AVG(avg_speed_mph)
 		FROM drives
 		WHERE vehicle_id = $1 AND avg_speed_mph IS NOT NULL AND avg_speed_mph > 0
 		  AND start_ts > NOW() - INTERVAL '30 days'`, vehicleID).Scan(&avgSpeedKmh); err != nil {
-		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: avg speed query failed")
+			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: avg speed query failed")
+		}
 	}
 
 	// ── Efficiency matrix ────────────────────────────────
-	matrix := h.buildEfficiencyMatrix(ctx, vehicleID, capacityKWh)
+	var matrix []efficiencyBucket
+	if h.db != nil {
+		matrix = h.buildEfficiencyMatrix(ctx, vehicleID, capacityKWh)
+	} else {
+		matrix = []efficiencyBucket{}
+	}
 
 	// ── Battery health / degradation adjustment ──────────
 	var healthScore *float64
-	if h.signalLogReader != nil {
-		val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "EnergyRemaining", time.Now())
-		if err == nil && val != nil {
+	if h.state != nil {
+		val, err := h.state.SignalAt(ctx, vehicleID, "EnergyRemaining", time.Now())
+		if err != nil {
+			log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "EnergyRemaining").Msg("range-projection: failed to read signal state")
+			writeError(w, http.StatusInternalServerError, "failed to read range projection state")
+			return
+		}
+		if val != nil {
 			if energy, ok := val.(float64); ok && energy > 0 {
 				hs := (energy / capacityKWh) * 100
 				if hs > 100 {
@@ -228,18 +257,20 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	// Sample count
 	var totalDrives int
-	if err := h.db.Pool.QueryRow(ctx, `
-		SELECT COUNT(*) FROM drives WHERE vehicle_id = $1 AND distance_mi > 5 AND start_battery_pct > end_battery_pct`,
-		vehicleID).Scan(&totalDrives); err != nil {
-		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: drive count query failed")
-	}
-
-	// First drive date for accuracy note
 	var firstDrive *time.Time
-	if err := h.db.Pool.QueryRow(ctx, `
+	if h.db != nil {
+		if err := h.db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM drives WHERE vehicle_id = $1 AND distance_mi > 5 AND start_battery_pct > end_battery_pct`,
+			vehicleID).Scan(&totalDrives); err != nil {
+			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: drive count query failed")
+		}
+
+		// First drive date for accuracy note
+		if err := h.db.Pool.QueryRow(ctx, `
 		SELECT MIN(start_ts) FROM drives WHERE vehicle_id = $1 AND distance_mi > 0`,
-		vehicleID).Scan(&firstDrive); err != nil {
-		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: first drive query failed")
+			vehicleID).Scan(&firstDrive); err != nil {
+			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: first drive query failed")
+		}
 	}
 	monthsOfData := 0
 	if firstDrive != nil {
@@ -260,14 +291,14 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 		"factors":            factors,
 		"projection_curve":   curve,
 		// Enhanced fields
-		"current_battery_pct":  math.Round(bl*10) / 10,
-		"usable_capacity_kwh":  math.Round(usableCapacity*10) / 10,
-		"health_factor":        math.Round(healthFactor*1000) / 1000,
-		"scenarios":            scenarios,
-		"efficiency_matrix":    matrix,
-		"tesla_estimate_km":    math.Round(teslaEstKm*10) / 10,
-		"your_estimate_km":     math.Round(yourEstKm*10) / 10,
-		"accuracy_note":        accuracyNote,
+		"current_battery_pct": math.Round(bl*10) / 10,
+		"usable_capacity_kwh": math.Round(usableCapacity*10) / 10,
+		"health_factor":       math.Round(healthFactor*1000) / 1000,
+		"scenarios":           scenarios,
+		"efficiency_matrix":   matrix,
+		"tesla_estimate_km":   math.Round(teslaEstKm*10) / 10,
+		"your_estimate_km":    math.Round(yourEstKm*10) / 10,
+		"accuracy_note":       accuracyNote,
 	})
 }
 
@@ -421,129 +452,6 @@ func (h *RangeProjectionHandler) buildScenarios(matrix []efficiencyBucket, batte
 	return scenarios
 }
 
-func getEfficiency(lookup map[string]efficiencyBucket, temp, speed string) float64 {
-	if b, ok := lookup[temp+"|"+speed]; ok {
-		return b.WhKm
-	}
-	return 0
-}
-
-func tempBucketFor(tempC int) string {
-	switch {
-	case tempC < 0:
-		return "freezing"
-	case tempC < 10:
-		return "cold"
-	case tempC < 25:
-		return "mild"
-	default:
-		return "hot"
-	}
-}
-
-func defaultEfficiency(tempC, speedKmh int) float64 {
-	base := 155.0 // mild city baseline
-	if speedKmh > 90 {
-		base = 195
-	} else if speedKmh > 50 {
-		base = 170
-	}
-	if tempC < 0 {
-		base *= 1.35
-	} else if tempC < 10 {
-		base *= 1.15
-	} else if tempC > 35 {
-		base *= 1.08
-	}
-	return base
-}
-
-func buildRangeFactors(avgTemp, avgSpeed, avgEff *float64) []rangeFactor {
-	var factors []rangeFactor
-
-	// Temperature impact
-	if avgTemp != nil {
-		temp := *avgTemp
-		impact := 0.0
-		desc := "Moderate temperature, minimal impact"
-		if temp < 0 {
-			impact = -20
-			desc = "Cold weather significantly reduces range"
-		} else if temp < 10 {
-			impact = -10
-			desc = "Cool weather moderately reduces range"
-		} else if temp > 35 {
-			impact = -8
-			desc = "High heat increases cooling load"
-		} else if temp >= 15 && temp <= 25 {
-			impact = 2
-			desc = "Ideal temperature for battery efficiency"
-		}
-		factors = append(factors, rangeFactor{
-			Name: "temperature", ImpactPct: impact, Description: desc,
-		})
-	}
-
-	// Speed impact
-	if avgSpeed != nil {
-		speed := *avgSpeed
-		impact := 0.0
-		desc := "Moderate speed, good efficiency"
-		if speed > 120 {
-			impact = -15
-			desc = "High-speed driving greatly reduces range"
-		} else if speed > 100 {
-			impact = -8
-			desc = "Highway speed reduces range moderately"
-		} else if speed < 50 {
-			impact = 5
-			desc = "Low-speed city driving improves range"
-		}
-		factors = append(factors, rangeFactor{
-			Name: "speed", ImpactPct: impact, Description: desc,
-		})
-	}
-
-	// HVAC estimate
-	factors = append(factors, rangeFactor{
-		Name: "hvac", ImpactPct: -3, Description: "Climate control active",
-	})
-
-	// Driving style from efficiency
-	if avgEff != nil {
-		eff := *avgEff
-		impact := 0.0
-		desc := "Average driving style"
-		if eff < 140 {
-			impact = 5
-			desc = "Efficient driving style"
-		} else if eff > 200 {
-			impact = -10
-			desc = "Aggressive driving reduces range"
-		} else if eff > 170 {
-			impact = -5
-			desc = "Moderately aggressive driving"
-		}
-		factors = append(factors, rangeFactor{
-			Name: "driving_style", ImpactPct: impact, Description: desc,
-		})
-	}
-
-	// Elevation placeholder
-	factors = append(factors, rangeFactor{
-		Name: "elevation", ImpactPct: -1, Description: "Minor elevation changes",
-	})
-
-	return factors
-}
-
-func ptrF64(p *float64) float64 {
-	if p == nil {
-		return 0
-	}
-	return *p
-}
-
 // GetByVehicle handles GET /vehicles/{vehicleID}/battery/projected-range
 // Returns the ProjectedRangeData shape the frontend expects.
 func (h *RangeProjectionHandler) GetByVehicle(w http.ResponseWriter, r *http.Request) {
@@ -557,22 +465,45 @@ func (h *RangeProjectionHandler) GetByVehicle(w http.ResponseWriter, r *http.Req
 	defer cancel()
 
 	// Look up vehicle-specific battery capacity
-	capacityKWh, _ := lookupVehicleCapacity(ctx, h.db, vehicleID)
+	var capacityKWh float64
+	if h.db != nil {
+		capacityKWh, _ = lookupVehicleCapacity(ctx, h.db, vehicleID)
+	} else {
+		capacityKWh = 75.0 // default Model 3/Y capacity
+	}
 
 	var batteryLevel, ratedRange, idealRange *float64
-	if h.signalLogReader != nil {
+	if h.state != nil {
 		now := time.Now()
-		if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "BatteryLevel", now); err == nil && val != nil {
+		val, err := h.state.SignalAt(ctx, vehicleID, "BatteryLevel", now)
+		if err != nil {
+			log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "BatteryLevel").Msg("range-projection: failed to read signal state")
+			writeError(w, http.StatusInternalServerError, "failed to read range projection state")
+			return
+		}
+		if val != nil {
 			if v, ok := toFloatOk(val); ok {
 				batteryLevel = &v
 			}
 		}
-		if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "RatedRange", now); err == nil && val != nil {
+		val, err = h.state.SignalAt(ctx, vehicleID, "RatedRange", now)
+		if err != nil {
+			log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "RatedRange").Msg("range-projection: failed to read signal state")
+			writeError(w, http.StatusInternalServerError, "failed to read range projection state")
+			return
+		}
+		if val != nil {
 			if v, ok := toFloatOk(val); ok {
 				ratedRange = &v
 			}
 		}
-		if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "IdealBatteryRange", now); err == nil && val != nil {
+		val, err = h.state.SignalAt(ctx, vehicleID, "IdealBatteryRange", now)
+		if err != nil {
+			log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "IdealBatteryRange").Msg("range-projection: failed to read signal state")
+			writeError(w, http.StatusInternalServerError, "failed to read range projection state")
+			return
+		}
+		if val != nil {
 			if v, ok := toFloatOk(val); ok {
 				idealRange = &v
 			}
@@ -594,11 +525,16 @@ func (h *RangeProjectionHandler) GetByVehicle(w http.ResponseWriter, r *http.Req
 		currentRange = rated
 	}
 
-	// Degradation estimate from signal_log
+	// Degradation estimate from canonical StateReader
 	var healthPct *float64
-	if h.signalLogReader != nil {
-		val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "EnergyRemaining", time.Now())
-		if err == nil && val != nil {
+	if h.state != nil {
+		val, err := h.state.SignalAt(ctx, vehicleID, "EnergyRemaining", time.Now())
+		if err != nil {
+			log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "EnergyRemaining").Msg("range-projection: failed to read signal state")
+			writeError(w, http.StatusInternalServerError, "failed to read range projection state")
+			return
+		}
+		if val != nil {
 			if energy, ok := val.(float64); ok && energy > 0 {
 				hp := (energy / capacityKWh) * 100
 				if hp > 100 {
@@ -620,29 +556,31 @@ func (h *RangeProjectionHandler) GetByVehicle(w http.ResponseWriter, r *http.Req
 
 	// Cycle estimate
 	var totalCycles int
-	if err := h.db.Pool.QueryRow(ctx, `
-		SELECT COUNT(*) FROM charging_sessions WHERE vehicle_id = $1`, vehicleID).Scan(&totalCycles); err != nil && err != pgx.ErrNoRows {
-		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: charging cycle count query failed")
-	}
-
-	// Avg daily km
 	var avgDailyKm float64
-	if err := h.db.Pool.QueryRow(ctx, `
+	if h.db != nil {
+		if err := h.db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM charging_sessions WHERE vehicle_id = $1`, vehicleID).Scan(&totalCycles); err != nil && err != pgx.ErrNoRows {
+			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: charging cycle count query failed")
+		}
+
+		// Avg daily km
+		if err := h.db.Pool.QueryRow(ctx, `
 		SELECT COALESCE(AVG(daily_km), 0) FROM (
 			SELECT DATE(start_ts) AS d, SUM(distance_mi) AS daily_km
 			FROM drives WHERE vehicle_id = $1 AND distance_mi > 0
 			GROUP BY DATE(start_ts)
 		) sub`, vehicleID).Scan(&avgDailyKm); err != nil && err != pgx.ErrNoRows {
-		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: avg daily km query failed")
+			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: avg daily km query failed")
+		}
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"current_range_km":   math.Round(currentRange*10) / 10,
-		"new_range_km":       math.Round(newRange*10) / 10,
-		"degradation_pct":    math.Round(degradation*10) / 10,
-		"total_cycles":       totalCycles,
-		"health_score":       math.Round(healthScore*10) / 10,
+		"current_range_km":     math.Round(currentRange*10) / 10,
+		"new_range_km":         math.Round(newRange*10) / 10,
+		"degradation_pct":      math.Round(degradation*10) / 10,
+		"total_cycles":         totalCycles,
+		"health_score":         math.Round(healthScore*10) / 10,
 		"current_capacity_pct": math.Round(capacityPct*10) / 10,
-		"avg_daily_km":       math.Round(avgDailyKm*10) / 10,
+		"avg_daily_km":         math.Round(avgDailyKm*10) / 10,
 	})
 }

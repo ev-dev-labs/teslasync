@@ -8,7 +8,7 @@ import {
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Select } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
-import { AlertBanner } from '@/components/feedback';
+import { AlertBanner, EmptyState } from '@/components/feedback';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { FadeIn } from '@/components/motion';
 import {
@@ -443,10 +443,11 @@ export default function TemperatureImpactPage() {
                 })}
               </ul>
             ) : (
-              <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
-                <Activity className="h-8 w-8 opacity-20" />
-                <p className="text-xs">{t('common.noData', 'No data available')}</p>
-              </div>
+              <EmptyState
+                icon={<Activity className="h-8 w-8 opacity-20" />}
+                message={t('common.noData', 'No data available')}
+                className="py-8"
+              />
             )}
           </GlassPanel>
         </FadeIn>

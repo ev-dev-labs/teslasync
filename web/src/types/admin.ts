@@ -76,6 +76,25 @@ export interface AuditLogEntry {
   createdAt: string;
 }
 
+/**
+ * Per-user activity entry returned by `GET /users/me/activity`
+ * (Phase-40 / Prompt 49 — Recent Activity Discoverability).
+ *
+ * Mirrors `userActivityEntry` in `internal/api/audit.go` after camelCaseKeys
+ * — both `entity_type` / `entityType` etc. are present at runtime, but the
+ * canonical shape uses the snake_case names that match the Go JSON tags.
+ */
+export interface UserActivityEntry {
+  id: number;
+  ts: string;
+  action: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  detail: string | null;
+  ip: string | null;
+  user_agent: string | null;
+}
+
 export interface SecurityEvent {
   id: string;
   locked: boolean | null;
@@ -227,11 +246,17 @@ export interface ChatMessage {
   createdAt: string;
 }
 
-export interface ChangelogEntry {
-  version: string;
-  date: string;
-  changes: string[];
-}
+// ChangelogEntry is generated from CHANGELOG.md by web/scripts/buildChangelog.mjs.
+// The shape lives in @/generated/changelog so the parser, modal, and pages
+// share a single source of truth (Phase-40 / Prompt 67). The legacy
+// `changes: string[]` shape was replaced with a typed `ChangelogChange[]`;
+// any consumer that needs flat strings can `entry.changes.map(c => c.text)`.
+export type {
+  ChangelogChange,
+  ChangelogChangeType,
+  ChangelogBadge,
+  ChangelogEntry,
+} from '@/generated/changelog';
 
 export type RoadmapPhase = 'done' | 'current' | 'next' | 'future';
 

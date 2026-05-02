@@ -24,9 +24,9 @@ function getPressureStatus(bar: number | null): 'green' | 'amber' | 'red' {
 }
 
 const STATUS_COLORS = {
-  green: { fill: '#22c55e', text: 'text-neon-green' },
-  amber: { fill: '#f59e0b', text: 'text-neon-amber' },
-  red: { fill: '#ef4444', text: 'text-neon-red' },
+  green: { fill: '#22c55e', text: 'text-emerald-300' },
+  amber: { fill: '#f59e0b', text: 'text-amber-300' },
+  red: { fill: '#ef4444', text: 'text-rose-300' },
 } as const;
 
 interface TireInfo {

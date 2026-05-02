@@ -8,12 +8,11 @@ import {
 
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel, Button as UiButton, Select as UiSelect, Input as UiInput, Badge } from '@/components/ui';
-import { StatCard } from '@/components/data-display';
+import { StatCard, DateTime } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { Spinner, AlertBanner } from '@/components/feedback';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { getAPICallLogs, getAPICallLogStats } from '@/api/devtools';
 import type { APICallLog, APICallLogStats } from '@/api/types';
@@ -33,6 +32,7 @@ const METHOD_VARIANTS: Record<string, LogBadgeVariant> = {
 };
 
 const SERVICE_CONFIG: Record<string, { label: string; variant: LogBadgeVariant }> = {
+  'teslasync-api':   { label: 'TeslaSync API',   variant: 'info' },
   'tesla-api':       { label: 'Tesla API',       variant: 'info' },
   'fleet-telemetry': { label: 'Fleet Telemetry', variant: 'success' },
   'geocoding':       { label: 'Geocoding',       variant: 'warning' },
@@ -51,6 +51,17 @@ function statusBadgeVariant(code: number | null): LogBadgeVariant {
 
 function serviceBadgeConfig(service: string): { label: string; variant: LogBadgeVariant } {
   return SERVICE_CONFIG[service] ?? { label: service, variant: 'neutral' };
+}
+
+// localDateTimeToISO converts a `<input type="datetime-local">` value (local
+// wall-clock, no offset, e.g. `2026-04-29T12:00`) to a UTC ISO string the
+// backend can compare against api_call_logs.ts (timestamptz). Returns
+// undefined for empty / unparseable input so the query param is omitted.
+function localDateTimeToISO(local: string): string | undefined {
+  if (!local) return undefined;
+  const d = new Date(local);
+  if (Number.isNaN(d.getTime())) return undefined;
+  return d.toISOString();
 }
 
 function JsonViewer({ data, label }: { data: string | null; label: string }) {
@@ -108,8 +119,12 @@ export default function ApiLogsPage() {
       status: status || undefined,
       endpoint: endpoint || undefined,
       service: service || undefined,
-      start: startDate || undefined,
-      end: endDate || undefined,
+      // datetime-local inputs are local-time (no offset); the backend stores
+      // ts as UTC (timestamptz). Convert via Date() so the comparison window
+      // matches what the user actually picked, not the same wall-clock time
+      // re-interpreted as UTC.
+      start: localDateTimeToISO(startDate),
+      end: localDateTimeToISO(endDate),
     }),
     refetchInterval: 10_000,
   });
@@ -215,6 +230,7 @@ export default function ApiLogsPage() {
               onChange={(e) => { setService(e.target.value); setPage(0); }}
               options={[
                 { value: '', label: t('apiLogs.allServices', 'All Services') },
+                { value: 'teslasync-api', label: 'TeslaSync API' },
                 { value: 'tesla-api', label: 'Tesla API' },
                 { value: 'fleet-telemetry', label: 'Fleet Telemetry' },
                 { value: 'geocoding', label: 'Geocoding' },
@@ -317,7 +333,7 @@ export default function ApiLogsPage() {
                         className="flex items-center gap-2 px-4 py-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
                       >
                         <span className="text-xs font-mono text-[var(--text-muted)] whitespace-nowrap w-36 shrink-0 hidden sm:block">
-                          {formatDateTime(log.ts)}
+                          <DateTime value={log.ts} in="utc" />
                         </span>
                         <Badge variant={serviceConfig.variant} size="sm">{serviceConfig.label}</Badge>
                         <Badge variant={METHOD_VARIANTS[log.http_method] ?? 'neutral'} size="sm">
@@ -343,7 +359,7 @@ export default function ApiLogsPage() {
                       {/* Mobile date + error (visible on small screens) */}
                       {expandedId !== log.id && (
                         <div className="px-4 pb-2 sm:hidden">
-                          <p className="text-[10px] text-[var(--text-muted)]">{formatDateTime(log.ts)}</p>
+                          <DateTime value={log.ts} in="utc" className="text-[10px] text-[var(--text-muted)]" />
                           {log.error_message && <p className="text-[10px] text-red-400 truncate mt-0.5">{log.error_message}</p>}
                         </div>
                       )}
@@ -352,7 +368,7 @@ export default function ApiLogsPage() {
                       {expandedId === log.id && (
                         <div className="p-4 space-y-3 bg-[var(--surface-2)]">
                           <div className="sm:hidden mb-2">
-                            <p className="text-[10px] text-[var(--text-muted)]">{formatDateTime(log.ts)}</p>
+                            <DateTime value={log.ts} in="utc" className="text-[10px] text-[var(--text-muted)]" />
                             {log.error_message && <p className="text-xs text-red-400 mt-1">{log.error_message}</p>}
                           </div>
                           <div>

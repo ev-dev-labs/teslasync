@@ -1,36 +1,44 @@
 package api
 
 import (
-	"fmt"
 	"math"
 	"net/http"
-	"sort"
 	"strconv"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
+	"github.com/rs/zerolog/log"
 )
 
 // BatteryDegradationHandler handles battery degradation prediction HTTP requests.
+//
+// Phase-39 migration: the four per-signal "value as of now" lookups in
+// the Predict and Health fallback branches (EnergyRemaining and
+// EstBatteryRange in each) now resolve through the canonical
+// signal.StateReader (ADR-002 / phase-39) instead of the legacy
+// database.SignalLogReader's per-signal helper. The historical
+// signal_log trace aggregation in synthesizeBatterySnapshots
+// (database.SignalLogReader.SignalTrace) is a SignalLogReader-only
+// capability with no StateReader equivalent and is intentionally
+// retained side-by-side; only the per-signal at-or-before lookup path
+// is migrated here.
+//
+// As part of this migration, transport errors from state.SignalAt now
+// propagate to the caller as a 500 instead of being silently swallowed
+// into a partial / zero-valued payload. The legacy silent-swallow
+// behavior was indistinguishable on the frontend from "vehicle truly
+// idle / brand-new vehicle with no signal_log history" and rendered
+// the Battery Degradation panel as "battery looks dead" even when the
+// underlying read had genuinely failed.
 type BatteryDegradationHandler struct {
 	db              *database.DB
+	state           signal.StateReader
 	signalLogReader *database.SignalLogReader
 }
 
-func NewBatteryDegradationHandler(db *database.DB, slr *database.SignalLogReader) *BatteryDegradationHandler {
-	return &BatteryDegradationHandler{db: db, signalLogReader: slr}
-}
-
-type batterySnapshotData struct {
-	ID             int64     `json:"id"`
-	HealthScore    float64   `json:"health_score"`
-	CapacityKWh    float64   `json:"capacity_kwh"`
-	DegradationPct float64   `json:"degradation_pct"`
-	EstRangeKm     float64   `json:"est_range_km"`
-	CycleCount     int       `json:"cycle_count"`
-	AvgCellTempC   float64   `json:"avg_cell_temp_c"`
-	CreatedAt      time.Time `json:"created_at"`
+func NewBatteryDegradationHandler(db *database.DB, state signal.StateReader, slr *database.SignalLogReader) *BatteryDegradationHandler {
+	return &BatteryDegradationHandler{db: db, state: state, signalLogReader: slr}
 }
 
 func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Request) {
@@ -47,8 +55,13 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 
 	ctx := r.Context()
 
-	// Look up vehicle-specific battery capacity
-	capacityKWh, capacitySource := lookupVehicleCapacity(ctx, h.db, vehicleID)
+	// Look up vehicle-specific battery capacity (nil-safe; falls back to
+	// the same default that lookupVehicleCapacity uses on lookup error).
+	capacityKWh := 75.0
+	capacitySource := "default"
+	if h.db != nil {
+		capacityKWh, capacitySource = lookupVehicleCapacity(ctx, h.db, vehicleID)
+	}
 
 	// Battery health history — reconstruct from signal_log
 	var snapshots []batterySnapshotData
@@ -74,34 +87,36 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 
 	// Charging habits that affect battery
 	type chargingHabits struct {
-		FastChargeCount    int     `json:"fast_charge_count"`
-		SlowChargeCount    int     `json:"slow_charge_count"`
-		DeepDischargeCount int     `json:"deep_discharge_count"`
-		ChargeToFullCount  int     `json:"charge_to_full_count"`
-		HighSocCount       int     `json:"high_soc_count"`
+		FastChargeCount     int     `json:"fast_charge_count"`
+		SlowChargeCount     int     `json:"slow_charge_count"`
+		DeepDischargeCount  int     `json:"deep_discharge_count"`
+		ChargeToFullCount   int     `json:"charge_to_full_count"`
+		HighSocCount        int     `json:"high_soc_count"`
 		AvgEnergyPerSession float64 `json:"avg_energy_per_session"`
-		TotalCount         int     `json:"total_count"`
+		TotalCount          int     `json:"total_count"`
 	}
 
 	var habits chargingHabits
-	err = h.db.Pool.QueryRow(ctx, `
-		SELECT
-			COUNT(*) FILTER (WHERE charger_power_kw_max > 50),
-			COUNT(*) FILTER (WHERE charger_power_kw_max <= 50 OR charger_power_kw_max IS NULL),
-			COUNT(*) FILTER (WHERE start_battery_pct < 10),
-			COUNT(*) FILTER (WHERE end_battery_pct > 95),
-			COUNT(*) FILTER (WHERE end_battery_pct > 90),
-			COALESCE(AVG(energy_added_kwh), 0),
-			COUNT(*)
-		FROM charging_sessions
-		WHERE vehicle_id = $1`, vehicleID).Scan(
-		&habits.FastChargeCount, &habits.SlowChargeCount,
-		&habits.DeepDischargeCount, &habits.ChargeToFullCount,
-		&habits.HighSocCount, &habits.AvgEnergyPerSession,
-		&habits.TotalCount)
-	if err != nil {
-		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get charging habits")
-		// Non-fatal
+	if h.db != nil {
+		err = h.db.Pool.QueryRow(ctx, `
+			SELECT
+				COUNT(*) FILTER (WHERE charger_power_kw_max > 50),
+				COUNT(*) FILTER (WHERE charger_power_kw_max <= 50 OR charger_power_kw_max IS NULL),
+				COUNT(*) FILTER (WHERE start_battery_pct < 10),
+				COUNT(*) FILTER (WHERE end_battery_pct > 95),
+				COUNT(*) FILTER (WHERE end_battery_pct > 90),
+				COALESCE(AVG(energy_added_kwh), 0),
+				COUNT(*)
+			FROM charging_sessions
+			WHERE vehicle_id = $1`, vehicleID).Scan(
+			&habits.FastChargeCount, &habits.SlowChargeCount,
+			&habits.DeepDischargeCount, &habits.ChargeToFullCount,
+			&habits.HighSocCount, &habits.AvgEnergyPerSession,
+			&habits.TotalCount)
+		if err != nil {
+			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get charging habits")
+			// Non-fatal
+		}
 	}
 	habits.AvgEnergyPerSession = math.Round(habits.AvgEnergyPerSession*10) / 10
 
@@ -121,14 +136,26 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 	// Fallback: derive from signal_log when no snapshots exist
 	if currentHealth == 0 {
 		var energy, rng *float64
-		if h.signalLogReader != nil {
+		if h.state != nil {
 			now := time.Now()
-			if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "EnergyRemaining", now); err == nil && val != nil {
+			val, sigErr := h.state.SignalAt(ctx, vehicleID, "EnergyRemaining", now)
+			if sigErr != nil {
+				log.Error().Err(sigErr).Int64("vehicle_id", vehicleID).Str("signal", "EnergyRemaining").Msg("battery degradation: failed to read signal state")
+				writeError(w, http.StatusInternalServerError, "failed to read battery state")
+				return
+			}
+			if val != nil {
 				if v, ok := toFloatOk(val); ok && v > 0 {
 					energy = &v
 				}
 			}
-			if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "EstBatteryRange", now); err == nil && val != nil {
+			val, sigErr = h.state.SignalAt(ctx, vehicleID, "EstBatteryRange", now)
+			if sigErr != nil {
+				log.Error().Err(sigErr).Int64("vehicle_id", vehicleID).Str("signal", "EstBatteryRange").Msg("battery degradation: failed to read signal state")
+				writeError(w, http.StatusInternalServerError, "failed to read battery state")
+				return
+			}
+			if val != nil {
 				if v, ok := toFloatOk(val); ok && v > 0 {
 					rng = &v
 				}
@@ -137,27 +164,35 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 		if energy != nil && *energy > 0 {
 			currentCapacity = *energy
 			currentHealth = (currentCapacity / capacityKWh) * 100
-			if currentHealth > 100 { currentHealth = 100 }
+			if currentHealth > 100 {
+				currentHealth = 100
+			}
 			currentDegradation = 100 - currentHealth
 		}
-		if rng != nil { currentRange = *rng }
+		if rng != nil {
+			currentRange = *rng
+		}
 		// Cycle count from charge sessions
-		var delta *float64
-		_ = h.db.Pool.QueryRow(ctx,
-			`SELECT SUM(GREATEST(end_battery_pct - start_battery_pct, 0)) 
-			 FROM charging_sessions WHERE vehicle_id = $1 AND end_battery_pct > start_battery_pct`,
-			vehicleID).Scan(&delta)
-		if delta != nil { currentCycles = int(*delta / 100) }
+		if h.db != nil {
+			var delta *float64
+			_ = h.db.Pool.QueryRow(ctx,
+				`SELECT SUM(GREATEST(end_battery_pct - start_battery_pct, 0)) 
+				 FROM charging_sessions WHERE vehicle_id = $1 AND end_battery_pct > start_battery_pct`,
+				vehicleID).Scan(&delta)
+			if delta != nil {
+				currentCycles = int(*delta / 100)
+			}
+		}
 
 		// Synthesize a snapshot so the page has something to show
 		if currentHealth > 0 {
 			snapshots = []batterySnapshotData{{
-				HealthScore:  currentHealth,
-				CapacityKWh:  currentCapacity,
+				HealthScore:    currentHealth,
+				CapacityKWh:    currentCapacity,
 				DegradationPct: currentDegradation,
-				EstRangeKm:   currentRange,
-				CycleCount:   currentCycles,
-				CreatedAt:    time.Now().UTC(),
+				EstRangeKm:     currentRange,
+				CycleCount:     currentCycles,
+				CreatedAt:      time.Now().UTC(),
 			}}
 		}
 	}
@@ -221,282 +256,16 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 		"stress_level":        stressLevel,
 		"fast_charge_ratio":   math.Round(fastChargeRatio*10) / 10,
 		// New predictive fields
-		"current_health_pct":            currentHealth,
+		"current_health_pct":             currentHealth,
 		"degradation_rate_pct_per_month": math.Round(result.RatePerMonth*1000) / 1000,
-		"projected_80pct_date":          result.Prediction.PredictedDate,
-		"projections":                   result.Projections,
-		"risk_factors":                  riskFactors,
-		"recommendations":               recommendations,
+		"projected_80pct_date":           result.Prediction.PredictedDate,
+		"projections":                    result.Projections,
+		"risk_factors":                   riskFactors,
+		"recommendations":                recommendations,
 		// Capacity estimate metadata
 		"battery_capacity_kwh": capacityKWh,
 		"capacity_source":      capacitySource,
 	})
-}
-
-type degradationPrediction struct {
-	SlopePerYear     float64 `json:"slope_per_year"`
-	YearsTo80Pct     float64 `json:"years_to_80_pct"`
-	PredictedDate    string  `json:"predicted_date"`
-	HasEnoughData    bool    `json:"has_enough_data"`
-	ProjectionPoints []struct {
-		Month  string  `json:"month"`
-		Health float64 `json:"health"`
-	} `json:"projection_points"`
-}
-
-type predictiveProjection struct {
-	Date           string  `json:"date"`
-	HealthPct      float64 `json:"health_pct"`
-	ConfidenceLow  float64 `json:"confidence_low"`
-	ConfidenceHigh float64 `json:"confidence_high"`
-}
-
-type riskFactor struct {
-	Name   string `json:"name"`
-	Score  int    `json:"score"`
-	Label  string `json:"label"`
-	Detail string `json:"detail"`
-}
-
-type regressionResult struct {
-	Prediction   degradationPrediction
-	Projections  []predictiveProjection
-	RatePerMonth float64
-}
-
-func (h *BatteryDegradationHandler) predictDegradation(snapshots []batterySnapshotData) regressionResult {
-	res := regressionResult{}
-	pred := &res.Prediction
-
-	if len(snapshots) < 3 {
-		res.Projections = []predictiveProjection{}
-		return res
-	}
-
-	pred.HasEnoughData = true
-
-	// Simple linear regression: health_score vs time (in years from first snapshot)
-	firstTime := snapshots[0].CreatedAt
-	n := float64(len(snapshots))
-	var sumX, sumY, sumXY, sumX2 float64
-
-	for _, s := range snapshots {
-		x := s.CreatedAt.Sub(firstTime).Hours() / (24 * 365.25) // years
-		y := s.HealthScore
-		sumX += x
-		sumY += y
-		sumXY += x * y
-		sumX2 += x * x
-	}
-
-	xBar := sumX / n
-	yBar := sumY / n
-	ssx := sumX2 - n*xBar*xBar
-
-	if math.Abs(ssx) < 1e-10 {
-		res.Projections = []predictiveProjection{}
-		return res
-	}
-
-	slope := (sumXY - n*xBar*yBar) / ssx
-	intercept := yBar - slope*xBar
-
-	pred.SlopePerYear = math.Round(slope*100) / 100
-	res.RatePerMonth = math.Abs(slope) / 12
-
-	// Residual standard error for confidence intervals
-	var sse float64
-	for _, s := range snapshots {
-		x := s.CreatedAt.Sub(firstTime).Hours() / (24 * 365.25)
-		residual := s.HealthScore - (intercept + slope*x)
-		sse += residual * residual
-	}
-	se := 0.0
-	if n > 2 {
-		se = math.Sqrt(sse / (n - 2))
-	}
-
-	// t-value for 95% prediction interval (approximate)
-	tValue := 2.0
-	if n > 30 {
-		tValue = 1.96
-	}
-
-	// Predict when health reaches 80%
-	if slope < 0 {
-		yearsTo80 := (80 - intercept) / slope
-		currentYears := time.Since(firstTime).Hours() / (24 * 365.25)
-		remainingYears := yearsTo80 - currentYears
-		if remainingYears > 0 {
-			pred.YearsTo80Pct = math.Round(remainingYears*10) / 10
-			predictedTime := time.Now().AddDate(0, int(remainingYears*12), 0)
-			pred.PredictedDate = predictedTime.Format("2006-01")
-		}
-	}
-
-	// Generate projection points (36 months / 3 years forward)
-	currentYears := time.Since(firstTime).Hours() / (24 * 365.25)
-
-	type projPoint struct {
-		Month  string  `json:"month"`
-		Health float64 `json:"health"`
-	}
-	var oldProjections []projPoint
-	var enhancedProjections []predictiveProjection
-
-	for i := 0; i <= 36; i++ {
-		futureYears := currentYears + float64(i)/12.0
-		health := intercept + slope*futureYears
-		if health < 0 {
-			health = 0
-		}
-		if health > 100 {
-			health = 100
-		}
-		month := time.Now().AddDate(0, i, 0).Format("2006-01")
-
-		oldProjections = append(oldProjections, projPoint{
-			Month:  month,
-			Health: math.Round(health*10) / 10,
-		})
-
-		// Prediction interval width at this point
-		xDev := futureYears - xBar
-		piWidth := 0.0
-		if ssx > 1e-10 && n > 2 {
-			piWidth = tValue * se * math.Sqrt(1+1/n+(xDev*xDev)/ssx)
-		}
-		low := math.Max(0, health-piWidth)
-		high := math.Min(100, health+piWidth)
-
-		enhancedProjections = append(enhancedProjections, predictiveProjection{
-			Date:           month,
-			HealthPct:      math.Round(health*10) / 10,
-			ConfidenceLow:  math.Round(low*10) / 10,
-			ConfidenceHigh: math.Round(high*10) / 10,
-		})
-	}
-
-	pred.ProjectionPoints = make([]struct {
-		Month  string  `json:"month"`
-		Health float64 `json:"health"`
-	}, len(oldProjections))
-	for i, p := range oldProjections {
-		pred.ProjectionPoints[i].Month = p.Month
-		pred.ProjectionPoints[i].Health = p.Health
-	}
-
-	res.Projections = enhancedProjections
-	return res
-}
-
-// computeRiskFactors scores 5 battery risk categories (0-100, higher = more risk).
-func computeRiskFactors(fastChargePct, highSocPct, avgCellTemp, cyclesPerMonth, deepDischargePct float64) []riskFactor {
-	factors := make([]riskFactor, 0, 5)
-
-	// 1. Fast charge ratio
-	fastScore := int(math.Min(100, fastChargePct*1.4))
-	factors = append(factors, riskFactor{
-		Name:   "fast_charge_ratio",
-		Score:  fastScore,
-		Label:  riskLabel(fastScore),
-		Detail: fmt.Sprintf("%.0f%% of sessions are DC fast charge", fastChargePct),
-	})
-
-	// 2. High SOC charging (sessions ending above 90%)
-	socScore := int(math.Min(100, highSocPct*1.3))
-	factors = append(factors, riskFactor{
-		Name:   "high_soc_charging",
-		Score:  socScore,
-		Label:  riskLabel(socScore),
-		Detail: fmt.Sprintf("%.0f%% of sessions charge above 90%%", highSocPct),
-	})
-
-	// 3. Temperature exposure
-	tempScore := 10
-	switch {
-	case avgCellTemp > 45:
-		tempScore = 90
-	case avgCellTemp > 40:
-		tempScore = 70
-	case avgCellTemp > 35:
-		tempScore = 50
-	case avgCellTemp > 30:
-		tempScore = 25
-	}
-	factors = append(factors, riskFactor{
-		Name:   "temperature_exposure",
-		Score:  tempScore,
-		Label:  riskLabel(tempScore),
-		Detail: fmt.Sprintf("Average cell temperature: %.1f°C", avgCellTemp),
-	})
-
-	// 4. Cycle count rate (vs ~25 cycles/month typical baseline)
-	cycleScore := 15
-	switch {
-	case cyclesPerMonth > 40:
-		cycleScore = 80
-	case cyclesPerMonth > 30:
-		cycleScore = 55
-	case cyclesPerMonth > 20:
-		cycleScore = 35
-	}
-	factors = append(factors, riskFactor{
-		Name:   "cycle_count_rate",
-		Score:  cycleScore,
-		Label:  riskLabel(cycleScore),
-		Detail: fmt.Sprintf("%.0f cycles/month vs ~25 typical", cyclesPerMonth),
-	})
-
-	// 5. Deep discharge frequency (sessions starting below 10% SOC)
-	deepScore := int(math.Min(100, deepDischargePct*4))
-	factors = append(factors, riskFactor{
-		Name:   "deep_discharge_frequency",
-		Score:  deepScore,
-		Label:  riskLabel(deepScore),
-		Detail: fmt.Sprintf("%.0f%% of sessions start below 10%% SOC", deepDischargePct),
-	})
-
-	return factors
-}
-
-func riskLabel(score int) string {
-	switch {
-	case score <= 25:
-		return "Low"
-	case score <= 50:
-		return "Moderate"
-	case score <= 75:
-		return "Elevated"
-	default:
-		return "High"
-	}
-}
-
-// generateRecommendations produces actionable tips based on elevated risk factors.
-func generateRecommendations(factors []riskFactor) []string {
-	recs := make([]string, 0)
-	for _, f := range factors {
-		if f.Score <= 40 {
-			continue
-		}
-		switch f.Name {
-		case "fast_charge_ratio":
-			recs = append(recs, "Reduce Supercharging frequency — prefer Level 2 home or destination charging")
-		case "high_soc_charging":
-			recs = append(recs, "Reduce daily charge limit to 80% for everyday driving")
-		case "temperature_exposure":
-			recs = append(recs, "Park in shade or climate-controlled garage to reduce heat exposure")
-		case "cycle_count_rate":
-			recs = append(recs, "Combine short trips when possible to reduce charge cycle frequency")
-		case "deep_discharge_frequency":
-			recs = append(recs, "Avoid letting battery drop below 20% regularly — plug in nightly")
-		}
-	}
-	if len(recs) == 0 {
-		recs = append(recs, "Your battery habits are excellent — keep it up!")
-	}
-	return recs
 }
 
 // Health handles GET /analytics/battery-health?vehicle_id=X
@@ -515,8 +284,13 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 
 	ctx := r.Context()
 
-	// Look up vehicle-specific battery capacity
-	capacityKWh, capacitySource := lookupVehicleCapacity(ctx, h.db, vehicleID)
+	// Look up vehicle-specific battery capacity (nil-safe; falls back to
+	// the same default that lookupVehicleCapacity uses on lookup error).
+	capacityKWh := 75.0
+	capacitySource := "default"
+	if h.db != nil {
+		capacityKWh, capacitySource = lookupVehicleCapacity(ctx, h.db, vehicleID)
+	}
 
 	// Battery history — reconstruct from signal_log
 	type histEntry struct {
@@ -566,14 +340,26 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 	// Fallback from signal_log
 	if latestSOH == 0 {
 		var energy, rng *float64
-		if h.signalLogReader != nil {
+		if h.state != nil {
 			now := time.Now()
-			if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "EnergyRemaining", now); err == nil && val != nil {
+			val, sigErr := h.state.SignalAt(ctx, vehicleID, "EnergyRemaining", now)
+			if sigErr != nil {
+				log.Error().Err(sigErr).Int64("vehicle_id", vehicleID).Str("signal", "EnergyRemaining").Msg("battery-health: failed to read signal state")
+				writeError(w, http.StatusInternalServerError, "failed to read battery state")
+				return
+			}
+			if val != nil {
 				if v, ok := toFloatOk(val); ok && v > 0 {
 					energy = &v
 				}
 			}
-			if val, err := h.signalLogReader.SignalAt(ctx, vehicleID, "EstBatteryRange", now); err == nil && val != nil {
+			val, sigErr = h.state.SignalAt(ctx, vehicleID, "EstBatteryRange", now)
+			if sigErr != nil {
+				log.Error().Err(sigErr).Int64("vehicle_id", vehicleID).Str("signal", "EstBatteryRange").Msg("battery-health: failed to read signal state")
+				writeError(w, http.StatusInternalServerError, "failed to read battery state")
+				return
+			}
+			if val != nil {
 				if v, ok := toFloatOk(val); ok && v > 0 {
 					rng = &v
 				}
@@ -589,13 +375,15 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 		if rng != nil {
 			latestRange = *rng
 		}
-		var delta *float64
-		_ = h.db.Pool.QueryRow(ctx,
-			`SELECT SUM(GREATEST(end_battery_pct - start_battery_pct, 0))
-			 FROM charging_sessions WHERE vehicle_id = $1 AND end_battery_pct > start_battery_pct`,
-			vehicleID).Scan(&delta)
-		if delta != nil {
-			latestCycles = int(*delta / 100)
+		if h.db != nil {
+			var delta *float64
+			_ = h.db.Pool.QueryRow(ctx,
+				`SELECT SUM(GREATEST(end_battery_pct - start_battery_pct, 0))
+				 FROM charging_sessions WHERE vehicle_id = $1 AND end_battery_pct > start_battery_pct`,
+				vehicleID).Scan(&delta)
+			if delta != nil {
+				latestCycles = int(*delta / 100)
+			}
 		}
 		if latestSOH > 0 {
 			history = []histEntry{{
@@ -610,14 +398,16 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 
 	// Charging habit stats
 	var fastCount, slowCount, deepDischarge, fullCharge int
-	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT
-			COUNT(*) FILTER (WHERE charger_power_kw_max > 50),
-			COUNT(*) FILTER (WHERE charger_power_kw_max <= 50 OR charger_power_kw_max IS NULL),
-			COUNT(*) FILTER (WHERE start_battery_pct < 10),
-			COUNT(*) FILTER (WHERE end_battery_pct > 95)
-		FROM charging_sessions
-		WHERE vehicle_id = $1`, vehicleID).Scan(&fastCount, &slowCount, &deepDischarge, &fullCharge)
+	if h.db != nil {
+		_ = h.db.Pool.QueryRow(ctx, `
+			SELECT
+				COUNT(*) FILTER (WHERE charger_power_kw_max > 50),
+				COUNT(*) FILTER (WHERE charger_power_kw_max <= 50 OR charger_power_kw_max IS NULL),
+				COUNT(*) FILTER (WHERE start_battery_pct < 10),
+				COUNT(*) FILTER (WHERE end_battery_pct > 95)
+			FROM charging_sessions
+			WHERE vehicle_id = $1`, vehicleID).Scan(&fastCount, &slowCount, &deepDischarge, &fullCharge)
+	}
 
 	totalCharges := fastCount + slowCount
 	fastChargePct := 0.0
@@ -662,10 +452,12 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 
 	// Avg depth of discharge
 	var avgDoD *float64
-	_ = h.db.Pool.QueryRow(ctx,
-		`SELECT AVG(GREATEST(start_battery_pct - end_battery_pct, 0))
-		 FROM drives WHERE vehicle_id = $1 AND start_battery_pct > end_battery_pct`,
-		vehicleID).Scan(&avgDoD)
+	if h.db != nil {
+		_ = h.db.Pool.QueryRow(ctx,
+			`SELECT AVG(GREATEST(start_battery_pct - end_battery_pct, 0))
+			 FROM drives WHERE vehicle_id = $1 AND start_battery_pct > end_battery_pct`,
+			vehicleID).Scan(&avgDoD)
+	}
 	dod := 0.0
 	if avgDoD != nil {
 		dod = *avgDoD
@@ -678,7 +470,7 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 	// Compute temp exposure score from actual ModuleTempMax signal data
 	var tempExposureScore interface{}
 	var tempExposureReason interface{}
-	if h.signalLogReader != nil {
+	if h.signalLogReader != nil && h.db != nil {
 		var avgTemp *float64
 		var sampleCount int
 		_ = h.db.Pool.QueryRow(ctx, `
@@ -728,151 +520,4 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 		"battery_capacity_kwh": capacityKWh,
 		"capacity_source":      capacitySource,
 	})
-}
-
-// synthesizeBatterySnapshots converts signal trace entries into the legacy
-// batterySnapshotData shape expected by the prediction and display code.
-// Entries are grouped by timestamp; each unique timestamp yields one snapshot.
-// nominalCapacity is the vehicle-specific estimated capacity in kWh.
-func synthesizeBatterySnapshots(entries []database.SignalTraceEntry, nominalCapacity float64) []batterySnapshotData {
-	if len(entries) == 0 {
-		return nil
-	}
-
-	// Group entries by timestamp (rounded to the nearest second)
-	type group struct {
-		ts              time.Time
-		batteryLevel    *float64
-		energyRemain    *float64
-		estBatteryRange *float64
-	}
-	groupMap := make(map[int64]*group) // unix seconds → group
-	var orderedKeys []int64
-
-	for _, e := range entries {
-		key := e.Timestamp.Unix()
-		g, ok := groupMap[key]
-		if !ok {
-			g = &group{ts: e.Timestamp}
-			groupMap[key] = g
-			orderedKeys = append(orderedKeys, key)
-		}
-		if e.ValueNum == nil {
-			continue
-		}
-		switch e.Signal {
-		case "BatteryLevel":
-			v := *e.ValueNum
-			g.batteryLevel = &v
-		case "EnergyRemaining":
-			v := *e.ValueNum
-			g.energyRemain = &v
-		case "EstBatteryRange":
-			v := *e.ValueNum
-			g.estBatteryRange = &v
-		}
-	}
-
-	sort.Slice(orderedKeys, func(i, j int) bool { return orderedKeys[i] < orderedKeys[j] })
-
-	var result []batterySnapshotData
-	var idCounter int64
-	for _, key := range orderedKeys {
-		g := groupMap[key]
-		idCounter++
-
-		// Derive health_score from EnergyRemaining / nominal
-		capacityKWh := nominalCapacity
-		healthScore := 100.0
-		if g.energyRemain != nil && *g.energyRemain > 0 {
-			capacityKWh = *g.energyRemain
-			healthScore = (capacityKWh / nominalCapacity) * 100
-			if healthScore > 100 {
-				healthScore = 100
-			}
-		}
-
-		estRangeKm := 0.0
-		if g.estBatteryRange != nil {
-			estRangeKm = *g.estBatteryRange
-		}
-
-		result = append(result, batterySnapshotData{
-			ID:             idCounter,
-			HealthScore:    healthScore,
-			CapacityKWh:    capacityKWh,
-			DegradationPct: 100 - healthScore,
-			EstRangeKm:     estRangeKm,
-			CreatedAt:      g.ts,
-		})
-	}
-	return result
-}
-
-// monthlyTrend holds monthly aggregation of battery health data.
-type monthlyTrend struct {
-	Month          string  `json:"month"`
-	AvgHealth      float64 `json:"avg_health"`
-	AvgCapacity    float64 `json:"avg_capacity"`
-	AvgDegradation float64 `json:"avg_degradation"`
-	AvgRange       float64 `json:"avg_range"`
-	MaxCycles      int     `json:"max_cycles"`
-	AvgCellTemp    float64 `json:"avg_cell_temp"`
-}
-
-// aggregateMonthlyTrends groups synthesized snapshots by month and computes averages.
-func aggregateMonthlyTrends(snapshots []batterySnapshotData) []monthlyTrend {
-	if len(snapshots) == 0 {
-		return []monthlyTrend{}
-	}
-
-	type monthAccum struct {
-		sumHealth      float64
-		sumCapacity    float64
-		sumDegradation float64
-		sumRange       float64
-		sumTemp        float64
-		maxCycles      int
-		count          int
-	}
-
-	months := make(map[string]*monthAccum)
-	var monthOrder []string
-
-	for _, s := range snapshots {
-		key := s.CreatedAt.Format("2006-01")
-		acc, ok := months[key]
-		if !ok {
-			acc = &monthAccum{}
-			months[key] = acc
-			monthOrder = append(monthOrder, key)
-		}
-		acc.sumHealth += s.HealthScore
-		acc.sumCapacity += s.CapacityKWh
-		acc.sumDegradation += s.DegradationPct
-		acc.sumRange += s.EstRangeKm
-		acc.sumTemp += s.AvgCellTempC
-		if s.CycleCount > acc.maxCycles {
-			acc.maxCycles = s.CycleCount
-		}
-		acc.count++
-	}
-
-	sort.Strings(monthOrder)
-
-	result := make([]monthlyTrend, 0, len(monthOrder))
-	for _, key := range monthOrder {
-		acc := months[key]
-		n := float64(acc.count)
-		result = append(result, monthlyTrend{
-			Month:          key,
-			AvgHealth:      math.Round(acc.sumHealth/n*10) / 10,
-			AvgCapacity:    math.Round(acc.sumCapacity/n*10) / 10,
-			AvgDegradation: math.Round(acc.sumDegradation/n*10) / 10,
-			AvgRange:       math.Round(acc.sumRange/n*10) / 10,
-			MaxCycles:      acc.maxCycles,
-			AvgCellTemp:    math.Round(acc.sumTemp/n*10) / 10,
-		})
-	}
-	return result
 }

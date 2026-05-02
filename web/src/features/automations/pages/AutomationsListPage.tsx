@@ -25,6 +25,7 @@ import {
   useReEnableAutomation,
 } from '@/api/hooks/useAutomations';
 import { useVehicles } from '@/api/hooks/useVehicles';
+import { usePinned } from '@/api/hooks/usePinned';
 import { AutomationCard } from './AutomationCard';
 import { AutomationActivityFeed } from './AutomationActivityFeed';
 import {
@@ -202,6 +203,21 @@ export default function AutomationsListPage() {
     return result;
   }, [items, statusFilter, search]);
 
+  const { data: automationPins = [] } = usePinned('automation');
+  const sortedItems = useMemo(() => {
+    if (automationPins.length === 0) return filteredItems;
+    const order = new Map<string, number>();
+    automationPins.forEach((p) => order.set(String(p.item_id), p.position));
+    return [...filteredItems].sort((a, b) => {
+      const ap = order.get(String(a.id));
+      const bp = order.get(String(b.id));
+      if (ap != null && bp != null) return ap - bp;
+      if (ap != null) return -1;
+      if (bp != null) return 1;
+      return 0;
+    });
+  }, [filteredItems, automationPins]);
+
   // Callbacks
   const handleToggle = useCallback(
     (id: number, enabled: boolean) => {
@@ -346,7 +362,7 @@ export default function AutomationsListPage() {
       <FadeIn delay={0.05}>
         {filteredItems.length > 0 ? (
           <StaggerContainer className="space-y-3">
-            {filteredItems.map((a) => (
+            {sortedItems.map((a) => (
               <StaggerItem key={a.id}>
                 <AutomationCard
                   automation={a}

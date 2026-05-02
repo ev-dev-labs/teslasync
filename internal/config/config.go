@@ -25,6 +25,61 @@ type Config struct {
 	OpenTelemetry  OpenTelemetryConfig
 	GoogleMaps     GoogleMapsConfig
 	AzureMaps      AzureMapsConfig
+	APILogs        APILogsConfig
+	WebPush        WebPushConfig
+}
+
+// WebPushConfig holds VAPID credentials used to sign and deliver Web Push
+// notifications to subscribed browsers (Phase 40 / Prompt 52).
+//
+// All three fields are required for the push channel to be active. When
+// any is empty, the push channel is disabled and the public-key endpoint
+// returns 404 — the frontend interprets that as "browser push unavailable
+// for this install" and hides the Enable button accordingly.
+//
+// VAPID keys MUST be generated once (offline) and pinned via env vars:
+//
+//	go run ./cmd/teslasync vapid-keygen
+//
+// Auto-generating at startup would invalidate every existing subscription
+// on the next restart.
+type WebPushConfig struct {
+	// PublicKey is the base64url-encoded VAPID public key (~88 chars).
+	// Returned to the browser unauthenticated via GET /push/public-key
+	// and used by the browser as `applicationServerKey` when subscribing.
+	PublicKey string
+	// PrivateKey is the base64url-encoded VAPID private key (~44 chars).
+	// SECRET — kept out of the frontend bundle; only the API server and
+	// notification worker need it (to sign each push request's JWT).
+	PrivateKey string
+	// Subject is the `mailto:` or HTTPS URL the push service contacts
+	// when a subscription needs operator follow-up. SECRET-ish — leaks
+	// the operator's email if exposed via logs.
+	Subject string
+}
+
+// Enabled reports whether all three VAPID fields are set. The push
+// channel registers as a no-op when this returns false.
+func (w WebPushConfig) Enabled() bool {
+	return w.PublicKey != "" && w.PrivateKey != "" && w.Subject != ""
+}
+
+// APILogsConfig controls the inbound api_call_logs middleware (Phase 38-10).
+//
+// When Enabled is false the middleware uses a no-op logger, so a misconfigured
+// or under-provisioned writer can be disabled at runtime without a rebuild.
+//
+// CaptureBodies toggles request/response body persistence (default OFF, per
+// ADR phase-38-08); when enabled both bodies are truncated at 10 KB.
+//
+// QueueCapacity, BatchSize and FlushInterval tune the async writer's
+// channel/batcher.
+type APILogsConfig struct {
+	Enabled       bool
+	CaptureBodies bool
+	QueueCapacity int
+	BatchSize     int
+	FlushInterval time.Duration
 }
 
 // GoogleMapsConfig holds settings for the Google Maps geocoding API.
@@ -158,9 +213,17 @@ type AuthConfig struct {
 }
 
 type RetentionConfig struct {
-	DataRetentionDays        int
-	PositionRetentionDays    int
+	DataRetentionDays          int
+	PositionRetentionDays      int
 	SignalHistoryRetentionDays int
+	// AuditRetentionDays is the maximum age (in days) of rows kept in
+	// audit_logs. Default 365. Set to 0 to disable automatic cleanup.
+	AuditRetentionDays int
+	// AuditIPRetentionDays is the age (in days) after which audit_logs.ip
+	// and audit_logs.user_agent are redacted to NULL. Default 30. Always
+	// less than or equal to AuditRetentionDays in practice; set to 0 to
+	// disable IP/UA redaction (rows are still pruned per AuditRetentionDays).
+	AuditIPRetentionDays int
 }
 
 // Load reads configuration from environment variables with sensible defaults.
@@ -236,6 +299,8 @@ func Load() (*Config, error) {
 			DataRetentionDays:          envInt("DATA_RETENTION_DAYS", 0),
 			PositionRetentionDays:      envInt("POSITION_RETENTION_DAYS", 0),
 			SignalHistoryRetentionDays: envInt("SIGNAL_HISTORY_RETENTION_DAYS", 0),
+			AuditRetentionDays:         envInt("AUDIT_RETENTION_DAYS", 365),
+			AuditIPRetentionDays:       envInt("AUDIT_IP_RETENTION_DAYS", 30),
 		},
 
 		FleetTelemetry: FleetTelemetryConfig{
@@ -278,6 +343,20 @@ func Load() (*Config, error) {
 
 		AzureMaps: AzureMapsConfig{
 			APIKey: envStr("AZURE_MAPS_API_KEY", ""),
+		},
+
+		APILogs: APILogsConfig{
+			Enabled:       envBool("API_LOGS_INBOUND_ENABLED", true),
+			CaptureBodies: envBool("API_LOG_CAPTURE_BODIES", false),
+			QueueCapacity: envInt("API_LOG_QUEUE_CAPACITY", 4096),
+			BatchSize:     envInt("API_LOG_BATCH_SIZE", 100),
+			FlushInterval: envDuration("API_LOG_FLUSH_INTERVAL", 1*time.Second),
+		},
+
+		WebPush: WebPushConfig{
+			PublicKey:  envStr("TESLASYNC_VAPID_PUBLIC_KEY", ""),
+			PrivateKey: envStr("TESLASYNC_VAPID_PRIVATE_KEY", ""),
+			Subject:    envStr("TESLASYNC_VAPID_SUBJECT", ""),
 		},
 	}
 

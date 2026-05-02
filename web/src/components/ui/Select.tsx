@@ -7,16 +7,29 @@ export interface SelectOption {
   disabled?: boolean;
 }
 
-export interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'children'> {
+export interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'children' | 'size'> {
   options: SelectOption[];
   label?: string;
   error?: string;
   hint?: string;
   placeholder?: string;
+  /**
+   * Sizing scale. Defaults to `'md'` for back-compat. Pass `'auto'` to
+   * follow the user's `ui_density` setting via density-aware Tailwind
+   * utilities. (Phase 40 / Prompt 44.)
+   */
+  size?: 'sm' | 'md' | 'lg' | 'auto';
 }
 
+const sizeClasses: Record<NonNullable<SelectProps['size']>, string> = {
+  sm: 'px-2 py-1.5 text-xs',
+  md: 'px-3 py-2 text-sm',
+  lg: 'px-4 py-2.5 text-base',
+  auto: 'px-d-pad-x py-d-pad-y text-d-base min-h-d-row',
+};
+
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ options, label, error, hint, placeholder, className, id, ...props }, ref) => {
+  ({ options, label, error, hint, placeholder, size = 'md', className, id, ...props }, ref) => {
     const selectId = id || label?.toLowerCase().replace(/\s+/g, '-');
     return (
       <div className="space-y-1">
@@ -29,7 +42,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           ref={ref}
           id={selectId}
           className={cn(
-            'w-full rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] px-3 py-2 text-sm text-[var(--text-primary)] transition-colors',
+            'w-full rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] transition-colors',
+            sizeClasses[size],
             'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-[var(--bg)]',
             'disabled:cursor-not-allowed disabled:opacity-50',
             error && 'border-red-500',

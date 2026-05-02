@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import { GlassPanel } from '@/components/ui'
 import { COLOR } from '@/lib/colors'
 
@@ -60,6 +61,7 @@ export function getScoreColor(score: number): string {
 }
 
 export function DriveScore({ drive }: { drive: DriveLike }) {
+  const { t } = useTranslation()
   const score = useMemo(() => computeDriveScore(drive), [drive])
   const color = getScoreColor(score.total)
 
@@ -101,18 +103,18 @@ export function DriveScore({ drive }: { drive: DriveLike }) {
             >
               {score.total}
             </motion.span>
-            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Score</span>
+            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{t('driveScore.score', 'Score')}</span>
           </div>
         </div>
 
         {/* Breakdown */}
         <div className="flex-1 space-y-2">
-          <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">Drive Score</h3>
+          <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('driveScore.title', 'Drive Score')}</h3>
           {[
-            { label: 'Efficiency', value: score.efficiency, max: 40, color: '#00f0ff' },
-            { label: 'Speed Discipline', value: score.speed, max: 20, color: '#a855f7' },
-            { label: 'Range Preservation', value: score.range, max: 20, color: '#10b981' },
-            { label: 'Trip Length', value: score.trip, max: 20, color: '#f59e0b' },
+            { label: t('driveScore.efficiency', 'Efficiency'), value: score.efficiency, max: 40, color: '#00f0ff' },
+            { label: t('driveScore.speedDiscipline', 'Speed Discipline'), value: score.speed, max: 20, color: '#a855f7' },
+            { label: t('driveScore.rangePreservation', 'Range Preservation'), value: score.range, max: 20, color: '#10b981' },
+            { label: t('driveScore.tripLength', 'Trip Length'), value: score.trip, max: 20, color: '#f59e0b' },
           ].map(item => (
             <div key={item.label}>
               <div className="flex justify-between text-[11px] mb-0.5">

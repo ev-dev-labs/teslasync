@@ -1,9 +1,10 @@
+import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 
 interface TimelineItemData {
   icon?: React.ReactNode;
-  title: string;
-  subtitle?: string;
+  title: ReactNode;
+  subtitle?: ReactNode;
   time: string;
   color?: string;
 }

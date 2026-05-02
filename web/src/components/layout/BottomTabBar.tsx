@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Home, Car, Zap, Bell, Settings } from 'lucide-react';
+import { Home, Car, BatteryCharging, HeartPulse, MapPin } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import type { LucideIcon } from 'lucide-react';
 
@@ -11,12 +11,17 @@ interface Tab {
   fallback: string;
 }
 
+/**
+ * Top-5 most-trafficked routes per MOBILE_GUIDELINES.md. Mirrors the
+ * navigation a Tesla owner reaches for from their phone:
+ * Dashboard → Drives → Charging → Battery → Map.
+ */
 const TABS: Tab[] = [
-  { path: '/',          icon: Home,     i18nKey: 'nav.dashboard', fallback: 'Home' },
-  { path: '/drives',    icon: Car,      i18nKey: 'nav.drives',    fallback: 'Drives' },
-  { path: '/commands',  icon: Zap,      i18nKey: 'nav.commands',  fallback: 'Commands' },
-  { path: '/alerts',    icon: Bell,     i18nKey: 'nav.alerts',    fallback: 'Alerts' },
-  { path: '/settings',  icon: Settings, i18nKey: 'nav.settings',  fallback: 'Settings' },
+  { path: '/',         icon: Home,             i18nKey: 'nav.dashboard', fallback: 'Home' },
+  { path: '/drives',   icon: Car,              i18nKey: 'nav.drives',    fallback: 'Drives' },
+  { path: '/charging', icon: BatteryCharging,  i18nKey: 'nav.charging',  fallback: 'Charging' },
+  { path: '/battery',  icon: HeartPulse,       i18nKey: 'nav.battery',   fallback: 'Battery' },
+  { path: '/live',     icon: MapPin,           i18nKey: 'nav.liveMap',   fallback: 'Map' },
 ];
 
 /** Paths shown in the bottom tab bar — used to de-emphasize sidebar duplicates on mobile */

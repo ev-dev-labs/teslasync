@@ -4,6 +4,14 @@ on:
   schedule:
     - cron: "0 4 * * 1"
   workflow_dispatch:
+    inputs:
+      runner:
+        description: 'Runner to use (manual runs only)'
+        type: choice
+        options:
+          - arc-runner
+          - ubuntu-latest
+        default: arc-runner
 
 permissions:
   contents: read
@@ -12,7 +20,7 @@ permissions:
 jobs:
   security:
     name: Security Scan
-    runs-on: arc-runner
+    runs-on: ${{ inputs.runner || 'arc-runner' }}
     steps:
       - uses: actions/checkout@v4
 

@@ -162,7 +162,7 @@ const catalog: SignalMeta[] = [
   { name: 'DestinationLocation', category: 'Location', type: 'string', description: 'Navigation destination coordinates' },
   { name: 'DestinationName', category: 'Navigation', type: 'string', description: 'Navigation destination name' },
   { name: 'GpsHeading', category: 'Location', type: 'number', unit: '°', description: 'GPS heading in degrees' },
-  { name: 'GpsState', category: 'Location', type: 'string', description: 'GPS fix state', enumValues: ['NoFix', 'Fix2D', 'Fix3D'] },
+  { name: 'GpsState', category: 'Location', type: 'string', description: 'GPS fix state. Polymorphic: Tesla emits "true"/"false"; legacy data uses "GPSValid"/"GPSInvalid"; canonical enum is NoFix/Fix2D/Fix3D. Use normalizeGpsState() before display.', enumValues: ['NoFix', 'Fix2D', 'Fix3D', 'GPSValid', 'GPSInvalid', 'true', 'false'] },
   { name: 'LocatedAtFavorite', category: 'Location', type: 'boolean', description: 'Vehicle at a favorite location' },
   { name: 'LocatedAtHome', category: 'Location', type: 'boolean', description: 'Vehicle at home location' },
   { name: 'LocatedAtWork', category: 'Location', type: 'boolean', description: 'Vehicle at work location' },
@@ -286,4 +286,42 @@ for (const s of catalog) _byName.set(s.name, s)
 /** Returns metadata for a signal by name. */
 export function getSignalMeta(name: string): SignalMeta | undefined {
   return _byName.get(name)
+}
+
+/* ------------------------------------------------------------------ */
+/*  GPS state normalisation                                            */
+/* ------------------------------------------------------------------ */
+
+/** Stable 3-value enum the UI can switch on for the polymorphic gps_state field. */
+export type GpsFixState = 'locked' | 'unlocked' | 'unknown'
+
+/**
+ * Canonicalises the polymorphic gps_state values Tesla and our test
+ * generators emit into a stable 3-value enum the UI can switch on.
+ *
+ * Real-world raw values include: "true"/"false" (Tesla bool literal),
+ * "GPSValid"/"GPSInvalid" (legacy test data), "NoFix"/"Fix2D"/"Fix3D"
+ * (canonical enum), and historic strings like "normal"/"good"/"strong"/
+ * "ok"/"valid"/"invalid"/"none".
+ */
+export function normalizeGpsState(raw: string | null | undefined): GpsFixState {
+  if (raw == null) return 'unknown'
+  const v = String(raw).trim().toLowerCase()
+  if (!v) return 'unknown'
+
+  if (
+    v === 'true' || v === '1' || v === 'yes' ||
+    v === 'gpsvalid' ||
+    v === 'fix2d' || v === 'fix3d' ||
+    v === 'normal' || v === 'good' || v === 'strong' || v === 'ok' || v === 'valid'
+  ) return 'locked'
+
+  if (
+    v === 'false' || v === '0' || v === 'no' ||
+    v === 'gpsinvalid' ||
+    v === 'nofix' ||
+    v === 'invalid' || v === 'none'
+  ) return 'unlocked'
+
+  return 'unknown'
 }

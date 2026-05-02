@@ -59,7 +59,7 @@ export function VehicleCharts({
           <GlassPanel className="overflow-hidden h-full">
             <div className="p-4 pb-0">
               <h3 className="section-title flex items-center gap-2 mb-3">
-                <Navigation className="h-4 w-4 text-neon-cyan" />{' '}
+                <Navigation className="h-4 w-4 text-cyan-300" />{' '}
                 {t('common.location', 'Location')}
               </h3>
             </div>

@@ -5,7 +5,7 @@ import { TrendingUp } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, ResponsiveContainer,
   Tooltip, ReferenceLine,
-  chartGrid, axisTick, axisTickSm, chartAnimation, fmt, CHART_COLORS,
+  chartGrid, axisTick, axisTickSm, chartAnimation, fmt, useChartPalette,
   AREA_DEFAULTS, areaGradient,
 } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
@@ -158,6 +158,9 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
   const isWide = size.cols >= 3;
   const tick = isWide ? axisTick : axisTickSm;
 
+  // Phase-40 / Prompt 60 — series colour follows the active theme.
+  const palette = useChartPalette();
+
   const stats = useMemo<ChartSummaryStat[]>(() => {
     const items: ChartSummaryStat[] = [
       {
@@ -187,7 +190,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
             margin={{ top: 4, right: 4, bottom: 0, left: -20 }}
             {...chartAnimation}
           >
-            {areaGradient('efficiency-grad', CHART_COLORS[0])}
+            {areaGradient('efficiency-grad', palette.series[0])}
             {chartGrid}
             <XAxis dataKey="label" tick={tick} tickLine={false} axisLine={false} />
             <YAxis
@@ -210,7 +213,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
             <Area
               {...AREA_DEFAULTS}
               dataKey="efficiency"
-              stroke={CHART_COLORS[0]}
+              stroke={palette.series[0]}
               fill="url(#efficiency-grad)"
               name={t('widget.driveEfficiencyChart.daily', 'Daily') + ` (${efficiencyUnit})`}
             />
@@ -232,7 +235,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
         <div className="flex items-center gap-1">
           <span
             className="inline-block h-2 w-2 rounded-full"
-            style={{ background: CHART_COLORS[0] }}
+            style={{ background: palette.series[0] }}
           />
           <span className="text-[10px] text-white/50">
             {t('widget.driveEfficiencyChart.daily', 'Daily')}
@@ -254,7 +257,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
   return (
     <WidgetShell
       title={!isCompact ? t('widget.driveEfficiencyChart.title', 'Drive Efficiency') : undefined}
-      icon={!isCompact ? <TrendingUp className="h-3.5 w-3.5 text-neon-cyan" /> : undefined}
+      icon={!isCompact ? <TrendingUp className="h-3.5 w-3.5 text-cyan-300" /> : undefined}
       loading={isLoading}
       error={error ? String(error) : null}
       updatedAt={dataUpdatedAt}

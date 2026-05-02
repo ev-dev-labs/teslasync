@@ -13,207 +13,35 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
 // ChargePlannerHandler provides smart charge scheduling optimization.
+//
+// Phase-39 migration: the current-SOC lookup that seeds the optimizer
+// (BatteryLevel as of now) now resolves through the canonical
+// signal.StateReader (ADR-002 / phase-39) instead of the legacy
+// database.SignalLogReader's per-signal helper. The lookup is a "value
+// as of now" forward-folded read, which maps 1:1 onto
+// StateReader.SignalAt with identical semantics.
+//
+// As part of this migration, transport errors from state.SignalAt now
+// propagate to the caller as a 500 instead of being silently swallowed.
+// The legacy silent-swallow defaulted currentSOC to 0, which made every
+// optimize request appear to need a full charge from empty — masking
+// real signal-store / pgx outages behind plausible-looking (but wrong)
+// charge windows and inflated cost estimates.
 type ChargePlannerHandler struct {
-	db              *database.DB
-	teslaClient     *tesla.Client
-	cfg             *config.Config
-	signalLogReader *database.SignalLogReader
+	db          *database.DB
+	teslaClient *tesla.Client
+	cfg         *config.Config
+	state       signal.StateReader
 }
 
 // NewChargePlannerHandler creates a new ChargePlannerHandler.
-func NewChargePlannerHandler(db *database.DB, teslaClient *tesla.Client, cfg *config.Config, slr *database.SignalLogReader) *ChargePlannerHandler {
-	return &ChargePlannerHandler{db: db, teslaClient: teslaClient, cfg: cfg, signalLogReader: slr}
-}
-
-// ── Request/Response types ───────────────────────────────────
-
-type optimizeRequest struct {
-	VehicleID        int64   `json:"vehicle_id"`
-	TargetSOC        int     `json:"target_soc"`
-	DepartBy         string  `json:"depart_by"` // RFC3339
-	RatePlanID       string  `json:"rate_plan_id"`
-	MaxAmps          int     `json:"max_amps"`
-	BatteryCapacity  float64 `json:"battery_capacity_kwh"` // optional, default 75
-	ChargerVoltage   int     `json:"charger_voltage"`      // optional, default 240
-	PreferOffPeak    bool    `json:"prefer_off_peak"`
-}
-
-type chargeWindow struct {
-	StartTime    time.Time `json:"start_time"`
-	EndTime      time.Time `json:"end_time"`
-	RateCentsKWh float64   `json:"rate_cents_kwh"`
-	EstCost      float64   `json:"estimated_cost"`
-	RateTier     string    `json:"rate_tier"`
-}
-
-type costComparison struct {
-	ChargeNowCost  float64 `json:"charge_now_cost"`
-	OptimizedCost  float64 `json:"optimized_cost"`
-	Savings        float64 `json:"savings"`
-	SavingsPct     float64 `json:"savings_percent"`
-}
-
-type optimizeResponse struct {
-	PlanID           int64           `json:"plan_id"`
-	CurrentSOC       int             `json:"current_soc"`
-	TargetSOC        int             `json:"target_soc"`
-	KWhNeeded        float64         `json:"kwh_needed"`
-	EstDurationHours float64         `json:"estimated_duration_hours"`
-	Schedule         chargeWindow    `json:"schedule"`
-	Comparison       costComparison  `json:"comparison"`
-	Alternatives     []chargeWindow  `json:"alternative_windows"`
-	HourlyRates      []hourlyRate    `json:"hourly_rates"`
-}
-
-type hourlyRate struct {
-	Hour       int     `json:"hour"`
-	RateCents  float64 `json:"rate_cents"`
-	Tier       string  `json:"tier"`
-}
-
-type applyRequest struct {
-	PlanID int64 `json:"plan_id"`
-}
-
-// ── TOU Rate Presets (server-side source of truth) ───────────
-
-type touRateBlock struct {
-	Rate  float64
-	Start int // hour 0-23
-	End   int // hour 0-24
-}
-
-type touSeason struct {
-	FromMonth int
-	ToMonth   int
-	Tiers     map[string][]touRateBlock // "ON_PEAK", "OFF_PEAK", "MID_PEAK", etc.
-}
-
-type touPlan struct {
-	ID       string
-	Name     string
-	Utility  string
-	Seasons  map[string]touSeason
-}
-
-var ratePlans = map[string]touPlan{
-	"pge-ev2a": {
-		ID: "pge-ev2a", Name: "PG&E EV2-A", Utility: "Pacific Gas & Electric",
-		Seasons: map[string]touSeason{
-			"Summer": {FromMonth: 6, ToMonth: 9, Tiers: map[string][]touRateBlock{
-				"ON_PEAK":  {{Rate: 0.49, Start: 16, End: 21}},
-				"OFF_PEAK": {{Rate: 0.35, Start: 0, End: 16}, {Rate: 0.35, Start: 21, End: 24}},
-			}},
-			"Winter": {FromMonth: 10, ToMonth: 5, Tiers: map[string][]touRateBlock{
-				"ON_PEAK":  {{Rate: 0.42, Start: 16, End: 21}},
-				"OFF_PEAK": {{Rate: 0.36, Start: 0, End: 16}, {Rate: 0.36, Start: 21, End: 24}},
-			}},
-		},
-	},
-	"sce-tou-d": {
-		ID: "sce-tou-d", Name: "SCE TOU-D", Utility: "Southern California Edison",
-		Seasons: map[string]touSeason{
-			"Summer": {FromMonth: 6, ToMonth: 9, Tiers: map[string][]touRateBlock{
-				"ON_PEAK":  {{Rate: 0.54, Start: 16, End: 21}},
-				"MID_PEAK": {{Rate: 0.41, Start: 8, End: 16}, {Rate: 0.41, Start: 21, End: 23}},
-				"OFF_PEAK": {{Rate: 0.28, Start: 0, End: 8}, {Rate: 0.28, Start: 23, End: 24}},
-			}},
-			"Winter": {FromMonth: 10, ToMonth: 5, Tiers: map[string][]touRateBlock{
-				"MID_PEAK":       {{Rate: 0.43, Start: 8, End: 21}},
-				"SUPER_OFF_PEAK": {{Rate: 0.28, Start: 0, End: 8}, {Rate: 0.28, Start: 21, End: 24}},
-			}},
-		},
-	},
-	"sdge-tou-dr1": {
-		ID: "sdge-tou-dr1", Name: "SDG&E TOU-DR1", Utility: "San Diego Gas & Electric",
-		Seasons: map[string]touSeason{
-			"Summer": {FromMonth: 6, ToMonth: 9, Tiers: map[string][]touRateBlock{
-				"ON_PEAK":  {{Rate: 0.71, Start: 16, End: 21}},
-				"OFF_PEAK": {{Rate: 0.45, Start: 0, End: 16}, {Rate: 0.45, Start: 21, End: 24}},
-			}},
-			"Winter": {FromMonth: 10, ToMonth: 5, Tiers: map[string][]touRateBlock{
-				"ON_PEAK":  {{Rate: 0.57, Start: 16, End: 21}},
-				"OFF_PEAK": {{Rate: 0.45, Start: 0, End: 16}, {Rate: 0.45, Start: 21, End: 24}},
-			}},
-		},
-	},
-}
-
-// ── Helpers ──────────────────────────────────────────────────
-
-// seasonForDate returns the season name for a given date.
-func seasonForDate(plan touPlan, t time.Time) string {
-	m := int(t.Month())
-	for name, s := range plan.Seasons {
-		if s.FromMonth <= s.ToMonth {
-			if m >= s.FromMonth && m <= s.ToMonth {
-				return name
-			}
-		} else {
-			// Wraps around year (e.g., Oct-May)
-			if m >= s.FromMonth || m <= s.ToMonth {
-				return name
-			}
-		}
-	}
-	// Fallback: return first season
-	for name := range plan.Seasons {
-		return name
-	}
-	return ""
-}
-
-// buildHourlyRates returns the rate and tier for each hour 0-23 for the given season.
-func buildHourlyRates(season touSeason) []hourlyRate {
-	rates := make([]hourlyRate, 24)
-	for i := range rates {
-		rates[i] = hourlyRate{Hour: i, RateCents: 0, Tier: "unknown"}
-	}
-	for tierName, blocks := range season.Tiers {
-		for _, b := range blocks {
-			for h := b.Start; h < b.End && h < 24; h++ {
-				rates[h] = hourlyRate{
-					Hour:      h,
-					RateCents: b.Rate * 100, // dollars -> cents
-					Tier:      tierName,
-				}
-			}
-		}
-	}
-	return rates
-}
-
-// tierLabel returns a human-friendly tier name.
-func tierLabel(tier string) string {
-	switch tier {
-	case "ON_PEAK":
-		return "on-peak"
-	case "MID_PEAK":
-		return "mid-peak"
-	case "OFF_PEAK", "SUPER_OFF_PEAK":
-		return "off-peak"
-	default:
-		return "unknown"
-	}
-}
-
-// costForWindow calculates the cost of charging across a window of hours using per-hour rates.
-func costForWindow(rates []hourlyRate, startHour, durationHours int, kwhNeeded float64) (float64, float64) {
-	if durationHours <= 0 {
-		return 0, 0
-	}
-	totalRateCents := 0.0
-	for i := 0; i < durationHours; i++ {
-		h := (startHour + i) % 24
-		totalRateCents += rates[h].RateCents
-	}
-	avgRateCents := totalRateCents / float64(durationHours)
-	cost := avgRateCents / 100.0 * kwhNeeded // cents→dollars * kWh
-	return cost, avgRateCents
+func NewChargePlannerHandler(db *database.DB, teslaClient *tesla.Client, cfg *config.Config, state signal.StateReader) *ChargePlannerHandler {
+	return &ChargePlannerHandler{db: db, teslaClient: teslaClient, cfg: cfg, state: state}
 }
 
 // ── Optimize Endpoint ────────────────────────────────────────
@@ -270,11 +98,17 @@ func (h *ChargePlannerHandler) Optimize(w http.ResponseWriter, r *http.Request) 
 		req.ChargerVoltage = 240
 	}
 
-	// Get current SOC from signal_log
+	// Get current SOC from the canonical state reader (signal_log-backed).
 	ctx := r.Context()
 	currentSOC := 0
-	if h.signalLogReader != nil {
-		if val, err := h.signalLogReader.SignalAt(ctx, req.VehicleID, "BatteryLevel", time.Now()); err == nil && val != nil {
+	if h.state != nil {
+		val, err := h.state.SignalAt(ctx, req.VehicleID, "BatteryLevel", time.Now())
+		if err != nil {
+			log.Error().Err(err).Int64("vehicle_id", req.VehicleID).Str("signal", "BatteryLevel").Msg("charge planner: failed to read current SOC")
+			writeError(w, http.StatusInternalServerError, "failed to read current battery state")
+			return
+		}
+		if val != nil {
 			if v, ok := toFloatOk(val); ok && v > 0 {
 				currentSOC = int(v)
 			}

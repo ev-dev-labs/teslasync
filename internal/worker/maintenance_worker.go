@@ -82,8 +82,32 @@ func runMaintenance(ctx context.Context, db *database.DB, cfg *config.Config) {
 		log.Error().Err(err).Msg("notification log cleanup failed")
 	}
 
-	// Run VACUUM ANALYZE to reclaim space and update statistics
-	if posDeleted > 0 || statesDeleted > 0 {
+	// Clean up old audit_logs entries beyond the configured retention window.
+	// Set AUDIT_RETENTION_DAYS=0 to disable.
+	var auditLogsDeleted int64
+	if cfg.Retention.AuditRetentionDays > 0 {
+		auditLogsDeleted, err = cleanupOldLogs(maintCtx, db, "audit_logs", "ts", cfg.Retention.AuditRetentionDays)
+		if err != nil {
+			log.Error().Err(err).Msg("audit log cleanup failed")
+		}
+	}
+
+	// Privacy: redact ip + user_agent on audit_logs older than the IP-retention
+	// window so we keep the actor identity (which the user can already see)
+	// without holding onto network metadata indefinitely. Set
+	// AUDIT_IP_RETENTION_DAYS=0 to keep the columns intact.
+	var auditIPsRedacted int64
+	if cfg.Retention.AuditIPRetentionDays > 0 {
+		auditIPsRedacted, err = redactOldAuditIPs(maintCtx, db, cfg.Retention.AuditIPRetentionDays)
+		if err != nil {
+			log.Error().Err(err).Msg("audit IP redaction failed")
+		}
+	}
+
+	// Run VACUUM ANALYZE to reclaim space and update statistics. Audit-log
+	// deletes also benefit from a vacuum pass since the table can accumulate
+	// dead tuples over a long retention window.
+	if posDeleted > 0 || statesDeleted > 0 || auditLogsDeleted > 0 {
 		if err := db.VacuumAnalyze(maintCtx); err != nil {
 			log.Error().Err(err).Msg("VACUUM ANALYZE failed")
 		}
@@ -99,6 +123,8 @@ func runMaintenance(ctx context.Context, db *database.DB, cfg *config.Config) {
 		Int64("states_deleted", statesDeleted).
 		Int64("api_logs_deleted", apiLogsDeleted).
 		Int64("notif_logs_deleted", notifLogsDeleted).
+		Int64("audit_logs_deleted", auditLogsDeleted).
+		Int64("audit_ips_redacted", auditIPsRedacted).
 		Dur("duration", time.Since(start)).
 		Msg("scheduled maintenance complete")
 }
@@ -130,4 +156,25 @@ func cleanupOldLogs(ctx context.Context, db *database.DB, table, tsCol string, r
 		log.Info().Int64("deleted", deleted).Str("table", table).Msg("cleaned up old logs")
 	}
 	return deleted, nil
+}
+
+// redactOldAuditIPs nulls out audit_logs.ip and audit_logs.user_agent for rows
+// older than retentionDays. The actor + action + entity remain so users can
+// still see what they did, but the network metadata is forgotten. This keeps
+// the per-user activity feed working without retaining PII indefinitely.
+func redactOldAuditIPs(ctx context.Context, db *database.DB, retentionDays int) (int64, error) {
+	const query = `
+		UPDATE audit_logs
+		   SET ip = NULL, user_agent = NULL
+		 WHERE ts < NOW() - ($1 || ' days')::INTERVAL
+		   AND (ip IS NOT NULL OR user_agent IS NOT NULL)`
+	tag, err := db.Pool.Exec(ctx, query, fmt.Sprintf("%d", retentionDays))
+	if err != nil {
+		return 0, err
+	}
+	redacted := tag.RowsAffected()
+	if redacted > 0 {
+		log.Info().Int64("redacted", redacted).Int("retention_days", retentionDays).Msg("redacted audit log IP/UA")
+	}
+	return redacted, nil
 }

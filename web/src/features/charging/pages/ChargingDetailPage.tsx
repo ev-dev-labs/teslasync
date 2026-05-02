@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { ChargingSession, ChargeTelemetryReading } from '@/api/types';
@@ -6,20 +6,22 @@ import { useChargingSessionDetail, useChargeTelemetry } from '@/api/hooks/useCha
 import { useVehicle, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { formatDateTime, formatDate, formatTime } from '@/lib/dateFormat';
+import { formatDate, formatTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtWithUnit, fmtPercent } from '@/lib/numberFormat';
+import { chartTokens } from '@/lib/tokens';
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge } from '@/components/ui';
-import { MetricBar, InlineMetric, AnimatedNumber, StatCard, KVList } from '@/components/data-display';
+import { GlassPanel, Badge, PrintButton } from '@/components/ui';
+import { MetricBar, InlineMetric, AnimatedNumber, StatCard, KVList, LiveIndicator, DateTime } from '@/components/data-display';
 import { RadialGauge } from '@/components/charts';
-import { Skeleton } from '@/components/feedback';
+import { Skeleton, EmptyState, LiveStaleDataBanner } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
-import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  ComposedChart, Line, ChartTooltip,
+  ComposedChart, Line, ReferenceLine, ChartTooltip,
   chartGrid, axisTickSm, chartMargin,
   AREA_DEFAULTS, areaGradient,
+  ChartBrush,
+  ChartTimeRangeProvider, useSyncedCursor, useSyncedReferenceLineX,
 } from '@/components/charts';
 
 import {
@@ -66,13 +68,13 @@ function LoadingSkeleton() {
         <Skeleton className="h-6 w-48" />
         <Skeleton className="h-5 w-16 rounded-full" />
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-6">
         {Array.from({ length: 5 }).map((_, i) => (
           <Skeleton key={i} className="h-36 rounded-xl" />
         ))}
       </div>
       <Skeleton className="h-24 rounded-xl" />
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {Array.from({ length: 8 }).map((_, i) => (
           <Skeleton key={i} className="h-24 rounded-xl" />
         ))}
@@ -81,6 +83,29 @@ function LoadingSkeleton() {
       <Skeleton className="h-72 rounded-xl" />
     </div>
   );
+}
+
+/* ─── synced cursor render-prop helper ─────────────────────────── */
+
+/**
+ * Phase-40 / Prompt 62 — render-prop helper that subscribes the inner
+ * recharts chart to the surrounding `<ChartTimeRangeProvider>` so the active
+ * cursor and persistent reference line stay in lockstep across the three
+ * time-axis charts on this page (SoC/energy/range, temperature, voltage &
+ * current). Each chart filters telemetry rows differently so we sync by value
+ * rather than by index.
+ */
+function ChargingChartSync({
+  children,
+}: {
+  children: (state: {
+    sync: ReturnType<typeof useSyncedCursor>;
+    syncedX: ReturnType<typeof useSyncedReferenceLineX>;
+  }) => ReactNode;
+}) {
+  const sync = useSyncedCursor();
+  const syncedX = useSyncedReferenceLineX();
+  return <>{children({ sync, syncedX })}</>;
 }
 
 /* ─── main page ────────────────────────────────────────────────── */
@@ -106,11 +131,11 @@ export default function ChargingDetailPage() {
       : t('charging.detail.title', 'Charge Session'),
   );
 
-  const breadcrumbs = useBreadcrumbs({
+  const breadcrumbLabels = {
     '/charging/:id': session
       ? `${formatDate(session.start_ts)} — ${fmtNumber(session.energy_added_kwh)} kWh`
       : `Session #${id}`,
-  });
+  };
 
   const hasTelemetry = !!telemetry && telemetry.length > 0;
   const dc = session ? isDC(session) : false;
@@ -183,7 +208,7 @@ export default function ChargingDetailPage() {
 
   if (isLoading || !session) {
     return (
-      <PageContainer title={t('charging.detail.title', 'Charge Session')} breadcrumbs={breadcrumbs}>
+      <PageContainer title={t('charging.detail.title', 'Charge Session')} breadcrumbLabels={breadcrumbLabels}>
         <LoadingSkeleton />
       </PageContainer>
     );
@@ -196,7 +221,18 @@ export default function ChargingDetailPage() {
       : null;
 
   return (
-    <PageContainer title={t('charging.detail.title', 'Charge Session')} className="space-y-8" breadcrumbs={breadcrumbs}>
+    <PageContainer
+      title={t('charging.detail.title', 'Charge Session')}
+      className="space-y-8"
+      breadcrumbLabels={breadcrumbLabels}
+      actions={
+        <div data-print-hide className="flex items-center gap-2">
+          <LiveIndicator variant="compact" />
+          <PrintButton />
+        </div>
+      }
+    >
+      <LiveStaleDataBanner />
       <FadeIn>
         {/* ── 1. Header ──────────────────────────────────────── */}
         <div className="flex flex-wrap items-center gap-3 mb-6">
@@ -232,7 +268,7 @@ export default function ChargingDetailPage() {
         </div>
 
         {/* ── 2. Hero gauges ─────────────────────────────────── */}
-        <StaggerContainer className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6 mb-8">
+        <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-8">
           <StaggerItem>
             <GlassPanel className="flex flex-col items-center py-4" glow="cyan">
               <RadialGauge
@@ -339,7 +375,7 @@ export default function ChargingDetailPage() {
         </GlassPanel>
 
         {/* ── 4. Eight stat cards ────────────────────────────── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <StatCard
             icon={<Zap className="h-4 w-4" />}
             label={t('charging.detail.energy', 'Energy')}
@@ -411,7 +447,7 @@ export default function ChargingDetailPage() {
           <h2 className="text-lg font-semibold mb-4">
             {t('charging.detail.moreDetails', 'More Details')}
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
             <InlineMetric
               icon={<Gauge className="h-4 w-4 text-purple-400" />}
               label={t('charging.detail.avgPower', 'Avg Power')}
@@ -502,143 +538,223 @@ export default function ChargingDetailPage() {
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
-              <Activity className="h-8 w-8 opacity-20" />
-              <p className="text-xs">{t('common.noData', 'No data available')}</p>
-            </div>
+            <EmptyState
+              icon={<Activity className="h-8 w-8 opacity-20" />}
+              message={t('common.noData', 'No data available')}
+              className="py-8"
+            />
           )}
         </GlassPanel>
 
-        {/* ── 8. SoC / Energy / Range over time ──────────────── */}
-        <GlassPanel className="p-6 mb-8">
-          <h2 className="text-lg font-semibold mb-4">
-            {t('charging.detail.socOverTime', 'SoC, Energy & Range over Time')}
-          </h2>
-          {timeSeriesData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <ComposedChart data={timeSeriesData} margin={chartMargin}>
-                {areaGradient('socGrad', '#10b981')}
-                {chartGrid}
-                <XAxis dataKey="time" tick={axisTickSm} />
-                <YAxis yAxisId="left" tick={axisTickSm} domain={[0, 100]} />
-                <YAxis yAxisId="right" orientation="right" tick={axisTickSm} />
-                <Tooltip content={<ChartTooltip />} />
-                <Area
-                  {...AREA_DEFAULTS}
-                  yAxisId="left"
-                  dataKey="soc"
-                  stroke="#10b981"
-                  fill="url(#socGrad)"
-                  name={t('charging.detail.soc', 'SoC')}
-                  unit=" %"
-                />
-                <Line
-                  {...AREA_DEFAULTS}
-                  yAxisId="right"
-                  dataKey="energy"
-                  stroke="#00f0ff"
-                  name={t('charging.detail.energy', 'Energy')}
-                  unit=" kWh"
-                />
-                <Line
-                  {...AREA_DEFAULTS}
-                  yAxisId="right"
-                  dataKey="range"
-                  stroke="#f59e0b"
-                  name={t('charging.detail.range', 'Range')}
-                  unit={` ${distanceUnit}`}
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
-              <Activity className="h-8 w-8 opacity-20" />
-              <p className="text-xs">{t('common.noData', 'No data available')}</p>
-            </div>
-          )}
-        </GlassPanel>
+        {/* ── 8/9/10. Synced time-axis charts ─────────────────────
+              Phase 40 / Prompt 62: the SoC/energy/range, temperature, and
+              voltage/current panels all live on the same charge-session time
+              axis but use different filtered telemetry rows. Wrapping them in
+              a `<ChartTimeRangeProvider>` with `syncMethod="value"` makes
+              recharts mirror the active hover cursor across all three, and
+              each chart renders a persistent `<ReferenceLine>` at the last
+              hovered timestamp via {@link useSyncedReferenceLineX}. */}
+        <ChartTimeRangeProvider syncId="charging.session" syncMethod="value">
+          {/* ── 8. SoC / Energy / Range over time ──────────────── */}
+          <GlassPanel className="p-6 mb-8">
+            <h2 className="text-lg font-semibold mb-4">
+              {t('charging.detail.socOverTime', 'SoC, Energy & Range over Time')}
+            </h2>
+            {timeSeriesData.length > 0 ? (
+              <ChargingChartSync>
+                {({ sync, syncedX }) => (
+                  <ResponsiveContainer width="100%" height={320}>
+                    <ComposedChart
+                      data={timeSeriesData}
+                      margin={chartMargin}
+                      syncId={sync.syncId}
+                      syncMethod={sync.syncMethod}
+                      onMouseMove={sync.onMouseMove}
+                    >
+                      {areaGradient('socGrad', '#10b981')}
+                      {chartGrid}
+                      <XAxis dataKey="time" tick={axisTickSm} />
+                      <YAxis yAxisId="left" tick={axisTickSm} domain={[0, 100]} />
+                      <YAxis yAxisId="right" orientation="right" tick={axisTickSm} />
+                      <Tooltip content={<ChartTooltip />} />
+                      <Area
+                        {...AREA_DEFAULTS}
+                        yAxisId="left"
+                        dataKey="soc"
+                        stroke="#10b981"
+                        fill="url(#socGrad)"
+                        name={t('charging.detail.soc', 'SoC')}
+                        unit=" %"
+                      />
+                      <Line
+                        {...AREA_DEFAULTS}
+                        yAxisId="right"
+                        dataKey="energy"
+                        stroke="#00f0ff"
+                        name={t('charging.detail.energy', 'Energy')}
+                        unit=" kWh"
+                      />
+                      <Line
+                        {...AREA_DEFAULTS}
+                        yAxisId="right"
+                        dataKey="range"
+                        stroke="#f59e0b"
+                        name={t('charging.detail.range', 'Range')}
+                        unit={` ${distanceUnit}`}
+                      />
+                      {syncedX != null && (
+                        <ReferenceLine
+                          yAxisId="left"
+                          x={syncedX}
+                          stroke={chartTokens.cursor.stroke}
+                          strokeWidth={chartTokens.cursor.strokeWidth}
+                          strokeDasharray={chartTokens.cursor.strokeDasharray}
+                          ifOverflow="hidden"
+                          isFront
+                        />
+                      )}
+                      {/* Brush lets users zoom into a portion of the charge
+                          timeline; recharts propagates the visible window to
+                          every other chart sharing this provider's syncId. */}
+                      <ChartBrush dataKey="time" />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                )}
+              </ChargingChartSync>
+            ) : (
+              <EmptyState
+                icon={<Activity className="h-8 w-8 opacity-20" />}
+                message={t('common.noData', 'No data available')}
+                className="py-8"
+              />
+            )}
+          </GlassPanel>
 
-        {/* ── 9. Temperature chart ───────────────────────────── */}
-        <GlassPanel className="p-6 mb-8">
-          <h2 className="text-lg font-semibold mb-4">
-            {t('charging.detail.temperature', 'Temperature')}
-          </h2>
-          {tempData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={240}>
-              <ComposedChart data={tempData} margin={chartMargin}>
-                {chartGrid}
-                <XAxis dataKey="time" tick={axisTickSm} />
-                <YAxis tick={axisTickSm} unit={` ${tempUnit}`} />
-                <Tooltip content={<ChartTooltip />} />
-                <Line
-                  {...AREA_DEFAULTS}
-                  dataKey="battery"
-                  stroke="#ef4444"
-                  name={t('charging.detail.batteryTemp', 'Battery')}
-                  unit={` ${tempUnit}`}
-                />
-                <Line
-                  {...AREA_DEFAULTS}
-                  dataKey="inside"
-                  stroke="#f59e0b"
-                  name={t('charging.detail.insideTemp', 'Inside')}
-                  unit={` ${tempUnit}`}
-                />
-                <Line
-                  {...AREA_DEFAULTS}
-                  dataKey="outside"
-                  stroke="#3b82f6"
-                  name={t('charging.detail.outsideTemp', 'Outside')}
-                  unit={` ${tempUnit}`}
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
-              <Activity className="h-8 w-8 opacity-20" />
-              <p className="text-xs">{t('common.noData', 'No data available')}</p>
-            </div>
-          )}
-        </GlassPanel>
+          {/* ── 9. Temperature chart ───────────────────────────── */}
+          <GlassPanel className="p-6 mb-8">
+            <h2 className="text-lg font-semibold mb-4">
+              {t('charging.detail.temperature', 'Temperature')}
+            </h2>
+            {tempData.length > 0 ? (
+              <ChargingChartSync>
+                {({ sync, syncedX }) => (
+                  <ResponsiveContainer width="100%" height={240}>
+                    <ComposedChart
+                      data={tempData}
+                      margin={chartMargin}
+                      syncId={sync.syncId}
+                      syncMethod={sync.syncMethod}
+                      onMouseMove={sync.onMouseMove}
+                    >
+                      {chartGrid}
+                      <XAxis dataKey="time" tick={axisTickSm} />
+                      <YAxis tick={axisTickSm} unit={` ${tempUnit}`} />
+                      <Tooltip content={<ChartTooltip />} />
+                      <Line
+                        {...AREA_DEFAULTS}
+                        dataKey="battery"
+                        stroke="#ef4444"
+                        name={t('charging.detail.batteryTemp', 'Battery')}
+                        unit={` ${tempUnit}`}
+                      />
+                      <Line
+                        {...AREA_DEFAULTS}
+                        dataKey="inside"
+                        stroke="#f59e0b"
+                        name={t('charging.detail.insideTemp', 'Inside')}
+                        unit={` ${tempUnit}`}
+                      />
+                      <Line
+                        {...AREA_DEFAULTS}
+                        dataKey="outside"
+                        stroke="#3b82f6"
+                        name={t('charging.detail.outsideTemp', 'Outside')}
+                        unit={` ${tempUnit}`}
+                      />
+                      {syncedX != null && (
+                        <ReferenceLine
+                          x={syncedX}
+                          stroke={chartTokens.cursor.stroke}
+                          strokeWidth={chartTokens.cursor.strokeWidth}
+                          strokeDasharray={chartTokens.cursor.strokeDasharray}
+                          ifOverflow="hidden"
+                          isFront
+                        />
+                      )}
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                )}
+              </ChargingChartSync>
+            ) : (
+              <EmptyState
+                icon={<Activity className="h-8 w-8 opacity-20" />}
+                message={t('common.noData', 'No data available')}
+                className="py-8"
+              />
+            )}
+          </GlassPanel>
 
-        {/* ── 10. Voltage & Current chart ────────────────────── */}
-        <GlassPanel className="p-6 mb-8">
-          <h2 className="text-lg font-semibold mb-4">
-            {t('charging.detail.voltageCurrent', 'Voltage & Current')}
-          </h2>
-          {voltCurrentData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={240}>
-              <ComposedChart data={voltCurrentData} margin={chartMargin}>
-                {chartGrid}
-                <XAxis dataKey="time" tick={axisTickSm} />
-                <YAxis yAxisId="v" tick={axisTickSm} unit=" V" />
-                <YAxis yAxisId="a" orientation="right" tick={axisTickSm} unit=" A" />
-                <Tooltip content={<ChartTooltip />} />
-                <Line
-                  {...AREA_DEFAULTS}
-                  yAxisId="v"
-                  dataKey="voltage"
-                  stroke="#f59e0b"
-                  name={t('charging.detail.voltage', 'Voltage')}
-                  unit=" V"
-                />
-                <Line
-                  {...AREA_DEFAULTS}
-                  yAxisId="a"
-                  dataKey="current"
-                  stroke="#06b6d4"
-                  name={t('charging.detail.current', 'Current')}
-                  unit=" A"
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
-              <Activity className="h-8 w-8 opacity-20" />
-              <p className="text-xs">{t('common.noData', 'No data available')}</p>
-            </div>
-          )}
-        </GlassPanel>
+          {/* ── 10. Voltage & Current chart ────────────────────── */}
+          <GlassPanel className="p-6 mb-8">
+            <h2 className="text-lg font-semibold mb-4">
+              {t('charging.detail.voltageCurrent', 'Voltage & Current')}
+            </h2>
+            {voltCurrentData.length > 0 ? (
+              <ChargingChartSync>
+                {({ sync, syncedX }) => (
+                  <ResponsiveContainer width="100%" height={240}>
+                    <ComposedChart
+                      data={voltCurrentData}
+                      margin={chartMargin}
+                      syncId={sync.syncId}
+                      syncMethod={sync.syncMethod}
+                      onMouseMove={sync.onMouseMove}
+                    >
+                      {chartGrid}
+                      <XAxis dataKey="time" tick={axisTickSm} />
+                      <YAxis yAxisId="v" tick={axisTickSm} unit=" V" />
+                      <YAxis yAxisId="a" orientation="right" tick={axisTickSm} unit=" A" />
+                      <Tooltip content={<ChartTooltip />} />
+                      <Line
+                        {...AREA_DEFAULTS}
+                        yAxisId="v"
+                        dataKey="voltage"
+                        stroke="#f59e0b"
+                        name={t('charging.detail.voltage', 'Voltage')}
+                        unit=" V"
+                      />
+                      <Line
+                        {...AREA_DEFAULTS}
+                        yAxisId="a"
+                        dataKey="current"
+                        stroke="#06b6d4"
+                        name={t('charging.detail.current', 'Current')}
+                        unit=" A"
+                      />
+                      {syncedX != null && (
+                        <ReferenceLine
+                          yAxisId="v"
+                          x={syncedX}
+                          stroke={chartTokens.cursor.stroke}
+                          strokeWidth={chartTokens.cursor.strokeWidth}
+                          strokeDasharray={chartTokens.cursor.strokeDasharray}
+                          ifOverflow="hidden"
+                          isFront
+                        />
+                      )}
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                )}
+              </ChargingChartSync>
+            ) : (
+              <EmptyState
+                icon={<Activity className="h-8 w-8 opacity-20" />}
+                message={t('common.noData', 'No data available')}
+                className="py-8"
+              />
+            )}
+          </GlassPanel>
+        </ChartTimeRangeProvider>
 
         {/* ── 11. Temperature summary fallback — removed: inside_temp_avg/outside_temp_avg no longer in session */}
 
@@ -734,15 +850,15 @@ export default function ChargingDetailPage() {
         </GlassPanel>
         {/* ── 12. Timestamps footer ──────────────────────────── */}
         <GlassPanel className="p-6">
-          <div className="grid grid-cols-2 gap-6 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
             <div>
               <p className="text-muted mb-1">{t('charging.detail.started', 'Started')}</p>
-              <p className="font-medium">{formatDateTime(session.start_ts)}</p>
+              <p className="font-medium"><DateTime value={session.start_ts} in="vehicle" showTz /></p>
             </div>
             <div>
               <p className="text-muted mb-1">{t('charging.detail.ended', 'Ended')}</p>
               <p className="font-medium">
-                {session.end_ts ? formatDateTime(session.end_ts) : '—'}
+                {session.end_ts ? <DateTime value={session.end_ts} in="vehicle" showTz /> : '—'}
               </p>
             </div>
           </div>

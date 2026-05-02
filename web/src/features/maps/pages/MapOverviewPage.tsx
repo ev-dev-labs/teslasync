@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -7,19 +7,24 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, Button, Select, type SelectOption, DataTable, type Column } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
-import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
+import { GlassPanel, Badge, Button, DataTable, type Column } from '@/components/ui';
+import { MetricCard, LiveIndicator } from '@/components/data-display';
+import { Skeleton, EmptyState, AlertBanner, LiveStaleDataBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
   MapContainer, Marker, Popup, Polyline,
   MapTileLayer, MapInvalidator, MapLayerSwitcher,
+  RoutePlayback,
   vehicleIcon,
   type MapStyle,
+  type PlaybackPoint,
 } from '@/components/maps';
 
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useUrlEnum } from '@/hooks/useUrlState';
+import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -69,9 +74,14 @@ export default function MapOverviewPage() {
   const { t } = useTranslation('maps');
   usePageTitle(t('mapOverview.pageTitle', 'Map Overview'));
 
-  /* ---- vehicle selector state ---- */
-  const [vehicleId, setVehicleId] = useState('');
-  const [mapStyle, setMapStyle] = useState<MapStyle>('dark');
+  /* ---- vehicle selector — Phase 40 / Prompt 16: header VehiclePicker is the source of truth ---- */
+  const { vehicleId } = useSelectedVehicle();
+  // Map style lives in the URL so a satellite view can be shared.
+  const [mapStyle, setMapStyle] = useUrlEnum<MapStyle>(
+    'layer',
+    ['dark', 'satellite', 'streets', 'terrain'] as const,
+    'dark',
+  );
 
   /* ---- queries ---- */
   const {
@@ -80,16 +90,7 @@ export default function MapOverviewPage() {
     error: vehiclesError,
   } = useVehicles();
 
-  const selectedId = vehicleId || String(vehicles?.[0]?.id ?? '');
-
-  const vehicleOptions: SelectOption[] = useMemo(
-    () =>
-      (vehicles ?? []).map((v) => ({
-        value: String(v.id),
-        label: v.display_name || v.vin,
-      })),
-    [vehicles],
-  );
+  const selectedId = vehicleId != null ? String(vehicleId) : '';
 
   const {
     data: latest,
@@ -132,7 +133,6 @@ export default function MapOverviewPage() {
   /* ---- derived ---- */
   const anyError = [vehiclesError, latestError, historyError].find(Boolean);
   const isLoading = vehiclesLoading || latestLoading;
-  const hasVehicles = (vehicles?.length ?? 0) > 0;
   const hasValidLocation = latest != null
     && typeof latest.latitude === 'number'
     && typeof latest.longitude === 'number'
@@ -144,6 +144,30 @@ export default function MapOverviewPage() {
       .map((s) => [s.latitude, s.longitude] as [number, number]),
     [history],
   );
+
+  /* Time-ordered points for the optional `<RoutePlayback>` widget. The
+     /positions endpoint returns most-recent-first, so we reverse here. */
+  const playbackPoints = useMemo<PlaybackPoint[]>(() => {
+    const list = (history ?? [])
+      .filter(
+        (s) =>
+          typeof s.latitude === 'number' &&
+          typeof s.longitude === 'number' &&
+          (s.latitude !== 0 || s.longitude !== 0) &&
+          !!s.created_at,
+      )
+      .map((s) => ({
+        lat: s.latitude,
+        lng: s.longitude,
+        timestamp: s.created_at,
+        speed: s.speed ?? undefined,
+        soc: s.battery_level ?? undefined,
+        power: s.power ?? undefined,
+      }));
+    /* Sort ascending by timestamp so playback runs forward in time. */
+    list.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    return list;
+  }, [history]);
 
   const vehicle = vehicles?.find((v) => String(v.id) === selectedId);
 
@@ -199,6 +223,11 @@ export default function MapOverviewPage() {
     [t],
   );
 
+  // Defensive guard: no vehicle selected (Phase 40 / Prompt 18).
+  if (vehicleId == null) {
+    return <NoVehicleSelected pageTitle={t('mapOverview.title', 'Map Overview')} />;
+  }
+
   /* ---- render ---- */
   return (
     <PageContainer
@@ -209,18 +238,9 @@ export default function MapOverviewPage() {
       )}
       loading={vehiclesLoading}
       error={vehiclesError as Error | null}
-      actions={
-        hasVehicles ? (
-          <Select
-            label={t('mapOverview.vehicleLabel', 'Vehicle')}
-            options={vehicleOptions}
-            value={selectedId}
-            onChange={(e) => setVehicleId(e.target.value)}
-            placeholder={t('mapOverview.vehiclePlaceholder', 'Select vehicle')}
-          />
-        ) : undefined
-      }
+      actions={<LiveIndicator variant="compact" />}
     >
+      <LiveStaleDataBanner />
       {anyError && (
         <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
           {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
@@ -267,6 +287,22 @@ export default function MapOverviewPage() {
           )}
         </GlassPanel>
       </FadeIn>
+
+      {/* ---- Recent route playback ---- */}
+      {playbackPoints.length > 1 && (
+        <FadeIn delay={0.04}>
+          <GlassPanel className="p-4">
+            <span className="mb-3 block text-sm font-semibold text-[var(--text-primary)]">
+              {t('mapOverview.recentPlayback', 'Recent Route Playback')}
+            </span>
+            <RoutePlayback
+              points={playbackPoints}
+              height={360}
+              ariaLabel={t('mapOverview.playbackLabel', 'Recent route playback map')}
+            />
+          </GlassPanel>
+        </FadeIn>
+      )}
 
       {/* ---- Vehicle status metric cards ---- */}
       {isLoading ? (

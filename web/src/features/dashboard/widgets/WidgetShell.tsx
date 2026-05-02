@@ -1,7 +1,13 @@
 import { type ReactNode, useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/cn';
 import { Skeleton, QueryError } from '@/components/feedback';
-import { DataFreshness } from '../components/DataFreshness';
+import { HelpTooltip, PinButton } from '@/components/ui';
+import {
+  DataFreshness,
+  DataFreshnessAuto,
+  type FreshnessQuery,
+} from '@/components/data-display';
+import type { WidgetHelp } from './types';
 
 interface WidgetShellProps {
   title?: string;
@@ -11,6 +17,14 @@ interface WidgetShellProps {
   children: ReactNode;
   noPadding?: boolean;
   actions?: ReactNode;
+  /**
+   * Convenience: pass an entire TanStack Query result and the shell will
+   * render `<DataFreshnessAuto query={query} />` in the header. Mutually
+   * exclusive with the granular `updatedAt`/`isFetching`/`isStale`/`isError`/
+   * `onRefresh` props (those win when supplied for backward compatibility).
+   * Phase-40 / Prompt 66.
+   */
+  query?: FreshnessQuery;
   /** Freshness: ms timestamp from dataUpdatedAt (0 = never) */
   updatedAt?: number;
   /** Is TanStack Query currently fetching in the background? */
@@ -21,30 +35,50 @@ interface WidgetShellProps {
   isError?: boolean;
   /** Callback to manually refetch the widget data */
   onRefresh?: () => void;
+  /**
+   * Optional help metadata. When provided AND the widget has a visible
+   * `title`, a small "?" tooltip is rendered next to the title with the
+   * provided text/i18nKey. Phase-40 / Prompt 47.
+   */
+  help?: WidgetHelp;
+  /**
+   * Stable widget identifier. When supplied alongside `dashboardId`, a
+   * <PinButton> is rendered in the header so the user can pin this widget
+   * to the top of the dashboard. Phase-40 / Prompt 48.
+   */
+  widgetId?: string;
+  /** Dashboard ID — used as the pin context so pins are per-dashboard. */
+  dashboardId?: string;
 }
 
 export function WidgetShell({
   title, icon, loading, error, children, noPadding, actions,
-  updatedAt, isFetching, isStale, isError, onRefresh,
+  query,
+  updatedAt, isFetching, isStale, isError, onRefresh, help,
+  widgetId, dashboardId,
 }: WidgetShellProps) {
   // Pulse animation on data change
   const [justUpdated, setJustUpdated] = useState(false);
   const prevUpdatedAt = useRef<number | undefined>(undefined);
 
+  // Resolve the effective updatedAt for the pulse-on-change effect: the
+  // explicit prop wins, otherwise we fall back to the query's value.
+  const effectiveUpdatedAt = updatedAt ?? query?.dataUpdatedAt;
+
   useEffect(() => {
     if (
-      updatedAt &&
-      updatedAt > 0 &&
+      effectiveUpdatedAt &&
+      effectiveUpdatedAt > 0 &&
       prevUpdatedAt.current !== undefined &&
-      prevUpdatedAt.current !== updatedAt
+      prevUpdatedAt.current !== effectiveUpdatedAt
     ) {
       setJustUpdated(true);
       const timer = setTimeout(() => setJustUpdated(false), 1500);
-      prevUpdatedAt.current = updatedAt;
+      prevUpdatedAt.current = effectiveUpdatedAt;
       return () => clearTimeout(timer);
     }
-    prevUpdatedAt.current = updatedAt;
-  }, [updatedAt]);
+    prevUpdatedAt.current = effectiveUpdatedAt;
+  }, [effectiveUpdatedAt]);
 
   if (loading) return <Skeleton className="h-full rounded-xl" />;
   if (error) return (
@@ -53,20 +87,29 @@ export function WidgetShell({
     </div>
   );
 
-  const showFreshness = updatedAt !== undefined;
+  const showFreshness = updatedAt !== undefined || query !== undefined;
   // Compact (dot-only) when widget has no title (typically 1×1 widgets)
   const freshnessCompact = !title;
 
-  const freshnessEl = showFreshness ? (
-    <DataFreshness
-      updatedAt={updatedAt > 0 ? updatedAt : null}
-      isFetching={isFetching ?? false}
-      isStale={isStale ?? false}
-      isError={isError ?? false}
-      onRefresh={onRefresh}
-      compact={freshnessCompact}
-    />
-  ) : null;
+  let freshnessEl: ReactNode = null;
+  if (showFreshness) {
+    if (updatedAt !== undefined) {
+      freshnessEl = (
+        <DataFreshness
+          updatedAt={updatedAt > 0 ? updatedAt : null}
+          isFetching={isFetching ?? false}
+          isStale={isStale ?? false}
+          isError={isError ?? false}
+          onRefresh={onRefresh}
+          compact={freshnessCompact}
+        />
+      );
+    } else if (query) {
+      freshnessEl = (
+        <DataFreshnessAuto query={query} compact={freshnessCompact} />
+      );
+    }
+  }
 
   return (
     <div
@@ -80,9 +123,28 @@ export function WidgetShell({
           <div className="flex items-center gap-1.5">
             {icon}
             <h3 className="text-[11px] font-medium text-white/40 uppercase tracking-wider">{title}</h3>
+            {help && (
+              <HelpTooltip
+                size="xs"
+                placement="top"
+                text={help.text}
+                i18nKey={help.i18nKey}
+                defaultValue={help.defaultValue}
+                learnMore={help.learnMore}
+                ariaLabel={`More info about ${title}`}
+              />
+            )}
           </div>
           <div className="flex items-center gap-2">
             {freshnessEl}
+            {widgetId && dashboardId && (
+              <PinButton
+                itemType="widget"
+                itemId={widgetId}
+                context={dashboardId}
+                size="sm"
+              />
+            )}
             {actions}
           </div>
         </div>

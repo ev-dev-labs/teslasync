@@ -2,16 +2,50 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { execSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import path from 'path'
 
 const enablePwaInDev = process.env.VITE_PWA_DEV === 'true'
 
+// Build-time provenance for the footer status bar (Phase-40 / Prompt 59).
+//   - VITE_APP_VERSION: package.json `version`, overridable via env.
+//   - VITE_GIT_SHA:     short HEAD sha; "dev" when not in a git checkout.
+const pkg = JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf8')) as { version?: string }
+const appVersion = process.env.VITE_APP_VERSION || pkg.version || 'dev'
+let gitSha = process.env.VITE_GIT_SHA || ''
+if (!gitSha) {
+  try {
+    gitSha = execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString()
+      .trim()
+  } catch {
+    gitSha = 'dev'
+  }
+}
+
 export default defineConfig({
+  define: {
+    'import.meta.env.VITE_APP_VERSION': JSON.stringify(appVersion),
+    'import.meta.env.VITE_GIT_SHA': JSON.stringify(gitSha),
+  },
   plugins: [
     react(),
     VitePWA({
       registerType: 'prompt',
-      includeAssets: ['favicon.svg', 'icons/*.svg', 'icons/*.png'],
+      // Phase 40 / Prompt 52 — switched from the default `generateSW`
+      // strategy to `injectManifest` so we can register a custom `push`
+      // event handler in the service worker. Workbox runtime caching
+      // (Google Fonts, map tiles) is re-implemented inside `src/sw/sw.ts`
+      // so caching behaviour does not regress.
+      strategies: 'injectManifest',
+      srcDir: 'src/sw',
+      filename: 'sw.ts',
+      injectManifest: {
+        // Same precache scope as the previous generateSW config.
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff,woff2,json}'],
+      },
+      includeAssets: ['favicon.svg', 'offline.html', 'icons/*.svg', 'icons/*.png'],
       manifest: {
         name: 'TeslaSync',
         short_name: 'TeslaSync',
@@ -57,45 +91,11 @@ export default defineConfig({
           },
         ],
       },
-      workbox: {
-        cleanupOutdatedCaches: true,
-        // Never precache API / SSE / WebSocket traffic
-        navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api/, /^\/ws/, /^\/healthz/, /^\/readyz/],
-        runtimeCaching: [
-          {
-            // Google Fonts stylesheets
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-stylesheets',
-              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
-            },
-          },
-          {
-            // Google Fonts webfont files
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-webfonts',
-              expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-          {
-            // Leaflet map tiles
-            urlPattern: /^https:\/\/.*tile.*\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'map-tiles',
-              expiration: { maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 30 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-        ],
-      },
       devOptions: {
         enabled: enablePwaInDev,
+        // Custom SW source is TypeScript — esbuild handles compilation
+        // when `type: 'module'` is set on the registered worker.
+        type: 'module',
       },
     }),
   ],
@@ -131,6 +131,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
         manualChunks: {
@@ -140,6 +141,7 @@ export default defineConfig({
           'vendor-map': ['leaflet', 'react-leaflet'],
           'vendor-motion': ['framer-motion'],
           'vendor-icons': ['lucide-react'],
+          'vendor-i18n': ['i18next', 'react-i18next'],
         },
       },
     },

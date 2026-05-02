@@ -1,14 +1,16 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout';
-import { Select } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { QueryError } from '@/components/feedback';
 import { DateRangeFilter } from '@/components/forms';
-import { useChargingSessionsPaginated, useChargingOptimizer } from '@/api/hooks/useCharging';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { SavedViewMenu } from '@/components/data-display';
+import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
+import { useChargingSessionsPaginated, useChargingOptimizer, useBulkDeleteCharging } from '@/api/hooks/useCharging';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import {
   HeroGauges,
   QuickMetrics,
@@ -37,14 +39,18 @@ import {
 export default function ChargingListPage() {
   const { t } = useTranslation();
   usePageTitle(t('charging.list.title', 'Charging Sessions'));
+  const savedView = useSavedViewUrl();
 
   const { convertDistance, distanceUnit } = useSettings();
-  const { data: vehicles } = useVehicles();
+  // Phase 40 / Prompt 16: header VehiclePicker is the source of truth.
+  // Alert drillthrough URLs (?vehicle_id=...) flow into the same store via
+  // useSelectedVehicle, so prior alert-context handling is no longer needed.
+  const { vehicleId } = useSelectedVehicle();
 
-  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState<SortKey>('date');
   const [sortDesc, setSortDesc] = useState(true);
   const [chargerFilter, setChargerFilter] = useState<ChargerFilter>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [startDate, setStartDate] = useState(() => {
@@ -54,7 +60,6 @@ export default function ChargingListPage() {
   });
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
 
-  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
   const {
     data: sessions,
     isLoading,
@@ -87,9 +92,39 @@ export default function ChargingListPage() {
   const chargerSpecs = useMemo(() => (sessions ? computeChargerSpecs(sessions) : null), [sessions]);
   const enhancedStats = useMemo(() => (sessions && stats ? computeEnhancedStats(sessions, stats) : null), [sessions, stats]);
   const filteredSessions = useMemo(
-    () => (sessions ? filterAndSortSessions(sessions, chargerFilter, sortBy, sortDesc) : []),
-    [sessions, chargerFilter, sortBy, sortDesc],
+    () => (sessions ? filterAndSortSessions(sessions, chargerFilter, sortBy, sortDesc, searchQuery) : []),
+    [sessions, chargerFilter, sortBy, sortDesc, searchQuery],
   );
+
+  // Phase-40 / Prompt 51 — bulk selection for delete.
+  const [bulkSelected, setBulkSelected] = useState<Set<number>>(new Set());
+  useEffect(() => {
+    setBulkSelected(prev => {
+      if (prev.size === 0) return prev;
+      const visible = new Set(filteredSessions.map(s => s.id));
+      const next = new Set<number>();
+      prev.forEach(id => { if (visible.has(id)) next.add(id); });
+      return next.size === prev.size ? prev : next;
+    });
+  }, [filteredSessions]);
+  const toggleSessionSelected = useCallback((id: number, on: boolean) => {
+    setBulkSelected(prev => {
+      const next = new Set(prev);
+      if (on) next.add(id); else next.delete(id);
+      return next;
+    });
+  }, []);
+  const clearSessionSelection = useCallback(() => setBulkSelected(new Set()), []);
+  const bulkDeleteChargingMut = useBulkDeleteCharging();
+  const handleBulkDeleteCharging = useCallback(async (ids: number[]) => {
+    await bulkDeleteChargingMut.mutateAsync(ids);
+    clearSessionSelection();
+  }, [bulkDeleteChargingMut, clearSessionSelection]);
+
+  // Defensive guard: no vehicle selected (Phase 40 / Prompt 18).
+  if (vehicleId == null) {
+    return <NoVehicleSelected pageTitle={t('charging.list.title', 'Charging Sessions')} />;
+  }
 
   // ── Render ───────────────────────────────────────────────────────────
   return (
@@ -97,30 +132,26 @@ export default function ChargingListPage() {
       title={t('charging.list.title', 'Charging Sessions')}
       subtitle={t('charging.list.subtitle', 'Cost analysis, charger breakdown, energy patterns, and performance tracking')}
       actions={
-        vehicles && vehicles.length > 0 ? (
-          <Select
-            value={String(vehicleId ?? '')}
-            onChange={(e) => setSelectedVehicle(Number(e.target.value))}
-            className="text-sm px-3 py-2"
-            options={vehicles.map((v) => ({
-              value: String(v.id),
-              label: v.display_name || v.vin,
-            }))}
-          />
-        ) : undefined
+        <SavedViewMenu
+          route="/charging"
+          currentQuery={savedView.currentQuery}
+          onApply={savedView.apply}
+        />
       }
     >
       <FadeIn>
-        <DateRangeFilter
-          startDate={startDate}
-          endDate={endDate}
-          onStartDateChange={setStartDate}
-          onEndDateChange={setEndDate}
-          onApply={() => setPage(1)}
-        />
+        <div data-tour="charging-filters">
+          <DateRangeFilter
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+            onApply={() => setPage(1)}
+          />
+        </div>
       </FadeIn>
 
-      {error && <QueryError error={error as Error} onRetry={refetch} />}
+      <QueryError error={error as Error} onRetry={refetch} />
 
       <FadeIn><HeroGauges stats={stats} /></FadeIn>
       <FadeIn delay={0.05}><QuickMetrics stats={stats} /></FadeIn>
@@ -149,6 +180,7 @@ export default function ChargingListPage() {
 
       {optimizer && <OptimizerSection optimizer={optimizer} />}
 
+      <div data-tour="charging-list">
       <SessionListSection
         sessions={sessions}
         filteredSessions={filteredSessions}
@@ -158,6 +190,8 @@ export default function ChargingListPage() {
         sortBy={sortBy}
         sortDesc={sortDesc}
         chargerFilter={chargerFilter}
+        searchQuery={searchQuery}
+        onSearchQueryChange={(v) => { setSearchQuery(v); setPage(1); }}
         onSortChange={(key) => { setSortBy(key); setSortDesc(true); }}
         onSortToggle={() => setSortDesc(!sortDesc)}
         onChargerFilterChange={setChargerFilter}
@@ -168,7 +202,12 @@ export default function ChargingListPage() {
         startDate={startDate}
         endDate={endDate}
         vehicleId={vehicleId}
+        selectedIds={bulkSelected}
+        onToggleSelected={toggleSessionSelected}
+        onClearSelection={clearSessionSelection}
+        onBulkDelete={handleBulkDeleteCharging}
       />
+      </div>
     </PageContainer>
   );
 }

@@ -1,16 +1,31 @@
 import { forwardRef, type InputHTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 
-export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
   label?: string;
   error?: string;
   hint?: string;
   icon?: ReactNode;
   suffix?: ReactNode;
+  /**
+   * Sizing scale. Defaults to `'md'` for back-compat with existing
+   * callers. Pass `'auto'` to follow the user's `ui_density` setting
+   * via density-aware Tailwind utilities (`min-h-d-row px-d-pad-x
+   * text-d-base`); see `useDensitySync` and `index.css`.
+   * (Phase 40 / Prompt 44.)
+   */
+  size?: 'sm' | 'md' | 'lg' | 'auto';
 }
 
+const sizeClasses: Record<NonNullable<InputProps['size']>, string> = {
+  sm: 'px-2 py-1.5 text-xs',
+  md: 'px-3 py-2 text-sm',
+  lg: 'px-4 py-2.5 text-base',
+  auto: 'px-d-pad-x py-d-pad-y text-d-base min-h-d-row',
+};
+
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, hint, icon, suffix, className, id, ...props }, ref) => {
+  ({ label, error, hint, icon, suffix, size = 'md', className, id, ...props }, ref) => {
     const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
     return (
       <div className="space-y-1">
@@ -25,7 +40,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             id={inputId}
             className={cn(
-              'w-full rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] px-3 py-2 text-sm text-[var(--text-primary)] transition-colors',
+              'w-full rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] transition-colors',
+              sizeClasses[size],
               'placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-[var(--bg)]',
               'disabled:cursor-not-allowed disabled:opacity-50',
               error && 'border-red-500',

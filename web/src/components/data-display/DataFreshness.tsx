@@ -1,0 +1,262 @@
+import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { RefreshCw, Wifi, WifiOff } from 'lucide-react';
+import type { UseQueryResult } from '@tanstack/react-query';
+import { cn } from '@/lib/cn';
+
+/**
+ * `<DataFreshness>` — query-result-driven freshness chip.
+ *
+ * Renders a tiny status dot + icon + relative time string ("3m ago",
+ * "updating…", "error") that surfaces the health of a data fetch. Designed
+ * to live inside a widget header or page header, **not** next to the value
+ * itself. For per-datum freshness (timestamp of a specific reading), use
+ * `<FreshnessIndicator>` instead.
+ *
+ * Four states (mapped from TanStack Query):
+ *   - `fresh`    — `dataUpdatedAt > 0`, no fetch in flight, data not stale
+ *   - `fetching` — `isFetching === true` (animated)
+ *   - `stale`    — `isStale === true` (TanStack Query past `staleTime`)
+ *   - `error`    — `isError === true`
+ *
+ * For most callers, prefer `<DataFreshnessAuto query={query} />` which takes
+ * the entire `useQuery()` result and wires every prop in one line.
+ *
+ * Phase-40 / Prompt 66 — promoted from `features/dashboard/components` to
+ * `components/data-display` so non-dashboard surfaces can adopt it without
+ * deep relative imports.
+ */
+export interface DataFreshnessProps {
+  /** When the data was last successfully fetched (ms timestamp or null) */
+  updatedAt: number | null;
+  /** Is TanStack Query currently fetching? */
+  isFetching: boolean;
+  /** Is data stale (past its staleTime)? */
+  isStale: boolean;
+  /** Is there an error? */
+  isError: boolean;
+  /** Manual refresh callback */
+  onRefresh?: () => void;
+  /** Compact mode (condensed icon, no text) for small widgets */
+  compact?: boolean;
+}
+
+export type FreshnessStatus = 'fresh' | 'fetching' | 'stale' | 'error';
+
+/**
+ * Shared color tier for the four freshness states. Other surfaces (e.g. the
+ * status bar's "Live telemetry" segment) import this map so the visual
+ * language stays consistent across the app. Phase-40 / Prompt 66.
+ */
+export const FRESHNESS_COLORS = {
+  fresh: { dot: 'bg-emerald-400', text: 'text-emerald-400/60' },
+  fetching: { dot: 'bg-sky-400', text: 'text-sky-400/60' },
+  stale: { dot: 'bg-amber-400', text: 'text-amber-400/60' },
+  error: { dot: 'bg-red-400', text: 'text-red-400/60' },
+} as const;
+
+const STATUS_CONFIG = {
+  fresh: {
+    icon: Wifi,
+    color: FRESHNESS_COLORS.fresh.text,
+    dotColor: FRESHNESS_COLORS.fresh.dot,
+  },
+  fetching: {
+    icon: RefreshCw,
+    color: FRESHNESS_COLORS.fetching.text,
+    dotColor: FRESHNESS_COLORS.fetching.dot,
+  },
+  stale: {
+    icon: Wifi,
+    color: FRESHNESS_COLORS.stale.text,
+    dotColor: FRESHNESS_COLORS.stale.dot,
+  },
+  error: {
+    icon: WifiOff,
+    color: FRESHNESS_COLORS.error.text,
+    dotColor: FRESHNESS_COLORS.error.dot,
+  },
+} as const;
+
+// TODO(phase-40/prompt-08): centralize this once the shared
+// `formatRelativeTime` helper in @/lib/dateFormat grows i18n plural support.
+// Today the shared helper returns hardcoded English ("just now", "5m ago"),
+// so we keep this i18n-aware variant local. Days/weeks fall-through ensures
+// caggs that refresh once a day still produce a sensible chip.
+function formatRelativeTime(
+  ms: number,
+  t: (key: string, fallback: string, opts?: Record<string, unknown>) => string,
+): string {
+  const seconds = Math.floor((Date.now() - ms) / 1000);
+  if (seconds < 5) return t('freshness.justNow', 'just now');
+  if (seconds < 60)
+    return t('freshness.seconds', '{{s}}s ago', { s: seconds });
+  if (seconds < 3600)
+    return t('freshness.minutes', '{{m}}m ago', {
+      m: Math.floor(seconds / 60),
+    });
+  if (seconds < 86_400)
+    return t('freshness.hours', '{{h}}h ago', {
+      h: Math.floor(seconds / 3600),
+    });
+  if (seconds < 604_800)
+    return t('freshness.days', '{{d}}d ago', {
+      d: Math.floor(seconds / 86_400),
+    });
+  return t('freshness.weeks', '{{w}}w ago', {
+    w: Math.floor(seconds / 604_800),
+  });
+}
+
+export function DataFreshness({
+  updatedAt,
+  isFetching,
+  isStale,
+  isError,
+  onRefresh,
+  compact = false,
+}: DataFreshnessProps) {
+  const { t } = useTranslation();
+  const [, setTick] = useState(0);
+
+  // Re-render every second to keep relative time accurate
+  useEffect(() => {
+    if (!updatedAt) return;
+    const id = setInterval(() => setTick((n) => n + 1), 1000);
+    return () => clearInterval(id);
+  }, [updatedAt]);
+
+  const status: FreshnessStatus = isError
+    ? 'error'
+    : isFetching
+      ? 'fetching'
+      : isStale
+        ? 'stale'
+        : 'fresh';
+
+  const cfg = STATUS_CONFIG[status];
+  const Icon = cfg.icon;
+
+  const relativeTime =
+    updatedAt && !isFetching
+      ? formatRelativeTime(updatedAt, t)
+      : isFetching
+        ? t('freshness.updating', 'updating…')
+        : isError
+          ? t('freshness.error', 'error')
+          : '';
+
+  const handleClick = useCallback(() => {
+    if (onRefresh && !isFetching) onRefresh();
+  }, [onRefresh, isFetching]);
+
+  const title = updatedAt
+    ? t('freshness.lastUpdated', 'Last updated: {{time}}', {
+        time: new Date(updatedAt).toLocaleTimeString(),
+      })
+    : t('freshness.neverUpdated', 'Never updated');
+
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center text-[10px] leading-none transition-colors',
+        compact ? 'gap-0.5' : 'gap-1',
+        cfg.color,
+        onRefresh && !isFetching && 'cursor-pointer hover:text-white/60',
+      )}
+      onClick={handleClick}
+      title={title}
+      role={onRefresh ? 'button' : undefined}
+      aria-label={onRefresh ? t('freshness.refresh', 'Refresh') : undefined}
+    >
+      {/* Status dot with pulse */}
+      <span className="relative flex h-1.5 w-1.5 shrink-0">
+        {status === 'fetching' && (
+          <span
+            className={cn(
+              'absolute inset-0 rounded-full animate-ping opacity-40',
+              cfg.dotColor,
+            )}
+          />
+        )}
+        <span className={cn('relative rounded-full h-1.5 w-1.5', cfg.dotColor)} />
+      </span>
+
+      <Icon
+        className={cn(
+          compact ? 'h-2 w-2' : 'h-2.5 w-2.5',
+          status === 'fetching' && 'animate-spin',
+        )}
+      />
+      {!compact && <span>{relativeTime}</span>}
+    </span>
+  );
+}
+
+/**
+ * Subset of `UseQueryResult` that `<DataFreshnessAuto>` consumes. Kept loose
+ * (`unknown` data, `unknown` error) so the wrapper accepts any TanStack Query
+ * result without leaking generics into call sites.
+ */
+export type FreshnessQuery = Pick<
+  UseQueryResult<unknown, unknown>,
+  'isFetching' | 'isStale' | 'isError' | 'dataUpdatedAt' | 'refetch'
+>;
+
+export interface DataFreshnessAutoProps {
+  /** Pass the entire TanStack Query result (the object returned by `useQuery`). */
+  query: FreshnessQuery;
+  /** Compact mode (icon-only, no relative time text). */
+  compact?: boolean;
+  /**
+   * Default `true`: clicking the indicator triggers `query.refetch()`. Set
+   * `false` for read-only displays where a manual refresh would be confusing
+   * (e.g. when the data is owned by an out-of-band poll cycle).
+   */
+  refetchable?: boolean;
+  /**
+   * Optional override for the staleness window in ms. When set, the chip
+   * forces the `stale` visual once `Date.now() - dataUpdatedAt` exceeds this
+   * value, even if TanStack Query's `isStale` is still `false`. Useful for
+   * caggs (continuous aggregates) with long `staleTime` — e.g. pass
+   * `6 * 60 * 60 * 1000` to flag a 6-hour-old daily cagg as amber.
+   */
+  forceStaleAfterMs?: number;
+}
+
+/**
+ * `<DataFreshnessAuto>` — convenience wrapper that derives every
+ * `<DataFreshness>` prop from a TanStack Query result. Collapses the
+ * widget/page boilerplate from four props to one:
+ *
+ * ```tsx
+ * const q = useChargingHistory(...)
+ * <DataFreshnessAuto query={q} compact />
+ * ```
+ *
+ * Preferred over `<DataFreshness>` for any caller that already has a
+ * `useQuery()` result handy. Phase-40 / Prompt 66.
+ */
+export function DataFreshnessAuto({
+  query,
+  compact,
+  refetchable = true,
+  forceStaleAfterMs,
+}: DataFreshnessAutoProps) {
+  const isStale =
+    query.isStale ||
+    (forceStaleAfterMs != null && query.dataUpdatedAt
+      ? Date.now() - query.dataUpdatedAt > forceStaleAfterMs
+      : false);
+
+  return (
+    <DataFreshness
+      updatedAt={query.dataUpdatedAt > 0 ? query.dataUpdatedAt : null}
+      isFetching={query.isFetching}
+      isStale={isStale}
+      isError={query.isError}
+      onRefresh={refetchable ? () => { void query.refetch(); } : undefined}
+      compact={compact}
+    />
+  );
+}

@@ -165,7 +165,7 @@ function JobRow({
         job.filePath && status === 'ready' ? (
           <a
             href={`/api/v1/export/download/${job.id}`}
-            className="shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center text-neon-cyan hover:text-white transition-colors"
+            className="shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center text-cyan-300 hover:text-white transition-colors"
             title={t('widget.exportDownload', 'Download')}
           >
             <Download className="h-3.5 w-3.5" />

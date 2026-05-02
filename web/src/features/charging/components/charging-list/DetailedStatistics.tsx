@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { TrendingUp } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
-import { AnimatedNumber } from '@/components/data-display';
-import { fmtNumber, fmtWithUnit } from '@/lib/numberFormat';
+import { AnimatedNumber, Currency } from '@/components/data-display';
+import { fmtWithUnit } from '@/lib/numberFormat';
 import { formatDuration } from '../ChargingSessionCard';
 import type { ChargingStats, EnhancedStats } from './helpers';
 
@@ -30,7 +30,7 @@ export function DetailedStatistics({ stats, enhanced }: DetailedStatisticsProps)
           <p className="text-[10px] text-[var(--text-muted)]">{t('charging.stats.avgDuration', 'Avg Duration')}</p>
         </div>
         <div>
-          <p className="text-lg font-bold text-neon-purple">{fmtWithUnit(stats.avgPower, 'kW')}</p>
+          <p className="text-lg font-bold text-purple-300">{fmtWithUnit(stats.avgPower, 'kW')}</p>
           <p className="text-[10px] text-[var(--text-muted)]">{t('charging.stats.avgPower', 'Avg Power')}</p>
         </div>
         <div>
@@ -38,11 +38,11 @@ export function DetailedStatistics({ stats, enhanced }: DetailedStatisticsProps)
           <p className="text-[10px] text-[var(--text-muted)]">{t('charging.stats.topCharger', 'Top Charger')} ({enhanced.mostCommonType[1]}×)</p>
         </div>
         <div>
-          <p className="text-lg font-bold text-neon-amber">${fmtNumber(stats.totalCost)}</p>
+          <p className="text-lg font-bold text-amber-300"><Currency value={stats.totalCost} /></p>
           <p className="text-[10px] text-[var(--text-muted)]">{t('charging.stats.totalCost', 'Total Cost')}</p>
         </div>
         <div>
-          <p className="text-lg font-bold text-neon-green">${fmtNumber(stats.avgCostPerKwh)}</p>
+          <p className="text-lg font-bold text-emerald-300"><Currency value={stats.avgCostPerKwh} precision={3} /></p>
           <p className="text-[10px] text-[var(--text-muted)]">{t('charging.stats.avgCostPerKwh', 'Avg $/kWh')}</p>
         </div>
       </div>

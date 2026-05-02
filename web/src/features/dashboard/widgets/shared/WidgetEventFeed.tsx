@@ -11,6 +11,9 @@ export interface EventFeedItem {
   timestamp: string;
   color: string;
   severity?: 'info' | 'warning' | 'critical';
+  /** Optional navigation target. When set, the entire row becomes a `<Link>`
+   *  to this href (used by alert drill-through — Phase 40 / Prompt 14). */
+  href?: string;
 }
 
 interface WidgetEventFeedProps {
@@ -78,6 +81,7 @@ export function WidgetEventFeed({
           time={formatRelativeTime(item.timestamp)}
           color={item.color}
           isLast={i === sorted.length - 1}
+          href={item.href}
         />
       ))}
     </div>

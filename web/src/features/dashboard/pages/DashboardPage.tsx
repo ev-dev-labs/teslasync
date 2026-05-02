@@ -3,27 +3,26 @@ import { createPortal } from 'react-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import {
-  RefreshCw, Bell, Radio, ArrowUpRight, Activity,
-  Route, BatteryCharging, Shield, AlertCircle, Settings, Plus, RotateCcw,
-  LayoutGrid, Download, Upload, Undo2, Redo2, LayoutTemplate, Tv,
-} from 'lucide-react';
 import { request } from '@/api/client';
 import { useAuthStatus } from '@/api/hooks/useSettings';
 import { useSyncVehicles } from '@/api/hooks/useVehicles';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Button } from '@/components/ui/Button';
-import { StatusPill } from '@/components/ui/StatusPill';
+import { PrintButton } from '@/components/ui/PrintButton';
 import { FadeIn } from '@/components/motion';
-import { AlertBanner } from '@/components/feedback';
+import { AlertBanner, LiveStaleDataBanner } from '@/components/feedback';
+import { LiveIndicator } from '@/components/data-display';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { useRealtimeEvents } from '@/hooks/useRealtimeEvents';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useTheme } from '@/components/ui/ThemeProvider';
+import { Palette } from 'lucide-react';
 import { DashboardGrid } from '../components/DashboardGrid';
 import { WidgetPicker } from '../components/WidgetPicker';
 import { WidgetSettingsModal } from '../components/WidgetSettingsModal';
 import { LayoutManager } from '../components/LayoutManager';
+import { LayoutSwitcher } from '../components/LayoutSwitcher';
 import { TemplateGallery } from '../components/TemplateGallery';
 import { ExportModal } from '../components/ExportModal';
 import { ImportPreviewModal } from '../components/ImportPreviewModal';
@@ -36,7 +35,73 @@ import { useKioskMode } from '../hooks/useKioskMode';
 import { fromUrlSafeBase64 } from '../hooks/validateImport';
 import { getWidgetDef } from '../widgets/registry';
 import type { Vehicle, Alert } from '../types';
-import type { WidgetConfig, SavedDashboard } from '../widgets/types';
+import type { WidgetConfig, SavedDashboard } from '../widgets/types';
+import { Icons } from '@/lib/icons';
+
+const THEME_FIRST_RUN_KEY = 'teslasync:themeFirstRunDismissed:v1';
+
+/**
+ * Phase-40 / Prompt 60 — first-run theme prompt.
+ *
+ * Renders once at the top of the dashboard for users who haven't picked a
+ * theme yet (still on the `neon-cyan` default) AND haven't dismissed the
+ * banner before. Both the "Open theme picker" and "Maybe later" actions
+ * mark the prompt as dismissed; the close button does the same.
+ *
+ * Storage key is versioned (`:v1`) so a future redesign can re-trigger the
+ * prompt by bumping the suffix.
+ */
+function ThemeFirstRunBanner() {
+  const { t } = useTranslation();
+  const { themeId } = useTheme();
+  const [dismissed, setDismissed] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem(THEME_FIRST_RUN_KEY) === '1';
+    } catch {
+      return true;
+    }
+  });
+
+  if (dismissed) return null;
+  // Only nag users who are still on the default theme. Anyone who's already
+  // customized has implicitly self-served, so the banner is skipped.
+  if (themeId !== 'neon-cyan') return null;
+
+  const persistDismiss = () => {
+    try {
+      window.localStorage.setItem(THEME_FIRST_RUN_KEY, '1');
+    } catch {
+      /* quota or disabled storage */
+    }
+    setDismissed(true);
+  };
+
+  const openPicker = () => {
+    window.dispatchEvent(new CustomEvent('open-theme-popover'));
+    persistDismiss();
+  };
+
+  return (
+    <AlertBanner
+      variant="info"
+      icon={<Palette className="h-4 w-4" />}
+      title={t('theme.firstRunTitle', 'Personalize TeslaSync')}
+      onClose={persistDismiss}
+    >
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="flex-1 min-w-0">{t('theme.firstRunBody', 'Pick a color theme that fits your style.')}</span>
+        <div className="flex gap-2 shrink-0">
+          <Button variant="primary" size="sm" onClick={openPicker}>
+            {t('theme.firstRunOpen', 'Open theme picker')}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={persistDismiss}>
+            {t('theme.firstRunLater', 'Maybe later')}
+          </Button>
+        </div>
+      </div>
+    </AlertBanner>
+  );
+}
 
 export default function DashboardPage() {
   usePageTitle('Dashboard');
@@ -53,6 +118,7 @@ export default function DashboardPage() {
     reorderDashboards, duplicateDashboard, updateDashboardSettings, updateDashboardIcon,
     applyPreset, resetToDefault, exportDashboard, importDashboardFromData,
     canUndo, canRedo, undoCount, undo, redo,
+    dirty, pinToVehicle,
   } = useDashboardLayout();
   const [showPicker, setShowPicker] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
@@ -62,7 +128,7 @@ export default function DashboardPage() {
   const [showKioskSettings, setShowKioskSettings] = useState(false);
   const [showDashSettings, setShowDashSettings] = useState<string | null>(null);
   useLayoutKeyboard({
-    editMode, canUndo, canRedo, onUndo: undo, onRedo: redo,
+    editMode, setEditMode, canUndo, canRedo, onUndo: undo, onRedo: redo,
     dashboards, switchDashboard,
   });
   const [settingsWidgetId, setSettingsWidgetId] = useState<string | null>(null);
@@ -79,7 +145,9 @@ export default function DashboardPage() {
   const syncVehicles = useSyncVehicles();
 
   /* ——— SSE real-time connection ——— */
-  const { connected } = useRealtimeEvents({
+  // Keep the SSE pipe wired up for cross-tab cache invalidation; live-pipe
+  // health is rendered via `<LiveIndicator>` (uses `useLiveConnection`).
+  useRealtimeEvents({
     onVehicleUpdate: () => queryClient.invalidateQueries({ queryKey: ['vehicles'] }),
     onFallbackToPolling: () => queryClient.invalidateQueries(),
   });
@@ -142,6 +210,33 @@ export default function DashboardPage() {
     }
   }, []);
 
+  /* ——— Command-palette bridge (Phase 40 / Prompt 30) ——— */
+  // The command palette dispatches `dashboard:*` CustomEvents because it lives
+  // outside the dashboard's React tree and can't call hooks directly.
+  useEffect(() => {
+    const onToggleEdit = () => setEditMode(!editMode);
+    const onAddWidget = () => setShowPicker(true);
+    const onReset = () => {
+      // Defer to LayoutSwitcher's confirm flow next time the user opens it.
+      // For palette invocation, run the destructive op behind window.confirm
+      // so power users still get a one-click path.
+      if (window.confirm(t('layout.resetMessage', 'This removes all customizations and restores the shipped default dashboard. Your other saved layouts are not affected.'))) {
+        resetToDefault();
+      }
+    };
+    window.addEventListener('dashboard:toggle-edit', onToggleEdit);
+    window.addEventListener('dashboard:add-widget', onAddWidget);
+    window.addEventListener('dashboard:reset', onReset);
+    // dashboard:open-switcher is handled by LayoutSwitcher itself if it
+    // mounts a listener — for now we navigate to /dashboard so the switcher
+    // is on screen and let the user click it.
+    return () => {
+      window.removeEventListener('dashboard:toggle-edit', onToggleEdit);
+      window.removeEventListener('dashboard:add-widget', onAddWidget);
+      window.removeEventListener('dashboard:reset', onReset);
+    };
+  }, [editMode, setEditMode, resetToDefault, t]);
+
   /* ——— Template gallery handler ——— */
   const handleApplyTemplate = (presetId: string) => {
     if (presetId === '__blank__') {
@@ -166,7 +261,7 @@ export default function DashboardPage() {
 
   /* ——— Header actions ——— */
   const headerActions = (
-    <div className="flex items-center gap-2 flex-wrap">
+    <div data-print-hide className="flex items-center gap-2 flex-wrap">
       {editMode ? (
         <>
           <div className="flex items-center gap-1 mr-1">
@@ -178,7 +273,7 @@ export default function DashboardPage() {
               aria-label={t('dashboard.undo', 'Undo')}
               className="text-white/60 hover:text-white disabled:opacity-30"
             >
-              <Undo2 className="h-4 w-4" />
+              <Icons.undoAlt className="h-4 w-4" />
             </Button>
             <Button
               variant="ghost"
@@ -188,7 +283,7 @@ export default function DashboardPage() {
               aria-label={t('dashboard.redo', 'Redo')}
               className="text-white/60 hover:text-white disabled:opacity-30"
             >
-              <Redo2 className="h-4 w-4" />
+              <Icons.redo className="h-4 w-4" />
             </Button>
             {canUndo && (
               <span className="text-[10px] text-white/30 tabular-nums">
@@ -197,19 +292,19 @@ export default function DashboardPage() {
             )}
           </div>
           <Button variant="ghost" size="sm" onClick={() => setShowPicker(true)}>
-            <Plus className="h-3.5 w-3.5 sm:mr-1" />
+            <Icons.add className="h-3.5 w-3.5 sm:mr-1" />
             <span className="hidden sm:inline">{t('dashboard.addWidget', 'Add Widget')}</span>
           </Button>
           <Button variant="ghost" size="sm" onClick={autoArrange}>
-            <LayoutGrid className="h-3.5 w-3.5 sm:mr-1" />
+            <Icons.layoutGrid className="h-3.5 w-3.5 sm:mr-1" />
             <span className="hidden sm:inline">{t('dashboard.autoArrange', 'Auto Arrange')}</span>
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setShowTemplates(true)} className="hidden sm:flex">
-            <LayoutTemplate className="h-3.5 w-3.5 mr-1" />
+            <Icons.layoutTemplate className="h-3.5 w-3.5 mr-1" />
             {t('dashboard.templates', 'Templates')}
           </Button>
           <Button variant="ghost" size="sm" onClick={resetToDefault} className="hidden sm:flex">
-            <RotateCcw className="h-3.5 w-3.5 mr-1" />
+            <Icons.undo className="h-3.5 w-3.5 mr-1" />
             {t('dashboard.reset', 'Reset')}
           </Button>
           <Button size="sm" onClick={() => setEditMode(false)}>
@@ -219,36 +314,36 @@ export default function DashboardPage() {
       ) : (
         <>
           <Button variant="ghost" size="sm" onClick={handleRefresh} loading={isRefreshing}>
-            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <Icons.refresh className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setShowExportModal(true)} className="hidden sm:flex">
-            <Download className="h-3.5 w-3.5" />
+            <Icons.download className="h-3.5 w-3.5" />
           </Button>
           <Button variant="ghost" size="sm" onClick={() => { setImportJson(null); setShowImportModal(true); }} className="hidden sm:flex">
-            <Upload className="h-3.5 w-3.5" />
+            <Icons.upload className="h-3.5 w-3.5" />
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setShowKioskSettings(true)} className="hidden sm:flex">
-            <Tv className="h-3.5 w-3.5 mr-1" />
+            <Icons.tv className="h-3.5 w-3.5 mr-1" />
             {t('dashboard.kiosk', 'Kiosk')}
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setEditMode(true)} data-tour="edit-mode-btn">
-            <Settings className="h-3.5 w-3.5 sm:mr-1" />
+            <Icons.settings className="h-3.5 w-3.5 sm:mr-1" />
             <span className="hidden sm:inline">{t('dashboard.customize', 'Customize')}</span>
           </Button>
         </>
       )}
       {!editMode && unreadAlerts > 0 && (
         <Link to="/alerts" className="relative">
-          <Bell className="h-5 w-5 text-[var(--text-secondary)] hover:text-neon-cyan transition-colors" />
+          <Icons.notifications className="h-5 w-5 text-[var(--text-secondary)] hover:text-neon-cyan transition-colors" />
           <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-neon-red text-[9px] font-bold text-[var(--text-primary)]">
             {unreadAlerts}
           </span>
         </Link>
       )}
-      <StatusPill color={connected ? '#10b981' : '#6b7280'} pulse={connected}>
-        <Radio className="h-3 w-3" />
-        {connected ? 'LIVE' : 'OFFLINE'}
-      </StatusPill>
+      <LiveIndicator variant="compact" />
+      {!editMode && (
+        <PrintButton label={t('dashboard.printSnapshot', 'Print snapshot')} />
+      )}
     </div>
   );
 
@@ -260,9 +355,15 @@ export default function DashboardPage() {
       actions={headerActions}
     >
       <div className="space-y-4">
+        {/* Phase-40 / Prompt 60 — first-run prompt to surface the theme picker. */}
+        <ThemeFirstRunBanner />
+
+        {/* Live-pipe stale-data warning (only shows after >2 min disconnected) */}
+        <LiveStaleDataBanner />
+
         {/* Error banner */}
         {anyError && (
-          <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
+          <AlertBanner variant="danger" icon={<Icons.alertCircle className="h-5 w-5" />}>
             {t('error.loadFailed', 'Failed to load data')}: {anyError.message}
           </AlertBanner>
         )}
@@ -272,11 +373,11 @@ export default function DashboardPage() {
           <FadeIn>
             <AlertBanner
               variant="warning"
-              icon={<AlertCircle className="h-5 w-5" />}
+              icon={<Icons.alertCircle className="h-5 w-5" />}
               title={t('auth.notConnected', 'Tesla account not connected')}
             >
               {t('auth.connectPrompt', 'Connect your account in')}{' '}
-              <Link to="/settings" className="text-neon-cyan hover:underline">
+              <Link to="/settings" className="text-cyan-300 hover:underline">
                 {t('auth.settings', 'Settings')}
               </Link>{' '}
               {t('auth.toStart', 'to start tracking.')}
@@ -286,18 +387,32 @@ export default function DashboardPage() {
 
         {/* Layout Manager — always show when there are dashboards */}
         {dashboards.length > 0 && (
-          <LayoutManager
-            dashboards={dashboards}
-            activeId={activeId}
-            onSwitch={switchDashboard}
-            onCreate={createDashboard}
-            onRename={renameDashboard}
-            onDelete={deleteDashboard}
-            onReorder={reorderDashboards}
-            onDuplicate={duplicateDashboard}
-            onOpenSettings={(id) => setShowDashSettings(id)}
-            onOpenTemplates={() => setShowTemplates(true)}
-          />
+          <div className="space-y-2">
+            <LayoutSwitcher
+              dashboards={dashboards}
+              activeId={activeId}
+              dirty={dirty}
+              editMode={editMode}
+              onSwitch={switchDashboard}
+              onCreate={(name) => createDashboard(name)}
+              onDuplicate={duplicateDashboard}
+              onReset={resetToDefault}
+              onToggleEdit={() => setEditMode(!editMode)}
+              onPinToVehicle={pinToVehicle}
+            />
+            <LayoutManager
+              dashboards={dashboards}
+              activeId={activeId}
+              onSwitch={switchDashboard}
+              onCreate={createDashboard}
+              onRename={renameDashboard}
+              onDelete={deleteDashboard}
+              onReorder={reorderDashboards}
+              onDuplicate={duplicateDashboard}
+              onOpenSettings={(id) => setShowDashSettings(id)}
+              onOpenTemplates={() => setShowTemplates(true)}
+            />
+          </div>
         )}
 
         {vehiclesLoading ? (
@@ -467,23 +582,23 @@ function EmptyOnboarding({ authenticated, onSync, isSyncing }: {
         </p>
         <div className="flex items-center justify-center gap-4">
           {authenticated ? (
-            <Button onClick={onSync} loading={isSyncing} icon={<RefreshCw className="h-4 w-4" />}>
+            <Button onClick={onSync} loading={isSyncing} icon={<Icons.refresh className="h-4 w-4" />}>
               {t('onboarding.sync', 'Sync Vehicles')}
             </Button>
           ) : (
             <Link to="/settings">
               <Button variant="primary">
-                {t('onboarding.connect', 'Connect Tesla Account')} <ArrowUpRight className="h-4 w-4 ml-1 inline-block" />
+                {t('onboarding.connect', 'Connect Tesla Account')} <Icons.drillThrough className="h-4 w-4 ml-1 inline-block" />
               </Button>
             </Link>
           )}
         </div>
-        <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl mx-auto">
+        <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-2xl mx-auto">
           {[
-            { icon: Activity, label: t('onboarding.tracking', 'Real-time Tracking'), color: '#00f0ff' },
-            { icon: Route, label: t('onboarding.drives', 'Drive History'), color: '#a855f7' },
-            { icon: BatteryCharging, label: t('onboarding.charging', 'Charge Analytics'), color: '#10b981' },
-            { icon: Shield, label: t('onboarding.control', 'Vehicle Control'), color: '#ef4444' },
+            { icon: Icons.efficiency, label: t('onboarding.tracking', 'Real-time Tracking'), color: '#00f0ff' },
+            { icon: Icons.drive, label: t('onboarding.drives', 'Drive History'), color: '#a855f7' },
+            { icon: Icons.batteryCharging, label: t('onboarding.charging', 'Charge Analytics'), color: '#10b981' },
+            { icon: Icons.security, label: t('onboarding.control', 'Vehicle Control'), color: '#ef4444' },
           ].map((f) => (
             <GlassPanel key={f.label} className="p-3 text-center">
               <f.icon className="h-6 w-6 mx-auto mb-2" style={{ color: f.color }} />
@@ -501,7 +616,7 @@ function LoadingSkeleton() {
   return (
     <div className="space-y-6">
       <Skeleton className="h-72" />
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-28" />)}
       </div>
     </div>

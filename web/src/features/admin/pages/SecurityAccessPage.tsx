@@ -143,7 +143,12 @@ export default function SecurityAccessPage() {
       {latest && (
         <FadeIn>
           <GlassPanel className="p-4 mb-6 flex items-center justify-center">
-            <VehicleTwin {...twinState} size="sm" interactive />
+            <VehicleTwin
+              {...twinState}
+              size="sm"
+              interactive
+              vehicleId={activeId ? Number(activeId) : undefined}
+            />
           </GlassPanel>
         </FadeIn>
       )}

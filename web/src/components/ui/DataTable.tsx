@@ -1,8 +1,23 @@
-import { type ReactNode, useState, useCallback, useEffect } from 'react'
+import { type ReactNode, useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { cn } from '../../lib/cn'
 import { tableTokens } from '../../lib/tokens'
-import { ChevronUp, ChevronDown } from 'lucide-react'
+import { ChevronUp, ChevronDown, ChevronRight, AlertTriangle, Download, Loader2 } from 'lucide-react'
 import { Pagination } from './Pagination'
+import { SectionErrorBoundary } from '../feedback/SectionErrorBoundary'
+import { DataTableColumnsMenu } from './DataTableColumnsMenu'
+import { DataTableBulkBar } from './DataTableBulkBar'
+import { DataTableResizer } from './DataTableResizer'
+import {
+  toCSV,
+  downloadCSV,
+  defaultExportFilename,
+  type CsvColumn,
+  type CsvCellValue,
+} from '../../lib/csvExport'
+
+type RowKey = string | number
 
 export interface Column<T> {
   key: string
@@ -10,6 +25,22 @@ export interface Column<T> {
   render: (row: T) => ReactNode
   sortable?: boolean
   className?: string
+  // Phase-40 / Prompt 25 additions:
+  /** Default visible column? Defaults to true. Hidden columns appear in the
+   *  column-visibility menu so users can re-show them. */
+  defaultVisible?: boolean
+  /** When set, this column is shown at <md viewports. Used to derive the
+   *  effective `mobileColumns` allow-list when the prop isn't supplied. */
+  visibleOnMobile?: boolean
+  /** Initial width in pixels (or 'auto'). When `resizable` is true the user's
+   *  drag overrides this and is persisted by `tableId`. */
+  defaultWidth?: number | 'auto'
+  /** Min width allowed when resizing. Defaults to 60. */
+  minWidth?: number
+  /** Max width allowed when resizing. Defaults to 800. */
+  maxWidth?: number
+  /** Right-align numeric columns; default 'left'. */
+  align?: 'left' | 'center' | 'right'
 }
 
 export interface PaginationConfig {
@@ -20,20 +51,247 @@ export interface PaginationConfig {
 interface DataTableProps<T> {
   columns: Column<T>[]
   data: T[]
-  keyExtractor: (row: T) => string | number
+  keyExtractor: (row: T) => RowKey
   sortKey?: string
   sortDir?: 'asc' | 'desc'
   onSort?: (key: string) => void
   emptyMessage?: string
   className?: string
+  /**
+   * Legacy boolean density toggle. Equivalent to `density='compact'`.
+   * Preserved for back-compat with pre-Phase-40-44 callers; new code
+   * should pass `density` directly.
+   */
   compact?: boolean
+  /**
+   * Information density for row heights / cell padding.
+   *
+   *   - `'compact'`     — forces tight rows regardless of user setting
+   *   - `'comfortable'` — forces default rows regardless of user setting
+   *   - `'spacious'`    — forces loose rows regardless of user setting
+   *   - `'auto'`        — follows the user's `ui_density` setting via
+   *                      density Tailwind utilities (`px-d-pad-x ...`)
+   *
+   * When omitted, DataTable defaults to `'auto'` (so the global
+   * preference flows through every default-styled table). Pass an
+   * explicit value when a specific table should look identical to all
+   * users regardless of preference (e.g. data-dense log viewers).
+   * (Phase 40 / Prompt 44.)
+   */
+  density?: 'compact' | 'comfortable' | 'spacious' | 'auto'
   pagination?: boolean | PaginationConfig
+  /**
+   * Optional name for the SectionErrorBoundary that wraps row rendering.
+   * Surfaces in console logs as `[ErrorBoundary:table:<name>]` when a row
+   * renderer throws. Defaults to "DataTable".
+   */
+  name?: string
+  /**
+   * Column keys to keep visible on viewports below `md` (768px). Columns NOT
+   * listed here become `hidden md:table-cell`. When omitted, the effective
+   * allow-list is derived from `Column.visibleOnMobile`. If neither is set,
+   * every column is shown at every viewport width and the table relies on the
+   * wrapper's `overflow-x-auto` to scroll horizontally on phones.
+   *
+   * MOBILE_GUIDELINES.md asks every multi-column DataTable to specify this so
+   * mobile users see the essential columns without horizontal scroll.
+   *
+   * @example mobileColumns={['name', 'status']}
+   */
+  mobileColumns?: string[]
+
+  // ── Phase-40 / Prompt 25 additions ────────────────────────────────────
+  /** Stable identifier used to persist column visibility & widths in
+   *  localStorage. Required when using `selectable`, `resizable`, or
+   *  the column-visibility menu. */
+  tableId?: string
+
+  // SELECTION
+  /** 'multi' = checkbox column + select-all + shift-click range. 'single' =
+   *  radio-style (one row at a time). 'none' or undefined = no selection. */
+  selectable?: 'single' | 'multi' | 'none'
+  /** Controlled list of selected row keys. */
+  selectedKeys?: RowKey[]
+  /** Called whenever the selection changes. */
+  onSelectionChange?: (keys: RowKey[]) => void
+  /** Renders above the header when `selectedKeys.length > 0`. The selected
+   *  rows are passed in for convenient lookup of the actual data. */
+  bulkActions?: (selected: T[]) => ReactNode
+
+  // STICKY / SCROLL
+  /** Make the `<thead>` stick to the top of the wrapper while the body scrolls. */
+  stickyHeader?: boolean
+  /** Cap the wrapper height; combined with `stickyHeader` lets long tables
+   *  scroll vertically inside their panel. */
+  maxHeight?: number | string
+
+  // EXPANSION
+  /** Render a leading chevron column that toggles row expansion. */
+  expandable?: boolean
+  /** Controlled list of expanded row keys. */
+  expandedKeys?: RowKey[]
+  /** Called whenever expansion changes. */
+  onExpandedChange?: (keys: RowKey[]) => void
+  /** Required when `expandable` is true: render the row drawer body. */
+  renderExpanded?: (row: T) => ReactNode
+
+  // RESIZE
+  /** Allow users to drag column right edges to resize. Persists per-column
+   *  widths in localStorage[`teslasync.table.${tableId}.widths`]. Requires
+   *  `tableId`. */
+  resizable?: boolean
+
+  // COLUMN VISIBILITY
+  /** Render the "Columns" picker button above the table. Persists user choice
+   *  in localStorage[`teslasync.table.${tableId}.visible`]. Requires
+   *  `tableId`. */
+  showColumnsMenu?: boolean
+
+  // ── Phase-40 / Prompt 31 — per-table CSV export ───────────────────────
+  /** Show a "Download CSV" button in the table toolbar. The CSV is generated
+   *  from the currently visible columns and the currently sorted/filtered
+   *  data the table has been given. */
+  exportable?: boolean
+  /** Filename for the exported CSV (without extension). Defaults to a
+   *  date-stamped fallback like `table-2026-05-01`. */
+  exportFilename?: string
+  /** Override how a row is serialized. Defaults to extracting each visible
+   *  column key from the row. */
+  exportRow?: (row: T) => Record<string, CsvCellValue>
+  /** Optional async hook for paginated/server-side data: when provided the
+   *  export awaits this fetcher to obtain the full row set instead of using
+   *  whatever's currently visible. */
+  exportAll?: () => Promise<T[]>
+
+  // ── Phase-40 / Prompt 37 — row virtualization ─────────────────────────
+  /** Opt-in row virtualization for high-volume tables (1000+ rows).
+   *  Mounts only the rows currently in the viewport (plus `overscan`),
+   *  which keeps the DOM small and scrolling at 60fps regardless of how
+   *  many rows the table has been given.
+   *
+   *  Constraints:
+   *    - Requires fixed-height rows. `expandable` is NOT supported (variable
+   *      heights are out of scope) — when both are passed the table falls
+   *      back to non-virtualized rendering.
+   *    - Auto-enables `stickyHeader` and `maxHeight` (defaults to 600px when
+   *      neither is provided) so the scroll container has a bounded height.
+   *
+   *  Selection, sort, column visibility, resize, and CSV export all remain
+   *  fully functional under virtualization. */
+  virtualized?: boolean
+  /** Estimated row height in pixels when `virtualized` is true. Defaults to
+   *  44 (default density) or 36 (compact density). The virtualizer adapts
+   *  to actual rendered sizes, so an estimate within a few pixels is fine. */
+  rowHeight?: number
+  /** Number of off-screen rows to render above/below the viewport when
+   *  virtualized. Defaults to 8 — higher values smooth fast scrolling at
+   *  the cost of slightly more DOM. */
+  overscan?: number
 }
 
-/** Sortable glass-styled data table with consistent styling and optional pagination. */
+const STORAGE_PREFIX = 'teslasync.table'
+
+function readStored<T>(key: string): T | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(key)
+    if (!raw) return null
+    return JSON.parse(raw) as T
+  } catch {
+    return null
+  }
+}
+
+function writeStored<T>(key: string, value: T): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value))
+  } catch {
+    /* quota / disabled — ignore */
+  }
+}
+
+function alignClass(align?: 'left' | 'center' | 'right'): string {
+  if (align === 'right') return 'text-right'
+  if (align === 'center') return 'text-center'
+  return ''
+}
+
+/** Sortable glass-styled data table with consistent styling and optional
+ *  pagination, selection, expansion, sticky header, column visibility &
+ *  per-column resize.
+ *
+ *  All advanced props are optional — passing only `columns` + `data` gives the
+ *  same lightweight behavior callers had before Phase-40 / Prompt 25. */
 export function DataTable<T>({
-  columns, data, keyExtractor, sortKey, sortDir, onSort, emptyMessage = 'No data', className, compact, pagination,
+  columns,
+  data,
+  keyExtractor,
+  sortKey,
+  sortDir,
+  onSort,
+  emptyMessage = 'No data',
+  className,
+  compact,
+  density,
+  pagination,
+  mobileColumns,
+  name,
+  tableId,
+  selectable = 'none',
+  selectedKeys,
+  onSelectionChange,
+  bulkActions,
+  stickyHeader = false,
+  maxHeight,
+  expandable = false,
+  expandedKeys,
+  onExpandedChange,
+  renderExpanded,
+  resizable = false,
+  showColumnsMenu = false,
+  exportable = false,
+  exportFilename,
+  exportRow,
+  exportAll,
+  virtualized = false,
+  rowHeight,
+  overscan,
 }: DataTableProps<T>) {
+  const { t } = useTranslation()
+  // Resolve effective density. Explicit `density` wins; otherwise the
+  // legacy `compact` boolean maps to 'compact'; otherwise default to
+  // 'auto' so the global setting flows through. Phase 40 / Prompt 44.
+  const effectiveDensity: 'compact' | 'comfortable' | 'spacious' | 'auto' =
+    density ?? (compact ? 'compact' : 'auto')
+  // Static density modes use the historical fixed paddings (32 / 44 /
+  // 56 px row heights). 'auto' uses density Tailwind utilities that
+  // read CSS vars set by `body[data-density="..."]` so the table
+  // reflows live when the user changes the setting.
+  const cellPaddingClass: string =
+    effectiveDensity === 'compact'
+      ? 'px-3 py-2'
+      : effectiveDensity === 'spacious'
+        ? 'px-5 py-4'
+        : effectiveDensity === 'comfortable'
+          ? tableTokens.cell
+          : 'px-d-pad-x py-d-pad-y text-d-base'
+  const leadingPaddingClass: string =
+    effectiveDensity === 'compact'
+      ? 'px-2 py-2'
+      : effectiveDensity === 'spacious'
+        ? 'px-4 py-4'
+        : effectiveDensity === 'comfortable'
+          ? 'px-3 py-3'
+          : 'px-d-pad-x py-d-pad-y'
+  const headCellPaddingClass: string =
+    effectiveDensity === 'compact'
+      ? 'px-3 py-2'
+      : effectiveDensity === 'spacious'
+        ? 'px-5 py-4'
+        : effectiveDensity === 'comfortable'
+          ? tableTokens.headCell
+          : 'px-d-pad-x py-d-pad-y text-d-base'
   const paginationEnabled = !!pagination
   const paginationConfig: PaginationConfig = typeof pagination === 'object' ? pagination : {}
   const defaultPageSize = paginationConfig.defaultPageSize ?? 25
@@ -42,62 +300,590 @@ export function DataTable<T>({
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(defaultPageSize)
 
-  // Reset to page 1 when data changes (e.g. filters applied)
+  // Reset to page 1 when data length changes (e.g. filters applied).
   useEffect(() => { setPage(1) }, [data.length])
 
+  // ── Column visibility (persisted by tableId) ────────────────────────────
+  const visibilityStorageKey = tableId ? `${STORAGE_PREFIX}.${tableId}.visible` : null
+  const defaultVisibleKeys = useMemo(
+    () => columns.filter(c => c.defaultVisible !== false).map(c => c.key),
+    [columns],
+  )
+  const [visibleKeys, setVisibleKeys] = useState<string[]>(() => {
+    if (!visibilityStorageKey) return defaultVisibleKeys
+    const stored = readStored<string[]>(visibilityStorageKey)
+    if (!stored || stored.length === 0) return defaultVisibleKeys
+    // Drop keys that no longer exist in the current columns.
+    const colKeys = new Set(columns.map(c => c.key))
+    const filtered = stored.filter(k => colKeys.has(k))
+    return filtered.length > 0 ? filtered : defaultVisibleKeys
+  })
+  // When the columns prop changes at runtime (e.g. a new column was added),
+  // drop any stale persisted keys but DO NOT auto-resurrect columns the user
+  // explicitly hid — leave that to the column-visibility menu.
+  useEffect(() => {
+    setVisibleKeys(prev => {
+      const knownKeys = new Set(columns.map(c => c.key))
+      const filtered = prev.filter(k => knownKeys.has(k))
+      return filtered.length === prev.length ? prev : filtered
+    })
+  }, [columns])
+
+  const updateVisibleKeys = useCallback(
+    (next: string[]) => {
+      setVisibleKeys(next)
+      if (visibilityStorageKey) writeStored(visibilityStorageKey, next)
+    },
+    [visibilityStorageKey],
+  )
+
+  const visibleSet = useMemo(() => new Set(visibleKeys), [visibleKeys])
+  const visibleColumns = useMemo(
+    () => columns.filter(c => visibleSet.has(c.key)),
+    [columns, visibleSet],
+  )
+
+  // ── Mobile allow-list ───────────────────────────────────────────────────
+  const effectiveMobileColumns = useMemo(() => {
+    if (mobileColumns) return mobileColumns
+    const derived = columns.filter(c => c.visibleOnMobile).map(c => c.key)
+    return derived.length > 0 ? derived : null
+  }, [mobileColumns, columns])
+  const mobileSet = useMemo(
+    () => (effectiveMobileColumns ? new Set(effectiveMobileColumns) : null),
+    [effectiveMobileColumns],
+  )
+  const colHiddenClass = (key: string) =>
+    mobileSet && !mobileSet.has(key) ? 'hidden md:table-cell' : ''
+
+  // ── Column widths (persisted by tableId) ───────────────────────────────
+  const widthsStorageKey = tableId ? `${STORAGE_PREFIX}.${tableId}.widths` : null
+  const [widths, setWidths] = useState<Record<string, number>>(() => {
+    if (!widthsStorageKey) return {}
+    return readStored<Record<string, number>>(widthsStorageKey) ?? {}
+  })
+  const setColumnWidth = useCallback((key: string, width: number) => {
+    setWidths(prev => ({ ...prev, [key]: width }))
+  }, [])
+  const persistColumnWidth = useCallback(
+    (key: string, width: number) => {
+      if (!widthsStorageKey) return
+      setWidths(prev => {
+        const next = { ...prev, [key]: width }
+        writeStored(widthsStorageKey, next)
+        return next
+      })
+    },
+    [widthsStorageKey],
+  )
+  const widthFor = (col: Column<T>): number | undefined => {
+    const stored = widths[col.key]
+    if (typeof stored === 'number') return stored
+    if (typeof col.defaultWidth === 'number') return col.defaultWidth
+    return undefined
+  }
+
+  // ── Selection ───────────────────────────────────────────────────────────
+  const isSelectable = selectable !== 'none'
+  const selection = selectedKeys ?? []
+  const selectionSet = useMemo(() => new Set(selection), [selection])
+  const lastClickedKey = useRef<RowKey | null>(null)
+
+  const allRowKeys = useMemo(() => data.map(keyExtractor), [data, keyExtractor])
+  const allSelected = isSelectable && allRowKeys.length > 0 && allRowKeys.every(k => selectionSet.has(k))
+  const someSelected = isSelectable && allRowKeys.some(k => selectionSet.has(k)) && !allSelected
+  const headerCheckboxRef = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (headerCheckboxRef.current) headerCheckboxRef.current.indeterminate = someSelected
+  }, [someSelected])
+
+  const setSelection = useCallback(
+    (next: RowKey[]) => onSelectionChange?.(next),
+    [onSelectionChange],
+  )
+
+  const toggleRow = useCallback(
+    (rowKey: RowKey, e: React.MouseEvent | React.ChangeEvent | React.KeyboardEvent) => {
+      const shift = 'shiftKey' in e ? (e as React.MouseEvent).shiftKey : false
+      if (selectable === 'single') {
+        setSelection(selectionSet.has(rowKey) ? [] : [rowKey])
+        lastClickedKey.current = rowKey
+        return
+      }
+      // multi
+      if (shift && lastClickedKey.current != null) {
+        const fromIdx = allRowKeys.indexOf(lastClickedKey.current)
+        const toIdx = allRowKeys.indexOf(rowKey)
+        if (fromIdx >= 0 && toIdx >= 0) {
+          const [a, b] = fromIdx < toIdx ? [fromIdx, toIdx] : [toIdx, fromIdx]
+          const range = allRowKeys.slice(a, b + 1)
+          // Behavior: range is added to selection (additive), not replacing.
+          const next = new Set(selection)
+          for (const k of range) next.add(k)
+          setSelection(Array.from(next))
+          lastClickedKey.current = rowKey
+          return
+        }
+      }
+      const next = new Set(selection)
+      if (next.has(rowKey)) next.delete(rowKey)
+      else next.add(rowKey)
+      setSelection(Array.from(next))
+      lastClickedKey.current = rowKey
+    },
+    [selectable, selection, selectionSet, allRowKeys, setSelection],
+  )
+
+  const toggleAll = useCallback(() => {
+    if (allSelected) setSelection([])
+    else setSelection(allRowKeys)
+  }, [allSelected, allRowKeys, setSelection])
+
+  const clearSelection = useCallback(() => setSelection([]), [setSelection])
+
+  // ── Expansion ───────────────────────────────────────────────────────────
+  const expansion = expandedKeys ?? []
+  const expansionSet = useMemo(() => new Set(expansion), [expansion])
+  const toggleExpand = useCallback(
+    (rowKey: RowKey) => {
+      if (!onExpandedChange) return
+      const next = new Set(expansion)
+      if (next.has(rowKey)) next.delete(rowKey)
+      else next.add(rowKey)
+      onExpandedChange(Array.from(next))
+    },
+    [expansion, onExpandedChange],
+  )
+
+  // ── Pagination slice ───────────────────────────────────────────────────
   const paginatedData = paginationEnabled
     ? data.slice((page - 1) * pageSize, page * pageSize)
     : data
 
+  // ── Selected rows for bulk actions slot ────────────────────────────────
+  const selectedRows = useMemo(
+    () => (isSelectable ? data.filter(row => selectionSet.has(keyExtractor(row))) : []),
+    [data, isSelectable, selectionSet, keyExtractor],
+  )
+
+  // ── CSV export ─────────────────────────────────────────────────────────
+  const [exporting, setExporting] = useState(false)
+  const handleExportCsv = useCallback(async () => {
+    if (exporting) return
+    setExporting(true)
+    try {
+      const sourceRows: T[] = exportAll ? await exportAll() : data
+      const filenameBase = exportFilename ?? defaultExportFilename(tableId ?? name ?? 'table')
+      const csvCols: CsvColumn<T>[] = visibleColumns.map((col) => ({
+        key: col.key,
+        header: col.header || col.key,
+        accessor: exportRow
+          ? (row) => {
+              const obj = exportRow(row)
+              const v = obj[col.key]
+              return v === undefined ? null : v
+            }
+          : (row) => {
+              // Default: shallow lookup. Renders that produce React nodes are
+              // not exportable — callers should pass `exportRow` to flatten
+              // formatted values to plain CSV cells.
+              const v = (row as unknown as Record<string, unknown>)[col.key]
+              if (v == null) return null
+              if (
+                typeof v === 'string' ||
+                typeof v === 'number' ||
+                typeof v === 'boolean'
+              ) {
+                return v
+              }
+              // Fall back to JSON for nested structures so the row still exports.
+              return v as object
+            },
+      }))
+      const csv = toCSV(sourceRows, csvCols)
+      downloadCSV(filenameBase, csv)
+    } finally {
+      setExporting(false)
+    }
+  }, [exporting, exportAll, data, exportFilename, tableId, name, visibleColumns, exportRow])
+
+  // Total visible column count for colSpan calcs (incl. selection / expand).
+  const leadingColCount = (isSelectable ? 1 : 0) + (expandable ? 1 : 0)
+  const totalCols = leadingColCount + visibleColumns.length
+
+  // ── Virtualization (Phase-40 / Prompt 37) ─────────────────────────────
+  // Only enabled when explicitly opted in AND there's no `expandable` slot
+  // (variable row heights are out of scope). When the user passes both, we
+  // gracefully fall back to non-virtualized rendering with a dev warning.
+  const virtualizationActive = virtualized && !expandable && data.length > 0
+  // Density-aware default row-height estimate. When `density='auto'`,
+  // read the live body data attr at mount; otherwise pick the matching
+  // fixed height. The virtualizer adapts to actual rendered sizes so
+  // an estimate within a few pixels is fine.
+  const densityRowHeight = (() => {
+    if (effectiveDensity === 'compact') return 32
+    if (effectiveDensity === 'spacious') return 56
+    if (effectiveDensity === 'comfortable') return 44
+    if (typeof document !== 'undefined') {
+      const d = document.body.dataset.density
+      if (d === 'compact') return 32
+      if (d === 'spacious') return 56
+    }
+    return 44
+  })()
+  const effectiveRowHeight = rowHeight ?? densityRowHeight
+  const effectiveOverscan = overscan ?? 8
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const virtualizer = useVirtualizer({
+    count: virtualizationActive ? paginatedData.length : 0,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => effectiveRowHeight,
+    overscan: effectiveOverscan,
+  })
+  const virtualItems = virtualizationActive ? virtualizer.getVirtualItems() : []
+  const virtualTotalSize = virtualizationActive ? virtualizer.getTotalSize() : 0
+  const virtualPadTop = virtualItems[0]?.start ?? 0
+  // When the virtualizer hasn't measured the viewport yet (or there are no
+  // visible items because the container has zero height — e.g. jsdom in
+  // unit tests), fall back to rendering the full estimated height as bottom
+  // padding so the scroll container reports its true scrollHeight. Once the
+  // virtualizer measures and produces virtual items, this collapses back to
+  // the precise tail padding.
+  const virtualPadBottom = virtualItems.length
+    ? virtualTotalSize - (virtualItems[virtualItems.length - 1]?.end ?? 0)
+    : virtualTotalSize
+  useEffect(() => {
+    if (virtualized && expandable && import.meta.env.DEV) {
+      console.warn(
+        '[DataTable] `virtualized` and `expandable` cannot be combined ' +
+        '(variable row heights are out of scope). Falling back to ' +
+        'non-virtualized rendering.',
+      )
+    }
+  }, [virtualized, expandable])
+
+  // tbody can only hold <tr>, so the boundary fallback must also be a <tr>
+  // to keep markup valid when a row renderer throws.
+  const bodyFallback = (
+    <tr>
+      <td
+        colSpan={totalCols}
+        className="px-4 py-8 text-center text-sm text-[var(--text-muted)]"
+      >
+        <span className="inline-flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4 text-tesla-red" aria-hidden="true" />
+          {t('errors.section.tableTitle', 'This table failed to render')}
+        </span>
+      </td>
+    </tr>
+  )
+
+  // Render a single data row (plus its optional expanded drawer row when
+  // expandable). Used by both the standard render path and the virtualized
+  // render path so selection / expansion / styling stay perfectly in sync.
+  const renderDataRow = (row: T): ReactNode[] => {
+    const rowKey = keyExtractor(row)
+    const selected = isSelectable && selectionSet.has(rowKey)
+    const expanded = expandable && expansionSet.has(rowKey)
+    const trClass = cn(
+      tableTokens.row,
+      selected && tableTokens.rowSelected,
+    )
+    const rows: ReactNode[] = [
+      <tr
+        key={rowKey}
+        className={trClass}
+        data-selected={selected ? 'true' : undefined}
+        data-expanded={expanded ? 'true' : undefined}
+        aria-selected={isSelectable ? selected : undefined}
+        onKeyDown={(e) => {
+          if (e.key === ' ' && isSelectable) {
+            e.preventDefault()
+            toggleRow(rowKey, e)
+          } else if (e.key === 'Enter' && expandable) {
+            e.preventDefault()
+            toggleExpand(rowKey)
+          }
+        }}
+        tabIndex={isSelectable || expandable ? 0 : undefined}
+      >
+        {isSelectable && (
+          <td className={cn(leadingPaddingClass, tableTokens.leadingColWidth)}>
+            <input
+              type={selectable === 'single' ? 'radio' : 'checkbox'}
+              checked={selected}
+              // Stop the click bubbling so a click on the checkbox
+              // doesn't also fire the row's onClick (when consumers
+              // attach one via `tr` wrappers around content).
+              onClick={(e) => {
+                e.stopPropagation()
+                toggleRow(rowKey, e)
+              }}
+              // Read-only because we drive state via onClick to
+              // capture shiftKey for range selection.
+              onChange={() => { /* handled in onClick */ }}
+              aria-label={
+                selected
+                  ? t('table.selection.deselectRow', 'Deselect row')
+                  : t('table.selection.selectRow', 'Select row')
+              }
+              className={cn(
+                'border-white/20 bg-white/5 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0',
+                selectable === 'single' ? '' : 'rounded',
+              )}
+            />
+          </td>
+        )}
+        {expandable && (
+          <td className={cn(leadingPaddingClass, tableTokens.leadingColWidth)}>
+            <button
+              type="button"
+              onClick={() => toggleExpand(rowKey)}
+              aria-expanded={expanded}
+              aria-label={
+                expanded
+                  ? t('table.expand.collapse', 'Collapse row')
+                  : t('table.expand.expand', 'Expand row')
+              }
+              className={cn(
+                'inline-flex h-5 w-5 items-center justify-center rounded',
+                'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06]',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
+                'transition-colors',
+              )}
+            >
+              <ChevronRight
+                className={cn('h-3.5 w-3.5 transition-transform', expanded && 'rotate-90')}
+                aria-hidden="true"
+              />
+            </button>
+          </td>
+        )}
+        {visibleColumns.map(col => (
+          <td
+            key={col.key}
+            className={cn(
+              cellPaddingClass,
+              colHiddenClass(col.key),
+              alignClass(col.align),
+              col.className,
+            )}
+          >
+            {col.render(row)}
+          </td>
+        ))}
+      </tr>,
+    ]
+    if (expanded && renderExpanded) {
+      rows.push(
+        <tr key={`${rowKey}-expanded`} data-expanded-content="true">
+          <td colSpan={totalCols} className={tableTokens.expandedCell}>
+            {renderExpanded(row)}
+          </td>
+        </tr>,
+      )
+    }
+    return rows
+  }
+
+  // ── Render ──────────────────────────────────────────────────────────────
+  // When virtualized, the wrapper MUST be the scrollable element with a
+  // bounded height (otherwise the virtualizer can't compute the viewport).
+  // We default to maxHeight=600 and auto-enable a sticky header so the
+  // column titles stay visible while the user scrolls through thousands of
+  // rows.
+  const effectiveMaxHeight = maxHeight ?? (virtualizationActive ? 600 : undefined)
+  const effectiveStickyHeader = stickyHeader || virtualizationActive
+
+  const wrapperStyle = effectiveMaxHeight != null
+    ? { maxHeight: typeof effectiveMaxHeight === 'number' ? `${effectiveMaxHeight}px` : effectiveMaxHeight }
+    : undefined
+
+  const wrapperClass = cn(
+    effectiveStickyHeader || effectiveMaxHeight != null
+      ? tableTokens.scrollContainer
+      : 'overflow-x-auto rounded-xl',
+    className,
+  )
+
+  const headRowClass = cn(
+    tableTokens.head,
+    effectiveStickyHeader && tableTokens.stickyHead,
+  )
+
+  const showToolbar =
+    (showColumnsMenu && tableId) ||
+    (isSelectable && selectedRows.length > 0) ||
+    exportable
+
   return (
-    <div className={cn('overflow-x-auto rounded-xl', className)}>
-      <table className={tableTokens.wrapper}>
-        <thead>
-          <tr className={tableTokens.head}>
-            {columns.map(col => (
-              <th
-                key={col.key}
-                scope="col"
+    <div className="space-y-2">
+      {/* Toolbar row (selection bulk-bar + columns picker + export) */}
+      {showToolbar && (
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex-1 min-w-0">
+            {isSelectable && selectedRows.length > 0 && (
+              <DataTableBulkBar count={selectedRows.length} onClear={clearSelection}>
+                {bulkActions?.(selectedRows)}
+              </DataTableBulkBar>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {exportable && (
+              <button
+                type="button"
+                onClick={handleExportCsv}
+                disabled={exporting || data.length === 0}
+                aria-label={t('table.export.csv', 'Download table as CSV')}
                 className={cn(
-                  compact ? 'px-3 py-2' : tableTokens.headCell,
-                  col.sortable && 'cursor-pointer select-none hover:text-[var(--text-secondary)]',
-                  col.className,
+                  'inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs',
+                  'border border-white/[0.08] bg-white/[0.03]',
+                  'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/[0.06]',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
+                  'transition-colors',
+                  'disabled:opacity-50 disabled:cursor-not-allowed',
                 )}
-                onClick={() => col.sortable && onSort?.(col.key)}
-                onKeyDown={col.sortable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSort?.(col.key) } } : undefined}
-                aria-sort={col.sortable && sortKey === col.key ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}
-                {...(col.sortable ? { tabIndex: 0, role: 'button' as const } : {})}
               >
-                <span className="inline-flex items-center gap-1">
-                  {col.header}
-                  {col.sortable && sortKey === col.key && (
-                    sortDir === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
-                  )}
-                </span>
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className={tableTokens.body}>
-          {data.length === 0 ? (
-            <tr>
-              <td colSpan={columns.length} className="px-4 py-12 text-center text-sm text-[var(--text-muted)]">
-                {emptyMessage}
-              </td>
+                {exporting ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                )}
+                <span>{t('table.export.csvButton', 'Download CSV')}</span>
+              </button>
+            )}
+            {showColumnsMenu && tableId && (
+              <DataTableColumnsMenu
+                columns={columns.map(c => ({ key: c.key, header: c.header }))}
+                visibleKeys={visibleKeys}
+                onChange={updateVisibleKeys}
+              />
+            )}
+          </div>
+        </div>
+      )}
+
+      <div ref={scrollContainerRef} className={wrapperClass} style={wrapperStyle}>
+        <table className={tableTokens.wrapper}>
+          <thead>
+            <tr className={headRowClass}>
+              {/* Selection header */}
+              {isSelectable && (
+                <th
+                  scope="col"
+                  className={cn(leadingPaddingClass, tableTokens.leadingColWidth)}
+                >
+                  {selectable === 'multi' ? (
+                    <input
+                      ref={headerCheckboxRef}
+                      type="checkbox"
+                      checked={allSelected}
+                      onChange={toggleAll}
+                      aria-label={
+                        allSelected
+                          ? t('table.selection.deselectAll', 'Deselect all rows')
+                          : t('table.selection.selectAll', 'Select all rows')
+                      }
+                      className="rounded border-white/20 bg-white/5 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0"
+                    />
+                  ) : null}
+                </th>
+              )}
+              {/* Expand header */}
+              {expandable && (
+                <th
+                  scope="col"
+                  aria-label={t('table.expand.column', 'Expand row')}
+                  className={cn(leadingPaddingClass, tableTokens.leadingColWidth)}
+                />
+              )}
+              {visibleColumns.map(col => {
+                const w = widthFor(col)
+                return (
+                  <th
+                    key={col.key}
+                    scope="col"
+                    className={cn(
+                      headCellPaddingClass,
+                      colHiddenClass(col.key),
+                      alignClass(col.align),
+                      resizable && 'relative group/th',
+                      col.className,
+                    )}
+                    style={w != null ? { width: w, minWidth: w } : undefined}
+                    aria-sort={col.sortable && sortKey === col.key ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}
+                  >
+                    {col.sortable ? (
+                      <button
+                        type="button"
+                        onClick={() => onSort?.(col.key)}
+                        className={cn(
+                          'inline-flex items-center gap-1 cursor-pointer select-none rounded',
+                          'hover:text-[var(--text-secondary)]',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent',
+                        )}
+                      >
+                        <span>{col.header}</span>
+                        {sortKey === col.key && (
+                          sortDir === 'asc'
+                            ? <ChevronUp className="h-3 w-3" aria-hidden="true" />
+                            : <ChevronDown className="h-3 w-3" aria-hidden="true" />
+                        )}
+                      </button>
+                    ) : (
+                      <span className="inline-flex items-center gap-1">
+                        {col.header}
+                      </span>
+                    )}
+                    {resizable && tableId && (
+                      <DataTableResizer
+                        columnKey={col.key}
+                        width={w ?? 120}
+                        minWidth={col.minWidth}
+                        maxWidth={col.maxWidth}
+                        onResize={(next) => setColumnWidth(col.key, next)}
+                        onResizeEnd={(final) => persistColumnWidth(col.key, final)}
+                        label={t('table.columns.resizeLabel', 'Resize column {{col}}', { col: col.header })}
+                      />
+                    )}
+                  </th>
+                )
+              })}
             </tr>
-          ) : (
-            paginatedData.map(row => (
-              <tr key={keyExtractor(row)} className={tableTokens.row}>
-                {columns.map(col => (
-                  <td key={col.key} className={cn(compact ? 'px-3 py-2' : tableTokens.cell, col.className)}>
-                    {col.render(row)}
+          </thead>
+          <tbody className={tableTokens.body}>
+            <SectionErrorBoundary name={`table:${name ?? tableId ?? 'DataTable'}`} fallback={bodyFallback}>
+              {data.length === 0 ? (
+                <tr>
+                  <td colSpan={totalCols} className="px-4 py-12 text-center text-sm text-[var(--text-muted)]">
+                    {emptyMessage}
                   </td>
-                ))}
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+                </tr>
+              ) : virtualizationActive ? (
+                <>
+                  {virtualPadTop > 0 && (
+                    <tr aria-hidden="true" data-virtual-spacer="top">
+                      <td colSpan={totalCols} className="p-0 border-0" style={{ height: virtualPadTop }} />
+                    </tr>
+                  )}
+                  {virtualItems.flatMap((vi) => {
+                    const row = paginatedData[vi.index]
+                    if (row === undefined) return []
+                    return renderDataRow(row)
+                  })}
+                  {virtualPadBottom > 0 && (
+                    <tr aria-hidden="true" data-virtual-spacer="bottom">
+                      <td colSpan={totalCols} className="p-0 border-0" style={{ height: virtualPadBottom }} />
+                    </tr>
+                  )}
+                </>
+              ) : (
+                paginatedData.flatMap(renderDataRow)
+              )}
+            </SectionErrorBoundary>
+          </tbody>
+        </table>
+      </div>
       {paginationEnabled && data.length > 0 && (
         <Pagination
           page={page}
@@ -136,4 +922,25 @@ export function useSortToggle(defaultKey?: string, defaultDir: 'asc' | 'desc' = 
   }, [sortKey, sortDir])
 
   return { sortKey, sortDir, onSort, sortFn }
+}
+
+/**
+ * Convenience hook for selection state. Maintains a list of selected row
+ * keys and exposes setters that are stable across renders. Pair with
+ * `<DataTable selectable="multi" selectedKeys={selectedKeys} onSelectionChange={setSelectedKeys} />`.
+ */
+export function useTableSelection<K extends RowKey = RowKey>(initial: K[] = []) {
+  const [selectedKeys, setSelectedKeys] = useState<K[]>(initial)
+  const clear = useCallback(() => setSelectedKeys([]), [])
+  return { selectedKeys, setSelectedKeys, clear }
+}
+
+/**
+ * Convenience hook for expansion state. Maintains a list of expanded row
+ * keys. Pair with `<DataTable expandable expandedKeys={...} onExpandedChange={...} />`.
+ */
+export function useTableExpansion<K extends RowKey = RowKey>(initial: K[] = []) {
+  const [expandedKeys, setExpandedKeys] = useState<K[]>(initial)
+  const clear = useCallback(() => setExpandedKeys([]), [])
+  return { expandedKeys, setExpandedKeys, clear }
 }

@@ -124,8 +124,8 @@ export default function DrivingCoachSection({ coachData }: DrivingCoachSectionPr
                 </div>
                 <div className="space-y-2">
                   {([
-                    { key: 'efficient', color: 'bg-neon-green', text: 'text-neon-green' },
-                    { key: 'moderate', color: 'bg-neon-amber', text: 'text-neon-amber' },
+                    { key: 'efficient', color: 'bg-neon-green', text: 'text-emerald-300' },
+                    { key: 'moderate', color: 'bg-neon-amber', text: 'text-amber-300' },
                     { key: 'aggressive', color: 'bg-red-500', text: 'text-red-400' },
                   ] as const).map(({ key, color, text }) => (
                     <div key={key} className="flex items-center justify-between text-xs">
@@ -196,8 +196,8 @@ export default function DrivingCoachSection({ coachData }: DrivingCoachSectionPr
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-white/70">{p.label}</span>
                   <span className={cn('font-bold tabular-nums',
-                    p.value <= p.lo ? 'text-neon-green' :
-                    p.value <= p.hi ? 'text-neon-amber' : 'text-red-400',
+                    p.value <= p.lo ? 'text-emerald-300' :
+                    p.value <= p.hi ? 'text-amber-300' : 'text-red-400',
                   )}>
                     {fmtNumber(p.value)}%
                   </span>

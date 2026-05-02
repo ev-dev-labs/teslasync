@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, Gauge, Battery, Zap, Mountain, Thermometer,
@@ -8,15 +8,19 @@ import {
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Button } from '@/components/ui';
-import { PlaybackControls } from '@/components/ui/PlaybackControls';
+import {
+  PlaybackControls,
+  type TimelineMarker,
+  type TimelinePreviewPoint,
+} from '@/components/data-display';
 import { StatCard, MetricCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
-import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 import {
   ChartContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, ReferenceLine, chartGrid, axisTick, fmt,
   CHART_COLORS, AREA_DEFAULTS, areaGradient,
+  Sparkline,
 } from '@/components/charts';
 import { ElevationProfile, type ElevationDataPoint } from '@/components/charts';
 import {
@@ -33,14 +37,23 @@ import { useTripReplay } from '@/hooks/useTripReplay';
 import { haversineDistance } from '@/lib/geo';
 import { formatDate } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { cn } from '@/lib/cn';
+import {
+  computeReplayMarkers,
+  nearestMarker,
+  type ReplayMarker,
+} from '@/features/driving/lib/replayMarkers';
 import type { DrivePosition } from '@/types/driving';
 
 /* ================================================================== */
 /*  Helpers                                                            */
 /* ================================================================== */
 
-/** Format ms duration as "HH:MM:SS" or "MM:SS" */
+/** Format ms duration as "HH:MM:SS" or "MM:SS". Non-finite/negative input
+ *  collapses to "00:00" so an upstream data bug surfaces as a sane
+ *  placeholder instead of "NaN:NaN" leaking into the UI. */
 function fmtDuration(ms: number): string {
+  if (!Number.isFinite(ms) || ms <= 0) return '00:00';
   const totalSec = Math.floor(ms / 1000);
   const h = Math.floor(totalSec / 3600);
   const m = Math.floor((totalSec % 3600) / 60);
@@ -107,12 +120,6 @@ export default function TripReplayPage() {
   const { data: drive, isLoading, error } = useDrive(id ?? '');
   const [mapStyle, setMapStyle] = useState<MapStyle>('dark');
 
-  const breadcrumbs = useBreadcrumbs({
-    '/drives/:id': drive
-      ? `${drive.startAddress ?? t('replay.drive', 'Drive')} → ${drive.endAddress ?? ''}`
-      : `Drive #${id}`,
-  });
-
   const {
     convertDistance, convertSpeed, convertTemp,
     distanceUnit, speedUnit, tempUnit,
@@ -147,6 +154,72 @@ export default function TripReplayPage() {
 
   /* ---- Replay hook ---- */
   const [replay, controls] = useTripReplay(positions);
+
+  /* ---- Timeline markers (Phase-40 / Prompt 57) ---- */
+  const replayMarkers: ReplayMarker[] = useMemo(
+    () => computeReplayMarkers(positions),
+    [positions],
+  );
+  const scrubberMarkers: TimelineMarker[] = useMemo(
+    () => replayMarkers.map((m) => ({
+      at: m.at,
+      kind: m.kind,
+      label: m.label,
+      count: m.count,
+    })),
+    [replayMarkers],
+  );
+
+  /* ---- URL deep-linking: ?at=0.42&play=1 (debounced 300ms) ---- */
+  const [searchParams, setSearchParams] = useSearchParams();
+  const restoredRef = useRef(false);
+  const writeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Restore once positions are loaded.
+  useEffect(() => {
+    if (restoredRef.current) return;
+    if (positions.length === 0) return;
+    restoredRef.current = true;
+    const atParam = searchParams.get('at');
+    const playParam = searchParams.get('play');
+    if (atParam != null) {
+      const at = Number(atParam);
+      if (Number.isFinite(at) && at >= 0 && at <= 1) {
+        controls.seekToProgress(at);
+      }
+    }
+    if (playParam === '1') {
+      controls.play();
+    }
+  }, [positions.length]);
+
+  // Persist (debounced) — write `at` and `play` to the URL.
+  useEffect(() => {
+    if (!restoredRef.current) return;
+    if (positions.length === 0) return;
+    if (writeTimerRef.current) clearTimeout(writeTimerRef.current);
+    const snapshotProgress = replay.progress;
+    const snapshotPlaying = replay.isPlaying;
+    writeTimerRef.current = setTimeout(() => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (snapshotProgress > 0 && snapshotProgress < 1) {
+            next.set('at', snapshotProgress.toFixed(3));
+          } else {
+            next.delete('at');
+          }
+          if (snapshotPlaying) next.set('play', '1');
+          else next.delete('play');
+          return next;
+        },
+        { replace: true },
+      );
+    }, 300);
+    return () => {
+      if (writeTimerRef.current) clearTimeout(writeTimerRef.current);
+    };
+  }, [replay.progress, replay.isPlaying, positions.length, setSearchParams]);
 
   /* ---- Map trail ---- */
   const trail: LatLngExpression[] = useMemo(
@@ -230,6 +303,67 @@ export default function TripReplayPage() {
     return timelineData[replay.currentIndex]?.time;
   }, [timelineData, replay.currentIndex]);
 
+  /* ---- Hover preview sampler for the scrubber ---- */
+  const getPreviewAt = useCallback(
+    (normalized: number): TimelinePreviewPoint | null => {
+      if (positions.length === 0 || replay.totalTime <= 0) return null;
+      const t0 = new Date(positions[0].timestamp).getTime();
+      const targetMs = Math.max(0, Math.min(1, normalized)) * replay.totalTime;
+      // Binary search for closest position.
+      let lo = 0;
+      let hi = positions.length - 1;
+      while (lo < hi) {
+        const mid = (lo + hi) >>> 1;
+        const t = new Date(positions[mid].timestamp).getTime() - t0;
+        if (t < targetMs) lo = mid + 1;
+        else hi = mid;
+      }
+      const p = positions[lo];
+      if (!p) return null;
+      return {
+        at: normalized,
+        speed: p.speed != null ? `${fmtNumber(convertSpeed(p.speed))} ${speedUnit}` : undefined,
+        power: p.power != null ? `${fmtNumber(p.power, 1)} kW` : undefined,
+        soc: `${fmtInt(p.batteryLevel)}%`,
+        elevation: p.elevation != null ? `${fmtInt(p.elevation)} m` : undefined,
+      };
+    },
+    [positions, replay.totalTime, convertSpeed, speedUnit],
+  );
+
+  /* ---- Speed sparkline behind the scrubber ---- */
+  const speedSparkData = useMemo(() => {
+    if (positions.length === 0) return [] as number[];
+    // Downsample to ~80 points so the sparkline isn't a noisy mess.
+    const target = 80;
+    if (positions.length <= target) {
+      return positions.map((p) => p.speed ?? 0);
+    }
+    const stride = positions.length / target;
+    const out: number[] = [];
+    for (let i = 0; i < target; i++) {
+      const idx = Math.min(positions.length - 1, Math.floor(i * stride));
+      out.push(positions[idx].speed ?? 0);
+    }
+    return out;
+  }, [positions]);
+
+  /* ---- Stat-card highlight: which marker is the playhead "on"? ---- */
+  const activeMarker = useMemo(
+    () => nearestMarker(replayMarkers, replay.progress, 0.02),
+    [replayMarkers, replay.progress],
+  );
+
+  const cardHighlight = useCallback(
+    (kinds: ReplayMarker['kind'][]): string | undefined => {
+      if (!activeMarker) return undefined;
+      return kinds.includes(activeMarker.kind)
+        ? 'ring-2 ring-cyan-400/60 ring-offset-1 ring-offset-black/30'
+        : undefined;
+    },
+    [activeMarker],
+  );
+
   /* ---- Current stat values ---- */
   const cp = replay.currentPosition;
 
@@ -248,14 +382,20 @@ export default function TripReplayPage() {
         : undefined}
       loading={isLoading}
       error={error instanceof Error ? error : error ? new Error(String(error)) : null}
-      breadcrumbs={breadcrumbs}
+      breadcrumbLabels={{
+        '/drives/:id': drive
+          ? `${drive.startAddress ?? t('replay.drive', 'Drive')} → ${drive.endAddress ?? ''}`
+          : `Drive #${id}`,
+      }}
       actions={
-        <Link to={`/drives/${id}`}>
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="mr-1 h-4 w-4" />
-            {t('replay.backToDrive', 'Back to Drive')}
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2" data-tour="drive-replay-share">
+          <Link to={`/drives/${id}`}>
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="mr-1 h-4 w-4" />
+              {t('replay.backToDrive', 'Back to Drive')}
+            </Button>
+          </Link>
+        </div>
       }
     >
       {positions.length === 0 && !isLoading ? (
@@ -335,6 +475,7 @@ export default function TripReplayPage() {
       {/*  Section 2 — Playback Controls                                   */}
       {/* ================================================================ */}
       <FadeIn delay={0.05}>
+        <div data-tour="drive-replay-scrubber">
         <PlaybackControls
           isPlaying={replay.isPlaying}
           speed={replay.speed}
@@ -346,7 +487,20 @@ export default function TripReplayPage() {
           onStop={controls.stop}
           onSpeedChange={controls.setSpeed}
           onSeek={controls.seekToProgress}
+          markers={scrubberMarkers}
+          getPreviewAt={getPreviewAt}
+          durationMs={replay.totalTime}
+          enableKeyboardShortcuts
+          onSeekBy={controls.seekBy}
+          onSpeedRelative={controls.setSpeedRelative}
+          onStepFrame={controls.stepFrame}
+          scrubberBackground={
+            speedSparkData.length > 1 ? (
+              <Sparkline data={speedSparkData} color="#22d3ee" height={24} width={400} />
+            ) : undefined
+          }
         />
+        </div>
       </FadeIn>
 
       {/* ================================================================ */}
@@ -363,18 +517,21 @@ export default function TripReplayPage() {
               value={cp?.speed != null ? `${fmtNumber(convertSpeed(cp.speed))} ${speedUnit}` : '—'}
               icon={<Gauge className="h-4 w-4" />}
               color="cyan"
+              className={cn(cardHighlight(['fast-segment']))}
             />
             <MetricCard
               label={t('replay.stat.power', 'Power')}
               value={cp?.power != null ? `${fmtNumber(cp.power, 1)} kW` : '—'}
               icon={<Zap className="h-4 w-4" />}
               color="cyan"
+              className={cn(cardHighlight(['regen-peak', 'charge-start', 'charge-stop']))}
             />
             <MetricCard
               label={t('replay.stat.battery', 'Battery')}
               value={cp ? `${fmtInt(cp.batteryLevel)}%` : '—'}
               icon={<Battery className="h-4 w-4" />}
               color="cyan"
+              className={cn(cardHighlight(['low-soc', 'charge-start', 'charge-stop']))}
             />
             <MetricCard
               label={t('replay.stat.elevation', 'Elevation')}

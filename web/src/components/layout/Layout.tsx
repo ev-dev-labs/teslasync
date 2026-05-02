@@ -1,118 +1,47 @@
-import { Outlet, NavLink, useLocation } from 'react-router-dom'
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import InstallPrompt from '../feedback/InstallPrompt'
-import {
-  LayoutDashboard,
-  Car,
-  Route,
-  BatteryCharging,
-  MapPin,
-  Settings,
-  Zap,
-  Menu,
-  X,
-  User,
-  Radar,
-  Bolt,
-  HeartPulse,
-  Gamepad2,
-  Bell,
-  BarChart3,
-  Wifi,
-  WifiOff,
-  BellRing,
-  Bot,
-  Gauge,
-  Download,
-  Moon,
-  Clock,
-  Milestone,
-  Target,
-  Activity,
-  GitCompare,
-  ArrowLeftRight,
-  Wallet,
-  BedDouble,
-  ShieldAlert,
-  FileText,
-  Wrench,
-  Thermometer,
-  Lock,
-  TrendingUp,
-  TrendingDown,
-  DollarSign,
-  Battery,
-  Trophy,
-  CalendarCheck,
-  CalendarClock,
-  HardDriveDownload,
-  Headphones,
-  DatabaseBackup,
-  Recycle,
-  Database,
-  History,
-  Monitor,
-  Terminal,
-  // Unique icon replacements (no more duplicates)
-  ArrowRightLeft,
-  Leaf,
-  Workflow,
-  BellPlus,
-  Cloud,
-  PieChart,
-  ShieldCheck,
-  CircleDot,
-  Fence,
-  ThermometerSun,
-  Navigation2,
-  Stethoscope,
-  MapPinned,
-  Cpu,
-  KeyRound,
-  ScanSearch,
-  RadioTower,
-  SlidersHorizontal,
-  Award,
-  Bug,
-  HardDrive,
-  Split,
-  Radio,
-  Signpost,
-  Hammer,
-  Receipt,
-  Key,
-  Home,
-  Server,
-  ChevronDown,
-  ChevronsDown,
-  ChevronsUp,
-  Star,
-} from 'lucide-react'
+import { OfflineBanner } from '../feedback/OfflineBanner'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
-import { useTour, isTourCompleted } from '@/hooks/useTour'
+import { GlobalShortcuts } from '@/lib/globalShortcuts'
+import { useTour } from '@/hooks/useTour'
 import { GotoIndicator } from '../feedback/GotoIndicator'
-import { KeyboardCheatSheet } from '../feedback/KeyboardCheatSheet'
+import { KeyboardShortcutsModal } from '../feedback/KeyboardShortcutsModal'
 import { TourOverlay } from '../feedback/TourOverlay'
+import { ChangelogModal } from '../feedback/ChangelogModal'
+import { TourLauncher } from '@/features/onboarding/TourLauncher'
+import {
+  TOUR_START_EVENT,
+  TOURS,
+  dispatchTourLauncherOpen,
+  isTourCompleted as isTourCompletedById,
+  type TourStartEventDetail,
+} from '@/lib/tourRegistry'
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
+import { RouteTransition } from '@/components/motion'
 import { BottomTabBar, BOTTOM_TAB_PATHS } from './BottomTabBar'
+import { StatusBar, useStatusBarPrefs } from './StatusBar'
 import { CommandPalette, CommandPaletteTrigger } from '../ui/CommandPalette'
-import { ServiceStatusBanner, SystemHealthDot } from '../data-display/ServiceStatus'
+import { ServiceStatusBanner } from '../data-display/ServiceStatus'
 import Logo from '../ui/Logo'
-import { Button } from '@/components/ui'
+import { Button, ThemePicker } from '@/components/ui'
 import { Breadcrumbs } from './Breadcrumbs'
-
-import { MAIN_TOUR_STEPS } from '@/features/onboarding/tourSteps'
+import { VehiclePicker } from './VehiclePicker'
 import { request } from '@/api/client'
-import { getVehicleState } from '@/api/vehicles'
-import type { Alert, Vehicle, VersionInfo, UpdateCheckResult, StaleSessionsResponse } from '@/api/types'
+import type { Alert, Vehicle, VersionInfo, StaleSessionsResponse } from '@/api/types'
 import { useRealtimeEvents } from '../../hooks/useRealtimeEvents'
 import { useNotificationListener } from '../../hooks/useNotificationListener'
+import { useTitleBadge } from '../../hooks/useTitleBadge'
+import { useFaviconBadge } from '../../hooks/useFaviconBadge'
+import { useCriticalAlertFlash } from '../../hooks/useCriticalAlertFlash'
 import { useToast } from '../feedback/Toast'
-import { useSettings } from '../../hooks/useSettings'
-import { GlassPanel } from '../ui/GlassPanel'
+import { useUnreadCount } from '@/api/hooks/useNotifications'
+import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough'
+import { Icons } from '@/lib/icons';
 
 const navI18nKeys: Record<string, string> = {
   'Dashboard': 'nav.dashboard',
@@ -124,6 +53,8 @@ const navI18nKeys: Record<string, string> = {
   'Battery Health': 'nav.battery',
   'Analytics': 'nav.analytics',
   'Vehicle Comparison': 'nav.vehicleComparison',
+  'Fleet Comparison': 'nav.analyticsFleetCompare',
+  'Period Comparison': 'nav.analyticsPeriodCompare',
   'Efficiency': 'nav.efficiency',
   'Mileage': 'nav.mileage',
   'Timeline': 'nav.timeline',
@@ -140,6 +71,7 @@ const navI18nKeys: Record<string, string> = {
   'Geofences': 'nav.geofences',
   'Notifications': 'nav.notifications',
   'Settings': 'nav.settings',
+  'My Activity': 'nav.myActivity',
   'Driving Dynamics': 'nav.drivingDynamics',
   'Climate Control': 'nav.climateControl',
   'Security & Access': 'nav.securityAccess',
@@ -156,7 +88,7 @@ export const navSearchKeywords: Record<string, string[]> = {
   '/': ['home', 'overview', 'start', 'summary'],
   '/live': ['map', 'location', 'tracking', 'realtime', 'vehicle position'],
   '/vehicles': ['cars', 'fleet', 'garage', 'vehicle list'],
-  '/compare': ['comparison', 'vehicles', 'side by side'],
+  '/period-compare': ['comparison', 'period', 'time', 'this month vs last month', 'trends'],
   '/weekly-digest': ['digest', 'weekly', 'summary', 'report'],
   '/navigation': ['route', 'directions', 'map', 'nav'],
   '/drives': ['drive history', 'sessions', 'trips'],
@@ -197,7 +129,7 @@ export const navSearchKeywords: Record<string, string[]> = {
   '/analytics': ['analytics', 'insights', 'charts'],
   '/statistics': ['stats', 'numbers', 'metrics'],
   '/lifetime-stats': ['lifetime', 'all time', 'totals'],
-  '/vehicle-comparison': ['compare vehicles', 'fleet comparison'],
+  '/vehicle-comparison': ['compare vehicles', 'fleet comparison', 'side by side', 'two vehicles'],
   '/timeline': ['timeline', 'events', 'history'],
   '/locations': ['places', 'locations', 'visited'],
   '/commands': ['commands', 'control', 'remote'],
@@ -244,178 +176,235 @@ const RECENT_NAV_STORAGE_KEY = 'teslasync-recent-nav-paths'
 const PINNED_NAV_STORAGE_KEY = 'teslasync-pinned-nav-paths'
 
 const SECTION_ICON_STYLES: Record<string, { accent: string; surface: string; ring: string; dot: string }> = {
-  Monitor: { accent: 'text-sky-300', surface: 'bg-sky-400/10', ring: 'ring-sky-400/20', dot: 'bg-sky-400' },
-  Drive: { accent: 'text-violet-300', surface: 'bg-violet-400/10', ring: 'ring-violet-400/20', dot: 'bg-violet-400' },
-  'Charge & Battery': { accent: 'text-emerald-300', surface: 'bg-emerald-400/10', ring: 'ring-emerald-400/20', dot: 'bg-emerald-400' },
+  Overview: { accent: 'text-sky-300', surface: 'bg-sky-400/10', ring: 'ring-sky-400/20', dot: 'bg-sky-400' },
+  Fleet: { accent: 'text-cyan-300', surface: 'bg-cyan-400/10', ring: 'ring-cyan-400/20', dot: 'bg-cyan-400' },
+  Driving: { accent: 'text-violet-300', surface: 'bg-violet-400/10', ring: 'ring-violet-400/20', dot: 'bg-violet-400' },
+  'Driving Insights': { accent: 'text-purple-300', surface: 'bg-purple-400/10', ring: 'ring-purple-400/20', dot: 'bg-purple-400' },
+  Charging: { accent: 'text-emerald-300', surface: 'bg-emerald-400/10', ring: 'ring-emerald-400/20', dot: 'bg-emerald-400' },
+  Battery: { accent: 'text-rose-300', surface: 'bg-rose-400/10', ring: 'ring-rose-400/20', dot: 'bg-rose-400' },
   Energy: { accent: 'text-amber-300', surface: 'bg-amber-400/10', ring: 'ring-amber-400/20', dot: 'bg-amber-400' },
-  Vehicle: { accent: 'text-cyan-300', surface: 'bg-cyan-400/10', ring: 'ring-cyan-400/20', dot: 'bg-cyan-400' },
-  Analyze: { accent: 'text-indigo-300', surface: 'bg-indigo-400/10', ring: 'ring-indigo-400/20', dot: 'bg-indigo-400' },
-  Manage: { accent: 'text-rose-300', surface: 'bg-rose-400/10', ring: 'ring-rose-400/20', dot: 'bg-rose-400' },
-  Assist: { accent: 'text-fuchsia-300', surface: 'bg-fuchsia-400/10', ring: 'ring-fuchsia-400/20', dot: 'bg-fuchsia-400' },
-  System: { accent: 'text-slate-300', surface: 'bg-slate-400/10', ring: 'ring-slate-400/20', dot: 'bg-slate-400' },
+  Efficiency: { accent: 'text-lime-300', surface: 'bg-lime-400/10', ring: 'ring-lime-400/20', dot: 'bg-lime-400' },
+  Costs: { accent: 'text-green-300', surface: 'bg-green-400/10', ring: 'ring-green-400/20', dot: 'bg-green-400' },
+  'Vehicle State': { accent: 'text-teal-300', surface: 'bg-teal-400/10', ring: 'ring-teal-400/20', dot: 'bg-teal-400' },
+  'Health & Service': { accent: 'text-red-300', surface: 'bg-red-400/10', ring: 'ring-red-400/20', dot: 'bg-red-400' },
+  Analytics: { accent: 'text-indigo-300', surface: 'bg-indigo-400/10', ring: 'ring-indigo-400/20', dot: 'bg-indigo-400' },
+  Controls: { accent: 'text-fuchsia-300', surface: 'bg-fuchsia-400/10', ring: 'ring-fuchsia-400/20', dot: 'bg-fuchsia-400' },
+  Alerts: { accent: 'text-orange-300', surface: 'bg-orange-400/10', ring: 'ring-orange-400/20', dot: 'bg-orange-400' },
+  Security: { accent: 'text-yellow-300', surface: 'bg-yellow-400/10', ring: 'ring-yellow-400/20', dot: 'bg-yellow-400' },
+  Assistant: { accent: 'text-pink-300', surface: 'bg-pink-400/10', ring: 'ring-pink-400/20', dot: 'bg-pink-400' },
+  Integrations: { accent: 'text-blue-300', surface: 'bg-blue-400/10', ring: 'ring-blue-400/20', dot: 'bg-blue-400' },
+  'Settings & Admin': { accent: 'text-slate-300', surface: 'bg-slate-400/10', ring: 'ring-slate-400/20', dot: 'bg-slate-400' },
   Data: { accent: 'text-teal-300', surface: 'bg-teal-400/10', ring: 'ring-teal-400/20', dot: 'bg-teal-400' },
+  Diagnostics: { accent: 'text-neon-cyan', surface: 'bg-cyan-400/10', ring: 'ring-cyan-400/20', dot: 'bg-neon-cyan' },
+  Infrastructure: { accent: 'text-emerald-300', surface: 'bg-emerald-400/10', ring: 'ring-emerald-400/20', dot: 'bg-emerald-400' },
   Developer: { accent: 'text-orange-300', surface: 'bg-orange-400/10', ring: 'ring-orange-400/20', dot: 'bg-orange-400' },
-  Diagnostics: { accent: 'text-lime-300', surface: 'bg-lime-400/10', ring: 'ring-lime-400/20', dot: 'bg-lime-400' },
+  'Project Info': { accent: 'text-white/60', surface: 'bg-white/5', ring: 'ring-white/10', dot: 'bg-white/40' },
 }
 
-type SSEState = 'connected' | 'reconnecting'
-
-function SSEStatusDot({ state }: { state: SSEState }) {
-  const isConnected = state === 'connected'
-  return (
-    <span
-      title={isConnected ? 'Live updates active' : 'Reconnecting live updates…'}
-      className={cn(
-        'inline-block h-2 w-2 rounded-full shrink-0',
-        isConnected ? 'bg-neon-green' : 'bg-amber-400 animate-pulse',
-      )}
-      style={{ boxShadow: `0 0 6px ${isConnected ? 'rgba(16,185,129,0.5)' : 'rgba(251,191,36,0.5)'}` }}
-    />
-  )
-}
+// NOTE: The legacy `SSEStatusDot` component lived here and rendered a bare
+// colored dot tied to the SSE wire state. It was replaced by the shared
+// `<LiveIndicator variant="dot">` (see import above) so the sidebar status
+// dot, page-level badges, and stale-data banner all derive from a single
+// `useLiveConnection` source of truth.
 
 export const navSections = [
   {
-    title: 'Monitor',
+    title: 'Overview',
     items: [
-      { to: '/', icon: LayoutDashboard, label: 'Dashboard', color: 'text-blue-400' },
-      { to: '/live', icon: Radar, label: 'Live Map', color: 'text-emerald-400' },
-      { to: '/vehicles', icon: Car, label: 'Fleet', color: 'text-sky-400', dataTour: 'vehicle-section' },
-      { to: '/compare', icon: GitCompare, label: 'Compare', color: 'text-orange-400' },
-      { to: '/weekly-digest', icon: CalendarCheck, label: 'Weekly Digest', color: 'text-purple-400' },
-      { to: '/navigation', icon: Signpost, label: 'Navigation', color: 'text-teal-400' },
+      { to: '/', icon: Icons.layoutDashboard, label: 'Dashboard', color: 'text-blue-400' },
+      { to: '/live', icon: Icons.radar, label: 'Live Map', color: 'text-emerald-400' },
+      { to: '/weekly-digest', icon: Icons.calendarCheck, label: 'Weekly Digest', color: 'text-purple-400' },
+      { to: '/timeline', icon: Icons.clock, label: 'Timeline', color: 'text-sky-400' },
     ],
   },
   {
-    title: 'Drive',
+    title: 'Fleet',
     items: [
-      { to: '/drives', icon: Route, label: 'Drives', color: 'text-violet-400' },
-      { to: '/trips', icon: Milestone, label: 'Trips', color: 'text-teal-400' },
-      { to: '/trip-planner', icon: MapPinned, label: 'Trip Planner', color: 'text-emerald-400' },
-      { to: '/drive-score', icon: Trophy, label: 'Drive Score', color: 'text-yellow-400' },
-      { to: '/speed-profile', icon: Gauge, label: 'Speed Profile', color: 'text-rose-400' },
-      { to: '/driving-dynamics', icon: Activity, label: 'Driving Dynamics', color: 'text-red-400' },
-      { to: '/regen-efficiency', icon: Recycle, label: 'Regen Braking', color: 'text-green-400' },
+      { to: '/vehicles', icon: Icons.vehicle, label: 'Fleet', color: 'text-sky-400', dataTour: 'vehicle-section' },
+      { to: '/period-compare', icon: Icons.calendar, label: 'Period Comparison', color: 'text-orange-400' },
+      { to: '/vehicle-comparison', icon: Icons.arrowLeftRight, label: 'Fleet Comparison', color: 'text-orange-400', minVehicles: 2 },
+      { to: '/locations', icon: Icons.location, label: 'Locations', color: 'text-emerald-400' },
+      { to: '/navigation', icon: Icons.signpost, label: 'Navigation', color: 'text-teal-400' },
     ],
   },
   {
-    title: 'Charge & Battery',
+    title: 'Driving',
     items: [
-      { to: '/battery', icon: HeartPulse, label: 'Battery Health', color: 'text-rose-400' },
-      { to: '/battery-cells', icon: Battery, label: 'Battery Cells', color: 'text-purple-400' },
-      { to: '/battery-degradation', icon: TrendingDown, label: 'Degradation', color: 'text-orange-400' },
-      { to: '/charging', icon: BatteryCharging, label: 'Charging', color: 'text-green-400' },
-      { to: '/tesla-charging-history', icon: Receipt, label: 'Tesla Charge History', color: 'text-emerald-400' },
-      { to: '/charging-heatmap', icon: CalendarClock, label: 'Charging Patterns', color: 'text-cyan-400' },
-      { to: '/charging-curve', icon: TrendingUp, label: 'Charging Curve', color: 'text-lime-400' },
-      { to: '/smart-charge', icon: CalendarClock, label: 'Smart Charge', color: 'text-cyan-400' },
-      { to: '/powershare', icon: Zap, label: 'Powershare', color: 'text-amber-400' },
+      { to: '/drives', icon: Icons.drive, label: 'Drives', color: 'text-violet-400' },
+      { to: '/trips', icon: Icons.trip, label: 'Trips', color: 'text-teal-400' },
+      { to: '/trip-planner', icon: Icons.mapPinned, label: 'Trip Planner', color: 'text-emerald-400' },
+      { to: '/mileage', icon: Icons.trip, label: 'Mileage', color: 'text-teal-400' },
+      { to: '/lifetime-stats', icon: Icons.award, label: 'Lifetime Stats', color: 'text-yellow-400' },
+    ],
+  },
+  {
+    title: 'Driving Insights',
+    items: [
+      { to: '/drive-score', icon: Icons.trophy, label: 'Drive Score', color: 'text-yellow-400' },
+      { to: '/speed-profile', icon: Icons.speed, label: 'Speed Profile', color: 'text-rose-400' },
+      { to: '/driving-dynamics', icon: Icons.efficiency, label: 'Driving Dynamics', color: 'text-red-400' },
+      { to: '/regen-efficiency', icon: Icons.recycle, label: 'Regen Braking', color: 'text-green-400' },
+    ],
+  },
+  {
+    title: 'Charging',
+    items: [
+      { to: '/charging', icon: Icons.batteryCharging, label: 'Charging', color: 'text-green-400' },
+      { to: '/tesla-charging-history', icon: Icons.receipt, label: 'Tesla Charge History', color: 'text-emerald-400' },
+      { to: '/charging-heatmap', icon: Icons.calendarClock, label: 'Charging Patterns', color: 'text-cyan-400' },
+      { to: '/charging-curve', icon: Icons.trendUp, label: 'Charging Curve', color: 'text-lime-400' },
+      { to: '/smart-charge', icon: Icons.calendarClock, label: 'Smart Charge', color: 'text-cyan-400' },
+      { to: '/powershare', icon: Icons.charging, label: 'Powershare', color: 'text-amber-400' },
+    ],
+  },
+  {
+    title: 'Battery',
+    items: [
+      { to: '/battery', icon: Icons.heartPulse, label: 'Battery Health', color: 'text-rose-400' },
+      { to: '/battery-cells', icon: Icons.battery, label: 'Battery Cells', color: 'text-purple-400' },
+      { to: '/battery-degradation', icon: Icons.trendDown, label: 'Degradation', color: 'text-orange-400' },
     ],
   },
   {
     title: 'Energy',
     items: [
-      { to: '/energy', icon: Bolt, label: 'Energy', color: 'text-yellow-400' },
-      { to: '/energy-flow', icon: ArrowRightLeft, label: 'Energy Flow', color: 'text-yellow-400' },
-      { to: '/power-flow', icon: Zap, label: 'Power Flow', color: 'text-orange-400' },
-      { to: '/energy-products', icon: Home, label: 'Energy Products', color: 'text-lime-400' },
-      { to: '/efficiency', icon: Leaf, label: 'Efficiency', color: 'text-amber-400' },
-      { to: '/route-efficiency', icon: Navigation2, label: 'Route Efficiency', color: 'text-emerald-400' },
-      { to: '/projected-range', icon: Target, label: 'Projected Range', color: 'text-pink-400' },
-      { to: '/mileage', icon: Milestone, label: 'Mileage', color: 'text-teal-400' },
-      { to: '/temperature-impact', icon: ThermometerSun, label: 'Temperature Impact', color: 'text-blue-400' },
-      { to: '/cost-analysis', icon: DollarSign, label: 'Cost Analysis', color: 'text-emerald-400' },
-      { to: '/tco', icon: Wallet, label: 'Cost of Ownership', color: 'text-green-400' },
+      { to: '/energy', icon: Icons.bolt, label: 'Energy', color: 'text-yellow-400' },
+      { to: '/energy-flow', icon: Icons.arrowRightLeft, label: 'Energy Flow', color: 'text-yellow-400' },
+      { to: '/power-flow', icon: Icons.charging, label: 'Power Flow', color: 'text-orange-400' },
+      { to: '/energy-products', icon: Icons.home, label: 'Energy Products', color: 'text-lime-400' },
+      { to: '/projected-range', icon: Icons.target, label: 'Projected Range', color: 'text-pink-400' },
     ],
   },
   {
-    title: 'Vehicle',
+    title: 'Efficiency',
     items: [
-      { to: '/digital-twin', icon: Monitor, label: 'Digital Twin', color: 'text-cyan-400' },
-      { to: '/tire-pressure', icon: CircleDot, label: 'Tire Pressure', color: 'text-orange-400' },
-      { to: '/climate-control', icon: Thermometer, label: 'Climate Control', color: 'text-sky-400' },
-      { to: '/drivetrain-health', icon: Cpu, label: 'Drivetrain Health', color: 'text-red-400' },
-      { to: '/vampire-drain', icon: Moon, label: 'Vampire Drain', color: 'text-indigo-400' },
-      { to: '/sleep-efficiency', icon: BedDouble, label: 'Sleep Efficiency', color: 'text-purple-400' },
-      { to: '/software-updates', icon: Download, label: 'Software Updates', color: 'text-teal-400' },
-      { to: '/maintenance', icon: Wrench, label: 'Maintenance', color: 'text-amber-400' },
+      { to: '/efficiency', icon: Icons.leaf, label: 'Efficiency', color: 'text-amber-400' },
+      { to: '/route-efficiency', icon: Icons.navigationAlt, label: 'Route Efficiency', color: 'text-emerald-400' },
+      { to: '/temperature-impact', icon: Icons.climateHot, label: 'Temperature Impact', color: 'text-blue-400' },
+      { to: '/vampire-drain', icon: Icons.moon, label: 'Vampire Drain', color: 'text-indigo-400' },
+      { to: '/sleep-efficiency', icon: Icons.bedDouble, label: 'Sleep Efficiency', color: 'text-purple-400' },
     ],
   },
   {
-    title: 'Analyze',
+    title: 'Costs',
     items: [
-      { to: '/analytics', icon: BarChart3, label: 'Analytics', color: 'text-indigo-400' },
-      { to: '/statistics', icon: PieChart, label: 'Statistics', color: 'text-cyan-400' },
-      { to: '/lifetime-stats', icon: Award, label: 'Lifetime Stats', color: 'text-yellow-400' },
-      { to: '/vehicle-comparison', icon: ArrowLeftRight, label: 'Vehicle Comparison', color: 'text-orange-400', minVehicles: 2 },
-      { to: '/timeline', icon: Clock, label: 'Timeline', color: 'text-sky-400' },
-      { to: '/locations', icon: MapPin, label: 'Locations', color: 'text-emerald-400' },
+      { to: '/cost-analysis', icon: Icons.dollarSign, label: 'Cost Analysis', color: 'text-emerald-400' },
+      { to: '/tco', icon: Icons.wallet, label: 'Cost of Ownership', color: 'text-green-400' },
     ],
   },
   {
-    title: 'Manage',
+    title: 'Vehicle State',
     items: [
-      { to: '/commands', icon: Gamepad2, label: 'Commands', color: 'text-fuchsia-400', dataTour: 'commands-section' },
-      { to: '/command-history', icon: History, label: 'Command History', color: 'text-violet-400' },
-      { to: '/automations', icon: Workflow, label: 'Automations', color: 'text-neon-cyan' },
-      { to: '/alerts', icon: Bell, label: 'Alerts', color: 'text-red-400' },
-      { to: '/alert-studio', icon: BellPlus, label: 'Alert Studio', color: 'text-neon-cyan' },
-      { to: '/geofences', icon: Fence, label: 'Geofences', color: 'text-lime-400' },
-      { to: '/notifications', icon: BellRing, label: 'Notifications', color: 'text-purple-400' },
-      { to: '/security-access', icon: Lock, label: 'Security & Access', color: 'text-emerald-400' },
-      { to: '/safety-settings', icon: ShieldCheck, label: 'Safety Settings', color: 'text-amber-400' },
-      { to: '/guard-mode', icon: ShieldAlert, label: 'Guard Mode', color: 'text-red-400' },
+      { to: '/digital-twin', icon: Icons.monitor, label: 'Digital Twin', color: 'text-cyan-400' },
+      { to: '/tire-pressure', icon: Icons.tirePressure, label: 'Tire Pressure', color: 'text-orange-400' },
+      { to: '/climate-control', icon: Icons.climate, label: 'Climate Control', color: 'text-sky-400' },
     ],
   },
   {
-    title: 'Assist',
+    title: 'Health & Service',
     items: [
-      { to: '/chatbot', icon: Bot, label: 'Chatbot', color: 'text-cyan-400' },
-      { to: '/media-player', icon: Headphones, label: 'Media Player', color: 'text-pink-400' },
+      { to: '/drivetrain-health', icon: Icons.cpu, label: 'Drivetrain Health', color: 'text-red-400' },
+      { to: '/software-updates', icon: Icons.download, label: 'Software Updates', color: 'text-teal-400' },
+      { to: '/maintenance', icon: Icons.maintenance, label: 'Maintenance', color: 'text-amber-400' },
     ],
   },
   {
-    title: 'System',
+    title: 'Analytics',
     items: [
-      { to: '/tesla-account', icon: User, label: 'Tesla Account', color: 'text-blue-400' },
-      { to: '/system-status', icon: Activity, label: 'Status', color: 'text-emerald-400' },
-      { to: '/api-logs', icon: FileText, label: 'API Logs', color: 'text-amber-400' },
-      { to: '/fleet-api', icon: Cloud, label: 'Fleet API', color: 'text-sky-400' },
-      { to: '/settings', icon: Settings, label: 'Settings', color: 'text-[var(--text-muted)]' },
-      { to: '/api-keys', icon: Key, label: 'API Keys', color: 'text-amber-400' },
-      { to: '/admin', icon: KeyRound, label: 'Admin', color: 'text-red-400' },
+      { to: '/analytics', icon: Icons.analytics, label: 'Analytics', color: 'text-indigo-400' },
+      { to: '/statistics', icon: Icons.pieChart, label: 'Statistics', color: 'text-cyan-400' },
+    ],
+  },
+  {
+    title: 'Controls',
+    items: [
+      { to: '/commands', icon: Icons.gamepad, label: 'Commands', color: 'text-fuchsia-400', dataTour: 'commands-section' },
+      { to: '/command-history', icon: Icons.history, label: 'Command History', color: 'text-violet-400' },
+    ],
+  },
+  {
+    title: 'Alerts',
+    items: [
+      { to: '/automations', icon: Icons.workflow, label: 'Automations', color: 'text-neon-cyan' },
+      { to: '/alerts', icon: Icons.notifications, label: 'Alerts', color: 'text-red-400' },
+      { to: '/alert-studio', icon: Icons.notificationsAdd, label: 'Alert Studio', color: 'text-neon-cyan' },
+      { to: '/geofences', icon: Icons.fence, label: 'Geofences', color: 'text-lime-400' },
+      { to: '/notifications', icon: Icons.notificationsActive, label: 'Notifications', color: 'text-purple-400' },
+    ],
+  },
+  {
+    title: 'Security',
+    items: [
+      { to: '/security-access', icon: Icons.locked, label: 'Security & Access', color: 'text-emerald-400' },
+      { to: '/safety-settings', icon: Icons.securityCheck, label: 'Safety Settings', color: 'text-amber-400' },
+      { to: '/guard-mode', icon: Icons.securityAlert, label: 'Guard Mode', color: 'text-red-400' },
+    ],
+  },
+  {
+    title: 'Assistant',
+    items: [
+      { to: '/chatbot', icon: Icons.bot, label: 'Chatbot', color: 'text-cyan-400' },
+      { to: '/media-player', icon: Icons.headphones, label: 'Media Player', color: 'text-pink-400' },
+    ],
+  },
+  {
+    title: 'Integrations',
+    items: [
+      { to: '/tesla-account', icon: Icons.user, label: 'Tesla Account', color: 'text-blue-400' },
+      { to: '/fleet-api', icon: Icons.cloud, label: 'Fleet API', color: 'text-sky-400' },
+      { to: '/api-logs', icon: Icons.fileText, label: 'API Logs', color: 'text-amber-400' },
+    ],
+  },
+  {
+    title: 'Settings & Admin',
+    items: [
+      { to: '/settings', icon: Icons.settings, label: 'Settings', color: 'text-[var(--text-muted)]' },
+      { to: '/me/activity', icon: Icons.history, label: 'My Activity', color: 'text-cyan-400' },
+      { to: '/admin', icon: Icons.keyRound, label: 'Admin', color: 'text-red-400' },
+      { to: '/api-keys', icon: Icons.key, label: 'API Keys', color: 'text-amber-400' },
     ],
   },
   {
     title: 'Data',
     items: [
-      { to: '/data-export', icon: HardDriveDownload, label: 'Data Export', color: 'text-lime-400' },
-      { to: '/backup', icon: DatabaseBackup, label: 'Backup & Restore', color: 'text-teal-400' },
-      { to: '/data-repair', icon: Stethoscope, label: 'Data Repair', color: 'text-amber-400' },
-    ],
-  },
-  {
-    title: 'Developer',
-    items: [
-      { to: '/dev-tools', icon: Hammer, label: 'Dev Tools', color: 'text-cyan-400' },
-      { to: '/api-playground', icon: Terminal, label: 'API Playground', color: 'text-emerald-400' },
-      { to: '/roadmap', icon: Signpost, label: 'Roadmap', color: 'text-violet-400' },
-      { to: '/changelog', icon: FileText, label: 'Changelog', color: 'text-white/50' },
+      { to: '/data-export', icon: Icons.hardDriveDownload, label: 'Data Export', color: 'text-lime-400' },
+      { to: '/backup', icon: Icons.databaseBackup, label: 'Backup & Restore', color: 'text-teal-400' },
+      { to: '/data-repair', icon: Icons.stethoscope, label: 'Data Repair', color: 'text-amber-400' },
     ],
   },
   {
     title: 'Diagnostics',
     items: [
-      { to: '/live-monitor', icon: RadioTower, label: 'Live Monitor', color: 'text-neon-green', dataTour: 'live-signals-section' },
-      { to: '/signal-log', icon: Database, label: 'Signal Log', color: 'text-cyan-400' },
-      { to: '/signal-explorer', icon: SlidersHorizontal, label: 'Signal Explorer', color: 'text-neon-cyan' },
-      { to: '/signal-diff', icon: Split, label: 'Signal Diff', color: 'text-violet-400' },
-      { to: '/signal-gaps', icon: Wifi, label: 'Gap Detector', color: 'text-amber-400' },
-      { to: '/state-debugger', icon: Bug, label: 'State Machine', color: 'text-purple-400' },
-      { to: '/mqtt-inspector', icon: Radio, label: 'MQTT Inspector', color: 'text-blue-400' },
-      { to: '/redis-signals', icon: Server, label: 'Redis Signals', color: 'text-orange-400' },
-      { to: '/db-health', icon: HardDrive, label: 'DB Health', color: 'text-emerald-400' },
-      { to: '/anomaly-detection', icon: ScanSearch, label: 'Anomaly Detection', color: 'text-red-400' },
+      { to: '/live-monitor', icon: Icons.radioTower, label: 'Live Monitor', color: 'text-neon-green', dataTour: 'live-signals-section' },
+      { to: '/signal-log', icon: Icons.database, label: 'Signal Log', color: 'text-cyan-400' },
+      { to: '/signal-explorer', icon: Icons.preferences, label: 'Signal Explorer', color: 'text-neon-cyan' },
+      { to: '/signal-diff', icon: Icons.split, label: 'Signal Diff', color: 'text-violet-400' },
+      { to: '/signal-gaps', icon: Icons.wifi, label: 'Gap Detector', color: 'text-amber-400' },
+      { to: '/state-debugger', icon: Icons.bug, label: 'State Machine', color: 'text-purple-400' },
+      { to: '/mqtt-inspector', icon: Icons.radio, label: 'MQTT Inspector', color: 'text-blue-400' },
+      { to: '/redis-signals', icon: Icons.server, label: 'Redis Signals', color: 'text-orange-400' },
+    ],
+  },
+  {
+    title: 'Infrastructure',
+    items: [
+      { to: '/system-status', icon: Icons.efficiency, label: 'Status', color: 'text-emerald-400' },
+      { to: '/db-health', icon: Icons.hardDrive, label: 'DB Health', color: 'text-emerald-400' },
+      { to: '/anomaly-detection', icon: Icons.scanSearch, label: 'Anomaly Detection', color: 'text-red-400' },
+    ],
+  },
+  {
+    title: 'Developer',
+    items: [
+      { to: '/dev-tools', icon: Icons.hammer, label: 'Dev Tools', color: 'text-cyan-400' },
+      { to: '/api-playground', icon: Icons.terminal, label: 'API Playground', color: 'text-emerald-400' },
+    ],
+  },
+  {
+    title: 'Project Info',
+    items: [
+      { to: '/roadmap', icon: Icons.signpost, label: 'Roadmap', color: 'text-violet-400' },
+      { to: '/changelog', icon: Icons.fileText, label: 'Changelog', color: 'text-white/50' },
     ],
   },
 ]
@@ -449,15 +438,188 @@ function findNavItemByExactPath(to: string) {
   return null
 }
 
+/**
+ * Tiny header link that renders the bell icon and an unread-count badge.
+ * Polls `/notifications/unread-count` via TanStack Query every 30s. Used in
+ * both the desktop sidebar header and the mobile top bar.
+ */
+function NotificationBell({ className }: { className?: string }) {
+  const { t } = useTranslation()
+  const { data: count = 0 } = useUnreadCount()
+  const display = count > 99 ? '99+' : String(count)
+  const label = count > 0
+    ? t('nav.notificationsUnread', '{{count}} unread notifications', { count })
+    : t('nav.notifications', 'Notifications')
+  return (
+    <NavLink
+      to="/notifications"
+      aria-label={label}
+      className={`relative inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${className ?? ''}`}
+    >
+      <Icons.notifications className="h-5 w-5" aria-hidden="true" />
+      {count > 0 && (
+        <span
+          aria-hidden="true"
+          className="absolute -top-0.5 -right-0.5 inline-flex min-w-[1rem] h-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white shadow ring-1 ring-rose-300/60"
+        >
+          {display}
+        </span>
+      )}
+    </NavLink>
+  )
+}
+
+/**
+ * Phase-40 / Prompt 60 — top-bar quick theme switcher.
+ *
+ * A small palette icon button that opens a popover containing a compact
+ * `<ThemePicker>`. The popover hides the custom-color builder to keep it
+ * small; users who want to build a custom theme follow the "Customize…"
+ * link to /settings/appearance.
+ *
+ * Listens for `open-theme-popover` window events so other surfaces (the
+ * command palette, the dashboard first-run banner) can open the popover
+ * without prop drilling.
+ */
+function ThemeQuickSwitcher({
+  className,
+  placement = 'right',
+}: {
+  className?: string
+  /**
+   * Which side of the trigger to anchor the popover to. The popover
+   * grows AWAY from the anchored side, so use 'left' when the trigger
+   * sits near the left edge of the viewport (sidebar header) and
+   * 'right' when it sits near the right edge (mobile header).
+   */
+  placement?: 'left' | 'right'
+}) {
+  const { t } = useTranslation()
+  const navigate = useNavigate()
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const popoverRef = useRef<HTMLDivElement>(null)
+  // Position is computed from the trigger's bbox so the popover can be
+  // portaled into <body>. Portaling is required because the sidebar
+  // (which contains the trigger) creates a stacking context via
+  // backdrop-filter, and the main content area (`relative z-10`) sits
+  // above it — without a portal the popover renders BEHIND dashboard
+  // content that overflows into its area.
+  const [coords, setCoords] = useState<{ top: number; left?: number; right?: number } | null>(null)
+
+  // Outside-click + Escape dismissal — same pattern as SavedViewMenu.
+  useEffect(() => {
+    if (!open) return
+    const onClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node
+      if (containerRef.current?.contains(target)) return
+      if (popoverRef.current?.contains(target)) return
+      setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onClickOutside)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  // Cross-component opener — wired by the command palette + first-run banner.
+  useEffect(() => {
+    const handler = () => setOpen(true)
+    window.addEventListener('open-theme-popover', handler)
+    return () => window.removeEventListener('open-theme-popover', handler)
+  }, [])
+
+  // Recompute popover coordinates whenever it opens or the viewport
+  // changes (resize, scroll). Uses capture-phase scroll so nested
+  // scroll containers also reposition the popover.
+  useEffect(() => {
+    if (!open) {
+      setCoords(null)
+      return
+    }
+    const update = () => {
+      const el = triggerRef.current
+      if (!el) return
+      const rect = el.getBoundingClientRect()
+      const top = rect.bottom + 8 // matches the previous mt-2 spacing
+      if (placement === 'left') {
+        setCoords({ top, left: rect.left })
+      } else {
+        setCoords({ top, right: window.innerWidth - rect.right })
+      }
+    }
+    update()
+    window.addEventListener('resize', update)
+    window.addEventListener('scroll', update, true)
+    return () => {
+      window.removeEventListener('resize', update)
+      window.removeEventListener('scroll', update, true)
+    }
+  }, [open, placement])
+
+  return (
+    <div ref={containerRef} className={`relative inline-block ${className ?? ''}`} data-role="theme-popover">
+      <Button
+        ref={triggerRef}
+        type="button"
+        variant="ghost"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label={t('theme.openPicker', 'Open theme picker')}
+        onClick={() => setOpen(v => !v)}
+        className="h-9 w-9 rounded-lg p-0 text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)]"
+      >
+        <Icons.palette className="h-5 w-5" aria-hidden="true" />
+      </Button>
+      {open && coords && createPortal(
+        <div
+          ref={popoverRef}
+          role="dialog"
+          aria-label={t('theme.openPicker', 'Open theme picker')}
+          style={{
+            position: 'fixed',
+            top: coords.top,
+            ...(coords.left !== undefined ? { left: coords.left } : {}),
+            ...(coords.right !== undefined ? { right: coords.right } : {}),
+          }}
+          className="z-[80] w-[22rem] max-w-[calc(100vw-1rem)] rounded-xl border border-[var(--glass-border)] bg-[var(--surface-1)] p-4 shadow-2xl"
+        >
+          <ThemePicker compact showMode showCustom={false} onChange={() => setOpen(false)} onModeChange={() => setOpen(false)} />
+          <div className="mt-3 flex justify-end border-t border-[var(--glass-border)] pt-3">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setOpen(false)
+                navigate('/settings#appearance')
+              }}
+              className="h-auto px-2 py-1 text-xs font-medium text-cyan-300 hover:bg-transparent hover:text-cyan-200"
+            >
+              {t('theme.customize', 'Customize…')}
+            </Button>
+          </div>
+        </div>,
+        document.body,
+      )}
+    </div>
+  )
+}
+
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [expandedSections, setExpandedSections] = useState<Set<string>>(() => {
     try {
       const stored = window.localStorage.getItem(EXPANDED_NAV_STORAGE_KEY)
       const parsed = stored ? JSON.parse(stored) as string[] : []
-      return new Set(parsed.length > 0 ? parsed : ['Monitor'])
+      return new Set(parsed.length > 0 ? parsed : ['Overview'])
     } catch {
-      return new Set(['Monitor'])
+      return new Set(['Overview'])
     }
   })
   const [recentNavPaths, setRecentNavPaths] = useState<string[]>(() => {
@@ -481,30 +643,112 @@ export default function Layout() {
   const location = useLocation()
   const { t } = useTranslation()
 
-  // SSE connection status + global alert toast
+  // SSE alert toasts. Live-pipe health is rendered by `<LiveIndicator>`
+  // via `useLiveConnection`; here we only need the alert callback.
   const toast = useToast()
-  const { state: sseState } = useRealtimeEvents({
+  useRealtimeEvents({
     onAlert: (data) => {
-      const alert = data as { title?: string; message?: string; severity?: string }
+      const alert = data as Partial<Alert>
       const severity = alert.severity ?? 'info'
-      const method = severity === 'critical' ? toast.error : severity === 'warning' ? toast.warning : toast.info
-      method(alert.title ?? 'Alert', alert.message ?? '')
+      // Build a drill-through link if we have enough metadata to deep-link.
+      // Falls back to /signal-explorer when only a timestamp is known.
+      const href = (alert.created_at || alert.rule_signal || alert.vehicle_id)
+        ? getAlertDrillthroughHref({
+            id: alert.id ?? 0,
+            vehicle_id: alert.vehicle_id ?? 0,
+            type: alert.type ?? 'notification',
+            severity: alert.severity ?? 'info',
+            title: alert.title ?? '',
+            message: alert.message ?? '',
+            is_read: false,
+            created_at: alert.created_at ?? new Date().toISOString(),
+            rule_id: alert.rule_id ?? null,
+            rule_signal: alert.rule_signal ?? null,
+            rule_severity: alert.rule_severity ?? null,
+          })
+        : null
+      const title = alert.title ?? t('alerts.toast.title', 'Alert')
+      const message = alert.message ?? ''
+      const toastType: 'error' | 'warning' | 'info' =
+        severity === 'critical' ? 'error' : severity === 'warning' ? 'warning' : 'info'
+      if (href) {
+        toast.toast({
+          type: toastType,
+          title,
+          message,
+          action: { label: t('alerts.toast.view', 'View'), to: href },
+        })
+      } else {
+        const method = toastType === 'error' ? toast.error : toastType === 'warning' ? toast.warning : toast.info
+        method(title, message)
+      }
     },
   })
   useNotificationListener()
-  const { convertDistance, distanceUnit } = useSettings()
+  // Browser tab badging — Phase 40 / Prompt 32. These three hooks
+  // share the SSE singleton with `useNotificationListener` above; no
+  // additional EventSource connection is opened.
+  useTitleBadge()
+  useFaviconBadge()
+  useCriticalAlertFlash()
   const { mode: shortcutMode, showCheatSheet, toggleCheatSheet } = useKeyboardShortcuts()
+  // Footer status bar (Phase-40 / Prompt 59). When the user has hidden the
+  // bar the main content reclaims the space — track the prefs reactively
+  // so the layout reflows on toggle.
+  const statusBarPrefs = useStatusBarPrefs()
 
-  // Onboarding tour
-  const tour = useTour(MAIN_TOUR_STEPS)
+  // The CommandPalette's "Show keyboard shortcuts" command (and any other
+  // caller) toggles the cheat sheet by dispatching this custom event so the
+  // shortcut layer stays decoupled from the React tree.
   useEffect(() => {
-    if (!isTourCompleted()) {
-      const timer = setTimeout(() => tour.start(), 1500)
-      return () => clearTimeout(timer)
+    const handler = () => toggleCheatSheet()
+    window.addEventListener('toggle-keyboard-shortcuts', handler)
+    return () => window.removeEventListener('toggle-keyboard-shortcuts', handler)
+  }, [toggleCheatSheet])
+
+  // Onboarding tour — Phase-40 / Prompt 65.
+  // Only one tour can be active at a time. The launcher (or a CustomEvent
+  // dispatched from anywhere) sets `activeTourId`; we wire the matching
+  // definition into useTour so completion is persisted under the per-tour
+  // storage key. Auto-start is intentionally limited to the dashboard tour.
+  const [activeTourId, setActiveTourId] = useState<string | null>(null)
+  const activeTourDef = activeTourId ? TOURS[activeTourId] ?? null : null
+  const tour = useTour(
+    activeTourDef?.steps ?? [],
+    activeTourDef ? { id: activeTourDef.id, version: activeTourDef.version } : undefined,
+  )
+
+  // Listen for "start tour" events from the launcher / palette / settings.
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<TourStartEventDetail>).detail
+      if (!detail?.id || !TOURS[detail.id]) return
+      setActiveTourId(detail.id)
     }
+    window.addEventListener(TOUR_START_EVENT, handler)
+    return () => window.removeEventListener(TOUR_START_EVENT, handler)
   }, [])
 
-  // Auto-skip tour steps whose target element is missing (e.g. sidebar items on mobile)
+  // When activeTourId changes (event-triggered) start the tour.
+  const tourStartRef = useRef(tour.start)
+  tourStartRef.current = tour.start
+  useEffect(() => {
+    if (!activeTourId) return
+    const timer = window.setTimeout(() => tourStartRef.current(), 50)
+    return () => window.clearTimeout(timer)
+  }, [activeTourId])
+
+  // When the tour finishes / is skipped, clear activeTourId so a future
+  // launch can re-trigger the same tour.
+  const wasTourActiveRef = useRef(false)
+  useEffect(() => {
+    if (wasTourActiveRef.current && !tour.isActive) {
+      setActiveTourId(null)
+    }
+    wasTourActiveRef.current = tour.isActive
+  }, [tour.isActive])
+
+  // Auto-skip steps whose target element is missing (e.g. mobile hides them).
   useEffect(() => {
     if (tour.isActive && tour.step && !tour.targetRect) {
       const timer = setTimeout(() => tour.next(), 400)
@@ -512,24 +756,33 @@ export default function Layout() {
     }
   }, [tour.isActive, tour.currentStep, tour.targetRect])
 
-  // Version info
+  // Version info — shown as the small chip in the sidebar/mobile header.
+  // (Footer status bar has its own VersionSegment that hits the same query
+  // key so this fetch is deduped.)
   const { data: versionInfo } = useQuery({ queryKey: ['version-info'], queryFn: () => request<VersionInfo>('/system/version'), staleTime: 60_000, refetchInterval: 60_000 })
-  const { data: updateCheck } = useQuery({ queryKey: ['update-check'], queryFn: () => request<UpdateCheckResult>('/system/update-check'), staleTime: 3600_000, refetchInterval: 3600_000 })
 
   // Live data for sidebar
   const { data: alerts } = useQuery({ queryKey: ['alerts-sidebar'], queryFn: () => request<Alert[]>('/alerts?limit=50&offset=0'), refetchInterval: 30_000, retry: 1 })
   const { data: vehicles } = useQuery({ queryKey: ['vehicles-sidebar'], queryFn: () => request<Vehicle[]>('/vehicles'), refetchInterval: 60_000, retry: 1 })
-  const primaryVehicle = vehicles?.[0]
-  const { data: primaryState } = useQuery({
-    queryKey: ['primary-state-sidebar', primaryVehicle?.id],
-    queryFn: () => getVehicleState(primaryVehicle!.id),
-    enabled: !!primaryVehicle,
-    refetchInterval: 60_000,
-  })
   const unreadAlerts = alerts?.filter(a => !a.is_read).length ?? 0
   const vehicleCount = vehicles?.length ?? 0
-  const onlineVehicles = vehicles?.filter(v => v.state === 'online').length ?? 0
-  const isConnected = !!primaryState?.live
+
+  // Auto-start the dashboard tour the first time a user lands on `/` with at
+  // least one vehicle linked. Per-feature tours stay launcher-only — see
+  // `tourRegistry.TOURS[*].autoStart` for the predicate. Re-evaluates when
+  // the route or fleet size changes; the per-tour completion key (versioned)
+  // prevents duplicate prompts.
+  useEffect(() => {
+    if (activeTourId) return
+    for (const def of Object.values(TOURS)) {
+      if (!def.autoStart) continue
+      if (isTourCompletedById(def.id, def.version)) continue
+      if (def.autoStart({ pathname: location.pathname, vehicleCount })) {
+        const timer = window.setTimeout(() => setActiveTourId(def.id), 1500)
+        return () => window.clearTimeout(timer)
+      }
+    }
+  }, [location.pathname, vehicleCount, activeTourId])
 
   // Stale sessions count for Data Repair badge
   const { data: staleSessions } = useQuery({ queryKey: ['stale-sessions-sidebar'], queryFn: () => request<StaleSessionsResponse>('/data-repair/stale-sessions'), refetchInterval: 60_000, retry: 1 })
@@ -651,16 +904,6 @@ export default function Layout() {
       ]
     : []
 
-  const uptimeStr= (() => {
-    const secs = versionInfo?.uptime_seconds
-    if (!secs || secs <= 0) return 'Online'
-    const d = Math.floor(secs / 86400)
-    const h = Math.floor((secs % 86400) / 3600)
-    const m = Math.floor((secs % 3600) / 60)
-    if (d > 0) return `${d}d ${h}h uptime`
-    if (h > 0) return `${h}h ${m}m uptime`
-    return `${m}m uptime`
-  })()
   const versionLabel = versionInfo?.chart_version && versionInfo.chart_version !== 'unknown'
     ? `v${versionInfo.chart_version}`
     : versionInfo?.app_version && versionInfo.app_version !== 'unknown'
@@ -734,13 +977,15 @@ export default function Layout() {
 
   return (
     <div className="flex h-dvh bg-[var(--bg)] text-[var(--text-primary)]">
-      {/* Skip to content */}
+      {/* Skip to content (WCAG 2.4.1). Hidden until focused; sends focus
+          straight to <main id="main-content"> so keyboard users don't have
+          to tab through the entire sidebar to reach the page body. */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[300] focus:rounded-lg focus:bg-neon-cyan focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-black focus:outline-none"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[300] focus:rounded-lg focus:bg-neon-cyan focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-black focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--bg)] focus:ring-neon-cyan"
         onClick={(e) => { e.preventDefault(); mainRef.current?.focus() }}
       >
-        Skip to content
+        {t('a11y.skipToMain', 'Skip to main content')}
       </a>
 
       {/* Ambient background effects */}
@@ -766,8 +1011,9 @@ export default function Layout() {
       {/* Sidebar */}
       <aside
         role="navigation"
-        aria-label="Main navigation"
+        aria-label={t('a11y.primaryNav', 'Primary')}
         data-tour="sidebar"
+        data-role="sidebar"
         data-sidebar-open={sidebarOpen}
         className={cn(
           'fixed left-0 bottom-0 z-[66] w-[clamp(240px,70vw,256px)] transform transition-transform duration-300 ease-out lg:top-0 lg:static lg:z-auto lg:w-64 lg:translate-x-0',
@@ -794,24 +1040,33 @@ export default function Layout() {
             onClick={() => setSidebarOpen(false)}
             className="h-10 w-10 shrink-0 rounded-xl p-0 text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)] active:scale-95 [-webkit-tap-highlight-color:transparent] [touch-action:manipulation]"
           >
-            <X className="h-5 w-5" />
+            <Icons.close className="h-5 w-5" />
           </Button>
         </div>
 
         {/* Logo — desktop sidebar header */}
-        <NavLink to="/" className="hidden lg:flex items-center gap-3 px-5 py-5 border-b border-[var(--glass-border)] shrink-0 hover:bg-[var(--surface-2)] transition-colors" onClick={() => setSidebarOpen(false)}>
-          <Logo size={32} showWordmark />
-          {versionLabel && (
-            <span className="ml-auto rounded-md bg-neon-cyan/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-neon-cyan">
-              {versionLabel}
-            </span>
-          )}
-        </NavLink>
+        <div className="hidden lg:flex items-center gap-2 px-5 py-5 border-b border-[var(--glass-border)] shrink-0">
+          <NavLink to="/" className="flex flex-1 items-center gap-3 hover:bg-[var(--surface-2)] -mx-2 px-2 py-1 rounded-md transition-colors" onClick={() => setSidebarOpen(false)}>
+            <Logo size={32} showWordmark />
+            {versionLabel && (
+              <span className="ml-auto rounded-md bg-neon-cyan/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-neon-cyan">
+                {versionLabel}
+              </span>
+            )}
+          </NavLink>
+          <ThemeQuickSwitcher placement="left" />
+          <NotificationBell />
+        </div>
 
         {/* Sticky search trigger */}
         <div className="px-3 py-2 lg:px-4 lg:py-3 border-b border-[var(--glass-border)] shrink-0">
           <CommandPaletteTrigger />
         </div>
+
+        {/* Persistent vehicle scope picker — Phase 40 / Prompt 16.
+            Renders its own bordered wrapper; returns null for single-vehicle
+            owners so no empty padding is visible. */}
+        <VehiclePicker />
 
         {/* Navigation */}
         <nav
@@ -851,7 +1106,7 @@ export default function Layout() {
                       activeIsPinned ? 'text-amber-300' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                     )}
                   >
-                    <Star className={cn('h-3.5 w-3.5', activeIsPinned && 'fill-current')} />
+                    <Icons.star className={cn('h-3.5 w-3.5', activeIsPinned && 'fill-current')} />
                     <span>{activeIsPinned ? t('nav.pinnedAction', 'Pinned') : t('nav.pinAction', 'Pin')}</span>
                   </Button>
                 )}
@@ -878,7 +1133,7 @@ export default function Layout() {
                       onClick={() => unpinNavPath(item.to)}
                       className="h-7 w-7 shrink-0 rounded-lg p-0 text-[var(--text-muted)] opacity-80 hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
                     >
-                      <X className="h-3.5 w-3.5" />
+                      <Icons.close className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 ))}
@@ -913,7 +1168,7 @@ export default function Layout() {
                   onClick={expandAllSections}
                   className="h-7 w-7 shrink-0 rounded-lg p-0 text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] disabled:opacity-40"
                 >
-                  <ChevronsDown className="h-4 w-4" aria-hidden="true" />
+                  <Icons.expandAll className="h-4 w-4" aria-hidden="true" />
                 </Button>
                 <Button
                   type="button"
@@ -925,7 +1180,7 @@ export default function Layout() {
                   onClick={collapseAllSections}
                   className="h-7 w-7 shrink-0 rounded-lg p-0 text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] disabled:opacity-40"
                 >
-                  <ChevronsUp className="h-4 w-4" aria-hidden="true" />
+                  <Icons.collapseAll className="h-4 w-4" aria-hidden="true" />
                 </Button>
               </div>
             </div>
@@ -943,7 +1198,7 @@ export default function Layout() {
                     aria-controls={`nav-section-${section.title.replace(/\W+/g, '-').toLowerCase()}`}
                     onClick={() => toggleSection(section.title)}
                     className={cn(
-                      'mb-1 h-8 w-full justify-between rounded-xl px-3 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
+                      'mb-1 h-8 w-full justify-between gap-2 rounded-xl px-3 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
                       isActiveSection && [
                         'text-[var(--text-primary)] ring-1',
                         sectionStyle?.surface ?? 'bg-[rgba(var(--theme-primary-rgb),0.07)]',
@@ -951,11 +1206,11 @@ export default function Layout() {
                       ]
                     )}
                   >
-                    <span className="flex items-center gap-2">
-                      <span className={cn('h-1.5 w-1.5 rounded-full opacity-80', sectionStyle?.dot ?? 'bg-neon-cyan')} />
-                      <span>{section.title}</span>
+                    <span className="flex min-w-0 flex-1 items-center gap-2">
+                      <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full opacity-80', sectionStyle?.dot ?? 'bg-neon-cyan')} />
+                      <span className="truncate" title={section.title}>{section.title}</span>
                     </span>
-                    <span className="flex items-center gap-2">
+                    <span className="flex shrink-0 items-center gap-2">
                       <span
                         className={cn(
                           'flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[9px] font-bold ring-1',
@@ -970,7 +1225,7 @@ export default function Layout() {
                       >
                         {section.items.length}
                       </span>
-                      <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', isExpanded && 'rotate-180')} />
+                      <Icons.expand className={cn('h-3.5 w-3.5 transition-transform', isExpanded && 'rotate-180')} />
                     </span>
                   </Button>
                   <AnimatePresence initial={false}>
@@ -995,52 +1250,34 @@ export default function Layout() {
           </div>
         </nav>
 
-        {/* Bottom status */}
+        {/* Bottom status — keyboard hint + tour launcher.
+            The previous "Update available" banner, "Live vehicle mini-status",
+            and "Connection / vehicles / uptime" panels were removed because
+            their info is now surfaced in the footer StatusBar
+            (VersionSegment shows the update dot + uptime, ConnectionSegment
+            shows API status, and ActiveVehicleSegment shows the active
+            vehicle with its battery + range). */}
         <div className="border-t border-[var(--glass-border)] px-4 py-3 space-y-2 shrink-0 safe-bottom">
-          {/* Update available banner */}
-          {updateCheck?.update_available && (
-            <GlassPanel className="!p-2.5 flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-              <Download className="h-3.5 w-3.5 text-amber-400 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-medium text-amber-300">Update available</p>
-                <p className="text-[10px] text-amber-400/70">v{updateCheck.latest}</p>
-              </div>
-            </GlassPanel>
-          )}
-          {/* Live vehicle mini-status */}
-          {primaryVehicle && primaryState?.state && (
-            <GlassPanel className="!p-2.5 flex items-center gap-2.5">
-              <div className={cn('h-2 w-2 rounded-full', primaryState.state.battery_level > 20 ? 'bg-neon-green' : 'bg-neon-red')}
-                style={{ boxShadow: `0 0 6px ${primaryState.state.battery_level > 20 ? 'rgba(16,185,129,0.5)' : 'rgba(239,68,68,0.5)'}` }} />
-              <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-medium text-[var(--text-secondary)] truncate">{primaryVehicle.display_name || 'Vehicle'}</p>
-                <p className="text-[10px] text-[var(--text-muted)]">{primaryState.state.battery_level}% · {Math.round(convertDistance(primaryState.state.rated_range))} {distanceUnit}</p>
-              </div>
-              <Zap className="h-3 w-3 text-neon-cyan/50" />
-            </GlassPanel>
-          )}
-          <GlassPanel className="flex items-center gap-3 !p-2.5">
-            {isConnected ? (
-              <Wifi className="h-3.5 w-3.5 text-neon-green" />
-            ) : (
-              <WifiOff className="h-3.5 w-3.5 text-[var(--text-muted)]" />
-            )}
-            <div className="flex-1">
-              <p className="text-[11px] font-medium text-[var(--text-secondary)]">{isConnected ? 'Connected' : 'Standby'}</p>
-              <p className="text-[10px] text-[var(--text-muted)]">{onlineVehicles}/{vehicles?.length ?? 0} vehicles · {uptimeStr}</p>
-            </div>
-            <SystemHealthDot />
-            <SSEStatusDot state={sseState} />
-          </GlassPanel>
           <p data-tour="keyboard-hint" className="text-center text-[10px] text-[var(--text-muted)] mt-1">
             {t('shortcuts.hint', 'Press')} <kbd className="px-1 rounded bg-[var(--surface-2)] text-[var(--text-secondary)]">?</kbd> {t('shortcuts.hintSuffix', 'for shortcuts')}
+            <span className="mx-1.5 text-[var(--text-muted)]/60">·</span>
+            <button
+              type="button"
+              onClick={() => dispatchTourLauncherOpen()}
+              className="inline-flex items-center gap-1 rounded text-[10px] text-[var(--text-muted)] underline-offset-2 hover:text-[var(--text-secondary)] hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--theme-primary)]"
+              aria-label={t('tour.launcher.openAria', 'Open tour launcher')}
+              data-tour-launcher-trigger
+            >
+              <Icons.helpCircle className="h-3 w-3" aria-hidden />
+              {t('tour.launcher.openShort', 'Take a tour')}
+            </button>
           </p>
         </div>
       </aside>
 
       {/* Mobile top bar */}
       {!sidebarOpen && (
-        <header className="fixed top-0 left-0 right-0 z-[60] flex items-center border-b border-[var(--glass-border)] bg-[var(--surface-1)] backdrop-blur-xl px-4 py-3 lg:hidden [touch-action:manipulation]">
+        <header data-role="appbar" className="fixed top-0 left-0 right-0 z-[60] flex items-center border-b border-[var(--glass-border)] bg-[var(--surface-1)] backdrop-blur-xl px-4 py-3 lg:hidden [touch-action:manipulation]">
           <Button
             onClick={() => setSidebarOpen(true)}
             type="button"
@@ -1050,11 +1287,13 @@ export default function Layout() {
             aria-expanded={false}
             className="relative z-10 h-11 w-11 -ml-1 rounded-xl p-0 text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)] active:scale-95 [-webkit-tap-highlight-color:transparent] [touch-action:manipulation]"
           >
-            <Menu className="h-6 w-6" />
+            <Icons.menu className="h-6 w-6" />
           </Button>
           <div className="flex-1 flex justify-center -ml-10">
             <Logo size={26} showWordmark />
           </div>
+          <NotificationBell className="ml-auto" />
+          <ThemeQuickSwitcher />
         </header>
       )}
 
@@ -1064,7 +1303,22 @@ export default function Layout() {
         <div className="h-14 shrink-0 lg:hidden" />
 
         <ServiceStatusBanner />
-        <main id="main-content" ref={mainRef} role="main" tabIndex={-1} className="flex-1 overflow-y-auto outline-none pb-16 lg:pb-0">
+        <main
+          id="main-content"
+          data-role="main-content"
+          ref={mainRef}
+          role="main"
+          tabIndex={-1}
+          className={cn(
+            'flex-1 overflow-y-auto outline-none pb-16 lg:pb-0',
+            // Reserve space for the footer status bar (Phase-40 / Prompt 59)
+            // so it never overlaps page content. On mobile it stacks ABOVE
+            // the BottomTabBar (which already adds 56px via pb-16), so we
+            // bump pb-16 → pb-20 (24px footer + tab bar). On desktop a
+            // single 28px reservation is enough.
+            statusBarPrefs.enabled && 'lg:pb-7 pb-20',
+          )}
+        >
           <div className="mx-auto max-w-[1600px] px-3 py-4 pb-safe sm:px-5 sm:py-5 lg:px-8 lg:py-8">
             {activeNavEntry && (
               <div className="mb-3 flex min-h-8 items-center justify-between gap-3 border-b border-white/[0.06] pb-2">
@@ -1074,17 +1328,9 @@ export default function Layout() {
                 </p>
               </div>
             )}
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={location.pathname}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.2 }}
-              >
-                <Outlet />
-              </motion.div>
-            </AnimatePresence>
+            <RouteTransition>
+              <Outlet />
+            </RouteTransition>
           </div>
         </main>
       </div>
@@ -1092,15 +1338,24 @@ export default function Layout() {
       {/* Mobile bottom tab bar */}
       <BottomTabBar />
 
+      {/* Footer status bar (Phase-40 / Prompt 59) — always-on health/version
+          surface pinned to the bottom of the viewport. Hides itself when the
+          user toggles it off in Settings → Appearance. */}
+      <StatusBar />
+
       {/* Command Palette */}
       <CommandPalette onOpen={() => setSidebarOpen(false)} />
 
       {/* PWA Install Prompt */}
       <InstallPrompt />
 
+      {/* Offline status banner (PWA / mobile) */}
+      <OfflineBanner />
+
       {/* Keyboard shortcut overlays */}
+      <GlobalShortcuts />
       <GotoIndicator visible={shortcutMode === 'goto'} />
-      <KeyboardCheatSheet open={showCheatSheet} onClose={toggleCheatSheet} />
+      <KeyboardShortcutsModal open={showCheatSheet} onClose={toggleCheatSheet} />
 
       {/* Onboarding tour */}
       {tour.isActive && tour.step && (
@@ -1114,6 +1369,14 @@ export default function Layout() {
           onSkip={tour.skip}
         />
       )}
+
+      {/* Tour launcher (Phase-40 / Prompt 65) — opens via TOUR_OPEN_LAUNCHER_EVENT */}
+      <TourLauncher />
+
+      {/* "What's new since last visit" modal (Phase-40 / Prompt 67) — auto-shows
+          once-per-24h after the OnboardingWizard, or on demand via the command
+          palette ("What's new") and footer status bar version segment. */}
+      <ChangelogModal />
     </div>
   )
 }

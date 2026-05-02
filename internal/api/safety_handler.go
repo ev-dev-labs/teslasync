@@ -6,16 +6,40 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
-// SafetyHandler serves safety snapshot endpoints backed by signal_log.
+// SafetyHandler serves safety / ADAS snapshot endpoints backed by the
+// signal-log change feed via signal.StateReader (ADR-002 / phase-39).
+//
+// Phase-39 migration: the legacy *database.SignalLogReader (the old pivot
+// + snapshot helpers) has been replaced with the canonical
+// signal.StateReader.
+//
+// ADAS / Autopilot enable flags (AutomaticEmergencyBrakingOff,
+// LaneDepartureAvoidance, ForwardCollisionWarning, PinToDriveEnabled, …)
+// are user-configured driver-assist toggles that VERY rarely change —
+// often once at vehicle delivery and never again, sometimes never. Under
+// the legacy raw-pivot implementation, every chart row whose bucket did
+// not contain a fresh emission for one of these flags rendered that
+// column as NULL, leaving the safety history table almost entirely
+// blank for any vehicle that had stable ADAS settings. With
+// StateReader.Timeline forward-folding (chart mode — empty CollapseBy so
+// every change-feed emission becomes one row), every row carries the
+// most-recently-observed value of every projected signal, fixing the
+// carry-forward gap end-to-end. This is critically important for the
+// safety domain because the absence of a recent emission MUST NOT be
+// misread as the feature being disabled.
 type SafetyHandler struct {
-	signalLogReader *database.SignalLogReader
+	state signal.StateReader
 }
 
-// Signal → JSON field mappings for safety pivot queries (ADAS signals).
-var safetyMappings = []database.PivotMapping{
+// Signal → JSON field mappings for safety / ADAS timeline + state
+// projection. Field names match the existing safety response shape
+// (snake_case; the frontend camelCaseKeys transform produces matching
+// camelCase keys on the wire).
+var safetyMappings = []signal.FieldMapping{
 	{Signal: "AutomaticEmergencyBrakingOff", Field: "automatic_emergency_braking_off"},
 	{Signal: "AutomaticBlindSpotCamera", Field: "automatic_blind_spot_camera"},
 	{Signal: "BlindSpotCollisionWarningChime", Field: "blind_spot_collision_warning"},
@@ -29,11 +53,16 @@ var safetyMappings = []database.PivotMapping{
 	{Signal: "SelfDrivingMilesSinceReset", Field: "self_driving_miles_since_reset"},
 }
 
-func NewSafetyHandler(slr *database.SignalLogReader) *SafetyHandler {
-	return &SafetyHandler{signalLogReader: slr}
+func NewSafetyHandler(state signal.StateReader) *SafetyHandler {
+	return &SafetyHandler{state: state}
 }
 
-// List returns safety history from signal_log via SignalTracePivotFlat.
+// List returns safety / ADAS history from the signal-log change feed via
+// StateReader.Timeline in CHART MODE (empty CollapseBy). Each emission
+// becomes one row; forward-folding ensures the rarely-emitted ADAS enable
+// flags carry their most-recent values across rows where they did not
+// re-emit, so the safety history table never blanks a column simply
+// because the user has not toggled that setting recently.
 func (h *SafetyHandler) List(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
 	if err != nil || vehicleID == 0 {
@@ -50,16 +79,14 @@ func (h *SafetyHandler) List(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	rows, err := h.signalLogReader.SignalTracePivotFlat(r.Context(),
-		vehicleID, safetyMappings, from, to)
+	timelineRows, err := h.state.Timeline(r.Context(),
+		vehicleID, safetyMappings, from, to, signal.TimelineOptions{})
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get safety data from signal_log")
 		writeError(w, http.StatusInternalServerError, "failed to get safety data")
 		return
 	}
-	if rows == nil {
-		rows = []map[string]interface{}{}
-	}
+	rows := timelineRowsToFlat(timelineRows)
 	for i, row := range rows {
 		if ts, ok := row["ts"]; ok {
 			row["created_at"] = ts
@@ -69,7 +96,10 @@ func (h *SafetyHandler) List(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, rows)
 }
 
-// Latest returns the most recent safety values via SnapshotAt(now).
+// Latest returns the most recent safety / ADAS values, derived from the
+// forward-folded signal-log state at time.Now() via StateReader.State.
+// Every safetyMappings entry whose Signal is present in State is projected
+// under its mapped Field name; absent signals are omitted.
 func (h *SafetyHandler) Latest(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
 	if err != nil || vehicleID == 0 {
@@ -77,7 +107,7 @@ func (h *SafetyHandler) Latest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	snap, err := h.signalLogReader.SnapshotAt(r.Context(), vehicleID, time.Now())
+	snap, err := h.state.State(r.Context(), vehicleID, time.Now())
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get latest safety data")
 		writeError(w, http.StatusInternalServerError, "failed to get latest safety data")

@@ -2,7 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
-import { useToast } from '@/components/feedback/Toast';
+import { useMutationToast } from './_toastHelpers';
+import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import type { Vehicle } from '@/types/vehicle';
 import type { VehicleState } from '../types';
 export { deriveVehicleStatus as getVehicleStatus } from '../types';
@@ -87,60 +88,52 @@ export function useVehiclePositions(vehicleId: number, limit = 100) {
 
 export function useRefreshVehicle() {
   const queryClient = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (id: string) => request<Vehicle>(`/vehicles/${id}/wake`, { method: 'POST' }),
     onSuccess: (data, id) => {
       queryClient.setQueryData(vehicleKeys.detail(id), data);
-      queryClient.invalidateQueries({ queryKey: vehicleKeys.all });
-      toast.success('Vehicle refreshed');
+      invalidateAndBroadcast(queryClient, { queryKey: vehicleKeys.all });
+      success('toast.vehicles.refresh.success', 'Vehicle refreshed');
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to refresh vehicle: ${err.message}`);
-    },
+    onError: (e) => error(e, 'toast.vehicles.refresh.error', 'Failed to refresh vehicle'),
   });
 }
 
 export function useDeleteVehicle() {
   const queryClient = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (id: number) => request<void>(`/vehicles/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: vehicleKeys.all });
-      toast.success('Vehicle deleted');
+      invalidateAndBroadcast(queryClient, { queryKey: vehicleKeys.all });
+      success('toast.vehicles.delete.success', 'Vehicle deleted');
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to delete vehicle: ${err.message}`);
-    },
+    onError: (e) => error(e, 'toast.vehicles.delete.error', 'Failed to delete vehicle'),
   });
 }
 
 export function useSyncVehicles() {
   const queryClient = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: () => request<{ synced: number; vehicles: Vehicle[] }>('/vehicles/sync', { method: 'POST' }),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: vehicleKeys.all });
-      toast.success(`Vehicles synced (${data.synced} updated)`);
+      invalidateAndBroadcast(queryClient, { queryKey: vehicleKeys.all });
+      success('toast.vehicles.sync.success', 'Vehicles synced ({{count}} updated)', { count: data.synced });
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to sync vehicles: ${err.message}`);
-    },
+    onError: (e) => error(e, 'toast.vehicles.sync.error', 'Failed to sync vehicles'),
   });
 }
 
 export function useWakeVehicle() {
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (id: number) => request<{ status: string }>(`/vehicles/${id}/wake`, { method: 'POST' }),
     onSuccess: () => {
-      toast.success('Wake command sent');
+      success('toast.vehicles.wake.success', 'Wake command sent');
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to wake vehicle: ${err.message}`);
-    },
+    onError: (e) => error(e, 'toast.vehicles.wake.error', 'Failed to wake vehicle'),
   });
 }
 
@@ -292,16 +285,14 @@ export function useVehicleMobileEnabled(vehicleId?: string) {
 
 export function useRefreshVehicleMobileEnabled(vehicleId?: string) {
   const queryClient = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: () => request<VehicleInfoEnvelope<MobileEnabledData>>(`/vehicles/${vehicleId}/mobile-enabled/refresh`, { method: 'POST' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicle-mobile-enabled', vehicleId] });
-      toast.success('Mobile access status refreshed');
+      success('toast.vehicles.mobileEnabled.refresh.success', 'Mobile access status refreshed');
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to refresh mobile access: ${err.message}`);
-    },
+    onError: (e) => error(e, 'toast.vehicles.mobileEnabled.refresh.error', 'Failed to refresh mobile access'),
   });
 }
 
@@ -316,16 +307,14 @@ export function useVehicleOptions(vehicleId?: string) {
 
 export function useRefreshVehicleOptions(vehicleId?: string) {
   const queryClient = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/options/refresh`, { method: 'POST' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicle-options', vehicleId] });
-      toast.success('Vehicle options refreshed');
+      success('toast.vehicles.options.refresh.success', 'Vehicle options refreshed');
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to refresh options: ${err.message}`);
-    },
+    onError: (e) => error(e, 'toast.vehicles.options.refresh.error', 'Failed to refresh options'),
   });
 }
 
@@ -340,16 +329,14 @@ export function useVehicleSpecs(vehicleId?: string) {
 
 export function useRefreshVehicleSpecs(vehicleId?: string) {
   const queryClient = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/specs/refresh`, { method: 'POST' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicle-specs', vehicleId] });
-      toast.success('Vehicle specs refreshed');
+      success('toast.vehicles.specs.refresh.success', 'Vehicle specs refreshed');
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to refresh specs: ${err.message}`);
-    },
+    onError: (e) => error(e, 'toast.vehicles.specs.refresh.error', 'Failed to refresh specs'),
   });
 }
 
@@ -366,16 +353,14 @@ export function useVehicleSubscriptions(vehicleId?: string) {
 
 export function useRefreshVehicleSubscriptions(vehicleId?: string) {
   const queryClient = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/subscriptions/refresh`, { method: 'POST' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicle-subscriptions', vehicleId] });
-      toast.success('Subscriptions refreshed');
+      success('toast.vehicles.subscriptions.refresh.success', 'Subscriptions refreshed');
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to refresh subscriptions: ${err.message}`);
-    },
+    onError: (e) => error(e, 'toast.vehicles.subscriptions.refresh.error', 'Failed to refresh subscriptions'),
   });
 }
 
@@ -392,16 +377,14 @@ export function useVehicleUpgrades(vehicleId?: string) {
 
 export function useRefreshVehicleUpgrades(vehicleId?: string) {
   const queryClient = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/upgrades/refresh`, { method: 'POST' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicle-upgrades', vehicleId] });
-      toast.success('Upgrades refreshed');
+      success('toast.vehicles.upgrades.refresh.success', 'Upgrades refreshed');
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to refresh upgrades: ${err.message}`);
-    },
+    onError: (e) => error(e, 'toast.vehicles.upgrades.refresh.error', 'Failed to refresh upgrades'),
   });
 }
 
@@ -417,15 +400,13 @@ export function useWarrantyDetails() {
 
 export function useRefreshWarrantyDetails() {
   const queryClient = useQueryClient();
-  const toast = useToast();
+  const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>('/tesla/warranty/refresh', { method: 'POST' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['warranty-details'] });
-      toast.success('Warranty details refreshed');
+      success('toast.vehicles.warranty.refresh.success', 'Warranty details refreshed');
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to refresh warranty details: ${err.message}`);
-    },
+    onError: (e) => error(e, 'toast.vehicles.warranty.refresh.error', 'Failed to refresh warranty details'),
   });
 }

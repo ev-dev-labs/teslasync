@@ -16,12 +16,17 @@ import (
 
 // APIKeyHandler handles API key management endpoints.
 type APIKeyHandler struct {
-	db *database.DB
+	db                *database.DB
+	forwardAuthHeader string
 }
 
 // NewAPIKeyHandler creates a new APIKeyHandler.
-func NewAPIKeyHandler(db *database.DB) *APIKeyHandler {
-	return &APIKeyHandler{db: db}
+//
+// forwardAuthHeader names the request header (e.g. X-Forwarded-User) that the
+// reverse-proxy auth provider injects; when set it is used as the actor on
+// emitted audit_logs entries so they appear in /users/me/activity.
+func NewAPIKeyHandler(db *database.DB, forwardAuthHeader string) *APIKeyHandler {
+	return &APIKeyHandler{db: db, forwardAuthHeader: forwardAuthHeader}
 }
 
 // List returns all API keys (without the hash).
@@ -101,7 +106,7 @@ func (h *APIKeyHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	logAudit(h.db, r.Context(), "create", "api_key", fmt.Sprintf("created key %q", name), r.RemoteAddr)
+	logAuditFromRequest(h.db, r, h.forwardAuthHeader, "create", "api_key", &id, fmt.Sprintf("created key %q", name))
 
 	writeJSON(w, http.StatusCreated, map[string]interface{}{
 		"id":          id,
@@ -125,7 +130,7 @@ func (h *APIKeyHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to delete API key")
 		return
 	}
-	logAudit(h.db, r.Context(), "delete", "api_key", fmt.Sprintf("deleted key id=%d", id), r.RemoteAddr)
+	logAuditFromRequest(h.db, r, h.forwardAuthHeader, "delete", "api_key", &id, fmt.Sprintf("deleted key id=%d", id))
 	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
 
@@ -142,7 +147,7 @@ func (h *APIKeyHandler) Revoke(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to revoke API key")
 		return
 	}
-	logAudit(h.db, r.Context(), "update", "api_key", fmt.Sprintf("revoked key id=%d", id), r.RemoteAddr)
+	logAuditFromRequest(h.db, r, h.forwardAuthHeader, "update", "api_key", &id, fmt.Sprintf("revoked key id=%d", id))
 	writeJSON(w, http.StatusOK, map[string]string{"status": "revoked"})
 }
 

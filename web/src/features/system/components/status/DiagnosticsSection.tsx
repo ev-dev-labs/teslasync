@@ -11,7 +11,7 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell,
   CHART_COLORS,
 } from '@/components/charts';
-import { Skeleton } from '@/components/feedback';
+import { Skeleton, EmptyState } from '@/components/feedback';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { getAPIUsage, getWorkersHealth } from '@/api/devtools';
 import { AccordionSection } from './AccordionSection';
@@ -145,10 +145,11 @@ export function DiagnosticsSection() {
                   ))}
                 </Grid>
               ) : (
-                <div className="flex flex-col items-center justify-center gap-2 py-8 text-white/40">
-                  <Activity className="h-8 w-8 opacity-20" />
-                  <p className="text-xs">{t('common.noData', 'No data available')}</p>
-                </div>
+                <EmptyState
+                  icon={<Activity className="h-8 w-8 opacity-20" />}
+                  message={t('common.noData', 'No data available')}
+                  className="py-8"
+                />
               )}
             </div>
           ) : null}

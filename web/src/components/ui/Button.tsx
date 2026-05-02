@@ -13,6 +13,10 @@ const sizes = {
   sm: 'h-8 px-3 text-xs',
   md: 'h-10 px-4 text-sm',
   lg: 'h-12 px-6 text-base',
+  // Density-aware sizing follows the user's `ui_density` setting via the
+  // density Tailwind utilities (`min-h-d-row px-d-pad-x text-d-base`).
+  // Phase 40 / Prompt 44.
+  auto: 'min-h-d-row px-d-pad-x text-d-base',
 } as const;
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

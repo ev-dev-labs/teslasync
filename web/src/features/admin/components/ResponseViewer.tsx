@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Copy, Check, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { GlassPanel, Button as UiButton } from '@/components/ui';
+import { GlassPanel, Button as UiButton, CopyButton } from '@/components/ui';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
@@ -109,16 +109,9 @@ defer resp.Body.Close()`;
 function SnippetPanel({ method, url, body }: { method: string; url: string; body?: string }) {
   const { t } = useTranslation();
   const [format, setFormat] = useState<'curl' | 'javascript' | 'python' | 'go'>('curl');
-  const [copied, setCopied] = useState(false);
   const [open, setOpen] = useState(false);
 
   const snippet = generateSnippet(method, url, format, body);
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(snippet);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
 
   const formats: Array<{ value: typeof format; label: string }> = [
     { value: 'curl', label: 'cURL' },
@@ -160,17 +153,14 @@ function SnippetPanel({ method, url, body }: { method: string; url: string; body
               </UiButton>
             ))}
             <div className="flex-1" />
-            <UiButton
-              type="button"
-              onClick={handleCopy}
-              className="!text-[10px] !px-2 !py-0.5"
-            >
-              {copied ? (
-                <><Check className="h-3 w-3 mr-1" />{t('playground.copied', 'Copied')}</>
-              ) : (
-                <><Copy className="h-3 w-3 mr-1" />{t('playground.copy', 'Copy')}</>
-              )}
-            </UiButton>
+            <CopyButton
+              text={snippet}
+              variant="primary"
+              size="sm"
+              withToast
+              label={t('playground.copy', 'Copy')}
+              className="!text-[10px] !px-2 !py-0.5 !h-auto"
+            />
           </div>
           <pre className="p-3 text-[11px] font-mono text-white/60 overflow-x-auto whitespace-pre">
             {snippet}

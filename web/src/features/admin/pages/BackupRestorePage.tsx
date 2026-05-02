@@ -1,27 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  Database,
-  Play,
-  Pencil,
-  Trash2,
-  Download,
-  ShieldCheck,
-  Eye,
-  Zap,
-  Plus,
-  HardDrive,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  Loader2,
-  Timer,
-  AlertCircle,
-  FolderOpen,
-  Cloud,
-  Archive,
-} from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Button, Input, Select, Modal, Toggle, ConfirmDialog, DataTable, Textarea, type Column } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
@@ -33,7 +12,8 @@ import { formatDateTime, formatDurationMsCompact, formatRelative } from '@/lib/d
 import { formatBytes, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { getErrorMessage } from '@/lib/errorMessage';
-import { request, getApiBase } from '@/api/client';
+import { request, getApiBase } from '@/api/client';
+import { Icons } from '@/lib/icons';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -104,21 +84,21 @@ const PROVIDER_BADGE_VARIANT: Record<string, 'neutral' | 'warning' | 'info' | 's
   gcs: 'success',
 };
 
-const PROVIDER_ICON: Record<string, typeof FolderOpen> = {
-  local: FolderOpen,
-  s3: Cloud,
-  azure: Cloud,
-  gcs: Cloud,
+const PROVIDER_ICON: Record<string, typeof Icons.folderOpen> = {
+  local: Icons.folderOpen,
+  s3: Icons.cloud,
+  azure: Icons.cloud,
+  gcs: Icons.cloud,
 };
 
 const STATUS_CONFIG: Record<
   string,
-  { color: string; bg: string; icon: typeof CheckCircle2; variant: 'success' | 'danger' | 'info' | 'neutral' }
+  { color: string; bg: string; icon: typeof Icons.successFilled; variant: 'success' | 'danger' | 'info' | 'neutral' }
 > = {
-  completed: { color: 'text-neon-green', bg: 'bg-neon-green/15', icon: CheckCircle2, variant: 'success' },
-  failed: { color: 'text-neon-red', bg: 'bg-neon-red/15', icon: XCircle, variant: 'danger' },
-  running: { color: 'text-neon-cyan', bg: 'bg-neon-cyan/15', icon: Loader2, variant: 'info' },
-  queued: { color: 'text-white/40', bg: 'bg-gray-500/15', icon: Timer, variant: 'neutral' },
+  completed: { color: 'text-neon-green', bg: 'bg-neon-green/15', icon: Icons.successFilled, variant: 'success' },
+  failed: { color: 'text-neon-red', bg: 'bg-neon-red/15', icon: Icons.error, variant: 'danger' },
+  running: { color: 'text-neon-cyan', bg: 'bg-neon-cyan/15', icon: Icons.loading, variant: 'info' },
+  queued: { color: 'text-[var(--text-muted)]', bg: 'bg-gray-500/15', icon: Icons.timer, variant: 'neutral' },
 };
 
 const EMPTY_FORM: ConfigFormData = {
@@ -377,7 +357,7 @@ export default function BackupRestorePage() {
       header: t('backup.provider', 'Provider'),
       render: (row) => {
         const p = PROVIDERS.find((pr) => pr.value === row.provider);
-        const ProvIcon = PROVIDER_ICON[row.provider] ?? Cloud;
+        const ProvIcon = PROVIDER_ICON[row.provider] ?? Icons.cloud;
         return (
           <Badge variant={PROVIDER_BADGE_VARIANT[row.provider] ?? 'neutral'} size="sm">
             <ProvIcon className="h-3 w-3 mr-1" />
@@ -390,7 +370,7 @@ export default function BackupRestorePage() {
       key: 'frequency',
       header: t('backup.frequency', 'Frequency'),
       render: (row) => (
-        <span className="text-sm text-white/60">
+        <span className="text-sm text-[var(--text-secondary)]">
           {row.frequency_days === 1 ? t('backup.daily', 'Daily') : t('backup.everyNDays', `Every ${row.frequency_days}d`, { count: row.frequency_days })}
         </span>
       ),
@@ -399,9 +379,9 @@ export default function BackupRestorePage() {
       key: 'schedule',
       header: t('backup.schedule', 'Schedule'),
       render: (row) => (
-        <div className="space-y-0.5 text-xs text-white/40">
-          <p>{t('backup.lastRun', 'Last')}: <span className="text-white/60">{row.last_run_at ? formatRelative(row.last_run_at) : '—'}</span></p>
-          <p>{t('backup.nextRun', 'Next')}: <span className="text-white/60">{row.next_run_at ? formatRelative(row.next_run_at) : '—'}</span></p>
+        <div className="space-y-0.5 text-xs text-[var(--text-muted)]">
+          <p>{t('backup.lastRun', 'Last')}: <span className="text-[var(--text-secondary)]">{row.last_run_at ? formatRelative(row.last_run_at) : '—'}</span></p>
+          <p>{t('backup.nextRun', 'Next')}: <span className="text-[var(--text-secondary)]">{row.next_run_at ? formatRelative(row.next_run_at) : '—'}</span></p>
         </div>
       ),
     },
@@ -424,7 +404,7 @@ export default function BackupRestorePage() {
           <Button
             size="sm"
             variant="ghost"
-            icon={<Play className="h-3.5 w-3.5" />}
+            icon={<Icons.play className="h-3.5 w-3.5" />}
             onClick={() => triggerMutation.mutate(row.id)}
             loading={triggerMutation.isPending}
             aria-label={t('backup.triggerNow', 'Trigger now')}
@@ -432,14 +412,14 @@ export default function BackupRestorePage() {
           <Button
             size="sm"
             variant="ghost"
-            icon={<Pencil className="h-3.5 w-3.5" />}
+            icon={<Icons.pencil className="h-3.5 w-3.5" />}
             onClick={() => openEdit(row)}
             aria-label={t('backup.edit', 'Edit')}
           />
           <Button
             size="sm"
             variant="ghost"
-            icon={<Trash2 className="h-3.5 w-3.5 text-neon-red" />}
+            icon={<Icons.delete className="h-3.5 w-3.5 text-neon-red" />}
             onClick={() => setDeleteTarget(row)}
             aria-label={t('backup.delete', 'Delete')}
           />
@@ -455,7 +435,7 @@ export default function BackupRestorePage() {
       header: t('backup.time', 'Time'),
       sortable: true,
       render: (row) => (
-        <span className="text-sm text-white/60">
+        <span className="text-sm text-[var(--text-secondary)]">
           {formatDateTime(row.created_at)}
         </span>
       ),
@@ -503,7 +483,7 @@ export default function BackupRestorePage() {
       key: 'file_name',
       header: t('backup.file', 'File'),
       render: (row) => (
-        <span className="text-xs text-white/60 max-w-[200px] truncate block font-mono">
+        <span className="text-xs text-[var(--text-secondary)] max-w-[200px] truncate block font-mono">
           {row.file_name ?? '—'}
         </span>
       ),
@@ -520,7 +500,7 @@ export default function BackupRestorePage() {
       key: 'record_count',
       header: t('backup.records', 'Records'),
       render: (row) => (
-        <span className="text-sm tabular-nums text-white/60 font-mono">
+        <span className="text-sm tabular-nums text-[var(--text-secondary)] font-mono">
           {row.record_count > 0 ? fmtInt(row.record_count) : '—'}
         </span>
       ),
@@ -529,7 +509,7 @@ export default function BackupRestorePage() {
       key: 'duration',
       header: t('backup.duration', 'Duration'),
       render: (row) => (
-        <span className="text-sm tabular-nums text-white/40">
+        <span className="text-sm tabular-nums text-[var(--text-muted)]">
           {row.duration_ms > 0 ? formatDurationMsCompact(row.duration_ms) : '—'}
         </span>
       ),
@@ -544,14 +524,14 @@ export default function BackupRestorePage() {
             <Button
               size="sm"
               variant="ghost"
-              icon={<Download className="h-3.5 w-3.5" />}
+              icon={<Icons.download className="h-3.5 w-3.5" />}
               onClick={() => handleDownload(row.id)}
               aria-label={t('backup.download', 'Download')}
             />
             <Button
               size="sm"
               variant="ghost"
-              icon={<ShieldCheck className="h-3.5 w-3.5" />}
+              icon={<Icons.securityCheck className="h-3.5 w-3.5" />}
               onClick={() => verifyMutation.mutate(row.id)}
               loading={verifyMutation.isPending}
               aria-label={t('backup.verify', 'Verify')}
@@ -559,7 +539,7 @@ export default function BackupRestorePage() {
             <Button
               size="sm"
               variant="ghost"
-              icon={<Eye className="h-3.5 w-3.5" />}
+              icon={<Icons.show className="h-3.5 w-3.5" />}
               onClick={() => handlePreview(row.id)}
               aria-label={t('backup.preview', 'Preview')}
             />
@@ -590,7 +570,7 @@ export default function BackupRestorePage() {
           <Button
             variant="secondary"
             size="sm"
-            icon={<Zap className="h-4 w-4" />}
+            icon={<Icons.charging className="h-4 w-4" />}
             onClick={() => quickBackupMutation.mutate()}
             loading={quickBackupMutation.isPending}
           >
@@ -599,7 +579,7 @@ export default function BackupRestorePage() {
           <Button
             variant="primary"
             size="sm"
-            icon={<Plus className="h-4 w-4" />}
+            icon={<Icons.add className="h-4 w-4" />}
             onClick={openCreate}
           >
             {t('backup.newConfig', 'New Config')}
@@ -608,7 +588,7 @@ export default function BackupRestorePage() {
       }
     >
       {anyError && (
-        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
+        <AlertBanner variant="danger" icon={<Icons.alertCircle className="h-5 w-5" />}>
           {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
         </AlertBanner>
       )}
@@ -623,13 +603,13 @@ export default function BackupRestorePage() {
               <MetricCard
                 label={t('backup.totalConfigs', 'Total Configs')}
                 value={fmtInt(configs.length)}
-                icon={<Database className="h-5 w-5" />}
+                icon={<Icons.database className="h-5 w-5" />}
                 color="cyan"
               />
               <MetricCard
                 label={t('backup.totalBackups', 'Total Backups')}
                 value={fmtInt(stats.totalBackups)}
-                icon={<Archive className="h-5 w-5" />}
+                icon={<Icons.archive className="h-5 w-5" />}
                 color="green"
               />
               <MetricCard
@@ -639,13 +619,13 @@ export default function BackupRestorePage() {
                     ? formatRelative(stats.lastBackup.completed_at ?? stats.lastBackup.created_at)
                     : '—'
                 }
-                icon={<Clock className="h-5 w-5" />}
+                icon={<Icons.clock className="h-5 w-5" />}
                 color="purple"
               />
               <MetricCard
                 label={t('backup.totalSize', 'Total Size')}
                 value={formatBytes(stats.totalSize)}
-                icon={<HardDrive className="h-5 w-5" />}
+                icon={<Icons.hardDrive className="h-5 w-5" />}
               />
             </>
           )}
@@ -658,7 +638,7 @@ export default function BackupRestorePage() {
           <h2 className="mb-4 text-lg font-semibold">{t('backup.configurations', 'Backup Configurations')}</h2>
           {configs.length === 0 && !loadingConfigs ? (
             <EmptyState
-              icon={<Database className="h-10 w-10 text-white/30" />}
+              icon={<Icons.database className="h-10 w-10 text-[var(--text-muted)]" />}
               title={t('backup.noConfigs', 'No backup configurations')}
               message={t('backup.noConfigsMessage', 'Create a backup configuration to start protecting your data.')}
               action={{ label: t('backup.newConfig', 'New Config'), onClick: openCreate }}
@@ -692,7 +672,7 @@ export default function BackupRestorePage() {
           </div>
           {runs.length === 0 && !loadingRuns ? (
             <EmptyState
-              icon={<Clock className="h-10 w-10 text-white/30" />}
+              icon={<Icons.clock className="h-10 w-10 text-[var(--text-muted)]" />}
               title={t('backup.noRuns', 'No backup runs yet')}
               message={t('backup.noRunsMessage', 'Trigger a backup or wait for the scheduled run.')}
             />
@@ -718,9 +698,9 @@ export default function BackupRestorePage() {
                       key={`err-${run.id}`}
                       className="flex items-start gap-2 rounded-lg bg-neon-red/5 p-3 ring-1 ring-neon-red/10"
                     >
-                      <AlertCircle className="h-4 w-4 text-neon-red shrink-0 mt-0.5" />
+                      <Icons.alertCircle className="h-4 w-4 text-neon-red shrink-0 mt-0.5" />
                       <div className="min-w-0">
-                        <p className="text-xs text-neon-red font-medium">
+                        <p className="text-xs text-rose-300 font-medium">
                           {run.file_name ?? `Run #${run.id}`}
                         </p>
                         <p className="text-[11px] text-neon-red/70 mt-0.5 break-words">
@@ -792,7 +772,7 @@ export default function BackupRestorePage() {
 
           {/* dynamic provider fields */}
           <div className="rounded-lg border border-white/5 bg-white/[0.02] p-4">
-            <p className="mb-3 text-sm font-medium text-white/60">
+            <p className="mb-3 text-sm font-medium text-[var(--text-secondary)]">
               {t('backup.providerSettings', 'Provider Settings')}
             </p>
             <div className="grid gap-3">
@@ -876,13 +856,13 @@ export default function BackupRestorePage() {
         {previewData ? (
           <div className="flex flex-col gap-4 p-1">
             <div className="flex items-center gap-2 text-sm">
-              <ShieldCheck
+              <Icons.securityCheck
                 className={cn(
                   'h-4 w-4',
-                  previewData.checksum_verified ? 'text-neon-green' : 'text-neon-red',
+                  previewData.checksum_verified ? 'text-emerald-300' : 'text-rose-300',
                 )}
               />
-              <span className={previewData.checksum_verified ? 'text-neon-green' : 'text-neon-red'}>
+              <span className={previewData.checksum_verified ? 'text-emerald-300' : 'text-rose-300'}>
                 {previewData.checksum_verified
                   ? t('backup.checksumVerified', 'Checksum verified')
                   : t('backup.checksumFailed', 'Checksum verification failed')}
@@ -892,14 +872,14 @@ export default function BackupRestorePage() {
             {/* Metadata */}
             {previewData.metadata && Object.keys(previewData.metadata).length > 0 && (
               <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
-                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-white/40">
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                   {t('backup.metadata', 'Backup Metadata')}
                 </p>
                 <div className="space-y-1 text-xs">
                   {Object.entries(previewData.metadata).map(([k, v]) => (
                     <div key={k} className="flex justify-between">
-                      <span className="text-white/40">{k}</span>
-                      <span className="text-white/60 font-mono">{String(v)}</span>
+                      <span className="text-[var(--text-muted)]">{k}</span>
+                      <span className="text-[var(--text-secondary)] font-mono">{String(v)}</span>
                     </div>
                   ))}
                 </div>
@@ -909,7 +889,7 @@ export default function BackupRestorePage() {
             {/* Tables */}
             {previewData.tables.length > 0 ? (
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">
                   {t('backup.tables', 'Tables')} ({previewData.tables.length})
                 </p>
                 <DataTable<{ name: string; rows: number }>
@@ -938,8 +918,8 @@ export default function BackupRestorePage() {
           </div>
         ) : (
           <div className="py-12 text-center">
-            <Loader2 className="h-6 w-6 animate-spin text-neon-purple mx-auto mb-2" />
-            <p className="text-sm text-white/40">{t('backup.loadingPreview', 'Loading preview…')}</p>
+            <Icons.loading className="h-6 w-6 animate-spin text-neon-purple mx-auto mb-2" />
+            <p className="text-sm text-[var(--text-muted)]">{t('backup.loadingPreview', 'Loading preview…')}</p>
           </div>
         )}
       </Modal>

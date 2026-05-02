@@ -1,0 +1,151 @@
+package tesla
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"strings"
+)
+
+// GetNearbyChargingSites returns charging sites near the vehicle's current location.
+// GET /api/1/vehicles/{vin}/nearby_charging_sites
+func (c *Client) GetNearbyChargingSites(ctx context.Context, vin string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/vehicles/%s/nearby_charging_sites", vin)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// GetReleaseNotes returns firmware release notes for a vehicle.
+// GET /api/1/vehicles/{vin}/release_notes
+func (c *Client) GetReleaseNotes(ctx context.Context, vin string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/vehicles/%s/release_notes", vin)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// GetRecentAlerts returns recent vehicle alerts (recalls, service reminders).
+// GET /api/1/vehicles/{vin}/recent_alerts
+func (c *Client) GetRecentAlerts(ctx context.Context, vin string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/vehicles/%s/recent_alerts", vin)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// GetServiceData returns service history and status for a vehicle.
+// GET /api/1/vehicles/{vin}/service_data
+func (c *Client) GetServiceData(ctx context.Context, vin string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/vehicles/%s/service_data", vin)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// GetFleetStatus provides vehicle state information (firmware, telemetry version, etc.).
+// POST /api/1/vehicles/fleet_status
+func (c *Client) GetFleetStatus(ctx context.Context, vins []string) ([]byte, int, error) {
+	body, _ := json.Marshal(map[string]interface{}{"vins": vins})
+	return c.doRequest(ctx, http.MethodPost, "/api/1/vehicles/fleet_status", bytes.NewReader(body))
+}
+
+// GetMobileEnabled calls GET /api/1/vehicles/{vin}/mobile_enabled.
+func (c *Client) GetMobileEnabled(ctx context.Context, vin string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/vehicles/%s/mobile_enabled", vin)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// GetVehicleOptions calls GET /api/1/dx/vehicles/options?vin={vin}.
+func (c *Client) GetVehicleOptions(ctx context.Context, vin string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/dx/vehicles/options?vin=%s", vin)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// GetVehicleSpecs calls GET /api/1/vehicles/{vin}/specs using a partner token.
+// NOTE: This endpoint costs $0.10 per successful call — cache aggressively.
+func (c *Client) GetVehicleSpecs(ctx context.Context, vin string) ([]byte, int, error) {
+	partnerToken, err := c.GetPartnerToken(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("get partner token: %w", err)
+	}
+	path := fmt.Sprintf("/api/1/vehicles/%s/specs", vin)
+	return c.doRequestWithToken(ctx, http.MethodGet, path, nil, partnerToken)
+}
+
+// GetSubscriptionEligibility calls GET /api/1/dx/vehicles/subscriptions/eligibility?vin={vin}.
+func (c *Client) GetSubscriptionEligibility(ctx context.Context, vin string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/dx/vehicles/subscriptions/eligibility?vin=%s", vin)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// GetUpgradeEligibility calls GET /api/1/dx/vehicles/upgrades/eligibility?vin={vin}.
+func (c *Client) GetUpgradeEligibility(ctx context.Context, vin string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/dx/vehicles/upgrades/eligibility?vin=%s", vin)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// GetWarrantyDetails calls GET /api/1/dx/warranty/details.
+func (c *Client) GetWarrantyDetails(ctx context.Context) ([]byte, int, error) {
+	return c.doRequest(ctx, http.MethodGet, "/api/1/dx/warranty/details", nil)
+}
+
+// ListVehicles returns all vehicles associated with the authenticated Tesla account.
+func (c *Client) ListVehicles(ctx context.Context) ([]VehicleData, error) {
+	data, status, err := c.doRequest(ctx, http.MethodGet, "/api/1/vehicles", nil)
+	if err != nil {
+		return nil, err
+	}
+	if status != http.StatusOK {
+		return nil, fmt.Errorf("list vehicles: status %d", status)
+	}
+
+	var resp struct {
+		Response []VehicleData `json:"response"`
+		Count    int           `json:"count"`
+	}
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("decode vehicles: %w", err)
+	}
+	return resp.Response, nil
+}
+
+// GetVehicleData returns the full snapshot of a vehicle's charge, climate,
+// drive, and config state. Returns ErrVehicleAsleep if the vehicle cannot
+// be reached (408/504). The optional endpoints parameter specifies which
+// vehicle_data sub-endpoints to request; if empty, all endpoints are requested.
+func (c *Client) GetVehicleData(ctx context.Context, vin string, endpoints ...string) (*VehicleDataResponse, error) {
+	epStr := "charge_state;climate_state;drive_state;location_data;vehicle_state;vehicle_config"
+	if len(endpoints) > 0 {
+		epStr = strings.Join(endpoints, ";")
+	}
+	path := fmt.Sprintf("/api/1/vehicles/%s/vehicle_data?endpoints=%s", vin, epStr)
+	data, status, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	if status == http.StatusRequestTimeout || status == http.StatusGatewayTimeout {
+		return nil, ErrVehicleAsleep
+	}
+	if status == http.StatusTooManyRequests {
+		return nil, ErrRateLimited
+	}
+	if status != http.StatusOK {
+		return nil, fmt.Errorf("get vehicle data: status %d", status)
+	}
+
+	var resp struct {
+		Response VehicleDataResponse `json:"response"`
+	}
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("decode vehicle data: %w", err)
+	}
+	return &resp.Response, nil
+}
+
+// WakeUp wakes a vehicle.
+func (c *Client) WakeUp(ctx context.Context, vin string) error {
+	path := fmt.Sprintf("/api/1/vehicles/%s/wake_up", vin)
+	_, status, err := c.doRequest(ctx, http.MethodPost, path, nil)
+	if err != nil {
+		return err
+	}
+	if status != http.StatusOK {
+		return fmt.Errorf("wake up: status %d", status)
+	}
+	return nil
+}

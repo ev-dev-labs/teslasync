@@ -2,26 +2,56 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
+
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
+
+// notifyOutboundClient builds a fresh *http.Client for the named
+// notification adapter (notify-discord/notify-slack/notify-webhook). The
+// sink is read on every call so the most recent SetOutboundSink wins;
+// LoggedTransport tags every entry with service=name in api_call_logs.
+func notifyOutboundClient(name string) *http.Client {
+	return httputil.NewClient(httputil.ClientConfig{
+		Name:          name,
+		Timeout:       config.HTTPClientTimeout,
+		Sink:          currentOutboundSink(),
+		EnableLogging: true,
+	})
+}
 
 // NotificationHandler handles notification channel CRUD and test delivery.
 type NotificationHandler struct {
-	repo *database.NotificationRepo
+	repo  *database.NotificationRepo
+	inbox notificationInboxStore
+}
+
+// notificationInboxStore is the slice of NotificationRepo used by the inbox
+// handlers (filter, bulk, unread-count). Extracted so tests can stub the DB.
+type notificationInboxStore interface {
+	GetLogsFiltered(ctx context.Context, f database.NotificationLogFilters) ([]*models.NotificationLog, error)
+	GetUnreadCount(ctx context.Context) (int64, error)
+	BulkSetRead(ctx context.Context, ids []int64, read bool) (int64, error)
+	BulkSetArchived(ctx context.Context, ids []int64, archived bool) (int64, error)
+	BulkDelete(ctx context.Context, ids []int64) (int64, error)
 }
 
 func NewNotificationHandler(db *database.DB) *NotificationHandler {
-	return &NotificationHandler{repo: database.NewNotificationRepo(db)}
+	repo := database.NewNotificationRepo(db)
+	return &NotificationHandler{repo: repo, inbox: repo}
 }
 
 func (h *NotificationHandler) ListChannels(w http.ResponseWriter, r *http.Request) {
@@ -270,8 +300,12 @@ func (h *NotificationHandler) TestChannel(w http.ResponseWriter, r *http.Request
 }
 
 func (h *NotificationHandler) GetLogs(w http.ResponseWriter, r *http.Request) {
-	limit, offset := pagination(r)
-	logs, err := h.repo.GetLogs(r.Context(), limit, offset)
+	filters, err := parseNotificationLogFilters(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	logs, err := h.inbox.GetLogsFiltered(r.Context(), filters)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get notification logs")
 		writeError(w, http.StatusInternalServerError, "failed to get logs")
@@ -281,6 +315,235 @@ func (h *NotificationHandler) GetLogs(w http.ResponseWriter, r *http.Request) {
 		logs = []*models.NotificationLog{}
 	}
 	writeJSON(w, http.StatusOK, logs)
+}
+
+// parseNotificationLogFilters turns query params into a NotificationLogFilters.
+// All params are optional. Multi-value filters (severity, vehicle_id, rule_id)
+// accept either repeated params (?severity=info&severity=warn) or a single
+// CSV (?severity=info,warn). Snake_case per project conventions.
+func parseNotificationLogFilters(r *http.Request) (database.NotificationLogFilters, error) {
+	q := r.URL.Query()
+	limit, offset := pagination(r)
+	f := database.NotificationLogFilters{Limit: limit, Offset: offset}
+
+	if vs := csvOrRepeated(q, "severity"); len(vs) > 0 {
+		allowed := map[string]bool{"info": true, "warn": true, "critical": true}
+		for _, s := range vs {
+			s = strings.ToLower(strings.TrimSpace(s))
+			if !allowed[s] {
+				return f, fmt.Errorf("invalid severity %q", s)
+			}
+			f.Severities = append(f.Severities, s)
+		}
+	}
+	if vs := csvOrRepeated(q, "vehicle_id"); len(vs) > 0 {
+		ids, err := parseInt64List(vs)
+		if err != nil {
+			return f, fmt.Errorf("invalid vehicle_id: %w", err)
+		}
+		f.VehicleIDs = ids
+	}
+	if vs := csvOrRepeated(q, "rule_id"); len(vs) > 0 {
+		ids, err := parseInt64List(vs)
+		if err != nil {
+			return f, fmt.Errorf("invalid rule_id: %w", err)
+		}
+		f.RuleIDs = ids
+	}
+	if s := q.Get("from"); s != "" {
+		t, err := parseFlexibleTime(s)
+		if err != nil {
+			return f, fmt.Errorf("invalid from: %w", err)
+		}
+		f.From = t
+	}
+	if s := q.Get("to"); s != "" {
+		t, err := parseFlexibleTime(s)
+		if err != nil {
+			return f, fmt.Errorf("invalid to: %w", err)
+		}
+		f.To = t
+	}
+	if s := q.Get("read"); s != "" {
+		v, err := parseBoolish(s)
+		if err != nil {
+			return f, fmt.Errorf("invalid read: %w", err)
+		}
+		f.Read = &v
+	}
+	// Default the inbox view to non-archived. Callers must opt into
+	// archived=true to switch to the Archived tab.
+	f.Archived = boolPtr(false)
+	if s := q.Get("archived"); s != "" {
+		v, err := parseBoolish(s)
+		if err != nil {
+			return f, fmt.Errorf("invalid archived: %w", err)
+		}
+		f.Archived = &v
+	}
+	if s := strings.TrimSpace(q.Get("q")); s != "" {
+		f.Query = s
+	}
+	return f, nil
+}
+
+func csvOrRepeated(q url.Values, key string) []string {
+	if vs, ok := q[key]; ok && len(vs) > 0 {
+		var out []string
+		for _, v := range vs {
+			for _, p := range strings.Split(v, ",") {
+				if p = strings.TrimSpace(p); p != "" {
+					out = append(out, p)
+				}
+			}
+		}
+		return out
+	}
+	return nil
+}
+
+func parseInt64List(in []string) ([]int64, error) {
+	out := make([]int64, 0, len(in))
+	for _, s := range in {
+		n, err := strconv.ParseInt(strings.TrimSpace(s), 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("not an int64: %q", s)
+		}
+		out = append(out, n)
+	}
+	return out, nil
+}
+
+func parseFlexibleTime(s string) (time.Time, error) {
+	for _, layout := range []string{time.RFC3339, time.RFC3339Nano, "2006-01-02"} {
+		if t, err := time.Parse(layout, s); err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("not a recognised time: %q", s)
+}
+
+func parseBoolish(s string) (bool, error) {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "1", "t", "true", "yes", "y":
+		return true, nil
+	case "0", "f", "false", "no", "n":
+		return false, nil
+	}
+	return false, fmt.Errorf("not a boolean: %q", s)
+}
+
+// bulkIDsRequest is the shared body shape for bulk mutation endpoints.
+type bulkIDsRequest struct {
+	IDs []int64 `json:"ids"`
+}
+
+func decodeBulkIDs(r *http.Request) ([]int64, error) {
+	var body bulkIDsRequest
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		return nil, fmt.Errorf("invalid request body: %w", err)
+	}
+	if len(body.IDs) == 0 {
+		return nil, fmt.Errorf("ids must be non-empty")
+	}
+	if len(body.IDs) > 1000 {
+		return nil, fmt.Errorf("ids exceeds 1000 cap")
+	}
+	return body.IDs, nil
+}
+
+// MarkRead flips read_at to NOW() for each id in the request body.
+func (h *NotificationHandler) MarkRead(w http.ResponseWriter, r *http.Request) {
+	ids, err := decodeBulkIDs(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	updated, err := h.inbox.BulkSetRead(r.Context(), ids, true)
+	if err != nil {
+		log.Error().Err(err).Msg("bulk mark read")
+		writeError(w, http.StatusInternalServerError, "failed to mark notifications read")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]int64{"updated": updated})
+}
+
+// MarkUnread clears read_at for each id in the request body.
+func (h *NotificationHandler) MarkUnread(w http.ResponseWriter, r *http.Request) {
+	ids, err := decodeBulkIDs(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	updated, err := h.inbox.BulkSetRead(r.Context(), ids, false)
+	if err != nil {
+		log.Error().Err(err).Msg("bulk mark unread")
+		writeError(w, http.StatusInternalServerError, "failed to mark notifications unread")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]int64{"updated": updated})
+}
+
+// Archive flips archived_at to NOW() for each id, also marking the row read
+// so it stops counting toward the unread badge.
+func (h *NotificationHandler) Archive(w http.ResponseWriter, r *http.Request) {
+	ids, err := decodeBulkIDs(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	updated, err := h.inbox.BulkSetArchived(r.Context(), ids, true)
+	if err != nil {
+		log.Error().Err(err).Msg("bulk archive")
+		writeError(w, http.StatusInternalServerError, "failed to archive notifications")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]int64{"updated": updated})
+}
+
+// Unarchive clears archived_at for each id.
+func (h *NotificationHandler) Unarchive(w http.ResponseWriter, r *http.Request) {
+	ids, err := decodeBulkIDs(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	updated, err := h.inbox.BulkSetArchived(r.Context(), ids, false)
+	if err != nil {
+		log.Error().Err(err).Msg("bulk unarchive")
+		writeError(w, http.StatusInternalServerError, "failed to unarchive notifications")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]int64{"updated": updated})
+}
+
+// DeleteBulk hard-deletes notification log rows. Kept rare/admin-only —
+// archive is preferred for the inbox UX.
+func (h *NotificationHandler) DeleteBulk(w http.ResponseWriter, r *http.Request) {
+	ids, err := decodeBulkIDs(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	deleted, err := h.inbox.BulkDelete(r.Context(), ids)
+	if err != nil {
+		log.Error().Err(err).Msg("bulk delete logs")
+		writeError(w, http.StatusInternalServerError, "failed to delete notifications")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]int64{"deleted": deleted})
+}
+
+// UnreadCount returns the number of non-archived, non-read notification rows.
+// Powers the header bell badge and the favicon badge (Prompt 32 hand-off).
+func (h *NotificationHandler) UnreadCount(w http.ResponseWriter, r *http.Request) {
+	n, err := h.inbox.GetUnreadCount(r.Context())
+	if err != nil {
+		log.Error().Err(err).Msg("unread count")
+		writeError(w, http.StatusInternalServerError, "failed to count unread notifications")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]int64{"count": n})
 }
 
 func (h *NotificationHandler) GetStats(w http.ResponseWriter, r *http.Request) {
@@ -326,7 +589,7 @@ func sendDiscord(webhookURL, title, message string) error {
 			{"title": title, "description": message, "color": 0xE82127},
 		},
 	}
-	return postJSON(webhookURL, payload)
+	return postJSON("notify-discord", webhookURL, payload)
 }
 
 func sendSlack(webhookURL, title, message string) error {
@@ -336,7 +599,7 @@ func sendSlack(webhookURL, title, message string) error {
 	payload := map[string]interface{}{
 		"text": fmt.Sprintf("*%s*\n%s", title, message),
 	}
-	return postJSON(webhookURL, payload)
+	return postJSON("notify-slack", webhookURL, payload)
 }
 
 func sendTelegram(botToken, chatID, title, message string) error {
@@ -349,7 +612,7 @@ func sendTelegram(botToken, chatID, title, message string) error {
 		"text":       fmt.Sprintf("*%s*\n%s", title, message),
 		"parse_mode": "Markdown",
 	}
-	return postJSON(url, payload)
+	return postJSON("notify-webhook", url, payload)
 }
 
 func sendWebhook(url, method, title, message string) error {
@@ -366,7 +629,7 @@ func sendWebhook(url, method, title, message string) error {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := (&http.Client{Timeout: config.HTTPClientTimeout}).Do(req)
+	resp, err := notifyOutboundClient("notify-webhook").Do(req)
 	if err != nil {
 		return err
 	}
@@ -393,7 +656,7 @@ func sendNtfy(serverURL, topic, title, message string) error {
 	req.Header.Set("Title", title)
 	req.Header.Set("Priority", "default")
 	req.Header.Set("Tags", "electric_plug")
-	resp, err := (&http.Client{Timeout: config.HTTPClientTimeout}).Do(req)
+	resp, err := notifyOutboundClient("notify-webhook").Do(req)
 	if err != nil {
 		return err
 	}
@@ -414,15 +677,19 @@ func sendPushover(appToken, userKey, title, message string) error {
 		"title":   title,
 		"message": message,
 	}
-	return postJSON("https://api.pushover.net/1/messages.json", payload)
+	return postJSON("notify-webhook", "https://api.pushover.net/1/messages.json", payload)
 }
 
-func postJSON(url string, payload interface{}) error {
+// postJSON dispatches a JSON payload to the supplied URL using the named
+// outbound client. clientName flows through LoggedTransport as the
+// api_call_logs.service tag so Discord/Slack/generic webhook calls are
+// distinguishable in the hypertable.
+func postJSON(clientName, url string, payload interface{}) error {
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
-	resp, err := (&http.Client{Timeout: config.HTTPClientTimeout}).Post(url, "application/json", bytes.NewReader(body))
+	resp, err := notifyOutboundClient(clientName).Post(url, "application/json", bytes.NewReader(body))
 	if err != nil {
 		return err
 	}

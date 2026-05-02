@@ -1,11 +1,27 @@
 import { lazy } from 'react';
 import {
   HeartPulse, Radio, MapPin, BarChart2, Server, AlertCircle,
-  FileSearch, HardDrive, Download, Info, LayoutDashboard,
+  FileSearch, HardDrive, Download, Info, LayoutDashboard, Rocket,
 } from 'lucide-react';
 import type { WidgetDef } from '../types';
 
 export const SYSTEM_WIDGETS: WidgetDef[] = [
+  {
+    id: 'onboarding-checklist',
+    name: 'Setup Checklist',
+    description: 'First-run setup checklist: connect Tesla, pick a theme, create an alert, and more',
+    icon: Rocket,
+    category: 'system',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 2, rows: 3 },
+    maxSize: { cols: 4, rows: 8 },
+    component: lazy(() => import('../OnboardingChecklistWidget')),
+    help: {
+      i18nKey: 'checklist.help',
+      defaultValue:
+        'Tracks the few things you need to configure before TeslaSync feels useful. Auto-completes each step as you do it; dismiss it once you’re done.',
+    },
+  },
   {
     id: 'uptime-monitor',
     name: 'Uptime Monitor',

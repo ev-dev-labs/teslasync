@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { Zap, Activity, Calendar } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
+import { HelpTooltip } from '@/components/ui/HelpTooltip';
 import { Select } from '@/components/ui/Select';
 import {
-  ChartContainer, ChartTooltip, AREA_DEFAULTS,
+  ChartContainer, ChartTooltip, AREA_DEFAULTS, renderAnnotationLines,
   ComposedChart, Line, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
@@ -203,18 +204,25 @@ export default function RegenEfficiencyPage() {
           {/* Monthly regen trend chart */}
           {monthlyTrend.length > 1 && (
             <FadeIn>
-              <ChartContainer title={t('regen.monthlyTrend', 'Monthly Regen Trend')} height={260}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={monthlyTrend}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                    <XAxis dataKey="month" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} />
-                    <YAxis yAxisId="kwh" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-                    <YAxis yAxisId="drives" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-                    <Tooltip content={<ChartTooltip />} />
-                    <Bar yAxisId="drives" dataKey="drives" name={t('regen.drives', 'Drives')} fill="#a855f7" fillOpacity={0.4} radius={[4, 4, 0, 0]} />
-                    <Line {...AREA_DEFAULTS} yAxisId="kwh" dataKey="regenKwh" name={t('regen.regenKwh', 'Regen kWh')} stroke="#10b981" />
-                  </ComposedChart>
-                </ResponsiveContainer>
+              <ChartContainer
+                title={t('regen.monthlyTrend', 'Monthly Regen Trend')}
+                height={260}
+                annotations={{ vehicleId, scope: 'efficiency', chartId: 'regen-monthly-trend' }}
+              >
+                {({ annotations: chartAnnotations }) => (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={monthlyTrend}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                      <XAxis dataKey="month" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} />
+                      <YAxis yAxisId="kwh" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                      <YAxis yAxisId="drives" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                      <Tooltip content={<ChartTooltip />} />
+                      {renderAnnotationLines(chartAnnotations, (ts) => ts)}
+                      <Bar yAxisId="drives" dataKey="drives" name={t('regen.drives', 'Drives')} fill="#a855f7" fillOpacity={0.4} radius={[4, 4, 0, 0]} />
+                      <Line {...AREA_DEFAULTS} yAxisId="kwh" dataKey="regenKwh" name={t('regen.regenKwh', 'Regen kWh')} stroke="#10b981" />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                )}
               </ChartContainer>
             </FadeIn>
           )}
@@ -224,6 +232,12 @@ export default function RegenEfficiencyPage() {
             <GlassPanel className="p-4 sm:p-5">
               <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
                 <Activity className="h-4 w-4 text-cyan-400" /> {t('regen.metrics', 'Regen Metrics')}
+                <HelpTooltip
+                  size="sm"
+                  i18nKey="help.regenEfficiency.body"
+                  defaultValue="Energy recovered through regenerative braking divided by total energy used during driving. Higher is better — Tesla cars typically reach 15–30% recovery in mixed driving."
+                  ariaLabel={t('help.regenEfficiency.iconLabel', { defaultValue: 'More info about regen metrics' })}
+                />
               </h3>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
                 <div>
@@ -272,10 +286,11 @@ export default function RegenEfficiencyPage() {
                   ))}
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
-                  <Activity className="h-8 w-8 opacity-20" />
-                  <p className="text-xs">{t('common.noData', 'No data available')}</p>
-                </div>
+                <EmptyState
+                  icon={<Activity className="h-8 w-8 opacity-20" />}
+                  message={t('common.noData', 'No data available')}
+                  className="py-8"
+                />
               )}
             </GlassPanel>
           </FadeIn>
