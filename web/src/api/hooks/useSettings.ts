@@ -3,6 +3,7 @@ import { request } from '../client';
 import { useMutationToast } from './_toastHelpers';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
+import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import type { AppSettings, GasPriceStatus } from '@/api/types';
 
 export const settingsKeys = {
@@ -34,7 +35,7 @@ export function useSaveSettings() {
         body: JSON.stringify(data),
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: settingsKeys.settings });
+      invalidateAndBroadcast(qc, { queryKey: settingsKeys.settings });
       success('toast.settings.save.success', 'Settings saved');
     },
     onError: (e) => error(e, 'toast.settings.save.error', 'Failed to save settings'),
@@ -72,7 +73,7 @@ export function useRefreshAuth() {
   return useMutation({
     mutationFn: () => request<void>('/auth/refresh', { method: 'POST' }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: settingsKeys.authStatus });
+      invalidateAndBroadcast(qc, { queryKey: settingsKeys.authStatus });
       success('toast.settings.auth.refresh.success', 'Auth refreshed');
     },
     onError: (e) => error(e, 'toast.settings.auth.refresh.error', 'Failed to refresh auth'),
@@ -85,7 +86,7 @@ export function useDisconnectAuth() {
   return useMutation({
     mutationFn: () => request<void>('/auth/disconnect', { method: 'POST' }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: settingsKeys.authStatus });
+      invalidateAndBroadcast(qc, { queryKey: settingsKeys.authStatus });
       success('toast.settings.auth.disconnect.success', 'Tesla account disconnected');
     },
     onError: (e) => error(e, 'toast.settings.auth.disconnect.error', 'Failed to disconnect'),
@@ -113,7 +114,7 @@ export function useSyncVehicles() {
   return useMutation({
     mutationFn: () => request<{ synced: number }>('/vehicles/sync', { method: 'POST' }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: settingsKeys.vehicles });
+      invalidateAndBroadcast(qc, { queryKey: settingsKeys.vehicles });
       success('toast.settings.vehicles.sync.success', 'Vehicles synced');
     },
     onError: (e) => error(e, 'toast.settings.vehicles.sync.error', 'Failed to sync vehicles'),
@@ -242,7 +243,7 @@ export function useToggleAPISuspend() {
         body: JSON.stringify({ suspended }),
       }),
     onSuccess: (_data, suspended) => {
-      qc.invalidateQueries({ queryKey: settingsKeys.settings });
+      invalidateAndBroadcast(qc, { queryKey: settingsKeys.settings });
       success(
         suspended ? 'toast.settings.api.toggle.suspended' : 'toast.settings.api.toggle.resumed',
         suspended ? 'API suspended' : 'API resumed',

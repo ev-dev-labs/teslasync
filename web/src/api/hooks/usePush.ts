@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { useMutationToast } from './_toastHelpers';
 import { STALE_TIMES } from '@/lib/constants';
+import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import type { PushSubscribeBody, PushSubscriptionRow } from '../types';
 
 /**
@@ -79,7 +80,7 @@ export function useSubscribePush() {
         body: JSON.stringify(body),
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: pushKeys.list });
+      invalidateAndBroadcast(qc, { queryKey: pushKeys.list });
       success('toast.webpush.subscribe.success', 'Browser push enabled on this device');
     },
     onError: (e) => error(e, 'toast.webpush.subscribe.error', 'Failed to enable browser push'),
@@ -103,7 +104,7 @@ export function useUnsubscribePush() {
         body: JSON.stringify({ endpoint }),
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: pushKeys.list });
+      invalidateAndBroadcast(qc, { queryKey: pushKeys.list });
       success('toast.webpush.unsubscribe.success', 'Browser push removed for this device');
     },
     onError: (e) => error(e, 'toast.webpush.unsubscribe.error', 'Failed to remove browser push'),

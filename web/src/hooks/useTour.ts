@@ -4,6 +4,7 @@ import {
   markTourSkipped as markSkippedInRegistry,
   resetAllTours as resetAllInRegistry,
 } from '@/lib/tourRegistry';
+import { broadcast } from '@/lib/broadcast';
 
 export interface TourStep {
   /** CSS selector for the element to highlight */
@@ -115,7 +116,10 @@ export function useTour(
     } else {
       setIsActive(false);
       const ctx = persistRef.current;
-      if (ctx) markCompletedInRegistry(ctx.id, ctx.version);
+      if (ctx) {
+        markCompletedInRegistry(ctx.id, ctx.version);
+        broadcast({ type: 'tour.completed', tourId: ctx.id, version: ctx.version });
+      }
     }
   }, [currentStep]);
 
@@ -128,13 +132,19 @@ export function useTour(
   const skip = useCallback(() => {
     setIsActive(false);
     const ctx = persistRef.current;
-    if (ctx) markSkippedInRegistry(ctx.id, ctx.version);
+    if (ctx) {
+      markSkippedInRegistry(ctx.id, ctx.version);
+      broadcast({ type: 'tour.completed', tourId: ctx.id, version: ctx.version });
+    }
   }, []);
 
   const finish = useCallback(() => {
     setIsActive(false);
     const ctx = persistRef.current;
-    if (ctx) markCompletedInRegistry(ctx.id, ctx.version);
+    if (ctx) {
+      markCompletedInRegistry(ctx.id, ctx.version);
+      broadcast({ type: 'tour.completed', tourId: ctx.id, version: ctx.version });
+    }
   }, []);
 
   return {
@@ -171,4 +181,5 @@ export function isTourCompleted(): boolean {
  */
 export function resetTour(): void {
   resetAllInRegistry();
+  broadcast({ type: 'tour.reset' });
 }

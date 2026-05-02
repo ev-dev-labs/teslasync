@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { ToastProvider } from './components/feedback/Toast'
 import { ErrorBoundary } from './components/feedback/ErrorBoundary'
 import { AchievementUnlockListener } from './components/feedback/AchievementUnlockListener'
+import { QueryBroadcastBridge } from './components/QueryBroadcastBridge'
 import { ThemeProvider } from './components/ui/ThemeProvider'
 import ReloadPrompt from './components/feedback/ReloadPrompt'
 import { SelectedVehicleProvider } from './store/selectedVehicle'
@@ -73,6 +74,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
+        {/* Phase-40 / Prompt 69: rebroadcast cross-tab queryInvalidate
+            messages into this tab's QueryClient. Mounted directly under
+            QueryClientProvider so useQueryClient() resolves. */}
+        <QueryBroadcastBridge />
         <BrowserRouter>
           <ThemeProvider>
             <SelectedVehicleProvider>

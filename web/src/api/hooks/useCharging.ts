@@ -3,6 +3,7 @@ import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import { STALE_TIMES, INTERVALS } from '@/lib/constants';
 import { useMutationToast } from './_toastHelpers';
+import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import type {
   ChargingSession,
   CostForecastData,
@@ -311,7 +312,7 @@ export function useApplySchedule() {
         body: JSON.stringify(params),
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: chargePlannerKeys.all });
+      invalidateAndBroadcast(qc, { queryKey: chargePlannerKeys.all });
       success('toast.charging.apply.success', 'Charge schedule applied');
     },
     onError: (err) => error(err, 'toast.charging.apply.error', 'Failed to apply schedule'),
@@ -352,7 +353,7 @@ export function useBulkDeleteCharging() {
         { method: 'DELETE', body: JSON.stringify({ ids }) },
       ),
     onSuccess: (res) => {
-      qc.invalidateQueries({ queryKey: chargingKeys.all });
+      invalidateAndBroadcast(qc, { queryKey: chargingKeys.all });
       success('toast.bulk.delete.success', '{{count}} deleted', {
         count: res.deleted ?? 0,
       });

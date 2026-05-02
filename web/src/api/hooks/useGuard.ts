@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { useToast } from '@/components/feedback/Toast';
+import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 
 // ── Types ───────────────────────────────────────────────────────────────
 
@@ -85,8 +86,8 @@ export function useSetGuardConfig() {
         body: JSON.stringify(body),
       }),
     onSuccess: (_data, { vehicleId }) => {
-      queryClient.invalidateQueries({ queryKey: guardKeys.config(vehicleId) });
-      queryClient.invalidateQueries({ queryKey: guardKeys.events(vehicleId) });
+      invalidateAndBroadcast(queryClient, { queryKey: guardKeys.config(vehicleId) });
+      invalidateAndBroadcast(queryClient, { queryKey: guardKeys.events(vehicleId) });
       toast.success('Guard configuration updated');
     },
     onError: (err: Error) => {
@@ -104,7 +105,7 @@ export function useGuardPanic() {
         method: 'POST',
       }),
     onSuccess: (_data, vehicleId) => {
-      queryClient.invalidateQueries({ queryKey: guardKeys.events(vehicleId) });
+      invalidateAndBroadcast(queryClient, { queryKey: guardKeys.events(vehicleId) });
       toast.success('Panic alert triggered');
     },
     onError: (err: Error) => {
@@ -122,7 +123,7 @@ export function useAcknowledgeGuardEvent() {
         method: 'POST',
       }),
     onSuccess: (_data, { vehicleId }) => {
-      queryClient.invalidateQueries({ queryKey: guardKeys.events(vehicleId) });
+      invalidateAndBroadcast(queryClient, { queryKey: guardKeys.events(vehicleId) });
       toast.success('Event acknowledged');
     },
     onError: (err: Error) => {

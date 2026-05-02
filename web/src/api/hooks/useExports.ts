@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import { useMutationToast } from './_toastHelpers';
+import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import type { ExportJob } from '@/types/export';
 
 export const exportKeys = {
@@ -100,8 +101,8 @@ export function useCreateExport() {
         body: JSON.stringify(payload),
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: exportKeys.jobs });
-      queryClient.invalidateQueries({ queryKey: exportKeys.all });
+      invalidateAndBroadcast(queryClient, { queryKey: exportKeys.jobs });
+      invalidateAndBroadcast(queryClient, { queryKey: exportKeys.all });
       success('toast.export.create.success', 'Export started');
     },
     onError: (err: Error) => {
@@ -130,8 +131,8 @@ export function useCreateAccountExport() {
         body: JSON.stringify(payload),
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: exportKeys.jobs });
-      queryClient.invalidateQueries({ queryKey: exportKeys.all });
+      invalidateAndBroadcast(queryClient, { queryKey: exportKeys.jobs });
+      invalidateAndBroadcast(queryClient, { queryKey: exportKeys.all });
       success('toast.export.account.success', 'Account export queued');
     },
     onError: (err: Error) => {

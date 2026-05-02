@@ -15,6 +15,7 @@ import {
   useSaveDashboardLayouts,
 } from '@/api/hooks/useSettings';
 import type { DashboardLayoutsPayload } from '@/api/hooks/useSettings';
+import { broadcast, subscribe } from '@/lib/broadcast';
 
 const DASHBOARDS_KEY = 'teslasync-dashboards';
 const ACTIVE_KEY = 'teslasync-active-dashboard';
@@ -460,6 +461,24 @@ export function useDashboardLayout() {
     localStorage.setItem(ACTIVE_KEY, finalActiveId);
   }, [backendLayouts, hydratedFromBackend]);
 
+  /* ─── Cross-tab sync (Phase-40 / Prompt 69) ─── */
+  // When another tab mutates the dashboard layout, re-read from
+  // localStorage so this tab's React state reflects the change. The
+  // sibling tab already wrote the new snapshot via persist/updateActive.
+  useEffect(() => {
+    return subscribe((m) => {
+      if (m.type !== 'dashboard.layout') return;
+      try {
+        const raw = localStorage.getItem(DASHBOARDS_KEY);
+        if (raw) setDashboards(JSON.parse(raw) as SavedDashboard[]);
+        const active = localStorage.getItem(ACTIVE_KEY);
+        if (active) setActiveId(active);
+      } catch {
+        /* ignore malformed peer write */
+      }
+    });
+  }, []);
+
   const activeDashboard = useMemo(() => {
     return dashboards.find((d) => d.id === activeId) ?? dashboards[0] ?? DEFAULT_DASHBOARD;
   }, [dashboards, activeId]);
@@ -491,6 +510,9 @@ export function useDashboardLayout() {
       localStorage.setItem(ACTIVE_KEY, active);
     }
     syncToBackend(dbs, resolvedActive);
+    // Phase-40 / Prompt 69 — let other tabs reload their layout state
+    // from the freshly-written localStorage snapshot.
+    broadcast({ type: 'dashboard.layout' });
   }, [activeId, syncToBackend]);
 
   const updateActive = useCallback(
@@ -501,6 +523,7 @@ export function useDashboardLayout() {
         );
         localStorage.setItem(DASHBOARDS_KEY, JSON.stringify(updated));
         syncToBackend(updated, activeId);
+        broadcast({ type: 'dashboard.layout' });
         return updated;
       });
     },

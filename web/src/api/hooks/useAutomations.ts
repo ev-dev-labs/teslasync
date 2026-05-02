@@ -3,6 +3,7 @@ import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { useMutationToast } from './_toastHelpers';
+import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import type {
   Automation,
   AutomationFull,
@@ -64,7 +65,7 @@ export function useToggleAutomation() {
         body: JSON.stringify({ enabled }),
       }),
     onSuccess: (_data, { enabled }) => {
-      qc.invalidateQueries({ queryKey: automationKeys.all });
+      invalidateAndBroadcast(qc, { queryKey: automationKeys.all });
       if (enabled) {
         success('toast.automation.enabled', 'Automation enabled');
       } else {
@@ -85,7 +86,7 @@ export function useReEnableAutomation() {
         { method: 'PATCH' },
       ),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: automationKeys.all });
+      invalidateAndBroadcast(qc, { queryKey: automationKeys.all });
       success('toast.automation.reEnable.success', 'Automation re-enabled');
     },
     onError: (err) => error(err, 'toast.automation.reEnable.error', 'Failed to re-enable automation'),
@@ -99,8 +100,8 @@ export function useDeleteAutomation() {
     mutationFn: (id: number) =>
       request<void>(`/automations/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: automationKeys.all });
-      qc.invalidateQueries({ queryKey: ['automation-history'] });
+      invalidateAndBroadcast(qc, { queryKey: automationKeys.all });
+      invalidateAndBroadcast(qc, { queryKey: ['automation-history'] });
       success('toast.automation.delete.success', 'Automation deleted');
     },
     onError: (err) => error(err, 'toast.automation.delete.error', 'Failed to delete automation'),
@@ -141,7 +142,7 @@ export function useCreateAutomationFull() {
         body: JSON.stringify(input),
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: automationKeys.all });
+      invalidateAndBroadcast(qc, { queryKey: automationKeys.all });
       success('toast.automation.create.success', 'Automation created');
     },
     onError: (err) => error(err, 'toast.automation.create.error', 'Failed to create automation'),
@@ -159,8 +160,8 @@ export function useUpdateAutomationFull() {
         body: JSON.stringify(input),
       }),
     onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: automationKeys.all });
-      qc.invalidateQueries({ queryKey: automationKeys.detail(vars.id) });
+      invalidateAndBroadcast(qc, { queryKey: automationKeys.all });
+      invalidateAndBroadcast(qc, { queryKey: automationKeys.detail(vars.id) });
       success('toast.automation.update.success', 'Automation updated');
     },
     onError: (err) => error(err, 'toast.automation.update.error', 'Failed to update automation'),

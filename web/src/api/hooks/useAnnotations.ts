@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { useMutationToast } from './_toastHelpers';
 import { STALE_TIMES } from '@/lib/constants';
+import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import type {
   AnnotationCategory,
   AnnotationScope,
@@ -113,7 +114,7 @@ export function useCreateAnnotation() {
         body: JSON.stringify(input),
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: annotationKeys.all });
+      invalidateAndBroadcast(qc, { queryKey: annotationKeys.all });
       success('toast.annotation.created.success', 'Annotation added');
     },
     onError: (e) => error(e, 'toast.annotation.created.error', 'Failed to add annotation'),
@@ -130,7 +131,7 @@ export function useUpdateAnnotation() {
         body: JSON.stringify(patch),
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: annotationKeys.all });
+      invalidateAndBroadcast(qc, { queryKey: annotationKeys.all });
       success('toast.annotation.updated.success', 'Annotation updated');
     },
     onError: (e) => error(e, 'toast.annotation.updated.error', 'Failed to update annotation'),
@@ -144,7 +145,7 @@ export function useDeleteAnnotation() {
     mutationFn: (id: number) =>
       request<void>(`/annotations/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: annotationKeys.all });
+      invalidateAndBroadcast(qc, { queryKey: annotationKeys.all });
       success('toast.annotation.deleted.success', 'Annotation removed');
     },
     onError: (e) => error(e, 'toast.annotation.deleted.error', 'Failed to remove annotation'),

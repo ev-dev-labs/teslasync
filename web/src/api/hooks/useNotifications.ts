@@ -3,6 +3,7 @@ import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS } from '@/lib/constants';
 import { useMutationToast } from './_toastHelpers';
+import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import type {
   Alert,
   AlertRule,
@@ -117,7 +118,7 @@ export function useMarkAlertRead() {
     mutationFn: (id: string) =>
       request<void>(`/alerts/${id}/read`, { method: 'POST' }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: notificationKeys.alerts });
+      invalidateAndBroadcast(qc, { queryKey: notificationKeys.alerts });
       success('toast.alerts.markRead.success', 'Alert marked as read');
     },
     onError: (e) => error(e, 'toast.alerts.markRead.error', 'Failed to mark alert as read'),
@@ -191,7 +192,7 @@ export function useSaveAlertRule() {
       });
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: notificationKeys.alertRules });
+      invalidateAndBroadcast(qc, { queryKey: notificationKeys.alertRules });
       success('toast.alerts.saveRule.success', 'Alert rule saved');
     },
     onError: (e) => error(e, 'toast.alerts.saveRule.error', 'Failed to save alert rule'),
@@ -205,7 +206,7 @@ export function useDeleteAlertRule() {
     mutationFn: (id: number) =>
       request<void>(`/alerts/rules/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: notificationKeys.alertRules });
+      invalidateAndBroadcast(qc, { queryKey: notificationKeys.alertRules });
       success('toast.alerts.deleteRule.success', 'Alert rule deleted');
     },
     onError: (e) => error(e, 'toast.alerts.deleteRule.error', 'Failed to delete alert rule'),
@@ -225,7 +226,7 @@ export function useToggleAlertRule() {
       });
     },
     onSuccess: (_data, { enabled }) => {
-      qc.invalidateQueries({ queryKey: notificationKeys.alertRules });
+      invalidateAndBroadcast(qc, { queryKey: notificationKeys.alertRules });
       success(
         enabled ? 'toast.alerts.toggleRule.enabled' : 'toast.alerts.toggleRule.disabled',
         enabled ? 'Alert rule enabled' : 'Alert rule disabled',
@@ -249,7 +250,7 @@ export function useBulkEnableRules() {
         { method: 'POST', body: JSON.stringify({ ids }) },
       ),
     onSuccess: (res) => {
-      qc.invalidateQueries({ queryKey: notificationKeys.alertRules });
+      invalidateAndBroadcast(qc, { queryKey: notificationKeys.alertRules });
       success('toast.bulk.enable.success', '{{count}} enabled', {
         count: res.updated ?? 0,
       });
@@ -269,7 +270,7 @@ export function useBulkDisableRules() {
         { method: 'POST', body: JSON.stringify({ ids }) },
       ),
     onSuccess: (res) => {
-      qc.invalidateQueries({ queryKey: notificationKeys.alertRules });
+      invalidateAndBroadcast(qc, { queryKey: notificationKeys.alertRules });
       success('toast.bulk.disable.success', '{{count}} disabled', {
         count: res.updated ?? 0,
       });
@@ -310,7 +311,7 @@ export function useSnoozeAlertRule() {
         body: JSON.stringify(body),
       }),
     onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: notificationKeys.alertRules });
+      invalidateAndBroadcast(qc, { queryKey: notificationKeys.alertRules });
       const cleared = vars.minutes != null && vars.minutes <= 0;
       success(
         cleared ? 'toast.alerts.snooze.cleared' : 'toast.alerts.snooze.success',
@@ -351,8 +352,8 @@ export function useUnreadCount() {
 }
 
 function invalidateLogsAndUnread(qc: ReturnType<typeof useQueryClient>) {
-  qc.invalidateQueries({ queryKey: notificationKeys.logs });
-  qc.invalidateQueries({ queryKey: notificationKeys.unreadCount });
+  invalidateAndBroadcast(qc, { queryKey: notificationKeys.logs });
+  invalidateAndBroadcast(qc, { queryKey: notificationKeys.unreadCount });
 }
 
 export function useMarkNotificationsRead() {
@@ -469,7 +470,7 @@ export function useSaveChannel() {
       );
     },
     onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: notificationKeys.channels });
+      invalidateAndBroadcast(qc, { queryKey: notificationKeys.channels });
       const isUpdate = 'id' in vars && typeof vars.id === 'number';
       success(
         isUpdate ? 'toast.channels.save.updated' : 'toast.channels.save.created',
@@ -487,8 +488,8 @@ export function useDeleteChannel() {
     mutationFn: (id: number) =>
       request<void>(`/notifications/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: notificationKeys.channels });
-      qc.invalidateQueries({ queryKey: notificationKeys.stats });
+      invalidateAndBroadcast(qc, { queryKey: notificationKeys.channels });
+      invalidateAndBroadcast(qc, { queryKey: notificationKeys.stats });
       success('toast.channels.delete.success', 'Channel deleted');
     },
     onError: (e) => error(e, 'toast.channels.delete.error', 'Failed to delete channel'),
@@ -502,8 +503,8 @@ export function useToggleChannel() {
     mutationFn: (id: number) =>
       request<NotificationChannel>(`/notifications/${id}/toggle`, { method: 'POST' }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: notificationKeys.channels });
-      qc.invalidateQueries({ queryKey: notificationKeys.stats });
+      invalidateAndBroadcast(qc, { queryKey: notificationKeys.channels });
+      invalidateAndBroadcast(qc, { queryKey: notificationKeys.stats });
       success('toast.channels.toggle.success', 'Channel toggled');
     },
     onError: (e) => error(e, 'toast.channels.toggle.error', 'Failed to toggle channel'),

@@ -3,6 +3,7 @@ import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { useMutationToast } from './_toastHelpers';
+import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import type { Vehicle } from '@/types/vehicle';
 import type { VehicleState } from '../types';
 export { deriveVehicleStatus as getVehicleStatus } from '../types';
@@ -92,7 +93,7 @@ export function useRefreshVehicle() {
     mutationFn: (id: string) => request<Vehicle>(`/vehicles/${id}/wake`, { method: 'POST' }),
     onSuccess: (data, id) => {
       queryClient.setQueryData(vehicleKeys.detail(id), data);
-      queryClient.invalidateQueries({ queryKey: vehicleKeys.all });
+      invalidateAndBroadcast(queryClient, { queryKey: vehicleKeys.all });
       success('toast.vehicles.refresh.success', 'Vehicle refreshed');
     },
     onError: (e) => error(e, 'toast.vehicles.refresh.error', 'Failed to refresh vehicle'),
@@ -105,7 +106,7 @@ export function useDeleteVehicle() {
   return useMutation({
     mutationFn: (id: number) => request<void>(`/vehicles/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: vehicleKeys.all });
+      invalidateAndBroadcast(queryClient, { queryKey: vehicleKeys.all });
       success('toast.vehicles.delete.success', 'Vehicle deleted');
     },
     onError: (e) => error(e, 'toast.vehicles.delete.error', 'Failed to delete vehicle'),
@@ -118,7 +119,7 @@ export function useSyncVehicles() {
   return useMutation({
     mutationFn: () => request<{ synced: number; vehicles: Vehicle[] }>('/vehicles/sync', { method: 'POST' }),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: vehicleKeys.all });
+      invalidateAndBroadcast(queryClient, { queryKey: vehicleKeys.all });
       success('toast.vehicles.sync.success', 'Vehicles synced ({{count}} updated)', { count: data.synced });
     },
     onError: (e) => error(e, 'toast.vehicles.sync.error', 'Failed to sync vehicles'),

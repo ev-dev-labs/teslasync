@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { useMutationToast } from './_toastHelpers';
 import { STALE_TIMES } from '@/lib/constants';
+import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import type { SavedView, SavedViewCreateInput, SavedViewUpdateInput } from '../types';
 
 /**
@@ -59,7 +60,7 @@ export function useCreateSavedView() {
         body: JSON.stringify(input),
       }),
     onSuccess: (created) => {
-      qc.invalidateQueries({ queryKey: savedViewsKeys.list(created.route) });
+      invalidateAndBroadcast(qc, { queryKey: savedViewsKeys.list(created.route) });
       success('toast.savedViews.create.success', 'Saved view created');
     },
     onError: (e) => error(e, 'toast.savedViews.create.error', 'Failed to save view'),
@@ -88,7 +89,7 @@ export function useUpdateSavedView() {
         body: JSON.stringify(patch),
       }),
     onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: savedViewsKeys.list(vars.route) });
+      invalidateAndBroadcast(qc, { queryKey: savedViewsKeys.list(vars.route) });
       success('toast.savedViews.update.success', 'View updated');
     },
     onError: (e) => error(e, 'toast.savedViews.update.error', 'Failed to update view'),
@@ -112,7 +113,7 @@ export function useDeleteSavedView() {
     mutationFn: ({ id }: DeleteSavedViewArgs) =>
       request<void>(`/saved-views/${id}`, { method: 'DELETE' }),
     onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: savedViewsKeys.list(vars.route) });
+      invalidateAndBroadcast(qc, { queryKey: savedViewsKeys.list(vars.route) });
       success('toast.savedViews.delete.success', 'View deleted');
     },
     onError: (e) => error(e, 'toast.savedViews.delete.error', 'Failed to delete view'),
@@ -141,7 +142,7 @@ export function useSetDefaultSavedView() {
         body: JSON.stringify({ is_default: isDefault }),
       }),
     onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: savedViewsKeys.list(vars.route) });
+      invalidateAndBroadcast(qc, { queryKey: savedViewsKeys.list(vars.route) });
       success(
         vars.isDefault ? 'toast.savedViews.setDefault.success' : 'toast.savedViews.unsetDefault.success',
         vars.isDefault ? 'Default view set' : 'Default cleared',

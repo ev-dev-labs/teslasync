@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { useMutationToast } from './_toastHelpers';
 import { STALE_TIMES } from '@/lib/constants';
+import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import type { PinnedItem, PinnedItemType } from '../types';
 
 /**
@@ -82,7 +83,7 @@ export function useTogglePin(type: PinnedItemType) {
       return null;
     },
     onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: pinnedKeys.all });
+      invalidateAndBroadcast(qc, { queryKey: pinnedKeys.all });
       if (vars.pin) {
         success('toast.pin.pinned.success', 'Pinned');
       } else {
@@ -120,7 +121,7 @@ export function useReorderPin(type: PinnedItemType) {
         body: JSON.stringify({ position }),
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: pinnedKeys.list(type) });
+      invalidateAndBroadcast(qc, { queryKey: pinnedKeys.list(type) });
     },
     onError: (e) => error(e, 'toast.pin.reorder.error', 'Failed to reorder pins'),
   });

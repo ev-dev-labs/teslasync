@@ -3,6 +3,7 @@ import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { useMutationToast } from './_toastHelpers';
+import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import type {
   EnergyStats,
   BatteryHealth,
@@ -176,7 +177,7 @@ export function useUpdateTOUSettings() {
         body: JSON.stringify(settings),
       }),
     onSuccess: (_data, { siteId }) => {
-      queryClient.invalidateQueries({ queryKey: ['tesla-site-info', siteId] });
+      invalidateAndBroadcast(queryClient, { queryKey: ['tesla-site-info', siteId] });
       success('toast.energy.tou.success', 'TOU settings saved');
     },
     onError: (err) => error(err, 'toast.energy.tou.error', 'Failed to save TOU settings'),
