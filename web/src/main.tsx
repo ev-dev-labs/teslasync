@@ -31,10 +31,19 @@ const queryClient = new QueryClient({
       retry: 1,
       retryDelay: (attempt) => Math.min(2000 * 2 ** attempt, 30_000),
       refetchOnWindowFocus: false,
+      // PWA: serve cached data when the device is offline instead of
+      // throwing immediately. TanStack Query keeps the query in 'paused'
+      // state until `navigator.onLine` flips back to true, then automatically
+      // refetches. Combined with `<OfflineBanner>` this gives Tesla owners a
+      // usable app inside tunnels / dead-zones without a hard error wall.
       networkMode: 'offlineFirst',
     },
     mutations: {
       retry: 1,
+      // PWA: queue mutations triggered while offline (instead of erroring) and
+      // replay them automatically when the connection returns. Long-term
+      // durability across full page reloads requires a persister — see the
+      // out-of-scope note in phase-40 prompt 36.
       networkMode: 'offlineFirst',
     },
   },

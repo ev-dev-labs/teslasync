@@ -11,6 +11,7 @@ export { PageLoader } from './PageLoader';
 export { PageLoadSkeleton } from './PageLoadSkeleton';
 export { QueryError } from './QueryError';
 export { AlertBanner } from './AlertBanner';
+export { OfflineBanner } from './OfflineBanner';
 export { LiveStaleDataBanner } from './LiveStaleDataBanner';
 export { AuthExpiredOverlay } from './AuthExpiredOverlay';
 export { GotoIndicator } from './GotoIndicator';

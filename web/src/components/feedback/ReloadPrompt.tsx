@@ -10,8 +10,10 @@ const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000
 
 /**
  * Shows a non-intrusive banner when a new version is deployed.
- * Auto-reloads after a short countdown so the user always gets
- * the latest version without manual intervention.
+ * Counts down then auto-reloads so users always run the latest version,
+ * but exposes a Dismiss button to opt out (cancels the countdown and
+ * hides the banner — the next page navigation or update check picks up
+ * the new build).
  */
 export default function ReloadPrompt() {
   const { t } = useTranslation()
@@ -19,7 +21,7 @@ export default function ReloadPrompt() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const {
-    needRefresh: [needRefresh],
+    needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
   } = useRegisterSW({
     onRegisteredSW(_swUrl: string, registration?: ServiceWorkerRegistration) {
@@ -32,9 +34,22 @@ export default function ReloadPrompt() {
     },
   })
 
+  const clearCountdown = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current)
+      timerRef.current = null
+    }
+  }, [])
+
   const doReload = useCallback(() => {
+    clearCountdown()
     updateServiceWorker(true)
-  }, [updateServiceWorker])
+  }, [updateServiceWorker, clearCountdown])
+
+  const dismiss = useCallback(() => {
+    clearCountdown()
+    setNeedRefresh(false)
+  }, [clearCountdown, setNeedRefresh])
 
   useEffect(() => {
     if (!needRefresh) return
@@ -43,23 +58,25 @@ export default function ReloadPrompt() {
     timerRef.current = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
-          if (timerRef.current) clearInterval(timerRef.current)
-          doReload()
+          clearCountdown()
+          updateServiceWorker(true)
           return 0
         }
         return prev - 1
       })
     }, 1000)
 
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current)
-    }
-  }, [needRefresh, doReload])
+    return clearCountdown
+  }, [needRefresh, updateServiceWorker, clearCountdown])
 
   if (!needRefresh) return null
 
   return (
-    <div className="fixed bottom-4 right-4 z-[9999] animate-in slide-in-from-bottom-4 fade-in duration-300">
+    <div
+      role="alert"
+      aria-live="polite"
+      className="fixed bottom-4 right-4 z-[9999] animate-in slide-in-from-bottom-4 fade-in duration-300"
+    >
       <GlassPanel className="!p-4 flex items-center gap-3 border border-neon-cyan/30 shadow-lg shadow-neon-cyan/10 max-w-sm">
         <div className="rounded-lg bg-neon-cyan/10 p-2">
           <RefreshCw className="h-5 w-5 text-neon-cyan animate-spin" />
@@ -73,6 +90,14 @@ export default function ReloadPrompt() {
           </p>
         </div>
         <Button
+          variant="ghost"
+          size="sm"
+          onClick={dismiss}
+          className="shrink-0 text-[var(--text-secondary)]"
+        >
+          {t('pwa.later', 'Later')}
+        </Button>
+        <Button
           variant="primary"
           size="sm"
           onClick={doReload}
@@ -84,3 +109,4 @@ export default function ReloadPrompt() {
     </div>
   )
 }
+

@@ -1088,7 +1088,19 @@
   "pwa": {
     "newVersion": "New version available",
     "reloadingIn": "Reloading in {{seconds}}s...",
-    "reloadNow": "Reload Now"
+    "reloadNow": "Reload Now",
+    "later": "Later",
+    "offline": {
+      "title": "You're offline",
+      "banner": "Showing cached data. New requests will retry when you reconnect."
+    }
+  },
+  "queryError": {
+    "title": "Failed to load data",
+    "retry": "Retry",
+    "offlineTitle": "You're offline",
+    "offlineDetail": "We'll retry automatically when your connection returns.",
+    "retryWhenOnline": "Retry when online"
   },
   "tour": {
     "close": "Close tour",

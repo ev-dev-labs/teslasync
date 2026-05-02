@@ -11,7 +11,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'prompt',
-      includeAssets: ['favicon.svg', 'icons/*.svg', 'icons/*.png'],
+      includeAssets: ['favicon.svg', 'offline.html', 'icons/*.svg', 'icons/*.png'],
       manifest: {
         name: 'TeslaSync',
         short_name: 'TeslaSync',
@@ -59,9 +59,16 @@ export default defineConfig({
       },
       workbox: {
         cleanupOutdatedCaches: true,
-        // Never precache API / SSE / WebSocket traffic
+        // Precache the SPA shell, fonts, icons, and the offline.html backstop.
+        // The default workbox glob already covers the build-output (js/css/html);
+        // the explicit globPatterns here keeps that behaviour explicit and adds
+        // common font / image extensions used by the precached icons.
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff,woff2,json}'],
+        // Never precache API / SSE / WebSocket traffic — see runtimeCaching
+        // below; none of those entries match /api, /ws, or /sse routes, so
+        // authenticated JSON is never written to the service-worker cache.
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api/, /^\/ws/, /^\/healthz/, /^\/readyz/],
+        navigateFallbackDenylist: [/^\/api/, /^\/ws/, /^\/sse/, /^\/healthz/, /^\/readyz/, /^\/metrics/],
         runtimeCaching: [
           {
             // Google Fonts stylesheets

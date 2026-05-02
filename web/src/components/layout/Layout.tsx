@@ -1,5 +1,6 @@
 import { Outlet, NavLink, useLocation } from 'react-router-dom'
 import InstallPrompt from '../feedback/InstallPrompt'
+import { OfflineBanner } from '../feedback/OfflineBanner'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { useTour, isTourCompleted } from '@/hooks/useTour'
@@ -1162,6 +1163,9 @@ export default function Layout() {
 
       {/* PWA Install Prompt */}
       <InstallPrompt />
+
+      {/* Offline status banner (PWA / mobile) */}
+      <OfflineBanner />
 
       {/* Keyboard shortcut overlays */}
       <GotoIndicator visible={shortcutMode === 'goto'} />
