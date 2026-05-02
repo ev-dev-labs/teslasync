@@ -138,6 +138,9 @@ const Settings = lazy(() => import('./features/settings/pages/SettingsPage'))
 // Onboarding (Phase 40 / Prompt 18 — first-run experience)
 const Onboarding = lazy(() => import('./features/onboarding/pages/OnboardingPage'))
 
+// 404 (Phase 40 / Prompt 38 — catch-all route)
+const NotFound = lazy(() => import('./features/system/pages/NotFoundPage'))
+
 // Sharing (public)
 const SharedDrive = lazy(() => import('./features/sharing/pages/SharedDrivePage'))
 
@@ -280,7 +283,13 @@ export default function App() {
         <Route path="charging-heatmap" element={<SafeRoute name="ChargingHeatmap"><ChargingHeatmap /></SafeRoute>} />
         <Route path="speed-profile" element={<SafeRoute name="SpeedProfile"><SpeedProfile /></SafeRoute>} />
         <Route path="tesla-account" element={<SafeRoute name="TeslaAccount"><TeslaAccount /></SafeRoute>} />
+        {/* Phase 40 / Prompt 38 — catch-all inside Layout so unknown URLs still
+            render with the sidebar/header chrome instead of a blank Outlet. */}
+        <Route path="*" element={<SafeRoute name="NotFound"><NotFound /></SafeRoute>} />
       </Route>
+      {/* Outer catch-all defends against any future top-level routes that
+          forget to nest under '/'. In normal operation the inner one wins. */}
+      <Route path="*" element={<SafeRoute name="NotFound"><NotFound /></SafeRoute>} />
       </Routes>
     </>
   )
