@@ -23,6 +23,7 @@ import type {
   ExportJobSubmitResponse,
   ChatResponse,
   ChatMessage,
+  ChatSessionInfo,
 } from './types'
 
 // === Telemetry Capture ===
@@ -160,5 +161,14 @@ export const sendChatMessage = (message: string, sessionId?: string) =>
 /** Fetches the full chat history for a given session. */
 export const getChatHistory = (sessionId: string) =>
   request<ChatMessage[]>(`/chatbot/history?session_id=${sessionId}`)
-/** Lists all available chat session IDs. */
-export const getChatSessions = () => request<string[]>('/chatbot/sessions')
+/** Lists chat sessions with rich metadata (title, message count, timestamps). */
+export const getChatSessions = () => request<ChatSessionInfo[]>('/chatbot/sessions')
+/** Renames a chat session. Pass an empty `title` to clear the override. */
+export const renameChatSession = (sessionId: string, title: string) =>
+  request<{ id: string; title: string }>(`/chatbot/sessions/${encodeURIComponent(sessionId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ title }),
+  })
+/** Deletes a chat session and all its messages. */
+export const deleteChatSession = (sessionId: string) =>
+  request<void>(`/chatbot/sessions/${encodeURIComponent(sessionId)}`, { method: 'DELETE' })

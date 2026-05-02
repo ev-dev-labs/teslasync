@@ -562,6 +562,20 @@ export interface ChatResponse {
   session_id: string
 }
 
+/**
+ * Per-session metadata used to render the chatbot sidebar (Phase 40 / Prompt 56).
+ * `title` is null when the user hasn't renamed the session — the UI then
+ * falls back to `first_message`.
+ */
+export interface ChatSessionInfo {
+  id: string
+  title: string | null
+  first_message: string | null
+  message_count: number
+  last_message_at: string | null
+  created_at: string | null
+}
+
 import { resolveStyle, VEHICLE_STATE_ENTRIES, VEHICLE_STATES } from '@/types/fsm'
 import type { BadgeVariant, VehicleState as _VehicleState } from '@/types/fsm'
 export type { BadgeVariant } from '@/types/fsm'

@@ -1,0 +1,236 @@
+import { useState, useRef, useEffect, type KeyboardEvent } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Bot, User, RotateCw, Pencil, Check, X } from 'lucide-react';
+import { Button, CopyButton, Textarea } from '@/components/ui';
+import { cn } from '@/lib/cn';
+import { formatTime } from '@/lib/dateFormat';
+import type { ChatMessage } from '@/api/types';
+import { MarkdownRenderer } from './MarkdownRenderer';
+
+/**
+ * Local extension of the wire-level ChatMessage with optional UI-only
+ * fields. The page mutates `streamedText` during the typewriter reveal;
+ * `isStreaming` controls whether the action row (copy/regenerate) is
+ * suppressed and the cursor blinks.
+ */
+export interface UIChatMessage extends ChatMessage {
+  isStreaming?: boolean;
+  /** Partial reveal during the typewriter animation. Falls back to content. */
+  streamedText?: string;
+}
+
+interface ChatMessageItemProps {
+  message: UIChatMessage;
+  /**
+   * True only for the LAST assistant message in the list — used to gate
+   * the "Regenerate" affordance (we don't let users regenerate a reply
+   * in the middle of history).
+   */
+  isLastAssistant: boolean;
+  /**
+   * True only for the LAST user message in the list — used to gate the
+   * inline edit affordance (editing a mid-history user message would
+   * orphan the conversation).
+   */
+  isLastUser: boolean;
+  /**
+   * When true, suppress the avatar (consecutive same-role messages). The
+   * timestamp is also hidden unless `isLastInGroup` is true.
+   */
+  isFirstInGroup: boolean;
+  isLastInGroup: boolean;
+  /** Hide all action-row buttons (used while another reply is streaming). */
+  actionsDisabled?: boolean;
+  onRegenerate?: (message: UIChatMessage) => void;
+  onEditAndResend?: (message: UIChatMessage, newText: string) => void;
+}
+
+/**
+ * Single chat row. Renders a user or assistant bubble with hover-revealed
+ * actions (copy on every message; regenerate on the last assistant reply;
+ * edit on the last user message).
+ */
+export function ChatMessageItem({
+  message,
+  isLastAssistant,
+  isLastUser,
+  isFirstInGroup,
+  isLastInGroup,
+  actionsDisabled,
+  onRegenerate,
+  onEditAndResend,
+}: ChatMessageItemProps) {
+  const { t } = useTranslation();
+  const isUser = message.role === 'user';
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(message.content);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (editing && textareaRef.current) {
+      textareaRef.current.focus();
+      const len = textareaRef.current.value.length;
+      textareaRef.current.setSelectionRange(len, len);
+    }
+  }, [editing]);
+
+  const startEdit = () => {
+    setDraft(message.content);
+    setEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setEditing(false);
+    setDraft(message.content);
+  };
+
+  const submitEdit = () => {
+    const trimmed = draft.trim();
+    if (!trimmed || trimmed === message.content.trim()) {
+      cancelEdit();
+      return;
+    }
+    onEditAndResend?.(message, trimmed);
+    setEditing(false);
+  };
+
+  const handleEditKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      submitEdit();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cancelEdit();
+    }
+  };
+
+  const visibleText = message.streamedText ?? message.content;
+  const showAvatar = isFirstInGroup;
+  const showTimestamp = isLastInGroup && !message.isStreaming;
+  const showActions = !message.isStreaming && !actionsDisabled && !editing;
+
+  return (
+    <div
+      className={cn('group flex gap-3', isUser ? 'justify-end' : 'justify-start')}
+      data-role={isUser ? 'user' : 'assistant'}
+    >
+      {!isUser && (
+        <div
+          className={cn(
+            'shrink-0 rounded-lg p-1.5 h-fit mt-1',
+            showAvatar
+              ? 'bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-purple-500/20'
+              : 'invisible',
+          )}
+          aria-hidden={!showAvatar}
+        >
+          <Bot className="h-4 w-4 text-purple-300" />
+        </div>
+      )}
+
+      <div
+        className={cn(
+          'rounded-2xl px-4 py-3 text-sm leading-relaxed border min-w-0',
+          isUser
+            ? 'max-w-[90%] sm:max-w-[70%] bg-cyan-500/10 border-cyan-500/20'
+            : 'max-w-[90%] sm:max-w-[80%] bg-white/5 border-white/10',
+        )}
+        data-print-card
+      >
+        {editing ? (
+          <div className="space-y-2">
+            <Textarea
+              ref={textareaRef}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={handleEditKeyDown}
+              rows={3}
+              aria-label={t('chatbot.aria.editMessage', 'Edit message')}
+            />
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={cancelEdit}
+                icon={<X className="h-3.5 w-3.5" />}
+              >
+                {t('chatbot.actions.cancel', 'Cancel')}
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={submitEdit}
+                disabled={!draft.trim() || draft.trim() === message.content.trim()}
+                icon={<Check className="h-3.5 w-3.5" />}
+              >
+                {t('chatbot.actions.saveAndResend', 'Save & resend')}
+              </Button>
+            </div>
+          </div>
+        ) : isUser ? (
+          <p className="whitespace-pre-wrap text-white/95 break-words">{visibleText}</p>
+        ) : (
+          <div className="text-white/90 break-words">
+            <MarkdownRenderer>{visibleText}</MarkdownRenderer>
+            {message.isStreaming && (
+              <span
+                className="inline-block w-1.5 h-4 ml-0.5 align-text-bottom bg-purple-300/80 motion-safe:animate-pulse"
+                aria-hidden="true"
+              />
+            )}
+          </div>
+        )}
+
+        {showTimestamp && (
+          <p className="text-[10px] mt-2 text-white/40">{formatTime(message.created_at)}</p>
+        )}
+
+        {showActions && (
+          <div className="mt-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+            <CopyButton
+              text={message.content}
+              iconOnly
+              variant="ghost"
+              size="sm"
+              ariaLabel={t('chatbot.aria.copyMessage', 'Copy message')}
+            />
+            {!isUser && isLastAssistant && onRegenerate && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onRegenerate(message)}
+                icon={<RotateCw className="h-3.5 w-3.5" />}
+                aria-label={t('chatbot.aria.regenerate', 'Regenerate response')}
+              >
+                {t('chatbot.actions.regenerate', 'Regenerate')}
+              </Button>
+            )}
+            {isUser && isLastUser && onEditAndResend && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={startEdit}
+                icon={<Pencil className="h-3.5 w-3.5" />}
+                aria-label={t('chatbot.aria.edit', 'Edit and resend')}
+              >
+                {t('chatbot.actions.edit', 'Edit')}
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {isUser && (
+        <div
+          className={cn(
+            'shrink-0 rounded-lg p-1.5 h-fit mt-1',
+            showAvatar ? 'bg-cyan-500/10 border border-cyan-500/20' : 'invisible',
+          )}
+          aria-hidden={!showAvatar}
+        >
+          <User className="h-4 w-4 text-cyan-300" />
+        </div>
+      )}
+    </div>
+  );
+}

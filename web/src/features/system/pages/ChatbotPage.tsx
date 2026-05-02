@@ -1,127 +1,293 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useMemo,
+  useDeferredValue,
+  type KeyboardEvent,
+} from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { Bot, Send, User, Sparkles, MessageSquare, Clock, Loader2 } from 'lucide-react';
+import { Bot, Send, Square, History as HistoryIcon } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel, Button, Input } from '@/components/ui';
+import { GlassPanel, Button, Textarea } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { formatTime } from '@/lib/dateFormat';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { cn } from '@/lib/cn';
-import { sendChatMessage, getChatHistory, getChatSessions } from '@/api/devtools';
+import {
+  useChatSessions,
+  useChatHistory,
+  useSendChatMessage,
+  useRenameChatSession,
+  useDeleteChatSession,
+} from '@/api/hooks/useChat';
 import type { ChatMessage } from '@/api/types';
 
-/* ------------------------------------------------------------------ */
-/*  Constants                                                          */
-/* ------------------------------------------------------------------ */
+import {
+  ChatMessageItem,
+  type UIChatMessage,
+} from '../components/chatbot/ChatMessageItem';
+import { SessionList } from '../components/chatbot/SessionList';
+import { SuggestedPrompts } from '../components/chatbot/SuggestedPrompts';
 
-const SUGGESTED_QUERIES = [
-  'How many vehicles do I have?',
-  'Total distance last 30 days',
-  'What are my battery levels?',
-  'How many drives this week?',
-  'Charging cost this month',
-  'What was my longest drive?',
-  'Top speed record',
-  'Tell me about my last drive',
-  'Show my geofences',
-  'How many alerts do I have?',
-];
-
-/* ------------------------------------------------------------------ */
-/*  Page                                                               */
-/* ------------------------------------------------------------------ */
-
+/**
+ * Chatbot page (Phase 40 / Prompt 56).
+ *
+ * Polished AI assistant surface. The backend `sendChatMessage` endpoint is
+ * still request/response — this page does NOT add server-streaming. It
+ * uses a deliberate client-side typewriter to reveal the assistant reply
+ * character-by-character so the UX matches modern chat surfaces; when
+ * real SSE/WebSocket streaming lands the swap is just changing where
+ * `streamedText` updates come from. See JSDoc on `useTypewriterStream`.
+ *
+ * Keyboard contract:
+ *   Enter         submit
+ *   Shift+Enter   newline
+ *   Escape        stop streaming reveal (instant complete)
+ *   ↑ (empty input) recall last user message into the input
+ */
 export default function ChatbotPage() {
   const { t } = useTranslation();
   usePageTitle(t('chatbot.title', 'AI Assistant'));
+  const motion = useMotionPreference();
 
   const [sessionId, setSessionId] = useState('');
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [showSessions, setShowSessions] = useState(false);
+  const [messages, setMessages] = useState<UIChatMessage[]>([]);
+  const [showSessions, setShowSessions] = useState(true);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  /* ---- queries ---- */
-  const { data: sessions = [] } = useQuery({
-    queryKey: ['chat-sessions'],
-    queryFn: getChatSessions,
-  });
+  const sessionsQuery = useChatSessions();
+  const sessions = sessionsQuery.data ?? [];
 
-  const historyQuery = useQuery({
-    queryKey: ['chat-history', sessionId],
-    queryFn: () => getChatHistory(sessionId),
-    enabled: !!sessionId,
-  });
+  const historyQuery = useChatHistory(sessionId);
 
+  // Hydrate local messages whenever the loaded history changes (switching
+  // sessions or first load). Keeps the typewriter-managed local state as
+  // the source of truth for the in-flight session.
   useEffect(() => {
-    if (historyQuery.data) setMessages(historyQuery.data);
+    if (historyQuery.data) {
+      setMessages(historyQuery.data.map(toUIMessage));
+    }
   }, [historyQuery.data]);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  const renameMut = useRenameChatSession();
+  const deleteMut = useDeleteChatSession();
 
-  /* ---- mutation ---- */
-  const sendMut = useMutation({
-    mutationFn: (message: string) => sendChatMessage(message, sessionId || undefined),
+  // Typewriter state — fully encapsulated so the page logic stays small.
+  const stream = useTypewriterStream({
+    reduceMotion: motion.reduce,
+    onTick: (id, partial) =>
+      setMessages((prev) =>
+        prev.map((m) => (m.id === id ? { ...m, streamedText: partial } : m)),
+      ),
+    onComplete: (id) => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === id ? { ...m, isStreaming: false, streamedText: undefined } : m,
+        ),
+      );
+      // Return focus to the input after the reveal completes.
+      inputRef.current?.focus();
+    },
+  });
+
+  const sendMut = useSendChatMessage({
     onSuccess: (data) => {
       if (!sessionId) setSessionId(data.session_id);
+      const assistantId = nextLocalId();
+      const created = new Date().toISOString();
+      const assistantMsg: UIChatMessage = {
+        id: assistantId,
+        session_id: data.session_id,
+        role: 'assistant',
+        content: data.response,
+        created_at: created,
+        isStreaming: true,
+        streamedText: '',
+      };
+      setMessages((prev) => [...prev, assistantMsg]);
+      stream.start(assistantId, data.response);
+      sessionsQuery.refetch();
+    },
+  });
+
+  // Auto-scroll on every new message AND while a reveal is in progress
+  // (so the user sees the text grow rather than having it appear below
+  // the viewport). useDeferredValue keeps the dependency stable while
+  // many other state pieces change in the same render — without it the
+  // effect would fire on every keystroke into the input box.
+  const deferredCount = useDeferredValue(messages.length);
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({
+      behavior: motion.reduce ? 'auto' : 'smooth',
+      block: 'end',
+    });
+  }, [deferredCount, motion.reduce]);
+
+  // Light-weight tick-driven scroll while the typewriter is active. We
+  // only fire while `stream.isActive` is true so it costs nothing the
+  // rest of the time. `behavior: 'auto'` keeps it cheap (no smooth
+  // animation queue) — the visual effect is "the text grows downward
+  // and the viewport tracks it".
+  useEffect(() => {
+    if (!stream.isActive) return;
+    const id = window.setInterval(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
+    }, 200);
+    return () => window.clearInterval(id);
+  }, [stream.isActive]);
+
+  /* ─── handlers ─────────────────────────────────────────────────────── */
+
+  const submitMessage = useCallback(
+    (text: string) => {
+      const msg = text.trim();
+      if (!msg || sendMut.isPending) return;
+      const userId = nextLocalId();
       setMessages((prev) => [
         ...prev,
         {
-          id: Date.now(),
-          session_id: data.session_id,
-          role: 'assistant',
-          content: data.response,
+          id: userId,
+          session_id: sessionId || 'pending',
+          role: 'user',
+          content: msg,
           created_at: new Date().toISOString(),
         },
       ]);
+      sendMut.mutate({ message: msg, sessionId: sessionId || undefined });
     },
-  });
+    [sendMut, sessionId],
+  );
 
-  /* ---- handlers ---- */
   const handleSend = useCallback(() => {
-    const msg = input.trim();
-    if (!msg || sendMut.isPending) return;
+    submitMessage(input);
     setInput('');
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: Date.now() - 1,
-        session_id: sessionId || 'pending',
-        role: 'user',
-        content: msg,
-        created_at: new Date().toISOString(),
-      },
-    ]);
-    sendMut.mutate(msg);
-  }, [input, sendMut, sessionId]);
+  }, [input, submitMessage]);
 
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
+    (e: KeyboardEvent<HTMLTextAreaElement>) => {
+      // Enter submits; Shift+Enter inserts a newline (default behavior).
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         handleSend();
+        return;
+      }
+      // ↑ on an empty input recalls the last user message for quick edit.
+      if (e.key === 'ArrowUp' && input === '') {
+        const lastUser = [...messages].reverse().find((m) => m.role === 'user');
+        if (lastUser) {
+          e.preventDefault();
+          setInput(lastUser.content);
+        }
       }
     },
-    [handleSend],
+    [handleSend, input, messages],
   );
 
+  // Esc cancels the streaming reveal — listen on the window so it works
+  // regardless of focus position.
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key === 'Escape' && stream.isActive) {
+        stream.stop();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [stream]);
+
   const startNewSession = useCallback(() => {
+    stream.stop();
     setSessionId('');
     setMessages([]);
+    setInput('');
     inputRef.current?.focus();
-  }, []);
+  }, [stream]);
 
-  const loadSession = useCallback((sid: string) => {
-    setSessionId(sid);
-    setShowSessions(false);
-  }, []);
+  const loadSession = useCallback(
+    (sid: string) => {
+      stream.stop();
+      setSessionId(sid);
+    },
+    [stream],
+  );
 
-  /* ---- render ---- */
+  const handleRegenerate = useCallback(
+    (assistantMsg: UIChatMessage) => {
+      // Find the user message immediately preceding this assistant one;
+      // resubmit it so the backend produces a fresh reply, and drop the
+      // old assistant message so the typewriter can re-render cleanly.
+      const idx = messages.findIndex((m) => m.id === assistantMsg.id);
+      if (idx <= 0) return;
+      const userMsg = [...messages.slice(0, idx)].reverse().find((m) => m.role === 'user');
+      if (!userMsg) return;
+      stream.stop();
+      setMessages((prev) => prev.slice(0, idx));
+      sendMut.mutate({ message: userMsg.content, sessionId: sessionId || undefined });
+    },
+    [messages, sendMut, sessionId, stream],
+  );
+
+  const handleEditAndResend = useCallback(
+    (userMsg: UIChatMessage, newText: string) => {
+      // Truncate history at this user message and resubmit with the new
+      // text — same model as ChatGPT-style "edit and regenerate".
+      const idx = messages.findIndex((m) => m.id === userMsg.id);
+      if (idx < 0) return;
+      stream.stop();
+      const truncated = messages.slice(0, idx);
+      const editedId = nextLocalId();
+      setMessages([
+        ...truncated,
+        {
+          ...userMsg,
+          id: editedId,
+          content: newText,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+      sendMut.mutate({ message: newText, sessionId: sessionId || undefined });
+    },
+    [messages, sendMut, sessionId, stream],
+  );
+
+  const handleRename = useCallback(
+    (sid: string, title: string) => {
+      renameMut.mutate({ sessionId: sid, title });
+    },
+    [renameMut],
+  );
+
+  const handleDelete = useCallback(
+    (sid: string) => {
+      deleteMut.mutate({ sessionId: sid });
+      if (sid === sessionId) {
+        startNewSession();
+      }
+    },
+    [deleteMut, sessionId, startNewSession],
+  );
+
+  /* ─── derived ─────────────────────────────────────────────────────── */
+
+  const lastAssistantId = useMemo(
+    () => [...messages].reverse().find((m) => m.role === 'assistant')?.id,
+    [messages],
+  );
+  const lastUserId = useMemo(
+    () => [...messages].reverse().find((m) => m.role === 'user')?.id,
+    [messages],
+  );
+
+  const isStreaming = stream.isActive;
+  const isWaiting = sendMut.isPending && !isStreaming;
+
+  /* ─── render ──────────────────────────────────────────────────────── */
+
   return (
     <PageContainer
       title={t('chatbot.title', 'AI Assistant')}
@@ -129,66 +295,50 @@ export default function ChatbotPage() {
       actions={
         <div className="flex items-center gap-2">
           <Button
-            onClick={() => setShowSessions(!showSessions)}
+            onClick={() => setShowSessions((s) => !s)}
             variant="ghost"
             size="sm"
-            icon={<Clock className="h-4 w-4" />}
+            icon={<HistoryIcon className="h-4 w-4" />}
+            aria-pressed={showSessions}
           >
             {t('chatbot.history', 'History')}
-          </Button>
-          <Button
-            onClick={startNewSession}
-            variant="secondary"
-            size="sm"
-            icon={<Sparkles className="h-4 w-4" />}
-          >
-            {t('chatbot.newChat', 'New Chat')}
           </Button>
         </div>
       }
     >
-      <div className="flex flex-1 gap-4 min-h-0" style={{ height: 'calc(100vh - 14rem)' }}>
-        {/* Session sidebar */}
+      <div
+        className="flex flex-1 gap-4 min-h-0"
+        style={{ height: 'calc(100vh - 14rem)' }}
+      >
         {showSessions && (
           <FadeIn>
-            <GlassPanel className="w-60 shrink-0 overflow-y-auto p-3 space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-wider px-2 py-1 text-[var(--text-secondary)]">
-                {t('chatbot.sessions', 'Sessions')}
-              </p>
-              {sessions.map((sid) => (
-                <Button
-                  key={sid}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => loadSession(sid)}
-                  className={cn(
-                    'w-full justify-start text-xs truncate',
-                    sid === sessionId ? 'bg-purple-500/10 text-purple-400' : '',
-                  )}
-                >
-                  <MessageSquare className="h-3 w-3 mr-2 shrink-0" />
-                  {sid}
-                </Button>
-              ))}
-              {sessions.length === 0 && (
-                <p className="text-xs px-2 py-4 text-center text-[var(--text-muted)]">
-                  {t('chatbot.noSessions', 'No sessions yet')}
-                </p>
-              )}
-            </GlassPanel>
+            <SessionList
+              sessions={sessions}
+              activeSessionId={sessionId}
+              onSelect={loadSession}
+              onNewChat={startNewSession}
+              onRename={handleRename}
+              onDelete={handleDelete}
+              isLoading={sessionsQuery.isLoading}
+              className="h-full"
+            />
           </FadeIn>
         )}
 
-        {/* Chat area */}
         <GlassPanel className="flex flex-col flex-1 !p-0 overflow-hidden">
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.length === 0 && (
+          <div
+            role="log"
+            aria-live="polite"
+            aria-relevant="additions"
+            aria-label={t('chatbot.aria.conversation', 'Conversation')}
+            className="flex-1 overflow-y-auto p-4 space-y-3"
+          >
+            {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full space-y-6 py-12">
                 <div className="relative">
                   <div className="absolute inset-0 rounded-full bg-purple-500/10 blur-xl scale-150" />
                   <div className="relative rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 p-6 border border-white/5">
-                    <Bot className="h-12 w-12 text-purple-400/60" />
+                    <Bot className="h-12 w-12 text-purple-300" aria-hidden="true" />
                   </div>
                 </div>
                 <div className="text-center space-y-2">
@@ -196,66 +346,51 @@ export default function ChatbotPage() {
                     {t('chatbot.howCanIHelp', 'How can I help you?')}
                   </p>
                   <p className="text-sm text-[var(--text-secondary)]">
-                    {t('chatbot.askAbout', 'Ask about your vehicles, drives, charging, and more')}
+                    {t(
+                      'chatbot.askAbout',
+                      'Ask about your vehicles, drives, charging, and more',
+                    )}
                   </p>
                 </div>
-                <div className="flex flex-wrap gap-2 justify-center max-w-lg">
-                  {SUGGESTED_QUERIES.slice(0, 6).map((q) => (
-                    <Button
-                      key={q}
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setInput(q);
-                        inputRef.current?.focus();
-                      }}
-                      className="rounded-full border border-white/5 hover:border-purple-500/20 hover:text-purple-400"
-                    >
-                      {q}
-                    </Button>
-                  ))}
-                </div>
+                <SuggestedPrompts
+                  onPick={(text) => {
+                    setInput(text);
+                    inputRef.current?.focus();
+                  }}
+                />
               </div>
+            ) : (
+              messages.map((msg, i) => {
+                const prev = messages[i - 1];
+                const next = messages[i + 1];
+                const isFirstInGroup = !prev || prev.role !== msg.role;
+                const isLastInGroup = !next || next.role !== msg.role;
+                return (
+                  <ChatMessageItem
+                    key={msg.id}
+                    message={msg}
+                    isLastAssistant={msg.id === lastAssistantId}
+                    isLastUser={msg.id === lastUserId}
+                    isFirstInGroup={isFirstInGroup}
+                    isLastInGroup={isLastInGroup}
+                    actionsDisabled={isStreaming || sendMut.isPending}
+                    onRegenerate={handleRegenerate}
+                    onEditAndResend={handleEditAndResend}
+                  />
+                );
+              })
             )}
 
-            {messages.map((msg, i) => (
-              <FadeIn key={msg.id || i}>
-                <div className={cn('flex gap-3', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
-                  {msg.role === 'assistant' && (
-                    <div className="shrink-0 rounded-lg bg-gradient-to-br from-purple-500/20 to-blue-500/20 p-1.5 h-fit mt-1">
-                      <Bot className="h-4 w-4 text-purple-400" />
-                    </div>
-                  )}
-                  <div
-                    className={cn(
-                      'rounded-2xl px-4 py-3 max-w-[90%] sm:max-w-[80%] text-sm leading-relaxed',
-                      msg.role === 'user'
-                        ? 'bg-cyan-500/10 border border-cyan-500/20'
-                        : 'bg-white/5 border border-white/5',
-                    )}
-                  >
-                    <p className="text-[var(--text-primary)] whitespace-pre-wrap">{msg.content}</p>
-                    <p className="text-[10px] mt-2 opacity-40">{formatTime(msg.created_at)}</p>
-                  </div>
-                  {msg.role === 'user' && (
-                    <div className="shrink-0 rounded-lg bg-cyan-500/10 p-1.5 h-fit mt-1">
-                      <User className="h-4 w-4 text-cyan-400" />
-                    </div>
-                  )}
-                </div>
-              </FadeIn>
-            ))}
-
-            {sendMut.isPending && (
+            {isWaiting && (
               <FadeIn>
                 <div className="flex gap-3 items-start">
-                  <div className="rounded-lg bg-gradient-to-br from-purple-500/20 to-blue-500/20 p-1.5">
-                    <Bot className="h-4 w-4 text-purple-400" />
+                  <div className="rounded-lg bg-gradient-to-br from-purple-500/20 to-blue-500/20 p-1.5 border border-purple-500/20">
+                    <Bot className="h-4 w-4 text-purple-300" aria-hidden="true" />
                   </div>
                   <GlassPanel className="!p-3 flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 text-purple-400 animate-spin" />
+                    <TypingDots reduceMotion={motion.reduce} />
                     <span className="text-sm text-[var(--text-secondary)]">
-                      {t('chatbot.thinking', 'Thinking...')}
+                      {t('chatbot.thinking', 'Thinking…')}
                     </span>
                   </GlassPanel>
                 </div>
@@ -265,28 +400,202 @@ export default function ChatbotPage() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input */}
           <div className="p-4 border-t border-[var(--glass-border)]">
-            <div className="flex items-center gap-3">
-              <Input
+            <label htmlFor="chatbot-input" className="sr-only">
+              {t('chatbot.inputLabel', 'Message')}
+            </label>
+            <div className="flex items-end gap-3">
+              <Textarea
                 ref={inputRef}
+                id="chatbot-input"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={t('chatbot.placeholder', 'Ask about your fleet...')}
-                aria-label={t('chatbot.inputLabel', 'Type a message')}
-                className="flex-1"
+                placeholder={t(
+                  'chatbot.placeholder',
+                  'Ask about your fleet… (Shift+Enter for newline)',
+                )}
+                rows={1}
+                className="flex-1 resize-none min-h-[40px] max-h-40"
+                aria-label={t('chatbot.inputLabel', 'Message')}
               />
-              <Button
-                onClick={handleSend}
-                disabled={!input.trim() || sendMut.isPending}
-                variant="primary"
-                icon={<Send className="h-5 w-5" />}
-              />
+              {isStreaming ? (
+                <Button
+                  onClick={() => stream.stop()}
+                  variant="secondary"
+                  icon={<Square className="h-4 w-4" />}
+                  aria-label={t('chatbot.actions.stopStreaming', 'Stop streaming')}
+                  title={t('chatbot.actions.stopHint', 'Stop reveal (Esc)')}
+                >
+                  {t('chatbot.actions.stop', 'Stop')}
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleSend}
+                  disabled={!input.trim() || sendMut.isPending}
+                  variant="primary"
+                  icon={<Send className="h-4 w-4" />}
+                  aria-label={t('chatbot.actions.send', 'Send message')}
+                />
+              )}
             </div>
           </div>
         </GlassPanel>
       </div>
     </PageContainer>
+  );
+}
+
+/* ─── helpers ─────────────────────────────────────────────────────── */
+
+function toUIMessage(m: ChatMessage): UIChatMessage {
+  return { ...m };
+}
+
+let localIdSeq = 0;
+function nextLocalId(): number {
+  // Negative ids never collide with backend-issued (positive) ids.
+  localIdSeq -= 1;
+  return -Date.now() + localIdSeq;
+}
+
+interface TypewriterStream {
+  start: (id: number, fullText: string) => void;
+  stop: () => void;
+  isActive: boolean;
+}
+
+interface TypewriterOptions {
+  reduceMotion: boolean;
+  onTick: (id: number, partial: string) => void;
+  onComplete: (id: number) => void;
+}
+
+/**
+ * useTypewriterStream — client-side typewriter reveal for assistant
+ * replies. Encapsulates the timer/cleanup so the page component stays
+ * declarative.
+ *
+ * When `prefers-reduced-motion: reduce` is set, the reveal is skipped
+ * entirely and the full text appears immediately — both `onTick` and
+ * `onComplete` still fire so consumers don't have to special-case the
+ * reduced-motion path.
+ *
+ * Reveal rate: ~40 chars per 16ms tick (≈2,500 chars/sec). Tuned to feel
+ * snappy without flooding React's re-render queue. The reveal is fully
+ * cancellable via `stop()` (also fired by Esc and the on-screen Stop
+ * button) — calling stop while a reveal is in flight immediately renders
+ * the rest of the text and runs `onComplete`.
+ */
+function useTypewriterStream(opts: TypewriterOptions): TypewriterStream {
+  const { reduceMotion, onTick, onComplete } = opts;
+  const stateRef = useRef<{
+    id: number | null;
+    full: string;
+    pos: number;
+    raf: number | null;
+    timer: number | null;
+  }>({ id: null, full: '', pos: 0, raf: null, timer: null });
+  const [active, setActive] = useState(false);
+
+  const cleanup = useCallback(() => {
+    const s = stateRef.current;
+    if (s.raf != null) {
+      cancelAnimationFrame(s.raf);
+      s.raf = null;
+    }
+    if (s.timer != null) {
+      window.clearTimeout(s.timer);
+      s.timer = null;
+    }
+  }, []);
+
+  const stop = useCallback(() => {
+    const s = stateRef.current;
+    if (s.id == null) return;
+    cleanup();
+    onTick(s.id, s.full);
+    onComplete(s.id);
+    s.id = null;
+    s.pos = 0;
+    s.full = '';
+    setActive(false);
+  }, [cleanup, onTick, onComplete]);
+
+  const start = useCallback(
+    (id: number, fullText: string) => {
+      cleanup();
+      const s = stateRef.current;
+      s.id = id;
+      s.full = fullText;
+      s.pos = 0;
+
+      if (reduceMotion || fullText.length === 0) {
+        onTick(id, fullText);
+        onComplete(id);
+        s.id = null;
+        s.full = '';
+        setActive(false);
+        return;
+      }
+
+      setActive(true);
+      const tick = () => {
+        const cur = stateRef.current;
+        if (cur.id == null) return;
+        const charsPerTick = 40;
+        cur.pos = Math.min(cur.full.length, cur.pos + charsPerTick);
+        onTick(cur.id, cur.full.slice(0, cur.pos));
+        if (cur.pos >= cur.full.length) {
+          const finishedId = cur.id;
+          cur.id = null;
+          cur.pos = 0;
+          cur.full = '';
+          setActive(false);
+          onComplete(finishedId);
+          return;
+        }
+        cur.timer = window.setTimeout(() => {
+          cur.raf = requestAnimationFrame(tick);
+        }, 16);
+      };
+      tick();
+    },
+    [cleanup, onTick, onComplete, reduceMotion],
+  );
+
+  // Stop the timer on unmount — we don't care about the in-flight reveal,
+  // but we MUST not leave a setTimeout firing into a torn-down component.
+  useEffect(() => () => cleanup(), [cleanup]);
+
+  return { start, stop, isActive: active };
+}
+
+/**
+ * Three-dot "thinking" indicator. Honors prefers-reduced-motion by
+ * collapsing to a static dot trio when motion is suppressed.
+ */
+function TypingDots({ reduceMotion }: { reduceMotion: boolean }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1"
+      aria-hidden="true"
+      role="presentation"
+    >
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className={cn(
+            'h-1.5 w-1.5 rounded-full bg-purple-300',
+            !reduceMotion && 'motion-safe:animate-bounce',
+          )}
+          style={
+            !reduceMotion
+              ? { animationDelay: `${i * 120}ms`, animationDuration: '900ms' }
+              : undefined
+          }
+        />
+      ))}
+    </span>
   );
 }

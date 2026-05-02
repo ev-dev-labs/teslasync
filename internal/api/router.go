@@ -756,6 +756,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Post("/", chatbotHandler.Chat)
 			r.Get("/history", chatbotHandler.History)
 			r.Get("/sessions", chatbotHandler.Sessions)
+			r.Patch("/sessions/{id}", chatbotHandler.RenameSession)
+			r.Delete("/sessions/{id}", chatbotHandler.DeleteSession)
 		})
 
 		// Tire Pressure

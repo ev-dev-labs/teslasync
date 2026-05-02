@@ -806,6 +806,16 @@
         "success": "Default cleared"
       }
     },
+    "chatbot": {
+      "rename": {
+        "success": "Conversation renamed",
+        "error": "Failed to rename conversation"
+      },
+      "delete": {
+        "success": "Conversation deleted",
+        "error": "Failed to delete conversation"
+      }
+    },
     "export": {
       "create": {
         "success": "Export started",
@@ -5508,12 +5518,50 @@
     "history": "History",
     "newChat": "New Chat",
     "sessions": "Sessions",
-    "noSessions": "No sessions yet",
+    "noSessions": "No conversations yet",
     "howCanIHelp": "How can I help you?",
     "askAbout": "Ask about your vehicles, drives, charging, and more",
-    "thinking": "Thinking...",
-    "placeholder": "Ask about your fleet...",
-    "inputLabel": "Type a message"
+    "thinking": "Thinking…",
+    "placeholder": "Ask about your fleet… (Shift+Enter for newline)",
+    "inputLabel": "Message",
+    "actions": {
+      "send": "Send message",
+      "stop": "Stop",
+      "stopHint": "Stop reveal (Esc)",
+      "stopStreaming": "Stop streaming",
+      "regenerate": "Regenerate",
+      "edit": "Edit",
+      "cancel": "Cancel",
+      "saveAndResend": "Save & resend"
+    },
+    "suggestion": {
+      "fleetYesterday": "What did my fleet do yesterday?",
+      "chargingCost30d": "Charging cost last 30 days",
+      "socDropping": "Why is my SoC dropping faster this week?",
+      "efficientDrive": "Show me the most efficient drive this month"
+    },
+    "session": {
+      "untitled": "Untitled conversation",
+      "empty": "Empty",
+      "messageCount_one": "{{count}} msg",
+      "messageCount_other": "{{count}} msgs"
+    },
+    "delete": {
+      "title": "Delete conversation?",
+      "message": "This will permanently remove this conversation and all its messages.",
+      "confirm": "Delete"
+    },
+    "aria": {
+      "conversation": "Conversation",
+      "suggestions": "Suggested prompts",
+      "copyMessage": "Copy message",
+      "regenerate": "Regenerate response",
+      "edit": "Edit and resend",
+      "editMessage": "Edit message",
+      "renameSession": "Rename conversation",
+      "deleteSession": "Delete conversation",
+      "doubleClickRename": "Double-click to rename"
+    }
   },
   "commandHistory": {
     "title": "Command History",
