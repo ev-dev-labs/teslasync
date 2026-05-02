@@ -4,6 +4,8 @@ import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { QueryError } from '@/components/feedback';
 import { DateRangeFilter } from '@/components/forms';
+import { SavedViewMenu } from '@/components/data-display';
+import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useChargingSessionsPaginated, useChargingOptimizer } from '@/api/hooks/useCharging';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -37,6 +39,7 @@ import {
 export default function ChargingListPage() {
   const { t } = useTranslation();
   usePageTitle(t('charging.list.title', 'Charging Sessions'));
+  const savedView = useSavedViewUrl();
 
   const { convertDistance, distanceUnit } = useSettings();
   // Phase 40 / Prompt 16: header VehiclePicker is the source of truth.
@@ -103,6 +106,13 @@ export default function ChargingListPage() {
     <PageContainer
       title={t('charging.list.title', 'Charging Sessions')}
       subtitle={t('charging.list.subtitle', 'Cost analysis, charger breakdown, energy patterns, and performance tracking')}
+      actions={
+        <SavedViewMenu
+          route="/charging"
+          currentQuery={savedView.currentQuery}
+          onApply={savedView.apply}
+        />
+      }
     >
       <FadeIn>
         <DateRangeFilter

@@ -14,7 +14,7 @@ import {
 } from '@/components/charts';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { Skeleton, QueryError, EmptyState } from '@/components/feedback';
-import { Currency } from '@/components/data-display';
+import { Currency, SavedViewMenu } from '@/components/data-display';
 import { DateRangeFilter } from '@/components/forms';
 
 import { useEnergyStats } from '@/api/hooks/useEnergy';
@@ -22,6 +22,7 @@ import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
 import { useVehicles, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt, fmtPercent } from '@/lib/numberFormat';
 import { CHARGER_COLORS } from '@/lib/colors';
@@ -80,6 +81,7 @@ export default function EnergyPage() {
   const { t } = useTranslation();
   usePageTitle(t('energy.title', 'Energy'));
   const { convertDistance, convertEfficiency, distanceUnit, efficiencyUnit } = useSettings();
+  const savedView = useSavedViewUrl();
 
   /* ── Vehicle selector ─────────────────────────────────────────── */
   const { data: vehicles } = useVehicles();
@@ -259,6 +261,11 @@ export default function EnergyPage() {
             endDate={endDate}
             onStartDateChange={setStartDate}
             onEndDateChange={setEndDate}
+          />
+          <SavedViewMenu
+            route="/energy"
+            currentQuery={savedView.currentQuery}
+            onApply={savedView.apply}
           />
         </div>
       }

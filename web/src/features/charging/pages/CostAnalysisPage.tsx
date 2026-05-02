@@ -5,10 +5,12 @@ import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { EmptyState } from '@/components/feedback';
 import { DateRangeFilter } from '@/components/forms';
+import { SavedViewMenu } from '@/components/data-display';
 import { useChargingSessionsPaginated, useCostForecast } from '@/api/hooks/useCharging';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { DEFAULT_GAS_PRICE, DEFAULT_MPG, DEFAULT_ELECTRICITY_RATE } from '../components/cost-analysis/constants';
 import { useCostAnalysisData } from '../components/cost-analysis/useCostAnalysisData';
 import {
@@ -28,6 +30,7 @@ import {
 export default function CostAnalysisPage() {
   const { t } = useTranslation();
   usePageTitle(t('costAnalysis.title', 'Cost Analysis'));
+  const savedView = useSavedViewUrl();
 
   const { isMiles, convertDistance, distanceUnit } = useSettings();
   // Phase 40 / Prompt 16: header VehiclePicker is the source of truth.
@@ -94,6 +97,11 @@ export default function CostAnalysisPage() {
             onStartDateChange={setStartDate}
             onEndDateChange={setEndDate}
             presets
+          />
+          <SavedViewMenu
+            route="/cost-analysis"
+            currentQuery={savedView.currentQuery}
+            onApply={savedView.apply}
           />
         </div>
       }

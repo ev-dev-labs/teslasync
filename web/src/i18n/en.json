@@ -727,6 +727,27 @@
         "error": "Failed to remove annotation"
       }
     },
+    "savedViews": {
+      "create": {
+        "success": "Saved view created",
+        "error": "Failed to save view"
+      },
+      "update": {
+        "success": "View updated",
+        "error": "Failed to update view"
+      },
+      "delete": {
+        "success": "View deleted",
+        "error": "Failed to delete view"
+      },
+      "setDefault": {
+        "success": "Default view set",
+        "error": "Failed to update default"
+      },
+      "unsetDefault": {
+        "success": "Default cleared"
+      }
+    },
     "export": {
       "create": {
         "success": "Export started",
@@ -5646,6 +5667,26 @@
     "noMatch": "No signals match current filters",
     "noData": "No signal data available",
     "lastRefreshed": "Last refreshed"
+  },
+  "savedViews": {
+    "title": "Saved views",
+    "saveCurrent": "Save current view…",
+    "manage": "Manage views",
+    "name": "Name",
+    "namePlaceholder": "View name",
+    "empty": "No saved views yet",
+    "emptyQuery": "No filters",
+    "appliedBadge": "View",
+    "clearApplied": "Clear applied view",
+    "deleteTitle": "Delete saved view",
+    "deleteConfirm": "Delete saved view \"{{name}}\"?",
+    "renamePrompt": "Rename view",
+    "makeDefault": "Apply automatically when I open this page",
+    "setDefault": "Set as default",
+    "unsetDefault": "Clear default",
+    "defaultBadge": "Default",
+    "pin": "Pin",
+    "unpin": "Unpin"
   },
   "trips": {
     "detail": {

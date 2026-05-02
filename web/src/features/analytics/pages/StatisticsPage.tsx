@@ -8,7 +8,7 @@ import {
 
 import { PageContainer, Grid } from '@/components/layout';
 import { GlassPanel, Select, Button } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { MetricCard, SavedViewMenu } from '@/components/data-display';
 import {
   RadialGauge, ChartTooltip, ChartContainer, CHART_COLORS,
   chartGrid, axisTickSm,
@@ -24,6 +24,7 @@ import { useFleetAnalytics, useMileageStats, useStateSummary } from '@/api/hooks
 import { useBatteryHealthAnalytics } from '@/api/hooks/useEnergy';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSettings } from '@/hooks/useSettings';
+import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
@@ -54,6 +55,7 @@ export default function StatisticsPage() {
   const { t } = useTranslation();
   usePageTitle(t('statistics.title', 'Statistics'));
   const { convertDistance, distanceUnit } = useSettings();
+  const savedView = useSavedViewUrl();
 
   const [vehicleId, setVehicleId] = useState('');
   const [startDate, setStartDate] = useState(() => {
@@ -120,6 +122,11 @@ export default function StatisticsPage() {
           <Button size="sm" onClick={() => { void refetch(); }}>
             <RefreshCw className="h-3.5 w-3.5" />
           </Button>
+          <SavedViewMenu
+            route="/statistics"
+            currentQuery={savedView.currentQuery}
+            onApply={savedView.apply}
+          />
         </div>
       }
     >

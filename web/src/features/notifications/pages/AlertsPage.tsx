@@ -26,6 +26,8 @@ import { MetricCard } from '@/components/data-display/MetricCard';
 import { AnimatedNumber } from '@/components/data-display/AnimatedNumber';
 import { SeverityBadge } from '@/components/data-display/SeverityBadge';
 import { StatusDot } from '@/components/data-display/StatusDot';
+import { SavedViewMenu } from '@/components/data-display/SavedViewMenu';
+import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { fmtInt } from '@/lib/numberFormat';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Skeleton } from '@/components/feedback/Skeleton';
@@ -451,6 +453,7 @@ export default function AlertsPage() {
   const { t } = useTranslation();
   usePageTitle(t('Alerts'));
   const toast = useToast();
+  const savedView = useSavedViewUrl();
 
   // Phase 40 / Prompt 33 — tab + filter live in the URL so a "?tab=history&filter=critical"
   // deep link works and can be shared.
@@ -570,6 +573,11 @@ export default function AlertsPage() {
           {quietActive && <Badge variant="info" size="sm">{t('Quiet hours')}</Badge>}
           {unreadCount > 0 && <Badge variant="info" size="sm">{unreadCount} {t('unread')}</Badge>}
           {criticalCount > 0 && <Badge variant="danger" size="sm">{criticalCount} {t('critical')}</Badge>}
+          <SavedViewMenu
+            route="/alerts"
+            currentQuery={savedView.currentQuery}
+            onApply={savedView.apply}
+          />
         </div>
       }
     >

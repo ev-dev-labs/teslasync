@@ -10,6 +10,8 @@ import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Pagination } from '@/components/ui/Pagination';
+import { SavedViewMenu } from '@/components/data-display/SavedViewMenu';
+import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import {
   ChartContainer, ChartTooltip,
   AreaChart, Area, BarChart, Bar, ScatterChart, Scatter,
@@ -179,6 +181,7 @@ function DriveCard({
 export default function DrivesListPage() {
   const { t } = useTranslation();
   usePageTitle(t('drives.title', 'Drive History'));
+  const savedView = useSavedViewUrl();
 
   /* Data hooks — Phase 40 / Prompt 16: header VehiclePicker is the source of truth */
   const { vehicleId } = useSelectedVehicle();
@@ -311,6 +314,13 @@ export default function DrivesListPage() {
       subtitle={t('drives.subtitle', 'Trip scoring, efficiency analysis, distance patterns, and performance data')}
       error={drivesError as Error | null}
       copyLink
+      actions={
+        <SavedViewMenu
+          route="/drives"
+          currentQuery={savedView.currentQuery}
+          onApply={savedView.apply}
+        />
+      }
     >
       {/* Date range + search filter */}
       <FadeIn>

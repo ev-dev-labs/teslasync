@@ -121,6 +121,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	dashboardLayoutHandler := NewDashboardLayoutHandler(db)
 	chartAnnotationHandler := NewChartAnnotationHandler(db)
 	pinnedHandler := NewPinnedHandler(db)
+	savedViewsHandler := NewSavedViewsHandler(db, cfg.Auth.ForwardAuthHeader)
 	var pahoForAlerts pahomqtt.Client
 	if mqttClient != nil {
 		pahoForAlerts = mqttClient.Underlying()
@@ -570,6 +571,19 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Post("/", pinnedHandler.Create)
 			r.Patch("/{id}", pinnedHandler.Update)
 			r.Delete("/{id}", pinnedHandler.Delete)
+		})
+
+		// Saved views (Phase 40 / Prompt 50) — durable named URL querystrings
+		// for list pages (filters, sort, pagination). Each row is a snapshot
+		// the user can recall later from the SavedViewMenu component; one
+		// view per (user, route) may be marked default and auto-applies on
+		// mount when the URL has no querystring.
+		r.Route("/saved-views", func(r chi.Router) {
+			r.Use(httprate.LimitByIP(60, 1*time.Minute))
+			r.Get("/", savedViewsHandler.List)
+			r.Post("/", savedViewsHandler.Create)
+			r.Put("/{id}", savedViewsHandler.Update)
+			r.Delete("/{id}", savedViewsHandler.Delete)
 		})
 
 		// Gas Price Auto-Poll

@@ -21,6 +21,7 @@ export {
   type SeverityIconProps,
 } from './SeverityBadge';
 export { StatusDot, type StatusDotProps } from './StatusDot';
+export { SavedViewMenu, type SavedViewMenuProps } from './SavedViewMenu';
 
 // Centralized format components — see ./format for details
 export {

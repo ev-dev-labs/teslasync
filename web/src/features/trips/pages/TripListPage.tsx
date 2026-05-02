@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Route, MapPin, Zap, Clock, Calendar, DollarSign, Download } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Select, Pagination, Button } from '@/components/ui';
-import { MetricCard, InlineMetric } from '@/components/data-display';
+import { MetricCard, InlineMetric, SavedViewMenu } from '@/components/data-display';
 import { ChartContainer, ChartTooltip, ChartGradient, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, axisTickSm, chartGrid, chartAnimation } from '@/components/charts';
 import { DateRangeFilter } from '@/components/forms';
 import { EmptyState, Skeleton } from '@/components/feedback';
@@ -12,6 +12,7 @@ import { useTrips } from '@/api/hooks/useTrips';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { formatDate } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { exportAsCSV, exportAsJSON } from '@/lib/export';
@@ -29,6 +30,7 @@ function formatDuration(startDate: string, endDate: string | null): string {
 export default function TripListPage() {
   const { t } = useTranslation();
   usePageTitle(t('trips.title', 'Trips'));
+  const savedView = useSavedViewUrl();
 
   const { data: vehicles } = useVehicles();
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
@@ -112,6 +114,13 @@ export default function TripListPage() {
       title={t('trips.title', 'Trips')}
       subtitle={t('trips.subtitle', 'Multi-drive trip reports with distance and cost tracking')}
       loading={isLoading}
+      actions={
+        <SavedViewMenu
+          route="/trips"
+          currentQuery={savedView.currentQuery}
+          onApply={savedView.apply}
+        />
+      }
     >
       {/* Vehicle Selector */}
       {vehicleOptions.length > 1 && (

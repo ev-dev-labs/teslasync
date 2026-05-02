@@ -1976,3 +1976,35 @@ export interface PinnedItem {
   pinned_at: string
   context?: string | null
 }
+
+// === Saved views (Phase 40 / Prompt 50) ===
+
+export interface SavedView {
+  id: number
+  user_id?: number | null
+  name: string
+  route: string
+  query: string
+  is_default: boolean
+  is_pinned: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface SavedViewCreateInput {
+  name: string
+  route: string
+  query: string
+  is_default?: boolean
+  is_pinned?: boolean
+  sort_order?: number
+}
+
+export interface SavedViewUpdateInput {
+  name?: string
+  query?: string
+  is_default?: boolean
+  is_pinned?: boolean
+  sort_order?: number
+}

@@ -5,6 +5,7 @@ import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { DataTable } from '@/components/ui/DataTable';
 import { MetricBar } from '@/components/data-display/MetricBar';
+import { SavedViewMenu } from '@/components/data-display/SavedViewMenu';
 import {
   ChartContainer, ChartTooltip, renderAnnotationLines,
   AREA_DEFAULTS, areaGradient,
@@ -22,6 +23,7 @@ import { useDrivingStats, useDrives } from '@/api/hooks/useDriving';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import type { Drive } from '@/types/driving';
@@ -51,6 +53,7 @@ function getEfficiency(drive: Drive): number | null {
 export default function EfficiencyPage() {
   const { t } = useTranslation();
   usePageTitle(t('efficiency.title', 'Efficiency'));
+  const savedView = useSavedViewUrl();
 
   // Phase 40 / Prompt 16: header VehiclePicker is the source of truth.
   const { vehicleId } = useSelectedVehicle();
@@ -198,6 +201,13 @@ export default function EfficiencyPage() {
       title={t('efficiency.title', 'Efficiency')}
       subtitle={t('efficiency.subtitle', 'Energy consumption and driving efficiency analysis')}
       error={null}
+      actions={
+        <SavedViewMenu
+          route="/efficiency"
+          currentQuery={savedView.currentQuery}
+          onApply={savedView.apply}
+        />
+      }
     >
       {/* Date filter */}
       <FadeIn>
