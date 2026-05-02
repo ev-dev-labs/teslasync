@@ -36,7 +36,7 @@ export function TourOverlay({
   const tooltipStyle = getTooltipPosition(step.placement, targetRect);
 
   return (
-    <div className="fixed inset-0 z-[10000]">
+    <div className="fixed inset-0 z-[10000]" data-tour-active="true">
       {/* Dark overlay with spotlight cutout */}
       <div
         className={cn(

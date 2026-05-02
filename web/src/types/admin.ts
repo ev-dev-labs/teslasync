@@ -246,11 +246,17 @@ export interface ChatMessage {
   createdAt: string;
 }
 
-export interface ChangelogEntry {
-  version: string;
-  date: string;
-  changes: string[];
-}
+// ChangelogEntry is generated from CHANGELOG.md by web/scripts/buildChangelog.mjs.
+// The shape lives in @/generated/changelog so the parser, modal, and pages
+// share a single source of truth (Phase-40 / Prompt 67). The legacy
+// `changes: string[]` shape was replaced with a typed `ChangelogChange[]`;
+// any consumer that needs flat strings can `entry.changes.map(c => c.text)`.
+export type {
+  ChangelogChange,
+  ChangelogChangeType,
+  ChangelogBadge,
+  ChangelogEntry,
+} from '@/generated/changelog';
 
 export type RoadmapPhase = 'done' | 'current' | 'next' | 'future';
 

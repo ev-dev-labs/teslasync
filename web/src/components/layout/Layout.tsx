@@ -8,6 +8,7 @@ import { useTour } from '@/hooks/useTour'
 import { GotoIndicator } from '../feedback/GotoIndicator'
 import { KeyboardShortcutsModal } from '../feedback/KeyboardShortcutsModal'
 import { TourOverlay } from '../feedback/TourOverlay'
+import { ChangelogModal } from '../feedback/ChangelogModal'
 import { TourLauncher } from '@/features/onboarding/TourLauncher'
 import {
   TOUR_START_EVENT,
@@ -1361,6 +1362,11 @@ export default function Layout() {
 
       {/* Tour launcher (Phase-40 / Prompt 65) — opens via TOUR_OPEN_LAUNCHER_EVENT */}
       <TourLauncher />
+
+      {/* "What's new since last visit" modal (Phase-40 / Prompt 67) — auto-shows
+          once-per-24h after the OnboardingWizard, or on demand via the command
+          palette ("What's new") and footer status bar version segment. */}
+      <ChangelogModal />
     </div>
   )
 }

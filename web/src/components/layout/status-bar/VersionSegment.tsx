@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Tag, X, ExternalLink } from 'lucide-react';
+import { Tag, X, ExternalLink, Sparkles } from 'lucide-react';
 import { Tooltip, Modal, Button } from '@/components/ui';
 import { request } from '@/api/client';
 import type { VersionInfo, UpdateCheckResult } from '@/api/types';
 import { cn } from '@/lib/cn';
+import { openChangelogModal, useChangelog } from '@/hooks/useChangelog';
 
 /**
  * VersionSegment — Phase-40 / Prompt 59.
@@ -44,6 +45,7 @@ function uptimeLabel(seconds: number | undefined | null): string | null {
 export function VersionSegment({ iconOnly = false }: VersionSegmentProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const { hasUnseen, newEntries } = useChangelog();
 
   const { data: versionInfo } = useQuery({
     queryKey: ['version-info'],
@@ -72,12 +74,13 @@ export function VersionSegment({ iconOnly = false }: VersionSegmentProps) {
       {t('statusBar.version.tooltip', 'TeslaSync version')} · v{appVersion}
       {sha && sha !== 'dev' ? ` · ${sha}` : ''}
       {uptime ? ` · ${t('statusBar.version.uptime', 'up {{uptime}}', { uptime })}` : ''}
+      {hasUnseen ? ` · ${t('changelog.unseenHint', '{{count}} new release(s)', { count: newEntries.length })}` : ''}
     </span>
   );
 
   const ariaLabel = `${t('statusBar.version.aria', 'TeslaSync version')}: v${appVersion}${
     sha && sha !== 'dev' ? ` (${sha})` : ''
-  }`;
+  }${hasUnseen ? `, ${t('changelog.unseenAria', 'unseen changelog')}` : ''}`;
 
   return (
     <>
@@ -101,6 +104,12 @@ export function VersionSegment({ iconOnly = false }: VersionSegmentProps) {
                 <span
                   className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-amber-400"
                   aria-label={t('statusBar.version.updateAvailable', 'Update available')}
+                />
+              )}
+              {hasUnseen && !updateAvailable && (
+                <span
+                  className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-cyan-400"
+                  aria-label={t('changelog.unseenAria', 'unseen changelog')}
                 />
               )}
             </>
@@ -161,6 +170,22 @@ export function VersionSegment({ iconOnly = false }: VersionSegmentProps) {
           )}
 
           <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setOpen(false);
+                openChangelogModal();
+              }}
+            >
+              <Sparkles className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+              {t('changelog.openModal', "What's new")}
+              {hasUnseen && (
+                <span
+                  className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-cyan-400"
+                  aria-hidden
+                />
+              )}
+            </Button>
             <Button
               variant="ghost"
               onClick={() =>

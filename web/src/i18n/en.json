@@ -1243,6 +1243,7 @@
       "shortcuts": "Show keyboard shortcuts",
       "help": "Open documentation",
       "tour": "Show tours",
+      "changelog": "What's new",
       "dashboardEdit": "Edit dashboard layout",
       "dashboardSwitch": "Switch dashboard layout…",
       "dashboardAddWidget": "Add widget to dashboard",
@@ -5714,7 +5715,33 @@
   },
   "changelog": {
     "title": "Changelog",
-    "subtitle": "History of features, improvements, and fixes"
+    "subtitle": "History of features, improvements, and fixes",
+    "openModal": "What's new",
+    "unseenHint": "{{count}} new release(s)",
+    "unseenAria": "unseen changelog",
+    "modal": {
+      "title": "What's new in TeslaSync",
+      "subtitleFirstVisit": "Welcome! Here's a quick tour of what TeslaSync ships with right now.",
+      "subtitleSinceLastVisit": "{{count}} new release(s) since your last visit.",
+      "viewFull": "View full changelog",
+      "gotIt": "Got it"
+    },
+    "badges": {
+      "latest": "Latest",
+      "stable": "Stable",
+      "beta": "Beta"
+    },
+    "sections": {
+      "added": "Added",
+      "changed": "Changed",
+      "fixed": "Fixed",
+      "removed": "Removed",
+      "deprecated": "Deprecated",
+      "security": "Security"
+    },
+    "releaseNotes": {
+      "heading": "What's New"
+    }
   },
   "chatbot": {
     "title": "AI Assistant",

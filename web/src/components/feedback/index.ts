@@ -21,3 +21,4 @@ export { TourOverlay } from './TourOverlay';
 export { JobProgressDrawer } from './JobProgressDrawer';
 export { AchievementUnlockedToast, AchievementUnlockedToastStack, type AchievementUnlockedToastProps } from './AchievementUnlockedToast';
 export { AchievementUnlockListener } from './AchievementUnlockListener';
+export { ChangelogModal } from './ChangelogModal';

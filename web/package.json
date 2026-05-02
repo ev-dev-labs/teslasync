@@ -5,7 +5,9 @@
   "version": "2.0.0",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/buildChangelog.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/buildChangelog.mjs",
     "build": "tsc && vite build",
     "postbuild": "node scripts/check-bundle-size.mjs",
     "preview": "vite preview",

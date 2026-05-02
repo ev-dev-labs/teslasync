@@ -333,6 +333,20 @@ export const commandRegistry: CommandDefinition[] = [
       window.dispatchEvent(new CustomEvent(TOUR_OPEN_LAUNCHER_EVENT))
     },
   },
+  {
+    id: 'action.changelog.openModal',
+    labelKey: 'palette.cmd.changelog',
+    labelFallback: "What's new",
+    icon: Icons.helpCircle,
+    section: 'actions',
+    keywords: ['changelog', 'release', 'notes', 'whats', 'new', 'updates', 'features'],
+    perform: () => {
+      // The ChangelogModal mounts at the app root and listens for this event.
+      // Imported as a string here (not via the helper) to avoid pulling the
+      // hook module into the registry and inflating the tree-shaken bundle.
+      window.dispatchEvent(new CustomEvent('teslasync:changelog:open'))
+    },
+  },
 
   // ── Dashboard customization (Phase 40 / Prompt 30) ────────────────────────
   // The DashboardPage listens for these CustomEvents (`dashboard:*`) and
