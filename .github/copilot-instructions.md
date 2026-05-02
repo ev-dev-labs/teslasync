@@ -118,6 +118,8 @@ the user — phase-42 may need to be revisited rather than worked around.
 
 ## Architecture
 
+> Telemetry-pipeline rules: see .github/instructions/tesla-pipeline.instructions.md
+
 ```
 React SPA (Vite 5) ──▶ Nginx reverse proxy ──▶ Go API Server (:8080)
                                                   │   │   │   │
