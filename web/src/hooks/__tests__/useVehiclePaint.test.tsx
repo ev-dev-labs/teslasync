@@ -143,4 +143,33 @@ describe('useVehiclePaint', () => {
     expect(result.current.paint.id).toBe('midnight-silver');
     expect(result.current.isOverridden).toBe(true);
   });
+
+  it('two hook instances in the same tab stay in sync without refresh', () => {
+    // Picker calls setPaint; the twin's instance must see the change too.
+    const picker = renderHook(() => useVehiclePaint(7, 'PearlWhite'));
+    const twin = renderHook(() => useVehiclePaint(7, 'PearlWhite'));
+
+    expect(picker.result.current.paint.id).toBe('pearl-white');
+    expect(twin.result.current.paint.id).toBe('pearl-white');
+
+    act(() => {
+      picker.result.current.setPaint('deep-blue');
+    });
+
+    expect(picker.result.current.paint.id).toBe('deep-blue');
+    expect(twin.result.current.paint.id).toBe('deep-blue');
+    expect(twin.result.current.isOverridden).toBe(true);
+  });
+
+  it('in-tab sync is scoped per vehicleId', () => {
+    const v1 = renderHook(() => useVehiclePaint(1, 'PearlWhite'));
+    const v2 = renderHook(() => useVehiclePaint(2, 'PearlWhite'));
+
+    act(() => {
+      v1.result.current.setPaint('red-multicoat');
+    });
+
+    expect(v1.result.current.paint.id).toBe('red-multicoat');
+    expect(v2.result.current.paint.id).toBe('pearl-white');
+  });
 });

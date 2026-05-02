@@ -403,87 +403,55 @@ function Body3DDetails() {
         fill={`url(#${ids.quarterSurface})`}
         opacity={0.72}
       />
+      {/* Single soft beltline — replaces the previous 3 stacked seams */}
       <path
         d="M 58 191 C 136 180 248 178 352 181 C 447 184 520 193 556 203"
         fill="none"
-        stroke="rgba(255,255,255,0.24)"
-        strokeWidth={1.6}
-        strokeLinecap="round"
-      />
-      <path
-        d="M 74 205 C 167 198 296 197 390 200 C 469 203 526 209 554 217"
-        fill="none"
-        stroke="rgba(0,0,0,0.38)"
-        strokeWidth={2.4}
+        stroke="rgba(255,255,255,0.14)"
+        strokeWidth={1}
         strokeLinecap="round"
       />
       <path
         d="M 53 215 C 120 226 214 230 332 229 C 432 228 513 221 552 211 L 542 224 C 476 238 361 243 219 239 C 131 236 75 229 44 219 Z"
         fill={`url(#${ids.rockerDepth})`}
-        opacity={0.82}
+        opacity={0.7}
       />
-      <path
-        d="M 202 152 C 245 121 289 107 336 109 C 390 111 437 128 489 152"
-        fill="none"
-        stroke="rgba(255,255,255,0.3)"
-        strokeWidth={2.2}
-        strokeLinecap="round"
-      />
+      {/* Door cuts — kept subtle so the body reads as one panel, not three */}
       <path
         d="M 205 156 L 307 155"
         fill="none"
-        stroke="rgba(255,255,255,0.3)"
-        strokeWidth={1.1}
+        stroke="rgba(255,255,255,0.18)"
+        strokeWidth={0.9}
         strokeLinecap="round"
       />
       <path
         d="M 320 154 L 456 154"
         fill="none"
-        stroke="rgba(255,255,255,0.22)"
-        strokeWidth={1.1}
+        stroke="rgba(255,255,255,0.14)"
+        strokeWidth={0.9}
         strokeLinecap="round"
       />
+      {/* Door handles */}
       <path
         d="M 254 174 L 275 173"
         fill="none"
-        stroke="rgba(2,6,23,0.72)"
-        strokeWidth={3.2}
+        stroke="rgba(2,6,23,0.55)"
+        strokeWidth={2.6}
         strokeLinecap="round"
       />
       <path
         d="M 374 174 L 397 173"
         fill="none"
-        stroke="rgba(2,6,23,0.72)"
-        strokeWidth={3.2}
+        stroke="rgba(2,6,23,0.55)"
+        strokeWidth={2.6}
         strokeLinecap="round"
       />
-      <path
-        d="M 58 189 C 70 181 85 178 101 181"
-        fill="none"
-        stroke="rgba(255,255,255,0.58)"
-        strokeWidth={3}
-        strokeLinecap="round"
-        opacity={0.55}
-      />
+      {/* Rear taillight diffuser accent */}
       <path
         d="M 524 158 C 541 163 553 174 559 188"
         fill="none"
-        stroke="rgba(239,68,68,0.62)"
-        strokeWidth={4}
-        strokeLinecap="round"
-      />
-      <path
-        d="M 50 205 C 45 197 47 190 55 181 C 65 169 83 162 112 158"
-        fill="none"
-        stroke="rgba(255,255,255,0.16)"
-        strokeWidth={1.2}
-        strokeLinecap="round"
-      />
-      <path
-        d="M 496 151 C 528 156 552 173 559 192 C 562 205 551 216 531 221"
-        fill="none"
-        stroke="rgba(0,0,0,0.28)"
-        strokeWidth={1.8}
+        stroke="rgba(239,68,68,0.5)"
+        strokeWidth={3.2}
         strokeLinecap="round"
       />
     </g>
@@ -506,166 +474,62 @@ function BodyShell({
         d="M 42 208 C 40 196 50 184 72 171 C 100 157 140 149 190 145 C 225 118 282 104 335 106 C 392 108 443 129 493 153 C 526 157 550 173 558 191 C 563 207 552 218 532 224 C 505 232 480 231 456 228 C 452 198 429 178 430 178 C 399 178 375 201 372 229 L 190 229 C 187 201 163 179 132 179 C 101 179 80 201 77 228 L 63 226 C 49 224 42 217 42 208 Z"
         fill={`url(#${ids.bodyGrad})`}
         stroke={bodyAccent.stroke}
-        strokeWidth={1.4}
+        strokeWidth={1.2}
       />
+      {/* Single roof-arc highlight (chrome bar) */}
       <path
         d="M 64 174 C 100 157 139 149 190 145 C 228 120 284 108 335 109 C 391 111 438 129 492 153"
         fill="none"
         stroke={bodyAccent.chrome}
-        strokeWidth={3.4}
+        strokeWidth={2}
         strokeLinecap="round"
-        opacity={0.36}
-      />
-      <path
-        d="M 61 190 C 138 178 247 177 353 180 C 448 183 521 192 556 201"
-        fill="none"
-        stroke={bodyAccent.highlight}
-        strokeWidth={1}
-        strokeLinecap="round"
-        opacity={0.55}
-      />
-      <path
-        d="M 56 184 C 89 161 132 150 190 146"
-        fill="none"
-        stroke="rgba(255,255,255,0.09)"
-        strokeWidth={1.2}
-        strokeLinecap="round"
-      />
-      <path
-        d="M 459 150 C 492 153 536 169 558 190"
-        fill="none"
-        stroke="rgba(255,255,255,0.11)"
-        strokeWidth={1.2}
-        strokeLinecap="round"
-      />
-      <path
-        d="M 45 211 C 108 224 207 231 335 230 C 440 229 514 221 552 211"
-        fill="none"
-        stroke="rgba(255,255,255,0.08)"
-        strokeWidth={1.2}
-        strokeLinecap="round"
+        opacity={0.22}
       />
       <path
         d="M 70 211 C 164 216 291 216 387 213 C 468 210 523 205 556 198 L 548 214 C 488 227 391 231 278 230 C 187 229 107 224 48 214 Z"
         fill={`url(#${ids.lowerShadow})`}
-        opacity={0.72}
-      />
-      <path
-        d="M 78 223 C 166 226 282 226 390 223 C 466 220 522 215 555 208"
-        fill="none"
-        stroke="rgba(0,0,0,0.4)"
-        strokeWidth={2.2}
-        strokeLinecap="round"
-        opacity={0.55}
+        opacity={0.6}
       />
 
-      <path
-        d="M 202 146 C 242 120 286 109 335 111 C 390 113 438 130 487 152"
-        fill="none"
-        stroke="rgba(255,255,255,0.16)"
-        strokeWidth={1}
-        strokeLinecap="round"
-      />
+      {/* Mirror */}
       <path
         d="M 177 153 C 191 145 208 147 221 156 C 205 161 190 160 177 155 Z"
         fill={`url(#${ids.mirrorGrad})`}
-        stroke="rgba(255,255,255,0.26)"
-        strokeWidth={0.8}
-      />
-      <path
-        d="M 177 153 C 193 150 209 152 219 156"
-        fill="none"
-        stroke="rgba(255,255,255,0.34)"
+        stroke="rgba(255,255,255,0.22)"
         strokeWidth={0.7}
-        strokeLinecap="round"
-      />
-      <path
-        d="M 107 161 L 125 154 L 144 157 L 128 166 Z"
-        fill="rgba(2,6,23,0.7)"
-        stroke="rgba(255,255,255,0.1)"
-        strokeWidth={0.8}
-      />
-      <path
-        d="M 109 158 C 124 154 139 154 152 158"
-        fill="none"
-        stroke="rgba(255,255,255,0.26)"
-        strokeWidth={1}
-        strokeLinecap="round"
-      />
-      <path
-        d="M 466 150 C 477 169 483 190 486 219"
-        fill="none"
-        stroke="rgba(255,255,255,0.09)"
-        strokeWidth={1}
-        strokeLinecap="round"
-      />
-      <path
-        d="M 489 149 C 516 150 542 160 558 178 L 526 176 C 515 164 502 154 489 149 Z"
-        fill="rgba(0,0,0,0.16)"
-        stroke="rgba(255,255,255,0.06)"
-        strokeWidth={0.8}
-      />
-      <path
-        d="M 492 144 C 512 137 544 136 560 144 C 543 151 516 151 492 145 Z"
-        fill="rgba(0,0,0,0.36)"
-        stroke="rgba(255,255,255,0.08)"
-        strokeWidth={0.8}
-      />
-      <path
-        d="M 504 139 C 527 134 551 137 562 145 C 542 149 519 148 500 145 Z"
-        fill="rgba(2,6,23,0.78)"
-        stroke="rgba(255,255,255,0.1)"
-        strokeWidth={0.9}
       />
 
+      {/* Door handle (front) */}
+      <path
+        d="M 107 161 L 125 154 L 144 157 L 128 166 Z"
+        fill="rgba(2,6,23,0.55)"
+        stroke="rgba(255,255,255,0.08)"
+        strokeWidth={0.7}
+      />
+
+      {/* Wheel arch cladding — paint-tinted shadow keeps the panel reading
+          as part of the body instead of a hard navy patch. */}
       <path
         d="M 74 228 C 79 195 103 173 132 173 C 164 173 188 198 192 228"
         fill="none"
-        stroke={C.cladding}
-        strokeWidth={13}
+        stroke={bodyAccent.shadow}
+        strokeWidth={10}
         strokeLinecap="round"
       />
       <path
         d="M 371 229 C 376 196 400 173 430 173 C 462 173 486 199 490 228"
         fill="none"
-        stroke={C.cladding}
-        strokeWidth={13}
-        strokeLinecap="round"
-      />
-      <path
-        d="M 78 227 C 82 199 104 178 132 178 C 161 178 184 200 188 228"
-        fill="none"
-        stroke="rgba(255,255,255,0.14)"
-        strokeWidth={1.2}
-        strokeLinecap="round"
-      />
-      <path
-        d="M 376 228 C 380 200 402 178 430 178 C 460 178 482 201 486 228"
-        fill="none"
-        stroke="rgba(255,255,255,0.14)"
-        strokeWidth={1.2}
-        strokeLinecap="round"
-      />
-      <path
-        d="M 76 205 C 104 194 166 193 195 204"
-        fill="none"
-        stroke="rgba(255,255,255,0.08)"
-        strokeWidth={1.1}
-        strokeLinecap="round"
-      />
-      <path
-        d="M 374 205 C 405 193 463 194 491 205"
-        fill="none"
-        stroke="rgba(255,255,255,0.08)"
-        strokeWidth={1.1}
+        stroke={bodyAccent.shadow}
+        strokeWidth={10}
         strokeLinecap="round"
       />
 
+      {/* Frunk seam */}
       <path
         d="M 62 176 C 100 156 139 148 190 145"
         fill="none"
-        stroke={frunkOpen ? C.doorOpen : 'rgba(255,255,255,0.08)'}
-        strokeWidth={frunkOpen ? 1.8 : 1}
+        stroke={frunkOpen ? C.doorOpen : 'rgba(255,255,255,0.06)'}
+        strokeWidth={frunkOpen ? 1.6 : 0.8}
         strokeLinecap="round"
       />
       <AnimatePresence>
@@ -683,11 +547,12 @@ function BodyShell({
         )}
       </AnimatePresence>
 
+      {/* Trunk seam */}
       <path
         d="M 469 148 C 508 150 542 165 558 188"
         fill="none"
-        stroke={trunkOpen ? C.doorOpen : 'rgba(255,255,255,0.08)'}
-        strokeWidth={trunkOpen ? 1.8 : 1}
+        stroke={trunkOpen ? C.doorOpen : 'rgba(255,255,255,0.06)'}
+        strokeWidth={trunkOpen ? 1.6 : 0.8}
         strokeLinecap="round"
       />
       <AnimatePresence>
@@ -735,54 +600,26 @@ function BodyReflections() {
         d="M 65 185 C 140 169 246 166 356 170 C 452 174 525 184 557 198"
         fill="none"
         stroke={`url(#${ids.shoulderHighlight})`}
-        strokeWidth={1.4}
-        strokeLinecap="round"
-        animate={{ opacity: [0.55, 0.86, 0.55] }}
-        transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
-      />
-      <path
-        d="M 88 205 C 154 214 267 216 378 214 C 459 212 520 206 552 198"
-        fill="none"
-        stroke="rgba(255,255,255,0.08)"
         strokeWidth={1.2}
         strokeLinecap="round"
+        animate={{ opacity: [0.4, 0.7, 0.4] }}
+        transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
       />
       <motion.path
         d="M 208 156 C 276 152 374 153 461 160 L 453 168 C 366 162 277 161 214 164 Z"
         fill={`url(#${ids.softReflection})`}
-        animate={{ opacity: [0.38, 0.78, 0.38] }}
+        animate={{ opacity: [0.28, 0.55, 0.28] }}
         transition={{ duration: 6.5, repeat: Infinity, ease: 'easeInOut' }}
       />
       <motion.path
         d="M 118 176 C 230 160 398 164 526 186"
         fill="none"
-        stroke="rgba(255,255,255,0.12)"
-        strokeWidth={1.1}
+        stroke="rgba(255,255,255,0.1)"
+        strokeWidth={1}
         strokeLinecap="round"
         strokeDasharray="58 420"
-        animate={{ strokeDashoffset: [0, -420], opacity: [0, 0.45, 0] }}
+        animate={{ strokeDashoffset: [0, -420], opacity: [0, 0.32, 0] }}
         transition={{ duration: 7.5, repeat: Infinity, ease: 'easeInOut' }}
-      />
-      <path
-        d="M 230 192 C 293 187 387 188 458 195"
-        fill="none"
-        stroke="rgba(255,255,255,0.06)"
-        strokeWidth={5}
-        strokeLinecap="round"
-      />
-      <path
-        d="M 73 178 C 106 161 149 153 190 153"
-        fill="none"
-        stroke="rgba(255,255,255,0.12)"
-        strokeWidth={1.1}
-        strokeLinecap="round"
-      />
-      <path
-        d="M 486 154 C 519 160 546 174 558 190"
-        fill="none"
-        stroke="rgba(255,255,255,0.1)"
-        strokeWidth={1.1}
-        strokeLinecap="round"
       />
     </g>
   );
@@ -856,31 +693,10 @@ function SideWindows({
         transition={{ duration: 6.8, repeat: Infinity, ease: 'easeInOut' }}
       />
       <path
-        d="M 245 134 C 265 123 288 117 310 115"
-        fill="none"
-        stroke="rgba(255,255,255,0.1)"
-        strokeWidth={1}
-        strokeLinecap="round"
-      />
-      <path
         d="M 348 116 L 334 148"
         fill="none"
-        stroke="rgba(2,6,23,0.82)"
-        strokeWidth={5.4}
-        strokeLinecap="round"
-      />
-      <path
-        d="M 475 149 L 443 156"
-        fill="none"
-        stroke="rgba(2,6,23,0.7)"
-        strokeWidth={4}
-        strokeLinecap="round"
-      />
-      <path
-        d="M 377 122 C 407 128 432 138 455 148"
-        fill="none"
-        stroke="rgba(255,255,255,0.08)"
-        strokeWidth={1.1}
+        stroke="rgba(2,6,23,0.55)"
+        strokeWidth={3.4}
         strokeLinecap="round"
       />
       {passengerAlert && (

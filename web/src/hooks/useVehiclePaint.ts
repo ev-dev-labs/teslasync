@@ -36,6 +36,34 @@ import {
 const STORAGE_PREFIX = 'teslasync:vehicle:';
 const STORAGE_SUFFIX = ':paint';
 
+// In-tab pub/sub: localStorage `storage` events only fire in *other* tabs,
+// and the broadcast bus self-filters by TAB_ID, so two hook instances in the
+// same tab (e.g. the picker on the page and the <VehicleTwin> below it) need
+// a separate notify channel to stay in sync without a refresh.
+type Listener = (id: PaintPaletteId | null) => void;
+const inTabListeners = new Map<number, Set<Listener>>();
+
+function notifyInTab(vehicleId: number, value: PaintPaletteId | null): void {
+  const set = inTabListeners.get(vehicleId);
+  if (!set) return;
+  for (const fn of set) fn(value);
+}
+
+function subscribeInTab(vehicleId: number, fn: Listener): () => void {
+  let set = inTabListeners.get(vehicleId);
+  if (!set) {
+    set = new Set();
+    inTabListeners.set(vehicleId, set);
+  }
+  set.add(fn);
+  return () => {
+    const s = inTabListeners.get(vehicleId);
+    if (!s) return;
+    s.delete(fn);
+    if (s.size === 0) inTabListeners.delete(vehicleId);
+  };
+}
+
 function storageKey(vehicleId: number | null | undefined): string | null {
   if (typeof vehicleId !== 'number' || !Number.isFinite(vehicleId) || vehicleId <= 0) {
     return null;
@@ -93,6 +121,16 @@ export function useVehiclePaint(
     setOverrideId(readOverride(vehicleId));
   }, [vehicleId]);
 
+  // Same-tab sync: another hook instance in this tab updated the override.
+  useEffect(() => {
+    if (typeof vehicleId !== 'number' || !Number.isFinite(vehicleId) || vehicleId <= 0) {
+      return;
+    }
+    return subscribeInTab(vehicleId, (value) => {
+      setOverrideId(value);
+    });
+  }, [vehicleId]);
+
   // Cross-tab sync: another tab edited this vehicle's paint → re-read.
   useEffect(() => {
     const off = subscribe((msg) => {
@@ -131,6 +169,7 @@ export function useVehiclePaint(
       setOverrideId(normalized);
       if (typeof vehicleId === 'number' && vehicleId > 0) {
         writeOverride(vehicleId, normalized);
+        notifyInTab(vehicleId, normalized);
         broadcast({ type: 'vehicle.paint.changed', vehicleId, paintId: normalized });
       }
     },
