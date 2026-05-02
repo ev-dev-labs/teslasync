@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, Button, ConfirmDialog } from '@/components/ui';
+import { GlassPanel, Badge, Button, ConfirmDialog, PinButton } from '@/components/ui';
 import { MetricCard, AnimatedNumber } from '@/components/data-display';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
@@ -22,6 +22,7 @@ import { fmtNumber } from '@/lib/numberFormat';
 import { batteryColor } from '@/lib/colors';
 import { request } from '@/api/client';
 import { fetchVehicleState } from '@/api/hooks/useVehicles';
+import { usePinned } from '@/api/hooks/usePinned';
 import { deriveVehicleStatus, statusVariant } from '@/api/types';
 import type { Vehicle } from '@/types/vehicle';
 import type { VehicleState } from '@/api/types';
@@ -45,6 +46,22 @@ export default function VehicleListPage() {
   const vehicleList = vehicles ?? [];
   const primaryId = vehicleList[0]?.id;
   useVehicleLive(primaryId);
+
+  /* Phase 40 / Prompt 48 — pinned vehicles float to the top of the list. */
+  const { data: vehiclePins = [] } = usePinned('vehicle');
+  const sortedVehicleList = useMemo(() => {
+    if (vehiclePins.length === 0) return vehicleList;
+    const order = new Map<string, number>();
+    vehiclePins.forEach((p) => order.set(String(p.item_id), p.position));
+    return [...vehicleList].sort((a, b) => {
+      const ap = order.get(String(a.id));
+      const bp = order.get(String(b.id));
+      if (ap != null && bp != null) return ap - bp;
+      if (ap != null) return -1;
+      if (bp != null) return 1;
+      return 0;
+    });
+  }, [vehicleList, vehiclePins]);
 
   /* Batch-fetch vehicle states for summary + battery chart */
   const { data: fleetStates } = useQuery({
@@ -304,7 +321,7 @@ export default function VehicleListPage() {
           </FadeIn>
 
           <StaggerContainer className="space-y-4">
-            {vehicleList.map((vehicle) => {
+            {sortedVehicleList.map((vehicle) => {
               const entry = fleet.entries.find(e => e.vehicle.id === vehicle.id);
               const state = entry?.state ?? null;
               const status = deriveVehicleStatus(state);
@@ -379,6 +396,7 @@ export default function VehicleListPage() {
 
                         {/* Actions */}
                         <div className="flex flex-col items-center gap-1 shrink-0">
+                          <PinButton itemType="vehicle" itemId={vehicle.id} size="sm" />
                           <Link
                             to={`/vehicles/${vehicle.id}`}
                             className="rounded-lg p-2 text-[var(--text-secondary)] hover:bg-cyan-400/10 hover:text-cyan-400 transition-all"

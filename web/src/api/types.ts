@@ -1954,3 +1954,25 @@ export type {
   AutomationTriggerInput,
   AutomationTriggerStep,
 } from '@/types/automations';
+
+// === Pinned items (Phase 40 / Prompt 48) ===
+
+export type PinnedItemType =
+  | 'vehicle'
+  | 'widget'
+  | 'alert_rule'
+  | 'location'
+  | 'geofence'
+  | 'automation'
+  | 'dashboard'
+  | 'command'
+
+export interface PinnedItem {
+  id: number
+  user_id?: number | null
+  item_type: PinnedItemType
+  item_id: string
+  position: number
+  pinned_at: string
+  context?: string | null
+}

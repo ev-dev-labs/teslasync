@@ -1,0 +1,127 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { request } from '../client';
+import { useMutationToast } from './_toastHelpers';
+import { STALE_TIMES } from '@/lib/constants';
+import type { PinnedItem, PinnedItemType } from '../types';
+
+/**
+ * Phase 40 / Prompt 48 — TanStack Query hooks for the unified pin storage.
+ *
+ * Surfaces (vehicle picker, dashboard widgets, alerts, geofences,
+ * automations, commands) call `usePinned(type, context?)` to know which
+ * rows to float to the top, and `useTogglePin(type)` to flip the pin.
+ *
+ * Wire contract: see `internal/api/pinned_handler.go`.
+ */
+
+export const pinnedKeys = {
+  all: ['pinned'] as const,
+  list: (type: PinnedItemType, context?: string) =>
+    ['pinned', type, context ?? null] as const,
+};
+
+function buildQuery(type: PinnedItemType, context?: string): string {
+  const usp = new URLSearchParams();
+  usp.set('type', type);
+  if (context != null) usp.set('context', context);
+  return `?${usp.toString()}`;
+}
+
+/**
+ * Fetch the current user's pins of a given type, optionally narrowed to a
+ * sub-surface (e.g. a specific dashboard ID when pinning widgets). Always
+ * returns an array — never undefined — so consumers can `.some(...)` or
+ * `.map(...)` without a null guard.
+ */
+export function usePinned(type: PinnedItemType, context?: string) {
+  return useQuery({
+    queryKey: pinnedKeys.list(type, context),
+    queryFn: () => request<PinnedItem[]>(`/pinned${buildQuery(type, context)}`),
+    staleTime: STALE_TIMES.SLOW,
+  });
+}
+
+export interface TogglePinInput {
+  itemId: string;
+  context?: string;
+  pin: boolean;
+}
+
+/**
+ * Pin or unpin a single item. The `pin` flag chooses between POST (create)
+ * and DELETE (by id, looked up from the cache). The mutation invalidates
+ * every `pinned[type]` query so dependent surfaces re-render in pin order.
+ */
+export function useTogglePin(type: PinnedItemType) {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+
+  return useMutation({
+    mutationFn: async ({ itemId, context, pin }: TogglePinInput) => {
+      if (pin) {
+        return request<PinnedItem>('/pinned', {
+          method: 'POST',
+          body: JSON.stringify({
+            item_type: type,
+            item_id: itemId,
+            ...(context != null ? { context } : {}),
+          }),
+        });
+      }
+      // Unpin: look up the existing row id from the cache for the matching
+      // (type, context) bucket. Fall back to a fresh fetch when the cache
+      // hasn't been hydrated yet.
+      const cached = qc.getQueryData<PinnedItem[]>(pinnedKeys.list(type, context));
+      const existing =
+        cached?.find(p => String(p.item_id) === String(itemId)) ??
+        (await request<PinnedItem[]>(`/pinned${buildQuery(type, context)}`)).find(
+          p => String(p.item_id) === String(itemId),
+        );
+      if (!existing) return null;
+      await request<void>(`/pinned/${existing.id}`, { method: 'DELETE' });
+      return null;
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: pinnedKeys.all });
+      if (vars.pin) {
+        success('toast.pin.pinned.success', 'Pinned');
+      } else {
+        success('toast.pin.unpinned.success', 'Unpinned');
+      }
+    },
+    onError: (e, vars) => {
+      if (vars.pin) {
+        error(e, 'toast.pin.pinned.error', 'Failed to pin');
+      } else {
+        error(e, 'toast.pin.unpinned.error', 'Failed to unpin');
+      }
+    },
+  });
+}
+
+export interface ReorderPinInput {
+  id: number;
+  position: number;
+}
+
+/**
+ * Reorder a single pin within its bucket. The drag handler is expected to
+ * issue one mutation per moved item. The mutation invalidates every
+ * `pinned[type]` query so consumers re-render in the new order.
+ */
+export function useReorderPin(type: PinnedItemType) {
+  const qc = useQueryClient();
+  const { error } = useMutationToast();
+
+  return useMutation({
+    mutationFn: ({ id, position }: ReorderPinInput) =>
+      request<PinnedItem>(`/pinned/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ position }),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: pinnedKeys.list(type) });
+    },
+    onError: (e) => error(e, 'toast.pin.reorder.error', 'Failed to reorder pins'),
+  });
+}

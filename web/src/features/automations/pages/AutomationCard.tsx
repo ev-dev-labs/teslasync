@@ -4,7 +4,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-import { GlassPanel, Badge, Button as UiButton, Toggle, ConfirmDialog } from '@/components/ui';
+import { GlassPanel, Badge, Button as UiButton, Toggle, ConfirmDialog, PinButton } from '@/components/ui';
 import {
   Zap, AlertTriangle, MoreVertical, Play, Copy, Download,
   Trash2, RotateCcw, Car, CheckCircle, XCircle, SkipForward,
@@ -109,6 +109,7 @@ export function AutomationCard({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            <PinButton itemType="automation" itemId={a.id} size="sm" />
             <Toggle
               checked={a.auto_disabled ? false : a.enabled}
               onChange={handleToggle}

@@ -120,6 +120,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	settingsHandler := NewSettingsHandler(db)
 	dashboardLayoutHandler := NewDashboardLayoutHandler(db)
 	chartAnnotationHandler := NewChartAnnotationHandler(db)
+	pinnedHandler := NewPinnedHandler(db)
 	var pahoForAlerts pahomqtt.Client
 	if mqttClient != nil {
 		pahoForAlerts = mqttClient.Underlying()
@@ -558,6 +559,17 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Post("/", chartAnnotationHandler.Create)
 			r.Patch("/{id}", chartAnnotationHandler.Update)
 			r.Delete("/{id}", chartAnnotationHandler.Delete)
+		})
+
+		// Pinned items (Phase 40 / Prompt 48) — unified per-user "pin" storage
+		// powering pinned-first ordering across vehicles, dashboard widgets,
+		// alert rules, geofences, automations, and commands.
+		r.Route("/pinned", func(r chi.Router) {
+			r.Use(httprate.LimitByIP(60, 1*time.Minute))
+			r.Get("/", pinnedHandler.List)
+			r.Post("/", pinnedHandler.Create)
+			r.Patch("/{id}", pinnedHandler.Update)
+			r.Delete("/{id}", pinnedHandler.Delete)
 		})
 
 		// Gas Price Auto-Poll

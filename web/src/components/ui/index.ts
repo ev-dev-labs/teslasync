@@ -10,6 +10,7 @@ export { StatusPill, type StatusPillProps } from './StatusPill';
 export { Toggle, type ToggleProps } from './Toggle';
 export { Tooltip, type TooltipProps } from './Tooltip';
 export { HelpTooltip, type HelpTooltipProps } from './HelpTooltip';
+export { PinButton, type PinButtonProps } from './PinButton';
 export { ConfirmDialog, type ConfirmDialogProps } from './ConfirmDialog';
 export { IconBox } from './IconBox';
 export { Icon, type IconProps, type IconSize } from './Icon';

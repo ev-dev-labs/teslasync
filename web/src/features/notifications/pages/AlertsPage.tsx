@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/Input';
 import { TabNav } from '@/components/ui/TabNav';
 import { Toggle } from '@/components/ui/Toggle';
 import { DataTable, type Column } from '@/components/ui/DataTable';
+import { PinButton } from '@/components/ui/PinButton';
 import { useUrlEnum, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 
 import { MetricCard } from '@/components/data-display/MetricCard';
@@ -47,6 +48,7 @@ import {
   useAlerts, useMarkAlertRead, useAlertRules,
   useNotificationChannels, useNotificationLogs, useNotificationStats,
 } from '@/api/hooks/useNotifications';
+import { usePinned } from '@/api/hooks/usePinned';
 import type { Alert, NotificationLog } from '@/api/types';
 import { Icons } from '@/lib/icons';
 
@@ -470,6 +472,15 @@ export default function AlertsPage() {
   const { data: alerts, isLoading, error } = useAlerts();
   const { data: rules } = useAlertRules();
   const markReadMut = useMarkAlertRead();
+  const { data: rulePins = [] } = usePinned('alert_rule');
+  const pinnedRules = useMemo(() => {
+    if (!rules || rulePins.length === 0) return [];
+    const order = new Map<string, number>();
+    rulePins.forEach(p => order.set(String(p.item_id), p.position));
+    return rules
+      .filter(r => order.has(String(r.id)))
+      .sort((a, b) => (order.get(String(a.id)) ?? 0) - (order.get(String(b.id)) ?? 0));
+  }, [rules, rulePins]);
 
   // Computed
   const tabFilteredAlerts = useMemo(() => alerts?.filter(a => {
@@ -716,6 +727,34 @@ export default function AlertsPage() {
       {/* ── Alerts Tab ───────────────────────────────────────────────── */}
       {tab === 'alerts' && (
         <>
+          {pinnedRules.length > 0 && (
+            <FadeIn>
+              <GlassPanel className="p-4 space-y-3">
+                <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-amber-300">
+                  <Icons.notifications className="h-4 w-4" />
+                  <span className="font-medium">{t('pinned.section.watching', 'Watching')}</span>
+                  <span className="text-[var(--text-muted)] normal-case tracking-normal">({pinnedRules.length})</span>
+                </div>
+                <ul className="divide-y divide-white/5">
+                  {pinnedRules.map(rule => (
+                    <li key={rule.id} className="flex items-center justify-between gap-3 py-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-[var(--text-primary)] truncate">{rule.name || `${t('alerts.rule', 'Rule')} #${rule.id}`}</span>
+                          {rule.enabled ? (
+                            <Badge variant="success" size="sm">{t('common.enabled', 'Enabled')}</Badge>
+                          ) : (
+                            <Badge variant="neutral" size="sm">{t('common.disabled', 'Disabled')}</Badge>
+                          )}
+                        </div>
+                      </div>
+                      <PinButton itemType="alert_rule" itemId={rule.id} size="sm" />
+                    </li>
+                  ))}
+                </ul>
+              </GlassPanel>
+            </FadeIn>
+          )}
           <FadeIn>
             <FilterBar>
               <SearchInput

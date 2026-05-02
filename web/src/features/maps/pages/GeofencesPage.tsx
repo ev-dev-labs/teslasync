@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, Button, Input, Select, Modal, Toggle, ConfirmDialog, Tabs } from '@/components/ui';
+import { GlassPanel, Badge, Button, Input, Select, Modal, Toggle, ConfirmDialog, Tabs, PinButton } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, Spinner, AlertBanner } from '@/components/feedback';
 import { useToast } from '@/components/feedback/Toast';
@@ -34,6 +34,7 @@ import {
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useVehicles } from '@/api/hooks/useVehicles';
+import { usePinned } from '@/api/hooks/usePinned';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
@@ -212,6 +213,20 @@ export default function GeofencesPage() {
     [],
   );
   const filteredGeofences = useFilteredList(geofences, search, geofenceSearchFields);
+  const { data: geofencePins = [] } = usePinned('geofence');
+  const sortedGeofences = useMemo(() => {
+    if (geofencePins.length === 0) return filteredGeofences;
+    const order = new Map<string, number>();
+    geofencePins.forEach((p) => order.set(String(p.item_id), p.position));
+    return [...filteredGeofences].sort((a, b) => {
+      const ap = order.get(String(a.id));
+      const bp = order.get(String(b.id));
+      if (ap != null && bp != null) return ap - bp;
+      if (ap != null) return -1;
+      if (bp != null) return 1;
+      return 0;
+    });
+  }, [filteredGeofences, geofencePins]);
 
   // ─── Drawer integration ──────────────────────────────────────────────────
 
@@ -506,7 +521,7 @@ export default function GeofencesPage() {
           )}
           {filteredGeofences.length > 0 ? (
             <>
-              {filteredGeofences.map((g) => (
+              {sortedGeofences.map((g) => (
                 <StaggerItem key={g.id}>
                   <GlassPanel
                     hover
@@ -549,6 +564,7 @@ export default function GeofencesPage() {
 
                     {/* Right: actions */}
                     <div className="flex shrink-0 items-center gap-2">
+                      <PinButton itemType="geofence" itemId={g.id} size="sm" />
                       <Toggle
                         checked={g.enabled}
                         onChange={(checked) => toggleMut.mutate({ id: g.id, enabled: checked })}

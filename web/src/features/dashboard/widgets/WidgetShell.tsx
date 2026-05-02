@@ -1,7 +1,7 @@
 import { type ReactNode, useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/cn';
 import { Skeleton, QueryError } from '@/components/feedback';
-import { HelpTooltip } from '@/components/ui';
+import { HelpTooltip, PinButton } from '@/components/ui';
 import { DataFreshness } from '../components/DataFreshness';
 import type { WidgetHelp } from './types';
 
@@ -29,11 +29,20 @@ interface WidgetShellProps {
    * provided text/i18nKey. Phase-40 / Prompt 47.
    */
   help?: WidgetHelp;
+  /**
+   * Stable widget identifier. When supplied alongside `dashboardId`, a
+   * <PinButton> is rendered in the header so the user can pin this widget
+   * to the top of the dashboard. Phase-40 / Prompt 48.
+   */
+  widgetId?: string;
+  /** Dashboard ID — used as the pin context so pins are per-dashboard. */
+  dashboardId?: string;
 }
 
 export function WidgetShell({
   title, icon, loading, error, children, noPadding, actions,
   updatedAt, isFetching, isStale, isError, onRefresh, help,
+  widgetId, dashboardId,
 }: WidgetShellProps) {
   // Pulse animation on data change
   const [justUpdated, setJustUpdated] = useState(false);
@@ -102,6 +111,14 @@ export function WidgetShell({
           </div>
           <div className="flex items-center gap-2">
             {freshnessEl}
+            {widgetId && dashboardId && (
+              <PinButton
+                itemType="widget"
+                itemId={widgetId}
+                context={dashboardId}
+                size="sm"
+              />
+            )}
             {actions}
           </div>
         </div>

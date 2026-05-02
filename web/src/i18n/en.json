@@ -170,6 +170,25 @@
     "aria": "Select vehicle",
     "label": "Vehicle"
   },
+  "pin": {
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "pinned": "Pinned"
+  },
+  "pinned": {
+    "section": {
+      "title": "Pinned",
+      "watching": "Watching"
+    },
+    "empty": {
+      "vehicle": "Pin frequently-used vehicles to keep them at the top.",
+      "alert_rule": "Pin alert rules to keep them under \"Watching\".",
+      "widget": "Pin widgets to keep them at the top of your dashboard.",
+      "geofence": "Pin geofences to keep them at the top of the list.",
+      "automation": "Pin automations to keep them at the top of the list.",
+      "default": "Nothing pinned yet."
+    }
+  },
   "delta": {
     "noComparison": "No comparison data",
     "title": "{{current}} vs {{previous}}",
@@ -679,6 +698,19 @@
   "toast": {
     "common": {
       "error": "Something went wrong"
+    },
+    "pin": {
+      "pinned": {
+        "success": "Pinned",
+        "error": "Failed to pin"
+      },
+      "unpinned": {
+        "success": "Unpinned",
+        "error": "Failed to unpin"
+      },
+      "reorder": {
+        "error": "Failed to reorder pins"
+      }
     },
     "annotation": {
       "created": {
