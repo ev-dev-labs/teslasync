@@ -5,7 +5,7 @@ import { BatteryWarning, Clock, Zap, Activity, Lightbulb, ShieldAlert } from 'lu
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Select, DataTable, type Column, useSortToggle } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { MetricCard, DataFreshnessAuto } from '@/components/data-display';
 import {
   RadialGauge, ChartTooltip, AREA_DEFAULTS,
   chartMargin, axisTick, CHART_COLORS,
@@ -58,11 +58,12 @@ export default function VampireDrainPage() {
 
   const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
 
-  const { data, isLoading, error } = useQuery<VampireDrainStats>({
+  const vampireQuery = useQuery<VampireDrainStats>({
     queryKey: ['vampire-drain-stats', activeId],
     queryFn: () => request<VampireDrainStats>(`/vampire-drain/stats?vehicle_id=${activeId}`),
     enabled: activeId !== '',
   });
+  const { data, isLoading, error } = vampireQuery;
 
   const { sortKey, sortDir, onSort, sortFn } = useSortToggle('date');
 
@@ -109,13 +110,16 @@ export default function VampireDrainPage() {
       loading={isLoading}
       error={error instanceof Error ? error : null}
       actions={
-        vehicles && vehicles.length > 1 ? (
-          <Select
-            options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
-            value={activeId}
-            onChange={(e) => setVehicleId(e.target.value)}
-          />
-        ) : undefined
+        <div className="flex items-center gap-3">
+          {vehicles && vehicles.length > 1 && (
+            <Select
+              options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
+              value={activeId}
+              onChange={(e) => setVehicleId(e.target.value)}
+            />
+          )}
+          <DataFreshnessAuto query={vampireQuery} />
+        </div>
       }
     >
       {/* Summary Metrics */}

@@ -9,7 +9,7 @@ import {
 
 import { PageContainer, Grid } from '@/components/layout';
 import { GlassPanel, Select } from '@/components/ui';
-import { StatCard, AnimatedNumber, ProgressRing, Currency } from '@/components/data-display';
+import { StatCard, AnimatedNumber, ProgressRing, Currency, DataFreshnessAuto } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 
@@ -40,7 +40,8 @@ export default function LifetimeStatsPage() {
 
   const [vehicleId, setVehicleId] = useState('');
   const { data: vehicles } = useVehicles();
-  const { data, isLoading, error } = useLifetimeStats(vehicleId || undefined);
+  const lifetimeQuery = useLifetimeStats(vehicleId || undefined);
+  const { data, isLoading, error } = lifetimeQuery;
 
   const vehicleOptions = useMemo(() => {
     const opts = [{ value: '', label: t('lifetime.allVehicles', 'All Vehicles') }];
@@ -105,6 +106,10 @@ export default function LifetimeStatsPage() {
       subtitle={t('lifetime.subtitle', 'Your all-time driving achievements and milestones')}
       loading={isLoading}
       error={error instanceof Error ? error : error ? new Error(String(error)) : null}
+      actions={
+        // Lifetime stats are cagg-driven; force amber after 6h.
+        <DataFreshnessAuto query={lifetimeQuery} forceStaleAfterMs={6 * 60 * 60 * 1000} />
+      }
     >
       {/* Vehicle filter */}
       {(vehicles ?? []).length > 1 && (

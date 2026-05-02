@@ -3139,6 +3139,8 @@
     "seconds": "{{s}}s ago",
     "minutes": "{{m}}m ago",
     "hours": "{{h}}h ago",
+    "days": "{{d}}d ago",
+    "weeks": "{{w}}w ago",
     "updating": "updating…",
     "error": "error",
     "lastUpdated": "Last updated: {{time}}",

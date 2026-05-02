@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Moon, Eye, Clock, Zap, DollarSign, Thermometer } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Select, DataTable, Badge, type Column } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { MetricCard, DataFreshnessAuto } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import {
@@ -46,7 +46,8 @@ export default function SleepEfficiencyPage() {
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : null;
 
-  const { data: sleep, isLoading, error } = useSleepEfficiency(vehicleIdStr, days);
+  const sleepQuery = useSleepEfficiency(vehicleIdStr, days);
+  const { data: sleep, isLoading, error } = sleepQuery;
 
   /* ── Derived data ── */
 
@@ -153,6 +154,7 @@ export default function SleepEfficiencyPage() {
               options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
             />
           )}
+          <DataFreshnessAuto query={sleepQuery} />
         </div>
       }
     >

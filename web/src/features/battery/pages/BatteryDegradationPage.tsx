@@ -9,7 +9,7 @@ import { PageContainer, Grid } from '@/components/layout';
 import {
   GlassPanel, Badge, DataTable, type Column,
 } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { MetricCard, DataFreshnessAuto } from '@/components/data-display';
 import {
   RadialGauge, ChartContainer, ChartTooltip, renderAnnotationLines,
   chartGrid, axisTickSm, CHART_COLORS,
@@ -105,7 +105,8 @@ export default function BatteryDegradationPage() {
   const activeIdStr = activeId != null ? String(activeId) : null;
 
   /* Battery health analytics (for overview stats, history table) */
-  const { data, isLoading, error } = useBatteryHealthAnalytics(activeIdStr);
+  const healthQuery = useBatteryHealthAnalytics(activeIdStr);
+  const { data, isLoading, error } = healthQuery;
 
   /* Degradation data (for prediction, risk factors, trend) */
   const { data: degradation } = useBatteryDegradation(activeIdStr);
@@ -213,6 +214,10 @@ export default function BatteryDegradationPage() {
       subtitle={t('Health trends, degradation predictions, and charging habit impact')}
       loading={isLoading}
       error={error as Error | null}
+      actions={
+        // Battery health analytics derive from a daily cagg; force amber after 24h.
+        <DataFreshnessAuto query={healthQuery} forceStaleAfterMs={24 * 60 * 60 * 1000} />
+      }
     >
       {/* ── Summary Metrics ───────────────────────────── */}
       <FadeIn>

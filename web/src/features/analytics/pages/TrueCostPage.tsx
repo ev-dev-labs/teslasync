@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { DollarSign, Fuel, Zap, TrendingUp, Leaf } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Select } from '@/components/ui';
-import { Currency } from '@/components/data-display';
+import { Currency, DataFreshnessAuto } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import {
@@ -27,7 +27,8 @@ export default function TrueCostPage() {
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : '';
 
-  const { data: tco, isLoading, error } = useCostBreakdown(vehicleIdStr);
+  const tcoQuery = useCostBreakdown(vehicleIdStr);
+  const { data: tco, isLoading, error } = tcoQuery;
 
   const fmtCurrency = (v: number) => `$${fmtNumber(v)}`;
 
@@ -40,13 +41,17 @@ export default function TrueCostPage() {
       loading={isLoading}
       error={error instanceof Error ? error : null}
       actions={
-        vehicles && vehicles.length > 1 ? (
-          <Select
-            value={String(vehicleId ?? '')}
-            onChange={(e) => setSelectedVehicle(Number(e.target.value))}
-            options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
-          />
-        ) : undefined
+        <div className="flex items-center gap-3">
+          {vehicles && vehicles.length > 1 && (
+            <Select
+              value={String(vehicleId ?? '')}
+              onChange={(e) => setSelectedVehicle(Number(e.target.value))}
+              options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
+            />
+          )}
+          {/* Cagg-driven; force amber after 6h to surface stale aggregates. */}
+          <DataFreshnessAuto query={tcoQuery} forceStaleAfterMs={6 * 60 * 60 * 1000} />
+        </div>
       }
     >
       {tco ? (

@@ -5,7 +5,7 @@ import { Gauge, TrendingUp, Calendar, BarChart3, AlertCircle } from 'lucide-reac
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, DataTable, type Column } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { MetricCard, DataFreshnessAuto } from '@/components/data-display';
 import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { FadeIn } from '@/components/motion';
@@ -65,11 +65,12 @@ export default function MileagePage() {
   const { vehicleId } = useSelectedVehicle();
   const activeId = vehicleId != null ? String(vehicleId) : '';
 
-  const { data: stats, isLoading, error: statsError } = useQuery<MileageStats>({
+  const statsQuery = useQuery<MileageStats>({
     queryKey: ['mileage-stats', activeId],
     queryFn: () => request<MileageStats>(`/mileage/stats?vehicle_id=${activeId}`),
     enabled: activeId !== '',
   });
+  const { data: stats, isLoading, error: statsError } = statsQuery;
 
   const { data: entries, error: entriesError } = useQuery<MileageEntry[]>({
     queryKey: ['mileage-entries', activeId],
@@ -128,6 +129,7 @@ export default function MileagePage() {
       subtitle={t('mileage.subtitle', 'Daily and monthly distance tracking')}
       loading={isLoading}
       error={null}
+      actions={<DataFreshnessAuto query={statsQuery} />}
     >
       {anyError && (
         <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>

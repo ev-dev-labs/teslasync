@@ -12,6 +12,15 @@ export { TimelineItem } from './TimelineItem';
 export { FSMBadge } from './FSMBadge';
 export { TransitionArrow } from './TransitionArrow';
 export { FreshnessIndicator, useIsStale } from './FreshnessIndicator';
+export {
+  DataFreshness,
+  DataFreshnessAuto,
+  FRESHNESS_COLORS,
+  type DataFreshnessProps,
+  type DataFreshnessAutoProps,
+  type FreshnessStatus,
+  type FreshnessQuery,
+} from './DataFreshness';
 export { LiveIndicator, type LiveIndicatorVariant } from './LiveIndicator';
 export { Delta, type DeltaProps } from './Delta';
 export {

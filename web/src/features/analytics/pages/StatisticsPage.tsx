@@ -8,7 +8,7 @@ import {
 
 import { PageContainer, Grid } from '@/components/layout';
 import { GlassPanel, Select, Button } from '@/components/ui';
-import { MetricCard, SavedViewMenu } from '@/components/data-display';
+import { MetricCard, SavedViewMenu, DataFreshnessAuto } from '@/components/data-display';
 import {
   RadialGauge, ChartTooltip, ChartContainer, CHART_COLORS,
   chartGrid, axisTickSm,
@@ -68,11 +68,12 @@ export default function StatisticsPage() {
   const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
 
   /* ── Data hooks ────────────────────────────────────────────────── */
-  const { data: stats, isLoading, error, refetch } = useQuery({
+  const statsQuery = useQuery({
     queryKey: ['period-stats', activeId],
     queryFn: () => request<PeriodStats>(`/analytics/period-stats?vehicle_id=${activeId}`),
     enabled: !!activeId,
   });
+  const { data: stats, isLoading, error, refetch } = statsQuery;
 
   const { data: batteryHealth } = useBatteryHealthAnalytics(activeId || null);
   const { data: mileage } = useMileageStats(activeId);
@@ -127,6 +128,7 @@ export default function StatisticsPage() {
             currentQuery={savedView.currentQuery}
             onApply={savedView.apply}
           />
+          <DataFreshnessAuto query={statsQuery} />
         </div>
       }
     >

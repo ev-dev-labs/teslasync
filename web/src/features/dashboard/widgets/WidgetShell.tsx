@@ -2,7 +2,11 @@ import { type ReactNode, useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/cn';
 import { Skeleton, QueryError } from '@/components/feedback';
 import { HelpTooltip, PinButton } from '@/components/ui';
-import { DataFreshness } from '../components/DataFreshness';
+import {
+  DataFreshness,
+  DataFreshnessAuto,
+  type FreshnessQuery,
+} from '@/components/data-display';
 import type { WidgetHelp } from './types';
 
 interface WidgetShellProps {
@@ -13,6 +17,14 @@ interface WidgetShellProps {
   children: ReactNode;
   noPadding?: boolean;
   actions?: ReactNode;
+  /**
+   * Convenience: pass an entire TanStack Query result and the shell will
+   * render `<DataFreshnessAuto query={query} />` in the header. Mutually
+   * exclusive with the granular `updatedAt`/`isFetching`/`isStale`/`isError`/
+   * `onRefresh` props (those win when supplied for backward compatibility).
+   * Phase-40 / Prompt 66.
+   */
+  query?: FreshnessQuery;
   /** Freshness: ms timestamp from dataUpdatedAt (0 = never) */
   updatedAt?: number;
   /** Is TanStack Query currently fetching in the background? */
@@ -41,6 +53,7 @@ interface WidgetShellProps {
 
 export function WidgetShell({
   title, icon, loading, error, children, noPadding, actions,
+  query,
   updatedAt, isFetching, isStale, isError, onRefresh, help,
   widgetId, dashboardId,
 }: WidgetShellProps) {
@@ -48,20 +61,24 @@ export function WidgetShell({
   const [justUpdated, setJustUpdated] = useState(false);
   const prevUpdatedAt = useRef<number | undefined>(undefined);
 
+  // Resolve the effective updatedAt for the pulse-on-change effect: the
+  // explicit prop wins, otherwise we fall back to the query's value.
+  const effectiveUpdatedAt = updatedAt ?? query?.dataUpdatedAt;
+
   useEffect(() => {
     if (
-      updatedAt &&
-      updatedAt > 0 &&
+      effectiveUpdatedAt &&
+      effectiveUpdatedAt > 0 &&
       prevUpdatedAt.current !== undefined &&
-      prevUpdatedAt.current !== updatedAt
+      prevUpdatedAt.current !== effectiveUpdatedAt
     ) {
       setJustUpdated(true);
       const timer = setTimeout(() => setJustUpdated(false), 1500);
-      prevUpdatedAt.current = updatedAt;
+      prevUpdatedAt.current = effectiveUpdatedAt;
       return () => clearTimeout(timer);
     }
-    prevUpdatedAt.current = updatedAt;
-  }, [updatedAt]);
+    prevUpdatedAt.current = effectiveUpdatedAt;
+  }, [effectiveUpdatedAt]);
 
   if (loading) return <Skeleton className="h-full rounded-xl" />;
   if (error) return (
@@ -70,20 +87,29 @@ export function WidgetShell({
     </div>
   );
 
-  const showFreshness = updatedAt !== undefined;
+  const showFreshness = updatedAt !== undefined || query !== undefined;
   // Compact (dot-only) when widget has no title (typically 1×1 widgets)
   const freshnessCompact = !title;
 
-  const freshnessEl = showFreshness ? (
-    <DataFreshness
-      updatedAt={updatedAt > 0 ? updatedAt : null}
-      isFetching={isFetching ?? false}
-      isStale={isStale ?? false}
-      isError={isError ?? false}
-      onRefresh={onRefresh}
-      compact={freshnessCompact}
-    />
-  ) : null;
+  let freshnessEl: ReactNode = null;
+  if (showFreshness) {
+    if (updatedAt !== undefined) {
+      freshnessEl = (
+        <DataFreshness
+          updatedAt={updatedAt > 0 ? updatedAt : null}
+          isFetching={isFetching ?? false}
+          isStale={isStale ?? false}
+          isError={isError ?? false}
+          onRefresh={onRefresh}
+          compact={freshnessCompact}
+        />
+      );
+    } else if (query) {
+      freshnessEl = (
+        <DataFreshnessAuto query={query} compact={freshnessCompact} />
+      );
+    }
+  }
 
   return (
     <div
