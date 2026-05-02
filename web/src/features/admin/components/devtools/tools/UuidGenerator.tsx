@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Fingerprint, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { ToolCard } from '../ToolCard'
-import { CopyButton } from '../CopyButton'
+import { CopyButton } from '@/components/ui'
 
 export function UuidGeneratorTool() {
   const { t } = useTranslation()

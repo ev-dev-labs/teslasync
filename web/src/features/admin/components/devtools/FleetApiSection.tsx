@@ -10,7 +10,7 @@ import { getErrorMessage } from '@/lib/errorMessage'
 import SignalConfigModal from '@/components/ui/SignalConfigModal'
 
 import { ToolCard } from './ToolCard'
-import { CopyButton } from './CopyButton'
+import { CopyButton } from '@/components/ui'
 import { ResultPanel } from './ResultPanel'
 import { apiFetch, useVehicleOptions } from './helpers'
 import { ICON_COLOR_MAP, ONBOARDING_STEPS, TELEMETRY_FIELDS } from './constants'

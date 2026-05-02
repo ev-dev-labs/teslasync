@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { BookOpen } from 'lucide-react'
 import { Input, Badge, DataTable, type Column } from '@/components/ui'
 import { ToolCard } from '../ToolCard'
-import { CopyButton } from '../CopyButton'
+import { CopyButton } from '@/components/ui'
 import { TESLA_ENDPOINTS } from '../constants'
 
 export function TeslaApiRefTool() {

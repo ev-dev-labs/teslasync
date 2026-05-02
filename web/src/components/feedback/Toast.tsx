@@ -72,6 +72,17 @@ export function useToast() {
   return ctx
 }
 
+/**
+ * useOptionalToast — non-throwing variant of {@link useToast} that returns
+ * `null` when no `<ToastProvider>` is mounted in the tree. Useful for
+ * primitives like `<CopyButton withToast>` that want to surface a toast when
+ * available but should not crash in isolated component tests or storybook
+ * stories that don't wrap with the provider.
+ */
+export function useOptionalToast(): ToastContextValue | null {
+  return useContext(ToastContext)
+}
+
 const icons: Record<ToastType, ReactNode> = {
   success: <CheckCircle className="h-5 w-5" />,
   error: <AlertCircle className="h-5 w-5" />,

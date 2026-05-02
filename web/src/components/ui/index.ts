@@ -27,6 +27,7 @@ export { Breadcrumb } from './Breadcrumb';
 export { CommandPalette } from './CommandPalette';
 export { Textarea } from './Textarea';
 export type { TextareaProps } from './Textarea';
+export { CopyButton, type CopyButtonProps } from './CopyButton';
 export { default as Logo } from './Logo';
 export { PlaybackControls } from './PlaybackControls';
 export {

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'lucide-react'
 import { Button, Textarea } from '@/components/ui'
 import { ToolCard } from '../ToolCard'
-import { CopyButton } from '../CopyButton'
+import { CopyButton } from '@/components/ui'
 
 export function UrlEncoderTool() {
   const { t } = useTranslation()

@@ -11,6 +11,7 @@ import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { CopyButton } from '@/components/ui/CopyButton';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Modal } from '@/components/ui/Modal';
@@ -24,7 +25,7 @@ import { formatDate } from '@/lib/dateFormat';
 import { useApiKeys, useCreateApiKey, useDeleteApiKey, useRevokeApiKey } from '@/api/hooks/useAdmin';
 import type { APIKey } from '@/types/admin';
 import {
-  Key, Plus, Trash2, Copy, Check, Shield, ShieldAlert, Crown, Clock, XCircle,
+  Key, Plus, Trash2, Shield, ShieldAlert, Crown, Clock, XCircle,
 } from 'lucide-react';
 
 // ─── Permission badge ────────────────────────────────────────────────────────
@@ -61,16 +62,7 @@ export default function APIKeysPage() {
   const [newName, setNewName] = useState('');
   const [newPerm, setNewPerm] = useState('read');
   const [generatedKey, setGeneratedKey] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<APIKey | null>(null);
-
-  const handleCopy = () => {
-    if (generatedKey) {
-      navigator.clipboard.writeText(generatedKey);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
 
   const isExpired = (k: APIKey) => k.expiresAt && new Date(k.expiresAt) < new Date();
 
@@ -105,9 +97,16 @@ export default function APIKeysPage() {
               <GlassPanel className="flex-1 p-3 font-mono text-xs text-cyan-300 break-all">
                 {generatedKey}
               </GlassPanel>
-              <Button variant="secondary" onClick={handleCopy} className="p-2.5 shrink-0" title={t('Copy')}>
-                {copied ? <Check className="h-4 w-4 text-neon-green" /> : <Copy className="h-4 w-4" />}
-              </Button>
+              <CopyButton
+                text={generatedKey}
+                variant="secondary"
+                size="md"
+                withToast
+                ariaLabel={t('Copy API key')}
+                title={t('Copy')}
+                iconOnly
+                className="shrink-0"
+              />
             </div>
             <Button variant="secondary" size="sm" onClick={() => { setShowCreate(false); setGeneratedKey(null); }}>
               {t('Done')}

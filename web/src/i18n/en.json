@@ -276,6 +276,12 @@
       "success": "Link copied to clipboard",
       "error": "Could not copy link"
     },
+    "copyButton": {
+      "copy": "Copy",
+      "copied": "Copied",
+      "successToast": "Copied to clipboard",
+      "errorToast": "Failed to copy"
+    },
     "online": "Online",
     "offline": "Offline",
     "connected": "Connected",

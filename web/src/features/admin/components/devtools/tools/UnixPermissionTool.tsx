@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Lock } from 'lucide-react'
 import { Input, Select } from '@/components/ui'
 import { ToolCard } from '../ToolCard'
-import { CopyButton } from '../CopyButton'
+import { CopyButton } from '@/components/ui'
 import { PERMS } from '../constants'
 
 export function UnixPermissionTool() {

@@ -1,7 +1,7 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Download, Copy, Check, Link2, AlertTriangle, Package } from 'lucide-react';
-import { Modal, Button, Badge } from '@/components/ui';
+import { Download, AlertTriangle, Package } from 'lucide-react';
+import { Modal, Button, Badge, CopyButton } from '@/components/ui';
 import { AlertBanner } from '@/components/feedback';
 import { MiniGridPreview } from './MiniGridPreview';
 import { toUrlSafeBase64, buildMinimalExport } from '../hooks/validateImport';
@@ -16,47 +16,38 @@ interface ExportModalProps {
 
 export function ExportModal({ open, onClose, dashboard, onDownload }: ExportModalProps) {
   const { t } = useTranslation('dashboard');
-  const [copied, setCopied] = useState(false);
-  const [shareCopied, setShareCopied] = useState(false);
-  const [shareError, setShareError] = useState<string | null>(null);
+
+  const dashboardJson = useMemo(
+    () => JSON.stringify(dashboard, null, 2),
+    [dashboard],
+  );
 
   const jsonSize = useMemo(() => {
-    const bytes = new Blob([JSON.stringify(dashboard, null, 2)]).size;
+    const bytes = new Blob([dashboardJson]).size;
     if (bytes < 1024) return `${bytes} B`;
     return `${(bytes / 1024).toFixed(1)} KB`;
-  }, [dashboard]);
+  }, [dashboardJson]);
 
-  const handleCopyClipboard = useCallback(async () => {
-    const json = JSON.stringify(dashboard, null, 2);
-    await navigator.clipboard.writeText(json);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, [dashboard]);
-
-  const handleShareUrl = useCallback(async () => {
-    setShareError(null);
+  // Compute the shareable URL eagerly so we can validate length and disable the
+  // copy button up-front (instead of letting users click through to a silent
+  // failure or a delayed inline error).
+  const shareUrl = useMemo(() => {
     const minimal = buildMinimalExport(dashboard);
     const encoded = toUrlSafeBase64(minimal);
-    const url = `${window.location.origin}/dashboard#import=${encoded}`;
+    return `${window.location.origin}/dashboard#import=${encoded}`;
+  }, [dashboard]);
 
-    if (url.length > 2000) {
-      setShareError(
-        t('export.urlTooLong', 'Layout too large for URL sharing ({{size}} chars). Use clipboard or file export instead.', {
-          size: url.length,
-        }),
-      );
-      return;
-    }
+  const shareUrlTooLong = shareUrl.length > 2000;
+  const shareError = shareUrlTooLong
+    ? t('export.urlTooLong', 'Layout too large for URL sharing ({{size}} chars). Use clipboard or file export instead.', {
+        size: shareUrl.length,
+      })
+    : null;
 
-    await navigator.clipboard.writeText(url);
-    setShareCopied(true);
-    setTimeout(() => setShareCopied(false), 2000);
-  }, [dashboard, t]);
-
-  const handleDownload = useCallback(() => {
+  const handleDownload = () => {
     onDownload();
     onClose();
-  }, [onDownload, onClose]);
+  };
 
   return (
     <Modal
@@ -103,37 +94,24 @@ export function ExportModal({ open, onClose, dashboard, onDownload }: ExportModa
             {t('export.downloadFile', 'Download JSON File')}
           </Button>
 
-          <Button
+          <CopyButton
+            text={dashboardJson}
             variant="ghost"
             size="md"
+            withToast
+            label={t('export.copyClipboard', 'Copy to Clipboard')}
             className="w-full justify-start"
-            onClick={handleCopyClipboard}
-          >
-            {copied ? (
-              <Check className="h-4 w-4 mr-2 text-emerald-400" />
-            ) : (
-              <Copy className="h-4 w-4 mr-2" />
-            )}
-            {copied
-              ? t('export.copied', 'Copied!')
-              : t('export.copyClipboard', 'Copy to Clipboard')}
-          </Button>
+          />
 
-          <Button
+          <CopyButton
+            text={shareUrl}
             variant="ghost"
             size="md"
+            withToast
+            disabled={shareUrlTooLong}
+            label={t('export.copyShareUrl', 'Copy Shareable URL')}
             className="w-full justify-start"
-            onClick={handleShareUrl}
-          >
-            {shareCopied ? (
-              <Check className="h-4 w-4 mr-2 text-emerald-400" />
-            ) : (
-              <Link2 className="h-4 w-4 mr-2" />
-            )}
-            {shareCopied
-              ? t('export.urlCopied', 'URL Copied!')
-              : t('export.copyShareUrl', 'Copy Shareable URL')}
-          </Button>
+          />
         </div>
 
         {shareError && (

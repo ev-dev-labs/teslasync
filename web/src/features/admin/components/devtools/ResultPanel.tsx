@@ -1,5 +1,5 @@
 import { cn } from '@/lib/cn'
-import { CopyButton } from './CopyButton'
+import { CopyButton } from '@/components/ui'
 
 interface ResultPanelProps {
   title: string
