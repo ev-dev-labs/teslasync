@@ -12,6 +12,7 @@ export { FSMBadge } from './FSMBadge';
 export { TransitionArrow } from './TransitionArrow';
 export { FreshnessIndicator, useIsStale } from './FreshnessIndicator';
 export { LiveIndicator, type LiveIndicatorVariant } from './LiveIndicator';
+export { Delta, type DeltaProps } from './Delta';
 export {
   SeverityBadge,
   SeverityIcon,
