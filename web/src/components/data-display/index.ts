@@ -27,6 +27,21 @@ export {
 } from './SeverityBadge';
 export { StatusDot, type StatusDotProps } from './StatusDot';
 export { SavedViewMenu, type SavedViewMenuProps } from './SavedViewMenu';
+export { PlaybackControls, type PlaybackControlsProps } from './PlaybackControls';
+export {
+  PlaybackSpeedMenu,
+  type PlaybackSpeedMenuProps,
+  REPLAY_SPEEDS,
+  nextSpeed,
+  shiftSpeed,
+} from './PlaybackSpeedMenu';
+export {
+  TimelineScrubber,
+  type TimelineScrubberProps,
+  type TimelineMarker,
+  type TimelineMarkerKind,
+  type TimelinePreviewPoint,
+} from './TimelineScrubber';
 
 // Centralized format components — see ./format for details
 export {

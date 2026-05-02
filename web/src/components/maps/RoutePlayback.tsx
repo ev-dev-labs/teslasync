@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { MapPin, Flag } from 'lucide-react';
 
 import { GlassPanel } from '@/components/ui/GlassPanel';
-import { PlaybackControls } from '@/components/ui/PlaybackControls';
+import { PlaybackControls } from '@/components/data-display/PlaybackControls';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { cn } from '@/lib/cn';

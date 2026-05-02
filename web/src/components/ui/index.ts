@@ -30,7 +30,7 @@ export type { TextareaProps } from './Textarea';
 export { CopyButton, type CopyButtonProps } from './CopyButton';
 export { PrintButton, type PrintButtonProps } from './PrintButton';
 export { default as Logo } from './Logo';
-export { PlaybackControls } from './PlaybackControls';
+export { PlaybackControls } from '../data-display/PlaybackControls';
 export {
   Heading,
   Text,

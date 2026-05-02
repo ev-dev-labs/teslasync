@@ -1,0 +1,45 @@
+=== GATE ===
+=== PREFLIGHT ===
+PROMPT=phase-40/57-trip-replay-timeline-scrubber
+BRANCH=refactor/mono-gone
+HEAD=a0c19279
+=== FILES_EXIST ===
+FILE[web\src\components\data-display\PlaybackControls.tsx]=True
+FILE[web\src\components\data-display\TimelineScrubber.tsx]=True
+FILE[web\src\components\data-display\PlaybackSpeedMenu.tsx]=True
+FILE[web\src\features\driving\lib\replayMarkers.ts]=True
+FILE[web\src\features\driving\lib\__tests__\replayMarkers.test.ts]=True
+FILES_EXPECTED=5
+FILES_MISSING=0
+=== TYPESCRIPT ===
+TSC_EXIT=0
+=== LINT ===
+LINT_EXIT=0
+=== FRONTEND_TEST ===
+Test Files  71 passed (71)
+     Tests  834 passed (834)
+FRONTEND_TEST_EXIT=0
+=== AUDIT_VIOLATIONS ===
+VIOLATION_INLINE_VAR=0
+VIOLATION_RECHARTS_DIRECT=0
+VIOLATION_LEAFLET_DIRECT=0
+VIOLATION_LEGACY_API_IMPORT=0
+VIOLATION_DOUBLE_API_PREFIX=0
+AUDIT_TOTAL_VIOLATIONS=0
+=== GIT_STATUS ===
+ M web/src/components/data-display/index.ts
+ M web/src/components/maps/RoutePlayback.tsx
+ D web/src/components/ui/PlaybackControls.tsx
+ M web/src/components/ui/index.ts
+ M web/src/features/driving/pages/TripReplayPage.tsx
+ M web/src/hooks/useTripReplay.ts
+ M web/src/i18n/en.json
+?? web/src/components/data-display/PlaybackControls.tsx
+?? web/src/components/data-display/PlaybackSpeedMenu.tsx
+?? web/src/components/data-display/TimelineScrubber.tsx
+?? web/src/features/driving/lib/
+
+UNEXPECTED_STATUS_COUNT=0
+=== STATUS ===
+EXIT=0
+STATUS=DONE
