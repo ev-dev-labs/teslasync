@@ -30,7 +30,7 @@ import { GlassPanel, Badge, Button as UiButton, ConfirmDialog, Input as UiInput,
 import { BulkActionsToolbar, type BulkAction, SeverityBadge, SeverityIcon } from '@/components/data-display'
 import { PageContainer } from '@/components/layout'
 import { FadeIn } from '@/components/motion'
-import { AlertBanner, EmptyState, ErrorDisplay, Skeleton } from '@/components/feedback'
+import { AlertBanner, DraftRecoveryBanner, EmptyState, ErrorDisplay, Skeleton } from '@/components/feedback'
 import { SearchInput } from '@/components/forms'
 import { cn } from '@/lib/cn'
 import { severityTokens } from '@/lib/tokens'
@@ -38,7 +38,7 @@ import { formatDateTime } from '@/lib/dateFormat'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useConfirm } from '@/hooks/useConfirm'
 import { useDirtyForm } from '@/hooks/useDirtyForm'
-import { useAutosave, loadAutosave, clearAutosave } from '@/hooks/useAutosave'
+import { useFormDraft } from '@/hooks/useFormDraft'
 import { useUrlString } from '@/hooks/useUrlState'
 import { alertRuleSchema } from '../schemas/alertRule'
 import { ComputedMetricEditor } from '../components/ComputedMetricEditor'
@@ -479,7 +479,6 @@ export default function AlertStudio() {
   const { confirm: confirmDelete, dialogProps: deleteDialogProps } = useConfirm()
   const { confirm: confirmDiscard, dialogProps: discardDialogProps } = useConfirm()
 
-  const [editor, setEditor] = useState<EditorState>(freshEditor)
   const [selectedId, setSelectedId] = useState<number | null>(null)
   // Phase-40 / Prompt 51 — multi-row selection for bulk enable/disable.
   const [bulkSelected, setBulkSelected] = useState<Set<number>>(new Set())
@@ -502,29 +501,37 @@ export default function AlertStudio() {
   const [formError, setFormError] = useState<string | null>(null)
   const initialEditorRef = useRef<string>(JSON.stringify(freshEditor()))
 
-  const draftKey = `alert-rule-${selectedId ?? 'new'}`
-  const draftRestoredRef = useRef(false)
+  // Phase-40 / Prompt 55 — `useFormDraft` persists in-progress new-rule
+  // editing to localStorage so a tab close, SW reload, or auth redirect
+  // doesn't destroy the user's work. Only the `alert-rule-new` key is
+  // persisted (skipPersist returns true for edit-an-existing-rule sessions);
+  // existing rules can be re-fetched from the server, but a brand-new rule
+  // exists nowhere else.
+  const draftKey = `alertstudio:rule:${selectedId ?? 'new'}`
+  const isNewRule = selectedId === null
+  const freshEditorJsonRef = useRef<string>(JSON.stringify(freshEditor()))
+  const {
+    value: editor,
+    setValue: setEditor,
+    hasDraft,
+    draftSavedAt,
+    discardDraft,
+  } = useFormDraft<EditorState>(draftKey, freshEditor(), {
+    version: 1,
+    debounceMs: 800,
+    skipPersist: v =>
+      saveRuleMut.isPending
+      || deleteRuleMut.isPending
+      || !isNewRule
+      || JSON.stringify(v) === freshEditorJsonRef.current,
+  })
+
   const isDirty = useMemo(
     () => JSON.stringify(editor) !== initialEditorRef.current,
     [editor],
   )
 
   useDirtyForm(isDirty)
-  useAutosave({
-    key: draftKey,
-    data: editor,
-    paused: saveRuleMut.isPending || deleteRuleMut.isPending,
-  })
-
-  // Restore autosaved draft for a brand-new rule on first mount only.
-  useEffect(() => {
-    if (draftRestoredRef.current) return
-    draftRestoredRef.current = true
-    if (selectedId !== null) return
-    const saved = loadAutosave<EditorState>('alert-rule-new')
-    if (!saved || !saved.name?.trim()) return
-    setEditor(saved)
-  }, [selectedId])
 
   const dirtyStrings = useMemo(() => ({
     title: t('forms.unsavedTitle', 'Unsaved changes'),
@@ -826,29 +833,32 @@ export default function AlertStudio() {
       editor.id ? { id: editor.id, ...payload } : payload,
       {
         onSuccess: () => {
-          clearAutosave(draftKey)
-          clearAutosave('alert-rule-new')
+          // Phase-40 / Prompt 55 — successful save promotes the draft into
+          // a real rule, so drop both the per-rule and the `new` drafts.
+          discardDraft()
           const blank = freshEditor()
-          setEditor(blank)
           setSelectedId(null)
+          setEditor(blank)
           initialEditorRef.current = JSON.stringify(blank)
         },
       },
     )
-  }, [canSave, draftKey, editor, saveRuleMut, t])
+  }, [canSave, discardDraft, editor, saveRuleMut, setEditor, t])
 
   const handleDelete = useCallback((id: number) => {
     deleteRuleMut.mutate(id, {
       onSuccess: () => {
-        clearAutosave(`alert-rule-${id}`)
+        // Phase-40 / Prompt 55 — drop any in-progress draft for the deleted
+        // rule so a future visit doesn't restore stale work.
+        discardDraft()
         const blank = freshEditor()
-        setEditor(blank)
         setSelectedId(null)
+        setEditor(blank)
         initialEditorRef.current = JSON.stringify(blank)
         setFormError(null)
       },
     })
-  }, [deleteRuleMut])
+  }, [deleteRuleMut, discardDraft, setEditor])
 
   const handleToggleTestChannel = useCallback((channelId: number) => {
     setTestChannelIds(current => {
@@ -1252,6 +1262,17 @@ export default function AlertStudio() {
                   : t('notifications.alertStudio.editor.newTitle', 'New Rule')}
               </p>
             </div>
+
+            {hasDraft && (
+              <div className="mb-4">
+                <DraftRecoveryBanner
+                  hasDraft={hasDraft}
+                  draftSavedAt={draftSavedAt}
+                  onDiscard={discardDraft}
+                  itemNoun={t('draft.noun.rule', 'Alert rule')}
+                />
+              </div>
+            )}
 
             {formError && (
               <div className="mb-4">

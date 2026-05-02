@@ -218,6 +218,20 @@
     "validationFailed": "Please fix the highlighted fields before saving.",
     "saveError": "Failed to save changes"
   },
+  "draft": {
+    "restored": "Draft restored from {{when}}.",
+    "restoredItem": "{{noun}} draft restored from {{when}}.",
+    "useDraft": "Use draft",
+    "discardDraft": "Discard draft",
+    "discardConfirmTitle": "Discard your unsaved changes?",
+    "discardConfirmDescription": "This cannot be undone.",
+    "unknownTime": "a moment ago",
+    "noun": {
+      "rule": "Alert rule",
+      "automation": "Automation",
+      "settings": "Settings"
+    }
+  },
   "bulk": {
     "selected": "{{count}} selected",
     "selected_one": "{{count}} selected",

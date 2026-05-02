@@ -5,14 +5,44 @@ import {
   useSettings, useSaveSettings, useVehicles, useCarPreferences,
 } from '@/api/hooks/useSettings'
 import { GlassPanel, Button, IconBox, Input, Select } from '@/components/ui'
-import { Skeleton } from '@/components/feedback'
+import { Skeleton, DraftRecoveryBanner } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { useToast } from '@/components/feedback/Toast'
+import { useFormDraft } from '@/hooks/useFormDraft'
 import { parseSettingEnum, isSettingMiles, isSettingFahrenheit, isSettingPSI, isSettingBar } from '@/lib/parseSettingEnum'
 import { SettingField } from './SettingField'
 import {
   Settings as SettingsIcon, Save, Download, Car, CheckCircle, Clock,
 } from 'lucide-react'
+
+const DEFAULT_FORM: AppSettings = {
+  unit_of_length: 'km',
+  unit_of_temp: 'C',
+  unit_of_pressure: 'bar',
+  preferred_range: 'rated',
+  language: 'en',
+  base_cost_per_kwh: 0.12,
+  api_suspended: false,
+  theme: 'neon-cyan',
+  mode: 'dark',
+  custom_primary: '#00b4d8',
+  custom_accent: '#e63946',
+  gas_price_per_unit: 3.50,
+  gas_unit: 'gallon',
+  gas_efficiency_mpg: 25,
+  decimal_precision: 2,
+  quiet_hours_enabled: false,
+  quiet_hours_start: '22:00',
+  quiet_hours_end: '07:00',
+  alert_digest_mode: 'instant',
+  currency_symbol: '$',
+  locale: 'en-US',
+  tz_display_default: 'vehicle',
+  timezone_user: '',
+  tab_badge_enabled: true,
+  critical_flash_enabled: true,
+  ui_density: 'comfortable',
+}
 
 export function GeneralSettings() {
   const { t } = useTranslation('settings')
@@ -20,39 +50,41 @@ export function GeneralSettings() {
   const { data: settings, isLoading } = useSettings()
   const settingsMut = useSaveSettings()
 
-  const [form, setForm] = useState<AppSettings>({
-    unit_of_length: 'km',
-    unit_of_temp: 'C',
-    unit_of_pressure: 'bar',
-    preferred_range: 'rated',
-    language: 'en',
-    base_cost_per_kwh: 0.12,
-    api_suspended: false,
-    theme: 'neon-cyan',
-    mode: 'dark',
-    custom_primary: '#00b4d8',
-    custom_accent: '#e63946',
-    gas_price_per_unit: 3.50,
-    gas_unit: 'gallon',
-    gas_efficiency_mpg: 25,
-    decimal_precision: 2,
-    quiet_hours_enabled: false,
-    quiet_hours_start: '22:00',
-    quiet_hours_end: '07:00',
-    alert_digest_mode: 'instant',
-    currency_symbol: '$',
-    locale: 'en-US',
-    tz_display_default: 'vehicle',
-    timezone_user: '',
-    tab_badge_enabled: true,
-    critical_flash_enabled: true,
-    ui_density: 'comfortable',
+  // Persist form drafts to localStorage so a long edit session survives a tab
+  // close, an SW reload, or an auth redirect. The optional google_maps_api_key
+  // field is a client-side public-tier integration key (comparable to the theme
+  // setting) — not a server credential. If a true secret is ever added to this
+  // form, switch that field to a separate non-persisted useState.
+  const {
+    value: form,
+    setValue: setForm,
+    hasDraft,
+    draftSavedAt,
+    discardDraft,
+  } = useFormDraft<AppSettings>('settings:general', DEFAULT_FORM, {
+    version: 1,
+    debounceMs: 800,
+    maxAgeMs: 24 * 60 * 60 * 1000,
+    skipPersist: (value) => {
+      if (settingsMut.isPending) return true
+      if (!settings) return true
+      // Never persist the unmodified server snapshot as a "draft".
+      try {
+        return JSON.stringify(value) === JSON.stringify(settings)
+      } catch {
+        return false
+      }
+    },
   })
   const [saved, setSaved] = useState(false)
 
   const [formInited, setFormInited] = useState(false)
   if (settings && !formInited) {
-    setForm(settings)
+    // Only hydrate from the server snapshot if no draft was restored — otherwise
+    // we'd clobber the user's in-progress edits.
+    if (!hasDraft) {
+      setForm(settings)
+    }
     setFormInited(true)
   }
 
@@ -99,6 +131,16 @@ export function GeneralSettings() {
             <p className="text-xs text-[var(--text-muted)]">{t('app.subtitle', 'Units, language, and cost preferences')}</p>
           </div>
         </div>
+
+        <DraftRecoveryBanner
+          hasDraft={hasDraft}
+          draftSavedAt={draftSavedAt}
+          onDiscard={() => {
+            discardDraft()
+            if (settings) setForm(settings)
+          }}
+          itemNoun={t('draft.noun.settings', 'Settings')}
+        />
 
         {isLoading ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

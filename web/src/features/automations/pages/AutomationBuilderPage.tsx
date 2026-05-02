@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -18,13 +18,13 @@ import {
   Toggle,
   Textarea as UiTextarea,
 } from '@/components/ui';
-import { AlertBanner, EmptyState } from '@/components/feedback';
+import { AlertBanner, DraftRecoveryBanner, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { FormSection } from '@/components/forms';
 import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDirtyForm } from '@/hooks/useDirtyForm';
-import { useAutosave, loadAutosave, clearAutosave } from '@/hooks/useAutosave';
+import { useFormDraft } from '@/hooks/useFormDraft';
 import { useConfirm } from '@/hooks/useConfirm';
 import { ConfirmDialog } from '@/components/ui';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -278,32 +278,66 @@ export default function AutomationBuilderPage() {
   const updateMutation = useUpdateAutomationFull();
   const testRunMutation = useTestRunAutomation();
 
-  // Autosave draft key — scoped per-automation (or "new"/"preset:X") so two
-  // tabs editing different automations can keep separate drafts.
+  // Phase-40 / Prompt 55 — `useFormDraft` autosaves the in-progress
+  // automation to localStorage so a tab close, SW reload, or auth redirect
+  // doesn't destroy the user's work. Scoped per-automation (or
+  // "new"/"preset:X") so two tabs editing different automations keep
+  // separate drafts. Persistence is gated on `dirty && hydrated && !isSaving`
+  // so we don't echo server data back to storage as a "draft".
   const draftKey = isEdit
-    ? `automation-${automationId ?? 'unknown'}`
+    ? `automation:edit:${automationId ?? 'unknown'}`
     : presetId
-      ? `automation-preset-${presetId}`
-      : 'automation-new';
+      ? `automation:preset:${presetId}`
+      : 'automation:new';
 
-  const [form, setForm] = useState<FormState>(getInitialForm);
   const [hydrated, setHydrated] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [conflicts, setConflicts] = useState<AutomationConflict[]>([]);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedId, setSavedId] = useState<number | null>(null);
 
+  const createMutation_isPendingRef = useRef(createMutation.isPending);
+  createMutation_isPendingRef.current = createMutation.isPending;
+  const updateMutation_isPendingRef = useRef(updateMutation.isPending);
+  updateMutation_isPendingRef.current = updateMutation.isPending;
+  const dirtyRef = useRef(dirty);
+  dirtyRef.current = dirty;
+  const hydratedRef = useRef(hydrated);
+  hydratedRef.current = hydrated;
+
+  const {
+    value: form,
+    setValue: setFormValue,
+    hasDraft,
+    draftSavedAt,
+    discardDraft,
+  } = useFormDraft<FormState>(draftKey, getInitialForm(), {
+    version: 1,
+    debounceMs: 1500,
+    skipPersist: () =>
+      createMutation_isPendingRef.current
+      || updateMutation_isPendingRef.current
+      || !hydratedRef.current
+      || !dirtyRef.current,
+  });
+
+  // For edits and preset installs, the canonical source of truth is the
+  // server payload / preset definition — drop any restored draft as soon as
+  // we know the real source data, so the user isn't editing a stale draft.
+  // (For brand-new automations with no preset, drafts are the whole point.)
   useEffect(() => {
     if (isEdit && existingAutomation && !hydrated) {
-      setForm(automationToForm(existingAutomation));
+      discardDraft();
+      setFormValue(automationToForm(existingAutomation));
       setConflicts([]);
       setHydrated(true);
     }
-  }, [existingAutomation, hydrated, isEdit]);
+  }, [discardDraft, existingAutomation, hydrated, isEdit, setFormValue]);
 
   useEffect(() => {
     if (!isEdit && preset && !hydrated) {
-      setForm({
+      discardDraft();
+      setFormValue({
         name: preset.name,
         description: preset.description,
         vehicle_id: null,
@@ -320,21 +354,18 @@ export default function AutomationBuilderPage() {
       });
       setHydrated(true);
     }
-  }, [hydrated, isEdit, preset]);
+  }, [discardDraft, hydrated, isEdit, preset, setFormValue]);
 
-  // For brand-new automations (no `id`, no `preset`), restore any previously
-  // saved draft on first mount so the user doesn't lose work after a reload.
-  // For edits and preset installs we never restore — the canonical source is
-  // the server payload / preset definition.
+  // For brand-new automations (no `id`, no `preset`), `useFormDraft` already
+  // hydrated the form value from any stored draft on mount. Mark hydrated
+  // immediately so further user edits start being autosaved. If a draft was
+  // restored, surface the dirty flag so the user can see their work and the
+  // unsaved-changes guard kicks in.
   useEffect(() => {
     if (isEdit || presetId || hydrated) return;
-    const draft = loadAutosave<FormState>(draftKey);
-    if (draft) {
-      setForm(draft);
-      setDirty(true);
-    }
+    if (hasDraft) setDirty(true);
     setHydrated(true);
-  }, [draftKey, hydrated, isEdit, presetId]);
+  }, [hasDraft, hydrated, isEdit, presetId]);
 
   useEffect(() => {
     setHydrated(false);
@@ -347,15 +378,6 @@ export default function AutomationBuilderPage() {
   const { confirm: confirmDiscard, dialogProps: discardDialogProps } = useConfirm();
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
-
-  // Persist a draft to localStorage on a debounce while the form is dirty.
-  // Pause during in-flight saves so a successful submit isn't immediately
-  // re-saved as a stale draft (clearAutosave runs in onSuccess below).
-  useAutosave({
-    key: draftKey,
-    data: form,
-    paused: isSaving || !dirty || !hydrated,
-  });
 
   const vehicleOptions = useMemo(() => {
     const options = (vehicles ?? []).map((vehicle) => ({
@@ -385,9 +407,9 @@ export default function AutomationBuilderPage() {
   const notificationChannels = channels ?? [];
 
   const update = useCallback(<K extends keyof FormState>(key: K, value: FormState[K]) => {
-    setForm((previous) => ({ ...previous, [key]: value }));
+    setFormValue((previous) => ({ ...previous, [key]: value }));
     setDirty(true);
-  }, []);
+  }, [setFormValue]);
 
   const handleTriggerKindChange = useCallback(
     (nextKind: string) => {
@@ -439,12 +461,12 @@ export default function AutomationBuilderPage() {
       setConflicts([]);
       // Successful save → drop the autosaved draft so a future visit
       // doesn't restore stale work.
-      clearAutosave(draftKey);
+      discardDraft();
       navigate('/automations');
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : String(error));
     }
-  }, [automationId, createMutation, draftKey, form, isEdit, navigate, updateMutation, validate]);
+  }, [automationId, createMutation, discardDraft, form, isEdit, navigate, updateMutation, validate]);
 
   /**
    * Cancel handler — if the form is dirty, prompt before navigating away.
@@ -546,6 +568,18 @@ export default function AutomationBuilderPage() {
         >
           {t('automations.builder.backToList', 'Back to Automations')}
         </UiButton>
+
+        {hasDraft && !isEdit && !presetId && (
+          <DraftRecoveryBanner
+            hasDraft={hasDraft}
+            draftSavedAt={draftSavedAt}
+            onDiscard={() => {
+              discardDraft();
+              setDirty(false);
+            }}
+            itemNoun={t('draft.noun.automation', 'Automation')}
+          />
+        )}
 
         <FadeIn>
           <FormSection title={t('automations.builder.general', 'General')}>
