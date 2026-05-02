@@ -180,6 +180,52 @@ func (r *ChargingRepo) Delete(ctx context.Context, id int64) error {
 	return err
 }
 
+// FilterExistingIDs returns the subset of `ids` that exist in the
+// charging_sessions table, in arbitrary order. Used by bulk handlers to
+// surface {id, "not_found"} per-id failures without round-tripping per id.
+func (r *ChargingRepo) FilterExistingIDs(ctx context.Context, ids []int64) ([]int64, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rows, err := r.db.Pool.Query(ctx, `SELECT id FROM charging_sessions WHERE id = ANY($1)`, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make([]int64, 0, len(ids))
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out = append(out, id)
+	}
+	return out, rows.Err()
+}
+
+// BulkDelete removes charging sessions whose IDs are in `ids`, all inside a
+// single transaction. Returns the actual rows-affected count. Callers should
+// pre-validate which ids exist via FilterExistingIDs to surface failed ids
+// to the client.
+func (r *ChargingRepo) BulkDelete(ctx context.Context, ids []int64) (int64, error) {
+	if len(ids) == 0 {
+		return 0, nil
+	}
+	var deleted int64
+	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		tag, err := tx.Exec(ctx, `DELETE FROM charging_sessions WHERE id = ANY($1)`, ids)
+		if err != nil {
+			return err
+		}
+		deleted = tag.RowsAffected()
+		return nil
+	})
+	if err != nil {
+		return 0, fmt.Errorf("bulk delete charging sessions: %w", err)
+	}
+	return deleted, nil
+}
+
 // CompleteWithTx is like Complete but uses the provided transaction.
 func (r *ChargingRepo) CompleteWithTx(ctx context.Context, tx DBTX, id int64, endTs time.Time,
 	energyAddedKwh *float64, endBatteryPct *int16, milesAdded *float64,

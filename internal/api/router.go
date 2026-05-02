@@ -216,6 +216,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		}
 	}
 
+	// Wire ForwardAuth header into handlers that audit-log mutations
+	// (Phase-40 / Prompt 51 — bulk action endpoints).
+	driveHandler.WithForwardAuthHeader(cfg.Auth.ForwardAuthHeader)
+	chargingHandler.WithForwardAuthHeader(cfg.Auth.ForwardAuthHeader)
+	alertHandler.WithForwardAuthHeader(cfg.Auth.ForwardAuthHeader)
+
 	// Start Redis Pub/Sub subscription for cross-pod SSE delivery.
 	// When Redis is available, vehicle_update events published by any pod's
 	// telemetry handler are forwarded to this pod's SSE clients.
@@ -419,6 +425,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/score", driveHandler.Score)
 			r.Get("/dynamics", driveHandler.Dynamics)
 			r.Get("/acceleration-distribution", driveHandler.AccelerationDistribution)
+			// Bulk delete (Phase-40 / Prompt 51)
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/bulk", driveHandler.BulkDelete)
 			r.Route("/{driveID}", func(r chi.Router) {
 				r.Get("/", driveHandler.Get)
 				r.Get("/positions", driveHandler.Positions)
@@ -444,6 +452,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Charging
 		r.Route("/charging", func(r chi.Router) {
 			r.Get("/", chargingHandler.ListByVehicle)
+			// Bulk delete (Phase-40 / Prompt 51)
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/bulk", chargingHandler.BulkDelete)
 			r.Route("/{sessionID}", func(r chi.Router) {
 				r.Get("/", chargingHandler.Get)
 				r.Get("/telemetry", chargingHandler.TelemetryReadings)
@@ -608,6 +618,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Put("/rules/{ruleID}", alertHandler.UpdateRule)
 			r.Delete("/rules/{ruleID}", alertHandler.DeleteRule)
 			r.Post("/rules/{ruleID}/snooze", alertHandler.SnoozeRule)
+			// Bulk enable/disable (Phase-40 / Prompt 51)
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/rules/bulk/enable", alertHandler.BulkEnableRules)
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/rules/bulk/disable", alertHandler.BulkDisableRules)
 			r.Post("/test", alertHandler.TestRule)
 		})
 

@@ -15,6 +15,8 @@ import {
   type ComputedMetricSummary,
   useAlertMetrics,
   useAlertRules,
+  useBulkDisableRules,
+  useBulkEnableRules,
   useDeleteAlertRule,
   useNotificationChannels,
   useSaveAlertRule,
@@ -25,7 +27,7 @@ import {
 import type { AlertRuleKind, ComputedMetricOp } from '@/api/types'
 import type { SignalValueType } from '@/types/signals'
 import { GlassPanel, Badge, Button as UiButton, ConfirmDialog, Input as UiInput, Select as UiSelect, Modal } from '@/components/ui'
-import { SeverityBadge, SeverityIcon } from '@/components/data-display'
+import { BulkActionsToolbar, type BulkAction, SeverityBadge, SeverityIcon } from '@/components/data-display'
 import { PageContainer } from '@/components/layout'
 import { FadeIn } from '@/components/motion'
 import { AlertBanner, EmptyState, ErrorDisplay, Skeleton } from '@/components/feedback'
@@ -479,6 +481,18 @@ export default function AlertStudio() {
 
   const [editor, setEditor] = useState<EditorState>(freshEditor)
   const [selectedId, setSelectedId] = useState<number | null>(null)
+  // Phase-40 / Prompt 51 — multi-row selection for bulk enable/disable.
+  const [bulkSelected, setBulkSelected] = useState<Set<number>>(new Set())
+  const clearBulk = useCallback(() => setBulkSelected(new Set()), [])
+  const toggleBulkSelected = useCallback((id: number, on: boolean) => {
+    setBulkSelected(prev => {
+      const next = new Set(prev)
+      if (on) next.add(id); else next.delete(id)
+      return next
+    })
+  }, [])
+  const bulkEnableMut = useBulkEnableRules()
+  const bulkDisableMut = useBulkDisableRules()
   const [showTemplates, setShowTemplates] = useState(false)
   const [templateSearch, setTemplateSearch] = useState('')
   const [templateCategory, setTemplateCategory] = useState<string | null>(null)
@@ -588,6 +602,39 @@ export default function AlertStudio() {
     const q = ruleSearch.toLowerCase()
     return rulesList.filter(r => (r.name || '').toLowerCase().includes(q))
   }, [rulesList, ruleSearch])
+
+  // Drop bulk selection whenever the visible result set changes — we never
+  // want a "ghost" id remaining selected from a previous filter.
+  useEffect(() => {
+    setBulkSelected(prev => {
+      if (prev.size === 0) return prev
+      const visible = new Set(filteredRules.map(r => r.id))
+      const next = new Set<number>()
+      prev.forEach(id => { if (visible.has(id)) next.add(id) })
+      return next.size === prev.size ? prev : next
+    })
+  }, [filteredRules])
+
+  const bulkRulesActions = useMemo<BulkAction[]>(() => [
+    {
+      id: 'enable',
+      label: t('bulk.actions.enable', 'Enable'),
+      icon: <Icons.notifications className="h-3.5 w-3.5" />,
+      onClick: async (ids) => {
+        await bulkEnableMut.mutateAsync(ids.map(Number))
+        clearBulk()
+      },
+    },
+    {
+      id: 'disable',
+      label: t('bulk.actions.disable', 'Disable'),
+      icon: <Icons.notificationsMuted className="h-3.5 w-3.5" />,
+      onClick: async (ids) => {
+        await bulkDisableMut.mutateAsync(ids.map(Number))
+        clearBulk()
+      },
+    },
+  ], [t, bulkEnableMut, bulkDisableMut, clearBulk])
 
   const rulesCountLabel = rulesList.length === 1
     ? t('notifications.alertStudio.rules.countOne', '1 rule')
@@ -1070,12 +1117,24 @@ export default function AlertStudio() {
               />
             )}
 
+            <BulkActionsToolbar
+              selectedIds={Array.from(bulkSelected)}
+              total={filteredRules.length}
+              onClear={clearBulk}
+              actions={bulkRulesActions}
+              itemNoun={{
+                one: t('bulk.noun.rule_one', 'alert rule'),
+                other: t('bulk.noun.rule_other', 'alert rules'),
+              }}
+            />
+
             <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
               {filteredRules.map(rule => {
                 const sev = normalizeSeverity(rule.severity)
                 const active = selectedId === rule.id
                 const snoozed = isSnoozeActive(rule.snoozed_until)
                 const triggerMode = normalizeTriggerMode(rule.trigger_mode)
+                const checked = bulkSelected.has(rule.id)
                 return (
                   <GlassPanel
                     key={rule.id}
@@ -1085,6 +1144,14 @@ export default function AlertStudio() {
                     )}
                   >
                     <div className="flex items-start gap-2">
+                      <input
+                        type="checkbox"
+                        className="mt-1 h-4 w-4 shrink-0 cursor-pointer rounded border-white/20 bg-white/[0.04] text-cyan-500 focus:ring-2 focus:ring-cyan-500"
+                        checked={checked}
+                        onClick={e => e.stopPropagation()}
+                        onChange={e => toggleBulkSelected(rule.id, e.target.checked)}
+                        aria-label={t('notifications.alertStudio.rules.selectRow', 'Select rule {{name}}', { name: rule.name || untitledRuleLabel })}
+                      />
                       <div
                         role="button"
                         tabIndex={0}

@@ -235,6 +235,49 @@ export function useToggleAlertRule() {
   });
 }
 
+/**
+ * Bulk enable alert rules. Phase-40 / Prompt 51 — accepts a list of rule
+ * ids and returns the standardized BulkOperationResult envelope.
+ */
+export function useBulkEnableRules() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: (ids: number[]) =>
+      request<{ updated?: number; failed?: Array<{ id: number; reason: string }> }>(
+        '/alerts/rules/bulk/enable',
+        { method: 'POST', body: JSON.stringify({ ids }) },
+      ),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: notificationKeys.alertRules });
+      success('toast.bulk.enable.success', '{{count}} enabled', {
+        count: res.updated ?? 0,
+      });
+    },
+    onError: (e) => error(e, 'toast.bulk.enable.error', 'Failed to enable selection'),
+  });
+}
+
+/** Bulk disable alert rules. */
+export function useBulkDisableRules() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: (ids: number[]) =>
+      request<{ updated?: number; failed?: Array<{ id: number; reason: string }> }>(
+        '/alerts/rules/bulk/disable',
+        { method: 'POST', body: JSON.stringify({ ids }) },
+      ),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: notificationKeys.alertRules });
+      success('toast.bulk.disable.success', '{{count}} disabled', {
+        count: res.updated ?? 0,
+      });
+    },
+    onError: (e) => error(e, 'toast.bulk.disable.error', 'Failed to disable selection'),
+  });
+}
+
 export function useTestAlertRule() {
   const { success, error } = useMutationToast();
   return useMutation({

@@ -132,6 +132,52 @@ func (r *AlertRuleRepo) Delete(ctx context.Context, id int64) error {
 	return err
 }
 
+// FilterExistingIDs returns the subset of `ids` that exist in alert_rules.
+// Used by bulk handlers to surface {id, "not_found"} per-id failures.
+func (r *AlertRuleRepo) FilterExistingIDs(ctx context.Context, ids []int64) ([]int64, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rows, err := r.db.Pool.Query(ctx, `SELECT id FROM alert_rules WHERE id = ANY($1)`, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make([]int64, 0, len(ids))
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out = append(out, id)
+	}
+	return out, rows.Err()
+}
+
+// BulkSetEnabled toggles `enabled` for every rule in `ids` inside a single
+// transaction. Returns the actual rows-affected count. Bumps updated_at
+// so the audit trail reflects the action.
+func (r *AlertRuleRepo) BulkSetEnabled(ctx context.Context, ids []int64, enabled bool) (int64, error) {
+	if len(ids) == 0 {
+		return 0, nil
+	}
+	var updated int64
+	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		tag, err := tx.Exec(ctx,
+			`UPDATE alert_rules SET enabled = $2, updated_at = NOW() WHERE id = ANY($1)`,
+			ids, enabled)
+		if err != nil {
+			return err
+		}
+		updated = tag.RowsAffected()
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	return updated, nil
+}
+
 // SetSnooze sets snoozed_until on a rule. Pass nil to clear the snooze.
 // updated_at is bumped so the audit trail reflects the action.
 func (r *AlertRuleRepo) SetSnooze(ctx context.Context, id int64, until *time.Time) error {

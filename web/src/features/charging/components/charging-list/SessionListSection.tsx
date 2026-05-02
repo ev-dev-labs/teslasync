@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { BatteryCharging, Filter, ArrowUpDown, Download } from 'lucide-react';
+import { useMemo } from 'react';
+import { BatteryCharging, Filter, ArrowUpDown, Download, Trash2 } from 'lucide-react';
 import { Button, Pagination } from '@/components/ui';
+import { BulkActionsToolbar, type BulkAction } from '@/components/data-display';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { SearchInput, FilterBar } from '@/components/forms';
@@ -30,6 +32,11 @@ interface SessionListSectionProps {
   startDate: string;
   endDate: string;
   vehicleId: number | null;
+  // Phase-40 / Prompt 51 — bulk-action plumbing
+  selectedIds?: Set<number>;
+  onToggleSelected?: (id: number, on: boolean) => void;
+  onClearSelection?: () => void;
+  onBulkDelete?: (ids: number[]) => Promise<void>;
 }
 
 export function SessionListSection({
@@ -53,8 +60,38 @@ export function SessionListSection({
   startDate,
   endDate,
   vehicleId,
+  selectedIds,
+  onToggleSelected,
+  onClearSelection,
+  onBulkDelete,
 }: SessionListSectionProps) {
   const { t } = useTranslation();
+
+  const bulkActions = useMemo<BulkAction[]>(() => {
+    if (!onBulkDelete) return [];
+    const count = selectedIds?.size ?? 0;
+    return [
+      {
+        id: 'delete',
+        label: t('bulk.actions.delete', 'Delete'),
+        icon: <Trash2 className="h-3.5 w-3.5" />,
+        variant: 'danger',
+        confirm: {
+          title: t('bulk.deleteConfirmTitle', 'Delete {{count}} {{noun}}?', {
+            count,
+            noun: count === 1
+              ? t('bulk.noun.session_one', 'charging session')
+              : t('bulk.noun.session_other', 'charging sessions'),
+          }),
+          description: t('bulk.deleteConfirmDescription', 'This cannot be undone.'),
+          confirmLabel: t('common.delete', 'Delete'),
+        },
+        onClick: async (ids) => {
+          await onBulkDelete(ids.map(Number));
+        },
+      },
+    ];
+  }, [t, selectedIds?.size, onBulkDelete]);
 
   if (isLoading) {
     return (
@@ -185,13 +222,33 @@ export function SessionListSection({
           message={t('charging.list.noMatchesDescription', 'Try clearing the search or charger filter to see more sessions.')}
         />
       ) : (
-        <StaggerContainer className="space-y-3">
-          {filteredSessions.map((s) => (
-            <StaggerItem key={s.id}>
-              <ChargingSessionCard session={s} convertDistance={convertDistance} distanceUnit={distanceUnit} />
-            </StaggerItem>
-          ))}
-        </StaggerContainer>
+        <>
+          {onBulkDelete && onClearSelection && onToggleSelected && (
+            <BulkActionsToolbar
+              selectedIds={Array.from(selectedIds ?? [])}
+              total={filteredSessions.length}
+              onClear={onClearSelection}
+              actions={bulkActions}
+              itemNoun={{
+                one: t('bulk.noun.session_one', 'charging session'),
+                other: t('bulk.noun.session_other', 'charging sessions'),
+              }}
+            />
+          )}
+          <StaggerContainer className="space-y-3">
+            {filteredSessions.map((s) => (
+              <StaggerItem key={s.id}>
+                <ChargingSessionCard
+                  session={s}
+                  convertDistance={convertDistance}
+                  distanceUnit={distanceUnit}
+                  selected={selectedIds?.has(s.id) ?? false}
+                  onToggleSelect={onToggleSelected}
+                />
+              </StaggerItem>
+            ))}
+          </StaggerContainer>
+        </>
       )}
 
       {/* Pagination */}

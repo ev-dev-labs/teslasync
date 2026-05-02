@@ -17,12 +17,15 @@ import (
 // AlertHandler handles alert rule CRUD and test-notification HTTP requests.
 // Alert firing/listing moved to the notifications subsystem (ADR-010).
 type AlertHandler struct {
-	alertRuleRepo alertRuleRepository
-	notifRepo     notificationRepository
-	eventHub      *EventHub
-	mqttClient    pahomqtt.Client
-	liveSignals   signal.LiveSignalStore
-	computedEval  *ComputedMetricEvaluator
+	db                *database.DB
+	alertRuleRepo     alertRuleRepository
+	bulkRuleRepo      alertRuleBulkRepository
+	notifRepo         notificationRepository
+	eventHub          *EventHub
+	mqttClient        pahomqtt.Client
+	liveSignals       signal.LiveSignalStore
+	computedEval      *ComputedMetricEvaluator
+	forwardAuthHeader string
 }
 
 type alertRuleRepository interface {
@@ -34,6 +37,15 @@ type alertRuleRepository interface {
 	SetSnooze(context.Context, int64, *time.Time) error
 }
 
+// alertRuleBulkRepository carries the bulk operations introduced by
+// Phase-40 / Prompt 51. Kept as a separate interface so existing
+// alertRuleRepository implementers (including the test fakes) don't need
+// to opt in unless they provide bulk semantics.
+type alertRuleBulkRepository interface {
+	FilterExistingIDs(context.Context, []int64) ([]int64, error)
+	BulkSetEnabled(context.Context, []int64, bool) (int64, error)
+}
+
 type notificationRepository interface {
 	GetLogs(context.Context, int, int) ([]*models.NotificationLog, error)
 	CreateLog(context.Context, *models.NotificationLog) error
@@ -42,14 +54,25 @@ type notificationRepository interface {
 }
 
 func NewAlertHandler(db *database.DB, hub *EventHub, mc pahomqtt.Client, store signal.LiveSignalStore) *AlertHandler {
+	repo := database.NewAlertRuleRepo(db)
 	return &AlertHandler{
-		alertRuleRepo: database.NewAlertRuleRepo(db),
+		db:            db,
+		alertRuleRepo: repo,
+		bulkRuleRepo:  repo,
 		notifRepo:     database.NewNotificationRepo(db),
 		eventHub:      hub,
 		mqttClient:    mc,
 		liveSignals:   store,
 		computedEval:  NewComputedMetricEvaluator(db),
 	}
+}
+
+// WithForwardAuthHeader wires the auth header used to attribute audit log
+// entries written by the bulk endpoints. When unset, audit rows still record
+// IP/User-Agent but Actor is empty (dev mode behaviour).
+func (h *AlertHandler) WithForwardAuthHeader(name string) *AlertHandler {
+	h.forwardAuthHeader = name
+	return h
 }
 
 // List returns recent notification logs adapted to the frontend Alert shape.

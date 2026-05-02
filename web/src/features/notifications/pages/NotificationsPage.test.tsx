@@ -98,11 +98,11 @@ vi.mock('@/api/hooks/useNotifications', async () => {
       isLoading: false,
       error: null,
     }),
-    useMarkNotificationsRead: () => ({ mutate: markReadMutate, isPending: false }),
-    useMarkNotificationsUnread: () => ({ mutate: vi.fn(), isPending: false }),
-    useArchiveNotifications: () => ({ mutate: archiveMutate, isPending: false }),
-    useUnarchiveNotifications: () => ({ mutate: unarchiveMutate, isPending: false }),
-    useDeleteNotifications: () => ({ mutate: deleteMutate, isPending: false }),
+    useMarkNotificationsRead: () => ({ mutate: markReadMutate, mutateAsync: vi.fn(async (ids: number[]) => { markReadMutate(ids); }), isPending: false }),
+    useMarkNotificationsUnread: () => ({ mutate: vi.fn(), mutateAsync: vi.fn(async () => {}), isPending: false }),
+    useArchiveNotifications: () => ({ mutate: archiveMutate, mutateAsync: vi.fn(async (ids: number[]) => { archiveMutate(ids); }), isPending: false }),
+    useUnarchiveNotifications: () => ({ mutate: unarchiveMutate, mutateAsync: vi.fn(async (ids: number[]) => { unarchiveMutate(ids); }), isPending: false }),
+    useDeleteNotifications: () => ({ mutate: deleteMutate, mutateAsync: vi.fn(async (ids: number[]) => { deleteMutate(ids); }), isPending: false }),
     useNotificationChannels: () => ({ data: [] }),
     useNotificationStats: () => ({ data: { total_sent: 0, total_failed: 0, total_pending: 0, active_channels: 0 } }),
     useTestChannel: () => ({ mutate: vi.fn(), isPending: false, isSuccess: false, isError: false }),
@@ -175,13 +175,16 @@ describe('NotificationsPage', () => {
     const checkboxes = screen.getAllByRole('checkbox');
     // First checkbox is the "select all visible" header checkbox.
     fireEvent.click(checkboxes[0]);
-    // The bulk bar appears as a region containing "1 selected" plus the bulk
-    // action buttons. Wait for it, then scope the Archive lookup to that bar
-    // (the per-row Archive button uses aria-label, the bulk bar uses text).
-    const bulkBar = await screen.findByText(/1 selected/i);
-    const archiveBtn = Array.from(
-      bulkBar.parentElement?.querySelectorAll('button') ?? [],
-    ).find((b) => b.textContent?.trim() === 'Archive');
+    // The bulk bar appears as a region with aria-label "Bulk actions...".
+    // Scope the Archive lookup to that region (the per-row Archive button uses
+    // aria-label, the bulk bar uses text).
+    const bulkBar = await screen.findByRole('region', {
+      name: /Bulk actions/i,
+    });
+    expect(bulkBar).toHaveTextContent(/1 selected/i);
+    const archiveBtn = Array.from(bulkBar.querySelectorAll('button')).find(
+      (b) => b.textContent?.trim() === 'Archive',
+    );
     expect(archiveBtn).toBeTruthy();
     fireEvent.click(archiveBtn!);
     await waitFor(() => expect(archiveMutate).toHaveBeenCalledTimes(1));

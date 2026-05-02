@@ -22,10 +22,15 @@ import (
 // is held behind the chargingByIDFetcher interface so handler tests can
 // inject a fake without standing up a real pgx pool.
 type ChargingHandler struct {
-	chargingRepo *database.ChargingRepo
-	charging     chargingByIDFetcher
-	state        signal.StateReader
-	redisCache   *signal.RedisSignalCache
+	db                *database.DB
+	chargingRepo      *database.ChargingRepo
+	charging          chargingByIDFetcher
+	state             signal.StateReader
+	redisCache        *signal.RedisSignalCache
+	forwardAuthHeader string
+	// bulkOverride lets tests substitute the bulk store without standing up a
+	// real *database.ChargingRepo. Always nil in production.
+	bulkOverride chargingBulkStore
 }
 
 // chargingByIDFetcher is the narrow interface needed by the migrated handlers
@@ -39,6 +44,7 @@ type chargingByIDFetcher interface {
 func NewChargingHandler(db *database.DB, state signal.StateReader) *ChargingHandler {
 	repo := database.NewChargingRepo(db)
 	return &ChargingHandler{
+		db:           db,
 		chargingRepo: repo,
 		charging:     repo,
 		state:        state,
@@ -48,6 +54,14 @@ func NewChargingHandler(db *database.DB, state signal.StateReader) *ChargingHand
 // WithRedisCache sets the Redis signal cache for computing live in-progress charge values.
 func (h *ChargingHandler) WithRedisCache(cache *signal.RedisSignalCache) *ChargingHandler {
 	h.redisCache = cache
+	return h
+}
+
+// WithForwardAuthHeader wires the auth header used to attribute audit log
+// entries written by the bulk endpoints. When unset, audit rows still record
+// IP/User-Agent but Actor is empty (dev mode behaviour).
+func (h *ChargingHandler) WithForwardAuthHeader(name string) *ChargingHandler {
+	h.forwardAuthHeader = name
 	return h
 }
 

@@ -21,12 +21,12 @@ import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Archive, ArchiveRestore, Bell, MailOpen, Trash2 } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Button, TabNav, ConfirmDialog, DataTableBulkBar } from '@/components/ui';
+import { GlassPanel, TabNav } from '@/components/ui';
+import { BulkActionsToolbar, type BulkAction } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useConfirm } from '@/hooks/useConfirm';
 import { useUrlEnum, useUrlString, useUrlArray } from '@/hooks/useUrlState';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import {
@@ -221,27 +221,64 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
 
   const grouped = useMemo(() => groupByDay(rows), [rows]);
 
-  const { confirm, dialogProps } = useConfirm();
+  const handleBulkArchive = useCallback(async (ids: Array<string | number>) => {
+    await archiveMut.mutateAsync(ids.map(Number));
+    clearSelection();
+  }, [archiveMut]);
+  const handleBulkUnarchive = useCallback(async (ids: Array<string | number>) => {
+    await unarchiveMut.mutateAsync(ids.map(Number));
+    clearSelection();
+  }, [unarchiveMut]);
+  const handleBulkMarkRead = useCallback(async (ids: Array<string | number>) => {
+    await markReadMut.mutateAsync(ids.map(Number));
+    clearSelection();
+  }, [markReadMut]);
+  const handleBulkDelete = useCallback(async (ids: Array<string | number>) => {
+    await deleteMut.mutateAsync(ids.map(Number));
+    clearSelection();
+  }, [deleteMut]);
 
-  const handleBulkArchive = () => {
-    archiveMut.mutate(Array.from(selected), { onSuccess: clearSelection });
-  };
-  const handleBulkUnarchive = () => {
-    unarchiveMut.mutate(Array.from(selected), { onSuccess: clearSelection });
-  };
-  const handleBulkMarkRead = () => {
-    markReadMut.mutate(Array.from(selected), { onSuccess: clearSelection });
-  };
-  const handleBulkDelete = async () => {
-    const ok = await confirm({
-      title: t('notifications.inbox.bulk.deleteConfirmTitle', 'Delete notifications?'),
-      message: t('notifications.inbox.bulk.deleteConfirmBody', 'These notifications will be permanently removed. Archive is usually the safer choice.'),
-      confirmLabel: t('common.delete', 'Delete'),
+  const bulkActions = useMemo<BulkAction[]>(() => {
+    const list: BulkAction[] = [];
+    if (!archived) {
+      list.push({
+        id: 'mark-read',
+        label: t('notifications.inbox.bulk.markRead', 'Mark read'),
+        icon: <MailOpen className="h-3.5 w-3.5" />,
+        onClick: handleBulkMarkRead,
+      });
+      list.push({
+        id: 'archive',
+        label: t('notifications.inbox.bulk.archive', 'Archive'),
+        icon: <Archive className="h-3.5 w-3.5" />,
+        onClick: handleBulkArchive,
+      });
+    }
+    if (archived) {
+      list.push({
+        id: 'restore',
+        label: t('notifications.inbox.bulk.restore', 'Restore'),
+        icon: <ArchiveRestore className="h-3.5 w-3.5" />,
+        onClick: handleBulkUnarchive,
+      });
+    }
+    list.push({
+      id: 'delete',
+      label: t('bulk.actions.delete', 'Delete'),
+      icon: <Trash2 className="h-3.5 w-3.5" />,
       variant: 'danger',
+      confirm: {
+        title: t('notifications.inbox.bulk.deleteConfirmTitle', 'Delete notifications?'),
+        description: t(
+          'notifications.inbox.bulk.deleteConfirmBody',
+          'These notifications will be permanently removed. Archive is usually the safer choice.',
+        ),
+        confirmLabel: t('common.delete', 'Delete'),
+      },
+      onClick: handleBulkDelete,
     });
-    if (!ok) return;
-    deleteMut.mutate(Array.from(selected), { onSuccess: clearSelection });
-  };
+    return list;
+  }, [archived, t, handleBulkArchive, handleBulkUnarchive, handleBulkMarkRead, handleBulkDelete]);
 
   const handleRowActivate = (log: NotificationLog) => {
     if (log.read_at) return;
@@ -260,46 +297,16 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
         />
       </FadeIn>
 
-      <DataTableBulkBar count={selected.size} onClear={clearSelection}>
-        {!archived && (
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={<MailOpen className="h-3.5 w-3.5" />}
-            onClick={handleBulkMarkRead}
-          >
-            {t('notifications.inbox.bulk.markRead', 'Mark read')}
-          </Button>
-        )}
-        {!archived && (
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={<Archive className="h-3.5 w-3.5" />}
-            onClick={handleBulkArchive}
-          >
-            {t('notifications.inbox.bulk.archive', 'Archive')}
-          </Button>
-        )}
-        {archived && (
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={<ArchiveRestore className="h-3.5 w-3.5" />}
-            onClick={handleBulkUnarchive}
-          >
-            {t('notifications.inbox.bulk.restore', 'Restore')}
-          </Button>
-        )}
-        <Button
-          variant="ghost"
-          size="sm"
-          icon={<Trash2 className="h-3.5 w-3.5" />}
-          onClick={handleBulkDelete}
-        >
-          {t('notifications.inbox.bulk.delete', 'Delete')}
-        </Button>
-      </DataTableBulkBar>
+      <BulkActionsToolbar
+        selectedIds={Array.from(selected)}
+        total={rows.length}
+        onClear={clearSelection}
+        actions={bulkActions}
+        itemNoun={{
+          one: t('bulk.noun.notification_one', 'notification'),
+          other: t('bulk.noun.notification_other', 'notifications'),
+        }}
+      />
 
       <GlassPanel className="p-3 sm:p-4">
         {/* Select-all row */}
@@ -377,8 +384,6 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
           </div>
         )}
       </GlassPanel>
-
-      {dialogProps && <ConfirmDialog {...dialogProps} />}
     </div>
   );
 }

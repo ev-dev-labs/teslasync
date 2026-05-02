@@ -15,6 +15,11 @@ export { FreshnessIndicator, useIsStale } from './FreshnessIndicator';
 export { LiveIndicator, type LiveIndicatorVariant } from './LiveIndicator';
 export { Delta, type DeltaProps } from './Delta';
 export {
+  BulkActionsToolbar,
+  type BulkAction,
+  type BulkActionsToolbarProps,
+} from './BulkActionsToolbar';
+export {
   SeverityBadge,
   SeverityIcon,
   type SeverityBadgeProps,

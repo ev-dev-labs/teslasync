@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
@@ -6,7 +6,7 @@ import { QueryError } from '@/components/feedback';
 import { DateRangeFilter } from '@/components/forms';
 import { SavedViewMenu } from '@/components/data-display';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
-import { useChargingSessionsPaginated, useChargingOptimizer } from '@/api/hooks/useCharging';
+import { useChargingSessionsPaginated, useChargingOptimizer, useBulkDeleteCharging } from '@/api/hooks/useCharging';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -96,6 +96,31 @@ export default function ChargingListPage() {
     [sessions, chargerFilter, sortBy, sortDesc, searchQuery],
   );
 
+  // Phase-40 / Prompt 51 — bulk selection for delete.
+  const [bulkSelected, setBulkSelected] = useState<Set<number>>(new Set());
+  useEffect(() => {
+    setBulkSelected(prev => {
+      if (prev.size === 0) return prev;
+      const visible = new Set(filteredSessions.map(s => s.id));
+      const next = new Set<number>();
+      prev.forEach(id => { if (visible.has(id)) next.add(id); });
+      return next.size === prev.size ? prev : next;
+    });
+  }, [filteredSessions]);
+  const toggleSessionSelected = useCallback((id: number, on: boolean) => {
+    setBulkSelected(prev => {
+      const next = new Set(prev);
+      if (on) next.add(id); else next.delete(id);
+      return next;
+    });
+  }, []);
+  const clearSessionSelection = useCallback(() => setBulkSelected(new Set()), []);
+  const bulkDeleteChargingMut = useBulkDeleteCharging();
+  const handleBulkDeleteCharging = useCallback(async (ids: number[]) => {
+    await bulkDeleteChargingMut.mutateAsync(ids);
+    clearSessionSelection();
+  }, [bulkDeleteChargingMut, clearSessionSelection]);
+
   // Defensive guard: no vehicle selected (Phase 40 / Prompt 18).
   if (vehicleId == null) {
     return <NoVehicleSelected pageTitle={t('charging.list.title', 'Charging Sessions')} />;
@@ -174,6 +199,10 @@ export default function ChargingListPage() {
         startDate={startDate}
         endDate={endDate}
         vehicleId={vehicleId}
+        selectedIds={bulkSelected}
+        onToggleSelected={toggleSessionSelected}
+        onClearSelection={clearSessionSelection}
+        onBulkDelete={handleBulkDeleteCharging}
       />
     </PageContainer>
   );

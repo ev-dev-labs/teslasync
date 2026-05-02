@@ -337,3 +337,27 @@ export function useRatePlans() {
     select: safeArray,
   });
 }
+
+/**
+ * Bulk delete charging sessions. Returns the standardized
+ * BulkOperationResult envelope (Phase-40 / Prompt 51).
+ */
+export function useBulkDeleteCharging() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: (ids: number[]) =>
+      request<{ deleted?: number; updated?: number; failed?: Array<{ id: number; reason: string }> }>(
+        '/charging/bulk',
+        { method: 'DELETE', body: JSON.stringify({ ids }) },
+      ),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: chargingKeys.all });
+      success('toast.bulk.delete.success', '{{count}} deleted', {
+        count: res.deleted ?? 0,
+      });
+    },
+    onError: (err) =>
+      error(err, 'toast.bulk.delete.error', 'Failed to delete selection'),
+  });
+}
