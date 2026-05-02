@@ -1,8 +1,12 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Command, ArrowRight, Zap, ChevronLeft, Car, ArrowRightLeft } from 'lucide-react'
+import {
+  Search, Command, ArrowRight, Zap, ChevronLeft, Car, ArrowRightLeft,
+  Route, BatteryCharging, Bell, BellRing, MapPin, Workflow, Compass, MapPinned,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { Input } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { navSearchKeywords, navSections } from '@/components/layout/Layout'
@@ -12,6 +16,8 @@ import { COMMANDS, type CommandDef } from '@/features/system/commands'
 import { useCommandRegistry, type ResolvedCommand } from '@/hooks/useCommandRegistry'
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle'
 import { scoreCommand } from '@/lib/commandRegistry'
+import { useGlobalSearch } from '@/api/hooks/useSearch'
+import type { SearchHitType } from '@/api/types'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -22,7 +28,7 @@ interface PaletteItem {
   icon: React.ReactNode
   action: () => void
   keywords?: string[]
-  type?: 'navigate' | 'command' | 'registry' | 'vehicle-switch'
+  type?: 'navigate' | 'command' | 'registry' | 'vehicle-switch' | 'search-hit'
   sublabel?: string
   /** Display-only shortcut hint shown next to the item (e.g. "?" or "g d") */
   shortcut?: string
@@ -143,6 +149,41 @@ export function addRecentCommand(entry: RecentCommandEntry) {
 function getIconForConfig(cfg: PaletteCommandConfig, def: CommandDef): React.ReactNode {
   const IconComp = cfg.useOffIcon && def.iconOff ? def.iconOff : def.icon
   return <IconComp className="h-4 w-4" />
+}
+
+// ─── Search hit helpers ─────────────────────────────────────────────────────
+//
+// Phase-40 / Prompt 41: shared between the live palette results and the
+// dedicated /search page so type icons stay consistent across surfaces.
+
+function searchHitIcon(type: SearchHitType): React.ReactNode {
+  switch (type) {
+    case 'vehicle': return <Car className="h-4 w-4" />
+    case 'drive': return <Route className="h-4 w-4" />
+    case 'charging': return <BatteryCharging className="h-4 w-4" />
+    case 'alert': return <BellRing className="h-4 w-4" />
+    case 'notification': return <Bell className="h-4 w-4" />
+    case 'geofence': return <MapPinned className="h-4 w-4" />
+    case 'automation': return <Workflow className="h-4 w-4" />
+    case 'location': return <MapPin className="h-4 w-4" />
+    case 'trip': return <Compass className="h-4 w-4" />
+    default: return <Search className="h-4 w-4" />
+  }
+}
+
+function searchSectionLabel(type: SearchHitType, t: TFunction): string {
+  switch (type) {
+    case 'vehicle': return t('search.section.vehicle', 'Vehicles')
+    case 'drive': return t('search.section.drive', 'Drives')
+    case 'charging': return t('search.section.charging', 'Charging')
+    case 'alert': return t('search.section.alert', 'Alerts')
+    case 'notification': return t('search.section.notification', 'Notifications')
+    case 'geofence': return t('search.section.geofence', 'Geofences')
+    case 'automation': return t('search.section.automation', 'Automations')
+    case 'location': return t('search.section.location', 'Locations')
+    case 'trip': return t('search.section.trip', 'Trips')
+    default: return t('search.section.results', 'Results')
+  }
 }
 
 // ─── CommandPalette ─────────────────────────────────────────────────────────
@@ -406,6 +447,43 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
     })),
   [vehicleList, pendingCommand, executeCommand, t])
 
+  // ── Live entity search (Phase-40 / Prompt 41) ─────────────────────────────
+  //
+  // Debounce by 200 ms so each keystroke does not fan out to the backend's
+  // ~9 ILIKE sub-queries. The hook itself enforces the >= 2 char floor.
+
+  const [debouncedQuery, setDebouncedQuery] = useState('')
+  useEffect(() => {
+    const trimmed = query.trim()
+    if (trimmed.length === 0) {
+      setDebouncedQuery('')
+      return
+    }
+    const handle = window.setTimeout(() => setDebouncedQuery(trimmed), 200)
+    return () => window.clearTimeout(handle)
+  }, [query])
+
+  const { data: searchData } = useGlobalSearch(debouncedQuery, {
+    disabled: mode !== 'search',
+    limit: 5,
+  })
+
+  const searchResultItems: PaletteItem[] = useMemo(() => {
+    const hits = searchData?.hits ?? []
+    if (hits.length === 0) return []
+    return hits.map((hit): PaletteItem => ({
+      id: `search-${hit.type}-${hit.id}`,
+      label: hit.title,
+      sublabel: hit.subtitle,
+      section: searchSectionLabel(hit.type, t),
+      icon: searchHitIcon(hit.type),
+      type: 'search-hit',
+      action: () => go(hit.url),
+    }))
+  }, [searchData, t, go])
+
+  const showViewAllResults = (searchData?.hits?.length ?? 0) > 0 && debouncedQuery.length >= 2
+
   // ── Filtered items ────────────────────────────────────────────────────────
   //
   // Order matters — recents render first when no query, registry/vehicles
@@ -413,8 +491,8 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
   // PALETTE_COMMAND_CONFIGS items stay at the bottom (long list).
 
   const allItems = useMemo(
-    () => [...recentItems, ...registryItems, ...vehicleSwitchItems, ...navItems, ...commandItems],
-    [recentItems, registryItems, vehicleSwitchItems, navItems, commandItems],
+    () => [...searchResultItems, ...recentItems, ...registryItems, ...vehicleSwitchItems, ...navItems, ...commandItems],
+    [searchResultItems, recentItems, registryItems, vehicleSwitchItems, navItems, commandItems],
   )
 
   const filtered = useMemo(() => {
@@ -423,6 +501,12 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
     // so "btr" matches "Battery Health" via subsequence, not just substring.
     const scored = allItems
       .map(cmd => {
+        // Server-ranked entity hits skip local filtering — the backend
+        // already matched on the user's query and computed scores per
+        // entity. Pinning them at a high pseudo-score keeps Results above
+        // the static items inside groupedItems while remaining in their
+        // own per-type sections.
+        if (cmd.type === 'search-hit') return { cmd, score: 9999 }
         const haystack = [cmd.label, ...(cmd.keywords ?? [])]
         let best = 0
         for (let i = 0; i < haystack.length; i++) {
@@ -677,6 +761,20 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
                       })}
                     </div>
                   ))
+                )}
+                {showViewAllResults && mode === 'search' && (
+                  <div className="border-t border-[var(--glass-border)] mt-1 pt-2">
+                    <button
+                      onClick={() => go(`/search?q=${encodeURIComponent(debouncedQuery)}`)}
+                      className="flex w-full items-center justify-between gap-3 rounded-xl px-4 py-2 text-left text-xs text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Search className="h-3.5 w-3.5" />
+                        {t('search.palette.viewAll', { query: debouncedQuery, defaultValue: `View all results for "${debouncedQuery}"` })}
+                      </span>
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 )}
               </div>
 

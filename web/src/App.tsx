@@ -141,6 +141,9 @@ const Onboarding = lazy(() => import('./features/onboarding/pages/OnboardingPage
 // 404 (Phase 40 / Prompt 38 — catch-all route)
 const NotFound = lazy(() => import('./features/system/pages/NotFoundPage'))
 
+// Global app-wide search (Phase 40 / Prompt 41)
+const Search = lazy(() => import('./features/system/pages/SearchPage'))
+
 // Sharing (public)
 const SharedDrive = lazy(() => import('./features/sharing/pages/SharedDrivePage'))
 
@@ -284,6 +287,8 @@ export default function App() {
         <Route path="charging-heatmap" element={<SafeRoute name="ChargingHeatmap"><ChargingHeatmap /></SafeRoute>} />
         <Route path="speed-profile" element={<SafeRoute name="SpeedProfile"><SpeedProfile /></SafeRoute>} />
         <Route path="tesla-account" element={<SafeRoute name="TeslaAccount"><TeslaAccount /></SafeRoute>} />
+        {/* Phase 40 / Prompt 41 — global app-wide entity search */}
+        <Route path="search" element={<SafeRoute name="Search"><Search /></SafeRoute>} />
         {/* Phase 40 / Prompt 38 — catch-all inside Layout so unknown URLs still
             render with the sidebar/header chrome instead of a blank Outlet. */}
         <Route path="*" element={<SafeRoute name="NotFound"><NotFound /></SafeRoute>} />

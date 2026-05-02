@@ -198,6 +198,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	shareHandler := NewShareHandler(db)
 	watchHandler := NewWatchHandler(db, teslaClient)
 	onboardingHandler := NewOnboardingHandler(db, opt.Encryptor)
+	searchHandler := NewSearchHandler(db)
 
 	// Wire Redis signal cache to handlers that read live vehicle state
 	if opt.CacheStore != nil {
@@ -648,6 +649,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Geocoding (forward address search + reverse coordinate lookup)
 		r.With(httprate.LimitByIP(30, 1*time.Minute)).Get("/geocode/search", geocodeHandler.Search)
 		r.With(httprate.LimitByIP(30, 1*time.Minute)).Get("/geocode/reverse", geocodeHandler.Reverse)
+
+		// Global app-wide entity search (vehicles/drives/charging/alerts/...).
+		// Rate-limited because each call fans out into ~9 ILIKE sub-queries.
+		r.With(httprate.LimitByIP(30, 1*time.Minute)).Get("/search", searchHandler.Search)
 
 		// Notifications
 		r.Route("/notifications", func(r chi.Router) {

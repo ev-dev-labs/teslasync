@@ -954,6 +954,47 @@
       "refreshed": "Data refreshed"
     }
   },
+  "search": {
+    "title": "Search",
+    "placeholder": "Search vehicles, drives, charging…",
+    "input": {
+      "label": "Search query"
+    },
+    "filters": {
+      "clear": "Clear filters"
+    },
+    "tooShort": {
+      "title": "Type at least 2 characters",
+      "message": "Search across vehicles, drives, charging sessions, alerts, geofences, automations and more."
+    },
+    "empty": {
+      "title": "Start typing to search",
+      "message": "Search across vehicles, drives, charging sessions, alerts, geofences, automations and more."
+    },
+    "error": {
+      "title": "Search failed",
+      "message": "The search service did not respond. Try again or refine your query."
+    },
+    "noResults": {
+      "title": "No results",
+      "message": "No matches for \"{{query}}\". Try fewer characters or open the command palette."
+    },
+    "palette": {
+      "viewAll": "View all results for \"{{query}}\""
+    },
+    "section": {
+      "results": "Results",
+      "vehicle": "Vehicles",
+      "drive": "Drives",
+      "charging": "Charging",
+      "alert": "Alerts",
+      "notification": "Notifications",
+      "geofence": "Geofences",
+      "automation": "Automations",
+      "location": "Locations",
+      "trip": "Trips"
+    }
+  },
   "a11y": {
     "skipToMain": "Skip to main content",
     "primaryNav": "Primary",

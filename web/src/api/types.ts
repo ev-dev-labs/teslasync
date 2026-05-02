@@ -1899,6 +1899,33 @@ export type {
   SignalValueType,
 } from '@/types/signals';
 
+/** One result from the global /search endpoint. */
+export type SearchHitType =
+  | 'vehicle'
+  | 'drive'
+  | 'charging'
+  | 'alert'
+  | 'notification'
+  | 'geofence'
+  | 'automation'
+  | 'location'
+  | 'trip';
+
+export interface SearchHit {
+  type: SearchHitType
+  id: number
+  title: string
+  subtitle?: string
+  url: string
+  score: number
+  when?: string
+}
+
+export interface SearchResponse {
+  hits: SearchHit[]
+  query: string
+}
+
 export type {
   AutomationActionInput,
   AutomationActionStep,
