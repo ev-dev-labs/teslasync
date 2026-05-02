@@ -288,26 +288,12 @@ function WheelSVG({
 
   return (
     <g>
-      <ellipse cx={cx + 8} cy={cy + 2} rx={44} ry={40} fill="rgba(0,0,0,0.46)" />
-      <circle cx={cx} cy={cy} r={43} fill={`url(#${ids.tireOuter})`} />
-      <circle cx={cx} cy={cy} r={39} fill={C.wheelDark} stroke={C.wheelStroke} strokeWidth={2} />
-      <circle cx={cx} cy={cy} r={34} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={2} />
-      <circle cx={cx} cy={cy} r={30} fill={C.wheelSidewall} stroke="rgba(255,255,255,0.08)" strokeWidth={1.5} />
-      <circle cx={cx} cy={cy} r={32} fill="none" stroke="rgba(0,0,0,0.35)" strokeWidth={1.2} />
-      <path
-        d={`M ${cx + 26} ${cy + 11} C ${cx + 30} ${cy + 16} ${cx + 29} ${cy + 23} ${cx + 24} ${cy + 27}`}
-        fill="none"
-        stroke="rgba(185,28,28,0.42)"
-        strokeWidth={3}
-        strokeLinecap="round"
-      />
-      <path
-        d={`M ${cx + 18} ${cy + 18} C ${cx + 25} ${cy + 12} ${cx + 30} ${cy + 3} ${cx + 30} ${cy - 8}`}
-        fill="none"
-        stroke="rgba(239,68,68,0.7)"
-        strokeWidth={5}
-        strokeLinecap="round"
-      />
+      {/* Soft ground contact shadow */}
+      <ellipse cx={cx + 4} cy={cy + 3} rx={40} ry={35} fill="rgba(0,0,0,0.38)" />
+      {/* Tire — single dark layer (no stacked rings) */}
+      <circle cx={cx} cy={cy} r={39} fill={`url(#${ids.tireOuter})`} />
+      {/* Sidewall edge — subtle ring between tire and rim */}
+      <circle cx={cx} cy={cy} r={31} fill="rgba(8,12,22,0.95)" stroke="rgba(255,255,255,0.07)" strokeWidth={0.7} />
       <motion.g
         initial={shouldSpin ? { rotate: 0 } : false}
         animate={shouldSpin ? { rotate: driving ? -360 : -1080 } : undefined}
@@ -322,59 +308,37 @@ function WheelSVG({
         }
         style={{ transformOrigin: `${cx}px ${cy}px` }}
       >
-        <circle cx={cx} cy={cy} r={36} fill="none" stroke="rgba(255,255,255,0.045)" strokeWidth={0.8} strokeDasharray="2,5" />
-        <circle cx={cx} cy={cy} r={28} fill={`url(#${ids.rimDepth})`} stroke="rgba(255,255,255,0.1)" strokeWidth={1} />
-        <circle cx={cx} cy={cy} r={25} fill={`url(#${ids.rimGrad})`} stroke="rgba(255,255,255,0.18)" strokeWidth={1.2} />
+        {/* Rim depth (back face) */}
+        <circle cx={cx} cy={cy} r={28} fill={`url(#${ids.rimDepth})`} />
+        {/* Rim face */}
+        <circle cx={cx} cy={cy} r={25} fill={`url(#${ids.rimGrad})`} stroke="rgba(255,255,255,0.16)" strokeWidth={0.8} />
+        {/* 10 thin alloy spokes — soft slate color so they don't look like dirt on saturated paint */}
         {blades.map((angle) => (
           <g key={angle} transform={`rotate(${angle} ${cx} ${cy})`}>
             <path
-              d={`M ${cx + 4} ${cy - 4} C ${cx + 11} ${cy - 19} ${cx + 23} ${cy - 26} ${cx + 31} ${cy - 18} C ${cx + 25} ${cy - 12} ${cx + 18} ${cy - 3} ${cx + 7} ${cy + 10} Z`}
-              fill="rgba(2,6,23,0.82)"
-              stroke="rgba(148,163,184,0.18)"
-              strokeWidth={0.6}
-            />
-            <path
-              d={`M ${cx + 9} ${cy - 3} C ${cx + 17} ${cy - 13} ${cx + 24} ${cy - 17} ${cx + 28} ${cy - 14}`}
-              fill="none"
-              stroke="rgba(255,255,255,0.14)"
-              strokeWidth={0.8}
-              strokeLinecap="round"
+              d={`M ${cx + 3.5} ${cy - 4} C ${cx + 8} ${cy - 16} ${cx + 16} ${cy - 22} ${cx + 24} ${cy - 16} C ${cx + 19} ${cy - 11} ${cx + 13} ${cy - 4} ${cx + 5} ${cy + 5} Z`}
+              fill="rgba(100,116,139,0.32)"
+              stroke="rgba(15,23,42,0.55)"
+              strokeWidth={0.45}
             />
           </g>
         ))}
-        <motion.path
-          d={`M ${cx - 18} ${cy - 15} C ${cx - 5} ${cy - 27} ${cx + 18} ${cy - 24} ${cx + 27} ${cy - 10}`}
-          fill="none"
-          stroke="rgba(255,255,255,0.16)"
-          strokeWidth={1.2}
-          strokeLinecap="round"
-          animate={{ opacity: [0.12, 0.42, 0.12] }}
-          transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
-        />
-        <circle cx={cx} cy={cy} r={13} fill="rgba(3,7,18,0.88)" stroke="rgba(255,255,255,0.16)" strokeWidth={1} />
+        {/* Hub */}
+        <circle cx={cx} cy={cy} r={10} fill="rgba(15,23,42,0.94)" stroke="rgba(255,255,255,0.16)" strokeWidth={0.7} />
         {lugs.map((angle) => {
           const rad = (angle * Math.PI) / 180;
           return (
             <circle
               key={angle}
-              cx={cx + Math.cos(rad) * 7}
-              cy={cy + Math.sin(rad) * 7}
-              r={1.5}
-              fill="rgba(203,213,225,0.45)"
+              cx={cx + Math.cos(rad) * 5.5}
+              cy={cy + Math.sin(rad) * 5.5}
+              r={1.1}
+              fill="rgba(148,163,184,0.55)"
             />
           );
         })}
-        <circle cx={cx} cy={cy} r={6} fill="rgba(30,41,59,0.95)" stroke="rgba(255,255,255,0.22)" strokeWidth={1} />
-        <circle cx={cx - 9} cy={cy - 10} r={2.5} fill="rgba(255,255,255,0.25)" />
+        <circle cx={cx} cy={cy} r={3.8} fill="rgba(51,65,85,0.95)" stroke="rgba(255,255,255,0.22)" strokeWidth={0.5} />
       </motion.g>
-      <circle cx={cx} cy={cy} r={40} fill="none" stroke="rgba(0,0,0,0.5)" strokeWidth={5} />
-      <path
-        d={`M ${cx - 33} ${cy - 14} C ${cx - 18} ${cy - 36} ${cx + 20} ${cy - 38} ${cx + 35} ${cy - 14}`}
-        fill="none"
-        stroke="rgba(255,255,255,0.08)"
-        strokeWidth={1.2}
-        strokeLinecap="round"
-      />
     </g>
   );
 }
@@ -386,22 +350,22 @@ function Body3DDetails() {
       <path
         d="M 64 176 C 96 158 138 149 190 145 L 205 157 C 147 157 100 165 58 188 Z"
         fill={`url(#${ids.hoodSurface})`}
-        opacity={0.72}
+        opacity={0.28}
       />
       <path
         d="M 205 158 L 316 155 L 307 221 L 201 218 C 199 197 200 176 205 158 Z"
         fill={`url(#${ids.frontDoorSurface})`}
-        opacity={0.72}
+        opacity={0.26}
       />
       <path
         d="M 320 155 L 458 154 L 450 220 L 311 221 Z"
         fill={`url(#${ids.rearDoorSurface})`}
-        opacity={0.68}
+        opacity={0.26}
       />
       <path
         d="M 456 154 C 486 150 523 159 558 190 C 550 207 518 216 483 219 C 480 193 470 171 456 154 Z"
         fill={`url(#${ids.quarterSurface})`}
-        opacity={0.72}
+        opacity={0.28}
       />
       {/* Single soft beltline — replaces the previous 3 stacked seams */}
       <path
@@ -414,7 +378,7 @@ function Body3DDetails() {
       <path
         d="M 53 215 C 120 226 214 230 332 229 C 432 228 513 221 552 211 L 542 224 C 476 238 361 243 219 239 C 131 236 75 229 44 219 Z"
         fill={`url(#${ids.rockerDepth})`}
-        opacity={0.7}
+        opacity={0.55}
       />
       {/* Door cuts — kept subtle so the body reads as one panel, not three */}
       <path
@@ -444,14 +408,6 @@ function Body3DDetails() {
         fill="none"
         stroke="rgba(2,6,23,0.55)"
         strokeWidth={2.6}
-        strokeLinecap="round"
-      />
-      {/* Rear taillight diffuser accent */}
-      <path
-        d="M 524 158 C 541 163 553 174 559 188"
-        fill="none"
-        stroke="rgba(239,68,68,0.5)"
-        strokeWidth={3.2}
         strokeLinecap="round"
       />
     </g>
@@ -507,21 +463,23 @@ function BodyShell({
         strokeWidth={0.7}
       />
 
-      {/* Wheel arch cladding — paint-tinted shadow keeps the panel reading
-          as part of the body instead of a hard navy patch. */}
+      {/* Wheel arch cladding — paint-tinted shadow, kept thin so it reads as
+          a wheel-well shadow, not a heavy black crescent. */}
       <path
         d="M 74 228 C 79 195 103 173 132 173 C 164 173 188 198 192 228"
         fill="none"
         stroke={bodyAccent.shadow}
-        strokeWidth={10}
+        strokeWidth={6}
         strokeLinecap="round"
+        opacity={0.55}
       />
       <path
         d="M 371 229 C 376 196 400 173 430 173 C 462 173 486 199 490 228"
         fill="none"
         stroke={bodyAccent.shadow}
-        strokeWidth={10}
+        strokeWidth={6}
         strokeLinecap="round"
+        opacity={0.55}
       />
 
       {/* Frunk seam */}
@@ -647,8 +605,8 @@ function SideWindows({
       <path
         d="M 194 148 C 230 121 276 108 331 108 C 386 109 431 126 478 151 L 448 159 L 207 159 Z"
         fill="rgba(2,6,23,0.74)"
-        stroke="rgba(2,6,23,0.82)"
-        strokeWidth={3}
+        stroke="rgba(15,23,42,0.65)"
+        strokeWidth={1.6}
         strokeLinejoin="round"
       />
       <path
@@ -665,8 +623,8 @@ function SideWindows({
       />
       <path
         d="M 316 114 L 318 153"
-        stroke="rgba(2,6,23,0.7)"
-        strokeWidth={5}
+        stroke="rgba(2,6,23,0.6)"
+        strokeWidth={3}
         strokeLinecap="round"
       />
       <path
@@ -695,8 +653,8 @@ function SideWindows({
       <path
         d="M 348 116 L 334 148"
         fill="none"
-        stroke="rgba(2,6,23,0.55)"
-        strokeWidth={3.4}
+        stroke="rgba(2,6,23,0.45)"
+        strokeWidth={2}
         strokeLinecap="round"
       />
       {passengerAlert && (
