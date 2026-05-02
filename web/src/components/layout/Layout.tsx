@@ -11,6 +11,7 @@ import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
+import { RouteTransition } from '@/components/motion'
 import { BottomTabBar, BOTTOM_TAB_PATHS } from './BottomTabBar'
 import { CommandPalette, CommandPaletteTrigger } from '../ui/CommandPalette'
 import { ServiceStatusBanner, SystemHealthDot } from '../data-display/ServiceStatus'
@@ -19,7 +20,6 @@ import Logo from '../ui/Logo'
 import { Button } from '@/components/ui'
 import { Breadcrumbs } from './Breadcrumbs'
 import { VehiclePicker } from './VehiclePicker'
-
 import { MAIN_TOUR_STEPS } from '@/features/onboarding/tourSteps'
 import { request } from '@/api/client'
 import { getVehicleState } from '@/api/vehicles'
@@ -1142,17 +1142,9 @@ export default function Layout() {
                 </p>
               </div>
             )}
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={location.pathname}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.2 }}
-              >
-                <Outlet />
-              </motion.div>
-            </AnimatePresence>
+            <RouteTransition>
+              <Outlet />
+            </RouteTransition>
           </div>
         </main>
       </div>
