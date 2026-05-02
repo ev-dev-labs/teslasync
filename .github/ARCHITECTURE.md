@@ -443,3 +443,160 @@ RULES:
 │ API call audit          │ api_call_logs table                  │
 └─────────────────────────┴──────────────────────────────────────┘
 ```
+
+## ADR-004: Tesla Fleet Telemetry Pipeline (codegen + dynamic units + single pipeline)
+
+**Status:** Accepted (phase-42).
+
+**Context.**
+The pre-phase-42 Tesla Fleet Telemetry ingest pipeline contained two parallel
+transform paths (`NormalizeFleetUnits` switch and `HotCatalog.Transformer`
+field), two parallel compound expanders (`Flatten()` and the `SignalRegistry`
+JSON-marshal switch), 16/16 passthrough transformer stubs that silently
+stored mph in `positions.speed_mps` and raw enum strings in typed enum
+columns, and a hand-curated `SignalRegistry` that was missing 11 Semitruck
+fields with no automated detection. A field-coverage audit produced 16 HIGH
+data-corruption findings, 22 MEDIUM missing-parser findings, and 18 LOW
+unit-annotation findings across 241 actionable Tesla proto fields.
+
+**Decision.**
+1. **Single source of truth.** Tesla's `vehicle_data.proto` is vendored under
+   `api/proto/tesla/` with a SHA256 checksum lock. A `go generate` step in
+   `cmd/protogen-tesla` parses the proto and emits `signal_metadata.go`,
+   `enum_parsers.go`, and `datum_decoder.go` in `internal/tesla/protomodel/`.
+   Hand-curated `SignalRegistry`, `KnownColdSignals`, and `signal_alias.go`
+   are DELETED. Adding a Tesla field = re-vendor + regen + add a routing
+   entry. CI fails if generated files are out of sync with the proto.
+2. **Single pipeline.** Every Fleet Telemetry payload follows exactly one
+   path: `bytes → typed Datum (codec) → flatten compounds → lookup
+   activeUnit at T → ToSI → atomic typed value → router → write`. The
+   `internal/tesla/router` package owns a curated `routing.yaml` that
+   specifies the destination (hot column or cold log) for every Field. A
+   reflective coverage test asserts every `ftproto.Field_*` has exactly one
+   routing entry — no double-routes, no missing routes.
+3. **Always flatten at ingest.** Compound message types (DoorState, Doors,
+   Location, TireLocation, Time, ScheduledChargingStartTime,
+   ScheduledDepartureTime, ShiftState) are decomposed into typed atomic
+   children at the codec boundary. No nested maps cross the ingest boundary.
+   Downstream consumers only see typed primitives.
+4. **Dynamic wire-format units.** Tesla's developer docs claim fixed units
+   (mph for VehicleSpeed, miles for Odometer, etc.) but the proto contract
+   says otherwise: `SettingDistanceUnit`, `SettingTemperatureUnit`,
+   `SettingTirePressureUnit`, and `SettingChargeUnit` are streamable Field
+   entries that change at runtime when a user toggles their dashboard
+   preference (e.g., a US driver crossing into Canada and switching to km).
+   The wire-format unit of unit-bearing fields follows the active vehicle
+   preference at emission time. Therefore: (a) `vehicle_unit_history`
+   records every `Setting*Unit` change with `effective_from TIMESTAMPTZ`;
+   (b) every unit-bearing field at time T looks up active unit as-of T
+   before `ToSI`; (c) all 4 `Setting*Unit` fields are subscribed at
+   `interval_seconds=1` as REQUIRED ingest signals; (d) the existing REST
+   `/vehicle_data` client (`internal/tesla/client_vehicle_data.go`) seeds
+   `vehicle_unit_history` from `gui_settings` on first connect as a
+   belt-and-suspenders alongside Tesla's process-startup telemetry snapshot.
+5. **Canonical SI storage.** All telemetry values are stored in SI base
+   units (m/s, m, Pa, °C, W, A, V) regardless of the wire-format unit. One
+   conversion site (the `internal/tesla/units.ToSI` 3-arg pure function),
+   one direction. The frontend converts SI to user-display units in
+   `web/src/lib/units/` using the app Settings preferences. App Settings
+   unit selectors are independent of vehicle dashboard preferences.
+6. **Forward-only, no shims.** All legacy code is deleted, not deprecated.
+   `internal/telemetry/{normalize,flatten,transformers_stub,hot_catalog*,signal_alias}.go`,
+   `internal/enums/signal_types.go`, and `internal/enums/parse_*.go` are
+   removed in tombstone prompts. No compatibility wrappers. No feature
+   flags. No parallel old/new pipelines.
+7. **Forward-only schema.** All 38 tables populated by the broken pipeline
+   are dropped with `CASCADE` and recreated with SI-canonical schemas. No
+   backfill — operator triggers a fleet-wide resubscribe at deploy time,
+   and Tesla's process-startup snapshot reseeds all subscribed signals
+   into the new schema.
+8. **Domain boundaries (LOCKED).**
+   - **Vendor namespace.** All Tesla-vendor-specific code lives under
+     `internal/tesla/`. Vendor-agnostic primitives (live signal store,
+     Redis cache, SSE fanout) live under `internal/signal/`. Cross-package
+     direction is one-way: `internal/tesla/normalize` may write into
+     `internal/signal` via the router; `internal/signal` MUST NOT import
+     `internal/tesla`. This boundary is the seed of any future
+     multi-vendor support.
+   - **Tesla-owned table naming.** Tables that hold Tesla-specific wire
+     interpretation MUST use the `tesla_` prefix
+     (e.g., `tesla_vehicle_wire_units` would be the architecturally-clean
+     name for `vehicle_unit_history`). For phase-42 we accept the
+     unprefixed `vehicle_unit_history` name since it's already entrenched
+     in the prompts; future tables MUST follow the prefix rule, and a
+     future migration may rename `vehicle_unit_history` to
+     `tesla_vehicle_unit_history` once the rename is cheap.
+   - **Routing is field-static and vehicle-agnostic.** A field's
+     destination is a function of `(field_name)` only. Per-vehicle or
+     value-conditional routing (e.g., "Semitruck-only fields skip
+     Model 3 vehicles", "speed > 0 → drive_telemetry") is OUT OF SCOPE
+     and must not be added to `router.Route`. Any future need is
+     handled at the writer layer (filter inside the writer), not in the
+     dispatcher.
+   - **Writer contract.** `router.Writer.Write(ctx, atomic, dst Entry) error`
+     is best-effort and idempotent on `(vehicle_id, ts, field)`. Errors
+     are logged + counted as `tesla_router_writer_failures_total{dest, reason}`
+     and do NOT abort sibling writers within the same payload. The
+     pipeline's `Process(ctx, bytes, vehicleID)` returns:
+     - `nil` if codec succeeded (regardless of how many writers failed —
+       per-atomic failures are observable via the metric, not the return
+       value, so MQTT does NOT redeliver a payload because one writer
+       blipped);
+     - `ErrPayloadDrop` only if the codec itself failed (malformed bytes)
+       — this IS what triggers MQTT redelivery + the poison-pill counter
+       in `internal/mqtt/mqtt.go` (Prompt 0060).
+9. **Operator surface (LOCKED).** Privileged binaries that mutate Tesla
+   subscription state on behalf of users (`cmd/resubscribe`) MUST require
+   an operator credential (env `TESLASYNC_OPERATOR_TOKEN`), refuse to run
+   without it, and emit an audit log line including the operator
+   identifier, target vehicle count, and config fingerprint
+   (sha256 of the BuildSubscription output). Read-only diagnostic
+   binaries (`cmd/unit-drift-validator`) MUST NOT mutate stored data
+   under any flag combination.
+
+**Consequences.**
+- Adding a new Tesla proto field requires (a) re-vendoring the proto, (b)
+  re-running `go generate`, (c) adding a `routing.yaml` entry. Forgetting
+  step (c) is a compile/test failure (coverage test in
+  `internal/tesla/router/coverage_test.go`).
+- A vehicle that has never connected has no `vehicle_unit_history` rows.
+  The first emission of a unit-bearing field would have no unit context.
+  The bootstrap (REST `/vehicle_data` snapshot from `gui_settings`) closes
+  this gap. If both bootstraps fail, the value is dropped + warning logged
+  + metric emitted — never silent corruption.
+- A future Tesla firmware change to wire-format unit semantics is detected
+  by the nightly unit-drift validator (`cmd/unit-drift-validator/`) which
+  cross-checks `delta(Position) / delta(time)` vs `ToSI('VehicleSpeed',
+  raw, assumed_unit)` and alerts when drift suggests Tesla changed the
+  contract.
+- Frontend Settings page unit selectors and "Sync from Car" button stay
+  app-display-only. They do NOT influence ingestion.
+- The single-pipeline invariant means there is no way to emit a value
+  through a "fast path" that bypasses unit conversion or routing. Every
+  value goes through one path.
+
+**Alternatives considered and rejected.**
+- *Patch-only fix on the existing pipeline.* Rejected — leaves the dual
+  transform/expander architecture intact, and the hand-curated registry
+  problem unsolved. Every patch is one-grep-away from a regression.
+- *Fixed wire-format units (Tesla docs interpretation).* Rejected — silent
+  cross-border data corruption forever, with no way to detect or recover.
+  The proto contract (streamable `Setting*Unit` Field entries) and the
+  cost asymmetry settle it. Tesla docs are widely known to have errors.
+- *Backfill historical data.* Rejected — there is no production data worth
+  preserving (corrupted by the broken pipeline). Resubscribe is faster,
+  cheaper, and produces clean data.
+- *`current_unit_prefs` JSONB cache instead of `vehicle_unit_history`
+  table.* Rejected — out-of-order arrivals (e.g., catch-up backlog after a
+  reconnection) require timestamped history, not a current-state cache.
+
+**Enforcement.**
+- `go generate ./internal/tesla/protomodel/...` is a CI gate.
+- `internal/tesla/protomodel/coverage_test.go` reflects on every
+  `ftproto.Field_*` and asserts metadata exists.
+- `internal/tesla/router/coverage_test.go` asserts every Field has exactly
+  one routing entry.
+- `internal/tesla/normalize/normalize_test.go` table-tests the entire
+  pipeline end-to-end for representative fields of every category.
+- `cmd/unit-drift-validator/` runs nightly and pages on suspected wire-unit
+  contract drift.
