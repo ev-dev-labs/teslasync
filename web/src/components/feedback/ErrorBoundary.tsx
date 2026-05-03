@@ -9,22 +9,48 @@ interface Props {
   inline?: boolean
   /** Optional name for logging which boundary caught the error */
   name?: string
+  /**
+   * When this value changes between renders, the boundary clears any
+   * captured error and re-renders children. Pass `useLocation().pathname`
+   * to auto-reset on route change without unmounting/remounting.
+   */
+  resetKey?: string | number
 }
 
 interface State {
   hasError: boolean
   error: Error | null
   retryCount: number
+  lastResetKey: string | number | undefined
 }
 
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props)
-    this.state = { hasError: false, error: null, retryCount: 0 }
+    this.state = {
+      hasError: false,
+      error: null,
+      retryCount: 0,
+      lastResetKey: props.resetKey,
+    }
   }
 
   static getDerivedStateFromError(error: Error): Partial<State> {
     return { hasError: true, error }
+  }
+
+  static getDerivedStateFromProps(nextProps: Props, prevState: State): Partial<State> | null {
+    if (nextProps.resetKey === prevState.lastResetKey) {
+      return null
+    }
+    if (prevState.hasError) {
+      return {
+        hasError: false,
+        error: null,
+        lastResetKey: nextProps.resetKey,
+      }
+    }
+    return { lastResetKey: nextProps.resetKey }
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {

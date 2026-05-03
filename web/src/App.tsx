@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react'
-import { Navigate, Routes, Route, useNavigate } from 'react-router-dom'
+import { Navigate, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import Layout from './components/layout/Layout'
 import { ScrollRestoration } from './components/layout/ScrollRestoration'
 import { PageLoadSkeleton } from './components/feedback/PageLoadSkeleton'
@@ -159,8 +159,13 @@ const WatchFace = lazy(() => import('./features/watch/pages/WatchFacePage'))
  *  doesn't reflow when the lazy chunk arrives — important for our CLS budget.
  *  See web/lighthouserc.json for the active assertions (Phase 40 / Prompt 35). */
 function SafeRoute({ children, name }: { children: React.ReactNode; name: string }) {
+  const { pathname } = useLocation()
+  // key={pathname} guarantees a fresh ErrorBoundary instance on every navigation,
+  // so a crash on the previous route can never persist into the next one.
+  // resetKey is also passed for defense-in-depth against any code path that
+  // would otherwise reuse the boundary instance across path changes.
   return (
-    <ErrorBoundary name={name}>
+    <ErrorBoundary key={pathname} name={name} resetKey={pathname}>
       <Suspense fallback={<PageLoadSkeleton />}>{children}</Suspense>
     </ErrorBoundary>
   )
