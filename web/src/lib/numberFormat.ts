@@ -34,6 +34,16 @@ export function safeNumber(v: unknown): number {
 }
 
 /**
+ * Returns true when the value is a finite, defined number suitable for
+ * arithmetic and formatting. Use this as the first guard in any formatter
+ * that produces user-visible output so that NaN, Infinity, -Infinity, null,
+ * and undefined never reach downstream `toFixed` / template expressions.
+ */
+export function isFiniteNumber(v: unknown): v is number {
+  return typeof v === 'number' && Number.isFinite(v)
+}
+
+/**
  * Format a number with locale-aware separators. Uses the global precision
  * and global locale set by `useSettings` unless overridden per-call.
  */
