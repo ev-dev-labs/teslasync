@@ -10,7 +10,7 @@ import {
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Button, ConfirmDialog, PinButton } from '@/components/ui';
 import { MetricCard, AnimatedNumber } from '@/components/data-display';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { Skeleton, EmptyState, StatGridSkeleton } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -26,6 +26,31 @@ import { usePinned } from '@/api/hooks/usePinned';
 import { deriveVehicleStatus, statusVariant } from '@/api/types';
 import type { Vehicle } from '@/types/vehicle';
 import type { VehicleState } from '@/api/types';
+
+/* ── Loading skeleton (Phase-45 / Prompt 18) ─────────────── */
+
+/**
+ * Mirrors the VehicleListPage layout while the fleet list loads:
+ * 4 fleet-summary stat cards → fleet hero panel → 3 vehicle row cards.
+ * Renders inside a real `<PageContainer>` so the title bar shows up
+ * immediately and CLS stays at zero when the real list arrives.
+ */
+function VehicleListSkeleton() {
+  const { t } = useTranslation();
+  return (
+    <PageContainer title={t('nav.vehicles', 'Fleet')}>
+      <div className="space-y-6" data-testid="vehicle-list-skeleton">
+        <StatGridSkeleton cards={4} />
+        <Skeleton className="h-36 rounded-xl" />
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-28 rounded-xl" />
+          ))}
+        </div>
+      </div>
+    </PageContainer>
+  );
+}
 
 /* ── Page ────────────────────────────────────────────────── */
 
@@ -127,21 +152,7 @@ export default function VehicleListPage() {
 
   /* ── Loading skeleton ── */
   if (isLoading) {
-    return (
-      <PageContainer title={t('nav.vehicles', 'Fleet')}>
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} height={96} />
-            ))}
-          </div>
-          <Skeleton height={140} />
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} height={112} />
-          ))}
-        </div>
-      </PageContainer>
-    );
+    return <VehicleListSkeleton />;
   }
 
   /* ── Error state ── */

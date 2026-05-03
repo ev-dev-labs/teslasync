@@ -15,7 +15,7 @@ import {
   BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
 } from '@/components/charts';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { Skeleton, EmptyState, ChartBlockSkeleton, StatGridSkeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { DateRangeFilter } from '@/components/forms';
 
@@ -49,6 +49,29 @@ const STATE_COLORS: Record<string, string> = {
   online: '#3b82f6',
   idle: '#a855f7',
 };
+
+/* ── Loading skeleton ────────────────────────────────────────────── */
+
+/**
+ * Mirrors the StatisticsPage layout while data loads:
+ * 5 period-stat cards → 3 averages → 1 battery-health panel →
+ * 2 side-by-side panels (state + mileage) → 1 vehicle-comparison chart.
+ * Phase-45 / Prompt 18.
+ */
+function StatisticsSkeleton() {
+  return (
+    <div className="space-y-6" data-testid="statistics-skeleton">
+      <StatGridSkeleton cards={5} className="sm:grid-cols-3 lg:grid-cols-5" />
+      <StatGridSkeleton cards={3} className="grid-cols-1 sm:grid-cols-3 md:grid-cols-3" />
+      <Skeleton className="h-56 rounded-xl" />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <ChartBlockSkeleton height={280} />
+        <Skeleton className="h-72 rounded-xl" />
+      </div>
+      <ChartBlockSkeleton height={320} />
+    </div>
+  );
+}
 
 /* ── Page ─────────────────────────────────────────────────────────── */
 
@@ -136,9 +159,7 @@ export default function StatisticsPage() {
       }
     >
       {isLoading ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} height={96} rounded />)}
-        </div>
+        <StatisticsSkeleton />
       ) : !stats ? (
         <EmptyState icon={<BarChart3 className="h-10 w-10" />} title={t('statistics.noData', 'No Data')} message={t('statistics.noDataMsg', 'No statistics available for this vehicle.')} />
       ) : (

@@ -13,7 +13,7 @@ import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, HelpTooltip, PrintButton } from '@/components/ui';
 import { MetricBar, InlineMetric, AnimatedNumber, StatCard, KVList, LiveIndicator, DateTime } from '@/components/data-display';
 import { RadialGauge } from '@/components/charts';
-import { Skeleton, EmptyState, LiveStaleDataBanner } from '@/components/feedback';
+import { Skeleton, EmptyState, LiveStaleDataBanner, PageHeaderSkeleton, StatGridSkeleton, ChartBlockSkeleton } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -58,29 +58,23 @@ function synthesizeCurve(session: ChargingSession): { soc: number; power: number
   return points;
 }
 
-/* ─── loading skeleton ─────────────────────────────────────────── */
+/* ─── loading skeleton (Phase-45 / Prompt 18) ──────────────────── */
 
+/**
+ * Mirrors the ChargingDetailPage layout while session telemetry loads:
+ * page header → 5 hero stat cards → cost ribbon → 8 secondary stats →
+ * 2 charts (charge curve + power profile). Migrated to the shared
+ * *Skeleton building blocks for consistency.
+ */
 function LoadingSkeleton() {
   return (
-    <div className="space-y-8 animate-pulse">
-      <div className="flex items-center gap-3">
-        <Skeleton className="h-8 w-8 rounded-full" />
-        <Skeleton className="h-6 w-48" />
-        <Skeleton className="h-5 w-16 rounded-full" />
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-6">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-36 rounded-xl" />
-        ))}
-      </div>
+    <div className="space-y-8" data-testid="charging-detail-skeleton">
+      <PageHeaderSkeleton />
+      <StatGridSkeleton cards={5} className="sm:grid-cols-2 md:grid-cols-5" />
       <Skeleton className="h-24 rounded-xl" />
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <Skeleton key={i} className="h-24 rounded-xl" />
-        ))}
-      </div>
-      <Skeleton className="h-64 rounded-xl" />
-      <Skeleton className="h-72 rounded-xl" />
+      <StatGridSkeleton cards={8} className="sm:grid-cols-2 lg:grid-cols-4" />
+      <ChartBlockSkeleton height={256} />
+      <ChartBlockSkeleton height={288} />
     </div>
   );
 }

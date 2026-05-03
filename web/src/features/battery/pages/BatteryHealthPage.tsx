@@ -19,7 +19,7 @@ import {
   AREA_DEFAULTS, TimeMarker,
 } from '@/components/charts';
 import { MetricCard, MetricBar, LiveIndicator } from '@/components/data-display';
-import { Skeleton, EmptyState, LiveStaleDataBanner, SectionErrorBoundary } from '@/components/feedback';
+import { Skeleton, EmptyState, LiveStaleDataBanner, SectionErrorBoundary, StatGridSkeleton, ChartBlockSkeleton, PageHeaderSkeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { useBatteryHealthAnalytics, useBatteryDegradation } from '@/api/hooks/useEnergy';
@@ -191,6 +191,30 @@ const QUICK_LINKS: { to: string; labelKey: string; fallback: string }[] = [
   { to: '/sleep-efficiency', labelKey: 'battery.links.sleepEfficiency', fallback: 'Sleep Efficiency' },
 ];
 
+/* ── Loading skeleton ────────────────────────────────────────────── */
+
+/**
+ * Mirrors the BatteryHealthPage layout while data loads:
+ * page header → 6 hero metric cards → degradation prediction chart →
+ * insights panel → recommendations panel → charging habits chart →
+ * quick-links row. Phase-45 / Prompt 18.
+ */
+function BatteryHealthSkeleton() {
+  return (
+    <div className="space-y-6" data-testid="battery-health-skeleton">
+      <PageHeaderSkeleton />
+      <StatGridSkeleton cards={6} className="md:grid-cols-3 lg:grid-cols-6" />
+      <ChartBlockSkeleton height={360} />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Skeleton className="h-56 rounded-xl" />
+        <Skeleton className="h-56 rounded-xl" />
+      </div>
+      <ChartBlockSkeleton height={300} />
+      <StatGridSkeleton cards={6} className="md:grid-cols-3 lg:grid-cols-6" />
+    </div>
+  );
+}
+
 /* ── Page ─────────────────────────────────────────────────────────── */
 
 export default function BatteryHealthPage() {
@@ -329,18 +353,7 @@ export default function BatteryHealthPage() {
 
   /* ── Loading ───────────────────────────────────────────────────── */
   if (healthLoading) {
-    return (
-      <PageContainer
-        title={t('battery.title', 'Battery Health')}
-        subtitle={t('battery.subtitle', 'Degradation tracking, prediction, charging habits & longevity insights')}
-      >
-        <Grid cols={{ default: 2, lg: 3 }} gap={4}>
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} height={100} />
-          ))}
-        </Grid>
-      </PageContainer>
-    );
+    return <BatteryHealthSkeleton />;
   }
 
   /* ── Empty / error ─────────────────────────────────────────────── */

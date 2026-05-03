@@ -7,6 +7,12 @@ export { PageErrorBoundary } from './PageErrorBoundary';
 export { Skeleton } from './Skeleton';
 export { ChartSkeleton } from './ChartSkeleton';
 export { StatSkeleton } from './StatSkeleton';
+export {
+  PageHeaderSkeleton,
+  StatGridSkeleton,
+  ChartBlockSkeleton,
+  TableSkeleton,
+} from './PageSkeleton';
 export { PageLoader } from './PageLoader';
 export { PageLoadSkeleton } from './PageLoadSkeleton';
 export { QueryError } from './QueryError';
