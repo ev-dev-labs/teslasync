@@ -1,7 +1,10 @@
+import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getSettings } from '@/api/settings'
 import type { AppSettings } from '@/api/types'
 import { setGlobalPrecision, setGlobalLocale, fmtNumber } from '../lib/numberFormat'
+import { subscribe } from '../lib/broadcast'
+import { TOPICS } from '../lib/broadcastTopics'
 import { FUEL } from '../lib/constants'
 import {
   milesToKm,
@@ -52,7 +55,7 @@ const defaults: AppSettings = {
  *   fmtSpeed, fmtTemp).
  */
 export function useSettings() {
-  const { data: settings } = useQuery({
+  const { data: settings, refetch } = useQuery({
     queryKey: ['settings'],
     queryFn: getSettings,
     staleTime: 5 * 60 * 1000,
@@ -65,9 +68,27 @@ export function useSettings() {
   const density: 'compact' | 'comfortable' | 'spacious' =
     s.ui_density === 'compact' || s.ui_density === 'spacious' ? s.ui_density : 'comfortable'
 
-  // Sync global precision/locale so fmtNumber/fmtPercent/etc. use them automatically
-  setGlobalPrecision(decimals)
-  setGlobalLocale(locale)
+  // Sync global precision/locale so fmtNumber/fmtPercent/etc. use them
+  // automatically. Phase-45/06: moved into useEffect so the side effect
+  // runs in commit phase (not during render) — this avoids
+  // double-application under React.StrictMode and makes the contract
+  // consistent with <FormatterPrefsBridge /> at the app root.
+  useEffect(() => {
+    setGlobalPrecision(decimals)
+    setGlobalLocale(locale)
+  }, [decimals, locale])
+
+  // Phase-45/06: listen for cross-tab `settings.changed` broadcasts so
+  // even if this tab's `['settings']` query was never fetched (e.g. the
+  // bridge tore down for some reason), we still refetch on a peer's
+  // mutation. Coexists harmlessly with <FormatterPrefsBridge /> which
+  // does the same — TanStack Query dedupes concurrent invalidations.
+  useEffect(() => {
+    return subscribe((msg) => {
+      if (msg.type !== TOPICS.SETTINGS_CHANGED) return
+      void refetch()
+    })
+  }, [refetch])
 
   const isMiles = s.unit_of_length === 'mi'
   const isFahrenheit = s.unit_of_temp === 'F'

@@ -6,6 +6,7 @@ import { ToastProvider } from './components/feedback/Toast'
 import { ErrorBoundary } from './components/feedback/ErrorBoundary'
 import { AchievementUnlockListener } from './components/feedback/AchievementUnlockListener'
 import { QueryBroadcastBridge } from './components/QueryBroadcastBridge'
+import { FormatterPrefsBridge } from './components/FormatterPrefsBridge'
 import { ThemeProvider } from './components/ui/ThemeProvider'
 import ReloadPrompt from './components/feedback/ReloadPrompt'
 import { SelectedVehicleProvider } from './store/selectedVehicle'
@@ -78,6 +79,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             messages into this tab's QueryClient. Mounted directly under
             QueryClientProvider so useQueryClient() resolves. */}
         <QueryBroadcastBridge />
+        {/* Phase-45 / Prompt 06: keep module-level formatter globals
+            (numberFormat locale + precision) in sync with the persisted
+            settings even on pages that never call useSettings() and after
+            cross-tab settings broadcasts. */}
+        <FormatterPrefsBridge />
         <BrowserRouter>
           <ThemeProvider>
             <SelectedVehicleProvider>
