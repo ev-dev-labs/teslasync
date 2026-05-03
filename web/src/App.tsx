@@ -51,7 +51,7 @@ const SleepEfficiency = lazy(() => import('./features/battery/pages/SleepEfficie
 // Driving & Performance
 const Drives = lazy(() => import('./features/driving/pages/DrivesListPage'))
 const DriveDetail = lazy(() => import('./features/driving/pages/DriveDetailPage'))
-const TripReplay = lazy(() => import('./features/driving/pages/TripReplayPage'))
+const TripReplay = lazy(() => import('./features/trips/pages/TripReplayPage'))
 const DriveScore = lazy(() => import('./features/driving/pages/DriveScorePage'))
 const DrivingDynamics = lazy(() => import('./features/driving/pages/DrivingDynamicsPage'))
 const DrivetrainHealth = lazy(() => import('./features/driving/pages/DrivetrainHealthPage'))

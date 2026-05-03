@@ -62,7 +62,7 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   // Driving
   { name: 'Drives', load: () => import('../features/driving/pages/DrivesListPage') },
   { name: 'DriveDetail', load: () => import('../features/driving/pages/DriveDetailPage') },
-  { name: 'TripReplay', load: () => import('../features/driving/pages/TripReplayPage') },
+  { name: 'TripReplay', load: () => import('../features/trips/pages/TripReplayPage') },
   { name: 'DriveScore', load: () => import('../features/driving/pages/DriveScorePage') },
   { name: 'DrivingDynamics', load: () => import('../features/driving/pages/DrivingDynamicsPage') },
   { name: 'DrivetrainHealth', load: () => import('../features/driving/pages/DrivetrainHealthPage') },
